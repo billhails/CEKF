@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "cekf.h"
+#include "step.h"
 
 /**
  * The step function of the CEKF machine.
@@ -12,6 +13,7 @@
 typedef Value *(*primitive)(ValueList *args);
 
 static primitive O(AexpPrimOp op);
+static CEKF *step(CEKF *state);
 static CEKF *applyProc(Value *proc, ValueList *args, Kont *k, Fail *f);
 static CEKF *applyKont(Kont *kont, Value *value, Fail *f);
 static Value *lookUp(AexpVar *var, Env *env);
@@ -21,37 +23,53 @@ static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings);
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
 static void cant_happen(const char *message);
 
+static CEKF *inject(Exp *exp) {
+    return newCEKF(
+        exp,
+        NULL,
+        newKont(KONT_TYPE_HALT, KONT_VAL_NONE()),
+        newFail(FAIL_TYPE_END, FAIL_VAL_NONE())
+    );
+}
+
+void run(Exp *exp) {
+    CEKF *state = inject(exp);
+    while (state->C->type != EXP_TYPE_DONE) {
+        state = step(state);
+    }
+}
+
 static Value *A(Aexp *aexp, Env *env) {
     switch (aexp->type) {
-        case AEXP_LAM_TYPE: {
+        case AEXP_TYPE_LAM: {
             return newValue(
-                VALUE_CLO_TYPE,
+                VALUE_TYPE_CLO,
                 VALUE_VAL_CLO(newClo(aexp->val.lam, env))
             );
         }
-        case AEXP_VAR_TYPE: {
+        case AEXP_TYPE_VAR: {
             return lookUp(aexp->val.var, env);
         }
-        case AEXP_TRUE_TYPE: {
-            return newValue(VALUE_TRUE_TYPE, VALUE_VAL_NONE());
+        case AEXP_TYPE_TRUE: {
+            return newValue(VALUE_TYPE_TRUE, VALUE_VAL_NONE());
             break;
         }
-        case AEXP_FALSE_TYPE: {
-            return newValue(VALUE_FALSE_TYPE, VALUE_VAL_NONE());
+        case AEXP_TYPE_FALSE: {
+            return newValue(VALUE_TYPE_FALSE, VALUE_VAL_NONE());
         }
-        case AEXP_INT_TYPE: {
+        case AEXP_TYPE_INT: {
             return newValue(
-                VALUE_INTEGER_TYPE,
+                VALUE_TYPE_INTEGER,
                 VALUE_VAL_INTEGER(aexp->val.integer)
             );
         }
-        case AEXP_PRIM_TYPE: {
+        case AEXP_TYPE_PRIM: {
             return (O(aexp->val.prim->op))(mapA(aexp->val.prim->args, env));
         }
     }
 }
 
-CEKF *step(CEKF *state) {
+static CEKF *step(CEKF *state) {
     Exp *C = state->C;
     Env *E = state->E;
     Kont *K = state->K;
@@ -64,7 +82,7 @@ CEKF *step(CEKF *state) {
         case EXP_TYPE_CEXP: {
             Cexp *cexp = C->val.cexp;
             switch (cexp->type) {
-                case CEXP_APPLY_TYPE: {
+                case CEXP_TYPE_APPLY: {
                     CexpApply *apply = cexp->val.apply;
                     Aexp *function = apply->function;
                     AexpList *args = apply->args;
@@ -72,28 +90,28 @@ CEKF *step(CEKF *state) {
                     ValueList *values = mapA(args, E);
                     return applyProc(proc, values, K, F);
                 }
-                case CEXP_CONDITIONAL_TYPE: {
+                case CEXP_TYPE_CONDITIONAL: {
                     CexpConditional *conditional = cexp->val.conditional;
                     Aexp *condition = conditional->condition;
                     Exp *consequence;
                     Value *testResult = A(condition, E);
-                    if (testResult->type == VALUE_FALSE_TYPE) {
+                    if (testResult->type == VALUE_TYPE_FALSE) {
                         consequence = conditional->alternative;
                     } else {
                         consequence = conditional->consequent;
                     }
                     return newCEKF(consequence, E, K, F);
                 }
-                case CEXP_CALLCC_TYPE: {
+                case CEXP_TYPE_CALLCC: {
                     Aexp *aexp = cexp->val.callCC;
                     Value *proc = A(aexp, E);
                     ValueList *args = newValueList(
                         NULL,
-                        newValue(VALUE_CONT_TYPE, VALUE_VAL_CONT(K))
+                        newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K))
                     );
                     return applyProc(proc, args, K, F);
                 }
-                case CEXP_LETREC_TYPE: {
+                case CEXP_TYPE_LETREC: {
                     CexpLetRec *letRec = cexp->val.letRec;
                     LetRecBindings *bindings = letRec->bindings;
                     Exp *body = letRec->body;
@@ -101,7 +119,7 @@ CEKF *step(CEKF *state) {
                     mapLetRecReplace(rho, bindings);
                     return newCEKF(body, rho, K, F);
                 }
-                case CEXP_AMB_TYPE: {
+                case CEXP_TYPE_AMB: {
                     CexpAmb *amb = cexp->val.amb;
                     Exp *exp1 = amb->exp1;
                     Exp *exp2 = amb->exp2;
@@ -116,7 +134,7 @@ CEKF *step(CEKF *state) {
                         )
                     );
                 }
-                case CEXP_BACK_TYPE: {
+                case CEXP_TYPE_BACK: {
                     if (F->type == FAIL_TYPE_BACKTRACK) {
                         BackTrack *backTrack = F->val.backTrack;
                         Exp *exp = backTrack->exp;
@@ -148,23 +166,23 @@ CEKF *step(CEKF *state) {
 static Value *add(ValueList *list) {
     AexpInteger result = 0;
     while (list != NULL) {
-        if (list->value->type == VALUE_INTEGER_TYPE) {
+        if (list->value->type == VALUE_TYPE_INTEGER) {
             result += list->value->val.z;
         }
         list = list->next;
     }
-    return newValue(VALUE_INTEGER_TYPE, VALUE_VAL_INTEGER(result)); 
+    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
 }
 
 static Value *mul(ValueList *list) {
     AexpInteger result = 1;
     while (list != NULL) {
-        if (list->value->type == VALUE_INTEGER_TYPE) {
+        if (list->value->type == VALUE_TYPE_INTEGER) {
             result *= list->value->val.z;
         }
         list = list->next;
     }
-    return newValue(VALUE_INTEGER_TYPE, VALUE_VAL_INTEGER(result)); 
+    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
 }
 
 static Value *sub(ValueList *list) {
@@ -173,13 +191,13 @@ static Value *sub(ValueList *list) {
         result = list->value->val.z;
         list = list->next;
         while (list != NULL) {
-            if (list->value->type == VALUE_INTEGER_TYPE) {
+            if (list->value->type == VALUE_TYPE_INTEGER) {
                 result -= list->value->val.z;
             }
             list = list->next;
         }
     }
-    return newValue(VALUE_INTEGER_TYPE, VALUE_VAL_INTEGER(result)); 
+    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
 }
 
 static Value *divide(ValueList *list) {
@@ -188,13 +206,13 @@ static Value *divide(ValueList *list) {
         result = list->value->val.z;
         list = list->next;
         while (list != NULL) {
-            if (list->value->type == VALUE_INTEGER_TYPE) {
+            if (list->value->type == VALUE_TYPE_INTEGER) {
                 result /= list->value->val.z;
             }
             list = list->next;
         }
     }
-    return newValue(VALUE_INTEGER_TYPE, VALUE_VAL_INTEGER(result)); 
+    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
 }
 
 static primitive O(AexpPrimOp op) {
@@ -207,7 +225,7 @@ static primitive O(AexpPrimOp op) {
 }
 
 static CEKF *applyProc(Value *proc, ValueList *vals, Kont *k, Fail *f) {
-    if (proc->type != VALUE_CLO_TYPE) {
+    if (proc->type != VALUE_TYPE_CLO) {
         cant_happen("expected proc in applyproc");
     }
 
@@ -275,7 +293,7 @@ static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings) {
     }
 
     Env *next = extendLetRecVoid(env, bindings->next);
-    Value *val = newValue(VALUE_VOID_TYPE, VALUE_VAL_NONE());
+    Value *val = newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE());
 
     return newEnv(next, bindings->var, val);
 }

@@ -26,12 +26,12 @@ typedef struct AexpVar {
 } AexpVar;
 
 typedef enum {
-    AEXP_LAM_TYPE,
-    AEXP_VAR_TYPE,
-    AEXP_TRUE_TYPE,
-    AEXP_FALSE_TYPE,
-    AEXP_INT_TYPE,
-    AEXP_PRIM_TYPE,
+    AEXP_TYPE_LAM,
+    AEXP_TYPE_VAR,
+    AEXP_TYPE_TRUE,
+    AEXP_TYPE_FALSE,
+    AEXP_TYPE_INT,
+    AEXP_TYPE_PRIM,
 } AexpType;
 
 typedef int AexpInteger; // you'll thank me later
@@ -73,12 +73,12 @@ typedef struct AexpList {
 } AexpList;
 
 typedef enum {
-    CEXP_APPLY_TYPE,
-    CEXP_CONDITIONAL_TYPE,
-    CEXP_CALLCC_TYPE,
-    CEXP_LETREC_TYPE,
-    CEXP_AMB_TYPE,
-    CEXP_BACK_TYPE,
+    CEXP_TYPE_APPLY,
+    CEXP_TYPE_CONDITIONAL,
+    CEXP_TYPE_CALLCC,
+    CEXP_TYPE_LETREC,
+    CEXP_TYPE_AMB,
+    CEXP_TYPE_BACK,
 } CexpType;
 
 typedef union {

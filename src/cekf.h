@@ -48,12 +48,12 @@ typedef struct LetK {
 } LetK;
 
 typedef enum {
-    VALUE_VOID_TYPE,
-    VALUE_INTEGER_TYPE,
-    VALUE_TRUE_TYPE,
-    VALUE_FALSE_TYPE,
-    VALUE_CLO_TYPE,
-    VALUE_CONT_TYPE,
+    VALUE_TYPE_VOID,
+    VALUE_TYPE_INTEGER,
+    VALUE_TYPE_TRUE,
+    VALUE_TYPE_FALSE,
+    VALUE_TYPE_CLO,
+    VALUE_TYPE_CONT,
 } ValueType;
 
 typedef union {
