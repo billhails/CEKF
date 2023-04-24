@@ -1,0 +1,6 @@
+obj/
+dep/
+cekf
+.*.swp
+.$*.drawio.bkp
+callgrind.out.*
