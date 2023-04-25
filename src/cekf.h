@@ -112,7 +112,6 @@ typedef struct BackTrack {
 Value *newValue(ValueType type, ValueVal val);
 ValueList *newValueList(ValueList *next, Value *value);
 Clo *newClo(AexpLam *lam, Env *rho);
-CEKF *newCEKF(Exp *C, Env *E, Kont *K, Fail *F, Value *V);
 Env *newEnv(Env *next, AexpVar *var, Value *val);
 Kont *newKont(KontType type, KontVal val);
 LetK *newLetK(AexpVar *var, Exp *body, Env *rho, Kont *k);
