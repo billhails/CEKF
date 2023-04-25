@@ -23,30 +23,12 @@ typedef struct Env {
     struct Value *val;
 } Env;
 
-typedef enum {
-    KONT_TYPE_LETK,
-    KONT_TYPE_HALT,
-} KontType;
-
-typedef union {
-    void *none;
-    struct LetK *letK;
-} KontVal;
-
 typedef struct Kont {
-    KontType type;
-    KontVal val;
-} Kont;
-
-#define KONT_VAL_LETK(x) ((KontVal){.letK = (x)})
-#define KONT_VAL_NONE()  ((KontVal){.none = NULL})
-
-typedef struct LetK {
     struct AexpVar *var;
     struct Exp *body;
     struct Env *rho;
-    struct Kont *k;
-} LetK;
+    struct Kont *next;
+} Kont;
 
 typedef enum {
     VALUE_TYPE_VOID,
@@ -84,38 +66,19 @@ typedef struct Clo {
     struct Env *rho;
 } Clo;
 
-typedef enum {
-    FAIL_TYPE_BACK,
-    FAIL_TYPE_END,
-} FailType;
-
-typedef union {
-    void *none;
-    struct Back *back;
-} FailVal;
 
 typedef struct Fail {
-    FailType type;
-    FailVal val;
-} Fail;
-
-typedef struct Back {
     struct Exp *exp;
     struct Env *rho;
     struct Kont *k;
-    struct Fail *f;
-} Back;
-
-#define FAIL_VAL_NONE()  ((FailVal){.none = NULL})
-#define FAIL_VAL_BACK(x) ((FailVal){.back = (x)})
+    struct Fail *next;
+} Fail;
 
 Value *newValue(ValueType type, ValueVal val);
 ValueList *newValueList(ValueList *next, Value *value);
 Clo *newClo(AexpLam *lam, Env *rho);
 Env *newEnv(Env *next, AexpVar *var, Value *val);
-Kont *newKont(KontType type, KontVal val);
-LetK *newLetK(AexpVar *var, Exp *body, Env *rho, Kont *k);
-Fail *newFail(FailType type, FailVal val);
-Back *newBack(Exp *exp, Env *rho, Kont *k, Fail *f);
+Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next);
+Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next);
 
 #endif

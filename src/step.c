@@ -29,8 +29,8 @@ static CEKF state;
 static void inject(Exp *exp) {
     state.C = exp;
     state.E = NULL;
-    state.K = newKont(KONT_TYPE_HALT, KONT_VAL_NONE());
-    state.F = newFail(FAIL_TYPE_END, FAIL_VAL_NONE());
+    state.K = NULL;
+    state.F = NULL;
     state.V = newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE());
 }
 
@@ -129,18 +129,16 @@ static void step() {
         case CEXP_TYPE_AMB: {
             CexpAmb *amb = C->val.cexp.amb;
             Exp *exp2 = amb->exp2;
-            Back *back = newBack(exp2, E, K, F);
             state.C = amb->exp1;
-            state.F = newFail( FAIL_TYPE_BACK, FAIL_VAL_BACK(back));
+            state.F = newFail(exp2, E, K, F);
         }
         break;
         case CEXP_TYPE_BACK: {
-            if (F->type == FAIL_TYPE_BACK) {
-                Back *back = F->val.back;
-                state.C = back->exp;
-                state.E = back->rho;
-                state.K = back->k;
-                state.F = back->f;
+            if (F != NULL) {
+                state.C = F->exp;
+                state.E = F->rho;
+                state.K = F->k;
+                state.F = F->next;
             } else {
                 state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
             }
@@ -151,8 +149,7 @@ static void step() {
             AexpVar *var = let->var;
             Exp *body = let->body;
             state.C = let->val;
-            LetK *letK = newLetK(var, body, E, K);
-            state.K = newKont( KONT_TYPE_LETK, KONT_VAL_LETK(letK));
+            state.K = newKont(var, body, E, K);
         }
         break;
     }
@@ -233,20 +230,16 @@ static void applyProc(Value *proc, ValueList *vals) {
 }
 
 static void applyKont(Value *val) {
-    switch (state.K->type) {
-        case KONT_TYPE_LETK: {
-            LetK *letK = state.K->val.letK;
-            AexpVar *var = letK->var;
-            state.C = letK->body;
-            Env *rho = letK->rho;
-            state.E = newEnv(rho, var, val);
-            state.K = letK->k;
-        }
-        break;
-        case KONT_TYPE_HALT: {
-            state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
-            state.V = val;
-        }
+    Kont *K = state.K;
+    if (K != NULL) {
+        AexpVar *var = K->var;
+        state.C = K->body;
+        Env *rho = K->rho;
+        state.E = newEnv(rho, var, val);
+        state.K = K->next;
+    } else {
+        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
+        state.V = val;
     }
 }
 

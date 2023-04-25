@@ -34,34 +34,20 @@ Env *newEnv(Env *next, AexpVar *var, Value *val) {
     return x;
 }
 
-Kont *newKont(KontType type, KontVal val) {
+Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next) {
     Kont *x = NEW(Kont);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
-LetK *newLetK(AexpVar *var, Exp *body, Env *rho, Kont *k) {
-    LetK *x = NEW(LetK);
     x->var = var;
     x->body = body;
     x->rho = rho;
-    x->k = k;
+    x->next = next;
     return x;
 }
 
-Fail *newFail(FailType type, FailVal val) {
+Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next) {
     Fail *x = NEW(Fail);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
-Back *newBack(Exp *exp, Env *rho, Kont *k, Fail *f) {
-    Back *x = NEW(Back);
     x->exp = exp;
     x->rho = rho;
     x->k = k;
-    x->f = f;
+    x->next = next;
     return x;
 }

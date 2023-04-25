@@ -77,51 +77,29 @@ void printEnv(Env *x) {
 
 void printKont(Kont *x) {
     printf("Kont[");
-    switch (x->type) {
-        case KONT_TYPE_LETK:
-            printLetK(x->val.letK);
-            break;
-        case KONT_TYPE_HALT:
-            printf("HALT");
-            break;
+    if (x != NULL) {
+        printAexpVar(x->var);
+        printf(", ");
+        printExp(x->body);
+        printf(", ");
+        printEnv(x->rho);
+        printf(", ");
+        printKont(x->next);
     }
-    printf("]");
-}
-
-void printLetK(LetK *x) {
-    printf("LetK[");
-    printAexpVar(x->var);
-    printf(", ");
-    printExp(x->body);
-    printf(", ");
-    printEnv(x->rho);
-    printf(", ");
-    printKont(x->k);
     printf("]");
 }
 
 void printFail(Fail *x) {
     printf("Fail[");
-    switch (x->type) {
-        case FAIL_TYPE_BACK:
-            printBack(x->val.back);
-            break;
-        case FAIL_TYPE_END:
-            printf("END");
-            break;
+    if (x != NULL) {
+        printExp(x->exp);
+        printf(", ");
+        printEnv(x->rho);
+        printf(", ");
+        printKont(x->k);
+        printf(", ");
+        printFail(x->next);
     }
-    printf("]");
-}
-
-void printBack(Back *x) {
-    printf("Back[");
-    printExp(x->exp);
-    printf(", ");
-    printEnv(x->rho);
-    printf(", ");
-    printKont(x->k);
-    printf(", ");
-    printFail(x->f);
     printf("]");
 }
 
