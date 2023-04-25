@@ -9,7 +9,7 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-CC=cc $(DEBUGGING)
+CC=cc -Werror $(DEBUGGING)
 
 CFILES=$(wildcard src/*.c)
 

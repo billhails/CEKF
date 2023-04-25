@@ -26,12 +26,13 @@ Clo *newClo(AexpLam *lam, Env *rho) {
     return x;
 }
 
-CEKF *newCEKF(Exp *C, Env *E, Kont *K, Fail *F) {
+CEKF *newCEKF(Exp *C, Env *E, Kont *K, Fail *F, Value *V) {
     CEKF *x = NEW(CEKF);
     x->C = C;
     x->E = E;
     x->K = K;
     x->F = F;
+    x->V = V;
     return x;
 }
 

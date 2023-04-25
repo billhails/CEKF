@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "cekf.h"
 #include "step.h"
 
@@ -14,8 +15,8 @@ typedef Value *(*primitive)(ValueList *args);
 
 static primitive O(AexpPrimOp op);
 static CEKF *step(CEKF *state);
-static CEKF *applyProc(Value *proc, ValueList *args, Kont *k, Fail *f);
-static CEKF *applyKont(Kont *kont, Value *value, Fail *f);
+static CEKF *applyProc(Value *proc, ValueList *args, Kont *k, Fail *f, Value *v);
+static CEKF *applyKont(Kont *kont, Value *value, Fail *f, Value *v);
 static Value *lookUp(AexpVar *var, Env *env);
 static ValueList *mapA(AexpList *args, Env *env);
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals);
@@ -28,14 +29,17 @@ static CEKF *inject(Exp *exp) {
         exp,
         NULL,
         newKont(KONT_TYPE_HALT, KONT_VAL_NONE()),
-        newFail(FAIL_TYPE_END, FAIL_VAL_NONE())
+        newFail(FAIL_TYPE_END, FAIL_VAL_NONE()),
+        newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE())
     );
 }
 
 void run(Exp *exp) {
     CEKF *state = inject(exp);
+    printCEKF(state);
     while (state->C->type != EXP_TYPE_DONE) {
         state = step(state);
+        printCEKF(state);
     }
 }
 
@@ -74,10 +78,11 @@ static CEKF *step(CEKF *state) {
     Env *E = state->E;
     Kont *K = state->K;
     Fail *F = state->F;
+    Value *V = state->V;
 
     switch (C->type) {
         case EXP_TYPE_AEXP: {
-            return applyKont(K, A(C->val.aexp, E), F);
+            return applyKont(K, A(C->val.aexp, E), F, V);
         }
         case EXP_TYPE_CEXP: {
             Cexp *cexp = C->val.cexp;
@@ -88,7 +93,7 @@ static CEKF *step(CEKF *state) {
                     AexpList *args = apply->args;
                     Value *proc = A(function, E);
                     ValueList *values = mapA(args, E);
-                    return applyProc(proc, values, K, F);
+                    return applyProc(proc, values, K, F, V);
                 }
                 case CEXP_TYPE_CONDITIONAL: {
                     CexpConditional *conditional = cexp->val.conditional;
@@ -100,7 +105,7 @@ static CEKF *step(CEKF *state) {
                     } else {
                         consequence = conditional->consequent;
                     }
-                    return newCEKF(consequence, E, K, F);
+                    return newCEKF(consequence, E, K, F, V);
                 }
                 case CEXP_TYPE_CALLCC: {
                     Aexp *aexp = cexp->val.callCC;
@@ -109,7 +114,7 @@ static CEKF *step(CEKF *state) {
                         NULL,
                         newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K))
                     );
-                    return applyProc(proc, args, K, F);
+                    return applyProc(proc, args, K, F, V);
                 }
                 case CEXP_TYPE_LETREC: {
                     CexpLetRec *letRec = cexp->val.letRec;
@@ -117,7 +122,7 @@ static CEKF *step(CEKF *state) {
                     Exp *body = letRec->body;
                     Env *rho = extendLetRecVoid(E, bindings);
                     mapLetRecReplace(rho, bindings);
-                    return newCEKF(body, rho, K, F);
+                    return newCEKF(body, rho, K, F, V);
                 }
                 case CEXP_TYPE_AMB: {
                     CexpAmb *amb = cexp->val.amb;
@@ -131,7 +136,8 @@ static CEKF *step(CEKF *state) {
                         newFail(
                             FAIL_TYPE_BACKTRACK,
                             FAIL_VAL_BACKTRACK(backTrack)
-                        )
+                        ),
+                        V
                     );
                 }
                 case CEXP_TYPE_BACK: {
@@ -141,10 +147,10 @@ static CEKF *step(CEKF *state) {
                         Env *rho = backTrack->rho;
                         Kont *k = backTrack->k;
                         Fail *f = backTrack->f;
-                        return newCEKF(exp, rho, k, f);
+                        return newCEKF(exp, rho, k, f, V);
                     } else {
                         Exp *exp = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
-                        return newCEKF(exp, E, K, F);
+                        return newCEKF(exp, E, K, F, V);
                     }
                 }
             }
@@ -158,7 +164,7 @@ static CEKF *step(CEKF *state) {
                 KONT_TYPE_LETK,
                 KONT_VAL_LETK(newLetK(var, body, E, K))
             );
-            return newCEKF(val, E, k, F);
+            return newCEKF(val, E, k, F, V);
         }
     }
 }
@@ -224,7 +230,7 @@ static primitive O(AexpPrimOp op) {
     }
 }
 
-static CEKF *applyProc(Value *proc, ValueList *vals, Kont *k, Fail *f) {
+static CEKF *applyProc(Value *proc, ValueList *vals, Kont *k, Fail *f, Value *v) {
     if (proc->type != VALUE_TYPE_CLO) {
         cant_happen("expected proc in applyproc");
     }
@@ -235,10 +241,10 @@ static CEKF *applyProc(Value *proc, ValueList *vals, Kont *k, Fail *f) {
     AexpVarList *vars = lam->args;
     Exp *body = lam->exp;
     Env *newRho = mapExtend(rho, vars, vals);
-    return newCEKF(body, newRho, k, f);
+    return newCEKF(body, newRho, k, f, v);
 }
 
-static CEKF *applyKont(Kont *k, Value *val, Fail *f) {
+static CEKF *applyKont(Kont *k, Value *val, Fail *f, Value *v) {
     switch (k->type) {
         case KONT_TYPE_LETK: {
             LetK *letK = k->val.letK;
@@ -247,17 +253,17 @@ static CEKF *applyKont(Kont *k, Value *val, Fail *f) {
             Env *rho = letK->rho;
             Kont *kappa = letK->k;
             Env *newRho = newEnv(rho, var, val);
-            return newCEKF(body, newRho, kappa, f);
+            return newCEKF(body, newRho, kappa, f, v);
         }
         case KONT_TYPE_HALT: {
             Exp *exp = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
-            return newCEKF(exp, NULL, k, f);
+            return newCEKF(exp, NULL, k, f, val);
         }
     }
 }
 
 static Value *lookUp(AexpVar *var, Env *env) {
-    while (env == NULL) {
+    while (env != NULL) {
         if (strcmp(var->name, env->var->name) == 0) {
             return env->val;
         }
