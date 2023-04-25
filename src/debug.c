@@ -6,23 +6,21 @@ void printValue(Value *x) {
     printf("Value[");
     switch (x->type) {
         case VALUE_TYPE_VOID:
-            printf("VALUE_TYPE_VOID");
+            printf("VOID");
             break;
         case VALUE_TYPE_INTEGER:
-            printf("VALUE_TYPE_INTEGER, %d", x->val.z);
+            printf("%d", x->val.z);
             break;
         case VALUE_TYPE_TRUE:
-            printf("VALUE_TYPE_TRUE");
+            printf("TRUE");
             break;
         case VALUE_TYPE_FALSE:
-            printf("VALUE_TYPE_FALSE");
+            printf("FALSE");
             break;
         case VALUE_TYPE_CLO:
-            printf("VALUE_TYPE_CLO, ");
             printClo(x->val.clo);
             break;
         case VALUE_TYPE_CONT:
-            printf("VALUE_TYPE_CONT, ");
             printKont(x->val.k);
             break;
     }
@@ -81,11 +79,10 @@ void printKont(Kont *x) {
     printf("Kont[");
     switch (x->type) {
         case KONT_TYPE_LETK:
-            printf("KONT_TYPE_LETK, ");
             printLetK(x->val.letK);
             break;
         case KONT_TYPE_HALT:
-            printf("KONT_TYPE_HALT");
+            printf("HALT");
             break;
     }
     printf("]");
@@ -107,11 +104,10 @@ void printFail(Fail *x) {
     printf("Fail[");
     switch (x->type) {
         case FAIL_TYPE_BACKTRACK:
-            printf("FAIL_TYPE_BACKTRACK, ");
             printBackTrack(x->val.backTrack);
             break;
         case FAIL_TYPE_END:
-            printf("FAIL_TYPE_END");
+            printf("END");
             break;
     }
     printf("]");
