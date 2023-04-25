@@ -85,13 +85,13 @@ typedef struct Clo {
 } Clo;
 
 typedef enum {
-    FAIL_TYPE_BACKTRACK,
+    FAIL_TYPE_BACK,
     FAIL_TYPE_END,
 } FailType;
 
 typedef union {
     void *none;
-    struct BackTrack *backTrack;
+    struct Back *back;
 } FailVal;
 
 typedef struct Fail {
@@ -99,15 +99,15 @@ typedef struct Fail {
     FailVal val;
 } Fail;
 
-typedef struct BackTrack {
+typedef struct Back {
     struct Exp *exp;
     struct Env *rho;
     struct Kont *k;
     struct Fail *f;
-} BackTrack;
+} Back;
 
-#define FAIL_VAL_NONE()       ((FailVal){.none      = NULL})
-#define FAIL_VAL_BACKTRACK(x) ((FailVal){.backTrack = (x)})
+#define FAIL_VAL_NONE()  ((FailVal){.none = NULL})
+#define FAIL_VAL_BACK(x) ((FailVal){.back = (x)})
 
 Value *newValue(ValueType type, ValueVal val);
 ValueList *newValueList(ValueList *next, Value *value);
@@ -116,6 +116,6 @@ Env *newEnv(Env *next, AexpVar *var, Value *val);
 Kont *newKont(KontType type, KontVal val);
 LetK *newLetK(AexpVar *var, Exp *body, Env *rho, Kont *k);
 Fail *newFail(FailType type, FailVal val);
-BackTrack *newBackTrack(Exp *exp, Env *rho, Kont *k, Fail *f);
+Back *newBack(Exp *exp, Env *rho, Kont *k, Fail *f);
 
 #endif

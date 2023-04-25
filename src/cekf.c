@@ -57,8 +57,8 @@ Fail *newFail(FailType type, FailVal val) {
     return x;
 }
 
-BackTrack *newBackTrack(Exp *exp, Env *rho, Kont *k, Fail *f) {
-    BackTrack *x = NEW(BackTrack);
+Back *newBack(Exp *exp, Env *rho, Kont *k, Fail *f) {
+    Back *x = NEW(Back);
     x->exp = exp;
     x->rho = rho;
     x->k = k;

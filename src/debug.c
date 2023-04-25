@@ -103,8 +103,8 @@ void printLetK(LetK *x) {
 void printFail(Fail *x) {
     printf("Fail[");
     switch (x->type) {
-        case FAIL_TYPE_BACKTRACK:
-            printBackTrack(x->val.backTrack);
+        case FAIL_TYPE_BACK:
+            printBack(x->val.back);
             break;
         case FAIL_TYPE_END:
             printf("END");
@@ -113,8 +113,8 @@ void printFail(Fail *x) {
     printf("]");
 }
 
-void printBackTrack(BackTrack *x) {
-    printf("BackTrack[");
+void printBack(Back *x) {
+    printf("Back[");
     printExp(x->exp);
     printf(", ");
     printEnv(x->rho);
@@ -189,7 +189,7 @@ void printCexpApply(CexpApply *x) {
     printf(")");
 }
 
-void printCexpConditional(CexpConditional *x) {
+void printCexpCond(CexpCond *x) {
     printf("(if ");
     printExp(x->condition);
     printf(" ");
@@ -254,8 +254,8 @@ void printExp(Exp *x) {
         case CEXP_TYPE_APPLY:
             printCexpApply(x->val.cexp.apply);
             break;
-        case CEXP_TYPE_CONDITIONAL:
-            printCexpConditional(x->val.cexp.conditional);
+        case CEXP_TYPE_COND:
+            printCexpCond(x->val.cexp.cond);
             break;
         case CEXP_TYPE_CALLCC:
             printf("(call/cc ");

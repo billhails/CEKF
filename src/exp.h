@@ -49,11 +49,11 @@ typedef struct CexpApply {
     struct AexpList *args;
 } CexpApply;
 
-typedef struct CexpConditional {
+typedef struct CexpCond {
     struct Exp *condition;
     struct Exp *consequent;
     struct Exp *alternative;
-} CexpConditional;
+} CexpCond;
 
 typedef struct CexpLetRec {
     struct LetRecBindings *bindings;
@@ -85,7 +85,7 @@ typedef enum {
     AEXP_TYPE_INT,
     AEXP_TYPE_PRIM,
     CEXP_TYPE_APPLY,
-    CEXP_TYPE_CONDITIONAL,
+    CEXP_TYPE_COND,
     CEXP_TYPE_CALLCC,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
@@ -103,7 +103,7 @@ typedef union {
 
 typedef union {
     struct CexpApply *apply;
-    struct CexpConditional *conditional;
+    struct CexpCond *cond;
     struct Exp *callCC;
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
@@ -121,22 +121,22 @@ typedef struct Exp {
     ExpVal val;
 } Exp;
 
-#define AEXP_VAL_LAM(x)         ((ExpVal){.aexp = ((AexpVal){.lam         = (x)})})
-#define AEXP_VAL_VAR(x)         ((ExpVal){.aexp = ((AexpVal){.var         = (x)})})
-#define AEXP_VAL_INT(x)         ((ExpVal){.aexp = ((AexpVal){.integer     = (x)})})
-#define AEXP_VAL_PRIM(x)        ((ExpVal){.aexp = ((AexpVal){.prim        = (x)})})
+#define AEXP_VAL_LAM(x)    ((ExpVal){.aexp = ((AexpVal){.lam     = (x)})})
+#define AEXP_VAL_VAR(x)    ((ExpVal){.aexp = ((AexpVal){.var     = (x)})})
+#define AEXP_VAL_INT(x)    ((ExpVal){.aexp = ((AexpVal){.integer = (x)})})
+#define AEXP_VAL_PRIM(x)   ((ExpVal){.aexp = ((AexpVal){.prim    = (x)})})
 
-#define CEXP_VAL_APPLY(x)       ((ExpVal){.cexp = ((CexpVal){.apply       = (x)})})
-#define CEXP_VAL_CONDITIONAL(x) ((ExpVal){.cexp = ((CexpVal){.conditional = (x)})})
-#define CEXP_VAL_CALLCC(x)      ((ExpVal){.cexp = ((CexpVal){.callCC      = (x)})})
-#define CEXP_VAL_LETREC(x)      ((ExpVal){.cexp = ((CexpVal){.letRec      = (x)})})
-#define CEXP_VAL_AMB(x)         ((ExpVal){.cexp = ((CexpVal){.amb         = (x)})})
+#define CEXP_VAL_APPLY(x)  ((ExpVal){.cexp = ((CexpVal){.apply   = (x)})})
+#define CEXP_VAL_COND(x)   ((ExpVal){.cexp = ((CexpVal){.cond    = (x)})})
+#define CEXP_VAL_CALLCC(x) ((ExpVal){.cexp = ((CexpVal){.callCC  = (x)})})
+#define CEXP_VAL_LETREC(x) ((ExpVal){.cexp = ((CexpVal){.letRec  = (x)})})
+#define CEXP_VAL_AMB(x)    ((ExpVal){.cexp = ((CexpVal){.amb     = (x)})})
 
-#define EXP_VAL_LET(x)          ((ExpVal){.let          = (x)})
+#define EXP_VAL_LET(x)     ((ExpVal){.let          = (x)})
 
-#define CEXP_VAL_NONE()         ((ExpVal){.none         = NULL})
-#define EXP_VAL_NONE()          ((ExpVal){.none         = NULL})
-#define AEXP_VAL_NONE()         ((ExpVal){.none         = NULL})
+#define CEXP_VAL_NONE()    ((ExpVal){.none         = NULL})
+#define EXP_VAL_NONE()     ((ExpVal){.none         = NULL})
+#define AEXP_VAL_NONE()    ((ExpVal){.none         = NULL})
 
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
@@ -144,7 +144,7 @@ AexpVar *newAexpVar(char *name);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args);
 AexpList *newAexpList(AexpList *next, Exp *exp);
 CexpApply *newCexpApply(Exp *function, AexpList *args);
-CexpConditional *newCexpConditional(Exp *condition, Exp *consequent, Exp *alternative);
+CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
 LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Exp *val);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);

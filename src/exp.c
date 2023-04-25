@@ -42,8 +42,8 @@ CexpApply *newCexpApply(Exp *function, AexpList *args) {
     return x;
 }
 
-CexpConditional *newCexpConditional(Exp *condition, Exp *consequent, Exp *alternative) {
-    CexpConditional *x = NEW(CexpConditional);
+CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative) {
+    CexpCond *x = NEW(CexpCond);
     x->condition = condition;
     x->consequent = consequent;
     x->alternative = alternative;

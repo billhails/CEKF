@@ -31,8 +31,8 @@ Exp *makeLet(AexpVar *var, Exp *val, Exp *body) {
 }
 
 Exp *makeIf(Exp *cond, Exp *cons, Exp *alt) {
-    CexpConditional *cec = newCexpConditional(cond, cons, alt);
-    return newExp(CEXP_TYPE_CONDITIONAL, CEXP_VAL_CONDITIONAL(cec));
+    CexpCond *cec = newCexpCond(cond, cons, alt);
+    return newExp(CEXP_TYPE_COND, CEXP_VAL_COND(cec));
 }
 
 Exp *makeBack() {

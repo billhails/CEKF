@@ -99,14 +99,14 @@ static void step() {
             applyProc(proc, values);
         }
         break;
-        case CEXP_TYPE_CONDITIONAL: {
-            CexpConditional *conditional = C->val.cexp.conditional;
-            Exp *condition = conditional->condition;
+        case CEXP_TYPE_COND: {
+            CexpCond *cond = C->val.cexp.cond;
+            Exp *condition = cond->condition;
             Value *testResult = A(condition, E);
             if (testResult->type == VALUE_TYPE_FALSE) {
-                state.C = conditional->alternative;
+                state.C = cond->alternative;
             } else {
-                state.C = conditional->consequent;
+                state.C = cond->consequent;
             }
         }
         break;
@@ -129,14 +129,14 @@ static void step() {
         case CEXP_TYPE_AMB: {
             CexpAmb *amb = C->val.cexp.amb;
             Exp *exp2 = amb->exp2;
-            BackTrack *back = newBackTrack(exp2, E, K, F);
+            Back *back = newBack(exp2, E, K, F);
             state.C = amb->exp1;
-            state.F = newFail( FAIL_TYPE_BACKTRACK, FAIL_VAL_BACKTRACK(back));
+            state.F = newFail( FAIL_TYPE_BACK, FAIL_VAL_BACK(back));
         }
         break;
         case CEXP_TYPE_BACK: {
-            if (F->type == FAIL_TYPE_BACKTRACK) {
-                BackTrack *back = F->val.backTrack;
+            if (F->type == FAIL_TYPE_BACK) {
+                Back *back = F->val.back;
                 state.C = back->exp;
                 state.E = back->rho;
                 state.K = back->k;
