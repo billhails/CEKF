@@ -21,13 +21,6 @@ AexpVar *newAexpVar(char *name) {
     return x;
 }
 
-Aexp *newAexp(AexpType type, AexpVal val) {
-    Aexp *x = NEW(Aexp);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
     AexpPrimApp *x = NEW(AexpPrimApp);
     x->op = op;
@@ -35,28 +28,21 @@ AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
     return x;
 }
 
-AexpList *newAexpList(AexpList *next, Aexp *exp) {
+AexpList *newAexpList(AexpList *next, Exp *exp) {
     AexpList *x = NEW(AexpList);
     x->next = next;
     x->exp = exp;
     return x;
 }
 
-Cexp *newCexp(CexpType type, CexpVal val) {
-    Cexp *x = NEW(Cexp);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
-CexpApply *newCexpApply(Aexp *function, AexpList *args) {
+CexpApply *newCexpApply(Exp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply);
     x->function = function;
     x->args = args;
     return x;
 }
 
-CexpConditional *newCexpConditional(Aexp *condition, Exp *consequent, Exp *alternative) {
+CexpConditional *newCexpConditional(Exp *condition, Exp *consequent, Exp *alternative) {
     CexpConditional *x = NEW(CexpConditional);
     x->condition = condition;
     x->consequent = consequent;
@@ -71,7 +57,7 @@ CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     return x;
 }
 
-LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val) {
+LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Exp *val) {
     LetRecBindings *x = NEW(LetRecBindings);
     x->next = next;
     x->var = var;

@@ -149,29 +149,6 @@ void printAexpVar(AexpVar *x) {
     printf("%s", x->name);
 }
 
-void printAexp(Aexp *x) {
-    switch (x->type) {
-        case AEXP_TYPE_LAM:
-            printAexpLam(x->val.lam);
-            break;
-        case AEXP_TYPE_VAR:
-            printAexpVar(x->val.var);
-            break;
-        case AEXP_TYPE_TRUE:
-            printf("#t");
-            break;
-        case AEXP_TYPE_FALSE:
-            printf("#f");
-            break;
-        case AEXP_TYPE_INT:
-            printf("%d", x->val.integer);
-            break;
-        case AEXP_TYPE_PRIM:
-            printAexpPrimApp(x->val.prim);
-            break;
-    }
-}
-
 void printAexpPrimApp(AexpPrimApp *x) {
     printf("(");
     switch(x->op) {
@@ -195,7 +172,7 @@ void printAexpPrimApp(AexpPrimApp *x) {
 void printAexpList(AexpList *x) {
     printf("(");
     while (x != NULL) {
-        printAexp(x->exp);
+        printExp(x->exp);
         if (x->next) {
             printf(" ");
         }
@@ -204,34 +181,9 @@ void printAexpList(AexpList *x) {
     printf(")");
 }
 
-void printCexp(Cexp *x) {
-    switch (x->type) {
-        case CEXP_TYPE_APPLY:
-            printCexpApply(x->val.apply);
-            break;
-        case CEXP_TYPE_CONDITIONAL:
-            printCexpConditional(x->val.conditional);
-            break;
-        case CEXP_TYPE_CALLCC:
-            printf("(call/cc ");
-            printAexp(x->val.callCC);
-            printf(")");
-            break;
-        case CEXP_TYPE_LETREC:
-            printCexpLetRec(x->val.letRec);
-            break;
-        case CEXP_TYPE_AMB:
-            printCexpAmb(x->val.amb);
-            break;
-        case CEXP_TYPE_BACK:
-            printf("(back)");
-            break;
-    }
-}
-
 void printCexpApply(CexpApply *x) {
     printf("(");
-    printAexp(x->function);
+    printExp(x->function);
     printf(" ");
     printAexpList(x->args);
     printf(")");
@@ -239,7 +191,7 @@ void printCexpApply(CexpApply *x) {
 
 void printCexpConditional(CexpConditional *x) {
     printf("(if ");
-    printAexp(x->condition);
+    printExp(x->condition);
     printf(" ");
     printExp(x->consequent);
     printf(" ");
@@ -261,7 +213,7 @@ void printLetRecBindings(LetRecBindings *x) {
         printf("(");
         printAexpVar(x->var);
         printf(" ");
-        printAexp(x->val);
+        printExp(x->val);
         printf(")");
         if (x->next != NULL) {
             printf(" ");
@@ -281,11 +233,43 @@ void printCexpAmb(CexpAmb *x) {
 
 void printExp(Exp *x) {
     switch (x->type) {
-        case EXP_TYPE_AEXP:
-            printAexp(x->val.aexp);
+        case AEXP_TYPE_LAM:
+            printAexpLam(x->val.aexp.lam);
             break;
-        case EXP_TYPE_CEXP:
-            printCexp(x->val.cexp);
+        case AEXP_TYPE_VAR:
+            printAexpVar(x->val.aexp.var);
+            break;
+        case AEXP_TYPE_TRUE:
+            printf("#t");
+            break;
+        case AEXP_TYPE_FALSE:
+            printf("#f");
+            break;
+        case AEXP_TYPE_INT:
+            printf("%d", x->val.aexp.integer);
+            break;
+        case AEXP_TYPE_PRIM:
+            printAexpPrimApp(x->val.aexp.prim);
+            break;
+        case CEXP_TYPE_APPLY:
+            printCexpApply(x->val.cexp.apply);
+            break;
+        case CEXP_TYPE_CONDITIONAL:
+            printCexpConditional(x->val.cexp.conditional);
+            break;
+        case CEXP_TYPE_CALLCC:
+            printf("(call/cc ");
+            printExp(x->val.cexp.callCC);
+            printf(")");
+            break;
+        case CEXP_TYPE_LETREC:
+            printCexpLetRec(x->val.cexp.letRec);
+            break;
+        case CEXP_TYPE_AMB:
+            printCexpAmb(x->val.cexp.amb);
+            break;
+        case CEXP_TYPE_BACK:
+            printf("(back)");
             break;
         case EXP_TYPE_LET:
             printExpLet(x->val.let);

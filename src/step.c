@@ -43,16 +43,16 @@ void run(Exp *exp) {
     }
 }
 
-static Value *A(Aexp *aexp, Env *env) {
+static Value *A(Exp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
             return newValue(
                 VALUE_TYPE_CLO,
-                VALUE_VAL_CLO(newClo(aexp->val.lam, env))
+                VALUE_VAL_CLO(newClo(aexp->val.aexp.lam, env))
             );
         }
         case AEXP_TYPE_VAR: {
-            return lookUp(aexp->val.var, env);
+            return lookUp(aexp->val.aexp.var, env);
         }
         case AEXP_TYPE_TRUE: {
             return newValue(VALUE_TYPE_TRUE, VALUE_VAL_NONE());
@@ -64,11 +64,13 @@ static Value *A(Aexp *aexp, Env *env) {
         case AEXP_TYPE_INT: {
             return newValue(
                 VALUE_TYPE_INTEGER,
-                VALUE_VAL_INTEGER(aexp->val.integer)
+                VALUE_VAL_INTEGER(aexp->val.aexp.integer)
             );
         }
         case AEXP_TYPE_PRIM: {
-            return (O(aexp->val.prim->op))(mapA(aexp->val.prim->args, env));
+            return (O(aexp->val.aexp.prim->op))(
+                mapA(aexp->val.aexp.prim->args, env)
+            );
         }
     }
 }
@@ -81,78 +83,78 @@ static CEKF *step(CEKF *state) {
     Value *V = state->V;
 
     switch (C->type) {
-        case EXP_TYPE_AEXP: {
-            return applyKont(K, A(C->val.aexp, E), F, V);
+        case AEXP_TYPE_LAM:
+        case AEXP_TYPE_VAR:
+        case AEXP_TYPE_TRUE:
+        case AEXP_TYPE_FALSE:
+        case AEXP_TYPE_INT:
+        case AEXP_TYPE_PRIM: {
+            return applyKont(K, A(C, E), F, V);
         }
-        case EXP_TYPE_CEXP: {
-            Cexp *cexp = C->val.cexp;
-            switch (cexp->type) {
-                case CEXP_TYPE_APPLY: {
-                    CexpApply *apply = cexp->val.apply;
-                    Aexp *function = apply->function;
-                    AexpList *args = apply->args;
-                    Value *proc = A(function, E);
-                    ValueList *values = mapA(args, E);
-                    return applyProc(proc, values, K, F, V);
-                }
-                case CEXP_TYPE_CONDITIONAL: {
-                    CexpConditional *conditional = cexp->val.conditional;
-                    Aexp *condition = conditional->condition;
-                    Exp *consequence;
-                    Value *testResult = A(condition, E);
-                    if (testResult->type == VALUE_TYPE_FALSE) {
-                        consequence = conditional->alternative;
-                    } else {
-                        consequence = conditional->consequent;
-                    }
-                    return newCEKF(consequence, E, K, F, V);
-                }
-                case CEXP_TYPE_CALLCC: {
-                    Aexp *aexp = cexp->val.callCC;
-                    Value *proc = A(aexp, E);
-                    ValueList *args = newValueList(
-                        NULL,
-                        newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K))
-                    );
-                    return applyProc(proc, args, K, F, V);
-                }
-                case CEXP_TYPE_LETREC: {
-                    CexpLetRec *letRec = cexp->val.letRec;
-                    LetRecBindings *bindings = letRec->bindings;
-                    Exp *body = letRec->body;
-                    Env *rho = extendLetRecVoid(E, bindings);
-                    mapLetRecReplace(rho, bindings);
-                    return newCEKF(body, rho, K, F, V);
-                }
-                case CEXP_TYPE_AMB: {
-                    CexpAmb *amb = cexp->val.amb;
-                    Exp *exp1 = amb->exp1;
-                    Exp *exp2 = amb->exp2;
-                    BackTrack *backTrack = newBackTrack(exp2, E, K, F);
-                    return newCEKF(
-                        exp1,
-                        E,
-                        K,
-                        newFail(
-                            FAIL_TYPE_BACKTRACK,
-                            FAIL_VAL_BACKTRACK(backTrack)
-                        ),
-                        V
-                    );
-                }
-                case CEXP_TYPE_BACK: {
-                    if (F->type == FAIL_TYPE_BACKTRACK) {
-                        BackTrack *backTrack = F->val.backTrack;
-                        Exp *exp = backTrack->exp;
-                        Env *rho = backTrack->rho;
-                        Kont *k = backTrack->k;
-                        Fail *f = backTrack->f;
-                        return newCEKF(exp, rho, k, f, V);
-                    } else {
-                        Exp *exp = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
-                        return newCEKF(exp, E, K, F, V);
-                    }
-                }
+        case CEXP_TYPE_APPLY: {
+            CexpApply *apply = C->val.cexp.apply;
+            Exp *function = apply->function;
+            AexpList *args = apply->args;
+            Value *proc = A(function, E);
+            ValueList *values = mapA(args, E);
+            return applyProc(proc, values, K, F, V);
+        }
+        case CEXP_TYPE_CONDITIONAL: {
+            CexpConditional *conditional = C->val.cexp.conditional;
+            Exp *condition = conditional->condition;
+            Exp *consequence;
+            Value *testResult = A(condition, E);
+            if (testResult->type == VALUE_TYPE_FALSE) {
+                consequence = conditional->alternative;
+            } else {
+                consequence = conditional->consequent;
+            }
+            return newCEKF(consequence, E, K, F, V);
+        }
+        case CEXP_TYPE_CALLCC: {
+            Exp *aexp = C->val.cexp.callCC;
+            Value *proc = A(aexp, E);
+            ValueList *args = newValueList(
+                NULL,
+                newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K))
+            );
+            return applyProc(proc, args, K, F, V);
+        }
+        case CEXP_TYPE_LETREC: {
+            CexpLetRec *letRec = C->val.cexp.letRec;
+            LetRecBindings *bindings = letRec->bindings;
+            Exp *body = letRec->body;
+            Env *rho = extendLetRecVoid(E, bindings);
+            mapLetRecReplace(rho, bindings);
+            return newCEKF(body, rho, K, F, V);
+        }
+        case CEXP_TYPE_AMB: {
+            CexpAmb *amb = C->val.cexp.amb;
+            Exp *exp1 = amb->exp1;
+            Exp *exp2 = amb->exp2;
+            BackTrack *backTrack = newBackTrack(exp2, E, K, F);
+            return newCEKF(
+                exp1,
+                E,
+                K,
+                newFail(
+                    FAIL_TYPE_BACKTRACK,
+                    FAIL_VAL_BACKTRACK(backTrack)
+                ),
+                V
+            );
+        }
+        case CEXP_TYPE_BACK: {
+            if (F->type == FAIL_TYPE_BACKTRACK) {
+                BackTrack *backTrack = F->val.backTrack;
+                Exp *exp = backTrack->exp;
+                Env *rho = backTrack->rho;
+                Kont *k = backTrack->k;
+                Fail *f = backTrack->f;
+                return newCEKF(exp, rho, k, f, V);
+            } else {
+                Exp *exp = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
+                return newCEKF(exp, E, K, F, V);
             }
         }
         case EXP_TYPE_LET: {
