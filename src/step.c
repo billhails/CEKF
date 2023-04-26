@@ -26,6 +26,14 @@ static void cant_happen(const char *message);
 
 static CEKF state;
 
+void markCEKF() {
+    markExp(state.C);
+    markEnv(state.E);
+    markKont(state.K);
+    markFail(state.F);
+    markValue(state.V);
+}
+
 static void inject(Exp *exp) {
     state.C = exp;
     state.E = NULL;

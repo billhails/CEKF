@@ -5,4 +5,6 @@
 
 void run(Exp *exp);
 
+void markCEKF();
+
 #endif
