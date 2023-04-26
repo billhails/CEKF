@@ -43,6 +43,6 @@ deps:
 
 profile: all
 	rm -f callgrind.out.*
-	valgrind --tool=callgrind ./cekf ./samples/zoo.lox
+	valgrind --tool=callgrind ./$(TARGET)
 
 # vim: noet,sw=8,tabstop=8
