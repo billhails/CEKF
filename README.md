@@ -12,5 +12,346 @@ Then a type checker (Hindley Milner), and finally a converter to generate the A-
 I'm hoping that I can reproduce the language I once implemented in Python [Here](https://github.com/billhails/PyScheme), but as a standalone
 binary with reasonable performance.
 
-If you want to look around, maybe start by reading the [math](CEKF.pdf) and comparing that with its implementation in [`step.c`](src/step.c),
+If you want to look around, maybe start by reading [the math](#the-math) and comparing that with its implementation in [`step.c`](src/step.c),
 or start at [`main.c`](src/main.c) where you can see it currently constructs some expressions manually, then gives it to the machine to evaluate.
+
+## The Math
+
+This machine is based on the CESK machine: Control, Environment Store and Continuation.
+
+CEKF stands for Control, Environment, Kontinuation and Failure. It omits "Store" from the CESK machine (turning it into a purely functional CEK machine) but then adds "Fail", a backtracking continuation allowing trivial support for `amb` (see [SICP pp. 412-437](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/full-text/book/book-Z-H-28.html#%_sec_4.3))
+
+The rest of this document closely follows Matt Might's blog post [Writing an interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/), slightly amended to describe a CEKF machine.
+
+### The ANF Grammar
+
+Our grammar omits the `set!`, but remember it must still be in A-normal form, and we add `amb` and `back` to `cexp`:
+
+Atomic expressions `aexp` always terminate and never cause an error:
+
+```plaintext
+lam ::= (lambda (var1 ... varN) exp)
+
+aexp ::= lam
+      |  var
+      |  #t  |  #f
+      |  integer
+      |  (prim aexp1 ... aexpN)
+```
+Complex expressions `cexp` might not terminate and might cause an error:
+
+```plaintext
+cexp ::= (aexp0 aexp1 ... aexpN)
+      |  (if aexp exp exp)
+      |  (call/cc aexp)
+      |  (letrec ((var1 aexp1) ... (varN aexpN)) exp)
+      |  (amb exp exp)
+      |  (back)
+```
+
+Expressions `exp` are atomic, complex , `let` bound, or the terminating `DONE`.
+
+```plaintext
+exp ::= aexp
+     |  cexp
+     |  (let ((var exp)) exp)
+     |  DONE
+```
+Primitives are built-in:
+```plaintext
+prim ::=   +  |  -  |  *  |  =
+```
+
+### CEKF State
+
+We reduce the CESK state machine from four registers to three by removing $Store$, then expand it back to four by adding $Fail$:
+
+$$
+\varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail \times Value
+$$
+
+The fifth, $Value$ register may not be necessary eventually, but I've included it as the place to put a value that would otherwise be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
+
+### Env
+
+Environments directly map variables to values:
+
+$$
+\rho \in Env = Var \rightharpoonup Value
+$$
+
+### Values
+
+Values are the same as CESK:
+
+$$
+val \in Value ::= \mathbf{void}
+\\;|\\;
+z
+\\;|\\;
+\mathbf{\\#t}
+\\;|\\;
+\mathbf{\\#f}
+\\;|\\;
+\mathbf{clo}(\mathtt{lam}, \rho)
+\\;|\\;
+\mathbf{cont}(\kappa)
+$$
+
+$z$ is an integer, $\mathbf{cont}$ is part of $Value$ because we support `call/cc`.
+
+### Continuations
+
+$$
+\kappa \in Kont ::= \mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa) \\;|\\; \mathbf{halt}
+$$
+
+e.g. when evaluating `exp` in `(let ((var exp)) body)` , the continuation of that evaluation is as in the `letk` above.
+
+### Failure Continuation
+
+$$
+f \in Fail ::= \mathbf{backtrack}(\mathtt{exp}, \rho, \kappa, f)\\;|\\;\mathbf{end}
+$$
+
+$\mathbf{end}$ is the failure continuation's equivalent to $\mathbf{halt}$. $\mathtt{exp}$ is the (unevaluated) second `exp` of the `amb`, $\rho$, $\kappa$ and $f$ are the values current when the `amb` was first evaluated.
+
+## `aexp` evaluation
+
+`aexp` are evaluated with an auxiliary function $\mathcal{A}$, simplified because there is no store:
+
+$$
+\mathcal{A} : \mathtt{aexp} \times Env \rightharpoonup Value
+$$
+
+Variables get looked up in the environment:
+
+$$
+\begin{align}
+\mathcal{A} (\mathtt{var}, \rho) &= \rho(\mathtt{var})
+\end{align}
+$$
+
+Constants evaluate to their value equivalents:
+
+$$
+\begin{align}
+\mathcal{A}(\mathtt{integer}, \rho) &= z
+\\
+\mathcal{A}( \mathtt{\\#t}, \rho) &=  \mathbf{\\#t}
+\\
+\mathcal{A}( \mathtt{\\#f}, \rho) &=  \mathbf{\\#f}
+\end{align}
+$$
+
+Lambdas become closures:
+
+$$
+\begin{align}
+\mathcal{A}(\mathtt{lam}, \rho) &= \mathbf{clo}(\mathtt{lam}, \rho)
+\end{align}
+$$
+
+Primitive expressions are evaluated recursively:
+
+$$
+\begin{align}
+\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) &= \mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho)\dots\mathcal{A}(\mathtt{aexp_n},\rho))
+\end{align}
+$$
+
+where
+
+$$
+\mathcal{O}(\mathtt{prim}) = (Value^* \rightharpoonup Value)
+$$
+
+maps a primitive to its corresponding operation.
+
+## The `step` function
+
+`step` goes from one state to the next.
+
+$$
+step: \Sigma \rightharpoonup \Sigma
+$$
+
+### `step` for function calls
+
+For ~~procedure~~ function calls, `step` first evaluates the function, then the arguments, then it applies the function:
+
+$$
+\begin{align}
+step(\mathtt{(aexp_0\ aexp_1\dots aexp_n)}, \rho, \kappa, f, r) &= applyproc(proc,\langle val_1,\dots val_n\rangle, \kappa, f, r)
+\end{align}
+$$
+
+where
+
+$$
+\begin{align}
+proc &= \mathcal{A}(\mathtt{aexp_0}, \rho)
+\\
+val_i &= \mathcal{A}(\mathtt{aexp_i}, \rho)
+\end{align}
+$$
+
+$applyproc$ (defined later) doesn't need an Env ($\rho$) because it uses the one in the procedure
+(remember $\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$).
+
+### Return
+
+When the expression under evaluation is an `aexp`, that means we need to return it to the continuation:
+
+$$
+\begin{align}
+step(\mathtt{aexp}, \rho, \kappa, f, r) &= applykont(\kappa, \mathcal{A}(\mathtt{aexp}, \rho), f, r)
+\end{align}
+$$
+
+where
+
+$$
+applykont: Kont \times Value \times Fail \times Value \rightharpoonup \Sigma
+$$
+
+is defined below.
+
+### Conditionals
+
+$$
+\begin{align}
+step(\mathtt{(if\ aexp\ e_{true}\ e_{false})},\rho,\kappa,f, r) &= \left\\{
+\begin{array}{ll}
+(\mathtt{e_{false}},\rho,\kappa,f,r) & \mathcal{A}(\mathtt{aexp},\rho) = \\#f
+\\
+(\mathtt{e_{true}},\rho,\kappa,f,r) & \textup{otherwise}
+\end{array}
+\right.
+\end{align}
+$$
+
+We might want to come back and revise this once we have stricter types.
+
+### Let
+
+Evaluating `let` forces the creation of a continuation
+
+$$
+\begin{align}
+step(\mathtt{(let\ (var\ exp)\ body)},\rho,\kappa,f,r) = (\mathtt{exp}, \rho, \kappa',f,r)
+\end{align}
+$$
+
+where
+
+$$
+\begin{align}
+\kappa' &= \mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa)
+\end{align}
+$$
+
+### Recursion
+
+In CESK, `letrec` is done by extending the environment to point at fresh store locations, then evaluating the expressions in the extended environment, then assigning the values in the store.
+
+Even then this only works if the computed values are closures, they can't actually *use* the values before they are assigned.
+
+I'm thinking that in CEK, for `letrec` only, we allow assignment into the Env (treating it like a store) because we're not bound by functional constraints if we're eventually implementing in C. We couldn't directly convert this to Haskell though.
+
+$$
+\begin{align}
+step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f,r) &= (\mathtt{body}, \rho', \kappa, f, r)
+\end{align}
+$$
+
+where:
+
+$$
+\begin{align}
+\rho' = \rho[\mathtt{var_i} \Rightarrow \mathbf{void}]
+\end{align}
+$$
+
+but subsequently mutated with
+
+$$
+\begin{align}
+\rho'[\mathtt{var_i}] \Leftarrow \mathcal{A}(\mathtt{aexp_i}, \rho')
+\end{align}
+$$
+
+### First class continuations
+
+`call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a function) as its only argument:
+
+$$
+\begin{align}
+step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f, r) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f, r)
+\end{align}
+$$
+
+### Amb
+
+`amb` arranges the next state such that its first argument will be evaluated, and additionally installs
+a new Fail continuation that, if backtracked to, will resume computation from the same state, except evaluating the second argument.
+
+$$
+\begin{align}
+step(\mathtt{(amb\ exp_1\ exp_2)}, \rho, \kappa, f, r) &= (\mathtt{exp_1}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp_2}, \rho, \kappa, f), r)
+\end{align}
+$$
+
+### Back
+
+`back` invokes the failure continuation, restoring the state captured by `amb`.
+
+$$
+\begin{align}
+step(\mathtt{(back)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp}, \rho', \kappa', f), r) &= (\mathtt{exp}, \rho', \kappa', f, r)
+\\
+step(\mathtt{(back)}, \rho, \kappa, \mathbf{end}, r) &= (\mathtt{DONE}, \rho, \mathbf{halt}, \mathbf{end}, r)
+\end{align}
+$$
+
+The `DONE` Exp signals termination.
+
+### Applying procedures
+
+$$
+applyproc : Value \times Value^* \times Kont \times Fail \times Value \rightharpoonup \Sigma
+$$
+
+$$
+\begin{align}
+applyproc( \mathbf{clo} (\mathtt{(lambda\ (var_1\dots var_n)\ body)}, \rho),\langle val_1\dots val_n\rangle, \kappa, f, r) =
+(\mathtt{body}, \rho', \kappa, f, r)
+\end{align}
+$$
+
+where
+
+$$
+\begin{align}
+\rho' = \rho[\mathtt{var_i} \Rightarrow val_i]
+\end{align}
+$$
+
+### Applying continuations
+
+$$
+applykont : Kont \times Value \times Fail \times Value \rightharpoonup \Sigma
+$$
+
+$$
+\begin{align}
+applykont(\mathbf{letk}(\mathtt{v}, \mathtt{body}, \rho, \kappa), val, f, r) &= (\mathtt{body}, \rho[\mathtt{v} \Rightarrow val], \kappa, f, r)
+\\
+applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, \rho, \mathbf{halt}, \mathbf{end}, val)
+\end{align}
+$$
+
+Q. Should $applycont$ get $f$ from its arguments or should we put it in the $\mathbf{letk}$?
+A. probably best to get it from its arguments, then we will backtrack through `call/cc`.
+
+Note again that `DONE` terminates the machine. Also note that this is the only situation where the fifth $r$ register is updated with the $val$ to be returned from the machine.
