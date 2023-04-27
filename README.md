@@ -409,3 +409,37 @@ Q. Should $applykont$ get $f$ from its arguments or should we put it in the $\ma
 A. probably best to get it from its arguments, then we will backtrack through `call/cc`.
 
 Note again that `DONE` terminates the machine. Also note that this is the only situation where the fifth $r$ register is updated with the $val$ to be returned from the machine.
+
+## Running the machine
+
+We need an $inject$ function that takes an expression and creates an initial state:
+
+$$
+inject : \mathtt{Exp} \rightharpoonup \Sigma
+$$
+
+specifically
+
+$$
+inject(\mathtt{Exp}) = (\mathtt{Exp}, [], \mathbf{halt}, \mathbf{end}, \mathbf{void})
+$$
+
+where $[]$ is an initial empty environment.
+
+Then a $run$ function repeatedly invokes the $step$ function until `DONE`:
+
+$$
+run : \Sigma \rightharpoonup Value
+$$
+
+which is just:
+
+$$
+\begin{align}
+run(\mathtt{DONE}, \rho, \kappa, f, r) &= r
+\\
+run(\mathtt{Exp}, \rho, \kappa, f, r) &= run(step(\mathtt{Exp}, \rho, \kappa, f, r))
+\end{align}
+$$
+
+where $\mathtt{Exp}$ is anything other than $\mathtt{DONE}$.
