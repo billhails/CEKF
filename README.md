@@ -3,7 +3,7 @@ Low level (C) implementation of a CEK machine with an additional "F" failure con
 
 This is heavily based on a blog post by Matt Might [Writing an interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/).
 
-I tasked myself with learning enough Haskell to bridge the gap between the math and real code, and then implemented in C.
+I taught myself enough Haskell to bridge the gap between the math and real code, and then implemented in C.
 
 Currently there is only an A-Normal syntax tree with constructors, the CEKF machine itself which can evaluate those trees,
 and a basic mark & sweep garbage collector. I plan to follow up with a better hashtable based environment, a lexer/parser
@@ -90,16 +90,18 @@ prim ::=   +  |  -  |  *  |  =
 
 ### CEKF State
 
-We reduce the CESK state machine from four registers to three by removing $Store$, then expand it back to four by adding $Fail$:
+We reduce the CESK state machine from four registers to three by removing $Store$, then expand it to five by adding $Fail$ and $Value$:
 
 $$
 \varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail \times Value
 $$
 
-So we'll use $\Sigma$ to denote the set of CEKF states, which are tuples of four registers: `Exp`, $Env$, $Kont$ and $fail$.
+So we'll use $\Sigma$ to denote the set of CEKF states, which are tuples of five registers: `Exp`, $Env$, $Kont$, $Fail$ and $Value$.
 $\varsigma$ is the symbol we'll use for individual elements of this set (states).
 
-The fifth, $Value$ register may not be necessary eventually, but I've included it as the place to put a value that would otherwise be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
+The fifth, $Value$ register may not be necessary eventually, but I've included it as the place to put a value that would otherwise
+be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would
+likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
 
 ### Env
 
@@ -143,7 +145,8 @@ $$
 f \in Fail ::= \mathbf{backtrack}(\mathtt{exp}, \rho, \kappa, f)\\;|\\;\mathbf{end}
 $$
 
-$\mathbf{end}$ is the failure continuation's equivalent to $\mathbf{halt}$. $\mathtt{exp}$ is the (unevaluated) second `exp` of the `amb`, $\rho$, $\kappa$ and $f$ are the values current when the `amb` was first evaluated.
+$\mathbf{end}$ is the failure continuation's equivalent to $\mathbf{halt}$. $\mathtt{exp}$ is the (unevaluated) second
+`exp` of the `amb`, $\rho$, $\kappa$ and $f$ are the values current when the `amb` was first evaluated.
 
 ## `aexp` evaluation
 
@@ -185,7 +188,8 @@ Primitive expressions are evaluated recursively:
 
 $$
 \begin{align}
-\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) &= \mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho)\dots\mathcal{A}(\mathtt{aexp_n},\rho))
+\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) &=
+\mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho)\dots\mathcal{A}(\mathtt{aexp_n},\rho))
 \end{align}
 $$
 
@@ -282,11 +286,13 @@ $$
 
 ### Recursion
 
-In CESK, `letrec` is done by extending the environment to point at fresh store locations, then evaluating the expressions in the extended environment, then assigning the values in the store.
+In CESK, `letrec` is done by extending the environment to point at fresh store locations, then evaluating the expressions
+in the extended environment, then assigning the values in the store.
 
 Even then this only works if the computed values are closures, they can't actually *use* the values before they are assigned.
 
-I'm thinking that in CEK, for `letrec` only, we allow assignment into the Env (treating it like a store) because we're not bound by functional constraints if we're eventually implementing in C. We couldn't directly convert this to Haskell though.
+I'm thinking that in CEK, for `letrec` only, we allow assignment into the Env (treating it like a store) because we're not
+bound by functional constraints if we're eventually implementing in C. We couldn't write this in Haskell though.
 
 $$
 \begin{align}
