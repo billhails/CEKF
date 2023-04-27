@@ -440,10 +440,18 @@ which is just:
 
 $$
 \begin{align}
-run(\mathtt{DONE}, \rho, \kappa, f, r) &= r
+run(\mathtt{Exp}, \rho, \kappa, f, r) &= \left\\{
+\begin{array}{ll}
+r & \mathtt{Exp} = \mathtt{DONE}
 \\
-run(\mathtt{Exp}, \rho, \kappa, f, r) &= run(step(\mathtt{Exp}, \rho, \kappa, f, r))
+run(step(\mathtt{Exp}, \rho, \kappa, f, r)) & \textup{otherwise}
+\end{array}
+\right.
 \end{align}
 $$
 
-where $\mathtt{Exp}$ is anything other than $\mathtt{DONE}$.
+Putting it all together:
+
+$$
+run(inject(\mathtt{Exp})) \rightharpoonup Value
+$$
