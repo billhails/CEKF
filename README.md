@@ -49,7 +49,7 @@ allowing trivial support for `amb`.
 
 The rest of this document closely follows Matt Might's blog post, slightly amended to describe a CEKF machine.
 
-### The ANF Grammar
+### Expressions `Exp` to be Evaluated
 
 Our grammar omits the `set!`, but remember it must still be in A-normal form, and we add `amb` and `back` to `cexp`:
 
