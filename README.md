@@ -239,8 +239,8 @@ val_i &= \mathcal{A}(\mathtt{aexp_i}, \rho)
 \end{align}
 $$
 
-$applyproc$ (defined later) doesn't need an Env ($\rho$) because it uses the one in the procedure
-(remember $\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$).
+$applyproc$ (defined later) doesn't need an Env ($\rho$) because it uses the one in the procedure produced by
+$\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$.
 
 ### Return
 
