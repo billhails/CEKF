@@ -115,7 +115,7 @@ $$
 $$
 
 Again you can read this as: $Env$ is the type (set of all environments), $\rho$ is an element of that set (a specific environment) and
-Environments are functions that take a variable and retrn a value.
+Environments are functions that take a variable and return a value.
 
 ### Values
 
