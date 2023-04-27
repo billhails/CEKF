@@ -101,7 +101,7 @@ $\varsigma$ is the symbol we'll use for individual elements of this set (states)
 are effectively two domains, the expressions being evaluated and the rest of the machine. To distinguish, the types of $\mathtt{Exp}$
 are set in fixed width.
 
-The fifth, $Value$ register doesn't appear in the name CEKF because it may not be necessary eventually, but I've included it as the
+The fifth, $Value$ register doesn't appear in the name CEKF because it may not be necessary eventually. I've included it as the
 place to put the final result value that would otherwise
 be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would
 likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
