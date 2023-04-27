@@ -368,7 +368,7 @@ $$
 step(\mathtt{DONE}, \rho, \kappa, f, r) = \varnothing
 $$
 
-terminates the machine.
+terminates the machine, effectively it's undefined for $step$ to be given this argument.
 
 ### Applying procedures
 
@@ -412,6 +412,8 @@ Note again that `DONE` terminates the machine. Also note that this is the only s
 
 ## Running the machine
 
+### inject
+
 We need an $inject$ function that takes an expression and creates an initial state:
 
 $$
@@ -426,7 +428,9 @@ $$
 
 where $[]$ is an initial empty environment.
 
-Then a $run$ function repeatedly invokes the $step$ function until `DONE`:
+### run
+
+The $run$ function repeatedly invokes the $step$ function until `DONE`:
 
 $$
 run : \Sigma \rightharpoonup Value
