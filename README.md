@@ -28,7 +28,7 @@ Mostly that additional continuation goes un-noticed, except in two specific case
 
 1. `amb` is invoked with two (unevaluated) arguments. It arranges to have it's first argument evaluated, and additionally installs a new
    failure continuation that will, if invoked, restore the state of the machine to the point just after `amb` was invoked, but with the second
-   argument to `amb` ready to be evaluated.
+   argument to `amb` ready to be evaluated instead.
 2. `back`, if invoked, restores the most recent state installed by `amb`, "backtracking" to the decision point and allowing the alternative to be
    produced.
    
