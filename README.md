@@ -96,13 +96,13 @@ $$
 \varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail \times Value
 $$
 
-So we'll use $\Sigma$ to denote the set of CEKF states, which are tuples of five registers: $\mathtt{Exp}$, $Env$, $Kont$, $Fail$ and $Value$.
+So we'll use $\Sigma$ to denote the set (type) of CEKF states, which are tuples of five registers: $\mathtt{Exp}$, $Env$, $Kont$, $Fail$ and $Value$.
 $\varsigma$ is the symbol we'll use for individual elements of this set (states). Pay close attention to the typesetting here, there
 are effectively two domains, the expressions being evaluated and the rest of the machine. To distinguish, the types of $\mathtt{Exp}$
 are set in fixed width.
 
 The fifth, $Value$ register doesn't appear in the name CEKF because it may not be necessary eventually. I've included it as the
-place to put the final result value that would otherwise
+place to put the final result that would otherwise
 be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would
 likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
 
