@@ -95,6 +95,9 @@ $$
 \varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail \times Value
 $$
 
+So we'll use $\Sigma$ to denote the set of CEKF states, which are tuples of four registers: `Exp`, $Env$, $Kont$ and $fail$.
+$\varsigma$ is the symbol we'll use for individual elements of this set (states).
+
 The fifth, $Value$ register may not be necessary eventually, but I've included it as the place to put a value that would otherwise be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
 
 ### Env
