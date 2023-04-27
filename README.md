@@ -105,7 +105,7 @@ are set in fixed width.
 The fifth, $Value$ register doesn't appear in the name CEKF because it may not be necessary eventually. I've included it as the
 place to put the final result that would otherwise
 be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would
-likely be implemented within the machine it may eventually be removed but for now it makes testing easier during implementation.
+likely be implemented *within* the machine $Value$ may eventually be removed but for now it makes testing easier during implementation.
 
 ### Env
 
