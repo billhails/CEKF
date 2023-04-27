@@ -306,7 +306,7 @@ bound by functional constraints if we're eventually implementing in C. We couldn
 
 $$
 \begin{align}
-step(\mathtt{(letrec\ ((var_1\ lam_1)\dots(var_n\ lam_n))\ body)}, \rho, \kappa, f,r) &= (\mathtt{body}, \rho', \kappa, f, r)
+step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f,r) &= (\mathtt{body}, \rho', \kappa, f, r)
 \end{align}
 $$
 
@@ -322,7 +322,7 @@ but subsequently mutated with
 
 $$
 \begin{align}
-\rho'[\mathtt{var_i}] \Leftarrow \mathcal{A}(\mathtt{lam_i}, \rho')
+\rho'[\mathtt{var_i}] \Leftarrow \mathcal{A}(\mathtt{aexp_i}, \rho')
 \end{align}
 $$
 
