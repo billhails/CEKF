@@ -14,7 +14,7 @@ I'm hoping that I can reproduce [the F♮ language I once implemented in Python]
 binary with reasonable performance. It's not a stack-based VM so it'll never be super fast but it should be ok.
 
 If you want to look around, maybe start by reading [the math](#the-math) and comparing that with its implementation in [`step.c`](src/step.c),
-or start at [`main.c`](src/main.c) where you can see it currently constructs some expressions manually, then gives it to the machine to evaluate.
+or start at [`main.c`](src/main.c) where you can see it currently constructs some expressions manually, then gives them to the machine to evaluate.
 
 ### An aside on `amb`
 I should probably give at least a brief explaination of `amb` here, since it's somewhat the point of this little project. `amb` is short for
