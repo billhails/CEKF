@@ -111,6 +111,9 @@ $$
 \rho \in Env = Var \rightharpoonup Value
 $$
 
+Again you can read this as: $Env$ is the type (set of all environments), $\rho$ is an element of that set (a specific environment) and
+Environments are functions that take a variable and retrn a value.
+
 ### Values
 
 Values are the same as CESK:
@@ -129,7 +132,9 @@ z
 \mathbf{cont}(\kappa)
 $$
 
-$z$ is an integer, $\mathbf{cont}$ is part of $Value$ because we support `call/cc`.
+$\mathbf{void}$ is the `NULL` equivalent, $z$ is an integer, $\mathbf{\\#t}$ and $\mathbf{\\#f}$ are booleans, $\mathbf{clo}$ is a closure
+of a lambda over an environment, and $\mathbf{cont}$ is a continuation expressed as a value. $\mathbf{cont}$ is part of $Value$ because we
+support `call/cc`.
 
 ### Continuations
 
@@ -137,7 +142,9 @@ $$
 \kappa \in Kont ::= \mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa) \\;|\\; \mathbf{halt}
 $$
 
-e.g. when evaluating `exp` in `(let ((var exp)) body)` , the continuation of that evaluation is as in the `letk` above.
+e.g. when evaluating `exp` in `(let ((var exp)) body)` the continuation of that evaluation is as in the `letk` above. It turns out that
+when evaluating ANF the only construct that requires a new continuation is when evaluating the `exp` part of such a `let`, hence the name
+$\mathbf{letk}$.
 
 ### Failure Continuation
 
@@ -386,7 +393,7 @@ applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, \rho, \mathbf{halt}, \mat
 \end{align}
 $$
 
-Q. Should $applycont$ get $f$ from its arguments or should we put it in the $\mathbf{letk}$?
+Q. Should $applykont$ get $f$ from its arguments or should we put it in the $\mathbf{letk}$?<br/>
 A. probably best to get it from its arguments, then we will backtrack through `call/cc`.
 
 Note again that `DONE` terminates the machine. Also note that this is the only situation where the fifth $r$ register is updated with the $val$ to be returned from the machine.
