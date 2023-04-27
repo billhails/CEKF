@@ -51,7 +51,7 @@ The rest of this document closely follows Matt Might's blog post, slightly amend
 
 ### Expressions `Exp` to be Evaluated
 
-Our grammar omits the `set!`, but remember it must still be in A-normal form, and we add `amb` and `back` to `cexp`:
+Our grammar is still in A-Normal form. It omits the `set!`, and adds `amb` and `back` to `cexp`:
 
 Atomic expressions `aexp` always terminate and never cause an error:
 
