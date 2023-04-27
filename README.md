@@ -47,9 +47,7 @@ showed how to handle multiple data types and primitive functions. I reduced that
 CEKF stands for Control, Environment, Kontinuation and Failure. It adds a "Fail" register, a backtracking continuation
 allowing trivial support for `amb`.
 
-The rest of this document closely follows Matt Might's blog post
-[Writing an interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/),
-slightly amended to describe a CEKF machine.
+The rest of this document closely follows Matt Might's blog post, slightly amended to describe a CEKF machine.
 
 ### The ANF Grammar
 
