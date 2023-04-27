@@ -112,7 +112,7 @@ likely be implemented within the machine it may eventually be removed but for no
 Environments directly map variables to values:
 
 $$
-\rho \in Env = Var \rightharpoonup Value
+\rho \in Env = \mathtt{var} \rightharpoonup Value
 $$
 
 Again you can read this as: $Env$ is the type (set of all environments), $\rho$ is an element of that set (a specific environment) and
