@@ -356,11 +356,19 @@ $$
 \begin{align}
 step(\mathtt{(back)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp}, \rho', \kappa', f), r) &= (\mathtt{exp}, \rho', \kappa', f, r)
 \\
-step(\mathtt{(back)}, \rho, \kappa, \mathbf{end}, r) &= (\mathtt{DONE}, \rho, \mathbf{halt}, \mathbf{end}, r)
+step(\mathtt{(back)}, \rho, \kappa, \mathbf{end}, r) &= (\mathtt{DONE}, \rho, \kappa, \mathbf{end}, r)
 \end{align}
 $$
 
 The `DONE` Exp signals termination.
+
+### DONE
+
+$$
+step(\mathtt{DONE}, \rho, \kappa, f, r) = \varnothing
+$$
+
+terminates the machine.
 
 ### Applying procedures
 
@@ -393,7 +401,7 @@ $$
 \begin{align}
 applykont(\mathbf{letk}(\mathtt{v}, \mathtt{body}, \rho, \kappa), val, f, r) &= (\mathtt{body}, \rho[\mathtt{v} \Rightarrow val], \kappa, f, r)
 \\
-applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, \rho, \mathbf{halt}, \mathbf{end}, val)
+applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, [], \mathbf{halt}, f, val)
 \end{align}
 $$
 
