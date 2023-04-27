@@ -22,7 +22,7 @@ I should probably give at least a brief explaination of `amb` here, since it's s
 
 If you have a continuation passing style interpreter, then all control flow, both call and return, is always "forwards"
 by calling a function (call) or calling a continuation (return). It then becomes possible to thread an additional "failure" continuation
-as a sort of hidden argument thtough all those calls.
+as a sort of hidden argument through all those calls.
 
 Mostly that additional continuation goes un-noticed, except in two specific cases:
 
