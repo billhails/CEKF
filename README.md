@@ -31,9 +31,12 @@ Mostly that additional continuation goes un-noticed, except in two specific case
    argument to `amb` ready to be evaluated.
 2. `back`, if invoked, restores the most recent state installed by `amb`, "backtracking" to the decision point and allowing the alternative to be
    produced.
+   
+For all the details see
+[SICP pp. 412-437](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/full-text/book/book-Z-H-28.html#%_sec_4.3).
 
 What makes a CEK machine such an easy way to implement `amb` is that the failure continuation is just an additional register, nothing else in
-the CEK machine needs to change, apart from cases to deal with `amb` and `back`.
+the CEK machine needs to change, apart from two additional cases in the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ## The Math
 
@@ -42,9 +45,7 @@ includes an additional S for "Store" register which allows mutation. I actually 
 showed how to handle multiple data types and primitive functions. I reduced that to a CEK machine as a preliminary.
 
 CEKF stands for Control, Environment, Kontinuation and Failure. It adds a "Fail" register, a backtracking continuation
-allowing trivial support for `amb`
-(see [SICP pp. 412-437](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/full-text/book/book-Z-H-28.html#%_sec_4.3))
-
+allowing trivial support for `amb`.
 
 The rest of this document closely follows Matt Might's blog post
 [Writing an interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/),
