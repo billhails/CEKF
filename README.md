@@ -301,7 +301,7 @@ in the extended environment, then assigning the values in the store.
 
 Even then this only works if the computed values are closures, they can't actually *use* the values before they are assigned.
 
-I'm thinking that in CEK, for `letrec` only, we allow assignment into the Env (treating it like a store) because we're not
+I'm thinking that in CEKF, for `letrec` only, we allow assignment into the Env (treating it like a store) because we're not
 bound by functional constraints if we're eventually implementing in C. We couldn't write this in Haskell though.
 
 $$
