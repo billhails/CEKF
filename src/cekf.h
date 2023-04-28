@@ -36,14 +36,14 @@ typedef struct {
 } CEKF;
 
 typedef struct Env {
-    Header header;
+    struct Header header;
     struct Env *next;
     struct AexpVar *var;
     struct Value *val;
 } Env;
 
 typedef struct Kont {
-    Header header;
+    struct Header header;
     struct AexpVar *var;
     struct Exp *body;
     struct Env *rho;
@@ -67,13 +67,13 @@ typedef union {
 } ValueVal;
 
 typedef struct Value {
-    Header header;
+    struct Header header;
     ValueType type;
     ValueVal val;
 } Value;
 
 typedef struct ValueList {
-    Header header;
+    struct Header header;
     struct ValueList *next;
     struct Value *value;
 } ValueList;
@@ -84,14 +84,14 @@ typedef struct ValueList {
 #define VALUE_VAL_NONE()     ((ValueVal){.none = NULL})
 
 typedef struct Clo {
-    Header header;
+    struct Header header;
     struct AexpLam *lam;
     struct Env *rho;
 } Clo;
 
 
 typedef struct Fail {
-    Header header;
+    struct Header header;
     struct Exp *exp;
     struct Env *rho;
     struct Kont *k;

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "exp.h"
+#include "hash.h"
 #include "memory.h"
 
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
@@ -35,7 +36,7 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
 AexpVar *newAexpVar(char *name) {
     AexpVar *x = NEW(AexpVar, OBJTYPE_VAR);
     x->name = name;
-    x->hash = hash(name);
+    x->hash = hashString(name);
     return x;
 }
 

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "debug.h"
 
@@ -273,7 +274,8 @@ void printExp(Exp *x) {
             printf("<DONE>");
             break;
         default:
-            printf("<unrecognised exp>");
+            printf("<unrecognised exp %d>", x->type);
+            exit(1);
     }
 }
 

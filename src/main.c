@@ -17,9 +17,12 @@
  */
 #include <stdbool.h>
 
+#include "common.h"
 #include "exp.h"
 #include "memory.h"
 #include "step.h"
+
+#ifdef DEBUG_RUN_TESTS
 
 Exp *makeIntExp(int num) {
     return newExp(AEXP_TYPE_INT, AEXP_VAL_INT(num));
@@ -129,3 +132,10 @@ int main(int argc, char *argv[]) {
     Exp *exp = makeTestExp2();
     run(exp);
 }
+
+#else
+
+int main(int argc, char *argv[]) {
+}
+
+#endif

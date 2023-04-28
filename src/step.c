@@ -72,7 +72,10 @@ static Value *A(Exp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
             Clo *clo = newClo(aexp->val.aexp.lam, env);
-            return newValue( VALUE_TYPE_CLO, VALUE_VAL_CLO(clo));
+            int save = PROTECT(clo);
+            Value *value = newValue( VALUE_TYPE_CLO, VALUE_VAL_CLO(clo));
+            UNPROTECT(save);
+            return value;
         }
         case AEXP_TYPE_VAR: {
             return lookUp(aexp->val.aexp.var, env);
@@ -104,6 +107,11 @@ static void step() {
     Kont *K = state.K;
     Fail *F = state.F;
     Value *V = state.V;
+    int topSave = PROTECT(C);
+    PROTECT(E);
+    PROTECT(K);
+    PROTECT(F);
+    PROTECT(V);
 
     switch (C->type) {
         case AEXP_TYPE_LAM:
@@ -112,7 +120,10 @@ static void step() {
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
         case AEXP_TYPE_PRIM: {
-            applyKont(A(C, E));
+            Value *val = A(C, E);
+            int save = PROTECT(val);
+            applyKont(val);
+            UNPROTECT(save);
         }
         break;
         case CEXP_TYPE_APPLY: {
@@ -120,8 +131,11 @@ static void step() {
             Exp *function = apply->function;
             AexpList *args = apply->args;
             Value *proc = A(function, E);
+            int save = PROTECT(proc);
             ValueList *values = mapA(args, E);
+            PROTECT(values);
             applyProc(proc, values);
+            UNPROTECT(save);
         }
         break;
         case CEXP_TYPE_COND: {
@@ -138,9 +152,13 @@ static void step() {
         case CEXP_TYPE_CALLCC: {
             Exp *aexp = C->val.cexp.callCC;
             Value *proc = A(aexp, E);
+            int save = PROTECT(proc);
             Value *val = newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K));
+            PROTECT(val);
             ValueList *args = newValueList(NULL, val);
+            PROTECT(args);
             applyProc(proc, args);
+            UNPROTECT(save);
         }
         break;
         case CEXP_TYPE_LETREC: {
@@ -178,6 +196,7 @@ static void step() {
         }
         break;
     }
+    UNPROTECT(topSave);
 }
 
 static Value *add(ValueList *list) {
@@ -284,14 +303,20 @@ static ValueList *mapA(AexpList *args, Env *env) {
     }
 
     ValueList *list = mapA(args->next, env);
+    int save = PROTECT(list);
     Value *val = A(args->exp, env);
+    PROTECT(val);
 
-    return newValueList(list, val);
+    ValueList *parent = newValueList(list, val);
+    UNPROTECT(save);
+    return parent;
 }
 
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals) {
     while (vars != NULL && vals != NULL) {
+        int save = PROTECT(env);
         env = newEnv(env, vars->var, vals->value);
+        UNPROTECT(save);
         vars = vars->next;
         vals = vals->next;
     }
@@ -305,9 +330,13 @@ static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings) {
     }
 
     Env *next = extendLetRecVoid(env, bindings->next);
+    int save = PROTECT(next);
     Value *val = newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE());
+    PROTECT(val);
 
-    return newEnv(next, bindings->var, val);
+    Env *parent = newEnv(next, bindings->var, val);
+    UNPROTECT(save);
+    return parent;
 }
 
 static void replaceInEnv(Env *env, AexpVar *var, Value *val) {

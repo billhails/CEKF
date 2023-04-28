@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "common.h"
 #include "memory.h"
 #include "step.h"
 
@@ -32,7 +33,62 @@ static Header *protected[MAX_PROTECTION];
 static int protectedIndex = 0;
 static Header *allocated = NULL;
 
+#ifdef DEBUG_LOG_GC
+const char *typeName(ObjType type) {
+    switch (type) {
+        case OBJTYPE_AMB:
+            return "amb";
+        case OBJTYPE_APPLY:
+            return "apply";
+        case OBJTYPE_BINDINGS:
+            return "bindings";
+        case OBJTYPE_COND:
+            return "cond";
+        case OBJTYPE_EXP:
+            return "exp";
+        case OBJTYPE_EXPLIST:
+            return "explist";
+        case OBJTYPE_LAM:
+            return "lam";
+        case OBJTYPE_LET:
+            return "let";
+        case OBJTYPE_LETREC:
+            return "letrec";
+        case OBJTYPE_PRIMAPP:
+            return "primapp";
+        case OBJTYPE_VAR:
+            return "var";
+        case OBJTYPE_VARLIST:
+            return "varlist";
+        case OBJTYPE_CLO:
+            return "clo";
+        case OBJTYPE_ENV:
+            return "env";
+        case OBJTYPE_FAIL:
+            return "fail";
+        case OBJTYPE_KONT:
+            return "kont";
+        case OBJTYPE_VALUE:
+            return "value";
+        case OBJTYPE_VALUELIST:
+            return "valuelist";
+        case OBJTYPE_HASHTABLE:
+            return "hashtable";
+        default:
+            return "???";
+    }
+}
+#endif
+
 int protect(Header *obj) {
+#ifdef DEBUG_LOG_GC
+    fprintf(
+        stderr,
+        "PROTECT(%s) -> %d\n",
+        (obj == NULL ? "NULL" : typeName(obj->type)),
+        protectedIndex
+    );
+#endif
     if (obj == NULL) return protectedIndex;
 
     if (protectedIndex == MAX_PROTECTION) {
@@ -45,6 +101,9 @@ int protect(Header *obj) {
 }
 
 void unProtect(int index) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "UNPROTECT(%d)\n", index);
+#endif
     protectedIndex = index;
 }
 
@@ -54,10 +113,11 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
         collectGarbage();
-#endif
+#else
         if (bytesAllocated > nextGC) {
             collectGarbage();
         }
+#endif
     }
 
     if (newSize == 0) {
@@ -71,6 +131,9 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 }
 
 void *allocate(size_t size, ObjType type) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "allocate type %s\n", typeName(type));
+#endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
     newObj->keep = false;
@@ -104,7 +167,7 @@ static void markProtected() {
             case OBJTYPE_VALUELIST:
                 markCekfObj(protected[i]);
                 break;
-            case OBJTYPE_HASHTABLE;
+            case OBJTYPE_HASHTABLE:
                 markHashTableObj(protected[i]);
                 break;
         }
@@ -121,18 +184,30 @@ static void sweep() {
     Header **previous = &allocated;
     while (current != NULL) {
         if (current->keep) {
+#ifdef DEBUG_LOG_GC
+            fprintf(stderr, "sweep keep type %s\n", typeName(current->type));
+#endif
             previous = &current->next;
             current->keep = false;
         } else {
+#ifdef DEBUG_LOG_GC
+            fprintf(stderr, "sweep discard type %s\n", typeName(current->type));
+#endif
             *previous = current->next;
             reallocate(current, (size_t)0, (size_t)0);
         }
-        current = current->next;
+        current = *previous;
     }
 }
 
 static void collectGarbage() {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "GC started\n");
+#endif
     mark();
     sweep();
     nextGC = bytesAllocated * 2;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "GC finished, bytesAllocated %d, nextGC %d\n", bytesAllocated, nextGC);
+#endif
 }
