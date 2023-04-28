@@ -44,7 +44,7 @@ the CEK machine needs to change, apart from two additional cases in the $step$ f
 ## The Math
 
 This machine is based on the CEK machine: Control, Environment and Kontinuation, but you'll also see mention of a CESK machine, which
-includes an additional S for "Store" register which allows mutation. I actually used a CESK machine as a starting point because it better
+includes an additional S for "Store" register which allows mutation. I actually used Maatt Might's CESK machine as a starting point because it better
 showed how to handle multiple data types and primitive functions. I reduced that to a CEK machine as a preliminary.
 
 CEKF is my idea, though I'd be surprised if no-one else has thought of it.
