@@ -87,9 +87,9 @@ $$
 \\
       &|&  \mathtt{(call/cc\\ aexp)}
 \\
-      &|&  \mathtt{(letrec\\ ((var_1\\ aexp_1)\dots(var_n aexp_n))\\ exp)}
+      &|&  \mathtt{(letrec\\ ((var_1\\ aexp_1)\dots(var_n\\ aexp_n))\\ exp)}
 \\
-      &|&  \mathtt{(amb exp exp)}
+      &|&  \mathtt{(amb\\ exp\\ exp)}
 \\
       &|&  \mathtt{(back)}
 \end{array}
@@ -125,7 +125,9 @@ $$
 $$
 
 So we'll use $\Sigma$ to denote the set (type) of CEKF states, which are tuples of five registers: $\mathtt{Exp}$, $Env$, $Kont$, $Fail$ and $Value$.
-$\varsigma$ is the symbol we'll use for individual elements of this set (states). Pay close attention to the typesetting here, there
+$\varsigma$ is the symbol we'll use for individual elements of this set (states).
+
+> Pay close attention to the typesetting here, there
 are effectively two domains, the expressions being evaluated and the rest of the machine. To distinguish, the types of $\mathtt{Exp}$
 are set in fixed width.
 
