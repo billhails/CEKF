@@ -60,38 +60,61 @@ Our grammar is still in A-Normal form. It omits the `set!`, and adds `amb` and `
 
 Atomic expressions `aexp` always terminate and never cause an error:
 
-```plaintext
-lam ::= (lambda (var1 ... varN) exp)
+$$
+\begin{array}{rcl}
+\mathtt{lam} &::=& \mathtt{(lambda\\ (var_1\dots var_n)\\ exp)}
+\\
+\\
+\mathtt{aexp} &::=& \mathtt{lam}
+\\
+      &|&  \mathtt{var}
+\\
+      &|&  \mathtt{\\#t}\\;  |\\;  \mathtt{\\#f}
+\\
+      &|&  \mathtt{integer}
+\\
+      &|&  \mathtt{(prim\\ aexp_1\dots aexp_n)}
+\end{array}
+$$
 
-aexp ::= lam
-      |  var
-      |  #t  |  #f
-      |  integer
-      |  (prim aexp1 ... aexpN)
-```
 Complex expressions `cexp` might not terminate and might cause an error:
 
-```plaintext
-cexp ::= (aexp0 aexp1 ... aexpN)
-      |  (if aexp exp exp)
-      |  (call/cc aexp)
-      |  (letrec ((var1 aexp1) ... (varN aexpN)) exp)
-      |  (amb exp exp)
-      |  (back)
-```
+$$
+\begin{array}{rcl}
+\mathtt{cexp} &::=& \mathtt{(aexp_0\\ aexp_1\dots aexp_n)}
+\\
+      &|&  \mathtt{(if\\ aexp\\ exp\\ exp)}
+\\
+      &|&  \mathtt{(call/cc\\ aexp)}
+\\
+      &|&  \mathtt{(letrec\\ ((var_1\\ aexp_1)\dots(var_n aexp_n))\\ exp)}
+\\
+      &|&  \mathtt{(amb exp exp)}
+\\
+      &|&  \mathtt{(back)}
+\end{array}
+$$
 
 Expressions `exp` are atomic, complex , `let` bound, or the terminating `DONE`.
 
-```plaintext
-exp ::= aexp
-     |  cexp
-     |  (let ((var exp)) exp)
-     |  DONE
-```
+$$
+\begin{array}{rcl}
+\mathtt{exp} &::=& \mathtt{aexp}
+\\
+     &|&  \mathtt{cexp}
+\\
+     &|&  \mathtt{(let\\ ((var\\ exp))\\ exp)}
+\\
+     &|&  \mathtt{DONE}
+\\
+\end{array}
+$$
+
 Primitives are built-in:
-```plaintext
-prim ::=   +  |  -  |  *  |  =
-```
+
+$$
+\mathtt{prim}\\ ::=\\   \mathtt{+}\\;  |\\;  \mathtt{-}\\;  |\\;  \mathtt{*}\\;  |\\;  \mathtt{=}
+$$
 
 ### CEKF State
 
