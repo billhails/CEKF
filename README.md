@@ -261,6 +261,12 @@ val_i &= \mathcal{A}(\mathtt{aexp_i}, \rho)
 \end{align}
 $$
 
+and
+
+$$
+applyproc : Value \times Value^* \times Kont \times Fail \times Value \rightharpoonup \Sigma
+$$
+
 $applyproc$ (defined later) doesn't need an Env ($\rho$) because it uses the one in the procedure produced by
 $\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$.
 
@@ -274,9 +280,9 @@ $$
 
 where
 
-$
+$$
 val = \mathcal{A}(\mathtt{aexp}, \rho)
-$
+$$
 
 and
 
@@ -404,10 +410,16 @@ $$
 
 $$
 \begin{align}
-applykont(\mathbf{letk}(\mathtt{v}, \mathtt{body}, \rho, \kappa), val, f, r) &= (\mathtt{body}, \rho[\mathtt{v} \Rightarrow val], \kappa, f, r)
+applykont(\mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa), val, f, r) &= (\mathtt{body}, \rho', \kappa, f, r)
 \\
 applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, [], \mathbf{halt}, f, val)
 \end{align}
+$$
+
+where
+
+$$
+\rho' = \rho[\mathtt{var} \Rightarrow val]
 $$
 
 Q. Should $applykont$ get $f$ from its arguments or should we put it in the $\mathbf{letk}$?<br/>
