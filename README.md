@@ -174,9 +174,7 @@ $$
 Variables get looked up in the environment:
 
 $$
-\begin{align}
-\mathcal{A} (\mathtt{var}, \rho) &= \rho(\mathtt{var})
-\end{align}
+\mathcal{A} (\mathtt{var}, \rho) = \rho(\mathtt{var})
 $$
 
 Constants evaluate to their value equivalents:
@@ -194,18 +192,14 @@ $$
 Lambdas become closures:
 
 $$
-\begin{align}
-\mathcal{A}(\mathtt{lam}, \rho) &= \mathbf{clo}(\mathtt{lam}, \rho)
-\end{align}
+\mathcal{A}(\mathtt{lam}, \rho) = \mathbf{clo}(\mathtt{lam}, \rho)
 $$
 
 Primitive expressions are evaluated recursively:
 
 $$
-\begin{align}
-\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) &=
+\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) =
 \mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho)\dots\mathcal{A}(\mathtt{aexp_n},\rho))
-\end{align}
 $$
 
 where
@@ -229,9 +223,7 @@ $$
 For ~~procedure~~ function calls, `step` first evaluates the function, then the arguments, then it applies the function:
 
 $$
-\begin{align}
-step(\mathtt{(aexp_0\ aexp_1\dots aexp_n)}, \rho, \kappa, f, r) &= applyproc(proc,\langle val_1,\dots val_n\rangle, \kappa, f, r)
-\end{align}
+step(\mathtt{(aexp_0\ aexp_1\dots aexp_n)}, \rho, \kappa, f, r) = applyproc(proc,\langle val_1,\dots val_n\rangle, \kappa, f, r)
 $$
 
 where
@@ -252,12 +244,16 @@ $\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$.
 When the expression under evaluation is an `aexp`, that means we need to return it to the continuation:
 
 $$
-\begin{align}
-step(\mathtt{aexp}, \rho, \kappa, f, r) &= applykont(\kappa, \mathcal{A}(\mathtt{aexp}, \rho), f, r)
-\end{align}
+step(\mathtt{aexp}, \rho, \kappa, f, r) = applykont(\kappa, val, f, r)
 $$
 
 where
+
+$
+val = \mathcal{A}(\mathtt{aexp}, \rho)
+$
+
+and
 
 $$
 applykont: Kont \times Value \times Fail \times Value \rightharpoonup \Sigma
@@ -268,15 +264,13 @@ is defined below.
 ### Conditionals
 
 $$
-\begin{align}
-step(\mathtt{(if\ aexp\ e_{true}\ e_{false})},\rho,\kappa,f, r) &= \left\\{
+step(\mathtt{(if\ aexp\ e_{true}\ e_{false})},\rho,\kappa,f, r) = \left\\{
 \begin{array}{ll}
 (\mathtt{e_{false}},\rho,\kappa,f,r) & \mathcal{A}(\mathtt{aexp},\rho) = \\#f
 \\
 (\mathtt{e_{true}},\rho,\kappa,f,r) & \textup{otherwise}
 \end{array}
 \right.
-\end{align}
 $$
 
 We might want to come back and revise this once we have stricter types.
@@ -286,17 +280,13 @@ We might want to come back and revise this once we have stricter types.
 Evaluating `let` forces the creation of a continuation
 
 $$
-\begin{align}
 step(\mathtt{(let\ (var\ exp)\ body)},\rho,\kappa,f,r) = (\mathtt{exp}, \rho, \kappa',f,r)
-\end{align}
 $$
 
 where
 
 $$
-\begin{align}
-\kappa' &= \mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa)
-\end{align}
+\kappa' = \mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa)
 $$
 
 ### Recursion
@@ -310,25 +300,19 @@ I'm thinking that in CEKF, for `letrec` only, we allow assignment into the Env (
 bound by functional constraints if we're eventually implementing in C. We couldn't write this in Haskell though.
 
 $$
-\begin{align}
-step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f,r) &= (\mathtt{body}, \rho', \kappa, f, r)
-\end{align}
+step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f,r) = (\mathtt{body}, \rho', \kappa, f, r)
 $$
 
 where:
 
 $$
-\begin{align}
 \rho' = \rho[\mathtt{var_i} \Rightarrow \mathbf{void}]
-\end{align}
 $$
 
 but subsequently mutated with
 
 $$
-\begin{align}
 \rho'[\mathtt{var_i}] \Leftarrow \mathcal{A}(\mathtt{aexp_i}, \rho')
-\end{align}
 $$
 
 ### First class continuations
@@ -336,9 +320,7 @@ $$
 `call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a function) as its only argument:
 
 $$
-\begin{align}
 step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f, r) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f, r)
-\end{align}
 $$
 
 ### Amb
@@ -347,9 +329,7 @@ $$
 a new Fail continuation that, if backtracked to, will resume computation from the same state, except evaluating the second argument.
 
 $$
-\begin{align}
-step(\mathtt{(amb\ exp_1\ exp_2)}, \rho, \kappa, f, r) &= (\mathtt{exp_1}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp_2}, \rho, \kappa, f), r)
-\end{align}
+step(\mathtt{(amb\ exp_1\ exp_2)}, \rho, \kappa, f, r) = (\mathtt{exp_1}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp_2}, \rho, \kappa, f), r)
 $$
 
 ### Back
@@ -381,18 +361,14 @@ applyproc : Value \times Value^* \times Kont \times Fail \times Value \rightharp
 $$
 
 $$
-\begin{align}
 applyproc( \mathbf{clo} (\mathtt{(lambda\ (var_1\dots var_n)\ body)}, \rho),\langle val_1\dots val_n\rangle, \kappa, f, r) =
 (\mathtt{body}, \rho', \kappa, f, r)
-\end{align}
 $$
 
 where
 
 $$
-\begin{align}
 \rho' = \rho[\mathtt{var_i} \Rightarrow val_i]
-\end{align}
 $$
 
 ### Applying continuations
@@ -443,15 +419,13 @@ $$
 which is just:
 
 $$
-\begin{align}
-run(\mathtt{Exp}, \rho, \kappa, f, r) &= \left\\{
+run(\mathtt{Exp}, \rho, \kappa, f, r) = \left\\{
 \begin{array}{ll}
 r & \mathtt{Exp} = \mathtt{DONE}
 \\
 run(step(\mathtt{Exp}, \rho, \kappa, f, r)) & \textup{otherwise}
 \end{array}
 \right.
-\end{align}
 $$
 
 Putting it all together:
