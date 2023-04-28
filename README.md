@@ -28,12 +28,12 @@ If you have a continuation passing style interpreter, then all control flow, bot
 by calling a function (call) or calling a continuation (return). It then becomes possible to thread an additional "failure" continuation
 as a sort of hidden argument through all those calls.
 
-Mostly that additional continuation goes un-noticed, except in two specific cases:
+Mostly that additional continuation goes completely unnoticed, except in two specific cases:
 
-1. `amb` is invoked with two (unevaluated) arguments. It arranges to have it's first argument evaluated, and additionally installs a new
+1. When `amb` is invoked with two (unevaluated) arguments, it arranges to have it's first argument evaluated, and additionally installs a new
    failure continuation that will, if invoked, restore the state of the machine to the point just after `amb` was invoked, but with the second
    argument to `amb` ready to be evaluated instead.
-2. `back`, if invoked, restores the most recent state installed by `amb`, "backtracking" to the decision point and allowing the alternative to be
+2. When `back` is invoked, it restores the most recent state installed by `amb`, "backtracking" to the decision point and allowing the alternative to be
    produced.
    
 For all the details see
