@@ -151,8 +151,8 @@ $$
 $$
 
 e.g. when evaluating `exp` in `(let ((var exp)) body)` the continuation of that evaluation is as in the `letk` above. It turns out that
-when evaluating ANF the only construct that requires a new continuation is when evaluating the `exp` part of such a `let`, hence the name
-$\mathbf{letk}$.
+when evaluating ANF the only construct that requires a new continuation is when evaluating the `exp` part of such a `let` (because
+in ANF all other complex expressions are in tail position), hence the name $\mathbf{letk}$.
 
 ### Failure Continuation
 
