@@ -20,7 +20,8 @@ If you want to look around, maybe start by reading [the math](#the-math) and com
 or start at [`main.c`](src/main.c) where you can see it currently constructs some expressions manually, then gives them to the machine to evaluate.
 
 ### An aside on `amb`
-I should probably give at least a brief explaination of `amb` here, since it's somewhat the point of this little project. `amb` is short for
+I should probably give at least a brief explaination of `amb` here, for those who don't know what it is,
+since it's somewhat the point of this little project. `amb` is short for
 "ambivalent" in the sense of "having more than one value", and is a way of doing non-deterministic programming.
 
 If you have a continuation passing style interpreter, then all control flow, both call and return, is always "forwards"
