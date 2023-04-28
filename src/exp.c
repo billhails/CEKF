@@ -35,6 +35,7 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
 AexpVar *newAexpVar(char *name) {
     AexpVar *x = NEW(AexpVar, OBJTYPE_VAR);
     x->name = name;
+    x->hash = hash(name);
     return x;
 }
 

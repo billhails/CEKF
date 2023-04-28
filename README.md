@@ -1,4 +1,7 @@
 # CEKF
+
+![logo](./CEKF.svg)
+
 Low level (C) implementation of a CEK machine with an additional "F" failure continuation supporting amb.
 
 This is heavily based on a blog post by Matt Might [Writing an interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/).

@@ -20,6 +20,7 @@
 
 #include <stddef.h>
 
+#include "hash.h"
 #include "memory.h"
 
 /**
@@ -45,6 +46,7 @@ typedef struct AexpVarList {
 typedef struct AexpVar {
     Header header;
     char *name;
+    hash_t hash;
 } AexpVar;
 
 typedef int AexpInteger; // you'll thank me later

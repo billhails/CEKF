@@ -104,6 +104,9 @@ static void markProtected() {
             case OBJTYPE_VALUELIST:
                 markCekfObj(protected[i]);
                 break;
+            case OBJTYPE_HASHTABLE;
+                markHashTableObj(protected[i]);
+                break;
         }
     }
 }

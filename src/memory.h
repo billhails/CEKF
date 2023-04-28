@@ -42,6 +42,8 @@ typedef enum {
     OBJTYPE_KONT,
     OBJTYPE_VALUE,
     OBJTYPE_VALUELIST,
+    // hash table types
+    OBJTYPE_HASHTABLE,
 } ObjType;
 
 typedef struct Header {
@@ -58,6 +60,7 @@ void *allocate(size_t size, ObjType type);
 
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
+void markHashTableObj(Header *x);
 
 #define EXIT_OOM 2
 
