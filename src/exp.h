@@ -56,6 +56,12 @@ typedef enum {
     AEXP_PRIM_SUB,
     AEXP_PRIM_MUL,
     AEXP_PRIM_DIV,
+    AEXP_PRIM_EQ,
+    AEXP_PRIM_NE,
+    AEXP_PRIM_GT,
+    AEXP_PRIM_LT,
+    AEXP_PRIM_GE,
+    AEXP_PRIM_LE,
 } AexpPrimOp;
 
 typedef struct AexpPrimApp {

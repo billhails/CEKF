@@ -251,12 +251,77 @@ static Value *divide(ValueList *list) {
     return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
 }
 
+#define MAKE_COMPARE_LIST(op, fun) \
+static bool fun(ValueList *list) { \
+    if (list == NULL) { \
+        return true; \
+    } \
+    if (list->value->type != VALUE_TYPE_INTEGER) { \
+        return false; \
+    } \
+    if (list->next == NULL) { \
+        return true; \
+    } \
+    if (list->next->value->type != VALUE_TYPE_INTEGER) { \
+        return false; \
+    } \
+    if (list->value->val.z op list->next->value->val.z) { \
+        return fun(list->next); \
+    } \
+    return false; \
+}
+
+MAKE_COMPARE_LIST(==, _eq)
+
+MAKE_COMPARE_LIST(>, _gt)
+
+MAKE_COMPARE_LIST(<, _lt)
+
+#undef MAKE_COMPARE_LIST
+
+static Value *eq(ValueList *list) {
+    bool result = _eq(list);
+    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+}
+
+static Value *ne(ValueList *list) {
+    bool result = _eq(list);
+    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+}
+
+static Value *gt(ValueList *list) {
+    bool result = _gt(list);
+    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+}
+
+static Value *lt(ValueList *list) {
+    bool result = _lt(list);
+    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+}
+
+static Value *ge(ValueList *list) {
+    bool result = _lt(list);
+    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+}
+
+static Value *le(ValueList *list) {
+    bool result = _gt(list);
+    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+}
+
+
 static primitive O(AexpPrimOp op) {
     switch (op) {
         case AEXP_PRIM_ADD: return add;
         case AEXP_PRIM_SUB: return sub;
         case AEXP_PRIM_MUL: return mul;
         case AEXP_PRIM_DIV: return divide;
+        case AEXP_PRIM_EQ: return eq;
+        case AEXP_PRIM_NE: return ne;
+        case AEXP_PRIM_GT: return gt;
+        case AEXP_PRIM_LT: return lt;
+        case AEXP_PRIM_GE: return ge;
+        case AEXP_PRIM_LE: return le;
     }
 }
 

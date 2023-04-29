@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 //#define DEBUG_LOG_GC
 #define DEBUG_RUN_TESTS
 

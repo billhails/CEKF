@@ -4,3 +4,4 @@ cekf
 .*.swp
 .$*.drawio.bkp
 callgrind.out.*
+core*

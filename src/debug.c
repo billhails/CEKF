@@ -61,12 +61,12 @@ void printClo(Clo *x) {
     printf("Clo[");
     printAexpLam(x->lam);
     printf(", ");
-    printEnv(x->rho);
+    printElidedEnv(x->rho);
     printf("]");
 }
 
 void printCEKF(CEKF *x) {
-    printf("CEKF[");
+    printf("[");
     printExp(x->C);
     printf(", ");
     printEnv(x->E);
@@ -85,6 +85,19 @@ void printEnv(Env *x) {
         printAexpVar(x->var);
         printf(" => ");
         printValue(x->val);
+        if (x->next != NULL) {
+            printf(", ");
+        }
+        x = x->next;
+    }
+    printf("]");
+}
+
+void printElidedEnv(Env *x) {
+    printf("Env[");
+    while (x != NULL) {
+        printAexpVar(x->var);
+        printf(" => <...elided...>");
         if (x->next != NULL) {
             printf(", ");
         }
@@ -160,8 +173,26 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_DIV:
             printf("* ");
             break;
+        case AEXP_PRIM_EQ:
+            printf("= ");
+            break;
+        case AEXP_PRIM_NE:
+            printf("!= ");
+            break;
+        case AEXP_PRIM_GT:
+            printf("> ");
+            break;
+        case AEXP_PRIM_LT:
+            printf("< ");
+            break;
+        case AEXP_PRIM_GE:
+            printf(">= ");
+            break;
+        case AEXP_PRIM_LE:
+            printf("<= ");
+            break;
     }
-    printAexpList(x->args);
+    printBareAexpList(x->args);
     printf(")");
 }
 
@@ -177,11 +208,21 @@ void printAexpList(AexpList *x) {
     printf(")");
 }
 
+void printBareAexpList(AexpList *x) {
+    while (x != NULL) {
+        printExp(x->exp);
+        if (x->next) {
+            printf(" ");
+        }
+        x = x->next;
+    }
+}
+
 void printCexpApply(CexpApply *x) {
     printf("(");
     printExp(x->function);
     printf(" ");
-    printAexpList(x->args);
+    printBareAexpList(x->args);
     printf(")");
 }
 

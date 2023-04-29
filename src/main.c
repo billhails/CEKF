@@ -32,6 +32,16 @@ Exp *makeVar(AexpVar *var) {
     return newExp(AEXP_TYPE_VAR, AEXP_VAL_VAR(var));
 }
 
+Exp *makeLambda(AexpVar *arg, Exp *body) {
+    AexpVarList *args = newAexpVarList(NULL, arg);
+    int save = PROTECT(args);
+    AexpLam *lam = newAexpLam(args, body);
+    PROTECT(lam);
+    Exp *exp = newExp(AEXP_TYPE_LAM, AEXP_VAL_LAM(lam));
+    UNPROTECT(save);
+    return exp;
+}
+
 AexpList *makeList(int argc, Exp* argv[]) {
     AexpList *acc = NULL;
     while (--argc >= 0) {
@@ -42,10 +52,18 @@ AexpList *makeList(int argc, Exp* argv[]) {
     return acc;
 }
 
-Exp *makeAdd(int argc, Exp *argv[]) {
+Exp *makeLetRec(LetRecBindings *bindings, Exp *body) {
+    CexpLetRec *letRec = newCexpLetRec(bindings, body);
+    int save = PROTECT(letRec);
+    Exp *exp = newExp(CEXP_TYPE_LETREC, CEXP_VAL_LETREC(letRec));
+    UNPROTECT(save);
+    return exp;
+}
+
+Exp *makePrim(AexpPrimOp op, int argc, Exp *argv[]) {
     AexpList *args = makeList(argc, argv);
     int save = PROTECT(args);
-    AexpPrimApp *prim = newAexpPrimApp(AEXP_PRIM_ADD, args);
+    AexpPrimApp *prim = newAexpPrimApp(op, args);
     PROTECT(prim);
     Exp *add = newExp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(prim));
     UNPROTECT(save);
@@ -70,6 +88,16 @@ Exp *makeIf(Exp *cond, Exp *cons, Exp *alt) {
 
 Exp *makeBack() {
     return newExp(CEXP_TYPE_BACK, CEXP_VAL_NONE());
+}
+
+Exp *makeApply(Exp *function, Exp *arg) {
+    AexpList *args = newAexpList(NULL, arg);
+    int save = PROTECT(args);
+    CexpApply *apply = newCexpApply(function, args);
+    PROTECT(apply);
+    Exp *exp = newExp(CEXP_TYPE_APPLY, CEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return exp;
 }
 
 Exp *makeAmb(Exp *exp1, Exp *exp2) {
@@ -97,7 +125,7 @@ Exp *makeTestExp1() {
     Exp *args[2];
     args[0] = x;
     args[1] = ten;
-    Exp *addTen = makeAdd(2, args);
+    Exp *addTen = makePrim(AEXP_PRIM_ADD, 2, args);
     PROTECT(addTen);
     Exp *let = makeLet(var, ten, addTen);
     UNPROTECT(save);
@@ -128,9 +156,116 @@ Exp *makeTestExp2() {
     return let;
 }
 
+Exp *makeTestExp3(int depth) {
+    Exp *args[2];
+    /*
+    (letrec ((fib
+             (lambda (n)
+                     (if (< n 2)
+                         1
+                         (+ (fib (- n 1))
+                            (fib (- n 2)))))))
+            (fib 5))
+
+    ANF:
+    (letrec ((fib
+              (lambda (n)
+                      (if (< n 2)
+                          1
+                          (let (fib1 (fib (- n 1)))
+                               (let (fib2 (fib (- n 2)))
+                                    (+ fib1 fib2)))))))
+            (fib 5))
+    */
+
+    AexpVar *fibVar = newAexpVar("fib");
+    int save = PROTECT(fibVar);
+
+    Exp *fib = makeVar(fibVar);
+    PROTECT(fib);
+    
+    AexpVar *n = newAexpVar("n");
+    PROTECT(n);
+
+    Exp *nExp = makeVar(n);
+    PROTECT(nExp);
+
+    Exp *one = makeIntExp(1);
+    PROTECT(one);
+
+    Exp *two = makeIntExp(2);
+    PROTECT(two);
+
+    args[0] = nExp;
+    args[1] = one;
+    Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, 2, args);
+    PROTECT(nMinusOne);
+    
+    args[0] = nExp;
+    args[1] = two;
+    Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, 2, args);
+    PROTECT(nMinusTwo);
+
+    AexpVar *fib1 = newAexpVar("fib1");
+    PROTECT(fib1);
+
+    AexpVar *fib2 = newAexpVar("fib2");
+    PROTECT(fib2);
+
+    Exp *fibNminusTwo = makeApply(fib, nMinusTwo);
+    PROTECT(fibNminusTwo);
+
+    Exp *fib1Exp = makeVar(fib1);
+    PROTECT(fib1Exp);
+
+    Exp *fib2Exp = makeVar(fib2);
+    PROTECT(fib2Exp);
+
+    args[0] = fib1Exp;
+    args[1] = fib2Exp;
+    Exp *addFib1fib2 = makePrim(AEXP_PRIM_ADD, 2, args);
+    PROTECT(addFib1fib2);
+
+    Exp *fibInnerLet = makeLet(fib2, fibNminusTwo, addFib1fib2);
+    PROTECT(fibInnerLet);
+    
+    Exp *fibNminusOne = makeApply(fib, nMinusOne);
+    PROTECT(fibNminusOne);
+
+    Exp *fibOuterLet = makeLet(fib1, fibNminusOne, fibInnerLet);
+    PROTECT(fibOuterLet);
+
+    args[0] = nExp;
+    args[1] = two;
+    Exp *nLtTwo = makePrim(AEXP_PRIM_LT, 2, args);
+    PROTECT(nLtTwo);
+
+    Exp *fibBody = makeIf(nLtTwo, one, fibOuterLet);
+    PROTECT(fibBody);
+    
+    Exp *fibLambda = makeLambda(n, fibBody);
+    PROTECT(fibLambda);
+
+    LetRecBindings *bindings = newLetRecBindings(NULL, fibVar, fibLambda);
+    PROTECT(bindings);
+
+    Exp *arg = makeIntExp(depth);
+    PROTECT(arg);
+
+    Exp *body = makeApply(fib, arg);
+    PROTECT(body);
+
+    Exp *letRec = makeLetRec(bindings, body);
+
+    UNPROTECT(save);
+
+    return letRec;
+}
+
 int main(int argc, char *argv[]) {
-    Exp *exp = makeTestExp2();
-    run(exp);
+    // run(makeTestExp1());
+    // run(makeTestExp2());
+    run(makeTestExp3(20));
 }
 
 #else
