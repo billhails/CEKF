@@ -230,7 +230,7 @@ $$
 where
 
 $$
-\mathcal{O}(\mathtt{prim}) = (Value^* \rightharpoonup Value)
+\mathcal{O} : \mathtt{prim} \rightharpoonup (Value^* \rightharpoonup Value)
 $$
 
 maps a primitive to its corresponding operation.
