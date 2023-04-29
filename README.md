@@ -348,7 +348,7 @@ $$
 
 ### First class continuations
 
-`call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a function) as its only argument:
+`call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a $Value$) as its only argument:
 
 $$
 step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f, r) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f, r)
