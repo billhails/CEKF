@@ -20,10 +20,11 @@
 
 #include <stdint.h>
 
-#include "exp.h"
 #include "memory.h"
 
 typedef uint32_t hash_t;
+
+#define HASH_MAX_LOAD 0.75
 
 hash_t hashString(const char *string);
 
@@ -40,5 +41,8 @@ typedef struct HashTable {
 } HashTable;
 
 HashTable *newHashTable();
+void hashSet(HashTable *table, struct AexpVar *var, struct Value *value);
+struct Value *hashGet(HashTable *table, struct AexpVar *var);
+struct AexpVar *hashGetVar(HashTable *table, const char *name);
 
 #endif

@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
+
 #include "exp.h"
 #include "hash.h"
 #include "memory.h"
@@ -33,10 +35,20 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
     return x;
 }
 
+static HashTable varTable;
+
 AexpVar *newAexpVar(char *name) {
-    AexpVar *x = NEW(AexpVar, OBJTYPE_VAR);
+    AexpVar *x;
+    x = hashGetVar(&varTable, name);
+    if (x != NULL) {
+        return x;
+    }
+    x = NEW(AexpVar, OBJTYPE_VAR);
     x->name = name;
     x->hash = hashString(name);
+    int save = PROTECT(x);
+    hashSet(&varTable, x, NULL);
+    UNPROTECT(save);
     return x;
 }
 

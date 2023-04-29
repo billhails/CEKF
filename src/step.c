@@ -64,8 +64,9 @@ void run(Exp *exp) {
     printCEKF(&state);
     while (state.C->type != EXP_TYPE_DONE) {
         step();
-        printCEKF(&state);
+        // printCEKF(&state);
     }
+    printCEKF(&state);
 }
 
 static Value *A(Exp *aexp, Env *env) {
@@ -354,7 +355,7 @@ static void applyKont(Value *val) {
 
 static Value *lookUp(AexpVar *var, Env *env) {
     while (env != NULL) {
-        if (strcmp(var->name, env->var->name) == 0) {
+        if (var == env->var) {
             return env->val;
         }
         env = env->next;

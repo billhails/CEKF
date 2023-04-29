@@ -142,35 +142,39 @@ void *allocate(size_t size, ObjType type) {
     return (void *)newObj;
 }
 
+void markObj(Header *h) {
+    switch (h->type) {
+        case OBJTYPE_AMB:
+        case OBJTYPE_APPLY:
+        case OBJTYPE_BINDINGS:
+        case OBJTYPE_COND:
+        case OBJTYPE_EXP:
+        case OBJTYPE_EXPLIST:
+        case OBJTYPE_LAM:
+        case OBJTYPE_LET:
+        case OBJTYPE_LETREC:
+        case OBJTYPE_PRIMAPP:
+        case OBJTYPE_VAR:
+        case OBJTYPE_VARLIST:
+            markExpObj(h);
+            break;
+        case OBJTYPE_CLO:
+        case OBJTYPE_ENV:
+        case OBJTYPE_FAIL:
+        case OBJTYPE_KONT:
+        case OBJTYPE_VALUE:
+        case OBJTYPE_VALUELIST:
+            markCekfObj(h);
+            break;
+        case OBJTYPE_HASHTABLE:
+            markHashTableObj(h);
+            break;
+    }
+}
+
 static void markProtected() {
     for (int i = 0; i < protectedIndex; ++i) {
-        switch (protected[i]->type) {
-            case OBJTYPE_AMB:
-            case OBJTYPE_APPLY:
-            case OBJTYPE_BINDINGS:
-            case OBJTYPE_COND:
-            case OBJTYPE_EXP:
-            case OBJTYPE_EXPLIST:
-            case OBJTYPE_LAM:
-            case OBJTYPE_LET:
-            case OBJTYPE_LETREC:
-            case OBJTYPE_PRIMAPP:
-            case OBJTYPE_VAR:
-            case OBJTYPE_VARLIST:
-                markExpObj(protected[i]);
-                break;
-            case OBJTYPE_CLO:
-            case OBJTYPE_ENV:
-            case OBJTYPE_FAIL:
-            case OBJTYPE_KONT:
-            case OBJTYPE_VALUE:
-            case OBJTYPE_VALUELIST:
-                markCekfObj(protected[i]);
-                break;
-            case OBJTYPE_HASHTABLE:
-                markHashTableObj(protected[i]);
-                break;
-        }
+        markObj(protected[i]);
     }
 }
 

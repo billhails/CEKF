@@ -58,6 +58,7 @@ int startProtect();
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
 
+void markObj(Header *h);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
@@ -65,6 +66,8 @@ void markHashTableObj(Header *x);
 #define EXIT_OOM 2
 
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
+#define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
+#define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
 
 #define STARTPROTECT() protect(NULL);
 #define PROTECT(x) protect((Header *)(x))
