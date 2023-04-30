@@ -53,14 +53,10 @@ typedef struct Kont {
 
 typedef struct ValueList {
     struct Header header;
-    struct ValueList *next;
-    struct Value value;
+    int count;
+    struct Value *values;
 } ValueList;
 
-#define VALUE_VAL_INTEGER(x) ((ValueVal){.z    = (x)})
-#define VALUE_VAL_CLO(x)     ((ValueVal){.clo  = (x)})
-#define VALUE_VAL_CONT(x)    ((ValueVal){.k    = (x)})
-#define VALUE_VAL_NONE()     ((ValueVal){.none = NULL})
 
 typedef struct Clo {
     struct Header header;
@@ -77,7 +73,7 @@ typedef struct Fail {
     struct Fail *next;
 } Fail;
 
-ValueList *newValueList(ValueList *next, Value value);
+ValueList *newValueList(int count);
 Clo *newClo(AexpLam *lam, Env *rho);
 Env *newEnv(Env *next, AexpVar *var, Value val);
 Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next);

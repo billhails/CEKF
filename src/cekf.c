@@ -37,10 +37,16 @@ Value vVoid = {
     .val = VALUE_VAL_NONE()
 };
 
-ValueList *newValueList(ValueList *next, Value value) {
+ValueList *newValueList(int count) {
     ValueList *x = NEW(ValueList, OBJTYPE_VALUELIST);
-    x->next = next;
-    x->value = value;
+    int save = PROTECT(x);
+    x->count = 0;
+    x->values = NEW_ARRAY(Value, count);
+    for (int i = 0; i < count; ++i) {
+        x->values[i] = vVoid;
+    }
+    x->count = count;
+    UNPROTECT(save);
     return x;
 }
 
@@ -97,8 +103,9 @@ void markValueList(ValueList *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markValueList(x->next);
-    markValue(x->value);
+    for (int i = 0; i < x->count; ++i) {
+        markValue(x->values[i]);
+    }
 }
 
 void markClo(Clo *x) {

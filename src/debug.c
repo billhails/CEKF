@@ -47,12 +47,11 @@ void printValue(Value x) {
 
 void printValueList(ValueList *x) {
     printf("ValueList[");
-    while (x != NULL) {
-        printValue(x->value);
-        if (x->next != NULL) {
+    for (int i = 0; i < x->count; ++i) {
+        printValue(x->values[i]);
+        if (i < x->count - 1) {
             printf(", ");
         }
-        x = x->next;
     }
     printf("]");
 }

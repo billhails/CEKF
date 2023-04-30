@@ -160,11 +160,10 @@ static void step() {
             Exp *aexp = C->val.cexp.callCC;
             Value proc = A(aexp, E);
             int save = protectValue(proc);
-            Value val;
-            val.type = VALUE_TYPE_CONT;
-            val.val = VALUE_VAL_CONT(K);
-            ValueList *args = newValueList(NULL, val);
+            ValueList *args = newValueList(1);
             PROTECT(args);
+            args->values[0].type = VALUE_TYPE_CONT;
+            args->values[0].val = VALUE_VAL_CONT(K);
             applyProc(proc, args);
             UNPROTECT(save);
         }
@@ -217,36 +216,32 @@ static Value intValue(int i) {
 
 static Value add(ValueList *list) {
     AexpInteger result = 0;
-    while (list != NULL) {
-        if (list->value.type == VALUE_TYPE_INTEGER) {
-            result += list->value.val.z;
+    for (int i = 0; i < list->count; ++i) {
+        if (list->values[i].type == VALUE_TYPE_INTEGER) {
+            result += list->values[i].val.z;
         }
-        list = list->next;
     }
     return intValue(result);
 }
 
 static Value mul(ValueList *list) {
     AexpInteger result = 1;
-    while (list != NULL) {
-        if (list->value.type == VALUE_TYPE_INTEGER) {
-            result *= list->value.val.z;
+    for (int i = 0; i < list->count; ++i) {
+        if (list->values[i].type == VALUE_TYPE_INTEGER) {
+            result *= list->values[i].val.z;
         }
-        list = list->next;
     }
     return intValue(result);
 }
 
 static Value sub(ValueList *list) {
     AexpInteger result = 0;
-    if (list != NULL) {
-        result = list->value.val.z;
-        list = list->next;
-        while (list != NULL) {
-            if (list->value.type == VALUE_TYPE_INTEGER) {
-                result -= list->value.val.z;
+    if (list->count != 0) {
+        result = list->values[0].val.z;
+        for (int i = 1; i< list->count; i++) {
+            if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                result -= list->values[i].val.z;
             }
-            list = list->next;
         }
     }
     return intValue(result);
@@ -254,46 +249,40 @@ static Value sub(ValueList *list) {
 
 static Value divide(ValueList *list) {
     AexpInteger result = 1;
-    if (list != NULL) {
-        result = list->value.val.z;
-        list = list->next;
-        while (list != NULL) {
-            if (list->value.type == VALUE_TYPE_INTEGER) {
-                result /= list->value.val.z;
+    if (list->count != 0) {
+        result = list->values[0].val.z;
+        for (int i = 1; i< list->count; i++) {
+            if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                result /= list->values[i].val.z;
             }
-            list = list->next;
         }
     }
     return intValue(result);
 }
 
-#define MAKE_COMPARE_LIST(op, fun) \
-static bool fun(ValueList *list) { \
-    if (list == NULL) { \
-        return true; \
-    } \
-    if (list->value.type != VALUE_TYPE_INTEGER) { \
-        return false; \
-    } \
-    if (list->next == NULL) { \
-        return true; \
-    } \
-    if (list->next->value.type != VALUE_TYPE_INTEGER) { \
-        return false; \
-    } \
-    if (list->value.val.z op list->next->value.val.z) { \
-        return fun(list->next); \
-    } \
-    return false; \
+static bool _eq(ValueList *list) {
+    if (list->count < 2) return true;
+    for (int i = 0; i < list->count - 1; i++) {
+        if (list->values[i].val.z != list->values[i+1].val.z) return false;
+    }
+    return true;
 }
 
-MAKE_COMPARE_LIST(==, _eq)
+static bool _gt(ValueList *list) {
+    if (list->count < 2) return true;
+    for (int i = 0; i < list->count - 1; i++) {
+        if (list->values[i].val.z <= list->values[i+1].val.z) return false;
+    }
+    return true;
+}
 
-MAKE_COMPARE_LIST(>, _gt)
-
-MAKE_COMPARE_LIST(<, _lt)
-
-#undef MAKE_COMPARE_LIST
+static bool _lt(ValueList *list) {
+    if (list->count < 2) return true;
+    for (int i = 0; i < list->count - 1; i++) {
+        if (list->values[i].val.z >= list->values[i+1].val.z) return false;
+    }
+    return true;
+}
 
 static Value eq(ValueList *list) {
     bool result = _eq(list);
@@ -378,28 +367,42 @@ static Value lookUp(AexpVar *var, Env *env) {
     cant_happen("no binding for var in env");
 }
 
+static int countAexpList(AexpList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
 static ValueList *mapA(AexpList *args, Env *env) {
     if (args == NULL) {
         return NULL;
     }
 
-    ValueList *list = mapA(args->next, env);
-    int save = PROTECT(list);
-    Value val = A(args->exp, env);
-    protectValue(val);
+    int count = countAexpList(args);
 
-    ValueList *parent = newValueList(list, val);
+    ValueList *list = newValueList(count);
+
+    int save = PROTECT(list);
+
+    for (int i = 0; i < count; ++i) {
+        list->values[i] = A(args->exp, env);
+        args = args->next;
+    }
+
     UNPROTECT(save);
-    return parent;
+    return list;
 }
 
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals) {
-    while (vars != NULL && vals != NULL) {
+    for (int i = 0; i < vals->count; i++) {
+        if (vars == NULL) break;
         int save = PROTECT(env);
-        env = newEnv(env, vars->var, vals->value);
+        env = newEnv(env, vars->var, vals->values[i]);
         UNPROTECT(save);
         vars = vars->next;
-        vals = vals->next;
     }
 
     return env;
