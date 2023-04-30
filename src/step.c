@@ -33,6 +33,7 @@ typedef Value (*primitive)(ValueList *args);
 static primitive O(AexpPrimOp op);
 static void step();
 static void applyProc(Value proc, ValueList *args);
+static void applyProcValue(Value proc, Value val);
 static void applyKont(Value value);
 static Value lookUp(AexpVar *var, Env *env);
 static ValueList *mapA(AexpList *args, Env *env);
@@ -139,9 +140,17 @@ static void step() {
             AexpList *args = apply->args;
             Value proc = A(function, E);
             int save = protectValue(proc);
-            ValueList *values = mapA(args, E);
-            PROTECT(values);
-            applyProc(proc, values);
+            if (args == NULL) {
+                applyProc(proc, NULL);
+            } else if (args->next == NULL) {
+                Value val = A(args->exp, E);
+                protectValue(val);
+                applyProcValue(proc, val);
+            } else {
+                ValueList *values = mapA(args, E);
+                PROTECT(values);
+                applyProc(proc, values);
+            }
             UNPROTECT(save);
         }
         break;
@@ -160,11 +169,11 @@ static void step() {
             Exp *aexp = C->val.cexp.callCC;
             Value proc = A(aexp, E);
             int save = protectValue(proc);
-            ValueList *args = newValueList(1);
-            PROTECT(args);
-            args->values[0].type = VALUE_TYPE_CONT;
-            args->values[0].val = VALUE_VAL_CONT(K);
-            applyProc(proc, args);
+            Value cont;
+            cont.type = VALUE_TYPE_CONT;
+            cont.val = VALUE_VAL_CONT(K);
+            protectValue(cont);
+            applyProcValue(proc, cont);
             UNPROTECT(save);
         }
         break;
@@ -216,9 +225,11 @@ static Value intValue(int i) {
 
 static Value add(ValueList *list) {
     AexpInteger result = 0;
-    for (int i = 0; i < list->count; ++i) {
-        if (list->values[i].type == VALUE_TYPE_INTEGER) {
-            result += list->values[i].val.z;
+    if (list != NULL) {
+        for (int i = 0; i < list->count; ++i) {
+            if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                result += list->values[i].val.z;
+            }
         }
     }
     return intValue(result);
@@ -226,9 +237,11 @@ static Value add(ValueList *list) {
 
 static Value mul(ValueList *list) {
     AexpInteger result = 1;
-    for (int i = 0; i < list->count; ++i) {
-        if (list->values[i].type == VALUE_TYPE_INTEGER) {
-            result *= list->values[i].val.z;
+    if (list != NULL) {
+        for (int i = 0; i < list->count; ++i) {
+            if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                result *= list->values[i].val.z;
+            }
         }
     }
     return intValue(result);
@@ -236,11 +249,13 @@ static Value mul(ValueList *list) {
 
 static Value sub(ValueList *list) {
     AexpInteger result = 0;
-    if (list->count != 0) {
-        result = list->values[0].val.z;
-        for (int i = 1; i< list->count; i++) {
-            if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                result -= list->values[i].val.z;
+    if (list != NULL) {
+        if (list->count != 0) {
+            result = list->values[0].val.z;
+            for (int i = 1; i< list->count; i++) {
+                if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                    result -= list->values[i].val.z;
+                }
             }
         }
     }
@@ -249,11 +264,13 @@ static Value sub(ValueList *list) {
 
 static Value divide(ValueList *list) {
     AexpInteger result = 1;
-    if (list->count != 0) {
-        result = list->values[0].val.z;
-        for (int i = 1; i< list->count; i++) {
-            if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                result /= list->values[i].val.z;
+    if (list != NULL) {
+        if (list->count != 0) {
+            result = list->values[0].val.z;
+            for (int i = 1; i< list->count; i++) {
+                if (list->values[i].type == VALUE_TYPE_INTEGER) {
+                    result /= list->values[i].val.z;
+                }
             }
         }
     }
@@ -261,7 +278,7 @@ static Value divide(ValueList *list) {
 }
 
 static bool _eq(ValueList *list) {
-    if (list->count < 2) return true;
+    if (list == NULL || list->count < 2) return true;
     for (int i = 0; i < list->count - 1; i++) {
         if (list->values[i].val.z != list->values[i+1].val.z) return false;
     }
@@ -269,7 +286,7 @@ static bool _eq(ValueList *list) {
 }
 
 static bool _gt(ValueList *list) {
-    if (list->count < 2) return true;
+    if (list == NULL || list->count < 2) return true;
     for (int i = 0; i < list->count - 1; i++) {
         if (list->values[i].val.z <= list->values[i+1].val.z) return false;
     }
@@ -277,7 +294,7 @@ static bool _gt(ValueList *list) {
 }
 
 static bool _lt(ValueList *list) {
-    if (list->count < 2) return true;
+    if (list == NULL || list->count < 2) return true;
     for (int i = 0; i < list->count - 1; i++) {
         if (list->values[i].val.z >= list->values[i+1].val.z) return false;
     }
@@ -343,6 +360,24 @@ static void applyProc(Value proc, ValueList *vals) {
     state.E = mapExtend(rho, vars, vals);
 }
 
+static void applyProcValue(Value proc, Value val) {
+    if (proc.type != VALUE_TYPE_CLO) {
+        cant_happen("expected proc in applyproc");
+    }
+
+    Clo *clo = proc.val.clo;
+    AexpLam *lam = clo->lam;
+    Env *rho = clo->rho;
+    AexpVarList *vars = lam->args;
+    if (vars == NULL) {
+        cant_happen("applyProcValue to proc with no args"); // yes it can
+    }
+    state.C = lam->exp;
+    int save = PROTECT(state.E);
+    state.E = newEnv(state.E, vars->var, val);
+    UNPROTECT(save);
+}
+
 static void applyKont(Value val) {
     Kont *K = state.K;
     if (K != NULL) {
@@ -397,12 +432,14 @@ static ValueList *mapA(AexpList *args, Env *env) {
 }
 
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals) {
-    for (int i = 0; i < vals->count; i++) {
-        if (vars == NULL) break;
-        int save = PROTECT(env);
-        env = newEnv(env, vars->var, vals->values[i]);
-        UNPROTECT(save);
-        vars = vars->next;
+    if (vals != NULL) {
+        for (int i = 0; i < vals->count; i++) {
+            if (vars == NULL) break;
+            int save = PROTECT(env);
+            env = newEnv(env, vars->var, vals->values[i]);
+            UNPROTECT(save);
+            vars = vars->next;
+        }
     }
 
     return env;
