@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "debug.h"
+#include "hash.h"
 
 void printValue(Value x) {
     printf("Value[");
@@ -78,15 +79,38 @@ void printCEKF(CEKF *x) {
     printf("]\n");
 }
 
+void printHashTable(HashTable *x) {
+    int count = 0;
+    printf("{");
+    for (int i = 0; i < x->capacity; ++i) {
+        if (x->entries[i].var != NULL) {
+            printf("%s => ", x->entries[i].var->name);
+            printValue(x->entries[i].value);
+            count++;
+            if (count < x->count) printf(", ");
+        }
+    }
+    printf("}");
+}
+
+void printElidedHashTable(HashTable *x) {
+    int count = 0;
+    printf("{");
+    for (int i = 0; i < x->capacity; ++i) {
+        if (x->entries[i].var != NULL) {
+            printf("%s => <...>", x->entries[i].var->name);
+            count++;
+            if (count < x->count) printf(", ");
+        }
+    }
+    printf("}");
+}
+
 void printEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
-        printAexpVar(x->var);
-        printf(" => ");
-        printValue(x->val);
-        if (x->next != NULL) {
-            printf(", ");
-        }
+        printHashTable(x->table);
+        if (x->next != NULL) printf(", ");
         x = x->next;
     }
     printf("]");
@@ -95,11 +119,8 @@ void printEnv(Env *x) {
 void printElidedEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
-        printAexpVar(x->var);
-        printf(" => <...>");
-        if (x->next != NULL) {
-            printf(", ");
-        }
+        printElidedHashTable(x->table);
+        if (x->next != NULL) printf(", ");
         x = x->next;
     }
     printf("]");

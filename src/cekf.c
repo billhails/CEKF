@@ -17,6 +17,7 @@
  */
 #include "cekf.h"
 #include "memory.h"
+#include "hash.h"
 
 /*
  * constants and memory allocation functions for the CEKF machine
@@ -57,11 +58,12 @@ Clo *newClo(AexpLam *lam, Env *rho) {
     return x;
 }
 
-Env *newEnv(Env *next, AexpVar *var, Value val) {
+Env *newEnv(Env *next) {
     Env *x = NEW(Env, OBJTYPE_ENV);
+    int save = PROTECT(x);
     x->next = next;
-    x->var = var;
-    x->val = val;
+    x->table = NULL;
+    x->table = newHashTable();
     return x;
 }
 
@@ -121,8 +123,7 @@ void markEnv(Env *x) {
     if (MARKED(x)) return;
     MARK(x);
     markEnv(x->next);
-    markAexpVar(x->var);
-    markValue(x->val);
+    markHashTableObj((Header *)x->table);
 }
 
 void markKont(Kont *x) {

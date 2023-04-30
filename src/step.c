@@ -20,9 +20,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "debug.h"
 #include "cekf.h"
 #include "step.h"
+#include "hash.h"
 
 /**
  * The step function of the CEKF machine.
@@ -38,8 +40,9 @@ static void applyKont(Value value);
 static Value lookUp(AexpVar *var, Env *env);
 static ValueList *mapA(AexpList *args, Env *env);
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals);
-static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings);
+static Env *extendLetRecVoid(Env *env);
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
+static void replaceInEnv(Env *env, AexpVar *var, Value val);
 static void cant_happen(const char *message);
 
 static CEKF state;
@@ -65,7 +68,9 @@ void run(Exp *exp) {
     printCEKF(&state);
     while (state.C->type != EXP_TYPE_DONE) {
         step();
-        // printCEKF(&state);
+#ifdef DEBUG_STEP
+        printCEKF(&state);
+#endif
     }
     printCEKF(&state);
 }
@@ -73,6 +78,9 @@ void run(Exp *exp) {
 static Value A(Exp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
+#ifdef DEBUG_STEP
+            printf("A LAM\n");
+#endif
             Clo *clo = newClo(aexp->val.aexp.lam, env);
             Value value;
             value .type = VALUE_TYPE_CLO;
@@ -80,22 +88,37 @@ static Value A(Exp *aexp, Env *env) {
             return value;
         }
         case AEXP_TYPE_VAR: {
+#ifdef DEBUG_STEP
+            printf("A VAR\n");
+#endif
             return lookUp(aexp->val.aexp.var, env);
         }
         case AEXP_TYPE_TRUE: {
+#ifdef DEBUG_STEP
+            printf("A TRUE\n");
+#endif
             return vTrue;
             break;
         }
         case AEXP_TYPE_FALSE: {
+#ifdef DEBUG_STEP
+            printf("A FALSE\n");
+#endif
             return vFalse;
         }
         case AEXP_TYPE_INT: {
+#ifdef DEBUG_STEP
+            printf("A INT\n");
+#endif
             Value value;
             value.type = VALUE_TYPE_INTEGER;
             value.val = VALUE_VAL_INTEGER(aexp->val.aexp.integer);
             return value;
         }
         case AEXP_TYPE_PRIM: {
+#ifdef DEBUG_STEP
+            printf("A PRIM\n");
+#endif
             return (O(aexp->val.aexp.prim->op))(
                 mapA(aexp->val.aexp.prim->args, env)
             );
@@ -128,6 +151,9 @@ static void step() {
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
         case AEXP_TYPE_PRIM: {
+#ifdef DEBUG_STEP
+            printf("step AEXP\n");
+#endif
             Value val = A(C, E);
             int save = protectValue(val);
             applyKont(val);
@@ -135,6 +161,9 @@ static void step() {
         }
         break;
         case CEXP_TYPE_APPLY: {
+#ifdef DEBUG_STEP
+            printf("step APPLY\n");
+#endif
             CexpApply *apply = C->val.cexp.apply;
             Exp *function = apply->function;
             AexpList *args = apply->args;
@@ -155,6 +184,9 @@ static void step() {
         }
         break;
         case CEXP_TYPE_COND: {
+#ifdef DEBUG_STEP
+            printf("step COND\n");
+#endif
             CexpCond *cond = C->val.cexp.cond;
             Exp *condition = cond->condition;
             Value testResult = A(condition, E);
@@ -166,6 +198,9 @@ static void step() {
         }
         break;
         case CEXP_TYPE_CALLCC: {
+#ifdef DEBUG_STEP
+            printf("step CALLCC\n");
+#endif
             Exp *aexp = C->val.cexp.callCC;
             Value proc = A(aexp, E);
             int save = protectValue(proc);
@@ -178,16 +213,22 @@ static void step() {
         }
         break;
         case CEXP_TYPE_LETREC: {
+#ifdef DEBUG_STEP
+            printf("step LETREC\n");
+#endif
             CexpLetRec *letRec = C->val.cexp.letRec;
             int save = PROTECT(letRec);
             LetRecBindings *bindings = letRec->bindings;
             state.C = letRec->body;
-            state.E = extendLetRecVoid(E, bindings);
+            state.E = extendLetRecVoid(E);
             mapLetRecReplace(state.E, bindings);
             UNPROTECT(save);
         }
         break;
         case CEXP_TYPE_AMB: {
+#ifdef DEBUG_STEP
+            printf("step AMB\n");
+#endif
             CexpAmb *amb = C->val.cexp.amb;
             Exp *exp2 = amb->exp2;
             state.C = amb->exp1;
@@ -195,6 +236,9 @@ static void step() {
         }
         break;
         case CEXP_TYPE_BACK: {
+#ifdef DEBUG_STEP
+            printf("step BACK\n");
+#endif
             if (F != NULL) {
                 state.C = F->exp;
                 state.E = F->rho;
@@ -206,6 +250,9 @@ static void step() {
         }
         break;
         case EXP_TYPE_LET: {
+#ifdef DEBUG_STEP
+            printf("step LET\n");
+#endif
             ExpLet *let = C->val.let;
             AexpVar *var = let->var;
             Exp *body = let->body;
@@ -374,7 +421,8 @@ static void applyProcValue(Value proc, Value val) {
     }
     state.C = lam->exp;
     int save = PROTECT(state.E);
-    state.E = newEnv(state.E, vars->var, val);
+    state.E = newEnv(state.E);
+    replaceInEnv(state.E, vars->var, val);
     UNPROTECT(save);
 }
 
@@ -384,7 +432,8 @@ static void applyKont(Value val) {
         AexpVar *var = K->var;
         state.C = K->body;
         Env *rho = K->rho;
-        state.E = newEnv(rho, var, val);
+        state.E = newEnv(rho);
+        replaceInEnv(state.E, var, val);
         state.K = K->next;
     } else {
         state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
@@ -394,9 +443,8 @@ static void applyKont(Value val) {
 
 static Value lookUp(AexpVar *var, Env *env) {
     while (env != NULL) {
-        if (var == env->var) {
-            return env->val;
-        }
+        Value value = hashGet(env->table, var);
+        if (value.type != VALUE_TYPE_VOID) return value;
         env = env->next;
     }
     cant_happen("no binding for var in env");
@@ -432,47 +480,39 @@ static ValueList *mapA(AexpList *args, Env *env) {
 }
 
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals) {
+    int save = PROTECT(env);
+    env = newEnv(env);
+    PROTECT(env);
     if (vals != NULL) {
         for (int i = 0; i < vals->count; i++) {
             if (vars == NULL) break;
-            int save = PROTECT(env);
-            env = newEnv(env, vars->var, vals->values[i]);
-            UNPROTECT(save);
+            replaceInEnv(env, vars->var, vals->values[i]);
             vars = vars->next;
         }
     }
 
+    UNPROTECT(save);
+
     return env;
 }
 
-static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings) {
-    if (bindings == NULL) {
-        return env;
-    }
-
-    Env *next = extendLetRecVoid(env, bindings->next);
-    int save = PROTECT(next);
-
-    Env *parent = newEnv(next, bindings->var, vVoid);
+static Env *extendLetRecVoid(Env *env) {
+    int save = PROTECT(env);
+    env = newEnv(env);
     UNPROTECT(save);
-    return parent;
+    return env;
 }
 
 static void replaceInEnv(Env *env, AexpVar *var, Value val) {
-    while (env != NULL) {
-        if (strcmp(env->var->name, var->name) == 0) {
-            env->val = val;
-            return;
-        }
-        env = env->next;
-    }
-    cant_happen("no binding for var in replaceInEnv");
+    hashSet(env->table, var, val);
 }
 
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings) {
     while (bindings != NULL) {
         Value val = A(bindings->val, env);
+        int save = protectValue(val);
         replaceInEnv(env, bindings->var, val);
+        UNPROTECT(save);
         bindings = bindings->next;
     }
 }

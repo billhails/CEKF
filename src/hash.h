@@ -43,5 +43,6 @@ HashTable *newHashTable();
 void hashSet(HashTable *table, struct AexpVar *var, struct Value value);
 struct Value hashGet(HashTable *table, struct AexpVar *var);
 struct AexpVar *hashGetVar(HashTable *table, const char *name);
+Value hashGet(HashTable *table, struct AexpVar *var);
 
 #endif
