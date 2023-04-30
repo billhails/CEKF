@@ -147,3 +147,15 @@ void markHashTableObj(Header *h) {
         }
     }
 }
+
+void freeHashTableObj(Header *h) {
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "freeHashTableObj()\n");
+#endif
+    HashTable *table = (HashTable *)h;
+    if (table == NULL) return;
+    if (table->count > 0) {
+        FREE_ARRAY(HashEntry, table->entries, table->count);
+    }
+    FREE(h, HashTable);
+}

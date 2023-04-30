@@ -249,6 +249,29 @@ void markExp(Exp *x) {
     }
 }
 
+void freeExpObj(Header *h) {
+    if (h == NULL) return;
+    Exp *x = (Exp *)h;
+    switch (x->type) {
+        case AEXP_TYPE_LAM:
+        case AEXP_TYPE_VAR:
+        case AEXP_TYPE_TRUE:
+        case AEXP_TYPE_FALSE:
+        case AEXP_TYPE_INT:
+        case AEXP_TYPE_PRIM:
+        case CEXP_TYPE_APPLY:
+        case CEXP_TYPE_COND:
+        case CEXP_TYPE_CALLCC:
+        case CEXP_TYPE_LETREC:
+        case CEXP_TYPE_AMB:
+        case CEXP_TYPE_BACK:
+        case EXP_TYPE_LET:
+        case EXP_TYPE_DONE:
+            FREE(x, Exp);
+            break;
+    }
+}
+
 void markExpObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_AMB:

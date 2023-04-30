@@ -169,6 +169,35 @@ void markObj(Header *h) {
     }
 }
 
+void freeObj(Header *h) {
+    switch (h->type) {
+        case OBJTYPE_AMB:
+        case OBJTYPE_APPLY:
+        case OBJTYPE_BINDINGS:
+        case OBJTYPE_COND:
+        case OBJTYPE_EXP:
+        case OBJTYPE_EXPLIST:
+        case OBJTYPE_LAM:
+        case OBJTYPE_LET:
+        case OBJTYPE_LETREC:
+        case OBJTYPE_PRIMAPP:
+        case OBJTYPE_VAR:
+        case OBJTYPE_VARLIST:
+            freeExpObj(h);
+            break;
+        case OBJTYPE_CLO:
+        case OBJTYPE_ENV:
+        case OBJTYPE_FAIL:
+        case OBJTYPE_KONT:
+        case OBJTYPE_VALUELIST:
+            freeCekfObj(h);
+            break;
+        case OBJTYPE_HASHTABLE:
+            freeHashTableObj(h);
+            break;
+    }
+}
+
 static void markProtected() {
     for (int i = 0; i < protectedIndex; ++i) {
         markObj(protected[i]);
@@ -195,7 +224,7 @@ static void sweep() {
             fprintf(stderr, "sweep discard type %s\n", typeName(current->type));
 #endif
             *previous = current->next;
-            reallocate(current, (size_t)0, (size_t)0);
+            freeObj(current);
         }
         current = *previous;
     }

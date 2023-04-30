@@ -62,9 +62,15 @@ void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
 
+void freeObj(Header *h);
+void freeExpObj(Header *x);
+void freeCekfObj(Header *x);
+void freeHashTableObj(Header *x);
+
 #define EXIT_OOM 2
 
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
+#define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
 

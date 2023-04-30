@@ -164,3 +164,28 @@ void markCekfObj(Header *h) {
             break;
     }
 }
+
+void freeCekfObj(Header *h) {
+    switch (h->type) {
+        case OBJTYPE_CLO:
+            reallocate((void *)h, sizeof(Clo), 0);
+            break;
+        case OBJTYPE_ENV:
+            reallocate((void *)h, sizeof(Env), 0);
+            break;
+        case OBJTYPE_FAIL:
+            reallocate((void *)h, sizeof(Fail), 0);
+            break;
+        case OBJTYPE_KONT:
+            reallocate((void *)h, sizeof(Kont), 0);
+            break;
+        case OBJTYPE_VALUELIST: {
+                ValueList *vl = (ValueList *)h;
+                if (vl->count > 0) {
+                    FREE_ARRAY(Value, vl->values, vl->count);
+                }
+                reallocate((void *)h, sizeof(ValueList), 0);
+            }
+            break;
+    }
+}
