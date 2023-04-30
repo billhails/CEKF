@@ -73,7 +73,7 @@ static void growCapacity(HashTable *table, int capacity) {
 
     for (int i = 0; i < capacity; i++) {
         entries[i].var = NULL;
-        entries[i].value = NULL;
+        entries[i].value = vVoid;
     }
 
     for (int i = 0; i < table->capacity; i++) {
@@ -89,7 +89,7 @@ static void growCapacity(HashTable *table, int capacity) {
     table->capacity = capacity;
 }
 
-void hashSet(HashTable *table, AexpVar *var, Value *value) {
+void hashSet(HashTable *table, AexpVar *var, Value value) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashSet()\n");
 #endif
@@ -105,11 +105,11 @@ void hashSet(HashTable *table, AexpVar *var, Value *value) {
     entry->value = value;
 }
 
-Value *hashGet(HashTable *table, AexpVar *var) {
+Value hashGet(HashTable *table, AexpVar *var) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashGet()\n");
 #endif
-    if (table->count == 0) return NULL;
+    if (table->count == 0) return vVoid;
     HashEntry *entry = findEntry(table->entries, table->capacity, var);
     return entry->value;
 }

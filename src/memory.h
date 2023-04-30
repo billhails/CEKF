@@ -40,7 +40,6 @@ typedef enum {
     OBJTYPE_ENV,
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
-    OBJTYPE_VALUE,
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,

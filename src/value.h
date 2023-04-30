@@ -1,5 +1,5 @@
-#ifndef cekf_hash_h
-#define cekf_hash_h
+#ifndef cekf_value_h
+#define cekf_value_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,30 +18,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+typedef enum {
+    VALUE_TYPE_VOID,
+    VALUE_TYPE_INTEGER,
+    VALUE_TYPE_TRUE,
+    VALUE_TYPE_FALSE,
+    VALUE_TYPE_CLO,
+    VALUE_TYPE_CONT,
+} ValueType;
 
-#include "common.h"
-#include "memory.h"
-#include "value.h"
+typedef union {
+    void *none;
+    int z;
+    struct Clo *clo;
+    struct Kont *k;
+} ValueVal;
 
-#define HASH_MAX_LOAD 0.75
+typedef struct Value {
+    ValueType type;
+    ValueVal val;
+} Value; 
 
-hash_t hashString(const char *string);
+// constants
+extern Value vTrue;
+extern Value vFalse;
+extern Value vVoid;
 
-typedef struct HashEntry {
-    struct AexpVar *var;
-    struct Value value;
-} HashEntry;
 
-typedef struct HashTable {
-    struct Header header;
-    int count;
-    int capacity;
-    HashEntry *entries;
-} HashTable;
-
-HashTable *newHashTable();
-void hashSet(HashTable *table, struct AexpVar *var, struct Value value);
-struct Value hashGet(HashTable *table, struct AexpVar *var);
-struct AexpVar *hashGetVar(HashTable *table, const char *name);
-
-#endif
+ #endif

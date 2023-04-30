@@ -47,7 +47,7 @@ AexpVar *newAexpVar(char *name) {
     x->name = name;
     x->hash = hashString(name);
     int save = PROTECT(x);
-    hashSet(&varTable, x, NULL);
+    hashSet(&varTable, x, vVoid);
     UNPROTECT(save);
     return x;
 }

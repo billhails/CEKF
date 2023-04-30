@@ -20,7 +20,7 @@
 
 #include <stddef.h>
 
-#include "hash.h"
+#include "common.h"
 #include "memory.h"
 
 /**

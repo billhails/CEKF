@@ -18,8 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ #include <stdint.h>
+
+ typedef uint32_t hash_t;
+
 // #define DEBUG_STRESS_GC
-//#define DEBUG_LOG_GC
+// #define DEBUG_LOG_GC
 #define DEBUG_RUN_TESTS
 
 #endif

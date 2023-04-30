@@ -28,13 +28,13 @@
  * The step function of the CEKF machine.
  */
 
-typedef Value *(*primitive)(ValueList *args);
+typedef Value (*primitive)(ValueList *args);
 
 static primitive O(AexpPrimOp op);
 static void step();
-static void applyProc(Value *proc, ValueList *args);
-static void applyKont(Value *value);
-static Value *lookUp(AexpVar *var, Env *env);
+static void applyProc(Value proc, ValueList *args);
+static void applyKont(Value value);
+static Value lookUp(AexpVar *var, Env *env);
 static ValueList *mapA(AexpList *args, Env *env);
 static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals);
 static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings);
@@ -56,7 +56,7 @@ static void inject(Exp *exp) {
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
-    state.V = newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE());
+    state.V = vVoid;
 }
 
 void run(Exp *exp) {
@@ -69,30 +69,30 @@ void run(Exp *exp) {
     printCEKF(&state);
 }
 
-static Value *A(Exp *aexp, Env *env) {
+static Value A(Exp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
             Clo *clo = newClo(aexp->val.aexp.lam, env);
-            int save = PROTECT(clo);
-            Value *value = newValue( VALUE_TYPE_CLO, VALUE_VAL_CLO(clo));
-            UNPROTECT(save);
+            Value value;
+            value .type = VALUE_TYPE_CLO;
+            value.val = VALUE_VAL_CLO(clo);
             return value;
         }
         case AEXP_TYPE_VAR: {
             return lookUp(aexp->val.aexp.var, env);
         }
         case AEXP_TYPE_TRUE: {
-            return newValue(VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+            return vTrue;
             break;
         }
         case AEXP_TYPE_FALSE: {
-            return newValue(VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+            return vFalse;
         }
         case AEXP_TYPE_INT: {
-            return newValue(
-                VALUE_TYPE_INTEGER,
-                VALUE_VAL_INTEGER(aexp->val.aexp.integer)
-            );
+            Value value;
+            value.type = VALUE_TYPE_INTEGER;
+            value.val = VALUE_VAL_INTEGER(aexp->val.aexp.integer);
+            return value;
         }
         case AEXP_TYPE_PRIM: {
             return (O(aexp->val.aexp.prim->op))(
@@ -102,17 +102,23 @@ static Value *A(Exp *aexp, Env *env) {
     }
 }
 
+static int protectValue(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_CLO:
+            return PROTECT(v.val.clo);
+        case VALUE_TYPE_CONT:
+            return PROTECT(v.val.k);
+        default:
+            return PROTECT(NULL);
+    }
+}
+
 static void step() {
     Exp *C = state.C;
     Env *E = state.E;
     Kont *K = state.K;
     Fail *F = state.F;
-    Value *V = state.V;
-    int topSave = PROTECT(C);
-    PROTECT(E);
-    PROTECT(K);
-    PROTECT(F);
-    PROTECT(V);
+    Value V = state.V;
 
     switch (C->type) {
         case AEXP_TYPE_LAM:
@@ -121,8 +127,8 @@ static void step() {
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
         case AEXP_TYPE_PRIM: {
-            Value *val = A(C, E);
-            int save = PROTECT(val);
+            Value val = A(C, E);
+            int save = protectValue(val);
             applyKont(val);
             UNPROTECT(save);
         }
@@ -131,8 +137,8 @@ static void step() {
             CexpApply *apply = C->val.cexp.apply;
             Exp *function = apply->function;
             AexpList *args = apply->args;
-            Value *proc = A(function, E);
-            int save = PROTECT(proc);
+            Value proc = A(function, E);
+            int save = protectValue(proc);
             ValueList *values = mapA(args, E);
             PROTECT(values);
             applyProc(proc, values);
@@ -142,8 +148,8 @@ static void step() {
         case CEXP_TYPE_COND: {
             CexpCond *cond = C->val.cexp.cond;
             Exp *condition = cond->condition;
-            Value *testResult = A(condition, E);
-            if (testResult->type == VALUE_TYPE_FALSE) {
+            Value testResult = A(condition, E);
+            if (testResult.type == VALUE_TYPE_FALSE) {
                 state.C = cond->alternative;
             } else {
                 state.C = cond->consequent;
@@ -152,10 +158,11 @@ static void step() {
         break;
         case CEXP_TYPE_CALLCC: {
             Exp *aexp = C->val.cexp.callCC;
-            Value *proc = A(aexp, E);
-            int save = PROTECT(proc);
-            Value *val = newValue(VALUE_TYPE_CONT, VALUE_VAL_CONT(K));
-            PROTECT(val);
+            Value proc = A(aexp, E);
+            int save = protectValue(proc);
+            Value val;
+            val.type = VALUE_TYPE_CONT;
+            val.val = VALUE_VAL_CONT(K);
             ValueList *args = newValueList(NULL, val);
             PROTECT(args);
             applyProc(proc, args);
@@ -164,10 +171,12 @@ static void step() {
         break;
         case CEXP_TYPE_LETREC: {
             CexpLetRec *letRec = C->val.cexp.letRec;
+            int save = PROTECT(letRec);
             LetRecBindings *bindings = letRec->bindings;
             state.C = letRec->body;
             state.E = extendLetRecVoid(E, bindings);
             mapLetRecReplace(state.E, bindings);
+            UNPROTECT(save);
         }
         break;
         case CEXP_TYPE_AMB: {
@@ -197,59 +206,65 @@ static void step() {
         }
         break;
     }
-    UNPROTECT(topSave);
 }
 
-static Value *add(ValueList *list) {
+static Value intValue(int i) {
+    Value value;
+    value.type = VALUE_TYPE_INTEGER;
+    value.val = VALUE_VAL_INTEGER(i); 
+    return value;
+}
+
+static Value add(ValueList *list) {
     AexpInteger result = 0;
     while (list != NULL) {
-        if (list->value->type == VALUE_TYPE_INTEGER) {
-            result += list->value->val.z;
+        if (list->value.type == VALUE_TYPE_INTEGER) {
+            result += list->value.val.z;
         }
         list = list->next;
     }
-    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
+    return intValue(result);
 }
 
-static Value *mul(ValueList *list) {
+static Value mul(ValueList *list) {
     AexpInteger result = 1;
     while (list != NULL) {
-        if (list->value->type == VALUE_TYPE_INTEGER) {
-            result *= list->value->val.z;
+        if (list->value.type == VALUE_TYPE_INTEGER) {
+            result *= list->value.val.z;
         }
         list = list->next;
     }
-    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
+    return intValue(result);
 }
 
-static Value *sub(ValueList *list) {
+static Value sub(ValueList *list) {
     AexpInteger result = 0;
     if (list != NULL) {
-        result = list->value->val.z;
+        result = list->value.val.z;
         list = list->next;
         while (list != NULL) {
-            if (list->value->type == VALUE_TYPE_INTEGER) {
-                result -= list->value->val.z;
+            if (list->value.type == VALUE_TYPE_INTEGER) {
+                result -= list->value.val.z;
             }
             list = list->next;
         }
     }
-    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
+    return intValue(result);
 }
 
-static Value *divide(ValueList *list) {
+static Value divide(ValueList *list) {
     AexpInteger result = 1;
     if (list != NULL) {
-        result = list->value->val.z;
+        result = list->value.val.z;
         list = list->next;
         while (list != NULL) {
-            if (list->value->type == VALUE_TYPE_INTEGER) {
-                result /= list->value->val.z;
+            if (list->value.type == VALUE_TYPE_INTEGER) {
+                result /= list->value.val.z;
             }
             list = list->next;
         }
     }
-    return newValue(VALUE_TYPE_INTEGER, VALUE_VAL_INTEGER(result)); 
+    return intValue(result);
 }
 
 #define MAKE_COMPARE_LIST(op, fun) \
@@ -257,16 +272,16 @@ static bool fun(ValueList *list) { \
     if (list == NULL) { \
         return true; \
     } \
-    if (list->value->type != VALUE_TYPE_INTEGER) { \
+    if (list->value.type != VALUE_TYPE_INTEGER) { \
         return false; \
     } \
     if (list->next == NULL) { \
         return true; \
     } \
-    if (list->next->value->type != VALUE_TYPE_INTEGER) { \
+    if (list->next->value.type != VALUE_TYPE_INTEGER) { \
         return false; \
     } \
-    if (list->value->val.z op list->next->value->val.z) { \
+    if (list->value.val.z op list->next->value.val.z) { \
         return fun(list->next); \
     } \
     return false; \
@@ -280,34 +295,34 @@ MAKE_COMPARE_LIST(<, _lt)
 
 #undef MAKE_COMPARE_LIST
 
-static Value *eq(ValueList *list) {
+static Value eq(ValueList *list) {
     bool result = _eq(list);
-    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+    return result ? vTrue : vFalse;
 }
 
-static Value *ne(ValueList *list) {
+static Value ne(ValueList *list) {
     bool result = _eq(list);
-    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+    return result ? vFalse : vTrue;
 }
 
-static Value *gt(ValueList *list) {
+static Value gt(ValueList *list) {
     bool result = _gt(list);
-    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+    return result ? vTrue : vFalse;
 }
 
-static Value *lt(ValueList *list) {
+static Value lt(ValueList *list) {
     bool result = _lt(list);
-    return newValue(result ? VALUE_TYPE_TRUE : VALUE_TYPE_FALSE, VALUE_VAL_NONE());
+    return result ? vTrue : vFalse;
 }
 
-static Value *ge(ValueList *list) {
+static Value ge(ValueList *list) {
     bool result = _lt(list);
-    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+    return result ? vFalse : vTrue;
 }
 
-static Value *le(ValueList *list) {
+static Value le(ValueList *list) {
     bool result = _gt(list);
-    return newValue(result ? VALUE_TYPE_FALSE : VALUE_TYPE_TRUE, VALUE_VAL_NONE());
+    return result ? vFalse : vTrue;
 }
 
 
@@ -326,12 +341,12 @@ static primitive O(AexpPrimOp op) {
     }
 }
 
-static void applyProc(Value *proc, ValueList *vals) {
-    if (proc->type != VALUE_TYPE_CLO) {
+static void applyProc(Value proc, ValueList *vals) {
+    if (proc.type != VALUE_TYPE_CLO) {
         cant_happen("expected proc in applyproc");
     }
 
-    Clo *clo = proc->val.clo;
+    Clo *clo = proc.val.clo;
     AexpLam *lam = clo->lam;
     Env *rho = clo->rho;
     AexpVarList *vars = lam->args;
@@ -339,7 +354,7 @@ static void applyProc(Value *proc, ValueList *vals) {
     state.E = mapExtend(rho, vars, vals);
 }
 
-static void applyKont(Value *val) {
+static void applyKont(Value val) {
     Kont *K = state.K;
     if (K != NULL) {
         AexpVar *var = K->var;
@@ -353,7 +368,7 @@ static void applyKont(Value *val) {
     }
 }
 
-static Value *lookUp(AexpVar *var, Env *env) {
+static Value lookUp(AexpVar *var, Env *env) {
     while (env != NULL) {
         if (var == env->var) {
             return env->val;
@@ -370,8 +385,8 @@ static ValueList *mapA(AexpList *args, Env *env) {
 
     ValueList *list = mapA(args->next, env);
     int save = PROTECT(list);
-    Value *val = A(args->exp, env);
-    PROTECT(val);
+    Value val = A(args->exp, env);
+    protectValue(val);
 
     ValueList *parent = newValueList(list, val);
     UNPROTECT(save);
@@ -397,15 +412,13 @@ static Env *extendLetRecVoid(Env *env, LetRecBindings *bindings) {
 
     Env *next = extendLetRecVoid(env, bindings->next);
     int save = PROTECT(next);
-    Value *val = newValue(VALUE_TYPE_VOID, VALUE_VAL_NONE());
-    PROTECT(val);
 
-    Env *parent = newEnv(next, bindings->var, val);
+    Env *parent = newEnv(next, bindings->var, vVoid);
     UNPROTECT(save);
     return parent;
 }
 
-static void replaceInEnv(Env *env, AexpVar *var, Value *val) {
+static void replaceInEnv(Env *env, AexpVar *var, Value val) {
     while (env != NULL) {
         if (strcmp(env->var->name, var->name) == 0) {
             env->val = val;
@@ -418,7 +431,7 @@ static void replaceInEnv(Env *env, AexpVar *var, Value *val) {
 
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings) {
     while (bindings != NULL) {
-        Value *val = A(bindings->val, env);
+        Value val = A(bindings->val, env);
         replaceInEnv(env, bindings->var, val);
         bindings = bindings->next;
     }

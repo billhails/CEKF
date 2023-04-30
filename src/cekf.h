@@ -26,20 +26,21 @@
 
 #include "exp.h"
 #include "memory.h"
+#include "value.h"
 
 typedef struct {
     struct Exp *C;
     struct Env *E;
     struct Kont *K;
     struct Fail *F;
-    struct Value *V;
+    struct Value V;
 } CEKF;
 
 typedef struct Env {
     struct Header header;
     struct Env *next;
     struct AexpVar *var;
-    struct Value *val;
+    struct Value val;
 } Env;
 
 typedef struct Kont {
@@ -50,32 +51,10 @@ typedef struct Kont {
     struct Kont *next;
 } Kont;
 
-typedef enum {
-    VALUE_TYPE_VOID,
-    VALUE_TYPE_INTEGER,
-    VALUE_TYPE_TRUE,
-    VALUE_TYPE_FALSE,
-    VALUE_TYPE_CLO,
-    VALUE_TYPE_CONT,
-} ValueType;
-
-typedef union {
-    void *none;
-    AexpInteger z;
-    struct Clo *clo;
-    struct Kont *k;
-} ValueVal;
-
-typedef struct Value {
-    struct Header header;
-    ValueType type;
-    ValueVal val;
-} Value;
-
 typedef struct ValueList {
     struct Header header;
     struct ValueList *next;
-    struct Value *value;
+    struct Value value;
 } ValueList;
 
 #define VALUE_VAL_INTEGER(x) ((ValueVal){.z    = (x)})
@@ -98,19 +77,17 @@ typedef struct Fail {
     struct Fail *next;
 } Fail;
 
-Value *newValue(ValueType type, ValueVal val);
-ValueList *newValueList(ValueList *next, Value *value);
+ValueList *newValueList(ValueList *next, Value value);
 Clo *newClo(AexpLam *lam, Env *rho);
-Env *newEnv(Env *next, AexpVar *var, Value *val);
+Env *newEnv(Env *next, AexpVar *var, Value val);
 Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next);
 Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next);
 
-void markValue(Value *x);
+void markValue(Value x);
 void markValueList(ValueList *x);
 void markClo(Clo *x);
 void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
-
 
 #endif

@@ -20,14 +20,14 @@
 
 #include "debug.h"
 
-void printValue(Value *x) {
+void printValue(Value x) {
     printf("Value[");
-    switch (x->type) {
+    switch (x.type) {
         case VALUE_TYPE_VOID:
             printf("VOID");
             break;
         case VALUE_TYPE_INTEGER:
-            printf("%d", x->val.z);
+            printf("%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
             printf("TRUE");
@@ -36,10 +36,10 @@ void printValue(Value *x) {
             printf("FALSE");
             break;
         case VALUE_TYPE_CLO:
-            printClo(x->val.clo);
+            printClo(x.val.clo);
             break;
         case VALUE_TYPE_CONT:
-            printKont(x->val.k);
+            printKont(x.val.k);
             break;
     }
     printf("]");
@@ -97,7 +97,7 @@ void printElidedEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
         printAexpVar(x->var);
-        printf(" => <...elided...>");
+        printf(" => <...>");
         if (x->next != NULL) {
             printf(", ");
         }

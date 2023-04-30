@@ -21,7 +21,7 @@
 #include "cekf.h"
 #include "exp.h"
 
-void printValue(Value *x);
+void printValue(Value x);
 void printValueList(ValueList *x);
 void printClo(Clo *x);
 void printCEKF(CEKF *x);

@@ -19,17 +19,25 @@
 #include "memory.h"
 
 /*
- * memory allocation functions for the CEKF machine
+ * constants and memory allocation functions for the CEKF machine
  */
 
-Value *newValue(ValueType type, ValueVal val) {
-    Value *x = NEW(Value, OBJTYPE_VALUE);
-    x->type = type;
-    x->val = val;
-    return x;
-}
+Value vTrue = {
+    .type = VALUE_TYPE_TRUE,
+    .val = VALUE_VAL_NONE()
+};
 
-ValueList *newValueList(ValueList *next, Value *value) {
+Value vFalse = {
+    .type = VALUE_TYPE_FALSE,
+    .val = VALUE_VAL_NONE()
+};
+
+Value vVoid = {
+    .type = VALUE_TYPE_VOID,
+    .val = VALUE_VAL_NONE()
+};
+
+ValueList *newValueList(ValueList *next, Value value) {
     ValueList *x = NEW(ValueList, OBJTYPE_VALUELIST);
     x->next = next;
     x->value = value;
@@ -43,7 +51,7 @@ Clo *newClo(AexpLam *lam, Env *rho) {
     return x;
 }
 
-Env *newEnv(Env *next, AexpVar *var, Value *val) {
+Env *newEnv(Env *next, AexpVar *var, Value val) {
     Env *x = NEW(Env, OBJTYPE_ENV);
     x->next = next;
     x->var = var;
@@ -69,21 +77,18 @@ Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next) {
     return x;
 }
 
-void markValue(Value *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    switch (x->type) {
+void markValue(Value x) {
+    switch (x.type) {
         case VALUE_TYPE_VOID:
         case VALUE_TYPE_INTEGER:
         case VALUE_TYPE_TRUE:
         case VALUE_TYPE_FALSE:
             break;
         case VALUE_TYPE_CLO:
-            markClo(x->val.clo);
+            markClo(x.val.clo);
             break;
         case VALUE_TYPE_CONT:
-            markKont(x->val.k);
+            markKont(x.val.k);
             break;
     }
 }
@@ -146,9 +151,6 @@ void markCekfObj(Header *h) {
             break;
         case OBJTYPE_KONT:
             markKont((Kont *)h);
-            break;
-        case OBJTYPE_VALUE:
-            markValue((Value *)h);
             break;
         case OBJTYPE_VALUELIST:
             markValueList((ValueList *)h);
