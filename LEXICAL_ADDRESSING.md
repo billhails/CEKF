@@ -63,7 +63,7 @@ That depends on `ct-extend` and `ct-lookup`
 ```
 
 ```scheme
-(define (lookup var ct-env)
+(define (ct-lookup var ct-env)
         (define (lookup-in-env ct-env frame-counter)
                 (define (lookup-in-frame frame offset)
                         (cond ((null? frame) null)
