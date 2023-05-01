@@ -106,10 +106,32 @@ void printElidedHashTable(HashTable *x) {
     printf("}");
 }
 
+void printValues(Value *values, int count) {
+    printf("{");
+    for (int i = 0; i < count; ++i) {
+        printValue(values[i]);
+        if (i + 1 < count) {
+            printf(", ");
+        }
+    }
+    printf("}");
+}
+
+void printElidedValues(Value *values, int count) {
+    printf("{");
+    for (int i = 0; i < count; ++i) {
+        printf("<...>");
+        if (i + 1 < count) {
+            printf(", ");
+        }
+    }
+    printf("}");
+}
+
 void printEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
-        printHashTable(x->table);
+        printValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
         x = x->next;
     }
@@ -129,7 +151,7 @@ void printCTEnv(CTEnv *x) {
 void printElidedEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
-        printElidedHashTable(x->table);
+        printElidedValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
         x = x->next;
     }

@@ -209,13 +209,25 @@ static void populateCTEnv(CTEnv *env, AexpVar *var) {
 }
 
 static bool locate(AexpVar *var, CTEnv *env, int *frame, int *offset) {
+#ifdef DEBUG_ANALIZE
+    printf("locate ");
+    printAexpVar(var);
+    printf(" in ");
+    printCTEnv(env);
+#endif
     *frame = 0;
     while (env != NULL) {
         if (hashLocate(env->table, var, offset)) {
+#ifdef DEBUG_ANALIZE
+            printf(" -> [%d:%d]\n", *frame, *offset);
+#endif
             return true;
         }
         (*frame)++;
         env = env->next;
     }
+#ifdef DEBUG_ANALIZE
+    printf(" FAILED!\n");
+#endif
     return false;
 }

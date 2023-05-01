@@ -21,8 +21,36 @@
 #include "hash.h"
 #include "memory.h"
 
+static int countAexpVarList(AexpVarList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+static int countAexpList(AexpList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+static int countLetRecBindings(LetRecBindings *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
     AexpLam *x = NEW(AexpLam, OBJTYPE_LAM);
+    x->nargs = countAexpVarList(args);
     x->args = args;
     x->exp = exp;
     return x;
@@ -63,6 +91,7 @@ AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
     AexpPrimApp *x = NEW(AexpPrimApp, OBJTYPE_PRIMAPP);
     x->op = op;
+    x->nargs = countAexpList(args);
     x->args = args;
     return x;
 }
@@ -77,6 +106,7 @@ AexpList *newAexpList(AexpList *next, Exp *exp) {
 CexpApply *newCexpApply(Exp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply, OBJTYPE_APPLY);
     x->function = function;
+    x->nargs = countAexpList(args);
     x->args = args;
     return x;
 }
@@ -91,6 +121,7 @@ CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative) {
 
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     CexpLetRec *x = NEW(CexpLetRec, OBJTYPE_LETREC);
+    x->nbindings = countLetRecBindings(bindings);
     x->bindings = bindings;
     x->body = body;
     return x;

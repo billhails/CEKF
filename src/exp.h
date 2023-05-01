@@ -33,6 +33,7 @@
 
 typedef struct AexpLam {
     Header header;
+    int nargs;
     struct AexpVarList *args;
     struct Exp *exp;
 } AexpLam;
@@ -74,6 +75,7 @@ typedef enum {
 typedef struct AexpPrimApp {
     Header header;
     AexpPrimOp op;
+    int nargs;
     struct AexpList *args;
 } AexpPrimApp;
 
@@ -86,6 +88,7 @@ typedef struct AexpList {
 typedef struct CexpApply {
     Header header;
     struct Exp *function;
+    int nargs;
     struct AexpList *args;
 } CexpApply;
 
@@ -98,6 +101,7 @@ typedef struct CexpCond {
 
 typedef struct CexpLetRec {
     Header header;
+    int nbindings;
     struct LetRecBindings *bindings;
     struct Exp *body;
 } CexpLetRec;

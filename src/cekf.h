@@ -39,7 +39,8 @@ typedef struct {
 typedef struct Env {
     struct Header header;
     struct Env *next;
-    struct HashTable *table;
+    int count;
+    struct Value *values;
 } Env;
 
 typedef struct Kont {
@@ -74,7 +75,7 @@ typedef struct Fail {
 
 ValueList *newValueList(int count);
 Clo *newClo(AexpLam *lam, Env *rho);
-Env *newEnv(Env *next);
+Env *newEnv(Env *next, int count);
 Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next);
 Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next);
 
