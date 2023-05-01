@@ -20,18 +20,21 @@
 
 #include "cekf.h"
 #include "exp.h"
+#include "analysis.h"
 
 void printValue(Value x);
 void printValueList(ValueList *x);
 void printClo(Clo *x);
 void printCEKF(CEKF *x);
 void printEnv(Env *x);
+void printCTEnv(CTEnv *x);
 void printElidedEnv(Env *x);
 void printKont(Kont *x);
 void printFail(Fail *x);
 void printAexpLam(AexpLam *x);
 void printAexpVarList(AexpVarList *x);
 void printAexpVar(AexpVar *x);
+void printAexpAnnotatedVar(AexpAnnotatedVar *x);
 void printAexpPrimApp(AexpPrimApp *x);
 void printAexpList(AexpList *x);
 void printBareAexpList(AexpList *x);

@@ -58,12 +58,20 @@ Clo *newClo(AexpLam *lam, Env *rho) {
     return x;
 }
 
-Env *newEnv(Env *next) {
+Env *newEnv(Env *next, int count) {
     Env *x = NEW(Env, OBJTYPE_ENV);
     int save = PROTECT(x);
     x->next = next;
-    x->table = NULL;
-    x->table = newHashTable();
+    x->count = 0;
+    x->values = NULL;
+    if (count > 0) {
+        x->values = NEW_ARRAY(Value, count);
+        x->count = count;
+        for (int i = 0; i < count; i++) {
+            x->values[i] = vVoid;
+        }
+    }
+    UNPROTECT(save);
     return x;
 }
 
@@ -123,7 +131,9 @@ void markEnv(Env *x) {
     if (MARKED(x)) return;
     MARK(x);
     markEnv(x->next);
-    markHashTableObj((Header *)x->table);
+    for (int i = 0; i < x->count; i++) {
+        markValue(x->values[i]);
+    }
 }
 
 void markKont(Kont *x) {
@@ -171,8 +181,11 @@ void freeCekfObj(Header *h) {
         case OBJTYPE_CLO:
             reallocate((void *)h, sizeof(Clo), 0);
             break;
-        case OBJTYPE_ENV:
-            reallocate((void *)h, sizeof(Env), 0);
+        case OBJTYPE_ENV: {
+                Env *env = (Env *)h;
+                FREE_ARRAY(Value, env->values, env->count);
+                reallocate((void *)h, sizeof(Env), 0);
+            }
             break;
         case OBJTYPE_FAIL:
             reallocate((void *)h, sizeof(Fail), 0);

@@ -21,8 +21,36 @@
 #include "hash.h"
 #include "memory.h"
 
+static int countAexpVarList(AexpVarList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+static int countAexpList(AexpList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+static int countLetRecBindings(LetRecBindings *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
     AexpLam *x = NEW(AexpLam, OBJTYPE_LAM);
+    x->nargs = countAexpVarList(args);
     x->args = args;
     x->exp = exp;
     return x;
@@ -52,9 +80,18 @@ AexpVar *newAexpVar(char *name) {
     return x;
 }
 
+AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
+    AexpAnnotatedVar *x = NEW(AexpAnnotatedVar, OBJTYPE_ANNOTATEDVAR);
+    x->frame = frame;
+    x->offset = offset;
+    x->var = var;
+    return x;
+}
+
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
     AexpPrimApp *x = NEW(AexpPrimApp, OBJTYPE_PRIMAPP);
     x->op = op;
+    x->nargs = countAexpList(args);
     x->args = args;
     return x;
 }
@@ -69,6 +106,7 @@ AexpList *newAexpList(AexpList *next, Exp *exp) {
 CexpApply *newCexpApply(Exp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply, OBJTYPE_APPLY);
     x->function = function;
+    x->nargs = countAexpList(args);
     x->args = args;
     return x;
 }
@@ -83,6 +121,7 @@ CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative) {
 
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     CexpLetRec *x = NEW(CexpLetRec, OBJTYPE_LETREC);
+    x->nbindings = countLetRecBindings(bindings);
     x->bindings = bindings;
     x->body = body;
     return x;
@@ -138,6 +177,13 @@ void markAexpVar(AexpVar *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
+}
+
+void markAexpAnnotatedVar(AexpAnnotatedVar *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpVar(x->var);
 }
 
 void markAexpPrimApp(AexpPrimApp *x) {
@@ -217,6 +263,9 @@ void markExp(Exp *x) {
         case AEXP_TYPE_VAR:
             markAexpVar(x->val.aexp.var);
             break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            markAexpAnnotatedVar(x->val.aexp.annotatedVar);
+            break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
@@ -255,6 +304,7 @@ void freeExpObj(Header *h) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
         case AEXP_TYPE_VAR:
+        case AEXP_TYPE_ANNOTATEDVAR:
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
@@ -306,6 +356,9 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_VAR:
             markAexpVar((AexpVar *) h);
+            break;
+        case OBJTYPE_ANNOTATEDVAR:
+            markAexpAnnotatedVar((AexpAnnotatedVar *) h);
             break;
         case OBJTYPE_VARLIST:
             markAexpVarList((AexpVarList *) h);

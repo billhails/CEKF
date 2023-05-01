@@ -24,6 +24,7 @@
 
 #include <string.h>
 
+#include "common.h"
 #include "cekf.h"
 #include "hash.h"
 #include "memory.h"
@@ -89,20 +90,48 @@ static void growCapacity(HashTable *table, int capacity) {
     table->capacity = capacity;
 }
 
-void hashSet(HashTable *table, AexpVar *var, Value value) {
-#ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashSet()\n");
-#endif
+static void checkCapacity(HashTable *table) {
     if (table->count + 1 > table->capacity * HASH_MAX_LOAD) {
         int capacity = table->capacity < 8 ? 8 : table->capacity * 2;
         growCapacity(table, capacity);
     }
+}
+
+void hashSet(HashTable *table, AexpVar *var, Value value) {
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "hashSet()\n");
+#endif
+    checkCapacity(table);
     HashEntry *entry = findEntry(table->entries, table->capacity, var);
 
     if (entry->var == NULL) table->count++;
 
     entry->var = var;
     entry->value = value;
+}
+
+void hashAddCTVar(HashTable *table, AexpVar *var) {
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "hashSet()\n");
+#endif
+    checkCapacity(table);
+    HashEntry *entry = findEntry(table->entries, table->capacity, var);
+    if (entry->var != NULL) cant_happen("duplicate variable in hashAddCTVar");
+    entry->var = var;
+    entry->value.type = VALUE_TYPE_INTEGER;
+    entry->value.val.z = table->count;
+    table->count++;
+}
+
+bool hashLocate(HashTable *table, struct AexpVar *var, int *location) {
+    HashEntry *entry = findEntry(table->entries, table->capacity, var);
+    if (entry->var == NULL) return false;
+
+    if (entry->value.type != VALUE_TYPE_INTEGER) {
+        cant_happen("non-integer value found in hashLocate");
+    }
+    (*location) = entry->value.val.z;
+    return true;
 }
 
 Value hashGet(HashTable *table, AexpVar *var) {

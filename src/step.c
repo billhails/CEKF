@@ -37,13 +37,12 @@ static void step();
 static void applyProc(Value proc, ValueList *args);
 static void applyProcValue(Value proc, Value val);
 static void applyKont(Value value);
-static Value lookUp(AexpVar *var, Env *env);
+static Value lookUp(AexpAnnotatedVar *var, Env *env);
 static ValueList *mapA(AexpList *args, Env *env);
-static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals);
-static Env *extendLetRecVoid(Env *env);
+static Env *mapExtend(Env *env, int nargs, ValueList *vals);
+static Env *extendLetRecVoid(Env *env, int count);
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
-static void replaceInEnv(Env *env, AexpVar *var, Value val);
-static void cant_happen(const char *message);
+static void replaceInEnv(Env *env, int index, Value val);
 
 static CEKF state;
 
@@ -87,11 +86,11 @@ static Value A(Exp *aexp, Env *env) {
             value.val = VALUE_VAL_CLO(clo);
             return value;
         }
-        case AEXP_TYPE_VAR: {
+        case AEXP_TYPE_ANNOTATEDVAR: {
 #ifdef DEBUG_STEP
-            printf("A VAR\n");
+            printf("A ANNOTATED VAR\n");
 #endif
-            return lookUp(aexp->val.aexp.var, env);
+            return lookUp(aexp->val.aexp.annotatedVar, env);
         }
         case AEXP_TYPE_TRUE: {
 #ifdef DEBUG_STEP
@@ -171,10 +170,6 @@ static void step() {
             int save = protectValue(proc);
             if (args == NULL) {
                 applyProc(proc, NULL);
-            } else if (args->next == NULL) {
-                Value val = A(args->exp, E);
-                protectValue(val);
-                applyProcValue(proc, val);
             } else {
                 ValueList *values = mapA(args, E);
                 PROTECT(values);
@@ -220,7 +215,7 @@ static void step() {
             int save = PROTECT(letRec);
             LetRecBindings *bindings = letRec->bindings;
             state.C = letRec->body;
-            state.E = extendLetRecVoid(E);
+            state.E = extendLetRecVoid(E, letRec->nbindings);
             mapLetRecReplace(state.E, bindings);
             UNPROTECT(save);
         }
@@ -396,20 +391,22 @@ static primitive O(AexpPrimOp op) {
 
 static void applyProc(Value proc, ValueList *vals) {
     if (proc.type != VALUE_TYPE_CLO) {
+        fprintf(stderr, "%d ", proc.type);
         cant_happen("expected proc in applyproc");
     }
 
     Clo *clo = proc.val.clo;
     AexpLam *lam = clo->lam;
     Env *rho = clo->rho;
-    AexpVarList *vars = lam->args;
+    int nargs = lam->nargs;
     state.C = lam->exp;
-    state.E = mapExtend(rho, vars, vals);
+    state.E = mapExtend(rho, nargs, vals);
 }
 
 static void applyProcValue(Value proc, Value val) {
     if (proc.type != VALUE_TYPE_CLO) {
-        cant_happen("expected proc in applyproc");
+        fprintf(stderr, "%d ", proc.type);
+        cant_happen("expected proc in applyproc value");
     }
 
     Clo *clo = proc.val.clo;
@@ -421,8 +418,8 @@ static void applyProcValue(Value proc, Value val) {
     }
     state.C = lam->exp;
     int save = PROTECT(state.E);
-    state.E = newEnv(state.E);
-    replaceInEnv(state.E, vars->var, val);
+    state.E = newEnv(state.E, 1);
+    replaceInEnv(state.E, 0, val);
     UNPROTECT(save);
 }
 
@@ -432,8 +429,8 @@ static void applyKont(Value val) {
         AexpVar *var = K->var;
         state.C = K->body;
         Env *rho = K->rho;
-        state.E = newEnv(rho);
-        replaceInEnv(state.E, var, val);
+        state.E = newEnv(rho, 1);
+        replaceInEnv(state.E, 0, val);
         state.K = K->next;
     } else {
         state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
@@ -441,13 +438,20 @@ static void applyKont(Value val) {
     }
 }
 
-static Value lookUp(AexpVar *var, Env *env) {
-    while (env != NULL) {
-        Value value = hashGet(env->table, var);
-        if (value.type != VALUE_TYPE_VOID) return value;
+static Value lookUp(AexpAnnotatedVar *var, Env *env) {
+#ifdef DEBUG_STEP
+            printf("* lookup ");
+            printAexpAnnotatedVar(var);
+            printf(" in ");
+            printEnv(env);
+            printf("\n");
+#endif
+    int frame = var->frame;
+    while (frame > 0) {
         env = env->next;
+        frame--;
     }
-    cant_happen("no binding for var in env");
+    return env->values[var->offset];
 }
 
 static int countAexpList(AexpList *list) {
@@ -479,45 +483,41 @@ static ValueList *mapA(AexpList *args, Env *env) {
     return list;
 }
 
-static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals) {
+static Env *mapExtend(Env *env, int nargs, ValueList *vals) {
     int save = PROTECT(env);
-    env = newEnv(env);
-    PROTECT(env);
-    if (vals != NULL) {
-        for (int i = 0; i < vals->count; i++) {
-            if (vars == NULL) break;
-            replaceInEnv(env, vars->var, vals->values[i]);
-            vars = vars->next;
-        }
+    env = newEnv(env, nargs);
+    UNPROTECT(save);
+    for (int i = 0; i < nargs && i < vals->count; i++) {
+        env->values[i] = vals->values[i];
     }
 
-    UNPROTECT(save);
-
     return env;
 }
 
-static Env *extendLetRecVoid(Env *env) {
+static Env *extendLetRecVoid(Env *env, int count) {
     int save = PROTECT(env);
-    env = newEnv(env);
+    env = newEnv(env, count);
     UNPROTECT(save);
     return env;
 }
 
-static void replaceInEnv(Env *env, AexpVar *var, Value val) {
-    hashSet(env->table, var, val);
+static void replaceInEnv(Env *env, int index, Value val) {
+    env->values[index] = val;
 }
 
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings) {
+    int index = 0;
     while (bindings != NULL) {
         Value val = A(bindings->val, env);
         int save = protectValue(val);
-        replaceInEnv(env, bindings->var, val);
+        replaceInEnv(env, index, val);
         UNPROTECT(save);
         bindings = bindings->next;
+        index++;
     }
 }
 
-static void cant_happen(const char *message) {
+void cant_happen(const char *message) {
     fprintf(stderr, "can't happen: %s\n", message);
     exit(1);
 }

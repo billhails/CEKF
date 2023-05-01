@@ -15,12 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
 #include <stdbool.h>
 
 #include "common.h"
+#include "analysis.h"
 #include "exp.h"
 #include "memory.h"
 #include "step.h"
+#include "debug.h"
 
 #ifdef DEBUG_RUN_TESTS
 
@@ -28,7 +31,7 @@ Exp *makeIntExp(int num) {
     return newExp(AEXP_TYPE_INT, AEXP_VAL_INT(num));
 }
 
-Exp *makeVar(AexpVar *var) {
+Exp *makeVarExp(AexpVar *var) {
     return newExp(AEXP_TYPE_VAR, AEXP_VAL_VAR(var));
 }
 
@@ -120,7 +123,7 @@ Exp *makeTestExp1() {
     int save = PROTECT(ten);
     AexpVar *var = newAexpVar("x");
     PROTECT(var);
-    Exp *x = makeVar(var);
+    Exp *x = makeVarExp(var);
     PROTECT(x);
     Exp *args[2];
     args[0] = x;
@@ -139,7 +142,7 @@ Exp *makeTestExp2() {
     int save = PROTECT(expFive);
     AexpVar *var = newAexpVar("x");
     PROTECT(var);
-    Exp *x = makeVar(var);
+    Exp *x = makeVarExp(var);
     PROTECT(x);
     Exp *expBack = makeBack();
     PROTECT(expBack);
@@ -181,14 +184,8 @@ Exp *makeTestExp3(int depth) {
     AexpVar *fibVar = newAexpVar("fib");
     int save = PROTECT(fibVar);
 
-    Exp *fib = makeVar(fibVar);
-    PROTECT(fib);
-    
     AexpVar *n = newAexpVar("n");
     PROTECT(n);
-
-    Exp *nExp = makeVar(n);
-    PROTECT(nExp);
 
     Exp *one = makeIntExp(1);
     PROTECT(one);
@@ -196,29 +193,29 @@ Exp *makeTestExp3(int depth) {
     Exp *two = makeIntExp(2);
     PROTECT(two);
 
-    args[0] = nExp;
-    args[1] = one;
-    Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, 2, args);
-    PROTECT(nMinusOne);
-    
-    args[0] = nExp;
-    args[1] = two;
-    Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, 2, args);
-    PROTECT(nMinusTwo);
-
     AexpVar *fib1 = newAexpVar("fib1");
     PROTECT(fib1);
 
     AexpVar *fib2 = newAexpVar("fib2");
     PROTECT(fib2);
 
+    Exp *fib = makeVarExp(fibVar);
+    PROTECT(fib);
+    
+    Exp *nExp = makeVarExp(n);
+    PROTECT(nExp);
+    args[0] = nExp;
+    args[1] = two;
+    Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, 2, args);
+    PROTECT(nMinusTwo);
+
     Exp *fibNminusTwo = makeApply(fib, nMinusTwo);
     PROTECT(fibNminusTwo);
 
-    Exp *fib1Exp = makeVar(fib1);
+    Exp *fib1Exp = makeVarExp(fib1);
     PROTECT(fib1Exp);
 
-    Exp *fib2Exp = makeVar(fib2);
+    Exp *fib2Exp = makeVarExp(fib2);
     PROTECT(fib2Exp);
 
     args[0] = fib1Exp;
@@ -229,11 +226,24 @@ Exp *makeTestExp3(int depth) {
     Exp *fibInnerLet = makeLet(fib2, fibNminusTwo, addFib1fib2);
     PROTECT(fibInnerLet);
     
+    fib = makeVarExp(fibVar);
+    PROTECT(fib);
+    
+    nExp = makeVarExp(n);
+    PROTECT(nExp);
+    args[0] = nExp;
+    args[1] = one;
+    Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, 2, args);
+    PROTECT(nMinusOne);
+    
     Exp *fibNminusOne = makeApply(fib, nMinusOne);
     PROTECT(fibNminusOne);
 
     Exp *fibOuterLet = makeLet(fib1, fibNminusOne, fibInnerLet);
     PROTECT(fibOuterLet);
+
+    nExp = makeVarExp(n);
+    PROTECT(nExp);
 
     args[0] = nExp;
     args[1] = two;
@@ -252,6 +262,9 @@ Exp *makeTestExp3(int depth) {
     Exp *arg = makeIntExp(depth);
     PROTECT(arg);
 
+    fib = makeVarExp(fibVar);
+    PROTECT(fib);
+    
     Exp *body = makeApply(fib, arg);
     PROTECT(body);
 
@@ -265,7 +278,12 @@ Exp *makeTestExp3(int depth) {
 int main(int argc, char *argv[]) {
     // run(makeTestExp1());
     // run(makeTestExp2());
-    run(makeTestExp3(20));
+    Exp *exp = makeTestExp3(25);
+    PROTECT(exp);
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    run(exp);
 }
 
 #else

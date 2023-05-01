@@ -106,8 +106,40 @@ void printElidedHashTable(HashTable *x) {
     printf("}");
 }
 
+void printValues(Value *values, int count) {
+    printf("{");
+    for (int i = 0; i < count; ++i) {
+        printValue(values[i]);
+        if (i + 1 < count) {
+            printf(", ");
+        }
+    }
+    printf("}");
+}
+
+void printElidedValues(Value *values, int count) {
+    printf("{");
+    for (int i = 0; i < count; ++i) {
+        printf("<...>");
+        if (i + 1 < count) {
+            printf(", ");
+        }
+    }
+    printf("}");
+}
+
 void printEnv(Env *x) {
     printf("Env[");
+    while (x != NULL) {
+        printValues(x->values, x->count);
+        if (x->next != NULL) printf(", ");
+        x = x->next;
+    }
+    printf("]");
+}
+
+void printCTEnv(CTEnv *x) {
+    printf("CTEnv[");
     while (x != NULL) {
         printHashTable(x->table);
         if (x->next != NULL) printf(", ");
@@ -119,7 +151,7 @@ void printEnv(Env *x) {
 void printElidedEnv(Env *x) {
     printf("Env[");
     while (x != NULL) {
-        printElidedHashTable(x->table);
+        printElidedValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
         x = x->next;
     }
@@ -176,6 +208,11 @@ void printAexpVarList(AexpVarList *x) {
 
 void printAexpVar(AexpVar *x) {
     printf("%s", x->name);
+}
+
+void printAexpAnnotatedVar(AexpAnnotatedVar *x) {
+    printAexpVar(x->var);
+    printf("[%d:%d]", x->frame, x->offset);
 }
 
 void printAexpPrimApp(AexpPrimApp *x) {
@@ -295,6 +332,9 @@ void printExp(Exp *x) {
             break;
         case AEXP_TYPE_VAR:
             printAexpVar(x->val.aexp.var);
+            break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            printAexpAnnotatedVar(x->val.aexp.annotatedVar);
             break;
         case AEXP_TYPE_TRUE:
             printf("#t");

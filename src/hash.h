@@ -19,6 +19,8 @@
  */
 
 
+#include <stdbool.h>
+
 #include "common.h"
 #include "memory.h"
 #include "value.h"
@@ -44,5 +46,7 @@ void hashSet(HashTable *table, struct AexpVar *var, struct Value value);
 struct Value hashGet(HashTable *table, struct AexpVar *var);
 struct AexpVar *hashGetVar(HashTable *table, const char *name);
 Value hashGet(HashTable *table, struct AexpVar *var);
+void hashAddCTVar(HashTable *table, struct AexpVar *var);
+bool hashLocate(HashTable *table, struct AexpVar *var, int *location);
 
 #endif
