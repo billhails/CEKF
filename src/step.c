@@ -30,7 +30,7 @@
  * The step function of the CEKF machine.
  */
 
-typedef Value (*primitive)(ValueList *args);
+typedef Value (*primitive)(Value arg1, Value arg2);
 
 static primitive O(AexpPrimOp op);
 static void step();
@@ -43,6 +43,7 @@ static Env *mapExtend(Env *env, int nargs, ValueList *vals);
 static Env *extendLetRecVoid(Env *env, int count);
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
 static void replaceInEnv(Env *env, int index, Value val);
+static int protectValue(Value v);
 
 static CEKF state;
 
@@ -118,9 +119,17 @@ static Value A(Exp *aexp, Env *env) {
 #ifdef DEBUG_STEP
             printf("A PRIM\n");
 #endif
-            return (O(aexp->val.aexp.prim->op))(
-                mapA(aexp->val.aexp.prim->args, env)
-            );
+            AexpPrimApp *prim = aexp->val.aexp.prim;
+            Value val1 = A(prim->exp1, env);
+            int save = protectValue(val1);
+            Value val2 = vVoid;
+            if (prim->exp2 != NULL) {
+                val2 = A(prim->exp2, env);
+                protectValue(val2);
+            }
+            Value result = (O(aexp->val.aexp.prim->op))(val1, val2);
+            UNPROTECT(save);
+            return result;
         }
     }
 }
@@ -265,111 +274,65 @@ static Value intValue(int i) {
     return value;
 }
 
-static Value add(ValueList *list) {
-    AexpInteger result = 0;
-    if (list != NULL) {
-        for (int i = 0; i < list->count; ++i) {
-            if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                result += list->values[i].val.z;
-            }
-        }
-    }
+static Value add(Value a, Value b) {
+    AexpInteger result = a.val.z + b.val.z;
     return intValue(result);
 }
 
-static Value mul(ValueList *list) {
-    AexpInteger result = 1;
-    if (list != NULL) {
-        for (int i = 0; i < list->count; ++i) {
-            if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                result *= list->values[i].val.z;
-            }
-        }
-    }
+static Value mul(Value a, Value b) {
+    AexpInteger result = a.val.z * b.val.z;
     return intValue(result);
 }
 
-static Value sub(ValueList *list) {
-    AexpInteger result = 0;
-    if (list != NULL) {
-        if (list->count != 0) {
-            result = list->values[0].val.z;
-            for (int i = 1; i< list->count; i++) {
-                if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                    result -= list->values[i].val.z;
-                }
-            }
-        }
-    }
+static Value sub(Value a, Value b) {
+    AexpInteger result = a.val.z - b.val.z;
     return intValue(result);
 }
 
-static Value divide(ValueList *list) {
-    AexpInteger result = 1;
-    if (list != NULL) {
-        if (list->count != 0) {
-            result = list->values[0].val.z;
-            for (int i = 1; i< list->count; i++) {
-                if (list->values[i].type == VALUE_TYPE_INTEGER) {
-                    result /= list->values[i].val.z;
-                }
-            }
-        }
-    }
+static Value divide(Value a, Value b) {
+    AexpInteger result = a.val.z / b.val.z;
     return intValue(result);
 }
 
-static bool _eq(ValueList *list) {
-    if (list == NULL || list->count < 2) return true;
-    for (int i = 0; i < list->count - 1; i++) {
-        if (list->values[i].val.z != list->values[i+1].val.z) return false;
-    }
-    return true;
+static bool _eq(Value a, Value b) {
+    return a.val.z == b.val.z;
 }
 
-static bool _gt(ValueList *list) {
-    if (list == NULL || list->count < 2) return true;
-    for (int i = 0; i < list->count - 1; i++) {
-        if (list->values[i].val.z <= list->values[i+1].val.z) return false;
-    }
-    return true;
+static bool _gt(Value a, Value b) {
+    return a.val.z > b.val.z;
 }
 
-static bool _lt(ValueList *list) {
-    if (list == NULL || list->count < 2) return true;
-    for (int i = 0; i < list->count - 1; i++) {
-        if (list->values[i].val.z >= list->values[i+1].val.z) return false;
-    }
-    return true;
+static bool _lt(Value a, Value b) {
+    return a.val.z < b.val.z;
 }
 
-static Value eq(ValueList *list) {
-    bool result = _eq(list);
+static Value eq(Value a, Value b) {
+    bool result = _eq(a, b);
     return result ? vTrue : vFalse;
 }
 
-static Value ne(ValueList *list) {
-    bool result = _eq(list);
+static Value ne(Value a, Value b) {
+    bool result = _eq(a, b);
     return result ? vFalse : vTrue;
 }
 
-static Value gt(ValueList *list) {
-    bool result = _gt(list);
+static Value gt(Value a, Value b) {
+    bool result = _gt(a, b);
     return result ? vTrue : vFalse;
 }
 
-static Value lt(ValueList *list) {
-    bool result = _lt(list);
+static Value lt(Value a, Value b) {
+    bool result = _lt(a, b);
     return result ? vTrue : vFalse;
 }
 
-static Value ge(ValueList *list) {
-    bool result = _lt(list);
+static Value ge(Value a, Value b) {
+    bool result = _lt(a, b);
     return result ? vFalse : vTrue;
 }
 
-static Value le(ValueList *list) {
-    bool result = _gt(list);
+static Value le(Value a, Value b) {
+    bool result = _gt(a, b);
     return result ? vFalse : vTrue;
 }
 

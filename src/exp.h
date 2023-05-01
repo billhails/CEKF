@@ -75,8 +75,8 @@ typedef enum {
 typedef struct AexpPrimApp {
     Header header;
     AexpPrimOp op;
-    int nargs;
-    struct AexpList *args;
+    struct Exp *exp1;
+    struct Exp *exp2;
 } AexpPrimApp;
 
 typedef struct AexpList {
@@ -195,7 +195,7 @@ AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
 AexpVar *newAexpVar(char *name);
 AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var);
-AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args);
+AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Exp *exp1, Exp *exp2);
 AexpList *newAexpList(AexpList *next, Exp *exp);
 CexpApply *newCexpApply(Exp *function, AexpList *args);
 CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative);

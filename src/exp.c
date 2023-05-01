@@ -88,11 +88,11 @@ AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
     return x;
 }
 
-AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
+AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Exp *exp1, Exp *exp2) {
     AexpPrimApp *x = NEW(AexpPrimApp, OBJTYPE_PRIMAPP);
     x->op = op;
-    x->nargs = countAexpList(args);
-    x->args = args;
+    x->exp1 = exp1;
+    x->exp2 = exp2;
     return x;
 }
 
@@ -190,7 +190,8 @@ void markAexpPrimApp(AexpPrimApp *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAexpList(x->args);
+    markExp(x->exp1);
+    markExp(x->exp2);
 }
 
 void markAexpList(AexpList *x) {

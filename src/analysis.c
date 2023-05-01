@@ -63,7 +63,8 @@ void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeAexpPrimApp "); printAexpPrimApp(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
-    analizeAexpList(x->args, env, depth + 1);
+    analizeExp(x->exp1, env, depth + 1);
+    analizeExp(x->exp2, env, depth + 1);
 }
 
 void analizeAexpList(AexpList *x, CTEnv *env, int depth) {

@@ -249,7 +249,11 @@ void printAexpPrimApp(AexpPrimApp *x) {
             printf("<= ");
             break;
     }
-    printBareAexpList(x->args);
+    printExp(x->exp1);
+    if (x->exp2 != NULL) {
+        printf(" ");
+        printExp(x->exp2);
+    }
     printf(")");
 }
 

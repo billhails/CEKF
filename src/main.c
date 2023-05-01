@@ -63,11 +63,9 @@ Exp *makeLetRec(LetRecBindings *bindings, Exp *body) {
     return exp;
 }
 
-Exp *makePrim(AexpPrimOp op, int argc, Exp *argv[]) {
-    AexpList *args = makeList(argc, argv);
-    int save = PROTECT(args);
-    AexpPrimApp *prim = newAexpPrimApp(op, args);
-    PROTECT(prim);
+Exp *makePrim(AexpPrimOp op, Exp *exp1, Exp *exp2) {
+    AexpPrimApp *prim = newAexpPrimApp(op, exp1, exp2);
+    int save = PROTECT(prim);
     Exp *add = newExp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(prim));
     UNPROTECT(save);
     return add;
@@ -125,10 +123,7 @@ Exp *makeTestExp1() {
     PROTECT(var);
     Exp *x = makeVarExp(var);
     PROTECT(x);
-    Exp *args[2];
-    args[0] = x;
-    args[1] = ten;
-    Exp *addTen = makePrim(AEXP_PRIM_ADD, 2, args);
+    Exp *addTen = makePrim(AEXP_PRIM_ADD, x, ten);
     PROTECT(addTen);
     Exp *let = makeLet(var, ten, addTen);
     UNPROTECT(save);
@@ -204,9 +199,7 @@ Exp *makeTestExp3(int depth) {
     
     Exp *nExp = makeVarExp(n);
     PROTECT(nExp);
-    args[0] = nExp;
-    args[1] = two;
-    Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, 2, args);
+    Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, nExp, two);
     PROTECT(nMinusTwo);
 
     Exp *fibNminusTwo = makeApply(fib, nMinusTwo);
@@ -218,9 +211,7 @@ Exp *makeTestExp3(int depth) {
     Exp *fib2Exp = makeVarExp(fib2);
     PROTECT(fib2Exp);
 
-    args[0] = fib1Exp;
-    args[1] = fib2Exp;
-    Exp *addFib1fib2 = makePrim(AEXP_PRIM_ADD, 2, args);
+    Exp *addFib1fib2 = makePrim(AEXP_PRIM_ADD, fib1Exp, fib2Exp);
     PROTECT(addFib1fib2);
 
     Exp *fibInnerLet = makeLet(fib2, fibNminusTwo, addFib1fib2);
@@ -231,9 +222,7 @@ Exp *makeTestExp3(int depth) {
     
     nExp = makeVarExp(n);
     PROTECT(nExp);
-    args[0] = nExp;
-    args[1] = one;
-    Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, 2, args);
+    Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, nExp, one);
     PROTECT(nMinusOne);
     
     Exp *fibNminusOne = makeApply(fib, nMinusOne);
@@ -245,9 +234,7 @@ Exp *makeTestExp3(int depth) {
     nExp = makeVarExp(n);
     PROTECT(nExp);
 
-    args[0] = nExp;
-    args[1] = two;
-    Exp *nLtTwo = makePrim(AEXP_PRIM_LT, 2, args);
+    Exp *nLtTwo = makePrim(AEXP_PRIM_LT, nExp, two);
     PROTECT(nLtTwo);
 
     Exp *fibBody = makeIf(nLtTwo, one, fibOuterLet);
@@ -278,7 +265,7 @@ Exp *makeTestExp3(int depth) {
 int main(int argc, char *argv[]) {
     // run(makeTestExp1());
     // run(makeTestExp2());
-    Exp *exp = makeTestExp3(25);
+    Exp *exp = makeTestExp3(35);
     PROTECT(exp);
     analizeExp(exp, NULL, 0);
     printExp(exp);
