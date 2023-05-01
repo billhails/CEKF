@@ -6,7 +6,7 @@ Static analysis is a phase prior to evaluation that replaces variables with thei
 
 We don't know what the *values* of variables will be at run-time, but we can work out their *locations*.
 
-We do this with the halp of a compile-time environment (`ct-env`) that just stores variables, not values.
+We do this with the help of a compile-time environment (`ct-env`) that just stores variables, not values.
 
 For example consider this `let` expression
 
@@ -14,7 +14,7 @@ For example consider this `let` expression
 (let ((x 10)) x)
 ```
 
-If we were evaluating that naiively we would be doing something like
+If we were evaluating that naively we would be doing something like
 
 ```scheme
 (define (eval-let expr env)
@@ -40,7 +40,7 @@ where `(vars bindings)` is just `(map car bindings)`
 
 and similarily for other language constructs.
 
-Continuing with our naiive run-time evaluation, variable are looked up in the current environment:
+Continuing with our naive run-time evaluation, variable are looked up in the current environment:
 
 ```scheme
 (define (eval-var var env)
