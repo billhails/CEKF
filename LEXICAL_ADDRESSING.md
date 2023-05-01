@@ -1,6 +1,4 @@
-Lexical addressing
-
-# Lexical addressing
+# Lexical Addressing
 
 Static analysis is a phase prior to evaluation that replaces variables with their location in the environment.
 
