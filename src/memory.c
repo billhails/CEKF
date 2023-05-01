@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "common.h"
+#include "analysis.h"
 #include "memory.h"
 #include "step.h"
 
@@ -58,6 +59,8 @@ const char *typeName(ObjType type) {
             return "primapp";
         case OBJTYPE_VAR:
             return "var";
+        case OBJTYPE_ANNOTATEDVAR:
+            return "annotatedvar";
         case OBJTYPE_VARLIST:
             return "varlist";
         case OBJTYPE_CLO:
@@ -153,6 +156,7 @@ void markObj(Header *h) {
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
         case OBJTYPE_VAR:
+        case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             markExpObj(h);
             break;
@@ -162,6 +166,9 @@ void markObj(Header *h) {
         case OBJTYPE_KONT:
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
+            break;
+        case OBJTYPE_CTENV:
+            markCTEnv(h);
             break;
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
@@ -182,6 +189,7 @@ void freeObj(Header *h) {
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
         case OBJTYPE_VAR:
+        case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             freeExpObj(h);
             break;
@@ -191,6 +199,9 @@ void freeObj(Header *h) {
         case OBJTYPE_KONT:
         case OBJTYPE_VALUELIST:
             freeCekfObj(h);
+            break;
+        case OBJTYPE_CTENV:
+            freeCTEnv(h);
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);

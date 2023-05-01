@@ -64,6 +64,7 @@ Env *newEnv(Env *next) {
     x->next = next;
     x->table = NULL;
     x->table = newHashTable();
+    UNPROTECT(save);
     return x;
 }
 

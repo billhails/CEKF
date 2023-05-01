@@ -49,6 +49,13 @@ typedef struct AexpVar {
     hash_t hash;
 } AexpVar;
 
+typedef struct AexpAnnotatedVar {
+    Header header;
+    int frame;
+    int offset;
+    struct AexpVar *var;
+} AexpAnnotatedVar;
+
 typedef int AexpInteger; // you'll thank me later
 
 typedef enum {
@@ -118,6 +125,7 @@ typedef struct ExpLet {
 typedef enum {
     AEXP_TYPE_LAM,
     AEXP_TYPE_VAR,
+    AEXP_TYPE_ANNOTATEDVAR,
     AEXP_TYPE_TRUE,
     AEXP_TYPE_FALSE,
     AEXP_TYPE_INT,
@@ -135,6 +143,7 @@ typedef enum {
 typedef union {
     struct AexpLam *lam;
     struct AexpVar *var;
+    struct AexpAnnotatedVar *annotatedVar;
     AexpInteger integer;
     struct AexpPrimApp *prim;
 } AexpVal;
@@ -160,10 +169,11 @@ typedef struct Exp {
     ExpVal val;
 } Exp;
 
-#define AEXP_VAL_LAM(x)    ((ExpVal){.aexp = ((AexpVal){.lam     = (x)})})
-#define AEXP_VAL_VAR(x)    ((ExpVal){.aexp = ((AexpVal){.var     = (x)})})
-#define AEXP_VAL_INT(x)    ((ExpVal){.aexp = ((AexpVal){.integer = (x)})})
-#define AEXP_VAL_PRIM(x)   ((ExpVal){.aexp = ((AexpVal){.prim    = (x)})})
+#define AEXP_VAL_LAM(x)          ((ExpVal){.aexp = ((AexpVal){.lam     = (x)})})
+#define AEXP_VAL_VAR(x)          ((ExpVal){.aexp = ((AexpVal){.var     = (x)})})
+#define AEXP_VAL_ANNOTATEDVAR(x) ((ExpVal){.aexp = ((AexpVal){.annotatedVar     = (x)})})
+#define AEXP_VAL_INT(x)          ((ExpVal){.aexp = ((AexpVal){.integer = (x)})})
+#define AEXP_VAL_PRIM(x)         ((ExpVal){.aexp = ((AexpVal){.prim    = (x)})})
 
 #define CEXP_VAL_APPLY(x)  ((ExpVal){.cexp = ((CexpVal){.apply   = (x)})})
 #define CEXP_VAL_COND(x)   ((ExpVal){.cexp = ((CexpVal){.cond    = (x)})})
@@ -180,6 +190,7 @@ typedef struct Exp {
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
 AexpVar *newAexpVar(char *name);
+AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args);
 AexpList *newAexpList(AexpList *next, Exp *exp);
 CexpApply *newCexpApply(Exp *function, AexpList *args);
@@ -193,6 +204,7 @@ Exp *newExp(ExpType type, ExpVal val);
 void markAexpLam(AexpLam *x);
 void markAexpVarList(AexpVarList *x);
 void markAexpVar(AexpVar *x);
+void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpPrimApp(AexpPrimApp *x);
 void markAexpList(AexpList *x);
 void markCexpApply(CexpApply *x);

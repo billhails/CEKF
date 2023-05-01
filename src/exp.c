@@ -52,6 +52,14 @@ AexpVar *newAexpVar(char *name) {
     return x;
 }
 
+AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
+    AexpAnnotatedVar *x = NEW(AexpAnnotatedVar, OBJTYPE_ANNOTATEDVAR);
+    x->frame = frame;
+    x->offset = offset;
+    x->var = var;
+    return x;
+}
+
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, AexpList *args) {
     AexpPrimApp *x = NEW(AexpPrimApp, OBJTYPE_PRIMAPP);
     x->op = op;
@@ -140,6 +148,13 @@ void markAexpVar(AexpVar *x) {
     MARK(x);
 }
 
+void markAexpAnnotatedVar(AexpAnnotatedVar *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpVar(x->var);
+}
+
 void markAexpPrimApp(AexpPrimApp *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -217,6 +232,9 @@ void markExp(Exp *x) {
         case AEXP_TYPE_VAR:
             markAexpVar(x->val.aexp.var);
             break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            markAexpAnnotatedVar(x->val.aexp.annotatedVar);
+            break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
@@ -255,6 +273,7 @@ void freeExpObj(Header *h) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
         case AEXP_TYPE_VAR:
+        case AEXP_TYPE_ANNOTATEDVAR:
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
@@ -306,6 +325,9 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_VAR:
             markAexpVar((AexpVar *) h);
+            break;
+        case OBJTYPE_ANNOTATEDVAR:
+            markAexpAnnotatedVar((AexpAnnotatedVar *) h);
             break;
         case OBJTYPE_VARLIST:
             markAexpVarList((AexpVarList *) h);

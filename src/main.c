@@ -15,12 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
 #include <stdbool.h>
 
 #include "common.h"
+#include "analysis.h"
 #include "exp.h"
 #include "memory.h"
 #include "step.h"
+#include "debug.h"
 
 #ifdef DEBUG_RUN_TESTS
 
@@ -181,9 +184,6 @@ Exp *makeTestExp3(int depth) {
     AexpVar *fibVar = newAexpVar("fib");
     int save = PROTECT(fibVar);
 
-    Exp *fib = makeVar(fibVar);
-    PROTECT(fib);
-    
     AexpVar *n = newAexpVar("n");
     PROTECT(n);
 
@@ -201,6 +201,9 @@ Exp *makeTestExp3(int depth) {
     Exp *nMinusOne = makePrim(AEXP_PRIM_SUB, 2, args);
     PROTECT(nMinusOne);
     
+    nExp = makeVar(n);
+    PROTECT(nExp);
+
     args[0] = nExp;
     args[1] = two;
     Exp *nMinusTwo = makePrim(AEXP_PRIM_SUB, 2, args);
@@ -212,6 +215,9 @@ Exp *makeTestExp3(int depth) {
     AexpVar *fib2 = newAexpVar("fib2");
     PROTECT(fib2);
 
+    Exp *fib = makeVar(fibVar);
+    PROTECT(fib);
+    
     Exp *fibNminusTwo = makeApply(fib, nMinusTwo);
     PROTECT(fibNminusTwo);
 
@@ -229,11 +235,17 @@ Exp *makeTestExp3(int depth) {
     Exp *fibInnerLet = makeLet(fib2, fibNminusTwo, addFib1fib2);
     PROTECT(fibInnerLet);
     
+    fib = makeVar(fibVar);
+    PROTECT(fib);
+    
     Exp *fibNminusOne = makeApply(fib, nMinusOne);
     PROTECT(fibNminusOne);
 
     Exp *fibOuterLet = makeLet(fib1, fibNminusOne, fibInnerLet);
     PROTECT(fibOuterLet);
+
+    nExp = makeVar(n);
+    PROTECT(nExp);
 
     args[0] = nExp;
     args[1] = two;
@@ -252,6 +264,9 @@ Exp *makeTestExp3(int depth) {
     Exp *arg = makeIntExp(depth);
     PROTECT(arg);
 
+    fib = makeVar(fibVar);
+    PROTECT(fib);
+    
     Exp *body = makeApply(fib, arg);
     PROTECT(body);
 
@@ -265,7 +280,11 @@ Exp *makeTestExp3(int depth) {
 int main(int argc, char *argv[]) {
     // run(makeTestExp1());
     // run(makeTestExp2());
-    run(makeTestExp3(20));
+    Exp *exp = makeTestExp3(20);
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    // run(makeTestExp3(20));
 }
 
 #else

@@ -43,7 +43,6 @@ static Env *mapExtend(Env *env, AexpVarList *vars, ValueList *vals);
 static Env *extendLetRecVoid(Env *env);
 static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
 static void replaceInEnv(Env *env, AexpVar *var, Value val);
-static void cant_happen(const char *message);
 
 static CEKF state;
 
@@ -517,7 +516,7 @@ static void mapLetRecReplace(Env *env, LetRecBindings *bindings) {
     }
 }
 
-static void cant_happen(const char *message) {
+void cant_happen(const char *message) {
     fprintf(stderr, "can't happen: %s\n", message);
     exit(1);
 }
