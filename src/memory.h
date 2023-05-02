@@ -69,6 +69,9 @@ void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
 
+bool enableGC();
+bool disableGC();
+
 #define EXIT_OOM 2
 
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))

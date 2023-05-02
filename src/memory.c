@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -25,6 +26,7 @@
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
+static bool gcEnabled = true;
 
 static void collectGarbage();
 
@@ -80,6 +82,18 @@ const char *typeName(ObjType type) {
     }
 }
 #endif
+
+bool enableGC() {
+    bool previous = gcEnabled;
+    gcEnabled = true;
+    return previous;
+}
+
+bool disableGC() {
+    bool previous = gcEnabled;
+    gcEnabled = false;
+    return previous;
+}
 
 int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
@@ -242,6 +256,7 @@ static void sweep() {
 }
 
 static void collectGarbage() {
+    if (!gcEnabled) return;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "GC started\n");
 #endif
