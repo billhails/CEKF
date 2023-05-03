@@ -2,16 +2,13 @@
 
 ![logo](./docs/CEKF.png)
 
-Low level (C) implementation of a CEK machine with an additional "F"
+Low level, hopefully fast C implementation of a CEK machine with an additional "F"
 failure continuation supporting amb.
 
 This is heavily based on a blog post by Matt Might [Writing an
 interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/).
 
-I taught myself enough Haskell to bridge the gap between the math and
-real code, and then implemented in C.
-
-Currently there is only an A-Normal syntax tree with constructors, the
+Currently there is an A-Normal syntax tree with constructors, the
 CEKF machine itself which can evaluate those trees, a basic mark & sweep
 garbage collector, and a static analyser to compute variable locations
 allowing fast indexed run-time environments. See
