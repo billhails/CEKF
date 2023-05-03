@@ -12,22 +12,41 @@ DEBUGGING=-g
 CC=cc -Werror $(OPTIMIZING)
 
 CFILES=$(wildcard src/*.c)
+EXTRA_CFILES=tmp/lexer.c tmp/parser.c
 
 OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
 DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 
+EXTRA_OBJ=$(patsubst tmp/%,obj/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
+EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
+
+ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
+ALL_DEP=$(DEP) $(EXTRA_DEP)
+
 all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	$(CC) -o $@ $(OBJ)
+$(TARGET): $(ALL_OBJ)
+	$(CC) -o $@ $(ALL_OBJ)
 
--include $(DEP)
+-include $(ALL_DEP)
 
 $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -c $< -o $@
 
+$(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
+	$(CC) -c $< -o $@
+
 $(DEP): dep/%.d: src/%.c | dep
 	$(CC) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+
+$(EXTRA_DEP): dep/%.d: tmp/%.c | dep
+	$(CC) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+
+tmp/lexer.c: src/lexer.l | tmp
+	flex -o $@ $<
+
+tmp/parser.c: src/parser.y | tmp
+	bison -o $@ $<
 
 dep:
 	mkdir $@
@@ -35,11 +54,14 @@ dep:
 obj:
 	mkdir $@
 
+tmp:
+	mkdir $@
+
 clean: deps
-	rm -f $(TARGET) $(OBJ) callgrind.out.*
+	rm -f $(TARGET) $(OBJ) callgrind.out.* tmp/*
 
 deps:
-	rm -f $(DEP)
+	rm -f $(ALL_DEP)
 
 profile: all
 	rm -f callgrind.out.*

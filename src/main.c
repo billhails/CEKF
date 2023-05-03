@@ -235,7 +235,7 @@ Exp *makeTestExpFib(int depth) {
 
 int main(int argc, char *argv[]) {
     disableGC();
-    Exp *exp = makeTestExpFib(20);
+    Exp *exp = makeTestExpFib(35);
     PROTECT(exp);
     enableGC();
     analizeExp(exp, NULL, 0);
