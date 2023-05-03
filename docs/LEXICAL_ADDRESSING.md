@@ -90,7 +90,7 @@ All it's doing is searching the environment for the location of the variable, an
 For example
 
 ```scheme
-(lookup 'y '((a b) (c d) (x y z)))
+(ct-lookup 'y '((a b) (c d) (x y z)))
 ```
 
 should return `(2 1)`
