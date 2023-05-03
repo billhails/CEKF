@@ -120,3 +120,4 @@ A run time environment is then just a linked list of arrays of values, and a run
         )
 )
 ```
+And since we've already done the analysis we know the environment must be there and we don't even need to check for `null`!
