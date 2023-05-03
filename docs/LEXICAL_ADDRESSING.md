@@ -4,7 +4,7 @@
 
 We don't know what the *values* of variables will be at run-time, but we can work out their *locations*.
 
-We do this with the help of a compile-time environment (`ct-env`) that just stores variables, not values.
+We do this with the help of a compile-time environment `ct-env` that just stores variables, not values.
 
 For example consider this `let` expression
 
