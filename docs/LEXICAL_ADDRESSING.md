@@ -1,6 +1,6 @@
 # Lexical Addressing
 
-Static analysis is a phase prior to evaluation that replaces variables with their location in the environment.
+**Static analysis** is a phase prior to evaluation that replaces variables with their location in the environment.
 
 We don't know what the *values* of variables will be at run-time, but we can work out their *locations*.
 
