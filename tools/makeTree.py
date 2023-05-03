@@ -21,7 +21,19 @@
 import re
 import sys
 
-class AexpInt:
+class Aexp:
+    def is_aexp(self):
+        return True
+
+class Cexp:
+    def is_aexp(self):
+        return False
+
+class LetExp:
+    def is_aexp(self):
+        return False
+
+class AexpInt(Aexp):
     def __init__(self, val):
         self.val = val
 
@@ -37,7 +49,7 @@ class AexpInt:
     def expCVal(self):
         return"AEXP_VAL_INT(" + self.makeC() + ")"
 
-class AexpFalse:
+class AexpFalse(Aexp):
     def __str__(self):
         return '#f'
 
@@ -47,7 +59,7 @@ class AexpFalse:
     def expCVal(self):
         return "AEXP_VAL_NONE()"
 
-class AexpTrue:
+class AexpTrue(Aexp):
     def __str__(self):
         return '#t'
 
@@ -57,7 +69,7 @@ class AexpTrue:
     def expCVal(self):
         return "AEXP_VAL_NONE()"
 
-class AexpLam:
+class AexpLam(Aexp):
     def __init__(self, args, body):
         self.args = args
         self.body = body
@@ -94,7 +106,7 @@ class AexpVarList:
             rest = self.rest.makeC()
         return "newAexpVarList(" + rest + "," + self.var.makeC() + ")"
 
-class AexpVar:
+class AexpVar(Aexp):
     def __init__(self, name):
         self.name = name
 
@@ -111,8 +123,10 @@ class AexpVar:
         return "AEXP_VAL_VAR(" + self.makeC() + ")"
 
 
-class AexpPrimApp:
+class AexpPrimApp(Aexp):
     def __init__(self, op, lhs, rhs):
+        lhs.assert_aexp("primap " + op + " expects lhs aexp")
+        rhs.assert_aexp("primap " + op + " expects rhs aexp")
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
@@ -156,6 +170,7 @@ class AexpPrimApp:
 
 class AexpList:
     def __init__(self, rest, exp):
+        exp.assert_aexp("aexp list expects aexps")
         self.rest = rest
         self.exp = exp
 
@@ -174,8 +189,9 @@ class AexpList:
             rest = self.rest.makeC()
         return "newAexpList(" + rest + "," + self.exp.makeC() + ")"
 
-class CexpApply:
+class CexpApply(Cexp):
     def __init__(self, function, args):
+        function.assert_aexp("function being applied must be an aexp")
         self.function = function
         self.args = args
 
@@ -191,8 +207,9 @@ class CexpApply:
     def expCVal(self):
         return "CEXP_VAL_APPLY(" + self.makeC() + ")"
 
-class CexpCond:
+class CexpCond(Cexp):
     def __init__(self, condition, consequent, alternative):
+        condition.assert_aexp("condition")
         self.condition = condition
         self.consequent = consequent
         self.alternative = alternative
@@ -210,7 +227,7 @@ class CexpCond:
         return "CEXP_VAL_COND(" + self.makeC() + ")"
 
 
-class CexpLetRec:
+class CexpLetRec(Cexp):
     def __init__(self, bindings, body):
         self.bindings = bindings
         self.body = body
@@ -230,6 +247,7 @@ class CexpLetRec:
 
 class LetRecBindings:
     def __init__(self, rest, var, val):
+        val.assert_aexp("letrec values must be aexp")
         self.rest = rest
         self.var = var
         self.val = val
@@ -249,7 +267,7 @@ class LetRecBindings:
             rest = self.rest.makeC()
         return "newLetRecBindings(" + rest + "," + self.var.makeC() + "," + self.val.makeC() + ")"
 
-class CexpAmb:
+class CexpAmb(Cexp):
     def __init__(self, exp1, exp2):
         self.exp1 = exp1
         self.exp2 = exp2
@@ -266,7 +284,7 @@ class CexpAmb:
     def expCVal(self):
         return "CEXP_VAL_AMB(" + self.makeC() + ")"
 
-class ExpLet:
+class ExpLet(LetExp):
     def __init__(self, var, val, body):
         self.var = var
         self.val = val
@@ -295,8 +313,11 @@ class Exp:
     def makeC(self):
         return "newExp(" + self.exp.expCType() + "," + self.exp.expCVal() + ")"
 
+    def assert_aexp(self, context):
+        if not self.exp.is_aexp():
+            raise Exception(context + " expects an aexp not a cexp")
 
-class CexpBack:
+class CexpBack(Cexp):
     def __str__(self):
         return "back"
 
@@ -306,8 +327,9 @@ class CexpBack:
     def expCVal(self):
         return "CEXP_VAL_NONE()"
 
-class CexpCallCC:
+class CexpCallCC(Cexp):
     def __init__(self, exp):
+        exp.assert_aexp("call/cc expects aexp");
         self.exp = exp
 
     def makeC(self):

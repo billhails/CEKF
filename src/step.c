@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "debug.h"
@@ -70,6 +71,7 @@ void run(Exp *exp) {
         step();
 #ifdef DEBUG_STEP
         printCEKF(&state);
+        sleep(1);
 #endif
     }
     printCEKF(&state);
@@ -79,7 +81,7 @@ static Value A(Exp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
 #ifdef DEBUG_STEP
-            printf("A LAM\n");
+            printf("A LAM "); printExp(aexp); printf("\n");
 #endif
             Clo *clo = newClo(aexp->val.aexp.lam, env);
             Value value;
@@ -89,26 +91,26 @@ static Value A(Exp *aexp, Env *env) {
         }
         case AEXP_TYPE_ANNOTATEDVAR: {
 #ifdef DEBUG_STEP
-            printf("A ANNOTATED VAR\n");
+            printf("A ANNOTATED VAR "); printExp(aexp); printf("\n");
 #endif
             return lookUp(aexp->val.aexp.annotatedVar, env);
         }
         case AEXP_TYPE_TRUE: {
 #ifdef DEBUG_STEP
-            printf("A TRUE\n");
+            printf("A TRUE "); printExp(aexp); printf("\n");
 #endif
             return vTrue;
             break;
         }
         case AEXP_TYPE_FALSE: {
 #ifdef DEBUG_STEP
-            printf("A FALSE\n");
+            printf("A FALSE "); printExp(aexp); printf("\n");
 #endif
             return vFalse;
         }
         case AEXP_TYPE_INT: {
 #ifdef DEBUG_STEP
-            printf("A INT\n");
+            printf("A INT "); printExp(aexp); printf("\n");
 #endif
             Value value;
             value.type = VALUE_TYPE_INTEGER;
@@ -117,7 +119,7 @@ static Value A(Exp *aexp, Env *env) {
         }
         case AEXP_TYPE_PRIM: {
 #ifdef DEBUG_STEP
-            printf("A PRIM\n");
+            printf("A PRIM "); printExp(aexp); printf("\n");
 #endif
             AexpPrimApp *prim = aexp->val.aexp.prim;
             Value val1 = A(prim->exp1, env);
@@ -131,6 +133,9 @@ static Value A(Exp *aexp, Env *env) {
             UNPROTECT(save);
             return result;
         }
+        default:
+            fprintf(stderr, "%d ", aexp->type);
+            cant_happen("unexpected aexp in A");
     }
 }
 
@@ -154,7 +159,7 @@ static void step() {
 
     switch (C->type) {
         case AEXP_TYPE_LAM:
-        case AEXP_TYPE_VAR:
+        case AEXP_TYPE_ANNOTATEDVAR:
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
@@ -264,6 +269,9 @@ static void step() {
             state.K = newKont(var, body, E, K);
         }
         break;
+        default:
+            fprintf(stderr, "%d ", C->type);
+            cant_happen("unexpected aexp in step");
     }
 }
 
@@ -352,18 +360,27 @@ static primitive O(AexpPrimOp op) {
     }
 }
 
-static void applyProc(Value proc, ValueList *vals) {
-    if (proc.type != VALUE_TYPE_CLO) {
-        fprintf(stderr, "%d ", proc.type);
-        cant_happen("expected proc in applyproc");
+static void applyProc(Value val, ValueList *vals) {
+    switch (val.type) {
+        case VALUE_TYPE_CLO: {
+            Clo *clo = val.val.clo;
+            AexpLam *lam = clo->lam;
+            Env *rho = clo->rho;
+            int nargs = lam->nargs;
+            state.C = lam->exp;
+            state.E = mapExtend(rho, nargs, vals);
+        }
+        break;
+        case VALUE_TYPE_CONT: {
+            state.K = val.val.k;
+            Value v = vals->values[0];
+            applyKont(v);
+        }
+        break;
+        default:
+            fprintf(stderr, "%d ", val.type);
+            cant_happen("expected proc or cont in applyproc");
     }
-
-    Clo *clo = proc.val.clo;
-    AexpLam *lam = clo->lam;
-    Env *rho = clo->rho;
-    int nargs = lam->nargs;
-    state.C = lam->exp;
-    state.E = mapExtend(rho, nargs, vals);
 }
 
 static void applyProcValue(Value proc, Value val) {

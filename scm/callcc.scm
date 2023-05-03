@@ -1,1 +1,1 @@
-(call/cc (lambda (ret) (if (ret 5) 6 7)))
+(let (x (call/cc (lambda (ret) (let (y (ret 5)) (if y 6 7))))) x)
