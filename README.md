@@ -1,6 +1,6 @@
 # CEKF
 
-![logo](./CEKF.png)
+![logo](./docs/CEKF.png)
 
 Low level (C) implementation of a CEK machine with an additional "F" failure continuation supporting amb.
 
