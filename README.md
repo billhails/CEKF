@@ -12,7 +12,7 @@ Currently there is only an A-Normal syntax tree with constructors, the CEKF mach
 a basic mark & sweep garbage collector and hashtable-based run-time environments. It turns out that even with hashtable based lookup
 the code is quite slow so my next step is to introduce a lexical adressing analysis phase prior to execution, and use integer tuples
 `(depth, offset)` to replace or supplement the variables with their location in the run-time environment. See my notes on
-[Lexical Addressing](LEXICAL_ADDRESSING.md) for more thoughts on that.
+[Lexical Addressing](docs/LEXICAL_ADDRESSING.md) for more thoughts on that.
 
 I plan to follow up with a lexer/parser
 (probably Bison/Flex but maybe a hand-written Pratt parser),
