@@ -1,6 +1,8 @@
 %{
 #include <stdio.h>
 #include <ctype.h>
+#include "common.h"
+
 int yylex();
 int lineNum = 1;
 void yyerror(char *ps, ...) { /* need this to avoid link problem */
@@ -13,7 +15,7 @@ void yyerror(char *ps, ...) { /* need this to avoid link problem */
 // need to choose token type from union above
 %token <d> NUMBER
 %token '(' ')'
-%left '+'
+%left ADD
 %left '*'
 %type <d> exp factor term
 %start cal
@@ -23,7 +25,7 @@ cal
         { printf("The result is %d\n", $1); }
     ;
 exp
-    : exp '+' factor
+    : exp ADD factor
         { $$ = $1 + $3; }
     | factor
         { $$ = $1; }

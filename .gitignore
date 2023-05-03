@@ -1,5 +1,6 @@
 obj/
 dep/
+tmp/
 cekf
 .*.swp
 .$*.drawio.bkp

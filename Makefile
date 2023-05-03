@@ -34,19 +34,19 @@ $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -c $< -o $@
 
 $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
-	$(CC) -c $< -o $@
+	$(CC) -I src/ -c $< -o $@
 
 $(DEP): dep/%.d: src/%.c | dep
 	$(CC) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(EXTRA_DEP): dep/%.d: tmp/%.c | dep
-	$(CC) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(CC) -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-tmp/lexer.c: src/lexer.l | tmp
+tmp/lexer.c: src/lexer.l tmp/parser.h | tmp
 	flex -o $@ $<
 
-tmp/parser.c: src/parser.y | tmp
-	bison -o $@ $<
+tmp/parser.c tmp/parser.h: src/parser.y | tmp
+	bison -d -o $@ $<
 
 dep:
 	mkdir $@
