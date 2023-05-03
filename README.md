@@ -75,7 +75,7 @@ $$
 \\
       &|&  \mathtt{integer}
 \\
-      &|&  \mathtt{(prim\\ aexp_1\dots aexp_n)}
+      &|&  \mathtt{(prim\\ aexp_1\ aexp_2)}
 \end{array}
 $$
 
@@ -120,25 +120,20 @@ $$
 
 ### CEKF State
 
-We reduce the CESK state machine from four registers to three by removing $Store$, then expand it to five by adding $Fail$ and $Value$:
+We reduce the CESK state machine from four registers to three by removing $Store$, then expand it back to four by adding $Fail$:
 
 $$
-\varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail \times Value
+\varsigma \in \Sigma = \mathtt{Exp} \times Env \times Kont \times Fail
 $$
 
-So we'll use $\Sigma$ to denote the set (type) of CEKF states, which are tuples of five registers: $\mathtt{Exp}$, $Env$, $Kont$, $Fail$ and $Value$.
+So we'll use $\Sigma$ to denote the set (type) of CEKF states, which are tuples of four registers: $\mathtt{Exp}$, $Env$, $Kont$ and $Fail$.
 $\varsigma$ is the symbol we'll use for individual elements of this set (states).
 
 > Pay close attention to the typesetting here, there
 are effectively two domains, the expressions being evaluated and the rest of the machine. To distinguish, the types of $\mathtt{Exp}$
 are set in fixed width.
 
-The fifth, $Value$ register doesn't appear in the name CEKF because it may not be necessary eventually. I've included it as the
-place to put the final result that would otherwise
-be lost when returning to the $\mathbf{halt}$ continuation, so the machine could be invoked within a repl. Since any repl would
-likely be implemented *within* the machine $Value$ may eventually be removed but for now it makes testing easier during implementation.
-
-### Env
+### Environments
 
 Environments directly map variables to values:
 
@@ -181,7 +176,7 @@ e.g. when evaluating `exp` in `(let ((var exp)) body)` the continuation of that 
 when evaluating ANF the only construct that requires a new continuation is when evaluating the `exp` part of such a `let` (because
 in ANF all other complex expressions are in tail position), hence the name $\mathbf{letk}$.
 
-### Failure Continuation
+### Failure Continuations
 
 $$
 f \in Fail ::= \mathbf{backtrack}(\mathtt{exp}, \rho, \kappa, f)\\;|\\;\mathbf{end}
@@ -192,7 +187,7 @@ $\mathbf{end}$ is the failure continuation's equivalent to $\mathbf{halt}$. $\ma
 
 ## `aexp` evaluation
 
-`aexp` are evaluated with an auxiliary function $\mathcal{A}$, simplified because there is no store:
+`aexp` are evaluated with an auxiliary function $\mathcal{A}$:
 
 $$
 \mathcal{A} : \mathtt{aexp} \times Env \rightharpoonup Value
@@ -225,14 +220,14 @@ $$
 Primitive expressions are evaluated recursively:
 
 $$
-\mathcal{A}(\mathtt{(prim\ aexp_1\dots aexp_n)}, \rho) =
-\mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho)\dots\mathcal{A}(\mathtt{aexp_n},\rho))
+\mathcal{A}(\mathtt{(prim\ aexp_1\ aexp_2)}, \rho) =
+\mathcal{O}(\mathtt{prim})(\mathcal{A}(\mathtt{aexp_1}, \rho),\mathcal{A}(\mathtt{aexp_2}, \rho))
 $$
 
 where
 
 $$
-\mathcal{O} : \mathtt{prim} \rightharpoonup (Value^* \rightharpoonup Value)
+\mathcal{O} : \mathtt{prim} \rightharpoonup ((Value \times Value) \rightharpoonup Value)
 $$
 
 maps a primitive to its corresponding operation.
@@ -250,7 +245,7 @@ $$
 For ~~procedure~~ function calls, `step` first evaluates the function, then the arguments, then it applies the function:
 
 $$
-step(\mathtt{(aexp_0\ aexp_1\dots aexp_n)}, \rho, \kappa, f, r) = applyproc(proc,\langle val_1,\dots val_n\rangle, \kappa, f, r)
+step(\mathtt{(aexp_0\ aexp_1\dots aexp_n)}, \rho, \kappa, f) = applyproc(proc,\langle val_1,\dots val_n\rangle, \kappa, f)
 $$
 
 where
@@ -266,7 +261,7 @@ $$
 and
 
 $$
-applyproc : Value \times Value^* \times Kont \times Fail \times Value \rightharpoonup \Sigma
+applyproc : Value \times Value^* \times Kont \times Fail \rightharpoonup \Sigma
 $$
 
 $applyproc$ (defined later) doesn't need an Env ($\rho$) because it uses the one in the procedure produced by
@@ -277,7 +272,7 @@ $\mathcal{A}(\mathtt{lam},\rho)=\mathbf{clo}(\mathtt{lam},\rho)$.
 When the expression under evaluation is an `aexp`, that means we need to return it to the continuation:
 
 $$
-step(\mathtt{aexp}, \rho, \kappa, f, r) = applykont(\kappa, val, f, r)
+step(\mathtt{aexp}, \rho, \kappa, f) = applykont(\kappa, val, f)
 $$
 
 where
@@ -289,7 +284,7 @@ $$
 and
 
 $$
-applykont: Kont \times Value \times Fail \times Value \rightharpoonup \Sigma
+applykont: Kont \times Value \times Fail \rightharpoonup \Sigma
 $$
 
 is defined below.
@@ -297,11 +292,11 @@ is defined below.
 ### Conditionals
 
 $$
-step(\mathtt{(if\ aexp\ e_{true}\ e_{false})},\rho,\kappa,f, r) = \left\\{
+step(\mathtt{(if\ aexp\ e_{true}\ e_{false})},\rho,\kappa, f) = \left\\{
 \begin{array}{ll}
-(\mathtt{e_{false}},\rho,\kappa,f,r) & \mathcal{A}(\mathtt{aexp},\rho) = \\#f
+(\mathtt{e_{false}},\rho,\kappa, f) & \mathcal{A}(\mathtt{aexp},\rho) = \\#f
 \\
-(\mathtt{e_{true}},\rho,\kappa,f,r) & \textup{otherwise}
+(\mathtt{e_{true}},\rho,\kappa, f) & \textup{otherwise}
 \end{array}
 \right.
 $$
@@ -313,7 +308,7 @@ We might want to come back and revise this once we have stricter types.
 Evaluating `let` forces the creation of a continuation
 
 $$
-step(\mathtt{(let\ (var\ exp)\ body)},\rho,\kappa,f,r) = (\mathtt{exp}, \rho, \kappa',f,r)
+step(\mathtt{(let\ (var\ exp)\ body)},\rho,\kappa, f) = (\mathtt{exp}, \rho, \kappa', f)
 $$
 
 where
@@ -333,7 +328,7 @@ I'm thinking that in CEKF, for `letrec` only, we allow assignment into the Env (
 bound by functional constraints if we're eventually implementing in C. We couldn't write this in Haskell though.
 
 $$
-step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f,r) = (\mathtt{body}, \rho', \kappa, f, r)
+step(\mathtt{(letrec\ ((var_1\ aexp_1)\dots(var_n\ aexp_n))\ body)}, \rho, \kappa, f) = (\mathtt{body}, \rho', \kappa, f)
 $$
 
 where:
@@ -353,7 +348,7 @@ $$
 `call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a $Value$) as its only argument:
 
 $$
-step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f, r) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f, r)
+step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f)
 $$
 
 ### Amb
@@ -362,7 +357,7 @@ $$
 a new Fail continuation that, if backtracked to, will resume computation from the same state, except evaluating the second argument.
 
 $$
-step(\mathtt{(amb\ exp_1\ exp_2)}, \rho, \kappa, f, r) = (\mathtt{exp_1}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp_2}, \rho, \kappa, f), r)
+step(\mathtt{(amb\ exp_1\ exp_2)}, \rho, \kappa, f) = (\mathtt{exp_1}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp_2}, \rho, \kappa, f))
 $$
 
 ### Back
@@ -371,9 +366,9 @@ $$
 
 $$
 \begin{align}
-step(\mathtt{(back)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp}, \rho', \kappa', f), r) &= (\mathtt{exp}, \rho', \kappa', f, r)
+step(\mathtt{(back)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp}, \rho', \kappa', f)) &= (\mathtt{exp}, \rho', \kappa', f)
 \\
-step(\mathtt{(back)}, \rho, \kappa, \mathbf{end}, r) &= (\mathtt{DONE}, \rho, \kappa, \mathbf{end}, r)
+step(\mathtt{(back)}, \rho, \kappa, \mathbf{end}) &= (\mathtt{DONE}, \rho, \kappa, \mathbf{end})
 \end{align}
 $$
 
@@ -382,7 +377,7 @@ The `DONE` Exp signals termination.
 ### DONE
 
 $$
-step(\mathtt{DONE}, \rho, \kappa, f, r) = \varnothing
+step(\mathtt{DONE}, \rho, \kappa, f) = \varnothing
 $$
 
 terminates the machine, effectively it's undefined for $step$ to be given this argument.
@@ -390,12 +385,12 @@ terminates the machine, effectively it's undefined for $step$ to be given this a
 ### Applying procedures
 
 $$
-applyproc : Value \times Value^* \times Kont \times Fail \times Value \rightharpoonup \Sigma
+applyproc : Value \times Value^* \times Kont \times Fail \rightharpoonup \Sigma
 $$
 
 $$
-applyproc( \mathbf{clo} (\mathtt{(lambda\ (var_1\dots var_n)\ body)}, \rho),\langle val_1\dots val_n\rangle, \kappa, f, r) =
-(\mathtt{body}, \rho', \kappa, f, r)
+applyproc( \mathbf{clo} (\mathtt{(lambda\ (var_1\dots var_n)\ body)}, \rho),\langle val_1\dots val_n\rangle, \kappa, f) =
+(\mathtt{body}, \rho', \kappa, f)
 $$
 
 where
@@ -407,20 +402,20 @@ $$
 Found an issue with the blog post here, it omits to mention the additional case
 
 $$
-applyproc( \mathbf{cont}(\kappa'), \langle val \rangle, \kappa, f, r) = applykont(\kappa', val, f, r)
+applyproc( \mathbf{cont}(\kappa'), \langle val \rangle, \kappa, f) = applykont(\kappa', val, f)
 $$
 
 ### Applying continuations
 
 $$
-applykont : Kont \times Value \times Fail \times Value \rightharpoonup \Sigma
+applykont : Kont \times Value \times Fail \rightharpoonup \Sigma
 $$
 
 $$
 \begin{align}
-applykont(\mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa), val, f, r) &= (\mathtt{body}, \rho', \kappa, f, r)
+applykont(\mathbf{letk}(\mathtt{var}, \mathtt{body}, \rho, \kappa), val, f) &= (\mathtt{body}, \rho', \kappa, f)
 \\
-applykont(\mathbf{halt}, val, f, r) &= (\mathtt{DONE}, [], \mathbf{halt}, f, val)
+applykont(\mathbf{halt}, val, f) &= (\mathtt{DONE}, [], \mathbf{halt}, f)
 \end{align}
 $$
 
@@ -433,7 +428,9 @@ $$
 Q. Should $applykont$ get $f$ from its arguments or should we put it in the $\mathbf{letk}$?<br/>
 A. probably best to get it from its arguments, then we will backtrack through `call/cc`.
 
-Note again that `DONE` terminates the machine. Also note that this is the only situation where the fifth $r$ register is updated with the $val$ to be returned from the machine.
+Note again that `DONE` terminates the machine. Also note that the final value $val$ is lost on return to the $\mathbf{halt}$ continuation.
+
+> In my implementation I have a fifth hidden register for the sole putpose of preserving the final value in this situation.
 
 ## Running the machine
 
@@ -448,7 +445,7 @@ $$
 specifically
 
 $$
-inject(\mathtt{Exp}) = (\mathtt{Exp}, [], \mathbf{halt}, \mathbf{end}, \mathbf{void})
+inject(\mathtt{Exp}) = (\mathtt{Exp}, [], \mathbf{halt}, \mathbf{end})
 $$
 
 where $[]$ is an initial empty environment.
@@ -464,11 +461,11 @@ $$
 which is just:
 
 $$
-run(\mathtt{Exp}, \rho, \kappa, f, r) = \left\\{
+run(\mathtt{Exp}, \rho, \kappa, f) = \left\\{
 \begin{array}{ll}
-r & \mathtt{Exp} = \mathtt{DONE}
+\mathbf{void} & \mathtt{Exp} = \mathtt{DONE}
 \\
-run(step(\mathtt{Exp}, \rho, \kappa, f, r)) & \textup{otherwise}
+run(step(\mathtt{Exp}, \rho, \kappa, f)) & \textup{otherwise}
 \end{array}
 \right.
 $$
