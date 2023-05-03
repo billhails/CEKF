@@ -407,6 +407,12 @@ $$
 \rho' = \rho[\mathtt{var_i} \Rightarrow val_i]
 $$
 
+Found an issue with the blog post here, it omits to mention the additional case
+
+$$
+applyproc( \mathbf{cont}(\kappa'), \langle val \rangle, \kappa, f, r) = applykont(\kappa', val, f, r)
+$$
+
 ### Applying continuations
 
 $$
