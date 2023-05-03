@@ -9,10 +9,7 @@ This is heavily based on a blog post by Matt Might [Writing an interpreter, CESK
 I taught myself enough Haskell to bridge the gap between the math and real code, and then implemented in C.
 
 Currently there is only an A-Normal syntax tree with constructors, the CEKF machine itself which can evaluate those trees,
-a basic mark & sweep garbage collector and hashtable-based run-time environments. It turns out that even with hashtable based lookup
-the code is quite slow so my next step is to introduce a lexical adressing analysis phase prior to execution, and use integer tuples
-`(depth, offset)` to replace or supplement the variables with their location in the run-time environment. See my notes on
-[Lexical Addressing](docs/LEXICAL_ADDRESSING.md) for more thoughts on that.
+a basic mark & sweep garbage collector, and a static analyser to compute variable locations allowing fast indexed run-time environments.
 
 I plan to follow up with a lexer/parser
 (probably Bison/Flex but maybe a hand-written Pratt parser),
@@ -21,7 +18,7 @@ then a type checker (Hindley Milner), and finally a converter to generate the A-
 I'm hoping that I can reproduce [the F♮ language I once implemented in Python](https://github.com/billhails/PyScheme), but as a standalone
 binary with reasonable performance. It's not a stack-based VM so it'll never be super fast but it should be ok.
 
-If you want to look around, maybe start by reading [the math](#the-math) and comparing that with its implementation in [`step.c`](src/step.c),
+If you want to stick around, maybe start by reading [the math](#the-math) and comparing that with its implementation in [`step.c`](src/step.c),
 or start at [`main.c`](src/main.c) where you can see it currently constructs some expressions manually, then gives them to the machine to evaluate.
 
 ### An aside on `amb`
