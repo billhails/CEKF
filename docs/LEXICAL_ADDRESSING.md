@@ -38,7 +38,7 @@ where `(vars bindings)` is just `(map car bindings)`
 
 and similarily for other language constructs.
 
-Continuing with our naive run-time evaluation, variable are looked up in the current environment:
+Continuing with our naive run-time evaluation analogy, variable are looked up in the current environment:
 
 ```scheme
 (define (eval-var var env)
