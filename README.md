@@ -15,7 +15,7 @@ Currently there is only an A-Normal syntax tree with constructors, the
 CEKF machine itself which can evaluate those trees, a basic mark & sweep
 garbage collector, and a static analyser to compute variable locations
 allowing fast indexed run-time environments. See
-[LEXICAL_ADDRESSING](docs/LEXICAL_ADDRESSING.md) for the idea there.
+[lexical addressing](docs/LEXICAL_ADDRESSING.md) for the idea there.
 
 I plan to follow up with a lexer/parser (probably Bison/Flex but maybe
 a hand-written Pratt parser), then a type checker (Hindley Milner),
