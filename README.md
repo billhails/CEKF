@@ -348,7 +348,7 @@ $$
 `call/cc` takes a function as argument and invokes it with the current continuation (dressed up to look like a $Value$) as its only argument:
 
 $$
-step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \mathbf{cont}(\kappa), \kappa, f)
+step(\mathtt{(call/cc\ aexp)}, \rho, \kappa, f) = applyproc(\mathcal{A}(\mathtt{aexp}, \rho), \langle \mathbf{cont}(\kappa) \rangle, \kappa, f)
 $$
 
 ### Amb
