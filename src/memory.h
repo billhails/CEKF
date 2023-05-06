@@ -45,6 +45,7 @@ typedef enum {
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
+    OBJTYPE_AST,
 } ObjType;
 
 typedef struct Header {
@@ -58,6 +59,7 @@ int protect(Header *obj);
 int startProtect();
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
+char *safe_strdup(char *s);
 
 void markObj(Header *h);
 void markExpObj(Header *x);

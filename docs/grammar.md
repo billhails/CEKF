@@ -39,17 +39,17 @@ functions : function
 
 function : arguments nest
 
-arguments : '(' arg_list ')'
+arguments : '(' arglist ')'
 
-arg_list : arg
-         | arg_list ',' arg
+arglist : arg
+        | arglist ',' arg
 
 arg : arg_2 '@' arg
     | arg_2
     | symbol '=' arg
 
 arg_2 : '[' ']'
-      | '[' arg_list ']'
+      | '[' arglist ']'
       | arg_3
 
 arg_3 : symbol
@@ -71,19 +71,6 @@ statements : expression
 
 expression : binop_and THEN expression
            | binop_and
-
-load : LOAD package [AS symbol]
-
-package : symbol
-        | package '.' symbol
-
-definition : define
-           | implicit_define
-           | load
-
-define : DEFINE symbol '=' expression
-
-implicit_define : symbol '=' expression
 
 binop_and : unop_not
           | unop_not AND binop_and
@@ -117,9 +104,6 @@ binop_mul : op_funcall '*' op_funcall
 op_funcall : env_access '(' expressions ')'
            | env_access
 
-expressions : expression
-            | expressions ',' expression
-
 env_access : atom
            | env_access '.' atom
 
@@ -138,6 +122,19 @@ atom : symbol
      | conditional
      | switch
      | '(' expression ')'
+
+load : LOAD package [AS symbol]
+
+package : symbol
+        | package '.' symbol
+
+definition : define
+           | load
+
+define : symbol '=' expression
+
+expressions : expression
+            | expressions ',' expression
 
 env : ENV extension nest
 

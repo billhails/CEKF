@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile
+.PHONY: all clean deps profile check-grammar
 
 TARGET=cekf
 
@@ -31,13 +31,13 @@ $(TARGET): $(ALL_OBJ)
 -include $(ALL_DEP)
 
 $(OBJ): obj/%.o: src/%.c | obj
-	$(CC) -c $< -o $@
+	$(CC) -I tmp/ -c $< -o $@
 
 $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
 	$(CC) -I src/ -c $< -o $@
 
 $(DEP): dep/%.d: src/%.c | dep
-	$(CC) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(CC) -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(EXTRA_DEP): dep/%.d: tmp/%.c | dep
 	$(CC) -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
@@ -46,7 +46,7 @@ tmp/lexer.c: src/lexer.l tmp/parser.h | tmp
 	flex -o $@ $<
 
 tmp/parser.c tmp/parser.h: src/parser.y | tmp
-	bison -d -o $@ $<
+	bison -v -Werror --header=tmp/parser.h -o tmp/parser.c $<
 
 dep:
 	mkdir $@
@@ -58,13 +58,16 @@ tmp:
 	mkdir $@
 
 clean: deps
-	rm -f $(TARGET) $(OBJ) callgrind.out.* tmp/*
+	rm -f $(TARGET) obj/* callgrind.out.* tmp/*
 
 deps:
-	rm -f $(ALL_DEP)
+	rm -f dep/*
 
 profile: all
 	rm -f callgrind.out.*
 	valgrind --tool=callgrind ./$(TARGET)
+
+check-grammar:
+	bison -Wcex --feature=syntax-only src/parser.y
 
 # vim: noet,sw=8,tabstop=8

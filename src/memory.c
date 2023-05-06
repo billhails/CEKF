@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common.h"
 #include "analysis.h"
@@ -82,6 +83,12 @@ const char *typeName(ObjType type) {
     }
 }
 #endif
+
+char *safe_strdup(char *s) {
+    char *t = strdup(s);
+    if (t == NULL) exit(1);
+    return t;
+}
 
 bool enableGC() {
     bool previous = gcEnabled;
