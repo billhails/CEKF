@@ -23,10 +23,10 @@
 #include "hash.h"
 #include "memory.h"
 
-AstNest *newAstNest(AstDefinitions *definitions, AstExpression *expression) {
+AstNest *newAstNest(AstDefinitions *definitions, AstExpressions *expressions) {
     AstNest *x = NEW(AstNest, OBJTYPE_AST);
     x->definitions = definitions;
-    x->expression = expression;
+    x->expressions = expressions;
     return x;
 }
 
@@ -228,10 +228,10 @@ AstBinOp *newAstBinOp(AstBinOpType type, AstExpression *lhs, AstExpression *rhs)
     return x;
 }
 
-AstFunCall *newAstFunCall(AstSymbol *symbol, AstExpressions *expressions) {
+AstFunCall *newAstFunCall(AstExpression *function, AstExpressions *arguments) {
     AstFunCall *x = NEW(AstFunCall, OBJTYPE_AST);
-    x->symbol = symbol;
-    x->expressions = expressions;
+    x->function = function;
+    x->arguments = arguments;
     return x;
 }
 
@@ -256,8 +256,9 @@ AstEnv *newAstEnv(AstPackage *package, AstDefinitions *definitions) {
     return x;
 }
 
-AstSymbol *newAstSymbol(char *name) {
+AstSymbol *newAstSymbol(AstSymbolType type, char *name) {
     AstSymbol *x = NEW(AstSymbol, OBJTYPE_AST);
+    x->type = type;
     x->name = safe_strdup(name);
     x->hash = hashString(name);
     return x;
@@ -266,6 +267,13 @@ AstSymbol *newAstSymbol(char *name) {
 AstString *newAstString(char *string) {
     AstString *x = NEW(AstString, OBJTYPE_AST);
     x->string = safe_strdup(string);
+    return x;
+}
+
+AstUnpack *newAstUnpack(AstSymbol *symbol, AstArgList *argList) {
+    AstUnpack *x = NEW(AstUnpack, OBJTYPE_AST);
+    x->symbol = symbol;
+    x->argList = argList;
     return x;
 }
 
@@ -306,6 +314,10 @@ void markAstArg(AstArg *x) {
         break;
         case AST_ARG_TYPE_STRING: {
             markAstString(x->val.string);
+        }
+        break;
+        case AST_ARG_TYPE_UNPACK: {
+            markAstUnpack(x->val.unpack);
         }
         break;
         case AST_ARG_TYPE_NUMBER:
@@ -415,10 +427,8 @@ void markAstExpression(AstExpression *x) {
             markAstBinOp(x->val.binOp);
         }
         break;
-        case AST_EXPRESSION_TYPE_NOT: {
-            markAstExpression(x->val.expression);
-        }
-        break;
+        case AST_EXPRESSION_TYPE_HERE:
+        case AST_EXPRESSION_TYPE_NOT:
         case AST_EXPRESSION_TYPE_NEGATE: {
             markAstExpression(x->val.expression);
         }
@@ -484,8 +494,8 @@ void markAstFunCall(AstFunCall *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
-    markAstExpressions(x->expressions);
+    markAstExpression(x->function);
+    markAstExpressions(x->arguments);
 }
 
 void markAstFunction(AstFunction *x) {
@@ -533,7 +543,7 @@ void markAstNest(AstNest *x) {
     if (MARKED(x)) return;
     MARK(x);
     markAstDefinitions(x->definitions);
-    markAstExpression(x->expression);
+    markAstExpressions(x->expressions);
 }
 
 void markAstPackage(AstPackage *x) {
@@ -679,4 +689,12 @@ void markAstTypeSymbols(AstTypeSymbols *x) {
     MARK(x);
     markAstTypeSymbols(x->next);
     markAstSymbol(x->typeSymbol);
+}
+
+void markAstUnpack(AstUnpack *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstSymbol(x->symbol);
+    markAstArgList(x->argList);
 }

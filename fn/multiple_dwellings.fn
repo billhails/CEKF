@@ -1,0 +1,55 @@
+let
+    typedef named_result { result(list(char), int) }
+    
+    fn require(condition) {
+        condition or back
+    }
+    
+    fn one_of { // demonstrate implicit green cut in composite functions
+        ([]) { back }
+        (h @ t) { h then one_of(t) }
+    }
+    
+    fn member {
+        (x, []) { false }
+        (x, x @ t) { true }
+        (x, h @ t) { member(x, t) }
+    }
+
+    fn exclude {
+        (l, []) { [] }
+        (l, h @ t) {
+            if (member(h, l)) {
+                exclude(l, t)
+            } else {
+                h @ exclude(l, t)
+            }
+        }
+    }
+    
+    fn abs(n) {
+        if (n < 0) { 0 - n } else { n }
+    }
+    
+    floors = [1, 2, 3, 4, 5];
+    baker = one_of(floors);
+    cooper = one_of(exclude([baker], floors));
+    fletcher = one_of(exclude([baker, cooper], floors));
+    miller = one_of(exclude([baker, cooper, fletcher], floors));
+    smith = head(exclude([baker, cooper, fletcher, miller], floors));
+in
+    require(baker != 5);
+    require(cooper != 1);
+    require(fletcher != 5);
+    require(fletcher != 1);
+    require(miller > cooper);
+    require(abs(smith - fletcher) != 1);
+    require(abs(fletcher - cooper) != 1);
+    
+    [
+        result("baker", baker),
+        result("cooper", cooper),
+        result("fletcher", fletcher),
+        result("miller", miller),
+        result("smith", smith)
+    ]

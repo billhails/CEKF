@@ -29,7 +29,7 @@
 typedef struct AstNest {
     struct Header header;
     struct AstDefinitions *definitions;
-    struct AstExpression *expression;
+    struct AstExpressions *expressions;
 } AstNest;
 
 
@@ -253,6 +253,7 @@ typedef enum AstArgType {
     AST_ARG_TYPE_TRUE,
     AST_ARG_TYPE_FALSE,
     AST_ARG_TYPE_WILDCARD,
+    AST_ARG_TYPE_UNPACK,
 } AstArgType;
 
 typedef union AstArgValue {
@@ -262,6 +263,7 @@ typedef union AstArgValue {
     struct AstNamedArg *named;
     struct AstArgList *list;
     struct AstEnvType *env;
+    struct AstUnpack *unpack;
     int number;
     struct AstString *string;
     char character;
@@ -283,9 +285,16 @@ typedef struct AstArg {
 #define AST_ARG_VAL_NUMBER(x) ((AstArgValue){.number = (x)})
 #define AST_ARG_VAL_STRING(x) ((AstArgValue){.string = (x)})
 #define AST_ARG_VAL_CHAR(x) ((AstArgValue){.character = (x)})
+#define AST_ARG_VAL_UNPACK(x) ((AstArgValue){.unpack = (x)})
 #define AST_ARG_VAL_TRUE() ((AstArgValue){.boolean = true})
 #define AST_ARG_VAL_FALSE() ((AstArgValue){.boolean = false})
 #define AST_ARG_VAL_WILDCARD() ((AstArgValue){.none = NULL})
+
+typedef struct AstUnpack {
+    struct Header header;
+    struct AstSymbol *symbol;
+    struct AstArgList *argList;
+} AstUnpack;
 
 typedef struct AstArgPair {
     struct Header header;
@@ -322,6 +331,7 @@ typedef enum AstExpressionType {
     AST_EXPRESSION_TYPE_BACK,
     AST_EXPRESSION_TYPE_CONDITIONAL,
     AST_EXPRESSION_TYPE_SWITCH,
+    AST_EXPRESSION_TYPE_HERE,
 } AstExpressionType;
 
 typedef union AstExpressionValue {
@@ -363,6 +373,7 @@ typedef struct AstExpression {
 #define AST_EXPRESSION_VAL_BACK() ((AstExpressionValue){.none = NULL})
 #define AST_EXPRESSION_VAL_CONDITIONAL(x) ((AstExpressionValue){.conditional = (x)})
 #define AST_EXPRESSION_VAL_SWITCH(x) ((AstExpressionValue){.switchStatement = (x)})
+#define AST_EXPRESSION_VAL_HERE(x) ((AstExpressionValue){.expression = (x)})
 
 typedef enum AstBinOpType {
     AST_BINOP_TYPE_THEN,
@@ -394,8 +405,8 @@ typedef struct AstBinOp {
 
 typedef struct AstFunCall {
     struct Header header;
-    struct AstSymbol *symbol;
-    struct AstExpressions *expressions;
+    struct AstExpression *function;
+    struct AstExpressions *arguments;
 } AstFunCall;
 
 typedef struct AstPackage {
@@ -416,8 +427,14 @@ typedef struct AstEnv {
     struct AstDefinitions *definitions;
 } AstEnv;
 
+typedef enum AstSymbolType {
+    AST_SYMBOL_TYPE_SYMBOL,
+    AST_SYMBOL_TYPE_TYPESYMBOL,
+} AstSymbolType;
+
 typedef struct AstSymbol {
     struct Header header;
+    AstSymbolType type;
     hash_t hash;
     char *name;
 } AstSymbol;
@@ -442,12 +459,12 @@ AstEnvType *newAstEnvType(AstSymbol *name, AstSymbol *prototype);
 AstExpression *newAstExpression(AstExpressionType type, AstExpressionValue val);
 AstExpressions *newAstExpressions(AstExpressions *next, AstExpression *expression);
 AstFlatType *newAstFlatType(AstSymbol *symbol, AstTypeSymbols *typeSymbols);
-AstFunCall *newAstFunCall(AstSymbol *symbol, AstExpressions *expressions);
+AstFunCall *newAstFunCall(AstExpression *function, AstExpressions *arguments);
 AstFunction *newAstFunction(AstArgList *argList, AstNest *nest);
 AstFun *newAstFun(AstFunType type, AstFunValue val);
 AstLoad *newAstLoad(AstPackage *package, AstSymbol *symbol);
 AstNamedArg *newAstNamedArg(AstSymbol *name, AstArg *arg);
-AstNest *newAstNest(AstDefinitions *definitions, AstExpression *expression);
+AstNest *newAstNest(AstDefinitions *definitions, AstExpressions *expressions);
 AstPackage *newAstPackage(AstPackage *next, AstSymbol *symbol);
 AstPrototypeBody *newAstPrototypeBody(AstPrototypeBody *next, AstSinglePrototype *single);
 AstPrototype *newAstPrototype(AstSymbol *symbol, AstPrototypeBody *body);
@@ -455,7 +472,7 @@ AstPrototypeSymbolType *newAstPrototypeSymbolType(AstSymbol *symbol, AstType *ty
 AstSinglePrototype *newAstSinglePrototype(AstSinglePrototypeType type, AstSinglePrototypeValue val);
 AstString *newAstString(char *string);
 AstSwitch *newAstSwitch(AstExpressions *expressions, AstCompositeFunction *compositeFunction);
-AstSymbol *newAstSymbol(char *name);
+AstSymbol *newAstSymbol(AstSymbolType type, char *name);
 AstTypeBody *newAstTypeBody(AstTypeBody *next, AstTypeConstructor *typeConstructor);
 AstTypeClause *newAstTypeClause(AstTypeClauseType type, AstTypeClauseValue val);
 AstTypeConstructor *newAstTypeConstructor(AstSymbol *symbol, AstTypeList *typeList);
@@ -463,6 +480,7 @@ AstTypeDef *newAstTypeDef(AstFlatType *flatType, AstTypeBody *typeBody);
 AstTypeList *newAstTypeList(AstTypeList *next, AstType *type);
 AstType *newAstType(AstType *next, AstTypeClause *typeClause);
 AstTypeSymbols *newAstTypeSymbols(AstTypeSymbols *next, AstSymbol *typeSymbol);
+AstUnpack *newAstUnpack(AstSymbol *symbol, AstArgList *argList);
 
 void markAstArgList(AstArgList *x);
 void markAstArg(AstArg *x);
@@ -499,5 +517,6 @@ void markAstTypeDef(AstTypeDef *x);
 void markAstTypeList(AstTypeList *x);
 void markAstType(AstType *x);
 void markAstTypeSymbols(AstTypeSymbols *x);
+void markAstUnpack(AstUnpack *x);
 
 #endif

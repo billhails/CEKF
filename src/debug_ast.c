@@ -45,7 +45,9 @@ void printAstArg(AstArg *x) {
         }
         break;
         case AST_ARG_TYPE_LIST: {
+            printf("[");
             printAstArgList(x->val.list);
+            printf("]");
         }
         break;
         case AST_ARG_TYPE_ENV: {
@@ -54,6 +56,10 @@ void printAstArg(AstArg *x) {
         break;
         case AST_ARG_TYPE_STRING: {
             printAstString(x->val.string);
+        }
+        break;
+        case AST_ARG_TYPE_UNPACK: {
+            printAstUnpack(x->val.unpack);
         }
         break;
         case AST_ARG_TYPE_NUMBER:
@@ -194,6 +200,11 @@ void printAstExpression(AstExpression *x) {
             printAstBinOp(x->val.binOp);
         }
         break;
+        case AST_EXPRESSION_TYPE_HERE: {
+            printf("(here ");
+            printAstExpression(x->val.expression);
+            printf(")");
+        }
         case AST_EXPRESSION_TYPE_NOT: {
             printf("(not ");
             printAstExpression(x->val.expression);
@@ -280,20 +291,24 @@ void printAstFlatType(AstFlatType *x) {
 
 void printAstFunCall(AstFunCall *x) {
     if (x == NULL) return;
-    printAstSymbol(x->symbol);
+    printAstExpression(x->function);
     printf("(");
-    printAstExpressions(x->expressions);
+    printAstExpressions(x->arguments);
     printf(")");
 }
 
 void printAstFunction(AstFunction *x) {
     if (x == NULL) return;
+    printf("(");
     printAstArgList(x->argList);
+    printf(") {\n");
     printAstNest(x->nest);
+    printf("\n}\n");
 }
 
 void printAstFun(AstFun *x) {
     if (x == NULL) return;
+    printf("fn ");
     switch (x->type) {
         case AST_FUN_TYPE_FUNCTION: {
             printAstFunction(x->val.function);
@@ -324,6 +339,15 @@ void printAstNamedArg(AstNamedArg *x) {
     printAstArg(x->arg);
 }
 
+static void printAstExpressionStatements(AstExpressions *x) {
+    if (x == NULL) return;
+    printAstExpression(x->expression);
+    if (x->next != NULL) {
+        printf(";\n");
+        printAstExpressionStatements(x->next);
+    }
+}
+
 void printAstNest(AstNest *x) {
     if (x == NULL) return;
     if (x->definitions != NULL) {
@@ -331,7 +355,7 @@ void printAstNest(AstNest *x) {
         printAstDefinitions(x->definitions);
         printf("in\n");
     }
-    printAstExpression(x->expression);
+    printAstExpressionStatements(x->expressions);
 }
 
 void printAstPackage(AstPackage *x) {
@@ -351,14 +375,17 @@ void printAstPrototypeBody(AstPrototypeBody *x) {
 
 void printAstPrototype(AstPrototype *x) {
     if (x == NULL) return;
+    printf("prototype ");
     printAstSymbol(x->symbol);
+    printf("{\n");
     printAstPrototypeBody(x->body);
+    printf("}\n");
 }
 
 void printAstPrototypeSymbolType(AstPrototypeSymbolType *x) {
     if (x == NULL) return;
     printAstSymbol(x->symbol);
-    printf(" ??? ");
+    printf(" : ");
     printAstType(x->type);
 }
 
@@ -391,6 +418,9 @@ void printAstSwitch(AstSwitch *x) {
 
 void printAstSymbol(AstSymbol *x) {
     if (x == NULL) return;
+    if (x->type == AST_SYMBOL_TYPE_TYPESYMBOL) {
+        printf("#");
+    }
     printf("%s", x->name);
 }
 
@@ -407,7 +437,9 @@ void printAstTypeClause(AstTypeClause *x) {
     if (x == NULL) return;
     switch (x->type) {
         case AST_TYPECLAUSE_TYPE_LIST: {
+            printf("list(");
             printAstType(x->val.type);
+            printf(")");
         }
         break;
         case AST_TYPECLAUSE_TYPE_INT:
@@ -440,17 +472,20 @@ void printAstTypeClause(AstTypeClause *x) {
 void printAstTypeConstructor(AstTypeConstructor *x) {
     if (x == NULL) return;
     printAstSymbol(x->symbol);
-    printf("(");
-    printAstTypeList(x->typeList);
-    printf(")");
+    if (x->typeList != NULL) {
+        printf("(");
+        printAstTypeList(x->typeList);
+        printf(")");
+    }
 }
 
 void printAstTypeDef(AstTypeDef *x) {
     if (x == NULL) return;
+    printf("typedef ");
     printAstFlatType(x->flatType);
-    printf("{ ");
+    printf(" { ");
     printAstTypeBody(x->typeBody);
-    printf(" }");
+    printf(" }\n");
 }
 
 void printAstTypeList(AstTypeList *x) {
@@ -464,19 +499,28 @@ void printAstTypeList(AstTypeList *x) {
 
 void printAstType(AstType *x) {
     if (x == NULL) return;
+    if(x->next != NULL) printf("(");
     printAstTypeClause(x->typeClause);
     if (x->next != NULL) {
-        printf(", ");
+        printf(" -> ");
         printAstType(x->next);
+        printf(")");
     }
 }
 
 void printAstTypeSymbols(AstTypeSymbols *x) {
     if (x == NULL) return;
-    printf("#");
     printAstSymbol(x->typeSymbol);
     if (x->next) {
         printf(", ");
         printAstTypeSymbols(x->next);
     }
+}
+
+void printAstUnpack(AstUnpack *x) {
+    if (x == NULL) return;
+    printAstSymbol(x->symbol);
+    printf("(");
+    printAstArgList(x->argList);
+    printf(")");
 }

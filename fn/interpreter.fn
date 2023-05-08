@@ -1,0 +1,74 @@
+let
+    // very simple environment
+    typedef environment { frame(string, expression, environment) | root }
+
+    // very simple AST
+    typedef expression {
+        addition(expression, expression) |
+        subtraction(expression, expression) |
+        multiplication(expression, expression) |
+        division(expression, expression) |
+        number(int) |
+        symbol(string) |
+        conditional(expression, expression, expression) |
+        lambda(expression, expression) |
+        closure(expression, environment) |
+        application(expression, expression)
+    }
+
+    // an interpreter
+    fn eval {
+        (addition(l, r), e)              { add(eval(l, e), eval(r, e)) }
+        (subtraction(l, r), e)           { sub(eval(l, e), eval(r, e)) }
+        (multiplication(l, r), e)        { mul(eval(l, e), eval(r, e)) }
+        (division(l, r), e)              { div(eval(l, e), eval(r, e)) }
+        (i = number(_), e)               { i }
+        (symbol(s), e)                   { lookup(s, e) }
+        (conditional(test, pro, con), e) { cond(test, pro, con, e) }
+        (l = lambda(_, _), e)            { closure(l, e) }
+        (application(function, arg), e)  { apply(eval(function, e), eval(arg, e)) }
+    }
+
+    // function application
+    fn apply (closure(lambda(symbol(s), body), e), arg) {
+        eval(body, frame(s, arg, e))
+    }
+
+    // built-ins
+    fn add (number(a), number(b)) { number(a + b) }
+    
+    fn sub (number(a), number(b)) { number(a - b) }
+    
+    fn mul (number(a), number(b)) { number(a * b) }
+    
+    fn div (number(a), number(b)) { number(a / b) }
+    
+    fn cond(test, pro, con, e) {
+        switch (eval(test, e)) {
+            (number(0)) { eval(con, e) } // 0 is false
+            (number(_)) { eval(pro, e) }
+        }
+    }
+
+    // lookup access to the environment
+    fn lookup {
+        (s, frame(s, value, _))  { value }
+        (s, frame(_, _, parent)) { lookup(s, parent) }
+        (s, root)                { error("mce symbol not defined " @@ s) }
+    }
+in
+    // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 3
+    eval(
+        application(
+            lambda(
+                symbol("x"),
+                conditional(
+                    symbol("x"),
+                    addition(symbol("x"), number(2)),
+                    symbol("x")
+                )
+            ),
+            symbol("a")
+        ),
+        frame("a", number(3), root)
+    )

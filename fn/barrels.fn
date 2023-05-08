@@ -1,56 +1,55 @@
 let
-
-fn require(condition) {
-    condition or back
-}
-
-fn one_of {
-    ([]) { back }
-    (h @ t) {
-        h then one_of(t)
+    fn require(condition) {
+        condition or back
     }
-}
 
-fn member {
-    (item, [])       { false }
-    (item, item @ t) { true }
-    (item, _ @ tail) { member(item, tail) }
-}
-
-fn exclude {
-    (items, []) { [] }
-    (items, h @ t) {
-        if (member(h, items)) {
-            exclude(items, t)
-        } else {
-            h @ exclude(items, t)
+    fn one_of {
+        ([]) { back }
+        (h @ t) {
+            h then one_of(t)
         }
     }
-}
 
-fn some_of {
-    ([]) { back }
-    (h @ t) { [h] then some_of(t) then h @ some_of(t) }
-}
+    fn member {
+        (item, [])       { false }
+        (item, item @ t) { true }
+        (item, _ @ tail) { member(item, tail) }
+    }
 
-fn sum {
-    ([]) { 0 }
-    (h @ t) { h + sum(t) }
-}
+    fn exclude {
+        (items, []) { [] }
+        (items, h @ t) {
+            if (member(h, items)) {
+                exclude(items, t)
+            } else {
+                h @ exclude(items, t)
+            }
+        }
+    }
 
-fn barrels_of_fun() {
-    let
-        barrels = [30, 32, 36, 38, 40, 62];
-        beer = one_of(barrels);
-        wine = exclude([beer], barrels);
-        barrel_1 = one_of(wine);
-        barrel_2 = one_of(exclude([barrel_1], wine));
-        purchase = some_of(exclude([barrel_1, barrel_2], wine));
-        tmp = require((barrel_1 + barrel_2) * 2 == sum(purchase));
-    in
-        beer
-}
+    fn some_of {
+        ([]) { back }
+        (h @ t) { [h] then some_of(t) then h @ some_of(t) }
+    }
+
+    fn sum {
+        ([]) { 0 }
+        (h @ t) { h + sum(t) }
+    }
+
+    fn barrels_of_fun() {
+        let
+            barrels = [30, 32, 36, 38, 40, 62];
+            beer = one_of(barrels);
+            wine = exclude([beer], barrels);
+            barrel_1 = one_of(wine);
+            barrel_2 = one_of(exclude([barrel_1], wine));
+            purchase = some_of(exclude([barrel_1, barrel_2], wine));
+        in
+            require((barrel_1 + barrel_2) * 2 == sum(purchase));
+            beer
+    }
 
 in
 
-barrels_of_fun()
+    barrels_of_fun()

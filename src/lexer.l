@@ -16,6 +16,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 
 [ \t]+ {}
 [\n] { lineNum++; }
+\/\/.* { }
 
 [0-9]+ {
     yylval.i = atoi(yytext);
@@ -25,28 +26,29 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "and"       { return AND; }
 "as"        { return AS; }
 "back"      { return BACK; }
+"bool"      { return KW_BOOL; }
+"char"      { return KW_CHAR; }
 "else"      { return ELSE; }
 "env"       { return ENV; }
 "extends"   { return EXTENDS; }
 "false"     { return FALSE; }
 "fn"        { return FN; }
+"here"      { return HERE; }
 "if"        { return IF; }
 "in"        { return IN; }
-"bool"      { return KW_BOOL; }
-"char"      { return KW_CHAR; }
 "int"       { return KW_INT; }
-"list"      { return KW_LIST; }
-"string"    { return KW_STRING; }
 "let"       { return LET; }
+"list"      { return KW_LIST; }
 "load"      { return LOAD; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "prototype" { return PROTOTYPE; }
+"_"         { return WILDCARD; }
+"string"    { return KW_STRING; }
 "switch"    { return SWITCH; }
 "then"      { return THEN; }
 "true"      { return TRUE; }
 "typedef"   { return TYPEDEF; }
-"_"         { return WILDCARD; }
 
 \"((\\.)|[^"])*\" { parseCS('"'); yylval.s = yytext; return STRING; }
 \'((\\.)|[^'])\'  { parseCS('\''); yylval.c = *yytext; return CHAR; }

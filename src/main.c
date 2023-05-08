@@ -259,6 +259,7 @@ int main(int argc, char *argv[]) {
     // yydebug = 1;
     yyparse();
     printAstNest(result);
+    printf("\n");
 }
 
 #endif

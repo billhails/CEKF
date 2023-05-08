@@ -1,0 +1,25 @@
+let
+
+    typedef tree(#t) { branch(tree(#t), #t, tree(#t)) | leaf }
+
+    fn insert {
+        (t, leaf) { branch(leaf, t, leaf) }
+        (t, x = branch(left, u, right)) {
+            if (t < u) {
+                branch(insert(t, left), u, right)
+            } else if (t == u) {
+                x
+            } else {
+                branch(left, u, insert(t, right))
+            }
+        }
+    }
+
+    fn flatten {
+        (leaf) { [] }
+        (branch(l, u, r)) { flatten(l) @@ [u] @@ flatten(r) }
+    }
+
+in
+
+    flatten(insert(1, insert(3, insert(2, insert(4, insert(3, leaf))))))

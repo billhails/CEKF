@@ -1,0 +1,26 @@
+let
+    unsorted = ["hello", "goodbye", "here", "there", "everywhere"];
+
+    fn qsort {
+        ([]) { [] }
+        (pivot @ rest) {
+            let
+                lesser = filter(fn (a, b) { a >= b }(pivot), rest);
+                greater = filter(fn (a, b) { a < b }(pivot), rest);
+            in
+                qsort(lesser) @@ [pivot] @@ qsort(greater)
+        }
+    }
+
+    fn filter {
+        (f, []) { [] }
+        (f, h @ t) {
+            if (f(h)) {
+                h @ filter(f, t)
+            } else {
+                filter(f, t)
+            }
+        }
+    }
+in
+    qsort(unsorted)

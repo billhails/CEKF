@@ -55,5 +55,6 @@ void printAstTypeDef(AstTypeDef *x);
 void printAstTypeList(AstTypeList *x);
 void printAstType(AstType *x);
 void printAstTypeSymbols(AstTypeSymbols *x);
+void printAstUnpack(AstUnpack *x);
 
  #endif

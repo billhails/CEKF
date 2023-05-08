@@ -1,0 +1,21 @@
+let
+    prototype foo {
+        prototype bar {
+            map: (#a -> #b) -> list(#a) -> list(#b);
+        }
+    }
+
+    env a {
+        env bar {
+            fn map {
+                (f, []) { [] }
+                (f, h @ t) { f(h) @ map(f, t) }
+            }
+        }
+    }
+
+    fn x (e: foo, f) {
+        e.bar.map(f, [1, 2, 3])
+    }
+in
+    x(a, add1)

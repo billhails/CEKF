@@ -1,0 +1,8 @@
+let
+    load utils.lists as lists
+
+    fn add(x, y) { x + y }
+
+in
+
+    lists.reduce(add, 0, [1, 2, 3, 4])
