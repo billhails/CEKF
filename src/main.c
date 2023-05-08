@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #include "common.h"
@@ -239,7 +240,9 @@ Exp *makeTestExpFib(int depth) {
 
 int main(int argc, char *argv[]) {
     disableGC();
-    Exp *exp = makeTestExpFib(35);
+    int depth = 35;
+    if (argc == 2) depth = atoi(argv[1]);
+    Exp *exp = makeTestExpFib(depth);
     PROTECT(exp);
     enableGC();
     analizeExp(exp, NULL, 0);
