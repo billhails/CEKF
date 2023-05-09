@@ -42,6 +42,15 @@ typedef enum ByteCodes {
     BYTECODE_ENV,
     BYTECODE_LETREC,
     BYTECODE_AMB,
+    BYTECODE_BACK,
+    BYTECODE_LET,
+    BYTECODE_CALLCC,
+    BYTECODE_TRUE,
+    BYTECODE_FALSE,
+    BYTECODE_INT,
+    BYTECODE_RETURN,
+    BYTECODE_JMP,
+    BYTECODE_DONE,
 
 } ByteCodes;
 
@@ -51,6 +60,8 @@ typedef struct ByteCodeArray {
     int count;
     byte *entries;
 } ByteCodeArray;
+
+void initByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b);
@@ -64,6 +75,10 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b);
 void writeExpLet(ExpLet *x, ByteCodeArray *b);
+void writeAexp(Aexp *x, ByteCodeArray *b);
+void writeCexp(Cexp *x, ByteCodeArray *b);
 void writeExp(Exp *x, ByteCodeArray *b);
+
+void writeEnd(ByteCodeArray *b);
 
 #endif

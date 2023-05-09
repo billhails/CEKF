@@ -48,6 +48,10 @@ const char *typeName(ObjType type) {
             return "bindings";
         case OBJTYPE_COND:
             return "cond";
+        case OBJTYPE_AEXP:
+            return "aexp";
+        case OBJTYPE_CEXP:
+            return "cexp";
         case OBJTYPE_EXP:
             return "exp";
         case OBJTYPE_EXPLIST:
@@ -70,6 +74,8 @@ const char *typeName(ObjType type) {
             return "clo";
         case OBJTYPE_ENV:
             return "env";
+        case OBJTYPE_CTENV:
+            return "ctenv";
         case OBJTYPE_FAIL:
             return "fail";
         case OBJTYPE_KONT:
@@ -78,8 +84,10 @@ const char *typeName(ObjType type) {
             return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
+        case OBJTYPE_AST:
+            return "ast";
         default:
-            return "???";
+            cant_happen("unrecognised ObjType in typeName");
     }
 }
 #endif
@@ -165,11 +173,16 @@ void *allocate(size_t size, ObjType type) {
 }
 
 void markObj(Header *h) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "markObj %s\n", typeName(h->type));
+#endif
     switch (h->type) {
         case OBJTYPE_AMB:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_COND:
+        case OBJTYPE_AEXP:
+        case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
         case OBJTYPE_EXPLIST:
         case OBJTYPE_LAM:
@@ -194,6 +207,8 @@ void markObj(Header *h) {
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
+        default:
+            cant_happen("unrecognised ObjType in markObj");
     }
 }
 
@@ -203,6 +218,8 @@ void freeObj(Header *h) {
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_COND:
+        case OBJTYPE_AEXP:
+        case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
         case OBJTYPE_EXPLIST:
         case OBJTYPE_LAM:
@@ -227,6 +244,8 @@ void freeObj(Header *h) {
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
             break;
+        default:
+            cant_happen("unrecognised ObjType in freeObj");
     }
 }
 

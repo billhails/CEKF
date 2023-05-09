@@ -21,6 +21,7 @@
 #include "cekf.h"
 #include "exp.h"
 #include "analysis.h"
+#include "bytecode.h"
 
 void printValue(Value x);
 void printValueList(ValueList *x);
@@ -43,7 +44,11 @@ void printCexpCond(CexpCond *x);
 void printCexpLetRec(CexpLetRec *x);
 void printLetRecBindings(LetRecBindings *x);
 void printCexpAmb(CexpAmb *x);
+void printAexp(Aexp *x);
+void printCexp(Cexp *x);
 void printExp(Exp *x);
 void printExpLet(ExpLet *x);
+
+void dumpByteCode(ByteCodeArray *b);
 
 #endif

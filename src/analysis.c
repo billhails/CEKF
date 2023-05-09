@@ -63,8 +63,8 @@ void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeAexpPrimApp "); printAexpPrimApp(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
-    analizeExp(x->exp1, env, depth + 1);
-    analizeExp(x->exp2, env, depth + 1);
+    analizeAexp(x->exp1, env, depth + 1);
+    analizeAexp(x->exp2, env, depth + 1);
 }
 
 void analizeAexpList(AexpList *x, CTEnv *env, int depth) {
@@ -72,7 +72,7 @@ void analizeAexpList(AexpList *x, CTEnv *env, int depth) {
     printf("%3d ", depth); printf("analizeAexpList "); printAexpList(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
     while(x != NULL) {
-        analizeExp(x->exp, env, depth + 1);
+        analizeAexp(x->exp, env, depth + 1);
         x = x->next;
     }
 }
@@ -81,7 +81,7 @@ void analizeCexpApply(CexpApply *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeCexpApply "); printCexpApply(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
-    analizeExp(x->function, env, depth + 1);
+    analizeAexp(x->function, env, depth + 1);
     analizeAexpList(x->args, env, depth + 1);
 }
 
@@ -89,7 +89,7 @@ void analizeCexpCond(CexpCond *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeCexpCond "); printCexpCond(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
-    analizeExp(x->condition, env, depth + 1);
+    analizeAexp(x->condition, env, depth + 1);
     analizeExp(x->consequent, env, depth + 1);
     analizeExp(x->alternative, env, depth + 1);
 }
@@ -109,7 +109,7 @@ void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth) {
     }
     bindings = x->bindings;
     while (bindings != NULL) {
-        analizeExp(bindings->val, env, depth + 1);
+        analizeAexp(bindings->val, env, depth + 1);
         bindings = bindings->next;
     }
     analizeExp(x->body, env, depth + 1);
@@ -138,48 +138,78 @@ void analizeExpLet(ExpLet *x, CTEnv *env, int depth) {
     UNPROTECT(save);
 }
 
+void analizeAexp(Aexp *x, CTEnv *env, int depth) {
+#ifdef DEBUG_ANALIZE
+    printf("%3d ", depth); printf("analizeAexp "); printAexp(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    switch (x->type) {
+        case AEXP_TYPE_LAM:
+            analizeAexpLam(x->val.lam, env, depth + 1);
+            break;
+        case AEXP_TYPE_VAR:
+            x->val.annotatedVar = analizeAexpVar(x->val.var, env, depth + 1);
+            x->type = AEXP_TYPE_ANNOTATEDVAR;
+            break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            cant_happen("analizeAexp called on annotated var");
+            break;
+        case AEXP_TYPE_TRUE:
+        case AEXP_TYPE_FALSE:
+        case AEXP_TYPE_INT:
+            break;
+        case AEXP_TYPE_PRIM:
+            analizeAexpPrimApp(x->val.prim, env, depth + 1);
+            break;
+        default:
+            cant_happen("unrecognized type in analizeAexp");
+    }
+}
+
+void analizeCexp(Cexp *x, CTEnv *env, int depth) {
+#ifdef DEBUG_ANALIZE
+    printf("%3d ", depth); printf("analizeCexp "); printCexp(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    switch (x->type) {
+        case CEXP_TYPE_APPLY:
+            analizeCexpApply(x->val.apply, env, depth + 1);
+            break;
+        case CEXP_TYPE_COND:
+            analizeCexpCond(x->val.cond, env, depth + 1);
+            break;
+        case CEXP_TYPE_CALLCC:
+            analizeAexp(x->val.callCC, env, depth + 1);
+            break;
+        case CEXP_TYPE_LETREC:
+            analizeCexpLetRec(x->val.letRec, env, depth + 1);
+            break;
+        case CEXP_TYPE_AMB:
+            analizeCexpAmb(x->val.amb, env, depth + 1);
+            break;
+        case CEXP_TYPE_BACK:
+            break;
+        default:
+            cant_happen("unrecognized type in analizeCexp");
+    }
+}
+
 void analizeExp(Exp *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeExp "); printExp(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
     switch (x->type) {
-        case AEXP_TYPE_LAM:
-            analizeAexpLam(x->val.aexp.lam, env, depth + 1);
+        case EXP_TYPE_AEXP:
+            analizeAexp(x->val.aexp, env, depth + 1);
             break;
-        case AEXP_TYPE_VAR:
-            x->val.aexp.annotatedVar = analizeAexpVar(x->val.aexp.var, env, depth + 1);
-            x->type = AEXP_TYPE_ANNOTATEDVAR;
-            break;
-        case AEXP_TYPE_ANNOTATEDVAR:
-            cant_happen("analizeExp called on annotated var");
-            break;
-        case AEXP_TYPE_TRUE:
-        case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
-        case CEXP_TYPE_BACK:
-        case EXP_TYPE_DONE:
-            break;
-        case AEXP_TYPE_PRIM:
-            analizeAexpPrimApp(x->val.aexp.prim, env, depth + 1);
-            break;
-        case CEXP_TYPE_APPLY:
-            analizeCexpApply(x->val.cexp.apply, env, depth + 1);
-            break;
-        case CEXP_TYPE_COND:
-            analizeCexpCond(x->val.cexp.cond, env, depth + 1);
-            break;
-        case CEXP_TYPE_CALLCC:
-            analizeExp(x->val.cexp.callCC, env, depth + 1);
-            break;
-        case CEXP_TYPE_LETREC:
-            analizeCexpLetRec(x->val.cexp.letRec, env, depth + 1);
-            break;
-        case CEXP_TYPE_AMB:
-            analizeCexpAmb(x->val.cexp.amb, env, depth + 1);
+        case EXP_TYPE_CEXP:
+            analizeCexp(x->val.cexp, env, depth + 1);
             break;
         case EXP_TYPE_LET:
             analizeExpLet(x->val.let, env, depth + 1);
             break;
+        case EXP_TYPE_DONE:
+            break;
+        default:
+            cant_happen("unrecognized type in analizeAexp");
     }
 }
 

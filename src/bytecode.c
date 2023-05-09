@@ -16,23 +16,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+
 #include "bytecode.h"
 
-static void growCapacity(ByteCodeArray *byteCodes, int capacity) {
-    byte *entries = NEW_ARRAY(byte, capacity);
+void initByteCodeArray(ByteCodeArray *b) {
+    b->count = 0;
+    b->capacity = 0;
+    b->entries = NULL;
+}
 
 
-    for (int i = 0; i < byteCodes->capacity; i++) {
-        entries[i] = byteCodes->entries[i];
-    }
+static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
+    int oldCapacity = byteCodes->capacity;
+    byte *entries = GROW_ARRAY(byte, byteCodes->entries, oldCapacity, newCapacity);
 
-    for (; i < capacity; i++) {
+    for (int i = oldCapacity; i < newCapacity; i++) {
         entries[i] = BYTECODE_NONE;
     }
 
-    FREE_ARRAY(byte, table->entries, table->capacity);
-    table->entries = entries;
-    table->capacity = capacity;
+    byteCodes->entries = entries;
+    byteCodes->capacity = newCapacity;
 }
 
 static void addByte(ByteCodeArray *b, int code) {
@@ -65,7 +69,8 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
-    writeExp(b, x->exp);
+    writeExp(x->exp, b);
+    addByte(b, BYTECODE_RETURN);
 }
 
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
@@ -85,8 +90,8 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
 
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     if (x == NULL) return;
-    writeExp(x->exp1, b);
-    writeExp(x->exp2, b);
+    writeAexp(x->exp1, b);
+    writeAexp(x->exp2, b);
     byte prim;
     switch (x->op) {
         case AEXP_PRIM_ADD:
@@ -127,26 +132,31 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
 
 void writeAexpList(AexpList *x, ByteCodeArray *b) {
     while (x != NULL) {
-        writeExp(x->exp, b);
+        writeAexp(x->exp, b);
         x = x->next;
     }
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
     writeAexpList(x->args, b);
-    writeExp(x->function, b);
+    writeAexp(x->function, b);
     addByte(b, BYTECODE_APPLY);
 }
 
 void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
-    writeExp(x->condition, b);
+    writeAexp(x->condition, b);
     addByte(b, BYTECODE_IF);
     int patch = b->count;
     writeWord(b, 0);
     writeExp(x->consequent, b);
+    addByte(b, BYTECODE_JMP);
+    int patch2 = b->count;
+    writeWord(b, 0);
     int offset = b->count - patch;
     writeWordAt(patch, b, offset);
     writeExp(x->alternative, b);
+    int offset2 = b->count - patch2;
+    writeWordAt(patch2, b, offset2);
 }
 
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
@@ -154,13 +164,13 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
     addByte(b, x->nbindings);
     writeLetRecBindings(x->bindings, b);
     addByte(b, BYTECODE_LETREC);
-    addByte(x->nbindings);
-    writeExp(x->body);
+    addByte(b, x->nbindings);
+    writeExp(x->body, b);
 }
 
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
     while (x != NULL) {
-        writeExp(x->val, b);
+        writeAexp(x->val, b);
         x = x->next;
     }
 }
@@ -168,21 +178,118 @@ void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_AMB);
     int patch = b->count;
-    addWord(b, 0);
+    writeWord(b, 0);
     writeExp(x->exp1, b);
-    writeWordAt(patch, b, b->count - patch);
+    addByte(b, BYTECODE_JMP);
+    int patch2 = b->count;
+    writeWord(b, 0);
+    int offset = b->count - patch;
+    writeWordAt(patch, b, offset);
     writeExp(x->exp2, b);
+    int offset2 = b->count - patch2;
+    writeWordAt(patch2, b, offset2);
 }
 
 void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_LET);
     int patch = b->count;
-    addWord(b, 0);
+    writeWord(b, 0);
     writeExp(x->val, b);
     writeWordAt(patch, b, b->count - patch);
     writeExp(x->body, b);
 }
 
-void writeExp(Exp *x, ByteCodeArray *b) {
+void writeAexp(Aexp *x, ByteCodeArray *b) {
+    switch (x->type) {
+        case AEXP_TYPE_LAM: {
+            writeAexpLam(x->val.lam, b);
+        }
+        break;
+        case AEXP_TYPE_VAR: {
+            cant_happen("un-annotated var in writeAexp");
+        }
+        break;
+        case AEXP_TYPE_ANNOTATEDVAR: {
+            writeAexpAnnotatedVar(x->val.annotatedVar, b);
+        }
+        break;
+        case AEXP_TYPE_TRUE: {
+            addByte(b, BYTECODE_TRUE);
+        }
+        break;
+        case AEXP_TYPE_FALSE: {
+            addByte(b, BYTECODE_FALSE);
+        }
+        break;
+        case AEXP_TYPE_INT: {
+            addByte(b, BYTECODE_INT);
+            writeWord(b, x->val.integer);
+        }
+        break;
+        case AEXP_TYPE_PRIM: {
+            writeAexpPrimApp(x->val.prim, b);
+        }
+        break;
+        default:
+            cant_happen("unrecognized Aexp type in writeAexp");
+    }
 }
 
+void writeCexp(Cexp *x, ByteCodeArray *b) {
+    switch (x->type) {
+        case CEXP_TYPE_APPLY: {
+            writeCexpApply(x->val.apply, b);
+        }
+        break;
+        case CEXP_TYPE_COND: {
+            writeCexpCond(x->val.cond, b);
+        }
+        break;
+        case CEXP_TYPE_CALLCC: {
+            writeAexp(x->val.callCC, b);
+            addByte(b, BYTECODE_CALLCC);
+        }
+        break;
+        case CEXP_TYPE_LETREC: {
+            writeCexpLetRec(x->val.letRec, b);
+        }
+        break;
+        case CEXP_TYPE_AMB: {
+            writeCexpAmb(x->val.amb, b);
+        }
+        break;
+        case CEXP_TYPE_BACK: {
+            addByte(b, BYTECODE_BACK);
+        }
+        break;
+        default:
+            cant_happen("unrecognized Cexp type in writeCexp");
+    }
+}
+
+void writeExp(Exp *x, ByteCodeArray *b) {
+    switch (x->type) {
+        case EXP_TYPE_AEXP: {
+            writeAexp(x->val.aexp, b);
+        }
+        break;
+        case EXP_TYPE_CEXP: {
+            writeCexp(x->val.cexp, b);
+        }
+        break;
+        case EXP_TYPE_LET: {
+            writeExpLet(x->val.let, b);
+        }
+        break;
+        case EXP_TYPE_DONE: {
+            addByte(b, BYTECODE_DONE);
+        }
+        break;
+        default:
+            cant_happen("unrecognized Exp type in writeExp");
+    }
+}
+
+void writeEnd(ByteCodeArray *b) {
+    addByte(b, BYTECODE_RETURN);
+}

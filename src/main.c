@@ -28,6 +28,7 @@
 #include "memory.h"
 #include "step.h"
 #include "debug.h"
+#include "bytecode.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -38,217 +39,326 @@
  * with `indent --linux`
  */
 
-Exp *makeTestExpAmb() {
-    /* back.scm */
-    return newExp(EXP_TYPE_LET,
-              EXP_VAL_LET(newExpLet
-                  (newAexpVar("x"),
-                   newExp(CEXP_TYPE_AMB,
-                      CEXP_VAL_AMB(newCexpAmb
-                               (newExp
-                            (AEXP_TYPE_FALSE,
-                             AEXP_VAL_NONE()),
-                            newExp(AEXP_TYPE_TRUE,
-                                   AEXP_VAL_NONE())))),
-                   newExp(CEXP_TYPE_COND,
-                      CEXP_VAL_COND(newCexpCond
-                            (newExp
-                             (AEXP_TYPE_VAR,
-                              AEXP_VAL_VAR(newAexpVar
-                                       ("x"))),
-                             newExp(AEXP_TYPE_INT,
-                                AEXP_VAL_INT(5)),
-                             newExp(CEXP_TYPE_BACK,
-                                CEXP_VAL_NONE())))))));
+Exp *makeTestExpAmb()
+{
+	/* back.scm */
+	return
+	    newExp(EXP_TYPE_LET,
+		   EXP_VAL_LET(newExpLet
+			       (newAexpVar("x"),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_AMB,
+						     CEXP_VAL_AMB(newCexpAmb
+								  (newExp
+								   (EXP_TYPE_AEXP,
+								    EXP_VAL_AEXP
+								    (newAexp
+								     (AEXP_TYPE_FALSE,
+								      AEXP_VAL_FALSE
+								      ()))),
+								   newExp
+								   (EXP_TYPE_AEXP,
+								    EXP_VAL_AEXP
+								    (newAexp
+								     (AEXP_TYPE_TRUE,
+								      AEXP_VAL_TRUE
+								      ())))))))),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_COND,
+						     CEXP_VAL_COND(newCexpCond
+								   (newAexp
+								    (AEXP_TYPE_VAR,
+								     AEXP_VAL_VAR
+								     (newAexpVar
+								      ("x"))),
+								    newExp
+								    (EXP_TYPE_AEXP,
+								     EXP_VAL_AEXP
+								     (newAexp
+								      (AEXP_TYPE_INT,
+								       AEXP_VAL_INT
+								       (5)))),
+								    newExp
+								    (EXP_TYPE_CEXP,
+								     EXP_VAL_CEXP
+								     (newCexp
+								      (CEXP_TYPE_BACK,
+								       CEXP_VAL_BACK
+								       ())))))))))));
 }
 
-Exp *makeTestExpCallCC() {
-    /* callcc.scm */
-    return newExp(EXP_TYPE_LET,
-              EXP_VAL_LET(newExpLet
-                  (newAexpVar("x"),
-                   newExp(CEXP_TYPE_CALLCC,
-                      CEXP_VAL_CALLCC(newExp
-                              (AEXP_TYPE_LAM,
-                               AEXP_VAL_LAM(newAexpLam
-                                    (newAexpVarList
-                                     (NULL,
-                                      newAexpVar
-                                      ("ret")),
-                                     newExp
-                                     (EXP_TYPE_LET,
-                                      EXP_VAL_LET
-                                      (newExpLet
-                                       (newAexpVar
-                                        ("y"),
-                                        newExp
-                                        (CEXP_TYPE_APPLY,
-                                         CEXP_VAL_APPLY
-                                         (newCexpApply
-                                          (newExp
-                                           (AEXP_TYPE_VAR,
-                                        AEXP_VAL_VAR
-                                        (newAexpVar
-                                         ("ret"))),
-                                           newAexpList
-                                           (NULL,
-                                        newExp
-                                        (AEXP_TYPE_INT,
-                                         AEXP_VAL_INT
-                                         (5)))))),
-                                        newExp
-                                        (CEXP_TYPE_COND,
-                                         CEXP_VAL_COND
-                                         (newCexpCond
-                                          (newExp
-                                           (AEXP_TYPE_VAR,
-                                        AEXP_VAL_VAR
-                                        (newAexpVar
-                                         ("y"))),
-                                           newExp
-                                           (AEXP_TYPE_INT,
-                                        AEXP_VAL_INT
-                                        (6)),
-                                           newExp
-                                           (AEXP_TYPE_INT,
-                                        AEXP_VAL_INT
-                                        (7))))))))))))),
-                   newExp(AEXP_TYPE_VAR,
-                      AEXP_VAL_VAR(newAexpVar("x"))))));
+Exp *makeTestExpCallCC()
+{
+	/* callcc.scm */
+	return
+	    newExp(EXP_TYPE_LET,
+		   EXP_VAL_LET(newExpLet
+			       (newAexpVar("x"),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_CALLCC,
+						     CEXP_VAL_CALLCC(newAexp
+								     (AEXP_TYPE_LAM,
+								      AEXP_VAL_LAM
+								      (newAexpLam
+								       (newAexpVarList
+									(NULL,
+									 newAexpVar
+									 ("ret")),
+									newExp
+									(EXP_TYPE_LET,
+									 EXP_VAL_LET
+									 (newExpLet
+									  (newAexpVar
+									   ("y"),
+									   newExp
+									   (EXP_TYPE_CEXP,
+									    EXP_VAL_CEXP
+									    (newCexp
+									     (CEXP_TYPE_APPLY,
+									      CEXP_VAL_APPLY
+									      (newCexpApply
+									       (newAexp
+										(AEXP_TYPE_VAR,
+										 AEXP_VAL_VAR
+										 (newAexpVar
+										  ("ret"))),
+										newAexpList
+										(NULL,
+										 newAexp
+										 (AEXP_TYPE_INT,
+										  AEXP_VAL_INT
+										  (5)))))))),
+									   newExp
+									   (EXP_TYPE_CEXP,
+									    EXP_VAL_CEXP
+									    (newCexp
+									     (CEXP_TYPE_COND,
+									      CEXP_VAL_COND
+									      (newCexpCond
+									       (newAexp
+										(AEXP_TYPE_VAR,
+										 AEXP_VAL_VAR
+										 (newAexpVar
+										  ("y"))),
+										newExp
+										(EXP_TYPE_AEXP,
+										 EXP_VAL_AEXP
+										 (newAexp
+										  (AEXP_TYPE_INT,
+										   AEXP_VAL_INT
+										   (6)))),
+										newExp
+										(EXP_TYPE_AEXP,
+										 EXP_VAL_AEXP
+										 (newAexp
+										  (AEXP_TYPE_INT,
+										   AEXP_VAL_INT
+										   (7))))))))))))))))))),
+				newExp(EXP_TYPE_AEXP,
+				       EXP_VAL_AEXP(newAexp
+						    (AEXP_TYPE_VAR,
+						     AEXP_VAL_VAR(newAexpVar
+								  ("x"))))))));
 }
 
-Exp *makeTestExpFib(int depth) {
-    /* fib.scm */
-    return newExp(CEXP_TYPE_LETREC,
-              CEXP_VAL_LETREC(newCexpLetRec
-                      (newLetRecBindings
-                       (NULL, newAexpVar("fib"),
-                    newExp(AEXP_TYPE_LAM,
-                           AEXP_VAL_LAM(newAexpLam
-                                (newAexpVarList
-                                 (NULL, newAexpVar("n")),
-                                 newExp(CEXP_TYPE_COND,
-                                    CEXP_VAL_COND
-                                    (newCexpCond
-                                     (newExp
-                                      (AEXP_TYPE_PRIM,
-                                       AEXP_VAL_PRIM
-                                       (newAexpPrimApp
-                                    (AEXP_PRIM_LT,
-                                     newExp
-                                     (AEXP_TYPE_VAR,
-                                      AEXP_VAL_VAR
-                                      (newAexpVar
-                                       ("n"))),
-                                     newExp
-                                     (AEXP_TYPE_INT,
-                                      AEXP_VAL_INT
-                                      (2))))),
-                                      newExp
-                                      (AEXP_TYPE_INT,
-                                       AEXP_VAL_INT(1)),
-                                      newExp
-                                      (EXP_TYPE_LET,
-                                       EXP_VAL_LET
-                                       (newExpLet
-                                    (newAexpVar
-                                     ("fib1"),
-                                     newExp
-                                     (CEXP_TYPE_APPLY,
-                                      CEXP_VAL_APPLY
-                                      (newCexpApply
-                                       (newExp
-                                        (AEXP_TYPE_VAR,
-                                         AEXP_VAL_VAR
-                                         (newAexpVar
-                                          ("fib"))),
-                                        newAexpList
-                                        (NULL,
-                                         newExp
-                                         (AEXP_TYPE_PRIM,
-                                          AEXP_VAL_PRIM
-                                          (newAexpPrimApp
-                                           (AEXP_PRIM_SUB,
-                                        newExp
-                                        (AEXP_TYPE_VAR,
-                                         AEXP_VAL_VAR
-                                         (newAexpVar
-                                          ("n"))),
-                                        newExp
-                                        (AEXP_TYPE_INT,
-                                         AEXP_VAL_INT
-                                         (1))))))))),
-                                     newExp
-                                     (EXP_TYPE_LET,
-                                      EXP_VAL_LET
-                                      (newExpLet
-                                       (newAexpVar
-                                        ("fib2"),
-                                        newExp
-                                        (CEXP_TYPE_APPLY,
-                                         CEXP_VAL_APPLY
-                                         (newCexpApply
-                                          (newExp
-                                           (AEXP_TYPE_VAR,
-                                        AEXP_VAL_VAR
-                                        (newAexpVar
-                                         ("fib"))),
-                                           newAexpList
-                                           (NULL,
-                                        newExp
-                                        (AEXP_TYPE_PRIM,
-                                         AEXP_VAL_PRIM
-                                         (newAexpPrimApp
-                                          (AEXP_PRIM_SUB,
-                                           newExp
-                                           (AEXP_TYPE_VAR,
-                                            AEXP_VAL_VAR
-                                            (newAexpVar
-                                             ("n"))),
-                                           newExp
-                                           (AEXP_TYPE_INT,
-                                            AEXP_VAL_INT
-                                            (2))))))))),
-                                        newExp
-                                        (AEXP_TYPE_PRIM,
-                                         AEXP_VAL_PRIM
-                                         (newAexpPrimApp
-                                          (AEXP_PRIM_ADD,
-                                           newExp
-                                           (AEXP_TYPE_VAR,
-                                        AEXP_VAL_VAR
-                                        (newAexpVar
-                                         ("fib1"))),
-                                           newExp
-                                           (AEXP_TYPE_VAR,
-                                        AEXP_VAL_VAR
-                                        (newAexpVar
-                                         ("fib2"))))))))))))))))))),
-                       newExp(CEXP_TYPE_APPLY,
-                          CEXP_VAL_APPLY(newCexpApply
-                                 (newExp
-                                  (AEXP_TYPE_VAR,
-                                   AEXP_VAL_VAR(newAexpVar
-                                        ("fib"))),
-                                  newAexpList(NULL,
-                                      newExp
-                                      (AEXP_TYPE_INT,
-                                       AEXP_VAL_INT
-                                       (depth)))))))));
 
+Exp *makeTestExpFib(int depth)
+{
+	/* fib.scm */
+	return
+	    newExp(EXP_TYPE_CEXP,
+		   EXP_VAL_CEXP(newCexp
+				(CEXP_TYPE_LETREC,
+				 CEXP_VAL_LETREC(newCexpLetRec
+						 (newLetRecBindings
+						  (NULL, newAexpVar("fib"),
+						   newAexp(AEXP_TYPE_LAM,
+							   AEXP_VAL_LAM
+							   (newAexpLam
+							    (newAexpVarList
+							     (NULL,
+							      newAexpVar("n")),
+							     newExp
+							     (EXP_TYPE_CEXP,
+							      EXP_VAL_CEXP
+							      (newCexp
+							       (CEXP_TYPE_COND,
+								CEXP_VAL_COND
+								(newCexpCond
+								 (newAexp
+								  (AEXP_TYPE_PRIM,
+								   AEXP_VAL_PRIM
+								   (newAexpPrimApp
+								    (AEXP_PRIM_LT,
+								     newAexp
+								     (AEXP_TYPE_VAR,
+								      AEXP_VAL_VAR
+								      (newAexpVar
+								       ("n"))),
+								     newAexp
+								     (AEXP_TYPE_INT,
+								      AEXP_VAL_INT
+								      (2))))),
+								  newExp
+								  (EXP_TYPE_AEXP,
+								   EXP_VAL_AEXP
+								   (newAexp
+								    (AEXP_TYPE_INT,
+								     AEXP_VAL_INT
+								     (1)))),
+								  newExp
+								  (EXP_TYPE_LET,
+								   EXP_VAL_LET
+								   (newExpLet
+								    (newAexpVar
+								     ("fib1"),
+								     newExp
+								     (EXP_TYPE_CEXP,
+								      EXP_VAL_CEXP
+								      (newCexp
+								       (CEXP_TYPE_APPLY,
+									CEXP_VAL_APPLY
+									(newCexpApply
+									 (newAexp
+									  (AEXP_TYPE_VAR,
+									   AEXP_VAL_VAR
+									   (newAexpVar
+									    ("fib"))),
+									  newAexpList
+									  (NULL,
+									   newAexp
+									   (AEXP_TYPE_PRIM,
+									    AEXP_VAL_PRIM
+									    (newAexpPrimApp
+									     (AEXP_PRIM_SUB,
+									      newAexp
+									      (AEXP_TYPE_VAR,
+									       AEXP_VAL_VAR
+									       (newAexpVar
+										("n"))),
+									      newAexp
+									      (AEXP_TYPE_INT,
+									       AEXP_VAL_INT
+									       (1))))))))))),
+								     newExp
+								     (EXP_TYPE_LET,
+								      EXP_VAL_LET
+								      (newExpLet
+								       (newAexpVar
+									("fib2"),
+									newExp
+									(EXP_TYPE_CEXP,
+									 EXP_VAL_CEXP
+									 (newCexp
+									  (CEXP_TYPE_APPLY,
+									   CEXP_VAL_APPLY
+									   (newCexpApply
+									    (newAexp
+									     (AEXP_TYPE_VAR,
+									      AEXP_VAL_VAR
+									      (newAexpVar
+									       ("fib"))),
+									     newAexpList
+									     (NULL,
+									      newAexp
+									      (AEXP_TYPE_PRIM,
+									       AEXP_VAL_PRIM
+									       (newAexpPrimApp
+										(AEXP_PRIM_SUB,
+										 newAexp
+										 (AEXP_TYPE_VAR,
+										  AEXP_VAL_VAR
+										  (newAexpVar
+										   ("n"))),
+										 newAexp
+										 (AEXP_TYPE_INT,
+										  AEXP_VAL_INT
+										  (2))))))))))),
+									newExp
+									(EXP_TYPE_AEXP,
+									 EXP_VAL_AEXP
+									 (newAexp
+									  (AEXP_TYPE_PRIM,
+									   AEXP_VAL_PRIM
+									   (newAexpPrimApp
+									    (AEXP_PRIM_ADD,
+									     newAexp
+									     (AEXP_TYPE_VAR,
+									      AEXP_VAL_VAR
+									      (newAexpVar
+									       ("fib1"))),
+									     newAexp
+									     (AEXP_TYPE_VAR,
+									      AEXP_VAL_VAR
+									      (newAexpVar
+									       ("fib2"))))))))))))))))))))))),
+						  newExp(EXP_TYPE_CEXP,
+							 EXP_VAL_CEXP(newCexp
+								      (CEXP_TYPE_APPLY,
+								       CEXP_VAL_APPLY
+								       (newCexpApply
+									(newAexp
+									 (AEXP_TYPE_VAR,
+									  AEXP_VAL_VAR
+									  (newAexpVar
+									   ("fib"))),
+									 newAexpList
+									 (NULL,
+									  newAexp
+									  (AEXP_TYPE_INT,
+									   AEXP_VAL_INT
+									   (depth)))))))))))));
 }
 
 int main(int argc, char *argv[]) {
+    ByteCodeArray byteCodes;
     disableGC();
-    int depth = 35;
+    int depth = 20;
     if (argc == 2) depth = atoi(argv[1]);
     Exp *exp = makeTestExpFib(depth);
-    PROTECT(exp);
+    int save = PROTECT(exp);
     enableGC();
     analizeExp(exp, NULL, 0);
     printExp(exp);
     printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+    dumpByteCode(&byteCodes);
     run(exp);
+    UNPROTECT(save);
+
+    disableGC();
+    exp = makeTestExpAmb(depth);
+    save = PROTECT(exp);
+    enableGC();
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+    dumpByteCode(&byteCodes);
+    run(exp);
+    UNPROTECT(save);
+
+    disableGC();
+    exp = makeTestExpCallCC(depth);
+    save = PROTECT(exp);
+    enableGC();
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+    dumpByteCode(&byteCodes);
+    run(exp);
+    UNPROTECT(save);
+
 }
 
 #else /* testing parser */

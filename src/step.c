@@ -56,16 +56,16 @@ void markCEKF() {
     markValue(state.V);
 }
 
-static void inject(Exp *exp) {
-    state.C = exp;
+static void inject(Control c) {
+    state.C = c;
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
 }
 
-void run(Exp *exp) {
-    inject(exp);
+void run(Control c) {
+    inject(c);
     printCEKF(&state);
     while (state.C->type != EXP_TYPE_DONE) {
         step();
@@ -77,13 +77,13 @@ void run(Exp *exp) {
     printCEKF(&state);
 }
 
-static Value A(Exp *aexp, Env *env) {
+static Value A(Aexp *aexp, Env *env) {
     switch (aexp->type) {
         case AEXP_TYPE_LAM: {
 #ifdef DEBUG_STEP
-            printf("A LAM "); printExp(aexp); printf("\n");
+            printf("A LAM "); printAexp(aexp); printf("\n");
 #endif
-            Clo *clo = newClo(aexp->val.aexp.lam, env);
+            Clo *clo = newClo(aexp->val.lam, env);
             Value value;
             value .type = VALUE_TYPE_CLO;
             value.val = VALUE_VAL_CLO(clo);
@@ -91,37 +91,37 @@ static Value A(Exp *aexp, Env *env) {
         }
         case AEXP_TYPE_ANNOTATEDVAR: {
 #ifdef DEBUG_STEP
-            printf("A ANNOTATED VAR "); printExp(aexp); printf("\n");
+            printf("A ANNOTATED VAR "); printAexp(aexp); printf("\n");
 #endif
-            return lookUp(aexp->val.aexp.annotatedVar, env);
+            return lookUp(aexp->val.annotatedVar, env);
         }
         case AEXP_TYPE_TRUE: {
 #ifdef DEBUG_STEP
-            printf("A TRUE "); printExp(aexp); printf("\n");
+            printf("A TRUE "); printAexp(aexp); printf("\n");
 #endif
             return vTrue;
             break;
         }
         case AEXP_TYPE_FALSE: {
 #ifdef DEBUG_STEP
-            printf("A FALSE "); printExp(aexp); printf("\n");
+            printf("A FALSE "); printAexp(aexp); printf("\n");
 #endif
             return vFalse;
         }
         case AEXP_TYPE_INT: {
 #ifdef DEBUG_STEP
-            printf("A INT "); printExp(aexp); printf("\n");
+            printf("A INT "); printAexp(aexp); printf("\n");
 #endif
             Value value;
             value.type = VALUE_TYPE_INTEGER;
-            value.val = VALUE_VAL_INTEGER(aexp->val.aexp.integer);
+            value.val = VALUE_VAL_INTEGER(aexp->val.integer);
             return value;
         }
         case AEXP_TYPE_PRIM: {
 #ifdef DEBUG_STEP
-            printf("A PRIM "); printExp(aexp); printf("\n");
+            printf("A PRIM "); printAexp(aexp); printf("\n");
 #endif
-            AexpPrimApp *prim = aexp->val.aexp.prim;
+            AexpPrimApp *prim = aexp->val.prim;
             Value val1 = A(prim->exp1, env);
             int save = protectValue(val1);
             Value val2 = vVoid;
@@ -129,7 +129,7 @@ static Value A(Exp *aexp, Env *env) {
                 val2 = A(prim->exp2, env);
                 protectValue(val2);
             }
-            Value result = (O(aexp->val.aexp.prim->op))(val1, val2);
+            Value result = (O(aexp->val.prim->op))(val1, val2);
             UNPROTECT(save);
             return result;
         }
@@ -158,103 +158,103 @@ static void step() {
     Value V = state.V;
 
     switch (C->type) {
-        case AEXP_TYPE_LAM:
-        case AEXP_TYPE_ANNOTATEDVAR:
-        case AEXP_TYPE_TRUE:
-        case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
-        case AEXP_TYPE_PRIM: {
+        case EXP_TYPE_AEXP: {
 #ifdef DEBUG_STEP
             printf("step AEXP\n");
 #endif
-            Value val = A(C, E);
+            Value val = A(C->val.aexp, E);
             int save = protectValue(val);
             applyKont(val);
             UNPROTECT(save);
         }
         break;
-        case CEXP_TYPE_APPLY: {
+        case EXP_TYPE_CEXP: {
+            switch (C->val.cexp->type) {
+                case CEXP_TYPE_APPLY: {
 #ifdef DEBUG_STEP
-            printf("step APPLY\n");
+                    printf("step APPLY\n");
 #endif
-            CexpApply *apply = C->val.cexp.apply;
-            Exp *function = apply->function;
-            AexpList *args = apply->args;
-            Value proc = A(function, E);
-            int save = protectValue(proc);
-            if (args == NULL) {
-                applyProc(proc, NULL);
-            } else {
-                ValueList *values = mapA(args, E);
-                PROTECT(values);
-                applyProc(proc, values);
-            }
-            UNPROTECT(save);
-        }
-        break;
-        case CEXP_TYPE_COND: {
+                    CexpApply *apply = C->val.cexp->val.apply;
+                    Aexp *function = apply->function;
+                    AexpList *args = apply->args;
+                    Value proc = A(function, E);
+                    int save = protectValue(proc);
+                    if (args == NULL) {
+                        applyProc(proc, NULL);
+                    } else {
+                        ValueList *values = mapA(args, E);
+                        PROTECT(values);
+                        applyProc(proc, values);
+                    }
+                    UNPROTECT(save);
+                }
+                break;
+                case CEXP_TYPE_COND: {
 #ifdef DEBUG_STEP
-            printf("step COND\n");
+                    printf("step COND\n");
 #endif
-            CexpCond *cond = C->val.cexp.cond;
-            Exp *condition = cond->condition;
-            Value testResult = A(condition, E);
-            if (testResult.type == VALUE_TYPE_FALSE) {
-                state.C = cond->alternative;
-            } else {
-                state.C = cond->consequent;
-            }
-        }
-        break;
-        case CEXP_TYPE_CALLCC: {
+                    CexpCond *cond = C->val.cexp->val.cond;
+                    Aexp *condition = cond->condition;
+                    Value testResult = A(condition, E);
+                    if (testResult.type == VALUE_TYPE_FALSE) {
+                        state.C = cond->alternative;
+                    } else {
+                        state.C = cond->consequent;
+                    }
+                }
+                break;
+                case CEXP_TYPE_CALLCC: {
 #ifdef DEBUG_STEP
-            printf("step CALLCC\n");
+                    printf("step CALLCC\n");
 #endif
-            Exp *aexp = C->val.cexp.callCC;
-            Value proc = A(aexp, E);
-            int save = protectValue(proc);
-            Value cont;
-            cont.type = VALUE_TYPE_CONT;
-            cont.val = VALUE_VAL_CONT(K);
-            protectValue(cont);
-            applyProcValue(proc, cont);
-            UNPROTECT(save);
-        }
-        break;
-        case CEXP_TYPE_LETREC: {
+                    Aexp *aexp = C->val.cexp->val.callCC;
+                    Value proc = A(aexp, E);
+                    int save = protectValue(proc);
+                    Value cont;
+                    cont.type = VALUE_TYPE_CONT;
+                    cont.val = VALUE_VAL_CONT(K);
+                    protectValue(cont);
+                    applyProcValue(proc, cont);
+                    UNPROTECT(save);
+                }
+                break;
+                case CEXP_TYPE_LETREC: {
 #ifdef DEBUG_STEP
-            printf("step LETREC\n");
+                    printf("step LETREC\n");
 #endif
-            CexpLetRec *letRec = C->val.cexp.letRec;
-            int save = PROTECT(letRec);
-            LetRecBindings *bindings = letRec->bindings;
-            state.C = letRec->body;
-            state.E = extendLetRecVoid(E, letRec->nbindings);
-            mapLetRecReplace(state.E, bindings);
-            UNPROTECT(save);
-        }
-        break;
-        case CEXP_TYPE_AMB: {
+                    CexpLetRec *letRec = C->val.cexp->val.letRec;
+                    int save = PROTECT(letRec);
+                    LetRecBindings *bindings = letRec->bindings;
+                    state.C = letRec->body;
+                    state.E = extendLetRecVoid(E, letRec->nbindings);
+                    mapLetRecReplace(state.E, bindings);
+                    UNPROTECT(save);
+                }
+                break;
+                case CEXP_TYPE_AMB: {
 #ifdef DEBUG_STEP
-            printf("step AMB\n");
+                    printf("step AMB\n");
 #endif
-            CexpAmb *amb = C->val.cexp.amb;
-            Exp *exp2 = amb->exp2;
-            state.C = amb->exp1;
-            state.F = newFail(exp2, E, K, F);
-        }
-        break;
-        case CEXP_TYPE_BACK: {
+                    CexpAmb *amb = C->val.cexp->val.amb;
+                    Exp *exp2 = amb->exp2;
+                    state.C = amb->exp1;
+                    state.F = newFail(exp2, E, K, F);
+                }
+                break;
+                case CEXP_TYPE_BACK: {
 #ifdef DEBUG_STEP
-            printf("step BACK\n");
+                    printf("step BACK\n");
 #endif
-            if (F != NULL) {
-                state.C = F->exp;
-                state.E = F->rho;
-                state.K = F->k;
-                state.F = F->next;
-            } else {
-                state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
+                    if (F != NULL) {
+                        state.C = F->exp;
+                        state.E = F->rho;
+                        state.K = F->k;
+                        state.F = F->next;
+                    } else {
+                        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_DONE());
+                    }
+                }
+                break;
             }
         }
         break;
@@ -413,7 +413,7 @@ static void applyKont(Value val) {
         replaceInEnv(state.E, 0, val);
         state.K = K->next;
     } else {
-        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_NONE());
+        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_DONE());
         state.V = val;
     }
 }

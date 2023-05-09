@@ -27,6 +27,8 @@ typedef enum {
     OBJTYPE_APPLY,
     OBJTYPE_BINDINGS,
     OBJTYPE_COND,
+    OBJTYPE_AEXP,
+    OBJTYPE_CEXP,
     OBJTYPE_EXP,
     OBJTYPE_EXPLIST,
     OBJTYPE_LAM,
@@ -80,6 +82,7 @@ bool disableGC();
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
+#define GROW_ARRAY(type, array, oldcount, newcount) ((type *)reallocate(array, sizeof(type) * (oldcount), sizeof(type) * (newcount)))
 
 #define STARTPROTECT() protect(NULL);
 #define PROTECT(x) protect((Header *)(x))

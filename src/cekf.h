@@ -24,12 +24,15 @@
 
 #include <stddef.h>
 
+#include "common.h"
 #include "exp.h"
 #include "memory.h"
 #include "value.h"
 
+typedef struct Exp *Control;
+
 typedef struct {
-    struct Exp *C;
+    Control C;
     struct Env *E;
     struct Kont *K;
     struct Fail *F;
@@ -46,7 +49,7 @@ typedef struct Env {
 typedef struct Kont {
     struct Header header;
     struct AexpVar *var;
-    struct Exp *body;
+    Control body;
     struct Env *rho;
     struct Kont *next;
 } Kont;
@@ -67,7 +70,7 @@ typedef struct Clo {
 
 typedef struct Fail {
     struct Header header;
-    struct Exp *exp;
+    Control exp;
     struct Env *rho;
     struct Kont *k;
     struct Fail *next;
