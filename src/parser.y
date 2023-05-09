@@ -344,7 +344,7 @@ expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_T
            | '(' expression ')'         { $$ = $2; }
            ;
 
-fun_call :  expression '(' expressions ')' %prec CALL    { $$ = newAstFunCall($1, $3); }
+fun_call :  symbol '(' expressions ')' %prec CALL    { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)), $3); }
          ;
 
 binop : expression THEN expression      { $$ = newAstBinOp(AST_BINOP_TYPE_THEN, $1, $3); }
