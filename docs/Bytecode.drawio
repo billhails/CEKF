@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2023-05-08T09:55:16.358Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.2.8 Chrome/112.0.5615.165 Electron/24.2.0 Safari/537.36" etag="CwLQBvJL-y2M0HuKzNb3" version="21.2.8" type="device">
+<mxfile host="Electron" modified="2023-05-08T13:03:26.670Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.2.8 Chrome/112.0.5615.165 Electron/24.2.0 Safari/537.36" etag="DXtKrrJdJnJAfY3H3BrK" version="21.2.8" type="device">
   <diagram name="Page-1" id="w8cN-r3wGZXz7W5xho0f">
     <mxGraphModel dx="1958" dy="1695" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -40,7 +40,7 @@
           <mxGeometry x="280" y="800" width="40" height="40" as="geometry" />
         </mxCell>
         <mxCell id="7hP3qgeIwIzLO_15ZlZ7-18" value="body" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="360" y="800" width="40" height="40" as="geometry" />
+          <mxGeometry x="320" y="800" width="40" height="40" as="geometry" />
         </mxCell>
         <mxCell id="7hP3qgeIwIzLO_15ZlZ7-25" value="call/cc" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1" parent="1" vertex="1">
           <mxGeometry x="240" y="1120" width="40" height="40" as="geometry" />
@@ -135,7 +135,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="260" y="780" />
-              <mxPoint x="380" y="780" />
+              <mxPoint x="340" y="780" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -187,11 +187,8 @@
         <mxCell id="7hP3qgeIwIzLO_15ZlZ7-83" value="if (pop()) (addr(et), E, K, F)&lt;br&gt;else (addr(ef), E, K, F)" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;align=left;spacingLeft=3;verticalAlign=top;" parent="1" vertex="1">
           <mxGeometry x="480" y="680" width="240" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="7hP3qgeIwIzLO_15ZlZ7-84" value="..." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-          <mxGeometry x="320" y="800" width="40" height="40" as="geometry" />
-        </mxCell>
         <mxCell id="7hP3qgeIwIzLO_15ZlZ7-85" value="..." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-          <mxGeometry x="400" y="800" width="40" height="40" as="geometry" />
+          <mxGeometry x="360" y="800" width="40" height="40" as="geometry" />
         </mxCell>
         <mxCell id="7hP3qgeIwIzLO_15ZlZ7-86" value="(addr(exp), E, letk(addr(body), E, K), F)" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;align=left;spacingLeft=3;verticalAlign=top;" parent="1" vertex="1">
           <mxGeometry x="480" y="800" width="320" height="60" as="geometry" />
