@@ -69,8 +69,12 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
+    int patch = b->count;
+    writeWord(b, 0);
     writeExp(x->exp, b);
     addByte(b, BYTECODE_RETURN);
+    int offset = b->count - patch;
+    writeWordAt(patch, b, offset);
 }
 
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
@@ -195,6 +199,7 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     int patch = b->count;
     writeWord(b, 0);
     writeExp(x->val, b);
+    addByte(b, BYTECODE_RETURN);
     writeWordAt(patch, b, b->count - patch);
     writeExp(x->body, b);
 }

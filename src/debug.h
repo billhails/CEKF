@@ -22,32 +22,34 @@
 #include "exp.h"
 #include "analysis.h"
 #include "bytecode.h"
+#include "stack.h"
 
-void printValue(Value x);
-void printValueList(ValueList *x);
-void printClo(Clo *x);
-void printCEKF(CEKF *x);
-void printEnv(Env *x);
-void printCTEnv(CTEnv *x);
-void printElidedEnv(Env *x);
-void printKont(Kont *x);
-void printFail(Fail *x);
-void printAexpLam(AexpLam *x);
-void printAexpVarList(AexpVarList *x);
-void printAexpVar(AexpVar *x);
+void printAexp(Aexp *x);
 void printAexpAnnotatedVar(AexpAnnotatedVar *x);
-void printAexpPrimApp(AexpPrimApp *x);
+void printAexpLam(AexpLam *x);
 void printAexpList(AexpList *x);
+void printAexpPrimApp(AexpPrimApp *x);
+void printAexpVar(AexpVar *x);
+void printAexpVarList(AexpVarList *x);
 void printBareAexpList(AexpList *x);
+void printCEKF(CEKF *x);
+void printCexpAmb(CexpAmb *x);
 void printCexpApply(CexpApply *x);
+void printCexp(Cexp *x);
 void printCexpCond(CexpCond *x);
 void printCexpLetRec(CexpLetRec *x);
-void printLetRecBindings(LetRecBindings *x);
-void printCexpAmb(CexpAmb *x);
-void printAexp(Aexp *x);
-void printCexp(Cexp *x);
+void printClo(Clo *x);
+void printCTEnv(CTEnv *x);
+void printElidedEnv(Env *x);
+void printEnv(Env *x);
 void printExp(Exp *x);
 void printExpLet(ExpLet *x);
+void printFail(Fail *x);
+void printKont(Kont *x);
+void printLetRecBindings(LetRecBindings *x);
+void printStack(Stack *x);
+void printValueList(ValueList *x);
+void printValue(Value x);
 
 void dumpByteCode(ByteCodeArray *b);
 

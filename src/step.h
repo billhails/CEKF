@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "exp.h"
+#include "bytecode.h"
 
-void run(Exp *exp);
+void run(ByteCodeArray B);
 
 void markCEKF();
 

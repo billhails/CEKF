@@ -51,9 +51,10 @@ ValueList *newValueList(int count) {
     return x;
 }
 
-Clo *newClo(AexpLam *lam, Env *rho) {
+Clo *newClo(int nvar, Control c, Env *rho) {
     Clo *x = NEW(Clo, OBJTYPE_CLO);
-    x->lam = lam;
+    x->nvar = nvar;
+    x->c = c;
     x->rho = rho;
     return x;
 }
@@ -75,16 +76,15 @@ Env *newEnv(Env *next, int count) {
     return x;
 }
 
-Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next) {
+Kont *newKont(Control body, Env *rho, Kont *next) {
     Kont *x = NEW(Kont, OBJTYPE_KONT);
-    x->var = var;
     x->body = body;
     x->rho = rho;
     x->next = next;
     return x;
 }
 
-Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next) {
+Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next) {
     Fail *x = NEW(Fail, OBJTYPE_FAIL);
     x->exp = exp;
     x->rho = rho;
@@ -122,7 +122,6 @@ void markClo(Clo *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAexpLam(x->lam);
     markEnv(x->rho);
 }
 
@@ -140,8 +139,6 @@ void markKont(Kont *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAexpVar(x->var);
-    markExp(x->body);
     markEnv(x->rho);
     markKont(x->next);
 }
@@ -150,7 +147,6 @@ void markFail(Fail *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markExp(x->exp);
     markEnv(x->rho);
     markKont(x->k);
     markFail(x->next);

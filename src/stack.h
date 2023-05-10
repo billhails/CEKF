@@ -1,5 +1,5 @@
-#ifndef cekf_common_h
-#define cekf_common_h
+#ifndef cekf_stack_h
+#define cekf_stack_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,16 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdint.h>
+#include "value.h"
 
- typedef uint32_t hash_t;
+typedef struct Stack {
+    int capacity;
+    int sp;
+    struct Value *stack;
+} Stack;
 
-// #define DEBUG_STEP
-// #define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 1
-// #define DEBUG_ANALIZE
-
-void cant_happen(const char *message);
+void pushValue(Stack *stack, Value v);
+struct Value popValue(Stack *stack);
+void markStack(Stack *stack);
+void initStack(Stack *stack);
 
 #endif

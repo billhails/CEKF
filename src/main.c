@@ -95,7 +95,7 @@ Exp *makeTestExpCallCC()
 	return
 	    newExp(EXP_TYPE_LET,
 		   EXP_VAL_LET(newExpLet
-			       (newAexpVar("x"),
+			       (newAexpVar("a"),
 				newExp(EXP_TYPE_CEXP,
 				       EXP_VAL_CEXP(newCexp
 						    (CEXP_TYPE_CALLCC,
@@ -112,7 +112,7 @@ Exp *makeTestExpCallCC()
 									 EXP_VAL_LET
 									 (newExpLet
 									  (newAexpVar
-									   ("y"),
+									   ("b"),
 									   newExp
 									   (EXP_TYPE_CEXP,
 									    EXP_VAL_CEXP
@@ -142,7 +142,7 @@ Exp *makeTestExpCallCC()
 										(AEXP_TYPE_VAR,
 										 AEXP_VAL_VAR
 										 (newAexpVar
-										  ("y"))),
+										  ("b"))),
 										newExp
 										(EXP_TYPE_AEXP,
 										 EXP_VAL_AEXP
@@ -161,7 +161,7 @@ Exp *makeTestExpCallCC()
 				       EXP_VAL_AEXP(newAexp
 						    (AEXP_TYPE_VAR,
 						     AEXP_VAL_VAR(newAexpVar
-								  ("x"))))))));
+								  ("a"))))))));
 }
 
 
@@ -328,8 +328,8 @@ int main(int argc, char *argv[]) {
     writeExp(exp, &byteCodes);
     writeEnd(&byteCodes);
     dumpByteCode(&byteCodes);
-    run(exp);
     UNPROTECT(save);
+    run(byteCodes);
 
     disableGC();
     exp = makeTestExpAmb(depth);
@@ -342,8 +342,8 @@ int main(int argc, char *argv[]) {
     writeExp(exp, &byteCodes);
     writeEnd(&byteCodes);
     dumpByteCode(&byteCodes);
-    run(exp);
     UNPROTECT(save);
+    run(byteCodes);
 
     disableGC();
     exp = makeTestExpCallCC(depth);
@@ -356,8 +356,8 @@ int main(int argc, char *argv[]) {
     writeExp(exp, &byteCodes);
     writeEnd(&byteCodes);
     dumpByteCode(&byteCodes);
-    run(exp);
     UNPROTECT(save);
+    run(byteCodes);
 
 }
 

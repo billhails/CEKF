@@ -24,12 +24,14 @@
 
 #include <stddef.h>
 
+#include "bytecode.h"
 #include "common.h"
 #include "exp.h"
 #include "memory.h"
+#include "stack.h"
 #include "value.h"
 
-typedef struct Exp *Control;
+typedef int Control;
 
 typedef struct {
     Control C;
@@ -37,6 +39,8 @@ typedef struct {
     struct Kont *K;
     struct Fail *F;
     struct Value V;
+    struct Stack S;
+    struct ByteCodeArray B;
 } CEKF;
 
 typedef struct Env {
@@ -48,7 +52,6 @@ typedef struct Env {
 
 typedef struct Kont {
     struct Header header;
-    struct AexpVar *var;
     Control body;
     struct Env *rho;
     struct Kont *next;
@@ -63,7 +66,8 @@ typedef struct ValueList {
 
 typedef struct Clo {
     struct Header header;
-    struct AexpLam *lam;
+    int nvar;
+    Control c;
     struct Env *rho;
 } Clo;
 
@@ -77,10 +81,10 @@ typedef struct Fail {
 } Fail;
 
 ValueList *newValueList(int count);
-Clo *newClo(AexpLam *lam, Env *rho);
+Clo *newClo(int nvar, Control c, Env *rho);
 Env *newEnv(Env *next, int count);
-Kont *newKont(AexpVar *var, Exp *body, Env *rho, Kont *next);
-Fail *newFail(Exp *exp, Env *rho, Kont *k, Fail *next);
+Kont *newKont(Control body, Env *rho, Kont *next);
+Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next);
 
 void markValue(Value x);
 void markValueList(ValueList *x);

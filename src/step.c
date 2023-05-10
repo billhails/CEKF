@@ -33,246 +33,52 @@
 
 typedef Value (*primitive)(Value arg1, Value arg2);
 
-static primitive O(AexpPrimOp op);
 static void step();
-static void applyProc(Value proc, ValueList *args);
-static void applyProcValue(Value proc, Value val);
-static void applyKont(Value value);
-static Value lookUp(AexpAnnotatedVar *var, Env *env);
-static ValueList *mapA(AexpList *args, Env *env);
-static Env *mapExtend(Env *env, int nargs, ValueList *vals);
-static Env *extendLetRecVoid(Env *env, int count);
-static void mapLetRecReplace(Env *env, LetRecBindings *bindings);
+static Value lookup(int frame, int offset);
+static Env *extendVoid(Env *env, int count);
 static void replaceInEnv(Env *env, int index, Value val);
-static int protectValue(Value v);
 
 static CEKF state;
 
 void markCEKF() {
-    markExp(state.C);
     markEnv(state.E);
     markKont(state.K);
     markFail(state.F);
     markValue(state.V);
+    markStack(&state.S);
 }
 
-static void inject(Control c) {
-    state.C = c;
+static void push(Value v) {
+    pushValue(&state.S, v);
+}
+
+static Value pop() {
+    return popValue(&state.S);
+}
+
+static void inject(ByteCodeArray B) {
+    state.C = 0;
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
+    initStack(&state.S);
+    state.B = B;
 }
 
-void run(Control c) {
-    inject(c);
+void run(ByteCodeArray B) {
+    inject(B);
     printCEKF(&state);
-    while (state.C->type != EXP_TYPE_DONE) {
-        step();
-#ifdef DEBUG_STEP
-        printCEKF(&state);
-        sleep(1);
-#endif
-    }
+    step();
     printCEKF(&state);
 }
 
-static Value A(Aexp *aexp, Env *env) {
-    switch (aexp->type) {
-        case AEXP_TYPE_LAM: {
-#ifdef DEBUG_STEP
-            printf("A LAM "); printAexp(aexp); printf("\n");
-#endif
-            Clo *clo = newClo(aexp->val.lam, env);
-            Value value;
-            value .type = VALUE_TYPE_CLO;
-            value.val = VALUE_VAL_CLO(clo);
-            return value;
-        }
-        case AEXP_TYPE_ANNOTATEDVAR: {
-#ifdef DEBUG_STEP
-            printf("A ANNOTATED VAR "); printAexp(aexp); printf("\n");
-#endif
-            return lookUp(aexp->val.annotatedVar, env);
-        }
-        case AEXP_TYPE_TRUE: {
-#ifdef DEBUG_STEP
-            printf("A TRUE "); printAexp(aexp); printf("\n");
-#endif
-            return vTrue;
-            break;
-        }
-        case AEXP_TYPE_FALSE: {
-#ifdef DEBUG_STEP
-            printf("A FALSE "); printAexp(aexp); printf("\n");
-#endif
-            return vFalse;
-        }
-        case AEXP_TYPE_INT: {
-#ifdef DEBUG_STEP
-            printf("A INT "); printAexp(aexp); printf("\n");
-#endif
-            Value value;
-            value.type = VALUE_TYPE_INTEGER;
-            value.val = VALUE_VAL_INTEGER(aexp->val.integer);
-            return value;
-        }
-        case AEXP_TYPE_PRIM: {
-#ifdef DEBUG_STEP
-            printf("A PRIM "); printAexp(aexp); printf("\n");
-#endif
-            AexpPrimApp *prim = aexp->val.prim;
-            Value val1 = A(prim->exp1, env);
-            int save = protectValue(val1);
-            Value val2 = vVoid;
-            if (prim->exp2 != NULL) {
-                val2 = A(prim->exp2, env);
-                protectValue(val2);
-            }
-            Value result = (O(aexp->val.prim->op))(val1, val2);
-            UNPROTECT(save);
-            return result;
-        }
-        default:
-            fprintf(stderr, "%d ", aexp->type);
-            cant_happen("unexpected aexp in A");
-    }
+static int valueAt(int index) {
+    return (state.B.entries[index] << 8) + state.B.entries[index + 1];
 }
 
-static int protectValue(Value v) {
-    switch (v.type) {
-        case VALUE_TYPE_CLO:
-            return PROTECT(v.val.clo);
-        case VALUE_TYPE_CONT:
-            return PROTECT(v.val.k);
-        default:
-            return PROTECT(NULL);
-    }
-}
-
-static void step() {
-    Exp *C = state.C;
-    Env *E = state.E;
-    Kont *K = state.K;
-    Fail *F = state.F;
-    Value V = state.V;
-
-    switch (C->type) {
-        case EXP_TYPE_AEXP: {
-#ifdef DEBUG_STEP
-            printf("step AEXP\n");
-#endif
-            Value val = A(C->val.aexp, E);
-            int save = protectValue(val);
-            applyKont(val);
-            UNPROTECT(save);
-        }
-        break;
-        case EXP_TYPE_CEXP: {
-            switch (C->val.cexp->type) {
-                case CEXP_TYPE_APPLY: {
-#ifdef DEBUG_STEP
-                    printf("step APPLY\n");
-#endif
-                    CexpApply *apply = C->val.cexp->val.apply;
-                    Aexp *function = apply->function;
-                    AexpList *args = apply->args;
-                    Value proc = A(function, E);
-                    int save = protectValue(proc);
-                    if (args == NULL) {
-                        applyProc(proc, NULL);
-                    } else {
-                        ValueList *values = mapA(args, E);
-                        PROTECT(values);
-                        applyProc(proc, values);
-                    }
-                    UNPROTECT(save);
-                }
-                break;
-                case CEXP_TYPE_COND: {
-#ifdef DEBUG_STEP
-                    printf("step COND\n");
-#endif
-                    CexpCond *cond = C->val.cexp->val.cond;
-                    Aexp *condition = cond->condition;
-                    Value testResult = A(condition, E);
-                    if (testResult.type == VALUE_TYPE_FALSE) {
-                        state.C = cond->alternative;
-                    } else {
-                        state.C = cond->consequent;
-                    }
-                }
-                break;
-                case CEXP_TYPE_CALLCC: {
-#ifdef DEBUG_STEP
-                    printf("step CALLCC\n");
-#endif
-                    Aexp *aexp = C->val.cexp->val.callCC;
-                    Value proc = A(aexp, E);
-                    int save = protectValue(proc);
-                    Value cont;
-                    cont.type = VALUE_TYPE_CONT;
-                    cont.val = VALUE_VAL_CONT(K);
-                    protectValue(cont);
-                    applyProcValue(proc, cont);
-                    UNPROTECT(save);
-                }
-                break;
-                case CEXP_TYPE_LETREC: {
-#ifdef DEBUG_STEP
-                    printf("step LETREC\n");
-#endif
-                    CexpLetRec *letRec = C->val.cexp->val.letRec;
-                    int save = PROTECT(letRec);
-                    LetRecBindings *bindings = letRec->bindings;
-                    state.C = letRec->body;
-                    state.E = extendLetRecVoid(E, letRec->nbindings);
-                    mapLetRecReplace(state.E, bindings);
-                    UNPROTECT(save);
-                }
-                break;
-                case CEXP_TYPE_AMB: {
-#ifdef DEBUG_STEP
-                    printf("step AMB\n");
-#endif
-                    CexpAmb *amb = C->val.cexp->val.amb;
-                    Exp *exp2 = amb->exp2;
-                    state.C = amb->exp1;
-                    state.F = newFail(exp2, E, K, F);
-                }
-                break;
-                case CEXP_TYPE_BACK: {
-#ifdef DEBUG_STEP
-                    printf("step BACK\n");
-#endif
-                    if (F != NULL) {
-                        state.C = F->exp;
-                        state.E = F->rho;
-                        state.K = F->k;
-                        state.F = F->next;
-                    } else {
-                        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_DONE());
-                    }
-                }
-                break;
-            }
-        }
-        break;
-        case EXP_TYPE_LET: {
-#ifdef DEBUG_STEP
-            printf("step LET\n");
-#endif
-            ExpLet *let = C->val.let;
-            AexpVar *var = let->var;
-            Exp *body = let->body;
-            state.C = let->val;
-            state.K = newKont(var, body, E, K);
-        }
-        break;
-        default:
-            fprintf(stderr, "%d ", C->type);
-            cant_happen("unexpected aexp in step");
-    }
+static int offsetAt(int index) {
+    return index + valueAt(index);
 }
 
 static Value intValue(int i) {
@@ -345,136 +151,21 @@ static Value le(Value a, Value b) {
 }
 
 
-static primitive O(AexpPrimOp op) {
-    switch (op) {
-        case AEXP_PRIM_ADD: return add;
-        case AEXP_PRIM_SUB: return sub;
-        case AEXP_PRIM_MUL: return mul;
-        case AEXP_PRIM_DIV: return divide;
-        case AEXP_PRIM_EQ: return eq;
-        case AEXP_PRIM_NE: return ne;
-        case AEXP_PRIM_GT: return gt;
-        case AEXP_PRIM_LT: return lt;
-        case AEXP_PRIM_GE: return ge;
-        case AEXP_PRIM_LE: return le;
-    }
-}
-
-static void applyProc(Value val, ValueList *vals) {
-    switch (val.type) {
-        case VALUE_TYPE_CLO: {
-            Clo *clo = val.val.clo;
-            AexpLam *lam = clo->lam;
-            Env *rho = clo->rho;
-            int nargs = lam->nargs;
-            state.C = lam->exp;
-            state.E = mapExtend(rho, nargs, vals);
-        }
-        break;
-        case VALUE_TYPE_CONT: {
-            state.K = val.val.k;
-            Value v = vals->values[0];
-            applyKont(v);
-        }
-        break;
-        default:
-            fprintf(stderr, "%d ", val.type);
-            cant_happen("expected proc or cont in applyproc");
-    }
-}
-
-static void applyProcValue(Value proc, Value val) {
-    if (proc.type != VALUE_TYPE_CLO) {
-        fprintf(stderr, "%d ", proc.type);
-        cant_happen("expected proc in applyproc value");
-    }
-
-    Clo *clo = proc.val.clo;
-    AexpLam *lam = clo->lam;
-    Env *rho = clo->rho;
-    AexpVarList *vars = lam->args;
-    if (vars == NULL) {
-        cant_happen("applyProcValue to proc with no args"); // yes it can
-    }
-    state.C = lam->exp;
-    int save = PROTECT(state.E);
-    state.E = newEnv(state.E, 1);
-    replaceInEnv(state.E, 0, val);
-    UNPROTECT(save);
-}
-
-static void applyKont(Value val) {
-    Kont *K = state.K;
-    if (K != NULL) {
-        AexpVar *var = K->var;
-        state.C = K->body;
-        Env *rho = K->rho;
-        state.E = newEnv(rho, 1);
-        replaceInEnv(state.E, 0, val);
-        state.K = K->next;
-    } else {
-        state.C = newExp(EXP_TYPE_DONE, EXP_VAL_DONE());
-        state.V = val;
-    }
-}
-
-static Value lookUp(AexpAnnotatedVar *var, Env *env) {
+static Value lookup(int frame, int offset) {
 #ifdef DEBUG_STEP
-            printf("* lookup ");
-            printAexpAnnotatedVar(var);
-            printf(" in ");
-            printEnv(env);
+            printf("* lookup [%d:%d] in ", frame, offset);
+            printEnv(state.E);
             printf("\n");
 #endif
-    int frame = var->frame;
+    Env *env = state.E;
     while (frame > 0) {
         env = env->next;
         frame--;
     }
-    return env->values[var->offset];
+    return env->values[offset];
 }
 
-static int countAexpList(AexpList *list) {
-    int count = 0;
-    while (list != NULL) {
-        count++;
-        list = list->next;
-    }
-    return count;
-}
-
-static ValueList *mapA(AexpList *args, Env *env) {
-    if (args == NULL) {
-        return NULL;
-    }
-
-    int count = countAexpList(args);
-
-    ValueList *list = newValueList(count);
-
-    int save = PROTECT(list);
-
-    for (int i = 0; i < count; ++i) {
-        list->values[i] = A(args->exp, env);
-        args = args->next;
-    }
-
-    UNPROTECT(save);
-    return list;
-}
-
-static Env *mapExtend(Env *env, int nargs, ValueList *vals) {
-    int save = PROTECT(env);
-    env = newEnv(env, nargs);
-    UNPROTECT(save);
-    for (int i = 0; i < nargs && i < vals->count; i++) {
-        env->values[i] = vals->values[i];
-    }
-
-    return env;
-}
-
-static Env *extendLetRecVoid(Env *env, int count) {
+static Env *extendVoid(Env *env, int count) {
     int save = PROTECT(env);
     env = newEnv(env, count);
     UNPROTECT(save);
@@ -485,19 +176,368 @@ static void replaceInEnv(Env *env, int index, Value val) {
     env->values[index] = val;
 }
 
-static void mapLetRecReplace(Env *env, LetRecBindings *bindings) {
-    int index = 0;
-    while (bindings != NULL) {
-        Value val = A(bindings->val, env);
-        int save = protectValue(val);
-        replaceInEnv(env, index, val);
-        UNPROTECT(save);
-        bindings = bindings->next;
-        index++;
-    }
-}
-
 void cant_happen(const char *message) {
     fprintf(stderr, "can't happen: %s\n", message);
     exit(1);
+}
+
+static void step() {
+    while (state.C != -1) {
+        switch (state.B.entries[state.C]) {
+            case BYTECODE_NONE: {
+                cant_happen("encountered NONE in step2()");
+            }
+            break;
+            case BYTECODE_LAM: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d LAM\n", state.C);
+#endif
+                Clo *clo = newClo(state.B.entries[state.C + 1], state.C + 4, state.E);
+                int save = PROTECT(clo);
+                Value v;
+                v.type = VALUE_TYPE_CLO;
+                v.val = VALUE_VAL_CLO(clo);
+                push(v);
+                UNPROTECT(save);
+                state.C = offsetAt(state.C + 2);
+            }
+            break;
+            case BYTECODE_VAR: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d VAR\n", state.C);
+#endif
+                push(lookup(state.B.entries[state.C + 1], state.B.entries[state.C + 2]));
+                state.C += 3;
+            }
+            break;
+            case BYTECODE_PRIM_ADD: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d ADD\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(add(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_SUB: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d SUB\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(sub(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_MUL: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d MUL\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(mul(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_DIV: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d DIV\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(divide(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_EQ: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d EQ\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(eq(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_NE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d NE\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(ne(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_GT: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d GT\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(gt(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_LT: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d LT\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(lt(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_GE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d GE\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(ge(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_LE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d LE\n", state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(le(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_APPLY: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d APPLY\n", state.C);
+#endif
+                Value aexp = pop();
+                switch (aexp.type) {
+                    case VALUE_TYPE_CLO: {
+                        Clo *clo = aexp.val.clo;
+                        int save = PROTECT(clo);
+                        int nvar = clo->nvar;
+                        state.E = extendVoid(clo->rho, nvar);
+                        for (; nvar > 0; nvar--) {
+                            replaceInEnv(state.E, nvar - 1, pop());
+                        }
+                        state.C = clo->c;
+                        UNPROTECT(save);
+                    }
+                    break;
+                    case VALUE_TYPE_CONT: {
+                        if (aexp.val.k == NULL) {
+                            state.V = pop();
+                            state.C = -1;
+                        } else {
+                            Kont *k = aexp.val.k;
+                            int save = PROTECT(k);
+                            state.E = extendVoid(k->rho, 1);
+                            replaceInEnv(state.E, 0, pop());
+                            state.C = k->body;
+                            state.K = k->next;
+                            UNPROTECT(save);
+                        }
+                    }
+                    break;
+                    default:
+                        cant_happen("unexpected type in APPLY");
+                }
+            }
+            break;
+            case BYTECODE_IF: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d IF\n", state.C);
+#endif
+                Value aexp = pop();
+                if (aexp.type == VALUE_TYPE_FALSE) {
+                    state.C = offsetAt(state.C + 1);
+                } else {
+                    state.C += 3;
+                }
+            }
+            break;
+            case BYTECODE_ENV: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d ENV\n", state.C);
+#endif
+                state.E = extendVoid(state.E, state.B.entries[state.C + 1]);
+                state.C += 2;
+            }
+            break;
+            case BYTECODE_LETREC: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d LETREC\n", state.C);
+#endif
+                int nargs = state.B.entries[state.C + 1];
+                for (; nargs > 0; nargs--) {
+                    replaceInEnv(state.E, nargs - 1, pop());
+                }
+                state.C += 2;
+            }
+            break;
+            case BYTECODE_AMB: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d AMB\n", state.C);
+#endif
+                state.F = newFail(offsetAt(state.C + 1), state.E, state.K, state.F);
+                state.C += 3;
+            }
+            break;
+            case BYTECODE_BACK: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d BACK\n", state.C);
+#endif
+                if (state.F == NULL) {
+                    state.C = -1;
+                } else {
+                    state.C = state.F->exp;
+                    state.E = state.F->rho;
+                    state.K = state.F->k;
+                    state.F = state.F->next;
+                }
+            }
+            break;
+            case BYTECODE_LET: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d LET\n", state.C);
+#endif
+                state.K = newKont(offsetAt(state.C + 1), state.E, state.K);
+                state.C += 3;
+            }
+            break;
+            case BYTECODE_JMP: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d JMP\n", state.C);
+#endif
+                state.C = offsetAt(state.C + 1);
+            }
+            break;
+            case BYTECODE_CALLCC: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d CALLCC\n", state.C);
+#endif
+                Value aexp = pop();
+                switch (aexp.type) {
+                    case VALUE_TYPE_CLO: {
+                        Clo *clo = aexp.val.clo;
+                        int save = PROTECT(clo);
+                        if (clo->nvar != 1) {
+                            cant_happen("wrong number of arguments in CALLCC receiver");
+                        }
+                        state.E = extendVoid(clo->rho, 1);
+                        Value k;
+                        k.type = VALUE_TYPE_CONT;
+                        k.val = VALUE_VAL_CONT(state.K);
+                        replaceInEnv(state.E, 0, k);
+                        state.C = clo->c;
+                        UNPROTECT(save);
+                    }
+                    break;
+                    case VALUE_TYPE_CONT: {
+                        if (aexp.val.k == NULL) {
+                            state.C = -1;
+                        } else {
+                            Kont *k = aexp.val.k;
+                            int save = PROTECT(k);
+                            state.E = extendVoid(k->rho, 1);
+                            Value k2;
+                            k2.type = VALUE_TYPE_CONT;
+                            k2.val = VALUE_VAL_CONT(state.K);
+                            replaceInEnv(state.E, 0, k2);
+                            state.C = k->body;
+                            UNPROTECT(save);
+                        }
+                    }
+                    break;
+                    default:
+                        cant_happen("unexpected type in CALLCC");
+                }
+            }
+            break;
+            case BYTECODE_TRUE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d TRUE\n", state.C);
+#endif
+                push(vTrue);
+                state.C++;
+            }
+            break;
+            case BYTECODE_FALSE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d FALSE\n", state.C);
+#endif
+                push(vFalse);
+                state.C++;
+            }
+            break;
+            case BYTECODE_INT: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d INT\n", state.C);
+#endif
+                Value v;
+                v.type = VALUE_TYPE_INTEGER;
+                v.val = VALUE_VAL_INTEGER(valueAt(state.C + 1));
+                push(v);
+                state.C += 3;
+            }
+            break;
+            case BYTECODE_RETURN: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d RET\n", state.C);
+#endif
+                if (state.K == NULL) {
+                    state.V = pop();
+                    state.C = -1;
+                } else {
+                    state.E = extendVoid(state.K->rho, 1);
+                    replaceInEnv(state.E, 0, pop());
+                    state.C = state.K->body;
+                    state.K = state.K->next;
+                }
+            }
+            break;
+            case BYTECODE_DONE: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("# %04d DONE\n", state.C);
+#endif
+                state.C = -1;
+            }
+            break;
+            default:
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+#endif
+                cant_happen("unrecognised bytecode in dumpByteCode");
+        }
+    }
 }

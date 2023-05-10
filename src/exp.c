@@ -65,6 +65,10 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
 
 static HashTable varTable;
 
+void markVarTable() {
+    markHashTableObj((Header *) &varTable);
+}
+
 AexpVar *newAexpVar(char *name) {
     AexpVar *x;
     x = hashGetVar(&varTable, name);

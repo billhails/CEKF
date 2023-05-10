@@ -59,20 +59,14 @@ void printValueList(ValueList *x) {
 }
 
 void printClo(Clo *x) {
-    printf("Clo[");
-    printAexpLam(x->lam);
-    printf(", ");
+    printf("Clo[%d, %d, ", x->nvar, x->c);
     printElidedEnv(x->rho);
     printf("]");
 }
 
 void printCEKF(CEKF *x) {
     printf("[");
-#ifdef BYTECODE_INTERPRETER
-    printf("%d", x.C);
-#else
-    printExp(x->C);
-#endif
+    printf("%d", x->C);
     printf(", ");
     printEnv(x->E);
     printf(", ");
@@ -81,7 +75,20 @@ void printCEKF(CEKF *x) {
     printFail(x->F);
     printf(", ");
     printValue(x->V);
+    printf(", ");
+    printStack(&x->S);
     printf("]\n");
+}
+
+void printStack(Stack *x) {
+    printf("Stack[");
+    for (int i = x->sp; i > 0; --i) {
+        printValue(x->stack[i-1]);
+        if (i > 1) {
+            printf(", ");
+        }
+    }
+    printf("]");
 }
 
 void printHashTable(HashTable *x) {
@@ -166,10 +173,7 @@ void printElidedEnv(Env *x) {
 void printKont(Kont *x) {
     printf("Kont[");
     if (x != NULL) {
-        printAexpVar(x->var);
-        printf(", ");
-        printExp(x->body);
-        printf(", ");
+        printf("%d, ", x->body);
         printEnv(x->rho);
         printf(", ");
         printKont(x->next);
@@ -180,7 +184,7 @@ void printKont(Kont *x) {
 void printFail(Fail *x) {
     printf("Fail[");
     if (x != NULL) {
-        printExp(x->exp);
+        printf("%d", x->exp);
         printf(", ");
         printEnv(x->rho);
         printf(", ");
@@ -428,7 +432,7 @@ static int wordAt(ByteCodeArray *b, int index) {
 }
 
 static int offsetAt(ByteCodeArray *b, int index) {
-    return index + (b->entries[index] << 8) + b->entries[index + 1];
+    return index + wordAt(b, index);
 }
 
 void dumpByteCode(ByteCodeArray *b) {
@@ -441,8 +445,8 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             case BYTECODE_LAM: {
-                printf("%04d ### LAM [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                printf("%04d ### LAM [%d] [%d]\n", i, b->entries[i + 1], offsetAt(b, i+2));
+                i += 4;
             }
             break;
             case BYTECODE_VAR: {

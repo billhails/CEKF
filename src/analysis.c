@@ -17,6 +17,7 @@
  */
 
 #include <stdbool.h>
+#include "common.h"
 #include "analysis.h"
 #include "exp.h"
 
@@ -56,7 +57,7 @@ AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth) {
     if (locate(x, env, &frame, &offset)) {
         return newAexpAnnotatedVar(frame, offset, x);
     }
-    cant_happen("no binding for var in analyzeAexpVar");
+    cant_happen("no binding for var in analizeAexpVar");
 }
 
 void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth) {

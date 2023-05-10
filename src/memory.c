@@ -24,6 +24,7 @@
 #include "analysis.h"
 #include "memory.h"
 #include "step.h"
+#include "exp.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -258,6 +259,7 @@ static void markProtected() {
 static void mark() {
     markCEKF();
     markProtected();
+    markVarTable();
 }
 
 static void sweep() {
