@@ -21,19 +21,22 @@
 import re
 import sys
 
-class Aexp:
+class AexpBase:
     def is_aexp(self):
         return True
 
-class Cexp:
+
+class CexpBase:
     def is_aexp(self):
         return False
 
-class LetExp:
+
+class LetExpBase:
     def is_aexp(self):
         return False
 
-class AexpInt(Aexp):
+
+class AexpInt(AexpBase):
     def __init__(self, val):
         self.val = val
 
@@ -49,7 +52,8 @@ class AexpInt(Aexp):
     def expCVal(self):
         return"AEXP_VAL_INT(" + self.makeC() + ")"
 
-class AexpFalse(Aexp):
+
+class AexpFalse(AexpBase):
     def __str__(self):
         return '#f'
 
@@ -57,9 +61,10 @@ class AexpFalse(Aexp):
         return "AEXP_TYPE_FALSE"
 
     def expCVal(self):
-        return "AEXP_VAL_NONE()"
+        return "AEXP_VAL_FALSE()"
 
-class AexpTrue(Aexp):
+
+class AexpTrue(AexpBase):
     def __str__(self):
         return '#t'
 
@@ -67,9 +72,10 @@ class AexpTrue(Aexp):
         return "AEXP_TYPE_TRUE"
 
     def expCVal(self):
-        return "AEXP_VAL_NONE()"
+        return "AEXP_VAL_TRUE()"
 
-class AexpLam(Aexp):
+
+class AexpLam(AexpBase):
     def __init__(self, args, body):
         self.args = args
         self.body = body
@@ -85,6 +91,7 @@ class AexpLam(Aexp):
 
     def expCVal(self):
         return "AEXP_VAL_LAM(" + self.makeC() + ")"
+
 
 class AexpVarList:
     def __init__(self, rest, var):
@@ -106,7 +113,8 @@ class AexpVarList:
             rest = self.rest.makeC()
         return "newAexpVarList(" + rest + "," + self.var.makeC() + ")"
 
-class AexpVar(Aexp):
+
+class AexpVar(AexpBase):
     def __init__(self, name):
         self.name = name
 
@@ -123,7 +131,7 @@ class AexpVar(Aexp):
         return "AEXP_VAL_VAR(" + self.makeC() + ")"
 
 
-class AexpPrimApp(Aexp):
+class AexpPrimApp(AexpBase):
     def __init__(self, op, lhs, rhs):
         lhs.assert_aexp("primap " + op + " expects lhs aexp")
         rhs.assert_aexp("primap " + op + " expects rhs aexp")
@@ -189,7 +197,8 @@ class AexpList:
             rest = self.rest.makeC()
         return "newAexpList(" + rest + "," + self.exp.makeC() + ")"
 
-class CexpApply(Cexp):
+
+class CexpApply(CexpBase):
     def __init__(self, function, args):
         function.assert_aexp("function being applied must be an aexp")
         self.function = function
@@ -207,7 +216,8 @@ class CexpApply(Cexp):
     def expCVal(self):
         return "CEXP_VAL_APPLY(" + self.makeC() + ")"
 
-class CexpCond(Cexp):
+
+class CexpCond(CexpBase):
     def __init__(self, condition, consequent, alternative):
         condition.assert_aexp("condition")
         self.condition = condition
@@ -227,7 +237,7 @@ class CexpCond(Cexp):
         return "CEXP_VAL_COND(" + self.makeC() + ")"
 
 
-class CexpLetRec(Cexp):
+class CexpLetRec(CexpBase):
     def __init__(self, bindings, body):
         self.bindings = bindings
         self.body = body
@@ -267,7 +277,8 @@ class LetRecBindings:
             rest = self.rest.makeC()
         return "newLetRecBindings(" + rest + "," + self.var.makeC() + "," + self.val.makeC() + ")"
 
-class CexpAmb(Cexp):
+
+class CexpAmb(CexpBase):
     def __init__(self, exp1, exp2):
         self.exp1 = exp1
         self.exp2 = exp2
@@ -284,7 +295,8 @@ class CexpAmb(Cexp):
     def expCVal(self):
         return "CEXP_VAL_AMB(" + self.makeC() + ")"
 
-class ExpLet(LetExp):
+
+class ExpLet(LetExpBase):
     def __init__(self, var, val, body):
         self.var = var
         self.val = val
@@ -303,12 +315,56 @@ class ExpLet(LetExp):
         return "EXP_VAL_LET(" + self.makeC() + ")"
 
 
+class Aexp(AexpBase):
+    def __init__(self, aexp):
+        self.aexp = aexp;
+
+    def is_aexp(self):
+        return self.aexp.is_aexp()
+
+    def __str__(self):
+        return str(self.aexp);
+
+    def makeC(self):
+        return "newAexp(" + self.aexp.expCType() + "," + self.aexp.expCVal() + ")"
+
+    def expCType(self):
+        return "EXP_TYPE_AEXP"
+
+    def expCVal(self):
+        return "EXP_VAL_AEXP(" + self.makeC() + ")"
+
+    def assert_aexp(self, context):
+        if not self.aexp.is_aexp():
+            raise Exception(context + " expects an aexp not a cexp")
+
+
+class Cexp(CexpBase):
+    def __init__(self, cexp):
+        self.cexp = cexp;
+
+    def is_aexp(self):
+        return False
+
+    def __str__(self):
+        return str(self.cexp);
+
+    def makeC(self):
+        return "newCexp(" + self.cexp.expCType() + "," + self.cexp.expCVal() + ")"
+
+    def expCType(self):
+        return "EXP_TYPE_CEXP"
+
+    def expCVal(self):
+        return "EXP_VAL_CEXP(" + self.makeC() + ")"
+
+
 class Exp:
     def __init__(self, exp):
         self.exp = exp
 
     def __str__(self):
-        return str(self.exp)
+        return "EXP[" + str(self.exp) + "]"
 
     def makeC(self):
         return "newExp(" + self.exp.expCType() + "," + self.exp.expCVal() + ")"
@@ -317,7 +373,8 @@ class Exp:
         if not self.exp.is_aexp():
             raise Exception(context + " expects an aexp not a cexp")
 
-class CexpBack(Cexp):
+
+class CexpBack(CexpBase):
     def __str__(self):
         return "back"
 
@@ -325,20 +382,27 @@ class CexpBack(Cexp):
         return "CEXP_TYPE_BACK"
 
     def expCVal(self):
-        return "CEXP_VAL_NONE()"
+        return "CEXP_VAL_BACK()"
 
-class CexpCallCC(Cexp):
+
+class CexpCallCC(CexpBase):
     def __init__(self, exp):
         exp.assert_aexp("call/cc expects aexp");
         self.exp = exp
 
+    def __str__(self):
+        return "(call/cc " + str(self.exp) + ")"
+
     def makeC(self):
         return "newExp(CEXP_TYPE_CALLCC, CEXP_VAL_CALLCC(" + self.exp.makeC() + "))"
+
     def expCType(self):
         return "CEXP_TYPE_CALLCC"
 
     def expCVal(self):
         return "CEXP_VAL_CALLCC(" + self.exp.makeC() + ")"
+
+############## PARSER
 
 class Token:
     OPEN = 0
@@ -362,6 +426,7 @@ class Token:
 
     def __str__(self):
         return 'Token<' + self.val + '>'
+
 
 class Lexer:
     def __init__(self, file):
@@ -455,16 +520,21 @@ class Lexer:
 
 
 def parse_aexp_list(tokens):
+    if tokens.peek().kind == Token.PRIM:
+        return parse_primapp(tokens.next(), tokens)
+    if tokens.peek().kind == Token.LAMBDA:
+        tokens.next()
+        return parse_lambda(tokens)
     if tokens.peek().val == ')':
         return None
-    exp = parse_exp(tokens)
+    exp = parse_aexp(tokens)
     return AexpList(parse_aexp_list(tokens), exp)
 
 def parse_varlist_body(tokens):
     if tokens.peek().val == ')':
         tokens.next()
         return None
-    var = parse_aexp_var(tokens)
+    var = parse_var(tokens)
     return AexpVarList(parse_varlist_body(tokens), var)
 
 def parse_varlist(tokens):
@@ -472,7 +542,7 @@ def parse_varlist(tokens):
         raise Exception("expected '(' before variable list")
     return parse_varlist_body(tokens)
 
-def parse_aexp_var(tokens):
+def parse_var(tokens):
     token = tokens.next()
     if token.kind == Token.VAR:
         return AexpVar(token.val);
@@ -481,8 +551,8 @@ def parse_aexp_var(tokens):
 def parse_letrec_bindings_list(tokens):
     token = tokens.next()
     if token.val == '(':
-        var = parse_aexp_var(tokens)
-        val = parse_exp(tokens)
+        var = parse_var(tokens)
+        val = parse_aexp(tokens)
         token = tokens.next()
         if token.val != ')':
             raise Exception("expected ')' after letrec binding");
@@ -500,26 +570,26 @@ def parse_letrec_bindings(tokens):
 def parse_amb(tokens):
     exp1 = parse_exp(tokens)
     exp2 = parse_exp(tokens)
-    return CexpAmb(exp1, exp2)
+    return Cexp(CexpAmb(exp1, exp2))
 
 def parse_back(tokens):
-    return CexpBack()
+    return Cexp(CexpBack())
 
 def parse_letrec(tokens):
     bindings = parse_letrec_bindings(tokens)
     body = parse_exp(tokens)
-    return CexpLetRec(bindings, body)
+    return Cexp(CexpLetRec(bindings, body))
 
 def parse_lambda(tokens):
     args = parse_varlist(tokens)
     body = parse_exp(tokens)
-    return AexpLam(args, body)
+    return Aexp(AexpLam(args, body))
 
 def parse_cond(tokens):
-    condition = parse_exp(tokens)
+    condition = parse_aexp(tokens)
     consequent = parse_exp(tokens)
     alternative = parse_exp(tokens)
-    return CexpCond(condition, consequent, alternative)
+    return Cexp(CexpCond(condition, consequent, alternative))
 
 def parse_var(tokens):
     token = tokens.next()
@@ -540,19 +610,18 @@ def parse_let(tokens):
     return ExpLet(var, val, body)
 
 def parse_callcc(tokens):
-    exp = parse_exp(tokens)
-    return CexpCallCC(exp)
+    exp = parse_aexp(tokens)
+    return Cexp(CexpCallCC(exp))
 
 def parse_primapp(token, tokens):
-    exp1 = parse_exp(tokens)
-    exp2 = parse_exp(tokens)
-    return AexpPrimApp(token.val, exp1, exp2)
+    exp1 = parse_aexp(tokens)
+    exp2 = parse_aexp(tokens)
+    return Aexp(AexpPrimApp(token.val, exp1, exp2))
 
 def parse_apply(tokens):
-    function = parse_exp(tokens)
+    function = parse_aexp(tokens)
     args = parse_aexp_list(tokens)
-    return CexpApply(function, args)
-
+    return Cexp(CexpApply(function, args))
 
 def parse_list(tokens):
     token = tokens.next()
@@ -574,16 +643,41 @@ def parse_list(tokens):
         case Token.PRIM:
             return parse_primapp(token, tokens)
         case Token.INTEGER:
-            return AexpInt(token)
+            return Aexp(AexpInt(token))
         case Token.TRUE:
-            return AexpTrue()
+            return Aexp(AexpTrue())
         case Token.FALSE:
-            return AexpFalse()
+            return Aexp(AexpFalse())
         case Token.VAR:
             tokens.pushback(token)
             return parse_apply(tokens)
         case Token.CLOSE:
             raise Exception("unexpected closing brace in expression");
+
+def parse_aexp(tokens):
+    token = tokens.next()
+    if token.val == '(':
+        exp = parse_aexp_list(tokens)
+        token = tokens.next()
+        if token.val != ')':
+            raise Exception("expected ')' after expression")
+        return exp
+    elif token.val == ')':
+        raise Exception("unexpected closing brace");
+    else:
+        match token.kind:
+            case Token.INTEGER:
+                return Aexp(AexpInt(token.val))
+            case Token.TRUE:
+                return Aexp(AexpTrue())
+            case Token.FALSE:
+                return Aexp(AexpFalse())
+            case Token.VAR:
+                return Aexp(AexpVar(token.val))
+            case Token.LAMBDA:
+                return parse_lambda(tokens)
+            case _:
+                raise Exception("unexpected token while parsing aexp: " + token.val);
 
 def parse_exp(tokens):
     token = tokens.next()
@@ -598,15 +692,17 @@ def parse_exp(tokens):
     else:
         match token.kind:
             case Token.INTEGER:
-                return Exp(AexpInt(token.val))
+                return Exp(Aexp(AexpInt(token.val)))
             case Token.TRUE:
-                return Exp(AexpTrue())
+                return Exp(Aexp(AexpTrue()))
             case Token.FALSE:
-                return Exp(AexpFalse())
+                return Exp(Aexp(AexpFalse()))
             case Token.VAR:
-                return Exp(AexpVar(token.val))
+                return Exp(Aexp(AexpVar(token.val)))
             case _:
                 raise Exception("unexpected token while parsing expression: " + token.val);
 
 
+expr = parse_exp(Lexer(sys.argv[1]))
+print(str(expr))
 print(parse_exp(Lexer(sys.argv[1])).makeC())

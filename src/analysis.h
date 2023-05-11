@@ -40,6 +40,8 @@ void analizeCexpCond(CexpCond *x, CTEnv *env, int depth);
 void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth);
 void analizeCexpAmb(CexpAmb *x, CTEnv *env, int depth);
 void analizeExpLet(ExpLet *x, CTEnv *env, int depth);
+void analizeAexp(Aexp *x, CTEnv *env, int depth);
+void analizeCexp(Cexp *x, CTEnv *env, int depth);
 void analizeExp(Exp *x, CTEnv *env, int depth);
 
 void markCTEnv(Header *env);

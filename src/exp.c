@@ -65,6 +65,11 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
 
 static HashTable varTable;
 
+void markVarTable() {
+    varTable.header.keep = false; // force
+    markHashTableObj((Header *) &varTable);
+}
+
 AexpVar *newAexpVar(char *name) {
     AexpVar *x;
     x = hashGetVar(&varTable, name);
@@ -88,7 +93,7 @@ AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
     return x;
 }
 
-AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Exp *exp1, Exp *exp2) {
+AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2) {
     AexpPrimApp *x = NEW(AexpPrimApp, OBJTYPE_PRIMAPP);
     x->op = op;
     x->exp1 = exp1;
@@ -96,14 +101,14 @@ AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Exp *exp1, Exp *exp2) {
     return x;
 }
 
-AexpList *newAexpList(AexpList *next, Exp *exp) {
+AexpList *newAexpList(AexpList *next, Aexp *exp) {
     AexpList *x = NEW(AexpList, OBJTYPE_EXPLIST);
     x->next = next;
     x->exp = exp;
     return x;
 }
 
-CexpApply *newCexpApply(Exp *function, AexpList *args) {
+CexpApply *newCexpApply(Aexp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply, OBJTYPE_APPLY);
     x->function = function;
     x->nargs = countAexpList(args);
@@ -111,7 +116,7 @@ CexpApply *newCexpApply(Exp *function, AexpList *args) {
     return x;
 }
 
-CexpCond *newCexpCond(Exp *condition, Exp *consequent, Exp *alternative) {
+CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative) {
     CexpCond *x = NEW(CexpCond, OBJTYPE_COND);
     x->condition = condition;
     x->consequent = consequent;
@@ -127,7 +132,7 @@ CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     return x;
 }
 
-LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Exp *val) {
+LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val) {
     LetRecBindings *x = NEW(LetRecBindings, OBJTYPE_BINDINGS);
     x->next = next;
     x->var = var;
@@ -139,6 +144,20 @@ CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2) {
     CexpAmb *x = NEW(CexpAmb, OBJTYPE_AMB);
     x->exp1 = exp1;
     x->exp2 = exp2;
+    return x;
+}
+
+Aexp *newAexp(AexpType type, AexpVal val) {
+    Aexp *x = NEW(Aexp, OBJTYPE_AEXP);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+Cexp *newCexp(CexpType type, CexpVal val) {
+    Cexp *x = NEW(Cexp, OBJTYPE_CEXP);
+    x->type = type;
+    x->val = val;
     return x;
 }
 
@@ -190,8 +209,8 @@ void markAexpPrimApp(AexpPrimApp *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markExp(x->exp1);
-    markExp(x->exp2);
+    markAexp(x->exp1);
+    markAexp(x->exp2);
 }
 
 void markAexpList(AexpList *x) {
@@ -199,14 +218,14 @@ void markAexpList(AexpList *x) {
     if (MARKED(x)) return;
     MARK(x);
     markAexpList(x->next);
-    markExp(x->exp);
+    markAexp(x->exp);
 }
 
 void markCexpApply(CexpApply *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markExp(x->function);
+    markAexp(x->function);
     markAexpList(x->args);
 }
 
@@ -214,7 +233,7 @@ void markCexpCond(CexpCond *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markExp(x->condition);
+    markAexp(x->condition);
     markExp(x->consequent);
     markExp(x->alternative);
 }
@@ -233,7 +252,7 @@ void markLetRecBindings(LetRecBindings *x) {
     MARK(x);
     markLetRecBindings(x->next);
     markAexpVar(x->var);
-    markExp(x->val);
+    markAexp(x->val);
 }
 
 void markCexpAmb(CexpAmb *x) {
@@ -253,77 +272,135 @@ void markExpLet(ExpLet *x) {
     markExp(x->body);
 }
 
-void markExp(Exp *x) {
+void markAexp(Aexp *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     switch (x->type) {
         case AEXP_TYPE_LAM:
-            markAexpLam(x->val.aexp.lam);
+            markAexpLam(x->val.lam);
             break;
         case AEXP_TYPE_VAR:
-            markAexpVar(x->val.aexp.var);
+            markAexpVar(x->val.var);
             break;
         case AEXP_TYPE_ANNOTATEDVAR:
-            markAexpAnnotatedVar(x->val.aexp.annotatedVar);
+            markAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
             break;
         case AEXP_TYPE_PRIM:
-            markAexpPrimApp(x->val.aexp.prim);
+            markAexpPrimApp(x->val.prim);
             break;
+        default:
+            cant_happen("unrecognised aexp type in markAexp");
+    }
+}
+
+void markCexp(Cexp *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch (x->type) {
         case CEXP_TYPE_APPLY:
-            markCexpApply(x->val.cexp.apply);
+            markCexpApply(x->val.apply);
             break;
         case CEXP_TYPE_COND:
-            markCexpCond(x->val.cexp.cond);
+            markCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
-            markExp(x->val.cexp.callCC);
+            markAexp(x->val.callCC);
             break;
         case CEXP_TYPE_LETREC:
-            markCexpLetRec(x->val.cexp.letRec);
+            markCexpLetRec(x->val.letRec);
             break;
         case CEXP_TYPE_AMB:
-            markCexpAmb(x->val.cexp.amb);
+            markCexpAmb(x->val.amb);
             break;
         case CEXP_TYPE_BACK:
+            break;
+        default:
+            cant_happen("unrecognised cexp type in markCexp");
+    }
+}
+
+void markExp(Exp *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch (x->type) {
+        case EXP_TYPE_AEXP:
+            markAexp(x->val.aexp);
+            break;
+        case EXP_TYPE_CEXP:
+            markCexp(x->val.cexp);
             break;
         case EXP_TYPE_LET:
             markExpLet(x->val.let);
             break;
         case EXP_TYPE_DONE:
             break;
+        default:
+            cant_happen("unrecognised exp type in markExp");
     }
 }
 
 void freeExpObj(Header *h) {
     if (h == NULL) return;
-    Exp *x = (Exp *)h;
-    switch (x->type) {
-        case AEXP_TYPE_LAM:
-        case AEXP_TYPE_VAR:
-        case AEXP_TYPE_ANNOTATEDVAR:
-        case AEXP_TYPE_TRUE:
-        case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
-        case AEXP_TYPE_PRIM:
-        case CEXP_TYPE_APPLY:
-        case CEXP_TYPE_COND:
-        case CEXP_TYPE_CALLCC:
-        case CEXP_TYPE_LETREC:
-        case CEXP_TYPE_AMB:
-        case CEXP_TYPE_BACK:
-        case EXP_TYPE_LET:
-        case EXP_TYPE_DONE:
-            FREE(x, Exp);
+    switch (h->type) {
+        case OBJTYPE_AMB:
+            FREE(h, CexpAmb);
             break;
+        case OBJTYPE_APPLY:
+            FREE(h, CexpApply);
+            break;
+        case OBJTYPE_BINDINGS:
+            FREE(h, LetRecBindings);
+            break;
+        case OBJTYPE_COND:
+            FREE(h, CexpCond);
+            break;
+        case OBJTYPE_AEXP:
+            FREE(h, Aexp);
+            break;
+        case OBJTYPE_CEXP:
+            FREE(h, Cexp);
+            break;
+        case OBJTYPE_EXP:
+            FREE(h, Exp);
+            break;
+        case OBJTYPE_EXPLIST:
+            FREE(h, AexpList);
+            break;
+        case OBJTYPE_LAM:
+            FREE(h, AexpLam);
+            break;
+        case OBJTYPE_LET:
+            FREE(h, ExpLet);
+            break;
+        case OBJTYPE_LETREC:
+            FREE(h, CexpLetRec);
+            break;
+        case OBJTYPE_PRIMAPP:
+            FREE(h, AexpPrimApp);
+            break;
+        case OBJTYPE_VAR:
+            FREE(h, AexpVar);
+            break;
+        case OBJTYPE_ANNOTATEDVAR:
+            FREE(h, AexpAnnotatedVar);
+            break;
+        case OBJTYPE_VARLIST:
+            FREE(h, AexpVarList);
+            break;
+        default:
+            cant_happen("unrecognised header type in freeExpObj");
     }
 }
 
 void markExpObj(Header *h) {
+    if (h == NULL) return;
     switch (h->type) {
         case OBJTYPE_AMB:
             markCexpAmb((CexpAmb *) h);
@@ -336,6 +413,12 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_COND:
             markCexpCond((CexpCond *) h);
+            break;
+        case OBJTYPE_AEXP:
+            markAexp((Aexp *) h);
+            break;
+        case OBJTYPE_CEXP:
+            markCexp((Cexp *) h);
             break;
         case OBJTYPE_EXP:
             markExp((Exp *) h);
@@ -364,5 +447,7 @@ void markExpObj(Header *h) {
         case OBJTYPE_VARLIST:
             markAexpVarList((AexpVarList *) h);
             break;
+        default:
+            cant_happen("unrecognised header type in markExpObj");
     }
 }

@@ -18,23 +18,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "common.h"
 #include "debug.h"
 #include "hash.h"
 
 void printValue(Value x) {
-    printf("Value[");
+    printf("V[");
     switch (x.type) {
         case VALUE_TYPE_VOID:
-            printf("VOID");
+            printf("#V");
             break;
         case VALUE_TYPE_INTEGER:
             printf("%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
-            printf("TRUE");
+            printf("#T");
             break;
         case VALUE_TYPE_FALSE:
-            printf("FALSE");
+            printf("#F");
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo);
@@ -58,16 +59,14 @@ void printValueList(ValueList *x) {
 }
 
 void printClo(Clo *x) {
-    printf("Clo[");
-    printAexpLam(x->lam);
-    printf(", ");
+    printf("C[%d, %d, ", x->nvar, x->c);
     printElidedEnv(x->rho);
     printf("]");
 }
 
 void printCEKF(CEKF *x) {
     printf("[");
-    printExp(x->C);
+    printf("%d", x->C);
     printf(", ");
     printEnv(x->E);
     printf(", ");
@@ -76,7 +75,20 @@ void printCEKF(CEKF *x) {
     printFail(x->F);
     printf(", ");
     printValue(x->V);
+    printf(", ");
+    printStack(&x->S);
     printf("]\n");
+}
+
+void printStack(Stack *x) {
+    printf("S[");
+    for (int i = x->sp; i > 0; --i) {
+        printValue(x->stack[i-1]);
+        if (i > 1) {
+            printf(", ");
+        }
+    }
+    printf("]");
 }
 
 void printHashTable(HashTable *x) {
@@ -129,7 +141,7 @@ void printElidedValues(Value *values, int count) {
 }
 
 void printEnv(Env *x) {
-    printf("Env[");
+    printf("E[");
     while (x != NULL) {
         printValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
@@ -149,7 +161,7 @@ void printCTEnv(CTEnv *x) {
 }
 
 void printElidedEnv(Env *x) {
-    printf("Env[");
+    printf("E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
@@ -159,12 +171,9 @@ void printElidedEnv(Env *x) {
 }
 
 void printKont(Kont *x) {
-    printf("Kont[");
+    printf("K[");
     if (x != NULL) {
-        printAexpVar(x->var);
-        printf(", ");
-        printExp(x->body);
-        printf(", ");
+        printf("%d, ", x->body);
         printEnv(x->rho);
         printf(", ");
         printKont(x->next);
@@ -173,9 +182,9 @@ void printKont(Kont *x) {
 }
 
 void printFail(Fail *x) {
-    printf("Fail[");
+    printf("F[");
     if (x != NULL) {
-        printExp(x->exp);
+        printf("%d", x->exp);
         printf(", ");
         printEnv(x->rho);
         printf(", ");
@@ -248,11 +257,13 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_LE:
             printf("<= ");
             break;
+        default:
+            cant_happen("unrecognized op in printAexpPrimApp");
     }
-    printExp(x->exp1);
+    printAexp(x->exp1);
     if (x->exp2 != NULL) {
         printf(" ");
-        printExp(x->exp2);
+        printAexp(x->exp2);
     }
     printf(")");
 }
@@ -260,7 +271,7 @@ void printAexpPrimApp(AexpPrimApp *x) {
 void printAexpList(AexpList *x) {
     printf("(");
     while (x != NULL) {
-        printExp(x->exp);
+        printAexp(x->exp);
         if (x->next) {
             printf(" ");
         }
@@ -271,7 +282,7 @@ void printAexpList(AexpList *x) {
 
 void printBareAexpList(AexpList *x) {
     while (x != NULL) {
-        printExp(x->exp);
+        printAexp(x->exp);
         if (x->next) {
             printf(" ");
         }
@@ -281,7 +292,7 @@ void printBareAexpList(AexpList *x) {
 
 void printCexpApply(CexpApply *x) {
     printf("(");
-    printExp(x->function);
+    printAexp(x->function);
     printf(" ");
     printBareAexpList(x->args);
     printf(")");
@@ -289,7 +300,7 @@ void printCexpApply(CexpApply *x) {
 
 void printCexpCond(CexpCond *x) {
     printf("(if ");
-    printExp(x->condition);
+    printAexp(x->condition);
     printf(" ");
     printExp(x->consequent);
     printf(" ");
@@ -311,7 +322,7 @@ void printLetRecBindings(LetRecBindings *x) {
         printf("(");
         printAexpVar(x->var);
         printf(" ");
-        printExp(x->val);
+        printAexp(x->val);
         printf(")");
         if (x->next != NULL) {
             printf(" ");
@@ -329,16 +340,16 @@ void printCexpAmb(CexpAmb *x) {
     printf(")");
 }
 
-void printExp(Exp *x) {
+void printAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
-            printAexpLam(x->val.aexp.lam);
+            printAexpLam(x->val.lam);
             break;
         case AEXP_TYPE_VAR:
-            printAexpVar(x->val.aexp.var);
+            printAexpVar(x->val.var);
             break;
         case AEXP_TYPE_ANNOTATEDVAR:
-            printAexpAnnotatedVar(x->val.aexp.annotatedVar);
+            printAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_TRUE:
             printf("#t");
@@ -347,30 +358,52 @@ void printExp(Exp *x) {
             printf("#f");
             break;
         case AEXP_TYPE_INT:
-            printf("%d", x->val.aexp.integer);
+            printf("%d", x->val.integer);
             break;
         case AEXP_TYPE_PRIM:
-            printAexpPrimApp(x->val.aexp.prim);
+            printAexpPrimApp(x->val.prim);
             break;
+        default:
+            printf("<unrecognised aexp %d>", x->type);
+            exit(1);
+    }
+}
+
+void printCexp(Cexp *x) {
+    switch (x->type) {
         case CEXP_TYPE_APPLY:
-            printCexpApply(x->val.cexp.apply);
+            printCexpApply(x->val.apply);
             break;
         case CEXP_TYPE_COND:
-            printCexpCond(x->val.cexp.cond);
+            printCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
             printf("(call/cc ");
-            printExp(x->val.cexp.callCC);
+            printAexp(x->val.callCC);
             printf(")");
             break;
         case CEXP_TYPE_LETREC:
-            printCexpLetRec(x->val.cexp.letRec);
+            printCexpLetRec(x->val.letRec);
             break;
         case CEXP_TYPE_AMB:
-            printCexpAmb(x->val.cexp.amb);
+            printCexpAmb(x->val.amb);
             break;
         case CEXP_TYPE_BACK:
             printf("(back)");
+            break;
+        default:
+            printf("<unrecognised cexp %d>", x->type);
+            exit(1);
+    }
+}
+
+void printExp(Exp *x) {
+    switch (x->type) {
+        case EXP_TYPE_AEXP:
+            printAexp(x->val.aexp);
+            break;
+        case EXP_TYPE_CEXP:
+            printCexp(x->val.cexp);
             break;
         case EXP_TYPE_LET:
             printExpLet(x->val.let);
@@ -392,4 +425,165 @@ void printExpLet(ExpLet *x) {
     printf(") ");
     printExp(x->body);
     printf(")");
+}
+
+static int intAt(ByteCodeArray *b, int index) {
+    return
+        (b->entries[index] << 24) +
+        (b->entries[index + 1] << 16) +
+        (b->entries[index + 2] << 8) +
+        b->entries[index + 3];
+}
+
+static int wordAt(ByteCodeArray *b, int index) {
+    return (b->entries[index] << 8) + b->entries[index + 1];
+}
+
+static int offsetAt(ByteCodeArray *b, int index) {
+    return index + wordAt(b, index);
+}
+
+void dumpByteCode(ByteCodeArray *b) {
+    int i = 0;
+    while (i < b->count) {
+        switch (b->entries[i]) {
+            case BYTECODE_NONE: {
+                printf("%04d ### NONE\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_LAM: {
+                printf("%04d ### LAM [%d] [%d]\n", i, b->entries[i + 1], offsetAt(b, i+2));
+                i += 4;
+            }
+            break;
+            case BYTECODE_VAR: {
+                printf("%04d ### VAR [%d:%d]\n", i, b->entries[i + 1], b->entries[i + 2]);
+                i += 3;
+            }
+            break;
+            case BYTECODE_PRIM_ADD: {
+                printf("%04d ### PRIM(+)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_SUB: {
+                printf("%04d ### PRIM(-)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_MUL: {
+                printf("%04d ### PRIM(*)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_DIV: {
+                printf("%04d ### PRIM(/)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_EQ: {
+                printf("%04d ### PRIM(==)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_NE: {
+                printf("%04d ### PRIM(!=)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_GT: {
+                printf("%04d ### PRIM(>)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_LT: {
+                printf("%04d ### PRIM(<)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_GE: {
+                printf("%04d ### PRIM(>=)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_LE: {
+                printf("%04d ### PRIM(<=)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_APPLY: {
+                printf("%04d ### APPLY\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_IF: {
+                printf("%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
+                i += 3;
+            }
+            break;
+            case BYTECODE_ENV: {
+                printf("%04d ### ENV [%d]\n", i, b->entries[i + 1]);
+                i += 2;
+            }
+            break;
+            case BYTECODE_LETREC: {
+                printf("%04d ### LETREC [%d]\n", i, b->entries[i + 1]);
+                i += 2;
+            }
+            break;
+            case BYTECODE_AMB: {
+                printf("%04d ### AMB [%d]\n", i, offsetAt(b, i + 1));
+                i += 3;
+            }
+            break;
+            case BYTECODE_BACK: {
+                printf("%04d ### BACK\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_LET: {
+                printf("%04d ### LET [%d]\n", i, offsetAt(b, i + 1));
+                i += 3;
+            }
+            break;
+            case BYTECODE_JMP: {
+                printf("%04d ### JMP [%d]\n", i, offsetAt(b, i + 1));
+                i += 3;
+            }
+            break;
+            case BYTECODE_CALLCC: {
+                printf("%04d ### CALLCC\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_TRUE: {
+                printf("%04d ### TRUE\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_FALSE: {
+                printf("%04d ### FALSE\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_INT: {
+                printf("%04d ### INT [%d]\n", i, intAt(b, i + 1));
+                i += 5;
+            }
+            break;
+            case BYTECODE_RETURN: {
+                printf("%04d ### RETURN\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_DONE: {
+                printf("%04d ### DONE\n", i);
+                i++;
+            }
+            break;
+            default:
+                cant_happen("unrecognised bytecode in dumpByteCode");
+        }
+    }
 }
