@@ -66,6 +66,7 @@ AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
 static HashTable varTable;
 
 void markVarTable() {
+    varTable.header.keep = false; // force
     markHashTableObj((Header *) &varTable);
 }
 
