@@ -164,6 +164,106 @@ Exp *makeTestExpCallCC()
 								  ("a"))))))));
 }
 
+Exp *makeTestExpCallCC2()
+{
+	/* callcc2.scm */
+	return
+	    newExp(EXP_TYPE_LET,
+		   EXP_VAL_LET(newExpLet
+			       (newAexpVar("x"),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_CALLCC,
+						     CEXP_VAL_CALLCC(newAexp
+								     (AEXP_TYPE_LAM,
+								      AEXP_VAL_LAM
+								      (newAexpLam
+								       (newAexpVarList
+									(NULL,
+									 newAexpVar
+									 ("ret")),
+									newExp
+									(EXP_TYPE_LET,
+									 EXP_VAL_LET
+									 (newExpLet
+									  (newAexpVar
+									   ("y"),
+									   newExp
+									   (EXP_TYPE_CEXP,
+									    EXP_VAL_CEXP
+									    (newCexp
+									     (CEXP_TYPE_CALLCC,
+									      CEXP_VAL_CALLCC
+									      (newAexp
+									       (AEXP_TYPE_VAR,
+										AEXP_VAL_VAR
+										(newAexpVar
+										 ("ret"))))))),
+									   newExp
+									   (EXP_TYPE_CEXP,
+									    EXP_VAL_CEXP
+									    (newCexp
+									     (CEXP_TYPE_COND,
+									      CEXP_VAL_COND
+									      (newCexpCond
+									       (newAexp
+										(AEXP_TYPE_VAR,
+										 AEXP_VAL_VAR
+										 (newAexpVar
+										  ("y"))),
+										newExp
+										(EXP_TYPE_AEXP,
+										 EXP_VAL_AEXP
+										 (newAexp
+										  (AEXP_TYPE_LAM,
+										   AEXP_VAL_LAM
+										   (newAexpLam
+										    (newAexpVarList
+										     (NULL,
+										      newAexpVar
+										      ("x")),
+										     newExp
+										     (EXP_TYPE_AEXP,
+										      EXP_VAL_AEXP
+										      (newAexp
+										       (AEXP_TYPE_INT,
+											AEXP_VAL_INT
+											(6))))))))),
+										newExp
+										(EXP_TYPE_AEXP,
+										 EXP_VAL_AEXP
+										 (newAexp
+										  (AEXP_TYPE_LAM,
+										   AEXP_VAL_LAM
+										   (newAexpLam
+										    (newAexpVarList
+										     (NULL,
+										      newAexpVar
+										      ("x")),
+										     newExp
+										     (EXP_TYPE_AEXP,
+										      EXP_VAL_AEXP
+										      (newAexp
+										       (AEXP_TYPE_INT,
+											AEXP_VAL_INT
+											(7)))))))))))))))))))))))),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_APPLY,
+						     CEXP_VAL_APPLY(newCexpApply
+								    (newAexp
+								     (AEXP_TYPE_VAR,
+								      AEXP_VAL_VAR
+								      (newAexpVar
+								       ("x"))),
+								     newAexpList
+								     (NULL,
+								      newAexp
+								      (AEXP_TYPE_TRUE,
+								       AEXP_VAL_TRUE
+								       ()))))))))));
+}
+
 
 Exp *makeTestExpFib(int depth)
 {
@@ -315,24 +415,13 @@ Exp *makeTestExpFib(int depth)
 
 int main(int argc, char *argv[]) {
     ByteCodeArray byteCodes;
+    int save;
+    Exp *exp;
+
     disableGC();
     int depth = 20;
     if (argc == 2) depth = atoi(argv[1]);
-    Exp *exp = makeTestExpFib(depth);
-    int save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-    dumpByteCode(&byteCodes);
-    UNPROTECT(save);
-    run(byteCodes);
-
-    disableGC();
-    exp = makeTestExpAmb(depth);
+    exp = makeTestExpFib(depth);
     save = PROTECT(exp);
     enableGC();
     analizeExp(exp, NULL, 0);
@@ -341,12 +430,14 @@ int main(int argc, char *argv[]) {
     initByteCodeArray(&byteCodes);
     writeExp(exp, &byteCodes);
     writeEnd(&byteCodes);
+#ifdef DEBUG_STEP
     dumpByteCode(&byteCodes);
+#endif
     UNPROTECT(save);
     run(byteCodes);
 
     disableGC();
-    exp = makeTestExpCallCC(depth);
+    exp = makeTestExpAmb();
     save = PROTECT(exp);
     enableGC();
     analizeExp(exp, NULL, 0);
@@ -355,7 +446,41 @@ int main(int argc, char *argv[]) {
     initByteCodeArray(&byteCodes);
     writeExp(exp, &byteCodes);
     writeEnd(&byteCodes);
+#ifdef DEBUG_STEP
     dumpByteCode(&byteCodes);
+#endif
+    UNPROTECT(save);
+    run(byteCodes);
+
+    disableGC();
+    exp = makeTestExpCallCC();
+    save = PROTECT(exp);
+    enableGC();
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+#ifdef DEBUG_STEP
+    dumpByteCode(&byteCodes);
+#endif
+    UNPROTECT(save);
+    run(byteCodes);
+
+    disableGC();
+    exp = makeTestExpCallCC2();
+    save = PROTECT(exp);
+    enableGC();
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+#ifdef DEBUG_STEP
+    dumpByteCode(&byteCodes);
+#endif
     UNPROTECT(save);
     run(byteCodes);
 

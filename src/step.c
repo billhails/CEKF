@@ -68,7 +68,6 @@ static void inject(ByteCodeArray B) {
 
 void run(ByteCodeArray B) {
     inject(B);
-    printCEKF(&state);
     step();
     printCEKF(&state);
 }
@@ -179,6 +178,55 @@ static void replaceInEnv(Env *env, int index, Value val) {
 void cant_happen(const char *message) {
     fprintf(stderr, "can't happen: %s\n", message);
     exit(1);
+}
+
+static int protectValue(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_CLO:
+            return PROTECT(v.val.clo);
+        case VALUE_TYPE_CONT:
+            return PROTECT(v.val.k);
+        default:
+            return PROTECT(NULL);
+    }
+}
+
+static void applyProc() {
+    Value aexp = pop();
+    switch (aexp.type) {
+        case VALUE_TYPE_CLO: {
+            Clo *clo = aexp.val.clo;
+            int save = PROTECT(clo);
+            int nvar = clo->nvar;
+            if (clo->nvar != 1) {
+                cant_happen("wrong number of arguments in applyProc receiver");
+            }
+            state.E = extendVoid(clo->rho, nvar);
+            for (; nvar > 0; nvar--) {
+                replaceInEnv(state.E, nvar - 1, pop());
+            }
+            state.C = clo->c;
+            UNPROTECT(save);
+        }
+        break;
+        case VALUE_TYPE_CONT: {
+            if (aexp.val.k == NULL) {
+                state.V = pop();
+                state.C = -1;
+            } else {
+                Kont *k = aexp.val.k;
+                int save = PROTECT(k);
+                state.E = extendVoid(k->rho, 1);
+                replaceInEnv(state.E, 0, pop());
+                state.C = k->body;
+                state.K = k->next;
+                UNPROTECT(save);
+            }
+        }
+        break;
+        default:
+            cant_happen("unexpected type in APPLY");
+    }
 }
 
 static void step() {
@@ -327,38 +375,7 @@ static void step() {
                 printCEKF(&state);
                 printf("# %04d APPLY\n", state.C);
 #endif
-                Value aexp = pop();
-                switch (aexp.type) {
-                    case VALUE_TYPE_CLO: {
-                        Clo *clo = aexp.val.clo;
-                        int save = PROTECT(clo);
-                        int nvar = clo->nvar;
-                        state.E = extendVoid(clo->rho, nvar);
-                        for (; nvar > 0; nvar--) {
-                            replaceInEnv(state.E, nvar - 1, pop());
-                        }
-                        state.C = clo->c;
-                        UNPROTECT(save);
-                    }
-                    break;
-                    case VALUE_TYPE_CONT: {
-                        if (aexp.val.k == NULL) {
-                            state.V = pop();
-                            state.C = -1;
-                        } else {
-                            Kont *k = aexp.val.k;
-                            int save = PROTECT(k);
-                            state.E = extendVoid(k->rho, 1);
-                            replaceInEnv(state.E, 0, pop());
-                            state.C = k->body;
-                            state.K = k->next;
-                            UNPROTECT(save);
-                        }
-                    }
-                    break;
-                    default:
-                        cant_happen("unexpected type in APPLY");
-                }
+                applyProc();
             }
             break;
             case BYTECODE_IF: {
@@ -442,41 +459,14 @@ static void step() {
                 printf("# %04d CALLCC\n", state.C);
 #endif
                 Value aexp = pop();
-                switch (aexp.type) {
-                    case VALUE_TYPE_CLO: {
-                        Clo *clo = aexp.val.clo;
-                        int save = PROTECT(clo);
-                        if (clo->nvar != 1) {
-                            cant_happen("wrong number of arguments in CALLCC receiver");
-                        }
-                        state.E = extendVoid(clo->rho, 1);
-                        Value k;
-                        k.type = VALUE_TYPE_CONT;
-                        k.val = VALUE_VAL_CONT(state.K);
-                        replaceInEnv(state.E, 0, k);
-                        state.C = clo->c;
-                        UNPROTECT(save);
-                    }
-                    break;
-                    case VALUE_TYPE_CONT: {
-                        if (aexp.val.k == NULL) {
-                            state.C = -1;
-                        } else {
-                            Kont *k = aexp.val.k;
-                            int save = PROTECT(k);
-                            state.E = extendVoid(k->rho, 1);
-                            Value k2;
-                            k2.type = VALUE_TYPE_CONT;
-                            k2.val = VALUE_VAL_CONT(state.K);
-                            replaceInEnv(state.E, 0, k2);
-                            state.C = k->body;
-                            UNPROTECT(save);
-                        }
-                    }
-                    break;
-                    default:
-                        cant_happen("unexpected type in CALLCC");
-                }
+                int save = protectValue(aexp);
+                Value cc;
+                cc.type = VALUE_TYPE_CONT;
+                cc.val = VALUE_VAL_CONT(state.K);
+                push(cc);
+                push(aexp);
+                UNPROTECT(save);
+                applyProc();
             }
             break;
             case BYTECODE_TRUE: {

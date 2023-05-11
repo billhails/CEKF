@@ -23,19 +23,19 @@
 #include "hash.h"
 
 void printValue(Value x) {
-    printf("Value[");
+    printf("V[");
     switch (x.type) {
         case VALUE_TYPE_VOID:
-            printf("VOID");
+            printf("#V");
             break;
         case VALUE_TYPE_INTEGER:
             printf("%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
-            printf("TRUE");
+            printf("#T");
             break;
         case VALUE_TYPE_FALSE:
-            printf("FALSE");
+            printf("#F");
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo);
@@ -59,7 +59,7 @@ void printValueList(ValueList *x) {
 }
 
 void printClo(Clo *x) {
-    printf("Clo[%d, %d, ", x->nvar, x->c);
+    printf("C[%d, %d, ", x->nvar, x->c);
     printElidedEnv(x->rho);
     printf("]");
 }
@@ -81,7 +81,7 @@ void printCEKF(CEKF *x) {
 }
 
 void printStack(Stack *x) {
-    printf("Stack[");
+    printf("S[");
     for (int i = x->sp; i > 0; --i) {
         printValue(x->stack[i-1]);
         if (i > 1) {
@@ -141,7 +141,7 @@ void printElidedValues(Value *values, int count) {
 }
 
 void printEnv(Env *x) {
-    printf("Env[");
+    printf("E[");
     while (x != NULL) {
         printValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
@@ -161,7 +161,7 @@ void printCTEnv(CTEnv *x) {
 }
 
 void printElidedEnv(Env *x) {
-    printf("Env[");
+    printf("E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
         if (x->next != NULL) printf(", ");
@@ -171,7 +171,7 @@ void printElidedEnv(Env *x) {
 }
 
 void printKont(Kont *x) {
-    printf("Kont[");
+    printf("K[");
     if (x != NULL) {
         printf("%d, ", x->body);
         printEnv(x->rho);
@@ -182,7 +182,7 @@ void printKont(Kont *x) {
 }
 
 void printFail(Fail *x) {
-    printf("Fail[");
+    printf("F[");
     if (x != NULL) {
         printf("%d", x->exp);
         printf(", ");

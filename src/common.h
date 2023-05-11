@@ -23,7 +23,7 @@
  typedef uint32_t hash_t;
 
 // #define DEBUG_STEP
-#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 #define DEBUG_RUN_TESTS 1
 // #define DEBUG_ANALIZE
