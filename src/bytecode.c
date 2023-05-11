@@ -65,6 +65,16 @@ static void writeWord(ByteCodeArray *b, int word) {
     addByte(b, word & 255);
 }
 
+static void writeInt(ByteCodeArray *b, int word) {
+    if (word > 4294967295) {
+        cant_happen("maximum int size exceeded");
+    }
+    addByte(b, (word >> 24) & 255);
+    addByte(b, (word >> 16) & 255);
+    addByte(b, (word >> 8) & 255);
+    addByte(b, word & 255);
+}
+
 void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
@@ -228,7 +238,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_INT: {
             addByte(b, BYTECODE_INT);
-            writeWord(b, x->val.integer);
+            writeInt(b, x->val.integer);
         }
         break;
         case AEXP_TYPE_PRIM: {

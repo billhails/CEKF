@@ -76,6 +76,14 @@ static int valueAt(int index) {
     return (state.B.entries[index] << 8) + state.B.entries[index + 1];
 }
 
+static int intAt(int index) {
+    return
+        (state.B.entries[index] << 24) +
+        (state.B.entries[index + 1] << 16) +
+        (state.B.entries[index + 2] << 8) +
+        state.B.entries[index + 3];
+}
+
 static int offsetAt(int index) {
     return index + valueAt(index);
 }
@@ -494,9 +502,9 @@ static void step() {
 #endif
                 Value v;
                 v.type = VALUE_TYPE_INTEGER;
-                v.val = VALUE_VAL_INTEGER(valueAt(state.C + 1));
+                v.val = VALUE_VAL_INTEGER(intAt(state.C + 1));
                 push(v);
-                state.C += 3;
+                state.C += 5;
             }
             break;
             case BYTECODE_RETURN: {

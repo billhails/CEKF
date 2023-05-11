@@ -427,6 +427,14 @@ void printExpLet(ExpLet *x) {
     printf(")");
 }
 
+static int intAt(ByteCodeArray *b, int index) {
+    return
+        (b->entries[index] << 24) +
+        (b->entries[index + 1] << 16) +
+        (b->entries[index + 2] << 8) +
+        b->entries[index + 3];
+}
+
 static int wordAt(ByteCodeArray *b, int index) {
     return (b->entries[index] << 8) + b->entries[index + 1];
 }
@@ -560,8 +568,8 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             case BYTECODE_INT: {
-                printf("%04d ### INT [%d]\n", i, wordAt(b, i + 1));
-                i += 3;
+                printf("%04d ### INT [%d]\n", i, intAt(b, i + 1));
+                i += 5;
             }
             break;
             case BYTECODE_RETURN: {
