@@ -50,8 +50,14 @@ typedef struct AexpVar {
     hash_t hash;
 } AexpVar;
 
+typedef enum {
+    VAR_TYPE_STACK,
+    VAR_TYPE_ENV,
+} AexpAnnotatedVarType;
+
 typedef struct AexpAnnotatedVar {
     Header header;
+    AexpAnnotatedVarType type;
     int frame;
     int offset;
     struct AexpVar *var;
@@ -215,7 +221,7 @@ typedef struct Exp {
 #define EXP_VAL_LET(x)  ((ExpVal){.let  = (x)})
 #define EXP_VAL_DONE()  ((ExpVal){.none = NULL})
 
-AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var);
+AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, AexpVar *var);
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpList *newAexpList(AexpList *next, Aexp *exp);
 Aexp *newAexp(AexpType type, AexpVal val);

@@ -462,6 +462,11 @@ void dumpByteCode(ByteCodeArray *b) {
                 i += 3;
             }
             break;
+            case BYTECODE_LVAR: {
+                printf("%04d ### LVAR [%d]\n", i, b->entries[i + 1]);
+                i += 2;
+            }
+            break;
             case BYTECODE_PRIM_ADD: {
                 printf("%04d ### PRIM(+)\n", i);
                 i++;

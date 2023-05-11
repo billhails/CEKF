@@ -55,7 +55,11 @@ AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth) {
     int frame;
     int offset;
     if (locate(x, env, &frame, &offset)) {
-        return newAexpAnnotatedVar(frame, offset, x);
+        if (frame == 0) {
+            return newAexpAnnotatedVar(VAR_TYPE_STACK, frame, offset, x);
+        } else {
+            return newAexpAnnotatedVar(VAR_TYPE_ENV, frame - 1, offset, x);
+        }
     }
     cant_happen("no binding for var in analizeAexpVar");
 }
@@ -99,10 +103,6 @@ void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeCexpLetRec "); printCexpLetRec(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
-    int save = PROTECT(env);
-    env = newCTEnv(env);
-    UNPROTECT(save);
-    save = PROTECT(env);
     LetRecBindings *bindings = x->bindings;
     while (bindings != NULL) {
         populateCTEnv(env, bindings->var);
@@ -114,7 +114,6 @@ void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth) {
         bindings = bindings->next;
     }
     analizeExp(x->body, env, depth + 1);
-    UNPROTECT(save);
 }
 
 void analizeCexpAmb(CexpAmb *x, CTEnv *env, int depth) {
@@ -130,13 +129,8 @@ void analizeExpLet(ExpLet *x, CTEnv *env, int depth) {
     printf("%3d ", depth); printf("analizeExpLet "); printExpLet(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
     analizeExp(x->val, env, depth + 1);
-    int save = PROTECT(env);
-    env = newCTEnv(env);
-    UNPROTECT(save);
-    save = PROTECT(env);
     populateCTEnv(env, x->var);
     analizeExp(x->body, env, depth + 1);
-    UNPROTECT(save);
 }
 
 void analizeAexp(Aexp *x, CTEnv *env, int depth) {
@@ -197,6 +191,11 @@ void analizeExp(Exp *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeExp "); printExp(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
+    int save = -1;
+    if (env == NULL) {
+        env = newCTEnv(NULL);
+        save = PROTECT(env);
+    }
     switch (x->type) {
         case EXP_TYPE_AEXP:
             analizeAexp(x->val.aexp, env, depth + 1);
@@ -211,6 +210,9 @@ void analizeExp(Exp *x, CTEnv *env, int depth) {
             break;
         default:
             cant_happen("unrecognized type in analizeAexp");
+    }
+    if (save != -1) {
+        UNPROTECT(save);
     }
 }
 

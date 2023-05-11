@@ -434,7 +434,7 @@ int main(int argc, char *argv[]) {
     dumpByteCode(&byteCodes);
 #endif
     UNPROTECT(save);
-    run(byteCodes);
+    // run(byteCodes);
 
     disableGC();
     exp = makeTestExpAmb();
@@ -450,7 +450,7 @@ int main(int argc, char *argv[]) {
     dumpByteCode(&byteCodes);
 #endif
     UNPROTECT(save);
-    run(byteCodes);
+    // run(byteCodes);
 
     disableGC();
     exp = makeTestExpCallCC();
@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
     dumpByteCode(&byteCodes);
 #endif
     UNPROTECT(save);
-    run(byteCodes);
+    // run(byteCodes);
 
     disableGC();
     exp = makeTestExpCallCC2();
@@ -482,7 +482,7 @@ int main(int argc, char *argv[]) {
     dumpByteCode(&byteCodes);
 #endif
     UNPROTECT(save);
-    run(byteCodes);
+    // run(byteCodes);
 
 }
 

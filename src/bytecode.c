@@ -97,9 +97,20 @@ void writeAexpVar(AexpVar *x, ByteCodeArray *b) {
 
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
     if (x == NULL) return;
-    addByte(b, BYTECODE_VAR);
-    addByte(b, x->frame);
-    addByte(b, x->offset);
+    switch (x->type) {
+        case VAR_TYPE_ENV:
+            addByte(b, BYTECODE_VAR);
+            addByte(b, x->frame);
+            addByte(b, x->offset);
+            break;
+        case VAR_TYPE_STACK:
+            addByte(b, BYTECODE_LVAR);
+            addByte(b, x->offset);
+            break;
+        default:
+            cant_happen("unrecognised annotated var type");
+    }
+            
 }
 
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
