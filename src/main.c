@@ -413,6 +413,87 @@ Exp *makeTestExpFib(int depth)
 									   (depth)))))))))))));
 }
 
+Exp *makeTestExpClosure()
+{
+	/* closure.scm */
+	return
+	    newExp(EXP_TYPE_LET,
+		   EXP_VAL_LET(newExpLet
+			       (newAexpVar("test"),
+				newExp(EXP_TYPE_AEXP,
+				       EXP_VAL_AEXP(newAexp
+						    (AEXP_TYPE_LAM,
+						     AEXP_VAL_LAM(newAexpLam
+								  (newAexpVarList
+								   (NULL,
+								    newAexpVar
+								    ("x")),
+								   newExp
+								   (EXP_TYPE_AEXP,
+								    EXP_VAL_AEXP
+								    (newAexp
+								     (AEXP_TYPE_LAM,
+								      AEXP_VAL_LAM
+								      (newAexpLam
+								       (newAexpVarList
+									(NULL,
+									 newAexpVar
+									 ("y")),
+									newExp
+									(EXP_TYPE_AEXP,
+									 EXP_VAL_AEXP
+									 (newAexp
+									  (AEXP_TYPE_PRIM,
+									   AEXP_VAL_PRIM
+									   (newAexpPrimApp
+									    (AEXP_PRIM_ADD,
+									     newAexp
+									     (AEXP_TYPE_VAR,
+									      AEXP_VAL_VAR
+									      (newAexpVar
+									       ("x"))),
+									     newAexp
+									     (AEXP_TYPE_VAR,
+									      AEXP_VAL_VAR
+									      (newAexpVar
+									       ("y")))))))))))))))))),
+				newExp(EXP_TYPE_LET,
+				       EXP_VAL_LET(newExpLet
+						   (newAexpVar("add2"),
+						    newExp(EXP_TYPE_CEXP,
+							   EXP_VAL_CEXP(newCexp
+									(CEXP_TYPE_APPLY,
+									 CEXP_VAL_APPLY
+									 (newCexpApply
+									  (newAexp
+									   (AEXP_TYPE_VAR,
+									    AEXP_VAL_VAR
+									    (newAexpVar
+									     ("test"))),
+									   newAexpList
+									   (NULL,
+									    newAexp
+									    (AEXP_TYPE_INT,
+									     AEXP_VAL_INT
+									     (2)))))))),
+						    newExp(EXP_TYPE_CEXP,
+							   EXP_VAL_CEXP(newCexp
+									(CEXP_TYPE_APPLY,
+									 CEXP_VAL_APPLY
+									 (newCexpApply
+									  (newAexp
+									   (AEXP_TYPE_VAR,
+									    AEXP_VAL_VAR
+									    (newAexpVar
+									     ("add2"))),
+									   newAexpList
+									   (NULL,
+									    newAexp
+									    (AEXP_TYPE_INT,
+									     AEXP_VAL_INT
+									     (3))))))))))))));
+}
+
 int main(int argc, char *argv[]) {
     ByteCodeArray byteCodes;
     int save;
@@ -483,6 +564,22 @@ int main(int argc, char *argv[]) {
 #endif
     UNPROTECT(save);
     // run(byteCodes);
+
+    disableGC();
+    exp = makeTestExpClosure();
+    save = PROTECT(exp);
+    enableGC();
+    analizeExp(exp, NULL, 0);
+    printExp(exp);
+    printf("\n");
+    initByteCodeArray(&byteCodes);
+    writeExp(exp, &byteCodes);
+    writeEnd(&byteCodes);
+#ifdef DEBUG_STEP
+    dumpByteCode(&byteCodes);
+#endif
+    UNPROTECT(save);
+    run(byteCodes);
 
 }
 
