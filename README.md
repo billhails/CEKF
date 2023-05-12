@@ -26,6 +26,13 @@ in Python](https://github.com/billhails/PyScheme), but as a standalone
 binary with reasonable performance. It's not a stack-based VM so it'll
 never be super fast but it should be ok.
 
+> UPDATE - I've replaced the tree-walking state machine with a bytecode
+> interpreter, the steps are pretty much the same as below but the
+> bytecode representation is much faster to execute. CEKF has also
+> sprouted a stack to support the bytecode interpreter, so I guess it's
+> now technically a CEKFS machine? Anyway see [V2](docs/V2.md) for
+> details of that.
+
 If you want to stick around, maybe start by reading [the math](#the-math)
 and comparing that with its implementation in [`step.c`](src/step.c), or
 start at [`main.c`](src/main.c) where you can see it currently constructs
