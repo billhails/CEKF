@@ -48,6 +48,6 @@ possibilities is known in advance, so this could be compiled to bytecode as a di
 ```
 | aexp | MATCH | num ! addr(exp1) | ... | addr(expn) | exp1 ... | ... | expn |
 ```
-
+`aexp` is constrained (by the type checker) to be an integer within the range of the enum.
 If we require all composite functions to be exhaustive then we don't need the `num`, but
 I've left it in for now.
