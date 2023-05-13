@@ -10,6 +10,9 @@ generation.
 ```mermaid
 flowchart TD
 source --> AST --> check[Type Checking] --> lambda[Lambda Conversion] --> anf[A-Normal Form Conversion] --> static[Static Analysis] --> Bytecode
+subgraph here
+lambda
+end
 ```
 
 One situation that will need to be optimised during the lambda conversion stage
