@@ -494,93 +494,40 @@ Exp *makeTestExpClosure()
 									     (3))))))))))))));
 }
 
+#define RUN_EXP(build) \
+do { \
+    disableGC(); \
+    exp = build; \
+    save = PROTECT(exp); \
+    enableGC(); \
+    analizeExp(exp, NULL, 0); \
+    printExp(exp); \
+    printf("\n"); \
+    initByteCodeArray(&byteCodes); \
+    writeExp(exp, &byteCodes); \
+    writeEnd(&byteCodes); \
+    dumpByteCode(&byteCodes); \
+    UNPROTECT(save); \
+    run(byteCodes); \
+} while(0)
+
 int main(int argc, char *argv[]) {
     ByteCodeArray byteCodes;
     int save;
     Exp *exp;
 
-    disableGC();
-    int depth = 20;
+    int depth = 4;
     if (argc == 2) depth = atoi(argv[1]);
-    exp = makeTestExpFib(depth);
-    save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-#ifdef DEBUG_STEP
-    dumpByteCode(&byteCodes);
-#endif
-    UNPROTECT(save);
-    // run(byteCodes);
 
-    disableGC();
-    exp = makeTestExpAmb();
-    save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-#ifdef DEBUG_STEP
-    dumpByteCode(&byteCodes);
-#endif
-    UNPROTECT(save);
-    // run(byteCodes);
+    RUN_EXP(makeTestExpFib(depth));
 
-    disableGC();
-    exp = makeTestExpCallCC();
-    save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-#ifdef DEBUG_STEP
-    dumpByteCode(&byteCodes);
-#endif
-    UNPROTECT(save);
-    // run(byteCodes);
+    RUN_EXP(makeTestExpAmb());
 
-    disableGC();
-    exp = makeTestExpCallCC2();
-    save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-#ifdef DEBUG_STEP
-    dumpByteCode(&byteCodes);
-#endif
-    UNPROTECT(save);
-    // run(byteCodes);
+    RUN_EXP(makeTestExpCallCC());
 
-    disableGC();
-    exp = makeTestExpClosure();
-    save = PROTECT(exp);
-    enableGC();
-    analizeExp(exp, NULL, 0);
-    printExp(exp);
-    printf("\n");
-    initByteCodeArray(&byteCodes);
-    writeExp(exp, &byteCodes);
-    writeEnd(&byteCodes);
-#ifdef DEBUG_STEP
-    dumpByteCode(&byteCodes);
-#endif
-    UNPROTECT(save);
-    run(byteCodes);
+    RUN_EXP(makeTestExpCallCC2());
 
+    RUN_EXP(makeTestExpClosure());
 }
 
 #else /* testing parser */

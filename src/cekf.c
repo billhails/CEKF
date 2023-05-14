@@ -81,6 +81,7 @@ Kont *newKont(Control body, Env *rho, Kont *next) {
     x->body = body;
     x->rho = rho;
     x->next = next;
+    x->snapshot = noSnapshot;
     return x;
 }
 
@@ -90,6 +91,7 @@ Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next) {
     x->rho = rho;
     x->k = k;
     x->next = next;
+    x->snapshot = noSnapshot;
     return x;
 }
 
@@ -135,10 +137,17 @@ void markEnv(Env *x) {
     }
 }
 
+static void markSnapshot(Snapshot s) {
+    for (int i = 0; i < s.frameSize; i++) {
+        markValue(s.frame[i]);
+    }
+}
+
 void markKont(Kont *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
+    markSnapshot(x->snapshot);
     markEnv(x->rho);
     markKont(x->next);
 }
@@ -147,6 +156,7 @@ void markFail(Fail *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
+    markSnapshot(x->snapshot);
     markEnv(x->rho);
     markKont(x->k);
     markFail(x->next);
@@ -169,6 +179,8 @@ void markCekfObj(Header *h) {
         case OBJTYPE_VALUELIST:
             markValueList((ValueList *)h);
             break;
+        default:
+            cant_happen("unrecognised header type in markCekfObj");
     }
 }
 
@@ -183,11 +195,17 @@ void freeCekfObj(Header *h) {
                 reallocate((void *)h, sizeof(Env), 0);
             }
             break;
-        case OBJTYPE_FAIL:
-            reallocate((void *)h, sizeof(Fail), 0);
+        case OBJTYPE_FAIL: {
+                Fail *f = (Fail *)h;
+                FREE_ARRAY(Value, f->snapshot.frame, f->snapshot.frameSize);
+                reallocate((void *)h, sizeof(Fail), 0);
+            }
             break;
-        case OBJTYPE_KONT:
-            reallocate((void *)h, sizeof(Kont), 0);
+        case OBJTYPE_KONT: {
+                Kont *k = (Kont *)h;
+                FREE_ARRAY(Value, k->snapshot.frame, k->snapshot.frameSize);
+                reallocate((void *)h, sizeof(Kont), 0);
+            }
             break;
         case OBJTYPE_VALUELIST: {
                 ValueList *vl = (ValueList *)h;
@@ -197,5 +215,7 @@ void freeCekfObj(Header *h) {
                 reallocate((void *)h, sizeof(ValueList), 0);
             }
             break;
+        default:
+            cant_happen("unrecognised header type in freeCekfObj");
     }
 }

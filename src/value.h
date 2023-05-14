@@ -32,6 +32,7 @@ typedef union {
     int z;
     struct Clo *clo;
     struct Kont *k;
+    struct CallableKont *ck;
 } ValueVal;
 
 typedef struct Value {
@@ -39,10 +40,11 @@ typedef struct Value {
     ValueVal val;
 } Value; 
 
-#define VALUE_VAL_INTEGER(x) ((ValueVal){.z    = (x)})
-#define VALUE_VAL_CLO(x)     ((ValueVal){.clo  = (x)})
-#define VALUE_VAL_CONT(x)    ((ValueVal){.k    = (x)})
-#define VALUE_VAL_NONE()     ((ValueVal){.none = NULL})
+#define VALUE_VAL_INTEGER(x)      ((ValueVal){.z    = (x)})
+#define VALUE_VAL_CLO(x)          ((ValueVal){.clo  = (x)})
+#define VALUE_VAL_CONT(x)         ((ValueVal){.k    = (x)})
+#define VALUE_VAL_CALLABLECONT(x) ((ValueVal){.ck   = (x)})
+#define VALUE_VAL_NONE()          ((ValueVal){.none = NULL})
 
 // constants
 extern Value vTrue;

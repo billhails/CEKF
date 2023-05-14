@@ -22,13 +22,23 @@
 #include "memory.h"
 
 #include <stddef.h>
+#include <string.h>
+
+Snapshot noSnapshot = {
+    .frameSize = 0,
+    .frame = NULL
+};
 
 void initStack(Stack *stack) {
     stack->sp = 0;
+    stack->fp = 0;
     stack->capacity = 0;
     stack->stack = NULL;
 }
 
+static int frameSize(Stack *stack) {
+    return stack->sp - stack->fp;
+}
 
 static void growCapacity(Stack *stack, int newCapacity) {
     int oldCapacity = stack->capacity;
@@ -57,3 +67,64 @@ void markStack(Stack *stack) {
         markValue(stack->stack[i]);
     }
 }
+
+Value peekValue(Stack *stack, int offset) {
+    if (stack->fp + offset >= stack->sp) {
+        cant_happen("peek beyond top of stack not allowed");
+    }
+    return stack->stack[stack->fp + offset];
+}
+
+static void copyToFrame(Stack *stack, Value *frame) {
+    for (int i = 0; i < frameSize(stack); ++i) {
+        frame[i] = peekValue(stack, i);
+    }
+}
+
+static void copyFromSnapshot(Stack *stack, Snapshot snapshot) {
+    stack->fp = stack->sp;
+    for (int i = 0; i < snapshot.frameSize; ++i) {
+        pushValue(stack, snapshot.frame[i]);
+    }
+}
+
+static void copyToSnapshot(Stack *stack, Snapshot *snapshot) {
+    int size = frameSize(stack);
+    if (size > 0) {
+        snapshot->frame = NEW_ARRAY(Value, size);
+        for (int i = 0; i < size; ++i) {
+            snapshot->frame[i] = peekValue(stack, i);
+        }
+        snapshot->frameSize = size;
+    }
+}
+
+void snapshotClo(Stack *stack, Clo *target) {
+    Env *env = newEnv(target->rho, frameSize(stack));
+    target->rho = env;
+    copyToFrame(stack, env->values);
+}
+
+void patchClo(Stack *stack, Clo *target) {
+    Env *rho = target->rho ? target->rho->next : NULL;
+    Env *env = newEnv(rho, frameSize(stack));
+    target->rho = env;
+    copyToFrame(stack, env->values);
+}
+
+void snapshotKont(Stack *stack, Kont *target) {
+    copyToSnapshot(stack, &target->snapshot);
+}
+
+void snapshotFail(Stack *stack, Fail *target) {
+    copyToSnapshot(stack, &target->snapshot);
+}
+
+void restoreKont(Stack *stack, Kont *source) {
+    copyFromSnapshot(stack, source->snapshot);
+}
+
+void restoreFail(Stack *stack, Fail *source) {
+    copyFromSnapshot(stack, source->snapshot);
+}
+

@@ -22,8 +22,7 @@
 #include "debug.h"
 #include "hash.h"
 
-void printValue(Value x) {
-    printf("V[");
+static void printContainedValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
             printf("#V");
@@ -43,6 +42,84 @@ void printValue(Value x) {
         case VALUE_TYPE_CONT:
             printKont(x.val.k);
             break;
+        default:
+            cant_happen("unrecognised value type in printValue");
+    }
+}
+
+static void printSnapshot(Snapshot s) {
+    if (s.frameSize == 0) {
+        printf("S/");
+        return;
+    }
+    printf("S[");
+    for (int i = 0; i < s.frameSize; i++) {
+        printContainedValue(s.frame[i]);
+        if (i < s.frameSize - 1) {
+            printf(", ");
+        }
+    }
+    printf("]");
+}
+
+static void printElidedSnapshot(Snapshot s) {
+    if (s.frameSize == 0) {
+        printf("S/");
+        return;
+    }
+    printf("S[<...>]");
+}
+
+void printValue(Value x) {
+    if (x.type == VALUE_TYPE_VOID) {
+        printf("V/");
+        return;
+    }
+    printf("V[");
+    printContainedValue(x);
+    printf("]");
+}
+
+void printElidedClo(Clo *x) {
+    printf("C[%d, %d, E[<...>], ", x->nvar, x->c);
+    printf("]");
+}
+
+void printElidedKont(Kont *x) {
+    if (x == NULL) {
+        printf("K/");
+        return;
+    }
+    printf("K[");
+    printf("%d, E[<...>], ", x->body);
+    printElidedSnapshot(x->snapshot);
+    printElidedKont(x->next);
+    printf("]");
+}
+
+void printElidedValue(Value x) {
+    printf("V[");
+    switch (x.type) {
+        case VALUE_TYPE_VOID:
+            printf("#V");
+            break;
+        case VALUE_TYPE_INTEGER:
+            printf("%d", x.val.z);
+            break;
+        case VALUE_TYPE_TRUE:
+            printf("#T");
+            break;
+        case VALUE_TYPE_FALSE:
+            printf("#F");
+            break;
+        case VALUE_TYPE_CLO:
+            printElidedClo(x.val.clo);
+            break;
+        case VALUE_TYPE_CONT:
+            printElidedKont(x.val.k);
+            break;
+        default:
+            cant_happen("unrecognised value type in printElidedValue");
     }
     printf("]");
 }
@@ -65,26 +142,32 @@ void printClo(Clo *x) {
 }
 
 void printCEKF(CEKF *x) {
-    printf("[");
+    printf("( ");
     printf("%d", x->C);
-    printf(", ");
+    printf(" - ");
     printEnv(x->E);
-    printf(", ");
+    printf(" - ");
     printKont(x->K);
-    printf(", ");
+    printf(" - ");
     printFail(x->F);
-    printf(", ");
+    printf(" - ");
     printValue(x->V);
-    printf(", ");
+    printf(" - ");
     printStack(&x->S);
-    printf("]\n");
+    printf(" )\n");
 }
 
 void printStack(Stack *x) {
-    printf("S[");
+    if (x == NULL || x->sp == 0) {
+        printf("S/");
+        return;
+    }
+    printf("S(%d,%d)[", x->sp, x->fp);
     for (int i = x->sp; i > 0; --i) {
-        printValue(x->stack[i-1]);
-        if (i > 1) {
+        printContainedValue(x->stack[i-1]);
+        if (i - 1 == x->fp) {
+            printf(" | ");
+        } else if (i > 1) {
             printf(", ");
         }
     }
@@ -132,7 +215,7 @@ void printValues(Value *values, int count) {
 void printElidedValues(Value *values, int count) {
     printf("{");
     for (int i = 0; i < count; ++i) {
-        printf("<...>");
+        printElidedValue(values[i]);
         if (i + 1 < count) {
             printf(", ");
         }
@@ -141,6 +224,10 @@ void printElidedValues(Value *values, int count) {
 }
 
 void printEnv(Env *x) {
+    if (x == NULL) {
+        printf("E/");
+        return;
+    }
     printf("E[");
     while (x != NULL) {
         printValues(x->values, x->count);
@@ -161,6 +248,10 @@ void printCTEnv(CTEnv *x) {
 }
 
 void printElidedEnv(Env *x) {
+    if (x == NULL) {
+        printf("E/");
+        return;
+    }
     printf("E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
@@ -171,10 +262,16 @@ void printElidedEnv(Env *x) {
 }
 
 void printKont(Kont *x) {
+    if (x == NULL) {
+        printf("K/");
+        return;
+    }
     printf("K[");
     if (x != NULL) {
         printf("%d, ", x->body);
         printEnv(x->rho);
+        printf(", ");
+        printSnapshot(x->snapshot);
         printf(", ");
         printKont(x->next);
     }
@@ -182,11 +279,17 @@ void printKont(Kont *x) {
 }
 
 void printFail(Fail *x) {
+    if (x == NULL) {
+        printf("F/");
+        return;
+    }
     printf("F[");
     if (x != NULL) {
         printf("%d", x->exp);
         printf(", ");
         printEnv(x->rho);
+        printf(", ");
+        printSnapshot(x->snapshot);
         printf(", ");
         printKont(x->k);
         printf(", ");
@@ -221,7 +324,10 @@ void printAexpVar(AexpVar *x) {
 
 void printAexpAnnotatedVar(AexpAnnotatedVar *x) {
     printAexpVar(x->var);
-    printf("[%d:%d]", x->frame, x->offset);
+    if (x->type == VAR_TYPE_STACK)
+        printf("[%d]", x->offset);
+    else
+        printf("[%d:%d]", x->frame, x->offset);
 }
 
 void printAexpPrimApp(AexpPrimApp *x) {
@@ -525,11 +631,6 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_IF: {
                 printf("%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
-            }
-            break;
-            case BYTECODE_ENV: {
-                printf("%04d ### ENV [%d]\n", i, b->entries[i + 1]);
-                i += 2;
             }
             break;
             case BYTECODE_LETREC: {

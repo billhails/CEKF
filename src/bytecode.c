@@ -185,8 +185,6 @@ void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
 }
 
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
-    addByte(b, BYTECODE_ENV);
-    addByte(b, x->nbindings);
     writeLetRecBindings(x->bindings, b);
     addByte(b, BYTECODE_LETREC);
     addByte(b, x->nbindings);
