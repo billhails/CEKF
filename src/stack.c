@@ -18,7 +18,6 @@
 
 #include "common.h"
 #include "cekf.h"
-#include "stack.h"
 #include "memory.h"
 
 #include <stddef.h>
