@@ -42,8 +42,11 @@ static void printContainedValue(Value x) {
         case VALUE_TYPE_CONT:
             printKont(x.val.k);
             break;
+        case VALUE_TYPE_CONS:
+            printCons(x.val.cons);
+            break;
         default:
-            cant_happen("unrecognised value type in printValue");
+            cant_happen("unrecognised value type in printContainedValue");
     }
 }
 
@@ -97,6 +100,14 @@ void printElidedKont(Kont *x) {
     printf("]");
 }
 
+void printCons(Cons *x) {
+    printf("(");
+    printContainedValue(x->car);
+    printf(" . ");
+    printContainedValue(x->cdr);
+    printf(")");
+}
+
 void printElidedValue(Value x) {
     printf("V[");
     switch (x.type) {
@@ -111,6 +122,9 @@ void printElidedValue(Value x) {
             break;
         case VALUE_TYPE_FALSE:
             printf("#F");
+            break;
+        case VALUE_TYPE_CONS:
+            printCons(x.val.cons);
             break;
         case VALUE_TYPE_CLO:
             printElidedClo(x.val.clo);
@@ -361,14 +375,33 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_LE:
             printf("<= ");
             break;
+        case AEXP_PRIM_CONS:
+            printf("cons ");
+            break;
         default:
-            cant_happen("unrecognized op in printAexpPrimApp");
+            cant_happen("unrecognized op in printAexpPrimApp (%d)", x->op);
     }
     printAexp(x->exp1);
     if (x->exp2 != NULL) {
         printf(" ");
         printAexp(x->exp2);
     }
+    printf(")");
+}
+
+void printAexpUnaryApp(AexpUnaryApp *x) {
+    printf("(");
+    switch(x->op) {
+        case AEXP_UNARY_CAR:
+            printf("car ");
+            break;
+        case AEXP_UNARY_CDR:
+            printf("cdr ");
+            break;
+        default:
+            cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
+    }
+    printAexp(x->exp);
     printf(")");
 }
 
@@ -461,15 +494,20 @@ void printAexp(Aexp *x) {
         case AEXP_TYPE_FALSE:
             printf("#f");
             break;
+        case AEXP_TYPE_VOID:
+            printf("nil");
+            break;
         case AEXP_TYPE_INT:
             printf("%d", x->val.integer);
             break;
         case AEXP_TYPE_PRIM:
             printAexpPrimApp(x->val.prim);
             break;
+        case AEXP_TYPE_UNARY:
+            printAexpUnaryApp(x->val.unary);
+            break;
         default:
-            printf("<unrecognised aexp %d>", x->type);
-            exit(1);
+            cant_happen("unrecognised aexp %d in printAexp", x->type);
     }
 }
 
@@ -621,6 +659,21 @@ void dumpByteCode(ByteCodeArray *b) {
                 i++;
             }
             break;
+            case BYTECODE_PRIM_CONS: {
+                printf("%04d ### PRIM(cons)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_CAR: {
+                printf("%04d ### PRIM(car)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_CDR: {
+                printf("%04d ### PRIM(cdr)\n", i);
+                i++;
+            }
+            break;
             case BYTECODE_APPLY: {
                 printf("%04d ### APPLY\n", i);
                 i++;
@@ -673,6 +726,11 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_FALSE: {
                 printf("%04d ### FALSE\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_VOID: {
+                printf("%04d ### VOID\n", i);
                 i++;
             }
             break;

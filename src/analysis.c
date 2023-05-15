@@ -72,6 +72,13 @@ void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth) {
     analizeAexp(x->exp2, env, depth + 1);
 }
 
+void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env, int depth) {
+#ifdef DEBUG_ANALIZE
+    printf("%3d ", depth); printf("analizeAexpPrimApp "); printAexpUnaryApp(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    analizeAexp(x->exp, env, depth + 1);
+}
+
 void analizeAexpList(AexpList *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeAexpList "); printAexpList(x); printf("  "); printCTEnv(env); printf("\n");
@@ -161,9 +168,13 @@ void analizeAexp(Aexp *x, CTEnv *env, int depth) {
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
+        case AEXP_TYPE_VOID:
             break;
         case AEXP_TYPE_PRIM:
             analizeAexpPrimApp(x->val.prim, env, depth + 1);
+            break;
+        case AEXP_TYPE_UNARY:
+            analizeAexpUnaryApp(x->val.unary, env, depth + 1);
             break;
         default:
             cant_happen("unrecognized type in analizeAexp");

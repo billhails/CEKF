@@ -113,6 +113,23 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
             
 }
 
+void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
+    if (x == NULL) return;
+    writeAexp(x->exp, b);
+    byte prim;
+    switch (x->op) {
+        case AEXP_UNARY_CAR:
+            prim = BYTECODE_PRIM_CAR;
+            break;
+        case AEXP_UNARY_CDR:
+            prim = BYTECODE_PRIM_CDR;
+            break;
+        default:
+            cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
+    }
+    addByte(b, prim);
+}
+
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     if (x == NULL) return;
     writeAexp(x->exp1, b);
@@ -148,6 +165,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
             break;
         case AEXP_PRIM_LE:
             prim = BYTECODE_PRIM_LE;
+            break;
+        case AEXP_PRIM_CONS:
+            prim = BYTECODE_PRIM_CONS;
             break;
         default:
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
@@ -245,6 +265,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             addByte(b, BYTECODE_FALSE);
         }
         break;
+        case AEXP_TYPE_VOID: {
+            addByte(b, BYTECODE_VOID);
+        }
+        break;
         case AEXP_TYPE_INT: {
             addByte(b, BYTECODE_INT);
             writeInt(b, x->val.integer);
@@ -252,6 +276,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_PRIM: {
             writeAexpPrimApp(x->val.prim, b);
+        }
+        break;
+        case AEXP_TYPE_UNARY: {
+            writeAexpUnaryApp(x->val.unary, b);
         }
         break;
         default:

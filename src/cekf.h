@@ -91,6 +91,12 @@ typedef struct Fail {
     struct Fail *next;
 } Fail;
 
+typedef struct Cons {
+    struct Header header;
+    struct Value car;
+    struct Value cdr;
+} Cons;
+
 void snapshotClo(Stack *stack, struct Clo *target);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);
@@ -116,6 +122,7 @@ Clo *newClo(int nvar, Control c, Env *rho);
 Env *newEnv(Env *next, int count);
 Kont *newKont(Control body, Env *rho, Kont *next);
 Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next);
+Cons *newCons(Value car, Value cdr);
 
 void markValue(Value x);
 void markValueList(ValueList *x);
@@ -123,6 +130,7 @@ void markClo(Clo *x);
 void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
+void markCons(Cons *x);
 
 #ifdef TEST_STACK
 void testStack();

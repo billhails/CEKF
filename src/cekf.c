@@ -95,6 +95,13 @@ Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next) {
     return x;
 }
 
+Cons *newCons(Value car, Value cdr) {
+    Cons *x = NEW(Cons, OBJTYPE_CONS);
+    x->car = car;
+    x->cdr = cdr;
+    return x;
+}
+
 void markValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
@@ -108,6 +115,11 @@ void markValue(Value x) {
         case VALUE_TYPE_CONT:
             markKont(x.val.k);
             break;
+        case VALUE_TYPE_CONS:
+            markCons(x.val.cons);
+            break;
+        default:
+            cant_happen("unrecognised type in markValue (%d)", x.type);
     }
 }
 
@@ -152,6 +164,14 @@ void markKont(Kont *x) {
     markKont(x->next);
 }
 
+void markCons(Cons *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markValue(x->car);
+    markValue(x->cdr);
+}
+
 void markFail(Fail *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -176,6 +196,9 @@ void markCekfObj(Header *h) {
         case OBJTYPE_KONT:
             markKont((Kont *)h);
             break;
+        case OBJTYPE_CONS:
+            markCons((Cons *)h);
+            break;
         case OBJTYPE_VALUELIST:
             markValueList((ValueList *)h);
             break;
@@ -186,6 +209,9 @@ void markCekfObj(Header *h) {
 
 void freeCekfObj(Header *h) {
     switch (h->type) {
+        case OBJTYPE_CONS:
+            reallocate((void *)h, sizeof(Cons), 0);
+            break;
         case OBJTYPE_CLO:
             reallocate((void *)h, sizeof(Clo), 0);
             break;

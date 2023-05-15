@@ -76,6 +76,7 @@ typedef enum {
     AEXP_PRIM_LT,
     AEXP_PRIM_GE,
     AEXP_PRIM_LE,
+    AEXP_PRIM_CONS,
 } AexpPrimOp;
 
 typedef struct AexpPrimApp {
@@ -84,6 +85,17 @@ typedef struct AexpPrimApp {
     struct Aexp *exp1;
     struct Aexp *exp2;
 } AexpPrimApp;
+
+typedef enum {
+    AEXP_UNARY_CAR,
+    AEXP_UNARY_CDR,
+} AexpUnaryOp;
+
+typedef struct AexpUnaryApp {
+    Header header;
+    AexpUnaryOp op;
+    struct Aexp *exp;
+} AexpUnaryApp;
 
 typedef struct AexpList {
     Header header;
@@ -138,8 +150,10 @@ typedef enum {
     AEXP_TYPE_ANNOTATEDVAR,
     AEXP_TYPE_TRUE,
     AEXP_TYPE_FALSE,
+    AEXP_TYPE_VOID,
     AEXP_TYPE_INT,
     AEXP_TYPE_PRIM,
+    AEXP_TYPE_UNARY,
 } AexpType;
 
 typedef union {
@@ -149,6 +163,7 @@ typedef union {
     struct AexpAnnotatedVar *annotatedVar;
     AexpInteger integer;
     struct AexpPrimApp *prim;
+    struct AexpUnaryApp *unary;
 } AexpVal;
 
 typedef struct Aexp {
@@ -162,8 +177,10 @@ typedef struct Aexp {
 #define AEXP_VAL_ANNOTATEDVAR(x) ((AexpVal){.annotatedVar = (x)})
 #define AEXP_VAL_TRUE()          ((AexpVal){.none         = NULL})
 #define AEXP_VAL_FALSE()         ((AexpVal){.none         = NULL})
+#define AEXP_VAL_VOID()          ((AexpVal){.none         = NULL})
 #define AEXP_VAL_INT(x)          ((AexpVal){.integer      = (x)})
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
+#define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
 
 typedef enum {
     CEXP_TYPE_APPLY,
@@ -226,6 +243,7 @@ AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpList *newAexpList(AexpList *next, Aexp *exp);
 Aexp *newAexp(AexpType type, AexpVal val);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2);
+AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
 AexpVar *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
@@ -241,6 +259,7 @@ void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);
 void markAexpList(AexpList *x);
 void markAexpPrimApp(AexpPrimApp *x);
+void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVar(AexpVar *x);
 void markAexpVarList(AexpVarList *x);
 void markCexpAmb(CexpAmb *x);

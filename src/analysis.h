@@ -37,6 +37,7 @@ CTEnv *newCTEnv(bool isLocal, CTEnv *next);
 void analizeAexpLam(AexpLam *x, CTEnv *env, int depth);
 AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth);
 void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth);
+void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env, int depth);
 void analizeAexpList(AexpList *x, CTEnv *env, int depth);
 void analizeCexpApply(CexpApply *x, CTEnv *env, int depth);
 void analizeCexpCond(CexpCond *x, CTEnv *env, int depth);
