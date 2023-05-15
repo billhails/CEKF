@@ -190,6 +190,34 @@ class AexpPrimApp(AexpBase):
         return "newAexpPrimApp(" + op + "," + self.lhs.makeC() + "," + self.rhs.makeC() + ")"
 
 
+
+class AexpUnaryApp(AexpBase):
+    def __init__(self, op, lhs):
+        lhs.assert_aexp("primap " + op + " expects aexp")
+        self.op = op
+        self.lhs = lhs
+
+    def __str__(self):
+        return "(" + str(self.op) + " " + str(self.lhs) + ")"
+
+    def expCType(self):
+        return "AEXP_TYPE_UNARY"
+
+    def expCVal(self):
+        return "AEXP_VAL_UNARY(" + self.makeC() + ")"
+
+    def makeCOp(self):
+        match self.op:
+            case 'car':
+                return "AEXP_UNARY_CAR"
+            case 'cdr':
+                return "AEXP_UNARY_CDR"
+
+    def makeC(self):
+        op = self.makeCOp()
+        return "newAexpUnaryApp(" + op + "," + self.lhs.makeC() + ")"
+
+
 class AexpList:
     def __init__(self, rest, exp):
         exp.assert_aexp("aexp list expects aexps")
@@ -434,6 +462,7 @@ class Token:
     TRUE = 12
     FALSE = 13
     VOID = 14
+    UNARY = 15
 
     def __init__(self, kind, val):
         self.kind = kind
@@ -526,6 +555,10 @@ class Lexer:
                                         yield Token(Token.PRIM, res)
                                     case 'cons':
                                         yield Token(Token.PRIM, res)
+                                    case 'car':
+                                        yield Token(Token.UNARY, res)
+                                    case 'cdr':
+                                        yield Token(Token.UNARY, res)
                                     case '#t':
                                         yield Token(Token.TRUE, res)
                                     case '#f':
@@ -541,6 +574,8 @@ class Lexer:
 def parse_aexp_list(tokens):
     if tokens.peek().kind == Token.PRIM:
         return parse_primapp(tokens.next(), tokens)
+    if tokens.peek().kind == Token.UNARY:
+        return parse_unaryapp(tokens.next(), tokens)
     if tokens.peek().kind == Token.LAMBDA:
         tokens.next()
         return parse_lambda(tokens)
@@ -637,6 +672,10 @@ def parse_primapp(token, tokens):
     exp2 = parse_aexp(tokens)
     return Aexp(AexpPrimApp(token.val, exp1, exp2))
 
+def parse_unaryapp(token, tokens):
+    exp = parse_aexp(tokens)
+    return Aexp(AexpUnaryApp(token.val, exp))
+
 def parse_apply(tokens):
     function = parse_aexp(tokens)
     args = parse_aexp_list(tokens)
@@ -661,6 +700,8 @@ def parse_list(tokens):
             return parse_callcc(tokens)
         case Token.PRIM:
             return parse_primapp(token, tokens)
+        case Token.UNARY:
+            return parse_unaryapp(token, tokens)
         case Token.INTEGER:
             return Aexp(AexpInt(token))
         case Token.TRUE:

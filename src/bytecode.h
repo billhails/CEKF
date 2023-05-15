@@ -39,6 +39,8 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_GE,
     BYTECODE_PRIM_LE,
     BYTECODE_PRIM_CONS,
+    BYTECODE_PRIM_CAR,
+    BYTECODE_PRIM_CDR,
     BYTECODE_APPLY,
     BYTECODE_IF,
     BYTECODE_LETREC,
@@ -71,6 +73,7 @@ void writeAexpVarList(AexpVarList *x, ByteCodeArray *b);
 void writeAexpVar(AexpVar *x, ByteCodeArray *b);
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b);
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
+void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);
 void writeAexpList(AexpList *x, ByteCodeArray *b);
 void writeCexpApply(CexpApply *x, ByteCodeArray *b);
 void writeCexpCond(CexpCond *x, ByteCodeArray *b);

@@ -102,6 +102,13 @@ AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2) {
     return x;
 }
 
+AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp) {
+    AexpUnaryApp *x = NEW(AexpUnaryApp, OBJTYPE_UNARYAPP);
+    x->op = op;
+    x->exp = exp;
+    return x;
+}
+
 AexpList *newAexpList(AexpList *next, Aexp *exp) {
     AexpList *x = NEW(AexpList, OBJTYPE_EXPLIST);
     x->next = next;
@@ -214,6 +221,13 @@ void markAexpPrimApp(AexpPrimApp *x) {
     markAexp(x->exp2);
 }
 
+void markAexpUnaryApp(AexpUnaryApp *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->exp);
+}
+
 void markAexpList(AexpList *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -294,6 +308,9 @@ void markAexp(Aexp *x) {
             break;
         case AEXP_TYPE_PRIM:
             markAexpPrimApp(x->val.prim);
+            break;
+        case AEXP_TYPE_UNARY:
+            markAexpUnaryApp(x->val.unary);
             break;
         default:
             cant_happen("unrecognised aexp type in markAexp");
@@ -386,6 +403,9 @@ void freeExpObj(Header *h) {
             break;
         case OBJTYPE_PRIMAPP:
             FREE(h, AexpPrimApp);
+            break;
+        case OBJTYPE_UNARYAPP:
+            FREE(h, AexpUnaryApp);
             break;
         case OBJTYPE_VAR:
             FREE(h, AexpVar);

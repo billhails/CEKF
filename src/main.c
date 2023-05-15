@@ -451,9 +451,20 @@ Exp *makeTestExpCons()
 								 ())))))))))))),
 				   newExp(EXP_TYPE_AEXP,
 					  EXP_VAL_AEXP(newAexp
-						       (AEXP_TYPE_VAR,
-							AEXP_VAL_VAR(newAexpVar
-								     ("a"))))))));
+						       (AEXP_TYPE_UNARY,
+							AEXP_VAL_UNARY
+							(newAexpUnaryApp
+							 (AEXP_UNARY_CAR,
+							  newAexp
+							  (AEXP_TYPE_UNARY,
+							   AEXP_VAL_UNARY
+							   (newAexpUnaryApp
+							    (AEXP_UNARY_CDR,
+							     newAexp
+							     (AEXP_TYPE_VAR,
+							      AEXP_VAL_VAR
+							      (newAexpVar
+							       ("a"))))))))))))));
 }
 
 Exp *makeTestExpClosure()

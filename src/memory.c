@@ -91,7 +91,7 @@ const char *typeName(ObjType type) {
         case OBJTYPE_AST:
             return "ast";
         default:
-            cant_happen("unrecognised ObjType in typeName");
+            cant_happen("unrecognised ObjType %d in typeName", type);
     }
 }
 #endif
@@ -237,6 +237,7 @@ void freeObj(Header *h) {
         case OBJTYPE_LET:
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
+        case OBJTYPE_UNARYAPP:
         case OBJTYPE_VAR:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:

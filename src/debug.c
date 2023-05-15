@@ -389,6 +389,22 @@ void printAexpPrimApp(AexpPrimApp *x) {
     printf(")");
 }
 
+void printAexpUnaryApp(AexpUnaryApp *x) {
+    printf("(");
+    switch(x->op) {
+        case AEXP_UNARY_CAR:
+            printf("car ");
+            break;
+        case AEXP_UNARY_CDR:
+            printf("cdr ");
+            break;
+        default:
+            cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
+    }
+    printAexp(x->exp);
+    printf(")");
+}
+
 void printAexpList(AexpList *x) {
     printf("(");
     while (x != NULL) {
@@ -486,6 +502,9 @@ void printAexp(Aexp *x) {
             break;
         case AEXP_TYPE_PRIM:
             printAexpPrimApp(x->val.prim);
+            break;
+        case AEXP_TYPE_UNARY:
+            printAexpUnaryApp(x->val.unary);
             break;
         default:
             cant_happen("unrecognised aexp %d in printAexp", x->type);
@@ -642,6 +661,16 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_CONS: {
                 printf("%04d ### PRIM(cons)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_CAR: {
+                printf("%04d ### PRIM(car)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_CDR: {
+                printf("%04d ### PRIM(cdr)\n", i);
                 i++;
             }
             break;
