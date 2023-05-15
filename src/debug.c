@@ -158,16 +158,14 @@ void printCEKF(CEKF *x) {
 }
 
 void printStack(Stack *x) {
-    if (x == NULL || x->sp == 0) {
+    if (x == NULL || x->sp ==0) {
         printf("S/");
         return;
     }
-    printf("S(%d,%d)[", x->sp, x->fp);
+    printf("S[");
     for (int i = x->sp; i > 0; --i) {
-        printContainedValue(x->stack[i-1]);
-        if (i - 1 == x->fp) {
-            printf(" | ");
-        } else if (i > 1) {
+        printContainedValue(peekValue(x, i - 1));
+        if (i > 1) {
             printf(", ");
         }
     }
@@ -656,6 +654,11 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_JMP: {
                 printf("%04d ### JMP [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
+            }
+            break;
+            case BYTECODE_PUSHN: {
+                printf("%04d ### PUSHN [%d]\n", i, b->entries[i + 1]);
+                i += 2;
             }
             break;
             case BYTECODE_CALLCC: {

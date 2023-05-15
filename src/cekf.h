@@ -22,6 +22,7 @@
  * The structures of the CEKF machine.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "bytecode.h"
@@ -35,7 +36,6 @@ typedef int Control;
 typedef struct Stack {
     int capacity;
     int sp;
-    int fp;
     struct Value *stack;
 } Stack;
 
@@ -97,6 +97,8 @@ void snapshotKont(Stack *stack, struct Kont *target);
 void snapshotFail(Stack *stack, struct Fail *target);
 void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
+void setFrame(Stack *stack, int nargs);
+void clearFrame(Stack *stack);
 
 extern Snapshot noSnapshot;
 
@@ -105,6 +107,8 @@ struct Value popValue(Stack *stack);
 struct Value peekValue(Stack *stack, int offset);
 void markStack(Stack *stack);
 void initStack(Stack *stack);
+int frameSize(Stack *stack);
+void pushN(Stack *stack, int n);
 
 
 ValueList *newValueList(int count);
@@ -119,5 +123,10 @@ void markClo(Clo *x);
 void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
+
+#ifdef TEST_STACK
+void testStack();
+void markTestStack();
+#endif
 
 #endif

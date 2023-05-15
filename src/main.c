@@ -512,11 +512,16 @@ do { \
 } while(0)
 
 int main(int argc, char *argv[]) {
+
+#ifdef TEST_STACK
+    testStack();
+    exit(0);
+#endif
     ByteCodeArray byteCodes;
     int save;
     Exp *exp;
 
-    int depth = 4;
+    int depth = 3;
     if (argc == 2) depth = atoi(argv[1]);
 
     RUN_EXP(makeTestExpFib(depth));

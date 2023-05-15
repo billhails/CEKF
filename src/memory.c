@@ -25,6 +25,7 @@
 #include "memory.h"
 #include "step.h"
 #include "exp.h"
+#include "cekf.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -152,6 +153,12 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     }
 
     if (newSize == 0) {
+#ifdef DEBUG_STRESS_GC
+        char *zerop = (char *)pointer;
+        for (int i = 0; i < oldSize; i++) {
+            zerop[i] = '\0';
+        }
+#endif
         free(pointer);
         return NULL;
     }
@@ -260,6 +267,9 @@ static void mark() {
     markCEKF();
     markProtected();
     markVarTable();
+#ifdef TEST_STACK
+    markTestStack();
+#endif
 }
 
 static void sweep() {

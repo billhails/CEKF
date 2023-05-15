@@ -50,6 +50,7 @@ typedef enum ByteCodes {
     BYTECODE_INT,
     BYTECODE_RETURN,
     BYTECODE_JMP,
+    BYTECODE_PUSHN,
     BYTECODE_DONE,
 
 } ByteCodes;

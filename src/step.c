@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdarg.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -59,14 +60,6 @@ static Value pop() {
 
 static Value peek(int index) {
     return peekValue(&state.S, index);
-}
-
-static void clearFrame() {
-    state.S.sp = state.S.fp;
-}
-
-static void setFrame(int nargs) {
-    state.S.fp = state.S.sp - nargs;
 }
 
 static void inject(ByteCodeArray B) {
@@ -191,9 +184,12 @@ static void replaceInEnv(Env *env, int index, Value val) {
     env->values[index] = val;
 }
 
-void cant_happen(const char *message) {
-    fprintf(stderr, "can't happen: %s\n", message);
-    raise(SIGABRT);
+void cant_happen(const char *message, ...) {
+    va_list args;
+
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
     exit(1);
 }
 
@@ -221,10 +217,9 @@ static void applyProc() {
     switch (callable.type) {
         case VALUE_TYPE_CLO: {
             Clo *clo = callable.val.clo;
-            int nvar = clo->nvar;
             state.C = clo->c;
             state.E = clo->rho;
-            setFrame(nvar);
+            setFrame(&state.S, clo->nvar);
         }
         break;
         case VALUE_TYPE_CONT: {
@@ -233,14 +228,14 @@ static void applyProc() {
                 state.C = -1;
             } else {
                 Value result = pop();
-                int save = protectValue(result);
+                protectValue(result);
                 Kont *k = callable.val.k;
                 state.C = k->body;
                 state.K = k->next;
                 state.E = k->rho;
+                clearFrame(&state.S);
                 restoreKont(&state.S, k);
                 push(result);
-                UNPROTECT(save);
             }
         }
         break;
@@ -289,6 +284,15 @@ static void step() {
                 printf("%04d ### LVAR [%d]\n", state.C, state.B.entries[state.C + 1]);
 #endif
                 push(peek(state.B.entries[state.C + 1]));
+                state.C += 2;
+            }
+            break;
+            case BYTECODE_PUSHN: { // allocate space for n variables on the stack
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%04d ### PUSHN [%d]\n", state.C, state.B.entries[state.C + 1]);
+#endif
+                pushN(&state.S, state.B.entries[state.C + 1]);
                 state.C += 2;
             }
             break;
@@ -535,9 +539,6 @@ static void step() {
                 printCEKF(&state);
                 printf("%04d ### RETURN\n", state.C);
 #endif
-                Value v = pop();
-                clearFrame();
-                push(v);
                 Value k;
                 k.type = VALUE_TYPE_CONT;
                 k.val = VALUE_VAL_CONT(state.K);
