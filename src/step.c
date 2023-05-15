@@ -163,6 +163,13 @@ static Value le(Value a, Value b) {
     return result ? vFalse : vTrue;
 }
 
+static Value cons(Value a, Value b) {
+    Cons *result = newCons(a, b);
+    Value v;
+    v.type = VALUE_TYPE_CONS;
+    v.val = VALUE_VAL_CONS(result);
+    return v;
+}
 
 static Value lookup(int frame, int offset) {
     Env *env = state.E;
@@ -190,6 +197,7 @@ void cant_happen(const char *message, ...) {
     va_start(args, message);
     vfprintf(stderr, message, args);
     va_end(args);
+    fprintf(stderr, "\n");
     exit(1);
 }
 
@@ -199,6 +207,8 @@ static int protectValue(Value v) {
             return PROTECT(v.val.clo);
         case VALUE_TYPE_CONT:
             return PROTECT(v.val.k);
+        case VALUE_TYPE_CONS:
+            return PROTECT(v.val.cons);
         default:
             return PROTECT(NULL);
     }
@@ -406,6 +416,23 @@ static void step() {
                 state.C++;
             }
             break;
+            case BYTECODE_PRIM_CONS: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%04d ### CONS\n", state.C);
+#endif
+                Value b = pop();
+                int save = protectValue(b);
+                Value a = pop();
+                protectValue(a);
+                Value result = cons(a, b);
+                protectValue(result);
+                push(result);
+                UNPROTECT(save);
+                state.C++;
+            }
+            break;
+
             case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -519,6 +546,15 @@ static void step() {
                 printf("%04d ### FALSE\n", state.C);
 #endif
                 push(vFalse);
+                state.C++;
+            }
+            break;
+            case BYTECODE_VOID: { // push void
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%04d ### VOID\n", state.C);
+#endif
+                push(vVoid);
                 state.C++;
             }
             break;

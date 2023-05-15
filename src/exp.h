@@ -76,6 +76,7 @@ typedef enum {
     AEXP_PRIM_LT,
     AEXP_PRIM_GE,
     AEXP_PRIM_LE,
+    AEXP_PRIM_CONS,
 } AexpPrimOp;
 
 typedef struct AexpPrimApp {
@@ -138,6 +139,7 @@ typedef enum {
     AEXP_TYPE_ANNOTATEDVAR,
     AEXP_TYPE_TRUE,
     AEXP_TYPE_FALSE,
+    AEXP_TYPE_VOID,
     AEXP_TYPE_INT,
     AEXP_TYPE_PRIM,
 } AexpType;
@@ -162,6 +164,7 @@ typedef struct Aexp {
 #define AEXP_VAL_ANNOTATEDVAR(x) ((AexpVal){.annotatedVar = (x)})
 #define AEXP_VAL_TRUE()          ((AexpVal){.none         = NULL})
 #define AEXP_VAL_FALSE()         ((AexpVal){.none         = NULL})
+#define AEXP_VAL_VOID()          ((AexpVal){.none         = NULL})
 #define AEXP_VAL_INT(x)          ((AexpVal){.integer      = (x)})
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
 

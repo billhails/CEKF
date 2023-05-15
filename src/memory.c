@@ -82,6 +82,8 @@ const char *typeName(ObjType type) {
             return "fail";
         case OBJTYPE_KONT:
             return "kont";
+        case OBJTYPE_CONS:
+            return "cons";
         case OBJTYPE_VALUELIST:
             return "valuelist";
         case OBJTYPE_HASHTABLE:
@@ -206,6 +208,7 @@ void markObj(Header *h) {
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
+        case OBJTYPE_CONS:
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;

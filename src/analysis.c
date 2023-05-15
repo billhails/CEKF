@@ -161,6 +161,7 @@ void analizeAexp(Aexp *x, CTEnv *env, int depth) {
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
+        case AEXP_TYPE_VOID:
             break;
         case AEXP_TYPE_PRIM:
             analizeAexpPrimApp(x->val.prim, env, depth + 1);

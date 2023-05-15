@@ -413,6 +413,49 @@ Exp *makeTestExpFib(int depth)
 									   (depth)))))))))))));
 }
 
+Exp *makeTestExpCons()
+{
+	/* cons.scm */
+	return newExp(EXP_TYPE_LET,
+		      EXP_VAL_LET(newExpLet
+				  (newAexpVar("a"),
+				   newExp(EXP_TYPE_AEXP,
+					  EXP_VAL_AEXP(newAexp
+						       (AEXP_TYPE_PRIM,
+							AEXP_VAL_PRIM
+							(newAexpPrimApp
+							 (AEXP_PRIM_CONS,
+							  newAexp(AEXP_TYPE_INT,
+								  AEXP_VAL_INT
+								  (1)),
+							  newAexp
+							  (AEXP_TYPE_PRIM,
+							   AEXP_VAL_PRIM
+							   (newAexpPrimApp
+							    (AEXP_PRIM_CONS,
+							     newAexp
+							     (AEXP_TYPE_INT,
+							      AEXP_VAL_INT(2)),
+							     newAexp
+							     (AEXP_TYPE_PRIM,
+							      AEXP_VAL_PRIM
+							      (newAexpPrimApp
+							       (AEXP_PRIM_CONS,
+								newAexp
+								(AEXP_TYPE_INT,
+								 AEXP_VAL_INT
+								 (3)),
+								newAexp
+								(AEXP_TYPE_VOID,
+								 AEXP_VAL_VOID
+								 ())))))))))))),
+				   newExp(EXP_TYPE_AEXP,
+					  EXP_VAL_AEXP(newAexp
+						       (AEXP_TYPE_VAR,
+							AEXP_VAL_VAR(newAexpVar
+								     ("a"))))))));
+}
+
 Exp *makeTestExpClosure()
 {
 	/* closure.scm */
@@ -494,6 +537,12 @@ Exp *makeTestExpClosure()
 									     (3))))))))))))));
 }
 
+#ifdef DEBUG_STEP
+#define DUMP_BYTECODE(bc) dumpByteCode(bc)
+#else
+#define DUMP_BYTECODE(bc) do {} while(0)
+#endif
+
 #define RUN_EXP(build) \
 do { \
     disableGC(); \
@@ -506,7 +555,7 @@ do { \
     initByteCodeArray(&byteCodes); \
     writeExp(exp, &byteCodes); \
     writeEnd(&byteCodes); \
-    dumpByteCode(&byteCodes); \
+    DUMP_BYTECODE(&byteCodes); \
     UNPROTECT(save); \
     run(byteCodes); \
 } while(0)
@@ -524,15 +573,17 @@ int main(int argc, char *argv[]) {
     int depth = 3;
     if (argc == 2) depth = atoi(argv[1]);
 
-    RUN_EXP(makeTestExpFib(depth));
+    // RUN_EXP(makeTestExpFib(depth));
 
-    RUN_EXP(makeTestExpAmb());
+    RUN_EXP(makeTestExpCons());
 
-    RUN_EXP(makeTestExpCallCC());
+    // RUN_EXP(makeTestExpAmb());
 
-    RUN_EXP(makeTestExpCallCC2());
+    // RUN_EXP(makeTestExpCallCC());
 
-    RUN_EXP(makeTestExpClosure());
+    // RUN_EXP(makeTestExpCallCC2());
+
+    // RUN_EXP(makeTestExpClosure());
 }
 
 #else /* testing parser */

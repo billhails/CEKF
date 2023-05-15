@@ -149,6 +149,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXP_PRIM_LE:
             prim = BYTECODE_PRIM_LE;
             break;
+        case AEXP_PRIM_CONS:
+            prim = BYTECODE_PRIM_CONS;
+            break;
         default:
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
     }
@@ -243,6 +246,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_FALSE: {
             addByte(b, BYTECODE_FALSE);
+        }
+        break;
+        case AEXP_TYPE_VOID: {
+            addByte(b, BYTECODE_VOID);
         }
         break;
         case AEXP_TYPE_INT: {

@@ -75,6 +75,18 @@ class AexpTrue(AexpBase):
         return "AEXP_VAL_TRUE()"
 
 
+
+class AexpVoid(AexpBase):
+    def __str__(self):
+        return 'nil'
+
+    def expCType(self):
+        return "AEXP_TYPE_VOID"
+
+    def expCVal(self):
+        return "AEXP_VAL_VOID()"
+
+
 class AexpLam(AexpBase):
     def __init__(self, args, body):
         self.args = args
@@ -170,6 +182,8 @@ class AexpPrimApp(AexpBase):
                 return "AEXP_PRIM_GE"
             case '!=':
                 return "AEXP_PRIM_NE"
+            case 'cons':
+                return "AEXP_PRIM_CONS"
 
     def makeC(self):
         op = self.makeCOp()
@@ -419,6 +433,7 @@ class Token:
     CALLCC = 11
     TRUE = 12
     FALSE = 13
+    VOID = 14
 
     def __init__(self, kind, val):
         self.kind = kind
@@ -509,10 +524,14 @@ class Lexer:
                                         yield Token(Token.PRIM, res)
                                     case '!=':
                                         yield Token(Token.PRIM, res)
+                                    case 'cons':
+                                        yield Token(Token.PRIM, res)
                                     case '#t':
                                         yield Token(Token.TRUE, res)
                                     case '#f':
                                         yield Token(Token.FALSE, res)
+                                    case 'nil':
+                                        yield Token(Token.VOID, res)
                                     case _:
                                         yield Token(Token.VAR, res)
                             else:
@@ -648,6 +667,8 @@ def parse_list(tokens):
             return Aexp(AexpTrue())
         case Token.FALSE:
             return Aexp(AexpFalse())
+        case Token.VOID:
+            return Aexp(AexpVoid())
         case Token.VAR:
             tokens.pushback(token)
             return parse_apply(tokens)
@@ -672,6 +693,8 @@ def parse_aexp(tokens):
                 return Aexp(AexpTrue())
             case Token.FALSE:
                 return Aexp(AexpFalse())
+            case Token.VOID:
+                return Aexp(AexpVoid())
             case Token.VAR:
                 return Aexp(AexpVar(token.val))
             case Token.LAMBDA:
@@ -697,6 +720,8 @@ def parse_exp(tokens):
                 return Exp(Aexp(AexpTrue()))
             case Token.FALSE:
                 return Exp(Aexp(AexpFalse()))
+            case Token.VOID:
+                return Exp(Aexp(AexpVoid()))
             case Token.VAR:
                 return Exp(Aexp(AexpVar(token.val)))
             case _:

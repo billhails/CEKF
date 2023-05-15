@@ -45,6 +45,7 @@ void printExp(Exp *x);
 void printExpLet(ExpLet *x);
 void printFail(Fail *x);
 void printKont(Kont *x);
+void printCons(Cons *x);
 void printLetRecBindings(LetRecBindings *x);
 void printStack(Stack *x);
 void printValueList(ValueList *x);
