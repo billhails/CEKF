@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdarg.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +56,10 @@ static void push(Value v) {
 
 static Value pop() {
     return popValue(&state.S);
+}
+
+static Value peek(int index) {
+    return peekValue(&state.S, index);
 }
 
 static void inject(ByteCodeArray B) {
@@ -159,11 +165,6 @@ static Value le(Value a, Value b) {
 
 
 static Value lookup(int frame, int offset) {
-#ifdef DEBUG_STEP
-            printf("* lookup [%d:%d] in ", frame, offset);
-            printEnv(state.E);
-            printf("\n");
-#endif
     Env *env = state.E;
     while (frame > 0) {
         env = env->next;
@@ -183,8 +184,12 @@ static void replaceInEnv(Env *env, int index, Value val) {
     env->values[index] = val;
 }
 
-void cant_happen(const char *message) {
-    fprintf(stderr, "can't happen: %s\n", message);
+void cant_happen(const char *message, ...) {
+    va_list args;
+
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
     exit(1);
 }
 
@@ -199,58 +204,63 @@ static int protectValue(Value v) {
     }
 }
 
+/**
+ * on reaching this point, the stack will contain a number
+ * of arguments, and the callable on top.
+ *
+ * it pops the callable and invokes it, leaving the rest of the
+ * arguments on the stack
+ */
 static void applyProc() {
-    Value aexp = pop();
-    switch (aexp.type) {
+    Value callable = pop();
+    int save = protectValue(callable);
+    switch (callable.type) {
         case VALUE_TYPE_CLO: {
-            Clo *clo = aexp.val.clo;
-            int save = PROTECT(clo);
-            int nvar = clo->nvar;
-            if (clo->nvar != 1) {
-                cant_happen("wrong number of arguments in applyProc receiver");
-            }
-            state.E = extendVoid(clo->rho, nvar);
-            for (; nvar > 0; nvar--) {
-                replaceInEnv(state.E, nvar - 1, pop());
-            }
+            Clo *clo = callable.val.clo;
             state.C = clo->c;
-            UNPROTECT(save);
+            state.E = clo->rho;
+            setFrame(&state.S, clo->nvar);
         }
         break;
         case VALUE_TYPE_CONT: {
-            if (aexp.val.k == NULL) {
+            if (callable.val.k == NULL) {
                 state.V = pop();
                 state.C = -1;
             } else {
-                Kont *k = aexp.val.k;
-                int save = PROTECT(k);
-                state.E = extendVoid(k->rho, 1);
-                replaceInEnv(state.E, 0, pop());
+                Value result = pop();
+                protectValue(result);
+                Kont *k = callable.val.k;
                 state.C = k->body;
                 state.K = k->next;
-                UNPROTECT(save);
+                state.E = k->rho;
+                clearFrame(&state.S);
+                restoreKont(&state.S, k);
+                push(result);
             }
         }
         break;
         default:
             cant_happen("unexpected type in APPLY");
     }
+    UNPROTECT(save);
 }
 
 static void step() {
     while (state.C != -1) {
         switch (state.B.entries[state.C]) {
             case BYTECODE_NONE: {
-                cant_happen("encountered NONE in step2()");
+                cant_happen("encountered NONE in step()");
             }
             break;
-            case BYTECODE_LAM: {
+            case BYTECODE_LAM: { // create a closure and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d LAM\n", state.C);
+                printf("%04d ### LAM [%d] [%d]\n", state.C, state.B.entries[state.C + 1], offsetAt(state.C + 2));
 #endif
+                Env *env = NULL;
                 Clo *clo = newClo(state.B.entries[state.C + 1], state.C + 4, state.E);
                 int save = PROTECT(clo);
+                snapshotClo(&state.S, clo);
                 Value v;
                 v.type = VALUE_TYPE_CLO;
                 v.val = VALUE_VAL_CLO(clo);
@@ -259,19 +269,37 @@ static void step() {
                 state.C = offsetAt(state.C + 2);
             }
             break;
-            case BYTECODE_VAR: {
+            case BYTECODE_VAR: { // look up an environment variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d VAR\n", state.C);
+                printf("%04d ### VAR [%d:%d]\n", state.C, state.B.entries[state.C + 1], state.B.entries[state.C + 2]);
 #endif
                 push(lookup(state.B.entries[state.C + 1], state.B.entries[state.C + 2]));
                 state.C += 3;
             }
             break;
-            case BYTECODE_PRIM_ADD: {
+            case BYTECODE_LVAR: { // look up a stack variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d ADD\n", state.C);
+                printf("%04d ### LVAR [%d]\n", state.C, state.B.entries[state.C + 1]);
+#endif
+                push(peek(state.B.entries[state.C + 1]));
+                state.C += 2;
+            }
+            break;
+            case BYTECODE_PUSHN: { // allocate space for n variables on the stack
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%04d ### PUSHN [%d]\n", state.C, state.B.entries[state.C + 1]);
+#endif
+                pushN(&state.S, state.B.entries[state.C + 1]);
+                state.C += 2;
+            }
+            break;
+            case BYTECODE_PRIM_ADD: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%04d ### ADD\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -279,10 +307,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_SUB: {
+            case BYTECODE_PRIM_SUB: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d SUB\n", state.C);
+                printf("%04d ### SUB\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -290,10 +318,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_MUL: {
+            case BYTECODE_PRIM_MUL: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d MUL\n", state.C);
+                printf("%04d ### MUL\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -301,10 +329,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_DIV: {
+            case BYTECODE_PRIM_DIV: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d DIV\n", state.C);
+                printf("%04d ### DIV\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -312,10 +340,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_EQ: {
+            case BYTECODE_PRIM_EQ: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d EQ\n", state.C);
+                printf("%04d ### EQ\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -323,10 +351,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_NE: {
+            case BYTECODE_PRIM_NE: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d NE\n", state.C);
+                printf("%04d ### NE\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -334,10 +362,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_GT: {
+            case BYTECODE_PRIM_GT: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d GT\n", state.C);
+                printf("%04d ### GT\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -345,10 +373,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_LT: {
+            case BYTECODE_PRIM_LT: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d LT\n", state.C);
+                printf("%04d ### LT\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -356,10 +384,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_GE: {
+            case BYTECODE_PRIM_GE: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d GE\n", state.C);
+                printf("%04d ### GE\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -367,10 +395,10 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_PRIM_LE: {
+            case BYTECODE_PRIM_LE: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d LE\n", state.C);
+                printf("%04d ### LE\n", state.C);
 #endif
                 Value b = pop();
                 Value a = pop();
@@ -378,18 +406,18 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_APPLY: {
+            case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d APPLY\n", state.C);
+                printf("%04d ### APPLY\n", state.C);
 #endif
                 applyProc();
             }
             break;
-            case BYTECODE_IF: {
+            case BYTECODE_IF: { // pop the test result and jump to the appropriate branch
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d IF\n", state.C);
+                printf("%04d ### IF [%d]\n", state.C, offsetAt(state.C + 1));
 #endif
                 Value aexp = pop();
                 if (aexp.type == VALUE_TYPE_FALSE) {
@@ -399,37 +427,34 @@ static void step() {
                 }
             }
             break;
-            case BYTECODE_ENV: {
+            case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d ENV\n", state.C);
-#endif
-                state.E = extendVoid(state.E, state.B.entries[state.C + 1]);
-                state.C += 2;
-            }
-            break;
-            case BYTECODE_LETREC: {
-#ifdef DEBUG_STEP
-                printCEKF(&state);
-                printf("# %04d LETREC\n", state.C);
+                printf("%04d ### LETREC [%d]\n", state.C, state.B.entries[state.C + 1]);
 #endif
                 int nargs = state.B.entries[state.C + 1];
-                for (; nargs > 0; nargs--) {
-                    replaceInEnv(state.E, nargs - 1, pop());
+                for (int i = 0; i < nargs; i++) {
+                    Value v = peek(i);
+                    if (v.type == VALUE_TYPE_CLO) {
+                        patchClo(&state.S, v.val.clo);
+                    } else {
+                        cant_happen("non-lambda value for letrec");
+                    }
                 }
                 state.C += 2;
             }
             break;
-            case BYTECODE_AMB: {
+            case BYTECODE_AMB: { // create a new failure continuation to resume at the alternative
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d AMB\n", state.C);
+                printf("%04d ### AMB [%d]\n", state.C, offsetAt(state.C + 1));
 #endif
                 state.F = newFail(offsetAt(state.C + 1), state.E, state.K, state.F);
+                snapshotFail(&state.S, state.F);
                 state.C += 3;
             }
             break;
-            case BYTECODE_BACK: {
+            case BYTECODE_BACK: { // restore the failure continuation or halt
 #ifdef DEBUG_STEP
                 printCEKF(&state);
                 printf("# %04d BACK\n", state.C);
@@ -440,31 +465,33 @@ static void step() {
                     state.C = state.F->exp;
                     state.E = state.F->rho;
                     state.K = state.F->k;
+                    restoreFail(&state.S, state.F);
                     state.F = state.F->next;
                 }
             }
             break;
-            case BYTECODE_LET: {
+            case BYTECODE_LET: { // create a new continuation to resume the body, and transfer control to the expression
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d LET\n", state.C);
+                printf("%04d ### LET [%d]\n", state.C, offsetAt(state.C + 1));
 #endif
                 state.K = newKont(offsetAt(state.C + 1), state.E, state.K);
+                snapshotKont(&state.S, state.K);
                 state.C += 3;
             }
             break;
-            case BYTECODE_JMP: {
+            case BYTECODE_JMP: { // jump forward a specified amount
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d JMP\n", state.C);
+                printf("%04d ### JMP [%d]\n", state.C, offsetAt(state.C + 1));
 #endif
                 state.C = offsetAt(state.C + 1);
             }
             break;
-            case BYTECODE_CALLCC: {
+            case BYTECODE_CALLCC: { // pop the callable, push the current continuation, push the callable and apply
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d CALLCC\n", state.C);
+                printf("%04d ### CALLCC\n", state.C);
 #endif
                 Value aexp = pop();
                 int save = protectValue(aexp);
@@ -477,28 +504,28 @@ static void step() {
                 applyProc();
             }
             break;
-            case BYTECODE_TRUE: {
+            case BYTECODE_TRUE: { // push true
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d TRUE\n", state.C);
+                printf("%04d ### TRUE\n", state.C);
 #endif
                 push(vTrue);
                 state.C++;
             }
             break;
-            case BYTECODE_FALSE: {
+            case BYTECODE_FALSE: { // push false
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d FALSE\n", state.C);
+                printf("%04d ### FALSE\n", state.C);
 #endif
                 push(vFalse);
                 state.C++;
             }
             break;
-            case BYTECODE_INT: {
+            case BYTECODE_INT: { // push literal int
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d INT\n", state.C);
+                printf("%04d ### JMP [%d]\n", state.C, intAt(state.C + 1));
 #endif
                 Value v;
                 v.type = VALUE_TYPE_INTEGER;
@@ -507,23 +534,19 @@ static void step() {
                 state.C += 5;
             }
             break;
-            case BYTECODE_RETURN: {
+            case BYTECODE_RETURN: { // push the current continuation and apply
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("# %04d RET\n", state.C);
+                printf("%04d ### RETURN\n", state.C);
 #endif
-                if (state.K == NULL) {
-                    state.V = pop();
-                    state.C = -1;
-                } else {
-                    state.E = extendVoid(state.K->rho, 1);
-                    replaceInEnv(state.E, 0, pop());
-                    state.C = state.K->body;
-                    state.K = state.K->next;
-                }
+                Value k;
+                k.type = VALUE_TYPE_CONT;
+                k.val = VALUE_VAL_CONT(state.K);
+                push(k);
+                applyProc();
             }
             break;
-            case BYTECODE_DONE: {
+            case BYTECODE_DONE: { // can't happen, probably
 #ifdef DEBUG_STEP
                 printCEKF(&state);
                 printf("# %04d DONE\n", state.C);
@@ -535,7 +558,10 @@ static void step() {
 #ifdef DEBUG_STEP
                 printCEKF(&state);
 #endif
-                cant_happen("unrecognised bytecode in dumpByteCode");
+                cant_happen("unrecognised bytecode in step()");
         }
+#ifdef DEBUG_STEP
+        sleep(1);
+#endif
     }
 }

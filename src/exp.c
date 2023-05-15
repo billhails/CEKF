@@ -85,8 +85,9 @@ AexpVar *newAexpVar(char *name) {
     return x;
 }
 
-AexpAnnotatedVar *newAexpAnnotatedVar(int frame, int offset, AexpVar *var) {
+AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, AexpVar *var) {
     AexpAnnotatedVar *x = NEW(AexpAnnotatedVar, OBJTYPE_ANNOTATEDVAR);
+    x->type = type;
     x->frame = frame;
     x->offset = offset;
     x->var = var;

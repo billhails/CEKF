@@ -18,10 +18,20 @@
 
 #include "common.h"
 #include "cekf.h"
-#include "stack.h"
 #include "memory.h"
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#ifdef DEBUG_STACK
+#include "debug.h"
+#endif
+
+Snapshot noSnapshot = {
+    .frameSize = 0,
+    .frame = NULL
+};
 
 void initStack(Stack *stack) {
     stack->sp = 0;
@@ -29,31 +39,286 @@ void initStack(Stack *stack) {
     stack->stack = NULL;
 }
 
-
-static void growCapacity(Stack *stack, int newCapacity) {
-    int oldCapacity = stack->capacity;
-    Value *newStack = GROW_ARRAY(Value, stack->stack, oldCapacity, newCapacity);
-
-    stack->stack = newStack;
-    stack->capacity = newCapacity;
+static int succ(int i, int modulus) {
+    return i + 1;
 }
 
-void pushValue(Stack *stack, Value v) {
-    if (stack->sp == stack->capacity) {
-        growCapacity(stack, stack->capacity < 8 ? 8 : stack->capacity * 2);
+int frameSize(Stack *s) {
+    return s->sp;
+}
+
+void setFrame(Stack *s, int n) {
+#ifdef DEBUG_STACK
+    printf("setFrame(%d)\n", n);
+#endif
+    if (n) {
+        MOVE_ARRAY(Value, s->stack, &s->stack[s->sp - n], n);
     }
-    stack->stack[stack->sp++] = v;
+    s->sp = n;
 }
 
-Value popValue(Stack *stack) {
-    if (stack->sp == 0) {
+void clearFrame(Stack *s) {
+#ifdef DEBUG_STACK
+    printf("clearFrame()\n");
+#endif
+    s->sp = 0;
+}
+
+static void growCapacity(Stack *s, int newCapacity) {
+#ifdef DEBUG_STACK
+    fprintf(stderr, "growCapacity(%d)\n", newCapacity);
+#endif
+    s->stack = GROW_ARRAY(Value, s->stack, s->capacity, newCapacity);
+    s->capacity = newCapacity;
+}
+
+void pushValue(Stack *s, Value v) {
+#ifdef DEBUG_STACK
+    printf("pushValue(");
+    printValue(v);
+    printf(")\n");
+#endif
+    if (s->sp == s->capacity) {
+        growCapacity(s, s->capacity < 8 ? 8 : s->capacity * 2);
+    }
+    s->stack[s->sp++] = v;
+}
+
+Value popValue(Stack *s) {
+#ifdef DEBUG_STACK
+    printf("popValue()\n");
+#endif
+    if (s->sp == 0) {
         cant_happen("stack underflow");
     }
-    return stack->stack[--stack->sp];
+    return s->stack[--s->sp];
 }
 
-void markStack(Stack *stack) {
-    for (int i = 0; i < stack->sp; i++) {
-        markValue(stack->stack[i]);
+void markStack(Stack *s) {
+#ifdef DEBUG_STACK
+    fprintf(stderr, "markStack()\n");
+#endif
+    for (int i = 0; i < s->sp; ++i) {
+        markValue(s->stack[i]);
     }
 }
+
+Value peekValue(Stack *s, int offset) {
+#ifdef DEBUG_STACK
+    fprintf(stderr, "peekValue\n");
+#endif
+    if (offset >= s->sp) {
+        cant_happen("peek beyond top of stack not allowed");
+    }
+    return s->stack[offset];
+}
+
+static void copyToFrame(Stack *s, Value *frame) {
+    COPY_ARRAY(Value, frame, s->stack, s->sp);
+}
+
+static void copyFromSnapshot(Stack *s, Snapshot ss) {
+    COPY_ARRAY(Value, &s->stack[s->sp], ss.frame, ss.frameSize);
+    s->sp += ss.frameSize;
+}
+
+static void copyToSnapshot(Stack *s, Snapshot *ss) {
+    if (s->sp > 0) {
+        ss->frame = NEW_ARRAY(Value, s->sp);
+        copyToFrame(s, ss->frame);
+    }
+    ss->frameSize = s->sp;
+}
+
+void snapshotClo(Stack *s, Clo *target) {
+    Env *env = newEnv(target->rho, s->sp);
+    target->rho = env;
+    copyToFrame(s, env->values);
+}
+
+void patchClo(Stack *s, Clo *target) {
+    target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, target->rho->count + s->sp);
+    copyToFrame(s, &target->rho->values[target->rho->count]);
+    target->rho->count += s->sp;
+}
+
+void snapshotKont(Stack *stack, Kont *target) {
+    copyToSnapshot(stack, &target->snapshot);
+}
+
+void snapshotFail(Stack *stack, Fail *target) {
+    copyToSnapshot(stack, &target->snapshot);
+}
+
+void restoreKont(Stack *stack, Kont *source) {
+    copyFromSnapshot(stack, source->snapshot);
+}
+
+void restoreFail(Stack *stack, Fail *source) {
+    copyFromSnapshot(stack, source->snapshot);
+}
+
+void pushN(Stack *s, int n) {
+    for (; n > 0; n--) {
+        pushValue(s, vVoid);
+    }
+}
+
+#ifdef TEST_STACK
+
+#define EXPECT(EXP) do { if (EXP) fprintf(stderr, "assertion " #EXP " passed\n"); else fprintf (stderr, "ASSERTION " #EXP " FAILED\n"); } while(0)
+
+static Stack S;
+
+void markTestStack() {
+    fprintf(stderr, "markTestStack()\n");
+    markStack(&S);
+}
+
+static Value integer(int i) {
+    Value v;
+    v.type = VALUE_TYPE_INTEGER;
+    v.val = VALUE_VAL_INTEGER(i);
+    return v;
+}
+
+bool isInteger(Value v, int i) {
+    return v.type == VALUE_TYPE_INTEGER && v.val.z == i;
+}
+
+void testStack() {
+    Value v;
+    initStack(&S);
+
+    EXPECT(S.pushable == false);
+    EXPECT(S.popable == false);
+    EXPECT(S.capacity == 0);
+    EXPECT(S.sp == 0);
+    EXPECT(S.fp == 0);
+    EXPECT(S.stack == NULL);
+    EXPECT(frameSize(&S) == 0);
+
+    pushValue(&S, integer(100));
+    EXPECT(S.capacity == 1);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 0);
+    EXPECT(frameSize(&S) == 1);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == false);
+    EXPECT(S.stack != NULL);
+    EXPECT(frameSize(&S) == 1);
+    v = peekValue(&S, 0);
+    EXPECT(isInteger(v, 100));
+
+    pushValue(&S, integer(101));
+    EXPECT(S.capacity == 2);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 0);
+    EXPECT(frameSize(&S) == 2);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == false);
+    v = peekValue(&S, 0);
+    EXPECT(isInteger(v, 100));
+    v = peekValue(&S, 1);
+    EXPECT(isInteger(v, 101);
+
+    v = popValue(&S);
+    EXPECT(isInteger(v, 101));
+    EXPECT(S.capacity == 2);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 1);
+    EXPECT(frameSize(&S) == 1);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    v = popValue(&S);
+    EXPECT(isInteger(v, 100));
+    EXPECT(S.capacity == 2);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 0);
+    EXPECT(frameSize(&S) == 0);
+    EXPECT(S.popable == false);
+    EXPECT(S.pushable == true);
+
+    pushValue(&S, vTrue);
+    pushValue(&S, vFalse);
+    pushValue(&S, vTrue);
+    EXPECT(S.capacity == 4);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 3);
+    EXPECT(frameSize(&S) == 3);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    setFrame(&S, 1);
+    EXPECT(S.capacity == 4);
+    EXPECT(S.fp == 2);
+    EXPECT(S.sp == 3);
+    EXPECT(frameSize(&S) == 1);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    pushValue(&S, vFalse);
+    EXPECT(S.capacity == 4);
+    EXPECT(S.fp == 2);
+    EXPECT(S.sp == 0);
+    EXPECT(frameSize(&S) == 2);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    v.type = VALUE_TYPE_INTEGER;
+    v.val = VALUE_VAL_INTEGER(100);
+    pushValue(&S, v);
+    EXPECT(S.capacity == 4);
+    EXPECT(S.fp == 2);
+    EXPECT(S.sp == 1);
+    EXPECT(frameSize(&S) == 3);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    v.val = VALUE_VAL_INTEGER(101);
+    pushValue(&S, v);
+    EXPECT(S.capacity == 4);
+    EXPECT(S.fp == 2);
+    EXPECT(S.sp == 2);
+    EXPECT(frameSize(&S) == 4);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == false);
+
+    v.val = VALUE_VAL_INTEGER(102);
+    pushValue(&S, v);
+    EXPECT(S.capacity == 8);
+    EXPECT(S.fp == 0);
+    EXPECT(S.sp == 5);
+    EXPECT(frameSize(&S) == 5);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+    v = peekValue(&S, 0);
+    EXPECT(v.type == VALUE_TYPE_TRUE);
+
+    v = peekValue(&S, 1);
+    EXPECT(v.type == VALUE_TYPE_FALSE);
+
+    v = peekValue(&S, 2);
+    EXPECT(v.type == VALUE_TYPE_INTEGER);
+    EXPECT(v.val.z == 100);
+
+    v = peekValue(&S, 3);
+    EXPECT(v.type == VALUE_TYPE_INTEGER);
+    EXPECT(v.val.z == 101);
+
+    v = peekValue(&S, 4);
+    EXPECT(v.type == VALUE_TYPE_INTEGER);
+    EXPECT(v.val.z == 102);
+
+    setFrame(&S, 1);
+    EXPECT(S.capacity == 8);
+    EXPECT(S.fp == 4);
+    EXPECT(S.sp == 5);
+    EXPECT(frameSize(&S) == 1);
+    EXPECT(S.popable == true);
+    EXPECT(S.pushable == true);
+
+}
+#endif

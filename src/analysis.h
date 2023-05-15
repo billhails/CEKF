@@ -18,6 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ #include <stdbool.h>
+
  #include "common.h"
  #include "exp.h"
  #include "hash.h"
@@ -25,11 +27,12 @@
 
 typedef struct CTEnv {
     struct Header header;
+    bool isLocal;
     struct CTEnv *next;
     struct HashTable *table;
 } CTEnv;
 
-CTEnv *newCTEnv(CTEnv *next);
+CTEnv *newCTEnv(bool isLocal, CTEnv *next);
 
 void analizeAexpLam(AexpLam *x, CTEnv *env, int depth);
 AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth);

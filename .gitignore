@@ -3,6 +3,6 @@ dep/
 tmp/
 cekf
 .*.swp
-.$*.drawio.bkp
+.$*.drawio.*
 callgrind.out.*
 core*

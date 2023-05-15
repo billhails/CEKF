@@ -27,6 +27,7 @@ typedef enum ByteCodes {
     BYTECODE_NONE,
     BYTECODE_LAM,
     BYTECODE_VAR,
+    BYTECODE_LVAR,
     BYTECODE_PRIM_ADD,
     BYTECODE_PRIM_SUB,
     BYTECODE_PRIM_MUL,
@@ -39,7 +40,6 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_LE,
     BYTECODE_APPLY,
     BYTECODE_IF,
-    BYTECODE_ENV,
     BYTECODE_LETREC,
     BYTECODE_AMB,
     BYTECODE_BACK,
@@ -50,6 +50,7 @@ typedef enum ByteCodes {
     BYTECODE_INT,
     BYTECODE_RETURN,
     BYTECODE_JMP,
+    BYTECODE_PUSHN,
     BYTECODE_DONE,
 
 } ByteCodes;

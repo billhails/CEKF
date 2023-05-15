@@ -22,16 +22,22 @@
  * The structures of the CEKF machine.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "bytecode.h"
 #include "common.h"
 #include "exp.h"
 #include "memory.h"
-#include "stack.h"
 #include "value.h"
 
 typedef int Control;
+
+typedef struct Stack {
+    int capacity;
+    int sp;
+    struct Value *stack;
+} Stack;
 
 typedef struct {
     Control C;
@@ -50,10 +56,16 @@ typedef struct Env {
     struct Value *values;
 } Env;
 
+typedef struct Snapshot {
+    int frameSize;
+    struct Value *frame;
+} Snapshot;
+
 typedef struct Kont {
     struct Header header;
     Control body;
     struct Env *rho;
+    Snapshot snapshot;
     struct Kont *next;
 } Kont;
 
@@ -63,7 +75,6 @@ typedef struct ValueList {
     struct Value *values;
 } ValueList;
 
-
 typedef struct Clo {
     struct Header header;
     int nvar;
@@ -71,14 +82,34 @@ typedef struct Clo {
     struct Env *rho;
 } Clo;
 
-
 typedef struct Fail {
     struct Header header;
     Control exp;
     struct Env *rho;
     struct Kont *k;
+    Snapshot snapshot;
     struct Fail *next;
 } Fail;
+
+void snapshotClo(Stack *stack, struct Clo *target);
+void patchClo(Stack *stack, struct Clo *target);
+void snapshotKont(Stack *stack, struct Kont *target);
+void snapshotFail(Stack *stack, struct Fail *target);
+void restoreKont(Stack *stack, struct Kont *source);
+void restoreFail(Stack *stack, struct Fail *source);
+void setFrame(Stack *stack, int nargs);
+void clearFrame(Stack *stack);
+
+extern Snapshot noSnapshot;
+
+void pushValue(Stack *stack, Value v);
+struct Value popValue(Stack *stack);
+struct Value peekValue(Stack *stack, int offset);
+void markStack(Stack *stack);
+void initStack(Stack *stack);
+int frameSize(Stack *stack);
+void pushN(Stack *stack, int n);
+
 
 ValueList *newValueList(int count);
 Clo *newClo(int nvar, Control c, Env *rho);
@@ -92,5 +123,10 @@ void markClo(Clo *x);
 void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
+
+#ifdef TEST_STACK
+void testStack();
+void markTestStack();
+#endif
 
 #endif

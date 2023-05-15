@@ -22,7 +22,6 @@
 #include "exp.h"
 #include "analysis.h"
 #include "bytecode.h"
-#include "stack.h"
 
 void printAexp(Aexp *x);
 void printAexpAnnotatedVar(AexpAnnotatedVar *x);

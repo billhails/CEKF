@@ -36,7 +36,7 @@ void analizeAexpLam(AexpLam *x, CTEnv *env, int depth) {
     printf("%3d ", depth); printf("analizeAexpLam "); printAexpLam(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(env);
+    env = newCTEnv(false, env);
     UNPROTECT(save);
     save = PROTECT(env);
     AexpVarList *args = x->args;
@@ -55,7 +55,11 @@ AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth) {
     int frame;
     int offset;
     if (locate(x, env, &frame, &offset)) {
-        return newAexpAnnotatedVar(frame, offset, x);
+        if (frame == 0) {
+            return newAexpAnnotatedVar(VAR_TYPE_STACK, frame, offset, x);
+        } else {
+            return newAexpAnnotatedVar(VAR_TYPE_ENV, frame - 1, offset, x);
+        }
     }
     cant_happen("no binding for var in analizeAexpVar");
 }
@@ -100,7 +104,7 @@ void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth) {
     printf("%3d ", depth); printf("analizeCexpLetRec "); printCexpLetRec(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(env);
+    env = newCTEnv(true, env);
     UNPROTECT(save);
     save = PROTECT(env);
     LetRecBindings *bindings = x->bindings;
@@ -131,7 +135,7 @@ void analizeExpLet(ExpLet *x, CTEnv *env, int depth) {
 #endif
     analizeExp(x->val, env, depth + 1);
     int save = PROTECT(env);
-    env = newCTEnv(env);
+    env = newCTEnv(true, env);
     UNPROTECT(save);
     save = PROTECT(env);
     populateCTEnv(env, x->var);
@@ -197,6 +201,11 @@ void analizeExp(Exp *x, CTEnv *env, int depth) {
 #ifdef DEBUG_ANALIZE
     printf("%3d ", depth); printf("analizeExp "); printExp(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
+    int save = -1;
+    if (env == NULL) {
+        env = newCTEnv(false, NULL);
+        save = PROTECT(env);
+    }
     switch (x->type) {
         case EXP_TYPE_AEXP:
             analizeAexp(x->val.aexp, env, depth + 1);
@@ -212,11 +221,15 @@ void analizeExp(Exp *x, CTEnv *env, int depth) {
         default:
             cant_happen("unrecognized type in analizeAexp");
     }
+    if (save != -1) {
+        UNPROTECT(save);
+    }
 }
 
-CTEnv *newCTEnv(CTEnv *next) {
+CTEnv *newCTEnv(bool isLocal, CTEnv *next) {
     CTEnv *x = NEW(CTEnv, OBJTYPE_CTENV);
     int save = PROTECT(x);
+    x->isLocal = isLocal;
     x->next = next;
     x->table = NULL;
     x->table = newHashTable();
@@ -240,6 +253,21 @@ static void populateCTEnv(CTEnv *env, AexpVar *var) {
     hashAddCTVar(env->table, var);
 }
 
+static int calculateAdjustment(CTEnv *env) {
+    int adjustment = 0;
+    while (env != NULL) {
+        if (env->isLocal) {
+            if (env->next) {
+                adjustment += env->next->table->count;
+            }
+            env = env->next;
+        } else {
+            return adjustment;
+        }
+    }
+    return adjustment;
+}
+
 static bool locate(AexpVar *var, CTEnv *env, int *frame, int *offset) {
 #ifdef DEBUG_ANALIZE
     printf("locate ");
@@ -253,9 +281,12 @@ static bool locate(AexpVar *var, CTEnv *env, int *frame, int *offset) {
 #ifdef DEBUG_ANALIZE
             printf(" -> [%d:%d]\n", *frame, *offset);
 #endif
+            *offset += calculateAdjustment(env);
             return true;
         }
-        (*frame)++;
+        if (!env->isLocal) {
+            (*frame)++;
+        }
         env = env->next;
     }
 #ifdef DEBUG_ANALIZE
