@@ -559,6 +559,25 @@ Exp *makeTestExpNot()
 							 AEXP_VAL_FALSE()))))));
 }
 
+Exp *
+makeTestExpList() {
+  /* list.scm */
+  return
+    newExp(EXP_TYPE_AEXP,
+           EXP_VAL_AEXP(newAexp
+                        (AEXP_TYPE_LIST,
+                         AEXP_VAL_LIST(newAexpList
+                                       (newAexpList
+                                        (newAexpList
+                                         (NULL,
+                                          newAexp(AEXP_TYPE_INT,
+                                                  AEXP_VAL_INT(3))),
+                                         newAexp(AEXP_TYPE_INT,
+                                                 AEXP_VAL_INT(2))),
+                                        newAexp(AEXP_TYPE_INT,
+                                                AEXP_VAL_INT(1)))))));
+}
+
 Exp *makeTestExpClosure()
 {
 	/* closure.scm */
@@ -677,23 +696,25 @@ int main(int argc, char *argv[]) {
     int depth = 3;
     if (argc == 2) depth = atoi(argv[1]);
 
-    RUN_EXP(makeTestExpFib(depth));
+    // RUN_EXP(makeTestExpFib(depth));
 
-    RUN_EXP(makeTestExpCons());
+    // RUN_EXP(makeTestExpCons());
 
-    RUN_EXP(makeTestExpXor());
+    // RUN_EXP(makeTestExpXor());
 
-    RUN_EXP(makeTestExpNot());
+    // RUN_EXP(makeTestExpNot());
 
-    RUN_EXP(makeTestExpBool());
+    // RUN_EXP(makeTestExpBool());
 
-    RUN_EXP(makeTestExpAmb());
+    // RUN_EXP(makeTestExpAmb());
 
-    RUN_EXP(makeTestExpCallCC());
+    // RUN_EXP(makeTestExpCallCC());
 
-    RUN_EXP(makeTestExpCallCC2());
+    // RUN_EXP(makeTestExpCallCC2());
 
-    RUN_EXP(makeTestExpClosure());
+    // RUN_EXP(makeTestExpClosure());
+
+    RUN_EXP(makeTestExpList());
 }
 
 #else /* testing parser */

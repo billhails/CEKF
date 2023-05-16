@@ -423,6 +423,18 @@ void printAexpList(AexpList *x) {
     printf(")");
 }
 
+void printAexpMakeList(AexpList *x) {
+    printf("(list ");
+    while (x != NULL) {
+        printAexp(x->exp);
+        if (x->next) {
+            printf(" ");
+        }
+        x = x->next;
+    }
+    printf(")");
+}
+
 void printBareAexpList(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
@@ -530,6 +542,9 @@ void printAexp(Aexp *x) {
             break;
         case AEXP_TYPE_UNARY:
             printAexpUnaryApp(x->val.unary);
+            break;
+        case AEXP_TYPE_LIST:
+            printAexpMakeList(x->val.list);
             break;
         default:
             cant_happen("unrecognised aexp %d in printAexp", x->type);

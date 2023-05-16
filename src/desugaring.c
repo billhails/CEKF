@@ -38,6 +38,7 @@ static ExpLet *desugarCexpBool(CexpBool *x);
 static ExpLet *desugarExpLet(ExpLet *x);
 static Aexp *desugarAexp(Aexp *x);
 static Cexp *desugarCexp(Cexp *x);
+static Aexp *desugarAexpMakeList(Aexp *x);
 
 #ifdef DEBUG_DESUGARING
 #define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
@@ -183,6 +184,13 @@ static ExpLet *desugarExpLet(ExpLet *x) {
     return x;
 }
 
+static Aexp * listToCons(AexpList * x) {
+    if (x == NULL) {
+        return newAexp(AEXP_TYPE_VOID, AEXP_VAL_VOID());
+    }
+    return newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(newAexpPrimApp(AEXP_PRIM_CONS, desugarAexp(x->exp), listToCons(x->next))));
+}
+
 static Aexp *desugarAexp(Aexp *x) {
     DEBUG_DESUGAR(Aexp, x);
     switch (x->type) {
@@ -206,6 +214,8 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_UNARY:
             x->val.unary = desugarAexpUnaryApp(x->val.unary);
             break;
+        case AEXP_TYPE_LIST:
+            return listToCons(x->val.list);
         default:
             cant_happen("unrecognized type in desugarAexp");
     }

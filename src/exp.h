@@ -168,6 +168,7 @@ typedef enum {
     AEXP_TYPE_INT,
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
+    AEXP_TYPE_LIST,
 } AexpType;
 
 typedef union {
@@ -178,6 +179,7 @@ typedef union {
     AexpInteger integer;
     struct AexpPrimApp *prim;
     struct AexpUnaryApp *unary;
+    struct AexpList *list;
 } AexpVal;
 
 typedef struct Aexp {
@@ -195,6 +197,7 @@ typedef struct Aexp {
 #define AEXP_VAL_INT(x)          ((AexpVal){.integer      = (x)})
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
 #define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
+#define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
 
 typedef enum {
     CEXP_TYPE_APPLY,
