@@ -77,6 +77,7 @@ typedef enum {
     AEXP_PRIM_GE,
     AEXP_PRIM_LE,
     AEXP_PRIM_CONS,
+    AEXP_PRIM_XOR,
 } AexpPrimOp;
 
 typedef struct AexpPrimApp {
@@ -89,6 +90,7 @@ typedef struct AexpPrimApp {
 typedef enum {
     AEXP_UNARY_CAR,
     AEXP_UNARY_CDR,
+    AEXP_UNARY_NOT,
 } AexpUnaryOp;
 
 typedef struct AexpUnaryApp {
@@ -136,6 +138,18 @@ typedef struct CexpAmb {
     struct Exp *exp1;
     struct Exp *exp2;
 } CexpAmb;
+
+typedef enum {
+    BOOL_TYPE_AND,
+    BOOL_TYPE_OR,
+} CexpBoolType;
+
+typedef struct CexpBool {
+    Header header;
+    CexpBoolType type;
+    struct Exp *exp1;
+    struct Exp *exp2;
+} CexpBool;
 
 typedef struct ExpLet {
     Header header;
@@ -189,6 +203,7 @@ typedef enum {
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
     CEXP_TYPE_BACK,
+    CEXP_TYPE_BOOL,
 } CexpType;
 
 typedef union {
@@ -198,6 +213,7 @@ typedef union {
     struct Aexp *callCC;
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
+    struct CexpBool *boolean;
 } CexpVal;
 
 typedef struct Cexp {
@@ -206,12 +222,13 @@ typedef struct Cexp {
     CexpVal val;
 } Cexp;
 
-#define CEXP_VAL_APPLY(x)  ((CexpVal){.apply  = (x)})
-#define CEXP_VAL_COND(x)   ((CexpVal){.cond   = (x)})
-#define CEXP_VAL_CALLCC(x) ((CexpVal){.callCC = (x)})
-#define CEXP_VAL_LETREC(x) ((CexpVal){.letRec = (x)})
-#define CEXP_VAL_AMB(x)    ((CexpVal){.amb    = (x)})
-#define CEXP_VAL_BACK()    ((CexpVal){.none   = NULL})
+#define CEXP_VAL_APPLY(x)  ((CexpVal){.apply   = (x)})
+#define CEXP_VAL_COND(x)   ((CexpVal){.cond    = (x)})
+#define CEXP_VAL_CALLCC(x) ((CexpVal){.callCC  = (x)})
+#define CEXP_VAL_LETREC(x) ((CexpVal){.letRec  = (x)})
+#define CEXP_VAL_AMB(x)    ((CexpVal){.amb     = (x)})
+#define CEXP_VAL_BOOL(x)   ((CexpVal){.boolean = (x)})
+#define CEXP_VAL_BACK()    ((CexpVal){.none    = NULL})
 
 typedef enum {
     EXP_TYPE_AEXP,
@@ -247,6 +264,7 @@ AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
 AexpVar *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
+CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
@@ -254,6 +272,8 @@ Cexp *newCexp(CexpType type, CexpVal val);
 ExpLet *newExpLet(AexpVar *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
 LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val);
+
+AexpVar *genSym(char *prefix);
 
 void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);
@@ -263,6 +283,7 @@ void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVar(AexpVar *x);
 void markAexpVarList(AexpVarList *x);
 void markCexpAmb(CexpAmb *x);
+void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);
 void markCexpCond(CexpCond *x);
 void markCexpLetRec(CexpLetRec *x);

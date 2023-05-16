@@ -375,6 +375,9 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_LE:
             printf("<= ");
             break;
+        case AEXP_PRIM_XOR:
+            printf("xor ");
+            break;
         case AEXP_PRIM_CONS:
             printf("cons ");
             break;
@@ -397,6 +400,9 @@ void printAexpUnaryApp(AexpUnaryApp *x) {
             break;
         case AEXP_UNARY_CDR:
             printf("cdr ");
+            break;
+        case AEXP_UNARY_NOT:
+            printf("not ");
             break;
         default:
             cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
@@ -477,6 +483,25 @@ void printCexpAmb(CexpAmb *x) {
     printf(")");
 }
 
+void printCexpBool(CexpBool *x) {
+    printf("(");
+    switch (x->type) {
+        case BOOL_TYPE_AND:
+            printf("and");
+            break;
+        case BOOL_TYPE_OR:
+            printf("or");
+            break;
+        default:
+            cant_happen("unrecognised type %d in printCexpBool", x->type);
+    }
+    printf(" ");
+    printExp(x->exp1);
+    printf(" ");
+    printExp(x->exp2);
+    printf(")");
+}
+
 void printAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
@@ -530,12 +555,14 @@ void printCexp(Cexp *x) {
         case CEXP_TYPE_AMB:
             printCexpAmb(x->val.amb);
             break;
+        case CEXP_TYPE_BOOL:
+            printCexpBool(x->val.boolean);
+            break;
         case CEXP_TYPE_BACK:
             printf("(back)");
             break;
         default:
-            printf("<unrecognised cexp %d>", x->type);
-            exit(1);
+            cant_happen("unrecognised cexp %d in printCexp", x->type);
     }
 }
 
@@ -659,6 +686,11 @@ void dumpByteCode(ByteCodeArray *b) {
                 i++;
             }
             break;
+            case BYTECODE_PRIM_XOR: {
+                printf("%04d ### PRIM(xor)\n", i);
+                i++;
+            }
+            break;
             case BYTECODE_PRIM_CONS: {
                 printf("%04d ### PRIM(cons)\n", i);
                 i++;
@@ -671,6 +703,11 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_CDR: {
                 printf("%04d ### PRIM(cdr)\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_NOT: {
+                printf("%04d ### PRIM(not)\n", i);
                 i++;
             }
             break;

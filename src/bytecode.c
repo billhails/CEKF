@@ -57,12 +57,24 @@ static void writeWordAt(int loc, ByteCodeArray *b, int word) {
     b->entries[loc + 1] = word & 255;
 }
 
+static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
+    int offset = b->count - patch;
+    writeWordAt(patch, b, offset);
+}
+
 static void writeWord(ByteCodeArray *b, int word) {
     if (word > 65535) {
         cant_happen("maximum word size exceeded");
     }
     addByte(b, word >> 8);
     addByte(b, word & 255);
+}
+
+static int reserveWord(ByteCodeArray *b) {
+    int address = b->count;
+    addByte(b, 0);
+    addByte(b, 0);
+    return address;
 }
 
 static void writeInt(ByteCodeArray *b, int word) {
@@ -79,12 +91,10 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
-    int patch = b->count;
-    writeWord(b, 0);
+    int patch = reserveWord(b);
     writeExp(x->exp, b);
     addByte(b, BYTECODE_RETURN);
-    int offset = b->count - patch;
-    writeWordAt(patch, b, offset);
+    writeCurrentAddressAt(patch, b);
 }
 
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
@@ -123,6 +133,9 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
             break;
         case AEXP_UNARY_CDR:
             prim = BYTECODE_PRIM_CDR;
+            break;
+        case AEXP_UNARY_NOT:
+            prim = BYTECODE_PRIM_NOT;
             break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
@@ -166,6 +179,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXP_PRIM_LE:
             prim = BYTECODE_PRIM_LE;
             break;
+        case AEXP_PRIM_XOR:
+            prim = BYTECODE_PRIM_XOR;
+            break;
         case AEXP_PRIM_CONS:
             prim = BYTECODE_PRIM_CONS;
             break;
@@ -191,17 +207,13 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
 void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
     writeAexp(x->condition, b);
     addByte(b, BYTECODE_IF);
-    int patch = b->count;
-    writeWord(b, 0);
+    int patch = reserveWord(b);
     writeExp(x->consequent, b);
     addByte(b, BYTECODE_JMP);
-    int patch2 = b->count;
-    writeWord(b, 0);
-    int offset = b->count - patch;
-    writeWordAt(patch, b, offset);
+    int patch2 = reserveWord(b);
+    writeCurrentAddressAt(patch, b);
     writeExp(x->alternative, b);
-    int offset2 = b->count - patch2;
-    writeWordAt(patch2, b, offset2);
+    writeCurrentAddressAt(patch2, b);
 }
 
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
@@ -220,26 +232,21 @@ void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
 
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_AMB);
-    int patch = b->count;
-    writeWord(b, 0);
+    int patch = reserveWord(b);
     writeExp(x->exp1, b);
     addByte(b, BYTECODE_JMP);
-    int patch2 = b->count;
-    writeWord(b, 0);
-    int offset = b->count - patch;
-    writeWordAt(patch, b, offset);
+    int patch2 = reserveWord(b);
+    writeCurrentAddressAt(patch, b);
     writeExp(x->exp2, b);
-    int offset2 = b->count - patch2;
-    writeWordAt(patch2, b, offset2);
+    writeCurrentAddressAt(patch2, b);
 }
 
 void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_LET);
-    int patch = b->count;
-    writeWord(b, 0);
+    int patch = reserveWord(b);
     writeExp(x->val, b);
     addByte(b, BYTECODE_RETURN);
-    writeWordAt(patch, b, b->count - patch);
+    writeCurrentAddressAt(patch, b);
     writeExp(x->body, b);
 }
 

@@ -190,6 +190,7 @@ void markObj(Header *h) {
         case OBJTYPE_AMB:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
+        case OBJTYPE_BOOL:
         case OBJTYPE_COND:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
@@ -228,6 +229,7 @@ void freeObj(Header *h) {
         case OBJTYPE_AMB:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
+        case OBJTYPE_BOOL:
         case OBJTYPE_COND:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
@@ -247,6 +249,7 @@ void freeObj(Header *h) {
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
+        case OBJTYPE_CONS:
         case OBJTYPE_VALUELIST:
             freeCekfObj(h);
             break;
@@ -257,7 +260,7 @@ void freeObj(Header *h) {
             freeHashTableObj(h);
             break;
         default:
-            cant_happen("unrecognised ObjType in freeObj");
+            cant_happen("unrecognised ObjType %d in freeObj", h->type);
     }
 }
 
