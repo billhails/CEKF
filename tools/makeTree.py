@@ -75,7 +75,6 @@ class AexpTrue(AexpBase):
         return "AEXP_VAL_TRUE()"
 
 
-
 class AexpVoid(AexpBase):
     def __str__(self):
         return 'nil'
@@ -170,6 +169,8 @@ class AexpPrimApp(AexpBase):
                 return "AEXP_PRIM_MUL"
             case '/':
                 return "AEXP_PRIM_DIV"
+            case '=':
+                return "AEXP_PRIM_EQ"
             case '==':
                 return "AEXP_PRIM_EQ"
             case '<':
@@ -184,21 +185,22 @@ class AexpPrimApp(AexpBase):
                 return "AEXP_PRIM_NE"
             case 'cons':
                 return "AEXP_PRIM_CONS"
+            case 'xor':
+                return "AEXP_PRIM_XOR"
 
     def makeC(self):
         op = self.makeCOp()
         return "newAexpPrimApp(" + op + "," + self.lhs.makeC() + "," + self.rhs.makeC() + ")"
 
 
-
 class AexpUnaryApp(AexpBase):
-    def __init__(self, op, lhs):
-        lhs.assert_aexp("primap " + op + " expects aexp")
+    def __init__(self, op, exp):
+        exp.assert_aexp("primap " + op + " expects aexp")
         self.op = op
-        self.lhs = lhs
+        self.exp = exp
 
     def __str__(self):
-        return "(" + str(self.op) + " " + str(self.lhs) + ")"
+        return "(" + str(self.op) + " " + str(self.exp) + ")"
 
     def expCType(self):
         return "AEXP_TYPE_UNARY"
@@ -212,10 +214,11 @@ class AexpUnaryApp(AexpBase):
                 return "AEXP_UNARY_CAR"
             case 'cdr':
                 return "AEXP_UNARY_CDR"
+            case 'not':
+                return "AEXP_UNARY_NOT"
 
     def makeC(self):
-        op = self.makeCOp()
-        return "newAexpUnaryApp(" + op + "," + self.lhs.makeC() + ")"
+        return "newAexpUnaryApp(" + self.makeCOp() + "," + self.exp.makeC() + ")"
 
 
 class AexpList:
@@ -238,6 +241,20 @@ class AexpList:
         if self.rest is not None:
             rest = self.rest.makeC()
         return "newAexpList(" + rest + "," + self.exp.makeC() + ")"
+
+
+class AexpMakeList(AexpBase):
+    def __init__(self, lst):
+        self.lst = lst
+
+    def __str__(self):
+        return "(list " + self.lst.inner_str() + ")"
+
+    def expCType(self):
+        return "AEXP_TYPE_LIST"
+
+    def expCVal(self):
+        return "AEXP_VAL_LIST(" + self.lst.makeC() + ")"
 
 
 class CexpApply(CexpBase):
@@ -336,6 +353,31 @@ class CexpAmb(CexpBase):
 
     def expCVal(self):
         return "CEXP_VAL_AMB(" + self.makeC() + ")"
+
+
+
+class CexpBool(CexpBase):
+    def __init__(self, token, exp1, exp2):
+        self.name = token.val;
+        self.exp1 = exp1
+        self.exp2 = exp2
+
+    def __str__(self):
+        return "(" +self.name + " " + str(self.exp1) + " " + str(self.exp2) + ")"
+
+    def cexpBoolType(self):
+        if self.name == "and":
+            return "BOOL_TYPE_AND"
+        return "BOOL_TYPE_OR"
+
+    def makeC(self):
+        return "newCexpBool(" + self.cexpBoolType() + "," + self.exp1.makeC() + "," + self.exp2.makeC() + ")"
+
+    def expCType(self):
+        return "CEXP_TYPE_BOOL"
+
+    def expCVal(self):
+        return "CEXP_VAL_BOOL(" + self.makeC() + ")"
 
 
 class ExpLet(LetExpBase):
@@ -463,10 +505,13 @@ class Token:
     FALSE = 13
     VOID = 14
     UNARY = 15
+    BOOL = 16
+    LIST = 17
 
-    def __init__(self, kind, val):
+    def __init__(self, kind, val, line):
         self.kind = kind
         self.val = val
+        self.line = line
 
     def __str__(self):
         return 'Token<' + self.val + '>'
@@ -494,24 +539,27 @@ class Lexer:
         self.buffer.append(token)
 
     def lexer(self, file):
+        line_number = 0;
         with open(file) as fh:
             for line in fh.readlines():
+                line_number = line_number + 1;
+                print(line_number)
                 line = line.strip()
                 while line:
                     if line[0] == '(':
                         line = line[1:]
                         line = line.strip()
-                        yield Token(Token.OPEN, '(')
+                        yield Token(Token.OPEN, '(', line_number)
                     elif line[0] == ')':
                         line = line[1:]
                         line = line.strip()
-                        yield Token(Token.CLOSE, ')')
+                        yield Token(Token.CLOSE, ')', line_number)
                     else:
                         x = re.search("^[0-9]+", line)
                         if x:
                             line = re.sub("^[0-9]+", "", line)
                             line = line.strip()
-                            yield Token(Token.INTEGER, x.group())
+                            yield Token(Token.INTEGER, x.group(), line_number)
                         else:
                             x = re.search("^[^\s()]+", line)
                             if x:
@@ -520,53 +568,63 @@ class Lexer:
                                 res = x.group()
                                 match res:
                                     case 'amb':
-                                        yield Token(Token.AMB, res)
+                                        yield Token(Token.AMB, res, line_number)
                                     case 'back':
-                                        yield Token(Token.BACK, res)
+                                        yield Token(Token.BACK, res, line_number)
                                     case 'letrec':
-                                        yield Token(Token.LETREC, res)
+                                        yield Token(Token.LETREC, res, line_number)
                                     case 'lambda':
-                                        yield Token(Token.LAMBDA, res)
+                                        yield Token(Token.LAMBDA, res, line_number)
                                     case 'if':
-                                        yield Token(Token.COND, res)
+                                        yield Token(Token.COND, res, line_number)
                                     case 'let':
-                                        yield Token(Token.LET, res)
+                                        yield Token(Token.LET, res, line_number)
                                     case 'call/cc':
-                                        yield Token(Token.CALLCC, res)
+                                        yield Token(Token.CALLCC, res, line_number)
                                     case '+':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '-':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '*':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '/':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '==':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '<':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '>':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '<=':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '>=':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case '!=':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
+                                    case 'xor':
+                                        yield Token(Token.PRIM, res, line_number)
+                                    case 'and':
+                                        yield Token(Token.BOOL, res, line_number)
+                                    case 'or':
+                                        yield Token(Token.BOOL, res, line_number)
                                     case 'cons':
-                                        yield Token(Token.PRIM, res)
+                                        yield Token(Token.PRIM, res, line_number)
                                     case 'car':
-                                        yield Token(Token.UNARY, res)
+                                        yield Token(Token.UNARY, res, line_number)
                                     case 'cdr':
-                                        yield Token(Token.UNARY, res)
+                                        yield Token(Token.UNARY, res, line_number)
+                                    case 'not':
+                                        yield Token(Token.UNARY, res, line_number)
                                     case '#t':
-                                        yield Token(Token.TRUE, res)
+                                        yield Token(Token.TRUE, res, line_number)
                                     case '#f':
-                                        yield Token(Token.FALSE, res)
+                                        yield Token(Token.FALSE, res, line_number)
+                                    case 'list':
+                                        yield Token(Token.LIST, res, line_number)
                                     case 'nil':
-                                        yield Token(Token.VOID, res)
+                                        yield Token(Token.VOID, res, line_number)
                                     case _:
-                                        yield Token(Token.VAR, res)
+                                        yield Token(Token.VAR, res, line_number)
                             else:
                                 raise Exception("can't parse \"" + line + '"')
 
@@ -620,6 +678,11 @@ def parse_letrec_bindings(tokens):
     if tokens.next().val != '(':
         raise Exception("expected '(' after 'letrec'")
     return parse_letrec_bindings_list(tokens)
+
+def parse_bool(token, tokens):
+    exp1 = parse_exp(tokens)
+    exp2 = parse_exp(tokens)
+    return Cexp(CexpBool(token, exp1, exp2))
 
 def parse_amb(tokens):
     exp1 = parse_exp(tokens)
@@ -681,9 +744,14 @@ def parse_apply(tokens):
     args = parse_aexp_list(tokens)
     return Cexp(CexpApply(function, args))
 
+def parse_make_list(tokens):
+    return Aexp(AexpMakeList(parse_aexp_list(tokens)))
+
 def parse_list(tokens):
     token = tokens.next()
     match token.kind:
+        case Token.BOOL:
+            return parse_bool(token, tokens)
         case Token.AMB:
             return parse_amb(tokens)
         case Token.BACK:
@@ -713,6 +781,8 @@ def parse_list(tokens):
         case Token.VAR:
             tokens.pushback(token)
             return parse_apply(tokens)
+        case Token.LIST:
+            return parse_make_list(tokens)
         case Token.CLOSE:
             raise Exception("unexpected closing brace in expression");
 
@@ -740,6 +810,8 @@ def parse_aexp(tokens):
                 return Aexp(AexpVar(token.val))
             case Token.LAMBDA:
                 return parse_lambda(tokens)
+            case Token.LIST:
+                return parse_make_list(tokens)
             case _:
                 raise Exception("unexpected token while parsing aexp: " + token.val);
 

@@ -347,6 +347,9 @@ void markAexp(Aexp *x) {
         case AEXP_TYPE_UNARY:
             markAexpUnaryApp(x->val.unary);
             break;
+        case AEXP_TYPE_LIST:
+            markAexpList(x->val.list);
+            break;
         default:
             cant_happen("unrecognised aexp type in markAexp");
     }
