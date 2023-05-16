@@ -85,6 +85,25 @@ AexpVar *newAexpVar(char *name) {
     return x;
 }
 
+static int symbolCounter = 0;
+
+AexpVar *genSym(char *prefix) {
+    char *buffer = NEW_ARRAY(char, 128); // not callable externally
+
+    for (;;) {
+        sprintf(buffer, "%s%d", prefix, symbolCounter++);
+        if (hashGetVar(&varTable, buffer) == NULL) {
+            AexpVar *x = NEW(AexpVar, OBJTYPE_VAR);
+            x->name = buffer;
+            x->hash = hashString(buffer);
+            int save = PROTECT(x);
+            hashSet(&varTable, x, vVoid);
+            UNPROTECT(save);
+            return x;
+        }
+    }
+}
+
 AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, AexpVar *var) {
     AexpAnnotatedVar *x = NEW(AexpAnnotatedVar, OBJTYPE_ANNOTATEDVAR);
     x->type = type;
@@ -150,6 +169,14 @@ LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val)
 
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2) {
     CexpAmb *x = NEW(CexpAmb, OBJTYPE_AMB);
+    x->exp1 = exp1;
+    x->exp2 = exp2;
+    return x;
+}
+
+CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2) {
+    CexpBool *x = NEW(CexpBool, OBJTYPE_BOOL);
+    x->type = type;
     x->exp1 = exp1;
     x->exp2 = exp2;
     return x;
@@ -278,6 +305,14 @@ void markCexpAmb(CexpAmb *x) {
     markExp(x->exp2);
 }
 
+void markCexpBool(CexpBool *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->exp1);
+    markExp(x->exp2);
+}
+
 void markExpLet(ExpLet *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -337,6 +372,9 @@ void markCexp(Cexp *x) {
         case CEXP_TYPE_AMB:
             markCexpAmb(x->val.amb);
             break;
+        case CEXP_TYPE_BOOL:
+            markCexpBool(x->val.boolean);
+            break;
         case CEXP_TYPE_BACK:
             break;
         default:
@@ -368,6 +406,9 @@ void markExp(Exp *x) {
 void freeExpObj(Header *h) {
     if (h == NULL) return;
     switch (h->type) {
+        case OBJTYPE_BOOL:
+            FREE(h, CexpAmb);
+            break;
         case OBJTYPE_AMB:
             FREE(h, CexpAmb);
             break;
@@ -426,6 +467,9 @@ void markExpObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_AMB:
             markCexpAmb((CexpAmb *) h);
+            break;
+        case OBJTYPE_BOOL:
+            markCexpBool((CexpBool *) h);
             break;
         case OBJTYPE_APPLY:
             markCexpApply((CexpApply *) h);

@@ -101,6 +101,10 @@ static Value intValue(int i) {
     return value;
 }
 
+static bool truthy(Value v) {
+    return v.type != VALUE_TYPE_FALSE;
+}
+
 static Value add(Value a, Value b) {
     AexpInteger result = a.val.z + b.val.z;
     return intValue(result);
@@ -133,6 +137,10 @@ static bool _lt(Value a, Value b) {
     return a.val.z < b.val.z;
 }
 
+static bool _xor(Value a, Value b) {
+    return truthy(a) ? !truthy(b) : truthy(b);
+}
+
 static Value eq(Value a, Value b) {
     bool result = _eq(a, b);
     return result ? vTrue : vFalse;
@@ -158,9 +166,17 @@ static Value ge(Value a, Value b) {
     return result ? vFalse : vTrue;
 }
 
+static Value xor(Value a, Value b) {
+    return _xor(a, b) ? vTrue : vFalse;
+}
+
 static Value le(Value a, Value b) {
     bool result = _gt(a, b);
     return result ? vFalse : vTrue;
+}
+
+static Value not(Value a) {
+    return truthy(a) ? vFalse : vTrue;
 }
 
 static Value car(Value cons) {
@@ -435,6 +451,17 @@ static void step() {
                 state.C++;
             }
             break;
+            case BYTECODE_PRIM_XOR: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### XOR\n", ++count, state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(xor(a, b));
+                state.C++;
+            }
+            break;
             case BYTECODE_PRIM_CAR: { // pop value, perform the op and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -452,6 +479,16 @@ static void step() {
 #endif
                 Value a = pop();
                 push(cdr(a));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_NOT: { // pop value, perform the op and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### NOT\n", ++count, state.C);
+#endif
+                Value a = pop();
+                push(not(a));
                 state.C++;
             }
             break;
@@ -485,10 +522,10 @@ static void step() {
                 printf("%4d) %04d ### IF [%d]\n", ++count, state.C, offsetAt(state.C + 1));
 #endif
                 Value aexp = pop();
-                if (aexp.type == VALUE_TYPE_FALSE) {
-                    state.C = offsetAt(state.C + 1);
-                } else {
+                if (truthy(aexp)) {
                     state.C += 3;
+                } else {
+                    state.C = offsetAt(state.C + 1);
                 }
             }
             break;

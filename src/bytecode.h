@@ -38,9 +38,11 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_LT,
     BYTECODE_PRIM_GE,
     BYTECODE_PRIM_LE,
+    BYTECODE_PRIM_XOR,
     BYTECODE_PRIM_CONS,
     BYTECODE_PRIM_CAR,
     BYTECODE_PRIM_CDR,
+    BYTECODE_PRIM_NOT,
     BYTECODE_APPLY,
     BYTECODE_IF,
     BYTECODE_LETREC,
@@ -80,6 +82,8 @@ void writeCexpCond(CexpCond *x, ByteCodeArray *b);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b);
+void writeCexpAnd(CexpBool *x, ByteCodeArray *b);
+void writeCexpOr(CexpBool *x, ByteCodeArray *b);
 void writeExpLet(ExpLet *x, ByteCodeArray *b);
 void writeAexp(Aexp *x, ByteCodeArray *b);
 void writeCexp(Cexp *x, ByteCodeArray *b);

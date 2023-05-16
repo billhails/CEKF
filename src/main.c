@@ -29,6 +29,7 @@
 #include "step.h"
 #include "debug.h"
 #include "bytecode.h"
+#include "desugaring.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -413,6 +414,84 @@ Exp *makeTestExpFib(int depth)
 									   (depth)))))))))))));
 }
 
+Exp *makeTestExpXor()
+{
+	/* xor.scm */
+	return newExp(EXP_TYPE_AEXP,
+		      EXP_VAL_AEXP(newAexp
+				   (AEXP_TYPE_PRIM,
+				    AEXP_VAL_PRIM(newAexpPrimApp
+						  (AEXP_PRIM_XOR,
+						   newAexp(AEXP_TYPE_TRUE,
+							   AEXP_VAL_TRUE()),
+						   newAexp(AEXP_TYPE_FALSE,
+							   AEXP_VAL_FALSE
+							   ()))))));
+}
+
+Exp *makeTestExpBool()
+{
+	/* bool.scm */
+	return
+	    newExp(EXP_TYPE_LET,
+		   EXP_VAL_LET(newExpLet
+			       (newAexpVar("r"),
+				newExp(EXP_TYPE_CEXP,
+				       EXP_VAL_CEXP(newCexp
+						    (CEXP_TYPE_BOOL,
+						     CEXP_VAL_BOOL(newCexpBool
+								   (BOOL_TYPE_AND,
+								    newExp
+								    (EXP_TYPE_CEXP,
+								     EXP_VAL_CEXP
+								     (newCexp
+								      (CEXP_TYPE_BOOL,
+								       CEXP_VAL_BOOL
+								       (newCexpBool
+									(BOOL_TYPE_OR,
+									 newExp
+									 (EXP_TYPE_AEXP,
+									  EXP_VAL_AEXP
+									  (newAexp
+									   (AEXP_TYPE_FALSE,
+									    AEXP_VAL_FALSE
+									    ()))),
+									 newExp
+									 (EXP_TYPE_AEXP,
+									  EXP_VAL_AEXP
+									  (newAexp
+									   (AEXP_TYPE_TRUE,
+									    AEXP_VAL_TRUE
+									    ())))))))),
+								    newExp
+								    (EXP_TYPE_CEXP,
+								     EXP_VAL_CEXP
+								     (newCexp
+								      (CEXP_TYPE_BOOL,
+								       CEXP_VAL_BOOL
+								       (newCexpBool
+									(BOOL_TYPE_AND,
+									 newExp
+									 (EXP_TYPE_AEXP,
+									  EXP_VAL_AEXP
+									  (newAexp
+									   (AEXP_TYPE_TRUE,
+									    AEXP_VAL_TRUE
+									    ()))),
+									 newExp
+									 (EXP_TYPE_AEXP,
+									  EXP_VAL_AEXP
+									  (newAexp
+									   (AEXP_TYPE_TRUE,
+									    AEXP_VAL_TRUE
+									    ()))))))))))))),
+				newExp(EXP_TYPE_AEXP,
+				       EXP_VAL_AEXP(newAexp
+						    (AEXP_TYPE_VAR,
+						     AEXP_VAL_VAR(newAexpVar
+								  ("r"))))))));
+}
+
 Exp *makeTestExpCons()
 {
 	/* cons.scm */
@@ -465,6 +544,19 @@ Exp *makeTestExpCons()
 							      AEXP_VAL_VAR
 							      (newAexpVar
 							       ("a"))))))))))))));
+}
+
+Exp *makeTestExpNot()
+{
+	/* not.scm */
+	return
+	    newExp(EXP_TYPE_AEXP,
+		   EXP_VAL_AEXP(newAexp
+				(AEXP_TYPE_UNARY,
+				 AEXP_VAL_UNARY(newAexpUnaryApp
+						(AEXP_UNARY_NOT,
+						 newAexp(AEXP_TYPE_FALSE,
+							 AEXP_VAL_FALSE()))))));
 }
 
 Exp *makeTestExpClosure()
@@ -559,10 +651,11 @@ do { \
     disableGC(); \
     exp = build; \
     save = PROTECT(exp); \
-    enableGC(); \
-    analizeExp(exp, NULL, 0); \
     printExp(exp); \
     printf("\n"); \
+    exp = desugarExp(exp); \
+    enableGC(); \
+    analizeExp(exp, NULL, 0); \
     initByteCodeArray(&byteCodes); \
     writeExp(exp, &byteCodes); \
     writeEnd(&byteCodes); \
@@ -584,17 +677,23 @@ int main(int argc, char *argv[]) {
     int depth = 3;
     if (argc == 2) depth = atoi(argv[1]);
 
-    // RUN_EXP(makeTestExpFib(depth));
+    RUN_EXP(makeTestExpFib(depth));
 
     RUN_EXP(makeTestExpCons());
 
-    // RUN_EXP(makeTestExpAmb());
+    RUN_EXP(makeTestExpXor());
 
-    // RUN_EXP(makeTestExpCallCC());
+    RUN_EXP(makeTestExpNot());
 
-    // RUN_EXP(makeTestExpCallCC2());
+    RUN_EXP(makeTestExpBool());
 
-    // RUN_EXP(makeTestExpClosure());
+    RUN_EXP(makeTestExpAmb());
+
+    RUN_EXP(makeTestExpCallCC());
+
+    RUN_EXP(makeTestExpCallCC2());
+
+    RUN_EXP(makeTestExpClosure());
 }
 
 #else /* testing parser */
