@@ -119,7 +119,8 @@ static CexpAmb *desugarCexpAmb(CexpAmb *x) {
 }
 
 static ExpLet *andToExpLet(CexpBool * x) {
-  // (and <exp1> <ep2>) => (let (<sym> <exp1>) (if <sym> <exp2> <sym>))
+  // (and <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> <exp2> #f))
+  // (and <aexp> <exp>) => (if <aexp> <exp> #f)
   Exp *exp1 = desugarExp(x->exp1);
   Exp *exp2 = desugarExp(x->exp2);
   AexpVar *sym = genSym("and_");
@@ -135,13 +136,14 @@ static ExpLet *andToExpLet(CexpBool * x) {
                                                   exp2,
                                                   newExp(EXP_TYPE_AEXP,
                                                          EXP_VAL_AEXP(newAexp
-                                                                      (AEXP_TYPE_VAR,
-                                                                       AEXP_VAL_VAR
-                                                                       (sym))))))))));
+                                                                      (AEXP_TYPE_FALSE,
+                                                                       AEXP_VAL_FALSE()
+                                                                      )))))))));
 }
 
 static ExpLet *orToExpLet(CexpBool * x) {
-  // (or <exp1> <ep2>) => (let (<sym> <exp1>) (if <sym> <sym> <exp2>))
+  // (or <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> #t <exp2>))
+  // (or <aexp> <exp>) => (if <aexp> #t <exp2>)
   Exp *exp1 = desugarExp(x->exp1);
   Exp *exp2 = desugarExp(x->exp2);
   AexpVar *sym = genSym("or_");
@@ -152,16 +154,12 @@ static ExpLet *orToExpLet(CexpBool * x) {
                      EXP_VAL_CEXP(newCexp
                                   (CEXP_TYPE_COND,
                                    CEXP_VAL_COND
-                                   (newCexpCond
-                                    (newAexp
-                                     (AEXP_TYPE_VAR,
-                                      AEXP_VAL_VAR(sym)),
-                                     newExp(EXP_TYPE_AEXP,
-                                            EXP_VAL_AEXP
-                                            (newAexp
-                                             (AEXP_TYPE_VAR,
-                                              AEXP_VAL_VAR
-                                              (sym)))), exp2))))));
+                                   (newCexpCond(
+                                       newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(sym)),
+                                       newExp(EXP_TYPE_AEXP, EXP_VAL_AEXP(newAexp(AEXP_TYPE_TRUE, AEXP_VAL_TRUE()))),
+                                       exp2
+                                   )
+                                  )))));
 }
 
 static ExpLet *desugarCexpBool(CexpBool *x) {

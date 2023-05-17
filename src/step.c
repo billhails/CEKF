@@ -33,12 +33,8 @@
  * The step function of the CEKF machine.
  */
 
-typedef Value (*primitive)(Value arg1, Value arg2);
-
 static void step();
 static Value lookup(int frame, int offset);
-static Env *extendVoid(Env *env, int count);
-static void replaceInEnv(Env *env, int index, Value val);
 
 static CEKF state;
 
@@ -102,7 +98,7 @@ static Value intValue(int i) {
 }
 
 static bool truthy(Value v) {
-    return v.type != VALUE_TYPE_FALSE;
+    return v.type != VALUE_TYPE_FALSE && v.type != VALUE_TYPE_VOID;
 }
 
 static Value add(Value a, Value b) {
@@ -180,7 +176,7 @@ static Value not(Value a) {
 }
 
 static Value car(Value cons) {
-    if (cons.type = VALUE_TYPE_CONS) {
+    if (cons.type == VALUE_TYPE_CONS) {
         return cons.val.cons->car;
     } else {
         cant_happen("unrecognised type for car %d", cons.type);
@@ -188,7 +184,7 @@ static Value car(Value cons) {
 }
 
 static Value cdr(Value cons) {
-    if (cons.type = VALUE_TYPE_CONS) {
+    if (cons.type == VALUE_TYPE_CONS) {
         return cons.val.cons->cdr;
     } else {
         cant_happen("unrecognised type for cdr %d", cons.type);
@@ -210,17 +206,6 @@ static Value lookup(int frame, int offset) {
         frame--;
     }
     return env->values[offset];
-}
-
-static Env *extendVoid(Env *env, int count) {
-    int save = PROTECT(env);
-    env = newEnv(env, count);
-    UNPROTECT(save);
-    return env;
-}
-
-static void replaceInEnv(Env *env, int index, Value val) {
-    env->values[index] = val;
 }
 
 void cant_happen(const char *message, ...) {
@@ -275,7 +260,6 @@ static void applyProc() {
                 state.C = k->body;
                 state.K = k->next;
                 state.E = k->rho;
-                clearFrame(&state.S);
                 restoreKont(&state.S, k);
                 push(result);
             }
@@ -286,6 +270,8 @@ static void applyProc() {
     }
     UNPROTECT(save);
 }
+
+// #define printCEKF(state)
 
 static void step() {
 #ifdef DEBUG_STEP
@@ -300,18 +286,19 @@ static void step() {
             case BYTECODE_LAM: { // create a closure and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### LAM [%d] [%d]\n", ++count, state.C, state.B.entries[state.C + 1], offsetAt(state.C + 2));
+                printf("%4d) %04d ### LAM [%d] [%d] [%d]\n", ++count, state.C, state.B.entries[state.C + 1], state.B.entries[state.C + 2], offsetAt(state.C + 3));
 #endif
                 Env *env = NULL;
-                Clo *clo = newClo(state.B.entries[state.C + 1], state.C + 4, state.E);
+                Clo *clo = newClo(state.B.entries[state.C + 1], state.C + 5, state.E);
+                int letRecOffset = state.B.entries[state.C + 2];
                 int save = PROTECT(clo);
-                snapshotClo(&state.S, clo);
+                snapshotClo(&state.S, clo, letRecOffset);
                 Value v;
                 v.type = VALUE_TYPE_CLO;
                 v.val = VALUE_VAL_CLO(clo);
                 push(v);
                 UNPROTECT(save);
-                state.C = offsetAt(state.C + 2);
+                state.C = offsetAt(state.C + 3);
             }
             break;
             case BYTECODE_VAR: { // look up an environment variable and push it
@@ -535,12 +522,12 @@ static void step() {
                 printf("%4d) %04d ### LETREC [%d]\n", ++count, state.C, state.B.entries[state.C + 1]);
 #endif
                 int nargs = state.B.entries[state.C + 1];
-                for (int i = 0; i < nargs; i++) {
+                for (int i = frameSize(&state.S) - nargs; i < frameSize(&state.S); i++) {
                     Value v = peek(i);
                     if (v.type == VALUE_TYPE_CLO) {
                         patchClo(&state.S, v.val.clo);
                     } else {
-                        cant_happen("non-lambda value for letrec");
+                        cant_happen("non-lambda value (%d) for letrec", v.type);
                     }
                 }
                 state.C += 2;
@@ -636,7 +623,7 @@ static void step() {
             case BYTECODE_INT: { // push literal int
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### JMP [%d]\n", ++count, state.C, intAt(state.C + 1));
+                printf("%4d) %04d ### INT [%d]\n", ++count, state.C, intAt(state.C + 1));
 #endif
                 Value v;
                 v.type = VALUE_TYPE_INTEGER;

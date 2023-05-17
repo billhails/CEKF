@@ -34,24 +34,17 @@ void printAexpVarList(AexpVarList *x);
 void printBareAexpList(AexpList *x);
 void printCEKF(CEKF *x);
 void printCexpAmb(CexpAmb *x);
-void printCexpBool(CexpBool *x);
 void printCexpApply(CexpApply *x);
+void printCexpBool(CexpBool *x);
 void printCexp(Cexp *x);
 void printCexpCond(CexpCond *x);
 void printCexpLetRec(CexpLetRec *x);
-void printClo(Clo *x);
 void printCTEnv(CTEnv *x);
-void printElidedEnv(Env *x);
-void printEnv(Env *x);
 void printExp(Exp *x);
 void printExpLet(ExpLet *x);
-void printFail(Fail *x);
-void printKont(Kont *x);
-void printCons(Cons *x);
 void printLetRecBindings(LetRecBindings *x);
-void printStack(Stack *x);
-void printValueList(ValueList *x);
-void printValue(Value x);
+
+void printValue(Value x, int depth);
 
 void dumpByteCode(ByteCodeArray *b);
 

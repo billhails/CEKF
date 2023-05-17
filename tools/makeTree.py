@@ -227,6 +227,9 @@ class AexpList:
         self.rest = rest
         self.exp = exp
 
+    def assert_aexp(self, context):
+        raise Exception("AexpList assert_aexp: " + context + ", got " + str(self))
+
     def __str__(self):
         return "(" + self.inner_str() + ")"
 
@@ -248,13 +251,19 @@ class AexpMakeList(AexpBase):
         self.lst = lst
 
     def __str__(self):
-        return "(list " + self.lst.inner_str() + ")"
+        if self.lst is None:
+            return "(list)"
+        else:
+            return "(list " + self.lst.inner_str() + ")"
 
     def expCType(self):
         return "AEXP_TYPE_LIST"
 
     def expCVal(self):
-        return "AEXP_VAL_LIST(" + self.lst.makeC() + ")"
+        if self.lst is None:
+            return "AEXP_VAL_LIST(NULL)"
+        else:
+            return "AEXP_VAL_LIST(" + self.lst.makeC() + ")"
 
 
 class CexpApply(CexpBase):
@@ -264,6 +273,7 @@ class CexpApply(CexpBase):
         self.args = args
 
     def __str__(self):
+        print("CexpApply(" + str(self.function) + ")")
         return "(" + str(self.function) + " " + self.args.inner_str() + ")"
 
     def makeC(self):
@@ -514,7 +524,7 @@ class Token:
         self.line = line
 
     def __str__(self):
-        return 'Token<' + self.val + '>'
+        return 'Token<' + self.val + '>(' + str(self.line) + ')'
 
 
 class Lexer:
@@ -532,7 +542,8 @@ class Lexer:
 
     def peek(self):
         if len(self.buffer) == 0:
-            self.buffer.append(next(self.stream))
+            token = next(self.stream)
+            self.buffer.append(token)
         return self.buffer[-1]
 
     def pushback(self, token):
@@ -543,7 +554,7 @@ class Lexer:
         with open(file) as fh:
             for line in fh.readlines():
                 line_number = line_number + 1;
-                print(line_number)
+                line = re.sub(";.*", "", line)
                 line = line.strip()
                 while line:
                     if line[0] == '(':
@@ -629,7 +640,8 @@ class Lexer:
                                 raise Exception("can't parse \"" + line + '"')
 
 
-def parse_aexp_list(tokens):
+def parse_aexp_list_expression(tokens):
+    print("parse_aexp_list_expression", str(tokens.peek()))
     if tokens.peek().kind == Token.PRIM:
         return parse_primapp(tokens.next(), tokens)
     if tokens.peek().kind == Token.UNARY:
@@ -637,12 +649,22 @@ def parse_aexp_list(tokens):
     if tokens.peek().kind == Token.LAMBDA:
         tokens.next()
         return parse_lambda(tokens)
+    if tokens.peek().kind == Token.LIST:
+        tokens.next()
+        return parse_make_list(tokens)
+    if tokens.peek().val == ')':
+        return None
+    raise Exception("unexpected start token " + str(tokens.peek()) + " in parse_aexp_list_expression")
+
+def parse_aexp_list(tokens):
+    print("parse_aexp_list", str(tokens.peek()))
     if tokens.peek().val == ')':
         return None
     exp = parse_aexp(tokens)
     return AexpList(parse_aexp_list(tokens), exp)
 
 def parse_varlist_body(tokens):
+    print("parse_varlist_body", str(tokens.peek()))
     if tokens.peek().val == ')':
         tokens.next()
         return None
@@ -650,17 +672,20 @@ def parse_varlist_body(tokens):
     return AexpVarList(parse_varlist_body(tokens), var)
 
 def parse_varlist(tokens):
+    print("parse_varlist", str(tokens.peek()))
     if tokens.next().val != '(':
         raise Exception("expected '(' before variable list")
     return parse_varlist_body(tokens)
 
 def parse_var(tokens):
+    print("parse_var", str(tokens.peek()))
     token = tokens.next()
     if token.kind == Token.VAR:
         return AexpVar(token.val);
     raise Exception("Expected var, got " + token.val)
 
 def parse_letrec_bindings_list(tokens):
+    print("parse_letrec_bindings_list", str(tokens.peek()))
     token = tokens.next()
     if token.val == '(':
         var = parse_var(tokens)
@@ -672,49 +697,58 @@ def parse_letrec_bindings_list(tokens):
     elif token.val == ')':
         return None
     else:
-        raise Exception("unexpected token " + token.val + " in letrec bindings")
+        raise Exception("unexpected token " + token.val + " in parse_letrec_bindings_list")
 
 def parse_letrec_bindings(tokens):
+    print("parse_letrec_bindings", str(tokens.peek()))
     if tokens.next().val != '(':
         raise Exception("expected '(' after 'letrec'")
     return parse_letrec_bindings_list(tokens)
 
 def parse_bool(token, tokens):
+    print("parse_letrec_bindings", token)
     exp1 = parse_exp(tokens)
     exp2 = parse_exp(tokens)
     return Cexp(CexpBool(token, exp1, exp2))
 
 def parse_amb(tokens):
+    print("parse_amb", str(tokens.peek()))
     exp1 = parse_exp(tokens)
     exp2 = parse_exp(tokens)
     return Cexp(CexpAmb(exp1, exp2))
 
 def parse_back(tokens):
+    print("parse_back", str(tokens.peek()))
     return Cexp(CexpBack())
 
 def parse_letrec(tokens):
+    print("parse_letrec", str(tokens.peek()))
     bindings = parse_letrec_bindings(tokens)
     body = parse_exp(tokens)
     return Cexp(CexpLetRec(bindings, body))
 
 def parse_lambda(tokens):
+    print("parse_lambda", str(tokens.peek()))
     args = parse_varlist(tokens)
     body = parse_exp(tokens)
     return Aexp(AexpLam(args, body))
 
 def parse_cond(tokens):
+    print("parse_cond", str(tokens.peek()))
     condition = parse_aexp(tokens)
     consequent = parse_exp(tokens)
     alternative = parse_exp(tokens)
     return Cexp(CexpCond(condition, consequent, alternative))
 
 def parse_var(tokens):
+    print("parse_var", str(tokens.peek()))
     token = tokens.next()
     if token.kind != Token.VAR:
         raise Exception("expected var, got " + token.val);
     return AexpVar(token.val)
 
 def parse_let(tokens):
+    print("parse_let", str(tokens.peek()))
     token = tokens.next()
     if token.val != '(':
         raise Exception("expected '(' after 'let', got " + token.val)
@@ -727,27 +761,34 @@ def parse_let(tokens):
     return ExpLet(var, val, body)
 
 def parse_callcc(tokens):
+    print("parse_callcc", str(tokens.peek()))
     exp = parse_aexp(tokens)
     return Cexp(CexpCallCC(exp))
 
 def parse_primapp(token, tokens):
+    print("parse_primapp", str(tokens.peek()))
     exp1 = parse_aexp(tokens)
     exp2 = parse_aexp(tokens)
     return Aexp(AexpPrimApp(token.val, exp1, exp2))
 
 def parse_unaryapp(token, tokens):
+    print("parse_unaryapp", str(token))
     exp = parse_aexp(tokens)
     return Aexp(AexpUnaryApp(token.val, exp))
 
 def parse_apply(tokens):
+    print("parse_apply", str(tokens.peek()))
     function = parse_aexp(tokens)
     args = parse_aexp_list(tokens)
     return Cexp(CexpApply(function, args))
 
 def parse_make_list(tokens):
-    return Aexp(AexpMakeList(parse_aexp_list(tokens)))
+    print("parse_apply", str(tokens.peek()))
+    lst = parse_aexp_list(tokens)
+    return Aexp(AexpMakeList(lst))
 
 def parse_list(tokens):
+    print("parse_list", str(tokens.peek()))
     token = tokens.next()
     match token.kind:
         case Token.BOOL:
@@ -784,18 +825,19 @@ def parse_list(tokens):
         case Token.LIST:
             return parse_make_list(tokens)
         case Token.CLOSE:
-            raise Exception("unexpected closing brace in expression");
+            raise Exception("unexpected closing brace in parse_list");
 
 def parse_aexp(tokens):
+    print("parse_aexp", str(tokens.peek()))
     token = tokens.next()
     if token.val == '(':
-        exp = parse_aexp_list(tokens)
+        exp = parse_aexp_list_expression(tokens)
         token = tokens.next()
         if token.val != ')':
-            raise Exception("expected ')' after expression")
+            raise Exception("expected ')' after expression in parse_aexp")
         return exp
     elif token.val == ')':
-        raise Exception("unexpected closing brace");
+        raise Exception("unexpected closing brace in parse_aexp");
     else:
         match token.kind:
             case Token.INTEGER:
@@ -813,18 +855,19 @@ def parse_aexp(tokens):
             case Token.LIST:
                 return parse_make_list(tokens)
             case _:
-                raise Exception("unexpected token while parsing aexp: " + token.val);
+                raise Exception("unexpected token in parse_aexp: " + token.val);
 
 def parse_exp(tokens):
+    print("parse_exp", str(tokens.peek()))
     token = tokens.next()
     if token.val == '(':
         exp = parse_list(tokens)
         token = tokens.next()
         if token.val != ')':
-            raise Exception("expected ')' after expression")
+            raise Exception("expected ')' after expression in parse_exp")
         return Exp(exp)
     elif token.val == ')':
-        raise Exception("unexpected closing brace");
+        raise Exception("unexpected closing brace in parse_exp");
     else:
         match token.kind:
             case Token.INTEGER:
@@ -838,7 +881,7 @@ def parse_exp(tokens):
             case Token.VAR:
                 return Exp(Aexp(AexpVar(token.val)))
             case _:
-                raise Exception("unexpected token while parsing expression: " + token.val);
+                raise Exception("unexpected token in parse_exp: " + token.val);
 
 
 expr = parse_exp(Lexer(sys.argv[1]))
