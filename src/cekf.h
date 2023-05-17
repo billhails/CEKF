@@ -97,7 +97,7 @@ typedef struct Cons {
     struct Value cdr;
 } Cons;
 
-void snapshotClo(Stack *stack, struct Clo *target);
+void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);
 void snapshotFail(Stack *stack, struct Fail *target);

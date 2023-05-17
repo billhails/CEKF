@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile check-grammar
+.PHONY: all clean deps profile check-grammar list-cores
 
 TARGET=cekf
 
@@ -9,8 +9,8 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-# CC=cc -Werror $(DEBUGGING)
-CC=cc -Werror $(OPTIMIZING)
+CC=cc -Werror $(DEBUGGING)
+# CC=cc -Werror $(OPTIMIZING)
 
 CFILES=$(wildcard src/*.c)
 EXTRA_CFILES=tmp/lexer.c tmp/parser.c
@@ -71,4 +71,6 @@ profile: all
 check-grammar:
 	bison -Wcex --feature=syntax-only src/parser.y
 
+list-cores:
+	ls -rt1 /var/lib/apport/coredump/* | tail -1
 # vim: noet,sw=8,tabstop=8

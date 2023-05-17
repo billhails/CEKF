@@ -91,6 +91,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
+    addByte(b, x->letRecOffset);
     int patch = reserveWord(b);
     writeExp(x->exp, b);
     addByte(b, BYTECODE_RETURN);

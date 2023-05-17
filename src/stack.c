@@ -66,7 +66,7 @@ void clearFrame(Stack *s) {
 
 static void growCapacity(Stack *s, int newCapacity) {
 #ifdef DEBUG_STACK
-    fprintf(stderr, "growCapacity(%d)\n", newCapacity);
+    printf("growCapacity(%d)\n", newCapacity);
 #endif
     s->stack = GROW_ARRAY(Value, s->stack, s->capacity, newCapacity);
     s->capacity = newCapacity;
@@ -75,8 +75,8 @@ static void growCapacity(Stack *s, int newCapacity) {
 void pushValue(Stack *s, Value v) {
 #ifdef DEBUG_STACK
     printf("pushValue(");
-    printValue(v);
-    printf(")\n");
+    printValue(v, 0);
+    printf(") sp = %d, capacity = %d\n", s->sp, s->capacity);
 #endif
     if (s->sp == s->capacity) {
         growCapacity(s, s->capacity < 8 ? 8 : s->capacity * 2);
@@ -96,7 +96,7 @@ Value popValue(Stack *s) {
 
 void markStack(Stack *s) {
 #ifdef DEBUG_STACK
-    fprintf(stderr, "markStack()\n");
+    printf("markStack()\n");
 #endif
     for (int i = 0; i < s->sp; ++i) {
         markValue(s->stack[i]);
@@ -104,58 +104,73 @@ void markStack(Stack *s) {
 }
 
 Value peekValue(Stack *s, int offset) {
-#ifdef DEBUG_STACK
-    fprintf(stderr, "peekValue\n");
-#endif
     if (offset >= s->sp) {
         cant_happen("peek beyond top of stack not allowed");
     }
     return s->stack[offset];
 }
 
-static void copyToFrame(Stack *s, Value *frame) {
-    COPY_ARRAY(Value, frame, s->stack, s->sp);
+static void copyToFrame(Stack *s, Value *frame, int letRecOffset) {
+    COPY_ARRAY(Value, frame, s->stack, s->sp - letRecOffset);
 }
 
 static void copyFromSnapshot(Stack *s, Snapshot ss) {
-    COPY_ARRAY(Value, &s->stack[s->sp], ss.frame, ss.frameSize);
-    s->sp += ss.frameSize;
+    COPY_ARRAY(Value, s->stack, ss.frame, ss.frameSize);
+    s->sp = ss.frameSize;
 }
 
 static void copyToSnapshot(Stack *s, Snapshot *ss) {
     if (s->sp > 0) {
         ss->frame = NEW_ARRAY(Value, s->sp);
-        copyToFrame(s, ss->frame);
+        copyToFrame(s, ss->frame, 0);
     }
     ss->frameSize = s->sp;
 }
 
-void snapshotClo(Stack *s, Clo *target) {
-    Env *env = newEnv(target->rho, s->sp);
+void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
+#ifdef DEBUG_STACK
+    printf("snapshotClo, sp = %d, capacity = %d\n", s->sp, s->capacity);
+#endif
+    Env *env = newEnv(target->rho, s->sp - letRecOffset);
     target->rho = env;
-    copyToFrame(s, env->values);
+    copyToFrame(s, env->values, letRecOffset);
 }
 
 void patchClo(Stack *s, Clo *target) {
-    target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, target->rho->count + s->sp);
-    copyToFrame(s, &target->rho->values[target->rho->count]);
-    target->rho->count += s->sp;
+#ifdef DEBUG_STACK
+    printf("patchClo, sp = %d, capacity = %d\n", s->sp, s->capacity);
+#endif
+    target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
+    copyToFrame(s, target->rho->values, 0);
+    target->rho->count = s->sp;
 }
 
-void snapshotKont(Stack *stack, Kont *target) {
-    copyToSnapshot(stack, &target->snapshot);
+void snapshotKont(Stack *s, Kont *target) {
+#ifdef DEBUG_STACK
+    printf("snapshotKont, sp = %d, capacity = %d\n", s->sp, s->capacity);
+#endif
+    copyToSnapshot(s, &target->snapshot);
 }
 
-void snapshotFail(Stack *stack, Fail *target) {
-    copyToSnapshot(stack, &target->snapshot);
+void snapshotFail(Stack *s, Fail *target) {
+#ifdef DEBUG_STACK
+    printf("snapshotFail, sp = %d, capacity = %d\n", s->sp, s->capacity);
+#endif
+    copyToSnapshot(s, &target->snapshot);
 }
 
-void restoreKont(Stack *stack, Kont *source) {
-    copyFromSnapshot(stack, source->snapshot);
+void restoreKont(Stack *s, Kont *source) {
+#ifdef DEBUG_STACK
+    printf("restoreKont, size = %d, capacity = %d\n", source->snapshot.frameSize, s->capacity);
+#endif
+    copyFromSnapshot(s, source->snapshot);
 }
 
-void restoreFail(Stack *stack, Fail *source) {
-    copyFromSnapshot(stack, source->snapshot);
+void restoreFail(Stack *s, Fail *source) {
+#ifdef DEBUG_STACK
+    printf("restoreFail, size = %d, capacity = %d\n", source->snapshot.frameSize, s->capacity);
+#endif
+    copyFromSnapshot(s, source->snapshot);
 }
 
 void pushN(Stack *s, int n) {
@@ -166,12 +181,12 @@ void pushN(Stack *s, int n) {
 
 #ifdef TEST_STACK
 
-#define EXPECT(EXP) do { if (EXP) fprintf(stderr, "assertion " #EXP " passed\n"); else fprintf (stderr, "ASSERTION " #EXP " FAILED\n"); } while(0)
+#define EXPECT(EXP) do { if (EXP) printf("assertion " #EXP " passed\n"); else printf("ASSERTION " #EXP " FAILED\n"); } while(0)
 
 static Stack S;
 
 void markTestStack() {
-    fprintf(stderr, "markTestStack()\n");
+    printf("markTestStack()\n");
     markStack(&S);
 }
 

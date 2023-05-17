@@ -51,6 +51,7 @@ static int countLetRecBindings(LetRecBindings *list) {
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
     AexpLam *x = NEW(AexpLam, OBJTYPE_LAM);
     x->nargs = countAexpVarList(args);
+    x->letRecOffset = 0;
     x->args = args;
     x->exp = exp;
     return x;

@@ -32,22 +32,9 @@ typedef struct CTEnv {
     struct HashTable *table;
 } CTEnv;
 
+void analizeExp(Exp *x, CTEnv *env);
+
 CTEnv *newCTEnv(bool isLocal, CTEnv *next);
-
-void analizeAexpLam(AexpLam *x, CTEnv *env, int depth);
-AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env, int depth);
-void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env, int depth);
-void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env, int depth);
-void analizeAexpList(AexpList *x, CTEnv *env, int depth);
-void analizeCexpApply(CexpApply *x, CTEnv *env, int depth);
-void analizeCexpCond(CexpCond *x, CTEnv *env, int depth);
-void analizeCexpLetRec(CexpLetRec *x, CTEnv *env, int depth);
-void analizeCexpAmb(CexpAmb *x, CTEnv *env, int depth);
-void analizeExpLet(ExpLet *x, CTEnv *env, int depth);
-void analizeAexp(Aexp *x, CTEnv *env, int depth);
-void analizeCexp(Cexp *x, CTEnv *env, int depth);
-void analizeExp(Exp *x, CTEnv *env, int depth);
-
 void markCTEnv(Header *env);
 void freeCTEnv(Header *env);
 

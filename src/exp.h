@@ -34,6 +34,7 @@
 typedef struct AexpLam {
     Header header;
     int nargs;
+    int letRecOffset;
     struct AexpVarList *args;
     struct Exp *exp;
 } AexpLam;

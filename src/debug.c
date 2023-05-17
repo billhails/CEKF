@@ -22,27 +22,44 @@
 #include "debug.h"
 #include "hash.h"
 
-static void printContainedValue(Value x) {
+static void printClo(Clo *x, int depth);
+static void printElidedEnv(Env *x);
+static void printEnv(Env *x, int depth);
+static void printFail(Fail *x, int depth);
+static void printKont(Kont *x, int depth);
+static void printStack(Stack *x, int depth);
+static void printCons(Cons *x);
+
+static void printPad(int depth) {
+    printf("%*s", depth * 4, "");
+}
+
+static void printContainedValue(Value x, int depth) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
+            printPad(depth);
             printf("#V");
             break;
         case VALUE_TYPE_INTEGER:
+            printPad(depth);
             printf("%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
+            printPad(depth);
             printf("#T");
             break;
         case VALUE_TYPE_FALSE:
+            printPad(depth);
             printf("#F");
             break;
         case VALUE_TYPE_CLO:
-            printClo(x.val.clo);
+            printClo(x.val.clo, depth);
             break;
         case VALUE_TYPE_CONT:
-            printKont(x.val.k);
+            printKont(x.val.k, depth);
             break;
         case VALUE_TYPE_CONS:
+            printPad(depth);
             printCons(x.val.cons);
             break;
         default:
@@ -50,18 +67,21 @@ static void printContainedValue(Value x) {
     }
 }
 
-static void printSnapshot(Snapshot s) {
+static void printSnapshot(Snapshot s, int depth) {
+    printPad(depth);
     if (s.frameSize == 0) {
         printf("S/");
         return;
     }
-    printf("S[");
+    printf("SS[\n");
     for (int i = 0; i < s.frameSize; i++) {
-        printContainedValue(s.frame[i]);
+        printContainedValue(s.frame[i], depth + 1);
         if (i < s.frameSize - 1) {
-            printf(", ");
+            printf(",");
         }
+        printf("\n");
     }
+    printPad(depth);
     printf("]");
 }
 
@@ -73,13 +93,16 @@ static void printElidedSnapshot(Snapshot s) {
     printf("S[<...>]");
 }
 
-void printValue(Value x) {
+void printValue(Value x, int depth) {
+    printPad(depth);
     if (x.type == VALUE_TYPE_VOID) {
         printf("V/");
         return;
     }
-    printf("V[");
-    printContainedValue(x);
+    printf("V[\n");
+    printContainedValue(x, depth + 1);
+    printf("\n");
+    printPad(depth);
     printf("]");
 }
 
@@ -102,9 +125,9 @@ void printElidedKont(Kont *x) {
 
 void printCons(Cons *x) {
     printf("(");
-    printContainedValue(x->car);
+    printContainedValue(x->car, 0);
     printf(" . ");
-    printContainedValue(x->cdr);
+    printContainedValue(x->cdr, 0);
     printf(")");
 }
 
@@ -138,51 +161,46 @@ void printElidedValue(Value x) {
     printf("]");
 }
 
-void printValueList(ValueList *x) {
-    printf("ValueList[");
-    for (int i = 0; i < x->count; ++i) {
-        printValue(x->values[i]);
-        if (i < x->count - 1) {
-            printf(", ");
-        }
-    }
-    printf("]");
-}
-
-void printClo(Clo *x) {
+static void printClo(Clo *x, int depth) {
+    printPad(depth);
     printf("C[%d, %d, ", x->nvar, x->c);
     printElidedEnv(x->rho);
     printf("]");
 }
 
 void printCEKF(CEKF *x) {
-    printf("( ");
+    int depth = 1;
+    printf("\nCEKF (\n");
+    printPad(depth);
     printf("%d", x->C);
-    printf(" - ");
-    printEnv(x->E);
-    printf(" - ");
-    printKont(x->K);
-    printf(" - ");
-    printFail(x->F);
-    printf(" - ");
-    printValue(x->V);
-    printf(" - ");
-    printStack(&x->S);
-    printf(" )\n");
+    printf(",\n");
+    printEnv(x->E, depth);
+    printf(",\n");
+    printKont(x->K, depth);
+    printf(",\n");
+    printFail(x->F, depth);
+    printf(",\n");
+    printValue(x->V, depth);
+    printf(",\n");
+    printStack(&x->S, depth);
+    printf("\n)\n\n");
 }
 
-void printStack(Stack *x) {
+static void printStack(Stack *x, int depth) {
+    printPad(depth);
     if (x == NULL || x->sp ==0) {
         printf("S/");
         return;
     }
-    printf("S[");
-    for (int i = x->sp; i > 0; --i) {
-        printContainedValue(peekValue(x, i - 1));
-        if (i > 1) {
-            printf(", ");
+    printf("S[\n");
+    for (int i = 0; i < x->sp; ++i) {
+        printContainedValue(peekValue(x, i), depth + 1);
+        if (i < x->sp - 1) {
+            printf(",");
         }
+        printf("\n");
     }
+    printPad(depth);
     printf("]");
 }
 
@@ -192,7 +210,7 @@ void printHashTable(HashTable *x) {
     for (int i = 0; i < x->capacity; ++i) {
         if (x->entries[i].var != NULL) {
             printf("%s => ", x->entries[i].var->name);
-            printValue(x->entries[i].value);
+            printValue(x->entries[i].value, 0);
             count++;
             if (count < x->count) printf(", ");
         }
@@ -213,14 +231,17 @@ void printElidedHashTable(HashTable *x) {
     printf("}");
 }
 
-void printValues(Value *values, int count) {
-    printf("{");
+static void printValues(Value *values, int count, int depth) {
+    printPad(depth);
+    printf("{\n");
     for (int i = 0; i < count; ++i) {
-        printValue(values[i]);
+        printValue(values[i], depth + 1);
         if (i + 1 < count) {
-            printf(", ");
+            printf(",");
         }
+        printf("\n");
     }
+    printPad(depth);
     printf("}");
 }
 
@@ -235,17 +256,20 @@ void printElidedValues(Value *values, int count) {
     printf("}");
 }
 
-void printEnv(Env *x) {
+void printEnv(Env *x, int depth) {
+    printPad(depth);
     if (x == NULL) {
         printf("E/");
         return;
     }
-    printf("E[");
+    printf("E[\n");
     while (x != NULL) {
-        printValues(x->values, x->count);
-        if (x->next != NULL) printf(", ");
+        printValues(x->values, x->count, depth + 1);
+        if (x->next != NULL) printf(",");
+        printf("\n");
         x = x->next;
     }
+    printPad(depth);
     printf("]");
 }
 
@@ -273,40 +297,48 @@ void printElidedEnv(Env *x) {
     printf("]");
 }
 
-void printKont(Kont *x) {
+static void printKont(Kont *x, int depth) {
+    printPad(depth);
     if (x == NULL) {
         printf("K/");
         return;
     }
-    printf("K[");
+    printf("K[\n");
     if (x != NULL) {
-        printf("%d, ", x->body);
-        printEnv(x->rho);
-        printf(", ");
-        printSnapshot(x->snapshot);
-        printf(", ");
-        printKont(x->next);
+        printPad(depth + 1);
+        printf("%d,\n", x->body);
+        printEnv(x->rho, depth + 1);
+        printf(",\n");
+        printSnapshot(x->snapshot, depth + 1);
+        printf(",\n");
+        printKont(x->next, depth + 1);
+        printf("\n");
     }
+    printPad(depth);
     printf("]");
 }
 
-void printFail(Fail *x) {
+static void printFail(Fail *x, int depth) {
+    printPad(depth);
     if (x == NULL) {
         printf("F/");
         return;
     }
-    printf("F[");
+    printf("F[\n");
     if (x != NULL) {
+        printPad(depth + 1);
         printf("%d", x->exp);
-        printf(", ");
-        printEnv(x->rho);
-        printf(", ");
-        printSnapshot(x->snapshot);
-        printf(", ");
-        printKont(x->k);
-        printf(", ");
-        printFail(x->next);
+        printf(",\n");
+        printEnv(x->rho, depth + 1);
+        printf(",\n");
+        printSnapshot(x->snapshot, depth + 1);
+        printf(",\n");
+        printKont(x->k, depth + 1);
+        printf(",\n");
+        printFail(x->next, depth + 1);
+        printf("\n");
     }
+    printPad(depth);
     printf("]");
 }
 
@@ -637,8 +669,8 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             case BYTECODE_LAM: {
-                printf("%04d ### LAM [%d] [%d]\n", i, b->entries[i + 1], offsetAt(b, i+2));
-                i += 4;
+                printf("%04d ### LAM [%d] [%d] [%d]\n", i, b->entries[i + 1], b->entries[i + 2], offsetAt(b, i + 3));
+                i += 5;
             }
             break;
             case BYTECODE_VAR: {
@@ -652,77 +684,77 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             case BYTECODE_PRIM_ADD: {
-                printf("%04d ### PRIM(+)\n", i);
+                printf("%04d ### ADD\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_SUB: {
-                printf("%04d ### PRIM(-)\n", i);
+                printf("%04d ### SUB\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_MUL: {
-                printf("%04d ### PRIM(*)\n", i);
+                printf("%04d ### MUL\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_DIV: {
-                printf("%04d ### PRIM(/)\n", i);
+                printf("%04d ### DIV\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_EQ: {
-                printf("%04d ### PRIM(==)\n", i);
+                printf("%04d ### EQ\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_NE: {
-                printf("%04d ### PRIM(!=)\n", i);
+                printf("%04d ### NE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_GT: {
-                printf("%04d ### PRIM(>)\n", i);
+                printf("%04d ### GT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_LT: {
-                printf("%04d ### PRIM(<)\n", i);
+                printf("%04d ### LT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_GE: {
-                printf("%04d ### PRIM(>=)\n", i);
+                printf("%04d ### GE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_LE: {
-                printf("%04d ### PRIM(<=)\n", i);
+                printf("%04d ### LE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_XOR: {
-                printf("%04d ### PRIM(xor)\n", i);
+                printf("%04d ### XOR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CONS: {
-                printf("%04d ### PRIM(cons)\n", i);
+                printf("%04d ### CONS\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CAR: {
-                printf("%04d ### PRIM(car)\n", i);
+                printf("%04d ### CAR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CDR: {
-                printf("%04d ### PRIM(cdr)\n", i);
+                printf("%04d ### CDR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_NOT: {
-                printf("%04d ### PRIM(not)\n", i);
+                printf("%04d ### NOT\n", i);
                 i++;
             }
             break;
