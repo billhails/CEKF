@@ -34,7 +34,7 @@ static void printPad(int depth) {
     printf("%*s", depth * 4, "");
 }
 
-static void printContainedValue(Value x, int depth) {
+void printContainedValue(Value x, int depth) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
             printPad(depth);
@@ -436,6 +436,9 @@ void printAexpUnaryApp(AexpUnaryApp *x) {
         case AEXP_UNARY_NOT:
             printf("not ");
             break;
+        case AEXP_UNARY_PRINT:
+            printf("print ");
+            break;
         default:
             cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
     }
@@ -755,6 +758,11 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_NOT: {
                 printf("%04d ### NOT\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_PRINT: {
+                printf("%04d ### PRINT\n", i);
                 i++;
             }
             break;

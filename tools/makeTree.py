@@ -216,6 +216,8 @@ class AexpUnaryApp(AexpBase):
                 return "AEXP_UNARY_CDR"
             case 'not':
                 return "AEXP_UNARY_NOT"
+            case 'print':
+                return "AEXP_UNARY_PRINT"
 
     def makeC(self):
         return "newAexpUnaryApp(" + self.makeCOp() + "," + self.exp.makeC() + ")"
@@ -625,6 +627,8 @@ class Lexer:
                                     case 'cdr':
                                         yield Token(Token.UNARY, res, line_number)
                                     case 'not':
+                                        yield Token(Token.UNARY, res, line_number)
+                                    case 'print':
                                         yield Token(Token.UNARY, res, line_number)
                                     case '#t':
                                         yield Token(Token.TRUE, res, line_number)
