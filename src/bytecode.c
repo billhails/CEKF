@@ -26,6 +26,13 @@ void initByteCodeArray(ByteCodeArray *b) {
     b->entries = NULL;
 }
 
+void resetByteCodeArray(ByteCodeArray *b) {
+    b->count = 0;
+    for (int i = 0; i < b->capacity; i++) {
+        b->entries[i] = BYTECODE_NONE;
+    }
+}
+
 
 static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     int oldCapacity = byteCodes->capacity;

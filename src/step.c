@@ -59,13 +59,19 @@ static Value peek(int index) {
 }
 
 static void inject(ByteCodeArray B) {
+    static bool first = true;
     state.C = 0;
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
-    initStack(&state.S);
+    if (first) {
+        initStack(&state.S);
+    } else {
+        setFrame(&state.S, 0);
+    }
     state.B = B;
+    first = false;
 }
 
 Value run(ByteCodeArray B) {
@@ -74,20 +80,26 @@ Value run(ByteCodeArray B) {
     return state.V;
 }
 
-static int valueAt(int index) {
-    return (state.B.entries[index] << 8) + state.B.entries[index + 1];
+static int byteAt(int i) {
+    int index = state.C + i;
+    return state.B.entries[index];
 }
 
-static int intAt(int index) {
+static int wordAt(int i) {
+    return (byteAt(i) << 8) + byteAt(i + 1);
+}
+
+static int intAt(int i) {
     return
-        (state.B.entries[index] << 24) +
-        (state.B.entries[index + 1] << 16) +
-        (state.B.entries[index + 2] << 8) +
-        state.B.entries[index + 3];
+        (byteAt(i) << 24) +
+        (byteAt(i + 1) << 16) +
+        (byteAt(i + 2) << 8) +
+        byteAt(i + 3);
 }
 
-static int offsetAt(int index) {
-    return index + valueAt(index);
+static int offsetAt(int i) {
+    int index = state.C + i;
+    return index + wordAt(i);
 }
 
 static Value intValue(int i) {
@@ -278,7 +290,7 @@ static void step() {
     int count = 0;
 #endif
     while (state.C != -1) {
-        switch (state.B.entries[state.C]) {
+        switch (byteAt(0)) {
             case BYTECODE_NONE: {
                 cant_happen("encountered NONE in step()");
             }
@@ -286,11 +298,11 @@ static void step() {
             case BYTECODE_LAM: { // create a closure and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### LAM [%d] [%d] [%d]\n", ++count, state.C, state.B.entries[state.C + 1], state.B.entries[state.C + 2], offsetAt(state.C + 3));
+                printf("%4d) %04d ### LAM [%d] [%d] [%d]\n", ++count, state.C, byteAt(1), byteAt(2), offsetAt(3));
 #endif
                 Env *env = NULL;
-                Clo *clo = newClo(state.B.entries[state.C + 1], state.C + 5, state.E);
-                int letRecOffset = state.B.entries[state.C + 2];
+                Clo *clo = newClo(byteAt(1), state.C + 5, state.E);
+                int letRecOffset = byteAt(2);
                 int save = PROTECT(clo);
                 snapshotClo(&state.S, clo, letRecOffset);
                 Value v;
@@ -298,33 +310,33 @@ static void step() {
                 v.val = VALUE_VAL_CLO(clo);
                 push(v);
                 UNPROTECT(save);
-                state.C = offsetAt(state.C + 3);
+                state.C = offsetAt(3);
             }
             break;
             case BYTECODE_VAR: { // look up an environment variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### VAR [%d:%d]\n", ++count, state.C, state.B.entries[state.C + 1], state.B.entries[state.C + 2]);
+                printf("%4d) %04d ### VAR [%d:%d]\n", ++count, state.C, byteAt(1), byteAt(2));
 #endif
-                push(lookup(state.B.entries[state.C + 1], state.B.entries[state.C + 2]));
+                push(lookup(byteAt(1), byteAt(2)));
                 state.C += 3;
             }
             break;
             case BYTECODE_LVAR: { // look up a stack variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### LVAR [%d]\n", ++count, state.C, state.B.entries[state.C + 1]);
+                printf("%4d) %04d ### LVAR [%d]\n", ++count, state.C, byteAt(1));
 #endif
-                push(peek(state.B.entries[state.C + 1]));
+                push(peek(byteAt(1)));
                 state.C += 2;
             }
             break;
             case BYTECODE_PUSHN: { // allocate space for n variables on the stack
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### PUSHN [%d]\n", ++count, state.C, state.B.entries[state.C + 1]);
+                printf("%4d) %04d ### PUSHN [%d]\n", ++count, state.C, byteAt(1));
 #endif
-                pushN(&state.S, state.B.entries[state.C + 1]);
+                pushN(&state.S, byteAt(1));
                 state.C += 2;
             }
             break;
@@ -518,22 +530,22 @@ static void step() {
             case BYTECODE_IF: { // pop the test result and jump to the appropriate branch
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### IF [%d]\n", ++count, state.C, offsetAt(state.C + 1));
+                printf("%4d) %04d ### IF [%d]\n", ++count, state.C, offsetAt(1));
 #endif
                 Value aexp = pop();
                 if (truthy(aexp)) {
                     state.C += 3;
                 } else {
-                    state.C = offsetAt(state.C + 1);
+                    state.C = offsetAt(1);
                 }
             }
             break;
             case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### LETREC [%d]\n", ++count, state.C, state.B.entries[state.C + 1]);
+                printf("%4d) %04d ### LETREC [%d]\n", ++count, state.C, byteAt(1));
 #endif
-                int nargs = state.B.entries[state.C + 1];
+                int nargs = byteAt(1);
                 for (int i = frameSize(&state.S) - nargs; i < frameSize(&state.S); i++) {
                     Value v = peek(i);
                     if (v.type == VALUE_TYPE_CLO) {
@@ -548,9 +560,9 @@ static void step() {
             case BYTECODE_AMB: { // create a new failure continuation to resume at the alternative
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### AMB [%d]\n", ++count, state.C, offsetAt(state.C + 1));
+                printf("%4d) %04d ### AMB [%d]\n", ++count, state.C, offsetAt(1));
 #endif
-                state.F = newFail(offsetAt(state.C + 1), state.E, state.K, state.F);
+                state.F = newFail(offsetAt(1), state.E, state.K, state.F);
                 snapshotFail(&state.S, state.F);
                 state.C += 3;
             }
@@ -574,9 +586,9 @@ static void step() {
             case BYTECODE_LET: { // create a new continuation to resume the body, and transfer control to the expression
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### LET [%d]\n", ++count, state.C, offsetAt(state.C + 1));
+                printf("%4d) %04d ### LET [%d]\n", ++count, state.C, offsetAt(1));
 #endif
-                state.K = newKont(offsetAt(state.C + 1), state.E, state.K);
+                state.K = newKont(offsetAt(1), state.E, state.K);
                 snapshotKont(&state.S, state.K);
                 state.C += 3;
             }
@@ -584,9 +596,9 @@ static void step() {
             case BYTECODE_JMP: { // jump forward a specified amount
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### JMP [%d]\n", ++count, state.C, offsetAt(state.C + 1));
+                printf("%4d) %04d ### JMP [%d]\n", ++count, state.C, offsetAt(1));
 #endif
-                state.C = offsetAt(state.C + 1);
+                state.C = offsetAt(1);
             }
             break;
             case BYTECODE_CALLCC: { // pop the callable, push the current continuation, push the callable and apply
@@ -635,11 +647,11 @@ static void step() {
             case BYTECODE_INT: { // push literal int
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04d ### INT [%d]\n", ++count, state.C, intAt(state.C + 1));
+                printf("%4d) %04d ### INT [%d]\n", ++count, state.C, intAt(1));
 #endif
                 Value v;
                 v.type = VALUE_TYPE_INTEGER;
-                v.val = VALUE_VAL_INTEGER(intAt(state.C + 1));
+                v.val = VALUE_VAL_INTEGER(intAt(1));
                 push(v);
                 state.C += 5;
             }
