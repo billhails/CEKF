@@ -19,8 +19,9 @@
  */
 
 #include "bytecode.h"
+#include "value.h"
 
-void run(ByteCodeArray B);
+Value run(ByteCodeArray B);
 
 void markCEKF();
 

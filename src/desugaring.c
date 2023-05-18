@@ -118,59 +118,115 @@ static CexpAmb *desugarCexpAmb(CexpAmb *x) {
     return x;
 }
 
-static ExpLet *andToExpLet(CexpBool * x) {
-  // (and <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> <exp2> #f))
-  // (and <aexp> <exp>) => (if <aexp> <exp> #f)
-  Exp *exp1 = desugarExp(x->exp1);
-  Exp *exp2 = desugarExp(x->exp2);
-  AexpVar *sym = genSym("and_");
-  return
-    newExpLet(sym, exp1,
-              newExp(EXP_TYPE_CEXP,
-                     EXP_VAL_CEXP(newCexp
-                                  (CEXP_TYPE_COND,
-                                   CEXP_VAL_COND(newCexpCond
-                                                 (newAexp
-                                                  (AEXP_TYPE_VAR,
-                                                   AEXP_VAL_VAR(sym)),
-                                                  exp2,
-                                                  newExp(EXP_TYPE_AEXP,
-                                                         EXP_VAL_AEXP(newAexp
-                                                                      (AEXP_TYPE_FALSE,
-                                                                       AEXP_VAL_FALSE()
-                                                                      )))))))));
+static Exp *aexpAndToExp(Aexp *exp1, Exp *exp2) {
+    return newExp(EXP_TYPE_CEXP,
+                  EXP_VAL_CEXP(newCexp
+                               (CEXP_TYPE_COND,
+                                CEXP_VAL_COND(newCexpCond
+                                              (exp1,
+                                               exp2,
+                                               newExp(EXP_TYPE_AEXP,
+                                                      EXP_VAL_AEXP(newAexp
+                                                                   (AEXP_TYPE_FALSE,
+                                                                    AEXP_VAL_FALSE
+                                                                    ()))))))));
 }
 
-static ExpLet *orToExpLet(CexpBool * x) {
-  // (or <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> #t <exp2>))
-  // (or <aexp> <exp>) => (if <aexp> #t <exp2>)
-  Exp *exp1 = desugarExp(x->exp1);
-  Exp *exp2 = desugarExp(x->exp2);
-  AexpVar *sym = genSym("or_");
-  return
-    newExpLet(sym,
-              exp1,
-              newExp(EXP_TYPE_CEXP,
-                     EXP_VAL_CEXP(newCexp
-                                  (CEXP_TYPE_COND,
-                                   CEXP_VAL_COND
-                                   (newCexpCond(
-                                       newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(sym)),
-                                       newExp(EXP_TYPE_AEXP, EXP_VAL_AEXP(newAexp(AEXP_TYPE_TRUE, AEXP_VAL_TRUE()))),
-                                       exp2
-                                   )
-                                  )))));
+static Exp *expAndToExp(Exp * exp1, Exp * exp2) {
+    AexpVar *sym = genSym("and_");
+    return newExp(EXP_TYPE_LET,
+                  EXP_VAL_LET(newExpLet
+                              (sym,
+                               exp1,
+                               newExp(EXP_TYPE_CEXP,
+                                      EXP_VAL_CEXP(newCexp
+                                                   (CEXP_TYPE_COND,
+                                                    CEXP_VAL_COND(newCexpCond
+                                                                  (newAexp
+                                                                   (AEXP_TYPE_VAR,
+                                                                    AEXP_VAL_VAR
+                                                                    (sym)),
+                                                                   exp2,
+                                                                   newExp
+                                                                   (EXP_TYPE_AEXP,
+                                                                    EXP_VAL_AEXP
+                                                                    (newAexp
+                                                                     (AEXP_TYPE_FALSE,
+                                                                      AEXP_VAL_FALSE
+                                                                      ())))))))))));
 }
 
-static ExpLet *desugarCexpBool(CexpBool *x) {
-    DEBUG_DESUGAR(CexpBool, x);
+static Exp *andToExp(CexpBool * x) {
+    // (and <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> <exp2> #f))
+    // (and <aexp> <exp>) => (if <aexp> <exp> #f)
+    Exp *exp1 = desugarExp(x->exp1);
+    Exp *exp2 = desugarExp(x->exp2);
+    if (exp1->type == EXP_TYPE_AEXP) {
+        return aexpAndToExp(exp1->val.aexp, exp2);
+    } else {
+        return expAndToExp(exp1, exp2);
+    }
+}
+
+static Exp *aexpOrToExp(Aexp *exp1, Exp *exp2) {
+    return newExp(EXP_TYPE_CEXP,
+                  EXP_VAL_CEXP(newCexp
+                               (CEXP_TYPE_COND,
+                                CEXP_VAL_COND(newCexpCond
+                                              (exp1,
+                                               newExp(EXP_TYPE_AEXP,
+                                                      EXP_VAL_AEXP(newAexp
+                                                                   (AEXP_TYPE_TRUE,
+                                                                    AEXP_VAL_TRUE
+                                                                    ()))),
+                                               exp2)))));
+}
+
+static Exp *expOrToExp(Exp *exp1, Exp *exp2) {
+    AexpVar *sym = genSym("or_");
+    return
+        newExp(EXP_TYPE_LET,
+               EXP_VAL_LET(newExpLet
+                           (sym,
+                            exp1,
+                            newExp(EXP_TYPE_CEXP,
+                                   EXP_VAL_CEXP(newCexp
+                                                (CEXP_TYPE_COND,
+                                                 CEXP_VAL_COND(newCexpCond
+                                                               (newAexp
+                                                                (AEXP_TYPE_VAR,
+                                                                 AEXP_VAL_VAR
+                                                                 (sym)),
+                                                                newExp
+                                                                (EXP_TYPE_AEXP,
+                                                                 EXP_VAL_AEXP
+                                                                 (newAexp
+                                                                  (AEXP_TYPE_TRUE,
+                                                                   AEXP_VAL_TRUE
+                                                                   ()))),
+                                                                exp2))))))));
+}
+
+static Exp *orToExp(CexpBool *x) {
+    // (or <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> #t <exp2>))
+    // (or <aexp> <exp>) => (if <aexp> #t <exp2>)
+    Exp *exp1 = desugarExp(x->exp1);
+    Exp *exp2 = desugarExp(x->exp2);
+    if (exp1->type == EXP_TYPE_AEXP) {
+        return aexpOrToExp(exp1->val.aexp, exp2);
+    } else {
+        return expOrToExp(exp1, exp2);
+    }
+}
+
+static Exp *boolToExp(CexpBool *x) {
     switch (x->type) {
         case BOOL_TYPE_AND:
-            return andToExpLet(x);
+            return andToExp(x);
         case BOOL_TYPE_OR:
-            return orToExpLet(x);
+            return orToExp(x);
         default:
-            cant_happen("unrecognised type %d in desugarCexpBool");
+            cant_happen("unrecognised type %d in boolToExp");
     }
 }
 
@@ -257,8 +313,7 @@ Exp *desugarExp(Exp *x) {
             break;
         case EXP_TYPE_CEXP:
             if (x->val.cexp->type == CEXP_TYPE_BOOL) {
-                x->val = EXP_VAL_LET(desugarCexpBool(x->val.cexp->val.boolean));
-                x->type = EXP_TYPE_LET;
+                return boolToExp(x->val.cexp->val.boolean);
             } else {
                 x->val.cexp = desugarCexp(x->val.cexp);
             }

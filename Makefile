@@ -9,8 +9,9 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-CC=cc -Werror $(DEBUGGING)
-# CC=cc -Werror $(OPTIMIZING)
+# CC=cc -Werror $(DEBUGGING)
+CC=cc -Werror $(OPTIMIZING)
+# CC=cc -Werror $(PROFILING)
 
 CFILES=$(wildcard src/*.c)
 EXTRA_CFILES=tmp/lexer.c tmp/parser.c

@@ -1,1 +1,1 @@
-(let (and_0 exp1) (if and_0 exp2 and_0))
+(let (and_0 a) (if and_0 b #f))
