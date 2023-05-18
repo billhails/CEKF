@@ -131,5 +131,5 @@ the same as the position on the stack, but there are a few complications.
 1. we need to distinguish local variables `LVAR` from environmental ones `VAR`.
 2. `LVAR` are annotated with a single number, the stack position.
 3. lexical analysis of `let` and `letrec` still need to create new `ctenv`s (to support shadowing)
-   but `let` and `letrec` in fact create `LVAR`s so within a nested `let` or `letrec` wee need to add up the
-   sizes of parent `ctenv` up to and including the function to calculate the actuat stack position for `LVAR`s
+   but `let` and `letrec` in fact create `LVAR`s so within a nested `let` or `letrec` we need to add up the
+   sizes of parent `ctenv` up to and including the function to calculate the actual stack position for `LVAR`s
