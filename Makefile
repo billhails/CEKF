@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile check-grammar list-cores
+.PHONY: all clean deps profile check-grammar list-cores test
 
 TARGET=cekf
 
@@ -64,6 +64,9 @@ clean: deps
 
 deps:
 	rm -f dep/*
+
+test: all
+	./$(TARGET)
 
 profile: all
 	rm -f callgrind.out.*
