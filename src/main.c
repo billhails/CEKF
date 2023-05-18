@@ -3376,24 +3376,29 @@ Exp *makeTestExpClosure()
 #define DUMP_BYTECODE(bc) do {} while(0)
 #endif
 
-#define RUN_EXP(build) \
-do { \
-    printf("\n" #build "\n\n"); \
-    disableGC(); \
-    exp = build; \
-    save = PROTECT(exp); \
-    exp = desugarExp(exp); \
-    analizeExp(exp, NULL); \
-    printExp(exp); \
-    printf("\n"); \
-    initByteCodeArray(&byteCodes); \
-    writeExp(exp, &byteCodes); \
-    writeEnd(&byteCodes); \
-    DUMP_BYTECODE(&byteCodes); \
-    UNPROTECT(save); \
-    enableGC(); \
+#define RUN_EXP(build)                      \
+do {                                        \
+    printf("\n" #build "\n\n");             \
+    disableGC();                            \
+    exp = build;                            \
+    save = PROTECT(exp);                    \
+    exp = desugarExp(exp);                  \
+    analizeExp(exp, NULL);                  \
+    printExp(exp);                          \
+    printf("\n");                           \
+    static bool first = false;              \
+    if (first) {                            \
+        initByteCodeArray(&byteCodes);      \
+    } else {                                \
+        resetByteCodeArray(&byteCodes);     \
+    }                                       \
+    writeExp(exp, &byteCodes);              \
+    writeEnd(&byteCodes);                   \
+    DUMP_BYTECODE(&byteCodes);              \
+    UNPROTECT(save);                        \
+    enableGC();                             \
     printContainedValue(run(byteCodes), 1); \
-    printf("\n"); \
+    printf("\n");                           \
 } while(0)
 
 int main(int argc, char *argv[]) {
@@ -3409,19 +3414,19 @@ int main(int argc, char *argv[]) {
     int depth = 4;
     if (argc == 2) depth = atoi(argv[1]);
 
-    // RUN_EXP(makeTestExpFib(depth));
-    // RUN_EXP(makeTestExpCons());
-    // RUN_EXP(makeTestExpXor());
-    // RUN_EXP(makeTestExpNot());
-    // RUN_EXP(makeTestExpBool());
-    // RUN_EXP(makeTestExpAmb());
-    // RUN_EXP(makeTestExpCallCC());
-    // RUN_EXP(makeTestExpCallCC2());
-    // RUN_EXP(makeTestExpClosure());
-    // RUN_EXP(makeTestExpList());
-    // RUN_EXP(makeTestExpLiars());
-    // RUN_EXP(makeTestExpOneOf());
-    // RUN_EXP(makeTestExpExclude());
+    RUN_EXP(makeTestExpFib(depth));
+    RUN_EXP(makeTestExpCons());
+    RUN_EXP(makeTestExpXor());
+    RUN_EXP(makeTestExpNot());
+    RUN_EXP(makeTestExpBool());
+    RUN_EXP(makeTestExpAmb());
+    RUN_EXP(makeTestExpCallCC());
+    RUN_EXP(makeTestExpCallCC2());
+    RUN_EXP(makeTestExpClosure());
+    RUN_EXP(makeTestExpList());
+    RUN_EXP(makeTestExpLiars());
+    RUN_EXP(makeTestExpOneOf());
+    RUN_EXP(makeTestExpExclude());
     RUN_EXP(makeTestExpBeer());
 }
 

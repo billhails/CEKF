@@ -70,6 +70,7 @@ typedef struct ByteCodeArray {
 } ByteCodeArray;
 
 void initByteCodeArray(ByteCodeArray *b);
+void resetByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b);
