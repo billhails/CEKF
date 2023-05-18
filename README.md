@@ -70,6 +70,23 @@ the failure continuation is just an additional register, nothing else
 in the CEK machine needs to change, apart from two additional cases in
 the $step$ function: one to deal with `amb` and one to deal with `back`.
 
+## Progress
+
+```mermaid
+flowchart TD
+AST[Parser] --> check[Type Checking] --> lambda[Lambda Conversion] --> anf[A-Normal Form Conversion] --> static[Static Analysis] --> Bytecode[Bytecode Generation] --> VM
+GC[Garbage Collection] --> VM
+subgraph done[Done]
+   static
+   Bytecode
+   VM
+   GC
+end
+subgraph WIP
+   AST
+end
+```
+
 ## The Math
 
 This machine is based on the CEK machine: Control, Environment and
