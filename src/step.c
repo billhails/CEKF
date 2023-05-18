@@ -479,6 +479,18 @@ static void step() {
                 state.C++;
             }
             break;
+            case BYTECODE_PRIM_PRINT: { // pop value, perform the op and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### PRINT\n", ++count, state.C);
+#endif
+                Value a = pop();
+                push(a);
+                printContainedValue(a, 0);
+                printf("\n");
+                state.C++;
+            }
+            break;
             case BYTECODE_PRIM_CONS: { // pop two values, perform the binop and push the result
 #ifdef DEBUG_STEP
                 printCEKF(&state);

@@ -44,6 +44,7 @@ void printExp(Exp *x);
 void printExpLet(ExpLet *x);
 void printLetRecBindings(LetRecBindings *x);
 
+void printContainedValue(Value x, int depth);
 void printValue(Value x, int depth);
 
 void dumpByteCode(ByteCodeArray *b);

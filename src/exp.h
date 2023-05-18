@@ -92,6 +92,7 @@ typedef enum {
     AEXP_UNARY_CAR,
     AEXP_UNARY_CDR,
     AEXP_UNARY_NOT,
+    AEXP_UNARY_PRINT,
 } AexpUnaryOp;
 
 typedef struct AexpUnaryApp {

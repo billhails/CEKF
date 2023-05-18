@@ -138,6 +138,9 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
         case AEXP_UNARY_NOT:
             prim = BYTECODE_PRIM_NOT;
             break;
+        case AEXP_UNARY_PRINT:
+            prim = BYTECODE_PRIM_PRINT;
+            break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
     }
