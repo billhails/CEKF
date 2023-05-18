@@ -121,3 +121,15 @@ A run time environment is then just a linked list of arrays of values, and a run
 )
 ```
 And since we've already done the analysis we know the environment must be there and we don't even need to check for `null`!
+
+# V2 Wrinkles
+
+in V2 I've gone to a hybrid stack/register VM, where variables local to a function are on the stack
+rather than in the environment. This is still lexically addressable, the offset in the environment is
+the same as the position on the stack, but there are a few complications.
+
+1. we need to distinguish local variables `LVAR` from environmental ones `VAR`.
+2. `LVAR` are annotated with a single number, the stack position.
+3. lexical analysis of `let` and `letrec` still need to create new `ctenv`s (to support shadowing)
+   but `let` and `letrec` in fact create `LVAR`s so within a nested `let` or `letrec` wee need to add up the
+   sizes of parent `ctenv` up to and including the function to calculate the actuat stack position for `LVAR`s
