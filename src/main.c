@@ -2372,6 +2372,7 @@ Exp *makeTestExpClosure()
 
 #define RUN_EXP(build) \
 do { \
+    printf("\n" #build "\n\n"); \
     disableGC(); \
     exp = build; \
     save = PROTECT(exp); \
@@ -2385,7 +2386,8 @@ do { \
     DUMP_BYTECODE(&byteCodes); \
     UNPROTECT(save); \
     enableGC(); \
-    run(byteCodes); \
+    printValue(run(byteCodes), 0); \
+    printf("\n"); \
 } while(0)
 
 int main(int argc, char *argv[]) {
@@ -2398,22 +2400,22 @@ int main(int argc, char *argv[]) {
     int save;
     Exp *exp;
 
-    int depth = 3;
+    int depth = 4;
     if (argc == 2) depth = atoi(argv[1]);
 
     RUN_EXP(makeTestExpFib(depth));
-    RUN_EXP(makeTestExpCons());
-    RUN_EXP(makeTestExpXor());
-    RUN_EXP(makeTestExpNot());
-    RUN_EXP(makeTestExpBool());
-    RUN_EXP(makeTestExpAmb());
-    RUN_EXP(makeTestExpCallCC());
-    RUN_EXP(makeTestExpCallCC2());
-    RUN_EXP(makeTestExpClosure());
-    RUN_EXP(makeTestExpList());
-    RUN_EXP(makeTestExpLiars());
-    RUN_EXP(makeTestExpOneOf());
-    RUN_EXP(makeTestExpExclude());
+    // RUN_EXP(makeTestExpCons());
+    // RUN_EXP(makeTestExpXor());
+    // RUN_EXP(makeTestExpNot());
+    // RUN_EXP(makeTestExpBool());
+    // RUN_EXP(makeTestExpAmb());
+    // RUN_EXP(makeTestExpCallCC());
+    // RUN_EXP(makeTestExpCallCC2());
+    // RUN_EXP(makeTestExpClosure());
+    // RUN_EXP(makeTestExpList());
+    // RUN_EXP(makeTestExpLiars());
+    // RUN_EXP(makeTestExpOneOf());
+    // RUN_EXP(makeTestExpExclude());
 }
 
 #else /* testing parser */

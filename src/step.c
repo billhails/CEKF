@@ -68,10 +68,10 @@ static void inject(ByteCodeArray B) {
     state.B = B;
 }
 
-void run(ByteCodeArray B) {
+Value run(ByteCodeArray B) {
     inject(B);
     step();
-    printCEKF(&state);
+    return state.V;
 }
 
 static int valueAt(int index) {
