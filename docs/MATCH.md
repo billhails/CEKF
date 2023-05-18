@@ -46,8 +46,79 @@ I'm thinking of making this specifically for matching enumerations, where the nu
 possibilities is known in advance, so this could be compiled to bytecode as a dispatch table:
 
 ```
-| aexp | MATCH | num ! addr(exp1) | ... | addr(expn) | exp1 ... | ... | expn |
+| aexp | MATCH | num-cases | addr(exp1) | ... | addr(expn) | exp1 ... | ... | expn |
 ```
 `aexp` is constrained (by the type checker) to be an integer within the range of the enum.
-If we require all composite functions to be exhaustive then we don't need the `num`, but
+If we require all composite functions to be exhaustive then we don't need the `num-cases`, but
 I've left it in for now.
+
+## Generating match statements
+
+how about
+
+```
+fn factorial {
+    (0) { 1 }
+    (n) { n * factorial(n - 1) }
+}
+```
+
+or
+
+```
+fn fib {
+    (0) { 0 }
+    (1) { 1 }
+    (n) ( fib(n - 1) + fib(n - 2) }
+}
+```
+
+or worse
+
+```
+fn yourGuess {
+   (264487592) { true }
+   (_) { false }
+}
+```
+
+So we'll still need if/else for literals.
+```
+(lambda (n)
+  (if (= n 264487592)
+    #t
+    #f))
+```
+Let's try a few more examples:
+
+```
+typedef list(#t) { pair(#t, list(#t)) | null }
+
+fn map {
+    (f, null) { null }
+    (f, pair(h, t)) { pair(f(h), map(f, t)) }
+}
+```
+
+this is more tricky, generated code might need cons'd arguments, or probably typed arguments:
+
+```scheme
+(map
+  (lambda (f val)
+    (match (get-type val) ((0 (make-typed-val 0))
+                           (1 (make-type 1 (f (first val)) (map f (second val)))))))
+```
+
+where `0` and `1` correspond to `null` and `pair` appropriately. It would be more efficient
+if we could just flatten the arguments and pass them directly on the stack, but this is a start.
+
+the ancilliary definitions would be something like
+```
+(define get-type car)
+(define make-type list)
+(define first cadr)
+(define second caddr)
+```
+
+however since this is bytecode we'll be generating, the more support we can build into the vm,
+the faster it will be.
