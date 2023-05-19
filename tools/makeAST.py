@@ -63,6 +63,10 @@ class Catalog:
         for entity in self.contents.values():
             entity.printNewFunction(self)
 
+    def printMarkFunctions(self):
+        for entity in self.contents.values():
+            entity.printMarkFunction(self)
+
         
 
 
@@ -73,6 +77,9 @@ class Base:
 
     def build(self, catalog):
         pass
+
+    def printMarkCode(self, fieldName, catalog):
+        return False
 
     def isEmpty(self):
         return False
@@ -93,6 +100,9 @@ class Base:
         pass
 
     def printNewFunction(self, catalog):
+        pass
+
+    def printMarkFunction(self, catalog):
         pass
 
     def getFieldDeclaration(self):
@@ -116,8 +126,9 @@ class Primitive(Base):
 
 
 class Struct(Base):
-    def __init__(self, name, data):
+    def __init__(self, name, data, isDiscriminatedUnion=False):
         super().__init__(name, data)
+        self.isDiscriminatedUnion = isDiscriminatedUnion
         self.fields = {}
         for typeName in self.data.keys():
             if type(self.data[typeName]) is str:
@@ -171,6 +182,25 @@ class Struct(Base):
         print("    return x;");
         print("}\n")
 
+    def printMarkFunction(self, catalog):
+        print("{d} {{".format(d=self.getMarkDeclaration()))
+        print("    if (x == NULL) return;")
+        print("    if (MARKED(x)) return;")
+        print("    MARK(x);")
+        if self.isDiscriminatedUnion:
+            print("    switch (x->type) {")
+            unionObj = catalog.get(self.fields['val'])
+            unionObj.printMarkCases(catalog)
+            print("    }")
+        else:
+            for field in self.fields.keys():
+                obj = catalog.get(self.fields[field])
+                obj.printMarkCode(field, catalog)
+        print("}\n")
+
+    def printMarkCode(self, fieldName, catalog):
+        print("    mark{f}(x->{n});".format(f=self.getName(), n=fieldName))
+        return True
 
 
 class UnionField:
@@ -252,6 +282,19 @@ class UnionField:
                 val = self.getValueFor(enumField)
             print("#define {v}({a}) (({p}){{.{f} = ({x})}})".format(v=v,a=arg,p=self.container, f=fieldName, x=val))
 
+    def printMarkCase(self, catalog):
+        enumFields = self.getEnumFields()
+        for enumField in enumFields:
+            v = self.container + "_" + enumField
+            v = v.upper().replace("VAL_", "_TYPE_").replace("AST", "AST_")
+            print("        case {f}:".format(f=v))
+            obj = catalog.get(self.name)
+            print("        ", end='')
+            if obj.printMarkCode(enumField, catalog):
+                print("            break;")
+            else:
+                print("    break;");
+
 
 
 class Union(Base):
@@ -268,7 +311,7 @@ class Union(Base):
         structName = self.name
         enumFields = []
 
-        catalog.add(Struct(structName, {enumName: "type", self.getName(): "val"}))
+        catalog.add(Struct(structName, {enumName: "type", self.getName(): "val"}, True))
 
         for unionField in self.fields.values():
             enumFields = enumFields + unionField.getEnumFields()
@@ -290,6 +333,13 @@ class Union(Base):
     def printDefines(self, catalog):
         for unionField in self.fields.values():
             unionField.printDefines(catalog)
+
+    def printMarkCases(self, catalog):
+        for unionField in self.fields.values():
+            unionField.printMarkCase(catalog)
+        print("        default:");
+        print('            cant_happen("unrecognised type in mark{f} %d", x->type);'.format(f=self.name));
+        
 
 
 class Enum(Base):
@@ -329,11 +379,13 @@ for name in document["enums"]:
     catalog.add(Enum(name, document["enums"][name]))
 
 catalog.build()
-#catalog.printTypedefs()
-#catalog.printNewDeclarations()
-#print("")
-#catalog.printMarkDeclarations()
-#print("")
+catalog.printTypedefs()
+catalog.printNewDeclarations()
+print("")
+catalog.printMarkDeclarations()
+print("")
 catalog.printDefines()
-#print("")
-#catalog.printNewFunctions()
+print("")
+catalog.printNewFunctions()
+print("")
+catalog.printMarkFunctions()
