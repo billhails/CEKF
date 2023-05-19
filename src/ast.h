@@ -104,6 +104,7 @@ typedef struct AstSinglePrototype {
 #define AST_SINGLEPROTOTYPE_VAL_PROTOTYPE(x) ((AstSinglePrototypeValue){.prototype = (x)})
 
 typedef struct AstPrototypeSymbolType {
+    struct Header header;
     struct AstSymbol *symbol;
     struct AstType *type;
 } AstPrototypeSymbolType;
@@ -366,7 +367,7 @@ typedef struct AstExpression {
 #define AST_EXPRESSION_VAL_STRING(x) ((AstExpressionValue){.string = (x)})
 #define AST_EXPRESSION_VAL_CHAR(x) ((AstExpressionValue){.character = (x)})
 #define AST_EXPRESSION_VAL_TRUE() ((AstExpressionValue){.boolean = true})
-#define AST_EXPRESSION_VAL_FALSE() ((AstExpressionValue){.binOp = false})
+#define AST_EXPRESSION_VAL_FALSE() ((AstExpressionValue){.boolean = false})
 #define AST_EXPRESSION_VAL_LIST(x) ((AstExpressionValue){.list = (x)})
 #define AST_EXPRESSION_VAL_FUN(x) ((AstExpressionValue){.fun = (x)})
 #define AST_EXPRESSION_VAL_ENV(x) ((AstExpressionValue){.env = (x)})

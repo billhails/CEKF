@@ -1,0 +1,199 @@
+
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2023  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+structs:
+    AstNest:
+        AstDefinitions: definitions
+        AstExpressions: expressions
+
+    AstDefinitions:
+        AstDefinitions: next
+        AstDefinition: definition
+
+    AstDefine:
+        AstSymbol: symbol
+        AstExpression: expression
+
+    AstPrototype:
+        AstSymbol: symbol
+        AstExpression: expression
+
+    AstPrototypeBody:
+        AstPrototypeBody: next
+        AstSinglePrototype: single
+
+    AstPrototypeSymbolType:
+        AstSymbol: symbol
+        AstType: type
+
+    AstLoad:
+        AstPackage: package
+        AstSymbol: symbol
+
+    AstTypeDef:
+        AstFlatType: flatType
+        AstTypeBody: typeBody
+
+    AstFlatType:
+        AstSymbol: symbol
+        AstTypeSymbols: typeSymbols
+
+    AstTypeSymbols:
+        AstTypeSymbols: next
+        AstSymbol: typeSymbol
+
+    AstTypeBody:
+        AstTypeBody: next
+        AstTypeConstructor: typeConstructor
+
+    AstTypeConstructor:
+        AstSymbol: symbol
+        AstTypeList: typeList
+
+    AstTypeList:
+        AstTypeList: next
+        AstType: type
+
+    AstType:
+        AstType: next
+        AstTypeClause: typeClause
+
+    AstConditional:
+        AstExpression: expression
+        AstNest:
+            - consequent
+            - alternative
+
+    AstSwitch:
+        AstExpressions: expressions
+        AstCompositeFunction: compositeFunction
+
+    AstCompositeFunction:
+        AstCompositeFunction: next
+        AstFunction: function
+
+    AstFunction:
+        AstArgList: argList
+        AstNest: nest
+
+    AstArgList:
+        AstArgList: next
+        AstArg: arg
+
+    AstUnpack:
+        AstSymbol: symbol
+        AstArgList: argList
+
+    AstArgPair:
+        AstArg:
+            - car
+            - cdr
+
+    AstNamedArg:
+        AstSymbol: name
+        AstArg: arg
+
+    AstEnvType:
+        AstSymbol:
+            - name
+            - prototype
+
+    AstBinOp:
+        AstBinOpType: type
+        AstExpression:
+            - lhs
+            - rhs
+    
+    AstFunCall:
+        AstExpression: function
+        AstExpressions: arguments
+
+    AstPackage:
+        AstPackage: next
+        AstSymbol: symbol
+
+    AstExpressions:
+        AstExpressions: next
+        AstExpression: expression
+
+    AstEnv:
+        AstPackage: package
+        AstDefinitions: definitions
+
+    AstSymbol:
+        AstSymbolType: type
+        hash_t: hash
+        char*: name
+
+    AstString:
+        char*: string
+unions:
+    AstDefinition:
+        AstDefine: define
+        AstPrototype: prototype
+        AstLoad: load
+        AstTypeDef: typeDef
+
+    AstSinglePrototype:
+        AstPrototypeSymbolType: symbolType
+        AstPrototype: prototype
+    
+    AstTypeClause:
+        void*: { none: [ int, char, bool, str ] } # different enums share this type by different names
+        AstType: { type: [ list, type ] }
+        AstSymbol: typeSymbol
+        AstTypeConstructor: constructor
+
+    AstFun:
+        AstFunction: function
+        AstCompositeFunction: compositeFunction
+
+    AstArg:
+        void*: { none: [ wildcard ] }
+        AstSymbol: symbol
+        AstArgPair: cons
+        AstNamedArg: named
+        AstArgList: list
+        AstEnvType: env
+        AstUnpack: unpack
+        int: number
+        AstString: string
+        char: character
+        bool: { boolean: { "true": "true", "false": "false" } } # different enums share this type by different names and values
+
+    AstExpression:
+        void*: { none: [ back ] }
+        AstBinOp: binOp
+        AstExpression: { expression: [ not, negate, here ] }
+        AstFunCall: funCall
+        AstSymbol: symbol
+        int: number
+        AstString: string
+        char: character
+        bool: { boolean: { "true": "true", "false": "false" } }
+        AstExpressions: list
+        AstFun: fun
+        AstEnv: env
+        AstConditional: conditional
+        AstSwitch: switchStatement
+
+enums:
+    AstBinOpType: [ then, and, or, xor, eq, ne, gt, lt, ge, le, cons, append, add, sub, mul, div, mod, pow, dot ]
+
+    AstSymbolType: [ symbol, typesymbol ]
