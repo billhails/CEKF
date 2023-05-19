@@ -19,6 +19,7 @@
 # reads YAML and outputs C code for the Yacc parser AST
 
 import yaml
+import sys
 
 class Catalog:
     def __init__(self):
@@ -67,6 +68,12 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkFunction(self)
 
+    def printObjTypeDefine(self):
+        objTypeArray = []
+        for entity in self.contents.values():
+            objTypeArray += entity.objTypeArray()
+        print("#define AST_OBJTYPES() {a}".format(a=',\\\n'.join(objTypeArray)))
+
         
 
 
@@ -78,11 +85,14 @@ class Base:
     def build(self, catalog):
         pass
 
-    def printMarkCode(self, fieldName, catalog):
+    def printMarkCode(self, fieldName, catalog, prefix=''):
         return False
 
     def isEmpty(self):
         return False
+
+    def objTypeArray(self):
+        return []
 
     def getName(self):
         return self.name
@@ -174,9 +184,15 @@ class Struct(Base):
     def printNewDeclaration(self, catalog):
         print("{d};".format(d=self.getNewDeclaration(catalog)))
 
+    def objType(self):
+        return 'OBJTYPE_' + self.name.upper()
+
+    def objTypeArray(self):
+        return [ self.objType() ]
+
     def printNewFunction(self, catalog):
         print("{d} {{".format(d=self.getNewDeclaration(catalog)))
-        print("    {name} *x = NEW({name}, OBJTYPE_AST);".format(name=self.name))
+        print("    {name} *x = NEW({name}, {o});".format(name=self.name, o=self.objType()))
         for field in self.fields.keys():
             print("    x->{field} = {field};".format(field=field))
         print("    return x;");
@@ -198,8 +214,8 @@ class Struct(Base):
                 obj.printMarkCode(field, catalog)
         print("}\n")
 
-    def printMarkCode(self, fieldName, catalog):
-        print("    mark{f}(x->{n});".format(f=self.getName(), n=fieldName))
+    def printMarkCode(self, fieldName, catalog, prefix=''):
+        print("    mark{f}(x->{p}{n});".format(f=self.getName(), p=prefix, n=fieldName))
         return True
 
 
@@ -290,7 +306,7 @@ class UnionField:
             print("        case {f}:".format(f=v))
             obj = catalog.get(self.name)
             print("        ", end='')
-            if obj.printMarkCode(enumField, catalog):
+            if obj.printMarkCode(enumField, catalog, 'val.'):
                 print("            break;")
             else:
                 print("    break;");
@@ -355,6 +371,27 @@ class Enum(Base):
         return "enum {name} ".format(name = self.getName())
 
 
+def printGpl():
+    print("""
+/*
+ * CEKF - VM supporting amb
+ * Copyright (C) 2022-2023  Bill Hails
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+    """)
+
 stream = open('./src/ast.yaml', 'r');
 
 document = yaml.load(stream, Loader=yaml.Loader)
@@ -379,13 +416,39 @@ for name in document["enums"]:
     catalog.add(Enum(name, document["enums"][name]))
 
 catalog.build()
-catalog.printTypedefs()
-catalog.printNewDeclarations()
-print("")
-catalog.printMarkDeclarations()
-print("")
-catalog.printDefines()
-print("")
-catalog.printNewFunctions()
-print("")
-catalog.printMarkFunctions()
+
+if len(sys.argv) == 2:
+    if sys.argv[1] == "ast_h":
+        print("#ifndef cekf_ast_h")
+        print("#define cekf_ast_h")
+        printGpl()
+        print("")
+        print('#include "hash.h"')
+        print('#include "memory.h"')
+        print("")
+        catalog.printTypedefs()
+        catalog.printNewDeclarations()
+        print("")
+        catalog.printMarkDeclarations()
+        print("")
+        catalog.printDefines()
+        print("")
+        print("#endif");
+    elif sys.argv[1] == "ast_objtypes_h":
+        print("#ifndef cekf_ast_objtypes_h")
+        print("#define cekf_ast_objtypes_h")
+        printGpl()
+        print("")
+        catalog.printObjTypeDefine()
+        print("")
+        print("#endif");
+    elif sys.argv[1] == "ast_c":
+        printGpl()
+        print("")
+        print('#include "ast.h"')
+        print("")
+        catalog.printNewFunctions()
+        print("")
+        print("/************************************/")
+        print("")
+        catalog.printMarkFunctions()
