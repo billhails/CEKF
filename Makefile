@@ -31,6 +31,7 @@ $(TARGET): $(ALL_OBJ)
 	$(CC) -o $@ $(ALL_OBJ)
 
 -include $(ALL_DEP)
+-include Makefile.extra
 
 $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I tmp/ -c $< -o $@

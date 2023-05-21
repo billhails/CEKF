@@ -1,0 +1,252 @@
+
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2023  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+structs:
+    AstNest:
+        definitions: AstDefinitions
+        expressions: AstExpressions
+
+    AstDefinitions:
+        next: AstDefinitions
+        definition: AstDefinition
+
+    AstDefine:
+        symbol: AstSymbol
+        expression: AstExpression
+
+    AstPrototype:
+        symbol: AstSymbol
+        body: AstPrototypeBody
+
+    AstPrototypeBody:
+        next: AstPrototypeBody
+        single: AstSinglePrototype
+
+    AstPrototypeSymbolType:
+        symbol: AstSymbol
+        type: AstType
+
+    AstLoad:
+        package: AstPackage
+        symbol: AstSymbol
+
+    AstTypeDef:
+        flatType: AstFlatType
+        typeBody: AstTypeBody
+
+    AstFlatType:
+        symbol: AstSymbol
+        typeSymbols: AstTypeSymbols
+
+    AstTypeSymbols:
+        next: AstTypeSymbols
+        typeSymbol: AstSymbol
+
+    AstTypeBody:
+        next: AstTypeBody
+        typeConstructor: AstTypeConstructor
+
+    AstTypeConstructor:
+        symbol: AstSymbol
+        typeList: AstTypeList
+
+    AstTypeList:
+        next: AstTypeList
+        type: AstType
+
+    AstType:
+        next: AstType
+        typeClause: AstTypeClause
+
+    AstConditional:
+        expression: AstExpression
+        consequent: AstNest
+        alternative: AstNest
+
+    AstSwitch:
+        expressions: AstExpressions
+        compositeFunction: AstCompositeFunction
+
+    AstCompositeFunction:
+        next: AstCompositeFunction
+        function: AstFunction
+
+    AstFunction:
+        argList: AstArgList
+        nest: AstNest
+
+    AstArgList:
+        next: AstArgList
+        arg: AstArg
+
+    AstUnpack:
+        symbol: AstSymbol
+        argList: AstArgList
+
+    AstArgPair:
+        car: AstArg
+        cdr: AstArg
+
+    AstNamedArg:
+        name: AstSymbol
+        arg: AstArg
+
+    AstEnvType:
+        name: AstSymbol
+        prototype: AstSymbol
+
+    AstBinOp:
+        type: AstBinOpType
+        lhs: AstExpression
+        rhs: AstExpression
+    
+    AstFunCall:
+        function: AstExpression
+        arguments: AstExpressions
+
+    AstPackage:
+        next: AstPackage
+        symbol: AstSymbol
+
+    AstExpressions:
+        next: AstExpressions
+        expression: AstExpression
+
+    AstEnv:
+        package: AstPackage
+        definitions: AstDefinitions
+
+    AstSymbol:
+        type: AstSymbolType
+        hash: hash_t
+        name: char_ptr
+
+    AstString:
+        string: char_ptr
+
+unions:
+    AstDefinition:
+        define: AstDefine
+        prototype: AstPrototype
+        load: AstLoad
+        typeDef: AstTypeDef
+
+    AstSinglePrototype:
+        symbolType: AstPrototypeSymbolType
+        prototype: AstPrototype
+    
+    AstTypeClause:
+        integer: void_ptr
+        character: void_ptr
+        boolean: void_ptr
+        string: void_ptr
+        list: AstType
+        type: AstType
+        typeSymbol: AstSymbol
+        var: AstSymbol
+        typeconstructor: AstTypeConstructor
+
+    AstFun:
+        function: AstFunction
+        compositeFunction: AstCompositeFunction
+
+    AstArg:
+        wildcard: void_ptr
+        symbol: AstSymbol
+        cons: AstArgPair
+        named: AstNamedArg
+        list: AstArgList
+        env: AstEnvType
+        unpack: AstUnpack
+        number: int
+        string: AstString
+        character: char
+        "yes": void_ptr
+        "no": void_ptr
+
+    AstExpression:
+        back: void_ptr
+        binOp: AstBinOp
+        not: AstExpression
+        negate: AstExpression
+        here: AstExpression
+        funCall: AstFunCall
+        symbol: AstSymbol
+        number: int
+        string: AstString
+        character: char
+        "yes": void_ptr
+        "no": void_ptr
+        list: AstExpressions
+        fun: AstFun
+        env: AstEnv
+        conditional: AstConditional
+        switchStatement: AstSwitch
+
+enums:
+    AstBinOpType:
+        - then
+        - and
+        - or
+        - xor
+        - eq
+        - ne
+        - gt
+        - lt
+        - ge
+        - le
+        - cons
+        - append
+        - add
+        - sub
+        - mul
+        - div
+        - mod
+        - pow
+        - dot
+
+    AstSymbolType:
+        - symbol
+        - typesymbol
+
+primitives:
+    char:
+        cname: "char"
+        printf: "%c"
+        valued: true
+    char_ptr:
+        cname: "char *"
+        printf: "%s"
+        valued: true
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+        valued: false
+    bool:
+        cname: "bool"
+        printf: "%d"
+        valued: true
+    int:
+        cname: "int"
+        printf: "%d"
+        valued: true
+    hash_t:
+        cname: "hash_t"
+        printf: "%x"
+        valued: true

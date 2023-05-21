@@ -21,6 +21,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "ast_objtypes.h"
+
 typedef enum {
     // exp types
     OBJTYPE_AMB,
@@ -50,7 +52,7 @@ typedef enum {
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
-    OBJTYPE_AST,
+    AST_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -64,7 +66,7 @@ int protect(Header *obj);
 int startProtect();
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
-char *safe_strdup(char *s);
+char *safeStrdup(char *s);
 
 void markObj(Header *h);
 void markExpObj(Header *x);

@@ -140,7 +140,7 @@ AstNest *result = NULL;
 %right '^'
 %nonassoc NEG
 %nonassoc HERE
-%left CALL
+%left '('
 %right '.'
 
 %start top
@@ -224,7 +224,7 @@ type_symbols : type_symbol                  { $$ = newAstTypeSymbols(NULL, $1); 
              | type_symbol ',' type_symbols { $$ = newAstTypeSymbols($3, $1); }
              ;
 
-type_symbol : TYPE_VAR  { $$ = newAstSymbol(AST_SYMBOL_TYPE_TYPESYMBOL, $1); }
+type_symbol : TYPE_VAR  { $$ = newAstSymbol(AST_SYMBOLTYPE_TYPE_TYPESYMBOL, hashString($1), safeStrdup($1)); }
             ;
 
 type_body : type_constructor                { $$ = newAstTypeBody(NULL, $1); }
@@ -244,9 +244,9 @@ type : type_clause              { $$ = newAstType(NULL, $1); }
      ;
 
 type_clause : KW_LIST '(' type ')'  { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_LIST, AST_TYPECLAUSE_VAL_LIST($3)); }
-            | KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INT, AST_TYPECLAUSE_VAL_INT()); }
-            | KW_CHAR               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_CHAR, AST_TYPECLAUSE_VAL_CHAR()); }
-            | KW_BOOL               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_BOOL, AST_TYPECLAUSE_VAL_BOOL()); }
+            | KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INTEGER, AST_TYPECLAUSE_VAL_INTEGER()); }
+            | KW_CHAR               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_CHARACTER, AST_TYPECLAUSE_VAL_CHARACTER()); }
+            | KW_BOOL               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_BOOLEAN, AST_TYPECLAUSE_VAL_BOOLEAN()); }
             | KW_STRING             { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_STRING, AST_TYPECLAUSE_VAL_STRING()); }
             | type_symbol           { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_VAR, AST_TYPECLAUSE_VAL_VAR($1)); }
             | type_constructor      { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR, AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR($1)); }
@@ -304,15 +304,15 @@ arg : symbol            { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL
     | env_type          { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
     | NUMBER            { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
     | string            { $$ = newAstArg(AST_ARG_TYPE_STRING, AST_ARG_VAL_STRING($1)); }
-    | CHAR              { $$ = newAstArg(AST_ARG_TYPE_CHAR, AST_ARG_VAL_CHAR($1)); }
-    | TRUE              { $$ = newAstArg(AST_ARG_TYPE_TRUE, AST_ARG_VAL_TRUE()); }
-    | FALSE             { $$ = newAstArg(AST_ARG_TYPE_FALSE, AST_ARG_VAL_FALSE()); }
+    | CHAR              { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
+    | TRUE              { $$ = newAstArg(AST_ARG_TYPE_YES, AST_ARG_VAL_YES()); }
+    | FALSE             { $$ = newAstArg(AST_ARG_TYPE_NO, AST_ARG_VAL_NO()); }
     | WILDCARD          { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
     ;
 
 unpack : symbol arguments   { $$ = newAstUnpack($1, $2); }
 
-string : STRING { $$ = newAstString($1); }
+string : STRING { $$ = newAstString(safeStrdup($1)); }
        ;
 
 cons : arg CONS arg { $$ = newAstArgPair($1, $3); }
@@ -334,38 +334,38 @@ expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_T
            | env                        { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
            | BACK                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
            | conditional                { $$ = newAstExpression(AST_EXPRESSION_TYPE_CONDITIONAL, AST_EXPRESSION_VAL_CONDITIONAL($1)); }
-           | switch                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SWITCH, AST_EXPRESSION_VAL_SWITCH($1)); }
+           | switch                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SWITCHSTATEMENT, AST_EXPRESSION_VAL_SWITCHSTATEMENT($1)); }
            | symbol                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)); }
            | NUMBER                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
            | string                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_STRING, AST_EXPRESSION_VAL_STRING($1)); }
-           | CHAR                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHAR, AST_EXPRESSION_VAL_CHAR($1)); }
-           | TRUE                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_TRUE, AST_EXPRESSION_VAL_TRUE()); }
-           | FALSE                      { $$ = newAstExpression(AST_EXPRESSION_TYPE_FALSE, AST_EXPRESSION_VAL_FALSE()); }
+           | CHAR                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
+           | TRUE                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_YES, AST_EXPRESSION_VAL_YES()); }
+           | FALSE                      { $$ = newAstExpression(AST_EXPRESSION_TYPE_NO, AST_EXPRESSION_VAL_NO()); }
            | '(' expression ')'         { $$ = $2; }
            ;
 
-fun_call :  symbol '(' expressions ')' %prec CALL    { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)), $3); }
+fun_call :  expression '(' expressions ')' { $$ = newAstFunCall($1, $3); }
          ;
 
-binop : expression THEN expression      { $$ = newAstBinOp(AST_BINOP_TYPE_THEN, $1, $3); }
-      | expression AND expression       { $$ = newAstBinOp(AST_BINOP_TYPE_AND, $1, $3); }
-      | expression OR expression        { $$ = newAstBinOp(AST_BINOP_TYPE_OR, $1, $3); }
-      | expression XOR expression       { $$ = newAstBinOp(AST_BINOP_TYPE_XOR, $1, $3); }
-      | expression EQ expression        { $$ = newAstBinOp(AST_BINOP_TYPE_EQ, $1, $3); }
-      | expression NE expression        { $$ = newAstBinOp(AST_BINOP_TYPE_NE, $1, $3); }
-      | expression GT expression        { $$ = newAstBinOp(AST_BINOP_TYPE_GT, $1, $3); }
-      | expression LT expression        { $$ = newAstBinOp(AST_BINOP_TYPE_LT, $1, $3); }
-      | expression GE expression        { $$ = newAstBinOp(AST_BINOP_TYPE_GE, $1, $3); }
-      | expression LE expression        { $$ = newAstBinOp(AST_BINOP_TYPE_LE, $1, $3); }
-      | expression CONS expression      { $$ = newAstBinOp(AST_BINOP_TYPE_CONS, $1, $3); }
-      | expression APPEND expression    { $$ = newAstBinOp(AST_BINOP_TYPE_APPEND, $1, $3); }
-      | expression '+' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_ADD, $1, $3); }
-      | expression '-' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_SUB, $1, $3); }
-      | expression '*' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_MUL, $1, $3); }
-      | expression '/' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_DIV, $1, $3); }
-      | expression '%' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_MOD, $1, $3); }
-      | expression '^' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_POW, $1, $3); }
-      | expression '.' expression       { $$ = newAstBinOp(AST_BINOP_TYPE_DOT, $1, $3); }
+binop : expression THEN expression      { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_THEN, $1, $3); }
+      | expression AND expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_AND, $1, $3); }
+      | expression OR expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_OR, $1, $3); }
+      | expression XOR expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_XOR, $1, $3); }
+      | expression EQ expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_EQ, $1, $3); }
+      | expression NE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_NE, $1, $3); }
+      | expression GT expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_GT, $1, $3); }
+      | expression LT expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_LT, $1, $3); }
+      | expression GE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_GE, $1, $3); }
+      | expression LE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_LE, $1, $3); }
+      | expression CONS expression      { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_CONS, $1, $3); }
+      | expression APPEND expression    { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_APPEND, $1, $3); }
+      | expression '+' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_ADD, $1, $3); }
+      | expression '-' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_SUB, $1, $3); }
+      | expression '*' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_MUL, $1, $3); }
+      | expression '/' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_DIV, $1, $3); }
+      | expression '%' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_MOD, $1, $3); }
+      | expression '^' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_POW, $1, $3); }
+      | expression '.' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_DOT, $1, $3); }
       ;
 
 package : symbol                { $$ = newAstPackage(NULL, $1); }
@@ -393,7 +393,7 @@ extends : %empty            { $$ = NULL; }
 
 env_body : '{' definitions '}'  { $$ = $2; }
 
-symbol : VAR    { $$ = newAstSymbol(AST_SYMBOL_TYPE_SYMBOL, $1); }
+symbol : VAR    { $$ = newAstSymbol(AST_SYMBOLTYPE_TYPE_SYMBOL, hashString($1), safeStrdup($1)); }
        ;
 
 %%
