@@ -96,7 +96,7 @@ const char *typeName(ObjType type) {
 }
 #endif
 
-char *safe_strdup(char *s) {
+char *safeStrdup(char *s) {
     char *t = strdup(s);
     if (t == NULL) exit(1);
     return t;

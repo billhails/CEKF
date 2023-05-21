@@ -3440,7 +3440,7 @@ int main(int argc, char *argv[]) {
     disableGC();
     // yydebug = 1;
     yyparse();
-    printAstNest(result);
+    printAstNest(result, 0);
     printf("\n");
 }
 

@@ -32,7 +32,7 @@ structs:
 
     AstPrototype:
         symbol: AstSymbol
-        expression: AstExpression
+        body: AstPrototypeBody
 
     AstPrototypeBody:
         next: AstPrototypeBody
@@ -152,23 +152,22 @@ unions:
         prototype: AstPrototype
     
     AstTypeClause:
-        none:
-            type: void_ptr
-            users: [ int, char, bool, str ] # different enums share this type by different names
-        type:
-            type: AstType
-            users: [ list, type ]
+        integer: void_ptr
+        character: void_ptr
+        boolean: void_ptr
+        string: void_ptr
+        list: AstType
+        type: AstType
         typeSymbol: AstSymbol
-        constructor: AstTypeConstructor
+        var: AstSymbol
+        typeconstructor: AstTypeConstructor
 
     AstFun:
         function: AstFunction
         compositeFunction: AstCompositeFunction
 
     AstArg:
-        none:
-            type: void_ptr
-            users: [ wildcard ]
+        wildcard: void_ptr
         symbol: AstSymbol
         cons: AstArgPair
         named: AstNamedArg
@@ -178,26 +177,22 @@ unions:
         number: int
         string: AstString
         character: char
-        boolean:
-            type: bool
-            users: { "true": "true", "false": "false" } # different enums share this type by different names and values
+        "yes": void_ptr
+        "no": void_ptr
 
     AstExpression:
-        none:
-            type: void_ptr
-            users: [ back ]
+        back: void_ptr
         binOp: AstBinOp
-        expression:
-            type: AstExpression
-            users: [ not, negate, here ]
+        not: AstExpression
+        negate: AstExpression
+        here: AstExpression
         funCall: AstFunCall
         symbol: AstSymbol
         number: int
         string: AstString
         character: char
-        boolean:
-            type: bool
-            users: { "true": "true", "false": "false" }
+        "yes": void_ptr
+        "no": void_ptr
         list: AstExpressions
         fun: AstFun
         env: AstEnv
@@ -234,18 +229,24 @@ primitives:
     char:
         cname: "char"
         printf: "%c"
+        valued: true
     char_ptr:
         cname: "char *"
         printf: "%s"
+        valued: true
     void_ptr:
         cname: "void *"
         printf: "%p"
+        valued: false
     bool:
         cname: "bool"
         printf: "%d"
+        valued: true
     int:
         cname: "int"
         printf: "%d"
+        valued: true
     hash_t:
         cname: "hash_t"
         printf: "%x"
+        valued: true
