@@ -19,181 +19,233 @@
 
 structs:
     AstNest:
-        AstDefinitions: definitions
-        AstExpressions: expressions
+        definitions: AstDefinitions
+        expressions: AstExpressions
 
     AstDefinitions:
-        AstDefinitions: next
-        AstDefinition: definition
+        next: AstDefinitions
+        definition: AstDefinition
 
     AstDefine:
-        AstSymbol: symbol
-        AstExpression: expression
+        symbol: AstSymbol
+        expression: AstExpression
 
     AstPrototype:
-        AstSymbol: symbol
-        AstExpression: expression
+        symbol: AstSymbol
+        expression: AstExpression
 
     AstPrototypeBody:
-        AstPrototypeBody: next
-        AstSinglePrototype: single
+        next: AstPrototypeBody
+        single: AstSinglePrototype
 
     AstPrototypeSymbolType:
-        AstSymbol: symbol
-        AstType: type
+        symbol: AstSymbol
+        type: AstType
 
     AstLoad:
-        AstPackage: package
-        AstSymbol: symbol
+        package: AstPackage
+        symbol: AstSymbol
 
     AstTypeDef:
-        AstFlatType: flatType
-        AstTypeBody: typeBody
+        flatType: AstFlatType
+        typeBody: AstTypeBody
 
     AstFlatType:
-        AstSymbol: symbol
-        AstTypeSymbols: typeSymbols
+        symbol: AstSymbol
+        typeSymbols: AstTypeSymbols
 
     AstTypeSymbols:
-        AstTypeSymbols: next
-        AstSymbol: typeSymbol
+        next: AstTypeSymbols
+        typeSymbol: AstSymbol
 
     AstTypeBody:
-        AstTypeBody: next
-        AstTypeConstructor: typeConstructor
+        next: AstTypeBody
+        typeConstructor: AstTypeConstructor
 
     AstTypeConstructor:
-        AstSymbol: symbol
-        AstTypeList: typeList
+        symbol: AstSymbol
+        typeList: AstTypeList
 
     AstTypeList:
-        AstTypeList: next
-        AstType: type
+        next: AstTypeList
+        type: AstType
 
     AstType:
-        AstType: next
-        AstTypeClause: typeClause
+        next: AstType
+        typeClause: AstTypeClause
 
     AstConditional:
-        AstExpression: expression
-        AstNest:
-            - consequent
-            - alternative
+        expression: AstExpression
+        consequent: AstNest
+        alternative: AstNest
 
     AstSwitch:
-        AstExpressions: expressions
-        AstCompositeFunction: compositeFunction
+        expressions: AstExpressions
+        compositeFunction: AstCompositeFunction
 
     AstCompositeFunction:
-        AstCompositeFunction: next
-        AstFunction: function
+        next: AstCompositeFunction
+        function: AstFunction
 
     AstFunction:
-        AstArgList: argList
-        AstNest: nest
+        argList: AstArgList
+        nest: AstNest
 
     AstArgList:
-        AstArgList: next
-        AstArg: arg
+        next: AstArgList
+        arg: AstArg
 
     AstUnpack:
-        AstSymbol: symbol
-        AstArgList: argList
+        symbol: AstSymbol
+        argList: AstArgList
 
     AstArgPair:
-        AstArg:
-            - car
-            - cdr
+        car: AstArg
+        cdr: AstArg
 
     AstNamedArg:
-        AstSymbol: name
-        AstArg: arg
+        name: AstSymbol
+        arg: AstArg
 
     AstEnvType:
-        AstSymbol:
-            - name
-            - prototype
+        name: AstSymbol
+        prototype: AstSymbol
 
     AstBinOp:
-        AstBinOpType: type
-        AstExpression:
-            - lhs
-            - rhs
+        type: AstBinOpType
+        lhs: AstExpression
+        rhs: AstExpression
     
     AstFunCall:
-        AstExpression: function
-        AstExpressions: arguments
+        function: AstExpression
+        arguments: AstExpressions
 
     AstPackage:
-        AstPackage: next
-        AstSymbol: symbol
+        next: AstPackage
+        symbol: AstSymbol
 
     AstExpressions:
-        AstExpressions: next
-        AstExpression: expression
+        next: AstExpressions
+        expression: AstExpression
 
     AstEnv:
-        AstPackage: package
-        AstDefinitions: definitions
+        package: AstPackage
+        definitions: AstDefinitions
 
     AstSymbol:
-        AstSymbolType: type
-        hash_t: hash
-        char*: name
+        type: AstSymbolType
+        hash: hash_t
+        name: char_ptr
 
     AstString:
-        char*: string
+        string: char_ptr
+
 unions:
     AstDefinition:
-        AstDefine: define
-        AstPrototype: prototype
-        AstLoad: load
-        AstTypeDef: typeDef
+        define: AstDefine
+        prototype: AstPrototype
+        load: AstLoad
+        typeDef: AstTypeDef
 
     AstSinglePrototype:
-        AstPrototypeSymbolType: symbolType
-        AstPrototype: prototype
+        symbolType: AstPrototypeSymbolType
+        prototype: AstPrototype
     
     AstTypeClause:
-        void*: { none: [ int, char, bool, str ] } # different enums share this type by different names
-        AstType: { type: [ list, type ] }
-        AstSymbol: typeSymbol
-        AstTypeConstructor: constructor
+        none:
+            type: void_ptr
+            users: [ int, char, bool, str ] # different enums share this type by different names
+        type:
+            type: AstType
+            users: [ list, type ]
+        typeSymbol: AstSymbol
+        constructor: AstTypeConstructor
 
     AstFun:
-        AstFunction: function
-        AstCompositeFunction: compositeFunction
+        function: AstFunction
+        compositeFunction: AstCompositeFunction
 
     AstArg:
-        void*: { none: [ wildcard ] }
-        AstSymbol: symbol
-        AstArgPair: cons
-        AstNamedArg: named
-        AstArgList: list
-        AstEnvType: env
-        AstUnpack: unpack
-        int: number
-        AstString: string
-        char: character
-        bool: { boolean: { "true": "true", "false": "false" } } # different enums share this type by different names and values
+        none:
+            type: void_ptr
+            users: [ wildcard ]
+        symbol: AstSymbol
+        cons: AstArgPair
+        named: AstNamedArg
+        list: AstArgList
+        env: AstEnvType
+        unpack: AstUnpack
+        number: int
+        string: AstString
+        character: char
+        boolean:
+            type: bool
+            users: { "true": "true", "false": "false" } # different enums share this type by different names and values
 
     AstExpression:
-        void*: { none: [ back ] }
-        AstBinOp: binOp
-        AstExpression: { expression: [ not, negate, here ] }
-        AstFunCall: funCall
-        AstSymbol: symbol
-        int: number
-        AstString: string
-        char: character
-        bool: { boolean: { "true": "true", "false": "false" } }
-        AstExpressions: list
-        AstFun: fun
-        AstEnv: env
-        AstConditional: conditional
-        AstSwitch: switchStatement
+        none:
+            type: void_ptr
+            users: [ back ]
+        binOp: AstBinOp
+        expression:
+            type: AstExpression
+            users: [ not, negate, here ]
+        funCall: AstFunCall
+        symbol: AstSymbol
+        number: int
+        string: AstString
+        character: char
+        boolean:
+            type: bool
+            users: { "true": "true", "false": "false" }
+        list: AstExpressions
+        fun: AstFun
+        env: AstEnv
+        conditional: AstConditional
+        switchStatement: AstSwitch
 
 enums:
-    AstBinOpType: [ then, and, or, xor, eq, ne, gt, lt, ge, le, cons, append, add, sub, mul, div, mod, pow, dot ]
+    AstBinOpType:
+        - then
+        - and
+        - or
+        - xor
+        - eq
+        - ne
+        - gt
+        - lt
+        - ge
+        - le
+        - cons
+        - append
+        - add
+        - sub
+        - mul
+        - div
+        - mod
+        - pow
+        - dot
 
-    AstSymbolType: [ symbol, typesymbol ]
+    AstSymbolType:
+        - symbol
+        - typesymbol
+
+primitives:
+    char:
+        cname: "char"
+        printf: "%c"
+    char_ptr:
+        cname: "char *"
+        printf: "%s"
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+    bool:
+        cname: "bool"
+        printf: "%d"
+    int:
+        cname: "int"
+        printf: "%d"
+    hash_t:
+        cname: "hash_t"
+        printf: "%x"
