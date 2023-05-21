@@ -74,16 +74,25 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ```mermaid
 flowchart TD
-AST[Parser] --> check[Type Checking] --> lambda[Lambda Conversion] --> anf[A-Normal Form Conversion] --> static[Static Analysis] --> Bytecode[Bytecode Generation] --> VM
+source --> AST[Parser] --abstract syntax--> check[Type Checking] --abstract syntax--> lambda[Lambda Conversion] --lambda calculus--> anf[A-Normal Form Conversion] --ANF--> static[Static Analysis] --annotated ANF--> Bytecode[Bytecode Generation] --bytecode--> VM
+scheme --> make_ast[Generate ANF] --ANF--> static
 GC[Garbage Collection] --> VM
-subgraph done[Done]
+VM --> GC
+subgraph done1[Done]
    static
    Bytecode
    VM
    GC
 end
-subgraph WIP
+subgraph done2[Done]
    AST
+end
+subgraph WIP
+   check
+end
+subgraph temp[Temporary]
+scheme
+make_ast
 end
 ```
 
