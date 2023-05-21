@@ -105,7 +105,7 @@ this is more tricky, generated code might need cons'd arguments, or probably typ
 ```scheme
 (map
   (lambda (f val)
-    (match (get-type val) ((0 (make-typed-val 0))
+    (match (get-type val) ((0 (make-type 0))
                            (1 (make-type 1 (f (first val)) (map f (second val)))))))
 ```
 
