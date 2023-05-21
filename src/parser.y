@@ -140,7 +140,7 @@ AstNest *result = NULL;
 %right '^'
 %nonassoc NEG
 %nonassoc HERE
-%left CALL
+%left '('
 %right '.'
 
 %start top
@@ -312,7 +312,7 @@ arg : symbol            { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL
 
 unpack : symbol arguments   { $$ = newAstUnpack($1, $2); }
 
-string : STRING { $$ = newAstString($1); }
+string : STRING { $$ = newAstString(safeStrdup($1)); }
        ;
 
 cons : arg CONS arg { $$ = newAstArgPair($1, $3); }
@@ -344,7 +344,7 @@ expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_T
            | '(' expression ')'         { $$ = $2; }
            ;
 
-fun_call :  symbol '(' expressions ')' %prec CALL    { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)), $3); }
+fun_call :  expression '(' expressions ')' { $$ = newAstFunCall($1, $3); }
          ;
 
 binop : expression THEN expression      { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_THEN, $1, $3); }
