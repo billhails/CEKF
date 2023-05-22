@@ -198,3 +198,44 @@ S(\alpha \rightarrow \beta) &= \beta \rightarrow \mathtt{Int}
 S(S(\alpha \rightarrow \beta)) &= \mathtt{Int} \rightarrow \mathtt{Int}
 \end{align}
 $$
+
+## Combining (Composing) Substitutions
+
+If we have more than one substitution, we can compose them into a single substitution.
+
+Example
+
+$$
+\begin{align}
+S_1 &= \set{\mathtt{h} \mapsto \mathtt{i}}
+\\
+S_2 &= \set{\mathtt{o} \mapsto \mathtt{h}}
+\\
+S_2(S_1(\mathtt{oh})) &= \mathtt{hi}
+\\
+S_3 &= \set{\mathtt{h} \mapsto \mathtt{i}, \mathtt{o} \mapsto \mathtt{h}}
+\\
+S_3(\mathtt{oh}) &= \mathtt{hi}
+\end{align}
+$$
+
+In this case the composition of the two substitutions is just their union $S_1 \cup S_2$.
+
+However
+
+$$
+\begin{align}
+S_1 &= \set{\mathtt{h} \mapsto \mathtt{i}}
+\\
+S_2 &= \set{\mathtt{o} \mapsto \mathtt{h}}
+\\
+S_1 (S_2 (\mathtt{oh}) ) &= \mathtt{ii}
+\\
+S_3 &= \set{\mathtt{h} \mapsto \mathtt{i}, \mathtt{o} \mapsto \mathtt{i}}
+\\
+S_3(\mathtt{oh}) &= \mathtt{ii}
+\end{align}
+$$
+
+So the order matters.
+
