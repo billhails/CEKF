@@ -155,3 +155,46 @@ $$
 \mathcal{FV}(\Gamma, \mathtt{e}:\sigma) &= \mathcal{FV}(\Gamma) \cup \mathcal{FV}(\sigma) & \mathtt{[extended]}
 \end{align}
 $$
+
+## Substitutions
+
+Changing tack, understanding substitutions is a necessary preliminary to understanding the Hindley-Milner algorithms.
+
+Substitutions are sets of mappings from symbols to terms, where terms are general constructions of symbols,
+like arithmetic expressions etc. Mappings are applied simultaneously.
+
+For example
+
+$$
+S = \set{\mathtt{h} \mapsto \mathtt{l}, \mathtt{e} \mapsto \mathtt{a}, \mathtt{l} \mapsto \mathtt{s}}
+$$
+
+says $S$ is the substitution mapping $\mathtt{h}$ to $\mathtt{l}$ etc.
+
+so if $\mathtt{h}$ etc. are characters, then
+
+$$
+S(\mathtt{hello})  = \mathtt{lasso}
+$$
+
+Note that $\mathtt{h}$ in $\mathtt{hello}$ went to $\mathtt{l}$, but was *not* subsequently mapped to $\mathtt{s}$.
+That is what the "mappings are applied simultaneously" rule was about.
+
+## Substitutions in Type Systems
+
+Direct quote:
+
+> Hindley-Milner type inference algorithms use substitutions from type variables to monotypes,
+> applied on types.
+
+Examples
+
+$$
+\begin{align}
+S &= \set{\alpha \mapsto \beta, \beta \mapsto \mathtt{Int}}
+\\
+S(\alpha \rightarrow \beta) &= \beta \rightarrow \mathtt{Int}
+\\
+S(S(\alpha \rightarrow \beta)) &= \mathtt{Int} \rightarrow \mathtt{Int}
+\end{align}
+$$
