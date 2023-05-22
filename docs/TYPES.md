@@ -72,6 +72,8 @@ $$
 \mathtt{age}:\mathtt{Int} \in \Gamma
 $$
 
+## Context Grammar 
+
 The grammar for contexts is simple
 
 $$
@@ -142,3 +144,14 @@ $$
 The interesting thing here is the quantifier rule which starts to hint at how polymorphism is handled: $\alpha$ is not free in
 a polytype quantified by $\alpha$.
 
+## Free Variables in Contexts
+
+We can also describe a rule for free variables in a context, referring back to the Context Grammar above,
+
+$$
+\begin{align}
+\mathcal{FV}(\emptyset) &= \set{} & \mathtt{[empty]}
+\\
+\mathcal{FV}(\Gamma, \mathtt{e}:\sigma) &= \mathcal{FV}(\Gamma) \cup \mathcal{FV}(\sigma) & \mathtt{[extended]}
+\end{align}
+$$
