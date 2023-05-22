@@ -239,3 +239,100 @@ $$
 
 So the order matters.
 
+## Unifying Substitutions
+
+Another direct quote:
+
+> A substitution unifies two values if, when applid to both, the results are equal.
+
+$$
+S(a) = S(b)
+$$
+
+Example
+
+$$
+\begin{align}
+S &= \set{ \mathtt{r} \mapsto \mathtt{y}, \mathtt{s} \mapsto \mathtt{y}, \mathtt{d} \mapsto \mathtt{s} }
+\\
+a &= \mathtt{red}
+\\
+b &= \mathtt{yes}
+\\
+S(a) &= \mathtt{yes}
+\\
+S(b) &= \mathtt{yey}
+\end{align}
+$$
+
+so $S$ does not unify $a$ and $b$.
+
+We can also ask "what substitution unifies $a$ and $b$?" There are obviously many possible
+substitutions in this case.
+
+The substitution with the fewest mappings is called the "Most General Unifying Solution".
+
+If we rely on the fact that substitutions always map from symbols, this sometimes restricts the possible solutions,
+for example
+
+$$
+\begin{align}
+a &= 3 + (7 \times z)
+\\
+b &= y + (x \times 2)
+\\
+S &= \set{ y \mapsto 3, x \mapsto 7, z \mapsto 2 }
+\end{align}
+$$
+
+another example
+
+$$
+\begin{align}
+a &= 2 + 3
+\\
+b &= y
+\\
+S &= \set { y \mapsto 2 + 3 }
+\end{align}
+$$
+
+Just demonstrates that the expressions in a substitution can be complex.
+
+Another example
+
+$$
+\begin{align}
+a &= 3 \times 7
+\\
+b &= 3 + z
+\end{align}
+$$
+
+In this case there is no unifying solution.
+
+Another example
+
+$$
+\begin{align}
+a &= 1 + z
+\\
+b &= z
+\\
+S &= \set{ z \mapsto 1 + 1 + 1 + \dots }
+\end{align}
+$$
+
+This is a solution, but it's not ok, attempting to unify a variable with an
+expression that it occurs in results in an infinite expansion which might be
+ok mathematically, but it's no use to a type checking algorithm.
+
+Anyway this all gives us a signature for the unification functon which I'm calling $\mathcal{U}$:
+
+$$
+\begin{align}
+S &= \mathcal{U}(a, b)
+\\
+S(a) &= S(b)
+\end{align}
+$$
