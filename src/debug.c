@@ -362,7 +362,7 @@ void printAexpVarList(AexpVarList *x) {
     printf(")");
 }
 
-void printAexpVar(AexpVar *x) {
+void printAexpVar(HashSymbol *x) {
     printf("%s", x->name);
 }
 

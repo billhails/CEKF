@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "memory.h"
+#include "hash.h"
 
 /**
  * This file defines the A-Normal form expressions
@@ -42,14 +43,8 @@ typedef struct AexpLam {
 typedef struct AexpVarList {
     Header header;
     struct AexpVarList *next;
-    struct AexpVar *var;
+    struct HashSymbol *var;
 } AexpVarList;
-
-typedef struct AexpVar {
-    Header header;
-    char *name;
-    hash_t hash;
-} AexpVar;
 
 typedef enum {
     VAR_TYPE_STACK,
@@ -61,7 +56,7 @@ typedef struct AexpAnnotatedVar {
     AexpAnnotatedVarType type;
     int frame;
     int offset;
-    struct AexpVar *var;
+    struct HashSymbol *var;
 } AexpAnnotatedVar;
 
 typedef int AexpInteger; // you'll thank me later
@@ -131,7 +126,7 @@ typedef struct CexpLetRec {
 typedef struct LetRecBindings {
     Header header;
     struct LetRecBindings *next;
-    struct AexpVar *var;
+    struct HashSymbol *var;
     struct Aexp *val;
 } LetRecBindings;
 
@@ -155,7 +150,7 @@ typedef struct CexpBool {
 
 typedef struct ExpLet {
     Header header;
-    struct AexpVar *var;
+    struct HashSymbol *var;
     struct Exp *val;
     struct Exp *body;
 } ExpLet;
@@ -176,7 +171,7 @@ typedef enum {
 typedef union {
     void *none;
     struct AexpLam *lam;
-    struct AexpVar *var;
+    struct HashSymbol *var;
     struct AexpAnnotatedVar *annotatedVar;
     AexpInteger integer;
     struct AexpPrimApp *prim;
@@ -260,32 +255,31 @@ typedef struct Exp {
 #define EXP_VAL_LET(x)  ((ExpVal){.let  = (x)})
 #define EXP_VAL_DONE()  ((ExpVal){.none = NULL})
 
-AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, AexpVar *var);
+AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, HashSymbol *var);
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpList *newAexpList(AexpList *next, Aexp *exp);
 Aexp *newAexp(AexpType type, AexpVal val);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2);
 AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
-AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var);
-AexpVar *newAexpVar(char *name);
+AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var);
+HashSymbol *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
 Cexp *newCexp(CexpType type, CexpVal val);
-ExpLet *newExpLet(AexpVar *var, Exp *val, Exp *body);
+ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
-LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val);
+LetRecBindings *newLetRecBindings(LetRecBindings *next, HashSymbol *var, Aexp *val);
 
-AexpVar *genSym(char *prefix);
+HashSymbol *genSym(char *prefix);
 
 void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);
 void markAexpList(AexpList *x);
 void markAexpPrimApp(AexpPrimApp *x);
 void markAexpUnaryApp(AexpUnaryApp *x);
-void markAexpVar(AexpVar *x);
 void markAexpVarList(AexpVarList *x);
 void markCexpAmb(CexpAmb *x);
 void markCexpBool(CexpBool *x);

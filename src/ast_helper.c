@@ -1,5 +1,3 @@
-#ifndef cekf_common_h
-#define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,19 +16,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdint.h>
+#include <stdio.h>
+#include "ast_helper.h"
 
- typedef uint32_t hash_t;
+static HashTable astSymbolTable;
 
-// #define TEST_STACK
-// #define DEBUG_STACK
-// #define DEBUG_STEP
-// #define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 1
-// #define DEBUG_ANALIZE
-// #define DEBUG_DESUGARING
+void markAstSymbolTable() {
+    astSymbolTable.header.keep = false;
+    markHashTableObj((Header *) &astSymbolTable);
+}
 
-void cant_happen(const char *message, ...);
 
-#endif
+HashSymbol *getAstSymbol(AstSymbolType type, char *name) {
+    return uniqueHashSymbol(&astSymbolTable, type, name);
+}
+
+void printAstSymbol(struct HashSymbol * x, int depth) {
+    if (x == NULL) { printf("AstSymbol (NULL)"); return; }
+    printf("AstSymbol[%d, \"%s\"]", x->type, x->name);
+}

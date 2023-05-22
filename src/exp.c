@@ -57,7 +57,7 @@ AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
     return x;
 }
 
-AexpVarList *newAexpVarList(AexpVarList *next, AexpVar *var) {
+AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var) {
     AexpVarList *x = NEW(AexpVarList, OBJTYPE_VARLIST);
     x->next = next;
     x->var = var;
@@ -71,30 +71,20 @@ void markVarTable() {
     markHashTableObj((Header *) &varTable);
 }
 
-AexpVar *newAexpVar(char *name) {
-    AexpVar *x;
-    x = hashGetVar(&varTable, name);
-    if (x != NULL) {
-        return x;
-    }
-    x = NEW(AexpVar, OBJTYPE_VAR);
-    x->name = name;
-    x->hash = hashString(name);
-    int save = PROTECT(x);
-    hashSet(&varTable, x, vVoid);
-    UNPROTECT(save);
-    return x;
+HashSymbol *newAexpVar(char *name) {
+    return uniqueHashSymbol(&varTable, 0, name);
 }
 
 static int symbolCounter = 0;
 
-AexpVar *genSym(char *prefix) {
+HashSymbol *genSym(char *prefix) {
     char *buffer = NEW_ARRAY(char, 128); // not callable externally
 
     for (;;) {
         sprintf(buffer, "%s%d", prefix, symbolCounter++);
         if (hashGetVar(&varTable, buffer) == NULL) {
-            AexpVar *x = NEW(AexpVar, OBJTYPE_VAR);
+            HashSymbol *x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
+            x->type = 0;
             x->name = buffer;
             x->hash = hashString(buffer);
             int save = PROTECT(x);
@@ -105,7 +95,7 @@ AexpVar *genSym(char *prefix) {
     }
 }
 
-AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, AexpVar *var) {
+AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, HashSymbol *var) {
     AexpAnnotatedVar *x = NEW(AexpAnnotatedVar, OBJTYPE_ANNOTATEDVAR);
     x->type = type;
     x->frame = frame;
@@ -160,7 +150,7 @@ CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     return x;
 }
 
-LetRecBindings *newLetRecBindings(LetRecBindings *next, AexpVar *var, Aexp *val) {
+LetRecBindings *newLetRecBindings(LetRecBindings *next, HashSymbol *var, Aexp *val) {
     LetRecBindings *x = NEW(LetRecBindings, OBJTYPE_BINDINGS);
     x->next = next;
     x->var = var;
@@ -204,7 +194,7 @@ Exp *newExp(ExpType type, ExpVal val) {
     return x;
 }
 
-ExpLet *newExpLet(AexpVar *var, Exp *val, Exp *body) {
+ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body) {
     ExpLet *x = NEW(ExpLet, OBJTYPE_LET);
     x->var = var;
     x->val = val;
@@ -225,10 +215,10 @@ void markAexpVarList(AexpVarList *x) {
     if (MARKED(x)) return;
     MARK(x);
     markAexpVarList(x->next);
-    markAexpVar(x->var);
+    markHashSymbol(x->var);
 }
 
-void markAexpVar(AexpVar *x) {
+void markAexpVar(HashSymbol *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
@@ -452,9 +442,6 @@ void freeExpObj(Header *h) {
         case OBJTYPE_UNARYAPP:
             FREE(h, AexpUnaryApp);
             break;
-        case OBJTYPE_VAR:
-            FREE(h, AexpVar);
-            break;
         case OBJTYPE_ANNOTATEDVAR:
             FREE(h, AexpAnnotatedVar);
             break;
@@ -507,9 +494,6 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_PRIMAPP:
             markAexpPrimApp((AexpPrimApp *) h);
-            break;
-        case OBJTYPE_VAR:
-            markAexpVar((AexpVar *) h);
             break;
         case OBJTYPE_ANNOTATEDVAR:
             markAexpAnnotatedVar((AexpAnnotatedVar *) h);

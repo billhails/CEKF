@@ -66,7 +66,7 @@ const char *typeName(ObjType type) {
             return "letrec";
         case OBJTYPE_PRIMAPP:
             return "primapp";
-        case OBJTYPE_VAR:
+        case OBJTYPE_HASHSYMBOL:
             return "var";
         case OBJTYPE_ANNOTATEDVAR:
             return "annotatedvar";
@@ -200,7 +200,6 @@ void markObj(Header *h) {
         case OBJTYPE_LET:
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
-        case OBJTYPE_VAR:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             markExpObj(h);
@@ -219,8 +218,14 @@ void markObj(Header *h) {
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
+        case OBJTYPE_HASHSYMBOL:
+            markHashSymbolObj(h);
+            break;
+        AST_OBJTYPE_CASES()
+            markAstObj(h);
+            break;
         default:
-            cant_happen("unrecognised ObjType in markObj");
+            cant_happen("unrecognised ObjType %d in markObj", h->type);
     }
 }
 
@@ -240,7 +245,6 @@ void freeObj(Header *h) {
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
         case OBJTYPE_UNARYAPP:
-        case OBJTYPE_VAR:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             freeExpObj(h);
@@ -258,6 +262,12 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
+            break;
+        case OBJTYPE_HASHSYMBOL:
+            freeHashSymbolObj(h);
+            break;
+        AST_OBJTYPE_CASES()
+            freeAstObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj", h->type);

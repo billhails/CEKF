@@ -21,6 +21,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+struct Header;
+
 #include "ast_objtypes.h"
 
 typedef enum {
@@ -39,7 +41,6 @@ typedef enum {
     OBJTYPE_LETREC,
     OBJTYPE_PRIMAPP,
     OBJTYPE_UNARYAPP,
-    OBJTYPE_VAR,
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
     // cekf types
@@ -52,6 +53,7 @@ typedef enum {
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
+    OBJTYPE_HASHSYMBOL,
     AST_OBJTYPES(),
 } ObjType;
 

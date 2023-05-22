@@ -16,13 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-# reads YAML and outputs C code for the Yacc parser AST
+# reads YAML and outputs C code for structs and unions
 
 import yaml
 import sys
+import argparse
 
 class Catalog:
-    def __init__(self):
+    def __init__(self, typeName):
+        self.typeName = typeName
         self.contents = {}
 
     def add(self, value):
@@ -59,6 +61,10 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
 
+    def printFreeDeclarations(self):
+        for entity in self.contents.values():
+            entity.printFreeDeclaration(self)
+
     def printNewDeclarations(self):
         for entity in self.contents.values():
             entity.printNewDeclaration(self)
@@ -83,11 +89,39 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkFunction(self)
 
+    def printFreeFunctions(self):
+        for entity in self.contents.values():
+            entity.printFreeFunction(self)
+
+    def printMarkObjFunction(self):
+        print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{')
+        print('    switch(h->type) {')
+        for entity in self.contents.values():
+            entity.printMarkObjCase(self)
+        print('    }')
+        print('}')
+
+    def printFreeObjFunction(self):
+        print(f'void free{self.typeName.capitalize()}Obj(struct Header *h) {{')
+        print('    switch(h->type) {')
+        for entity in self.contents.values():
+            entity.printFreeObjCase(self)
+        print('    }')
+        print('}')
+
     def printObjTypeDefine(self):
         objTypeArray = []
         for entity in self.contents.values():
             objTypeArray += entity.objTypeArray()
         print("#define AST_OBJTYPES() {a}".format(a=', \\\n'.join(objTypeArray)))
+
+    def printObjCasesDefine(self):
+        print("#define AST_OBJTYPE_CASES() \\")
+        for entity in self.contents.values():
+            objType = entity.objTypeArray()
+            if len(objType) == 1:
+                print(f'case {objType[0]}:\\')
+        print("")
 
 
 class Base:
@@ -111,10 +145,16 @@ class Base:
     def printTypedef(self, catalog):
         pass
 
+    def printFreeDeclaration(self, catalog):
+        pass
+
     def printMarkDeclaration(self, catalog):
         pass
 
     def printMarkFunction(self, catalog):
+        pass
+
+    def printFreeFunction(self, catalog):
         pass
 
     def printNewDeclaration(self, catalog):
@@ -127,6 +167,12 @@ class Base:
         pass
 
     def printPrintFunction(self, catalog):
+        pass
+
+    def printMarkObjCase(self, catalog):
+        pass
+
+    def printFreeObjCase(self, catalog):
         pass
 
     def printDefines(self, catalog):
@@ -237,6 +283,10 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration()
         return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
+    def getFreeSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration()
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
@@ -253,6 +303,9 @@ class SimpleStruct(Base):
 
     def printNewDeclaration(self, catalog):
         print("{decl};".format(decl=self.getNewSignature(catalog)));
+
+    def printFreeDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getFreeSignature(catalog)));
 
     def printMarkDeclaration(self, catalog):
         print("{decl};".format(decl=self.getMarkSignature(catalog)));
@@ -296,6 +349,27 @@ class SimpleStruct(Base):
         print("    MARK(x);")
         self.printMarkFunctionBody(catalog)
         print("}\n")
+
+    def printFreeFunction(self, catalog):
+        print("{decl} {{".format(decl=self.getFreeSignature(catalog)));
+        print(f"    FREE(x, {self.getName()});")
+        print("}\n")
+
+    def printMarkObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('mark{name}(({name} *)h);'.format(name=self.getName()))
+        pad(3)
+        print('break;')
+
+    def printFreeObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('free{name}(({name} *)h);'.format(name=self.getName()))
+        pad(3)
+        print('break;')
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
@@ -534,7 +608,11 @@ class Primitive(Base):
     def __init__(self, name, data):
         super().__init__(name)
         self.cname = data['cname']
-        self.printf = data['printf']
+        if 'printf' in data:
+            self.printFn = 'printf'
+            self.printf = data['printf']
+        else:
+            self.printFn = data['printFn']
         self.valued = data['valued']
 
 
@@ -545,13 +623,19 @@ class Primitive(Base):
         pad(depth)
         print('pad(depth + 1);')
         pad(depth)
-        print(f'printf("{self.cname} {self.printf}", x->{prefix}{field});')
+        if self.printFn == 'printf':
+            print(f'printf("{self.cname} {self.printf}", x->{prefix}{field});')
+        else:
+            print(f'{self.printFn}(x->{prefix}{field}, depth);')
 
     def getDefineValue(self):
         return 'x' if self.valued else 'NULL'
 
     def getDefineArg(self):
         return 'x' if self.valued else ''
+
+
+##################################################################
 
 def debug(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -560,7 +644,7 @@ def pad(depth):
     print("    " * depth, end='')
 
 def printGpl():
-    print("""/*
+    print(f"""/*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
  *
@@ -582,11 +666,23 @@ def printGpl():
 
 """)
 
-stream = open('./src/ast.yaml', 'r');
+##################################################################
+
+parser = argparse.ArgumentParser()
+parser.add_argument("yaml", help="input yaml file")
+parser.add_argument("type",
+                    type=str,
+                    choices=["h", "c", "objtypes_h", "debug_h", "debug_c"],
+                    help="the type of output to produce")
+args = parser.parse_args()
+
+stream = open(args.yaml, 'r')
 
 document = yaml.load(stream, Loader=yaml.Loader)
 
-catalog = Catalog()
+typeName = document['config']['name']
+
+catalog = Catalog(typeName)
 
 for name in document["structs"]:
     catalog.add(SimpleStruct(name, document["structs"][name]))
@@ -602,58 +698,73 @@ for name in document["primitives"]:
 
 catalog.build()
 
-if len(sys.argv) == 2:
-    if sys.argv[1] == "ast_h":
-        print("#ifndef cekf_ast_h")
-        print("#define cekf_ast_h")
-        printGpl()
-        print("")
-        print('#include "hash.h"')
-        print('#include "memory.h"')
-        print("")
-        catalog.printTypedefs()
-        catalog.printNewDeclarations()
-        print("")
-        catalog.printMarkDeclarations()
-        print("")
-        catalog.printDefines()
-        print("")
-        print("#endif");
-    elif sys.argv[1] == "ast_objtypes_h":
-        print("#ifndef cekf_ast_objtypes_h")
-        print("#define cekf_ast_objtypes_h")
-        printGpl()
-        print("")
-        catalog.printObjTypeDefine()
-        print("")
-        print("#endif");
-    elif sys.argv[1] == "ast_c":
-        printGpl()
-        print("")
-        print('#include "ast.h"')
-        print("")
-        catalog.printNewFunctions()
-        print("")
-        print("/************************************/")
-        print("")
-        catalog.printMarkFunctions()
-    elif sys.argv[1] == 'debug_ast_h':
-        print("#ifndef cekf_debug_ast_h")
-        print("#define cekf_debug_ast_h")
-        printGpl()
-        print("")
-        print('#include "ast.h"')
-        print("")
-        catalog.printPrintDeclarations()
-        print("")
-        print("#endif");
-    elif sys.argv[1] == 'debug_ast_c':
-        printGpl()
-        print("")
-        print('#include <stdio.h>')
-        print("")
-        print('#include "debug_ast.h"')
-        print("")
-        print('static void pad(int depth) { printf("%*s", depth * 4, ""); }')
-        print("")
-        catalog.printPrintFunctions()
+if args.type == "h":
+    print(f"#ifndef cekf_{typeName}_h")
+    print(f"#define cekf_{typeName}_h")
+    printGpl()
+    print("")
+    print('#include "hash.h"')
+    print('#include "memory.h"')
+    print("")
+    catalog.printTypedefs()
+    catalog.printNewDeclarations()
+    print("")
+    catalog.printMarkDeclarations()
+    print("")
+    catalog.printFreeDeclarations()
+    print("")
+    catalog.printDefines()
+    print("")
+    print("#endif");
+elif args.type == "objtypes_h":
+    print(f"#ifndef cekf_{typeName}_objtypes_h")
+    print(f"#define cekf_{typeName}_objtypes_h")
+    printGpl()
+    print("")
+    catalog.printObjTypeDefine()
+    print("")
+    catalog.printObjCasesDefine()
+    print("")
+    print(f'void mark{typeName.capitalize()}Obj(struct Header *h);')
+    print(f'void free{typeName.capitalize()}Obj(struct Header *h);')
+    print("")
+    print("#endif");
+elif args.type == "c":
+    printGpl()
+    print("")
+    print(f'#include "{typeName}.h"')
+    print("")
+    catalog.printNewFunctions()
+    print("")
+    print("/************************************/")
+    print("")
+    catalog.printMarkFunctions()
+    print("")
+    catalog.printMarkObjFunction()
+    print("")
+    print("/************************************/")
+    print("")
+    catalog.printFreeFunctions()
+    print("")
+    catalog.printFreeObjFunction()
+    print("")
+elif args.type == 'debug_h':
+    print(f"#ifndef cekf_debug_{typeName}_h")
+    print(f"#define cekf_debug_{typeName}_h")
+    printGpl()
+    print("")
+    print(f'#include "{typeName}_helper.h"')
+    print("")
+    catalog.printPrintDeclarations()
+    print("")
+    print("#endif");
+elif args.type == 'debug_c':
+    printGpl()
+    print("")
+    print('#include <stdio.h>')
+    print("")
+    print(f'#include "debug_{typeName}.h"')
+    print("")
+    print('static void pad(int depth) { printf("%*s", depth * 4, ""); }')
+    print("")
+    catalog.printPrintFunctions()

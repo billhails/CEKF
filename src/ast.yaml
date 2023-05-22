@@ -17,6 +17,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+config:
+    name: ast
+
 structs:
     AstNest:
         definitions: AstDefinitions
@@ -27,11 +30,11 @@ structs:
         definition: AstDefinition
 
     AstDefine:
-        symbol: AstSymbol
+        symbol: HashSymbol
         expression: AstExpression
 
     AstPrototype:
-        symbol: AstSymbol
+        symbol: HashSymbol
         body: AstPrototypeBody
 
     AstPrototypeBody:
@@ -39,31 +42,31 @@ structs:
         single: AstSinglePrototype
 
     AstPrototypeSymbolType:
-        symbol: AstSymbol
+        symbol: HashSymbol
         type: AstType
 
     AstLoad:
         package: AstPackage
-        symbol: AstSymbol
+        symbol: HashSymbol
 
     AstTypeDef:
         flatType: AstFlatType
         typeBody: AstTypeBody
 
     AstFlatType:
-        symbol: AstSymbol
+        symbol: HashSymbol
         typeSymbols: AstTypeSymbols
 
     AstTypeSymbols:
         next: AstTypeSymbols
-        typeSymbol: AstSymbol
+        typeSymbol: HashSymbol
 
     AstTypeBody:
         next: AstTypeBody
         typeConstructor: AstTypeConstructor
 
     AstTypeConstructor:
-        symbol: AstSymbol
+        symbol: HashSymbol
         typeList: AstTypeList
 
     AstTypeList:
@@ -96,7 +99,7 @@ structs:
         arg: AstArg
 
     AstUnpack:
-        symbol: AstSymbol
+        symbol: HashSymbol
         argList: AstArgList
 
     AstArgPair:
@@ -104,12 +107,12 @@ structs:
         cdr: AstArg
 
     AstNamedArg:
-        name: AstSymbol
+        name: HashSymbol
         arg: AstArg
 
     AstEnvType:
-        name: AstSymbol
-        prototype: AstSymbol
+        name: HashSymbol
+        prototype: HashSymbol
 
     AstBinOp:
         type: AstBinOpType
@@ -122,7 +125,7 @@ structs:
 
     AstPackage:
         next: AstPackage
-        symbol: AstSymbol
+        symbol: HashSymbol
 
     AstExpressions:
         next: AstExpressions
@@ -131,11 +134,6 @@ structs:
     AstEnv:
         package: AstPackage
         definitions: AstDefinitions
-
-    AstSymbol:
-        type: AstSymbolType
-        hash: hash_t
-        name: char_ptr
 
     AstString:
         string: char_ptr
@@ -158,8 +156,8 @@ unions:
         string: void_ptr
         list: AstType
         type: AstType
-        typeSymbol: AstSymbol
-        var: AstSymbol
+        typeSymbol: HashSymbol
+        var: HashSymbol
         typeconstructor: AstTypeConstructor
 
     AstFun:
@@ -168,7 +166,7 @@ unions:
 
     AstArg:
         wildcard: void_ptr
-        symbol: AstSymbol
+        symbol: HashSymbol
         cons: AstArgPair
         named: AstNamedArg
         list: AstArgList
@@ -187,7 +185,7 @@ unions:
         negate: AstExpression
         here: AstExpression
         funCall: AstFunCall
-        symbol: AstSymbol
+        symbol: HashSymbol
         number: int
         string: AstString
         character: char
@@ -226,6 +224,10 @@ enums:
         - typesymbol
 
 primitives:
+    HashSymbol:
+        cname: "HashSymbol *"
+        printFn: "printAstSymbol"
+        valued: true
     char:
         cname: "char"
         printf: "%c"

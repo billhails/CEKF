@@ -16,8 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// #define DEBUG_HASHTABLE
-
 #ifdef DEBUG_HASHTABLE
 #include <stdio.h>
 #endif
@@ -52,7 +50,7 @@ hash_t hashString(const char *string) {
     return hash;
 }
 
-static HashEntry *findEntry(HashEntry *entries, int capacity, AexpVar *var) {
+static HashEntry *findEntry(HashEntry *entries, int capacity, HashSymbol *var) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "findEntry()\n");
 #endif
@@ -97,7 +95,7 @@ static void checkCapacity(HashTable *table) {
     }
 }
 
-void hashSet(HashTable *table, AexpVar *var, Value value) {
+void hashSet(HashTable *table, HashSymbol *var, Value value) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashSet()\n");
 #endif
@@ -110,7 +108,7 @@ void hashSet(HashTable *table, AexpVar *var, Value value) {
     entry->value = value;
 }
 
-void hashAddCTVar(HashTable *table, AexpVar *var) {
+void hashAddCTVar(HashTable *table, HashSymbol *var) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashSet()\n");
 #endif
@@ -123,7 +121,7 @@ void hashAddCTVar(HashTable *table, AexpVar *var) {
     table->count++;
 }
 
-bool hashLocate(HashTable *table, struct AexpVar *var, int *location) {
+bool hashLocate(HashTable *table, struct HashSymbol *var, int *location) {
     HashEntry *entry = findEntry(table->entries, table->capacity, var);
     if (entry->var == NULL) return false;
 
@@ -134,7 +132,7 @@ bool hashLocate(HashTable *table, struct AexpVar *var, int *location) {
     return true;
 }
 
-Value hashGet(HashTable *table, AexpVar *var) {
+Value hashGet(HashTable *table, HashSymbol *var) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashGet()\n");
 #endif
@@ -143,7 +141,7 @@ Value hashGet(HashTable *table, AexpVar *var) {
     return entry->value;
 }
 
-AexpVar *hashGetVar(HashTable *table, const char *name) {
+HashSymbol *hashGetVar(HashTable *table, const char *name) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "hashGetVar()\n");
 #endif
@@ -171,7 +169,7 @@ void markHashTableObj(Header *h) {
     MARK(table);
     for (int i = 0; i < table->capacity; i++) {
         if (table->entries[i].var != NULL) {
-            markAexpVar(table->entries[i].var);
+            markHashSymbol(table->entries[i].var);
             markValue(table->entries[i].value);
         }
     }
@@ -187,4 +185,30 @@ void freeHashTableObj(Header *h) {
         FREE_ARRAY(HashEntry, table->entries, table->count);
     }
     FREE(h, HashTable);
+}
+
+HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name) {
+    HashSymbol *x;
+    x = hashGetVar(table, name);
+    if (x != NULL) {
+        return x;
+    }
+    x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
+    int save = PROTECT(x);
+    x->type = type;
+    x->name = safeStrdup(name);
+    x->hash = hashString(name);
+    hashSet(table, x, vVoid);
+    UNPROTECT(save);
+    return x;
+}
+
+void markHashSymbol(HashSymbol *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+}
+
+void freeHashSymbol(HashSymbol *x) {
+    FREE(x, HashSymbol);
 }

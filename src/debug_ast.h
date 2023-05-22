@@ -22,7 +22,7 @@
 
 
 
-#include "ast.h"
+#include "ast_helper.h"
 
 void printAstNest(struct AstNest * x, int depth);
 void printAstDefinitions(struct AstDefinitions * x, int depth);
@@ -52,7 +52,6 @@ void printAstFunCall(struct AstFunCall * x, int depth);
 void printAstPackage(struct AstPackage * x, int depth);
 void printAstExpressions(struct AstExpressions * x, int depth);
 void printAstEnv(struct AstEnv * x, int depth);
-void printAstSymbol(struct AstSymbol * x, int depth);
 void printAstString(struct AstString * x, int depth);
 void printAstDefinition(struct AstDefinition * x, int depth);
 void printAstSinglePrototype(struct AstSinglePrototype * x, int depth);

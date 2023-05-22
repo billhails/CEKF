@@ -137,8 +137,8 @@ typedef union AstTypeClauseVal {
     void * string;
     struct AstType * list;
     struct AstType * type;
-    struct AstSymbol * typeSymbol;
-    struct AstSymbol * var;
+    HashSymbol * typeSymbol;
+    HashSymbol * var;
     struct AstTypeConstructor * typeconstructor;
 } AstTypeClauseVal;
 
@@ -149,7 +149,7 @@ typedef union AstFunVal {
 
 typedef union AstArgVal {
     void * wildcard;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstArgPair * cons;
     struct AstNamedArg * named;
     struct AstArgList * list;
@@ -169,7 +169,7 @@ typedef union AstExpressionVal {
     struct AstExpression * negate;
     struct AstExpression * here;
     struct AstFunCall * funCall;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     int number;
     struct AstString * string;
     char character;
@@ -198,13 +198,13 @@ typedef struct AstDefinitions {
 
 typedef struct AstDefine {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstExpression * expression;
 } AstDefine;
 
 typedef struct AstPrototype {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstPrototypeBody * body;
 } AstPrototype;
 
@@ -216,14 +216,14 @@ typedef struct AstPrototypeBody {
 
 typedef struct AstPrototypeSymbolType {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstType * type;
 } AstPrototypeSymbolType;
 
 typedef struct AstLoad {
     Header header;
     struct AstPackage * package;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
 } AstLoad;
 
 typedef struct AstTypeDef {
@@ -234,14 +234,14 @@ typedef struct AstTypeDef {
 
 typedef struct AstFlatType {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstTypeSymbols * typeSymbols;
 } AstFlatType;
 
 typedef struct AstTypeSymbols {
     Header header;
     struct AstTypeSymbols * next;
-    struct AstSymbol * typeSymbol;
+    HashSymbol * typeSymbol;
 } AstTypeSymbols;
 
 typedef struct AstTypeBody {
@@ -252,7 +252,7 @@ typedef struct AstTypeBody {
 
 typedef struct AstTypeConstructor {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstTypeList * typeList;
 } AstTypeConstructor;
 
@@ -301,7 +301,7 @@ typedef struct AstArgList {
 
 typedef struct AstUnpack {
     Header header;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
     struct AstArgList * argList;
 } AstUnpack;
 
@@ -313,14 +313,14 @@ typedef struct AstArgPair {
 
 typedef struct AstNamedArg {
     Header header;
-    struct AstSymbol * name;
+    HashSymbol * name;
     struct AstArg * arg;
 } AstNamedArg;
 
 typedef struct AstEnvType {
     Header header;
-    struct AstSymbol * name;
-    struct AstSymbol * prototype;
+    HashSymbol * name;
+    HashSymbol * prototype;
 } AstEnvType;
 
 typedef struct AstBinOp {
@@ -339,7 +339,7 @@ typedef struct AstFunCall {
 typedef struct AstPackage {
     Header header;
     struct AstPackage * next;
-    struct AstSymbol * symbol;
+    HashSymbol * symbol;
 } AstPackage;
 
 typedef struct AstExpressions {
@@ -353,13 +353,6 @@ typedef struct AstEnv {
     struct AstPackage * package;
     struct AstDefinitions * definitions;
 } AstEnv;
-
-typedef struct AstSymbol {
-    Header header;
-    enum AstSymbolType  type;
-    hash_t hash;
-    char * name;
-} AstSymbol;
 
 typedef struct AstString {
     Header header;
@@ -404,16 +397,16 @@ typedef struct AstExpression {
 
 struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpressions * expressions);
 struct AstDefinitions * newAstDefinitions(struct AstDefinitions * next, struct AstDefinition * definition);
-struct AstDefine * newAstDefine(struct AstSymbol * symbol, struct AstExpression * expression);
-struct AstPrototype * newAstPrototype(struct AstSymbol * symbol, struct AstPrototypeBody * body);
+struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expression);
+struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBody * body);
 struct AstPrototypeBody * newAstPrototypeBody(struct AstPrototypeBody * next, struct AstSinglePrototype * single);
-struct AstPrototypeSymbolType * newAstPrototypeSymbolType(struct AstSymbol * symbol, struct AstType * type);
-struct AstLoad * newAstLoad(struct AstPackage * package, struct AstSymbol * symbol);
+struct AstPrototypeSymbolType * newAstPrototypeSymbolType(HashSymbol * symbol, struct AstType * type);
+struct AstLoad * newAstLoad(struct AstPackage * package, HashSymbol * symbol);
 struct AstTypeDef * newAstTypeDef(struct AstFlatType * flatType, struct AstTypeBody * typeBody);
-struct AstFlatType * newAstFlatType(struct AstSymbol * symbol, struct AstTypeSymbols * typeSymbols);
-struct AstTypeSymbols * newAstTypeSymbols(struct AstTypeSymbols * next, struct AstSymbol * typeSymbol);
+struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols * typeSymbols);
+struct AstTypeSymbols * newAstTypeSymbols(struct AstTypeSymbols * next, HashSymbol * typeSymbol);
 struct AstTypeBody * newAstTypeBody(struct AstTypeBody * next, struct AstTypeConstructor * typeConstructor);
-struct AstTypeConstructor * newAstTypeConstructor(struct AstSymbol * symbol, struct AstTypeList * typeList);
+struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct AstTypeList * typeList);
 struct AstTypeList * newAstTypeList(struct AstTypeList * next, struct AstType * type);
 struct AstType * newAstType(struct AstType * next, struct AstTypeClause * typeClause);
 struct AstConditional * newAstConditional(struct AstExpression * expression, struct AstNest * consequent, struct AstNest * alternative);
@@ -421,16 +414,15 @@ struct AstSwitch * newAstSwitch(struct AstExpressions * expressions, struct AstC
 struct AstCompositeFunction * newAstCompositeFunction(struct AstCompositeFunction * next, struct AstFunction * function);
 struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest * nest);
 struct AstArgList * newAstArgList(struct AstArgList * next, struct AstArg * arg);
-struct AstUnpack * newAstUnpack(struct AstSymbol * symbol, struct AstArgList * argList);
+struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList);
 struct AstArgPair * newAstArgPair(struct AstArg * car, struct AstArg * cdr);
-struct AstNamedArg * newAstNamedArg(struct AstSymbol * name, struct AstArg * arg);
-struct AstEnvType * newAstEnvType(struct AstSymbol * name, struct AstSymbol * prototype);
+struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg);
+struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype);
 struct AstBinOp * newAstBinOp(enum AstBinOpType  type, struct AstExpression * lhs, struct AstExpression * rhs);
 struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExpressions * arguments);
-struct AstPackage * newAstPackage(struct AstPackage * next, struct AstSymbol * symbol);
+struct AstPackage * newAstPackage(struct AstPackage * next, HashSymbol * symbol);
 struct AstExpressions * newAstExpressions(struct AstExpressions * next, struct AstExpression * expression);
 struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * definitions);
-struct AstSymbol * newAstSymbol(enum AstSymbolType  type, hash_t hash, char * name);
 struct AstString * newAstString(char * string);
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val);
 struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  type, union AstSinglePrototypeVal  val);
@@ -467,7 +459,6 @@ void markAstFunCall(struct AstFunCall * x);
 void markAstPackage(struct AstPackage * x);
 void markAstExpressions(struct AstExpressions * x);
 void markAstEnv(struct AstEnv * x);
-void markAstSymbol(struct AstSymbol * x);
 void markAstString(struct AstString * x);
 void markAstDefinition(struct AstDefinition * x);
 void markAstSinglePrototype(struct AstSinglePrototype * x);
@@ -475,6 +466,42 @@ void markAstTypeClause(struct AstTypeClause * x);
 void markAstFun(struct AstFun * x);
 void markAstArg(struct AstArg * x);
 void markAstExpression(struct AstExpression * x);
+
+void freeAstNest(struct AstNest * x);
+void freeAstDefinitions(struct AstDefinitions * x);
+void freeAstDefine(struct AstDefine * x);
+void freeAstPrototype(struct AstPrototype * x);
+void freeAstPrototypeBody(struct AstPrototypeBody * x);
+void freeAstPrototypeSymbolType(struct AstPrototypeSymbolType * x);
+void freeAstLoad(struct AstLoad * x);
+void freeAstTypeDef(struct AstTypeDef * x);
+void freeAstFlatType(struct AstFlatType * x);
+void freeAstTypeSymbols(struct AstTypeSymbols * x);
+void freeAstTypeBody(struct AstTypeBody * x);
+void freeAstTypeConstructor(struct AstTypeConstructor * x);
+void freeAstTypeList(struct AstTypeList * x);
+void freeAstType(struct AstType * x);
+void freeAstConditional(struct AstConditional * x);
+void freeAstSwitch(struct AstSwitch * x);
+void freeAstCompositeFunction(struct AstCompositeFunction * x);
+void freeAstFunction(struct AstFunction * x);
+void freeAstArgList(struct AstArgList * x);
+void freeAstUnpack(struct AstUnpack * x);
+void freeAstArgPair(struct AstArgPair * x);
+void freeAstNamedArg(struct AstNamedArg * x);
+void freeAstEnvType(struct AstEnvType * x);
+void freeAstBinOp(struct AstBinOp * x);
+void freeAstFunCall(struct AstFunCall * x);
+void freeAstPackage(struct AstPackage * x);
+void freeAstExpressions(struct AstExpressions * x);
+void freeAstEnv(struct AstEnv * x);
+void freeAstString(struct AstString * x);
+void freeAstDefinition(struct AstDefinition * x);
+void freeAstSinglePrototype(struct AstSinglePrototype * x);
+void freeAstTypeClause(struct AstTypeClause * x);
+void freeAstFun(struct AstFun * x);
+void freeAstArg(struct AstArg * x);
+void freeAstExpression(struct AstExpression * x);
 
 #define AST_DEFINITION_VAL_DEFINE(x) ((union AstDefinitionVal ){.define = (x)})
 #define AST_DEFINITION_VAL_PROTOTYPE(x) ((union AstDefinitionVal ){.prototype = (x)})

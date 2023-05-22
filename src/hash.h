@@ -27,10 +27,15 @@
 
 #define HASH_MAX_LOAD 0.75
 
-hash_t hashString(const char *string);
+typedef struct HashSymbol {
+    struct Header header;
+    int type;
+    hash_t hash;
+    char *name;
+} HashSymbol;
 
 typedef struct HashEntry {
-    struct AexpVar *var;
+    struct HashSymbol *var;
     struct Value value;
 } HashEntry;
 
@@ -41,12 +46,18 @@ typedef struct HashTable {
     HashEntry *entries;
 } HashTable;
 
+hash_t hashString(const char *string);
 HashTable *newHashTable();
-void hashSet(HashTable *table, struct AexpVar *var, struct Value value);
-struct Value hashGet(HashTable *table, struct AexpVar *var);
-struct AexpVar *hashGetVar(HashTable *table, const char *name);
-Value hashGet(HashTable *table, struct AexpVar *var);
-void hashAddCTVar(HashTable *table, struct AexpVar *var);
-bool hashLocate(HashTable *table, struct AexpVar *var, int *location);
+void hashSet(HashTable *table, struct HashSymbol *var, struct Value value);
+struct Value hashGet(HashTable *table, struct HashSymbol *var);
+struct HashSymbol *hashGetVar(HashTable *table, const char *name);
+Value hashGet(HashTable *table, struct HashSymbol *var);
+void hashAddCTVar(HashTable *table, struct HashSymbol *var);
+bool hashLocate(HashTable *table, struct HashSymbol *var, int *location);
+HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name);
+void markHashSymbol(HashSymbol *x);
+void freeHashSymbol(HashSymbol *x);
 
+static inline void markHashSymbolObj(Header *h) { markHashSymbol((HashSymbol *)h); }
+static inline void freeHashSymbolObj(Header *h) { freeHashSymbol((HashSymbol *)h); }
 #endif

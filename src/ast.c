@@ -36,14 +36,14 @@ struct AstDefinitions * newAstDefinitions(struct AstDefinitions * next, struct A
     return x;
 }
 
-struct AstDefine * newAstDefine(struct AstSymbol * symbol, struct AstExpression * expression) {
+struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expression) {
     struct AstDefine * x = NEW(AstDefine, OBJTYPE_ASTDEFINE);
     x->symbol = symbol;
     x->expression = expression;
     return x;
 }
 
-struct AstPrototype * newAstPrototype(struct AstSymbol * symbol, struct AstPrototypeBody * body) {
+struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBody * body) {
     struct AstPrototype * x = NEW(AstPrototype, OBJTYPE_ASTPROTOTYPE);
     x->symbol = symbol;
     x->body = body;
@@ -57,14 +57,14 @@ struct AstPrototypeBody * newAstPrototypeBody(struct AstPrototypeBody * next, st
     return x;
 }
 
-struct AstPrototypeSymbolType * newAstPrototypeSymbolType(struct AstSymbol * symbol, struct AstType * type) {
+struct AstPrototypeSymbolType * newAstPrototypeSymbolType(HashSymbol * symbol, struct AstType * type) {
     struct AstPrototypeSymbolType * x = NEW(AstPrototypeSymbolType, OBJTYPE_ASTPROTOTYPESYMBOLTYPE);
     x->symbol = symbol;
     x->type = type;
     return x;
 }
 
-struct AstLoad * newAstLoad(struct AstPackage * package, struct AstSymbol * symbol) {
+struct AstLoad * newAstLoad(struct AstPackage * package, HashSymbol * symbol) {
     struct AstLoad * x = NEW(AstLoad, OBJTYPE_ASTLOAD);
     x->package = package;
     x->symbol = symbol;
@@ -78,14 +78,14 @@ struct AstTypeDef * newAstTypeDef(struct AstFlatType * flatType, struct AstTypeB
     return x;
 }
 
-struct AstFlatType * newAstFlatType(struct AstSymbol * symbol, struct AstTypeSymbols * typeSymbols) {
+struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols * typeSymbols) {
     struct AstFlatType * x = NEW(AstFlatType, OBJTYPE_ASTFLATTYPE);
     x->symbol = symbol;
     x->typeSymbols = typeSymbols;
     return x;
 }
 
-struct AstTypeSymbols * newAstTypeSymbols(struct AstTypeSymbols * next, struct AstSymbol * typeSymbol) {
+struct AstTypeSymbols * newAstTypeSymbols(struct AstTypeSymbols * next, HashSymbol * typeSymbol) {
     struct AstTypeSymbols * x = NEW(AstTypeSymbols, OBJTYPE_ASTTYPESYMBOLS);
     x->next = next;
     x->typeSymbol = typeSymbol;
@@ -99,7 +99,7 @@ struct AstTypeBody * newAstTypeBody(struct AstTypeBody * next, struct AstTypeCon
     return x;
 }
 
-struct AstTypeConstructor * newAstTypeConstructor(struct AstSymbol * symbol, struct AstTypeList * typeList) {
+struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct AstTypeList * typeList) {
     struct AstTypeConstructor * x = NEW(AstTypeConstructor, OBJTYPE_ASTTYPECONSTRUCTOR);
     x->symbol = symbol;
     x->typeList = typeList;
@@ -156,7 +156,7 @@ struct AstArgList * newAstArgList(struct AstArgList * next, struct AstArg * arg)
     return x;
 }
 
-struct AstUnpack * newAstUnpack(struct AstSymbol * symbol, struct AstArgList * argList) {
+struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList) {
     struct AstUnpack * x = NEW(AstUnpack, OBJTYPE_ASTUNPACK);
     x->symbol = symbol;
     x->argList = argList;
@@ -170,14 +170,14 @@ struct AstArgPair * newAstArgPair(struct AstArg * car, struct AstArg * cdr) {
     return x;
 }
 
-struct AstNamedArg * newAstNamedArg(struct AstSymbol * name, struct AstArg * arg) {
+struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg) {
     struct AstNamedArg * x = NEW(AstNamedArg, OBJTYPE_ASTNAMEDARG);
     x->name = name;
     x->arg = arg;
     return x;
 }
 
-struct AstEnvType * newAstEnvType(struct AstSymbol * name, struct AstSymbol * prototype) {
+struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype) {
     struct AstEnvType * x = NEW(AstEnvType, OBJTYPE_ASTENVTYPE);
     x->name = name;
     x->prototype = prototype;
@@ -199,7 +199,7 @@ struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExp
     return x;
 }
 
-struct AstPackage * newAstPackage(struct AstPackage * next, struct AstSymbol * symbol) {
+struct AstPackage * newAstPackage(struct AstPackage * next, HashSymbol * symbol) {
     struct AstPackage * x = NEW(AstPackage, OBJTYPE_ASTPACKAGE);
     x->next = next;
     x->symbol = symbol;
@@ -217,14 +217,6 @@ struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * d
     struct AstEnv * x = NEW(AstEnv, OBJTYPE_ASTENV);
     x->package = package;
     x->definitions = definitions;
-    return x;
-}
-
-struct AstSymbol * newAstSymbol(enum AstSymbolType  type, hash_t hash, char * name) {
-    struct AstSymbol * x = NEW(AstSymbol, OBJTYPE_ASTSYMBOL);
-    x->type = type;
-    x->hash = hash;
-    x->name = name;
     return x;
 }
 
@@ -299,7 +291,6 @@ void markAstDefine(struct AstDefine * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstExpression(x->expression);
 }
 
@@ -307,7 +298,6 @@ void markAstPrototype(struct AstPrototype * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstPrototypeBody(x->body);
 }
 
@@ -323,7 +313,6 @@ void markAstPrototypeSymbolType(struct AstPrototypeSymbolType * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstType(x->type);
 }
 
@@ -332,7 +321,6 @@ void markAstLoad(struct AstLoad * x) {
     if (MARKED(x)) return;
     MARK(x);
     markAstPackage(x->package);
-    markAstSymbol(x->symbol);
 }
 
 void markAstTypeDef(struct AstTypeDef * x) {
@@ -347,7 +335,6 @@ void markAstFlatType(struct AstFlatType * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstTypeSymbols(x->typeSymbols);
 }
 
@@ -356,7 +343,6 @@ void markAstTypeSymbols(struct AstTypeSymbols * x) {
     if (MARKED(x)) return;
     MARK(x);
     markAstTypeSymbols(x->next);
-    markAstSymbol(x->typeSymbol);
 }
 
 void markAstTypeBody(struct AstTypeBody * x) {
@@ -371,7 +357,6 @@ void markAstTypeConstructor(struct AstTypeConstructor * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstTypeList(x->typeList);
 }
 
@@ -436,7 +421,6 @@ void markAstUnpack(struct AstUnpack * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->symbol);
     markAstArgList(x->argList);
 }
 
@@ -452,7 +436,6 @@ void markAstNamedArg(struct AstNamedArg * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->name);
     markAstArg(x->arg);
 }
 
@@ -460,8 +443,6 @@ void markAstEnvType(struct AstEnvType * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstSymbol(x->name);
-    markAstSymbol(x->prototype);
 }
 
 void markAstBinOp(struct AstBinOp * x) {
@@ -485,7 +466,6 @@ void markAstPackage(struct AstPackage * x) {
     if (MARKED(x)) return;
     MARK(x);
     markAstPackage(x->next);
-    markAstSymbol(x->symbol);
 }
 
 void markAstExpressions(struct AstExpressions * x) {
@@ -502,12 +482,6 @@ void markAstEnv(struct AstEnv * x) {
     MARK(x);
     markAstPackage(x->package);
     markAstDefinitions(x->definitions);
-}
-
-void markAstSymbol(struct AstSymbol * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
 }
 
 void markAstString(struct AstString * x) {
@@ -574,10 +548,8 @@ void markAstTypeClause(struct AstTypeClause * x) {
             markAstType(x->val.type);
             break;
         case AST_TYPECLAUSE_TYPE_TYPESYMBOL:
-            markAstSymbol(x->val.typeSymbol);
             break;
         case AST_TYPECLAUSE_TYPE_VAR:
-            markAstSymbol(x->val.var);
             break;
         case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR:
             markAstTypeConstructor(x->val.typeconstructor);
@@ -611,7 +583,6 @@ void markAstArg(struct AstArg * x) {
         case AST_ARG_TYPE_WILDCARD:
             break;
         case AST_ARG_TYPE_SYMBOL:
-            markAstSymbol(x->val.symbol);
             break;
         case AST_ARG_TYPE_CONS:
             markAstArgPair(x->val.cons);
@@ -667,7 +638,6 @@ void markAstExpression(struct AstExpression * x) {
             markAstFunCall(x->val.funCall);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
-            markAstSymbol(x->val.symbol);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             break;
@@ -697,6 +667,370 @@ void markAstExpression(struct AstExpression * x) {
             break;
         default:
             cant_happen("unrecognised type %d in markAstExpression", x->type);
+    }
+}
+
+
+void markAstObj(struct Header *h) {
+    switch(h->type) {
+        case OBJTYPE_ASTNEST:
+            markAstNest((AstNest *)h);
+            break;
+        case OBJTYPE_ASTDEFINITIONS:
+            markAstDefinitions((AstDefinitions *)h);
+            break;
+        case OBJTYPE_ASTDEFINE:
+            markAstDefine((AstDefine *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPE:
+            markAstPrototype((AstPrototype *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPEBODY:
+            markAstPrototypeBody((AstPrototypeBody *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPESYMBOLTYPE:
+            markAstPrototypeSymbolType((AstPrototypeSymbolType *)h);
+            break;
+        case OBJTYPE_ASTLOAD:
+            markAstLoad((AstLoad *)h);
+            break;
+        case OBJTYPE_ASTTYPEDEF:
+            markAstTypeDef((AstTypeDef *)h);
+            break;
+        case OBJTYPE_ASTFLATTYPE:
+            markAstFlatType((AstFlatType *)h);
+            break;
+        case OBJTYPE_ASTTYPESYMBOLS:
+            markAstTypeSymbols((AstTypeSymbols *)h);
+            break;
+        case OBJTYPE_ASTTYPEBODY:
+            markAstTypeBody((AstTypeBody *)h);
+            break;
+        case OBJTYPE_ASTTYPECONSTRUCTOR:
+            markAstTypeConstructor((AstTypeConstructor *)h);
+            break;
+        case OBJTYPE_ASTTYPELIST:
+            markAstTypeList((AstTypeList *)h);
+            break;
+        case OBJTYPE_ASTTYPE:
+            markAstType((AstType *)h);
+            break;
+        case OBJTYPE_ASTCONDITIONAL:
+            markAstConditional((AstConditional *)h);
+            break;
+        case OBJTYPE_ASTSWITCH:
+            markAstSwitch((AstSwitch *)h);
+            break;
+        case OBJTYPE_ASTCOMPOSITEFUNCTION:
+            markAstCompositeFunction((AstCompositeFunction *)h);
+            break;
+        case OBJTYPE_ASTFUNCTION:
+            markAstFunction((AstFunction *)h);
+            break;
+        case OBJTYPE_ASTARGLIST:
+            markAstArgList((AstArgList *)h);
+            break;
+        case OBJTYPE_ASTUNPACK:
+            markAstUnpack((AstUnpack *)h);
+            break;
+        case OBJTYPE_ASTARGPAIR:
+            markAstArgPair((AstArgPair *)h);
+            break;
+        case OBJTYPE_ASTNAMEDARG:
+            markAstNamedArg((AstNamedArg *)h);
+            break;
+        case OBJTYPE_ASTENVTYPE:
+            markAstEnvType((AstEnvType *)h);
+            break;
+        case OBJTYPE_ASTBINOP:
+            markAstBinOp((AstBinOp *)h);
+            break;
+        case OBJTYPE_ASTFUNCALL:
+            markAstFunCall((AstFunCall *)h);
+            break;
+        case OBJTYPE_ASTPACKAGE:
+            markAstPackage((AstPackage *)h);
+            break;
+        case OBJTYPE_ASTEXPRESSIONS:
+            markAstExpressions((AstExpressions *)h);
+            break;
+        case OBJTYPE_ASTENV:
+            markAstEnv((AstEnv *)h);
+            break;
+        case OBJTYPE_ASTSTRING:
+            markAstString((AstString *)h);
+            break;
+        case OBJTYPE_ASTDEFINITION:
+            markAstDefinition((AstDefinition *)h);
+            break;
+        case OBJTYPE_ASTSINGLEPROTOTYPE:
+            markAstSinglePrototype((AstSinglePrototype *)h);
+            break;
+        case OBJTYPE_ASTTYPECLAUSE:
+            markAstTypeClause((AstTypeClause *)h);
+            break;
+        case OBJTYPE_ASTFUN:
+            markAstFun((AstFun *)h);
+            break;
+        case OBJTYPE_ASTARG:
+            markAstArg((AstArg *)h);
+            break;
+        case OBJTYPE_ASTEXPRESSION:
+            markAstExpression((AstExpression *)h);
+            break;
+    }
+}
+
+/************************************/
+
+void freeAstNest(struct AstNest * x) {
+    FREE(x, AstNest);
+}
+
+void freeAstDefinitions(struct AstDefinitions * x) {
+    FREE(x, AstDefinitions);
+}
+
+void freeAstDefine(struct AstDefine * x) {
+    FREE(x, AstDefine);
+}
+
+void freeAstPrototype(struct AstPrototype * x) {
+    FREE(x, AstPrototype);
+}
+
+void freeAstPrototypeBody(struct AstPrototypeBody * x) {
+    FREE(x, AstPrototypeBody);
+}
+
+void freeAstPrototypeSymbolType(struct AstPrototypeSymbolType * x) {
+    FREE(x, AstPrototypeSymbolType);
+}
+
+void freeAstLoad(struct AstLoad * x) {
+    FREE(x, AstLoad);
+}
+
+void freeAstTypeDef(struct AstTypeDef * x) {
+    FREE(x, AstTypeDef);
+}
+
+void freeAstFlatType(struct AstFlatType * x) {
+    FREE(x, AstFlatType);
+}
+
+void freeAstTypeSymbols(struct AstTypeSymbols * x) {
+    FREE(x, AstTypeSymbols);
+}
+
+void freeAstTypeBody(struct AstTypeBody * x) {
+    FREE(x, AstTypeBody);
+}
+
+void freeAstTypeConstructor(struct AstTypeConstructor * x) {
+    FREE(x, AstTypeConstructor);
+}
+
+void freeAstTypeList(struct AstTypeList * x) {
+    FREE(x, AstTypeList);
+}
+
+void freeAstType(struct AstType * x) {
+    FREE(x, AstType);
+}
+
+void freeAstConditional(struct AstConditional * x) {
+    FREE(x, AstConditional);
+}
+
+void freeAstSwitch(struct AstSwitch * x) {
+    FREE(x, AstSwitch);
+}
+
+void freeAstCompositeFunction(struct AstCompositeFunction * x) {
+    FREE(x, AstCompositeFunction);
+}
+
+void freeAstFunction(struct AstFunction * x) {
+    FREE(x, AstFunction);
+}
+
+void freeAstArgList(struct AstArgList * x) {
+    FREE(x, AstArgList);
+}
+
+void freeAstUnpack(struct AstUnpack * x) {
+    FREE(x, AstUnpack);
+}
+
+void freeAstArgPair(struct AstArgPair * x) {
+    FREE(x, AstArgPair);
+}
+
+void freeAstNamedArg(struct AstNamedArg * x) {
+    FREE(x, AstNamedArg);
+}
+
+void freeAstEnvType(struct AstEnvType * x) {
+    FREE(x, AstEnvType);
+}
+
+void freeAstBinOp(struct AstBinOp * x) {
+    FREE(x, AstBinOp);
+}
+
+void freeAstFunCall(struct AstFunCall * x) {
+    FREE(x, AstFunCall);
+}
+
+void freeAstPackage(struct AstPackage * x) {
+    FREE(x, AstPackage);
+}
+
+void freeAstExpressions(struct AstExpressions * x) {
+    FREE(x, AstExpressions);
+}
+
+void freeAstEnv(struct AstEnv * x) {
+    FREE(x, AstEnv);
+}
+
+void freeAstString(struct AstString * x) {
+    FREE(x, AstString);
+}
+
+void freeAstDefinition(struct AstDefinition * x) {
+    FREE(x, AstDefinition);
+}
+
+void freeAstSinglePrototype(struct AstSinglePrototype * x) {
+    FREE(x, AstSinglePrototype);
+}
+
+void freeAstTypeClause(struct AstTypeClause * x) {
+    FREE(x, AstTypeClause);
+}
+
+void freeAstFun(struct AstFun * x) {
+    FREE(x, AstFun);
+}
+
+void freeAstArg(struct AstArg * x) {
+    FREE(x, AstArg);
+}
+
+void freeAstExpression(struct AstExpression * x) {
+    FREE(x, AstExpression);
+}
+
+
+void freeAstObj(struct Header *h) {
+    switch(h->type) {
+        case OBJTYPE_ASTNEST:
+            freeAstNest((AstNest *)h);
+            break;
+        case OBJTYPE_ASTDEFINITIONS:
+            freeAstDefinitions((AstDefinitions *)h);
+            break;
+        case OBJTYPE_ASTDEFINE:
+            freeAstDefine((AstDefine *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPE:
+            freeAstPrototype((AstPrototype *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPEBODY:
+            freeAstPrototypeBody((AstPrototypeBody *)h);
+            break;
+        case OBJTYPE_ASTPROTOTYPESYMBOLTYPE:
+            freeAstPrototypeSymbolType((AstPrototypeSymbolType *)h);
+            break;
+        case OBJTYPE_ASTLOAD:
+            freeAstLoad((AstLoad *)h);
+            break;
+        case OBJTYPE_ASTTYPEDEF:
+            freeAstTypeDef((AstTypeDef *)h);
+            break;
+        case OBJTYPE_ASTFLATTYPE:
+            freeAstFlatType((AstFlatType *)h);
+            break;
+        case OBJTYPE_ASTTYPESYMBOLS:
+            freeAstTypeSymbols((AstTypeSymbols *)h);
+            break;
+        case OBJTYPE_ASTTYPEBODY:
+            freeAstTypeBody((AstTypeBody *)h);
+            break;
+        case OBJTYPE_ASTTYPECONSTRUCTOR:
+            freeAstTypeConstructor((AstTypeConstructor *)h);
+            break;
+        case OBJTYPE_ASTTYPELIST:
+            freeAstTypeList((AstTypeList *)h);
+            break;
+        case OBJTYPE_ASTTYPE:
+            freeAstType((AstType *)h);
+            break;
+        case OBJTYPE_ASTCONDITIONAL:
+            freeAstConditional((AstConditional *)h);
+            break;
+        case OBJTYPE_ASTSWITCH:
+            freeAstSwitch((AstSwitch *)h);
+            break;
+        case OBJTYPE_ASTCOMPOSITEFUNCTION:
+            freeAstCompositeFunction((AstCompositeFunction *)h);
+            break;
+        case OBJTYPE_ASTFUNCTION:
+            freeAstFunction((AstFunction *)h);
+            break;
+        case OBJTYPE_ASTARGLIST:
+            freeAstArgList((AstArgList *)h);
+            break;
+        case OBJTYPE_ASTUNPACK:
+            freeAstUnpack((AstUnpack *)h);
+            break;
+        case OBJTYPE_ASTARGPAIR:
+            freeAstArgPair((AstArgPair *)h);
+            break;
+        case OBJTYPE_ASTNAMEDARG:
+            freeAstNamedArg((AstNamedArg *)h);
+            break;
+        case OBJTYPE_ASTENVTYPE:
+            freeAstEnvType((AstEnvType *)h);
+            break;
+        case OBJTYPE_ASTBINOP:
+            freeAstBinOp((AstBinOp *)h);
+            break;
+        case OBJTYPE_ASTFUNCALL:
+            freeAstFunCall((AstFunCall *)h);
+            break;
+        case OBJTYPE_ASTPACKAGE:
+            freeAstPackage((AstPackage *)h);
+            break;
+        case OBJTYPE_ASTEXPRESSIONS:
+            freeAstExpressions((AstExpressions *)h);
+            break;
+        case OBJTYPE_ASTENV:
+            freeAstEnv((AstEnv *)h);
+            break;
+        case OBJTYPE_ASTSTRING:
+            freeAstString((AstString *)h);
+            break;
+        case OBJTYPE_ASTDEFINITION:
+            freeAstDefinition((AstDefinition *)h);
+            break;
+        case OBJTYPE_ASTSINGLEPROTOTYPE:
+            freeAstSinglePrototype((AstSinglePrototype *)h);
+            break;
+        case OBJTYPE_ASTTYPECLAUSE:
+            freeAstTypeClause((AstTypeClause *)h);
+            break;
+        case OBJTYPE_ASTFUN:
+            freeAstFun((AstFun *)h);
+            break;
+        case OBJTYPE_ASTARG:
+            freeAstArg((AstArg *)h);
+            break;
+        case OBJTYPE_ASTEXPRESSION:
+            freeAstExpression((AstExpression *)h);
+            break;
     }
 }
 

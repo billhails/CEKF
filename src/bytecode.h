@@ -74,7 +74,7 @@ void resetByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b);
-void writeAexpVar(AexpVar *x, ByteCodeArray *b);
+void writeAexpVar(HashSymbol *x, ByteCodeArray *b);
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b);
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
 void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);

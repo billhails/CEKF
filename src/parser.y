@@ -5,7 +5,7 @@
 #include <ctype.h>
 
 #include "common.h"
-#include "ast.h"
+#include "ast_helper.h"
 
 // #define YYDEBUG 1
 
@@ -50,7 +50,7 @@ AstNest *result = NULL;
     AstSinglePrototype *singlePrototype;
     AstString *string;
     AstSwitch *switchStatement;
-    AstSymbol *symbol;
+    HashSymbol *symbol;
     AstTypeBody *typeBody;
     AstTypeClause *typeClause;
     AstTypeConstructor *typeConstructor;
@@ -224,7 +224,7 @@ type_symbols : type_symbol                  { $$ = newAstTypeSymbols(NULL, $1); 
              | type_symbol ',' type_symbols { $$ = newAstTypeSymbols($3, $1); }
              ;
 
-type_symbol : TYPE_VAR  { $$ = newAstSymbol(AST_SYMBOLTYPE_TYPE_TYPESYMBOL, hashString($1), safeStrdup($1)); }
+type_symbol : TYPE_VAR  { $$ = getAstSymbol(AST_SYMBOLTYPE_TYPE_TYPESYMBOL, $1); }
             ;
 
 type_body : type_constructor                { $$ = newAstTypeBody(NULL, $1); }
@@ -393,7 +393,7 @@ extends : %empty            { $$ = NULL; }
 
 env_body : '{' definitions '}'  { $$ = $2; }
 
-symbol : VAR    { $$ = newAstSymbol(AST_SYMBOLTYPE_TYPE_SYMBOL, hashString($1), safeStrdup($1)); }
+symbol : VAR    { $$ = getAstSymbol(AST_SYMBOLTYPE_TYPE_SYMBOL, $1); }
        ;
 
 %%

@@ -29,7 +29,7 @@ void printAexpLam(AexpLam *x);
 void printAexpList(AexpList *x);
 void printAexpPrimApp(AexpPrimApp *x);
 void printAexpUnaryApp(AexpUnaryApp *x);
-void printAexpVar(AexpVar *x);
+void printAexpVar(HashSymbol *x);
 void printAexpVarList(AexpVarList *x);
 void printBareAexpList(AexpList *x);
 void printCEKF(CEKF *x);

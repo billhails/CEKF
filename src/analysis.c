@@ -28,11 +28,11 @@
 #include "debug.h"
 #endif
 
-static bool locate(AexpVar *var, CTEnv *env, int *frame, int *offset);
-static void populateCTEnv(CTEnv *env, AexpVar *var);
+static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
+static void populateCTEnv(CTEnv *env, HashSymbol *var);
 
 static void analizeAexpLam(AexpLam *x, CTEnv *env);
-static AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env);
+static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env);
 static void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env);
 static void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
 static void analizeAexpList(AexpList *x, CTEnv *env);
@@ -61,7 +61,7 @@ static void analizeAexpLam(AexpLam *x, CTEnv *env) {
     UNPROTECT(save);
 }
 
-static AexpAnnotatedVar *analizeAexpVar(AexpVar *x, CTEnv *env) {
+static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     printf("analizeAexpVar "); printAexpVar(x); printf("  "); printCTEnv(env); printf("\n");
 #endif
@@ -284,7 +284,7 @@ void freeCTEnv(Header *h) {
     reallocate((void *)h, sizeof(CTEnv), 0);
 }
 
-static void populateCTEnv(CTEnv *env, AexpVar *var) {
+static void populateCTEnv(CTEnv *env, HashSymbol *var) {
     hashAddCTVar(env->table, var);
 }
 
@@ -303,7 +303,7 @@ static int calculateAdjustment(CTEnv *env) {
     return adjustment;
 }
 
-static bool locate(AexpVar *var, CTEnv *env, int *frame, int *offset) {
+static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
 #ifdef DEBUG_ANALIZE
     printf("locate ");
     printAexpVar(var);

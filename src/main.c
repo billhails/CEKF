@@ -3441,7 +3441,9 @@ int main(int argc, char *argv[]) {
     // yydebug = 1;
     yyparse();
     printAstNest(result, 0);
+    enableGC();
     printf("\n");
+    char *foo = NEW_ARRAY(char, 10); // force gc
 }
 
 #endif
