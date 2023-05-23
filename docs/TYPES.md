@@ -107,31 +107,6 @@ $$
 \end{align}
 $$
 
-## Typing Judgements
-
-Given a context and an expression, we can make typing judgements about the expression.
-Typing Judgements look like this
-
-$$
-\Gamma\vdash \mathtt{e}:\sigma
-$$
-
-Which can be read as "from the context $\Gamma$ it follows ($\vdash$) that $e$ has type $\sigma$."
-
-## Typing Rules
-
-A typing rule looks like
-
-$$
-{\mathtt{x}:\sigma \in \Gamma \above{2pt} \Gamma \vdash \mathtt{x}:\sigma}
-$$
-
-Where the upper part is called the premise, and the lower part the conclusion or judgement.
-
-You can read this example as "**if** the assignment $\mathtt{x}:\sigma$ is in the context $\Gamma$ **then**
-from the context $\Gamma$ it follows that $\mathtt{x}$ has type $\sigma$." This is almost a tautology,
-but a necessary one when specifying a type checking algorithm.
-
 ## Free Variables in Type Expressions
 
 Analogous to free variables in expressions, we can define a function to calculate the free variables in a type expression:
@@ -541,4 +516,62 @@ $$
 \\
 \mathcal{G}(\Gamma, \sigma) &= \forall \alpha . \forall \delta . \forall \epsilon . \alpha \rightarrow \beta \rightarrow \gamma \rightarrow \delta \rightarrow \epsilon
 \end{align}
+$$
+
+## Typing Judgements
+
+Given a context and an expression, we can make typing judgements about the expression.
+Typing Judgements look like this
+
+$$
+\Gamma\vdash \mathtt{e}:\sigma
+$$
+
+Which can be read as "from the context $\Gamma$ it follows ($\vdash$) that $e$ has type $\sigma$."
+
+## HM Typing Rules
+
+A typing rule looks like
+
+$$
+{\mathtt{x}:\sigma \in \Gamma \above{1pt} \Gamma \vdash \mathtt{x}:\sigma}
+$$
+
+Where the upper part is called the premise, and the lower part the conclusion or judgement.
+
+You can read this example as "**if** the assignment $\mathtt{x}:\sigma$ is in the context $\Gamma$ **then**
+from the context $\Gamma$ it follows that $\mathtt{x}$ has type $\sigma$." This is almost a tautology,
+but a necessary one when specifying a type checking algorithm.
+
+### The VAR Rule
+
+The first typing rule in HM is $\mathtt{VAR}$ or $\mathtt{variable}$ and is the one we just looked at:
+
+$$
+{\mathtt{x}:\sigma \in \Gamma \above{1pt} \Gamma \vdash \mathtt{x}:\sigma}\qquad\mathtt{[VAR]}
+$$
+
+see [above](#typing-rules).
+
+### The APP Rule
+
+$$
+{\Gamma \vdash \mathtt{e_0}:\tau_a \rightarrow \tau_b\qquad \Gamma \vdash \mathtt{e_1}: \tau_a
+\above{1pt}
+\Gamma \vdash \mathtt{e_0}\ \mathtt{e_1}:\tau_b }\qquad\mathtt{[APP]}
+$$
+
+You can read this as **if** from the context it follows that $\mathtt{e_0}$ has type $\tau_a \rightarrow \tau_b$
+**and** from the context $\mathtt{e_1}$ has type $\tau_a$ **then** from the context it follows that the
+application of $\mathtt{e_0}$ to $\mathtt{e_1}$ has type $\tau_b$, or mor colloquially "the application
+of a function of type $\tau_a \rightarrow \tau_b$ to a type $\tau_a$ results in a $\tau_b$." 
+
+One point to note is that $\tau_a$ and $\tau_b$ are monotypes, this rule doesn't apply to polytypes ($\sigma$).
+
+Concrete example
+
+$$
+{\Gamma \vdash \mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool}\qquad \Gamma \vdash \mathtt{age}: \mathtt{Int}
+\above{1pt}
+\Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool} }
 $$
