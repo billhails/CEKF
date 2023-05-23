@@ -503,3 +503,42 @@ $$
 
 ## Generalisation of types in HM
 
+Referring back to [Free Variables in Type Expressions](#free-variables-in-type-expressions) we know
+
+$$
+\mathcal{FV}(\forall \alpha . \alpha \rightarrow \beta) = \alpha
+$$
+
+We can use this to get from specific types to more general types by quantifying the free variables in an expression:
+
+$$
+\forall \beta . \alpha \rightarrow \beta \sqsupset \forall \alpha . \forall \beta . \alpha \rightarrow \beta
+$$
+
+That is essentially what generalization is: adding a $\forall$ quantifier to a free type variable in a type.
+In HM we can only generalize a type when the type variable is not free in the context, so the signature
+for generalize, $\mathcal{G}$ is
+
+$$
+\mathcal{G}(\Gamma, \sigma) = \textup{the most generalized version of the type }\sigma
+$$
+
+Example
+
+$$
+\begin{align}
+\Gamma &= \mathtt{x}:\beta,\quad \mathtt{y}:\mathtt{List}\ \gamma \rightarrow \mathtt{Int},\quad \mathtt{z}:\forall \delta . \delta
+\\
+\sigma &= \forall \epsilon . \alpha \rightarrow \beta \rightarrow \gamma \rightarrow \delta \rightarrow \epsilon
+\\
+\mathcal{G}(\Gamma, \sigma) &= ?
+\\
+\mathcal{FV}(\Gamma) &= \set{\beta, \gamma} & \textup{not }\delta\textup{ because it is }\forall\textup{ quantified}
+\\
+\mathcal{FV}(\sigma) &= \set{\alpha, \beta, \gamma, \delta} & \textup{not }\epsilon\textup{ for the same reason}
+\\
+\mathcal{FV}(\sigma) - \mathcal{FV}(\Gamma) &= \set{ \alpha, \delta }
+\\
+\mathcal{G}(\Gamma, \sigma) &= \forall \alpha . \forall \delta . \forall \epsilon . \alpha \rightarrow \beta \rightarrow \gamma \rightarrow \delta \rightarrow \epsilon
+\end{align}
+$$
