@@ -481,3 +481,25 @@ S &= \set{\alpha \mapsto \mathtt{Int}}
 S(\forall \alpha . \alpha \rightarrow \mathtt{Bool}) &= \mathtt{Int} \rightarrow \mathtt{Bool}
 \end{align}
 $$
+
+## Instantiation of Types in HM
+
+Referring back to the [Unification algorithm](#unification-algorithm-for-hm-types), note that it only accepts monotypes, it can't
+deal with $\forall$ quantified types.
+
+Instantiation allows us to get from polytypes to monotypes.
+
+Example
+
+$$
+\begin{align}
+S &= \set{ \alpha \mapsto \mathtt{Int}, \beta \mapsto \mathtt{List}\ \gamma}
+\\
+S(\forall \alpha . \forall \beta . \alpha \rightarrow \beta) &= \mathtt{Int} \rightarrow \mathtt{List}\ \gamma
+\end{align}
+$$
+
+> If $\sigma_1 \sqsubseteq \sigma_2$ then an expression of type $\sigma_2$ can be used where one of type $\sigma_1$ is needed.
+
+## Generalisation of types in HM
+
