@@ -465,3 +465,19 @@ $$
 
 and in fact $\forall\alpha.\alpha$ is like zero in this relation, it's the most general possible type expression
 because it means any type variable.
+
+### Formal Definition of Type Order
+> $\sigma_1$ is more general than $\sigma_2$ if there is a substitution $S$ that maps the for-all quantified
+> variables in $\sigma_1$, and $S(\sigma_1) = \sigma_2$.
+
+Example
+
+$$
+\begin{align}
+\forall \alpha . \alpha \rightarrow \mathtt{Bool} &\sqsubseteq \mathtt{Int} \rightarrow \mathtt{Bool}
+\\
+S &= \set{\alpha \mapsto \mathtt{Int}}
+\\
+S(\forall \alpha . \alpha \rightarrow \mathtt{Bool}) &= \mathtt{Int} \rightarrow \mathtt{Bool}
+\end{align}
+$$
