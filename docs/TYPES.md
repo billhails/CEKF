@@ -2,6 +2,42 @@
 
 My notes on an absolutely fantastic YouTube series by [Adam Jones](https://www.youtube.com/@adam-jones).
 
+## Lambda Calculus Grammar
+
+$$
+\begin{align}
+\mathtt{e} &= \mathtt{x} & \mathtt{[variable]}
+\\
+& |\ \mathtt{e_1}\ \mathtt{e_2} & \mathtt{[application]}
+\\
+& |\ \lambda \mathtt{x} \rightarrow \mathtt{e} & \mathtt{[abstraction]}
+\\
+& |\ \mathtt{let\ x = e_1\ in\ e_2} & \mathtt{[let]}
+\end{align}
+$$
+
+You might think that the $\mathtt{[let]}$ term is redundant, because $\mathtt{let\ x = e_1\ in\ e_2}$
+is synonymous with $(\lambda x.e_2)e_1$ but %\mathtt{let}$ is treated differently by the type-checking
+algorithm, as a way to achieve polymorphism.
+
+## Free Variables in Expressions
+
+Free variables are variables that have no value (free as in "not bound").
+We can define a free variables function
+$\mathcal{FV}$ for lambda expressions as
+
+$$
+\begin{align}
+\mathcal{FV}(\mathtt{x}) &= \set{\mathtt{x}} & \mathtt{[variable]}
+\\
+\mathcal{FV}(\mathtt{e_1}\ \mathtt{e_2}) &= \mathcal{FV}(\mathtt{e_1}) \cup \mathcal{FV}(\mathtt{e_2}) & \mathtt{[application]}
+\\
+\mathcal{FV}(\lambda \mathtt{x} \rightarrow \mathtt{e}) &= \mathcal{FV}(\mathtt{e}) - \set{x} & \mathtt{[abstraction]}
+\\
+\mathcal{FV}(\mathtt{let\ x = e_1\ in\ e_2})  &= \mathcal{FV}(\mathtt{e_1}) \cup \mathcal{FV}(\mathtt{e_2}) - \set{x} & \mathtt{[let]}
+\end{align}
+$$
+
 ## Hindley Milner Type Grammar
 
 $$
@@ -29,20 +65,6 @@ Example
 
 $$
 \forall \alpha . \mathtt{List}(\alpha \rightarrow \alpha)
-$$
-
-## Lambda Calculus Grammar
-
-$$
-\begin{align}
-\mathtt{e} &= \mathtt{x} & \mathtt{[variable]}
-\\
-& |\ \mathtt{e_1}\ \mathtt{e_2} & \mathtt{[application]}
-\\
-& |\ \lambda \mathtt{x} \rightarrow \mathtt{e} & \mathtt{[abstraction]}
-\\
-& |\ \mathtt{let\ x = e_1\ in\ e_2} & \mathtt{[let]}
-\end{align}
 $$
 
 ## Type Assignment
@@ -109,24 +131,6 @@ You can read this example as "**if** the assignment $\mathtt{x}:\sigma$ is in th
 from the context $\Gamma$ it follows that $\mathtt{x}$ has type $\sigma$." This is almost a tautology,
 but a necessary one when specifying a type checking algorithm.
 
-## Free Variables in Expressions
-
-Free variables are variables that have no value (free as in "not bound").
-Referring back to the lambda calculus grammar we can define a free variables function
-$\mathcal{FV}$ for expressions as
-
-$$
-\begin{align}
-\mathcal{FV}(\mathtt{x}) &= \set{\mathtt{x}} & \mathtt{[variable]}
-\\
-\mathcal{FV}(\mathtt{e_1}\ \mathtt{e_2}) &= \mathcal{FV}(\mathtt{e_1}) \cup \mathcal{FV}(\mathtt{e_2}) & \mathtt{[application]}
-\\
-\mathcal{FV}(\lambda \mathtt{x} \rightarrow \mathtt{e}) &= \mathcal{FV}(\mathtt{e}) - \set{x} & \mathtt{[abstraction]}
-\\
-\mathcal{FV}(\mathtt{let\ x = e_1\ in\ e_2})  &= \mathcal{FV}(\mathtt{e_1}) \cup \mathcal{FV}(\mathtt{e_2}) - \set{x} & \mathtt{[let]}
-\end{align}
-$$
-
 ## Free Variables in Type Expressions
 
 Analogous to free variables in expressions, we can define a function to calculate the free variables in a type expression:
@@ -157,8 +161,6 @@ $$
 $$
 
 ## Substitutions
-
-Changing tack, understanding substitutions is a necessary preliminary to understanding the Hindley-Milner algorithms.
 
 Substitutions are sets of mappings from symbols to terms, where terms are general constructions of symbols,
 like arithmetic expressions etc. Mappings are applied simultaneously.
@@ -237,7 +239,20 @@ S_3(\mathtt{oh}) &= \mathtt{ii}
 \end{align}
 $$
 
-So the order matters.
+$S_3$ is different, so the order of application matters.
+
+A semi-manual way to calculate the composition of two substitutions like this is
+to draw up a table. The leftmost column is the symbols being mapped from,
+intermediate columns are the results of applying a substitution on the previous
+column, and the final column is the resulting mapping:
+
+|              | $S_2$        | $S_1$        | $S_3$                           |
+|--------------|--------------|--------------|---------------------------------|
+| $\mathtt{h}$ | $\mathtt{i}$ | $\mathtt{i}$ | $\mathtt{h} \mapsto \mathtt{i}$ |
+| $\mathtt{o}$ | $\mathtt{h}$ | $\mathtt{i}$ | $\mathtt{o} \mapsto \mathtt{i}$ |
+
+The set of the mappings in column $S_3$ is the final substitution:
+$\set{\mathtt{h} \mapsto \mathtt{i}, \mathtt{o} \mapsto \mathtt{i}}$
 
 ## Unifying Substitutions
 
@@ -336,3 +351,70 @@ S &= \mathcal{U}(a, b)
 S(a) &= S(b)
 \end{align}
 $$
+
+## Applying Unification to Type Systems
+
+Example
+
+$$
+\begin{align}
+a &= \mathtt{Int} \rightarrow \alpha
+\\
+b &= \beta \rightarrow \mathtt{Bool}
+\\
+S &= \mathcal{U}(a, b)
+\\
+S &= \set{ \alpha \mapsto \mathtt{Bool}, \beta \mapsto \mathtt{Int} }
+\end{align}
+$$
+
+Another example
+
+$$
+\begin{align}
+a &= \mathtt{List}\ \alpha
+\\
+b &= \beta \rightarrow \mathtt{Bool}
+\\
+S &= \mathcal{U}(a, b)
+\end{align}
+$$
+
+Has no solutions as the structure is different.
+
+Another example
+
+$$
+\begin{align}
+a &= \alpha \rightarrow \mathtt{Int}
+\\
+b &= \alpha
+\\
+S &= \mathcal{U}(a, b)
+\\
+S &= \set{\alpha \mapsto \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \dots}
+\end{align}
+$$
+
+This is the "occurs in" error again, $\alpha$ is a function with an infinite number of arguments.
+
+## Unification Algorithm for HM Types
+
+```plaintext
+unify(a: Monotype, b: Monotype) -> Substitution:
+  if a is a type variable:
+    if b is the same type variable:
+      return {}
+    if b contains a:
+      throw "Error occurs check"
+    return { a -> b }
+  if b is a type variable:
+    return unify(b, a)
+  if a and b are both type function applications:
+    if a and b have different type functions:
+      throw "Error unification failed"
+    S = {}
+    for i in range(number of type function arguments):
+      S = combine(S, unify(a.args[i], b.args[i])
+    return S
+```
