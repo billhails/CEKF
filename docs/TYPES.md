@@ -17,7 +17,7 @@ $$
 $$
 
 You might think that the $\mathtt{[let]}$ term is redundant, because $\mathtt{let\ x = e_1\ in\ e_2}$
-is synonymous with $(\lambda x.e_2)e_1$ but %\mathtt{let}$ is treated differently by the type-checking
+is synonymous with $(\lambda x.e_2)e_1$ but $\mathtt{let}$ is treated differently by the type-checking
 algorithm, as a way to achieve polymorphism.
 
 ## Free Variables in Expressions
@@ -59,7 +59,8 @@ it can be a "type function application" $C$ like $\mathtt{List[}\tau\mathtt{]}$ 
 $\mathtt{Bool}$, $\mathtt{Int}$ etc are also type function applications, but with no arguments.
 * $\sigma$ is a **polytype**
 which can be either a monotype $\tau$ or a quantified polytype $\forall\alpha.\sigma$. Quantified polytypes
-are how we deal with polymorphic functions.
+are how we deal with polymorphic functions. More on that lter, but essentially $\forall\alpha$ is saying
+"any $\alpha$ in the subsequent expression is local to it".
 
 Example
 
@@ -418,3 +419,49 @@ unify(a: Monotype, b: Monotype) -> Substitution:
       S = combine(S, unify(a.args[i], b.args[i])
     return S
 ```
+
+Just remember that we're talking about type function applications here, not lambdas, i.e. if the type
+function application is $\mathtt{List}\ \beta$ then the arguments are $\beta$, or if the type
+function application is $\mathtt{Int}\rightarrow\alpha$ then the arguments are $\mathtt{Int}$ and $\alpha$,
+and if the type function application is $\mathtt{Int}$ then there are no arguments.
+
+## Type Order
+
+> Some types are more general than others.
+
+Consider
+
+$$
+\forall \alpha . \forall \beta . \alpha \rightarrow \beta
+$$
+
+There is a sense in which the above is "more general" than something like this:
+
+$$
+\forall \alpha . \alpha \rightarrow \mathtt{Bool}
+$$
+
+which in turn is more genral that something like
+
+$$
+\mathtt{Int} \rightarrow \mathtt{Bool}
+$$
+
+This can be represented by the "strictly more general than" $\sqsubset$ relation:
+
+$$
+\forall \alpha . \alpha \rightarrow \mathtt{Bool} \sqsubset \mathtt{Int} \rightarrow \mathtt{Bool}
+$$
+
+There is also a less strict "more general than" $\sqsubseteq$ operator, kind of like a "less than or equal to"
+
+$$
+\begin{align}
+\alpha & \sqsubseteq \alpha
+\\
+\forall \alpha . \alpha & \sqsubseteq \mathtt{Int}
+\end{align}
+$$
+
+and in fact $\forall\alpha.\alpha$ is like zero in this relation, it's the most general possible type expression
+because it means any type variable.
