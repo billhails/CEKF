@@ -545,7 +545,7 @@ but a necessary one when specifying a type checking algorithm.
 
 ### The VAR Rule
 
-The first typing rule in HM is $\mathtt{VAR}$ or $\mathtt{variable}$ and is the one we just looked at:
+The first typing rule in HM is $\mathtt{VAR}$ for "variable" and is the one we just looked at:
 
 $$
 {\mathtt{x}:\sigma \in \Gamma \above{1pt} \Gamma \vdash \mathtt{x}:\sigma}\qquad\mathtt{[VAR]}
@@ -554,6 +554,8 @@ $$
 see [above](#typing-rules).
 
 ### The APP Rule
+
+$\mathtt{APP}$ for "application".
 
 $$
 {\Gamma \vdash \mathtt{e_0}:\tau_a \rightarrow \tau_b\qquad \Gamma \vdash \mathtt{e_1}: \tau_a
@@ -571,7 +573,211 @@ One point to note is that $\tau_a$ and $\tau_b$ are monotypes, this rule doesn't
 Concrete example
 
 $$
-{\Gamma \vdash \mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool}\qquad \Gamma \vdash \mathtt{age}: \mathtt{Int}
+{ 
+  {
+     {\mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool} \in \Gamma}
+     \above{1pt}
+     \Gamma \vdash \mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool}
+  }
+  \qquad
+  {
+     {\mathtt{age}: \mathtt{Int} \in \Gamma}
+     \above{1pt}
+     \Gamma \vdash \mathtt{age}: \mathtt{Int}
+  }
 \above{1pt}
-\Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool} }
+  \Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+}
+$$
+
+This additionally shows stacking of rules to produce derivation trees.
+
+#### Typing Proofs
+
+Before discussing the other type rules, let's look at how we might automate the process so far.
+
+If we want toderive the type of say $\mathtt{odd\ age}$ we start by givilg it a fresh type variable, say $t_0$:
+
+$$
+\Gamma \vdash \mathtt{odd\ age}: t_0
+$$
+
+Nw we know from it's structure that it's a function application, so we'll be using the $\mathtt{APP}$ rule, etc.
+
+$$
+{ 
+  {
+     {\mathtt{odd}:t_4 \in \Gamma}
+     \above{1pt}
+     \Gamma \vdash \mathtt{odd}:t_1 \rightarrow t_2
+  }{\scriptsize\mathtt{[VAR]}}
+  \qquad
+  {
+     {\mathtt{age}: t_5 \in \Gamma}
+     \above{1pt}
+     \Gamma \vdash \mathtt{age}: t_3
+  }{\scriptsize\mathtt{[VAR]}}
+\above{1pt}
+  \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_0
+}
+{\scriptsize\mathtt{[APP]}}
+$$
+
+again we give the rule fresh variables.
+
+Having gotten a set of variables, we can use the rules to work out how they should unify:
+
+$$
+\begin{align}
+t_0 &\sim t_2
+\\
+t_1 &\sim t_3
+\\
+t_1 \rightarrow t_2 &\sim t_4
+\\
+t_4 &\sim \mathtt{Int} \rightarrow \mathtt{Bool}
+\\
+t_3 &\sim t_5
+\\
+t_5 &\sim \mathtt{Int}
+\end{align}
+$$
+
+Once we have this list, we can discard the tree and just look at the final expression
+
+$$
+\Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_0
+$$
+
+taking the first unification $t_0 \sim t_2$ and applying it, we get two possible unifications:
+
+$$
+\begin{align}
+\mathcal{U}(t_0, t_2) &= \set{ t_0 \mapsto t_2 }
+\\
+                      &= \set{ t_2 \mapsto t_0 }
+\end{align}
+$$
+
+These are actually equivalent, though it's tricky to explain how, but we need the first one.
+
+if we apply that substitution we get
+
+$$
+\begin{align}
+& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\\
+t_1 &\sim t_3
+\\
+t_1 \rightarrow t_2 &\sim t_4
+\\
+t_4 &\sim \mathtt{Int} \rightarrow \mathtt{Bool}
+\\
+t_3 &\sim t_5
+\\
+t_5 &\sim \mathtt{Int}
+\end{align}
+$$
+
+The next substitution applies to one of the unifications, not to the final statement
+
+$$
+\begin{align}
+S &= \mathcal{U}(t_1, t_3)
+\\
+S &= \set{ t_1 \mapsto t_3 }
+\\
+S(t_1 \rightarrow t_2 \sim t_4) &= t_3 \rightarrow t_2 \sim t_4
+\end{align}
+$$
+
+resulting in 
+
+$$
+\begin{align}
+& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\\
+t_3 \rightarrow t_2 &\sim t_4
+\\
+t_4 &\sim \mathtt{Int} \rightarrow \mathtt{Bool}
+\\
+t_3 &\sim t_5
+\\
+t_5 &\sim \mathtt{Int}
+\end{align}
+$$
+
+the next substitution
+
+$$
+\begin{align}
+S &= \mathcal{U}(t_3 \rightarrow t_2, t_4)
+\\
+S &= \set{t_4 \mapsto t_3 \rightarrow t_2}
+\\
+S(t_4 \sim \mathtt{Int} \rightarrow \mathtt{Bool}) &= t_3 \rightarrow t_2 \sim \mathtt{Int} \rightarrow \mathtt{Bool}
+\end{align}
+$$
+
+apply 
+
+$$
+\begin{align}
+& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\\
+t_3 \rightarrow t_2 &\sim \mathtt{Int} \rightarrow \mathtt{Bool}
+\\
+t_3 &\sim t_5
+\\
+t_5 &\sim \mathtt{Int}
+\end{align}
+$$
+
+The next substitution
+
+$$
+\begin{align}
+S &= \mathcal{U}(t_3 \rightarrow t_2, \mathtt{Int} \rightarrow \mathtt{Bool})
+\\
+S &= \set{t_3 \mapsto \mathtt{Int}, t_2 \mapsto \mathtt{Bool}}
+\\
+S(t_3 \sim t_5) &= \mathtt{Int} \sim t_5
+\\
+S(\mathtt{odd}\ \mathtt{age}:t_2) &= \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\end{align}
+$$
+
+Applying that gives us our solution
+
+$$
+\begin{align}
+& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\\
+\mathtt{Int} &\sim t_5
+\\
+t_5 &\sim \mathtt{Int}
+\end{align}
+$$
+
+however we haven't finished, as any subsequent failures would indicate a problem with the unification as a whole,
+so we continue:
+
+$$
+\begin{align}
+S &= \mathcal{U}(\mathtt{Int}, t_5)
+\\
+S &= \set{t_5 \mapsto \mathtt{Int}}
+\\
+S(t_5 \sim \mathtt{Int}) &= \mathtt{Int} \sim \mathtt{Int}
+\end{align}
+$$
+
+and applying this last substitution we see everything has worked out
+
+$$
+\begin{align}
+& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\\
+\mathtt{Int} &\sim \mathtt{Int}
+\end{align}
 $$
