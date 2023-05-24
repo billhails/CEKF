@@ -1,5 +1,7 @@
 # Type Checking
 
+Or, "Climbing the Hindley-Milner Mountain" 😁
+
 My notes on an absolutely fantastic YouTube series by [Adam Jones](https://www.youtube.com/@adam-jones).
 These are initially for my own benefit, explaining it to myself, so if you don't follow go watch the videos.
 
@@ -700,11 +702,11 @@ $$
 {
   {
     {
-      \Gamma \vdash \mathtt{reverse}: \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha
+      \Gamma\ \vdash\ \mathtt{reverse}\ :\ \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha
     }\ {\scriptsize\mathtt{[VAR]}}
-    \qquad \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha \sqsubseteq \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
+    \qquad \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha\ \sqsubseteq\ \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
     \above{1pt}
-    \Gamma \vdash \mathtt{reverse} : \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
+    \Gamma\ \vdash\ \mathtt{reverse} : \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
   }{\scriptsize\mathtt{[INST]}}
   \qquad
   {
@@ -714,6 +716,45 @@ $$
   \Gamma \vdash \mathtt{reverse\ ages} : \mathtt{List\ int}
 }{\scriptsize\mathtt{[APP]}}
 $$
+
+### The GEN Rule
+
+$\mathtt{GEN}$ for "generalization". Refer back to [Generalisation of Types in HM](#generalisation-of-types-in-hm)
+for an introduction.
+
+$$
+{
+\Gamma \vdash \mathtt{e} : \sigma \qquad \alpha \notin \mathcal{FV}(\Gamma)
+\above{1pt}
+\Gamma \vdash \mathtt{e} : \forall\alpha . \sigma
+}\qquad\mathtt{[GEN]}
+$$
+
+Says **if** $\mathtt{e}$ has type $\sigma$ **and** $\alpha$ is not in the free variables of $\Gamma$
+**then** the type of $\mathtt{e}$ is actually $\forall\alpha . \sigma$.
+
+Partial example
+
+$$
+{
+\Gamma \vdash \mathtt{things} : \mathtt{List}\ \alpha \qquad \alpha \notin \mathcal{FV}(\Gamma)
+\above{1pt}
+\Gamma \vdash \mathtt{things} : \forall\alpha . \mathtt{List}\ \alpha
+}\qquad\mathtt{[GEN]}
+$$
+
+Says **if** $\mathtt{things}$ has type $\mathtt{List}\ \alpha$ **and** $\alpha$ is not in the free
+variables of $\Gamma$ **then** $\forall$-quantify $\mathtt{List}\ \alpha$ with $\alpha$.
+
+Concrete example
+
+Given
+
+$$
+\Gamma = \mathtt{age} : \mathtt{Int}, \mathtt{odd} : \mathtt{Int} \rightarrow \mathtt{Bool}
+$$
+
+what is the type of $\mathtt{let\ id = \lambda x \rightarrow x\ in\ (id\ (odd\ (id\ age)))}$?
 
 ### Typing Proofs
 
