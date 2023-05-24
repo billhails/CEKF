@@ -656,7 +656,7 @@ Example:
 
 $$
 {
-\Gamma \vdash \mathtt{3} : \mathtt{Int} \qquad \Gamma, \mathtt{a} : \mathtt{Int} \vdash \mathtt{gt\ 3\ a} : \mathtt{Bool}
+\Gamma \vdash \mathtt{2} : \mathtt{Int} \qquad \Gamma, \mathtt{a} : \mathtt{Int} \vdash \mathtt{gt\ 3\ a} : \mathtt{Bool}
 \above{1pt}
 \Gamma \vdash \mathtt{let\ x = 3\ in\ gt\ 3\ a} : \mathtt{Bool}
 }
@@ -665,7 +665,7 @@ $$
 where
 
 $$
-\Gamma = \mathtt{gt} : \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \mathtt{Bool}, 3 : \mathtt{Int}
+\Gamma = \mathtt{gt} : \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \mathtt{Bool}, 2 : \mathtt{Int}
 $$
 
 In reality the context would have a generic way to assign $\mathtt{Int}$ to literal integers, rather than
