@@ -221,6 +221,9 @@ void markObj(Header *h) {
         case OBJTYPE_HASHSYMBOL:
             markHashSymbolObj(h);
             break;
+        TIN_OBJTYPE_CASES()
+            markTinObj(h);
+            break;
         AST_OBJTYPE_CASES()
             markAstObj(h);
             break;
@@ -265,6 +268,9 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_HASHSYMBOL:
             freeHashSymbolObj(h);
+            break;
+        TIN_OBJTYPE_CASES()
+            freeTinObj(h);
             break;
         AST_OBJTYPE_CASES()
             freeAstObj(h);

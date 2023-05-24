@@ -113,10 +113,10 @@ class Catalog:
         objTypeArray = []
         for entity in self.contents.values():
             objTypeArray += entity.objTypeArray()
-        print("#define AST_OBJTYPES() {a}".format(a=', \\\n'.join(objTypeArray)))
+        print("#define {typeName}_OBJTYPES() {a}".format(a=', \\\n'.join(objTypeArray), typeName=self.typeName.upper()))
 
     def printObjCasesDefine(self):
-        print("#define AST_OBJTYPE_CASES() \\")
+        print(f"#define {self.typeName.upper()}_OBJTYPE_CASES() \\")
         for entity in self.contents.values():
             objType = entity.objTypeArray()
             if len(objType) == 1:

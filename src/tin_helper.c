@@ -1,5 +1,3 @@
-#ifndef cekf_common_h
-#define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,19 +16,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdint.h>
+#include <stdio.h>
+#include "tin_helper.h"
 
- typedef uint32_t hash_t;
+static HashTable tinSymbolTable;
 
-// #define TEST_STACK
-// #define DEBUG_STACK
-// #define DEBUG_STEP
-// #define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 2
-// #define DEBUG_ANALIZE
-// #define DEBUG_DESUGARING
+void markTinSymbolTable() {
+    tinSymbolTable.header.keep = false;
+    markHashTableObj((Header *) &tinSymbolTable);
+}
 
-void cant_happen(const char *message, ...);
 
-#endif
+HashSymbol *getTinSymbol(char *name) {
+    return uniqueHashSymbol(&tinSymbolTable, 0, name);
+}
+
+void printTinSymbol(struct HashSymbol * x, int depth) {
+    if (x == NULL) { printf("TinSymbol (NULL)"); return; }
+    printf("TinSymbol[\"%s\"]", x->name);
+}
