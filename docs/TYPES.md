@@ -593,11 +593,47 @@ $$
 
 This additionally shows stacking of rules to produce derivation trees.
 
-#### Typing Proofs
+### The ABS Rule
 
-Before discussing the other type rules, let's look at how we might automate the process so far.
+ABS for "abstraction".
 
-If we want toderive the type of say $\mathtt{odd\ age}$ we start by givilg it a fresh type variable, say $t_0$:
+$$
+{
+  \Gamma, \mathtt{x} : \tau_a \vdash \mathtt{e} : \tau_b
+  \above{1pt}
+  \Gamma \vdash \lambda \mathtt{x} \rightarrow \mathtt{e} : \tau_a \rightarrow \tau_b
+}\qquad\mathtt{[ABS]}
+$$
+
+Says **if** from the context plus an assignment $\mathtt{x}$ has type $\tau_a$ it follows that $\mathtt{e}$ has type $\tau_b$,
+**then** from the context it follows that expression $\lambda \mathtt{x} \rightarrow \mathtt{e}$ has type $\tau_a \rightarrow \tau_b$.
+
+Example
+
+$$
+{
+  \Gamma, \mathtt{n} : \mathtt{Int} \vdash \mathtt{gt\ 3\ n} : \mathtt{Bool}
+  \above{1pt}
+  \Gamma \vdash \lambda \mathtt{n} \rightarrow \mathtt{gt\ 3\ n} : \mathtt{Int} \rightarrow \mathtt{Bool}
+}
+$$
+
+Where
+
+$$
+\Gamma = \mathtt{gt} : \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \mathtt{Bool}
+$$
+
+This is subtle, why the extra assigment outside of the context? and why from the context alone does it
+follow that the function abstraction has that type? I think it's working backwards from the body of the
+function abstraction to its argument type, and the $\mathtt{n}$ is only required as a placeholder for a
+unifiable variable.
+
+### Typing Proofs
+
+Let's look at how we might automate the process.
+
+If we want to derive the type of say $\mathtt{odd\ age}$ we start by givilg it a fresh type variable, say $t_0$:
 
 $$
 \Gamma \vdash \mathtt{odd\ age}: t_0
@@ -672,7 +708,7 @@ we remove the constraint from our list and we're left with:
 
 $$
 \begin{align}
-& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:t_2
 \\
 t_1 &\sim t_3
 \\
@@ -706,7 +742,7 @@ resulting in
 
 $$
 \begin{align}
-& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:t_2
 \\
 t_3 \rightarrow t_2 &\sim t_4
 \\
@@ -724,7 +760,7 @@ $$
 \begin{align}
 S &= \mathcal{U}(t_3 \rightarrow t_2, t_4)
 \\
- &= \set{t_4 \mapsto t_3 \rightarrow t_2}
+ &= \set{t_4 \mapsto (t_3 \rightarrow t_2)}
 \end{align}
 $$
 
@@ -738,7 +774,7 @@ resulting in
 
 $$
 \begin{align}
-& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:t_2
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:t_2
 \\
 t_3 \rightarrow t_2 &\sim \mathtt{Int} \rightarrow \mathtt{Bool}
 \\
@@ -772,7 +808,7 @@ gives us our solution
 
 $$
 \begin{align}
-& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
 \\
 \mathtt{Int} &\sim t_5
 \\
@@ -797,12 +833,26 @@ $$
 S(t_5 \sim \mathtt{Int}) = \mathtt{Int} \sim \mathtt{Int}
 $$
 
-we see everything has worked out
+we are left with one final unification to perform
 
 $$
 \begin{align}
-& & \Gamma \vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
 \\
 \mathtt{Int} &\sim \mathtt{Int}
+\end{align}
+$$
+
+doing that results in an empty mapping so no substitutions to perform so we discard the constraint and we're done.
+
+$$
+\begin{align}
+S &= \mathcal{U}(\mathtt{Int}, \mathtt{Int})
+\\
+ &= \emptyset
+\\
+\\
+\Gamma &\vdash \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\\
 \end{align}
 $$
