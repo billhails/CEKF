@@ -983,3 +983,25 @@ S &= \mathcal{U}(\mathtt{Int}, \mathtt{Int})
 \\
 \end{align}
 $$
+
+## Algorithm W
+
+We're now ready to tackle the HM algoritms themselves, starting with algorithm $\mathcal{W}$.
+
+The signature for $\mathcal{W}$ is
+
+$$
+\mathcal{W}\ \Gamma \times \mathtt{e} = S \times \sigma
+$$
+
+e.g. it takes a tuple of a context and an expression, and returns a tuple of a substitution and a type.
+
+And here it is
+
+$$
+\begin{align}
+\mathcal{W}(\Gamma, \mathtt{x}) &= (id, \set{\vec{\beta}/\vec{\alpha}}\tau) & \textup{where }\Gamma(\mathtt{x}) = \forall\vec{\alpha}.\tau, \textup{new }\vec{\beta}
+\\
+\mathcal{W}(\Gamma, \lambda \mathtt{x} \rightarrow  \mathtt{e}) &= 
+\end{align}
+$$
