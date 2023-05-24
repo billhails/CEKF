@@ -658,7 +658,7 @@ $$
 {
 \Gamma \vdash \mathtt{2} : \mathtt{Int} \qquad \Gamma, \mathtt{a} : \mathtt{Int} \vdash \mathtt{gt\ 3\ a} : \mathtt{Bool}
 \above{1pt}
-\Gamma \vdash \mathtt{let\ x = 3\ in\ gt\ 3\ a} : \mathtt{Bool}
+\Gamma \vdash \mathtt{let\ a = 2\ in\ gt\ 3\ a} : \mathtt{Bool}
 }
 $$
 
@@ -670,6 +670,50 @@ $$
 
 In reality the context would have a generic way to assign $\mathtt{Int}$ to literal integers, rather than
 enumerating them as here.
+
+### The INST Rule
+
+$\mathtt{INST}$ for "instantiation"
+
+Refer back to [Instantiation of Types in HM](#instantiation-of-types-in-hm) for an introduction.
+
+$$
+{
+\Gamma \vdash \mathtt{e} : \sigma_a \qquad \sigma_a \sqsubseteq \sigma_b
+\above{1pt}
+\Gamma \vdash \mathtt{e} : \sigma_b
+}\qquad\mathtt{[INST]}
+$$
+
+Says **if** $\mathtt{e}$ has type $\sigma_a$ **and** $\sigma_a$ is more general than $\sigma_b$ **then**
+$\mathtt{e}$ has (can have) type $\sigma_b$.
+
+Example, given
+
+$$
+\Gamma = \mathtt{reverse}: \forall\alpha. \mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha, \mathtt{Ages} : \mathtt{List\ int}
+$$
+
+What is the type of $\mathtt{reverse\ ages}$?
+
+$$
+{
+  {
+    {
+      \Gamma \vdash \mathtt{reverse}: \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha
+    }\ {\scriptsize\mathtt{[VAR]}}
+    \qquad \forall\alpha.\mathtt{List}\ \alpha \rightarrow \mathtt{List}\ \alpha \sqsubseteq \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
+    \above{1pt}
+    \Gamma \vdash \mathtt{reverse} : \mathtt{List\ Int} \rightarrow \mathtt{List\ Int}
+  }{\scriptsize\mathtt{[INST]}}
+  \qquad
+  {
+    \Gamma \vdash \mathtt{ages}: \mathtt{List\ Int}
+  }\ {\scriptsize\mathtt{[VAR]}}
+  \above{1pt}
+  \Gamma \vdash \mathtt{reverse\ ages} : \mathtt{List\ int}
+}{\scriptsize\mathtt{[APP]}}
+$$
 
 ### Typing Proofs
 
