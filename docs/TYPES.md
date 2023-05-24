@@ -63,6 +63,9 @@ which can be either a monotype $\tau$ or a quantified polytype $\forall\alpha.\s
 are how we deal with polymorphic functions. More on that lter, but essentially $\forall\alpha$ is saying
 "any $\alpha$ in the subsequent expression is local to it".
 
+> These two types are *not interchangeable*. pay careful attention to where we use a $\tau$ and where we use a $\sigma$
+> in subsequent equations.
+
 Example
 
 $$
@@ -628,6 +631,42 @@ This is subtle, why the extra assigment outside of the context? and why from the
 follow that the function abstraction has that type? I think it's working backwards from the body of the
 function abstraction to its argument type, and the $\mathtt{n}$ is only required as a placeholder for a
 unifiable variable.
+
+### The LET Rule
+
+There is a special rule for $\mathtt{let}$ bindings.
+
+$$
+{
+\Gamma \vdash \mathtt{e_0} : \sigma \qquad \Gamma, \mathtt{x} : \sigma \vdash \mathtt{e_1} : \tau
+\above{1pt}
+\Gamma \vdash \mathtt{let\ x = e_0\ in\ e_1} : \tau
+}\qquad\mathtt{[LET]}
+$$
+
+Says that **if** from the context it follows that $\mathtt{e_0}$ has type $\mathtt{sigma}$ **and**
+from the context plust a type assignment of $\sigma$ to $\mathtt{x}$ it follows that $\mathtt{e_1}$
+has type $\tau$, **then** from the context alone it follows that $\mathtt{let\ x = e_0\ in\ e_1}$ has
+type $\tau$.
+
+Note that the result $\tau$ is constrained to be a monotype, this will be important later.
+Also note that this is a kind of mixture of both the $\mathtt{APP}$ and $\mathtt{ABS}$ rules.
+
+Example:
+
+$$
+{
+\Gamma \vdash \mathtt{2} : \mathtt{Int} \qquad \Gamma, \mathtt{a} : \mathtt{Int} \vdash \mathtt{gt\ 3\ a} : \mathtt{Bool}
+\above{1pt}
+\Gamma \vdash \mathtt{let\ x = 3\ in\ gt\ 3\ a} : \mathtt{Bool}
+}\qquad\mathtt{[LET]}
+$$
+
+where
+
+$$
+\Gamma = \mathtt{gt} : \mathtt{Int} \rightarrow \mathtt{Int} \rightarrow \mathtt{Bool}
+$$
 
 ### Typing Proofs
 
