@@ -1,6 +1,7 @@
 # Type Checking
 
 My notes on an absolutely fantastic YouTube series by [Adam Jones](https://www.youtube.com/@adam-jones).
+These are initially for my own benefit, explaining it to myself, so if you don't follow go watch the videos.
 
 ## Lambda Calculus Grammar
 
@@ -653,15 +654,21 @@ taking the first unification $t_0 \sim t_2$ and applying it, we get two possible
 
 $$
 \begin{align}
-\mathcal{U}(t_0, t_2) &= \set{ t_0 \mapsto t_2 }
+S = \mathcal{U}(t_0, t_2) &= \set{ t_0 \mapsto t_2 }
 \\
-                      &= \set{ t_2 \mapsto t_0 }
+                          &= \set{ t_2 \mapsto t_0 }
 \end{align}
 $$
 
 These are actually equivalent, though it's tricky to explain how, but we need the first one.
 
-if we apply that substitution we get
+if we apply that substitution to all the components, only one actually changes:
+
+$$
+S(\mathtt{odd}\ \mathtt{age}:t_0) = \mathtt{odd}\ \mathtt{age}:t_2
+$$
+
+we remove the constraint from our list and we're left with:
 
 $$
 \begin{align}
@@ -685,10 +692,14 @@ $$
 \begin{align}
 S &= \mathcal{U}(t_1, t_3)
 \\
-S &= \set{ t_1 \mapsto t_3 }
-\\
-S(t_1 \rightarrow t_2 \sim t_4) &= t_3 \rightarrow t_2 \sim t_4
+ &= \set{ t_1 \mapsto t_3 }
 \end{align}
+$$
+
+We apply the sybstitution and discard the constraint
+
+$$
+S(t_1 \rightarrow t_2 \sim t_4) = t_3 \rightarrow t_2 \sim t_4
 $$
 
 resulting in 
@@ -713,13 +724,17 @@ $$
 \begin{align}
 S &= \mathcal{U}(t_3 \rightarrow t_2, t_4)
 \\
-S &= \set{t_4 \mapsto t_3 \rightarrow t_2}
-\\
-S(t_4 \sim \mathtt{Int} \rightarrow \mathtt{Bool}) &= t_3 \rightarrow t_2 \sim \mathtt{Int} \rightarrow \mathtt{Bool}
+ &= \set{t_4 \mapsto t_3 \rightarrow t_2}
 \end{align}
 $$
 
-apply 
+apply and discard
+
+$$
+S(t_4 \sim \mathtt{Int} \rightarrow \mathtt{Bool}) = t_3 \rightarrow t_2 \sim \mathtt{Int} \rightarrow \mathtt{Bool}
+$$
+
+resulting in
 
 $$
 \begin{align}
@@ -739,15 +754,21 @@ $$
 \begin{align}
 S &= \mathcal{U}(t_3 \rightarrow t_2, \mathtt{Int} \rightarrow \mathtt{Bool})
 \\
-S &= \set{t_3 \mapsto \mathtt{Int}, t_2 \mapsto \mathtt{Bool}}
-\\
-S(t_3 \sim t_5) &= \mathtt{Int} \sim t_5
-\\
-S(\mathtt{odd}\ \mathtt{age}:t_2) &= \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+  &= \set{t_3 \mapsto \mathtt{Int}, t_2 \mapsto \mathtt{Bool}}
 \end{align}
 $$
 
-Applying that gives us our solution
+Applying that
+
+$$
+\begin{align}
+S(\mathtt{odd}\ \mathtt{age}:t_2) &= \mathtt{odd}\ \mathtt{age}:\mathtt{Bool}
+\\
+S(t_3 \sim t_5) &= \mathtt{Int} \sim t_5
+\end{align}
+$$
+
+gives us our solution
 
 $$
 \begin{align}
@@ -766,13 +787,17 @@ $$
 \begin{align}
 S &= \mathcal{U}(\mathtt{Int}, t_5)
 \\
-S &= \set{t_5 \mapsto \mathtt{Int}}
-\\
-S(t_5 \sim \mathtt{Int}) &= \mathtt{Int} \sim \mathtt{Int}
+ &= \set{t_5 \mapsto \mathtt{Int}}
 \end{align}
 $$
 
-and applying this last substitution we see everything has worked out
+and applying this last substitution
+
+$$
+S(t_5 \sim \mathtt{Int}) = \mathtt{Int} \sim \mathtt{Int}
+$$
+
+we see everything has worked out
 
 $$
 \begin{align}
