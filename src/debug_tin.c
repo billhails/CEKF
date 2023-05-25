@@ -67,6 +67,19 @@ void printTinTypeQuantifier(struct TinTypeQuantifier * x, int depth) {
     printf("]");
 }
 
+void printTinContext(struct TinContext * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinContext (NULL)"); return; }
+    printf("TinContext[\n");
+    pad(depth + 1);
+    printHashTable(x->frame, depth);
+    printf("\n");
+    printTinContext(x->next, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
 void printTinMonoType(struct TinMonoType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinMonoType (NULL)"); return; }
@@ -108,6 +121,29 @@ void printTinPolyType(struct TinPolyType * x, int depth) {
             break;
         default:
             cant_happen("unrecognised type %d in printTinPolyType", x->type);
+    }
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinType(struct TinType * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinType (NULL)"); return; }
+    printf("TinType[\n");
+    switch(x->type) {
+        case TINTYPE_TYPE_MONOTYPE:
+            pad(depth + 1);
+            printf("TINTYPE_TYPE_MONOTYPE\n");
+            printTinMonoType(x->val.monoType, depth + 1);
+            break;
+        case TINTYPE_TYPE_POLYTYPE:
+            pad(depth + 1);
+            printf("TINTYPE_TYPE_POLYTYPE\n");
+            printTinPolyType(x->val.polyType, depth + 1);
+            break;
+        default:
+            cant_happen("unrecognised type %d in printTinType", x->type);
     }
     printf("\n");
     pad(depth);

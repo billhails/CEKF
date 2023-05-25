@@ -44,6 +44,13 @@ struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPoly
     return x;
 }
 
+struct TinContext * newTinContext(HashTable * frame, struct TinContext * next) {
+    struct TinContext * x = NEW(TinContext, OBJTYPE_TINCONTEXT);
+    x->frame = frame;
+    x->next = next;
+    return x;
+}
+
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val) {
     struct TinMonoType * x = NEW(TinMonoType, OBJTYPE_TINMONOTYPE);
     x->type = type;
@@ -53,6 +60,13 @@ struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTyp
 
 struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTypeVal  val) {
     struct TinPolyType * x = NEW(TinPolyType, OBJTYPE_TINPOLYTYPE);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+struct TinType * newTinType(enum TinTypeType  type, union TinTypeVal  val) {
+    struct TinType * x = NEW(TinType, OBJTYPE_TINTYPE);
     x->type = type;
     x->val = val;
     return x;
@@ -81,6 +95,13 @@ void markTinTypeQuantifier(struct TinTypeQuantifier * x) {
     if (MARKED(x)) return;
     MARK(x);
     markTinPolyType(x->quantifiedType);
+}
+
+void markTinContext(struct TinContext * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markTinContext(x->next);
 }
 
 void markTinMonoType(struct TinMonoType * x) {
@@ -114,6 +135,22 @@ void markTinPolyType(struct TinPolyType * x) {
     }
 }
 
+void markTinType(struct TinType * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case TINTYPE_TYPE_MONOTYPE:
+            markTinMonoType(x->val.monoType);
+            break;
+        case TINTYPE_TYPE_POLYTYPE:
+            markTinPolyType(x->val.polyType);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markTinType", x->type);
+    }
+}
+
 
 void markTinObj(struct Header *h) {
     switch(h->type) {
@@ -126,11 +163,17 @@ void markTinObj(struct Header *h) {
         case OBJTYPE_TINTYPEQUANTIFIER:
             markTinTypeQuantifier((TinTypeQuantifier *)h);
             break;
+        case OBJTYPE_TINCONTEXT:
+            markTinContext((TinContext *)h);
+            break;
         case OBJTYPE_TINMONOTYPE:
             markTinMonoType((TinMonoType *)h);
             break;
         case OBJTYPE_TINPOLYTYPE:
             markTinPolyType((TinPolyType *)h);
+            break;
+        case OBJTYPE_TINTYPE:
+            markTinType((TinType *)h);
             break;
     }
 }
@@ -149,12 +192,20 @@ void freeTinTypeQuantifier(struct TinTypeQuantifier * x) {
     FREE(x, TinTypeQuantifier);
 }
 
+void freeTinContext(struct TinContext * x) {
+    FREE(x, TinContext);
+}
+
 void freeTinMonoType(struct TinMonoType * x) {
     FREE(x, TinMonoType);
 }
 
 void freeTinPolyType(struct TinPolyType * x) {
     FREE(x, TinPolyType);
+}
+
+void freeTinType(struct TinType * x) {
+    FREE(x, TinType);
 }
 
 
@@ -169,12 +220,37 @@ void freeTinObj(struct Header *h) {
         case OBJTYPE_TINTYPEQUANTIFIER:
             freeTinTypeQuantifier((TinTypeQuantifier *)h);
             break;
+        case OBJTYPE_TINCONTEXT:
+            freeTinContext((TinContext *)h);
+            break;
         case OBJTYPE_TINMONOTYPE:
             freeTinMonoType((TinMonoType *)h);
             break;
         case OBJTYPE_TINPOLYTYPE:
             freeTinPolyType((TinPolyType *)h);
             break;
+        case OBJTYPE_TINTYPE:
+            freeTinType((TinType *)h);
+            break;
+    }
+}
+
+char *typenameTinObj(int type) {
+    switch(type) {
+        case OBJTYPE_TINFUNCTIONAPPLICATION:
+            return "TinFunctionApplication";
+        case OBJTYPE_TINMONOTYPELIST:
+            return "TinMonoTypeList";
+        case OBJTYPE_TINTYPEQUANTIFIER:
+            return "TinTypeQuantifier";
+        case OBJTYPE_TINCONTEXT:
+            return "TinContext";
+        case OBJTYPE_TINMONOTYPE:
+            return "TinMonoType";
+        case OBJTYPE_TINPOLYTYPE:
+            return "TinPolyType";
+        case OBJTYPE_TINTYPE:
+            return "TinType";
     }
 }
 

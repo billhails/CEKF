@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #include "common.h"
 #include "analysis.h"
@@ -30,6 +31,7 @@
 static int bytesAllocated = 0;
 static int nextGC = 0;
 static bool gcEnabled = true;
+static int numAlloc = 0;
 
 static void collectGarbage();
 
@@ -44,6 +46,8 @@ const char *typeName(ObjType type) {
     switch (type) {
         case OBJTYPE_AMB:
             return "amb";
+        case OBJTYPE_BOOL:
+            return "bool";
         case OBJTYPE_APPLY:
             return "apply";
         case OBJTYPE_BINDINGS:
@@ -66,6 +70,8 @@ const char *typeName(ObjType type) {
             return "letrec";
         case OBJTYPE_PRIMAPP:
             return "primapp";
+        case OBJTYPE_UNARYAPP:
+            return "unaryapp";
         case OBJTYPE_HASHSYMBOL:
             return "var";
         case OBJTYPE_ANNOTATEDVAR:
@@ -88,8 +94,12 @@ const char *typeName(ObjType type) {
             return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
-        case OBJTYPE_AST:
-            return "ast";
+        TIN_OBJTYPE_CASES()
+            typenameTinObj(type);
+            break;
+        AST_OBJTYPE_CASES()
+            typenameAstObj(type);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in typeName", type);
     }
@@ -142,7 +152,19 @@ void unProtect(int index) {
 }
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "reallocate %d + %lu - %lu [%d]\n", bytesAllocated, newSize, oldSize, numAlloc);
+    if (newSize > oldSize)
+        numAlloc++;
+    if (newSize < oldSize)
+        numAlloc--;
+    if (numAlloc < 0)
+        cant_happen("more frees than mallocs!");
+
+#endif
     bytesAllocated += newSize - oldSize;
+    if (bytesAllocated < 0)
+        cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]", bytesAllocated, newSize, oldSize, numAlloc);
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
@@ -172,7 +194,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "allocate type %s\n", typeName(type));
+    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type), bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
@@ -300,9 +322,6 @@ static void sweep() {
     Header **previous = &allocated;
     while (current != NULL) {
         if (current->keep) {
-#ifdef DEBUG_LOG_GC
-            fprintf(stderr, "sweep keep type %s\n", typeName(current->type));
-#endif
             previous = &current->next;
             current->keep = false;
         } else {

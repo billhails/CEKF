@@ -34,30 +34,36 @@ typedef struct HashSymbol {
     char *name;
 } HashSymbol;
 
-typedef struct HashEntry {
-    struct HashSymbol *var;
-    struct Value value;
-} HashEntry;
+typedef void (*MarkHashValueFunction)(void *value);
+typedef void (*PrintHashValueFunction)(void *value);
 
 typedef struct HashTable {
     struct Header header;
+    int id;
     int count;
     int capacity;
-    HashEntry *entries;
+    size_t valuesize;
+    HashSymbol **keys;
+    void *values;
+    MarkHashValueFunction markfunction;
+    PrintHashValueFunction printfunction;
 } HashTable;
 
 hash_t hashString(const char *string);
-HashTable *newHashTable();
-void hashSet(HashTable *table, struct HashSymbol *var, struct Value value);
-struct Value hashGet(HashTable *table, struct HashSymbol *var);
-struct HashSymbol *hashGetVar(HashTable *table, const char *name);
-Value hashGet(HashTable *table, struct HashSymbol *var);
-void hashAddCTVar(HashTable *table, struct HashSymbol *var);
-bool hashLocate(HashTable *table, struct HashSymbol *var, int *location);
-HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name);
+
+HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, PrintHashValueFunction printfunction);
+
+void hashSet(HashTable *table, struct HashSymbol *var, void *src);
+bool hashGet(HashTable *table, struct HashSymbol *var, void *dest);
+
+HashSymbol *hashGetVar(HashTable *table, const char *name);
+HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name, void *valuePtr);
+
 void markHashSymbol(HashSymbol *x);
 void freeHashSymbol(HashSymbol *x);
 
-static inline void markHashSymbolObj(Header *h) { markHashSymbol((HashSymbol *)h); }
-static inline void freeHashSymbolObj(Header *h) { freeHashSymbol((HashSymbol *)h); }
+void printHashTable(HashTable *table, int depth);
+
+static inline void markHashSymbolObj(struct Header *h) { markHashSymbol((HashSymbol *)h); }
+static inline void freeHashSymbolObj(struct Header *h) { freeHashSymbol((HashSymbol *)h); }
 #endif

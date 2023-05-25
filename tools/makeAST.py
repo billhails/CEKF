@@ -109,6 +109,14 @@ class Catalog:
         print('    }')
         print('}')
 
+    def printTypeObjFunction(self):
+        print(f'char *typename{self.typeName.capitalize()}Obj(int type) {{')
+        print('    switch(type) {')
+        for entity in self.contents.values():
+            entity.printTypeObjCase(self)
+        print('    }')
+        print('}')
+
     def printObjTypeDefine(self):
         objTypeArray = []
         for entity in self.contents.values():
@@ -173,6 +181,9 @@ class Base:
         pass
 
     def printFreeObjCase(self, catalog):
+        pass
+
+    def printTypeObjCase(self, catalog):
         pass
 
     def printDefines(self, catalog):
@@ -370,6 +381,12 @@ class SimpleStruct(Base):
         print('free{name}(({name} *)h);'.format(name=self.getName()))
         pad(3)
         print('break;')
+
+    def printTypeObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('return "{name}";'.format(name=self.getName()))
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
@@ -727,6 +744,7 @@ elif args.type == "objtypes_h":
     print("")
     print(f'void mark{typeName.capitalize()}Obj(struct Header *h);')
     print(f'void free{typeName.capitalize()}Obj(struct Header *h);')
+    print(f'char *typename{typeName.capitalize()}Obj(int type);')
     print("")
     print("#endif");
 elif args.type == "c":
@@ -747,6 +765,8 @@ elif args.type == "c":
     catalog.printFreeFunctions()
     print("")
     catalog.printFreeObjFunction()
+    print("")
+    catalog.printTypeObjFunction()
     print("")
 elif args.type == 'debug_h':
     print(f"#ifndef cekf_debug_{typeName}_h")

@@ -18,17 +18,10 @@
 
 #include <stdio.h>
 #include "ast_helper.h"
-
-static HashTable astSymbolTable;
-
-void markAstSymbolTable() {
-    astSymbolTable.header.keep = false;
-    markHashTableObj((Header *) &astSymbolTable);
-}
-
+#include "symbol.h"
 
 HashSymbol *getAstSymbol(AstSymbolType type, char *name) {
-    return uniqueHashSymbol(&astSymbolTable, type, name);
+    return newSymbol(name, (int) type);
 }
 
 void printAstSymbol(struct HashSymbol * x, int depth) {

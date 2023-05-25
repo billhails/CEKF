@@ -33,6 +33,10 @@ structs:
         var: HashSymbol
         quantifiedType: TinPolyType
 
+    TinContext:
+        frame: HashTable
+        next: TinContext
+
 unions:
     TinMonoType:
         var: HashSymbol
@@ -42,12 +46,21 @@ unions:
         monoType: TinMonoType
         quantifier: TinTypeQuantifier
 
+    TinType:
+        monoType: TinMonoType
+        polyType: TinPolyType
+
 enums: {}
 
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printTinSymbol"
+        valued: true
+
+    HashTable:
+        cname: "HashTable *"
+        printFn: "printHashTable"
         valued: true
 
     int:

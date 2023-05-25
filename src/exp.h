@@ -23,6 +23,7 @@
 #include "common.h"
 #include "memory.h"
 #include "hash.h"
+#include "symbol.h"
 
 /**
  * This file defines the A-Normal form expressions
@@ -273,7 +274,6 @@ ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
 LetRecBindings *newLetRecBindings(LetRecBindings *next, HashSymbol *var, Aexp *val);
 
-HashSymbol *genSym(char *prefix);
 
 void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);

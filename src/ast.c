@@ -1034,3 +1034,78 @@ void freeAstObj(struct Header *h) {
     }
 }
 
+char *typenameAstObj(int type) {
+    switch(type) {
+        case OBJTYPE_ASTNEST:
+            return "AstNest";
+        case OBJTYPE_ASTDEFINITIONS:
+            return "AstDefinitions";
+        case OBJTYPE_ASTDEFINE:
+            return "AstDefine";
+        case OBJTYPE_ASTPROTOTYPE:
+            return "AstPrototype";
+        case OBJTYPE_ASTPROTOTYPEBODY:
+            return "AstPrototypeBody";
+        case OBJTYPE_ASTPROTOTYPESYMBOLTYPE:
+            return "AstPrototypeSymbolType";
+        case OBJTYPE_ASTLOAD:
+            return "AstLoad";
+        case OBJTYPE_ASTTYPEDEF:
+            return "AstTypeDef";
+        case OBJTYPE_ASTFLATTYPE:
+            return "AstFlatType";
+        case OBJTYPE_ASTTYPESYMBOLS:
+            return "AstTypeSymbols";
+        case OBJTYPE_ASTTYPEBODY:
+            return "AstTypeBody";
+        case OBJTYPE_ASTTYPECONSTRUCTOR:
+            return "AstTypeConstructor";
+        case OBJTYPE_ASTTYPELIST:
+            return "AstTypeList";
+        case OBJTYPE_ASTTYPE:
+            return "AstType";
+        case OBJTYPE_ASTCONDITIONAL:
+            return "AstConditional";
+        case OBJTYPE_ASTSWITCH:
+            return "AstSwitch";
+        case OBJTYPE_ASTCOMPOSITEFUNCTION:
+            return "AstCompositeFunction";
+        case OBJTYPE_ASTFUNCTION:
+            return "AstFunction";
+        case OBJTYPE_ASTARGLIST:
+            return "AstArgList";
+        case OBJTYPE_ASTUNPACK:
+            return "AstUnpack";
+        case OBJTYPE_ASTARGPAIR:
+            return "AstArgPair";
+        case OBJTYPE_ASTNAMEDARG:
+            return "AstNamedArg";
+        case OBJTYPE_ASTENVTYPE:
+            return "AstEnvType";
+        case OBJTYPE_ASTBINOP:
+            return "AstBinOp";
+        case OBJTYPE_ASTFUNCALL:
+            return "AstFunCall";
+        case OBJTYPE_ASTPACKAGE:
+            return "AstPackage";
+        case OBJTYPE_ASTEXPRESSIONS:
+            return "AstExpressions";
+        case OBJTYPE_ASTENV:
+            return "AstEnv";
+        case OBJTYPE_ASTSTRING:
+            return "AstString";
+        case OBJTYPE_ASTDEFINITION:
+            return "AstDefinition";
+        case OBJTYPE_ASTSINGLEPROTOTYPE:
+            return "AstSinglePrototype";
+        case OBJTYPE_ASTTYPECLAUSE:
+            return "AstTypeClause";
+        case OBJTYPE_ASTFUN:
+            return "AstFun";
+        case OBJTYPE_ASTARG:
+            return "AstArg";
+        case OBJTYPE_ASTEXPRESSION:
+            return "AstExpression";
+    }
+}
+

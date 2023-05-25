@@ -20,6 +20,7 @@
 #include "exp.h"
 #include "hash.h"
 #include "memory.h"
+#include "symbol.h"
 
 static int countAexpVarList(AexpVarList *list) {
     int count = 0;
@@ -64,35 +65,8 @@ AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var) {
     return x;
 }
 
-static HashTable varTable;
-
-void markVarTable() {
-    varTable.header.keep = false; // force
-    markHashTableObj((Header *) &varTable);
-}
-
 HashSymbol *newAexpVar(char *name) {
-    return uniqueHashSymbol(&varTable, 0, name);
-}
-
-static int symbolCounter = 0;
-
-HashSymbol *genSym(char *prefix) {
-    char *buffer = NEW_ARRAY(char, 128); // not callable externally
-
-    for (;;) {
-        sprintf(buffer, "%s%d", prefix, symbolCounter++);
-        if (hashGetVar(&varTable, buffer) == NULL) {
-            HashSymbol *x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
-            x->type = 0;
-            x->name = buffer;
-            x->hash = hashString(buffer);
-            int save = PROTECT(x);
-            hashSet(&varTable, x, vVoid);
-            UNPROTECT(save);
-            return x;
-        }
-    }
+    return newSymbol(name, 0);
 }
 
 AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, HashSymbol *var) {

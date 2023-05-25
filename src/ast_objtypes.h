@@ -98,5 +98,6 @@ case OBJTYPE_ASTEXPRESSION:\
 
 void markAstObj(struct Header *h);
 void freeAstObj(struct Header *h);
+char *typenameAstObj(int type);
 
 #endif

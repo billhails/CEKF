@@ -1,3 +1,5 @@
+#ifndef cekf_symbol_h
+#define cekf_symbol_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,16 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include "tin_helper.h"
-#include "debug_tin.h"
-#include "symbol.h"
+#include "hash.h"
 
-HashSymbol *getTinSymbol(char *name) {
-    return newSymbol(name, 0);
-}
+HashSymbol *genSym(char *prefix);
 
-void printTinSymbol(struct HashSymbol * x, int depth) {
-    if (x == NULL) { printf("TinSymbol (NULL)"); return; }
-    printf("TinSymbol[\"%s\"]", x->name);
-}
+HashSymbol *newSymbol(char *name, int type);
+
+#endif

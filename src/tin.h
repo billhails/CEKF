@@ -35,6 +35,11 @@ typedef enum TinPolyTypeType {
     TINPOLYTYPE_TYPE_QUANTIFIER,
 } TinPolyTypeType;
 
+typedef enum TinTypeType {
+    TINTYPE_TYPE_MONOTYPE,
+    TINTYPE_TYPE_POLYTYPE,
+} TinTypeType;
+
 
 
 typedef union TinMonoTypeVal {
@@ -46,6 +51,11 @@ typedef union TinPolyTypeVal {
     struct TinMonoType * monoType;
     struct TinTypeQuantifier * quantifier;
 } TinPolyTypeVal;
+
+typedef union TinTypeVal {
+    struct TinMonoType * monoType;
+    struct TinPolyType * polyType;
+} TinTypeVal;
 
 
 
@@ -68,6 +78,12 @@ typedef struct TinTypeQuantifier {
     struct TinPolyType * quantifiedType;
 } TinTypeQuantifier;
 
+typedef struct TinContext {
+    Header header;
+    HashTable * frame;
+    struct TinContext * next;
+} TinContext;
+
 typedef struct TinMonoType {
     Header header;
     enum TinMonoTypeType  type;
@@ -80,27 +96,41 @@ typedef struct TinPolyType {
     union TinPolyTypeVal  val;
 } TinPolyType;
 
+typedef struct TinType {
+    Header header;
+    enum TinTypeType  type;
+    union TinTypeVal  val;
+} TinType;
+
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args);
 struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * type, struct TinMonoTypeList * next);
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType);
+struct TinContext * newTinContext(HashTable * frame, struct TinContext * next);
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val);
 struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTypeVal  val);
+struct TinType * newTinType(enum TinTypeType  type, union TinTypeVal  val);
 
 void markTinFunctionApplication(struct TinFunctionApplication * x);
 void markTinMonoTypeList(struct TinMonoTypeList * x);
 void markTinTypeQuantifier(struct TinTypeQuantifier * x);
+void markTinContext(struct TinContext * x);
 void markTinMonoType(struct TinMonoType * x);
 void markTinPolyType(struct TinPolyType * x);
+void markTinType(struct TinType * x);
 
 void freeTinFunctionApplication(struct TinFunctionApplication * x);
 void freeTinMonoTypeList(struct TinMonoTypeList * x);
 void freeTinTypeQuantifier(struct TinTypeQuantifier * x);
+void freeTinContext(struct TinContext * x);
 void freeTinMonoType(struct TinMonoType * x);
 void freeTinPolyType(struct TinPolyType * x);
+void freeTinType(struct TinType * x);
 
 #define TINMONOTYPE_VAL_VAR(x) ((union TinMonoTypeVal ){.var = (x)})
 #define TINMONOTYPE_VAL_FUN(x) ((union TinMonoTypeVal ){.fun = (x)})
 #define TINPOLYTYPE_VAL_MONOTYPE(x) ((union TinPolyTypeVal ){.monoType = (x)})
 #define TINPOLYTYPE_VAL_QUANTIFIER(x) ((union TinPolyTypeVal ){.quantifier = (x)})
+#define TINTYPE_VAL_MONOTYPE(x) ((union TinTypeVal ){.monoType = (x)})
+#define TINTYPE_VAL_POLYTYPE(x) ((union TinTypeVal ){.polyType = (x)})
 
 #endif

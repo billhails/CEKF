@@ -17,6 +17,8 @@
  */
 
 #include <stdbool.h>
+#include <stdio.h>
+
 #include "common.h"
 #include "analysis.h"
 #include "exp.h"
@@ -24,7 +26,6 @@
 // #define DEBUG_ANALIZE
 
 #ifdef DEBUG_ANALIZE
-#include <stdio.h>
 #include "debug.h"
 #endif
 
@@ -43,6 +44,11 @@ static void analizeCexpAmb(CexpAmb *x, CTEnv *env);
 static void analizeExpLet(ExpLet *x, CTEnv *env);
 static void analizeAexp(Aexp *x, CTEnv *env);
 static void analizeCexp(Cexp *x, CTEnv *env);
+
+static void hashAddCTVar(HashTable *table, HashSymbol *var) {
+    int count = table->count;
+    hashSet(table, var, &count);
+}
 
 static void analizeAexpLam(AexpLam *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
@@ -261,13 +267,17 @@ void analizeExp(Exp *x, CTEnv *env) {
     }
 }
 
+static void printCTHashTableValue(void *intptr) {
+    printf("%d", *((int *)intptr));
+}
+
 CTEnv *newCTEnv(bool isLocal, CTEnv *next) {
     CTEnv *x = NEW(CTEnv, OBJTYPE_CTENV);
     int save = PROTECT(x);
     x->isLocal = isLocal;
     x->next = next;
     x->table = NULL;
-    x->table = newHashTable();
+    x->table = newHashTable(sizeof(int), NULL, printCTHashTableValue);
     UNPROTECT(save);
     return x;
 }
@@ -312,7 +322,7 @@ static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
 #endif
     *frame = 0;
     while (env != NULL) {
-        if (hashLocate(env->table, var, offset)) {
+        if (hashGet(env->table, var, offset)) {
 #ifdef DEBUG_ANALIZE
             printf(" -> [%d:%d]\n", *frame, *offset);
 #endif

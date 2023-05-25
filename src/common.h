@@ -25,11 +25,12 @@
 // #define TEST_STACK
 // #define DEBUG_STACK
 // #define DEBUG_STEP
-// #define DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 #define DEBUG_RUN_TESTS 2
 // #define DEBUG_ANALIZE
 // #define DEBUG_DESUGARING
+// #define DEBUG_HASHTABLE
 
 void cant_happen(const char *message, ...);
 
