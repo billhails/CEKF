@@ -235,7 +235,7 @@ void freeHashTableObj(Header *h) {
     FREE(h, HashTable);
 }
 
-HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name, void *src) {
+HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
     HashSymbol *x;
     x = hashGetVar(table, name);
     if (x != NULL) {
@@ -243,7 +243,6 @@ HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name, void *src) 
     }
     x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
     int save = PROTECT(x);
-    x->type = type;
     x->name = safeStrdup(name);
     x->hash = hashString(name);
     hashSet(table, x, src);

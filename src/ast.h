@@ -47,11 +47,6 @@ typedef enum AstBinOpType {
     AST_BINOPTYPE_TYPE_DOT,
 } AstBinOpType;
 
-typedef enum AstSymbolType {
-    AST_SYMBOLTYPE_TYPE_SYMBOL,
-    AST_SYMBOLTYPE_TYPE_TYPESYMBOL,
-} AstSymbolType;
-
 typedef enum AstDefinitionType {
     AST_DEFINITION_TYPE_DEFINE,
     AST_DEFINITION_TYPE_PROTOTYPE,

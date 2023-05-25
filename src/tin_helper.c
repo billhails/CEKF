@@ -22,7 +22,7 @@
 #include "symbol.h"
 
 HashSymbol *getTinSymbol(char *name) {
-    return newSymbol(name, 0);
+    return newSymbol(name);
 }
 
 void printTinSymbol(struct HashSymbol * x, int depth) {

@@ -29,7 +29,6 @@
 
 typedef struct HashSymbol {
     struct Header header;
-    int type;
     hash_t hash;
     char *name;
 } HashSymbol;
@@ -57,7 +56,7 @@ void hashSet(HashTable *table, struct HashSymbol *var, void *src);
 bool hashGet(HashTable *table, struct HashSymbol *var, void *dest);
 
 HashSymbol *hashGetVar(HashTable *table, const char *name);
-HashSymbol *uniqueHashSymbol(HashTable *table, int type, char *name, void *valuePtr);
+HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
 
 void markHashSymbol(HashSymbol *x);
 void freeHashSymbol(HashSymbol *x);

@@ -66,7 +66,7 @@ AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var) {
 }
 
 HashSymbol *newAexpVar(char *name) {
-    return newSymbol(name, 0);
+    return newSymbol(name);
 }
 
 AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, HashSymbol *var) {

@@ -20,11 +20,11 @@
 #include "ast_helper.h"
 #include "symbol.h"
 
-HashSymbol *getAstSymbol(AstSymbolType type, char *name) {
-    return newSymbol(name, (int) type);
+HashSymbol *getAstSymbol(char *name) {
+    return newSymbol(name);
 }
 
 void printAstSymbol(struct HashSymbol * x, int depth) {
     if (x == NULL) { printf("AstSymbol (NULL)"); return; }
-    printf("AstSymbol[%d, \"%s\"]", x->type, x->name);
+    printf("AstSymbol[\"%s\"]", x->name);
 }

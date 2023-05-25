@@ -24,7 +24,7 @@
 
 void markAstSymbolTable();
 
-HashSymbol *getAstSymbol(AstSymbolType type, char *name);
+HashSymbol *getAstSymbol(char *name);
 void printAstSymbol(HashSymbol *x, int depth);
 
 #endif

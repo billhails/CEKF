@@ -27,11 +27,11 @@ void markVarTable() {
     markHashTableObj((Header *) symbolTable);
 }
 
-HashSymbol *newSymbol(char *name, int type) {
+HashSymbol *newSymbol(char *name) {
     if (symbolTable == NULL) {
         symbolTable = newHashTable(0, NULL, NULL);
     }
-    return uniqueHashSymbol(symbolTable, type, name, NULL);
+    return uniqueHashSymbol(symbolTable, name, NULL);
 }
 
 
@@ -44,7 +44,6 @@ HashSymbol *genSym(char *prefix) {
         if (hashGetVar(symbolTable, buffer) == NULL) {
             HashSymbol *x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
             int save = PROTECT(x);
-            x->type = 0;
             x->name = safeStrdup(buffer);
             x->hash = hashString(buffer);
             hashSet(symbolTable, x, NULL);

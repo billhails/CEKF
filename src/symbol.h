@@ -22,6 +22,6 @@
 
 HashSymbol *genSym(char *prefix);
 
-HashSymbol *newSymbol(char *name, int type);
+HashSymbol *newSymbol(char *name);
 
 #endif

@@ -224,7 +224,7 @@ type_symbols : type_symbol                  { $$ = newAstTypeSymbols(NULL, $1); 
              | type_symbol ',' type_symbols { $$ = newAstTypeSymbols($3, $1); }
              ;
 
-type_symbol : TYPE_VAR  { $$ = getAstSymbol(AST_SYMBOLTYPE_TYPE_TYPESYMBOL, $1); }
+type_symbol : TYPE_VAR  { $$ = getAstSymbol($1); }
             ;
 
 type_body : type_constructor                { $$ = newAstTypeBody(NULL, $1); }
@@ -393,7 +393,7 @@ extends : %empty            { $$ = NULL; }
 
 env_body : '{' definitions '}'  { $$ = $2; }
 
-symbol : VAR    { $$ = getAstSymbol(AST_SYMBOLTYPE_TYPE_SYMBOL, $1); }
+symbol : VAR    { $$ = getAstSymbol($1); }
        ;
 
 %%
