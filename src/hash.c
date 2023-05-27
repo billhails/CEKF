@@ -68,6 +68,11 @@ hash_t hashString(const char *string) {
     return hash;
 }
 
+static void* valuePtr(HashTable *table, int index) {
+    if (table->valuesize == 0) return NULL;
+    return (char *)table->values + (index * table->valuesize);
+}
+
 static hash_t findEntry(HashSymbol **keys, int capacity, HashSymbol *var) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "findEntry(%s)\n", var->name);
@@ -113,7 +118,7 @@ static void growCapacity(HashTable *table, int capacity) {
         keys[new_index] = var;
         if (table->valuesize > 0) {
             void *dst = (char *)values + (new_index * table->valuesize);
-            void *src = (char *)table->values + (old_index * table->valuesize);
+            void *src = valuePtr(table, old_index);
             memcpy(dst, src, table->valuesize);
         }
     }
@@ -146,7 +151,7 @@ void hashSet(HashTable *table, HashSymbol *var, void *src) {
     table->keys[index] = var;
 
     if (table->valuesize > 0) {
-        void *target = (char *)table->values + (index * table->valuesize);
+        void *target = valuePtr(table, index);
         memcpy(target, src, table->valuesize);
     }
 }
@@ -165,7 +170,7 @@ bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
 #endif
     if (table->keys[index] == NULL) return false;
     if (table->valuesize > 0) {
-        void *src = (char *) table->values + (index * table->valuesize);
+        void *src = valuePtr(table, index);
         memcpy(dest, src, table->valuesize);
     }
     return true;
@@ -192,7 +197,10 @@ HashSymbol *hashGetVar(HashTable *table, const char *name) {
 }
 
 void markHashTableObj(Header *h) {
-    HashTable *table = (HashTable *)h;
+    markHashTable((HashTable *)h);
+}
+
+void markHashTable(HashTable *table) {
 #ifdef DEBUG_HASHTABLE
     fprintf(stderr, "markHashTableObj() [%d]\n", table->id);
     printMemHeader("values", table->values);
@@ -266,6 +274,34 @@ void printHashTable(HashTable *table, int depth) {
         }
     }
     printf("}");
+}
+
+HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {
+    while (*index < table->capacity) {
+        if (table->keys[*index] != NULL) {
+            if (data != NULL) {
+                void *src = valuePtr(table, *index);
+                if (src != NULL) {
+                    memcpy(data, src, table->valuesize);
+                }
+            }
+            return table->keys[(*index)++];
+        }
+        (*index)++;
+    }
+    return NULL;
+}
+
+void copyHashTable(HashTable *to, HashTable *from) {
+    if (from->valuesize != to->valuesize) {
+        cant_happen("attempt to copy between hash tables with different storage size: %d vs %d", from->valuesize, to->valuesize);
+    }
+    for (int i = 0; i < from->capacity; ++i) {
+        if (from->keys[i] != NULL) {
+            void *data = valuePtr(from, i);
+            hashSet(to, from->keys[i], data);
+        }
+    }
 }
 
 void markHashSymbol(HashSymbol *x) {

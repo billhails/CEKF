@@ -46,7 +46,7 @@ void printTinMonoTypeList(struct TinMonoTypeList * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinMonoTypeList (NULL)"); return; }
     printf("TinMonoTypeList[\n");
-    printTinMonoType(x->type, depth + 1);
+    printTinMonoType(x->monoType, depth + 1);
     printf("\n");
     printTinMonoTypeList(x->next, depth + 1);
     printf("\n");
@@ -75,6 +75,17 @@ void printTinContext(struct TinContext * x, int depth) {
     printHashTable(x->frame, depth);
     printf("\n");
     printTinContext(x->next, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinSubstitution(struct TinSubstitution * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinSubstitution (NULL)"); return; }
+    printf("TinSubstitution[\n");
+    pad(depth + 1);
+    printHashTable(x->map, depth);
     printf("\n");
     pad(depth);
     printf("]");
@@ -144,6 +155,34 @@ void printTinType(struct TinType * x, int depth) {
             break;
         default:
             cant_happen("unrecognised type %d in printTinType", x->type);
+    }
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinSubstitutionCurrency(struct TinSubstitutionCurrency * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinSubstitutionCurrency (NULL)"); return; }
+    printf("TinSubstitutionCurrency[\n");
+    switch(x->type) {
+        case TINSUBSTITUTIONCURRENCY_TYPE_TYPE:
+            pad(depth + 1);
+            printf("TINSUBSTITUTIONCURRENCY_TYPE_TYPE\n");
+            printTinType(x->val.type, depth + 1);
+            break;
+        case TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT:
+            pad(depth + 1);
+            printf("TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT\n");
+            printTinContext(x->val.context, depth + 1);
+            break;
+        case TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION:
+            pad(depth + 1);
+            printf("TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION\n");
+            printTinSubstitution(x->val.substitution, depth + 1);
+            break;
+        default:
+            cant_happen("unrecognised type %d in printTinSubstitutionCurrency", x->type);
     }
     printf("\n");
     pad(depth);

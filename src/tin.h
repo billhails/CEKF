@@ -40,6 +40,12 @@ typedef enum TinTypeType {
     TINTYPE_TYPE_POLYTYPE,
 } TinTypeType;
 
+typedef enum TinSubstitutionCurrencyType {
+    TINSUBSTITUTIONCURRENCY_TYPE_TYPE,
+    TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT,
+    TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION,
+} TinSubstitutionCurrencyType;
+
 
 
 typedef union TinMonoTypeVal {
@@ -57,6 +63,12 @@ typedef union TinTypeVal {
     struct TinPolyType * polyType;
 } TinTypeVal;
 
+typedef union TinSubstitutionCurrencyVal {
+    struct TinType * type;
+    struct TinContext * context;
+    struct TinSubstitution * substitution;
+} TinSubstitutionCurrencyVal;
+
 
 
 typedef struct TinFunctionApplication {
@@ -68,7 +80,7 @@ typedef struct TinFunctionApplication {
 
 typedef struct TinMonoTypeList {
     Header header;
-    struct TinMonoType * type;
+    struct TinMonoType * monoType;
     struct TinMonoTypeList * next;
 } TinMonoTypeList;
 
@@ -83,6 +95,11 @@ typedef struct TinContext {
     HashTable * frame;
     struct TinContext * next;
 } TinContext;
+
+typedef struct TinSubstitution {
+    Header header;
+    HashTable * map;
+} TinSubstitution;
 
 typedef struct TinMonoType {
     Header header;
@@ -102,29 +119,41 @@ typedef struct TinType {
     union TinTypeVal  val;
 } TinType;
 
+typedef struct TinSubstitutionCurrency {
+    Header header;
+    enum TinSubstitutionCurrencyType  type;
+    union TinSubstitutionCurrencyVal  val;
+} TinSubstitutionCurrency;
+
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args);
-struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * type, struct TinMonoTypeList * next);
+struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struct TinMonoTypeList * next);
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType);
 struct TinContext * newTinContext(HashTable * frame, struct TinContext * next);
+struct TinSubstitution * newTinSubstitution(HashTable * map);
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val);
 struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTypeVal  val);
 struct TinType * newTinType(enum TinTypeType  type, union TinTypeVal  val);
+struct TinSubstitutionCurrency * newTinSubstitutionCurrency(enum TinSubstitutionCurrencyType  type, union TinSubstitutionCurrencyVal  val);
 
 void markTinFunctionApplication(struct TinFunctionApplication * x);
 void markTinMonoTypeList(struct TinMonoTypeList * x);
 void markTinTypeQuantifier(struct TinTypeQuantifier * x);
 void markTinContext(struct TinContext * x);
+void markTinSubstitution(struct TinSubstitution * x);
 void markTinMonoType(struct TinMonoType * x);
 void markTinPolyType(struct TinPolyType * x);
 void markTinType(struct TinType * x);
+void markTinSubstitutionCurrency(struct TinSubstitutionCurrency * x);
 
 void freeTinFunctionApplication(struct TinFunctionApplication * x);
 void freeTinMonoTypeList(struct TinMonoTypeList * x);
 void freeTinTypeQuantifier(struct TinTypeQuantifier * x);
 void freeTinContext(struct TinContext * x);
+void freeTinSubstitution(struct TinSubstitution * x);
 void freeTinMonoType(struct TinMonoType * x);
 void freeTinPolyType(struct TinPolyType * x);
 void freeTinType(struct TinType * x);
+void freeTinSubstitutionCurrency(struct TinSubstitutionCurrency * x);
 
 #define TINMONOTYPE_VAL_VAR(x) ((union TinMonoTypeVal ){.var = (x)})
 #define TINMONOTYPE_VAL_FUN(x) ((union TinMonoTypeVal ){.fun = (x)})
@@ -132,5 +161,8 @@ void freeTinType(struct TinType * x);
 #define TINPOLYTYPE_VAL_QUANTIFIER(x) ((union TinPolyTypeVal ){.quantifier = (x)})
 #define TINTYPE_VAL_MONOTYPE(x) ((union TinTypeVal ){.monoType = (x)})
 #define TINTYPE_VAL_POLYTYPE(x) ((union TinTypeVal ){.polyType = (x)})
+#define TINSUBSTITUTIONCURRENCY_VAL_TYPE(x) ((union TinSubstitutionCurrencyVal ){.type = (x)})
+#define TINSUBSTITUTIONCURRENCY_VAL_CONTEXT(x) ((union TinSubstitutionCurrencyVal ){.context = (x)})
+#define TINSUBSTITUTIONCURRENCY_VAL_SUBSTITUTION(x) ((union TinSubstitutionCurrencyVal ){.substitution = (x)})
 
 #endif

@@ -54,6 +54,7 @@ HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, Pr
 
 void hashSet(HashTable *table, struct HashSymbol *var, void *src);
 bool hashGet(HashTable *table, struct HashSymbol *var, void *dest);
+void copyHashTable(HashTable *to, HashTable *from);
 
 HashSymbol *hashGetVar(HashTable *table, const char *name);
 HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
@@ -62,6 +63,10 @@ void markHashSymbol(HashSymbol *x);
 void freeHashSymbol(HashSymbol *x);
 
 void printHashTable(HashTable *table, int depth);
+
+HashSymbol *iterateHashTable(HashTable *table, int *index, void *data);
+
+void markHashTable(HashTable *table);
 
 static inline void markHashSymbolObj(struct Header *h) { markHashSymbol((HashSymbol *)h); }
 static inline void freeHashSymbolObj(struct Header *h) { freeHashSymbol((HashSymbol *)h); }

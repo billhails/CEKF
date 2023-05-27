@@ -3430,7 +3430,7 @@ int main(int argc, char *argv[]) {
     RUN_EXP(makeTestExpBeer());
 }
 
-#else /* testing parser */
+#elif DEBUG_RUN_TESTS == 2 /* testing parser */
 
 // extern int yydebug;
 
@@ -3444,6 +3444,14 @@ int main(int argc, char *argv[]) {
     enableGC();
     printf("\n");
     char *foo = NEW_ARRAY(char, 10); // force gc
+}
+
+#else
+
+extern void testTin();
+
+int main(int argc, char *argv[]) {
+    testTin();
 }
 
 #endif

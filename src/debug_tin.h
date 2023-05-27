@@ -28,8 +28,10 @@ void printTinFunctionApplication(struct TinFunctionApplication * x, int depth);
 void printTinMonoTypeList(struct TinMonoTypeList * x, int depth);
 void printTinTypeQuantifier(struct TinTypeQuantifier * x, int depth);
 void printTinContext(struct TinContext * x, int depth);
+void printTinSubstitution(struct TinSubstitution * x, int depth);
 void printTinMonoType(struct TinMonoType * x, int depth);
 void printTinPolyType(struct TinPolyType * x, int depth);
 void printTinType(struct TinType * x, int depth);
+void printTinSubstitutionCurrency(struct TinSubstitutionCurrency * x, int depth);
 
 #endif

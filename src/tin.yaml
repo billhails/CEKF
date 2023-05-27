@@ -26,7 +26,7 @@ structs:
         args: TinMonoTypeList
 
     TinMonoTypeList:
-        type: TinMonoType
+        monoType: TinMonoType
         next: TinMonoTypeList
 
     TinTypeQuantifier:
@@ -36,6 +36,9 @@ structs:
     TinContext:
         frame: HashTable
         next: TinContext
+
+    TinSubstitution:
+        map: HashTable
 
 unions:
     TinMonoType:
@@ -50,17 +53,24 @@ unions:
         monoType: TinMonoType
         polyType: TinPolyType
 
+    TinSubstitutionCurrency: # argument and return value
+        type: TinType
+        context: TinContext
+        substitution: TinSubstitution
+
 enums: {}
 
-primitives:
+primitives: # TODO need a markFn for HashTables etc.
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printTinSymbol"
+        markFn: "markHashSymbol"
         valued: true
 
     HashTable:
         cname: "HashTable *"
         printFn: "printHashTable"
+        markFn: "markHashTable"
         valued: true
 
     int:

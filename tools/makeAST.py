@@ -625,6 +625,10 @@ class Primitive(Base):
     def __init__(self, name, data):
         super().__init__(name)
         self.cname = data['cname']
+        if 'markFn' in data:
+            self.markFn = data['markFn']
+        else:
+            self.markFn = None
         if 'printf' in data:
             self.printFn = 'printf'
             self.printf = data['printf']
@@ -632,6 +636,17 @@ class Primitive(Base):
             self.printFn = data['printFn']
         self.valued = data['valued']
 
+    def printMarkCase(self, catalog):
+        if self.markFn is not None:
+            typeName = self.makeTypeName()
+            print(f"        case {typeName}:")
+            self.printMarkField(self.name, 3, 'val.')
+            print("            break;")
+
+    def printMarkField(self, field, depth, prefix=''):
+        if self.markFn is not None:
+            pad(depth)
+            print("{markFn}(x->{prefix}{field});".format(field=field, markFn=self.markFn, prefix=prefix))
 
     def getTypeDeclaration(self):
         return self.cname

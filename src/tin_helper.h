@@ -26,5 +26,14 @@ void markTinSymbolTable();
 
 HashSymbol *getTinSymbol(char *name);
 void printTinSymbol(HashSymbol *x, int depth);
+HashTable *newTinSubstitutionTable();
+HashTable *newTinContextTable();
+void addSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
+
+TinSubstitutionCurrency *applySubstitution(
+    TinSubstitution *substitution,
+    TinSubstitutionCurrency *arg
+);
+
 
 #endif
