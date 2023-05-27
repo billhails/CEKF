@@ -315,19 +315,21 @@ TinSubstitutionCurrency *applySubstitution(TinSubstitution *s, TinSubstitutionCu
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 3
+
+#define EXPECT(EXP) do { if (EXP) printf("assertion " #EXP " passed\n"); else printf("ASSERTION " #EXP " FAILED\n"); } while(0)
+
 void testTin() {
     printf("testTin()\n");
     int save;
     TinSubstitutionCurrency *tsc;
     TinSubstitution *ts;
     TinSubstitutionCurrency *result;
+    TinMonoType *tmt;
     HashSymbol *x = newSymbol("x"); PROTECT(x);
     HashSymbol *y = newSymbol("y"); PROTECT(y);
     HashSymbol *z = newSymbol("z"); PROTECT(y);
     HashSymbol *a = newSymbol("->"); PROTECT(a);
     HashSymbol *b = newSymbol("Bool"); PROTECT(b);
-
-    printf("\nt### type-monotype-var\n\n");
 
     disableGC();
     tsc = newTinSubstitutionCurrency(
@@ -350,17 +352,9 @@ void testTin() {
     PROTECT(ts);
     enableGC();
 
-    printTinSubstitution(ts, 0);
-    printf("\n");
-    printTinSubstitutionCurrency(tsc, 0);
-    printf("\n");
     result = applySubstitution(ts, tsc);
-    PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(result->val.type->val.monoType->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-monotype-fun\n\n");
 
     disableGC();
     tsc = newTinSubstitutionCurrency(
@@ -401,17 +395,11 @@ void testTin() {
     PROTECT(ts);
     enableGC();
 
-    printTinSubstitution(ts, 0);
-    printf("\n");
-    printTinSubstitutionCurrency(tsc, 0);
-    printf("\n");
     result = applySubstitution(ts, tsc);
-    PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(result->val.type->val.monoType->val.fun->name == a);
+    EXPECT(result->val.type->val.monoType->val.fun->args->monoType->val.fun->name == b);
+    EXPECT(result->val.type->val.monoType->val.fun->args->next->monoType->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-polytype-monotype-fun\n\n");
 
     disableGC();
     tsc = newTinSubstitutionCurrency(
@@ -457,17 +445,11 @@ void testTin() {
     PROTECT(ts);
     enableGC();
 
-    printTinSubstitution(ts, 0);
-    printf("\n");
-    printTinSubstitutionCurrency(tsc, 0);
-    printf("\n");
     result = applySubstitution(ts, tsc);
-    PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->name == a);
+    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->args->monoType->val.fun->name == b);
+    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->args->next->monoType->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-polytype-quantifier\n\n");
 
     disableGC();
     tsc = newTinSubstitutionCurrency(
@@ -503,17 +485,11 @@ void testTin() {
     PROTECT(ts);
     enableGC();
 
-    printTinSubstitution(ts, 0);
-    printf("\n");
-    printTinSubstitutionCurrency(tsc, 0);
-    printf("\n");
     result = applySubstitution(ts, tsc);
     PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(result->val.type->val.polyType->val.quantifier->var == x);
+    EXPECT(result->val.type->val.polyType->val.quantifier->quantifiedType->val.monoType->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-context\n\n");
 
     disableGC();
     HashTable *t = newTinContextTable();
@@ -537,17 +513,12 @@ void testTin() {
     PROTECT(ts);
     enableGC();
 
-    printTinSubstitution(ts, 0);
-    printf("\n");
-    printTinSubstitutionCurrency(tsc, 0);
-    printf("\n");
     result = applySubstitution(ts, tsc);
     PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    TinType *receiver;
+    EXPECT(hashGet(result->val.context->frame, x, &receiver));
+    EXPECT(receiver->val.monoType->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-substitution-1\n\n");
 
     // C1 = { x |-> y }
     // C2 = { y |-> z }
@@ -567,17 +538,13 @@ void testTin() {
     save = PROTECT(tsc);
     PROTECT(C1);
 
-    printTinSubstitution(C1, 0);
-    printf("\n");
-    printTinSubstitution(C2, 0);
-    printf("\n");
     result = applySubstitution(C1, tsc);
     PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(hashGet(result->val.substitution->map, y, &tmt));
+    EXPECT(tmt->val.var == z);
+    EXPECT(hashGet(result->val.substitution->map, x, &tmt));
+    EXPECT(tmt->val.var == y);
     UNPROTECT(save);
-
-    printf("\n### type-substitution-2\n\n");
 
     // C1 = { y |-> z }
     // C2 = { x |-> y }
@@ -597,14 +564,12 @@ void testTin() {
     save = PROTECT(tsc);
     PROTECT(C1);
 
-    printTinSubstitution(C1, 0);
-    printf("\n");
-    printTinSubstitution(C2, 0);
-    printf("\n");
     result = applySubstitution(C1, tsc);
     PROTECT(result);
-    printTinSubstitutionCurrency(result, 0);
-    printf("\n");
+    EXPECT(hashGet(result->val.substitution->map, y, &tmt));
+    EXPECT(tmt->val.var == z);
+    EXPECT(hashGet(result->val.substitution->map, x, &tmt));
+    EXPECT(tmt->val.var == z);
     UNPROTECT(save);
 
 }
