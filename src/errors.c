@@ -1,5 +1,3 @@
-#ifndef cekf_tin_helper_h
-#define cekf_tin_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,16 +16,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "tin.h"
-#include "hash.h"
-#include "memory.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdlib.h>
 
-void markTinSymbolTable();
+#include "common.h"
 
-void printTinSymbol(HashSymbol *x, int depth);
-HashTable *newTinSubstitutionTable();
-HashTable *newTinContextTable();
+static bool errors = false;
 
-void addSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
-
+void cant_happen(const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+#ifdef DEBUG_DUMP_CORE
+    raise(SIGABRT);
+#else
+    exit(1);
 #endif
+}
+
+void can_happen(const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+    errors = true;
+}
+
+bool hadErrors() {
+    return errors;
+}
