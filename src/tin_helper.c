@@ -1034,6 +1034,52 @@ void testTin() {
                 2,
                 newTinMonoTypeList(
                     newTinMonoType(
+                        TINMONOTYPE_TYPE_VAR,
+                        TINMONOTYPE_VAL_VAR(x)
+                    ),
+                    newTinMonoTypeList(
+                        newTinMonoType(
+                            TINMONOTYPE_TYPE_VAR,
+                            TINMONOTYPE_VAL_VAR(x)
+                        ),
+                        NULL
+                    )
+                )
+            )
+        )
+    );
+    save = PROTECT(tmt1);
+    tmt2 = newTinMonoType(
+        TINMONOTYPE_TYPE_FUN,
+        TINMONOTYPE_VAL_FUN(
+            newTinFunctionApplication(
+                arrow,
+                2,
+                newTinMonoTypeList(
+                    newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(newTinFunctionApplication(integer, 0, NULL))),
+                    newTinMonoTypeList(
+                        newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))),
+                        NULL
+                    )
+                )
+            )
+        )
+    );
+    PROTECT(tmt2);
+    enableGC();
+    C1 = unify(tmt1, tmt2);
+    UNPROTECT(save);
+    EXPECT(hadErrors());
+
+    disableGC();
+    tmt1 = newTinMonoType(
+        TINMONOTYPE_TYPE_FUN,
+        TINMONOTYPE_VAL_FUN(
+            newTinFunctionApplication(
+                arrow,
+                2,
+                newTinMonoTypeList(
+                    newTinMonoType(
                         TINMONOTYPE_TYPE_FUN,
                         TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
                     ),
