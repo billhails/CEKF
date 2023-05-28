@@ -258,16 +258,20 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
     return x;
 }
 
+void printHashSymbol(HashSymbol *symbol) {
+    printf("%s", symbol->name);
+}
+
 void printHashTable(HashTable *table, int depth) {
     int count = 0;
     printf("%*s", depth * 4, "");
     printf("{[id:%d] ", table->id);
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
-            printf("%s", table->keys[i]->name);
+            printHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->printfunction != NULL) {
                 printf(" => ");
-                table->printfunction((char *)table->values + (i * table->valuesize));
+                table->printfunction(valuePtr(table, i), depth + 1);
             }
             count++;
             if (count < table->count) printf(", ");

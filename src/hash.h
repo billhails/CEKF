@@ -34,7 +34,7 @@ typedef struct HashSymbol {
 } HashSymbol;
 
 typedef void (*MarkHashValueFunction)(void *value);
-typedef void (*PrintHashValueFunction)(void *value);
+typedef void (*PrintHashValueFunction)(void *value, int depth);
 
 typedef struct HashTable {
     struct Header header;
@@ -63,6 +63,7 @@ void markHashSymbol(HashSymbol *x);
 void freeHashSymbol(HashSymbol *x);
 
 void printHashTable(HashTable *table, int depth);
+void printHashSymbol(HashSymbol *symbol);
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data);
 

@@ -71,20 +71,6 @@ struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTyp
     return x;
 }
 
-struct TinType * newTinType(enum TinTypeType  type, union TinTypeVal  val) {
-    struct TinType * x = NEW(TinType, OBJTYPE_TINTYPE);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
-struct TinSubstitutionCurrency * newTinSubstitutionCurrency(enum TinSubstitutionCurrencyType  type, union TinSubstitutionCurrencyVal  val) {
-    struct TinSubstitutionCurrency * x = NEW(TinSubstitutionCurrency, OBJTYPE_TINSUBSTITUTIONCURRENCY);
-    x->type = type;
-    x->val = val;
-    return x;
-}
-
 
 /************************************/
 
@@ -159,41 +145,6 @@ void markTinPolyType(struct TinPolyType * x) {
     }
 }
 
-void markTinType(struct TinType * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    switch(x->type) {
-        case TINTYPE_TYPE_MONOTYPE:
-            markTinMonoType(x->val.monoType);
-            break;
-        case TINTYPE_TYPE_POLYTYPE:
-            markTinPolyType(x->val.polyType);
-            break;
-        default:
-            cant_happen("unrecognised type %d in markTinType", x->type);
-    }
-}
-
-void markTinSubstitutionCurrency(struct TinSubstitutionCurrency * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    switch(x->type) {
-        case TINSUBSTITUTIONCURRENCY_TYPE_TYPE:
-            markTinType(x->val.type);
-            break;
-        case TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT:
-            markTinContext(x->val.context);
-            break;
-        case TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION:
-            markTinSubstitution(x->val.substitution);
-            break;
-        default:
-            cant_happen("unrecognised type %d in markTinSubstitutionCurrency", x->type);
-    }
-}
-
 
 void markTinObj(struct Header *h) {
     switch(h->type) {
@@ -217,12 +168,6 @@ void markTinObj(struct Header *h) {
             break;
         case OBJTYPE_TINPOLYTYPE:
             markTinPolyType((TinPolyType *)h);
-            break;
-        case OBJTYPE_TINTYPE:
-            markTinType((TinType *)h);
-            break;
-        case OBJTYPE_TINSUBSTITUTIONCURRENCY:
-            markTinSubstitutionCurrency((TinSubstitutionCurrency *)h);
             break;
     }
 }
@@ -257,14 +202,6 @@ void freeTinPolyType(struct TinPolyType * x) {
     FREE(x, TinPolyType);
 }
 
-void freeTinType(struct TinType * x) {
-    FREE(x, TinType);
-}
-
-void freeTinSubstitutionCurrency(struct TinSubstitutionCurrency * x) {
-    FREE(x, TinSubstitutionCurrency);
-}
-
 
 void freeTinObj(struct Header *h) {
     switch(h->type) {
@@ -289,12 +226,6 @@ void freeTinObj(struct Header *h) {
         case OBJTYPE_TINPOLYTYPE:
             freeTinPolyType((TinPolyType *)h);
             break;
-        case OBJTYPE_TINTYPE:
-            freeTinType((TinType *)h);
-            break;
-        case OBJTYPE_TINSUBSTITUTIONCURRENCY:
-            freeTinSubstitutionCurrency((TinSubstitutionCurrency *)h);
-            break;
     }
 }
 
@@ -314,10 +245,6 @@ char *typenameTinObj(int type) {
             return "TinMonoType";
         case OBJTYPE_TINPOLYTYPE:
             return "TinPolyType";
-        case OBJTYPE_TINTYPE:
-            return "TinType";
-        case OBJTYPE_TINSUBSTITUTIONCURRENCY:
-            return "TinSubstitutionCurrency";
     }
 }
 

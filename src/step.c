@@ -227,7 +227,11 @@ void cant_happen(const char *message, ...) {
     vfprintf(stderr, message, args);
     va_end(args);
     fprintf(stderr, "\n");
+#ifdef DEBUG_DUMP_CORE
+    raise(SIGABRT);
+#else
     exit(1);
+#endif
 }
 
 static int protectValue(Value v) {

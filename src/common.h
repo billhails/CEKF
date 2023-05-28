@@ -32,6 +32,8 @@
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
 // #define DEBUG_TIN_SUBSTITUTION
+// #define DEBUG_TIN_INSTANTIATION
+// #define DEBUG_DUMP_CORE
 
 void cant_happen(const char *message, ...);
 

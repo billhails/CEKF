@@ -30,10 +30,12 @@ static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype)
 static TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
 static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTypeQuantifier *tq);
 static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);
-static TinType *applyTypeSubstitution(TinSubstitution *s, TinType *ttype);
 static TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
 static TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2);
 
+static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map);
+static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map);
+static TinMonoType *instantiatePolyType(TinPolyType *tpt, HashTable *map);
 
 HashSymbol *getTinSymbol(char *name) {
     return newSymbol(name);
@@ -44,20 +46,28 @@ void printTinSymbol(struct HashSymbol * x, int depth) {
     printf("TinSymbol[\"%s\"]", x->name);
 }
 
-static void printSubstitutionFn(void *ptr) {
-    printTinMonoType(*(TinMonoType **)ptr, 0);
+static void printSubstitutionFn(void *ptr, int depth) {
+    printTinMonoType(*(TinMonoType **)ptr, depth);
 }
 
 static void markSubstitutionFn(void *ptr) {
     markTinMonoType(*(TinMonoType **)ptr);
 }
 
-static void printContextFn(void *ptr) {
-    printTinType(*(TinType **)ptr, 0);
+static void printContextFn(void *ptr, int depth) {
+    printTinPolyType(*(TinPolyType **)ptr, depth);
 }
 
 static void markContextFn(void *ptr) {
-    markTinType(*(TinType **)ptr);
+    markTinPolyType(*(TinPolyType **)ptr);
+}
+
+static void markVarFn(void *ptr) {
+    markHashSymbol(*(HashSymbol **) ptr);
+}
+
+static void printVarFn(void *ptr, int depth) {
+    printHashSymbol(*(HashSymbol **) ptr);
 }
 
 HashTable *newTinSubstitutionTable() {
@@ -70,18 +80,45 @@ HashTable *newTinSubstitutionTable() {
 
 HashTable *newTinContextTable() {
     return newHashTable(
-        sizeof(TinType*),
+        sizeof(TinPolyType*),
         markContextFn,
         printContextFn
     );
 }
 
-void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype) {
-    hashSet(substitution->map, symbol, &monotype);
+HashTable *newTinVarTable() {
+    return newHashTable(
+        sizeof(HashSymbol *),
+        markVarFn,
+        printVarFn
+    );
 }
 
-void addToContext(TinContext *context, HashSymbol *symbol, TinType *type) {
-    hashSet(context->frame, symbol, &type);
+void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monoType) {
+    hashSet(substitution->map, symbol, &monoType);
+}
+
+void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
+    hashSet(context->frame, symbol, &polyType);
+}
+
+TinPolyType *lookupInContext(TinContext *context, HashSymbol *var) {
+    if (context == NULL) return NULL;
+    TinPolyType *result;
+    if (hashGet(context->frame, var, &result)) return result;
+    return lookupInContext(context->next, var);
+}
+
+TinMonoType *lookupInSubstitution(TinSubstitution *substitution, HashSymbol *var) {
+    TinMonoType *result;
+    if (hashGet(substitution->map, var, &result)) return result;
+    return NULL;
+}
+
+HashSymbol *lookupInMap(HashTable *map, HashSymbol *symbol) {
+    HashSymbol *result;
+    if (hashGet(map, symbol, &result)) return result;
+    return NULL;
 }
 
 static TinContext *copyContext(TinContext *source) {
@@ -110,11 +147,21 @@ static TinSubstitution *copySubstitution(TinSubstitution *source) {
     return ts;
 }
 
-static TinMonoTypeList *mapMonoTypeList(TinSubstitution *s, TinMonoTypeList *args) {
+static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeList *args) {
+#ifdef DEBUG_TIN_SUBSTITUTION
+    printf("applyArgsSubstitution ");
+    printTinMonoTypeList(funApp, 0);
+    printf("\n");
+    sleep(1);
+#endif
     if (args == NULL) return NULL;
-    TinMonoTypeList *soFar = mapMonoTypeList(s, args->next);
+    TinMonoTypeList *soFar = applyArgsSubstitution(s, args->next);
     int save = PROTECT(soFar);
     TinMonoType *t = applyMonoTypeSubstitution(s, args->monoType);
+    if (soFar == args->next && t == args->monoType) {
+        UNPROTECT(save);
+        return args;
+    }
     PROTECT(t);
     TinMonoTypeList *current = newTinMonoTypeList(t, soFar);
     UNPROTECT(save);
@@ -128,8 +175,9 @@ static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunct
     printf("\n");
     sleep(1);
 #endif
-    TinMonoTypeList *args = mapMonoTypeList(s, funApp->args);
+    TinMonoTypeList *args = applyArgsSubstitution(s, funApp->args);
     int save = PROTECT(args);
+    if (args == funApp->args) return funApp;
     TinFunctionApplication *result = newTinFunctionApplication(funApp->name, funApp->nargs, args);
     UNPROTECT(save);
     return result;
@@ -142,8 +190,8 @@ static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype)
     printf("\n");
     sleep(1);
 #endif
-    TinMonoType *replacement = NULL;
-    if (hashGet(s->map, mtype->val.var, &replacement)) return replacement;
+    TinMonoType *replacement = lookupInSubstitution(s, mtype->val.var);
+    if (replacement != NULL) return replacement;
     return mtype;
 }
 
@@ -159,6 +207,7 @@ static TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *m
             return applyVarSubstitution(s, mtype);
         case TINMONOTYPE_TYPE_FUN: {
             TinFunctionApplication *tfa = applyFunSubstitution(s, mtype->val.fun);
+            if (tfa == mtype->val.fun) return mtype;
             int save = PROTECT(tfa);
             TinMonoType *tmt = newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(tfa));
             UNPROTECT(save);
@@ -177,6 +226,7 @@ static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTyp
     sleep(1);
 #endif
     TinPolyType *pt = applyPolyTypeSubstitution(s, tq->quantifiedType);
+    if (pt == tq->quantifiedType) return tq;
     int save = PROTECT(pt);
     TinTypeQuantifier *result = newTinTypeQuantifier(tq->var, pt);
     UNPROTECT(save);
@@ -193,6 +243,7 @@ static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *p
     switch (ptype->type) {
         case TINPOLYTYPE_TYPE_MONOTYPE: {
             TinMonoType *tmt = applyMonoTypeSubstitution(s, ptype->val.monoType);
+            if (tmt == ptype->val.monoType) return ptype;
             int save = PROTECT(tmt);
             TinPolyType *pt = newTinPolyType(TINPOLYTYPE_TYPE_MONOTYPE, TINPOLYTYPE_VAL_MONOTYPE(tmt));
             UNPROTECT(save);
@@ -200,6 +251,7 @@ static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *p
         }
         case TINPOLYTYPE_TYPE_QUANTIFIER: {
             TinTypeQuantifier *ttq = applyQuantifierSubstitution(s, ptype->val.quantifier);
+            if (ttq == ptype->val.quantifier) return ptype;
             int save = PROTECT(ttq);
             TinPolyType *pt = newTinPolyType(TINPOLYTYPE_TYPE_QUANTIFIER, TINPOLYTYPE_VAL_QUANTIFIER(ttq));
             UNPROTECT(save);
@@ -207,33 +259,6 @@ static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *p
         }
         default:
             cant_happen("unrecognised type %d in applyPolyTypeSubstitution", ptype->type);
-    }
-}
-
-static TinType *applyTypeSubstitution(TinSubstitution *s, TinType *ttype) {
-#ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyTypeSubstitution ");
-    printTinType(ttype, 0);
-    printf("\n");
-    sleep(1);
-#endif
-    switch (ttype->type) {
-        case TINTYPE_TYPE_MONOTYPE: {
-            TinMonoType *tmt = applyMonoTypeSubstitution(s, ttype->val.monoType);
-            int save = PROTECT(tmt);
-            TinType *tt = newTinType(TINTYPE_TYPE_MONOTYPE, TINTYPE_VAL_MONOTYPE(tmt));
-            UNPROTECT(save);
-            return tt;
-        }
-        case TINTYPE_TYPE_POLYTYPE: {
-            TinPolyType *tpt = applyPolyTypeSubstitution(s, ttype->val.polyType);
-            int save = PROTECT(tpt);
-            TinType *tt = newTinType(TINTYPE_TYPE_POLYTYPE, TINTYPE_VAL_POLYTYPE(tpt));
-            UNPROTECT(save);
-            return tt;
-        }
-        default:
-            cant_happen("unrecognised type %d in applyTypeSubstitution", ttype->type);
     }
 }
 
@@ -247,10 +272,10 @@ static TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *cont
     TinContext *result = copyContext(context);
     int save = PROTECT(result);
     int i = 0;
-    TinType *t = NULL;
+    TinPolyType *t = NULL;
     HashSymbol *key;
     while ((key = iterateHashTable(result->frame, &i, &t)) != NULL) {
-        TinType *ts = applyTypeSubstitution(s, t);
+        TinPolyType *ts = applyPolyTypeSubstitution(s, t);
         addToContext(result, key, ts); // we know it's already in the context so this won't change the table
     }
     UNPROTECT(save);
@@ -279,38 +304,133 @@ static TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSu
     return ts;
 }
 
-TinSubstitutionCurrency *applySubstitution(TinSubstitution *s, TinSubstitutionCurrency *arg) {
-#ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applySubstitution ");
-    printTinSubstitutionCurrency(arg, 0);
+static HashSymbol *newTypeVariable() {
+    return genSym("#");
+}
+
+static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiateVar ");
+    printHashSymbol(symbol);
     printf("\n");
     sleep(1);
 #endif
-    switch (arg->type) {
-        case TINSUBSTITUTIONCURRENCY_TYPE_TYPE: {
-            TinType *tt = applyTypeSubstitution(s, arg->val.type);
-            int save = PROTECT(tt);
-            TinSubstitutionCurrency * tsc = newTinSubstitutionCurrency(TINSUBSTITUTIONCURRENCY_TYPE_TYPE, TINSUBSTITUTIONCURRENCY_VAL_TYPE(tt));
+    HashSymbol *replacement = lookupInMap(map, symbol);
+    if (replacement != NULL) return replacement;
+    return symbol;
+}
+
+static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiateArgs ");
+    printTinMonoTypeList(args, 0);
+    printf("\n");
+    sleep(1);
+#endif
+    if (args == NULL) return NULL;
+    TinMonoTypeList *next = instantiateArgs(args->next, map);
+    int save = PROTECT(next);
+    TinMonoType *monoType = instantiateMonoType(args->monoType, map);
+    if (next == args->next && monoType == args->monoType) {
+        UNPROTECT(save);
+        return args;
+    }
+    PROTECT(monoType);
+    TinMonoTypeList *newArgs = newTinMonoTypeList(monoType, next);
+    UNPROTECT(save);
+    return newArgs;
+
+}
+
+static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiateFun ");
+    printTinFunctionApplication(tfa, 0);
+    printf("\n");
+    sleep(1);
+#endif
+    TinMonoTypeList *args = instantiateArgs(tfa->args, map);
+    if (args == tfa->args) return tfa;
+    int save = PROTECT(tfa);
+    PROTECT(args);
+    TinFunctionApplication *newTfa = newTinFunctionApplication(tfa->name, tfa->nargs, args);
+    UNPROTECT(save);
+    return newTfa;
+}
+
+static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiateMonoType ");
+    printTinMonoType(tmt, 0);
+    printf("\n");
+    sleep(1);
+#endif
+    switch (tmt->type) {
+        case TINMONOTYPE_TYPE_VAR: {
+            HashSymbol *var = instantiateVar(tmt->val.var, map);
+            if (tmt->val.var == var) return tmt;
+            int save = PROTECT(var);
+            TinMonoType *newTmt = newTinMonoType(
+                TINMONOTYPE_TYPE_VAR,
+                TINMONOTYPE_VAL_VAR(var)
+            );
             UNPROTECT(save);
-            return tsc;
+            return newTmt;
         }
-        case TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT: {
-            TinContext *tc = applyContextSubstitution(s, arg->val.context);
-            int save = PROTECT(tc);
-            TinSubstitutionCurrency * tsc = newTinSubstitutionCurrency(TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT, TINSUBSTITUTIONCURRENCY_VAL_CONTEXT(tc));
+        case TINMONOTYPE_TYPE_FUN: {
+            TinFunctionApplication *tfa = instantiateFun(tmt->val.fun, map);
+            if (tfa == tmt->val.fun) return tmt;
+            int save = PROTECT(tfa);
+            TinMonoType *newTmt = newTinMonoType(
+                TINMONOTYPE_TYPE_FUN,
+                TINMONOTYPE_VAL_FUN(tfa)
+            );
             UNPROTECT(save);
-            return tsc;
-        }
-        case TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION: {
-            TinSubstitution *ts = applySubstitutionSubstitution(s, arg->val.substitution);
-            int save = PROTECT(ts);
-            TinSubstitutionCurrency * tsc = newTinSubstitutionCurrency(TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION, TINSUBSTITUTIONCURRENCY_VAL_SUBSTITUTION(ts));
-            UNPROTECT(save);
-            return tsc;
+            return newTmt;
         }
         default:
-            cant_happen("unrecognised type %d in applySubstitution", arg->type);
+            cant_happen("unrecognised type %d in instantiateMonoType", tmt->type);
     }
+}
+
+static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiateQuantifier ");
+    printTinTypeQuantifier(ttq, 0);
+    printf("\n");
+    sleep(1);
+#endif
+    HashSymbol *newVar = newTypeVariable();
+    int save = PROTECT(newVar);
+    hashSet(map, ttq->var, &newVar);
+    UNPROTECT(save);
+    return instantiatePolyType(ttq->quantifiedType, map);
+}
+
+
+static TinMonoType *instantiatePolyType(TinPolyType *tpt, HashTable *map) {
+#ifdef DEBUG_TIN_INSTANTIATION
+    printf("instantiatePolyType ");
+    printTinPolyType(tpt, 0);
+    printf("\n");
+    sleep(1);
+#endif
+    switch (tpt->type) {
+        case TINPOLYTYPE_TYPE_MONOTYPE:
+            return instantiateMonoType(tpt->val.monoType, map);
+        case TINPOLYTYPE_TYPE_QUANTIFIER:
+            return instantiateQuantifier(tpt->val.quantifier, map);
+        default:
+            cant_happen("unrecognised type %d in instantiatePolyType", tpt->type);
+    }
+}
+
+TinMonoType *instantiate(TinPolyType *tpt) {
+    HashTable *map = newTinVarTable();
+    int save = PROTECT(map);
+    TinMonoType *result = instantiatePolyType(tpt, map);
+    UNPROTECT(save);
+    return result;
 }
 
 #ifdef DEBUG_RUN_TESTS
@@ -318,120 +438,90 @@ TinSubstitutionCurrency *applySubstitution(TinSubstitution *s, TinSubstitutionCu
 
 #define EXPECT(EXP) do { if (EXP) printf("assertion " #EXP " passed\n"); else printf("ASSERTION " #EXP " FAILED\n"); } while(0)
 
+static bool isTypeVariable(HashSymbol *symbol) {
+    return symbol->name[0] == '#';
+}
+
 void testTin() {
     printf("testTin()\n");
     int save;
-    TinSubstitutionCurrency *tsc;
-    TinSubstitution *ts;
-    TinSubstitutionCurrency *result;
     TinMonoType *tmt;
+    TinPolyType *tpt;
+    TinSubstitution *C1;
+    TinSubstitution *C2;
+    int totalSave = PROTECT(NULL);
     HashSymbol *x = newSymbol("x"); PROTECT(x);
     HashSymbol *y = newSymbol("y"); PROTECT(y);
     HashSymbol *z = newSymbol("z"); PROTECT(y);
-    HashSymbol *a = newSymbol("->"); PROTECT(a);
-    HashSymbol *b = newSymbol("Bool"); PROTECT(b);
+    HashSymbol *arrow = newSymbol("->"); PROTECT(arrow);
+    HashSymbol *boolean = newSymbol("Bool"); PROTECT(boolean);
 
     disableGC();
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_TYPE,
-        TINSUBSTITUTIONCURRENCY_VAL_TYPE(
-            newTinType(
-                TINTYPE_TYPE_MONOTYPE,
-                TINTYPE_VAL_MONOTYPE(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_VAR,
-                        TINMONOTYPE_VAL_VAR(x)
-                    )
-                )
-            )
-        )
-    );
-    ts = newTinSubstitution(newTinSubstitutionTable());
-    addToSubstitution(ts, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tsc);
-    PROTECT(ts);
+    tmt = newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(x));
+    C1 = newTinSubstitution(newTinSubstitutionTable());
+    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
+    save = PROTECT(tmt);
+    PROTECT(C1);
     enableGC();
-
-    result = applySubstitution(ts, tsc);
-    EXPECT(result->val.type->val.monoType->val.var == y);
+    tmt = applyMonoTypeSubstitution(C1, tmt);
+    EXPECT(tmt->val.var == y);
     UNPROTECT(save);
 
     disableGC();
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_TYPE,
-        TINSUBSTITUTIONCURRENCY_VAL_TYPE(
-            newTinType(
-                TINTYPE_TYPE_MONOTYPE,
-                TINTYPE_VAL_MONOTYPE(
+    tmt = newTinMonoType(
+        TINMONOTYPE_TYPE_FUN,
+        TINMONOTYPE_VAL_FUN(
+            newTinFunctionApplication(
+                arrow,
+                2,
+                newTinMonoTypeList(
                     newTinMonoType(
                         TINMONOTYPE_TYPE_FUN,
-                        TINMONOTYPE_VAL_FUN(
-                            newTinFunctionApplication(
-                                a,
-                                2,
-                                newTinMonoTypeList(
-                                    newTinMonoType(
-                                        TINMONOTYPE_TYPE_FUN,
-                                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(b, 0, NULL))
-                                    ),
-                                    newTinMonoTypeList(
-                                        newTinMonoType(
-                                            TINMONOTYPE_TYPE_VAR,
-                                            TINMONOTYPE_VAL_VAR(x)
-                                        ),
-                                        NULL
-                                    )
-                                )
-                            )
-                        )
+                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
+                    ),
+                    newTinMonoTypeList(
+                        newTinMonoType(
+                            TINMONOTYPE_TYPE_VAR,
+                            TINMONOTYPE_VAL_VAR(x)
+                        ),
+                        NULL
                     )
                 )
             )
         )
     );
-    ts = newTinSubstitution(newTinSubstitutionTable());
-    addToSubstitution(ts, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tsc);
-    PROTECT(ts);
+    C1 = newTinSubstitution(newTinSubstitutionTable());
+    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
+    save = PROTECT(tmt);
+    PROTECT(C1);
     enableGC();
-
-    result = applySubstitution(ts, tsc);
-    EXPECT(result->val.type->val.monoType->val.fun->name == a);
-    EXPECT(result->val.type->val.monoType->val.fun->args->monoType->val.fun->name == b);
-    EXPECT(result->val.type->val.monoType->val.fun->args->next->monoType->val.var == y);
+    tmt = applyMonoTypeSubstitution(C1, tmt);
+    EXPECT(tmt->val.fun->name == arrow);
+    EXPECT(tmt->val.fun->args->monoType->val.fun->name == boolean);
+    EXPECT(tmt->val.fun->args->next->monoType->val.var == y);
     UNPROTECT(save);
 
     disableGC();
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_TYPE,
-        TINSUBSTITUTIONCURRENCY_VAL_TYPE(
-            newTinType(
-                TINTYPE_TYPE_POLYTYPE,
-                TINTYPE_VAL_POLYTYPE(
-                    newTinPolyType(
-                        TINPOLYTYPE_TYPE_MONOTYPE,
-                        TINPOLYTYPE_VAL_MONOTYPE(
+    tpt = newTinPolyType(
+        TINPOLYTYPE_TYPE_MONOTYPE,
+        TINPOLYTYPE_VAL_MONOTYPE(
+            newTinMonoType(
+                TINMONOTYPE_TYPE_FUN,
+                TINMONOTYPE_VAL_FUN(
+                    newTinFunctionApplication(
+                        arrow,
+                        2,
+                        newTinMonoTypeList(
                             newTinMonoType(
                                 TINMONOTYPE_TYPE_FUN,
-                                TINMONOTYPE_VAL_FUN(
-                                    newTinFunctionApplication(
-                                        a,
-                                        2,
-                                        newTinMonoTypeList(
-                                            newTinMonoType(
-                                                TINMONOTYPE_TYPE_FUN,
-                                                TINMONOTYPE_VAL_FUN(newTinFunctionApplication(b, 0, NULL))
-                                            ),
-                                            newTinMonoTypeList(
-                                                newTinMonoType(
-                                                    TINMONOTYPE_TYPE_VAR,
-                                                    TINMONOTYPE_VAL_VAR(x)
-                                                ),
-                                                NULL
-                                            )
-                                        )
-                                    )
-                                )
+                                TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
+                            ),
+                            newTinMonoTypeList(
+                                newTinMonoType(
+                                    TINMONOTYPE_TYPE_VAR,
+                                    TINMONOTYPE_VAL_VAR(x)
+                                ),
+                                NULL
                             )
                         )
                     )
@@ -439,85 +529,66 @@ void testTin() {
             )
         )
     );
-    ts = newTinSubstitution(newTinSubstitutionTable());
-    addToSubstitution(ts, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tsc);
-    PROTECT(ts);
+    C1 = newTinSubstitution(newTinSubstitutionTable());
+    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
+    save = PROTECT(tpt);
+    PROTECT(C1);
     enableGC();
-
-    result = applySubstitution(ts, tsc);
-    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->name == a);
-    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->args->monoType->val.fun->name == b);
-    EXPECT(result->val.type->val.polyType->val.monoType->val.fun->args->next->monoType->val.var == y);
+    tpt = applyPolyTypeSubstitution(C1, tpt);
+    EXPECT(tpt->val.monoType->val.fun->name == arrow);
+    EXPECT(tpt->val.monoType->val.fun->args->monoType->val.fun->name == boolean);
+    EXPECT(tpt->val.monoType->val.fun->args->next->monoType->val.var == y);
     UNPROTECT(save);
 
     disableGC();
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_TYPE,
-        TINSUBSTITUTIONCURRENCY_VAL_TYPE(
-            newTinType(
-                TINTYPE_TYPE_POLYTYPE,
-                TINTYPE_VAL_POLYTYPE(
-                    newTinPolyType(
-                        TINPOLYTYPE_TYPE_QUANTIFIER,
-                        TINPOLYTYPE_VAL_QUANTIFIER(
-                            newTinTypeQuantifier(
-                                x,
-                                newTinPolyType(
-                                    TINPOLYTYPE_TYPE_MONOTYPE,
-                                    TINPOLYTYPE_VAL_MONOTYPE(
-                                        newTinMonoType(
-                                            TINMONOTYPE_TYPE_VAR,
-                                            TINMONOTYPE_VAL_VAR(x)
-                                        )
-                                    )
-                                )
-                            )
+    tpt = newTinPolyType(
+        TINPOLYTYPE_TYPE_QUANTIFIER,
+        TINPOLYTYPE_VAL_QUANTIFIER(
+            newTinTypeQuantifier(
+                x,
+                newTinPolyType(
+                    TINPOLYTYPE_TYPE_MONOTYPE,
+                    TINPOLYTYPE_VAL_MONOTYPE(
+                        newTinMonoType(
+                            TINMONOTYPE_TYPE_VAR,
+                            TINMONOTYPE_VAL_VAR(x)
                         )
                     )
                 )
             )
         )
     );
-    ts = newTinSubstitution(newTinSubstitutionTable());
-    addToSubstitution(ts, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tsc);
-    PROTECT(ts);
+    C1 = newTinSubstitution(newTinSubstitutionTable());
+    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
+    save = PROTECT(tpt);
+    PROTECT(C1);
     enableGC();
-
-    result = applySubstitution(ts, tsc);
-    PROTECT(result);
-    EXPECT(result->val.type->val.polyType->val.quantifier->var == x);
-    EXPECT(result->val.type->val.polyType->val.quantifier->quantifiedType->val.monoType->val.var == y);
+    tpt = applyPolyTypeSubstitution(C1, tpt);
+    PROTECT(tpt);
+    EXPECT(tpt->val.quantifier->var == x);
+    EXPECT(tpt->val.quantifier->quantifiedType->val.monoType->val.var == y);
     UNPROTECT(save);
 
     disableGC();
     HashTable *t = newTinContextTable();
     TinContext *tc = newTinContext(t, NULL);
-    addToContext(tc, x, newTinType(
-        TINTYPE_TYPE_MONOTYPE,
-        TINTYPE_VAL_MONOTYPE(
+    addToContext(tc, x, newTinPolyType(
+        TINPOLYTYPE_TYPE_MONOTYPE,
+        TINPOLYTYPE_VAL_MONOTYPE(
             newTinMonoType(
                 TINMONOTYPE_TYPE_VAR,
                 TINMONOTYPE_VAL_VAR(x)
             )
         )
     ));
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_CONTEXT,
-        TINSUBSTITUTIONCURRENCY_VAL_CONTEXT(tc)
-    );
-    ts = newTinSubstitution(newTinSubstitutionTable());
-    addToSubstitution(ts, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tsc);
-    PROTECT(ts);
+    C1 = newTinSubstitution(newTinSubstitutionTable());
+    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
+    save = PROTECT(tc);
+    PROTECT(C1);
     enableGC();
-
-    result = applySubstitution(ts, tsc);
-    PROTECT(result);
-    TinType *receiver;
-    EXPECT(hashGet(result->val.context->frame, x, &receiver));
-    EXPECT(receiver->val.monoType->val.var == y);
+    tc = applyContextSubstitution(C1, tc);
+    PROTECT(tc);
+    EXPECT(lookupInContext(tc, x)->val.monoType->val.var == y);
     UNPROTECT(save);
 
     // C1 = { x |-> y }
@@ -527,23 +598,16 @@ void testTin() {
     // y | z | z
 
     disableGC();
-    TinSubstitution *C1 = newTinSubstitution(newTinSubstitutionTable());
+    C1 = newTinSubstitution(newTinSubstitutionTable());
     addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    TinSubstitution *C2 = newTinSubstitution(newTinSubstitutionTable());
+    C2 = newTinSubstitution(newTinSubstitutionTable());
     addToSubstitution(C2, y, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(z)));
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION,
-        TINSUBSTITUTIONCURRENCY_VAL_SUBSTITUTION(C2)
-    );
-    save = PROTECT(tsc);
-    PROTECT(C1);
-
-    result = applySubstitution(C1, tsc);
-    PROTECT(result);
-    EXPECT(hashGet(result->val.substitution->map, y, &tmt));
-    EXPECT(tmt->val.var == z);
-    EXPECT(hashGet(result->val.substitution->map, x, &tmt));
-    EXPECT(tmt->val.var == y);
+    save = PROTECT(C1);
+    PROTECT(C2);
+    enableGC();
+    C2 = applySubstitutionSubstitution(C1, C2);
+    EXPECT(lookupInSubstitution(C2, y)->val.var == z);
+    EXPECT(lookupInSubstitution(C2, x)->val.var == y);
     UNPROTECT(save);
 
     // C1 = { y |-> z }
@@ -557,21 +621,112 @@ void testTin() {
     addToSubstitution(C1, y, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(z)));
     C2 = newTinSubstitution(newTinSubstitutionTable());
     addToSubstitution(C2, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    tsc = newTinSubstitutionCurrency(
-        TINSUBSTITUTIONCURRENCY_TYPE_SUBSTITUTION,
-        TINSUBSTITUTIONCURRENCY_VAL_SUBSTITUTION(C2)
-    );
-    save = PROTECT(tsc);
-    PROTECT(C1);
-
-    result = applySubstitution(C1, tsc);
-    PROTECT(result);
-    EXPECT(hashGet(result->val.substitution->map, y, &tmt));
-    EXPECT(tmt->val.var == z);
-    EXPECT(hashGet(result->val.substitution->map, x, &tmt));
-    EXPECT(tmt->val.var == z);
+    save = PROTECT(C1);
+    PROTECT(C2);
+    enableGC();
+    C2 = applySubstitutionSubstitution(C1, C2);
+    EXPECT(lookupInSubstitution(C2, y)->val.var == z);
+    EXPECT(lookupInSubstitution(C2, x)->val.var == z);
     UNPROTECT(save);
 
+    disableGC();
+    tpt = newTinPolyType(
+        TINPOLYTYPE_TYPE_MONOTYPE,
+        TINPOLYTYPE_VAL_MONOTYPE(
+            newTinMonoType(
+                TINMONOTYPE_TYPE_VAR,
+                TINMONOTYPE_VAL_VAR(x)
+            )
+        )
+    );
+    save = PROTECT(tpt);
+    enableGC();
+    tmt = instantiate(tpt);
+    EXPECT(tmt->val.var == x);
+    UNPROTECT(save);
+
+    disableGC();
+    tpt = newTinPolyType(
+        TINPOLYTYPE_TYPE_MONOTYPE,
+        TINPOLYTYPE_VAL_MONOTYPE(
+            newTinMonoType(
+                TINMONOTYPE_TYPE_FUN,
+                TINMONOTYPE_VAL_FUN(
+                    newTinFunctionApplication(
+                        arrow,
+                        2,
+                        newTinMonoTypeList(
+                            newTinMonoType(
+                                TINMONOTYPE_TYPE_FUN,
+                                TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
+                            ),
+                            newTinMonoTypeList(
+                                newTinMonoType(
+                                    TINMONOTYPE_TYPE_VAR,
+                                    TINMONOTYPE_VAL_VAR(x)
+                                ),
+                                NULL
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
+    save = PROTECT(tpt);
+    enableGC();
+    tmt = instantiate(tpt);
+    EXPECT(tmt->val.fun->name == arrow);
+    EXPECT(tmt->val.fun->args->monoType->val.fun->name == boolean);
+    EXPECT(tmt->val.fun->args->next->monoType->val.var == x);
+    UNPROTECT(save);
+
+    disableGC();
+    tpt = newTinPolyType(
+        TINPOLYTYPE_TYPE_QUANTIFIER,
+        TINPOLYTYPE_VAL_QUANTIFIER(
+            newTinTypeQuantifier(
+                x,
+                newTinPolyType(
+                    TINPOLYTYPE_TYPE_MONOTYPE,
+                    TINPOLYTYPE_VAL_MONOTYPE(
+                        newTinMonoType(
+                            TINMONOTYPE_TYPE_FUN,
+                            TINMONOTYPE_VAL_FUN(
+                                newTinFunctionApplication(
+                                    arrow,
+                                    2,
+                                    newTinMonoTypeList(
+                                        newTinMonoType(
+                                            TINMONOTYPE_TYPE_FUN,
+                                            TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
+                                        ),
+                                        newTinMonoTypeList(
+                                            newTinMonoType(
+                                                TINMONOTYPE_TYPE_VAR,
+                                                TINMONOTYPE_VAL_VAR(x)
+                                            ),
+                                            NULL
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
+    save = PROTECT(tpt);
+    enableGC();
+    tmt = instantiate(tpt);
+    EXPECT(tmt->val.fun->name == arrow);
+    EXPECT(tmt->val.fun->args->monoType->val.fun->name == boolean);
+    EXPECT(isTypeVariable(tmt->val.fun->args->next->monoType->val.var));
+    UNPROTECT(save);
+    // printTinMonoType(tmt, 0);
+
+    UNPROTECT(totalSave);
 }
 #endif
 #endif

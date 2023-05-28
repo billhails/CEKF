@@ -267,7 +267,7 @@ void analizeExp(Exp *x, CTEnv *env) {
     }
 }
 
-static void printCTHashTableValue(void *intptr) {
+static void printCTHashTableValue(void *intptr, int depth) {
     printf("%d", *((int *)intptr));
 }
 

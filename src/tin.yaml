@@ -49,15 +49,6 @@ unions:
         monoType: TinMonoType
         quantifier: TinTypeQuantifier
 
-    TinType:
-        monoType: TinMonoType
-        polyType: TinPolyType
-
-    TinSubstitutionCurrency: # argument and return value
-        type: TinType
-        context: TinContext
-        substitution: TinSubstitution
-
 enums: {}
 
 primitives: # TODO need a markFn for HashTables etc.
