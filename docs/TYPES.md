@@ -1181,7 +1181,7 @@ $$
 \\
 \textup{where}
 \\
-& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_{n-1} \rightarrow \beta)
+& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_n \rightarrow \beta)
 \\
 &\textup{new }\beta
 \\
