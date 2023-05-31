@@ -1110,3 +1110,94 @@ $$
 
 e.g. it takes a tuple of a context and an expression, and returns a tuple of a substitution and a type.
 
+
+### constants
+
+$$
+\mathcal{W}(\Gamma, \mathtt{()}) = (\emptyset, \iota)
+$$
+
+Applying $\mathcal{W}$ to a constant returns the empty (identity) substitution and the type of that constant (it just knows).
+
+### variables
+
+$$
+\begin{align}
+\mathcal{W}(\Gamma, \mathtt{x}) &= (\emptyset, \{\vec{\beta}/\vec{\alpha}\}\tau)
+\\
+\textup{where}
+\\
+&\Gamma(\mathtt{x}) = \forall\vec{\alpha}.\tau
+\\
+&\textup{new }\vec{\beta}
+\end{align}
+$$
+
+This is saying that applying $\mathcal{W}$ to a variable looks up the possibly quantified type of the variable in the context and returns it, with all of its quantifiers replaced with fresh type variables.
+
+### abstraction
+
+$$
+\begin{align*}
+\mathcal{W(\Gamma, \lambda\mathtt{x}.\mathtt{e})} &= (S_1, S_1(\beta \rightarrow \tau_1))
+\\
+\textup{where}
+\\
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \mathtt{x}:\beta, \mathtt{e})
+\\
+&\textup{new }\beta
+\end{align*}
+$$
+
+Applying $\mathcal{W}$ to a lambda expression first creates a fresh type variable $\beta$, then evaluates the body of the lambda $\mathtt{e}$ with a context extended by a mapping from $\mathtt{x}$ to $\beta$.
+
+It then returns the substitution from the result, plus a function application type $\beta \rightarrow \tau$ (where $\tau$ is the type from the result) but with the substitution from the result applied to it.
+
+### application
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, \mathtt{e_1e_2}) &= (S_3S_2S_1, S_3\beta)
+\\
+\textup{where}
+\\
+& S_3 = \mathcal{U}(S_2\tau_1, \tau_2 \rightarrow \beta)
+\\
+&\textup{new }\beta
+\\
+& (S_2, \tau_2) = \mathcal{W}(S_1\Gamma, \mathtt{e_2})
+\\
+&(S_1, \tau_1) = \mathcal{W}(\Gamma, \mathtt{e_1})
+\end{align*}
+$$
+
+So when applying $\mathcal{W}$ to a function application $\mathtt{e_1e_2}$, first (reading from bottom to top) calculate the substitution for and type of $\mathtt{e_1}$ in the current context: $(S_1, \tau_1)$. Next apply the substitution $S_1$ to the current context and use that new context to determine the substitution for, and type of $\mathtt{e_2}$: $(S_2, \tau_2)$. Then create a fresh type variable $\beta$ and a function application from the inferred type of $\mathtt{e_2}$ to that $\beta$, and unify that with the inferred type of $\mathtt{e_1}$ after applying the substitution $S_2$ to it. Finally return the combination of all the inferred substitutions plus the type resulting from applying $S_3$ to $\beta$.
+
+### let
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, \mathtt{let\ x = e_1\ in\ e_2}) &= (S_2S_1, \tau_2)
+\\
+\textup{where}
+\\
+&(S_2, \tau_2) = \mathcal{W}(S_1\Gamma + \mathtt{x}: Clos_{S_1\Gamma}(\tau_1), \mathtt{e_2})
+\\
+&(S_1, \tau_1) = \mathcal{W}(\Gamma, \mathtt{e_1})
+\end{align*}
+$$
+
+When applying $\mathcal{W}$ to a `let` expression: $\mathtt{let\ x = e_1\ in\ e_2}$, first use the current context to determine the substitution for, and type of $\mathtt{e_1}$: $(S_1, \tau_1)$.
+Use that substitution to modify the context, and then extend the context with a mapping from $\mathtt{x}$ to the polytype version of the type $\tau_1$, and use that context to infer the substitution for, and type of $\mathtt{e_2}$: $(S_2, \tau_2)$.
+Return the type of $\mathtt{e_2}$ plus the combination of the two substitutions.
+
+### fix
+
+We won't need this. My idea for typechecking `letrec` I think is ok:
+
+When actually evaluating (with `eval`) a letrec we need to create an environment populated with
+dummy variables, then replace those variables with their actual values as the letrec bindings are computed.
+That way the functions in a letrec can "see" themselves and all their siblings when they actually execute.
+
+Analogously when typechecking a letrec we create an extended context with each variable bound
+to a fresh type variable. Those variables will be unified with the types of the letrec expressions appropriately.
