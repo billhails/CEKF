@@ -1173,6 +1173,27 @@ $$
 
 So when applying $\mathcal{W}$ to a function application $\mathtt{e_1e_2}$, first (reading from bottom to top) calculate the substitution for and type of $\mathtt{e_1}$ in the current context: $(S_1, \tau_1)$. Next apply the substitution $S_1$ to the current context and use that new context to determine the substitution for, and type of $\mathtt{e_2}$: $(S_2, \tau_2)$. Then create a fresh type variable $\beta$ and a function application from the inferred type of $\mathtt{e_2}$ to that $\beta$, and unify that with the inferred type of $\mathtt{e_1}$ after applying the substitution $S_2$ to it. Finally return the combination of all the inferred substitutions plus the type resulting from applying $S_3$ to $\beta$.
 
+However our language supports multiple arguments to functions, so I'm proposing:
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, \mathtt{e_0e_1\dots e_n}) &= (S'S_nS_{n-1}, S'\beta)
+\\
+\textup{where}
+\\
+& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_{n-1} \rightarrow \beta)
+\\
+&\textup{new }\beta
+\\
+& (S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \mathtt{e_n})
+\\
+&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, \mathtt{e_0\dots e_{n-1}})
+\end{align*}
+$$
+
+It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$
+
+
 ### let
 
 $$
