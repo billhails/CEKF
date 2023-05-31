@@ -984,6 +984,120 @@ S &= \mathcal{U}(\mathtt{Int}, \mathtt{Int})
 \end{align}
 $$
 
+## Another Perspective
+
+
+The videos refer to [This Paper](https://dl.acm.org/doi/10.1145/291891.291892) by Lee and Yi, which uses a slightly different lambda calculus and formulation of the typing rules, so we start by reviewing those.
+
+### lambda grammar
+
+$$
+\begin{align*}
+\mathtt{e} &= \mathtt{()} & \mathtt{[constant]}
+\\
+& |\ \mathtt{x} & \mathtt{[variable]}
+\\
+& |\ \mathtt{e_1}\ \mathtt{e_2} & \mathtt{[application]}
+\\
+& |\ \lambda \mathtt{x} . \mathtt{e} & \mathtt{[abstraction]}
+\\
+& |\ \mathtt{let\ x = e_1\ in\ e_2} & \mathtt{[let]}
+\\
+& |\ \mathtt{fix\ f}\ \lambda \mathtt{x}.\mathtt{e} & \mathtt{[fix]}
+\end{align*}
+$$
+
+Most notable is the addition of a $\mathtt{[fix]}$ construct, which I believe is the pure functional equivalent of `letrec`, but I don't pretend to understand it and I have an alternative approach for handling `letrec`.
+
+
+### type grammar
+
+$$
+\begin{align*}
+\tau &= \iota & \textup{constant type}
+\\
+& |\ \alpha & \textup{type variable}
+\\
+& |\ \tau \rightarrow \tau & \textup{function type}
+\end{align*}
+$$
+
+### type scheme
+
+$$
+\sigma = \tau\ |\ \forall\vec{\alpha}.\tau 
+$$
+
+Type Schemes are what we've been calling polytypes.
+The $\forall\vec{\alpha}$ here is just shorthand for $\forall\alpha_1.\forall\alpha_2.\forall\alpha_3\dots$
+
+### type env
+
+$$
+\Gamma \in \mathtt{x} \xrightarrow{fin} \sigma
+$$
+
+is a mapping from lambda variables to type schemes (not sure what the $fin$ means, "finite"?).
+
+### typing rules
+
+$$
+\Gamma \vdash \mathtt{()}: \iota\qquad \mathtt{[con]}
+$$
+
+Is just saying there's an implicit mapping from constants to their types ($\set{1\mapsto Int, 2\mapsto Int, \dots}$ etc.)
+
+$$
+{
+\Gamma(\mathtt{x}) \succ \tau
+\above{1pt}
+\Gamma \vdash \mathtt{x} : \tau
+}\qquad\mathtt{[var]}
+$$
+
+The $\succ$ (successor) relation is their equivalent for $\sqsubseteq$, and $\Gamma(\mathtt{x})$ just means the value of $\mathtt{x}$ in $\Gamma$.
+
+$$
+{
+\Gamma + \mathtt{x} : \tau_1 \vdash \mathtt{e} : \tau_2
+\above{1pt}
+\Gamma \vdash \lambda\mathtt{x}.\mathtt{e} : \tau_1 \rightarrow \tau_2
+} \qquad \mathtt{[fn]}
+$$
+
+This is the ABS rule we've seen already.
+
+$$
+{
+\Gamma \vdash \mathtt{e_1}: \tau_1 \rightarrow \tau_2\qquad \Gamma \vdash \mathtt{e_2} : \tau_1
+\above{1pt}
+\Gamma \vdash \mathtt{e_1 e_2} : \tau_2
+}\qquad \mathtt{[app]}
+$$
+
+Exactly the same as our APP rule.
+
+$$
+{
+\Gamma \vdash \mathtt{e_1} : \tau_1 \qquad \Gamma + Clos_\Gamma(\tau_1) \vdash \mathtt{e_2} : \tau_2
+\above{1pt}
+\Gamma \vdash \mathtt{let\ x = e_1\ in\ e_2}: \tau_2
+}\qquad \mathtt{[let]}
+$$
+
+Again like our LET rule, but the $Clos$ function is turning $\tau_1$ into a polytype.
+
+$$
+{
+\Gamma + \mathtt{f} : \tau \vdash \lambda\mathtt{x}.\mathtt{e} : \tau
+\above{1pt}
+\Gamma \vdash \mathtt{fix\ f}\ \lambda \mathtt{x}.\mathtt{e} : \tau
+} \qquad \mathtt{[fix]}
+$$
+
+We won't need this rule as we support `letrec`.
+
+
 ## Algorithm W
 
 We're now ready to tackle the HM algoritms themselves, starting with algorithm $\mathcal{W}$.
@@ -996,12 +1110,3 @@ $$
 
 e.g. it takes a tuple of a context and an expression, and returns a tuple of a substitution and a type.
 
-And here it is
-
-$$
-\begin{align}
-\mathcal{W}(\Gamma, \mathtt{x}) &= (id, \set{\vec{\beta}/\vec{\alpha}}\tau) & \textup{where }\Gamma(\mathtt{x}) = \forall\vec{\alpha}.\tau, \textup{new }\vec{\beta}
-\\
-\mathcal{W}(\Gamma, \lambda \mathtt{x} \rightarrow  \mathtt{e}) &= 
-\end{align}
-$$
