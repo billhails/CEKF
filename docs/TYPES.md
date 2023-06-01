@@ -1272,7 +1272,7 @@ $$
 \\
 \textup{where}
 \\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma + \{\overrightarrow{\mathtt{x}\mapsto\beta}\}, \mathtt{e})
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \{\overrightarrow{\mathtt{x}:\beta}\}, \mathtt{e})
 \\
 &\textup{new }\vec\beta
 \end{align*}
