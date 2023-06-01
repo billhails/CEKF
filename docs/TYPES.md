@@ -1334,6 +1334,7 @@ $$
 &\Gamma_n = S_{n-1}\Gamma_{n-1}
 \end{align*}
 $$
+
 We need to accumulate context like that because the laguage allows for the same variable in multiple argument positions (i.e. `fn eq { (x, x) { true } (_, _) { false } }`.)
 
 Next the context needed to typecheck the function body. Haven't we already calculated it as $\Gamma_n$? That context will certainly contain bindings for $\mathtt{f}$, $\mathtt{h}$ and $\mathtt{t}$, so this might be it.
