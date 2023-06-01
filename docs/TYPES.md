@@ -1246,7 +1246,8 @@ $$
 \end{align*}
 $$
 
-It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$
+It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$.
+The terminating condition for rhe recursion where $n$ is zero is $\mathcal{W}(\Gamma, \mathtt{e_0})$ as in the original.
 
 ### abstraction*
 
@@ -1280,4 +1281,8 @@ $$
 
 No need for recursion this time, we are supplied a vector of arguments $\mathtt{\vec{x}}$ and we extend the context with
 bindings from each of those to a fresh type variable, then we perform the substitution on a nest of function applications.
+
 ### if
+
+Actually, for the purposes of typechecking, we can just treat `if` as a function with three arguments: $\mathtt{Bool} \rightarrow \beta \rightarrow \beta \rightarrow \beta$.
+It takes a bool and two betas and produces a beta.
