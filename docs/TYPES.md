@@ -1173,26 +1173,6 @@ $$
 
 So when applying $\mathcal{W}$ to a function application $\mathtt{e_1e_2}$, first (reading from bottom to top) calculate the substitution for and type of $\mathtt{e_1}$ in the current context: $(S_1, \tau_1)$. Next apply the substitution $S_1$ to the current context and use that new context to determine the substitution for, and type of $\mathtt{e_2}$: $(S_2, \tau_2)$. Then create a fresh type variable $\beta$ and a function application from the inferred type of $\mathtt{e_2}$ to that $\beta$, and unify that with the inferred type of $\mathtt{e_1}$ after applying the substitution $S_2$ to it. Finally return the combination of all the inferred substitutions plus the type resulting from applying $S_3$ to $\beta$.
 
-However our language supports multiple arguments to functions, so I'm proposing:
-
-$$
-\begin{align*}
-\mathcal{W}(\Gamma, \mathtt{e_0e_1\dots e_n}) &= (S'S_nS_{n-1}, S'\beta)
-\\
-\textup{where}
-\\
-& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_n \rightarrow \beta)
-\\
-&\textup{new }\beta
-\\
-& (S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \mathtt{e_n})
-\\
-&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, \mathtt{e_0\dots e_{n-1}})
-\end{align*}
-$$
-
-It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$
-
 
 ### let
 
@@ -1222,3 +1202,82 @@ That way the functions in a letrec can "see" themselves and all their siblings w
 
 Analogously when typechecking a letrec we create an extended context with each variable bound
 to a fresh type variable. Those variables will be unified with the types of the letrec expressions appropriately.
+
+## Extensions
+
+These are my modifications and additions to the above, to support the F-natural language. In F-natural functions can take multiple
+arguments so the abstraction and application cases will need to change, plus we'll need a case for `if`.
+
+### application*
+
+original
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, \mathtt{e_1e_2}) &= (S_3S_2S_1, S_3\beta)
+\\
+\textup{where}
+\\
+& S_3 = \mathcal{U}(S_2\tau_1, \tau_2 \rightarrow \beta)
+\\
+&\textup{new }\beta
+\\
+& (S_2, \tau_2) = \mathcal{W}(S_1\Gamma, \mathtt{e_2})
+\\
+&(S_1, \tau_1) = \mathcal{W}(\Gamma, \mathtt{e_1})
+\end{align*}
+$$
+
+becomes
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, \mathtt{e_0e_1\dots e_n}) &= (S'S_nS_{n-1}, S'\beta)
+\\
+\textup{where}
+\\
+& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_n \rightarrow \beta)
+\\
+&\textup{new }\beta
+\\
+& (S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \mathtt{e_n})
+\\
+&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, \mathtt{e_0\dots e_{n-1}})
+\end{align*}
+$$
+
+It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$
+
+### abstraction*
+
+original
+
+$$
+\begin{align*}
+\mathcal{W(\Gamma, \lambda\mathtt{x}.\mathtt{e})} &= (S_1, S_1(\beta \rightarrow \tau_1))
+\\
+\textup{where}
+\\
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \mathtt{x}:\beta, \mathtt{e})
+\\
+&\textup{new }\beta
+\end{align*}
+$$
+
+becomes
+
+$$
+\begin{align*}
+\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
+\\
+\textup{where}
+\\
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \{\overrightarrow{\mathtt{x}\mapsto\beta}\}, \mathtt{e})
+\\
+&\textup{new }\vec\beta
+\end{align*}
+$$
+
+No need for recursion this time, we are supplied a vector of arguments $\mathtt{\vec{x}}$ and we extend the context with
+bindings from each of those to a fresh type variable, then we perform the substitution on a nest of function applications.
+### if
