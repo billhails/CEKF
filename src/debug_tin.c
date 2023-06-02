@@ -91,6 +91,30 @@ void printTinSubstitution(struct TinSubstitution * x, int depth) {
     printf("]");
 }
 
+void printTinMonoTypeVec(struct TinMonoTypeVec * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinMonoTypeVec (NULL)"); return; }
+    printf("TinMonoTypeVec[\n");
+    printTinMonoType(x->monoType, depth + 1);
+    printf("\n");
+    printTinMonoTypeVec(x->next, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinArgsResult(struct TinArgsResult * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinArgsResult (NULL)"); return; }
+    printf("TinArgsResult[\n");
+    printTinContext(x->context, depth + 1);
+    printf("\n");
+    printTinMonoTypeVec(x->vec, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
 void printTinMonoType(struct TinMonoType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinMonoType (NULL)"); return; }

@@ -25,28 +25,6 @@
 #include "hash.h"
 #include "memory.h"
 
-typedef enum AstBinOpType {
-    AST_BINOPTYPE_TYPE_THEN,
-    AST_BINOPTYPE_TYPE_AND,
-    AST_BINOPTYPE_TYPE_OR,
-    AST_BINOPTYPE_TYPE_XOR,
-    AST_BINOPTYPE_TYPE_EQ,
-    AST_BINOPTYPE_TYPE_NE,
-    AST_BINOPTYPE_TYPE_GT,
-    AST_BINOPTYPE_TYPE_LT,
-    AST_BINOPTYPE_TYPE_GE,
-    AST_BINOPTYPE_TYPE_LE,
-    AST_BINOPTYPE_TYPE_CONS,
-    AST_BINOPTYPE_TYPE_APPEND,
-    AST_BINOPTYPE_TYPE_ADD,
-    AST_BINOPTYPE_TYPE_SUB,
-    AST_BINOPTYPE_TYPE_MUL,
-    AST_BINOPTYPE_TYPE_DIV,
-    AST_BINOPTYPE_TYPE_MOD,
-    AST_BINOPTYPE_TYPE_POW,
-    AST_BINOPTYPE_TYPE_DOT,
-} AstBinOpType;
-
 typedef enum AstDefinitionType {
     AST_DEFINITION_TYPE_DEFINE,
     AST_DEFINITION_TYPE_PROTOTYPE,
@@ -66,22 +44,14 @@ typedef enum AstTypeClauseType {
     AST_TYPECLAUSE_TYPE_STRING,
     AST_TYPECLAUSE_TYPE_LIST,
     AST_TYPECLAUSE_TYPE_TYPE,
-    AST_TYPECLAUSE_TYPE_TYPESYMBOL,
     AST_TYPECLAUSE_TYPE_VAR,
     AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR,
 } AstTypeClauseType;
 
-typedef enum AstFunType {
-    AST_FUN_TYPE_FUNCTION,
-    AST_FUN_TYPE_COMPOSITEFUNCTION,
-} AstFunType;
-
 typedef enum AstArgType {
     AST_ARG_TYPE_WILDCARD,
     AST_ARG_TYPE_SYMBOL,
-    AST_ARG_TYPE_CONS,
     AST_ARG_TYPE_NAMED,
-    AST_ARG_TYPE_LIST,
     AST_ARG_TYPE_ENV,
     AST_ARG_TYPE_UNPACK,
     AST_ARG_TYPE_NUMBER,
@@ -92,11 +62,8 @@ typedef enum AstArgType {
 } AstArgType;
 
 typedef enum AstExpressionType {
+    AST_EXPRESSION_TYPE_NIL,
     AST_EXPRESSION_TYPE_BACK,
-    AST_EXPRESSION_TYPE_BINOP,
-    AST_EXPRESSION_TYPE_NOT,
-    AST_EXPRESSION_TYPE_NEGATE,
-    AST_EXPRESSION_TYPE_HERE,
     AST_EXPRESSION_TYPE_FUNCALL,
     AST_EXPRESSION_TYPE_SYMBOL,
     AST_EXPRESSION_TYPE_NUMBER,
@@ -104,11 +71,10 @@ typedef enum AstExpressionType {
     AST_EXPRESSION_TYPE_CHARACTER,
     AST_EXPRESSION_TYPE_YES,
     AST_EXPRESSION_TYPE_NO,
-    AST_EXPRESSION_TYPE_LIST,
     AST_EXPRESSION_TYPE_FUN,
     AST_EXPRESSION_TYPE_ENV,
     AST_EXPRESSION_TYPE_CONDITIONAL,
-    AST_EXPRESSION_TYPE_SWITCHSTATEMENT,
+    AST_EXPRESSION_TYPE_NEST,
 } AstExpressionType;
 
 
@@ -132,22 +98,14 @@ typedef union AstTypeClauseVal {
     void * string;
     struct AstType * list;
     struct AstType * type;
-    HashSymbol * typeSymbol;
     HashSymbol * var;
-    struct AstTypeConstructor * typeconstructor;
+    struct AstTypeConstructor * typeConstructor;
 } AstTypeClauseVal;
-
-typedef union AstFunVal {
-    struct AstFunction * function;
-    struct AstCompositeFunction * compositeFunction;
-} AstFunVal;
 
 typedef union AstArgVal {
     void * wildcard;
     HashSymbol * symbol;
-    struct AstArgPair * cons;
     struct AstNamedArg * named;
-    struct AstArgList * list;
     struct AstEnvType * env;
     struct AstUnpack * unpack;
     int number;
@@ -158,11 +116,8 @@ typedef union AstArgVal {
 } AstArgVal;
 
 typedef union AstExpressionVal {
+    void * nil;
     void * back;
-    struct AstBinOp * binOp;
-    struct AstExpression * not;
-    struct AstExpression * negate;
-    struct AstExpression * here;
     struct AstFunCall * funCall;
     HashSymbol * symbol;
     int number;
@@ -170,11 +125,10 @@ typedef union AstExpressionVal {
     char character;
     void * yes;
     void * no;
-    struct AstExpressions * list;
-    struct AstFun * fun;
+    struct AstCompositeFunction * fun;
     struct AstEnv * env;
     struct AstConditional * conditional;
-    struct AstSwitch * switchStatement;
+    struct AstNest * nest;
 } AstExpressionVal;
 
 
@@ -270,12 +224,6 @@ typedef struct AstConditional {
     struct AstNest * alternative;
 } AstConditional;
 
-typedef struct AstSwitch {
-    Header header;
-    struct AstExpressions * expressions;
-    struct AstCompositeFunction * compositeFunction;
-} AstSwitch;
-
 typedef struct AstCompositeFunction {
     Header header;
     struct AstCompositeFunction * next;
@@ -317,13 +265,6 @@ typedef struct AstEnvType {
     HashSymbol * name;
     HashSymbol * prototype;
 } AstEnvType;
-
-typedef struct AstBinOp {
-    Header header;
-    enum AstBinOpType  type;
-    struct AstExpression * lhs;
-    struct AstExpression * rhs;
-} AstBinOp;
 
 typedef struct AstFunCall {
     Header header;
@@ -372,12 +313,6 @@ typedef struct AstTypeClause {
     union AstTypeClauseVal  val;
 } AstTypeClause;
 
-typedef struct AstFun {
-    Header header;
-    enum AstFunType  type;
-    union AstFunVal  val;
-} AstFun;
-
 typedef struct AstArg {
     Header header;
     enum AstArgType  type;
@@ -405,7 +340,6 @@ struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct As
 struct AstTypeList * newAstTypeList(struct AstTypeList * next, struct AstType * type);
 struct AstType * newAstType(struct AstType * next, struct AstTypeClause * typeClause);
 struct AstConditional * newAstConditional(struct AstExpression * expression, struct AstNest * consequent, struct AstNest * alternative);
-struct AstSwitch * newAstSwitch(struct AstExpressions * expressions, struct AstCompositeFunction * compositeFunction);
 struct AstCompositeFunction * newAstCompositeFunction(struct AstCompositeFunction * next, struct AstFunction * function);
 struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest * nest);
 struct AstArgList * newAstArgList(struct AstArgList * next, struct AstArg * arg);
@@ -413,7 +347,6 @@ struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList
 struct AstArgPair * newAstArgPair(struct AstArg * car, struct AstArg * cdr);
 struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg);
 struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype);
-struct AstBinOp * newAstBinOp(enum AstBinOpType  type, struct AstExpression * lhs, struct AstExpression * rhs);
 struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExpressions * arguments);
 struct AstPackage * newAstPackage(struct AstPackage * next, HashSymbol * symbol);
 struct AstExpressions * newAstExpressions(struct AstExpressions * next, struct AstExpression * expression);
@@ -422,7 +355,6 @@ struct AstString * newAstString(char * string);
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val);
 struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  type, union AstSinglePrototypeVal  val);
 struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstTypeClauseVal  val);
-struct AstFun * newAstFun(enum AstFunType  type, union AstFunVal  val);
 struct AstArg * newAstArg(enum AstArgType  type, union AstArgVal  val);
 struct AstExpression * newAstExpression(enum AstExpressionType  type, union AstExpressionVal  val);
 
@@ -441,7 +373,6 @@ void markAstTypeConstructor(struct AstTypeConstructor * x);
 void markAstTypeList(struct AstTypeList * x);
 void markAstType(struct AstType * x);
 void markAstConditional(struct AstConditional * x);
-void markAstSwitch(struct AstSwitch * x);
 void markAstCompositeFunction(struct AstCompositeFunction * x);
 void markAstFunction(struct AstFunction * x);
 void markAstArgList(struct AstArgList * x);
@@ -449,7 +380,6 @@ void markAstUnpack(struct AstUnpack * x);
 void markAstArgPair(struct AstArgPair * x);
 void markAstNamedArg(struct AstNamedArg * x);
 void markAstEnvType(struct AstEnvType * x);
-void markAstBinOp(struct AstBinOp * x);
 void markAstFunCall(struct AstFunCall * x);
 void markAstPackage(struct AstPackage * x);
 void markAstExpressions(struct AstExpressions * x);
@@ -458,7 +388,6 @@ void markAstString(struct AstString * x);
 void markAstDefinition(struct AstDefinition * x);
 void markAstSinglePrototype(struct AstSinglePrototype * x);
 void markAstTypeClause(struct AstTypeClause * x);
-void markAstFun(struct AstFun * x);
 void markAstArg(struct AstArg * x);
 void markAstExpression(struct AstExpression * x);
 
@@ -477,7 +406,6 @@ void freeAstTypeConstructor(struct AstTypeConstructor * x);
 void freeAstTypeList(struct AstTypeList * x);
 void freeAstType(struct AstType * x);
 void freeAstConditional(struct AstConditional * x);
-void freeAstSwitch(struct AstSwitch * x);
 void freeAstCompositeFunction(struct AstCompositeFunction * x);
 void freeAstFunction(struct AstFunction * x);
 void freeAstArgList(struct AstArgList * x);
@@ -485,7 +413,6 @@ void freeAstUnpack(struct AstUnpack * x);
 void freeAstArgPair(struct AstArgPair * x);
 void freeAstNamedArg(struct AstNamedArg * x);
 void freeAstEnvType(struct AstEnvType * x);
-void freeAstBinOp(struct AstBinOp * x);
 void freeAstFunCall(struct AstFunCall * x);
 void freeAstPackage(struct AstPackage * x);
 void freeAstExpressions(struct AstExpressions * x);
@@ -494,7 +421,6 @@ void freeAstString(struct AstString * x);
 void freeAstDefinition(struct AstDefinition * x);
 void freeAstSinglePrototype(struct AstSinglePrototype * x);
 void freeAstTypeClause(struct AstTypeClause * x);
-void freeAstFun(struct AstFun * x);
 void freeAstArg(struct AstArg * x);
 void freeAstExpression(struct AstExpression * x);
 
@@ -510,16 +436,11 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_TYPECLAUSE_VAL_STRING() ((union AstTypeClauseVal ){.string = (NULL)})
 #define AST_TYPECLAUSE_VAL_LIST(x) ((union AstTypeClauseVal ){.list = (x)})
 #define AST_TYPECLAUSE_VAL_TYPE(x) ((union AstTypeClauseVal ){.type = (x)})
-#define AST_TYPECLAUSE_VAL_TYPESYMBOL(x) ((union AstTypeClauseVal ){.typeSymbol = (x)})
 #define AST_TYPECLAUSE_VAL_VAR(x) ((union AstTypeClauseVal ){.var = (x)})
-#define AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR(x) ((union AstTypeClauseVal ){.typeconstructor = (x)})
-#define AST_FUN_VAL_FUNCTION(x) ((union AstFunVal ){.function = (x)})
-#define AST_FUN_VAL_COMPOSITEFUNCTION(x) ((union AstFunVal ){.compositeFunction = (x)})
+#define AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR(x) ((union AstTypeClauseVal ){.typeConstructor = (x)})
 #define AST_ARG_VAL_WILDCARD() ((union AstArgVal ){.wildcard = (NULL)})
 #define AST_ARG_VAL_SYMBOL(x) ((union AstArgVal ){.symbol = (x)})
-#define AST_ARG_VAL_CONS(x) ((union AstArgVal ){.cons = (x)})
 #define AST_ARG_VAL_NAMED(x) ((union AstArgVal ){.named = (x)})
-#define AST_ARG_VAL_LIST(x) ((union AstArgVal ){.list = (x)})
 #define AST_ARG_VAL_ENV(x) ((union AstArgVal ){.env = (x)})
 #define AST_ARG_VAL_UNPACK(x) ((union AstArgVal ){.unpack = (x)})
 #define AST_ARG_VAL_NUMBER(x) ((union AstArgVal ){.number = (x)})
@@ -527,11 +448,8 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_ARG_VAL_CHARACTER(x) ((union AstArgVal ){.character = (x)})
 #define AST_ARG_VAL_YES() ((union AstArgVal ){.yes = (NULL)})
 #define AST_ARG_VAL_NO() ((union AstArgVal ){.no = (NULL)})
+#define AST_EXPRESSION_VAL_NIL() ((union AstExpressionVal ){.nil = (NULL)})
 #define AST_EXPRESSION_VAL_BACK() ((union AstExpressionVal ){.back = (NULL)})
-#define AST_EXPRESSION_VAL_BINOP(x) ((union AstExpressionVal ){.binOp = (x)})
-#define AST_EXPRESSION_VAL_NOT(x) ((union AstExpressionVal ){.not = (x)})
-#define AST_EXPRESSION_VAL_NEGATE(x) ((union AstExpressionVal ){.negate = (x)})
-#define AST_EXPRESSION_VAL_HERE(x) ((union AstExpressionVal ){.here = (x)})
 #define AST_EXPRESSION_VAL_FUNCALL(x) ((union AstExpressionVal ){.funCall = (x)})
 #define AST_EXPRESSION_VAL_SYMBOL(x) ((union AstExpressionVal ){.symbol = (x)})
 #define AST_EXPRESSION_VAL_NUMBER(x) ((union AstExpressionVal ){.number = (x)})
@@ -539,10 +457,9 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_EXPRESSION_VAL_CHARACTER(x) ((union AstExpressionVal ){.character = (x)})
 #define AST_EXPRESSION_VAL_YES() ((union AstExpressionVal ){.yes = (NULL)})
 #define AST_EXPRESSION_VAL_NO() ((union AstExpressionVal ){.no = (NULL)})
-#define AST_EXPRESSION_VAL_LIST(x) ((union AstExpressionVal ){.list = (x)})
 #define AST_EXPRESSION_VAL_FUN(x) ((union AstExpressionVal ){.fun = (x)})
 #define AST_EXPRESSION_VAL_ENV(x) ((union AstExpressionVal ){.env = (x)})
 #define AST_EXPRESSION_VAL_CONDITIONAL(x) ((union AstExpressionVal ){.conditional = (x)})
-#define AST_EXPRESSION_VAL_SWITCHSTATEMENT(x) ((union AstExpressionVal ){.switchStatement = (x)})
+#define AST_EXPRESSION_VAL_NEST(x) ((union AstExpressionVal ){.nest = (x)})
 
 #endif

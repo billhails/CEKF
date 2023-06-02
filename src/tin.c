@@ -57,6 +57,20 @@ struct TinSubstitution * newTinSubstitution(HashTable * map) {
     return x;
 }
 
+struct TinMonoTypeVec * newTinMonoTypeVec(struct TinMonoType * monoType, struct TinMonoTypeVec * next) {
+    struct TinMonoTypeVec * x = NEW(TinMonoTypeVec, OBJTYPE_TINMONOTYPEVEC);
+    x->monoType = monoType;
+    x->next = next;
+    return x;
+}
+
+struct TinArgsResult * newTinArgsResult(struct TinContext * context, struct TinMonoTypeVec * vec) {
+    struct TinArgsResult * x = NEW(TinArgsResult, OBJTYPE_TINARGSRESULT);
+    x->context = context;
+    x->vec = vec;
+    return x;
+}
+
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val) {
     struct TinMonoType * x = NEW(TinMonoType, OBJTYPE_TINMONOTYPE);
     x->type = type;
@@ -113,6 +127,22 @@ void markTinSubstitution(struct TinSubstitution * x) {
     markHashTable(x->map);
 }
 
+void markTinMonoTypeVec(struct TinMonoTypeVec * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markTinMonoType(x->monoType);
+    markTinMonoTypeVec(x->next);
+}
+
+void markTinArgsResult(struct TinArgsResult * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markTinContext(x->context);
+    markTinMonoTypeVec(x->vec);
+}
+
 void markTinMonoType(struct TinMonoType * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -163,6 +193,12 @@ void markTinObj(struct Header *h) {
         case OBJTYPE_TINSUBSTITUTION:
             markTinSubstitution((TinSubstitution *)h);
             break;
+        case OBJTYPE_TINMONOTYPEVEC:
+            markTinMonoTypeVec((TinMonoTypeVec *)h);
+            break;
+        case OBJTYPE_TINARGSRESULT:
+            markTinArgsResult((TinArgsResult *)h);
+            break;
         case OBJTYPE_TINMONOTYPE:
             markTinMonoType((TinMonoType *)h);
             break;
@@ -194,6 +230,14 @@ void freeTinSubstitution(struct TinSubstitution * x) {
     FREE(x, TinSubstitution);
 }
 
+void freeTinMonoTypeVec(struct TinMonoTypeVec * x) {
+    FREE(x, TinMonoTypeVec);
+}
+
+void freeTinArgsResult(struct TinArgsResult * x) {
+    FREE(x, TinArgsResult);
+}
+
 void freeTinMonoType(struct TinMonoType * x) {
     FREE(x, TinMonoType);
 }
@@ -220,6 +264,12 @@ void freeTinObj(struct Header *h) {
         case OBJTYPE_TINSUBSTITUTION:
             freeTinSubstitution((TinSubstitution *)h);
             break;
+        case OBJTYPE_TINMONOTYPEVEC:
+            freeTinMonoTypeVec((TinMonoTypeVec *)h);
+            break;
+        case OBJTYPE_TINARGSRESULT:
+            freeTinArgsResult((TinArgsResult *)h);
+            break;
         case OBJTYPE_TINMONOTYPE:
             freeTinMonoType((TinMonoType *)h);
             break;
@@ -241,6 +291,10 @@ char *typenameTinObj(int type) {
             return "TinContext";
         case OBJTYPE_TINSUBSTITUTION:
             return "TinSubstitution";
+        case OBJTYPE_TINMONOTYPEVEC:
+            return "TinMonoTypeVec";
+        case OBJTYPE_TINARGSRESULT:
+            return "TinArgsResult";
         case OBJTYPE_TINMONOTYPE:
             return "TinMonoType";
         case OBJTYPE_TINPOLYTYPE:

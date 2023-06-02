@@ -55,6 +55,7 @@ typedef enum {
     // hash table types
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
+    OBJTYPE_WRESULT,
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
 } ObjType;
@@ -76,11 +77,13 @@ void markObj(Header *h);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
+void markWResultObj(Header *x);
 
 void freeObj(Header *h);
 void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
+void freeWResultObj(Header *x);
 
 bool enableGC();
 bool disableGC();

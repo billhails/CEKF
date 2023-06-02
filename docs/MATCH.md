@@ -122,3 +122,7 @@ the ancilliary definitions would be something like
 
 however since this is bytecode we'll be generating, the more support we can build into the vm,
 the faster it will be.
+
+We might think about implementing arrays in the target language, initially for this single purpose,
+to avoid having to use cons for everything. the array would have a length field and an array of
+values.

@@ -25,9 +25,21 @@
 void markTinSymbolTable();
 
 void printTinSymbol(HashSymbol *x, int depth);
-HashTable *newTinSubstitutionTable();
-HashTable *newTinContextTable();
+TinContext *freshTinContext();
 
 void addSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
+TinContext *extendTinContext(TinContext *parent);
+HashSymbol *freshTypeVariable();
+void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType);
+TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2);
+TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
+
+TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);
+TinPolyType *lookupInContext(TinContext *context, HashSymbol *var);
+TinSubstitution *makeEmptySubstitution();
+TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
+TinMonoType *instantiate(TinPolyType *tpt);
+TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2);
+TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
 
 #endif

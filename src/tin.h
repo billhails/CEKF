@@ -79,6 +79,18 @@ typedef struct TinSubstitution {
     HashTable * map;
 } TinSubstitution;
 
+typedef struct TinMonoTypeVec {
+    Header header;
+    struct TinMonoType * monoType;
+    struct TinMonoTypeVec * next;
+} TinMonoTypeVec;
+
+typedef struct TinArgsResult {
+    Header header;
+    struct TinContext * context;
+    struct TinMonoTypeVec * vec;
+} TinArgsResult;
+
 typedef struct TinMonoType {
     Header header;
     enum TinMonoTypeType  type;
@@ -96,6 +108,8 @@ struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struc
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType);
 struct TinContext * newTinContext(HashTable * frame, struct TinContext * next);
 struct TinSubstitution * newTinSubstitution(HashTable * map);
+struct TinMonoTypeVec * newTinMonoTypeVec(struct TinMonoType * monoType, struct TinMonoTypeVec * next);
+struct TinArgsResult * newTinArgsResult(struct TinContext * context, struct TinMonoTypeVec * vec);
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val);
 struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTypeVal  val);
 
@@ -104,6 +118,8 @@ void markTinMonoTypeList(struct TinMonoTypeList * x);
 void markTinTypeQuantifier(struct TinTypeQuantifier * x);
 void markTinContext(struct TinContext * x);
 void markTinSubstitution(struct TinSubstitution * x);
+void markTinMonoTypeVec(struct TinMonoTypeVec * x);
+void markTinArgsResult(struct TinArgsResult * x);
 void markTinMonoType(struct TinMonoType * x);
 void markTinPolyType(struct TinPolyType * x);
 
@@ -112,6 +128,8 @@ void freeTinMonoTypeList(struct TinMonoTypeList * x);
 void freeTinTypeQuantifier(struct TinTypeQuantifier * x);
 void freeTinContext(struct TinContext * x);
 void freeTinSubstitution(struct TinSubstitution * x);
+void freeTinMonoTypeVec(struct TinMonoTypeVec * x);
+void freeTinArgsResult(struct TinArgsResult * x);
 void freeTinMonoType(struct TinMonoType * x);
 void freeTinPolyType(struct TinPolyType * x);
 

@@ -81,10 +81,6 @@ structs:
         consequent: AstNest
         alternative: AstNest
 
-    AstSwitch:
-        expressions: AstExpressions
-        compositeFunction: AstCompositeFunction
-
     AstCompositeFunction:
         next: AstCompositeFunction
         function: AstFunction
@@ -113,11 +109,6 @@ structs:
         name: HashSymbol
         prototype: HashSymbol
 
-    AstBinOp:
-        type: AstBinOpType
-        lhs: AstExpression
-        rhs: AstExpression
-    
     AstFunCall:
         function: AstExpression
         arguments: AstExpressions
@@ -155,20 +146,13 @@ unions:
         string: void_ptr
         list: AstType
         type: AstType
-        typeSymbol: HashSymbol
         var: HashSymbol
-        typeconstructor: AstTypeConstructor
-
-    AstFun:
-        function: AstFunction
-        compositeFunction: AstCompositeFunction
+        typeConstructor: AstTypeConstructor
 
     AstArg:
         wildcard: void_ptr
         symbol: HashSymbol
-        cons: AstArgPair
         named: AstNamedArg
-        list: AstArgList
         env: AstEnvType
         unpack: AstUnpack
         number: int
@@ -178,11 +162,8 @@ unions:
         "no": void_ptr
 
     AstExpression:
+        nil: void_ptr
         back: void_ptr
-        binOp: AstBinOp
-        not: AstExpression
-        negate: AstExpression
-        here: AstExpression
         funCall: AstFunCall
         symbol: HashSymbol
         number: int
@@ -190,33 +171,12 @@ unions:
         character: char
         "yes": void_ptr
         "no": void_ptr
-        list: AstExpressions
-        fun: AstFun
+        fun: AstCompositeFunction
         env: AstEnv
         conditional: AstConditional
-        switchStatement: AstSwitch
+        nest: AstNest
 
-enums:
-    AstBinOpType:
-        - then
-        - and
-        - or
-        - xor
-        - eq
-        - ne
-        - gt
-        - lt
-        - ge
-        - le
-        - cons
-        - append
-        - add
-        - sub
-        - mul
-        - div
-        - mod
-        - pow
-        - dot
+enums: {}
 
 primitives:
     HashSymbol:

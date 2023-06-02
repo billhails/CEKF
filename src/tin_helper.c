@@ -26,13 +26,7 @@
 
 static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunctionApplication *funApp);
 static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype);
-static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype);
-static TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
 static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTypeQuantifier *tq);
-static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);
-static TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
-static TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2);
-static TinSubstitution *makeEmptySubstitution();
 
 static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map);
 static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map);
@@ -99,6 +93,14 @@ static HashTable *newVarTable() {
     );
 }
 
+TinContext *freshTinContext() {
+    HashTable *h = newContextTable();
+    int save = PROTECT(h);
+    TinContext *c = newTinContext(h, NULL);
+    UNPROTECT(save);
+    return c;
+}
+
 static HashTable *newFreeVariableTable() {
     return newHashTable(0, NULL, NULL);
 }
@@ -107,11 +109,11 @@ static void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol,
     hashSet(substitution->map, symbol, &monoType);
 }
 
-static void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
+void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
     hashSet(context->frame, symbol, &polyType);
 }
 
-static TinPolyType *lookupInContext(TinContext *context, HashSymbol *var) {
+TinPolyType *lookupInContext(TinContext *context, HashSymbol *var) {
     if (context == NULL) return NULL;
     TinPolyType *result;
     if (hashGet(context->frame, var, &result)) return result;
@@ -152,6 +154,14 @@ static TinContext *copyContext(TinContext *source) {
         UNPROTECT(save);
         return context;
     }
+}
+
+TinContext *extendTinContext(TinContext *parent) {
+    HashTable *frame = newContextTable();
+    int save = PROTECT(frame);
+    TinContext *context = newTinContext(frame, parent);
+    UNPROTECT(save);
+    return context;
 }
 
 static TinSubstitution *copySubstitution(TinSubstitution *source) {
@@ -210,7 +220,7 @@ static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype)
     return mtype;
 }
 
-static TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
+TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyMonoTypeSubstitution ");
     printTinMonoType(mtype, 0);
@@ -248,7 +258,7 @@ static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTyp
     return result;
 }
 
-static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
+TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyPolyTypeSubstitution ");
     printTinPolyType(ptype, 0);
@@ -277,7 +287,7 @@ static TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *p
     }
 }
 
-static TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
+TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyContextSubstitution ");
     printTinContext(context, 0);
@@ -297,7 +307,7 @@ static TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *cont
     return result;
 }
 
-static TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2) {
+TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applySubstitutionSubstitution ");
     printTinSubstitution(s2, 0);
@@ -319,7 +329,7 @@ static TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSu
     return ts;
 }
 
-static HashSymbol *newTypeVariable() {
+HashSymbol *freshTypeVariable() {
     return genSym("#");
 }
 
@@ -415,7 +425,7 @@ static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map
     printf("\n");
     sleep(1);
 #endif
-    HashSymbol *newVar = newTypeVariable();
+    HashSymbol *newVar = freshTypeVariable();
     int save = PROTECT(newVar);
     setInMap(map, ttq->var, newVar);
     UNPROTECT(save);
@@ -499,7 +509,7 @@ TinPolyType *generalize(TinContext *context, TinMonoType *monoType) {
     return tpt;
 }
 
-static TinSubstitution *makeEmptySubstitution() {
+TinSubstitution *makeEmptySubstitution() {
     HashTable *h = newSubstitutionTable();
     int save = PROTECT(h);
     TinSubstitution *s = newTinSubstitution(h);
@@ -606,546 +616,7 @@ TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2) {
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 3
 
-#define EXPECT(EXP) do { if (EXP) printf("assertion " #EXP " passed\n"); else printf("ASSERTION " #EXP " FAILED\n"); } while(0)
+#include "tests/tin.inc"
 
-static bool isTypeVariable(HashSymbol *symbol) {
-    return symbol->name[0] == '#';
-}
-
-void testTin() {
-    printf("testTin()\n");
-    int save;
-    TinMonoType *tmt1;
-    TinMonoType *tmt2;
-    TinPolyType *tpt;
-    TinSubstitution *C1;
-    TinSubstitution *C2;
-    TinContext *tc;
-    HashTable *htc;
-    int totalSave = PROTECT(NULL);
-    HashSymbol *x = newSymbol("x"); PROTECT(x);
-    HashSymbol *y = newSymbol("y"); PROTECT(y);
-    HashSymbol *z = newSymbol("z"); PROTECT(y);
-    HashSymbol *arrow = newSymbol("->"); PROTECT(arrow);
-    HashSymbol *boolean = newSymbol("Bool"); PROTECT(boolean);
-    HashSymbol *integer = newSymbol("Int"); PROTECT(boolean);
-
-    disableGC();
-    tmt1 = newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(x));
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tmt1);
-    PROTECT(C1);
-    enableGC();
-    tmt1 = applyMonoTypeSubstitution(C1, tmt1);
-    EXPECT(tmt1->val.var == y);
-    UNPROTECT(save);
-
-    disableGC();
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_FUN,
-                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tmt1);
-    PROTECT(C1);
-    enableGC();
-    tmt1 = applyMonoTypeSubstitution(C1, tmt1);
-    EXPECT(tmt1->val.fun->name == arrow);
-    EXPECT(tmt1->val.fun->args->monoType->val.fun->name == boolean);
-    EXPECT(tmt1->val.fun->args->next->monoType->val.var == y);
-    UNPROTECT(save);
-
-    disableGC();
-    tpt = newTinPolyType(
-        TINPOLYTYPE_TYPE_MONOTYPE,
-        TINPOLYTYPE_VAL_MONOTYPE(
-            newTinMonoType(
-                TINMONOTYPE_TYPE_FUN,
-                TINMONOTYPE_VAL_FUN(
-                    newTinFunctionApplication(
-                        arrow,
-                        2,
-                        newTinMonoTypeList(
-                            newTinMonoType(
-                                TINMONOTYPE_TYPE_FUN,
-                                TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                            ),
-                            newTinMonoTypeList(
-                                newTinMonoType(
-                                    TINMONOTYPE_TYPE_VAR,
-                                    TINMONOTYPE_VAL_VAR(x)
-                                ),
-                                NULL
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    );
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tpt);
-    PROTECT(C1);
-    enableGC();
-    tpt = applyPolyTypeSubstitution(C1, tpt);
-    EXPECT(tpt->val.monoType->val.fun->name == arrow);
-    EXPECT(tpt->val.monoType->val.fun->args->monoType->val.fun->name == boolean);
-    EXPECT(tpt->val.monoType->val.fun->args->next->monoType->val.var == y);
-    UNPROTECT(save);
-
-    disableGC();
-    tpt = newTinPolyType(
-        TINPOLYTYPE_TYPE_QUANTIFIER,
-        TINPOLYTYPE_VAL_QUANTIFIER(
-            newTinTypeQuantifier(
-                x,
-                newTinPolyType(
-                    TINPOLYTYPE_TYPE_MONOTYPE,
-                    TINPOLYTYPE_VAL_MONOTYPE(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        )
-                    )
-                )
-            )
-        )
-    );
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tpt);
-    PROTECT(C1);
-    enableGC();
-    tpt = applyPolyTypeSubstitution(C1, tpt);
-    PROTECT(tpt);
-    EXPECT(tpt->val.quantifier->var == x);
-    EXPECT(tpt->val.quantifier->quantifiedType->val.monoType->val.var == y);
-    UNPROTECT(save);
-
-    disableGC();
-    htc = newContextTable();
-    tc = newTinContext(htc, NULL);
-    addToContext(tc, x, newTinPolyType(
-        TINPOLYTYPE_TYPE_MONOTYPE,
-        TINPOLYTYPE_VAL_MONOTYPE(
-            newTinMonoType(
-                TINMONOTYPE_TYPE_VAR,
-                TINMONOTYPE_VAL_VAR(x)
-            )
-        )
-    ));
-
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(tc);
-    PROTECT(C1);
-    enableGC();
-    tc = applyContextSubstitution(C1, tc);
-    PROTECT(tc);
-    EXPECT(lookupInContext(tc, x)->val.monoType->val.var == y);
-    UNPROTECT(save);
-
-    // C1 = { x |-> y }
-    // C2 = { y |-> z }
-    // C1(C2) =  { x |-> y, y |-> z }
-    // x | x | y
-    // y | z | z
-
-    disableGC();
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    C2 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C2, y, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(z)));
-    save = PROTECT(C1);
-    PROTECT(C2);
-    enableGC();
-    C2 = applySubstitutionSubstitution(C1, C2);
-    EXPECT(lookupInSubstitution(C2, y)->val.var == z);
-    EXPECT(lookupInSubstitution(C2, x)->val.var == y);
-    UNPROTECT(save);
-
-    // C1 = { y |-> z }
-    // C2 = { x |-> y }
-    // C1(C2) =  { x |-> z, y |-> z }
-    // x | y | z
-    // y | y | z
-
-    disableGC();
-    C1 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C1, y, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(z)));
-    C2 = newTinSubstitution(newSubstitutionTable());
-    addToSubstitution(C2, x, newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)));
-    save = PROTECT(C1);
-    PROTECT(C2);
-    enableGC();
-    C2 = applySubstitutionSubstitution(C1, C2);
-    EXPECT(lookupInSubstitution(C2, y)->val.var == z);
-    EXPECT(lookupInSubstitution(C2, x)->val.var == z);
-    UNPROTECT(save);
-
-    disableGC();
-    tpt = newTinPolyType(
-        TINPOLYTYPE_TYPE_MONOTYPE,
-        TINPOLYTYPE_VAL_MONOTYPE(
-            newTinMonoType(
-                TINMONOTYPE_TYPE_VAR,
-                TINMONOTYPE_VAL_VAR(x)
-            )
-        )
-    );
-    save = PROTECT(tpt);
-    enableGC();
-    tmt1 = instantiate(tpt);
-    EXPECT(tmt1->val.var == x);
-    UNPROTECT(save);
-
-    disableGC();
-    tpt = newTinPolyType(
-        TINPOLYTYPE_TYPE_MONOTYPE,
-        TINPOLYTYPE_VAL_MONOTYPE(
-            newTinMonoType(
-                TINMONOTYPE_TYPE_FUN,
-                TINMONOTYPE_VAL_FUN(
-                    newTinFunctionApplication(
-                        arrow,
-                        2,
-                        newTinMonoTypeList(
-                            newTinMonoType(
-                                TINMONOTYPE_TYPE_FUN,
-                                TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                            ),
-                            newTinMonoTypeList(
-                                newTinMonoType(
-                                    TINMONOTYPE_TYPE_VAR,
-                                    TINMONOTYPE_VAL_VAR(x)
-                                ),
-                                NULL
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tpt);
-    enableGC();
-    tmt1 = instantiate(tpt);
-    EXPECT(tmt1->val.fun->name == arrow);
-    EXPECT(tmt1->val.fun->args->monoType->val.fun->name == boolean);
-    EXPECT(tmt1->val.fun->args->next->monoType->val.var == x);
-    UNPROTECT(save);
-
-    disableGC();
-    tpt = newTinPolyType(
-        TINPOLYTYPE_TYPE_QUANTIFIER,
-        TINPOLYTYPE_VAL_QUANTIFIER(
-            newTinTypeQuantifier(
-                x,
-                newTinPolyType(
-                    TINPOLYTYPE_TYPE_MONOTYPE,
-                    TINPOLYTYPE_VAL_MONOTYPE(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_FUN,
-                            TINMONOTYPE_VAL_FUN(
-                                newTinFunctionApplication(
-                                    arrow,
-                                    2,
-                                    newTinMonoTypeList(
-                                        newTinMonoType(
-                                            TINMONOTYPE_TYPE_FUN,
-                                            TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                                        ),
-                                        newTinMonoTypeList(
-                                            newTinMonoType(
-                                                TINMONOTYPE_TYPE_VAR,
-                                                TINMONOTYPE_VAL_VAR(x)
-                                            ),
-                                            NULL
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tpt);
-    enableGC();
-    tmt1 = instantiate(tpt);
-    EXPECT(tmt1->val.fun->name == arrow);
-    EXPECT(tmt1->val.fun->args->monoType->val.fun->name == boolean);
-    EXPECT(isTypeVariable(tmt1->val.fun->args->next->monoType->val.var));
-    UNPROTECT(save);
-
-    disableGC();
-    htc = newContextTable();
-    tc = newTinContext(htc, NULL);
-    addToContext(tc, x, newTinPolyType(
-        TINPOLYTYPE_TYPE_MONOTYPE,
-        TINPOLYTYPE_VAL_MONOTYPE(
-            newTinMonoType(
-                TINMONOTYPE_TYPE_VAR,
-                TINMONOTYPE_VAL_VAR(x)
-            )
-        )
-    ));
-    save = PROTECT(tc);
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_VAR,
-        TINMONOTYPE_VAL_VAR(x)
-    );
-    PROTECT(tmt1);
-    enableGC();
-    tpt = generalize(tc, tmt1);
-    EXPECT(tpt->type == TINPOLYTYPE_TYPE_MONOTYPE);
-    EXPECT(tpt->val.monoType->val.var == x);
-    UNPROTECT(save);
-
-    disableGC();
-    htc = newContextTable();
-    tc = newTinContext(htc, NULL);
-    save = PROTECT(tc);
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_VAR,
-        TINMONOTYPE_VAL_VAR(x)
-    );
-    PROTECT(tmt1);
-    enableGC();
-    tpt = generalize(tc, tmt1);
-    EXPECT(tpt->type == TINPOLYTYPE_TYPE_QUANTIFIER);
-    EXPECT(tpt->val.quantifier->var == x);
-    EXPECT(tpt->val.quantifier->quantifiedType->type == TINPOLYTYPE_TYPE_MONOTYPE);
-    UNPROTECT(save);
-
-    disableGC();
-    htc = newContextTable();
-    tc = newTinContext(htc, NULL);
-    save = PROTECT(tc);
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_VAR,
-                        TINMONOTYPE_VAL_VAR(x)
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    PROTECT(tmt1);
-    enableGC();
-    tpt = generalize(tc, tmt1);
-    EXPECT(tpt->type == TINPOLYTYPE_TYPE_QUANTIFIER);
-    EXPECT(tpt->val.quantifier->var == x);
-    EXPECT(tpt->val.quantifier->quantifiedType->type == TINPOLYTYPE_TYPE_MONOTYPE);
-    UNPROTECT(save);
-
-    disableGC();
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_FUN,
-                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tmt1);
-    tmt2 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(TINMONOTYPE_TYPE_VAR, TINMONOTYPE_VAL_VAR(y)),
-                    newTinMonoTypeList(
-                        newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(newTinFunctionApplication(integer, 0, NULL))),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    PROTECT(tmt2);
-    enableGC();
-    C1 = unify(tmt1, tmt2);
-    UNPROTECT(save);
-    EXPECT(C1->map->count == 2);
-    EXPECT(lookupInSubstitution(C1, x)->type = TINMONOTYPE_TYPE_FUN);
-    EXPECT(lookupInSubstitution(C1, x)->val.fun->name = integer);
-    EXPECT(lookupInSubstitution(C1, y)->type = TINMONOTYPE_TYPE_FUN);
-    EXPECT(lookupInSubstitution(C1, x)->val.fun->name = boolean);
-
-    disableGC();
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_VAR,
-                        TINMONOTYPE_VAL_VAR(x)
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tmt1);
-    tmt2 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(newTinFunctionApplication(integer, 0, NULL))),
-                    newTinMonoTypeList(
-                        newTinMonoType(TINMONOTYPE_TYPE_FUN, TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    PROTECT(tmt2);
-    enableGC();
-    C1 = unify(tmt1, tmt2);
-    UNPROTECT(save);
-    EXPECT(hadErrors());
-
-    disableGC();
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_FUN,
-                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tmt1);
-    tmt2 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                boolean,
-                0,
-                NULL
-            )
-        )
-    );
-    PROTECT(tmt2);
-    enableGC();
-    C1 = unify(tmt1, tmt2);
-    UNPROTECT(save);
-    EXPECT(hadErrors());
-
-    disableGC();
-    tmt1 = newTinMonoType(
-        TINMONOTYPE_TYPE_FUN,
-        TINMONOTYPE_VAL_FUN(
-            newTinFunctionApplication(
-                arrow,
-                2,
-                newTinMonoTypeList(
-                    newTinMonoType(
-                        TINMONOTYPE_TYPE_FUN,
-                        TINMONOTYPE_VAL_FUN(newTinFunctionApplication(boolean, 0, NULL))
-                    ),
-                    newTinMonoTypeList(
-                        newTinMonoType(
-                            TINMONOTYPE_TYPE_VAR,
-                            TINMONOTYPE_VAL_VAR(x)
-                        ),
-                        NULL
-                    )
-                )
-            )
-        )
-    );
-    save = PROTECT(tmt1);
-    tmt2 = newTinMonoType(
-        TINMONOTYPE_TYPE_VAR,
-        TINMONOTYPE_VAL_VAR(x)
-    );
-    PROTECT(tmt2);
-    enableGC();
-    C1 = unify(tmt1, tmt2);
-    UNPROTECT(save);
-    EXPECT(hadErrors());
-
-    UNPROTECT(totalSave);
-}
 #endif
 #endif

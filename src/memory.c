@@ -94,6 +94,8 @@ const char *typeName(ObjType type) {
             return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
+        case OBJTYPE_WRESULT:
+            return "wresult";
         TIN_OBJTYPE_CASES()
             typenameTinObj(type);
             break;
@@ -243,6 +245,9 @@ void markObj(Header *h) {
         case OBJTYPE_HASHSYMBOL:
             markHashSymbolObj(h);
             break;
+        case OBJTYPE_WRESULT:
+            markWResultObj(h);
+            break;
         TIN_OBJTYPE_CASES()
             markTinObj(h);
             break;
@@ -290,6 +295,9 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_HASHSYMBOL:
             freeHashSymbolObj(h);
+            break;
+        case OBJTYPE_WRESULT:
+            freeWResultObj(h);
             break;
         TIN_OBJTYPE_CASES()
             freeTinObj(h);

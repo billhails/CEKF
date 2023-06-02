@@ -40,6 +40,14 @@ structs:
     TinSubstitution:
         map: HashTable
 
+    TinMonoTypeVec:
+        monoType: TinMonoType
+        next: TinMonoTypeVec
+
+    TinArgsResult:
+        context: TinContext
+        vec: TinMonoTypeVec
+
 unions:
     TinMonoType:
         var: HashSymbol

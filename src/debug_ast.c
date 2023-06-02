@@ -215,18 +215,6 @@ void printAstConditional(struct AstConditional * x, int depth) {
     printf("]");
 }
 
-void printAstSwitch(struct AstSwitch * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstSwitch (NULL)"); return; }
-    printf("AstSwitch[\n");
-    printAstExpressions(x->expressions, depth + 1);
-    printf("\n");
-    printAstCompositeFunction(x->compositeFunction, depth + 1);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
 void printAstCompositeFunction(struct AstCompositeFunction * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstCompositeFunction (NULL)"); return; }
@@ -310,97 +298,6 @@ void printAstEnvType(struct AstEnvType * x, int depth) {
     printf("\n");
     pad(depth + 1);
     printAstSymbol(x->prototype, depth);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
-void printAstBinOp(struct AstBinOp * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstBinOp (NULL)"); return; }
-    printf("AstBinOp[\n");
-    switch (x->type) {
-        case AST_BINOPTYPE_TYPE_THEN:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_THEN");
-            break;
-        case AST_BINOPTYPE_TYPE_AND:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_AND");
-            break;
-        case AST_BINOPTYPE_TYPE_OR:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_OR");
-            break;
-        case AST_BINOPTYPE_TYPE_XOR:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_XOR");
-            break;
-        case AST_BINOPTYPE_TYPE_EQ:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_EQ");
-            break;
-        case AST_BINOPTYPE_TYPE_NE:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_NE");
-            break;
-        case AST_BINOPTYPE_TYPE_GT:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_GT");
-            break;
-        case AST_BINOPTYPE_TYPE_LT:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_LT");
-            break;
-        case AST_BINOPTYPE_TYPE_GE:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_GE");
-            break;
-        case AST_BINOPTYPE_TYPE_LE:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_LE");
-            break;
-        case AST_BINOPTYPE_TYPE_CONS:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_CONS");
-            break;
-        case AST_BINOPTYPE_TYPE_APPEND:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_APPEND");
-            break;
-        case AST_BINOPTYPE_TYPE_ADD:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_ADD");
-            break;
-        case AST_BINOPTYPE_TYPE_SUB:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_SUB");
-            break;
-        case AST_BINOPTYPE_TYPE_MUL:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_MUL");
-            break;
-        case AST_BINOPTYPE_TYPE_DIV:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_DIV");
-            break;
-        case AST_BINOPTYPE_TYPE_MOD:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_MOD");
-            break;
-        case AST_BINOPTYPE_TYPE_POW:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_POW");
-            break;
-        case AST_BINOPTYPE_TYPE_DOT:
-            pad(depth + 1);
-            printf("AST_BINOPTYPE_TYPE_DOT");
-            break;
-    }
-    printf("\n");
-    printAstExpression(x->lhs, depth + 1);
-    printf("\n");
-    printAstExpression(x->rhs, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -561,12 +458,6 @@ void printAstTypeClause(struct AstTypeClause * x, int depth) {
             printf("AST_TYPECLAUSE_TYPE_TYPE\n");
             printAstType(x->val.type, depth + 1);
             break;
-        case AST_TYPECLAUSE_TYPE_TYPESYMBOL:
-            pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_TYPESYMBOL\n");
-            pad(depth + 1);
-            printAstSymbol(x->val.typeSymbol, depth);
-            break;
         case AST_TYPECLAUSE_TYPE_VAR:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_VAR\n");
@@ -576,33 +467,10 @@ void printAstTypeClause(struct AstTypeClause * x, int depth) {
         case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR\n");
-            printAstTypeConstructor(x->val.typeconstructor, depth + 1);
+            printAstTypeConstructor(x->val.typeConstructor, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstTypeClause", x->type);
-    }
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
-void printAstFun(struct AstFun * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstFun (NULL)"); return; }
-    printf("AstFun[\n");
-    switch(x->type) {
-        case AST_FUN_TYPE_FUNCTION:
-            pad(depth + 1);
-            printf("AST_FUN_TYPE_FUNCTION\n");
-            printAstFunction(x->val.function, depth + 1);
-            break;
-        case AST_FUN_TYPE_COMPOSITEFUNCTION:
-            pad(depth + 1);
-            printf("AST_FUN_TYPE_COMPOSITEFUNCTION\n");
-            printAstCompositeFunction(x->val.compositeFunction, depth + 1);
-            break;
-        default:
-            cant_happen("unrecognised type %d in printAstFun", x->type);
     }
     printf("\n");
     pad(depth);
@@ -626,20 +494,10 @@ void printAstArg(struct AstArg * x, int depth) {
             pad(depth + 1);
             printAstSymbol(x->val.symbol, depth);
             break;
-        case AST_ARG_TYPE_CONS:
-            pad(depth + 1);
-            printf("AST_ARG_TYPE_CONS\n");
-            printAstArgPair(x->val.cons, depth + 1);
-            break;
         case AST_ARG_TYPE_NAMED:
             pad(depth + 1);
             printf("AST_ARG_TYPE_NAMED\n");
             printAstNamedArg(x->val.named, depth + 1);
-            break;
-        case AST_ARG_TYPE_LIST:
-            pad(depth + 1);
-            printf("AST_ARG_TYPE_LIST\n");
-            printAstArgList(x->val.list, depth + 1);
             break;
         case AST_ARG_TYPE_ENV:
             pad(depth + 1);
@@ -693,31 +551,17 @@ void printAstExpression(struct AstExpression * x, int depth) {
     if (x == NULL) { printf("AstExpression (NULL)"); return; }
     printf("AstExpression[\n");
     switch(x->type) {
+        case AST_EXPRESSION_TYPE_NIL:
+            pad(depth + 1);
+            printf("AST_EXPRESSION_TYPE_NIL\n");
+            pad(depth + 1);
+            printf("void * %p", x->val.nil);
+            break;
         case AST_EXPRESSION_TYPE_BACK:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_BACK\n");
             pad(depth + 1);
             printf("void * %p", x->val.back);
-            break;
-        case AST_EXPRESSION_TYPE_BINOP:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_BINOP\n");
-            printAstBinOp(x->val.binOp, depth + 1);
-            break;
-        case AST_EXPRESSION_TYPE_NOT:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_NOT\n");
-            printAstExpression(x->val.not, depth + 1);
-            break;
-        case AST_EXPRESSION_TYPE_NEGATE:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_NEGATE\n");
-            printAstExpression(x->val.negate, depth + 1);
-            break;
-        case AST_EXPRESSION_TYPE_HERE:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_HERE\n");
-            printAstExpression(x->val.here, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             pad(depth + 1);
@@ -759,15 +603,10 @@ void printAstExpression(struct AstExpression * x, int depth) {
             pad(depth + 1);
             printf("void * %p", x->val.no);
             break;
-        case AST_EXPRESSION_TYPE_LIST:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_LIST\n");
-            printAstExpressions(x->val.list, depth + 1);
-            break;
         case AST_EXPRESSION_TYPE_FUN:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_FUN\n");
-            printAstFun(x->val.fun, depth + 1);
+            printAstCompositeFunction(x->val.fun, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_ENV:
             pad(depth + 1);
@@ -779,10 +618,10 @@ void printAstExpression(struct AstExpression * x, int depth) {
             printf("AST_EXPRESSION_TYPE_CONDITIONAL\n");
             printAstConditional(x->val.conditional, depth + 1);
             break;
-        case AST_EXPRESSION_TYPE_SWITCHSTATEMENT:
+        case AST_EXPRESSION_TYPE_NEST:
             pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_SWITCHSTATEMENT\n");
-            printAstSwitch(x->val.switchStatement, depth + 1);
+            printf("AST_EXPRESSION_TYPE_NEST\n");
+            printAstNest(x->val.nest, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstExpression", x->type);

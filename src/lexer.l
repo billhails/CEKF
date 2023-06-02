@@ -66,7 +66,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 -?[0-9]+ { yylval.i = atoi(yytext); return NUMBER; }
 
 {ID}  { yylval.s = yytext; return VAR; }
-#{ID} { yylval.s = &(yytext[1]); return TYPE_VAR; }
+#{ID} { yylval.s = yytext; return TYPE_VAR; }
 
 . { return yytext[0]; }
 %%

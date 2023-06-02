@@ -28,7 +28,7 @@
 // #define DEBUG_STEP
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 3
+#define DEBUG_RUN_TESTS 4
 // #define DEBUG_ANALIZE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
@@ -36,6 +36,7 @@
 // #define DEBUG_TIN_INSTANTIATION
 // #define DEBUG_TIN_UNIFICATION
 // #define DEBUG_DUMP_CORE
+#define DEBUG_ALGORITHM_W
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "ast_helper.h"
+#include "symbol.h"
 
 // #define YYDEBUG 1
 
@@ -18,6 +19,29 @@ void yyerror(char *ps, ...) {
 
 AstNest *result = NULL;
 
+static AstFunCall *binOpToFunCall(char *op, AstExpression *lhs, AstExpression *rhs) {
+    return newAstFunCall(
+        newAstExpression(
+            AST_EXPRESSION_TYPE_SYMBOL,
+            AST_EXPRESSION_VAL_SYMBOL(newSymbol(op))
+        ),
+        newAstExpressions(
+            newAstExpressions(NULL, rhs),
+            lhs
+        )
+    );
+}
+
+static AstFunCall *unOpToFunCall(char *op, AstExpression *arg) {
+    return newAstFunCall(
+        newAstExpression(
+            AST_EXPRESSION_TYPE_SYMBOL,
+            AST_EXPRESSION_VAL_SYMBOL(newSymbol(op))
+        ),
+        newAstExpressions(NULL, arg)
+    );
+}
+
 %}
 %union {
     char *s;
@@ -25,8 +49,6 @@ AstNest *result = NULL;
     char c;
     AstArg *arg;
     AstArgList *argList;
-    AstArgPair *argPair;
-    AstBinOp *binOp;
     AstCompositeFunction *compositeFunction;
     AstConditional *conditional;
     AstDefine *define;
@@ -39,7 +61,6 @@ AstNest *result = NULL;
     AstFlatType *flatType;
     AstFunCall *funCall;
     AstFunction *function;
-    AstFun *fun;
     AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
@@ -49,7 +70,6 @@ AstNest *result = NULL;
     AstPrototypeSymbolType *prototypeSymbolType;
     AstSinglePrototype *singlePrototype;
     AstString *string;
-    AstSwitch *switchStatement;
     HashSymbol *symbol;
     AstTypeBody *typeBody;
     AstTypeClause *typeClause;
@@ -64,9 +84,7 @@ AstNest *result = NULL;
 
 %type <arg> arg
 %type <argList> arguments arglist
-%type <argPair> cons
-%type <binOp> binop
-%type <compositeFunction> composite_function functions
+%type <compositeFunction> composite_function functions fun
 %type <conditional> conditional
 %type <define> defun denv
 %type <definition> definition
@@ -76,9 +94,8 @@ AstNest *result = NULL;
 %type <expression> expression
 %type <expressions> expressions expression_statements
 %type <flatType> flat_type
-%type <funCall> fun_call
+%type <funCall> fun_call binop conslist unop switch
 %type <function> function
-%type <fun> fun
 %type <load> load
 %type <namedArg> named_arg
 %type <nest> top nest nest_body conditional_nest
@@ -88,7 +105,6 @@ AstNest *result = NULL;
 %type <prototype> prototype
 %type <singlePrototype> single_prototype
 %type <string> string
-%type <switchStatement> switch
 %type <symbol> symbol type_symbol as
 %type <typeBody> type_body
 %type <typeClause> type_clause
@@ -97,7 +113,7 @@ AstNest *result = NULL;
 %type <typeList> type_list
 %type <typeSymbols> type_symbols
 %type <type> type
-%type <unpack> unpack
+%type <unpack> unpack cons consarglist
 
 %token AS
 %token BACK
@@ -268,11 +284,11 @@ conditional_nest : conditional  {
                  | nest         { $$ = $1; }
                  ;
 
-switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstSwitch($3, $5); }
+switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($5)), $3); }
        ;
 
-fun : function              { $$ = newAstFun(AST_FUN_TYPE_FUNCTION, AST_FUN_VAL_FUNCTION($1)); }
-    | composite_function    { $$ =  newAstFun(AST_FUN_TYPE_COMPOSITEFUNCTION, AST_FUN_VAL_COMPOSITEFUNCTION($1)); }
+fun : function              { $$ = newAstCompositeFunction(NULL, $1); }
+    | composite_function    { $$ = $1; }
     ;
 
 nest : '{' nest_body '}'    { $$ = $2; }
@@ -296,18 +312,23 @@ arglist : %empty            { $$ = NULL; }
         | arg ',' arglist   { $$ = newAstArgList($3, $1); }
         ;
 
-arg : symbol            { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
-    | unpack            { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
-    | cons              { $$ = newAstArg(AST_ARG_TYPE_CONS, AST_ARG_VAL_CONS($1)); }
-    | named_arg         { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
-    | '[' arglist ']'   { $$ = newAstArg(AST_ARG_TYPE_LIST, AST_ARG_VAL_LIST($2)); }
-    | env_type          { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
-    | NUMBER            { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
-    | string            { $$ = newAstArg(AST_ARG_TYPE_STRING, AST_ARG_VAL_STRING($1)); }
-    | CHAR              { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
-    | TRUE              { $$ = newAstArg(AST_ARG_TYPE_YES, AST_ARG_VAL_YES()); }
-    | FALSE             { $$ = newAstArg(AST_ARG_TYPE_NO, AST_ARG_VAL_NO()); }
-    | WILDCARD          { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
+consarglist : %empty                { $$ = NULL; }
+            | arg                   { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList(NULL, $1)); }
+            | arg ',' consarglist   { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList(newAstArgList(NULL, newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3))), $1)); }
+            ;
+
+arg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
+    | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
+    | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
+    | named_arg           { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
+    | '[' consarglist ']' { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
+    | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
+    | NUMBER              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
+    | string              { $$ = newAstArg(AST_ARG_TYPE_STRING, AST_ARG_VAL_STRING($1)); }
+    | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
+    | TRUE                { $$ = newAstArg(AST_ARG_TYPE_YES, AST_ARG_VAL_YES()); }
+    | FALSE               { $$ = newAstArg(AST_ARG_TYPE_NO, AST_ARG_VAL_NO()); }
+    | WILDCARD            { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
     ;
 
 unpack : symbol arguments   { $$ = newAstUnpack($1, $2); }
@@ -315,7 +336,7 @@ unpack : symbol arguments   { $$ = newAstUnpack($1, $2); }
 string : STRING { $$ = newAstString(safeStrdup($1)); }
        ;
 
-cons : arg CONS arg { $$ = newAstArgPair($1, $3); }
+cons : arg CONS arg { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList(newAstArgList(NULL, $3), $1)); }
      ;
 
 env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
@@ -324,17 +345,15 @@ env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
 named_arg : symbol '=' arg  { $$ = newAstNamedArg($1, $3); }
           ;
 
-expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_TYPE_BINOP, AST_EXPRESSION_VAL_BINOP($1)); }
+expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | fun_call                   { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | '-' expression %prec NEG   { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEGATE, AST_EXPRESSION_VAL_NEGATE($2)); }
-           | NOT expression %prec NOT   { $$ = newAstExpression(AST_EXPRESSION_TYPE_NOT, AST_EXPRESSION_VAL_NOT($2)); }
-           | HERE expression            { $$ = newAstExpression(AST_EXPRESSION_TYPE_HERE, AST_EXPRESSION_VAL_HERE($2)); }
-           | '[' expressions ']'        { $$ = newAstExpression(AST_EXPRESSION_TYPE_LIST, AST_EXPRESSION_VAL_LIST($2)); }
+           | unop                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | '[' conslist ']'           { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
            | FN fun                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
            | env                        { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
            | BACK                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
            | conditional                { $$ = newAstExpression(AST_EXPRESSION_TYPE_CONDITIONAL, AST_EXPRESSION_VAL_CONDITIONAL($1)); }
-           | switch                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SWITCHSTATEMENT, AST_EXPRESSION_VAL_SWITCHSTATEMENT($1)); }
+           | switch                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | symbol                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)); }
            | NUMBER                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
            | string                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_STRING, AST_EXPRESSION_VAL_STRING($1)); }
@@ -344,28 +363,33 @@ expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_T
            | '(' expression ')'         { $$ = $2; }
            ;
 
+unop : '-' expression %prec NEG   { $$ = unOpToFunCall("neg", $2); }
+     | NOT expression %prec NOT   { $$ = unOpToFunCall("not", $2); }
+     | HERE expression            { $$ = unOpToFunCall("here", $2); }
+     ;
+
 fun_call :  expression '(' expressions ')' { $$ = newAstFunCall($1, $3); }
          ;
 
-binop : expression THEN expression      { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_THEN, $1, $3); }
-      | expression AND expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_AND, $1, $3); }
-      | expression OR expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_OR, $1, $3); }
-      | expression XOR expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_XOR, $1, $3); }
-      | expression EQ expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_EQ, $1, $3); }
-      | expression NE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_NE, $1, $3); }
-      | expression GT expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_GT, $1, $3); }
-      | expression LT expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_LT, $1, $3); }
-      | expression GE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_GE, $1, $3); }
-      | expression LE expression        { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_LE, $1, $3); }
-      | expression CONS expression      { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_CONS, $1, $3); }
-      | expression APPEND expression    { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_APPEND, $1, $3); }
-      | expression '+' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_ADD, $1, $3); }
-      | expression '-' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_SUB, $1, $3); }
-      | expression '*' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_MUL, $1, $3); }
-      | expression '/' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_DIV, $1, $3); }
-      | expression '%' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_MOD, $1, $3); }
-      | expression '^' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_POW, $1, $3); }
-      | expression '.' expression       { $$ = newAstBinOp(AST_BINOPTYPE_TYPE_DOT, $1, $3); }
+binop : expression THEN expression      { $$ = binOpToFunCall("then", $1, $3); }
+      | expression AND expression       { $$ = binOpToFunCall("and", $1, $3); }
+      | expression OR expression        { $$ = binOpToFunCall("or", $1, $3); }
+      | expression XOR expression       { $$ = binOpToFunCall("xor", $1, $3); }
+      | expression EQ expression        { $$ = binOpToFunCall("==", $1, $3); }
+      | expression NE expression        { $$ = binOpToFunCall("!=", $1, $3); }
+      | expression GT expression        { $$ = binOpToFunCall(">", $1, $3); }
+      | expression LT expression        { $$ = binOpToFunCall("<", $1, $3); }
+      | expression GE expression        { $$ = binOpToFunCall(">=", $1, $3); }
+      | expression LE expression        { $$ = binOpToFunCall("<=", $1, $3); }
+      | expression CONS expression      { $$ = binOpToFunCall("@", $1, $3); }
+      | expression APPEND expression    { $$ = binOpToFunCall("@@", $1, $3); }
+      | expression '+' expression       { $$ = binOpToFunCall("+", $1, $3); }
+      | expression '-' expression       { $$ = binOpToFunCall("-", $1, $3); }
+      | expression '*' expression       { $$ = binOpToFunCall("*", $1, $3); }
+      | expression '/' expression       { $$ = binOpToFunCall("/", $1, $3); }
+      | expression '%' expression       { $$ = binOpToFunCall("%", $1, $3); }
+      | expression '^' expression       { $$ = binOpToFunCall("^", $1, $3); }
+      | expression '.' expression       { $$ = binOpToFunCall(".", $1, $3); }
       ;
 
 package : symbol                { $$ = newAstPackage(NULL, $1); }
@@ -376,6 +400,11 @@ expressions : %empty                        { $$ = NULL; }
             | expression                    { $$ = newAstExpressions(NULL, $1); }
             | expression ',' expressions    { $$ = newAstExpressions($3, $1); }
             ;
+
+conslist : %empty                     { $$ = binOpToFunCall("nil", NULL, NULL); }
+         | expression                 { $$ = binOpToFunCall("@", $1, NULL); }
+         | expression ',' conslist    { $$ = binOpToFunCall("@", $1, newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($3))); }
+         ;
 
 expression_statements : expression                              { $$ = newAstExpressions(NULL, $1); }
                       | expression ';' expression_statements    { $$ = newAstExpressions($3, $1); }

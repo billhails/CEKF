@@ -265,6 +265,10 @@ void printHashSymbol(HashSymbol *symbol) {
 void printHashTable(HashTable *table, int depth) {
     int count = 0;
     printf("%*s", depth * 4, "");
+    if (table == NULL) {
+        printf("HashTable: (NULL)");
+        return;
+    }
     printf("{[id:%d] ", table->id);
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
