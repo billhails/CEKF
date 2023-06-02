@@ -1251,7 +1251,11 @@ The terminating condition for rhe recursion where $n$ is zero is $\mathcal{W}(\G
 
 ### abstraction*
 
-original
+This is the difficult bit, firstly functions can take multiple arguments, secondly functions are composite, with altenative arguments and function bodies, and thirdly the formal arguments to a function can be a multitude of things: constants, wildcards, symbols or nested type constructors with embedded symbols.
+
+Let's deal with the three changes separately. First multiple arguments, assuming the formal arguments are all just symbols.
+
+The original
 
 $$
 \begin{align*}
@@ -1273,14 +1277,91 @@ $$
 \\
 \textup{where}
 \\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma + \{\overrightarrow{\mathtt{x}:\beta}\}, \mathtt{e})
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \overrightarrow{\mathtt{x}:\beta}, \mathtt{e})
 \\
 &\textup{new }\vec\beta
 \end{align*}
 $$
 
-No need for recursion this time, we are supplied a vector of arguments $\mathtt{\vec{x}}$ and we extend the context with
-bindings from each of those to a fresh type variable, then we perform the substitution on a nest of function applications.
+So far so good, we take a vector of arguments $\mathtt{\vec{x}}$, bind each to a fresh $\beta$ in the function body while typechecking that, and output a substitution over the chained function call.
+
+Secondly the top-level of a function definition is composite, We can have separate cases for that
+
+$$
+\begin{align*}
+\mathcal{W}(\Gamma, (\lambda_1,\dots\lambda_n)) &= (S, S(\tau_n))
+\\
+\textup{where}
+\\
+&S = \mathcal{U}(\tau_n, \tau_{n-1})
+\\
+&(S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \lambda_n)
+\\
+&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, (\lambda_1,\dots\lambda_{n-1}))
+\\
+\mathcal{W}(\Gamma, (\lambda,)) &= \mathcal{W}(\Gamma, \lambda)
+\end{align*}
+$$
+
+LGTM. Now for the last part, complex formal arguments. So far we have:
+
+$$
+\begin{align*}
+\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
+\\
+\textup{where}
+\\
+& (S_1, \tau_1) = \mathcal{W}(\Gamma + \overrightarrow{\mathtt{x}:\beta}, \mathtt{e})
+\\
+&\textup{new }\vec\beta
+\end{align*}
+$$
+
+But if the formal arguments  aren't just symbols, then that set of mappings $\overrightarrow{\mathtt{x}:\beta}$ isn't going to work.
+
+The substitution $S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1)$ is still valid, but those betas are the top-level types that the function accepts, not necessarily the same as the variables bound in the body of the function.
+
+So we'll need to calculate the set of bindings passed in to the function alongside the set of types the function accepts.
+
+We cam determine the type of each argument by calling $\mathcal{W}$ on it, something like:
+
+$$
+\begin{align*}
+(S_n, \tau_n) &= \mathcal{W}(\Gamma_n, \mathtt{x_n})
+\\
+\textup{where}
+\\
+&\Gamma_n = S_{n-1}\Gamma_{n-1}
+\end{align*}
+$$
+
+We need to accumulate context like that because the laguage allows for the same variable in multiple argument positions (i.e. `fn eq { (x, x) { true } (_, _) { false } }`.)
+
+Next the context needed to typecheck the function body. Haven't we already calculated it as $\Gamma_n$? That context will certainly contain bindings for $\mathtt{f}$, $\mathtt{h}$ and $\mathtt{t}$, so this might be it.
+
+$$
+\begin{align*}
+\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
+\\
+\textup{where}
+\\
+& (S_1, \tau_1) = \mathcal{W}(\Gamma_n, \mathtt{e})
+\\
+& (\Gamma_n, \vec{\beta}) = Args(\Gamma, \mathtt{\vec{x}})
+\\
+\\
+Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_n})) &= (S_n\Gamma, \overrightarrow{\beta_{n-1}} + S_n\tau_n)
+\\
+\textup{where}
+\\
+&(S_n, \tau_n) = \mathcal{W}(\Gamma_n, \mathtt{x_n})
+\\
+&(\Gamma_n, \overrightarrow{\beta_{n-1}}) = Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_{n-1}}))
+\\
+\\
+Args(\Gamma, ()) &= (\Gamma, ())
+\end{align*}
+$$
 
 ### if
 
