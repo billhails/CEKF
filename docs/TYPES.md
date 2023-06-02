@@ -1359,7 +1359,7 @@ Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_n})) &= (S_n\Gamma, \overrightarrow{
 &(\Gamma_n, \overrightarrow{\beta_{n-1}}) = Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_{n-1}}))
 \\
 \\
-Args(\Gamma, (\mathtt{x_1})) &= (S_1\Gamma, (S_1\tau_1))
+Args(\Gamma, ()) &= (\Gamma, ())
 \\
 \textup{where}
 \\
