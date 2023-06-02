@@ -1360,10 +1360,6 @@ Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_n})) &= (S_n\Gamma, \overrightarrow{
 \\
 \\
 Args(\Gamma, ()) &= (\Gamma, ())
-\\
-\textup{where}
-\\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma, \mathtt{x_1})
 \end{align*}
 $$
 
