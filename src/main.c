@@ -22,6 +22,7 @@
 #include "common.h"
 #include "ast.h"
 #include "debug_ast.h"
+#include "debug_tin.h"
 #include "parser.h"
 #include "analysis.h"
 #include "exp.h"
@@ -33,6 +34,7 @@
 #include "algorithm_W.h"
 #include "tin.h"
 #include "tin_helper.h"
+#include "hash.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -73,7 +75,9 @@ int main(int argc, char *argv[]) {
     yyparse();
     PROTECT(result);
     enableGC();
-    WTop(result);
+    quietPrintHashTable = true;
+    WResult *wr = WTop(result);
+    printTinMonoType(wr->monoType, 0);
     printf("\n");
 }
 

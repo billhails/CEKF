@@ -30,11 +30,10 @@ void printTinFunctionApplication(struct TinFunctionApplication * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinFunctionApplication (NULL)"); return; }
     printf("TinFunctionApplication[\n");
-    pad(depth + 1);
-    printTinSymbol(x->name, depth);
+        printTinSymbol(x->name, depth + 1);
     printf("\n");
-    pad(depth + 1);
-    printf("int %d", x->nargs);
+        pad(depth + 1);
+printf("int %d", x->nargs);
     printf("\n");
     printTinMonoTypeList(x->args, depth + 1);
     printf("\n");
@@ -58,8 +57,7 @@ void printTinTypeQuantifier(struct TinTypeQuantifier * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinTypeQuantifier (NULL)"); return; }
     printf("TinTypeQuantifier[\n");
-    pad(depth + 1);
-    printTinSymbol(x->var, depth);
+        printTinSymbol(x->var, depth + 1);
     printf("\n");
     printTinPolyType(x->quantifiedType, depth + 1);
     printf("\n");
@@ -71,8 +69,7 @@ void printTinContext(struct TinContext * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinContext (NULL)"); return; }
     printf("TinContext[\n");
-    pad(depth + 1);
-    printHashTable(x->frame, depth);
+        printHashTable(x->frame, depth + 1);
     printf("\n");
     printTinContext(x->next, depth + 1);
     printf("\n");
@@ -84,8 +81,7 @@ void printTinSubstitution(struct TinSubstitution * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinSubstitution (NULL)"); return; }
     printf("TinSubstitution[\n");
-    pad(depth + 1);
-    printHashTable(x->map, depth);
+        printHashTable(x->map, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -123,8 +119,7 @@ void printTinMonoType(struct TinMonoType * x, int depth) {
         case TINMONOTYPE_TYPE_VAR:
             pad(depth + 1);
             printf("TINMONOTYPE_TYPE_VAR\n");
-            pad(depth + 1);
-            printTinSymbol(x->val.var, depth);
+                        printTinSymbol(x->val.var, depth + 1);
             break;
         case TINMONOTYPE_TYPE_FUN:
             pad(depth + 1);

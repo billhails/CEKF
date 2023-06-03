@@ -1,0 +1,5 @@
+let
+    typedef lst(#t) { pair(#t, lst(#t)) | null }
+
+in
+    pair(1, null)

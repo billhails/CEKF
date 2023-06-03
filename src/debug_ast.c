@@ -42,9 +42,9 @@ void printAstDefinitions(struct AstDefinitions * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstDefinitions (NULL)"); return; }
     printf("AstDefinitions[\n");
-    printAstDefinitions(x->next, depth + 1);
-    printf("\n");
     printAstDefinition(x->definition, depth + 1);
+    printf("\n");
+    printAstDefinitions(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -54,8 +54,7 @@ void printAstDefine(struct AstDefine * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstDefine (NULL)"); return; }
     printf("AstDefine[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstExpression(x->expression, depth + 1);
     printf("\n");
@@ -67,8 +66,7 @@ void printAstPrototype(struct AstPrototype * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstPrototype (NULL)"); return; }
     printf("AstPrototype[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstPrototypeBody(x->body, depth + 1);
     printf("\n");
@@ -80,9 +78,9 @@ void printAstPrototypeBody(struct AstPrototypeBody * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstPrototypeBody (NULL)"); return; }
     printf("AstPrototypeBody[\n");
-    printAstPrototypeBody(x->next, depth + 1);
-    printf("\n");
     printAstSinglePrototype(x->single, depth + 1);
+    printf("\n");
+    printAstPrototypeBody(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -92,8 +90,7 @@ void printAstPrototypeSymbolType(struct AstPrototypeSymbolType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstPrototypeSymbolType (NULL)"); return; }
     printf("AstPrototypeSymbolType[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstType(x->type, depth + 1);
     printf("\n");
@@ -107,8 +104,7 @@ void printAstLoad(struct AstLoad * x, int depth) {
     printf("AstLoad[\n");
     printAstPackage(x->package, depth + 1);
     printf("\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -130,8 +126,7 @@ void printAstFlatType(struct AstFlatType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstFlatType (NULL)"); return; }
     printf("AstFlatType[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstTypeSymbols(x->typeSymbols, depth + 1);
     printf("\n");
@@ -143,10 +138,9 @@ void printAstTypeSymbols(struct AstTypeSymbols * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstTypeSymbols (NULL)"); return; }
     printf("AstTypeSymbols[\n");
-    printAstTypeSymbols(x->next, depth + 1);
+        printAstSymbol(x->typeSymbol, depth + 1);
     printf("\n");
-    pad(depth + 1);
-    printAstSymbol(x->typeSymbol, depth);
+    printAstTypeSymbols(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -156,9 +150,9 @@ void printAstTypeBody(struct AstTypeBody * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstTypeBody (NULL)"); return; }
     printf("AstTypeBody[\n");
-    printAstTypeBody(x->next, depth + 1);
-    printf("\n");
     printAstTypeConstructor(x->typeConstructor, depth + 1);
+    printf("\n");
+    printAstTypeBody(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -168,8 +162,7 @@ void printAstTypeConstructor(struct AstTypeConstructor * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstTypeConstructor (NULL)"); return; }
     printf("AstTypeConstructor[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstTypeList(x->typeList, depth + 1);
     printf("\n");
@@ -181,9 +174,9 @@ void printAstTypeList(struct AstTypeList * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstTypeList (NULL)"); return; }
     printf("AstTypeList[\n");
-    printAstTypeList(x->next, depth + 1);
-    printf("\n");
     printAstType(x->type, depth + 1);
+    printf("\n");
+    printAstTypeList(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -193,9 +186,9 @@ void printAstType(struct AstType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstType (NULL)"); return; }
     printf("AstType[\n");
-    printAstType(x->next, depth + 1);
-    printf("\n");
     printAstTypeClause(x->typeClause, depth + 1);
+    printf("\n");
+    printAstType(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -219,9 +212,9 @@ void printAstCompositeFunction(struct AstCompositeFunction * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstCompositeFunction (NULL)"); return; }
     printf("AstCompositeFunction[\n");
-    printAstCompositeFunction(x->next, depth + 1);
-    printf("\n");
     printAstFunction(x->function, depth + 1);
+    printf("\n");
+    printAstCompositeFunction(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -243,9 +236,9 @@ void printAstArgList(struct AstArgList * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstArgList (NULL)"); return; }
     printf("AstArgList[\n");
-    printAstArgList(x->next, depth + 1);
-    printf("\n");
     printAstArg(x->arg, depth + 1);
+    printf("\n");
+    printAstArgList(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -255,8 +248,7 @@ void printAstUnpack(struct AstUnpack * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstUnpack (NULL)"); return; }
     printf("AstUnpack[\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstArgList(x->argList, depth + 1);
     printf("\n");
@@ -280,8 +272,7 @@ void printAstNamedArg(struct AstNamedArg * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstNamedArg (NULL)"); return; }
     printf("AstNamedArg[\n");
-    pad(depth + 1);
-    printAstSymbol(x->name, depth);
+        printAstSymbol(x->name, depth + 1);
     printf("\n");
     printAstArg(x->arg, depth + 1);
     printf("\n");
@@ -293,11 +284,9 @@ void printAstEnvType(struct AstEnvType * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstEnvType (NULL)"); return; }
     printf("AstEnvType[\n");
-    pad(depth + 1);
-    printAstSymbol(x->name, depth);
+        printAstSymbol(x->name, depth + 1);
     printf("\n");
-    pad(depth + 1);
-    printAstSymbol(x->prototype, depth);
+        printAstSymbol(x->prototype, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -319,10 +308,9 @@ void printAstPackage(struct AstPackage * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstPackage (NULL)"); return; }
     printf("AstPackage[\n");
-    printAstPackage(x->next, depth + 1);
+        printAstSymbol(x->symbol, depth + 1);
     printf("\n");
-    pad(depth + 1);
-    printAstSymbol(x->symbol, depth);
+    printAstPackage(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -332,9 +320,9 @@ void printAstExpressions(struct AstExpressions * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstExpressions (NULL)"); return; }
     printf("AstExpressions[\n");
-    printAstExpressions(x->next, depth + 1);
-    printf("\n");
     printAstExpression(x->expression, depth + 1);
+    printf("\n");
+    printAstExpressions(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -356,8 +344,8 @@ void printAstString(struct AstString * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstString (NULL)"); return; }
     printf("AstString[\n");
-    pad(depth + 1);
-    printf("char * %s", x->string);
+        pad(depth + 1);
+printf("char * %s", x->string);
     printf("\n");
     pad(depth);
     printf("]");
@@ -427,26 +415,26 @@ void printAstTypeClause(struct AstTypeClause * x, int depth) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_INTEGER\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.integer);
+                        pad(depth + 1);
+printf("void * %p", x->val.integer);
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_CHARACTER\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.character);
+                        pad(depth + 1);
+printf("void * %p", x->val.character);
             break;
         case AST_TYPECLAUSE_TYPE_BOOLEAN:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_BOOLEAN\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.boolean);
+                        pad(depth + 1);
+printf("void * %p", x->val.boolean);
             break;
         case AST_TYPECLAUSE_TYPE_STRING:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_STRING\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.string);
+                        pad(depth + 1);
+printf("void * %p", x->val.string);
             break;
         case AST_TYPECLAUSE_TYPE_LIST:
             pad(depth + 1);
@@ -461,8 +449,7 @@ void printAstTypeClause(struct AstTypeClause * x, int depth) {
         case AST_TYPECLAUSE_TYPE_VAR:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_VAR\n");
-            pad(depth + 1);
-            printAstSymbol(x->val.var, depth);
+                        printAstSymbol(x->val.var, depth + 1);
             break;
         case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR:
             pad(depth + 1);
@@ -485,14 +472,13 @@ void printAstArg(struct AstArg * x, int depth) {
         case AST_ARG_TYPE_WILDCARD:
             pad(depth + 1);
             printf("AST_ARG_TYPE_WILDCARD\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.wildcard);
+                        pad(depth + 1);
+printf("void * %p", x->val.wildcard);
             break;
         case AST_ARG_TYPE_SYMBOL:
             pad(depth + 1);
             printf("AST_ARG_TYPE_SYMBOL\n");
-            pad(depth + 1);
-            printAstSymbol(x->val.symbol, depth);
+                        printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_ARG_TYPE_NAMED:
             pad(depth + 1);
@@ -512,8 +498,8 @@ void printAstArg(struct AstArg * x, int depth) {
         case AST_ARG_TYPE_NUMBER:
             pad(depth + 1);
             printf("AST_ARG_TYPE_NUMBER\n");
-            pad(depth + 1);
-            printf("int %d", x->val.number);
+                        pad(depth + 1);
+printf("int %d", x->val.number);
             break;
         case AST_ARG_TYPE_STRING:
             pad(depth + 1);
@@ -523,20 +509,20 @@ void printAstArg(struct AstArg * x, int depth) {
         case AST_ARG_TYPE_CHARACTER:
             pad(depth + 1);
             printf("AST_ARG_TYPE_CHARACTER\n");
-            pad(depth + 1);
-            printf("char %c", x->val.character);
+                        pad(depth + 1);
+printf("char %c", x->val.character);
             break;
         case AST_ARG_TYPE_YES:
             pad(depth + 1);
             printf("AST_ARG_TYPE_YES\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.yes);
+                        pad(depth + 1);
+printf("void * %p", x->val.yes);
             break;
         case AST_ARG_TYPE_NO:
             pad(depth + 1);
             printf("AST_ARG_TYPE_NO\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.no);
+                        pad(depth + 1);
+printf("void * %p", x->val.no);
             break;
         default:
             cant_happen("unrecognised type %d in printAstArg", x->type);
@@ -554,14 +540,14 @@ void printAstExpression(struct AstExpression * x, int depth) {
         case AST_EXPRESSION_TYPE_NIL:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_NIL\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.nil);
+                        pad(depth + 1);
+printf("void * %p", x->val.nil);
             break;
         case AST_EXPRESSION_TYPE_BACK:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_BACK\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.back);
+                        pad(depth + 1);
+printf("void * %p", x->val.back);
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             pad(depth + 1);
@@ -571,14 +557,13 @@ void printAstExpression(struct AstExpression * x, int depth) {
         case AST_EXPRESSION_TYPE_SYMBOL:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_SYMBOL\n");
-            pad(depth + 1);
-            printAstSymbol(x->val.symbol, depth);
+                        printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_NUMBER\n");
-            pad(depth + 1);
-            printf("int %d", x->val.number);
+                        pad(depth + 1);
+printf("int %d", x->val.number);
             break;
         case AST_EXPRESSION_TYPE_STRING:
             pad(depth + 1);
@@ -588,20 +573,20 @@ void printAstExpression(struct AstExpression * x, int depth) {
         case AST_EXPRESSION_TYPE_CHARACTER:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_CHARACTER\n");
-            pad(depth + 1);
-            printf("char %c", x->val.character);
+                        pad(depth + 1);
+printf("char %c", x->val.character);
             break;
         case AST_EXPRESSION_TYPE_YES:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_YES\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.yes);
+                        pad(depth + 1);
+printf("void * %p", x->val.yes);
             break;
         case AST_EXPRESSION_TYPE_NO:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_NO\n");
-            pad(depth + 1);
-            printf("void * %p", x->val.no);
+                        pad(depth + 1);
+printf("void * %p", x->val.no);
             break;
         case AST_EXPRESSION_TYPE_FUN:
             pad(depth + 1);

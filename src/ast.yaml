@@ -25,8 +25,8 @@ structs:
         expressions: AstExpressions
 
     AstDefinitions:
-        next: AstDefinitions
         definition: AstDefinition
+        next: AstDefinitions
 
     AstDefine:
         symbol: HashSymbol
@@ -37,8 +37,8 @@ structs:
         body: AstPrototypeBody
 
     AstPrototypeBody:
-        next: AstPrototypeBody
         single: AstSinglePrototype
+        next: AstPrototypeBody
 
     AstPrototypeSymbolType:
         symbol: HashSymbol
@@ -57,24 +57,24 @@ structs:
         typeSymbols: AstTypeSymbols
 
     AstTypeSymbols:
-        next: AstTypeSymbols
         typeSymbol: HashSymbol
+        next: AstTypeSymbols
 
     AstTypeBody:
-        next: AstTypeBody
         typeConstructor: AstTypeConstructor
+        next: AstTypeBody
 
     AstTypeConstructor:
         symbol: HashSymbol
         typeList: AstTypeList
 
     AstTypeList:
-        next: AstTypeList
         type: AstType
+        next: AstTypeList
 
     AstType:
-        next: AstType
         typeClause: AstTypeClause
+        next: AstType
 
     AstConditional:
         expression: AstExpression
@@ -82,16 +82,16 @@ structs:
         alternative: AstNest
 
     AstCompositeFunction:
-        next: AstCompositeFunction
         function: AstFunction
+        next: AstCompositeFunction
 
     AstFunction:
         argList: AstArgList
         nest: AstNest
 
     AstArgList:
-        next: AstArgList
         arg: AstArg
+        next: AstArgList
 
     AstUnpack:
         symbol: HashSymbol
@@ -114,12 +114,12 @@ structs:
         arguments: AstExpressions
 
     AstPackage:
-        next: AstPackage
         symbol: HashSymbol
+        next: AstPackage
 
     AstExpressions:
-        next: AstExpressions
         expression: AstExpression
+        next: AstExpressions
 
     AstEnv:
         package: AstPackage

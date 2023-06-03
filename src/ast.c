@@ -29,10 +29,10 @@ struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpre
     return x;
 }
 
-struct AstDefinitions * newAstDefinitions(struct AstDefinitions * next, struct AstDefinition * definition) {
+struct AstDefinitions * newAstDefinitions(struct AstDefinition * definition, struct AstDefinitions * next) {
     struct AstDefinitions * x = NEW(AstDefinitions, OBJTYPE_ASTDEFINITIONS);
-    x->next = next;
     x->definition = definition;
+    x->next = next;
     return x;
 }
 
@@ -50,10 +50,10 @@ struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBo
     return x;
 }
 
-struct AstPrototypeBody * newAstPrototypeBody(struct AstPrototypeBody * next, struct AstSinglePrototype * single) {
+struct AstPrototypeBody * newAstPrototypeBody(struct AstSinglePrototype * single, struct AstPrototypeBody * next) {
     struct AstPrototypeBody * x = NEW(AstPrototypeBody, OBJTYPE_ASTPROTOTYPEBODY);
-    x->next = next;
     x->single = single;
+    x->next = next;
     return x;
 }
 
@@ -85,17 +85,17 @@ struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols *
     return x;
 }
 
-struct AstTypeSymbols * newAstTypeSymbols(struct AstTypeSymbols * next, HashSymbol * typeSymbol) {
+struct AstTypeSymbols * newAstTypeSymbols(HashSymbol * typeSymbol, struct AstTypeSymbols * next) {
     struct AstTypeSymbols * x = NEW(AstTypeSymbols, OBJTYPE_ASTTYPESYMBOLS);
-    x->next = next;
     x->typeSymbol = typeSymbol;
+    x->next = next;
     return x;
 }
 
-struct AstTypeBody * newAstTypeBody(struct AstTypeBody * next, struct AstTypeConstructor * typeConstructor) {
+struct AstTypeBody * newAstTypeBody(struct AstTypeConstructor * typeConstructor, struct AstTypeBody * next) {
     struct AstTypeBody * x = NEW(AstTypeBody, OBJTYPE_ASTTYPEBODY);
-    x->next = next;
     x->typeConstructor = typeConstructor;
+    x->next = next;
     return x;
 }
 
@@ -106,17 +106,17 @@ struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct As
     return x;
 }
 
-struct AstTypeList * newAstTypeList(struct AstTypeList * next, struct AstType * type) {
+struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * next) {
     struct AstTypeList * x = NEW(AstTypeList, OBJTYPE_ASTTYPELIST);
-    x->next = next;
     x->type = type;
+    x->next = next;
     return x;
 }
 
-struct AstType * newAstType(struct AstType * next, struct AstTypeClause * typeClause) {
+struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * next) {
     struct AstType * x = NEW(AstType, OBJTYPE_ASTTYPE);
-    x->next = next;
     x->typeClause = typeClause;
+    x->next = next;
     return x;
 }
 
@@ -128,10 +128,10 @@ struct AstConditional * newAstConditional(struct AstExpression * expression, str
     return x;
 }
 
-struct AstCompositeFunction * newAstCompositeFunction(struct AstCompositeFunction * next, struct AstFunction * function) {
+struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * function, struct AstCompositeFunction * next) {
     struct AstCompositeFunction * x = NEW(AstCompositeFunction, OBJTYPE_ASTCOMPOSITEFUNCTION);
-    x->next = next;
     x->function = function;
+    x->next = next;
     return x;
 }
 
@@ -142,10 +142,10 @@ struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest 
     return x;
 }
 
-struct AstArgList * newAstArgList(struct AstArgList * next, struct AstArg * arg) {
+struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next) {
     struct AstArgList * x = NEW(AstArgList, OBJTYPE_ASTARGLIST);
-    x->next = next;
     x->arg = arg;
+    x->next = next;
     return x;
 }
 
@@ -184,17 +184,17 @@ struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExp
     return x;
 }
 
-struct AstPackage * newAstPackage(struct AstPackage * next, HashSymbol * symbol) {
+struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next) {
     struct AstPackage * x = NEW(AstPackage, OBJTYPE_ASTPACKAGE);
-    x->next = next;
     x->symbol = symbol;
+    x->next = next;
     return x;
 }
 
-struct AstExpressions * newAstExpressions(struct AstExpressions * next, struct AstExpression * expression) {
+struct AstExpressions * newAstExpressions(struct AstExpression * expression, struct AstExpressions * next) {
     struct AstExpressions * x = NEW(AstExpressions, OBJTYPE_ASTEXPRESSIONS);
-    x->next = next;
     x->expression = expression;
+    x->next = next;
     return x;
 }
 
@@ -261,8 +261,8 @@ void markAstDefinitions(struct AstDefinitions * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstDefinitions(x->next);
     markAstDefinition(x->definition);
+    markAstDefinitions(x->next);
 }
 
 void markAstDefine(struct AstDefine * x) {
@@ -283,8 +283,8 @@ void markAstPrototypeBody(struct AstPrototypeBody * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstPrototypeBody(x->next);
     markAstSinglePrototype(x->single);
+    markAstPrototypeBody(x->next);
 }
 
 void markAstPrototypeSymbolType(struct AstPrototypeSymbolType * x) {
@@ -327,8 +327,8 @@ void markAstTypeBody(struct AstTypeBody * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstTypeBody(x->next);
     markAstTypeConstructor(x->typeConstructor);
+    markAstTypeBody(x->next);
 }
 
 void markAstTypeConstructor(struct AstTypeConstructor * x) {
@@ -342,16 +342,16 @@ void markAstTypeList(struct AstTypeList * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstTypeList(x->next);
     markAstType(x->type);
+    markAstTypeList(x->next);
 }
 
 void markAstType(struct AstType * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstType(x->next);
     markAstTypeClause(x->typeClause);
+    markAstType(x->next);
 }
 
 void markAstConditional(struct AstConditional * x) {
@@ -367,8 +367,8 @@ void markAstCompositeFunction(struct AstCompositeFunction * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstCompositeFunction(x->next);
     markAstFunction(x->function);
+    markAstCompositeFunction(x->next);
 }
 
 void markAstFunction(struct AstFunction * x) {
@@ -383,8 +383,8 @@ void markAstArgList(struct AstArgList * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstArgList(x->next);
     markAstArg(x->arg);
+    markAstArgList(x->next);
 }
 
 void markAstUnpack(struct AstUnpack * x) {
@@ -434,8 +434,8 @@ void markAstExpressions(struct AstExpressions * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAstExpressions(x->next);
     markAstExpression(x->expression);
+    markAstExpressions(x->next);
 }
 
 void markAstEnv(struct AstEnv * x) {

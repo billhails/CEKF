@@ -24,6 +24,8 @@
 #include "hash.h"
 #include "memory.h"
 
+bool quietPrintHashTable = false;
+
 static int idCounter = 0;
 
 #ifdef DEBUG_HASHTABLE
@@ -269,19 +271,22 @@ void printHashTable(HashTable *table, int depth) {
         printf("HashTable: (NULL)");
         return;
     }
-    printf("{[id:%d] ", table->id);
+    printf("{[id:%d]\n", table->id);
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
+            printf("%*s", (depth + 1) * 4, "");
             printHashSymbol(table->keys[i]);
-            if (table->valuesize > 0 && table->printfunction != NULL) {
-                printf(" => ");
-                table->printfunction(valuePtr(table, i), depth + 1);
+            if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
+                printf(" =>\n");
+                table->printfunction(valuePtr(table, i), depth + 2);
+                printf("\n");
+            } else {
+                printf("\n");
             }
             count++;
-            if (count < table->count) printf(", ");
         }
     }
-    printf("}");
+    printf("%*s}", depth * 4, "");
 }
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {

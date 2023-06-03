@@ -62,6 +62,8 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
 void markHashSymbol(HashSymbol *x);
 void freeHashSymbol(HashSymbol *x);
 
+extern bool quietPrintHashTable;
+
 void printHashTable(HashTable *table, int depth);
 void printHashSymbol(HashSymbol *symbol);
 

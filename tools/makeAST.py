@@ -653,12 +653,12 @@ class Primitive(Base):
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print('pad(depth + 1);')
         pad(depth)
         if self.printFn == 'printf':
+            print('pad(depth + 1);')
             print(f'printf("{self.cname} {self.printf}", x->{prefix}{field});')
         else:
-            print(f'{self.printFn}(x->{prefix}{field}, depth);')
+            print(f'{self.printFn}(x->{prefix}{field}, depth + 1);')
 
     def getDefineValue(self):
         return 'x' if self.valued else 'NULL'

@@ -25,6 +25,7 @@ HashSymbol *getAstSymbol(char *name) {
 }
 
 void printAstSymbol(struct HashSymbol * x, int depth) {
+    printf("%*s", depth * 4, "");
     if (x == NULL) { printf("AstSymbol (NULL)"); return; }
     printf("AstSymbol[\"%s\"]", x->name);
 }

@@ -41,6 +41,7 @@ static HashSymbol *getTinSymbol(char *name) {
 }
 
 void printTinSymbol(struct HashSymbol * x, int depth) {
+    printf("%*s", depth * 4, "");
     if (x == NULL) { printf("TinSymbol (NULL)"); return; }
     printf("TinSymbol[\"%s\"]", x->name);
 }
@@ -105,7 +106,7 @@ static HashTable *newFreeVariableTable() {
     return newHashTable(0, NULL, NULL);
 }
 
-static void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monoType) {
+void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monoType) {
     hashSet(substitution->map, symbol, &monoType);
 }
 
@@ -175,7 +176,9 @@ static TinSubstitution *copySubstitution(TinSubstitution *source) {
 static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeList *args) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyArgsSubstitution ");
-    printTinMonoTypeList(funApp, 0);
+    printTinSubstitution(s, 0);
+    printf("\n");
+    printTinMonoTypeList(args, 0);
     printf("\n");
     sleep(1);
 #endif
