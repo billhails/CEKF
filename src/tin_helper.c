@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "common.h"
 #include "tin_helper.h"
@@ -36,6 +37,13 @@ static void findMonoTypeVariables(HashTable *map, TinMonoType *monoType);
 
 static bool monoTypeContains(HashSymbol *var, TinMonoType *tmt);
 
+static void showTinSymbol(HashSymbol *symbol);
+static void showTinTypeQuantifier(TinTypeQuantifier *quantifier);
+static void showTinFun(TinFunctionApplication *fun);
+static void showTinSubstitution(TinSubstitution *sub);
+static void showTinMonoTypeList(TinMonoTypeList *list);
+static void showTinContext(TinContext *context);
+
 static HashSymbol *getTinSymbol(char *name) {
     return newSymbol(name);
 }
@@ -47,7 +55,8 @@ void printTinSymbol(struct HashSymbol * x, int depth) {
 }
 
 static void printSubstitutionFn(void *ptr, int depth) {
-    printTinMonoType(*(TinMonoType **)ptr, depth);
+    printf("%*s", depth * 4, "");
+    showTinMonoType(*(TinMonoType **)ptr);
 }
 
 static void markSubstitutionFn(void *ptr) {
@@ -55,7 +64,8 @@ static void markSubstitutionFn(void *ptr) {
 }
 
 static void printContextFn(void *ptr, int depth) {
-    printTinPolyType(*(TinPolyType **)ptr, depth);
+    printf("%*s", depth * 4, "");
+    showTinPolyType(*(TinPolyType **)ptr);
 }
 
 static void markContextFn(void *ptr) {
@@ -71,27 +81,33 @@ static void printVarFn(void *ptr, int depth) {
 }
 
 static HashTable *newSubstitutionTable() {
-    return newHashTable(
+    HashTable *h = newHashTable(
         sizeof(TinMonoType*),
         markSubstitutionFn,
         printSubstitutionFn
     );
+    h->shortEntries = true;
+    return h;
 }
 
 static HashTable *newContextTable() {
-    return newHashTable(
+    HashTable *h = newHashTable(
         sizeof(TinPolyType*),
         markContextFn,
         printContextFn
     );
+    h->shortEntries = true;
+    return h;
 }
 
 static HashTable *newVarTable() {
-    return newHashTable(
+    HashTable *h = newHashTable(
         sizeof(HashSymbol *),
         markVarFn,
         printVarFn
     );
+    h->shortEntries = true;
+    return h;
 }
 
 TinContext *freshTinContext() {
@@ -176,11 +192,13 @@ static TinSubstitution *copySubstitution(TinSubstitution *source) {
 static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeList *args) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyArgsSubstitution ");
-    printTinSubstitution(s, 0);
+    showTinSubstitution(s);
     printf("\n");
-    printTinMonoTypeList(args, 0);
+    showTinMonoTypeList(args);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     if (args == NULL) return NULL;
     TinMonoTypeList *soFar = applyArgsSubstitution(s, args->next);
@@ -199,9 +217,11 @@ static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeLis
 static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunctionApplication *funApp) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyFunSubstitution ");
-    printTinFunctionApplication(funApp, 0);
+    showTinFun(funApp);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinMonoTypeList *args = applyArgsSubstitution(s, funApp->args);
     int save = PROTECT(args);
@@ -214,9 +234,11 @@ static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunct
 static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyVarSubstitution ");
-    printTinMonoType(mtype, 0);
+    showTinMonoType(mtype);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinMonoType *replacement = lookupInSubstitution(s, mtype->val.var);
     if (replacement != NULL) return replacement;
@@ -226,9 +248,11 @@ static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype)
 TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyMonoTypeSubstitution ");
-    printTinMonoType(mtype, 0);
+    showTinMonoType(mtype);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     switch (mtype->type) {
         case TINMONOTYPE_TYPE_VAR:
@@ -249,9 +273,11 @@ TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTypeQuantifier *tq) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyQuantifierSubstitution ");
-    printTinTypeQuantifier(tq, 0);
+    showTinTypeQuantifier(tq);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinPolyType *pt = applyPolyTypeSubstitution(s, tq->quantifiedType);
     if (pt == tq->quantifiedType) return tq;
@@ -264,9 +290,11 @@ static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTyp
 TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyPolyTypeSubstitution ");
-    printTinPolyType(ptype, 0);
+    showTinPolyType(ptype);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     switch (ptype->type) {
         case TINPOLYTYPE_TYPE_MONOTYPE: {
@@ -293,9 +321,11 @@ TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
 TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyContextSubstitution ");
-    printTinContext(context, 0);
+    showTinContext(context);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinContext *result = copyContext(context);
     int save = PROTECT(result);
@@ -313,9 +343,11 @@ TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applySubstitutionSubstitution ");
-    printTinSubstitution(s2, 0);
+    showTinSubstitution(s2);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinSubstitution *ts = copySubstitution(s1);
     int save = PROTECT(ts);
@@ -332,8 +364,10 @@ TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitut
     return ts;
 }
 
-HashSymbol *freshTypeVariable() {
-    return genSym("#");
+HashSymbol *freshTypeVariable(const char *suffix) {
+    char buf[128];
+    sprintf(buf, "#%s", suffix);
+    return genSym(buf);
 }
 
 static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
@@ -341,7 +375,9 @@ static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
     printf("instantiateVar ");
     printHashSymbol(symbol);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     HashSymbol *replacement = lookupInMap(map, symbol);
     if (replacement != NULL) return replacement;
@@ -351,9 +387,11 @@ static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
 static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiateArgs ");
-    printTinMonoTypeList(args, 0);
+    showTinMonoTypeList(args);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     if (args == NULL) return NULL;
     TinMonoTypeList *next = instantiateArgs(args->next, map);
@@ -373,9 +411,11 @@ static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
 static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiateFun ");
-    printTinFunctionApplication(tfa, 0);
+    showTinFunctionApplication(tfa);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     TinMonoTypeList *args = instantiateArgs(tfa->args, map);
     if (args == tfa->args) return tfa;
@@ -389,9 +429,11 @@ static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashT
 static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiateMonoType ");
-    printTinMonoType(tmt, 0);
+    showTinMonoType(tmt);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     switch (tmt->type) {
         case TINMONOTYPE_TYPE_VAR: {
@@ -424,11 +466,13 @@ static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map) {
 static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiateQuantifier ");
-    printTinTypeQuantifier(ttq, 0);
+    showTinTypeQuantifier(ttq);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
-    HashSymbol *newVar = freshTypeVariable();
+#endif
+    HashSymbol *newVar = freshTypeVariable("instantiate");
     int save = PROTECT(newVar);
     setInMap(map, ttq->var, newVar);
     UNPROTECT(save);
@@ -439,9 +483,11 @@ static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map
 static TinMonoType *instantiatePolyType(TinPolyType *tpt, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiatePolyType ");
-    printTinPolyType(tpt, 0);
+    showTinPolyType(tpt);
     printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
+#endif
 #endif
     switch (tpt->type) {
         case TINPOLYTYPE_TYPE_MONOTYPE:
@@ -543,12 +589,12 @@ static bool monoTypeContains(HashSymbol *var, TinMonoType *tmt) {
     }
 }
 
-TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2) {
+TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2, const char *caller) {
 #ifdef DEBUG_TIN_UNIFICATION
-    printf("unify ");
-    printTinMonoType(t1, 0);
+    printf("%s unify ", caller);
+    showTinMonoType(t1);
     printf(" with ");
-    printTinMonoType(t2, 0);
+    showTinMonoType(t2);
     printf("\n\n");
 #endif
     switch (t1->type) {
@@ -570,30 +616,30 @@ TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2) {
         case TINMONOTYPE_TYPE_FUN: {
             switch (t2->type) {
                 case TINMONOTYPE_TYPE_VAR:
-                    return unify(t2, t1);
+                    return unify(t2, t1, caller);
                 case TINMONOTYPE_TYPE_FUN: {
                     TinSubstitution *s = makeEmptySubstitution();
                     TinFunctionApplication *f1 = t1->val.fun;
                     TinFunctionApplication *f2 = t2->val.fun;
                     if (f1->name != f2->name) {
-                        can_happen("cannot unify %s with %s", f1->name->name, f2->name->name);
+                        can_happen("%s cannot unify %s with %s", caller, f1->name->name, f2->name->name);
                         return s;
                     }
                     if (f1->nargs != f2->nargs) {
-                        cant_happen("different argument counts for type function %s: %d vs. %d", f1->name->name, f1->nargs, f2->nargs);
+                        cant_happen("%s different argument counts for type function %s: %d vs. %d", caller, f1->name->name, f1->nargs, f2->nargs);
                     }
                     int save = PROTECT(s);
                     TinMonoTypeList *a1 = f1->args;
                     TinMonoTypeList *a2 = f2->args;
                     while (a1 != NULL) {
                         if (a2 == NULL) {
-                            cant_happen("argument lengths underrun in unify %s", f1->name->name);
+                            cant_happen("%s argument lengths underrun in unify %s", caller, f1->name->name);
                         }
                         TinMonoType *tmt1 = applyMonoTypeSubstitution(s, a1->monoType);
                         PROTECT(tmt1);
                         TinMonoType *tmt2 = applyMonoTypeSubstitution(s, a2->monoType);
                         PROTECT(tmt2);
-                        TinSubstitution *s2 = unify(tmt1, tmt2);
+                        TinSubstitution *s2 = unify(tmt1, tmt2, caller);
                         PROTECT(s2);
                         s = applySubstitutionSubstitution(s, s2);
                         UNPROTECT(save);
@@ -602,17 +648,100 @@ TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2) {
                         a2 = a2->next;
                     }
                     if (a2 != NULL) {
-                        cant_happen("argument lengths overrun in unify %s", f1->name->name);
+                        cant_happen("%s, argument lengths overrun in unify %s", caller, f1->name->name);
                     }
                     UNPROTECT(save);
                     return s;
                 }
                 default:
-                    cant_happen("unrecognised t2 %d in unify", t2->type);
+                    cant_happen("%s unrecognised t2 %d in unify", caller, t2->type);
             }
         }
         default:
-            cant_happen("unrecognised t1 %d in unify", t1->type);
+            cant_happen("%s unrecognised t1 %d in unify", caller, t1->type);
+    }
+}
+
+
+static bool isAlphaSymbol(HashSymbol *symbol) {
+    if (symbol == NULL) return true;
+    return (bool) isalpha(symbol->name[0]);
+}
+
+static void showTinContext(TinContext *context) {
+    printTinContext(context, 0);
+}
+
+static void showTinSubstitution(TinSubstitution *sub) {
+    printHashTable(sub->map, 0);
+}
+
+static void showTinMonoTypeList(TinMonoTypeList *list) {
+    printf("(");
+    for (TinMonoTypeList *args = list; args != NULL; args = args->next) {
+        showTinMonoType(args->monoType);
+        if (args->next != NULL) printf(", ");
+    }
+    printf(")");
+}
+
+static void showTinFun(TinFunctionApplication *fun) {
+    if (fun == NULL) { printf("<null>"); return; }
+    if (isAlphaSymbol(fun->name) || fun->nargs != 2) {
+        showTinSymbol(fun->name);
+        showTinMonoTypeList(fun->args);
+    } else {
+        printf("(");
+        for (TinMonoTypeList *args = fun->args; args != NULL; args = args->next) {
+            showTinMonoType(args->monoType);
+            if (args->next != NULL) {
+                printf(" ");
+                showTinSymbol(fun->name);
+                printf(" ");
+            }
+        }
+        printf(")");
+    }
+}
+
+static void showTinSymbol(HashSymbol *symbol) {
+    if (symbol == NULL) { printf("<null>"); return; }
+    printf("%s", symbol->name);
+}
+
+static void showTinTypeQuantifier(TinTypeQuantifier *quantifier) {
+    if (quantifier == NULL) { printf("<null>"); return; }
+    printf("V");
+    showTinSymbol(quantifier->var);
+    printf(".");
+    showTinPolyType(quantifier->quantifiedType);
+}
+
+void showTinMonoType(TinMonoType *monoType) {
+    if (monoType == NULL) { printf("<null>"); return; }
+    switch (monoType->type) {
+        case TINMONOTYPE_TYPE_VAR:
+            showTinSymbol(monoType->val.var);
+            break;
+        case TINMONOTYPE_TYPE_FUN:
+            showTinFun(monoType->val.fun);
+            break;
+        default:
+            cant_happen("unrecognised type %d in showTinMonoType", monoType->type);
+    }
+}
+
+void showTinPolyType(TinPolyType *polyType) {
+    if (polyType == NULL) { printf("<null>"); return; }
+    switch (polyType->type) {
+        case TINPOLYTYPE_TYPE_MONOTYPE:
+            showTinMonoType(polyType->val.monoType);
+            break;
+        case TINPOLYTYPE_TYPE_QUANTIFIER:
+            showTinTypeQuantifier(polyType->val.quantifier);
+            break;
+        default:
+            cant_happen("unrecognised type %d in showTinPolyType", polyType->type);
     }
 }
 

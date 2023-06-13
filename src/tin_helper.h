@@ -24,14 +24,17 @@
 
 void markTinSymbolTable();
 
+void showTinMonoType(TinMonoType *monoType);
+void showTinPolyType(TinPolyType *polyType);
+
 void printTinSymbol(HashSymbol *x, int depth);
 TinContext *freshTinContext();
 
 void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
 TinContext *extendTinContext(TinContext *parent);
-HashSymbol *freshTypeVariable();
+HashSymbol *freshTypeVariable(const char *suffix);
 void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType);
-TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2);
+TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2, const char *caller);
 TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
 
 TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);

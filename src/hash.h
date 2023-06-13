@@ -46,6 +46,7 @@ typedef struct HashTable {
     void *values;
     MarkHashValueFunction markfunction;
     PrintHashValueFunction printfunction;
+    bool shortEntries;
 } HashTable;
 
 hash_t hashString(const char *string);

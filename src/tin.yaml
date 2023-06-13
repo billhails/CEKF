@@ -40,13 +40,9 @@ structs:
     TinSubstitution:
         map: HashTable
 
-    TinMonoTypeVec:
-        monoType: TinMonoType
-        next: TinMonoTypeVec
-
     TinArgsResult:
         context: TinContext
-        vec: TinMonoTypeVec
+        vec: TinMonoTypeList
 
 unions:
     TinMonoType:
@@ -59,7 +55,7 @@ unions:
 
 enums: {}
 
-primitives: # TODO need a markFn for HashTables etc.
+primitives:
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printTinSymbol"

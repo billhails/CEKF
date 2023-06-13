@@ -58,6 +58,7 @@ HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, Pr
     x->printfunction = printfunction;
     x->keys = NULL;
     x->values = NULL;
+    x->shortEntries = false;
     return x;
 }
 
@@ -271,14 +272,23 @@ void printHashTable(HashTable *table, int depth) {
         printf("HashTable: (NULL)");
         return;
     }
-    printf("{[id:%d]\n", table->id);
+    printf("{[id:%d]", table->id);
+    bool first = true;
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
+            if (first) {
+                first = false;
+                printf("\n");
+            }
             printf("%*s", (depth + 1) * 4, "");
             printHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
-                printf(" =>\n");
-                table->printfunction(valuePtr(table, i), depth + 2);
+                printf(" =>");
+                if (table->shortEntries)
+                    printf(" ");
+                else
+                    printf("\n");
+                table->printfunction(valuePtr(table, i), table->shortEntries ? 0 : (depth + 2));
                 printf("\n");
             } else {
                 printf("\n");
@@ -286,7 +296,10 @@ void printHashTable(HashTable *table, int depth) {
             count++;
         }
     }
-    printf("%*s}", depth * 4, "");
+    if (first)
+        printf("}");
+    else
+        printf("%*s}", depth * 4, "");
 }
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {

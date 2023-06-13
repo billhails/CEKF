@@ -307,8 +307,7 @@ fargs : %empty            { $$ = NULL; }
       | farg ',' fargs    { $$ = newAstArgList($1, $3); }
       ;
 
-consfargs : %empty              { $$ = newAstUnpack(getAstSymbol("@"), NULL); }
-          | farg                { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList($1, NULL)); }
+consfargs : farg                { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList($1, NULL)); }
           | farg ',' consfargs  { $$ = newAstUnpack(getAstSymbol("@"), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
@@ -316,6 +315,7 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | named_farg          { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
+     | '[' ']'             { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(getAstSymbol("nil"))); }
      | '[' consfargs ']'   { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
      | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
      | NUMBER              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }

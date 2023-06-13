@@ -29,7 +29,6 @@ void printTinMonoTypeList(struct TinMonoTypeList * x, int depth);
 void printTinTypeQuantifier(struct TinTypeQuantifier * x, int depth);
 void printTinContext(struct TinContext * x, int depth);
 void printTinSubstitution(struct TinSubstitution * x, int depth);
-void printTinMonoTypeVec(struct TinMonoTypeVec * x, int depth);
 void printTinArgsResult(struct TinArgsResult * x, int depth);
 void printTinMonoType(struct TinMonoType * x, int depth);
 void printTinPolyType(struct TinPolyType * x, int depth);

@@ -1,0 +1,5 @@
+let
+    typedef either(#a, #b) { a(#a) | b(#b) }
+
+in
+    a(1)

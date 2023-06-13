@@ -1,0 +1,9 @@
+let
+    fn map {
+        (f, nil()) { nil }
+        (f, h @ t) { f(h) @ map(f, t) }
+    }
+
+   fn add1(x) { x + 1 }
+in
+    map(add1, [1, 2, 3])

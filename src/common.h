@@ -35,8 +35,8 @@
 // #define DEBUG_TIN_SUBSTITUTION
 // #define DEBUG_TIN_INSTANTIATION
 // #define DEBUG_TIN_UNIFICATION
-// #define DEBUG_DUMP_CORE
-// #define DEBUG_ALGORITHM_W
+#define DEBUG_DUMP_CORE
+#define DEBUG_ALGORITHM_W
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

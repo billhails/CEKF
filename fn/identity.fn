@@ -1,0 +1,4 @@
+let
+    fn i(x) { x }
+in
+    i

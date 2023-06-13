@@ -28,6 +28,7 @@ static TinMonoType *astTypeToMonoType(AstType *type);
 static TinMonoType *constantTypeFunction(HashSymbol *name);
 static TinMonoType *singleArgTypeFunction(HashSymbol*name, TinMonoType *arg);
 static void addMonoTypeToContext(TinContext *context, HashSymbol *symbol, TinMonoType *monoType);
+static void generalizeMonoTypeToContext(TinContext *context, HashSymbol *symbol, TinMonoType *monoType);
 
 static WResult *WNest(TinContext *context, AstNest *nest, int depth);
 static WResult *WExpression(TinContext *context, AstExpression *expr, int depth);
@@ -76,8 +77,8 @@ void printWResult(WResult *result, int depth) {
     quietPrintHashTable = false;
     printf("%*sWResult [\n", depth * 4, "");
     printTinSubstitution(result->substitution, depth + 1);
-    printf(",\n");
-    printTinMonoType(result->monoType, depth + 1);
+    printf(",\n%*s", (depth + 1) * 4, "");
+    showTinMonoType(result->monoType);
     printf("\n");
     printf("%*s]", depth * 4, "");
     quietPrintHashTable = save;
@@ -94,9 +95,11 @@ static HashSymbol *arrowSymbol() {
     return newSymbol("->");
 }
 
+/*
 static HashSymbol *doubleArrowSymbol() {
     return newSymbol("=>");
 }
+*/
 
 static HashSymbol *intSymbol() {
     return newSymbol("Int");
@@ -129,6 +132,13 @@ static TinPolyType *monoToPolyType(TinMonoType *monoType) {
     );
 }
 
+static void generalizeMonoTypeToContext(TinContext *context, HashSymbol *symbol, TinMonoType *monoType) {
+    TinPolyType *polyType = generalize(context, monoType);
+    int save = PROTECT(polyType);
+    addToContext(context, symbol, polyType);
+    UNPROTECT(save);
+}
+
 static void addMonoTypeToContext(TinContext *context, HashSymbol *symbol, TinMonoType *monoType) {
     TinPolyType *polyType = monoToPolyType(monoType);
     int save = PROTECT(polyType);
@@ -150,8 +160,8 @@ static TinMonoType *monoTypeVar(HashSymbol *var) {
     );
 }
 
-static TinMonoType *freshMonoTypeVar() {
-    return monoTypeVar(freshTypeVariable());
+static TinMonoType *freshMonoTypeVar(const char *prefix) {
+    return monoTypeVar(freshTypeVariable(prefix));
 }
 
 static TinFunctionApplication *constantFunApp(HashSymbol *name) {
@@ -185,10 +195,12 @@ static TinMonoType *arrowApplication(TinMonoType *type1, TinMonoType *type2) {
     return anyArrowApplication(arrow, type1, type2);
 }
 
+/*
 static TinMonoType *doubleArrowApplication(TinMonoType *type1, TinMonoType *type2) {
     HashSymbol *arrow = doubleArrowSymbol();
     return anyArrowApplication(arrow, type1, type2);
 }
+*/
 
 static TinMonoType *stringMonoType() {
     TinMonoType *charType = constantTypeFunction(charSymbol());
@@ -199,14 +211,14 @@ static TinMonoType *stringMonoType() {
 }
 
 static void collectDefine(AstDefine *define, TinContext *context) {
-    TinMonoType *var = freshMonoTypeVar();
+    TinMonoType *var = freshMonoTypeVar(define->symbol->name);
     int save = PROTECT(var);
     addMonoTypeToContext(context, define->symbol, var);
     UNPROTECT(save);
 }
 
 static void collectPrototype(AstPrototype *prototype, TinContext *context) {
-    TinMonoType *var = freshMonoTypeVar();
+    TinMonoType *var = freshMonoTypeVar(prototype->symbol->name);
     int save = PROTECT(var);
     addMonoTypeToContext(context, prototype->symbol, var);
     UNPROTECT(save);
@@ -270,7 +282,7 @@ static TinMonoType *makeTypeCallMonoType(TinMonoType *this, TinMonoType *rest) {
     monoTypeList = newTinMonoTypeList(this, monoTypeList);
     UNPROTECT(save);
     save = PROTECT(monoTypeList);
-    HashSymbol *symbol = doubleArrowSymbol();
+    HashSymbol *symbol = arrowSymbol();
     TinMonoType *result = monoTypeFunctionApplication(symbol, monoTypeList);
     UNPROTECT(save);
     return result;
@@ -369,7 +381,7 @@ static TinMonoType *collectTypeList(AstTypeList *typeList, TinMonoType *final) {
 static TinMonoType *collectTypeConstructor(AstTypeConstructor *typeConstructor, TinMonoType *type, TinContext *context) {
     TinMonoType *functionType = collectTypeList(typeConstructor->typeList, type);
     int save = PROTECT(functionType);
-    addMonoTypeToContext(context, typeConstructor->symbol, functionType);
+    generalizeMonoTypeToContext(context, typeConstructor->symbol, functionType);
     UNPROTECT(save);
 }
 
@@ -402,7 +414,7 @@ static void collectDefinition(AstDefinition *definition, TinContext *context) {
 }
 
 static WResult *anyResult() {
-    TinMonoType *fresh = freshMonoTypeVar();
+    TinMonoType *fresh = freshMonoTypeVar("any");
     int save = PROTECT(fresh);
     TinSubstitution *empty = makeEmptySubstitution();
     PROTECT(empty);
@@ -437,6 +449,8 @@ static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
     enter("WSymbol", myId, depth);
     printHashSymbol(symbol);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     TinPolyType *value = lookupInContext(context, symbol);
     if (value == NULL) {
@@ -464,6 +478,8 @@ static WResult *WCond(TinContext *context, AstConditional *cond, int depth) {
     int myId = idSource++;
     enter("WCond", myId, depth);
     printAstConditional(cond, depth);
+    printf("\n");
+    printTinContext(context, depth + 1);
     printf("\n");
 #endif
     // slightly hacky, but DRY, we convert the cond to a 3 valued function
@@ -536,6 +552,8 @@ static WResult *WApplicationRec(TinContext *context, AstFunCall *funCall, int na
     enter("WapplicationRec", myId, depth);
     printAstFunCall(funCall, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     if (nargs == 0) return WExpression(context, funCall->function, depth + 1);
     WResult *Rn_1 = WApplicationRec(context, funCall, nargs - 1, depth);
@@ -545,13 +563,13 @@ static WResult *WApplicationRec(TinContext *context, AstFunCall *funCall, int na
     AstExpression *e_n = nthExpression(nargs, funCall->arguments);
     WResult *Rn = WExpression(Cn_1, e_n, depth + 1);
     PROTECT(Rn);
-    TinMonoType *beta = freshMonoTypeVar();
+    TinMonoType *beta = freshMonoTypeVar("apprec");
     PROTECT(beta);
     TinMonoType *arrow = arrowApplication(Rn->monoType, beta);
     PROTECT(arrow);
     TinMonoType *SnTn_1 = applyMonoTypeSubstitution(Rn->substitution, Rn_1->monoType);
     PROTECT(SnTn_1);
-    TinSubstitution *Sprime = unify(SnTn_1, arrow);
+    TinSubstitution *Sprime = unify(SnTn_1, arrow, "WApplicationRec");
     PROTECT(Sprime);
     TinMonoType *SprimeBeta = applyMonoTypeSubstitution(Sprime, beta);
     PROTECT(SprimeBeta);
@@ -574,6 +592,9 @@ static WResult *WUnpackRec(TinContext *context, AstUnpack *unpack, int nargs, in
     int myId = idSource++;
     enter("WUnpackRec", myId, depth);
     printAstUnpack(unpack, depth);
+    printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     if (nargs == 0) return WSymbol(context, unpack->symbol, depth + 1);
     WResult *Rn_1 = WUnpackRec(context, unpack, nargs - 1, depth);
@@ -583,13 +604,13 @@ static WResult *WUnpackRec(TinContext *context, AstUnpack *unpack, int nargs, in
     AstArg *e_n = nthArg(nargs, unpack->argList);
     WResult *Rn = WFarg(Cn_1, e_n, depth + 1);
     PROTECT(Rn);
-    TinMonoType *beta = freshMonoTypeVar();
+    TinMonoType *beta = freshMonoTypeVar("unpackrec");
     PROTECT(beta);
-    TinMonoType *arrow = doubleArrowApplication(Rn->monoType, beta);
+    TinMonoType *arrow = arrowApplication(Rn->monoType, beta);
     PROTECT(arrow);
     TinMonoType *SnTn_1 = applyMonoTypeSubstitution(Rn->substitution, Rn_1->monoType);
     PROTECT(SnTn_1);
-    TinSubstitution *Sprime = unify(SnTn_1, arrow);
+    TinSubstitution *Sprime = unify(SnTn_1, arrow, "WUnpackRec");
     PROTECT(Sprime);
     TinMonoType *SprimeBeta = applyMonoTypeSubstitution(Sprime, beta);
     PROTECT(SprimeBeta);
@@ -612,6 +633,8 @@ static WResult *WApplication(TinContext *context, AstFunCall *funCall, int depth
     int myId = idSource++;
     enter("WApplication", myId, depth);
     printAstFunCall(funCall, depth);
+    printf("\n");
+    printTinContext(context, depth + 1);
     printf("\n");
 #endif
     int nargs = countExpressions(funCall->arguments);
@@ -639,15 +662,17 @@ static WResult *WUnpack(TinContext *context, AstUnpack *unpack, int depth) {
     enter("WUnpack", myId, depth);
     printAstUnpack(unpack, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     int nargs = countArgList(unpack->argList);
     WResult *result = WUnpackRec(context, unpack, nargs, depth);
-    return result;
 #ifdef DEBUG_ALGORITHM_W
     leave("WUnpack", myId, depth);
     printWResult(result, depth);
     printf("\n");
 #endif
+    return result;
 }
 
 static WResult *WFarg_d(TinContext *context, AstArg *arg, int depth) {
@@ -687,6 +712,8 @@ static WResult *WFarg(TinContext *context, AstArg *arg, int depth) {
     enter("WFarg", myId, depth);
     printAstArg(arg, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     WResult *result = WFarg_d(context, arg, depth);
 #ifdef DEBUG_ALGORITHM_W
@@ -697,17 +724,17 @@ static WResult *WFarg(TinContext *context, AstArg *arg, int depth) {
     return result;
 }
 
-static TinArgsResult *Fargs(TinContext *context, AstArgList *args, int depth) {
+static TinArgsResult *WFargs(TinContext *context, AstArgList *args, int depth) {
     if (args == NULL) {
         return newTinArgsResult(context, NULL);
     }
-    TinArgsResult *An = Fargs(context, args->next, depth + 1);
+    TinArgsResult *An = WFargs(context, args->next, depth + 1);
     int save = PROTECT(An);
     WResult *Rn = WFarg(An->context, args->arg, depth + 1);
     PROTECT(Rn);
     TinMonoType *Stn = applyMonoTypeSubstitution(Rn->substitution, Rn->monoType);
     PROTECT(Stn);
-    TinMonoTypeVec *vec = newTinMonoTypeVec(Stn, An->vec);
+    TinMonoTypeList *vec = newTinMonoTypeList(Stn, An->vec);
     PROTECT(vec);
     TinContext *SnGamma = applyContextSubstitution(Rn->substitution, An->context);
     PROTECT(SnGamma);
@@ -716,7 +743,7 @@ static TinArgsResult *Fargs(TinContext *context, AstArgList *args, int depth) {
     return result;
 }
 
-static TinMonoType *makeArrowList(TinMonoTypeVec *vec, TinMonoType *final) {
+static TinMonoType *makeArrowList(TinMonoTypeList *vec, TinMonoType *final) {
     if (vec == NULL) return final;
     TinMonoType *next = makeArrowList(vec->next, final);
     int save = PROTECT(next);
@@ -725,14 +752,23 @@ static TinMonoType *makeArrowList(TinMonoTypeVec *vec, TinMonoType *final) {
     return result;
 }
 
-static bool isTypeFunctionApplication(TinPolyType *argType) {
+static bool isZeroArgFunctionApplication(TinPolyType *argType) {
     if (argType == NULL) return false;
-    if (argType->type != TINPOLYTYPE_TYPE_MONOTYPE) return false;
-    TinMonoType *monoType = argType->val.monoType;
-    if (monoType->type != TINMONOTYPE_TYPE_FUN) return false;
-    HashSymbol *name = monoType->val.fun->name;
-    HashSymbol *arrow = doubleArrowSymbol();
-    return name == arrow;
+    switch (argType->type) {
+        case TINPOLYTYPE_TYPE_MONOTYPE:
+            TinMonoType *monoType = argType->val.monoType;
+            if (monoType->type != TINMONOTYPE_TYPE_FUN) return false;
+            if (monoType->val.fun->nargs != 1) return false;
+            HashSymbol *name = monoType->val.fun->name;
+            HashSymbol *arrow = arrowSymbol();
+            return name == arrow;
+        case TINPOLYTYPE_TYPE_QUANTIFIER:
+            TinTypeQuantifier *quantifier = argType->val.quantifier;
+            if (quantifier == NULL) cant_happen("null quantifier");
+            return isZeroArgFunctionApplication(quantifier->quantifiedType);
+        default:
+            cant_happen("unrecognised TinPolyType type %d in isZeroArgFunctionApplication", argType->type);
+    }
 }
 
 static void addVar(TinContext *context, AstArg *arg) {
@@ -749,8 +785,8 @@ static void addVar(TinContext *context, AstArg *arg) {
             return;
         case AST_ARG_TYPE_SYMBOL: {
             TinPolyType *argType = lookupInContext(context, arg->val.symbol);
-            if (!isTypeFunctionApplication(argType)) {
-                TinMonoType *var = freshMonoTypeVar();
+            if (!isZeroArgFunctionApplication(argType)) { // i.e. nil
+                TinMonoType *var = freshMonoTypeVar(arg->val.symbol->name);
                 int save = PROTECT(var);
                 addMonoTypeToContext(context, arg->val.symbol, var);
                 UNPROTECT(save);
@@ -759,7 +795,7 @@ static void addVar(TinContext *context, AstArg *arg) {
         }
         case AST_ARG_TYPE_NAMED: {
             addVar(context, arg->val.named->arg);
-            TinMonoType *var = freshMonoTypeVar();
+            TinMonoType *var = freshMonoTypeVar(arg->val.named->name->name);
             int save = PROTECT(var);
             addMonoTypeToContext(context, arg->val.named->name, var);
             UNPROTECT(save);
@@ -784,11 +820,13 @@ static WResult *WFunction(TinContext *context, AstFunction *fun, int depth) {
     enter("WFunction", myId, depth);
     printAstFunction(fun, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     TinContext *fnContext = extendTinContext(context);
     int save = PROTECT(fnContext);
     addVars(fnContext, fun->argList);
-    TinArgsResult *An = Fargs(fnContext, fun->argList, depth + 1);
+    TinArgsResult *An = WFargs(fnContext, fun->argList, depth + 1);
     PROTECT(An);
     WResult *R1 = WNest(An->context, fun->nest, depth + 1);
     PROTECT(R1);
@@ -816,6 +854,8 @@ static WResult *WAbstraction(TinContext *context, AstCompositeFunction *fun, int
     enter("WAbstraction", myId, depth);
     printAstCompositeFunction(fun, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     if (fun->next == NULL) {
         WResult *result = WFunction(context, fun->function, depth + 1);
@@ -832,7 +872,7 @@ static WResult *WAbstraction(TinContext *context, AstCompositeFunction *fun, int
     PROTECT(Sn_1Gamma);
     WResult *Rn = WFunction(Sn_1Gamma, fun->function, depth + 1);
     PROTECT(Rn);
-    TinSubstitution *S = unify(Rn->monoType, Rn_1->monoType);
+    TinSubstitution *S = unify(Rn->monoType, Rn_1->monoType, "WAbstraction");
     PROTECT(S);
     TinMonoType *Stn = applyMonoTypeSubstitution(S, Rn->monoType);
     PROTECT(Stn);
@@ -884,6 +924,8 @@ static WResult *WExpression(TinContext *context, AstExpression *expr, int depth)
     enter("WExpression", myId, depth);
     printAstExpression(expr, depth);
     printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     WResult *result = WExpression_d(context, expr, depth);
 #ifdef DEBUG_ALGORITHM_W
@@ -898,12 +940,15 @@ static void WDefine(TinContext *context, AstDefine *define, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WDefine", myId, depth);
+    printTinContext(context, depth + 1);
+    printf("\n");
 #endif
     HashSymbol *symbol = define->symbol;
     AstExpression *expression = define->expression;
     WResult *wResult = WExpression(context, expression, depth + 1);
     int save = PROTECT(wResult);
     TinPolyType *value = generalize(context, wResult->monoType);
+    PROTECT(value);
     TinPolyType *result = applyPolyTypeSubstitution(wResult->substitution, value);
     PROTECT(result);
     addToContext(context, symbol, result);
@@ -911,8 +956,8 @@ static void WDefine(TinContext *context, AstDefine *define, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     leave("WDefine", myId, depth);
     printHashSymbol(symbol);
-    printf(" =\n");
-    printTinPolyType(result, depth);
+    printf(" =\n%*s", depth * 4, "");
+    showTinPolyType(result);
     printf("\n");
 #endif
 }
@@ -921,6 +966,8 @@ static void WDefinition(TinContext *context, AstDefinition *definition, int dept
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WDefinition", myId, depth);
+    printf("\n");
+    printTinContext(context, depth + 1);
     printf("\n");
 #endif
     switch (definition->type) {
@@ -947,6 +994,8 @@ static WResult *WNest(TinContext *context, AstNest *nest, int depth) {
     int myId = idSource++;
     enter("WNest", myId, depth);
     printAstNest(nest, depth);
+    printf("\n");
+    printTinContext(context, depth + 1);
     printf("\n");
 #endif
     if (nest == NULL) return newWResult(NULL, NULL);
@@ -983,18 +1032,18 @@ static void addBinOp(TinContext *context, HashSymbol *op, TinMonoType *a, TinMon
     funApp = arrowApplication(a, funApp);
     UNPROTECT(save);
     save = PROTECT(funApp);
-    addMonoTypeToContext(context, op, funApp);
+    generalizeMonoTypeToContext(context, op, funApp);
     UNPROTECT(save);
 }
 
 static void addTypeBinOp(TinContext *context, HashSymbol *op, TinMonoType *a, TinMonoType *b, TinMonoType *c) {
     // #a -> ~b -> #c
-    TinMonoType *funApp = doubleArrowApplication(b, c);
+    TinMonoType *funApp = arrowApplication(b, c);
     int save = PROTECT(funApp);
-    funApp = doubleArrowApplication(a, funApp);
+    funApp = arrowApplication(a, funApp);
     UNPROTECT(save);
     save = PROTECT(funApp);
-    addMonoTypeToContext(context, op, funApp);
+    generalizeMonoTypeToContext(context, op, funApp);
     UNPROTECT(save);
 }
 
@@ -1020,7 +1069,7 @@ static void addBoolBinOp(TinContext *context, char *token) {
 
 static void addThen(TinContext *context) {
     // #a -> #a -> #a
-    TinMonoType *fresh = freshMonoTypeVar();
+    TinMonoType *fresh = freshMonoTypeVar("then");
     int save = PROTECT(fresh);
     HashSymbol *then = newSymbol("then");
     addBinOp(context, then, fresh, fresh, fresh);
@@ -1030,7 +1079,7 @@ static void addThen(TinContext *context) {
 static void addComparisonBinOp(TinContext *context, char *token) {
     // #a -> #a -> Bool
     HashSymbol *op = newSymbol(token);
-    TinMonoType *fresh = freshMonoTypeVar();
+    TinMonoType *fresh = freshMonoTypeVar(token);
     int save = PROTECT(fresh);
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
     PROTECT(boolSym);
@@ -1041,7 +1090,7 @@ static void addComparisonBinOp(TinContext *context, char *token) {
 static void addCons(TinContext *context) {
     // #a -> List(#a) -> List(#a)
     HashSymbol *op = newSymbol("@");
-    TinMonoType *fresh = freshMonoTypeVar();
+    TinMonoType *fresh = freshMonoTypeVar("@");
     int save = PROTECT(fresh);
     TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
     PROTECT(list);
@@ -1052,7 +1101,7 @@ static void addCons(TinContext *context) {
 static void addAppend(TinContext *context) {
     // List(#a) -> List(#a) -> List(#a)
     HashSymbol *op = newSymbol("@@");
-    TinMonoType *fresh = freshMonoTypeVar();
+    TinMonoType *fresh = freshMonoTypeVar("@@");
     int save = PROTECT(fresh);
     TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
     PROTECT(list);
@@ -1068,7 +1117,7 @@ static void addNot(TinContext *context) {
     TinMonoType *funApp = arrowApplication(boolSym, boolSym);
     UNPROTECT(save);
     save = PROTECT(funApp);
-    addMonoTypeToContext(context, op, funApp);
+    generalizeMonoTypeToContext(context, op, funApp);
     UNPROTECT(save);
 }
 
@@ -1080,15 +1129,15 @@ static void addNegate(TinContext *context) {
     TinMonoType *funApp = arrowApplication(intSym, intSym);
     UNPROTECT(save);
     save = PROTECT(funApp);
-    addMonoTypeToContext(context, op, funApp);
+    generalizeMonoTypeToContext(context, op, funApp);
     UNPROTECT(save);
 }
 
 static void addHere(TinContext *context) {
     // ((#a -> #b) -> #a) -> #a
-    TinMonoType *a = freshMonoTypeVar();
+    TinMonoType *a = freshMonoTypeVar("here-a");
     int save = PROTECT(a);
-    TinMonoType *b = freshMonoTypeVar();
+    TinMonoType *b = freshMonoTypeVar("here-b");
     PROTECT(b);
     TinMonoType *arrow = arrowApplication(a, b);
     UNPROTECT(save);
@@ -1100,13 +1149,13 @@ static void addHere(TinContext *context) {
     UNPROTECT(save);
     save = PROTECT(arrow);
     HashSymbol *op = newSymbol("here");
-    addMonoTypeToContext(context, op, arrow);
+    generalizeMonoTypeToContext(context, op, arrow);
     UNPROTECT(save);
 }
 
 static void addIf(TinContext *context) {
     // Bool -> #a -> #a -> #a
-    TinMonoType *a = freshMonoTypeVar();
+    TinMonoType *a = freshMonoTypeVar("if");
     int save = PROTECT(a);
     TinMonoType *arrow = arrowApplication(a, a);
     UNPROTECT(save);
@@ -1120,7 +1169,18 @@ static void addIf(TinContext *context) {
     UNPROTECT(save);
     save = PROTECT(arrow);
     HashSymbol *op = newSymbol("if");
-    addMonoTypeToContext(context, op, arrow);
+    generalizeMonoTypeToContext(context, op, arrow);
+    UNPROTECT(save);
+}
+
+static void addNil(TinContext *context) {
+    // List(#t)
+    TinMonoType *fresh = freshMonoTypeVar("nil");
+    int save = PROTECT(fresh);
+    TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
+    PROTECT(list);
+    HashSymbol *op = newSymbol("nil");
+    generalizeMonoTypeToContext(context, op, list);
     UNPROTECT(save);
 }
 
@@ -1149,5 +1209,6 @@ WResult *WTop(AstNest *nest) {
     addNegate(context);
     addHere(context);
     addIf(context);
+    addNil(context);
     return WNest(context, nest, 0);
 }

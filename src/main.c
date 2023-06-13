@@ -75,10 +75,13 @@ int main(int argc, char *argv[]) {
     yyparse();
     PROTECT(result);
     enableGC();
-    quietPrintHashTable = true;
+    // quietPrintHashTable = true;
     WResult *wr = WTop(result);
-    printTinMonoType(wr->monoType, 0);
+    showTinMonoType(wr->monoType);
     printf("\n");
+    if (hadErrors()) {
+        printf("(errors detected)\n");
+    }
 }
 
 #endif
