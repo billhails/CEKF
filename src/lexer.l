@@ -40,6 +40,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "let"       { return LET; }
 "list"      { return KW_LIST; }
 "load"      { return LOAD; }
+"nil"       { return NIL; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "prototype" { return PROTOTYPE; }

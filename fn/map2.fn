@@ -1,6 +1,6 @@
 let
     fn map {
-        (f, nil()) { nil }
+        (f, nil) { [] }
         (f, h @ t) { f(h) @ map(f, t) }
     }
 

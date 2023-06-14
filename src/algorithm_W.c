@@ -95,12 +95,6 @@ static HashSymbol *arrowSymbol() {
     return newSymbol("->");
 }
 
-/*
-static HashSymbol *doubleArrowSymbol() {
-    return newSymbol("=>");
-}
-*/
-
 static HashSymbol *intSymbol() {
     return newSymbol("Int");
 }
@@ -194,13 +188,6 @@ static TinMonoType *arrowApplication(TinMonoType *type1, TinMonoType *type2) {
     HashSymbol *arrow = arrowSymbol();
     return anyArrowApplication(arrow, type1, type2);
 }
-
-/*
-static TinMonoType *doubleArrowApplication(TinMonoType *type1, TinMonoType *type2) {
-    HashSymbol *arrow = doubleArrowSymbol();
-    return anyArrowApplication(arrow, type1, type2);
-}
-*/
 
 static TinMonoType *stringMonoType() {
     TinMonoType *charType = constantTypeFunction(charSymbol());
