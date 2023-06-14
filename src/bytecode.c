@@ -109,7 +109,7 @@ void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
     cant_happen("writeAexpVarList called");
 }
 
-void writeAexpVar(AexpVar *x, ByteCodeArray *b) {
+void writeAexpVar(HashSymbol *x, ByteCodeArray *b) {
     cant_happen("writeAexpVar called");
 }
 

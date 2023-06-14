@@ -40,6 +40,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "let"       { return LET; }
 "list"      { return KW_LIST; }
 "load"      { return LOAD; }
+"nil"       { return NIL; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "prototype" { return PROTOTYPE; }
@@ -66,7 +67,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 -?[0-9]+ { yylval.i = atoi(yytext); return NUMBER; }
 
 {ID}  { yylval.s = yytext; return VAR; }
-#{ID} { yylval.s = &(yytext[1]); return TYPE_VAR; }
+#{ID} { yylval.s = yytext; return TYPE_VAR; }
 
 . { return yytext[0]; }
 %%

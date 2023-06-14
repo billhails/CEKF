@@ -28,7 +28,7 @@
 static AexpLam *desugarAexpLam(AexpLam *x);
 static AexpPrimApp *desugarAexpPrimApp(AexpPrimApp *x);
 static AexpUnaryApp *desugarAexpUnaryApp(AexpUnaryApp *x);
-static AexpVar *desugarAexpVar(AexpVar *x);
+static HashSymbol *desugarAexpVar(HashSymbol *x);
 static AexpList *desugarAexpList(AexpList *x);
 static CexpApply *desugarCexpApply(CexpApply *x);
 static CexpCond *desugarCexpCond(CexpCond *x);
@@ -65,8 +65,8 @@ static AexpUnaryApp *desugarAexpUnaryApp(AexpUnaryApp *x) {
     return x;
 }
 
-static AexpVar *desugarAexpVar(AexpVar *x) {
-    DEBUG_DESUGAR(AexpVar, x);
+static HashSymbol *desugarAexpVar(HashSymbol *x) {
+    DEBUG_DESUGAR(HashSymbol, x);
     return x;
 }
 
@@ -133,7 +133,7 @@ static Exp *aexpAndToExp(Aexp *exp1, Exp *exp2) {
 }
 
 static Exp *expAndToExp(Exp * exp1, Exp * exp2) {
-    AexpVar *sym = genSym("and_");
+    HashSymbol *sym = genSym("and_");
     return newExp(EXP_TYPE_LET,
                   EXP_VAL_LET(newExpLet
                               (sym,
@@ -183,7 +183,7 @@ static Exp *aexpOrToExp(Aexp *exp1, Exp *exp2) {
 }
 
 static Exp *expOrToExp(Exp *exp1, Exp *exp2) {
-    AexpVar *sym = genSym("or_");
+    HashSymbol *sym = genSym("or_");
     return
         newExp(EXP_TYPE_LET,
                EXP_VAL_LET(newExpLet

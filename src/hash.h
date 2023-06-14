@@ -27,26 +27,51 @@
 
 #define HASH_MAX_LOAD 0.75
 
-hash_t hashString(const char *string);
+typedef struct HashSymbol {
+    struct Header header;
+    hash_t hash;
+    char *name;
+} HashSymbol;
 
-typedef struct HashEntry {
-    struct AexpVar *var;
-    struct Value value;
-} HashEntry;
+typedef void (*MarkHashValueFunction)(void *value);
+typedef void (*PrintHashValueFunction)(void *value, int depth);
 
 typedef struct HashTable {
     struct Header header;
+    int id;
     int count;
     int capacity;
-    HashEntry *entries;
+    size_t valuesize;
+    HashSymbol **keys;
+    void *values;
+    MarkHashValueFunction markfunction;
+    PrintHashValueFunction printfunction;
+    bool shortEntries;
 } HashTable;
 
-HashTable *newHashTable();
-void hashSet(HashTable *table, struct AexpVar *var, struct Value value);
-struct Value hashGet(HashTable *table, struct AexpVar *var);
-struct AexpVar *hashGetVar(HashTable *table, const char *name);
-Value hashGet(HashTable *table, struct AexpVar *var);
-void hashAddCTVar(HashTable *table, struct AexpVar *var);
-bool hashLocate(HashTable *table, struct AexpVar *var, int *location);
+hash_t hashString(const char *string);
 
+HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, PrintHashValueFunction printfunction);
+
+void hashSet(HashTable *table, struct HashSymbol *var, void *src);
+bool hashGet(HashTable *table, struct HashSymbol *var, void *dest);
+void copyHashTable(HashTable *to, HashTable *from);
+
+HashSymbol *hashGetVar(HashTable *table, const char *name);
+HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
+
+void markHashSymbol(HashSymbol *x);
+void freeHashSymbol(HashSymbol *x);
+
+extern bool quietPrintHashTable;
+
+void printHashTable(HashTable *table, int depth);
+void printHashSymbol(HashSymbol *symbol);
+
+HashSymbol *iterateHashTable(HashTable *table, int *index, void *data);
+
+void markHashTable(HashTable *table);
+
+static inline void markHashSymbolObj(struct Header *h) { markHashSymbol((HashSymbol *)h); }
+static inline void freeHashSymbolObj(struct Header *h) { freeHashSymbol((HashSymbol *)h); }
 #endif

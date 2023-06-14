@@ -1,5 +1,3 @@
-#ifndef cekf_common_h
-#define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,28 +16,39 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdbool.h>
- #include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
 
- typedef uint32_t hash_t;
+#include "common.h"
 
-// #define TEST_STACK
-// #define DEBUG_STACK
-// #define DEBUG_STEP
-#define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 4
-// #define DEBUG_ANALIZE
-// #define DEBUG_DESUGARING
-// #define DEBUG_HASHTABLE
-// #define DEBUG_TIN_SUBSTITUTION
-// #define DEBUG_TIN_INSTANTIATION
-// #define DEBUG_TIN_UNIFICATION
-#define DEBUG_DUMP_CORE
-#define DEBUG_ALGORITHM_W
+static bool errors = false;
 
-void cant_happen(const char *message, ...);
-void can_happen(const char *message, ...);
-bool hadErrors();
-
+void cant_happen(const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+#ifdef DEBUG_DUMP_CORE
+    raise(SIGABRT);
+#else
+    exit(1);
 #endif
+}
+
+void can_happen(const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+    errors = true;
+}
+
+bool hadErrors() {
+    return errors;
+}

@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #include "common.h"
 #include "analysis.h"
@@ -30,6 +31,7 @@
 static int bytesAllocated = 0;
 static int nextGC = 0;
 static bool gcEnabled = true;
+static int numAlloc = 0;
 
 static void collectGarbage();
 
@@ -44,6 +46,8 @@ const char *typeName(ObjType type) {
     switch (type) {
         case OBJTYPE_AMB:
             return "amb";
+        case OBJTYPE_BOOL:
+            return "bool";
         case OBJTYPE_APPLY:
             return "apply";
         case OBJTYPE_BINDINGS:
@@ -66,7 +70,9 @@ const char *typeName(ObjType type) {
             return "letrec";
         case OBJTYPE_PRIMAPP:
             return "primapp";
-        case OBJTYPE_VAR:
+        case OBJTYPE_UNARYAPP:
+            return "unaryapp";
+        case OBJTYPE_HASHSYMBOL:
             return "var";
         case OBJTYPE_ANNOTATEDVAR:
             return "annotatedvar";
@@ -88,8 +94,14 @@ const char *typeName(ObjType type) {
             return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
-        case OBJTYPE_AST:
-            return "ast";
+        case OBJTYPE_WRESULT:
+            return "wresult";
+        TIN_OBJTYPE_CASES()
+            typenameTinObj(type);
+            break;
+        AST_OBJTYPE_CASES()
+            typenameAstObj(type);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in typeName", type);
     }
@@ -142,7 +154,19 @@ void unProtect(int index) {
 }
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "reallocate %d + %lu - %lu [%d]\n", bytesAllocated, newSize, oldSize, numAlloc);
+    if (newSize > oldSize)
+        numAlloc++;
+    if (newSize < oldSize)
+        numAlloc--;
+    if (numAlloc < 0)
+        cant_happen("more frees than mallocs!");
+
+#endif
     bytesAllocated += newSize - oldSize;
+    if (bytesAllocated < 0)
+        cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]", bytesAllocated, newSize, oldSize, numAlloc);
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
@@ -172,7 +196,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "allocate type %s\n", typeName(type));
+    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type), bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
@@ -200,7 +224,6 @@ void markObj(Header *h) {
         case OBJTYPE_LET:
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
-        case OBJTYPE_VAR:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             markExpObj(h);
@@ -219,8 +242,20 @@ void markObj(Header *h) {
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
+        case OBJTYPE_HASHSYMBOL:
+            markHashSymbolObj(h);
+            break;
+        case OBJTYPE_WRESULT:
+            markWResultObj(h);
+            break;
+        TIN_OBJTYPE_CASES()
+            markTinObj(h);
+            break;
+        AST_OBJTYPE_CASES()
+            markAstObj(h);
+            break;
         default:
-            cant_happen("unrecognised ObjType in markObj");
+            cant_happen("unrecognised ObjType %d in markObj", h->type);
     }
 }
 
@@ -240,7 +275,6 @@ void freeObj(Header *h) {
         case OBJTYPE_LETREC:
         case OBJTYPE_PRIMAPP:
         case OBJTYPE_UNARYAPP:
-        case OBJTYPE_VAR:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
             freeExpObj(h);
@@ -258,6 +292,18 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
+            break;
+        case OBJTYPE_HASHSYMBOL:
+            freeHashSymbolObj(h);
+            break;
+        case OBJTYPE_WRESULT:
+            freeWResultObj(h);
+            break;
+        TIN_OBJTYPE_CASES()
+            freeTinObj(h);
+            break;
+        AST_OBJTYPE_CASES()
+            freeAstObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj", h->type);
@@ -284,9 +330,6 @@ static void sweep() {
     Header **previous = &allocated;
     while (current != NULL) {
         if (current->keep) {
-#ifdef DEBUG_LOG_GC
-            fprintf(stderr, "sweep keep type %s\n", typeName(current->type));
-#endif
             previous = &current->next;
             current->keep = false;
         } else {

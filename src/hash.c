@@ -16,12 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// #define DEBUG_HASHTABLE
-
-#ifdef DEBUG_HASHTABLE
 #include <stdio.h>
-#endif
-
 #include <string.h>
 
 #include "common.h"
@@ -29,21 +24,45 @@
 #include "hash.h"
 #include "memory.h"
 
-HashTable *newHashTable() {
+bool quietPrintHashTable = false;
+
+static int idCounter = 0;
+
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "newHashTable()\n");
+static void printMemHeader(char *id, void *ptr) {
+    /*
+    if (ptr == NULL) return;
+    int size = 16;
+
+    char *b = (char *)ptr;
+    b -= size;
+    fprintf(stderr, "%s mem header", id);
+    for (int i = 0; i < size; i++) {
+        fprintf(stderr, " %02x", b[i]);
+    }
+    fprintf(stderr, "\n");
+    */
+}
+#endif
+
+HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, PrintHashValueFunction printfunction) {
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "newHashTable() [id=%d, valuesize=%lu]\n", idCounter, valuesize);
 #endif
     HashTable *x = NEW(HashTable, OBJTYPE_HASHTABLE);
+    x->id = idCounter++;
     x->count = 0;
     x->capacity = 0;
-    x->entries = NULL;
+    x->valuesize = valuesize;
+    x->markfunction = markfunction;
+    x->printfunction = printfunction;
+    x->keys = NULL;
+    x->values = NULL;
+    x->shortEntries = false;
     return x;
 }
 
 hash_t hashString(const char *string) {
-#ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashString(%s)\n", string);
-#endif
     hash_t hash = 2166136261u;
     for (; *string != '\0'; string++) {
         hash ^= (uint8_t)*string;
@@ -52,15 +71,20 @@ hash_t hashString(const char *string) {
     return hash;
 }
 
-static HashEntry *findEntry(HashEntry *entries, int capacity, AexpVar *var) {
+static void* valuePtr(HashTable *table, int index) {
+    if (table->valuesize == 0) return NULL;
+    return (char *)table->values + (index * table->valuesize);
+}
+
+static hash_t findEntry(HashSymbol **keys, int capacity, HashSymbol *var) {
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "findEntry()\n");
+    fprintf(stderr, "findEntry(%s)\n", var->name);
 #endif
     hash_t index = var->hash & (capacity - 1);
     for (;;) {
-        HashEntry *entry = &entries[index];
-        if (entry->var == var || entry->var == NULL) {
-            return entry;
+        HashSymbol *key = keys[index];
+        if (key == var || key == NULL) {
+            return index;
         }
         index = (index + 1) & (capacity - 1);
     }
@@ -68,25 +92,44 @@ static HashEntry *findEntry(HashEntry *entries, int capacity, AexpVar *var) {
 
 static void growCapacity(HashTable *table, int capacity) {
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "growCapacity(%d)\n", capacity);
+    fprintf(stderr, "growCapacity(%d) [%d]\n", capacity, table->id);
 #endif
-    HashEntry *entries = NEW_ARRAY(HashEntry, capacity);
+    HashSymbol **keys = NEW_ARRAY(HashSymbol *, capacity);
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "growCapacity old keys: %p new keys: %p\n", table->keys, keys);
+    printMemHeader("keys", keys);
+#endif
+    void *values = NULL;
 
     for (int i = 0; i < capacity; i++) {
-        entries[i].var = NULL;
-        entries[i].value = vVoid;
+        keys[i] = NULL;
     }
 
-    for (int i = 0; i < table->capacity; i++) {
-        HashEntry *entry = &table->entries[i];
-        if (entry->var == NULL) continue;
-        HashEntry *dest = findEntry(entries, capacity, entry->var);
-        dest->var = entry->var;
-        dest->value = entry->value;
+    if (table->valuesize > 0) {
+        values = NEW_ARRAY(char, table->valuesize * capacity);
+        bzero(values, table->valuesize * capacity);
+#ifdef DEBUG_HASHTABLE
+        fprintf(stderr, "growCapacity old values: %p new values: %p\n", table->values, values);
+        printMemHeader("values", values);
+#endif
     }
 
-    FREE_ARRAY(HashEntry, table->entries, table->capacity);
-    table->entries = entries;
+    for (int old_index = 0; old_index < table->capacity; old_index++) {
+        HashSymbol *var = table->keys[old_index];
+        if (var == NULL) continue;
+        hash_t new_index = findEntry(keys, capacity, var);
+        keys[new_index] = var;
+        if (table->valuesize > 0) {
+            void *dst = (char *)values + (new_index * table->valuesize);
+            void *src = valuePtr(table, old_index);
+            memcpy(dst, src, table->valuesize);
+        }
+    }
+
+    FREE_ARRAY(HashSymbol *, table->keys, table->capacity);
+    FREE_ARRAY(char, table->values, table->valuesize * table->capacity);
+    table->keys = keys;
+    table->values = values;
     table->capacity = capacity;
 }
 
@@ -97,94 +140,202 @@ static void checkCapacity(HashTable *table) {
     }
 }
 
-void hashSet(HashTable *table, AexpVar *var, Value value) {
+void hashSet(HashTable *table, HashSymbol *var, void *src) {
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashSet()\n");
+    fprintf(stderr, "hashSet(%s) [%d]\n", var->name, table->id);
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
 #endif
     checkCapacity(table);
-    HashEntry *entry = findEntry(table->entries, table->capacity, var);
+    hash_t index = findEntry(table->keys, table->capacity, var);
 
-    if (entry->var == NULL) table->count++;
+    if (table->keys[index] == NULL) table->count++;
 
-    entry->var = var;
-    entry->value = value;
-}
+    table->keys[index] = var;
 
-void hashAddCTVar(HashTable *table, AexpVar *var) {
-#ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashSet()\n");
-#endif
-    checkCapacity(table);
-    HashEntry *entry = findEntry(table->entries, table->capacity, var);
-    if (entry->var != NULL) cant_happen("duplicate variable in hashAddCTVar");
-    entry->var = var;
-    entry->value.type = VALUE_TYPE_INTEGER;
-    entry->value.val.z = table->count;
-    table->count++;
-}
-
-bool hashLocate(HashTable *table, struct AexpVar *var, int *location) {
-    HashEntry *entry = findEntry(table->entries, table->capacity, var);
-    if (entry->var == NULL) return false;
-
-    if (entry->value.type != VALUE_TYPE_INTEGER) {
-        cant_happen("non-integer value found in hashLocate");
+    if (table->valuesize > 0) {
+        void *target = valuePtr(table, index);
+        memcpy(target, src, table->valuesize);
     }
-    (*location) = entry->value.val.z;
+}
+
+bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "hashGet(%s) [%d]\n", var->name, table->id);
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
+#endif
+    if (table->count == 0) return false;
+    hash_t index = findEntry(table->keys, table->capacity, var);
+#ifdef DEBUG_HASHTABLE
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
+#endif
+    if (table->keys[index] == NULL) return false;
+    if (table->valuesize > 0) {
+        void *src = valuePtr(table, index);
+        memcpy(dest, src, table->valuesize);
+    }
     return true;
 }
 
-Value hashGet(HashTable *table, AexpVar *var) {
+HashSymbol *hashGetVar(HashTable *table, const char *name) {
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashGet()\n");
-#endif
-    if (table->count == 0) return vVoid;
-    HashEntry *entry = findEntry(table->entries, table->capacity, var);
-    return entry->value;
-}
-
-AexpVar *hashGetVar(HashTable *table, const char *name) {
-#ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "hashGetVar()\n");
+    fprintf(stderr, "hashGetVar() [%d]\n", table->id);
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
 #endif
     if (table->count == 0) return NULL;
     hash_t hash = hashString(name);
     hash_t index = hash & (table->capacity - 1);
 
     for (;;) {
-        if (table->entries[index].var == NULL) return NULL;
-        if (   table->entries[index].var->hash == hash
-            && strcmp(name, table->entries[index].var->name) == 0) {
-            return table->entries[index].var;
+        if (table->keys[index] == NULL) return NULL;
+        if (   table->keys[index]->hash == hash
+            && strcmp(name, table->keys[index]->name) == 0) {
+            return table->keys[index];
         }
         index = (index + 1) & (table->capacity - 1);
     }
 }
 
 void markHashTableObj(Header *h) {
+    markHashTable((HashTable *)h);
+}
+
+void markHashTable(HashTable *table) {
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "markHashTableObj()\n");
+    fprintf(stderr, "markHashTableObj() [%d]\n", table->id);
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
 #endif
-    HashTable *table = (HashTable *)h;
     if (table == NULL) return;
     if (MARKED(table)) return;
     MARK(table);
     for (int i = 0; i < table->capacity; i++) {
-        if (table->entries[i].var != NULL) {
-            markAexpVar(table->entries[i].var);
-            markValue(table->entries[i].value);
+        if (table->keys[i] != NULL) {
+            markHashSymbol(table->keys[i]);
+            if (table->valuesize > 0 && table->markfunction != NULL) {
+                table->markfunction((char *)table->values + (i * table->valuesize));
+            }
         }
     }
 }
 
 void freeHashTableObj(Header *h) {
-#ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "freeHashTableObj()\n");
-#endif
     HashTable *table = (HashTable *)h;
+#ifdef DEBUG_HASHTABLE
+    fprintf(stderr, "freeHashTableObj() [%d]\n", table->id);
+    printMemHeader("values", table->values);
+    printMemHeader("keys", table->keys);
+#endif
     if (table == NULL) return;
     if (table->count > 0) {
-        FREE_ARRAY(HashEntry, table->entries, table->count);
+#ifdef DEBUG_HASHTABLE
+        fprintf(stderr, "freeHashTableObj keys: %p\n", table->keys);
+#endif
+        FREE_ARRAY(HashSymbol *, table->keys, table->capacity);
+        if (table->valuesize > 0) {
+#ifdef DEBUG_HASHTABLE
+            fprintf(stderr, "freeHashTableObj values: %p\n", table->values);
+            printMemHeader("values", table->values);
+#endif
+            FREE_ARRAY(char, table->values, table->capacity * table->valuesize);
+        }
     }
     FREE(h, HashTable);
+}
+
+HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
+    HashSymbol *x;
+    x = hashGetVar(table, name);
+    if (x != NULL) {
+        return x;
+    }
+    x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
+    int save = PROTECT(x);
+    x->name = safeStrdup(name);
+    x->hash = hashString(name);
+    hashSet(table, x, src);
+    UNPROTECT(save);
+    return x;
+}
+
+void printHashSymbol(HashSymbol *symbol) {
+    printf("%s", symbol->name);
+}
+
+void printHashTable(HashTable *table, int depth) {
+    int count = 0;
+    printf("%*s", depth * 4, "");
+    if (table == NULL) {
+        printf("HashTable: (NULL)");
+        return;
+    }
+    printf("{[id:%d]", table->id);
+    bool first = true;
+    for (int i = 0; i < table->capacity; ++i) {
+        if (table->keys[i] != NULL) {
+            if (first) {
+                first = false;
+                printf("\n");
+            }
+            printf("%*s", (depth + 1) * 4, "");
+            printHashSymbol(table->keys[i]);
+            if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
+                printf(" =>");
+                if (table->shortEntries)
+                    printf(" ");
+                else
+                    printf("\n");
+                table->printfunction(valuePtr(table, i), table->shortEntries ? 0 : (depth + 2));
+                printf("\n");
+            } else {
+                printf("\n");
+            }
+            count++;
+        }
+    }
+    if (first)
+        printf("}");
+    else
+        printf("%*s}", depth * 4, "");
+}
+
+HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {
+    while (*index < table->capacity) {
+        if (table->keys[*index] != NULL) {
+            if (data != NULL) {
+                void *src = valuePtr(table, *index);
+                if (src != NULL) {
+                    memcpy(data, src, table->valuesize);
+                }
+            }
+            return table->keys[(*index)++];
+        }
+        (*index)++;
+    }
+    return NULL;
+}
+
+void copyHashTable(HashTable *to, HashTable *from) {
+    if (from->valuesize != to->valuesize) {
+        cant_happen("attempt to copy between hash tables with different storage size: %d vs %d", from->valuesize, to->valuesize);
+    }
+    for (int i = 0; i < from->capacity; ++i) {
+        if (from->keys[i] != NULL) {
+            void *data = valuePtr(from, i);
+            hashSet(to, from->keys[i], data);
+        }
+    }
+}
+
+void markHashSymbol(HashSymbol *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+}
+
+void freeHashSymbol(HashSymbol *x) {
+    FREE(x, HashSymbol);
 }

@@ -1,4 +1,3 @@
-
 #
 # CEKF - VM supporting amb
 # Copyright (C) 2022-2023  Bill Hails
@@ -17,86 +16,85 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+config:
+    name: ast
+
 structs:
     AstNest:
         definitions: AstDefinitions
         expressions: AstExpressions
 
     AstDefinitions:
-        next: AstDefinitions
         definition: AstDefinition
+        next: AstDefinitions
 
     AstDefine:
-        symbol: AstSymbol
+        symbol: HashSymbol
         expression: AstExpression
 
     AstPrototype:
-        symbol: AstSymbol
+        symbol: HashSymbol
         body: AstPrototypeBody
 
     AstPrototypeBody:
-        next: AstPrototypeBody
         single: AstSinglePrototype
+        next: AstPrototypeBody
 
     AstPrototypeSymbolType:
-        symbol: AstSymbol
+        symbol: HashSymbol
         type: AstType
 
     AstLoad:
         package: AstPackage
-        symbol: AstSymbol
+        symbol: HashSymbol
 
     AstTypeDef:
         flatType: AstFlatType
         typeBody: AstTypeBody
 
     AstFlatType:
-        symbol: AstSymbol
+        symbol: HashSymbol
         typeSymbols: AstTypeSymbols
 
     AstTypeSymbols:
+        typeSymbol: HashSymbol
         next: AstTypeSymbols
-        typeSymbol: AstSymbol
 
     AstTypeBody:
-        next: AstTypeBody
         typeConstructor: AstTypeConstructor
+        next: AstTypeBody
 
     AstTypeConstructor:
-        symbol: AstSymbol
+        symbol: HashSymbol
         typeList: AstTypeList
 
     AstTypeList:
-        next: AstTypeList
         type: AstType
+        next: AstTypeList
 
     AstType:
-        next: AstType
         typeClause: AstTypeClause
+        next: AstType
 
     AstConditional:
         expression: AstExpression
         consequent: AstNest
         alternative: AstNest
 
-    AstSwitch:
-        expressions: AstExpressions
-        compositeFunction: AstCompositeFunction
-
     AstCompositeFunction:
-        next: AstCompositeFunction
         function: AstFunction
+        next: AstCompositeFunction
 
     AstFunction:
         argList: AstArgList
         nest: AstNest
 
     AstArgList:
-        next: AstArgList
         arg: AstArg
+        next: AstArgList
 
     AstUnpack:
-        symbol: AstSymbol
+        symbol: HashSymbol
         argList: AstArgList
 
     AstArgPair:
@@ -104,38 +102,28 @@ structs:
         cdr: AstArg
 
     AstNamedArg:
-        name: AstSymbol
+        name: HashSymbol
         arg: AstArg
 
     AstEnvType:
-        name: AstSymbol
-        prototype: AstSymbol
+        name: HashSymbol
+        prototype: HashSymbol
 
-    AstBinOp:
-        type: AstBinOpType
-        lhs: AstExpression
-        rhs: AstExpression
-    
     AstFunCall:
         function: AstExpression
         arguments: AstExpressions
 
     AstPackage:
+        symbol: HashSymbol
         next: AstPackage
-        symbol: AstSymbol
 
     AstExpressions:
-        next: AstExpressions
         expression: AstExpression
+        next: AstExpressions
 
     AstEnv:
         package: AstPackage
         definitions: AstDefinitions
-
-    AstSymbol:
-        type: AstSymbolType
-        hash: hash_t
-        name: char_ptr
 
     AstString:
         string: char_ptr
@@ -158,20 +146,13 @@ unions:
         string: void_ptr
         list: AstType
         type: AstType
-        typeSymbol: AstSymbol
-        var: AstSymbol
-        typeconstructor: AstTypeConstructor
-
-    AstFun:
-        function: AstFunction
-        compositeFunction: AstCompositeFunction
+        var: HashSymbol
+        typeConstructor: AstTypeConstructor
 
     AstArg:
         wildcard: void_ptr
-        symbol: AstSymbol
-        cons: AstArgPair
+        symbol: HashSymbol
         named: AstNamedArg
-        list: AstArgList
         env: AstEnvType
         unpack: AstUnpack
         number: int
@@ -181,51 +162,27 @@ unions:
         "no": void_ptr
 
     AstExpression:
+        nil: void_ptr
         back: void_ptr
-        binOp: AstBinOp
-        not: AstExpression
-        negate: AstExpression
-        here: AstExpression
         funCall: AstFunCall
-        symbol: AstSymbol
+        symbol: HashSymbol
         number: int
         string: AstString
         character: char
         "yes": void_ptr
         "no": void_ptr
-        list: AstExpressions
-        fun: AstFun
+        fun: AstCompositeFunction
         env: AstEnv
         conditional: AstConditional
-        switchStatement: AstSwitch
+        nest: AstNest
 
-enums:
-    AstBinOpType:
-        - then
-        - and
-        - or
-        - xor
-        - eq
-        - ne
-        - gt
-        - lt
-        - ge
-        - le
-        - cons
-        - append
-        - add
-        - sub
-        - mul
-        - div
-        - mod
-        - pow
-        - dot
-
-    AstSymbolType:
-        - symbol
-        - typesymbol
+enums: {}
 
 primitives:
+    HashSymbol:
+        cname: "HashSymbol *"
+        printFn: "printAstSymbol"
+        valued: true
     char:
         cname: "char"
         printf: "%c"

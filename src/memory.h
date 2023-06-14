@@ -21,7 +21,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+struct Header;
+
 #include "ast_objtypes.h"
+#include "tin_objtypes.h"
 
 typedef enum {
     // exp types
@@ -39,7 +42,6 @@ typedef enum {
     OBJTYPE_LETREC,
     OBJTYPE_PRIMAPP,
     OBJTYPE_UNARYAPP,
-    OBJTYPE_VAR,
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
     // cekf types
@@ -52,7 +54,10 @@ typedef enum {
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
+    OBJTYPE_HASHSYMBOL,
+    OBJTYPE_WRESULT,
     AST_OBJTYPES(),
+    TIN_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -72,11 +77,13 @@ void markObj(Header *h);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
+void markWResultObj(Header *x);
 
 void freeObj(Header *h);
 void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
+void freeWResultObj(Header *x);
 
 bool enableGC();
 bool disableGC();

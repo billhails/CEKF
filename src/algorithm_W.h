@@ -1,5 +1,5 @@
-#ifndef cekf_common_h
-#define cekf_common_h
+#ifndef cekf_algorithm_w_h
+#define cekf_algorithm_w_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,28 +18,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdbool.h>
- #include <stdint.h>
+#include "tin.h"
+#include "ast.h"
 
- typedef uint32_t hash_t;
+typedef struct WResult {
+    struct Header header;
+    struct TinSubstitution *substitution;
+    struct TinMonoType *monoType;
+} WResult;
 
-// #define TEST_STACK
-// #define DEBUG_STACK
-// #define DEBUG_STEP
-#define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 4
-// #define DEBUG_ANALIZE
-// #define DEBUG_DESUGARING
-// #define DEBUG_HASHTABLE
-// #define DEBUG_TIN_SUBSTITUTION
-// #define DEBUG_TIN_INSTANTIATION
-// #define DEBUG_TIN_UNIFICATION
-#define DEBUG_DUMP_CORE
-#define DEBUG_ALGORITHM_W
+void markWResult(struct WResult *result);
+void printWResult(struct WResult *result, int depth);
 
-void cant_happen(const char *message, ...);
-void can_happen(const char *message, ...);
-bool hadErrors();
+struct WResult *WTop(struct AstNest *nest);
 
 #endif

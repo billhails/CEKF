@@ -204,33 +204,6 @@ static void printStack(Stack *x, int depth) {
     printf("]");
 }
 
-void printHashTable(HashTable *x) {
-    int count = 0;
-    printf("{");
-    for (int i = 0; i < x->capacity; ++i) {
-        if (x->entries[i].var != NULL) {
-            printf("%s => ", x->entries[i].var->name);
-            printValue(x->entries[i].value, 0);
-            count++;
-            if (count < x->count) printf(", ");
-        }
-    }
-    printf("}");
-}
-
-void printElidedHashTable(HashTable *x) {
-    int count = 0;
-    printf("{");
-    for (int i = 0; i < x->capacity; ++i) {
-        if (x->entries[i].var != NULL) {
-            printf("%s => <...>", x->entries[i].var->name);
-            count++;
-            if (count < x->count) printf(", ");
-        }
-    }
-    printf("}");
-}
-
 static void printValues(Value *values, int count, int depth) {
     printPad(depth);
     printf("{\n");
@@ -276,7 +249,7 @@ void printEnv(Env *x, int depth) {
 void printCTEnv(CTEnv *x) {
     printf("CTEnv[");
     while (x != NULL) {
-        printHashTable(x->table);
+        printHashTable(x->table, 0);
         if (x->next != NULL) printf(", ");
         x = x->next;
     }
@@ -362,7 +335,7 @@ void printAexpVarList(AexpVarList *x) {
     printf(")");
 }
 
-void printAexpVar(AexpVar *x) {
+void printAexpVar(HashSymbol *x) {
     printf("%s", x->name);
 }
 

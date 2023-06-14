@@ -220,16 +220,6 @@ static Value lookup(int frame, int offset) {
     return env->values[offset];
 }
 
-void cant_happen(const char *message, ...) {
-    va_list args;
-
-    va_start(args, message);
-    vfprintf(stderr, message, args);
-    va_end(args);
-    fprintf(stderr, "\n");
-    exit(1);
-}
-
 static int protectValue(Value v) {
     switch (v.type) {
         case VALUE_TYPE_CLO:
