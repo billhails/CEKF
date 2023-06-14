@@ -86,8 +86,6 @@ subgraph done1[Done]
 end
 subgraph done2[Done]
    AST
-end
-subgraph WIP
    check
 end
 subgraph temp[Temporary]
