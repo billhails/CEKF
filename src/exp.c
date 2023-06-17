@@ -100,6 +100,13 @@ AexpList *newAexpList(AexpList *next, Aexp *exp) {
     return x;
 }
 
+AexpMakeVec *newAexpMakeVec(AexpList *args) {
+    AexpMakeVec *x = NEW(AexpMakeVec, OBJTYPE_MAKEVEC);
+    x->args = args;
+    x->nargs = countAexpList(args);
+    return x;
+}
+
 CexpApply *newCexpApply(Aexp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply, OBJTYPE_APPLY);
     x->function = function;
@@ -228,6 +235,13 @@ void markAexpList(AexpList *x) {
     markAexp(x->exp);
 }
 
+void markAexpMakeVec(AexpMakeVec *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpList(x->args);
+}
+
 void markCexpApply(CexpApply *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -308,6 +322,9 @@ void markAexp(Aexp *x) {
             break;
         case AEXP_TYPE_PRIM:
             markAexpPrimApp(x->val.prim);
+            break;
+        case AEXP_TYPE_MAKEVEC:
+            markAexpMakeVec(x->val.makeVec);
             break;
         case AEXP_TYPE_UNARY:
             markAexpUnaryApp(x->val.unary);
@@ -422,6 +439,9 @@ void freeExpObj(Header *h) {
         case OBJTYPE_VARLIST:
             FREE(h, AexpVarList);
             break;
+        case OBJTYPE_MAKEVEC:
+            FREE(h, AexpMakeVec);
+            break;
         default:
             cant_happen("unrecognised header type in freeExpObj");
     }
@@ -474,6 +494,9 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_VARLIST:
             markAexpVarList((AexpVarList *) h);
+            break;
+        case OBJTYPE_MAKEVEC:
+            markAexpMakeVec((AexpMakeVec *) h);
             break;
         default:
             cant_happen("unrecognised header type in markExpObj");

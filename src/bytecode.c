@@ -196,6 +196,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXP_PRIM_CONS:
             prim = BYTECODE_PRIM_CONS;
             break;
+        case AEXP_PRIM_VEC:
+            prim = BYTECODE_PRIM_VEC;
+            break;
         default:
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
     }
@@ -207,6 +210,12 @@ void writeAexpList(AexpList *x, ByteCodeArray *b) {
         writeAexp(x->exp, b);
         x = x->next;
     }
+}
+
+void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
+    writeAexpList(x->args, b);
+    addByte(b, BYTECODE_PRIM_MAKEVEC);
+    addByte(b, x->nargs);
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
@@ -298,6 +307,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_UNARY: {
             writeAexpUnaryApp(x->val.unary, b);
+        }
+        break;
+        case AEXP_TYPE_MAKEVEC: {
+            writeAexpMakeVec(x->val.makeVec, b);
         }
         break;
         default:

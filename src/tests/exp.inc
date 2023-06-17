@@ -23,6 +23,45 @@
  * with `indent --linux`
  */
 
+Exp *
+makeTestExpVec() {
+    /* vec.scm */
+    return newExp(EXP_TYPE_LET,
+                  EXP_VAL_LET(newExpLet
+                              (newAexpVar("v"),
+                               newExp(EXP_TYPE_AEXP,
+                                      EXP_VAL_AEXP(newAexp
+                                                   (AEXP_TYPE_MAKEVEC,
+                                                    AEXP_VAL_MAKEVEC
+                                                    (newAexpMakeVec
+                                                     (newAexpList
+                                                      (newAexpList
+                                                       (newAexpList
+                                                        (NULL,
+                                                         newAexp
+                                                         (AEXP_TYPE_INT,
+                                                          AEXP_VAL_INT(3))),
+                                                        newAexp(AEXP_TYPE_INT,
+                                                                AEXP_VAL_INT
+                                                                (2))),
+                                                       newAexp(AEXP_TYPE_INT,
+                                                               AEXP_VAL_INT
+                                                               (1)))))))),
+                               newExp(EXP_TYPE_AEXP,
+                                      EXP_VAL_AEXP(newAexp
+                                                   (AEXP_TYPE_PRIM,
+                                                    AEXP_VAL_PRIM
+                                                    (newAexpPrimApp
+                                                     (AEXP_PRIM_VEC,
+                                                      newAexp(AEXP_TYPE_INT,
+                                                              AEXP_VAL_INT
+                                                              (1)),
+                                                      newAexp(AEXP_TYPE_VAR,
+                                                              AEXP_VAL_VAR
+                                                              (newAexpVar
+                                                               ("v")))))))))));
+}
+
 Exp *makeTestExpAmb()
 {
 	/* back.scm */
@@ -3397,6 +3436,8 @@ int main(int argc, char *argv[]) {
     int depth = 4;
     if (argc == 2) depth = atoi(argv[1]);
 
+    RUN_EXP(makeTestExpVec());
+    /*
     RUN_EXP(makeTestExpFib(depth));
     RUN_EXP(makeTestExpCons());
     RUN_EXP(makeTestExpXor());
@@ -3411,6 +3452,7 @@ int main(int argc, char *argv[]) {
     RUN_EXP(makeTestExpOneOf());
     RUN_EXP(makeTestExpExclude());
     RUN_EXP(makeTestExpBeer());
+    */
 }
 
 /* vi: ft=c */

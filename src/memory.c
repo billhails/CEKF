@@ -90,6 +90,8 @@ const char *typeName(ObjType type) {
             return "kont";
         case OBJTYPE_CONS:
             return "cons";
+        case OBJTYPE_VEC:
+            return "vec";
         case OBJTYPE_VALUELIST:
             return "valuelist";
         case OBJTYPE_HASHTABLE:
@@ -226,6 +228,7 @@ void markObj(Header *h) {
         case OBJTYPE_PRIMAPP:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
+        case OBJTYPE_MAKEVEC:
             markExpObj(h);
             break;
         case OBJTYPE_CLO:
@@ -233,6 +236,7 @@ void markObj(Header *h) {
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
         case OBJTYPE_CONS:
+        case OBJTYPE_VEC:
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;
@@ -277,6 +281,7 @@ void freeObj(Header *h) {
         case OBJTYPE_UNARYAPP:
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
+        case OBJTYPE_MAKEVEC:
             freeExpObj(h);
             break;
         case OBJTYPE_CLO:
@@ -284,6 +289,7 @@ void freeObj(Header *h) {
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
         case OBJTYPE_CONS:
+        case OBJTYPE_VEC:
         case OBJTYPE_VALUELIST:
             freeCekfObj(h);
             break;

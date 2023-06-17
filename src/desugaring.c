@@ -80,6 +80,12 @@ static AexpList *desugarAexpList(AexpList *x) {
     return y;
 }
 
+static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
+    DEBUG_DESUGAR(AexpMakeVec, x);
+    x->args = desugarAexpList(x->args);
+    return x;
+}
+
 static CexpApply *desugarCexpApply(CexpApply *x) {
     DEBUG_DESUGAR(CexpApply, x);
     x->function = desugarAexp(x->function);
@@ -268,10 +274,13 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_UNARY:
             x->val.unary = desugarAexpUnaryApp(x->val.unary);
             break;
+        case AEXP_TYPE_MAKEVEC:
+            x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
+            break;
         case AEXP_TYPE_LIST:
             return listToCons(x->val.list);
         default:
-            cant_happen("unrecognized type in desugarAexp");
+            cant_happen("unrecognized type %d in desugarAexp", x->type);
     }
     return x;
 }
@@ -300,7 +309,7 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_BACK:
             break;
         default:
-            cant_happen("unrecognized type in desugarCexp");
+            cant_happen("unrecognized type %d in desugarCexp", x->type);
     }
     return x;
 }
@@ -324,7 +333,7 @@ Exp *desugarExp(Exp *x) {
         case EXP_TYPE_DONE:
             break;
         default:
-            cant_happen("unrecognized type in desugarAexp");
+            cant_happen("unrecognized type %d in desugarExp", x->type);
     }
     return x;
 }

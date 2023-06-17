@@ -74,6 +74,7 @@ typedef enum {
     AEXP_PRIM_GE,
     AEXP_PRIM_LE,
     AEXP_PRIM_CONS,
+    AEXP_PRIM_VEC,
     AEXP_PRIM_XOR,
 } AexpPrimOp;
 
@@ -109,6 +110,12 @@ typedef struct CexpApply {
     int nargs;
     struct AexpList *args;
 } CexpApply;
+
+typedef struct AexpMakeVec {
+    Header header;
+    int nargs;
+    struct AexpList *args;
+} AexpMakeVec;
 
 typedef struct CexpCond {
     Header header;
@@ -167,6 +174,7 @@ typedef enum {
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
     AEXP_TYPE_LIST,
+    AEXP_TYPE_MAKEVEC,
 } AexpType;
 
 typedef union {
@@ -178,6 +186,7 @@ typedef union {
     struct AexpPrimApp *prim;
     struct AexpUnaryApp *unary;
     struct AexpList *list;
+    struct AexpMakeVec *makeVec;
 } AexpVal;
 
 typedef struct Aexp {
@@ -196,6 +205,7 @@ typedef struct Aexp {
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
 #define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
 #define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
+#define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec      = (x)})
 
 typedef enum {
     CEXP_TYPE_APPLY,
@@ -263,6 +273,7 @@ Aexp *newAexp(AexpType type, AexpVal val);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2);
 AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var);
+AexpMakeVec *newAexpMakeVec(AexpList *args);
 HashSymbol *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
@@ -281,6 +292,7 @@ void markAexpList(AexpList *x);
 void markAexpPrimApp(AexpPrimApp *x);
 void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVarList(AexpVarList *x);
+void markAexpMakeVec(AexpMakeVec *x);
 void markCexpAmb(CexpAmb *x);
 void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);

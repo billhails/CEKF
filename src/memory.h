@@ -44,6 +44,7 @@ typedef enum {
     OBJTYPE_UNARYAPP,
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
+    OBJTYPE_MAKEVEC,
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,
@@ -51,6 +52,7 @@ typedef enum {
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
     OBJTYPE_CONS,
+    OBJTYPE_VEC,
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
@@ -90,8 +92,12 @@ bool disableGC();
 
 #define EXIT_OOM 2
 
+#define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
+#define FREE_VEC(vec) ((void)reallocate(vec, sizeof(vec) + vec->size * sizeof(Value), 0))
+
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
+
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
 #define GROW_ARRAY(type, array, oldcount, newcount) ((type *)reallocate(array, sizeof(type) * (oldcount), sizeof(type) * (newcount)))

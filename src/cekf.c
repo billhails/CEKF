@@ -102,6 +102,15 @@ Cons *newCons(Value car, Value cdr) {
     return x;
 }
 
+Vec *newVec(int size) {
+    Vec *x = NEW_VEC(size);
+    x->size = size;
+    for (int i = 0; i < size; i++) {
+        x->values[i] = vVoid;
+    }
+    return x;
+}
+
 void markValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
@@ -172,6 +181,15 @@ void markCons(Cons *x) {
     markValue(x->cdr);
 }
 
+void markVec(Vec *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    for (int i = 0; i < x->size; i++) {
+        markValue(x->values[i]);
+    }
+}
+
 void markFail(Fail *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -211,6 +229,10 @@ void freeCekfObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_CONS:
             reallocate((void *)h, sizeof(Cons), 0);
+            break;
+        case OBJTYPE_VEC:
+            Vec *vec = (Vec *)h;
+            FREE_VEC(vec);
             break;
         case OBJTYPE_CLO:
             reallocate((void *)h, sizeof(Clo), 0);

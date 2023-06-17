@@ -180,6 +180,13 @@ static void analizeExpLet(ExpLet *x, CTEnv *env) {
     UNPROTECT(save);
 }
 
+static void analizeAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    printf("analizeAexpMakeVec "); printAexpMakeVec(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    analizeAexpList(x->args, env);
+}
+
 static void analizeAexp(Aexp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     printf("analizeAexp "); printAexp(x); printf("  "); printCTEnv(env); printf("\n");
@@ -205,6 +212,9 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
             break;
         case AEXP_TYPE_UNARY:
             analizeAexpUnaryApp(x->val.unary, env);
+            break;
+        case AEXP_TYPE_MAKEVEC:
+            analizeAexpMakeVec(x->val.makeVec, env);
             break;
         default:
             cant_happen("unrecognized type in analizeAexp");

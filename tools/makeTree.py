@@ -185,6 +185,8 @@ class AexpPrimApp(AexpBase):
                 return "AEXP_PRIM_NE"
             case 'cons':
                 return "AEXP_PRIM_CONS"
+            case 'vec':
+                return "AEXP_PRIM_VEC"
             case 'xor':
                 return "AEXP_PRIM_XOR"
 
@@ -267,6 +269,27 @@ class AexpMakeList(AexpBase):
         else:
             return "AEXP_VAL_LIST(" + self.lst.makeC() + ")"
 
+class AexpMakeVec(AexpBase):
+    def __init__(self, lst):
+        self.lst = lst
+
+    def __str__(self):
+        if self.lst is None:
+            return "(make-vec)"
+        else:
+            return "(make-vec " + self.lst.inner_str() + ")"
+
+    def expCType(self):
+        return "AEXP_TYPE_MAKEVEC"
+
+    def makeC(self):
+        rest = "NULL"
+        if self.lst is not None:
+            rest = self.lst.makeC()
+        return "newAexpMakeVec(" + rest + ")";
+
+    def expCVal(self):
+        return "AEXP_VAL_MAKEVEC(" + self.makeC() + ")"
 
 class CexpApply(CexpBase):
     def __init__(self, function, args):
@@ -519,6 +542,7 @@ class Token:
     UNARY = 15
     BOOL = 16
     LIST = 17
+    MAKEVEC = 18
 
     def __init__(self, kind, val, line):
         self.kind = kind
@@ -594,6 +618,8 @@ class Lexer:
                                         yield Token(Token.LET, res, line_number)
                                     case 'call/cc':
                                         yield Token(Token.CALLCC, res, line_number)
+                                    case 'make-vec':
+                                        yield Token(Token.MAKEVEC, res, line_number)
                                     case '+':
                                         yield Token(Token.PRIM, res, line_number)
                                     case '-':
@@ -621,6 +647,8 @@ class Lexer:
                                     case 'or':
                                         yield Token(Token.BOOL, res, line_number)
                                     case 'cons':
+                                        yield Token(Token.PRIM, res, line_number)
+                                    case 'vec':
                                         yield Token(Token.PRIM, res, line_number)
                                     case 'car':
                                         yield Token(Token.UNARY, res, line_number)
@@ -769,6 +797,11 @@ def parse_callcc(tokens):
     exp = parse_aexp(tokens)
     return Cexp(CexpCallCC(exp))
 
+def parse_makevec(tokens):
+    print("parse_makevec", str(tokens.peek()))
+    args = parse_aexp_list(tokens)
+    return Aexp(AexpMakeVec(args))
+
 def parse_primapp(token, tokens):
     print("parse_primapp", str(tokens.peek()))
     exp1 = parse_aexp(tokens)
@@ -811,6 +844,8 @@ def parse_list(tokens):
             return parse_let(tokens)
         case Token.CALLCC:
             return parse_callcc(tokens)
+        case Token.MAKEVEC:
+            return parse_makevec(tokens)
         case Token.PRIM:
             return parse_primapp(token, tokens)
         case Token.UNARY:

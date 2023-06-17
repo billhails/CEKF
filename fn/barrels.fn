@@ -37,7 +37,7 @@ let
         (h @ t) { h + sum(t) }
     }
 
-    fn barrels_of_fun() {
+    fn barrels_of_fun(x) {
         let
             barrels = [30, 32, 36, 38, 40, 62];
             beer = one_of(barrels);
@@ -52,4 +52,4 @@ let
 
 in
 
-    barrels_of_fun()
+    barrels_of_fun

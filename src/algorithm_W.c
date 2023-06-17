@@ -40,9 +40,18 @@ static void addVars(TinContext *context, AstArgList *args);
 static int idSource = 0;
 
 static void enter(char *name, int id, int depth) {
+    bool newline = true;
+    if (depth < 0) {
+        newline = false;
+        depth = -depth;
+    }
     int pad = depth * 4 - 8;
     if (pad < 0) pad = 0;
-    printf("[%03d]>>>%*s%s\n", id, pad, "", name);
+    printf("[%03d]>>>%*s%s", id, pad, "", name);
+    if (newline)
+        printf("\n");
+    else
+        printf(" ");
 }
 
 static void leave(char *name, int id, int depth) {
@@ -433,7 +442,7 @@ static WResult *stringResult() {
 static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
-    enter("WSymbol", myId, depth);
+    enter("WSymbol", myId, -depth);
     printHashSymbol(symbol);
     printf("\n");
     printTinContext(context, depth + 1);
@@ -454,7 +463,7 @@ static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WSymbol", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth+ 1);
     printf("\n");
 #endif
     return result;
@@ -464,7 +473,7 @@ static WResult *WCond(TinContext *context, AstConditional *cond, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WCond", myId, depth);
-    printAstConditional(cond, depth);
+    printAstConditional(cond, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -502,7 +511,7 @@ static WResult *WCond(TinContext *context, AstConditional *cond, int depth) {
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WCond", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -536,13 +545,26 @@ static AstArg *nthArg(int n, AstArgList *args) {
 static WResult *WApplicationRec(TinContext *context, AstFunCall *funCall, int nargs, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
-    enter("WapplicationRec", myId, depth);
-    printAstFunCall(funCall, depth);
+    enter("WapplicationRec", myId, -depth);
+    printf("%d\n", nargs);
+    if (nargs == 0) {
+        printAstExpression(funCall->function, depth + 1);
+    } else {
+        printAstExpression(nthExpression(nargs, funCall->arguments), depth + 1);
+    }
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
 #endif
-    if (nargs == 0) return WExpression(context, funCall->function, depth + 1);
+    if (nargs == 0) {
+        WResult *result = WExpression(context, funCall->function, depth + 1);
+#ifdef DEBUG_ALGORITHM_W
+        leave("WApplicatonRec", myId, depth);
+        printWResult(result, depth + 1);
+        printf("\n");
+#endif
+        return result;
+    }
     WResult *Rn_1 = WApplicationRec(context, funCall, nargs - 1, depth);
     int save = PROTECT(Rn_1);
     TinContext *Cn_1 = applyContextSubstitution(Rn_1->substitution, context);
@@ -568,7 +590,7 @@ static WResult *WApplicationRec(TinContext *context, AstFunCall *funCall, int na
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WApplicatonRec", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -577,13 +599,27 @@ static WResult *WApplicationRec(TinContext *context, AstFunCall *funCall, int na
 static WResult *WUnpackRec(TinContext *context, AstUnpack *unpack, int nargs, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
-    enter("WUnpackRec", myId, depth);
-    printAstUnpack(unpack, depth);
+    enter("WUnpackRec", myId, -depth);
+    printf("%d\n", nargs);
+    if (nargs == 0) {
+        printf("%*s", (depth + 1) * 4, "");
+        printHashSymbol(unpack->symbol);
+    } else {
+        printAstArg(nthArg(nargs, unpack->argList), depth + 1);
+    }
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
 #endif
-    if (nargs == 0) return WSymbol(context, unpack->symbol, depth + 1);
+    if (nargs == 0) {
+        WResult *result = WSymbol(context, unpack->symbol, depth + 1);
+#ifdef DEBUG_ALGORITHM_W
+        leave("WUnpackRec", myId, depth);
+        printWResult(result, depth + 1);
+        printf("\n");
+#endif
+        return result;
+    }
     WResult *Rn_1 = WUnpackRec(context, unpack, nargs - 1, depth);
     int save = PROTECT(Rn_1);
     TinContext *Cn_1 = applyContextSubstitution(Rn_1->substitution, context);
@@ -609,7 +645,7 @@ static WResult *WUnpackRec(TinContext *context, AstUnpack *unpack, int nargs, in
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WUnpackRec", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -619,7 +655,7 @@ static WResult *WApplication(TinContext *context, AstFunCall *funCall, int depth
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WApplication", myId, depth);
-    printAstFunCall(funCall, depth);
+    printAstFunCall(funCall, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -628,7 +664,7 @@ static WResult *WApplication(TinContext *context, AstFunCall *funCall, int depth
     WResult *result = WApplicationRec(context, funCall, nargs, depth);
 #ifdef DEBUG_ALGORITHM_W
     leave("WApplication", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -647,7 +683,7 @@ static WResult *WUnpack(TinContext *context, AstUnpack *unpack, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WUnpack", myId, depth);
-    printAstUnpack(unpack, depth);
+    printAstUnpack(unpack, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -656,7 +692,7 @@ static WResult *WUnpack(TinContext *context, AstUnpack *unpack, int depth) {
     WResult *result = WUnpackRec(context, unpack, nargs, depth);
 #ifdef DEBUG_ALGORITHM_W
     leave("WUnpack", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -697,7 +733,7 @@ static WResult *WFarg(TinContext *context, AstArg *arg, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WFarg", myId, depth);
-    printAstArg(arg, depth);
+    printAstArg(arg, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -705,7 +741,7 @@ static WResult *WFarg(TinContext *context, AstArg *arg, int depth) {
     WResult *result = WFarg_d(context, arg, depth);
 #ifdef DEBUG_ALGORITHM_W
     leave("WFarg", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -805,7 +841,7 @@ static WResult *WFunction(TinContext *context, AstFunction *fun, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WFunction", myId, depth);
-    printAstFunction(fun, depth);
+    printAstFunction(fun, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -826,7 +862,7 @@ static WResult *WFunction(TinContext *context, AstFunction *fun, int depth) {
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WFunction", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -839,7 +875,7 @@ static WResult *WAbstraction(TinContext *context, AstCompositeFunction *fun, int
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WAbstraction", myId, depth);
-    printAstCompositeFunction(fun, depth);
+    printAstCompositeFunction(fun, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -848,7 +884,7 @@ static WResult *WAbstraction(TinContext *context, AstCompositeFunction *fun, int
         WResult *result = WFunction(context, fun->function, depth + 1);
 #ifdef DEBUG_ALGORITHM_W
         leave("WAbstraction", myId, depth);
-        printWResult(result, depth);
+        printWResult(result, depth + 1);
         printf("\n");
 #endif
         return result;
@@ -867,7 +903,7 @@ static WResult *WAbstraction(TinContext *context, AstCompositeFunction *fun, int
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WAbstraction", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -909,7 +945,7 @@ static WResult *WExpression(TinContext *context, AstExpression *expr, int depth)
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WExpression", myId, depth);
-    printAstExpression(expr, depth);
+    printAstExpression(expr, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -917,7 +953,7 @@ static WResult *WExpression(TinContext *context, AstExpression *expr, int depth)
     WResult *result = WExpression_d(context, expr, depth);
 #ifdef DEBUG_ALGORITHM_W
     leave("WExpression", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -980,7 +1016,7 @@ static WResult *WNest(TinContext *context, AstNest *nest, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
     enter("WNest", myId, depth);
-    printAstNest(nest, depth);
+    printAstNest(nest, depth + 1);
     printf("\n");
     printTinContext(context, depth + 1);
     printf("\n");
@@ -1006,7 +1042,7 @@ static WResult *WNest(TinContext *context, AstNest *nest, int depth) {
     UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WNest", myId, depth);
-    printWResult(result, depth);
+    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -1060,6 +1096,15 @@ static void addThen(TinContext *context) {
     int save = PROTECT(fresh);
     HashSymbol *then = newSymbol("then");
     addBinOp(context, then, fresh, fresh, fresh);
+    UNPROTECT(save);
+}
+
+static void addBack(TinContext *context) {
+    // #a
+    TinMonoType *fresh = freshMonoTypeVar("back");
+    int save = PROTECT(fresh);
+    HashSymbol *back = newSymbol("back");
+    generalizeMonoTypeToContext(context, back, fresh);
     UNPROTECT(save);
 }
 
@@ -1197,5 +1242,6 @@ WResult *WTop(AstNest *nest) {
     addHere(context);
     addIf(context);
     addNil(context);
+    addBack(context);
     return WNest(context, nest, 0);
 }

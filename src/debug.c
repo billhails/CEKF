@@ -29,6 +29,7 @@ static void printFail(Fail *x, int depth);
 static void printKont(Kont *x, int depth);
 static void printStack(Stack *x, int depth);
 static void printCons(Cons *x);
+static void printVec(Vec *x);
 
 static void printPad(int depth) {
     printf("%*s", depth * 4, "");
@@ -61,6 +62,10 @@ void printContainedValue(Value x, int depth) {
         case VALUE_TYPE_CONS:
             printPad(depth);
             printCons(x.val.cons);
+            break;
+        case VALUE_TYPE_VEC:
+            printPad(depth);
+            printVec(x.val.vec);
             break;
         default:
             cant_happen("unrecognised value type in printContainedValue");
@@ -131,6 +136,17 @@ void printCons(Cons *x) {
     printf(")");
 }
 
+void printVec(Vec *x) {
+    printf("#[");
+    for (int i = 0; i < x->size; i++) {
+        printContainedValue(x->values[i], 0);
+        if (i + 1 < x->size) {
+            printf(" ");
+        }
+    }
+    printf("]");
+}
+
 void printElidedValue(Value x) {
     printf("V[");
     switch (x.type) {
@@ -148,6 +164,9 @@ void printElidedValue(Value x) {
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);
+            break;
+        case VALUE_TYPE_VEC:
+            printVec(x.val.vec);
             break;
         case VALUE_TYPE_CLO:
             printElidedClo(x.val.clo);
@@ -386,6 +405,9 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_CONS:
             printf("cons ");
             break;
+        case AEXP_PRIM_VEC:
+            printf("vec ");
+            break;
         default:
             cant_happen("unrecognized op in printAexpPrimApp (%d)", x->op);
     }
@@ -419,8 +441,7 @@ void printAexpUnaryApp(AexpUnaryApp *x) {
     printf(")");
 }
 
-void printAexpList(AexpList *x) {
-    printf("(");
+static void printAexpListContents(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
@@ -428,18 +449,23 @@ void printAexpList(AexpList *x) {
         }
         x = x->next;
     }
+}
+
+void printAexpList(AexpList *x) {
+    printf("(");
+    printAexpListContents(x);
     printf(")");
 }
 
 void printAexpMakeList(AexpList *x) {
     printf("(list ");
-    while (x != NULL) {
-        printAexp(x->exp);
-        if (x->next) {
-            printf(" ");
-        }
-        x = x->next;
-    }
+    printAexpListContents(x);
+    printf(")");
+}
+
+void printAexpMakeVec(AexpMakeVec *x) {
+    printf("(make-vec ");
+    printAexpListContents(x->args);
     printf(")");
 }
 
@@ -553,6 +579,9 @@ void printAexp(Aexp *x) {
             break;
         case AEXP_TYPE_LIST:
             printAexpMakeList(x->val.list);
+            break;
+        case AEXP_TYPE_MAKEVEC:
+            printAexpMakeVec(x->val.makeVec);
             break;
         default:
             cant_happen("unrecognised aexp %d in printAexp", x->type);
@@ -736,6 +765,16 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_PRINT: {
                 printf("%04d ### PRINT\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_MAKEVEC: {
+                printf("%04d ### MAKEVEC [%d]\n", i, b->entries[i + 1]);
+                i += 2;
+            }
+            break;
+            case BYTECODE_PRIM_VEC: {
+                printf("%04d ### VEC\n", i);
                 i++;
             }
             break;
