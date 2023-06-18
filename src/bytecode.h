@@ -46,6 +46,7 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_VEC,
     BYTECODE_PRIM_NOT,
     BYTECODE_PRIM_PRINT,
+    BYTECODE_MATCH,
     BYTECODE_APPLY,
     BYTECODE_IF,
     BYTECODE_LETREC,
@@ -61,7 +62,6 @@ typedef enum ByteCodes {
     BYTECODE_JMP,
     BYTECODE_PUSHN,
     BYTECODE_DONE,
-
 } ByteCodes;
 
 typedef struct ByteCodeArray {
@@ -83,6 +83,7 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);
 void writeAexpList(AexpList *x, ByteCodeArray *b);
 void writeCexpApply(CexpApply *x, ByteCodeArray *b);
 void writeCexpCond(CexpCond *x, ByteCodeArray *b);
+void writeCexpMatch(CexpMatch *x, ByteCodeArray *b);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b);

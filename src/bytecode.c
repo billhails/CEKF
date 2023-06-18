@@ -17,6 +17,7 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "bytecode.h"
 
@@ -243,6 +244,73 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
     writeExp(x->body, b);
 }
 
+static AexpInteger validateMatchIndex(Aexp *index) {
+    if (index->type != AEXP_TYPE_INT) {
+        cant_happen("match index must be literal integer");
+    }
+    AexpInteger i = index->val.integer;
+    if (i < 0 || i > 255) {
+        cant_happen("match index must be in the range 0-255");
+    }
+    return i;
+}
+
+static int validateCexpMatch(CexpMatch *x) {
+    bool seen[256];
+    for (int i = 0; i < 256; ++i) {
+        seen[i] = false;
+    }
+    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+        for (AexpList *matches = m->matches; matches != NULL; matches = matches->next) {
+            AexpInteger index = validateMatchIndex(matches->exp);
+            if (seen[index]) {
+                cant_happen("duplicate index %d in validateCexpMatch", index);
+            }
+            seen[index] = true;
+        }
+    }
+    bool end = false;
+    int count = 0;
+    for (int i = 0; i < 256; ++i) {
+        if (seen[i]) {
+            if (end)
+                cant_happen("non-contiguous match indices in validateCexpMatch");
+            else
+                count = i + 1;
+        } else {
+            end = true;
+        }
+    }
+    if (count == 0)
+        cant_happen("empty match indices in validateCexpMatch");
+    return count;
+}
+
+void writeCexpMatch(CexpMatch *x, ByteCodeArray *b) {
+    int count = validateCexpMatch(x);
+    writeAexp(x->condition, b);
+    addByte(b, BYTECODE_MATCH);
+    // create a dispatch table
+    addByte(b, count);
+    int patches[256];
+    int jumps[256];
+    for (int i = 0; i < count; ++i) {
+        patches[i] = reserveWord(b);
+    }
+    int jumpCounter = 0;
+    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+        for (AexpList *l = m->matches; l != NULL; l = l->next) {
+            AexpInteger i = l->exp->val.integer;
+            writeCurrentAddressAt(patches[i], b);
+        }
+        writeExp(m->body, b);
+        addByte(b, BYTECODE_JMP);
+        jumps[jumpCounter++] = reserveWord(b);
+    }
+    for (int i = 0; i < jumpCounter; i++)
+        writeCurrentAddressAt(jumps[i], b);
+}
+
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
     while (x != NULL) {
         writeAexp(x->val, b);
@@ -326,6 +394,10 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         break;
         case CEXP_TYPE_COND: {
             writeCexpCond(x->val.cond, b);
+        }
+        break;
+        case CEXP_TYPE_MATCH: {
+            writeCexpMatch(x->val.match, b);
         }
         break;
         case CEXP_TYPE_CALLCC: {

@@ -548,6 +548,27 @@ void printCexpBool(CexpBool *x) {
     printf(")");
 }
 
+void printMatchList(MatchList *x) {
+    if (x == NULL) return;
+    printf("(");
+    printAexpList(x->matches);
+    printf(" ");
+    printExp(x->body);
+    printf(")");
+    if (x->next != NULL) {
+        printf(" ");
+        printMatchList(x->next);
+    }
+}
+
+void printCexpMatch(CexpMatch *x) {
+    printf("(match ");
+    printAexp(x->condition);
+    printf(" ");
+    printMatchList(x->clauses);
+    printf(")");
+}
+
 void printAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
@@ -609,6 +630,9 @@ void printCexp(Cexp *x) {
             break;
         case CEXP_TYPE_BOOL:
             printCexpBool(x->val.boolean);
+            break;
+        case CEXP_TYPE_MATCH:
+            printCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BACK:
             printf("(back)");
@@ -786,6 +810,18 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_IF: {
                 printf("%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
+            }
+            break;
+            case BYTECODE_MATCH: {
+                int count = b->entries[i + 1];
+                printf("%04d ### MATCH [%d]", i, count);
+                i += 2;
+                while (count > 0) {
+                    printf("[%d]", offsetAt(b, i));
+                    count--;
+                    i += 2;
+                }
+                printf("\n");
             }
             break;
             case BYTECODE_LETREC: {

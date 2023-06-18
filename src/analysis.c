@@ -221,6 +221,24 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
     }
 }
 
+static void analizeMatchList(MatchList *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    printf("analizeMatchList "); printMatchList(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    if (x == NULL) return;
+    analizeAexpList(x->matches, env);
+    analizeExp(x->body, env);
+    analizeMatchList(x->next, env);
+}
+
+static void analizeCexpMatch(CexpMatch *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    printf("analizeCexpMatch "); printCexpMatch(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    analizeAexp(x->condition, env);
+    analizeMatchList(x->clauses, env);
+}
+
 static void analizeCexp(Cexp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     printf("analizeCexp "); printCexp(x); printf("  "); printCTEnv(env); printf("\n");
@@ -240,6 +258,9 @@ static void analizeCexp(Cexp *x, CTEnv *env) {
             break;
         case CEXP_TYPE_AMB:
             analizeCexpAmb(x->val.amb, env);
+            break;
+        case CEXP_TYPE_MATCH:
+            analizeCexpMatch(x->val.match, env);
             break;
         case CEXP_TYPE_BACK:
             break;
@@ -270,7 +291,7 @@ void analizeExp(Exp *x, CTEnv *env) {
         case EXP_TYPE_DONE:
             break;
         default:
-            cant_happen("unrecognized type in analizeAexp");
+            cant_happen("unrecognized type in analizeExp");
     }
     if (save != -1) {
         UNPROTECT(save);

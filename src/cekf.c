@@ -127,6 +127,9 @@ void markValue(Value x) {
         case VALUE_TYPE_CONS:
             markCons(x.val.cons);
             break;
+        case VALUE_TYPE_VEC:
+            markVec(x.val.vec);
+            break;
         default:
             cant_happen("unrecognised type in markValue (%d)", x.type);
     }

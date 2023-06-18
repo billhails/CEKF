@@ -45,6 +45,8 @@ typedef enum {
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
     OBJTYPE_MAKEVEC,
+    OBJTYPE_MATCH,
+    OBJTYPE_MATCHLIST,
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,

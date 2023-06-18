@@ -331,6 +331,43 @@ class CexpCond(CexpBase):
         return "CEXP_VAL_COND(" + self.makeC() + ")"
 
 
+class CexpMatch(CexpBase):
+    def __init__(self, condition, clauses):
+        self.condition = condition
+        self.clauses = clauses
+
+    def __str__(self):
+        return "(match " + str(self.condition) + " " + str(self.clauses) + ")"
+
+    def makeC(self):
+        return "newCexpMatch(" + self.condition.makeC() + "," + self.clauses.makeC() + ")"
+
+    def expCType(self):
+        return "CEXP_TYPE_MATCH"
+
+    def expCVal(self):
+        return "CEXP_VAL_MATCH(" + self.makeC() + ")"
+
+
+class MatchList:
+    def __init__(self, matches, body, rest):
+        self.matches = matches
+        self.body = body
+        self.rest = rest
+
+    def __str__(self):
+        rest = ""
+        if self.rest is not None:
+            rest = " " + str(self.rest)
+        return "(" + str(self.matches) + " " + str(self.body) + ")" + rest
+
+    def makeC(self):
+        rest = "NULL"
+        if self.rest is not None:
+            rest = self.rest.makeC()
+        return "newMatchList(" + self.matches.makeC() + "," + self.body.makeC() + "," + rest + ")"
+
+
 class CexpLetRec(CexpBase):
     def __init__(self, bindings, body):
         self.bindings = bindings
@@ -543,6 +580,7 @@ class Token:
     BOOL = 16
     LIST = 17
     MAKEVEC = 18
+    MATCH = 19
 
     def __init__(self, kind, val, line):
         self.kind = kind
@@ -620,6 +658,8 @@ class Lexer:
                                         yield Token(Token.CALLCC, res, line_number)
                                     case 'make-vec':
                                         yield Token(Token.MAKEVEC, res, line_number)
+                                    case 'match':
+                                        yield Token(Token.MATCH, res, line_number)
                                     case '+':
                                         yield Token(Token.PRIM, res, line_number)
                                     case '-':
@@ -674,6 +714,9 @@ class Lexer:
 
 def parse_aexp_list_expression(tokens):
     print("parse_aexp_list_expression", str(tokens.peek()))
+    if tokens.peek().kind == Token.MAKEVEC:
+        tokens.next()
+        return parse_makevec(tokens)
     if tokens.peek().kind == Token.PRIM:
         return parse_primapp(tokens.next(), tokens)
     if tokens.peek().kind == Token.UNARY:
@@ -824,6 +867,40 @@ def parse_make_list(tokens):
     lst = parse_aexp_list(tokens)
     return Aexp(AexpMakeList(lst))
 
+def parse_match_list(tokens):
+    print("parse_match_list", str(tokens.peek()))
+    if tokens.peek().val == ")":
+        return None
+
+    token = tokens.next()
+    if token.val != '(':
+        raise Exception("expected '(' in parse_match_list, got " + token.val)
+
+    token = tokens.next()
+    if token.val != '(':
+        raise Exception("expected '((' in parse_match_list, got " + token.val)
+
+    matches = parse_aexp_list(tokens)
+
+    token = tokens.next()
+    if token.val != ')':
+        raise Exception("expected ')' after matches in parse_match_list")
+
+    body = parse_exp(tokens)
+
+    token = tokens.next()
+    if token.val != ')':
+        raise Exception("expected ')' after body in parse_match_list")
+
+    rest = parse_match_list(tokens)
+    return MatchList(matches, body, rest)
+
+def parse_match(tokens):
+    print("parse_match", str(tokens.peek()))
+    condition = parse_aexp(tokens)
+    clauses = parse_match_list(tokens)
+    return Cexp(CexpMatch(condition, clauses))
+
 def parse_list(tokens):
     print("parse_list", str(tokens.peek()))
     token = tokens.next()
@@ -863,6 +940,8 @@ def parse_list(tokens):
             return parse_apply(tokens)
         case Token.LIST:
             return parse_make_list(tokens)
+        case Token.MATCH:
+            return parse_match(tokens)
         case Token.CLOSE:
             raise Exception("unexpected closing brace in parse_list");
 

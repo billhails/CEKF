@@ -229,6 +229,8 @@ void markObj(Header *h) {
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
         case OBJTYPE_MAKEVEC:
+        case OBJTYPE_MATCH:
+        case OBJTYPE_MATCHLIST:
             markExpObj(h);
             break;
         case OBJTYPE_CLO:
@@ -282,6 +284,8 @@ void freeObj(Header *h) {
         case OBJTYPE_ANNOTATEDVAR:
         case OBJTYPE_VARLIST:
         case OBJTYPE_MAKEVEC:
+        case OBJTYPE_MATCH:
+        case OBJTYPE_MATCHLIST:
             freeExpObj(h);
             break;
         case OBJTYPE_CLO:

@@ -588,6 +588,24 @@ static void step() {
                 }
             }
             break;
+            case BYTECODE_MATCH: { // pop the dispach code, verify it's an integer and in range, and dispatch
+                int size = byteAt(1);
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### MATCH [%d]", ++count, state.C, byteAt(1));
+                for (int c = 0; c < size; c++) {
+                    printf("[%d]", offsetAt(2 + c * 2));
+                }
+                printf("\n");
+#endif
+                Value v = pop();
+                if (v.type != VALUE_TYPE_INTEGER)
+                    cant_happen("match expression must be an integer");
+                if (v.val.z < 0 || v.val.z >= size)
+                    cant_happen("match expression index out of range (%d)", v.val.z);
+                state.C = offsetAt(2 + v.val.z * 2);
+            }
+            break;
             case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame
 #ifdef DEBUG_STEP
                 printCEKF(&state);

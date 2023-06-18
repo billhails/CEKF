@@ -37,6 +37,8 @@ void printCexpAmb(CexpAmb *x);
 void printCexpApply(CexpApply *x);
 void printCexpBool(CexpBool *x);
 void printCexp(Cexp *x);
+void printCexpMatch(CexpMatch *x);
+void printMatchList(MatchList *x);
 void printCexpCond(CexpCond *x);
 void printCexpLetRec(CexpLetRec *x);
 void printCTEnv(CTEnv *x);

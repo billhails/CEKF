@@ -285,6 +285,22 @@ static Aexp *desugarAexp(Aexp *x) {
     return x;
 }
 
+static MatchList *desugarMatchList(MatchList *x) {
+    DEBUG_DESUGAR(MatchList, x);
+    if (x == NULL) return NULL;
+    x->matches = desugarAexpList(x->matches);
+    x->body = desugarExp(x->body);
+    x->next = desugarMatchList(x->next);
+    return x;
+}
+
+static CexpMatch *desugarCexpMatch(CexpMatch *x) {
+    DEBUG_DESUGAR(CexpMatch, x);
+    x->condition = desugarAexp(x->condition);
+    x->clauses = desugarMatchList(x->clauses);
+    return x;
+}
+
 static Cexp *desugarCexp(Cexp *x) {
     DEBUG_DESUGAR(Cexp, x);
     switch (x->type) {
@@ -302,6 +318,9 @@ static Cexp *desugarCexp(Cexp *x) {
             break;
         case CEXP_TYPE_AMB:
             x->val.amb = desugarCexpAmb(x->val.amb);
+            break;
+        case CEXP_TYPE_MATCH:
+            x->val.match = desugarCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BOOL:
             cant_happen("desugarCexp given CEXP_TYPE_BOOL");

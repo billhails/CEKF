@@ -123,6 +123,21 @@ CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative) {
     return x;
 }
 
+CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses) {
+    CexpMatch *x = NEW(CexpMatch, OBJTYPE_MATCH);
+    x->condition = condition;
+    x->clauses = clauses;
+    return x;
+}
+
+MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next) {
+    MatchList *x = NEW(MatchList, OBJTYPE_MATCHLIST);
+    x->matches = matches;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body) {
     CexpLetRec *x = NEW(CexpLetRec, OBJTYPE_LETREC);
     x->nbindings = countLetRecBindings(bindings);
@@ -259,6 +274,24 @@ void markCexpCond(CexpCond *x) {
     markExp(x->alternative);
 }
 
+void markCexpMatch(CexpMatch *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->condition);
+    markMatchList(x->clauses);
+}
+
+void markMatchList(MatchList *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpList(x->matches);
+    markExp(x->body);
+    markMatchList(x->next);
+}
+
+
 void markCexpLetRec(CexpLetRec *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -360,6 +393,9 @@ void markCexp(Cexp *x) {
         case CEXP_TYPE_BOOL:
             markCexpBool(x->val.boolean);
             break;
+        case CEXP_TYPE_MATCH:
+            markCexpMatch(x->val.match);
+            break;
         case CEXP_TYPE_BACK:
             break;
         default:
@@ -442,6 +478,12 @@ void freeExpObj(Header *h) {
         case OBJTYPE_MAKEVEC:
             FREE(h, AexpMakeVec);
             break;
+        case OBJTYPE_MATCH:
+            FREE(h, CexpMatch);
+            break;
+        case OBJTYPE_MATCHLIST:
+            FREE(h, MatchList);
+            break;
         default:
             cant_happen("unrecognised header type in freeExpObj");
     }
@@ -497,6 +539,12 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_MAKEVEC:
             markAexpMakeVec((AexpMakeVec *) h);
+            break;
+        case OBJTYPE_MATCH:
+            markCexpMatch((CexpMatch *) h);
+            break;
+        case OBJTYPE_MATCHLIST:
+            markMatchList((MatchList *) h);
             break;
         default:
             cant_happen("unrecognised header type in markExpObj");
