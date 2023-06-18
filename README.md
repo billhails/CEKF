@@ -74,11 +74,22 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ```mermaid
 flowchart TD
-source --> AST[Parser] --abstract syntax--> check[Type Checking] --abstract syntax--> lambda[Lambda Conversion] --lambda calculus--> anf[A-Normal Form Conversion] --ANF--> static[Static Analysis] --annotated ANF--> Bytecode[Bytecode Generation] --bytecode--> VM
-scheme --> make_ast[Generate ANF] --ANF--> static
+source -->
+AST[Parser] --abstract syntax-->
+check[Type Checking] --abstract syntax-->
+lambda[Lambda Conversion] --lambda calculus-->
+desugaring1[Desugaring] -- simplified lambda calculus-->
+anf[A-Normal Form Conversion] --ANF-->
+static[Static Analysis] --annotated ANF-->
+Bytecode[Bytecode Generation] --bytecode--> VM
+scheme -->
+make_ast[Generate ANF Python script] --ANF-->
+desugaring2[Desugaring] --ANF-->
+static
 GC[Garbage Collection] --> VM
 VM --> GC
 subgraph done1[Done]
+   desugaring2
    static
    Bytecode
    VM
@@ -89,10 +100,17 @@ subgraph done2[Done]
    check
 end
 subgraph temp[Temporary]
-scheme
-make_ast
+   scheme
+   make_ast
+end
+subgraph WIP
+   lambda
 end
 ```
+
+The desugaring step is probably best done before ANF conversion, then ANF conversion has less to do, but
+for the purposes of testing I have a Python script that directly generates the C structures from
+a Scheme input which is already in ANF, so the desugaring for that is done on the ANF structures.
 
 ## The Math
 
