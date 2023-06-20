@@ -580,15 +580,16 @@ Concrete example
 
 $$
 { 
-  {
+  {\displaystyle
      {\mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool} \in \Gamma}
      \above{1pt}
-     \Gamma \vdash \mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool}
+     \displaystyle \Gamma \vdash \mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool}
   }
   \qquad
-  {
+  {\displaystyle
      {\mathtt{age}: \mathtt{Int} \in \Gamma}
      \above{1pt}
+	 \displaystyle
      \Gamma \vdash \mathtt{age}: \mathtt{Int}
   }
 \above{1pt}
@@ -1208,160 +1209,98 @@ to a fresh type variable. Those variables will be unified with the types of the 
 These are my modifications and additions to the above, to support the F-natural language. In F-natural functions can take multiple
 arguments so the abstraction and application cases will need to change, plus we'll need a case for `if`.
 
-### application*
+### Algorithm W Again
 
-original
-
-$$
-\begin{align*}
-\mathcal{W}(\Gamma, \mathtt{e_1e_2}) &= (S_3S_2S_1, S_3\beta)
-\\
-\textup{where}
-\\
-& S_3 = \mathcal{U}(S_2\tau_1, \tau_2 \rightarrow \beta)
-\\
-&\textup{new }\beta
-\\
-& (S_2, \tau_2) = \mathcal{W}(S_1\Gamma, \mathtt{e_2})
-\\
-&(S_1, \tau_1) = \mathcal{W}(\Gamma, \mathtt{e_1})
-\end{align*}
-$$
-
-becomes
+My changes and additions in $\color{blue}\text{blue}$.
 
 $$
 \begin{align*}
-\mathcal{W}(\Gamma, \mathtt{e_0e_1\dots e_n}) &= (S'S_nS_{n-1}, S'\beta)
+\mathcal{W}\ Context \times Expression &= Substitution \times Type
+\\
+\\
+\mathcal{W}(\Gamma, \mathtt{x}) &= (\set{}, \{\overrightarrow{\mathcal{F}\beta}/\vec{\alpha}\}\tau)
+\\
+\text{where}
+\\
+\Gamma(\mathtt{x}) &= \forall \vec{\alpha}.\tau
+\\
+\\
+\color{blue}
+\mathcal{W}(\Gamma, \lambda \mathtt{x_o\dots x_n}.\mathtt{e}) &\color{blue}= (S_1, (S_1\beta)\rightarrow\tau_1)
+\\
+\color{blue}\text{where}
+\\
+\color{blue}((S_1,\tau_1) &\color{blue}= \mathcal{W}(\Gamma + Vars(\mathtt{x_0}), \lambda \mathtt{x_1\dots x_n}\mathtt{e})
+\\
+\\
+\mathcal{W}(\Gamma, \lambda \mathtt{x}.\mathtt{e}) &=(S_1, (S_1\beta)\rightarrow\tau_1)
+\\
+\text{where}
+\\
+(S_1,\tau_1) &= \mathcal{W}(\Gamma + \textcolor{blue}{Vars(\mathtt{x})}, \mathtt{e})
+\\
+\\
+\color{blue}\mathcal{W}(\Gamma, \mathtt{e_1\dots e_n}) &\color{blue}= (S_3 \circ S_2 \circ S_1, S_3\beta)
+\\
+\color{blue}\text{where}
+\\
+\color{blue}S_3 &\color{blue}= \mathcal{U}(S_2\tau_1,\tau_2\rightarrow\mathcal{F}\beta)
+\\
+\color{blue}(S_2, \tau_2) &\color{blue}= \mathcal{W}(S_1\Gamma, \mathtt{e_n})
+\\
+\color{blue}(S_1, \tau_1) &\color{blue}= \mathcal{W}(\Gamma, \mathtt{e_1\dots e_{n-1}})
+\\
+\\
+\mathcal{W}(\Gamma, \mathtt{e_1\ e_2}) &= (S_3\circ S_2\circ S_1, S_3\beta)
+\\
+\text{where}
+\\
+S_3 &= \mathcal{U}(S_2\tau_1,\tau_2\rightarrow\mathcal{F}\beta)
+\\
+(S_2, \tau_2) &= \mathcal{W}(S_1\Gamma, \mathtt{e_2})
+\\
+(S_1, \tau_1) &= \mathcal{W}(\Gamma, \mathtt{e_1})
+\\
+\\
+\mathcal{W}(\Gamma, \mathtt{let\ x=e_1\ in\ e_2}) &= (S_2\circ S_1, \tau_2)
 \\
 \textup{where}
 \\
-& S' = \mathcal{U}(S_n\tau_{n-1}, \tau_n \rightarrow \beta)
+(S_2, \tau_2) &= \mathcal{W}(S_1\Gamma + \mathtt{x}:\mathcal{G}(S_1\Gamma, \tau_1), \mathtt{e_2})
 \\
-&\textup{new }\beta
-\\
-& (S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \mathtt{e_n})
-\\
-&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, \mathtt{e_0\dots e_{n-1}})
+(S_1, \tau_1) &= \mathcal{W}(\Gamma, \mathtt{e_1})
 \end{align*}
 $$
 
-It's basically the same apart from some variable renaming, except in the first line where $\mathtt{e_0}$ is applied to $\mathtt{e_1\dots e_n}$ arguments, and in the last line, where it recurses on $\mathtt{e_0\dots e_{n-1}}$.
-The terminating condition for rhe recursion where $n$ is zero is $\mathcal{W}(\Gamma, \mathtt{e_0})$ as in the original.
+This all relies on the observations that:
 
-### abstraction*
+$$
+\begin{align}
+\lambda(x_1, x_2).e &= \lambda x_1 .\lambda x_2.e
+\\
+e_1(e_2,e_3) &= (e_1 e_2)e_3
+\end{align}
+$$
 
-This is the difficult bit, firstly functions can take multiple arguments, secondly functions are composite, with altenative arguments and function bodies, and thirdly the formal arguments to a function can be a multitude of things: constants, wildcards, symbols or nested type constructors with embedded symbols.
+(currying), so we can tail recurse on the lambda arguments and left-recurse on function application.
 
-Let's deal with the three changes separately. First multiple arguments, assuming the formal arguments are all just symbols.
-
-The original
+We need an ancilliary definition of $Vars$ to determine the bindings of arguments, but it's pretty simple:
 
 $$
 \begin{align*}
-\mathcal{W(\Gamma, \lambda\mathtt{x}.\mathtt{e})} &= (S_1, S_1(\beta \rightarrow \tau_1))
+Vars\ Expression^* &= Context
 \\
-\textup{where}
+Vars(\mathtt{x}) &= \set{ \mathtt{x} : \mathcal{F}\beta }
 \\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma + \mathtt{x}:\beta, \mathtt{e})
+Vars(\mathtt{x()}) &= \set{}
 \\
-&\textup{new }\beta
+Vars(\mathtt{x_0\dots x_n}) &= Vars(\mathtt{x_n}) + Vars(\mathtt{x_0\dots x_{n-1}})
+\\
+Vars(\mathtt{x(x_0\dots x_n)}) &= Vars(\mathtt{x_0\dots x_n})
 \end{align*}
 $$
 
-becomes
-
-$$
-\begin{align*}
-\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
-\\
-\textup{where}
-\\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma + \overrightarrow{\mathtt{x}:\beta}, \mathtt{e})
-\\
-&\textup{new }\vec\beta
-\end{align*}
-$$
-
-So far so good, we take a vector of arguments $\mathtt{\vec{x}}$, bind each to a fresh $\beta$ in the function body while typechecking that, and output a substitution over the chained function call.
-
-Secondly the top-level of a function definition is composite, We can have separate cases for that
-
-$$
-\begin{align*}
-\mathcal{W}(\Gamma, (\lambda_1,\dots\lambda_n)) &= (S, S(\tau_n))
-\\
-\textup{where}
-\\
-&S = \mathcal{U}(\tau_n, \tau_{n-1})
-\\
-&(S_n, \tau_n) = \mathcal{W}(S_{n-1}\Gamma, \lambda_n)
-\\
-&(S_{n-1}, \tau_{n-1}) = \mathcal{W}(\Gamma, (\lambda_1,\dots\lambda_{n-1}))
-\\
-\mathcal{W}(\Gamma, (\lambda,)) &= \mathcal{W}(\Gamma, \lambda)
-\end{align*}
-$$
-
-LGTM. Now for the last part, complex formal arguments. So far we have:
-
-$$
-\begin{align*}
-\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
-\\
-\textup{where}
-\\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma + \overrightarrow{\mathtt{x}:\beta}, \mathtt{e})
-\\
-&\textup{new }\vec\beta
-\end{align*}
-$$
-
-But if the formal arguments  aren't just symbols, then that set of mappings $\overrightarrow{\mathtt{x}:\beta}$ isn't going to work.
-
-The substitution $S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1)$ is still valid, but those betas are the top-level types that the function accepts, not necessarily the same as the variables bound in the body of the function.
-
-So we'll need to calculate the set of bindings passed in to the function alongside the set of types the function accepts.
-
-We cam determine the type of each argument by calling $\mathcal{W}$ on it, something like:
-
-$$
-\begin{align*}
-(S_n, \tau_n) &= \mathcal{W}(\Gamma_n, \mathtt{x_n})
-\\
-\textup{where}
-\\
-&\Gamma_n = S_{n-1}\Gamma_{n-1}
-\end{align*}
-$$
-
-We need to accumulate context like that because the laguage allows for the same variable in multiple argument positions (i.e. `fn eq { (x, x) { true } (_, _) { false } }`.)
-
-Next the context needed to typecheck the function body. Haven't we already calculated it as $\Gamma_n$? That context will certainly contain bindings for $\mathtt{f}$, $\mathtt{h}$ and $\mathtt{t}$, so this might be it.
-
-$$
-\begin{align*}
-\mathcal{W(\Gamma, \lambda\mathtt{\vec{x}}.\mathtt{e})} &= (S_1, S_1(\beta_1 \rightarrow \dots \rightarrow \beta_n \rightarrow \tau_1))
-\\
-\textup{where}
-\\
-& (S_1, \tau_1) = \mathcal{W}(\Gamma_n, \mathtt{e})
-\\
-& (\Gamma_n, \vec{\beta}) = Args(\Gamma, \mathtt{\vec{x}})
-\\
-\\
-Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_n})) &= (S_n\Gamma, \overrightarrow{\beta_{n-1}} + S_n\tau_n)
-\\
-\textup{where}
-\\
-&(S_n, \tau_n) = \mathcal{W}(\Gamma_n, \mathtt{x_n})
-\\
-&(\Gamma_n, \overrightarrow{\beta_{n-1}}) = Args(\Gamma, (\mathtt{x_1}, \dots \mathtt{x_{n-1}}))
-\\
-\\
-Args(\Gamma, ()) &= (\Gamma, ())
-\end{align*}
-$$
+Because in an arg like $\mathtt{x(y)}$ the $\mathtt{x}$ is to be treated as a type constructor and not bound.
 
 ### if
 
