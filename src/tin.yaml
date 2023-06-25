@@ -34,7 +34,8 @@ structs:
         quantifiedType: TinPolyType
 
     TinContext:
-        frame: HashTable
+        varFrame: HashTable
+        tcFrame: HashTable
         next: TinContext
 
     TinSubstitution:
@@ -43,6 +44,16 @@ structs:
     TinArgsResult:
         context: TinContext
         vec: TinMonoTypeList
+
+    TinVarResult:
+        substitution: TinSubstitution
+        context: TinContext
+        monoType: TinMonoType
+        set: HashTable
+
+    TinVarsResult:
+        context: TinContext
+        set: HashTable
 
 unions:
     TinMonoType:

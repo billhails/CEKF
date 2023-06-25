@@ -69,7 +69,9 @@ void printTinContext(struct TinContext * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TinContext (NULL)"); return; }
     printf("TinContext[\n");
-        printHashTable(x->frame, depth + 1);
+        printHashTable(x->varFrame, depth + 1);
+    printf("\n");
+        printHashTable(x->tcFrame, depth + 1);
     printf("\n");
     printTinContext(x->next, depth + 1);
     printf("\n");
@@ -94,6 +96,34 @@ void printTinArgsResult(struct TinArgsResult * x, int depth) {
     printTinContext(x->context, depth + 1);
     printf("\n");
     printTinMonoTypeList(x->vec, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinVarResult(struct TinVarResult * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinVarResult (NULL)"); return; }
+    printf("TinVarResult[\n");
+    printTinSubstitution(x->substitution, depth + 1);
+    printf("\n");
+    printTinContext(x->context, depth + 1);
+    printf("\n");
+    printTinMonoType(x->monoType, depth + 1);
+    printf("\n");
+        printHashTable(x->set, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTinVarsResult(struct TinVarsResult * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TinVarsResult (NULL)"); return; }
+    printf("TinVarsResult[\n");
+    printTinContext(x->context, depth + 1);
+    printf("\n");
+        printHashTable(x->set, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");

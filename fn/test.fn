@@ -1,0 +1,7 @@
+let
+    fn cc(x, y) { x > 2 and y > "hello" }
+    fn cond(x, y) {
+        if (cc(x, y)) { false } else { true }
+    }
+in
+    cond

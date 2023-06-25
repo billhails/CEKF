@@ -172,7 +172,7 @@ bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
     printMemHeader("keys", table->keys);
 #endif
     if (table->keys[index] == NULL) return false;
-    if (table->valuesize > 0) {
+    if (table->valuesize > 0 && dest != NULL) {
         void *src = valuePtr(table, index);
         memcpy(dest, src, table->valuesize);
     }

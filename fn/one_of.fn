@@ -6,4 +6,4 @@ let
         }
     }
 in
-    one_of
+    one_of([1, 2, 3])

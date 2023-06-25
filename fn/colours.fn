@@ -5,4 +5,4 @@ let
         (red()) { "red" }
     }
 in
-    tostr(red)
+    tostr

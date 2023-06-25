@@ -33,17 +33,19 @@ TinContext *freshTinContext();
 void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
 TinContext *extendTinContext(TinContext *parent);
 HashSymbol *freshTypeVariable(const char *suffix);
-void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType);
+void addVarToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType);
+void addConstructorToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType);
 TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2, const char *caller);
 TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
 
 TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);
 TinPolyType *lookupInContext(TinContext *context, HashSymbol *var);
+bool isTypeConstructor(TinContext *context, HashSymbol *var);
 TinSubstitution *makeEmptySubstitution();
 TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
+void applyContextSubstitutionInPlace(TinSubstitution *s, TinContext *context);
 TinMonoType *instantiate(TinPolyType *tpt);
 TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2);
-TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
 TinPolyType *generalize(TinContext *context, TinMonoType *monoType);
 
 #endif
