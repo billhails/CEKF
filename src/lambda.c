@@ -288,6 +288,12 @@ void markLamExp(struct LamExp * x) {
         case LAMEXP_TYPE_MATCH:
             markLamMatch(x->val.match);
             break;
+        case LAMEXP_TYPE_CHARACTER:
+            break;
+        case LAMEXP_TYPE_STRING:
+            break;
+        case LAMEXP_TYPE_BACK:
+            break;
         case LAMEXP_TYPE_T:
             break;
         case LAMEXP_TYPE_F:

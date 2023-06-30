@@ -103,8 +103,8 @@ int main(int argc, char *argv[]) {
     if (hadErrors()) {
         printf("(errors detected)\n");
     } else {
-        LamLetRec *letRec = lamConvertNest(result, NULL);
-        printLamLetRec(letRec, 0);
+        LamExp *exp = lamConvertNest(result, NULL);
+        printLamExp(exp, 0);
         printf("\n");
     }
 }

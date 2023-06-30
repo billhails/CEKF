@@ -362,6 +362,24 @@ printf("int %d", x->val.integer);
             printf("LAMEXP_TYPE_MATCH\n");
             printLamMatch(x->val.match, depth + 1);
             break;
+        case LAMEXP_TYPE_CHARACTER:
+            pad(depth + 1);
+            printf("LAMEXP_TYPE_CHARACTER\n");
+                        pad(depth + 1);
+printf("char %c", x->val.character);
+            break;
+        case LAMEXP_TYPE_STRING:
+            pad(depth + 1);
+            printf("LAMEXP_TYPE_STRING\n");
+                        pad(depth + 1);
+printf("char * %s", x->val.string);
+            break;
+        case LAMEXP_TYPE_BACK:
+            pad(depth + 1);
+            printf("LAMEXP_TYPE_BACK\n");
+                        pad(depth + 1);
+printf("void * %p", x->val.back);
+            break;
         case LAMEXP_TYPE_T:
             pad(depth + 1);
             printf("LAMEXP_TYPE_T\n");

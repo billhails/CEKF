@@ -64,6 +64,9 @@ typedef enum LamExpType {
     LAMEXP_TYPE_CALLCC,
     LAMEXP_TYPE_LETREC,
     LAMEXP_TYPE_MATCH,
+    LAMEXP_TYPE_CHARACTER,
+    LAMEXP_TYPE_STRING,
+    LAMEXP_TYPE_BACK,
     LAMEXP_TYPE_T,
     LAMEXP_TYPE_F,
     LAMEXP_TYPE_NIL,
@@ -84,6 +87,9 @@ typedef union LamExpVal {
     struct LamExp * callcc;
     struct LamLetRec * letrec;
     struct LamMatch * match;
+    char character;
+    char * string;
+    void * back;
     void * t;
     void * f;
     void * nil;
@@ -248,6 +254,9 @@ void freeLamExp(struct LamExp * x);
 #define LAMEXP_VAL_CALLCC(x) ((union LamExpVal ){.callcc = (x)})
 #define LAMEXP_VAL_LETREC(x) ((union LamExpVal ){.letrec = (x)})
 #define LAMEXP_VAL_MATCH(x) ((union LamExpVal ){.match = (x)})
+#define LAMEXP_VAL_CHARACTER(x) ((union LamExpVal ){.character = (x)})
+#define LAMEXP_VAL_STRING(x) ((union LamExpVal ){.string = (x)})
+#define LAMEXP_VAL_BACK() ((union LamExpVal ){.back = (NULL)})
 #define LAMEXP_VAL_T() ((union LamExpVal ){.t = (NULL)})
 #define LAMEXP_VAL_F() ((union LamExpVal ){.f = (NULL)})
 #define LAMEXP_VAL_NIL() ((union LamExpVal ){.nil = (NULL)})

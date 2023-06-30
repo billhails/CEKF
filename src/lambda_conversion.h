@@ -21,5 +21,5 @@
  #include "ast.h"
  #include "lambda.h"
 
- LamLetRec *lamConvertNest(AstNest *nest, LamContext *env);
+ LamExp *lamConvertNest(AstNest *nest, LamContext *env);
  #endif

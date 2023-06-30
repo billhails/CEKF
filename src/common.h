@@ -37,7 +37,7 @@
 // #define DEBUG_TIN_UNIFICATION
 #define DEBUG_DUMP_CORE
 // #define DEBUG_ALGORITHM_W
-// #define DEBUG_LAMBDA_CONVERT
+#define DEBUG_LAMBDA_CONVERT
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

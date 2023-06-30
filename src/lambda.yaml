@@ -122,6 +122,9 @@ unions:
         callcc: LamExp
         letrec: LamLetRec
         match: LamMatch
+        character: character
+        string: string
+        back: void_ptr
         t: void_ptr
         f: void_ptr
         nil: void_ptr
@@ -144,4 +147,12 @@ primitives:
     int:
         cname: "int"
         printf: "%d"
+        valued: true
+    character:
+        cname: "char"
+        printf: "%c"
+        valued: true
+    string:
+        cname: "char *"
+        printf: "%s"
         valued: true
