@@ -611,38 +611,35 @@ static WResult *WUnpackRec(TinContext *context, AstUnpack *unpack, int nargs, in
     printTinContext(context, depth + 1);
     printf("\n");
 #endif
+    int save = -1;
+    WResult *result;
     if (nargs == 0) {
-        WResult *result = WSymbol(context, unpack->symbol, depth + 1);
-#ifdef DEBUG_ALGORITHM_W
-        leave("WUnpackRec", myId, depth);
-        printWResult(result, depth + 1);
-        printf("\n");
-#endif
-        return result;
+        result = WSymbol(context, unpack->symbol, depth + 1);
+    } else {
+        WResult *Rn_1 = WUnpackRec(context, unpack, nargs - 1, depth);
+        save = PROTECT(Rn_1);
+        TinContext *Cn_1 = applyContextSubstitution(Rn_1->substitution, context);
+        (void) PROTECT(Cn_1);
+        AstArg *e_n = nthArg(nargs, unpack->argList);
+        WResult *Rn = WFarg(Cn_1, e_n, depth + 1);
+        (void) PROTECT(Rn);
+        TinMonoType *beta = freshMonoTypeVar("unpackrec");
+        (void) PROTECT(beta);
+        TinMonoType *arrow = arrowApplication(Rn->monoType, beta);
+        (void) PROTECT(arrow);
+        TinMonoType *SnTn_1 = applyMonoTypeSubstitution(Rn->substitution, Rn_1->monoType);
+        (void) PROTECT(SnTn_1);
+        TinSubstitution *Sprime = unify(SnTn_1, arrow, "WUnpackRec");
+        (void) PROTECT(Sprime);
+        TinMonoType *SprimeBeta = applyMonoTypeSubstitution(Sprime, beta);
+        (void) PROTECT(SprimeBeta);
+        TinSubstitution *SnSn_1 = applySubstitutionSubstitution(Rn->substitution, Rn_1->substitution);
+        (void) PROTECT(SnSn_1);
+        TinSubstitution *SprimeSnSn_1 = applySubstitutionSubstitution(Sprime, SnSn_1);
+        (void) PROTECT(SprimeSnSn_1);
+        result = newWResult(SprimeSnSn_1, SprimeBeta);
     }
-    WResult *Rn_1 = WUnpackRec(context, unpack, nargs - 1, depth);
-    int save = PROTECT(Rn_1);
-    TinContext *Cn_1 = applyContextSubstitution(Rn_1->substitution, context);
-    (void) PROTECT(Cn_1);
-    AstArg *e_n = nthArg(nargs, unpack->argList);
-    WResult *Rn = WFarg(Cn_1, e_n, depth + 1);
-    (void) PROTECT(Rn);
-    TinMonoType *beta = freshMonoTypeVar("unpackrec");
-    (void) PROTECT(beta);
-    TinMonoType *arrow = arrowApplication(Rn->monoType, beta);
-    (void) PROTECT(arrow);
-    TinMonoType *SnTn_1 = applyMonoTypeSubstitution(Rn->substitution, Rn_1->monoType);
-    (void) PROTECT(SnTn_1);
-    TinSubstitution *Sprime = unify(SnTn_1, arrow, "WUnpackRec");
-    (void) PROTECT(Sprime);
-    TinMonoType *SprimeBeta = applyMonoTypeSubstitution(Sprime, beta);
-    (void) PROTECT(SprimeBeta);
-    TinSubstitution *SnSn_1 = applySubstitutionSubstitution(Rn->substitution, Rn_1->substitution);
-    (void) PROTECT(SnSn_1);
-    TinSubstitution *SprimeSnSn_1 = applySubstitutionSubstitution(Sprime, SnSn_1);
-    (void) PROTECT(SprimeSnSn_1);
-    WResult *result = newWResult(SprimeSnSn_1, SprimeBeta);
-    UNPROTECT(save);
+    if (save != -1) UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WUnpackRec", myId, depth);
     printWResult(result, depth + 1);
@@ -973,6 +970,7 @@ static WResult *WFunction(TinContext *context, AstFunction *fun, int depth) {
     HashTable *V = newHashTable(0, NULL, NULL);
     (void) PROTECT(V);
     WResult *result = WFunctionPrime(fnContext, fun, V, fun->argList, depth + 1);
+    UNPROTECT(save);
 #ifdef DEBUG_ALGORITHM_W
     leave("WFunction", myId, depth);
     printWResult(result, depth + 1);

@@ -23,6 +23,8 @@
 #include "ast.h"
 #include "debug_ast.h"
 #include "debug_tin.h"
+#include "debug_lambda.h"
+#include "lambda_conversion.h"
 #include "parser.h"
 #include "analysis.h"
 #include "exp.h"
@@ -65,6 +67,25 @@ int main(int argc, char *argv[]) {
     testTin();
 }
 
+#elif DEBUG_RUN_TESTS == 4
+
+extern AstNest *result;
+
+int main(int argc, char *argv[]) {
+    disableGC();
+    // yydebug = 1;
+    yyparse();
+    PROTECT(result);
+    enableGC();
+    // quietPrintHashTable = true;
+    WResult *wr = WTop(result);
+    showTinMonoType(wr->monoType);
+    printf("\n");
+    if (hadErrors()) {
+        printf("(errors detected)\n");
+    }
+}
+
 #else
 
 extern AstNest *result;
@@ -81,6 +102,10 @@ int main(int argc, char *argv[]) {
     printf("\n");
     if (hadErrors()) {
         printf("(errors detected)\n");
+    } else {
+        LamLetRec *letRec = lamConvertNest(result, NULL);
+        printLamLetRec(letRec, 0);
+        printf("\n");
     }
 }
 

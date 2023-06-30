@@ -25,6 +25,7 @@ struct Header;
 
 #include "ast_objtypes.h"
 #include "tin_objtypes.h"
+#include "lambda_objtypes.h"
 
 typedef enum {
     // exp types
@@ -62,6 +63,7 @@ typedef enum {
     OBJTYPE_WRESULT,
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
+    LAMBDA_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

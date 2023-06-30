@@ -1,5 +1,5 @@
-#ifndef cekf_common_h
-#define cekf_common_h
+#ifndef cekf_lambda_conversion_h
+#define cekf_lambda_conversion_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,29 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdbool.h>
- #include <stdint.h>
+ #include "ast.h"
+ #include "lambda.h"
 
- typedef uint32_t hash_t;
-
-// #define TEST_STACK
-// #define DEBUG_STACK
-#define DEBUG_STEP
-#define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 5
-// #define DEBUG_ANALIZE
-// #define DEBUG_DESUGARING
-// #define DEBUG_HASHTABLE
-// #define DEBUG_TIN_SUBSTITUTION
-// #define DEBUG_TIN_INSTANTIATION
-// #define DEBUG_TIN_UNIFICATION
-#define DEBUG_DUMP_CORE
-// #define DEBUG_ALGORITHM_W
-// #define DEBUG_LAMBDA_CONVERT
-
-void cant_happen(const char *message, ...);
-void can_happen(const char *message, ...);
-bool hadErrors();
-
-#endif
+ LamLetRec *lamConvertNest(AstNest *nest, LamContext *env);
+ #endif

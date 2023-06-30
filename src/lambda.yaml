@@ -17,8 +17,131 @@
 #
 
 config:
-    name: lambda # static structures resulting from lambda conversion
+    name: lambda
 
 structs:
-    LambdaFunction:
-        args
+    LamLam:
+        nargs: int
+        args: LamVarList
+        exp: LamExp
+
+    LamVarList:
+        var: HashSymbol
+        next: LamVarList
+
+    LamPrimApp:
+        type: LamPrimOp
+        exp1: LamExp
+        exp2: LamExp
+
+    LamUnaryApp:
+        type: LamUnaryOp
+        exp: LamExp
+
+    LamList:
+        exp: LamExp
+        next: LamList
+
+    LamApply:
+        function: LamExp
+        nargs: int
+        args: LamList
+
+    LamMakeVec:
+        nargs: int
+        args: LamList
+
+    LamCond:
+        condition: LamExp
+        consequent: LamExp
+        alternative: LamExp
+
+    LamMatch:
+        index: LamExp
+        cases: LamMatchList
+
+    LamMatchList:
+        matches: LamList
+        body: LamExp
+        next: LamMatchList
+
+    LamLetRec:
+        nbindings: int
+        bindings: LamLetRecBindings
+        body: LamList
+
+    LamLetRecBindings:
+        var: HashSymbol
+        val: LamExp
+        next: LamLetRecBindings
+
+    LamContext:
+        frame: HashTable
+        parent: LamContext
+
+    LamTypeConstructorInfo:
+        nargs: int
+        index: int
+
+enums:
+    LamPrimOp:
+        - LAM_PRIM_ADD
+        - LAM_PRIM_SUB
+        - LAM_PRIM_MUL
+        - LAM_PRIM_DIV
+        - LAM_PRIM_EQ
+        - LAM_PRIM_NE
+        - LAM_PRIM_GT
+        - LAM_PRIM_LT
+        - LAM_PRIM_GE
+        - LAM_PRIM_LE
+        - LAM_PRIM_CONS
+        - LAM_PRIM_VEC
+        - LAM_PRIM_XOR
+        - LAM_PRIM_AND
+        - LAM_PRIM_OR
+        - LAM_PRIM_AMB
+
+    LamUnaryOp:
+        - LAM_UNARY_CAR
+        - LAM_UNARY_CDR
+        - LAM_UNARY_NOT
+        - LAM_UNARY_PRINT
+
+unions:
+    LamExp:
+        lam: LamLam
+        var: HashSymbol
+        integer: int
+        prim: LamPrimApp
+        unary: LamUnaryApp
+        list: LamList
+        makeVec: LamMakeVec
+        apply: LamApply
+        cond: LamCond
+        callcc: LamExp
+        letrec: LamLetRec
+        match: LamMatch
+        t: void_ptr
+        f: void_ptr
+        nil: void_ptr
+
+primitives:
+    HashSymbol:
+        cname: "HashSymbol *"
+        printFn: "printLambdaSymbol"
+        markFn: "markHashSymbol"
+        valued: true
+    HashTable:
+        cname: "HashTable *"
+        printFn: "printHashTable"
+        markFn: "markHashTable"
+        valued: true
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+        valued: false
+    int:
+        cname: "int"
+        printf: "%d"
+        valued: true

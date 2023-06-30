@@ -99,11 +99,11 @@ const char *typeName(ObjType type) {
         case OBJTYPE_WRESULT:
             return "wresult";
         TIN_OBJTYPE_CASES()
-            typenameTinObj(type);
-            break;
+            return typenameTinObj(type);
         AST_OBJTYPE_CASES()
-            typenameAstObj(type);
-            break;
+            return typenameAstObj(type);
+        LAMBDA_OBJTYPE_CASES()
+            return typenameLambdaObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName", type);
     }
@@ -260,6 +260,9 @@ void markObj(Header *h) {
         AST_OBJTYPE_CASES()
             markAstObj(h);
             break;
+        LAMBDA_OBJTYPE_CASES()
+            markLambdaObj(h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in markObj", h->type);
     }
@@ -315,6 +318,8 @@ void freeObj(Header *h) {
         AST_OBJTYPE_CASES()
             freeAstObj(h);
             break;
+        LAMBDA_OBJTYPE_CASES()
+            freeLambdaObj(h);
         default:
             cant_happen("unrecognised ObjType %d in freeObj", h->type);
     }
