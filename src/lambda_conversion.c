@@ -44,6 +44,24 @@ printf("leave " #name " %d\n", myId);
 #define LEAVE(n)
 #endif
 
+#define MAKE_COUNT_LIST(type)           \
+static int count ## type (type *list) { \
+    ENTER(count ## type)                \
+    int count = 0;                      \
+    while (list != NULL) {              \
+        count++;                        \
+        list = list->next;              \
+    }                                   \
+    LEAVE(count ## type)                \
+    return count;                       \
+}
+
+MAKE_COUNT_LIST(LamLetRecBindings)
+
+MAKE_COUNT_LIST(AstTypeList)
+
+MAKE_COUNT_LIST(AstExpressions)
+
 LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest)
     LamContext *ext = extendLamContext(env);
@@ -52,7 +70,7 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     PROTECT(bindings);
     LamList *body = convertExpressions(nest->expressions, ext);
     PROTECT(body);
-    LamLetRec *letRec = newLamLetRec(countLetRecBindings(bindings), bindings, body);
+    LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, body);
     PROTECT(letRec);
     LamExp *result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
     UNPROTECT(save);
@@ -120,16 +138,6 @@ static bool typeHasFields(AstTypeBody *typeBody) {
     return false;
 }
 
-static int countTypeList(AstTypeList *typeList) {
-    ENTER(countTypeList)
-    int count = 0;
-    while (typeList != NULL) {
-        count++;
-        typeList = typeList->next;
-    }
-    LEAVE(countTypeList)
-    return count;
-}
 
 static void collectTypeInfo(HashSymbol *symbol, int index, int nargs, LamContext *env) {
     ENTER(collectTypeInfo)
@@ -138,18 +146,6 @@ static void collectTypeInfo(HashSymbol *symbol, int index, int nargs, LamContext
     addToLamContext(env, symbol, info);
     UNPROTECT(save);
     LEAVE(collectTypeInfo)
-}
-
-static LamExp* makeEmptyEnumVector(int index) {
-    LamExp *indexExp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
-    int save = PROTECT(indexExp);
-    LamList *args = newLamList(indexExp, NULL);
-    PROTECT(args);
-    LamMakeVec * makeVec = newLamMakeVec(1, args);
-    PROTECT(makeVec);
-    LamExp * makeVecExp = newLamExp(LAMEXP_TYPE_MAKEVEC, LAMEXP_VAL_MAKEVEC(makeVec));
-    UNPROTECT(save);
-    return makeVecExp;
 }
 
 static LamVarList *genLamVarList(int nargs) {
@@ -172,14 +168,24 @@ static LamList *varListToLamList(LamVarList *varList) {
     return this;
 }
 
+static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
+    LamExp *indexExp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
+    int save = PROTECT(indexExp);
+    args = newLamList(indexExp, args);
+    PROTECT(args);
+    LamMakeVec *makeVec = newLamMakeVec(nargs + 1, args);
+    PROTECT(makeVec);
+    LamExp *exp = newLamExp(LAMEXP_TYPE_MAKEVEC, LAMEXP_VAL_MAKEVEC(makeVec));
+    UNPROTECT(save);
+    return exp;
+}
+
 static LamExp *makeTypeConstructor(int index, int nargs) {
     LamVarList *varList = genLamVarList(nargs);
     int save = PROTECT(varList);
     LamList *args = varListToLamList(varList);
     PROTECT(args);
-    LamMakeVec *makeVec = newLamMakeVec(nargs, args);
-    PROTECT(makeVec);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_MAKEVEC, LAMEXP_VAL_MAKEVEC(makeVec));
+    LamExp *exp = makeMakeVec(nargs, index, args);
     PROTECT(exp);
     LamLam *lambda = newLamLam(nargs, varList, exp);
     PROTECT(lambda);
@@ -190,7 +196,7 @@ static LamExp *makeTypeConstructor(int index, int nargs) {
 
 static LamExp *analyzeTypeConstructor(AstTypeConstructor *typeConstructor, int index, bool someoneHasFields, LamContext *env) {
     ENTER(analyzeTypeConstructor)
-    int nargs = countTypeList(typeConstructor->typeList);
+    int nargs = countAstTypeList(typeConstructor->typeList);
     // we collect info about the type constructor regardless
     collectTypeInfo(typeConstructor->symbol, index, nargs, env);
     LamExp *exp = NULL;
@@ -204,7 +210,7 @@ static LamExp *analyzeTypeConstructor(AstTypeConstructor *typeConstructor, int i
         if (someoneHasFields) {
             // if another constructor for this type has args, then we must create a
             // constant vector, to be consistent with other instances of this type
-            exp = makeEmptyEnumVector(index);
+            exp = makeMakeVec(0, index, NULL);
         } else {
             // if none of the constructors for this type take arguments, then we can
             // treat it as a simple integer enumeration along with the others
@@ -229,6 +235,7 @@ static LamLetRecBindings *prependTypeConstructor(AstTypeConstructor *typeConstru
         return next;
     }
 }
+
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next) {
     ENTER(prependDefine)
     LamExp *exp = convertExpression(define->expression, env);
@@ -240,16 +247,32 @@ static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamL
 }
 
 static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
-    // TODO
-    return NULL;
-}
-
-static LamExp * convertSymbol(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-    if (info == NULL || info->nargs == 0) {
-        return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
+    AstExpression *function = funCall->function;
+    LamList *args = convertExpressions(funCall->arguments, env);
+    int actualNargs = countAstExpressions(funCall->arguments);
+    int save = PROTECT(args);
+    // see if it's a type constructor we can inline
+    if (function->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        HashSymbol *symbol = function->val.symbol;
+        LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+        if (info != NULL) {
+            if (info->nargs > 0) {
+                if (actualNargs == info->nargs) {
+                    LamExp *inLine = makeMakeVec(info->nargs, info->index, args);
+                    UNPROTECT(save);
+                    return inLine;
+                }
+            }
+        }
     }
-    can_happen("type constructor %s takes %d arguments", symbol->name, info->nargs);
+    // otherwise we convert as normal
+    LamExp *fun = convertExpression(function, env);
+    PROTECT(fun);
+    LamApply *apply = newLamApply(fun, actualNargs, args);
+    PROTECT(apply);
+    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return result;
 }
 
 static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
@@ -258,8 +281,17 @@ static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) 
 }
 
 static LamExp * convertCond(AstConditional *cond, LamContext *env) {
-    // TODO
-    return NULL;
+    LamExp *condition = convertExpression(cond->expression, env);
+    int save = PROTECT(condition);
+    LamExp *consequent = lamConvertNest(cond->consequent, env);
+    PROTECT(consequent);
+    LamExp *alternative = lamConvertNest(cond->alternative, env);
+    PROTECT(alternative);
+    LamCond *lamCond = newLamCond(condition, consequent, alternative);
+    PROTECT(lamCond);
+    LamExp *result = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(lamCond));
+    UNPROTECT(save);
+    return result;
 }
 
 static LamExp * convertString(AstString *string, LamContext *env) {
@@ -282,7 +314,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = convertFunCall(expression->val.funCall, env);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
-            result = convertSymbol(expression->val.symbol, env);
+            result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(expression->val.symbol));
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             result = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(expression->val.number));
@@ -316,18 +348,13 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
 }
 
 static LamList *convertExpressions(AstExpressions *expressions, LamContext *env) {
-    return NULL;
+    if (expressions == NULL) return NULL;
+    LamList *next = convertExpressions(expressions->next, env);
+    int save = PROTECT(next);
+    LamExp *exp = convertExpression(expressions->expression, env);
+    (void) PROTECT(exp);
+    LamList *this = newLamList(exp, next);
+    UNPROTECT(save);
+    return this;
 }
 
-static int countLetRecBindings(LamLetRecBindings *b) {
-    ENTER(countLetRecBindings)
-    int count = 0;
-
-    while (b != NULL) {
-        b = b->next;
-        count++;
-    }
-
-    LEAVE(countLetRecBindings)
-    return count;
-}

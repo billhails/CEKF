@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include "ast.h"
- #include "lambda.h"
+#include "ast.h"
+#include "lambda.h"
 
- LamExp *lamConvertNest(AstNest *nest, LamContext *env);
- #endif
+LamExp *lamConvertNest(AstNest *nest, LamContext *env);
+#endif
