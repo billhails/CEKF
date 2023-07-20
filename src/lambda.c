@@ -120,8 +120,9 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
     return x;
 }
 
-struct LamTypeConstructorInfo * newLamTypeConstructorInfo(int nargs, int index) {
+struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int nargs, int index) {
     struct LamTypeConstructorInfo * x = NEW(LamTypeConstructorInfo, OBJTYPE_LAMTYPECONSTRUCTORINFO);
+    x->vec = vec;
     x->nargs = nargs;
     x->index = index;
     return x;

@@ -45,8 +45,8 @@ $(DEP): dep/%.d: src/%.c | dep
 $(EXTRA_DEP): dep/%.d: tmp/%.c | dep
 	$(CC) -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-tmp/lexer.c: src/lexer.l tmp/parser.h | tmp
-	flex -o $@ $<
+tmp/lexer.c tmp/lexer.h: src/lexer.l tmp/parser.h | tmp
+	flex --header-file=tmp/lexer.h -o $@ $<
 
 tmp/parser.c tmp/parser.h: src/parser.y | tmp
 	bison -v -Werror --header=tmp/parser.h -o tmp/parser.c $<

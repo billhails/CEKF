@@ -194,20 +194,6 @@ void printAstType(struct AstType * x, int depth) {
     printf("]");
 }
 
-void printAstConditional(struct AstConditional * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstConditional (NULL)"); return; }
-    printf("AstConditional[\n");
-    printAstExpression(x->expression, depth + 1);
-    printf("\n");
-    printAstNest(x->consequent, depth + 1);
-    printf("\n");
-    printAstNest(x->alternative, depth + 1);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
 void printAstCompositeFunction(struct AstCompositeFunction * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstCompositeFunction (NULL)"); return; }
@@ -251,18 +237,6 @@ void printAstUnpack(struct AstUnpack * x, int depth) {
         printAstSymbol(x->symbol, depth + 1);
     printf("\n");
     printAstArgList(x->argList, depth + 1);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
-void printAstArgPair(struct AstArgPair * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstArgPair (NULL)"); return; }
-    printf("AstArgPair[\n");
-    printAstArg(x->car, depth + 1);
-    printf("\n");
-    printAstArg(x->cdr, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -335,17 +309,6 @@ void printAstEnv(struct AstEnv * x, int depth) {
     printAstPackage(x->package, depth + 1);
     printf("\n");
     printAstDefinitions(x->definitions, depth + 1);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
-void printAstString(struct AstString * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("AstString (NULL)"); return; }
-    printf("AstString[\n");
-        pad(depth + 1);
-printf("char * %s", x->string);
     printf("\n");
     pad(depth);
     printf("]");
@@ -424,18 +387,6 @@ printf("void * %p", x->val.integer);
                         pad(depth + 1);
 printf("void * %p", x->val.character);
             break;
-        case AST_TYPECLAUSE_TYPE_BOOLEAN:
-            pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_BOOLEAN\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.boolean);
-            break;
-        case AST_TYPECLAUSE_TYPE_STRING:
-            pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_STRING\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.string);
-            break;
         case AST_TYPECLAUSE_TYPE_LIST:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_LIST\n");
@@ -501,28 +452,11 @@ printf("void * %p", x->val.wildcard);
                         pad(depth + 1);
 printf("int %d", x->val.number);
             break;
-        case AST_ARG_TYPE_STRING:
-            pad(depth + 1);
-            printf("AST_ARG_TYPE_STRING\n");
-            printAstString(x->val.string, depth + 1);
-            break;
         case AST_ARG_TYPE_CHARACTER:
             pad(depth + 1);
             printf("AST_ARG_TYPE_CHARACTER\n");
                         pad(depth + 1);
 printf("char %c", x->val.character);
-            break;
-        case AST_ARG_TYPE_YES:
-            pad(depth + 1);
-            printf("AST_ARG_TYPE_YES\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.yes);
-            break;
-        case AST_ARG_TYPE_NO:
-            pad(depth + 1);
-            printf("AST_ARG_TYPE_NO\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.no);
             break;
         default:
             cant_happen("unrecognised type %d in printAstArg", x->type);
@@ -565,28 +499,11 @@ printf("void * %p", x->val.back);
                         pad(depth + 1);
 printf("int %d", x->val.number);
             break;
-        case AST_EXPRESSION_TYPE_STRING:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_STRING\n");
-            printAstString(x->val.string, depth + 1);
-            break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_CHARACTER\n");
                         pad(depth + 1);
 printf("char %c", x->val.character);
-            break;
-        case AST_EXPRESSION_TYPE_YES:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_YES\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.yes);
-            break;
-        case AST_EXPRESSION_TYPE_NO:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_NO\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.no);
             break;
         case AST_EXPRESSION_TYPE_FUN:
             pad(depth + 1);
@@ -597,11 +514,6 @@ printf("void * %p", x->val.no);
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_ENV\n");
             printAstEnv(x->val.env, depth + 1);
-            break;
-        case AST_EXPRESSION_TYPE_CONDITIONAL:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_CONDITIONAL\n");
-            printAstConditional(x->val.conditional, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_NEST:
             pad(depth + 1);

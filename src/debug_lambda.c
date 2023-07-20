@@ -287,6 +287,9 @@ void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth) {
     if (x == NULL) { printf("LamTypeConstructorInfo (NULL)"); return; }
     printf("LamTypeConstructorInfo[\n");
         pad(depth + 1);
+printf("bool %d", x->vec);
+    printf("\n");
+        pad(depth + 1);
 printf("int %d", x->nargs);
     printf("\n");
         pad(depth + 1);

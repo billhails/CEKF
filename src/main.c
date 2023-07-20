@@ -25,7 +25,7 @@
 #include "debug_tin.h"
 #include "debug_lambda.h"
 #include "lambda_conversion.h"
-#include "parser.h"
+#include "parser_management.h"
 #include "analysis.h"
 #include "exp.h"
 #include "memory.h"
@@ -45,14 +45,14 @@
 
 #elif DEBUG_RUN_TESTS == 2 /* testing parser */
 
-// extern int yydebug;
-
-extern AstNest *result;
 
 int main(int argc, char *argv[]) {
     disableGC();
-    // yydebug = 1;
-    yyparse();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
     printAstNest(result, 0);
     enableGC();
     printf("\n");
@@ -73,8 +73,11 @@ extern AstNest *result;
 
 int main(int argc, char *argv[]) {
     disableGC();
-    // yydebug = 1;
-    yyparse();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
     PROTECT(result);
     enableGC();
     // quietPrintHashTable = true;
@@ -92,8 +95,11 @@ extern AstNest *result;
 
 int main(int argc, char *argv[]) {
     disableGC();
-    // yydebug = 1;
-    yyparse();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
     PROTECT(result);
     enableGC();
     // quietPrintHashTable = true;

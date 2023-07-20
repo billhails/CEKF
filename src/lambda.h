@@ -184,6 +184,7 @@ typedef struct LamContext {
 
 typedef struct LamTypeConstructorInfo {
     Header header;
+    bool vec;
     int nargs;
     int index;
 } LamTypeConstructorInfo;
@@ -207,7 +208,7 @@ struct LamMatchList * newLamMatchList(struct LamList * matches, struct LamExp * 
 struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamList * body);
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next);
 struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent);
-struct LamTypeConstructorInfo * newLamTypeConstructorInfo(int nargs, int index);
+struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int nargs, int index);
 struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val);
 
 void markLamLam(struct LamLam * x);

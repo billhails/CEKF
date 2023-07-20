@@ -17,6 +17,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "common.h"
 #include "lambda_conversion.h"
 #include "lambda_helper.h"
@@ -62,16 +63,20 @@ MAKE_COUNT_LIST(AstTypeList)
 
 MAKE_COUNT_LIST(AstExpressions)
 
+MAKE_COUNT_LIST(AstArgList)
+
+MAKE_COUNT_LIST(AstCompositeFunction)
+
 LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest)
     LamContext *ext = extendLamContext(env);
     int save = PROTECT(ext);
     LamLetRecBindings *bindings = convertDefinitions(nest->definitions, ext);
-    PROTECT(bindings);
+    (void) PROTECT(bindings);
     LamList *body = convertExpressions(nest->expressions, ext);
-    PROTECT(body);
+    (void) PROTECT(body);
     LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, body);
-    PROTECT(letRec);
+    (void) PROTECT(letRec);
     LamExp *result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
     UNPROTECT(save);
     LEAVE(lamConvertNest)
@@ -139,9 +144,9 @@ static bool typeHasFields(AstTypeBody *typeBody) {
 }
 
 
-static void collectTypeInfo(HashSymbol *symbol, int index, int nargs, LamContext *env) {
+static void collectTypeInfo(HashSymbol *symbol, bool vec, int index, int nargs, LamContext *env) {
     ENTER(collectTypeInfo)
-    LamTypeConstructorInfo *info = newLamTypeConstructorInfo(nargs, index);
+    LamTypeConstructorInfo *info = newLamTypeConstructorInfo(vec, nargs, index);
     int save = PROTECT(info);
     addToLamContext(env, symbol, info);
     UNPROTECT(save);
@@ -162,7 +167,7 @@ static LamList *varListToLamList(LamVarList *varList) {
     LamList *next = varListToLamList(varList->next);
     int save = PROTECT(next);
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(varList->var));
-    PROTECT(exp);
+    (void) PROTECT(exp);
     LamList *this = newLamList(exp, next);
     UNPROTECT(save);
     return this;
@@ -172,9 +177,9 @@ static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
     LamExp *indexExp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
     int save = PROTECT(indexExp);
     args = newLamList(indexExp, args);
-    PROTECT(args);
+    (void) PROTECT(args);
     LamMakeVec *makeVec = newLamMakeVec(nargs + 1, args);
-    PROTECT(makeVec);
+    (void) PROTECT(makeVec);
     LamExp *exp = newLamExp(LAMEXP_TYPE_MAKEVEC, LAMEXP_VAL_MAKEVEC(makeVec));
     UNPROTECT(save);
     return exp;
@@ -184,11 +189,11 @@ static LamExp *makeTypeConstructor(int index, int nargs) {
     LamVarList *varList = genLamVarList(nargs);
     int save = PROTECT(varList);
     LamList *args = varListToLamList(varList);
-    PROTECT(args);
+    (void) PROTECT(args);
     LamExp *exp = makeMakeVec(nargs, index, args);
-    PROTECT(exp);
+    (void) PROTECT(exp);
     LamLam *lambda = newLamLam(nargs, varList, exp);
-    PROTECT(lambda);
+    (void) PROTECT(lambda);
     LamExp *result = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
     return result;
@@ -198,7 +203,7 @@ static LamExp *analyzeTypeConstructor(AstTypeConstructor *typeConstructor, int i
     ENTER(analyzeTypeConstructor)
     int nargs = countAstTypeList(typeConstructor->typeList);
     // we collect info about the type constructor regardless
-    collectTypeInfo(typeConstructor->symbol, index, nargs, env);
+    collectTypeInfo(typeConstructor->symbol, someoneHasFields, index, nargs, env);
     LamExp *exp = NULL;
     if (nargs > 0) {
         // if this type constructor has args, then we have to create a function
@@ -267,35 +272,83 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
     }
     // otherwise we convert as normal
     LamExp *fun = convertExpression(function, env);
-    PROTECT(fun);
+    (void) PROTECT(fun);
     LamApply *apply = newLamApply(fun, actualNargs, args);
-    PROTECT(apply);
+    (void) PROTECT(apply);
     LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return result;
 }
 
-static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
-    // TODO
+/*******************************************/
+
+static int categorizeArg(AstArg *arg) {
+    switch (arg->type) {
+        case AST_ARG_TYPE_WILDCARD: {
+        }
+        break;
+        case AST_ARG_TYPE_SYMBOL: {
+        }
+        break;
+        case AST_ARG_TYPE_NAMED: {
+        }
+        break;
+        case AST_ARG_TYPE_ENV: {
+        }
+        break;
+        case AST_ARG_TYPE_UNPACK: {
+        }
+        break;
+        case AST_ARG_TYPE_NUMBER: {
+        }
+        break;
+        case AST_ARG_TYPE_CHARACTER: {
+        }
+        break;
+        default:
+            cant_happen("unrecognised arg type %d in categorizeArg", arg->type);
+    }
+}
+
+static LamExp *convertCompositeBodiesInParallel(int nargs, int nBodies, LamVarList *args, AstArgList *argLists[], AstNest *nests[], LamContext *env) {
+    int *categories = NEW_ARRAY(int, nBodies);
+    for (int i = 0; i < nBodies; ++i) {
+        categories[i] = categorizeArg(argLists[i]->arg);
+    }
+    FREE_ARRAY(int, categories, nBodies);
     return NULL;
 }
 
-static LamExp * convertCond(AstConditional *cond, LamContext *env) {
-    LamExp *condition = convertExpression(cond->expression, env);
-    int save = PROTECT(condition);
-    LamExp *consequent = lamConvertNest(cond->consequent, env);
-    PROTECT(consequent);
-    LamExp *alternative = lamConvertNest(cond->alternative, env);
-    PROTECT(alternative);
-    LamCond *lamCond = newLamCond(condition, consequent, alternative);
-    PROTECT(lamCond);
-    LamExp *result = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(lamCond));
-    UNPROTECT(save);
+static LamExp *convertCompositeBodies(int nargs, LamVarList *args, AstCompositeFunction *fun, LamContext *env) {
+    int nBodies = countAstCompositeFunction(fun);
+    AstNest **nests = NEW_ARRAY(AstNest *, nBodies);
+    AstArgList **argLists = NEW_ARRAY(AstArgList *, nBodies);
+    for (int i = 0; i < nBodies; i++) {
+        AstFunction *func = fun->function;
+        nests[i] = func->nest;
+        argLists[i] = func->argList;
+        fun = fun->next;
+    }
+    LamExp *result = convertCompositeBodiesInParallel(nargs, nBodies, args, argLists, nests, env);
+    FREE_ARRAY(AstNest*, nests, nBodies);
+    FREE_ARRAY(AstArgList*, argLists, nBodies);
     return result;
 }
 
-static LamExp * convertString(AstString *string, LamContext *env) {
-    return newLamExp(LAMEXP_TYPE_STRING, LAMEXP_VAL_STRING(string->string));
+/*******************************************/
+
+static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
+    if (fun == NULL) cant_happen("composite function with no components");
+    int nargs = countAstArgList(fun->function->argList);
+    LamVarList *args = genLamVarList(nargs);
+    int save = PROTECT(args);
+    LamExp *body = convertCompositeBodies(nargs, args, fun, env);
+    (void) PROTECT(body);
+    LamLam *lambda = newLamLam(nargs, args, body);
+    (void) PROTECT(lambda);
+    LamExp *result = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
+    UNPROTECT(save);
+    return result;
 }
 
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
@@ -319,23 +372,11 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_NUMBER:
             result = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(expression->val.number));
             break;
-        case AST_EXPRESSION_TYPE_STRING:
-            result = convertString(expression->val.string, env);
-            break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             result = newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(expression->val.character));
             break;
-        case AST_EXPRESSION_TYPE_YES:
-            result = newLamExp(LAMEXP_TYPE_T, LAMEXP_VAL_T());
-            break;
-        case AST_EXPRESSION_TYPE_NO:
-            result = newLamExp(LAMEXP_TYPE_F, LAMEXP_VAL_F());
-            break;
         case AST_EXPRESSION_TYPE_FUN:
             result = convertCompositeFun(expression->val.fun, env);
-            break;
-        case AST_EXPRESSION_TYPE_CONDITIONAL:
-            result = convertCond(expression->val.conditional, env);
             break;
         case AST_EXPRESSION_TYPE_NEST:
             result = lamConvertNest(expression->val.nest, env);

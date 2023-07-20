@@ -120,14 +120,6 @@ struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * 
     return x;
 }
 
-struct AstConditional * newAstConditional(struct AstExpression * expression, struct AstNest * consequent, struct AstNest * alternative) {
-    struct AstConditional * x = NEW(AstConditional, OBJTYPE_ASTCONDITIONAL);
-    x->expression = expression;
-    x->consequent = consequent;
-    x->alternative = alternative;
-    return x;
-}
-
 struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * function, struct AstCompositeFunction * next) {
     struct AstCompositeFunction * x = NEW(AstCompositeFunction, OBJTYPE_ASTCOMPOSITEFUNCTION);
     x->function = function;
@@ -153,13 +145,6 @@ struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList
     struct AstUnpack * x = NEW(AstUnpack, OBJTYPE_ASTUNPACK);
     x->symbol = symbol;
     x->argList = argList;
-    return x;
-}
-
-struct AstArgPair * newAstArgPair(struct AstArg * car, struct AstArg * cdr) {
-    struct AstArgPair * x = NEW(AstArgPair, OBJTYPE_ASTARGPAIR);
-    x->car = car;
-    x->cdr = cdr;
     return x;
 }
 
@@ -202,12 +187,6 @@ struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * d
     struct AstEnv * x = NEW(AstEnv, OBJTYPE_ASTENV);
     x->package = package;
     x->definitions = definitions;
-    return x;
-}
-
-struct AstString * newAstString(char * string) {
-    struct AstString * x = NEW(AstString, OBJTYPE_ASTSTRING);
-    x->string = string;
     return x;
 }
 
@@ -354,15 +333,6 @@ void markAstType(struct AstType * x) {
     markAstType(x->next);
 }
 
-void markAstConditional(struct AstConditional * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markAstExpression(x->expression);
-    markAstNest(x->consequent);
-    markAstNest(x->alternative);
-}
-
 void markAstCompositeFunction(struct AstCompositeFunction * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -392,14 +362,6 @@ void markAstUnpack(struct AstUnpack * x) {
     if (MARKED(x)) return;
     MARK(x);
     markAstArgList(x->argList);
-}
-
-void markAstArgPair(struct AstArgPair * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markAstArg(x->car);
-    markAstArg(x->cdr);
 }
 
 void markAstNamedArg(struct AstNamedArg * x) {
@@ -444,12 +406,6 @@ void markAstEnv(struct AstEnv * x) {
     MARK(x);
     markAstPackage(x->package);
     markAstDefinitions(x->definitions);
-}
-
-void markAstString(struct AstString * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
 }
 
 void markAstDefinition(struct AstDefinition * x) {
@@ -499,10 +455,6 @@ void markAstTypeClause(struct AstTypeClause * x) {
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             break;
-        case AST_TYPECLAUSE_TYPE_BOOLEAN:
-            break;
-        case AST_TYPECLAUSE_TYPE_STRING:
-            break;
         case AST_TYPECLAUSE_TYPE_LIST:
             markAstType(x->val.list);
             break;
@@ -539,14 +491,7 @@ void markAstArg(struct AstArg * x) {
             break;
         case AST_ARG_TYPE_NUMBER:
             break;
-        case AST_ARG_TYPE_STRING:
-            markAstString(x->val.string);
-            break;
         case AST_ARG_TYPE_CHARACTER:
-            break;
-        case AST_ARG_TYPE_YES:
-            break;
-        case AST_ARG_TYPE_NO:
             break;
         default:
             cant_happen("unrecognised type %d in markAstArg", x->type);
@@ -569,23 +514,13 @@ void markAstExpression(struct AstExpression * x) {
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             break;
-        case AST_EXPRESSION_TYPE_STRING:
-            markAstString(x->val.string);
-            break;
         case AST_EXPRESSION_TYPE_CHARACTER:
-            break;
-        case AST_EXPRESSION_TYPE_YES:
-            break;
-        case AST_EXPRESSION_TYPE_NO:
             break;
         case AST_EXPRESSION_TYPE_FUN:
             markAstCompositeFunction(x->val.fun);
             break;
         case AST_EXPRESSION_TYPE_ENV:
             markAstEnv(x->val.env);
-            break;
-        case AST_EXPRESSION_TYPE_CONDITIONAL:
-            markAstConditional(x->val.conditional);
             break;
         case AST_EXPRESSION_TYPE_NEST:
             markAstNest(x->val.nest);
@@ -640,9 +575,6 @@ void markAstObj(struct Header *h) {
         case OBJTYPE_ASTTYPE:
             markAstType((AstType *)h);
             break;
-        case OBJTYPE_ASTCONDITIONAL:
-            markAstConditional((AstConditional *)h);
-            break;
         case OBJTYPE_ASTCOMPOSITEFUNCTION:
             markAstCompositeFunction((AstCompositeFunction *)h);
             break;
@@ -654,9 +586,6 @@ void markAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTUNPACK:
             markAstUnpack((AstUnpack *)h);
-            break;
-        case OBJTYPE_ASTARGPAIR:
-            markAstArgPair((AstArgPair *)h);
             break;
         case OBJTYPE_ASTNAMEDARG:
             markAstNamedArg((AstNamedArg *)h);
@@ -675,9 +604,6 @@ void markAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTENV:
             markAstEnv((AstEnv *)h);
-            break;
-        case OBJTYPE_ASTSTRING:
-            markAstString((AstString *)h);
             break;
         case OBJTYPE_ASTDEFINITION:
             markAstDefinition((AstDefinition *)h);
@@ -755,10 +681,6 @@ void freeAstType(struct AstType * x) {
     FREE(x, AstType);
 }
 
-void freeAstConditional(struct AstConditional * x) {
-    FREE(x, AstConditional);
-}
-
 void freeAstCompositeFunction(struct AstCompositeFunction * x) {
     FREE(x, AstCompositeFunction);
 }
@@ -773,10 +695,6 @@ void freeAstArgList(struct AstArgList * x) {
 
 void freeAstUnpack(struct AstUnpack * x) {
     FREE(x, AstUnpack);
-}
-
-void freeAstArgPair(struct AstArgPair * x) {
-    FREE(x, AstArgPair);
 }
 
 void freeAstNamedArg(struct AstNamedArg * x) {
@@ -801,10 +719,6 @@ void freeAstExpressions(struct AstExpressions * x) {
 
 void freeAstEnv(struct AstEnv * x) {
     FREE(x, AstEnv);
-}
-
-void freeAstString(struct AstString * x) {
-    FREE(x, AstString);
 }
 
 void freeAstDefinition(struct AstDefinition * x) {
@@ -872,9 +786,6 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTTYPE:
             freeAstType((AstType *)h);
             break;
-        case OBJTYPE_ASTCONDITIONAL:
-            freeAstConditional((AstConditional *)h);
-            break;
         case OBJTYPE_ASTCOMPOSITEFUNCTION:
             freeAstCompositeFunction((AstCompositeFunction *)h);
             break;
@@ -886,9 +797,6 @@ void freeAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTUNPACK:
             freeAstUnpack((AstUnpack *)h);
-            break;
-        case OBJTYPE_ASTARGPAIR:
-            freeAstArgPair((AstArgPair *)h);
             break;
         case OBJTYPE_ASTNAMEDARG:
             freeAstNamedArg((AstNamedArg *)h);
@@ -907,9 +815,6 @@ void freeAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTENV:
             freeAstEnv((AstEnv *)h);
-            break;
-        case OBJTYPE_ASTSTRING:
-            freeAstString((AstString *)h);
             break;
         case OBJTYPE_ASTDEFINITION:
             freeAstDefinition((AstDefinition *)h);
@@ -959,8 +864,6 @@ char *typenameAstObj(int type) {
             return "AstTypeList";
         case OBJTYPE_ASTTYPE:
             return "AstType";
-        case OBJTYPE_ASTCONDITIONAL:
-            return "AstConditional";
         case OBJTYPE_ASTCOMPOSITEFUNCTION:
             return "AstCompositeFunction";
         case OBJTYPE_ASTFUNCTION:
@@ -969,8 +872,6 @@ char *typenameAstObj(int type) {
             return "AstArgList";
         case OBJTYPE_ASTUNPACK:
             return "AstUnpack";
-        case OBJTYPE_ASTARGPAIR:
-            return "AstArgPair";
         case OBJTYPE_ASTNAMEDARG:
             return "AstNamedArg";
         case OBJTYPE_ASTENVTYPE:
@@ -983,8 +884,6 @@ char *typenameAstObj(int type) {
             return "AstExpressions";
         case OBJTYPE_ASTENV:
             return "AstEnv";
-        case OBJTYPE_ASTSTRING:
-            return "AstString";
         case OBJTYPE_ASTDEFINITION:
             return "AstDefinition";
         case OBJTYPE_ASTSINGLEPROTOTYPE:

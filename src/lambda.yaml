@@ -80,6 +80,7 @@ structs:
         parent: LamContext
 
     LamTypeConstructorInfo:
+        vec: bool
         nargs: int
         index: int
 
@@ -146,6 +147,10 @@ primitives:
         valued: false
     int:
         cname: "int"
+        printf: "%d"
+        valued: true
+    bool:
+        cname: "bool"
         printf: "%d"
         valued: true
     character:

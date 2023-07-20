@@ -2,6 +2,7 @@
 #include <stdlib.h> /* for atoi call */
 #include "ast.h"
 #include "parser.h"
+#include "parser_management.h"
 extern int lineNum;
 
 void parseCS(char delimeter);
@@ -26,12 +27,10 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "and"       { return AND; }
 "as"        { return AS; }
 "back"      { return BACK; }
-"bool"      { return KW_BOOL; }
 "char"      { return KW_CHAR; }
 "else"      { return ELSE; }
 "env"       { return ENV; }
 "extends"   { return EXTENDS; }
-"false"     { return FALSE; }
 "fn"        { return FN; }
 "here"      { return HERE; }
 "if"        { return IF; }
@@ -40,7 +39,6 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "let"       { return LET; }
 "list"      { return KW_LIST; }
 "load"      { return LOAD; }
-"nil"       { return NIL; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "prototype" { return PROTOTYPE; }
@@ -48,7 +46,6 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "string"    { return KW_STRING; }
 "switch"    { return SWITCH; }
 "then"      { return THEN; }
-"true"      { return TRUE; }
 "typedef"   { return TYPEDEF; }
 
 \"((\\.)|[^"])*\" { parseCS('"'); yylval.s = yytext; return STRING; }
@@ -70,6 +67,8 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 #{ID} { yylval.s = yytext; return TYPE_VAR; }
 
 . { return yytext[0]; }
+
+<<EOF>> { if (!pm_popFile()) yyterminate(); }
 %%
 
 void parseCS(char delimiter) {

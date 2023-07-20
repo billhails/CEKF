@@ -205,14 +205,6 @@ static TinMonoType *arrowApplication(TinMonoType *type1, TinMonoType *type2) {
     return anyArrowApplication(arrow, type1, type2);
 }
 
-static TinMonoType *stringMonoType() {
-    TinMonoType *charType = constantTypeFunction(charSymbol());
-    int save = PROTECT(charType);
-    TinMonoType *result = singleArgTypeFunction(listSymbol(), charType);
-    UNPROTECT(save);
-    return result;
-}
-
 static void collectDefine(AstDefine *define, TinContext *context) {
     TinMonoType *var = freshMonoTypeVar(define->symbol->name);
     int save = PROTECT(var);
@@ -332,10 +324,6 @@ static TinMonoType *astTypeClauseToMonoType(AstTypeClause *typeClause) {
             return constantTypeFunction(intSymbol());
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             return constantTypeFunction(charSymbol());
-        case AST_TYPECLAUSE_TYPE_BOOLEAN:
-            return constantTypeFunction(boolSymbol());
-        case AST_TYPECLAUSE_TYPE_STRING:
-            return stringMonoType();
         case AST_TYPECLAUSE_TYPE_LIST: {
             TinMonoType *type = astTypeToMonoType(typeClause->val.list);
             int save = PROTECT(type);
@@ -436,16 +424,6 @@ static WResult *constantResult(HashSymbol *typeName) {
     return r;
 }
 
-static WResult *stringResult() {
-    TinMonoType *type = stringMonoType();
-    int save = PROTECT(type);
-    TinSubstitution *empty = makeEmptySubstitution();
-    (void) PROTECT(empty);
-    WResult *r = newWResult(empty, type);
-    UNPROTECT(save);
-    return r;
-}
-
 static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     int myId = idSource++;
@@ -471,54 +449,6 @@ static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
 #ifdef DEBUG_ALGORITHM_W
     leave("WSymbol", myId, depth);
     printWResult(result, depth+ 1);
-    printf("\n");
-#endif
-    return result;
-}
-
-static WResult *WCond(TinContext *context, AstConditional *cond, int depth) {
-#ifdef DEBUG_ALGORITHM_W
-    int myId = idSource++;
-    enter("WCond", myId, depth);
-    printAstConditional(cond, depth + 1);
-    printf("\n");
-    printTinContext(context, depth + 1);
-    printf("\n");
-#endif
-    // slightly hacky, but DRY, we convert the cond to a 3 valued function
-    // "if" and type check that against a pre-supplied context type for "if"
-    AstExpression *arg = newAstExpression(
-        AST_EXPRESSION_TYPE_NEST,
-        AST_EXPRESSION_VAL_NEST(cond->alternative)
-    );
-    int save = PROTECT(arg);
-    AstExpressions *args = newAstExpressions(arg, NULL);
-    UNPROTECT(save);
-    save = PROTECT(args);
-    arg = newAstExpression(
-        AST_EXPRESSION_TYPE_NEST,
-        AST_EXPRESSION_VAL_NEST(cond->consequent)
-    );
-    (void) PROTECT(arg);
-    args = newAstExpressions(arg, args);
-    UNPROTECT(save);
-    save = PROTECT(args);
-    args = newAstExpressions(cond->expression, args);
-    UNPROTECT(save);
-    save = PROTECT(args);
-    AstExpression *fun = newAstExpression(
-        AST_EXPRESSION_TYPE_SYMBOL,
-        AST_EXPRESSION_VAL_SYMBOL(newSymbol("if"))
-    );
-    (void) PROTECT(fun);
-    AstFunCall *call = newAstFunCall(fun, args);
-    UNPROTECT(save);
-    save = PROTECT(call);
-    WResult *result = WApplication(context, call, depth + 1);
-    UNPROTECT(save);
-#ifdef DEBUG_ALGORITHM_W
-    leave("WCond", myId, depth);
-    printWResult(result, depth + 1);
     printf("\n");
 #endif
     return result;
@@ -716,13 +646,8 @@ static WResult *WFarg_d(TinContext *context, AstArg *arg, int depth) {
             return WUnpack(context, arg->val.unpack, depth + 1);
         case AST_ARG_TYPE_NUMBER:
             return constantResult(intSymbol());
-        case AST_ARG_TYPE_STRING:
-            return stringResult();
         case AST_ARG_TYPE_CHARACTER:
             return constantResult(charSymbol());
-        case AST_ARG_TYPE_YES:
-        case AST_ARG_TYPE_NO:
-            return constantResult(boolSymbol());
     }
 }
 
@@ -748,10 +673,7 @@ static void addVar(TinContext *context, AstArg *arg) {
     switch (arg->type) {
         case AST_ARG_TYPE_WILDCARD:
         case AST_ARG_TYPE_NUMBER:
-        case AST_ARG_TYPE_STRING:
         case AST_ARG_TYPE_CHARACTER:
-        case AST_ARG_TYPE_YES:
-        case AST_ARG_TYPE_NO:
         /*
         case AST_ARG_TYPE_ENV:
         */
@@ -832,10 +754,7 @@ static TinVarsResult *vars(TinContext *context, HashTable *V, AstArg *arg, int d
         break;
         case AST_ARG_TYPE_WILDCARD:
         case AST_ARG_TYPE_NUMBER:
-        case AST_ARG_TYPE_STRING:
-        case AST_ARG_TYPE_CHARACTER:
-        case AST_ARG_TYPE_YES:
-        case AST_ARG_TYPE_NO: {
+        case AST_ARG_TYPE_CHARACTER: {
             result = newTinVarsResult(context, V);
         }
         break;
@@ -907,21 +826,8 @@ static TinVarResult *var(TinContext *context, HashTable *V, AstArg *arg, int dep
             result = newTinVarResult(wr->substitution, context, wr->monoType, V);
         }
         break;
-        case AST_ARG_TYPE_STRING: {
-            WResult *wr = stringResult();
-            save = PROTECT(wr);
-            result = newTinVarResult(wr->substitution, context, wr->monoType, V);
-        }
-        break;
         case AST_ARG_TYPE_CHARACTER: {
             WResult *wr = constantResult(charSymbol());
-            save = PROTECT(wr);
-            result = newTinVarResult(wr->substitution, context, wr->monoType, V);
-        }
-        break;
-        case AST_ARG_TYPE_YES:
-        case AST_ARG_TYPE_NO: {
-            WResult *wr = constantResult(boolSymbol());
             save = PROTECT(wr);
             result = newTinVarResult(wr->substitution, context, wr->monoType, V);
         }
@@ -1040,13 +946,8 @@ static WResult *WExpression_d(TinContext *context, AstExpression *expr, int dept
             return WSymbol(context, expr->val.symbol, depth + 1);
         case AST_EXPRESSION_TYPE_NUMBER:
             return constantResult(intSymbol());
-        case AST_EXPRESSION_TYPE_STRING:
-            return stringResult();
         case AST_EXPRESSION_TYPE_CHARACTER:
             return constantResult(charSymbol());
-        case AST_EXPRESSION_TYPE_YES:
-        case AST_EXPRESSION_TYPE_NO:
-            return constantResult(boolSymbol());
         case AST_EXPRESSION_TYPE_FUN:
             return WAbstraction(context, expr->val.fun, depth + 1);
         case AST_EXPRESSION_TYPE_NEST:
@@ -1055,8 +956,6 @@ static WResult *WExpression_d(TinContext *context, AstExpression *expr, int dept
         case AST_EXPRESSION_TYPE_ENV:
             return WEnv(context, expr->val.env);
         */
-        case AST_EXPRESSION_TYPE_CONDITIONAL:
-            return WCond(context, expr->val.conditional, depth + 1);
         default:
             cant_happen("unrecognised type %d in WExpression", expr->type);
     }
@@ -1266,8 +1165,8 @@ static void addComparisonBinOp(TinContext *context, char *token) {
 
 static void addCons(TinContext *context) {
     // #a -> List(#a) -> List(#a)
-    HashSymbol *op = newSymbol("@");
-    TinMonoType *fresh = freshMonoTypeVar("@");
+    HashSymbol *op = newSymbol("cons");
+    TinMonoType *fresh = freshMonoTypeVar("cons");
     int save = PROTECT(fresh);
     TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
     (void) PROTECT(list);
@@ -1277,8 +1176,8 @@ static void addCons(TinContext *context) {
 
 static void addAppend(TinContext *context) {
     // List(#a) -> List(#a) -> List(#a)
-    HashSymbol *op = newSymbol("@@");
-    TinMonoType *fresh = freshMonoTypeVar("@@");
+    HashSymbol *op = newSymbol("append");
+    TinMonoType *fresh = freshMonoTypeVar("append");
     int save = PROTECT(fresh);
     TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
     (void) PROTECT(list);

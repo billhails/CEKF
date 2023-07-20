@@ -76,11 +76,6 @@ structs:
         typeClause: AstTypeClause
         next: AstType
 
-    AstConditional:
-        expression: AstExpression
-        consequent: AstNest
-        alternative: AstNest
-
     AstCompositeFunction:
         function: AstFunction
         next: AstCompositeFunction
@@ -96,10 +91,6 @@ structs:
     AstUnpack:
         symbol: HashSymbol
         argList: AstArgList
-
-    AstArgPair:
-        car: AstArg
-        cdr: AstArg
 
     AstNamedArg:
         name: HashSymbol
@@ -125,9 +116,6 @@ structs:
         package: AstPackage
         definitions: AstDefinitions
 
-    AstString:
-        string: char_ptr
-
 unions:
     AstDefinition:
         define: AstDefine
@@ -142,8 +130,6 @@ unions:
     AstTypeClause:
         integer: void_ptr
         character: void_ptr
-        boolean: void_ptr
-        string: void_ptr
         list: AstType
         type: AstType
         var: HashSymbol
@@ -156,10 +142,7 @@ unions:
         env: AstEnvType
         unpack: AstUnpack
         number: int
-        string: AstString
         character: char
-        "yes": void_ptr
-        "no": void_ptr
 
     AstExpression:
         nil: void_ptr
@@ -167,13 +150,9 @@ unions:
         funCall: AstFunCall
         symbol: HashSymbol
         number: int
-        string: AstString
         character: char
-        "yes": void_ptr
-        "no": void_ptr
         fun: AstCompositeFunction
         env: AstEnv
-        conditional: AstConditional
         nest: AstNest
 
 enums: {}
@@ -187,18 +166,10 @@ primitives:
         cname: "char"
         printf: "%c"
         valued: true
-    char_ptr:
-        cname: "char *"
-        printf: "%s"
-        valued: true
     void_ptr:
         cname: "void *"
         printf: "%p"
         valued: false
-    bool:
-        cname: "bool"
-        printf: "%d"
-        valued: true
     int:
         cname: "int"
         printf: "%d"
