@@ -40,7 +40,6 @@ typedef enum AstSinglePrototypeType {
 typedef enum AstTypeClauseType {
     AST_TYPECLAUSE_TYPE_INTEGER,
     AST_TYPECLAUSE_TYPE_CHARACTER,
-    AST_TYPECLAUSE_TYPE_LIST,
     AST_TYPECLAUSE_TYPE_TYPE,
     AST_TYPECLAUSE_TYPE_VAR,
     AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR,
@@ -85,7 +84,6 @@ typedef union AstSinglePrototypeVal {
 typedef union AstTypeClauseVal {
     void * integer;
     void * character;
-    struct AstType * list;
     struct AstType * type;
     HashSymbol * var;
     struct AstTypeConstructor * typeConstructor;
@@ -387,7 +385,6 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_SINGLEPROTOTYPE_VAL_PROTOTYPE(x) ((union AstSinglePrototypeVal ){.prototype = (x)})
 #define AST_TYPECLAUSE_VAL_INTEGER() ((union AstTypeClauseVal ){.integer = (NULL)})
 #define AST_TYPECLAUSE_VAL_CHARACTER() ((union AstTypeClauseVal ){.character = (NULL)})
-#define AST_TYPECLAUSE_VAL_LIST(x) ((union AstTypeClauseVal ){.list = (x)})
 #define AST_TYPECLAUSE_VAL_TYPE(x) ((union AstTypeClauseVal ){.type = (x)})
 #define AST_TYPECLAUSE_VAL_VAR(x) ((union AstTypeClauseVal ){.var = (x)})
 #define AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR(x) ((union AstTypeClauseVal ){.typeConstructor = (x)})

@@ -387,11 +387,6 @@ printf("void * %p", x->val.integer);
                         pad(depth + 1);
 printf("void * %p", x->val.character);
             break;
-        case AST_TYPECLAUSE_TYPE_LIST:
-            pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_LIST\n");
-            printAstType(x->val.list, depth + 1);
-            break;
         case AST_TYPECLAUSE_TYPE_TYPE:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_TYPE\n");

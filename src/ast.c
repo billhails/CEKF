@@ -455,9 +455,6 @@ void markAstTypeClause(struct AstTypeClause * x) {
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             break;
-        case AST_TYPECLAUSE_TYPE_LIST:
-            markAstType(x->val.list);
-            break;
         case AST_TYPECLAUSE_TYPE_TYPE:
             markAstType(x->val.type);
             break;

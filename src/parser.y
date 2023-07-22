@@ -183,11 +183,8 @@ static AstUnpack *newStringUnpack(char *str) {
 %token FN
 %token IF
 %token IN
-%token KW_BOOL
 %token KW_CHAR
 %token KW_INT
-%token KW_LIST
-%token KW_STRING
 %token LET
 %token LOAD
 %token PROTOTYPE
@@ -317,11 +314,10 @@ type : type_clause              { $$ = newAstType($1, NULL); }
      | type_clause ARROW type   { $$ = newAstType($1, $3); }
      ;
 
-type_clause : KW_LIST '(' type ')'  { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_LIST, AST_TYPECLAUSE_VAL_LIST($3)); }
-            | KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INTEGER, AST_TYPECLAUSE_VAL_INTEGER()); }
+type_clause : KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INTEGER, AST_TYPECLAUSE_VAL_INTEGER()); }
             | KW_CHAR               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_CHARACTER, AST_TYPECLAUSE_VAL_CHARACTER()); }
             | type_symbol           { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_VAR, AST_TYPECLAUSE_VAL_VAR($1)); }
-            | type_constructor      { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR, AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR($1)); }
+            | type_constructor      { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR, AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR($1)); } // FIXME compound_type not type_constructor
             | '(' type ')'          { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPE, AST_TYPECLAUSE_VAL_TYPE($2)); }
             ;
 

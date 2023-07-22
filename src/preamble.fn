@@ -1,7 +1,7 @@
 let
-    typedef Bool { true | false }
+    typedef bool { true | false }
 
-    typedef List(#t) { cons(#t, List(#t)) | nil }
+    typedef list(#t) { cons(#t, list(#t)) | nil }
 
     fn append {
         ([], b) { b }

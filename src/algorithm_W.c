@@ -105,27 +105,19 @@ static HashSymbol *arrowSymbol() {
 }
 
 static HashSymbol *intSymbol() {
-    return newSymbol("Int");
+    return newSymbol("int");
 }
 
 static HashSymbol *charSymbol() {
-    return newSymbol("Char");
+    return newSymbol("char");
 }
 
 static HashSymbol *boolSymbol() {
-    return newSymbol("Bool");
-}
-
-static HashSymbol *stringSymbol() {
-    return newSymbol("String");
-}
-
-static HashSymbol *listSymbol() {
-    return newSymbol("List");
+    return newSymbol("bool");
 }
 
 static HashSymbol *envSymbol() {
-    return newSymbol("Env");
+    return newSymbol("env");
 }
 
 static TinPolyType *monoToPolyType(TinMonoType *monoType) {
@@ -324,13 +316,6 @@ static TinMonoType *astTypeClauseToMonoType(AstTypeClause *typeClause) {
             return constantTypeFunction(intSymbol());
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             return constantTypeFunction(charSymbol());
-        case AST_TYPECLAUSE_TYPE_LIST: {
-            TinMonoType *type = astTypeToMonoType(typeClause->val.list);
-            int save = PROTECT(type);
-            TinMonoType *result = singleArgTypeFunction(listSymbol(), type);
-            UNPROTECT(save);
-            return result;
-        }
         case AST_TYPECLAUSE_TYPE_TYPE:
             return astTypeToMonoType(typeClause->val.type);
         case AST_TYPECLAUSE_TYPE_VAR:
@@ -1115,7 +1100,7 @@ static void addTypeBinOp(TinContext *context, HashSymbol *op, TinMonoType *a, Ti
 }
 
 static void addIntBinOp(TinContext *context, char *token) {
-    // Int -> Int -> Int
+    // int -> int -> int
     HashSymbol *symbol = newSymbol(token);
     int save = PROTECT(symbol);
     TinMonoType *intSym = constantTypeFunction(intSymbol());
@@ -1125,7 +1110,7 @@ static void addIntBinOp(TinContext *context, char *token) {
 }
 
 static void addBoolBinOp(TinContext *context, char *token) {
-    // Bool -> Bool -> Bool
+    // bool -> bool -> bool
     HashSymbol *symbol = newSymbol(token);
     int save = PROTECT(symbol);
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
@@ -1153,7 +1138,7 @@ static void addBack(TinContext *context) {
 }
 
 static void addComparisonBinOp(TinContext *context, char *token) {
-    // #a -> #a -> Bool
+    // #a -> #a -> bool
     HashSymbol *op = newSymbol(token);
     TinMonoType *fresh = freshMonoTypeVar(token);
     int save = PROTECT(fresh);
@@ -1163,30 +1148,8 @@ static void addComparisonBinOp(TinContext *context, char *token) {
     UNPROTECT(save);
 }
 
-static void addCons(TinContext *context) {
-    // #a -> List(#a) -> List(#a)
-    HashSymbol *op = newSymbol("cons");
-    TinMonoType *fresh = freshMonoTypeVar("cons");
-    int save = PROTECT(fresh);
-    TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
-    (void) PROTECT(list);
-    addTypeBinOp(context, op, fresh, list, list);
-    UNPROTECT(save);
-}
-
-static void addAppend(TinContext *context) {
-    // List(#a) -> List(#a) -> List(#a)
-    HashSymbol *op = newSymbol("append");
-    TinMonoType *fresh = freshMonoTypeVar("append");
-    int save = PROTECT(fresh);
-    TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
-    (void) PROTECT(list);
-    addBinOp(context, op, list, list, list);
-    UNPROTECT(save);
-}
-
 static void addNot(TinContext *context) {
-    // Bool -> Bool
+    // bool -> bool
     HashSymbol *op = newSymbol("not");
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
     int save = PROTECT(boolSym);
@@ -1198,7 +1161,7 @@ static void addNot(TinContext *context) {
 }
 
 static void addNegate(TinContext *context) {
-    // Int -> Int
+    // int -> int
     HashSymbol *op = newSymbol("neg");
     TinMonoType *intSym = constantTypeFunction(intSymbol());
     int save = PROTECT(intSym);
@@ -1226,37 +1189,6 @@ static void addHere(TinContext *context) {
     save = PROTECT(arrow);
     HashSymbol *op = newSymbol("here");
     generalizeMonoTypeToContext(context, op, arrow);
-    UNPROTECT(save);
-}
-
-static void addIf(TinContext *context) {
-    // Bool -> #a -> #a -> #a
-    TinMonoType *a = freshMonoTypeVar("if");
-    int save = PROTECT(a);
-    TinMonoType *arrow = arrowApplication(a, a);
-    UNPROTECT(save);
-    save = PROTECT(arrow);
-    arrow = arrowApplication(a, arrow);
-    UNPROTECT(save);
-    save = PROTECT(arrow);
-    TinMonoType *b = constantTypeFunction(boolSymbol());
-    (void) PROTECT(b);
-    arrow = arrowApplication(b, arrow);
-    UNPROTECT(save);
-    save = PROTECT(arrow);
-    HashSymbol *op = newSymbol("if");
-    generalizeMonoTypeToContext(context, op, arrow);
-    UNPROTECT(save);
-}
-
-static void addNil(TinContext *context) {
-    // List(#t)
-    TinMonoType *fresh = freshMonoTypeVar("nil");
-    int save = PROTECT(fresh);
-    TinMonoType *list = singleArgTypeFunction(listSymbol(), fresh);
-    (void) PROTECT(list);
-    HashSymbol *op = newSymbol("nil");
-    generalizeTypeConstructorToContext(context, op, list);
     UNPROTECT(save);
 }
 
@@ -1292,13 +1224,9 @@ WResult *WTop(AstNest *nest) {
     addComparisonBinOp(context, ">=");
     addComparisonBinOp(context, "!=");
     addThen(context);
-    addCons(context);
-    addAppend(context);
     addNot(context);
     addNegate(context);
     addHere(context);
-    addIf(context);
-    addNil(context);
     addBack(context);
     addError(context);
     return WNest(context, nest, 0);

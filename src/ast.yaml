@@ -130,7 +130,7 @@ unions:
     AstTypeClause:
         integer: void_ptr
         character: void_ptr
-        list: AstType
+        # list: AstType
         type: AstType
         var: HashSymbol
         typeConstructor: AstTypeConstructor

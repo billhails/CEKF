@@ -37,13 +37,11 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "in"        { return IN; }
 "int"       { return KW_INT; }
 "let"       { return LET; }
-"list"      { return KW_LIST; }
 "load"      { return LOAD; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "prototype" { return PROTOTYPE; }
 "_"         { return WILDCARD; }
-"string"    { return KW_STRING; }
 "switch"    { return SWITCH; }
 "then"      { return THEN; }
 "typedef"   { return TYPEDEF; }
