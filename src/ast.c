@@ -106,6 +106,13 @@ struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct As
     return x;
 }
 
+struct AstTypeFunction * newAstTypeFunction(HashSymbol * symbol, struct AstTypeList * typeList) {
+    struct AstTypeFunction * x = NEW(AstTypeFunction, OBJTYPE_ASTTYPEFUNCTION);
+    x->symbol = symbol;
+    x->typeList = typeList;
+    return x;
+}
+
 struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * next) {
     struct AstTypeList * x = NEW(AstTypeList, OBJTYPE_ASTTYPELIST);
     x->type = type;
@@ -317,6 +324,13 @@ void markAstTypeConstructor(struct AstTypeConstructor * x) {
     markAstTypeList(x->typeList);
 }
 
+void markAstTypeFunction(struct AstTypeFunction * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstTypeList(x->typeList);
+}
+
 void markAstTypeList(struct AstTypeList * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -455,13 +469,10 @@ void markAstTypeClause(struct AstTypeClause * x) {
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             break;
-        case AST_TYPECLAUSE_TYPE_TYPE:
-            markAstType(x->val.type);
-            break;
         case AST_TYPECLAUSE_TYPE_VAR:
             break;
-        case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR:
-            markAstTypeConstructor(x->val.typeConstructor);
+        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
+            markAstTypeFunction(x->val.typeFunction);
             break;
         default:
             cant_happen("unrecognised type %d in markAstTypeClause", x->type);
@@ -566,6 +577,9 @@ void markAstObj(struct Header *h) {
         case OBJTYPE_ASTTYPECONSTRUCTOR:
             markAstTypeConstructor((AstTypeConstructor *)h);
             break;
+        case OBJTYPE_ASTTYPEFUNCTION:
+            markAstTypeFunction((AstTypeFunction *)h);
+            break;
         case OBJTYPE_ASTTYPELIST:
             markAstTypeList((AstTypeList *)h);
             break;
@@ -668,6 +682,10 @@ void freeAstTypeBody(struct AstTypeBody * x) {
 
 void freeAstTypeConstructor(struct AstTypeConstructor * x) {
     FREE(x, AstTypeConstructor);
+}
+
+void freeAstTypeFunction(struct AstTypeFunction * x) {
+    FREE(x, AstTypeFunction);
 }
 
 void freeAstTypeList(struct AstTypeList * x) {
@@ -777,6 +795,9 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTTYPECONSTRUCTOR:
             freeAstTypeConstructor((AstTypeConstructor *)h);
             break;
+        case OBJTYPE_ASTTYPEFUNCTION:
+            freeAstTypeFunction((AstTypeFunction *)h);
+            break;
         case OBJTYPE_ASTTYPELIST:
             freeAstTypeList((AstTypeList *)h);
             break;
@@ -857,6 +878,8 @@ char *typenameAstObj(int type) {
             return "AstTypeBody";
         case OBJTYPE_ASTTYPECONSTRUCTOR:
             return "AstTypeConstructor";
+        case OBJTYPE_ASTTYPEFUNCTION:
+            return "AstTypeFunction";
         case OBJTYPE_ASTTYPELIST:
             return "AstTypeList";
         case OBJTYPE_ASTTYPE:

@@ -135,6 +135,7 @@ static AstUnpack *newStringUnpack(char *str) {
     AstTypeBody *typeBody;
     AstTypeClause *typeClause;
     AstTypeConstructor *typeConstructor;
+    AstTypeFunction *typeFunction;
     AstTypeDef *typeDef;
     AstTypeList *typeList;
     AstTypeSymbols *typeSymbols;
@@ -168,6 +169,7 @@ static AstUnpack *newStringUnpack(char *str) {
 %type <typeBody> type_body
 %type <typeClause> type_clause
 %type <typeConstructor> type_constructor
+%type <typeFunction> type_function
 %type <typeDef> typedef
 %type <typeList> type_list
 %type <typeSymbols> type_symbols
@@ -284,6 +286,8 @@ as : %empty     { $$ = NULL; }
    | AS symbol  { $$ = $2; }
    ;
 
+/******************************** types */
+
 typedef : TYPEDEF flat_type '{' type_body '}'   { $$ = newAstTypeDef($2, $4); }
         ;
 
@@ -306,19 +310,23 @@ type_constructor : symbol                   { $$ = newAstTypeConstructor($1, NUL
                  | symbol '(' type_list ')' { $$ = newAstTypeConstructor($1, $3); }
                  ;
 
+type_function : symbol                   { $$ = newAstTypeFunction($1, NULL); }
+              | symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
+              ;
+
 type_list : type                { $$ = newAstTypeList($1, NULL); }
           | type ',' type_list  { $$ = newAstTypeList($1, $3); }
           ;
 
 type : type_clause              { $$ = newAstType($1, NULL); }
      | type_clause ARROW type   { $$ = newAstType($1, $3); }
+     | '(' type ')'             { $$ = $2; }
      ;
 
 type_clause : KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INTEGER, AST_TYPECLAUSE_VAL_INTEGER()); }
             | KW_CHAR               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_CHARACTER, AST_TYPECLAUSE_VAL_CHARACTER()); }
             | type_symbol           { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_VAR, AST_TYPECLAUSE_VAL_VAR($1)); }
-            | type_constructor      { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR, AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR($1)); } // FIXME compound_type not type_constructor
-            | '(' type ')'          { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPE, AST_TYPECLAUSE_VAL_TYPE($2)); }
+            | type_function         { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPEFUNCTION, AST_TYPECLAUSE_VAL_TYPEFUNCTION($1)); }
             ;
 
 /******************************** expressions */

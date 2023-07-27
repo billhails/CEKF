@@ -40,9 +40,8 @@ typedef enum AstSinglePrototypeType {
 typedef enum AstTypeClauseType {
     AST_TYPECLAUSE_TYPE_INTEGER,
     AST_TYPECLAUSE_TYPE_CHARACTER,
-    AST_TYPECLAUSE_TYPE_TYPE,
     AST_TYPECLAUSE_TYPE_VAR,
-    AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR,
+    AST_TYPECLAUSE_TYPE_TYPEFUNCTION,
 } AstTypeClauseType;
 
 typedef enum AstArgType {
@@ -84,9 +83,8 @@ typedef union AstSinglePrototypeVal {
 typedef union AstTypeClauseVal {
     void * integer;
     void * character;
-    struct AstType * type;
     HashSymbol * var;
-    struct AstTypeConstructor * typeConstructor;
+    struct AstTypeFunction * typeFunction;
 } AstTypeClauseVal;
 
 typedef union AstArgVal {
@@ -184,6 +182,12 @@ typedef struct AstTypeConstructor {
     HashSymbol * symbol;
     struct AstTypeList * typeList;
 } AstTypeConstructor;
+
+typedef struct AstTypeFunction {
+    Header header;
+    HashSymbol * symbol;
+    struct AstTypeList * typeList;
+} AstTypeFunction;
 
 typedef struct AstTypeList {
     Header header;
@@ -299,6 +303,7 @@ struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols *
 struct AstTypeSymbols * newAstTypeSymbols(HashSymbol * typeSymbol, struct AstTypeSymbols * next);
 struct AstTypeBody * newAstTypeBody(struct AstTypeConstructor * typeConstructor, struct AstTypeBody * next);
 struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct AstTypeList * typeList);
+struct AstTypeFunction * newAstTypeFunction(HashSymbol * symbol, struct AstTypeList * typeList);
 struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * next);
 struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * next);
 struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * function, struct AstCompositeFunction * next);
@@ -329,6 +334,7 @@ void markAstFlatType(struct AstFlatType * x);
 void markAstTypeSymbols(struct AstTypeSymbols * x);
 void markAstTypeBody(struct AstTypeBody * x);
 void markAstTypeConstructor(struct AstTypeConstructor * x);
+void markAstTypeFunction(struct AstTypeFunction * x);
 void markAstTypeList(struct AstTypeList * x);
 void markAstType(struct AstType * x);
 void markAstCompositeFunction(struct AstCompositeFunction * x);
@@ -359,6 +365,7 @@ void freeAstFlatType(struct AstFlatType * x);
 void freeAstTypeSymbols(struct AstTypeSymbols * x);
 void freeAstTypeBody(struct AstTypeBody * x);
 void freeAstTypeConstructor(struct AstTypeConstructor * x);
+void freeAstTypeFunction(struct AstTypeFunction * x);
 void freeAstTypeList(struct AstTypeList * x);
 void freeAstType(struct AstType * x);
 void freeAstCompositeFunction(struct AstCompositeFunction * x);
@@ -385,9 +392,8 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_SINGLEPROTOTYPE_VAL_PROTOTYPE(x) ((union AstSinglePrototypeVal ){.prototype = (x)})
 #define AST_TYPECLAUSE_VAL_INTEGER() ((union AstTypeClauseVal ){.integer = (NULL)})
 #define AST_TYPECLAUSE_VAL_CHARACTER() ((union AstTypeClauseVal ){.character = (NULL)})
-#define AST_TYPECLAUSE_VAL_TYPE(x) ((union AstTypeClauseVal ){.type = (x)})
 #define AST_TYPECLAUSE_VAL_VAR(x) ((union AstTypeClauseVal ){.var = (x)})
-#define AST_TYPECLAUSE_VAL_TYPECONSTRUCTOR(x) ((union AstTypeClauseVal ){.typeConstructor = (x)})
+#define AST_TYPECLAUSE_VAL_TYPEFUNCTION(x) ((union AstTypeClauseVal ){.typeFunction = (x)})
 #define AST_ARG_VAL_WILDCARD() ((union AstArgVal ){.wildcard = (NULL)})
 #define AST_ARG_VAL_SYMBOL(x) ((union AstArgVal ){.symbol = (x)})
 #define AST_ARG_VAL_NAMED(x) ((union AstArgVal ){.named = (x)})

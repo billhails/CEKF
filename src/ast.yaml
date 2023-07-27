@@ -68,6 +68,10 @@ structs:
         symbol: HashSymbol
         typeList: AstTypeList
 
+    AstTypeFunction:
+        symbol: HashSymbol
+        typeList: AstTypeList
+
     AstTypeList:
         type: AstType
         next: AstTypeList
@@ -130,10 +134,8 @@ unions:
     AstTypeClause:
         integer: void_ptr
         character: void_ptr
-        # list: AstType
-        type: AstType
         var: HashSymbol
-        typeConstructor: AstTypeConstructor
+        typeFunction: AstTypeFunction
 
     AstArg:
         wildcard: void_ptr

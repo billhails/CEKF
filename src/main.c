@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     char *foo = NEW_ARRAY(char, 10); // force gc
 }
 
-#elif DEBUG_RUN_TESTS == 3
+#elif DEBUG_RUN_TESTS == 3 // testing type inference
 
 extern void testTin();
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     testTin();
 }
 
-#elif DEBUG_RUN_TESTS == 4
+#elif DEBUG_RUN_TESTS == 4 // testing algorithm W
 
 extern AstNest *result;
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
     }
 }
 
-#else
+#else // testing lambda conversion
 
 extern AstNest *result;
 

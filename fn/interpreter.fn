@@ -1,6 +1,6 @@
 let
     // very simple environment
-    typedef environment { frame(List(Char), expression, environment) | root }
+    typedef environment { frame(list(char), expression, environment) | root }
 
     // very simple AST
     typedef expression {
@@ -9,7 +9,7 @@ let
         multiplication(expression, expression) |
         division(expression, expression) |
         number(int) |
-        symbol(List(Char)) |
+        symbol(list(char)) |
         conditional(expression, expression, expression) |
         lambda(expression, expression) |
         closure(expression, environment) |

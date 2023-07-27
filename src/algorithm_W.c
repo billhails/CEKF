@@ -302,10 +302,10 @@ static TinMonoTypeList *typeListToMonoTypeList(AstTypeList *typeList) {
     return result;
 }
 
-static TinMonoType *astTypeConstructorToMonoType(AstTypeConstructor *typeConstructor) {
-    TinMonoTypeList *typeList = typeListToMonoTypeList(typeConstructor->typeList);
+static TinMonoType *astTypeFunctionToMonoType(AstTypeFunction *typeFunction) {
+    TinMonoTypeList *typeList = typeListToMonoTypeList(typeFunction->typeList);
     int save = PROTECT(typeList);
-    TinMonoType *type = monoTypeFunctionApplication(typeConstructor->symbol, typeList);
+    TinMonoType *type = monoTypeFunctionApplication(typeFunction->symbol, typeList);
     UNPROTECT(save);
     return type;
 }
@@ -316,12 +316,10 @@ static TinMonoType *astTypeClauseToMonoType(AstTypeClause *typeClause) {
             return constantTypeFunction(intSymbol());
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             return constantTypeFunction(charSymbol());
-        case AST_TYPECLAUSE_TYPE_TYPE:
-            return astTypeToMonoType(typeClause->val.type);
         case AST_TYPECLAUSE_TYPE_VAR:
             return monoTypeVar(typeClause->val.var);
-        case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR: {
-            return astTypeConstructorToMonoType(typeClause->val.typeConstructor);
+        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION: {
+            return astTypeFunctionToMonoType(typeClause->val.typeFunction);
         }
         default:
             cant_happen("unrecognised type %d in astTypeClauseToMonoType", typeClause->type);

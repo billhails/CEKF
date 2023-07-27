@@ -23,6 +23,22 @@
 #include "lambda_helper.h"
 #include "symbol.h"
 
+#define ARG_CATEGORY_VAR 0
+#define ARG_CATEGORY_CONST 1
+#define ARG_CATEGORY_STRUCT 2
+#define ARG_CATEGORY_ENV 3
+
+#define SAFE_MALLOC(thing) ((thing *)safe_malloc(sizeof(thing)))
+
+typedef struct DecisionTree {
+    AstArg **currentArgs;
+    AstArgList **remainingArgs;
+    AstNest **bodies;
+    int *nBodies;
+    int globalCount;
+    int localCount;
+} DecisionTree;
+
 static LamLetRecBindings *convertDefinitions(AstDefinitions *definitions, LamContext *env);
 static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
 static int countLetRecBindings(LamLetRecBindings *b);
@@ -282,27 +298,38 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
 
 /*******************************************/
 
-static int categorizeArg(AstArg *arg) {
+static int categorizeArg(AstArg *arg, LamContext *env) {
     switch (arg->type) {
         case AST_ARG_TYPE_WILDCARD: {
+            return ARG_CATEGORY_VAR;
         }
         break;
         case AST_ARG_TYPE_SYMBOL: {
+            LamTypeConstructorInfo *info = lookupInLamContext(env, arg->val.symbol);
+            if (info != NULL) {
+                return ARG_CATEGORY_STRUCT;
+            }
+            return ARG_CATEGORY_VAR;
         }
         break;
         case AST_ARG_TYPE_NAMED: {
+            return categorizeArg(arg->val.named->arg, env);
         }
         break;
         case AST_ARG_TYPE_ENV: {
+            return ARG_CATEGORY_ENV;
         }
         break;
         case AST_ARG_TYPE_UNPACK: {
+            return ARG_CATEGORY_STRUCT;
         }
         break;
         case AST_ARG_TYPE_NUMBER: {
+            return ARG_CATEGORY_CONST;
         }
         break;
         case AST_ARG_TYPE_CHARACTER: {
+            return ARG_CATEGORY_CONST;
         }
         break;
         default:
@@ -310,17 +337,87 @@ static int categorizeArg(AstArg *arg) {
     }
 }
 
-static LamExp *convertCompositeBodiesInParallel(int nargs, int nBodies, LamVarList *args, AstArgList *argLists[], AstNest *nests[], LamContext *env) {
-    int *categories = NEW_ARRAY(int, nBodies);
-    for (int i = 0; i < nBodies; ++i) {
-        categories[i] = categorizeArg(argLists[i]->arg);
+static void *safe_malloc(size_t size) {
+    void *ptr = malloc(size);
+    if (ptr == NULL) {
+        perror("malloc");
+        exit(1);
     }
-    FREE_ARRAY(int, categories, nBodies);
+    return ptr;
+}
+
+static DecisionTree *newDecisionTree(int globalCount) {
+    DecisionTree *dt = SAFE_MALLOC(DecisionTree);
+    int square = globalCount * globalCount;
+    dt->currentArgs = NEW_ARRAY(AstArg *, square);
+    dt->remainingArgs = NEW_ARRAY(AstArgList *, square);
+    dt->bodies = NEW_ARRAY(AstNest *, square);
+    dt->nBodies = NEW_ARRAY(int, globalCount);
+    for (int i = 0; i < globalCount; i++) {
+        dt->nBodies[i] = 0;
+    }
+    dt->globalCount = globalCount;
+    dt->localCount = 0;
+    return dt;
+}
+
+static void freeDecisionTree(DecisionTree *dt) {
+    int square = dt->globalCount * dt->globalCount;
+    FREE_ARRAY(AstArg *, dt->currentArgs, square);
+    FREE_ARRAY(AstArgList *, dt->remainingArgs, square);
+    FREE_ARRAY(AstNest *, dt->bodies, square);
+    FREE_ARRAY(int, dt->nBodies, dt->globalCount);
+    free(dt);
+}
+
+static AstArg *getCurrentArg(DecisionTree *dt, int major, int minor) {
+    return dt->currentArgs[major * dt->globalCount + minor];
+}
+
+static AstArgList *getRemainingArgList(DecisionTree *dt, int major, int minor) {
+    return dt->remainingArgs[major * dt->globalCount + minor];
+}
+
+static AstNest *getBody(DecisionTree *dt, int major, int minor) {
+    return dt->bodies[major * dt->globalCount + minor];
+}
+
+static int getNBodies(DecisionTree *dt, int major) {
+    return dt->nBodies[major];
+}
+
+static LamExp *convertCompositeBodiesInParallel(int nargs, int nBodies, LamVarList *generatedArgs, AstArgList *argLists[], AstNest *nests[], LamContext *env) {
+    if (nargs == 0) {
+        if (nbodies != 1) {
+            can_happen("more than one case matches");
+        }
+        return lamConvertNest(nests[0], env);
+    }
+    AstArg **constPool = NEW_ARRAY(AstArg*, nBodies);
+    AstArgList **constArgs = NEW_ARRAY(AstArgList*, nBodies);
+    int numConsts = 0;
+    AstArg **varPool = NEW_ARRAY(AstArg*, nBodies);
+    AstArgList **varArgs = NEW_ARRAY(AstArgList*, nBodies);
+    int numVars = 0;
+    AstArg **structPool = NEW_ARRAY(AstArg*, nBodies);
+    AstArgList **structArgs = NEW_ARRAY(AstArgList*, nBodies);
+    int numStructs = 0;
+
+    FREE_ARRAY(AstArg**, constPool, nBodies);
+    FREE_ARRAY(AstArgList**, constArgs, nBodies);
+    FREE_ARRAY(AstArg**, varPool, nBodies);
+    FREE_ARRAY(AstArgList**, varArgs, nBodies);
+    FREE_ARRAY(AstArg**, structPool, nBodies);
+    FREE_ARRAY(AstArgList**, structArgs, nBodies);
     return NULL;
 }
 
-static LamExp *convertCompositeBodies(int nargs, LamVarList *args, AstCompositeFunction *fun, LamContext *env) {
+static LamExp *convertCompositeBodies(int nargs, LamVarList *generatedArgs, AstCompositeFunction *fun, LamContext *env) {
     int nBodies = countAstCompositeFunction(fun);
+    if (nBodies == 0) {
+        can_happen("empty composite function");
+        return NULL;
+    }
     AstNest **nests = NEW_ARRAY(AstNest *, nBodies);
     AstArgList **argLists = NEW_ARRAY(AstArgList *, nBodies);
     for (int i = 0; i < nBodies; i++) {
@@ -329,7 +426,7 @@ static LamExp *convertCompositeBodies(int nargs, LamVarList *args, AstCompositeF
         argLists[i] = func->argList;
         fun = fun->next;
     }
-    LamExp *result = convertCompositeBodiesInParallel(nargs, nBodies, args, argLists, nests, env);
+    LamExp *result = convertCompositeBodiesInParallel(nargs, nBodies, generatedArgs, argLists, nests, env);
     FREE_ARRAY(AstNest*, nests, nBodies);
     FREE_ARRAY(AstArgList*, argLists, nBodies);
     return result;
@@ -340,11 +437,11 @@ static LamExp *convertCompositeBodies(int nargs, LamVarList *args, AstCompositeF
 static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
     if (fun == NULL) cant_happen("composite function with no components");
     int nargs = countAstArgList(fun->function->argList);
-    LamVarList *args = genLamVarList(nargs);
-    int save = PROTECT(args);
-    LamExp *body = convertCompositeBodies(nargs, args, fun, env);
+    LamVarList *generatedArgs = genLamVarList(nargs);
+    int save = PROTECT(generatedArgs);
+    LamExp *body = convertCompositeBodies(nargs, generatedArgs, fun, env);
     (void) PROTECT(body);
-    LamLam *lambda = newLamLam(nargs, args, body);
+    LamLam *lambda = newLamLam(nargs, generatedArgs, body);
     (void) PROTECT(lambda);
     LamExp *result = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);

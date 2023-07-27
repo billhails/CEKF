@@ -170,6 +170,18 @@ void printAstTypeConstructor(struct AstTypeConstructor * x, int depth) {
     printf("]");
 }
 
+void printAstTypeFunction(struct AstTypeFunction * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("AstTypeFunction (NULL)"); return; }
+    printf("AstTypeFunction[\n");
+        printAstSymbol(x->symbol, depth + 1);
+    printf("\n");
+    printAstTypeList(x->typeList, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
 void printAstTypeList(struct AstTypeList * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("AstTypeList (NULL)"); return; }
@@ -387,20 +399,15 @@ printf("void * %p", x->val.integer);
                         pad(depth + 1);
 printf("void * %p", x->val.character);
             break;
-        case AST_TYPECLAUSE_TYPE_TYPE:
-            pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_TYPE\n");
-            printAstType(x->val.type, depth + 1);
-            break;
         case AST_TYPECLAUSE_TYPE_VAR:
             pad(depth + 1);
             printf("AST_TYPECLAUSE_TYPE_VAR\n");
                         printAstSymbol(x->val.var, depth + 1);
             break;
-        case AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR:
+        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
             pad(depth + 1);
-            printf("AST_TYPECLAUSE_TYPE_TYPECONSTRUCTOR\n");
-            printAstTypeConstructor(x->val.typeConstructor, depth + 1);
+            printf("AST_TYPECLAUSE_TYPE_TYPEFUNCTION\n");
+            printAstTypeFunction(x->val.typeFunction, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstTypeClause", x->type);

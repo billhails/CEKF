@@ -36,6 +36,7 @@ void printAstFlatType(struct AstFlatType * x, int depth);
 void printAstTypeSymbols(struct AstTypeSymbols * x, int depth);
 void printAstTypeBody(struct AstTypeBody * x, int depth);
 void printAstTypeConstructor(struct AstTypeConstructor * x, int depth);
+void printAstTypeFunction(struct AstTypeFunction * x, int depth);
 void printAstTypeList(struct AstTypeList * x, int depth);
 void printAstType(struct AstType * x, int depth);
 void printAstCompositeFunction(struct AstCompositeFunction * x, int depth);
