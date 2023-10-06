@@ -47,6 +47,7 @@
 
 
 int main(int argc, char *argv[]) {
+    initProtection();
     disableGC();
     if (argc < 2) {
         fprintf(stderr, "need filename\n");
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
 extern void testTin();
 
 int main(int argc, char *argv[]) {
+    initProtection();
     testTin();
 }
 
@@ -72,6 +74,7 @@ int main(int argc, char *argv[]) {
 extern AstNest *result;
 
 int main(int argc, char *argv[]) {
+    initProtection();
     disableGC();
     if (argc < 2) {
         fprintf(stderr, "need filename\n");
@@ -94,6 +97,7 @@ int main(int argc, char *argv[]) {
 extern AstNest *result;
 
 int main(int argc, char *argv[]) {
+    initProtection();
     disableGC();
     if (argc < 2) {
         fprintf(stderr, "need filename\n");
@@ -120,6 +124,7 @@ int main(int argc, char *argv[]) {
 #else
 
 int main(int argc, char *argv[]) {
+    initProtection();
 }
 
 #endif

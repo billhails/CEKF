@@ -35,10 +35,24 @@ static int numAlloc = 0;
 
 static void collectGarbage();
 
+/*
 #define MAX_PROTECTION 256
+*/
 
+typedef struct ProtectionStack {
+    Header header;
+    int capacity;
+    int sp;
+    Header *stack[0];
+} ProtectionStack;
+
+/*
 static Header *protected[MAX_PROTECTION];
 static int protectedIndex = 0;
+*/
+
+static ProtectionStack *protected = NULL;
+
 static Header *allocated = NULL;
 
 #ifdef DEBUG_LOG_GC
@@ -98,6 +112,8 @@ const char *typeName(ObjType type) {
             return "hashtable";
         case OBJTYPE_WRESULT:
             return "wresult";
+        case OBJTYPE_PROTECTION:
+            return "protection";
         TIN_OBJTYPE_CASES()
             return typenameTinObj(type);
         AST_OBJTYPE_CASES()
@@ -128,31 +144,55 @@ bool disableGC() {
     return previous;
 }
 
+#define INITIAL_PROTECTION 8
+#define NEW_PROTECT(size) ((ProtectionStack *)allocate(sizeof(ProtectionStack) + size * sizeof(Header *), OBJTYPE_PROTECTION))
+#define FREE_PROTECT(p) ((void)reallocate(p, sizeof(ProtectionStack) + ((ProtectionStack *)p)->capacity * sizeof(Header *), 0))
+
+void initProtection(void) {
+    protected = NEW_PROTECT(INITIAL_PROTECTION);
+    protected->capacity = INITIAL_PROTECTION;
+    protected->sp = 0;
+}
+
 int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(
         stderr,
-        "PROTECT(%s) -> %d\n",
+        "PROTECT(%s) -> %d (%d)\n",
         (obj == NULL ? "NULL" : typeName(obj->type)),
-        protectedIndex
+        protected->sp,
+        protected->capacity
     );
 #endif
-    if (obj == NULL) return protectedIndex;
+    if (obj == NULL) return protected->sp;
 
-    if (protectedIndex == MAX_PROTECTION) {
-        fprintf(stderr, "maximum GC protected limit exceeded\n");
-        exit(1);
+    protected->stack[protected->sp++] = obj;
+    if (protected->sp == protected->capacity) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "protect old stack: %p\n", (void *)protected);
+#endif
+        ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
+        tmp->capacity = protected->capacity * 2;
+        for (tmp->sp = 0; tmp->sp < protected->sp; tmp->sp++) {
+            tmp->stack[tmp->sp] = protected->stack[tmp->sp];
+        }
+        protected = tmp;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "protect new stack: %p\n", (void *)protected);
+#endif
     }
 
-    protected[protectedIndex++] = obj;
-    return protectedIndex - 1;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type), protected->sp, protected->capacity);
+#endif
+    return protected->sp - 1;
 }
 
 void unProtect(int index) {
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "UNPROTECT(%d)\n", index);
 #endif
-    protectedIndex = index;
+    protected->sp = index;
 }
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
@@ -208,6 +248,20 @@ void *allocate(size_t size, ObjType type) {
     return (void *)newObj;
 }
 
+static void markProtectionObj(Header *h) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "markProtectionObj\n");
+#endif
+    MARK(h);
+    ProtectionStack *protected = (ProtectionStack *)h;
+    for (int i = 0; i < protected->sp; ++i) {
+        markObj(protected->stack[i]);
+    }
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "markProtectionObj done\n");
+#endif
+}
+
 void markObj(Header *h) {
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "markObj %s\n", typeName(h->type));
@@ -254,6 +308,9 @@ void markObj(Header *h) {
         case OBJTYPE_WRESULT:
             markWResultObj(h);
             break;
+        case OBJTYPE_PROTECTION:
+            markProtectionObj(h);
+            break;
         TIN_OBJTYPE_CASES()
             markTinObj(h);
             break;
@@ -266,6 +323,10 @@ void markObj(Header *h) {
         default:
             cant_happen("unrecognised ObjType %d in markObj", h->type);
     }
+}
+
+static void freeProtectionObj(Header *h) {
+    FREE_PROTECT(h);
 }
 
 void freeObj(Header *h) {
@@ -312,6 +373,9 @@ void freeObj(Header *h) {
         case OBJTYPE_WRESULT:
             freeWResultObj(h);
             break;
+        case OBJTYPE_PROTECTION:
+            freeProtectionObj(h);
+            break;
         TIN_OBJTYPE_CASES()
             freeTinObj(h);
             break;
@@ -326,15 +390,20 @@ void freeObj(Header *h) {
 }
 
 static void markProtected() {
-    for (int i = 0; i < protectedIndex; ++i) {
-        markObj(protected[i]);
-    }
+    if (protected != NULL)
+        markProtectionObj((Header *) protected);
 }
 
 static void mark() {
     markCEKF();
     markProtected();
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "starting markVarTable\n");
+#endif
     markVarTable();
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "markVarTable done\n");
+#endif
 #ifdef TEST_STACK
     markTestStack();
 #endif
@@ -349,7 +418,8 @@ static void sweep() {
             current->keep = false;
         } else {
 #ifdef DEBUG_LOG_GC
-            fprintf(stderr, "sweep discard type %s\n", typeName(current->type));
+            fprintf(stderr, "sweep discard %p\n", (void *)current);
+            fprintf(stderr, "              type %s\n", typeName(current->type));
 #endif
             *previous = current->next;
             freeObj(current);

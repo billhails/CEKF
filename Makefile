@@ -67,7 +67,7 @@ deps:
 	rm -f dep/*
 
 test: all
-	./$(TARGET)
+	./$(TARGET) fn/interpreter.fn
 
 profile: all
 	rm -f callgrind.out.*

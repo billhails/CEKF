@@ -388,7 +388,7 @@ static int getNBodies(DecisionTree *dt, int major) {
 
 static LamExp *convertCompositeBodiesInParallel(int nargs, int nBodies, LamVarList *generatedArgs, AstArgList *argLists[], AstNest *nests[], LamContext *env) {
     if (nargs == 0) {
-        if (nbodies != 1) {
+        if (nBodies != 1) {
             can_happen("more than one case matches");
         }
         return lamConvertNest(nests[0], env);

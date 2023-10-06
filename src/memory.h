@@ -61,6 +61,7 @@ typedef enum {
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
     OBJTYPE_WRESULT,
+    OBJTYPE_PROTECTION,
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
     LAMBDA_OBJTYPES(),
@@ -91,8 +92,10 @@ void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
 void freeWResultObj(Header *x);
 
-bool enableGC();
-bool disableGC();
+bool enableGC(void);
+bool disableGC(void);
+
+void initProtection(void);
 
 #define EXIT_OOM 2
 

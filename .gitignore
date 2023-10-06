@@ -1,8 +1,11 @@
 obj/
 dep/
 tmp/
+junk/
 cekf
 .*.swp
 .$*.drawio.*
 callgrind.out.*
 core*
+Makefile.extra
+gmon.out

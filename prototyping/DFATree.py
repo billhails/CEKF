@@ -1,6 +1,11 @@
 import collections.abc
 
+
+
 class Fargs:
+    """
+    List of Formal Arguments
+    """
     def __init__(self, fargs, action):
         self.fargs = fargs
         self.action = action
@@ -8,8 +13,13 @@ class Fargs:
     def accept(self, visitor, state):
         return visitor.visitFargs(self, state)
 
+
 class Farg:
+    """
+    Abstract base class for single Formal Arguments
+    """
     pass
+
 
 class NumericFarg(Farg):
     def __init__(self, n):
@@ -18,13 +28,22 @@ class NumericFarg(Farg):
     def accept(self, visitor, state):
         return visitor.visitNumericFarg(self, state)
 
-class EnumFarg(Farg):
-    def __init__(self, label, args):
-        self.label = label
-        self.args = args
+
+class VecFarg(Farg):
+    def __init__(self, fields):
+        self.fields = fields
 
     def accept(self, visitor, state):
-        return visitor.visitEnumFarg(self, state)
+        return visitor.visitVecFarg(self, state)
+
+
+class LabelFarg(Farg):
+    def __init__(self, label):
+        self.label = label
+
+    def accept(self, visitor, state):
+        return visitor.visitLabelFarg(self, state)
+
 
 class VarFarg(Farg):
     def __init__(self, name):
@@ -33,6 +52,7 @@ class VarFarg(Farg):
     def accept(self, visitor, state):
         return visitor.visitVarFarg(self, state)
 
+
 class ComparisonFarg(Farg):
     def __init__(self, name):
         self.name = name
@@ -40,9 +60,11 @@ class ComparisonFarg(Farg):
     def accept(self, visitor, state):
         return visitor.visitComparisonFarg(self, state)
 
+
 class WildcardFarg(Farg):
     def accept(self, visitor, state):
         return visitor.visitWildcardFarg(self, state)
+
 
 class Compound:
     def __init__(self, fargss):
@@ -51,21 +73,62 @@ class Compound:
     def accept(self, visitor):
         return visitor.visitCompoundFargs(self)
 
+
 class AArgs:
     def __init__(self, aargs):
         self.aargs = aargs
 
+
 class AArg:
     pass
+
 
 class NumericAArg(AArg):
     def __init__(self, n):
         self.n = n
 
+
 class EnumAArg(AArg):
-    def __init__(self, label, args):
-        self.label = label
-        self.args = args
+    def __init__(self, fields):
+        self.fields = fields
+
+
+class StateTable:
+    def __init__(self, state):
+        self.states = sorted(state.allStates())
+        transitions = set()
+        for state in self.states:
+            for transition in state.transitions:
+                transitions.add(transition)
+        self.transitions = sorted([x for x in transitions])
+        transitionMap = {x.key(): x for x in self.transitions}
+        self.width = len(self.states)
+        for i in range(self.width):
+            self.states[i].setStateTableIndex(i)
+        self.height = len(self.transitions)
+        for i in range(self.height):
+            self.transitions[i].setStateTableIndex(i)
+        self.table = [[None for i in range(self.width)] for j in range(self.height)]
+        for state in self.states:
+            for transition in state.transitions:
+                myTransition = transitionMap[transition.key()]
+                x = state.getStateTableIndex()
+                y = myTransition.getStateTableIndex()
+                to = state.transitions[transition].getStateTableIndex()
+                # print(y, x, to)
+                self.table[y][x] = to
+
+    def toStr(self, n):
+        if n is None:
+            return ''
+        return str(n)
+
+    def markdown(self):
+        print('|     | ' + ' | '.join([str(s.getStateTableLabel()) for s in self.states]) + ' |')
+        print('| --- | ' + ' | '.join(['---'] * self.width) + ' |')
+        for y in range(self.height):
+            print(f'| { self.transitions[y].key() } | ' + ' | '.join([self.toStr(x) for x in self.table[y]]) + ' |')
+
 
 class DFAState:
     counter = 0
@@ -74,7 +137,41 @@ class DFAState:
         self.action = action
         self.transitions = {}
         self.name = 'S' + str(DFAState.counter)
+        self.sortKey = DFAState.counter
+        self.stateTableIndex = 0
         DFAState.counter += 1
+
+    def toStateTable(self):
+        return StateTable(self)
+
+    def allStates(self):
+        return [x for x in self._allStates(set())]
+
+    def _allStates(self, seen):
+        if self in seen:
+            return seen
+        seen.add(self)
+        for transition in self.transitions:
+            self.transitions[transition]._allStates(seen)
+        return seen
+
+    def __lt__(self, other):
+        return self.sortKey < other.sortKey
+
+    def __cmp__(self, other):
+        return cmp(self.sortKey, other.sortKey)
+
+    def getStateTableIndex(self):
+        return self.stateTableIndex
+
+    def isTerminal(self):
+        return self.action is not None
+
+    def getStateTableLabel(self):
+        return str(self.stateTableIndex) +  ((' ' + self.action) if self.isTerminal() else '')
+
+    def setStateTableIndex(self, index):
+        self.stateTableIndex = index
 
     def add(self, other):
         if self.action is None:
@@ -92,6 +189,11 @@ class DFAState:
             return self.name
         return self.name + ' ' + self.action
 
+    def getLabel(self):
+        if self.action is None:
+            return str(self.sortKey)
+        return str(self.sortKey) + ' ' + self.action
+
     def addTransition(self, nfaTransition):
         key = nfaTransition.key()
         dfa = nfaTransition.to.toDFA()
@@ -105,11 +207,14 @@ class DFAState:
             return None
         if transition.stackCost() == 1:
             newState = DFAState()
-            newState.transitions[DFARetTransition()] = escape
+            newState.transitions[DFARetTransition('adjusted')] = escape
             return newState
         if transition.stackCost == -1:
             return escape.transitions[DFARetTransition()]
         return escape
+
+    def isConditional(self):
+        return any([transition.isConditional() for transition in self.transitions])
 
     def patchEscapes(self, escape=None):
         wildcard = DFAVarTransition()
@@ -121,7 +226,7 @@ class DFAState:
         else:
             for transition in self.transitions:
                 self.transitions[transition].patchEscapes(self.adjustEscape(transition, escape))
-            if escape is not None and any([transition.isConditional() for transition in self.transitions]):
+            if escape is not None and self.isConditional():
                 self.transitions[wildcard] = escape
 
     def __str__(self):
@@ -131,7 +236,7 @@ class DFAState:
         if self.name in seen:
             return
         seen[self.name] = True
-        print(f'{self.name}[{self.getName()}]')
+        print(f'{self.name}(({self.getLabel()}))')
         for transition in self.transitions:
             self.transitions[transition].mermaid(seen)
         for transition in self.transitions:
@@ -139,8 +244,21 @@ class DFAState:
 
 
 class DFATransition:
+    counter = 0
+
+    def __init__(self):
+        self.stateTableIndex = 0
+        self.id = DFATransition.counter
+        DFATransition.counter += 1
+
     def __ne__(self, other):
         return not(self == other)
+
+    def getStateTableIndex(self):
+        return self.stateTableIndex
+
+    def setStateTableIndex(self, index):
+        self.stateTableIndex = index
 
     def stackCost(self):
         return 0
@@ -148,12 +266,21 @@ class DFATransition:
     def isConditional(self):
         return False
 
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __cmp__(self, other):
+        return cmp(self.id, other.id)
+
     def isWildcard(self):
         return False
 
+    def key(self):
+        return str(self)
 
 class DFANumericTransition(DFATransition):
     def __init__(self, n):
+        super().__init__()
         self.n = n
 
     def __hash__(self):
@@ -169,18 +296,33 @@ class DFANumericTransition(DFATransition):
         return True
 
 
-class DFAEnumTransition(DFATransition):
+class DFALabelTransition(DFATransition):
     def __init__(self, label):
+        super().__init__()
         self.label = label
 
     def __hash__(self):
-        return hash(('enum', self.label))
+        return hash(('label', self.label))
 
     def __eq__(self, other):
-        return isinstance(other, DFAEnumTransition) and self.label == other.label
+        return isinstance(other, DFALabelTransition) and self.label == other.label
 
     def __str__(self):
-        return f'{{{str(self.label)}}}'
+        return f'{{{self.label}}}'
+
+    def isConditional(self):
+        return True
+
+
+class DFAVecTransition(DFATransition):
+    def __hash__(self):
+        return hash(('vec', ''))
+
+    def __eq__(self, other):
+        return isinstance(other, DFAVecTransition)
+
+    def __str__(self):
+        return 'vec'
 
     def isConditional(self):
         return True
@@ -188,6 +330,7 @@ class DFAEnumTransition(DFATransition):
 
 class DFAIndexTransition(DFATransition):
     def __init__(self, index):
+        super().__init__()
         self.index = index
 
     def __hash__(self):
@@ -205,6 +348,7 @@ class DFAIndexTransition(DFATransition):
 
 class DFAArgTransition(DFATransition):
     def __init__(self, index):
+        super().__init__()
         self.index = index
 
     def __hash__(self):
@@ -236,6 +380,7 @@ class DFAVarTransition(DFATransition):
 
 class DFAComparisonTransition(DFATransition):
     def __init__(self, var):
+        super().__init__()
         self.var = var
 
     def __hash__(self):
@@ -252,6 +397,10 @@ class DFAComparisonTransition(DFATransition):
 
 
 class DFARetTransition(DFATransition):
+    def __init__(self, label='?'):
+        super().__init__()
+        self.label = label
+
     def __hash__(self):
         return hash(('ret', ''))
 
@@ -259,10 +408,14 @@ class DFARetTransition(DFATransition):
         return isinstance(other, DFARetTransition)
 
     def __str__(self):
+        return f'ret {self.label}'
+
+    def key(self):
         return 'ret'
 
     def stackCost(self):
         return -1
+
 
 class NFAState:
     def __init__(self, out, action=None):
@@ -287,6 +440,7 @@ class NFAState:
                 dfa.addTransition(out)
         return dfa
 
+
 class NFATransition:
     def __init__(self, to):
         assert isinstance(to, NFAState)
@@ -298,6 +452,7 @@ class NFATransition:
     def key(self):
         raise Exception('key cannot be called on base transition')
 
+
 class NFAEmptyTransition(NFATransition):
     def __str__(self):
         return '-> ' + str(self.to)
@@ -307,6 +462,7 @@ class NFAEmptyTransition(NFATransition):
 
     def key(self):
         raise Exception('key cannot be called on empty transition')
+
 
 class NFANumericTransition(NFATransition):
     def __init__(self, to, n):
@@ -319,8 +475,9 @@ class NFANumericTransition(NFATransition):
     def key(self):
         return DFANumericTransition(self.n)
 
-class NFAEnumTransition(NFATransition):
-    def __init__(self, to, label):
+
+class NFALabelTransition(NFATransition):
+    def __init__(self, label, to):
         super().__init__(to)
         self.label = label
 
@@ -328,7 +485,8 @@ class NFAEnumTransition(NFATransition):
         return '-{' + self.label + '}-> ' + str(self.to)
 
     def key(self):
-        return DFAEnumTransition(self.label)
+        return DFALabelTransition(self.label)
+
 
 class NFAIndexTransition(NFATransition):
     def __init__(self, to, index):
@@ -341,6 +499,18 @@ class NFAIndexTransition(NFATransition):
     def key(self):
         return DFAIndexTransition(self.index)
 
+
+class NFAVecTransition(NFATransition):
+    def __init__(self, to):
+        self.to = to
+
+    def __str__(self):
+        return '-vec-> ' + str(self.to)
+
+    def key(self):
+        return DFAVecTransition()
+
+
 class NFAArgTransition(NFATransition):
     def __init__(self, to, index):
         self.index = index
@@ -351,6 +521,7 @@ class NFAArgTransition(NFATransition):
 
     def key(self):
         return DFAArgTransition(self.index)
+
 
 class NFAVarTransition(NFATransition):
     def __init__(self, name, to):
@@ -363,12 +534,14 @@ class NFAVarTransition(NFATransition):
     def key(self):
         return DFAVarTransition()
 
+
 class NFAWildcardTransition(NFATransition):
     def __str__(self):
         return '-*-> ' + str(self.to)
 
     def key(self):
         return DFAVarTransition()
+
 
 class NFAComparisonTransition(NFATransition):
     def __init__(self, name, to):
@@ -381,12 +554,18 @@ class NFAComparisonTransition(NFATransition):
     def key(self):
         return DFAComparisonTransition(self.name)
 
+
 class NFARetTransition(NFATransition):
+    def __init__(self, label, to):
+        super().__init__(to)
+        self.label = label
+
     def __str__(self):
-        return '-ret-> ' + str(self.to)
+        return f'-ret {self.label}-> ' + str(self.to)
 
     def key(self):
-        return DFARetTransition()
+        return DFARetTransition(self.label)
+
 
 class FargToNfaVisitor:
     def visitCompoundFargs(self, compound):
@@ -402,21 +581,26 @@ class FargToNfaVisitor:
         if count == 0:
             return state
         state = self.recursivelyVisitFargs(fargs, count - 1, state)
-        return NFAState([NFAArgTransition(fargs[len(fargs) - count].accept(self, NFAState([NFARetTransition(state)])), len(fargs) - count)])
+        index = len(fargs) - count
+        return NFAState([NFAArgTransition(fargs[index].accept(self, NFAState([NFARetTransition(f'[{index}]', state)])), index)])
 
     def visitNumericFarg(self, numeric, state):
         return NFAState([NFANumericTransition(state, numeric.n)])
 
-    def visitEnumFarg(self, enum, state):
-        count = len(enum.args)
-        fields = self.recursivelyVisitEnum(enum.args, count, state)
-        return NFAState([NFAEnumTransition(fields, enum.label)])
+    def visitVecFarg(self, vec, state):
+        count = len(vec.fields)
+        newState = self.recursivelyVisitVec(vec.fields, count, NFAState([NFARetTransition('vec', state)]))
+        return NFAState([NFAVecTransition(newState)])
 
-    def recursivelyVisitEnum(self, args, count, state):
+    def recursivelyVisitVec(self, fields, count, state):
         if count == 0:
             return state
-        state = self.recursivelyVisitEnum(args, count - 1, state)
-        return NFAState([NFAIndexTransition(args[len(args) - count].accept(self, NFAState([NFARetTransition(state)])), len(args) - count)])
+        state = self.recursivelyVisitVec(fields, count - 1, state)
+        index = len(fields) - count
+        return NFAState([NFAIndexTransition(fields[index].accept(self, NFAState([NFARetTransition(f'[[{index}]]', state)])), index)])
+
+    def visitLabelFarg(self, label, state):
+        return NFAState([NFALabelTransition(label.label, state)])
 
     def visitVarFarg(self, var, state):
         return NFAState([NFAVarTransition(var.name, state)])
@@ -427,11 +611,12 @@ class FargToNfaVisitor:
     def visitComparisonFarg(self, comparison, state):
         return NFAState([NFAComparisonTransition(comparison.name, state)])
 
+
 # (f, [])
 # (f, h @ t)
 mapArgs = Compound([
-    Fargs([VarFarg('f'), EnumFarg('nil', [])], 'finish'),
-    Fargs([VarFarg('f'), EnumFarg('cons', [VarFarg('h'), EnumFarg('cons', [VarFarg('t'), EnumFarg('nil', [])])])], 'recurse')
+    Fargs([VarFarg('f'), VecFarg([LabelFarg('nil')])], 'finish'),
+    Fargs([VarFarg('f'), VecFarg([LabelFarg('cons'), VarFarg('h'), VecFarg([LabelFarg('cons'), VarFarg('t'), VecFarg([LabelFarg('nil')])])])], 'recurse')
 ])
 
 # nfa = mapArgs.accept(FargToNfaVisitor())
@@ -444,9 +629,9 @@ mapArgs = Compound([
 # dfa.mermaid()
 
 memberArgs = Compound([
-    Fargs([VarFarg('x'), EnumFarg('nil', [])], 'fail'),
-    Fargs([VarFarg('x'), EnumFarg('cons', [ComparisonFarg('x'), WildcardFarg()])], 'succeed'),
-    Fargs([VarFarg('x'), EnumFarg('cons', [WildcardFarg(), VarFarg('t')])], 'continue')
+    Fargs([VarFarg('x'), VecFarg([LabelFarg('nil')])], 'fail'),
+    Fargs([VarFarg('x'), VecFarg([LabelFarg('cons'), ComparisonFarg('x'), WildcardFarg()])], 'succeed'),
+    Fargs([VarFarg('x'), VecFarg([LabelFarg('cons'), WildcardFarg(), VarFarg('t')])], 'continue')
 ])
 
 # nfa2 = memberArgs.accept(FargToNfaVisitor())
@@ -456,10 +641,10 @@ memberArgs = Compound([
 # dfa2.mermaid()
 
 testArgs = Compound([
-    Fargs([EnumFarg('cons', [NumericFarg(1), EnumFarg('cons', [NumericFarg(1), EnumFarg('nil', [])])])], 'a'),
-    Fargs([EnumFarg('cons', [NumericFarg(1), EnumFarg('cons', [NumericFarg(2), EnumFarg('nil', [])])])], 'b'),
-    Fargs([EnumFarg('cons', [NumericFarg(2), EnumFarg('cons', [NumericFarg(1), EnumFarg('nil', [])])])], 'c'),
-    Fargs([EnumFarg('cons', [NumericFarg(2), EnumFarg('cons', [NumericFarg(2), EnumFarg('nil', [])])])], 'd'),
+    Fargs([VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('nil')])])])], 'a'),
+    Fargs([VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('cons'), NumericFarg(2), VecFarg([LabelFarg('nil')])])])], 'b'),
+    Fargs([VecFarg([LabelFarg('cons'), NumericFarg(2), VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('nil')])])])], 'c'),
+    Fargs([VecFarg([LabelFarg('cons'), NumericFarg(2), VecFarg([LabelFarg('cons'), NumericFarg(2), VecFarg([LabelFarg('nil')])])])], 'd'),
     Fargs([WildcardFarg()], 'e'),
 ])
 
@@ -470,3 +655,7 @@ testDfa = testNfa.toDFA()
 testDfa.patchEscapes()
 
 testDfa.mermaid()
+
+testStateTable = testDfa.toStateTable()
+
+testStateTable.markdown()
