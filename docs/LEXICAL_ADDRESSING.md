@@ -1,10 +1,13 @@
 # Lexical Addressing
 
-**Static analysis** is a phase prior to evaluation that replaces variables with their location in the environment.
+**Static analysis** is a phase prior to evaluation that replaces variables
+with their location in the environment.
 
-We don't know what the *values* of variables will be at run-time, but we can work out their *locations*.
+We don't know what the *values* of variables will be at run-time, but
+we can work out their *locations*.
 
-We do this with the help of a compile-time environment `ct-env` that just stores variables, not values.
+We do this with the help of a compile-time environment `ct-env` that
+just stores variables, not values.
 
 For example consider this `let` expression
 
@@ -23,9 +26,11 @@ If we were evaluating that naively we would be doing something like
 )
 ```
 
-Where `eval-bindings` evaluates the value part of each binding and returns tuples of `(var evaluated-val)` 
+Where `eval-bindings` evaluates the value part of each binding and
+returns tuples of `(var evaluated-val)`
 
-Static analysis proceeds analogously, but we don't need to (and can't) evaluate anything,
+Static analysis proceeds analogously, but we don't need to (and can't)
+evaluate anything,
 
 ```scheme
 (define (analyze-let expr ct-env)
@@ -38,7 +43,8 @@ where `(vars bindings)` is just `(map car bindings)`
 
 and similarily for other language constructs.
 
-Continuing with our naive run-time evaluation analogy, variable are looked up in the current environment:
+Continuing with our naive run-time evaluation analogy, variable are
+looked up in the current environment:
 
 ```scheme
 (define (eval-var var env)
@@ -46,11 +52,13 @@ Continuing with our naive run-time evaluation analogy, variable are looked up in
 )
 ```
 
-The only transformations we perform during lexical addressing is to annotate the variables with their locations in the compile-time environment:
+The only transformations we perform during lexical addressing is
+to annotate the variables with their locations in the compile-time
+environment:
 
 ```scheme
 (define (analyze-var var ct-env)
-        (annotate-var var (ct-lookup var env))
+        (annotate-var var (ct-lookup var ct-env))
 )
 ```
 
@@ -85,7 +93,8 @@ That depends on `ct-extend` and `ct-lookup`
 )
 ```
 
-All it's doing is searching the environment for the location of the variable, and returning a tuple of `(frame offset)`.
+All it's doing is searching the environment for the location of the
+variable, and returning a tuple of `(frame offset)`.
 
 For example
 
@@ -95,8 +104,8 @@ For example
 
 should return `(2 1)`
 
-The other thing we need to handle is when we see a lambda. It's simpler than you might think,
-and completely analogous to let:
+The other thing we need to handle is when we see a lambda. It's simpler
+than you might think, and completely analogous to let:
 
 ```scheme
 (define (analyze-lambda expr ct-env)
@@ -106,11 +115,16 @@ and completely analogous to let:
 )
 ```
 
-No need to create any compile-time equivalent to closures or anything like that, we just analyse the body in the environment that the lambda is created in, which is exactly what lexical variables require.
+No need to create any compile-time equivalent to closures or anything
+like that, we just analyse the body in the environment that the lambda
+is created in, which is exactly what lexical variables require.
 
-The only thing we need to ensure to make all this work is that the run-time environments will be constructed with identical frames and offsets. They no longer need variables, or hash tables to find them.
+The only thing we need to ensure to make all this work is that the
+run-time environments will be constructed with identical frames and
+offsets. They no longer need variables, or hash tables to find them.
 
-A run time environment is then just a linked list of arrays of values, and a run-time lookup is just:
+A run time environment is then just a linked list of arrays of values,
+and a run-time lookup is just:
 
 ```scheme
 (define (lookup frame offset env)
@@ -120,16 +134,21 @@ A run time environment is then just a linked list of arrays of values, and a run
         )
 )
 ```
-And since we've already done the analysis we know the environment must be there and we don't even need to check for `null`!
+And since we've already done the analysis we know the environment must
+be there and we don't even need to check for `null`!
 
 # V2 Wrinkles
 
-in V2 I've gone to a hybrid stack/register VM, where variables local to a function are on the stack
-rather than in the environment. This is still lexically addressable, the offset in the environment is
-the same as the position on the stack, but there are a few complications.
+in V2 I've gone to a hybrid stack/register VM, where variables local
+to a function are on the stack rather than in the environment. This is
+still lexically addressable, the offset in the environment is the same
+as the position on the stack, but there are a few complications.
 
-1. we need to distinguish local variables `LVAR` from environmental ones `VAR`.
+1. we need to distinguish local variables `LVAR` from environmental ones
+   `VAR`.
 2. `LVAR` are annotated with a single number, the stack position.
-3. lexical analysis of `let` and `letrec` still need to create new `ctenv`s (to support shadowing)
-   but `let` and `letrec` in fact create `LVAR`s so within a nested `let` or `letrec` we need to add up the
-   sizes of parent `ctenv` up to and including the function to calculate the actual stack position for `LVAR`s
+3. lexical analysis of `let` and `letrec` still need to create new
+   `ctenv`s (to support shadowing) but `let` and `letrec` in fact create
+   `LVAR`s so within a nested `let` or `letrec` we need to add up the
+   sizes of parent `ctenv` up to and including the function to calculate
+   the actual stack position for `LVAR`s
