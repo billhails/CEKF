@@ -74,6 +74,7 @@ typedef enum {
     AEXP_PRIM_GE,
     AEXP_PRIM_LE,
     AEXP_PRIM_CONS,
+    AEXP_PRIM_VEC,
     AEXP_PRIM_XOR,
 } AexpPrimOp;
 
@@ -110,12 +111,31 @@ typedef struct CexpApply {
     struct AexpList *args;
 } CexpApply;
 
+typedef struct AexpMakeVec {
+    Header header;
+    int nargs;
+    struct AexpList *args;
+} AexpMakeVec;
+
 typedef struct CexpCond {
     Header header;
     struct Aexp *condition;
     struct Exp *consequent;
     struct Exp *alternative;
 } CexpCond;
+
+typedef struct CexpMatch {
+    Header header;
+    struct Aexp *condition;
+    struct MatchList *clauses;
+} CexpMatch;
+
+typedef struct MatchList {
+    Header header;
+    struct AexpList *matches;
+    struct Exp *body;
+    struct MatchList *next;
+} MatchList;
 
 typedef struct CexpLetRec {
     Header header;
@@ -167,6 +187,7 @@ typedef enum {
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
     AEXP_TYPE_LIST,
+    AEXP_TYPE_MAKEVEC,
 } AexpType;
 
 typedef union {
@@ -178,6 +199,7 @@ typedef union {
     struct AexpPrimApp *prim;
     struct AexpUnaryApp *unary;
     struct AexpList *list;
+    struct AexpMakeVec *makeVec;
 } AexpVal;
 
 typedef struct Aexp {
@@ -196,6 +218,7 @@ typedef struct Aexp {
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
 #define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
 #define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
+#define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec      = (x)})
 
 typedef enum {
     CEXP_TYPE_APPLY,
@@ -205,6 +228,7 @@ typedef enum {
     CEXP_TYPE_AMB,
     CEXP_TYPE_BACK,
     CEXP_TYPE_BOOL,
+    CEXP_TYPE_MATCH,
 } CexpType;
 
 typedef union {
@@ -215,6 +239,7 @@ typedef union {
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
     struct CexpBool *boolean;
+    struct CexpMatch *match;
 } CexpVal;
 
 typedef struct Cexp {
@@ -229,6 +254,7 @@ typedef struct Cexp {
 #define CEXP_VAL_LETREC(x) ((CexpVal){.letRec  = (x)})
 #define CEXP_VAL_AMB(x)    ((CexpVal){.amb     = (x)})
 #define CEXP_VAL_BOOL(x)   ((CexpVal){.boolean = (x)})
+#define CEXP_VAL_MATCH(x)  ((CexpVal){.match   = (x)})
 #define CEXP_VAL_BACK()    ((CexpVal){.none    = NULL})
 
 typedef enum {
@@ -263,12 +289,15 @@ Aexp *newAexp(AexpType type, AexpVal val);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2);
 AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
 AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var);
+AexpMakeVec *newAexpMakeVec(AexpList *args);
 HashSymbol *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
+CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses);
+MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next);
 Cexp *newCexp(CexpType type, CexpVal val);
 ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
@@ -281,11 +310,14 @@ void markAexpList(AexpList *x);
 void markAexpPrimApp(AexpPrimApp *x);
 void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVarList(AexpVarList *x);
+void markAexpMakeVec(AexpMakeVec *x);
 void markCexpAmb(CexpAmb *x);
 void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);
 void markCexpCond(CexpCond *x);
 void markCexpLetRec(CexpLetRec *x);
+void markCexpMatch(CexpMatch *x);
+void markMatchList(MatchList *x);
 void markAexp(Aexp *x);
 void markCexp(Cexp *x);
 void markExp(Exp *x);

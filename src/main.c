@@ -23,7 +23,9 @@
 #include "ast.h"
 #include "debug_ast.h"
 #include "debug_tin.h"
-#include "parser.h"
+#include "debug_lambda.h"
+#include "lambda_conversion.h"
+#include "parser_management.h"
 #include "analysis.h"
 #include "exp.h"
 #include "memory.h"
@@ -43,36 +45,42 @@
 
 #elif DEBUG_RUN_TESTS == 2 /* testing parser */
 
-// extern int yydebug;
-
-extern AstNest *result;
 
 int main(int argc, char *argv[]) {
+    initProtection();
     disableGC();
-    // yydebug = 1;
-    yyparse();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
     printAstNest(result, 0);
     enableGC();
     printf("\n");
     char *foo = NEW_ARRAY(char, 10); // force gc
 }
 
-#elif DEBUG_RUN_TESTS == 3
+#elif DEBUG_RUN_TESTS == 3 // testing type inference
 
 extern void testTin();
 
 int main(int argc, char *argv[]) {
+    initProtection();
     testTin();
 }
 
-#else
+#elif DEBUG_RUN_TESTS == 4 // testing algorithm W
 
 extern AstNest *result;
 
 int main(int argc, char *argv[]) {
+    initProtection();
     disableGC();
-    // yydebug = 1;
-    yyparse();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
     PROTECT(result);
     enableGC();
     // quietPrintHashTable = true;
@@ -84,11 +92,39 @@ int main(int argc, char *argv[]) {
     }
 }
 
+#else // testing lambda conversion
+
+extern AstNest *result;
+
+int main(int argc, char *argv[]) {
+    initProtection();
+    disableGC();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
+    PROTECT(result);
+    enableGC();
+    // quietPrintHashTable = true;
+    WResult *wr = WTop(result);
+    showTinMonoType(wr->monoType);
+    printf("\n");
+    if (hadErrors()) {
+        printf("(errors detected)\n");
+    } else {
+        LamExp *exp = lamConvertNest(result, NULL);
+        printLamExp(exp, 0);
+        printf("\n");
+    }
+}
+
 #endif
 
 #else
 
 int main(int argc, char *argv[]) {
+    initProtection();
 }
 
 #endif

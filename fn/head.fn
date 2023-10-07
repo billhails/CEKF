@@ -1,0 +1,7 @@
+let
+    fn head {
+        ([]) { error("cannot take the head of an empty list") }
+        (h @ _) { h }
+    }
+in
+    head

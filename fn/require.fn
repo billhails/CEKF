@@ -1,0 +1,6 @@
+let
+    fn require(condition) {
+        condition or back
+    }
+in
+    require

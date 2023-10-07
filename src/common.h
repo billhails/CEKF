@@ -25,7 +25,7 @@
 
 // #define TEST_STACK
 // #define DEBUG_STACK
-// #define DEBUG_STEP
+#define DEBUG_STEP
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 #define DEBUG_RUN_TESTS 4
@@ -36,7 +36,8 @@
 // #define DEBUG_TIN_INSTANTIATION
 // #define DEBUG_TIN_UNIFICATION
 #define DEBUG_DUMP_CORE
-#define DEBUG_ALGORITHM_W
+// #define DEBUG_ALGORITHM_W
+#define DEBUG_LAMBDA_CONVERT
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

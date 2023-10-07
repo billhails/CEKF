@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ // additional desugaring not handled by the parser.
+ // we should consider handling all desugaring in the parser and remove this
+
 #include <stdio.h>
 
 #include "common.h"
@@ -78,6 +81,12 @@ static AexpList *desugarAexpList(AexpList *x) {
         x = x->next;
     }
     return y;
+}
+
+static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
+    DEBUG_DESUGAR(AexpMakeVec, x);
+    x->args = desugarAexpList(x->args);
+    return x;
 }
 
 static CexpApply *desugarCexpApply(CexpApply *x) {
@@ -268,11 +277,30 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_UNARY:
             x->val.unary = desugarAexpUnaryApp(x->val.unary);
             break;
+        case AEXP_TYPE_MAKEVEC:
+            x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
+            break;
         case AEXP_TYPE_LIST:
             return listToCons(x->val.list);
         default:
-            cant_happen("unrecognized type in desugarAexp");
+            cant_happen("unrecognized type %d in desugarAexp", x->type);
     }
+    return x;
+}
+
+static MatchList *desugarMatchList(MatchList *x) {
+    DEBUG_DESUGAR(MatchList, x);
+    if (x == NULL) return NULL;
+    x->matches = desugarAexpList(x->matches);
+    x->body = desugarExp(x->body);
+    x->next = desugarMatchList(x->next);
+    return x;
+}
+
+static CexpMatch *desugarCexpMatch(CexpMatch *x) {
+    DEBUG_DESUGAR(CexpMatch, x);
+    x->condition = desugarAexp(x->condition);
+    x->clauses = desugarMatchList(x->clauses);
     return x;
 }
 
@@ -294,13 +322,16 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_AMB:
             x->val.amb = desugarCexpAmb(x->val.amb);
             break;
+        case CEXP_TYPE_MATCH:
+            x->val.match = desugarCexpMatch(x->val.match);
+            break;
         case CEXP_TYPE_BOOL:
             cant_happen("desugarCexp given CEXP_TYPE_BOOL");
             break;
         case CEXP_TYPE_BACK:
             break;
         default:
-            cant_happen("unrecognized type in desugarCexp");
+            cant_happen("unrecognized type %d in desugarCexp", x->type);
     }
     return x;
 }
@@ -324,7 +355,7 @@ Exp *desugarExp(Exp *x) {
         case EXP_TYPE_DONE:
             break;
         default:
-            cant_happen("unrecognized type in desugarAexp");
+            cant_happen("unrecognized type %d in desugarExp", x->type);
     }
     return x;
 }

@@ -54,8 +54,16 @@ static Value pop() {
     return popValue(&state.S);
 }
 
+static void popn(int n) {
+    popN(&state.S, n);
+}
+
 static Value peek(int index) {
     return peekValue(&state.S, index);
+}
+
+static void copyToVec(Vec *v) {
+    copyTopToValues(&state.S, &(v->values[0]), v->size);
 }
 
 static void inject(ByteCodeArray B) {
@@ -211,6 +219,18 @@ static Value cons(Value a, Value b) {
     return v;
 }
 
+static Value vec(Value index, Value vector) {
+    if (index.type != VALUE_TYPE_INTEGER)
+        cant_happen("invalid index type for vec %d", index.type);
+    if (vector.type != VALUE_TYPE_VEC)
+        cant_happen("invalid vector type for vec %d", vector.type);
+    int i = index.val.z;
+    Vec *v = vector.val.vec;
+    if (i < 0 || i >= v->size)
+        cant_happen("index out of range 0 - %d for vec (%d)", v->size, i);
+    return v->values[i];
+}
+
 static Value lookup(int frame, int offset) {
     Env *env = state.E;
     while (frame > 0) {
@@ -228,6 +248,8 @@ static int protectValue(Value v) {
             return PROTECT(v.val.k);
         case VALUE_TYPE_CONS:
             return PROTECT(v.val.cons);
+        case VALUE_TYPE_VEC:
+            return PROTECT(v.val.vec);
         default:
             return PROTECT(NULL);
     }
@@ -509,6 +531,42 @@ static void step() {
                 state.C++;
             }
             break;
+            case BYTECODE_PRIM_VEC: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### VEC\n", ++count, state.C);
+#endif
+                Value b = pop();
+                int save = protectValue(b);
+                Value a = pop();
+                protectValue(a);
+                Value result = vec(a, b);
+                protectValue(result);
+                push(result);
+                UNPROTECT(save);
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_MAKEVEC: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### MAKEVEC [%d]\n", ++count, state.C, byteAt(1));
+#endif
+                int size = byteAt(1);
+                // at this point there will be `size` arguments on the stack. Rather than
+                // popping then individually we can just memcpy them into a new struct Vec
+                Vec *v = newVec(size);
+                int save = PROTECT(v);
+                copyToVec(v);
+                popn(size);
+                Value val;
+                val.type = VALUE_TYPE_VEC;
+                val.val = VALUE_VAL_VEC(v);
+                push(val);
+                UNPROTECT(save);
+                state.C += 2;
+            }
+            break;
             case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -528,6 +586,24 @@ static void step() {
                 } else {
                     state.C = offsetAt(1);
                 }
+            }
+            break;
+            case BYTECODE_MATCH: { // pop the dispach code, verify it's an integer and in range, and dispatch
+                int size = byteAt(1);
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### MATCH [%d]", ++count, state.C, byteAt(1));
+                for (int c = 0; c < size; c++) {
+                    printf("[%d]", offsetAt(2 + c * 2));
+                }
+                printf("\n");
+#endif
+                Value v = pop();
+                if (v.type != VALUE_TYPE_INTEGER)
+                    cant_happen("match expression must be an integer");
+                if (v.val.z < 0 || v.val.z >= size)
+                    cant_happen("match expression index out of range (%d)", v.val.z);
+                state.C = offsetAt(2 + v.val.z * 2);
             }
             break;
             case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame

@@ -1,0 +1,13 @@
+let
+    fn exclude1 {
+        (filter, []) { [] }
+        (filter, h @ t) {
+            if (filter(h)) {
+                exclude1(filter, t)
+            } else {
+                h @ exclude1(filter, t)
+            }
+        }
+    }
+in
+    exclude1

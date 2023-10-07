@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// common error handling, very basic for now.
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>

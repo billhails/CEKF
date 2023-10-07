@@ -97,6 +97,12 @@ typedef struct Cons {
     struct Value cdr;
 } Cons;
 
+typedef struct Vec {
+    struct Header header;
+    int size;
+    struct Value values[0];
+} Vec;
+
 void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);
@@ -111,10 +117,12 @@ extern Snapshot noSnapshot;
 void pushValue(Stack *stack, Value v);
 struct Value popValue(Stack *stack);
 struct Value peekValue(Stack *stack, int offset);
+void copyTopToValues(Stack *s, Value *values, int size);
 void markStack(Stack *stack);
 void initStack(Stack *stack);
 int frameSize(Stack *stack);
 void pushN(Stack *stack, int n);
+void popN(Stack *s, int n);
 
 
 ValueList *newValueList(int count);
@@ -123,6 +131,7 @@ Env *newEnv(Env *next, int count);
 Kont *newKont(Control body, Env *rho, Kont *next);
 Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next);
 Cons *newCons(Value car, Value cdr);
+Vec *newVec(int size);
 
 void markValue(Value x);
 void markValueList(ValueList *x);
@@ -131,6 +140,7 @@ void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
 void markCons(Cons *x);
+void markVec(Vec *x);
 
 #ifdef TEST_STACK
 void testStack();

@@ -1,0 +1,16 @@
+let
+    fn id (x) { x }
+
+    fn length {
+        ([]) { 0 }
+        (_ @ t) { 1 + length(t) }
+    }
+
+    fn odd(n) { n % 2 == 0 }
+
+    fn checkId(x) {
+        id(odd(id(length(id(x)))))
+    }
+
+in
+    checkId("hello")

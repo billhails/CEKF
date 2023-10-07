@@ -15,6 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+// A-Normal Form lambda expressions that will get directly converted
+// to bytecode.
+//
+// consider generating this from yaml
+
 #include <stdio.h>
 
 #include "exp.h"
@@ -100,6 +106,13 @@ AexpList *newAexpList(AexpList *next, Aexp *exp) {
     return x;
 }
 
+AexpMakeVec *newAexpMakeVec(AexpList *args) {
+    AexpMakeVec *x = NEW(AexpMakeVec, OBJTYPE_MAKEVEC);
+    x->args = args;
+    x->nargs = countAexpList(args);
+    return x;
+}
+
 CexpApply *newCexpApply(Aexp *function, AexpList *args) {
     CexpApply *x = NEW(CexpApply, OBJTYPE_APPLY);
     x->function = function;
@@ -113,6 +126,21 @@ CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative) {
     x->condition = condition;
     x->consequent = consequent;
     x->alternative = alternative;
+    return x;
+}
+
+CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses) {
+    CexpMatch *x = NEW(CexpMatch, OBJTYPE_MATCH);
+    x->condition = condition;
+    x->clauses = clauses;
+    return x;
+}
+
+MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next) {
+    MatchList *x = NEW(MatchList, OBJTYPE_MATCHLIST);
+    x->matches = matches;
+    x->body = body;
+    x->next = next;
     return x;
 }
 
@@ -228,6 +256,13 @@ void markAexpList(AexpList *x) {
     markAexp(x->exp);
 }
 
+void markAexpMakeVec(AexpMakeVec *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpList(x->args);
+}
+
 void markCexpApply(CexpApply *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -244,6 +279,24 @@ void markCexpCond(CexpCond *x) {
     markExp(x->consequent);
     markExp(x->alternative);
 }
+
+void markCexpMatch(CexpMatch *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->condition);
+    markMatchList(x->clauses);
+}
+
+void markMatchList(MatchList *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpList(x->matches);
+    markExp(x->body);
+    markMatchList(x->next);
+}
+
 
 void markCexpLetRec(CexpLetRec *x) {
     if (x == NULL) return;
@@ -309,6 +362,9 @@ void markAexp(Aexp *x) {
         case AEXP_TYPE_PRIM:
             markAexpPrimApp(x->val.prim);
             break;
+        case AEXP_TYPE_MAKEVEC:
+            markAexpMakeVec(x->val.makeVec);
+            break;
         case AEXP_TYPE_UNARY:
             markAexpUnaryApp(x->val.unary);
             break;
@@ -342,6 +398,9 @@ void markCexp(Cexp *x) {
             break;
         case CEXP_TYPE_BOOL:
             markCexpBool(x->val.boolean);
+            break;
+        case CEXP_TYPE_MATCH:
+            markCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BACK:
             break;
@@ -422,6 +481,15 @@ void freeExpObj(Header *h) {
         case OBJTYPE_VARLIST:
             FREE(h, AexpVarList);
             break;
+        case OBJTYPE_MAKEVEC:
+            FREE(h, AexpMakeVec);
+            break;
+        case OBJTYPE_MATCH:
+            FREE(h, CexpMatch);
+            break;
+        case OBJTYPE_MATCHLIST:
+            FREE(h, MatchList);
+            break;
         default:
             cant_happen("unrecognised header type in freeExpObj");
     }
@@ -474,6 +542,15 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_VARLIST:
             markAexpVarList((AexpVarList *) h);
+            break;
+        case OBJTYPE_MAKEVEC:
+            markAexpMakeVec((AexpMakeVec *) h);
+            break;
+        case OBJTYPE_MATCH:
+            markCexpMatch((CexpMatch *) h);
+            break;
+        case OBJTYPE_MATCHLIST:
+            markMatchList((MatchList *) h);
             break;
         default:
             cant_happen("unrecognised header type in markExpObj");

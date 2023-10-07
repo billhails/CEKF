@@ -15,6 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+// Debugging support for printing various structures.
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,6 +32,7 @@ static void printFail(Fail *x, int depth);
 static void printKont(Kont *x, int depth);
 static void printStack(Stack *x, int depth);
 static void printCons(Cons *x);
+static void printVec(Vec *x);
 
 static void printPad(int depth) {
     printf("%*s", depth * 4, "");
@@ -61,6 +65,10 @@ void printContainedValue(Value x, int depth) {
         case VALUE_TYPE_CONS:
             printPad(depth);
             printCons(x.val.cons);
+            break;
+        case VALUE_TYPE_VEC:
+            printPad(depth);
+            printVec(x.val.vec);
             break;
         default:
             cant_happen("unrecognised value type in printContainedValue");
@@ -131,6 +139,17 @@ void printCons(Cons *x) {
     printf(")");
 }
 
+void printVec(Vec *x) {
+    printf("#[");
+    for (int i = 0; i < x->size; i++) {
+        printContainedValue(x->values[i], 0);
+        if (i + 1 < x->size) {
+            printf(" ");
+        }
+    }
+    printf("]");
+}
+
 void printElidedValue(Value x) {
     printf("V[");
     switch (x.type) {
@@ -148,6 +167,9 @@ void printElidedValue(Value x) {
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);
+            break;
+        case VALUE_TYPE_VEC:
+            printVec(x.val.vec);
             break;
         case VALUE_TYPE_CLO:
             printElidedClo(x.val.clo);
@@ -386,6 +408,9 @@ void printAexpPrimApp(AexpPrimApp *x) {
         case AEXP_PRIM_CONS:
             printf("cons ");
             break;
+        case AEXP_PRIM_VEC:
+            printf("vec ");
+            break;
         default:
             cant_happen("unrecognized op in printAexpPrimApp (%d)", x->op);
     }
@@ -419,8 +444,7 @@ void printAexpUnaryApp(AexpUnaryApp *x) {
     printf(")");
 }
 
-void printAexpList(AexpList *x) {
-    printf("(");
+static void printAexpListContents(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
@@ -428,18 +452,23 @@ void printAexpList(AexpList *x) {
         }
         x = x->next;
     }
+}
+
+void printAexpList(AexpList *x) {
+    printf("(");
+    printAexpListContents(x);
     printf(")");
 }
 
 void printAexpMakeList(AexpList *x) {
     printf("(list ");
-    while (x != NULL) {
-        printAexp(x->exp);
-        if (x->next) {
-            printf(" ");
-        }
-        x = x->next;
-    }
+    printAexpListContents(x);
+    printf(")");
+}
+
+void printAexpMakeVec(AexpMakeVec *x) {
+    printf("(make-vec ");
+    printAexpListContents(x->args);
     printf(")");
 }
 
@@ -522,6 +551,27 @@ void printCexpBool(CexpBool *x) {
     printf(")");
 }
 
+void printMatchList(MatchList *x) {
+    if (x == NULL) return;
+    printf("(");
+    printAexpList(x->matches);
+    printf(" ");
+    printExp(x->body);
+    printf(")");
+    if (x->next != NULL) {
+        printf(" ");
+        printMatchList(x->next);
+    }
+}
+
+void printCexpMatch(CexpMatch *x) {
+    printf("(match ");
+    printAexp(x->condition);
+    printf(" ");
+    printMatchList(x->clauses);
+    printf(")");
+}
+
 void printAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
@@ -554,6 +604,9 @@ void printAexp(Aexp *x) {
         case AEXP_TYPE_LIST:
             printAexpMakeList(x->val.list);
             break;
+        case AEXP_TYPE_MAKEVEC:
+            printAexpMakeVec(x->val.makeVec);
+            break;
         default:
             cant_happen("unrecognised aexp %d in printAexp", x->type);
     }
@@ -580,6 +633,9 @@ void printCexp(Cexp *x) {
             break;
         case CEXP_TYPE_BOOL:
             printCexpBool(x->val.boolean);
+            break;
+        case CEXP_TYPE_MATCH:
+            printCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BACK:
             printf("(back)");
@@ -739,6 +795,16 @@ void dumpByteCode(ByteCodeArray *b) {
                 i++;
             }
             break;
+            case BYTECODE_PRIM_MAKEVEC: {
+                printf("%04d ### MAKEVEC [%d]\n", i, b->entries[i + 1]);
+                i += 2;
+            }
+            break;
+            case BYTECODE_PRIM_VEC: {
+                printf("%04d ### VEC\n", i);
+                i++;
+            }
+            break;
             case BYTECODE_APPLY: {
                 printf("%04d ### APPLY\n", i);
                 i++;
@@ -747,6 +813,18 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_IF: {
                 printf("%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
+            }
+            break;
+            case BYTECODE_MATCH: {
+                int count = b->entries[i + 1];
+                printf("%04d ### MATCH [%d]", i, count);
+                i += 2;
+                while (count > 0) {
+                    printf("[%d]", offsetAt(b, i));
+                    count--;
+                    i += 2;
+                }
+                printf("\n");
             }
             break;
             case BYTECODE_LETREC: {

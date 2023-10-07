@@ -90,7 +90,13 @@ static HashTable *newSubstitutionTable() {
     return h;
 }
 
-static HashTable *newContextTable() {
+static HashTable *newContextTcTable() {
+    HashTable *h = newHashTable(0, NULL, NULL);
+    h->shortEntries = true;
+    return h;
+}
+
+static HashTable *newContextVarTable() {
     HashTable *h = newHashTable(
         sizeof(TinPolyType*),
         markContextFn,
@@ -111,9 +117,11 @@ static HashTable *newVarTable() {
 }
 
 TinContext *freshTinContext() {
-    HashTable *h = newContextTable();
-    int save = PROTECT(h);
-    TinContext *c = newTinContext(h, NULL);
+    HashTable *vars = newContextVarTable();
+    int save = PROTECT(vars);
+    HashTable *constructors = newContextTcTable();
+    PROTECT(constructors);
+    TinContext *c = newTinContext(vars, constructors, NULL);
     UNPROTECT(save);
     return c;
 }
@@ -126,15 +134,30 @@ void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMon
     hashSet(substitution->map, symbol, &monoType);
 }
 
-void addToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
-    hashSet(context->frame, symbol, &polyType);
+void addVarToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
+    hashSet(context->varFrame, symbol, &polyType);
+}
+
+void addConstructorToContext(TinContext *context, HashSymbol *symbol, TinPolyType *polyType) {
+    hashSet(context->varFrame, symbol, &polyType);
+    hashSet(context->tcFrame, symbol, NULL);
 }
 
 TinPolyType *lookupInContext(TinContext *context, HashSymbol *var) {
     if (context == NULL) return NULL;
     TinPolyType *result;
-    if (hashGet(context->frame, var, &result)) return result;
+    if (hashGet(context->varFrame, var, &result)) {
+        return result;
+    }
     return lookupInContext(context->next, var);
+}
+
+bool isTypeConstructor(TinContext *context, HashSymbol *var) {
+    if (context == NULL) return false;
+    if (hashGet(context->tcFrame, var, NULL)) {
+        return true;
+    }
+    return isTypeConstructor(context->next, var);
 }
 
 static TinMonoType *lookupInSubstitution(TinSubstitution *substitution, HashSymbol *var) {
@@ -159,24 +182,23 @@ static void addFreeVariable(HashTable *map, HashSymbol *key) {
 
 static TinContext *copyContext(TinContext *source) {
     if (source == NULL) {
-        HashTable *table = newContextTable();
-        int save = PROTECT(table);
-        TinContext * context = newTinContext(table, NULL);
-        UNPROTECT(save);
-        return context;
+        return freshTinContext();
     } else {
         TinContext *context = copyContext(source->next);
         int save = PROTECT(context);
-        copyHashTable(context->frame, source->frame);
+        copyHashTable(context->varFrame, source->varFrame);
+        copyHashTable(context->tcFrame, source->tcFrame);
         UNPROTECT(save);
         return context;
     }
 }
 
 TinContext *extendTinContext(TinContext *parent) {
-    HashTable *frame = newContextTable();
-    int save = PROTECT(frame);
-    TinContext *context = newTinContext(frame, parent);
+    HashTable *varFrame = newContextVarTable();
+    int save = PROTECT(varFrame);
+    HashTable *ctFrame = newContextTcTable();
+    PROTECT(ctFrame);
+    TinContext *context = newTinContext(varFrame, ctFrame, parent);
     UNPROTECT(save);
     return context;
 }
@@ -318,6 +340,24 @@ TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
     }
 }
 
+void applyContextSubstitutionInPlace(TinSubstitution *s, TinContext *context) {
+#ifdef DEBUG_TIN_SUBSTITUTION
+    printf("applyContextSubstitutionInPlace ");
+    showTinContext(context);
+    printf("\n");
+#ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
+    sleep(1);
+#endif
+#endif
+    int i = 0;
+    TinPolyType *t = NULL;
+    HashSymbol *key;
+    while ((key = iterateHashTable(context->varFrame, &i, &t)) != NULL) {
+        TinPolyType *ts = applyPolyTypeSubstitution(s, t);
+        addVarToContext(context, key, ts); // we know it's already in the context so this won't change the table
+    }
+}
+
 TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 #ifdef DEBUG_TIN_SUBSTITUTION
     printf("applyContextSubstitution ");
@@ -332,9 +372,9 @@ TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
     int i = 0;
     TinPolyType *t = NULL;
     HashSymbol *key;
-    while ((key = iterateHashTable(result->frame, &i, &t)) != NULL) {
+    while ((key = iterateHashTable(result->varFrame, &i, &t)) != NULL) {
         TinPolyType *ts = applyPolyTypeSubstitution(s, t);
-        addToContext(result, key, ts); // we know it's already in the context so this won't change the table
+        addVarToContext(result, key, ts); // we know it's already in the context so this won't change the table
     }
     UNPROTECT(save);
     return result;

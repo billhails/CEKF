@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// run-time stack and closure/continuation management
+
 #include "common.h"
 #include "cekf.h"
 #include "memory.h"
@@ -110,8 +112,12 @@ Value peekValue(Stack *s, int offset) {
     return s->stack[offset];
 }
 
-static void copyToFrame(Stack *s, Value *frame, int letRecOffset) {
-    COPY_ARRAY(Value, frame, s->stack, s->sp - letRecOffset);
+void copyTopToValues(Stack *s, Value *values, int size) {
+    COPY_ARRAY(Value, values, &(s->stack[s->sp - size]), size);
+}
+
+static void copyToValues(Stack *s, Value *values, int size) {
+    COPY_ARRAY(Value, values, s->stack, s->sp - size);
 }
 
 static void copyFromSnapshot(Stack *s, Snapshot ss) {
@@ -122,7 +128,7 @@ static void copyFromSnapshot(Stack *s, Snapshot ss) {
 static void copyToSnapshot(Stack *s, Snapshot *ss) {
     if (s->sp > 0) {
         ss->frame = NEW_ARRAY(Value, s->sp);
-        copyToFrame(s, ss->frame, 0);
+        copyToValues(s, ss->frame, 0);
     }
     ss->frameSize = s->sp;
 }
@@ -133,7 +139,7 @@ void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
 #endif
     Env *env = newEnv(target->rho, s->sp - letRecOffset);
     target->rho = env;
-    copyToFrame(s, env->values, letRecOffset);
+    copyToValues(s, env->values, letRecOffset);
 }
 
 void patchClo(Stack *s, Clo *target) {
@@ -141,7 +147,7 @@ void patchClo(Stack *s, Clo *target) {
     printf("patchClo, sp = %d, capacity = %d\n", s->sp, s->capacity);
 #endif
     target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
-    copyToFrame(s, target->rho->values, 0);
+    copyToValues(s, target->rho->values, 0);
     target->rho->count = s->sp;
 }
 
@@ -176,6 +182,13 @@ void restoreFail(Stack *s, Fail *source) {
 void pushN(Stack *s, int n) {
     for (; n > 0; n--) {
         pushValue(s, vVoid);
+    }
+}
+
+void popN(Stack *s, int n) {
+    s->sp -= n;
+    if (s->sp < 0) {
+        cant_happen("stack underflow in popN");
     }
 }
 

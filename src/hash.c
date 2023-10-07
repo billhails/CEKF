@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Hash table implementation.
+// Mostly a copy of Nystrom's clox implementation, with a few extensions.
+
 #include <stdio.h>
 #include <string.h>
 
@@ -172,7 +175,7 @@ bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
     printMemHeader("keys", table->keys);
 #endif
     if (table->keys[index] == NULL) return false;
-    if (table->valuesize > 0) {
+    if (table->valuesize > 0 && dest != NULL) {
         void *src = valuePtr(table, index);
         memcpy(dest, src, table->valuesize);
     }

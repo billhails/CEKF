@@ -25,6 +25,7 @@ struct Header;
 
 #include "ast_objtypes.h"
 #include "tin_objtypes.h"
+#include "lambda_objtypes.h"
 
 typedef enum {
     // exp types
@@ -44,6 +45,9 @@ typedef enum {
     OBJTYPE_UNARYAPP,
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
+    OBJTYPE_MAKEVEC,
+    OBJTYPE_MATCH,
+    OBJTYPE_MATCHLIST,
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,
@@ -51,13 +55,16 @@ typedef enum {
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
     OBJTYPE_CONS,
+    OBJTYPE_VEC,
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
     OBJTYPE_WRESULT,
+    OBJTYPE_PROTECTION,
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
+    LAMBDA_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -85,13 +92,19 @@ void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
 void freeWResultObj(Header *x);
 
-bool enableGC();
-bool disableGC();
+bool enableGC(void);
+bool disableGC(void);
+
+void initProtection(void);
 
 #define EXIT_OOM 2
 
+#define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
+#define FREE_VEC(vec) ((void)reallocate(vec, sizeof(vec) + vec->size * sizeof(Value), 0))
+
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
+
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
 #define GROW_ARRAY(type, array, oldcount, newcount) ((type *)reallocate(array, sizeof(type) * (oldcount), sizeof(type) * (newcount)))

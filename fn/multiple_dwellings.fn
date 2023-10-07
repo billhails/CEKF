@@ -1,6 +1,11 @@
 let
     typedef named_result { result(list(char), int) }
     
+    fn head {
+        ([]) { error("cannot take the head of an empty list") }
+        (h @ _) { h }
+    }
+
     fn require(condition) {
         condition or back
     }

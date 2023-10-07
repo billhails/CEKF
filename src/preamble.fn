@@ -1,0 +1,11 @@
+let
+    typedef bool { true | false }
+
+    typedef list(#t) { cons(#t, list(#t)) | nil }
+
+    fn append {
+        ([], b) { b }
+        (h @ t, b) { h @ append(t, b) }
+    }
+
+in {

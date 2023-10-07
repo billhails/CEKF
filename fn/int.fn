@@ -1,1 +1,1 @@
-let x = 5 in x
+let x = 5; in x

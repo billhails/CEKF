@@ -1,0 +1,9 @@
+let
+    fn one_of {
+        ([]) { back }
+        (h @ t) {
+            h then one_of(t)
+        }
+    }
+in
+    one_of([1, 2, 3])

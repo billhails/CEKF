@@ -185,6 +185,8 @@ class AexpPrimApp(AexpBase):
                 return "AEXP_PRIM_NE"
             case 'cons':
                 return "AEXP_PRIM_CONS"
+            case 'vec':
+                return "AEXP_PRIM_VEC"
             case 'xor':
                 return "AEXP_PRIM_XOR"
 
@@ -267,6 +269,27 @@ class AexpMakeList(AexpBase):
         else:
             return "AEXP_VAL_LIST(" + self.lst.makeC() + ")"
 
+class AexpMakeVec(AexpBase):
+    def __init__(self, lst):
+        self.lst = lst
+
+    def __str__(self):
+        if self.lst is None:
+            return "(make-vec)"
+        else:
+            return "(make-vec " + self.lst.inner_str() + ")"
+
+    def expCType(self):
+        return "AEXP_TYPE_MAKEVEC"
+
+    def makeC(self):
+        rest = "NULL"
+        if self.lst is not None:
+            rest = self.lst.makeC()
+        return "newAexpMakeVec(" + rest + ")";
+
+    def expCVal(self):
+        return "AEXP_VAL_MAKEVEC(" + self.makeC() + ")"
 
 class CexpApply(CexpBase):
     def __init__(self, function, args):
@@ -306,6 +329,43 @@ class CexpCond(CexpBase):
 
     def expCVal(self):
         return "CEXP_VAL_COND(" + self.makeC() + ")"
+
+
+class CexpMatch(CexpBase):
+    def __init__(self, condition, clauses):
+        self.condition = condition
+        self.clauses = clauses
+
+    def __str__(self):
+        return "(match " + str(self.condition) + " " + str(self.clauses) + ")"
+
+    def makeC(self):
+        return "newCexpMatch(" + self.condition.makeC() + "," + self.clauses.makeC() + ")"
+
+    def expCType(self):
+        return "CEXP_TYPE_MATCH"
+
+    def expCVal(self):
+        return "CEXP_VAL_MATCH(" + self.makeC() + ")"
+
+
+class MatchList:
+    def __init__(self, matches, body, rest):
+        self.matches = matches
+        self.body = body
+        self.rest = rest
+
+    def __str__(self):
+        rest = ""
+        if self.rest is not None:
+            rest = " " + str(self.rest)
+        return "(" + str(self.matches) + " " + str(self.body) + ")" + rest
+
+    def makeC(self):
+        rest = "NULL"
+        if self.rest is not None:
+            rest = self.rest.makeC()
+        return "newMatchList(" + self.matches.makeC() + "," + self.body.makeC() + "," + rest + ")"
 
 
 class CexpLetRec(CexpBase):
@@ -519,6 +579,8 @@ class Token:
     UNARY = 15
     BOOL = 16
     LIST = 17
+    MAKEVEC = 18
+    MATCH = 19
 
     def __init__(self, kind, val, line):
         self.kind = kind
@@ -594,6 +656,10 @@ class Lexer:
                                         yield Token(Token.LET, res, line_number)
                                     case 'call/cc':
                                         yield Token(Token.CALLCC, res, line_number)
+                                    case 'make-vec':
+                                        yield Token(Token.MAKEVEC, res, line_number)
+                                    case 'match':
+                                        yield Token(Token.MATCH, res, line_number)
                                     case '+':
                                         yield Token(Token.PRIM, res, line_number)
                                     case '-':
@@ -622,6 +688,8 @@ class Lexer:
                                         yield Token(Token.BOOL, res, line_number)
                                     case 'cons':
                                         yield Token(Token.PRIM, res, line_number)
+                                    case 'vec':
+                                        yield Token(Token.PRIM, res, line_number)
                                     case 'car':
                                         yield Token(Token.UNARY, res, line_number)
                                     case 'cdr':
@@ -646,6 +714,9 @@ class Lexer:
 
 def parse_aexp_list_expression(tokens):
     print("parse_aexp_list_expression", str(tokens.peek()))
+    if tokens.peek().kind == Token.MAKEVEC:
+        tokens.next()
+        return parse_makevec(tokens)
     if tokens.peek().kind == Token.PRIM:
         return parse_primapp(tokens.next(), tokens)
     if tokens.peek().kind == Token.UNARY:
@@ -769,6 +840,11 @@ def parse_callcc(tokens):
     exp = parse_aexp(tokens)
     return Cexp(CexpCallCC(exp))
 
+def parse_makevec(tokens):
+    print("parse_makevec", str(tokens.peek()))
+    args = parse_aexp_list(tokens)
+    return Aexp(AexpMakeVec(args))
+
 def parse_primapp(token, tokens):
     print("parse_primapp", str(tokens.peek()))
     exp1 = parse_aexp(tokens)
@@ -791,6 +867,40 @@ def parse_make_list(tokens):
     lst = parse_aexp_list(tokens)
     return Aexp(AexpMakeList(lst))
 
+def parse_match_list(tokens):
+    print("parse_match_list", str(tokens.peek()))
+    if tokens.peek().val == ")":
+        return None
+
+    token = tokens.next()
+    if token.val != '(':
+        raise Exception("expected '(' in parse_match_list, got " + token.val)
+
+    token = tokens.next()
+    if token.val != '(':
+        raise Exception("expected '((' in parse_match_list, got " + token.val)
+
+    matches = parse_aexp_list(tokens)
+
+    token = tokens.next()
+    if token.val != ')':
+        raise Exception("expected ')' after matches in parse_match_list")
+
+    body = parse_exp(tokens)
+
+    token = tokens.next()
+    if token.val != ')':
+        raise Exception("expected ')' after body in parse_match_list")
+
+    rest = parse_match_list(tokens)
+    return MatchList(matches, body, rest)
+
+def parse_match(tokens):
+    print("parse_match", str(tokens.peek()))
+    condition = parse_aexp(tokens)
+    clauses = parse_match_list(tokens)
+    return Cexp(CexpMatch(condition, clauses))
+
 def parse_list(tokens):
     print("parse_list", str(tokens.peek()))
     token = tokens.next()
@@ -811,6 +921,8 @@ def parse_list(tokens):
             return parse_let(tokens)
         case Token.CALLCC:
             return parse_callcc(tokens)
+        case Token.MAKEVEC:
+            return parse_makevec(tokens)
         case Token.PRIM:
             return parse_primapp(token, tokens)
         case Token.UNARY:
@@ -828,6 +940,8 @@ def parse_list(tokens):
             return parse_apply(tokens)
         case Token.LIST:
             return parse_make_list(tokens)
+        case Token.MATCH:
+            return parse_match(tokens)
         case Token.CLOSE:
             raise Exception("unexpected closing brace in parse_list");
 
