@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// This file contains code for maintaining the bytecode array as well
+// as generating bytecode from ANF lambda expressions.
+
 #include <stdio.h>
 #include <stdbool.h>
 

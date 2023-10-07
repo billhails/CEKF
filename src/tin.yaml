@@ -17,7 +17,9 @@
 #
 
 config:
-    name: tin # short for "type inference"
+    name: tin
+
+description: Type inference structures used by Algorithm W.
 
 structs:
     TinFunctionApplication:

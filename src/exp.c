@@ -15,6 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+// A-Normal Form lambda expressions that will get directly converted
+// to bytecode.
+//
+// consider generating this from yaml
+
 #include <stdio.h>
 
 #include "exp.h"

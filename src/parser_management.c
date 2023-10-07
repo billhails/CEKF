@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// initial support for loading preamble etc.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>

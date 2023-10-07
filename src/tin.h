@@ -21,6 +21,7 @@
 // generated from src/tin.yaml by makeAST.py
 
 
+// Type inference structures used by Algorithm W.
 
 #include "hash.h"
 #include "memory.h"

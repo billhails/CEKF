@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// run-time stack and closure/continuation management
+
 #include "common.h"
 #include "cekf.h"
 #include "memory.h"

@@ -688,7 +688,7 @@ def debug(*args, **kwargs):
 def pad(depth):
     print("    " * depth, end='')
 
-def printGpl(file):
+def printGpl(file, document):
     print(f"""/*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -710,6 +710,8 @@ def printGpl(file):
 // generated from {file} by makeAST.py
 
 """)
+    if 'description' in document:
+        print(f"// {document['description']}")
 
 ##################################################################
 
@@ -750,7 +752,7 @@ catalog.build()
 if args.type == "h":
     print(f"#ifndef cekf_{typeName}_h")
     print(f"#define cekf_{typeName}_h")
-    printGpl(args.yaml)
+    printGpl(args.yaml, document)
     print("")
     print('#include "hash.h"')
     print('#include "memory.h"')
@@ -770,7 +772,7 @@ if args.type == "h":
 elif args.type == "objtypes_h":
     print(f"#ifndef cekf_{typeName}_objtypes_h")
     print(f"#define cekf_{typeName}_objtypes_h")
-    printGpl(args.yaml)
+    printGpl(args.yaml, document)
     print("")
     catalog.printObjTypeDefine()
     print("")
@@ -782,7 +784,7 @@ elif args.type == "objtypes_h":
     print("")
     print("#endif");
 elif args.type == "c":
-    printGpl(args.yaml)
+    printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}.h"')
     print("")
@@ -805,7 +807,7 @@ elif args.type == "c":
 elif args.type == 'debug_h':
     print(f"#ifndef cekf_debug_{typeName}_h")
     print(f"#define cekf_debug_{typeName}_h")
-    printGpl(args.yaml)
+    printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}_helper.h"')
     for include in includes:
@@ -815,7 +817,7 @@ elif args.type == 'debug_h':
     print("")
     print("#endif");
 elif args.type == 'debug_c':
-    printGpl(args.yaml)
+    printGpl(args.yaml, document)
     print("")
     print('#include <stdio.h>')
     print("")

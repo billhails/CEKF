@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ // additional desugaring not handled by the parser.
+ // we should consider handling all desugaring in the parser and remove this
+
 #include <stdio.h>
 
 #include "common.h"

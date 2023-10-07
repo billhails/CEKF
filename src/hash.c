@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Hash table implementation.
+// Mostly a copy of Nystrom's clox implementation, with a few extensions.
+
 #include <stdio.h>
 #include <string.h>
 

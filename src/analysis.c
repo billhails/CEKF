@@ -14,6 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This file contains code for performing static lexical analysis
+ * of variables, annotating those variables with their run-time locations.
  */
 
 #include <stdbool.h>

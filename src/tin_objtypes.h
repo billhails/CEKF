@@ -21,6 +21,7 @@
 // generated from src/tin.yaml by makeAST.py
 
 
+// Type inference structures used by Algorithm W.
 
 #define TIN_OBJTYPES() OBJTYPE_TINFUNCTIONAPPLICATION, \
 OBJTYPE_TINMONOTYPELIST, \
