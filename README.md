@@ -13,7 +13,8 @@ variables local to a function are directly accessible on the stack, and
 closures and continuations are snapshots of stack frames. It additionally
 makes use of fast lexical addressing (an implementation of
 [De Bruijn Indexing](https://en.wikipedia.org/wiki/De_Bruijn_index)) for
-added efficiency gains.
+added efficiency gains. It also sports an implementation of Hindley-Milner
+Algorithm W for strict implicit type checking.
 
 I'm hoping that I can reproduce [the F♮ language I once implemented
 in Python](https://github.com/billhails/PyScheme), but as a standalone
@@ -551,3 +552,23 @@ Putting it all together:
 $$
 run(inject(\mathtt{Exp})) \rightharpoonup Value
 $$
+
+## Bytecode
+
+The above description of the machine assumes it is evaluating a tree of
+lambda expressions. That makes the concepts somewhat clearer so I've left
+it as originally written. However the actual implementation uses a bytecode
+interpreter instead. Translation from lambda expressions to bytecode turns
+out to be not that difficult, see [docs/V2](docs/V2.md) for details of that.
+
+## Lexical Addressing
+
+A lexical analysis stage annotates variables with their locations for faster
+run-time lookup. See [docs/LEXICAL_ADDRESSING](docs/LEXICAL_ADDRESSING.md).
+
+## Type Inferencing
+
+My previous attempt at implicit type-checking borrowed a pre-built
+implementation of Algorithm W written in Python. This time around I've
+gone with my own implementation, which required quite a lot of research.
+I've made notes on that process in [docs/TYPES](docs/TYPES.md).
