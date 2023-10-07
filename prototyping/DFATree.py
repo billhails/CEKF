@@ -95,7 +95,7 @@ class EnumAArg(AArg):
 
 class StateTable:
     def __init__(self, state):
-        self.states = sorted(state.allStates())
+        self.states = sorted(state.allReachableStates())
         transitions = set()
         for state in self.states:
             for transition in state.transitions:
@@ -144,15 +144,15 @@ class DFAState:
     def toStateTable(self):
         return StateTable(self)
 
-    def allStates(self):
-        return [x for x in self._allStates(set())]
+    def allReachableStates(self):
+        return [x for x in self._allReachableStates(set())]
 
-    def _allStates(self, seen):
+    def _allReachableStates(self, seen):
         if self in seen:
             return seen
         seen.add(self)
         for transition in self.transitions:
-            self.transitions[transition]._allStates(seen)
+            self.transitions[transition]._allReachableStates(seen)
         return seen
 
     def __lt__(self, other):
@@ -173,14 +173,14 @@ class DFAState:
     def setStateTableIndex(self, index):
         self.stateTableIndex = index
 
-    def add(self, other):
+    def merge(self, other):
         if self.action is None:
             self.action = other.action
         else:
             other.action = self.action
         for transition in other.transitions:
             if transition in self.transitions:
-                self.transitions[transition].add(other.transitions[transition])
+                self.transitions[transition].merge(other.transitions[transition])
             else:
                 self.transitions[transition] = other.transitions[transition]
 
@@ -198,7 +198,7 @@ class DFAState:
         key = nfaTransition.key()
         dfa = nfaTransition.to.toDFA()
         if key in self.transitions:
-            self.transitions[key].add(dfa)
+            self.transitions[key].merge(dfa)
         else:
             self.transitions[key] = dfa
 
@@ -228,6 +228,65 @@ class DFAState:
                 self.transitions[transition].patchEscapes(self.adjustEscape(transition, escape))
             if escape is not None and self.isConditional():
                 self.transitions[wildcard] = escape
+
+    def replaceDuplicates(self):
+        duplicates = self.findDuplicates()
+        while len(duplicates) > 0:
+            self._replaceDuplicates(duplicates)
+            duplicates = self.findDuplicates()
+
+    def _replaceDuplicates(self, duplicates):
+        for a in duplicates:
+            for b in duplicates[a]:
+                print(f'{a.getName()}/{b.getName()}')
+                self._replaceDuplicate(a, b)
+
+    def _replaceDuplicate(self, a, b):
+        allStates = self.allReachableStates()
+        for state in allStates:
+            state._replaceOneDuplicate(a, b)
+
+    def _replaceOneDuplicate(self, a, b):
+        for transition in self.transitions:
+            if self.transitions[transition] == a:
+                self.transitions[transition] = b
+
+    def findDuplicates(self):
+        duplicates = dict()
+        allStates = self.allReachableStates()
+        for instance in allStates:
+            instance._findDuplicates(allStates, duplicates)
+        return duplicates
+        """
+        for a in duplicates:
+            for b in duplicates[a]:
+                print(f'{a.getName()} == {b.getName()}');
+        """
+
+    def _findDuplicates(self, allStates, duplicates):
+        for instance in allStates:
+            if instance.sortKey <= self.sortKey:
+                pass
+            else:
+                if self.sameTransitions(instance):
+                    if self not in duplicates:
+                        duplicates[self] = set()
+                    duplicates[self].add(instance)
+
+    def sameTransitions(self, other):
+        return len(self.transitions) > 0 and self._sameTransitions(other) and other._sameTransitions(self)
+
+    def _sameTransitions(self, other):
+        for transition in self.transitions:
+            if not other.hasSameTransition(transition, self.transitions[transition]):
+                return False
+        return True
+
+    def hasSameTransition(self, transition, target):
+        if transition in self.transitions:
+            if self.transitions[transition] == target:
+                return True
+        return False
 
     def __str__(self):
         return f'({self.getName()}' + ' '.join([f' -{t}-> {str(self.transitions[t])}' for t in self.transitions]) + ')'
@@ -435,7 +494,7 @@ class NFAState:
         dfa = DFAState(self.action)
         for out in self.out:
             if out.isEmpty():
-                dfa.add(out.to.toDFA())
+                dfa.merge(out.to.toDFA())
             else:
                 dfa.addTransition(out)
         return dfa
@@ -654,8 +713,12 @@ testDfa = testNfa.toDFA()
 
 testDfa.patchEscapes()
 
-testDfa.mermaid()
+testDfa.mermaid({})
 
 testStateTable = testDfa.toStateTable()
 
 testStateTable.markdown()
+
+testDfa.replaceDuplicates()
+print("")
+testDfa.mermaid({})
