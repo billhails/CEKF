@@ -141,6 +141,41 @@ class DFAState:
         self.stateTableIndex = 0
         DFAState.counter += 1
 
+    def collapseActions(self, seen=None):
+        if seen is None:
+            seen = {}
+        if self in seen:
+            return self
+        if self.isConditional():
+            for transition in self.transitions:
+                self.transitions[transition] = self.transitions[transition].collapseActions(seen)
+        else:
+            newTransitions = dict()
+            for transition in self.transitions:
+                (newTransition, nextConditional) = self.collapseActionChain(transition, seen)
+                nextConditional.collapseActions(seen)
+                newTransitions[newTransition] = nextConditional
+            self.transitions = newTransitions
+        return self
+                
+
+    def getTransition(self):
+        if len(self.transitions) == 1:
+            for transition in self.transitions:
+                return transition
+        else:
+            raise Exception(f'cannot call getTransition on non-action state: {self.getName()}')
+
+    def collapseActionChain(self, transition, seen):
+        if not len(self.transitions) == 1:
+            raise Exception(f'action state with other than 1 transition: {self.getName()}')
+        if self.transitions[transition].isConditional() or self.transitions[transition].isTerminal():
+            return (transition, self.transitions[transition])
+        else:
+            nextTransition = self.transitions[transition].getTransition()
+            (newTransition, nextState) = self.transitions[transition].collapseActionChain(nextTransition, seen)
+            return (DFAActionTransition(transition, newTransition), nextState)
+
     def toStateTable(self):
         return StateTable(self)
 
@@ -238,7 +273,6 @@ class DFAState:
     def _replaceDuplicates(self, duplicates):
         for a in duplicates:
             for b in duplicates[a]:
-                print(f'{a.getName()}/{b.getName()}')
                 self._replaceDuplicate(a, b)
 
     def _replaceDuplicate(self, a, b):
@@ -291,7 +325,9 @@ class DFAState:
     def __str__(self):
         return f'({self.getName()}' + ' '.join([f' -{t}-> {str(self.transitions[t])}' for t in self.transitions]) + ')'
 
-    def mermaid(self, seen={}):
+    def mermaid(self, seen=None):
+        if seen is None:
+            seen = {}
         if self.name in seen:
             return
         seen[self.name] = True
@@ -299,7 +335,10 @@ class DFAState:
         for transition in self.transitions:
             self.transitions[transition].mermaid(seen)
         for transition in self.transitions:
-            print(f'{self.name}--"{str(transition)}"-->{self.transitions[transition].name}')
+            if transition.isConditional():
+                print(f'{self.name}--"{str(transition)}"-->{self.transitions[transition].name}')
+            else:
+                print(f'{self.name}-."{str(transition)}".->{self.transitions[transition].name}')
 
 
 class DFATransition:
@@ -336,6 +375,22 @@ class DFATransition:
 
     def key(self):
         return str(self)
+
+class DFAActionTransition(DFATransition):
+    def __init__(self, head, tail):
+        super().__init__()
+        self.head = head
+        self.tail = tail
+
+    def __hash__(self):
+        return hash(('action', hash(self.head), hash(self.tail)))
+
+    def __eq__(self, other):
+        return isinstance(other, DFAActionTransition) and self.head == other.head and self.tail == other.tail
+
+    def __str__(self):
+        return f'{str(self.head)}\\n{str(self.tail)}'
+        
 
 class DFANumericTransition(DFATransition):
     def __init__(self, n):
@@ -434,6 +489,9 @@ class DFAVarTransition(DFATransition):
         return '*'
 
     def isWildcard(self):
+        return True
+
+    def isConditional(self):
         return True
 
 
@@ -671,33 +729,29 @@ class FargToNfaVisitor:
         return NFAState([NFAComparisonTransition(comparison.name, state)])
 
 
-# (f, [])
-# (f, h @ t)
+def makeMermaid(args):
+    nfa = args.accept(FargToNfaVisitor())
+    dfa = nfa.toDFA()
+    dfa.patchEscapes()
+    dfa.replaceDuplicates()
+    print('```mermaid')
+    print('flowchart')
+    dfa.collapseActions().mermaid()
+    print('```')
+    print('')
+
 mapArgs = Compound([
     Fargs([VarFarg('f'), VecFarg([LabelFarg('nil')])], 'finish'),
     Fargs([VarFarg('f'), VecFarg([LabelFarg('cons'), VarFarg('h'), VecFarg([LabelFarg('cons'), VarFarg('t'), VecFarg([LabelFarg('nil')])])])], 'recurse')
 ])
-
-# nfa = mapArgs.accept(FargToNfaVisitor())
-
-# print(str(nfa))
-
-# dfa = nfa.toDFA()
-# print(str(dfa))
-
-# dfa.mermaid()
+makeMermaid(mapArgs)
 
 memberArgs = Compound([
     Fargs([VarFarg('x'), VecFarg([LabelFarg('nil')])], 'fail'),
     Fargs([VarFarg('x'), VecFarg([LabelFarg('cons'), ComparisonFarg('x'), WildcardFarg()])], 'succeed'),
     Fargs([VarFarg('x'), VecFarg([LabelFarg('cons'), WildcardFarg(), VarFarg('t')])], 'continue')
 ])
-
-# nfa2 = memberArgs.accept(FargToNfaVisitor())
-
-# dfa2 = nfa2.toDFA()
-
-# dfa2.mermaid()
+makeMermaid(memberArgs)
 
 testArgs = Compound([
     Fargs([VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('cons'), NumericFarg(1), VecFarg([LabelFarg('nil')])])])], 'a'),
@@ -707,18 +761,3 @@ testArgs = Compound([
     Fargs([WildcardFarg()], 'e'),
 ])
 
-testNfa = testArgs.accept(FargToNfaVisitor())
-
-testDfa = testNfa.toDFA()
-
-testDfa.patchEscapes()
-
-testDfa.mermaid({})
-
-testStateTable = testDfa.toStateTable()
-
-testStateTable.markdown()
-
-testDfa.replaceDuplicates()
-print("")
-testDfa.mermaid({})
