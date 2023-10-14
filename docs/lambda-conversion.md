@@ -386,3 +386,6 @@ step(\mathtt{(cut\ exp)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp'}, \rho',
 $$
 
 That's it. We won't expose `cut` as a language feature because its use is purely internal to the implementation.
+
+`cut` is now implemented, the ANF [scm/map-amb.scm](../scm/map-amb.scm) file demonstrates the expected behaviour, that file has been
+translated into C structs with [tools/makeTree.py](../tools/makeTree.py) and the resulting C code pasted into [src/tests/exp.inc](../src/tests/exp.inc) as a test `makeTestExpMap()`.
