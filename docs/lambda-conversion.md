@@ -382,7 +382,7 @@ $$
 `cut` pops the topmost failure continuation and arranges for its argument to be evaluated. It would be an error if `cut` was invoked without a failure continuation in place:
 
 $$
-step(\mathtt{(cut\ exp)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp'}, \rho', \kappa', f) = (\mathtt{exp}, \rho, \kappa, f))
+step(\mathtt{(cut\ exp)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp'}, \rho', \kappa', f)) = (\mathtt{exp}, \rho, \kappa, f)
 $$
 
 That's it. We won't expose `cut` as a language feature because its use is purely internal to the implementation.
