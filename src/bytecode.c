@@ -332,6 +332,11 @@ void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
     writeCurrentAddressAt(patch2, b);
 }
 
+void writeCexpCut(CexpCut *x, ByteCodeArray *b) {
+    addByte(b, BYTECODE_CUT);
+    writeExp(x->exp, b);
+}
+
 void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_LET);
     int patch = reserveWord(b);
@@ -414,6 +419,10 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         break;
         case CEXP_TYPE_AMB: {
             writeCexpAmb(x->val.amb, b);
+        }
+        break;
+        case CEXP_TYPE_CUT: {
+            writeCexpCut(x->val.cut, b);
         }
         break;
         case CEXP_TYPE_BACK: {

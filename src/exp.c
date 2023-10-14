@@ -167,6 +167,12 @@ CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2) {
     return x;
 }
 
+CexpCut *newCexpCut(Exp *exp) {
+    CexpCut *x = NEW(CexpCut, OBJTYPE_CUT);
+    x->exp = exp;
+    return x;
+}
+
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2) {
     CexpBool *x = NEW(CexpBool, OBJTYPE_BOOL);
     x->type = type;
@@ -323,6 +329,13 @@ void markCexpAmb(CexpAmb *x) {
     markExp(x->exp2);
 }
 
+void markCexpCut(CexpCut *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->exp);
+}
+
 void markCexpBool(CexpBool *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -396,6 +409,9 @@ void markCexp(Cexp *x) {
         case CEXP_TYPE_AMB:
             markCexpAmb(x->val.amb);
             break;
+        case CEXP_TYPE_CUT:
+            markCexpCut(x->val.cut);
+            break;
         case CEXP_TYPE_BOOL:
             markCexpBool(x->val.boolean);
             break;
@@ -434,10 +450,13 @@ void freeExpObj(Header *h) {
     if (h == NULL) return;
     switch (h->type) {
         case OBJTYPE_BOOL:
-            FREE(h, CexpAmb);
+            FREE(h, CexpBool);
             break;
         case OBJTYPE_AMB:
             FREE(h, CexpAmb);
+            break;
+        case OBJTYPE_CUT:
+            FREE(h, CexpCut);
             break;
         case OBJTYPE_APPLY:
             FREE(h, CexpApply);
@@ -500,6 +519,9 @@ void markExpObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_AMB:
             markCexpAmb((CexpAmb *) h);
+            break;
+        case OBJTYPE_CUT:
+            markCexpCut((CexpCut *) h);
             break;
         case OBJTYPE_BOOL:
             markCexpBool((CexpBool *) h);

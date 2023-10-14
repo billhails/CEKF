@@ -44,6 +44,7 @@ static void analizeCexpApply(CexpApply *x, CTEnv *env);
 static void analizeCexpCond(CexpCond *x, CTEnv *env);
 static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env);
 static void analizeCexpAmb(CexpAmb *x, CTEnv *env);
+static void analizeCexpCut(CexpCut *x, CTEnv *env);
 static void analizeExpLet(ExpLet *x, CTEnv *env);
 static void analizeAexp(Aexp *x, CTEnv *env);
 static void analizeCexp(Cexp *x, CTEnv *env);
@@ -169,6 +170,13 @@ static void analizeCexpAmb(CexpAmb *x, CTEnv *env) {
     analizeExp(x->exp2, env);
 }
 
+static void analizeCexpCut(CexpCut *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    printf("analizeCexpCut "); printCexpCut(x); printf("  "); printCTEnv(env); printf("\n");
+#endif
+    analizeExp(x->exp, env);
+}
+
 static void analizeExpLet(ExpLet *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     printf("analizeExpLet "); printExpLet(x); printf("  "); printCTEnv(env); printf("\n");
@@ -262,13 +270,16 @@ static void analizeCexp(Cexp *x, CTEnv *env) {
         case CEXP_TYPE_AMB:
             analizeCexpAmb(x->val.amb, env);
             break;
+        case CEXP_TYPE_CUT:
+            analizeCexpCut(x->val.cut, env);
+            break;
         case CEXP_TYPE_MATCH:
             analizeCexpMatch(x->val.match, env);
             break;
         case CEXP_TYPE_BACK:
             break;
         default:
-            cant_happen("unrecognized type in analizeCexp");
+            cant_happen("unrecognized type %d in analizeCexp", x->type);
     }
 }
 

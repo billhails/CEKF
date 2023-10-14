@@ -37,6 +37,7 @@ static CexpApply *desugarCexpApply(CexpApply *x);
 static CexpCond *desugarCexpCond(CexpCond *x);
 static CexpLetRec *desugarCexpLetRec(CexpLetRec *x);
 static CexpAmb *desugarCexpAmb(CexpAmb *x);
+static CexpCut *desugarCexpCut(CexpCut *x);
 static ExpLet *desugarCexpBool(CexpBool *x);
 static ExpLet *desugarExpLet(ExpLet *x);
 static Aexp *desugarAexp(Aexp *x);
@@ -124,6 +125,12 @@ static CexpAmb *desugarCexpAmb(CexpAmb *x) {
     DEBUG_DESUGAR(CexpAmb, x);
     x->exp1 = desugarExp(x->exp1);
     x->exp2 = desugarExp(x->exp2);
+    return x;
+}
+
+static CexpCut *desugarCexpCut(CexpCut *x) {
+    DEBUG_DESUGAR(CexpCut, x);
+    x->exp = desugarExp(x->exp);
     return x;
 }
 
@@ -321,6 +328,9 @@ static Cexp *desugarCexp(Cexp *x) {
             break;
         case CEXP_TYPE_AMB:
             x->val.amb = desugarCexpAmb(x->val.amb);
+            break;
+        case CEXP_TYPE_CUT:
+            x->val.cut = desugarCexpCut(x->val.cut);
             break;
         case CEXP_TYPE_MATCH:
             x->val.match = desugarCexpMatch(x->val.match);
