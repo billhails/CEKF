@@ -532,6 +532,12 @@ void printCexpAmb(CexpAmb *x) {
     printf(")");
 }
 
+void printCexpCut(CexpCut *x) {
+    printf("(cut ");
+    printExp(x->exp);
+    printf(")");
+}
+
 void printCexpBool(CexpBool *x) {
     printf("(");
     switch (x->type) {
@@ -630,6 +636,9 @@ void printCexp(Cexp *x) {
             break;
         case CEXP_TYPE_AMB:
             printCexpAmb(x->val.amb);
+            break;
+        case CEXP_TYPE_CUT:
+            printCexpCut(x->val.cut);
             break;
         case CEXP_TYPE_BOOL:
             printCexpBool(x->val.boolean);
@@ -835,6 +844,11 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_AMB: {
                 printf("%04d ### AMB [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
+            }
+            break;
+            case BYTECODE_CUT: {
+                printf("%04d ### CUT\n", i);
+                i++;
             }
             break;
             case BYTECODE_BACK: {

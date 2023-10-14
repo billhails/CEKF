@@ -28,6 +28,9 @@ class Farg:
 
 
 class NumericFarg(Farg):
+    """
+    literal number
+    """
     def __init__(self, n):
         self.n = n
 
@@ -39,6 +42,9 @@ class NumericFarg(Farg):
 
 
 class VecFarg(Farg):
+    """
+    vector type like pair or maybe
+    """
     def __init__(self, label, *fields):
         self.label = label
         self.fields = fields
@@ -56,6 +62,9 @@ class VecFarg(Farg):
 
 
 class VarFarg(Farg):
+    """
+    variable
+    """
     def __init__(self, name):
         self.name = name
 
@@ -66,18 +75,29 @@ class VarFarg(Farg):
         return self.name
 
 
-class ComparisonFarg(Farg):
-    def __init__(self, name):
+class AssignmentFarg(Farg):
+    """
+    name = value
+    """
+    def __init__(self, name, value):
         self.name = name
+        self.value = value
 
     def accept(self, visitor, state):
-        return visitor.visitComparisonFarg(self, state)
+        return visitor.visitAssignmentFarg(self, state)
 
     def __str__(self):
-        return self.name
+        return self.name + '=' + str(self.value)
+
+    def notePosition(self, i):
+        super().notePosition(i)
+        self.value.notePosition(i)
 
 
 class WildcardFarg(Farg):
+    """
+    Wildcard _
+    """
     def accept(self, visitor, state):
         return visitor.visitWildcardFarg(self, state)
 
@@ -553,7 +573,28 @@ class DfaVarTransition(DfaTransition):
         return isinstance(other, DfaVarTransition) and self.var == other.var
 
     def __str__(self):
-        return 'bind ' + self.var
+        return 'unify ' + self.var
+
+    def isWildcard(self):
+        return True
+
+    def isConditional(self):
+        return True
+
+
+class DfaAssignmentTransition(DfaTransition):
+    def __init__(self, var):
+        super().__init__()
+        self.var = var
+
+    def __hash__(self):
+        return hash(('var', self.var))
+
+    def __eq__(self, other):
+        return isinstance(other, DfaAssignmentTransition) and self.var == other.var
+
+    def __str__(self):
+        return 'unify ' + self.var
 
     def isWildcard(self):
         return True
@@ -574,24 +615,6 @@ class DfaWildcardTransition(DfaTransition):
 
     def isWildcard(self):
         return True
-
-    def isConditional(self):
-        return True
-
-
-class DfaComparisonTransition(DfaTransition):
-    def __init__(self, var):
-        super().__init__()
-        self.var = var
-
-    def __hash__(self):
-        return hash(('cmp', self.var))
-
-    def __eq__(self, other):
-        return isinstance(other, DfaComparisonTransition) and self.var == other.var
-
-    def __str__(self):
-        return f'=={str(self.var)}'
 
     def isConditional(self):
         return True
@@ -716,13 +739,25 @@ class NfaArgTransition(NfaTransition):
         return DfaArgTransition(self.index)
 
 
+class NfaAssignmentTransition(NfaTransition):
+    def __init__(self, name, to):
+        super().__init__(to)
+        self.name = name
+
+    def __str__(self):
+        return 'unify ' + self.name + ' ' + str(self.to)
+
+    def key(self):
+        return DfaAssignmentTransition(self.name)
+
+
 class NfaVarTransition(NfaTransition):
     def __init__(self, name, to):
         super().__init__(to)
         self.name = name
 
     def __str__(self):
-        return 'bind ' + self.name + ' ' + str(self.to)
+        return 'unify ' + self.name + ' ' + str(self.to)
 
     def key(self):
         return DfaVarTransition(self.name)
@@ -734,18 +769,6 @@ class NfaWildcardTransition(NfaTransition):
 
     def key(self):
         return DfaWildcardTransition()
-
-
-class NfaComparisonTransition(NfaTransition):
-    def __init__(self, name, to):
-        super().__init__(to)
-        self.name = name
-
-    def __str__(self):
-        return f'(={self.name}) ' + str(self.to)
-
-    def key(self):
-        return DfaComparisonTransition(self.name)
 
 
 class FargToNfaVisitor:
@@ -780,11 +803,11 @@ class FargToNfaVisitor:
     def visitVarFarg(self, var, state):
         return NfaState([NfaVarTransition(var.name, state)])
 
+    def visitAssignmentFarg(self, assignment, state):
+        return NfaState([NfaAssignmentTransition(assignment.name, assignment.value.accept(self, state))])
+
     def visitWildcardFarg(self, wildcard, state):
         return NfaState([NfaWildcardTransition(state)])
-
-    def visitComparisonFarg(self, comparison, state):
-        return NfaState([NfaComparisonTransition(comparison.name, state)])
 
 
 def makeMermaid(args):
@@ -809,7 +832,7 @@ makeMermaid(mapArgs)
 
 memberArgs = Compound(
     Fargs('false', VarFarg('x'), VecFarg('nil')),
-    Fargs('true', VarFarg('x'), VecFarg('cons', ComparisonFarg('x'), WildcardFarg())),
+    Fargs('true', VarFarg('x'), VecFarg('cons', VarFarg('x'), WildcardFarg())),
     Fargs('continue', VarFarg('x'), VecFarg('cons', WildcardFarg(), VarFarg('t')))
 )
 makeMermaid(memberArgs)
@@ -823,3 +846,22 @@ testArgs = Compound(
 )
 makeMermaid(testArgs)
 
+"""
+Problems
+--------
+
+Because we're matching the args for all functions at once, we can't pay attention to variable names,
+we have to assume the variables are bound by a previous (or subsequent) process.
+That in turn means we can't handle assignment args (x=[1, 2] etc.) because x won't be bound.
+And there are problems with matching common values too, like in member:
+
+fn member {
+    (_, []) { false }
+    (x, x @ y) { true }
+    (y, _ @ t) { member(y, t) }
+}
+
+The parallel matching would have to bind y as well as x to the first argument, but y shouldn't be bound
+in the true case because types are different and it would become a comparison with the second appearence
+of y in the true branch.
+"""

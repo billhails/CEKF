@@ -428,6 +428,24 @@ class CexpAmb(CexpBase):
 
 
 
+class CexpCut(CexpBase):
+    def __init__(self, exp):
+        self.exp = exp
+
+    def __str__(self):
+        return "(cut " + str(self.exp) + ")"
+
+    def makeC(self):
+        return "newCexpCut(" + self.exp.makeC() + ")"
+
+    def expCType(self):
+        return "CEXP_TYPE_CUT"
+
+    def expCVal(self):
+        return "CEXP_VAL_CUT(" + self.makeC() + ")"
+
+
+
 class CexpBool(CexpBase):
     def __init__(self, token, exp1, exp2):
         self.name = token.val;
@@ -581,6 +599,7 @@ class Token:
     LIST = 17
     MAKEVEC = 18
     MATCH = 19
+    CUT = 20
 
     def __init__(self, kind, val, line):
         self.kind = kind
@@ -644,6 +663,8 @@ class Lexer:
                                 match res:
                                     case 'amb':
                                         yield Token(Token.AMB, res, line_number)
+                                    case 'cut':
+                                        yield Token(Token.CUT, res, line_number)
                                     case 'back':
                                         yield Token(Token.BACK, res, line_number)
                                     case 'letrec':
@@ -792,6 +813,11 @@ def parse_amb(tokens):
     exp2 = parse_exp(tokens)
     return Cexp(CexpAmb(exp1, exp2))
 
+def parse_cut(tokens):
+    print("parse_cut", str(tokens.peek()))
+    exp = parse_exp(tokens)
+    return Cexp(CexpCut(exp))
+
 def parse_back(tokens):
     print("parse_back", str(tokens.peek()))
     return Cexp(CexpBack())
@@ -909,6 +935,8 @@ def parse_list(tokens):
             return parse_bool(token, tokens)
         case Token.AMB:
             return parse_amb(tokens)
+        case Token.CUT:
+            return parse_cut(tokens)
         case Token.BACK:
             return parse_back(tokens)
         case Token.LETREC:

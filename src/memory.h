@@ -30,6 +30,7 @@ struct Header;
 typedef enum {
     // exp types
     OBJTYPE_AMB,
+    OBJTYPE_CUT,
     OBJTYPE_APPLY,
     OBJTYPE_BINDINGS,
     OBJTYPE_BOOL,

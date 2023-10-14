@@ -34,6 +34,7 @@ void printAexpVarList(AexpVarList *x);
 void printBareAexpList(AexpList *x);
 void printCEKF(CEKF *x);
 void printCexpAmb(CexpAmb *x);
+void printCexpCut(CexpCut *x);
 void printCexpApply(CexpApply *x);
 void printCexpBool(CexpBool *x);
 void printCexp(Cexp *x);

@@ -157,6 +157,11 @@ typedef struct CexpAmb {
     struct Exp *exp2;
 } CexpAmb;
 
+typedef struct CexpCut {
+    Header header;
+    struct Exp *exp;
+} CexpCut;
+
 typedef enum {
     BOOL_TYPE_AND,
     BOOL_TYPE_OR,
@@ -226,6 +231,7 @@ typedef enum {
     CEXP_TYPE_CALLCC,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
+    CEXP_TYPE_CUT,
     CEXP_TYPE_BACK,
     CEXP_TYPE_BOOL,
     CEXP_TYPE_MATCH,
@@ -238,6 +244,7 @@ typedef union {
     struct Aexp *callCC;
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
+    struct CexpCut *cut;
     struct CexpBool *boolean;
     struct CexpMatch *match;
 } CexpVal;
@@ -253,6 +260,7 @@ typedef struct Cexp {
 #define CEXP_VAL_CALLCC(x) ((CexpVal){.callCC  = (x)})
 #define CEXP_VAL_LETREC(x) ((CexpVal){.letRec  = (x)})
 #define CEXP_VAL_AMB(x)    ((CexpVal){.amb     = (x)})
+#define CEXP_VAL_CUT(x)    ((CexpVal){.cut     = (x)})
 #define CEXP_VAL_BOOL(x)   ((CexpVal){.boolean = (x)})
 #define CEXP_VAL_MATCH(x)  ((CexpVal){.match   = (x)})
 #define CEXP_VAL_BACK()    ((CexpVal){.none    = NULL})
@@ -292,6 +300,7 @@ AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var);
 AexpMakeVec *newAexpMakeVec(AexpList *args);
 HashSymbol *newAexpVar(char *name);
 CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
+CexpCut *newCexpCut(Exp *exp);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative);
@@ -312,6 +321,7 @@ void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVarList(AexpVarList *x);
 void markAexpMakeVec(AexpMakeVec *x);
 void markCexpAmb(CexpAmb *x);
+void markCexpCut(CexpCut *x);
 void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);
 void markCexpCond(CexpCond *x);

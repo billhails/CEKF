@@ -63,6 +63,8 @@ const char *typeName(ObjType type) {
     switch (type) {
         case OBJTYPE_AMB:
             return "amb";
+        case OBJTYPE_CUT:
+            return "cut";
         case OBJTYPE_BOOL:
             return "bool";
         case OBJTYPE_APPLY:
@@ -95,6 +97,12 @@ const char *typeName(ObjType type) {
             return "annotatedvar";
         case OBJTYPE_VARLIST:
             return "varlist";
+        case OBJTYPE_MAKEVEC:
+            return "makevec";
+        case OBJTYPE_MATCH:
+            return "match";
+        case OBJTYPE_MATCHLIST:
+            return "matchlist";
         case OBJTYPE_CLO:
             return "clo";
         case OBJTYPE_ENV:
@@ -152,6 +160,9 @@ bool disableGC() {
 #define FREE_PROTECT(p) ((void)reallocate(p, sizeof(ProtectionStack) + ((ProtectionStack *)p)->capacity * sizeof(Header *), 0))
 
 void initProtection(void) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "initProtection\n");
+#endif
     protected = NEW_PROTECT(INITIAL_PROTECTION);
     protected->capacity = INITIAL_PROTECTION;
     protected->sp = 0;
@@ -271,6 +282,7 @@ void markObj(Header *h) {
 #endif
     switch (h->type) {
         case OBJTYPE_AMB:
+        case OBJTYPE_CUT:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_BOOL:
@@ -335,6 +347,7 @@ static void freeProtectionObj(Header *h) {
 void freeObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_AMB:
+        case OBJTYPE_CUT:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_BOOL:

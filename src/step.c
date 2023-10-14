@@ -633,6 +633,18 @@ static void step() {
                 state.C += 3;
             }
             break;
+            case BYTECODE_CUT: { // discard the current failure continuation
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### CUT\n", ++count, state.C);
+#endif
+                if (state.F == NULL) {
+                    cant_happen("cut with no extant failure continuation");
+                }
+                state.F = state.F->next;
+                state.C += 1;
+            }
+            break;
             case BYTECODE_BACK: { // restore the failure continuation or halt
 #ifdef DEBUG_STEP
                 printCEKF(&state);
