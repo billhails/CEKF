@@ -389,3 +389,72 @@ That's it. We won't expose `cut` as a language feature because its use is purely
 
 `cut` is now implemented, the ANF [scm/map-amb.scm](../scm/map-amb.scm) file demonstrates the expected behaviour, that file has been
 translated into C structs with [tools/makeTree.py](../tools/makeTree.py) and the resulting C code pasted into [src/tests/exp.inc](../src/tests/exp.inc) as a test `makeTestExpMap()`.
+
+There are problems with this approach too, after a day or so of more prototyping, it definately will work (is working)
+see [my prototype](../prototyping/Args.py)
+but the resulting code is horribly inneficcient. For example given:
+
+```plaintext
+typedef colour { red | green | blue }
+```
+
+this function:
+
+```plaintext
+fn colourToChar {
+  (red) => { 'r' }
+  (green) => { 'g' }
+  (blue) => { 'b' }
+}
+```
+
+compiles to this!
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (amb (match arg0
+                            ((0) (cut 'r'))
+                            ((1 2) (back)))
+                     (amb (match arg0
+                                 ((1) (cut 'g'))
+                                 ((0 2) (back)))
+                          (amb (match arg0
+                                      ((2) (cut 'b'))
+                                      ((0 1) (back)))
+                               (error "patterns exhausted in function colourToChar"))))))
+```
+
+Which is hardly ideal. An ideal translation would just be:
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (amb (match arg0
+                            ((0) (cut 'r'))
+                            ((1) (cut 'g'))
+                            ((2) (cut 'b'))
+                     (error "patterns exhausted in function colourToChar")))))
+```
+
+or even just:
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (match arg0
+                       ((0) 'r')
+                       ((1) 'g')
+                       ((2) 'b'))))
+```
+
+I've already implemented `cut`, and I think I'll leave it in because it might yet prove useful, but since efficiency is one
+of the primary motivations for this project, I can't use it here.
+
+Fortunately there's still life in the original idea. I started searching for pattern matching algorithms, found some very
+good documentation on Rust internals which finally led me to
+[this paper](https://www.classes.cs.uchicago.edu/archive/2011/spring/22620-1/papers/pettersson92.pdf).
+I'm quite gratified that I wasn't alone in thinking regular expressions were the way to go, but this paper
+has a complete algorithm described and working that does exactly what I want!
+
+Plan now is to get that working as a Python prototype, then translate into C.
