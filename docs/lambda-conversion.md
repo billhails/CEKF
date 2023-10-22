@@ -458,3 +458,89 @@ I'm quite gratified that I wasn't alone in thinking regular expressions were the
 has a complete algorithm described and working that does exactly what I want!
 
 Plan now is to get that working as a Python prototype, then translate into C.
+
+And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.py). For sample inputs here's the output:
+
+```scheme
+; {
+;   [_, null] => null
+;   [f, cons(h, t)] => (cons (f h) (map f t))
+; }
+(lambda (p0 p2)
+        (match (vec 0 p1)
+               ((0) null)
+               ((1) (let (p1$1 (vec 1 p1))
+                         (let (p1$2 (vec 2 p1))
+                              (cons (p0 p1$1)
+                                    (map p0 p1$2)))))))
+
+; {
+;   [f, cons(h, t)] => (cons (f h) (map f t))
+; }
+(lambda (p0 p1)
+        (match (vec 0 p1)
+               ((1) (let (p1$1 (vec 1 p1))
+                    (let (p1$2 (vec 2 p1))
+                         (cons (p0 p1$1)
+                               (map p0 p1$2)))))
+               ((0) (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [_, null] => null
+; }
+(lambda (p0 p1)
+        (match (vec 0 p1)
+               ((0) null)
+               ((1) (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [0] => 1
+;   [n] => (* n (factorial (- n 1)))
+; }
+(lambda (p0)
+        (cond p0 (0 1)
+                 (else (* p0 (factorial (- p0 1))))))
+
+; {
+;   [n] => (* n (factorial (- n 1)))
+; }
+(lambda (p0) (* p0 (factorial (- p0 1))))
+
+; {
+;   [0] => 1
+; }
+(lambda (p0)
+        (cond p0 (0 1)
+                 (else (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [null, null] => A
+;   [xs, ys] => (B xs ys)
+; }
+(lambda (p0 p1)
+        (letrec ((q0 (lambda () (B p0 p1))))
+                (match (vec 0 p0)
+                       ((0) (match (vec 0 p1)
+                                   ((0) A)
+                                   ((1) (q0))))
+                       ((1) (q0)))))
+
+; {
+;   [null, ys] => E1
+;   [xs, null] => E2
+;   [cons(x, xs), cons(y, ys)] => E3
+; }
+(lambda (p0 p1)
+        (match (vec 0 p0)
+               ((0) E1)
+               ((1) (let (p0$1 (vec 1 p0))
+                         (let (p0$2 (vec 2 p0))
+                              (match (vec 0 p1)
+                                     ((0) E2)
+                                     ((1) (let (p1$1 (vec 1 p1))
+                                               (let (p1$2 (vec 2 p1))
+                                                    E3)))))))))
+```
