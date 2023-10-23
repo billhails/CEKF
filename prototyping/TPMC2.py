@@ -107,6 +107,8 @@ class Char(Scalar):
 class MatchRules:
     def __init__(self, *rules):
         self.rules = [*rules]
+        if len(self.rules) == 0:
+            raise Exception("MatchRules constructor called with 0 arguments")
         self.rootVariables = [f'p{i}' for i in range(rules[0].length())];
         self.errorState = None
         self.knownStates = None
@@ -150,20 +152,29 @@ class MatchRules:
         return self.rules[0].action
 
     def mixtureRule(self):
+        debug('mixtureRule')
         index = self.findColumnIndexWithConstructor()
         column = self.columnAtIndex(index)
         otherColumns = self.columnsNotAtIndex(index)
         constructorIndices = column.findConstructorIndices()
+        debug('constructorIndices', constructorIndices)
         testState = TestState(self.getConstructorPath(index))
         for constructorIndex in constructorIndices:
             constructor = column.patterns[constructorIndex]
+            # debug('constructor', constructor)
             matchingRowIndices = column.findIndicesMatching(constructor)
+            # debug('matchingRowIndices', matchingRowIndices)
             patterns = column.getPatterns(matchingRowIndices)
+            # debug('patterns', patterns)
             arity = constructor.arity()
             matrix = [pattern.extractSubPatterns(arity) for pattern in patterns]
+            # debug('matrix', matrix)
             otherRows = self.rowsFromColumns(otherColumns, matchingRowIndices)
+            # debug('otherRows', otherRows)
             fullMatrix = [a + b for a, b in zip(matrix, otherRows)]
+            # debug('fullMatrix', fullMatrix)
             actions = [rule.action for rule in [self.rules[i] for i in matchingRowIndices]]
+            # debug('actions', actions)
             rules = MatchRules(*[MatchRule(action, *patterns) for action, patterns in zip(actions, fullMatrix)])
             rules.acceptErrorState(self.errorState)
             rules.acceptKnownStates(self.knownStates)
@@ -171,9 +182,12 @@ class MatchRules:
             arc = Arc(constructor.replaceSubPatternsWithWildcards(), state)
             testState.acceptArc(arc)
         constructors = [column.patterns[i] for i in constructorIndices]
+        debug('mixtureRule: isExhaustive')
         if constructors[0].isExhaustive(constructors):
+            debug('mixtureRule: isExhaustive True')
             return testState
         else:
+            debug('mixtureRule: isExhaustive False')
             wildcardIndices = column.findWildcardIndices()
             if len(wildcardIndices) > 0:
                 otherRows = self.rowsFromColumns(otherColumns, wildcardIndices)
@@ -226,7 +240,7 @@ class Column:
         return [i for i in range(len(self.patterns)) if self.patterns[i].isConstructor()]
 
     def findIndicesMatching(self, constructor):
-        return [i for i in range(len(self.patterns)) if self.patterns[i].matches(constructor)]
+        return [i for i in range(len(self.patterns)) if self.patterns[i].matches(constructor.getTerminal())]
 
     def getPatterns(self, indices):
         return [self.patterns[i] for i in indices]
@@ -299,6 +313,12 @@ class Pattern:
     def addSubst(self, subst):
         return subst
 
+    def isConstant(self):
+        return False
+
+    def isRealConstructor(self):
+        return False
+
     def isConstructor(self):
         return False
 
@@ -310,6 +330,9 @@ class Pattern:
 
     def getComponents(self):
         return []
+
+    def getTerminal(self):
+        return self
 
     def __str__(self):
         return f'{self.prefix()}{self.str()}'
@@ -371,10 +394,32 @@ class Assignment(Pattern):
         return self
 
     def isExhaustive(self, otherPatterns):
+        debug('Assignment isexhaustive', self, list(map(str, otherPatterns)))
         return self.value.isExhaustive(otherPatterns)
+
+    def getTerminal(self):
+        return self.value.getTerminal()
+
+    def isRealConstructor(self):
+        return self.value.isRealConstructor()
+
+    def allIndices(self):
+        return self.value.allIndices()
+
+    def index(self):
+        return self.value.index()
+
+    def isConstant(self):
+        return self.value.isConstant()
+
+    def boundVariables(self):
+        return self.value.boundVariables()
 
     def str(self):
         return str(self.name) + '=' + str(self.value)
+
+    def getComponents(self):
+        return self.value.getComponents()
 
     def __eq__(self, other):
         return self.value == other
@@ -431,6 +476,9 @@ class Constant(Pattern):
 
     def matches(self, constructor):
         return type(constructor) is Constant and self.value == constructor.value
+
+    def isConstant(self):
+        return True
 
     def boundVariables(self):
         return set()
@@ -492,6 +540,9 @@ class Constructor(Pattern):
             self.components[i] = self.components[i].replaceVarsWithWildcards()
         return self
 
+    def isRealConstructor(self):
+        return True
+
     def isConstructor(self):
         return True
 
@@ -502,8 +553,9 @@ class Constructor(Pattern):
         return len(self.components)
 
     def isExhaustive(self, otherPatterns):
+        debug('Constructor isexhaustive', self, list(map(str, otherPatterns)))
         for required in self.knownTags[self.tag]['siblings']:
-            if len([x for x in otherPatterns if str(x.tag) == required]) == 0:
+            if len([x for x in otherPatterns if str(x.getTerminal().tag) == required]) == 0:
                 return False
         return True
 
@@ -586,6 +638,7 @@ class TestState(State):
         constants = [arc for arc in self.arcs if arc.isConstant()]
         if len(constants) > 0:
             return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
+        debug('convertToAction', list(map(str, self.arcs)))
         return List('todo')
 
     def __eq__(self, other):
@@ -656,10 +709,10 @@ class Arc:
         return self.state.collectLambdas(lambdas)
 
     def isConstructor(self):
-        return type(self.test) is Constructor
+        return self.test.isRealConstructor()
 
     def isConstant(self):
-        return type(self.test) is Constant
+        return self.test.isConstant()
 
     def calculateFreeVariables(self):
         return self.state.calculateFreeVariables() - self.test.boundVariables()
@@ -686,9 +739,10 @@ class Arc:
         return [self.indices, self.createBindings(self.state.convertToCode())]
 
     def condClause(self):
+        code = self.createBindings(self.state.convertToCode())
         if self.isConstant():
-            return [self.test.value, self.state.convertToCode()]
-        return ['else', self.state.convertToCode()]
+            return [self.test.value, code]
+        return ['else', code]
 
     def createBindings(self, code):
         components = self.test.getComponents()
@@ -719,6 +773,7 @@ def testIt(example):
         print("non-exhaustive pattern match detected")
     print()
 
+"""
 testIt(MatchRules(
     MatchRule('null', Wildcard(), Constructor('null')),
     MatchRule(["cons", ["f", "h"], ["map", "f", "t"]],  Var('f'), Constructor('cons', Var('h'), Var('t')))
@@ -754,4 +809,10 @@ testIt(MatchRules(
     MatchRule('E1', Constructor('null'), Var('ys')),
     MatchRule('E2', Var('xs'), Constructor('null')),
     MatchRule('E3', Constructor('cons', Var('x'), Var('xs')), Constructor('cons', Var('y'), Var('ys')))
+))
+"""
+
+testIt(MatchRules(
+    MatchRule(['v'], Assignment('v', Constructor('cons', Constant(1), Constructor('null')))),
+    MatchRule(['w'], Wildcard())
 ))

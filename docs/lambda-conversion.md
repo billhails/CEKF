@@ -466,7 +466,7 @@ And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.
 ;   [_, null] => null
 ;   [f, cons(h, t)] => (cons (f h) (map f t))
 ; }
-(lambda (p0 p2)
+(lambda (p0 p1)
         (match (vec 0 p1)
                ((0) null)
                ((1) (let (p1$1 (vec 1 p1))
