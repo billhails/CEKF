@@ -1,9 +1,11 @@
 #! /usr/bin/python3
 
 import functools
+import subprocess
 
 def debug(*args):
-    print('DEBUG', *args)
+    # print('DEBUG', *args)
+    pass
 
 ## basic functional support
 
@@ -152,12 +154,12 @@ class MatchRules:
         return self.rules[0].action
 
     def mixtureRule(self):
-        debug('mixtureRule')
+        # debug('mixtureRule')
         index = self.findColumnIndexWithConstructor()
         column = self.columnAtIndex(index)
         otherColumns = self.columnsNotAtIndex(index)
         constructorIndices = column.findConstructorIndices()
-        debug('constructorIndices', constructorIndices)
+        # debug('constructorIndices', constructorIndices)
         testState = TestState(self.getConstructorPath(index))
         for constructorIndex in constructorIndices:
             constructor = column.patterns[constructorIndex]
@@ -182,12 +184,12 @@ class MatchRules:
             arc = Arc(constructor.replaceSubPatternsWithWildcards(), state)
             testState.acceptArc(arc)
         constructors = [column.patterns[i] for i in constructorIndices]
-        debug('mixtureRule: isExhaustive')
+        # debug('mixtureRule: isExhaustive')
         if constructors[0].isExhaustive(constructors):
-            debug('mixtureRule: isExhaustive True')
+            # debug('mixtureRule: isExhaustive True')
             return testState
         else:
-            debug('mixtureRule: isExhaustive False')
+            # debug('mixtureRule: isExhaustive False')
             wildcardIndices = column.findWildcardIndices()
             if len(wildcardIndices) > 0:
                 otherRows = self.rowsFromColumns(otherColumns, wildcardIndices)
@@ -229,7 +231,7 @@ class MatchRules:
         return [self.columnAtIndex(i) for i in range(self.rules[0].length()) if i != index]
 
     def __str__(self):
-        return f'({", ".join([str(v) for v in self.rootVariables])}) {{\n' + '\n'.join([str(rule) for rule in self.rules]) + '\n}'
+        return '; {\n;    ' + '\n;    '.join([str(rule) for rule in self.rules]) + '\n; }'
 
 
 class Column:
@@ -394,7 +396,7 @@ class Assignment(Pattern):
         return self
 
     def isExhaustive(self, otherPatterns):
-        debug('Assignment isexhaustive', self, list(map(str, otherPatterns)))
+        # debug('Assignment isexhaustive', self, list(map(str, otherPatterns)))
         return self.value.isExhaustive(otherPatterns)
 
     def getTerminal(self):
@@ -443,9 +445,10 @@ class Wildcard(Pattern):
         return wildcards
 
     def boundVariables(self):
+        ret = set()
         if '$' in self.path:
-            return set(self.path)
-        return set()
+            ret.add(self.path)
+        return ret
 
     def __eq__(self, other):
         return type(other) is Wildcard and self.path == other.path
@@ -533,7 +536,8 @@ class Constructor(Pattern):
         return self.knownTags[self.tag]['index']
 
     def boundVariables(self):
-        return functools.reduce(lambda bvs, component: bvs | component.boundVariables(), self.components, set(self.path))
+        init = { self.path }
+        return functools.reduce(lambda bvs, component: bvs | {component.path}, self.components, init)
 
     def replaceVarsWithWildcards(self):
         for i in range(len(self.components)):
@@ -553,7 +557,7 @@ class Constructor(Pattern):
         return len(self.components)
 
     def isExhaustive(self, otherPatterns):
-        debug('Constructor isexhaustive', self, list(map(str, otherPatterns)))
+        # debug('Constructor isexhaustive', self, list(map(str, otherPatterns)))
         for required in self.knownTags[self.tag]['siblings']:
             if len([x for x in otherPatterns if str(x.getTerminal().tag) == required]) == 0:
                 return False
@@ -578,11 +582,12 @@ class State:
 
     def __init__(self):
         self.refCount = 0
-        self.stamp = f'q{self.counter}'
-        self.counter += 1
+        self.stamp = f'q{State.counter}'
+        State.counter += 1
         self.freeVariables = set()
 
     def convertToIntermediate(self, variables):
+        self.recalculateRefCounts()
         lambdas = self.collectLambdas(dict())
         if len(lambdas) > 0:
             return List('lambda', variables, ['letrec', [lam.convertToLambda() for lam in lambdas.values()], self.convertToCode()])
@@ -599,6 +604,10 @@ class State:
     def convertToLambda(self):
         return List(self.stamp, ['lambda', sorted(self.calculateFreeVariables()), self.convertToAction()])
 
+    def recalculateRefCounts(self):
+        self.resetRefCountsToZero()
+        self.incrementRefCounts()
+
     def calculateFreeVariables(self):
         return self.freeVariables
 
@@ -609,6 +618,17 @@ class TestState(State):
         self.path = path
         self.arcs = []
 
+    def resetRefCountsToZero(self):
+        self.refCount = 0
+        for arc in self.arcs:
+            arc.resetRefCountsToZero()
+
+    def incrementRefCounts(self):
+        self.refCount += 1
+        if self.refCount == 1:
+            for arc in self.arcs:
+                arc.incrementRefCounts()
+
     def collectLambdas(self, lambdas):
         if self.refCount > 1:
             lambdas[str(self)] = self
@@ -617,14 +637,19 @@ class TestState(State):
         return lambdas
 
     def acceptArc(self, arc):
+        for existing in self.arcs:
+            if arc == existing:
+                return
         self.arcs.append(arc)
 
     def calculateFreeVariables(self):
+        init = set()
         if '$' in self.path:
-            init = set(self.path)
-        else:
-            init = set()
-        return functools.reduce(lambda fvs, arc: fvs | arc.calculateFreeVariables(), self.arcs, init)
+            init.add(self.path)
+        debug(f'TestState {self.stamp}: {self.path} calculating free variables starting from {init}')
+        res = functools.reduce(lambda fvs, arc: fvs | arc.calculateFreeVariables(), self.arcs, init)
+        debug(f'TestState {self.stamp}: {self.path} free variables {res}')
+        return res
 
     def convertToAction(self):
         # (match var (...))
@@ -638,7 +663,7 @@ class TestState(State):
         constants = [arc for arc in self.arcs if arc.isConstant()]
         if len(constants) > 0:
             return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
-        debug('convertToAction', list(map(str, self.arcs)))
+        # debug('convertToAction', list(map(str, self.arcs)))
         return List('todo')
 
     def __eq__(self, other):
@@ -662,6 +687,12 @@ class FinalState(State):
         super().__init__()
         self.action = action
 
+    def resetRefCountsToZero(self):
+        self.refCount = 0
+
+    def incrementRefCounts(self):
+        self.refCount += 1
+
     def collectLambdas(self, lambdas):
         if self.refCount > 1:
             lambdas[str(self)] = self
@@ -684,12 +715,18 @@ class FinalState(State):
         return self.action
 
     def __str__(self):
-        return str(self.action)
+        return f'{self.stamp}={str(self.action)}'
 
 
 class ErrorState(State):
     def __str__(self):
         return 'ERROR'
+
+    def resetRefCountsToZero(self):
+        pass
+
+    def incrementRefCounts(self):
+        pass
 
     def convertToCode(self):
         return List('ERROR')
@@ -705,6 +742,12 @@ class Arc:
         self.state.refCount += 1
         self.indices = None
 
+    def resetRefCountsToZero(self):
+        self.state.resetRefCountsToZero()
+
+    def incrementRefCounts(self):
+        self.state.incrementRefCounts()
+
     def collectLambdas(self, lambdas):
         return self.state.collectLambdas(lambdas)
 
@@ -715,7 +758,10 @@ class Arc:
         return self.test.isConstant()
 
     def calculateFreeVariables(self):
-        return self.state.calculateFreeVariables() - self.test.boundVariables()
+        fv = self.state.calculateFreeVariables()
+        bv = self.test.boundVariables()
+        debug(f'Arc {str(self.test)} free variables: {fv} - {bv} = {fv - bv}')
+        return fv - bv
 
     def noteConstructor(self, constructors):
         if not self.isConstructor():
@@ -758,6 +804,12 @@ class Arc:
 
 ### Tests
 
+def printIt(schemeStr):
+    with open("/tmp/junk", "w") as outFile:
+        print(schemeStr, file=outFile)
+    subprocess.run(['pp', '/tmp/junk'])
+    subprocess.run(['rm', '/tmp/junk'])
+
 def testIt(example):
     print(str(example))
     example.acceptErrorState(ErrorState())
@@ -766,14 +818,12 @@ def testIt(example):
     example.performSubstitutions()
     example.replaceVarsWithWildcards()
     dfa = example.match()
-    dfa.calculateFreeVariables()
-    print(str(dfa))
-    print(dfa.convertToIntermediate(example.rootVariables))
+    # print(str(dfa))
+    printIt(dfa.convertToIntermediate(example.rootVariables))
     if example.hasErrorTransitions():
-        print("non-exhaustive pattern match detected")
+        print("; non-exhaustive pattern match detected")
     print()
 
-"""
 testIt(MatchRules(
     MatchRule('null', Wildcard(), Constructor('null')),
     MatchRule(["cons", ["f", "h"], ["map", "f", "t"]],  Var('f'), Constructor('cons', Var('h'), Var('t')))
@@ -810,9 +860,16 @@ testIt(MatchRules(
     MatchRule('E2', Var('xs'), Constructor('null')),
     MatchRule('E3', Constructor('cons', Var('x'), Var('xs')), Constructor('cons', Var('y'), Var('ys')))
 ))
-"""
 
 testIt(MatchRules(
-    MatchRule(['v'], Assignment('v', Constructor('cons', Constant(1), Constructor('null')))),
-    MatchRule(['w'], Wildcard())
+    MatchRule('v', Assignment('v', Constructor('cons', Constant(1), Constructor('null')))),
+    MatchRule('w', Wildcard())
+))
+
+testIt(MatchRules(
+    MatchRule('a', Constructor('cons', Constant(1), Constructor('cons', Constant(1), Constructor('null')))),
+    MatchRule('b', Constructor('cons', Constant(1), Constructor('cons', Constant(2), Constructor('null')))),
+    MatchRule('c', Constructor('cons', Constant(2), Constructor('cons', Constant(1), Constructor('null')))),
+    MatchRule('d', Constructor('cons', Constant(2), Constructor('cons', Constant(2), Constructor('null')))),
+    MatchRule('e', Wildcard())
 ))
