@@ -4,8 +4,7 @@ import functools
 import subprocess
 
 def debug(*args):
-    # print('DEBUG', *args)
-    pass
+    print('DEBUG', *args)
 
 ## basic functional support
 
@@ -124,6 +123,18 @@ class MatchRules:
     def getErrorState(self):
         return self.errorState
         
+    def identifyComparisons(self):
+        for rule in self.rules:
+            rule.identifyComparisons()
+
+    def redundantActions(self):
+        redundants = []
+        for rule in self.rules:
+            redundant = rule.redundantAction()
+            if redundant is not None:
+                redundants += [redundant]
+        return redundants
+
     def hasErrorTransitions(self):
         return self.errorState.refCount > 0
 
@@ -154,29 +165,20 @@ class MatchRules:
         return self.rules[0].action
 
     def mixtureRule(self):
-        # debug('mixtureRule')
         index = self.findColumnIndexWithConstructor()
         column = self.columnAtIndex(index)
         otherColumns = self.columnsNotAtIndex(index)
         constructorIndices = column.findConstructorIndices()
-        # debug('constructorIndices', constructorIndices)
         testState = TestState(self.getConstructorPath(index))
         for constructorIndex in constructorIndices:
             constructor = column.patterns[constructorIndex]
-            # debug('constructor', constructor)
             matchingRowIndices = column.findIndicesMatching(constructor)
-            # debug('matchingRowIndices', matchingRowIndices)
             patterns = column.getPatterns(matchingRowIndices)
-            # debug('patterns', patterns)
             arity = constructor.arity()
             matrix = [pattern.extractSubPatterns(arity) for pattern in patterns]
-            # debug('matrix', matrix)
             otherRows = self.rowsFromColumns(otherColumns, matchingRowIndices)
-            # debug('otherRows', otherRows)
             fullMatrix = [a + b for a, b in zip(matrix, otherRows)]
-            # debug('fullMatrix', fullMatrix)
             actions = [rule.action for rule in [self.rules[i] for i in matchingRowIndices]]
-            # debug('actions', actions)
             rules = MatchRules(*[MatchRule(action, *patterns) for action, patterns in zip(actions, fullMatrix)])
             rules.acceptErrorState(self.errorState)
             rules.acceptKnownStates(self.knownStates)
@@ -184,12 +186,9 @@ class MatchRules:
             arc = Arc(constructor.replaceSubPatternsWithWildcards(), state)
             testState.acceptArc(arc)
         constructors = [column.patterns[i] for i in constructorIndices]
-        # debug('mixtureRule: isExhaustive')
         if constructors[0].isExhaustive(constructors):
-            # debug('mixtureRule: isExhaustive True')
             return testState
         else:
-            # debug('mixtureRule: isExhaustive False')
             wildcardIndices = column.findWildcardIndices()
             if len(wildcardIndices) > 0:
                 otherRows = self.rowsFromColumns(otherColumns, wildcardIndices)
@@ -239,7 +238,7 @@ class Column:
         self.patterns = patterns
 
     def findConstructorIndices(self):
-        return [i for i in range(len(self.patterns)) if self.patterns[i].isConstructor()]
+        return [i for i in range(len(self.patterns)) if self.patterns[i].isNotVariable()]
 
     def findIndicesMatching(self, constructor):
         return [i for i in range(len(self.patterns)) if self.patterns[i].matches(constructor.getTerminal())]
@@ -251,7 +250,7 @@ class Column:
         return self.patterns[index]
 
     def findWildcardIndices(self):
-        return [i for i in range(len(self.patterns)) if not self.patterns[i].isConstructor()]
+        return [i for i in range(len(self.patterns)) if not self.patterns[i].isNotVariable()]
 
 class MatchRule:
     def __init__(self, action, *patterns):
@@ -288,12 +287,21 @@ class MatchRule:
 
     def findFirstConstructor(self):
         for i in range(len(self.patterns)):
-            if self.patterns[i].isConstructor():
+            if self.patterns[i].isNotVariable():
                 return i
         return None
         
     def getConstructorPath(self, index):
         return self.patterns[index].path
+
+    def identifyComparisons(self):
+        seen = dict()
+        for i in range(len(self.patterns)):
+            self.patterns[i] = self.patterns[i].identifyComparisons(seen)
+
+    def redundantAction(self):
+        if self.action.refCount == 0:
+            return self.action
 
     def __str__(self):
         return '[' + ', '.join([str(pat) for pat in self.patterns]) + '] => ' + str(self.action)
@@ -315,13 +323,16 @@ class Pattern:
     def addSubst(self, subst):
         return subst
 
+    def isComparison(self):
+        return False
+
     def isConstant(self):
         return False
 
     def isRealConstructor(self):
         return False
 
-    def isConstructor(self):
+    def isNotVariable(self):
         return False
 
     def replaceVarsWithWildcards(self):
@@ -333,7 +344,13 @@ class Pattern:
     def getComponents(self):
         return []
 
+    def arity(self):
+        return 0
+
     def getTerminal(self):
+        return self
+
+    def identifyComparisons(self, seen):
         return self
 
     def __str__(self):
@@ -357,8 +374,62 @@ class Var(Pattern):
         new.acceptPath(self.path)
         return new
 
+    def identifyComparisons(self, seen):
+        if str(self.name) in seen:
+            return Comparison(seen[str(self.name)], self)
+        seen[str(self.name)] = self
+        return self
+
     def str(self):
         return str(self.name) if self.path is None else '_'
+
+
+class Comparison(Pattern):
+    def __init__(self, previous, current):
+        super().__init__()
+        self.previous = previous
+        self.current = current
+
+    def acceptPath(self, path):
+        super().acceptPath(path)
+        self.current.acceptPath(path)
+
+    def addSubst(self, subst):
+        self.current.addSubst(subst)
+        return subst
+
+    def replaceVarsWithWildcards(self):
+        self.previous = self.previous.replaceVarsWithWildcards()
+        self.current = self.current.replaceVarsWithWildcards()
+        return self
+
+    def matches(self, constructor):
+        return self.previous.matches(constructor) and self.current.matches(constructor)
+
+    def arity(self):
+        if self.previous.arity() > 0:
+            return self.previous.arity()
+        if self.current.arity() > 0:
+            return self.current.arity()
+        return 0
+
+    def extractSubPatterns(self, arity):
+        return self.current.extractSubPatterns(arity)
+
+    def isExhaustive(self, otherPatterns):
+        return False
+
+    def isNotVariable(self):
+        return True
+
+    def isComparison(self):
+        return True
+
+    def getVariable(self):
+        return self.previous.path
+
+    def __str__(self):
+        return f'({str(self.previous)})==({str(self.current)})'
 
 
 class Assignment(Pattern):
@@ -366,6 +437,7 @@ class Assignment(Pattern):
         super().__init__()
         self.name = Exp.wrap(name)
         self.value = Exp.wrap(value)
+        self.comparison = None
 
     def acceptPath(self, path):
         super().acceptPath(path)
@@ -375,8 +447,8 @@ class Assignment(Pattern):
         subst[str(self.name)] = self.path
         return self.value.addSubst(subst)
         
-    def isConstructor(self):
-        return self.value.isConstructor()
+    def isNotVariable(self):
+        return self.value.isNotVariable()
 
     def replaceVarsWithWildcards(self):
         self.value = self.value.replaceVarsWithWildcards()
@@ -396,7 +468,6 @@ class Assignment(Pattern):
         return self
 
     def isExhaustive(self, otherPatterns):
-        # debug('Assignment isexhaustive', self, list(map(str, otherPatterns)))
         return self.value.isExhaustive(otherPatterns)
 
     def getTerminal(self):
@@ -422,6 +493,14 @@ class Assignment(Pattern):
 
     def getComponents(self):
         return self.value.getComponents()
+
+    def identifyComparisons(self, seen):
+        if str(self.name) in seen:
+            self.value = self.value.identifyComparisons(seen)
+            return Comparison(seen[str(self.name)], self)
+        seen[str(self.name)] = self
+        self.value = self.value.identifyComparisons(seen)
+        return self
 
     def __eq__(self, other):
         return self.value == other
@@ -459,7 +538,7 @@ class Constant(Pattern):
         super().__init__()
         self.value = Exp.wrap(value)
 
-    def isConstructor(self):
+    def isNotVariable(self):
         return True
 
     def str(self):
@@ -547,7 +626,7 @@ class Constructor(Pattern):
     def isRealConstructor(self):
         return True
 
-    def isConstructor(self):
+    def isNotVariable(self):
         return True
 
     def matches(self, constructor):
@@ -568,6 +647,11 @@ class Constructor(Pattern):
             return self.components
         else:
             raise Exception(f"wrong arity {arity} for constructor {self.tag}")
+
+    def identifyComparisons(self, seen):
+        for i in range(len(self.components)):
+            self.components[i] = self.components[i].identifyComparisons(seen)
+        return self
 
     def str(self):
         return str(self.tag) + ('' if len(self.components) == 0 else ('(' + ', '.join([str(comp) for comp in self.components]) + ')' ))
@@ -655,7 +739,7 @@ class TestState(State):
         # (match var (...))
         # (if (eq var val) ... )
         # (match (vec n var) ... )
-        constructors = [arc for arc in self.arcs if arc.isConstructor()]
+        constructors = [arc for arc in self.arcs if arc.isNotVariable()]
         if len(constructors) > 0:
             for arc in self.arcs:
                 arc.noteConstructor(constructors)
@@ -663,7 +747,10 @@ class TestState(State):
         constants = [arc for arc in self.arcs if arc.isConstant()]
         if len(constants) > 0:
             return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
-        # debug('convertToAction', list(map(str, self.arcs)))
+        comparisons = [arc for arc in self.arcs if arc.isComparison()]
+        if len(comparisons) > 0:
+            return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
+        debug('convertToAction', list(map(str, self.arcs)))
         return List('todo')
 
     def __eq__(self, other):
@@ -751,11 +838,14 @@ class Arc:
     def collectLambdas(self, lambdas):
         return self.state.collectLambdas(lambdas)
 
-    def isConstructor(self):
+    def isNotVariable(self):
         return self.test.isRealConstructor()
 
     def isConstant(self):
         return self.test.isConstant()
+
+    def isComparison(self):
+        return self.test.isComparison()
 
     def calculateFreeVariables(self):
         fv = self.state.calculateFreeVariables()
@@ -764,7 +854,7 @@ class Arc:
         return fv - bv
 
     def noteConstructor(self, constructors):
-        if not self.isConstructor():
+        if not self.isNotVariable():
            self.indices = self.missingIndices(constructors)
 
     def missingIndices(self, constructors):
@@ -788,6 +878,8 @@ class Arc:
         code = self.createBindings(self.state.convertToCode())
         if self.isConstant():
             return [self.test.value, code]
+        if self.isComparison():
+            return [self.test.getVariable(), code]
         return ['else', code]
 
     def createBindings(self, code):
@@ -814,6 +906,7 @@ def testIt(example):
     print(str(example))
     example.acceptErrorState(ErrorState())
     example.acceptKnownStates(dict())
+    example.identifyComparisons()
     example.renameVariables()
     example.performSubstitutions()
     example.replaceVarsWithWildcards()
@@ -822,6 +915,9 @@ def testIt(example):
     printIt(dfa.convertToIntermediate(example.rootVariables))
     if example.hasErrorTransitions():
         print("; non-exhaustive pattern match detected")
+    redundancies = example.redundantActions()
+    if len(redundancies) > 0:
+        print(f"; redundant actions detected: {[str(x) for x in redundancies]}")
     print()
 
 testIt(MatchRules(
@@ -872,4 +968,10 @@ testIt(MatchRules(
     MatchRule('c', Constructor('cons', Constant(2), Constructor('cons', Constant(1), Constructor('null')))),
     MatchRule('d', Constructor('cons', Constant(2), Constructor('cons', Constant(2), Constructor('null')))),
     MatchRule('e', Wildcard())
+))
+
+testIt(MatchRules(
+    MatchRule('false', Wildcard(), Constructor('null')),
+    MatchRule('true', Var('x'), Constructor('cons', Var('x'), Wildcard())),
+    MatchRule(['member', 'x', 't'], Var('x'), Constructor('cons', Wildcard(), Var('t')))
 ))
