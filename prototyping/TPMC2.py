@@ -106,6 +106,8 @@ class Char(Scalar):
 ## Match rule classes
 
 class MatchRules:
+    counter = 0
+
     def __init__(self, *rules):
         self.rules = [*rules]
         if len(self.rules) == 0:
@@ -113,6 +115,8 @@ class MatchRules:
         self.rootVariables = [f'p{i}' for i in range(rules[0].length())];
         self.errorState = None
         self.knownStates = None
+        self.id = MatchRules.counter
+        MatchRules.counter += 1
 
     def acceptErrorState(self, errorState):
         self.errorState = errorState
@@ -230,7 +234,7 @@ class MatchRules:
         return [self.columnAtIndex(i) for i in range(self.rules[0].length()) if i != index]
 
     def __str__(self):
-        return '; {\n;    ' + '\n;    '.join([str(rule) for rule in self.rules]) + '\n; }'
+        return f'; {self.id} {{\n;    ' + '\n;    '.join([str(rule) for rule in self.rules]) + '\n; }'
 
 
 class Column:
@@ -332,6 +336,9 @@ class Pattern:
     def isRealConstructor(self):
         return False
 
+    def isAssignment(self):
+        return False
+
     def isNotVariable(self):
         return False
 
@@ -376,6 +383,8 @@ class Var(Pattern):
 
     def identifyComparisons(self, seen):
         if str(self.name) in seen:
+            if seen[str(self.name)].isAssignment():
+                raise Exception("cannot perform equality tests on assignments")
             return Comparison(seen[str(self.name)], self)
         seen[str(self.name)] = self
         return self
@@ -428,8 +437,11 @@ class Comparison(Pattern):
     def getVariable(self):
         return self.previous.path
 
+    def getTerminal(self):
+        return self.previous.getTerminal()
+
     def __str__(self):
-        return f'({str(self.previous)})==({str(self.current)})'
+        return f'{str(self.previous)} == {str(self.current)}'
 
 
 class Assignment(Pattern):
@@ -496,11 +508,13 @@ class Assignment(Pattern):
 
     def identifyComparisons(self, seen):
         if str(self.name) in seen:
-            self.value = self.value.identifyComparisons(seen)
-            return Comparison(seen[str(self.name)], self)
+            raise Exception("cannot perform equality checks on assignments")
         seen[str(self.name)] = self
         self.value = self.value.identifyComparisons(seen)
         return self
+
+    def isAssignment(self):
+        return True
 
     def __eq__(self, other):
         return self.value == other
@@ -636,7 +650,6 @@ class Constructor(Pattern):
         return len(self.components)
 
     def isExhaustive(self, otherPatterns):
-        # debug('Constructor isexhaustive', self, list(map(str, otherPatterns)))
         for required in self.knownTags[self.tag]['siblings']:
             if len([x for x in otherPatterns if str(x.getTerminal().tag) == required]) == 0:
                 return False
@@ -730,9 +743,7 @@ class TestState(State):
         init = set()
         if '$' in self.path:
             init.add(self.path)
-        debug(f'TestState {self.stamp}: {self.path} calculating free variables starting from {init}')
         res = functools.reduce(lambda fvs, arc: fvs | arc.calculateFreeVariables(), self.arcs, init)
-        debug(f'TestState {self.stamp}: {self.path} free variables {res}')
         return res
 
     def convertToAction(self):
@@ -750,7 +761,6 @@ class TestState(State):
         comparisons = [arc for arc in self.arcs if arc.isComparison()]
         if len(comparisons) > 0:
             return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
-        debug('convertToAction', list(map(str, self.arcs)))
         return List('todo')
 
     def __eq__(self, other):
@@ -850,7 +860,6 @@ class Arc:
     def calculateFreeVariables(self):
         fv = self.state.calculateFreeVariables()
         bv = self.test.boundVariables()
-        debug(f'Arc {str(self.test)} free variables: {fv} - {bv} = {fv - bv}')
         return fv - bv
 
     def noteConstructor(self, constructors):
@@ -919,6 +928,8 @@ def testIt(example):
     if len(redundancies) > 0:
         print(f"; redundant actions detected: {[str(x) for x in redundancies]}")
     print()
+    print()
+    print()
 
 testIt(MatchRules(
     MatchRule('null', Wildcard(), Constructor('null')),
@@ -975,3 +986,4 @@ testIt(MatchRules(
     MatchRule('true', Var('x'), Constructor('cons', Var('x'), Wildcard())),
     MatchRule(['member', 'x', 't'], Var('x'), Constructor('cons', Wildcard(), Var('t')))
 ))
+
