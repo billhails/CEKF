@@ -342,6 +342,9 @@ class Pattern:
     def isNotVariable(self):
         return False
 
+    def isStructured(self):
+        return False
+
     def replaceVarsWithWildcards(self):
         return self
 
@@ -588,13 +591,27 @@ class Constructor(Pattern):
         "null": {
             "siblings": [ "cons" ],
             "arity": 0,
+            "structured": True,
             "index": 0
         },
         "cons": {
             "siblings": [ "null" ],
             "arity": 2,
+            "structured": True,
             "index": 1
-        }
+        },
+        "false": {
+            "siblings": [ "true" ],
+            "arity": 0,
+            "structured": False,
+            "index": 0
+        },
+        "true": {
+            "siblings": [ "false" ],
+            "arity": 0,
+            "structured": False,
+            "index": 1
+        },
     }
 
     def __init__(self, tag, *components):
@@ -642,6 +659,9 @@ class Constructor(Pattern):
 
     def isNotVariable(self):
         return True
+
+    def isStructured(self):
+        return self.knownTags[self.tag]["structured"]
 
     def matches(self, constructor):
         return type(constructor) is Constructor and self.tag == constructor.tag
@@ -754,7 +774,9 @@ class TestState(State):
         if len(constructors) > 0:
             for arc in self.arcs:
                 arc.noteConstructor(constructors)
-            return List('match', ['vec', 0, self.path], *[arc.matchClause() for arc in self.arcs])
+            if arc.isStructured():
+                return List('match', ['vec', 0, self.path], *[arc.matchClause() for arc in self.arcs])
+            return List('match', self.path, *[arc.matchClause() for arc in self.arcs])
         constants = [arc for arc in self.arcs if arc.isConstant()]
         if len(constants) > 0:
             return List('cond', self.path, *[arc.condClause() for arc in self.arcs])
@@ -856,6 +878,9 @@ class Arc:
 
     def isComparison(self):
         return self.test.isComparison()
+
+    def isStructured(self):
+        return self.test.isStructured()
 
     def calculateFreeVariables(self):
         fv = self.state.calculateFreeVariables()
@@ -987,3 +1012,13 @@ testIt(MatchRules(
     MatchRule(['member', 'x', 't'], Var('x'), Constructor('cons', Wildcard(), Var('t')))
 ))
 
+testIt(MatchRules(
+    MatchRule('false', Constructor('null'), Wildcard()),
+    MatchRule('true', Constructor('cons', Var('x'), Wildcard()), Var('x')),
+    MatchRule(['member', 'x', 't'], Constructor('cons', Wildcard(), Var('t')), Var('x'))
+))
+
+testIt(MatchRules(
+    MatchRule('false', Constructor('true')),
+    MatchRule('true', Constructor('false'))
+))
