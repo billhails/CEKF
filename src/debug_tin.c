@@ -14,12 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-// generated from src/tin.yaml by makeAST.py
-
-
-// Type inference structures used by Algorithm W.
+ *
+ * Type inference structures used by Algorithm W.
+ *
+ * generated from src/tin.yaml by makeAST.py
+*/
 
 #include <stdio.h>
 

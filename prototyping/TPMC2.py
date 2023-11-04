@@ -452,7 +452,6 @@ class Assignment(Pattern):
         super().__init__()
         self.name = Exp.wrap(name)
         self.value = Exp.wrap(value)
-        self.comparison = None
 
     def acceptPath(self, path):
         super().acceptPath(path)
@@ -919,7 +918,7 @@ class Arc:
     def createBindings(self, code):
         components = self.test.getComponents()
         return foldr(lambda i, c: ['let', [components[i].path, ['vec', i + 1, self.test.path]], c], code, range(len(components)))
-        
+
     def __eq__(self, other):
         if type(other) is not Arc:
             raise Exception(f"cannot compare Arc with {type(other)}")

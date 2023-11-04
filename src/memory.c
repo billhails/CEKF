@@ -131,6 +131,8 @@ const char *typeName(ObjType type) {
             return typenameAstObj(type);
         LAMBDA_OBJTYPE_CASES()
             return typenameLambdaObj(type);
+        TPMC_OBJTYPE_CASES()
+            return typenameTpmcObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName", type);
     }
@@ -335,6 +337,9 @@ void markObj(Header *h) {
         LAMBDA_OBJTYPE_CASES()
             markLambdaObj(h);
             break;
+        TPMC_OBJTYPE_CASES()
+            markTpmcObj(h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in markObj", h->type);
     }
@@ -400,6 +405,10 @@ void freeObj(Header *h) {
             break;
         LAMBDA_OBJTYPE_CASES()
             freeLambdaObj(h);
+            break;
+        TPMC_OBJTYPE_CASES()
+            freeTpmcObj(h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj", h->type);
     }

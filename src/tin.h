@@ -16,12 +16,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-// generated from src/tin.yaml by makeAST.py
-
-
-// Type inference structures used by Algorithm W.
+ *
+ * Type inference structures used by Algorithm W.
+ *
+ * generated from src/tin.yaml by makeAST.py
+*/
 
 #include "hash.h"
 #include "memory.h"
@@ -113,6 +112,8 @@ typedef struct TinPolyType {
     union TinPolyTypeVal  val;
 } TinPolyType;
 
+
+
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args);
 struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struct TinMonoTypeList * next);
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType);
@@ -145,6 +146,7 @@ void freeTinVarResult(struct TinVarResult * x);
 void freeTinVarsResult(struct TinVarsResult * x);
 void freeTinMonoType(struct TinMonoType * x);
 void freeTinPolyType(struct TinPolyType * x);
+
 
 #define TINMONOTYPE_VAL_VAR(x) ((union TinMonoTypeVal ){.var = (x)})
 #define TINMONOTYPE_VAL_FUN(x) ((union TinMonoTypeVal ){.fun = (x)})

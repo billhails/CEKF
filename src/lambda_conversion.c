@@ -26,6 +26,7 @@
 #include "lambda_conversion.h"
 #include "lambda_helper.h"
 #include "symbol.h"
+#include "tpmc_logic.h"
 
 #define ARG_CATEGORY_VAR 0
 #define ARG_CATEGORY_CONST 1
@@ -33,15 +34,6 @@
 #define ARG_CATEGORY_ENV 3
 
 #define SAFE_MALLOC(thing) ((thing *)safe_malloc(sizeof(thing)))
-
-typedef struct DecisionTree {
-    AstArg **currentArgs;
-    AstArgList **remainingArgs;
-    AstNest **bodies;
-    int *nBodies;
-    int globalCount;
-    int localCount;
-} DecisionTree;
 
 static LamLetRecBindings *convertDefinitions(AstDefinitions *definitions, LamContext *env);
 static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
@@ -350,89 +342,26 @@ static void *safe_malloc(size_t size) {
     return ptr;
 }
 
-static DecisionTree *newDecisionTree(int globalCount) {
-    DecisionTree *dt = SAFE_MALLOC(DecisionTree);
-    int square = globalCount * globalCount;
-    dt->currentArgs = NEW_ARRAY(AstArg *, square);
-    dt->remainingArgs = NEW_ARRAY(AstArgList *, square);
-    dt->bodies = NEW_ARRAY(AstNest *, square);
-    dt->nBodies = NEW_ARRAY(int, globalCount);
-    for (int i = 0; i < globalCount; i++) {
-        dt->nBodies[i] = 0;
-    }
-    dt->globalCount = globalCount;
-    dt->localCount = 0;
-    return dt;
-}
-
-static void freeDecisionTree(DecisionTree *dt) {
-    int square = dt->globalCount * dt->globalCount;
-    FREE_ARRAY(AstArg *, dt->currentArgs, square);
-    FREE_ARRAY(AstArgList *, dt->remainingArgs, square);
-    FREE_ARRAY(AstNest *, dt->bodies, square);
-    FREE_ARRAY(int, dt->nBodies, dt->globalCount);
-    free(dt);
-}
-
-static AstArg *getCurrentArg(DecisionTree *dt, int major, int minor) {
-    return dt->currentArgs[major * dt->globalCount + minor];
-}
-
-static AstArgList *getRemainingArgList(DecisionTree *dt, int major, int minor) {
-    return dt->remainingArgs[major * dt->globalCount + minor];
-}
-
-static AstNest *getBody(DecisionTree *dt, int major, int minor) {
-    return dt->bodies[major * dt->globalCount + minor];
-}
-
-static int getNBodies(DecisionTree *dt, int major) {
-    return dt->nBodies[major];
-}
-
-static LamExp *convertCompositeBodiesInParallel(int nargs, int nBodies, LamVarList *generatedArgs, AstArgList *argLists[], AstNest *nests[], LamContext *env) {
-    if (nargs == 0) {
-        if (nBodies != 1) {
-            can_happen("more than one case matches");
-        }
-        return lamConvertNest(nests[0], env);
-    }
-    AstArg **constPool = NEW_ARRAY(AstArg*, nBodies);
-    AstArgList **constArgs = NEW_ARRAY(AstArgList*, nBodies);
-    int numConsts = 0;
-    AstArg **varPool = NEW_ARRAY(AstArg*, nBodies);
-    AstArgList **varArgs = NEW_ARRAY(AstArgList*, nBodies);
-    int numVars = 0;
-    AstArg **structPool = NEW_ARRAY(AstArg*, nBodies);
-    AstArgList **structArgs = NEW_ARRAY(AstArgList*, nBodies);
-    int numStructs = 0;
-
-    FREE_ARRAY(AstArg**, constPool, nBodies);
-    FREE_ARRAY(AstArgList**, constArgs, nBodies);
-    FREE_ARRAY(AstArg**, varPool, nBodies);
-    FREE_ARRAY(AstArgList**, varArgs, nBodies);
-    FREE_ARRAY(AstArg**, structPool, nBodies);
-    FREE_ARRAY(AstArgList**, structArgs, nBodies);
-    return NULL;
-}
-
 static LamExp *convertCompositeBodies(int nargs, LamVarList *generatedArgs, AstCompositeFunction *fun, LamContext *env) {
     int nBodies = countAstCompositeFunction(fun);
     if (nBodies == 0) {
         can_happen("empty composite function");
         return NULL;
     }
-    AstNest **nests = NEW_ARRAY(AstNest *, nBodies);
+    LamExp **actions = NEW_ARRAY(LamExp *, nBodies);
     AstArgList **argLists = NEW_ARRAY(AstArgList *, nBodies);
+    int p = PROTECT(NULL);
     for (int i = 0; i < nBodies; i++) {
         AstFunction *func = fun->function;
-        nests[i] = func->nest;
+        actions[i] = lamConvertNest(func->nest, env);
+        PROTECT(actions[i]);
         argLists[i] = func->argList;
         fun = fun->next;
     }
-    LamExp *result = convertCompositeBodiesInParallel(nargs, nBodies, generatedArgs, argLists, nests, env);
-    FREE_ARRAY(AstNest*, nests, nBodies);
+    LamExp *result = tpmcConvert(nargs, nBodies, generatedArgs, argLists, actions, env);
+    FREE_ARRAY(LamExp*, actions, nBodies);
     FREE_ARRAY(AstArgList*, argLists, nBodies);
+    UNPROTECT(p);
     return result;
 }
 

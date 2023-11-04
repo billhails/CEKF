@@ -26,6 +26,7 @@ struct Header;
 #include "ast_objtypes.h"
 #include "tin_objtypes.h"
 #include "lambda_objtypes.h"
+#include "tpmc_objtypes.h"
 
 typedef enum {
     // exp types
@@ -66,6 +67,7 @@ typedef enum {
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
     LAMBDA_OBJTYPES(),
+    TPMC_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -105,6 +107,10 @@ void initProtection(void);
 
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
+
+#define NEW_MATRIX(type, count, entry, tag) ((type *)allocate(sizeof(type) + ((count) * sizeof(entry)), tag))
+#define FREE_MATRIX(type, ptr, count, entry) ((void)reallocate((ptr), sizeof(type) + (count) * sizeof(entry), 0))
+#define GROW_MATRIX(type, ptr, oldcount, newcount, entry) ((type *)reallocate(ptr, sizeof(type) + (oldcount) * sizeof(entry), sizeof(type) + (newcount) * sizeof(entry)))
 
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))
