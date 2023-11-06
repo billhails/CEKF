@@ -22,13 +22,10 @@
 
 #include "tpmc.h"
 
-struct TpmcMatchRules * newTpmcMatchRules(int id, struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables, struct TpmcState * errorState, struct TpmcStateArray * knownStates) {
+struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables) {
     struct TpmcMatchRules * x = NEW(TpmcMatchRules, OBJTYPE_TPMCMATCHRULES);
-    x->id = id;
     x->rules = rules;
     x->rootVariables = rootVariables;
-    x->errorState = errorState;
-    x->knownStates = knownStates;
     return x;
 }
 
@@ -39,47 +36,37 @@ struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPa
     return x;
 }
 
-struct TpmcVarPattern * newTpmcVarPattern(HashSymbol * path, HashSymbol * name) {
+struct TpmcVarPattern * newTpmcVarPattern(HashSymbol * name) {
     struct TpmcVarPattern * x = NEW(TpmcVarPattern, OBJTYPE_TPMCVARPATTERN);
-    x->path = path;
     x->name = name;
     return x;
 }
 
-struct TpmcComparisonPattern * newTpmcComparisonPattern(HashSymbol * path, struct TpmcPattern * previous, struct TpmcPattern * current) {
+struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current) {
     struct TpmcComparisonPattern * x = NEW(TpmcComparisonPattern, OBJTYPE_TPMCCOMPARISONPATTERN);
-    x->path = path;
     x->previous = previous;
     x->current = current;
     return x;
 }
 
-struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * path, HashSymbol * name, struct TpmcPattern * value) {
+struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struct TpmcPattern * value) {
     struct TpmcAssignmentPattern * x = NEW(TpmcAssignmentPattern, OBJTYPE_TPMCASSIGNMENTPATTERN);
-    x->path = path;
     x->name = name;
     x->value = value;
     return x;
 }
 
-struct TpmcWildcardPattern * newTpmcWildcardPattern(HashSymbol * path) {
-    struct TpmcWildcardPattern * x = NEW(TpmcWildcardPattern, OBJTYPE_TPMCWILDCARDPATTERN);
-    x->path = path;
-    return x;
-}
-
-struct TpmcConstantPattern * newTpmcConstantPattern(HashSymbol * path, LamExp * value) {
-    struct TpmcConstantPattern * x = NEW(TpmcConstantPattern, OBJTYPE_TPMCCONSTANTPATTERN);
-    x->path = path;
-    x->value = value;
-    return x;
-}
-
-struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * path, HashSymbol * tag, struct TpmcPatternArray * components) {
+struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, struct TpmcPatternArray * components) {
     struct TpmcConstructorPattern * x = NEW(TpmcConstructorPattern, OBJTYPE_TPMCCONSTRUCTORPATTERN);
-    x->path = path;
     x->tag = tag;
     x->components = components;
+    return x;
+}
+
+struct TpmcPattern * newTpmcPattern(struct TpmcPatternValue * pattern) {
+    struct TpmcPattern * x = NEW(TpmcPattern, OBJTYPE_TPMCPATTERN);
+    x->pattern = pattern;
+    x->path = NULL;
     return x;
 }
 
@@ -96,6 +83,15 @@ struct TpmcFinalState * newTpmcFinalState(LamExp * action) {
     return x;
 }
 
+struct TpmcState * newTpmcState(int stamp, struct TpmcStateValue * state) {
+    struct TpmcState * x = NEW(TpmcState, OBJTYPE_TPMCSTATE);
+    x->stamp = stamp;
+    x->state = state;
+    x->refcount = 0;
+    x->freeVariables = NULL;
+    return x;
+}
+
 struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test) {
     struct TpmcArc * x = NEW(TpmcArc, OBJTYPE_TPMCARC);
     x->state = state;
@@ -103,57 +99,50 @@ struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test)
     return x;
 }
 
-struct TpmcPattern * newTpmcPattern(enum TpmcPatternType  type, union TpmcPatternVal  val) {
-    struct TpmcPattern * x = NEW(TpmcPattern, OBJTYPE_TPMCPATTERN);
+struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, union TpmcPatternValueVal  val) {
+    struct TpmcPatternValue * x = NEW(TpmcPatternValue, OBJTYPE_TPMCPATTERNVALUE);
     x->type = type;
     x->val = val;
     return x;
 }
 
-struct TpmcState * newTpmcState(enum TpmcStateType  type, union TpmcStateVal  val) {
-    struct TpmcState * x = NEW(TpmcState, OBJTYPE_TPMCSTATE);
+struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union TpmcStateValueVal  val) {
+    struct TpmcStateValue * x = NEW(TpmcStateValue, OBJTYPE_TPMCSTATEVALUE);
     x->type = type;
     x->val = val;
     return x;
 }
 
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray() {
-    struct TpmcMatchRuleArray * res = NEW_MATRIX(TpmcMatchRuleArray, 4, TpmcMatchRule, OBJTYPE_TPMCMATCHRULEARRAY);
+    struct TpmcMatchRuleArray * res = NEW_MATRIX(TpmcMatchRuleArray, 4, struct TpmcMatchRule *, OBJTYPE_TPMCMATCHRULEARRAY);
     res->size = 0;
     res->capacity = 4;
     return res;
 }
 
 struct TpmcVariableArray * newTpmcVariableArray() {
-    struct TpmcVariableArray * res = NEW_MATRIX(TpmcVariableArray, 4, HashSymbol, OBJTYPE_TPMCVARIABLEARRAY);
-    res->size = 0;
-    res->capacity = 4;
-    return res;
-}
-
-struct TpmcStateArray * newTpmcStateArray() {
-    struct TpmcStateArray * res = NEW_MATRIX(TpmcStateArray, 4, TpmcState, OBJTYPE_TPMCSTATEARRAY);
+    struct TpmcVariableArray * res = NEW_MATRIX(TpmcVariableArray, 4, HashSymbol *, OBJTYPE_TPMCVARIABLEARRAY);
     res->size = 0;
     res->capacity = 4;
     return res;
 }
 
 struct TpmcPatternArray * newTpmcPatternArray() {
-    struct TpmcPatternArray * res = NEW_MATRIX(TpmcPatternArray, 4, TpmcPattern, OBJTYPE_TPMCPATTERNARRAY);
+    struct TpmcPatternArray * res = NEW_MATRIX(TpmcPatternArray, 4, struct TpmcPattern *, OBJTYPE_TPMCPATTERNARRAY);
     res->size = 0;
     res->capacity = 4;
     return res;
 }
 
 struct TpmcArcArray * newTpmcArcArray() {
-    struct TpmcArcArray * res = NEW_MATRIX(TpmcArcArray, 4, TpmcArc, OBJTYPE_TPMCARCARRAY);
+    struct TpmcArcArray * res = NEW_MATRIX(TpmcArcArray, 4, struct TpmcArc *, OBJTYPE_TPMCARCARRAY);
     res->size = 0;
     res->capacity = 4;
     return res;
 }
 
 struct TpmcMatrix * newTpmcMatrix(int x, int y) {
-    struct TpmcMatrix * res = NEW_MATRIX(TpmcMatrix, x * y, TpmcPattern, OBJTYPE_TPMCMATRIX);
+    struct TpmcMatrix * res = NEW_MATRIX(TpmcMatrix, x * y, struct TpmcPattern *, OBJTYPE_TPMCMATRIX);
     res->x = x;
     res->y = y;
     return res;
@@ -162,7 +151,7 @@ struct TpmcMatrix * newTpmcMatrix(int x, int y) {
 
 struct TpmcMatchRuleArray * pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * old, struct TpmcMatchRule * entry) {
     if (old->size == old->capacity) {
-        old = GROW_MATRIX(TpmcMatchRuleArray, old, old->capacity, old->capacity * 2, TpmcMatchRule);
+        old = GROW_MATRIX(TpmcMatchRuleArray, old, old->capacity, old->capacity * 2, struct TpmcMatchRule *);
         old->capacity *= 2;
     }
     old->entries[old->size++] = entry;
@@ -171,16 +160,7 @@ struct TpmcMatchRuleArray * pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * o
 
 struct TpmcVariableArray * pushTpmcVariableArray(struct TpmcVariableArray * old, HashSymbol * entry) {
     if (old->size == old->capacity) {
-        old = GROW_MATRIX(TpmcVariableArray, old, old->capacity, old->capacity * 2, HashSymbol);
-        old->capacity *= 2;
-    }
-    old->entries[old->size++] = entry;
-    return old;
-}
-
-struct TpmcStateArray * pushTpmcStateArray(struct TpmcStateArray * old, struct TpmcState * entry) {
-    if (old->size == old->capacity) {
-        old = GROW_MATRIX(TpmcStateArray, old, old->capacity, old->capacity * 2, TpmcState);
+        old = GROW_MATRIX(TpmcVariableArray, old, old->capacity, old->capacity * 2, HashSymbol *);
         old->capacity *= 2;
     }
     old->entries[old->size++] = entry;
@@ -189,7 +169,7 @@ struct TpmcStateArray * pushTpmcStateArray(struct TpmcStateArray * old, struct T
 
 struct TpmcPatternArray * pushTpmcPatternArray(struct TpmcPatternArray * old, struct TpmcPattern * entry) {
     if (old->size == old->capacity) {
-        old = GROW_MATRIX(TpmcPatternArray, old, old->capacity, old->capacity * 2, TpmcPattern);
+        old = GROW_MATRIX(TpmcPatternArray, old, old->capacity, old->capacity * 2, struct TpmcPattern *);
         old->capacity *= 2;
     }
     old->entries[old->size++] = entry;
@@ -198,7 +178,7 @@ struct TpmcPatternArray * pushTpmcPatternArray(struct TpmcPatternArray * old, st
 
 struct TpmcArcArray * pushTpmcArcArray(struct TpmcArcArray * old, struct TpmcArc * entry) {
     if (old->size == old->capacity) {
-        old = GROW_MATRIX(TpmcArcArray, old, old->capacity, old->capacity * 2, TpmcArc);
+        old = GROW_MATRIX(TpmcArcArray, old, old->capacity, old->capacity * 2, struct TpmcArc *);
         old->capacity *= 2;
     }
     old->entries[old->size++] = entry;
@@ -212,7 +192,8 @@ void markTpmcMatchRules(struct TpmcMatchRules * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markTpmcState(x->errorState);
+    markTpmcMatchRuleArray(x->rules);
+    markTpmcVariableArray(x->rootVariables);
 }
 
 void markTpmcMatchRule(struct TpmcMatchRule * x) {
@@ -220,13 +201,13 @@ void markTpmcMatchRule(struct TpmcMatchRule * x) {
     if (MARKED(x)) return;
     MARK(x);
     markTpmcState(x->action);
+    markTpmcPatternArray(x->patterns);
 }
 
 void markTpmcVarPattern(struct TpmcVarPattern * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markHashSymbol(x->path);
     markHashSymbol(x->name);
 }
 
@@ -234,7 +215,6 @@ void markTpmcComparisonPattern(struct TpmcComparisonPattern * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markHashSymbol(x->path);
     markTpmcPattern(x->previous);
     markTpmcPattern(x->current);
 }
@@ -243,32 +223,24 @@ void markTpmcAssignmentPattern(struct TpmcAssignmentPattern * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markHashSymbol(x->path);
     markHashSymbol(x->name);
     markTpmcPattern(x->value);
-}
-
-void markTpmcWildcardPattern(struct TpmcWildcardPattern * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->path);
-}
-
-void markTpmcConstantPattern(struct TpmcConstantPattern * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->path);
-    markLamExp(x->value);
 }
 
 void markTpmcConstructorPattern(struct TpmcConstructorPattern * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markHashSymbol(x->path);
     markHashSymbol(x->tag);
+    markTpmcPatternArray(x->components);
+}
+
+void markTpmcPattern(struct TpmcPattern * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->path);
+    markTpmcPatternValue(x->pattern);
 }
 
 void markTpmcTestState(struct TpmcTestState * x) {
@@ -276,6 +248,7 @@ void markTpmcTestState(struct TpmcTestState * x) {
     if (MARKED(x)) return;
     MARK(x);
     markHashSymbol(x->path);
+    markTpmcArcArray(x->arcs);
 }
 
 void markTpmcFinalState(struct TpmcFinalState * x) {
@@ -283,6 +256,14 @@ void markTpmcFinalState(struct TpmcFinalState * x) {
     if (MARKED(x)) return;
     MARK(x);
     markLamExp(x->action);
+}
+
+void markTpmcState(struct TpmcState * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashTable(x->freeVariables);
+    markTpmcStateValue(x->state);
 }
 
 void markTpmcArc(struct TpmcArc * x) {
@@ -293,49 +274,49 @@ void markTpmcArc(struct TpmcArc * x) {
     markTpmcPattern(x->test);
 }
 
-void markTpmcPattern(struct TpmcPattern * x) {
+void markTpmcPatternValue(struct TpmcPatternValue * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     switch(x->type) {
-        case TPMCPATTERN_TYPE_VAR:
+        case TPMCPATTERNVALUE_TYPE_VAR:
             markTpmcVarPattern(x->val.var);
             break;
-        case TPMCPATTERN_TYPE_COMPARISON:
+        case TPMCPATTERNVALUE_TYPE_COMPARISON:
             markTpmcComparisonPattern(x->val.comparison);
             break;
-        case TPMCPATTERN_TYPE_ASSIGNMENT:
+        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
             markTpmcAssignmentPattern(x->val.assignment);
             break;
-        case TPMCPATTERN_TYPE_WILDCARD:
-            markTpmcWildcardPattern(x->val.wildcard);
+        case TPMCPATTERNVALUE_TYPE_WILDCARD:
             break;
-        case TPMCPATTERN_TYPE_CONSTANT:
-            markTpmcConstantPattern(x->val.constant);
+        case TPMCPATTERNVALUE_TYPE_CHARACTER:
             break;
-        case TPMCPATTERN_TYPE_CONSTRUCTOR:
+        case TPMCPATTERNVALUE_TYPE_INTEGER:
+            break;
+        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             markTpmcConstructorPattern(x->val.constructor);
             break;
         default:
-            cant_happen("unrecognised type %d in markTpmcPattern", x->type);
+            cant_happen("unrecognised type %d in markTpmcPatternValue", x->type);
     }
 }
 
-void markTpmcState(struct TpmcState * x) {
+void markTpmcStateValue(struct TpmcStateValue * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     switch(x->type) {
-        case TPMCSTATE_TYPE_TEST:
+        case TPMCSTATEVALUE_TYPE_TEST:
             markTpmcTestState(x->val.test);
             break;
-        case TPMCSTATE_TYPE_FINAL:
+        case TPMCSTATEVALUE_TYPE_FINAL:
             markTpmcFinalState(x->val.final);
             break;
-        case TPMCSTATE_TYPE_ERROR:
+        case TPMCSTATEVALUE_TYPE_ERROR:
             break;
         default:
-            cant_happen("unrecognised type %d in markTpmcState", x->type);
+            cant_happen("unrecognised type %d in markTpmcStateValue", x->type);
     }
 }
 
@@ -354,15 +335,6 @@ void markTpmcVariableArray(struct TpmcVariableArray * x) {
     MARK(x);
     for (int i = 0; i < x->size; i++) {
         markHashSymbol(x->entries[i]);
-    }
-}
-
-void markTpmcStateArray(struct TpmcStateArray * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    for (int i = 0; i < x->size; i++) {
-        markTpmcState(x->entries[i]);
     }
 }
 
@@ -411,14 +383,11 @@ void markTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCASSIGNMENTPATTERN:
             markTpmcAssignmentPattern((TpmcAssignmentPattern *)h);
             break;
-        case OBJTYPE_TPMCWILDCARDPATTERN:
-            markTpmcWildcardPattern((TpmcWildcardPattern *)h);
-            break;
-        case OBJTYPE_TPMCCONSTANTPATTERN:
-            markTpmcConstantPattern((TpmcConstantPattern *)h);
-            break;
         case OBJTYPE_TPMCCONSTRUCTORPATTERN:
             markTpmcConstructorPattern((TpmcConstructorPattern *)h);
+            break;
+        case OBJTYPE_TPMCPATTERN:
+            markTpmcPattern((TpmcPattern *)h);
             break;
         case OBJTYPE_TPMCTESTSTATE:
             markTpmcTestState((TpmcTestState *)h);
@@ -426,15 +395,35 @@ void markTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCFINALSTATE:
             markTpmcFinalState((TpmcFinalState *)h);
             break;
-        case OBJTYPE_TPMCARC:
-            markTpmcArc((TpmcArc *)h);
-            break;
-        case OBJTYPE_TPMCPATTERN:
-            markTpmcPattern((TpmcPattern *)h);
-            break;
         case OBJTYPE_TPMCSTATE:
             markTpmcState((TpmcState *)h);
             break;
+        case OBJTYPE_TPMCARC:
+            markTpmcArc((TpmcArc *)h);
+            break;
+        case OBJTYPE_TPMCPATTERNVALUE:
+            markTpmcPatternValue((TpmcPatternValue *)h);
+            break;
+        case OBJTYPE_TPMCSTATEVALUE:
+            markTpmcStateValue((TpmcStateValue *)h);
+            break;
+        case OBJTYPE_TPMCMATCHRULEARRAY:
+            markTpmcMatchRuleArray((TpmcMatchRuleArray *)h);
+            break;
+        case OBJTYPE_TPMCVARIABLEARRAY:
+            markTpmcVariableArray((TpmcVariableArray *)h);
+            break;
+        case OBJTYPE_TPMCPATTERNARRAY:
+            markTpmcPatternArray((TpmcPatternArray *)h);
+            break;
+        case OBJTYPE_TPMCARCARRAY:
+            markTpmcArcArray((TpmcArcArray *)h);
+            break;
+        case OBJTYPE_TPMCMATRIX:
+            markTpmcMatrix((TpmcMatrix *)h);
+            break;
+        default:
+            cant_happen("unrecognized type in markTpmcObj\n");
     }
 }
 
@@ -460,16 +449,12 @@ void freeTpmcAssignmentPattern(struct TpmcAssignmentPattern * x) {
     FREE(x, TpmcAssignmentPattern);
 }
 
-void freeTpmcWildcardPattern(struct TpmcWildcardPattern * x) {
-    FREE(x, TpmcWildcardPattern);
-}
-
-void freeTpmcConstantPattern(struct TpmcConstantPattern * x) {
-    FREE(x, TpmcConstantPattern);
-}
-
 void freeTpmcConstructorPattern(struct TpmcConstructorPattern * x) {
     FREE(x, TpmcConstructorPattern);
+}
+
+void freeTpmcPattern(struct TpmcPattern * x) {
+    FREE(x, TpmcPattern);
 }
 
 void freeTpmcTestState(struct TpmcTestState * x) {
@@ -480,16 +465,20 @@ void freeTpmcFinalState(struct TpmcFinalState * x) {
     FREE(x, TpmcFinalState);
 }
 
+void freeTpmcState(struct TpmcState * x) {
+    FREE(x, TpmcState);
+}
+
 void freeTpmcArc(struct TpmcArc * x) {
     FREE(x, TpmcArc);
 }
 
-void freeTpmcPattern(struct TpmcPattern * x) {
-    FREE(x, TpmcPattern);
+void freeTpmcPatternValue(struct TpmcPatternValue * x) {
+    FREE(x, TpmcPatternValue);
 }
 
-void freeTpmcState(struct TpmcState * x) {
-    FREE(x, TpmcState);
+void freeTpmcStateValue(struct TpmcStateValue * x) {
+    FREE(x, TpmcStateValue);
 }
 
 void freeTpmcMatchRuleArray(struct TpmcMatchRuleArray * x) {
@@ -498,10 +487,6 @@ void freeTpmcMatchRuleArray(struct TpmcMatchRuleArray * x) {
 
 void freeTpmcVariableArray(struct TpmcVariableArray * x) {
     FREE_MATRIX(TpmcVariableArray, x, x->capacity, HashSymbol *);
-}
-
-void freeTpmcStateArray(struct TpmcStateArray * x) {
-    FREE_MATRIX(TpmcStateArray, x, x->capacity, struct TpmcState *);
 }
 
 void freeTpmcPatternArray(struct TpmcPatternArray * x) {
@@ -534,14 +519,11 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCASSIGNMENTPATTERN:
             freeTpmcAssignmentPattern((TpmcAssignmentPattern *)h);
             break;
-        case OBJTYPE_TPMCWILDCARDPATTERN:
-            freeTpmcWildcardPattern((TpmcWildcardPattern *)h);
-            break;
-        case OBJTYPE_TPMCCONSTANTPATTERN:
-            freeTpmcConstantPattern((TpmcConstantPattern *)h);
-            break;
         case OBJTYPE_TPMCCONSTRUCTORPATTERN:
             freeTpmcConstructorPattern((TpmcConstructorPattern *)h);
+            break;
+        case OBJTYPE_TPMCPATTERN:
+            freeTpmcPattern((TpmcPattern *)h);
             break;
         case OBJTYPE_TPMCTESTSTATE:
             freeTpmcTestState((TpmcTestState *)h);
@@ -549,23 +531,23 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCFINALSTATE:
             freeTpmcFinalState((TpmcFinalState *)h);
             break;
+        case OBJTYPE_TPMCSTATE:
+            freeTpmcState((TpmcState *)h);
+            break;
         case OBJTYPE_TPMCARC:
             freeTpmcArc((TpmcArc *)h);
             break;
-        case OBJTYPE_TPMCPATTERN:
-            freeTpmcPattern((TpmcPattern *)h);
+        case OBJTYPE_TPMCPATTERNVALUE:
+            freeTpmcPatternValue((TpmcPatternValue *)h);
             break;
-        case OBJTYPE_TPMCSTATE:
-            freeTpmcState((TpmcState *)h);
+        case OBJTYPE_TPMCSTATEVALUE:
+            freeTpmcStateValue((TpmcStateValue *)h);
             break;
         case OBJTYPE_TPMCMATCHRULEARRAY:
             freeTpmcMatchRuleArray((TpmcMatchRuleArray *)h);
             break;
         case OBJTYPE_TPMCVARIABLEARRAY:
             freeTpmcVariableArray((TpmcVariableArray *)h);
-            break;
-        case OBJTYPE_TPMCSTATEARRAY:
-            freeTpmcStateArray((TpmcStateArray *)h);
             break;
         case OBJTYPE_TPMCPATTERNARRAY:
             freeTpmcPatternArray((TpmcPatternArray *)h);
@@ -576,6 +558,8 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCMATRIX:
             freeTpmcMatrix((TpmcMatrix *)h);
             break;
+        default:
+            cant_happen("unrecognized type in freeTpmcObj\n");
     }
 }
 
@@ -591,34 +575,34 @@ char *typenameTpmcObj(int type) {
             return "TpmcComparisonPattern";
         case OBJTYPE_TPMCASSIGNMENTPATTERN:
             return "TpmcAssignmentPattern";
-        case OBJTYPE_TPMCWILDCARDPATTERN:
-            return "TpmcWildcardPattern";
-        case OBJTYPE_TPMCCONSTANTPATTERN:
-            return "TpmcConstantPattern";
         case OBJTYPE_TPMCCONSTRUCTORPATTERN:
             return "TpmcConstructorPattern";
+        case OBJTYPE_TPMCPATTERN:
+            return "TpmcPattern";
         case OBJTYPE_TPMCTESTSTATE:
             return "TpmcTestState";
         case OBJTYPE_TPMCFINALSTATE:
             return "TpmcFinalState";
-        case OBJTYPE_TPMCARC:
-            return "TpmcArc";
-        case OBJTYPE_TPMCPATTERN:
-            return "TpmcPattern";
         case OBJTYPE_TPMCSTATE:
             return "TpmcState";
+        case OBJTYPE_TPMCARC:
+            return "TpmcArc";
+        case OBJTYPE_TPMCPATTERNVALUE:
+            return "TpmcPatternValue";
+        case OBJTYPE_TPMCSTATEVALUE:
+            return "TpmcStateValue";
         case OBJTYPE_TPMCMATCHRULEARRAY:
             return "TpmcMatchRuleArray";
         case OBJTYPE_TPMCVARIABLEARRAY:
             return "TpmcVariableArray";
-        case OBJTYPE_TPMCSTATEARRAY:
-            return "TpmcStateArray";
         case OBJTYPE_TPMCPATTERNARRAY:
             return "TpmcPatternArray";
         case OBJTYPE_TPMCARCARRAY:
             return "TpmcArcArray";
         case OBJTYPE_TPMCMATRIX:
             return "TpmcMatrix";
+        default:
+            cant_happen("unrecognized type in typenameTpmcObj\n");
     }
 }
 

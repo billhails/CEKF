@@ -9,3 +9,4 @@ callgrind.out.*
 core*
 Makefile.extra
 gmon.out
+.idea

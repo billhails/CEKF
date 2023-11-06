@@ -38,7 +38,9 @@ HashSymbol *newSymbol(char *name) {
 HashSymbol *genSym(char *prefix) {
     static int symbolCounter = 0;
     char buffer[128];
-
+    if (symbolTable == NULL) {
+        symbolTable = newHashTable(0, NULL, NULL);
+    }
     for (;;) {
         sprintf(buffer, "%s%d", prefix, symbolCounter++);
         if (hashGetVar(symbolTable, buffer) == NULL) {

@@ -231,11 +231,24 @@ void printLamMatchList(struct LamMatchList * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("LamMatchList (NULL)"); return; }
     printf("LamMatchList[\n");
-    printLamList(x->matches, depth + 1);
+    printLamIntList(x->matches, depth + 1);
     printf("\n");
     printLamExp(x->body, depth + 1);
     printf("\n");
     printLamMatchList(x->next, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printLamIntList(struct LamIntList * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("LamIntList (NULL)"); return; }
+    printf("LamIntList[\n");
+        pad(depth + 1);
+printf("int %d", x->item);
+    printf("\n");
+    printLamIntList(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");

@@ -63,9 +63,13 @@ structs:
         cases: LamMatchList
 
     LamMatchList:
-        matches: LamList
+        matches: LamIntList
         body: LamExp
         next: LamMatchList
+
+    LamIntList:
+        item: int
+        next: LamIntList
 
     LamLetRec:
         nbindings: int

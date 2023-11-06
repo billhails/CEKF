@@ -111,6 +111,8 @@ class Catalog:
         print('    switch(h->type) {')
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in mark{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -119,6 +121,8 @@ class Catalog:
         print('    switch(h->type) {')
         for entity in self.contents.values():
             entity.printFreeObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in free{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -127,6 +131,8 @@ class Catalog:
         print('    switch(type) {')
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in typename{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -325,7 +331,7 @@ class SimpleArray(Base):
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(x->{prefix}{field}, depth + 1);')
+        print(f'print{myName}(x->{prefix}{field}, depth+1);')
 
     def printTypedef(self, catalog):
         print("typedef struct {name} {{".format(name=self.getName()))
@@ -386,11 +392,11 @@ class SimpleArray(Base):
         myObjType = self.getObjType()
         myName = self.getName()
         if self.dimension == 1:
-            print(f"    {myType} res = NEW_MATRIX({myName}, 4, {self.entries.typeName}, {myObjType});")
+            print(f"    {myType} res = NEW_MATRIX({myName}, 4, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
             print("    res->size = 0;")
             print("    res->capacity = 4;")
         else:
-            print(f"    {myType} res = NEW_MATRIX({myName}, x * y, {self.entries.typeName}, {myObjType});")
+            print(f"    {myType} res = NEW_MATRIX({myName}, x * y, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
             print("    res->x = x;")
             print("    res->y = y;")
         print("    return res;")
@@ -408,7 +414,7 @@ class SimpleArray(Base):
         if self.dimension == 1:
             print(f"{self.getTypeDeclaration()} push{self.getName()}({self.getTypeDeclaration()} old, {self.entries.getTypeDeclaration(catalog)} entry) {{")
             print("    if (old->size == old->capacity) {")
-            print(f"        old = GROW_MATRIX({self.getName()}, old, old->capacity, old->capacity * 2, {self.entries.typeName});")
+            print(f"        old = GROW_MATRIX({self.getName()}, old, old->capacity, old->capacity * 2, {self.entries.getTypeDeclaration(catalog)});")
             print(f"        old->capacity *= 2;")
             print("    }")
             print("    old->entries[old->size++] = entry;")
@@ -451,7 +457,10 @@ class SimpleArray(Base):
         print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
         print(f'    if (x == NULL) {{ printf("{myName} (NULL)"); return; }}')
-        print(f'    printf("{myName}[\\n");')
+        if self.dimension == 1:
+            print(f'    printf("{myName}(%d)[\\n", x->size);')
+        else:
+            print(f'    printf("{myName}(%d * %d)[\\n", x->x, x->y);')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
         print('    printf("]");')
@@ -465,8 +474,8 @@ class SimpleArray(Base):
 
     def print1dPrintFunctionBody(self, catalog):
         print("    for (int i = 0; i < x->size; i++) {")
-        print("        pad(depth);")
         self.entries.printPrintArrayLine(catalog, "i", 2)
+        print('        printf("\\n");')
         print("    }")
 
     def print2dPrintFunctionBody(self, catalog):
@@ -475,6 +484,7 @@ class SimpleArray(Base):
         print('        printf("[\\n");')
         print("        for (int j = 0; j < x->x; j++) {")
         self.entries.printPrintArrayLine(catalog, "i * x->x + j", 3)
+        print('            printf("\\n");')
         print("        }")
         print("        pad(depth);")
         print('        printf("]\\n");')
@@ -488,11 +498,23 @@ class SimpleArray(Base):
         pad(3)
         print('break;')
 
+    def printMarkObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('mark{name}(({name} *)h);'.format(name=self.getName()))
+        pad(3)
+        print('break;')
+
     def printTypeObjCase(self, catalog):
         pad(2)
         print(f'case {self.getObjType()}:')
         pad(3)
         print('return "{name}";'.format(name=self.getName()))
+
+    def printMarkField(self, field, depth, prefix=''):
+        pad(depth)
+        print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
 
 
     def isArray(self):

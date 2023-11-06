@@ -21,6 +21,6 @@
 #include "ast.h"
 #include "lambda.h"
 
-LamExp *tpmcConvert(int nargs, int nbodies, LamVarList *generatedArgs, AstArgList **argList, LamExp **actions, LamContext *env);
+LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList, LamExp **actions, LamContext *env);
 #endif
 

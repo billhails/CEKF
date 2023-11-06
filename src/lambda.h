@@ -157,10 +157,16 @@ typedef struct LamMatch {
 
 typedef struct LamMatchList {
     Header header;
-    struct LamList * matches;
+    struct LamIntList * matches;
     struct LamExp * body;
     struct LamMatchList * next;
 } LamMatchList;
+
+typedef struct LamIntList {
+    Header header;
+    int item;
+    struct LamIntList * next;
+} LamIntList;
 
 typedef struct LamLetRec {
     Header header;
@@ -206,7 +212,8 @@ struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamLis
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args);
 struct LamCond * newLamCond(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases);
-struct LamMatchList * newLamMatchList(struct LamList * matches, struct LamExp * body, struct LamMatchList * next);
+struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next);
+struct LamIntList * newLamIntList(int item, struct LamIntList * next);
 struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamList * body);
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next);
 struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent);
@@ -223,6 +230,7 @@ void markLamMakeVec(struct LamMakeVec * x);
 void markLamCond(struct LamCond * x);
 void markLamMatch(struct LamMatch * x);
 void markLamMatchList(struct LamMatchList * x);
+void markLamIntList(struct LamIntList * x);
 void markLamLetRec(struct LamLetRec * x);
 void markLamLetRecBindings(struct LamLetRecBindings * x);
 void markLamContext(struct LamContext * x);
@@ -239,6 +247,7 @@ void freeLamMakeVec(struct LamMakeVec * x);
 void freeLamCond(struct LamCond * x);
 void freeLamMatch(struct LamMatch * x);
 void freeLamMatchList(struct LamMatchList * x);
+void freeLamIntList(struct LamIntList * x);
 void freeLamLetRec(struct LamLetRec * x);
 void freeLamLetRecBindings(struct LamLetRecBindings * x);
 void freeLamContext(struct LamContext * x);

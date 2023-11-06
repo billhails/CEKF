@@ -87,12 +87,160 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     (void) PROTECT(bindings);
     LamList *body = convertExpressions(nest->expressions, ext);
     (void) PROTECT(body);
-    LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, body);
-    (void) PROTECT(letRec);
-    LamExp *result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
+    LamExp *result = NULL;
+    if (bindings) {
+        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, body);
+        (void) PROTECT(letRec);
+        result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
+    } else {
+        result = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
+    }
     UNPROTECT(save);
     LEAVE(lamConvertNest)
     return result;
+}
+
+static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
+
+static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *substitutions) {
+    if (varList == NULL) {
+        return NULL;
+    }
+    varList->next = performVarListSubstitutions(varList->next, substitutions);
+    varList->var = performVarSubstitutions(varList->var, substitutions);
+    return varList;
+}
+
+static LamLam *performLamSubstitutions(LamLam *lam, HashTable *substitutions) {
+    lam->args = performVarListSubstitutions(lam->args, substitutions);
+    lam->exp = lamPerformSubstitutions(lam->exp, substitutions);
+    return lam;
+}
+
+static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions) {
+    HashSymbol *replacement = NULL;
+    if (hashGet(substitutions, var, &replacement)) {
+        return replacement;
+    }
+    return var;
+}
+
+static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, HashTable *substitutions) {
+    prim->exp1 = lamPerformSubstitutions(prim->exp1, substitutions);
+    prim->exp2 = lamPerformSubstitutions(prim->exp2, substitutions);
+    return prim;
+}
+
+static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, HashTable *substitutions) {
+    unary->exp = lamPerformSubstitutions(unary->exp, substitutions);
+    return unary;
+}
+
+static LamList *performListSubstitutions(LamList *list, HashTable *substitutions) {
+    if (list == NULL) {
+        return NULL;
+    }
+    list->next = performListSubstitutions(list->next, substitutions);
+    list->exp = lamPerformSubstitutions(list->exp, substitutions);
+    return list;
+}
+
+static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *substitutions) {
+    makeVec->args = performListSubstitutions(makeVec->args, substitutions);
+    return makeVec;
+}
+
+static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitutions) {
+    apply->function = lamPerformSubstitutions(apply->function, substitutions);
+    apply->args = performListSubstitutions(apply->args, substitutions);
+    return apply;
+}
+
+static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions) {
+    cond->condition = lamPerformSubstitutions(cond->condition, substitutions);
+    cond->consequent = lamPerformSubstitutions(cond->consequent, substitutions);
+    cond->alternative = lamPerformSubstitutions(cond->alternative, substitutions);
+    return cond;
+}
+
+static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, HashTable *substitutions) {
+    if (bindings == NULL) {
+        return NULL;
+    }
+    bindings->next = performBindingsSubstitutions(bindings->next, substitutions);
+    bindings->var = performVarSubstitutions(bindings->var, substitutions);
+    bindings->val = lamPerformSubstitutions(bindings->val, substitutions);
+    return bindings;
+}
+
+static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *substitutions) {
+    letrec->bindings = performBindingsSubstitutions(letrec->bindings, substitutions);
+    letrec->body = performListSubstitutions(letrec->body, substitutions);
+    return letrec;
+}
+
+static LamMatchList *performCaseSubstitutions(LamMatchList *cases, HashTable *substitutions) {
+    if (cases == NULL) {
+        return NULL;
+    }
+    cases->next = performCaseSubstitutions(cases->next, substitutions);
+    cases->body = lamPerformSubstitutions(cases->body, substitutions);
+    return cases;
+}
+
+static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitutions) {
+    match->index = lamPerformSubstitutions(match->index, substitutions);
+    match->cases = performCaseSubstitutions(match->cases, substitutions);
+    return match;
+}
+
+LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
+    switch (exp->type) {
+        case LAMEXP_TYPE_INTEGER:
+        case LAMEXP_TYPE_CHARACTER:
+        case LAMEXP_TYPE_STRING:
+        case LAMEXP_TYPE_BACK:
+        case LAMEXP_TYPE_T:
+        case LAMEXP_TYPE_F:
+        case LAMEXP_TYPE_NIL:
+            break;
+        case LAMEXP_TYPE_LAM:
+            exp->val.lam = performLamSubstitutions(exp->val.lam, substitutions);
+            break;
+        case LAMEXP_TYPE_VAR:
+            exp->val.var = performVarSubstitutions(exp->val.var, substitutions);
+            break;
+        case LAMEXP_TYPE_PRIM:
+            exp->val.prim = performPrimSubstitutions(exp->val.prim, substitutions);
+            break;
+        case LAMEXP_TYPE_UNARY:
+            exp->val.unary = performUnarySubstitutions(exp->val.unary, substitutions);
+            break;
+        case LAMEXP_TYPE_LIST:
+            exp->val.list = performListSubstitutions(exp->val.list, substitutions);
+            break;
+        case LAMEXP_TYPE_MAKEVEC:
+            exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
+            break;
+        case LAMEXP_TYPE_APPLY:
+            exp->val.apply = performApplySubstitutions(exp->val.apply, substitutions);
+            break;
+        case LAMEXP_TYPE_COND:
+            exp->val.cond = performCondSubstitutions(exp->val.cond, substitutions);
+            break;
+        case LAMEXP_TYPE_CALLCC:
+            exp->val.callcc = lamPerformSubstitutions(exp->val.callcc, substitutions);
+            break;
+        case LAMEXP_TYPE_LETREC:
+            exp->val.letrec = performLetRecSubstitutions(exp->val.letrec, substitutions);
+            break;
+        case LAMEXP_TYPE_MATCH:
+            exp->val.match = performMatchSubstitutions(exp->val.match, substitutions);
+            break;
+        default:
+            cant_happen("unrecognized LamExp type (%d) in lamPerformSubstitutions", exp->type);
+    }
+    return exp;
 }
  
 static LamLetRecBindings *convertDefinitions(AstDefinitions *definitions, LamContext *env) {
@@ -342,7 +490,7 @@ static void *safe_malloc(size_t size) {
     return ptr;
 }
 
-static LamExp *convertCompositeBodies(int nargs, LamVarList *generatedArgs, AstCompositeFunction *fun, LamContext *env) {
+static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun, LamContext *env) {
     int nBodies = countAstCompositeFunction(fun);
     if (nBodies == 0) {
         can_happen("empty composite function");
@@ -358,7 +506,7 @@ static LamExp *convertCompositeBodies(int nargs, LamVarList *generatedArgs, AstC
         argLists[i] = func->argList;
         fun = fun->next;
     }
-    LamExp *result = tpmcConvert(nargs, nBodies, generatedArgs, argLists, actions, env);
+    LamLam *result = tpmcConvert(nargs, nBodies, argLists, actions, env);
     FREE_ARRAY(LamExp*, actions, nBodies);
     FREE_ARRAY(AstArgList*, argLists, nBodies);
     UNPROTECT(p);
@@ -370,12 +518,8 @@ static LamExp *convertCompositeBodies(int nargs, LamVarList *generatedArgs, AstC
 static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
     if (fun == NULL) cant_happen("composite function with no components");
     int nargs = countAstArgList(fun->function->argList);
-    LamVarList *generatedArgs = genLamVarList(nargs);
-    int save = PROTECT(generatedArgs);
-    LamExp *body = convertCompositeBodies(nargs, generatedArgs, fun, env);
-    (void) PROTECT(body);
-    LamLam *lambda = newLamLam(nargs, generatedArgs, body);
-    (void) PROTECT(lambda);
+    LamLam *lambda = convertCompositeBodies(nargs, fun, env);
+    int save = PROTECT(lambda);
     LamExp *result = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
     return result;

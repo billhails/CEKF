@@ -89,10 +89,17 @@ struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases
     return x;
 }
 
-struct LamMatchList * newLamMatchList(struct LamList * matches, struct LamExp * body, struct LamMatchList * next) {
+struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next) {
     struct LamMatchList * x = NEW(LamMatchList, OBJTYPE_LAMMATCHLIST);
     x->matches = matches;
     x->body = body;
+    x->next = next;
+    return x;
+}
+
+struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
+    struct LamIntList * x = NEW(LamIntList, OBJTYPE_LAMINTLIST);
+    x->item = item;
     x->next = next;
     return x;
 }
@@ -214,9 +221,16 @@ void markLamMatchList(struct LamMatchList * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markLamList(x->matches);
+    markLamIntList(x->matches);
     markLamExp(x->body);
     markLamMatchList(x->next);
+}
+
+void markLamIntList(struct LamIntList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamIntList(x->next);
 }
 
 void markLamLetRec(struct LamLetRec * x) {
@@ -340,6 +354,9 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMMATCHLIST:
             markLamMatchList((LamMatchList *)h);
             break;
+        case OBJTYPE_LAMINTLIST:
+            markLamIntList((LamIntList *)h);
+            break;
         case OBJTYPE_LAMLETREC:
             markLamLetRec((LamLetRec *)h);
             break;
@@ -355,6 +372,8 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMEXP:
             markLamExp((LamExp *)h);
             break;
+        default:
+            cant_happen("unrecognized type in markLambdaObj\n");
     }
 }
 
@@ -398,6 +417,10 @@ void freeLamMatch(struct LamMatch * x) {
 
 void freeLamMatchList(struct LamMatchList * x) {
     FREE(x, LamMatchList);
+}
+
+void freeLamIntList(struct LamIntList * x) {
+    FREE(x, LamIntList);
 }
 
 void freeLamLetRec(struct LamLetRec * x) {
@@ -453,6 +476,9 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMMATCHLIST:
             freeLamMatchList((LamMatchList *)h);
             break;
+        case OBJTYPE_LAMINTLIST:
+            freeLamIntList((LamIntList *)h);
+            break;
         case OBJTYPE_LAMLETREC:
             freeLamLetRec((LamLetRec *)h);
             break;
@@ -468,6 +494,8 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMEXP:
             freeLamExp((LamExp *)h);
             break;
+        default:
+            cant_happen("unrecognized type in freeLambdaObj\n");
     }
 }
 
@@ -493,6 +521,8 @@ char *typenameLambdaObj(int type) {
             return "LamMatch";
         case OBJTYPE_LAMMATCHLIST:
             return "LamMatchList";
+        case OBJTYPE_LAMINTLIST:
+            return "LamIntList";
         case OBJTYPE_LAMLETREC:
             return "LamLetRec";
         case OBJTYPE_LAMLETRECBINDINGS:
@@ -503,6 +533,8 @@ char *typenameLambdaObj(int type) {
             return "LamTypeConstructorInfo";
         case OBJTYPE_LAMEXP:
             return "LamExp";
+        default:
+            cant_happen("unrecognized type in typenameLambdaObj\n");
     }
 }
 

@@ -34,6 +34,7 @@ void printLamMakeVec(struct LamMakeVec * x, int depth);
 void printLamCond(struct LamCond * x, int depth);
 void printLamMatch(struct LamMatch * x, int depth);
 void printLamMatchList(struct LamMatchList * x, int depth);
+void printLamIntList(struct LamIntList * x, int depth);
 void printLamLetRec(struct LamLetRec * x, int depth);
 void printLamLetRecBindings(struct LamLetRecBindings * x, int depth);
 void printLamContext(struct LamContext * x, int depth);

@@ -25,41 +25,31 @@ description: Term Pattern Matching Compiler types
 
 structs:
     TpmcMatchRules:
-        id: int
         rules: TpmcMatchRuleArray
         rootVariables: TpmcVariableArray
-        errorState: TpmcState
-        knownStates: TpmcStateArray
 
     TpmcMatchRule:
         action: TpmcState
         patterns: TpmcPatternArray
 
     TpmcVarPattern:
-        path: HashSymbol
         name: HashSymbol
 
     TpmcComparisonPattern:
-        path: HashSymbol
         previous: TpmcPattern
         current: TpmcPattern
 
     TpmcAssignmentPattern:
-        path: HashSymbol
         name: HashSymbol
         value: TpmcPattern
 
-    TpmcWildcardPattern:
-        path: HashSymbol
-
-    TpmcConstantPattern:
-        path: HashSymbol
-        value: LamExp
-
     TpmcConstructorPattern:
-        path: HashSymbol
         tag: HashSymbol
         components: TpmcPatternArray
+
+    TpmcPattern:
+        path: HashSymbol=NULL
+        pattern: TpmcPatternValue
 
     TpmcTestState:
         path: HashSymbol
@@ -67,6 +57,12 @@ structs:
 
     TpmcFinalState:
         action: LamExp
+
+    TpmcState:
+        refcount: int=0
+        stamp: int
+        freeVariables: HashTable=NULL
+        state: TpmcStateValue
 
     TpmcArc:
         state: TpmcState
@@ -81,10 +77,6 @@ arrays:
         dimension: 1
         entries: HashSymbol
 
-    TpmcStateArray:
-        dimension: 1
-        entries: TpmcState
-
     TpmcPatternArray:
         dimension: 1
         entries: TpmcPattern
@@ -98,15 +90,16 @@ arrays:
         entries: TpmcPattern
 
 unions:
-    TpmcPattern:
+    TpmcPatternValue:
         var: TpmcVarPattern
         comparison: TpmcComparisonPattern
         assignment: TpmcAssignmentPattern
-        wildcard: TpmcWildcardPattern
-        constant: TpmcConstantPattern
+        wildcard: void_ptr
+        character: char
+        integer: int
         constructor: TpmcConstructorPattern
 
-    TpmcState:
+    TpmcStateValue:
         test: TpmcTestState
         final: TpmcFinalState
         error: void_ptr
@@ -114,6 +107,12 @@ unions:
 enums: {}
 
 primitives:
+    HashTable:
+        cname: "HashTable *"
+        printFn: "printHashTable"
+        markFn: "markHashTable"
+        valued: true
+
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printAstSymbol"
@@ -126,12 +125,17 @@ primitives:
         markFn: "markLamExp"
         valued: true
 
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false
-
     int:
         cname: "int"
         printf: "%d"
         valued: true
+
+    char:
+        cname: "char"
+        printf: "'%c'"
+        valued: true
+
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+        valued: false

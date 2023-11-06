@@ -8,4 +8,10 @@ let
         (h @ t, b) { h @ append(t, b) }
     }
 
+    fn member {
+        (_, []) { false }
+        (x, x @ _) { true }
+        (x, _ @ t) { member(x, t) }
+    }
+
 in {

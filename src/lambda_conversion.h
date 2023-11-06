@@ -22,4 +22,5 @@
 #include "lambda.h"
 
 LamExp *lamConvertNest(AstNest *nest, LamContext *env);
+LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
 #endif

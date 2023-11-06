@@ -112,7 +112,7 @@ class MatchRules:
         self.rules = [*rules]
         if len(self.rules) == 0:
             raise Exception("MatchRules constructor called with 0 arguments")
-        self.rootVariables = [f'p{i}' for i in range(rules[0].length())];
+        self.rootVariables = [f'p{i}' for i in range(rules[0].length())]
         self.errorState = None
         self.knownStates = None
         self.id = MatchRules.counter
