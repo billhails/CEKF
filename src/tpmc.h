@@ -20,7 +20,7 @@
  * Term Pattern Matching Compiler types
  *
  * generated from src/tpmc.yaml by makeAST.py
-*/
+ */
 
 #include "hash.h"
 #include "memory.h"
@@ -163,6 +163,13 @@ typedef struct TpmcPatternArray {
     struct TpmcPattern * entries[0];
 } TpmcPatternArray;
 
+typedef struct TpmcStateArray {
+    Header header;
+    int size;
+    int capacity;
+    struct TpmcState * entries[0];
+} TpmcStateArray;
+
 typedef struct TpmcArcArray {
     Header header;
     int size;
@@ -170,10 +177,17 @@ typedef struct TpmcArcArray {
     struct TpmcArc * entries[0];
 } TpmcArcArray;
 
+typedef struct TpmcIntArray {
+    Header header;
+    int size;
+    int capacity;
+    int entries[0];
+} TpmcIntArray;
+
 typedef struct TpmcMatrix {
     Header header;
-    int x;
-    int y;
+    int width;
+    int height;
     struct TpmcPattern * entries[0];
 } TpmcMatrix;
 
@@ -193,8 +207,10 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray();
 struct TpmcVariableArray * newTpmcVariableArray();
 struct TpmcPatternArray * newTpmcPatternArray();
+struct TpmcStateArray * newTpmcStateArray();
 struct TpmcArcArray * newTpmcArcArray();
-struct TpmcMatrix * newTpmcMatrix(int x, int y);
+struct TpmcIntArray * newTpmcIntArray();
+struct TpmcMatrix * newTpmcMatrix(int width, int height);
 
 void markTpmcMatchRules(struct TpmcMatchRules * x);
 void markTpmcMatchRule(struct TpmcMatchRule * x);
@@ -212,7 +228,9 @@ void markTpmcStateValue(struct TpmcStateValue * x);
 void markTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);
 void markTpmcVariableArray(struct TpmcVariableArray * x);
 void markTpmcPatternArray(struct TpmcPatternArray * x);
+void markTpmcStateArray(struct TpmcStateArray * x);
 void markTpmcArcArray(struct TpmcArcArray * x);
+void markTpmcIntArray(struct TpmcIntArray * x);
 void markTpmcMatrix(struct TpmcMatrix * x);
 
 void freeTpmcMatchRules(struct TpmcMatchRules * x);
@@ -231,13 +249,17 @@ void freeTpmcStateValue(struct TpmcStateValue * x);
 void freeTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);
 void freeTpmcVariableArray(struct TpmcVariableArray * x);
 void freeTpmcPatternArray(struct TpmcPatternArray * x);
+void freeTpmcStateArray(struct TpmcStateArray * x);
 void freeTpmcArcArray(struct TpmcArcArray * x);
+void freeTpmcIntArray(struct TpmcIntArray * x);
 void freeTpmcMatrix(struct TpmcMatrix * x);
 
 struct TpmcMatchRuleArray * pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * old, struct TpmcMatchRule * entry);
 struct TpmcVariableArray * pushTpmcVariableArray(struct TpmcVariableArray * old, HashSymbol * entry);
 struct TpmcPatternArray * pushTpmcPatternArray(struct TpmcPatternArray * old, struct TpmcPattern * entry);
+struct TpmcStateArray * pushTpmcStateArray(struct TpmcStateArray * old, struct TpmcState * entry);
 struct TpmcArcArray * pushTpmcArcArray(struct TpmcArcArray * old, struct TpmcArc * entry);
+struct TpmcIntArray * pushTpmcIntArray(struct TpmcIntArray * old, int entry);
 
 #define TPMCPATTERNVALUE_VAL_VAR(x) ((union TpmcPatternValueVal ){.var = (x)})
 #define TPMCPATTERNVALUE_VAL_COMPARISON(x) ((union TpmcPatternValueVal ){.comparison = (x)})
@@ -249,5 +271,7 @@ struct TpmcArcArray * pushTpmcArcArray(struct TpmcArcArray * old, struct TpmcArc
 #define TPMCSTATEVALUE_VAL_TEST(x) ((union TpmcStateValueVal ){.test = (x)})
 #define TPMCSTATEVALUE_VAL_FINAL(x) ((union TpmcStateValueVal ){.final = (x)})
 #define TPMCSTATEVALUE_VAL_ERROR() ((union TpmcStateValueVal ){.error = (NULL)})
+
+#define TpmcMatrixIndex(o, w, h) ((o)->entries[(h) * (o)->width + (w)])
 
 #endif

@@ -20,7 +20,7 @@
  * Type inference structures used by Algorithm W.
  *
  * generated from src/tin.yaml by makeAST.py
-*/
+ */
 
 #include "hash.h"
 #include "memory.h"
@@ -152,5 +152,6 @@ void freeTinPolyType(struct TinPolyType * x);
 #define TINMONOTYPE_VAL_FUN(x) ((union TinMonoTypeVal ){.fun = (x)})
 #define TINPOLYTYPE_VAL_MONOTYPE(x) ((union TinPolyTypeVal ){.monoType = (x)})
 #define TINPOLYTYPE_VAL_QUANTIFIER(x) ((union TinPolyTypeVal ){.quantifier = (x)})
+
 
 #endif

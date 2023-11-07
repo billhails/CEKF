@@ -66,6 +66,10 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
 
+    def printAccessDeclarations(self):
+        for entity in self.contents.values():
+            entity.printAccessDeclarations(self)
+
     def printPushDeclarations(self):
         for entity in self.contents.values():
             entity.printPushDeclaration(self)
@@ -208,6 +212,9 @@ class Base:
     def printDefines(self, catalog):
         pass
 
+    def printAccessDeclarations(self, catalog):
+        pass
+
     def printPushDeclaration(self, catalog):
         pass
 
@@ -321,8 +328,8 @@ class SimpleArray(Base):
         if self.dimension > 2:
             raise Exception("only 1 or 2 dimensional arrays supported for now")
         if self.dimension == 2:
-            self.x = SimpleField(self.name, "x", "int")
-            self.y = SimpleField(self.name, "y", "int")
+            self.width = SimpleField(self.name, "width", "int")
+            self.height = SimpleField(self.name, "height", "int")
         self.entries = SimpleField(self.name,"entries", data["entries"])
 
     def getTypeDeclaration(self):
@@ -333,12 +340,16 @@ class SimpleArray(Base):
         pad(depth)
         print(f'print{myName}(x->{prefix}{field}, depth+1);')
 
+    def printAccessDeclarations(self, catalog):
+        if self.dimension == 2:
+            print(f"#define {self.getName()}Index(o, w, h) ((o)->entries[(h) * (o)->width + (w)])")
+
     def printTypedef(self, catalog):
         print("typedef struct {name} {{".format(name=self.getName()))
         print("    Header header;")
         if self.dimension == 2: # 2D arrays are fixed size
-            print("    int x;")
-            print("    int y;")
+            print("    int width;")
+            print("    int height;")
         else:                   # 1D arrays can grow
             print("    int size;")
             print("    int capacity;")
@@ -360,7 +371,7 @@ class SimpleArray(Base):
         if self.dimension == 1:
             print(f"    FREE_MATRIX({self.getName()}, x, x->capacity, {self.entries.getTypeDeclaration(catalog)});")
         else:
-            print(f"    FREE_MATRIX({self.getName()}, x, x->x * x->y, {self.entries.getTypeDeclaration(catalog)});")
+            print(f"    FREE_MATRIX({self.getName()}, x, x->width * x->height, {self.entries.getTypeDeclaration(catalog)});")
         print("}\n")
 
     def getFreeSignature(self, catalog):
@@ -374,10 +385,9 @@ class SimpleArray(Base):
         return [ self.getObjType() ]
 
     def getNewArgs(self):
-        # return [x for x in self.fields if x.default is None]
         if self.dimension == 1:
             return []
-        return [self.x, self.y]
+        return [self.width, self.height]
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration()
@@ -392,14 +402,14 @@ class SimpleArray(Base):
         myObjType = self.getObjType()
         myName = self.getName()
         if self.dimension == 1:
-            print(f"    {myType} res = NEW_MATRIX({myName}, 4, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
-            print("    res->size = 0;")
-            print("    res->capacity = 4;")
+            print(f"    {myType} x = NEW_MATRIX({myName}, 4, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
+            print("    x->size = 0;")
+            print("    x->capacity = 4;")
         else:
-            print(f"    {myType} res = NEW_MATRIX({myName}, x * y, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
-            print("    res->x = x;")
-            print("    res->y = y;")
-        print("    return res;")
+            print(f"    {myType} x = NEW_MATRIX({myName}, width * height, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
+            print("    x->width = width;")
+            print("    x->height = height;")
+        print("    return x;")
         print("}\n")
 
     def printNewDeclaration(self, catalog):
@@ -441,7 +451,7 @@ class SimpleArray(Base):
         print("    }")
 
     def printMark2dFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->x * x->y; i++) {")
+        print("    for (int i = 0; i < x->width * x->height; i++) {")
         self.entries.printMarkArrayLine(catalog, "i", 2)
         print("    }")
 
@@ -460,7 +470,7 @@ class SimpleArray(Base):
         if self.dimension == 1:
             print(f'    printf("{myName}(%d)[\\n", x->size);')
         else:
-            print(f'    printf("{myName}(%d * %d)[\\n", x->x, x->y);')
+            print(f'    printf("{myName}(%d * %d)[\\n", x->width, x->height);')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
         print('    printf("]");')
@@ -479,11 +489,11 @@ class SimpleArray(Base):
         print("    }")
 
     def print2dPrintFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->y; i++) {")
+        print("    for (int i = 0; i < x->height; i++) {")
         print("        pad(depth);")
         print('        printf("[\\n");')
-        print("        for (int j = 0; j < x->x; j++) {")
-        self.entries.printPrintArrayLine(catalog, "i * x->x + j", 3)
+        print("        for (int j = 0; j < x->width; j++) {")
+        self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
         print('            printf("\\n");')
         print("        }")
         print("        pad(depth);")
@@ -963,7 +973,7 @@ def printGpl(file, document):
         print(f" * {document['description']}\n *")
 
     print(f" * generated from {file} by makeAST.py")
-    print("*/")
+    print(" */")
 
 ##################################################################
 
@@ -1029,6 +1039,8 @@ if args.type == "h":
     catalog.printPushDeclarations()
     print("")
     catalog.printDefines()
+    print("")
+    catalog.printAccessDeclarations()
     print("")
     print("#endif")
 elif args.type == "objtypes_h":

@@ -27,6 +27,7 @@
 #include "lambda_helper.h"
 #include "symbol.h"
 #include "tpmc_logic.h"
+#include "debug_ast.h"
 
 #define ARG_CATEGORY_VAR 0
 #define ARG_CATEGORY_CONST 1
@@ -35,10 +36,10 @@
 
 #define SAFE_MALLOC(thing) ((thing *)safe_malloc(sizeof(thing)))
 
-static LamLetRecBindings *convertDefinitions(AstDefinitions *definitions, LamContext *env);
+static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env);
 static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
 static int countLetRecBindings(LamLetRecBindings *b);
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next);
+static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next, bool typeDefs);
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
 static LamLetRecBindings *prependTypeDef(AstTypeDef *typeDef, LamLetRecBindings *next, LamContext *env);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
@@ -83,7 +84,7 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest)
     LamContext *ext = extendLamContext(env);
     int save = PROTECT(ext);
-    LamLetRecBindings *bindings = convertDefinitions(nest->definitions, ext);
+    LamLetRecBindings *bindings = convertLetrecBindings(nest->definitions, ext);
     (void) PROTECT(bindings);
     LamList *body = convertExpressions(nest->expressions, ext);
     (void) PROTECT(body);
@@ -242,30 +243,58 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
     }
     return exp;
 }
- 
-static LamLetRecBindings *convertDefinitions(AstDefinitions *definitions, LamContext *env) {
-    ENTER(convertDefinitions)
+
+static LamLetRecBindings *convertTypeDefs(AstDefinitions *definitions, LamContext *env) {
     if (definitions == NULL) {
-        LEAVE(convertDefinitions)
         return NULL;
     }
-    LamLetRecBindings *next = convertDefinitions(definitions->next, env);
+    LamLetRecBindings *next = convertTypeDefs(definitions->next, env);
     int save = PROTECT(next);
-    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next);
+    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next, true);
     UNPROTECT(save);
-    LEAVE(convertDefinitions)
     return this;
 }
 
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next) {
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env, LamLetRecBindings *previous) {
+    if (definitions == NULL) {
+        return previous;
+    }
+    LamLetRecBindings *next = convertFuncDefs(definitions->next, env, previous);
+    int save = PROTECT(next);
+    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next, false);
+    UNPROTECT(save);
+    return this;
+}
+ 
+static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env) {
+    ENTER(convertLetrecBindings)
+    if (definitions == NULL) {
+        LEAVE(convertLetrecBindings)
+        return NULL;
+    }
+    LamLetRecBindings *typeDefs = convertTypeDefs(definitions, env);
+    int save = PROTECT(typeDefs);
+    LamLetRecBindings *funcDefs = convertFuncDefs(definitions, env, typeDefs);
+    UNPROTECT(save);
+    LEAVE(convertLetrecBindings)
+    return funcDefs;
+}
+
+static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next, bool typeDefs) {
     ENTER(prependDefinition)
     LamLetRecBindings *result = NULL;
     switch (definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
-            result = prependDefine(definition->val.define, env, next);
+            if (typeDefs)
+                result = next;
+            else
+                result = prependDefine(definition->val.define, env, next);
             break;
         case AST_DEFINITION_TYPE_TYPEDEF:
-            result = prependTypeDef(definition->val.typeDef, next, env);
+            if (typeDefs)
+                result = prependTypeDef(definition->val.typeDef, next, env);
+            else
+                result = next;
             break;
         default:
             cant_happen("unrecognised definition type %d in prependDefinition", definition->type);
@@ -499,13 +528,14 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun, LamC
     LamExp **actions = NEW_ARRAY(LamExp *, nBodies);
     AstArgList **argLists = NEW_ARRAY(AstArgList *, nBodies);
     int p = PROTECT(NULL);
-    for (int i = 0; i < nBodies; i++) {
-        AstFunction *func = fun->function;
+    AstCompositeFunction *f = fun;
+    for (int i = 0; i < nBodies; i++, f = f->next) {
+        AstFunction *func = f->function;
         actions[i] = lamConvertNest(func->nest, env);
         PROTECT(actions[i]);
         argLists[i] = func->argList;
-        fun = fun->next;
     }
+    printAstCompositeFunction(fun, 0);
     LamLam *result = tpmcConvert(nargs, nBodies, argLists, actions, env);
     FREE_ARRAY(LamExp*, actions, nBodies);
     FREE_ARRAY(AstArgList*, argLists, nBodies);

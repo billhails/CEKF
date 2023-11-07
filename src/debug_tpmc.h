@@ -20,7 +20,7 @@
  * Term Pattern Matching Compiler types
  *
  * generated from src/tpmc.yaml by makeAST.py
-*/
+ */
 
 #include "tpmc_helper.h"
 #include "debug_lambda.h"
@@ -41,7 +41,9 @@ void printTpmcStateValue(struct TpmcStateValue * x, int depth);
 void printTpmcMatchRuleArray(struct TpmcMatchRuleArray * x, int depth);
 void printTpmcVariableArray(struct TpmcVariableArray * x, int depth);
 void printTpmcPatternArray(struct TpmcPatternArray * x, int depth);
+void printTpmcStateArray(struct TpmcStateArray * x, int depth);
 void printTpmcArcArray(struct TpmcArcArray * x, int depth);
+void printTpmcIntArray(struct TpmcIntArray * x, int depth);
 void printTpmcMatrix(struct TpmcMatrix * x, int depth);
 
 #endif

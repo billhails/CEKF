@@ -18,7 +18,7 @@
  * Term Pattern Matching Compiler types
  *
  * generated from src/tpmc.yaml by makeAST.py
-*/
+ */
 
 #include "tpmc.h"
 
@@ -114,38 +114,52 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 }
 
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray() {
-    struct TpmcMatchRuleArray * res = NEW_MATRIX(TpmcMatchRuleArray, 4, struct TpmcMatchRule *, OBJTYPE_TPMCMATCHRULEARRAY);
-    res->size = 0;
-    res->capacity = 4;
-    return res;
+    struct TpmcMatchRuleArray * x = NEW_MATRIX(TpmcMatchRuleArray, 4, struct TpmcMatchRule *, OBJTYPE_TPMCMATCHRULEARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
 }
 
 struct TpmcVariableArray * newTpmcVariableArray() {
-    struct TpmcVariableArray * res = NEW_MATRIX(TpmcVariableArray, 4, HashSymbol *, OBJTYPE_TPMCVARIABLEARRAY);
-    res->size = 0;
-    res->capacity = 4;
-    return res;
+    struct TpmcVariableArray * x = NEW_MATRIX(TpmcVariableArray, 4, HashSymbol *, OBJTYPE_TPMCVARIABLEARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
 }
 
 struct TpmcPatternArray * newTpmcPatternArray() {
-    struct TpmcPatternArray * res = NEW_MATRIX(TpmcPatternArray, 4, struct TpmcPattern *, OBJTYPE_TPMCPATTERNARRAY);
-    res->size = 0;
-    res->capacity = 4;
-    return res;
+    struct TpmcPatternArray * x = NEW_MATRIX(TpmcPatternArray, 4, struct TpmcPattern *, OBJTYPE_TPMCPATTERNARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
+}
+
+struct TpmcStateArray * newTpmcStateArray() {
+    struct TpmcStateArray * x = NEW_MATRIX(TpmcStateArray, 4, struct TpmcState *, OBJTYPE_TPMCSTATEARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
 }
 
 struct TpmcArcArray * newTpmcArcArray() {
-    struct TpmcArcArray * res = NEW_MATRIX(TpmcArcArray, 4, struct TpmcArc *, OBJTYPE_TPMCARCARRAY);
-    res->size = 0;
-    res->capacity = 4;
-    return res;
+    struct TpmcArcArray * x = NEW_MATRIX(TpmcArcArray, 4, struct TpmcArc *, OBJTYPE_TPMCARCARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
 }
 
-struct TpmcMatrix * newTpmcMatrix(int x, int y) {
-    struct TpmcMatrix * res = NEW_MATRIX(TpmcMatrix, x * y, struct TpmcPattern *, OBJTYPE_TPMCMATRIX);
-    res->x = x;
-    res->y = y;
-    return res;
+struct TpmcIntArray * newTpmcIntArray() {
+    struct TpmcIntArray * x = NEW_MATRIX(TpmcIntArray, 4, int, OBJTYPE_TPMCINTARRAY);
+    x->size = 0;
+    x->capacity = 4;
+    return x;
+}
+
+struct TpmcMatrix * newTpmcMatrix(int width, int height) {
+    struct TpmcMatrix * x = NEW_MATRIX(TpmcMatrix, width * height, struct TpmcPattern *, OBJTYPE_TPMCMATRIX);
+    x->width = width;
+    x->height = height;
+    return x;
 }
 
 
@@ -176,9 +190,27 @@ struct TpmcPatternArray * pushTpmcPatternArray(struct TpmcPatternArray * old, st
     return old;
 }
 
+struct TpmcStateArray * pushTpmcStateArray(struct TpmcStateArray * old, struct TpmcState * entry) {
+    if (old->size == old->capacity) {
+        old = GROW_MATRIX(TpmcStateArray, old, old->capacity, old->capacity * 2, struct TpmcState *);
+        old->capacity *= 2;
+    }
+    old->entries[old->size++] = entry;
+    return old;
+}
+
 struct TpmcArcArray * pushTpmcArcArray(struct TpmcArcArray * old, struct TpmcArc * entry) {
     if (old->size == old->capacity) {
         old = GROW_MATRIX(TpmcArcArray, old, old->capacity, old->capacity * 2, struct TpmcArc *);
+        old->capacity *= 2;
+    }
+    old->entries[old->size++] = entry;
+    return old;
+}
+
+struct TpmcIntArray * pushTpmcIntArray(struct TpmcIntArray * old, int entry) {
+    if (old->size == old->capacity) {
+        old = GROW_MATRIX(TpmcIntArray, old, old->capacity, old->capacity * 2, int);
         old->capacity *= 2;
     }
     old->entries[old->size++] = entry;
@@ -347,6 +379,15 @@ void markTpmcPatternArray(struct TpmcPatternArray * x) {
     }
 }
 
+void markTpmcStateArray(struct TpmcStateArray * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    for (int i = 0; i < x->size; i++) {
+        markTpmcState(x->entries[i]);
+    }
+}
+
 void markTpmcArcArray(struct TpmcArcArray * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -356,11 +397,19 @@ void markTpmcArcArray(struct TpmcArcArray * x) {
     }
 }
 
+void markTpmcIntArray(struct TpmcIntArray * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    for (int i = 0; i < x->size; i++) {
+    }
+}
+
 void markTpmcMatrix(struct TpmcMatrix * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    for (int i = 0; i < x->x * x->y; i++) {
+    for (int i = 0; i < x->width * x->height; i++) {
         markTpmcPattern(x->entries[i]);
     }
 }
@@ -416,8 +465,14 @@ void markTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCPATTERNARRAY:
             markTpmcPatternArray((TpmcPatternArray *)h);
             break;
+        case OBJTYPE_TPMCSTATEARRAY:
+            markTpmcStateArray((TpmcStateArray *)h);
+            break;
         case OBJTYPE_TPMCARCARRAY:
             markTpmcArcArray((TpmcArcArray *)h);
+            break;
+        case OBJTYPE_TPMCINTARRAY:
+            markTpmcIntArray((TpmcIntArray *)h);
             break;
         case OBJTYPE_TPMCMATRIX:
             markTpmcMatrix((TpmcMatrix *)h);
@@ -493,12 +548,20 @@ void freeTpmcPatternArray(struct TpmcPatternArray * x) {
     FREE_MATRIX(TpmcPatternArray, x, x->capacity, struct TpmcPattern *);
 }
 
+void freeTpmcStateArray(struct TpmcStateArray * x) {
+    FREE_MATRIX(TpmcStateArray, x, x->capacity, struct TpmcState *);
+}
+
 void freeTpmcArcArray(struct TpmcArcArray * x) {
     FREE_MATRIX(TpmcArcArray, x, x->capacity, struct TpmcArc *);
 }
 
+void freeTpmcIntArray(struct TpmcIntArray * x) {
+    FREE_MATRIX(TpmcIntArray, x, x->capacity, int);
+}
+
 void freeTpmcMatrix(struct TpmcMatrix * x) {
-    FREE_MATRIX(TpmcMatrix, x, x->x * x->y, struct TpmcPattern *);
+    FREE_MATRIX(TpmcMatrix, x, x->width * x->height, struct TpmcPattern *);
 }
 
 
@@ -552,8 +615,14 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCPATTERNARRAY:
             freeTpmcPatternArray((TpmcPatternArray *)h);
             break;
+        case OBJTYPE_TPMCSTATEARRAY:
+            freeTpmcStateArray((TpmcStateArray *)h);
+            break;
         case OBJTYPE_TPMCARCARRAY:
             freeTpmcArcArray((TpmcArcArray *)h);
+            break;
+        case OBJTYPE_TPMCINTARRAY:
+            freeTpmcIntArray((TpmcIntArray *)h);
             break;
         case OBJTYPE_TPMCMATRIX:
             freeTpmcMatrix((TpmcMatrix *)h);
@@ -597,8 +666,12 @@ char *typenameTpmcObj(int type) {
             return "TpmcVariableArray";
         case OBJTYPE_TPMCPATTERNARRAY:
             return "TpmcPatternArray";
+        case OBJTYPE_TPMCSTATEARRAY:
+            return "TpmcStateArray";
         case OBJTYPE_TPMCARCARRAY:
             return "TpmcArcArray";
+        case OBJTYPE_TPMCINTARRAY:
+            return "TpmcIntArray";
         case OBJTYPE_TPMCMATRIX:
             return "TpmcMatrix";
         default:

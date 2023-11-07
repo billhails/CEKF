@@ -18,7 +18,7 @@
  * Type inference structures used by Algorithm W.
  *
  * generated from src/tin.yaml by makeAST.py
-*/
+ */
 
 #include <stdio.h>
 

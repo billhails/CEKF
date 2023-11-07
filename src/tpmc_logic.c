@@ -23,18 +23,13 @@
 #include "tpmc_logic.h"
 #include "tpmc.h"
 #include "debug_tpmc.h"
+#include "tpmc_match.h"
 #include "ast_helper.h"
 #include "symbol.h"
 #include "memory.h"
 #include "lambda_conversion.h"
 
-static TpmcPattern *convertPattern(AstArg *arg);
-
-static int stateCounter = 0;
-
-static TpmcState *makeState(TpmcStateValue *val) {
-    return newTpmcState(stateCounter++, val);
-}
+static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
 
 static TpmcPattern *makePattern(TpmcPatternValue *val) {
     return newTpmcPattern(val);
@@ -52,11 +47,11 @@ static TpmcVariableArray *createRootVariables(int nargs) {
     return rootVariables;
 }
 
-static TpmcPatternArray *convertArgList(AstArgList *argList) {
+static TpmcPatternArray *convertArgList(AstArgList *argList, LamContext *env) {
     TpmcPatternArray *patterns = newTpmcPatternArray();
     int save = PROTECT(patterns);
     while (argList != NULL) {
-        TpmcPattern *pattern = convertPattern(argList->arg);
+        TpmcPattern *pattern = convertPattern(argList->arg, env);
         int save2 = PROTECT(pattern);
         patterns = pushTpmcPatternArray(patterns, pattern);
         REPLACE_PROTECT(save, patterns);
@@ -75,18 +70,33 @@ static TpmcPattern *makeWildcardPattern() {
     return pattern;
 }
 
-static TpmcPattern *makeVarPattern(HashSymbol *symbol) {
-    TpmcVarPattern *var = newTpmcVarPattern(symbol);
-    int save = PROTECT(var);
-    TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(var));
-    PROTECT(val);
-    TpmcPattern *pattern = makePattern(val);
-    UNPROTECT(save);
-    return pattern;
+static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    if (info == NULL) {
+        printf("makeVarPattern %s is var\n", symbol->name);
+        TpmcVarPattern *var = newTpmcVarPattern(symbol);
+        int save = PROTECT(var);
+        TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(var));
+        PROTECT(val);
+        TpmcPattern *pattern = makePattern(val);
+        UNPROTECT(save);
+        return pattern;
+    } else {
+        printf("makeVarPattern %s is constructor\n", symbol->name);
+        TpmcPatternArray *args = newTpmcPatternArray();
+        int save = PROTECT(args);
+        TpmcConstructorPattern *constructor = newTpmcConstructorPattern(symbol, args);
+        PROTECT(constructor);
+        TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR, TPMCPATTERNVALUE_VAL_CONSTRUCTOR(constructor));
+        PROTECT(val);
+        TpmcPattern *pattern = makePattern(val);
+        UNPROTECT(save);
+        return pattern;
+    }
 }
 
-static TpmcPattern *makeAssignmentPattern(AstNamedArg *named) {
-    TpmcPattern *value = convertPattern(named->arg);
+static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
+    TpmcPattern *value = convertPattern(named->arg, env);
     int save = PROTECT(value);
     TpmcAssignmentPattern *assignment = newTpmcAssignmentPattern(named->name, value);
     PROTECT(assignment);
@@ -97,8 +107,8 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named) {
     return pattern;
 }
 
-static TpmcPattern *makeConstructorPattern(AstUnpack *unpack) {
-    TpmcPatternArray *patterns = convertArgList(unpack->argList);
+static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
+    TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
     TpmcConstructorPattern *constructor = newTpmcConstructorPattern(unpack->symbol, patterns);
     PROTECT(constructor);
@@ -125,18 +135,18 @@ static TpmcPattern *makeCharacterPattern(char character) {
     return pattern;
 }
 
-static TpmcPattern *convertPattern(AstArg *arg) {
+static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
     switch (arg->type) {
         case AST_ARG_TYPE_WILDCARD:
             return makeWildcardPattern();
         case AST_ARG_TYPE_SYMBOL:
-            return makeVarPattern(arg->val.symbol);
+            return makeVarPattern(arg->val.symbol, env);
         case AST_ARG_TYPE_NAMED:
-            return makeAssignmentPattern(arg->val.named);
+            return makeAssignmentPattern(arg->val.named, env);
         case AST_ARG_TYPE_ENV:
             cant_happen("env arg type not supported yet in convertPattern");
         case AST_ARG_TYPE_UNPACK:
-            return makeConstructorPattern(arg->val.unpack);
+            return makeConstructorPattern(arg->val.unpack, env);
         case AST_ARG_TYPE_NUMBER:
             return makeIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
@@ -146,25 +156,25 @@ static TpmcPattern *convertPattern(AstArg *arg) {
     }
 }
 
-static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action) {
-    TpmcPatternArray *patterns = convertArgList(argList);
+static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action, LamContext *env) {
+    TpmcPatternArray *patterns = convertArgList(argList, env);
     int save = PROTECT(patterns);
     TpmcFinalState *finalState = newTpmcFinalState(action);
     PROTECT(finalState);
     TpmcStateValue *stateVal = newTpmcStateValue(TPMCSTATEVALUE_TYPE_FINAL, TPMCSTATEVALUE_VAL_FINAL(finalState));
     PROTECT(stateVal);
-    TpmcState *state = makeState(stateVal);
+    TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
     TpmcMatchRule *result = newTpmcMatchRule(state, patterns);
     UNPROTECT(save);
     return result;
 }
 
-static TpmcMatchRuleArray *convertComposite(int nbodies, AstArgList **argLists, LamExp **actions) {
+static TpmcMatchRuleArray *convertComposite(int nbodies, AstArgList **argLists, LamExp **actions, LamContext *env) {
     TpmcMatchRuleArray *result = newTpmcMatchRuleArray();
     int save = PROTECT(result);
     for (int i = 0; i < nbodies; i++) {
-        TpmcMatchRule *rule = convertSingle(argLists[i], actions[i]);
+        TpmcMatchRule *rule = convertSingle(argLists[i], actions[i], env);
         int save2 = PROTECT(rule);
         result = pushTpmcMatchRuleArray(result, rule);
         REPLACE_PROTECT(save, result);
@@ -177,7 +187,7 @@ static TpmcMatchRuleArray *convertComposite(int nbodies, AstArgList **argLists, 
 static TpmcState *makeErrorState() {
     TpmcStateValue *stateVal = newTpmcStateValue(TPMCSTATEVALUE_TYPE_ERROR, TPMCSTATEVALUE_VAL_ERROR());
     int save = PROTECT(stateVal);
-    TpmcState *state = makeState(stateVal);
+    TpmcState *state = tpmcMakeState(stateVal);
     UNPROTECT(save);
     return state;
 }
@@ -334,8 +344,8 @@ static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, HashTable *sub
 
 static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
     hashSet(substitutions, pattern->pattern->val.assignment->name, &(pattern->path));
-    pattern->pattern->val.assignment->value = collectPatternSubstitutions(pattern->pattern->val.assignment->value, substitutions);
-    return pattern;
+    // we no longer need to remember this is an assignment now we have the substitution
+    return collectPatternSubstitutions(pattern->pattern->val.assignment->value, substitutions);
 }
 
 static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
@@ -394,10 +404,45 @@ static void performRulesSubstitutions(TpmcMatchRules *input) {
     }
 }
 
+static void populateMatrixRow(TpmcMatchRule *rule, TpmcMatrix *matrix, int row) {
+    for (int col = 0; col < rule->patterns->size; col++) {
+        TpmcMatrixIndex(matrix, col, row) = rule->patterns->entries[col];
+    }
+}
+
+static TpmcStateArray *extractFinalStates(TpmcMatchRules *input) {
+    TpmcStateArray *res = newTpmcStateArray();
+    int save = PROTECT(res);
+    for (int i = 0; i < input->rules->size; i++) {
+        res = pushTpmcStateArray(res, input->rules->entries[i]->action);
+        REPLACE_PROTECT(save, res);
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
+    int height = input->rules->size;
+    if (height == 0) {
+        cant_happen("zero height matrix");
+    }
+    int width = input->rules->entries[0]->patterns->size;
+    if (width == 0) {
+        cant_happen("zero width matrix");
+    }
+    TpmcMatrix *matrix = newTpmcMatrix(width, height);
+    int save = PROTECT(matrix);
+    for (int row = 0; row < height; ++row) {
+        populateMatrixRow(input->rules->entries[row], matrix, row);
+    }
+    UNPROTECT(save);
+    return matrix;
+}
+
 LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** actions, LamContext * env) {
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);
-    TpmcMatchRuleArray *rules = convertComposite(nbodies, argLists, actions);
+    TpmcMatchRuleArray *rules = convertComposite(nbodies, argLists, actions, env);
     PROTECT(rules);
     TpmcMatchRules *input = newTpmcMatchRules(rules, rootVariables);
     UNPROTECT(save);
@@ -405,7 +450,12 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     replaceComparisonRules(input);
     renameRules(input);
     performRulesSubstitutions(input);
+    TpmcMatrix *initialMatrix = convertToMatrix(input);
+    PROTECT(initialMatrix);
+    TpmcStateArray *finalStates = extractFinalStates(input);
+    PROTECT(finalStates);
     printTpmcMatchRules(input, 0);
     TpmcState *errorState = makeErrorState();
     PROTECT(errorState);
+    TpmcState *dfa = tpmcMatch(initialMatrix, finalStates, errorState, env);
 }

@@ -81,9 +81,17 @@ arrays:
         dimension: 1
         entries: TpmcPattern
 
+    TpmcStateArray:
+        dimension: 1
+        entries: TpmcState
+
     TpmcArcArray:
         dimension: 1
         entries: TpmcArc
+
+    TpmcIntArray:
+        dimension: 1
+        entries: int
 
     TpmcMatrix:
         dimension: 2

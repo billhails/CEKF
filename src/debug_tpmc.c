@@ -18,7 +18,7 @@
  * Term Pattern Matching Compiler types
  *
  * generated from src/tpmc.yaml by makeAST.py
-*/
+ */
 
 #include <stdio.h>
 
@@ -276,6 +276,18 @@ void printTpmcPatternArray(struct TpmcPatternArray * x, int depth) {
     printf("]");
 }
 
+void printTpmcStateArray(struct TpmcStateArray * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TpmcStateArray (NULL)"); return; }
+    printf("TpmcStateArray(%d)[\n", x->size);
+    for (int i = 0; i < x->size; i++) {
+        printTpmcState(x->entries[i], depth + 1);
+        printf("\n");
+    }
+    pad(depth);
+    printf("]");
+}
+
 void printTpmcArcArray(struct TpmcArcArray * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TpmcArcArray (NULL)"); return; }
@@ -288,15 +300,28 @@ void printTpmcArcArray(struct TpmcArcArray * x, int depth) {
     printf("]");
 }
 
+void printTpmcIntArray(struct TpmcIntArray * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TpmcIntArray (NULL)"); return; }
+    printf("TpmcIntArray(%d)[\n", x->size);
+    for (int i = 0; i < x->size; i++) {
+                pad(depth + 1);
+printf("int %d", x->entries[i]);
+        printf("\n");
+    }
+    pad(depth);
+    printf("]");
+}
+
 void printTpmcMatrix(struct TpmcMatrix * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TpmcMatrix (NULL)"); return; }
-    printf("TpmcMatrix(%d * %d)[\n", x->x, x->y);
-    for (int i = 0; i < x->y; i++) {
+    printf("TpmcMatrix(%d * %d)[\n", x->width, x->height);
+    for (int i = 0; i < x->height; i++) {
         pad(depth);
         printf("[\n");
-        for (int j = 0; j < x->x; j++) {
-            printTpmcPattern(x->entries[i * x->x + j], depth + 1);
+        for (int j = 0; j < x->width; j++) {
+            printTpmcPattern(x->entries[i * x->width + j], depth + 1);
             printf("\n");
         }
         pad(depth);
