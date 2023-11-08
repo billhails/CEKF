@@ -94,6 +94,7 @@ typedef struct TpmcAssignmentPattern {
 typedef struct TpmcConstructorPattern {
     Header header;
     HashSymbol * tag;
+    LamTypeConstructorInfo * info;
     struct TpmcPatternArray * components;
 } TpmcConstructorPattern;
 
@@ -127,6 +128,11 @@ typedef struct TpmcArc {
     struct TpmcState * state;
     struct TpmcPattern * test;
 } TpmcArc;
+
+typedef struct TpmcStateArrayContainer {
+    Header header;
+    struct TpmcStateArray * array;
+} TpmcStateArrayContainer;
 
 typedef struct TpmcPatternValue {
     Header header;
@@ -196,12 +202,13 @@ struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPa
 struct TpmcVarPattern * newTpmcVarPattern(HashSymbol * name);
 struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current);
 struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struct TpmcPattern * value);
-struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, struct TpmcPatternArray * components);
+struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, LamTypeConstructorInfo * info, struct TpmcPatternArray * components);
 struct TpmcPattern * newTpmcPattern(struct TpmcPatternValue * pattern);
 struct TpmcTestState * newTpmcTestState(HashSymbol * path, struct TpmcArcArray * arcs);
 struct TpmcFinalState * newTpmcFinalState(LamExp * action);
 struct TpmcState * newTpmcState(int stamp, struct TpmcStateValue * state);
 struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test);
+struct TpmcStateArrayContainer * newTpmcStateArrayContainer(struct TpmcStateArray * array);
 struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, union TpmcPatternValueVal  val);
 struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union TpmcStateValueVal  val);
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray();
@@ -223,6 +230,7 @@ void markTpmcTestState(struct TpmcTestState * x);
 void markTpmcFinalState(struct TpmcFinalState * x);
 void markTpmcState(struct TpmcState * x);
 void markTpmcArc(struct TpmcArc * x);
+void markTpmcStateArrayContainer(struct TpmcStateArrayContainer * x);
 void markTpmcPatternValue(struct TpmcPatternValue * x);
 void markTpmcStateValue(struct TpmcStateValue * x);
 void markTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);
@@ -244,6 +252,7 @@ void freeTpmcTestState(struct TpmcTestState * x);
 void freeTpmcFinalState(struct TpmcFinalState * x);
 void freeTpmcState(struct TpmcState * x);
 void freeTpmcArc(struct TpmcArc * x);
+void freeTpmcStateArrayContainer(struct TpmcStateArrayContainer * x);
 void freeTpmcPatternValue(struct TpmcPatternValue * x);
 void freeTpmcStateValue(struct TpmcStateValue * x);
 void freeTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);

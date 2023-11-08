@@ -36,6 +36,7 @@ void printTpmcTestState(struct TpmcTestState * x, int depth);
 void printTpmcFinalState(struct TpmcFinalState * x, int depth);
 void printTpmcState(struct TpmcState * x, int depth);
 void printTpmcArc(struct TpmcArc * x, int depth);
+void printTpmcStateArrayContainer(struct TpmcStateArrayContainer * x, int depth);
 void printTpmcPatternValue(struct TpmcPatternValue * x, int depth);
 void printTpmcStateValue(struct TpmcStateValue * x, int depth);
 void printTpmcMatchRuleArray(struct TpmcMatchRuleArray * x, int depth);

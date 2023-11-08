@@ -161,13 +161,13 @@ void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
     printf("]");
 }
 
-void printLamList(struct LamList * x, int depth) {
+void printLamSequence(struct LamSequence * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamList (NULL)"); return; }
-    printf("LamList[\n");
+    if (x == NULL) { printf("LamSequence (NULL)"); return; }
+    printf("LamSequence[\n");
     printLamExp(x->exp, depth + 1);
     printf("\n");
-    printLamList(x->next, depth + 1);
+    printLamSequence(x->next, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -182,7 +182,7 @@ void printLamApply(struct LamApply * x, int depth) {
         pad(depth + 1);
 printf("int %d", x->nargs);
     printf("\n");
-    printLamList(x->args, depth + 1);
+    printLamSequence(x->args, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -195,7 +195,7 @@ void printLamMakeVec(struct LamMakeVec * x, int depth) {
         pad(depth + 1);
 printf("int %d", x->nargs);
     printf("\n");
-    printLamList(x->args, depth + 1);
+    printLamSequence(x->args, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -263,7 +263,7 @@ printf("int %d", x->nbindings);
     printf("\n");
     printLamLetRecBindings(x->bindings, depth + 1);
     printf("\n");
-    printLamList(x->body, depth + 1);
+    printLamSequence(x->body, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");
@@ -303,7 +303,10 @@ void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth) {
 printf("bool %d", x->vec);
     printf("\n");
         pad(depth + 1);
-printf("int %d", x->nargs);
+printf("int %d", x->arity);
+    printf("\n");
+        pad(depth + 1);
+printf("int %d", x->size);
     printf("\n");
         pad(depth + 1);
 printf("int %d", x->index);
@@ -346,7 +349,7 @@ printf("int %d", x->val.integer);
         case LAMEXP_TYPE_LIST:
             pad(depth + 1);
             printf("LAMEXP_TYPE_LIST\n");
-            printLamList(x->val.list, depth + 1);
+            printLamSequence(x->val.list, depth + 1);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             pad(depth + 1);
@@ -395,24 +398,6 @@ printf("char * %s", x->val.string);
             printf("LAMEXP_TYPE_BACK\n");
                         pad(depth + 1);
 printf("void * %p", x->val.back);
-            break;
-        case LAMEXP_TYPE_T:
-            pad(depth + 1);
-            printf("LAMEXP_TYPE_T\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.t);
-            break;
-        case LAMEXP_TYPE_F:
-            pad(depth + 1);
-            printf("LAMEXP_TYPE_F\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.f);
-            break;
-        case LAMEXP_TYPE_NIL:
-            pad(depth + 1);
-            printf("LAMEXP_TYPE_NIL\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.nil);
             break;
         default:
             cant_happen("unrecognised type %d in printLamExp", x->type);

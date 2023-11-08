@@ -90,6 +90,8 @@ void printTpmcConstructorPattern(struct TpmcConstructorPattern * x, int depth) {
     printf("TpmcConstructorPattern[\n");
         printAstSymbol(x->tag, depth + 1);
     printf("\n");
+        printLamTypeConstructorInfo(x->info, depth + 1);
+    printf("\n");
     printTpmcPatternArray(x->components, depth+1);
     printf("\n");
     pad(depth);
@@ -155,6 +157,16 @@ void printTpmcArc(struct TpmcArc * x, int depth) {
     printTpmcState(x->state, depth + 1);
     printf("\n");
     printTpmcPattern(x->test, depth + 1);
+    printf("\n");
+    pad(depth);
+    printf("]");
+}
+
+void printTpmcStateArrayContainer(struct TpmcStateArrayContainer * x, int depth) {
+    pad(depth);
+    if (x == NULL) { printf("TpmcStateArrayContainer (NULL)"); return; }
+    printf("TpmcStateArrayContainer[\n");
+    printTpmcStateArray(x->array, depth+1);
     printf("\n");
     pad(depth);
     printf("]");

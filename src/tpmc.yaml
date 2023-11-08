@@ -32,6 +32,7 @@ structs:
         action: TpmcState
         patterns: TpmcPatternArray
 
+    # FIXME this is unnecessary, the symbol can go straight into the union
     TpmcVarPattern:
         name: HashSymbol
 
@@ -45,6 +46,7 @@ structs:
 
     TpmcConstructorPattern:
         tag: HashSymbol
+        info: LamTypeConstructorInfo
         components: TpmcPatternArray
 
     TpmcPattern:
@@ -67,6 +69,9 @@ structs:
     TpmcArc:
         state: TpmcState
         test: TpmcPattern
+
+    TpmcStateArrayContainer:
+        array: TpmcStateArray
 
 arrays:
     TpmcMatchRuleArray:
@@ -126,11 +131,17 @@ primitives:
         printFn: "printAstSymbol"
         markFn: "markHashSymbol"
         valued: true
-    
+
     LamExp:
         cname: "LamExp *"
         printFn: "printLamExp"
         markFn: "markLamExp"
+        valued: true
+
+    LamTypeConstructorInfo:
+        cname: "LamTypeConstructorInfo *"
+        printFn: "printLamTypeConstructorInfo"
+        markFn: "markLamTypeConstructorInfo"
         valued: true
 
     int:

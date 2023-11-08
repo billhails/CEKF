@@ -40,18 +40,18 @@ structs:
         type: LamUnaryOp
         exp: LamExp
 
-    LamList:
+    LamSequence:
         exp: LamExp
-        next: LamList
+        next: LamSequence
 
     LamApply:
         function: LamExp
         nargs: int
-        args: LamList
+        args: LamSequence
 
     LamMakeVec:
         nargs: int
-        args: LamList
+        args: LamSequence
 
     LamCond:
         condition: LamExp
@@ -74,7 +74,7 @@ structs:
     LamLetRec:
         nbindings: int
         bindings: LamLetRecBindings
-        body: LamList
+        body: LamSequence
 
     LamLetRecBindings:
         var: HashSymbol
@@ -86,9 +86,10 @@ structs:
         parent: LamContext
 
     LamTypeConstructorInfo:
-        vec: bool
-        nargs: int
-        index: int
+        vec: bool # does this need to be a vector?
+        arity: int # number of arguments to this constructor
+        size: int # number of alternatives
+        index: int # index into list of alternatives
 
 enums:
     LamPrimOp:
@@ -122,7 +123,7 @@ unions:
         integer: int
         prim: LamPrimApp
         unary: LamUnaryApp
-        list: LamList
+        list: LamSequence
         makeVec: LamMakeVec
         apply: LamApply
         cond: LamCond
@@ -132,9 +133,6 @@ unions:
         character: character
         string: string
         back: void_ptr
-        t: void_ptr
-        f: void_ptr
-        nil: void_ptr
 
 primitives:
     HashSymbol:

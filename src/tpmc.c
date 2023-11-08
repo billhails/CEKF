@@ -56,9 +56,10 @@ struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struc
     return x;
 }
 
-struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, struct TpmcPatternArray * components) {
+struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, LamTypeConstructorInfo * info, struct TpmcPatternArray * components) {
     struct TpmcConstructorPattern * x = NEW(TpmcConstructorPattern, OBJTYPE_TPMCCONSTRUCTORPATTERN);
     x->tag = tag;
+    x->info = info;
     x->components = components;
     return x;
 }
@@ -96,6 +97,12 @@ struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test)
     struct TpmcArc * x = NEW(TpmcArc, OBJTYPE_TPMCARC);
     x->state = state;
     x->test = test;
+    return x;
+}
+
+struct TpmcStateArrayContainer * newTpmcStateArrayContainer(struct TpmcStateArray * array) {
+    struct TpmcStateArrayContainer * x = NEW(TpmcStateArrayContainer, OBJTYPE_TPMCSTATEARRAYCONTAINER);
+    x->array = array;
     return x;
 }
 
@@ -264,6 +271,7 @@ void markTpmcConstructorPattern(struct TpmcConstructorPattern * x) {
     if (MARKED(x)) return;
     MARK(x);
     markHashSymbol(x->tag);
+    markLamTypeConstructorInfo(x->info);
     markTpmcPatternArray(x->components);
 }
 
@@ -304,6 +312,13 @@ void markTpmcArc(struct TpmcArc * x) {
     MARK(x);
     markTpmcState(x->state);
     markTpmcPattern(x->test);
+}
+
+void markTpmcStateArrayContainer(struct TpmcStateArrayContainer * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markTpmcStateArray(x->array);
 }
 
 void markTpmcPatternValue(struct TpmcPatternValue * x) {
@@ -450,6 +465,9 @@ void markTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCARC:
             markTpmcArc((TpmcArc *)h);
             break;
+        case OBJTYPE_TPMCSTATEARRAYCONTAINER:
+            markTpmcStateArrayContainer((TpmcStateArrayContainer *)h);
+            break;
         case OBJTYPE_TPMCPATTERNVALUE:
             markTpmcPatternValue((TpmcPatternValue *)h);
             break;
@@ -528,6 +546,10 @@ void freeTpmcArc(struct TpmcArc * x) {
     FREE(x, TpmcArc);
 }
 
+void freeTpmcStateArrayContainer(struct TpmcStateArrayContainer * x) {
+    FREE(x, TpmcStateArrayContainer);
+}
+
 void freeTpmcPatternValue(struct TpmcPatternValue * x) {
     FREE(x, TpmcPatternValue);
 }
@@ -600,6 +622,9 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCARC:
             freeTpmcArc((TpmcArc *)h);
             break;
+        case OBJTYPE_TPMCSTATEARRAYCONTAINER:
+            freeTpmcStateArrayContainer((TpmcStateArrayContainer *)h);
+            break;
         case OBJTYPE_TPMCPATTERNVALUE:
             freeTpmcPatternValue((TpmcPatternValue *)h);
             break;
@@ -656,6 +681,8 @@ char *typenameTpmcObj(int type) {
             return "TpmcState";
         case OBJTYPE_TPMCARC:
             return "TpmcArc";
+        case OBJTYPE_TPMCSTATEARRAYCONTAINER:
+            return "TpmcStateArrayContainer";
         case OBJTYPE_TPMCPATTERNVALUE:
             return "TpmcPatternValue";
         case OBJTYPE_TPMCSTATEVALUE:

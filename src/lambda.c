@@ -52,14 +52,14 @@ struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp) 
     return x;
 }
 
-struct LamList * newLamList(struct LamExp * exp, struct LamList * next) {
-    struct LamList * x = NEW(LamList, OBJTYPE_LAMLIST);
+struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next) {
+    struct LamSequence * x = NEW(LamSequence, OBJTYPE_LAMSEQUENCE);
     x->exp = exp;
     x->next = next;
     return x;
 }
 
-struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args) {
+struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamSequence * args) {
     struct LamApply * x = NEW(LamApply, OBJTYPE_LAMAPPLY);
     x->function = function;
     x->nargs = nargs;
@@ -67,7 +67,7 @@ struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamLis
     return x;
 }
 
-struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
+struct LamMakeVec * newLamMakeVec(int nargs, struct LamSequence * args) {
     struct LamMakeVec * x = NEW(LamMakeVec, OBJTYPE_LAMMAKEVEC);
     x->nargs = nargs;
     x->args = args;
@@ -104,7 +104,7 @@ struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
     return x;
 }
 
-struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamList * body) {
+struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamSequence * body) {
     struct LamLetRec * x = NEW(LamLetRec, OBJTYPE_LAMLETREC);
     x->nbindings = nbindings;
     x->bindings = bindings;
@@ -127,10 +127,11 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
     return x;
 }
 
-struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int nargs, int index) {
+struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int arity, int size, int index) {
     struct LamTypeConstructorInfo * x = NEW(LamTypeConstructorInfo, OBJTYPE_LAMTYPECONSTRUCTORINFO);
     x->vec = vec;
-    x->nargs = nargs;
+    x->arity = arity;
+    x->size = size;
     x->index = index;
     return x;
 }
@@ -177,12 +178,12 @@ void markLamUnaryApp(struct LamUnaryApp * x) {
     markLamExp(x->exp);
 }
 
-void markLamList(struct LamList * x) {
+void markLamSequence(struct LamSequence * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     markLamExp(x->exp);
-    markLamList(x->next);
+    markLamSequence(x->next);
 }
 
 void markLamApply(struct LamApply * x) {
@@ -190,14 +191,14 @@ void markLamApply(struct LamApply * x) {
     if (MARKED(x)) return;
     MARK(x);
     markLamExp(x->function);
-    markLamList(x->args);
+    markLamSequence(x->args);
 }
 
 void markLamMakeVec(struct LamMakeVec * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markLamList(x->args);
+    markLamSequence(x->args);
 }
 
 void markLamCond(struct LamCond * x) {
@@ -238,7 +239,7 @@ void markLamLetRec(struct LamLetRec * x) {
     if (MARKED(x)) return;
     MARK(x);
     markLamLetRecBindings(x->bindings);
-    markLamList(x->body);
+    markLamSequence(x->body);
 }
 
 void markLamLetRecBindings(struct LamLetRecBindings * x) {
@@ -284,7 +285,7 @@ void markLamExp(struct LamExp * x) {
             markLamUnaryApp(x->val.unary);
             break;
         case LAMEXP_TYPE_LIST:
-            markLamList(x->val.list);
+            markLamSequence(x->val.list);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             markLamMakeVec(x->val.makeVec);
@@ -310,12 +311,6 @@ void markLamExp(struct LamExp * x) {
             break;
         case LAMEXP_TYPE_BACK:
             break;
-        case LAMEXP_TYPE_T:
-            break;
-        case LAMEXP_TYPE_F:
-            break;
-        case LAMEXP_TYPE_NIL:
-            break;
         default:
             cant_happen("unrecognised type %d in markLamExp", x->type);
     }
@@ -336,8 +331,8 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMUNARYAPP:
             markLamUnaryApp((LamUnaryApp *)h);
             break;
-        case OBJTYPE_LAMLIST:
-            markLamList((LamList *)h);
+        case OBJTYPE_LAMSEQUENCE:
+            markLamSequence((LamSequence *)h);
             break;
         case OBJTYPE_LAMAPPLY:
             markLamApply((LamApply *)h);
@@ -395,8 +390,8 @@ void freeLamUnaryApp(struct LamUnaryApp * x) {
     FREE(x, LamUnaryApp);
 }
 
-void freeLamList(struct LamList * x) {
-    FREE(x, LamList);
+void freeLamSequence(struct LamSequence * x) {
+    FREE(x, LamSequence);
 }
 
 void freeLamApply(struct LamApply * x) {
@@ -458,8 +453,8 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMUNARYAPP:
             freeLamUnaryApp((LamUnaryApp *)h);
             break;
-        case OBJTYPE_LAMLIST:
-            freeLamList((LamList *)h);
+        case OBJTYPE_LAMSEQUENCE:
+            freeLamSequence((LamSequence *)h);
             break;
         case OBJTYPE_LAMAPPLY:
             freeLamApply((LamApply *)h);
@@ -509,8 +504,8 @@ char *typenameLambdaObj(int type) {
             return "LamPrimApp";
         case OBJTYPE_LAMUNARYAPP:
             return "LamUnaryApp";
-        case OBJTYPE_LAMLIST:
-            return "LamList";
+        case OBJTYPE_LAMSEQUENCE:
+            return "LamSequence";
         case OBJTYPE_LAMAPPLY:
             return "LamApply";
         case OBJTYPE_LAMMAKEVEC:

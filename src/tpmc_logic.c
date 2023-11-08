@@ -85,7 +85,7 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
         printf("makeVarPattern %s is constructor\n", symbol->name);
         TpmcPatternArray *args = newTpmcPatternArray();
         int save = PROTECT(args);
-        TpmcConstructorPattern *constructor = newTpmcConstructorPattern(symbol, args);
+        TpmcConstructorPattern *constructor = newTpmcConstructorPattern(symbol, info, args);
         PROTECT(constructor);
         TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR, TPMCPATTERNVALUE_VAL_CONSTRUCTOR(constructor));
         PROTECT(val);
@@ -108,9 +108,13 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
 }
 
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupInLamContext(env, unpack->symbol);
+    if (info == NULL) {
+        cant_happen("makeConstructorPattern() passed invalid constructor: %s", unpack->symbol->name);
+    }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
-    TpmcConstructorPattern *constructor = newTpmcConstructorPattern(unpack->symbol, patterns);
+    TpmcConstructorPattern *constructor = newTpmcConstructorPattern(unpack->symbol, info,  patterns);
     PROTECT(constructor);
     TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR, TPMCPATTERNVALUE_VAL_CONSTRUCTOR(constructor));
     PROTECT(val);
@@ -454,8 +458,18 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     PROTECT(initialMatrix);
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
-    printTpmcMatchRules(input, 0);
+    TpmcStateArray *knownStates = newTpmcStateArray();
+    int save2 = PROTECT(knownStates);
+    TpmcStateArrayContainer *knownStatesContainer = newTpmcStateArrayContainer(knownStates);
+    REPLACE_PROTECT(save2, knownStatesContainer);
+    for (int i = 0; i < finalStates->size; ++i) {
+        knownStatesContainer->array = pushTpmcStateArray(knownStatesContainer->array, finalStates->entries[i]);
+    }
+    // printTpmcMatchRules(input, 0);
     TpmcState *errorState = makeErrorState();
     PROTECT(errorState);
-    TpmcState *dfa = tpmcMatch(initialMatrix, finalStates, errorState, env);
+    TpmcState *dfa = tpmcMatch(initialMatrix, finalStates, errorState, knownStatesContainer);
+    PROTECT(dfa);
+    printTpmcState(dfa, 0);
+    return NULL;
 }
