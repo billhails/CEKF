@@ -32,10 +32,6 @@ structs:
         action: TpmcState
         patterns: TpmcPatternArray
 
-    # FIXME this is unnecessary, the symbol can go straight into the union
-    TpmcVarPattern:
-        name: HashSymbol
-
     TpmcComparisonPattern:
         previous: TpmcPattern
         current: TpmcPattern
@@ -104,7 +100,7 @@ arrays:
 
 unions:
     TpmcPatternValue:
-        var: TpmcVarPattern
+        var: HashSymbol
         comparison: TpmcComparisonPattern
         assignment: TpmcAssignmentPattern
         wildcard: void_ptr

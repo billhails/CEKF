@@ -74,10 +74,8 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
         printf("makeVarPattern %s is var\n", symbol->name);
-        TpmcVarPattern *var = newTpmcVarPattern(symbol);
-        int save = PROTECT(var);
-        TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(var));
-        PROTECT(val);
+        TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(symbol));
+        int save = PROTECT(val);
         TpmcPattern *pattern = makePattern(val);
         UNPROTECT(save);
         return pattern;
@@ -259,9 +257,9 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *se
 
 static TpmcPattern *replaceVarPattern(TpmcPattern *pattern, HashTable *seen) {
     TpmcPattern *other = NULL;
-    if (hashGet(seen, pattern->pattern->val.var->name, &other)) {
+    if (hashGet(seen, pattern->pattern->val.var, &other)) {
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
-            can_happen("cannot compare assignment (var %s)", pattern->pattern->val.var->name->name);
+            can_happen("cannot compare assignment (var %s)", pattern->pattern->val.var->name);
         }
         TpmcComparisonPattern *comp = newTpmcComparisonPattern(other, pattern);
         int save = PROTECT(comp);
@@ -271,7 +269,7 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern, HashTable *seen) {
         UNPROTECT(save);
         return result;
     } else {
-        hashSet(seen, pattern->pattern->val.var->name, &pattern);
+        hashSet(seen, pattern->pattern->val.var, &pattern);
         return pattern;
     }
 }
@@ -340,7 +338,7 @@ static void replaceComparisonRules(TpmcMatchRules *input) {
 static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable *substitutions);
 
 static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
-    hashSet(substitutions, pattern->pattern->val.var->name, &(pattern->path));
+    hashSet(substitutions, pattern->pattern->val.var, &(pattern->path));
     TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD, TPMCPATTERNVALUE_VAL_WILDCARD());
     pattern->pattern = wc;
     return pattern;

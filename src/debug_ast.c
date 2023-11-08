@@ -473,12 +473,6 @@ void printAstExpression(struct AstExpression * x, int depth) {
     if (x == NULL) { printf("AstExpression (NULL)"); return; }
     printf("AstExpression[\n");
     switch(x->type) {
-        case AST_EXPRESSION_TYPE_NIL:
-            pad(depth + 1);
-            printf("AST_EXPRESSION_TYPE_NIL\n");
-                        pad(depth + 1);
-printf("void * %p", x->val.nil);
-            break;
         case AST_EXPRESSION_TYPE_BACK:
             pad(depth + 1);
             printf("AST_EXPRESSION_TYPE_BACK\n");

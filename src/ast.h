@@ -55,7 +55,6 @@ typedef enum AstArgType {
 } AstArgType;
 
 typedef enum AstExpressionType {
-    AST_EXPRESSION_TYPE_NIL,
     AST_EXPRESSION_TYPE_BACK,
     AST_EXPRESSION_TYPE_FUNCALL,
     AST_EXPRESSION_TYPE_SYMBOL,
@@ -98,7 +97,6 @@ typedef union AstArgVal {
 } AstArgVal;
 
 typedef union AstExpressionVal {
-    void * nil;
     void * back;
     struct AstFunCall * funCall;
     HashSymbol * symbol;
@@ -404,7 +402,6 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_ARG_VAL_UNPACK(x) ((union AstArgVal ){.unpack = (x)})
 #define AST_ARG_VAL_NUMBER(x) ((union AstArgVal ){.number = (x)})
 #define AST_ARG_VAL_CHARACTER(x) ((union AstArgVal ){.character = (x)})
-#define AST_EXPRESSION_VAL_NIL() ((union AstExpressionVal ){.nil = (NULL)})
 #define AST_EXPRESSION_VAL_BACK() ((union AstExpressionVal ){.back = (NULL)})
 #define AST_EXPRESSION_VAL_FUNCALL(x) ((union AstExpressionVal ){.funCall = (x)})
 #define AST_EXPRESSION_VAL_SYMBOL(x) ((union AstExpressionVal ){.symbol = (x)})

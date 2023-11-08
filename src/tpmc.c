@@ -36,12 +36,6 @@ struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPa
     return x;
 }
 
-struct TpmcVarPattern * newTpmcVarPattern(HashSymbol * name) {
-    struct TpmcVarPattern * x = NEW(TpmcVarPattern, OBJTYPE_TPMCVARPATTERN);
-    x->name = name;
-    return x;
-}
-
 struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current) {
     struct TpmcComparisonPattern * x = NEW(TpmcComparisonPattern, OBJTYPE_TPMCCOMPARISONPATTERN);
     x->previous = previous;
@@ -243,13 +237,6 @@ void markTpmcMatchRule(struct TpmcMatchRule * x) {
     markTpmcPatternArray(x->patterns);
 }
 
-void markTpmcVarPattern(struct TpmcVarPattern * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->name);
-}
-
 void markTpmcComparisonPattern(struct TpmcComparisonPattern * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -327,7 +314,7 @@ void markTpmcPatternValue(struct TpmcPatternValue * x) {
     MARK(x);
     switch(x->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
-            markTpmcVarPattern(x->val.var);
+            markHashSymbol(x->val.var);
             break;
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             markTpmcComparisonPattern(x->val.comparison);
@@ -438,9 +425,6 @@ void markTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCMATCHRULE:
             markTpmcMatchRule((TpmcMatchRule *)h);
             break;
-        case OBJTYPE_TPMCVARPATTERN:
-            markTpmcVarPattern((TpmcVarPattern *)h);
-            break;
         case OBJTYPE_TPMCCOMPARISONPATTERN:
             markTpmcComparisonPattern((TpmcComparisonPattern *)h);
             break;
@@ -508,10 +492,6 @@ void freeTpmcMatchRules(struct TpmcMatchRules * x) {
 
 void freeTpmcMatchRule(struct TpmcMatchRule * x) {
     FREE(x, TpmcMatchRule);
-}
-
-void freeTpmcVarPattern(struct TpmcVarPattern * x) {
-    FREE(x, TpmcVarPattern);
 }
 
 void freeTpmcComparisonPattern(struct TpmcComparisonPattern * x) {
@@ -595,9 +575,6 @@ void freeTpmcObj(struct Header *h) {
         case OBJTYPE_TPMCMATCHRULE:
             freeTpmcMatchRule((TpmcMatchRule *)h);
             break;
-        case OBJTYPE_TPMCVARPATTERN:
-            freeTpmcVarPattern((TpmcVarPattern *)h);
-            break;
         case OBJTYPE_TPMCCOMPARISONPATTERN:
             freeTpmcComparisonPattern((TpmcComparisonPattern *)h);
             break;
@@ -663,8 +640,6 @@ char *typenameTpmcObj(int type) {
             return "TpmcMatchRules";
         case OBJTYPE_TPMCMATCHRULE:
             return "TpmcMatchRule";
-        case OBJTYPE_TPMCVARPATTERN:
-            return "TpmcVarPattern";
         case OBJTYPE_TPMCCOMPARISONPATTERN:
             return "TpmcComparisonPattern";
         case OBJTYPE_TPMCASSIGNMENTPATTERN:

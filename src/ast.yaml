@@ -149,7 +149,6 @@ unions:
         character: char
 
     AstExpression:
-        nil: void_ptr
         back: void_ptr
         funCall: AstFunCall
         symbol: HashSymbol

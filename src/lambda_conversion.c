@@ -39,12 +39,14 @@
 static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env);
 static LamSequence *convertExpressions(AstExpressions *expressions, LamContext *env);
 static int countLetRecBindings(LamLetRecBindings *b);
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next, bool typeDefs);
+static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next);
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
 static LamLetRecBindings *prependTypeDef(AstTypeDef *typeDef, LamLetRecBindings *next, LamContext *env);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static LamLetRecBindings *prependTypeConstructor(AstTypeConstructor *typeConstructor, int size, int index, bool hasFields, LamLetRecBindings *next, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
+static void collectTypeDefs(AstDefinitions *definitions, LamContext *env);
+static void collectTypeConstructor(AstTypeConstructor *typeConstructor, int size, int index, bool hasFields, LamContext *env);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 static int invocationId = 0;
@@ -241,24 +243,13 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
     return exp;
 }
 
-static LamLetRecBindings *convertTypeDefs(AstDefinitions *definitions, LamContext *env) {
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env) {
     if (definitions == NULL) {
         return NULL;
     }
-    LamLetRecBindings *next = convertTypeDefs(definitions->next, env);
+    LamLetRecBindings *next = convertFuncDefs(definitions->next, env);
     int save = PROTECT(next);
-    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next, true);
-    UNPROTECT(save);
-    return this;
-}
-
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env, LamLetRecBindings *previous) {
-    if (definitions == NULL) {
-        return previous;
-    }
-    LamLetRecBindings *next = convertFuncDefs(definitions->next, env, previous);
-    int save = PROTECT(next);
-    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next, false);
+    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next);
     UNPROTECT(save);
     return this;
 }
@@ -269,35 +260,10 @@ static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, Lam
         LEAVE(convertLetrecBindings)
         return NULL;
     }
-    LamLetRecBindings *typeDefs = convertTypeDefs(definitions, env);
-    int save = PROTECT(typeDefs);
-    LamLetRecBindings *funcDefs = convertFuncDefs(definitions, env, typeDefs);
-    UNPROTECT(save);
+    collectTypeDefs(definitions, env);
+    LamLetRecBindings *funcDefs = convertFuncDefs(definitions, env);
     LEAVE(convertLetrecBindings)
     return funcDefs;
-}
-
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next, bool typeDefs) {
-    ENTER(prependDefinition)
-    LamLetRecBindings *result = NULL;
-    switch (definition->type) {
-        case AST_DEFINITION_TYPE_DEFINE:
-            if (typeDefs)
-                result = next;
-            else
-                result = prependDefine(definition->val.define, env, next);
-            break;
-        case AST_DEFINITION_TYPE_TYPEDEF:
-            if (typeDefs)
-                result = prependTypeDef(definition->val.typeDef, next, env);
-            else
-                result = next;
-            break;
-        default:
-            cant_happen("unrecognised definition type %d in prependDefinition", definition->type);
-    }
-    LEAVE(prependDefinition)
-    return result;
 }
 
 static int countTypeBodies(AstTypeBody *typeBody) {
@@ -309,25 +275,44 @@ static int countTypeBodies(AstTypeBody *typeBody) {
     return count;
 }
 
-// FIXME there should be no need to generate code for typedefs, the constructors in fn bodies should
-// be inlined to make-vecs, and the valueless constructors to contants.
-static LamLetRecBindings *prependTypeDef(AstTypeDef *typeDef, LamLetRecBindings *next, LamContext *env) {
-    ENTER(prependTypeDef)
-    AstTypeBody *typeBody = typeDef->typeBody;
-    bool hasFields = typeHasFields(typeBody);
-    int size = countTypeBodies(typeBody);
-    int index = 0;
-    int save = PROTECT(next);
-    while (typeBody != NULL) {
-        next = prependTypeConstructor(typeBody->typeConstructor, size, index, hasFields, next, env);
-        UNPROTECT(save);
-        save = PROTECT(next);
-        typeBody = typeBody->next;
-        index++;
+static void collectTypeDef(AstDefinition *definition, LamContext *env) {
+    if (definition->type == AST_DEFINITION_TYPE_TYPEDEF) {
+        AstTypeDef *typeDef = definition->val.typeDef;
+        AstTypeBody *typeBody = typeDef->typeBody;
+        bool hasFields = typeHasFields(typeBody);
+        int size = countTypeBodies(typeBody);
+        int index = 0;
+        while (typeBody != NULL) {
+            collectTypeConstructor(typeBody->typeConstructor, size, index, hasFields, env);
+            typeBody = typeBody->next;
+            index++;
+        }
     }
-    UNPROTECT(save);
-    LEAVE(prependTypeDef)
-    return next;
+}
+
+static void collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
+    if (definitions == NULL) {
+        return;
+    }
+    collectTypeDef(definitions->definition, env);
+    collectTypeDefs(definitions->next, env);
+}
+
+static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next) {
+    ENTER(prependDefinition)
+    LamLetRecBindings *result = NULL;
+    switch (definition->type) {
+        case AST_DEFINITION_TYPE_DEFINE:
+            result = prependDefine(definition->val.define, env, next);
+            break;
+        case AST_DEFINITION_TYPE_TYPEDEF:
+            result = next;
+            break;
+        default:
+            cant_happen("unrecognised definition type %d in prependDefinition", definition->type);
+    }
+    LEAVE(prependDefinition)
+    return result;
 }
 
 static bool typeHasFields(AstTypeBody *typeBody) {
@@ -424,6 +409,12 @@ static LamExp *analyzeTypeConstructor(AstTypeConstructor *typeConstructor, int s
     return exp;
 }
 
+static void collectTypeConstructor(AstTypeConstructor *typeConstructor, int size, int index, bool hasFields, LamContext *env) {
+    int nargs = countAstTypeList(typeConstructor->typeList);
+    // we collect info about the type constructor regardless
+    collectTypeInfo(typeConstructor->symbol, hasFields, size, index, nargs, env);
+}
+
 static LamLetRecBindings *prependTypeConstructor(AstTypeConstructor *typeConstructor, int size, int index, bool hasFields, LamLetRecBindings *next, LamContext *env) {
     ENTER(prependTypeConstructor)
     LamExp *exp = analyzeTypeConstructor(typeConstructor, size, index, hasFields, env);
@@ -459,12 +450,16 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
         HashSymbol *symbol = function->val.symbol;
         LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
         if (info != NULL) {
-            if (info->arity > 0) {
+            if (info->vec) {
                 if (actualNargs == info->arity) {
                     LamExp *inLine = makeMakeVec(info->arity, info->index, args);
                     UNPROTECT(save);
                     return inLine;
+                } else {
+                    cant_happen("wrong number of arguments to constructor %s", symbol->name);
                 }
+            } else {
+                cant_happen("arguments to empty constructor %s", symbol->name);
             }
         }
     }
@@ -564,15 +559,25 @@ static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) 
     return result;
 }
 
+static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    if (info == NULL) {
+        return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
+    }
+    if (info->vec) {
+        if (info->arity > 0) {
+            cant_happen("too few arguments to constructor %s", symbol->name);
+        }
+        return makeMakeVec(0, info->index, NULL);
+    } else {
+        return newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(info->index));
+    }
+}
+
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression)
     LamExp *result = NULL;
     switch (expression->type) {
-        case AST_EXPRESSION_TYPE_NIL: {
-            HashSymbol *nil = newSymbol("nil");
-            result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(nil));
-        }
-        break;
         case AST_EXPRESSION_TYPE_BACK:
             result = newLamExp(LAMEXP_TYPE_BACK, LAMEXP_VAL_BACK());
             break;

@@ -50,16 +50,6 @@ void printTpmcMatchRule(struct TpmcMatchRule * x, int depth) {
     printf("]");
 }
 
-void printTpmcVarPattern(struct TpmcVarPattern * x, int depth) {
-    pad(depth);
-    if (x == NULL) { printf("TpmcVarPattern (NULL)"); return; }
-    printf("TpmcVarPattern[\n");
-        printAstSymbol(x->name, depth + 1);
-    printf("\n");
-    pad(depth);
-    printf("]");
-}
-
 void printTpmcComparisonPattern(struct TpmcComparisonPattern * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TpmcComparisonPattern (NULL)"); return; }
@@ -180,7 +170,7 @@ void printTpmcPatternValue(struct TpmcPatternValue * x, int depth) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             pad(depth + 1);
             printf("TPMCPATTERNVALUE_TYPE_VAR\n");
-            printTpmcVarPattern(x->val.var, depth + 1);
+                        printAstSymbol(x->val.var, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             pad(depth + 1);

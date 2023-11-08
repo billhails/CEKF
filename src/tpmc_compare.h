@@ -30,7 +30,6 @@ bool tpmcArcArrayEq(TpmcArcArray *a, TpmcArcArray *b);
 bool tpmcArcEq(TpmcArc *a, TpmcArc *b);
 bool tpmcPatternEq(TpmcPattern *a, TpmcPattern *b);
 bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b);
-bool tpmcVarPatternEq(TpmcVarPattern *a, TpmcVarPattern *b);
 bool tpmcComparisonPatternEq(TpmcComparisonPattern *a, TpmcComparisonPattern *b);
 bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a, TpmcAssignmentPattern *b);
 bool tpmcConstructorPatternEq(TpmcConstructorPattern *a, TpmcConstructorPattern *b);

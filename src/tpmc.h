@@ -45,7 +45,7 @@ typedef enum TpmcStateValueType {
 
 
 typedef union TpmcPatternValueVal {
-    struct TpmcVarPattern * var;
+    HashSymbol * var;
     struct TpmcComparisonPattern * comparison;
     struct TpmcAssignmentPattern * assignment;
     void * wildcard;
@@ -73,11 +73,6 @@ typedef struct TpmcMatchRule {
     struct TpmcState * action;
     struct TpmcPatternArray * patterns;
 } TpmcMatchRule;
-
-typedef struct TpmcVarPattern {
-    Header header;
-    HashSymbol * name;
-} TpmcVarPattern;
 
 typedef struct TpmcComparisonPattern {
     Header header;
@@ -199,7 +194,6 @@ typedef struct TpmcMatrix {
 
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables);
 struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPatternArray * patterns);
-struct TpmcVarPattern * newTpmcVarPattern(HashSymbol * name);
 struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current);
 struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struct TpmcPattern * value);
 struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, LamTypeConstructorInfo * info, struct TpmcPatternArray * components);
@@ -221,7 +215,6 @@ struct TpmcMatrix * newTpmcMatrix(int width, int height);
 
 void markTpmcMatchRules(struct TpmcMatchRules * x);
 void markTpmcMatchRule(struct TpmcMatchRule * x);
-void markTpmcVarPattern(struct TpmcVarPattern * x);
 void markTpmcComparisonPattern(struct TpmcComparisonPattern * x);
 void markTpmcAssignmentPattern(struct TpmcAssignmentPattern * x);
 void markTpmcConstructorPattern(struct TpmcConstructorPattern * x);
@@ -243,7 +236,6 @@ void markTpmcMatrix(struct TpmcMatrix * x);
 
 void freeTpmcMatchRules(struct TpmcMatchRules * x);
 void freeTpmcMatchRule(struct TpmcMatchRule * x);
-void freeTpmcVarPattern(struct TpmcVarPattern * x);
 void freeTpmcComparisonPattern(struct TpmcComparisonPattern * x);
 void freeTpmcAssignmentPattern(struct TpmcAssignmentPattern * x);
 void freeTpmcConstructorPattern(struct TpmcConstructorPattern * x);

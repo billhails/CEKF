@@ -512,8 +512,6 @@ void markAstExpression(struct AstExpression * x) {
     if (MARKED(x)) return;
     MARK(x);
     switch(x->type) {
-        case AST_EXPRESSION_TYPE_NIL:
-            break;
         case AST_EXPRESSION_TYPE_BACK:
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:

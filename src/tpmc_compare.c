@@ -86,7 +86,7 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
     }
     switch (a->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
-            return tpmcVarPatternEq(a->val.var, b->val.var);
+            return a->val.var == b->val.var;
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             return tpmcComparisonPatternEq(a->val.comparison, b->val.comparison);
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
@@ -100,11 +100,6 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return tpmcConstructorPatternEq(a->val.constructor, b->val.constructor);
     }
-}
-
-bool tpmcVarPatternEq(TpmcVarPattern *a, TpmcVarPattern *b) {
-    PREAMBLE();
-    return a->name == b->name;
 }
 
 bool tpmcComparisonPatternEq(TpmcComparisonPattern *a, TpmcComparisonPattern *b) {

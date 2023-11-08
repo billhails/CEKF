@@ -27,7 +27,6 @@
 
 void printTpmcMatchRules(struct TpmcMatchRules * x, int depth);
 void printTpmcMatchRule(struct TpmcMatchRule * x, int depth);
-void printTpmcVarPattern(struct TpmcVarPattern * x, int depth);
 void printTpmcComparisonPattern(struct TpmcComparisonPattern * x, int depth);
 void printTpmcAssignmentPattern(struct TpmcAssignmentPattern * x, int depth);
 void printTpmcConstructorPattern(struct TpmcConstructorPattern * x, int depth);
