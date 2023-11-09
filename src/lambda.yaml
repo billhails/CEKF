@@ -103,7 +103,6 @@ enums:
         - LAM_PRIM_LT
         - LAM_PRIM_GE
         - LAM_PRIM_LE
-        - LAM_PRIM_CONS
         - LAM_PRIM_VEC
         - LAM_PRIM_XOR
         - LAM_PRIM_AND
@@ -111,8 +110,6 @@ enums:
         - LAM_PRIM_AMB
 
     LamUnaryOp:
-        - LAM_UNARY_CAR
-        - LAM_UNARY_CDR
         - LAM_UNARY_NOT
         - LAM_UNARY_PRINT
 
@@ -131,7 +128,6 @@ unions:
         letrec: LamLetRec
         match: LamMatch
         character: character
-        string: string
         back: void_ptr
 
 primitives:
@@ -160,8 +156,4 @@ primitives:
     character:
         cname: "char"
         printf: "%c"
-        valued: true
-    string:
-        cname: "char *"
-        printf: "%s"
         valued: true

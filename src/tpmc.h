@@ -25,6 +25,7 @@
 #include "hash.h"
 #include "memory.h"
 #include "lambda.h"
+#include "lambda_pp.h"
 
 typedef enum TpmcPatternValueType {
     TPMCPATTERNVALUE_TYPE_VAR,

@@ -98,10 +98,6 @@ void printLamPrimApp(struct LamPrimApp * x, int depth) {
             pad(depth + 1);
             printf("LAMPRIMOP_TYPE_LAM_PRIM_LE");
             break;
-        case LAMPRIMOP_TYPE_LAM_PRIM_CONS:
-            pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_CONS");
-            break;
         case LAMPRIMOP_TYPE_LAM_PRIM_VEC:
             pad(depth + 1);
             printf("LAMPRIMOP_TYPE_LAM_PRIM_VEC");
@@ -137,14 +133,6 @@ void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
     if (x == NULL) { printf("LamUnaryApp (NULL)"); return; }
     printf("LamUnaryApp[\n");
     switch (x->type) {
-        case LAMUNARYOP_TYPE_LAM_UNARY_CAR:
-            pad(depth + 1);
-            printf("LAMUNARYOP_TYPE_LAM_UNARY_CAR");
-            break;
-        case LAMUNARYOP_TYPE_LAM_UNARY_CDR:
-            pad(depth + 1);
-            printf("LAMUNARYOP_TYPE_LAM_UNARY_CDR");
-            break;
         case LAMUNARYOP_TYPE_LAM_UNARY_NOT:
             pad(depth + 1);
             printf("LAMUNARYOP_TYPE_LAM_UNARY_NOT");
@@ -386,12 +374,6 @@ printf("int %d", x->val.integer);
             printf("LAMEXP_TYPE_CHARACTER\n");
                         pad(depth + 1);
 printf("char %c", x->val.character);
-            break;
-        case LAMEXP_TYPE_STRING:
-            pad(depth + 1);
-            printf("LAMEXP_TYPE_STRING\n");
-                        pad(depth + 1);
-printf("char * %s", x->val.string);
             break;
         case LAMEXP_TYPE_BACK:
             pad(depth + 1);

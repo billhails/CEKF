@@ -145,7 +145,7 @@ static TpmcStateArray *extractStateArraySubset(TpmcStateArray *all, TpmcIntArray
 static int determineArity(TpmcPattern *pattern) {
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         LamTypeConstructorInfo *info = pattern->pattern->val.constructor->info;
-        printf("%s has arity %d\n", pattern->pattern->val.constructor->tag->name, info->arity);
+        // printf("%s has arity %d\n", pattern->pattern->val.constructor->tag->name, info->arity);
         return info->arity;
     } else {
         return 0;
@@ -208,7 +208,7 @@ static void copyMatrixExceptColAndOnlyRows(int col, TpmcIntArray *ys, TpmcMatrix
         if (x != col) {
             for (int iy = 0; iy < ys->size; ++iy) {
                 int y = ys->entries[iy];
-                printf("copyMatrixExceptCol(%d), to[%d][%d] <= from[%d][%d]\n", col, tx, iy, x, y);
+                // printf("copyMatrixExceptCol(%d), to[%d][%d] <= from[%d][%d]\n", col, tx, iy, x, y);
                 TpmcMatrixIndex(to, tx, iy) = TpmcMatrixIndex(from, x, y);
             }
             tx++;
@@ -219,7 +219,7 @@ static void copyMatrixExceptColAndOnlyRows(int col, TpmcIntArray *ys, TpmcMatrix
 static void copyMatrixWithOffset(int offset, TpmcMatrix *from, TpmcMatrix *to) {
     for (int x = 0; x < from->width; x++) {
         for (int y = 0; y < from->height; ++y) {
-            printf("copyMatrixWithOffset(%d), to[%d][%d] <= from[%d][%d]\n", offset, x+offset, y, x, y);
+            // printf("copyMatrixWithOffset(%d), to[%d][%d] <= from[%d][%d]\n", offset, x+offset, y, x, y);
             TpmcMatrixIndex(to, x + offset, y) = TpmcMatrixIndex(from, x, y);
         }
     }
@@ -383,7 +383,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
     // If the set of constructors is exhaustive, then no more arcs are computed
     if (constructorsAreExhaustive(state)) {
         UNPROTECT(save);
-        printf("leave mixture\n");
+        // printf("leave mixture\n");
         return deduplicateState(state, knownStates);
     }
     // Otherwise, a default arc (_,state) is the last arc.
@@ -412,7 +412,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
         PROTECT(wcArc);
         state->state->val.test->arcs = pushTpmcArcArray(state->state->val.test->arcs, wcArc);
         UNPROTECT(save);
-        printf("leave mixture\n");
+        // printf("leave mixture\n");
         return deduplicateState(state, knownStates);
     } else {
         // Otherwise, the error state is used after its reference count has been incremented
@@ -423,7 +423,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
         PROTECT(errorArc);
         state->state->val.test->arcs = pushTpmcArcArray(state->state->val.test->arcs, errorArc);
         UNPROTECT(save);
-        printf("leave mixture\n");
+        // printf("leave mixture\n");
         return deduplicateState(state, knownStates);
     }
 }
@@ -433,7 +433,7 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcState 
         cant_happen("zero-height matrix passed to match");
     }
     if (allRowZeroAreWildcards(matrix)) {
-        fprintf(stderr, "variable rule applies\n");
+        // printf("variable rule applies\n");
         finalStates->entries[0]->refcount++;
         return finalStates->entries[0];
     }

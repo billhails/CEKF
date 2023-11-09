@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "debug_tpmc.h"
+#include "lambda_pp.h"
 
 static void pad(int depth) { printf("%*s", depth * 4, ""); }
 
@@ -116,7 +117,7 @@ void printTpmcFinalState(struct TpmcFinalState * x, int depth) {
     pad(depth);
     if (x == NULL) { printf("TpmcFinalState (NULL)"); return; }
     printf("TpmcFinalState[\n");
-        printLamExp(x->action, depth + 1);
+        ppLamExpD(x->action, depth + 1);
     printf("\n");
     pad(depth);
     printf("]");

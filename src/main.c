@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
         printf("(errors detected)\n");
     } else {
         LamExp *exp = lamConvertNest(result, NULL);
-        printLamExp(exp, 0);
+        // printLamExp(exp, 0);
         printf("\n");
     }
 }

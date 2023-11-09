@@ -994,6 +994,10 @@ if 'includes' in document['config']:
     includes = document['config']['includes']
 else:
     includes = []
+if 'limited_includes' in document['config']:
+    limited_includes = document['config']['limited_includes']
+else:
+    limited_includes = []
 
 catalog = Catalog(typeName)
 
@@ -1027,6 +1031,8 @@ if args.type == "h":
     print('#include "hash.h"')
     print('#include "memory.h"')
     for include in includes:
+        print(f'#include "{include}"')
+    for include in limited_includes:
         print(f'#include "{include}"')
     print("")
     catalog.printTypedefs()
@@ -1088,6 +1094,8 @@ elif args.type == 'debug_h':
     print(f'#include "{typeName}_helper.h"')
     for include in includes:
         print(f'#include "debug_{include}"')
+    for include in limited_includes:
+        print(f'#include "{include}"')
     print("")
     catalog.printPrintDeclarations()
     print("")
@@ -1098,6 +1106,8 @@ elif args.type == 'debug_c':
     print('#include <stdio.h>')
     print("")
     print(f'#include "debug_{typeName}.h"')
+    for include in limited_includes:
+        print(f'#include "{include}"')
     print("")
     print('static void pad(int depth) { printf("%*s", depth * 4, ""); }')
     print("")

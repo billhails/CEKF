@@ -20,6 +20,8 @@ config:
     name: tpmc
     includes:
     - lambda.h
+    limited_includes:
+    - lambda_pp.h
 
 description: Term Pattern Matching Compiler types
 
@@ -130,7 +132,7 @@ primitives:
 
     LamExp:
         cname: "LamExp *"
-        printFn: "printLamExp"
+        printFn: "ppLamExpD"
         markFn: "markLamExp"
         valued: true
 

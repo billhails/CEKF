@@ -36,7 +36,6 @@ typedef enum LamPrimOp {
     LAMPRIMOP_TYPE_LAM_PRIM_LT,
     LAMPRIMOP_TYPE_LAM_PRIM_GE,
     LAMPRIMOP_TYPE_LAM_PRIM_LE,
-    LAMPRIMOP_TYPE_LAM_PRIM_CONS,
     LAMPRIMOP_TYPE_LAM_PRIM_VEC,
     LAMPRIMOP_TYPE_LAM_PRIM_XOR,
     LAMPRIMOP_TYPE_LAM_PRIM_AND,
@@ -45,8 +44,6 @@ typedef enum LamPrimOp {
 } LamPrimOp;
 
 typedef enum LamUnaryOp {
-    LAMUNARYOP_TYPE_LAM_UNARY_CAR,
-    LAMUNARYOP_TYPE_LAM_UNARY_CDR,
     LAMUNARYOP_TYPE_LAM_UNARY_NOT,
     LAMUNARYOP_TYPE_LAM_UNARY_PRINT,
 } LamUnaryOp;
@@ -65,7 +62,6 @@ typedef enum LamExpType {
     LAMEXP_TYPE_LETREC,
     LAMEXP_TYPE_MATCH,
     LAMEXP_TYPE_CHARACTER,
-    LAMEXP_TYPE_STRING,
     LAMEXP_TYPE_BACK,
 } LamExpType;
 
@@ -85,7 +81,6 @@ typedef union LamExpVal {
     struct LamLetRec * letrec;
     struct LamMatch * match;
     char character;
-    char * string;
     void * back;
 } LamExpVal;
 
@@ -263,7 +258,6 @@ void freeLamExp(struct LamExp * x);
 #define LAMEXP_VAL_LETREC(x) ((union LamExpVal ){.letrec = (x)})
 #define LAMEXP_VAL_MATCH(x) ((union LamExpVal ){.match = (x)})
 #define LAMEXP_VAL_CHARACTER(x) ((union LamExpVal ){.character = (x)})
-#define LAMEXP_VAL_STRING(x) ((union LamExpVal ){.string = (x)})
 #define LAMEXP_VAL_BACK() ((union LamExpVal ){.back = (NULL)})
 
 

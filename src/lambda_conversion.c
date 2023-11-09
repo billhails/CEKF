@@ -201,7 +201,6 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
     switch (exp->type) {
         case LAMEXP_TYPE_INTEGER:
         case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_STRING:
         case LAMEXP_TYPE_BACK:
             break;
         case LAMEXP_TYPE_LAM:
@@ -539,7 +538,6 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun, LamC
         PROTECT(actions[i]);
         argLists[i] = func->argList;
     }
-    printAstCompositeFunction(fun, 0);
     LamLam *result = tpmcConvert(nargs, nBodies, argLists, actions, env);
     FREE_ARRAY(LamExp*, actions, nBodies);
     FREE_ARRAY(AstArgList*, argLists, nBodies);
@@ -562,8 +560,10 @@ static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) 
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
+        printf("convertSymbol %s is not a constructor\n", symbol->name);
         return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     }
+    printf("convertSymbol %s is a constructor\n", symbol->name);
     if (info->vec) {
         if (info->arity > 0) {
             cant_happen("too few arguments to constructor %s", symbol->name);
@@ -585,7 +585,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = convertFunCall(expression->val.funCall, env);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
-            result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(expression->val.symbol));
+            result = convertSymbol(expression->val.symbol, env);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             result = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(expression->val.number));

@@ -73,14 +73,14 @@ static TpmcPattern *makeWildcardPattern() {
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
-        printf("makeVarPattern %s is var\n", symbol->name);
+        // printf("makeVarPattern %s is var\n", symbol->name);
         TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(symbol));
         int save = PROTECT(val);
         TpmcPattern *pattern = makePattern(val);
         UNPROTECT(save);
         return pattern;
     } else {
-        printf("makeVarPattern %s is constructor\n", symbol->name);
+        // printf("makeVarPattern %s is constructor\n", symbol->name);
         TpmcPatternArray *args = newTpmcPatternArray();
         int save = PROTECT(args);
         TpmcConstructorPattern *constructor = newTpmcConstructorPattern(symbol, info, args);

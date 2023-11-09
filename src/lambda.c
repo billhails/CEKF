@@ -307,8 +307,6 @@ void markLamExp(struct LamExp * x) {
             break;
         case LAMEXP_TYPE_CHARACTER:
             break;
-        case LAMEXP_TYPE_STRING:
-            break;
         case LAMEXP_TYPE_BACK:
             break;
         default:
