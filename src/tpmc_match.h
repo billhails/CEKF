@@ -23,6 +23,6 @@
 #include "tpmc.h"
 
 TpmcState *tpmcMakeState(TpmcStateValue *val);
-TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *states, TpmcState *errorState, TpmcStateArrayContainer *knownStates);
+TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *states, TpmcState *errorState, TpmcStateArray *knownStates);
 
 #endif

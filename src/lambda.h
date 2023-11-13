@@ -24,6 +24,10 @@
 
 #include "hash.h"
 #include "memory.h"
+#include "common.h"
+#ifdef DEBUG_LOG_GC
+#include <stdio.h>
+#endif
 
 typedef enum LamPrimOp {
     LAMPRIMOP_TYPE_LAM_PRIM_ADD,
@@ -57,12 +61,16 @@ typedef enum LamExpType {
     LAMEXP_TYPE_LIST,
     LAMEXP_TYPE_MAKEVEC,
     LAMEXP_TYPE_APPLY,
-    LAMEXP_TYPE_COND,
+    LAMEXP_TYPE_IFF,
     LAMEXP_TYPE_CALLCC,
     LAMEXP_TYPE_LETREC,
+    LAMEXP_TYPE_LET,
     LAMEXP_TYPE_MATCH,
+    LAMEXP_TYPE_COND,
     LAMEXP_TYPE_CHARACTER,
     LAMEXP_TYPE_BACK,
+    LAMEXP_TYPE_ERROR,
+    LAMEXP_TYPE_COND_DEFAULT,
 } LamExpType;
 
 
@@ -76,12 +84,16 @@ typedef union LamExpVal {
     struct LamSequence * list;
     struct LamMakeVec * makeVec;
     struct LamApply * apply;
-    struct LamCond * cond;
+    struct LamIff * iff;
     struct LamExp * callcc;
     struct LamLetRec * letrec;
+    struct LamLet * let;
     struct LamMatch * match;
+    struct LamCond * cond;
     char character;
     void * back;
+    void * error;
+    void * cond_default;
 } LamExpVal;
 
 
@@ -131,12 +143,25 @@ typedef struct LamMakeVec {
     struct LamSequence * args;
 } LamMakeVec;
 
-typedef struct LamCond {
+typedef struct LamIff {
     Header header;
     struct LamExp * condition;
     struct LamExp * consequent;
     struct LamExp * alternative;
+} LamIff;
+
+typedef struct LamCond {
+    Header header;
+    struct LamExp * value;
+    struct LamCondCases * cases;
 } LamCond;
+
+typedef struct LamCondCases {
+    Header header;
+    struct LamExp * constant;
+    struct LamExp * body;
+    struct LamCondCases * next;
+} LamCondCases;
 
 typedef struct LamMatch {
     Header header;
@@ -157,11 +182,18 @@ typedef struct LamIntList {
     struct LamIntList * next;
 } LamIntList;
 
+typedef struct LamLet {
+    Header header;
+    HashSymbol * var;
+    struct LamExp * value;
+    struct LamExp * body;
+} LamLet;
+
 typedef struct LamLetRec {
     Header header;
     int nbindings;
     struct LamLetRecBindings * bindings;
-    struct LamSequence * body;
+    struct LamExp * body;
 } LamLetRec;
 
 typedef struct LamLetRecBindings {
@@ -200,11 +232,14 @@ struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp);
 struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next);
 struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamSequence * args);
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamSequence * args);
-struct LamCond * newLamCond(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
+struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
+struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases);
+struct LamCondCases * newLamCondCases(struct LamExp * constant, struct LamExp * body, struct LamCondCases * next);
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases);
 struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next);
 struct LamIntList * newLamIntList(int item, struct LamIntList * next);
-struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamSequence * body);
+struct LamLet * newLamLet(HashSymbol * var, struct LamExp * value, struct LamExp * body);
+struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamExp * body);
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next);
 struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent);
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int arity, int size, int index);
@@ -217,10 +252,13 @@ void markLamUnaryApp(struct LamUnaryApp * x);
 void markLamSequence(struct LamSequence * x);
 void markLamApply(struct LamApply * x);
 void markLamMakeVec(struct LamMakeVec * x);
+void markLamIff(struct LamIff * x);
 void markLamCond(struct LamCond * x);
+void markLamCondCases(struct LamCondCases * x);
 void markLamMatch(struct LamMatch * x);
 void markLamMatchList(struct LamMatchList * x);
 void markLamIntList(struct LamIntList * x);
+void markLamLet(struct LamLet * x);
 void markLamLetRec(struct LamLetRec * x);
 void markLamLetRecBindings(struct LamLetRecBindings * x);
 void markLamContext(struct LamContext * x);
@@ -234,10 +272,13 @@ void freeLamUnaryApp(struct LamUnaryApp * x);
 void freeLamSequence(struct LamSequence * x);
 void freeLamApply(struct LamApply * x);
 void freeLamMakeVec(struct LamMakeVec * x);
+void freeLamIff(struct LamIff * x);
 void freeLamCond(struct LamCond * x);
+void freeLamCondCases(struct LamCondCases * x);
 void freeLamMatch(struct LamMatch * x);
 void freeLamMatchList(struct LamMatchList * x);
 void freeLamIntList(struct LamIntList * x);
+void freeLamLet(struct LamLet * x);
 void freeLamLetRec(struct LamLetRec * x);
 void freeLamLetRecBindings(struct LamLetRecBindings * x);
 void freeLamContext(struct LamContext * x);
@@ -253,12 +294,16 @@ void freeLamExp(struct LamExp * x);
 #define LAMEXP_VAL_LIST(x) ((union LamExpVal ){.list = (x)})
 #define LAMEXP_VAL_MAKEVEC(x) ((union LamExpVal ){.makeVec = (x)})
 #define LAMEXP_VAL_APPLY(x) ((union LamExpVal ){.apply = (x)})
-#define LAMEXP_VAL_COND(x) ((union LamExpVal ){.cond = (x)})
+#define LAMEXP_VAL_IFF(x) ((union LamExpVal ){.iff = (x)})
 #define LAMEXP_VAL_CALLCC(x) ((union LamExpVal ){.callcc = (x)})
 #define LAMEXP_VAL_LETREC(x) ((union LamExpVal ){.letrec = (x)})
+#define LAMEXP_VAL_LET(x) ((union LamExpVal ){.let = (x)})
 #define LAMEXP_VAL_MATCH(x) ((union LamExpVal ){.match = (x)})
+#define LAMEXP_VAL_COND(x) ((union LamExpVal ){.cond = (x)})
 #define LAMEXP_VAL_CHARACTER(x) ((union LamExpVal ){.character = (x)})
 #define LAMEXP_VAL_BACK() ((union LamExpVal ){.back = (NULL)})
+#define LAMEXP_VAL_ERROR() ((union LamExpVal ){.error = (NULL)})
+#define LAMEXP_VAL_COND_DEFAULT() ((union LamExpVal ){.cond_default = (NULL)})
 
 
 #endif

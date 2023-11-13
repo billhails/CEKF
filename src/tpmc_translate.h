@@ -1,5 +1,5 @@
-#ifndef cekf_tpmc_logic_h
-#define cekf_tpmc_logic_h
+#ifndef cekf_tpmc_translate_h
+#define cekf_tpmc_translate_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ast.h"
+#include "tpmc.h"
 #include "lambda.h"
 
-LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList, LamExp **actions, LamContext *env);
+LamExp *tpmcTranslate(TpmcState *dfa);
 #endif
+
 

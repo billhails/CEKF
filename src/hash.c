@@ -156,7 +156,7 @@ void hashSet(HashTable *table, HashSymbol *var, void *src) {
 
     table->keys[index] = var;
 
-    if (table->valuesize > 0) {
+    if (table->valuesize > 0 && src != NULL) {
         void *target = valuePtr(table, index);
         memcpy(target, src, table->valuesize);
     }
@@ -265,44 +265,44 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
 }
 
 void printHashSymbol(HashSymbol *symbol) {
-    printf("%s", symbol->name);
+    fprintf(stderr, "%s", symbol->name);
 }
 
 void printHashTable(HashTable *table, int depth) {
     int count = 0;
-    printf("%*s", depth * 4, "");
+    fprintf(stderr, "%*s", depth * 4, "");
     if (table == NULL) {
-        printf("HashTable: (NULL)");
+        fprintf(stderr, "HashTable: (NULL)");
         return;
     }
-    printf("{[id:%d]", table->id);
+    fprintf(stderr, "{[id:%d]", table->id);
     bool first = true;
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
             if (first) {
                 first = false;
-                printf("\n");
+                fprintf(stderr, "\n");
             }
-            printf("%*s", (depth + 1) * 4, "");
+            fprintf(stderr, "%*s", (depth + 1) * 4, "");
             printHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
-                printf(" =>");
+                fprintf(stderr, " =>");
                 if (table->shortEntries)
-                    printf(" ");
+                    fprintf(stderr, " ");
                 else
-                    printf("\n");
+                    fprintf(stderr, "\n");
                 table->printfunction(valuePtr(table, i), table->shortEntries ? 0 : (depth + 2));
-                printf("\n");
+                fprintf(stderr, "\n");
             } else {
-                printf("\n");
+                fprintf(stderr, "\n");
             }
             count++;
         }
     }
     if (first)
-        printf("}");
+        fprintf(stderr, "}");
     else
-        printf("%*s}", depth * 4, "");
+        fprintf(stderr, "%*s}", depth * 4, "");
 }
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {

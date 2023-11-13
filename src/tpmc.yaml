@@ -67,9 +67,34 @@ structs:
     TpmcArc:
         state: TpmcState
         test: TpmcPattern
+        freeVariables: HashTable
 
-    TpmcStateArrayContainer:
-        array: TpmcStateArray
+    TpmcArcList:
+        arc: TpmcArc
+        next: TpmcArcList
+
+    TpmcIntList:
+        integer: int
+        next: TpmcIntList
+
+unions:
+    TpmcPatternValue:
+        var: HashSymbol
+        comparison: TpmcComparisonPattern
+        assignment: TpmcAssignmentPattern
+        wildcard: void_ptr
+        character: char
+        integer: int
+        constructor: TpmcConstructorPattern
+
+    TpmcStateValue:
+        test: TpmcTestState
+        final: TpmcFinalState
+        error: void_ptr
+
+tags:
+    - TpmcStateArray
+    - TpmcPatternArray
 
 arrays:
     TpmcMatchRuleArray:
@@ -99,21 +124,6 @@ arrays:
     TpmcMatrix:
         dimension: 2
         entries: TpmcPattern
-
-unions:
-    TpmcPatternValue:
-        var: HashSymbol
-        comparison: TpmcComparisonPattern
-        assignment: TpmcAssignmentPattern
-        wildcard: void_ptr
-        character: char
-        integer: int
-        constructor: TpmcConstructorPattern
-
-    TpmcStateValue:
-        test: TpmcTestState
-        final: TpmcFinalState
-        error: void_ptr
 
 enums: {}
 
@@ -145,6 +155,11 @@ primitives:
     int:
         cname: "int"
         printf: "%d"
+        valued: true
+
+    string:
+        cname: "char *"
+        printf: "%s"
         valued: true
 
     char:

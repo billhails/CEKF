@@ -34,6 +34,7 @@ bool tpmcComparisonPatternEq(TpmcComparisonPattern *a, TpmcComparisonPattern *b)
 bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a, TpmcAssignmentPattern *b);
 bool tpmcConstructorPatternEq(TpmcConstructorPattern *a, TpmcConstructorPattern *b);
 bool tpmcPatternArrayEq(TpmcPatternArray *a, TpmcPatternArray *b);
+bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray);
 
 #endif
 

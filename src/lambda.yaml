@@ -53,10 +53,19 @@ structs:
         nargs: int
         args: LamSequence
 
-    LamCond:
+    LamIff:
         condition: LamExp
         consequent: LamExp
         alternative: LamExp
+
+    LamCond:
+        value: LamExp
+        cases: LamCondCases
+
+    LamCondCases:
+        constant: LamExp
+        body: LamExp
+        next: LamCondCases
 
     LamMatch:
         index: LamExp
@@ -71,10 +80,15 @@ structs:
         item: int
         next: LamIntList
 
+    LamLet:
+        var: HashSymbol
+        value: LamExp
+        body: LamExp
+
     LamLetRec:
         nbindings: int
         bindings: LamLetRecBindings
-        body: LamSequence
+        body: LamExp
 
     LamLetRecBindings:
         var: HashSymbol
@@ -123,12 +137,16 @@ unions:
         list: LamSequence
         makeVec: LamMakeVec
         apply: LamApply
-        cond: LamCond
+        iff: LamIff
         callcc: LamExp
         letrec: LamLetRec
+        let: LamLet
         match: LamMatch
+        cond: LamCond
         character: character
         back: void_ptr
+        error: void_ptr
+        cond_default: void_ptr
 
 primitives:
     HashSymbol:

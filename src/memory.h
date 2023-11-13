@@ -111,7 +111,6 @@ void initProtection(void);
 
 #define NEW_MATRIX(type, count, entry, tag) ((type *)allocate(sizeof(type) + ((count) * sizeof(entry)), tag))
 #define FREE_MATRIX(type, ptr, count, entry) ((void)reallocate((ptr), sizeof(type) + (count) * sizeof(entry), 0))
-#define GROW_MATRIX(type, ptr, oldcount, newcount, entry) ((type *)reallocate(ptr, sizeof(type) + (oldcount) * sizeof(entry), sizeof(type) + (newcount) * sizeof(entry)))
 
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))

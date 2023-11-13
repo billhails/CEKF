@@ -52,9 +52,9 @@ static void collectTypeConstructor(AstTypeConstructor *typeConstructor, int size
 static int invocationId = 0;
 #define ENTER(name) \
 int myId = invocationId++; \
-printf("enter " #name " %d\n", myId);
+fprintf(stderr, "enter " #name " %d\n", myId);
 #define LEAVE(name) \
-printf("leave " #name " %d\n", myId);
+fprintf(stderr, "leave " #name " %d\n", myId);
 #else
 #define ENTER(n)
 #define LEAVE(n)
@@ -90,9 +90,12 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     (void) PROTECT(bindings);
     LamSequence *body = convertExpressions(nest->expressions, ext);
     (void) PROTECT(body);
+    LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
+    (void) PROTECT(letRecBody);
+
     LamExp *result = NULL;
     if (bindings) {
-        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, body);
+        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, letRecBody);
         (void) PROTECT(letRec);
         result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
     } else {
@@ -159,11 +162,11 @@ static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitut
     return apply;
 }
 
-static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions) {
-    cond->condition = lamPerformSubstitutions(cond->condition, substitutions);
-    cond->consequent = lamPerformSubstitutions(cond->consequent, substitutions);
-    cond->alternative = lamPerformSubstitutions(cond->alternative, substitutions);
-    return cond;
+static LamIff *performIffSubstitutions(LamIff *iff, HashTable *substitutions) {
+    iff->condition = lamPerformSubstitutions(iff->condition, substitutions);
+    iff->consequent = lamPerformSubstitutions(iff->consequent, substitutions);
+    iff->alternative = lamPerformSubstitutions(iff->alternative, substitutions);
+    return iff;
 }
 
 static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, HashTable *substitutions) {
@@ -178,7 +181,7 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
 
 static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *substitutions) {
     letrec->bindings = performBindingsSubstitutions(letrec->bindings, substitutions);
-    letrec->body = performListSubstitutions(letrec->body, substitutions);
+    letrec->body = lamPerformSubstitutions(letrec->body, substitutions);
     return letrec;
 }
 
@@ -195,6 +198,22 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitut
     match->index = lamPerformSubstitutions(match->index, substitutions);
     match->cases = performCaseSubstitutions(match->cases, substitutions);
     return match;
+}
+
+static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable *substitutions) {
+    if (cases == NULL) {
+        return NULL;
+    }
+    cases->constant = lamPerformSubstitutions(cases->constant, substitutions); // shouldn't be necessary but ...
+    cases->body = lamPerformSubstitutions(cases->body, substitutions);
+    cases->next = performCondCaseSubstitutions(cases->next, substitutions);
+    return cases;
+}
+
+static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions) {
+    cond->value = lamPerformSubstitutions(cond->value, substitutions);
+    cond->cases = performCondCaseSubstitutions(cond->cases, substitutions);
+    return cond;
 }
 
 LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
@@ -223,6 +242,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_APPLY:
             exp->val.apply = performApplySubstitutions(exp->val.apply, substitutions);
+            break;
+        case LAMEXP_TYPE_IFF:
+            exp->val.iff = performIffSubstitutions(exp->val.iff, substitutions);
             break;
         case LAMEXP_TYPE_COND:
             exp->val.cond = performCondSubstitutions(exp->val.cond, substitutions);
@@ -560,10 +582,14 @@ static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) 
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
+#ifdef DEBUG_LAMBDA_CONVERT
         printf("convertSymbol %s is not a constructor\n", symbol->name);
+#endif
         return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     }
+#ifdef DEBUG_LAMBDA_CONVERT
     printf("convertSymbol %s is a constructor\n", symbol->name);
+#endif
     if (info->vec) {
         if (info->arity > 0) {
             cant_happen("too few arguments to constructor %s", symbol->name);

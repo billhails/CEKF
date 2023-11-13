@@ -24,368 +24,430 @@
 
 #include "debug_lambda.h"
 
-static void pad(int depth) { printf("%*s", depth * 4, ""); }
+static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
 
 void printLamLam(struct LamLam * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamLam (NULL)"); return; }
-    printf("LamLam[\n");
+    if (x == NULL) { fprintf(stderr, "LamLam (NULL)"); return; }
+    fprintf(stderr, "LamLam[\n");
         pad(depth + 1);
-printf("int %d", x->nargs);
-    printf("\n");
+fprintf(stderr, "int %d", x->nargs);
+    fprintf(stderr, "\n");
     printLamVarList(x->args, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->exp, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamVarList(struct LamVarList * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamVarList (NULL)"); return; }
-    printf("LamVarList[\n");
+    if (x == NULL) { fprintf(stderr, "LamVarList (NULL)"); return; }
+    fprintf(stderr, "LamVarList[\n");
         printLambdaSymbol(x->var, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamVarList(x->next, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamPrimApp(struct LamPrimApp * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamPrimApp (NULL)"); return; }
-    printf("LamPrimApp[\n");
+    if (x == NULL) { fprintf(stderr, "LamPrimApp (NULL)"); return; }
+    fprintf(stderr, "LamPrimApp[\n");
     switch (x->type) {
         case LAMPRIMOP_TYPE_LAM_PRIM_ADD:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_ADD");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_ADD");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_SUB:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_SUB");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_SUB");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_MUL:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_MUL");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_MUL");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_DIV:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_DIV");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_DIV");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_EQ:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_EQ");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_EQ");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_NE:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_NE");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_NE");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_GT:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_GT");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_GT");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_LT:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_LT");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_LT");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_GE:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_GE");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_GE");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_LE:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_LE");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_LE");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_VEC:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_VEC");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_VEC");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_XOR:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_XOR");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_XOR");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_AND:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_AND");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_AND");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_OR:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_OR");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_OR");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_AMB:
             pad(depth + 1);
-            printf("LAMPRIMOP_TYPE_LAM_PRIM_AMB");
+            fprintf(stderr, "LAMPRIMOP_TYPE_LAM_PRIM_AMB");
             break;
     }
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->exp1, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->exp2, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamUnaryApp (NULL)"); return; }
-    printf("LamUnaryApp[\n");
+    if (x == NULL) { fprintf(stderr, "LamUnaryApp (NULL)"); return; }
+    fprintf(stderr, "LamUnaryApp[\n");
     switch (x->type) {
         case LAMUNARYOP_TYPE_LAM_UNARY_NOT:
             pad(depth + 1);
-            printf("LAMUNARYOP_TYPE_LAM_UNARY_NOT");
+            fprintf(stderr, "LAMUNARYOP_TYPE_LAM_UNARY_NOT");
             break;
         case LAMUNARYOP_TYPE_LAM_UNARY_PRINT:
             pad(depth + 1);
-            printf("LAMUNARYOP_TYPE_LAM_UNARY_PRINT");
+            fprintf(stderr, "LAMUNARYOP_TYPE_LAM_UNARY_PRINT");
             break;
     }
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->exp, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamSequence(struct LamSequence * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamSequence (NULL)"); return; }
-    printf("LamSequence[\n");
+    if (x == NULL) { fprintf(stderr, "LamSequence (NULL)"); return; }
+    fprintf(stderr, "LamSequence[\n");
     printLamExp(x->exp, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamSequence(x->next, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamApply(struct LamApply * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamApply (NULL)"); return; }
-    printf("LamApply[\n");
+    if (x == NULL) { fprintf(stderr, "LamApply (NULL)"); return; }
+    fprintf(stderr, "LamApply[\n");
     printLamExp(x->function, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
         pad(depth + 1);
-printf("int %d", x->nargs);
-    printf("\n");
+fprintf(stderr, "int %d", x->nargs);
+    fprintf(stderr, "\n");
     printLamSequence(x->args, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamMakeVec(struct LamMakeVec * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamMakeVec (NULL)"); return; }
-    printf("LamMakeVec[\n");
+    if (x == NULL) { fprintf(stderr, "LamMakeVec (NULL)"); return; }
+    fprintf(stderr, "LamMakeVec[\n");
         pad(depth + 1);
-printf("int %d", x->nargs);
-    printf("\n");
+fprintf(stderr, "int %d", x->nargs);
+    fprintf(stderr, "\n");
     printLamSequence(x->args, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
+}
+
+void printLamIff(struct LamIff * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamIff (NULL)"); return; }
+    fprintf(stderr, "LamIff[\n");
+    printLamExp(x->condition, depth + 1);
+    fprintf(stderr, "\n");
+    printLamExp(x->consequent, depth + 1);
+    fprintf(stderr, "\n");
+    printLamExp(x->alternative, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
 }
 
 void printLamCond(struct LamCond * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamCond (NULL)"); return; }
-    printf("LamCond[\n");
-    printLamExp(x->condition, depth + 1);
-    printf("\n");
-    printLamExp(x->consequent, depth + 1);
-    printf("\n");
-    printLamExp(x->alternative, depth + 1);
-    printf("\n");
+    if (x == NULL) { fprintf(stderr, "LamCond (NULL)"); return; }
+    fprintf(stderr, "LamCond[\n");
+    printLamExp(x->value, depth + 1);
+    fprintf(stderr, "\n");
+    printLamCondCases(x->cases, depth + 1);
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
+}
+
+void printLamCondCases(struct LamCondCases * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamCondCases (NULL)"); return; }
+    fprintf(stderr, "LamCondCases[\n");
+    printLamExp(x->constant, depth + 1);
+    fprintf(stderr, "\n");
+    printLamExp(x->body, depth + 1);
+    fprintf(stderr, "\n");
+    printLamCondCases(x->next, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
 }
 
 void printLamMatch(struct LamMatch * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamMatch (NULL)"); return; }
-    printf("LamMatch[\n");
+    if (x == NULL) { fprintf(stderr, "LamMatch (NULL)"); return; }
+    fprintf(stderr, "LamMatch[\n");
     printLamExp(x->index, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamMatchList(x->cases, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamMatchList(struct LamMatchList * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamMatchList (NULL)"); return; }
-    printf("LamMatchList[\n");
+    if (x == NULL) { fprintf(stderr, "LamMatchList (NULL)"); return; }
+    fprintf(stderr, "LamMatchList[\n");
     printLamIntList(x->matches, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->body, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamMatchList(x->next, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamIntList(struct LamIntList * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamIntList (NULL)"); return; }
-    printf("LamIntList[\n");
+    if (x == NULL) { fprintf(stderr, "LamIntList (NULL)"); return; }
+    fprintf(stderr, "LamIntList[\n");
         pad(depth + 1);
-printf("int %d", x->item);
-    printf("\n");
+fprintf(stderr, "int %d", x->item);
+    fprintf(stderr, "\n");
     printLamIntList(x->next, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
+}
+
+void printLamLet(struct LamLet * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamLet (NULL)"); return; }
+    fprintf(stderr, "LamLet[\n");
+        printLambdaSymbol(x->var, depth + 1);
+    fprintf(stderr, "\n");
+    printLamExp(x->value, depth + 1);
+    fprintf(stderr, "\n");
+    printLamExp(x->body, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
 }
 
 void printLamLetRec(struct LamLetRec * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamLetRec (NULL)"); return; }
-    printf("LamLetRec[\n");
+    if (x == NULL) { fprintf(stderr, "LamLetRec (NULL)"); return; }
+    fprintf(stderr, "LamLetRec[\n");
         pad(depth + 1);
-printf("int %d", x->nbindings);
-    printf("\n");
+fprintf(stderr, "int %d", x->nbindings);
+    fprintf(stderr, "\n");
     printLamLetRecBindings(x->bindings, depth + 1);
-    printf("\n");
-    printLamSequence(x->body, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
+    printLamExp(x->body, depth + 1);
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamLetRecBindings(struct LamLetRecBindings * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamLetRecBindings (NULL)"); return; }
-    printf("LamLetRecBindings[\n");
+    if (x == NULL) { fprintf(stderr, "LamLetRecBindings (NULL)"); return; }
+    fprintf(stderr, "LamLetRecBindings[\n");
         printLambdaSymbol(x->var, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamExp(x->val, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamLetRecBindings(x->next, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamContext(struct LamContext * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamContext (NULL)"); return; }
-    printf("LamContext[\n");
+    if (x == NULL) { fprintf(stderr, "LamContext (NULL)"); return; }
+    fprintf(stderr, "LamContext[\n");
         printHashTable(x->frame, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printLamContext(x->parent, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamTypeConstructorInfo (NULL)"); return; }
-    printf("LamTypeConstructorInfo[\n");
+    if (x == NULL) { fprintf(stderr, "LamTypeConstructorInfo (NULL)"); return; }
+    fprintf(stderr, "LamTypeConstructorInfo[\n");
         pad(depth + 1);
-printf("bool %d", x->vec);
-    printf("\n");
+fprintf(stderr, "bool %d", x->vec);
+    fprintf(stderr, "\n");
         pad(depth + 1);
-printf("int %d", x->arity);
-    printf("\n");
+fprintf(stderr, "int %d", x->arity);
+    fprintf(stderr, "\n");
         pad(depth + 1);
-printf("int %d", x->size);
-    printf("\n");
+fprintf(stderr, "int %d", x->size);
+    fprintf(stderr, "\n");
         pad(depth + 1);
-printf("int %d", x->index);
-    printf("\n");
+fprintf(stderr, "int %d", x->index);
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printLamExp(struct LamExp * x, int depth) {
     pad(depth);
-    if (x == NULL) { printf("LamExp (NULL)"); return; }
-    printf("LamExp[\n");
+    if (x == NULL) { fprintf(stderr, "LamExp (NULL)"); return; }
+    fprintf(stderr, "LamExp[\n");
     switch(x->type) {
         case LAMEXP_TYPE_LAM:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_LAM\n");
+            fprintf(stderr, "LAMEXP_TYPE_LAM\n");
             printLamLam(x->val.lam, depth + 1);
             break;
         case LAMEXP_TYPE_VAR:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_VAR\n");
+            fprintf(stderr, "LAMEXP_TYPE_VAR\n");
                         printLambdaSymbol(x->val.var, depth + 1);
             break;
         case LAMEXP_TYPE_INTEGER:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_INTEGER\n");
+            fprintf(stderr, "LAMEXP_TYPE_INTEGER\n");
                         pad(depth + 1);
-printf("int %d", x->val.integer);
+fprintf(stderr, "int %d", x->val.integer);
             break;
         case LAMEXP_TYPE_PRIM:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_PRIM\n");
+            fprintf(stderr, "LAMEXP_TYPE_PRIM\n");
             printLamPrimApp(x->val.prim, depth + 1);
             break;
         case LAMEXP_TYPE_UNARY:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_UNARY\n");
+            fprintf(stderr, "LAMEXP_TYPE_UNARY\n");
             printLamUnaryApp(x->val.unary, depth + 1);
             break;
         case LAMEXP_TYPE_LIST:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_LIST\n");
+            fprintf(stderr, "LAMEXP_TYPE_LIST\n");
             printLamSequence(x->val.list, depth + 1);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_MAKEVEC\n");
+            fprintf(stderr, "LAMEXP_TYPE_MAKEVEC\n");
             printLamMakeVec(x->val.makeVec, depth + 1);
             break;
         case LAMEXP_TYPE_APPLY:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_APPLY\n");
+            fprintf(stderr, "LAMEXP_TYPE_APPLY\n");
             printLamApply(x->val.apply, depth + 1);
             break;
-        case LAMEXP_TYPE_COND:
+        case LAMEXP_TYPE_IFF:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_COND\n");
-            printLamCond(x->val.cond, depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_IFF\n");
+            printLamIff(x->val.iff, depth + 1);
             break;
         case LAMEXP_TYPE_CALLCC:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_CALLCC\n");
+            fprintf(stderr, "LAMEXP_TYPE_CALLCC\n");
             printLamExp(x->val.callcc, depth + 1);
             break;
         case LAMEXP_TYPE_LETREC:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_LETREC\n");
+            fprintf(stderr, "LAMEXP_TYPE_LETREC\n");
             printLamLetRec(x->val.letrec, depth + 1);
+            break;
+        case LAMEXP_TYPE_LET:
+            pad(depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_LET\n");
+            printLamLet(x->val.let, depth + 1);
             break;
         case LAMEXP_TYPE_MATCH:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_MATCH\n");
+            fprintf(stderr, "LAMEXP_TYPE_MATCH\n");
             printLamMatch(x->val.match, depth + 1);
+            break;
+        case LAMEXP_TYPE_COND:
+            pad(depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_COND\n");
+            printLamCond(x->val.cond, depth + 1);
             break;
         case LAMEXP_TYPE_CHARACTER:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_CHARACTER\n");
+            fprintf(stderr, "LAMEXP_TYPE_CHARACTER\n");
                         pad(depth + 1);
-printf("char %c", x->val.character);
+fprintf(stderr, "char %c", x->val.character);
             break;
         case LAMEXP_TYPE_BACK:
             pad(depth + 1);
-            printf("LAMEXP_TYPE_BACK\n");
+            fprintf(stderr, "LAMEXP_TYPE_BACK\n");
                         pad(depth + 1);
-printf("void * %p", x->val.back);
+fprintf(stderr, "void * %p", x->val.back);
+            break;
+        case LAMEXP_TYPE_ERROR:
+            pad(depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_ERROR\n");
+                        pad(depth + 1);
+fprintf(stderr, "void * %p", x->val.error);
+            break;
+        case LAMEXP_TYPE_COND_DEFAULT:
+            pad(depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_COND_DEFAULT\n");
+                        pad(depth + 1);
+fprintf(stderr, "void * %p", x->val.cond_default);
             break;
         default:
             cant_happen("unrecognised type %d in printLamExp", x->type);
     }
-    printf("\n");
+    fprintf(stderr, "\n");
     pad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 

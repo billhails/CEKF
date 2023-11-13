@@ -74,6 +74,15 @@ bool tpmcArcEq(TpmcArc *a, TpmcArc *b) {
     return (tpmcStateEq(a->state, b->state) && tpmcPatternEq(a->test, b->test));
 }
 
+bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray) {
+    for (int i = 0; i < arcArray->size; i++) {
+        if (tpmcArcEq(arcArray->entries[i], arc)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool tpmcPatternEq(TpmcPattern *a, TpmcPattern *b) {
     PREAMBLE();
     return (a->path == b->path && tpmcPatternValueEq(a->pattern, b->pattern));

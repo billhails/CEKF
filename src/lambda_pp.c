@@ -25,35 +25,43 @@
 void ppLamExpD(LamExp *exp, int depth) {
     while (depth > 0) {
         depth--;
-        printf("    ");
+        fprintf(stderr, "    ");
     }
     ppLamExp(exp);
 }
 
 void ppLamLam(LamLam *lam) {
-    printf("(lambda ");
+    if (lam == NULL) {
+        fprintf(stderr, "<NULL lambda>");
+        return;
+    }
+    fprintf(stderr, "(lambda ");
     ppLamVarList(lam->args);
-    printf(" ");
+    fprintf(stderr, " ");
     ppLamExp(lam->exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 static void _ppLamVarList(LamVarList *varList) {
     if (varList == NULL) return;
     ppHashSymbol(varList->var);
     if (varList->next != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamVarList(varList->next);
     }
 }
 
 void ppLamVarList(LamVarList *varList) {
-    printf("(");
+    fprintf(stderr, "(");
     _ppLamVarList(varList);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamExp(LamExp *exp) {
+    if (exp == NULL) {
+        fprintf(stderr, "<NULL exp>");
+        return;
+    }
     switch (exp->type) {
         case LAMEXP_TYPE_LAM:
             ppLamLam(exp->val.lam);
@@ -62,7 +70,7 @@ void ppLamExp(LamExp *exp) {
             ppHashSymbol(exp->val.var);
             break;
         case LAMEXP_TYPE_INTEGER:
-            printf("%d", exp->val.integer);
+            fprintf(stderr, "%d", exp->val.integer);
             break;
         case LAMEXP_TYPE_PRIM:
             ppLamPrimApp(exp->val.prim);
@@ -79,8 +87,8 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_APPLY:
             ppLamApply(exp->val.apply);
             break;
-        case LAMEXP_TYPE_COND:
-            ppLamCond(exp->val.cond);
+        case LAMEXP_TYPE_IFF:
+            ppLamIff(exp->val.iff);
             break;
         case LAMEXP_TYPE_CALLCC:
             ppLamCallCC(exp->val.callcc); // LamExp
@@ -88,14 +96,26 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_LETREC:
             ppLamLetRec(exp->val.letrec);
             break;
+        case LAMEXP_TYPE_LET:
+            ppLamLet(exp->val.let);
+            break;
         case LAMEXP_TYPE_MATCH:
             ppLamMatch(exp->val.match);
             break;
         case LAMEXP_TYPE_CHARACTER:
-            printf("'%c'", exp->val.character);
+            fprintf(stderr, "'%c'", exp->val.character);
             break;
         case LAMEXP_TYPE_BACK:
-            printf("(back)");
+            fprintf(stderr, "(back)");
+            break;
+        case LAMEXP_TYPE_ERROR:
+            fprintf(stderr, "(error)");
+            break;
+        case LAMEXP_TYPE_COND:
+            ppLamCond(exp->val.cond);
+            break;
+        case LAMEXP_TYPE_COND_DEFAULT:
+            fprintf(stderr, "default");
             break;
         default:
             cant_happen("unrecognized type %d in ppLamExp", exp->type);
@@ -103,65 +123,73 @@ void ppLamExp(LamExp *exp) {
 }
 
 void ppHashSymbol(HashSymbol *symbol) {
-    printf("<%s>", symbol->name);
+    if (symbol == NULL) {
+        fprintf(stderr, "<NULL symbol>");
+        return;
+    }
+    fprintf(stderr, "<%s>", symbol->name);
 }
 
 void ppLamPrimApp(LamPrimApp *primApp) {
-    printf("(");
+    if (primApp == NULL) {
+        fprintf(stderr, "<NULL primApp>");
+        return;
+    }
+    fprintf(stderr, "(");
     ppLamPrimOp(primApp->type);
-    printf(" ");
+    fprintf(stderr, " ");
     ppLamExp(primApp->exp1);
-    printf(" ");
+    fprintf(stderr, " ");
     ppLamExp(primApp->exp2);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamPrimOp(LamPrimOp type) {
     switch (type) {
         case LAMPRIMOP_TYPE_LAM_PRIM_ADD:
-            printf("+");
+            fprintf(stderr, "+");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_SUB:
-            printf("-");
+            fprintf(stderr, "-");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_MUL:
-            printf("*");
+            fprintf(stderr, "*");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_DIV:
-            printf("/");
+            fprintf(stderr, "/");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_EQ:
-            printf("eq");
+            fprintf(stderr, "eq");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_NE:
-            printf("ne");
+            fprintf(stderr, "ne");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_GT:
-            printf("gt");
+            fprintf(stderr, "gt");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_LT:
-            printf("lt");
+            fprintf(stderr, "lt");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_GE:
-            printf("ge");
+            fprintf(stderr, "ge");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_LE:
-            printf("le");
+            fprintf(stderr, "le");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_VEC:
-            printf("vec");
+            fprintf(stderr, "vec");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_XOR:
-            printf("xor");
+            fprintf(stderr, "xor");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_AND:
-            printf("and");
+            fprintf(stderr, "and");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_OR:
-            printf("or");
+            fprintf(stderr, "or");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_AMB:
-            printf("amb");
+            fprintf(stderr, "amb");
             break;
         default:
             cant_happen("unrecognised type %d in ppLamPrimOp", type);
@@ -169,20 +197,24 @@ void ppLamPrimOp(LamPrimOp type) {
 }
 
 void ppLamUnary(LamUnaryApp *unaryApp) {
-    printf("(");
+    if (unaryApp == NULL) {
+        fprintf(stderr, "<NULL unaryApp>");
+        return;
+    }
+    fprintf(stderr, "(");
     ppLamUnaryOp(unaryApp->type);
-    printf(" ");
+    fprintf(stderr, " ");
     ppLamExp(unaryApp->exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamUnaryOp(LamUnaryOp type) {
     switch (type) {
         case LAMUNARYOP_TYPE_LAM_UNARY_NOT:
-            printf("not");
+            fprintf(stderr, "not");
             break;
         case LAMUNARYOP_TYPE_LAM_UNARY_PRINT:
-            printf("print");
+            fprintf(stderr, "print");
             break;
         default:
             cant_happen("unrecognised type %d in ppLamUnaryOp", type);
@@ -193,117 +225,182 @@ static void _ppLamSequence(LamSequence *sequence) {
     if (sequence == NULL) return;
     ppLamExp(sequence->exp);
     if (sequence->next != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamSequence(sequence->next);
     }
 }
 
 void ppLamSequence(LamSequence *sequence) {
-    printf("(");
+    fprintf(stderr, "(begin ");
     _ppLamSequence(sequence);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamMakeVec(LamMakeVec *makeVec) {
-    printf("(make-vec");
+    if (makeVec == NULL) {
+        fprintf(stderr, "<NULL makeVec>");
+        return;
+    }
+    fprintf(stderr, "(make-vec");
     if (makeVec->args != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamSequence(makeVec->args);
     }
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamApply(LamApply *apply) {
-    printf("(");
+    if (apply == NULL) {
+        fprintf(stderr, "<NULL apply>");
+        return;
+    }
+    fprintf(stderr, "(");
     ppLamExp(apply->function);
     if (apply->args != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamSequence(apply->args);
     }
-    printf(")");
+    fprintf(stderr, ")");
+}
+
+void ppLamIff(LamIff *iff) {
+    if (iff == NULL) {
+        fprintf(stderr, "<NULL if>");
+        return;
+    }
+    fprintf(stderr, "(if ");
+    ppLamExp(iff->condition);
+    fprintf(stderr, " ");
+    ppLamExp(iff->consequent);
+    fprintf(stderr, " ");
+    ppLamExp(iff->alternative);
+    fprintf(stderr, ")");
+}
+
+static void _ppLamCondCases(LamCondCases *cases) {
+    fprintf(stderr, "(");
+    ppLamExp(cases->constant);
+    fprintf(stderr, " ");
+    ppLamExp(cases->body);
+    fprintf(stderr, ")");
+    if (cases->next != NULL) {
+        fprintf(stderr, " ");
+        _ppLamCondCases(cases->next);
+    }
 }
 
 void ppLamCond(LamCond *cond) {
-    printf("(if ");
-    ppLamExp(cond->condition);
-    printf(" ");
-    ppLamExp(cond->consequent);
-    printf(" ");
-    ppLamExp(cond->alternative);
-    printf(")");
+    if (cond == NULL) {
+        fprintf(stderr, "<NULL cond>");
+        return;
+    }
+    fprintf(stderr, "(cond ");
+    ppLamExp(cond->value);
+    if (cond->cases != NULL) {
+        fprintf(stderr, " ");
+        _ppLamCondCases(cond->cases);
+    }
+    fprintf(stderr, ")");
 }
 
 void ppLamCallCC(LamExp *exp) {
-    printf("(call/cc ");
+    if (exp == NULL) {
+        fprintf(stderr, "<NULL call/cc>");
+        return;
+    }
+    fprintf(stderr, "(call/cc ");
     ppLamExp(exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void ppLamLetRec(LamLetRec *letRec) {
-    printf("(letrec ");
+    if (letRec == NULL) {
+        fprintf(stderr, "<NULL letRec>");
+        return;
+    }
+    fprintf(stderr, "(letrec ");
     ppLamLetRecBindings(letRec->bindings);
     if (letRec->body != NULL) {
-        printf(" ");
-        _ppLamSequence(letRec->body);
+        fprintf(stderr, " ");
+        ppLamExp(letRec->body);
     }
-    printf(")");
+    fprintf(stderr, ")");
+}
+
+void ppLamLet(LamLet *let) {
+    if (let == NULL) {
+        fprintf(stderr, "<NULL let>");
+        return;
+    }
+    fprintf(stderr, "(let (");
+    ppHashSymbol(let->var);
+    fprintf(stderr, " ");
+    ppLamExp(let->value);
+    fprintf(stderr, ") ");
+    ppLamExp(let->body);
+    fprintf(stderr, ")");
+
 }
 
 static void _ppLamMatchList(LamMatchList *cases) {
     if (cases == NULL) return;
-    printf("(");
+    fprintf(stderr, "(");
     ppLamIntList(cases->matches);
     if (cases->body) {
-        printf(" ");
+        fprintf(stderr, " ");
         ppLamExp(cases->body);
     }
-    printf(")");
+    fprintf(stderr, ")");
     if (cases->next) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamMatchList(cases->next);
     }
 }
 
 void ppLamMatch(LamMatch *match) {
-    printf("(match ");
+    if (match == NULL) {
+        fprintf(stderr, "<NULL match>");
+        return;
+    }
+    fprintf(stderr, "(match ");
     ppLamExp(match->index);
     if (match->cases != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamMatchList(match->cases);
     }
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
     if (bindings == NULL) return;
-    printf("(");
+    fprintf(stderr, "(");
     ppHashSymbol(bindings->var);
-    printf(" ");
+    fprintf(stderr, " ");
     ppLamExp(bindings->val);
-    printf(")");
+    fprintf(stderr, ")");
     if (bindings->next) {
-        printf(" ");
+        fprintf(stderr, " ");
        _ppLamLetRecBindings(bindings->next);
     }
 }
 
 void ppLamLetRecBindings(LamLetRecBindings *bindings) {
-    printf("(");
+    fprintf(stderr, "(");
     _ppLamLetRecBindings(bindings);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL) return;
-    printf("%d", list->item);
+    fprintf(stderr, "%d", list->item);
     if (list->next != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         _ppLamIntList(list->next);
     }
 }
 
 void ppLamIntList(LamIntList *list) {
-    printf("(");
+    fprintf(stderr, "(");
     _ppLamIntList(list);
-    printf(")");
+    fprintf(stderr, ")");
 }

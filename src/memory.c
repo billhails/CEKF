@@ -55,7 +55,7 @@ static ProtectionStack *protected = NULL;
 static Header *allocated = NULL;
 
 #ifdef DEBUG_LOG_GC
-const char *typeName(ObjType type) {
+const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_AMB:
             return "amb";
@@ -130,7 +130,7 @@ const char *typeName(ObjType type) {
         TPMC_OBJTYPE_CASES()
             return typenameTpmcObj(type);
         default:
-            cant_happen("unrecognised ObjType %d in typeName", type);
+            cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
 }
 #endif
@@ -174,8 +174,9 @@ int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(
         stderr,
-        "PROTECT(%s) -> %d (%d)\n",
-        (obj == NULL ? "NULL" : typeName(obj->type)),
+        "PROTECT(%p:%s) -> %d (%d)\n",
+        obj,
+        (obj == NULL ? "NULL" : typeName(obj->type, obj)),
         protected->sp,
         protected->capacity
     );
@@ -199,7 +200,7 @@ int protect(Header *obj) {
     }
 
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type), protected->sp, protected->capacity);
+    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj), protected->sp, protected->capacity);
 #endif
     return protected->sp - 1;
 }
@@ -213,7 +214,7 @@ void unProtect(int index) {
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "reallocate %d + %lu - %lu [%d]\n", bytesAllocated, newSize, oldSize, numAlloc);
+    fprintf(stderr, "reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n", bytesAllocated, newSize, oldSize, numAlloc, pointer);
     if (newSize > oldSize)
         numAlloc++;
     if (newSize < oldSize)
@@ -249,12 +250,15 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     void *result = realloc(pointer, newSize);
     if (result == NULL) exit(1);
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "reallocate ptr %p => %p\n", pointer, result);
+#endif
     return result;
 }
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type), bytesAllocated, size, numAlloc);
+    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type, 0), bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
@@ -280,7 +284,7 @@ static void markProtectionObj(Header *h) {
 
 void markObj(Header *h, int i) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markObj [%d]%s\n", i, typeName(h->type));
+    fprintf(stderr, "markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
         case OBJTYPE_AMB:
@@ -410,7 +414,7 @@ void freeObj(Header *h) {
             freeTpmcObj(h);
             break;
         default:
-            cant_happen("unrecognised ObjType %d in freeObj", h->type);
+            cant_happen("unrecognised ObjType %d in freeObj at %p", h->type, (void *)h);
     }
 }
 
@@ -444,7 +448,7 @@ static void sweep() {
         } else {
 #ifdef DEBUG_LOG_GC
             fprintf(stderr, "sweep discard %p\n", (void *)current);
-            fprintf(stderr, "              type %s\n", typeName(current->type));
+            fprintf(stderr, "              type %s\n", typeName(current->type, current));
 #endif
             *previous = current->next;
             freeObj(current);

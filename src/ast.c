@@ -26,6 +26,9 @@ struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpre
     struct AstNest * x = NEW(AstNest, OBJTYPE_ASTNEST);
     x->definitions = definitions;
     x->expressions = expressions;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstNest = %p\n", x);
+#endif
     return x;
 }
 
@@ -33,6 +36,9 @@ struct AstDefinitions * newAstDefinitions(struct AstDefinition * definition, str
     struct AstDefinitions * x = NEW(AstDefinitions, OBJTYPE_ASTDEFINITIONS);
     x->definition = definition;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstDefinitions = %p\n", x);
+#endif
     return x;
 }
 
@@ -40,6 +46,9 @@ struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expr
     struct AstDefine * x = NEW(AstDefine, OBJTYPE_ASTDEFINE);
     x->symbol = symbol;
     x->expression = expression;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstDefine = %p\n", x);
+#endif
     return x;
 }
 
@@ -47,6 +56,9 @@ struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBo
     struct AstPrototype * x = NEW(AstPrototype, OBJTYPE_ASTPROTOTYPE);
     x->symbol = symbol;
     x->body = body;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstPrototype = %p\n", x);
+#endif
     return x;
 }
 
@@ -54,6 +66,9 @@ struct AstPrototypeBody * newAstPrototypeBody(struct AstSinglePrototype * single
     struct AstPrototypeBody * x = NEW(AstPrototypeBody, OBJTYPE_ASTPROTOTYPEBODY);
     x->single = single;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstPrototypeBody = %p\n", x);
+#endif
     return x;
 }
 
@@ -61,6 +76,9 @@ struct AstPrototypeSymbolType * newAstPrototypeSymbolType(HashSymbol * symbol, s
     struct AstPrototypeSymbolType * x = NEW(AstPrototypeSymbolType, OBJTYPE_ASTPROTOTYPESYMBOLTYPE);
     x->symbol = symbol;
     x->type = type;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstPrototypeSymbolType = %p\n", x);
+#endif
     return x;
 }
 
@@ -68,6 +86,9 @@ struct AstLoad * newAstLoad(struct AstPackage * package, HashSymbol * symbol) {
     struct AstLoad * x = NEW(AstLoad, OBJTYPE_ASTLOAD);
     x->package = package;
     x->symbol = symbol;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstLoad = %p\n", x);
+#endif
     return x;
 }
 
@@ -75,6 +96,9 @@ struct AstTypeDef * newAstTypeDef(struct AstFlatType * flatType, struct AstTypeB
     struct AstTypeDef * x = NEW(AstTypeDef, OBJTYPE_ASTTYPEDEF);
     x->flatType = flatType;
     x->typeBody = typeBody;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeDef = %p\n", x);
+#endif
     return x;
 }
 
@@ -82,6 +106,9 @@ struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols *
     struct AstFlatType * x = NEW(AstFlatType, OBJTYPE_ASTFLATTYPE);
     x->symbol = symbol;
     x->typeSymbols = typeSymbols;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstFlatType = %p\n", x);
+#endif
     return x;
 }
 
@@ -89,6 +116,9 @@ struct AstTypeSymbols * newAstTypeSymbols(HashSymbol * typeSymbol, struct AstTyp
     struct AstTypeSymbols * x = NEW(AstTypeSymbols, OBJTYPE_ASTTYPESYMBOLS);
     x->typeSymbol = typeSymbol;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeSymbols = %p\n", x);
+#endif
     return x;
 }
 
@@ -96,6 +126,9 @@ struct AstTypeBody * newAstTypeBody(struct AstTypeConstructor * typeConstructor,
     struct AstTypeBody * x = NEW(AstTypeBody, OBJTYPE_ASTTYPEBODY);
     x->typeConstructor = typeConstructor;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeBody = %p\n", x);
+#endif
     return x;
 }
 
@@ -103,6 +136,9 @@ struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct As
     struct AstTypeConstructor * x = NEW(AstTypeConstructor, OBJTYPE_ASTTYPECONSTRUCTOR);
     x->symbol = symbol;
     x->typeList = typeList;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeConstructor = %p\n", x);
+#endif
     return x;
 }
 
@@ -110,6 +146,9 @@ struct AstTypeFunction * newAstTypeFunction(HashSymbol * symbol, struct AstTypeL
     struct AstTypeFunction * x = NEW(AstTypeFunction, OBJTYPE_ASTTYPEFUNCTION);
     x->symbol = symbol;
     x->typeList = typeList;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeFunction = %p\n", x);
+#endif
     return x;
 }
 
@@ -117,6 +156,9 @@ struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * 
     struct AstTypeList * x = NEW(AstTypeList, OBJTYPE_ASTTYPELIST);
     x->type = type;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeList = %p\n", x);
+#endif
     return x;
 }
 
@@ -124,6 +166,9 @@ struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * 
     struct AstType * x = NEW(AstType, OBJTYPE_ASTTYPE);
     x->typeClause = typeClause;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstType = %p\n", x);
+#endif
     return x;
 }
 
@@ -131,6 +176,9 @@ struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * funct
     struct AstCompositeFunction * x = NEW(AstCompositeFunction, OBJTYPE_ASTCOMPOSITEFUNCTION);
     x->function = function;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstCompositeFunction = %p\n", x);
+#endif
     return x;
 }
 
@@ -138,6 +186,9 @@ struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest 
     struct AstFunction * x = NEW(AstFunction, OBJTYPE_ASTFUNCTION);
     x->argList = argList;
     x->nest = nest;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstFunction = %p\n", x);
+#endif
     return x;
 }
 
@@ -145,6 +196,9 @@ struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next)
     struct AstArgList * x = NEW(AstArgList, OBJTYPE_ASTARGLIST);
     x->arg = arg;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstArgList = %p\n", x);
+#endif
     return x;
 }
 
@@ -152,6 +206,9 @@ struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList
     struct AstUnpack * x = NEW(AstUnpack, OBJTYPE_ASTUNPACK);
     x->symbol = symbol;
     x->argList = argList;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstUnpack = %p\n", x);
+#endif
     return x;
 }
 
@@ -159,6 +216,9 @@ struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg) {
     struct AstNamedArg * x = NEW(AstNamedArg, OBJTYPE_ASTNAMEDARG);
     x->name = name;
     x->arg = arg;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstNamedArg = %p\n", x);
+#endif
     return x;
 }
 
@@ -166,6 +226,9 @@ struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype) {
     struct AstEnvType * x = NEW(AstEnvType, OBJTYPE_ASTENVTYPE);
     x->name = name;
     x->prototype = prototype;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstEnvType = %p\n", x);
+#endif
     return x;
 }
 
@@ -173,6 +236,9 @@ struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExp
     struct AstFunCall * x = NEW(AstFunCall, OBJTYPE_ASTFUNCALL);
     x->function = function;
     x->arguments = arguments;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstFunCall = %p\n", x);
+#endif
     return x;
 }
 
@@ -180,6 +246,9 @@ struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next)
     struct AstPackage * x = NEW(AstPackage, OBJTYPE_ASTPACKAGE);
     x->symbol = symbol;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstPackage = %p\n", x);
+#endif
     return x;
 }
 
@@ -187,6 +256,9 @@ struct AstExpressions * newAstExpressions(struct AstExpression * expression, str
     struct AstExpressions * x = NEW(AstExpressions, OBJTYPE_ASTEXPRESSIONS);
     x->expression = expression;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstExpressions = %p\n", x);
+#endif
     return x;
 }
 
@@ -194,6 +266,9 @@ struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * d
     struct AstEnv * x = NEW(AstEnv, OBJTYPE_ASTENV);
     x->package = package;
     x->definitions = definitions;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstEnv = %p\n", x);
+#endif
     return x;
 }
 
@@ -201,6 +276,9 @@ struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstD
     struct AstDefinition * x = NEW(AstDefinition, OBJTYPE_ASTDEFINITION);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstDefinition = %p\n", x);
+#endif
     return x;
 }
 
@@ -208,6 +286,9 @@ struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  t
     struct AstSinglePrototype * x = NEW(AstSinglePrototype, OBJTYPE_ASTSINGLEPROTOTYPE);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstSinglePrototype = %p\n", x);
+#endif
     return x;
 }
 
@@ -215,6 +296,9 @@ struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstT
     struct AstTypeClause * x = NEW(AstTypeClause, OBJTYPE_ASTTYPECLAUSE);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstTypeClause = %p\n", x);
+#endif
     return x;
 }
 
@@ -222,6 +306,9 @@ struct AstArg * newAstArg(enum AstArgType  type, union AstArgVal  val) {
     struct AstArg * x = NEW(AstArg, OBJTYPE_ASTARG);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstArg = %p\n", x);
+#endif
     return x;
 }
 
@@ -229,6 +316,9 @@ struct AstExpression * newAstExpression(enum AstExpressionType  type, union AstE
     struct AstExpression * x = NEW(AstExpression, OBJTYPE_ASTEXPRESSION);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new AstExpression = %p\n", x);
+#endif
     return x;
 }
 

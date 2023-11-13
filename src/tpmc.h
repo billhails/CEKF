@@ -24,6 +24,10 @@
 
 #include "hash.h"
 #include "memory.h"
+#include "common.h"
+#ifdef DEBUG_LOG_GC
+#include <stdio.h>
+#endif
 #include "lambda.h"
 #include "lambda_pp.h"
 
@@ -123,12 +127,20 @@ typedef struct TpmcArc {
     Header header;
     struct TpmcState * state;
     struct TpmcPattern * test;
+    HashTable * freeVariables;
 } TpmcArc;
 
-typedef struct TpmcStateArrayContainer {
+typedef struct TpmcArcList {
     Header header;
-    struct TpmcStateArray * array;
-} TpmcStateArrayContainer;
+    struct TpmcArc * arc;
+    struct TpmcArcList * next;
+} TpmcArcList;
+
+typedef struct TpmcIntList {
+    Header header;
+    int integer;
+    struct TpmcIntList * next;
+} TpmcIntList;
 
 typedef struct TpmcPatternValue {
     Header header;
@@ -148,49 +160,51 @@ typedef struct TpmcMatchRuleArray {
     Header header;
     int size;
     int capacity;
-    struct TpmcMatchRule * entries[0];
+    struct TpmcMatchRule * *entries;
 } TpmcMatchRuleArray;
 
 typedef struct TpmcVariableArray {
     Header header;
     int size;
     int capacity;
-    HashSymbol * entries[0];
+    HashSymbol * *entries;
 } TpmcVariableArray;
 
 typedef struct TpmcPatternArray {
     Header header;
+    char *_tag;
     int size;
     int capacity;
-    struct TpmcPattern * entries[0];
+    struct TpmcPattern * *entries;
 } TpmcPatternArray;
 
 typedef struct TpmcStateArray {
     Header header;
+    char *_tag;
     int size;
     int capacity;
-    struct TpmcState * entries[0];
+    struct TpmcState * *entries;
 } TpmcStateArray;
 
 typedef struct TpmcArcArray {
     Header header;
     int size;
     int capacity;
-    struct TpmcArc * entries[0];
+    struct TpmcArc * *entries;
 } TpmcArcArray;
 
 typedef struct TpmcIntArray {
     Header header;
     int size;
     int capacity;
-    int entries[0];
+    int *entries;
 } TpmcIntArray;
 
 typedef struct TpmcMatrix {
     Header header;
     int width;
     int height;
-    struct TpmcPattern * entries[0];
+    struct TpmcPattern * *entries;
 } TpmcMatrix;
 
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables);
@@ -202,14 +216,15 @@ struct TpmcPattern * newTpmcPattern(struct TpmcPatternValue * pattern);
 struct TpmcTestState * newTpmcTestState(HashSymbol * path, struct TpmcArcArray * arcs);
 struct TpmcFinalState * newTpmcFinalState(LamExp * action);
 struct TpmcState * newTpmcState(int stamp, struct TpmcStateValue * state);
-struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test);
-struct TpmcStateArrayContainer * newTpmcStateArrayContainer(struct TpmcStateArray * array);
+struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test, HashTable * freeVariables);
+struct TpmcArcList * newTpmcArcList(struct TpmcArc * arc, struct TpmcArcList * next);
+struct TpmcIntList * newTpmcIntList(int integer, struct TpmcIntList * next);
 struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, union TpmcPatternValueVal  val);
 struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union TpmcStateValueVal  val);
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray();
 struct TpmcVariableArray * newTpmcVariableArray();
-struct TpmcPatternArray * newTpmcPatternArray();
-struct TpmcStateArray * newTpmcStateArray();
+struct TpmcPatternArray * newTpmcPatternArray(char * _tag);
+struct TpmcStateArray * newTpmcStateArray(char * _tag);
 struct TpmcArcArray * newTpmcArcArray();
 struct TpmcIntArray * newTpmcIntArray();
 struct TpmcMatrix * newTpmcMatrix(int width, int height);
@@ -224,7 +239,8 @@ void markTpmcTestState(struct TpmcTestState * x);
 void markTpmcFinalState(struct TpmcFinalState * x);
 void markTpmcState(struct TpmcState * x);
 void markTpmcArc(struct TpmcArc * x);
-void markTpmcStateArrayContainer(struct TpmcStateArrayContainer * x);
+void markTpmcArcList(struct TpmcArcList * x);
+void markTpmcIntList(struct TpmcIntList * x);
 void markTpmcPatternValue(struct TpmcPatternValue * x);
 void markTpmcStateValue(struct TpmcStateValue * x);
 void markTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);
@@ -245,7 +261,8 @@ void freeTpmcTestState(struct TpmcTestState * x);
 void freeTpmcFinalState(struct TpmcFinalState * x);
 void freeTpmcState(struct TpmcState * x);
 void freeTpmcArc(struct TpmcArc * x);
-void freeTpmcStateArrayContainer(struct TpmcStateArrayContainer * x);
+void freeTpmcArcList(struct TpmcArcList * x);
+void freeTpmcIntList(struct TpmcIntList * x);
 void freeTpmcPatternValue(struct TpmcPatternValue * x);
 void freeTpmcStateValue(struct TpmcStateValue * x);
 void freeTpmcMatchRuleArray(struct TpmcMatchRuleArray * x);
@@ -256,12 +273,12 @@ void freeTpmcArcArray(struct TpmcArcArray * x);
 void freeTpmcIntArray(struct TpmcIntArray * x);
 void freeTpmcMatrix(struct TpmcMatrix * x);
 
-struct TpmcMatchRuleArray * pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * old, struct TpmcMatchRule * entry);
-struct TpmcVariableArray * pushTpmcVariableArray(struct TpmcVariableArray * old, HashSymbol * entry);
-struct TpmcPatternArray * pushTpmcPatternArray(struct TpmcPatternArray * old, struct TpmcPattern * entry);
-struct TpmcStateArray * pushTpmcStateArray(struct TpmcStateArray * old, struct TpmcState * entry);
-struct TpmcArcArray * pushTpmcArcArray(struct TpmcArcArray * old, struct TpmcArc * entry);
-struct TpmcIntArray * pushTpmcIntArray(struct TpmcIntArray * old, int entry);
+void pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * obj, struct TpmcMatchRule * entry);
+void pushTpmcVariableArray(struct TpmcVariableArray * obj, HashSymbol * entry);
+void pushTpmcPatternArray(struct TpmcPatternArray * obj, struct TpmcPattern * entry);
+void pushTpmcStateArray(struct TpmcStateArray * obj, struct TpmcState * entry);
+void pushTpmcArcArray(struct TpmcArcArray * obj, struct TpmcArc * entry);
+void pushTpmcIntArray(struct TpmcIntArray * obj, int entry);
 
 #define TPMCPATTERNVALUE_VAL_VAR(x) ((union TpmcPatternValueVal ){.var = (x)})
 #define TPMCPATTERNVALUE_VAL_COMPARISON(x) ((union TpmcPatternValueVal ){.comparison = (x)})
@@ -274,6 +291,18 @@ struct TpmcIntArray * pushTpmcIntArray(struct TpmcIntArray * old, int entry);
 #define TPMCSTATEVALUE_VAL_FINAL(x) ((union TpmcStateValueVal ){.final = (x)})
 #define TPMCSTATEVALUE_VAL_ERROR() ((union TpmcStateValueVal ){.error = (NULL)})
 
-#define TpmcMatrixIndex(o, w, h) ((o)->entries[(h) * (o)->width + (w)])
+static inline struct TpmcPattern * getTpmcMatrixIndex(struct TpmcMatrix * obj, int x, int y) {
+    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {
+        cant_happen("2d matrix bounds exceeded");
+    }
+    return obj->entries[x + y * obj->width];
+}
+
+static inline void setTpmcMatrixIndex(struct TpmcMatrix * obj, int x, int y, struct TpmcPattern * val) {
+    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {
+        cant_happen("2d matrix bounds exceeded");
+    }
+    obj->entries[x + y * obj->width] = val;
+}
 
 #endif

@@ -1021,3 +1021,9 @@ testIt(MatchRules(
     MatchRule('false', Constructor('true')),
     MatchRule('true', Constructor('false'))
 ))
+
+testIt(MatchRules(
+    MatchRule('false', Constructor('null'), Wildcard()),
+    MatchRule('true', Var('x'), Var('x')),
+    MatchRule(['member', 'x', 't'], Constructor('cons', Wildcard(), Var('t')), Var('x'))
+))
