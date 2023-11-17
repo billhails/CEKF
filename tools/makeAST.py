@@ -434,27 +434,29 @@ class SimpleArray(Base):
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
+        print(f"    {myType} x = NEW({myName}, {myObjType});")
+        print("    int save = PROTECT(x);")
+        print("    x->entries = NULL;")
+        if self.tagged:
+            print("    x->_tag = _tag;")
         if self.dimension == 1:
-            print(f"    {myType} x = NEW({myName}, {myObjType});")
-            print("    int save = PROTECT(x);")
-            if self.tagged:
-                print("    x->_tag = _tag;")
-            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4);")
-            print("    UNPROTECT(save);");
             print("    x->size = 0;")
+            print("    x->capacity = 0;")
+            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4);")
             print("    x->capacity = 4;")
         else:
-            print(f"    {myType} x = NEW_MATRIX({myName}, width * height, {self.entries.getTypeDeclaration(catalog)}, {myObjType});")
-            print("    int save = PROTECT(x);")
-            if self.tagged:
-                print("    x->_tag = _tag;")
-            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height);")
-            print("    UNPROTECT(save);");
+            print("    x->width = 0;")
+            print("    x->height = 0;")
+            print("    if (width * height > 0) {")
+            print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height);")
+            print(f"        bzero(x->entries, sizeof({self.entries.getTypeDeclaration(catalog)}) * width * height);")
+            print("    }")
             print("    x->width = width;")
             print("    x->height = height;")
         print("#ifdef DEBUG_LOG_GC")
         print(f'    fprintf(stderr, "new {myName} = %p\\n", x);')
         print("#endif")
+        print("    UNPROTECT(save);");
         print("    return x;")
         print("}\n")
 
@@ -471,7 +473,7 @@ class SimpleArray(Base):
             print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{")
             print("    if (x->size == x->capacity) {")
             print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2);")
-            print(f"        x->capacity *= 2;")
+            print("        x->capacity *= 2;")
             print("    }")
             print("    x->entries[x->size++] = entry;")
             print("}\n")
@@ -1126,6 +1128,7 @@ elif args.type == "c":
     printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}.h"')
+    print("#include <strings.h>");
     print("")
     catalog.printNewFunctions()
     print("")

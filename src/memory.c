@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
 #include "common.h"
 #include "analysis.h"
@@ -37,6 +36,8 @@ static bool gcEnabled = true;
 static int numAlloc = 0;
 
 static void collectGarbage();
+
+static Header *lastAlloc = NULL;
 
 /*
 #define MAX_PROTECTION 256
@@ -54,7 +55,10 @@ static ProtectionStack *protected = NULL;
 
 static Header *allocated = NULL;
 
-#ifdef DEBUG_LOG_GC
+void validateLastAlloc() {
+    lastAlloc = NULL;
+}
+
 const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_AMB:
@@ -133,7 +137,6 @@ const char *typeName(ObjType type, void *p) {
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
 }
-#endif
 
 char *safeStrdup(char *s) {
     char *t = strdup(s);
@@ -265,6 +268,11 @@ void *allocate(size_t size, ObjType type) {
     newObj->keep = false;
     newObj->next = allocated;
     allocated = newObj;
+    if (gcEnabled) {
+        lastAlloc = newObj;
+    } else {
+        lastAlloc = NULL;
+    }
     return (void *)newObj;
 }
 
@@ -462,7 +470,13 @@ static void collectGarbage() {
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "GC started\n");
 #endif
+#ifdef DEBUG_GC
+    fprintf(stderr, "GC\n");
+#endif
     mark();
+    if (lastAlloc && !MARKED(lastAlloc)) {
+        cant_happen("alloc of %s (%p) immediately dropped", typeName(lastAlloc->type, lastAlloc), lastAlloc);
+    }
     sweep();
     nextGC = bytesAllocated * 2;
 #ifdef DEBUG_LOG_GC

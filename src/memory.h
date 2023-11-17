@@ -101,6 +101,8 @@ bool disableGC(void);
 
 void initProtection(void);
 
+void validateLastAlloc();
+
 #define EXIT_OOM 2
 
 #define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
@@ -108,9 +110,6 @@ void initProtection(void);
 
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
-
-#define NEW_MATRIX(type, count, entry, tag) ((type *)allocate(sizeof(type) + ((count) * sizeof(entry)), tag))
-#define FREE_MATRIX(type, ptr, count, entry) ((void)reallocate((ptr), sizeof(type) + (count) * sizeof(entry), 0))
 
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))

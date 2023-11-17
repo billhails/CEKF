@@ -21,6 +21,7 @@
  */
 
 #include "ast.h"
+#include <strings.h>
 
 struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpressions * expressions) {
     struct AstNest * x = NEW(AstNest, OBJTYPE_ASTNEST);

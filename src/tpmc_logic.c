@@ -326,6 +326,7 @@ static void replaceComparisonRule(TpmcMatchRule *rule) {
         rule->patterns->entries[i] = replaceComparisonPattern(rule->patterns->entries[i], seen);
     }
     UNPROTECT(save);
+    validateLastAlloc();
 }
 
 static void replaceComparisonRules(TpmcMatchRules *input) {
@@ -508,6 +509,9 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
 #endif
     LamExp *body = tpmcTranslate(dfa);
     PROTECT(body);
+#ifdef DEBUG_TPMC_LOGIC
+    fprintf(stderr, "tpmcTranslate returned %p\n", body);
+#endif
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(rootVariables->size, args, body);
@@ -518,6 +522,7 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     fprintf(stderr, "*** BODY ***\n");
     ppLamExp(tmp);
     fprintf(stderr, "\n");
+    validateLastAlloc();
 #endif
     UNPROTECT(save);
     return res;

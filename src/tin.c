@@ -21,6 +21,7 @@
  */
 
 #include "tin.h"
+#include <strings.h>
 
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args) {
     struct TinFunctionApplication * x = NEW(TinFunctionApplication, OBJTYPE_TINFUNCTIONAPPLICATION);

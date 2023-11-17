@@ -31,7 +31,9 @@ HashSymbol *newSymbol(char *name) {
     if (symbolTable == NULL) {
         symbolTable = newHashTable(0, NULL, NULL);
     }
-    return uniqueHashSymbol(symbolTable, name, NULL);
+    HashSymbol *res = uniqueHashSymbol(symbolTable, name, NULL);
+    validateLastAlloc();
+    return res;
 }
 
 
@@ -50,6 +52,7 @@ HashSymbol *genSym(char *prefix) {
             x->hash = hashString(buffer);
             hashSet(symbolTable, x, NULL);
             UNPROTECT(save);
+            validateLastAlloc();
             return x;
         }
     }

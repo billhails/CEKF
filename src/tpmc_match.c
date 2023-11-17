@@ -28,14 +28,9 @@
 #include "symbol.h"
 
 #ifdef DEBUG_TPMC_MATCH
-static int debugInvocationId = 0;
-#define ENTER(name) int debugMyId = debugInvocationId++; fprintf(stderr, "**** "); fprintf(stderr, "enter " #name " (%d)\n", debugMyId)
-#define LEAVE(name) fprintf(stderr, "**** "); fprintf(stderr, "leave " #name " %d\n", debugMyId)
-#define DEBUG(...) do { fprintf(stderr, "**** "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
+#include "debugging_on.h"
 #else
-#define ENTER(n) 0
-#define LEAVE(n) 0
-#define DEBUG(...) 0
+#include "debugging_off.h"
 #endif
 
 TpmcState *tpmcMakeState(TpmcStateValue *val) {
@@ -383,6 +378,7 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs) {
             break;
         }
     }
+    validateLastAlloc();
     return res;
 }
 
@@ -417,6 +413,7 @@ static TpmcState *deduplicateState(TpmcState *state, TpmcStateArray *knownStates
     for (int i = 0; i < knownStates->size; i++) {
         if (tpmcStateEq(state, knownStates->entries[i])) {
             DEBUG("deduplicateState found dup");
+            validateLastAlloc();
             return knownStates->entries[i];
         }
     }
@@ -592,6 +589,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
             TpmcPattern *c = getTpmcMatrixIndex(matrix, x, y);
             // Let {i1 , ... , ij} be the row-indices of the patterns in the column that match c.
             TpmcIntArray *matchingIndices = findPatternsMatching(matrix, x, y);
+            validateLastAlloc();
             int save2 = PROTECT(matchingIndices);
             // Let {pat1 , ... , patj} be the patterns in the column corresponding to the indices computed above,
             TpmcPatternArray *matchingPatterns = extractMatrixColumnSubset(matrix, x, matchingIndices);
@@ -626,6 +624,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
             PROTECT(arc);
             if (tpmcArcInArray(arc, state->state->val.test->arcs)) {
                 arc->state->refcount--;
+                validateLastAlloc();
             } else {
                 pushTpmcArcArray(state->state->val.test->arcs, arc);
             }
@@ -671,6 +670,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
         LEAVE(mixture);
         return res;
     } else {
+        validateLastAlloc();
         // Otherwise, the error state is used after its reference count has been incremented
         TpmcPattern *errorPattern = makeNamedWildcardPattern(getTpmcMatrixIndex(matrix, x, 0)->path);
         PROTECT(errorPattern);

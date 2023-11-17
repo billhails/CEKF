@@ -543,6 +543,7 @@ TinMonoType *instantiate(TinPolyType *tpt) {
     HashTable *map = newVarTable();
     int save = PROTECT(map);
     TinMonoType *result = instantiatePolyType(tpt, map);
+    validateLastAlloc();
     UNPROTECT(save);
     return result;
 }

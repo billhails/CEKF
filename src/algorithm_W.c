@@ -426,8 +426,7 @@ static WResult *WSymbol(TinContext *context, HashSymbol *symbol, int depth) {
     }
     int save = PROTECT(value);
     TinMonoType *instantiated = instantiate(value);
-    UNPROTECT(save);
-    save = PROTECT(instantiated);
+    PROTECT(instantiated);
     TinSubstitution *empty = makeEmptySubstitution();
     (void) PROTECT(empty);
     WResult *result = newWResult(empty, instantiated);

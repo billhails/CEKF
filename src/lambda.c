@@ -21,6 +21,7 @@
  */
 
 #include "lambda.h"
+#include <strings.h>
 
 struct LamLam * newLamLam(int nargs, struct LamVarList * args, struct LamExp * exp) {
     struct LamLam * x = NEW(LamLam, OBJTYPE_LAMLAM);

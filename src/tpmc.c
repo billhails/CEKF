@@ -21,6 +21,7 @@
  */
 
 #include "tpmc.h"
+#include <strings.h>
 
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables) {
     struct TpmcMatchRules * x = NEW(TpmcMatchRules, OBJTYPE_TPMCMATCHRULES);
@@ -168,93 +169,111 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray() {
     struct TpmcMatchRuleArray * x = NEW(TpmcMatchRuleArray, OBJTYPE_TPMCMATCHRULEARRAY);
     int save = PROTECT(x);
-    x->entries = NEW_ARRAY(struct TpmcMatchRule *, 4);
-    UNPROTECT(save);
+    x->entries = NULL;
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(struct TpmcMatchRule *, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcMatchRuleArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcVariableArray * newTpmcVariableArray() {
     struct TpmcVariableArray * x = NEW(TpmcVariableArray, OBJTYPE_TPMCVARIABLEARRAY);
     int save = PROTECT(x);
-    x->entries = NEW_ARRAY(HashSymbol *, 4);
-    UNPROTECT(save);
+    x->entries = NULL;
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(HashSymbol *, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcVariableArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
     struct TpmcPatternArray * x = NEW(TpmcPatternArray, OBJTYPE_TPMCPATTERNARRAY);
     int save = PROTECT(x);
+    x->entries = NULL;
     x->_tag = _tag;
-    x->entries = NEW_ARRAY(struct TpmcPattern *, 4);
-    UNPROTECT(save);
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(struct TpmcPattern *, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcPatternArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcStateArray * newTpmcStateArray(char * _tag) {
     struct TpmcStateArray * x = NEW(TpmcStateArray, OBJTYPE_TPMCSTATEARRAY);
     int save = PROTECT(x);
+    x->entries = NULL;
     x->_tag = _tag;
-    x->entries = NEW_ARRAY(struct TpmcState *, 4);
-    UNPROTECT(save);
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(struct TpmcState *, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcStateArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcArcArray * newTpmcArcArray() {
     struct TpmcArcArray * x = NEW(TpmcArcArray, OBJTYPE_TPMCARCARRAY);
     int save = PROTECT(x);
-    x->entries = NEW_ARRAY(struct TpmcArc *, 4);
-    UNPROTECT(save);
+    x->entries = NULL;
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(struct TpmcArc *, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcArcArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcIntArray * newTpmcIntArray() {
     struct TpmcIntArray * x = NEW(TpmcIntArray, OBJTYPE_TPMCINTARRAY);
     int save = PROTECT(x);
-    x->entries = NEW_ARRAY(int, 4);
-    UNPROTECT(save);
+    x->entries = NULL;
     x->size = 0;
+    x->capacity = 0;
+    x->entries = NEW_ARRAY(int, 4);
     x->capacity = 4;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcIntArray = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
 struct TpmcMatrix * newTpmcMatrix(int width, int height) {
-    struct TpmcMatrix * x = NEW_MATRIX(TpmcMatrix, width * height, struct TpmcPattern *, OBJTYPE_TPMCMATRIX);
+    struct TpmcMatrix * x = NEW(TpmcMatrix, OBJTYPE_TPMCMATRIX);
     int save = PROTECT(x);
-    x->entries = NEW_ARRAY(struct TpmcPattern *, width * height);
-    UNPROTECT(save);
+    x->entries = NULL;
+    x->width = 0;
+    x->height = 0;
+    if (width * height > 0) {
+        x->entries = NEW_ARRAY(struct TpmcPattern *, width * height);
+        bzero(x->entries, sizeof(struct TpmcPattern *) * width * height);
+    }
     x->width = width;
     x->height = height;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "new TpmcMatrix = %p\n", x);
 #endif
+    UNPROTECT(save);
     return x;
 }
 
