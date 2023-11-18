@@ -66,13 +66,13 @@ source -->
 AST[Parser] --abstract syntax-->
 check[Type Checking] --abstract syntax-->
 lambda[Lambda Conversion] --lambda calculus-->
-desugaring1[Desugaring] -- simplified lambda calculus-->
 anf[A-Normal Form Conversion] --ANF-->
+desugaring2[Desugaring]
 static[Static Analysis] --annotated ANF-->
 Bytecode[Bytecode Generation] --bytecode--> VM
 scheme -->
 make_ast[Generate ANF Python script] --ANF-->
-desugaring2[Desugaring] --ANF-->
+desugaring2 --ANF-->
 static
 GC[Garbage Collection] --> VM
 VM --> GC
@@ -93,7 +93,7 @@ subgraph temp[Temporary]
    make_ast
 end
 subgraph WIP
-   lambda
+   anf
 end
 ```
 
