@@ -86,9 +86,7 @@ end
 subgraph done2[Done]
    AST
    check
-end
-subgraph WIP
-    lambda
+   lambda
 end
 subgraph temp[Temporary]
    scheme
