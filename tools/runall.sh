@@ -2,8 +2,8 @@
 
 set -e
 
-test -d tmp_scm || mkdir tmp_scm
-test -d out_scm || mkdir out_scm
+if [ ! -d tmp_scm ] ; then mkdir tmp_scm ; fi
+if [ ! -d out_scm ] ; then  mkdir out_scm ; fi
 
 for i in fn/*.fn ; do
     echo $i
