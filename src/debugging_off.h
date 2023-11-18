@@ -1,5 +1,3 @@
-#ifndef cekf_lambda_conversion_h
-#define cekf_lambda_conversion_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,11 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Term Pattern Matching Compiler stage 4. code generation
  */
 
-#include "ast.h"
-#include "lambda.h"
-
-LamExp *lamConvertNest(AstNest *nest, LamContext *env);
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
-#endif
+#define ENTER(n) 0
+#define LEAVE(n) 0
+#define DEBUG(...) 0
+#define NEWLINE() 0

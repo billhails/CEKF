@@ -37,6 +37,7 @@
 #include "tin.h"
 #include "tin_helper.h"
 #include "hash.h"
+#include "lambda_pp.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -108,13 +109,14 @@ int main(int argc, char *argv[]) {
     enableGC();
     // quietPrintHashTable = true;
     WResult *wr = WTop(result);
-    showTinMonoType(wr->monoType);
-    printf("\n");
+    // showTinMonoType(wr->monoType);
+    // printf("\n");
+    validateLastAlloc();
     if (hadErrors()) {
         printf("(errors detected)\n");
     } else {
         LamExp *exp = lamConvertNest(result, NULL);
-        printLamExp(exp, 0);
+        ppLamExp(exp);
         printf("\n");
     }
 }

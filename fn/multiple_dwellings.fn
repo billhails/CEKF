@@ -2,7 +2,6 @@ let
     typedef named_result { result(list(char), int) }
     
     fn head {
-        ([]) { error("cannot take the head of an empty list") }
         (h @ _) { h }
     }
 
@@ -15,12 +14,6 @@ let
         (h @ t) { h then one_of(t) }
     }
     
-    fn member {
-        (x, []) { false }
-        (x, x @ t) { true }
-        (x, h @ t) { member(x, t) }
-    }
-
     fn exclude {
         (l, []) { [] }
         (l, h @ t) {

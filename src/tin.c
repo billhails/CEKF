@@ -14,20 +14,23 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Type inference structures used by Algorithm W.
+ *
+ * generated from src/tin.yaml by makeAST.py
  */
 
-// generated from src/tin.yaml by makeAST.py
-
-
-// Type inference structures used by Algorithm W.
-
 #include "tin.h"
+#include <strings.h>
 
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args) {
     struct TinFunctionApplication * x = NEW(TinFunctionApplication, OBJTYPE_TINFUNCTIONAPPLICATION);
     x->name = name;
     x->nargs = nargs;
     x->args = args;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinFunctionApplication = %p\n", x);
+#endif
     return x;
 }
 
@@ -35,6 +38,9 @@ struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struc
     struct TinMonoTypeList * x = NEW(TinMonoTypeList, OBJTYPE_TINMONOTYPELIST);
     x->monoType = monoType;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinMonoTypeList = %p\n", x);
+#endif
     return x;
 }
 
@@ -42,6 +48,9 @@ struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPoly
     struct TinTypeQuantifier * x = NEW(TinTypeQuantifier, OBJTYPE_TINTYPEQUANTIFIER);
     x->var = var;
     x->quantifiedType = quantifiedType;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinTypeQuantifier = %p\n", x);
+#endif
     return x;
 }
 
@@ -50,12 +59,18 @@ struct TinContext * newTinContext(HashTable * varFrame, HashTable * tcFrame, str
     x->varFrame = varFrame;
     x->tcFrame = tcFrame;
     x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinContext = %p\n", x);
+#endif
     return x;
 }
 
 struct TinSubstitution * newTinSubstitution(HashTable * map) {
     struct TinSubstitution * x = NEW(TinSubstitution, OBJTYPE_TINSUBSTITUTION);
     x->map = map;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinSubstitution = %p\n", x);
+#endif
     return x;
 }
 
@@ -63,6 +78,9 @@ struct TinArgsResult * newTinArgsResult(struct TinContext * context, struct TinM
     struct TinArgsResult * x = NEW(TinArgsResult, OBJTYPE_TINARGSRESULT);
     x->context = context;
     x->vec = vec;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinArgsResult = %p\n", x);
+#endif
     return x;
 }
 
@@ -72,6 +90,9 @@ struct TinVarResult * newTinVarResult(struct TinSubstitution * substitution, str
     x->context = context;
     x->monoType = monoType;
     x->set = set;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinVarResult = %p\n", x);
+#endif
     return x;
 }
 
@@ -79,6 +100,9 @@ struct TinVarsResult * newTinVarsResult(struct TinContext * context, HashTable *
     struct TinVarsResult * x = NEW(TinVarsResult, OBJTYPE_TINVARSRESULT);
     x->context = context;
     x->set = set;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinVarsResult = %p\n", x);
+#endif
     return x;
 }
 
@@ -86,6 +110,9 @@ struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTyp
     struct TinMonoType * x = NEW(TinMonoType, OBJTYPE_TINMONOTYPE);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinMonoType = %p\n", x);
+#endif
     return x;
 }
 
@@ -93,8 +120,12 @@ struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTyp
     struct TinPolyType * x = NEW(TinPolyType, OBJTYPE_TINPOLYTYPE);
     x->type = type;
     x->val = val;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new TinPolyType = %p\n", x);
+#endif
     return x;
 }
+
 
 
 /************************************/
@@ -230,6 +261,8 @@ void markTinObj(struct Header *h) {
         case OBJTYPE_TINPOLYTYPE:
             markTinPolyType((TinPolyType *)h);
             break;
+        default:
+            cant_happen("unrecognized type in markTinObj\n");
     }
 }
 
@@ -308,6 +341,8 @@ void freeTinObj(struct Header *h) {
         case OBJTYPE_TINPOLYTYPE:
             freeTinPolyType((TinPolyType *)h);
             break;
+        default:
+            cant_happen("unrecognized type in freeTinObj\n");
     }
 }
 
@@ -333,6 +368,8 @@ char *typenameTinObj(int type) {
             return "TinMonoType";
         case OBJTYPE_TINPOLYTYPE:
             return "TinPolyType";
+        default:
+            cant_happen("unrecognized type in typenameTinObj\n");
     }
 }
 

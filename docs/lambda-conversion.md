@@ -382,7 +382,165 @@ $$
 `cut` pops the topmost failure continuation and arranges for its argument to be evaluated. It would be an error if `cut` was invoked without a failure continuation in place:
 
 $$
-step(\mathtt{(cut\ exp)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp'}, \rho', \kappa', f) = (\mathtt{exp}, \rho, \kappa, f))
+step(\mathtt{(cut\ exp)}, \rho, \kappa, \mathbf{backtrack}(\mathtt{exp'}, \rho', \kappa', f)) = (\mathtt{exp}, \rho, \kappa, f)
 $$
 
 That's it. We won't expose `cut` as a language feature because its use is purely internal to the implementation.
+
+`cut` is now implemented, the ANF [scm/map-amb.scm](../scm/map-amb.scm) file demonstrates the expected behaviour, that file has been
+translated into C structs with [tools/makeTree.py](../tools/makeTree.py) and the resulting C code pasted into [src/tests/exp.inc](../src/tests/exp.inc) as a test `makeTestExpMap()`.
+
+There are problems with this approach too, after a day or so of more prototyping, it definately will work (is working)
+see [my prototype](../prototyping/Args.py)
+but the resulting code is horribly inneficcient. For example given:
+
+```plaintext
+typedef colour { red | green | blue }
+```
+
+this function:
+
+```plaintext
+fn colourToChar {
+  (red) => { 'r' }
+  (green) => { 'g' }
+  (blue) => { 'b' }
+}
+```
+
+compiles to this!
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (amb (match arg0
+                            ((0) (cut 'r'))
+                            ((1 2) (back)))
+                     (amb (match arg0
+                                 ((1) (cut 'g'))
+                                 ((0 2) (back)))
+                          (amb (match arg0
+                                      ((2) (cut 'b'))
+                                      ((0 1) (back)))
+                               (error "patterns exhausted in function colourToChar"))))))
+```
+
+Which is hardly ideal. An ideal translation would just be:
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (amb (match arg0
+                            ((0) (cut 'r'))
+                            ((1) (cut 'g'))
+                            ((2) (cut 'b'))
+                     (error "patterns exhausted in function colourToChar")))))
+```
+
+or even just:
+
+```scheme
+(define colourToChar
+        (lambda (arg0)
+                (match arg0
+                       ((0) 'r')
+                       ((1) 'g')
+                       ((2) 'b'))))
+```
+
+I've already implemented `cut`, and I think I'll leave it in because it might yet prove useful, but since efficiency is one
+of the primary motivations for this project, I can't use it here.
+
+Fortunately there's still life in the original idea. I started searching for pattern matching algorithms, found some very
+good documentation on Rust internals which finally led me to
+[this paper](https://www.classes.cs.uchicago.edu/archive/2011/spring/22620-1/papers/pettersson92.pdf).
+I'm quite gratified that I wasn't alone in thinking regular expressions were the way to go, but this paper
+has a complete algorithm described and working that does exactly what I want!
+
+Plan now is to get that working as a Python prototype, then translate into C.
+
+And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.py). For sample inputs here's the output:
+
+```scheme
+; {
+;   [_, null] => null
+;   [f, cons(h, t)] => (cons (f h) (map f t))
+; }
+(lambda (p0 p1)
+        (match (vec 0 p1)
+               ((0) null)
+               ((1) (let (p1$1 (vec 1 p1))
+                         (let (p1$2 (vec 2 p1))
+                              (cons (p0 p1$1)
+                                    (map p0 p1$2)))))))
+
+; {
+;   [f, cons(h, t)] => (cons (f h) (map f t))
+; }
+(lambda (p0 p1)
+        (match (vec 0 p1)
+               ((1) (let (p1$1 (vec 1 p1))
+                    (let (p1$2 (vec 2 p1))
+                         (cons (p0 p1$1)
+                               (map p0 p1$2)))))
+               ((0) (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [_, null] => null
+; }
+(lambda (p0 p1)
+        (match (vec 0 p1)
+               ((0) null)
+               ((1) (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [0] => 1
+;   [n] => (* n (factorial (- n 1)))
+; }
+(lambda (p0)
+        (cond p0 (0 1)
+                 (else (* p0 (factorial (- p0 1))))))
+
+; {
+;   [n] => (* n (factorial (- n 1)))
+; }
+(lambda (p0) (* p0 (factorial (- p0 1))))
+
+; {
+;   [0] => 1
+; }
+(lambda (p0)
+        (cond p0 (0 1)
+                 (else (ERROR))))
+; non-exhaustive pattern match detected
+
+; {
+;   [null, null] => A
+;   [xs, ys] => (B xs ys)
+; }
+(lambda (p0 p1)
+        (letrec ((q0 (lambda () (B p0 p1))))
+                (match (vec 0 p0)
+                       ((0) (match (vec 0 p1)
+                                   ((0) A)
+                                   ((1) (q0))))
+                       ((1) (q0)))))
+
+; {
+;   [null, ys] => E1
+;   [xs, null] => E2
+;   [cons(x, xs), cons(y, ys)] => E3
+; }
+(lambda (p0 p1)
+        (match (vec 0 p0)
+               ((0) E1)
+               ((1) (let (p0$1 (vec 1 p0))
+                         (let (p0$2 (vec 2 p0))
+                              (match (vec 0 p1)
+                                     ((0) E2)
+                                     ((1) (let (p1$1 (vec 1 p1))
+                                               (let (p1$2 (vec 2 p1))
+                                                    E3)))))))))
+```

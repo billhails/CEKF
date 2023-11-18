@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_conversion_h
-#define cekf_lambda_conversion_h
+#ifndef cekf_tpmc_match_h
+#define cekf_tpmc_match_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,11 +16,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Term Pattern Matching Compiler match algorithm
  */
 
-#include "ast.h"
-#include "lambda.h"
+#include "tpmc.h"
 
-LamExp *lamConvertNest(AstNest *nest, LamContext *env);
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
+TpmcState *tpmcMakeState(TpmcStateValue *val);
+TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *states, TpmcState *errorState, TpmcStateArray *knownStates);
+
 #endif

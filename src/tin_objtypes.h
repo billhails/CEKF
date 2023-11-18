@@ -16,12 +16,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Type inference structures used by Algorithm W.
+ *
+ * generated from src/tin.yaml by makeAST.py
  */
-
-// generated from src/tin.yaml by makeAST.py
-
-
-// Type inference structures used by Algorithm W.
 
 #define TIN_OBJTYPES() OBJTYPE_TINFUNCTIONAPPLICATION, \
 OBJTYPE_TINMONOTYPELIST, \

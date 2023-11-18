@@ -26,6 +26,7 @@ struct Header;
 #include "ast_objtypes.h"
 #include "tin_objtypes.h"
 #include "lambda_objtypes.h"
+#include "tpmc_objtypes.h"
 
 typedef enum {
     // exp types
@@ -66,6 +67,7 @@ typedef enum {
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
     LAMBDA_OBJTYPES(),
+    TPMC_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -76,12 +78,13 @@ typedef struct Header {
 
 void *reallocate(void *ptr, size_t oldSize, size_t newSize);
 int protect(Header *obj);
+void replaceProtect(int i, Header *obj);
 int startProtect();
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
 char *safeStrdup(char *s);
 
-void markObj(Header *h);
+void markObj(Header *h, int i);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
@@ -97,6 +100,8 @@ bool enableGC(void);
 bool disableGC(void);
 
 void initProtection(void);
+
+void validateLastAlloc();
 
 #define EXIT_OOM 2
 
@@ -115,6 +120,7 @@ void initProtection(void);
 #define STARTPROTECT() protect(NULL);
 #define PROTECT(x) protect((Header *)(x))
 #define UNPROTECT(i) unProtect(i)
+#define REPLACE_PROTECT(i, x) replaceProtect(i, (Header *)(x))
 
 #define MARK(obj) (((Header *)(obj))->keep = true)
 #define MARKED(obj) (((Header *)(obj))->keep == true)

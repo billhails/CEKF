@@ -40,37 +40,55 @@ structs:
         type: LamUnaryOp
         exp: LamExp
 
-    LamList:
+    LamSequence:
         exp: LamExp
-        next: LamList
+        next: LamSequence
 
     LamApply:
         function: LamExp
         nargs: int
-        args: LamList
+        args: LamSequence
 
     LamMakeVec:
         nargs: int
-        args: LamList
+        args: LamSequence
 
-    LamCond:
+    LamIff:
         condition: LamExp
         consequent: LamExp
         alternative: LamExp
+
+    LamCond:
+        value: LamExp
+        cases: LamCondCases
+
+    LamCondCases:
+        constant: LamExp
+        body: LamExp
+        next: LamCondCases
 
     LamMatch:
         index: LamExp
         cases: LamMatchList
 
     LamMatchList:
-        matches: LamList
+        matches: LamIntList
         body: LamExp
         next: LamMatchList
+
+    LamIntList:
+        item: int
+        next: LamIntList
+
+    LamLet:
+        var: HashSymbol
+        value: LamExp
+        body: LamExp
 
     LamLetRec:
         nbindings: int
         bindings: LamLetRecBindings
-        body: LamList
+        body: LamExp
 
     LamLetRecBindings:
         var: HashSymbol
@@ -82,9 +100,10 @@ structs:
         parent: LamContext
 
     LamTypeConstructorInfo:
-        vec: bool
-        nargs: int
-        index: int
+        vec: bool # does this need to be a vector?
+        arity: int # number of arguments to this constructor
+        size: int # number of alternatives
+        index: int # index into list of alternatives
 
 enums:
     LamPrimOp:
@@ -98,7 +117,6 @@ enums:
         - LAM_PRIM_LT
         - LAM_PRIM_GE
         - LAM_PRIM_LE
-        - LAM_PRIM_CONS
         - LAM_PRIM_VEC
         - LAM_PRIM_XOR
         - LAM_PRIM_AND
@@ -106,8 +124,6 @@ enums:
         - LAM_PRIM_AMB
 
     LamUnaryOp:
-        - LAM_UNARY_CAR
-        - LAM_UNARY_CDR
         - LAM_UNARY_NOT
         - LAM_UNARY_PRINT
 
@@ -118,19 +134,19 @@ unions:
         integer: int
         prim: LamPrimApp
         unary: LamUnaryApp
-        list: LamList
+        list: LamSequence
         makeVec: LamMakeVec
         apply: LamApply
-        cond: LamCond
+        iff: LamIff
         callcc: LamExp
         letrec: LamLetRec
+        let: LamLet
         match: LamMatch
+        cond: LamCond
         character: character
-        string: string
         back: void_ptr
-        t: void_ptr
-        f: void_ptr
-        nil: void_ptr
+        error: void_ptr
+        cond_default: void_ptr
 
 primitives:
     HashSymbol:
@@ -158,8 +174,4 @@ primitives:
     character:
         cname: "char"
         printf: "%c"
-        valued: true
-    string:
-        cname: "char *"
-        printf: "%s"
         valued: true

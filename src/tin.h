@@ -16,15 +16,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Type inference structures used by Algorithm W.
+ *
+ * generated from src/tin.yaml by makeAST.py
  */
-
-// generated from src/tin.yaml by makeAST.py
-
-
-// Type inference structures used by Algorithm W.
 
 #include "hash.h"
 #include "memory.h"
+#include "common.h"
+#ifdef DEBUG_LOG_GC
+#include <stdio.h>
+#endif
 
 typedef enum TinMonoTypeType {
     TINMONOTYPE_TYPE_VAR,
@@ -113,6 +116,8 @@ typedef struct TinPolyType {
     union TinPolyTypeVal  val;
 } TinPolyType;
 
+
+
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args);
 struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struct TinMonoTypeList * next);
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType);
@@ -146,9 +151,11 @@ void freeTinVarsResult(struct TinVarsResult * x);
 void freeTinMonoType(struct TinMonoType * x);
 void freeTinPolyType(struct TinPolyType * x);
 
+
 #define TINMONOTYPE_VAL_VAR(x) ((union TinMonoTypeVal ){.var = (x)})
 #define TINMONOTYPE_VAL_FUN(x) ((union TinMonoTypeVal ){.fun = (x)})
 #define TINPOLYTYPE_VAL_MONOTYPE(x) ((union TinPolyTypeVal ){.monoType = (x)})
 #define TINPOLYTYPE_VAL_QUANTIFIER(x) ((union TinPolyTypeVal ){.quantifier = (x)})
+
 
 #endif

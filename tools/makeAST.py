@@ -34,6 +34,10 @@ class Catalog:
             raise Exception("attempt to overwtite " + name + " in catalog")
         self.contents[name] = value
 
+    def tag(self, t):
+        if t in self.contents:
+            self.contents[t].tag()
+
     def get(self, key):
         if key in self.contents:
             return self.contents[key]
@@ -57,10 +61,26 @@ class Catalog:
         for entity in self.contents.values():
             if entity.isStruct():
                 entity.printTypedef(self)
+        print("\n")
+        for entity in self.contents.values():
+            if entity.isArray():
+                entity.printTypedef(self)
 
     def printMarkDeclarations(self):
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
+
+    def printAccessDeclarations(self):
+        for entity in self.contents.values():
+            entity.printAccessDeclarations(self)
+
+    def printPushDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPushDeclaration(self)
+
+    def printPushFunctions(self):
+        for entity in self.contents.values():
+            entity.printPushFunction(self)
 
     def printFreeDeclarations(self):
         for entity in self.contents.values():
@@ -99,6 +119,8 @@ class Catalog:
         print('    switch(h->type) {')
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in mark{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -107,6 +129,8 @@ class Catalog:
         print('    switch(h->type) {')
         for entity in self.contents.values():
             entity.printFreeObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in free{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -115,6 +139,8 @@ class Catalog:
         print('    switch(type) {')
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
+        print('        default:')
+        print(f'            cant_happen("unrecognized type in typename{self.typeName.capitalize()}Obj\\n");')
         print('    }')
         print('}')
 
@@ -141,9 +167,13 @@ class Base:
     """
     def __init__(self, name):
         self.name = name
+        self.tagged = False
 
     def objTypeArray(self):
         return []
+
+    def tag(self):
+        self.tagged = True
 
     def getName(self):
         return self.name
@@ -190,6 +220,15 @@ class Base:
     def printDefines(self, catalog):
         pass
 
+    def printAccessDeclarations(self, catalog):
+        pass
+
+    def printPushDeclaration(self, catalog):
+        pass
+
+    def printPushFunction(selfself, catalog):
+        pass
+
     def isEnum(self):
         return False
 
@@ -197,6 +236,9 @@ class Base:
         return False
 
     def isStruct(self):
+        return False
+
+    def isArray(selfself):
         return False
 
     def printMarkField(self, field, depth, prefix=''):
@@ -229,7 +271,7 @@ class EnumField:
         pad(depth + 1)
         print('pad(depth + 1);')
         pad(depth + 1)
-        print(f'printf("{typeName}");')
+        print(f'fprintf(stderr, "{typeName}");')
         pad(depth + 1)
         print('break;')
 
@@ -248,9 +290,15 @@ class SimpleField:
             self.typeName = typeName
             self.default = None
 
-    def getSignature(self, catalog):
+    def getTypeDeclaration(self, catalog):
         obj = catalog.get(self.typeName)
-        return "{type} {name}".format(type=obj.getTypeDeclaration(), name=self.name)
+        return obj.getTypeDeclaration()
+
+    def getSignature(self, catalog):
+        return "{type} {name}".format(type=self.getTypeDeclaration(catalog), name=self.name)
+
+    def getArraySignature(self, catalog):
+        return "{type} *{name}".format(type=self.getTypeDeclaration(catalog), name=self.name)
 
     def getFieldName(self):
         return self.name
@@ -259,13 +307,278 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printMarkField(self.name, depth)
 
+    def printMarkArrayLine(self, catalog, key, depth):
+        obj = catalog.get(self.typeName)
+        obj.printMarkField(f"{self.name}[{key}]", depth)
+
     def printPrintLine(self, catalog, depth):
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, depth)
 
+    def printPrintArrayLine(self, catalog, key, depth):
+        obj = catalog.get(self.typeName)
+        obj.printPrintField(f"{self.name}[{key}]", depth)
+
     def printStructTypedefLine(self, catalog):
         print("    {decl};".format(decl=self.getSignature(catalog)))
 
+    def printArrayTypedefLine(self, catalog):
+        print("    {decl};".format(decl=self.getArraySignature(catalog)))
+
+
+class SimpleArray(Base):
+    """
+    Array structures declared in the yaml
+    """
+    def __init__(self, name, data):
+        super().__init__(name)
+        self.dimension = data["dimension"] or 1
+        if self.dimension > 2:
+            raise Exception("only 1 or 2 dimensional arrays supported for now")
+        if self.dimension == 2:
+            self.width = SimpleField(self.name, "width", "int")
+            self.height = SimpleField(self.name, "height", "int")
+        self.entries = SimpleField(self.name,"entries", data["entries"])
+
+    def tag(self):
+        super().tag()
+        self.tagField = SimpleField(self.name, "_tag", "string")
+
+    def getTypeDeclaration(self):
+        return "struct {name} *".format(name=self.getName())
+
+    def printPrintField(self, field, depth, prefix=''):
+        myName=self.getName()
+        pad(depth)
+        print(f'print{myName}(x->{prefix}{field}, depth+1);')
+
+    def printAccessDeclarations(self, catalog):
+        if self.dimension == 2:
+            print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{")
+            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {");
+            print('        cant_happen("2d matrix bounds exceeded");')
+            print("    }")
+            print("    return obj->entries[x + y * obj->width];")
+            print("}")
+            print("")
+            print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{")
+            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {");
+            print('        cant_happen("2d matrix bounds exceeded");')
+            print("    }")
+            print("    obj->entries[x + y * obj->width] = val;")
+            print("}")
+
+    def printTypedef(self, catalog):
+        print("typedef struct {name} {{".format(name=self.getName()))
+        print("    Header header;")
+        if self.tagged:
+            print("    char *_tag;")
+        if self.dimension == 2: # 2D arrays are fixed size
+            print("    int width;")
+            print("    int height;")
+        else:                   # 1D arrays can grow
+            print("    int size;")
+            print("    int capacity;")
+        self.entries.printArrayTypedefLine(catalog)
+        print("}} {name};\n".format(name=self.getName()))
+
+    def printMarkDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getMarkSignature(catalog)))
+
+    def getMarkSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+
+    def printFreeDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getFreeSignature(catalog)))
+
+    def printFreeFunction(self, catalog):
+        print("{decl} {{".format(decl=self.getFreeSignature(catalog)))
+        if self.dimension == 1:
+            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity);")
+        else:
+            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->width * x->height);")
+        print(f"    FREE(x, {self.getName()});")
+        print("}\n")
+
+    def getFreeSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+
+    def getObjType(self):
+        return ('objtype_' + self.getName()).upper()
+
+    def objTypeArray(self):
+        return [ self.getObjType() ]
+
+    def getNewArgs(self):
+        if self.tagged:
+            return [self.tagField] + self._getNewArgs()
+        else:
+            return self._getNewArgs()
+
+    def _getNewArgs(self):
+        if self.dimension == 1:
+            return []
+        return [self.width, self.height]
+
+    def getNewSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        args = []
+        for field in self.getNewArgs():
+            args += [field.getSignature(catalog)]
+        return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
+
+    def printNewFunction(self, catalog):
+        print("{decl} {{".format(decl=self.getNewSignature(catalog)))
+        myType = self.getTypeDeclaration()
+        myObjType = self.getObjType()
+        myName = self.getName()
+        print(f"    {myType} x = NEW({myName}, {myObjType});")
+        print("    int save = PROTECT(x);")
+        print("    x->entries = NULL;")
+        if self.tagged:
+            print("    x->_tag = _tag;")
+        if self.dimension == 1:
+            print("    x->size = 0;")
+            print("    x->capacity = 0;")
+            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4);")
+            print("    x->capacity = 4;")
+        else:
+            print("    x->width = 0;")
+            print("    x->height = 0;")
+            print("    if (width * height > 0) {")
+            print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height);")
+            print(f"        bzero(x->entries, sizeof({self.entries.getTypeDeclaration(catalog)}) * width * height);")
+            print("    }")
+            print("    x->width = width;")
+            print("    x->height = height;")
+        print("#ifdef DEBUG_LOG_GC")
+        print(f'    fprintf(stderr, "new {myName} = %p\\n", x);')
+        print("#endif")
+        print("    UNPROTECT(save);");
+        print("    return x;")
+        print("}\n")
+
+    def printNewDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getNewSignature(catalog)))
+
+    def printPushDeclaration(self, catalog):
+        if self.dimension == 1:
+            print(f"void push{self.getName()}({self.getTypeDeclaration()} obj, {self.entries.getTypeDeclaration(catalog)} entry);")
+
+
+    def printPushFunction(self, catalog):
+        if self.dimension == 1:
+            print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{")
+            print("    if (x->size == x->capacity) {")
+            print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2);")
+            print("        x->capacity *= 2;")
+            print("    }")
+            print("    x->entries[x->size++] = entry;")
+            print("}\n")
+
+    def printMarkFunction(self, catalog):
+        print("{decl} {{".format(decl=self.getMarkSignature(catalog)))
+        print("    if (x == NULL) return;")
+        print("    if (MARKED(x)) return;")
+        print("    MARK(x);")
+        self.printMarkFunctionBody(catalog)
+        print("}\n")
+
+    def printMarkFunctionBody(self, catalog):
+        if self.dimension == 1:
+            self.printMark1dFunctionBody(catalog)
+        else:
+            self.printMark2dFunctionBody(catalog)
+
+    def printMark1dFunctionBody(self, catalog):
+        print("    for (int i = 0; i < x->size; i++) {")
+        self.entries.printMarkArrayLine(catalog, "i", 2)
+        print("    }")
+
+    def printMark2dFunctionBody(self, catalog):
+        print("    int size = x->width * x->height;")
+        print("    for (int i = 0; i < size; i++) {")
+        self.entries.printMarkArrayLine(catalog, "i", 2)
+        print("    }")
+
+    def printPrintDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getPrintSignature(catalog)))
+
+    def getPrintSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+
+    def printPrintFunction(self, catalog):
+        myName = self.getName()
+        print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
+        print("    pad(depth);")
+        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
+        if self.tagged:
+            print('    fprintf(stderr, "<<%s>>", x->_tag);')
+        if self.dimension == 1:
+            print(f'    fprintf(stderr, "{myName}(%d)[\\n", x->size);')
+        else:
+            print(f'    fprintf(stderr, "{myName}(%d * %d)[\\n", x->width, x->height);')
+        self.printPrintFunctionBody(catalog)
+        print("    pad(depth);")
+        print('    fprintf(stderr, "]");')
+        print("}\n")
+
+    def printPrintFunctionBody(self, catalog):
+        if self.dimension == 1:
+            self.print1dPrintFunctionBody(catalog)
+        else:
+            self.print2dPrintFunctionBody(catalog)
+
+    def print1dPrintFunctionBody(self, catalog):
+        print("    for (int i = 0; i < x->size; i++) {")
+        self.entries.printPrintArrayLine(catalog, "i", 2)
+        print('        fprintf(stderr, "\\n");')
+        print("    }")
+
+    def print2dPrintFunctionBody(self, catalog):
+        print("    for (int i = 0; i < x->height; i++) {")
+        print("        pad(depth);")
+        print('        fprintf(stderr, "[\\n");')
+        print("        for (int j = 0; j < x->width; j++) {")
+        self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
+        print('            fprintf(stderr, "\\n");')
+        print("        }")
+        print("        pad(depth);")
+        print('        fprintf(stderr, "]\\n");')
+        print("    }")
+
+    def printFreeObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('free{name}(({name} *)h);'.format(name=self.getName()))
+        pad(3)
+        print('break;')
+
+    def printMarkObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('mark{name}(({name} *)h);'.format(name=self.getName()))
+        pad(3)
+        print('break;')
+
+    def printTypeObjCase(self, catalog):
+        pad(2)
+        print(f'case {self.getObjType()}:')
+        pad(3)
+        print('return "{name}";'.format(name=self.getName()))
+
+    def printMarkField(self, field, depth, prefix=''):
+        pad(depth)
+        print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
+
+
+    def isArray(self):
+        return True
 
 class SimpleStruct(Base):
     """
@@ -323,19 +636,19 @@ class SimpleStruct(Base):
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
     def printNewDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getNewSignature(catalog)));
+        print("{decl};".format(decl=self.getNewSignature(catalog)))
 
     def printFreeDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getFreeSignature(catalog)));
+        print("{decl};".format(decl=self.getFreeSignature(catalog)))
 
     def printMarkDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getMarkSignature(catalog)));
+        print("{decl};".format(decl=self.getMarkSignature(catalog)))
 
     def printPrintDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getPrintSignature(catalog)));
+        print("{decl};".format(decl=self.getPrintSignature(catalog)))
 
     def printNewFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getNewSignature(catalog)));
+        print("{decl} {{".format(decl=self.getNewSignature(catalog)))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
@@ -344,6 +657,9 @@ class SimpleStruct(Base):
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
             print("    x->{f} = {d};".format(f=field.getFieldName(), d=field.default))
+        print("#ifdef DEBUG_LOG_GC")
+        print(f'    fprintf(stderr, "new {myName} = %p\\n", x);')
+        print("#endif")
         print("    return x;")
         print("}\n")
 
@@ -354,7 +670,7 @@ class SimpleStruct(Base):
     def printPrintFunctionBody(self, catalog):
         for field in self.fields:
             field.printPrintLine(catalog, 1)
-            print('    printf("\\n");')
+            print('    fprintf(stderr, "\\n");')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
@@ -366,7 +682,7 @@ class SimpleStruct(Base):
         print(f'print{myName}(x->{prefix}{field}, depth + 1);')
 
     def printMarkFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getMarkSignature(catalog)));
+        print("{decl} {{".format(decl=self.getMarkSignature(catalog)))
         print("    if (x == NULL) return;")
         print("    if (MARKED(x)) return;")
         print("    MARK(x);")
@@ -374,7 +690,7 @@ class SimpleStruct(Base):
         print("}\n")
 
     def printFreeFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getFreeSignature(catalog)));
+        print("{decl} {{".format(decl=self.getFreeSignature(catalog)))
         print(f"    FREE(x, {self.getName()});")
         print("}\n")
 
@@ -402,13 +718,13 @@ class SimpleStruct(Base):
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
-        print("{decl} {{".format(decl=self.getPrintSignature(catalog)));
+        print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
-        print(f'    if (x == NULL) {{ printf("{myName} (NULL)"); return; }}')
-        print(f'    printf("{myName}[\\n");')
+        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
+        print(f'    fprintf(stderr, "{myName}[\\n");')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
-        print('    printf("]");')
+        print('    fprintf(stderr, "]");')
         print("}\n")
 
     def getDefineValue(self):
@@ -481,7 +797,7 @@ class DiscriminatedUnionField(EnumField):
         typeName = self.makeTypeName()
         print(f"        case {typeName}:")
         print(f'            pad(depth + 1);')
-        print(f'            printf("{typeName}\\n");')
+        print(f'            fprintf(stderr, "{typeName}\\n");')
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, 3, 'val.')
         print("            break;")
@@ -536,7 +852,7 @@ class DiscriminatedUnion(SimpleStruct):
         print("        default:")
         print('            cant_happen("unrecognised type %d in print{myName}", x->type);'.format(myName=self.getName()))
         print("    }")
-        print('    printf("\\n");')
+        print('    fprintf(stderr, "\\n");')
 
 
 class DiscriminatedUnionUnion(Base):
@@ -592,11 +908,11 @@ class SimpleEnum(Base):
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print('switch (x->type) {');
+        print('switch (x->type) {')
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
-        print('}');
+        print('}')
 
 
 
@@ -669,7 +985,7 @@ class Primitive(Base):
         pad(depth)
         if self.printFn == 'printf':
             print('pad(depth + 1);')
-            print(f'printf("{self.cname} {self.printf}", x->{prefix}{field});')
+            print(f'fprintf(stderr, "{self.cname} {self.printf}", x->{prefix}{field});')
         else:
             print(f'{self.printFn}(x->{prefix}{field}, depth + 1);')
 
@@ -705,13 +1021,12 @@ def printGpl(file, document):
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-// generated from {file} by makeAST.py
-
-""")
+ *""")
     if 'description' in document:
-        print(f"// {document['description']}")
+        print(f" * {document['description']}\n *")
+
+    print(f" * generated from {file} by makeAST.py")
+    print(" */")
 
 ##################################################################
 
@@ -732,20 +1047,36 @@ if 'includes' in document['config']:
     includes = document['config']['includes']
 else:
     includes = []
+if 'limited_includes' in document['config']:
+    limited_includes = document['config']['limited_includes']
+else:
+    limited_includes = []
 
 catalog = Catalog(typeName)
 
-for name in document["structs"]:
-    catalog.add(SimpleStruct(name, document["structs"][name]))
+if "structs" in document:
+    for name in document["structs"]:
+        catalog.add(SimpleStruct(name, document["structs"][name]))
 
-for name in document["unions"]:
-    catalog.add(DiscriminatedUnion(name, document["unions"][name]))
+if "unions" in document:
+    for name in document["unions"]:
+        catalog.add(DiscriminatedUnion(name, document["unions"][name]))
 
-for name in document["enums"]:
-    catalog.add(SimpleEnum(name, document["enums"][name]))
+if "enums" in document:
+    for name in document["enums"]:
+        catalog.add(SimpleEnum(name, document["enums"][name]))
 
-for name in document["primitives"]:
-    catalog.add(Primitive(name, document["primitives"][name]))
+if "primitives" in document:
+    for name in document["primitives"]:
+        catalog.add(Primitive(name, document["primitives"][name]))
+
+if "arrays" in document:
+    for name in document["arrays"]:
+        catalog.add(SimpleArray(name, document["arrays"][name]))
+
+if "tags" in document:
+    for tag in document["tags"]:
+        catalog.tag(tag);
 
 catalog.build()
 
@@ -756,8 +1087,14 @@ if args.type == "h":
     print("")
     print('#include "hash.h"')
     print('#include "memory.h"')
+    print('#include "common.h"')
+    print("#ifdef DEBUG_LOG_GC")
+    print("#include <stdio.h>");
+    print("#endif")
     for include in includes:
-        print(f'#include "{include}"');
+        print(f'#include "{include}"')
+    for include in limited_includes:
+        print(f'#include "{include}"')
     print("")
     catalog.printTypedefs()
     catalog.printNewDeclarations()
@@ -766,9 +1103,13 @@ if args.type == "h":
     print("")
     catalog.printFreeDeclarations()
     print("")
+    catalog.printPushDeclarations()
+    print("")
     catalog.printDefines()
     print("")
-    print("#endif");
+    catalog.printAccessDeclarations()
+    print("")
+    print("#endif")
 elif args.type == "objtypes_h":
     print(f"#ifndef cekf_{typeName}_objtypes_h")
     print(f"#define cekf_{typeName}_objtypes_h")
@@ -782,13 +1123,16 @@ elif args.type == "objtypes_h":
     print(f'void free{typeName.capitalize()}Obj(struct Header *h);')
     print(f'char *typename{typeName.capitalize()}Obj(int type);')
     print("")
-    print("#endif");
+    print("#endif")
 elif args.type == "c":
     printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}.h"')
+    print("#include <strings.h>");
     print("")
     catalog.printNewFunctions()
+    print("")
+    catalog.printPushFunctions()
     print("")
     print("/************************************/")
     print("")
@@ -811,18 +1155,22 @@ elif args.type == 'debug_h':
     print("")
     print(f'#include "{typeName}_helper.h"')
     for include in includes:
-        print(f'#include "debug_{include}"');
+        print(f'#include "debug_{include}"')
+    for include in limited_includes:
+        print(f'#include "{include}"')
     print("")
     catalog.printPrintDeclarations()
     print("")
-    print("#endif");
+    print("#endif")
 elif args.type == 'debug_c':
     printGpl(args.yaml, document)
     print("")
     print('#include <stdio.h>')
     print("")
     print(f'#include "debug_{typeName}.h"')
+    for include in limited_includes:
+        print(f'#include "{include}"')
     print("")
-    print('static void pad(int depth) { printf("%*s", depth * 4, ""); }')
+    print('static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }')
     print("")
     catalog.printPrintFunctions()

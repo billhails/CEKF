@@ -62,7 +62,7 @@ static AstFunCall *fakeAstConditional(AstExpression *condition, AstNest *consequ
             newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(newSymbol("false"))),
             NULL
         ),
-        consequent
+        alternative
     );
     return newAstFunCall(
         newAstExpression(

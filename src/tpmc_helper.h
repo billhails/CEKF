@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_conversion_h
-#define cekf_lambda_conversion_h
+#ifndef cekf_tpmc_helper_h
+#define cekf_tpmc_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ast.h"
-#include "lambda.h"
+#include "ast_helper.h"
+#include "tpmc.h"
+#include "hash.h"
+#include "memory.h"
 
-LamExp *lamConvertNest(AstNest *nest, LamContext *env);
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
 #endif

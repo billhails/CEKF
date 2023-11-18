@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
 #include "common.h"
 #include "analysis.h"
@@ -38,6 +37,8 @@ static int numAlloc = 0;
 
 static void collectGarbage();
 
+static Header *lastAlloc = NULL;
+
 /*
 #define MAX_PROTECTION 256
 */
@@ -49,17 +50,16 @@ typedef struct ProtectionStack {
     Header *stack[0];
 } ProtectionStack;
 
-/*
-static Header *protected[MAX_PROTECTION];
-static int protectedIndex = 0;
-*/
 
 static ProtectionStack *protected = NULL;
 
 static Header *allocated = NULL;
 
-#ifdef DEBUG_LOG_GC
-const char *typeName(ObjType type) {
+void validateLastAlloc() {
+    lastAlloc = NULL;
+}
+
+const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_AMB:
             return "amb";
@@ -131,11 +131,12 @@ const char *typeName(ObjType type) {
             return typenameAstObj(type);
         LAMBDA_OBJTYPE_CASES()
             return typenameLambdaObj(type);
+        TPMC_OBJTYPE_CASES()
+            return typenameTpmcObj(type);
         default:
-            cant_happen("unrecognised ObjType %d in typeName", type);
+            cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
 }
-#endif
 
 char *safeStrdup(char *s) {
     char *t = strdup(s);
@@ -168,12 +169,17 @@ void initProtection(void) {
     protected->sp = 0;
 }
 
+void replaceProtect(int i, Header *obj) {
+    protected->stack[i] = obj;
+}
+
 int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(
         stderr,
-        "PROTECT(%s) -> %d (%d)\n",
-        (obj == NULL ? "NULL" : typeName(obj->type)),
+        "PROTECT(%p:%s) -> %d (%d)\n",
+        obj,
+        (obj == NULL ? "NULL" : typeName(obj->type, obj)),
         protected->sp,
         protected->capacity
     );
@@ -183,7 +189,7 @@ int protect(Header *obj) {
     protected->stack[protected->sp++] = obj;
     if (protected->sp == protected->capacity) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "protect old stack: %p\n", (void *)protected);
+        fprintf(stderr, "protect old stack: %p\n", (void *)protected);
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
@@ -197,7 +203,7 @@ int protect(Header *obj) {
     }
 
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type), protected->sp, protected->capacity);
+    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj), protected->sp, protected->capacity);
 #endif
     return protected->sp - 1;
 }
@@ -211,7 +217,7 @@ void unProtect(int index) {
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "reallocate %d + %lu - %lu [%d]\n", bytesAllocated, newSize, oldSize, numAlloc);
+    fprintf(stderr, "reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n", bytesAllocated, newSize, oldSize, numAlloc, pointer);
     if (newSize > oldSize)
         numAlloc++;
     if (newSize < oldSize)
@@ -247,18 +253,26 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     void *result = realloc(pointer, newSize);
     if (result == NULL) exit(1);
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "reallocate ptr %p => %p\n", pointer, result);
+#endif
     return result;
 }
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type), bytesAllocated, size, numAlloc);
+    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type, 0), bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
     newObj->keep = false;
     newObj->next = allocated;
     allocated = newObj;
+    if (gcEnabled) {
+        lastAlloc = newObj;
+    } else {
+        lastAlloc = NULL;
+    }
     return (void *)newObj;
 }
 
@@ -269,16 +283,16 @@ static void markProtectionObj(Header *h) {
     MARK(h);
     ProtectionStack *protected = (ProtectionStack *)h;
     for (int i = 0; i < protected->sp; ++i) {
-        markObj(protected->stack[i]);
+        markObj(protected->stack[i], i);
     }
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "markProtectionObj done\n");
 #endif
 }
 
-void markObj(Header *h) {
+void markObj(Header *h, int i) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markObj %s\n", typeName(h->type));
+    fprintf(stderr, "markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
         case OBJTYPE_AMB:
@@ -335,8 +349,11 @@ void markObj(Header *h) {
         LAMBDA_OBJTYPE_CASES()
             markLambdaObj(h);
             break;
+        TPMC_OBJTYPE_CASES()
+            markTpmcObj(h);
+            break;
         default:
-            cant_happen("unrecognised ObjType %d in markObj", h->type);
+            cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
     }
 }
 
@@ -400,8 +417,12 @@ void freeObj(Header *h) {
             break;
         LAMBDA_OBJTYPE_CASES()
             freeLambdaObj(h);
+            break;
+        TPMC_OBJTYPE_CASES()
+            freeTpmcObj(h);
+            break;
         default:
-            cant_happen("unrecognised ObjType %d in freeObj", h->type);
+            cant_happen("unrecognised ObjType %d in freeObj at %p", h->type, (void *)h);
     }
 }
 
@@ -435,7 +456,7 @@ static void sweep() {
         } else {
 #ifdef DEBUG_LOG_GC
             fprintf(stderr, "sweep discard %p\n", (void *)current);
-            fprintf(stderr, "              type %s\n", typeName(current->type));
+            fprintf(stderr, "              type %s\n", typeName(current->type, current));
 #endif
             *previous = current->next;
             freeObj(current);
@@ -449,7 +470,13 @@ static void collectGarbage() {
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "GC started\n");
 #endif
+#ifdef DEBUG_GC
+    fprintf(stderr, "GC\n");
+#endif
     mark();
+    if (lastAlloc && !MARKED(lastAlloc)) {
+        cant_happen("alloc of %s (%p) immediately dropped", typeName(lastAlloc->type, lastAlloc), lastAlloc);
+    }
     sweep();
     nextGC = bytesAllocated * 2;
 #ifdef DEBUG_LOG_GC

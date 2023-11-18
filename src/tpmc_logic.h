@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_conversion_h
-#define cekf_lambda_conversion_h
+#ifndef cekf_tpmc_logic_h
+#define cekf_tpmc_logic_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -21,6 +21,6 @@
 #include "ast.h"
 #include "lambda.h"
 
-LamExp *lamConvertNest(AstNest *nest, LamContext *env);
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
+LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList, LamExp **actions, LamContext *env);
 #endif
+

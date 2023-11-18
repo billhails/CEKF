@@ -31,14 +31,18 @@ HashSymbol *newSymbol(char *name) {
     if (symbolTable == NULL) {
         symbolTable = newHashTable(0, NULL, NULL);
     }
-    return uniqueHashSymbol(symbolTable, name, NULL);
+    HashSymbol *res = uniqueHashSymbol(symbolTable, name, NULL);
+    validateLastAlloc();
+    return res;
 }
 
 
 HashSymbol *genSym(char *prefix) {
     static int symbolCounter = 0;
     char buffer[128];
-
+    if (symbolTable == NULL) {
+        symbolTable = newHashTable(0, NULL, NULL);
+    }
     for (;;) {
         sprintf(buffer, "%s%d", prefix, symbolCounter++);
         if (hashGetVar(symbolTable, buffer) == NULL) {
@@ -48,6 +52,7 @@ HashSymbol *genSym(char *prefix) {
             x->hash = hashString(buffer);
             hashSet(symbolTable, x, NULL);
             UNPROTECT(save);
+            validateLastAlloc();
             return x;
         }
     }

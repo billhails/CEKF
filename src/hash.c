@@ -31,6 +31,11 @@ bool quietPrintHashTable = false;
 
 static int idCounter = 0;
 
+#ifdef DEBUG_LEAK
+// allow very detailed specific debugging to be turned off and on at runtime
+bool hash_debug_flag = false;
+#endif
+
 #ifdef DEBUG_HASHTABLE
 static void printMemHeader(char *id, void *ptr) {
     /*
@@ -144,20 +149,27 @@ static void checkCapacity(HashTable *table) {
 }
 
 void hashSet(HashTable *table, HashSymbol *var, void *src) {
-#ifdef DEBUG_HASHTABLE
+#if defined(DEBUG_HASHTABLE) || defined(DEBUG_LEAK)
     fprintf(stderr, "hashSet(%s) [%d]\n", var->name, table->id);
-    printMemHeader("values", table->values);
-    printMemHeader("keys", table->keys);
 #endif
     checkCapacity(table);
     hash_t index = findEntry(table->keys, table->capacity, var);
+#ifdef DEBUG_LEAK
+        fprintf(stderr, "index == %d\n", index);
+#endif
 
     if (table->keys[index] == NULL) table->count++;
 
     table->keys[index] = var;
 
-    if (table->valuesize > 0) {
+    if (table->valuesize > 0 && src != NULL) {
         void *target = valuePtr(table, index);
+#if defined(DEBUG_HASHTABLE) || defined(DEBUG_LEAK)
+        fprintf(stderr, "memcpy(%p, %p, %ld);\n", target, src, table->valuesize);
+#ifdef DEBUG_LEAK
+        fprintf(stderr, "// *%p == %p, table->values == %p\n", src, *((void **)src), table->values);
+#endif
+#endif
         memcpy(target, src, table->valuesize);
     }
 }
@@ -207,18 +219,21 @@ void markHashTableObj(Header *h) {
 }
 
 void markHashTable(HashTable *table) {
+    if (table == NULL) return;
 #ifdef DEBUG_HASHTABLE
-    fprintf(stderr, "markHashTableObj() [%d]\n", table->id);
+    fprintf(stderr, "markHashTable() [%d]\n", table->id);
     printMemHeader("values", table->values);
     printMemHeader("keys", table->keys);
 #endif
-    if (table == NULL) return;
     if (MARKED(table)) return;
     MARK(table);
     for (int i = 0; i < table->capacity; i++) {
         if (table->keys[i] != NULL) {
             markHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->markfunction != NULL) {
+#ifdef DEBUG_HASHTABLE
+                fprintf(stderr, "markHashTable() [%d][%d][%p]\n", table->id, i, (char *)table->values + (i * table->valuesize));
+#endif
                 table->markfunction((char *)table->values + (i * table->valuesize));
             }
         }
@@ -265,44 +280,47 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
 }
 
 void printHashSymbol(HashSymbol *symbol) {
-    printf("%s", symbol->name);
+    fprintf(stderr, "%s", symbol->name);
 }
 
 void printHashTable(HashTable *table, int depth) {
     int count = 0;
-    printf("%*s", depth * 4, "");
+    fprintf(stderr, "%*s", depth * 4, "");
     if (table == NULL) {
-        printf("HashTable: (NULL)");
+        fprintf(stderr, "HashTable: (NULL)");
         return;
     }
-    printf("{[id:%d]", table->id);
+    fprintf(stderr, "{[id:%d]", table->id);
     bool first = true;
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
             if (first) {
                 first = false;
-                printf("\n");
+                fprintf(stderr, "\n");
             }
-            printf("%*s", (depth + 1) * 4, "");
+            fprintf(stderr, "%*s", (depth + 1) * 4, "");
             printHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
-                printf(" =>");
+                fprintf(stderr, " =>");
                 if (table->shortEntries)
-                    printf(" ");
+                    fprintf(stderr, " ");
                 else
-                    printf("\n");
+                    fprintf(stderr, "\n");
+#ifdef DEBUG_LEAK
+fprintf(stderr, "printHashTable, index %d, valuePtr %p\n", i, valuePtr(table, i));
+#endif
                 table->printfunction(valuePtr(table, i), table->shortEntries ? 0 : (depth + 2));
-                printf("\n");
+                fprintf(stderr, "\n");
             } else {
-                printf("\n");
+                fprintf(stderr, "\n");
             }
             count++;
         }
     }
     if (first)
-        printf("}");
+        fprintf(stderr, "}");
     else
-        printf("%*s}", depth * 4, "");
+        fprintf(stderr, "%*s}", depth * 4, "");
 }
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {

@@ -1,5 +1,3 @@
-#ifndef cekf_decision_tree_h
-#define cekf_decision_tree_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,16 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Term Pattern Matching Compiler stage 4. code generation
  */
 
-
-typedef struct DecisionTree {
-    AstArg **currentArgs;
-    AstArgList **remainingArgs;
-    AstNest **bodies;
-    int *nBodies;
-    int globalCount;
-    int localCount;
-} DecisionTree;
-
- #endif
+static int debugInvocationId = 0;
+#define ENTER(name) int debugMyId = debugInvocationId++; fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "enter " #name " %d\n", debugMyId)
+#define LEAVE(name) fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "leave " #name " %d\n", debugMyId)
+#define DEBUG(...) do { fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
+#define NEWLINE() fprintf(stderr, "\n")

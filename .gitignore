@@ -2,6 +2,8 @@ obj/
 dep/
 tmp/
 junk/
+out_scm/
+tmp_scm/
 cekf
 .*.swp
 .$*.drawio.*
@@ -9,3 +11,4 @@ callgrind.out.*
 core*
 Makefile.extra
 gmon.out
+.idea

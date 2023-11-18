@@ -25,10 +25,14 @@
 
 // #define TEST_STACK
 // #define DEBUG_STACK
-#define DEBUG_STEP
+// #define DEBUG_STEP
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
-#define DEBUG_RUN_TESTS 1
+// #define DEBUG_GC
+// #define DEBUG_TPMC_MATCH
+// #define DEBUG_TPMC_TRANSLATE
+// #define DEBUG_TPMC_LOGIC
+#define DEBUG_RUN_TESTS 5
 // #define DEBUG_ANALIZE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
@@ -37,7 +41,8 @@
 // #define DEBUG_TIN_UNIFICATION
 #define DEBUG_DUMP_CORE
 // #define DEBUG_ALGORITHM_W
-#define DEBUG_LAMBDA_CONVERT
+// #define DEBUG_LAMBDA_CONVERT
+// #define DEBUG_LEAK
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);
