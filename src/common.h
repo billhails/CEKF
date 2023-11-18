@@ -31,7 +31,7 @@
 // #define DEBUG_GC
 // #define DEBUG_TPMC_MATCH
 // #define DEBUG_TPMC_TRANSLATE
-#define DEBUG_TPMC_LOGIC
+// #define DEBUG_TPMC_LOGIC
 #define DEBUG_RUN_TESTS 5
 // #define DEBUG_ANALIZE
 // #define DEBUG_DESUGARING

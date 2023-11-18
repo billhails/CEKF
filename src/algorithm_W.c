@@ -937,10 +937,9 @@ static WResult *WExpression_d(TinContext *context, AstExpression *expr, int dept
             return WAbstraction(context, expr->val.fun, depth + 1);
         case AST_EXPRESSION_TYPE_NEST:
             return WNest(context, expr->val.nest, depth + 1);
-        /*
         case AST_EXPRESSION_TYPE_ENV:
-            return WEnv(context, expr->val.env);
-        */
+            cant_happen("env type not supported yet");
+            // return WEnv(context, expr->val.env);
         default:
             cant_happen("unrecognised type %d in WExpression", expr->type);
     }

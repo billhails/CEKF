@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
     enableGC();
     // quietPrintHashTable = true;
     WResult *wr = WTop(result);
-    showTinMonoType(wr->monoType);
-    printf("\n");
+    // showTinMonoType(wr->monoType);
+    // printf("\n");
     validateLastAlloc();
     if (hadErrors()) {
         printf("(errors detected)\n");

@@ -442,9 +442,6 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
         cant_happen("zero height matrix");
     }
     int width = input->rules->entries[0]->patterns->size;
-    if (width == 0) { // FIXME should allow fn with 0 arguments?
-        cant_happen("zero width matrix");
-    }
     TpmcMatrix *matrix = newTpmcMatrix(width, height);
     int save = PROTECT(matrix);
     for (int row = 0; row < height; ++row) {
