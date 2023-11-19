@@ -230,6 +230,15 @@ static void _ppLamSequence(LamSequence *sequence) {
     }
 }
 
+static void _ppLamList(LamList *list) {
+    if (list == NULL) return;
+    ppLamExp(list->exp);
+    if (list->next != NULL) {
+        fprintf(stderr, " ");
+        _ppLamList(list->next);
+    }
+}
+
 void ppLamSequence(LamSequence *sequence) {
     fprintf(stderr, "(begin ");
     _ppLamSequence(sequence);
@@ -244,7 +253,7 @@ void ppLamMakeVec(LamMakeVec *makeVec) {
     fprintf(stderr, "(make-vec");
     if (makeVec->args != NULL) {
         fprintf(stderr, " ");
-        _ppLamSequence(makeVec->args);
+        _ppLamList(makeVec->args);
     }
     fprintf(stderr, ")");
 }
@@ -258,7 +267,7 @@ void ppLamApply(LamApply *apply) {
     ppLamExp(apply->function);
     if (apply->args != NULL) {
         fprintf(stderr, " ");
-        _ppLamSequence(apply->args);
+        _ppLamList(apply->args);
     }
     fprintf(stderr, ")");
 }

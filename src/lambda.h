@@ -130,17 +130,23 @@ typedef struct LamSequence {
     struct LamSequence * next;
 } LamSequence;
 
+typedef struct LamList {
+    Header header;
+    struct LamExp * exp;
+    struct LamList * next;
+} LamList;
+
 typedef struct LamApply {
     Header header;
     struct LamExp * function;
     int nargs;
-    struct LamSequence * args;
+    struct LamList * args;
 } LamApply;
 
 typedef struct LamMakeVec {
     Header header;
     int nargs;
-    struct LamSequence * args;
+    struct LamList * args;
 } LamMakeVec;
 
 typedef struct LamIff {
@@ -230,8 +236,9 @@ struct LamVarList * newLamVarList(HashSymbol * var, struct LamVarList * next);
 struct LamPrimApp * newLamPrimApp(enum LamPrimOp  type, struct LamExp * exp1, struct LamExp * exp2);
 struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp);
 struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next);
-struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamSequence * args);
-struct LamMakeVec * newLamMakeVec(int nargs, struct LamSequence * args);
+struct LamList * newLamList(struct LamExp * exp, struct LamList * next);
+struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args);
+struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args);
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases);
 struct LamCondCases * newLamCondCases(struct LamExp * constant, struct LamExp * body, struct LamCondCases * next);
@@ -250,6 +257,7 @@ void markLamVarList(struct LamVarList * x);
 void markLamPrimApp(struct LamPrimApp * x);
 void markLamUnaryApp(struct LamUnaryApp * x);
 void markLamSequence(struct LamSequence * x);
+void markLamList(struct LamList * x);
 void markLamApply(struct LamApply * x);
 void markLamMakeVec(struct LamMakeVec * x);
 void markLamIff(struct LamIff * x);
@@ -270,6 +278,7 @@ void freeLamVarList(struct LamVarList * x);
 void freeLamPrimApp(struct LamPrimApp * x);
 void freeLamUnaryApp(struct LamUnaryApp * x);
 void freeLamSequence(struct LamSequence * x);
+void freeLamList(struct LamList * x);
 void freeLamApply(struct LamApply * x);
 void freeLamMakeVec(struct LamMakeVec * x);
 void freeLamIff(struct LamIff * x);

@@ -75,7 +75,17 @@ struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * ne
     return x;
 }
 
-struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamSequence * args) {
+struct LamList * newLamList(struct LamExp * exp, struct LamList * next) {
+    struct LamList * x = NEW(LamList, OBJTYPE_LAMLIST);
+    x->exp = exp;
+    x->next = next;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new LamList = %p\n", x);
+#endif
+    return x;
+}
+
+struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args) {
     struct LamApply * x = NEW(LamApply, OBJTYPE_LAMAPPLY);
     x->function = function;
     x->nargs = nargs;
@@ -86,7 +96,7 @@ struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamSeq
     return x;
 }
 
-struct LamMakeVec * newLamMakeVec(int nargs, struct LamSequence * args) {
+struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
     struct LamMakeVec * x = NEW(LamMakeVec, OBJTYPE_LAMMAKEVEC);
     x->nargs = nargs;
     x->args = args;
@@ -267,19 +277,27 @@ void markLamSequence(struct LamSequence * x) {
     markLamSequence(x->next);
 }
 
+void markLamList(struct LamList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->exp);
+    markLamList(x->next);
+}
+
 void markLamApply(struct LamApply * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     markLamExp(x->function);
-    markLamSequence(x->args);
+    markLamList(x->args);
 }
 
 void markLamMakeVec(struct LamMakeVec * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markLamSequence(x->args);
+    markLamList(x->args);
 }
 
 void markLamIff(struct LamIff * x) {
@@ -449,6 +467,9 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMSEQUENCE:
             markLamSequence((LamSequence *)h);
             break;
+        case OBJTYPE_LAMLIST:
+            markLamList((LamList *)h);
+            break;
         case OBJTYPE_LAMAPPLY:
             markLamApply((LamApply *)h);
             break;
@@ -516,6 +537,10 @@ void freeLamUnaryApp(struct LamUnaryApp * x) {
 
 void freeLamSequence(struct LamSequence * x) {
     FREE(x, LamSequence);
+}
+
+void freeLamList(struct LamList * x) {
+    FREE(x, LamList);
 }
 
 void freeLamApply(struct LamApply * x) {
@@ -592,6 +617,9 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMSEQUENCE:
             freeLamSequence((LamSequence *)h);
             break;
+        case OBJTYPE_LAMLIST:
+            freeLamList((LamList *)h);
+            break;
         case OBJTYPE_LAMAPPLY:
             freeLamApply((LamApply *)h);
             break;
@@ -651,6 +679,8 @@ char *typenameLambdaObj(int type) {
             return "LamUnaryApp";
         case OBJTYPE_LAMSEQUENCE:
             return "LamSequence";
+        case OBJTYPE_LAMLIST:
+            return "LamList";
         case OBJTYPE_LAMAPPLY:
             return "LamApply";
         case OBJTYPE_LAMMAKEVEC:

@@ -161,6 +161,18 @@ void printLamSequence(struct LamSequence * x, int depth) {
     fprintf(stderr, "]");
 }
 
+void printLamList(struct LamList * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamList (NULL)"); return; }
+    fprintf(stderr, "LamList[\n");
+    printLamExp(x->exp, depth + 1);
+    fprintf(stderr, "\n");
+    printLamList(x->next, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
+}
+
 void printLamApply(struct LamApply * x, int depth) {
     pad(depth);
     if (x == NULL) { fprintf(stderr, "LamApply (NULL)"); return; }
@@ -170,7 +182,7 @@ void printLamApply(struct LamApply * x, int depth) {
         pad(depth + 1);
 fprintf(stderr, "int %d", x->nargs);
     fprintf(stderr, "\n");
-    printLamSequence(x->args, depth + 1);
+    printLamList(x->args, depth + 1);
     fprintf(stderr, "\n");
     pad(depth);
     fprintf(stderr, "]");
@@ -183,7 +195,7 @@ void printLamMakeVec(struct LamMakeVec * x, int depth) {
         pad(depth + 1);
 fprintf(stderr, "int %d", x->nargs);
     fprintf(stderr, "\n");
-    printLamSequence(x->args, depth + 1);
+    printLamList(x->args, depth + 1);
     fprintf(stderr, "\n");
     pad(depth);
     fprintf(stderr, "]");

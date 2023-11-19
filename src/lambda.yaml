@@ -44,14 +44,18 @@ structs:
         exp: LamExp
         next: LamSequence
 
+    LamList:
+        exp: LamExp
+        next: LamList
+
     LamApply:
         function: LamExp
         nargs: int
-        args: LamSequence
+        args: LamList
 
     LamMakeVec:
         nargs: int
-        args: LamSequence
+        args: LamList
 
     LamIff:
         condition: LamExp
