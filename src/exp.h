@@ -312,7 +312,6 @@ ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
 LetRecBindings *newLetRecBindings(LetRecBindings *next, HashSymbol *var, Aexp *val);
 
-
 void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);
 void markAexpList(AexpList *x);
