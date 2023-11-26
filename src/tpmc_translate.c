@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "lambda.h"
+#include "lambda_helper.h"
 #include "tpmc.h"
 #include "symbol.h"
 #include "common.h"
@@ -34,14 +35,6 @@
 
 static LamExp *translateStateToInlineCode(TpmcState *dfa, HashTable *lambdaCache);
 static LamExp *translateState(TpmcState *dfa, HashTable *lambdaCache);
-
-static void markLamExpFn(void *ptr) {
-    markLamExp(*((LamExp **) ptr));
-}
-
-static void printLamExpFn(void *ptr, int depth) {
-    ppLamExpD(*((LamExp **) ptr), depth);
-}
 
 static HashSymbol *makeLambdaName(TpmcState *state) {
     char buf[80];
@@ -83,20 +76,20 @@ static LamVarList *makeCanonicalArgs(HashTable *freeVariables) {
     return res;
 }
 
-static LamSequence *convertVarListToSequence(LamVarList *vars) {
-    ENTER(convertVarListToSequence);
+static LamList *convertVarListToList(LamVarList *vars) {
+    ENTER(convertVarListToList);
     if (vars == NULL) {
-        LEAVE(convertVarListToSequence);
+        LEAVE(convertVarListToList);
         return NULL;
     }
-    LamSequence *next = convertVarListToSequence(vars->next);
+    LamList *next = convertVarListToList(vars->next);
     int save = PROTECT(next);
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(vars->var));
     DEBUG("[newLamExp]");
     PROTECT(exp);
-    LamSequence *this = newLamSequence(exp, next);
+    LamList *this = newLamList(exp, next);
     UNPROTECT(save);
-    LEAVE(convertVarListToSequence);
+    LEAVE(convertVarListToList);
     return this;
 }
 
@@ -107,7 +100,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     int save = PROTECT(function);
     LamVarList *cargs = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(cargs);
-    LamSequence *args = convertVarListToSequence(cargs);
+    LamList *args = convertVarListToList(cargs);
     PROTECT(args);
     LamApply *apply = newLamApply(function, dfa->freeVariables->count, args);
     PROTECT(apply);

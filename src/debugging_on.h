@@ -19,7 +19,7 @@
  */
 
 static int debugInvocationId = 0;
-#define ENTER(name) int debugMyId = debugInvocationId++; fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "enter " #name " %d\n", debugMyId)
-#define LEAVE(name) fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "leave " #name " %d\n", debugMyId)
+#define ENTER(name) int debugMyId = debugInvocationId++; fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "enter " #name " #%d\n", debugMyId)
+#define LEAVE(name) fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, "leave " #name " #%d\n", debugMyId)
 #define DEBUG(...) do { fprintf(stderr, "**** %s:%-5d ", __FILE__, __LINE__); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
 #define NEWLINE() fprintf(stderr, "\n")

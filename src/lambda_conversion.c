@@ -25,7 +25,7 @@
 #include "common.h"
 #include "lambda_conversion.h"
 #include "lambda_helper.h"
-#include "symbol.h"
+#include "symbols.h"
 #include "tpmc_logic.h"
 #include "debug_ast.h"
 
@@ -37,7 +37,8 @@
 #define SAFE_MALLOC(thing) ((thing *)safe_malloc(sizeof(thing)))
 
 static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env);
-static LamSequence *convertExpressions(AstExpressions *expressions, LamContext *env);
+static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
+static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env);
 static int countLetRecBindings(LamLetRecBindings *b);
 static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next);
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
@@ -82,7 +83,7 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     int save = PROTECT(ext);
     LamLetRecBindings *bindings = convertLetrecBindings(nest->definitions, ext);
     (void) PROTECT(bindings);
-    LamSequence *body = convertExpressions(nest->expressions, ext);
+    LamSequence *body = convertSequence(nest->expressions, ext);
     (void) PROTECT(body);
     LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
     (void) PROTECT(letRecBody);
@@ -147,7 +148,19 @@ static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, HashTable *sub
     return unary;
 }
 
-static LamSequence *performListSubstitutions(LamSequence *list, HashTable *substitutions) {
+static LamSequence *performSequenceSubstitutions(LamSequence *sequence, HashTable *substitutions) {
+    ENTER(performSequenceSubstitutions);
+    if (sequence == NULL) {
+        LEAVE(performSequenceSubstitutions);
+        return NULL;
+    }
+    sequence->next = performSequenceSubstitutions(sequence->next, substitutions);
+    sequence->exp = lamPerformSubstitutions(sequence->exp, substitutions);
+    LEAVE(performSequenceSubstitutions);
+    return sequence;
+}
+
+static LamList *performListSubstitutions(LamList *list, HashTable *substitutions) {
     ENTER(performListSubstitutions);
     if (list == NULL) {
         LEAVE(performListSubstitutions);
@@ -233,6 +246,30 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitut
     return match;
 }
 
+static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
+    ENTER(performAndSubstitutions);
+    and->left = lamPerformSubstitutions(and->left, substitutions);
+    and->left = lamPerformSubstitutions(and->left, substitutions);
+    LEAVE(performAndSubstitutions);
+    return and;
+}
+
+static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
+    ENTER(performOrSubstitutions);
+    or->left = lamPerformSubstitutions(or->left, substitutions);
+    or->left = lamPerformSubstitutions(or->left, substitutions);
+    LEAVE(performOrSubstitutions);
+    return or;
+}
+
+static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
+    ENTER(performAmbSubstitutions);
+    amb->left = lamPerformSubstitutions(amb->left, substitutions);
+    amb->left = lamPerformSubstitutions(amb->left, substitutions);
+    LEAVE(performAmbSubstitutions);
+    return amb;
+}
+
 static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable *substitutions) {
     ENTER(performCondCaseSubstitutions);
     if (cases == NULL) {
@@ -276,7 +313,7 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             exp->val.unary = performUnarySubstitutions(exp->val.unary, substitutions);
             break;
         case LAMEXP_TYPE_LIST:
-            exp->val.list = performListSubstitutions(exp->val.list, substitutions);
+            exp->val.list = performSequenceSubstitutions(exp->val.list, substitutions);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
@@ -301,6 +338,15 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_MATCH:
             exp->val.match = performMatchSubstitutions(exp->val.match, substitutions);
+            break;
+        case LAMEXP_TYPE_AND:
+            exp->val.and = performAndSubstitutions(exp->val.and, substitutions);
+            break;
+        case LAMEXP_TYPE_OR:
+            exp->val.or = performOrSubstitutions(exp->val.or, substitutions);
+            break;
+        case LAMEXP_TYPE_AMB:
+            exp->val.amb = performAmbSubstitutions(exp->val.amb, substitutions);
             break;
         default:
             cant_happen("unrecognized LamExp type (%d) in lamPerformSubstitutions", exp->type);
@@ -413,21 +459,21 @@ static LamVarList *genLamVarList(int nargs) {
     return this;
 }
 
-static LamSequence *varListToLamList(LamVarList *varList) {
+static LamList *varListToLamList(LamVarList *varList) {
     if (varList == NULL) return NULL;
-    LamSequence *next = varListToLamList(varList->next);
+    LamList *next = varListToLamList(varList->next);
     int save = PROTECT(next);
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(varList->var));
     (void) PROTECT(exp);
-    LamSequence *this = newLamSequence(exp, next);
+    LamList *this = newLamList(exp, next);
     UNPROTECT(save);
     return this;
 }
 
-static LamExp *makeMakeVec(int nargs, int index, LamSequence *args) {
+static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
     LamExp *indexExp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
     int save = PROTECT(indexExp);
-    args = newLamSequence(indexExp, args);
+    args = newLamList(indexExp, args);
     (void) PROTECT(args);
     LamMakeVec *makeVec = newLamMakeVec(nargs + 1, args);
     (void) PROTECT(makeVec);
@@ -439,7 +485,7 @@ static LamExp *makeMakeVec(int nargs, int index, LamSequence *args) {
 static LamExp *makeTypeConstructor(int index, int nargs) {
     LamVarList *varList = genLamVarList(nargs);
     int save = PROTECT(varList);
-    LamSequence *args = varListToLamList(varList);
+    LamList *args = varListToLamList(varList);
     (void) PROTECT(args);
     LamExp *exp = makeMakeVec(nargs, index, args);
     (void) PROTECT(exp);
@@ -508,26 +554,125 @@ static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamL
     return this;
 }
 
+#define CHECK_ONE_ARG(name, args) do { \
+    if ((args) == NULL) { \
+        cant_happen("expected 1 arg in " #name ", got 0"); \
+    } \
+    if ((args)->next != NULL) { \
+        cant_happen("expected 1 arg in " #name ", got > 1"); \
+    } \
+} while(0)
+
+#define CHECK_TWO_ARGS(name, args) do { \
+    if ((args) == NULL) { \
+        cant_happen("expected 2 args in " #name ", got 0"); \
+    } \
+    if ((args)->next == NULL) { \
+        cant_happen("expected 2 args in " #name ", got 1"); \
+    } \
+    if ((args)->next->next != NULL) { \
+        cant_happen("expected 2 args in " #name ", got > 2"); \
+    } \
+} while(0)
+
+
+static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
+    CHECK_ONE_ARG(makeUnaryOp, args);
+    LamUnaryApp *app = newLamUnaryApp(opCode, args->exp);
+    int save = PROTECT(app);
+    LamExp *exp = newLamExp(LAMEXP_TYPE_UNARY, LAMEXP_VAL_UNARY(app));
+    UNPROTECT(save);
+    return exp;
+}
+
+static LamExp *makeCallCC(LamList *args) {
+    CHECK_ONE_ARG(makeCallCC, args);
+    return newLamExp(LAMEXP_TYPE_CALLCC, LAMEXP_VAL_CALLCC(args->exp));
+}
+
+static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
+    CHECK_TWO_ARGS(makeBinOp, args);
+    LamPrimApp *app = newLamPrimApp(opCode, args->exp, args->next->exp);
+    int save = PROTECT(app);
+    LamExp *exp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(app));
+    UNPROTECT(save);
+    return exp;
+}
+
+static LamExp *makeLamAnd(LamList *args) {
+    CHECK_TWO_ARGS(makeLamAnd, args);
+    LamAnd *lamAnd = newLamAnd(args->exp, args->next->exp);
+    int save = PROTECT(lamAnd);
+    LamExp *res = newLamExp(LAMEXP_TYPE_AND, LAMEXP_VAL_AND(lamAnd));
+    UNPROTECT(save);
+    return res;
+}
+
+static LamExp *makeLamOr(LamList *args) {
+    CHECK_TWO_ARGS(makeLamOr, args);
+    LamOr *lamOr = newLamOr(args->exp, args->next->exp);
+    int save = PROTECT(lamOr);
+    LamExp *res = newLamExp(LAMEXP_TYPE_OR, LAMEXP_VAL_OR(lamOr));
+    UNPROTECT(save);
+    return res;
+}
+
+static LamExp *makeLamAmb(LamList *args) {
+    CHECK_TWO_ARGS(makeLamAmb, args);
+    LamAmb *lamAmb = newLamAmb(args->exp, args->next->exp);
+    int save = PROTECT(lamAmb);
+    LamExp *res = newLamExp(LAMEXP_TYPE_AMB, LAMEXP_VAL_AMB(lamAmb));
+    UNPROTECT(save);
+    return res;
+}
+
+static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
+    if (symbol == negSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_LAM_UNARY_NEG, args);
+    if (symbol == notSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_LAM_UNARY_NOT, args);
+    if (symbol == hereSymbol()) return makeCallCC(args);
+    if (symbol == thenSymbol()) return makeLamAmb(args);
+    if (symbol == andSymbol()) return makeLamAnd(args);
+    if (symbol == orSymbol()) return makeLamOr(args);
+    if (symbol == xorSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_XOR, args);
+    if (symbol == eqSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_EQ, args);
+    if (symbol == neSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_NE, args);
+    if (symbol == gtSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_GT, args);
+    if (symbol == ltSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_LT, args);
+    if (symbol == geSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_GE, args);
+    if (symbol == addSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_ADD, args);
+    if (symbol == subSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_SUB, args);
+    if (symbol == mulSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_MUL, args);
+    if (symbol == divSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_DIV, args);
+    if (symbol == modSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_MOD, args);
+    if (symbol == powSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LAM_PRIM_POW, args);
+    return false;
+}
+
 static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
     AstExpression *function = funCall->function;
-    LamSequence *args = convertExpressions(funCall->arguments, env);
+    LamList *args = convertExpressions(funCall->arguments, env);
     int actualNargs = countAstExpressions(funCall->arguments);
     int save = PROTECT(args);
-    // see if it's a type constructor we can inline
+    // see if it's a type constructor we can inline FIXME - or a primitive
     if (function->type == AST_EXPRESSION_TYPE_SYMBOL) {
         HashSymbol *symbol = function->val.symbol;
-        LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-        if (info != NULL) {
-            if (info->vec) {
-                if (actualNargs == info->arity) {
-                    LamExp *inLine = makeMakeVec(info->arity, info->index, args);
-                    UNPROTECT(save);
-                    return inLine;
+        LamExp *primApp = makePrimApp(symbol, args);
+        if (primApp != NULL) {
+            return primApp;
+        } else {
+            LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+            if (info != NULL) {
+                if (info->vec) {
+                    if (actualNargs == info->arity) {
+                        LamExp *inLine = makeMakeVec(info->arity, info->index, args);
+                        UNPROTECT(save);
+                        return inLine;
+                    } else {
+                        cant_happen("wrong number of arguments to constructor %s", symbol->name);
+                    }
                 } else {
-                    cant_happen("wrong number of arguments to constructor %s", symbol->name);
+                    cant_happen("arguments to empty constructor %s", symbol->name);
                 }
-            } else {
-                cant_happen("arguments to empty constructor %s", symbol->name);
             }
         }
     }
@@ -688,9 +833,20 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     return result;
 }
 
-static LamSequence *convertExpressions(AstExpressions *expressions, LamContext *env) {
+static LamList *convertExpressions(AstExpressions *expressions, LamContext *env) {
     if (expressions == NULL) return NULL;
-    LamSequence *next = convertExpressions(expressions->next, env);
+    LamList *next = convertExpressions(expressions->next, env);
+    int save = PROTECT(next);
+    LamExp *exp = convertExpression(expressions->expression, env);
+    (void) PROTECT(exp);
+    LamList *this = newLamList(exp, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env) {
+    if (expressions == NULL) return NULL;
+    LamSequence *next = convertSequence(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
     (void) PROTECT(exp);

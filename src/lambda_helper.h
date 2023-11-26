@@ -27,4 +27,6 @@ void printLambdaSymbol(HashSymbol *x, int depth);
 LamContext *extendLamContext(LamContext *parent);
 void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info);
 LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var);
+void markLamExpFn(void *ptr);
+void printLamExpFn(void *ptr, int depth);
 #endif

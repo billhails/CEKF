@@ -29,6 +29,7 @@ void printLamVarList(struct LamVarList * x, int depth);
 void printLamPrimApp(struct LamPrimApp * x, int depth);
 void printLamUnaryApp(struct LamUnaryApp * x, int depth);
 void printLamSequence(struct LamSequence * x, int depth);
+void printLamList(struct LamList * x, int depth);
 void printLamApply(struct LamApply * x, int depth);
 void printLamMakeVec(struct LamMakeVec * x, int depth);
 void printLamIff(struct LamIff * x, int depth);
@@ -41,6 +42,9 @@ void printLamLet(struct LamLet * x, int depth);
 void printLamLetRec(struct LamLetRec * x, int depth);
 void printLamLetRecBindings(struct LamLetRecBindings * x, int depth);
 void printLamContext(struct LamContext * x, int depth);
+void printLamAnd(struct LamAnd * x, int depth);
+void printLamOr(struct LamOr * x, int depth);
+void printLamAmb(struct LamAmb * x, int depth);
 void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth);
 void printLamExp(struct LamExp * x, int depth);
 

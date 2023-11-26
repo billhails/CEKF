@@ -20,10 +20,6 @@
 #include "ast_helper.h"
 #include "symbol.h"
 
-HashSymbol *getAstSymbol(char *name) {
-    return newSymbol(name);
-}
-
 void printAstSymbol(struct HashSymbol * x, int depth) {
     fprintf(stderr, "%*s", depth * 4, "");
     if (x == NULL) { fprintf(stderr, "AstSymbol (NULL)"); return; }

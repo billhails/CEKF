@@ -35,26 +35,26 @@ static void printCons(Cons *x);
 static void printVec(Vec *x);
 
 static void printPad(int depth) {
-    printf("%*s", depth * 4, "");
+    fprintf(stderr, "%*s", depth * 4, "");
 }
 
 void printContainedValue(Value x, int depth) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
             printPad(depth);
-            printf("#V");
+            fprintf(stderr, "#V");
             break;
         case VALUE_TYPE_INTEGER:
             printPad(depth);
-            printf("%d", x.val.z);
+            fprintf(stderr, "%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
             printPad(depth);
-            printf("#T");
+            fprintf(stderr, "#T");
             break;
         case VALUE_TYPE_FALSE:
             printPad(depth);
-            printf("#F");
+            fprintf(stderr, "#F");
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo, depth);
@@ -78,92 +78,92 @@ void printContainedValue(Value x, int depth) {
 static void printSnapshot(Snapshot s, int depth) {
     printPad(depth);
     if (s.frameSize == 0) {
-        printf("S/");
+        fprintf(stderr, "S/");
         return;
     }
-    printf("SS[\n");
+    fprintf(stderr, "SS[\n");
     for (int i = 0; i < s.frameSize; i++) {
         printContainedValue(s.frame[i], depth + 1);
         if (i < s.frameSize - 1) {
-            printf(",");
+            fprintf(stderr, ",");
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 static void printElidedSnapshot(Snapshot s) {
     if (s.frameSize == 0) {
-        printf("S/");
+        fprintf(stderr, "S/");
         return;
     }
-    printf("S[<...>]");
+    fprintf(stderr, "S[<...>]");
 }
 
 void printValue(Value x, int depth) {
     printPad(depth);
     if (x.type == VALUE_TYPE_VOID) {
-        printf("V/");
+        fprintf(stderr, "V/");
         return;
     }
-    printf("V[\n");
+    fprintf(stderr, "V[\n");
     printContainedValue(x, depth + 1);
-    printf("\n");
+    fprintf(stderr, "\n");
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printElidedClo(Clo *x) {
-    printf("C[%d, %d, E[<...>], ", x->nvar, x->c);
-    printf("]");
+    fprintf(stderr, "C[%d, %d, E[<...>], ", x->nvar, x->c);
+    fprintf(stderr, "]");
 }
 
 void printElidedKont(Kont *x) {
     if (x == NULL) {
-        printf("K/");
+        fprintf(stderr, "K/");
         return;
     }
-    printf("K[");
-    printf("%d, E[<...>], ", x->body);
+    fprintf(stderr, "K[");
+    fprintf(stderr, "%d, E[<...>], ", x->body);
     printElidedSnapshot(x->snapshot);
     printElidedKont(x->next);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printCons(Cons *x) {
-    printf("(");
+    fprintf(stderr, "(");
     printContainedValue(x->car, 0);
-    printf(" . ");
+    fprintf(stderr, " . ");
     printContainedValue(x->cdr, 0);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printVec(Vec *x) {
-    printf("#[");
+    fprintf(stderr, "#[");
     for (int i = 0; i < x->size; i++) {
         printContainedValue(x->values[i], 0);
         if (i + 1 < x->size) {
-            printf(" ");
+            fprintf(stderr, " ");
         }
     }
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printElidedValue(Value x) {
-    printf("V[");
+    fprintf(stderr, "V[");
     switch (x.type) {
         case VALUE_TYPE_VOID:
-            printf("#V");
+            fprintf(stderr, "#V");
             break;
         case VALUE_TYPE_INTEGER:
-            printf("%d", x.val.z);
+            fprintf(stderr, "%d", x.val.z);
             break;
         case VALUE_TYPE_TRUE:
-            printf("#T");
+            fprintf(stderr, "#T");
             break;
         case VALUE_TYPE_FALSE:
-            printf("#F");
+            fprintf(stderr, "#F");
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);
@@ -180,402 +180,405 @@ void printElidedValue(Value x) {
         default:
             cant_happen("unrecognised value type in printElidedValue");
     }
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 static void printClo(Clo *x, int depth) {
     printPad(depth);
-    printf("C[%d, %d, ", x->nvar, x->c);
+    fprintf(stderr, "C[%d, %d, ", x->nvar, x->c);
     printElidedEnv(x->rho);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printCEKF(CEKF *x) {
     int depth = 1;
-    printf("\nCEKF (\n");
+    fprintf(stderr, "\nCEKF (\n");
     printPad(depth);
-    printf("%d", x->C);
-    printf(",\n");
+    fprintf(stderr, "%d", x->C);
+    fprintf(stderr, ",\n");
     printEnv(x->E, depth);
-    printf(",\n");
+    fprintf(stderr, ",\n");
     printKont(x->K, depth);
-    printf(",\n");
+    fprintf(stderr, ",\n");
     printFail(x->F, depth);
-    printf(",\n");
+    fprintf(stderr, ",\n");
     printValue(x->V, depth);
-    printf(",\n");
+    fprintf(stderr, ",\n");
     printStack(&x->S, depth);
-    printf("\n)\n\n");
+    fprintf(stderr, "\n)\n\n");
 }
 
 static void printStack(Stack *x, int depth) {
     printPad(depth);
     if (x == NULL || x->sp ==0) {
-        printf("S/");
+        fprintf(stderr, "S/");
         return;
     }
-    printf("S[\n");
+    fprintf(stderr, "S[\n");
     for (int i = 0; i < x->sp; ++i) {
         printContainedValue(peekValue(x, i), depth + 1);
         if (i < x->sp - 1) {
-            printf(",");
+            fprintf(stderr, ",");
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 static void printValues(Value *values, int count, int depth) {
     printPad(depth);
-    printf("{\n");
+    fprintf(stderr, "{\n");
     for (int i = 0; i < count; ++i) {
         printValue(values[i], depth + 1);
         if (i + 1 < count) {
-            printf(",");
+            fprintf(stderr, ",");
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
     printPad(depth);
-    printf("}");
+    fprintf(stderr, "}");
 }
 
 void printElidedValues(Value *values, int count) {
-    printf("{");
+    fprintf(stderr, "{");
     for (int i = 0; i < count; ++i) {
         printElidedValue(values[i]);
         if (i + 1 < count) {
-            printf(", ");
+            fprintf(stderr, ", ");
         }
     }
-    printf("}");
+    fprintf(stderr, "}");
 }
 
 void printEnv(Env *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        printf("E/");
+        fprintf(stderr, "E/");
         return;
     }
-    printf("E[\n");
+    fprintf(stderr, "E[\n");
     while (x != NULL) {
         printValues(x->values, x->count, depth + 1);
-        if (x->next != NULL) printf(",");
-        printf("\n");
+        if (x->next != NULL) fprintf(stderr, ",");
+        fprintf(stderr, "\n");
         x = x->next;
     }
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printCTEnv(CTEnv *x) {
-    printf("CTEnv[");
+    fprintf(stderr, "CTEnv[");
     while (x != NULL) {
         printHashTable(x->table, 0);
-        if (x->next != NULL) printf(", ");
+        if (x->next != NULL) fprintf(stderr, ", ");
         x = x->next;
     }
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printElidedEnv(Env *x) {
     if (x == NULL) {
-        printf("E/");
+        fprintf(stderr, "E/");
         return;
     }
-    printf("E[");
+    fprintf(stderr, "E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
-        if (x->next != NULL) printf(", ");
+        if (x->next != NULL) fprintf(stderr, ", ");
         x = x->next;
     }
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 static void printKont(Kont *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        printf("K/");
+        fprintf(stderr, "K/");
         return;
     }
-    printf("K[\n");
+    fprintf(stderr, "K[\n");
     if (x != NULL) {
         printPad(depth + 1);
-        printf("%d,\n", x->body);
+        fprintf(stderr, "%d,\n", x->body);
         printEnv(x->rho, depth + 1);
-        printf(",\n");
+        fprintf(stderr, ",\n");
         printSnapshot(x->snapshot, depth + 1);
-        printf(",\n");
+        fprintf(stderr, ",\n");
         printKont(x->next, depth + 1);
-        printf("\n");
+        fprintf(stderr, "\n");
     }
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 static void printFail(Fail *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        printf("F/");
+        fprintf(stderr, "F/");
         return;
     }
-    printf("F[\n");
+    fprintf(stderr, "F[\n");
     if (x != NULL) {
         printPad(depth + 1);
-        printf("%d", x->exp);
-        printf(",\n");
+        fprintf(stderr, "%d", x->exp);
+        fprintf(stderr, ",\n");
         printEnv(x->rho, depth + 1);
-        printf(",\n");
+        fprintf(stderr, ",\n");
         printSnapshot(x->snapshot, depth + 1);
-        printf(",\n");
+        fprintf(stderr, ",\n");
         printKont(x->k, depth + 1);
-        printf(",\n");
+        fprintf(stderr, ",\n");
         printFail(x->next, depth + 1);
-        printf("\n");
+        fprintf(stderr, "\n");
     }
     printPad(depth);
-    printf("]");
+    fprintf(stderr, "]");
 }
 
 void printAexpLam(AexpLam *x) {
-    printf("(lambda ");
+    fprintf(stderr, "(lambda ");
     printAexpVarList(x->args);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexpVarList(AexpVarList *x) {
-    printf("(");
+    fprintf(stderr, "(");
     while (x != NULL) {
         printAexpVar(x->var);
         if (x->next != NULL) {
-            printf(" ");
+            fprintf(stderr, " ");
         }
         x = x->next;
     }
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexpVar(HashSymbol *x) {
-    printf("%s", x->name);
+    fprintf(stderr, "%s", x->name);
 }
 
 void printAexpAnnotatedVar(AexpAnnotatedVar *x) {
     printAexpVar(x->var);
     if (x->type == VAR_TYPE_STACK)
-        printf("[%d]", x->offset);
+        fprintf(stderr, "[%d]", x->offset);
     else
-        printf("[%d:%d]", x->frame, x->offset);
+        fprintf(stderr, "[%d:%d]", x->frame, x->offset);
 }
 
 void printAexpPrimApp(AexpPrimApp *x) {
-    printf("(");
+    fprintf(stderr, "(");
     switch(x->op) {
         case AEXP_PRIM_ADD:
-            printf("+ ");
+            fprintf(stderr, "add ");
             break;
         case AEXP_PRIM_SUB:
-            printf("- ");
+            fprintf(stderr, "sub ");
             break;
         case AEXP_PRIM_MUL:
-            printf("* ");
+            fprintf(stderr, "mul ");
             break;
         case AEXP_PRIM_DIV:
-            printf("* ");
+            fprintf(stderr, "div ");
             break;
         case AEXP_PRIM_EQ:
-            printf("= ");
+            fprintf(stderr, "eq ");
             break;
         case AEXP_PRIM_NE:
-            printf("!= ");
+            fprintf(stderr, "ne ");
             break;
         case AEXP_PRIM_GT:
-            printf("> ");
+            fprintf(stderr, "gt ");
             break;
         case AEXP_PRIM_LT:
-            printf("< ");
+            fprintf(stderr, "lt ");
             break;
         case AEXP_PRIM_GE:
-            printf(">= ");
+            fprintf(stderr, "ge ");
             break;
         case AEXP_PRIM_LE:
-            printf("<= ");
+            fprintf(stderr, "le ");
             break;
         case AEXP_PRIM_XOR:
-            printf("xor ");
+            fprintf(stderr, "xor ");
             break;
         case AEXP_PRIM_CONS:
-            printf("cons ");
+            fprintf(stderr, "cons ");
             break;
         case AEXP_PRIM_VEC:
-            printf("vec ");
+            fprintf(stderr, "vec ");
+            break;
+        case AEXP_PRIM_MOD:
+            fprintf(stderr, "mod ");
             break;
         default:
             cant_happen("unrecognized op in printAexpPrimApp (%d)", x->op);
     }
     printAexp(x->exp1);
     if (x->exp2 != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         printAexp(x->exp2);
     }
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexpUnaryApp(AexpUnaryApp *x) {
-    printf("(");
+    fprintf(stderr, "(");
     switch(x->op) {
         case AEXP_UNARY_CAR:
-            printf("car ");
+            fprintf(stderr, "car ");
             break;
         case AEXP_UNARY_CDR:
-            printf("cdr ");
+            fprintf(stderr, "cdr ");
             break;
         case AEXP_UNARY_NOT:
-            printf("not ");
+            fprintf(stderr, "not ");
             break;
         case AEXP_UNARY_PRINT:
-            printf("print ");
+            fprintf(stderr, "print ");
             break;
         default:
             cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
     }
     printAexp(x->exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 static void printAexpListContents(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
-            printf(" ");
+            fprintf(stderr, " ");
         }
         x = x->next;
     }
 }
 
 void printAexpList(AexpList *x) {
-    printf("(");
+    fprintf(stderr, "(");
     printAexpListContents(x);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexpMakeList(AexpList *x) {
-    printf("(list ");
+    fprintf(stderr, "(list ");
     printAexpListContents(x);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexpMakeVec(AexpMakeVec *x) {
-    printf("(make-vec ");
+    fprintf(stderr, "(make-vec ");
     printAexpListContents(x->args);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printBareAexpList(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
-            printf(" ");
+            fprintf(stderr, " ");
         }
         x = x->next;
     }
 }
 
 void printCexpApply(CexpApply *x) {
-    printf("(");
+    fprintf(stderr, "(");
     printAexp(x->function);
-    printf(" ");
+    fprintf(stderr, " ");
     printBareAexpList(x->args);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printCexpCond(CexpCond *x) {
-    printf("(if ");
+    fprintf(stderr, "(if ");
     printAexp(x->condition);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->consequent);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->alternative);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printCexpLetRec(CexpLetRec *x) {
-    printf("(letrec ");
+    fprintf(stderr, "(letrec ");
     printLetRecBindings(x->bindings);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->body);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printLetRecBindings(LetRecBindings *x) {
-    printf("(");
+    fprintf(stderr, "(");
     while (x != NULL) {
-        printf("(");
+        fprintf(stderr, "(");
         printAexpVar(x->var);
-        printf(" ");
+        fprintf(stderr, " ");
         printAexp(x->val);
-        printf(")");
+        fprintf(stderr, ")");
         if (x->next != NULL) {
-            printf(" ");
+            fprintf(stderr, " ");
         }
         x = x->next;
     }
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printCexpAmb(CexpAmb *x) {
-    printf("(amb ");
+    fprintf(stderr, "(amb ");
     printExp(x->exp1);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->exp2);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printCexpCut(CexpCut *x) {
-    printf("(cut ");
+    fprintf(stderr, "(cut ");
     printExp(x->exp);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printCexpBool(CexpBool *x) {
-    printf("(");
+    fprintf(stderr, "(");
     switch (x->type) {
         case BOOL_TYPE_AND:
-            printf("and");
+            fprintf(stderr, "and");
             break;
         case BOOL_TYPE_OR:
-            printf("or");
+            fprintf(stderr, "or");
             break;
         default:
             cant_happen("unrecognised type %d in printCexpBool", x->type);
     }
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->exp1);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->exp2);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printMatchList(MatchList *x) {
     if (x == NULL) return;
-    printf("(");
+    fprintf(stderr, "(");
     printAexpList(x->matches);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->body);
-    printf(")");
+    fprintf(stderr, ")");
     if (x->next != NULL) {
-        printf(" ");
+        fprintf(stderr, " ");
         printMatchList(x->next);
     }
 }
 
 void printCexpMatch(CexpMatch *x) {
-    printf("(match ");
+    fprintf(stderr, "(match ");
     printAexp(x->condition);
-    printf(" ");
+    fprintf(stderr, " ");
     printMatchList(x->clauses);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 void printAexp(Aexp *x) {
@@ -590,16 +593,19 @@ void printAexp(Aexp *x) {
             printAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_TRUE:
-            printf("#t");
+            fprintf(stderr, "#t");
             break;
         case AEXP_TYPE_FALSE:
-            printf("#f");
+            fprintf(stderr, "#f");
             break;
         case AEXP_TYPE_VOID:
-            printf("nil");
+            fprintf(stderr, "nil");
             break;
         case AEXP_TYPE_INT:
-            printf("%d", x->val.integer);
+            fprintf(stderr, "%d", x->val.integer);
+            break;
+        case AEXP_TYPE_CHAR:
+            fprintf(stderr, "'%c'", x->val.character);
             break;
         case AEXP_TYPE_PRIM:
             printAexpPrimApp(x->val.prim);
@@ -627,9 +633,9 @@ void printCexp(Cexp *x) {
             printCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
-            printf("(call/cc ");
+            fprintf(stderr, "(call/cc ");
             printAexp(x->val.callCC);
-            printf(")");
+            fprintf(stderr, ")");
             break;
         case CEXP_TYPE_LETREC:
             printCexpLetRec(x->val.letRec);
@@ -647,7 +653,10 @@ void printCexp(Cexp *x) {
             printCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BACK:
-            printf("(back)");
+            fprintf(stderr, "(back)");
+            break;
+        case CEXP_TYPE_ERROR:
+            fprintf(stderr, "(error)");
             break;
         default:
             cant_happen("unrecognised cexp %d in printCexp", x->type);
@@ -666,22 +675,22 @@ void printExp(Exp *x) {
             printExpLet(x->val.let);
             break;
         case EXP_TYPE_DONE:
-            printf("<DONE>");
+            fprintf(stderr, "<DONE>");
             break;
         default:
-            printf("<unrecognised exp %d>", x->type);
+            fprintf(stderr, "<unrecognised exp %d>", x->type);
             exit(1);
     }
 }
 
 void printExpLet(ExpLet *x) {
-    printf("(let (");
+    fprintf(stderr, "(let (");
     printAexpVar(x->var);
-    printf(" ");
+    fprintf(stderr, " ");
     printExp(x->val);
-    printf(") ");
+    fprintf(stderr, ") ");
     printExp(x->body);
-    printf(")");
+    fprintf(stderr, ")");
 }
 
 static int intAt(ByteCodeArray *b, int index) {
@@ -705,204 +714,204 @@ void dumpByteCode(ByteCodeArray *b) {
     while (i < b->count) {
         switch (b->entries[i]) {
             case BYTECODE_NONE: {
-                printf("%04d ### NONE\n", i);
+                fprintf(stderr, "%04d ### NONE\n", i);
                 i++;
             }
             break;
             case BYTECODE_LAM: {
-                printf("%04d ### LAM [%d] [%d] [%d]\n", i, b->entries[i + 1], b->entries[i + 2], offsetAt(b, i + 3));
+                fprintf(stderr, "%04d ### LAM [%d] [%d] [%d]\n", i, b->entries[i + 1], b->entries[i + 2], offsetAt(b, i + 3));
                 i += 5;
             }
             break;
             case BYTECODE_VAR: {
-                printf("%04d ### VAR [%d:%d]\n", i, b->entries[i + 1], b->entries[i + 2]);
+                fprintf(stderr, "%04d ### VAR [%d:%d]\n", i, b->entries[i + 1], b->entries[i + 2]);
                 i += 3;
             }
             break;
             case BYTECODE_LVAR: {
-                printf("%04d ### LVAR [%d]\n", i, b->entries[i + 1]);
+                fprintf(stderr, "%04d ### LVAR [%d]\n", i, b->entries[i + 1]);
                 i += 2;
             }
             break;
             case BYTECODE_PRIM_ADD: {
-                printf("%04d ### ADD\n", i);
+                fprintf(stderr, "%04d ### ADD\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_SUB: {
-                printf("%04d ### SUB\n", i);
+                fprintf(stderr, "%04d ### SUB\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_MUL: {
-                printf("%04d ### MUL\n", i);
+                fprintf(stderr, "%04d ### MUL\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_DIV: {
-                printf("%04d ### DIV\n", i);
+                fprintf(stderr, "%04d ### DIV\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_EQ: {
-                printf("%04d ### EQ\n", i);
+                fprintf(stderr, "%04d ### EQ\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_NE: {
-                printf("%04d ### NE\n", i);
+                fprintf(stderr, "%04d ### NE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_GT: {
-                printf("%04d ### GT\n", i);
+                fprintf(stderr, "%04d ### GT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_LT: {
-                printf("%04d ### LT\n", i);
+                fprintf(stderr, "%04d ### LT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_GE: {
-                printf("%04d ### GE\n", i);
+                fprintf(stderr, "%04d ### GE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_LE: {
-                printf("%04d ### LE\n", i);
+                fprintf(stderr, "%04d ### LE\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_XOR: {
-                printf("%04d ### XOR\n", i);
+                fprintf(stderr, "%04d ### XOR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CONS: {
-                printf("%04d ### CONS\n", i);
+                fprintf(stderr, "%04d ### CONS\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CAR: {
-                printf("%04d ### CAR\n", i);
+                fprintf(stderr, "%04d ### CAR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_CDR: {
-                printf("%04d ### CDR\n", i);
+                fprintf(stderr, "%04d ### CDR\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_NOT: {
-                printf("%04d ### NOT\n", i);
+                fprintf(stderr, "%04d ### NOT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_PRINT: {
-                printf("%04d ### PRINT\n", i);
+                fprintf(stderr, "%04d ### PRINT\n", i);
                 i++;
             }
             break;
             case BYTECODE_PRIM_MAKEVEC: {
-                printf("%04d ### MAKEVEC [%d]\n", i, b->entries[i + 1]);
+                fprintf(stderr, "%04d ### MAKEVEC [%d]\n", i, b->entries[i + 1]);
                 i += 2;
             }
             break;
             case BYTECODE_PRIM_VEC: {
-                printf("%04d ### VEC\n", i);
+                fprintf(stderr, "%04d ### VEC\n", i);
                 i++;
             }
             break;
             case BYTECODE_APPLY: {
-                printf("%04d ### APPLY\n", i);
+                fprintf(stderr, "%04d ### APPLY\n", i);
                 i++;
             }
             break;
             case BYTECODE_IF: {
-                printf("%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
+                fprintf(stderr, "%04d ### IF [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
             }
             break;
             case BYTECODE_MATCH: {
                 int count = b->entries[i + 1];
-                printf("%04d ### MATCH [%d]", i, count);
+                fprintf(stderr, "%04d ### MATCH [%d]", i, count);
                 i += 2;
                 while (count > 0) {
-                    printf("[%d]", offsetAt(b, i));
+                    fprintf(stderr, "[%d]", offsetAt(b, i));
                     count--;
                     i += 2;
                 }
-                printf("\n");
+                fprintf(stderr, "\n");
             }
             break;
             case BYTECODE_LETREC: {
-                printf("%04d ### LETREC [%d]\n", i, b->entries[i + 1]);
+                fprintf(stderr, "%04d ### LETREC [%d]\n", i, b->entries[i + 1]);
                 i += 2;
             }
             break;
             case BYTECODE_AMB: {
-                printf("%04d ### AMB [%d]\n", i, offsetAt(b, i + 1));
+                fprintf(stderr, "%04d ### AMB [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
             }
             break;
             case BYTECODE_CUT: {
-                printf("%04d ### CUT\n", i);
+                fprintf(stderr, "%04d ### CUT\n", i);
                 i++;
             }
             break;
             case BYTECODE_BACK: {
-                printf("%04d ### BACK\n", i);
+                fprintf(stderr, "%04d ### BACK\n", i);
                 i++;
             }
             break;
             case BYTECODE_LET: {
-                printf("%04d ### LET [%d]\n", i, offsetAt(b, i + 1));
+                fprintf(stderr, "%04d ### LET [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
             }
             break;
             case BYTECODE_JMP: {
-                printf("%04d ### JMP [%d]\n", i, offsetAt(b, i + 1));
+                fprintf(stderr, "%04d ### JMP [%d]\n", i, offsetAt(b, i + 1));
                 i += 3;
             }
             break;
             case BYTECODE_PUSHN: {
-                printf("%04d ### PUSHN [%d]\n", i, b->entries[i + 1]);
+                fprintf(stderr, "%04d ### PUSHN [%d]\n", i, b->entries[i + 1]);
                 i += 2;
             }
             break;
             case BYTECODE_CALLCC: {
-                printf("%04d ### CALLCC\n", i);
+                fprintf(stderr, "%04d ### CALLCC\n", i);
                 i++;
             }
             break;
             case BYTECODE_TRUE: {
-                printf("%04d ### TRUE\n", i);
+                fprintf(stderr, "%04d ### TRUE\n", i);
                 i++;
             }
             break;
             case BYTECODE_FALSE: {
-                printf("%04d ### FALSE\n", i);
+                fprintf(stderr, "%04d ### FALSE\n", i);
                 i++;
             }
             break;
             case BYTECODE_VOID: {
-                printf("%04d ### VOID\n", i);
+                fprintf(stderr, "%04d ### VOID\n", i);
                 i++;
             }
             break;
             case BYTECODE_INT: {
-                printf("%04d ### INT [%d]\n", i, intAt(b, i + 1));
+                fprintf(stderr, "%04d ### INT [%d]\n", i, intAt(b, i + 1));
                 i += 5;
             }
             break;
             case BYTECODE_RETURN: {
-                printf("%04d ### RETURN\n", i);
+                fprintf(stderr, "%04d ### RETURN\n", i);
                 i++;
             }
             break;
             case BYTECODE_DONE: {
-                printf("%04d ### DONE\n", i);
+                fprintf(stderr, "%04d ### DONE\n", i);
                 i++;
             }
             break;
