@@ -19,16 +19,25 @@
 #include <stdio.h>
 
 #include "lambda_helper.h"
+#include "lambda_pp.h"
 
 
 void printLambdaSymbol(HashSymbol *x, int depth) {
-    printf("%*s", depth * 4, "");
-    if (x == NULL) { printf("LambdaSymbol (NULL)"); return; }
-    printf("AstSymbol[\"%s\"]", x->name);
+    fprintf(stderr, "%*s", depth * 4, "");
+    if (x == NULL) { fprintf(stderr, "LambdaSymbol (NULL)"); return; }
+    fprintf(stderr, "AstSymbol[\"%s\"]", x->name);
+}
+
+void markLamExpFn(void *ptr) {
+    markLamExp(*((LamExp **) ptr));
+}
+
+void printLamExpFn(void *ptr, int depth) {
+    ppLamExpD(*((LamExp **) ptr), depth);
 }
 
 static void printLamContextFn(void *ptr, int depth) {
-    printf("%*s", depth * 4, "");
+    fprintf(stderr, "%*s", depth * 4, "");
     printLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr, depth);
 }
 

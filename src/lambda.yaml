@@ -103,6 +103,18 @@ structs:
         frame: HashTable
         parent: LamContext
 
+    LamAnd:
+        left: LamExp
+        right: LamExp
+
+    LamOr:
+        left: LamExp
+        right: LamExp
+
+    LamAmb:
+        left: LamExp
+        right: LamExp
+
     LamTypeConstructorInfo:
         vec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
@@ -115,6 +127,8 @@ enums:
         - LAM_PRIM_SUB
         - LAM_PRIM_MUL
         - LAM_PRIM_DIV
+        - LAM_PRIM_MOD
+        - LAM_PRIM_POW
         - LAM_PRIM_EQ
         - LAM_PRIM_NE
         - LAM_PRIM_GT
@@ -123,11 +137,9 @@ enums:
         - LAM_PRIM_LE
         - LAM_PRIM_VEC
         - LAM_PRIM_XOR
-        - LAM_PRIM_AND
-        - LAM_PRIM_OR
-        - LAM_PRIM_AMB
 
     LamUnaryOp:
+        - LAM_UNARY_NEG
         - LAM_UNARY_NOT
         - LAM_UNARY_PRINT
 
@@ -147,6 +159,9 @@ unions:
         let: LamLet
         match: LamMatch
         cond: LamCond
+        and: LamAnd
+        or: LamOr
+        amb: LamAmb
         character: character
         back: void_ptr
         error: void_ptr

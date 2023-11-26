@@ -38,6 +38,7 @@
 #include "tin_helper.h"
 #include "hash.h"
 #include "lambda_pp.h"
+#include "anf.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -116,8 +117,12 @@ int main(int argc, char *argv[]) {
         printf("(errors detected)\n");
     } else {
         LamExp *exp = lamConvertNest(result, NULL);
-        ppLamExp(exp);
-        printf("\n");
+        int save = PROTECT(exp);
+        // ppLamExp(exp);
+        // printf("\n");
+        Exp *anfExp = anfNormalize(exp);
+        printExp(anfExp);
+        fprintf(stderr, "\n");
     }
 }
 

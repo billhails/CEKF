@@ -76,6 +76,7 @@ typedef enum {
     AEXP_PRIM_CONS,
     AEXP_PRIM_VEC,
     AEXP_PRIM_XOR,
+    AEXP_PRIM_MOD,
 } AexpPrimOp;
 
 typedef struct AexpPrimApp {
@@ -189,10 +190,12 @@ typedef enum {
     AEXP_TYPE_FALSE,
     AEXP_TYPE_VOID,
     AEXP_TYPE_INT,
+    AEXP_TYPE_CHAR,
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
     AEXP_TYPE_LIST,
     AEXP_TYPE_MAKEVEC,
+    AEXP_TYPE_DEFAULT,
 } AexpType;
 
 typedef union {
@@ -201,6 +204,7 @@ typedef union {
     struct HashSymbol *var;
     struct AexpAnnotatedVar *annotatedVar;
     AexpInteger integer;
+    char character;
     struct AexpPrimApp *prim;
     struct AexpUnaryApp *unary;
     struct AexpList *list;
@@ -220,10 +224,12 @@ typedef struct Aexp {
 #define AEXP_VAL_FALSE()         ((AexpVal){.none         = NULL})
 #define AEXP_VAL_VOID()          ((AexpVal){.none         = NULL})
 #define AEXP_VAL_INT(x)          ((AexpVal){.integer      = (x)})
+#define AEXP_VAL_CHAR(x)         ((AexpVal){.character    = (x)})
 #define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
 #define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
 #define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
 #define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec      = (x)})
+#define AEXP_VAL_DEFAULT()       ((AexpVal){.none         = NULL})
 
 typedef enum {
     CEXP_TYPE_APPLY,
@@ -235,6 +241,7 @@ typedef enum {
     CEXP_TYPE_BACK,
     CEXP_TYPE_BOOL,
     CEXP_TYPE_MATCH,
+    CEXP_TYPE_ERROR,
 } CexpType;
 
 typedef union {
@@ -264,6 +271,7 @@ typedef struct Cexp {
 #define CEXP_VAL_BOOL(x)   ((CexpVal){.boolean = (x)})
 #define CEXP_VAL_MATCH(x)  ((CexpVal){.match   = (x)})
 #define CEXP_VAL_BACK()    ((CexpVal){.none    = NULL})
+#define CEXP_VAL_ERROR()   ((CexpVal){.none    = NULL})
 
 typedef enum {
     EXP_TYPE_AEXP,

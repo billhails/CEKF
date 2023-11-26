@@ -2,7 +2,9 @@ let
     typedef colour { red | green | blue }
 
     fn tostr {
-        (red()) { "red" }
+        (red) { "red" }
+        (green) { "green" }
+        (blue) { "blue" }
     }
 in
     tostr

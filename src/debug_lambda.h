@@ -42,6 +42,9 @@ void printLamLet(struct LamLet * x, int depth);
 void printLamLetRec(struct LamLetRec * x, int depth);
 void printLamLetRecBindings(struct LamLetRecBindings * x, int depth);
 void printLamContext(struct LamContext * x, int depth);
+void printLamAnd(struct LamAnd * x, int depth);
+void printLamOr(struct LamOr * x, int depth);
+void printLamAmb(struct LamAmb * x, int depth);
 void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth);
 void printLamExp(struct LamExp * x, int depth);
 

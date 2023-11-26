@@ -24,6 +24,7 @@
 #include "algorithm_W.h"
 #include "tin_helper.h"
 #include "symbol.h"
+#include "symbols.h"
 #include "debug_tin.h"
 #include "debug_ast.h"
 
@@ -101,26 +102,6 @@ static WResult *newWResult(TinSubstitution *substitution, TinMonoType *monoType)
     x->substitution = substitution;
     x->monoType = monoType;
     return x;
-}
-
-static HashSymbol *arrowSymbol() {
-    return newSymbol("->");
-}
-
-static HashSymbol *intSymbol() {
-    return newSymbol("int");
-}
-
-static HashSymbol *charSymbol() {
-    return newSymbol("char");
-}
-
-static HashSymbol *boolSymbol() {
-    return newSymbol("bool");
-}
-
-static HashSymbol *envSymbol() {
-    return newSymbol("env");
 }
 
 static TinPolyType *monoToPolyType(TinMonoType *monoType) {
@@ -1098,48 +1079,43 @@ static void addTypeBinOp(TinContext *context, HashSymbol *op, TinMonoType *a, Ti
     UNPROTECT(save);
 }
 
-static void addIntBinOp(TinContext *context, char *token) {
+static void addIntBinOp(TinContext *context, HashSymbol *symbol) {
     // int -> int -> int
-    HashSymbol *symbol = newSymbol(token);
-    int save = PROTECT(symbol);
     TinMonoType *intSym = constantTypeFunction(intSymbol());
-    (void) PROTECT(intSym);
+    int save = PROTECT(intSym);
     addBinOp(context, symbol, intSym, intSym, intSym);
     UNPROTECT(save);
 }
 
-static void addBoolBinOp(TinContext *context, char *token) {
+static void addBoolBinOp(TinContext *context, HashSymbol *symbol) {
     // bool -> bool -> bool
-    HashSymbol *symbol = newSymbol(token);
-    int save = PROTECT(symbol);
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
-    (void) PROTECT(boolSym);
+    int save = PROTECT(boolSym);
     addBinOp(context, symbol, boolSym, boolSym, boolSym);
     UNPROTECT(save);
 }
 
 static void addThen(TinContext *context) {
     // #a -> #a -> #a
-    TinMonoType *fresh = freshMonoTypeVar("then");
+    HashSymbol *then = thenSymbol();
+    TinMonoType *fresh = freshMonoTypeVar(then->name);
     int save = PROTECT(fresh);
-    HashSymbol *then = newSymbol("then");
     addBinOp(context, then, fresh, fresh, fresh);
     UNPROTECT(save);
 }
 
 static void addBack(TinContext *context) {
     // #a
-    TinMonoType *fresh = freshMonoTypeVar("back");
+    HashSymbol *back = backSymbol();
+    TinMonoType *fresh = freshMonoTypeVar(back->name);
     int save = PROTECT(fresh);
-    HashSymbol *back = newSymbol("back");
     generalizeMonoTypeToContext(context, back, fresh);
     UNPROTECT(save);
 }
 
-static void addComparisonBinOp(TinContext *context, char *token) {
+static void addComparisonBinOp(TinContext *context, HashSymbol *op) {
     // #a -> #a -> bool
-    HashSymbol *op = newSymbol(token);
-    TinMonoType *fresh = freshMonoTypeVar(token);
+    TinMonoType *fresh = freshMonoTypeVar(op->name);
     int save = PROTECT(fresh);
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
     (void) PROTECT(boolSym);
@@ -1149,7 +1125,7 @@ static void addComparisonBinOp(TinContext *context, char *token) {
 
 static void addNot(TinContext *context) {
     // bool -> bool
-    HashSymbol *op = newSymbol("not");
+    HashSymbol *op = notSymbol();
     TinMonoType *boolSym = constantTypeFunction(boolSymbol());
     int save = PROTECT(boolSym);
     TinMonoType *funApp = arrowApplication(boolSym, boolSym);
@@ -1161,7 +1137,7 @@ static void addNot(TinContext *context) {
 
 static void addNegate(TinContext *context) {
     // int -> int
-    HashSymbol *op = newSymbol("neg");
+    HashSymbol *op = negSymbol();
     TinMonoType *intSym = constantTypeFunction(intSymbol());
     int save = PROTECT(intSym);
     TinMonoType *funApp = arrowApplication(intSym, intSym);
@@ -1186,20 +1162,20 @@ static void addHere(TinContext *context) {
     arrow = arrowApplication(arrow, a);
     UNPROTECT(save);
     save = PROTECT(arrow);
-    HashSymbol *op = newSymbol("here");
+    HashSymbol *op = hereSymbol();
     generalizeMonoTypeToContext(context, op, arrow);
     UNPROTECT(save);
 }
 
 static void addError(TinContext *context) {
     // #t1 -> #t2
-    TinMonoType *fresh1 = freshMonoTypeVar("error");
+    HashSymbol *op = errorSymbol();
+    TinMonoType *fresh1 = freshMonoTypeVar(op->name);
     int save = PROTECT(fresh1);
-    TinMonoType *fresh2 = freshMonoTypeVar("error");
+    TinMonoType *fresh2 = freshMonoTypeVar(op->name);
     PROTECT(fresh2);
     TinMonoType *funApp = arrowApplication(fresh1, fresh2);
     PROTECT(funApp);
-    HashSymbol *op = newSymbol("error");
     generalizeMonoTypeToContext(context, op, funApp);
     UNPROTECT(save);
 }
@@ -1207,21 +1183,21 @@ static void addError(TinContext *context) {
 WResult *WTop(AstNest *nest) {
     TinContext *context = freshTinContext();
     int save = PROTECT(context);
-    addIntBinOp(context, "+");
-    addIntBinOp(context, "-");
-    addIntBinOp(context, "*");
-    addIntBinOp(context, "/");
-    addIntBinOp(context, "%");
-    addIntBinOp(context, "^");
-    addBoolBinOp(context, "and");
-    addBoolBinOp(context, "or");
-    addBoolBinOp(context, "xor");
-    addComparisonBinOp(context, "==");
-    addComparisonBinOp(context, "<");
-    addComparisonBinOp(context, ">");
-    addComparisonBinOp(context, "<=");
-    addComparisonBinOp(context, ">=");
-    addComparisonBinOp(context, "!=");
+    addIntBinOp(context, addSymbol());
+    addIntBinOp(context, subSymbol());
+    addIntBinOp(context, mulSymbol());
+    addIntBinOp(context, divSymbol());
+    addIntBinOp(context, modSymbol());
+    addIntBinOp(context, powSymbol());
+    addBoolBinOp(context, andSymbol());
+    addBoolBinOp(context, orSymbol());
+    addBoolBinOp(context, xorSymbol());
+    addComparisonBinOp(context, eqSymbol());
+    addComparisonBinOp(context, ltSymbol());
+    addComparisonBinOp(context, gtSymbol());
+    addComparisonBinOp(context, leSymbol());
+    addComparisonBinOp(context, geSymbol());
+    addComparisonBinOp(context, neSymbol());
     addThen(context);
     addNot(context);
     addNegate(context);

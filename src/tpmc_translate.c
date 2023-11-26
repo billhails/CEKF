@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "lambda.h"
+#include "lambda_helper.h"
 #include "tpmc.h"
 #include "symbol.h"
 #include "common.h"
@@ -34,14 +35,6 @@
 
 static LamExp *translateStateToInlineCode(TpmcState *dfa, HashTable *lambdaCache);
 static LamExp *translateState(TpmcState *dfa, HashTable *lambdaCache);
-
-static void markLamExpFn(void *ptr) {
-    markLamExp(*((LamExp **) ptr));
-}
-
-static void printLamExpFn(void *ptr, int depth) {
-    ppLamExpD(*((LamExp **) ptr), depth);
-}
 
 static HashSymbol *makeLambdaName(TpmcState *state) {
     char buf[80];

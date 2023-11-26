@@ -212,6 +212,36 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
     return x;
 }
 
+struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right) {
+    struct LamAnd * x = NEW(LamAnd, OBJTYPE_LAMAND);
+    x->left = left;
+    x->right = right;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new LamAnd = %p\n", x);
+#endif
+    return x;
+}
+
+struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right) {
+    struct LamOr * x = NEW(LamOr, OBJTYPE_LAMOR);
+    x->left = left;
+    x->right = right;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new LamOr = %p\n", x);
+#endif
+    return x;
+}
+
+struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right) {
+    struct LamAmb * x = NEW(LamAmb, OBJTYPE_LAMAMB);
+    x->left = left;
+    x->right = right;
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "new LamAmb = %p\n", x);
+#endif
+    return x;
+}
+
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int arity, int size, int index) {
     struct LamTypeConstructorInfo * x = NEW(LamTypeConstructorInfo, OBJTYPE_LAMTYPECONSTRUCTORINFO);
     x->vec = vec;
@@ -384,6 +414,30 @@ void markLamContext(struct LamContext * x) {
     markLamContext(x->parent);
 }
 
+void markLamAnd(struct LamAnd * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->left);
+    markLamExp(x->right);
+}
+
+void markLamOr(struct LamOr * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->left);
+    markLamExp(x->right);
+}
+
+void markLamAmb(struct LamAmb * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->left);
+    markLamExp(x->right);
+}
+
 void markLamTypeConstructorInfo(struct LamTypeConstructorInfo * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -435,6 +489,15 @@ void markLamExp(struct LamExp * x) {
             break;
         case LAMEXP_TYPE_COND:
             markLamCond(x->val.cond);
+            break;
+        case LAMEXP_TYPE_AND:
+            markLamAnd(x->val.and);
+            break;
+        case LAMEXP_TYPE_OR:
+            markLamOr(x->val.or);
+            break;
+        case LAMEXP_TYPE_AMB:
+            markLamAmb(x->val.amb);
             break;
         case LAMEXP_TYPE_CHARACTER:
             break;
@@ -505,6 +568,15 @@ void markLambdaObj(struct Header *h) {
             break;
         case OBJTYPE_LAMCONTEXT:
             markLamContext((LamContext *)h);
+            break;
+        case OBJTYPE_LAMAND:
+            markLamAnd((LamAnd *)h);
+            break;
+        case OBJTYPE_LAMOR:
+            markLamOr((LamOr *)h);
+            break;
+        case OBJTYPE_LAMAMB:
+            markLamAmb((LamAmb *)h);
             break;
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             markLamTypeConstructorInfo((LamTypeConstructorInfo *)h);
@@ -591,6 +663,18 @@ void freeLamContext(struct LamContext * x) {
     FREE(x, LamContext);
 }
 
+void freeLamAnd(struct LamAnd * x) {
+    FREE(x, LamAnd);
+}
+
+void freeLamOr(struct LamOr * x) {
+    FREE(x, LamOr);
+}
+
+void freeLamAmb(struct LamAmb * x) {
+    FREE(x, LamAmb);
+}
+
 void freeLamTypeConstructorInfo(struct LamTypeConstructorInfo * x) {
     FREE(x, LamTypeConstructorInfo);
 }
@@ -656,6 +740,15 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMCONTEXT:
             freeLamContext((LamContext *)h);
             break;
+        case OBJTYPE_LAMAND:
+            freeLamAnd((LamAnd *)h);
+            break;
+        case OBJTYPE_LAMOR:
+            freeLamOr((LamOr *)h);
+            break;
+        case OBJTYPE_LAMAMB:
+            freeLamAmb((LamAmb *)h);
+            break;
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             freeLamTypeConstructorInfo((LamTypeConstructorInfo *)h);
             break;
@@ -705,6 +798,12 @@ char *typenameLambdaObj(int type) {
             return "LamLetRecBindings";
         case OBJTYPE_LAMCONTEXT:
             return "LamContext";
+        case OBJTYPE_LAMAND:
+            return "LamAnd";
+        case OBJTYPE_LAMOR:
+            return "LamOr";
+        case OBJTYPE_LAMAMB:
+            return "LamAmb";
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             return "LamTypeConstructorInfo";
         case OBJTYPE_LAMEXP:

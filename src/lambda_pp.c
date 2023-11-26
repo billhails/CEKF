@@ -42,6 +42,42 @@ void ppLamLam(LamLam *lam) {
     fprintf(stderr, ")");
 }
 
+void ppLamAnd(LamAnd *and) {
+    if (and == NULL) {
+        fprintf(stderr, "<NULL and>");
+        return;
+    }
+    fprintf(stderr, "(and ");
+    ppLamExp(and->left);
+    fprintf(stderr, " ");
+    ppLamExp(and->right);
+    fprintf(stderr, ")");
+}
+
+void ppLamOr(LamOr *or) {
+    if (or == NULL) {
+        fprintf(stderr, "<NULL or>");
+        return;
+    }
+    fprintf(stderr, "(or ");
+    ppLamExp(or->left);
+    fprintf(stderr, " ");
+    ppLamExp(or->right);
+    fprintf(stderr, ")");
+}
+
+void ppLamAmb(LamAmb *amb) {
+    if (amb == NULL) {
+        fprintf(stderr, "<NULL amb>");
+        return;
+    }
+    fprintf(stderr, "(amb ");
+    ppLamExp(amb->left);
+    fprintf(stderr, " ");
+    ppLamExp(amb->right);
+    fprintf(stderr, ")");
+}
+
 static void _ppLamVarList(LamVarList *varList) {
     if (varList == NULL) return;
     ppHashSymbol(varList->var);
@@ -114,6 +150,15 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_COND:
             ppLamCond(exp->val.cond);
             break;
+        case LAMEXP_TYPE_AND:
+            ppLamAnd(exp->val.and);
+            break;
+        case LAMEXP_TYPE_OR:
+            ppLamOr(exp->val.or);
+            break;
+        case LAMEXP_TYPE_AMB:
+            ppLamAmb(exp->val.amb);
+            break;
         case LAMEXP_TYPE_COND_DEFAULT:
             fprintf(stderr, "default");
             break;
@@ -147,16 +192,16 @@ void ppLamPrimApp(LamPrimApp *primApp) {
 void ppLamPrimOp(LamPrimOp type) {
     switch (type) {
         case LAMPRIMOP_TYPE_LAM_PRIM_ADD:
-            fprintf(stderr, "+");
+            fprintf(stderr, "add");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_SUB:
-            fprintf(stderr, "-");
+            fprintf(stderr, "sub");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_MUL:
-            fprintf(stderr, "*");
+            fprintf(stderr, "mul");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_DIV:
-            fprintf(stderr, "/");
+            fprintf(stderr, "div");
             break;
         case LAMPRIMOP_TYPE_LAM_PRIM_EQ:
             fprintf(stderr, "eq");
@@ -182,14 +227,8 @@ void ppLamPrimOp(LamPrimOp type) {
         case LAMPRIMOP_TYPE_LAM_PRIM_XOR:
             fprintf(stderr, "xor");
             break;
-        case LAMPRIMOP_TYPE_LAM_PRIM_AND:
-            fprintf(stderr, "and");
-            break;
-        case LAMPRIMOP_TYPE_LAM_PRIM_OR:
-            fprintf(stderr, "or");
-            break;
-        case LAMPRIMOP_TYPE_LAM_PRIM_AMB:
-            fprintf(stderr, "amb");
+        case LAMPRIMOP_TYPE_LAM_PRIM_MOD:
+            fprintf(stderr, "mod");
             break;
         default:
             cant_happen("unrecognised type %d in ppLamPrimOp", type);
