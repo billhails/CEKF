@@ -115,6 +115,7 @@ void markValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
         case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_CHARACTER:
         case VALUE_TYPE_TRUE:
         case VALUE_TYPE_FALSE:
             break;

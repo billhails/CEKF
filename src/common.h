@@ -23,6 +23,7 @@
 
  typedef uint32_t hash_t;
 
+// #define DEBUG_RUN_TESTS 1
 // #define TEST_STACK
 // #define DEBUG_STACK
 // #define DEBUG_STEP
@@ -32,7 +33,6 @@
 // #define DEBUG_TPMC_MATCH
 // #define DEBUG_TPMC_TRANSLATE
 // #define DEBUG_TPMC_LOGIC
-#define DEBUG_RUN_TESTS 5
 // #define DEBUG_ANALIZE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
@@ -43,7 +43,7 @@
 // #define DEBUG_ALGORITHM_W
 // #define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LEAK
-// #define DEBUG_ANF
+#define DEBUG_ANF
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

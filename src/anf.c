@@ -850,6 +850,7 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
         Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
         PROTECT(val);
         cexpLetRec->bindings = newLetRecBindings(cexpLetRec->bindings, lamLetRecBindings->var, val);
+        cexpLetRec->nbindings++;
     }
     UNPROTECT(save);
     return cexpLetRec;

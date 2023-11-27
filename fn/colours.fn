@@ -7,4 +7,4 @@ let
         (blue) { "blue" }
     }
 in
-    tostr
+    tostr(red)

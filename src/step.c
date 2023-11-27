@@ -141,6 +141,11 @@ static Value divide(Value a, Value b) {
     return intValue(result);
 }
 
+static Value modulo(Value a, Value b) {
+    AexpInteger result = a.val.z % b.val.z;
+    return intValue(result);
+}
+
 static bool _eq(Value a, Value b) {
     return a.val.z == b.val.z;
 }
@@ -290,7 +295,7 @@ static void applyProc() {
         }
         break;
         default:
-            cant_happen("unexpected type in APPLY");
+            cant_happen("unexpected type %d in APPLY", callable.type);
     }
     UNPROTECT(save);
 }
@@ -300,6 +305,7 @@ static void applyProc() {
 static void step() {
 #ifdef DEBUG_STEP
     int count = 0;
+    dumpByteCode(&state.B);
 #endif
     while (state.C != -1) {
         switch (byteAt(0)) {
@@ -393,6 +399,17 @@ static void step() {
                 Value b = pop();
                 Value a = pop();
                 push(divide(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_MOD: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### MOD\n", ++count, state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(modulo(a, b));
                 state.C++;
             }
             break;
@@ -667,6 +684,7 @@ static void step() {
                 printf("%4d) %04d ### LET [%d]\n", ++count, state.C, offsetAt(1));
 #endif
                 state.K = newKont(offsetAt(1), state.E, state.K);
+                validateLastAlloc();
                 snapshotKont(&state.S, state.K);
                 state.C += 3;
             }
@@ -734,6 +752,18 @@ static void step() {
                 state.C += 5;
             }
             break;
+            case BYTECODE_CHAR: { // push literal char
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### CHAR [%c]\n", ++count, state.C, byteAt(1));
+#endif
+                Value v;
+                v.type = VALUE_TYPE_CHARACTER;
+                v.val = VALUE_VAL_CHARACTER(byteAt(1));
+                push(v);
+                state.C += 2;
+            }
+            break;
             case BYTECODE_RETURN: { // push the current continuation and apply
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -758,7 +788,7 @@ static void step() {
 #ifdef DEBUG_STEP
                 printCEKF(&state);
 #endif
-                cant_happen("unrecognised bytecode in step()");
+                cant_happen("unrecognised bytecode %d in step()", byteAt(0));
         }
 #ifdef DEBUG_STEP
         sleep(1);

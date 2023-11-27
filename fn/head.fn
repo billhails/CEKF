@@ -3,4 +3,4 @@ let
         (h @ _) { h }
     }
 in
-    head
+    head([2, 3])

@@ -176,6 +176,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXP_PRIM_DIV:
             prim = BYTECODE_PRIM_DIV;
             break;
+        case AEXP_PRIM_MOD:
+            prim = BYTECODE_PRIM_MOD;
+            break;
         case AEXP_PRIM_EQ:
             prim = BYTECODE_PRIM_EQ;
             break;
@@ -377,6 +380,11 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             writeInt(b, x->val.integer);
         }
         break;
+        case AEXP_TYPE_CHAR: {
+            addByte(b, BYTECODE_CHAR);
+            addByte(b, x->val.character);
+        }
+        break;
         case AEXP_TYPE_PRIM: {
             writeAexpPrimApp(x->val.prim, b);
         }
@@ -429,8 +437,12 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             addByte(b, BYTECODE_BACK);
         }
         break;
+        case CEXP_TYPE_ERROR: {
+            addByte(b, BYTECODE_ERROR);
+        }
+        break;
         default:
-            cant_happen("unrecognized Cexp type in writeCexp");
+            cant_happen("unrecognized Cexp type %d in writeCexp", x->type);
     }
 }
 

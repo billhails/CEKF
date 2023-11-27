@@ -1,5 +1,5 @@
 let
-    typedef named_list { nl(string, list(string)) }
+    typedef named_list(#t) { nl(list(char), list(#t)) }
 
 in
     nl("hello", ["there"])

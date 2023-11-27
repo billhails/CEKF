@@ -249,7 +249,7 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitut
 static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
     ENTER(performAndSubstitutions);
     and->left = lamPerformSubstitutions(and->left, substitutions);
-    and->left = lamPerformSubstitutions(and->left, substitutions);
+    and->right = lamPerformSubstitutions(and->right, substitutions);
     LEAVE(performAndSubstitutions);
     return and;
 }
@@ -257,7 +257,7 @@ static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
 static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
     ENTER(performOrSubstitutions);
     or->left = lamPerformSubstitutions(or->left, substitutions);
-    or->left = lamPerformSubstitutions(or->left, substitutions);
+    or->right = lamPerformSubstitutions(or->right, substitutions);
     LEAVE(performOrSubstitutions);
     return or;
 }
@@ -265,7 +265,7 @@ static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
 static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
     ENTER(performAmbSubstitutions);
     amb->left = lamPerformSubstitutions(amb->left, substitutions);
-    amb->left = lamPerformSubstitutions(amb->left, substitutions);
+    amb->right = lamPerformSubstitutions(amb->right, substitutions);
     LEAVE(performAmbSubstitutions);
     return amb;
 }

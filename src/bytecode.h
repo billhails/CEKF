@@ -32,6 +32,7 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_SUB,
     BYTECODE_PRIM_MUL,
     BYTECODE_PRIM_DIV,
+    BYTECODE_PRIM_MOD,
     BYTECODE_PRIM_EQ,
     BYTECODE_PRIM_NE,
     BYTECODE_PRIM_GT,
@@ -59,10 +60,12 @@ typedef enum ByteCodes {
     BYTECODE_FALSE,
     BYTECODE_VOID,
     BYTECODE_INT,
+    BYTECODE_CHAR,
     BYTECODE_RETURN,
     BYTECODE_JMP,
     BYTECODE_PUSHN,
     BYTECODE_DONE,
+    BYTECODE_ERROR,
 } ByteCodes;
 
 typedef struct ByteCodeArray {
