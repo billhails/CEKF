@@ -4484,8 +4484,8 @@ int main(int argc, char *argv[]) {
 
     initProtection();
 
-    RUN_EXP(makeTestExpMapAmb());
     /*
+    RUN_EXP(makeTestExpMapAmb());
     RUN_EXP(makeTestExpMap());
     RUN_EXP(makeTestExpMatch());
     RUN_EXP(makeTestExpVec());
@@ -4501,7 +4501,9 @@ int main(int argc, char *argv[]) {
     RUN_EXP(makeTestExpList());
     RUN_EXP(makeTestExpLiars());
     RUN_EXP(makeTestExpOneOf());
+    */
     RUN_EXP(makeTestExpExclude());
+    /*
     RUN_EXP(makeTestExpBeer());
     */
 }

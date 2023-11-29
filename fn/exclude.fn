@@ -10,4 +10,4 @@ let
         }
     }
 in
-    exclude
+    exclude("bd", "abcde")

@@ -54,7 +54,7 @@ let
     fn lookup {
         (s, frame(s, value, _))  { value }
         (s, frame(_, _, parent)) { lookup(s, parent) }
-        (s, root)                { error("mce symbol not defined " @@ s) }
+        (s, root)                { number(0) } // error("mce symbol not defined " @@ s) }
     }
 in
     // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 3

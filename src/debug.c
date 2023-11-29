@@ -48,13 +48,9 @@ void printContainedValue(Value x, int depth) {
             printPad(depth);
             fprintf(stderr, "%d", x.val.z);
             break;
-        case VALUE_TYPE_TRUE:
+        case VALUE_TYPE_CHARACTER:
             printPad(depth);
-            fprintf(stderr, "#T");
-            break;
-        case VALUE_TYPE_FALSE:
-            printPad(depth);
-            fprintf(stderr, "#F");
+            fprintf(stderr, "'%c'", x.val.c);
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo, depth);
@@ -159,11 +155,8 @@ void printElidedValue(Value x) {
         case VALUE_TYPE_INTEGER:
             fprintf(stderr, "%d", x.val.z);
             break;
-        case VALUE_TYPE_TRUE:
-            fprintf(stderr, "#T");
-            break;
-        case VALUE_TYPE_FALSE:
-            fprintf(stderr, "#F");
+        case VALUE_TYPE_CHARACTER:
+            fprintf(stderr, "'%c'", x.val.c);
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);
@@ -364,9 +357,9 @@ void printAexpVar(HashSymbol *x) {
 void printAexpAnnotatedVar(AexpAnnotatedVar *x) {
     printAexpVar(x->var);
     if (x->type == VAR_TYPE_STACK)
-        fprintf(stderr, "[%d]", x->offset);
+        fprintf(stderr, ":%d", x->offset);
     else
-        fprintf(stderr, "[%d:%d]", x->frame, x->offset);
+        fprintf(stderr, ":%d:%d", x->frame, x->offset);
 }
 
 void printAexpPrimApp(AexpPrimApp *x) {
@@ -705,6 +698,10 @@ static int wordAt(ByteCodeArray *b, int index) {
     return (b->entries[index] << 8) + b->entries[index + 1];
 }
 
+static int charAt(ByteCodeArray *b, int index) {
+    return b->entries[index];
+}
+
 static int offsetAt(ByteCodeArray *b, int index) {
     return index + wordAt(b, index);
 }
@@ -750,6 +747,11 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_DIV: {
                 fprintf(stderr, "%04d ### DIV\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_PRIM_MOD: {
+                fprintf(stderr, "%04d ### MOD\n", i);
                 i++;
             }
             break;
@@ -905,6 +907,11 @@ void dumpByteCode(ByteCodeArray *b) {
                 i += 5;
             }
             break;
+            case BYTECODE_CHAR: {
+                fprintf(stderr, "%04d ### CHAR [%c]\n", i, charAt(b, i + 1));
+                i += 2;
+            }
+            break;
             case BYTECODE_RETURN: {
                 fprintf(stderr, "%04d ### RETURN\n", i);
                 i++;
@@ -912,6 +919,11 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_DONE: {
                 fprintf(stderr, "%04d ### DONE\n", i);
+                i++;
+            }
+            break;
+            case BYTECODE_ERROR: {
+                fprintf(stderr, "%04d ### ERROR\n", i);
                 i++;
             }
             break;

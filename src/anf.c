@@ -75,7 +75,6 @@ static MatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
 static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacements);
-static bool lamExpIsCexp(LamExp *val);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
 
 Exp *anfNormalize(LamExp *lamExp) {
@@ -683,6 +682,13 @@ static Aexp *aexpNormalizeCharacter(char character) {
     return newAexp(AEXP_TYPE_CHAR, AEXP_VAL_CHAR(character));
 }
 
+static Aexp *cloneAexp(Aexp *orig) {
+    if (orig->type == AEXP_TYPE_VAR) {
+        return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(orig->val.var));
+    }
+    return orig;
+}
+
 static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacements) {
     ENTER(replaceCond);
     if (cases == NULL) {
@@ -705,7 +711,9 @@ static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacement
     }
     Exp *alternative = replaceCond(value, cases->next, replacements);
     PROTECT(alternative);
-    AexpPrimApp *eq = newAexpPrimApp(AEXP_PRIM_EQ, value, constant);
+    Aexp *clone = cloneAexp(value);
+    PROTECT(clone);
+    AexpPrimApp *eq = newAexpPrimApp(AEXP_PRIM_EQ, clone, constant);
     PROTECT(eq);
     Aexp *condition = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(eq));
     PROTECT(condition);
@@ -775,33 +783,18 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
     return res;
 }
 
-static bool lamListIsCexp(LamList *args) {
-    if (args == NULL) {
-        return false;
-    }
-    if (lamExpIsCexp(args->exp)) {
-        return true;
-    }
-    return lamListIsCexp(args->next);
-}
-
-static bool makeVecIsCexp(LamMakeVec *makeVec) {
-    return lamListIsCexp(makeVec->args);
-}
-
-static bool lamExpIsCexp(LamExp *val) {
+static bool lamExpIsConst(LamExp *val) {
     switch (val->type) {
         case LAMEXP_TYPE_LAM:
+            return true;
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_INTEGER:
         case LAMEXP_TYPE_CHARACTER:
-            return false;
+        case LAMEXP_TYPE_BACK:
+        case LAMEXP_TYPE_ERROR:
+        case LAMEXP_TYPE_AMB:
         case LAMEXP_TYPE_PRIM:
-            return lamExpIsCexp(val->val.prim->exp1) && lamExpIsCexp(val->val.prim->exp2);
         case LAMEXP_TYPE_UNARY:
-            return lamExpIsCexp(val->val.unary->exp);
-        case LAMEXP_TYPE_MAKEVEC:
-            return makeVecIsCexp(val->val.makeVec);
         case LAMEXP_TYPE_LIST:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
@@ -812,14 +805,12 @@ static bool lamExpIsCexp(LamExp *val) {
         case LAMEXP_TYPE_COND:
         case LAMEXP_TYPE_AND:
         case LAMEXP_TYPE_OR:
-        case LAMEXP_TYPE_AMB:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_ERROR:
-            return true;
+        case LAMEXP_TYPE_MAKEVEC:
+            return false;
         case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("lamExpIsCexp encountered cond default");
+            cant_happen("lamExpIsConst encountered cond default");
         default:
-            cant_happen("unrecognised LamExp type %d in lamExpIsCexp", val->type);
+            cant_happen("unrecognised LamExp type %d in lamExpIsConst", val->type);
     }
 }
 
@@ -829,7 +820,12 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
     }
     cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRecBindings->next);
     int save = PROTECT(cexpLetRec);
-    if (lamExpIsCexp(lamLetRecBindings->val)) {
+    if (lamExpIsConst(lamLetRecBindings->val)) {
+        Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
+        PROTECT(val);
+        cexpLetRec->bindings = newLetRecBindings(cexpLetRec->bindings, lamLetRecBindings->var, val);
+        cexpLetRec->nbindings++;
+    } else {
         Exp *val = normalize(lamLetRecBindings->val, NULL);
         PROTECT(val);
         Exp *exp = NULL;
@@ -846,10 +842,6 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
         exp = newExp(EXP_TYPE_LET, EXP_VAL_LET(expLet));
         PROTECT(exp);
         cexpLetRec = newCexpLetRec(NULL, exp);
-    } else {
-        Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
-        PROTECT(val);
-        cexpLetRec->bindings = newLetRecBindings(cexpLetRec->bindings, lamLetRecBindings->var, val);
     }
     UNPROTECT(save);
     return cexpLetRec;

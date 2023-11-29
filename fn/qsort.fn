@@ -5,6 +5,7 @@ let
         ([]) { [] }
         (pivot @ rest) {
             let
+                // currying not supported yet
                 lesser = filter(fn (a, b) { a >= b }(pivot), rest);
                 greater = filter(fn (a, b) { a < b }(pivot), rest);
             in

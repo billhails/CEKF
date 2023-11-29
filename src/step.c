@@ -118,7 +118,7 @@ static Value intValue(int i) {
 }
 
 static bool truthy(Value v) {
-    return v.type != VALUE_TYPE_FALSE && v.type != VALUE_TYPE_VOID;
+    return !((v.type == VALUE_TYPE_INTEGER && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
 }
 
 static Value add(Value a, Value b) {
@@ -141,16 +141,82 @@ static Value divide(Value a, Value b) {
     return intValue(result);
 }
 
+static Value modulo(Value a, Value b) {
+    AexpInteger result = a.val.z % b.val.z;
+    return intValue(result);
+}
+
+static int _cmp(Value a, Value b);
+
+static int _consCmp(Cons *a, Cons *b) {
+    if (a == b) {
+        return 0;
+    }
+    if (a == NULL) {
+        return 1;
+    }
+    if (b == NULL) {
+        return -1;
+    }
+    int cmp = _cmp(a->car, b->car);
+    if (cmp == 0) {
+        return _cmp(a->cdr, b->cdr);
+    }
+    return cmp;
+}
+
+static int _vecCmp(Vec *a, Vec *b) {
+    if (a == b) {
+        return 0;
+    }
+#ifdef SAFETY_CHECKS
+    if (a == NULL || b == NULL) {
+        cant_happen("null vecs in _vecCmp(%p, %p)", a, b);
+    }
+    if (a->size == 0 || b->size == 0) {
+        cant_happen("empty vecs in _vecCmp()");
+    }
+    if (a->values[0].type != VALUE_TYPE_INTEGER || b->values[0] != VALUE_TYPE_INTEGER) {
+        cant_happen("expected integer vec tags in _vecCmp()");
+    }
+#endif
+    if (a->values[0].val.z != b->values[0].val.z) {
+        return a->values[0].val.z < b->values[0].val.z ? -1 : 1;
+    }
+    for (int i = 1; i < a->size; ++i) {
+        int cmp = _cmp(a->values[i], b->values[i]);
+        if (cmp != 0) return cmp;
+    }
+    return 0;
+}
+
+static int _cmp(Value a, Value b) {
+    switch (a.type) {
+        case VALUE_TYPE_VOID:
+            return 0;
+        case VALUE_TYPE_INTEGER:
+            return a.val.z < b.val.z ? -1 : a.val.z == b.val.z ? 0 : 1;
+        case VALUE_TYPE_CHARACTER:
+            return a.val.c < b.val.c ? -1 : a.val.c == b.val.c ? 0 : 1;
+        case VALUE_TYPE_CONS:
+            return _consCmp(a.val.cons, b.val.cons);
+        case VALUE_TYPE_VEC:
+            return _vecCmp(a.val.vec, b.val.vec);
+        default:
+            cant_happen("unexpected type for _cmp (%d)", a.type);
+    }
+}
+
 static bool _eq(Value a, Value b) {
-    return a.val.z == b.val.z;
+    return _cmp(a, b) == 0;
 }
 
 static bool _gt(Value a, Value b) {
-    return a.val.z > b.val.z;
+    return _cmp(a, b) == 1;
 }
 
 static bool _lt(Value a, Value b) {
-    return a.val.z < b.val.z;
+    return _cmp(a, b) == -1;
 }
 
 static bool _xor(Value a, Value b) {
@@ -290,7 +356,7 @@ static void applyProc() {
         }
         break;
         default:
-            cant_happen("unexpected type in APPLY");
+            cant_happen("unexpected type %d in APPLY", callable.type);
     }
     UNPROTECT(save);
 }
@@ -300,6 +366,7 @@ static void applyProc() {
 static void step() {
 #ifdef DEBUG_STEP
     int count = 0;
+    dumpByteCode(&state.B);
 #endif
     while (state.C != -1) {
         switch (byteAt(0)) {
@@ -393,6 +460,17 @@ static void step() {
                 Value b = pop();
                 Value a = pop();
                 push(divide(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_MOD: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### MOD\n", ++count, state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(modulo(a, b));
                 state.C++;
             }
             break;
@@ -600,7 +678,7 @@ static void step() {
 #endif
                 Value v = pop();
                 if (v.type != VALUE_TYPE_INTEGER)
-                    cant_happen("match expression must be an integer");
+                    cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_INTEGER, v.type);
                 if (v.val.z < 0 || v.val.z >= size)
                     cant_happen("match expression index out of range (%d)", v.val.z);
                 state.C = offsetAt(2 + v.val.z * 2);
@@ -667,6 +745,7 @@ static void step() {
                 printf("%4d) %04d ### LET [%d]\n", ++count, state.C, offsetAt(1));
 #endif
                 state.K = newKont(offsetAt(1), state.E, state.K);
+                validateLastAlloc();
                 snapshotKont(&state.S, state.K);
                 state.C += 3;
             }
@@ -734,6 +813,18 @@ static void step() {
                 state.C += 5;
             }
             break;
+            case BYTECODE_CHAR: { // push literal char
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04d ### CHAR [%c]\n", ++count, state.C, byteAt(1));
+#endif
+                Value v;
+                v.type = VALUE_TYPE_CHARACTER;
+                v.val = VALUE_VAL_CHARACTER(byteAt(1));
+                push(v);
+                state.C += 2;
+            }
+            break;
             case BYTECODE_RETURN: { // push the current continuation and apply
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -758,7 +849,7 @@ static void step() {
 #ifdef DEBUG_STEP
                 printCEKF(&state);
 #endif
-                cant_happen("unrecognised bytecode in step()");
+                cant_happen("unrecognised bytecode %d in step()", byteAt(0));
         }
 #ifdef DEBUG_STEP
         sleep(1);

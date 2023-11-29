@@ -276,7 +276,9 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
+        case AEXP_TYPE_CHAR:
         case AEXP_TYPE_VOID:
+        case AEXP_TYPE_DEFAULT:
             break;
         case AEXP_TYPE_PRIM:
             x->val.prim = desugarAexpPrimApp(x->val.prim);
@@ -338,6 +340,7 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_BOOL:
             cant_happen("desugarCexp given CEXP_TYPE_BOOL");
             break;
+        case CEXP_TYPE_ERROR:
         case CEXP_TYPE_BACK:
             break;
         default:

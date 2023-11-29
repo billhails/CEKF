@@ -5,4 +5,4 @@ let
         (item, _ @ tail) { member(item, tail) }
     }
 in
-    member
+    member('c', "abc")

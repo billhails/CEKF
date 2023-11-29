@@ -6,10 +6,10 @@ let
         (_ @ t) { 1 + length(t) }
     }
 
-    fn odd(n) { n % 2 == 0 }
+    fn even(n) { n % 2 == 0 }
 
     fn checkId(x) {
-        id(odd(id(length(id(x)))))
+        id(even(id(length(id(x)))))
     }
 
 in

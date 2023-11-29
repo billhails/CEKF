@@ -1,4 +1,4 @@
 let
     fn add1(x) { x + 1 }
 in
-    add1
+    add1(2)

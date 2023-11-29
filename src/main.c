@@ -131,7 +131,40 @@ int main(int argc, char *argv[]) {
 #else
 
 int main(int argc, char *argv[]) {
+    ByteCodeArray byteCodes;
     initProtection();
+    disableGC();
+    if (argc < 2) {
+        fprintf(stderr, "need filename\n");
+        exit(1);
+    }
+    AstNest *result = pm_parseFile(argv[1]);
+    PROTECT(result);
+    enableGC();
+    WResult *wr = WTop(result);
+    validateLastAlloc();
+    if (hadErrors()) {
+        printf("(errors detected)\n");
+        exit(1);
+    }
+    LamExp *exp = lamConvertNest(result, NULL);
+    int save = PROTECT(exp);
+    Exp *anfExp = anfNormalize(exp);
+    PROTECT(anfExp);
+    disableGC();
+    anfExp = desugarExp(anfExp);
+    PROTECT(anfExp);
+    enableGC();
+#ifdef DEBUG_ANF
+    printExp(anfExp);
+    fprintf(stderr, "\n");
+#endif
+    analizeExp(anfExp, NULL);
+    initByteCodeArray(&byteCodes);
+    writeExp(anfExp, &byteCodes);
+    writeEnd(&byteCodes);
+    printContainedValue(run(byteCodes), 1);
+    printf("\n");
 }
 
 #endif

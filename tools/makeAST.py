@@ -436,6 +436,9 @@ class SimpleArray(Base):
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType});")
         print("    int save = PROTECT(x);")
+        print("#ifdef DEBUG_ALLOC");
+        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
+        print("#endif");
         print("    x->entries = NULL;")
         if self.tagged:
             print("    x->_tag = _tag;")
@@ -653,13 +656,13 @@ class SimpleStruct(Base):
         myObjType = self.getObjType()
         myName = self.getName()
         print("    {myType} x = NEW({myName}, {myObjType});".format(myType=myType, myName=myName, myObjType=myObjType))
+        print("#ifdef DEBUG_ALLOC");
+        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
+        print("#endif");
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
             print("    x->{f} = {d};".format(f=field.getFieldName(), d=field.default))
-        print("#ifdef DEBUG_LOG_GC")
-        print(f'    fprintf(stderr, "new {myName} = %p\\n", x);')
-        print("#endif")
         print("    return x;")
         print("}\n")
 
@@ -1128,7 +1131,9 @@ elif args.type == "c":
     printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}.h"')
+    print("#include <stdio.h>");
     print("#include <strings.h>");
+    print('#include "common.h"');
     print("")
     catalog.printNewFunctions()
     print("")

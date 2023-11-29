@@ -46,6 +46,7 @@ void printCTEnv(CTEnv *x);
 void printExp(Exp *x);
 void printExpLet(ExpLet *x);
 void printLetRecBindings(LetRecBindings *x);
+void printAexpMakeVec(AexpMakeVec *x);
 
 void printContainedValue(Value x, int depth);
 void printValue(Value x, int depth);

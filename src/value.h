@@ -21,8 +21,9 @@
 typedef enum {
     VALUE_TYPE_VOID,
     VALUE_TYPE_INTEGER,
-    VALUE_TYPE_TRUE,
-    VALUE_TYPE_FALSE,
+    VALUE_TYPE_CHARACTER,
+    // VALUE_TYPE_TRUE,
+    // VALUE_TYPE_FALSE,
     VALUE_TYPE_CLO,
     VALUE_TYPE_CONT,
     VALUE_TYPE_CONS,
@@ -32,6 +33,7 @@ typedef enum {
 typedef union {
     void *none;
     int z;
+    char c;
     struct Clo *clo;
     struct Kont *k;
     struct Cons *cons;
@@ -43,12 +45,13 @@ typedef struct Value {
     ValueVal val;
 } Value; 
 
-#define VALUE_VAL_INTEGER(x) ((ValueVal){.z    = (x)})
-#define VALUE_VAL_CLO(x)     ((ValueVal){.clo  = (x)})
-#define VALUE_VAL_CONT(x)    ((ValueVal){.k    = (x)})
-#define VALUE_VAL_CONS(x)    ((ValueVal){.cons = (x)})
-#define VALUE_VAL_VEC(x)     ((ValueVal){.vec  = (x)})
-#define VALUE_VAL_NONE()     ((ValueVal){.none = NULL})
+#define VALUE_VAL_INTEGER(x)   ((ValueVal){.z    = (x)})
+#define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
+#define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
+#define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
+#define VALUE_VAL_CONS(x)      ((ValueVal){.cons = (x)})
+#define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
+#define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
 // constants
 extern Value vTrue;
