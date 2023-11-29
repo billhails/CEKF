@@ -52,14 +52,6 @@ void printContainedValue(Value x, int depth) {
             printPad(depth);
             fprintf(stderr, "'%c'", x.val.c);
             break;
-        case VALUE_TYPE_TRUE:
-            printPad(depth);
-            fprintf(stderr, "#T");
-            break;
-        case VALUE_TYPE_FALSE:
-            printPad(depth);
-            fprintf(stderr, "#F");
-            break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo, depth);
             break;
@@ -165,12 +157,6 @@ void printElidedValue(Value x) {
             break;
         case VALUE_TYPE_CHARACTER:
             fprintf(stderr, "'%c'", x.val.c);
-            break;
-        case VALUE_TYPE_TRUE:
-            fprintf(stderr, "#T");
-            break;
-        case VALUE_TYPE_FALSE:
-            fprintf(stderr, "#F");
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);

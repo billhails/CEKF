@@ -24,13 +24,13 @@
  */
 
 Value vTrue = {
-    .type = VALUE_TYPE_TRUE,
-    .val = VALUE_VAL_NONE()
+    .type = VALUE_TYPE_INTEGER,
+    .val = VALUE_VAL_INTEGER(1)
 };
 
 Value vFalse = {
-    .type = VALUE_TYPE_FALSE,
-    .val = VALUE_VAL_NONE()
+    .type = VALUE_TYPE_INTEGER,
+    .val = VALUE_VAL_INTEGER(0)
 };
 
 Value vVoid = {
@@ -116,8 +116,6 @@ void markValue(Value x) {
         case VALUE_TYPE_VOID:
         case VALUE_TYPE_INTEGER:
         case VALUE_TYPE_CHARACTER:
-        case VALUE_TYPE_TRUE:
-        case VALUE_TYPE_FALSE:
             break;
         case VALUE_TYPE_CLO:
             markClo(x.val.clo);

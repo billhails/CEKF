@@ -130,12 +130,15 @@ static void analizeCexpCond(CexpCond *x, CTEnv *env) {
 }
 
 static void analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
-    if (x->type != AEXP_TYPE_LAM) {
-        cant_happen("non-lambda value (%d) for letrec in AnalizeLetRecLam");
+    switch (x->type) {
+        case AEXP_TYPE_LAM:
+            AexpLam *lam = x->val.lam;
+            analizeAexpLam(lam, env);
+            lam->letRecOffset = letRecOffset;
+            break;
+        default:
+            cant_happen("letrec bindings can only contain lambdas");
     }
-    AexpLam *lam = x->val.lam;
-    analizeAexpLam(lam, env);
-    lam->letRecOffset = letRecOffset;
 }
 
 static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env) {
@@ -211,7 +214,7 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
             x->type = AEXP_TYPE_ANNOTATEDVAR;
             break;
         case AEXP_TYPE_ANNOTATEDVAR:
-            cant_happen("analizeAexp called on annotated var");
+            cant_happen("analizeAexp called on annotated var %s", x->val.annotatedVar->var->name);
             break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:

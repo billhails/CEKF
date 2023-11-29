@@ -118,7 +118,7 @@ static Value intValue(int i) {
 }
 
 static bool truthy(Value v) {
-    return v.type != VALUE_TYPE_FALSE && v.type != VALUE_TYPE_VOID;
+    return !((v.type == VALUE_TYPE_INTEGER && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
 }
 
 static Value add(Value a, Value b) {
@@ -146,16 +146,77 @@ static Value modulo(Value a, Value b) {
     return intValue(result);
 }
 
+static int _cmp(Value a, Value b);
+
+static int _consCmp(Cons *a, Cons *b) {
+    if (a == b) {
+        return 0;
+    }
+    if (a == NULL) {
+        return 1;
+    }
+    if (b == NULL) {
+        return -1;
+    }
+    int cmp = _cmp(a->car, b->car);
+    if (cmp == 0) {
+        return _cmp(a->cdr, b->cdr);
+    }
+    return cmp;
+}
+
+static int _vecCmp(Vec *a, Vec *b) {
+    if (a == b) {
+        return 0;
+    }
+#ifdef SAFETY_CHECKS
+    if (a == NULL || b == NULL) {
+        cant_happen("null vecs in _vecCmp(%p, %p)", a, b);
+    }
+    if (a->size == 0 || b->size == 0) {
+        cant_happen("empty vecs in _vecCmp()");
+    }
+    if (a->values[0].type != VALUE_TYPE_INTEGER || b->values[0] != VALUE_TYPE_INTEGER) {
+        cant_happen("expected integer vec tags in _vecCmp()");
+    }
+#endif
+    if (a->values[0].val.z != b->values[0].val.z) {
+        return a->values[0].val.z < b->values[0].val.z ? -1 : 1;
+    }
+    for (int i = 1; i < a->size; ++i) {
+        int cmp = _cmp(a->values[i], b->values[i]);
+        if (cmp != 0) return cmp;
+    }
+    return 0;
+}
+
+static int _cmp(Value a, Value b) {
+    switch (a.type) {
+        case VALUE_TYPE_VOID:
+            return 0;
+        case VALUE_TYPE_INTEGER:
+            return a.val.z < b.val.z ? -1 : a.val.z == b.val.z ? 0 : 1;
+        case VALUE_TYPE_CHARACTER:
+            return a.val.c < b.val.c ? -1 : a.val.c == b.val.c ? 0 : 1;
+        case VALUE_TYPE_CONS:
+            return _consCmp(a.val.cons, b.val.cons);
+        case VALUE_TYPE_VEC:
+            return _vecCmp(a.val.vec, b.val.vec);
+        default:
+            cant_happen("unexpected type for _cmp (%d)", a.type);
+    }
+}
+
 static bool _eq(Value a, Value b) {
-    return a.val.z == b.val.z;
+    return _cmp(a, b) == 0;
 }
 
 static bool _gt(Value a, Value b) {
-    return a.val.z > b.val.z;
+    return _cmp(a, b) == 1;
 }
 
 static bool _lt(Value a, Value b) {
-    return a.val.z < b.val.z;
+    return _cmp(a, b) == -1;
 }
 
 static bool _xor(Value a, Value b) {
@@ -617,7 +678,7 @@ static void step() {
 #endif
                 Value v = pop();
                 if (v.type != VALUE_TYPE_INTEGER)
-                    cant_happen("match expression must be an integer");
+                    cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_INTEGER, v.type);
                 if (v.val.z < 0 || v.val.z >= size)
                     cant_happen("match expression index out of range (%d)", v.val.z);
                 state.C = offsetAt(2 + v.val.z * 2);

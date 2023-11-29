@@ -43,7 +43,8 @@
 // #define DEBUG_ALGORITHM_W
 // #define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LEAK
-#define DEBUG_ANF
+// #define DEBUG_ANF
+// #define DEBUG_ALLOC
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

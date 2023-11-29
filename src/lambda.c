@@ -21,246 +21,248 @@
  */
 
 #include "lambda.h"
+#include <stdio.h>
 #include <strings.h>
+#include "common.h"
 
 struct LamLam * newLamLam(int nargs, struct LamVarList * args, struct LamExp * exp) {
     struct LamLam * x = NEW(LamLam, OBJTYPE_LAMLAM);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamLam %p\n", x);
+#endif
     x->nargs = nargs;
     x->args = args;
     x->exp = exp;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamLam = %p\n", x);
-#endif
     return x;
 }
 
 struct LamVarList * newLamVarList(HashSymbol * var, struct LamVarList * next) {
     struct LamVarList * x = NEW(LamVarList, OBJTYPE_LAMVARLIST);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamVarList %p\n", x);
+#endif
     x->var = var;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamVarList = %p\n", x);
-#endif
     return x;
 }
 
 struct LamPrimApp * newLamPrimApp(enum LamPrimOp  type, struct LamExp * exp1, struct LamExp * exp2) {
     struct LamPrimApp * x = NEW(LamPrimApp, OBJTYPE_LAMPRIMAPP);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamPrimApp %p\n", x);
+#endif
     x->type = type;
     x->exp1 = exp1;
     x->exp2 = exp2;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamPrimApp = %p\n", x);
-#endif
     return x;
 }
 
 struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp) {
     struct LamUnaryApp * x = NEW(LamUnaryApp, OBJTYPE_LAMUNARYAPP);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamUnaryApp %p\n", x);
+#endif
     x->type = type;
     x->exp = exp;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamUnaryApp = %p\n", x);
-#endif
     return x;
 }
 
 struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next) {
     struct LamSequence * x = NEW(LamSequence, OBJTYPE_LAMSEQUENCE);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamSequence %p\n", x);
+#endif
     x->exp = exp;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamSequence = %p\n", x);
-#endif
     return x;
 }
 
 struct LamList * newLamList(struct LamExp * exp, struct LamList * next) {
     struct LamList * x = NEW(LamList, OBJTYPE_LAMLIST);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamList %p\n", x);
+#endif
     x->exp = exp;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamList = %p\n", x);
-#endif
     return x;
 }
 
 struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args) {
     struct LamApply * x = NEW(LamApply, OBJTYPE_LAMAPPLY);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamApply %p\n", x);
+#endif
     x->function = function;
     x->nargs = nargs;
     x->args = args;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamApply = %p\n", x);
-#endif
     return x;
 }
 
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
     struct LamMakeVec * x = NEW(LamMakeVec, OBJTYPE_LAMMAKEVEC);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamMakeVec %p\n", x);
+#endif
     x->nargs = nargs;
     x->args = args;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamMakeVec = %p\n", x);
-#endif
     return x;
 }
 
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative) {
     struct LamIff * x = NEW(LamIff, OBJTYPE_LAMIFF);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamIff %p\n", x);
+#endif
     x->condition = condition;
     x->consequent = consequent;
     x->alternative = alternative;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamIff = %p\n", x);
-#endif
     return x;
 }
 
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases) {
     struct LamCond * x = NEW(LamCond, OBJTYPE_LAMCOND);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamCond %p\n", x);
+#endif
     x->value = value;
     x->cases = cases;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamCond = %p\n", x);
-#endif
     return x;
 }
 
 struct LamCondCases * newLamCondCases(struct LamExp * constant, struct LamExp * body, struct LamCondCases * next) {
     struct LamCondCases * x = NEW(LamCondCases, OBJTYPE_LAMCONDCASES);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamCondCases %p\n", x);
+#endif
     x->constant = constant;
     x->body = body;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamCondCases = %p\n", x);
-#endif
     return x;
 }
 
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases) {
     struct LamMatch * x = NEW(LamMatch, OBJTYPE_LAMMATCH);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamMatch %p\n", x);
+#endif
     x->index = index;
     x->cases = cases;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamMatch = %p\n", x);
-#endif
     return x;
 }
 
 struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next) {
     struct LamMatchList * x = NEW(LamMatchList, OBJTYPE_LAMMATCHLIST);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamMatchList %p\n", x);
+#endif
     x->matches = matches;
     x->body = body;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamMatchList = %p\n", x);
-#endif
     return x;
 }
 
 struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
     struct LamIntList * x = NEW(LamIntList, OBJTYPE_LAMINTLIST);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamIntList %p\n", x);
+#endif
     x->item = item;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamIntList = %p\n", x);
-#endif
     return x;
 }
 
 struct LamLet * newLamLet(HashSymbol * var, struct LamExp * value, struct LamExp * body) {
     struct LamLet * x = NEW(LamLet, OBJTYPE_LAMLET);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamLet %p\n", x);
+#endif
     x->var = var;
     x->value = value;
     x->body = body;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamLet = %p\n", x);
-#endif
     return x;
 }
 
 struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamExp * body) {
     struct LamLetRec * x = NEW(LamLetRec, OBJTYPE_LAMLETREC);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamLetRec %p\n", x);
+#endif
     x->nbindings = nbindings;
     x->bindings = bindings;
     x->body = body;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamLetRec = %p\n", x);
-#endif
     return x;
 }
 
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next) {
     struct LamLetRecBindings * x = NEW(LamLetRecBindings, OBJTYPE_LAMLETRECBINDINGS);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamLetRecBindings %p\n", x);
+#endif
     x->var = var;
     x->val = val;
     x->next = next;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamLetRecBindings = %p\n", x);
-#endif
     return x;
 }
 
 struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent) {
     struct LamContext * x = NEW(LamContext, OBJTYPE_LAMCONTEXT);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamContext %p\n", x);
+#endif
     x->frame = frame;
     x->parent = parent;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamContext = %p\n", x);
-#endif
     return x;
 }
 
 struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right) {
     struct LamAnd * x = NEW(LamAnd, OBJTYPE_LAMAND);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamAnd %p\n", x);
+#endif
     x->left = left;
     x->right = right;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamAnd = %p\n", x);
-#endif
     return x;
 }
 
 struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right) {
     struct LamOr * x = NEW(LamOr, OBJTYPE_LAMOR);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamOr %p\n", x);
+#endif
     x->left = left;
     x->right = right;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamOr = %p\n", x);
-#endif
     return x;
 }
 
 struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right) {
     struct LamAmb * x = NEW(LamAmb, OBJTYPE_LAMAMB);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamAmb %p\n", x);
+#endif
     x->left = left;
     x->right = right;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamAmb = %p\n", x);
-#endif
     return x;
 }
 
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int arity, int size, int index) {
     struct LamTypeConstructorInfo * x = NEW(LamTypeConstructorInfo, OBJTYPE_LAMTYPECONSTRUCTORINFO);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamTypeConstructorInfo %p\n", x);
+#endif
     x->vec = vec;
     x->arity = arity;
     x->size = size;
     x->index = index;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamTypeConstructorInfo = %p\n", x);
-#endif
     return x;
 }
 
 struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val) {
     struct LamExp * x = NEW(LamExp, OBJTYPE_LAMEXP);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamExp %p\n", x);
+#endif
     x->type = type;
     x->val = val;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new LamExp = %p\n", x);
-#endif
     return x;
 }
 

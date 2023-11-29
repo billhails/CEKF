@@ -1,0 +1,41 @@
+let
+    fn require(condition) {
+        condition or back
+    }
+
+    fn one_of {
+        ([]) { back }
+        (h @ t) {
+            h then one_of(t)
+        }
+    }
+
+    fn exclude {
+        (items, []) { [] }
+        (items, h @ t) {
+            if (member(h, items)) {
+                exclude(items, t)
+            } else {
+                h @ exclude(items, t)
+            }
+        }
+    }
+
+    fn liars() {
+        let
+            ranks = [1, 2, 3, 4, 5];
+            betty = one_of(ranks);
+            ethel = one_of(exclude([betty], ranks));
+            joan = one_of(exclude([betty, ethel], ranks));
+            kitty = one_of(exclude([betty, ethel, joan], ranks));
+            mary = one_of(exclude([betty, ethel, joan, kitty], ranks));
+        in
+            require((kitty == 2) xor (betty == 3));
+            require((ethel == 1) xor (joan == 2));
+            require((joan == 3) xor (ethel == 5));
+            require((kitty == 2) xor (mary == 4));
+            require((mary == 4) xor (betty == 1));
+            [betty, ethel, joan, kitty, mary]
+    }
+in
+    liars()

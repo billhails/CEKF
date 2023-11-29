@@ -40,6 +40,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "load"      { return LOAD; }
 "not"       { return NOT; }
 "or"        { return OR; }
+"xor"       { return XOR; }
 "prototype" { return PROTOTYPE; }
 "_"         { return WILDCARD; }
 "switch"    { return SWITCH; }

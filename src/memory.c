@@ -474,7 +474,7 @@ static void collectGarbage() {
     fprintf(stderr, "GC\n");
 #endif
     mark();
-#ifdef DEBUG_GC
+#ifdef DEBUG_ALLOC
     if (lastAlloc && !MARKED(lastAlloc)) {
         cant_happen("alloc of %s (%p) immediately dropped", typeName(lastAlloc->type, lastAlloc), lastAlloc);
     }
