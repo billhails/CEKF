@@ -486,7 +486,7 @@ void printCexpApply(CexpApply *x) {
     fprintf(stderr, ")");
 }
 
-void printCexpCond(CexpCond *x) {
+void printCexpIf(CexpIf *x) {
     fprintf(stderr, "(if ");
     printAexp(x->condition);
     fprintf(stderr, " ");
@@ -622,8 +622,8 @@ void printCexp(Cexp *x) {
         case CEXP_TYPE_APPLY:
             printCexpApply(x->val.apply);
             break;
-        case CEXP_TYPE_COND:
-            printCexpCond(x->val.cond);
+        case CEXP_TYPE_IF:
+            printCexpIf(x->val.iff);
             break;
         case CEXP_TYPE_CALLCC:
             fprintf(stderr, "(call/cc ");

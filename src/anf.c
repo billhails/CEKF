@@ -321,10 +321,10 @@ static Exp *normalizeIff(LamIff *lamIff, Exp *tail) {
     PROTECT(consequent);
     Exp *alternative = normalize(lamIff->alternative, NULL);
     PROTECT(alternative);
-    CexpCond *cexpCond = newCexpCond(condition, consequent, alternative);
+    CexpIf *cexpIf = newCexpIf(condition, consequent, alternative);
     UNPROTECT(save2);
-    save2 = PROTECT(cexpCond);
-    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(cexpCond));
+    save2 = PROTECT(cexpIf);
+    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(cexpIf));
     REPLACE_PROTECT(save2, cexp);
     Exp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -717,9 +717,9 @@ static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacement
     PROTECT(eq);
     Aexp *condition = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(eq));
     PROTECT(condition);
-    CexpCond *iff = newCexpCond(condition, consequent, alternative);
+    CexpIf *iff = newCexpIf(condition, consequent, alternative);
     PROTECT(iff);
-    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(iff));
+    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(iff));
     PROTECT(cexp);
     Exp *exp = wrapCexp(cexp);
     UNPROTECT(save);

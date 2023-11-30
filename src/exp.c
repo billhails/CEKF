@@ -121,8 +121,8 @@ CexpApply *newCexpApply(Aexp *function, AexpList *args) {
     return x;
 }
 
-CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative) {
-    CexpCond *x = NEW(CexpCond, OBJTYPE_COND);
+CexpIf *newCexpIf(Aexp *condition, Exp *consequent, Exp *alternative) {
+    CexpIf *x = NEW(CexpIf, OBJTYPE_IF);
     x->condition = condition;
     x->consequent = consequent;
     x->alternative = alternative;
@@ -277,7 +277,7 @@ void markCexpApply(CexpApply *x) {
     markAexpList(x->args);
 }
 
-void markCexpCond(CexpCond *x) {
+void markCexpIf(CexpIf *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
@@ -399,8 +399,8 @@ void markCexp(Cexp *x) {
         case CEXP_TYPE_APPLY:
             markCexpApply(x->val.apply);
             break;
-        case CEXP_TYPE_COND:
-            markCexpCond(x->val.cond);
+        case CEXP_TYPE_IF:
+            markCexpIf(x->val.iff);
             break;
         case CEXP_TYPE_CALLCC:
             markAexp(x->val.callCC);
@@ -467,8 +467,8 @@ void freeExpObj(Header *h) {
         case OBJTYPE_BINDINGS:
             FREE(h, LetRecBindings);
             break;
-        case OBJTYPE_COND:
-            FREE(h, CexpCond);
+        case OBJTYPE_IF:
+            FREE(h, CexpIf);
             break;
         case OBJTYPE_AEXP:
             FREE(h, Aexp);
@@ -535,8 +535,8 @@ void markExpObj(Header *h) {
         case OBJTYPE_BINDINGS:
             markLetRecBindings((LetRecBindings *) h);
             break;
-        case OBJTYPE_COND:
-            markCexpCond((CexpCond *) h);
+        case OBJTYPE_IF:
+            markCexpIf((CexpIf *) h);
             break;
         case OBJTYPE_AEXP:
             markAexp((Aexp *) h);

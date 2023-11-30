@@ -18,10 +18,13 @@
 
 #include "symbols.h"
 
+// symbols with a '$' suffix are internal, other symbols
+// are accessible from the language.
+
 HashSymbol *negSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("neg");
+        res = newSymbol("neg$");
     }
     return res;
 }
@@ -93,7 +96,7 @@ HashSymbol *xorSymbol() {
 HashSymbol *eqSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("eq");
+        res = newSymbol("eq$");
     }
     return res;
 }
@@ -101,7 +104,7 @@ HashSymbol *eqSymbol() {
 HashSymbol *neSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("ne");
+        res = newSymbol("ne$");
     }
     return res;
 }
@@ -109,7 +112,7 @@ HashSymbol *neSymbol() {
 HashSymbol *gtSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("gt");
+        res = newSymbol("gt$");
     }
     return res;
 }
@@ -117,7 +120,7 @@ HashSymbol *gtSymbol() {
 HashSymbol *ltSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("lt");
+        res = newSymbol("lt$");
     }
     return res;
 }
@@ -125,7 +128,7 @@ HashSymbol *ltSymbol() {
 HashSymbol *geSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("ge");
+        res = newSymbol("ge$");
     }
     return res;
 }
@@ -133,7 +136,7 @@ HashSymbol *geSymbol() {
 HashSymbol *leSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("le");
+        res = newSymbol("le$");
     }
     return res;
 }
@@ -157,7 +160,7 @@ HashSymbol *appendSymbol() {
 HashSymbol *addSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("add");
+        res = newSymbol("add$");
     }
     return res;
 }
@@ -165,7 +168,7 @@ HashSymbol *addSymbol() {
 HashSymbol *subSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("sub");
+        res = newSymbol("sub$");
     }
     return res;
 }
@@ -173,7 +176,7 @@ HashSymbol *subSymbol() {
 HashSymbol *mulSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("mul");
+        res = newSymbol("mul$");
     }
     return res;
 }
@@ -181,7 +184,7 @@ HashSymbol *mulSymbol() {
 HashSymbol *divSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("div");
+        res = newSymbol("div$");
     }
     return res;
 }
@@ -189,7 +192,7 @@ HashSymbol *divSymbol() {
 HashSymbol *modSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("mod");
+        res = newSymbol("mod$");
     }
     return res;
 }
@@ -197,7 +200,7 @@ HashSymbol *modSymbol() {
 HashSymbol *powSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("pow");
+        res = newSymbol("pow$");
     }
     return res;
 }
@@ -205,7 +208,7 @@ HashSymbol *powSymbol() {
 HashSymbol *dotSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("dot");
+        res = newSymbol("dot$");
     }
     return res;
 }

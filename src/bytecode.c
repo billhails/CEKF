@@ -231,7 +231,7 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_APPLY);
 }
 
-void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
+void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     writeAexp(x->condition, b);
     addByte(b, BYTECODE_IF);
     int patch = reserveWord(b);
@@ -408,8 +408,8 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             writeCexpApply(x->val.apply, b);
         }
         break;
-        case CEXP_TYPE_COND: {
-            writeCexpCond(x->val.cond, b);
+        case CEXP_TYPE_IF: {
+            writeCexpIf(x->val.iff, b);
         }
         break;
         case CEXP_TYPE_MATCH: {

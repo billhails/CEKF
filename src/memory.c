@@ -71,8 +71,8 @@ const char *typeName(ObjType type, void *p) {
             return "apply";
         case OBJTYPE_BINDINGS:
             return "bindings";
-        case OBJTYPE_COND:
-            return "cond";
+        case OBJTYPE_IF:
+            return "if";
         case OBJTYPE_AEXP:
             return "aexp";
         case OBJTYPE_CEXP:
@@ -300,7 +300,7 @@ void markObj(Header *h, int i) {
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_BOOL:
-        case OBJTYPE_COND:
+        case OBJTYPE_IF:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
@@ -368,7 +368,7 @@ void freeObj(Header *h) {
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
         case OBJTYPE_BOOL:
-        case OBJTYPE_COND:
+        case OBJTYPE_IF:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:

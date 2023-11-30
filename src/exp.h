@@ -118,12 +118,12 @@ typedef struct AexpMakeVec {
     struct AexpList *args;
 } AexpMakeVec;
 
-typedef struct CexpCond {
+typedef struct CexpIf {
     Header header;
     struct Aexp *condition;
     struct Exp *consequent;
     struct Exp *alternative;
-} CexpCond;
+} CexpIf;
 
 typedef struct CexpMatch {
     Header header;
@@ -233,7 +233,7 @@ typedef struct Aexp {
 
 typedef enum {
     CEXP_TYPE_APPLY,
-    CEXP_TYPE_COND,
+    CEXP_TYPE_IF,
     CEXP_TYPE_CALLCC,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
@@ -247,7 +247,7 @@ typedef enum {
 typedef union {
     void *none;
     struct CexpApply *apply;
-    struct CexpCond *cond;
+    struct CexpIf *iff;
     struct Aexp *callCC;
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
@@ -263,7 +263,7 @@ typedef struct Cexp {
 } Cexp;
 
 #define CEXP_VAL_APPLY(x)  ((CexpVal){.apply   = (x)})
-#define CEXP_VAL_COND(x)   ((CexpVal){.cond    = (x)})
+#define CEXP_VAL_IF(x)     ((CexpVal){.iff     = (x)})
 #define CEXP_VAL_CALLCC(x) ((CexpVal){.callCC  = (x)})
 #define CEXP_VAL_LETREC(x) ((CexpVal){.letRec  = (x)})
 #define CEXP_VAL_AMB(x)    ((CexpVal){.amb     = (x)})
@@ -311,7 +311,7 @@ CexpAmb *newCexpAmb(Exp *exp1, Exp *exp2);
 CexpCut *newCexpCut(Exp *exp);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
-CexpCond *newCexpCond(Aexp *condition, Exp *consequent, Exp *alternative);
+CexpIf *newCexpIf(Aexp *condition, Exp *consequent, Exp *alternative);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
 CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses);
 MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next);
@@ -331,7 +331,7 @@ void markCexpAmb(CexpAmb *x);
 void markCexpCut(CexpCut *x);
 void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);
-void markCexpCond(CexpCond *x);
+void markCexpIf(CexpIf *x);
 void markCexpLetRec(CexpLetRec *x);
 void markCexpMatch(CexpMatch *x);
 void markMatchList(MatchList *x);

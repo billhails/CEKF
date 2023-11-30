@@ -34,7 +34,7 @@ static AexpUnaryApp *desugarAexpUnaryApp(AexpUnaryApp *x);
 static HashSymbol *desugarAexpVar(HashSymbol *x);
 static AexpList *desugarAexpList(AexpList *x);
 static CexpApply *desugarCexpApply(CexpApply *x);
-static CexpCond *desugarCexpCond(CexpCond *x);
+static CexpIf *desugarCexpIf(CexpIf *x);
 static CexpLetRec *desugarCexpLetRec(CexpLetRec *x);
 static CexpAmb *desugarCexpAmb(CexpAmb *x);
 static CexpCut *desugarCexpCut(CexpCut *x);
@@ -97,8 +97,8 @@ static CexpApply *desugarCexpApply(CexpApply *x) {
     return x;
 }
 
-static CexpCond *desugarCexpCond(CexpCond *x) {
-    DEBUG_DESUGAR(CexpCond, x);
+static CexpIf *desugarCexpIf(CexpIf *x) {
+    DEBUG_DESUGAR(CexpIf, x);
     x->condition = desugarAexp(x->condition);
     x->consequent = desugarExp(x->consequent);
     x->alternative = desugarExp(x->alternative);
@@ -137,8 +137,8 @@ static CexpCut *desugarCexpCut(CexpCut *x) {
 static Exp *aexpAndToExp(Aexp *exp1, Exp *exp2) {
     return newExp(EXP_TYPE_CEXP,
                   EXP_VAL_CEXP(newCexp
-                               (CEXP_TYPE_COND,
-                                CEXP_VAL_COND(newCexpCond
+                               (CEXP_TYPE_IF,
+                                CEXP_VAL_IF(newCexpIf
                                               (exp1,
                                                exp2,
                                                newExp(EXP_TYPE_AEXP,
@@ -156,8 +156,8 @@ static Exp *expAndToExp(Exp * exp1, Exp * exp2) {
                                exp1,
                                newExp(EXP_TYPE_CEXP,
                                       EXP_VAL_CEXP(newCexp
-                                                   (CEXP_TYPE_COND,
-                                                    CEXP_VAL_COND(newCexpCond
+                                                   (CEXP_TYPE_IF,
+                                                    CEXP_VAL_IF(newCexpIf
                                                                   (newAexp
                                                                    (AEXP_TYPE_VAR,
                                                                     AEXP_VAL_VAR
@@ -187,8 +187,8 @@ static Exp *andToExp(CexpBool * x) {
 static Exp *aexpOrToExp(Aexp *exp1, Exp *exp2) {
     return newExp(EXP_TYPE_CEXP,
                   EXP_VAL_CEXP(newCexp
-                               (CEXP_TYPE_COND,
-                                CEXP_VAL_COND(newCexpCond
+                               (CEXP_TYPE_IF,
+                                CEXP_VAL_IF(newCexpIf
                                               (exp1,
                                                newExp(EXP_TYPE_AEXP,
                                                       EXP_VAL_AEXP(newAexp
@@ -207,8 +207,8 @@ static Exp *expOrToExp(Exp *exp1, Exp *exp2) {
                             exp1,
                             newExp(EXP_TYPE_CEXP,
                                    EXP_VAL_CEXP(newCexp
-                                                (CEXP_TYPE_COND,
-                                                 CEXP_VAL_COND(newCexpCond
+                                                (CEXP_TYPE_IF,
+                                                 CEXP_VAL_IF(newCexpIf
                                                                (newAexp
                                                                 (AEXP_TYPE_VAR,
                                                                  AEXP_VAL_VAR
@@ -319,8 +319,8 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_APPLY:
             x->val.apply = desugarCexpApply(x->val.apply);
             break;
-        case CEXP_TYPE_COND:
-            x->val.cond = desugarCexpCond(x->val.cond);
+        case CEXP_TYPE_IF:
+            x->val.iff = desugarCexpIf(x->val.iff);
             break;
         case CEXP_TYPE_CALLCC:
             x->val.callCC = desugarAexp(x->val.callCC);

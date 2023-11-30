@@ -18,13 +18,13 @@ let
 
     // an interpreter
     fn eval {
-        (addition(l, r), e)              { opAdd(eval(l, e), eval(r, e)) }
-        (subtraction(l, r), e)           { opSub(eval(l, e), eval(r, e)) }
-        (multiplication(l, r), e)        { opMul(eval(l, e), eval(r, e)) }
-        (division(l, r), e)              { opDiv(eval(l, e), eval(r, e)) }
+        (addition(l, r), e)              { add(eval(l, e), eval(r, e)) }
+        (subtraction(l, r), e)           { sub(eval(l, e), eval(r, e)) }
+        (multiplication(l, r), e)        { mul(eval(l, e), eval(r, e)) }
+        (division(l, r), e)              { div(eval(l, e), eval(r, e)) }
         (i = number(_), e)               { i }
         (symbol(s), e)                   { lookup(s, e) }
-        (conditional(test, pro, con), e) { opCond(test, pro, con, e) }
+        (conditional(test, pro, con), e) { cond(test, pro, con, e) }
         (l = lambda(_, _), e)            { closure(l, e) }
         (application(function, arg), e)  { apply(eval(function, e), eval(arg, e)) }
     }
@@ -35,15 +35,15 @@ let
     }
 
     // built-ins
-    fn opAdd (number(a), number(b)) { number(a + b) }
+    fn add (number(a), number(b)) { number(a + b) }
     
-    fn opSub (number(a), number(b)) { number(a - b) }
+    fn sub (number(a), number(b)) { number(a - b) }
     
-    fn opMul (number(a), number(b)) { number(a * b) }
+    fn mul (number(a), number(b)) { number(a * b) }
     
-    fn opDiv (number(a), number(b)) { number(a / b) }
+    fn div (number(a), number(b)) { number(a / b) }
     
-    fn opCond(test, pro, con, e) {
+    fn cond(test, pro, con, e) {
         switch (eval(test, e)) {
             (number(0)) { eval(con, e) } // 0 is false
             (number(_)) { eval(pro, e) }
