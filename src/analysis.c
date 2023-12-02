@@ -42,6 +42,8 @@ static void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
 static void analizeAexpList(AexpList *x, CTEnv *env);
 static void analizeCexpApply(CexpApply *x, CTEnv *env);
 static void analizeCexpIf(CexpIf *x, CTEnv *env);
+static void analizeCexpCond(CexpCond *x, CTEnv *env);
+static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env);
 static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env);
 static void analizeCexpAmb(CexpAmb *x, CTEnv *env);
 static void analizeCexpCut(CexpCut *x, CTEnv *env);
@@ -127,6 +129,23 @@ static void analizeCexpIf(CexpIf *x, CTEnv *env) {
     analizeAexp(x->condition, env);
     analizeExp(x->consequent, env);
     analizeExp(x->alternative, env);
+}
+
+static void analizeCexpCond(CexpCond *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    fprintf(stderr, "analizeCexpCond "); printCexpCond(x); fprintf(stderr, "  "); printCTEnv(env); fprintf(stderr, "\n");
+#endif
+    analizeAexp(x->condition, env);
+    analizeCexpCondCases(x->cases, env);
+}
+
+static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env) {
+    if (x == NULL) return;
+#ifdef DEBUG_ANALIZE
+    fprintf(stderr, "analizeCexpCondCases "); printCexpCondCases(x); fprintf(stderr, "  "); printCTEnv(env); fprintf(stderr, "\n");
+#endif
+    analizeExp(x->body, env);
+    analizeCexpCondCases(x->next, env);
 }
 
 static void analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
@@ -220,7 +239,6 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_FALSE:
         case AEXP_TYPE_INT:
         case AEXP_TYPE_CHAR:
-        case AEXP_TYPE_DEFAULT:
         case AEXP_TYPE_VOID:
             break;
         case AEXP_TYPE_PRIM:
@@ -265,6 +283,9 @@ static void analizeCexp(Cexp *x, CTEnv *env) {
             break;
         case CEXP_TYPE_IF:
             analizeCexpIf(x->val.iff, env);
+            break;
+        case CEXP_TYPE_COND:
+            analizeCexpCond(x->val.cond, env);
             break;
         case CEXP_TYPE_CALLCC:
             analizeAexp(x->val.callCC, env);

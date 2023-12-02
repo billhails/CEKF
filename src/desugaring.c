@@ -35,6 +35,7 @@ static HashSymbol *desugarAexpVar(HashSymbol *x);
 static AexpList *desugarAexpList(AexpList *x);
 static CexpApply *desugarCexpApply(CexpApply *x);
 static CexpIf *desugarCexpIf(CexpIf *x);
+static CexpCond *desugarCexpCond(CexpCond *x);
 static CexpLetRec *desugarCexpLetRec(CexpLetRec *x);
 static CexpAmb *desugarCexpAmb(CexpAmb *x);
 static CexpCut *desugarCexpCut(CexpCut *x);
@@ -102,6 +103,21 @@ static CexpIf *desugarCexpIf(CexpIf *x) {
     x->condition = desugarAexp(x->condition);
     x->consequent = desugarExp(x->consequent);
     x->alternative = desugarExp(x->alternative);
+    return x;
+}
+
+static CexpCondCases *desugarCexpCondCases(CexpCondCases *x) {
+    if (x == NULL) {
+        return NULL;
+    }
+    x->body = desugarExp(x->body);
+    x->next = desugarCexpCondCases(x->next);
+    return x;
+}
+
+static CexpCond *desugarCexpCond(CexpCond *x) {
+    x->condition = desugarAexp(x->condition);
+    x->cases = desugarCexpCondCases(x->cases);
     return x;
 }
 
@@ -278,7 +294,6 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_INT:
         case AEXP_TYPE_CHAR:
         case AEXP_TYPE_VOID:
-        case AEXP_TYPE_DEFAULT:
             break;
         case AEXP_TYPE_PRIM:
             x->val.prim = desugarAexpPrimApp(x->val.prim);
@@ -321,6 +336,9 @@ static Cexp *desugarCexp(Cexp *x) {
             break;
         case CEXP_TYPE_IF:
             x->val.iff = desugarCexpIf(x->val.iff);
+            break;
+        case CEXP_TYPE_COND:
+            x->val.cond = desugarCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
             x->val.callCC = desugarAexp(x->val.callCC);

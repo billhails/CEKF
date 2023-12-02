@@ -125,6 +125,19 @@ typedef struct CexpIf {
     struct Exp *alternative;
 } CexpIf;
 
+typedef struct CexpCond {
+    Header header;
+    struct Aexp *condition;
+    struct CexpCondCases *cases;
+} CexpCond;
+
+typedef struct CexpCondCases {
+    Header header;
+    int option;
+    struct Exp *body;
+    struct CexpCondCases *next;
+} CexpCondCases;
+
 typedef struct CexpMatch {
     Header header;
     struct Aexp *condition;
@@ -195,7 +208,6 @@ typedef enum {
     AEXP_TYPE_UNARY,
     AEXP_TYPE_LIST,
     AEXP_TYPE_MAKEVEC,
-    AEXP_TYPE_DEFAULT,
 } AexpType;
 
 typedef union {
@@ -229,11 +241,11 @@ typedef struct Aexp {
 #define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
 #define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
 #define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec      = (x)})
-#define AEXP_VAL_DEFAULT()       ((AexpVal){.none         = NULL})
 
 typedef enum {
     CEXP_TYPE_APPLY,
     CEXP_TYPE_IF,
+    CEXP_TYPE_COND,
     CEXP_TYPE_CALLCC,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
@@ -248,6 +260,7 @@ typedef union {
     void *none;
     struct CexpApply *apply;
     struct CexpIf *iff;
+    struct CexpCond *cond;
     struct Aexp *callCC;
     struct CexpLetRec *letRec;
     struct CexpAmb *amb;
@@ -264,6 +277,7 @@ typedef struct Cexp {
 
 #define CEXP_VAL_APPLY(x)  ((CexpVal){.apply   = (x)})
 #define CEXP_VAL_IF(x)     ((CexpVal){.iff     = (x)})
+#define CEXP_VAL_COND(x)   ((CexpVal){.cond    = (x)})
 #define CEXP_VAL_CALLCC(x) ((CexpVal){.callCC  = (x)})
 #define CEXP_VAL_LETREC(x) ((CexpVal){.letRec  = (x)})
 #define CEXP_VAL_AMB(x)    ((CexpVal){.amb     = (x)})
@@ -312,6 +326,8 @@ CexpCut *newCexpCut(Exp *exp);
 CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpIf *newCexpIf(Aexp *condition, Exp *consequent, Exp *alternative);
+CexpCond *newCexpCond(Aexp *condition, CexpCondCases *cases);
+CexpCondCases *newCexpCondCases(int option, Exp *body, CexpCondCases *next);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
 CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses);
 MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next);
@@ -332,6 +348,8 @@ void markCexpCut(CexpCut *x);
 void markCexpBool(CexpBool *x);
 void markCexpApply(CexpApply *x);
 void markCexpIf(CexpIf *x);
+void markCexpCond(CexpCond *x);
+void markCexpCondCases(CexpCondCases *x);
 void markCexpLetRec(CexpLetRec *x);
 void markCexpMatch(CexpMatch *x);
 void markMatchList(MatchList *x);

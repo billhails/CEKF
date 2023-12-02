@@ -68,6 +68,13 @@ static void writeWordAt(int loc, ByteCodeArray *b, int word) {
     b->entries[loc + 1] = word & 255;
 }
 
+static void writeIntAt(int loc, ByteCodeArray *b, int word) {
+    b->entries[loc + 0] = (word >> 24) & 255;
+    b->entries[loc + 1] = (word >> 16) & 255;
+    b->entries[loc + 2] = (word >> 8) & 255;
+    b->entries[loc + 3] = word & 255;
+}
+
 static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
     int offset = b->count - patch;
     writeWordAt(patch, b, offset);
@@ -83,6 +90,15 @@ static void writeWord(ByteCodeArray *b, int word) {
 
 static int reserveWord(ByteCodeArray *b) {
     int address = b->count;
+    addByte(b, 0);
+    addByte(b, 0);
+    return address;
+}
+
+static int reserveInt(ByteCodeArray *b) {
+    int address = b->count;
+    addByte(b, 0);
+    addByte(b, 0);
     addByte(b, 0);
     addByte(b, 0);
     return address;
@@ -241,6 +257,58 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     writeCurrentAddressAt(patch, b);
     writeExp(x->alternative, b);
     writeCurrentAddressAt(patch2, b);
+}
+
+static int countCexpCondCases(CexpCondCases *x) {
+    int val = 0;
+    while (x != NULL) {
+        val++;
+        x = x->next;
+    }
+    return val;
+}
+
+void writeCexpCondCases(int depth, int *values, int *addresses, int *jumps, CexpCondCases *x, ByteCodeArray *b) {
+    if (x == NULL) {
+        return;
+    }
+    writeCexpCondCases(depth + 1, values, addresses, jumps, x->next, b);
+    if (x->next == NULL) { // default
+        writeExp(x->body, b);
+    } else {
+        writeIntAt(values[depth], b, x->option);
+        writeCurrentAddressAt(addresses[depth], b);
+        writeExp(x->body, b);
+    }
+    if (depth > 0) {
+        addByte(b, BYTECODE_JMP);
+        jumps[depth - 1] = reserveWord(b);
+    }
+}
+
+void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
+    int numCases = countCexpCondCases(x->cases);
+    numCases--; // don't count the default case
+    if (numCases <= 0) {
+        cant_happen("zero cases in writeCexpCond");
+    }
+    writeAexp(x->condition, b);
+    addByte(b, BYTECODE_COND);
+    writeWord(b, numCases);
+    int *values = NEW_ARRAY(int, numCases); // address in b for each index_i
+    int *addresses = NEW_ARRAY(int, numCases); // address in b for each addr(exp_i)
+    int *jumps = NEW_ARRAY(int, numCases); // address in b for the JMP patch address at the end of each expression
+    for (int i = 0; i < numCases; i++) {
+        values[i] = reserveInt(b);
+        addresses[i] = reserveWord(b);
+    }
+    writeCexpCondCases(0, values, addresses, jumps, x->cases, b);
+    for (int i = 0; i < numCases; i++) {
+        writeCurrentAddressAt(jumps[i], b);
+    }
+    FREE_ARRAY(int, values, numCases);
+    FREE_ARRAY(int, addresses, numCases);
+    FREE_ARRAY(int, jumps, numCases);
 }
 
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
@@ -410,6 +478,10 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         break;
         case CEXP_TYPE_IF: {
             writeCexpIf(x->val.iff, b);
+        }
+        break;
+        case CEXP_TYPE_COND: {
+            writeCexpCond(x->val.cond, b);
         }
         break;
         case CEXP_TYPE_MATCH: {
