@@ -27,7 +27,7 @@
 // #define TEST_STACK
 // #define DEBUG_STACK
 // #define DEBUG_STEP
-// #define DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
 // #define DEBUG_TPMC_MATCH
