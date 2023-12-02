@@ -496,6 +496,26 @@ void printCexpIf(CexpIf *x) {
     fprintf(stderr, ")");
 }
 
+void printCexpCond(CexpCond *x) {
+    fprintf(stderr, "(cond ");
+    printAexp(x->condition);
+    fprintf(stderr, " ");
+    printCexpCondCases(x->cases);
+    fprintf(stderr, ")");
+}
+
+void printCexpCondCases(CexpCondCases *x) {
+    while (x != NULL) {
+        fprintf(stderr, "(%d ", x->option);
+        printExp(x->body);
+        fprintf(stderr, ")");
+        if (x->next) {
+            fprintf(stderr, " ");
+        }
+        x = x->next;
+    }
+}
+
 void printCexpLetRec(CexpLetRec *x) {
     fprintf(stderr, "(letrec ");
     printLetRecBindings(x->bindings);
@@ -624,6 +644,9 @@ void printCexp(Cexp *x) {
             break;
         case CEXP_TYPE_IF:
             printCexpIf(x->val.iff);
+            break;
+        case CEXP_TYPE_COND:
+            printCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
             fprintf(stderr, "(call/cc ");
