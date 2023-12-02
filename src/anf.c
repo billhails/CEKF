@@ -74,7 +74,7 @@ static Exp *normalizeMatch(LamMatch *match, Exp *tail);
 static MatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
-static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacements);
+static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
 
 Exp *anfNormalize(LamExp *lamExp) {
@@ -152,14 +152,21 @@ static Exp *normalizeCond(LamCond *cond, Exp *tail) {
     int save = PROTECT(replacements);
     Aexp *value = replaceLamExp(cond->value, replacements);
     int save2 = PROTECT(value);
-    Exp *exp = replaceCond(value, cond->cases, replacements);
+    CexpCondCases *cases = normalizeCondCases(cond->cases);
+    PROTECT(cases);
+    CexpCond *cexpCond = newCexpCond(value, cases);
+    UNPROTECT(save2);
+    save2 = PROTECT(cexpCond);
+    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(cexpCond));
+    REPLACE_PROTECT(save2, cexp);
+    Exp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
     exp = wrapTail(exp, tail);
     REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
+    exp = letBind(exp, replacements);
     UNPROTECT(save);
     LEAVE(normalizeCond);
-    return res;
+    return exp;
 }
 
 static Exp *normalizeMatch(LamMatch *match, Exp *tail) {
@@ -321,10 +328,10 @@ static Exp *normalizeIff(LamIff *lamIff, Exp *tail) {
     PROTECT(consequent);
     Exp *alternative = normalize(lamIff->alternative, NULL);
     PROTECT(alternative);
-    CexpCond *cexpCond = newCexpCond(condition, consequent, alternative);
+    CexpIf *cexpIf = newCexpIf(condition, consequent, alternative);
     UNPROTECT(save2);
-    save2 = PROTECT(cexpCond);
-    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(cexpCond));
+    save2 = PROTECT(cexpIf);
+    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(cexpIf));
     REPLACE_PROTECT(save2, cexp);
     Exp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -689,6 +696,7 @@ static Aexp *cloneAexp(Aexp *orig) {
     return orig;
 }
 
+/*
 static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacements) {
     ENTER(replaceCond);
     if (cases == NULL) {
@@ -717,21 +725,48 @@ static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacement
     PROTECT(eq);
     Aexp *condition = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(eq));
     PROTECT(condition);
-    CexpCond *iff = newCexpCond(condition, consequent, alternative);
+    CexpIf *iff = newCexpIf(condition, consequent, alternative);
     PROTECT(iff);
-    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(iff));
+    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(iff));
     PROTECT(cexp);
     Exp *exp = wrapCexp(cexp);
     UNPROTECT(save);
     LEAVE(replaceCond);
     return exp;
 }
+*/
 
-
-static Aexp *replaceCondDefault() {
-    return newAexp(AEXP_TYPE_DEFAULT, AEXP_VAL_DEFAULT());
+static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
+    ENTER(normalizeCondCases);
+    if (cases == NULL) {
+        LEAVE(normalizeCondCases);
+        return NULL;
+    }
+    CexpCondCases *next = normalizeCondCases(cases->next);
+    int save = PROTECT(next);
+    int constant = 0;
+    switch (cases->constant->type) {
+        case LAMEXP_TYPE_INTEGER:
+            constant = cases->constant->val.integer;
+            break;
+        case LAMEXP_TYPE_CHARACTER:
+            constant = (int) cases->constant->val.character;
+            break;
+        case LAMEXP_TYPE_COND_DEFAULT:
+            if (next != NULL) {
+                cant_happen("cond default not last case");
+            }
+            constant = 0;
+            break;
+        default:
+            cant_happen("unexpected type %d for constant in normalizeCondCases");
+    }
+    Exp *body = normalize(cases->body, NULL);
+    PROTECT(body);
+    CexpCondCases *this = newCexpCondCases(constant, body, next);
+    UNPROTECT(save);
+    return this;
 }
-
 
 static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
     ENTER(replaceLamExp);
@@ -774,8 +809,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
             res = replaceLamCexp(lamExp, replacements);
             break;
         case LAMEXP_TYPE_COND_DEFAULT:
-            res = replaceCondDefault();
-            break;
+            cant_happen("replaceLamExp encountered cond default");
         default:
             cant_happen("unrecognised type %d in replaceLamExp", lamExp->type);
     }

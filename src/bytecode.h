@@ -50,6 +50,7 @@ typedef enum ByteCodes {
     BYTECODE_MATCH,
     BYTECODE_APPLY,
     BYTECODE_IF,
+    BYTECODE_COND,
     BYTECODE_LETREC,
     BYTECODE_AMB,
     BYTECODE_CUT,
@@ -86,7 +87,7 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
 void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);
 void writeAexpList(AexpList *x, ByteCodeArray *b);
 void writeCexpApply(CexpApply *x, ByteCodeArray *b);
-void writeCexpCond(CexpCond *x, ByteCodeArray *b);
+void writeCexpIf(CexpIf *x, ByteCodeArray *b);
 void writeCexpMatch(CexpMatch *x, ByteCodeArray *b);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);

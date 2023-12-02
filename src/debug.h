@@ -40,7 +40,7 @@ void printCexpBool(CexpBool *x);
 void printCexp(Cexp *x);
 void printCexpMatch(CexpMatch *x);
 void printMatchList(MatchList *x);
-void printCexpCond(CexpCond *x);
+void printCexpIf(CexpIf *x);
 void printCexpLetRec(CexpLetRec *x);
 void printCTEnv(CTEnv *x);
 void printExp(Exp *x);
