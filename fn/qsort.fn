@@ -1,11 +1,11 @@
 let
-    unsorted = ["hello", "goodbye", "here", "there", "everywhere"];
+    // unsorted = ["hello", "goodbye", "here", "there", "everywhere"];
+    unsorted = "rhrtgefewhgjtyjyuosfsfswfgikpzxxvcbfvwfh";
 
     fn qsort {
         ([]) { [] }
         (pivot @ rest) {
             let
-                // currying not supported yet
                 lesser = filter(fn (a, b) { a >= b }(pivot), rest);
                 greater = filter(fn (a, b) { a < b }(pivot), rest);
             in

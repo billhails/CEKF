@@ -245,6 +245,7 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
     writeAexpList(x->args, b);
     writeAexp(x->function, b);
     addByte(b, BYTECODE_APPLY);
+    addByte(b, x->nargs);
 }
 
 void writeCexpIf(CexpIf *x, ByteCodeArray *b) {

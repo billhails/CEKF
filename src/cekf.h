@@ -111,6 +111,8 @@ void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
 void setFrame(Stack *stack, int nargs);
 void clearFrame(Stack *stack);
+void copyTosToEnv(Stack *s, Env *e, int n);
+void copyValues(Value *to, Value *from, int size);
 
 extern Snapshot noSnapshot;
 
