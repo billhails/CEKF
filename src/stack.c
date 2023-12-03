@@ -54,6 +54,7 @@ void setFrame(Stack *s, int n) {
     printf("setFrame(%d)\n", n);
 #endif
     if (n) {
+        //         type,  dest,     src,                  amount
         MOVE_ARRAY(Value, s->stack, &s->stack[s->sp - n], n);
     }
     s->sp = n;
@@ -131,6 +132,17 @@ static void copyToSnapshot(Stack *s, Snapshot *ss) {
         copyToValues(s, ss->frame, 0);
     }
     ss->frameSize = s->sp;
+}
+
+void copyValues(Value *to, Value *from, int size) {
+    COPY_ARRAY(Value, to, from, size);
+}
+
+void copyTosToEnv(Stack *s, Env *e, int n) {
+#ifdef DEBUG_STACK
+    printf("copyTosToEnv, sp = %d, capacity = %d\n", s->sp, s->capacity);
+#endif
+    copyValues(e->values, &(s->stack[s->sp - n]), n);
 }
 
 void snapshotClo(Stack *s, Clo *target, int letRecOffset) {

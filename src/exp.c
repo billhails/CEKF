@@ -506,6 +506,9 @@ void freeExpObj(Header *h) {
         case OBJTYPE_COND:
             FREE(h, CexpCond);
             break;
+        case OBJTYPE_CONDCASES:
+            FREE(h, CexpCondCases);
+            break;
         case OBJTYPE_AEXP:
             FREE(h, Aexp);
             break;

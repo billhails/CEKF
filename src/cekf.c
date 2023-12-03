@@ -117,6 +117,7 @@ void markValue(Value x) {
         case VALUE_TYPE_INTEGER:
         case VALUE_TYPE_CHARACTER:
             break;
+        case VALUE_TYPE_PCLO:
         case VALUE_TYPE_CLO:
             markClo(x.val.clo);
             break;

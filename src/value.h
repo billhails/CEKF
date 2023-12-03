@@ -23,6 +23,7 @@ typedef enum {
     VALUE_TYPE_INTEGER,
     VALUE_TYPE_CHARACTER,
     VALUE_TYPE_CLO,
+    VALUE_TYPE_PCLO,
     VALUE_TYPE_CONT,
     VALUE_TYPE_CONS,
     VALUE_TYPE_VEC,
@@ -45,7 +46,9 @@ typedef struct Value {
 
 #define VALUE_VAL_INTEGER(x)   ((ValueVal){.z    = (x)})
 #define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
+// CLO and PCLO share the same Clo struct
 #define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
+#define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
 #define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
 #define VALUE_VAL_CONS(x)      ((ValueVal){.cons = (x)})
 #define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})

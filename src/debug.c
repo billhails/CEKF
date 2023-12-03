@@ -849,8 +849,8 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             case BYTECODE_APPLY: {
-                fprintf(stderr, "%04x ### APPLY\n", i);
-                i++;
+                fprintf(stderr, "%04x ### APPLY [%d]\n", i, b->entries[i + 1]);
+                i += 2;
             }
             break;
             case BYTECODE_IF: {

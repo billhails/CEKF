@@ -371,6 +371,8 @@ void freeObj(Header *h) {
         case OBJTYPE_BINDINGS:
         case OBJTYPE_BOOL:
         case OBJTYPE_IF:
+        case OBJTYPE_COND:
+        case OBJTYPE_CONDCASES:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:

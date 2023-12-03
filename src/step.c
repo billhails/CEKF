@@ -176,7 +176,7 @@ static int _vecCmp(Vec *a, Vec *b) {
     if (a->size == 0 || b->size == 0) {
         cant_happen("empty vecs in _vecCmp()");
     }
-    if (a->values[0].type != VALUE_TYPE_INTEGER || b->values[0] != VALUE_TYPE_INTEGER) {
+    if (a->values[0].type != VALUE_TYPE_INTEGER || b->values[0].type != VALUE_TYPE_INTEGER) {
         cant_happen("expected integer vec tags in _vecCmp()");
     }
 #endif
@@ -191,6 +191,16 @@ static int _vecCmp(Vec *a, Vec *b) {
 }
 
 static int _cmp(Value a, Value b) {
+#ifdef DEBUG_STEP
+    fprintf(stderr, "_cmp:\n");
+    printContainedValue(a, 0);
+    fprintf(stderr, "\n");
+    printContainedValue(b, 0);
+    fprintf(stderr, "\n");
+#endif
+    if (a.type != b.type) {
+        cant_happen("different types in _cmp");
+    }
     switch (a.type) {
         case VALUE_TYPE_VOID:
             return 0;
@@ -328,15 +338,57 @@ static int protectValue(Value v) {
  * it pops the callable and invokes it, leaving the rest of the
  * arguments on the stack
  */
-static void applyProc() {
+static void applyProc(int naargs) {
     Value callable = pop();
     int save = protectValue(callable);
     switch (callable.type) {
+        case VALUE_TYPE_PCLO: {
+            Clo *clo = callable.val.clo;
+            if (clo->nvar == naargs) {
+                state.C = clo->c;
+                state.E = clo->rho->next;
+                copyValues(state.S.stack, clo->rho->values, clo->rho->count);
+                copyValues(&(state.S.stack[clo->rho->count]), &(state.S.stack[state.S.sp - clo->nvar]), clo->nvar);
+                state.S.sp = clo->rho->count + clo->nvar;
+            } else if (naargs == 0) {
+                push(callable);
+            } else if (naargs < clo->nvar) {
+                Env *e = newEnv(clo->rho->next, naargs + clo->rho->count);
+                int save = PROTECT(e);
+                copyValues(e->values, clo->rho->values, clo->rho->count);
+                copyValues(&(e->values[clo->rho->count]), &(state.S.stack[state.S.sp - naargs]), naargs);
+                Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                PROTECT(pclo);
+                callable.type = VALUE_TYPE_PCLO;
+                callable.val.clo = pclo;
+                push(callable);
+                UNPROTECT(save);
+            } else {
+                cant_happen("too many arguments to partial closure, expected %d, got %d", clo->nvar, naargs);
+            }
+        }
+        break;
         case VALUE_TYPE_CLO: {
             Clo *clo = callable.val.clo;
-            state.C = clo->c;
-            state.E = clo->rho;
-            setFrame(&state.S, clo->nvar);
+            if (clo->nvar == naargs) {
+                state.C = clo->c;
+                state.E = clo->rho;
+                setFrame(&state.S, clo->nvar);
+            } else if (naargs == 0) {
+                push(callable);
+            } else if (naargs < clo->nvar) {
+                Env *e = newEnv(clo->rho, naargs);
+                int save = PROTECT(e);
+                copyTosToEnv(&state.S, e, naargs);
+                Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                PROTECT(pclo);
+                callable.type = VALUE_TYPE_PCLO;
+                callable.val.clo = pclo;
+                push(callable);
+                UNPROTECT(save);
+            } else {
+                cant_happen("too many arguments to closure, expected %d, got %d", clo->nvar, naargs);
+            }
         }
         break;
         case VALUE_TYPE_CONT: {
@@ -361,7 +413,7 @@ static void applyProc() {
     UNPROTECT(save);
 }
 
-// #define printCEKF(state)
+#define printCEKF(state)
 
 static void step() {
 #ifdef DEBUG_STEP
@@ -648,9 +700,11 @@ static void step() {
             case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### APPLY\n", ++count, state.C);
+                printf("%4d) %04x ### APPLY [%d]\n", ++count, state.C, byteAt(1));
 #endif
-                applyProc();
+                int nargs = byteAt(1);
+                state.C += 2;
+                applyProc(nargs);
             }
             break;
             case BYTECODE_IF: { // pop the test result and jump to the appropriate branch
@@ -684,7 +738,7 @@ static void step() {
                 state.C = offsetAt(2 + v.val.z * 2);
             }
             break;
-            case BYTECODE_COND: { //
+            case BYTECODE_COND: { // pop the value, walk the dispatch table looking for a match, or run the default
                 int size = wordAt(1);
 #ifdef DEBUG_STEP
                 printCEKF(&state);
@@ -808,7 +862,7 @@ static void step() {
                 push(cc);
                 push(aexp);
                 UNPROTECT(save);
-                applyProc();
+                applyProc(1);
             }
             break;
             case BYTECODE_TRUE: { // push true
@@ -871,7 +925,7 @@ static void step() {
                 k.type = VALUE_TYPE_CONT;
                 k.val = VALUE_VAL_CONT(state.K);
                 push(k);
-                applyProc();
+                applyProc(1);
             }
             break;
             case BYTECODE_DONE: { // can't happen, probably
@@ -889,7 +943,9 @@ static void step() {
                 cant_happen("unrecognised bytecode %d in step()", byteAt(0));
         }
 #ifdef DEBUG_STEP
+#ifdef DEBUG_SLOW_STEP
         sleep(1);
+#endif
 #endif
     }
 }
