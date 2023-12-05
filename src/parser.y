@@ -210,6 +210,7 @@ static AstUnpack *newStringUnpack(char *str) {
 %nonassoc '='
 %nonassoc ':'
 %right CONS APPEND
+%left CAR CDR
 %left '+' '-'
 %left '*' '/' '%'
 %right '^'
@@ -423,6 +424,8 @@ expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_T
 
 unop : '-' expression %prec NEG   { $$ = unOpToFunCall(negSymbol(), $2); }
      | NOT expression %prec NOT   { $$ = unOpToFunCall(notSymbol(), $2); }
+     | LT expression %prec CAR    { $$ = unOpToFunCall(carSymbol(), $2); }
+     | GT expression %prec CDR    { $$ = unOpToFunCall(cdrSymbol(), $2); }
      | HERE expression            { $$ = unOpToFunCall(hereSymbol(), $2); }
      ;
 

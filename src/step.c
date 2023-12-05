@@ -176,14 +176,8 @@ static int _vecCmp(Vec *a, Vec *b) {
     if (a->size == 0 || b->size == 0) {
         cant_happen("empty vecs in _vecCmp()");
     }
-    if (a->values[0].type != VALUE_TYPE_INTEGER || b->values[0].type != VALUE_TYPE_INTEGER) {
-        cant_happen("expected integer vec tags in _vecCmp()");
-    }
 #endif
-    if (a->values[0].val.z != b->values[0].val.z) {
-        return a->values[0].val.z < b->values[0].val.z ? -1 : 1;
-    }
-    for (int i = 1; i < a->size; ++i) {
+    for (int i = 0; i < a->size; ++i) {
         int cmp = _cmp(a->values[i], b->values[i]);
         if (cmp != 0) return cmp;
     }

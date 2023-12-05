@@ -26,7 +26,7 @@
 // #define DEBUG_RUN_TESTS 1
 // #define TEST_STACK
 // #define DEBUG_STACK
-#define DEBUG_STEP
+// #define DEBUG_STEP
 // #define DEBUG_SLOW_STEP
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
@@ -46,7 +46,7 @@
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
 // #define DEBUG_ALLOC
-#define SAFETY_CHECKS
+// #define SAFETY_CHECKS
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);
