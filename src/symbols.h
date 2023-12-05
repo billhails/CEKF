@@ -53,5 +53,7 @@ HashSymbol *intSymbol();
 HashSymbol *charSymbol();
 HashSymbol *boolSymbol();
 HashSymbol *envSymbol();
+HashSymbol *carSymbol();
+HashSymbol *cdrSymbol();
 
 #endif

@@ -285,3 +285,19 @@ HashSymbol *envSymbol() {
     return res;
 }
 
+HashSymbol *carSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("car");
+    }
+    return res;
+}
+
+HashSymbol *cdrSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("cdr");
+    }
+    return res;
+}
+
