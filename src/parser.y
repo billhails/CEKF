@@ -43,41 +43,6 @@ static AstFunCall *unOpToFunCall(HashSymbol *op, AstExpression *arg) {
     );
 }
 
-/*
- * if (test) { consequent } else { alternative }
- *
- * becomes
- *
- * fn { (true) { consequent } (false) { alternative } }(test)
- */
-static AstFunCall *fakeAstConditional(AstExpression *condition, AstNest *consequent, AstNest *alternative) {
-    AstFunction *trueFunction = newAstFunction(
-        newAstArgList(
-            newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(trueSymbol())),
-            NULL
-        ),
-        consequent
-    );
-    AstFunction *falseFunction = newAstFunction(
-        newAstArgList(
-            newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(falseSymbol())),
-            NULL
-        ),
-        alternative
-    );
-    return newAstFunCall(
-        newAstExpression(
-            AST_EXPRESSION_TYPE_FUN,
-            AST_EXPRESSION_VAL_FUN(
-                newAstCompositeFunction(
-                    trueFunction,
-                    newAstCompositeFunction(
-                        falseFunction,
-                        NULL
-                    )))),
-        newAstExpressions(condition, NULL));
-}
-
 static AstFunCall *newStringList(char *str) {
     if (*str == '\0') {
         return newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(nilSymbol())), NULL);
@@ -142,7 +107,7 @@ static AstUnpack *newStringUnpack(char *str) {
     AstTypeSymbols *typeSymbols;
     AstType *type;
     AstUnpack *unpack;
-
+    AstIff *iff;
 }
 
 %type <arg> farg
@@ -156,11 +121,11 @@ static AstUnpack *newStringUnpack(char *str) {
 %type <expression> expression
 %type <expressions> expressions expression_statements
 %type <flatType> flat_type
-%type <funCall> fun_call binop conslist unop switch conditional string
+%type <funCall> fun_call binop conslist unop switch string
 %type <function> function
 %type <load> load
 %type <namedArg> named_farg
-%type <nest> top nest nest_body conditional_nest
+%type <nest> top nest nest_body iff_nest
 %type <package> package extends
 %type <prototypeBody> prototype_body
 %type <prototypeSymbolType> prototype_symbol_type
@@ -176,6 +141,7 @@ static AstUnpack *newStringUnpack(char *str) {
 %type <typeSymbols> type_symbols
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
+%type <iff> iff
 
 %token AS
 %token BACK
@@ -333,17 +299,12 @@ type_clause : KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_
 
 /******************************** expressions */
 
-conditional : IF '(' expression ')' nest ELSE conditional_nest  { $$ = fakeAstConditional($3, $5, $7); }
-            ;
+iff : IF '(' expression ')' nest ELSE iff_nest  { $$ = newAstIff($3, $5, $7); }
+    ;
 
-conditional_nest : conditional  {
-                                    $$ = newAstNest(
-                                        NULL,
-                                        newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)), NULL)
-                                    );
-                                }
-                 | nest         { $$ = $1; }
-                 ;
+iff_nest : iff  { $$ = newAstNest(NULL, newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)), NULL)); }
+         | nest { $$ = $1; }
+         ;
 
 switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($5)), $3); }
        ;
@@ -405,21 +366,21 @@ env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
 named_farg : symbol '=' farg  { $$ = newAstNamedArg($1, $3); }
            ;
 
-expression : binop                      { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | fun_call                   { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | unop                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | '[' conslist ']'           { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
-           | FN fun                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
-           | env                        { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
-           | BACK                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
-           | conditional                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | switch                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | symbol                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)); }
-           | NUMBER                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
-           | string                     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
-           | CHAR                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
-           | nest                       { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
-           | '(' expression ')'         { $$ = $2; }
+expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | fun_call             { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | unop                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | '[' conslist ']'     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
+           | FN fun               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
+           | env                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
+           | BACK                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
+           | iff                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)); }
+           | switch               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | symbol               { $$ = newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)); }
+           | NUMBER               { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
+           | string               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
+           | CHAR                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
+           | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
+           | '(' expression ')'   { $$ = $2; }
            ;
 
 unop : '-' expression %prec NEG   { $$ = unOpToFunCall(negSymbol(), $2); }

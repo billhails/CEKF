@@ -275,6 +275,17 @@ struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * d
     return x;
 }
 
+struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * consequent, struct AstNest * alternative) {
+    struct AstIff * x = NEW(AstIff, OBJTYPE_ASTIFF);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new AstIff %p\n", x);
+#endif
+    x->test = test;
+    x->consequent = consequent;
+    x->alternative = alternative;
+    return x;
+}
+
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val) {
     struct AstDefinition * x = NEW(AstDefinition, OBJTYPE_ASTDEFINITION);
 #ifdef DEBUG_ALLOC
@@ -516,6 +527,15 @@ void markAstEnv(struct AstEnv * x) {
     markAstDefinitions(x->definitions);
 }
 
+void markAstIff(struct AstIff * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstExpression(x->test);
+    markAstNest(x->consequent);
+    markAstNest(x->alternative);
+}
+
 void markAstDefinition(struct AstDefinition * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -625,6 +645,9 @@ void markAstExpression(struct AstExpression * x) {
         case AST_EXPRESSION_TYPE_NEST:
             markAstNest(x->val.nest);
             break;
+        case AST_EXPRESSION_TYPE_IFF:
+            markAstIff(x->val.iff);
+            break;
         default:
             cant_happen("unrecognised type %d in markAstExpression", x->type);
     }
@@ -707,6 +730,9 @@ void markAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTENV:
             markAstEnv((AstEnv *)h);
+            break;
+        case OBJTYPE_ASTIFF:
+            markAstIff((AstIff *)h);
             break;
         case OBJTYPE_ASTDEFINITION:
             markAstDefinition((AstDefinition *)h);
@@ -830,6 +856,10 @@ void freeAstEnv(struct AstEnv * x) {
     FREE(x, AstEnv);
 }
 
+void freeAstIff(struct AstIff * x) {
+    FREE(x, AstIff);
+}
+
 void freeAstDefinition(struct AstDefinition * x) {
     FREE(x, AstDefinition);
 }
@@ -928,6 +958,9 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTENV:
             freeAstEnv((AstEnv *)h);
             break;
+        case OBJTYPE_ASTIFF:
+            freeAstIff((AstIff *)h);
+            break;
         case OBJTYPE_ASTDEFINITION:
             freeAstDefinition((AstDefinition *)h);
             break;
@@ -1000,6 +1033,8 @@ char *typenameAstObj(int type) {
             return "AstExpressions";
         case OBJTYPE_ASTENV:
             return "AstEnv";
+        case OBJTYPE_ASTIFF:
+            return "AstIff";
         case OBJTYPE_ASTDEFINITION:
             return "AstDefinition";
         case OBJTYPE_ASTSINGLEPROTOTYPE:

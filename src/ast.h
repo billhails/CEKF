@@ -67,6 +67,7 @@ typedef enum AstExpressionType {
     AST_EXPRESSION_TYPE_FUN,
     AST_EXPRESSION_TYPE_ENV,
     AST_EXPRESSION_TYPE_NEST,
+    AST_EXPRESSION_TYPE_IFF,
 } AstExpressionType;
 
 
@@ -109,6 +110,7 @@ typedef union AstExpressionVal {
     struct AstCompositeFunction * fun;
     struct AstEnv * env;
     struct AstNest * nest;
+    struct AstIff * iff;
 } AstExpressionVal;
 
 
@@ -263,6 +265,13 @@ typedef struct AstEnv {
     struct AstDefinitions * definitions;
 } AstEnv;
 
+typedef struct AstIff {
+    Header header;
+    struct AstExpression * test;
+    struct AstNest * consequent;
+    struct AstNest * alternative;
+} AstIff;
+
 typedef struct AstDefinition {
     Header header;
     enum AstDefinitionType  type;
@@ -320,6 +329,7 @@ struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExp
 struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next);
 struct AstExpressions * newAstExpressions(struct AstExpression * expression, struct AstExpressions * next);
 struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * definitions);
+struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * consequent, struct AstNest * alternative);
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val);
 struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  type, union AstSinglePrototypeVal  val);
 struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstTypeClauseVal  val);
@@ -351,6 +361,7 @@ void markAstFunCall(struct AstFunCall * x);
 void markAstPackage(struct AstPackage * x);
 void markAstExpressions(struct AstExpressions * x);
 void markAstEnv(struct AstEnv * x);
+void markAstIff(struct AstIff * x);
 void markAstDefinition(struct AstDefinition * x);
 void markAstSinglePrototype(struct AstSinglePrototype * x);
 void markAstTypeClause(struct AstTypeClause * x);
@@ -382,6 +393,7 @@ void freeAstFunCall(struct AstFunCall * x);
 void freeAstPackage(struct AstPackage * x);
 void freeAstExpressions(struct AstExpressions * x);
 void freeAstEnv(struct AstEnv * x);
+void freeAstIff(struct AstIff * x);
 void freeAstDefinition(struct AstDefinition * x);
 void freeAstSinglePrototype(struct AstSinglePrototype * x);
 void freeAstTypeClause(struct AstTypeClause * x);
@@ -414,6 +426,7 @@ void freeAstExpression(struct AstExpression * x);
 #define AST_EXPRESSION_VAL_FUN(x) ((union AstExpressionVal ){.fun = (x)})
 #define AST_EXPRESSION_VAL_ENV(x) ((union AstExpressionVal ){.env = (x)})
 #define AST_EXPRESSION_VAL_NEST(x) ((union AstExpressionVal ){.nest = (x)})
+#define AST_EXPRESSION_VAL_IFF(x) ((union AstExpressionVal ){.iff = (x)})
 
 
 #endif

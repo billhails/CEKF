@@ -49,6 +49,7 @@ void printAstFunCall(struct AstFunCall * x, int depth);
 void printAstPackage(struct AstPackage * x, int depth);
 void printAstExpressions(struct AstExpressions * x, int depth);
 void printAstEnv(struct AstEnv * x, int depth);
+void printAstIff(struct AstIff * x, int depth);
 void printAstDefinition(struct AstDefinition * x, int depth);
 void printAstSinglePrototype(struct AstSinglePrototype * x, int depth);
 void printAstTypeClause(struct AstTypeClause * x, int depth);
