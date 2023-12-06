@@ -101,6 +101,22 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     return result;
 }
 
+static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
+    ENTER(lamConvertIff);
+    LamExp *test = convertExpression(iff->test, context);
+    int save = PROTECT(test);
+    LamExp *consequent = lamConvertNest(iff->consequent, context);
+    PROTECT(consequent);
+    LamExp *alternative = lamConvertNest(iff->alternative, context);
+    PROTECT(alternative);
+    LamIff *lamIff = newLamIff(test, consequent, alternative);
+    PROTECT(lamIff);
+    LamExp *result = newLamExp(LAMEXP_TYPE_IFF, LAMEXP_VAL_IFF(lamIff));
+    UNPROTECT(save);
+    LEAVE(lamConvertIff);
+    return result;
+}
+
 static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
 
 static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *substitutions) {
@@ -825,6 +841,9 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_NEST:
             result = lamConvertNest(expression->val.nest, env);
+            break;
+        case AST_EXPRESSION_TYPE_IFF:
+            result = lamConvertIff(expression->val.iff, env);
             break;
         default:
             cant_happen("unrecognised expression type %d in convertExpression", expression->type);

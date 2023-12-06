@@ -326,6 +326,20 @@ void printAstEnv(struct AstEnv * x, int depth) {
     fprintf(stderr, "]");
 }
 
+void printAstIff(struct AstIff * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "AstIff (NULL)"); return; }
+    fprintf(stderr, "AstIff[\n");
+    printAstExpression(x->test, depth + 1);
+    fprintf(stderr, "\n");
+    printAstNest(x->consequent, depth + 1);
+    fprintf(stderr, "\n");
+    printAstNest(x->alternative, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
+}
+
 void printAstDefinition(struct AstDefinition * x, int depth) {
     pad(depth);
     if (x == NULL) { fprintf(stderr, "AstDefinition (NULL)"); return; }
@@ -515,6 +529,11 @@ fprintf(stderr, "char %c", x->val.character);
             pad(depth + 1);
             fprintf(stderr, "AST_EXPRESSION_TYPE_NEST\n");
             printAstNest(x->val.nest, depth + 1);
+            break;
+        case AST_EXPRESSION_TYPE_IFF:
+            pad(depth + 1);
+            fprintf(stderr, "AST_EXPRESSION_TYPE_IFF\n");
+            printAstIff(x->val.iff, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstExpression", x->type);

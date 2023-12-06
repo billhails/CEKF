@@ -122,6 +122,11 @@ structs:
         package: AstPackage
         definitions: AstDefinitions
 
+    AstIff:
+        test: AstExpression
+        consequent: AstNest
+        alternative: AstNest
+
 unions:
     AstDefinition:
         define: AstDefine
@@ -157,6 +162,7 @@ unions:
         fun: AstCompositeFunction
         env: AstEnv
         nest: AstNest
+        iff: AstIff
 
 enums: {}
 

@@ -39,6 +39,7 @@ static WResult *WExpression(TinContext *context, AstExpression *expr, int depth)
 static WResult *WApplication(TinContext *context, AstFunCall *funCall, int depth);
 static WResult *WFarg(TinContext *context, AstArg *arg, int depth);
 static void addVars(TinContext *context, AstArgList *args);
+static WResult *WIff(TinContext *context, AstIff *iff, int depth);
 
 #ifdef DEBUG_ALGORITHM_W
 static int idSource = 0;
@@ -918,6 +919,8 @@ static WResult *WExpression_d(TinContext *context, AstExpression *expr, int dept
             return WAbstraction(context, expr->val.fun, depth + 1);
         case AST_EXPRESSION_TYPE_NEST:
             return WNest(context, expr->val.nest, depth + 1);
+        case AST_EXPRESSION_TYPE_IFF:
+            return WIff(context, expr->val.iff, depth + 1);
         case AST_EXPRESSION_TYPE_ENV:
             cant_happen("env type not supported yet");
             // return WEnv(context, expr->val.env);
@@ -1020,6 +1023,61 @@ static void WDefinition(TinContext *context, AstDefinition *definition, int dept
 #endif
 }
 
+static AstFunction *makeBoolFunction(HashSymbol *argSymbol, AstNest *body) {
+    AstArg *arg = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(argSymbol));
+    int save = PROTECT(arg);
+    AstArgList *argList = newAstArgList(arg, NULL);
+    PROTECT(argList);
+    AstFunction *result = newAstFunction(argList, body);
+    UNPROTECT(save);
+    return result;
+}
+
+/*
+ * if (test) { consequent } else { alternative }
+ *
+ * becomes
+ *
+ * fn { (true) { consequent } (false) { alternative } }(test)
+ */
+static AstFunCall *fakeAstConditional(AstExpression *condition, AstNest *consequent, AstNest *alternative) {
+    AstFunction *trueFunction = makeBoolFunction(trueSymbol(), consequent);
+    int save = PROTECT(trueFunction);
+    AstFunction *falseFunction = makeBoolFunction(falseSymbol(), alternative);
+    PROTECT(falseFunction);
+    AstCompositeFunction *body = newAstCompositeFunction(falseFunction, NULL);
+    PROTECT(body);
+    body = newAstCompositeFunction(trueFunction, body);
+    PROTECT(body);
+    AstExpression *funExpression = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN(body));
+    PROTECT(funExpression);
+    AstExpressions *args = newAstExpressions(condition, NULL);
+    PROTECT(args);
+    AstFunCall *funCall = newAstFunCall(funExpression, args);
+    UNPROTECT(save);
+    return funCall;
+}
+
+static WResult *WIff(TinContext *context, AstIff *iff, int depth) {
+#ifdef DEBUG_ALGORITHM_W
+    int myId = idSource++;
+    enter("WIff", myId, depth);
+    printAstIff(iff, depth + 1);
+    printf("\n");
+    printTinContext(context, depth + 1);
+    printf("\n");
+#endif
+    AstFunCall *fakeIff = fakeAstConditional(iff->test, iff->consequent, iff->alternative);
+    int save = PROTECT(fakeIff);
+    WResult *result = WApplication(context, fakeIff, depth);
+    UNPROTECT(save);
+#ifdef DEBUG_ALGORITHM_W
+    leave("WIff", myId, depth);
+    printWResult(result, depth + 1);
+    printf("\n");
+#endif
+    return result;
+}
 
 static WResult *WNest(TinContext *context, AstNest *nest, int depth) {
 #ifdef DEBUG_ALGORITHM_W
