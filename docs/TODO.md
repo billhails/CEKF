@@ -8,7 +8,6 @@
    * type awareness
    * needs thought,
    * would be nice to be able to describe how types should print.
-* don't convert `if` to `lambda` - it's too inefficient.
 * remove old `cons` from ANF and bytecodes.
 * numbers:
    * arbitrary size integers
