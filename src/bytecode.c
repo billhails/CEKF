@@ -192,6 +192,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXP_PRIM_DIV:
             prim = BYTECODE_PRIM_DIV;
             break;
+        case AEXP_PRIM_POW:
+            prim = BYTECODE_PRIM_POW;
+            break;
         case AEXP_PRIM_MOD:
             prim = BYTECODE_PRIM_MOD;
             break;

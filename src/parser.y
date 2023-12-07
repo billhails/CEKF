@@ -179,7 +179,7 @@ static AstUnpack *newStringUnpack(char *str) {
 %left CAR CDR
 %left '+' '-'
 %left '*' '/' '%'
-%right '^'
+%right POW
 %nonassoc NEG
 %nonassoc HERE
 %left '('
@@ -410,7 +410,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression '*' expression       { $$ = binOpToFunCall(mulSymbol(), $1, $3); }
       | expression '/' expression       { $$ = binOpToFunCall(divSymbol(), $1, $3); }
       | expression '%' expression       { $$ = binOpToFunCall(modSymbol(), $1, $3); }
-      | expression '^' expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
+      | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
       | expression '.' expression       { $$ = binOpToFunCall(dotSymbol(), $1, $3); }
       ;
 

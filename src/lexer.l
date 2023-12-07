@@ -57,6 +57,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "<"  { return LT; }
 ">=" { return GE; }
 "<=" { return LE; }
+"**" { return POW; }
 "@"  { return CONS; }
 "@@" { return APPEND; }
 

@@ -141,6 +141,16 @@ static Value divide(Value a, Value b) {
     return intValue(result);
 }
 
+// dumb temporary power fn
+static Value tmpPow(Value a, Value b) {
+    int result = 1;
+    int mul = a.val.z;
+    for (int i = b.val.z; i > 0; i--) {
+        result *= mul;
+    }
+    return intValue(result);
+}
+
 static Value modulo(Value a, Value b) {
     AexpInteger result = a.val.z % b.val.z;
     return intValue(result);
@@ -506,6 +516,17 @@ static void step() {
                 Value b = pop();
                 Value a = pop();
                 push(divide(a, b));
+                state.C++;
+            }
+            break;
+            case BYTECODE_PRIM_POW: { // pop two values, perform the binop and push the result
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04x ### POW\n", ++count, state.C);
+#endif
+                Value b = pop();
+                Value a = pop();
+                push(tmpPow(a, b));
                 state.C++;
             }
             break;
