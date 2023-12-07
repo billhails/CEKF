@@ -26,8 +26,10 @@
 // #define DEBUG_RUN_TESTS 1
 // #define TEST_STACK
 // #define DEBUG_STACK
-// #define DEBUG_STEP
+#define DEBUG_STEP
+// if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #define DEBUG_SLOW_STEP
+// define this to cause a GC at every possible step (catched memory leaks early)
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
@@ -40,13 +42,15 @@
 // #define DEBUG_TIN_SUBSTITUTION
 // #define DEBUG_TIN_INSTANTIATION
 // #define DEBUG_TIN_UNIFICATION
+// define this to make fatal errors dump core (if ulimit allows)
 #define DEBUG_DUMP_CORE
 // #define DEBUG_ALGORITHM_W
 // #define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
 // #define DEBUG_ALLOC
-// #define SAFETY_CHECKS
+// define this to turn on additional safety checks for things that shouldn't but just possibly might happen
+#define SAFETY_CHECKS
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

@@ -773,6 +773,11 @@ void dumpByteCode(ByteCodeArray *b) {
                 i++;
             }
             break;
+            case BYTECODE_PRIM_POW: {
+                fprintf(stderr, "%04x ### POW\n", i);
+                i++;
+            }
+            break;
             case BYTECODE_PRIM_MOD: {
                 fprintf(stderr, "%04x ### MOD\n", i);
                 i++;

@@ -977,6 +977,8 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
             return AEXP_PRIM_MUL;
         case LAMPRIMOP_TYPE_LAM_PRIM_DIV:
             return AEXP_PRIM_DIV;
+        case LAMPRIMOP_TYPE_LAM_PRIM_POW:
+            return AEXP_PRIM_POW;
         case LAMPRIMOP_TYPE_LAM_PRIM_EQ:
             return AEXP_PRIM_EQ;
         case LAMPRIMOP_TYPE_LAM_PRIM_NE:
