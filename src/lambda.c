@@ -129,10 +129,21 @@ struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases) 
     return x;
 }
 
-struct LamCondCases * newLamCondCases(struct LamExp * constant, struct LamExp * body, struct LamCondCases * next) {
-    struct LamCondCases * x = NEW(LamCondCases, OBJTYPE_LAMCONDCASES);
+struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * body, struct LamIntCondCases * next) {
+    struct LamIntCondCases * x = NEW(LamIntCondCases, OBJTYPE_LAMINTCONDCASES);
 #ifdef DEBUG_ALLOC
-    fprintf(stderr, "new LamCondCases %p\n", x);
+    fprintf(stderr, "new LamIntCondCases %p\n", x);
+#endif
+    x->constant = constant;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
+struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * body, struct LamCharCondCases * next) {
+    struct LamCharCondCases * x = NEW(LamCharCondCases, OBJTYPE_LAMCHARCONDCASES);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamCharCondCases %p\n", x);
 #endif
     x->constant = constant;
     x->body = body;
@@ -266,6 +277,16 @@ struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val) {
     return x;
 }
 
+struct LamCondCases * newLamCondCases(enum LamCondCasesType  type, union LamCondCasesVal  val) {
+    struct LamCondCases * x = NEW(LamCondCases, OBJTYPE_LAMCONDCASES);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "new LamCondCases %p\n", x);
+#endif
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
 
 
 /************************************/
@@ -349,13 +370,21 @@ void markLamCond(struct LamCond * x) {
     markLamCondCases(x->cases);
 }
 
-void markLamCondCases(struct LamCondCases * x) {
+void markLamIntCondCases(struct LamIntCondCases * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markLamExp(x->constant);
+    markBigInt(x->constant);
     markLamExp(x->body);
-    markLamCondCases(x->next);
+    markLamIntCondCases(x->next);
+}
+
+void markLamCharCondCases(struct LamCharCondCases * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->body);
+    markLamCharCondCases(x->next);
 }
 
 void markLamMatch(struct LamMatch * x) {
@@ -457,7 +486,10 @@ void markLamExp(struct LamExp * x) {
         case LAMEXP_TYPE_VAR:
             markHashSymbol(x->val.var);
             break;
-        case LAMEXP_TYPE_INTEGER:
+        case LAMEXP_TYPE_STDINT:
+            break;
+        case LAMEXP_TYPE_BIGINTEGER:
+            markBigInt(x->val.biginteger);
             break;
         case LAMEXP_TYPE_PRIM:
             markLamPrimApp(x->val.prim);
@@ -514,6 +546,22 @@ void markLamExp(struct LamExp * x) {
     }
 }
 
+void markLamCondCases(struct LamCondCases * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case LAMCONDCASES_TYPE_INTEGERS:
+            markLamIntCondCases(x->val.integers);
+            break;
+        case LAMCONDCASES_TYPE_CHARACTERS:
+            markLamCharCondCases(x->val.characters);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markLamCondCases", x->type);
+    }
+}
+
 
 void markLambdaObj(struct Header *h) {
     switch(h->type) {
@@ -547,8 +595,11 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMCOND:
             markLamCond((LamCond *)h);
             break;
-        case OBJTYPE_LAMCONDCASES:
-            markLamCondCases((LamCondCases *)h);
+        case OBJTYPE_LAMINTCONDCASES:
+            markLamIntCondCases((LamIntCondCases *)h);
+            break;
+        case OBJTYPE_LAMCHARCONDCASES:
+            markLamCharCondCases((LamCharCondCases *)h);
             break;
         case OBJTYPE_LAMMATCH:
             markLamMatch((LamMatch *)h);
@@ -585,6 +636,9 @@ void markLambdaObj(struct Header *h) {
             break;
         case OBJTYPE_LAMEXP:
             markLamExp((LamExp *)h);
+            break;
+        case OBJTYPE_LAMCONDCASES:
+            markLamCondCases((LamCondCases *)h);
             break;
         default:
             cant_happen("unrecognized type in markLambdaObj\n");
@@ -633,8 +687,12 @@ void freeLamCond(struct LamCond * x) {
     FREE(x, LamCond);
 }
 
-void freeLamCondCases(struct LamCondCases * x) {
-    FREE(x, LamCondCases);
+void freeLamIntCondCases(struct LamIntCondCases * x) {
+    FREE(x, LamIntCondCases);
+}
+
+void freeLamCharCondCases(struct LamCharCondCases * x) {
+    FREE(x, LamCharCondCases);
 }
 
 void freeLamMatch(struct LamMatch * x) {
@@ -685,6 +743,10 @@ void freeLamExp(struct LamExp * x) {
     FREE(x, LamExp);
 }
 
+void freeLamCondCases(struct LamCondCases * x) {
+    FREE(x, LamCondCases);
+}
+
 
 void freeLambdaObj(struct Header *h) {
     switch(h->type) {
@@ -718,8 +780,11 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMCOND:
             freeLamCond((LamCond *)h);
             break;
-        case OBJTYPE_LAMCONDCASES:
-            freeLamCondCases((LamCondCases *)h);
+        case OBJTYPE_LAMINTCONDCASES:
+            freeLamIntCondCases((LamIntCondCases *)h);
+            break;
+        case OBJTYPE_LAMCHARCONDCASES:
+            freeLamCharCondCases((LamCharCondCases *)h);
             break;
         case OBJTYPE_LAMMATCH:
             freeLamMatch((LamMatch *)h);
@@ -757,6 +822,9 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMEXP:
             freeLamExp((LamExp *)h);
             break;
+        case OBJTYPE_LAMCONDCASES:
+            freeLamCondCases((LamCondCases *)h);
+            break;
         default:
             cant_happen("unrecognized type in freeLambdaObj\n");
     }
@@ -784,8 +852,10 @@ char *typenameLambdaObj(int type) {
             return "LamIff";
         case OBJTYPE_LAMCOND:
             return "LamCond";
-        case OBJTYPE_LAMCONDCASES:
-            return "LamCondCases";
+        case OBJTYPE_LAMINTCONDCASES:
+            return "LamIntCondCases";
+        case OBJTYPE_LAMCHARCONDCASES:
+            return "LamCharCondCases";
         case OBJTYPE_LAMMATCH:
             return "LamMatch";
         case OBJTYPE_LAMMATCHLIST:
@@ -810,6 +880,8 @@ char *typenameLambdaObj(int type) {
             return "LamTypeConstructorInfo";
         case OBJTYPE_LAMEXP:
             return "LamExp";
+        case OBJTYPE_LAMCONDCASES:
+            return "LamCondCases";
         default:
             cant_happen("unrecognized type in typenameLambdaObj\n");
     }

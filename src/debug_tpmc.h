@@ -25,6 +25,7 @@
 #include "tpmc_helper.h"
 #include "debug_lambda.h"
 #include "lambda_pp.h"
+#include "bigint.h"
 
 void printTpmcMatchRules(struct TpmcMatchRules * x, int depth);
 void printTpmcMatchRule(struct TpmcMatchRule * x, int depth);

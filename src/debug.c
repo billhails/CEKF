@@ -44,9 +44,13 @@ void printContainedValue(Value x, int depth) {
             printPad(depth);
             fprintf(stderr, "#V");
             break;
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_STDINT:
             printPad(depth);
             fprintf(stderr, "%d", x.val.z);
+            break;
+        case VALUE_TYPE_BIGINT:
+            printPad(depth);
+            fprintBigInt(stderr, x.val.b);
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
@@ -152,7 +156,7 @@ void printElidedValue(Value x) {
         case VALUE_TYPE_VOID:
             fprintf(stderr, "#V");
             break;
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_STDINT:
             fprintf(stderr, "%d", x.val.z);
             break;
         case VALUE_TYPE_CHARACTER:
@@ -456,6 +460,22 @@ void printAexpList(AexpList *x) {
     fprintf(stderr, ")");
 }
 
+static void printAexpIntListContents(AexpIntList *x) {
+    while (x != NULL) {
+        fprintf(stderr, "%d", x->integer);
+        if (x->next) {
+            fprintf(stderr, " ");
+        }
+        x = x->next;
+    }
+}
+
+void printAexpIntList(AexpIntList *x) {
+    fprintf(stderr, "(");
+    printAexpIntListContents(x);
+    fprintf(stderr, ")");
+}
+
 void printAexpMakeList(AexpList *x) {
     fprintf(stderr, "(list ");
     printAexpListContents(x);
@@ -504,15 +524,42 @@ void printCexpCond(CexpCond *x) {
     fprintf(stderr, ")");
 }
 
-void printCexpCondCases(CexpCondCases *x) {
+void printCexpIntCondCases(CexpIntCondCases *x) {
     while (x != NULL) {
-        fprintf(stderr, "(%d ", x->option);
+        fprintf(stderr, "(");
+        fprintBigInt(stderr, x->option);
+        fprintf(stderr, " ");
         printExp(x->body);
         fprintf(stderr, ")");
         if (x->next) {
             fprintf(stderr, " ");
         }
         x = x->next;
+    }
+}
+
+void printCexpCharCondCases(CexpCharCondCases *x) {
+    while (x != NULL) {
+        fprintf(stderr, "('%c' ", x->option);
+        printExp(x->body);
+        fprintf(stderr, ")");
+        if (x->next) {
+            fprintf(stderr, " ");
+        }
+        x = x->next;
+    }
+}
+
+void printCexpCondCases(CexpCondCases *x) {
+    switch (x->type) {
+        case CONDCASE_TYPE_INT:
+            printCexpIntCondCases(x->val.intCases);
+            break;
+        case CONDCASE_TYPE_CHAR:
+            printCexpCharCondCases(x->val.charCases);
+            break;
+        default:
+            cant_happen("unrecognised type %d in printCexpCondCases", x->type);
     }
 }
 
@@ -576,7 +623,7 @@ void printCexpBool(CexpBool *x) {
 void printMatchList(MatchList *x) {
     if (x == NULL) return;
     fprintf(stderr, "(");
-    printAexpList(x->matches);
+    printAexpIntList(x->matches);
     fprintf(stderr, " ");
     printExp(x->body);
     fprintf(stderr, ")");
@@ -614,8 +661,11 @@ void printAexp(Aexp *x) {
         case AEXP_TYPE_VOID:
             fprintf(stderr, "nil");
             break;
-        case AEXP_TYPE_INT:
-            fprintf(stderr, "%d", x->val.integer);
+        case AEXP_TYPE_BIGINT:
+            fprintBigInt(stderr, x->val.biginteger);
+            break;
+        case AEXP_TYPE_LITTLEINT:
+            fprintf(stderr, "i%d", x->val.littleinteger);
             break;
         case AEXP_TYPE_CHAR:
             fprintf(stderr, "'%c'", x->val.character);
@@ -707,26 +757,6 @@ void printExpLet(ExpLet *x) {
     fprintf(stderr, ") ");
     printExp(x->body);
     fprintf(stderr, ")");
-}
-
-static int intAt(ByteCodeArray *b, int index) {
-    return
-        (b->entries[index] << 24) +
-        (b->entries[index + 1] << 16) +
-        (b->entries[index + 2] << 8) +
-        b->entries[index + 3];
-}
-
-static int wordAt(ByteCodeArray *b, int index) {
-    return (b->entries[index] << 8) + b->entries[index + 1];
-}
-
-static int charAt(ByteCodeArray *b, int index) {
-    return b->entries[index];
-}
-
-static int offsetAt(ByteCodeArray *b, int index) {
-    return index + wordAt(b, index);
 }
 
 void dumpByteCode(ByteCodeArray *b) {
@@ -875,14 +905,32 @@ void dumpByteCode(ByteCodeArray *b) {
                 fprintf(stderr, "\n");
             }
             break;
-            case BYTECODE_COND: {
+            case BYTECODE_CHARCOND: {
                 int count = (b->entries[i + 1] << 8) + b->entries[i + 2];
-                fprintf(stderr, "%04x ### COND [%d]", i, count);
+                fprintf(stderr, "%04x ### CHARCOND [%d]", i, count);
                 i += 3;
                 while (count > 0) {
                     fprintf(stderr, " %d:[%04x]", intAt(b, i), offsetAt(b, i+4));
                     count--;
                     i += 6;
+                }
+                fprintf(stderr, "\n");
+            }
+            break;
+            case BYTECODE_INTCOND: {
+                int count = wordAt(b, i + 1);
+                fprintf(stderr, "%04x ### INTCOND [%d]", i, count);
+                i += 3;
+                while (count > 0) {
+                    BigInt *big = bigIntAt(b, i);
+                    int save = PROTECT(big);
+                    fprintf(stderr, " ");
+                    fprintBigInt(stderr, big);
+                    UNPROTECT(save);
+                    i += offsetAfterBigIntAt(b, i);
+                    fprintf(stderr, " [%04x]", offsetAt(b, i));
+                    i += 2;
+                    count--;
                 }
                 fprintf(stderr, "\n");
             }
@@ -942,9 +990,20 @@ void dumpByteCode(ByteCodeArray *b) {
                 i++;
             }
             break;
-            case BYTECODE_INT: {
-                fprintf(stderr, "%04x ### INT [%d]\n", i, intAt(b, i + 1));
+            case BYTECODE_STDINT: {
+                fprintf(stderr, "%04x ### STDINT [%d]\n", i, intAt(b, i + 1));
                 i += 5;
+            }
+            break;
+            case BYTECODE_BIGINT: {
+                fprintf(stderr, "%04x ### BIGINT [", i);
+                i++;
+                BigInt *big = bigIntAt(b, i);
+                int save = PROTECT(big);
+                fprintBigInt(stderr, big);
+                UNPROTECT(save);
+                fprintf(stderr, "]\n");
+                i += offsetAfterBigIntAt(b, i);
             }
             break;
             case BYTECODE_CHAR: {
@@ -968,7 +1027,7 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             default:
-                cant_happen("unrecognised bytecode in dumpByteCode");
+                cant_happen("unrecognised bytecode %d in dumpByteCode", b->entries[i]);
         }
     }
 }

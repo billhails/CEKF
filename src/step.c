@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "common.h"
 #include "debug.h"
@@ -35,6 +36,7 @@
 
 static void step();
 static Value lookup(int frame, int offset);
+static int protectValue(Value v);
 
 static CEKF state;
 
@@ -88,57 +90,89 @@ Value run(ByteCodeArray B) {
     return state.V;
 }
 
-static int byteAt(int i) {
+static int readByteAt(int i) {
     int index = state.C + i;
     return state.B.entries[index];
 }
 
-static int wordAt(int i) {
-    return (byteAt(i) << 8) + byteAt(i + 1);
+static int readWordAt(int i) {
+    return (readByteAt(i) << 8) + readByteAt(i + 1);
 }
 
-static int intAt(int i) {
+static int readIntAt(int i) {
     return
-        (byteAt(i) << 24) +
-        (byteAt(i + 1) << 16) +
-        (byteAt(i + 2) << 8) +
-        byteAt(i + 3);
+        (readByteAt(i) << 24) +
+        (readByteAt(i + 1) << 16) +
+        (readByteAt(i + 2) << 8) +
+        readByteAt(i + 3);
 }
 
-static int offsetAt(int i) {
+static BigInt *readBigIntAt(int i) {
+    return bigIntAt(&state.B, state.C + i);
+}
+
+static int readOffsetAfterBigIntAt(int i) {
+    return offsetAfterBigIntAt(&state.B, state.C + i);
+}
+
+static int readOffsetAt(int i) {
     int index = state.C + i;
-    return index + wordAt(i);
+    return index + readWordAt(i);
 }
 
 static Value intValue(int i) {
     Value value;
-    value.type = VALUE_TYPE_INTEGER;
-    value.val = VALUE_VAL_INTEGER(i); 
+    value.type = VALUE_TYPE_STDINT;
+    value.val = VALUE_VAL_STDINT(i); 
+    return value;
+}
+
+static Value bigIntValue(BigInt *i) {
+    Value value;
+    value.type = VALUE_TYPE_BIGINT;
+    value.val = VALUE_VAL_BIGINT(i); 
     return value;
 }
 
 static bool truthy(Value v) {
-    return !((v.type == VALUE_TYPE_INTEGER && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
+    return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
 }
 
 static Value add(Value a, Value b) {
-    AexpInteger result = a.val.z + b.val.z;
-    return intValue(result);
+    assert(a.type == VALUE_TYPE_BIGINT);
+    assert(b.type == VALUE_TYPE_BIGINT);
+    BigInt *result = addBigInt(a.val.b, b.val.b);
+    return bigIntValue(result);
 }
 
 static Value mul(Value a, Value b) {
-    AexpInteger result = a.val.z * b.val.z;
-    return intValue(result);
+    assert(a.type == VALUE_TYPE_BIGINT);
+    assert(b.type == VALUE_TYPE_BIGINT);
+    int save = protectValue(a);
+    protectValue(b);
+    BigInt *result = mulBigInt(a.val.b, b.val.b);
+    UNPROTECT(save);
+    return bigIntValue(result);
 }
 
 static Value sub(Value a, Value b) {
-    AexpInteger result = a.val.z - b.val.z;
-    return intValue(result);
+    assert(a.type == VALUE_TYPE_BIGINT);
+    assert(b.type == VALUE_TYPE_BIGINT);
+    int save = protectValue(a);
+    protectValue(b);
+    BigInt *result = subBigInt(a.val.b, b.val.b);
+    UNPROTECT(save);
+    return bigIntValue(result);
 }
 
 static Value divide(Value a, Value b) {
-    AexpInteger result = a.val.z / b.val.z;
-    return intValue(result);
+    assert(a.type == VALUE_TYPE_BIGINT);
+    assert(b.type == VALUE_TYPE_BIGINT);
+    int save = protectValue(a);
+    protectValue(b);
+    BigInt *result = divBigInt(a.val.b, b.val.b);
+    UNPROTECT(save);
+    return bigIntValue(result);
 }
 
 // dumb temporary power fn
@@ -152,7 +186,7 @@ static Value tmpPow(Value a, Value b) {
 }
 
 static Value modulo(Value a, Value b) {
-    AexpInteger result = a.val.z % b.val.z;
+    int result = a.val.z % b.val.z;
     return intValue(result);
 }
 
@@ -208,7 +242,9 @@ static int _cmp(Value a, Value b) {
     switch (a.type) {
         case VALUE_TYPE_VOID:
             return 0;
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_BIGINT:
+            return cmpBigInt(a.val.b, b.val.b);
+        case VALUE_TYPE_STDINT:
             return a.val.z < b.val.z ? -1 : a.val.z == b.val.z ? 0 : 1;
         case VALUE_TYPE_CHARACTER:
             return a.val.c < b.val.c ? -1 : a.val.c == b.val.c ? 0 : 1;
@@ -300,7 +336,7 @@ static Value cons(Value a, Value b) {
 }
 
 static Value vec(Value index, Value vector) {
-    if (index.type != VALUE_TYPE_INTEGER)
+    if (index.type != VALUE_TYPE_STDINT)
         cant_happen("invalid index type for vec %d", index.type);
     if (vector.type != VALUE_TYPE_VEC)
         cant_happen("invalid vector type for vec %d", vector.type);
@@ -330,6 +366,8 @@ static int protectValue(Value v) {
             return PROTECT(v.val.cons);
         case VALUE_TYPE_VEC:
             return PROTECT(v.val.vec);
+        case VALUE_TYPE_BIGINT:
+            return PROTECT(v.val.b);
         default:
             return PROTECT(NULL);
     }
@@ -425,7 +463,7 @@ static void step() {
     dumpByteCode(&state.B);
 #endif
     while (state.C != -1) {
-        switch (byteAt(0)) {
+        switch (readByteAt(0)) {
             case BYTECODE_NONE: {
                 cant_happen("encountered NONE in step()");
             }
@@ -433,11 +471,11 @@ static void step() {
             case BYTECODE_LAM: { // create a closure and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### LAM [%d] [%d] [%04x]\n", ++count, state.C, byteAt(1), byteAt(2), offsetAt(3));
+                printf("%4d) %04x ### LAM [%d] [%d] [%04x]\n", ++count, state.C, readByteAt(1), readByteAt(2), readOffsetAt(3));
 #endif
                 Env *env = NULL;
-                Clo *clo = newClo(byteAt(1), state.C + 5, state.E);
-                int letRecOffset = byteAt(2);
+                Clo *clo = newClo(readByteAt(1), state.C + 5, state.E);
+                int letRecOffset = readByteAt(2);
                 int save = PROTECT(clo);
                 snapshotClo(&state.S, clo, letRecOffset);
                 Value v;
@@ -445,33 +483,33 @@ static void step() {
                 v.val = VALUE_VAL_CLO(clo);
                 push(v);
                 UNPROTECT(save);
-                state.C = offsetAt(3);
+                state.C = readOffsetAt(3);
             }
             break;
             case BYTECODE_VAR: { // look up an environment variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### VAR [%d:%d]\n", ++count, state.C, byteAt(1), byteAt(2));
+                printf("%4d) %04x ### VAR [%d:%d]\n", ++count, state.C, readByteAt(1), readByteAt(2));
 #endif
-                push(lookup(byteAt(1), byteAt(2)));
+                push(lookup(readByteAt(1), readByteAt(2)));
                 state.C += 3;
             }
             break;
             case BYTECODE_LVAR: { // look up a stack variable and push it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### LVAR [%d]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### LVAR [%d]\n", ++count, state.C, readByteAt(1));
 #endif
-                push(peek(byteAt(1)));
+                push(peek(readByteAt(1)));
                 state.C += 2;
             }
             break;
             case BYTECODE_PUSHN: { // allocate space for n variables on the stack
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### PUSHN [%d]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### PUSHN [%d]\n", ++count, state.C, readByteAt(1));
 #endif
-                pushN(&state.S, byteAt(1));
+                pushN(&state.S, readByteAt(1));
                 state.C += 2;
             }
             break;
@@ -695,9 +733,9 @@ static void step() {
             case BYTECODE_PRIM_MAKEVEC: {
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### MAKEVEC [%d]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### MAKEVEC [%d]\n", ++count, state.C, readByteAt(1));
 #endif
-                int size = byteAt(1);
+                int size = readByteAt(1);
                 // at this point there will be `size` arguments on the stack. Rather than
                 // popping then individually we can just memcpy them into a new struct Vec
                 Vec *v = newVec(size);
@@ -715,9 +753,9 @@ static void step() {
             case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### APPLY [%d]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### APPLY [%d]\n", ++count, state.C, readByteAt(1));
 #endif
-                int nargs = byteAt(1);
+                int nargs = readByteAt(1);
                 state.C += 2;
                 applyProc(nargs);
             }
@@ -725,62 +763,94 @@ static void step() {
             case BYTECODE_IF: { // pop the test result and jump to the appropriate branch
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### IF [%04x]\n", ++count, state.C, offsetAt(1));
+                printf("%4d) %04x ### IF [%04x]\n", ++count, state.C, readOffsetAt(1));
 #endif
                 Value aexp = pop();
                 if (truthy(aexp)) {
                     state.C += 3;
                 } else {
-                    state.C = offsetAt(1);
+                    state.C = readOffsetAt(1);
                 }
             }
             break;
             case BYTECODE_MATCH: { // pop the dispach code, verify it's an integer and in range, and dispatch
-                int size = byteAt(1);
+                int size = readByteAt(1);
 #ifdef DEBUG_STEP
                 printCEKF(&state);
                 printf("%4d) %04x ### MATCH [%d]", ++count, state.C, size);
                 for (int c = 0; c < size; c++) {
-                    printf("[%04x]", offsetAt(2 + c * 2));
+                    printf("[%04x]", readOffsetAt(2 + c * 2));
                 }
                 printf("\n");
 #endif
                 Value v = pop();
-                if (v.type != VALUE_TYPE_INTEGER)
-                    cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_INTEGER, v.type);
+                if (v.type != VALUE_TYPE_STDINT)
+                    cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_STDINT, v.type);
                 if (v.val.z < 0 || v.val.z >= size)
                     cant_happen("match expression index out of range (%d)", v.val.z);
-                state.C = offsetAt(2 + v.val.z * 2);
+                state.C = readOffsetAt(2 + v.val.z * 2);
             }
             break;
-            case BYTECODE_COND: { // pop the value, walk the dispatch table looking for a match, or run the default
-                int size = wordAt(1);
+            case BYTECODE_INTCOND: { // pop the value, walk the dispatch table looking for a match, or run the default
+                int size = readWordAt(1);
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### COND [%d]", ++count, state.C, size);
+                printf("%4d) %04x ### INTCOND [%d]\n", ++count, state.C, size);
+#endif
+                Value v = pop();
+                int save = protectValue(v);
+                switch (v.type) {
+                    case VALUE_TYPE_BIGINT:
+                        break;
+                    default:
+                        cant_happen("expected value type BIGINT for INTCOND value, got %d", v.type);
+                }
+                bool found = false;
+                int frame = 3; // 1 byte bytecode + 2 bytes size
+                for (int c = 0; c < size; c++) {
+                    BigInt *bigInt = readBigIntAt(frame);
+                    frame += readOffsetAfterBigIntAt(frame); // skip bigint
+                    if (cmpBigInt(bigInt, v.val.b) == 0) {
+                        found = true;
+                        state.C = readOffsetAt(frame);
+                        break;
+                    }
+                    frame += 2; // skip jump offset
+                }
+                if (!found) {
+                    state.C += frame;
+                }
+                UNPROTECT(save);
+            }
+            break;
+            case BYTECODE_CHARCOND: { // pop the value, walk the dispatch table looking for a match, or run the default
+                int size = readWordAt(1);
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04x ### CHARCOND [%d]", ++count, state.C, size);
                 for (int c = 0; c < size; c++) {
                     int frame = c * 6 + 3;
-                    printf(" %d:[%04x]", intAt(frame), offsetAt(frame + 4));
+                    printf(" %d:[%04x]", readIntAt(frame), readOffsetAt(frame + 4));
                 }
                 printf("\n");
 #endif
                 Value v = pop();
                 int option = 0;
                 switch (v.type) {
-                    case VALUE_TYPE_INTEGER:
+                    case VALUE_TYPE_STDINT:
                         option = v.val.z;
                         break;
                     case VALUE_TYPE_CHARACTER:
                         option = (int) v.val.c;
                         break;
                     default:
-                        cant_happen("unexpected type %d for COND value", v.type);
+                        cant_happen("unexpected type %d for CHARCOND value", v.type);
                 }
                 bool found = false;
                 for (int c = 0; c < size; c++) {
                     int frame = c * 6 + 3;
-                    if (option == intAt(frame)) {
-                        state.C = offsetAt(frame + 4);
+                    if (option == readIntAt(frame)) {
+                        state.C = readOffsetAt(frame + 4);
                         found = true;
                         break;
                     }
@@ -793,9 +863,9 @@ static void step() {
             case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### LETREC [%d]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### LETREC [%d]\n", ++count, state.C, readByteAt(1));
 #endif
-                int nargs = byteAt(1);
+                int nargs = readByteAt(1);
                 for (int i = frameSize(&state.S) - nargs; i < frameSize(&state.S); i++) {
                     Value v = peek(i);
                     if (v.type == VALUE_TYPE_CLO) {
@@ -810,9 +880,9 @@ static void step() {
             case BYTECODE_AMB: { // create a new failure continuation to resume at the alternative
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### AMB [%04x]\n", ++count, state.C, offsetAt(1));
+                printf("%4d) %04x ### AMB [%04x]\n", ++count, state.C, readOffsetAt(1));
 #endif
-                state.F = newFail(offsetAt(1), state.E, state.K, state.F);
+                state.F = newFail(readOffsetAt(1), state.E, state.K, state.F);
                 snapshotFail(&state.S, state.F);
                 state.C += 3;
             }
@@ -848,9 +918,9 @@ static void step() {
             case BYTECODE_LET: { // create a new continuation to resume the body, and transfer control to the expression
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### LET [%04x]\n", ++count, state.C, offsetAt(1));
+                printf("%4d) %04x ### LET [%04x]\n", ++count, state.C, readOffsetAt(1));
 #endif
-                state.K = newKont(offsetAt(1), state.E, state.K);
+                state.K = newKont(readOffsetAt(1), state.E, state.K);
                 validateLastAlloc();
                 snapshotKont(&state.S, state.K);
                 state.C += 3;
@@ -859,9 +929,9 @@ static void step() {
             case BYTECODE_JMP: { // jump forward a specified amount
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### JMP [%04x]\n", ++count, state.C, offsetAt(1));
+                printf("%4d) %04x ### JMP [%04x]\n", ++count, state.C, readOffsetAt(1));
 #endif
-                state.C = offsetAt(1);
+                state.C = readOffsetAt(1);
             }
             break;
             case BYTECODE_CALLCC: { // pop the callable, push the current continuation, push the callable and apply
@@ -907,14 +977,14 @@ static void step() {
                 state.C++;
             }
             break;
-            case BYTECODE_INT: { // push literal int
+            case BYTECODE_STDINT: { // push literal int
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### INT [%d]\n", ++count, state.C, intAt(1));
+                printf("%4d) %04x ### STDINT [%d]\n", ++count, state.C, readIntAt(1));
 #endif
                 Value v;
-                v.type = VALUE_TYPE_INTEGER;
-                v.val = VALUE_VAL_INTEGER(intAt(1));
+                v.type = VALUE_TYPE_STDINT;
+                v.val = VALUE_VAL_STDINT(readIntAt(1));
                 push(v);
                 state.C += 5;
             }
@@ -922,13 +992,32 @@ static void step() {
             case BYTECODE_CHAR: { // push literal char
 #ifdef DEBUG_STEP
                 printCEKF(&state);
-                printf("%4d) %04x ### CHAR [%c]\n", ++count, state.C, byteAt(1));
+                printf("%4d) %04x ### CHAR [%c]\n", ++count, state.C, readByteAt(1));
 #endif
                 Value v;
                 v.type = VALUE_TYPE_CHARACTER;
-                v.val = VALUE_VAL_CHARACTER(byteAt(1));
+                v.val = VALUE_VAL_CHARACTER(readByteAt(1));
                 push(v);
                 state.C += 2;
+            }
+            break;
+            case BYTECODE_BIGINT: {
+#ifdef DEBUG_STEP
+                printCEKF(&state);
+                printf("%4d) %04x ### BIGINT [", ++count, state.C);
+#endif
+                BigInt *bigInt = readBigIntAt(1);
+                int save = PROTECT(bigInt);
+#ifdef DEBUG_STEP
+                fprintBigInt(stdout, bigInt);
+                printf("]\n");
+#endif
+                Value v;
+                v.type = VALUE_TYPE_BIGINT;
+                v.val = VALUE_VAL_BIGINT(bigInt);
+                push(v);
+                UNPROTECT(save);
+                state.C += readOffsetAfterBigIntAt(1) + 1;
             }
             break;
             case BYTECODE_RETURN: { // push the current continuation and apply
@@ -955,7 +1044,7 @@ static void step() {
 #ifdef DEBUG_STEP
                 printCEKF(&state);
 #endif
-                cant_happen("unrecognised bytecode %d in step()", byteAt(0));
+                cant_happen("unrecognised bytecode %d in step()", readByteAt(0));
         }
 #ifdef DEBUG_STEP
 #ifdef DEBUG_SLOW_STEP

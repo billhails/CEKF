@@ -22,6 +22,7 @@ config:
     - lambda.h
     limited_includes:
     - lambda_pp.h
+    - bigint.h
 
 description: Term Pattern Matching Compiler types
 
@@ -84,7 +85,7 @@ unions:
         assignment: TpmcAssignmentPattern
         wildcard: void_ptr
         character: char
-        integer: int
+        biginteger: BigInt
         constructor: TpmcConstructorPattern
 
     TpmcStateValue:
@@ -144,6 +145,12 @@ primitives:
         cname: "LamExp *"
         printFn: "ppLamExpD"
         markFn: "markLamExp"
+        valued: true
+
+    BigInt:
+        cname: "BigInt *"
+        printFn: "printBigInt"
+        markFn: "markBigInt"
         valued: true
 
     LamTypeConstructorInfo:

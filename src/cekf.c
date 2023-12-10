@@ -24,13 +24,13 @@
  */
 
 Value vTrue = {
-    .type = VALUE_TYPE_INTEGER,
-    .val = VALUE_VAL_INTEGER(1)
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(1)
 };
 
 Value vFalse = {
-    .type = VALUE_TYPE_INTEGER,
-    .val = VALUE_VAL_INTEGER(0)
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(0)
 };
 
 Value vVoid = {
@@ -114,7 +114,7 @@ Vec *newVec(int size) {
 void markValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_STDINT:
         case VALUE_TYPE_CHARACTER:
             break;
         case VALUE_TYPE_PCLO:
@@ -129,6 +129,9 @@ void markValue(Value x) {
             break;
         case VALUE_TYPE_VEC:
             markVec(x.val.vec);
+            break;
+        case VALUE_TYPE_BIGINT:
+            markBigInt(x.val.b);
             break;
         default:
             cant_happen("unrecognised type in markValue (%d)", x.type);

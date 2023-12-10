@@ -179,9 +179,6 @@ struct TpmcMatchRuleArray * newTpmcMatchRuleArray() {
     x->capacity = 0;
     x->entries = NEW_ARRAY(struct TpmcMatchRule *, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcMatchRuleArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -197,9 +194,6 @@ struct TpmcVariableArray * newTpmcVariableArray() {
     x->capacity = 0;
     x->entries = NEW_ARRAY(HashSymbol *, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcVariableArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -216,9 +210,6 @@ struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
     x->capacity = 0;
     x->entries = NEW_ARRAY(struct TpmcPattern *, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcPatternArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -235,9 +226,6 @@ struct TpmcStateArray * newTpmcStateArray(char * _tag) {
     x->capacity = 0;
     x->entries = NEW_ARRAY(struct TpmcState *, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcStateArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -253,9 +241,6 @@ struct TpmcArcArray * newTpmcArcArray() {
     x->capacity = 0;
     x->entries = NEW_ARRAY(struct TpmcArc *, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcArcArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -271,9 +256,6 @@ struct TpmcIntArray * newTpmcIntArray() {
     x->capacity = 0;
     x->entries = NEW_ARRAY(int, 4);
     x->capacity = 4;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcIntArray = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -293,9 +275,6 @@ struct TpmcMatrix * newTpmcMatrix(int width, int height) {
     }
     x->width = width;
     x->height = height;
-#ifdef DEBUG_LOG_GC
-    fprintf(stderr, "new TpmcMatrix = %p\n", x);
-#endif
     UNPROTECT(save);
     return x;
 }
@@ -466,7 +445,8 @@ void markTpmcPatternValue(struct TpmcPatternValue * x) {
             break;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             break;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+            markBigInt(x->val.biginteger);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             markTpmcConstructorPattern(x->val.constructor);

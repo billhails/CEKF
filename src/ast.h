@@ -25,9 +25,7 @@
 #include "hash.h"
 #include "memory.h"
 #include "common.h"
-#ifdef DEBUG_LOG_GC
-#include <stdio.h>
-#endif
+#include "bigint.h"
 
 typedef enum AstDefinitionType {
     AST_DEFINITION_TYPE_DEFINE,
@@ -97,7 +95,7 @@ typedef union AstArgVal {
     struct AstNamedArg * named;
     struct AstEnvType * env;
     struct AstUnpack * unpack;
-    int number;
+    BigInt * number;
     char character;
 } AstArgVal;
 
@@ -105,7 +103,7 @@ typedef union AstExpressionVal {
     void * back;
     struct AstFunCall * funCall;
     HashSymbol * symbol;
-    int number;
+    BigInt * number;
     char character;
     struct AstCompositeFunction * fun;
     struct AstEnv * env;

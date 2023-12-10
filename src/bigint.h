@@ -7,6 +7,8 @@ extern "C" {
 
 #include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
+#include "memory.h"
 
 /* any unsigned integer type */
 typedef uint32_t bigint_word;
@@ -35,6 +37,28 @@ typedef struct bigint {
     bigint_word *words;
     int neg, size, capacity;
 } bigint;
+
+// CEKF wrapper for memory management
+typedef struct BigInt {
+    Header header;
+    bigint bi;
+} BigInt;
+
+BigInt *newBigInt(bigint bi);
+void markBigInt(BigInt *bi);
+void freeBigInt(BigInt *bi);
+void printBigInt(BigInt *bi, int depth);
+void fprintBigInt(FILE *f, BigInt *x);
+void sprintBigInt(char *s, BigInt *x);
+int cmpBigInt(BigInt *a, BigInt *b);
+void dumpBigInt(FILE *fp, BigInt *big);
+typedef bigint *(*bigint_binop)(bigint *dst, const bigint *a, const bigint *b);
+BigInt *addBigInt(BigInt *a, BigInt *b);
+BigInt *subBigInt(BigInt *a, BigInt *b);
+BigInt *mulBigInt(BigInt *a, BigInt *b);
+BigInt *divBigInt(BigInt *a, BigInt *b);
+
+// END CEKF additions
 
 typedef void (*bigint_rand_func)(uint8_t *dst, int n);
 

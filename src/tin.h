@@ -25,9 +25,6 @@
 #include "hash.h"
 #include "memory.h"
 #include "common.h"
-#ifdef DEBUG_LOG_GC
-#include <stdio.h>
-#endif
 
 typedef enum TinMonoTypeType {
     TINMONOTYPE_TYPE_VAR,

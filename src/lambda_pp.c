@@ -105,8 +105,11 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_VAR:
             ppHashSymbol(exp->val.var);
             break;
-        case LAMEXP_TYPE_INTEGER:
-            fprintf(stderr, "%d", exp->val.integer);
+        case LAMEXP_TYPE_BIGINTEGER:
+            fprintBigInt(stderr, exp->val.biginteger);
+            break;
+        case LAMEXP_TYPE_STDINT:
+            fprintf(stderr, "i%d", exp->val.stdint);
             break;
         case LAMEXP_TYPE_PRIM:
             ppLamPrimApp(exp->val.prim);
@@ -325,15 +328,38 @@ void ppLamIff(LamIff *iff) {
     fprintf(stderr, ")");
 }
 
-static void _ppLamCondCases(LamCondCases *cases) {
+static void _ppLamIntCondCases(LamIntCondCases *cases) {
     fprintf(stderr, "(");
-    ppLamExp(cases->constant);
+    fprintBigInt(stderr, cases->constant);
     fprintf(stderr, " ");
     ppLamExp(cases->body);
     fprintf(stderr, ")");
     if (cases->next != NULL) {
         fprintf(stderr, " ");
-        _ppLamCondCases(cases->next);
+        _ppLamIntCondCases(cases->next);
+    }
+}
+
+static void _ppLamCharCondCases(LamCharCondCases *cases) {
+    fprintf(stderr, "('%c' ", cases->constant);
+    ppLamExp(cases->body);
+    fprintf(stderr, ")");
+    if (cases->next != NULL) {
+        fprintf(stderr, " ");
+        _ppLamCharCondCases(cases->next);
+    }
+}
+
+static void _ppLamCondCases(LamCondCases *cases) {
+    switch (cases->type) {
+        case LAMCONDCASES_TYPE_INTEGERS:
+            _ppLamIntCondCases(cases->val.integers);
+            break;
+        case LAMCONDCASES_TYPE_CHARACTERS:
+            _ppLamCharCondCases(cases->val.characters);
+            break;
+        default:
+            cant_happen("unrecognised type %d in _ppLamCondCases", cases->type);
     }
 }
 

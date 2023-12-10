@@ -64,6 +64,13 @@ AexpLam *newAexpLam(AexpVarList *args, Exp *exp) {
     return x;
 }
 
+AexpIntList *newAexpIntList(AexpIntList *next, int integer) {
+    AexpIntList *x = NEW(AexpIntList, OBJTYPE_AEXPINTLIST);
+    x->next = next;
+    x->integer = integer;
+    return x;
+}
+
 AexpVarList *newAexpVarList(AexpVarList *next, HashSymbol *var) {
     AexpVarList *x = NEW(AexpVarList, OBJTYPE_VARLIST);
     x->next = next;
@@ -136,11 +143,26 @@ CexpCond *newCexpCond(Aexp *condition, CexpCondCases *cases) {
     return x;
 }
 
-CexpCondCases *newCexpCondCases(int option, Exp *body, CexpCondCases *next) {
-    CexpCondCases *x = NEW(CexpCondCases, OBJTYPE_CONDCASES);
+CexpCharCondCases *newCexpCharCondCases(char option, Exp *body, CexpCharCondCases *next) {
+    CexpCharCondCases *x = NEW(CexpCharCondCases, OBJTYPE_CHARCONDCASES);
     x->option = option;
     x->body = body;
     x->next = next;
+    return x;
+}
+
+CexpIntCondCases *newCexpIntCondCases(BigInt *option, Exp *body, CexpIntCondCases *next) {
+    CexpIntCondCases *x = NEW(CexpIntCondCases, OBJTYPE_INTCONDCASES);
+    x->option = option;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
+CexpCondCases *newCexpCondCases(CondCaseType type, CondCaseVal val) {
+    CexpCondCases *x = NEW(CexpCondCases, OBJTYPE_CONDCASES);
+    x->type = type;
+    x->val = val;
     return x;
 }
 
@@ -151,7 +173,7 @@ CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses) {
     return x;
 }
 
-MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next) {
+MatchList *newMatchList(AexpIntList *matches, Exp *body, MatchList *next) {
     MatchList *x = NEW(MatchList, OBJTYPE_MATCHLIST);
     x->matches = matches;
     x->body = body;
@@ -241,6 +263,13 @@ void markAexpVarList(AexpVarList *x) {
     markHashSymbol(x->var);
 }
 
+void markAexpIntList(AexpIntList *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpIntList(x->next);
+}
+
 void markAexpVar(HashSymbol *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -309,12 +338,37 @@ void markCexpCond(CexpCond *x) {
     markCexpCondCases(x->cases);
 }
 
-void markCexpCondCases(CexpCondCases *x) {
+void markCexpIntCondCases(CexpIntCondCases *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
     markExp(x->body);
-    markCexpCondCases(x->next);
+    markBigInt(x->option);
+    markCexpIntCondCases(x->next);
+}
+
+void markCexpCharCondCases(CexpCharCondCases *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->body);
+    markCexpCharCondCases(x->next);
+}
+
+void markCexpCondCases(CexpCondCases *x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch (x->type) {
+        case CONDCASE_TYPE_INT:
+            markCexpIntCondCases(x->val.intCases);
+            break;
+        case CONDCASE_TYPE_CHAR:
+            markCexpCharCondCases(x->val.charCases);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markCexpCondCases", x->type);
+    }
 }
 
 void markCexpMatch(CexpMatch *x) {
@@ -329,7 +383,7 @@ void markMatchList(MatchList *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
-    markAexpList(x->matches);
+    markAexpIntList(x->matches);
     markExp(x->body);
     markMatchList(x->next);
 }
@@ -400,7 +454,8 @@ void markAexp(Aexp *x) {
             break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
+        case AEXP_TYPE_LITTLEINT:
+        case AEXP_TYPE_BIGINT:
         case AEXP_TYPE_CHAR:
         case AEXP_TYPE_VOID:
             break;
@@ -417,7 +472,7 @@ void markAexp(Aexp *x) {
             markAexpList(x->val.list);
             break;
         default:
-            cant_happen("unrecognised aexp type in markAexp");
+            cant_happen("unrecognised aexp type %d in markAexp", x->type);
     }
 }
 
@@ -583,6 +638,12 @@ void markExpObj(Header *h) {
         case OBJTYPE_CONDCASES:
             markCexpCondCases((CexpCondCases *) h);
             break;
+        case OBJTYPE_CHARCONDCASES:
+            markCexpCharCondCases((CexpCharCondCases *) h);
+            break;
+        case OBJTYPE_INTCONDCASES:
+            markCexpIntCondCases((CexpIntCondCases *) h);
+            break;
         case OBJTYPE_AEXP:
             markAexp((Aexp *) h);
             break;
@@ -591,6 +652,9 @@ void markExpObj(Header *h) {
             break;
         case OBJTYPE_EXP:
             markExp((Exp *) h);
+            break;
+        case OBJTYPE_AEXPINTLIST:
+            markAexpIntList((AexpIntList *) h);
             break;
         case OBJTYPE_EXPLIST:
             markAexpList((AexpList *) h);

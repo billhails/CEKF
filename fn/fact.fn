@@ -1,0 +1,7 @@
+let
+    fn fact {
+        (0) { 1 }
+        (n) { n * fact(n - 1) }
+    }
+in
+    fact(1000)

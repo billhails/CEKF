@@ -18,9 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "bigint.h"
+
 typedef enum {
     VALUE_TYPE_VOID,
-    VALUE_TYPE_INTEGER,
+    VALUE_TYPE_STDINT,
+    VALUE_TYPE_BIGINT,
     VALUE_TYPE_CHARACTER,
     VALUE_TYPE_CLO,
     VALUE_TYPE_PCLO,
@@ -32,6 +35,7 @@ typedef enum {
 typedef union {
     void *none;
     int z;
+    BigInt *b;
     char c;
     struct Clo *clo;
     struct Kont *k;
@@ -44,7 +48,8 @@ typedef struct Value {
     ValueVal val;
 } Value; 
 
-#define VALUE_VAL_INTEGER(x)   ((ValueVal){.z    = (x)})
+#define VALUE_VAL_STDINT(x)    ((ValueVal){.z    = (x)})
+#define VALUE_VAL_BIGINT(x)    ((ValueVal){.b    = (x)})
 #define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
 // CLO and PCLO share the same Clo struct
 #define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})

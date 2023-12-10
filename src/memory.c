@@ -303,10 +303,13 @@ void markObj(Header *h, int i) {
         case OBJTYPE_IF:
         case OBJTYPE_COND:
         case OBJTYPE_CONDCASES:
+        case OBJTYPE_INTCONDCASES:
+        case OBJTYPE_CHARCONDCASES:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
         case OBJTYPE_EXPLIST:
+        case OBJTYPE_AEXPINTLIST:
         case OBJTYPE_LAM:
         case OBJTYPE_LET:
         case OBJTYPE_LETREC:
@@ -354,6 +357,9 @@ void markObj(Header *h, int i) {
         TPMC_OBJTYPE_CASES()
             markTpmcObj(h);
             break;
+        case OBJTYPE_BIGINT:
+            markBigInt((BigInt *)h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
     }
@@ -377,6 +383,7 @@ void freeObj(Header *h) {
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
         case OBJTYPE_EXPLIST:
+        case OBJTYPE_AEXPINTLIST:
         case OBJTYPE_LAM:
         case OBJTYPE_LET:
         case OBJTYPE_LETREC:
@@ -397,6 +404,9 @@ void freeObj(Header *h) {
         case OBJTYPE_VEC:
         case OBJTYPE_VALUELIST:
             freeCekfObj(h);
+            break;
+        case OBJTYPE_BIGINT:
+            freeBigInt((BigInt *)h);
             break;
         case OBJTYPE_CTENV:
             freeCTEnv(h);

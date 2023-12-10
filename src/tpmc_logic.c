@@ -117,8 +117,8 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     return pattern;
 }
 
-static TpmcPattern *makeIntegerPattern(int number) {
-    TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_INTEGER, TPMCPATTERNVALUE_VAL_INTEGER(number));
+static TpmcPattern *makeBigIntegerPattern(BigInt *number) {
+    TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_BIGINTEGER, TPMCPATTERNVALUE_VAL_BIGINTEGER(number));
     int save = PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -146,7 +146,7 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
         case AST_ARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
         case AST_ARG_TYPE_NUMBER:
-            return makeIntegerPattern(arg->val.number);
+            return makeBigIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
         default:
@@ -217,7 +217,7 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
     pattern->path = variable;
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             break;
@@ -302,7 +302,7 @@ static void printHashTableSymbol(void *p, int d) {
 
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *seen) {
     switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             return pattern;
@@ -386,7 +386,7 @@ static void populateFreeVariables(TpmcState *state, HashTable *substitutions) {
 
 static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
     switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             return pattern;

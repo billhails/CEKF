@@ -139,13 +139,33 @@ static void analizeCexpCond(CexpCond *x, CTEnv *env) {
     analizeCexpCondCases(x->cases, env);
 }
 
+static void analizeCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
+    if (x == NULL) return;
+    analizeExp(x->body, env);
+    analizeCexpIntCondCases(x->next, env);
+}
+
+static void analizeCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
+    if (x == NULL) return;
+    analizeExp(x->body, env);
+    analizeCexpCharCondCases(x->next, env);
+}
+
 static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env) {
     if (x == NULL) return;
 #ifdef DEBUG_ANALIZE
     fprintf(stderr, "analizeCexpCondCases "); printCexpCondCases(x); fprintf(stderr, "  "); printCTEnv(env); fprintf(stderr, "\n");
 #endif
-    analizeExp(x->body, env);
-    analizeCexpCondCases(x->next, env);
+    switch (x->type) {
+        case CONDCASE_TYPE_INT:
+            analizeCexpIntCondCases(x->val.intCases, env);
+            break;
+        case CONDCASE_TYPE_CHAR:
+            analizeCexpCharCondCases(x->val.charCases, env);
+            break;
+        default:
+            cant_happen("unrecognised type %d in analizeCexpCondCases", x->type);
+    }
 }
 
 static void analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
@@ -237,7 +257,8 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
             break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
+        case AEXP_TYPE_BIGINT:
+        case AEXP_TYPE_LITTLEINT:
         case AEXP_TYPE_CHAR:
         case AEXP_TYPE_VOID:
             break;
@@ -260,7 +281,6 @@ static void analizeMatchList(MatchList *x, CTEnv *env) {
     fprintf(stderr, "analizeMatchList "); printMatchList(x); fprintf(stderr, "  "); printCTEnv(env); fprintf(stderr, "\n");
 #endif
     if (x == NULL) return;
-    analizeAexpList(x->matches, env);
     analizeExp(x->body, env);
     analizeMatchList(x->next, env);
 }

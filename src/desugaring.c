@@ -106,12 +106,35 @@ static CexpIf *desugarCexpIf(CexpIf *x) {
     return x;
 }
 
-static CexpCondCases *desugarCexpCondCases(CexpCondCases *x) {
+static CexpIntCondCases *desugarCexpIntCondCases(CexpIntCondCases *x) {
     if (x == NULL) {
         return NULL;
     }
     x->body = desugarExp(x->body);
-    x->next = desugarCexpCondCases(x->next);
+    x->next = desugarCexpIntCondCases(x->next);
+    return x;
+}
+
+static CexpCharCondCases *desugarCexpCharCondCases(CexpCharCondCases *x) {
+    if (x == NULL) {
+        return NULL;
+    }
+    x->body = desugarExp(x->body);
+    x->next = desugarCexpCharCondCases(x->next);
+    return x;
+}
+
+static CexpCondCases *desugarCexpCondCases(CexpCondCases *x) {
+    switch (x->type) {
+        case CONDCASE_TYPE_INT:
+            x->val.intCases = desugarCexpIntCondCases(x->val.intCases);
+            break;
+        case CONDCASE_TYPE_CHAR:
+            x->val.charCases = desugarCexpCharCondCases(x->val.charCases);
+            break;
+        default:
+            cant_happen("unrecognized type %d in desugarCexpCondCases", x->type);
+    }
     return x;
 }
 
@@ -291,7 +314,8 @@ static Aexp *desugarAexp(Aexp *x) {
             break;
         case AEXP_TYPE_TRUE:
         case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_INT:
+        case AEXP_TYPE_LITTLEINT:
+        case AEXP_TYPE_BIGINT:
         case AEXP_TYPE_CHAR:
         case AEXP_TYPE_VOID:
             break;
@@ -315,7 +339,6 @@ static Aexp *desugarAexp(Aexp *x) {
 static MatchList *desugarMatchList(MatchList *x) {
     DEBUG_DESUGAR(MatchList, x);
     if (x == NULL) return NULL;
-    x->matches = desugarAexpList(x->matches);
     x->body = desugarExp(x->body);
     x->next = desugarMatchList(x->next);
     return x;

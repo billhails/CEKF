@@ -19,10 +19,7 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 [\n] { lineNum++; }
 \/\/.* { }
 
-[0-9]+ {
-    yylval.i = atoi(yytext);
-    return NUMBER;
-}
+-?[0-9]+ { yylval.s = yytext; return NUMBER; }
 
 "and"       { return AND; }
 "as"        { return AS; }
@@ -60,8 +57,6 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "**" { return POW; }
 "@"  { return CONS; }
 "@@" { return APPEND; }
-
--?[0-9]+ { yylval.i = atoi(yytext); return NUMBER; }
 
 {ID}  { yylval.s = yytext; return VAR; }
 #{ID} { yylval.s = yytext; return TYPE_VAR; }

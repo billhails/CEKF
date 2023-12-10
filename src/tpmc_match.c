@@ -120,9 +120,9 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
             DEBUG("leave patternMatches %d", res);
             return res;
         }
-        case TPMCPATTERNVALUE_TYPE_INTEGER: {
-            bool res = isComparison || (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_INTEGER &&
-                constructor->pattern->val.integer == pattern->pattern->val.integer);
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
+            bool res = isComparison || (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_BIGINTEGER &&
+                cmpBigInt(constructor->pattern->val.biginteger, pattern->pattern->val.biginteger) == 0);
             DEBUG("leave patternMatches %d", res);
             return res;
         }
@@ -270,8 +270,8 @@ static void populateSubPatternMatrix(TpmcMatrix *matrix, TpmcPatternArray *patte
                 cant_happen("encountered pattern type assignment during populateSubPatternMatrix");
             case TPMCPATTERNVALUE_TYPE_CHARACTER:
                 cant_happen("encountered pattern type char during populateSubPatternMatrix");
-            case TPMCPATTERNVALUE_TYPE_INTEGER:
-                cant_happen("encountered pattern type char during populateSubPatternMatrix");
+            case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+                cant_happen("encountered pattern type int during populateSubPatternMatrix");
             default:
                 cant_happen("unrecognised pattern type %d during populateSubPatternMatrix", pattern->pattern->type);
         }
@@ -447,7 +447,7 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern, HashTable *boundVar
             break;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             break;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             collectPathsBoundByConstructor(pattern->pattern->val.constructor->components, boundVariables);

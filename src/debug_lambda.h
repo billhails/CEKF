@@ -23,6 +23,7 @@
  */
 
 #include "lambda_helper.h"
+#include "bigint.h"
 
 void printLamLam(struct LamLam * x, int depth);
 void printLamVarList(struct LamVarList * x, int depth);
@@ -34,7 +35,8 @@ void printLamApply(struct LamApply * x, int depth);
 void printLamMakeVec(struct LamMakeVec * x, int depth);
 void printLamIff(struct LamIff * x, int depth);
 void printLamCond(struct LamCond * x, int depth);
-void printLamCondCases(struct LamCondCases * x, int depth);
+void printLamIntCondCases(struct LamIntCondCases * x, int depth);
+void printLamCharCondCases(struct LamCharCondCases * x, int depth);
 void printLamMatch(struct LamMatch * x, int depth);
 void printLamMatchList(struct LamMatchList * x, int depth);
 void printLamIntList(struct LamIntList * x, int depth);
@@ -47,5 +49,6 @@ void printLamOr(struct LamOr * x, int depth);
 void printLamAmb(struct LamAmb * x, int depth);
 void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth);
 void printLamExp(struct LamExp * x, int depth);
+void printLamCondCases(struct LamCondCases * x, int depth);
 
 #endif

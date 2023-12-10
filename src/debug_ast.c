@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "debug_ast.h"
+#include "bigint.h"
 
 static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
 
@@ -465,8 +466,7 @@ fprintf(stderr, "void * %p", x->val.wildcard);
         case AST_ARG_TYPE_NUMBER:
             pad(depth + 1);
             fprintf(stderr, "AST_ARG_TYPE_NUMBER\n");
-                        pad(depth + 1);
-fprintf(stderr, "int %d", x->val.number);
+                        printBigInt(x->val.number, depth + 1);
             break;
         case AST_ARG_TYPE_CHARACTER:
             pad(depth + 1);
@@ -506,8 +506,7 @@ fprintf(stderr, "void * %p", x->val.back);
         case AST_EXPRESSION_TYPE_NUMBER:
             pad(depth + 1);
             fprintf(stderr, "AST_EXPRESSION_TYPE_NUMBER\n");
-                        pad(depth + 1);
-fprintf(stderr, "int %d", x->val.number);
+                        printBigInt(x->val.number, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             pad(depth + 1);

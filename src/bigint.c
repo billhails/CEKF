@@ -1,9 +1,11 @@
 #include "bigint.h"
+#include "common.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define BIGINT_ASSERT(a, op, b) assert((a) op (b));
 
@@ -129,16 +131,14 @@ bigint* bigint_init(bigint *dst){
 
 bigint* bigint_reserve(bigint *dst, int capacity){
     if (dst->capacity >= capacity) return dst;
+    dst->words = GROW_ARRAY(bigint_word, dst->words, dst->capacity, capacity);
     dst->capacity = capacity;
-    dst->words = (bigint_word*)realloc(dst->words, capacity * sizeof(*dst->words));
-    /* out of memory? sorry :( */
-    assert(dst->words != NULL);
     BIGINT_ASSERT(dst->size, <=, capacity);
     return dst;
 }
 
 void bigint_free(bigint *dst){
-    free(dst->words);
+    FREE_ARRAY(bigint_word, dst->words, dst->capacity);
     bigint_init(dst);
 }
 
@@ -490,11 +490,11 @@ bigint* bigint_mul(bigint *dst, const bigint *a, const bigint *b){
         dst->size = bigint_raw_mul_add(dst->words, a->words, na, b->words, nb);
     }else{
         int magical_upper_bound = BIGINT_MAX(na, nb) * 11 + 180 + n;
-        tmp = (bigint_word*)malloc(magical_upper_bound * sizeof(*tmp));
+        tmp = NEW_ARRAY(bigint_word, magical_upper_bound);
 
         dst->size = bigint_raw_mul_karatsuba(tmp, a->words, na, b->words, nb, tmp + n);
         bigint_raw_cpy(dst->words, tmp, dst->size);
-        free(tmp);
+        FREE_ARRAY(bigint_word, tmp, magical_upper_bound);
     }
 
     return bigint_set_neg(dst, a->neg ^ b->neg);
@@ -1213,3 +1213,99 @@ double bigint_double(const bigint *src){
     memcpy(&d, &x, sizeof(d));
     return src->neg ? -d : d;
 }
+
+// additional CEKF code
+
+BigInt *newBigInt(bigint bi) {
+    BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "newBigInt %p\n", x);
+#endif
+    x->bi = bi;
+    return x;
+}
+
+void markBigInt(BigInt *x) {
+    if (x == NULL) return;
+    MARK(x);
+}
+
+void freeBigInt(BigInt *x) {
+    FREE_ARRAY(bigint_word, x->bi.words, x->bi.capacity);
+    FREE(x, BigInt);
+}
+
+void printBigInt(BigInt *x, int depth) {
+    fprintf(stderr, "%*s", depth * 4, "");
+    fprintBigInt(stderr, x);
+}
+
+void fprintBigInt(FILE *f, BigInt *x) {
+    if (x == NULL) {
+        fprintf(f, "<null>");
+        return;
+    }
+    int size = bigint_write_size(&x->bi, 10);
+    if (size < 256) {
+        static char buffer[256];
+        bigint_write(buffer, size, &x->bi);
+        fprintf(f, "%s", buffer);
+    } else {
+        char *buf = NEW_ARRAY(char, size);
+        bigint_write(buf, size, &x->bi);
+        fprintf(f, "%s", buf);
+        FREE_ARRAY(char, buf, size);
+    }
+}
+
+void sprintBigInt(char *s, BigInt *x) {
+    if (x == NULL) {
+        sprintf(s, "<null>");
+        return;
+    }
+    int size = bigint_write_size(&x->bi, 10);
+    bigint_write(s, size, &x->bi);
+}
+
+int cmpBigInt(BigInt *a, BigInt *b) {
+    return bigint_cmp(&a->bi, &b->bi);
+}
+
+static BigInt *_opBigInt(bigint_binop op, BigInt *a, BigInt *b) {
+    bigint res;
+    bigint_init(&res);
+    op(&res, &a->bi, &b->bi);
+    return newBigInt(res);
+}
+
+BigInt *addBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_add, a, b);
+}
+
+BigInt *subBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_sub, a, b);
+}
+
+BigInt *mulBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_mul, a, b);
+}
+
+BigInt *divBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_div, a, b);
+}
+
+void dumpBigInt(FILE *fp, BigInt *big) {
+    fprintf(fp, "BigInt %p", big);
+    if (big != NULL) {
+        fprintf(fp, " size:%d, capacity:%d, neg:%d, words:[", big->bi.size, big->bi.capacity, big->bi.neg);
+        for (int i = 0; i < big->bi.capacity;) {
+            fprintf(fp, "%d", big->bi.words[i]);
+            i++;
+            if (i < big->bi.capacity) fprintf(stderr, ", ");
+        }
+        fprintf(fp, "]");
+    }
+    fprintf(fp, "\n");
+}
+
+

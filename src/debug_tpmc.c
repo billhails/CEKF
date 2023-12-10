@@ -24,6 +24,7 @@
 
 #include "debug_tpmc.h"
 #include "lambda_pp.h"
+#include "bigint.h"
 
 static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
 
@@ -212,11 +213,10 @@ fprintf(stderr, "void * %p", x->val.wildcard);
                         pad(depth + 1);
 fprintf(stderr, "char '%c'", x->val.character);
             break;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_INTEGER\n");
-                        pad(depth + 1);
-fprintf(stderr, "int %d", x->val.integer);
+            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_BIGINTEGER\n");
+                        printBigInt(x->val.biginteger, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             pad(depth + 1);

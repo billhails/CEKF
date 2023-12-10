@@ -29,44 +29,55 @@ typedef enum ByteCodes {
     BYTECODE_VAR,
     BYTECODE_LVAR,
     BYTECODE_PRIM_ADD,
+
     BYTECODE_PRIM_SUB,
     BYTECODE_PRIM_MUL,
     BYTECODE_PRIM_DIV,
     BYTECODE_PRIM_POW,
     BYTECODE_PRIM_MOD,
+
     BYTECODE_PRIM_EQ,
     BYTECODE_PRIM_NE,
     BYTECODE_PRIM_GT,
     BYTECODE_PRIM_LT,
     BYTECODE_PRIM_GE,
+
     BYTECODE_PRIM_LE,
     BYTECODE_PRIM_XOR,
     BYTECODE_PRIM_CONS,
     BYTECODE_PRIM_MAKEVEC,
     BYTECODE_PRIM_CAR,
+
     BYTECODE_PRIM_CDR,
     BYTECODE_PRIM_VEC,
     BYTECODE_PRIM_NOT,
     BYTECODE_PRIM_PRINT,
     BYTECODE_MATCH,
+
     BYTECODE_APPLY,
     BYTECODE_IF,
-    BYTECODE_COND,
+    BYTECODE_CHARCOND,
+    BYTECODE_INTCOND,
     BYTECODE_LETREC,
+
     BYTECODE_AMB,
     BYTECODE_CUT,
     BYTECODE_BACK,
     BYTECODE_LET,
     BYTECODE_CALLCC,
+
     BYTECODE_TRUE,
     BYTECODE_FALSE,
     BYTECODE_VOID,
-    BYTECODE_INT,
+    BYTECODE_STDINT,
+    BYTECODE_BIGINT,
+
     BYTECODE_CHAR,
     BYTECODE_RETURN,
     BYTECODE_JMP,
     BYTECODE_PUSHN,
     BYTECODE_DONE,
+
     BYTECODE_ERROR,
 } ByteCodes;
 
@@ -102,5 +113,14 @@ void writeCexp(Cexp *x, ByteCodeArray *b);
 void writeExp(Exp *x, ByteCodeArray *b);
 
 void writeEnd(ByteCodeArray *b);
+
+int intAt(ByteCodeArray *b, int index);
+int wordAt(ByteCodeArray *b, int index);
+int charAt(ByteCodeArray *b, int index);
+int offsetAt(ByteCodeArray *b, int index);
+BigInt *bigIntAt(ByteCodeArray *b, int index);
+byte byteAt(ByteCodeArray *b, int i);
+int offsetAfterBigIntAt(ByteCodeArray *b, int i);
+
 
 #endif

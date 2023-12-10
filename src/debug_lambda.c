@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "debug_lambda.h"
+#include "bigint.h"
 
 static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
 
@@ -227,15 +228,30 @@ void printLamCond(struct LamCond * x, int depth) {
     fprintf(stderr, "]");
 }
 
-void printLamCondCases(struct LamCondCases * x, int depth) {
+void printLamIntCondCases(struct LamIntCondCases * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "LamCondCases (NULL)"); return; }
-    fprintf(stderr, "LamCondCases[\n");
-    printLamExp(x->constant, depth + 1);
+    if (x == NULL) { fprintf(stderr, "LamIntCondCases (NULL)"); return; }
+    fprintf(stderr, "LamIntCondCases[\n");
+        printBigInt(x->constant, depth + 1);
     fprintf(stderr, "\n");
     printLamExp(x->body, depth + 1);
     fprintf(stderr, "\n");
-    printLamCondCases(x->next, depth + 1);
+    printLamIntCondCases(x->next, depth + 1);
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
+}
+
+void printLamCharCondCases(struct LamCharCondCases * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamCharCondCases (NULL)"); return; }
+    fprintf(stderr, "LamCharCondCases[\n");
+        pad(depth + 1);
+fprintf(stderr, "char %c", x->constant);
+    fprintf(stderr, "\n");
+    printLamExp(x->body, depth + 1);
+    fprintf(stderr, "\n");
+    printLamCharCondCases(x->next, depth + 1);
     fprintf(stderr, "\n");
     pad(depth);
     fprintf(stderr, "]");
@@ -406,11 +422,16 @@ void printLamExp(struct LamExp * x, int depth) {
             fprintf(stderr, "LAMEXP_TYPE_VAR\n");
                         printLambdaSymbol(x->val.var, depth + 1);
             break;
-        case LAMEXP_TYPE_INTEGER:
+        case LAMEXP_TYPE_STDINT:
             pad(depth + 1);
-            fprintf(stderr, "LAMEXP_TYPE_INTEGER\n");
+            fprintf(stderr, "LAMEXP_TYPE_STDINT\n");
                         pad(depth + 1);
-fprintf(stderr, "int %d", x->val.integer);
+fprintf(stderr, "int %d", x->val.stdint);
+            break;
+        case LAMEXP_TYPE_BIGINTEGER:
+            pad(depth + 1);
+            fprintf(stderr, "LAMEXP_TYPE_BIGINTEGER\n");
+                        printBigInt(x->val.biginteger, depth + 1);
             break;
         case LAMEXP_TYPE_PRIM:
             pad(depth + 1);
@@ -508,6 +529,29 @@ fprintf(stderr, "void * %p", x->val.cond_default);
             break;
         default:
             cant_happen("unrecognised type %d in printLamExp", x->type);
+    }
+    fprintf(stderr, "\n");
+    pad(depth);
+    fprintf(stderr, "]");
+}
+
+void printLamCondCases(struct LamCondCases * x, int depth) {
+    pad(depth);
+    if (x == NULL) { fprintf(stderr, "LamCondCases (NULL)"); return; }
+    fprintf(stderr, "LamCondCases[\n");
+    switch(x->type) {
+        case LAMCONDCASES_TYPE_INTEGERS:
+            pad(depth + 1);
+            fprintf(stderr, "LAMCONDCASES_TYPE_INTEGERS\n");
+            printLamIntCondCases(x->val.integers, depth + 1);
+            break;
+        case LAMCONDCASES_TYPE_CHARACTERS:
+            pad(depth + 1);
+            fprintf(stderr, "LAMCONDCASES_TYPE_CHARACTERS\n");
+            printLamCharCondCases(x->val.characters, depth + 1);
+            break;
+        default:
+            cant_happen("unrecognised type %d in printLamCondCases", x->type);
     }
     fprintf(stderr, "\n");
     pad(depth);
