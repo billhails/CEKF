@@ -44,9 +44,13 @@ void printContainedValue(Value x, int depth) {
             printPad(depth);
             fprintf(stderr, "#V");
             break;
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_STDINT:
             printPad(depth);
             fprintf(stderr, "%d", x.val.z);
+            break;
+        case VALUE_TYPE_BIGINT:
+            printPad(depth);
+            fprintBigInt(stderr, x.val.b);
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
@@ -152,7 +156,7 @@ void printElidedValue(Value x) {
         case VALUE_TYPE_VOID:
             fprintf(stderr, "#V");
             break;
-        case VALUE_TYPE_INTEGER:
+        case VALUE_TYPE_STDINT:
             fprintf(stderr, "%d", x.val.z);
             break;
         case VALUE_TYPE_CHARACTER:
@@ -456,6 +460,22 @@ void printAexpList(AexpList *x) {
     fprintf(stderr, ")");
 }
 
+static void printAexpIntListContents(AexpIntList *x) {
+    while (x != NULL) {
+        fprintf(stderr, "%d", x->integer);
+        if (x->next) {
+            fprintf(stderr, " ");
+        }
+        x = x->next;
+    }
+}
+
+void printAexpIntList(AexpIntList *x) {
+    fprintf(stderr, "(");
+    printAexpIntListContents(x);
+    fprintf(stderr, ")");
+}
+
 void printAexpMakeList(AexpList *x) {
     fprintf(stderr, "(list ");
     printAexpListContents(x);
@@ -504,15 +524,42 @@ void printCexpCond(CexpCond *x) {
     fprintf(stderr, ")");
 }
 
-void printCexpCondCases(CexpCondCases *x) {
+void printCexpIntCondCases(CexpIntCondCases *x) {
     while (x != NULL) {
-        fprintf(stderr, "(%d ", x->option);
+        fprintf(stderr, "(");
+        fprintBigInt(stderr, x->option);
+        fprintf(stderr, " ");
         printExp(x->body);
         fprintf(stderr, ")");
         if (x->next) {
             fprintf(stderr, " ");
         }
         x = x->next;
+    }
+}
+
+void printCexpCharCondCases(CexpCharCondCases *x) {
+    while (x != NULL) {
+        fprintf(stderr, "('%c' ", x->option);
+        printExp(x->body);
+        fprintf(stderr, ")");
+        if (x->next) {
+            fprintf(stderr, " ");
+        }
+        x = x->next;
+    }
+}
+
+void printCexpCondCases(CexpCondCases *x) {
+    switch (x->type) {
+        case CONDCASE_TYPE_INT:
+            printCexpIntCondCases(x->val.intCases);
+            break;
+        case CONDCASE_TYPE_CHAR:
+            printCexpCharCondCases(x->val.charCases);
+            break;
+        default:
+            cant_happen("unrecognised type %d in printCexpCondCases", x->type);
     }
 }
 
@@ -576,7 +623,7 @@ void printCexpBool(CexpBool *x) {
 void printMatchList(MatchList *x) {
     if (x == NULL) return;
     fprintf(stderr, "(");
-    printAexpList(x->matches);
+    printAexpIntList(x->matches);
     fprintf(stderr, " ");
     printExp(x->body);
     fprintf(stderr, ")");
@@ -614,8 +661,11 @@ void printAexp(Aexp *x) {
         case AEXP_TYPE_VOID:
             fprintf(stderr, "nil");
             break;
-        case AEXP_TYPE_INT:
-            fprintf(stderr, "%d", x->val.integer);
+        case AEXP_TYPE_BIGINT:
+            fprintBigInt(stderr, x->val.biginteger);
+            break;
+        case AEXP_TYPE_LITTLEINT:
+            fprintf(stderr, "i%d", x->val.littleinteger);
             break;
         case AEXP_TYPE_CHAR:
             fprintf(stderr, "'%c'", x->val.character);
@@ -709,266 +759,250 @@ void printExpLet(ExpLet *x) {
     fprintf(stderr, ")");
 }
 
-static int intAt(ByteCodeArray *b, int index) {
-    return
-        (b->entries[index] << 24) +
-        (b->entries[index + 1] << 16) +
-        (b->entries[index + 2] << 8) +
-        b->entries[index + 3];
-}
-
-static int wordAt(ByteCodeArray *b, int index) {
-    return (b->entries[index] << 8) + b->entries[index + 1];
-}
-
-static int charAt(ByteCodeArray *b, int index) {
-    return b->entries[index];
-}
-
-static int offsetAt(ByteCodeArray *b, int index) {
-    return index + wordAt(b, index);
-}
-
 void dumpByteCode(ByteCodeArray *b) {
     int i = 0;
+    /*
     while (i < b->count) {
-        switch (b->entries[i]) {
+        fprintf(stderr, "[%04x] %02x\n", i, b->entries[i]);
+        i++;
+    }
+    i = 0;
+    */
+    while (i < b->count) {
+        fprintf(stderr, "%04x ### ", i);
+        switch (readByte(b, &i)) {
             case BYTECODE_NONE: {
-                fprintf(stderr, "%04x ### NONE\n", i);
-                i++;
+                fprintf(stderr, "NONE\n");
             }
             break;
             case BYTECODE_LAM: {
-                fprintf(stderr, "%04x ### LAM [%d] [%d] [%04x]\n", i, b->entries[i + 1], b->entries[i + 2], offsetAt(b, i + 3));
-                i += 5;
+                int nargs = readByte(b, &i);
+                int letRecOffset = readByte(b, &i);
+                int offset = readOffset(b, &i);
+                fprintf(stderr, "LAM [%d] [%d] [%04x]\n", nargs, letRecOffset, offset);
             }
             break;
             case BYTECODE_VAR: {
-                fprintf(stderr, "%04x ### VAR [%d:%d]\n", i, b->entries[i + 1], b->entries[i + 2]);
-                i += 3;
+                int frame = readByte(b, &i);
+                int offset = readByte(b, &i);
+                fprintf(stderr, "VAR [%d:%d]\n", frame, offset);
             }
             break;
             case BYTECODE_LVAR: {
-                fprintf(stderr, "%04x ### LVAR [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                int offset = readByte(b, &i);
+                fprintf(stderr, "LVAR [%d]\n", offset);
             }
             break;
             case BYTECODE_PRIM_ADD: {
-                fprintf(stderr, "%04x ### ADD\n", i);
-                i++;
+                fprintf(stderr, "ADD\n");
             }
             break;
             case BYTECODE_PRIM_SUB: {
-                fprintf(stderr, "%04x ### SUB\n", i);
-                i++;
+                fprintf(stderr, "SUB\n");
             }
             break;
             case BYTECODE_PRIM_MUL: {
-                fprintf(stderr, "%04x ### MUL\n", i);
-                i++;
+                fprintf(stderr, "MUL\n");
             }
             break;
             case BYTECODE_PRIM_DIV: {
-                fprintf(stderr, "%04x ### DIV\n", i);
-                i++;
+                fprintf(stderr, "DIV\n");
             }
             break;
             case BYTECODE_PRIM_POW: {
-                fprintf(stderr, "%04x ### POW\n", i);
-                i++;
+                fprintf(stderr, "POW\n");
             }
             break;
             case BYTECODE_PRIM_MOD: {
-                fprintf(stderr, "%04x ### MOD\n", i);
-                i++;
+                fprintf(stderr, "MOD\n");
             }
             break;
             case BYTECODE_PRIM_EQ: {
-                fprintf(stderr, "%04x ### EQ\n", i);
-                i++;
+                fprintf(stderr, "EQ\n");
             }
             break;
             case BYTECODE_PRIM_NE: {
-                fprintf(stderr, "%04x ### NE\n", i);
-                i++;
+                fprintf(stderr, "NE\n");
             }
             break;
             case BYTECODE_PRIM_GT: {
-                fprintf(stderr, "%04x ### GT\n", i);
-                i++;
+                fprintf(stderr, "GT\n");
             }
             break;
             case BYTECODE_PRIM_LT: {
-                fprintf(stderr, "%04x ### LT\n", i);
-                i++;
+                fprintf(stderr, "LT\n");
             }
             break;
             case BYTECODE_PRIM_GE: {
-                fprintf(stderr, "%04x ### GE\n", i);
-                i++;
+                fprintf(stderr, "GE\n");
             }
             break;
             case BYTECODE_PRIM_LE: {
-                fprintf(stderr, "%04x ### LE\n", i);
-                i++;
+                fprintf(stderr, "LE\n");
             }
             break;
             case BYTECODE_PRIM_XOR: {
-                fprintf(stderr, "%04x ### XOR\n", i);
-                i++;
+                fprintf(stderr, "XOR\n");
             }
             break;
             case BYTECODE_PRIM_CONS: {
-                fprintf(stderr, "%04x ### CONS\n", i);
-                i++;
+                fprintf(stderr, "CONS\n");
             }
             break;
             case BYTECODE_PRIM_CAR: {
-                fprintf(stderr, "%04x ### CAR\n", i);
-                i++;
+                fprintf(stderr, "CAR\n");
             }
             break;
             case BYTECODE_PRIM_CDR: {
-                fprintf(stderr, "%04x ### CDR\n", i);
-                i++;
+                fprintf(stderr, "CDR\n");
             }
             break;
             case BYTECODE_PRIM_NOT: {
-                fprintf(stderr, "%04x ### NOT\n", i);
-                i++;
+                fprintf(stderr, "NOT\n");
             }
             break;
             case BYTECODE_PRIM_PRINT: {
-                fprintf(stderr, "%04x ### PRINT\n", i);
-                i++;
+                fprintf(stderr, "PRINT\n");
             }
             break;
             case BYTECODE_PRIM_MAKEVEC: {
-                fprintf(stderr, "%04x ### MAKEVEC [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                int size = readByte(b, &i);
+                fprintf(stderr, "MAKEVEC [%d]\n", size);
             }
             break;
             case BYTECODE_PRIM_VEC: {
-                fprintf(stderr, "%04x ### VEC\n", i);
-                i++;
+                fprintf(stderr, "VEC\n");
             }
             break;
             case BYTECODE_APPLY: {
-                fprintf(stderr, "%04x ### APPLY [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                int nargs = readByte(b, &i);
+                fprintf(stderr, "APPLY [%d]\n", nargs);
             }
             break;
             case BYTECODE_IF: {
-                fprintf(stderr, "%04x ### IF [%04x]\n", i, offsetAt(b, i + 1));
-                i += 3;
+                int offset = readOffset(b, &i);
+                fprintf(stderr, "IF [%04x]\n", offset);
             }
             break;
             case BYTECODE_MATCH: {
-                int count = b->entries[i + 1];
-                fprintf(stderr, "%04x ### MATCH [%d]", i, count);
-                i += 2;
+                int count = readByte(b, &i);
+                fprintf(stderr, "MATCH [%d]", count);
                 while (count > 0) {
-                    fprintf(stderr, "[%04x]", offsetAt(b, i));
+                    int offset = readOffset(b, &i);
+                    fprintf(stderr, "[%04x]", offset);
                     count--;
-                    i += 2;
                 }
                 fprintf(stderr, "\n");
             }
             break;
-            case BYTECODE_COND: {
-                int count = (b->entries[i + 1] << 8) + b->entries[i + 2];
-                fprintf(stderr, "%04x ### COND [%d]", i, count);
-                i += 3;
+            case BYTECODE_CHARCOND: {
+                int count = readWord(b, &i);
+                fprintf(stderr, "CHARCOND [%d]", count);
                 while (count > 0) {
-                    fprintf(stderr, " %d:[%04x]", intAt(b, i), offsetAt(b, i+4));
+                    int val = readInt(b, &i);
+                    int offset = readOffset(b, &i);
+                    fprintf(stderr, " %d:[%04x]", val, offset);
                     count--;
-                    i += 6;
+                }
+                fprintf(stderr, "\n");
+            }
+            break;
+            case BYTECODE_INTCOND: {
+                int count = readWord(b, &i);
+                fprintf(stderr, "INTCOND [%d]", count);
+                while (count > 0) {
+                    bigint bi = readBigint(b, &i);
+                    fprintf(stderr, " ");
+                    bigint_fprint(stderr, &bi);
+                    bigint_free(&bi);
+                    int offset = readOffset(b, &i);
+                    fprintf(stderr, ":[%04x]", offset);
+                    count--;
                 }
                 fprintf(stderr, "\n");
             }
             break;
             case BYTECODE_LETREC: {
-                fprintf(stderr, "%04x ### LETREC [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                int size = readByte(b, &i);
+                fprintf(stderr, "LETREC [%d]\n", size);
             }
             break;
             case BYTECODE_AMB: {
-                fprintf(stderr, "%04x ### AMB [%04x]\n", i, offsetAt(b, i + 1));
-                i += 3;
+                int offset = readOffset(b, &i);
+                fprintf(stderr, "AMB [%04x]\n", offset);
             }
             break;
             case BYTECODE_CUT: {
-                fprintf(stderr, "%04x ### CUT\n", i);
-                i++;
+                fprintf(stderr, "CUT\n");
             }
             break;
             case BYTECODE_BACK: {
-                fprintf(stderr, "%04x ### BACK\n", i);
-                i++;
+                fprintf(stderr, "BACK\n");
             }
             break;
             case BYTECODE_LET: {
-                fprintf(stderr, "%04x ### LET [%04x]\n", i, offsetAt(b, i + 1));
-                i += 3;
+                int offset = readOffset(b, &i);
+                fprintf(stderr, "LET [%04x]\n", offset);
             }
             break;
             case BYTECODE_JMP: {
-                fprintf(stderr, "%04x ### JMP [%04x]\n", i, offsetAt(b, i + 1));
-                i += 3;
+                int offset = readOffset(b, &i);
+                fprintf(stderr, "JMP [%04x]\n", offset);
             }
             break;
             case BYTECODE_PUSHN: {
-                fprintf(stderr, "%04x ### PUSHN [%d]\n", i, b->entries[i + 1]);
-                i += 2;
+                int size = readByte(b, &i);
+                fprintf(stderr, "PUSHN [%d]\n", size);
             }
             break;
             case BYTECODE_CALLCC: {
-                fprintf(stderr, "%04x ### CALLCC\n", i);
-                i++;
+                fprintf(stderr, "CALLCC\n");
             }
             break;
             case BYTECODE_TRUE: {
-                fprintf(stderr, "%04x ### TRUE\n", i);
-                i++;
+                fprintf(stderr, "TRUE\n");
             }
             break;
             case BYTECODE_FALSE: {
-                fprintf(stderr, "%04x ### FALSE\n", i);
-                i++;
+                fprintf(stderr, "FALSE\n");
             }
             break;
             case BYTECODE_VOID: {
-                fprintf(stderr, "%04x ### VOID\n", i);
-                i++;
+                fprintf(stderr, "VOID\n");
             }
             break;
-            case BYTECODE_INT: {
-                fprintf(stderr, "%04x ### INT [%d]\n", i, intAt(b, i + 1));
-                i += 5;
+            case BYTECODE_STDINT: {
+                int val = readInt(b, &i);
+                fprintf(stderr, "STDINT [%d]\n", val);
+            }
+            break;
+            case BYTECODE_BIGINT: {
+                fprintf(stderr, "BIGINT [");
+                bigint bi = readBigint(b, &i);
+                bigint_fprint(stderr, &bi);
+                fprintf(stderr, "]\n");
+                bigint_free(&bi);
             }
             break;
             case BYTECODE_CHAR: {
-                fprintf(stderr, "%04x ### CHAR [%c]\n", i, charAt(b, i + 1));
-                i += 2;
+                char c = readByte(b, &i);
+                fprintf(stderr, "CHAR [%c]\n", c);
             }
             break;
             case BYTECODE_RETURN: {
-                fprintf(stderr, "%04x ### RETURN\n", i);
-                i++;
+                fprintf(stderr, "RETURN\n");
             }
             break;
             case BYTECODE_DONE: {
-                fprintf(stderr, "%04x ### DONE\n", i);
-                i++;
+                fprintf(stderr, "DONE\n");
             }
             break;
             case BYTECODE_ERROR: {
-                fprintf(stderr, "%04x ### ERROR\n", i);
-                i++;
+                fprintf(stderr, "ERROR\n");
             }
             break;
             default:
-                cant_happen("unrecognised bytecode in dumpByteCode");
+                cant_happen("unrecognised bytecode %d in dumpByteCode", b->entries[i]);
         }
     }
 }

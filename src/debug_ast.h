@@ -23,6 +23,7 @@
  */
 
 #include "ast_helper.h"
+#include "bigint.h"
 
 void printAstNest(struct AstNest * x, int depth);
 void printAstDefinitions(struct AstDefinitions * x, int depth);

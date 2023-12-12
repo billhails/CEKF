@@ -24,6 +24,7 @@
 #include "memory.h"
 #include "hash.h"
 #include "symbol.h"
+#include "bigint.h"
 
 /**
  * This file defines the A-Normal form expressions
@@ -60,7 +61,7 @@ typedef struct AexpAnnotatedVar {
     struct HashSymbol *var;
 } AexpAnnotatedVar;
 
-typedef int AexpInteger; // you'll thank me later
+typedef BigInt *AexpInteger; // you'll thank me later
 
 typedef enum {
     AEXP_PRIM_ADD,
@@ -106,6 +107,12 @@ typedef struct AexpList {
     struct Aexp *exp;
 } AexpList;
 
+typedef struct AexpIntList {
+    Header header;
+    struct AexpIntList *next;
+    int integer;
+} AexpIntList;
+
 typedef struct CexpApply {
     Header header;
     struct Aexp *function;
@@ -132,12 +139,19 @@ typedef struct CexpCond {
     struct CexpCondCases *cases;
 } CexpCond;
 
-typedef struct CexpCondCases {
+typedef struct CexpIntCondCases {
     Header header;
-    int option;
+    BigInt *option;
     struct Exp *body;
-    struct CexpCondCases *next;
-} CexpCondCases;
+    struct CexpIntCondCases *next;
+} CexpIntCondCases;
+
+typedef struct CexpCharCondCases {
+    Header header;
+    char option;
+    struct Exp *body;
+    struct CexpCharCondCases *next;
+} CexpCharCondCases;
 
 typedef struct CexpMatch {
     Header header;
@@ -147,7 +161,7 @@ typedef struct CexpMatch {
 
 typedef struct MatchList {
     Header header;
-    struct AexpList *matches;
+    struct AexpIntList *matches;
     struct Exp *body;
     struct MatchList *next;
 } MatchList;
@@ -197,13 +211,33 @@ typedef struct ExpLet {
 } ExpLet;
 
 typedef enum {
+    CONDCASE_TYPE_INT,
+    CONDCASE_TYPE_CHAR,
+} CondCaseType;
+
+typedef union {
+    CexpCharCondCases *charCases;
+    CexpIntCondCases *intCases;
+} CondCaseVal;
+
+typedef struct CexpCondCases {
+    Header header;
+    CondCaseType type;
+    CondCaseVal val;
+} CexpCondCases;
+
+#define CONDCASE_VAL_CHAR(x) ((CondCaseVal){.charCases = (x)})
+#define CONDCASE_VAL_INT(x)  ((CondCaseVal){.intCases  = (x)})
+
+typedef enum {
     AEXP_TYPE_LAM,
     AEXP_TYPE_VAR,
     AEXP_TYPE_ANNOTATEDVAR,
     AEXP_TYPE_TRUE,
     AEXP_TYPE_FALSE,
     AEXP_TYPE_VOID,
-    AEXP_TYPE_INT,
+    AEXP_TYPE_BIGINT,
+    AEXP_TYPE_LITTLEINT,
     AEXP_TYPE_CHAR,
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
@@ -216,7 +250,8 @@ typedef union {
     struct AexpLam *lam;
     struct HashSymbol *var;
     struct AexpAnnotatedVar *annotatedVar;
-    AexpInteger integer;
+    AexpInteger biginteger;
+    int littleinteger;
     char character;
     struct AexpPrimApp *prim;
     struct AexpUnaryApp *unary;
@@ -230,18 +265,19 @@ typedef struct Aexp {
     AexpVal val;
 } Aexp;
 
-#define AEXP_VAL_LAM(x)          ((AexpVal){.lam          = (x)})
-#define AEXP_VAL_VAR(x)          ((AexpVal){.var          = (x)})
-#define AEXP_VAL_ANNOTATEDVAR(x) ((AexpVal){.annotatedVar = (x)})
-#define AEXP_VAL_TRUE()          ((AexpVal){.none         = NULL})
-#define AEXP_VAL_FALSE()         ((AexpVal){.none         = NULL})
-#define AEXP_VAL_VOID()          ((AexpVal){.none         = NULL})
-#define AEXP_VAL_INT(x)          ((AexpVal){.integer      = (x)})
-#define AEXP_VAL_CHAR(x)         ((AexpVal){.character    = (x)})
-#define AEXP_VAL_PRIM(x)         ((AexpVal){.prim         = (x)})
-#define AEXP_VAL_UNARY(x)        ((AexpVal){.unary        = (x)})
-#define AEXP_VAL_LIST(x)         ((AexpVal){.list         = (x)})
-#define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec      = (x)})
+#define AEXP_VAL_LAM(x)          ((AexpVal){.lam           = (x)})
+#define AEXP_VAL_VAR(x)          ((AexpVal){.var           = (x)})
+#define AEXP_VAL_ANNOTATEDVAR(x) ((AexpVal){.annotatedVar  = (x)})
+#define AEXP_VAL_TRUE()          ((AexpVal){.none          = NULL})
+#define AEXP_VAL_FALSE()         ((AexpVal){.none          = NULL})
+#define AEXP_VAL_VOID()          ((AexpVal){.none          = NULL})
+#define AEXP_VAL_BIGINT(x)       ((AexpVal){.biginteger    = (x)})
+#define AEXP_VAL_LITTLEINT(x)    ((AexpVal){.littleinteger = (x)})
+#define AEXP_VAL_CHAR(x)         ((AexpVal){.character     = (x)})
+#define AEXP_VAL_PRIM(x)         ((AexpVal){.prim          = (x)})
+#define AEXP_VAL_UNARY(x)        ((AexpVal){.unary         = (x)})
+#define AEXP_VAL_LIST(x)         ((AexpVal){.list          = (x)})
+#define AEXP_VAL_MAKEVEC(x)      ((AexpVal){.makeVec       = (x)})
 
 typedef enum {
     CEXP_TYPE_APPLY,
@@ -316,6 +352,7 @@ typedef struct Exp {
 AexpAnnotatedVar *newAexpAnnotatedVar(AexpAnnotatedVarType type, int frame, int offset, HashSymbol *var);
 AexpLam *newAexpLam(AexpVarList *args, Exp *exp);
 AexpList *newAexpList(AexpList *next, Aexp *exp);
+AexpIntList *newAexpIntList(AexpIntList *next, int integer);
 Aexp *newAexp(AexpType type, AexpVal val);
 AexpPrimApp *newAexpPrimApp(AexpPrimOp op, Aexp *exp1, Aexp *exp2);
 AexpUnaryApp *newAexpUnaryApp(AexpUnaryOp op, Aexp *exp);
@@ -328,18 +365,22 @@ CexpBool *newCexpBool(CexpBoolType type, Exp *exp1, Exp *exp2);
 CexpApply *newCexpApply(Aexp *function, AexpList *args);
 CexpIf *newCexpIf(Aexp *condition, Exp *consequent, Exp *alternative);
 CexpCond *newCexpCond(Aexp *condition, CexpCondCases *cases);
-CexpCondCases *newCexpCondCases(int option, Exp *body, CexpCondCases *next);
+CexpIntCondCases *newCexpIntCondCases(BigInt *option, Exp *body, CexpIntCondCases *next);
+CexpCharCondCases *newCexpCharCondCases(char option, Exp *body, CexpCharCondCases *next);
+CexpCondCases *newCexpCondCases(CondCaseType type, CondCaseVal val);
 CexpLetRec *newCexpLetRec(LetRecBindings *bindings, Exp *body);
 CexpMatch *newCexpMatch(Aexp *condition, MatchList *clauses);
-MatchList *newMatchList(AexpList *matches, Exp *body, MatchList *next);
+MatchList *newMatchList(AexpIntList *matches, Exp *body, MatchList *next);
 Cexp *newCexp(CexpType type, CexpVal val);
 ExpLet *newExpLet(HashSymbol *var, Exp *val, Exp *body);
 Exp *newExp(ExpType type, ExpVal val);
 LetRecBindings *newLetRecBindings(LetRecBindings *next, HashSymbol *var, Aexp *val);
 
+
 void markAexpAnnotatedVar(AexpAnnotatedVar *x);
 void markAexpLam(AexpLam *x);
 void markAexpList(AexpList *x);
+void markAexpIntList(AexpIntList *x);
 void markAexpPrimApp(AexpPrimApp *x);
 void markAexpUnaryApp(AexpUnaryApp *x);
 void markAexpVarList(AexpVarList *x);
@@ -351,6 +392,8 @@ void markCexpApply(CexpApply *x);
 void markCexpIf(CexpIf *x);
 void markCexpCond(CexpCond *x);
 void markCexpCondCases(CexpCondCases *x);
+void markCexpIntCondCases(CexpIntCondCases *x);
+void markCexpCharCondCases(CexpCharCondCases *x);
 void markCexpLetRec(CexpLetRec *x);
 void markCexpMatch(CexpMatch *x);
 void markMatchList(MatchList *x);

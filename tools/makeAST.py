@@ -456,9 +456,6 @@ class SimpleArray(Base):
             print("    }")
             print("    x->width = width;")
             print("    x->height = height;")
-        print("#ifdef DEBUG_LOG_GC")
-        print(f'    fprintf(stderr, "new {myName} = %p\\n", x);')
-        print("#endif")
         print("    UNPROTECT(save);");
         print("    return x;")
         print("}\n")
@@ -1091,9 +1088,6 @@ if args.type == "h":
     print('#include "hash.h"')
     print('#include "memory.h"')
     print('#include "common.h"')
-    print("#ifdef DEBUG_LOG_GC")
-    print("#include <stdio.h>");
-    print("#endif")
     for include in includes:
         print(f'#include "{include}"')
     for include in limited_includes:

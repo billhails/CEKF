@@ -104,10 +104,12 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
             return true;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             return a->val.character == b->val.character;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
-            return a->val.integer == b->val.integer;
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+            return cmpBigInt(a->val.biginteger, b->val.biginteger) == 0;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return tpmcConstructorPatternEq(a->val.constructor, b->val.constructor);
+        default:
+            cant_happen("unrecognised type %d in tpmcPatternEq", a->type);
     }
 }
 

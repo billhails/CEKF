@@ -22,6 +22,7 @@
 #include "symbol.h"
 #include "memory.h"
 #include "lambda_helper.h"
+#include "bigint.h"
 
 #ifdef DEBUG_ANF
 #include <stdio.h>
@@ -36,7 +37,8 @@
 static Exp *normalize(LamExp *lamExp, Exp *tail);
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
-static Exp *normalizeInteger(int integer, Exp *tail);
+static Exp *normalizeBigInteger(BigInt *integer, Exp *tail);
+static Exp *normalizeStdInteger(int integer, Exp *tail);
 static Exp *normalizeCharacter(char character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAnd(LamAnd *app, Exp *tail);
@@ -54,7 +56,8 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op);
 static Exp *letBind(Exp *body, HashTable *replacements);
 static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
-static Aexp *aexpNormalizeInteger(int integer);
+static Aexp *aexpNormalizeBigInteger(BigInt *integer);
+static Aexp *aexpNormalizeStdInteger(int integer);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpVarList *convertVarList(LamVarList *args);
@@ -72,7 +75,7 @@ static LetRecBindings *replaceLetRecBindings(LamLetRecBindings *lamLetRecBinding
 static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
 static Exp *normalizeMatch(LamMatch *match, Exp *tail);
 static MatchList *normalizeMatchList(LamMatchList *matchList);
-static AexpList *convertIntList(LamIntList *list);
+static AexpIntList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
@@ -94,8 +97,10 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeLam(lamExp->val.lam, tail);
         case LAMEXP_TYPE_VAR:
             return normalizeVar(lamExp->val.var, tail);
-        case LAMEXP_TYPE_INTEGER:
-            return normalizeInteger(lamExp->val.integer, tail);
+        case LAMEXP_TYPE_STDINT:
+            return normalizeStdInteger(lamExp->val.stdint, tail);
+        case LAMEXP_TYPE_BIGINTEGER:
+            return normalizeBigInteger(lamExp->val.biginteger, tail);
         case LAMEXP_TYPE_PRIM:
             return normalizePrim(lamExp->val.prim, tail);
         case LAMEXP_TYPE_UNARY:
@@ -200,7 +205,7 @@ static MatchList *normalizeMatchList(LamMatchList *matchList) {
     }
     MatchList *next = normalizeMatchList(matchList->next);
     int save = PROTECT(next);
-    AexpList *matches = convertIntList(matchList->matches);
+    AexpIntList *matches = convertIntList(matchList->matches);
     PROTECT(matches);
     Exp *body = normalize(matchList->body, NULL);
     PROTECT(body);
@@ -538,17 +543,31 @@ static Exp *normalizeCharacter(char character, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeInteger(int integer, Exp *tail) {
-    ENTER(normalizeInteger);
+static Exp *normalizeBigInteger(BigInt *integer, Exp *tail) {
+    ENTER(normalizeBigInteger);
     if (tail != NULL) {
-        LEAVE(normalizeInteger);
+        LEAVE(normalizeBigInteger);
         return tail;
     }
-    Aexp *aexp = aexpNormalizeInteger(integer);
+    Aexp *aexp = aexpNormalizeBigInteger(integer);
     int save = PROTECT(aexp);
     Exp *exp = wrapAexp(aexp);
     UNPROTECT(save);
-    LEAVE(normalizeInteger);
+    LEAVE(normalizeBigInteger);
+    return exp;
+}
+
+static Exp *normalizeStdInteger(int integer, Exp *tail) {
+    ENTER(normalizeStdInteger);
+    if (tail != NULL) {
+        LEAVE(normalizeStdInteger);
+        return tail;
+    }
+    Aexp *aexp = aexpNormalizeStdInteger(integer);
+    int save = PROTECT(aexp);
+    Exp *exp = wrapAexp(aexp);
+    UNPROTECT(save);
+    LEAVE(normalizeStdInteger);
     return exp;
 }
 
@@ -580,17 +599,15 @@ static Aexp *aexpNormalizeLam(LamLam *lamLam) {
     return aexp;
 }
 
-static AexpList *convertIntList(LamIntList *list) {
+static AexpIntList *convertIntList(LamIntList *list) {
     ENTER(convertIntList);
     if (list == NULL) {
         LEAVE(convertIntList);
         return NULL;
     }
-    AexpList *next = convertIntList(list->next);
+    AexpIntList *next = convertIntList(list->next);
     int save = PROTECT(next);
-    Aexp *aexp = newAexp(AEXP_TYPE_INT, AEXP_VAL_INT(list->item));
-    PROTECT(aexp);
-    AexpList *this = newAexpList(next, aexp);
+    AexpIntList *this = newAexpIntList(next, list->item);
     UNPROTECT(save);
     LEAVE(convertIntList);
     return this;
@@ -681,8 +698,12 @@ static Aexp *aexpNormalizeVar(HashSymbol *var) {
     return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(var));
 }
 
-static Aexp *aexpNormalizeInteger(int integer) {
-    return newAexp(AEXP_TYPE_INT, AEXP_VAL_INT(integer));
+static Aexp *aexpNormalizeBigInteger(BigInt *integer) {
+    return newAexp(AEXP_TYPE_BIGINT, AEXP_VAL_BIGINT(integer));
+}
+
+static Aexp *aexpNormalizeStdInteger(int integer) {
+    return newAexp(AEXP_TYPE_LITTLEINT, AEXP_VAL_LITTLEINT(integer));
 }
 
 static Aexp *aexpNormalizeCharacter(char character) {
@@ -696,45 +717,27 @@ static Aexp *cloneAexp(Aexp *orig) {
     return orig;
 }
 
-/*
-static Exp *replaceCond(Aexp *value, LamCondCases *cases, HashTable *replacements) {
-    ENTER(replaceCond);
-    if (cases == NULL) {
-        cant_happen("empty cases in replaceCond");
-    }
-    Aexp *constant = replaceLamExp(cases->constant, replacements);
-    int save = PROTECT(constant);
-    Exp *consequent = normalize(cases->body, NULL);
-    PROTECT(consequent);
-    if (constant->type == AEXP_TYPE_DEFAULT) {
-        if (cases->next != NULL) {
-            cant_happen("cond cases after default");
-        }
-        UNPROTECT(save);
-        LEAVE(replaceCond);
-        return consequent;
-    }
-    if (cases->next == NULL) {
-        cant_happen("cond cases with no default");
-    }
-    Exp *alternative = replaceCond(value, cases->next, replacements);
-    PROTECT(alternative);
-    Aexp *clone = cloneAexp(value);
-    PROTECT(clone);
-    AexpPrimApp *eq = newAexpPrimApp(AEXP_PRIM_EQ, clone, constant);
-    PROTECT(eq);
-    Aexp *condition = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(eq));
-    PROTECT(condition);
-    CexpIf *iff = newCexpIf(condition, consequent, alternative);
-    PROTECT(iff);
-    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(iff));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
+static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
+    if (cases == NULL) return NULL;
+    CexpIntCondCases *next = normalizeIntCondCases(cases->next);
+    int save = PROTECT(next);
+    Exp *body = normalize(cases->body, NULL);
+    PROTECT(body);
+    CexpIntCondCases *this = newCexpIntCondCases(cases->constant, body, next);
     UNPROTECT(save);
-    LEAVE(replaceCond);
-    return exp;
+    return this;
 }
-*/
+
+static CexpCharCondCases *normalizeCharCondCases(LamCharCondCases *cases) {
+    if (cases == NULL) return NULL;
+    CexpCharCondCases *next = normalizeCharCondCases(cases->next);
+    int save = PROTECT(next);
+    Exp *body = normalize(cases->body, NULL);
+    PROTECT(body);
+    CexpCharCondCases *this = newCexpCharCondCases(cases->constant, body, next);
+    UNPROTECT(save);
+    return this;
+}
 
 static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
     ENTER(normalizeCondCases);
@@ -742,30 +745,27 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
         LEAVE(normalizeCondCases);
         return NULL;
     }
-    CexpCondCases *next = normalizeCondCases(cases->next);
-    int save = PROTECT(next);
-    int constant = 0;
-    switch (cases->constant->type) {
-        case LAMEXP_TYPE_INTEGER:
-            constant = cases->constant->val.integer;
-            break;
-        case LAMEXP_TYPE_CHARACTER:
-            constant = (int) cases->constant->val.character;
-            break;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            if (next != NULL) {
-                cant_happen("cond default not last case");
-            }
-            constant = 0;
-            break;
+    CexpCondCases *res = NULL;
+    int save = PROTECT(NULL);
+    switch (cases->type) {
+        case LAMCONDCASES_TYPE_INTEGERS: {
+            CexpIntCondCases *intCases = normalizeIntCondCases(cases->val.integers);
+            PROTECT(intCases);
+            res = newCexpCondCases(CONDCASE_TYPE_INT, CONDCASE_VAL_INT(intCases));
+        }
+        break;
+        case LAMCONDCASES_TYPE_CHARACTERS: {
+            CexpCharCondCases *charCases = normalizeCharCondCases(cases->val.characters);
+            PROTECT(charCases);
+            res = newCexpCondCases(CONDCASE_TYPE_CHAR, CONDCASE_VAL_CHAR(charCases));
+        }
+        break;
         default:
-            cant_happen("unexpected type %d for constant in normalizeCondCases");
+            cant_happen("unrecognized type %d in normlizeCondCases", cases->type);
     }
-    Exp *body = normalize(cases->body, NULL);
-    PROTECT(body);
-    CexpCondCases *this = newCexpCondCases(constant, body, next);
     UNPROTECT(save);
-    return this;
+    LEAVE(normalizeCondCases);
+    return res;
 }
 
 static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
@@ -778,8 +778,11 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
         case LAMEXP_TYPE_VAR:
             res = aexpNormalizeVar(lamExp->val.var);
             break;
-        case LAMEXP_TYPE_INTEGER:
-            res = aexpNormalizeInteger(lamExp->val.integer);
+        case LAMEXP_TYPE_BIGINTEGER:
+            res = aexpNormalizeBigInteger(lamExp->val.biginteger);
+            break;
+        case LAMEXP_TYPE_STDINT:
+            res = aexpNormalizeStdInteger(lamExp->val.stdint);
             break;
         case LAMEXP_TYPE_PRIM:
             res = replaceLamPrim(lamExp, replacements); // prim needs lamExp
@@ -822,7 +825,7 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_LAM:
             return true;
         case LAMEXP_TYPE_VAR:
-        case LAMEXP_TYPE_INTEGER:
+        case LAMEXP_TYPE_BIGINTEGER:
         case LAMEXP_TYPE_CHARACTER:
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_ERROR:

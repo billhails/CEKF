@@ -612,6 +612,7 @@ void markAstArg(struct AstArg * x) {
             markAstUnpack(x->val.unpack);
             break;
         case AST_ARG_TYPE_NUMBER:
+            markBigInt(x->val.number);
             break;
         case AST_ARG_TYPE_CHARACTER:
             break;
@@ -633,6 +634,7 @@ void markAstExpression(struct AstExpression * x) {
         case AST_EXPRESSION_TYPE_SYMBOL:
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
+            markBigInt(x->val.number);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             break;

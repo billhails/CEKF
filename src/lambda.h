@@ -25,9 +25,7 @@
 #include "hash.h"
 #include "memory.h"
 #include "common.h"
-#ifdef DEBUG_LOG_GC
-#include <stdio.h>
-#endif
+#include "bigint.h"
 
 typedef enum LamPrimOp {
     LAMPRIMOP_TYPE_LAM_PRIM_ADD,
@@ -55,7 +53,8 @@ typedef enum LamUnaryOp {
 typedef enum LamExpType {
     LAMEXP_TYPE_LAM,
     LAMEXP_TYPE_VAR,
-    LAMEXP_TYPE_INTEGER,
+    LAMEXP_TYPE_STDINT,
+    LAMEXP_TYPE_BIGINTEGER,
     LAMEXP_TYPE_PRIM,
     LAMEXP_TYPE_UNARY,
     LAMEXP_TYPE_LIST,
@@ -76,12 +75,18 @@ typedef enum LamExpType {
     LAMEXP_TYPE_COND_DEFAULT,
 } LamExpType;
 
+typedef enum LamCondCasesType {
+    LAMCONDCASES_TYPE_INTEGERS,
+    LAMCONDCASES_TYPE_CHARACTERS,
+} LamCondCasesType;
+
 
 
 typedef union LamExpVal {
     struct LamLam * lam;
     HashSymbol * var;
-    int integer;
+    int stdint;
+    BigInt * biginteger;
     struct LamPrimApp * prim;
     struct LamUnaryApp * unary;
     struct LamSequence * list;
@@ -101,6 +106,11 @@ typedef union LamExpVal {
     void * error;
     void * cond_default;
 } LamExpVal;
+
+typedef union LamCondCasesVal {
+    struct LamIntCondCases * integers;
+    struct LamCharCondCases * characters;
+} LamCondCasesVal;
 
 
 
@@ -168,12 +178,19 @@ typedef struct LamCond {
     struct LamCondCases * cases;
 } LamCond;
 
-typedef struct LamCondCases {
+typedef struct LamIntCondCases {
     Header header;
-    struct LamExp * constant;
+    BigInt * constant;
     struct LamExp * body;
-    struct LamCondCases * next;
-} LamCondCases;
+    struct LamIntCondCases * next;
+} LamIntCondCases;
+
+typedef struct LamCharCondCases {
+    Header header;
+    char constant;
+    struct LamExp * body;
+    struct LamCharCondCases * next;
+} LamCharCondCases;
 
 typedef struct LamMatch {
     Header header;
@@ -253,6 +270,12 @@ typedef struct LamExp {
     union LamExpVal  val;
 } LamExp;
 
+typedef struct LamCondCases {
+    Header header;
+    enum LamCondCasesType  type;
+    union LamCondCasesVal  val;
+} LamCondCases;
+
 
 
 struct LamLam * newLamLam(int nargs, struct LamVarList * args, struct LamExp * exp);
@@ -265,7 +288,8 @@ struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamLis
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args);
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases);
-struct LamCondCases * newLamCondCases(struct LamExp * constant, struct LamExp * body, struct LamCondCases * next);
+struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * body, struct LamIntCondCases * next);
+struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * body, struct LamCharCondCases * next);
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases);
 struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next);
 struct LamIntList * newLamIntList(int item, struct LamIntList * next);
@@ -278,6 +302,7 @@ struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right);
 struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right);
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(bool vec, int arity, int size, int index);
 struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val);
+struct LamCondCases * newLamCondCases(enum LamCondCasesType  type, union LamCondCasesVal  val);
 
 void markLamLam(struct LamLam * x);
 void markLamVarList(struct LamVarList * x);
@@ -289,7 +314,8 @@ void markLamApply(struct LamApply * x);
 void markLamMakeVec(struct LamMakeVec * x);
 void markLamIff(struct LamIff * x);
 void markLamCond(struct LamCond * x);
-void markLamCondCases(struct LamCondCases * x);
+void markLamIntCondCases(struct LamIntCondCases * x);
+void markLamCharCondCases(struct LamCharCondCases * x);
 void markLamMatch(struct LamMatch * x);
 void markLamMatchList(struct LamMatchList * x);
 void markLamIntList(struct LamIntList * x);
@@ -302,6 +328,7 @@ void markLamOr(struct LamOr * x);
 void markLamAmb(struct LamAmb * x);
 void markLamTypeConstructorInfo(struct LamTypeConstructorInfo * x);
 void markLamExp(struct LamExp * x);
+void markLamCondCases(struct LamCondCases * x);
 
 void freeLamLam(struct LamLam * x);
 void freeLamVarList(struct LamVarList * x);
@@ -313,7 +340,8 @@ void freeLamApply(struct LamApply * x);
 void freeLamMakeVec(struct LamMakeVec * x);
 void freeLamIff(struct LamIff * x);
 void freeLamCond(struct LamCond * x);
-void freeLamCondCases(struct LamCondCases * x);
+void freeLamIntCondCases(struct LamIntCondCases * x);
+void freeLamCharCondCases(struct LamCharCondCases * x);
 void freeLamMatch(struct LamMatch * x);
 void freeLamMatchList(struct LamMatchList * x);
 void freeLamIntList(struct LamIntList * x);
@@ -326,11 +354,13 @@ void freeLamOr(struct LamOr * x);
 void freeLamAmb(struct LamAmb * x);
 void freeLamTypeConstructorInfo(struct LamTypeConstructorInfo * x);
 void freeLamExp(struct LamExp * x);
+void freeLamCondCases(struct LamCondCases * x);
 
 
 #define LAMEXP_VAL_LAM(x) ((union LamExpVal ){.lam = (x)})
 #define LAMEXP_VAL_VAR(x) ((union LamExpVal ){.var = (x)})
-#define LAMEXP_VAL_INTEGER(x) ((union LamExpVal ){.integer = (x)})
+#define LAMEXP_VAL_STDINT(x) ((union LamExpVal ){.stdint = (x)})
+#define LAMEXP_VAL_BIGINTEGER(x) ((union LamExpVal ){.biginteger = (x)})
 #define LAMEXP_VAL_PRIM(x) ((union LamExpVal ){.prim = (x)})
 #define LAMEXP_VAL_UNARY(x) ((union LamExpVal ){.unary = (x)})
 #define LAMEXP_VAL_LIST(x) ((union LamExpVal ){.list = (x)})
@@ -349,6 +379,8 @@ void freeLamExp(struct LamExp * x);
 #define LAMEXP_VAL_BACK() ((union LamExpVal ){.back = (NULL)})
 #define LAMEXP_VAL_ERROR() ((union LamExpVal ){.error = (NULL)})
 #define LAMEXP_VAL_COND_DEFAULT() ((union LamExpVal ){.cond_default = (NULL)})
+#define LAMCONDCASES_VAL_INTEGERS(x) ((union LamCondCasesVal ){.integers = (x)})
+#define LAMCONDCASES_VAL_CHARACTERS(x) ((union LamCondCasesVal ){.characters = (x)})
 
 
 #endif

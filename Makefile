@@ -28,7 +28,7 @@ ALL_DEP=$(DEP) $(EXTRA_DEP)
 all: $(TARGET)
 
 $(TARGET): $(ALL_OBJ)
-	$(CC) -o $@ $(ALL_OBJ)
+	$(CC) -o $@ $(ALL_OBJ) -lm
 
 -include $(ALL_DEP)
 -include Makefile.extra

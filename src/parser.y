@@ -2,12 +2,14 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "common.h"
 #include "ast_helper.h"
 #include "symbol.h"
 #include "symbols.h"
+#include "bigint.h"
 
 // #define YYDEBUG 1
 
@@ -71,11 +73,24 @@ static AstUnpack *newStringUnpack(char *str) {
     );
 }
 
+static BigInt *makeBigInt(char *digits) {
+    if (bigint_flag) {
+        bigint bi;
+        bigint_init(&bi);
+        bigint_from_str(&bi, digits);
+        BigInt *bbi = newBigInt(bi);
+        return bbi;
+    } else {
+        int i = atoi(digits);
+        return fakeBigInt(i);
+    }
+}
+
 %}
 %union {
     char *s;
-    int i;
     char c;
+    BigInt *bi;
     AstArg *arg;
     AstArgList *argList;
     AstCompositeFunction *compositeFunction;
@@ -110,6 +125,7 @@ static AstUnpack *newStringUnpack(char *str) {
     AstIff *iff;
 }
 
+%type <bi> number
 %type <arg> farg
 %type <argList> fargs
 %type <compositeFunction> composite_function functions fun
@@ -163,7 +179,7 @@ static AstUnpack *newStringUnpack(char *str) {
 %token WILDCARD
 
 %token <c> CHAR
-%token <i> NUMBER
+%token <s> NUMBER
 %token <s> STRING
 %token <s> TYPE_VAR
 %token <s> VAR
@@ -335,6 +351,8 @@ consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList(
           | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
+number : NUMBER  { $$ = makeBigInt($1); }
+       ;
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
@@ -342,7 +360,7 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
      | '[' ']'             { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(nilSymbol())); }
      | '[' consfargs ']'   { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
      | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
-     | NUMBER              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
+     | number              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
      | stringarg           { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
      | WILDCARD            { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
@@ -376,7 +394,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | iff                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)); }
            | switch               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | symbol               { $$ = newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL($1)); }
-           | NUMBER               { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
+           | number               { $$ = newAstExpression(AST_EXPRESSION_TYPE_NUMBER, AST_EXPRESSION_VAL_NUMBER($1)); }
            | string               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | CHAR                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }

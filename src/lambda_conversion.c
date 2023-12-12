@@ -286,15 +286,46 @@ static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
     return amb;
 }
 
+static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, HashTable *substitutions) {
+    ENTER(performIntCondCaseSubstitutions);
+    if (cases == NULL) {
+        LEAVE(performIntCondCaseSubstitutions);
+        return NULL;
+    }
+    cases->body = lamPerformSubstitutions(cases->body, substitutions);
+    cases->next = performIntCondCaseSubstitutions(cases->next, substitutions);
+    LEAVE(performIntCondCaseSubstitutions);
+    return cases;
+}
+
+static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, HashTable *substitutions) {
+    ENTER(performCharCondCaseSubstitutions);
+    if (cases == NULL) {
+        LEAVE(performCharCondCaseSubstitutions);
+        return NULL;
+    }
+    cases->body = lamPerformSubstitutions(cases->body, substitutions);
+    cases->next = performCharCondCaseSubstitutions(cases->next, substitutions);
+    LEAVE(performCharCondCaseSubstitutions);
+    return cases;
+}
+
 static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable *substitutions) {
     ENTER(performCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCondCaseSubstitutions);
         return NULL;
     }
-    cases->constant = lamPerformSubstitutions(cases->constant, substitutions); // shouldn't be necessary but ...
-    cases->body = lamPerformSubstitutions(cases->body, substitutions);
-    cases->next = performCondCaseSubstitutions(cases->next, substitutions);
+    switch (cases->type) {
+        case LAMCONDCASES_TYPE_INTEGERS:
+            cases->val.integers = performIntCondCaseSubstitutions(cases->val.integers, substitutions);
+            break;
+        case LAMCONDCASES_TYPE_CHARACTERS:
+            cases->val.characters = performCharCondCaseSubstitutions(cases->val.characters, substitutions);
+            break;
+        default:
+            cant_happen("unrecognised type %d in performCondCaseSubstitutions", cases->type);
+    }
     LEAVE(performCondCaseSubstitutions);
     return cases;
 }
@@ -310,7 +341,8 @@ static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions
 LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
     ENTER(lamPerformSubstitutions);
     switch (exp->type) {
-        case LAMEXP_TYPE_INTEGER:
+        case LAMEXP_TYPE_BIGINTEGER:
+        case LAMEXP_TYPE_STDINT:
         case LAMEXP_TYPE_CHARACTER:
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_COND_DEFAULT:
@@ -487,7 +519,7 @@ static LamList *varListToLamList(LamVarList *varList) {
 }
 
 static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
-    LamExp *indexExp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
+    LamExp *indexExp = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(index));
     int save = PROTECT(indexExp);
     args = newLamList(indexExp, args);
     (void) PROTECT(args);
@@ -532,7 +564,7 @@ static LamExp *analyzeTypeConstructor(AstTypeConstructor *typeConstructor, int s
         } else {
             // if none of the constructors for this type take arguments, then we can
             // treat it as a simple integer enumeration along with the others
-            exp = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(index));
+            exp = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(index));
         }
     }
     LEAVE(analyzeTypeConstructor);
@@ -812,7 +844,7 @@ static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
         }
         return makeMakeVec(0, info->index, NULL);
     } else {
-        LamExp *res = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(info->index));
+        LamExp *res = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(info->index));
         return res;
     }
 }
@@ -831,7 +863,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = convertSymbol(expression->val.symbol, env);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
-            result = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(expression->val.number));
+            result = newLamExp(LAMEXP_TYPE_BIGINTEGER, LAMEXP_VAL_BIGINTEGER(expression->val.number));
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             result = newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(expression->val.character));

@@ -179,7 +179,7 @@ static LamExp *prependLetBindings(TpmcPattern *test, HashTable *freeVariables, L
         // (let (var (vec i+1 base)) body)
         HashSymbol *path = constructor->components->entries[i]->path;
         if (hashGet(freeVariables, path, NULL)) {
-            LamExp *index = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(i + 1));
+            LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(i + 1));
             DEBUG("[newLamExp]");
             int save2 = PROTECT(index);
             LamExp *base = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
@@ -281,7 +281,8 @@ static TpmcArcList *arcArrayToList(TpmcArcArray *arcArray) {
 //                           (default 'D')))))
 // 
 static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache);
-static LamCondCases *translateConstantArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache);
+static LamIntCondCases *translateConstantIntArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache);
+static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache);
 static LamMatchList *translateConstructorArcList(TpmcArcList *arcList, LamExp *testVar, LamIntList *unexhaustedIndices, HashTable *lambdaCache);
 
 static LamExp *translateTestState(TpmcTestState *testState, HashTable *lambdaCache) {
@@ -345,14 +346,25 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
             res = translateComparisonArcListToIf(arcList, testVar, lambdaCache);
             break;
         }
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-        case TPMCPATTERNVALUE_TYPE_INTEGER: {
-            LamCondCases *cases = translateConstantArcList(arcList, testVar, lambdaCache);
-            int save = PROTECT(cases);
+        case TPMCPATTERNVALUE_TYPE_CHARACTER: {
+            LamCharCondCases *charCases = translateConstantCharArcList(arcList, testVar, lambdaCache);
+            int save = PROTECT(charCases);
+            LamCondCases *cases = newLamCondCases(LAMCONDCASES_TYPE_CHARACTERS, LAMCONDCASES_VAL_CHARACTERS(charCases));
+            PROTECT(cases);
             LamCond *cond = newLamCond(testVar, cases);
             PROTECT(cond);
             res = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
-            DEBUG("[newLamExp]");
+            UNPROTECT(save);
+            break;
+        }
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
+            LamIntCondCases *intCases = translateConstantIntArcList(arcList, testVar, lambdaCache);
+            int save = PROTECT(intCases);
+            LamCondCases *cases = newLamCondCases(LAMCONDCASES_TYPE_INTEGERS, LAMCONDCASES_VAL_INTEGERS(intCases));
+            PROTECT(cases);
+            LamCond *cond = newLamCond(testVar, cases);
+            PROTECT(cond);
+            res = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
             UNPROTECT(save);
             break;
         }
@@ -368,7 +380,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
             PROTECT(matches);
             LamExp *testExp = NULL;
             if (info->vec) {
-                LamExp *zero = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(0));
+                LamExp *zero = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
                 DEBUG("[newLamExp]");
                 PROTECT(zero);
                 LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_LAM_PRIM_VEC, zero, testVar);
@@ -393,60 +405,100 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
     return res;
 }
 
-static LamCondCases *makeConstantCondCase(TpmcArcList *arcList, LamExp *constant, LamExp *testVar, HashTable *lambdaCache) {
-    LamCondCases *next = translateConstantArcList(arcList->next, testVar, lambdaCache);
+static LamIntCondCases *makeConstantIntCondCase(TpmcArcList *arcList, BigInt * constant, LamExp *testVar, HashTable *lambdaCache) {
+    LamIntCondCases *next = translateConstantIntArcList(arcList->next, testVar, lambdaCache);
     int save = PROTECT(next);
     LamExp *body = translateState(arcList->arc->state, lambdaCache);
     PROTECT(body);
-    LamCondCases *res = newLamCondCases(constant, body, next);
+    LamIntCondCases *res = newLamIntCondCases(constant, body, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamCondCases *makeCondDefault(LamExp *action) {
-    LamExp *cond_default = newLamExp(LAMEXP_TYPE_COND_DEFAULT, LAMEXP_VAL_COND_DEFAULT());
-    DEBUG("[newLamExp]");
-    int save = PROTECT(cond_default);
-    LamCondCases *res = newLamCondCases(cond_default, action, NULL);
+static LamIntCondCases *makeIntCondDefault(LamExp *action) {
+    LamIntCondCases *res = newLamIntCondCases(NULL, action, NULL);
+    return res;
+}
+
+static LamCharCondCases *makeConstantCharCondCase(TpmcArcList *arcList, int constant, LamExp *testVar, HashTable *lambdaCache) {
+    LamCharCondCases *next = translateConstantCharArcList(arcList->next, testVar, lambdaCache);
+    int save = PROTECT(next);
+    LamExp *body = translateState(arcList->arc->state, lambdaCache);
+    PROTECT(body);
+    LamCharCondCases *res = newLamCharCondCases(constant, body, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamCondCases *translateConstantArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache) {
+static LamCharCondCases *makeCharCondDefault(LamExp *action) {
+    LamCharCondCases *res = newLamCharCondCases(0, action, NULL);
+    return res;
+}
+
+static LamIntCondCases *translateConstantIntArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache) {
     if (arcList == NULL) {
-        cant_happen("ran out of arcs in translateConstantArcList");
+        cant_happen("ran out of arcs in translateConstantIntArcList");
     }
-    ENTER(translateConstantArcList);
-    LamCondCases *res = NULL;
+    ENTER(translateConstantIntArcList);
+    LamIntCondCases *res = NULL;
     switch (arcList->arc->test->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_COMPARISON: {
             // (default ...
             LamExp *iff = translateComparisonArcListToIf(arcList, testVar, lambdaCache);
             int save = PROTECT(iff);
-            res = makeCondDefault(iff);
+            res = makeIntCondDefault(iff);
             UNPROTECT(save);
             break;
         }
         case TPMCPATTERNVALUE_TYPE_CHARACTER: {
-            LamExp *character = newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(arcList->arc->test->pattern->val.character));
-            DEBUG("[newLamExp]");
-            int save = PROTECT(character);
-            res = makeConstantCondCase(arcList, character, testVar, lambdaCache);
-            UNPROTECT(save);
-            break;
+            cant_happen("encountered character case when cinstructing an integer cond");
         }
-        case TPMCPATTERNVALUE_TYPE_INTEGER: {
-            LamExp *integer = newLamExp(LAMEXP_TYPE_INTEGER, LAMEXP_VAL_INTEGER(arcList->arc->test->pattern->val.integer));
-            DEBUG("[newLamExp]");
-            int save = PROTECT(integer);
-            res = makeConstantCondCase(arcList, integer, testVar, lambdaCache);
-            UNPROTECT(save);
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
+            BigInt * integer = arcList->arc->test->pattern->val.biginteger;
+            res = makeConstantIntCondCase(arcList, integer, testVar, lambdaCache);
             break;
         }
         case TPMCPATTERNVALUE_TYPE_WILDCARD: {
             LamExp *body = translateState(arcList->arc->state, lambdaCache);
             int save = PROTECT(body);
-            res = makeCondDefault(body);
+            res = makeIntCondDefault(body);
+            UNPROTECT(save);
+            break;
+        }
+        default:
+            cant_happen("unrecognized pattern type %d in translateConstantArcList", arcList->arc->test->pattern->type);
+    }
+    LEAVE(translateConstantArcList);
+    return res;
+}
+
+static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList, LamExp *testVar, HashTable *lambdaCache) {
+    if (arcList == NULL) {
+        cant_happen("ran out of arcs in translateConstantCharArcList");
+    }
+    ENTER(translateConstantCharArcList);
+    LamCharCondCases *res = NULL;
+    switch (arcList->arc->test->pattern->type) {
+        case TPMCPATTERNVALUE_TYPE_COMPARISON: {
+            // (default ...
+            LamExp *iff = translateComparisonArcListToIf(arcList, testVar, lambdaCache);
+            int save = PROTECT(iff);
+            res = makeCharCondDefault(iff);
+            UNPROTECT(save);
+            break;
+        }
+        case TPMCPATTERNVALUE_TYPE_CHARACTER: {
+            int character = arcList->arc->test->pattern->val.character;
+            res = makeConstantCharCondCase(arcList, character, testVar, lambdaCache);
+            break;
+        }
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
+            cant_happen("encountered integer case when constructing a character cond");
+        }
+        case TPMCPATTERNVALUE_TYPE_WILDCARD: {
+            LamExp *body = translateState(arcList->arc->state, lambdaCache);
+            int save = PROTECT(body);
+            res = makeCharCondDefault(body);
             UNPROTECT(save);
             break;
         }

@@ -25,11 +25,9 @@
 #include "hash.h"
 #include "memory.h"
 #include "common.h"
-#ifdef DEBUG_LOG_GC
-#include <stdio.h>
-#endif
 #include "lambda.h"
 #include "lambda_pp.h"
+#include "bigint.h"
 
 typedef enum TpmcPatternValueType {
     TPMCPATTERNVALUE_TYPE_VAR,
@@ -37,7 +35,7 @@ typedef enum TpmcPatternValueType {
     TPMCPATTERNVALUE_TYPE_ASSIGNMENT,
     TPMCPATTERNVALUE_TYPE_WILDCARD,
     TPMCPATTERNVALUE_TYPE_CHARACTER,
-    TPMCPATTERNVALUE_TYPE_INTEGER,
+    TPMCPATTERNVALUE_TYPE_BIGINTEGER,
     TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
 } TpmcPatternValueType;
 
@@ -55,7 +53,7 @@ typedef union TpmcPatternValueVal {
     struct TpmcAssignmentPattern * assignment;
     void * wildcard;
     char character;
-    int integer;
+    BigInt * biginteger;
     struct TpmcConstructorPattern * constructor;
 } TpmcPatternValueVal;
 
@@ -285,7 +283,7 @@ void pushTpmcIntArray(struct TpmcIntArray * obj, int entry);
 #define TPMCPATTERNVALUE_VAL_ASSIGNMENT(x) ((union TpmcPatternValueVal ){.assignment = (x)})
 #define TPMCPATTERNVALUE_VAL_WILDCARD() ((union TpmcPatternValueVal ){.wildcard = (NULL)})
 #define TPMCPATTERNVALUE_VAL_CHARACTER(x) ((union TpmcPatternValueVal ){.character = (x)})
-#define TPMCPATTERNVALUE_VAL_INTEGER(x) ((union TpmcPatternValueVal ){.integer = (x)})
+#define TPMCPATTERNVALUE_VAL_BIGINTEGER(x) ((union TpmcPatternValueVal ){.biginteger = (x)})
 #define TPMCPATTERNVALUE_VAL_CONSTRUCTOR(x) ((union TpmcPatternValueVal ){.constructor = (x)})
 #define TPMCSTATEVALUE_VAL_TEST(x) ((union TpmcStateValueVal ){.test = (x)})
 #define TPMCSTATEVALUE_VAL_FINAL(x) ((union TpmcStateValueVal ){.final = (x)})
