@@ -51,7 +51,7 @@
 // #define DEBUG_ANF
 // #define DEBUG_ALLOC
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
-// #define SAFETY_CHECKS
+#define SAFETY_CHECKS
 
 void cant_happen(const char *message, ...);
 void can_happen(const char *message, ...);

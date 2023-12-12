@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "common.h"
@@ -73,11 +74,16 @@ static AstUnpack *newStringUnpack(char *str) {
 }
 
 static BigInt *makeBigInt(char *digits) {
-    bigint bi;
-    bigint_init(&bi);
-    bigint_from_str(&bi, digits);
-    BigInt *bbi = newBigInt(bi);
-    return bbi;
+    if (bigint_flag) {
+        bigint bi;
+        bigint_init(&bi);
+        bigint_from_str(&bi, digits);
+        BigInt *bbi = newBigInt(bi);
+        return bbi;
+    } else {
+        int i = atoi(digits);
+        return fakeBigInt(i);
+    }
 }
 
 %}

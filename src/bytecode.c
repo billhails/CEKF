@@ -458,7 +458,11 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
         int i = 0;
         for (CexpIntCondCases *xx = x; xx != NULL; xx = xx->next) {
             if (xx->next == NULL) break; // default case doesn't get a test
-            addBig(b, xx->option->bi);
+            if (bigint_flag) {
+                addBig(b, xx->option->bi);
+            } else {
+                addInt(b, xx->option->little);
+            }
             dispatches[i++] = reserveWord(b);
         }
     }
@@ -630,8 +634,13 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         }
         break;
         case AEXP_TYPE_BIGINT: {
-            addByte(b, BYTECODE_BIGINT);
-            addBig(b, x->val.biginteger->bi);
+            if (bigint_flag) {
+                addByte(b, BYTECODE_BIGINT);
+                addBig(b, x->val.biginteger->bi);
+            } else {
+                addByte(b, BYTECODE_STDINT);
+                addInt(b, x->val.biginteger->little);
+            }
         }
         break;
         case AEXP_TYPE_CHAR: {

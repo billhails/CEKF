@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <math.h>
 
 #include "common.h"
 #include "debug.h"
@@ -135,47 +136,120 @@ static bool truthy(Value v) {
     return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
 }
 
-static Value add(Value a, Value b) {
+typedef Value (*IntegerBinOp)(Value, Value);
+
+static IntegerBinOp add;
+
+static Value bigAdd(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = addBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
 }
 
-static Value mul(Value a, Value b) {
+static Value littleAdd(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(a.val.z + b.val.z);
+}
+
+static IntegerBinOp mul;
+
+static Value bigMul(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = mulBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
 }
 
-static Value sub(Value a, Value b) {
+static Value littleMul(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(a.val.z * b.val.z);
+}
+
+static IntegerBinOp sub;
+
+static Value bigSub(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = subBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
 }
 
-static Value divide(Value a, Value b) {
+static Value littleSub(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(a.val.z - b.val.z);
+}
+
+static IntegerBinOp divide;
+
+static Value bigDivide(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = divBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
 }
 
-// dumb temporary power fn
-static Value power(Value a, Value b) {
+static Value littleDivide(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(a.val.z / b.val.z);
+}
+
+static IntegerBinOp power;
+
+static Value bigPower(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = powBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
 }
 
-static Value modulo(Value a, Value b) {
+static Value littlePower(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(pow(a.val.z, b.val.z));
+}
+
+static IntegerBinOp modulo;
+
+static Value bigModulo(Value a, Value b) {
+#ifdef SAFETY_CHECKS
     assert(a.type == VALUE_TYPE_BIGINT);
     assert(b.type == VALUE_TYPE_BIGINT);
+#endif
     BigInt *result = modBigInt(a.val.b, b.val.b);
     return bigIntValue(result);
+}
+
+static Value littleModulo(Value a, Value b) {
+#ifdef SAFETY_CHECKS
+    assert(a.type == VALUE_TYPE_STDINT);
+    assert(b.type == VALUE_TYPE_STDINT);
+#endif
+    return intValue(a.val.z % b.val.z);
 }
 
 static int _cmp(Value a, Value b);
@@ -450,6 +524,21 @@ static void step() {
     int count = 0;
     dumpByteCode(&state.B);
 #endif
+    if (bigint_flag) {
+        add = bigAdd;
+        mul = bigMul;
+        sub = bigSub;
+        divide = bigDivide;
+        power = bigPower;
+        modulo = bigModulo;
+    } else {
+        add = littleAdd;
+        mul = littleMul;
+        sub = littleSub;
+        divide = littleDivide;
+        power = littlePower;
+        modulo = littleModulo;
+    }
     state.C = 0;
     while (state.C != -1) {
 #ifdef DEBUG_STEP
@@ -757,18 +846,23 @@ static void step() {
 #endif
                 Value v = pop();
                 int save = protectValue(v);
-                switch (v.type) {
-                    case VALUE_TYPE_BIGINT:
-                        break;
-                    default:
-                        cant_happen("expected value type BIGINT for INTCOND value, got %d", v.type);
-                }
-                for (int c = 0; c < size; c++) {
-                    BigInt *bigInt = readCurrentBigInt();
-                    int offset = readCurrentOffset();
-                    if (cmpBigInt(bigInt, v.val.b) == 0) {
-                        state.C = offset;
-                        break;
+                if (bigint_flag) {
+                    for (int c = 0; c < size; c++) {
+                        BigInt *bigInt = readCurrentBigInt();
+                        int offset = readCurrentOffset();
+                        if (cmpBigInt(bigInt, v.val.b) == 0) {
+                            state.C = offset;
+                            break;
+                        }
+                    }
+                } else {
+                    for (int c = 0; c < size; c++) {
+                        int option = readCurrentInt();
+                        int offset = readCurrentOffset();
+                        if (option == v.val.z) {
+                            state.C = offset;
+                            break;
+                        }
                     }
                 }
                 UNPROTECT(save);

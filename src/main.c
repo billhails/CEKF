@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <getopt.h>
 
 #include "common.h"
 #include "ast.h"
@@ -131,7 +132,26 @@ int main(int argc, char *argv[]) {
 
 #else
 
+int bigint_flag = 0;
+
 int main(int argc, char *argv[]) {
+    int c;
+
+    while (1) {
+        static struct option long_options[] =
+        {
+          {"bigints", no_argument, &bigint_flag, 1},
+          {"smallints", no_argument, &bigint_flag, 0},
+          {0, 0, 0, 0}
+        };
+        int option_index = 0;
+
+        c = getopt_long (argc, argv, "", long_options, &option_index);
+
+        if (c == -1)
+            break;
+    }
+
     ByteCodeArray byteCodes;
     initProtection();
     disableGC();
@@ -143,11 +163,11 @@ int main(int argc, char *argv[]) {
     printf("void *: %ld\n", sizeof(void *));
     */
 
-    if (argc < 2) {
+    if (optind >= argc) {
         fprintf(stderr, "need filename\n");
         exit(1);
     }
-    AstNest *result = pm_parseFile(argv[1]);
+    AstNest *result = pm_parseFile(argv[optind]);
     PROTECT(result);
     enableGC();
     WResult *wr = WTop(result);

@@ -1221,7 +1221,18 @@ BigInt *newBigInt(bigint bi) {
 #ifdef DEBUG_ALLOC
     fprintf(stderr, "newBigInt %p\n", x);
 #endif
+    x->little = 0;
     x->bi = bi;
+    return x;
+}
+
+BigInt *fakeBigInt(int little) {
+    BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
+#ifdef DEBUG_ALLOC
+    fprintf(stderr, "newBigInt %p\n", x);
+#endif
+    x->little = little;
+    bzero(&x->bi, sizeof(bigint));
     return x;
 }
 

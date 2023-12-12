@@ -33,6 +33,8 @@ typedef uint32_t bigint_word;
     for (_i = 0; _i < (n)/2; _i++) BIGINT_SWAP(type, data[_i], data[n - 1 - _i]);\
 } while (0)
 
+extern int bigint_flag;
+
 typedef struct bigint {
     bigint_word *words;
     int neg, size, capacity;
@@ -42,9 +44,11 @@ typedef struct bigint {
 typedef struct BigInt {
     Header header;
     bigint bi;
+    int little;
 } BigInt;
 
 BigInt *newBigInt(bigint bi);
+BigInt *fakeBigInt(int little);
 void markBigInt(BigInt *bi);
 void freeBigInt(BigInt *bi);
 void printBigInt(BigInt *bi, int depth);
