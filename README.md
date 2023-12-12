@@ -84,8 +84,7 @@ a Scheme input which is already in ANF, so the desugaring for that is done on th
 
 ## CEKF Formal Description
 
-The formal mathematical presentation of the CEKF state machine is described
-[here](docs/MATH.md).
+A formal mathematical description of the CEKF machine can be found [here](docs/MATH.md).
 
 ## Bytecode
 
