@@ -39,6 +39,7 @@
 #include "hash.h"
 #include "lambda_pp.h"
 #include "anf.h"
+#include "bigint.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -134,6 +135,14 @@ int main(int argc, char *argv[]) {
     ByteCodeArray byteCodes;
     initProtection();
     disableGC();
+    /*
+    printf("char: %ld\n", sizeof(char));
+    printf("word: %ld\n", sizeof(word));
+    printf("int: %ld\n", sizeof(int));
+    printf("bigint_word: %ld\n", sizeof(bigint_word));
+    printf("void *: %ld\n", sizeof(void *));
+    */
+
     if (argc < 2) {
         fprintf(stderr, "need filename\n");
         exit(1);

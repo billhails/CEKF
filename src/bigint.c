@@ -1240,22 +1240,26 @@ void printBigInt(BigInt *x, int depth) {
     fprintBigInt(stderr, x);
 }
 
+void bigint_fprint(FILE *f, bigint *bi) {
+    int size = bigint_write_size(bi, 10);
+    if (size < 256) {
+        static char buffer[256];
+        bigint_write(buffer, size, bi);
+        fprintf(f, "%s", buffer);
+    } else {
+        char *buf = NEW_ARRAY(char, size);
+        bigint_write(buf, size, bi);
+        fprintf(f, "%s", buf);
+        FREE_ARRAY(char, buf, size);
+    }
+}
+
 void fprintBigInt(FILE *f, BigInt *x) {
     if (x == NULL) {
         fprintf(f, "<null>");
         return;
     }
-    int size = bigint_write_size(&x->bi, 10);
-    if (size < 256) {
-        static char buffer[256];
-        bigint_write(buffer, size, &x->bi);
-        fprintf(f, "%s", buffer);
-    } else {
-        char *buf = NEW_ARRAY(char, size);
-        bigint_write(buf, size, &x->bi);
-        fprintf(f, "%s", buf);
-        FREE_ARRAY(char, buf, size);
-    }
+    bigint_fprint(f, &x->bi);
 }
 
 void sprintBigInt(char *s, BigInt *x) {
@@ -1272,10 +1276,14 @@ int cmpBigInt(BigInt *a, BigInt *b) {
 }
 
 static BigInt *_opBigInt(bigint_binop op, BigInt *a, BigInt *b) {
-    bigint res;
-    bigint_init(&res);
-    op(&res, &a->bi, &b->bi);
-    return newBigInt(res);
+    int save = PROTECT(a);
+    PROTECT(b);
+    bigint c;
+    bigint_init(&c);
+    op(&c, &a->bi, &b->bi);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
 }
 
 BigInt *addBigInt(BigInt *a, BigInt *b) {
@@ -1292,6 +1300,24 @@ BigInt *mulBigInt(BigInt *a, BigInt *b) {
 
 BigInt *divBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_div, a, b);
+}
+
+BigInt *modBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_mod, a, b);
+}
+
+BigInt *powBigInt(BigInt *a, BigInt *b) {
+    int save = PROTECT(a);
+    PROTECT(b);
+    if (b->bi.size > 1) {
+        cant_happen("maximum exponent for bigint exceeded");
+    }
+    bigint c;
+    bigint_init(&c);
+    bigint_pow_word(&c, &a->bi, b->bi.words[0]);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
 }
 
 void dumpBigInt(FILE *fp, BigInt *big) {

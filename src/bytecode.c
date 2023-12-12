@@ -46,7 +46,6 @@ void resetByteCodeArray(ByteCodeArray *b) {
     }
 }
 
-
 static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     int oldCapacity = byteCodes->capacity;
     byte *entries = GROW_ARRAY(byte, byteCodes->entries, oldCapacity, newCapacity);
@@ -59,143 +58,139 @@ static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     byteCodes->capacity = newCapacity;
 }
 
+static inline void reserve(ByteCodeArray *b, size_t size) {
+    while ((b->count + size) >= b->capacity) {
+        growCapacity(b, b->capacity < 8 ? 8 : b->capacity * 2);
+    }
+}
+
 static void addByte(ByteCodeArray *b, int code) {
     if (code > 255) {
         cant_happen("maximim byte size exceeded");
     }
-    if (b->count == b->capacity) {
-        growCapacity(b, b->capacity < 8 ? 8 : b->capacity * 2);
-    }
-    // fprintf(stderr, "byte [%04x] = [%02x]\n", b->count, code);
+    DEBUG("%04x addByte %02x", b->count, code);
+    reserve(b, sizeof(byte));
     b->entries[b->count++] = code;
 }
 
-static void writeWordAt(int loc, ByteCodeArray *b, int word) {
+static void writeWordAt(int loc, ByteCodeArray *b, word word) {
     if (word > 65535) {
         cant_happen("maximum word size exceeded");
     }
-    b->entries[loc] = word >> 8;
-    b->entries[loc + 1] = word & 255;
+    DEBUG("%04x writeWord %04x", loc, word);
+    memcpy(&b->entries[loc], &word, sizeof(word));
 }
 
 static void writeIntAt(int loc, ByteCodeArray *b, int word) {
-    b->entries[loc + 0] = (word >> 24) & 255;
-    b->entries[loc + 1] = (word >> 16) & 255;
-    b->entries[loc + 2] = (word >> 8) & 255;
-    b->entries[loc + 3] = word & 255;
+    DEBUG("%04x writeInt %d", loc, word);
+    memcpy(&b->entries[loc], &word, sizeof(int));
 }
 
 static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
-    int offset = b->count - patch;
+    word offset = b->count - patch;
     writeWordAt(patch, b, offset);
 }
 
-static void writeWord(ByteCodeArray *b, int word) {
-    if (word > 65535) {
+static void addWord(ByteCodeArray *b, word w) {
+    if (w > 65535) {
         cant_happen("maximum word size exceeded");
     }
-    addByte(b, word >> 8);
-    addByte(b, word & 255);
+    reserve(b, sizeof(word));
+    writeWordAt(b->count, b, w);
+    b->count += sizeof(word);
 }
 
 static int reserveWord(ByteCodeArray *b) {
     int address = b->count;
-    addByte(b, 0);
-    addByte(b, 0);
+    addWord(b, 0);
     return address;
+}
+
+static void addInt(ByteCodeArray *b, int word) {
+    if (word > 4294967295) {
+        cant_happen("maximum int size exceeded");
+    }
+    reserve(b, sizeof(int));
+    writeIntAt(b->count, b, word);
+    b->count += sizeof(int);
 }
 
 static int reserveInt(ByteCodeArray *b) {
     int address = b->count;
-    addByte(b, 0);
-    addByte(b, 0);
-    addByte(b, 0);
-    addByte(b, 0);
+    addInt(b, 0);
     return address;
 }
 
-static void writeLittleInt(ByteCodeArray *b, int word) {
-    if (word > 4294967295) {
-        cant_happen("maximum int size exceeded");
-    }
-    addByte(b, (word >> 24) & 255);
-    addByte(b, (word >> 16) & 255);
-    addByte(b, (word >> 8) & 255);
-    addByte(b, word & 255);
+static void addBig(ByteCodeArray *b, bigint bi) {
+    addInt(b, bi.size);
+    addInt(b, bi.capacity);
+    addByte(b, bi.neg);
+    size_t nBytes = bi.capacity * sizeof(bigint_word);
+    reserve(b, nBytes);
+    DEBUG("%04x addBig nBytes %ld", b->count, nBytes);
+    memcpy(&b->entries[b->count], &bi.words[0], nBytes);
+    b->count += nBytes;
 }
 
-static void writeBigInt(ByteCodeArray *b, BigInt *big) {
-    if (big == NULL) {
-        cant_happen("writeBigInt given NULL BigInt*");
-    }
-    DEBUG("writeBigInt size %d", big->bi.size);
-#ifdef DEBUG_BYTECODE
-    dumpBigInt(stderr, big);
-    NEWLINE();
-#endif
-    writeLittleInt(b, big->bi.size);
-    writeLittleInt(b, big->bi.capacity);
-    addByte(b, big->bi.neg);
-    for (int i = 0; i < big->bi.capacity; i++) {
-        writeLittleInt(b, big->bi.words[i]);
-    }
+byte readByte(ByteCodeArray *b, int *i) {
+    return b->entries[(*i)++];
 }
 
-byte byteAt(ByteCodeArray *b, int i) {
-    return b->entries[i];
+static inline void _readWord(ByteCodeArray *b, int *i, word *a) {
+    memcpy(a, &b->entries[*i], sizeof(word));
+    (*i) += sizeof(word);
 }
 
-BigInt *bigIntAt(ByteCodeArray *b, int index) {
-    int size = intAt(b, index);
-    int capacity = intAt(b, index + 4);
-    int neg = byteAt(b, index + 2 * 4);
-    DEBUG("bigIntAt [%04x], size %d, capacity %d, neg %d", index, size, capacity, neg);
-    index += 9;
-    bigint bi;
-    bigint_init(&bi);
-    bigint_reserve(&bi, capacity);
-    for (int i = 0; i < capacity; i++) {
-        bi.words[i] = intAt(b, index + i * 4);
-    }
-    bi.size = size;
-    bi.capacity = capacity;
-    bi.neg = neg;
-    BigInt *res = newBigInt(bi);
-    int save = PROTECT(res);
-#ifdef DEBUG_BYTECODE
-    fprintBigInt(stderr, res);
-    NEWLINE();
-#endif
-    UNPROTECT(save);
-    return res;
+word readWord(ByteCodeArray *b, int *i) {
+    word a;
+    _readWord(b, i, &a);
+    return a;
 }
 
-int offsetAfterBigIntAt(ByteCodeArray *b, int i) {
-    int capacity = intAt(b, i + 4);
-    return 4 + 4 + 1 + capacity * 4;
+static inline void _readInt(ByteCodeArray *b, int *i, int *a) {
+    memcpy(a, &b->entries[*i], sizeof(int));
+    (*i) += sizeof(int);
 }
 
-int intAt(ByteCodeArray *b, int i) {
-    return
-        (b->entries[i] << 24) +
-        (b->entries[i + 1] << 16) +
-        (b->entries[i + 2] << 8) +
-        b->entries[i + 3];
+int readInt(ByteCodeArray *b, int *i) {
+    int a;
+    _readInt(b, i, &a);
+    return a;
 }
 
-int wordAt(ByteCodeArray *b, int index) {
-    return (b->entries[index] << 8) + b->entries[index + 1];
+int readOffset(ByteCodeArray *b, int *i) {
+    int ii = *i;
+    int offset = readWord(b, i);
+    return ii + offset;
 }
 
-int charAt(ByteCodeArray *b, int index) {
-    return b->entries[index];
+int readOffsetAt(ByteCodeArray *b, int i, int step) {
+    int ii = i + step * sizeof(word);
+    int offset = readWord(b, &ii);
+    return i + offset + step * sizeof(word);
 }
 
-int offsetAt(ByteCodeArray *b, int index) {
-    return index + wordAt(b, index);
+bigint readBigint(ByteCodeArray *b, int *i) {
+    bigint a;
+    bigint_init(&a);
+    int size;
+    int capacity;
+    _readInt(b, i, &size);
+    _readInt(b, i, &capacity);
+    int neg = readByte(b, i);
+    bigint_reserve(&a, capacity);
+    int nbytes = capacity * sizeof(bigint_word);
+    memcpy(a.words, &b->entries[*i], nbytes);
+    (*i) += nbytes;
+    a.size = size;
+    a.neg = neg;
+    return a;
 }
+
+////////////////////////////////////////////////////////////////////////////
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
+    ENTER(writeAexpLam);
     if (x == NULL) return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
@@ -204,17 +199,23 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     writeExp(x->exp, b);
     addByte(b, BYTECODE_RETURN);
     writeCurrentAddressAt(patch, b);
+    LEAVE(writeAexpLam);
 }
 
 void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
+    ENTER(writeAexpVarList);
     cant_happen("writeAexpVarList called");
+    LEAVE(writeAexpVarList);
 }
 
 void writeAexpVar(HashSymbol *x, ByteCodeArray *b) {
+    ENTER(writeAexpVar);
     cant_happen("writeAexpVar called");
+    LEAVE(writeAexpVar);
 }
 
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
+    ENTER(writeAexpAnnotatedVar);
     if (x == NULL) return;
     switch (x->type) {
         case VAR_TYPE_ENV:
@@ -230,9 +231,11 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
             cant_happen("unrecognised annotated var type");
     }
             
+    LEAVE(writeAexpAnnotatedVar);
 }
 
 void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
+    ENTER(writeAexpUnaryApp);
     if (x == NULL) return;
     writeAexp(x->exp, b);
     byte prim;
@@ -253,9 +256,11 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
     }
     addByte(b, prim);
+    LEAVE(writeAexpUnaryApp);
 }
 
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
+    ENTER(writeAexpPrimApp);
     if (x == NULL) return;
     writeAexp(x->exp1, b);
     writeAexp(x->exp2, b);
@@ -310,29 +315,37 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
     }
     addByte(b, prim);
+    LEAVE(writeAexpPrimApp);
 }
 
 void writeAexpList(AexpList *x, ByteCodeArray *b) {
+    ENTER(writeAexpList);
     while (x != NULL) {
         writeAexp(x->exp, b);
         x = x->next;
     }
+    LEAVE(writeAexpList);
 }
 
 void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
+    ENTER(writeAexpMakeVec);
     writeAexpList(x->args, b);
     addByte(b, BYTECODE_PRIM_MAKEVEC);
     addByte(b, x->nargs);
+    LEAVE(writeAexpMakeVec);
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
+    ENTER(writeCexpApply);
     writeAexpList(x->args, b);
     writeAexp(x->function, b);
     addByte(b, BYTECODE_APPLY);
     addByte(b, x->nargs);
+    LEAVE(writeCexpApply);
 }
 
 void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
+    ENTER(writeCexpIf);
     writeAexp(x->condition, b);
     addByte(b, BYTECODE_IF);
     int patch = reserveWord(b);
@@ -342,6 +355,7 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     writeCurrentAddressAt(patch, b);
     writeExp(x->alternative, b);
     writeCurrentAddressAt(patch2, b);
+    LEAVE(writeCexpIf);
 }
 
 static int countCexpCharCondCases(CexpCharCondCases *x) {
@@ -363,6 +377,7 @@ static int countCexpIntCondCases(CexpIntCondCases *x) {
 }
 
 void writeCexpCharCondCases(int depth, int *values, int *addresses, int *jumps, CexpCharCondCases *x, ByteCodeArray *b) {
+    ENTER(writeCexpCharCondCases);
     if (x == NULL) {
         return;
     }
@@ -378,6 +393,7 @@ void writeCexpCharCondCases(int depth, int *values, int *addresses, int *jumps, 
         addByte(b, BYTECODE_JMP);
         jumps[depth - 1] = reserveWord(b);
     }
+    LEAVE(writeCexpCharCondCases);
 }
 
 //                                                  +-----------------------------------------------------------------------------------------------------+
@@ -387,13 +403,14 @@ void writeCexpCharCondCases(int depth, int *values, int *addresses, int *jumps, 
 //                                                                           +-------------------------|-----------+                    +--------------------------------+
 //                                                                                                     +-----------------------------------------------------------------+
 void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b) {
+    ENTER(writeCexpCharCond);
     addByte(b, BYTECODE_CHARCOND);
     int numCases = countCexpCharCondCases(x);
     numCases--; // don't count the default case
     if (numCases <= 0) {
         cant_happen("zero cases in writeCexpCharCond");
     }
-    writeWord(b, numCases);
+    addWord(b, numCases);
     int *values = NEW_ARRAY(int, numCases); // address in b for each index_i
     int *addresses = NEW_ARRAY(int, numCases); // address in b for each addr(exp_i)
     int *jumps = NEW_ARRAY(int, numCases); // address in b for the JMP patch address at the end of each expression
@@ -408,9 +425,11 @@ void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b) {
     FREE_ARRAY(int, values, numCases);
     FREE_ARRAY(int, addresses, numCases);
     FREE_ARRAY(int, jumps, numCases);
+    LEAVE(writeCexpCharCond);
 }
 
 void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b, int *endJumps, int *dispatches, int index) {
+    ENTER(writeCexpIntCondCases);
     if (x == NULL) return;
     writeCexpIntCondCases(x->next, b, endJumps, dispatches, index + 1);
     if (x->next != NULL) { // last case is default, first one written, no dispatch as it follows the jmp table
@@ -421,23 +440,25 @@ void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b, int *endJumps,
         addByte(b, BYTECODE_JMP);
         endJumps[index] = reserveWord(b);
     }
+    LEAVE(writeCexpIntCondCases);
 }
 
 void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
+    ENTER(writeCexpIntCond);
     addByte(b, BYTECODE_INTCOND);
     int numCases = countCexpIntCondCases(x);
     numCases--; // don't count the default case
     if (numCases <= 0) {
         cant_happen("zero cases in writeCexpIntCond");
     }
-    writeWord(b, numCases);
+    addWord(b, numCases);
     // we start out by writing each of the cases, reserving a slot in memory for each dispatch address after each (variable length) value.
     int *dispatches = NEW_ARRAY(int, numCases); // address of the slots for each dispatch address
     {
         int i = 0;
         for (CexpIntCondCases *xx = x; xx != NULL; xx = xx->next) {
             if (xx->next == NULL) break; // default case doesn't get a test
-            writeBigInt(b, xx->option);
+            addBig(b, xx->option->bi);
             dispatches[i++] = reserveWord(b);
         }
     }
@@ -448,9 +469,13 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     for (int  i = 0; i < numCases; i++) {
         writeCurrentAddressAt(endJumps[i], b);
     }
+    FREE_ARRAY(int, dispatches, numCases);
+    FREE_ARRAY(int, endJumps, numCases);
+    LEAVE(writeCexpIntCond);
 }
 
 void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
+    ENTER(writeCexpCond);
     writeAexp(x->condition, b);
     switch (x->cases->type) {
         case CONDCASE_TYPE_INT:
@@ -462,13 +487,16 @@ void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
         default:
             cant_happen("unrecognised type %d in writeCexpCond", x->cases->type);
     }
+    LEAVE(writeCexpCond);
 }
 
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b) {
+    ENTER(writeCexpLetRec);
     writeLetRecBindings(x->bindings, b);
     addByte(b, BYTECODE_LETREC);
     addByte(b, x->nbindings);
     writeExp(x->body, b);
+    LEAVE(writeCexpLetRec);
 }
 
 static int validateCexpMatch(CexpMatch *x) {
@@ -503,6 +531,7 @@ static int validateCexpMatch(CexpMatch *x) {
 }
 
 void writeCexpMatch(CexpMatch *x, ByteCodeArray *b) {
+    ENTER(writeCexpMatch);
     int count = validateCexpMatch(x);
     writeAexp(x->condition, b);
     addByte(b, BYTECODE_MATCH);
@@ -525,16 +554,20 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b) {
     }
     for (int i = 0; i < jumpCounter; i++)
         writeCurrentAddressAt(jumps[i], b);
+    LEAVE(writeCexpMatch);
 }
 
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
+    ENTER(writeLetRecBindings);
     while (x != NULL) {
         writeAexp(x->val, b);
         x = x->next;
     }
+    LEAVE(writeLetRecBindings);
 }
 
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
+    ENTER(writeCexpAmb);
     addByte(b, BYTECODE_AMB);
     int patch = reserveWord(b);
     writeExp(x->exp1, b);
@@ -543,23 +576,29 @@ void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
     writeCurrentAddressAt(patch, b);
     writeExp(x->exp2, b);
     writeCurrentAddressAt(patch2, b);
+    LEAVE(writeCexpAmb);
 }
 
 void writeCexpCut(CexpCut *x, ByteCodeArray *b) {
+    ENTER(writeCexpCut);
     addByte(b, BYTECODE_CUT);
     writeExp(x->exp, b);
+    LEAVE(writeCexpCut);
 }
 
 void writeExpLet(ExpLet *x, ByteCodeArray *b) {
+    ENTER(writeExpLet);
     addByte(b, BYTECODE_LET);
     int patch = reserveWord(b);
     writeExp(x->val, b);
     addByte(b, BYTECODE_RETURN);
     writeCurrentAddressAt(patch, b);
     writeExp(x->body, b);
+    LEAVE(writeExpLet);
 }
 
 void writeAexp(Aexp *x, ByteCodeArray *b) {
+    ENTER(writeAexp);
     switch (x->type) {
         case AEXP_TYPE_LAM: {
             writeAexpLam(x->val.lam, b);
@@ -587,12 +626,12 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_LITTLEINT: {
             addByte(b, BYTECODE_STDINT);
-            writeLittleInt(b, x->val.littleinteger);
+            addInt(b, x->val.littleinteger);
         }
         break;
         case AEXP_TYPE_BIGINT: {
             addByte(b, BYTECODE_BIGINT);
-            writeBigInt(b, x->val.biginteger);
+            addBig(b, x->val.biginteger->bi);
         }
         break;
         case AEXP_TYPE_CHAR: {
@@ -615,9 +654,11 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         default:
             cant_happen("unrecognized Aexp type in writeAexp");
     }
+    LEAVE(writeAexp);
 }
 
 void writeCexp(Cexp *x, ByteCodeArray *b) {
+    ENTER(writeCexp);
     switch (x->type) {
         case CEXP_TYPE_APPLY: {
             writeCexpApply(x->val.apply, b);
@@ -663,9 +704,11 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         default:
             cant_happen("unrecognized Cexp type %d in writeCexp", x->type);
     }
+    LEAVE(writeCexp);
 }
 
 void writeExp(Exp *x, ByteCodeArray *b) {
+    ENTER(writeExp);
     switch (x->type) {
         case EXP_TYPE_AEXP: {
             writeAexp(x->val.aexp, b);
@@ -686,8 +729,11 @@ void writeExp(Exp *x, ByteCodeArray *b) {
         default:
             cant_happen("unrecognized Exp type in writeExp");
     }
+    LEAVE(writeExp);
 }
 
 void writeEnd(ByteCodeArray *b) {
+    ENTER(writeEnd);
     addByte(b, BYTECODE_RETURN);
+    LEAVE(writeEnd);
 }

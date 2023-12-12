@@ -57,6 +57,9 @@ BigInt *addBigInt(BigInt *a, BigInt *b);
 BigInt *subBigInt(BigInt *a, BigInt *b);
 BigInt *mulBigInt(BigInt *a, BigInt *b);
 BigInt *divBigInt(BigInt *a, BigInt *b);
+BigInt *modBigInt(BigInt *a, BigInt *b);
+BigInt *powBigInt(BigInt *a, BigInt *b);
+void bigint_fprint(FILE *f, bigint *bi);
 
 // END CEKF additions
 

@@ -22,6 +22,7 @@
 #include "memory.h"
 
 typedef uint8_t byte;
+typedef uint16_t word;
 
 typedef enum ByteCodes {
     BYTECODE_NONE,
@@ -114,13 +115,11 @@ void writeExp(Exp *x, ByteCodeArray *b);
 
 void writeEnd(ByteCodeArray *b);
 
-int intAt(ByteCodeArray *b, int index);
-int wordAt(ByteCodeArray *b, int index);
-int charAt(ByteCodeArray *b, int index);
-int offsetAt(ByteCodeArray *b, int index);
-BigInt *bigIntAt(ByteCodeArray *b, int index);
-byte byteAt(ByteCodeArray *b, int i);
-int offsetAfterBigIntAt(ByteCodeArray *b, int i);
-
+byte readByte(ByteCodeArray *b, int *i);
+word readWord(ByteCodeArray *b, int *i);
+int readInt(ByteCodeArray *b, int *i);
+bigint readBigint(ByteCodeArray *b, int *i);
+int readOffset(ByteCodeArray *b, int *i);
+int readOffsetAt(ByteCodeArray *b, int i, int step);
 
 #endif

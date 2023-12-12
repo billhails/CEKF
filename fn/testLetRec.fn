@@ -8,4 +8,4 @@ let
             d3
     }
 in
-    bad
+    bad()
