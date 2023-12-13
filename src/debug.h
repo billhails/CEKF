@@ -43,6 +43,8 @@ void printMatchList(MatchList *x);
 void printCexpIf(CexpIf *x);
 void printCexpCond(CexpCond *x);
 void printCexpCondCases(CexpCondCases *x);
+void printCexpIntCondCases(CexpIntCondCases *x);
+void printCexpCharCondCases(CexpCharCondCases *x);
 void printCexpLetRec(CexpLetRec *x);
 void printCTEnv(CTEnv *x);
 void printExp(Exp *x);

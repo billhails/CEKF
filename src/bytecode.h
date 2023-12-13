@@ -106,11 +106,60 @@ void writeExp(Exp *x, ByteCodeArray *b);
 
 void writeEnd(ByteCodeArray *b);
 
-byte readByte(ByteCodeArray *b, int *i);
-word readWord(ByteCodeArray *b, int *i);
-int readInt(ByteCodeArray *b, int *i);
-bigint readBigint(ByteCodeArray *b, int *i);
-int readOffset(ByteCodeArray *b, int *i);
-int readOffsetAt(ByteCodeArray *b, int i, int step);
+static inline byte readByte(ByteCodeArray *b, int *i) {
+    return b->entries[(*i)++];
+}
+
+static inline void _readWord(ByteCodeArray *b, int *i, word *a) {
+    memcpy(a, &b->entries[*i], sizeof(word));
+    (*i) += sizeof(word);
+}
+
+static inline word readWord(ByteCodeArray *b, int *i) {
+    word a;
+    _readWord(b, i, &a);
+    return a;
+}
+
+static inline void _readInt(ByteCodeArray *b, int *i, int *a) {
+    memcpy(a, &b->entries[*i], sizeof(int));
+    (*i) += sizeof(int);
+}
+
+static inline int readInt(ByteCodeArray *b, int *i) {
+    int a;
+    _readInt(b, i, &a);
+    return a;
+}
+
+static inline int readOffset(ByteCodeArray *b, int *i) {
+    int ii = *i;
+    int offset = readWord(b, i);
+    return ii + offset;
+}
+
+static inline int readOffsetAt(ByteCodeArray *b, int i, int step) {
+    int ii = i + step * sizeof(word);
+    int offset = readWord(b, &ii);
+    return i + offset + step * sizeof(word);
+}
+
+static inline bigint readBigint(ByteCodeArray *b, int *i) {
+    bigint a;
+    bigint_init(&a);
+    int size;
+    int capacity;
+    _readInt(b, i, &size);
+    _readInt(b, i, &capacity);
+    int neg = readByte(b, i);
+    bigint_reserve(&a, capacity);
+    int nbytes = capacity * sizeof(bigint_word);
+    memcpy(a.words, &b->entries[*i], nbytes);
+    (*i) += nbytes;
+    a.size = size;
+    a.neg = neg;
+    return a;
+}
+
 
 #endif

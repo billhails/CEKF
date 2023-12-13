@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "bytecode.h"
+#include "debug.h"
 #include "common.h"
 
 #ifdef DEBUG_BYTECODE
@@ -58,7 +59,7 @@ static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     byteCodes->capacity = newCapacity;
 }
 
-static inline void reserve(ByteCodeArray *b, size_t size) {
+static void reserve(ByteCodeArray *b, size_t size) {
     while ((b->count + size) >= b->capacity) {
         growCapacity(b, b->capacity < 8 ? 8 : b->capacity * 2);
     }
@@ -130,61 +131,6 @@ static void addBig(ByteCodeArray *b, bigint bi) {
     DEBUG("%04x addBig nBytes %ld", b->count, nBytes);
     memcpy(&b->entries[b->count], &bi.words[0], nBytes);
     b->count += nBytes;
-}
-
-byte readByte(ByteCodeArray *b, int *i) {
-    return b->entries[(*i)++];
-}
-
-static inline void _readWord(ByteCodeArray *b, int *i, word *a) {
-    memcpy(a, &b->entries[*i], sizeof(word));
-    (*i) += sizeof(word);
-}
-
-word readWord(ByteCodeArray *b, int *i) {
-    word a;
-    _readWord(b, i, &a);
-    return a;
-}
-
-static inline void _readInt(ByteCodeArray *b, int *i, int *a) {
-    memcpy(a, &b->entries[*i], sizeof(int));
-    (*i) += sizeof(int);
-}
-
-int readInt(ByteCodeArray *b, int *i) {
-    int a;
-    _readInt(b, i, &a);
-    return a;
-}
-
-int readOffset(ByteCodeArray *b, int *i) {
-    int ii = *i;
-    int offset = readWord(b, i);
-    return ii + offset;
-}
-
-int readOffsetAt(ByteCodeArray *b, int i, int step) {
-    int ii = i + step * sizeof(word);
-    int offset = readWord(b, &ii);
-    return i + offset + step * sizeof(word);
-}
-
-bigint readBigint(ByteCodeArray *b, int *i) {
-    bigint a;
-    bigint_init(&a);
-    int size;
-    int capacity;
-    _readInt(b, i, &size);
-    _readInt(b, i, &capacity);
-    int neg = readByte(b, i);
-    bigint_reserve(&a, capacity);
-    int nbytes = capacity * sizeof(bigint_word);
-    memcpy(a.words, &b->entries[*i], nbytes);
-    (*i) += nbytes;
-    a.size = size;
-    a.neg = neg;
-    return a;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -447,6 +393,8 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     ENTER(writeCexpIntCond);
     addByte(b, BYTECODE_INTCOND);
     int numCases = countCexpIntCondCases(x);
+    // fprintf(stderr, "writeCexpIntCond size %d\n", numCases);
+    // printCexpIntCondCases(x);
     numCases--; // don't count the default case
     if (numCases <= 0) {
         cant_happen("zero cases in writeCexpIntCond");
