@@ -20,7 +20,7 @@ I'm hoping that I can reproduce [the F♮ language I once implemented
 in Python](https://github.com/billhails/PyScheme), but as a standalone
 binary with reasonable performance.
 
-If you want to stick around, maybe start by reading [the math](docs/MATH.md)
+If you want to stick around, maybe start by reading [the wiki]([wiki](https://github.com/billhails/CEKF/wiki)), then maybe [the math](docs/MATH.md)
 and comparing that with its implementation in [`step.c`](src/step.c), or
 start at [`main.c`](src/main.c) where you can see it currently constructs
 some expressions manually, then gives them to the machine to evaluate.
