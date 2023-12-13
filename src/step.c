@@ -836,9 +836,14 @@ static void step() {
                 int here = state.C;
                 for (int c = 0; c < size; c++) {
                     printf(" ");
-                    BigInt *bigInt = readCurrentBigInt();
+                    if (bigint_flag) {
+                        BigInt *bigInt = readCurrentBigInt();
+                        fprintBigInt(stdout, bigInt);
+                    } else {
+                        int Int = readCurrentInt();
+                        printf("%d", Int);
+                    }
                     int offset = readCurrentOffset();
-                    fprintBigInt(stdout, bigInt);
                     printf(":[%04x]", offset);
                 }
                 printf("\n");

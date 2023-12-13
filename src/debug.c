@@ -911,10 +911,15 @@ void dumpByteCode(ByteCodeArray *b) {
                 int count = readWord(b, &i);
                 fprintf(stderr, "INTCOND [%d]", count);
                 while (count > 0) {
-                    bigint bi = readBigint(b, &i);
-                    fprintf(stderr, " ");
-                    bigint_fprint(stderr, &bi);
-                    bigint_free(&bi);
+                    if (bigint_flag) {
+                        bigint bi = readBigint(b, &i);
+                        fprintf(stderr, " ");
+                        bigint_fprint(stderr, &bi);
+                        bigint_free(&bi);
+                    } else {
+                        int li = readInt(b, &i);
+                        fprintf(stderr, " %d", li);
+                    }
                     int offset = readOffset(b, &i);
                     fprintf(stderr, ":[%04x]", offset);
                     count--;

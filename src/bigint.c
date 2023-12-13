@@ -1270,7 +1270,11 @@ void fprintBigInt(FILE *f, BigInt *x) {
         fprintf(f, "<null>");
         return;
     }
-    bigint_fprint(f, &x->bi);
+    if (bigint_flag) {
+        bigint_fprint(f, &x->bi);
+    } else {
+        fprintf(f, "%d", x->little);
+    }
 }
 
 void sprintBigInt(char *s, BigInt *x) {
@@ -1278,12 +1282,18 @@ void sprintBigInt(char *s, BigInt *x) {
         sprintf(s, "<null>");
         return;
     }
-    int size = bigint_write_size(&x->bi, 10);
-    bigint_write(s, size, &x->bi);
+    if (bigint_flag) {
+        int size = bigint_write_size(&x->bi, 10);
+        bigint_write(s, size, &x->bi);
+    } else {
+        sprintf(s, "%d", x->little);
+    }
 }
 
 int cmpBigInt(BigInt *a, BigInt *b) {
-    return bigint_cmp(&a->bi, &b->bi);
+    if (bigint_flag)
+        return bigint_cmp(&a->bi, &b->bi);
+    return a->little < b->little ? -1 : a->little == b->little ? 0 : 1;
 }
 
 static BigInt *_opBigInt(bigint_binop op, BigInt *a, BigInt *b) {
