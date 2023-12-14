@@ -34,6 +34,8 @@ static int bytesAllocated = 0;
 static int nextGC = 0;
 static bool gcEnabled = true;
 static int numAlloc = 0;
+static int maxMem = 0;
+static int numGc = 0;
 
 static void collectGarbage();
 
@@ -50,6 +52,10 @@ typedef struct ProtectionStack {
     Header *stack[0];
 } ProtectionStack;
 
+void reportMemory() {
+    printf("\ngc runs: %d, current memory: %d, max memory: %d\n",
+        numGc, bytesAllocated, maxMem);
+}
 
 static ProtectionStack *protected = NULL;
 
@@ -229,6 +235,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     bytesAllocated += newSize - oldSize;
     if (bytesAllocated < 0)
         cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]", bytesAllocated, newSize, oldSize, numAlloc);
+
+    if (bytesAllocated > maxMem) {
+        maxMem = bytesAllocated;
+    }
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
@@ -481,6 +491,7 @@ static void sweep() {
 
 static void collectGarbage() {
     if (!gcEnabled) return;
+    numGc++;
 #ifdef DEBUG_LOG_GC
     fprintf(stderr, "GC started\n");
 #endif

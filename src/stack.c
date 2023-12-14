@@ -41,10 +41,6 @@ void initStack(Stack *stack) {
     stack->stack = NULL;
 }
 
-static int succ(int i, int modulus) {
-    return i + 1;
-}
-
 int frameSize(Stack *s) {
     return s->sp;
 }
