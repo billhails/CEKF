@@ -1216,6 +1216,9 @@ double bigint_double(const bigint *src){
 
 // additional CEKF code
 
+// set true by main/getopts to enable bigint usage
+int bigint_flag = 0;
+
 BigInt *newBigInt(bigint bi) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
 #ifdef DEBUG_ALLOC

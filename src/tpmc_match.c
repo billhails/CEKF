@@ -549,8 +549,8 @@ void ppPattern(TpmcPattern *pattern) {
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             fprintf(stderr, "'%c'", pattern->pattern->val.character);
             break;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
-            fprintf(stderr, "%d", pattern->pattern->val.integer);
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+            fprintBigInt(stderr, pattern->pattern->val.biginteger);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
             TpmcConstructorPattern *c = pattern->pattern->val.constructor;

@@ -451,7 +451,7 @@ static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
 static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
     printf("instantiateFun ");
-    showTinFunctionApplication(tfa);
+    showTinFun(tfa);
     printf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);

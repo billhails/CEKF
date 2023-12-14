@@ -87,6 +87,8 @@ const char *typeName(ObjType type, void *p) {
             return "exp";
         case OBJTYPE_EXPLIST:
             return "explist";
+        case OBJTYPE_AEXPINTLIST:
+            return "aexpintlist";
         case OBJTYPE_LAM:
             return "lam";
         case OBJTYPE_LET:
@@ -131,6 +133,8 @@ const char *typeName(ObjType type, void *p) {
             return "wresult";
         case OBJTYPE_PROTECTION:
             return "protection";
+        case OBJTYPE_BIGINT:
+            return "bigint";
         TIN_OBJTYPE_CASES()
             return typenameTinObj(type);
         AST_OBJTYPE_CASES()

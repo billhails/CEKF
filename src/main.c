@@ -132,7 +132,6 @@ int main(int argc, char *argv[]) {
 
 #else
 
-int bigint_flag = 0;
 int report_mem_flag = 0;
 
 int main(int argc, char *argv[]) {
