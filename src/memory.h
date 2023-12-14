@@ -110,6 +110,8 @@ void initProtection(void);
 
 void validateLastAlloc();
 
+void reportMemory();
+
 #define EXIT_OOM 2
 
 #define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))

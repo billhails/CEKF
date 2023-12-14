@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 #else
 
 int bigint_flag = 0;
+int report_mem_flag = 0;
 
 int main(int argc, char *argv[]) {
     int c;
@@ -140,8 +141,8 @@ int main(int argc, char *argv[]) {
     while (1) {
         static struct option long_options[] =
         {
-          {"bigints", no_argument, &bigint_flag, 1},
-          {"smallints", no_argument, &bigint_flag, 0},
+          {"bigint", no_argument, &bigint_flag, 1},
+          {"report-memory", no_argument, &report_mem_flag, 1},
           {0, 0, 0, 0}
         };
         int option_index = 0;
@@ -194,6 +195,8 @@ int main(int argc, char *argv[]) {
     writeEnd(&byteCodes);
     printContainedValue(run(byteCodes), 1);
     printf("\n");
+    if (report_mem_flag)
+        reportMemory();
 }
 
 #endif

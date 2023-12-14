@@ -10,7 +10,6 @@
    * would be nice to be able to describe how types should print.
 * remove old `cons` from ANF and bytecodes.
 * numbers:
-   * arbitrary size integers
    * rationals: 1/3
    * irrationals: sqrt(2)
    * complex numbers
@@ -24,8 +23,6 @@
    * much better error reporting.
 * error recovery.
 * command-line arguments for libraries etc.
-   * verbose output for gc statistics at end of run etc.
 * fail on non-exhaustive pattern match (optional).
    * some sort of `//@-allow-non-exhaustive` inline directive?
 * error function
-* remove hard-coded assumptions about type sizes in bytecodes
