@@ -1,5 +1,3 @@
-#ifndef cekf_test_h
-#define cekf_test_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
-#include "memory.h"
-#include "ast.h"
-#include "parser_management.h"
+#include "test.h"
 
-#endif
+static void test_parse(char *filename) {
+    disableGC();
+    PmModule *mod = newPmToplevelFromFile(filename);
+    int save = PROTECT(mod);
+    pmParseModule(mod);
+    enableGC();
+    assert(mod->nest != NULL);
+    UNPROTECT(save);
+}
+
+
+int main(int argc, char *argv[]) {
+    initProtection();
+    test_parse("fn/barrels.fn");
+}
+

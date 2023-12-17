@@ -76,8 +76,8 @@ typedef enum {
 
     OBJTYPE_WRESULT,
     OBJTYPE_PROTECTION,
-    // bigint type
     OBJTYPE_BIGINT,
+    OBJTYPE_PMMODULE,
 
     AST_OBJTYPES(),
     TIN_OBJTYPES(),
@@ -125,8 +125,11 @@ void reportMemory();
 #define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
 #define FREE_VEC(vec) ((void)reallocate(vec, sizeof(vec) + vec->size * sizeof(Value), 0))
 
+// Allocation for directly managed objects
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
+// Allocation for indirectly managed objects
+#define ALLOCATE(type) ((type *)reallocate(NULL, 0, sizeof(type)))
 
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))

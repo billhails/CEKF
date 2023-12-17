@@ -1,5 +1,5 @@
-#ifndef cekf_parser_management_h
-#define cekf_parser_management_h
+#ifndef cekf_test_h
+#define cekf_test_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,14 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
+#include <assert.h>
+#include "memory.h"
 #include "ast.h"
-
-int pm_newFile(char *filename);
-int pm_popFile(void);
-AstNest *pm_parseFile(char *filename);
+#include "module.h"
+#include "algorithm_W.h"
+#include "tin_helper.h"
 
 #endif

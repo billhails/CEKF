@@ -29,6 +29,7 @@
 #include "step.h"
 #include "exp.h"
 #include "cekf.h"
+#include "module.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -135,6 +136,8 @@ const char *typeName(ObjType type, void *p) {
             return "protection";
         case OBJTYPE_BIGINT:
             return "bigint";
+        case OBJTYPE_PMMODULE:
+            return "pmmodule";
         TIN_OBJTYPE_CASES()
             return typenameTinObj(type);
         AST_OBJTYPE_CASES()
@@ -359,6 +362,9 @@ void markObj(Header *h, int i) {
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
             break;
+        case OBJTYPE_PMMODULE:
+            markPmModule(h);
+            break;
         TIN_OBJTYPE_CASES()
             markTinObj(h);
             break;
@@ -436,6 +442,9 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
+            break;
+        case OBJTYPE_PMMODULE:
+            freePmModule(h);
             break;
         TIN_OBJTYPE_CASES()
             freeTinObj(h);

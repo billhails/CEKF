@@ -1,25 +1,30 @@
 %{
-#include <stdlib.h> /* for atoi call */
-#include "ast.h"
 #include "parser.h"
-#include "parser_management.h"
-extern int lineNum;
+#include "module.h"
 
-void parseCS(char delimeter);
+void parseCS(char *text, char delimeter);
 %}
 
 %option nodefault
+%option debug
+%option reentrant
+%option bison-bridge
 %option noyywrap
+%option extra-type="struct PmModule *"
 
 ID [a-zA-Z_][a-zA-Z_0-9]*
 
 %%
 
+%{
+struct PmModule *mod = yyextra;
+%}
+
 [ \t]+ {}
-[\n] { lineNum++; }
+[\n] {}
 \/\/.* { }
 
--?[0-9]+ { yylval.s = yytext; return NUMBER; }
+-?[0-9]+ { yylval->s = yytext; return NUMBER; }
 
 "and"       { return AND; }
 "as"        { return AS; }
@@ -44,8 +49,8 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "then"      { return THEN; }
 "typedef"   { return TYPEDEF; }
 
-\"((\\.)|[^"])*\" { parseCS('"'); yylval.s = yytext; return STRING; }
-\'((\\.)|[^'])\'  { parseCS('\''); yylval.c = *yytext; return CHAR; }
+\"((\\.)|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
+\'((\\.)|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }
 
 "->" { return ARROW; }
 "==" { return EQ; }
@@ -58,17 +63,18 @@ ID [a-zA-Z_][a-zA-Z_0-9]*
 "@"  { return CONS; }
 "@@" { return APPEND; }
 
-{ID}  { yylval.s = yytext; return VAR; }
-#{ID} { yylval.s = yytext; return TYPE_VAR; }
+{ID}  { yylval->s = yytext; return VAR; }
+#{ID} { yylval->s = yytext; return TYPE_VAR; }
+
+<<EOF>> { if (!popPmFile(mod)) yyterminate(); }
 
 . { return yytext[0]; }
 
-<<EOF>> { if (!pm_popFile()) yyterminate(); }
 %%
 
-void parseCS(char delimiter) {
-    char *lead = yytext;
-    char *follow = yytext;
+void parseCS(char *text, char delimiter) {
+    char *lead = text;
+    char *follow = text;
     while (*lead != '\0') {
         if (*lead == delimiter) {
             lead++;

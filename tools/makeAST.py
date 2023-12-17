@@ -120,7 +120,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in mark{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);')
         print('    }')
         print('}')
 
@@ -130,7 +130,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printFreeObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in free{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);')
         print('    }')
         print('}')
 
@@ -140,7 +140,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in typename{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in typename{self.typeName.capitalize()}Obj\\n", type);')
         print('    }')
         print('}')
 

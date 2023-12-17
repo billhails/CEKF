@@ -604,7 +604,7 @@ void markTpmcObj(struct Header *h) {
             markTpmcMatrix((TpmcMatrix *)h);
             break;
         default:
-            cant_happen("unrecognized type in markTpmcObj\n");
+            cant_happen("unrecognised type %d in markTpmcObj\n", h->type);
     }
 }
 
@@ -768,7 +768,7 @@ void freeTpmcObj(struct Header *h) {
             freeTpmcMatrix((TpmcMatrix *)h);
             break;
         default:
-            cant_happen("unrecognized type in freeTpmcObj\n");
+            cant_happen("unrecognised type %d in freeTpmcObj\n", h->type);
     }
 }
 
@@ -817,7 +817,7 @@ char *typenameTpmcObj(int type) {
         case OBJTYPE_TPMCMATRIX:
             return "TpmcMatrix";
         default:
-            cant_happen("unrecognized type in typenameTpmcObj\n");
+            cant_happen("unrecognised type %d in typenameTpmcObj\n", type);
     }
 }
 

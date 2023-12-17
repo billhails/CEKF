@@ -264,7 +264,7 @@ void markTinObj(struct Header *h) {
             markTinPolyType((TinPolyType *)h);
             break;
         default:
-            cant_happen("unrecognized type in markTinObj\n");
+            cant_happen("unrecognised type %d in markTinObj\n", h->type);
     }
 }
 
@@ -344,7 +344,7 @@ void freeTinObj(struct Header *h) {
             freeTinPolyType((TinPolyType *)h);
             break;
         default:
-            cant_happen("unrecognized type in freeTinObj\n");
+            cant_happen("unrecognised type %d in freeTinObj\n", h->type);
     }
 }
 
@@ -371,7 +371,7 @@ char *typenameTinObj(int type) {
         case OBJTYPE_TINPOLYTYPE:
             return "TinPolyType";
         default:
-            cant_happen("unrecognized type in typenameTinObj\n");
+            cant_happen("unrecognised type %d in typenameTinObj\n", type);
     }
 }
 

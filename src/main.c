@@ -26,7 +26,8 @@
 #include "debug_tin.h"
 #include "debug_lambda.h"
 #include "lambda_conversion.h"
-#include "parser_management.h"
+#include "module.h"
+// #include "parser.h"
 #include "analysis.h"
 #include "exp.h"
 #include "memory.h"
@@ -167,16 +168,18 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "need filename\n");
         exit(1);
     }
-    AstNest *result = pm_parseFile(argv[optind]);
-    PROTECT(result);
+    PmModule *mod = newPmToplevelFromFile(argv[optind]);
+    PROTECT(mod);
+    pmParseModule(mod);
     enableGC();
-    WResult *wr = WTop(result);
+    // printAstNest(mod->nest, 0);
+    WResult *wr = WTop(mod->nest);
     validateLastAlloc();
     if (hadErrors()) {
         printf("(errors detected)\n");
         exit(1);
     }
-    LamExp *exp = lamConvertNest(result, NULL);
+    LamExp *exp = lamConvertNest(mod->nest, NULL);
     int save = PROTECT(exp);
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);

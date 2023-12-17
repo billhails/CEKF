@@ -752,7 +752,7 @@ void markAstObj(struct Header *h) {
             markAstExpression((AstExpression *)h);
             break;
         default:
-            cant_happen("unrecognized type in markAstObj\n");
+            cant_happen("unrecognised type %d in markAstObj\n", h->type);
     }
 }
 
@@ -979,7 +979,7 @@ void freeAstObj(struct Header *h) {
             freeAstExpression((AstExpression *)h);
             break;
         default:
-            cant_happen("unrecognized type in freeAstObj\n");
+            cant_happen("unrecognised type %d in freeAstObj\n", h->type);
     }
 }
 
@@ -1048,7 +1048,7 @@ char *typenameAstObj(int type) {
         case OBJTYPE_ASTEXPRESSION:
             return "AstExpression";
         default:
-            cant_happen("unrecognized type in typenameAstObj\n");
+            cant_happen("unrecognised type %d in typenameAstObj\n", type);
     }
 }
 

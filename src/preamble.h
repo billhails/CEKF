@@ -16,18 +16,5 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "test.h"
-
-static void test_parse(char *filename) {
-    disableGC();
-    AstNest *result = pm_parseFile(filename);
-    PROTECT(result);
-    assert(result != NULL);
-    enableGC();
-}
-
-
-int main(int argc, char *argv[]) {
-    test_parse("fn/barrels.fn");
-}
-
+extern const char *preamble;
+extern const char *postamble;

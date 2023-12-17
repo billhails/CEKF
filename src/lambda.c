@@ -641,7 +641,7 @@ void markLambdaObj(struct Header *h) {
             markLamCondCases((LamCondCases *)h);
             break;
         default:
-            cant_happen("unrecognized type in markLambdaObj\n");
+            cant_happen("unrecognised type %d in markLambdaObj\n", h->type);
     }
 }
 
@@ -826,7 +826,7 @@ void freeLambdaObj(struct Header *h) {
             freeLamCondCases((LamCondCases *)h);
             break;
         default:
-            cant_happen("unrecognized type in freeLambdaObj\n");
+            cant_happen("unrecognised type %d in freeLambdaObj\n", h->type);
     }
 }
 
@@ -883,7 +883,7 @@ char *typenameLambdaObj(int type) {
         case OBJTYPE_LAMCONDCASES:
             return "LamCondCases";
         default:
-            cant_happen("unrecognized type in typenameLambdaObj\n");
+            cant_happen("unrecognised type %d in typenameLambdaObj\n", type);
     }
 }
 
