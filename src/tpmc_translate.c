@@ -156,7 +156,7 @@ static LamExp *translateComparisonArcToTest(TpmcArc *arc) {
     LamExp *b = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->current->path));
     DEBUG("[newLamExp]");
     PROTECT(b);
-    LamPrimApp *eq = newLamPrimApp(LAMPRIMOP_TYPE_LAM_PRIM_EQ, a, b);
+    LamPrimApp *eq = newLamPrimApp(LAMPRIMOP_TYPE_EQ, a, b);
     PROTECT(eq);
     LamExp *res = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(eq));
     DEBUG("[newLamExp]");
@@ -185,7 +185,7 @@ static LamExp *prependLetBindings(TpmcPattern *test, HashTable *freeVariables, L
             LamExp *base = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
             DEBUG("[newLamExp]");
             PROTECT(base);
-            LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_LAM_PRIM_VEC, index, base);
+            LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, base);
             PROTECT(vec);
             LamExp *vecExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
             DEBUG("[newLamExp]");
@@ -380,13 +380,12 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
             PROTECT(matches);
             LamExp *testExp = NULL;
             if (info->vec) {
+                // zero is the index of the enum tag in the vector
                 LamExp *zero = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
-                DEBUG("[newLamExp]");
                 PROTECT(zero);
-                LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_LAM_PRIM_VEC, zero, testVar);
+                LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, zero, testVar);
                 PROTECT(vec);
                 testExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
-                DEBUG("[newLamExp]");
                 PROTECT(testExp);
             } else {
                 testExp = testVar;
@@ -394,7 +393,6 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
             LamMatch *match = newLamMatch(testExp, matches);
             PROTECT(match);
             res = newLamExp(LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
-            DEBUG("[newLamExp]");
             UNPROTECT(save);
             break;
         }

@@ -53,8 +53,12 @@
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
 #define SAFETY_CHECKS
 
-void cant_happen(const char *message, ...);
-void can_happen(const char *message, ...);
-bool hadErrors();
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+void cant_happen(const char *message, ...) __attribute__((noreturn, format(printf, 1, 2)));
+void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
+bool hadErrors(void);
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 #endif

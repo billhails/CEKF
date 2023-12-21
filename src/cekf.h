@@ -31,7 +31,7 @@
 #include "memory.h"
 #include "value.h"
 
-typedef int Control;
+typedef size_t Control;
 
 typedef struct Stack {
     int capacity;
@@ -145,8 +145,8 @@ void markCons(Cons *x);
 void markVec(Vec *x);
 
 #ifdef TEST_STACK
-void testStack();
-void markTestStack();
+void testStack(void);
+void markTestStack(void);
 #endif
 
 #endif

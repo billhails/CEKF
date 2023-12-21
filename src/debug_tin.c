@@ -24,154 +24,154 @@
 
 #include "debug_tin.h"
 
-static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
+static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
 
 void printTinFunctionApplication(struct TinFunctionApplication * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinFunctionApplication (NULL)"); return; }
-    fprintf(stderr, "TinFunctionApplication[\n");
+    if (x == NULL) { eprintf("TinFunctionApplication (NULL)"); return; }
+    eprintf("TinFunctionApplication[\n");
         printTinSymbol(x->name, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         pad(depth + 1);
-fprintf(stderr, "int %d", x->nargs);
-    fprintf(stderr, "\n");
+eprintf("int %d", x->nargs);
+    eprintf("\n");
     printTinMonoTypeList(x->args, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinMonoTypeList(struct TinMonoTypeList * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinMonoTypeList (NULL)"); return; }
-    fprintf(stderr, "TinMonoTypeList[\n");
+    if (x == NULL) { eprintf("TinMonoTypeList (NULL)"); return; }
+    eprintf("TinMonoTypeList[\n");
     printTinMonoType(x->monoType, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinMonoTypeList(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinTypeQuantifier(struct TinTypeQuantifier * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinTypeQuantifier (NULL)"); return; }
-    fprintf(stderr, "TinTypeQuantifier[\n");
+    if (x == NULL) { eprintf("TinTypeQuantifier (NULL)"); return; }
+    eprintf("TinTypeQuantifier[\n");
         printTinSymbol(x->var, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinPolyType(x->quantifiedType, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinContext(struct TinContext * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinContext (NULL)"); return; }
-    fprintf(stderr, "TinContext[\n");
+    if (x == NULL) { eprintf("TinContext (NULL)"); return; }
+    eprintf("TinContext[\n");
         printHashTable(x->varFrame, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printHashTable(x->tcFrame, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinContext(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinSubstitution(struct TinSubstitution * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinSubstitution (NULL)"); return; }
-    fprintf(stderr, "TinSubstitution[\n");
+    if (x == NULL) { eprintf("TinSubstitution (NULL)"); return; }
+    eprintf("TinSubstitution[\n");
         printHashTable(x->map, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinArgsResult(struct TinArgsResult * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinArgsResult (NULL)"); return; }
-    fprintf(stderr, "TinArgsResult[\n");
+    if (x == NULL) { eprintf("TinArgsResult (NULL)"); return; }
+    eprintf("TinArgsResult[\n");
     printTinContext(x->context, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinMonoTypeList(x->vec, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinVarResult(struct TinVarResult * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinVarResult (NULL)"); return; }
-    fprintf(stderr, "TinVarResult[\n");
+    if (x == NULL) { eprintf("TinVarResult (NULL)"); return; }
+    eprintf("TinVarResult[\n");
     printTinSubstitution(x->substitution, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinContext(x->context, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTinMonoType(x->monoType, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printHashTable(x->set, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinVarsResult(struct TinVarsResult * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinVarsResult (NULL)"); return; }
-    fprintf(stderr, "TinVarsResult[\n");
+    if (x == NULL) { eprintf("TinVarsResult (NULL)"); return; }
+    eprintf("TinVarsResult[\n");
     printTinContext(x->context, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printHashTable(x->set, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinMonoType(struct TinMonoType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinMonoType (NULL)"); return; }
-    fprintf(stderr, "TinMonoType[\n");
+    if (x == NULL) { eprintf("TinMonoType (NULL)"); return; }
+    eprintf("TinMonoType[\n");
     switch(x->type) {
         case TINMONOTYPE_TYPE_VAR:
             pad(depth + 1);
-            fprintf(stderr, "TINMONOTYPE_TYPE_VAR\n");
+            eprintf("TINMONOTYPE_TYPE_VAR\n");
                         printTinSymbol(x->val.var, depth + 1);
             break;
         case TINMONOTYPE_TYPE_FUN:
             pad(depth + 1);
-            fprintf(stderr, "TINMONOTYPE_TYPE_FUN\n");
+            eprintf("TINMONOTYPE_TYPE_FUN\n");
             printTinFunctionApplication(x->val.fun, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printTinMonoType", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTinPolyType(struct TinPolyType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TinPolyType (NULL)"); return; }
-    fprintf(stderr, "TinPolyType[\n");
+    if (x == NULL) { eprintf("TinPolyType (NULL)"); return; }
+    eprintf("TinPolyType[\n");
     switch(x->type) {
         case TINPOLYTYPE_TYPE_MONOTYPE:
             pad(depth + 1);
-            fprintf(stderr, "TINPOLYTYPE_TYPE_MONOTYPE\n");
+            eprintf("TINPOLYTYPE_TYPE_MONOTYPE\n");
             printTinMonoType(x->val.monoType, depth + 1);
             break;
         case TINPOLYTYPE_TYPE_QUANTIFIER:
             pad(depth + 1);
-            fprintf(stderr, "TINPOLYTYPE_TYPE_QUANTIFIER\n");
+            eprintf("TINPOLYTYPE_TYPE_QUANTIFIER\n");
             printTinTypeQuantifier(x->val.quantifier, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printTinPolyType", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 

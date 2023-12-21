@@ -271,7 +271,7 @@ class EnumField:
         pad(depth + 1)
         print('pad(depth + 1);')
         pad(depth + 1)
-        print(f'fprintf(stderr, "{typeName}");')
+        print(f'eprintf("{typeName}");')
         pad(depth + 1)
         print('break;')
 
@@ -427,6 +427,8 @@ class SimpleArray(Base):
         args = []
         for field in self.getNewArgs():
             args += [field.getSignature(catalog)]
+        if len(args) == 0:
+            args += ['void']
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
     def printNewFunction(self, catalog):
@@ -437,7 +439,7 @@ class SimpleArray(Base):
         print(f"    {myType} x = NEW({myName}, {myObjType});")
         print("    int save = PROTECT(x);")
         print("#ifdef DEBUG_ALLOC");
-        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
+        print(f'    eprintf("new {myName} %p\\n", x);')
         print("#endif");
         print("    x->entries = NULL;")
         if self.tagged:
@@ -514,16 +516,16 @@ class SimpleArray(Base):
         myName = self.getName()
         print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
-        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
         if self.tagged:
-            print('    fprintf(stderr, "<<%s>>", x->_tag);')
+            print('    eprintf("<<%s>>", x->_tag);')
         if self.dimension == 1:
-            print(f'    fprintf(stderr, "{myName}(%d)[\\n", x->size);')
+            print(f'    eprintf("{myName}(%d)[\\n", x->size);')
         else:
-            print(f'    fprintf(stderr, "{myName}(%d * %d)[\\n", x->width, x->height);')
+            print(f'    eprintf("{myName}(%d * %d)[\\n", x->width, x->height);')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
-        print('    fprintf(stderr, "]");')
+        print('    eprintf("]");')
         print("}\n")
 
     def printPrintFunctionBody(self, catalog):
@@ -535,19 +537,19 @@ class SimpleArray(Base):
     def print1dPrintFunctionBody(self, catalog):
         print("    for (int i = 0; i < x->size; i++) {")
         self.entries.printPrintArrayLine(catalog, "i", 2)
-        print('        fprintf(stderr, "\\n");')
+        print('        eprintf("\\n");')
         print("    }")
 
     def print2dPrintFunctionBody(self, catalog):
         print("    for (int i = 0; i < x->height; i++) {")
         print("        pad(depth);")
-        print('        fprintf(stderr, "[\\n");')
+        print('        eprintf("[\\n");')
         print("        for (int j = 0; j < x->width; j++) {")
         self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
-        print('            fprintf(stderr, "\\n");')
+        print('            eprintf("\\n");')
         print("        }")
         print("        pad(depth);")
-        print('        fprintf(stderr, "]\\n");')
+        print('        eprintf("]\\n");')
         print("    }")
 
     def printFreeObjCase(self, catalog):
@@ -633,6 +635,8 @@ class SimpleStruct(Base):
         args = []
         for field in self.getNewArgs():
             args += [field.getSignature(catalog)]
+        if len(args) == 0:
+            args += ['void']
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
     def printNewDeclaration(self, catalog):
@@ -654,7 +658,7 @@ class SimpleStruct(Base):
         myName = self.getName()
         print("    {myType} x = NEW({myName}, {myObjType});".format(myType=myType, myName=myName, myObjType=myObjType))
         print("#ifdef DEBUG_ALLOC");
-        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
+        print(f'    eprintf("new {myName} %p\\n", x);')
         print("#endif");
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
@@ -670,7 +674,7 @@ class SimpleStruct(Base):
     def printPrintFunctionBody(self, catalog):
         for field in self.fields:
             field.printPrintLine(catalog, 1)
-            print('    fprintf(stderr, "\\n");')
+            print('    eprintf("\\n");')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
@@ -720,11 +724,11 @@ class SimpleStruct(Base):
         myName = self.getName()
         print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
-        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
-        print(f'    fprintf(stderr, "{myName}[\\n");')
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
+        print(f'    eprintf("{myName}[\\n");')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
-        print('    fprintf(stderr, "]");')
+        print('    eprintf("]");')
         print("}\n")
 
     def getDefineValue(self):
@@ -797,7 +801,7 @@ class DiscriminatedUnionField(EnumField):
         typeName = self.makeTypeName()
         print(f"        case {typeName}:")
         print(f'            pad(depth + 1);')
-        print(f'            fprintf(stderr, "{typeName}\\n");')
+        print(f'            eprintf("{typeName}\\n");')
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, 3, 'val.')
         print("            break;")
@@ -852,7 +856,7 @@ class DiscriminatedUnion(SimpleStruct):
         print("        default:")
         print('            cant_happen("unrecognised type %d in print{myName}", x->type);'.format(myName=self.getName()))
         print("    }")
-        print('    fprintf(stderr, "\\n");')
+        print('    eprintf("\\n");')
 
 
 class DiscriminatedUnionUnion(Base):
@@ -985,7 +989,7 @@ class Primitive(Base):
         pad(depth)
         if self.printFn == 'printf':
             print('pad(depth + 1);')
-            print(f'fprintf(stderr, "{self.cname} {self.printf}", x->{prefix}{field});')
+            print(f'eprintf("{self.cname} {self.printf}", x->{prefix}{field});')
         else:
             print(f'{self.printFn}(x->{prefix}{field}, depth + 1);')
 
@@ -1170,6 +1174,6 @@ elif args.type == 'debug_c':
     for include in limited_includes:
         print(f'#include "{include}"')
     print("")
-    print('static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }')
+    print('static void pad(int depth) { eprintf("%*s", depth * 4, ""); }')
     print("")
     catalog.printPrintFunctions()

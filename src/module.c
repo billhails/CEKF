@@ -34,6 +34,7 @@ static PmModule *newPmModule() {
     x->bufStack = NULL;
     x->nest = NULL;
     x->scanner = scanner;
+    return x;
 }
 
 static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {
@@ -120,6 +121,7 @@ static void freePmBufStack(PmModule *mod, PmBufStack *x) {
 }
 
 void freePmModule(Header *h) {
+    if (h == NULL) return;
     PmModule *mod = (PmModule *)h;
 	freePmBufStack(mod, mod->bufStack);
     yylex_destroy(mod->scanner);

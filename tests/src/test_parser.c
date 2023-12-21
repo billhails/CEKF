@@ -29,7 +29,7 @@ static void test_parse(char *filename) {
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
     test_parse("fn/barrels.fn");
 }

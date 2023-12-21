@@ -35,18 +35,18 @@ static void printCons(Cons *x);
 static void printVec(Vec *x);
 
 static void printPad(int depth) {
-    fprintf(stderr, "%*s", depth * 4, "");
+    eprintf("%*s", depth * 4, "");
 }
 
 void printContainedValue(Value x, int depth) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
             printPad(depth);
-            fprintf(stderr, "#V");
+            eprintf("#V");
             break;
         case VALUE_TYPE_STDINT:
             printPad(depth);
-            fprintf(stderr, "%d", x.val.z);
+            eprintf("%d", x.val.z);
             break;
         case VALUE_TYPE_BIGINT:
             printPad(depth);
@@ -54,7 +54,7 @@ void printContainedValue(Value x, int depth) {
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
-            fprintf(stderr, "'%c'", x.val.c);
+            eprintf("'%c'", x.val.c);
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo, depth);
@@ -78,89 +78,89 @@ void printContainedValue(Value x, int depth) {
 static void printSnapshot(Snapshot s, int depth) {
     printPad(depth);
     if (s.frameSize == 0) {
-        fprintf(stderr, "S/");
+        eprintf("S/");
         return;
     }
-    fprintf(stderr, "SS[\n");
+    eprintf("SS[\n");
     for (int i = 0; i < s.frameSize; i++) {
         printContainedValue(s.frame[i], depth + 1);
         if (i < s.frameSize - 1) {
-            fprintf(stderr, ",");
+            eprintf(",");
         }
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 static void printElidedSnapshot(Snapshot s) {
     if (s.frameSize == 0) {
-        fprintf(stderr, "S/");
+        eprintf("S/");
         return;
     }
-    fprintf(stderr, "S[<...>]");
+    eprintf("S[<...>]");
 }
 
 void printValue(Value x, int depth) {
     printPad(depth);
     if (x.type == VALUE_TYPE_VOID) {
-        fprintf(stderr, "V/");
+        eprintf("V/");
         return;
     }
-    fprintf(stderr, "V[\n");
+    eprintf("V[\n");
     printContainedValue(x, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printElidedClo(Clo *x) {
-    fprintf(stderr, "C[%d, %d, E[<...>], ", x->nvar, x->c);
-    fprintf(stderr, "]");
+    eprintf("C[%d, %04lx, E[<...>], ", x->nvar, x->c);
+    eprintf("]");
 }
 
 void printElidedKont(Kont *x) {
     if (x == NULL) {
-        fprintf(stderr, "K/");
+        eprintf("K/");
         return;
     }
-    fprintf(stderr, "K[");
-    fprintf(stderr, "%d, E[<...>], ", x->body);
+    eprintf("K[");
+    eprintf("%04lx, E[<...>], ", x->body);
     printElidedSnapshot(x->snapshot);
     printElidedKont(x->next);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printCons(Cons *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     printContainedValue(x->car, 0);
-    fprintf(stderr, " . ");
+    eprintf(" . ");
     printContainedValue(x->cdr, 0);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printVec(Vec *x) {
-    fprintf(stderr, "#[");
+    eprintf("#[");
     for (int i = 0; i < x->size; i++) {
         printContainedValue(x->values[i], 0);
         if (i + 1 < x->size) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
     }
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printElidedValue(Value x) {
-    fprintf(stderr, "V[");
+    eprintf("V[");
     switch (x.type) {
         case VALUE_TYPE_VOID:
-            fprintf(stderr, "#V");
+            eprintf("#V");
             break;
         case VALUE_TYPE_STDINT:
-            fprintf(stderr, "%d", x.val.z);
+            eprintf("%d", x.val.z);
             break;
         case VALUE_TYPE_CHARACTER:
-            fprintf(stderr, "'%c'", x.val.c);
+            eprintf("'%c'", x.val.c);
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);
@@ -177,362 +177,362 @@ void printElidedValue(Value x) {
         default:
             cant_happen("unrecognised value type in printElidedValue");
     }
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 static void printClo(Clo *x, int depth) {
     printPad(depth);
-    fprintf(stderr, "C[%d, %d, ", x->nvar, x->c);
+    eprintf("C[%d, %04lx, ", x->nvar, x->c);
     printElidedEnv(x->rho);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printCEKF(CEKF *x) {
     int depth = 1;
-    fprintf(stderr, "\nCEKF (\n");
+    eprintf("\nCEKF (\n");
     printPad(depth);
-    fprintf(stderr, "%d", x->C);
-    fprintf(stderr, ",\n");
+    eprintf("%04lx", x->C);
+    eprintf(",\n");
     printEnv(x->E, depth);
-    fprintf(stderr, ",\n");
+    eprintf(",\n");
     printKont(x->K, depth);
-    fprintf(stderr, ",\n");
+    eprintf(",\n");
     printFail(x->F, depth);
-    fprintf(stderr, ",\n");
+    eprintf(",\n");
     printValue(x->V, depth);
-    fprintf(stderr, ",\n");
+    eprintf(",\n");
     printStack(&x->S, depth);
-    fprintf(stderr, "\n)\n\n");
+    eprintf("\n)\n\n");
 }
 
 static void printStack(Stack *x, int depth) {
     printPad(depth);
     if (x == NULL || x->sp ==0) {
-        fprintf(stderr, "S/");
+        eprintf("S/");
         return;
     }
-    fprintf(stderr, "S[\n");
+    eprintf("S[\n");
     for (int i = 0; i < x->sp; ++i) {
         printContainedValue(peekValue(x, i), depth + 1);
         if (i < x->sp - 1) {
-            fprintf(stderr, ",");
+            eprintf(",");
         }
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 static void printValues(Value *values, int count, int depth) {
     printPad(depth);
-    fprintf(stderr, "{\n");
+    eprintf("{\n");
     for (int i = 0; i < count; ++i) {
         printValue(values[i], depth + 1);
         if (i + 1 < count) {
-            fprintf(stderr, ",");
+            eprintf(",");
         }
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     printPad(depth);
-    fprintf(stderr, "}");
+    eprintf("}");
 }
 
 void printElidedValues(Value *values, int count) {
-    fprintf(stderr, "{");
+    eprintf("{");
     for (int i = 0; i < count; ++i) {
         printElidedValue(values[i]);
         if (i + 1 < count) {
-            fprintf(stderr, ", ");
+            eprintf(", ");
         }
     }
-    fprintf(stderr, "}");
+    eprintf("}");
 }
 
 void printEnv(Env *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        fprintf(stderr, "E/");
+        eprintf("E/");
         return;
     }
-    fprintf(stderr, "E[\n");
+    eprintf("E[\n");
     while (x != NULL) {
         printValues(x->values, x->count, depth + 1);
-        if (x->next != NULL) fprintf(stderr, ",");
-        fprintf(stderr, "\n");
+        if (x->next != NULL) eprintf(",");
+        eprintf("\n");
         x = x->next;
     }
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printCTEnv(CTEnv *x) {
-    fprintf(stderr, "CTEnv[");
+    eprintf("CTEnv[");
     while (x != NULL) {
         printHashTable(x->table, 0);
-        if (x->next != NULL) fprintf(stderr, ", ");
+        if (x->next != NULL) eprintf(", ");
         x = x->next;
     }
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printElidedEnv(Env *x) {
     if (x == NULL) {
-        fprintf(stderr, "E/");
+        eprintf("E/");
         return;
     }
-    fprintf(stderr, "E[");
+    eprintf("E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
-        if (x->next != NULL) fprintf(stderr, ", ");
+        if (x->next != NULL) eprintf(", ");
         x = x->next;
     }
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 static void printKont(Kont *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        fprintf(stderr, "K/");
+        eprintf("K/");
         return;
     }
-    fprintf(stderr, "K[\n");
+    eprintf("K[\n");
     if (x != NULL) {
         printPad(depth + 1);
-        fprintf(stderr, "%d,\n", x->body);
+        eprintf("%04lx,\n", x->body);
         printEnv(x->rho, depth + 1);
-        fprintf(stderr, ",\n");
+        eprintf(",\n");
         printSnapshot(x->snapshot, depth + 1);
-        fprintf(stderr, ",\n");
+        eprintf(",\n");
         printKont(x->next, depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 static void printFail(Fail *x, int depth) {
     printPad(depth);
     if (x == NULL) {
-        fprintf(stderr, "F/");
+        eprintf("F/");
         return;
     }
-    fprintf(stderr, "F[\n");
+    eprintf("F[\n");
     if (x != NULL) {
         printPad(depth + 1);
-        fprintf(stderr, "%d", x->exp);
-        fprintf(stderr, ",\n");
+        eprintf("%04lx", x->exp);
+        eprintf(",\n");
         printEnv(x->rho, depth + 1);
-        fprintf(stderr, ",\n");
+        eprintf(",\n");
         printSnapshot(x->snapshot, depth + 1);
-        fprintf(stderr, ",\n");
+        eprintf(",\n");
         printKont(x->k, depth + 1);
-        fprintf(stderr, ",\n");
+        eprintf(",\n");
         printFail(x->next, depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     printPad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAexpLam(AexpLam *x) {
-    fprintf(stderr, "(lambda ");
+    eprintf("(lambda ");
     printAexpVarList(x->args);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->exp);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexpVarList(AexpVarList *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     while (x != NULL) {
         printAexpVar(x->var);
         if (x->next != NULL) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexpVar(HashSymbol *x) {
-    fprintf(stderr, "%s", x->name);
+    eprintf("%s", x->name);
 }
 
 void printAexpAnnotatedVar(AexpAnnotatedVar *x) {
     printAexpVar(x->var);
     if (x->type == VAR_TYPE_STACK)
-        fprintf(stderr, ":%d", x->offset);
+        eprintf(":%d", x->offset);
     else
-        fprintf(stderr, ":%d:%d", x->frame, x->offset);
+        eprintf(":%d:%d", x->frame, x->offset);
 }
 
 void printAexpPrimApp(AexpPrimApp *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     switch(x->op) {
         case AEXP_PRIM_ADD:
-            fprintf(stderr, "add ");
+            eprintf("add ");
             break;
         case AEXP_PRIM_SUB:
-            fprintf(stderr, "sub ");
+            eprintf("sub ");
             break;
         case AEXP_PRIM_MUL:
-            fprintf(stderr, "mul ");
+            eprintf("mul ");
             break;
         case AEXP_PRIM_DIV:
-            fprintf(stderr, "div ");
+            eprintf("div ");
             break;
         case AEXP_PRIM_EQ:
-            fprintf(stderr, "eq ");
+            eprintf("eq ");
             break;
         case AEXP_PRIM_NE:
-            fprintf(stderr, "ne ");
+            eprintf("ne ");
             break;
         case AEXP_PRIM_GT:
-            fprintf(stderr, "gt ");
+            eprintf("gt ");
             break;
         case AEXP_PRIM_LT:
-            fprintf(stderr, "lt ");
+            eprintf("lt ");
             break;
         case AEXP_PRIM_GE:
-            fprintf(stderr, "ge ");
+            eprintf("ge ");
             break;
         case AEXP_PRIM_LE:
-            fprintf(stderr, "le ");
+            eprintf("le ");
             break;
         case AEXP_PRIM_XOR:
-            fprintf(stderr, "xor ");
+            eprintf("xor ");
             break;
         case AEXP_PRIM_CONS:
-            fprintf(stderr, "cons ");
+            eprintf("cons ");
             break;
         case AEXP_PRIM_VEC:
-            fprintf(stderr, "vec ");
+            eprintf("vec ");
             break;
         case AEXP_PRIM_MOD:
-            fprintf(stderr, "mod ");
+            eprintf("mod ");
             break;
         default:
             cant_happen("unrecognized op in printAexpPrimApp (%d)", x->op);
     }
     printAexp(x->exp1);
     if (x->exp2 != NULL) {
-        fprintf(stderr, " ");
+        eprintf(" ");
         printAexp(x->exp2);
     }
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexpUnaryApp(AexpUnaryApp *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     switch(x->op) {
         case AEXP_UNARY_CAR:
-            fprintf(stderr, "car ");
+            eprintf("car ");
             break;
         case AEXP_UNARY_CDR:
-            fprintf(stderr, "cdr ");
+            eprintf("cdr ");
             break;
         case AEXP_UNARY_NOT:
-            fprintf(stderr, "not ");
+            eprintf("not ");
             break;
         case AEXP_UNARY_PRINT:
-            fprintf(stderr, "print ");
+            eprintf("print ");
             break;
         default:
             cant_happen("unrecognized op in printAexpUnaryApp (%d)", x->op);
     }
     printAexp(x->exp);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 static void printAexpListContents(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
 }
 
 void printAexpList(AexpList *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     printAexpListContents(x);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 static void printAexpIntListContents(AexpIntList *x) {
     while (x != NULL) {
-        fprintf(stderr, "%d", x->integer);
+        eprintf("%d", x->integer);
         if (x->next) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
 }
 
 void printAexpIntList(AexpIntList *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     printAexpIntListContents(x);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexpMakeList(AexpList *x) {
-    fprintf(stderr, "(list ");
+    eprintf("(list ");
     printAexpListContents(x);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexpMakeVec(AexpMakeVec *x) {
-    fprintf(stderr, "(make-vec ");
+    eprintf("(make-vec ");
     printAexpListContents(x->args);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printBareAexpList(AexpList *x) {
     while (x != NULL) {
         printAexp(x->exp);
         if (x->next) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
 }
 
 void printCexpApply(CexpApply *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     printAexp(x->function);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printBareAexpList(x->args);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpIf(CexpIf *x) {
-    fprintf(stderr, "(if ");
+    eprintf("(if ");
     printAexp(x->condition);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->consequent);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->alternative);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpCond(CexpCond *x) {
-    fprintf(stderr, "(cond ");
+    eprintf("(cond ");
     printAexp(x->condition);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printCexpCondCases(x->cases);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpIntCondCases(CexpIntCondCases *x) {
     while (x != NULL) {
-        fprintf(stderr, "(");
+        eprintf("(");
         fprintBigInt(stderr, x->option);
-        fprintf(stderr, " ");
+        eprintf(" ");
         printExp(x->body);
-        fprintf(stderr, ")");
+        eprintf(")");
         if (x->next) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
@@ -540,11 +540,11 @@ void printCexpIntCondCases(CexpIntCondCases *x) {
 
 void printCexpCharCondCases(CexpCharCondCases *x) {
     while (x != NULL) {
-        fprintf(stderr, "('%c' ", x->option);
+        eprintf("('%c' ", x->option);
         printExp(x->body);
-        fprintf(stderr, ")");
+        eprintf(")");
         if (x->next) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
@@ -564,81 +564,81 @@ void printCexpCondCases(CexpCondCases *x) {
 }
 
 void printCexpLetRec(CexpLetRec *x) {
-    fprintf(stderr, "(letrec ");
+    eprintf("(letrec ");
     printLetRecBindings(x->bindings);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->body);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printLetRecBindings(LetRecBindings *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     while (x != NULL) {
-        fprintf(stderr, "(");
+        eprintf("(");
         printAexpVar(x->var);
-        fprintf(stderr, " ");
+        eprintf(" ");
         printAexp(x->val);
-        fprintf(stderr, ")");
+        eprintf(")");
         if (x->next != NULL) {
-            fprintf(stderr, " ");
+            eprintf(" ");
         }
         x = x->next;
     }
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpAmb(CexpAmb *x) {
-    fprintf(stderr, "(amb ");
+    eprintf("(amb ");
     printExp(x->exp1);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->exp2);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpCut(CexpCut *x) {
-    fprintf(stderr, "(cut ");
+    eprintf("(cut ");
     printExp(x->exp);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printCexpBool(CexpBool *x) {
-    fprintf(stderr, "(");
+    eprintf("(");
     switch (x->type) {
         case BOOL_TYPE_AND:
-            fprintf(stderr, "and");
+            eprintf("and");
             break;
         case BOOL_TYPE_OR:
-            fprintf(stderr, "or");
+            eprintf("or");
             break;
         default:
             cant_happen("unrecognised type %d in printCexpBool", x->type);
     }
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->exp1);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->exp2);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printMatchList(MatchList *x) {
     if (x == NULL) return;
-    fprintf(stderr, "(");
+    eprintf("(");
     printAexpIntList(x->matches);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->body);
-    fprintf(stderr, ")");
+    eprintf(")");
     if (x->next != NULL) {
-        fprintf(stderr, " ");
+        eprintf(" ");
         printMatchList(x->next);
     }
 }
 
 void printCexpMatch(CexpMatch *x) {
-    fprintf(stderr, "(match ");
+    eprintf("(match ");
     printAexp(x->condition);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printMatchList(x->clauses);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void printAexp(Aexp *x) {
@@ -653,22 +653,22 @@ void printAexp(Aexp *x) {
             printAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_TRUE:
-            fprintf(stderr, "#t");
+            eprintf("#t");
             break;
         case AEXP_TYPE_FALSE:
-            fprintf(stderr, "#f");
+            eprintf("#f");
             break;
         case AEXP_TYPE_VOID:
-            fprintf(stderr, "nil");
+            eprintf("nil");
             break;
         case AEXP_TYPE_BIGINT:
             fprintBigInt(stderr, x->val.biginteger);
             break;
         case AEXP_TYPE_LITTLEINT:
-            fprintf(stderr, "i%d", x->val.littleinteger);
+            eprintf("%d", x->val.littleinteger);
             break;
         case AEXP_TYPE_CHAR:
-            fprintf(stderr, "'%c'", x->val.character);
+            eprintf("'%c'", x->val.character);
             break;
         case AEXP_TYPE_PRIM:
             printAexpPrimApp(x->val.prim);
@@ -699,9 +699,9 @@ void printCexp(Cexp *x) {
             printCexpCond(x->val.cond);
             break;
         case CEXP_TYPE_CALLCC:
-            fprintf(stderr, "(call/cc ");
+            eprintf("(call/cc ");
             printAexp(x->val.callCC);
-            fprintf(stderr, ")");
+            eprintf(")");
             break;
         case CEXP_TYPE_LETREC:
             printCexpLetRec(x->val.letRec);
@@ -719,10 +719,10 @@ void printCexp(Cexp *x) {
             printCexpMatch(x->val.match);
             break;
         case CEXP_TYPE_BACK:
-            fprintf(stderr, "(back)");
+            eprintf("(back)");
             break;
         case CEXP_TYPE_ERROR:
-            fprintf(stderr, "(error)");
+            eprintf("(error)");
             break;
         default:
             cant_happen("unrecognised cexp %d in printCexp", x->type);
@@ -741,269 +741,269 @@ void printExp(Exp *x) {
             printExpLet(x->val.let);
             break;
         case EXP_TYPE_DONE:
-            fprintf(stderr, "<DONE>");
+            eprintf("<DONE>");
             break;
         default:
-            fprintf(stderr, "<unrecognised exp %d>", x->type);
+            eprintf("<unrecognised exp %d>", x->type);
             exit(1);
     }
 }
 
 void printExpLet(ExpLet *x) {
-    fprintf(stderr, "(let (");
+    eprintf("(let (");
     printAexpVar(x->var);
-    fprintf(stderr, " ");
+    eprintf(" ");
     printExp(x->val);
-    fprintf(stderr, ") ");
+    eprintf(") ");
     printExp(x->body);
-    fprintf(stderr, ")");
+    eprintf(")");
 }
 
 void dumpByteCode(ByteCodeArray *b) {
-    int i = 0;
+    size_t i = 0;
     /*
     while (i < b->count) {
-        fprintf(stderr, "[%04x] %02x\n", i, b->entries[i]);
+        eprintf("[%04x] %02x\n", i, b->entries[i]);
         i++;
     }
     i = 0;
     */
     while (i < b->count) {
-        fprintf(stderr, "%04x ### ", i);
+        eprintf("%04lx ### ", i);
         switch (readByte(b, &i)) {
             case BYTECODE_NONE: {
-                fprintf(stderr, "NONE\n");
+                eprintf("NONE\n");
             }
             break;
             case BYTECODE_LAM: {
                 int nargs = readByte(b, &i);
                 int letRecOffset = readByte(b, &i);
                 int offset = readOffset(b, &i);
-                fprintf(stderr, "LAM [%d] [%d] [%04x]\n", nargs, letRecOffset, offset);
+                eprintf("LAM [%d] [%d] [%04x]\n", nargs, letRecOffset, offset);
             }
             break;
             case BYTECODE_VAR: {
                 int frame = readByte(b, &i);
                 int offset = readByte(b, &i);
-                fprintf(stderr, "VAR [%d:%d]\n", frame, offset);
+                eprintf("VAR [%d:%d]\n", frame, offset);
             }
             break;
             case BYTECODE_LVAR: {
                 int offset = readByte(b, &i);
-                fprintf(stderr, "LVAR [%d]\n", offset);
+                eprintf("LVAR [%d]\n", offset);
             }
             break;
             case BYTECODE_PRIM_ADD: {
-                fprintf(stderr, "ADD\n");
+                eprintf("ADD\n");
             }
             break;
             case BYTECODE_PRIM_SUB: {
-                fprintf(stderr, "SUB\n");
+                eprintf("SUB\n");
             }
             break;
             case BYTECODE_PRIM_MUL: {
-                fprintf(stderr, "MUL\n");
+                eprintf("MUL\n");
             }
             break;
             case BYTECODE_PRIM_DIV: {
-                fprintf(stderr, "DIV\n");
+                eprintf("DIV\n");
             }
             break;
             case BYTECODE_PRIM_POW: {
-                fprintf(stderr, "POW\n");
+                eprintf("POW\n");
             }
             break;
             case BYTECODE_PRIM_MOD: {
-                fprintf(stderr, "MOD\n");
+                eprintf("MOD\n");
             }
             break;
             case BYTECODE_PRIM_EQ: {
-                fprintf(stderr, "EQ\n");
+                eprintf("EQ\n");
             }
             break;
             case BYTECODE_PRIM_NE: {
-                fprintf(stderr, "NE\n");
+                eprintf("NE\n");
             }
             break;
             case BYTECODE_PRIM_GT: {
-                fprintf(stderr, "GT\n");
+                eprintf("GT\n");
             }
             break;
             case BYTECODE_PRIM_LT: {
-                fprintf(stderr, "LT\n");
+                eprintf("LT\n");
             }
             break;
             case BYTECODE_PRIM_GE: {
-                fprintf(stderr, "GE\n");
+                eprintf("GE\n");
             }
             break;
             case BYTECODE_PRIM_LE: {
-                fprintf(stderr, "LE\n");
+                eprintf("LE\n");
             }
             break;
             case BYTECODE_PRIM_XOR: {
-                fprintf(stderr, "XOR\n");
+                eprintf("XOR\n");
             }
             break;
             case BYTECODE_PRIM_CONS: {
-                fprintf(stderr, "CONS\n");
+                eprintf("CONS\n");
             }
             break;
             case BYTECODE_PRIM_CAR: {
-                fprintf(stderr, "CAR\n");
+                eprintf("CAR\n");
             }
             break;
             case BYTECODE_PRIM_CDR: {
-                fprintf(stderr, "CDR\n");
+                eprintf("CDR\n");
             }
             break;
             case BYTECODE_PRIM_NOT: {
-                fprintf(stderr, "NOT\n");
+                eprintf("NOT\n");
             }
             break;
             case BYTECODE_PRIM_PRINT: {
-                fprintf(stderr, "PRINT\n");
+                eprintf("PRINT\n");
             }
             break;
             case BYTECODE_PRIM_MAKEVEC: {
                 int size = readByte(b, &i);
-                fprintf(stderr, "MAKEVEC [%d]\n", size);
+                eprintf("MAKEVEC [%d]\n", size);
             }
             break;
             case BYTECODE_PRIM_VEC: {
-                fprintf(stderr, "VEC\n");
+                eprintf("VEC\n");
             }
             break;
             case BYTECODE_APPLY: {
                 int nargs = readByte(b, &i);
-                fprintf(stderr, "APPLY [%d]\n", nargs);
+                eprintf("APPLY [%d]\n", nargs);
             }
             break;
             case BYTECODE_IF: {
                 int offset = readOffset(b, &i);
-                fprintf(stderr, "IF [%04x]\n", offset);
+                eprintf("IF [%04x]\n", offset);
             }
             break;
             case BYTECODE_MATCH: {
                 int count = readByte(b, &i);
-                fprintf(stderr, "MATCH [%d]", count);
+                eprintf("MATCH [%d]", count);
                 while (count > 0) {
                     int offset = readOffset(b, &i);
-                    fprintf(stderr, "[%04x]", offset);
+                    eprintf("[%04x]", offset);
                     count--;
                 }
-                fprintf(stderr, "\n");
+                eprintf("\n");
             }
             break;
             case BYTECODE_CHARCOND: {
                 int count = readWord(b, &i);
-                fprintf(stderr, "CHARCOND [%d]", count);
+                eprintf("CHARCOND [%d]", count);
                 while (count > 0) {
                     int val = readInt(b, &i);
                     int offset = readOffset(b, &i);
-                    fprintf(stderr, " %d:[%04x]", val, offset);
+                    eprintf(" %d:[%04x]", val, offset);
                     count--;
                 }
-                fprintf(stderr, "\n");
+                eprintf("\n");
             }
             break;
             case BYTECODE_INTCOND: {
                 int count = readWord(b, &i);
-                fprintf(stderr, "INTCOND [%d]", count);
+                eprintf("INTCOND [%d]", count);
                 while (count > 0) {
                     if (bigint_flag) {
                         bigint bi = readBigint(b, &i);
-                        fprintf(stderr, " ");
+                        eprintf(" ");
                         bigint_fprint(stderr, &bi);
                         bigint_free(&bi);
                     } else {
                         int li = readInt(b, &i);
-                        fprintf(stderr, " %d", li);
+                        eprintf(" %d", li);
                     }
                     int offset = readOffset(b, &i);
-                    fprintf(stderr, ":[%04x]", offset);
+                    eprintf(":[%04x]", offset);
                     count--;
                 }
-                fprintf(stderr, "\n");
+                eprintf("\n");
             }
             break;
             case BYTECODE_LETREC: {
                 int size = readByte(b, &i);
-                fprintf(stderr, "LETREC [%d]\n", size);
+                eprintf("LETREC [%d]\n", size);
             }
             break;
             case BYTECODE_AMB: {
                 int offset = readOffset(b, &i);
-                fprintf(stderr, "AMB [%04x]\n", offset);
+                eprintf("AMB [%04x]\n", offset);
             }
             break;
             case BYTECODE_CUT: {
-                fprintf(stderr, "CUT\n");
+                eprintf("CUT\n");
             }
             break;
             case BYTECODE_BACK: {
-                fprintf(stderr, "BACK\n");
+                eprintf("BACK\n");
             }
             break;
             case BYTECODE_LET: {
                 int offset = readOffset(b, &i);
-                fprintf(stderr, "LET [%04x]\n", offset);
+                eprintf("LET [%04x]\n", offset);
             }
             break;
             case BYTECODE_JMP: {
                 int offset = readOffset(b, &i);
-                fprintf(stderr, "JMP [%04x]\n", offset);
+                eprintf("JMP [%04x]\n", offset);
             }
             break;
             case BYTECODE_PUSHN: {
                 int size = readByte(b, &i);
-                fprintf(stderr, "PUSHN [%d]\n", size);
+                eprintf("PUSHN [%d]\n", size);
             }
             break;
             case BYTECODE_CALLCC: {
-                fprintf(stderr, "CALLCC\n");
+                eprintf("CALLCC\n");
             }
             break;
             case BYTECODE_TRUE: {
-                fprintf(stderr, "TRUE\n");
+                eprintf("TRUE\n");
             }
             break;
             case BYTECODE_FALSE: {
-                fprintf(stderr, "FALSE\n");
+                eprintf("FALSE\n");
             }
             break;
             case BYTECODE_VOID: {
-                fprintf(stderr, "VOID\n");
+                eprintf("VOID\n");
             }
             break;
             case BYTECODE_STDINT: {
                 int val = readInt(b, &i);
-                fprintf(stderr, "STDINT [%d]\n", val);
+                eprintf("STDINT [%d]\n", val);
             }
             break;
             case BYTECODE_BIGINT: {
-                fprintf(stderr, "BIGINT [");
+                eprintf("BIGINT [");
                 bigint bi = readBigint(b, &i);
                 bigint_fprint(stderr, &bi);
-                fprintf(stderr, "]\n");
+                eprintf("]\n");
                 bigint_free(&bi);
             }
             break;
             case BYTECODE_CHAR: {
                 char c = readByte(b, &i);
-                fprintf(stderr, "CHAR [%c]\n", c);
+                eprintf("CHAR [%c]\n", c);
             }
             break;
             case BYTECODE_RETURN: {
-                fprintf(stderr, "RETURN\n");
+                eprintf("RETURN\n");
             }
             break;
             case BYTECODE_DONE: {
-                fprintf(stderr, "DONE\n");
+                eprintf("DONE\n");
             }
             break;
             case BYTECODE_ERROR: {
-                fprintf(stderr, "ERROR\n");
+                eprintf("ERROR\n");
             }
             break;
             default:

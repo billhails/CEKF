@@ -403,6 +403,6 @@ void markExp(Exp *x);
 void markExpLet(ExpLet *x);
 void markLetRecBindings(LetRecBindings *x);
 
-void markVarTable();
+void markVarTable(void);
 
 #endif

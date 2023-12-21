@@ -22,7 +22,7 @@
 #include "hash.h"
 #include "memory.h"
 
-void markAstSymbolTable();
+void markAstSymbolTable(void);
 
 void printAstSymbol(HashSymbol *x, int depth);
 

@@ -26,330 +26,330 @@
 #include "lambda_pp.h"
 #include "bigint.h"
 
-static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
+static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
 
 void printTpmcMatchRules(struct TpmcMatchRules * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcMatchRules (NULL)"); return; }
-    fprintf(stderr, "TpmcMatchRules[\n");
+    if (x == NULL) { eprintf("TpmcMatchRules (NULL)"); return; }
+    eprintf("TpmcMatchRules[\n");
     printTpmcMatchRuleArray(x->rules, depth+1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcVariableArray(x->rootVariables, depth+1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcMatchRule(struct TpmcMatchRule * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcMatchRule (NULL)"); return; }
-    fprintf(stderr, "TpmcMatchRule[\n");
+    if (x == NULL) { eprintf("TpmcMatchRule (NULL)"); return; }
+    eprintf("TpmcMatchRule[\n");
     printTpmcState(x->action, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPatternArray(x->patterns, depth+1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcComparisonPattern(struct TpmcComparisonPattern * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcComparisonPattern (NULL)"); return; }
-    fprintf(stderr, "TpmcComparisonPattern[\n");
+    if (x == NULL) { eprintf("TpmcComparisonPattern (NULL)"); return; }
+    eprintf("TpmcComparisonPattern[\n");
     printTpmcPattern(x->previous, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPattern(x->current, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcAssignmentPattern(struct TpmcAssignmentPattern * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcAssignmentPattern (NULL)"); return; }
-    fprintf(stderr, "TpmcAssignmentPattern[\n");
+    if (x == NULL) { eprintf("TpmcAssignmentPattern (NULL)"); return; }
+    eprintf("TpmcAssignmentPattern[\n");
         printAstSymbol(x->name, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPattern(x->value, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcConstructorPattern(struct TpmcConstructorPattern * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcConstructorPattern (NULL)"); return; }
-    fprintf(stderr, "TpmcConstructorPattern[\n");
+    if (x == NULL) { eprintf("TpmcConstructorPattern (NULL)"); return; }
+    eprintf("TpmcConstructorPattern[\n");
         printAstSymbol(x->tag, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printLamTypeConstructorInfo(x->info, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPatternArray(x->components, depth+1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcPattern(struct TpmcPattern * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcPattern (NULL)"); return; }
-    fprintf(stderr, "TpmcPattern[\n");
+    if (x == NULL) { eprintf("TpmcPattern (NULL)"); return; }
+    eprintf("TpmcPattern[\n");
         printAstSymbol(x->path, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPatternValue(x->pattern, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcTestState(struct TpmcTestState * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcTestState (NULL)"); return; }
-    fprintf(stderr, "TpmcTestState[\n");
+    if (x == NULL) { eprintf("TpmcTestState (NULL)"); return; }
+    eprintf("TpmcTestState[\n");
         printAstSymbol(x->path, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcArcArray(x->arcs, depth+1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcFinalState(struct TpmcFinalState * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcFinalState (NULL)"); return; }
-    fprintf(stderr, "TpmcFinalState[\n");
+    if (x == NULL) { eprintf("TpmcFinalState (NULL)"); return; }
+    eprintf("TpmcFinalState[\n");
         ppLamExpD(x->action, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcState(struct TpmcState * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcState (NULL)"); return; }
-    fprintf(stderr, "TpmcState[\n");
+    if (x == NULL) { eprintf("TpmcState (NULL)"); return; }
+    eprintf("TpmcState[\n");
         pad(depth + 1);
-fprintf(stderr, "int %d", x->refcount);
-    fprintf(stderr, "\n");
+eprintf("int %d", x->refcount);
+    eprintf("\n");
         pad(depth + 1);
-fprintf(stderr, "int %d", x->stamp);
-    fprintf(stderr, "\n");
+eprintf("int %d", x->stamp);
+    eprintf("\n");
         printHashTable(x->freeVariables, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcStateValue(x->state, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcArc(struct TpmcArc * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcArc (NULL)"); return; }
-    fprintf(stderr, "TpmcArc[\n");
+    if (x == NULL) { eprintf("TpmcArc (NULL)"); return; }
+    eprintf("TpmcArc[\n");
     printTpmcState(x->state, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcPattern(x->test, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printHashTable(x->freeVariables, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcArcList(struct TpmcArcList * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcArcList (NULL)"); return; }
-    fprintf(stderr, "TpmcArcList[\n");
+    if (x == NULL) { eprintf("TpmcArcList (NULL)"); return; }
+    eprintf("TpmcArcList[\n");
     printTpmcArc(x->arc, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printTpmcArcList(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcIntList(struct TpmcIntList * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcIntList (NULL)"); return; }
-    fprintf(stderr, "TpmcIntList[\n");
+    if (x == NULL) { eprintf("TpmcIntList (NULL)"); return; }
+    eprintf("TpmcIntList[\n");
         pad(depth + 1);
-fprintf(stderr, "int %d", x->integer);
-    fprintf(stderr, "\n");
+eprintf("int %d", x->integer);
+    eprintf("\n");
     printTpmcIntList(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcPatternValue(struct TpmcPatternValue * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcPatternValue (NULL)"); return; }
-    fprintf(stderr, "TpmcPatternValue[\n");
+    if (x == NULL) { eprintf("TpmcPatternValue (NULL)"); return; }
+    eprintf("TpmcPatternValue[\n");
     switch(x->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_VAR\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_VAR\n");
                         printAstSymbol(x->val.var, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_COMPARISON\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_COMPARISON\n");
             printTpmcComparisonPattern(x->val.comparison, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_ASSIGNMENT\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_ASSIGNMENT\n");
             printTpmcAssignmentPattern(x->val.assignment, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_WILDCARD\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_WILDCARD\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.wildcard);
+eprintf("void * %p", x->val.wildcard);
             break;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_CHARACTER\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_CHARACTER\n");
                         pad(depth + 1);
-fprintf(stderr, "char '%c'", x->val.character);
+eprintf("char '%c'", x->val.character);
             break;
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_BIGINTEGER\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_BIGINTEGER\n");
                         printBigInt(x->val.biginteger, depth + 1);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             pad(depth + 1);
-            fprintf(stderr, "TPMCPATTERNVALUE_TYPE_CONSTRUCTOR\n");
+            eprintf("TPMCPATTERNVALUE_TYPE_CONSTRUCTOR\n");
             printTpmcConstructorPattern(x->val.constructor, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printTpmcPatternValue", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcStateValue(struct TpmcStateValue * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcStateValue (NULL)"); return; }
-    fprintf(stderr, "TpmcStateValue[\n");
+    if (x == NULL) { eprintf("TpmcStateValue (NULL)"); return; }
+    eprintf("TpmcStateValue[\n");
     switch(x->type) {
         case TPMCSTATEVALUE_TYPE_TEST:
             pad(depth + 1);
-            fprintf(stderr, "TPMCSTATEVALUE_TYPE_TEST\n");
+            eprintf("TPMCSTATEVALUE_TYPE_TEST\n");
             printTpmcTestState(x->val.test, depth + 1);
             break;
         case TPMCSTATEVALUE_TYPE_FINAL:
             pad(depth + 1);
-            fprintf(stderr, "TPMCSTATEVALUE_TYPE_FINAL\n");
+            eprintf("TPMCSTATEVALUE_TYPE_FINAL\n");
             printTpmcFinalState(x->val.final, depth + 1);
             break;
         case TPMCSTATEVALUE_TYPE_ERROR:
             pad(depth + 1);
-            fprintf(stderr, "TPMCSTATEVALUE_TYPE_ERROR\n");
+            eprintf("TPMCSTATEVALUE_TYPE_ERROR\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.error);
+eprintf("void * %p", x->val.error);
             break;
         default:
             cant_happen("unrecognised type %d in printTpmcStateValue", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcMatchRuleArray(struct TpmcMatchRuleArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcMatchRuleArray (NULL)"); return; }
-    fprintf(stderr, "TpmcMatchRuleArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcMatchRuleArray (NULL)"); return; }
+    eprintf("TpmcMatchRuleArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
         printTpmcMatchRule(x->entries[i], depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcVariableArray(struct TpmcVariableArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcVariableArray (NULL)"); return; }
-    fprintf(stderr, "TpmcVariableArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcVariableArray (NULL)"); return; }
+    eprintf("TpmcVariableArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
                 printAstSymbol(x->entries[i], depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcPatternArray(struct TpmcPatternArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcPatternArray (NULL)"); return; }
-    fprintf(stderr, "<<%s>>", x->_tag);
-    fprintf(stderr, "TpmcPatternArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcPatternArray (NULL)"); return; }
+    eprintf("<<%s>>", x->_tag);
+    eprintf("TpmcPatternArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
         printTpmcPattern(x->entries[i], depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcStateArray(struct TpmcStateArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcStateArray (NULL)"); return; }
-    fprintf(stderr, "<<%s>>", x->_tag);
-    fprintf(stderr, "TpmcStateArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcStateArray (NULL)"); return; }
+    eprintf("<<%s>>", x->_tag);
+    eprintf("TpmcStateArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
         printTpmcState(x->entries[i], depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcArcArray(struct TpmcArcArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcArcArray (NULL)"); return; }
-    fprintf(stderr, "TpmcArcArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcArcArray (NULL)"); return; }
+    eprintf("TpmcArcArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
         printTpmcArc(x->entries[i], depth + 1);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcIntArray(struct TpmcIntArray * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcIntArray (NULL)"); return; }
-    fprintf(stderr, "TpmcIntArray(%d)[\n", x->size);
+    if (x == NULL) { eprintf("TpmcIntArray (NULL)"); return; }
+    eprintf("TpmcIntArray(%d)[\n", x->size);
     for (int i = 0; i < x->size; i++) {
                 pad(depth + 1);
-fprintf(stderr, "int %d", x->entries[i]);
-        fprintf(stderr, "\n");
+eprintf("int %d", x->entries[i]);
+        eprintf("\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printTpmcMatrix(struct TpmcMatrix * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "TpmcMatrix (NULL)"); return; }
-    fprintf(stderr, "TpmcMatrix(%d * %d)[\n", x->width, x->height);
+    if (x == NULL) { eprintf("TpmcMatrix (NULL)"); return; }
+    eprintf("TpmcMatrix(%d * %d)[\n", x->width, x->height);
     for (int i = 0; i < x->height; i++) {
         pad(depth);
-        fprintf(stderr, "[\n");
+        eprintf("[\n");
         for (int j = 0; j < x->width; j++) {
             printTpmcPattern(x->entries[i * x->width + j], depth + 1);
-            fprintf(stderr, "\n");
+            eprintf("\n");
         }
         pad(depth);
-        fprintf(stderr, "]\n");
+        eprintf("]\n");
     }
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 

@@ -71,7 +71,6 @@ static Exp *wrapTail(Exp *exp, Exp *tail);
 static Exp *normalizeIff(LamIff *lamIff, Exp *tail);
 static Exp *normalizeCallCc(LamExp *callcc, Exp *tail);
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail);
-static LetRecBindings *replaceLetRecBindings(LamLetRecBindings *lamLetRecBindings, HashTable *replacements);
 static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
 static Exp *normalizeMatch(LamMatch *match, Exp *tail);
 static MatchList *normalizeMatchList(LamMatchList *matchList);
@@ -254,32 +253,6 @@ static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
     LEAVE(normalizeLetRec);
     return exp;
 }
-
-/*
-static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
-    ENTER(normalizeLetRec);
-#ifdef DEBUG_ANF
-    ppLamLetRec(lamLetRec);
-    NEWLINE();
-#endif
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    LetRecBindings *bindings = replaceLetRecBindings(lamLetRec->bindings, replacements);
-    PROTECT(bindings);
-    Exp* body = normalize(lamLetRec->body, tail);
-    PROTECT(body);
-    body = letBind(body, replacements);
-    PROTECT(body);
-    CexpLetRec *cexpLetRec = newCexpLetRec(bindings, body);
-    PROTECT(cexpLetRec);
-    Cexp *cexp = newCexp(CEXP_TYPE_LETREC, CEXP_VAL_LETREC(cexpLetRec));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    UNPROTECT(save);
-    LEAVE(normalizeLetRec);
-    return exp;
-}
-*/
 
 static Exp *normalizeError(Exp *tail) {
     ENTER(normalizeError);
@@ -710,13 +683,6 @@ static Aexp *aexpNormalizeCharacter(char character) {
     return newAexp(AEXP_TYPE_CHAR, AEXP_VAL_CHAR(character));
 }
 
-static Aexp *cloneAexp(Aexp *orig) {
-    if (orig->type == AEXP_TYPE_VAR) {
-        return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(orig->val.var));
-    }
-    return orig;
-}
-
 static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
     if (cases == NULL) return NULL;
     CexpIntCondCases *next = normalizeIntCondCases(cases->next);
@@ -884,24 +850,6 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
     return cexpLetRec;
 }
 
-/*
-static LetRecBindings *replaceLetRecBindings(LamLetRecBindings *lamLetRecBindings, HashTable *replacements) {
-    ENTER(replaceLetRecBindings);
-    if (lamLetRecBindings == NULL) {
-        LEAVE(replaceLetRecBindings);
-        return NULL;
-    }
-    LetRecBindings *next = replaceLetRecBindings(lamLetRecBindings->next, replacements);
-    int save = PROTECT(next);
-    Aexp *val = replaceLamExp(lamLetRecBindings->val, replacements);
-    PROTECT(val);
-    LetRecBindings *this = newLetRecBindings(next, lamLetRecBindings->var, val);
-    UNPROTECT(save);
-    LEAVE(replaceLetRecBindings);
-    return this;
-}
-*/
-
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements) {
     ENTER(replaceLamMakeVec);
     DEBUG("calling replaceLamList");
@@ -961,9 +909,9 @@ static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements) 
 
 static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
     switch(op) {
-        case LAMUNARYOP_TYPE_LAM_UNARY_NOT:
+        case LAMUNARYOP_TYPE_NOT:
             return AEXP_UNARY_NOT;
-        case LAMUNARYOP_TYPE_LAM_UNARY_PRINT:
+        case LAMUNARYOP_TYPE_PRINT:
             return AEXP_UNARY_PRINT;
         default:
             cant_happen("unrecognised type %d in mapUnaryOp", op);
@@ -972,33 +920,33 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
 
 static AexpPrimOp mapPrimOp(LamPrimOp op) {
     switch (op) {
-        case LAMPRIMOP_TYPE_LAM_PRIM_ADD:
+        case LAMPRIMOP_TYPE_ADD:
             return AEXP_PRIM_ADD;
-        case LAMPRIMOP_TYPE_LAM_PRIM_SUB:
+        case LAMPRIMOP_TYPE_SUB:
             return AEXP_PRIM_SUB;
-        case LAMPRIMOP_TYPE_LAM_PRIM_MUL:
+        case LAMPRIMOP_TYPE_MUL:
             return AEXP_PRIM_MUL;
-        case LAMPRIMOP_TYPE_LAM_PRIM_DIV:
+        case LAMPRIMOP_TYPE_DIV:
             return AEXP_PRIM_DIV;
-        case LAMPRIMOP_TYPE_LAM_PRIM_POW:
+        case LAMPRIMOP_TYPE_POW:
             return AEXP_PRIM_POW;
-        case LAMPRIMOP_TYPE_LAM_PRIM_EQ:
+        case LAMPRIMOP_TYPE_EQ:
             return AEXP_PRIM_EQ;
-        case LAMPRIMOP_TYPE_LAM_PRIM_NE:
+        case LAMPRIMOP_TYPE_NE:
             return AEXP_PRIM_NE;
-        case LAMPRIMOP_TYPE_LAM_PRIM_GT:
+        case LAMPRIMOP_TYPE_GT:
             return AEXP_PRIM_GT;
-        case LAMPRIMOP_TYPE_LAM_PRIM_LT:
+        case LAMPRIMOP_TYPE_LT:
             return AEXP_PRIM_LT;
-        case LAMPRIMOP_TYPE_LAM_PRIM_GE:
+        case LAMPRIMOP_TYPE_GE:
             return AEXP_PRIM_GE;
-        case LAMPRIMOP_TYPE_LAM_PRIM_LE:
+        case LAMPRIMOP_TYPE_LE:
             return AEXP_PRIM_LE;
-        case LAMPRIMOP_TYPE_LAM_PRIM_VEC:
+        case LAMPRIMOP_TYPE_VEC:
             return AEXP_PRIM_VEC;
-        case LAMPRIMOP_TYPE_LAM_PRIM_XOR:
+        case LAMPRIMOP_TYPE_XOR:
             return AEXP_PRIM_XOR;
-        case LAMPRIMOP_TYPE_LAM_PRIM_MOD:
+        case LAMPRIMOP_TYPE_MOD:
             return AEXP_PRIM_MOD;
         default:
             cant_happen("unrecognised op type %d in mapPrimOp", op);

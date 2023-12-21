@@ -18,7 +18,7 @@
  * Term Pattern Matching Compiler stage 4. code generation
  */
 
-#define ENTER(n) 0
-#define LEAVE(n) 0
-#define DEBUG(...) 0
-#define NEWLINE() 0
+#define ENTER(n)
+#define LEAVE(n)
+#define DEBUG(...)
+#define NEWLINE()

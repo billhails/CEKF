@@ -9,9 +9,13 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-CC=cc -Werror $(DEBUGGING)
-# CC=cc -Werror $(OPTIMIZING)
-# CC=cc -Werror $(PROFILING)
+# CCMODE = $(PROFILING)
+# CCMODE = $(OPTIMIZING)
+CCMODE = $(DEBUGGING)
+
+
+CC=cc -Wall -Wextra -Werror $(CCMODE)
+LAXCC=cc -Werror $(CCMODE)
 
 MAIN=src/main.c
 CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
@@ -48,7 +52,7 @@ $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I tmp/ -I src/ -c $< -o $@
 
 $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
-	$(CC) -I src/ -I tmp/ -c $< -o $@
+	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(CC) -I src/ -I tmp/ -c $< -o $@
@@ -57,7 +61,7 @@ $(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep
 	$(CC) -I tmp/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(EXTRA_DEP): dep/%.d: tmp/%.c | dep
-	$(CC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(LAXCC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(TEST_DEP): dep/%.d: tests/src/%.c | dep
 	$(CC) -I src/ -I /tmp -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<

@@ -13,12 +13,12 @@ typedef struct PmModule {
 } PmModule;
 
 PmModule *newPmModuleFromFileHandle(FILE *f, const char *origin);
-PmModule *newPmModuleFromStdin();
-PmModule *new_PmModuleFromFile(const char *filename);
-PmModule *new_PmModuleFromString(char *src, char *id);
+PmModule *newPmModuleFromStdin(void);
+PmModule *newPmModuleFromFile(const char *filename);
+PmModule *newPmModuleFromString(char *src, char *id);
 
 PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin);
-PmModule *newPmToplevelFromStdin();
+PmModule *newPmToplevelFromStdin(void);
 PmModule *newPmToplevelFromFile(const char *filename);
 PmModule *newPmToplevelFromString(char *src, char *id);
 

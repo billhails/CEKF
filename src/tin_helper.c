@@ -40,22 +40,16 @@ static bool monoTypeContains(HashSymbol *var, TinMonoType *tmt);
 static void showTinSymbol(HashSymbol *symbol);
 static void showTinTypeQuantifier(TinTypeQuantifier *quantifier);
 static void showTinFun(TinFunctionApplication *fun);
-static void showTinSubstitution(TinSubstitution *sub);
 static void showTinMonoTypeList(TinMonoTypeList *list);
-static void showTinContext(TinContext *context);
-
-static HashSymbol *getTinSymbol(char *name) {
-    return newSymbol(name);
-}
 
 void printTinSymbol(struct HashSymbol * x, int depth) {
-    printf("%*s", depth * 4, "");
-    if (x == NULL) { printf("TinSymbol (NULL)"); return; }
-    printf("TinSymbol[\"%s\"]", x->name);
+    eprintf("%*s", depth * 4, "");
+    if (x == NULL) { eprintf("TinSymbol (NULL)"); return; }
+    eprintf("TinSymbol[\"%s\"]", x->name);
 }
 
 static void printSubstitutionFn(void *ptr, int depth) {
-    printf("%*s", depth * 4, "");
+    eprintf("%*s", depth * 4, "");
     showTinMonoType(*(TinMonoType **)ptr);
 }
 
@@ -64,7 +58,7 @@ static void markSubstitutionFn(void *ptr) {
 }
 
 static void printContextFn(void *ptr, int depth) {
-    printf("%*s", depth * 4, "");
+    eprintf("%*s", depth * 4, "");
     showTinPolyType(*(TinPolyType **)ptr);
 }
 
@@ -76,7 +70,7 @@ static void markVarFn(void *ptr) {
     markHashSymbol(*(HashSymbol **) ptr);
 }
 
-static void printVarFn(void *ptr, int depth) {
+static void printVarFn(void *ptr, int depth __attribute__((unused))) {
     printHashSymbol(*(HashSymbol **) ptr);
 }
 
@@ -213,11 +207,11 @@ static TinSubstitution *copySubstitution(TinSubstitution *source) {
 
 static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeList *args) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyArgsSubstitution ");
+    eprintf("applyArgsSubstitution ");
     showTinSubstitution(s);
-    printf("\n");
+    eprintf("\n");
     showTinMonoTypeList(args);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -238,9 +232,9 @@ static TinMonoTypeList *applyArgsSubstitution(TinSubstitution *s, TinMonoTypeLis
 
 static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunctionApplication *funApp) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyFunSubstitution ");
+    eprintf("applyFunSubstitution ");
     showTinFun(funApp);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -255,9 +249,9 @@ static TinFunctionApplication *applyFunSubstitution(TinSubstitution *s, TinFunct
 
 static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyVarSubstitution ");
+    eprintf("applyVarSubstitution ");
     showTinMonoType(mtype);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -269,9 +263,9 @@ static TinMonoType *applyVarSubstitution(TinSubstitution *s, TinMonoType *mtype)
 
 TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyMonoTypeSubstitution ");
+    eprintf("applyMonoTypeSubstitution ");
     showTinMonoType(mtype);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -294,9 +288,9 @@ TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype) {
 
 static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTypeQuantifier *tq) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyQuantifierSubstitution ");
+    eprintf("applyQuantifierSubstitution ");
     showTinTypeQuantifier(tq);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -311,9 +305,9 @@ static TinTypeQuantifier *applyQuantifierSubstitution(TinSubstitution *s, TinTyp
 
 TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyPolyTypeSubstitution ");
+    eprintf("applyPolyTypeSubstitution ");
     showTinPolyType(ptype);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -342,9 +336,9 @@ TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype) {
 
 void applyContextSubstitutionInPlace(TinSubstitution *s, TinContext *context) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyContextSubstitutionInPlace ");
+    eprintf("applyContextSubstitutionInPlace ");
     showTinContext(context);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -360,9 +354,9 @@ void applyContextSubstitutionInPlace(TinSubstitution *s, TinContext *context) {
 
 TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applyContextSubstitution ");
+    eprintf("applyContextSubstitution ");
     showTinContext(context);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -382,9 +376,9 @@ TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context) {
 
 TinSubstitution *applySubstitutionSubstitution(TinSubstitution *s1, TinSubstitution *s2) {
 #ifdef DEBUG_TIN_SUBSTITUTION
-    printf("applySubstitutionSubstitution ");
+    eprintf("applySubstitutionSubstitution ");
     showTinSubstitution(s2);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -412,9 +406,9 @@ HashSymbol *freshTypeVariable(const char *suffix) {
 
 static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiateVar ");
+    eprintf("instantiateVar ");
     printHashSymbol(symbol);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -426,9 +420,9 @@ static HashSymbol *instantiateVar(HashSymbol *symbol, HashTable *map) {
 
 static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiateArgs ");
+    eprintf("instantiateArgs ");
     showTinMonoTypeList(args);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -450,9 +444,9 @@ static TinMonoTypeList *instantiateArgs(TinMonoTypeList *args, HashTable *map) {
 
 static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiateFun ");
+    eprintf("instantiateFun ");
     showTinFun(tfa);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -468,9 +462,9 @@ static TinFunctionApplication *instantiateFun(TinFunctionApplication *tfa, HashT
 
 static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiateMonoType ");
+    eprintf("instantiateMonoType ");
     showTinMonoType(tmt);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -505,9 +499,9 @@ static TinMonoType *instantiateMonoType(TinMonoType *tmt, HashTable *map) {
 
 static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiateQuantifier ");
+    eprintf("instantiateQuantifier ");
     showTinTypeQuantifier(ttq);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -522,9 +516,9 @@ static TinMonoType *instantiateQuantifier(TinTypeQuantifier *ttq, HashTable *map
 
 static TinMonoType *instantiatePolyType(TinPolyType *tpt, HashTable *map) {
 #ifdef DEBUG_TIN_INSTANTIATION
-    printf("instantiatePolyType ");
+    eprintf("instantiatePolyType ");
     showTinPolyType(tpt);
-    printf("\n");
+    eprintf("\n");
 #ifdef DEBUG_TIN_SUBSTITUTION_SLOWLY
     sleep(1);
 #endif
@@ -583,7 +577,7 @@ TinPolyType *generalize(TinContext *context, TinMonoType *monoType) {
     HashSymbol *var;
     TinTypeQuantifier *tqt = NULL;
     int i = 0;
-    while (var = iterateHashTable(map, &i, NULL)) {
+    while ((var = iterateHashTable(map, &i, NULL)) != NULL) {
         if (lookupInContext(context, var) == NULL) {
             int save2 = PROTECT(tpt);
             tqt = newTinTypeQuantifier(var, tpt);
@@ -632,11 +626,11 @@ static bool monoTypeContains(HashSymbol *var, TinMonoType *tmt) {
 
 TinSubstitution *unify(TinMonoType *t1, TinMonoType *t2, const char *caller) {
 #ifdef DEBUG_TIN_UNIFICATION
-    printf("%s unify ", caller);
+    eprintf("%s unify ", caller);
     showTinMonoType(t1);
-    printf(" with ");
+    eprintf(" with ");
     showTinMonoType(t2);
-    printf("\n\n");
+    eprintf("\n");
 #endif
     switch (t1->type) {
         case TINMONOTYPE_TYPE_VAR: {
@@ -709,57 +703,49 @@ static bool isAlphaSymbol(HashSymbol *symbol) {
     return (bool) isalpha(symbol->name[0]);
 }
 
-static void showTinContext(TinContext *context) {
-    printTinContext(context, 0);
-}
-
-static void showTinSubstitution(TinSubstitution *sub) {
-    printHashTable(sub->map, 0);
-}
-
 static void showTinMonoTypeList(TinMonoTypeList *list) {
-    printf("(");
+    eprintf("(");
     for (TinMonoTypeList *args = list; args != NULL; args = args->next) {
         showTinMonoType(args->monoType);
-        if (args->next != NULL) printf(", ");
+        if (args->next != NULL) eprintf(", ");
     }
-    printf(")");
+    eprintf(")");
 }
 
 static void showTinFun(TinFunctionApplication *fun) {
-    if (fun == NULL) { printf("<null>"); return; }
+    if (fun == NULL) { eprintf("<null>"); return; }
     if (isAlphaSymbol(fun->name) || fun->nargs != 2) {
         showTinSymbol(fun->name);
         showTinMonoTypeList(fun->args);
     } else {
-        printf("(");
+        eprintf("(");
         for (TinMonoTypeList *args = fun->args; args != NULL; args = args->next) {
             showTinMonoType(args->monoType);
             if (args->next != NULL) {
-                printf(" ");
+                eprintf(" ");
                 showTinSymbol(fun->name);
-                printf(" ");
+                eprintf(" ");
             }
         }
-        printf(")");
+        eprintf(")");
     }
 }
 
 static void showTinSymbol(HashSymbol *symbol) {
-    if (symbol == NULL) { printf("<null>"); return; }
-    printf("%s", symbol->name);
+    if (symbol == NULL) { eprintf("<null>"); return; }
+    eprintf("%s", symbol->name);
 }
 
 static void showTinTypeQuantifier(TinTypeQuantifier *quantifier) {
-    if (quantifier == NULL) { printf("<null>"); return; }
-    printf("V");
+    if (quantifier == NULL) { eprintf("<null>"); return; }
+    eprintf("V");
     showTinSymbol(quantifier->var);
-    printf(".");
+    eprintf(".");
     showTinPolyType(quantifier->quantifiedType);
 }
 
 void showTinMonoType(TinMonoType *monoType) {
-    if (monoType == NULL) { printf("<null>"); return; }
+    if (monoType == NULL) { eprintf("<null>"); return; }
     switch (monoType->type) {
         case TINMONOTYPE_TYPE_VAR:
             showTinSymbol(monoType->val.var);
@@ -773,7 +759,7 @@ void showTinMonoType(TinMonoType *monoType) {
 }
 
 void showTinPolyType(TinPolyType *polyType) {
-    if (polyType == NULL) { printf("<null>"); return; }
+    if (polyType == NULL) { eprintf("<null>"); return; }
     switch (polyType->type) {
         case TINPOLYTYPE_TYPE_MONOTYPE:
             showTinMonoType(polyType->val.monoType);

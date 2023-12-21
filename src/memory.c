@@ -175,7 +175,7 @@ bool disableGC() {
 
 void initProtection(void) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "initProtection\n");
+    eprintf("initProtection\n");
 #endif
     protected = NEW_PROTECT(INITIAL_PROTECTION);
     protected->capacity = INITIAL_PROTECTION;
@@ -202,7 +202,7 @@ int protect(Header *obj) {
     protected->stack[protected->sp++] = obj;
     if (protected->sp == protected->capacity) {
 #ifdef DEBUG_LOG_GC
-        fprintf(stderr, "protect old stack: %p\n", (void *)protected);
+        eprintf("protect old stack: %p\n", (void *)protected);
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
@@ -211,26 +211,26 @@ int protect(Header *obj) {
         }
         protected = tmp;
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "protect new stack: %p\n", (void *)protected);
+    eprintf("protect new stack: %p\n", (void *)protected);
 #endif
     }
 
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj), protected->sp, protected->capacity);
+    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj), protected->sp, protected->capacity);
 #endif
     return protected->sp - 1;
 }
 
 void unProtect(int index) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "UNPROTECT(%d)\n", index);
+    eprintf("UNPROTECT(%d)\n", index);
 #endif
     protected->sp = index;
 }
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n", bytesAllocated, newSize, oldSize, numAlloc, pointer);
+    eprintf("reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n", bytesAllocated, newSize, oldSize, numAlloc, pointer);
     if (newSize > oldSize)
         numAlloc++;
     if (newSize < oldSize)
@@ -260,7 +260,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     if (newSize == 0) {
 #ifdef DEBUG_STRESS_GC
         char *zerop = (char *)pointer;
-        for (int i = 0; i < oldSize; i++) {
+        for (size_t i = 0; i < oldSize; i++) {
             zerop[i] = '\0';
         }
 #endif
@@ -271,14 +271,14 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     void *result = realloc(pointer, newSize);
     if (result == NULL) exit(1);
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "reallocate ptr %p => %p\n", pointer, result);
+    eprintf("reallocate ptr %p => %p\n", pointer, result);
 #endif
     return result;
 }
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "allocate type %s %d %lu [%d]\n", typeName(type, 0), bytesAllocated, size, numAlloc);
+    eprintf("allocate type %s %d %lu [%d]\n", typeName(type, 0), bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
     newObj->type = type;
@@ -295,7 +295,7 @@ void *allocate(size_t size, ObjType type) {
 
 static void markProtectionObj(Header *h) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markProtectionObj\n");
+    eprintf("markProtectionObj\n");
 #endif
     MARK(h);
     ProtectionStack *protected = (ProtectionStack *)h;
@@ -303,13 +303,13 @@ static void markProtectionObj(Header *h) {
         markObj(protected->stack[i], i);
     }
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markProtectionObj done\n");
+    eprintf("markProtectionObj done\n");
 #endif
 }
 
 void markObj(Header *h, int i) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markObj [%d]%s %p\n", i, typeName(h->type, h), h);
+    eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
         case OBJTYPE_AMB:
@@ -391,14 +391,15 @@ static void freeProtectionObj(Header *h) {
 
 void freeObj(Header *h) {
     switch (h->type) {
+        case OBJTYPE_BOOL:
         case OBJTYPE_AMB:
         case OBJTYPE_CUT:
         case OBJTYPE_APPLY:
         case OBJTYPE_BINDINGS:
-        case OBJTYPE_BOOL:
         case OBJTYPE_IF:
         case OBJTYPE_COND:
         case OBJTYPE_CONDCASES:
+        case OBJTYPE_INTCONDCASES:
         case OBJTYPE_AEXP:
         case OBJTYPE_CEXP:
         case OBJTYPE_EXP:
@@ -472,11 +473,11 @@ static void mark() {
     markCEKF();
     markProtected();
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "starting markVarTable\n");
+    eprintf("starting markVarTable\n");
 #endif
     markVarTable();
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "markVarTable done\n");
+    eprintf("markVarTable done\n");
 #endif
 #ifdef TEST_STACK
     markTestStack();
@@ -492,8 +493,8 @@ static void sweep() {
             current->keep = false;
         } else {
 #ifdef DEBUG_LOG_GC
-            fprintf(stderr, "sweep discard %p\n", (void *)current);
-            fprintf(stderr, "              type %s\n", typeName(current->type, current));
+            eprintf("sweep discard %p\n", (void *)current);
+            eprintf("              type %s\n", typeName(current->type, current));
 #endif
             *previous = current->next;
             freeObj(current);
@@ -506,10 +507,10 @@ static void collectGarbage() {
     if (!gcEnabled) return;
     numGc++;
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "GC started\n");
+    eprintf("GC started\n");
 #endif
 #ifdef DEBUG_GC
-    fprintf(stderr, "GC\n");
+    eprintf("GC\n");
 #endif
     mark();
 #ifdef DEBUG_ALLOC
@@ -520,6 +521,6 @@ static void collectGarbage() {
     sweep();
     nextGC = bytesAllocated * 2;
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "GC finished, bytesAllocated %d, nextGC %d\n", bytesAllocated, nextGC);
+    eprintf("GC finished, bytesAllocated %d, nextGC %d\n", bytesAllocated, nextGC);
 #endif
 }

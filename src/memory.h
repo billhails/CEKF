@@ -94,7 +94,7 @@ typedef struct Header {
 void *reallocate(void *ptr, size_t oldSize, size_t newSize);
 int protect(Header *obj);
 void replaceProtect(int i, Header *obj);
-int startProtect();
+int startProtect(void);
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
 char *safeStrdup(char *s);
@@ -116,9 +116,9 @@ bool disableGC(void);
 
 void initProtection(void);
 
-void validateLastAlloc();
+void validateLastAlloc(void);
 
-void reportMemory();
+void reportMemory(void);
 
 #define EXIT_OOM 2
 

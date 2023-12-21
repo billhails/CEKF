@@ -3,6 +3,12 @@ let
         condition or back
     }
 
+    fn member {
+        (_, []) { false }
+        (x,  x @ _) { true }
+        (x, _ @ t) { member(x, t) }
+    }
+
     fn one_of {
         ([]) { back }
         (h @ t) {

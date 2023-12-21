@@ -21,7 +21,7 @@
 #include "symbol.h"
 
 void printAstSymbol(struct HashSymbol * x, int depth) {
-    fprintf(stderr, "%*s", depth * 4, "");
-    if (x == NULL) { fprintf(stderr, "AstSymbol (NULL)"); return; }
-    fprintf(stderr, "AstSymbol[\"%s\"]", x->name);
+    eprintf("%*s", depth * 4, "");
+    if (x == NULL) { eprintf("AstSymbol (NULL)"); return; }
+    eprintf("AstSymbol[\"%s\"]", x->name);
 }

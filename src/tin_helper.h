@@ -22,13 +22,13 @@
 #include "hash.h"
 #include "memory.h"
 
-void markTinSymbolTable();
+void markTinSymbolTable(void);
 
 void showTinMonoType(TinMonoType *monoType);
 void showTinPolyType(TinPolyType *polyType);
 
 void printTinSymbol(HashSymbol *x, int depth);
-TinContext *freshTinContext();
+TinContext *freshTinContext(void);
 
 void addToSubstitution(TinSubstitution *substitution, HashSymbol *symbol, TinMonoType *monotype);
 TinContext *extendTinContext(TinContext *parent);
@@ -41,7 +41,7 @@ TinMonoType *applyMonoTypeSubstitution(TinSubstitution *s, TinMonoType *mtype);
 TinPolyType *applyPolyTypeSubstitution(TinSubstitution *s, TinPolyType *ptype);
 TinPolyType *lookupInContext(TinContext *context, HashSymbol *var);
 bool isTypeConstructor(TinContext *context, HashSymbol *var);
-TinSubstitution *makeEmptySubstitution();
+TinSubstitution *makeEmptySubstitution(void);
 TinContext *applyContextSubstitution(TinSubstitution *s, TinContext *context);
 void applyContextSubstitutionInPlace(TinSubstitution *s, TinContext *context);
 TinMonoType *instantiate(TinPolyType *tpt);

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "common.h"
 #include "ast.h"
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
     initProtection();
     disableGC();
     if (argc < 2) {
-        fprintf(stderr, "need filename\n");
+        eprintf("need filename\n");
         exit(1);
     }
     AstNest *result = pm_parseFile(argv[1]);
@@ -82,7 +83,7 @@ int main(int argc, char *argv[]) {
     initProtection();
     disableGC();
     if (argc < 2) {
-        fprintf(stderr, "need filename\n");
+        eprintf("need filename\n");
         exit(1);
     }
     AstNest *result = pm_parseFile(argv[1]);
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
     initProtection();
     disableGC();
     if (argc < 2) {
-        fprintf(stderr, "need filename\n");
+        eprintf("need filename\n");
         exit(1);
     }
     AstNest *result = pm_parseFile(argv[1]);
@@ -125,7 +126,7 @@ int main(int argc, char *argv[]) {
         // printf("\n");
         Exp *anfExp = anfNormalize(exp);
         printExp(anfExp);
-        fprintf(stderr, "\n");
+        eprintf("\n");
     }
 }
 
@@ -134,15 +135,18 @@ int main(int argc, char *argv[]) {
 #else
 
 int report_mem_flag = 0;
+static int report_time_flag = 0;
 
 int main(int argc, char *argv[]) {
     int c;
+    clock_t begin = clock();
 
     while (1) {
         static struct option long_options[] =
         {
           {"bigint", no_argument, &bigint_flag, 1},
           {"report-memory", no_argument, &report_mem_flag, 1},
+          {"report-time", no_argument, &report_time_flag, 1},
           {0, 0, 0, 0}
         };
         int option_index = 0;
@@ -165,7 +169,7 @@ int main(int argc, char *argv[]) {
     */
 
     if (optind >= argc) {
-        fprintf(stderr, "need filename\n");
+        eprintf("need filename\n");
         exit(1);
     }
     PmModule *mod = newPmToplevelFromFile(argv[optind]);
@@ -173,7 +177,7 @@ int main(int argc, char *argv[]) {
     pmParseModule(mod);
     enableGC();
     // printAstNest(mod->nest, 0);
-    WResult *wr = WTop(mod->nest);
+    /* WResult *wr = */ (void) WTop(mod->nest);
     validateLastAlloc();
     if (hadErrors()) {
         printf("(errors detected)\n");
@@ -181,6 +185,9 @@ int main(int argc, char *argv[]) {
     }
     LamExp *exp = lamConvertNest(mod->nest, NULL);
     int save = PROTECT(exp);
+#ifdef DEBUG_LAMBDA_CONVERT
+    ppLamExp(exp);
+#endif
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);
     disableGC();
@@ -189,16 +196,22 @@ int main(int argc, char *argv[]) {
     enableGC();
 #ifdef DEBUG_ANF
     printExp(anfExp);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     analizeExp(anfExp, NULL);
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
+    UNPROTECT(save);
     printContainedValue(run(byteCodes), 1);
     printf("\n");
     if (report_mem_flag)
         reportMemory();
+    if (report_time_flag) {
+        clock_t end = clock();
+        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("elapsed time %.3lf\n", time_spent);
+    }
 }
 
 #endif

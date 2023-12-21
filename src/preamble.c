@@ -19,30 +19,22 @@
 const char *preamble =
 "let"
 "    typedef bool { false | true }"
-""
+
 "    typedef list(#t) { nil | cons(#t, list(#t)) }"
-""
+
 "    fn append {"
 "        ([], b) { b }"
 "        (h @ t, b) { h @ append(t, b) }"
 "    }"
-""
-"    fn member {"
-"        (_, []) { false }"
-"        (x, x @ _) { true }"
-"        (x, _ @ t) { member(x, t) }"
-"    }"
-""
+
 "    fn car {"
-"        ([]) { [] }"
 "        (h @ _) { h }"
 "    }"
-""
+
 "    fn cdr {"
-"        ([]) { [] }"
 "        (_ @ t) { t }"
 "    }"
-""
+
 "in {";
 
 const char *postamble = "}";

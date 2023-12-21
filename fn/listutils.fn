@@ -1,0 +1,44 @@
+fn member {
+    (_, []) { false }
+    (x, x @ _) { true }
+    (x, _ @ t) { member(x, t) }
+}
+
+fn map {
+    (_, []) { [] }
+    (f, h @ t) { f(h) @ map(f, t)) }
+}
+
+fn length {
+    ([]) { 0 }
+    (_ @ t) { 1 + length(t) }
+}
+
+fn foldl {
+    (_, [], acc) { acc }
+    (f, h @ t, acc) { foldl(f, t, f(h, acc)) }
+}
+
+fn foldr {
+    (f, l, acc) { foldl(f, reverse(l), acc) }
+}
+
+fn reverse (l) {
+    foldl((elem, acc) { elem @ acc }, l, [])
+}
+
+fn filter {
+    (_, []) { [] }
+    (f, h @ t) {
+        if (f(h)) {
+            h @ filter(f, t)
+        } else {
+            filter(f, t)
+        }
+    }
+}
+
+fn fill {
+    (0, _) { [] }
+    (n, v) { v @ fill(n - 1, v) }
+}

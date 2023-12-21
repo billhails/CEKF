@@ -64,6 +64,33 @@ structs:
         consequent: LamExp
         alternative: LamExp
 
+
+    LamType:
+        name: HashSymbol
+        args: LamTypeArgs
+
+    LamTypeArgs:
+        name: HashSymbol
+        next: LamTypeArgs
+
+    LamTypeConstructor:
+        name: HashSymbol
+        type: LamType
+        args: LamTypeConstructorArgs
+    
+    LamTypeConstructorArgs:
+        arg: LamTypeConstructorArg
+        next: LamTypeConstructorArgs
+
+    LamTypeConstructorArg:
+        type: LamTypeConstructorType
+        next: LamTypeConstructorArg
+
+    LamTypeFunction:
+        name: HashSymbol
+        args: LamTypeConstructorArgs
+
+
     LamCond:
         value: LamExp
         cases: LamCondCases
@@ -123,6 +150,7 @@ structs:
         right: LamExp
 
     LamTypeConstructorInfo:
+        type: LamTypeConstructor
         vec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
         size: int # number of alternatives
@@ -130,25 +158,25 @@ structs:
 
 enums:
     LamPrimOp:
-        - LAM_PRIM_ADD
-        - LAM_PRIM_SUB
-        - LAM_PRIM_MUL
-        - LAM_PRIM_DIV
-        - LAM_PRIM_MOD
-        - LAM_PRIM_POW
-        - LAM_PRIM_EQ
-        - LAM_PRIM_NE
-        - LAM_PRIM_GT
-        - LAM_PRIM_LT
-        - LAM_PRIM_GE
-        - LAM_PRIM_LE
-        - LAM_PRIM_VEC
-        - LAM_PRIM_XOR
+        - ADD
+        - SUB
+        - MUL
+        - DIV
+        - MOD
+        - POW
+        - EQ
+        - NE
+        - GT
+        - LT
+        - GE
+        - LE
+        - VEC
+        - XOR
 
     LamUnaryOp:
-        - LAM_UNARY_NEG
-        - LAM_UNARY_NOT
-        - LAM_UNARY_PRINT
+        - NEG
+        - NOT
+        - PRINT
 
 unions:
     LamExp:
@@ -178,6 +206,12 @@ unions:
     LamCondCases:
         integers: LamIntCondCases
         characters: LamCharCondCases
+
+    LamTypeConstructorType:
+        integer: void_ptr
+        character: void_ptr
+        var: HashSymbol
+        function: LamTypeFunction
 
 primitives:
     HashSymbol:

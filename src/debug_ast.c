@@ -25,520 +25,520 @@
 #include "debug_ast.h"
 #include "bigint.h"
 
-static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }
+static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
 
 void printAstNest(struct AstNest * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstNest (NULL)"); return; }
-    fprintf(stderr, "AstNest[\n");
+    if (x == NULL) { eprintf("AstNest (NULL)"); return; }
+    eprintf("AstNest[\n");
     printAstDefinitions(x->definitions, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstExpressions(x->expressions, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstDefinitions(struct AstDefinitions * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstDefinitions (NULL)"); return; }
-    fprintf(stderr, "AstDefinitions[\n");
+    if (x == NULL) { eprintf("AstDefinitions (NULL)"); return; }
+    eprintf("AstDefinitions[\n");
     printAstDefinition(x->definition, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstDefinitions(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstDefine(struct AstDefine * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstDefine (NULL)"); return; }
-    fprintf(stderr, "AstDefine[\n");
+    if (x == NULL) { eprintf("AstDefine (NULL)"); return; }
+    eprintf("AstDefine[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstExpression(x->expression, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstPrototype(struct AstPrototype * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstPrototype (NULL)"); return; }
-    fprintf(stderr, "AstPrototype[\n");
+    if (x == NULL) { eprintf("AstPrototype (NULL)"); return; }
+    eprintf("AstPrototype[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstPrototypeBody(x->body, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstPrototypeBody(struct AstPrototypeBody * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstPrototypeBody (NULL)"); return; }
-    fprintf(stderr, "AstPrototypeBody[\n");
+    if (x == NULL) { eprintf("AstPrototypeBody (NULL)"); return; }
+    eprintf("AstPrototypeBody[\n");
     printAstSinglePrototype(x->single, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstPrototypeBody(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstPrototypeSymbolType(struct AstPrototypeSymbolType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstPrototypeSymbolType (NULL)"); return; }
-    fprintf(stderr, "AstPrototypeSymbolType[\n");
+    if (x == NULL) { eprintf("AstPrototypeSymbolType (NULL)"); return; }
+    eprintf("AstPrototypeSymbolType[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstType(x->type, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstLoad(struct AstLoad * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstLoad (NULL)"); return; }
-    fprintf(stderr, "AstLoad[\n");
+    if (x == NULL) { eprintf("AstLoad (NULL)"); return; }
+    eprintf("AstLoad[\n");
     printAstPackage(x->package, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeDef(struct AstTypeDef * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeDef (NULL)"); return; }
-    fprintf(stderr, "AstTypeDef[\n");
+    if (x == NULL) { eprintf("AstTypeDef (NULL)"); return; }
+    eprintf("AstTypeDef[\n");
     printAstFlatType(x->flatType, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeBody(x->typeBody, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstFlatType(struct AstFlatType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstFlatType (NULL)"); return; }
-    fprintf(stderr, "AstFlatType[\n");
+    if (x == NULL) { eprintf("AstFlatType (NULL)"); return; }
+    eprintf("AstFlatType[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeSymbols(x->typeSymbols, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeSymbols(struct AstTypeSymbols * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeSymbols (NULL)"); return; }
-    fprintf(stderr, "AstTypeSymbols[\n");
+    if (x == NULL) { eprintf("AstTypeSymbols (NULL)"); return; }
+    eprintf("AstTypeSymbols[\n");
         printAstSymbol(x->typeSymbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeSymbols(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeBody(struct AstTypeBody * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeBody (NULL)"); return; }
-    fprintf(stderr, "AstTypeBody[\n");
+    if (x == NULL) { eprintf("AstTypeBody (NULL)"); return; }
+    eprintf("AstTypeBody[\n");
     printAstTypeConstructor(x->typeConstructor, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeBody(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeConstructor(struct AstTypeConstructor * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeConstructor (NULL)"); return; }
-    fprintf(stderr, "AstTypeConstructor[\n");
+    if (x == NULL) { eprintf("AstTypeConstructor (NULL)"); return; }
+    eprintf("AstTypeConstructor[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeList(x->typeList, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeFunction(struct AstTypeFunction * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeFunction (NULL)"); return; }
-    fprintf(stderr, "AstTypeFunction[\n");
+    if (x == NULL) { eprintf("AstTypeFunction (NULL)"); return; }
+    eprintf("AstTypeFunction[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeList(x->typeList, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeList(struct AstTypeList * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeList (NULL)"); return; }
-    fprintf(stderr, "AstTypeList[\n");
+    if (x == NULL) { eprintf("AstTypeList (NULL)"); return; }
+    eprintf("AstTypeList[\n");
     printAstType(x->type, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstTypeList(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstType(struct AstType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstType (NULL)"); return; }
-    fprintf(stderr, "AstType[\n");
+    if (x == NULL) { eprintf("AstType (NULL)"); return; }
+    eprintf("AstType[\n");
     printAstTypeClause(x->typeClause, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstType(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstCompositeFunction(struct AstCompositeFunction * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstCompositeFunction (NULL)"); return; }
-    fprintf(stderr, "AstCompositeFunction[\n");
+    if (x == NULL) { eprintf("AstCompositeFunction (NULL)"); return; }
+    eprintf("AstCompositeFunction[\n");
     printAstFunction(x->function, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstCompositeFunction(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstFunction(struct AstFunction * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstFunction (NULL)"); return; }
-    fprintf(stderr, "AstFunction[\n");
+    if (x == NULL) { eprintf("AstFunction (NULL)"); return; }
+    eprintf("AstFunction[\n");
     printAstArgList(x->argList, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstNest(x->nest, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstArgList(struct AstArgList * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstArgList (NULL)"); return; }
-    fprintf(stderr, "AstArgList[\n");
+    if (x == NULL) { eprintf("AstArgList (NULL)"); return; }
+    eprintf("AstArgList[\n");
     printAstArg(x->arg, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstArgList(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstUnpack(struct AstUnpack * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstUnpack (NULL)"); return; }
-    fprintf(stderr, "AstUnpack[\n");
+    if (x == NULL) { eprintf("AstUnpack (NULL)"); return; }
+    eprintf("AstUnpack[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstArgList(x->argList, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstNamedArg(struct AstNamedArg * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstNamedArg (NULL)"); return; }
-    fprintf(stderr, "AstNamedArg[\n");
+    if (x == NULL) { eprintf("AstNamedArg (NULL)"); return; }
+    eprintf("AstNamedArg[\n");
         printAstSymbol(x->name, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstArg(x->arg, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstEnvType(struct AstEnvType * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstEnvType (NULL)"); return; }
-    fprintf(stderr, "AstEnvType[\n");
+    if (x == NULL) { eprintf("AstEnvType (NULL)"); return; }
+    eprintf("AstEnvType[\n");
         printAstSymbol(x->name, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
         printAstSymbol(x->prototype, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstFunCall(struct AstFunCall * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstFunCall (NULL)"); return; }
-    fprintf(stderr, "AstFunCall[\n");
+    if (x == NULL) { eprintf("AstFunCall (NULL)"); return; }
+    eprintf("AstFunCall[\n");
     printAstExpression(x->function, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstExpressions(x->arguments, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstPackage(struct AstPackage * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstPackage (NULL)"); return; }
-    fprintf(stderr, "AstPackage[\n");
+    if (x == NULL) { eprintf("AstPackage (NULL)"); return; }
+    eprintf("AstPackage[\n");
         printAstSymbol(x->symbol, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstPackage(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstExpressions(struct AstExpressions * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstExpressions (NULL)"); return; }
-    fprintf(stderr, "AstExpressions[\n");
+    if (x == NULL) { eprintf("AstExpressions (NULL)"); return; }
+    eprintf("AstExpressions[\n");
     printAstExpression(x->expression, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstExpressions(x->next, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstEnv(struct AstEnv * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstEnv (NULL)"); return; }
-    fprintf(stderr, "AstEnv[\n");
+    if (x == NULL) { eprintf("AstEnv (NULL)"); return; }
+    eprintf("AstEnv[\n");
     printAstPackage(x->package, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstDefinitions(x->definitions, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstIff(struct AstIff * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstIff (NULL)"); return; }
-    fprintf(stderr, "AstIff[\n");
+    if (x == NULL) { eprintf("AstIff (NULL)"); return; }
+    eprintf("AstIff[\n");
     printAstExpression(x->test, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstNest(x->consequent, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printAstNest(x->alternative, depth + 1);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstDefinition(struct AstDefinition * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstDefinition (NULL)"); return; }
-    fprintf(stderr, "AstDefinition[\n");
+    if (x == NULL) { eprintf("AstDefinition (NULL)"); return; }
+    eprintf("AstDefinition[\n");
     switch(x->type) {
         case AST_DEFINITION_TYPE_DEFINE:
             pad(depth + 1);
-            fprintf(stderr, "AST_DEFINITION_TYPE_DEFINE\n");
+            eprintf("AST_DEFINITION_TYPE_DEFINE\n");
             printAstDefine(x->val.define, depth + 1);
             break;
         case AST_DEFINITION_TYPE_PROTOTYPE:
             pad(depth + 1);
-            fprintf(stderr, "AST_DEFINITION_TYPE_PROTOTYPE\n");
+            eprintf("AST_DEFINITION_TYPE_PROTOTYPE\n");
             printAstPrototype(x->val.prototype, depth + 1);
             break;
         case AST_DEFINITION_TYPE_LOAD:
             pad(depth + 1);
-            fprintf(stderr, "AST_DEFINITION_TYPE_LOAD\n");
+            eprintf("AST_DEFINITION_TYPE_LOAD\n");
             printAstLoad(x->val.load, depth + 1);
             break;
         case AST_DEFINITION_TYPE_TYPEDEF:
             pad(depth + 1);
-            fprintf(stderr, "AST_DEFINITION_TYPE_TYPEDEF\n");
+            eprintf("AST_DEFINITION_TYPE_TYPEDEF\n");
             printAstTypeDef(x->val.typeDef, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstDefinition", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstSinglePrototype(struct AstSinglePrototype * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstSinglePrototype (NULL)"); return; }
-    fprintf(stderr, "AstSinglePrototype[\n");
+    if (x == NULL) { eprintf("AstSinglePrototype (NULL)"); return; }
+    eprintf("AstSinglePrototype[\n");
     switch(x->type) {
         case AST_SINGLEPROTOTYPE_TYPE_SYMBOLTYPE:
             pad(depth + 1);
-            fprintf(stderr, "AST_SINGLEPROTOTYPE_TYPE_SYMBOLTYPE\n");
+            eprintf("AST_SINGLEPROTOTYPE_TYPE_SYMBOLTYPE\n");
             printAstPrototypeSymbolType(x->val.symbolType, depth + 1);
             break;
         case AST_SINGLEPROTOTYPE_TYPE_PROTOTYPE:
             pad(depth + 1);
-            fprintf(stderr, "AST_SINGLEPROTOTYPE_TYPE_PROTOTYPE\n");
+            eprintf("AST_SINGLEPROTOTYPE_TYPE_PROTOTYPE\n");
             printAstPrototype(x->val.prototype, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstSinglePrototype", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstTypeClause(struct AstTypeClause * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstTypeClause (NULL)"); return; }
-    fprintf(stderr, "AstTypeClause[\n");
+    if (x == NULL) { eprintf("AstTypeClause (NULL)"); return; }
+    eprintf("AstTypeClause[\n");
     switch(x->type) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
             pad(depth + 1);
-            fprintf(stderr, "AST_TYPECLAUSE_TYPE_INTEGER\n");
+            eprintf("AST_TYPECLAUSE_TYPE_INTEGER\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.integer);
+eprintf("void * %p", x->val.integer);
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             pad(depth + 1);
-            fprintf(stderr, "AST_TYPECLAUSE_TYPE_CHARACTER\n");
+            eprintf("AST_TYPECLAUSE_TYPE_CHARACTER\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.character);
+eprintf("void * %p", x->val.character);
             break;
         case AST_TYPECLAUSE_TYPE_VAR:
             pad(depth + 1);
-            fprintf(stderr, "AST_TYPECLAUSE_TYPE_VAR\n");
+            eprintf("AST_TYPECLAUSE_TYPE_VAR\n");
                         printAstSymbol(x->val.var, depth + 1);
             break;
         case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
             pad(depth + 1);
-            fprintf(stderr, "AST_TYPECLAUSE_TYPE_TYPEFUNCTION\n");
+            eprintf("AST_TYPECLAUSE_TYPE_TYPEFUNCTION\n");
             printAstTypeFunction(x->val.typeFunction, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstTypeClause", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstArg(struct AstArg * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstArg (NULL)"); return; }
-    fprintf(stderr, "AstArg[\n");
+    if (x == NULL) { eprintf("AstArg (NULL)"); return; }
+    eprintf("AstArg[\n");
     switch(x->type) {
         case AST_ARG_TYPE_WILDCARD:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_WILDCARD\n");
+            eprintf("AST_ARG_TYPE_WILDCARD\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.wildcard);
+eprintf("void * %p", x->val.wildcard);
             break;
         case AST_ARG_TYPE_SYMBOL:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_SYMBOL\n");
+            eprintf("AST_ARG_TYPE_SYMBOL\n");
                         printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_ARG_TYPE_NAMED:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_NAMED\n");
+            eprintf("AST_ARG_TYPE_NAMED\n");
             printAstNamedArg(x->val.named, depth + 1);
             break;
         case AST_ARG_TYPE_ENV:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_ENV\n");
+            eprintf("AST_ARG_TYPE_ENV\n");
             printAstEnvType(x->val.env, depth + 1);
             break;
         case AST_ARG_TYPE_UNPACK:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_UNPACK\n");
+            eprintf("AST_ARG_TYPE_UNPACK\n");
             printAstUnpack(x->val.unpack, depth + 1);
             break;
         case AST_ARG_TYPE_NUMBER:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_NUMBER\n");
+            eprintf("AST_ARG_TYPE_NUMBER\n");
                         printBigInt(x->val.number, depth + 1);
             break;
         case AST_ARG_TYPE_CHARACTER:
             pad(depth + 1);
-            fprintf(stderr, "AST_ARG_TYPE_CHARACTER\n");
+            eprintf("AST_ARG_TYPE_CHARACTER\n");
                         pad(depth + 1);
-fprintf(stderr, "char %c", x->val.character);
+eprintf("char %c", x->val.character);
             break;
         default:
             cant_happen("unrecognised type %d in printAstArg", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
 void printAstExpression(struct AstExpression * x, int depth) {
     pad(depth);
-    if (x == NULL) { fprintf(stderr, "AstExpression (NULL)"); return; }
-    fprintf(stderr, "AstExpression[\n");
+    if (x == NULL) { eprintf("AstExpression (NULL)"); return; }
+    eprintf("AstExpression[\n");
     switch(x->type) {
         case AST_EXPRESSION_TYPE_BACK:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_BACK\n");
+            eprintf("AST_EXPRESSION_TYPE_BACK\n");
                         pad(depth + 1);
-fprintf(stderr, "void * %p", x->val.back);
+eprintf("void * %p", x->val.back);
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_FUNCALL\n");
+            eprintf("AST_EXPRESSION_TYPE_FUNCALL\n");
             printAstFunCall(x->val.funCall, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_SYMBOL\n");
+            eprintf("AST_EXPRESSION_TYPE_SYMBOL\n");
                         printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_NUMBER\n");
+            eprintf("AST_EXPRESSION_TYPE_NUMBER\n");
                         printBigInt(x->val.number, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_CHARACTER\n");
+            eprintf("AST_EXPRESSION_TYPE_CHARACTER\n");
                         pad(depth + 1);
-fprintf(stderr, "char %c", x->val.character);
+eprintf("char %c", x->val.character);
             break;
         case AST_EXPRESSION_TYPE_FUN:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_FUN\n");
+            eprintf("AST_EXPRESSION_TYPE_FUN\n");
             printAstCompositeFunction(x->val.fun, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_ENV:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_ENV\n");
+            eprintf("AST_EXPRESSION_TYPE_ENV\n");
             printAstEnv(x->val.env, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_NEST:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_NEST\n");
+            eprintf("AST_EXPRESSION_TYPE_NEST\n");
             printAstNest(x->val.nest, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_IFF:
             pad(depth + 1);
-            fprintf(stderr, "AST_EXPRESSION_TYPE_IFF\n");
+            eprintf("AST_EXPRESSION_TYPE_IFF\n");
             printAstIff(x->val.iff, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstExpression", x->type);
     }
-    fprintf(stderr, "\n");
+    eprintf("\n");
     pad(depth);
-    fprintf(stderr, "]");
+    eprintf("]");
 }
 
