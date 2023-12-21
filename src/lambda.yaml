@@ -64,6 +64,11 @@ structs:
         tag: int         # the tag of the constructor
         args: LamList    # the remaining arguments to make-vec
 
+    LamDeconstruct:
+        name: HashSymbol # name of the constructor being deconstructed
+        vec: int         # offset of the field in the vector
+        exp: LamExp      # expression being deconstructed
+
     LamMakeVec:
         nargs: int
         args: LamList
@@ -213,6 +218,7 @@ unions:
         list: LamSequence
         makeVec: LamMakeVec
         construct: LamConstruct
+        deconstruct: LamDeconstruct
         constant: LamConstant
         apply: LamApply
         iff: LamIff

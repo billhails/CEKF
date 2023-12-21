@@ -34,6 +34,7 @@ void printLamList(struct LamList * x, int depth);
 void printLamApply(struct LamApply * x, int depth);
 void printLamConstant(struct LamConstant * x, int depth);
 void printLamConstruct(struct LamConstruct * x, int depth);
+void printLamDeconstruct(struct LamDeconstruct * x, int depth);
 void printLamMakeVec(struct LamMakeVec * x, int depth);
 void printLamIff(struct LamIff * x, int depth);
 void printLamCond(struct LamCond * x, int depth);

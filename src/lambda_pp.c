@@ -123,6 +123,9 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_MAKEVEC:
             ppLamMakeVec(exp->val.makeVec);
             break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            ppLamDeconstruct(exp->val.deconstruct);
+            break;
         case LAMEXP_TYPE_CONSTRUCT:
             ppLamConstruct(exp->val.construct);
             break;
@@ -602,4 +605,12 @@ void ppLamConstant(LamConstant *constant) {
     eprintf("(constant ");
     ppHashSymbol(constant->name);
     eprintf(" %d)", constant->tag);
+}
+
+void ppLamDeconstruct(LamDeconstruct *deconstruct) {
+    eprintf("(deconstruct ");
+    ppHashSymbol(deconstruct->name);
+    eprintf(" %d ", deconstruct->vec);
+    ppLamExp(deconstruct->exp);
+    eprintf(")");
 }

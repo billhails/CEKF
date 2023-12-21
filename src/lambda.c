@@ -106,6 +106,15 @@ struct LamConstruct * newLamConstruct(HashSymbol * name, int tag, struct LamList
     return x;
 }
 
+struct LamDeconstruct * newLamDeconstruct(HashSymbol * name, int vec, struct LamExp * exp) {
+    struct LamDeconstruct * x = NEW(LamDeconstruct, OBJTYPE_LAMDECONSTRUCT);
+    DEBUG("new LamDeconstruct %pn", x);
+    x->name = name;
+    x->vec = vec;
+    x->exp = exp;
+    return x;
+}
+
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
     struct LamMakeVec * x = NEW(LamMakeVec, OBJTYPE_LAMMAKEVEC);
     DEBUG("new LamMakeVec %pn", x);
@@ -415,6 +424,14 @@ void markLamConstruct(struct LamConstruct * x) {
     markLamList(x->args);
 }
 
+void markLamDeconstruct(struct LamDeconstruct * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamExp(x->exp);
+}
+
 void markLamMakeVec(struct LamMakeVec * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -649,6 +666,9 @@ void markLamExp(struct LamExp * x) {
         case LAMEXP_TYPE_CONSTRUCT:
             markLamConstruct(x->val.construct);
             break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            markLamDeconstruct(x->val.deconstruct);
+            break;
         case LAMEXP_TYPE_CONSTANT:
             markLamConstant(x->val.constant);
             break;
@@ -763,6 +783,9 @@ void markLambdaObj(struct Header *h) {
             break;
         case OBJTYPE_LAMCONSTRUCT:
             markLamConstruct((LamConstruct *)h);
+            break;
+        case OBJTYPE_LAMDECONSTRUCT:
+            markLamDeconstruct((LamDeconstruct *)h);
             break;
         case OBJTYPE_LAMMAKEVEC:
             markLamMakeVec((LamMakeVec *)h);
@@ -889,6 +912,10 @@ void freeLamConstant(struct LamConstant * x) {
 
 void freeLamConstruct(struct LamConstruct * x) {
     FREE(x, LamConstruct);
+}
+
+void freeLamDeconstruct(struct LamDeconstruct * x) {
+    FREE(x, LamDeconstruct);
 }
 
 void freeLamMakeVec(struct LamMakeVec * x) {
@@ -1033,6 +1060,9 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMCONSTRUCT:
             freeLamConstruct((LamConstruct *)h);
             break;
+        case OBJTYPE_LAMDECONSTRUCT:
+            freeLamDeconstruct((LamDeconstruct *)h);
+            break;
         case OBJTYPE_LAMMAKEVEC:
             freeLamMakeVec((LamMakeVec *)h);
             break;
@@ -1142,6 +1172,8 @@ char *typenameLambdaObj(int type) {
             return "LamConstant";
         case OBJTYPE_LAMCONSTRUCT:
             return "LamConstruct";
+        case OBJTYPE_LAMDECONSTRUCT:
+            return "LamDeconstruct";
         case OBJTYPE_LAMMAKEVEC:
             return "LamMakeVec";
         case OBJTYPE_LAMIFF:

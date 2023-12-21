@@ -60,6 +60,7 @@ typedef enum LamExpType {
     LAMEXP_TYPE_LIST,
     LAMEXP_TYPE_MAKEVEC,
     LAMEXP_TYPE_CONSTRUCT,
+    LAMEXP_TYPE_DECONSTRUCT,
     LAMEXP_TYPE_CONSTANT,
     LAMEXP_TYPE_APPLY,
     LAMEXP_TYPE_IFF,
@@ -102,6 +103,7 @@ typedef union LamExpVal {
     struct LamSequence * list;
     struct LamMakeVec * makeVec;
     struct LamConstruct * construct;
+    struct LamDeconstruct * deconstruct;
     struct LamConstant * constant;
     struct LamApply * apply;
     struct LamIff * iff;
@@ -191,6 +193,13 @@ typedef struct LamConstruct {
     int tag;
     struct LamList * args;
 } LamConstruct;
+
+typedef struct LamDeconstruct {
+    Header header;
+    HashSymbol * name;
+    int vec;
+    struct LamExp * exp;
+} LamDeconstruct;
 
 typedef struct LamMakeVec {
     Header header;
@@ -382,6 +391,7 @@ struct LamList * newLamList(struct LamExp * exp, struct LamList * next);
 struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args);
 struct LamConstant * newLamConstant(HashSymbol * name, int tag);
 struct LamConstruct * newLamConstruct(HashSymbol * name, int tag, struct LamList * args);
+struct LamDeconstruct * newLamDeconstruct(HashSymbol * name, int vec, struct LamExp * exp);
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args);
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases);
@@ -420,6 +430,7 @@ void markLamList(struct LamList * x);
 void markLamApply(struct LamApply * x);
 void markLamConstant(struct LamConstant * x);
 void markLamConstruct(struct LamConstruct * x);
+void markLamDeconstruct(struct LamDeconstruct * x);
 void markLamMakeVec(struct LamMakeVec * x);
 void markLamIff(struct LamIff * x);
 void markLamCond(struct LamCond * x);
@@ -458,6 +469,7 @@ void freeLamList(struct LamList * x);
 void freeLamApply(struct LamApply * x);
 void freeLamConstant(struct LamConstant * x);
 void freeLamConstruct(struct LamConstruct * x);
+void freeLamDeconstruct(struct LamDeconstruct * x);
 void freeLamMakeVec(struct LamMakeVec * x);
 void freeLamIff(struct LamIff * x);
 void freeLamCond(struct LamCond * x);
@@ -497,6 +509,7 @@ void freeLamTypeConstructorType(struct LamTypeConstructorType * x);
 #define LAMEXP_VAL_LIST(x) ((union LamExpVal ){.list = (x)})
 #define LAMEXP_VAL_MAKEVEC(x) ((union LamExpVal ){.makeVec = (x)})
 #define LAMEXP_VAL_CONSTRUCT(x) ((union LamExpVal ){.construct = (x)})
+#define LAMEXP_VAL_DECONSTRUCT(x) ((union LamExpVal ){.deconstruct = (x)})
 #define LAMEXP_VAL_CONSTANT(x) ((union LamExpVal ){.constant = (x)})
 #define LAMEXP_VAL_APPLY(x) ((union LamExpVal ){.apply = (x)})
 #define LAMEXP_VAL_IFF(x) ((union LamExpVal ){.iff = (x)})

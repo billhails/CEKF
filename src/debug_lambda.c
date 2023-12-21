@@ -217,6 +217,21 @@ eprintf("int %d", x->tag);
     eprintf("]");
 }
 
+void printLamDeconstruct(struct LamDeconstruct * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamDeconstruct (NULL)"); return; }
+    eprintf("LamDeconstruct[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+        pad(depth + 1);
+eprintf("int %d", x->vec);
+    eprintf("\n");
+    printLamExp(x->exp, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printLamMakeVec(struct LamMakeVec * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamMakeVec (NULL)"); return; }
@@ -597,6 +612,11 @@ eprintf("int %d", x->val.stdint);
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_CONSTRUCT\n");
             printLamConstruct(x->val.construct, depth + 1);
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            pad(depth + 1);
+            eprintf("LAMEXP_TYPE_DECONSTRUCT\n");
+            printLamDeconstruct(x->val.deconstruct, depth + 1);
             break;
         case LAMEXP_TYPE_CONSTANT:
             pad(depth + 1);

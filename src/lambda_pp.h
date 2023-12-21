@@ -39,6 +39,7 @@ void ppLamIff(LamIff *iff);
 void ppLamCond(LamCond *cond);
 void ppLamCallCC(LamExp *exp);
 void ppLamLetRec(LamLetRec *letRec);
+void ppLamDeconstruct(LamDeconstruct *deconstruct);
 void ppLamConstruct(LamConstruct *construct);
 void ppLamConstant(LamConstant *constant);
 void ppLamTypeDefs(LamTypeDefs *typeDefs);

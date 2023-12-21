@@ -174,26 +174,28 @@ static LamExp *prependLetBindings(TpmcPattern *test, HashTable *freeVariables, L
     if (constructor->components->size == 0) {
         return body;
     }
+    HashSymbol *name = constructor->info->type->name;
     int save = PROTECT(body);
     for (int i = 0; i < constructor->components->size; i++) {
         // (let (var (vec i+1 base)) body)
         HashSymbol *path = constructor->components->entries[i]->path;
         if (hashGet(freeVariables, path, NULL)) {
-            LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(i + 1));
-            DEBUG("[newLamExp]");
-            int save2 = PROTECT(index);
+            // LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(i + 1));
+            // int save2 = PROTECT(index);
             LamExp *base = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
-            DEBUG("[newLamExp]");
+            int save2 = PROTECT(base);
             PROTECT(base);
-            LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, base);
-            PROTECT(vec);
-            LamExp *vecExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
-            DEBUG("[newLamExp]");
-            PROTECT(vecExp);
-            LamLet *let = newLamLet(path, vecExp, body);
+            // LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, base);
+            // PROTECT(vec);
+            // LamExp *vecExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
+            // PROTECT(vecExp);
+            LamDeconstruct *deconstruct = newLamDeconstruct(name, i + 1, base);
+            PROTECT(deconstruct);
+            LamExp *deconstructExp = newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(deconstruct));
+            PROTECT(deconstructExp);
+            LamLet *let = newLamLet(path, deconstructExp, body);
             PROTECT(let);
             body = newLamExp(LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
-            DEBUG("[newLamExp]");
             REPLACE_PROTECT(save, body);
             UNPROTECT(save2);
         }

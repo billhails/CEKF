@@ -80,6 +80,7 @@ static Exp *normalizeCond(LamCond *cond, Exp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
+static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -121,6 +122,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeCallCc(lamExp->val.callcc, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
+        case LAMEXP_TYPE_DECONSTRUCT:
+            return normalizeDeconstruct(lamExp->val.deconstruct, tail);
         case LAMEXP_TYPE_CONSTRUCT:
             return normalizeConstruct(lamExp->val.construct, tail);
         case LAMEXP_TYPE_CONSTANT:
@@ -229,6 +232,24 @@ static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
     UNPROTECT(save);
     LEAVE(normalizeLet);
     return exp;
+}
+
+static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
+    LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(deconstruct->vec));
+    int save = PROTECT(index);
+    LamPrimApp *res = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
+    UNPROTECT(save);
+    return res;
+}
+
+static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
+    ENTER(noramaalizeDeconstruct);
+    LamPrimApp *primApp = deconstructToPrimApp(deconstruct);
+    int save = PROTECT(primApp);
+    Exp *res = normalizePrim(primApp, tail);
+    UNPROTECT(save);
+    LEAVE(noramaalizeDeconstruct);
+    return res;
 }
 
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
