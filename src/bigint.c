@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef DEBUG_BIGINT
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 #define BIGINT_ASSERT(a, op, b) assert((a) op (b));
 
@@ -1221,9 +1226,7 @@ int bigint_flag = 0;
 
 BigInt *newBigInt(bigint bi) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
-#ifdef DEBUG_ALLOC
-    eprintf("newBigInt %p\n", x);
-#endif
+    DEBUG("newBigInt %p", x);
     x->little = 0;
     x->bi = bi;
     return x;
@@ -1231,9 +1234,7 @@ BigInt *newBigInt(bigint bi) {
 
 BigInt *fakeBigInt(int little) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
-#ifdef DEBUG_ALLOC
-    eprintf("newBigInt %p\n", x);
-#endif
+    DEBUG("newBigInt %p", x);
     x->little = little;
     bzero(&x->bi, sizeof(bigint));
     return x;

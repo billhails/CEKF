@@ -59,10 +59,13 @@ typedef enum LamExpType {
     LAMEXP_TYPE_UNARY,
     LAMEXP_TYPE_LIST,
     LAMEXP_TYPE_MAKEVEC,
+    LAMEXP_TYPE_CONSTRUCT,
+    LAMEXP_TYPE_CONSTANT,
     LAMEXP_TYPE_APPLY,
     LAMEXP_TYPE_IFF,
     LAMEXP_TYPE_CALLCC,
     LAMEXP_TYPE_LETREC,
+    LAMEXP_TYPE_TYPEDEFS,
     LAMEXP_TYPE_LET,
     LAMEXP_TYPE_MATCH,
     LAMEXP_TYPE_COND,
@@ -98,10 +101,13 @@ typedef union LamExpVal {
     struct LamUnaryApp * unary;
     struct LamSequence * list;
     struct LamMakeVec * makeVec;
+    struct LamConstruct * construct;
+    struct LamConstant * constant;
     struct LamApply * apply;
     struct LamIff * iff;
     struct LamExp * callcc;
     struct LamLetRec * letrec;
+    struct LamTypeDefs * typedefs;
     struct LamLet * let;
     struct LamMatch * match;
     struct LamCond * cond;
@@ -173,6 +179,19 @@ typedef struct LamApply {
     struct LamList * args;
 } LamApply;
 
+typedef struct LamConstant {
+    Header header;
+    HashSymbol * name;
+    int tag;
+} LamConstant;
+
+typedef struct LamConstruct {
+    Header header;
+    HashSymbol * name;
+    int tag;
+    struct LamList * args;
+} LamConstruct;
+
 typedef struct LamMakeVec {
     Header header;
     int nargs;
@@ -185,43 +204,6 @@ typedef struct LamIff {
     struct LamExp * consequent;
     struct LamExp * alternative;
 } LamIff;
-
-typedef struct LamType {
-    Header header;
-    HashSymbol * name;
-    struct LamTypeArgs * args;
-} LamType;
-
-typedef struct LamTypeArgs {
-    Header header;
-    HashSymbol * name;
-    struct LamTypeArgs * next;
-} LamTypeArgs;
-
-typedef struct LamTypeConstructor {
-    Header header;
-    HashSymbol * name;
-    struct LamType * type;
-    struct LamTypeConstructorArgs * args;
-} LamTypeConstructor;
-
-typedef struct LamTypeConstructorArgs {
-    Header header;
-    struct LamTypeConstructorArg * arg;
-    struct LamTypeConstructorArgs * next;
-} LamTypeConstructorArgs;
-
-typedef struct LamTypeConstructorArg {
-    Header header;
-    struct LamTypeConstructorType * type;
-    struct LamTypeConstructorArg * next;
-} LamTypeConstructorArg;
-
-typedef struct LamTypeFunction {
-    Header header;
-    HashSymbol * name;
-    struct LamTypeConstructorArgs * args;
-} LamTypeFunction;
 
 typedef struct LamCond {
     Header header;
@@ -307,6 +289,61 @@ typedef struct LamAmb {
     struct LamExp * right;
 } LamAmb;
 
+typedef struct LamTypeDefs {
+    Header header;
+    struct LamTypeDefList * typeDefs;
+    struct LamExp * body;
+} LamTypeDefs;
+
+typedef struct LamTypeDefList {
+    Header header;
+    struct LamTypeDef * typeDef;
+    struct LamTypeDefList * next;
+} LamTypeDefList;
+
+typedef struct LamTypeDef {
+    Header header;
+    struct LamType * type;
+    struct LamTypeConstructorList * constructors;
+} LamTypeDef;
+
+typedef struct LamTypeConstructorList {
+    Header header;
+    struct LamTypeConstructor * constructor;
+    struct LamTypeConstructorList * next;
+} LamTypeConstructorList;
+
+typedef struct LamType {
+    Header header;
+    HashSymbol * name;
+    struct LamTypeArgs * args;
+} LamType;
+
+typedef struct LamTypeArgs {
+    Header header;
+    HashSymbol * name;
+    struct LamTypeArgs * next;
+} LamTypeArgs;
+
+typedef struct LamTypeConstructor {
+    Header header;
+    HashSymbol * name;
+    struct LamType * type;
+    struct LamTypeConstructorArgs * args;
+} LamTypeConstructor;
+
+typedef struct LamTypeConstructorArgs {
+    Header header;
+    struct LamTypeConstructorType * arg;
+    struct LamTypeConstructorArgs * next;
+} LamTypeConstructorArgs;
+
+typedef struct LamTypeFunction {
+    Header header;
+    HashSymbol * name;
+    struct LamTypeConstructorArgs * args;
+} LamTypeFunction;
+
 typedef struct LamTypeConstructorInfo {
     Header header;
     struct LamTypeConstructor * type;
@@ -343,14 +380,10 @@ struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp);
 struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next);
 struct LamList * newLamList(struct LamExp * exp, struct LamList * next);
 struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args);
+struct LamConstant * newLamConstant(HashSymbol * name, int tag);
+struct LamConstruct * newLamConstruct(HashSymbol * name, int tag, struct LamList * args);
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args);
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative);
-struct LamType * newLamType(HashSymbol * name, struct LamTypeArgs * args);
-struct LamTypeArgs * newLamTypeArgs(HashSymbol * name, struct LamTypeArgs * next);
-struct LamTypeConstructor * newLamTypeConstructor(HashSymbol * name, struct LamType * type, struct LamTypeConstructorArgs * args);
-struct LamTypeConstructorArgs * newLamTypeConstructorArgs(struct LamTypeConstructorArg * arg, struct LamTypeConstructorArgs * next);
-struct LamTypeConstructorArg * newLamTypeConstructorArg(struct LamTypeConstructorType * type, struct LamTypeConstructorArg * next);
-struct LamTypeFunction * newLamTypeFunction(HashSymbol * name, struct LamTypeConstructorArgs * args);
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases);
 struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * body, struct LamIntCondCases * next);
 struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * body, struct LamCharCondCases * next);
@@ -364,6 +397,15 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
 struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right);
 struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right);
 struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right);
+struct LamTypeDefs * newLamTypeDefs(struct LamTypeDefList * typeDefs, struct LamExp * body);
+struct LamTypeDefList * newLamTypeDefList(struct LamTypeDef * typeDef, struct LamTypeDefList * next);
+struct LamTypeDef * newLamTypeDef(struct LamType * type, struct LamTypeConstructorList * constructors);
+struct LamTypeConstructorList * newLamTypeConstructorList(struct LamTypeConstructor * constructor, struct LamTypeConstructorList * next);
+struct LamType * newLamType(HashSymbol * name, struct LamTypeArgs * args);
+struct LamTypeArgs * newLamTypeArgs(HashSymbol * name, struct LamTypeArgs * next);
+struct LamTypeConstructor * newLamTypeConstructor(HashSymbol * name, struct LamType * type, struct LamTypeConstructorArgs * args);
+struct LamTypeConstructorArgs * newLamTypeConstructorArgs(struct LamTypeConstructorType * arg, struct LamTypeConstructorArgs * next);
+struct LamTypeFunction * newLamTypeFunction(HashSymbol * name, struct LamTypeConstructorArgs * args);
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(struct LamTypeConstructor * type, bool vec, int arity, int size, int index);
 struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val);
 struct LamCondCases * newLamCondCases(enum LamCondCasesType  type, union LamCondCasesVal  val);
@@ -376,14 +418,10 @@ void markLamUnaryApp(struct LamUnaryApp * x);
 void markLamSequence(struct LamSequence * x);
 void markLamList(struct LamList * x);
 void markLamApply(struct LamApply * x);
+void markLamConstant(struct LamConstant * x);
+void markLamConstruct(struct LamConstruct * x);
 void markLamMakeVec(struct LamMakeVec * x);
 void markLamIff(struct LamIff * x);
-void markLamType(struct LamType * x);
-void markLamTypeArgs(struct LamTypeArgs * x);
-void markLamTypeConstructor(struct LamTypeConstructor * x);
-void markLamTypeConstructorArgs(struct LamTypeConstructorArgs * x);
-void markLamTypeConstructorArg(struct LamTypeConstructorArg * x);
-void markLamTypeFunction(struct LamTypeFunction * x);
 void markLamCond(struct LamCond * x);
 void markLamIntCondCases(struct LamIntCondCases * x);
 void markLamCharCondCases(struct LamCharCondCases * x);
@@ -397,6 +435,15 @@ void markLamContext(struct LamContext * x);
 void markLamAnd(struct LamAnd * x);
 void markLamOr(struct LamOr * x);
 void markLamAmb(struct LamAmb * x);
+void markLamTypeDefs(struct LamTypeDefs * x);
+void markLamTypeDefList(struct LamTypeDefList * x);
+void markLamTypeDef(struct LamTypeDef * x);
+void markLamTypeConstructorList(struct LamTypeConstructorList * x);
+void markLamType(struct LamType * x);
+void markLamTypeArgs(struct LamTypeArgs * x);
+void markLamTypeConstructor(struct LamTypeConstructor * x);
+void markLamTypeConstructorArgs(struct LamTypeConstructorArgs * x);
+void markLamTypeFunction(struct LamTypeFunction * x);
 void markLamTypeConstructorInfo(struct LamTypeConstructorInfo * x);
 void markLamExp(struct LamExp * x);
 void markLamCondCases(struct LamCondCases * x);
@@ -409,14 +456,10 @@ void freeLamUnaryApp(struct LamUnaryApp * x);
 void freeLamSequence(struct LamSequence * x);
 void freeLamList(struct LamList * x);
 void freeLamApply(struct LamApply * x);
+void freeLamConstant(struct LamConstant * x);
+void freeLamConstruct(struct LamConstruct * x);
 void freeLamMakeVec(struct LamMakeVec * x);
 void freeLamIff(struct LamIff * x);
-void freeLamType(struct LamType * x);
-void freeLamTypeArgs(struct LamTypeArgs * x);
-void freeLamTypeConstructor(struct LamTypeConstructor * x);
-void freeLamTypeConstructorArgs(struct LamTypeConstructorArgs * x);
-void freeLamTypeConstructorArg(struct LamTypeConstructorArg * x);
-void freeLamTypeFunction(struct LamTypeFunction * x);
 void freeLamCond(struct LamCond * x);
 void freeLamIntCondCases(struct LamIntCondCases * x);
 void freeLamCharCondCases(struct LamCharCondCases * x);
@@ -430,6 +473,15 @@ void freeLamContext(struct LamContext * x);
 void freeLamAnd(struct LamAnd * x);
 void freeLamOr(struct LamOr * x);
 void freeLamAmb(struct LamAmb * x);
+void freeLamTypeDefs(struct LamTypeDefs * x);
+void freeLamTypeDefList(struct LamTypeDefList * x);
+void freeLamTypeDef(struct LamTypeDef * x);
+void freeLamTypeConstructorList(struct LamTypeConstructorList * x);
+void freeLamType(struct LamType * x);
+void freeLamTypeArgs(struct LamTypeArgs * x);
+void freeLamTypeConstructor(struct LamTypeConstructor * x);
+void freeLamTypeConstructorArgs(struct LamTypeConstructorArgs * x);
+void freeLamTypeFunction(struct LamTypeFunction * x);
 void freeLamTypeConstructorInfo(struct LamTypeConstructorInfo * x);
 void freeLamExp(struct LamExp * x);
 void freeLamCondCases(struct LamCondCases * x);
@@ -444,10 +496,13 @@ void freeLamTypeConstructorType(struct LamTypeConstructorType * x);
 #define LAMEXP_VAL_UNARY(x) ((union LamExpVal ){.unary = (x)})
 #define LAMEXP_VAL_LIST(x) ((union LamExpVal ){.list = (x)})
 #define LAMEXP_VAL_MAKEVEC(x) ((union LamExpVal ){.makeVec = (x)})
+#define LAMEXP_VAL_CONSTRUCT(x) ((union LamExpVal ){.construct = (x)})
+#define LAMEXP_VAL_CONSTANT(x) ((union LamExpVal ){.constant = (x)})
 #define LAMEXP_VAL_APPLY(x) ((union LamExpVal ){.apply = (x)})
 #define LAMEXP_VAL_IFF(x) ((union LamExpVal ){.iff = (x)})
 #define LAMEXP_VAL_CALLCC(x) ((union LamExpVal ){.callcc = (x)})
 #define LAMEXP_VAL_LETREC(x) ((union LamExpVal ){.letrec = (x)})
+#define LAMEXP_VAL_TYPEDEFS(x) ((union LamExpVal ){.typedefs = (x)})
 #define LAMEXP_VAL_LET(x) ((union LamExpVal ){.let = (x)})
 #define LAMEXP_VAL_MATCH(x) ((union LamExpVal ){.match = (x)})
 #define LAMEXP_VAL_COND(x) ((union LamExpVal ){.cond = (x)})

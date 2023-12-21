@@ -16,8 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-static int debugInvocationId = 0;
-#define ENTER(name) int debugMyId = debugInvocationId++; eprintf("**** %s:%-5d ", __FILE__, __LINE__); eprintf("ENTER " #name " #%d\n", debugMyId)
-#define LEAVE(name) eprintf("**** %s:%-5d ", __FILE__, __LINE__); eprintf("LEAVE " #name " #%d\n", debugMyId)
-#define DEBUG(...) do { eprintf("**** %s:%-5d ", __FILE__, __LINE__); eprintf(__VA_ARGS__); eprintf("\n"); } while(0)
+static int _debugInvocationId = 0;
+#define DEBUG(...) do { \
+    eprintf("**** %s:%-5d ", __FILE__, __LINE__); \
+    eprintf(__VA_ARGS__); eprintf("\n"); \
+} while(0)
+#define ENTER(name) int _debugMyId = _debugInvocationId++; \
+    DEBUG("ENTER " #name " #%d", _debugMyId)
+#define LEAVE(name) DEBUG("LEAVE " #name " #%d", _debugMyId)
 #define NEWLINE() eprintf("\n")
+#define IFDEBUG(x) do { x; NEWLINE(); } while(0)

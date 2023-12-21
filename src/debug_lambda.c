@@ -189,6 +189,34 @@ eprintf("int %d", x->nargs);
     eprintf("]");
 }
 
+void printLamConstant(struct LamConstant * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamConstant (NULL)"); return; }
+    eprintf("LamConstant[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+        pad(depth + 1);
+eprintf("int %d", x->tag);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamConstruct(struct LamConstruct * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamConstruct (NULL)"); return; }
+    eprintf("LamConstruct[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+        pad(depth + 1);
+eprintf("int %d", x->tag);
+    eprintf("\n");
+    printLamList(x->args, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printLamMakeVec(struct LamMakeVec * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamMakeVec (NULL)"); return; }
@@ -211,80 +239,6 @@ void printLamIff(struct LamIff * x, int depth) {
     printLamExp(x->consequent, depth + 1);
     eprintf("\n");
     printLamExp(x->alternative, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamType(struct LamType * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamType (NULL)"); return; }
-    eprintf("LamType[\n");
-        printLambdaSymbol(x->name, depth + 1);
-    eprintf("\n");
-    printLamTypeArgs(x->args, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamTypeArgs(struct LamTypeArgs * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamTypeArgs (NULL)"); return; }
-    eprintf("LamTypeArgs[\n");
-        printLambdaSymbol(x->name, depth + 1);
-    eprintf("\n");
-    printLamTypeArgs(x->next, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamTypeConstructor(struct LamTypeConstructor * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamTypeConstructor (NULL)"); return; }
-    eprintf("LamTypeConstructor[\n");
-        printLambdaSymbol(x->name, depth + 1);
-    eprintf("\n");
-    printLamType(x->type, depth + 1);
-    eprintf("\n");
-    printLamTypeConstructorArgs(x->args, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamTypeConstructorArgs(struct LamTypeConstructorArgs * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamTypeConstructorArgs (NULL)"); return; }
-    eprintf("LamTypeConstructorArgs[\n");
-    printLamTypeConstructorArg(x->arg, depth + 1);
-    eprintf("\n");
-    printLamTypeConstructorArgs(x->next, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamTypeConstructorArg(struct LamTypeConstructorArg * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamTypeConstructorArg (NULL)"); return; }
-    eprintf("LamTypeConstructorArg[\n");
-    printLamTypeConstructorType(x->type, depth + 1);
-    eprintf("\n");
-    printLamTypeConstructorArg(x->next, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
-void printLamTypeFunction(struct LamTypeFunction * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("LamTypeFunction (NULL)"); return; }
-    eprintf("LamTypeFunction[\n");
-        printLambdaSymbol(x->name, depth + 1);
-    eprintf("\n");
-    printLamTypeConstructorArgs(x->args, depth + 1);
     eprintf("\n");
     pad(depth);
     eprintf("]");
@@ -461,6 +415,116 @@ void printLamAmb(struct LamAmb * x, int depth) {
     eprintf("]");
 }
 
+void printLamTypeDefs(struct LamTypeDefs * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeDefs (NULL)"); return; }
+    eprintf("LamTypeDefs[\n");
+    printLamTypeDefList(x->typeDefs, depth + 1);
+    eprintf("\n");
+    printLamExp(x->body, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeDefList(struct LamTypeDefList * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeDefList (NULL)"); return; }
+    eprintf("LamTypeDefList[\n");
+    printLamTypeDef(x->typeDef, depth + 1);
+    eprintf("\n");
+    printLamTypeDefList(x->next, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeDef(struct LamTypeDef * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeDef (NULL)"); return; }
+    eprintf("LamTypeDef[\n");
+    printLamType(x->type, depth + 1);
+    eprintf("\n");
+    printLamTypeConstructorList(x->constructors, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeConstructorList(struct LamTypeConstructorList * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeConstructorList (NULL)"); return; }
+    eprintf("LamTypeConstructorList[\n");
+    printLamTypeConstructor(x->constructor, depth + 1);
+    eprintf("\n");
+    printLamTypeConstructorList(x->next, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamType(struct LamType * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamType (NULL)"); return; }
+    eprintf("LamType[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+    printLamTypeArgs(x->args, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeArgs(struct LamTypeArgs * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeArgs (NULL)"); return; }
+    eprintf("LamTypeArgs[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+    printLamTypeArgs(x->next, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeConstructor(struct LamTypeConstructor * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeConstructor (NULL)"); return; }
+    eprintf("LamTypeConstructor[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+    printLamType(x->type, depth + 1);
+    eprintf("\n");
+    printLamTypeConstructorArgs(x->args, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeConstructorArgs(struct LamTypeConstructorArgs * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeConstructorArgs (NULL)"); return; }
+    eprintf("LamTypeConstructorArgs[\n");
+    printLamTypeConstructorType(x->arg, depth + 1);
+    eprintf("\n");
+    printLamTypeConstructorArgs(x->next, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printLamTypeFunction(struct LamTypeFunction * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamTypeFunction (NULL)"); return; }
+    eprintf("LamTypeFunction[\n");
+        printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
+    printLamTypeConstructorArgs(x->args, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamTypeConstructorInfo (NULL)"); return; }
@@ -529,6 +593,16 @@ eprintf("int %d", x->val.stdint);
             eprintf("LAMEXP_TYPE_MAKEVEC\n");
             printLamMakeVec(x->val.makeVec, depth + 1);
             break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            pad(depth + 1);
+            eprintf("LAMEXP_TYPE_CONSTRUCT\n");
+            printLamConstruct(x->val.construct, depth + 1);
+            break;
+        case LAMEXP_TYPE_CONSTANT:
+            pad(depth + 1);
+            eprintf("LAMEXP_TYPE_CONSTANT\n");
+            printLamConstant(x->val.constant, depth + 1);
+            break;
         case LAMEXP_TYPE_APPLY:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_APPLY\n");
@@ -548,6 +622,11 @@ eprintf("int %d", x->val.stdint);
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_LETREC\n");
             printLamLetRec(x->val.letrec, depth + 1);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            pad(depth + 1);
+            eprintf("LAMEXP_TYPE_TYPEDEFS\n");
+            printLamTypeDefs(x->val.typedefs, depth + 1);
             break;
         case LAMEXP_TYPE_LET:
             pad(depth + 1);

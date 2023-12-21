@@ -30,6 +30,11 @@
 #include "memory.h"
 #include "lambda_conversion.h"
 #include "lambda_pp.h"
+#ifdef DEBUG_TPMC_LOGIC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
 
@@ -474,18 +479,12 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     replaceComparisonRules(input);
     renameRules(input);
     performRulesSubstitutions(input);
-#ifdef DEBUG_TPMC_LOGIC
-    eprintf("*** RULES ***\n");
-    printTpmcMatchRules(input, 0);
-    eprintf("\n");
-#endif
+    DEBUG("*** RULES ***");
+    IFDEBUG(printTpmcMatchRules(input, 0));
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
-#ifdef DEBUG_TPMC_LOGIC
-    eprintf("*** MATRIX ***\n");
-    printTpmcMatrix(matrix, 0);
-    eprintf("\n");
-#endif
+    DEBUG("*** MATRIX ***");
+    IFDEBUG(printTpmcMatrix(matrix, 0));
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
     TpmcStateArray *knownStates = newTpmcStateArray("tpmcConvert");
@@ -497,16 +496,11 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     PROTECT(errorState);
     TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates);
     PROTECT(dfa);
-#ifdef DEBUG_TPMC_LOGIC
-    eprintf("*** DFA ***\n");
-    printTpmcState(dfa, 0);
-    eprintf("\n");
-#endif
+    DEBUG("*** DFA ***");
+    IFDEBUG(printTpmcState(dfa, 0));
     LamExp *body = tpmcTranslate(dfa);
     PROTECT(body);
-#ifdef DEBUG_TPMC_LOGIC
-    eprintf("tpmcTranslate returned %p\n", body);
-#endif
+    DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(rootVariables->size, args, body);
@@ -514,11 +508,10 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
 #ifdef DEBUG_TPMC_LOGIC
     LamExp *tmp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));
     PROTECT(tmp);
-    eprintf("*** BODY ***\n");
-    ppLamExp(tmp);
-    eprintf("\n");
-    validateLastAlloc();
 #endif
+    DEBUG("*** BODY ***");
+    IFDEBUG(ppLamExp(tmp));
+    IFDEBUG(validateLastAlloc());
     UNPROTECT(save);
     return res;
 }

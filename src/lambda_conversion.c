@@ -34,15 +34,15 @@
 #define ARG_CATEGORY_STRUCT 2
 #define ARG_CATEGORY_ENV 3
 
-static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env);
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env);
 static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
 static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env);
 static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next);
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
-static void collectTypeDefs(AstDefinitions *definitions, LamContext *env);
-static void collectTypeConstructor(AstTypeConstructor *typeConstructor, LamType *type, int size, int index, bool hasFields, LamContext *env);
+static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env);
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstructor, LamType *type, int size, int index, bool hasFields, LamContext *env);
 static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type, bool someoneHasFields, int enumCount, int index, int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
@@ -77,22 +77,30 @@ MAKE_COUNT_LIST(AstCompositeFunction)
 
 LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest);
-    LamContext *ext = extendLamContext(env);
-    int save = PROTECT(ext);
-    LamLetRecBindings *bindings = convertLetrecBindings(nest->definitions, ext);
-    (void) PROTECT(bindings);
-    LamSequence *body = convertSequence(nest->expressions, ext);
+    env = extendLamContext(env);
+    int save = PROTECT(env);
+    LamTypeDefList *typeDefList = collectTypeDefs(nest->definitions, env);
+    (void) PROTECT(typeDefList);
+    LamLetRecBindings *funcDefsList = convertFuncDefs(nest->definitions, env);
+    PROTECT(funcDefsList);
+    LamSequence *body = convertSequence(nest->expressions, env);
     (void) PROTECT(body);
     LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
     (void) PROTECT(letRecBody);
 
     LamExp *result = NULL;
-    if (bindings) {
-        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(bindings), bindings, letRecBody);
+    if (funcDefsList != NULL) {
+        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(funcDefsList), funcDefsList, letRecBody);
         (void) PROTECT(letRec);
         result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
     } else {
         result = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
+    }
+    (void) PROTECT(result);
+    if (typeDefList != NULL) {
+        LamTypeDefs *typeDefs = newLamTypeDefs(typeDefList, result);
+        (void) PROTECT(typeDefs);
+        result = newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
     }
     UNPROTECT(save);
     LEAVE(lamConvertNest);
@@ -189,6 +197,13 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *s
     makeVec->args = performListSubstitutions(makeVec->args, substitutions);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
+}
+
+static LamConstruct *performConstructSubstitutions(LamConstruct *construct, HashTable *substitutions) {
+    ENTER(performConstructSubstitutions);
+    construct->args = performListSubstitutions(construct->args, substitutions);
+    LEAVE(performConstructSubstitutions);
+    return construct;
 }
 
 static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitutions) {
@@ -343,6 +358,7 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_COND_DEFAULT:
         case LAMEXP_TYPE_ERROR:
+        case LAMEXP_TYPE_CONSTANT:
             break;
         case LAMEXP_TYPE_LAM:
             exp->val.lam = performLamSubstitutions(exp->val.lam, substitutions);
@@ -361,6 +377,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_MAKEVEC:
             exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
+            break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            exp->val.construct = performConstructSubstitutions(exp->val.construct, substitutions);
             break;
         case LAMEXP_TYPE_APPLY:
             exp->val.apply = performApplySubstitutions(exp->val.apply, substitutions);
@@ -410,18 +429,6 @@ static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContex
     UNPROTECT(save);
     LEAVE(convertFuncDefs);
     return this;
-}
- 
-static LamLetRecBindings *convertLetrecBindings(AstDefinitions *definitions, LamContext *env) {
-    ENTER(convertLetrecBindings);
-    if (definitions == NULL) {
-        LEAVE(convertLetrecBindings);
-        return NULL;
-    }
-    collectTypeDefs(definitions, env);
-    LamLetRecBindings *funcDefs = convertFuncDefs(definitions, env);
-    LEAVE(convertLetrecBindings);
-    return funcDefs;
 }
 
 static int countTypeBodies(AstTypeBody *typeBody) {
@@ -486,22 +493,40 @@ static LamTypeConstructorType *convertAstTypeClause(AstTypeClause *astTypeClause
     }
 }
 
-static LamTypeConstructorArg *convertTypeConstructorType(AstType *astType) {
-    if (astType == NULL) return NULL;
-    LamTypeConstructorArg *next = convertTypeConstructorType(astType->next);
-    int save = PROTECT(next);
-    LamTypeConstructorType *lamTypeConstructorType = convertAstTypeClause(astType->typeClause);
-    PROTECT(lamTypeConstructorType);
-    LamTypeConstructorArg *this = newLamTypeConstructorArg(lamTypeConstructorType, next);
+static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs, LamTypeConstructorType *rhs) {
+    LamTypeConstructorArgs *rhsArg = newLamTypeConstructorArgs(rhs, NULL);
+    int save = PROTECT(rhsArg);
+    LamTypeConstructorArgs *args = newLamTypeConstructorArgs(lhs, rhsArg);
+    PROTECT(args);
+    LamTypeFunction *res = newLamTypeFunction(arrowSymbol(), args);
     UNPROTECT(save);
-    return this;
+    return res;
+}
+
+static LamTypeConstructorType *convertAstType(AstType *astType) {
+    if (astType->next) { // it's a function
+        LamTypeConstructorType *next = convertAstType(astType->next);
+        int save = PROTECT(next);
+        LamTypeConstructorType *this = convertAstTypeClause(astType->typeClause);
+        PROTECT(this);
+        LamTypeFunction *arrow = makeArrow(this, next);
+        PROTECT(arrow);
+        LamTypeConstructorType *res = newLamTypeConstructorType(
+            LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION,
+            LAMTYPECONSTRUCTORTYPE_VAL_FUNCTION(arrow)
+        );
+        UNPROTECT(save);
+        return res;
+    } else {
+        return convertAstTypeClause(astType->typeClause);
+    }
 }
 
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
     if (typeList == NULL) return NULL;
     LamTypeConstructorArgs *next = convertAstTypeList(typeList->next);
     int save = PROTECT(next);
-    LamTypeConstructorArg *arg = convertTypeConstructorType(typeList->type);
+    LamTypeConstructorType *arg = convertAstType(typeList->type);
     PROTECT(arg);
     LamTypeConstructorArgs *this = newLamTypeConstructorArgs(arg, next);
     UNPROTECT(save);
@@ -524,7 +549,7 @@ static void collectTypeInfo(
     LEAVE(collectTypeInfo);
 }
 
-static void collectTypeConstructor(
+static LamTypeConstructor *collectTypeConstructor(
     AstTypeConstructor *typeConstructor,
     LamType *type,
     int enumCount,
@@ -539,31 +564,57 @@ static void collectTypeConstructor(
     PROTECT(lamTypeConstructor);
     collectTypeInfo(typeConstructor->symbol, lamTypeConstructor, someoneHasFields, enumCount, index, nargs, env);
     UNPROTECT(save);
+    return lamTypeConstructor;
 }
 
-static void collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
+static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
     LamType *type = convertTypeDefType(typeDef->flatType);
     int save = PROTECT(type);
     AstTypeBody *typeBody = typeDef->typeBody;
     bool hasFields = typeHasFields(typeBody);
     int enumCount = countTypeBodies(typeBody);
     int index = 0;
+    LamTypeConstructorList *lamTypeConstructorList = NULL;
+    int save2 = PROTECT(type);
     while (typeBody != NULL) {
-        collectTypeConstructor(typeBody->typeConstructor, type, enumCount, index, hasFields, env);
+        LamTypeConstructor *lamTypeConstructor = collectTypeConstructor(
+            typeBody->typeConstructor,
+            type,
+            enumCount,
+            index,
+            hasFields,
+            env
+        );
+        int save3 = PROTECT(lamTypeConstructor);
+        lamTypeConstructorList = newLamTypeConstructorList(
+            lamTypeConstructor,
+            lamTypeConstructorList
+        );
+        REPLACE_PROTECT(save2, lamTypeConstructorList);
+        UNPROTECT(save3);
         typeBody = typeBody->next;
         index++;
     }
+    LamTypeDef *res = newLamTypeDef(type, lamTypeConstructorList);
     UNPROTECT(save);
+    return res;
 }
 
-static void collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
+static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
     if (definitions == NULL) {
-        return;
+        return NULL;
     }
     if (definitions->definition->type == AST_DEFINITION_TYPE_TYPEDEF) {
-        collectTypeDef(definitions->definition->val.typeDef, env);
+        LamTypeDef *lamTypeDef = collectTypeDef(definitions->definition->val.typeDef, env);
+        int save = PROTECT(lamTypeDef);
+        LamTypeDefList *rest = collectTypeDefs(definitions->next, env);
+        PROTECT(rest);
+        LamTypeDefList *res = newLamTypeDefList(lamTypeDef, rest);
+        UNPROTECT(save);
+        return res;
+    } else {
+        return collectTypeDefs(definitions->next, env);
     }
-    collectTypeDefs(definitions->next, env);
 }
 
 static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next) {
@@ -594,6 +645,23 @@ static bool typeHasFields(AstTypeBody *typeBody) {
     return false;
 }
 
+static LamExp *makeConstruct(HashSymbol *name, int tag, LamList *args) {
+    LamConstruct *construct = newLamConstruct(name, tag, args);
+    int save = PROTECT(construct);
+    LamExp *res = newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(construct));
+    UNPROTECT(save);
+    return res;
+}
+
+static LamExp *makeConstant(HashSymbol *name, int tag) {
+    LamConstant *constant = newLamConstant(name, tag);
+    int save = PROTECT(constant);
+    LamExp *res = newLamExp(LAMEXP_TYPE_CONSTANT, LAMEXP_VAL_CONSTANT(constant));
+    UNPROTECT(save);
+    return res;
+}
+
+/*
 static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
     LamExp *indexExp = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(index));
     int save = PROTECT(indexExp);
@@ -605,6 +673,7 @@ static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
     UNPROTECT(save);
     return exp;
 }
+*/
 
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next) {
     ENTER(prependDefine);
@@ -726,7 +795,7 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
             if (info != NULL) {
                 if (info->vec) {
                     if (actualNargs == info->arity) {
-                        LamExp *inLine = makeMakeVec(info->arity, info->index, args);
+                        LamExp *inLine = makeConstruct(symbol, info->index, args);
                         UNPROTECT(save);
                         return inLine;
                     } else {
@@ -804,10 +873,9 @@ static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
         if (info->arity > 0) {
             cant_happen("too few arguments to constructor %s", symbol->name);
         }
-        return makeMakeVec(0, info->index, NULL);
+        return makeConstruct(symbol, info->index, NULL);
     } else {
-        LamExp *res = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(info->index));
-        return res;
+        return makeConstant(symbol, info->index);
     }
 }
 

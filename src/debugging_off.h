@@ -21,4 +21,5 @@
 #define ENTER(n)
 #define LEAVE(n)
 #define DEBUG(...)
+#define IFDEBUG(x)
 #define NEWLINE()

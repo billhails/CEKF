@@ -65,6 +65,7 @@ static AexpList *replaceLamList(LamList *list, HashTable *replacements);
 static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements);
 static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements);
+static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements);
 static Aexp *replaceLamCexp(LamExp *apply, HashTable *replacements);
 static Exp *normalizeMakeVec(LamMakeVec *makeVec, Exp *tail);
 static Exp *wrapTail(Exp *exp, Exp *tail);
@@ -78,6 +79,7 @@ static AexpIntList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
+static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -85,12 +87,7 @@ Exp *anfNormalize(LamExp *lamExp) {
 
 static Exp *normalize(LamExp *lamExp, Exp *tail) {
     ENTER(normalize);
-#ifdef DEBUG_ANF
-    ppLamExp(lamExp);
-    NEWLINE();
-    // printLamExp(lamExp, 0);
-    // NEWLINE();
-#endif
+    IFDEBUG(ppLamExp(lamExp));
     switch (lamExp->type) {
         case LAMEXP_TYPE_LAM:
             return normalizeLam(lamExp->val.lam, tail);
@@ -114,6 +111,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeSequence(lamExp->val.list, tail);
         case LAMEXP_TYPE_MAKEVEC:
             return normalizeMakeVec(lamExp->val.makeVec, tail);
+        case LAMEXP_TYPE_TYPEDEFS:
+            return normalize(lamExp->val.typedefs->body, tail);
         case LAMEXP_TYPE_APPLY:
             return normalizeApply(lamExp->val.apply, tail);
         case LAMEXP_TYPE_IFF:
@@ -122,6 +121,10 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeCallCc(lamExp->val.callcc, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
+        case LAMEXP_TYPE_CONSTRUCT:
+            return normalizeConstruct(lamExp->val.construct, tail);
+        case LAMEXP_TYPE_CONSTANT:
+            return normalizeStdInteger(lamExp->val.constant->tag, tail);
         case LAMEXP_TYPE_LET:
             return normalizeLet(lamExp->val.let, tail);
         case LAMEXP_TYPE_MATCH:
@@ -230,10 +233,7 @@ static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
 
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
     ENTER(normalizeLetRec);
-#ifdef DEBUG_ANF
-    ppLamLetRec(lamLetRec);
-    NEWLINE();
-#endif
+    IFDEBUG(ppLamLetRec(lamLetRec));
     Exp* body = normalize(lamLetRec->body, tail);
     int save = PROTECT(body);
     CexpLetRec *cexpLetRec = newCexpLetRec(NULL, body);
@@ -339,6 +339,30 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
     Exp *res = letBind(exp, replacements);
     UNPROTECT(save);
     LEAVE(normalizeMakeVec);
+    return res;
+}
+
+static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
+    int nargs = 0;
+    for (LamList *args = construct->args; args != NULL; args = args->next) {
+        nargs++;
+    }
+    LamExp *newArg = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(construct->tag));
+    int save = PROTECT(newArg);
+    LamList *extraItem = newLamList(newArg, construct->args);
+    PROTECT(extraItem);
+    LamMakeVec *res = newLamMakeVec(nargs + 1, extraItem);
+    UNPROTECT(save);
+    return res;
+}
+
+static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
+    ENTER(normalizeConstruct);
+    LamMakeVec *makeVec = constructToMakeVec(construct);
+    int save = PROTECT(makeVec);
+    Exp *res = normalizeMakeVec(makeVec, tail);
+    UNPROTECT(save);
+    LEAVE(normalizeConstruct);
     return res;
 }
 
@@ -614,10 +638,7 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
     AexpList *args = replaceLamList(lamApply->args, replacements);
     PROTECT(args);
     DEBUG("back from replaceLamList");
-#ifdef DEBUG_ANF
-    printHashTable(replacements, 0);
-    NEWLINE();
-#endif
+    IFDEBUG(printHashTable(replacements, 0));
     CexpApply *cexpApply = newCexpApply(function, args);
     UNPROTECT(save2);
     save2 = PROTECT(cexpApply);
@@ -637,12 +658,8 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
 static Exp *letBind(Exp *body, HashTable *replacements) {
     ENTER(letBind);
     // DEBUG("sleep %d", sleep(1));
-#ifdef DEBUG_ANF
-    printExp(body);
-    NEWLINE();
-    printHashTable(replacements, 0);
-    NEWLINE();
-#endif
+    IFDEBUG(printExp(body));
+    IFDEBUG(printHashTable(replacements, 0));
     if (replacements->count == 0) {
         LEAVE(letBind);
         return body;
@@ -759,6 +776,15 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
         case LAMEXP_TYPE_MAKEVEC:
             res = replaceLamMakeVec(lamExp->val.makeVec, replacements);
             break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            res = replaceLamConstruct(lamExp->val.construct, replacements);
+            break;
+        case LAMEXP_TYPE_CONSTANT:
+            res = aexpNormalizeStdInteger(lamExp->val.constant->tag);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            res = replaceLamCexp(lamExp->val.typedefs->body, replacements);
+            break;
         case LAMEXP_TYPE_CHARACTER:
             res = aexpNormalizeCharacter(lamExp->val.character);
             break;
@@ -793,6 +819,8 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_BIGINTEGER:
         case LAMEXP_TYPE_CHARACTER:
+        case LAMEXP_TYPE_CONSTANT:
+        case LAMEXP_TYPE_CONSTRUCT:
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_AMB:
@@ -803,6 +831,7 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_IFF:
         case LAMEXP_TYPE_CALLCC:
         case LAMEXP_TYPE_LETREC:
+        case LAMEXP_TYPE_TYPEDEFS:
         case LAMEXP_TYPE_LET:
         case LAMEXP_TYPE_MATCH:
         case LAMEXP_TYPE_COND:
@@ -848,6 +877,14 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
     }
     UNPROTECT(save);
     return cexpLetRec;
+}
+
+static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements) {
+    LamMakeVec *makeVec = constructToMakeVec(construct);
+    int save = PROTECT(makeVec);
+    Aexp *res = replaceLamMakeVec(makeVec, replacements);
+    UNPROTECT(save);
+    return res;
 }
 
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements) {
@@ -955,9 +992,7 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
 
 static HashSymbol *freshSymbol() {
     HashSymbol *res = genSym("anf$");
-#ifdef DEBUG_ANF
     DEBUG("freshHashSymbol %s", res->name);
-#endif
     return res;
 }
 
@@ -968,10 +1003,7 @@ static Aexp *replaceLamCexp(LamExp *apply, HashTable *replacements) {
     }
     HashSymbol *subst = freshSymbol();
     hashSet(replacements, subst, &apply);
-#ifdef DEBUG_ANF
-    printHashTable(replacements, 0);
-    NEWLINE();
-#endif
+    IFDEBUG(printHashTable(replacements, 0));
     LEAVE(replaceLamCexp);
     return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(subst));
 }

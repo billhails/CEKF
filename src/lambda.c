@@ -24,12 +24,15 @@
 #include <stdio.h>
 #include <strings.h>
 #include "common.h"
+#ifdef DEBUG_ALLOC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 struct LamLam * newLamLam(int nargs, struct LamVarList * args, struct LamExp * exp) {
     struct LamLam * x = NEW(LamLam, OBJTYPE_LAMLAM);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamLam %p\n", x);
-#endif
+    DEBUG("new LamLam %pn", x);
     x->nargs = nargs;
     x->args = args;
     x->exp = exp;
@@ -38,9 +41,7 @@ struct LamLam * newLamLam(int nargs, struct LamVarList * args, struct LamExp * e
 
 struct LamVarList * newLamVarList(HashSymbol * var, struct LamVarList * next) {
     struct LamVarList * x = NEW(LamVarList, OBJTYPE_LAMVARLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamVarList %p\n", x);
-#endif
+    DEBUG("new LamVarList %pn", x);
     x->var = var;
     x->next = next;
     return x;
@@ -48,9 +49,7 @@ struct LamVarList * newLamVarList(HashSymbol * var, struct LamVarList * next) {
 
 struct LamPrimApp * newLamPrimApp(enum LamPrimOp  type, struct LamExp * exp1, struct LamExp * exp2) {
     struct LamPrimApp * x = NEW(LamPrimApp, OBJTYPE_LAMPRIMAPP);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamPrimApp %p\n", x);
-#endif
+    DEBUG("new LamPrimApp %pn", x);
     x->type = type;
     x->exp1 = exp1;
     x->exp2 = exp2;
@@ -59,9 +58,7 @@ struct LamPrimApp * newLamPrimApp(enum LamPrimOp  type, struct LamExp * exp1, st
 
 struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp) {
     struct LamUnaryApp * x = NEW(LamUnaryApp, OBJTYPE_LAMUNARYAPP);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamUnaryApp %p\n", x);
-#endif
+    DEBUG("new LamUnaryApp %pn", x);
     x->type = type;
     x->exp = exp;
     return x;
@@ -69,9 +66,7 @@ struct LamUnaryApp * newLamUnaryApp(enum LamUnaryOp  type, struct LamExp * exp) 
 
 struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * next) {
     struct LamSequence * x = NEW(LamSequence, OBJTYPE_LAMSEQUENCE);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamSequence %p\n", x);
-#endif
+    DEBUG("new LamSequence %pn", x);
     x->exp = exp;
     x->next = next;
     return x;
@@ -79,9 +74,7 @@ struct LamSequence * newLamSequence(struct LamExp * exp, struct LamSequence * ne
 
 struct LamList * newLamList(struct LamExp * exp, struct LamList * next) {
     struct LamList * x = NEW(LamList, OBJTYPE_LAMLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamList %p\n", x);
-#endif
+    DEBUG("new LamList %pn", x);
     x->exp = exp;
     x->next = next;
     return x;
@@ -89,20 +82,33 @@ struct LamList * newLamList(struct LamExp * exp, struct LamList * next) {
 
 struct LamApply * newLamApply(struct LamExp * function, int nargs, struct LamList * args) {
     struct LamApply * x = NEW(LamApply, OBJTYPE_LAMAPPLY);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamApply %p\n", x);
-#endif
+    DEBUG("new LamApply %pn", x);
     x->function = function;
     x->nargs = nargs;
     x->args = args;
     return x;
 }
 
+struct LamConstant * newLamConstant(HashSymbol * name, int tag) {
+    struct LamConstant * x = NEW(LamConstant, OBJTYPE_LAMCONSTANT);
+    DEBUG("new LamConstant %pn", x);
+    x->name = name;
+    x->tag = tag;
+    return x;
+}
+
+struct LamConstruct * newLamConstruct(HashSymbol * name, int tag, struct LamList * args) {
+    struct LamConstruct * x = NEW(LamConstruct, OBJTYPE_LAMCONSTRUCT);
+    DEBUG("new LamConstruct %pn", x);
+    x->name = name;
+    x->tag = tag;
+    x->args = args;
+    return x;
+}
+
 struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
     struct LamMakeVec * x = NEW(LamMakeVec, OBJTYPE_LAMMAKEVEC);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamMakeVec %p\n", x);
-#endif
+    DEBUG("new LamMakeVec %pn", x);
     x->nargs = nargs;
     x->args = args;
     return x;
@@ -110,81 +116,16 @@ struct LamMakeVec * newLamMakeVec(int nargs, struct LamList * args) {
 
 struct LamIff * newLamIff(struct LamExp * condition, struct LamExp * consequent, struct LamExp * alternative) {
     struct LamIff * x = NEW(LamIff, OBJTYPE_LAMIFF);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamIff %p\n", x);
-#endif
+    DEBUG("new LamIff %pn", x);
     x->condition = condition;
     x->consequent = consequent;
     x->alternative = alternative;
     return x;
 }
 
-struct LamType * newLamType(HashSymbol * name, struct LamTypeArgs * args) {
-    struct LamType * x = NEW(LamType, OBJTYPE_LAMTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamType %p\n", x);
-#endif
-    x->name = name;
-    x->args = args;
-    return x;
-}
-
-struct LamTypeArgs * newLamTypeArgs(HashSymbol * name, struct LamTypeArgs * next) {
-    struct LamTypeArgs * x = NEW(LamTypeArgs, OBJTYPE_LAMTYPEARGS);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeArgs %p\n", x);
-#endif
-    x->name = name;
-    x->next = next;
-    return x;
-}
-
-struct LamTypeConstructor * newLamTypeConstructor(HashSymbol * name, struct LamType * type, struct LamTypeConstructorArgs * args) {
-    struct LamTypeConstructor * x = NEW(LamTypeConstructor, OBJTYPE_LAMTYPECONSTRUCTOR);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeConstructor %p\n", x);
-#endif
-    x->name = name;
-    x->type = type;
-    x->args = args;
-    return x;
-}
-
-struct LamTypeConstructorArgs * newLamTypeConstructorArgs(struct LamTypeConstructorArg * arg, struct LamTypeConstructorArgs * next) {
-    struct LamTypeConstructorArgs * x = NEW(LamTypeConstructorArgs, OBJTYPE_LAMTYPECONSTRUCTORARGS);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeConstructorArgs %p\n", x);
-#endif
-    x->arg = arg;
-    x->next = next;
-    return x;
-}
-
-struct LamTypeConstructorArg * newLamTypeConstructorArg(struct LamTypeConstructorType * type, struct LamTypeConstructorArg * next) {
-    struct LamTypeConstructorArg * x = NEW(LamTypeConstructorArg, OBJTYPE_LAMTYPECONSTRUCTORARG);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeConstructorArg %p\n", x);
-#endif
-    x->type = type;
-    x->next = next;
-    return x;
-}
-
-struct LamTypeFunction * newLamTypeFunction(HashSymbol * name, struct LamTypeConstructorArgs * args) {
-    struct LamTypeFunction * x = NEW(LamTypeFunction, OBJTYPE_LAMTYPEFUNCTION);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeFunction %p\n", x);
-#endif
-    x->name = name;
-    x->args = args;
-    return x;
-}
-
 struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases) {
     struct LamCond * x = NEW(LamCond, OBJTYPE_LAMCOND);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamCond %p\n", x);
-#endif
+    DEBUG("new LamCond %pn", x);
     x->value = value;
     x->cases = cases;
     return x;
@@ -192,9 +133,7 @@ struct LamCond * newLamCond(struct LamExp * value, struct LamCondCases * cases) 
 
 struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * body, struct LamIntCondCases * next) {
     struct LamIntCondCases * x = NEW(LamIntCondCases, OBJTYPE_LAMINTCONDCASES);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamIntCondCases %p\n", x);
-#endif
+    DEBUG("new LamIntCondCases %pn", x);
     x->constant = constant;
     x->body = body;
     x->next = next;
@@ -203,9 +142,7 @@ struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * b
 
 struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * body, struct LamCharCondCases * next) {
     struct LamCharCondCases * x = NEW(LamCharCondCases, OBJTYPE_LAMCHARCONDCASES);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamCharCondCases %p\n", x);
-#endif
+    DEBUG("new LamCharCondCases %pn", x);
     x->constant = constant;
     x->body = body;
     x->next = next;
@@ -214,9 +151,7 @@ struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * bod
 
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases) {
     struct LamMatch * x = NEW(LamMatch, OBJTYPE_LAMMATCH);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamMatch %p\n", x);
-#endif
+    DEBUG("new LamMatch %pn", x);
     x->index = index;
     x->cases = cases;
     return x;
@@ -224,9 +159,7 @@ struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases
 
 struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next) {
     struct LamMatchList * x = NEW(LamMatchList, OBJTYPE_LAMMATCHLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamMatchList %p\n", x);
-#endif
+    DEBUG("new LamMatchList %pn", x);
     x->matches = matches;
     x->body = body;
     x->next = next;
@@ -235,9 +168,7 @@ struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp
 
 struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
     struct LamIntList * x = NEW(LamIntList, OBJTYPE_LAMINTLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamIntList %p\n", x);
-#endif
+    DEBUG("new LamIntList %pn", x);
     x->item = item;
     x->next = next;
     return x;
@@ -245,9 +176,7 @@ struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
 
 struct LamLet * newLamLet(HashSymbol * var, struct LamExp * value, struct LamExp * body) {
     struct LamLet * x = NEW(LamLet, OBJTYPE_LAMLET);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamLet %p\n", x);
-#endif
+    DEBUG("new LamLet %pn", x);
     x->var = var;
     x->value = value;
     x->body = body;
@@ -256,9 +185,7 @@ struct LamLet * newLamLet(HashSymbol * var, struct LamExp * value, struct LamExp
 
 struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamExp * body) {
     struct LamLetRec * x = NEW(LamLetRec, OBJTYPE_LAMLETREC);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamLetRec %p\n", x);
-#endif
+    DEBUG("new LamLetRec %pn", x);
     x->nbindings = nbindings;
     x->bindings = bindings;
     x->body = body;
@@ -267,9 +194,7 @@ struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindin
 
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next) {
     struct LamLetRecBindings * x = NEW(LamLetRecBindings, OBJTYPE_LAMLETRECBINDINGS);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamLetRecBindings %p\n", x);
-#endif
+    DEBUG("new LamLetRecBindings %pn", x);
     x->var = var;
     x->val = val;
     x->next = next;
@@ -278,9 +203,7 @@ struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp 
 
 struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent) {
     struct LamContext * x = NEW(LamContext, OBJTYPE_LAMCONTEXT);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamContext %p\n", x);
-#endif
+    DEBUG("new LamContext %pn", x);
     x->frame = frame;
     x->parent = parent;
     return x;
@@ -288,9 +211,7 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
 
 struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right) {
     struct LamAnd * x = NEW(LamAnd, OBJTYPE_LAMAND);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamAnd %p\n", x);
-#endif
+    DEBUG("new LamAnd %pn", x);
     x->left = left;
     x->right = right;
     return x;
@@ -298,9 +219,7 @@ struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right) {
 
 struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right) {
     struct LamOr * x = NEW(LamOr, OBJTYPE_LAMOR);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamOr %p\n", x);
-#endif
+    DEBUG("new LamOr %pn", x);
     x->left = left;
     x->right = right;
     return x;
@@ -308,19 +227,88 @@ struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right) {
 
 struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right) {
     struct LamAmb * x = NEW(LamAmb, OBJTYPE_LAMAMB);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamAmb %p\n", x);
-#endif
+    DEBUG("new LamAmb %pn", x);
     x->left = left;
     x->right = right;
     return x;
 }
 
+struct LamTypeDefs * newLamTypeDefs(struct LamTypeDefList * typeDefs, struct LamExp * body) {
+    struct LamTypeDefs * x = NEW(LamTypeDefs, OBJTYPE_LAMTYPEDEFS);
+    DEBUG("new LamTypeDefs %pn", x);
+    x->typeDefs = typeDefs;
+    x->body = body;
+    return x;
+}
+
+struct LamTypeDefList * newLamTypeDefList(struct LamTypeDef * typeDef, struct LamTypeDefList * next) {
+    struct LamTypeDefList * x = NEW(LamTypeDefList, OBJTYPE_LAMTYPEDEFLIST);
+    DEBUG("new LamTypeDefList %pn", x);
+    x->typeDef = typeDef;
+    x->next = next;
+    return x;
+}
+
+struct LamTypeDef * newLamTypeDef(struct LamType * type, struct LamTypeConstructorList * constructors) {
+    struct LamTypeDef * x = NEW(LamTypeDef, OBJTYPE_LAMTYPEDEF);
+    DEBUG("new LamTypeDef %pn", x);
+    x->type = type;
+    x->constructors = constructors;
+    return x;
+}
+
+struct LamTypeConstructorList * newLamTypeConstructorList(struct LamTypeConstructor * constructor, struct LamTypeConstructorList * next) {
+    struct LamTypeConstructorList * x = NEW(LamTypeConstructorList, OBJTYPE_LAMTYPECONSTRUCTORLIST);
+    DEBUG("new LamTypeConstructorList %pn", x);
+    x->constructor = constructor;
+    x->next = next;
+    return x;
+}
+
+struct LamType * newLamType(HashSymbol * name, struct LamTypeArgs * args) {
+    struct LamType * x = NEW(LamType, OBJTYPE_LAMTYPE);
+    DEBUG("new LamType %pn", x);
+    x->name = name;
+    x->args = args;
+    return x;
+}
+
+struct LamTypeArgs * newLamTypeArgs(HashSymbol * name, struct LamTypeArgs * next) {
+    struct LamTypeArgs * x = NEW(LamTypeArgs, OBJTYPE_LAMTYPEARGS);
+    DEBUG("new LamTypeArgs %pn", x);
+    x->name = name;
+    x->next = next;
+    return x;
+}
+
+struct LamTypeConstructor * newLamTypeConstructor(HashSymbol * name, struct LamType * type, struct LamTypeConstructorArgs * args) {
+    struct LamTypeConstructor * x = NEW(LamTypeConstructor, OBJTYPE_LAMTYPECONSTRUCTOR);
+    DEBUG("new LamTypeConstructor %pn", x);
+    x->name = name;
+    x->type = type;
+    x->args = args;
+    return x;
+}
+
+struct LamTypeConstructorArgs * newLamTypeConstructorArgs(struct LamTypeConstructorType * arg, struct LamTypeConstructorArgs * next) {
+    struct LamTypeConstructorArgs * x = NEW(LamTypeConstructorArgs, OBJTYPE_LAMTYPECONSTRUCTORARGS);
+    DEBUG("new LamTypeConstructorArgs %pn", x);
+    x->arg = arg;
+    x->next = next;
+    return x;
+}
+
+struct LamTypeFunction * newLamTypeFunction(HashSymbol * name, struct LamTypeConstructorArgs * args) {
+    struct LamTypeFunction * x = NEW(LamTypeFunction, OBJTYPE_LAMTYPEFUNCTION);
+    DEBUG("new LamTypeFunction %pn", x);
+    x->name = name;
+    x->args = args;
+    return x;
+}
+
 struct LamTypeConstructorInfo * newLamTypeConstructorInfo(struct LamTypeConstructor * type, bool vec, int arity, int size, int index) {
     struct LamTypeConstructorInfo * x = NEW(LamTypeConstructorInfo, OBJTYPE_LAMTYPECONSTRUCTORINFO);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeConstructorInfo %p\n", x);
-#endif
+    DEBUG("new LamTypeConstructorInfo %pn", x);
     x->type = type;
     x->vec = vec;
     x->arity = arity;
@@ -331,9 +319,7 @@ struct LamTypeConstructorInfo * newLamTypeConstructorInfo(struct LamTypeConstruc
 
 struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val) {
     struct LamExp * x = NEW(LamExp, OBJTYPE_LAMEXP);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamExp %p\n", x);
-#endif
+    DEBUG("new LamExp %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -341,9 +327,7 @@ struct LamExp * newLamExp(enum LamExpType  type, union LamExpVal  val) {
 
 struct LamCondCases * newLamCondCases(enum LamCondCasesType  type, union LamCondCasesVal  val) {
     struct LamCondCases * x = NEW(LamCondCases, OBJTYPE_LAMCONDCASES);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamCondCases %p\n", x);
-#endif
+    DEBUG("new LamCondCases %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -351,9 +335,7 @@ struct LamCondCases * newLamCondCases(enum LamCondCasesType  type, union LamCond
 
 struct LamTypeConstructorType * newLamTypeConstructorType(enum LamTypeConstructorTypeType  type, union LamTypeConstructorTypeVal  val) {
     struct LamTypeConstructorType * x = NEW(LamTypeConstructorType, OBJTYPE_LAMTYPECONSTRUCTORTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new LamTypeConstructorType %p\n", x);
-#endif
+    DEBUG("new LamTypeConstructorType %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -418,6 +400,21 @@ void markLamApply(struct LamApply * x) {
     markLamList(x->args);
 }
 
+void markLamConstant(struct LamConstant * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+}
+
+void markLamConstruct(struct LamConstruct * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamList(x->args);
+}
+
 void markLamMakeVec(struct LamMakeVec * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -432,55 +429,6 @@ void markLamIff(struct LamIff * x) {
     markLamExp(x->condition);
     markLamExp(x->consequent);
     markLamExp(x->alternative);
-}
-
-void markLamType(struct LamType * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->name);
-    markLamTypeArgs(x->args);
-}
-
-void markLamTypeArgs(struct LamTypeArgs * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->name);
-    markLamTypeArgs(x->next);
-}
-
-void markLamTypeConstructor(struct LamTypeConstructor * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->name);
-    markLamType(x->type);
-    markLamTypeConstructorArgs(x->args);
-}
-
-void markLamTypeConstructorArgs(struct LamTypeConstructorArgs * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markLamTypeConstructorArg(x->arg);
-    markLamTypeConstructorArgs(x->next);
-}
-
-void markLamTypeConstructorArg(struct LamTypeConstructorArg * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markLamTypeConstructorType(x->type);
-    markLamTypeConstructorArg(x->next);
-}
-
-void markLamTypeFunction(struct LamTypeFunction * x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markHashSymbol(x->name);
-    markLamTypeConstructorArgs(x->args);
 }
 
 void markLamCond(struct LamCond * x) {
@@ -590,6 +538,79 @@ void markLamAmb(struct LamAmb * x) {
     markLamExp(x->right);
 }
 
+void markLamTypeDefs(struct LamTypeDefs * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamTypeDefList(x->typeDefs);
+    markLamExp(x->body);
+}
+
+void markLamTypeDefList(struct LamTypeDefList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamTypeDef(x->typeDef);
+    markLamTypeDefList(x->next);
+}
+
+void markLamTypeDef(struct LamTypeDef * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamType(x->type);
+    markLamTypeConstructorList(x->constructors);
+}
+
+void markLamTypeConstructorList(struct LamTypeConstructorList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamTypeConstructor(x->constructor);
+    markLamTypeConstructorList(x->next);
+}
+
+void markLamType(struct LamType * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamTypeArgs(x->args);
+}
+
+void markLamTypeArgs(struct LamTypeArgs * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamTypeArgs(x->next);
+}
+
+void markLamTypeConstructor(struct LamTypeConstructor * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamType(x->type);
+    markLamTypeConstructorArgs(x->args);
+}
+
+void markLamTypeConstructorArgs(struct LamTypeConstructorArgs * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamTypeConstructorType(x->arg);
+    markLamTypeConstructorArgs(x->next);
+}
+
+void markLamTypeFunction(struct LamTypeFunction * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markHashSymbol(x->name);
+    markLamTypeConstructorArgs(x->args);
+}
+
 void markLamTypeConstructorInfo(struct LamTypeConstructorInfo * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -625,6 +646,12 @@ void markLamExp(struct LamExp * x) {
         case LAMEXP_TYPE_MAKEVEC:
             markLamMakeVec(x->val.makeVec);
             break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            markLamConstruct(x->val.construct);
+            break;
+        case LAMEXP_TYPE_CONSTANT:
+            markLamConstant(x->val.constant);
+            break;
         case LAMEXP_TYPE_APPLY:
             markLamApply(x->val.apply);
             break;
@@ -636,6 +663,9 @@ void markLamExp(struct LamExp * x) {
             break;
         case LAMEXP_TYPE_LETREC:
             markLamLetRec(x->val.letrec);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            markLamTypeDefs(x->val.typedefs);
             break;
         case LAMEXP_TYPE_LET:
             markLamLet(x->val.let);
@@ -728,29 +758,17 @@ void markLambdaObj(struct Header *h) {
         case OBJTYPE_LAMAPPLY:
             markLamApply((LamApply *)h);
             break;
+        case OBJTYPE_LAMCONSTANT:
+            markLamConstant((LamConstant *)h);
+            break;
+        case OBJTYPE_LAMCONSTRUCT:
+            markLamConstruct((LamConstruct *)h);
+            break;
         case OBJTYPE_LAMMAKEVEC:
             markLamMakeVec((LamMakeVec *)h);
             break;
         case OBJTYPE_LAMIFF:
             markLamIff((LamIff *)h);
-            break;
-        case OBJTYPE_LAMTYPE:
-            markLamType((LamType *)h);
-            break;
-        case OBJTYPE_LAMTYPEARGS:
-            markLamTypeArgs((LamTypeArgs *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTOR:
-            markLamTypeConstructor((LamTypeConstructor *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
-            markLamTypeConstructorArgs((LamTypeConstructorArgs *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTORARG:
-            markLamTypeConstructorArg((LamTypeConstructorArg *)h);
-            break;
-        case OBJTYPE_LAMTYPEFUNCTION:
-            markLamTypeFunction((LamTypeFunction *)h);
             break;
         case OBJTYPE_LAMCOND:
             markLamCond((LamCond *)h);
@@ -790,6 +808,33 @@ void markLambdaObj(struct Header *h) {
             break;
         case OBJTYPE_LAMAMB:
             markLamAmb((LamAmb *)h);
+            break;
+        case OBJTYPE_LAMTYPEDEFS:
+            markLamTypeDefs((LamTypeDefs *)h);
+            break;
+        case OBJTYPE_LAMTYPEDEFLIST:
+            markLamTypeDefList((LamTypeDefList *)h);
+            break;
+        case OBJTYPE_LAMTYPEDEF:
+            markLamTypeDef((LamTypeDef *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTORLIST:
+            markLamTypeConstructorList((LamTypeConstructorList *)h);
+            break;
+        case OBJTYPE_LAMTYPE:
+            markLamType((LamType *)h);
+            break;
+        case OBJTYPE_LAMTYPEARGS:
+            markLamTypeArgs((LamTypeArgs *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTOR:
+            markLamTypeConstructor((LamTypeConstructor *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
+            markLamTypeConstructorArgs((LamTypeConstructorArgs *)h);
+            break;
+        case OBJTYPE_LAMTYPEFUNCTION:
+            markLamTypeFunction((LamTypeFunction *)h);
             break;
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             markLamTypeConstructorInfo((LamTypeConstructorInfo *)h);
@@ -838,36 +883,20 @@ void freeLamApply(struct LamApply * x) {
     FREE(x, LamApply);
 }
 
+void freeLamConstant(struct LamConstant * x) {
+    FREE(x, LamConstant);
+}
+
+void freeLamConstruct(struct LamConstruct * x) {
+    FREE(x, LamConstruct);
+}
+
 void freeLamMakeVec(struct LamMakeVec * x) {
     FREE(x, LamMakeVec);
 }
 
 void freeLamIff(struct LamIff * x) {
     FREE(x, LamIff);
-}
-
-void freeLamType(struct LamType * x) {
-    FREE(x, LamType);
-}
-
-void freeLamTypeArgs(struct LamTypeArgs * x) {
-    FREE(x, LamTypeArgs);
-}
-
-void freeLamTypeConstructor(struct LamTypeConstructor * x) {
-    FREE(x, LamTypeConstructor);
-}
-
-void freeLamTypeConstructorArgs(struct LamTypeConstructorArgs * x) {
-    FREE(x, LamTypeConstructorArgs);
-}
-
-void freeLamTypeConstructorArg(struct LamTypeConstructorArg * x) {
-    FREE(x, LamTypeConstructorArg);
-}
-
-void freeLamTypeFunction(struct LamTypeFunction * x) {
-    FREE(x, LamTypeFunction);
 }
 
 void freeLamCond(struct LamCond * x) {
@@ -922,6 +951,42 @@ void freeLamAmb(struct LamAmb * x) {
     FREE(x, LamAmb);
 }
 
+void freeLamTypeDefs(struct LamTypeDefs * x) {
+    FREE(x, LamTypeDefs);
+}
+
+void freeLamTypeDefList(struct LamTypeDefList * x) {
+    FREE(x, LamTypeDefList);
+}
+
+void freeLamTypeDef(struct LamTypeDef * x) {
+    FREE(x, LamTypeDef);
+}
+
+void freeLamTypeConstructorList(struct LamTypeConstructorList * x) {
+    FREE(x, LamTypeConstructorList);
+}
+
+void freeLamType(struct LamType * x) {
+    FREE(x, LamType);
+}
+
+void freeLamTypeArgs(struct LamTypeArgs * x) {
+    FREE(x, LamTypeArgs);
+}
+
+void freeLamTypeConstructor(struct LamTypeConstructor * x) {
+    FREE(x, LamTypeConstructor);
+}
+
+void freeLamTypeConstructorArgs(struct LamTypeConstructorArgs * x) {
+    FREE(x, LamTypeConstructorArgs);
+}
+
+void freeLamTypeFunction(struct LamTypeFunction * x) {
+    FREE(x, LamTypeFunction);
+}
+
 void freeLamTypeConstructorInfo(struct LamTypeConstructorInfo * x) {
     FREE(x, LamTypeConstructorInfo);
 }
@@ -962,29 +1027,17 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMAPPLY:
             freeLamApply((LamApply *)h);
             break;
+        case OBJTYPE_LAMCONSTANT:
+            freeLamConstant((LamConstant *)h);
+            break;
+        case OBJTYPE_LAMCONSTRUCT:
+            freeLamConstruct((LamConstruct *)h);
+            break;
         case OBJTYPE_LAMMAKEVEC:
             freeLamMakeVec((LamMakeVec *)h);
             break;
         case OBJTYPE_LAMIFF:
             freeLamIff((LamIff *)h);
-            break;
-        case OBJTYPE_LAMTYPE:
-            freeLamType((LamType *)h);
-            break;
-        case OBJTYPE_LAMTYPEARGS:
-            freeLamTypeArgs((LamTypeArgs *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTOR:
-            freeLamTypeConstructor((LamTypeConstructor *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
-            freeLamTypeConstructorArgs((LamTypeConstructorArgs *)h);
-            break;
-        case OBJTYPE_LAMTYPECONSTRUCTORARG:
-            freeLamTypeConstructorArg((LamTypeConstructorArg *)h);
-            break;
-        case OBJTYPE_LAMTYPEFUNCTION:
-            freeLamTypeFunction((LamTypeFunction *)h);
             break;
         case OBJTYPE_LAMCOND:
             freeLamCond((LamCond *)h);
@@ -1025,6 +1078,33 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMAMB:
             freeLamAmb((LamAmb *)h);
             break;
+        case OBJTYPE_LAMTYPEDEFS:
+            freeLamTypeDefs((LamTypeDefs *)h);
+            break;
+        case OBJTYPE_LAMTYPEDEFLIST:
+            freeLamTypeDefList((LamTypeDefList *)h);
+            break;
+        case OBJTYPE_LAMTYPEDEF:
+            freeLamTypeDef((LamTypeDef *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTORLIST:
+            freeLamTypeConstructorList((LamTypeConstructorList *)h);
+            break;
+        case OBJTYPE_LAMTYPE:
+            freeLamType((LamType *)h);
+            break;
+        case OBJTYPE_LAMTYPEARGS:
+            freeLamTypeArgs((LamTypeArgs *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTOR:
+            freeLamTypeConstructor((LamTypeConstructor *)h);
+            break;
+        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
+            freeLamTypeConstructorArgs((LamTypeConstructorArgs *)h);
+            break;
+        case OBJTYPE_LAMTYPEFUNCTION:
+            freeLamTypeFunction((LamTypeFunction *)h);
+            break;
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             freeLamTypeConstructorInfo((LamTypeConstructorInfo *)h);
             break;
@@ -1058,22 +1138,14 @@ char *typenameLambdaObj(int type) {
             return "LamList";
         case OBJTYPE_LAMAPPLY:
             return "LamApply";
+        case OBJTYPE_LAMCONSTANT:
+            return "LamConstant";
+        case OBJTYPE_LAMCONSTRUCT:
+            return "LamConstruct";
         case OBJTYPE_LAMMAKEVEC:
             return "LamMakeVec";
         case OBJTYPE_LAMIFF:
             return "LamIff";
-        case OBJTYPE_LAMTYPE:
-            return "LamType";
-        case OBJTYPE_LAMTYPEARGS:
-            return "LamTypeArgs";
-        case OBJTYPE_LAMTYPECONSTRUCTOR:
-            return "LamTypeConstructor";
-        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
-            return "LamTypeConstructorArgs";
-        case OBJTYPE_LAMTYPECONSTRUCTORARG:
-            return "LamTypeConstructorArg";
-        case OBJTYPE_LAMTYPEFUNCTION:
-            return "LamTypeFunction";
         case OBJTYPE_LAMCOND:
             return "LamCond";
         case OBJTYPE_LAMINTCONDCASES:
@@ -1100,6 +1172,24 @@ char *typenameLambdaObj(int type) {
             return "LamOr";
         case OBJTYPE_LAMAMB:
             return "LamAmb";
+        case OBJTYPE_LAMTYPEDEFS:
+            return "LamTypeDefs";
+        case OBJTYPE_LAMTYPEDEFLIST:
+            return "LamTypeDefList";
+        case OBJTYPE_LAMTYPEDEF:
+            return "LamTypeDef";
+        case OBJTYPE_LAMTYPECONSTRUCTORLIST:
+            return "LamTypeConstructorList";
+        case OBJTYPE_LAMTYPE:
+            return "LamType";
+        case OBJTYPE_LAMTYPEARGS:
+            return "LamTypeArgs";
+        case OBJTYPE_LAMTYPECONSTRUCTOR:
+            return "LamTypeConstructor";
+        case OBJTYPE_LAMTYPECONSTRUCTORARGS:
+            return "LamTypeConstructorArgs";
+        case OBJTYPE_LAMTYPEFUNCTION:
+            return "LamTypeFunction";
         case OBJTYPE_LAMTYPECONSTRUCTORINFO:
             return "LamTypeConstructorInfo";
         case OBJTYPE_LAMEXP:

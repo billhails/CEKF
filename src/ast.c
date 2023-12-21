@@ -24,12 +24,15 @@
 #include <stdio.h>
 #include <strings.h>
 #include "common.h"
+#ifdef DEBUG_ALLOC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpressions * expressions) {
     struct AstNest * x = NEW(AstNest, OBJTYPE_ASTNEST);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstNest %p\n", x);
-#endif
+    DEBUG("new AstNest %pn", x);
     x->definitions = definitions;
     x->expressions = expressions;
     return x;
@@ -37,9 +40,7 @@ struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpre
 
 struct AstDefinitions * newAstDefinitions(struct AstDefinition * definition, struct AstDefinitions * next) {
     struct AstDefinitions * x = NEW(AstDefinitions, OBJTYPE_ASTDEFINITIONS);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstDefinitions %p\n", x);
-#endif
+    DEBUG("new AstDefinitions %pn", x);
     x->definition = definition;
     x->next = next;
     return x;
@@ -47,9 +48,7 @@ struct AstDefinitions * newAstDefinitions(struct AstDefinition * definition, str
 
 struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expression) {
     struct AstDefine * x = NEW(AstDefine, OBJTYPE_ASTDEFINE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstDefine %p\n", x);
-#endif
+    DEBUG("new AstDefine %pn", x);
     x->symbol = symbol;
     x->expression = expression;
     return x;
@@ -57,9 +56,7 @@ struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expr
 
 struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBody * body) {
     struct AstPrototype * x = NEW(AstPrototype, OBJTYPE_ASTPROTOTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstPrototype %p\n", x);
-#endif
+    DEBUG("new AstPrototype %pn", x);
     x->symbol = symbol;
     x->body = body;
     return x;
@@ -67,9 +64,7 @@ struct AstPrototype * newAstPrototype(HashSymbol * symbol, struct AstPrototypeBo
 
 struct AstPrototypeBody * newAstPrototypeBody(struct AstSinglePrototype * single, struct AstPrototypeBody * next) {
     struct AstPrototypeBody * x = NEW(AstPrototypeBody, OBJTYPE_ASTPROTOTYPEBODY);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstPrototypeBody %p\n", x);
-#endif
+    DEBUG("new AstPrototypeBody %pn", x);
     x->single = single;
     x->next = next;
     return x;
@@ -77,9 +72,7 @@ struct AstPrototypeBody * newAstPrototypeBody(struct AstSinglePrototype * single
 
 struct AstPrototypeSymbolType * newAstPrototypeSymbolType(HashSymbol * symbol, struct AstType * type) {
     struct AstPrototypeSymbolType * x = NEW(AstPrototypeSymbolType, OBJTYPE_ASTPROTOTYPESYMBOLTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstPrototypeSymbolType %p\n", x);
-#endif
+    DEBUG("new AstPrototypeSymbolType %pn", x);
     x->symbol = symbol;
     x->type = type;
     return x;
@@ -87,9 +80,7 @@ struct AstPrototypeSymbolType * newAstPrototypeSymbolType(HashSymbol * symbol, s
 
 struct AstLoad * newAstLoad(struct AstPackage * package, HashSymbol * symbol) {
     struct AstLoad * x = NEW(AstLoad, OBJTYPE_ASTLOAD);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstLoad %p\n", x);
-#endif
+    DEBUG("new AstLoad %pn", x);
     x->package = package;
     x->symbol = symbol;
     return x;
@@ -97,9 +88,7 @@ struct AstLoad * newAstLoad(struct AstPackage * package, HashSymbol * symbol) {
 
 struct AstTypeDef * newAstTypeDef(struct AstFlatType * flatType, struct AstTypeBody * typeBody) {
     struct AstTypeDef * x = NEW(AstTypeDef, OBJTYPE_ASTTYPEDEF);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeDef %p\n", x);
-#endif
+    DEBUG("new AstTypeDef %pn", x);
     x->flatType = flatType;
     x->typeBody = typeBody;
     return x;
@@ -107,9 +96,7 @@ struct AstTypeDef * newAstTypeDef(struct AstFlatType * flatType, struct AstTypeB
 
 struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols * typeSymbols) {
     struct AstFlatType * x = NEW(AstFlatType, OBJTYPE_ASTFLATTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstFlatType %p\n", x);
-#endif
+    DEBUG("new AstFlatType %pn", x);
     x->symbol = symbol;
     x->typeSymbols = typeSymbols;
     return x;
@@ -117,9 +104,7 @@ struct AstFlatType * newAstFlatType(HashSymbol * symbol, struct AstTypeSymbols *
 
 struct AstTypeSymbols * newAstTypeSymbols(HashSymbol * typeSymbol, struct AstTypeSymbols * next) {
     struct AstTypeSymbols * x = NEW(AstTypeSymbols, OBJTYPE_ASTTYPESYMBOLS);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeSymbols %p\n", x);
-#endif
+    DEBUG("new AstTypeSymbols %pn", x);
     x->typeSymbol = typeSymbol;
     x->next = next;
     return x;
@@ -127,9 +112,7 @@ struct AstTypeSymbols * newAstTypeSymbols(HashSymbol * typeSymbol, struct AstTyp
 
 struct AstTypeBody * newAstTypeBody(struct AstTypeConstructor * typeConstructor, struct AstTypeBody * next) {
     struct AstTypeBody * x = NEW(AstTypeBody, OBJTYPE_ASTTYPEBODY);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeBody %p\n", x);
-#endif
+    DEBUG("new AstTypeBody %pn", x);
     x->typeConstructor = typeConstructor;
     x->next = next;
     return x;
@@ -137,9 +120,7 @@ struct AstTypeBody * newAstTypeBody(struct AstTypeConstructor * typeConstructor,
 
 struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct AstTypeList * typeList) {
     struct AstTypeConstructor * x = NEW(AstTypeConstructor, OBJTYPE_ASTTYPECONSTRUCTOR);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeConstructor %p\n", x);
-#endif
+    DEBUG("new AstTypeConstructor %pn", x);
     x->symbol = symbol;
     x->typeList = typeList;
     return x;
@@ -147,9 +128,7 @@ struct AstTypeConstructor * newAstTypeConstructor(HashSymbol * symbol, struct As
 
 struct AstTypeFunction * newAstTypeFunction(HashSymbol * symbol, struct AstTypeList * typeList) {
     struct AstTypeFunction * x = NEW(AstTypeFunction, OBJTYPE_ASTTYPEFUNCTION);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeFunction %p\n", x);
-#endif
+    DEBUG("new AstTypeFunction %pn", x);
     x->symbol = symbol;
     x->typeList = typeList;
     return x;
@@ -157,9 +136,7 @@ struct AstTypeFunction * newAstTypeFunction(HashSymbol * symbol, struct AstTypeL
 
 struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * next) {
     struct AstTypeList * x = NEW(AstTypeList, OBJTYPE_ASTTYPELIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeList %p\n", x);
-#endif
+    DEBUG("new AstTypeList %pn", x);
     x->type = type;
     x->next = next;
     return x;
@@ -167,9 +144,7 @@ struct AstTypeList * newAstTypeList(struct AstType * type, struct AstTypeList * 
 
 struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * next) {
     struct AstType * x = NEW(AstType, OBJTYPE_ASTTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstType %p\n", x);
-#endif
+    DEBUG("new AstType %pn", x);
     x->typeClause = typeClause;
     x->next = next;
     return x;
@@ -177,9 +152,7 @@ struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * 
 
 struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * function, struct AstCompositeFunction * next) {
     struct AstCompositeFunction * x = NEW(AstCompositeFunction, OBJTYPE_ASTCOMPOSITEFUNCTION);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstCompositeFunction %p\n", x);
-#endif
+    DEBUG("new AstCompositeFunction %pn", x);
     x->function = function;
     x->next = next;
     return x;
@@ -187,9 +160,7 @@ struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * funct
 
 struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest * nest) {
     struct AstFunction * x = NEW(AstFunction, OBJTYPE_ASTFUNCTION);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstFunction %p\n", x);
-#endif
+    DEBUG("new AstFunction %pn", x);
     x->argList = argList;
     x->nest = nest;
     return x;
@@ -197,9 +168,7 @@ struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest 
 
 struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next) {
     struct AstArgList * x = NEW(AstArgList, OBJTYPE_ASTARGLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstArgList %p\n", x);
-#endif
+    DEBUG("new AstArgList %pn", x);
     x->arg = arg;
     x->next = next;
     return x;
@@ -207,9 +176,7 @@ struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next)
 
 struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList) {
     struct AstUnpack * x = NEW(AstUnpack, OBJTYPE_ASTUNPACK);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstUnpack %p\n", x);
-#endif
+    DEBUG("new AstUnpack %pn", x);
     x->symbol = symbol;
     x->argList = argList;
     return x;
@@ -217,9 +184,7 @@ struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList
 
 struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg) {
     struct AstNamedArg * x = NEW(AstNamedArg, OBJTYPE_ASTNAMEDARG);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstNamedArg %p\n", x);
-#endif
+    DEBUG("new AstNamedArg %pn", x);
     x->name = name;
     x->arg = arg;
     return x;
@@ -227,9 +192,7 @@ struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg) {
 
 struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype) {
     struct AstEnvType * x = NEW(AstEnvType, OBJTYPE_ASTENVTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstEnvType %p\n", x);
-#endif
+    DEBUG("new AstEnvType %pn", x);
     x->name = name;
     x->prototype = prototype;
     return x;
@@ -237,9 +200,7 @@ struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype) {
 
 struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExpressions * arguments) {
     struct AstFunCall * x = NEW(AstFunCall, OBJTYPE_ASTFUNCALL);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstFunCall %p\n", x);
-#endif
+    DEBUG("new AstFunCall %pn", x);
     x->function = function;
     x->arguments = arguments;
     return x;
@@ -247,9 +208,7 @@ struct AstFunCall * newAstFunCall(struct AstExpression * function, struct AstExp
 
 struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next) {
     struct AstPackage * x = NEW(AstPackage, OBJTYPE_ASTPACKAGE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstPackage %p\n", x);
-#endif
+    DEBUG("new AstPackage %pn", x);
     x->symbol = symbol;
     x->next = next;
     return x;
@@ -257,9 +216,7 @@ struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next)
 
 struct AstExpressions * newAstExpressions(struct AstExpression * expression, struct AstExpressions * next) {
     struct AstExpressions * x = NEW(AstExpressions, OBJTYPE_ASTEXPRESSIONS);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstExpressions %p\n", x);
-#endif
+    DEBUG("new AstExpressions %pn", x);
     x->expression = expression;
     x->next = next;
     return x;
@@ -267,9 +224,7 @@ struct AstExpressions * newAstExpressions(struct AstExpression * expression, str
 
 struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * definitions) {
     struct AstEnv * x = NEW(AstEnv, OBJTYPE_ASTENV);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstEnv %p\n", x);
-#endif
+    DEBUG("new AstEnv %pn", x);
     x->package = package;
     x->definitions = definitions;
     return x;
@@ -277,9 +232,7 @@ struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * d
 
 struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * consequent, struct AstNest * alternative) {
     struct AstIff * x = NEW(AstIff, OBJTYPE_ASTIFF);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstIff %p\n", x);
-#endif
+    DEBUG("new AstIff %pn", x);
     x->test = test;
     x->consequent = consequent;
     x->alternative = alternative;
@@ -288,9 +241,7 @@ struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * conseque
 
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val) {
     struct AstDefinition * x = NEW(AstDefinition, OBJTYPE_ASTDEFINITION);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstDefinition %p\n", x);
-#endif
+    DEBUG("new AstDefinition %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -298,9 +249,7 @@ struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstD
 
 struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  type, union AstSinglePrototypeVal  val) {
     struct AstSinglePrototype * x = NEW(AstSinglePrototype, OBJTYPE_ASTSINGLEPROTOTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstSinglePrototype %p\n", x);
-#endif
+    DEBUG("new AstSinglePrototype %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -308,9 +257,7 @@ struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  t
 
 struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstTypeClauseVal  val) {
     struct AstTypeClause * x = NEW(AstTypeClause, OBJTYPE_ASTTYPECLAUSE);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstTypeClause %p\n", x);
-#endif
+    DEBUG("new AstTypeClause %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -318,9 +265,7 @@ struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstT
 
 struct AstArg * newAstArg(enum AstArgType  type, union AstArgVal  val) {
     struct AstArg * x = NEW(AstArg, OBJTYPE_ASTARG);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstArg %p\n", x);
-#endif
+    DEBUG("new AstArg %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -328,9 +273,7 @@ struct AstArg * newAstArg(enum AstArgType  type, union AstArgVal  val) {
 
 struct AstExpression * newAstExpression(enum AstExpressionType  type, union AstExpressionVal  val) {
     struct AstExpression * x = NEW(AstExpression, OBJTYPE_ASTEXPRESSION);
-#ifdef DEBUG_ALLOC
-    eprintf("new AstExpression %p\n", x);
-#endif
+    DEBUG("new AstExpression %pn", x);
     x->type = type;
     x->val = val;
     return x;

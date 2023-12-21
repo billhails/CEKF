@@ -438,9 +438,7 @@ class SimpleArray(Base):
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType});")
         print("    int save = PROTECT(x);")
-        print("#ifdef DEBUG_ALLOC");
-        print(f'    eprintf("new {myName} %p\\n", x);')
-        print("#endif");
+        print(f'    DEBUG("new {myName} %p", x);')
         print("    x->entries = NULL;")
         if self.tagged:
             print("    x->_tag = _tag;")
@@ -657,9 +655,7 @@ class SimpleStruct(Base):
         myObjType = self.getObjType()
         myName = self.getName()
         print("    {myType} x = NEW({myName}, {myObjType});".format(myType=myType, myName=myName, myObjType=myObjType))
-        print("#ifdef DEBUG_ALLOC");
-        print(f'    eprintf("new {myName} %p\\n", x);')
-        print("#endif");
+        print(f'    DEBUG("new {myName} %pn", x);')
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
@@ -1132,6 +1128,11 @@ elif args.type == "c":
     print("#include <stdio.h>");
     print("#include <strings.h>");
     print('#include "common.h"');
+    print('#ifdef DEBUG_ALLOC')
+    print('#include "debugging_on.h"')
+    print('#else')
+    print('#include "debugging_off.h"')
+    print('#endif')
     print("")
     catalog.printNewFunctions()
     print("")

@@ -187,6 +187,7 @@ int main(int argc, char *argv[]) {
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
+    eprintf("\n");
 #endif
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);

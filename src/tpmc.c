@@ -24,12 +24,15 @@
 #include <stdio.h>
 #include <strings.h>
 #include "common.h"
+#ifdef DEBUG_ALLOC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables) {
     struct TpmcMatchRules * x = NEW(TpmcMatchRules, OBJTYPE_TPMCMATCHRULES);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcMatchRules %p\n", x);
-#endif
+    DEBUG("new TpmcMatchRules %pn", x);
     x->rules = rules;
     x->rootVariables = rootVariables;
     return x;
@@ -37,9 +40,7 @@ struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, str
 
 struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPatternArray * patterns) {
     struct TpmcMatchRule * x = NEW(TpmcMatchRule, OBJTYPE_TPMCMATCHRULE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcMatchRule %p\n", x);
-#endif
+    DEBUG("new TpmcMatchRule %pn", x);
     x->action = action;
     x->patterns = patterns;
     return x;
@@ -47,9 +48,7 @@ struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPa
 
 struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current) {
     struct TpmcComparisonPattern * x = NEW(TpmcComparisonPattern, OBJTYPE_TPMCCOMPARISONPATTERN);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcComparisonPattern %p\n", x);
-#endif
+    DEBUG("new TpmcComparisonPattern %pn", x);
     x->previous = previous;
     x->current = current;
     return x;
@@ -57,9 +56,7 @@ struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * pre
 
 struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struct TpmcPattern * value) {
     struct TpmcAssignmentPattern * x = NEW(TpmcAssignmentPattern, OBJTYPE_TPMCASSIGNMENTPATTERN);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcAssignmentPattern %p\n", x);
-#endif
+    DEBUG("new TpmcAssignmentPattern %pn", x);
     x->name = name;
     x->value = value;
     return x;
@@ -67,9 +64,7 @@ struct TpmcAssignmentPattern * newTpmcAssignmentPattern(HashSymbol * name, struc
 
 struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, LamTypeConstructorInfo * info, struct TpmcPatternArray * components) {
     struct TpmcConstructorPattern * x = NEW(TpmcConstructorPattern, OBJTYPE_TPMCCONSTRUCTORPATTERN);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcConstructorPattern %p\n", x);
-#endif
+    DEBUG("new TpmcConstructorPattern %pn", x);
     x->tag = tag;
     x->info = info;
     x->components = components;
@@ -78,9 +73,7 @@ struct TpmcConstructorPattern * newTpmcConstructorPattern(HashSymbol * tag, LamT
 
 struct TpmcPattern * newTpmcPattern(struct TpmcPatternValue * pattern) {
     struct TpmcPattern * x = NEW(TpmcPattern, OBJTYPE_TPMCPATTERN);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcPattern %p\n", x);
-#endif
+    DEBUG("new TpmcPattern %pn", x);
     x->pattern = pattern;
     x->path = NULL;
     return x;
@@ -88,9 +81,7 @@ struct TpmcPattern * newTpmcPattern(struct TpmcPatternValue * pattern) {
 
 struct TpmcTestState * newTpmcTestState(HashSymbol * path, struct TpmcArcArray * arcs) {
     struct TpmcTestState * x = NEW(TpmcTestState, OBJTYPE_TPMCTESTSTATE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcTestState %p\n", x);
-#endif
+    DEBUG("new TpmcTestState %pn", x);
     x->path = path;
     x->arcs = arcs;
     return x;
@@ -98,18 +89,14 @@ struct TpmcTestState * newTpmcTestState(HashSymbol * path, struct TpmcArcArray *
 
 struct TpmcFinalState * newTpmcFinalState(LamExp * action) {
     struct TpmcFinalState * x = NEW(TpmcFinalState, OBJTYPE_TPMCFINALSTATE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcFinalState %p\n", x);
-#endif
+    DEBUG("new TpmcFinalState %pn", x);
     x->action = action;
     return x;
 }
 
 struct TpmcState * newTpmcState(int stamp, struct TpmcStateValue * state) {
     struct TpmcState * x = NEW(TpmcState, OBJTYPE_TPMCSTATE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcState %p\n", x);
-#endif
+    DEBUG("new TpmcState %pn", x);
     x->stamp = stamp;
     x->state = state;
     x->refcount = 0;
@@ -119,9 +106,7 @@ struct TpmcState * newTpmcState(int stamp, struct TpmcStateValue * state) {
 
 struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test, HashTable * freeVariables) {
     struct TpmcArc * x = NEW(TpmcArc, OBJTYPE_TPMCARC);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcArc %p\n", x);
-#endif
+    DEBUG("new TpmcArc %pn", x);
     x->state = state;
     x->test = test;
     x->freeVariables = freeVariables;
@@ -130,9 +115,7 @@ struct TpmcArc * newTpmcArc(struct TpmcState * state, struct TpmcPattern * test,
 
 struct TpmcArcList * newTpmcArcList(struct TpmcArc * arc, struct TpmcArcList * next) {
     struct TpmcArcList * x = NEW(TpmcArcList, OBJTYPE_TPMCARCLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcArcList %p\n", x);
-#endif
+    DEBUG("new TpmcArcList %pn", x);
     x->arc = arc;
     x->next = next;
     return x;
@@ -140,9 +123,7 @@ struct TpmcArcList * newTpmcArcList(struct TpmcArc * arc, struct TpmcArcList * n
 
 struct TpmcIntList * newTpmcIntList(int integer, struct TpmcIntList * next) {
     struct TpmcIntList * x = NEW(TpmcIntList, OBJTYPE_TPMCINTLIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcIntList %p\n", x);
-#endif
+    DEBUG("new TpmcIntList %pn", x);
     x->integer = integer;
     x->next = next;
     return x;
@@ -150,9 +131,7 @@ struct TpmcIntList * newTpmcIntList(int integer, struct TpmcIntList * next) {
 
 struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, union TpmcPatternValueVal  val) {
     struct TpmcPatternValue * x = NEW(TpmcPatternValue, OBJTYPE_TPMCPATTERNVALUE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcPatternValue %p\n", x);
-#endif
+    DEBUG("new TpmcPatternValue %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -160,9 +139,7 @@ struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, u
 
 struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union TpmcStateValueVal  val) {
     struct TpmcStateValue * x = NEW(TpmcStateValue, OBJTYPE_TPMCSTATEVALUE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcStateValue %p\n", x);
-#endif
+    DEBUG("new TpmcStateValue %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -171,9 +148,7 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
     struct TpmcMatchRuleArray * x = NEW(TpmcMatchRuleArray, OBJTYPE_TPMCMATCHRULEARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcMatchRuleArray %p\n", x);
-#endif
+    DEBUG("new TpmcMatchRuleArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
@@ -186,9 +161,7 @@ struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
 struct TpmcVariableArray * newTpmcVariableArray(void) {
     struct TpmcVariableArray * x = NEW(TpmcVariableArray, OBJTYPE_TPMCVARIABLEARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcVariableArray %p\n", x);
-#endif
+    DEBUG("new TpmcVariableArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
@@ -201,9 +174,7 @@ struct TpmcVariableArray * newTpmcVariableArray(void) {
 struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
     struct TpmcPatternArray * x = NEW(TpmcPatternArray, OBJTYPE_TPMCPATTERNARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcPatternArray %p\n", x);
-#endif
+    DEBUG("new TpmcPatternArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
@@ -217,9 +188,7 @@ struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
 struct TpmcStateArray * newTpmcStateArray(char * _tag) {
     struct TpmcStateArray * x = NEW(TpmcStateArray, OBJTYPE_TPMCSTATEARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcStateArray %p\n", x);
-#endif
+    DEBUG("new TpmcStateArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
@@ -233,9 +202,7 @@ struct TpmcStateArray * newTpmcStateArray(char * _tag) {
 struct TpmcArcArray * newTpmcArcArray(void) {
     struct TpmcArcArray * x = NEW(TpmcArcArray, OBJTYPE_TPMCARCARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcArcArray %p\n", x);
-#endif
+    DEBUG("new TpmcArcArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
@@ -248,9 +215,7 @@ struct TpmcArcArray * newTpmcArcArray(void) {
 struct TpmcIntArray * newTpmcIntArray(void) {
     struct TpmcIntArray * x = NEW(TpmcIntArray, OBJTYPE_TPMCINTARRAY);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcIntArray %p\n", x);
-#endif
+    DEBUG("new TpmcIntArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
@@ -263,9 +228,7 @@ struct TpmcIntArray * newTpmcIntArray(void) {
 struct TpmcMatrix * newTpmcMatrix(int width, int height) {
     struct TpmcMatrix * x = NEW(TpmcMatrix, OBJTYPE_TPMCMATRIX);
     int save = PROTECT(x);
-#ifdef DEBUG_ALLOC
-    eprintf("new TpmcMatrix %p\n", x);
-#endif
+    DEBUG("new TpmcMatrix %p", x);
     x->entries = NULL;
     x->width = 0;
     x->height = 0;

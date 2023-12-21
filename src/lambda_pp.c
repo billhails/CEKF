@@ -123,6 +123,12 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_MAKEVEC:
             ppLamMakeVec(exp->val.makeVec);
             break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            ppLamConstruct(exp->val.construct);
+            break;
+        case LAMEXP_TYPE_CONSTANT:
+            ppLamConstant(exp->val.constant);
+            break;
         case LAMEXP_TYPE_APPLY:
             ppLamApply(exp->val.apply);
             break;
@@ -134,6 +140,9 @@ void ppLamExp(LamExp *exp) {
             break;
         case LAMEXP_TYPE_LETREC:
             ppLamLetRec(exp->val.letrec);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            ppLamTypeDefs(exp->val.typedefs);
             break;
         case LAMEXP_TYPE_LET:
             ppLamLet(exp->val.let);
@@ -274,11 +283,9 @@ static void _ppLamSequence(LamSequence *sequence) {
 
 static void _ppLamList(LamList *list) {
     if (list == NULL) return;
+    eprintf(" ");
     ppLamExp(list->exp);
-    if (list->next != NULL) {
-        eprintf(" ");
-        _ppLamList(list->next);
-    }
+    _ppLamList(list->next);
 }
 
 void ppLamSequence(LamSequence *sequence) {
@@ -293,10 +300,7 @@ void ppLamMakeVec(LamMakeVec *makeVec) {
         return;
     }
     eprintf("(make-vec");
-    if (makeVec->args != NULL) {
-        eprintf(" ");
-        _ppLamList(makeVec->args);
-    }
+    _ppLamList(makeVec->args);
     eprintf(")");
 }
 
@@ -307,10 +311,7 @@ void ppLamApply(LamApply *apply) {
     }
     eprintf("(");
     ppLamExp(apply->function);
-    if (apply->args != NULL) {
-        eprintf(" ");
-        _ppLamList(apply->args);
-    }
+    _ppLamList(apply->args);
     eprintf(")");
 }
 
@@ -401,6 +402,22 @@ void ppLamLetRec(LamLetRec *letRec) {
     eprintf(")");
 }
 
+void ppLamTypeDefList(LamTypeDefList *typeDefList);
+
+void ppLamTypeDefs(LamTypeDefs *typeDefs) {
+    if (typeDefs == NULL) {
+        eprintf("<NULL typedefs>");
+        return;
+    }
+    eprintf("(typedefs ");
+    ppLamTypeDefList(typeDefs->typeDefs);
+    if (typeDefs->body != NULL) {
+        eprintf(" ");
+        ppLamExp(typeDefs->body);
+    }
+    eprintf(")");
+}
+
 void ppLamLet(LamLet *let) {
     if (let == NULL) {
         eprintf("<NULL let>");
@@ -464,6 +481,100 @@ void ppLamLetRecBindings(LamLetRecBindings *bindings) {
     eprintf(")");
 }
 
+static void _ppLamTypeArgs(LamTypeArgs *args) {
+    if (args == NULL) return;
+    eprintf(" ");
+    ppHashSymbol(args->name);
+    _ppLamTypeArgs(args->next);
+}
+
+static void _ppLamType(LamType *type) {
+    if (type->args == NULL) {
+        ppHashSymbol(type->name);
+        return;
+    }
+    eprintf("(");
+    ppHashSymbol(type->name);
+    _ppLamTypeArgs(type->args);
+    eprintf(")");
+}
+
+static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args);
+
+static void _ppLamTypeFunction(LamTypeFunction *function) {
+    eprintf("(");
+    ppHashSymbol(function->name);
+    _ppLamTypeConstructorArgs(function->args);
+    eprintf(")");
+}
+
+static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
+    switch (type->type) {
+        case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
+            eprintf("int");
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
+            eprintf("char");
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
+            ppHashSymbol(type->val.var);
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
+            _ppLamTypeFunction(type->val.function);
+            break;
+        default:
+            cant_happen("unrecognised type %d in _ppLamTypeConstructorType", type->type);
+    }
+}
+
+static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args) {
+    if (args == NULL) return;
+    eprintf(" ");
+    _ppLamTypeConstructorType(args->arg);
+    _ppLamTypeConstructorArgs(args->next);
+}
+
+static void _ppLamTypeConstructor(LamTypeConstructor *constructor) {
+    // deliberately don't print the type
+    if (constructor->args == NULL) {
+        ppHashSymbol(constructor->name);
+        return;
+    }
+    eprintf("(");
+    ppHashSymbol(constructor->name);
+    _ppLamTypeConstructorArgs(constructor->args);
+    eprintf(")");
+}
+
+static void _ppLamTypeConstructorList(LamTypeConstructorList *list) {
+    if (list == NULL) return;
+    eprintf(" ");
+    _ppLamTypeConstructor(list->constructor);
+    _ppLamTypeConstructorList(list->next);
+}
+
+void ppLamTypeDef(LamTypeDef *typeDef) {
+    eprintf("(");
+    _ppLamType(typeDef->type);
+    _ppLamTypeConstructorList(typeDef->constructors);
+    eprintf(")");
+}
+
+static void _ppLamTypeDefList(LamTypeDefList *list) {
+    if (list == NULL) return;
+    ppLamTypeDef(list->typeDef);
+    if (list->next) {
+        eprintf(" ");
+        _ppLamTypeDefList(list->next);
+    }
+}
+
+void ppLamTypeDefList(LamTypeDefList *typeDefList) {
+    eprintf("(");
+    _ppLamTypeDefList(typeDefList);
+    eprintf(")");
+}
+
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL) return;
     eprintf("%d", list->item);
@@ -477,4 +588,18 @@ void ppLamIntList(LamIntList *list) {
     eprintf("(");
     _ppLamIntList(list);
     eprintf(")");
+}
+
+void ppLamConstruct(LamConstruct *construct) {
+    eprintf("(construct ");
+    ppHashSymbol(construct->name);
+    eprintf(" %d", construct->tag);
+    _ppLamList(construct->args);
+    eprintf(")");
+}
+
+void ppLamConstant(LamConstant *constant) {
+    eprintf("(constant ");
+    ppHashSymbol(constant->name);
+    eprintf(" %d)", constant->tag);
 }

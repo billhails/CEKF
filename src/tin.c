@@ -24,12 +24,15 @@
 #include <stdio.h>
 #include <strings.h>
 #include "common.h"
+#ifdef DEBUG_ALLOC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int nargs, struct TinMonoTypeList * args) {
     struct TinFunctionApplication * x = NEW(TinFunctionApplication, OBJTYPE_TINFUNCTIONAPPLICATION);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinFunctionApplication %p\n", x);
-#endif
+    DEBUG("new TinFunctionApplication %pn", x);
     x->name = name;
     x->nargs = nargs;
     x->args = args;
@@ -38,9 +41,7 @@ struct TinFunctionApplication * newTinFunctionApplication(HashSymbol * name, int
 
 struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struct TinMonoTypeList * next) {
     struct TinMonoTypeList * x = NEW(TinMonoTypeList, OBJTYPE_TINMONOTYPELIST);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinMonoTypeList %p\n", x);
-#endif
+    DEBUG("new TinMonoTypeList %pn", x);
     x->monoType = monoType;
     x->next = next;
     return x;
@@ -48,9 +49,7 @@ struct TinMonoTypeList * newTinMonoTypeList(struct TinMonoType * monoType, struc
 
 struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPolyType * quantifiedType) {
     struct TinTypeQuantifier * x = NEW(TinTypeQuantifier, OBJTYPE_TINTYPEQUANTIFIER);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinTypeQuantifier %p\n", x);
-#endif
+    DEBUG("new TinTypeQuantifier %pn", x);
     x->var = var;
     x->quantifiedType = quantifiedType;
     return x;
@@ -58,9 +57,7 @@ struct TinTypeQuantifier * newTinTypeQuantifier(HashSymbol * var, struct TinPoly
 
 struct TinContext * newTinContext(HashTable * varFrame, HashTable * tcFrame, struct TinContext * next) {
     struct TinContext * x = NEW(TinContext, OBJTYPE_TINCONTEXT);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinContext %p\n", x);
-#endif
+    DEBUG("new TinContext %pn", x);
     x->varFrame = varFrame;
     x->tcFrame = tcFrame;
     x->next = next;
@@ -69,18 +66,14 @@ struct TinContext * newTinContext(HashTable * varFrame, HashTable * tcFrame, str
 
 struct TinSubstitution * newTinSubstitution(HashTable * map) {
     struct TinSubstitution * x = NEW(TinSubstitution, OBJTYPE_TINSUBSTITUTION);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinSubstitution %p\n", x);
-#endif
+    DEBUG("new TinSubstitution %pn", x);
     x->map = map;
     return x;
 }
 
 struct TinArgsResult * newTinArgsResult(struct TinContext * context, struct TinMonoTypeList * vec) {
     struct TinArgsResult * x = NEW(TinArgsResult, OBJTYPE_TINARGSRESULT);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinArgsResult %p\n", x);
-#endif
+    DEBUG("new TinArgsResult %pn", x);
     x->context = context;
     x->vec = vec;
     return x;
@@ -88,9 +81,7 @@ struct TinArgsResult * newTinArgsResult(struct TinContext * context, struct TinM
 
 struct TinVarResult * newTinVarResult(struct TinSubstitution * substitution, struct TinContext * context, struct TinMonoType * monoType, HashTable * set) {
     struct TinVarResult * x = NEW(TinVarResult, OBJTYPE_TINVARRESULT);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinVarResult %p\n", x);
-#endif
+    DEBUG("new TinVarResult %pn", x);
     x->substitution = substitution;
     x->context = context;
     x->monoType = monoType;
@@ -100,9 +91,7 @@ struct TinVarResult * newTinVarResult(struct TinSubstitution * substitution, str
 
 struct TinVarsResult * newTinVarsResult(struct TinContext * context, HashTable * set) {
     struct TinVarsResult * x = NEW(TinVarsResult, OBJTYPE_TINVARSRESULT);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinVarsResult %p\n", x);
-#endif
+    DEBUG("new TinVarsResult %pn", x);
     x->context = context;
     x->set = set;
     return x;
@@ -110,9 +99,7 @@ struct TinVarsResult * newTinVarsResult(struct TinContext * context, HashTable *
 
 struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTypeVal  val) {
     struct TinMonoType * x = NEW(TinMonoType, OBJTYPE_TINMONOTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinMonoType %p\n", x);
-#endif
+    DEBUG("new TinMonoType %pn", x);
     x->type = type;
     x->val = val;
     return x;
@@ -120,9 +107,7 @@ struct TinMonoType * newTinMonoType(enum TinMonoTypeType  type, union TinMonoTyp
 
 struct TinPolyType * newTinPolyType(enum TinPolyTypeType  type, union TinPolyTypeVal  val) {
     struct TinPolyType * x = NEW(TinPolyType, OBJTYPE_TINPOLYTYPE);
-#ifdef DEBUG_ALLOC
-    eprintf("new TinPolyType %p\n", x);
-#endif
+    DEBUG("new TinPolyType %pn", x);
     x->type = type;
     x->val = val;
     return x;

@@ -46,7 +46,7 @@
 // define this to make fatal errors dump core (if ulimit allows)
 #define DEBUG_DUMP_CORE
 // #define DEBUG_ALGORITHM_W
-// #define DEBUG_LAMBDA_CONVERT
+#define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
 // #define DEBUG_ALLOC
