@@ -1,10 +1,11 @@
 This is the license that comes with the re-entrant parser from
-[gfrey](https://github.com/gfrey/reentrant_flex_bison_parser).
+[gfrey/reentrant_flex_bison_parser](https://github.com/gfrey/reentrant_flex_bison_parser).
 
 It does *not* apply to the whole of the CEKF project.
 
 ----
 
+```
 Copyright (c) 2015, Gereon Frey
 
 All rights reserved.
@@ -30,3 +31,4 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```

@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 
-#include "debug_ast.h"
+#include "ast_debug.h"
 #include "bigint.h"
 
 static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
@@ -55,7 +55,7 @@ void printAstDefine(struct AstDefine * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstDefine (NULL)"); return; }
     eprintf("AstDefine[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstExpression(x->expression, depth + 1);
     eprintf("\n");
@@ -67,7 +67,7 @@ void printAstPrototype(struct AstPrototype * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstPrototype (NULL)"); return; }
     eprintf("AstPrototype[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstPrototypeBody(x->body, depth + 1);
     eprintf("\n");
@@ -91,7 +91,7 @@ void printAstPrototypeSymbolType(struct AstPrototypeSymbolType * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstPrototypeSymbolType (NULL)"); return; }
     eprintf("AstPrototypeSymbolType[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstType(x->type, depth + 1);
     eprintf("\n");
@@ -105,7 +105,7 @@ void printAstLoad(struct AstLoad * x, int depth) {
     eprintf("AstLoad[\n");
     printAstPackage(x->package, depth + 1);
     eprintf("\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     pad(depth);
     eprintf("]");
@@ -127,7 +127,7 @@ void printAstFlatType(struct AstFlatType * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstFlatType (NULL)"); return; }
     eprintf("AstFlatType[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstTypeSymbols(x->typeSymbols, depth + 1);
     eprintf("\n");
@@ -139,7 +139,7 @@ void printAstTypeSymbols(struct AstTypeSymbols * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstTypeSymbols (NULL)"); return; }
     eprintf("AstTypeSymbols[\n");
-        printAstSymbol(x->typeSymbol, depth + 1);
+    printAstSymbol(x->typeSymbol, depth + 1);
     eprintf("\n");
     printAstTypeSymbols(x->next, depth + 1);
     eprintf("\n");
@@ -163,7 +163,7 @@ void printAstTypeConstructor(struct AstTypeConstructor * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstTypeConstructor (NULL)"); return; }
     eprintf("AstTypeConstructor[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstTypeList(x->typeList, depth + 1);
     eprintf("\n");
@@ -175,7 +175,7 @@ void printAstTypeFunction(struct AstTypeFunction * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstTypeFunction (NULL)"); return; }
     eprintf("AstTypeFunction[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstTypeList(x->typeList, depth + 1);
     eprintf("\n");
@@ -247,7 +247,7 @@ void printAstUnpack(struct AstUnpack * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstUnpack (NULL)"); return; }
     eprintf("AstUnpack[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstArgList(x->argList, depth + 1);
     eprintf("\n");
@@ -259,7 +259,7 @@ void printAstNamedArg(struct AstNamedArg * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstNamedArg (NULL)"); return; }
     eprintf("AstNamedArg[\n");
-        printAstSymbol(x->name, depth + 1);
+    printAstSymbol(x->name, depth + 1);
     eprintf("\n");
     printAstArg(x->arg, depth + 1);
     eprintf("\n");
@@ -271,9 +271,9 @@ void printAstEnvType(struct AstEnvType * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstEnvType (NULL)"); return; }
     eprintf("AstEnvType[\n");
-        printAstSymbol(x->name, depth + 1);
+    printAstSymbol(x->name, depth + 1);
     eprintf("\n");
-        printAstSymbol(x->prototype, depth + 1);
+    printAstSymbol(x->prototype, depth + 1);
     eprintf("\n");
     pad(depth);
     eprintf("]");
@@ -295,7 +295,7 @@ void printAstPackage(struct AstPackage * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstPackage (NULL)"); return; }
     eprintf("AstPackage[\n");
-        printAstSymbol(x->symbol, depth + 1);
+    printAstSymbol(x->symbol, depth + 1);
     eprintf("\n");
     printAstPackage(x->next, depth + 1);
     eprintf("\n");
@@ -405,19 +405,19 @@ void printAstTypeClause(struct AstTypeClause * x, int depth) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
             pad(depth + 1);
             eprintf("AST_TYPECLAUSE_TYPE_INTEGER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.integer);
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("AST_TYPECLAUSE_TYPE_CHARACTER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.character);
             break;
         case AST_TYPECLAUSE_TYPE_VAR:
             pad(depth + 1);
             eprintf("AST_TYPECLAUSE_TYPE_VAR\n");
-                        printAstSymbol(x->val.var, depth + 1);
+            printAstSymbol(x->val.var, depth + 1);
             break;
         case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
             pad(depth + 1);
@@ -440,13 +440,13 @@ void printAstArg(struct AstArg * x, int depth) {
         case AST_ARG_TYPE_WILDCARD:
             pad(depth + 1);
             eprintf("AST_ARG_TYPE_WILDCARD\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.wildcard);
             break;
         case AST_ARG_TYPE_SYMBOL:
             pad(depth + 1);
             eprintf("AST_ARG_TYPE_SYMBOL\n");
-                        printAstSymbol(x->val.symbol, depth + 1);
+            printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_ARG_TYPE_NAMED:
             pad(depth + 1);
@@ -466,12 +466,12 @@ eprintf("void * %p", x->val.wildcard);
         case AST_ARG_TYPE_NUMBER:
             pad(depth + 1);
             eprintf("AST_ARG_TYPE_NUMBER\n");
-                        printBigInt(x->val.number, depth + 1);
+            printBigInt(x->val.number, depth + 1);
             break;
         case AST_ARG_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("AST_ARG_TYPE_CHARACTER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("char %c", x->val.character);
             break;
         default:
@@ -490,7 +490,7 @@ void printAstExpression(struct AstExpression * x, int depth) {
         case AST_EXPRESSION_TYPE_BACK:
             pad(depth + 1);
             eprintf("AST_EXPRESSION_TYPE_BACK\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.back);
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
@@ -501,17 +501,17 @@ eprintf("void * %p", x->val.back);
         case AST_EXPRESSION_TYPE_SYMBOL:
             pad(depth + 1);
             eprintf("AST_EXPRESSION_TYPE_SYMBOL\n");
-                        printAstSymbol(x->val.symbol, depth + 1);
+            printAstSymbol(x->val.symbol, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             pad(depth + 1);
             eprintf("AST_EXPRESSION_TYPE_NUMBER\n");
-                        printBigInt(x->val.number, depth + 1);
+            printBigInt(x->val.number, depth + 1);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("AST_EXPRESSION_TYPE_CHARACTER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("char %c", x->val.character);
             break;
         case AST_EXPRESSION_TYPE_FUN:
@@ -540,5 +540,350 @@ eprintf("char %c", x->val.character);
     eprintf("\n");
     pad(depth);
     eprintf("]");
+}
+
+
+/***************************************/
+
+bool eqAstNest(struct AstNest * a, struct AstNest * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstDefinitions(a->definitions, b->definitions)) return false;
+    if (!eqAstExpressions(a->expressions, b->expressions)) return false;
+    return true;
+}
+
+bool eqAstDefinitions(struct AstDefinitions * a, struct AstDefinitions * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstDefinition(a->definition, b->definition)) return false;
+    if (!eqAstDefinitions(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstDefine(struct AstDefine * a, struct AstDefine * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstExpression(a->expression, b->expression)) return false;
+    return true;
+}
+
+bool eqAstPrototype(struct AstPrototype * a, struct AstPrototype * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstPrototypeBody(a->body, b->body)) return false;
+    return true;
+}
+
+bool eqAstPrototypeBody(struct AstPrototypeBody * a, struct AstPrototypeBody * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstSinglePrototype(a->single, b->single)) return false;
+    if (!eqAstPrototypeBody(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstPrototypeSymbolType(struct AstPrototypeSymbolType * a, struct AstPrototypeSymbolType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstType(a->type, b->type)) return false;
+    return true;
+}
+
+bool eqAstLoad(struct AstLoad * a, struct AstLoad * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstPackage(a->package, b->package)) return false;
+    if (a->symbol != b->symbol) return false;
+    return true;
+}
+
+bool eqAstTypeDef(struct AstTypeDef * a, struct AstTypeDef * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstFlatType(a->flatType, b->flatType)) return false;
+    if (!eqAstTypeBody(a->typeBody, b->typeBody)) return false;
+    return true;
+}
+
+bool eqAstFlatType(struct AstFlatType * a, struct AstFlatType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstTypeSymbols(a->typeSymbols, b->typeSymbols)) return false;
+    return true;
+}
+
+bool eqAstTypeSymbols(struct AstTypeSymbols * a, struct AstTypeSymbols * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->typeSymbol != b->typeSymbol) return false;
+    if (!eqAstTypeSymbols(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstTypeBody(struct AstTypeBody * a, struct AstTypeBody * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstTypeConstructor(a->typeConstructor, b->typeConstructor)) return false;
+    if (!eqAstTypeBody(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstTypeConstructor(struct AstTypeConstructor * a, struct AstTypeConstructor * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstTypeList(a->typeList, b->typeList)) return false;
+    return true;
+}
+
+bool eqAstTypeFunction(struct AstTypeFunction * a, struct AstTypeFunction * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstTypeList(a->typeList, b->typeList)) return false;
+    return true;
+}
+
+bool eqAstTypeList(struct AstTypeList * a, struct AstTypeList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstType(a->type, b->type)) return false;
+    if (!eqAstTypeList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstType(struct AstType * a, struct AstType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstTypeClause(a->typeClause, b->typeClause)) return false;
+    if (!eqAstType(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstCompositeFunction(struct AstCompositeFunction * a, struct AstCompositeFunction * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstFunction(a->function, b->function)) return false;
+    if (!eqAstCompositeFunction(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstFunction(struct AstFunction * a, struct AstFunction * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstArgList(a->argList, b->argList)) return false;
+    if (!eqAstNest(a->nest, b->nest)) return false;
+    return true;
+}
+
+bool eqAstArgList(struct AstArgList * a, struct AstArgList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstArg(a->arg, b->arg)) return false;
+    if (!eqAstArgList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstUnpack(struct AstUnpack * a, struct AstUnpack * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstArgList(a->argList, b->argList)) return false;
+    return true;
+}
+
+bool eqAstNamedArg(struct AstNamedArg * a, struct AstNamedArg * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (!eqAstArg(a->arg, b->arg)) return false;
+    return true;
+}
+
+bool eqAstEnvType(struct AstEnvType * a, struct AstEnvType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (a->prototype != b->prototype) return false;
+    return true;
+}
+
+bool eqAstFunCall(struct AstFunCall * a, struct AstFunCall * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstExpression(a->function, b->function)) return false;
+    if (!eqAstExpressions(a->arguments, b->arguments)) return false;
+    return true;
+}
+
+bool eqAstPackage(struct AstPackage * a, struct AstPackage * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->symbol != b->symbol) return false;
+    if (!eqAstPackage(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstExpressions(struct AstExpressions * a, struct AstExpressions * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstExpression(a->expression, b->expression)) return false;
+    if (!eqAstExpressions(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstEnv(struct AstEnv * a, struct AstEnv * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstPackage(a->package, b->package)) return false;
+    if (!eqAstDefinitions(a->definitions, b->definitions)) return false;
+    return true;
+}
+
+bool eqAstIff(struct AstIff * a, struct AstIff * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstExpression(a->test, b->test)) return false;
+    if (!eqAstNest(a->consequent, b->consequent)) return false;
+    if (!eqAstNest(a->alternative, b->alternative)) return false;
+    return true;
+}
+
+bool eqAstDefinition(struct AstDefinition * a, struct AstDefinition * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case AST_DEFINITION_TYPE_DEFINE:
+            if (!eqAstDefine(a->val.define, b->val.define)) return false;
+            break;
+        case AST_DEFINITION_TYPE_PROTOTYPE:
+            if (!eqAstPrototype(a->val.prototype, b->val.prototype)) return false;
+            break;
+        case AST_DEFINITION_TYPE_LOAD:
+            if (!eqAstLoad(a->val.load, b->val.load)) return false;
+            break;
+        case AST_DEFINITION_TYPE_TYPEDEF:
+            if (!eqAstTypeDef(a->val.typeDef, b->val.typeDef)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqAstDefinition", a->type);
+    }
+    return true;
+}
+
+bool eqAstSinglePrototype(struct AstSinglePrototype * a, struct AstSinglePrototype * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case AST_SINGLEPROTOTYPE_TYPE_SYMBOLTYPE:
+            if (!eqAstPrototypeSymbolType(a->val.symbolType, b->val.symbolType)) return false;
+            break;
+        case AST_SINGLEPROTOTYPE_TYPE_PROTOTYPE:
+            if (!eqAstPrototype(a->val.prototype, b->val.prototype)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqAstSinglePrototype", a->type);
+    }
+    return true;
+}
+
+bool eqAstTypeClause(struct AstTypeClause * a, struct AstTypeClause * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case AST_TYPECLAUSE_TYPE_INTEGER:
+            if (a->val.integer != b->val.integer) return false;
+            break;
+        case AST_TYPECLAUSE_TYPE_CHARACTER:
+            if (a->val.character != b->val.character) return false;
+            break;
+        case AST_TYPECLAUSE_TYPE_VAR:
+            if (a->val.var != b->val.var) return false;
+            break;
+        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:
+            if (!eqAstTypeFunction(a->val.typeFunction, b->val.typeFunction)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqAstTypeClause", a->type);
+    }
+    return true;
+}
+
+bool eqAstArg(struct AstArg * a, struct AstArg * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case AST_ARG_TYPE_WILDCARD:
+            if (a->val.wildcard != b->val.wildcard) return false;
+            break;
+        case AST_ARG_TYPE_SYMBOL:
+            if (a->val.symbol != b->val.symbol) return false;
+            break;
+        case AST_ARG_TYPE_NAMED:
+            if (!eqAstNamedArg(a->val.named, b->val.named)) return false;
+            break;
+        case AST_ARG_TYPE_ENV:
+            if (!eqAstEnvType(a->val.env, b->val.env)) return false;
+            break;
+        case AST_ARG_TYPE_UNPACK:
+            if (!eqAstUnpack(a->val.unpack, b->val.unpack)) return false;
+            break;
+        case AST_ARG_TYPE_NUMBER:
+            if (a->val.number != b->val.number) return false;
+            break;
+        case AST_ARG_TYPE_CHARACTER:
+            if (a->val.character != b->val.character) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqAstArg", a->type);
+    }
+    return true;
+}
+
+bool eqAstExpression(struct AstExpression * a, struct AstExpression * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case AST_EXPRESSION_TYPE_BACK:
+            if (a->val.back != b->val.back) return false;
+            break;
+        case AST_EXPRESSION_TYPE_FUNCALL:
+            if (!eqAstFunCall(a->val.funCall, b->val.funCall)) return false;
+            break;
+        case AST_EXPRESSION_TYPE_SYMBOL:
+            if (a->val.symbol != b->val.symbol) return false;
+            break;
+        case AST_EXPRESSION_TYPE_NUMBER:
+            if (a->val.number != b->val.number) return false;
+            break;
+        case AST_EXPRESSION_TYPE_CHARACTER:
+            if (a->val.character != b->val.character) return false;
+            break;
+        case AST_EXPRESSION_TYPE_FUN:
+            if (!eqAstCompositeFunction(a->val.fun, b->val.fun)) return false;
+            break;
+        case AST_EXPRESSION_TYPE_ENV:
+            if (!eqAstEnv(a->val.env, b->val.env)) return false;
+            break;
+        case AST_EXPRESSION_TYPE_NEST:
+            if (!eqAstNest(a->val.nest, b->val.nest)) return false;
+            break;
+        case AST_EXPRESSION_TYPE_IFF:
+            if (!eqAstIff(a->val.iff, b->val.iff)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqAstExpression", a->type);
+    }
+    return true;
 }
 

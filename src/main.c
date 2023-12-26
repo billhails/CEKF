@@ -24,7 +24,6 @@
 #include "common.h"
 #include "ast.h"
 #include "debug_ast.h"
-#include "debug_tin.h"
 #include "debug_lambda.h"
 #include "lambda_conversion.h"
 #include "module.h"
@@ -36,13 +35,12 @@
 #include "debug.h"
 #include "bytecode.h"
 #include "desugaring.h"
-#include "algorithm_W.h"
-#include "tin.h"
-#include "tin_helper.h"
 #include "hash.h"
 #include "lambda_pp.h"
 #include "anf.h"
 #include "bigint.h"
+#include "tc_analyze.h"
+#include "debug_tc.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -73,29 +71,6 @@ extern void testTin();
 int main(int argc, char *argv[]) {
     initProtection();
     testTin();
-}
-
-#elif DEBUG_RUN_TESTS == 4 // testing algorithm W
-
-extern AstNest *result;
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    PROTECT(result);
-    enableGC();
-    // quietPrintHashTable = true;
-    WResult *wr = WTop(result);
-    showTinMonoType(wr->monoType);
-    printf("\n");
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-    }
 }
 
 #else // testing lambda conversion
@@ -176,19 +151,21 @@ int main(int argc, char *argv[]) {
     PROTECT(mod);
     pmParseModule(mod);
     enableGC();
-    // printAstNest(mod->nest, 0);
-    /* WResult *wr = */ (void) WTop(mod->nest);
-    validateLastAlloc();
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-        exit(1);
-    }
     LamExp *exp = lamConvertNest(mod->nest, NULL);
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
     eprintf("\n");
 #endif
+    TcEnv *env = tc_init();
+    PROTECT(env);
+    TcType *res = tc_analyze(exp, env);
+    if (hadErrors()) {
+        return 1;
+    }
+    PROTECT(res);
+    printTcType(res, 0);
+    eprintf("\n");
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);
     disableGC();

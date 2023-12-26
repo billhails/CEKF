@@ -23,7 +23,7 @@
 #include "tpmc_logic.h"
 #include "tpmc_translate.h"
 #include "tpmc.h"
-#include "debug_tpmc.h"
+#include "tpmc_debug.h"
 #include "tpmc_match.h"
 #include "ast_helper.h"
 #include "symbol.h"

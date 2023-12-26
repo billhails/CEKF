@@ -27,7 +27,7 @@
 #include "lambda_helper.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
-#include "debug_ast.h"
+#include "ast_debug.h"
 
 #define ARG_CATEGORY_VAR 0
 #define ARG_CATEGORY_CONST 1

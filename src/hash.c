@@ -169,6 +169,14 @@ void hashSet(HashTable *table, HashSymbol *var, void *src) {
     }
 }
 
+bool hashContains(HashTable *table, HashSymbol *var) {
+    DEBUG("hashContains(%s) [%d]", var->name, table->id);
+    if (table->count == 0) return false;
+    hash_t index = findEntry(table->keys, table->capacity, var);
+    if (table->keys[index] == NULL) return false;
+    return true;
+}
+
 bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
     DEBUG("hashGet(%s) [%d]", var->name, table->id);
     IFDEBUG(printMemHeader("values", table->values));

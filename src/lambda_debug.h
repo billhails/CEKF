@@ -1,5 +1,5 @@
-#ifndef cekf_debug_lambda_h
-#define cekf_debug_lambda_h
+#ifndef cekf_lambda_debug_h
+#define cekf_lambda_debug_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -63,5 +63,44 @@ void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth);
 void printLamExp(struct LamExp * x, int depth);
 void printLamCondCases(struct LamCondCases * x, int depth);
 void printLamTypeConstructorType(struct LamTypeConstructorType * x, int depth);
+
+bool eqLamLam(struct LamLam * a, struct LamLam * b);
+bool eqLamVarList(struct LamVarList * a, struct LamVarList * b);
+bool eqLamPrimApp(struct LamPrimApp * a, struct LamPrimApp * b);
+bool eqLamUnaryApp(struct LamUnaryApp * a, struct LamUnaryApp * b);
+bool eqLamSequence(struct LamSequence * a, struct LamSequence * b);
+bool eqLamList(struct LamList * a, struct LamList * b);
+bool eqLamApply(struct LamApply * a, struct LamApply * b);
+bool eqLamConstant(struct LamConstant * a, struct LamConstant * b);
+bool eqLamConstruct(struct LamConstruct * a, struct LamConstruct * b);
+bool eqLamDeconstruct(struct LamDeconstruct * a, struct LamDeconstruct * b);
+bool eqLamMakeVec(struct LamMakeVec * a, struct LamMakeVec * b);
+bool eqLamIff(struct LamIff * a, struct LamIff * b);
+bool eqLamCond(struct LamCond * a, struct LamCond * b);
+bool eqLamIntCondCases(struct LamIntCondCases * a, struct LamIntCondCases * b);
+bool eqLamCharCondCases(struct LamCharCondCases * a, struct LamCharCondCases * b);
+bool eqLamMatch(struct LamMatch * a, struct LamMatch * b);
+bool eqLamMatchList(struct LamMatchList * a, struct LamMatchList * b);
+bool eqLamIntList(struct LamIntList * a, struct LamIntList * b);
+bool eqLamLet(struct LamLet * a, struct LamLet * b);
+bool eqLamLetRec(struct LamLetRec * a, struct LamLetRec * b);
+bool eqLamLetRecBindings(struct LamLetRecBindings * a, struct LamLetRecBindings * b);
+bool eqLamContext(struct LamContext * a, struct LamContext * b);
+bool eqLamAnd(struct LamAnd * a, struct LamAnd * b);
+bool eqLamOr(struct LamOr * a, struct LamOr * b);
+bool eqLamAmb(struct LamAmb * a, struct LamAmb * b);
+bool eqLamTypeDefs(struct LamTypeDefs * a, struct LamTypeDefs * b);
+bool eqLamTypeDefList(struct LamTypeDefList * a, struct LamTypeDefList * b);
+bool eqLamTypeDef(struct LamTypeDef * a, struct LamTypeDef * b);
+bool eqLamTypeConstructorList(struct LamTypeConstructorList * a, struct LamTypeConstructorList * b);
+bool eqLamType(struct LamType * a, struct LamType * b);
+bool eqLamTypeArgs(struct LamTypeArgs * a, struct LamTypeArgs * b);
+bool eqLamTypeConstructor(struct LamTypeConstructor * a, struct LamTypeConstructor * b);
+bool eqLamTypeConstructorArgs(struct LamTypeConstructorArgs * a, struct LamTypeConstructorArgs * b);
+bool eqLamTypeFunction(struct LamTypeFunction * a, struct LamTypeFunction * b);
+bool eqLamTypeConstructorInfo(struct LamTypeConstructorInfo * a, struct LamTypeConstructorInfo * b);
+bool eqLamExp(struct LamExp * a, struct LamExp * b);
+bool eqLamCondCases(struct LamCondCases * a, struct LamCondCases * b);
+bool eqLamTypeConstructorType(struct LamTypeConstructorType * a, struct LamTypeConstructorType * b);
 
 #endif

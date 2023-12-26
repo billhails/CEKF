@@ -18,7 +18,6 @@
 
 #include "test.h"
 
-/*
 static AstNest *parseWrapped(char *string) {
     disableGC();
     PmModule *mod = newPmToplevelFromString(string, string);
@@ -30,8 +29,8 @@ static AstNest *parseWrapped(char *string) {
     assert(mod->nest != NULL);
     return mod->nest;
 }
-*/
 
+/*
 static AstNest *parseSolo(char *string) {
     disableGC();
     PmModule *mod = newPmModuleFromString(string, string);
@@ -43,6 +42,7 @@ static AstNest *parseSolo(char *string) {
     assert(mod->nest != NULL);
     return mod->nest;
 }
+*/
 /*
 
 static void test_car() {
@@ -66,18 +66,24 @@ static void test_cdr() {
 	UNPROTECT(save);
     assert(!hadErrors());
 }
-
+*/
 static void test_car_of() {
     printf("test_car_of\n");
     AstNest *result = parseWrapped("<[1]");
     int save = PROTECT(result);
-    WResult *wr = WTop(result);
-    showTinMonoType(wr->monoType);
+    LamExp *exp = lamConvertNest(result, NULL);
+    PROTECT(exp);
+    ppLamExp(exp);
     printf("\n");
-	UNPROTECT(save);
+    TcEnv *env = tc_init();
+    PROTECT(env);
+    TcType *res = tc_analyze(exp, env);
     assert(!hadErrors());
+    PROTECT(res);
+    printTcType(res, 0);
+	UNPROTECT(save);
 }
-
+/*
 static void test_adder() {
     printf("test_adder\n");
     AstNest *result = parseSolo("fn(a,b){a+b}");
@@ -99,7 +105,6 @@ static void test_fact() {
 	UNPROTECT(save);
     assert(!hadErrors());
 }
-*/
 
 static void test_small_car() {
     printf("test_small_car\n");
@@ -113,15 +118,14 @@ static void test_small_car() {
 	UNPROTECT(save);
     assert(!hadErrors());
 }
+*/
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
-    /*
-    test_car();
-    test_cdr();
+    // test_car();
+    // test_cdr();
     test_car_of();
-    test_adder();
-    */
-    test_small_car();
+    // test_adder();
+    // test_small_car();
 }
 

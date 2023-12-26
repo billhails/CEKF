@@ -18,7 +18,7 @@
 
 static int _debugInvocationId = 0;
 #define DEBUG(...) do { \
-    eprintf("**** %s:%-5d ", __FILE__, __LINE__); \
+    eprintf("*** %s:%-5d ", __FILE__, __LINE__); \
     eprintf(__VA_ARGS__); eprintf("\n"); \
 } while(0)
 #define ENTER(name) int _debugMyId = _debugInvocationId++; \

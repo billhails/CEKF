@@ -24,9 +24,9 @@
 struct Header;
 
 #include "ast_objtypes.h"
-#include "tin_objtypes.h"
 #include "lambda_objtypes.h"
 #include "tpmc_objtypes.h"
+#include "tc_objtypes.h"
 
 typedef enum {
     // exp types
@@ -74,15 +74,14 @@ typedef enum {
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
 
-    OBJTYPE_WRESULT,
     OBJTYPE_PROTECTION,
     OBJTYPE_BIGINT,
     OBJTYPE_PMMODULE,
 
     AST_OBJTYPES(),
-    TIN_OBJTYPES(),
     LAMBDA_OBJTYPES(),
     TPMC_OBJTYPES(),
+    TC_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -103,13 +102,11 @@ void markObj(Header *h, int i);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
-void markWResultObj(Header *x);
 
 void freeObj(Header *h);
 void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
-void freeWResultObj(Header *x);
 
 bool enableGC(void);
 bool disableGC(void);
