@@ -17,6 +17,7 @@
  */
 
 #include "tc_helper.h"
+#include "symbol.h"
 
 void ppTcType(TcType *type) {
    if (type == NULL) {
@@ -33,8 +34,11 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_VAR:
             ppTcVar(type->val.var);
             break;
-        case TCTYPE_TYPE_INTEGER:
-            eprintf("int");
+        case TCTYPE_TYPE_BIGINTEGER:
+            eprintf("bigint");
+            break;
+        case TCTYPE_TYPE_SMALLINTEGER:
+            eprintf("smallint");
             break;
         case TCTYPE_TYPE_CHARACTER:
             eprintf("char");
@@ -63,7 +67,7 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcVar(TcVar *var) {
-    eprintf("<%s>", var->name->name);
+    eprintf("<%s>%d", var->name->name, var->id);
     if (var->instance != NULL) {
         eprintf(" [");
         ppTcType(var->instance);
@@ -83,4 +87,26 @@ void ppTcTypeDef(TcTypeDef *typeDef) {
     eprintf("%s(", typeDef->name->name);
     ppTypeDefArgs(typeDef->args);
     eprintf(")");
+}
+
+bool eqTcVar(struct TcVar * a, struct TcVar * b, HashTable *map) {
+    if (a == b) return true;
+    if (a->name == b->name) return true;
+    HashSymbol *common = NULL;
+    if (hashGet(map, a->name, &common)) {
+        HashSymbol *other = NULL;
+        if (hashGet(map, b->name, &other)) {
+            return common == other;
+        } else {
+            return false;
+        }
+    } else if (hashGet(map, b->name, &common)) {
+        return false;
+    } else {
+        // symmetric
+        common = genSym("tt$");
+        hashSet(map, a->name, &common);
+        hashSet(map, b->name, &common);
+    }
+    return true;
 }

@@ -30,7 +30,8 @@ typedef enum TcTypeType {
     TCTYPE_TYPE_FUNCTION,
     TCTYPE_TYPE_PAIR,
     TCTYPE_TYPE_VAR,
-    TCTYPE_TYPE_INTEGER,
+    TCTYPE_TYPE_SMALLINTEGER,
+    TCTYPE_TYPE_BIGINTEGER,
     TCTYPE_TYPE_CHARACTER,
     TCTYPE_TYPE_TYPEDEF,
 } TcTypeType;
@@ -41,7 +42,8 @@ typedef union TcTypeVal {
     struct TcFunction * function;
     struct TcPair * pair;
     struct TcVar * var;
-    void * integer;
+    void * smallinteger;
+    void * biginteger;
     void * character;
     struct TcTypeDef * typeDef;
 } TcTypeVal;
@@ -87,6 +89,7 @@ typedef struct TcTypeDefArgs {
 typedef struct TcVar {
     Header header;
     HashSymbol * name;
+    int id;
     struct TcType * instance;
 } TcVar;
 
@@ -104,7 +107,7 @@ struct TcFunction * newTcFunction(struct TcType * arg, struct TcType * result);
 struct TcPair * newTcPair(struct TcType * first, struct TcType * second);
 struct TcTypeDef * newTcTypeDef(HashSymbol * name, struct TcTypeDefArgs * args);
 struct TcTypeDefArgs * newTcTypeDefArgs(struct TcType * type, struct TcTypeDefArgs * next);
-struct TcVar * newTcVar(HashSymbol * name);
+struct TcVar * newTcVar(HashSymbol * name, int id);
 struct TcType * newTcType(enum TcTypeType  type, union TcTypeVal  val);
 
 void markTcEnv(struct TcEnv * x);
@@ -129,7 +132,8 @@ void freeTcType(struct TcType * x);
 #define TCTYPE_VAL_FUNCTION(x) ((union TcTypeVal ){.function = (x)})
 #define TCTYPE_VAL_PAIR(x) ((union TcTypeVal ){.pair = (x)})
 #define TCTYPE_VAL_VAR(x) ((union TcTypeVal ){.var = (x)})
-#define TCTYPE_VAL_INTEGER() ((union TcTypeVal ){.integer = (NULL)})
+#define TCTYPE_VAL_SMALLINTEGER() ((union TcTypeVal ){.smallinteger = (NULL)})
+#define TCTYPE_VAL_BIGINTEGER() ((union TcTypeVal ){.biginteger = (NULL)})
 #define TCTYPE_VAL_CHARACTER() ((union TcTypeVal ){.character = (NULL)})
 #define TCTYPE_VAL_TYPEDEF(x) ((union TcTypeVal ){.typeDef = (x)})
 

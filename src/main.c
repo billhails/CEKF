@@ -23,8 +23,8 @@
 
 #include "common.h"
 #include "ast.h"
-#include "debug_ast.h"
-#include "debug_lambda.h"
+#include "ast_debug.h"
+#include "lambda_debug.h"
 #include "lambda_conversion.h"
 #include "module.h"
 // #include "parser.h"
@@ -40,7 +40,7 @@
 #include "anf.h"
 #include "bigint.h"
 #include "tc_analyze.h"
-#include "debug_tc.h"
+#include "tc_debug.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -147,16 +147,19 @@ int main(int argc, char *argv[]) {
         eprintf("need filename\n");
         exit(1);
     }
+    // parse => AST
     PmModule *mod = newPmToplevelFromFile(argv[optind]);
     PROTECT(mod);
     pmParseModule(mod);
     enableGC();
+    // lambda conversion: AST => LamExp
     LamExp *exp = lamConvertNest(mod->nest, NULL);
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
     eprintf("\n");
 #endif
+    // type checking
     TcEnv *env = tc_init();
     PROTECT(env);
     TcType *res = tc_analyze(exp, env);
@@ -164,11 +167,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     PROTECT(res);
-    printTcType(res, 0);
+    ppTcType(res);
     eprintf("\n");
+    // normalization: LamExp => ANF
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);
     disableGC();
+    // desugaring
     anfExp = desugarExp(anfExp);
     PROTECT(anfExp);
     enableGC();
@@ -176,13 +181,17 @@ int main(int argc, char *argv[]) {
     printExp(anfExp);
     eprintf("\n");
 #endif
+    // static analysis: ANF => annotated ANF (de bruijn)
     analizeExp(anfExp, NULL);
+    // byte code generation
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
     UNPROTECT(save);
+    // execution
     printContainedValue(run(byteCodes), 1);
     printf("\n");
+    // report stats etc.
     if (report_mem_flag)
         reportMemory();
     if (report_time_flag) {

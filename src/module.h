@@ -25,6 +25,7 @@ PmModule *newPmToplevelFromString(char *src, char *id);
 void markPmModule(Header *h);
 void freePmModule(Header *h);
 int pmParseModule(PmModule *mod);
+void incLineNo(PmModule *mod);
 int popPmFile(PmModule *mod);
 void showModuleState(FILE *fp, PmModule *mod);
 

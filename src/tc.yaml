@@ -21,6 +21,12 @@ config:
 
 description: Structures to support type inference
 
+cmp:
+    extraArgs:
+        map: HashTable
+    bespokeImplementation:
+    - TcVar
+
 structs:
     TcEnv:
         table: HashTable
@@ -48,6 +54,7 @@ structs:
 
     TcVar:
         name: HashSymbol
+        id: int
         instance: TcType=NULL
 
 unions:
@@ -55,7 +62,8 @@ unions:
         function: TcFunction
         pair: TcPair
         var: TcVar
-        integer: void_ptr
+        smallinteger: void_ptr
+        biginteger: void_ptr
         character: void_ptr
         typeDef: TcTypeDef
 

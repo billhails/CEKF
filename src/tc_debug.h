@@ -33,13 +33,13 @@ void printTcTypeDefArgs(struct TcTypeDefArgs * x, int depth);
 void printTcVar(struct TcVar * x, int depth);
 void printTcType(struct TcType * x, int depth);
 
-bool eqTcEnv(struct TcEnv * a, struct TcEnv * b);
-bool eqTcNg(struct TcNg * a, struct TcNg * b);
-bool eqTcFunction(struct TcFunction * a, struct TcFunction * b);
-bool eqTcPair(struct TcPair * a, struct TcPair * b);
-bool eqTcTypeDef(struct TcTypeDef * a, struct TcTypeDef * b);
-bool eqTcTypeDefArgs(struct TcTypeDefArgs * a, struct TcTypeDefArgs * b);
-bool eqTcVar(struct TcVar * a, struct TcVar * b);
-bool eqTcType(struct TcType * a, struct TcType * b);
+bool eqTcEnv(struct TcEnv * a, struct TcEnv * b, HashTable *map);
+bool eqTcNg(struct TcNg * a, struct TcNg * b, HashTable *map);
+bool eqTcFunction(struct TcFunction * a, struct TcFunction * b, HashTable *map);
+bool eqTcPair(struct TcPair * a, struct TcPair * b, HashTable *map);
+bool eqTcTypeDef(struct TcTypeDef * a, struct TcTypeDef * b, HashTable *map);
+bool eqTcTypeDefArgs(struct TcTypeDefArgs * a, struct TcTypeDefArgs * b, HashTable *map);
+bool eqTcVar(struct TcVar * a, struct TcVar * b, HashTable *map);
+bool eqTcType(struct TcType * a, struct TcType * b, HashTable *map);
 
 #endif

@@ -38,6 +38,16 @@ class Catalog:
         if t in self.contents:
             self.contents[t].tag()
 
+    def noteExtraCmpArgs(self, args):
+        for key in self.contents:
+            self.contents[key].noteExtraCmpArgs(args)
+
+    def noteBespokeCmpImplementation(self, name):
+        if name in self.contents:
+            self.contents[name].noteBespokeCmpImplementation()
+        else:
+            raise Exception("bespoke cmp implementation declared for nonexistant entry " + name)
+
     def get(self, key):
         if key in self.contents:
             return self.contents[key]
@@ -176,6 +186,11 @@ class Base:
     def __init__(self, name):
         self.name = name
         self.tagged = False
+        self.bespokeCmpImplementation = False
+        self.extraCmpArgs = {}
+
+    def noteExtraCmpArgs(self, args):
+        self.extraCmpArgs = args
 
     def objTypeArray(self):
         return []
@@ -252,8 +267,11 @@ class Base:
     def isStruct(self):
         return False
 
-    def isArray(selfself):
+    def isArray(self):
         return False
+
+    def noteBespokeCmpImplementation(self):
+        self.bespokeCmpImplementation = True
 
     def printMarkField(self, field, depth, prefix=''):
         pass
@@ -549,11 +567,30 @@ class SimpleArray(Base):
         myType = self.getTypeDeclaration()
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
+    def getCtype(self, astType, catalog):
+        return f"{astType} *"
+
+    def getExtraCmpFargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
+            extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
     def getCompareSignature(self, catalog):
         myType = self.getTypeDeclaration()
-        return "bool eq{myName}({myType} a, {myType} b)".format(myName=self.getName(), myType=myType)
+        myName = self.getName()
+        extraCmpArgs = self.getExtraCmpFargs(catalog)
+        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
 
     def printCompareFunction(self, catalog):
+        if self.bespokeCmpImplementation:
+            print("// Bespoke implementation required for");
+            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("")
+            return
         myName = self.getName()
         print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
         print("    if (a == b) return true;")
@@ -683,9 +720,31 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration()
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
+    def getCtype(self, astType, catalog):
+        return f"{astType} *"
+
+    def getExtraCmpFargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
+            extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getExtraCmpAargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            extra += [name]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
     def getCompareSignature(self, catalog):
         myType = self.getTypeDeclaration()
-        return "bool eq{myName}({myType} a, {myType} b)".format(myName=self.getName(), myType=myType)
+        myName = self.getName()
+        extraCmpArgs = self.getExtraCmpFargs(catalog)
+        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
 
     def getNewArgs(self):
         return [x for x in self.fields if x.default is None]
@@ -750,8 +809,9 @@ class SimpleStruct(Base):
 
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
+        extraArgs = self.getExtraCmpAargs({})
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false;")
         
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
@@ -794,6 +854,11 @@ class SimpleStruct(Base):
         print('return "{name}";'.format(name=self.getName()))
 
     def printCompareFunction(self, catalog):
+        if self.bespokeCmpImplementation:
+            print("// Bespoke implementation required for");
+            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("")
+            return
         myName = self.getName()
         print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
         print("    if (a == b) return true;")
@@ -1198,6 +1263,13 @@ if "tags" in document:
     for tag in document["tags"]:
         catalog.tag(tag);
 
+if "cmp" in document:
+    if "extraArgs" in document["cmp"]:
+        catalog.noteExtraCmpArgs(document["cmp"]["extraArgs"])
+    if "bespokeImplementation" in document["cmp"]:
+        for bespoke in document["cmp"]["bespokeImplementation"]:
+            catalog.noteBespokeCmpImplementation(bespoke)
+        
 catalog.build()
 
 if args.type == "h":

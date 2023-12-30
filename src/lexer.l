@@ -21,7 +21,7 @@ struct PmModule *mod = yyextra;
 %}
 
 [ \t]+ {}
-[\n] {}
+[\n] { incLineNo(mod); }
 \/\/.* { }
 
 -?[0-9]+ { yylval->s = yytext; return NUMBER; }

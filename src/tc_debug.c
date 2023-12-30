@@ -104,6 +104,9 @@ void printTcVar(struct TcVar * x, int depth) {
     eprintf("TcVar[\n");
     printAstSymbol(x->name, depth + 1);
     eprintf("\n");
+    pad(depth + 1);
+eprintf("int %d", x->id);
+    eprintf("\n");
     printTcType(x->instance, depth + 1);
     eprintf("\n");
     pad(depth);
@@ -130,11 +133,17 @@ void printTcType(struct TcType * x, int depth) {
             eprintf("TCTYPE_TYPE_VAR\n");
             printTcVar(x->val.var, depth + 1);
             break;
-        case TCTYPE_TYPE_INTEGER:
+        case TCTYPE_TYPE_SMALLINTEGER:
             pad(depth + 1);
-            eprintf("TCTYPE_TYPE_INTEGER\n");
+            eprintf("TCTYPE_TYPE_SMALLINTEGER\n");
             pad(depth + 1);
-eprintf("void * %p", x->val.integer);
+eprintf("void * %p", x->val.smallinteger);
+            break;
+        case TCTYPE_TYPE_BIGINTEGER:
+            pad(depth + 1);
+            eprintf("TCTYPE_TYPE_BIGINTEGER\n");
+            pad(depth + 1);
+eprintf("void * %p", x->val.biginteger);
             break;
         case TCTYPE_TYPE_CHARACTER:
             pad(depth + 1);
@@ -158,84 +167,82 @@ eprintf("void * %p", x->val.character);
 
 /***************************************/
 
-bool eqTcEnv(struct TcEnv * a, struct TcEnv * b) {
+bool eqTcEnv(struct TcEnv * a, struct TcEnv * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (a->table != b->table) return false;
-    if (!eqTcEnv(a->next, b->next)) return false;
+    if (!eqTcEnv(a->next, b->next, map)) return false;
     return true;
 }
 
-bool eqTcNg(struct TcNg * a, struct TcNg * b) {
+bool eqTcNg(struct TcNg * a, struct TcNg * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (a->table != b->table) return false;
-    if (!eqTcNg(a->next, b->next)) return false;
+    if (!eqTcNg(a->next, b->next, map)) return false;
     return true;
 }
 
-bool eqTcFunction(struct TcFunction * a, struct TcFunction * b) {
+bool eqTcFunction(struct TcFunction * a, struct TcFunction * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
-    if (!eqTcType(a->arg, b->arg)) return false;
-    if (!eqTcType(a->result, b->result)) return false;
+    if (!eqTcType(a->arg, b->arg, map)) return false;
+    if (!eqTcType(a->result, b->result, map)) return false;
     return true;
 }
 
-bool eqTcPair(struct TcPair * a, struct TcPair * b) {
+bool eqTcPair(struct TcPair * a, struct TcPair * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
-    if (!eqTcType(a->first, b->first)) return false;
-    if (!eqTcType(a->second, b->second)) return false;
+    if (!eqTcType(a->first, b->first, map)) return false;
+    if (!eqTcType(a->second, b->second, map)) return false;
     return true;
 }
 
-bool eqTcTypeDef(struct TcTypeDef * a, struct TcTypeDef * b) {
-    if (a == b) return true;
-    if (a == NULL || b == NULL) return false;
-    if (a->name != b->name) return false;
-    if (!eqTcTypeDefArgs(a->args, b->args)) return false;
-    return true;
-}
-
-bool eqTcTypeDefArgs(struct TcTypeDefArgs * a, struct TcTypeDefArgs * b) {
-    if (a == b) return true;
-    if (a == NULL || b == NULL) return false;
-    if (!eqTcType(a->type, b->type)) return false;
-    if (!eqTcTypeDefArgs(a->next, b->next)) return false;
-    return true;
-}
-
-bool eqTcVar(struct TcVar * a, struct TcVar * b) {
+bool eqTcTypeDef(struct TcTypeDef * a, struct TcTypeDef * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (a->name != b->name) return false;
-    if (!eqTcType(a->instance, b->instance)) return false;
+    if (!eqTcTypeDefArgs(a->args, b->args, map)) return false;
     return true;
 }
 
-bool eqTcType(struct TcType * a, struct TcType * b) {
+bool eqTcTypeDefArgs(struct TcTypeDefArgs * a, struct TcTypeDefArgs * b, HashTable *map) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqTcType(a->type, b->type, map)) return false;
+    if (!eqTcTypeDefArgs(a->next, b->next, map)) return false;
+    return true;
+}
+
+// Bespoke implementation required for
+// bool eqTcVar(struct TcVar * a, struct TcVar * b, HashTable *map)
+
+bool eqTcType(struct TcType * a, struct TcType * b, HashTable *map) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (a->type != b->type) return false;
     switch(a->type) {
         case TCTYPE_TYPE_FUNCTION:
-            if (!eqTcFunction(a->val.function, b->val.function)) return false;
+            if (!eqTcFunction(a->val.function, b->val.function, map)) return false;
             break;
         case TCTYPE_TYPE_PAIR:
-            if (!eqTcPair(a->val.pair, b->val.pair)) return false;
+            if (!eqTcPair(a->val.pair, b->val.pair, map)) return false;
             break;
         case TCTYPE_TYPE_VAR:
-            if (!eqTcVar(a->val.var, b->val.var)) return false;
+            if (!eqTcVar(a->val.var, b->val.var, map)) return false;
             break;
-        case TCTYPE_TYPE_INTEGER:
-            if (a->val.integer != b->val.integer) return false;
+        case TCTYPE_TYPE_SMALLINTEGER:
+            if (a->val.smallinteger != b->val.smallinteger) return false;
+            break;
+        case TCTYPE_TYPE_BIGINTEGER:
+            if (a->val.biginteger != b->val.biginteger) return false;
             break;
         case TCTYPE_TYPE_CHARACTER:
             if (a->val.character != b->val.character) return false;
             break;
         case TCTYPE_TYPE_TYPEDEF:
-            if (!eqTcTypeDef(a->val.typeDef, b->val.typeDef)) return false;
+            if (!eqTcTypeDef(a->val.typeDef, b->val.typeDef, map)) return false;
             break;
         default:
             cant_happen("unrecognised type %d in eqTcType", a->type);

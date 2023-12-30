@@ -78,10 +78,11 @@ struct TcTypeDefArgs * newTcTypeDefArgs(struct TcType * type, struct TcTypeDefAr
     return x;
 }
 
-struct TcVar * newTcVar(HashSymbol * name) {
+struct TcVar * newTcVar(HashSymbol * name, int id) {
     struct TcVar * x = NEW(TcVar, OBJTYPE_TCVAR);
     DEBUG("new TcVar %pn", x);
     x->name = name;
+    x->id = id;
     x->instance = NULL;
     return x;
 }
@@ -166,7 +167,9 @@ void markTcType(struct TcType * x) {
         case TCTYPE_TYPE_VAR:
             markTcVar(x->val.var);
             break;
-        case TCTYPE_TYPE_INTEGER:
+        case TCTYPE_TYPE_SMALLINTEGER:
+            break;
+        case TCTYPE_TYPE_BIGINTEGER:
             break;
         case TCTYPE_TYPE_CHARACTER:
             break;
