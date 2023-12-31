@@ -1,5 +1,16 @@
 # Type Checking
 
+> Future self - I'm leaving this as-is because it was quite a climb, but in the end I didn't take the approach
+> described here. The trouble was that tying to implement Algorithm W as described below, using substitutions,
+> resulted in a horrible unmaintainable mess of code which I confess I didn't even understand myself. I discovered
+> a little secret about HM though, There is an alternative much more pragmatic approach, much closer to
+> the actual implementations I've seen, and described originally in [this paper](http://lucacardelli.name/Papers/BasicTypechecking.pdf)
+> which uses prolog-style logical variables with pruning, proper type-environments, and a reference implementation
+> in Modula-2. Ripping out the old type-checker and adding in the new on only took me a couple of weeks over Christmas,
+> wheras I must have spent two months or more on the previous version, which never even worked properly.
+
+---
+
 Or, "Climbing the Hindley-Milner Mountain" 😁
 
 My notes on an absolutely fantastic YouTube series by [Adam Jones](https://www.youtube.com/@adam-jones).
