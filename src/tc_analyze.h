@@ -1,5 +1,5 @@
-#ifndef cekf_algorithm_w_h
-#define cekf_algorithm_w_h
+#ifndef cekf_tc_analyze_h
+#define cekf_tc_analyze_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,18 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "tin.h"
-#include "ast.h"
+#include "tc.h"
+#include "lambda.h"
 
-typedef struct WResult {
-    struct Header header;
-    struct TinSubstitution *substitution;
-    struct TinMonoType *monoType;
-} WResult;
-
-void markWResult(struct WResult *result);
-void printWResult(struct WResult *result, int depth);
-
-struct WResult *WTop(struct AstNest *nest);
+TcEnv *tc_init(void);
+TcType *tc_analyze(LamExp *exp, TcEnv *env);
 
 #endif

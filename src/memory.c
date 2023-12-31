@@ -130,22 +130,20 @@ const char *typeName(ObjType type, void *p) {
             return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
-        case OBJTYPE_WRESULT:
-            return "wresult";
         case OBJTYPE_PROTECTION:
             return "protection";
         case OBJTYPE_BIGINT:
             return "bigint";
         case OBJTYPE_PMMODULE:
             return "pmmodule";
-        TIN_OBJTYPE_CASES()
-            return typenameTinObj(type);
         AST_OBJTYPE_CASES()
             return typenameAstObj(type);
         LAMBDA_OBJTYPE_CASES()
             return typenameLambdaObj(type);
         TPMC_OBJTYPE_CASES()
             return typenameTpmcObj(type);
+        TC_OBJTYPE_CASES()
+            return typenameTcObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
@@ -356,17 +354,11 @@ void markObj(Header *h, int i) {
         case OBJTYPE_HASHSYMBOL:
             markHashSymbolObj(h);
             break;
-        case OBJTYPE_WRESULT:
-            markWResultObj(h);
-            break;
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
             break;
         case OBJTYPE_PMMODULE:
             markPmModule(h);
-            break;
-        TIN_OBJTYPE_CASES()
-            markTinObj(h);
             break;
         AST_OBJTYPE_CASES()
             markAstObj(h);
@@ -376,6 +368,9 @@ void markObj(Header *h, int i) {
             break;
         TPMC_OBJTYPE_CASES()
             markTpmcObj(h);
+            break;
+        TC_OBJTYPE_CASES()
+            markTcObj(h);
             break;
         case OBJTYPE_BIGINT:
             markBigInt((BigInt *)h);
@@ -438,17 +433,11 @@ void freeObj(Header *h) {
         case OBJTYPE_HASHSYMBOL:
             freeHashSymbolObj(h);
             break;
-        case OBJTYPE_WRESULT:
-            freeWResultObj(h);
-            break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
             break;
         case OBJTYPE_PMMODULE:
             freePmModule(h);
-            break;
-        TIN_OBJTYPE_CASES()
-            freeTinObj(h);
             break;
         AST_OBJTYPE_CASES()
             freeAstObj(h);
@@ -458,6 +447,9 @@ void freeObj(Header *h) {
             break;
         TPMC_OBJTYPE_CASES()
             freeTpmcObj(h);
+            break;
+        TC_OBJTYPE_CASES()
+            freeTcObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj at %p", h->type, (void *)h);

@@ -22,8 +22,8 @@
 #include "common.h"
 #include "tpmc_match.h"
 #include "tpmc_compare.h"
-#include "debug_tpmc.h"
-#include "debug_lambda.h"
+#include "tpmc_debug.h"
+#include "lambda_debug.h"
 #include "lambda_helper.h"
 #include "symbol.h"
 

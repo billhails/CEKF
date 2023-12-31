@@ -159,6 +159,10 @@ int popPmFile(PmModule *mod) {
     return 1;
 }
 
+void incLineNo(PmModule *mod) {
+    if (mod != NULL && mod->bufStack != NULL) mod->bufStack->lineno++;
+}
+
 void showModuleState(FILE *fp, PmModule *mod) {
     if (mod == NULL) {
         fprintf(fp, "module is null\n");
@@ -168,5 +172,5 @@ void showModuleState(FILE *fp, PmModule *mod) {
         fprintf(fp, "module->bufStack is null\n");
         return;
     }
-    fprintf(fp, "current file %s\n", mod->bufStack->filename);
+    fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename, mod->bufStack->lineno + 1);
 }

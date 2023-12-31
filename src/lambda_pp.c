@@ -245,6 +245,9 @@ void ppLamPrimOp(LamPrimOp type) {
         case LAMPRIMOP_TYPE_MOD:
             eprintf("mod");
             break;
+        case LAMPRIMOP_TYPE_POW:
+            eprintf("pow");
+            break;
         default:
             cant_happen("unrecognised type %d in ppLamPrimOp", type);
     }

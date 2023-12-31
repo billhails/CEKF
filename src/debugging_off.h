@@ -1,3 +1,5 @@
+#ifndef cekf_debugging
+#define cekf_debugging
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -23,3 +25,7 @@
 #define DEBUG(...)
 #define IFDEBUG(x)
 #define NEWLINE()
+#define DEBUGGING_ON()
+#define DEBUGGING_OFF()
+
+#endif

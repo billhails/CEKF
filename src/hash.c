@@ -169,6 +169,14 @@ void hashSet(HashTable *table, HashSymbol *var, void *src) {
     }
 }
 
+bool hashContains(HashTable *table, HashSymbol *var) {
+    DEBUG("hashContains(%s) [%d]", var->name, table->id);
+    if (table->count == 0) return false;
+    hash_t index = findEntry(table->keys, table->capacity, var);
+    if (table->keys[index] == NULL) return false;
+    return true;
+}
+
 bool hashGet(HashTable *table, HashSymbol *var, void *dest) {
     DEBUG("hashGet(%s) [%d]", var->name, table->id);
     IFDEBUG(printMemHeader("values", table->values));
@@ -267,7 +275,7 @@ void printHashTable(HashTable *table, int depth) {
         eprintf("HashTable: (NULL)");
         return;
     }
-    eprintf("{[id:%d]", table->id);
+    eprintf("HashTable %d: {", table->id);
     bool first = true;
     for (int i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
@@ -283,7 +291,6 @@ void printHashTable(HashTable *table, int depth) {
                     eprintf(" ");
                 else
                     eprintf("\n");
-DEBUG("printHashTable, index %d, valuePtr %p", i, valuePtr(table, i));
                 table->printfunction(valuePtr(table, i), table->shortEntries ? 0 : (depth + 2));
                 eprintf("\n");
             } else {

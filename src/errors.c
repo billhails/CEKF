@@ -48,6 +48,9 @@ void can_happen(const char *message, ...) {
     va_end(args);
     eprintf("\n");
     errors = true;
+#ifdef DEBUG_TC
+    abort();
+#endif
 }
 
 bool hadErrors() {

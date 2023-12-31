@@ -1,3 +1,5 @@
+#ifndef cekf_debugging
+#define cekf_debugging
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -17,12 +19,21 @@
  */
 
 static int _debugInvocationId = 0;
+static bool _debuggingOn = true;
+static int _debuggingDepth = 0;
+
 #define DEBUG(...) do { \
-    eprintf("**** %s:%-5d ", __FILE__, __LINE__); \
-    eprintf(__VA_ARGS__); eprintf("\n"); \
+    if (_debuggingOn) { \
+        eprintf("%s:%-5d %*s", __FILE__, __LINE__, _debuggingDepth, ""); \
+        eprintf(__VA_ARGS__); \
+        eprintf("\n"); \
+    } \
 } while(0)
-#define ENTER(name) int _debugMyId = _debugInvocationId++; \
-    DEBUG("ENTER " #name " #%d", _debugMyId)
-#define LEAVE(name) DEBUG("LEAVE " #name " #%d", _debugMyId)
-#define NEWLINE() eprintf("\n")
-#define IFDEBUG(x) do { x; NEWLINE(); } while(0)
+#define ENTER(name) int _debugMyId = _debugInvocationId++; DEBUG("ENTER " #name " #%d", _debugMyId); _debuggingDepth++
+#define LEAVE(name) _debuggingDepth--; DEBUG("LEAVE " #name " #%d", _debugMyId)
+#define NEWLINE() do { if (_debuggingOn) eprintf("\n"); } while(0)
+#define IFDEBUG(x) do { if (_debuggingOn) { eprintf("%s:%-5d %*s", __FILE__, __LINE__, _debuggingDepth, ""); x; NEWLINE(); } } while(0)
+#define DEBUGGING_ON() do { _debuggingOn = true; } while (0)
+#define DEBUGGING_OFF() do { _debuggingOn = false; } while (0)
+
+#endif

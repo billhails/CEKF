@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_helper_h
-#define cekf_lambda_helper_h
+#ifndef cekf_tc_objtypes_h
+#define cekf_tc_objtypes_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,17 +16,34 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Structures to support type inference
+ *
+ * generated from src/tc.yaml by makeAST.py
  */
 
-#include "lambda.h"
-#include "lambda_debug.h"
-#include "hash.h"
-#include "memory.h"
- 
-void printLambdaSymbol(HashSymbol *x, int depth);
-LamContext *extendLamContext(LamContext *parent);
-void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info);
-LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var);
-void markLamExpFn(void *ptr);
-void printLamExpFn(void *ptr, int depth);
+#define TC_OBJTYPES() OBJTYPE_TCENV, \
+OBJTYPE_TCNG, \
+OBJTYPE_TCFUNCTION, \
+OBJTYPE_TCPAIR, \
+OBJTYPE_TCTYPEDEF, \
+OBJTYPE_TCTYPEDEFARGS, \
+OBJTYPE_TCVAR, \
+OBJTYPE_TCTYPE
+
+#define TC_OBJTYPE_CASES() \
+case OBJTYPE_TCENV:\
+case OBJTYPE_TCNG:\
+case OBJTYPE_TCFUNCTION:\
+case OBJTYPE_TCPAIR:\
+case OBJTYPE_TCTYPEDEF:\
+case OBJTYPE_TCTYPEDEFARGS:\
+case OBJTYPE_TCVAR:\
+case OBJTYPE_TCTYPE:\
+
+
+void markTcObj(struct Header *h);
+void freeTcObj(struct Header *h);
+char *typenameTcObj(int type);
+
 #endif

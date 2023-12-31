@@ -1,0 +1,13 @@
+let
+    typedef colours { red | green | blue }
+    fn map {
+        (f, nil) { [] }
+        (f, h @ t) { f(h) @ map(f, t) }
+    }
+    fn toInt {
+        (red) { 0 }
+        (green) { 1 }
+        (blue) { 2 }
+    }
+in
+    map(toInt, [red, green, blue])

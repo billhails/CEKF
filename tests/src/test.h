@@ -22,7 +22,9 @@
 #include "memory.h"
 #include "ast.h"
 #include "module.h"
-#include "algorithm_W.h"
-#include "tin_helper.h"
+#include "lambda_conversion.h"
+#include "lambda_pp.h"
+#include "tc_debug.h"
+#include "tc_analyze.h"
 
 #endif

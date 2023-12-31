@@ -1,5 +1,5 @@
-#ifndef cekf_debug_ast_h
-#define cekf_debug_ast_h
+#ifndef cekf_ast_debug_h
+#define cekf_ast_debug_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -56,5 +56,37 @@ void printAstSinglePrototype(struct AstSinglePrototype * x, int depth);
 void printAstTypeClause(struct AstTypeClause * x, int depth);
 void printAstArg(struct AstArg * x, int depth);
 void printAstExpression(struct AstExpression * x, int depth);
+
+bool eqAstNest(struct AstNest * a, struct AstNest * b);
+bool eqAstDefinitions(struct AstDefinitions * a, struct AstDefinitions * b);
+bool eqAstDefine(struct AstDefine * a, struct AstDefine * b);
+bool eqAstPrototype(struct AstPrototype * a, struct AstPrototype * b);
+bool eqAstPrototypeBody(struct AstPrototypeBody * a, struct AstPrototypeBody * b);
+bool eqAstPrototypeSymbolType(struct AstPrototypeSymbolType * a, struct AstPrototypeSymbolType * b);
+bool eqAstLoad(struct AstLoad * a, struct AstLoad * b);
+bool eqAstTypeDef(struct AstTypeDef * a, struct AstTypeDef * b);
+bool eqAstFlatType(struct AstFlatType * a, struct AstFlatType * b);
+bool eqAstTypeSymbols(struct AstTypeSymbols * a, struct AstTypeSymbols * b);
+bool eqAstTypeBody(struct AstTypeBody * a, struct AstTypeBody * b);
+bool eqAstTypeConstructor(struct AstTypeConstructor * a, struct AstTypeConstructor * b);
+bool eqAstTypeFunction(struct AstTypeFunction * a, struct AstTypeFunction * b);
+bool eqAstTypeList(struct AstTypeList * a, struct AstTypeList * b);
+bool eqAstType(struct AstType * a, struct AstType * b);
+bool eqAstCompositeFunction(struct AstCompositeFunction * a, struct AstCompositeFunction * b);
+bool eqAstFunction(struct AstFunction * a, struct AstFunction * b);
+bool eqAstArgList(struct AstArgList * a, struct AstArgList * b);
+bool eqAstUnpack(struct AstUnpack * a, struct AstUnpack * b);
+bool eqAstNamedArg(struct AstNamedArg * a, struct AstNamedArg * b);
+bool eqAstEnvType(struct AstEnvType * a, struct AstEnvType * b);
+bool eqAstFunCall(struct AstFunCall * a, struct AstFunCall * b);
+bool eqAstPackage(struct AstPackage * a, struct AstPackage * b);
+bool eqAstExpressions(struct AstExpressions * a, struct AstExpressions * b);
+bool eqAstEnv(struct AstEnv * a, struct AstEnv * b);
+bool eqAstIff(struct AstIff * a, struct AstIff * b);
+bool eqAstDefinition(struct AstDefinition * a, struct AstDefinition * b);
+bool eqAstSinglePrototype(struct AstSinglePrototype * a, struct AstSinglePrototype * b);
+bool eqAstTypeClause(struct AstTypeClause * a, struct AstTypeClause * b);
+bool eqAstArg(struct AstArg * a, struct AstArg * b);
+bool eqAstExpression(struct AstExpression * a, struct AstExpression * b);
 
 #endif

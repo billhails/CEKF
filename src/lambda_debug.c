@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 
-#include "debug_lambda.h"
+#include "lambda_debug.h"
 #include "bigint.h"
 
 static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
@@ -31,7 +31,7 @@ void printLamLam(struct LamLam * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamLam (NULL)"); return; }
     eprintf("LamLam[\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->nargs);
     eprintf("\n");
     printLamVarList(x->args, depth + 1);
@@ -46,7 +46,7 @@ void printLamVarList(struct LamVarList * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamVarList (NULL)"); return; }
     eprintf("LamVarList[\n");
-        printLambdaSymbol(x->var, depth + 1);
+    printLambdaSymbol(x->var, depth + 1);
     eprintf("\n");
     printLamVarList(x->next, depth + 1);
     eprintf("\n");
@@ -180,7 +180,7 @@ void printLamApply(struct LamApply * x, int depth) {
     eprintf("LamApply[\n");
     printLamExp(x->function, depth + 1);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->nargs);
     eprintf("\n");
     printLamList(x->args, depth + 1);
@@ -193,9 +193,9 @@ void printLamConstant(struct LamConstant * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamConstant (NULL)"); return; }
     eprintf("LamConstant[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->tag);
     eprintf("\n");
     pad(depth);
@@ -206,9 +206,9 @@ void printLamConstruct(struct LamConstruct * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamConstruct (NULL)"); return; }
     eprintf("LamConstruct[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->tag);
     eprintf("\n");
     printLamList(x->args, depth + 1);
@@ -221,9 +221,9 @@ void printLamDeconstruct(struct LamDeconstruct * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamDeconstruct (NULL)"); return; }
     eprintf("LamDeconstruct[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->vec);
     eprintf("\n");
     printLamExp(x->exp, depth + 1);
@@ -236,7 +236,7 @@ void printLamMakeVec(struct LamMakeVec * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamMakeVec (NULL)"); return; }
     eprintf("LamMakeVec[\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->nargs);
     eprintf("\n");
     printLamList(x->args, depth + 1);
@@ -275,7 +275,7 @@ void printLamIntCondCases(struct LamIntCondCases * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamIntCondCases (NULL)"); return; }
     eprintf("LamIntCondCases[\n");
-        printBigInt(x->constant, depth + 1);
+    printBigInt(x->constant, depth + 1);
     eprintf("\n");
     printLamExp(x->body, depth + 1);
     eprintf("\n");
@@ -289,7 +289,7 @@ void printLamCharCondCases(struct LamCharCondCases * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamCharCondCases (NULL)"); return; }
     eprintf("LamCharCondCases[\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("char %c", x->constant);
     eprintf("\n");
     printLamExp(x->body, depth + 1);
@@ -330,7 +330,7 @@ void printLamIntList(struct LamIntList * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamIntList (NULL)"); return; }
     eprintf("LamIntList[\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->item);
     eprintf("\n");
     printLamIntList(x->next, depth + 1);
@@ -343,7 +343,7 @@ void printLamLet(struct LamLet * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamLet (NULL)"); return; }
     eprintf("LamLet[\n");
-        printLambdaSymbol(x->var, depth + 1);
+    printLambdaSymbol(x->var, depth + 1);
     eprintf("\n");
     printLamExp(x->value, depth + 1);
     eprintf("\n");
@@ -357,7 +357,7 @@ void printLamLetRec(struct LamLetRec * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamLetRec (NULL)"); return; }
     eprintf("LamLetRec[\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->nbindings);
     eprintf("\n");
     printLamLetRecBindings(x->bindings, depth + 1);
@@ -372,7 +372,7 @@ void printLamLetRecBindings(struct LamLetRecBindings * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamLetRecBindings (NULL)"); return; }
     eprintf("LamLetRecBindings[\n");
-        printLambdaSymbol(x->var, depth + 1);
+    printLambdaSymbol(x->var, depth + 1);
     eprintf("\n");
     printLamExp(x->val, depth + 1);
     eprintf("\n");
@@ -386,7 +386,7 @@ void printLamContext(struct LamContext * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamContext (NULL)"); return; }
     eprintf("LamContext[\n");
-        printHashTable(x->frame, depth + 1);
+    printHashTable(x->frame, depth + 1);
     eprintf("\n");
     printLamContext(x->parent, depth + 1);
     eprintf("\n");
@@ -482,7 +482,7 @@ void printLamType(struct LamType * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamType (NULL)"); return; }
     eprintf("LamType[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
     printLamTypeArgs(x->args, depth + 1);
     eprintf("\n");
@@ -494,7 +494,7 @@ void printLamTypeArgs(struct LamTypeArgs * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamTypeArgs (NULL)"); return; }
     eprintf("LamTypeArgs[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
     printLamTypeArgs(x->next, depth + 1);
     eprintf("\n");
@@ -506,7 +506,7 @@ void printLamTypeConstructor(struct LamTypeConstructor * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamTypeConstructor (NULL)"); return; }
     eprintf("LamTypeConstructor[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
     printLamType(x->type, depth + 1);
     eprintf("\n");
@@ -532,7 +532,7 @@ void printLamTypeFunction(struct LamTypeFunction * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamTypeFunction (NULL)"); return; }
     eprintf("LamTypeFunction[\n");
-        printLambdaSymbol(x->name, depth + 1);
+    printLambdaSymbol(x->name, depth + 1);
     eprintf("\n");
     printLamTypeConstructorArgs(x->args, depth + 1);
     eprintf("\n");
@@ -546,16 +546,16 @@ void printLamTypeConstructorInfo(struct LamTypeConstructorInfo * x, int depth) {
     eprintf("LamTypeConstructorInfo[\n");
     printLamTypeConstructor(x->type, depth + 1);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("bool %d", x->vec);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->arity);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->size);
     eprintf("\n");
-        pad(depth + 1);
+    pad(depth + 1);
 eprintf("int %d", x->index);
     eprintf("\n");
     pad(depth);
@@ -575,18 +575,18 @@ void printLamExp(struct LamExp * x, int depth) {
         case LAMEXP_TYPE_VAR:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_VAR\n");
-                        printLambdaSymbol(x->val.var, depth + 1);
+            printLambdaSymbol(x->val.var, depth + 1);
             break;
         case LAMEXP_TYPE_STDINT:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_STDINT\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("int %d", x->val.stdint);
             break;
         case LAMEXP_TYPE_BIGINTEGER:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_BIGINTEGER\n");
-                        printBigInt(x->val.biginteger, depth + 1);
+            printBigInt(x->val.biginteger, depth + 1);
             break;
         case LAMEXP_TYPE_PRIM:
             pad(depth + 1);
@@ -681,25 +681,25 @@ eprintf("int %d", x->val.stdint);
         case LAMEXP_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_CHARACTER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("char %c", x->val.character);
             break;
         case LAMEXP_TYPE_BACK:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_BACK\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.back);
             break;
         case LAMEXP_TYPE_ERROR:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_ERROR\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.error);
             break;
         case LAMEXP_TYPE_COND_DEFAULT:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_COND_DEFAULT\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.cond_default);
             break;
         default:
@@ -741,19 +741,19 @@ void printLamTypeConstructorType(struct LamTypeConstructorType * x, int depth) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
             pad(depth + 1);
             eprintf("LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.integer);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER\n");
-                        pad(depth + 1);
+            pad(depth + 1);
 eprintf("void * %p", x->val.character);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
             pad(depth + 1);
             eprintf("LAMTYPECONSTRUCTORTYPE_TYPE_VAR\n");
-                        printLambdaSymbol(x->val.var, depth + 1);
+            printLambdaSymbol(x->val.var, depth + 1);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
             pad(depth + 1);
@@ -766,5 +766,486 @@ eprintf("void * %p", x->val.character);
     eprintf("\n");
     pad(depth);
     eprintf("]");
+}
+
+
+/***************************************/
+
+bool eqLamLam(struct LamLam * a, struct LamLam * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->nargs != b->nargs) return false;
+    if (!eqLamVarList(a->args, b->args)) return false;
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    return true;
+}
+
+bool eqLamVarList(struct LamVarList * a, struct LamVarList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->var != b->var) return false;
+    if (!eqLamVarList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamPrimApp(struct LamPrimApp * a, struct LamPrimApp * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    switch (a->type) {
+        case LAMPRIMOP_TYPE_ADD:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_SUB:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_MUL:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_DIV:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_MOD:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_POW:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_EQ:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_NE:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_GT:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_LT:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_GE:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_LE:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_VEC:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_XOR:
+            if (a != b) return false;
+            break;
+    }
+    if (!eqLamExp(a->exp1, b->exp1)) return false;
+    if (!eqLamExp(a->exp2, b->exp2)) return false;
+    return true;
+}
+
+bool eqLamUnaryApp(struct LamUnaryApp * a, struct LamUnaryApp * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    switch (a->type) {
+        case LAMUNARYOP_TYPE_NEG:
+            if (a != b) return false;
+            break;
+        case LAMUNARYOP_TYPE_NOT:
+            if (a != b) return false;
+            break;
+        case LAMUNARYOP_TYPE_PRINT:
+            if (a != b) return false;
+            break;
+    }
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    return true;
+}
+
+bool eqLamSequence(struct LamSequence * a, struct LamSequence * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    if (!eqLamSequence(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamList(struct LamList * a, struct LamList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    if (!eqLamList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamApply(struct LamApply * a, struct LamApply * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->function, b->function)) return false;
+    if (a->nargs != b->nargs) return false;
+    if (!eqLamList(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamConstant(struct LamConstant * a, struct LamConstant * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (a->tag != b->tag) return false;
+    return true;
+}
+
+bool eqLamConstruct(struct LamConstruct * a, struct LamConstruct * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (a->tag != b->tag) return false;
+    if (!eqLamList(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamDeconstruct(struct LamDeconstruct * a, struct LamDeconstruct * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (a->vec != b->vec) return false;
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    return true;
+}
+
+bool eqLamMakeVec(struct LamMakeVec * a, struct LamMakeVec * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->nargs != b->nargs) return false;
+    if (!eqLamList(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamIff(struct LamIff * a, struct LamIff * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->condition, b->condition)) return false;
+    if (!eqLamExp(a->consequent, b->consequent)) return false;
+    if (!eqLamExp(a->alternative, b->alternative)) return false;
+    return true;
+}
+
+bool eqLamCond(struct LamCond * a, struct LamCond * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->value, b->value)) return false;
+    if (!eqLamCondCases(a->cases, b->cases)) return false;
+    return true;
+}
+
+bool eqLamIntCondCases(struct LamIntCondCases * a, struct LamIntCondCases * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->constant != b->constant) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    if (!eqLamIntCondCases(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamCharCondCases(struct LamCharCondCases * a, struct LamCharCondCases * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->constant != b->constant) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    if (!eqLamCharCondCases(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamMatch(struct LamMatch * a, struct LamMatch * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->index, b->index)) return false;
+    if (!eqLamMatchList(a->cases, b->cases)) return false;
+    return true;
+}
+
+bool eqLamMatchList(struct LamMatchList * a, struct LamMatchList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamIntList(a->matches, b->matches)) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    if (!eqLamMatchList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamIntList(struct LamIntList * a, struct LamIntList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->item != b->item) return false;
+    if (!eqLamIntList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamLet(struct LamLet * a, struct LamLet * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->var != b->var) return false;
+    if (!eqLamExp(a->value, b->value)) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    return true;
+}
+
+bool eqLamLetRec(struct LamLetRec * a, struct LamLetRec * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->nbindings != b->nbindings) return false;
+    if (!eqLamLetRecBindings(a->bindings, b->bindings)) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    return true;
+}
+
+bool eqLamLetRecBindings(struct LamLetRecBindings * a, struct LamLetRecBindings * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->var != b->var) return false;
+    if (!eqLamExp(a->val, b->val)) return false;
+    if (!eqLamLetRecBindings(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamContext(struct LamContext * a, struct LamContext * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->frame != b->frame) return false;
+    if (!eqLamContext(a->parent, b->parent)) return false;
+    return true;
+}
+
+bool eqLamAnd(struct LamAnd * a, struct LamAnd * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->left, b->left)) return false;
+    if (!eqLamExp(a->right, b->right)) return false;
+    return true;
+}
+
+bool eqLamOr(struct LamOr * a, struct LamOr * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->left, b->left)) return false;
+    if (!eqLamExp(a->right, b->right)) return false;
+    return true;
+}
+
+bool eqLamAmb(struct LamAmb * a, struct LamAmb * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->left, b->left)) return false;
+    if (!eqLamExp(a->right, b->right)) return false;
+    return true;
+}
+
+bool eqLamTypeDefs(struct LamTypeDefs * a, struct LamTypeDefs * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamTypeDefList(a->typeDefs, b->typeDefs)) return false;
+    if (!eqLamExp(a->body, b->body)) return false;
+    return true;
+}
+
+bool eqLamTypeDefList(struct LamTypeDefList * a, struct LamTypeDefList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamTypeDef(a->typeDef, b->typeDef)) return false;
+    if (!eqLamTypeDefList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamTypeDef(struct LamTypeDef * a, struct LamTypeDef * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamType(a->type, b->type)) return false;
+    if (!eqLamTypeConstructorList(a->constructors, b->constructors)) return false;
+    return true;
+}
+
+bool eqLamTypeConstructorList(struct LamTypeConstructorList * a, struct LamTypeConstructorList * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamTypeConstructor(a->constructor, b->constructor)) return false;
+    if (!eqLamTypeConstructorList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamType(struct LamType * a, struct LamType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (!eqLamTypeArgs(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamTypeArgs(struct LamTypeArgs * a, struct LamTypeArgs * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (!eqLamTypeArgs(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamTypeConstructor(struct LamTypeConstructor * a, struct LamTypeConstructor * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (!eqLamType(a->type, b->type)) return false;
+    if (!eqLamTypeConstructorArgs(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamTypeConstructorArgs(struct LamTypeConstructorArgs * a, struct LamTypeConstructorArgs * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamTypeConstructorType(a->arg, b->arg)) return false;
+    if (!eqLamTypeConstructorArgs(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqLamTypeFunction(struct LamTypeFunction * a, struct LamTypeFunction * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->name != b->name) return false;
+    if (!eqLamTypeConstructorArgs(a->args, b->args)) return false;
+    return true;
+}
+
+bool eqLamTypeConstructorInfo(struct LamTypeConstructorInfo * a, struct LamTypeConstructorInfo * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamTypeConstructor(a->type, b->type)) return false;
+    if (a->vec != b->vec) return false;
+    if (a->arity != b->arity) return false;
+    if (a->size != b->size) return false;
+    if (a->index != b->index) return false;
+    return true;
+}
+
+bool eqLamExp(struct LamExp * a, struct LamExp * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case LAMEXP_TYPE_LAM:
+            if (!eqLamLam(a->val.lam, b->val.lam)) return false;
+            break;
+        case LAMEXP_TYPE_VAR:
+            if (a->val.var != b->val.var) return false;
+            break;
+        case LAMEXP_TYPE_STDINT:
+            if (a->val.stdint != b->val.stdint) return false;
+            break;
+        case LAMEXP_TYPE_BIGINTEGER:
+            if (a->val.biginteger != b->val.biginteger) return false;
+            break;
+        case LAMEXP_TYPE_PRIM:
+            if (!eqLamPrimApp(a->val.prim, b->val.prim)) return false;
+            break;
+        case LAMEXP_TYPE_UNARY:
+            if (!eqLamUnaryApp(a->val.unary, b->val.unary)) return false;
+            break;
+        case LAMEXP_TYPE_LIST:
+            if (!eqLamSequence(a->val.list, b->val.list)) return false;
+            break;
+        case LAMEXP_TYPE_MAKEVEC:
+            if (!eqLamMakeVec(a->val.makeVec, b->val.makeVec)) return false;
+            break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            if (!eqLamConstruct(a->val.construct, b->val.construct)) return false;
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            if (!eqLamDeconstruct(a->val.deconstruct, b->val.deconstruct)) return false;
+            break;
+        case LAMEXP_TYPE_CONSTANT:
+            if (!eqLamConstant(a->val.constant, b->val.constant)) return false;
+            break;
+        case LAMEXP_TYPE_APPLY:
+            if (!eqLamApply(a->val.apply, b->val.apply)) return false;
+            break;
+        case LAMEXP_TYPE_IFF:
+            if (!eqLamIff(a->val.iff, b->val.iff)) return false;
+            break;
+        case LAMEXP_TYPE_CALLCC:
+            if (!eqLamExp(a->val.callcc, b->val.callcc)) return false;
+            break;
+        case LAMEXP_TYPE_LETREC:
+            if (!eqLamLetRec(a->val.letrec, b->val.letrec)) return false;
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            if (!eqLamTypeDefs(a->val.typedefs, b->val.typedefs)) return false;
+            break;
+        case LAMEXP_TYPE_LET:
+            if (!eqLamLet(a->val.let, b->val.let)) return false;
+            break;
+        case LAMEXP_TYPE_MATCH:
+            if (!eqLamMatch(a->val.match, b->val.match)) return false;
+            break;
+        case LAMEXP_TYPE_COND:
+            if (!eqLamCond(a->val.cond, b->val.cond)) return false;
+            break;
+        case LAMEXP_TYPE_AND:
+            if (!eqLamAnd(a->val.and, b->val.and)) return false;
+            break;
+        case LAMEXP_TYPE_OR:
+            if (!eqLamOr(a->val.or, b->val.or)) return false;
+            break;
+        case LAMEXP_TYPE_AMB:
+            if (!eqLamAmb(a->val.amb, b->val.amb)) return false;
+            break;
+        case LAMEXP_TYPE_CHARACTER:
+            if (a->val.character != b->val.character) return false;
+            break;
+        case LAMEXP_TYPE_BACK:
+            if (a->val.back != b->val.back) return false;
+            break;
+        case LAMEXP_TYPE_ERROR:
+            if (a->val.error != b->val.error) return false;
+            break;
+        case LAMEXP_TYPE_COND_DEFAULT:
+            if (a->val.cond_default != b->val.cond_default) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqLamExp", a->type);
+    }
+    return true;
+}
+
+bool eqLamCondCases(struct LamCondCases * a, struct LamCondCases * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case LAMCONDCASES_TYPE_INTEGERS:
+            if (!eqLamIntCondCases(a->val.integers, b->val.integers)) return false;
+            break;
+        case LAMCONDCASES_TYPE_CHARACTERS:
+            if (!eqLamCharCondCases(a->val.characters, b->val.characters)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqLamCondCases", a->type);
+    }
+    return true;
+}
+
+bool eqLamTypeConstructorType(struct LamTypeConstructorType * a, struct LamTypeConstructorType * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->type != b->type) return false;
+    switch(a->type) {
+        case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
+            if (a->val.integer != b->val.integer) return false;
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
+            if (a->val.character != b->val.character) return false;
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
+            if (a->val.var != b->val.var) return false;
+            break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
+            if (!eqLamTypeFunction(a->val.function, b->val.function)) return false;
+            break;
+        default:
+            cant_happen("unrecognised type %d in eqLamTypeConstructorType", a->type);
+    }
+    return true;
 }
 

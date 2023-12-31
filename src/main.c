@@ -23,9 +23,8 @@
 
 #include "common.h"
 #include "ast.h"
-#include "debug_ast.h"
-#include "debug_tin.h"
-#include "debug_lambda.h"
+#include "ast_debug.h"
+#include "lambda_debug.h"
 #include "lambda_conversion.h"
 #include "module.h"
 // #include "parser.h"
@@ -36,13 +35,12 @@
 #include "debug.h"
 #include "bytecode.h"
 #include "desugaring.h"
-#include "algorithm_W.h"
-#include "tin.h"
-#include "tin_helper.h"
 #include "hash.h"
 #include "lambda_pp.h"
 #include "anf.h"
 #include "bigint.h"
+#include "tc_analyze.h"
+#include "tc_debug.h"
 
 #ifdef DEBUG_RUN_TESTS
 #if DEBUG_RUN_TESTS == 1
@@ -73,29 +71,6 @@ extern void testTin();
 int main(int argc, char *argv[]) {
     initProtection();
     testTin();
-}
-
-#elif DEBUG_RUN_TESTS == 4 // testing algorithm W
-
-extern AstNest *result;
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    PROTECT(result);
-    enableGC();
-    // quietPrintHashTable = true;
-    WResult *wr = WTop(result);
-    showTinMonoType(wr->monoType);
-    printf("\n");
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-    }
 }
 
 #else // testing lambda conversion
@@ -172,26 +147,33 @@ int main(int argc, char *argv[]) {
         eprintf("need filename\n");
         exit(1);
     }
+    // parse => AST
     PmModule *mod = newPmToplevelFromFile(argv[optind]);
     PROTECT(mod);
     pmParseModule(mod);
     enableGC();
-    // printAstNest(mod->nest, 0);
-    /* WResult *wr = */ (void) WTop(mod->nest);
-    validateLastAlloc();
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-        exit(1);
-    }
+    // lambda conversion: AST => LamExp
     LamExp *exp = lamConvertNest(mod->nest, NULL);
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
     eprintf("\n");
 #endif
+    // type checking
+    TcEnv *env = tc_init();
+    PROTECT(env);
+    TcType *res = tc_analyze(exp, env);
+    if (hadErrors()) {
+        return 1;
+    }
+    PROTECT(res);
+    ppTcType(res);
+    eprintf("\n");
+    // normalization: LamExp => ANF
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);
     disableGC();
+    // desugaring
     anfExp = desugarExp(anfExp);
     PROTECT(anfExp);
     enableGC();
@@ -199,13 +181,17 @@ int main(int argc, char *argv[]) {
     printExp(anfExp);
     eprintf("\n");
 #endif
+    // static analysis: ANF => annotated ANF (de bruijn)
     analizeExp(anfExp, NULL);
+    // byte code generation
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
     UNPROTECT(save);
+    // execution
     printContainedValue(run(byteCodes), 1);
     printf("\n");
+    // report stats etc.
     if (report_mem_flag)
         reportMemory();
     if (report_time_flag) {

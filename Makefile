@@ -55,7 +55,7 @@ $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
 	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
-	$(CC) -I src/ -I tmp/ -c $< -o $@
+	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
 $(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep
 	$(CC) -I tmp/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<

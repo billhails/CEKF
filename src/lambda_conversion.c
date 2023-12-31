@@ -27,7 +27,7 @@
 #include "lambda_helper.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
-#include "debug_ast.h"
+#include "ast_debug.h"
 
 #define ARG_CATEGORY_VAR 0
 #define ARG_CATEGORY_CONST 1
@@ -197,6 +197,13 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *s
     makeVec->args = performListSubstitutions(makeVec->args, substitutions);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
+}
+
+static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, HashTable *substitutions) {
+    ENTER(performDeconstructSubstitutions);
+    deconstruct->exp = lamPerformSubstitutions(deconstruct->exp, substitutions);
+    LEAVE(performDeconstructSubstitutions);
+    return deconstruct;
 }
 
 static LamConstruct *performConstructSubstitutions(LamConstruct *construct, HashTable *substitutions) {
@@ -377,6 +384,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_MAKEVEC:
             exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            exp->val.deconstruct = performDeconstructSubstitutions(exp->val.deconstruct, substitutions);
             break;
         case LAMEXP_TYPE_CONSTRUCT:
             exp->val.construct = performConstructSubstitutions(exp->val.construct, substitutions);
