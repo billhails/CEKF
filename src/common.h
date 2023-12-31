@@ -29,7 +29,7 @@
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #define DEBUG_SLOW_STEP
-// define this to cause a GC at every possible step (catched memory leaks early)
+// define this to cause a GC at every possible step (catches memory leaks early)
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
@@ -45,7 +45,7 @@
 // #define DEBUG_BYTECODE
 // define this to make fatal errors dump core (if ulimit allows)
 #define DEBUG_DUMP_CORE
-#define DEBUG_TC
+// #define DEBUG_TC
 // #define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LEAK
 // #define DEBUG_ANF

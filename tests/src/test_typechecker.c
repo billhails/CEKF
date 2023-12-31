@@ -51,7 +51,7 @@ static AstNest *parseSolo(char *string) {
     return mod->nest;
 }
 
-static TcType *charToVar(char *name) {
+static TcType *makeVar(char *name) {
     HashSymbol *t = newSymbol(name);
     TcVar *v = newTcVar(t, 0);
     int save = PROTECT(v);
@@ -121,7 +121,7 @@ static void test_cdr() {
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *var = charToVar("#t");
+    TcType *var = makeVar("#t");
     PROTECT(var);
     TcType *td = listOf(var);
     PROTECT(td);
@@ -137,7 +137,7 @@ static void test_car() {
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *var = charToVar("#t");
+    TcType *var = makeVar("#t");
     PROTECT(var);
     TcType *td = listOf(var);
     PROTECT(td);
@@ -295,7 +295,7 @@ static void test_either_1() {
     PROTECT(res);
     TcType *big = makeBigInteger();
     PROTECT(big);
-    TcType *var = charToVar("#t");
+    TcType *var = makeVar("#t");
     PROTECT(var);
     TcTypeDefArgs *args = newTcTypeDefArgs(var, NULL);
     PROTECT(args);
@@ -348,28 +348,30 @@ static void test_lol() {
 }
 
 static void test_map() {
-    printf("test_lol\n");
+    printf("test_map\n");
     AstNest *result = parseWrapped(
 "let"
-"    typedef colours { red | green | blue }"
 "    fn map {"
-"        (f, nil) { [] }"
+"        (_, []) { [] }"
 "        (f, h @ t) { f(h) @ map(f, t) }"
 "    }"
-"    fn toInt {"
-"        (red) { 0 }"
-"        (green) { 1 }"
-"        (blue) { 2 }"
-"    }"
 "in"
-"    map(toInt, [red, green, blue])"
+"    map"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *big = makeBigInteger();
-    PROTECT(big);
-    TcType *expected = listOf(big);
+    TcType *t1 = makeVar("#t1");
+    PROTECT(t1);
+    TcType *t2 = makeVar("#t2");
+    PROTECT(t2);
+    TcType *f = makeFunction2(t1, t2);
+    PROTECT(f);
+    TcType *listT1 = listOf(t1);
+    PROTECT(listT1);
+    TcType *listT2 = listOf(t2);
+    PROTECT(listT2);
+    TcType *expected = makeFunction3(f, listT1, listT2);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
@@ -378,7 +380,6 @@ static void test_map() {
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
-    /*
     test_car();
     test_cdr();
     test_car_of();
@@ -393,7 +394,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test_id();
     test_if();
     test_lol();
-    */
     test_map();
 }
 
