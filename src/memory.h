@@ -24,9 +24,9 @@
 struct Header;
 
 #include "ast_objtypes.h"
-#include "tin_objtypes.h"
 #include "lambda_objtypes.h"
 #include "tpmc_objtypes.h"
+#include "tc_objtypes.h"
 
 typedef enum {
     // exp types
@@ -35,46 +35,53 @@ typedef enum {
     OBJTYPE_APPLY,
     OBJTYPE_BINDINGS,
     OBJTYPE_BOOL,
+
     OBJTYPE_IF,
     OBJTYPE_COND,
     OBJTYPE_CONDCASES,
     OBJTYPE_INTCONDCASES,
     OBJTYPE_CHARCONDCASES,
+
     OBJTYPE_AEXP,
     OBJTYPE_CEXP,
     OBJTYPE_EXP,
     OBJTYPE_EXPLIST,
     OBJTYPE_AEXPINTLIST,
+
     OBJTYPE_LAM,
     OBJTYPE_LET,
     OBJTYPE_LETREC,
     OBJTYPE_PRIMAPP,
     OBJTYPE_UNARYAPP,
+
     OBJTYPE_ANNOTATEDVAR,
     OBJTYPE_VARLIST,
     OBJTYPE_MAKEVEC,
     OBJTYPE_MATCH,
     OBJTYPE_MATCHLIST,
+
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,
     OBJTYPE_CTENV,
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
+
     OBJTYPE_CONS,
     OBJTYPE_VEC,
     OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
-    OBJTYPE_WRESULT,
+
     OBJTYPE_PROTECTION,
-    // bigint type
     OBJTYPE_BIGINT,
+    OBJTYPE_PMMODULE,
+
     AST_OBJTYPES(),
-    TIN_OBJTYPES(),
     LAMBDA_OBJTYPES(),
     TPMC_OBJTYPES(),
+    TC_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -86,7 +93,7 @@ typedef struct Header {
 void *reallocate(void *ptr, size_t oldSize, size_t newSize);
 int protect(Header *obj);
 void replaceProtect(int i, Header *obj);
-int startProtect();
+int startProtect(void);
 void unProtect(int index);
 void *allocate(size_t size, ObjType type);
 char *safeStrdup(char *s);
@@ -95,30 +102,31 @@ void markObj(Header *h, int i);
 void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
-void markWResultObj(Header *x);
 
 void freeObj(Header *h);
 void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
-void freeWResultObj(Header *x);
 
 bool enableGC(void);
 bool disableGC(void);
 
 void initProtection(void);
 
-void validateLastAlloc();
+void validateLastAlloc(void);
 
-void reportMemory();
+void reportMemory(void);
 
 #define EXIT_OOM 2
 
 #define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
 #define FREE_VEC(vec) ((void)reallocate(vec, sizeof(vec) + vec->size * sizeof(Value), 0))
 
+// Allocation for directly managed objects
 #define NEW(thing, type) ((thing *)allocate(sizeof(thing), type))
 #define FREE(thing, type) ((void)reallocate(thing, sizeof(type), 0))
+// Allocation for indirectly managed objects
+#define ALLOCATE(type) ((type *)reallocate(NULL, 0, sizeof(type)))
 
 #define NEW_ARRAY(type, count) ((type *)reallocate(NULL, 0, sizeof(type) * (count)))
 #define FREE_ARRAY(type, array, count) ((void)reallocate(array, sizeof(type) * (count), 0))

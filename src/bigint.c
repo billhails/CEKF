@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef DEBUG_BIGINT
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 #define BIGINT_ASSERT(a, op, b) assert((a) op (b));
 
@@ -1216,11 +1221,12 @@ double bigint_double(const bigint *src){
 
 // additional CEKF code
 
+// set true by main/getopts to enable bigint usage
+int bigint_flag = 0;
+
 BigInt *newBigInt(bigint bi) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
-#ifdef DEBUG_ALLOC
-    fprintf(stderr, "newBigInt %p\n", x);
-#endif
+    DEBUG("newBigInt %p", x);
     x->little = 0;
     x->bi = bi;
     return x;
@@ -1228,9 +1234,7 @@ BigInt *newBigInt(bigint bi) {
 
 BigInt *fakeBigInt(int little) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
-#ifdef DEBUG_ALLOC
-    fprintf(stderr, "newBigInt %p\n", x);
-#endif
+    DEBUG("newBigInt %p", x);
     x->little = little;
     bzero(&x->bi, sizeof(bigint));
     return x;
@@ -1247,7 +1251,7 @@ void freeBigInt(BigInt *x) {
 }
 
 void printBigInt(BigInt *x, int depth) {
-    fprintf(stderr, "%*s", depth * 4, "");
+    eprintf("%*s", depth * 4, "");
     fprintBigInt(stderr, x);
 }
 
@@ -1348,7 +1352,7 @@ void dumpBigInt(FILE *fp, BigInt *big) {
         for (int i = 0; i < big->bi.capacity;) {
             fprintf(fp, "%d", big->bi.words[i]);
             i++;
-            if (i < big->bi.capacity) fprintf(stderr, ", ");
+            if (i < big->bi.capacity) eprintf(", ");
         }
         fprintf(fp, "]");
     }

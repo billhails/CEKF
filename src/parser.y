@@ -1,3 +1,9 @@
+%define api.pure full
+%lex-param {void *scanner}
+%parse-param {void *scanner}{struct PmModule *mod}
+
+%define parse.trace
+%define parse.error verbose
 %{
 
 #include <stdbool.h>
@@ -10,17 +16,13 @@
 #include "symbol.h"
 #include "symbols.h"
 #include "bigint.h"
+#include "module.h"
+#include "parser.h"
+#include "lexer.h"
+
+void yyerror (yyscan_t *locp, PmModule *mod, char const *msg);
 
 // #define YYDEBUG 1
-
-int yylex();
-extern char *yytext;
-int lineNum = 1;
-void yyerror(char *ps, ...) {
-    printf("%s at token '%s' on line %d\n", ps, yytext, lineNum);
-}
-
-AstNest *result = NULL;
 
 static AstFunCall *binOpToFunCall(HashSymbol *op, AstExpression *lhs, AstExpression *rhs) {
     return newAstFunCall(
@@ -87,6 +89,11 @@ static BigInt *makeBigInt(char *digits) {
 }
 
 %}
+%code requires
+{
+#include "module.h"
+#include "ast.h"
+}
 %union {
     char *s;
     char c;
@@ -206,7 +213,7 @@ static BigInt *makeBigInt(char *digits) {
 %%
 
 top : %empty     { $$ = NULL; }
-    | nest_body  { result = $$; }
+    | nest_body  { mod->nest = $$; }
     ;
 
 nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
@@ -466,3 +473,10 @@ symbol : VAR    { $$ = newSymbol($1); }
        ;
 
 %%
+void yyerror (yyscan_t *locp, PmModule *mod, char const *msg) {
+    fprintf(stderr, "%s\n", msg);
+    if (mod && mod->bufStack) {
+        showModuleState(stderr, mod);
+    }
+    abort();
+}

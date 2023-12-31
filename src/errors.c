@@ -23,7 +23,6 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <signal.h>
 
 #include "common.h"
 
@@ -34,9 +33,9 @@ void cant_happen(const char *message, ...) {
     va_start(args, message);
     vfprintf(stderr, message, args);
     va_end(args);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #ifdef DEBUG_DUMP_CORE
-    raise(SIGABRT);
+    abort();
 #else
     exit(1);
 #endif
@@ -47,8 +46,11 @@ void can_happen(const char *message, ...) {
     va_start(args, message);
     vfprintf(stderr, message, args);
     va_end(args);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     errors = true;
+#ifdef DEBUG_TC
+    abort();
+#endif
 }
 
 bool hadErrors() {

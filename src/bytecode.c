@@ -42,7 +42,7 @@ void initByteCodeArray(ByteCodeArray *b) {
 
 void resetByteCodeArray(ByteCodeArray *b) {
     b->count = 0;
-    for (int i = 0; i < b->capacity; i++) {
+    for (size_t i = 0; i < b->capacity; i++) {
         b->entries[i] = BYTECODE_NONE;
     }
 }
@@ -69,15 +69,12 @@ static void addByte(ByteCodeArray *b, int code) {
     if (code > 255) {
         cant_happen("maximim byte size exceeded");
     }
-    DEBUG("%04x addByte %02x", b->count, code);
+    DEBUG("%04lx addByte %02x", b->count, code);
     reserve(b, sizeof(byte));
     b->entries[b->count++] = code;
 }
 
 static void writeWordAt(int loc, ByteCodeArray *b, word word) {
-    if (word > 65535) {
-        cant_happen("maximum word size exceeded");
-    }
     DEBUG("%04x writeWord %04x", loc, word);
     memcpy(&b->entries[loc], &word, sizeof(word));
 }
@@ -93,9 +90,6 @@ static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
 }
 
 static void addWord(ByteCodeArray *b, word w) {
-    if (w > 65535) {
-        cant_happen("maximum word size exceeded");
-    }
     reserve(b, sizeof(word));
     writeWordAt(b->count, b, w);
     b->count += sizeof(word);
@@ -108,9 +102,6 @@ static int reserveWord(ByteCodeArray *b) {
 }
 
 static void addInt(ByteCodeArray *b, int word) {
-    if (word > 4294967295) {
-        cant_happen("maximum int size exceeded");
-    }
     reserve(b, sizeof(int));
     writeIntAt(b->count, b, word);
     b->count += sizeof(int);
@@ -128,7 +119,7 @@ static void addBig(ByteCodeArray *b, bigint bi) {
     addByte(b, bi.neg);
     size_t nBytes = bi.capacity * sizeof(bigint_word);
     reserve(b, nBytes);
-    DEBUG("%04x addBig nBytes %ld", b->count, nBytes);
+    DEBUG("%04lx addBig nBytes %ld", b->count, nBytes);
     memcpy(&b->entries[b->count], &bi.words[0], nBytes);
     b->count += nBytes;
 }
@@ -146,18 +137,6 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_RETURN);
     writeCurrentAddressAt(patch, b);
     LEAVE(writeAexpLam);
-}
-
-void writeAexpVarList(AexpVarList *x, ByteCodeArray *b) {
-    ENTER(writeAexpVarList);
-    cant_happen("writeAexpVarList called");
-    LEAVE(writeAexpVarList);
-}
-
-void writeAexpVar(HashSymbol *x, ByteCodeArray *b) {
-    ENTER(writeAexpVar);
-    cant_happen("writeAexpVar called");
-    LEAVE(writeAexpVar);
 }
 
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
@@ -393,7 +372,7 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     ENTER(writeCexpIntCond);
     addByte(b, BYTECODE_INTCOND);
     int numCases = countCexpIntCondCases(x);
-    // fprintf(stderr, "writeCexpIntCond size %d\n", numCases);
+    // eprintf("writeCexpIntCond size %d\n", numCases);
     // printCexpIntCondCases(x);
     numCases--; // don't count the default case
     if (numCases <= 0) {

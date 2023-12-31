@@ -55,6 +55,20 @@ structs:
         nargs: int
         args: LamList
 
+    LamConstant:
+        name: HashSymbol # the name of the constructor
+        tag: int         # the tag of the constructor
+
+    LamConstruct:
+        name: HashSymbol # the name of the constructor
+        tag: int         # the tag of the constructor
+        args: LamList    # the remaining arguments to make-vec
+
+    LamDeconstruct:
+        name: HashSymbol # name of the constructor being deconstructed
+        vec: int         # offset of the field in the vector
+        exp: LamExp      # expression being deconstructed
+
     LamMakeVec:
         nargs: int
         args: LamList
@@ -122,33 +136,76 @@ structs:
         left: LamExp
         right: LamExp
 
+    # the following LamTypeDef* structs prepend each letrec.
+    # Any typedefs in the AST are hoisted into this section.
+    LamTypeDefs:
+        typeDefs: LamTypeDefList
+        body: LamExp
+
+    LamTypeDefList:
+        typeDef: LamTypeDef
+        next: LamTypeDefList
+
+    LamTypeDef:
+        type: LamType # re-use
+        constructors: LamTypeConstructorList
+
+    LamTypeConstructorList:
+        constructor: LamTypeConstructor # re-use
+        next: LamTypeConstructorList
+
+    # the following LamType* structs hold type information
+    # used by lambda conversion and the TPMC
+    LamType:
+        name: HashSymbol
+        args: LamTypeArgs
+
+    LamTypeArgs:
+        name: HashSymbol
+        next: LamTypeArgs
+
+    LamTypeConstructor:
+        name: HashSymbol
+        type: LamType
+        args: LamTypeConstructorArgs
+    
+    LamTypeConstructorArgs:
+        arg: LamTypeConstructorType
+        next: LamTypeConstructorArgs
+
+    LamTypeFunction:
+        name: HashSymbol
+        args: LamTypeConstructorArgs
+
     LamTypeConstructorInfo:
+        type: LamTypeConstructor
         vec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
         size: int # number of alternatives
         index: int # index into list of alternatives
 
+
 enums:
     LamPrimOp:
-        - LAM_PRIM_ADD
-        - LAM_PRIM_SUB
-        - LAM_PRIM_MUL
-        - LAM_PRIM_DIV
-        - LAM_PRIM_MOD
-        - LAM_PRIM_POW
-        - LAM_PRIM_EQ
-        - LAM_PRIM_NE
-        - LAM_PRIM_GT
-        - LAM_PRIM_LT
-        - LAM_PRIM_GE
-        - LAM_PRIM_LE
-        - LAM_PRIM_VEC
-        - LAM_PRIM_XOR
+        - ADD
+        - SUB
+        - MUL
+        - DIV
+        - MOD
+        - POW
+        - EQ
+        - NE
+        - GT
+        - LT
+        - GE
+        - LE
+        - VEC
+        - XOR
 
     LamUnaryOp:
-        - LAM_UNARY_NEG
-        - LAM_UNARY_NOT
-        - LAM_UNARY_PRINT
+        - NEG
+        - NOT
+        - PRINT
 
 unions:
     LamExp:
@@ -160,10 +217,14 @@ unions:
         unary: LamUnaryApp
         list: LamSequence
         makeVec: LamMakeVec
+        construct: LamConstruct
+        deconstruct: LamDeconstruct
+        constant: LamConstant
         apply: LamApply
         iff: LamIff
         callcc: LamExp
         letrec: LamLetRec
+        typedefs: LamTypeDefs
         let: LamLet
         match: LamMatch
         cond: LamCond
@@ -178,6 +239,12 @@ unions:
     LamCondCases:
         integers: LamIntCondCases
         characters: LamCharCondCases
+
+    LamTypeConstructorType:
+        integer: void_ptr
+        character: void_ptr
+        var: HashSymbol
+        function: LamTypeFunction
 
 primitives:
     HashSymbol:

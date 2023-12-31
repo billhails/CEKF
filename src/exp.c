@@ -564,6 +564,9 @@ void freeExpObj(Header *h) {
         case OBJTYPE_CONDCASES:
             FREE(h, CexpCondCases);
             break;
+        case OBJTYPE_INTCONDCASES:
+            FREE(h, CexpIntCondCases);
+            break;
         case OBJTYPE_AEXP:
             FREE(h, Aexp);
             break;
@@ -575,6 +578,9 @@ void freeExpObj(Header *h) {
             break;
         case OBJTYPE_EXPLIST:
             FREE(h, AexpList);
+            break;
+        case OBJTYPE_AEXPINTLIST:
+            FREE(h, AexpIntList);
             break;
         case OBJTYPE_LAM:
             FREE(h, AexpLam);
@@ -607,7 +613,7 @@ void freeExpObj(Header *h) {
             FREE(h, MatchList);
             break;
         default:
-            cant_happen("unrecognised header type in freeExpObj");
+            cant_happen("unrecognised header type %d in freeExpObj", h->type);
     }
 }
 

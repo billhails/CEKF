@@ -1,6 +1,11 @@
 The following is the license that came with the bigint code I'm using.
 It does *not* apply to the CEKF project as a whole.
 
+Original project [983/bigint](https://github.com/983/bigint).
+
+---
+
+```
 This is free and unencumbered software released into the public domain.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -25,4 +30,4 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org>
-
+```

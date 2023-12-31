@@ -19,7 +19,7 @@
  */
 
 #include "lambda.h"
-#include "debug_lambda.h"
+#include "lambda_debug.h"
 #include "hash.h"
 #include "memory.h"
  

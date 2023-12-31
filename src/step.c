@@ -298,11 +298,11 @@ static int _vecCmp(Vec *a, Vec *b) {
 
 static int _cmp(Value a, Value b) {
 #ifdef DEBUG_STEP
-    fprintf(stderr, "_cmp:\n");
+    eprintf("_cmp:\n");
     printContainedValue(a, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     printContainedValue(b, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     if (a.type != b.type) {
         cant_happen("different types in _cmp");
@@ -504,7 +504,7 @@ static void applyProc(int naargs) {
         case VALUE_TYPE_CONT: {
             if (callable.val.k == NULL) {
                 state.V = pop();
-                state.C = -1;
+                state.C = UINT64_MAX;
             } else {
                 Value result = pop();
                 protectValue(result);
@@ -546,10 +546,10 @@ static void step() {
         modulo = littleModulo;
     }
     state.C = 0;
-    while (state.C != -1) {
+    while (state.C != UINT64_MAX) {
 #ifdef DEBUG_STEP
         printCEKF(&state);
-        printf("%4d) %04x ### ", ++count, state.C);
+        printf("%4d) %04lx ### ", ++count, state.C);
 #endif
         switch (readCurrentByte()) {
             case BYTECODE_NONE: {
@@ -561,7 +561,6 @@ static void step() {
                 int letRecOffset = readCurrentByte();
                 int end = readCurrentOffset();
                 DEBUGPRINTF("LAM nargs:[%d] letrec:[%d] end:[%04x]\n", nargs, letRecOffset, end);
-                Env *env = NULL;
                 Clo *clo = newClo(nargs, state.C, state.E);
                 int save = PROTECT(clo);
                 snapshotClo(&state.S, clo, letRecOffset);

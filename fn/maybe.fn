@@ -1,0 +1,1 @@
+typedef maybe(#t) { nothing | just(#t) }

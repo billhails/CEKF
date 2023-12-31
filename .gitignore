@@ -12,3 +12,5 @@ core*
 Makefile.extra
 gmon.out
 .idea
+tests/.test_*-success
+tests/test_*

@@ -10,6 +10,12 @@ let
         }
     }
 
+    fn member {
+        (_, []) { false }
+        (x,  x @ _) { true }
+        (x, _ @ t) { member(x, t) }
+    }
+
     fn exclude {
         (items, []) { [] }
         (items, h @ t) {

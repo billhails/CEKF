@@ -1,5 +1,3 @@
-#ifndef cekf_parser_management_h
-#define cekf_parser_management_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,14 +16,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+const char *preamble =
+"let"
+"    typedef bool { false | true }"
 
-#include "ast.h"
+"    typedef list(#t) { nil | cons(#t, list(#t)) }"
 
-int pm_newFile(char *filename);
-int pm_popFile(void);
-AstNest *pm_parseFile(char *filename);
+"    fn append {"
+"        ([], b) { b }"
+"        (h @ t, b) { h @ append(t, b) }"
+"    }"
 
-#endif
+"    fn car {"
+"        (h @ _) { h }"
+"    }"
+
+"    fn cdr {"
+"        (_ @ t) { t }"
+"    }"
+
+"in {";
+
+const char *postamble = "}";

@@ -65,7 +65,8 @@ flowchart TD
 
 source --> AST[Parser]
  --abstract syntax-->  
-check[Type Checking] --abstract syntax-->  
+check[Type Checking]
+AST --abstract syntax-->  
 lambda[Lambda Conversion] --lambda calculus-->  
 anf[A-Normal Form Conversion] --ANF-->  
 desugaring2[Desugaring]  

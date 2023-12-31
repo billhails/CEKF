@@ -38,6 +38,16 @@ class Catalog:
         if t in self.contents:
             self.contents[t].tag()
 
+    def noteExtraCmpArgs(self, args):
+        for key in self.contents:
+            self.contents[key].noteExtraCmpArgs(args)
+
+    def noteBespokeCmpImplementation(self, name):
+        if name in self.contents:
+            self.contents[name].noteBespokeCmpImplementation()
+        else:
+            raise Exception("bespoke cmp implementation declared for nonexistant entry " + name)
+
     def get(self, key):
         if key in self.contents:
             return self.contents[key]
@@ -94,9 +104,17 @@ class Catalog:
         for entity in self.contents.values():
             entity.printPrintFunction(self)
 
+    def printCompareFunctions(self):
+        for entity in self.contents.values():
+            entity.printCompareFunction(self)
+
     def printPrintDeclarations(self):
         for entity in self.contents.values():
             entity.printPrintDeclaration(self)
+
+    def printCompareDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCompareDeclaration(self)
 
     def printDefines(self):
         for entity in self.contents.values():
@@ -120,7 +138,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in mark{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);')
         print('    }')
         print('}')
 
@@ -130,7 +148,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printFreeObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in free{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);')
         print('    }')
         print('}')
 
@@ -140,7 +158,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognized type in typename{self.typeName.capitalize()}Obj\\n");')
+        print(f'            cant_happen("unrecognised type %d in typename{self.typeName.capitalize()}Obj\\n", type);')
         print('    }')
         print('}')
 
@@ -168,6 +186,11 @@ class Base:
     def __init__(self, name):
         self.name = name
         self.tagged = False
+        self.bespokeCmpImplementation = False
+        self.extraCmpArgs = {}
+
+    def noteExtraCmpArgs(self, args):
+        self.extraCmpArgs = args
 
     def objTypeArray(self):
         return []
@@ -205,7 +228,13 @@ class Base:
     def printPrintDeclaration(self, catalog):
         pass
 
+    def printCompareDeclaration(self, catalog):
+        pass
+
     def printPrintFunction(self, catalog):
+        pass
+
+    def printCompareFunction(self, catalog):
         pass
 
     def printMarkObjCase(self, catalog):
@@ -238,8 +267,11 @@ class Base:
     def isStruct(self):
         return False
 
-    def isArray(selfself):
+    def isArray(self):
         return False
+
+    def noteBespokeCmpImplementation(self):
+        self.bespokeCmpImplementation = True
 
     def printMarkField(self, field, depth, prefix=''):
         pass
@@ -264,6 +296,15 @@ class EnumField:
         v = v.upper().replace('AST', 'AST_')
         return v
 
+    def printCompareCase(self, depth):
+        typeName = self.makeTypeName()
+        pad(depth)
+        print(f'case {typeName}:')
+        pad(depth + 1)
+        print("if (a != b) return false;")
+        pad(depth + 1)
+        print('break;')
+
     def printPrintCase(self, depth):
         typeName = self.makeTypeName()
         pad(depth)
@@ -271,7 +312,7 @@ class EnumField:
         pad(depth + 1)
         print('pad(depth + 1);')
         pad(depth + 1)
-        print(f'fprintf(stderr, "{typeName}");')
+        print(f'eprintf("{typeName}");')
         pad(depth + 1)
         print('break;')
 
@@ -311,6 +352,10 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printMarkField(f"{self.name}[{key}]", depth)
 
+    def printCompareLine(self, catalog, depth):
+        obj = catalog.get(self.typeName)
+        obj.printCompareField(self.name, depth)
+
     def printPrintLine(self, catalog, depth):
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, depth)
@@ -318,6 +363,10 @@ class SimpleField:
     def printPrintArrayLine(self, catalog, key, depth):
         obj = catalog.get(self.typeName)
         obj.printPrintField(f"{self.name}[{key}]", depth)
+
+    def printCompareArrayLine(self, catalog, key, depth):
+        obj = catalog.get(self.typeName)
+        obj.printCompareField(f"{self.name}[{key}]", depth)
 
     def printStructTypedefLine(self, catalog):
         print("    {decl};".format(decl=self.getSignature(catalog)))
@@ -347,6 +396,11 @@ class SimpleArray(Base):
     def getTypeDeclaration(self):
         return "struct {name} *".format(name=self.getName())
 
+    def printCompareField(self, field, depth, prefix=''):
+        myName=self.getName()
+        pad(depth)
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+        
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
@@ -427,6 +481,8 @@ class SimpleArray(Base):
         args = []
         for field in self.getNewArgs():
             args += [field.getSignature(catalog)]
+        if len(args) == 0:
+            args += ['void']
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
     def printNewFunction(self, catalog):
@@ -436,9 +492,7 @@ class SimpleArray(Base):
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType});")
         print("    int save = PROTECT(x);")
-        print("#ifdef DEBUG_ALLOC");
-        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
-        print("#endif");
+        print(f'    DEBUG("new {myName} %p", x);')
         print("    x->entries = NULL;")
         if self.tagged:
             print("    x->_tag = _tag;")
@@ -506,24 +560,68 @@ class SimpleArray(Base):
     def printPrintDeclaration(self, catalog):
         print("{decl};".format(decl=self.getPrintSignature(catalog)))
 
+    def printCompareDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getCompareSignature(catalog)))
+
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration()
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+
+    def getCtype(self, astType, catalog):
+        return f"{astType} *"
+
+    def getExtraCmpFargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
+            extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getCompareSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        myName = self.getName()
+        extraCmpArgs = self.getExtraCmpFargs(catalog)
+        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+
+    def printCompareFunction(self, catalog):
+        if self.bespokeCmpImplementation:
+            print("// Bespoke implementation required for");
+            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("")
+            return
+        myName = self.getName()
+        print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
+        print("    if (a == b) return true;")
+        print("    if (a == NULL || b == NULL) return false;")
+        if self.dimension == 1:
+            print("    if (a->size != b->size) return false;")
+            print("    for (int i = 0; i < a->size; i++) {")
+            self.entries.printCompareArrayLine(catalog, "i", 2)
+            print("    }")
+        else:
+            print("    if (a->width != b->width || a->height != b->height) return false;")
+            print("    for (int i = 0; i < (a->width * a->height); i++) {")
+            self.entries.printCompareArrayLine(catalog, "i", 2)
+            print("    }")
+        print("    return true;")
+        print("}\n")
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
         print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
-        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
         if self.tagged:
-            print('    fprintf(stderr, "<<%s>>", x->_tag);')
+            print('    eprintf("<<%s>>", x->_tag);')
         if self.dimension == 1:
-            print(f'    fprintf(stderr, "{myName}(%d)[\\n", x->size);')
+            print(f'    eprintf("{myName}(%d)[\\n", x->size);')
         else:
-            print(f'    fprintf(stderr, "{myName}(%d * %d)[\\n", x->width, x->height);')
+            print(f'    eprintf("{myName}(%d * %d)[\\n", x->width, x->height);')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
-        print('    fprintf(stderr, "]");')
+        print('    eprintf("]");')
         print("}\n")
 
     def printPrintFunctionBody(self, catalog):
@@ -535,19 +633,19 @@ class SimpleArray(Base):
     def print1dPrintFunctionBody(self, catalog):
         print("    for (int i = 0; i < x->size; i++) {")
         self.entries.printPrintArrayLine(catalog, "i", 2)
-        print('        fprintf(stderr, "\\n");')
+        print('        eprintf("\\n");')
         print("    }")
 
     def print2dPrintFunctionBody(self, catalog):
         print("    for (int i = 0; i < x->height; i++) {")
         print("        pad(depth);")
-        print('        fprintf(stderr, "[\\n");')
+        print('        eprintf("[\\n");')
         print("        for (int j = 0; j < x->width; j++) {")
         self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
-        print('            fprintf(stderr, "\\n");')
+        print('            eprintf("\\n");')
         print("        }")
         print("        pad(depth);")
-        print('        fprintf(stderr, "]\\n");')
+        print('        eprintf("]\\n");')
         print("    }")
 
     def printFreeObjCase(self, catalog):
@@ -622,6 +720,32 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration()
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
+    def getCtype(self, astType, catalog):
+        return f"{astType} *"
+
+    def getExtraCmpFargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
+            extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getExtraCmpAargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            extra += [name]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getCompareSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        myName = self.getName()
+        extraCmpArgs = self.getExtraCmpFargs(catalog)
+        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+
     def getNewArgs(self):
         return [x for x in self.fields if x.default is None]
 
@@ -633,6 +757,8 @@ class SimpleStruct(Base):
         args = []
         for field in self.getNewArgs():
             args += [field.getSignature(catalog)]
+        if len(args) == 0:
+            args += ['void']
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
     def printNewDeclaration(self, catalog):
@@ -647,15 +773,16 @@ class SimpleStruct(Base):
     def printPrintDeclaration(self, catalog):
         print("{decl};".format(decl=self.getPrintSignature(catalog)))
 
+    def printCompareDeclaration(self, catalog):
+        print("{decl};".format(decl=self.getCompareSignature(catalog)))
+
     def printNewFunction(self, catalog):
         print("{decl} {{".format(decl=self.getNewSignature(catalog)))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
         print("    {myType} x = NEW({myName}, {myObjType});".format(myType=myType, myName=myName, myObjType=myObjType))
-        print("#ifdef DEBUG_ALLOC");
-        print(f'    fprintf(stderr, "new {myName} %p\\n", x);')
-        print("#endif");
+        print(f'    DEBUG("new {myName} %pn", x);')
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
@@ -667,15 +794,25 @@ class SimpleStruct(Base):
         for field in self.fields:
             field.printMarkLine(catalog, 1)
 
+    def printCompareFunctionBody(self, catalog):
+        for field in self.fields:
+            field.printCompareLine(catalog, 1)
+
     def printPrintFunctionBody(self, catalog):
         for field in self.fields:
             field.printPrintLine(catalog, 1)
-            print('    fprintf(stderr, "\\n");')
+            print('    eprintf("\\n");')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
         print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
 
+    def printCompareField(self, field, depth, prefix=''):
+        myName=self.getName()
+        extraArgs = self.getExtraCmpAargs({})
+        pad(depth)
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false;")
+        
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
@@ -716,15 +853,29 @@ class SimpleStruct(Base):
         pad(3)
         print('return "{name}";'.format(name=self.getName()))
 
+    def printCompareFunction(self, catalog):
+        if self.bespokeCmpImplementation:
+            print("// Bespoke implementation required for");
+            print("// {decl}".format(decl=self.getCompareSignature(catalog)))
+            print("")
+            return
+        myName = self.getName()
+        print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
+        print("    if (a == b) return true;")
+        print("    if (a == NULL || b == NULL) return false;")
+        self.printCompareFunctionBody(catalog)
+        print("    return true;")
+        print("}\n")
+
     def printPrintFunction(self, catalog):
         myName = self.getName()
         print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
         print("    pad(depth);")
-        print(f'    if (x == NULL) {{ fprintf(stderr, "{myName} (NULL)"); return; }}')
-        print(f'    fprintf(stderr, "{myName}[\\n");')
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
+        print(f'    eprintf("{myName}[\\n");')
         self.printPrintFunctionBody(catalog)
         print("    pad(depth);")
-        print('    fprintf(stderr, "]");')
+        print('    eprintf("]");')
         print("}\n")
 
     def getDefineValue(self):
@@ -793,11 +944,18 @@ class DiscriminatedUnionField(EnumField):
         obj.printMarkField(self.name, 3, 'val.')
         print("            break;")
 
+    def printCompareCase(self, catalog):
+        typeName = self.makeTypeName()
+        print(f"        case {typeName}:")
+        obj = catalog.get(self.typeName)
+        obj.printCompareField(self.name, 3, 'val.')
+        print("            break;")
+
     def printPrintCase(self, catalog):
         typeName = self.makeTypeName()
         print(f"        case {typeName}:")
         print(f'            pad(depth + 1);')
-        print(f'            fprintf(stderr, "{typeName}\\n");')
+        print(f'            eprintf("{typeName}\\n");')
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, 3, 'val.')
         print("            break;")
@@ -845,6 +1003,15 @@ class DiscriminatedUnion(SimpleStruct):
         print('            cant_happen("unrecognised type %d in mark{myName}", x->type);'.format(myName=self.getName()))
         print("    }")
 
+    def printCompareFunctionBody(self, catalog):
+        print("    if (a->type != b->type) return false;")
+        print("    switch(a->type) {")
+        for field in self.fields:
+            field.printCompareCase(catalog)
+        print("        default:")
+        print('            cant_happen("unrecognised type %d in eq{myName}", a->type);'.format(myName=self.getName()))
+        print("    }")
+
     def printPrintFunctionBody(self, catalog):
         print("    switch(x->type) {")
         for field in self.fields:
@@ -852,7 +1019,7 @@ class DiscriminatedUnion(SimpleStruct):
         print("        default:")
         print('            cant_happen("unrecognised type %d in print{myName}", x->type);'.format(myName=self.getName()))
         print("    }")
-        print('    fprintf(stderr, "\\n");')
+        print('    eprintf("\\n");')
 
 
 class DiscriminatedUnionUnion(Base):
@@ -905,6 +1072,14 @@ class SimpleEnum(Base):
 
     def isEnum(self):
         return True
+
+    def printCompareField(self, field, depth, prefix=''):
+        pad(depth)
+        print("switch (a->type) {")
+        for field in self.fields:
+            field.printCompareCase(depth + 1)
+        pad(depth)
+        print('}')
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
@@ -964,6 +1139,10 @@ class Primitive(Base):
         else:
             self.printFn = data['printFn']
         self.valued = data['valued']
+        if 'compareFn' in data:
+            self.compareFn = data['compareFn']
+        else:
+            self.compareFn = None
 
     def printMarkCase(self, catalog):
         if self.markFn is not None:
@@ -980,12 +1159,18 @@ class Primitive(Base):
     def getTypeDeclaration(self):
         return self.cname
 
-    def printPrintField(self, field, depth, prefix=''):
+    def printCompareField(self, field, depth, prefix=''):
         pad(depth)
+        if self.compareFn is None:
+            print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false;")
+        else:
+            print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+
+    def printPrintField(self, field, depth, prefix=''):
         pad(depth)
         if self.printFn == 'printf':
             print('pad(depth + 1);')
-            print(f'fprintf(stderr, "{self.cname} {self.printf}", x->{prefix}{field});')
+            print(f'eprintf("{self.cname} {self.printf}", x->{prefix}{field});')
         else:
             print(f'{self.printFn}(x->{prefix}{field}, depth + 1);')
 
@@ -1078,6 +1263,13 @@ if "tags" in document:
     for tag in document["tags"]:
         catalog.tag(tag);
 
+if "cmp" in document:
+    if "extraArgs" in document["cmp"]:
+        catalog.noteExtraCmpArgs(document["cmp"]["extraArgs"])
+    if "bespokeImplementation" in document["cmp"]:
+        for bespoke in document["cmp"]["bespokeImplementation"]:
+            catalog.noteBespokeCmpImplementation(bespoke)
+        
 catalog.build()
 
 if args.type == "h":
@@ -1128,6 +1320,11 @@ elif args.type == "c":
     print("#include <stdio.h>");
     print("#include <strings.h>");
     print('#include "common.h"');
+    print('#ifdef DEBUG_ALLOC')
+    print('#include "debugging_on.h"')
+    print('#else')
+    print('#include "debugging_off.h"')
+    print('#endif')
     print("")
     catalog.printNewFunctions()
     print("")
@@ -1148,17 +1345,19 @@ elif args.type == "c":
     catalog.printTypeObjFunction()
     print("")
 elif args.type == 'debug_h':
-    print(f"#ifndef cekf_debug_{typeName}_h")
-    print(f"#define cekf_debug_{typeName}_h")
+    print(f"#ifndef cekf_{typeName}_debug_h")
+    print(f"#define cekf_{typeName}_debug_h")
     printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}_helper.h"')
     for include in includes:
-        print(f'#include "debug_{include}"')
+        print(f'#include "{include[0:-2]}_debug.h"')
     for include in limited_includes:
         print(f'#include "{include}"')
     print("")
     catalog.printPrintDeclarations()
+    print("")
+    catalog.printCompareDeclarations()
     print("")
     print("#endif")
 elif args.type == 'debug_c':
@@ -1166,10 +1365,14 @@ elif args.type == 'debug_c':
     print("")
     print('#include <stdio.h>')
     print("")
-    print(f'#include "debug_{typeName}.h"')
+    print(f'#include "{typeName}_debug.h"')
     for include in limited_includes:
         print(f'#include "{include}"')
     print("")
-    print('static void pad(int depth) { fprintf(stderr, "%*s", depth * 4, ""); }')
+    print('static void pad(int depth) { eprintf("%*s", depth * 4, ""); }')
     print("")
     catalog.printPrintFunctions()
+    print("")
+    print("/***************************************/")
+    print("")
+    catalog.printCompareFunctions()

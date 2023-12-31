@@ -23,6 +23,6 @@
 
 Value run(ByteCodeArray B);
 
-void markCEKF();
+void markCEKF(void);
 
 #endif

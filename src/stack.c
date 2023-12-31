@@ -28,6 +28,9 @@
 #include <string.h>
 #ifdef DEBUG_STACK
 #include "debug.h"
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
 #endif
 
 Snapshot noSnapshot = {
@@ -46,9 +49,7 @@ int frameSize(Stack *s) {
 }
 
 void setFrame(Stack *s, int n) {
-#ifdef DEBUG_STACK
-    printf("setFrame(%d)\n", n);
-#endif
+    DEBUG("setFrame(%d)", n);
     if (n) {
         //         type,  dest,     src,                  amount
         MOVE_ARRAY(Value, s->stack, &s->stack[s->sp - n], n);
@@ -57,25 +58,21 @@ void setFrame(Stack *s, int n) {
 }
 
 void clearFrame(Stack *s) {
-#ifdef DEBUG_STACK
-    printf("clearFrame()\n");
-#endif
+    DEBUG("clearFrame()");
     s->sp = 0;
 }
 
 static void growCapacity(Stack *s, int newCapacity) {
-#ifdef DEBUG_STACK
-    printf("growCapacity(%d)\n", newCapacity);
-#endif
+    DEBUG("growCapacity(%d)", newCapacity);
     s->stack = GROW_ARRAY(Value, s->stack, s->capacity, newCapacity);
     s->capacity = newCapacity;
 }
 
 void pushValue(Stack *s, Value v) {
 #ifdef DEBUG_STACK
-    printf("pushValue(");
+    eprintf("pushValue(");
     printValue(v, 0);
-    printf(") sp = %d, capacity = %d\n", s->sp, s->capacity);
+    eprintf(") sp = %d, capacity = %d\n", s->sp, s->capacity);
 #endif
     if (s->sp == s->capacity) {
         growCapacity(s, s->capacity < 8 ? 8 : s->capacity * 2);
@@ -84,9 +81,7 @@ void pushValue(Stack *s, Value v) {
 }
 
 Value popValue(Stack *s) {
-#ifdef DEBUG_STACK
-    printf("popValue()\n");
-#endif
+    DEBUG("popValue()");
     if (s->sp == 0) {
         cant_happen("stack underflow");
     }
@@ -94,9 +89,7 @@ Value popValue(Stack *s) {
 }
 
 void markStack(Stack *s) {
-#ifdef DEBUG_STACK
-    printf("markStack()\n");
-#endif
+    DEBUG("markStack()");
     for (int i = 0; i < s->sp; ++i) {
         markValue(s->stack[i]);
     }
@@ -135,55 +128,41 @@ void copyValues(Value *to, Value *from, int size) {
 }
 
 void copyTosToEnv(Stack *s, Env *e, int n) {
-#ifdef DEBUG_STACK
-    printf("copyTosToEnv, sp = %d, capacity = %d\n", s->sp, s->capacity);
-#endif
+    DEBUG("copyTosToEnv, sp = %d, capacity = %d", s->sp, s->capacity);
     copyValues(e->values, &(s->stack[s->sp - n]), n);
 }
 
 void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
-#ifdef DEBUG_STACK
-    printf("snapshotClo, sp = %d, capacity = %d\n", s->sp, s->capacity);
-#endif
+    DEBUG("snapshotClo, sp = %d, capacity = %d", s->sp, s->capacity);
     Env *env = newEnv(target->rho, s->sp - letRecOffset);
     target->rho = env;
     copyToValues(s, env->values, letRecOffset);
 }
 
 void patchClo(Stack *s, Clo *target) {
-#ifdef DEBUG_STACK
-    printf("patchClo, sp = %d, capacity = %d\n", s->sp, s->capacity);
-#endif
+    DEBUG("patchClo, sp = %d, capacity = %d", s->sp, s->capacity);
     target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
     copyToValues(s, target->rho->values, 0);
     target->rho->count = s->sp;
 }
 
 void snapshotKont(Stack *s, Kont *target) {
-#ifdef DEBUG_STACK
-    printf("snapshotKont, sp = %d, capacity = %d\n", s->sp, s->capacity);
-#endif
+    DEBUG("snapshotKont, sp = %d, capacity = %d", s->sp, s->capacity);
     copyToSnapshot(s, &target->snapshot);
 }
 
 void snapshotFail(Stack *s, Fail *target) {
-#ifdef DEBUG_STACK
-    printf("snapshotFail, sp = %d, capacity = %d\n", s->sp, s->capacity);
-#endif
+    DEBUG("snapshotFail, sp = %d, capacity = %d", s->sp, s->capacity);
     copyToSnapshot(s, &target->snapshot);
 }
 
 void restoreKont(Stack *s, Kont *source) {
-#ifdef DEBUG_STACK
-    printf("restoreKont, size = %d, capacity = %d\n", source->snapshot.frameSize, s->capacity);
-#endif
+    DEBUG("restoreKont, size = %d, capacity = %d", source->snapshot.frameSize, s->capacity);
     copyFromSnapshot(s, source->snapshot);
 }
 
 void restoreFail(Stack *s, Fail *source) {
-#ifdef DEBUG_STACK
-    printf("restoreFail, size = %d, capacity = %d\n", source->snapshot.frameSize, s->capacity);
-#endif
+    DEBUG("restoreFail, size = %d, capacity = %d", source->snapshot.frameSize, s->capacity);
     copyFromSnapshot(s, source->snapshot);
 }
 

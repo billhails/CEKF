@@ -1,0 +1,89 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2023  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: tc
+
+description: Structures to support type inference
+
+cmp:
+    extraArgs:
+        map: HashTable
+    bespokeImplementation:
+    - TcVar
+
+structs:
+    TcEnv:
+        table: HashTable
+        next: TcEnv
+
+    TcNg:
+        table: HashTable
+        next: TcNg
+
+    TcFunction:
+        arg: TcType
+        result: TcType
+
+    TcPair:
+        first: TcType
+        second: TcType
+
+    TcTypeDef:
+        name: HashSymbol
+        args: TcTypeDefArgs
+
+    TcTypeDefArgs:
+        type: TcType
+        next: TcTypeDefArgs
+
+    TcVar:
+        name: HashSymbol
+        id: int
+        instance: TcType=NULL
+
+unions:
+    TcType:
+        function: TcFunction
+        pair: TcPair
+        var: TcVar
+        smallinteger: void_ptr
+        biginteger: void_ptr
+        character: void_ptr
+        typeDef: TcTypeDef
+
+enums: {}
+
+primitives:
+    HashSymbol:
+        cname: "HashSymbol *"
+        printFn: printAstSymbol
+        valued: true
+    HashTable:
+        cname: "HashTable *"
+        printFn: printHashTable
+        markFn: markHashTable
+        valued: true
+    int:
+        cname: int
+        printf: "%d"
+        valued: true
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+        valued: false

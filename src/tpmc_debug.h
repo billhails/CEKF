@@ -1,5 +1,5 @@
-#ifndef cekf_debug_tpmc_h
-#define cekf_debug_tpmc_h
+#ifndef cekf_tpmc_debug_h
+#define cekf_tpmc_debug_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -23,7 +23,7 @@
  */
 
 #include "tpmc_helper.h"
-#include "debug_lambda.h"
+#include "lambda_debug.h"
 #include "lambda_pp.h"
 #include "bigint.h"
 
@@ -48,5 +48,27 @@ void printTpmcStateArray(struct TpmcStateArray * x, int depth);
 void printTpmcArcArray(struct TpmcArcArray * x, int depth);
 void printTpmcIntArray(struct TpmcIntArray * x, int depth);
 void printTpmcMatrix(struct TpmcMatrix * x, int depth);
+
+bool eqTpmcMatchRules(struct TpmcMatchRules * a, struct TpmcMatchRules * b);
+bool eqTpmcMatchRule(struct TpmcMatchRule * a, struct TpmcMatchRule * b);
+bool eqTpmcComparisonPattern(struct TpmcComparisonPattern * a, struct TpmcComparisonPattern * b);
+bool eqTpmcAssignmentPattern(struct TpmcAssignmentPattern * a, struct TpmcAssignmentPattern * b);
+bool eqTpmcConstructorPattern(struct TpmcConstructorPattern * a, struct TpmcConstructorPattern * b);
+bool eqTpmcPattern(struct TpmcPattern * a, struct TpmcPattern * b);
+bool eqTpmcTestState(struct TpmcTestState * a, struct TpmcTestState * b);
+bool eqTpmcFinalState(struct TpmcFinalState * a, struct TpmcFinalState * b);
+bool eqTpmcState(struct TpmcState * a, struct TpmcState * b);
+bool eqTpmcArc(struct TpmcArc * a, struct TpmcArc * b);
+bool eqTpmcArcList(struct TpmcArcList * a, struct TpmcArcList * b);
+bool eqTpmcIntList(struct TpmcIntList * a, struct TpmcIntList * b);
+bool eqTpmcPatternValue(struct TpmcPatternValue * a, struct TpmcPatternValue * b);
+bool eqTpmcStateValue(struct TpmcStateValue * a, struct TpmcStateValue * b);
+bool eqTpmcMatchRuleArray(struct TpmcMatchRuleArray * a, struct TpmcMatchRuleArray * b);
+bool eqTpmcVariableArray(struct TpmcVariableArray * a, struct TpmcVariableArray * b);
+bool eqTpmcPatternArray(struct TpmcPatternArray * a, struct TpmcPatternArray * b);
+bool eqTpmcStateArray(struct TpmcStateArray * a, struct TpmcStateArray * b);
+bool eqTpmcArcArray(struct TpmcArcArray * a, struct TpmcArcArray * b);
+bool eqTpmcIntArray(struct TpmcIntArray * a, struct TpmcIntArray * b);
+bool eqTpmcMatrix(struct TpmcMatrix * a, struct TpmcMatrix * b);
 
 #endif

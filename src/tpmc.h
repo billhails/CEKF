@@ -219,12 +219,12 @@ struct TpmcArcList * newTpmcArcList(struct TpmcArc * arc, struct TpmcArcList * n
 struct TpmcIntList * newTpmcIntList(int integer, struct TpmcIntList * next);
 struct TpmcPatternValue * newTpmcPatternValue(enum TpmcPatternValueType  type, union TpmcPatternValueVal  val);
 struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union TpmcStateValueVal  val);
-struct TpmcMatchRuleArray * newTpmcMatchRuleArray();
-struct TpmcVariableArray * newTpmcVariableArray();
+struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void);
+struct TpmcVariableArray * newTpmcVariableArray(void);
 struct TpmcPatternArray * newTpmcPatternArray(char * _tag);
 struct TpmcStateArray * newTpmcStateArray(char * _tag);
-struct TpmcArcArray * newTpmcArcArray();
-struct TpmcIntArray * newTpmcIntArray();
+struct TpmcArcArray * newTpmcArcArray(void);
+struct TpmcIntArray * newTpmcIntArray(void);
 struct TpmcMatrix * newTpmcMatrix(int width, int height);
 
 void markTpmcMatchRules(struct TpmcMatchRules * x);

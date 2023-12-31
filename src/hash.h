@@ -54,6 +54,7 @@ hash_t hashString(const char *string);
 HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction, PrintHashValueFunction printfunction);
 
 void hashSet(HashTable *table, struct HashSymbol *var, void *src);
+bool hashContains(HashTable *table, HashSymbol *var);
 bool hashGet(HashTable *table, struct HashSymbol *var, void *dest);
 void copyHashTable(HashTable *to, HashTable *from);
 

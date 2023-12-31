@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile check-grammar list-cores test
+.PHONY: all clean deps profile check-grammar list-cores test clean-test
 
 TARGET=cekf
 
@@ -9,47 +9,80 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-CC=cc -Werror $(DEBUGGING)
-# CC=cc -Werror $(OPTIMIZING)
-# CC=cc -Werror $(PROFILING)
+# CCMODE = $(PROFILING)
+# CCMODE = $(OPTIMIZING)
+CCMODE = $(DEBUGGING)
 
-CFILES=$(wildcard src/*.c)
+
+CC=cc -Wall -Wextra -Werror $(CCMODE)
+LAXCC=cc -Werror $(CCMODE)
+
+MAIN=src/main.c
+CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
 EXTRA_CFILES=tmp/lexer.c tmp/parser.c
+TEST_CFILES=$(wildcard tests/src/*.c)
 
+TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
+
+TEST_SUCCESSES=$(patsubst tests/%,tests/.%-success,$(TEST_TARGETS))
+
+MAIN_OBJ=obj/main.o
 OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
+TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
+
+MAIN_DEP=dep/main.d
 DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
+TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
 EXTRA_OBJ=$(patsubst tmp/%,obj/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
 EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP)
 
 all: $(TARGET)
 
-$(TARGET): $(ALL_OBJ)
-	$(CC) -o $@ $(ALL_OBJ) -lm
+$(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
+	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) -lm
 
--include $(ALL_DEP)
+include $(ALL_DEP)
 -include Makefile.extra
 
-$(OBJ): obj/%.o: src/%.c | obj
-	$(CC) -I tmp/ -c $< -o $@
+$(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
+	$(CC) -I tmp/ -I src/ -c $< -o $@
 
 $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
-	$(CC) -I src/ -c $< -o $@
+	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
-$(DEP): dep/%.d: src/%.c | dep
-	$(CC) -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(TEST_OBJ): obj/%.o: tests/src/%.c | obj
+	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
+
+$(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep
+	$(CC) -I tmp/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(EXTRA_DEP): dep/%.d: tmp/%.c | dep
-	$(CC) -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(LAXCC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+
+$(TEST_DEP): dep/%.d: tests/src/%.c | dep
+	$(CC) -I src/ -I /tmp -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 tmp/lexer.c tmp/lexer.h: src/lexer.l tmp/parser.h | tmp
 	flex --header-file=tmp/lexer.h -o $@ $<
 
 tmp/parser.c tmp/parser.h: src/parser.y | tmp
 	bison -v -Werror --header=tmp/parser.h -o tmp/parser.c $<
+
+clean-test:
+	rm -f $(TEST_SUCCESSES)
+
+test: $(TEST_SUCCESSES)
+
+$(TEST_SUCCESSES): tests/.%-success: tests/%
+	./$<
+	@ touch $@
+
+$(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
+	$(CC) -o $@ $< $(ALL_OBJ) -lm
 
 dep:
 	mkdir $@
@@ -65,9 +98,6 @@ clean: deps
 
 deps:
 	rm -f dep/*
-
-test: all
-	./$(TARGET) fn/interpreter.fn
 
 profile: all
 	rm -f callgrind.out.*

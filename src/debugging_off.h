@@ -1,3 +1,5 @@
+#ifndef cekf_debugging
+#define cekf_debugging
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +20,12 @@
  * Term Pattern Matching Compiler stage 4. code generation
  */
 
-#define ENTER(n) 0
-#define LEAVE(n) 0
-#define DEBUG(...) 0
-#define NEWLINE() 0
+#define ENTER(n)
+#define LEAVE(n)
+#define DEBUG(...)
+#define IFDEBUG(x)
+#define NEWLINE()
+#define DEBUGGING_ON()
+#define DEBUGGING_OFF()
+
+#endif

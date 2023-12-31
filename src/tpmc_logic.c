@@ -23,13 +23,18 @@
 #include "tpmc_logic.h"
 #include "tpmc_translate.h"
 #include "tpmc.h"
-#include "debug_tpmc.h"
+#include "tpmc_debug.h"
 #include "tpmc_match.h"
 #include "ast_helper.h"
 #include "symbol.h"
 #include "memory.h"
 #include "lambda_conversion.h"
 #include "lambda_pp.h"
+#ifdef DEBUG_TPMC_LOGIC
+#include "debugging_on.h"
+#else
+#include "debugging_off.h"
+#endif
 
 static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
 
@@ -69,14 +74,12 @@ static TpmcPattern *makeWildcardPattern() {
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
-        // printf("makeVarPattern %s is var\n", symbol->name);
         TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR, TPMCPATTERNVALUE_VAL_VAR(symbol));
         int save = PROTECT(val);
         TpmcPattern *pattern = newTpmcPattern(val);
         UNPROTECT(save);
         return pattern;
     } else {
-        // printf("makeVarPattern %s is constructor\n", symbol->name);
         TpmcPatternArray *args = newTpmcPatternArray("makeVarPatern");
         int save = PROTECT(args);
         TpmcConstructorPattern *constructor = newTpmcConstructorPattern(symbol, info, args);
@@ -476,18 +479,12 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     replaceComparisonRules(input);
     renameRules(input);
     performRulesSubstitutions(input);
-#ifdef DEBUG_TPMC_LOGIC
-    fprintf(stderr, "*** RULES ***\n");
-    printTpmcMatchRules(input, 0);
-    fprintf(stderr, "\n");
-#endif
+    DEBUG("*** RULES ***");
+    IFDEBUG(printTpmcMatchRules(input, 0));
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
-#ifdef DEBUG_TPMC_LOGIC
-    fprintf(stderr, "*** MATRIX ***\n");
-    printTpmcMatrix(matrix, 0);
-    fprintf(stderr, "\n");
-#endif
+    DEBUG("*** MATRIX ***");
+    IFDEBUG(printTpmcMatrix(matrix, 0));
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
     TpmcStateArray *knownStates = newTpmcStateArray("tpmcConvert");
@@ -499,16 +496,11 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
     PROTECT(errorState);
     TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates);
     PROTECT(dfa);
-#ifdef DEBUG_TPMC_LOGIC
-    fprintf(stderr, "*** DFA ***\n");
-    printTpmcState(dfa, 0);
-    fprintf(stderr, "\n");
-#endif
+    DEBUG("*** DFA ***");
+    IFDEBUG(printTpmcState(dfa, 0));
     LamExp *body = tpmcTranslate(dfa);
     PROTECT(body);
-#ifdef DEBUG_TPMC_LOGIC
-    fprintf(stderr, "tpmcTranslate returned %p\n", body);
-#endif
+    DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(rootVariables->size, args, body);
@@ -516,11 +508,10 @@ LamLam * tpmcConvert(int nargs, int nbodies, AstArgList ** argLists, LamExp ** a
 #ifdef DEBUG_TPMC_LOGIC
     LamExp *tmp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));
     PROTECT(tmp);
-    fprintf(stderr, "*** BODY ***\n");
-    ppLamExp(tmp);
-    fprintf(stderr, "\n");
-    validateLastAlloc();
 #endif
+    DEBUG("*** BODY ***");
+    IFDEBUG(ppLamExp(tmp));
+    IFDEBUG(validateLastAlloc());
     UNPROTECT(save);
     return res;
 }

@@ -1,0 +1,179 @@
+let
+    typedef typeExp {
+          varType(typeExp)
+        | operType(list(char), list(typeExp))
+        | nullType
+    }
+    typedef copyEnv {
+          cpEnv(typeExp, typeExp, copyEnv)
+        | nullCpEnv
+    }
+    typedef typeCheckEnv {
+          tcEnv(list(char), typeExp, typeCheckEnv)
+        | nullTcEnv
+    }
+    typedef ExpClass {
+          ideClass(list(char))
+        | condClass(ExpClass, ExpClass, ExpClass)
+        | lambClass(list(char), ExpClass)
+        | appClass(ExpClass, ExpClass)
+        | blockClass(DeclClass, ExpClass)
+    }
+    typedef DeclClass {
+          defClass(list(char), ExpClass)
+        | seqClass(DeclClass, DeclClass)
+        | recClass(Decl)
+    }
+    fn newTypeVar() { varType(nullType) }
+    fn prune {
+        (x = varType(nullType)) { x }
+        (varType(x)) { prune(x) }
+        (x) { x }
+    }
+    fn occursInType {
+        (var, type) {
+            switch(prune(type)) {
+                (x = varType(_)) { var == x }
+                (operType(_, args)) { occursInTypeList(var, args) }
+            }
+        }
+    }
+    fn occursInTypeList {
+        (_, []) { false }
+        (var, h @ t) { occursInType(var, h) or occursInTypeList(var, t) }
+    }
+    fn unifyType(exp1, exp2) {
+        switch (prune(exp1), prune(exp2)) {
+            (exp1=varType(_), exp2) {
+                if (occursInType(exp1, exp2)) {
+                    exp1 == exp2
+                } else {
+                    varType(exp2); // exp1.instance := exp2
+                    true
+                }
+            }
+            (exp1, exp2=varType(_)) {
+                unifyType(exp2, exp1)
+            }
+            (operType(ide, args1), operType(ide, args2)) {
+                unifyArgs(args1, args2)
+            }
+            (_, _) {
+                false
+            }
+        }
+    }
+    fn unifyArgs {
+        ([], []) { true }
+        (h1 @ t1, h2 @ t2) { unifyType(h1, h2) and unifyArgs(t1, t2) }
+        (_, _) { false }
+    }
+    fn isGeneric(var, ng) { not occursInTypeList(var, ng) }
+    fn freshVar {
+        (typeVar, nullCpEnv, envt) {
+            fn (fresh) {
+                #(fresh, copyEnv(fresh, typevar, envt))
+            } (newTypeVar())
+        }
+        (typeVar, cpEnv(old, new, parent), topEnv) {
+            if (typeVar == old) {
+                (new, topEnv)
+            } else {
+                freshVar(typeVar, parent, topEnv)
+            }
+        }
+    }
+    fn fresh(typeExp, ng, envt) {
+        switch(prune(typeExp)) {
+            (x = varType(_)) {
+                if (isGeneric(x, ng)) {
+                    freshVar(x, envt, envt)
+                } else { x }
+            }
+            (operType(ide, args)) {
+                operType(ide, freshList(args, ng, envt))
+            }
+        }
+    }
+    fn freshList {
+        ([], _, _) { [] }
+        (h @ t, ng, envt) {
+            fresh(h, ng, envt) @ freshList(t, ng, envt)
+        }
+    }
+    fn freshType(typeExp, ng) {
+        fresh(typeExp, ng, nullCpEnv)
+    }
+    fn retrieve {
+        (ide, tcEnv(ide, exp, _), ng) { freshType(exp, ng) }
+        (_, nullTcEnv, _) { error("unbound ide") }
+        (ide, tcEnv(_, _, tail), ng) { retrieve(ide, tail, ng) }
+    }
+    fn funType(dom, cod) { operType("->", [dom, cod]) }
+    fn analyzeExp {
+        (expClass(ide), envt, ng) { retrieve(ide, envt, ng) }
+        (condClass(test, cons, alt), envt, ng) {
+            unifyType(test, boolType) and
+            unifyType(analyzeExp(cons, envt, ng), analyzeExp(alt, envt, ng))
+            // return type of cons
+        }
+        (lambClass(binder, body), envt, ng) {
+            fn (typeOfBinder) {
+                funType(typeOfBinder,
+                    analyzeExp(body, tcEnv(binder, typeOfBinder, envt),
+                        typeOfBinder @ ng))
+            } (newTypeVar())
+        }
+        (appClass(fun, arg), envt, ng) {
+            fn (typeOfRes) {
+                unifyType(
+                    analyzeExp(fun, envt, ng),
+                    funType(analyzeExp(arg, envt, ng), typeOfRes));
+                typeOfRes
+            } (newTypeVar())
+        }
+        (blockClass(decl, scope), envt, ng) {
+            analyzeExp(scope, analyzeDecl(decl, envt, ng), ng)
+        }
+    }
+    fn analyzeDecl {
+        (defClass(binder, def), envt, ng) {
+            tcEnv(binder, analyzeExp(def, envt, ng), envt)
+        }
+        (seqClass(first, second), envt, ng) {
+            analyzeDecl(second, anayzeDecl(first, envt, ng), ng);
+        }
+        (recClass(rec), envt, ng) {
+            let
+                #(env2, ng2) = analyzeRecDeclBind(rec, envt, ng);
+            in
+                analyzeRecDecl(rec, env2, ng2);
+                env2
+        }
+    }
+    fn analyzeRecDeclBind {
+        (defClass(binder, _), envt, ng) {
+            fn (fresh) {
+                #(tcEnv(binder, fresh, envt), fresh @ ng)
+            } (newTypeVar())
+        }
+        (seqClass(first, second), envt, ng) {
+            let
+                #(env1, ng1) = analyzeRecDeclBind(first, envt, ng);
+            in
+                analyzeRecDeclBind(second, env1, ng1);
+        }
+    }
+    fn analyzeRecDecl {
+        (defClass(binder, def), envt, ng) {
+            unifyType(retrieve(binder, envt, ng),
+                      analyzeExp(def, envt, ng))
+        }
+        (seqClass(first, second), envt, ng) {
+            analyzeRecDecl(first, envt, ng) and
+                analyzeRecDecl(second, envt, ng)
+        }
+        (recClass(rec), envt, ng) {
+            analyzeRec(rec, envt, ng)
+        }
+    }

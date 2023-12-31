@@ -39,11 +39,9 @@ static CexpCond *desugarCexpCond(CexpCond *x);
 static CexpLetRec *desugarCexpLetRec(CexpLetRec *x);
 static CexpAmb *desugarCexpAmb(CexpAmb *x);
 static CexpCut *desugarCexpCut(CexpCut *x);
-static ExpLet *desugarCexpBool(CexpBool *x);
 static ExpLet *desugarExpLet(ExpLet *x);
 static Aexp *desugarAexp(Aexp *x);
 static Cexp *desugarCexp(Cexp *x);
-static Aexp *desugarAexpMakeList(Aexp *x);
 
 #ifdef DEBUG_DESUGARING
 #define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
@@ -281,7 +279,7 @@ static Exp *boolToExp(CexpBool *x) {
         case BOOL_TYPE_OR:
             return orToExp(x);
         default:
-            cant_happen("unrecognised type %d in boolToExp");
+            cant_happen("unrecognised type %d in boolToExp", x->type);
     }
 }
 

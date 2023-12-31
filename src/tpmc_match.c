@@ -22,8 +22,8 @@
 #include "common.h"
 #include "tpmc_match.h"
 #include "tpmc_compare.h"
-#include "debug_tpmc.h"
-#include "debug_lambda.h"
+#include "tpmc_debug.h"
+#include "lambda_debug.h"
 #include "lambda_helper.h"
 #include "symbol.h"
 
@@ -84,9 +84,9 @@ static TpmcState *makeEmptyTestState(HashSymbol *path) {
     PROTECT(val);
     TpmcState *state = tpmcMakeState(val);
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "makeEmptyTestState returning: ");
+    eprintf("makeEmptyTestState returning: ");
     printTpmcState(state,0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     UNPROTECT(save);
     LEAVE(makeEmptyTestState);
@@ -96,11 +96,11 @@ static TpmcState *makeEmptyTestState(HashSymbol *path) {
 static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
     ENTER(patternMatches);
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "patternMatches constructor: ");
+    eprintf("patternMatches constructor: ");
     printTpmcPattern(constructor, 0);
-    fprintf(stderr, "\npatternMatches pattern: ");
+    eprintf("\npatternMatches pattern: ");
     printTpmcPattern(pattern, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     bool isComparison = (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON);
     switch (pattern->pattern->type) {
@@ -142,7 +142,7 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
 static bool patternIndexMatches(TpmcMatrix *matrix, int x, int y, int yy) {
     if (y == yy) {
 #ifdef DEBUG_TPMC_MATCH2
-        fprintf(stderr, "patternIndexMatches is true trivially\n");
+        eprintf("patternIndexMatches is true trivially\n");
 #endif
         return true;
     }
@@ -161,9 +161,9 @@ TpmcIntArray *findPatternsMatching(TpmcMatrix *matrix, int x, int y) {
         }
     }
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "findPatternsMatching %d %d returning: ", x, y);
+    eprintf("findPatternsMatching %d %d returning: ", x, y);
     printTpmcIntArray(res, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     UNPROTECT(save);
     LEAVE(findPatternsMatching);
@@ -179,9 +179,9 @@ static TpmcPatternArray *extractMatrixColumnSubset(TpmcMatrix *matrix, int x, Tp
         pushTpmcPatternArray(res, getTpmcMatrixIndex(matrix, x, y));
     }
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "extractMatrixColumnSubset returning: ");
+    eprintf("extractMatrixColumnSubset returning: ");
     printTpmcPatternArray(res, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     UNPROTECT(save);
     LEAVE(extractMatrixColumnSubset);
@@ -191,11 +191,11 @@ static TpmcPatternArray *extractMatrixColumnSubset(TpmcMatrix *matrix, int x, Tp
 static TpmcStateArray *extractStateArraySubset(TpmcStateArray *all, TpmcIntArray *indices) {
     ENTER(extractStateArraySubset);
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "extractStateArraySubset all: ");
+    eprintf("extractStateArraySubset all: ");
     printTpmcStateArray(all,0);
-    fprintf(stderr, "\nextractStateArraySubset indices: ");
+    eprintf("\nextractStateArraySubset indices: ");
     printTpmcIntArray(indices,0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     TpmcStateArray *res = newTpmcStateArray("extractStateArraySubset");
     int save = PROTECT(res);
@@ -283,9 +283,9 @@ static void copyMatrixExceptColAndOnlyRows(int col, TpmcIntArray *ys, TpmcMatrix
     ENTER(copyMatrixExceptColAndOnlyRows);
     DEBUG("copyMatrixExceptColAndOnlyRows col : %d", col);
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "copyMatrixExceptColAndOnlyRows rows: ");
+    eprintf("copyMatrixExceptColAndOnlyRows rows: ");
     printTpmcIntArray(ys, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
     DEBUG("copyMatrixExceptColAndOnlyRows from: %d * %d to: %d * %d", from->width, from->height, to->width, to->height);
 #endif
     int tx = 0;
@@ -379,6 +379,7 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs) {
         }
     }
     validateLastAlloc();
+    UNPROTECT(save);
     return res;
 }
 
@@ -536,39 +537,39 @@ static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
 
 #ifdef DEBUG_TPMC_MATCH
 void ppPattern(TpmcPattern *pattern) {
-    fprintf(stderr, "%s == ", pattern->path->name);
+    eprintf("%s == ", pattern->path->name);
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_COMPARISON: {
             TpmcComparisonPattern *c = pattern->pattern->val.comparison;
-            fprintf(stderr, "(%s == %s)", c->previous->path->name, c->current->path->name);
+            eprintf("(%s == %s)", c->previous->path->name, c->current->path->name);
             break;
         }
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            fprintf(stderr, "_");
+            eprintf("_");
             break;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            fprintf(stderr, "'%c'", pattern->pattern->val.character);
+            eprintf("'%c'", pattern->pattern->val.character);
             break;
-        case TPMCPATTERNVALUE_TYPE_INTEGER:
-            fprintf(stderr, "%d", pattern->pattern->val.integer);
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+            fprintBigInt(stderr, pattern->pattern->val.biginteger);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
             TpmcConstructorPattern *c = pattern->pattern->val.constructor;
-            fprintf(stderr, "%s(", c->tag->name);
+            eprintf("%s(", c->tag->name);
             for (int i = 0; i < c->components->size; ++i) {
                 ppPattern(c->components->entries[i]);
                 if (i+1 < c->components->size) {
-                    fprintf(stderr, ", ");
+                    eprintf(", ");
                 }
             }
-            fprintf(stderr, ")");
+            eprintf(")");
             break;
         }
         default:
             cant_happen("ppPattern encountered unexpected type");
     }
 }
-#define PPPATTERN(p) ppPattern(p); fprintf(stderr, "\n")
+#define PPPATTERN(p) ppPattern(p); eprintf("\n")
 #else
 #define PPPATTERN(p)
 #endif
@@ -692,11 +693,11 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcState 
     }
     TpmcState *res = NULL;
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "tpmcMatch: matrix: ");
+    eprintf("tpmcMatch: matrix: ");
     printTpmcMatrix(matrix, 0);
-    fprintf(stderr, "\ntpmcMatch: finalStates: ");
+    eprintf("\ntpmcMatch: finalStates: ");
     printTpmcStateArray(finalStates, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     if (noRemainingTests(matrix)) {
         DEBUG("variable rule applies");
@@ -707,9 +708,9 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcState 
     }
     LEAVE(tpmcMatch);
 #ifdef DEBUG_TPMC_MATCH2
-    fprintf(stderr, "tpmcMatch returning: ");
+    eprintf("tpmcMatch returning: ");
     printTpmcState(res, 0);
-    fprintf(stderr, "\n");
+    eprintf("\n");
 #endif
     return res;
 }

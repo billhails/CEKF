@@ -75,8 +75,8 @@ typedef enum ByteCodes {
 
 typedef struct ByteCodeArray {
     struct Header header;
-    int capacity;
-    int count;
+    size_t capacity;
+    size_t count;
     byte *entries;
 } ByteCodeArray;
 
@@ -84,8 +84,6 @@ void initByteCodeArray(ByteCodeArray *b);
 void resetByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
-void writeAexpVarList(AexpVarList *x, ByteCodeArray *b);
-void writeAexpVar(HashSymbol *x, ByteCodeArray *b);
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b);
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
 void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);
@@ -106,45 +104,45 @@ void writeExp(Exp *x, ByteCodeArray *b);
 
 void writeEnd(ByteCodeArray *b);
 
-static inline byte readByte(ByteCodeArray *b, int *i) {
+static inline byte readByte(ByteCodeArray *b, size_t *i) {
     return b->entries[(*i)++];
 }
 
-static inline void _readWord(ByteCodeArray *b, int *i, word *a) {
+static inline void _readWord(ByteCodeArray *b, size_t *i, word *a) {
     memcpy(a, &b->entries[*i], sizeof(word));
     (*i) += sizeof(word);
 }
 
-static inline word readWord(ByteCodeArray *b, int *i) {
+static inline word readWord(ByteCodeArray *b, size_t *i) {
     word a;
     _readWord(b, i, &a);
     return a;
 }
 
-static inline void _readInt(ByteCodeArray *b, int *i, int *a) {
+static inline void _readInt(ByteCodeArray *b, size_t *i, int *a) {
     memcpy(a, &b->entries[*i], sizeof(int));
     (*i) += sizeof(int);
 }
 
-static inline int readInt(ByteCodeArray *b, int *i) {
+static inline int readInt(ByteCodeArray *b, size_t *i) {
     int a;
     _readInt(b, i, &a);
     return a;
 }
 
-static inline int readOffset(ByteCodeArray *b, int *i) {
+static inline int readOffset(ByteCodeArray *b, size_t *i) {
     int ii = *i;
     int offset = readWord(b, i);
     return ii + offset;
 }
 
 static inline int readOffsetAt(ByteCodeArray *b, int i, int step) {
-    int ii = i + step * sizeof(word);
+    size_t ii = i + step * sizeof(word);
     int offset = readWord(b, &ii);
     return i + offset + step * sizeof(word);
 }
 
-static inline bigint readBigint(ByteCodeArray *b, int *i) {
+static inline bigint readBigint(ByteCodeArray *b, size_t *i) {
     bigint a;
     bigint_init(&a);
     int size;
