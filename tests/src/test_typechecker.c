@@ -60,13 +60,19 @@ static TcType *charToVar(char *name) {
     return var;
 }
 
+static TcType *makeTypeDef(char *name, TcTypeDefArgs *args) {
+    HashSymbol *sym = newSymbol(name);
+    TcTypeDef *typeDef = newTcTypeDef(sym, args);
+    int save = PROTECT(typeDef);
+    TcType *td = newTcType(TCTYPE_TYPE_TYPEDEF, TCTYPE_VAL_TYPEDEF(typeDef));
+    UNPROTECT(save);
+    return td;
+}
+
 static TcType *listOf(TcType *type) {
     TcTypeDefArgs *args = newTcTypeDefArgs(type, NULL);
     int save = PROTECT(args);
-    HashSymbol *list = newSymbol("list");
-    TcTypeDef *typeDef = newTcTypeDef(list, args);
-    PROTECT(typeDef);
-    TcType *td = newTcType(TCTYPE_TYPE_TYPEDEF, TCTYPE_VAL_TYPEDEF(typeDef));
+    TcType *td = makeTypeDef("list", args);
     UNPROTECT(save);
     return td;
 }
@@ -89,6 +95,10 @@ static TcType *makeFunction3(TcType *arg1, TcType *arg2, TcType *result) {
 
 static TcType *makeBigInteger() {
     return newTcType(TCTYPE_TYPE_BIGINTEGER, TCTYPE_VAL_BIGINTEGER());
+}
+
+static TcType *makeCharacter() {
+    return newTcType(TCTYPE_TYPE_CHARACTER, TCTYPE_VAL_CHARACTER());
 }
 
 static TcType *analyze(AstNest *nest) {
@@ -201,9 +211,174 @@ static void test_caddr() {
 	UNPROTECT(save);
 }
 
+static void test_curry() {
+    printf("test_curry\n");
+    AstNest *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)");
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *expected = makeBigInteger();
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_here() {
+    printf("test_here\n");
+    AstNest *result = parseWrapped(
+"let"
+"    fn funky(k) { k(1) }"
+"in"
+"    4 + here fn (k) {"
+"        if (funky(k)) {"
+"            2"
+"        } else {"
+"            3"
+"        }"
+"    }"
+    );
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *expected = makeBigInteger();
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_if() {
+    printf("test_if\n");
+    AstNest *result = parseWrapped("if (true and true) { 10 } else { 20 }");
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *expected = makeBigInteger();
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_id() {
+    printf("test_id\n");
+    AstNest *result = parseWrapped(
+"let"
+"    fn id (x) { x }"
+""
+"    fn length {"
+"        ([]) { 0 }"
+"        (_ @ t) { 1 + length(t) }"
+"    }"
+""
+"    fn even(n) { n % 2 == 0 }"
+""
+"    fn checkId(x) {"
+"        id(even(id(length(id(x)))))"
+"    }"
+""
+"in"
+"    checkId(\"hello\")"
+    );
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *expected = makeTypeDef("bool", NULL);
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_either_1() {
+    printf("test_either_1\n");
+    AstNest *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)");
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *big = makeBigInteger();
+    PROTECT(big);
+    TcType *var = charToVar("#t");
+    PROTECT(var);
+    TcTypeDefArgs *args = newTcTypeDefArgs(var, NULL);
+    PROTECT(args);
+    args = newTcTypeDefArgs(big, args);
+    PROTECT(args);
+    TcType *expected = makeTypeDef("either", args);
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_tostr() {
+    printf("test_tostr\n");
+    AstNest *result = parseWrapped(
+"let"
+"    typedef colour { red | green | blue }"
+"    fn tostr {"
+"        (red) { \"red\" }"
+"        (green) { \"green\" }"
+"        (blue) { \"blue\" }"
+"    }"
+"in"
+"    tostr(red)"
+    );
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *character = makeCharacter();
+    PROTECT(character);
+    TcType *expected = listOf(character);
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_lol() {
+    printf("test_lol\n");
+    AstNest *result = parseWrapped("[[1]]");
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *big = makeBigInteger();
+    PROTECT(big);
+    TcType *loi = listOf(big);
+    PROTECT(loi);
+    TcType *expected = listOf(loi);
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
+static void test_map() {
+    printf("test_lol\n");
+    AstNest *result = parseWrapped(
+"let"
+"    typedef colours { red | green | blue }"
+"    fn map {"
+"        (f, nil) { [] }"
+"        (f, h @ t) { f(h) @ map(f, t) }"
+"    }"
+"    fn toInt {"
+"        (red) { 0 }"
+"        (green) { 1 }"
+"        (blue) { 2 }"
+"    }"
+"in"
+"    map(toInt, [red, green, blue])"
+    );
+    int save = PROTECT(result);
+    TcType *res = analyze(result);
+    PROTECT(res);
+    TcType *big = makeBigInteger();
+    PROTECT(big);
+    TcType *expected = listOf(big);
+    PROTECT(expected);
+    assert(compareTcTypes(res, expected));
+	UNPROTECT(save);
+}
+
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
+    /*
     test_car();
     test_cdr();
     test_car_of();
@@ -211,5 +386,14 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test_fact();
     test_add1();
     test_caddr();
+    test_either_1();
+    test_tostr();
+    test_curry();
+    test_here();
+    test_id();
+    test_if();
+    test_lol();
+    */
+    test_map();
 }
 

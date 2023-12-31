@@ -199,6 +199,13 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *s
     return makeVec;
 }
 
+static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, HashTable *substitutions) {
+    ENTER(performDeconstructSubstitutions);
+    deconstruct->exp = lamPerformSubstitutions(deconstruct->exp, substitutions);
+    LEAVE(performDeconstructSubstitutions);
+    return deconstruct;
+}
+
 static LamConstruct *performConstructSubstitutions(LamConstruct *construct, HashTable *substitutions) {
     ENTER(performConstructSubstitutions);
     construct->args = performListSubstitutions(construct->args, substitutions);
@@ -377,6 +384,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_MAKEVEC:
             exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            exp->val.deconstruct = performDeconstructSubstitutions(exp->val.deconstruct, substitutions);
             break;
         case LAMEXP_TYPE_CONSTRUCT:
             exp->val.construct = performConstructSubstitutions(exp->val.construct, substitutions);

@@ -126,8 +126,11 @@ TcEnv *tc_init(void) {
 
 TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     TcNg *ng = extendNg(NULL);
+    int save = PROTECT(ng);
     IFDEBUG(ppLamExp(exp));
-    return prune(analyzeExp(exp, env, ng));
+    TcType *res = prune(analyzeExp(exp, env, ng));
+    UNPROTECT(save);
+    return res;
 }
 
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
@@ -572,7 +575,6 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         TcType *freshVar = makeFreshVar();
         int save2 = PROTECT(freshVar);
         addToEnv(env, bindings->var, freshVar);
-        // addToNg(ng, freshVar->val.var->name, freshVar);
         UNPROTECT(save2);
     }
     for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL; bindings = bindings->next) {
@@ -587,10 +589,8 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         unify(freshVar, type);
         DEBUG("analyzeLetRec binding %s, result:", bindings->var->name);
         IFDEBUG(ppTcType(freshVar));
-        // addToEnv(env, bindings->var, freshVar);
         UNPROTECT(save2);
     }
-    IFDEBUG(printTcEnv(env, 0));
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
     LEAVE(analyzeLetRec);
@@ -652,9 +652,6 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func, HashTable *
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
     TcTypeDefArgs *args = makeTypeDefArgs(func->args, map);
-    if (args == NULL) {
-        cant_happen("null args to LamTypeDefFunction '%s' in makeTypeConstructorApplication", func->name->name);
-    }
     int save = PROTECT(args);
     TcType *res = makeTypeDef(func->name, args);
     UNPROTECT(save);
@@ -726,6 +723,7 @@ static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
     ENTER(analyzeTypeDefs);
     env = extendEnv(env);
     int save = PROTECT(env);
+    DEBUG("after extendEnv:");
     for (LamTypeDefList *list = typeDefs->typeDefs; list != NULL; list = list->next) {
         collectTypeDef(list->typeDef, env);
     }
@@ -973,19 +971,24 @@ static TcType *freshTypeDef(TcTypeDef *typeDef, TcNg *ng, HashTable *map) {
 }
 
 static bool isGeneric(TcType *typeVar, TcNg *ng) {
-    if (ng == NULL) {
-        return true;
-    }
-    int i = 0;
-    TcType *entry = NULL;
-    HashSymbol *s = NULL;
-    while ((s = iterateHashTable(ng->table, &i, &entry)) != NULL) {
-        if (occursInType(typeVar, entry)) {
-            return false;
+    ENTER(isGeneric);
+    IFDEBUG(ppTcType(typeVar));
+    while (ng != NULL) {
+        int i = 0;
+        TcType *entry = NULL;
+        HashSymbol *s = NULL;
+        while ((s = iterateHashTable(ng->table, &i, &entry)) != NULL) {
+            if (occursInType(typeVar, entry)) {
+                LEAVE(isGeneric);
+                DEBUG("false");
+                return false;
+            }
         }
+        ng = ng->next;
     }
-    bool res = isGeneric(typeVar, ng->next);
-    return res;
+    LEAVE(isGeneric);
+    DEBUG("true");
+    return true;
 }
 
 static TcType *typeGetOrPut(HashTable *map, TcType *typeVar, TcType *defaultValue) {
@@ -1057,10 +1060,10 @@ static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
     return NULL;
 }
 
-static void addToNg(TcNg *env, HashSymbol *symbol, TcType *type) {
+static void addToNg(TcNg *ng, HashSymbol *symbol, TcType *type) {
     DEBUG("addToNg %s =>", symbol->name);
     IFDEBUG(ppTcType(type));
-    hashSet(env->table, symbol, &type);
+    hashSet(ng->table, symbol, &type);
 }
 
 static TcType *makeBoolean() {
@@ -1079,20 +1082,24 @@ static TcType *makeFn(TcType *arg, TcType *result) {
 }
 
 static TcEnv *extendEnv(TcEnv *parent) {
+    ENTER(extendEnv);
     HashTable *table = newHashTable(sizeof(TcType *), markType, printType);
     int save = PROTECT(table);
     table->shortEntries = true;
     TcEnv *env = newTcEnv(table, parent);
     UNPROTECT(save);
+    LEAVE(extendEnv);
     return env;
 }
 
 static TcNg *extendNg(TcNg *parent) {
+    ENTER(extendNg);
     HashTable *table = newHashTable(sizeof(TcType *), markType, printType);
     int save = PROTECT(table);
     table->shortEntries = true;
     TcNg *ng = newTcNg(table, parent);
     UNPROTECT(save);
+    LEAVE(extendNg);
     return ng;
 }
 
@@ -1301,6 +1308,14 @@ static bool unify(TcType *a, TcType *b) {
         return unify(b, a);
     } else {
         if (a->type != b->type) {
+            if ((a->type == TCTYPE_TYPE_SMALLINTEGER &&
+                 b->type == TCTYPE_TYPE_TYPEDEF) ||
+                (a->type == TCTYPE_TYPE_TYPEDEF &&
+                 b->type == TCTYPE_TYPE_SMALLINTEGER)) {
+                // small integers are *only* used as type tags
+                // so can unify with typeDefs
+                return true;
+            }
             can_happen("unification failed");
             ppTcType(a);
             eprintf(" vs ");
