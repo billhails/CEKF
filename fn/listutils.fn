@@ -6,7 +6,7 @@ fn member {
 
 fn map {
     (_, []) { [] }
-    (f, h @ t) { f(h) @ map(f, t)) }
+    (func, h @ t) { func(h) @ map(func, t)) }
 }
 
 fn length {
@@ -16,24 +16,24 @@ fn length {
 
 fn foldl {
     (_, [], acc) { acc }
-    (f, h @ t, acc) { foldl(f, t, f(h, acc)) }
+    (func, h @ t, acc) { foldl(func, t, func(h, acc)) }
 }
 
-fn foldr {
-    (f, l, acc) { foldl(f, reverse(l), acc) }
+fn foldr(func, lst, acc) {
+    foldl(func, reverse(lst), acc)
 }
 
-fn reverse (l) {
-    foldl((elem, acc) { elem @ acc }, l, [])
+fn reverse (lst) {
+    foldl((elem, acc) { elem @ acc }, lst, [])
 }
 
 fn filter {
     (_, []) { [] }
-    (f, h @ t) {
-        if (f(h)) {
-            h @ filter(f, t)
+    (func, h @ t) {
+        if (func(h)) {
+            h @ filter(func, t)
         } else {
-            filter(f, t)
+            filter(func, t)
         }
     }
 }
@@ -41,4 +41,46 @@ fn filter {
 fn fill {
     (0, _) { [] }
     (n, v) { v @ fill(n - 1, v) }
+}
+
+fn nth {
+    (0, h @ _) { h }
+    (n, _ @ t) { nth(n - 1, t) }
+}
+
+fn sum(lst) {
+    foldl(fn (elm, acc) { elm + acc }, lst, 0)
+}
+
+fn range(low, high) {
+    if (low >= high) { [] }
+    else { low @ range(low + 1, high) }
+}
+
+fn partition(p, l, k) {
+    let fn helper {
+        ([], lesser, greater) { k(lesser, greater) }
+        (h @ t, lesser, greater) {
+            if (p < h) {
+                partition(t, lesser, h @ greater)
+            } else {
+                partition(t, h @ lesser, greater)
+            }
+        }
+    }
+    in helper(l, [], [])
+}
+
+fn sort_h {
+    (h @ t, sorted) {
+        partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort_h(greater, sorted)) }
+    }
+    ([], sorted) { sorted }
+}
+
+fn sort {
+    ([]) { [] }
+    (h @ t) {
+        partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort(greater)) })
+    }
 }

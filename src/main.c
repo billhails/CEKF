@@ -177,12 +177,12 @@ int main(int argc, char *argv[]) {
     anfExp = desugarExp(anfExp);
     PROTECT(anfExp);
     enableGC();
+    // static analysis: ANF => annotated ANF (de bruijn)
+    analizeExp(anfExp, NULL);
 #ifdef DEBUG_ANF
     printExp(anfExp);
     eprintf("\n");
 #endif
-    // static analysis: ANF => annotated ANF (de bruijn)
-    analizeExp(anfExp, NULL);
     // byte code generation
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);

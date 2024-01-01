@@ -1,0 +1,33 @@
+let
+    // with DEBUG_STRESS_GC this takes an age!
+    unsorted = "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruoluwghokrgadfanokngfgrwnuxboualnlhxmighxpwfhcvsdgyiryiehzsaqpelnhmzbejngybaqnnwthmxohakvwulpyzsdltquyyxfjtmfrkajmroebudshflggonmhmqahdvdmytvalcdigjqzsiefihwiihqwuvptripgpzwwbjkqrqwmacsjoqbphilfrkuaqbcqvedwkpmbmxdclajloiimciyatrpuhddbpknmkydzxpxqbmiyugulmxxaffpqlurwechzjgsgzrivnzsdbihytchqxvderrjxsoilgyzizpumoaexhovuadssebduwakznwigstaxgcjixnwfplffmdmpnkgtnrcbkeefpgbdxpjxlrxoiabhhzfnlnshiwszijzfnstudgnqnvvqyshcnekqokcftgiqirhfgxvttijoohfaaapgdrxjiqwmbhwcvudlcexqybceknreincfokgvoznyfymbjfihngowqecfrwyiwcoawpxnwmxjqdjfsswewbparjwvgmqoqkqsltopvdbvfdwuzgyymdfwxbwccsyzqrvgwgwbmjxqwdcpszcvgghjmwbdsiyrruoparniylkdwxyfsosxzfwznazzvorretnjpvfndbepurvghnzzzsmoffqoqqcibiblqwsjbjakclgwuuirisihetsykmzhtvrkrqcnpaupfvwtyvdbvdoketzlpdhkirmttkgvmqwjfqcqikbnyzvlsuxpnvptcbkjoggygghbvkmbaebikvlylavudzccjyunjnqazihlpeecbxeiimimmjjewztrmggfrhsbvxnvqhjbyhtgfftkyyhiajqtkjmlurblaiuxppzfzumynhridmymfeaonqyrnrqdachqhsixnnfhsfmfkosolwoarhkmhbmxrfwicojiqrvzllbovlkdlsurbczlcvfddcnxiccstfqyudnfjwhdpdvwpguowkjvpwbecsjtuxdbtevwpkbdoutwatjoblgscsfapnxdxaxyanuwvuddoqgilxdcznpmdykiskewnbqdsvrnmpbngzvrhkgglfyhqtypoejtqiqcuwjqkbiuwxnjtwvegqhoneeewxdbwqqdipyzvfqmslutyuqfebtwdfoboobxruzspspguysayinklowkfgglyosgqorbuuozjfkqzehptptdbfknkfdmaphktpuzwgjcluxiigpytlejqajvosrpfqvokpaurhzqxydbaphihujakxkgpkktvsywqbeqqnvqfpkokpduowffpqeddgaeesuvrehtttezbrmqmsheeduzztooeleutvbazyjscveflomwwwkfcxzbzuuxxymgtnczxqhmfmvpactzcovibwizgjpzkxbghbyvraqjjozcwufubvzcsewyschjxucgkcftobwyrkkervodvvpeabzxbkfyobqmhrycezkrtyqbyddfazuezibxsajclayhyoatnljujvftuedcygqzyfchbenwoffrfkhdhnchecuwkljmuwmjqfxmskimzhrztpagllrosusaofjmkvqzljjlminstxbxydteofdhsjrvpxmjrfpwtevvcxiuabkthrqltmgvpmomklfpknorfxmcvmmmvumoduwboexdejvlwjtpslwnhobenhyzlvyvkclmbqpdgjvflqfzdyshwhtqlsojdlgnazymlutdlzgxdomobqmcqcvojgmqlyiokaxrorxcswvngwmhsruhshzqlaybhjbctzizftuzbaljjxsjyxmzstvmyinbszsqfylacpgmclczrxlgenrxatrkdgcnytjtxgrtqopssjjzrcsafpacrvtvscthxrpmsdrmenvaaetklhezoqbfhweopoxvadkxqvbhiipegtasxonteityfibkpnuigancwisyowxeihfjuadsfjoxlewpnifjjcegzitjxqpxcousmucwisdmvtinsuuwpzwuuawpcxzscpnqafftsadxcwtrragewwjlnavplniaeathgovtusbgytesbncqtdazvhhjyvdbobuaqdeukualscrywgcqnsrwxupqymypjtgkxlezymjerjjwkrgrnmmylsxlwsdglcouajefvwfhjylykjgeojbnuirxdgtjsissxhdedndtfuruyxalrricqnkqpupskajjyltjezgzpdtlktykbvrierzvvzskehmvzgzieizwxhggddfanpnxbyjrekojhdorkzwkplgyumlqmyveesorothsffgsuxdsealasqkycajhgdwgvjqyqlxfsghaaarruxplabewjpxkqwmckbaipcxhebrukmgpeauguuxicchlzzhhcrctuulypiwtcpsmmhhrllbrcuztikkewrumznhujmgibzzpnxiycmedaawqomhrsikawqzyvdtqcjrzuhapyruccjotrkrlvyrgkrjglomqzxxjmev";
+
+    fn partition(p, l, k) {
+        let fn helper {
+            ([], lesser, greater) { k(lesser, greater) }
+            (h @ t, lesser, greater) {
+                if (p < h) {
+                    helper(t, lesser, h @ greater)
+                } else {
+                    helper(t, h @ lesser, greater)
+                }
+            }
+        }
+        in helper(l, [], [])
+    }
+
+    fn sort_h {
+        (h @ t, sorted) {
+            partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort_h(greater, sorted)) })
+        }
+        ([], sorted) { sorted }
+    }
+
+    fn sort {
+        ([]) { [] }
+        (h @ t) {
+            partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort(greater)) })
+        }
+    }
+in
+    sort(unsorted)

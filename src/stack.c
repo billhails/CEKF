@@ -102,6 +102,13 @@ Value peekValue(Stack *s, int offset) {
     return s->stack[offset];
 }
 
+Value peekTop(Stack *s) {
+    if (s->sp == 0) {
+        cant_happen("peek top of empty stack not allowed");
+    }
+    return s->stack[s->sp - 1];
+}
+
 void copyTopToValues(Stack *s, Value *values, int size) {
     COPY_ARRAY(Value, values, &(s->stack[s->sp - size]), size);
 }

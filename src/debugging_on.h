@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-static int _debugInvocationId = 0;
-static bool _debuggingOn = true;
-static int _debuggingDepth = 0;
+static int _debugInvocationId __attribute__((unused)) = 0;
+static bool _debuggingOn __attribute__((unused)) = true;
+static int _debuggingDepth __attribute__((unused)) = 0;
 
 #define DEBUG(...) do { \
     if (_debuggingOn) { \
