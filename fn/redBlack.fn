@@ -1,0 +1,119 @@
+let
+    typedef redBlackTree(#t) {
+        leaf |
+        red(redBlackTree(#t), #t, redBlackTree(#t)) |
+        black(redBlackTree(#t), #t, redBlackTree(#t))
+    }
+
+    fn member {
+        (_, leaf) { false }
+        (x, red(_, x, _)) { true }
+        (x, black(_, x, _)) { true }
+        (x, red(l, y, r)) {
+            if (x < y) { member(x, l) } else { member(x, r) }
+        }
+        (x, black(l, y, r)) {
+            if (x < y) { member(x, l) } else { member(x, r) }
+        }
+    }
+
+    fn insert(x, s) {
+        let
+            fn balance {
+                (red(red(a, x, b), y, c), z, d) {
+                    red(black(a, x, b), y, black(c, z, d))
+                }
+                (red(a, x, red(b, y, c)), z, d) {
+                    red(black(a, x, b), y, black(c, z, d))
+                }
+                (a, x, red(red(b, y, c), z, d)) {
+                    red(black(a, x, b), y, black(c, z, d))
+                }
+                (a, x, red(b, y, red(c, z, d))) {
+                    red(black(a, x, b), y, black(c, z, d))
+                }
+                (a, x, b) { black(a, x, b) }
+            }
+
+            fn ins {
+                (_, leaf) { red(leaf, x, leaf) }
+                (x, s = red(a, x, b)) { back }
+                (x, s = black(a, x, b)) { back }
+                (x, red(a, y, b)) {
+                    if (x < y) {
+                        red(ins(x, a), y, b)
+                    } else {
+                        red(a, y, ins(x, b))
+                    }
+                }
+                (x, black(a, y, b)) {
+                    if (x < y) {
+                        balance(ins(x, a), y, b)
+                    } else {
+                        balance(a, y, ins(x, b))
+                    }
+                }
+            }
+        in
+            switch (ins(x, s)) {
+                (red(a, y, b)) { black(a, y, b) }
+                (x) { x }
+            } then s
+    }
+ 
+    fn makeSet(lst) {
+       let fn helper {
+           ([], tr) { tr }
+           (h @ t, tr) { helper(t, insert(h, tr)) }
+       }
+       in
+           helper(lst, leaf)
+    }
+
+in
+    makeSet("kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")
+
+// #[black
+//     #[black
+//         #[red
+//             #[black
+//                 #[black
+//                     #[red #[leaf] 'a' #[leaf]]
+//                     'b'
+//                     #[leaf]]
+//                 'c'
+//                 #[black #[leaf] 'd' #[leaf]]]
+//             'e'
+//             #[black
+//                 #[black
+//                     #[red #[leaf] 'f' #[leaf]]
+//                     'g'
+//                     #[red #[leaf] 'h' #[leaf]]]
+//                 'i'
+//                 #[black
+//                     #[red #[leaf] 'j' #[leaf]]
+//                     'k'
+//                     #[red #[leaf] 'l' #[leaf]]]]]
+//         'm'
+//         #[black
+//             #[black
+//                 #[leaf] 'n' #[leaf]]
+//                 'o'
+//                 #[black #[leaf] 'p' #[leaf]]]]
+//     'q'
+//     #[black
+//         #[black
+//             #[black #[leaf] 'r' #[leaf]]
+//             's'
+//             #[black #[leaf] 't' #[leaf]]]
+//         'u'
+//         #[black
+//             #[black
+//                 #[leaf]
+//                 'v'
+//                 #[red #[leaf] 'w' #[leaf]]]
+//             'x'
+//             #[black
+//                 #[leaf]
+//                 'y'
+//                 #[red #[leaf] 'z' #[leaf]]]]]]

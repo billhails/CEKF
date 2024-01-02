@@ -57,30 +57,44 @@ fn range(low, high) {
     else { low @ range(low + 1, high) }
 }
 
-fn partition(p, l, k) {
-    let fn helper {
-        ([], lesser, greater) { k(lesser, greater) }
-        (h @ t, lesser, greater) {
-            if (p < h) {
-                partition(t, lesser, h @ greater)
-            } else {
-                partition(t, h @ lesser, greater)
-            }
-        }
-    }
-    in helper(l, [], [])
-}
-
-fn sort_h {
-    (h @ t, sorted) {
-        partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort_h(greater, sorted)) }
-    }
-    ([], sorted) { sorted }
-}
-
-fn sort {
+fn dedup {
     ([]) { [] }
     (h @ t) {
-        partition(h, t, fn (lesser, greater) { sort_h(lesser, h @ sort(greater)) })
+        h @ dedup(filter(t, fn(i) { h != i }))
     }
+}
+
+fn sort(lst) {
+    let
+        fn full_sort {
+            ([]) { [] }
+            (first @ rest) {
+                partition(first, rest, fn (lesser, greater) {
+                    partial_sort(lesser, first @ full_sort(greater))
+                })
+            }
+        }
+        fn partial_sort {
+            (first @ rest, already_sorted) {
+                partition(first, rest, fn (lesser, greater) {
+                    partial_sort(lesser, first @ partial_sort(greater, already_sorted))
+                })
+            }
+            ([], sorted) { sorted }
+        }
+        fn partition(key, lst, kont) {
+            let fn helper {
+                ([], lesser, greater) { kont(lesser, greater) }
+                (first @ rest, lesser, greater) {
+                    if (key < first) {
+                        helper(rest, lesser, first @ greater)
+                    } else {
+                        helper(rest, first @ lesser, greater)
+                    }
+                }
+            }
+            in helper(lst, [], [])
+        }
+    in
+        full_sort(lst)
 }
