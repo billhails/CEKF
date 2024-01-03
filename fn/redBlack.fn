@@ -36,29 +36,31 @@ let
             }
 
             fn ins {
-                (_, leaf) { red(leaf, x, leaf) }
-                (x, s = red(a, x, b)) { back }
-                (x, s = black(a, x, b)) { back }
-                (x, red(a, y, b)) {
+                (_, leaf, _) { red(leaf, x, leaf) }
+                (x, red(a, x, b), throw) { throw(leaf) }
+                (x, black(a, x, b), throw) { throw(leaf) }
+                (x, red(a, y, b), throw) {
                     if (x < y) {
-                        red(ins(x, a), y, b)
+                        red(ins(x, a, throw), y, b)
                     } else {
-                        red(a, y, ins(x, b))
+                        red(a, y, ins(x, b, throw))
                     }
                 }
-                (x, black(a, y, b)) {
+                (x, black(a, y, b), throw) {
                     if (x < y) {
-                        balance(ins(x, a), y, b)
+                        balance(ins(x, a, throw), y, b)
                     } else {
-                        balance(a, y, ins(x, b))
+                        balance(a, y, ins(x, b, throw))
                     }
                 }
             }
+
         in
-            switch (ins(x, s)) {
+            switch (here fn (throw) { ins(x, s, throw) }) {
+                (leaf) { s }
                 (red(a, y, b)) { black(a, y, b) }
                 (x) { x }
-            } then s
+            }
     }
  
     fn makeSet(lst) {

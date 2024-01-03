@@ -436,10 +436,6 @@ static TcType *findResultType(TcType *fn) {
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng) {
     ENTER(analyzeDeconstruct);
     IFDEBUG(ppLamDeconstruct(deconstruct));
-    /*
-    TcType *constructor = NULL;
-    if (!getFromEnv(env, deconstruct->name, &constructor)) {
-    */
     TcType *constructor = lookup(env, deconstruct->name, ng);
     int save = PROTECT(constructor);
     if (constructor == NULL) {
@@ -590,7 +586,10 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
         }
         int save2 = PROTECT(freshVar);
-        TcType *type = analyzeExp(bindings->val, env, ng);
+        TcNg *ng2 = extendNg(ng);
+        PROTECT(ng2);
+        addToNg(ng2, freshVar->val.var->name, freshVar);
+        TcType *type = analyzeExp(bindings->val, env, ng2);
         PROTECT(type);
         unify(freshVar, type);
         DEBUG("analyzeLetRec binding %s, result:", bindings->var->name);
@@ -945,13 +944,11 @@ static bool getFromEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
     if (hashGet(env->table, symbol, type)) {
         return true;
     }
-    bool res = getFromEnv(env->next, symbol, type);
-    return res;
+    return getFromEnv(env->next, symbol, type);
 }
 
 static HashTable *makeTypeMap() {
-    HashTable *res = newHashTable(sizeof(TcType *), markType, printType);
-    return res;
+    return newHashTable(sizeof(TcType *), markType, printType);
 }
 
 static TcType *freshFunction(TcFunction *fn, TcNg *ng, HashTable *map) {
