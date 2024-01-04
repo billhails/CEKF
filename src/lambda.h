@@ -250,6 +250,7 @@ typedef struct LamMatchList {
 typedef struct LamIntList {
     Header header;
     int item;
+    HashSymbol * name;
     struct LamIntList * next;
 } LamIntList;
 
@@ -399,7 +400,7 @@ struct LamIntCondCases * newLamIntCondCases(BigInt * constant, struct LamExp * b
 struct LamCharCondCases * newLamCharCondCases(char constant, struct LamExp * body, struct LamCharCondCases * next);
 struct LamMatch * newLamMatch(struct LamExp * index, struct LamMatchList * cases);
 struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp * body, struct LamMatchList * next);
-struct LamIntList * newLamIntList(int item, struct LamIntList * next);
+struct LamIntList * newLamIntList(int item, HashSymbol * name, struct LamIntList * next);
 struct LamLet * newLamLet(HashSymbol * var, struct LamExp * value, struct LamExp * body);
 struct LamLetRec * newLamLetRec(int nbindings, struct LamLetRecBindings * bindings, struct LamExp * body);
 struct LamLetRecBindings * newLamLetRecBindings(HashSymbol * var, struct LamExp * val, struct LamLetRecBindings * next);

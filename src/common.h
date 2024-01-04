@@ -29,7 +29,7 @@
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #define DEBUG_SLOW_STEP
-// define this to cause a GC at every possible step (catches memory leaks early)
+// define this to cause a GC at every malloc (catches memory leaks early)
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC

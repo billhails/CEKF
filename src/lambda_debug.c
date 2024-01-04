@@ -333,6 +333,8 @@ void printLamIntList(struct LamIntList * x, int depth) {
     pad(depth + 1);
 eprintf("int %d", x->item);
     eprintf("\n");
+    printLambdaSymbol(x->name, depth + 1);
+    eprintf("\n");
     printLamIntList(x->next, depth + 1);
     eprintf("\n");
     pad(depth);
@@ -973,6 +975,7 @@ bool eqLamIntList(struct LamIntList * a, struct LamIntList * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (a->item != b->item) return false;
+    if (a->name != b->name) return false;
     if (!eqLamIntList(a->next, b->next)) return false;
     return true;
 }

@@ -103,6 +103,7 @@ structs:
 
     LamIntList:
         item: int
+        name: HashSymbol
         next: LamIntList
 
     LamLet:

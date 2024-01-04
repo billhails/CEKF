@@ -583,7 +583,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList) {
 
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL) return;
-    eprintf("%d", list->item);
+    eprintf("%d:%s", list->item, list->name->name);
     if (list->next != NULL) {
         eprintf(" ");
         _ppLamIntList(list->next);

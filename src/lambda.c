@@ -175,10 +175,11 @@ struct LamMatchList * newLamMatchList(struct LamIntList * matches, struct LamExp
     return x;
 }
 
-struct LamIntList * newLamIntList(int item, struct LamIntList * next) {
+struct LamIntList * newLamIntList(int item, HashSymbol * name, struct LamIntList * next) {
     struct LamIntList * x = NEW(LamIntList, OBJTYPE_LAMINTLIST);
     DEBUG("new LamIntList %pn", x);
     x->item = item;
+    x->name = name;
     x->next = next;
     return x;
 }
@@ -494,6 +495,7 @@ void markLamIntList(struct LamIntList * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
     MARK(x);
+    markHashSymbol(x->name);
     markLamIntList(x->next);
 }
 

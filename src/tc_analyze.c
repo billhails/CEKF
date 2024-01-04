@@ -86,7 +86,7 @@ static bool occursInType(TcType *a, TcType *b);
 static bool occursIn(TcType *a, TcType *b);
 static bool sameType(TcType *a, TcType *b);
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
-static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
@@ -303,44 +303,35 @@ static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
 
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     ENTER(analyzePrim);
+    TcType *res = NULL;
     switch (app->type) {
         case LAMPRIMOP_TYPE_ADD:
         case LAMPRIMOP_TYPE_SUB:
         case LAMPRIMOP_TYPE_MUL:
         case LAMPRIMOP_TYPE_DIV:
         case LAMPRIMOP_TYPE_MOD:
-        case LAMPRIMOP_TYPE_POW: {
-            TcType *res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
+        case LAMPRIMOP_TYPE_POW:
+            res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
+            break;
         case LAMPRIMOP_TYPE_EQ:
         case LAMPRIMOP_TYPE_NE:
         case LAMPRIMOP_TYPE_GT:
         case LAMPRIMOP_TYPE_LT:
         case LAMPRIMOP_TYPE_GE:
-        case LAMPRIMOP_TYPE_LE: {
-            TcType *res = analyzeComparison(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
-        case LAMPRIMOP_TYPE_VEC: {
-            // Hacky, but the only time the type checker should encounter a literal vec
-            // is the (vec 0 <exp>) to retrieve the tag of a constructor. All other calls to vec
-            // should be hidden behind (deconstruct ...) syntax
-            // plus in this case the exp2 arg will always be a simple var so analysis would not prove anything
-            TcType *res = makeSmallInteger();
-            LEAVE(analyzePrim);
-            return res;
-        }
-        case LAMPRIMOP_TYPE_XOR: {
-            TcType *res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
+        case LAMPRIMOP_TYPE_LE:
+            res = analyzeComparison(app->exp1, app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_VEC:
+            res = analyzeExp(app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_XOR:
+            res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
+            break;
         default:
             cant_happen("unrecognised type %d in analyzePrim", app->type);
     }
+    LEAVE(analyzePrim);
+    return res;
 }
 
 static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
@@ -586,6 +577,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
         }
         int save2 = PROTECT(freshVar);
+        // Recursive functions need to be statically typed inside their own context:
         TcNg *ng2 = extendNg(ng);
         PROTECT(ng2);
         addToNg(ng2, freshVar->val.var->name, freshVar);
@@ -806,11 +798,64 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return boolean;
 }
 
+static TcType *lookupConstructorType(HashSymbol *name, TcEnv *env, TcNg *ng) {
+    ENTER(lookupConstructorType);
+    TcType *res = lookup(env, name, ng);
+    if (res == NULL) {
+        cant_happen("lookupConstructorType %s failed", name->name);
+    }
+    res = findResultType(res);
+    LEAVE(lookupConstructorType);
+    return res;
+}
+
+static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeIntList);
+    if (intList == NULL) {
+        LEAVE(analyzeIntList);
+        return makeFreshVar("intList");
+    }
+    TcType *next = analyzeIntList(intList->next, env, ng);
+    int save = PROTECT(next);
+    TcType *this = lookupConstructorType(intList->name, env, ng);
+    PROTECT(this);
+    unify(next, this);
+    LEAVE(analyzeIntList);
+    UNPROTECT(save);
+    return this;
+}
+
+static TcType *findCaseType(LamMatchList *matchList, TcEnv *env, TcNg *ng) {
+    ENTER(findCaseType);
+    if (matchList == NULL) {
+        LEAVE(findCaseType);
+        return makeFreshVar("caseType");
+    }
+    TcType *next = findCaseType(matchList->next, env, ng);
+    int save = PROTECT(next);
+    TcType *this = analyzeIntList(matchList->matches, env, ng);
+    PROTECT(this);
+    unify(this, next);
+    UNPROTECT(save);
+    LEAVE(findCaseType);
+    return this;
+}
+
 static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng) {
     ENTER(analyzeMatch);
-    (void) analyzeSmallIntegerExp(match->index, env, ng);
+    TcType *caseType = findCaseType(match->cases, env, ng);
+    int save = PROTECT(caseType);
+    TcType *indexType = analyzeExp(match->index, env, ng);
+    PROTECT(indexType);
+    eprintf("unify ");
+    ppTcType(caseType);
+    eprintf(" with ");
+    ppTcType(indexType);
+    eprintf("\n");
+    unify(caseType, indexType);
     TcType *res = analyzeMatchCases(match->cases, env, ng);
     LEAVE(analyzeMatch);
+    UNPROTECT(save);
     return res;
 }
 
@@ -1341,6 +1386,7 @@ static bool unify(TcType *a, TcType *b) {
         return unify(b, a);
     } else {
         if (a->type != b->type) {
+            /*
             if ((a->type == TCTYPE_TYPE_SMALLINTEGER &&
                  b->type == TCTYPE_TYPE_TYPEDEF) ||
                 (a->type == TCTYPE_TYPE_TYPEDEF &&
@@ -1349,6 +1395,7 @@ static bool unify(TcType *a, TcType *b) {
                 // so can unify with typeDefs
                 return true;
             }
+            */
             can_happen("unification failed");
             ppTcType(a);
             eprintf(" vs ");

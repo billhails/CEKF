@@ -177,18 +177,11 @@ static LamExp *prependLetBindings(TpmcPattern *test, HashTable *freeVariables, L
     HashSymbol *name = constructor->info->type->name;
     int save = PROTECT(body);
     for (int i = 0; i < constructor->components->size; i++) {
-        // (let (var (vec i+1 base)) body)
         HashSymbol *path = constructor->components->entries[i]->path;
         if (hashGet(freeVariables, path, NULL)) {
-            // LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(i + 1));
-            // int save2 = PROTECT(index);
             LamExp *base = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
             int save2 = PROTECT(base);
             PROTECT(base);
-            // LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, base);
-            // PROTECT(vec);
-            // LamExp *vecExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
-            // PROTECT(vecExp);
             LamDeconstruct *deconstruct = newLamDeconstruct(name, i + 1, base);
             PROTECT(deconstruct);
             LamExp *deconstructExp = newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(deconstruct));
@@ -305,7 +298,7 @@ static LamIntList *makeUnexhaustedIndices(LamTypeConstructorInfo *info) {
     LamIntList *res = NULL;
     int save = PROTECT(res);
     for (int i = 0; i < info->size; ++i) {
-        res = newLamIntList(i, res);
+        res = newLamIntList(i, info->type->name, res);
         PROTECT(res);
     }
     UNPROTECT(save);
@@ -566,7 +559,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList, LamExp *t
             LamExp *body = translateArcToCode(arcList->arc, lambdaCache);
             DEBUG("translateArcToCode returned %p", body);
             PROTECT(body);
-            LamIntList *index = newLamIntList(info->index, NULL);
+            LamIntList *index = newLamIntList(info->index, info->type->name, NULL);
             PROTECT(index);
             res = newLamMatchList(index, body, next);
             UNPROTECT(save);
