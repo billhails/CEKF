@@ -491,7 +491,6 @@ class SimpleArray(Base):
         myObjType = self.getObjType()
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType});")
-        print("    int save = PROTECT(x);")
         print(f'    DEBUG("new {myName} %p", x);')
         print("    x->entries = NULL;")
         if self.tagged:
@@ -499,11 +498,13 @@ class SimpleArray(Base):
         if self.dimension == 1:
             print("    x->size = 0;")
             print("    x->capacity = 0;")
+            print("    int save = PROTECT(x);")
             print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4);")
             print("    x->capacity = 4;")
         else:
             print("    x->width = 0;")
             print("    x->height = 0;")
+            print("    int save = PROTECT(x);")
             print("    if (width * height > 0) {")
             print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height);")
             print(f"        bzero(x->entries, sizeof({self.entries.getTypeDeclaration(catalog)}) * width * height);")

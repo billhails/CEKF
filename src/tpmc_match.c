@@ -19,6 +19,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include "common.h"
 #include "tpmc_match.h"
 #include "tpmc_compare.h"
@@ -107,23 +108,23 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             cant_happen("patternMatches ennncountered var");
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            LEAVE(patternMatches true);
+            LEAVE(patternMatches);
             return true;
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
             cant_happen("patternMatches encountered assignment");
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            LEAVE(patternMatches true);
+            LEAVE(patternMatches);
             return true;
         case TPMCPATTERNVALUE_TYPE_CHARACTER: {
             bool res = isComparison || (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_CHARACTER &&
                 constructor->pattern->val.character == pattern->pattern->val.character);
-            DEBUG("leave patternMatches %d", res);
+            LEAVE(patternMatches);
             return res;
         }
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER: {
             bool res = isComparison || (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_BIGINTEGER &&
                 cmpBigInt(constructor->pattern->val.biginteger, pattern->pattern->val.biginteger) == 0);
-            DEBUG("leave patternMatches %d", res);
+            LEAVE(patternMatches);
             return res;
         }
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
@@ -131,7 +132,7 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
             bool res = (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR &&
                 // pointer equivalence works for hash symbols
                 constructor->pattern->val.constructor->tag == pattern->pattern->val.constructor->tag) || isComparison;
-            DEBUG("leave patternMatches %d", res);
+            LEAVE(patternMatches);
             return res;
         }
         default:
@@ -529,6 +530,7 @@ static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
     }
     state->refcount++;
     DEBUG("makeTpmcArc creating arc to state with refcount %d", state->refcount);
+    IFDEBUG(printTpmcState(state, 0));
     TpmcArc *arc = newTpmcArc(state, pattern, freeVariables);
     UNPROTECT(save);
     LEAVE(makeTpmcArc);
@@ -583,10 +585,10 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates, TpmcS
     int save = PROTECT(state);
     // For each constructor c in the selected column, its arc is defined as follows:
     for (int y = 0; y < matrix->height; y++) {
-        DEBUG("mixture (%d) - examining[%d][%d]", debugMyId, x, y);
+        DEBUG("mixture examining[%d][%d]", x, y);
         PPPATTERN(getTpmcMatrixIndex(matrix, x, y));
         if (!patternIsWildcard(matrix, x, y)) {
-            DEBUG("mixture (%d) - pattern is not wildcard", debugMyId);
+            DEBUG("mixture pattern is not wildcard");
             TpmcPattern *c = getTpmcMatrixIndex(matrix, x, y);
             // Let {i1 , ... , ij} be the row-indices of the patterns in the column that match c.
             TpmcIntArray *matchingIndices = findPatternsMatching(matrix, x, y);

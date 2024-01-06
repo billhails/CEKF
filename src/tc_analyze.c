@@ -847,11 +847,6 @@ static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng) {
     int save = PROTECT(caseType);
     TcType *indexType = analyzeExp(match->index, env, ng);
     PROTECT(indexType);
-    eprintf("unify ");
-    ppTcType(caseType);
-    eprintf(" with ");
-    ppTcType(indexType);
-    eprintf("\n");
     unify(caseType, indexType);
     TcType *res = analyzeMatchCases(match->cases, env, ng);
     LEAVE(analyzeMatch);

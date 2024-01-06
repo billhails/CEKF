@@ -1,8 +1,8 @@
 let
-    typedef redBlackTree(#t) {
+    typedef tree(#t) {
         leaf |
-        red(redBlackTree(#t), #t, redBlackTree(#t)) |
-        black(redBlackTree(#t), #t, redBlackTree(#t))
+        red(tree(#t), #t, tree(#t)) |
+        black(tree(#t), #t, tree(#t))
     }
 
     fn member {
@@ -19,26 +19,20 @@ let
 
     fn insert(x, s) {
         let
+            fn bal(a, x, b, y, c, z, d) { red(black(a, x, b), y, black(c, z, d)) }
+
             fn balance {
-                (red(red(a, x, b), y, c), z, d) {
-                    red(black(a, x, b), y, black(c, z, d))
-                }
-                (red(a, x, red(b, y, c)), z, d) {
-                    red(black(a, x, b), y, black(c, z, d))
-                }
-                (a, x, red(red(b, y, c), z, d)) {
-                    red(black(a, x, b), y, black(c, z, d))
-                }
-                (a, x, red(b, y, red(c, z, d))) {
-                    red(black(a, x, b), y, black(c, z, d))
-                }
+                (red(red(a, x, b), y, c), z, d) { bal(a, x, b, y, c, z, d) }
+                (red(a, x, red(b, y, c)), z, d) { bal(a, x, b, y, c, z, d) }
+                (a, x, red(red(b, y, c), z, d)) { bal(a, x, b, y, c, z, d) }
+                (a, x, red(b, y, red(c, z, d))) { bal(a, x, b, y, c, z, d) }
                 (a, x, b) { black(a, x, b) }
             }
 
             fn ins {
                 (_, leaf, _) { red(leaf, x, leaf) }
-                (x, red(a, x, b), throw) { throw(leaf) }
-                (x, black(a, x, b), throw) { throw(leaf) }
+                (x, red(a, x, b), throw) { throw(s) }
+                (x, black(a, x, b), throw) { throw(s) }
                 (x, red(a, y, b), throw) {
                     if (x < y) {
                         red(ins(x, a, throw), y, b)
@@ -54,13 +48,8 @@ let
                     }
                 }
             }
-
         in
-            switch (here fn (throw) { ins(x, s, throw) }) {
-                (leaf) { s }
-                (red(a, y, b)) { black(a, y, b) }
-                (x) { x }
-            }
+            here fn (throw) { ins(x, s, throw) }
     }
  
     fn makeSet(lst) {

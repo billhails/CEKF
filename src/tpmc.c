@@ -147,11 +147,11 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
     struct TpmcMatchRuleArray * x = NEW(TpmcMatchRuleArray, OBJTYPE_TPMCMATCHRULEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcMatchRuleArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcMatchRule *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -160,11 +160,11 @@ struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
 
 struct TpmcVariableArray * newTpmcVariableArray(void) {
     struct TpmcVariableArray * x = NEW(TpmcVariableArray, OBJTYPE_TPMCVARIABLEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcVariableArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(HashSymbol *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -173,12 +173,12 @@ struct TpmcVariableArray * newTpmcVariableArray(void) {
 
 struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
     struct TpmcPatternArray * x = NEW(TpmcPatternArray, OBJTYPE_TPMCPATTERNARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcPatternArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcPattern *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -187,12 +187,12 @@ struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
 
 struct TpmcStateArray * newTpmcStateArray(char * _tag) {
     struct TpmcStateArray * x = NEW(TpmcStateArray, OBJTYPE_TPMCSTATEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcStateArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcState *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -201,11 +201,11 @@ struct TpmcStateArray * newTpmcStateArray(char * _tag) {
 
 struct TpmcArcArray * newTpmcArcArray(void) {
     struct TpmcArcArray * x = NEW(TpmcArcArray, OBJTYPE_TPMCARCARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcArcArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcArc *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -214,11 +214,11 @@ struct TpmcArcArray * newTpmcArcArray(void) {
 
 struct TpmcIntArray * newTpmcIntArray(void) {
     struct TpmcIntArray * x = NEW(TpmcIntArray, OBJTYPE_TPMCINTARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcIntArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(int, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -227,11 +227,11 @@ struct TpmcIntArray * newTpmcIntArray(void) {
 
 struct TpmcMatrix * newTpmcMatrix(int width, int height) {
     struct TpmcMatrix * x = NEW(TpmcMatrix, OBJTYPE_TPMCMATRIX);
-    int save = PROTECT(x);
     DEBUG("new TpmcMatrix %p", x);
     x->entries = NULL;
     x->width = 0;
     x->height = 0;
+    int save = PROTECT(x);
     if (width * height > 0) {
         x->entries = NEW_ARRAY(struct TpmcPattern *, width * height);
         bzero(x->entries, sizeof(struct TpmcPattern *) * width * height);

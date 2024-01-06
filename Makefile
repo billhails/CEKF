@@ -72,14 +72,8 @@ tmp/lexer.c tmp/lexer.h: src/lexer.l tmp/parser.h | tmp
 tmp/parser.c tmp/parser.h: src/parser.y | tmp
 	bison -v -Werror --header=tmp/parser.h -o tmp/parser.c $<
 
-clean-test:
-	rm -f $(TEST_SUCCESSES)
-
-test: $(TEST_SUCCESSES)
-
-$(TEST_SUCCESSES): tests/.%-success: tests/%
-	./$<
-	@ touch $@
+test: $(TEST_TARGETS)
+	for t in $(TEST_TARGETS) ; do $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm
