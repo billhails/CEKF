@@ -240,6 +240,10 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
 
 static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables) {
     if (rule->patterns->size != rootVariables->size) {
+        printTpmcMatchRule(rule, 0);
+        eprintf("\n");
+        printTpmcVariableArray(rootVariables, 0);
+        eprintf("\n");
         cant_happen("size mismatch in renameRule");
     }
     for (int i = 0; i < rootVariables->size; i++) {

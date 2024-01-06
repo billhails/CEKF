@@ -97,24 +97,24 @@ Value run(ByteCodeArray B) {
     return state.V;
 }
 
-static inline int readCurrentByte() {
+static inline int readCurrentByte(void) {
     return readByte(&state.B, &state.C);
 }
 
-static inline int readCurrentWord() {
+static inline int readCurrentWord(void) {
     return readWord(&state.B, &state.C);
 }
 
-static inline int readCurrentInt() {
+static inline int readCurrentInt(void) {
     return readInt(&state.B, &state.C);
 }
 
-static inline BigInt *readCurrentBigInt() {
+static inline BigInt *readCurrentBigInt(void) {
     bigint bi = readBigint(&state.B, &state.C);
     return newBigInt(bi);
 }
 
-static inline int readCurrentOffset() {
+static inline int readCurrentOffset(void) {
     return readOffset(&state.B, &state.C);
 }
 
@@ -547,11 +547,12 @@ static void step() {
     }
     state.C = 0;
     while (state.C != UINT64_MAX) {
+        int bytecode;
 #ifdef DEBUG_STEP
         printCEKF(&state);
         printf("%4d) %04lx ### ", ++count, state.C);
 #endif
-        switch (readCurrentByte()) {
+        switch (bytecode = readCurrentByte()) {
             case BYTECODE_NONE: {
                 cant_happen("encountered NONE in step()");
             }
@@ -988,11 +989,17 @@ static void step() {
             break;
             case BYTECODE_DONE: { // can't happen, probably
                 DEBUGPRINTF("DONE\n");
-                state.C = -1;
+                state.C = UINT64_MAX;
+            }
+            break;
+            case BYTECODE_ERROR: {
+                DEBUGPRINTF("ERROR\n");
+                state.C = UINT64_MAX;
+                eprintf("pattern match exhausted in step\n");
             }
             break;
             default:
-                cant_happen("unrecognised bytecode %d in step()", readCurrentByte(0));
+                cant_happen("unrecognised bytecode %d in step()", bytecode);
         }
 #ifdef DEBUG_STEP
 #ifdef DEBUG_SLOW_STEP
