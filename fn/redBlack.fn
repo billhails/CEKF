@@ -61,50 +61,20 @@ let
            helper(lst, leaf)
     }
 
+    // tree(#t) -> list(#t)
+    fn makeList(tree) {
+        let
+            fn part_flatten {
+                (red(left, t, right), already_flat) {
+                    part_flatten(left, t @ part_flatten(right, already_flat))
+                }
+                (black(left, t, right), already_flat) {
+                    part_flatten(left, t @ part_flatten(right, already_flat))
+                }
+                (leaf, already_flat) { already_flat }
+            }
+        in
+            part_flatten(tree, [])
+    }
 in
-    makeSet("kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")
-
-// #[black
-//     #[black
-//         #[red
-//             #[black
-//                 #[black
-//                     #[red #[leaf] 'a' #[leaf]]
-//                     'b'
-//                     #[leaf]]
-//                 'c'
-//                 #[black #[leaf] 'd' #[leaf]]]
-//             'e'
-//             #[black
-//                 #[black
-//                     #[red #[leaf] 'f' #[leaf]]
-//                     'g'
-//                     #[red #[leaf] 'h' #[leaf]]]
-//                 'i'
-//                 #[black
-//                     #[red #[leaf] 'j' #[leaf]]
-//                     'k'
-//                     #[red #[leaf] 'l' #[leaf]]]]]
-//         'm'
-//         #[black
-//             #[black
-//                 #[leaf] 'n' #[leaf]]
-//                 'o'
-//                 #[black #[leaf] 'p' #[leaf]]]]
-//     'q'
-//     #[black
-//         #[black
-//             #[black #[leaf] 'r' #[leaf]]
-//             's'
-//             #[black #[leaf] 't' #[leaf]]]
-//         'u'
-//         #[black
-//             #[black
-//                 #[leaf]
-//                 'v'
-//                 #[red #[leaf] 'w' #[leaf]]]
-//             'x'
-//             #[black
-//                 #[leaf]
-//                 'y'
-//                 #[red #[leaf] 'z' #[leaf]]]]]]
+    makeList(makeSet("kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol"))

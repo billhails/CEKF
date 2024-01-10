@@ -2,6 +2,7 @@ let
     typedef Color { R | B | BB }
     typedef Tup(#t, #u) { T(#t, #u) }
     typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), Tup(#t, #u), Dict(#t, #u)) }
+    typedef Maybe(#t) { none | some(#t) }
 
     fn balance {
         (B, D(R, D(R, a, x, b), y, c), z, d)  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
@@ -13,15 +14,16 @@ let
         (color, a, b, c)                      { D(color, a, b, c) }
     }
 
+    // #t -> Dict(#t, #u) -> Maybe(#u)
     fn lookup {
-        (_, E, default) { default }
-        (_, EE, default) { default }
-        (x, D(_, _, T(x, y), _), _) { y }
-        (x, D(_, a, T(y, _), b), default) {
+        (_, E) { none }
+        (_, EE) { none }
+        (x, D(_, _, T(x, y), _)) { some(y) }
+        (x, D(_, a, T(y, _), b)) {
             if (x < y) {
-                lookup(x, a, default)
+                lookup(x, a)
             } else {
-                lookup(x, b, default)
+                lookup(x, b)
             }
         }
     }
@@ -126,4 +128,4 @@ let
     }
  
 in
-    lookup('f', delete('f', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki")), '0')
+    lookup('f', delete('f', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki")))

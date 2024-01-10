@@ -1,21 +1,25 @@
+// naive unbalanced tree example
+// see redBlack.fn for a balanced tree
+// and dictionary.fn for a red-black map
+
 let
     typedef set(#t) { branch(set(#t), #t, set(#t)) | leaf }
 
     fn insert(val, set) {
         let
             fn safe_insert {
-                (t, leaf) { branch(leaf, t, leaf) }
-                (t, branch(left, t, right)) { back }
-                (t, branch(left, u, right)) {
+                (t, leaf, _) { branch(leaf, t, leaf) }
+                (t, branch(left, t, right), throw) { throw(set) }
+                (t, branch(left, u, right), throw) {
                     if (t < u) {
-                        branch(safe_insert(t, left), u, right)
+                        branch(safe_insert(t, left, throw), u, right)
                     } else {
-                        branch(left, u, safe_insert(t, right))
+                        branch(left, u, safe_insert(t, right, throw))
                     }
                 }
             }
         in
-            safe_insert(val, set) then set
+            here fn (throw) { safe_insert(val, set, throw) }
     }
 
     fn contains {
