@@ -166,6 +166,11 @@ unions:
         nest: AstNest
         iff: AstIff
 
+arrays:
+    AstCharArray:
+        dimension: 1
+        entries: char
+
 enums: {}
 
 primitives:

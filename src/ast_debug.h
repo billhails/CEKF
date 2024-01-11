@@ -56,6 +56,7 @@ void printAstSinglePrototype(struct AstSinglePrototype * x, int depth);
 void printAstTypeClause(struct AstTypeClause * x, int depth);
 void printAstArg(struct AstArg * x, int depth);
 void printAstExpression(struct AstExpression * x, int depth);
+void printAstCharArray(struct AstCharArray * x, int depth);
 
 bool eqAstNest(struct AstNest * a, struct AstNest * b);
 bool eqAstDefinitions(struct AstDefinitions * a, struct AstDefinitions * b);
@@ -88,5 +89,6 @@ bool eqAstSinglePrototype(struct AstSinglePrototype * a, struct AstSinglePrototy
 bool eqAstTypeClause(struct AstTypeClause * a, struct AstTypeClause * b);
 bool eqAstArg(struct AstArg * a, struct AstArg * b);
 bool eqAstExpression(struct AstExpression * a, struct AstExpression * b);
+bool eqAstCharArray(struct AstCharArray * a, struct AstCharArray * b);
 
 #endif

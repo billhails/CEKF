@@ -279,6 +279,27 @@ struct AstExpression * newAstExpression(enum AstExpressionType  type, union AstE
     return x;
 }
 
+struct AstCharArray * newAstCharArray(void) {
+    struct AstCharArray * x = NEW(AstCharArray, OBJTYPE_ASTCHARARRAY);
+    DEBUG("new AstCharArray %p", x);
+    x->entries = NULL;
+    x->size = 0;
+    x->capacity = 0;
+    int save = PROTECT(x);
+    x->entries = NEW_ARRAY(char, 4);
+    x->capacity = 4;
+    UNPROTECT(save);
+    return x;
+}
+
+
+void pushAstCharArray(struct AstCharArray * x, char entry) {
+    if (x->size == x->capacity) {
+        x->entries = GROW_ARRAY(char, x->entries, x->capacity, x->capacity *2);
+        x->capacity *= 2;
+    }
+    x->entries[x->size++] = entry;
+}
 
 
 /************************************/
@@ -598,6 +619,14 @@ void markAstExpression(struct AstExpression * x) {
     }
 }
 
+void markAstCharArray(struct AstCharArray * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    for (int i = 0; i < x->size; i++) {
+    }
+}
+
 
 void markAstObj(struct Header *h) {
     switch(h->type) {
@@ -693,6 +722,9 @@ void markAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTEXPRESSION:
             markAstExpression((AstExpression *)h);
+            break;
+        case OBJTYPE_ASTCHARARRAY:
+            markAstCharArray((AstCharArray *)h);
             break;
         default:
             cant_happen("unrecognised type %d in markAstObj\n", h->type);
@@ -825,6 +857,11 @@ void freeAstExpression(struct AstExpression * x) {
     FREE(x, AstExpression);
 }
 
+void freeAstCharArray(struct AstCharArray * x) {
+    FREE_ARRAY(char, x->entries, x->capacity);
+    FREE(x, AstCharArray);
+}
+
 
 void freeAstObj(struct Header *h) {
     switch(h->type) {
@@ -921,6 +958,9 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTEXPRESSION:
             freeAstExpression((AstExpression *)h);
             break;
+        case OBJTYPE_ASTCHARARRAY:
+            freeAstCharArray((AstCharArray *)h);
+            break;
         default:
             cant_happen("unrecognised type %d in freeAstObj\n", h->type);
     }
@@ -990,6 +1030,8 @@ char *typenameAstObj(int type) {
             return "AstArg";
         case OBJTYPE_ASTEXPRESSION:
             return "AstExpression";
+        case OBJTYPE_ASTCHARARRAY:
+            return "AstCharArray";
         default:
             cant_happen("unrecognised type %d in typenameAstObj\n", type);
     }

@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
 
 #else
 
-int report_mem_flag = 0;
-static int report_time_flag = 0;
+int report_flag = 0;
+static int help_flag = 0;
 
 int main(int argc, char *argv[]) {
     int c;
@@ -120,8 +120,8 @@ int main(int argc, char *argv[]) {
         static struct option long_options[] =
         {
           {"bigint", no_argument, &bigint_flag, 1},
-          {"report-memory", no_argument, &report_mem_flag, 1},
-          {"report-time", no_argument, &report_time_flag, 1},
+          {"report", no_argument, &report_flag, 1},
+          {"help", no_argument, &help_flag, 1},
           {0, 0, 0, 0}
         };
         int option_index = 0;
@@ -130,6 +130,15 @@ int main(int argc, char *argv[]) {
 
         if (c == -1)
             break;
+    }
+
+    if (help_flag) {
+        printf("%s",
+            "--bigint        use arbitrary precision integers\n"
+            "--report        report statistics\n"
+            "--help          this help\n"
+        );
+        exit(0);
     }
 
     ByteCodeArray byteCodes;
@@ -192,12 +201,12 @@ int main(int argc, char *argv[]) {
     printContainedValue(run(byteCodes), 1);
     printf("\n");
     // report stats etc.
-    if (report_mem_flag)
-        reportMemory();
-    if (report_time_flag) {
+    if (report_flag) {
         clock_t end = clock();
         double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-        printf("elapsed time %.3lf\n", time_spent);
+        printf("\nelapsed time %.3lf\n", time_spent);
+        reportMemory();
+        reportSteps();
     }
 }
 

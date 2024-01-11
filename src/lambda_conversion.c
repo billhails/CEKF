@@ -781,6 +781,7 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     if (symbol == gtSymbol()) return makeBinOp(LAMPRIMOP_TYPE_GT, args);
     if (symbol == ltSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LT, args);
     if (symbol == geSymbol()) return makeBinOp(LAMPRIMOP_TYPE_GE, args);
+    if (symbol == leSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LE, args);
     if (symbol == addSymbol()) return makeBinOp(LAMPRIMOP_TYPE_ADD, args);
     if (symbol == subSymbol()) return makeBinOp(LAMPRIMOP_TYPE_SUB, args);
     if (symbol == mulSymbol()) return makeBinOp(LAMPRIMOP_TYPE_MUL, args);

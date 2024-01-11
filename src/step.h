@@ -25,4 +25,6 @@ Value run(ByteCodeArray B);
 
 void markCEKF(void);
 
+void reportSteps(void);
+
 #endif

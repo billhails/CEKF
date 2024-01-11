@@ -542,6 +542,19 @@ eprintf("char %c", x->val.character);
     eprintf("]");
 }
 
+void printAstCharArray(struct AstCharArray * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("AstCharArray (NULL)"); return; }
+    eprintf("AstCharArray(%d)[\n", x->size);
+    for (int i = 0; i < x->size; i++) {
+        pad(depth + 1);
+eprintf("char %c", x->entries[i]);
+        eprintf("\n");
+    }
+    pad(depth);
+    eprintf("]");
+}
+
 
 /***************************************/
 
@@ -883,6 +896,16 @@ bool eqAstExpression(struct AstExpression * a, struct AstExpression * b) {
             break;
         default:
             cant_happen("unrecognised type %d in eqAstExpression", a->type);
+    }
+    return true;
+}
+
+bool eqAstCharArray(struct AstCharArray * a, struct AstCharArray * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (a->size != b->size) return false;
+    for (int i = 0; i < a->size; i++) {
+        if (a->entries[i] != b->entries[i]) return false;
     }
     return true;
 }

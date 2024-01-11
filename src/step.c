@@ -525,9 +525,14 @@ static void applyProc(int naargs) {
 
 #define printCEKF(state)
 
+static int count = 0;
+
+void reportSteps(void) {
+    printf("%d instructions executed\n", count);
+}
+
 static void step() {
 #ifdef DEBUG_STEP
-    int count = 0;
     dumpByteCode(&state.B);
 #endif
     if (bigint_flag) {
@@ -547,10 +552,11 @@ static void step() {
     }
     state.C = 0;
     while (state.C != UINT64_MAX) {
+        ++count;
         int bytecode;
 #ifdef DEBUG_STEP
         printCEKF(&state);
-        printf("%4d) %04lx ### ", ++count, state.C);
+        printf("%4d) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
             case BYTECODE_NONE: {

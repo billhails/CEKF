@@ -47,32 +47,33 @@ static AstFunCall *unOpToFunCall(HashSymbol *op, AstExpression *arg) {
     );
 }
 
-static AstFunCall *newStringList(char *str) {
-    if (*str == '\0') {
-        return newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(nilSymbol())), NULL);
+static AstFunCall *newStringList(AstCharArray *str) {
+    AstFunCall *res =
+        newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(nilSymbol())), NULL);
+    for (int size = str->size; size > 0; size--) {
+        res = newAstFunCall(
+            newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(consSymbol())),
+            newAstExpressions(
+                newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER(str->entries[size-1])),
+                newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL(res)), NULL)
+            )
+        );
     }
-    AstFunCall *rest = newStringList(str + 1);
-    return newAstFunCall(
-        newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(consSymbol())),
-        newAstExpressions(
-            newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER(*str)),
-            newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL(rest)), NULL)
-        )
-    );
+    return res;
 }
 
-static AstUnpack *newStringUnpack(char *str) {
-    if (*str == '\0') {
-        return newAstUnpack(nilSymbol(), NULL);
+static AstUnpack *newStringUnpack(AstCharArray *str) {
+    AstUnpack *res = newAstUnpack(nilSymbol(), NULL);
+    for (int size = str->size; size > 0; size--) {
+        res = newAstUnpack(
+            consSymbol(),
+            newAstArgList(
+                newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(str->entries[size-1])),
+                newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK(res)), NULL)
+            )
+        );
     }
-    AstUnpack *rest = newStringUnpack(str + 1);
-    return newAstUnpack(
-        consSymbol(),
-        newAstArgList(
-            newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(*str)),
-            newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK(rest)), NULL)
-        )
-    );
+    return res;
 }
 
 static BigInt *makeBigInt(char *digits) {
@@ -86,6 +87,19 @@ static BigInt *makeBigInt(char *digits) {
         int i = atoi(digits);
         return fakeBigInt(i);
     }
+}
+
+static AstCharArray *appendCharArray(AstCharArray *res, char *str) {
+    while (*str) {
+        pushAstCharArray(res, *str);
+        str++;
+    }
+    return res;
+}
+
+static AstCharArray *newCharArray(char *str) {
+    AstCharArray *res = newAstCharArray();
+    return appendCharArray(res, str);
 }
 
 %}
@@ -130,8 +144,10 @@ static BigInt *makeBigInt(char *digits) {
     AstType *type;
     AstUnpack *unpack;
     AstIff *iff;
+    AstCharArray *chars;
 }
 
+%type <chars> str
 %type <bi> number
 %type <arg> farg
 %type <argList> fargs
@@ -376,11 +392,15 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
 unpack : symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
        ;
 
-stringarg : STRING { $$ = newStringUnpack($1); }
+stringarg : str { $$ = newStringUnpack($1); }
        ;
 
-string : STRING { $$ = newStringList($1); }
+string : str { $$ = newStringList($1); }
        ;
+
+str : STRING            { $$ = newCharArray($1); }
+    | str STRING        { $$ = appendCharArray($1, $2); }
+    ;
 
 cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;

@@ -54,7 +54,7 @@ typedef struct ProtectionStack {
 } ProtectionStack;
 
 void reportMemory() {
-    printf("\ngc runs: %d, current memory: %d, max memory: %d\n",
+    printf("gc runs: %d, current memory: %d, max memory: %d\n",
         numGc, bytesAllocated, maxMem);
 }
 

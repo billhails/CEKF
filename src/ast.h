@@ -302,6 +302,13 @@ typedef struct AstExpression {
 
 
 
+typedef struct AstCharArray {
+    Header header;
+    int size;
+    int capacity;
+    char *entries;
+} AstCharArray;
+
 struct AstNest * newAstNest(struct AstDefinitions * definitions, struct AstExpressions * expressions);
 struct AstDefinitions * newAstDefinitions(struct AstDefinition * definition, struct AstDefinitions * next);
 struct AstDefine * newAstDefine(HashSymbol * symbol, struct AstExpression * expression);
@@ -333,6 +340,7 @@ struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  t
 struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstTypeClauseVal  val);
 struct AstArg * newAstArg(enum AstArgType  type, union AstArgVal  val);
 struct AstExpression * newAstExpression(enum AstExpressionType  type, union AstExpressionVal  val);
+struct AstCharArray * newAstCharArray(void);
 
 void markAstNest(struct AstNest * x);
 void markAstDefinitions(struct AstDefinitions * x);
@@ -365,6 +373,7 @@ void markAstSinglePrototype(struct AstSinglePrototype * x);
 void markAstTypeClause(struct AstTypeClause * x);
 void markAstArg(struct AstArg * x);
 void markAstExpression(struct AstExpression * x);
+void markAstCharArray(struct AstCharArray * x);
 
 void freeAstNest(struct AstNest * x);
 void freeAstDefinitions(struct AstDefinitions * x);
@@ -397,7 +406,9 @@ void freeAstSinglePrototype(struct AstSinglePrototype * x);
 void freeAstTypeClause(struct AstTypeClause * x);
 void freeAstArg(struct AstArg * x);
 void freeAstExpression(struct AstExpression * x);
+void freeAstCharArray(struct AstCharArray * x);
 
+void pushAstCharArray(struct AstCharArray * obj, char entry);
 
 #define AST_DEFINITION_VAL_DEFINE(x) ((union AstDefinitionVal ){.define = (x)})
 #define AST_DEFINITION_VAL_PROTOTYPE(x) ((union AstDefinitionVal ){.prototype = (x)})
