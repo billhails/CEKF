@@ -144,9 +144,4 @@ void markFail(Fail *x);
 void markCons(Cons *x);
 void markVec(Vec *x);
 
-#ifdef TEST_STACK
-void testStack(void);
-void markTestStack(void);
-#endif
-
 #endif

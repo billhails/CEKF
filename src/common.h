@@ -24,7 +24,6 @@
  typedef uint32_t hash_t;
 
 // #define DEBUG_RUN_TESTS 1
-// #define TEST_STACK
 // #define DEBUG_STACK
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step

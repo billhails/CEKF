@@ -471,9 +471,6 @@ static void mark() {
 #ifdef DEBUG_LOG_GC
     eprintf("markVarTable done\n");
 #endif
-#ifdef TEST_STACK
-    markTestStack();
-#endif
 }
 
 static void sweep() {
