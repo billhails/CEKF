@@ -27,7 +27,6 @@
 #include "lambda_debug.h"
 #include "lambda_conversion.h"
 #include "module.h"
-// #include "parser.h"
 #include "analysis.h"
 #include "exp.h"
 #include "memory.h"
@@ -41,73 +40,6 @@
 #include "bigint.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
-
-#ifdef DEBUG_RUN_TESTS
-#if DEBUG_RUN_TESTS == 1
-
-#include "tests/exp.inc"
-
-#elif DEBUG_RUN_TESTS == 2 /* testing parser */
-
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    printAstNest(result, 0);
-    enableGC();
-    printf("\n");
-    char *foo = NEW_ARRAY(char, 10); // force gc
-}
-
-#elif DEBUG_RUN_TESTS == 3 // testing type inference
-
-extern void testTin();
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    testTin();
-}
-
-#else // testing lambda conversion
-
-extern AstNest *result;
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    PROTECT(result);
-    enableGC();
-    // quietPrintHashTable = true;
-    WResult *wr = WTop(result);
-    // showTinMonoType(wr->monoType);
-    // printf("\n");
-    validateLastAlloc();
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-    } else {
-        LamExp *exp = lamConvertNest(result, NULL);
-        int save = PROTECT(exp);
-        // ppLamExp(exp);
-        // printf("\n");
-        Exp *anfExp = anfNormalize(exp);
-        printExp(anfExp);
-        eprintf("\n");
-    }
-}
-
-#endif
-
-#else
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -210,4 +142,3 @@ int main(int argc, char *argv[]) {
     }
 }
 
-#endif
