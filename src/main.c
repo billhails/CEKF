@@ -36,7 +36,7 @@
 #include "desugaring.h"
 #include "hash.h"
 #include "lambda_pp.h"
-#include "anf.h"
+#include "anf_normalize.h"
 #include "bigint.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
