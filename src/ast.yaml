@@ -191,7 +191,3 @@ primitives:
         printFn: "printBigInt"
         markFn: "markBigInt"
         valued: true
-    hash_t:
-        cname: "hash_t"
-        printf: "%x"
-        valued: true

@@ -17,7 +17,7 @@
  *
  * Structures to support type inference
  *
- * generated from src/tc.yaml by makeAST.py
+ * Generated from src/tc.yaml by tools/makeAST.py
  */
 
 #include "tc.h"
@@ -29,6 +29,10 @@
 #else
 #include "debugging_off.h"
 #endif
+
+/*
+ * constructor functions
+ */
 
 struct TcEnv * newTcEnv(HashTable * table, struct TcEnv * next) {
     struct TcEnv * x = NEW(TcEnv, OBJTYPE_TCENV);
@@ -96,8 +100,156 @@ struct TcType * newTcType(enum TcTypeType  type, union TcTypeVal  val) {
 }
 
 
+/*
+ * copy functions
+ */
 
-/************************************/
+struct TcEnv * copyTcEnv(struct TcEnv * o) {
+    if (o == NULL) return NULL;
+    struct TcEnv * x = NEW(TcEnv, OBJTYPE_TCENV);
+    DEBUG("copy TcEnv %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcEnv));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->table = o->table;
+    x->next = copyTcEnv(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcNg * copyTcNg(struct TcNg * o) {
+    if (o == NULL) return NULL;
+    struct TcNg * x = NEW(TcNg, OBJTYPE_TCNG);
+    DEBUG("copy TcNg %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcNg));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->table = o->table;
+    x->next = copyTcNg(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcFunction * copyTcFunction(struct TcFunction * o) {
+    if (o == NULL) return NULL;
+    struct TcFunction * x = NEW(TcFunction, OBJTYPE_TCFUNCTION);
+    DEBUG("copy TcFunction %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcFunction));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->arg = copyTcType(o->arg);
+    x->result = copyTcType(o->result);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcPair * copyTcPair(struct TcPair * o) {
+    if (o == NULL) return NULL;
+    struct TcPair * x = NEW(TcPair, OBJTYPE_TCPAIR);
+    DEBUG("copy TcPair %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcPair));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->first = copyTcType(o->first);
+    x->second = copyTcType(o->second);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcTypeDef * copyTcTypeDef(struct TcTypeDef * o) {
+    if (o == NULL) return NULL;
+    struct TcTypeDef * x = NEW(TcTypeDef, OBJTYPE_TCTYPEDEF);
+    DEBUG("copy TcTypeDef %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcTypeDef));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->name = o->name;
+    x->args = copyTcTypeDefArgs(o->args);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcTypeDefArgs * copyTcTypeDefArgs(struct TcTypeDefArgs * o) {
+    if (o == NULL) return NULL;
+    struct TcTypeDefArgs * x = NEW(TcTypeDefArgs, OBJTYPE_TCTYPEDEFARGS);
+    DEBUG("copy TcTypeDefArgs %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcTypeDefArgs));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->type = copyTcType(o->type);
+    x->next = copyTcTypeDefArgs(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcVar * copyTcVar(struct TcVar * o) {
+    if (o == NULL) return NULL;
+    struct TcVar * x = NEW(TcVar, OBJTYPE_TCVAR);
+    DEBUG("copy TcVar %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcVar));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->name = o->name;
+    x->id = o->id;
+    x->instance = copyTcType(o->instance);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TcType * copyTcType(struct TcType * o) {
+    if (o == NULL) return NULL;
+    struct TcType * x = NEW(TcType, OBJTYPE_TCTYPE);
+    DEBUG("copy TcType %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TcType));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case TCTYPE_TYPE_FUNCTION:
+            x->val.function = copyTcFunction(o->val.function);
+            break;
+        case TCTYPE_TYPE_PAIR:
+            x->val.pair = copyTcPair(o->val.pair);
+            break;
+        case TCTYPE_TYPE_VAR:
+            x->val.var = copyTcVar(o->val.var);
+            break;
+        case TCTYPE_TYPE_SMALLINTEGER:
+            x->val.smallinteger = o->val.smallinteger;
+            break;
+        case TCTYPE_TYPE_BIGINTEGER:
+            x->val.biginteger = o->val.biginteger;
+            break;
+        case TCTYPE_TYPE_CHARACTER:
+            x->val.character = o->val.character;
+            break;
+        case TCTYPE_TYPE_TYPEDEF:
+            x->val.typeDef = copyTcTypeDef(o->val.typeDef);
+            break;
+        default:
+            cant_happen("unrecognised type %d in copyTcType", o->type);
+    }
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
+}
+
+
+/*
+ * push functions
+ */
+
+
+/*
+ * mark functions
+ */
 
 void markTcEnv(struct TcEnv * x) {
     if (x == NULL) return;
@@ -182,6 +334,10 @@ void markTcType(struct TcType * x) {
 }
 
 
+/*
+ * generic mark function
+ */
+
 void markTcObj(struct Header *h) {
     switch(h->type) {
         case OBJTYPE_TCENV:
@@ -213,7 +369,9 @@ void markTcObj(struct Header *h) {
     }
 }
 
-/************************************/
+/*
+ * free functions
+ */
 
 void freeTcEnv(struct TcEnv * x) {
     FREE(x, TcEnv);
@@ -248,6 +406,10 @@ void freeTcType(struct TcType * x) {
 }
 
 
+/*
+ * generic free function
+ */
+
 void freeTcObj(struct Header *h) {
     switch(h->type) {
         case OBJTYPE_TCENV:
@@ -279,6 +441,10 @@ void freeTcObj(struct Header *h) {
     }
 }
 
+/*
+ * type identifier function
+ */
+
 char *typenameTcObj(int type) {
     switch(type) {
         case OBJTYPE_TCENV:
@@ -301,4 +467,3 @@ char *typenameTcObj(int type) {
             cant_happen("unrecognised type %d in typenameTcObj\n", type);
     }
 }
-

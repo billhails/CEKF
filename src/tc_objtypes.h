@@ -19,10 +19,15 @@
  *
  * Structures to support type inference
  *
- * generated from src/tc.yaml by makeAST.py
+ * Generated from src/tc.yaml by tools/makeAST.py
  */
 
-#define TC_OBJTYPES() OBJTYPE_TCENV, \
+/*
+ * define objtypes
+ */
+
+#define TC_OBJTYPES() \
+OBJTYPE_TCENV, \
 OBJTYPE_TCNG, \
 OBJTYPE_TCFUNCTION, \
 OBJTYPE_TCPAIR, \
@@ -30,6 +35,10 @@ OBJTYPE_TCTYPEDEF, \
 OBJTYPE_TCTYPEDEFARGS, \
 OBJTYPE_TCVAR, \
 OBJTYPE_TCTYPE
+
+/*
+ * define cases
+ */
 
 #define TC_OBJTYPE_CASES() \
 case OBJTYPE_TCENV:\
@@ -41,6 +50,10 @@ case OBJTYPE_TCTYPEDEFARGS:\
 case OBJTYPE_TCVAR:\
 case OBJTYPE_TCTYPE:\
 
+
+/*
+ * declare generic type functions
+ */
 
 void markTcObj(struct Header *h);
 void freeTcObj(struct Header *h);

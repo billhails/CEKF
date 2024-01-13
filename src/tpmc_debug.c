@@ -17,7 +17,7 @@
  *
  * Term Pattern Matching Compiler types
  *
- * generated from src/tpmc.yaml by makeAST.py
+ * Generated from src/tpmc.yaml by tools/makeAST.py
  */
 
 #include <stdio.h>
@@ -26,7 +26,15 @@
 #include "lambda_pp.h"
 #include "bigint.h"
 
+/*
+ * helper functions
+ */
+
 static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
+
+/*
+ * print functions
+ */
 
 void printTpmcMatchRules(struct TpmcMatchRules * x, int depth) {
     pad(depth);
@@ -354,7 +362,9 @@ void printTpmcMatrix(struct TpmcMatrix * x, int depth) {
 }
 
 
-/***************************************/
+/*
+ * compare functions
+ */
 
 bool eqTpmcMatchRules(struct TpmcMatchRules * a, struct TpmcMatchRules * b) {
     if (a == b) return true;

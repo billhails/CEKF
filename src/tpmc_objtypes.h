@@ -19,10 +19,15 @@
  *
  * Term Pattern Matching Compiler types
  *
- * generated from src/tpmc.yaml by makeAST.py
+ * Generated from src/tpmc.yaml by tools/makeAST.py
  */
 
-#define TPMC_OBJTYPES() OBJTYPE_TPMCMATCHRULES, \
+/*
+ * define objtypes
+ */
+
+#define TPMC_OBJTYPES() \
+OBJTYPE_TPMCMATCHRULES, \
 OBJTYPE_TPMCMATCHRULE, \
 OBJTYPE_TPMCCOMPARISONPATTERN, \
 OBJTYPE_TPMCASSIGNMENTPATTERN, \
@@ -43,6 +48,10 @@ OBJTYPE_TPMCSTATEARRAY, \
 OBJTYPE_TPMCARCARRAY, \
 OBJTYPE_TPMCINTARRAY, \
 OBJTYPE_TPMCMATRIX
+
+/*
+ * define cases
+ */
 
 #define TPMC_OBJTYPE_CASES() \
 case OBJTYPE_TPMCMATCHRULES:\
@@ -67,6 +76,10 @@ case OBJTYPE_TPMCARCARRAY:\
 case OBJTYPE_TPMCINTARRAY:\
 case OBJTYPE_TPMCMATRIX:\
 
+
+/*
+ * declare generic type functions
+ */
 
 void markTpmcObj(struct Header *h);
 void freeTpmcObj(struct Header *h);

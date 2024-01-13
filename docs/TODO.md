@@ -29,3 +29,4 @@
 * fail on non-exhaustive pattern match (optional).
    * some sort of `//@-allow-non-exhaustive` inline directive?
 * error function
+* common fn bodies with alternative arguments `fn { (...) | (...) { ... } }`

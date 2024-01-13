@@ -19,12 +19,16 @@
  *
  * Structures to support type inference
  *
- * generated from src/tc.yaml by makeAST.py
+ * Generated from src/tc.yaml by tools/makeAST.py
  */
 
 #include "hash.h"
 #include "memory.h"
 #include "common.h"
+
+/*
+ * typedefs
+ */
 
 typedef enum TcTypeType {
     TCTYPE_TYPE_FUNCTION,
@@ -101,6 +105,11 @@ typedef struct TcType {
 
 
 
+
+/*
+ * constructor declaration
+ */
+
 struct TcEnv * newTcEnv(HashTable * table, struct TcEnv * next);
 struct TcNg * newTcNg(HashTable * table, struct TcNg * next);
 struct TcFunction * newTcFunction(struct TcType * arg, struct TcType * result);
@@ -109,6 +118,23 @@ struct TcTypeDef * newTcTypeDef(HashSymbol * name, struct TcTypeDefArgs * args);
 struct TcTypeDefArgs * newTcTypeDefArgs(struct TcType * type, struct TcTypeDefArgs * next);
 struct TcVar * newTcVar(HashSymbol * name, int id);
 struct TcType * newTcType(enum TcTypeType  type, union TcTypeVal  val);
+
+/*
+ * copy declarations
+ */
+
+struct TcEnv * copyTcEnv(struct TcEnv * o);
+struct TcNg * copyTcNg(struct TcNg * o);
+struct TcFunction * copyTcFunction(struct TcFunction * o);
+struct TcPair * copyTcPair(struct TcPair * o);
+struct TcTypeDef * copyTcTypeDef(struct TcTypeDef * o);
+struct TcTypeDefArgs * copyTcTypeDefArgs(struct TcTypeDefArgs * o);
+struct TcVar * copyTcVar(struct TcVar * o);
+struct TcType * copyTcType(struct TcType * o);
+
+/*
+ * mark declarations
+ */
 
 void markTcEnv(struct TcEnv * x);
 void markTcNg(struct TcNg * x);
@@ -119,6 +145,10 @@ void markTcTypeDefArgs(struct TcTypeDefArgs * x);
 void markTcVar(struct TcVar * x);
 void markTcType(struct TcType * x);
 
+/*
+ * free declarations
+ */
+
 void freeTcEnv(struct TcEnv * x);
 void freeTcNg(struct TcNg * x);
 void freeTcFunction(struct TcFunction * x);
@@ -128,6 +158,14 @@ void freeTcTypeDefArgs(struct TcTypeDefArgs * x);
 void freeTcVar(struct TcVar * x);
 void freeTcType(struct TcType * x);
 
+/*
+ * push declarations
+ */
+
+
+/*
+ * defines
+ */
 
 #define TCTYPE_VAL_FUNCTION(x) ((union TcTypeVal ){.function = (x)})
 #define TCTYPE_VAL_PAIR(x) ((union TcTypeVal ){.pair = (x)})
@@ -136,6 +174,10 @@ void freeTcType(struct TcType * x);
 #define TCTYPE_VAL_BIGINTEGER() ((union TcTypeVal ){.biginteger = (NULL)})
 #define TCTYPE_VAL_CHARACTER() ((union TcTypeVal ){.character = (NULL)})
 #define TCTYPE_VAL_TYPEDEF(x) ((union TcTypeVal ){.typeDef = (x)})
+
+/*
+ * access declarations
+ */
 
 
 #endif
