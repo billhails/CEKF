@@ -7,11 +7,9 @@ let
 
     fn member {
         (_, leaf) { false }
-        (x, red(_, x, _)) { true }
+        (x, red(_, x, _)) |
         (x, black(_, x, _)) { true }
-        (x, red(l, y, r)) {
-            if (x < y) { member(x, l) } else { member(x, r) }
-        }
+        (x, red(l, y, r)) |
         (x, black(l, y, r)) {
             if (x < y) { member(x, l) } else { member(x, r) }
         }
@@ -19,19 +17,17 @@ let
 
     fn insert(x, s) {
         let
-            fn bal(a, x, b, y, c, z, d) { red(black(a, x, b), y, black(c, z, d)) }
-
             fn balance {
-                (red(red(a, x, b), y, c), z, d) { bal(a, x, b, y, c, z, d) }
-                (red(a, x, red(b, y, c)), z, d) { bal(a, x, b, y, c, z, d) }
-                (a, x, red(red(b, y, c), z, d)) { bal(a, x, b, y, c, z, d) }
-                (a, x, red(b, y, red(c, z, d))) { bal(a, x, b, y, c, z, d) }
+                (red(red(a, x, b), y, c), z, d) |
+                (red(a, x, red(b, y, c)), z, d) |
+                (a, x, red(red(b, y, c), z, d)) |
+                (a, x, red(b, y, red(c, z, d))) { red(black(a, x, b), y, black(c, z, d)) }
                 (a, x, b) { black(a, x, b) }
             }
 
             fn ins {
                 (_, leaf, _) { red(leaf, x, leaf) }
-                (x, red(a, x, b), throw) { throw(s) }
+                (x, red(a, x, b), throw) |
                 (x, black(a, x, b), throw) { throw(s) }
                 (x, red(a, y, b), throw) {
                     if (x < y) {
@@ -65,9 +61,7 @@ let
     fn makeList(tree) {
         let
             fn part_flatten {
-                (red(left, t, right), already_flat) {
-                    part_flatten(left, t @ part_flatten(right, already_flat))
-                }
+                (red(left, t, right), already_flat) |
                 (black(left, t, right), already_flat) {
                     part_flatten(left, t @ part_flatten(right, already_flat))
                 }
@@ -77,4 +71,17 @@ let
             part_flatten(tree, [])
     }
 in
-    makeList(makeSet("kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol"))
+    makeList(
+        makeSet(
+            "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymk"
+            "fpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdoz"
+            "zyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcis"
+            "xevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknja"
+            "uctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupu"
+            "wdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggim"
+            "fsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhox"
+            "nywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskci"
+            "vvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpaw"
+            "kahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximva"
+            "auocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbk"
+            "zxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol"))

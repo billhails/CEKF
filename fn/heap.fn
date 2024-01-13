@@ -4,8 +4,7 @@ let
     typedef maybe(#t) { none | some(#t) }
 
     fn merge {
-      (E, h) { h }
-      (h, E) { h }
+      (E, h) | (h, E) { h }
       (h1=T(_, x, a1, b1), h2=T(_, y, a2, b2)) {
         if (x <= y) {
           makeT(x, a1, merge(b1, h2))

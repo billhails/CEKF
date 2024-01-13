@@ -225,6 +225,18 @@ typedef struct AstArgList {
     struct AstArgList * next;
 } AstArgList;
 
+typedef struct AstAltArgs {
+    Header header;
+    struct AstArgList * argList;
+    struct AstAltArgs * next;
+} AstAltArgs;
+
+typedef struct AstAltFunction {
+    Header header;
+    struct AstAltArgs * altArgs;
+    struct AstNest * nest;
+} AstAltFunction;
+
 typedef struct AstUnpack {
     Header header;
     HashSymbol * symbol;
@@ -336,6 +348,8 @@ struct AstType * newAstType(struct AstTypeClause * typeClause, struct AstType * 
 struct AstCompositeFunction * newAstCompositeFunction(struct AstFunction * function, struct AstCompositeFunction * next);
 struct AstFunction * newAstFunction(struct AstArgList * argList, struct AstNest * nest);
 struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next);
+struct AstAltArgs * newAstAltArgs(struct AstArgList * argList, struct AstAltArgs * next);
+struct AstAltFunction * newAstAltFunction(struct AstAltArgs * altArgs, struct AstNest * nest);
 struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList);
 struct AstNamedArg * newAstNamedArg(HashSymbol * name, struct AstArg * arg);
 struct AstEnvType * newAstEnvType(HashSymbol * name, HashSymbol * prototype);
@@ -373,6 +387,8 @@ struct AstType * copyAstType(struct AstType * o);
 struct AstCompositeFunction * copyAstCompositeFunction(struct AstCompositeFunction * o);
 struct AstFunction * copyAstFunction(struct AstFunction * o);
 struct AstArgList * copyAstArgList(struct AstArgList * o);
+struct AstAltArgs * copyAstAltArgs(struct AstAltArgs * o);
+struct AstAltFunction * copyAstAltFunction(struct AstAltFunction * o);
 struct AstUnpack * copyAstUnpack(struct AstUnpack * o);
 struct AstNamedArg * copyAstNamedArg(struct AstNamedArg * o);
 struct AstEnvType * copyAstEnvType(struct AstEnvType * o);
@@ -410,6 +426,8 @@ void markAstType(struct AstType * x);
 void markAstCompositeFunction(struct AstCompositeFunction * x);
 void markAstFunction(struct AstFunction * x);
 void markAstArgList(struct AstArgList * x);
+void markAstAltArgs(struct AstAltArgs * x);
+void markAstAltFunction(struct AstAltFunction * x);
 void markAstUnpack(struct AstUnpack * x);
 void markAstNamedArg(struct AstNamedArg * x);
 void markAstEnvType(struct AstEnvType * x);
@@ -447,6 +465,8 @@ void freeAstType(struct AstType * x);
 void freeAstCompositeFunction(struct AstCompositeFunction * x);
 void freeAstFunction(struct AstFunction * x);
 void freeAstArgList(struct AstArgList * x);
+void freeAstAltArgs(struct AstAltArgs * x);
+void freeAstAltFunction(struct AstAltFunction * x);
 void freeAstUnpack(struct AstUnpack * x);
 void freeAstNamedArg(struct AstNamedArg * x);
 void freeAstEnvType(struct AstEnvType * x);

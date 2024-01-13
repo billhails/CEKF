@@ -102,6 +102,14 @@ static AstCharArray *newCharArray(char *str) {
     return appendCharArray(res, str);
 }
 
+static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions, AstCompositeFunction *rest) {
+    for (AstAltArgs *args = functions->altArgs; args != NULL; args = args->next) {
+        AstFunction *this = newAstFunction(args->argList, copyAstNest(functions->nest));
+        rest = newAstCompositeFunction(this, rest);
+    }
+    return rest;
+}
+
 %}
 %code requires
 {
@@ -124,7 +132,6 @@ static AstCharArray *newCharArray(char *str) {
     AstExpressions *expressions;
     AstFlatType *flatType;
     AstFunCall *funCall;
-    AstFunction *function;
     AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
@@ -145,6 +152,8 @@ static AstCharArray *newCharArray(char *str) {
     AstUnpack *unpack;
     AstIff *iff;
     AstCharArray *chars;
+    AstAltFunction *altFunction;
+    AstAltArgs * altArgs;
 }
 
 %type <chars> str
@@ -161,7 +170,6 @@ static AstCharArray *newCharArray(char *str) {
 %type <expressions> expressions expression_statements
 %type <flatType> flat_type
 %type <funCall> fun_call binop conslist unop switch string
-%type <function> function
 %type <load> load
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
@@ -181,6 +189,8 @@ static AstCharArray *newCharArray(char *str) {
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
 %type <iff> iff
+%type <altFunction> alt_function
+%type <altArgs> alt_args
 
 %token AS
 %token BACK
@@ -348,7 +358,7 @@ iff_nest : iff  { $$ = newAstNest(NULL, newAstExpressions(newAstExpression(AST_E
 switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($5)), $3); }
        ;
 
-fun : function              { $$ = newAstCompositeFunction($1, NULL); }
+fun : alt_function          { $$ = makeAstCompositeFunction($1, NULL); }
     | composite_function    { $$ = $1; }
     ;
 
@@ -358,12 +368,16 @@ nest : '{' nest_body '}'    { $$ = $2; }
 composite_function : '{' functions '}'  { $$ = $2; }
                    ;
 
-functions : function            { $$ = newAstCompositeFunction($1, NULL); }
-          | function functions  { $$ = newAstCompositeFunction($1, $2); }
+functions : alt_function            { $$ = makeAstCompositeFunction($1, NULL); }
+          | alt_function functions  { $$ = makeAstCompositeFunction($1, $2); }
           ;
 
-function : '(' fargs ')' nest   { $$ = newAstFunction($2, $4); }
+alt_args : '(' fargs ')'               { $$ = newAstAltArgs($2, NULL); }
+         | '(' fargs ')' '|' alt_args  { $$ = newAstAltArgs($2, $5); }
          ;
+
+alt_function : alt_args nest    { $$ = newAstAltFunction($1, $2); }
+             ;
 
 fargs : %empty            { $$ = NULL; }
       | farg              { $$ = newAstArgList($1, NULL); }

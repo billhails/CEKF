@@ -5,19 +5,19 @@ let
     typedef Maybe(#t) { none | some(#t) }
 
     fn balance {
-        (B, D(R, D(R, a, x, b), y, c), z, d)  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
-        (B, D(R, a, x, D(R, b, y, c)), z, d)  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
-        (B, a, x, D(R, D(R, b, y, c), z, d))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
+        (B, D(R, D(R, a, x, b), y, c), z, d)  |
+        (B, D(R, a, x, D(R, b, y, c)), z, d)  |
+        (B, a, x, D(R, D(R, b, y, c), z, d))  |
         (B, a, x, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
-        (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
+
+        (BB, D(R, a, x, D(R, b, y, c)), z, d) |
         (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
         (color, a, b, c)                      { D(color, a, b, c) }
     }
 
     // #t -> Dict(#t, #u) -> Maybe(#u)
     fn lookup {
-        (_, E) { none }
-        (_, EE) { none }
+        (_, E) | (_, EE) { none }
         (x, D(_, _, T(x, y), _)) { some(y) }
         (x, D(_, a, T(y, _), b)) {
             if (x < y) {
@@ -36,8 +36,7 @@ let
                 (t) { t }
             }
             fn ins {
-                (x, EE) { D(R, E, T(x, v), E) }
-                (x, E) { D(R, E, T(x, v), E) }
+                (x, EE) | (x, E) { D(R, E, T(x, v), E) }
                 (x, D(c, a, T(x, _), b)) { D(c, a, T(x, v), b) }
                 (x, D(color, a, s=T(y, _), b)) {
                     if (x < y) {
@@ -54,11 +53,9 @@ let
     fn delete(x, s) {
         let
             fn del {
-                (_, EE, throw) { throw(s) }
-                (_, E, throw) { throw(s) }
+                (_, EE, throw) | (_, E, throw) { throw(s) }
                 (x, D(R, E, T(x, _), E), _) { E }
                 (x, D(B, E, T(x, _), E), _) { EE }
-                (_, D(B, E, _, E), throw) { throw(s) }
                 (_, D(B, E, _, E), throw) { throw(s) }
                 (x, D(B, D(R, E, y, E), T(x, _), E), _) { D(B, E, y, E) }
                 (x, D(B, D(R, E, y, E), T(z, zv), E), throw) {
@@ -102,7 +99,7 @@ let
             }
 
             fn leftmost_successor {
-                (D(_, E, x, E))             { x }
+                (D(_, E, x, E))             |
                 (D(B, E, x, D(R, E, _, E))) { x }
                 (D(_, a, _, _))             { leftmost_successor(a) }
             }
@@ -119,7 +116,7 @@ let
 
     fn makeDict(lst) {
        let fn helper {
-           ([], tr) { tr }
+           ([], tr) |
            (h @ [], tr) { tr }
            (h @ h2 @ t, tr) { helper(t, insert(h, h2, tr)) }
        }

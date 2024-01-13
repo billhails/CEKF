@@ -251,6 +251,30 @@ void printAstArgList(struct AstArgList * x, int depth) {
     eprintf("]");
 }
 
+void printAstAltArgs(struct AstAltArgs * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("AstAltArgs (NULL)"); return; }
+    eprintf("AstAltArgs[\n");
+    printAstArgList(x->argList, depth + 1);
+    eprintf("\n");
+    printAstAltArgs(x->next, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
+void printAstAltFunction(struct AstAltFunction * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("AstAltFunction (NULL)"); return; }
+    eprintf("AstAltFunction[\n");
+    printAstAltArgs(x->altArgs, depth + 1);
+    eprintf("\n");
+    printAstNest(x->nest, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printAstUnpack(struct AstUnpack * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstUnpack (NULL)"); return; }
@@ -709,6 +733,22 @@ bool eqAstArgList(struct AstArgList * a, struct AstArgList * b) {
     if (a == NULL || b == NULL) return false;
     if (!eqAstArg(a->arg, b->arg)) return false;
     if (!eqAstArgList(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstAltArgs(struct AstAltArgs * a, struct AstAltArgs * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstArgList(a->argList, b->argList)) return false;
+    if (!eqAstAltArgs(a->next, b->next)) return false;
+    return true;
+}
+
+bool eqAstAltFunction(struct AstAltFunction * a, struct AstAltFunction * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstAltArgs(a->altArgs, b->altArgs)) return false;
+    if (!eqAstNest(a->nest, b->nest)) return false;
     return true;
 }
 

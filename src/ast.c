@@ -178,6 +178,22 @@ struct AstArgList * newAstArgList(struct AstArg * arg, struct AstArgList * next)
     return x;
 }
 
+struct AstAltArgs * newAstAltArgs(struct AstArgList * argList, struct AstAltArgs * next) {
+    struct AstAltArgs * x = NEW(AstAltArgs, OBJTYPE_ASTALTARGS);
+    DEBUG("new AstAltArgs %pn", x);
+    x->argList = argList;
+    x->next = next;
+    return x;
+}
+
+struct AstAltFunction * newAstAltFunction(struct AstAltArgs * altArgs, struct AstNest * nest) {
+    struct AstAltFunction * x = NEW(AstAltFunction, OBJTYPE_ASTALTFUNCTION);
+    DEBUG("new AstAltFunction %pn", x);
+    x->altArgs = altArgs;
+    x->nest = nest;
+    return x;
+}
+
 struct AstUnpack * newAstUnpack(HashSymbol * symbol, struct AstArgList * argList) {
     struct AstUnpack * x = NEW(AstUnpack, OBJTYPE_ASTUNPACK);
     DEBUG("new AstUnpack %pn", x);
@@ -549,6 +565,34 @@ struct AstArgList * copyAstArgList(struct AstArgList * o) {
     int save = PROTECT(x);
     x->arg = copyAstArg(o->arg);
     x->next = copyAstArgList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AstAltArgs * copyAstAltArgs(struct AstAltArgs * o) {
+    if (o == NULL) return NULL;
+    struct AstAltArgs * x = NEW(AstAltArgs, OBJTYPE_ASTALTARGS);
+    DEBUG("copy AstAltArgs %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AstAltArgs));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->argList = copyAstArgList(o->argList);
+    x->next = copyAstAltArgs(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AstAltFunction * copyAstAltFunction(struct AstAltFunction * o) {
+    if (o == NULL) return NULL;
+    struct AstAltFunction * x = NEW(AstAltFunction, OBJTYPE_ASTALTFUNCTION);
+    DEBUG("copy AstAltFunction %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AstAltFunction));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->altArgs = copyAstAltArgs(o->altArgs);
+    x->nest = copyAstNest(o->nest);
     UNPROTECT(save);
     return x;
 }
@@ -1004,6 +1048,22 @@ void markAstArgList(struct AstArgList * x) {
     markAstArgList(x->next);
 }
 
+void markAstAltArgs(struct AstAltArgs * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstArgList(x->argList);
+    markAstAltArgs(x->next);
+}
+
+void markAstAltFunction(struct AstAltFunction * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstAltArgs(x->altArgs);
+    markAstNest(x->nest);
+}
+
 void markAstUnpack(struct AstUnpack * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -1252,6 +1312,12 @@ void markAstObj(struct Header *h) {
         case OBJTYPE_ASTARGLIST:
             markAstArgList((AstArgList *)h);
             break;
+        case OBJTYPE_ASTALTARGS:
+            markAstAltArgs((AstAltArgs *)h);
+            break;
+        case OBJTYPE_ASTALTFUNCTION:
+            markAstAltFunction((AstAltFunction *)h);
+            break;
         case OBJTYPE_ASTUNPACK:
             markAstUnpack((AstUnpack *)h);
             break;
@@ -1375,6 +1441,14 @@ void freeAstArgList(struct AstArgList * x) {
     FREE(x, AstArgList);
 }
 
+void freeAstAltArgs(struct AstAltArgs * x) {
+    FREE(x, AstAltArgs);
+}
+
+void freeAstAltFunction(struct AstAltFunction * x) {
+    FREE(x, AstAltFunction);
+}
+
 void freeAstUnpack(struct AstUnpack * x) {
     FREE(x, AstUnpack);
 }
@@ -1493,6 +1567,12 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTARGLIST:
             freeAstArgList((AstArgList *)h);
             break;
+        case OBJTYPE_ASTALTARGS:
+            freeAstAltArgs((AstAltArgs *)h);
+            break;
+        case OBJTYPE_ASTALTFUNCTION:
+            freeAstAltFunction((AstAltFunction *)h);
+            break;
         case OBJTYPE_ASTUNPACK:
             freeAstUnpack((AstUnpack *)h);
             break;
@@ -1582,6 +1662,10 @@ char *typenameAstObj(int type) {
             return "AstFunction";
         case OBJTYPE_ASTARGLIST:
             return "AstArgList";
+        case OBJTYPE_ASTALTARGS:
+            return "AstAltArgs";
+        case OBJTYPE_ASTALTFUNCTION:
+            return "AstAltFunction";
         case OBJTYPE_ASTUNPACK:
             return "AstUnpack";
         case OBJTYPE_ASTNAMEDARG:

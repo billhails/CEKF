@@ -3,11 +3,11 @@ let
     typedef Tree(#t) { E | EE | T(Color, Tree(#t), #t, Tree(#t)) }
 
     fn balance {
-        (B, T(R, T(R, a, x, b), y, c), z, d) { T(R, T(B, a, x, b), y, T(B, c, z, d)) }
-        (B, T(R, a, x, T(R, b, y, c)), z, d) { T(R, T(B, a, x, b), y, T(B, c, z, d)) }
-        (B, a, x, T(R, T(R, b, y, c), z, d)) { T(R, T(B, a, x, b), y, T(B, c, z, d)) }
-        (B, a, x, T(R, b, y, T(R, c, z, d))) { T(R, T(B, a, x, b), y, T(B, c, z, d)) }
-        (BB, T(R, a, x, T(R, b, y, c)), z, d) { T(B, T(B, a, x, b), y, T(B, c, z, d)) }
+        (B, T(R, T(R, a, x, b), y, c), z, d) |
+        (B, T(R, a, x, T(R, b, y, c)), z, d) |
+        (B, a, x, T(R, T(R, b, y, c), z, d)) |
+        (B, a, x, T(R, b, y, T(R, c, z, d))) |
+        (BB, T(R, a, x, T(R, b, y, c)), z, d) |
         (BB, T(R, a, x, T(R, b, y, c)), z, d) { T(B, T(B, a, x, b), y, T(B, c, z, d)) }
         (color, a, b, c) { T(color, a, b, c) }
     }
@@ -26,8 +26,8 @@ let
     fn insert(x, s) {
         let
             fn blacken {
-                (T(R, t=T(R, _, _, _), y, c)) { T(B, t, y, c) }
-                (T(R, a, x, t=T(R, _, _, _))) { T(B, a, x, t) }
+                (T(R, a=T(R, _, _, _), x, b)) |
+                (T(R, a, x, b=T(R, _, _, _))) { T(B, a, x, b) }
                 (t) { t }
             }
             fn ins {
@@ -51,7 +51,7 @@ let
                 (_, E, throw) { throw(s) }
                 (x, T(R, E, x, E), _) { E }
                 (x, T(B, E, x, E), _) { EE }
-                (_, T(B, E, _, E), throw) { throw(s) }
+                (_, T(B, E, _, E), throw) |
                 (_, T(B, E, _, E), throw) { throw(s) }
                 (x, T(B, T(R, E, y, E), x, E), _) { T(B, E, y, E) }
                 (x, T(B, T(R, E, y, E), z, E), throw) {
@@ -99,8 +99,7 @@ let
             }
 
             fn min_del_y {
-                (T(R, E, x, E)) { x }
-                (T(B, E, x, E)) { x }
+                (T(R, E, x, E)) | (T(B, E, x, E)) { x }
                 (T(B, E, x, T(R, E, _, E))) { x }
                 (T(c, a, x, b)) { min_del_y(a) }
 

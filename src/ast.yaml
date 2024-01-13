@@ -96,6 +96,14 @@ structs:
         arg: AstArg
         next: AstArgList
 
+    AstAltArgs: # temp struct used by the parser for `fn (...) | (...) { ... }` alternative arguments
+        argList: AstArgList
+        next: AstAltArgs
+
+    AstAltFunction: # ditto
+        altArgs: AstAltArgs
+        nest: AstNest
+
     AstUnpack:
         symbol: HashSymbol
         argList: AstArgList
