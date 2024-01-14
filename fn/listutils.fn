@@ -24,7 +24,7 @@ fn foldr(func, lst, acc) {
 }
 
 fn reverse (lst) {
-    foldl((elem, acc) { elem @ acc }, lst, [])
+    foldl(fn (elem, acc) { elem @ acc }, lst, [])
 }
 
 fn filter {
