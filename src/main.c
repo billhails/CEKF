@@ -33,6 +33,7 @@
 #include "memory.h"
 #include "step.h"
 #include "debug.h"
+#include "anf_pp.h"
 #include "bytecode.h"
 #include "desugaring.h"
 #include "hash.h"
@@ -122,7 +123,7 @@ int main(int argc, char *argv[]) {
     // static analysis: ANF => annotated ANF (de bruijn)
     analizeExp(anfExp, NULL);
 #ifdef DEBUG_ANF
-    printExp(anfExp);
+    ppExp(anfExp);
     eprintf("\n");
 #endif
     // byte code generation
