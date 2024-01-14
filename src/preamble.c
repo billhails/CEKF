@@ -18,23 +18,19 @@
 
 const char *preamble =
 "let"
+"    typedef cmp { lt | eq | gt }"
 "    typedef bool { false | true }"
-
 "    typedef list(#t) { nil | cons(#t, list(#t)) }"
-
 "    fn append {"
 "        ([], b) { b }"
 "        (h @ t, b) { h @ append(t, b) }"
 "    }"
-
 "    fn car {"
 "        (h @ _) { h }"
 "    }"
-
 "    fn cdr {"
 "        (_ @ t) { t }"
 "    }"
-
 "in {";
 
 const char *postamble = "}";

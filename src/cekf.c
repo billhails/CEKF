@@ -33,6 +33,21 @@ Value vFalse = {
     .val = VALUE_VAL_STDINT(0)
 };
 
+Value vLt = {
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(0)
+};
+
+Value vEq = {
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(1)
+};
+
+Value vGt = {
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(2)
+};
+
 Value vVoid = {
     .type = VALUE_TYPE_VOID,
     .val = VALUE_VAL_NONE()

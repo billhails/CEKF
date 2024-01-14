@@ -55,6 +55,7 @@ typedef enum AexpPrimOp {
     AEXPPRIMOP_TYPE_VEC,
     AEXPPRIMOP_TYPE_XOR,
     AEXPPRIMOP_TYPE_MOD,
+    AEXPPRIMOP_TYPE_CMP,
 } AexpPrimOp;
 
 typedef enum AexpUnaryOp {

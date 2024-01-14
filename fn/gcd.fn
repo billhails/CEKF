@@ -1,0 +1,26 @@
+let
+    fn gcd(a, b) {
+        let
+            fn helper {
+                (a, b, lt) {
+                    let
+                        c = b - a;
+                    in
+                        helper(a, c, a <=> c)
+                }
+                (a, _, eq) { a }
+                (a, b, gt) {
+                    let
+                        c = a - b;
+                    in
+                        helper(b, c, b <=> c)
+                }
+            }
+        in
+            helper(a, b, a <=> b)
+    }
+in
+    gcd(
+        6400000000000000000000000000000000000000,
+        4000000000000000000000000000000000000000
+    )

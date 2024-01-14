@@ -225,6 +225,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %left AND OR XOR
 %nonassoc NOT
 %nonassoc EQ NE GT LT GE LE
+%nonassoc CMP
 %nonassoc '='
 %nonassoc ':'
 %right CONS APPEND
@@ -466,6 +467,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression LT expression        { $$ = binOpToFunCall(ltSymbol(), $1, $3); }
       | expression GE expression        { $$ = binOpToFunCall(geSymbol(), $1, $3); }
       | expression LE expression        { $$ = binOpToFunCall(leSymbol(), $1, $3); }
+      | expression CMP expression       { $$ = binOpToFunCall(cmpSymbol(), $1, $3); }
       | expression CONS expression      { $$ = binOpToFunCall(consSymbol(), $1, $3); }
       | expression APPEND expression    { $$ = binOpToFunCall(appendSymbol(), $1, $3); }
       | expression '+' expression       { $$ = binOpToFunCall(addSymbol(), $1, $3); }

@@ -141,6 +141,22 @@ HashSymbol *leSymbol() {
     return res;
 }
 
+HashSymbol *cmpSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("cmp$");
+    }
+    return res;
+}
+
+HashSymbol *starshipSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("cmp");
+    }
+    return res;
+}
+
 HashSymbol *consSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

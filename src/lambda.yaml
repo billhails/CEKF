@@ -208,6 +208,7 @@ enums:
         - LE
         - VEC
         - XOR
+        - CMP
 
     LamUnaryOp:
         - NEG

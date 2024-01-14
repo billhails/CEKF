@@ -189,6 +189,7 @@ enums:
         - VEC
         - XOR
         - MOD
+        - CMP
 
     AexpUnaryOp:
         - CAR

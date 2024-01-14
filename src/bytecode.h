@@ -80,6 +80,7 @@ typedef enum ByteCodes {
     BYTECODE_DONE,
 
     BYTECODE_ERROR,
+    BYTECODE_PRIM_CMP,
 } ByteCodes;
 
 typedef struct ByteCodeArray {

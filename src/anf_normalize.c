@@ -1056,6 +1056,8 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
             return AEXPPRIMOP_TYPE_XOR;
         case LAMPRIMOP_TYPE_MOD:
             return AEXPPRIMOP_TYPE_MOD;
+        case LAMPRIMOP_TYPE_CMP:
+            return AEXPPRIMOP_TYPE_CMP;
         default:
             cant_happen("unrecognised op type %d in mapPrimOp", op);
     }

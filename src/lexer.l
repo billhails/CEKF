@@ -64,6 +64,8 @@ struct PmModule *mod = yyextra;
 "@"  { return CONS; }
 "@@" { return APPEND; }
 
+"<=>" { return CMP; }
+
 {ID}  { yylval->s = yytext; return VAR; }
 #{ID} { yylval->s = yytext; return TYPE_VAR; }
 

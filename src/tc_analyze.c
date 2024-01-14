@@ -42,6 +42,7 @@ static void addToNg(TcNg *env, HashSymbol *symbol, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static TcType *makeBoolean(void);
+static TcType *makeStarship(void);
 static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
@@ -289,6 +290,19 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *n
     return res;
 }
 
+static TcType *analyzeStarship(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeComparison);
+    TcType *type1 = analyzeExp(exp1, env, ng);
+    int save = PROTECT(type1);
+    TcType *type2 = analyzeExp(exp2, env, ng);
+    PROTECT(type2);
+    unify(type1, type2);
+    UNPROTECT(save);
+    TcType *res = makeStarship();
+    LEAVE(analyzeComparison);
+    return res;
+}
+
 static TcType *analyzeBinaryBool(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *ng) {
     ENTER(analyzeBinaryBool);
     (void) analyzeBooleanExp(exp1, env, ng);
@@ -323,6 +337,9 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
         case LAMPRIMOP_TYPE_GE:
         case LAMPRIMOP_TYPE_LE:
             res = analyzeComparison(app->exp1, app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_CMP:
+            res = analyzeStarship(app->exp1, app->exp2, env, ng);
             break;
         case LAMPRIMOP_TYPE_VEC:
             res = analyzeExp(app->exp2, env, ng);
@@ -1152,6 +1169,11 @@ static void addToNg(TcNg *ng, HashSymbol *symbol, TcType *type) {
 
 static TcType *makeBoolean() {
     TcType *res = makeTypeDef(boolSymbol(), NULL);
+    return res;
+}
+
+static TcType *makeStarship() {
+    TcType *res = makeTypeDef(starshipSymbol(), NULL);
     return res;
 }
 

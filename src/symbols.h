@@ -43,6 +43,8 @@ HashSymbol *ifSymbol(void);
 HashSymbol *intSymbol(void);
 HashSymbol *leSymbol(void);
 HashSymbol *ltSymbol(void);
+HashSymbol *cmpSymbol(void);
+HashSymbol *starshipSymbol(void);
 HashSymbol *modSymbol(void);
 HashSymbol *mulSymbol(void);
 HashSymbol *negSymbol(void);

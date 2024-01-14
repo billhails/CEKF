@@ -233,6 +233,9 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         case AEXPPRIMOP_TYPE_VEC:
             prim = BYTECODE_PRIM_VEC;
             break;
+        case AEXPPRIMOP_TYPE_CMP:
+            prim = BYTECODE_PRIM_CMP;
+            break;
         default:
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
     }

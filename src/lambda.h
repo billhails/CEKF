@@ -48,6 +48,7 @@ typedef enum LamPrimOp {
     LAMPRIMOP_TYPE_LE,
     LAMPRIMOP_TYPE_VEC,
     LAMPRIMOP_TYPE_XOR,
+    LAMPRIMOP_TYPE_CMP,
 } LamPrimOp;
 
 typedef enum LamUnaryOp {

@@ -325,6 +325,19 @@ static int _cmp(Value a, Value b) {
     }
 }
 
+static Value cmp(Value a, Value b) {
+    switch (_cmp(a, b)) {
+        case -1:
+            return vLt;
+        case 0:
+            return vEq;
+        case 1:
+            return vGt;
+        default:
+            cant_happen("unexpected value from _cmp");
+    }
+}
+
 static bool _eq(Value a, Value b) {
     return _cmp(a, b) == 0;
 }
@@ -596,6 +609,13 @@ static void step() {
                 int size = readCurrentByte();
                 DEBUGPRINTF("PUSHN [%d]\n", size);
                 pushN(&state.S, size);
+            }
+            break;
+            case BYTECODE_PRIM_CMP: { // pop two values, perform the binop and push the result
+                DEBUGPRINTF("CMP\n");
+                Value b = pop();
+                Value a = pop();
+                push(cmp(a, b));
             }
             break;
             case BYTECODE_PRIM_ADD: { // pop two values, perform the binop and push the result

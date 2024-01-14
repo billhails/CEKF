@@ -160,6 +160,10 @@ void printAexpPrimApp(struct AexpPrimApp * x, int depth) {
             pad(depth + 1);
             eprintf("AEXPPRIMOP_TYPE_MOD");
             break;
+        case AEXPPRIMOP_TYPE_CMP:
+            pad(depth + 1);
+            eprintf("AEXPPRIMOP_TYPE_CMP");
+            break;
     }
     eprintf("\n");
     printAexp(x->exp1, depth + 1);
@@ -731,6 +735,9 @@ bool eqAexpPrimApp(struct AexpPrimApp * a, struct AexpPrimApp * b) {
             if (a != b) return false;
             break;
         case AEXPPRIMOP_TYPE_MOD:
+            if (a != b) return false;
+            break;
+        case AEXPPRIMOP_TYPE_CMP:
             if (a != b) return false;
             break;
     }

@@ -800,6 +800,7 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     if (symbol == divSymbol()) return makeBinOp(LAMPRIMOP_TYPE_DIV, args);
     if (symbol == modSymbol()) return makeBinOp(LAMPRIMOP_TYPE_MOD, args);
     if (symbol == powSymbol()) return makeBinOp(LAMPRIMOP_TYPE_POW, args);
+    if (symbol == cmpSymbol()) return makeBinOp(LAMPRIMOP_TYPE_CMP, args);
     return NULL;
 }
 

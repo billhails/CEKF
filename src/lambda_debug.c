@@ -125,6 +125,10 @@ void printLamPrimApp(struct LamPrimApp * x, int depth) {
             pad(depth + 1);
             eprintf("LAMPRIMOP_TYPE_XOR");
             break;
+        case LAMPRIMOP_TYPE_CMP:
+            pad(depth + 1);
+            eprintf("LAMPRIMOP_TYPE_CMP");
+            break;
     }
     eprintf("\n");
     printLamExp(x->exp1, depth + 1);
@@ -859,6 +863,9 @@ bool eqLamPrimApp(struct LamPrimApp * a, struct LamPrimApp * b) {
             if (a != b) return false;
             break;
         case LAMPRIMOP_TYPE_XOR:
+            if (a != b) return false;
+            break;
+        case LAMPRIMOP_TYPE_CMP:
             if (a != b) return false;
             break;
     }
