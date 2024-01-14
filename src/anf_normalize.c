@@ -86,6 +86,35 @@ Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
 }
 
+static int countAexpVarList(AexpVarList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+static int countAexpList(AexpList *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+
+/*
+static int countLetRecBindings(LetRecBindings *list) {
+    int count = 0;
+    while (list != NULL) {
+        count++;
+        list = list->next;
+    }
+    return count;
+}
+*/
+
 static Exp *normalize(LamExp *lamExp, Exp *tail) {
     ENTER(normalize);
     IFDEBUG(ppLamExp(lamExp));
@@ -257,7 +286,7 @@ static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
     IFDEBUG(ppLamLetRec(lamLetRec));
     Exp* body = normalize(lamLetRec->body, tail);
     int save = PROTECT(body);
-    CexpLetRec *cexpLetRec = newCexpLetRec(NULL, body);
+    CexpLetRec *cexpLetRec = newCexpLetRec(0, NULL, body);
     PROTECT(cexpLetRec);
     cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRec->bindings);
     PROTECT(cexpLetRec);
@@ -330,7 +359,7 @@ static Exp *normalizeIff(LamIff *lamIff, Exp *tail) {
     CexpIf *cexpIf = newCexpIf(condition, consequent, alternative);
     UNPROTECT(save2);
     save2 = PROTECT(cexpIf);
-    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(cexpIf));
+    Cexp *cexp = newCexp(CEXP_TYPE_IFF, CEXP_VAL_IFF(cexpIf));
     REPLACE_PROTECT(save2, cexp);
     Exp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -349,7 +378,7 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
     DEBUG("calling replaceLamList");
     AexpList *args = replaceLamList(lamMakeVec->args, replacements);
     int save2 = PROTECT(args);
-    AexpMakeVec *aexpMakeVec = newAexpMakeVec(args);
+    AexpMakeVec *aexpMakeVec = newAexpMakeVec(countAexpList(args), args);
     REPLACE_PROTECT(save2, aexpMakeVec);
     Aexp *aexp = newAexp(AEXP_TYPE_MAKEVEC, AEXP_VAL_MAKEVEC(aexpMakeVec));
     REPLACE_PROTECT(save2, aexp);
@@ -490,9 +519,9 @@ static Exp *normalizeAnd(LamAnd *app, Exp *tail) {
     int save = PROTECT(left);
     Exp *right = normalize(app->right, NULL);
     PROTECT(right);
-    CexpBool *and = newCexpBool(BOOL_TYPE_AND, left, right);
+    CexpBool *and = newCexpBool(CEXPBOOLTYPE_TYPE_AND, left, right);
     PROTECT(and);
-    Cexp *cexp = newCexp(CEXP_TYPE_BOOL, CEXP_VAL_BOOL(and));
+    Cexp *cexp = newCexp(CEXP_TYPE_BOOLEAN, CEXP_VAL_BOOLEAN(and));
     PROTECT(cexp);
     Exp *exp = wrapCexp(cexp);
     PROTECT(exp);
@@ -506,9 +535,9 @@ static Exp *normalizeOr(LamOr *app, Exp *tail) {
     int save = PROTECT(left);
     Exp *right = normalize(app->right, NULL);
     PROTECT(right);
-    CexpBool *or = newCexpBool(BOOL_TYPE_OR, left, right);
+    CexpBool *or = newCexpBool(CEXPBOOLTYPE_TYPE_OR, left, right);
     PROTECT(or);
-    Cexp *cexp = newCexp(CEXP_TYPE_BOOL, CEXP_VAL_BOOL(or));
+    Cexp *cexp = newCexp(CEXP_TYPE_BOOLEAN, CEXP_VAL_BOOLEAN(or));
     PROTECT(cexp);
     Exp *exp = wrapCexp(cexp);
     PROTECT(exp);
@@ -609,7 +638,7 @@ static Aexp *aexpNormalizeLam(LamLam *lamLam) {
     int save = PROTECT(varList);
     Exp *body = normalize(lamLam->exp, NULL);
     PROTECT(body);
-    AexpLam *aexpLam = newAexpLam(varList, body);
+    AexpLam *aexpLam = newAexpLam(countAexpVarList(varList), 0, varList, body);
     PROTECT(aexpLam);
     Aexp *aexp = newAexp(AEXP_TYPE_LAM, AEXP_VAL_LAM(aexpLam));
     UNPROTECT(save);
@@ -625,7 +654,7 @@ static AexpIntList *convertIntList(LamIntList *list) {
     }
     AexpIntList *next = convertIntList(list->next);
     int save = PROTECT(next);
-    AexpIntList *this = newAexpIntList(next, list->item);
+    AexpIntList *this = newAexpIntList(list->item, next);
     UNPROTECT(save);
     LEAVE(convertIntList);
     return this;
@@ -639,7 +668,7 @@ static AexpVarList *convertVarList(LamVarList *args) {
     }
     AexpVarList *next = convertVarList(args->next);
     int save = PROTECT(next);
-    AexpVarList *this = newAexpVarList(next, args->var);
+    AexpVarList *this = newAexpVarList(args->var, next);
     UNPROTECT(save);
     LEAVE(convertVarList);
     return this;
@@ -660,7 +689,7 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
     PROTECT(args);
     DEBUG("back from replaceLamList");
     IFDEBUG(printHashTable(replacements, 0));
-    CexpApply *cexpApply = newCexpApply(function, args);
+    CexpApply *cexpApply = newCexpApply(function, countAexpList(args), args);
     UNPROTECT(save2);
     save2 = PROTECT(cexpApply);
     Cexp *cexp = newCexp(CEXP_TYPE_APPLY, CEXP_VAL_APPLY(cexpApply));
@@ -710,15 +739,15 @@ static Aexp *aexpNormalizeVar(HashSymbol *var) {
 }
 
 static Aexp *aexpNormalizeBigInteger(BigInt *integer) {
-    return newAexp(AEXP_TYPE_BIGINT, AEXP_VAL_BIGINT(integer));
+    return newAexp(AEXP_TYPE_BIGINTEGER, AEXP_VAL_BIGINTEGER(integer));
 }
 
 static Aexp *aexpNormalizeStdInteger(int integer) {
-    return newAexp(AEXP_TYPE_LITTLEINT, AEXP_VAL_LITTLEINT(integer));
+    return newAexp(AEXP_TYPE_LITTLEINTEGER, AEXP_VAL_LITTLEINTEGER(integer));
 }
 
 static Aexp *aexpNormalizeCharacter(char character) {
-    return newAexp(AEXP_TYPE_CHAR, AEXP_VAL_CHAR(character));
+    return newAexp(AEXP_TYPE_CHARACTER, AEXP_VAL_CHARACTER(character));
 }
 
 static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
@@ -755,13 +784,13 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
         case LAMCONDCASES_TYPE_INTEGERS: {
             CexpIntCondCases *intCases = normalizeIntCondCases(cases->val.integers);
             PROTECT(intCases);
-            res = newCexpCondCases(CONDCASE_TYPE_INT, CONDCASE_VAL_INT(intCases));
+            res = newCexpCondCases(CEXPCONDCASES_TYPE_INTCASES, CEXPCONDCASES_VAL_INTCASES(intCases));
         }
         break;
         case LAMCONDCASES_TYPE_CHARACTERS: {
             CexpCharCondCases *charCases = normalizeCharCondCases(cases->val.characters);
             PROTECT(charCases);
-            res = newCexpCondCases(CONDCASE_TYPE_CHAR, CONDCASE_VAL_CHAR(charCases));
+            res = newCexpCondCases(CEXPCONDCASES_TYPE_CHARCASES, CEXPCONDCASES_VAL_CHARCASES(charCases));
         }
         break;
         default:
@@ -876,7 +905,7 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
     if (lamExpIsConst(lamLetRecBindings->val)) {
         Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
         PROTECT(val);
-        cexpLetRec->bindings = newLetRecBindings(cexpLetRec->bindings, lamLetRecBindings->var, val);
+        cexpLetRec->bindings = newLetRecBindings(lamLetRecBindings->var, val, cexpLetRec->bindings);
         cexpLetRec->nbindings++;
     } else {
         Exp *val = normalize(lamLetRecBindings->val, NULL);
@@ -894,7 +923,7 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *
         PROTECT(expLet);
         exp = newExp(EXP_TYPE_LET, EXP_VAL_LET(expLet));
         PROTECT(exp);
-        cexpLetRec = newCexpLetRec(NULL, exp);
+        cexpLetRec = newCexpLetRec(0, NULL, exp);
     }
     UNPROTECT(save);
     return cexpLetRec;
@@ -913,7 +942,7 @@ static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements) {
     DEBUG("calling replaceLamList");
     AexpList *aexpList = replaceLamList(makeVec->args, replacements);
     int save = PROTECT(aexpList);
-    AexpMakeVec *aexpMakeVec = newAexpMakeVec(aexpList);
+    AexpMakeVec *aexpMakeVec = newAexpMakeVec(countAexpList(aexpList), aexpList);
     PROTECT(aexpMakeVec);
     Aexp *res = newAexp(AEXP_TYPE_MAKEVEC, AEXP_VAL_MAKEVEC(aexpMakeVec));
     UNPROTECT(save);
@@ -932,7 +961,7 @@ static AexpList *replaceLamList(LamList *list, HashTable *replacements) {
     int save = PROTECT(next);
     Aexp *val = replaceLamExp(list->exp, replacements);
     PROTECT(val);
-    AexpList *res = newAexpList(next, val);
+    AexpList *res = newAexpList(val, next);
     UNPROTECT(save);
     LEAVE(replaceLamList);
     return res;
@@ -968,9 +997,9 @@ static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements) 
 static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
     switch(op) {
         case LAMUNARYOP_TYPE_NOT:
-            return AEXP_UNARY_NOT;
+            return AEXPUNARYOP_TYPE_NOT;
         case LAMUNARYOP_TYPE_PRINT:
-            return AEXP_UNARY_PRINT;
+            return AEXPUNARYOP_TYPE_PRINT;
         default:
             cant_happen("unrecognised type %d in mapUnaryOp", op);
     }
@@ -979,33 +1008,33 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
 static AexpPrimOp mapPrimOp(LamPrimOp op) {
     switch (op) {
         case LAMPRIMOP_TYPE_ADD:
-            return AEXP_PRIM_ADD;
+            return AEXPPRIMOP_TYPE_ADD;
         case LAMPRIMOP_TYPE_SUB:
-            return AEXP_PRIM_SUB;
+            return AEXPPRIMOP_TYPE_SUB;
         case LAMPRIMOP_TYPE_MUL:
-            return AEXP_PRIM_MUL;
+            return AEXPPRIMOP_TYPE_MUL;
         case LAMPRIMOP_TYPE_DIV:
-            return AEXP_PRIM_DIV;
+            return AEXPPRIMOP_TYPE_DIV;
         case LAMPRIMOP_TYPE_POW:
-            return AEXP_PRIM_POW;
+            return AEXPPRIMOP_TYPE_POW;
         case LAMPRIMOP_TYPE_EQ:
-            return AEXP_PRIM_EQ;
+            return AEXPPRIMOP_TYPE_EQ;
         case LAMPRIMOP_TYPE_NE:
-            return AEXP_PRIM_NE;
+            return AEXPPRIMOP_TYPE_NE;
         case LAMPRIMOP_TYPE_GT:
-            return AEXP_PRIM_GT;
+            return AEXPPRIMOP_TYPE_GT;
         case LAMPRIMOP_TYPE_LT:
-            return AEXP_PRIM_LT;
+            return AEXPPRIMOP_TYPE_LT;
         case LAMPRIMOP_TYPE_GE:
-            return AEXP_PRIM_GE;
+            return AEXPPRIMOP_TYPE_GE;
         case LAMPRIMOP_TYPE_LE:
-            return AEXP_PRIM_LE;
+            return AEXPPRIMOP_TYPE_LE;
         case LAMPRIMOP_TYPE_VEC:
-            return AEXP_PRIM_VEC;
+            return AEXPPRIMOP_TYPE_VEC;
         case LAMPRIMOP_TYPE_XOR:
-            return AEXP_PRIM_XOR;
+            return AEXPPRIMOP_TYPE_XOR;
         case LAMPRIMOP_TYPE_MOD:
-            return AEXP_PRIM_MOD;
+            return AEXPPRIMOP_TYPE_MOD;
         default:
             cant_happen("unrecognised op type %d in mapPrimOp", op);
     }

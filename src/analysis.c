@@ -24,7 +24,7 @@
 
 #include "common.h"
 #include "analysis.h"
-#include "exp.h"
+#include "anf.h"
 
 // #define DEBUG_ANALIZE
 
@@ -81,9 +81,9 @@ static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env) {
     int offset;
     if (locate(x, env, &frame, &offset)) {
         if (frame == 0) {
-            return newAexpAnnotatedVar(VAR_TYPE_STACK, frame, offset, x);
+            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_STACK, frame, offset, x);
         } else {
-            return newAexpAnnotatedVar(VAR_TYPE_ENV, frame - 1, offset, x);
+            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_ENV, frame - 1, offset, x);
         }
     }
     cant_happen("no binding for var '%s' in analizeAexpVar", x->name);
@@ -157,10 +157,10 @@ static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env) {
     eprintf("analizeCexpCondCases "); printCexpCondCases(x); eprintf("  "); printCTEnv(env); eprintf("\n");
 #endif
     switch (x->type) {
-        case CONDCASE_TYPE_INT:
+        case CEXPCONDCASES_TYPE_INTCASES:
             analizeCexpIntCondCases(x->val.intCases, env);
             break;
-        case CONDCASE_TYPE_CHAR:
+        case CEXPCONDCASES_TYPE_CHARCASES:
             analizeCexpCharCondCases(x->val.charCases, env);
             break;
         default:
@@ -255,12 +255,12 @@ static void analizeAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_ANNOTATEDVAR:
             cant_happen("analizeAexp called on annotated var %s", x->val.annotatedVar->var->name);
             break;
-        case AEXP_TYPE_TRUE:
-        case AEXP_TYPE_FALSE:
-        case AEXP_TYPE_BIGINT:
-        case AEXP_TYPE_LITTLEINT:
-        case AEXP_TYPE_CHAR:
-        case AEXP_TYPE_VOID:
+        case AEXP_TYPE_T:
+        case AEXP_TYPE_F:
+        case AEXP_TYPE_BIGINTEGER:
+        case AEXP_TYPE_LITTLEINTEGER:
+        case AEXP_TYPE_CHARACTER:
+        case AEXP_TYPE_V:
             break;
         case AEXP_TYPE_PRIM:
             analizeAexpPrimApp(x->val.prim, env);
@@ -301,7 +301,7 @@ static void analizeCexp(Cexp *x, CTEnv *env) {
         case CEXP_TYPE_APPLY:
             analizeCexpApply(x->val.apply, env);
             break;
-        case CEXP_TYPE_IF:
+        case CEXP_TYPE_IFF:
             analizeCexpIf(x->val.iff, env);
             break;
         case CEXP_TYPE_COND:

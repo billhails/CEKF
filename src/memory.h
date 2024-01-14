@@ -24,41 +24,12 @@
 struct Header;
 
 #include "ast_objtypes.h"
+#include "anf_objtypes.h"
 #include "lambda_objtypes.h"
 #include "tpmc_objtypes.h"
 #include "tc_objtypes.h"
 
 typedef enum {
-    // exp types
-    OBJTYPE_AMB,
-    OBJTYPE_CUT,
-    OBJTYPE_APPLY,
-    OBJTYPE_BINDINGS,
-    OBJTYPE_BOOL,
-
-    OBJTYPE_IF,
-    OBJTYPE_COND,
-    OBJTYPE_CONDCASES,
-    OBJTYPE_INTCONDCASES,
-    OBJTYPE_CHARCONDCASES,
-
-    OBJTYPE_AEXP,
-    OBJTYPE_CEXP,
-    OBJTYPE_EXP,
-    OBJTYPE_EXPLIST,
-    OBJTYPE_AEXPINTLIST,
-
-    OBJTYPE_LAM,
-    OBJTYPE_LET,
-    OBJTYPE_LETREC,
-    OBJTYPE_PRIMAPP,
-    OBJTYPE_UNARYAPP,
-
-    OBJTYPE_ANNOTATEDVAR,
-    OBJTYPE_VARLIST,
-    OBJTYPE_MAKEVEC,
-    OBJTYPE_MATCH,
-    OBJTYPE_MATCHLIST,
 
     // cekf types
     OBJTYPE_CLO,
@@ -78,6 +49,7 @@ typedef enum {
     OBJTYPE_BIGINT,
     OBJTYPE_PMMODULE,
 
+    ANF_OBJTYPES(),
     AST_OBJTYPES(),
     LAMBDA_OBJTYPES(),
     TPMC_OBJTYPES(),
@@ -99,12 +71,10 @@ void *allocate(size_t size, ObjType type);
 char *safeStrdup(char *s);
 
 void markObj(Header *h, int i);
-void markExpObj(Header *x);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
 
 void freeObj(Header *h);
-void freeExpObj(Header *x);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
 

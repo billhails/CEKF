@@ -27,7 +27,7 @@
 
 #include "bytecode.h"
 #include "common.h"
-#include "exp.h"
+#include "anf.h"
 #include "memory.h"
 #include "value.h"
 

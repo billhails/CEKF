@@ -24,4 +24,6 @@ HashSymbol *genSym(char *prefix);
 
 HashSymbol *newSymbol(char *name);
 
+void markVarTable(void);
+
 #endif

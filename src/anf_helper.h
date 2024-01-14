@@ -1,5 +1,5 @@
-#ifndef cekf_debug_h
-#define cekf_debug_h
+#ifndef cekf_anf_helper_h
+#define cekf_anf_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,19 +16,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * ANF structures to be converted to bytecode.
+ *
+ * Generated from src/anf.yaml by tools/makeAST.py
  */
 
-#include "cekf.h"
 #include "anf.h"
-#include "analysis.h"
-#include "bytecode.h"
-
-void printCEKF(CEKF *x);
-void printCTEnv(CTEnv *x);
-
-void printContainedValue(Value x, int depth);
-void printValue(Value x, int depth);
-
-void dumpByteCode(ByteCodeArray *b);
 
 #endif
