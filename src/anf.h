@@ -27,6 +27,8 @@
 #include "common.h"
 #include "bigint.h"
 #include "ast_helper.h"
+#include "tc.h"
+#include "tc_debug.h"
 
 /*
  * typedefs
@@ -59,7 +61,6 @@ typedef enum AexpUnaryOp {
     AEXPUNARYOP_TYPE_CAR,
     AEXPUNARYOP_TYPE_CDR,
     AEXPUNARYOP_TYPE_NOT,
-    AEXPUNARYOP_TYPE_PRINT,
 } AexpUnaryOp;
 
 typedef enum CexpBoolType {
@@ -95,6 +96,7 @@ typedef enum CexpType {
     CEXP_TYPE_IFF,
     CEXP_TYPE_COND,
     CEXP_TYPE_CALLCC,
+    CEXP_TYPE_PRINT,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
     CEXP_TYPE_CUT,
@@ -139,6 +141,7 @@ typedef union CexpVal {
     struct CexpIf * iff;
     struct CexpCond * cond;
     struct Aexp * callCC;
+    struct TypedAexp * print;
     struct CexpLetRec * letRec;
     struct CexpAmb * amb;
     struct CexpCut * cut;
@@ -294,6 +297,12 @@ typedef struct ExpLet {
     struct Exp * body;
 } ExpLet;
 
+typedef struct TypedAexp {
+    Header header;
+    struct Aexp * aexp;
+    struct TcType * type;
+} TypedAexp;
+
 typedef struct CexpCondCases {
     Header header;
     enum CexpCondCasesType  type;
@@ -346,6 +355,7 @@ struct CexpAmb * newCexpAmb(struct Exp * exp1, struct Exp * exp2);
 struct CexpCut * newCexpCut(struct Exp * exp);
 struct CexpBool * newCexpBool(enum CexpBoolType  type, struct Exp * exp1, struct Exp * exp2);
 struct ExpLet * newExpLet(HashSymbol * var, struct Exp * val, struct Exp * body);
+struct TypedAexp * newTypedAexp(struct Aexp * aexp, struct TcType * type);
 struct CexpCondCases * newCexpCondCases(enum CexpCondCasesType  type, union CexpCondCasesVal  val);
 struct Aexp * newAexp(enum AexpType  type, union AexpVal  val);
 struct Cexp * newCexp(enum CexpType  type, union CexpVal  val);
@@ -376,6 +386,7 @@ struct CexpAmb * copyCexpAmb(struct CexpAmb * o);
 struct CexpCut * copyCexpCut(struct CexpCut * o);
 struct CexpBool * copyCexpBool(struct CexpBool * o);
 struct ExpLet * copyExpLet(struct ExpLet * o);
+struct TypedAexp * copyTypedAexp(struct TypedAexp * o);
 struct CexpCondCases * copyCexpCondCases(struct CexpCondCases * o);
 struct Aexp * copyAexp(struct Aexp * o);
 struct Cexp * copyCexp(struct Cexp * o);
@@ -406,6 +417,7 @@ void markCexpAmb(struct CexpAmb * x);
 void markCexpCut(struct CexpCut * x);
 void markCexpBool(struct CexpBool * x);
 void markExpLet(struct ExpLet * x);
+void markTypedAexp(struct TypedAexp * x);
 void markCexpCondCases(struct CexpCondCases * x);
 void markAexp(struct Aexp * x);
 void markCexp(struct Cexp * x);
@@ -436,6 +448,7 @@ void freeCexpAmb(struct CexpAmb * x);
 void freeCexpCut(struct CexpCut * x);
 void freeCexpBool(struct CexpBool * x);
 void freeExpLet(struct ExpLet * x);
+void freeTypedAexp(struct TypedAexp * x);
 void freeCexpCondCases(struct CexpCondCases * x);
 void freeAexp(struct Aexp * x);
 void freeCexp(struct Cexp * x);
@@ -471,6 +484,7 @@ void freeExp(struct Exp * x);
 #define CEXP_VAL_IFF(x) ((union CexpVal ){.iff = (x)})
 #define CEXP_VAL_COND(x) ((union CexpVal ){.cond = (x)})
 #define CEXP_VAL_CALLCC(x) ((union CexpVal ){.callCC = (x)})
+#define CEXP_VAL_PRINT(x) ((union CexpVal ){.print = (x)})
 #define CEXP_VAL_LETREC(x) ((union CexpVal ){.letRec = (x)})
 #define CEXP_VAL_AMB(x) ((union CexpVal ){.amb = (x)})
 #define CEXP_VAL_CUT(x) ((union CexpVal ){.cut = (x)})

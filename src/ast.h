@@ -70,6 +70,7 @@ typedef enum AstExpressionType {
     AST_EXPRESSION_TYPE_ENV,
     AST_EXPRESSION_TYPE_NEST,
     AST_EXPRESSION_TYPE_IFF,
+    AST_EXPRESSION_TYPE_PRINT,
 } AstExpressionType;
 
 
@@ -113,6 +114,7 @@ typedef union AstExpressionVal {
     struct AstEnv * env;
     struct AstNest * nest;
     struct AstIff * iff;
+    struct AstPrint * print;
 } AstExpressionVal;
 
 
@@ -286,6 +288,11 @@ typedef struct AstIff {
     struct AstNest * alternative;
 } AstIff;
 
+typedef struct AstPrint {
+    Header header;
+    struct AstExpression * exp;
+} AstPrint;
+
 typedef struct AstDefinition {
     Header header;
     enum AstDefinitionType  type;
@@ -358,6 +365,7 @@ struct AstPackage * newAstPackage(HashSymbol * symbol, struct AstPackage * next)
 struct AstExpressions * newAstExpressions(struct AstExpression * expression, struct AstExpressions * next);
 struct AstEnv * newAstEnv(struct AstPackage * package, struct AstDefinitions * definitions);
 struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * consequent, struct AstNest * alternative);
+struct AstPrint * newAstPrint(struct AstExpression * exp);
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val);
 struct AstSinglePrototype * newAstSinglePrototype(enum AstSinglePrototypeType  type, union AstSinglePrototypeVal  val);
 struct AstTypeClause * newAstTypeClause(enum AstTypeClauseType  type, union AstTypeClauseVal  val);
@@ -397,6 +405,7 @@ struct AstPackage * copyAstPackage(struct AstPackage * o);
 struct AstExpressions * copyAstExpressions(struct AstExpressions * o);
 struct AstEnv * copyAstEnv(struct AstEnv * o);
 struct AstIff * copyAstIff(struct AstIff * o);
+struct AstPrint * copyAstPrint(struct AstPrint * o);
 struct AstDefinition * copyAstDefinition(struct AstDefinition * o);
 struct AstSinglePrototype * copyAstSinglePrototype(struct AstSinglePrototype * o);
 struct AstTypeClause * copyAstTypeClause(struct AstTypeClause * o);
@@ -436,6 +445,7 @@ void markAstPackage(struct AstPackage * x);
 void markAstExpressions(struct AstExpressions * x);
 void markAstEnv(struct AstEnv * x);
 void markAstIff(struct AstIff * x);
+void markAstPrint(struct AstPrint * x);
 void markAstDefinition(struct AstDefinition * x);
 void markAstSinglePrototype(struct AstSinglePrototype * x);
 void markAstTypeClause(struct AstTypeClause * x);
@@ -475,6 +485,7 @@ void freeAstPackage(struct AstPackage * x);
 void freeAstExpressions(struct AstExpressions * x);
 void freeAstEnv(struct AstEnv * x);
 void freeAstIff(struct AstIff * x);
+void freeAstPrint(struct AstPrint * x);
 void freeAstDefinition(struct AstDefinition * x);
 void freeAstSinglePrototype(struct AstSinglePrototype * x);
 void freeAstTypeClause(struct AstTypeClause * x);
@@ -518,6 +529,7 @@ void pushAstCharArray(struct AstCharArray * obj, char entry);
 #define AST_EXPRESSION_VAL_ENV(x) ((union AstExpressionVal ){.env = (x)})
 #define AST_EXPRESSION_VAL_NEST(x) ((union AstExpressionVal ){.nest = (x)})
 #define AST_EXPRESSION_VAL_IFF(x) ((union AstExpressionVal ){.iff = (x)})
+#define AST_EXPRESSION_VAL_PRINT(x) ((union AstExpressionVal ){.print = (x)})
 
 /*
  * access declarations

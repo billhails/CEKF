@@ -373,6 +373,16 @@ void printAstIff(struct AstIff * x, int depth) {
     eprintf("]");
 }
 
+void printAstPrint(struct AstPrint * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("AstPrint (NULL)"); return; }
+    eprintf("AstPrint[\n");
+    printAstExpression(x->exp, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printAstDefinition(struct AstDefinition * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("AstDefinition (NULL)"); return; }
@@ -565,6 +575,11 @@ eprintf("char %c", x->val.character);
             pad(depth + 1);
             eprintf("AST_EXPRESSION_TYPE_IFF\n");
             printAstIff(x->val.iff, depth + 1);
+            break;
+        case AST_EXPRESSION_TYPE_PRINT:
+            pad(depth + 1);
+            eprintf("AST_EXPRESSION_TYPE_PRINT\n");
+            printAstPrint(x->val.print, depth + 1);
             break;
         default:
             cant_happen("unrecognised type %d in printAstExpression", x->type);
@@ -817,6 +832,13 @@ bool eqAstIff(struct AstIff * a, struct AstIff * b) {
     return true;
 }
 
+bool eqAstPrint(struct AstPrint * a, struct AstPrint * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqAstExpression(a->exp, b->exp)) return false;
+    return true;
+}
+
 bool eqAstDefinition(struct AstDefinition * a, struct AstDefinition * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
@@ -943,6 +965,9 @@ bool eqAstExpression(struct AstExpression * a, struct AstExpression * b) {
             break;
         case AST_EXPRESSION_TYPE_IFF:
             if (!eqAstIff(a->val.iff, b->val.iff)) return false;
+            break;
+        case AST_EXPRESSION_TYPE_PRINT:
+            if (!eqAstPrint(a->val.print, b->val.print)) return false;
             break;
         default:
             cant_happen("unrecognised type %d in eqAstExpression", a->type);

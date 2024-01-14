@@ -247,6 +247,14 @@ struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right) {
     return x;
 }
 
+struct LamPrint * newLamPrint(struct LamExp * exp) {
+    struct LamPrint * x = NEW(LamPrint, OBJTYPE_LAMPRINT);
+    DEBUG("new LamPrint %pn", x);
+    x->exp = exp;
+    x->type = NULL;
+    return x;
+}
+
 struct LamTypeDefs * newLamTypeDefs(struct LamTypeDefList * typeDefs, struct LamExp * body) {
     struct LamTypeDefs * x = NEW(LamTypeDefs, OBJTYPE_LAMTYPEDEFS);
     DEBUG("new LamTypeDefs %pn", x);
@@ -723,6 +731,20 @@ struct LamAmb * copyLamAmb(struct LamAmb * o) {
     return x;
 }
 
+struct LamPrint * copyLamPrint(struct LamPrint * o) {
+    if (o == NULL) return NULL;
+    struct LamPrint * x = NEW(LamPrint, OBJTYPE_LAMPRINT);
+    DEBUG("copy LamPrint %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct LamPrint));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->exp = copyLamExp(o->exp);
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
+}
+
 struct LamTypeDefs * copyLamTypeDefs(struct LamTypeDefs * o) {
     if (o == NULL) return NULL;
     struct LamTypeDefs * x = NEW(LamTypeDefs, OBJTYPE_LAMTYPEDEFS);
@@ -941,6 +963,9 @@ struct LamExp * copyLamExp(struct LamExp * o) {
             break;
         case LAMEXP_TYPE_AMB:
             x->val.amb = copyLamAmb(o->val.amb);
+            break;
+        case LAMEXP_TYPE_PRINT:
+            x->val.print = copyLamPrint(o->val.print);
             break;
         case LAMEXP_TYPE_CHARACTER:
             x->val.character = o->val.character;
@@ -1226,6 +1251,14 @@ void markLamAmb(struct LamAmb * x) {
     markLamExp(x->right);
 }
 
+void markLamPrint(struct LamPrint * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLamExp(x->exp);
+    markTcType(x->type);
+}
+
 void markLamTypeDefs(struct LamTypeDefs * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -1376,6 +1409,9 @@ void markLamExp(struct LamExp * x) {
         case LAMEXP_TYPE_AMB:
             markLamAmb(x->val.amb);
             break;
+        case LAMEXP_TYPE_PRINT:
+            markLamPrint(x->val.print);
+            break;
         case LAMEXP_TYPE_CHARACTER:
             break;
         case LAMEXP_TYPE_BACK:
@@ -1506,6 +1542,9 @@ void markLambdaObj(struct Header *h) {
             break;
         case OBJTYPE_LAMAMB:
             markLamAmb((LamAmb *)h);
+            break;
+        case OBJTYPE_LAMPRINT:
+            markLamPrint((LamPrint *)h);
             break;
         case OBJTYPE_LAMTYPEDEFS:
             markLamTypeDefs((LamTypeDefs *)h);
@@ -1655,6 +1694,10 @@ void freeLamAmb(struct LamAmb * x) {
     FREE(x, LamAmb);
 }
 
+void freeLamPrint(struct LamPrint * x) {
+    FREE(x, LamPrint);
+}
+
 void freeLamTypeDefs(struct LamTypeDefs * x) {
     FREE(x, LamTypeDefs);
 }
@@ -1789,6 +1832,9 @@ void freeLambdaObj(struct Header *h) {
         case OBJTYPE_LAMAMB:
             freeLamAmb((LamAmb *)h);
             break;
+        case OBJTYPE_LAMPRINT:
+            freeLamPrint((LamPrint *)h);
+            break;
         case OBJTYPE_LAMTYPEDEFS:
             freeLamTypeDefs((LamTypeDefs *)h);
             break;
@@ -1889,6 +1935,8 @@ char *typenameLambdaObj(int type) {
             return "LamOr";
         case OBJTYPE_LAMAMB:
             return "LamAmb";
+        case OBJTYPE_LAMPRINT:
+            return "LamPrint";
         case OBJTYPE_LAMTYPEDEFS:
             return "LamTypeDefs";
         case OBJTYPE_LAMTYPEDEFLIST:

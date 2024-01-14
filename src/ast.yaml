@@ -137,6 +137,9 @@ structs:
         consequent: AstNest
         alternative: AstNest
 
+    AstPrint:
+        exp: AstExpression
+
 unions:
     AstDefinition:
         define: AstDefine
@@ -173,6 +176,7 @@ unions:
         env: AstEnv
         nest: AstNest
         iff: AstIff
+        print: AstPrint
 
 arrays:
     AstCharArray:
@@ -184,10 +188,10 @@ enums: {}
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
-        printFn: "printAstSymbol"
+        printFn: printAstSymbol
         valued: true
     char:
-        cname: "char"
+        cname: char
         printf: "%c"
         valued: true
     void_ptr:
@@ -196,6 +200,6 @@ primitives:
         valued: false
     BigInt:
         cname: "BigInt *"
-        printFn: "printBigInt"
-        markFn: "markBigInt"
+        printFn: printBigInt
+        markFn: markBigInt
         valued: true

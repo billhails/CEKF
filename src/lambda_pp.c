@@ -270,9 +270,6 @@ void ppLamUnaryOp(LamUnaryOp type) {
         case LAMUNARYOP_TYPE_NOT:
             eprintf("not");
             break;
-        case LAMUNARYOP_TYPE_PRINT:
-            eprintf("print");
-            break;
         default:
             cant_happen("unrecognised type %d in ppLamUnaryOp", type);
     }

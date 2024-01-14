@@ -174,9 +174,6 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
         case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODE_PRIM_NOT;
             break;
-        case AEXPUNARYOP_TYPE_PRINT:
-            prim = BYTECODE_PRIM_PRINT;
-            break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
     }
@@ -615,6 +612,11 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         case CEXP_TYPE_CALLCC: {
             writeAexp(x->val.callCC, b);
             addByte(b, BYTECODE_CALLCC);
+        }
+        break;
+        case CEXP_TYPE_PRINT: {
+            writeAexp(x->val.print->aexp, b);
+            addByte(b, BYTECODE_PRIM_PRINT);
         }
         break;
         case CEXP_TYPE_LETREC: {

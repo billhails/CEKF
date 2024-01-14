@@ -24,6 +24,8 @@
 
 #include "lambda_helper.h"
 #include "bigint.h"
+#include "tc.h"
+#include "tc_debug.h"
 
 /*
  * print declarations
@@ -54,6 +56,7 @@ void printLamContext(struct LamContext * x, int depth);
 void printLamAnd(struct LamAnd * x, int depth);
 void printLamOr(struct LamOr * x, int depth);
 void printLamAmb(struct LamAmb * x, int depth);
+void printLamPrint(struct LamPrint * x, int depth);
 void printLamTypeDefs(struct LamTypeDefs * x, int depth);
 void printLamTypeDefList(struct LamTypeDefList * x, int depth);
 void printLamTypeDef(struct LamTypeDef * x, int depth);
@@ -97,6 +100,7 @@ bool eqLamContext(struct LamContext * a, struct LamContext * b);
 bool eqLamAnd(struct LamAnd * a, struct LamAnd * b);
 bool eqLamOr(struct LamOr * a, struct LamOr * b);
 bool eqLamAmb(struct LamAmb * a, struct LamAmb * b);
+bool eqLamPrint(struct LamPrint * a, struct LamPrint * b);
 bool eqLamTypeDefs(struct LamTypeDefs * a, struct LamTypeDefs * b);
 bool eqLamTypeDefList(struct LamTypeDefList * a, struct LamTypeDefList * b);
 bool eqLamTypeDef(struct LamTypeDef * a, struct LamTypeDef * b);

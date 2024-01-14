@@ -215,6 +215,14 @@ struct ExpLet * newExpLet(HashSymbol * var, struct Exp * val, struct Exp * body)
     return x;
 }
 
+struct TypedAexp * newTypedAexp(struct Aexp * aexp, struct TcType * type) {
+    struct TypedAexp * x = NEW(TypedAexp, OBJTYPE_TYPEDAEXP);
+    DEBUG("new TypedAexp %pn", x);
+    x->aexp = aexp;
+    x->type = type;
+    return x;
+}
+
 struct CexpCondCases * newCexpCondCases(enum CexpCondCasesType  type, union CexpCondCasesVal  val) {
     struct CexpCondCases * x = NEW(CexpCondCases, OBJTYPE_CEXPCONDCASES);
     DEBUG("new CexpCondCases %pn", x);
@@ -559,6 +567,20 @@ struct ExpLet * copyExpLet(struct ExpLet * o) {
     return x;
 }
 
+struct TypedAexp * copyTypedAexp(struct TypedAexp * o) {
+    if (o == NULL) return NULL;
+    struct TypedAexp * x = NEW(TypedAexp, OBJTYPE_TYPEDAEXP);
+    DEBUG("copy TypedAexp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TypedAexp));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->aexp = copyAexp(o->aexp);
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
+}
+
 struct CexpCondCases * copyCexpCondCases(struct CexpCondCases * o) {
     if (o == NULL) return NULL;
     struct CexpCondCases * x = NEW(CexpCondCases, OBJTYPE_CEXPCONDCASES);
@@ -664,6 +686,9 @@ struct Cexp * copyCexp(struct Cexp * o) {
             break;
         case CEXP_TYPE_CALLCC:
             x->val.callCC = copyAexp(o->val.callCC);
+            break;
+        case CEXP_TYPE_PRINT:
+            x->val.print = copyTypedAexp(o->val.print);
             break;
         case CEXP_TYPE_LETREC:
             x->val.letRec = copyCexpLetRec(o->val.letRec);
@@ -891,6 +916,14 @@ void markExpLet(struct ExpLet * x) {
     markExp(x->body);
 }
 
+void markTypedAexp(struct TypedAexp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->aexp);
+    markTcType(x->type);
+}
+
 void markCexpCondCases(struct CexpCondCases * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -970,6 +1003,9 @@ void markCexp(struct Cexp * x) {
             break;
         case CEXP_TYPE_CALLCC:
             markAexp(x->val.callCC);
+            break;
+        case CEXP_TYPE_PRINT:
+            markTypedAexp(x->val.print);
             break;
         case CEXP_TYPE_LETREC:
             markCexpLetRec(x->val.letRec);
@@ -1082,6 +1118,9 @@ void markAnfObj(struct Header *h) {
         case OBJTYPE_EXPLET:
             markExpLet((ExpLet *)h);
             break;
+        case OBJTYPE_TYPEDAEXP:
+            markTypedAexp((TypedAexp *)h);
+            break;
         case OBJTYPE_CEXPCONDCASES:
             markCexpCondCases((CexpCondCases *)h);
             break;
@@ -1187,6 +1226,10 @@ void freeExpLet(struct ExpLet * x) {
     FREE(x, ExpLet);
 }
 
+void freeTypedAexp(struct TypedAexp * x) {
+    FREE(x, TypedAexp);
+}
+
 void freeCexpCondCases(struct CexpCondCases * x) {
     FREE(x, CexpCondCases);
 }
@@ -1273,6 +1316,9 @@ void freeAnfObj(struct Header *h) {
         case OBJTYPE_EXPLET:
             freeExpLet((ExpLet *)h);
             break;
+        case OBJTYPE_TYPEDAEXP:
+            freeTypedAexp((TypedAexp *)h);
+            break;
         case OBJTYPE_CEXPCONDCASES:
             freeCexpCondCases((CexpCondCases *)h);
             break;
@@ -1338,6 +1384,8 @@ char *typenameAnfObj(int type) {
             return "CexpBool";
         case OBJTYPE_EXPLET:
             return "ExpLet";
+        case OBJTYPE_TYPEDAEXP:
+            return "TypedAexp";
         case OBJTYPE_CEXPCONDCASES:
             return "CexpCondCases";
         case OBJTYPE_AEXP:

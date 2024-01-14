@@ -124,6 +124,18 @@ static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     return result;
 }
 
+static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
+    ENTER(lamConvertPrint);
+    LamExp *exp = convertExpression(print->exp, context);
+    int save = PROTECT(exp);
+    LamPrint *lamPrint = newLamPrint(exp);
+    PROTECT(lamPrint);
+    LamExp *result = newLamExp(LAMEXP_TYPE_PRINT, LAMEXP_VAL_PRINT(lamPrint));
+    UNPROTECT(save);
+    LEAVE(lamConvertPrint);
+    return result;
+}
+
 static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *substitutions) {
     ENTER(performVarListSubstitutions);
     if (varList == NULL) {
@@ -918,6 +930,9 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_IFF:
             result = lamConvertIff(expression->val.iff, env);
+            break;
+        case AST_EXPRESSION_TYPE_PRINT:
+            result = lamConvertPrint(expression->val.print, env);
             break;
         default:
             cant_happen("unrecognised expression type %d in convertExpression", expression->type);

@@ -125,9 +125,6 @@ void ppAexpUnaryApp(AexpUnaryApp *x) {
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;
-        case AEXPUNARYOP_TYPE_PRINT:
-            eprintf("print ");
-            break;
         default:
             cant_happen("unrecognized op in ppAexpUnaryApp (%d)", x->type);
     }

@@ -136,6 +136,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstNamedArg *namedArg;
     AstNest *nest;
     AstPackage *package;
+    AstPrint *print;
     AstPrototypeBody *prototypeBody;
     AstPrototype *prototype;
     AstPrototypeSymbolType *prototypeSymbolType;
@@ -174,6 +175,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
 %type <package> package extends
+%type <print> print
 %type <prototypeBody> prototype_body
 %type <prototypeSymbolType> prototype_symbol_type
 %type <prototype> prototype
@@ -205,6 +207,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %token KW_INT
 %token LET
 %token LOAD
+%token PRINT
 %token PROTOTYPE
 %token SWITCH
 %token TRUE
@@ -439,6 +442,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | string               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | CHAR                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
+           | print                { $$ = newAstExpression(AST_EXPRESSION_TYPE_PRINT, AST_EXPRESSION_VAL_PRINT($1)); }
            | '(' expression ')'   { $$ = $2; }
            ;
 
@@ -505,6 +509,9 @@ env_body : '{' definitions '}'  { $$ = $2; }
 
 symbol : VAR    { $$ = newSymbol($1); }
        ;
+
+print : PRINT '(' expression ')' { $$ = newAstPrint($3); }
+      ;
 
 %%
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg) {

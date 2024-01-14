@@ -71,6 +71,7 @@ static Exp *normalizeMakeVec(LamMakeVec *makeVec, Exp *tail);
 static Exp *wrapTail(Exp *exp, Exp *tail);
 static Exp *normalizeIff(LamIff *lamIff, Exp *tail);
 static Exp *normalizeCallCc(LamExp *callcc, Exp *tail);
+static Exp *normalizePrint(LamPrint *print, Exp *tail);
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail);
 static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
 static Exp *normalizeMatch(LamMatch *match, Exp *tail);
@@ -149,6 +150,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeIff(lamExp->val.iff, tail);
         case LAMEXP_TYPE_CALLCC:
             return normalizeCallCc(lamExp->val.callcc, tail);
+        case LAMEXP_TYPE_PRINT:
+            return normalizePrint(lamExp->val.print, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
         case LAMEXP_TYPE_DECONSTRUCT:
@@ -343,6 +346,26 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
     Exp *res = letBind(exp, replacements);
     UNPROTECT(save);
     LEAVE(normalizeCallCc);
+    return res;
+}
+
+static Exp *normalizePrint(LamPrint *lamPrint, Exp *tail) {
+    ENTER(normalizePrint);
+    HashTable *replacements = makeLamExpHashTable();
+    int save = PROTECT(replacements);
+    Aexp *aexp = replaceLamExp(lamPrint->exp, replacements);
+    int save2 = PROTECT(aexp);
+    TypedAexp *typedAexp = newTypedAexp(aexp, lamPrint->type);
+    REPLACE_PROTECT(save2, typedAexp);
+    Cexp *cexp = newCexp(CEXP_TYPE_PRINT, CEXP_VAL_PRINT(typedAexp));
+    REPLACE_PROTECT(save2, cexp);
+    Exp *exp = wrapCexp(cexp);
+    REPLACE_PROTECT(save2, exp);
+    exp = wrapTail(exp, tail);
+    REPLACE_PROTECT(save2, exp);
+    Exp *res = letBind(exp, replacements);
+    UNPROTECT(save);
+    LEAVE(normalizePrint);
     return res;
 }
 
@@ -998,8 +1021,6 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
     switch(op) {
         case LAMUNARYOP_TYPE_NOT:
             return AEXPUNARYOP_TYPE_NOT;
-        case LAMUNARYOP_TYPE_PRINT:
-            return AEXPUNARYOP_TYPE_PRINT;
         default:
             cant_happen("unrecognised type %d in mapUnaryOp", op);
     }

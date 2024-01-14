@@ -24,6 +24,8 @@
 
 #include "lambda_debug.h"
 #include "bigint.h"
+#include "tc.h"
+#include "tc_debug.h"
 
 /*
  * helper functions
@@ -145,10 +147,6 @@ void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
         case LAMUNARYOP_TYPE_NOT:
             pad(depth + 1);
             eprintf("LAMUNARYOP_TYPE_NOT");
-            break;
-        case LAMUNARYOP_TYPE_PRINT:
-            pad(depth + 1);
-            eprintf("LAMUNARYOP_TYPE_PRINT");
             break;
     }
     eprintf("\n");
@@ -440,6 +438,18 @@ void printLamAmb(struct LamAmb * x, int depth) {
     eprintf("]");
 }
 
+void printLamPrint(struct LamPrint * x, int depth) {
+    pad(depth);
+    if (x == NULL) { eprintf("LamPrint (NULL)"); return; }
+    eprintf("LamPrint[\n");
+    printLamExp(x->exp, depth + 1);
+    eprintf("\n");
+    printTcType(x->type, depth + 1);
+    eprintf("\n");
+    pad(depth);
+    eprintf("]");
+}
+
 void printLamTypeDefs(struct LamTypeDefs * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("LamTypeDefs (NULL)"); return; }
@@ -688,6 +698,11 @@ eprintf("int %d", x->val.stdint);
             eprintf("LAMEXP_TYPE_AMB\n");
             printLamAmb(x->val.amb, depth + 1);
             break;
+        case LAMEXP_TYPE_PRINT:
+            pad(depth + 1);
+            eprintf("LAMEXP_TYPE_PRINT\n");
+            printLamPrint(x->val.print, depth + 1);
+            break;
         case LAMEXP_TYPE_CHARACTER:
             pad(depth + 1);
             eprintf("LAMEXP_TYPE_CHARACTER\n");
@@ -860,9 +875,6 @@ bool eqLamUnaryApp(struct LamUnaryApp * a, struct LamUnaryApp * b) {
             if (a != b) return false;
             break;
         case LAMUNARYOP_TYPE_NOT:
-            if (a != b) return false;
-            break;
-        case LAMUNARYOP_TYPE_PRINT:
             if (a != b) return false;
             break;
     }
@@ -1049,6 +1061,14 @@ bool eqLamAmb(struct LamAmb * a, struct LamAmb * b) {
     return true;
 }
 
+bool eqLamPrint(struct LamPrint * a, struct LamPrint * b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    if (!eqLamExp(a->exp, b->exp)) return false;
+    if (a->type != b->type) return false;
+    return true;
+}
+
 bool eqLamTypeDefs(struct LamTypeDefs * a, struct LamTypeDefs * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
@@ -1203,6 +1223,9 @@ bool eqLamExp(struct LamExp * a, struct LamExp * b) {
             break;
         case LAMEXP_TYPE_AMB:
             if (!eqLamAmb(a->val.amb, b->val.amb)) return false;
+            break;
+        case LAMEXP_TYPE_PRINT:
+            if (!eqLamPrint(a->val.print, b->val.print)) return false;
             break;
         case LAMEXP_TYPE_CHARACTER:
             if (a->val.character != b->val.character) return false;

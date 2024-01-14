@@ -69,6 +69,7 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng);
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng);
 static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng);
 static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng);
+static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng);
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng);
 static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng);
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng);
@@ -151,7 +152,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LIST:
             return analyzeSequence(exp->val.list, env, ng);
         case LAMEXP_TYPE_MAKEVEC:
-            cant_happen("encountered make-vec in analyzeLamExp");
+            cant_happen("encountered make-vec in analyzeExp");
         case LAMEXP_TYPE_CONSTRUCT:
             return analyzeConstruct(exp->val.construct, env, ng);
         case LAMEXP_TYPE_DECONSTRUCT:
@@ -164,6 +165,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return analyzeIff(exp->val.iff, env, ng);
         case LAMEXP_TYPE_CALLCC:
             return analyzeCallCC(exp->val.callcc, env, ng);
+        case LAMEXP_TYPE_PRINT:
+            return analyzePrint(exp->val.print, env, ng);
         case LAMEXP_TYPE_LETREC:
             return analyzeLetRec(exp->val.letrec, env, ng);
         case LAMEXP_TYPE_TYPEDEFS:
@@ -187,9 +190,9 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_ERROR:
             return analyzeError();
         case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("encountered cond default in analyzeLamExp");
+            cant_happen("encountered cond default in analyzeExp");
         default:
-            cant_happen("unrecognized type %d in analyzeLamExp", exp->type);
+            cant_happen("unrecognized type %d in analyzeExp", exp->type);
     }
 }
 
@@ -343,9 +346,6 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
             break;
         case LAMUNARYOP_TYPE_NOT:
             res = analyzeUnaryBool(app->exp, env, ng);
-            break;
-        case LAMUNARYOP_TYPE_PRINT:
-            res = analyzeExp(app->exp, env, ng);
             break;
         default:
             cant_happen("unrecognized type %d in analyzeUnary", app->type);
@@ -555,6 +555,16 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
     unify(calledType, aba);
     UNPROTECT(save);
     return a;
+}
+
+static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
+    // a -> a, but additionally store the type of the expression
+    TcType *type = analyzeExp(print->exp, env, ng);
+    int save = PROTECT(type);
+    type = prune(type);
+    print->type = type;
+    UNPROTECT(save);
+    return type;
 }
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {

@@ -43,6 +43,7 @@ struct PmModule *mod = yyextra;
 "not"       { return NOT; }
 "or"        { return OR; }
 "xor"       { return XOR; }
+"print"     { return PRINT; }
 "prototype" { return PROTOTYPE; }
 "_"         { return WILDCARD; }
 "switch"    { return SWITCH; }

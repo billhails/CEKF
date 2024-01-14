@@ -26,6 +26,8 @@
 #include "memory.h"
 #include "common.h"
 #include "bigint.h"
+#include "tc.h"
+#include "tc_debug.h"
 
 /*
  * typedefs
@@ -51,7 +53,6 @@ typedef enum LamPrimOp {
 typedef enum LamUnaryOp {
     LAMUNARYOP_TYPE_NEG,
     LAMUNARYOP_TYPE_NOT,
-    LAMUNARYOP_TYPE_PRINT,
 } LamUnaryOp;
 
 typedef enum LamExpType {
@@ -77,6 +78,7 @@ typedef enum LamExpType {
     LAMEXP_TYPE_AND,
     LAMEXP_TYPE_OR,
     LAMEXP_TYPE_AMB,
+    LAMEXP_TYPE_PRINT,
     LAMEXP_TYPE_CHARACTER,
     LAMEXP_TYPE_BACK,
     LAMEXP_TYPE_ERROR,
@@ -120,6 +122,7 @@ typedef union LamExpVal {
     struct LamAnd * and;
     struct LamOr * or;
     struct LamAmb * amb;
+    struct LamPrint * print;
     char character;
     void * back;
     void * error;
@@ -303,6 +306,12 @@ typedef struct LamAmb {
     struct LamExp * right;
 } LamAmb;
 
+typedef struct LamPrint {
+    Header header;
+    struct LamExp * exp;
+    struct TcType * type;
+} LamPrint;
+
 typedef struct LamTypeDefs {
     Header header;
     struct LamTypeDefList * typeDefs;
@@ -417,6 +426,7 @@ struct LamContext * newLamContext(HashTable * frame, struct LamContext * parent)
 struct LamAnd * newLamAnd(struct LamExp * left, struct LamExp * right);
 struct LamOr * newLamOr(struct LamExp * left, struct LamExp * right);
 struct LamAmb * newLamAmb(struct LamExp * left, struct LamExp * right);
+struct LamPrint * newLamPrint(struct LamExp * exp);
 struct LamTypeDefs * newLamTypeDefs(struct LamTypeDefList * typeDefs, struct LamExp * body);
 struct LamTypeDefList * newLamTypeDefList(struct LamTypeDef * typeDef, struct LamTypeDefList * next);
 struct LamTypeDef * newLamTypeDef(struct LamType * type, struct LamTypeConstructorList * constructors);
@@ -460,6 +470,7 @@ struct LamContext * copyLamContext(struct LamContext * o);
 struct LamAnd * copyLamAnd(struct LamAnd * o);
 struct LamOr * copyLamOr(struct LamOr * o);
 struct LamAmb * copyLamAmb(struct LamAmb * o);
+struct LamPrint * copyLamPrint(struct LamPrint * o);
 struct LamTypeDefs * copyLamTypeDefs(struct LamTypeDefs * o);
 struct LamTypeDefList * copyLamTypeDefList(struct LamTypeDefList * o);
 struct LamTypeDef * copyLamTypeDef(struct LamTypeDef * o);
@@ -503,6 +514,7 @@ void markLamContext(struct LamContext * x);
 void markLamAnd(struct LamAnd * x);
 void markLamOr(struct LamOr * x);
 void markLamAmb(struct LamAmb * x);
+void markLamPrint(struct LamPrint * x);
 void markLamTypeDefs(struct LamTypeDefs * x);
 void markLamTypeDefList(struct LamTypeDefList * x);
 void markLamTypeDef(struct LamTypeDef * x);
@@ -546,6 +558,7 @@ void freeLamContext(struct LamContext * x);
 void freeLamAnd(struct LamAnd * x);
 void freeLamOr(struct LamOr * x);
 void freeLamAmb(struct LamAmb * x);
+void freeLamPrint(struct LamPrint * x);
 void freeLamTypeDefs(struct LamTypeDefs * x);
 void freeLamTypeDefList(struct LamTypeDefList * x);
 void freeLamTypeDef(struct LamTypeDef * x);
@@ -591,6 +604,7 @@ void freeLamTypeConstructorType(struct LamTypeConstructorType * x);
 #define LAMEXP_VAL_AND(x) ((union LamExpVal ){.and = (x)})
 #define LAMEXP_VAL_OR(x) ((union LamExpVal ){.or = (x)})
 #define LAMEXP_VAL_AMB(x) ((union LamExpVal ){.amb = (x)})
+#define LAMEXP_VAL_PRINT(x) ((union LamExpVal ){.print = (x)})
 #define LAMEXP_VAL_CHARACTER(x) ((union LamExpVal ){.character = (x)})
 #define LAMEXP_VAL_BACK() ((union LamExpVal ){.back = (NULL)})
 #define LAMEXP_VAL_ERROR() ((union LamExpVal ){.error = (NULL)})

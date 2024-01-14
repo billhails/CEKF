@@ -259,6 +259,13 @@ struct AstIff * newAstIff(struct AstExpression * test, struct AstNest * conseque
     return x;
 }
 
+struct AstPrint * newAstPrint(struct AstExpression * exp) {
+    struct AstPrint * x = NEW(AstPrint, OBJTYPE_ASTPRINT);
+    DEBUG("new AstPrint %pn", x);
+    x->exp = exp;
+    return x;
+}
+
 struct AstDefinition * newAstDefinition(enum AstDefinitionType  type, union AstDefinitionVal  val) {
     struct AstDefinition * x = NEW(AstDefinition, OBJTYPE_ASTDEFINITION);
     DEBUG("new AstDefinition %pn", x);
@@ -710,6 +717,19 @@ struct AstIff * copyAstIff(struct AstIff * o) {
     return x;
 }
 
+struct AstPrint * copyAstPrint(struct AstPrint * o) {
+    if (o == NULL) return NULL;
+    struct AstPrint * x = NEW(AstPrint, OBJTYPE_ASTPRINT);
+    DEBUG("copy AstPrint %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AstPrint));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->exp = copyAstExpression(o->exp);
+    UNPROTECT(save);
+    return x;
+}
+
 struct AstDefinition * copyAstDefinition(struct AstDefinition * o) {
     if (o == NULL) return NULL;
     struct AstDefinition * x = NEW(AstDefinition, OBJTYPE_ASTDEFINITION);
@@ -864,6 +884,9 @@ struct AstExpression * copyAstExpression(struct AstExpression * o) {
             break;
         case AST_EXPRESSION_TYPE_IFF:
             x->val.iff = copyAstIff(o->val.iff);
+            break;
+        case AST_EXPRESSION_TYPE_PRINT:
+            x->val.print = copyAstPrint(o->val.print);
             break;
         default:
             cant_happen("unrecognised type %d in copyAstExpression", o->type);
@@ -1124,6 +1147,13 @@ void markAstIff(struct AstIff * x) {
     markAstNest(x->alternative);
 }
 
+void markAstPrint(struct AstPrint * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAstExpression(x->exp);
+}
+
 void markAstDefinition(struct AstDefinition * x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -1238,6 +1268,9 @@ void markAstExpression(struct AstExpression * x) {
         case AST_EXPRESSION_TYPE_IFF:
             markAstIff(x->val.iff);
             break;
+        case AST_EXPRESSION_TYPE_PRINT:
+            markAstPrint(x->val.print);
+            break;
         default:
             cant_happen("unrecognised type %d in markAstExpression", x->type);
     }
@@ -1341,6 +1374,9 @@ void markAstObj(struct Header *h) {
             break;
         case OBJTYPE_ASTIFF:
             markAstIff((AstIff *)h);
+            break;
+        case OBJTYPE_ASTPRINT:
+            markAstPrint((AstPrint *)h);
             break;
         case OBJTYPE_ASTDEFINITION:
             markAstDefinition((AstDefinition *)h);
@@ -1481,6 +1517,10 @@ void freeAstIff(struct AstIff * x) {
     FREE(x, AstIff);
 }
 
+void freeAstPrint(struct AstPrint * x) {
+    FREE(x, AstPrint);
+}
+
 void freeAstDefinition(struct AstDefinition * x) {
     FREE(x, AstDefinition);
 }
@@ -1597,6 +1637,9 @@ void freeAstObj(struct Header *h) {
         case OBJTYPE_ASTIFF:
             freeAstIff((AstIff *)h);
             break;
+        case OBJTYPE_ASTPRINT:
+            freeAstPrint((AstPrint *)h);
+            break;
         case OBJTYPE_ASTDEFINITION:
             freeAstDefinition((AstDefinition *)h);
             break;
@@ -1682,6 +1725,8 @@ char *typenameAstObj(int type) {
             return "AstEnv";
         case OBJTYPE_ASTIFF:
             return "AstIff";
+        case OBJTYPE_ASTPRINT:
+            return "AstPrint";
         case OBJTYPE_ASTDEFINITION:
             return "AstDefinition";
         case OBJTYPE_ASTSINGLEPROTOTYPE:

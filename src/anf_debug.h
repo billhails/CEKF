@@ -25,6 +25,8 @@
 #include "anf_helper.h"
 #include "bigint.h"
 #include "ast_helper.h"
+#include "tc.h"
+#include "tc_debug.h"
 
 /*
  * print declarations
@@ -51,6 +53,7 @@ void printCexpAmb(struct CexpAmb * x, int depth);
 void printCexpCut(struct CexpCut * x, int depth);
 void printCexpBool(struct CexpBool * x, int depth);
 void printExpLet(struct ExpLet * x, int depth);
+void printTypedAexp(struct TypedAexp * x, int depth);
 void printCexpCondCases(struct CexpCondCases * x, int depth);
 void printAexp(struct Aexp * x, int depth);
 void printCexp(struct Cexp * x, int depth);
@@ -81,6 +84,7 @@ bool eqCexpAmb(struct CexpAmb * a, struct CexpAmb * b);
 bool eqCexpCut(struct CexpCut * a, struct CexpCut * b);
 bool eqCexpBool(struct CexpBool * a, struct CexpBool * b);
 bool eqExpLet(struct ExpLet * a, struct ExpLet * b);
+bool eqTypedAexp(struct TypedAexp * a, struct TypedAexp * b);
 bool eqCexpCondCases(struct CexpCondCases * a, struct CexpCondCases * b);
 bool eqAexp(struct Aexp * a, struct Aexp * b);
 bool eqCexp(struct Cexp * a, struct Cexp * b);
