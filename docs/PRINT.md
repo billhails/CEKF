@@ -61,7 +61,7 @@ defined functions, so our `typedef bool ...` results in
 `(letrec ((print$bool ...` etc.
 
 
-We might start by looking at what these compiled functions might look like:
+We might start by looking at what these generated functions might look like:
 
 ## special case list of char
 
@@ -164,7 +164,6 @@ each component `#k` and `#v`:
               (print$Dict (vec 4 d) print#k, print#v)
               (putc ')'))
   d))
-  ...
 ```
 
 ## Compiling printers
@@ -201,10 +200,37 @@ we replace the `(print d)` with:
                (make-printer print$list print$int)) d)
 ```
 
-We don't yet have dot-notation to support variable numbers of args
-and it might be better to collect the extra args in a list/vec because
-varargs are kind of at odds with strict type checking, but this is code
-generated during type checking so does not *need* to be subject to it.
+We don't yet have dot-notation to support variable numbers of args and it
+might be better to collect the extra args in a list/vec because varargs
+are kind of at odds with strict type checking, but this is code generated
+during type checking so does not *need* to be subject to it.
+
+It might be worth inventing some terminology to distinguish the two
+kinds of "printers" here, we can call the raw `print$Dict` etc. printers
+"generated" printers, they can take more than one argument, and we can
+call the printer functions produced by `make-printer` "compiled" printers,
+they only ever take one argument and are safe as additional arguments
+to the "generated" printers. Note that "generated" printers with only
+one argument can be directly used as if they were compiled, i.e. on
+encountering
+
+```scheme
+(print 12)
+```
+
+The compiler should just produce
+
+```scheme
+(print$int 12)
+```
+
+although
+
+```scheme
+((make-printer print$int) 12)
+```
+
+would also work, if slightly less efficiently.
 
 ## last issue, type unavailable
 
@@ -236,3 +262,9 @@ produces
 
 we should remember to leave a value on the stack as all functions
 return values, maybe just `vTrue`.
+
+## Future work
+
+Compiling these printer functions at run time is sub-optimal, though
+still a good approach imo. Maybe they could be hoisted out to globals
+so they don't re-compile for every print statement.
