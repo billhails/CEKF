@@ -104,7 +104,7 @@ Remember we want i.e. `[1, 2, 3]` not `pair(1, pair(2, pair(3, nil)))`.
 Again we can just inject this
 
 ```scheme
-(print$list (lambda (list, print#t)
+(print$list (lambda (l print#t)
   (putc '[')
   (letrec ((p (lambda (l)
                 (match (vec 0 l)
@@ -120,7 +120,7 @@ Again we can just inject this
                             )
           (p l))
   (putc ']')
-  list))
+  l))
 ```
 
 `print#t` is the pre-compiled function to display the components
@@ -151,17 +151,17 @@ The function takes a dictionary to print and a helper for
 each component `#k` and `#v`:
 
 ```scheme
-(print$Dict (lambda (d, print#k, print#v)
+(print$Dict (lambda (d print#k print#v)
   (match (vec 0 d)
          ((0) (puts "leaf"))
          ((1) (puts "tree("))
-              (print$Dict (vec 1 d) print#k, print#v)
+              (print$Dict (vec 1 d) print#k print#v)
               (puts ", ")
               (print#k (vec 2 d))
               (puts ", ")
               (print#v (vec 3 d))
               (puts ", ")
-              (print$Dict (vec 4 d) print#k, print#v)
+              (print$Dict (vec 4 d) print#k print#v)
               (putc ')'))
   d))
 ```
