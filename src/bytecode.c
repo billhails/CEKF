@@ -618,7 +618,7 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         }
         break;
         case CEXP_TYPE_PRINT: {
-            writeAexp(x->val.print->aexp, b);
+            writeAexp(x->val.print, b);
             addByte(b, BYTECODE_PRIM_PRINT);
         }
         break;

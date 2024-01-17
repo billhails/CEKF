@@ -311,7 +311,7 @@ static void analizeCexp(Cexp *x, CTEnv *env) {
             analizeAexp(x->val.callCC, env);
             break;
         case CEXP_TYPE_PRINT:
-            analizeAexp(x->val.print->aexp, env);
+            analizeAexp(x->val.print, env);
             break;
         case CEXP_TYPE_LETREC:
             analizeCexpLetRec(x->val.letRec, env);

@@ -124,10 +124,6 @@ structs:
         val: Exp
         body: Exp
 
-    TypedAexp:
-        aexp: Aexp
-        type: TcType
-
 unions:
     CexpCondCases:
         charCases: CexpCharCondCases
@@ -155,7 +151,7 @@ unions:
         iff: CexpIf
         cond: CexpCond
         callCC: Aexp
-        print: TypedAexp
+        print: Aexp
         letRec: CexpLetRec
         amb: CexpAmb
         cut: CexpCut

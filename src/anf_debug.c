@@ -421,18 +421,6 @@ void printExpLet(struct ExpLet * x, int depth) {
     eprintf("]");
 }
 
-void printTypedAexp(struct TypedAexp * x, int depth) {
-    pad(depth);
-    if (x == NULL) { eprintf("TypedAexp (NULL)"); return; }
-    eprintf("TypedAexp[\n");
-    printAexp(x->aexp, depth + 1);
-    eprintf("\n");
-    printTcType(x->type, depth + 1);
-    eprintf("\n");
-    pad(depth);
-    eprintf("]");
-}
-
 void printCexpCondCases(struct CexpCondCases * x, int depth) {
     pad(depth);
     if (x == NULL) { eprintf("CexpCondCases (NULL)"); return; }
@@ -579,7 +567,7 @@ eprintf("void * %p", x->val.error);
         case CEXP_TYPE_PRINT:
             pad(depth + 1);
             eprintf("CEXP_TYPE_PRINT\n");
-            printTypedAexp(x->val.print, depth + 1);
+            printAexp(x->val.print, depth + 1);
             break;
         case CEXP_TYPE_LETREC:
             pad(depth + 1);
@@ -907,14 +895,6 @@ bool eqExpLet(struct ExpLet * a, struct ExpLet * b) {
     return true;
 }
 
-bool eqTypedAexp(struct TypedAexp * a, struct TypedAexp * b) {
-    if (a == b) return true;
-    if (a == NULL || b == NULL) return false;
-    if (!eqAexp(a->aexp, b->aexp)) return false;
-    if (a->type != b->type) return false;
-    return true;
-}
-
 bool eqCexpCondCases(struct CexpCondCases * a, struct CexpCondCases * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
@@ -1006,7 +986,7 @@ bool eqCexp(struct Cexp * a, struct Cexp * b) {
             if (!eqAexp(a->val.callCC, b->val.callCC)) return false;
             break;
         case CEXP_TYPE_PRINT:
-            if (!eqTypedAexp(a->val.print, b->val.print)) return false;
+            if (!eqAexp(a->val.print, b->val.print)) return false;
             break;
         case CEXP_TYPE_LETREC:
             if (!eqCexpLetRec(a->val.letRec, b->val.letRec)) return false;

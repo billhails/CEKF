@@ -448,8 +448,6 @@ void printLamPrint(struct LamPrint * x, int depth) {
     eprintf("LamPrint[\n");
     printLamExp(x->exp, depth + 1);
     eprintf("\n");
-    printTcType(x->type, depth + 1);
-    eprintf("\n");
     pad(depth);
     eprintf("]");
 }
@@ -1072,7 +1070,6 @@ bool eqLamPrint(struct LamPrint * a, struct LamPrint * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     if (!eqLamExp(a->exp, b->exp)) return false;
-    if (a->type != b->type) return false;
     return true;
 }
 

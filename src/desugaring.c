@@ -363,7 +363,7 @@ static Cexp *desugarCexp(Cexp *x) {
             x->val.callCC = desugarAexp(x->val.callCC);
             break;
         case CEXP_TYPE_PRINT:
-            x->val.print->aexp = desugarAexp(x->val.print->aexp);
+            x->val.print = desugarAexp(x->val.print);
             break;
         case CEXP_TYPE_LETREC:
             x->val.letRec = desugarCexpLetRec(x->val.letRec);

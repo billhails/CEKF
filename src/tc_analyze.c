@@ -575,13 +575,8 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
-    // a -> a, but additionally store the type of the expression
-    TcType *type = analyzeExp(print->exp, env, ng);
-    int save = PROTECT(type);
-    type = prune(type);
-    print->type = type;
-    UNPROTECT(save);
-    return type;
+    // a -> a
+    return analyzeExp(print->exp, env, ng);
 }
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {

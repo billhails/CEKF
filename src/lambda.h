@@ -310,7 +310,6 @@ typedef struct LamAmb {
 typedef struct LamPrint {
     Header header;
     struct LamExp * exp;
-    struct TcType * type;
 } LamPrint;
 
 typedef struct LamTypeDefs {

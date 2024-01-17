@@ -355,9 +355,7 @@ static Exp *normalizePrint(LamPrint *lamPrint, Exp *tail) {
     int save = PROTECT(replacements);
     Aexp *aexp = replaceLamExp(lamPrint->exp, replacements);
     int save2 = PROTECT(aexp);
-    TypedAexp *typedAexp = newTypedAexp(aexp, lamPrint->type);
-    REPLACE_PROTECT(save2, typedAexp);
-    Cexp *cexp = newCexp(CEXP_TYPE_PRINT, CEXP_VAL_PRINT(typedAexp));
+    Cexp *cexp = newCexp(CEXP_TYPE_PRINT, CEXP_VAL_PRINT(aexp));
     REPLACE_PROTECT(save2, cexp);
     Exp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);

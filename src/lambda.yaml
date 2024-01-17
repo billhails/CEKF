@@ -141,7 +141,6 @@ structs:
 
     LamPrint:
         exp: LamExp
-        type: TcType=NULL
 
     # the following LamTypeDef* structs prepend each letrec.
     # Any typedefs in the AST are hoisted into this section.
