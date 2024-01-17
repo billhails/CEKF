@@ -611,6 +611,13 @@ static void step() {
                 pushN(&state.S, size);
             }
             break;
+            case BYTECODE_PRIM_PUTC: { // peek value, print it
+                DEBUGPRINTF("PUTC\n");
+                Value b = pop();
+                putchar(b.val.c);
+                push(b);
+            }
+            break;
             case BYTECODE_PRIM_CMP: { // pop two values, perform the binop and push the result
                 DEBUGPRINTF("CMP\n");
                 Value b = pop();

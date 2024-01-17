@@ -212,6 +212,7 @@ enums:
     LamUnaryOp:
         - NEG
         - NOT
+        - PUTC
 
 unions:
     LamExp:

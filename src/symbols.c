@@ -29,6 +29,14 @@ HashSymbol *negSymbol() {
     return res;
 }
 
+HashSymbol *putcSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putc");
+    }
+    return res;
+}
+
 HashSymbol *notSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

@@ -191,6 +191,7 @@ enums:
         - CAR
         - CDR
         - NOT
+        - PUTC
 
     CexpBoolType:
         - AND

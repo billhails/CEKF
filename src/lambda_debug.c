@@ -152,6 +152,10 @@ void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
             pad(depth + 1);
             eprintf("LAMUNARYOP_TYPE_NOT");
             break;
+        case LAMUNARYOP_TYPE_PUTC:
+            pad(depth + 1);
+            eprintf("LAMUNARYOP_TYPE_PUTC");
+            break;
     }
     eprintf("\n");
     printLamExp(x->exp, depth + 1);
@@ -880,6 +884,9 @@ bool eqLamUnaryApp(struct LamUnaryApp * a, struct LamUnaryApp * b) {
             if (a != b) return false;
             break;
         case LAMUNARYOP_TYPE_NOT:
+            if (a != b) return false;
+            break;
+        case LAMUNARYOP_TYPE_PUTC:
             if (a != b) return false;
             break;
     }

@@ -53,6 +53,7 @@ HashSymbol *nilSymbol(void);
 HashSymbol *notSymbol(void);
 HashSymbol *orSymbol(void);
 HashSymbol *powSymbol(void);
+HashSymbol *putcSymbol(void);
 HashSymbol *subSymbol(void);
 HashSymbol *thenSymbol(void);
 HashSymbol *trueSymbol(void);

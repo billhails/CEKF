@@ -174,6 +174,9 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
         case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODE_PRIM_NOT;
             break;
+        case AEXPUNARYOP_TYPE_PUTC:
+            prim = BYTECODE_PRIM_PUTC;
+            break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
     }

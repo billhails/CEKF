@@ -55,6 +55,7 @@ static void addIfToEnv(TcEnv *env);
 static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addNegToEnv(TcEnv *env);
 static void addNotToEnv(TcEnv *env);
+static void addPutcToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
@@ -90,6 +91,7 @@ static bool sameType(TcType *a, TcType *b);
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
@@ -121,6 +123,7 @@ TcEnv *tc_init(void) {
     addIntBinOpToEnv(env, subSymbol());
     addNegToEnv(env);
     addNotToEnv(env);
+    addPutcToEnv(env);
     addThenToEnv(env);
     UNPROTECT(save);
     return env;
@@ -312,9 +315,16 @@ static TcType *analyzeBinaryBool(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *n
 }
 
 static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
-    ENTER(analyzeBinaryBool);
+    ENTER(analyzeUnaryBool);
     TcType *res = analyzeBooleanExp(exp, env, ng);
-    LEAVE(analyzeBinaryBool);
+    LEAVE(analyzeUnaryBool);
+    return res;
+}
+
+static TcType *analyzeUnaryChar(LamExp *exp, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeUnaryChar);
+    TcType *res = analyzeCharacterExp(exp, env, ng);
+    LEAVE(analyzeUnaryChar);
     return res;
 }
 
@@ -363,6 +373,9 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
             break;
         case LAMUNARYOP_TYPE_NOT:
             res = analyzeUnaryBool(app->exp, env, ng);
+            break;
+        case LAMUNARYOP_TYPE_PUTC:
+            res = analyzeUnaryChar(app->exp, env, ng);
             break;
         default:
             cant_happen("unrecognized type %d in analyzeUnary", app->type);
@@ -820,6 +833,18 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return boolean;
 }
 
+static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeCharacterExp);
+    TcType *type = analyzeExp(exp, env, ng);
+    int save = PROTECT(type);
+    TcType *character = makeCharacter();
+    PROTECT(character);
+    unify(type, character);
+    UNPROTECT(save);
+    LEAVE(analyzeCharacterExp);
+    return character;
+}
+
 static TcType *lookupConstructorType(HashSymbol *name, TcEnv *env, TcNg *ng) {
     ENTER(lookupConstructorType);
     TcType *res = lookup(env, name, ng);
@@ -1251,6 +1276,13 @@ static void addNotToEnv(TcEnv *env) {
     TcType *boolean = makeBoolean();
     int save = PROTECT(boolean);
     addUnOpToEnv(env, negSymbol(), boolean);
+    UNPROTECT(save);
+}
+
+static void addPutcToEnv(TcEnv *env) {
+    TcType *character = makeCharacter();
+    int save = PROTECT(character);
+    addUnOpToEnv(env, putcSymbol(), character);
     UNPROTECT(save);
 }
 
