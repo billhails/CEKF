@@ -109,7 +109,7 @@ Again we can just inject this
   (letrec ((p (lambda (l)
                 (match (vec 0 l)
                        ((0) 0)
-                       ((1) (displayOther (vec 1 l))
+                       ((1) (print#t (vec 1 l))
                             (q (vec 2 l))))))
            (q (lambda (l)
                 (match (vec 0 l)
@@ -128,7 +128,7 @@ of the list, whatever they are.
 
 `puts` needs a bit of thought, I might just expand it to something like
 `(putc* ',' ' ')`. where `putc*` bytecode is followed by a count and prints
-and pops that many chars from the stack (minus 1).
+and pops that many chars from the stack (minus 1 to preserve the stack cost invariant).
 
 ## simple general case, booleans etc.
 
@@ -141,7 +141,9 @@ This, and everything else, will be fully generated.
   bool))
 ```
 
-## complex general case
+## complex general case 1 - dictionary/tree
+
+The type is fully parameterised.
 
 ```
 typedef Dict(#k, #v) { leaf | tree(Dict(#k, #v), #k, #v, Dict(#k, #v)) }
@@ -166,16 +168,38 @@ each component `#k` and `#v`:
   d))
 ```
 
+## complex general case 2 - named result
+
+The type is partially parameterized, and contains some explicit types.
+
+```
+typedef NamedResult(#r) { result(list(char), #r) }
+```
+
+The function takes a NamedResult to print and a helper for the parameterised type.
+
+```scheme
+(print$NamedResult (lambda a print#r)
+  (puts "result(")
+  (print$string (vec 1 a))
+  (puts ", ")
+  (print#r (vec 2 a))
+  (puts ")")
+  a)
+```
+
+The code can directly infer the correct printer function for `list(char)`.
+
 ## Compiling printers
 
 Notice a common pattern, best evidenced by the Dict example above,
 that each `print$x` takes a thing to print, then zero or more helpers
-for each component, in the order declared by the typedef. Note also
+for each component, in the same order as declared by the typedef (`#k, #v`). Note also
 that the helpers can only take a single argument, the thing to print,
 and so in general we should only be using functions of one argument,
 not the multi-argument generated functions like `print$Dict`.
 
-Thankfully we can use functional composition to do this:
+Thankfully we can use functional composition to create those single argument functions "pre-parameterised":
 
 ```scheme
 (make-printer (lambda (fn . args)
