@@ -164,7 +164,7 @@ each component `#k` and `#v`:
               (print#v (vec 3 d))
               (puts ", ")
               (print$Dict (vec 4 d) print#k print#v)
-              (putc ')'))
+              (puts ")"))
   d))
 ```
 
