@@ -28,15 +28,12 @@ Finally if we print the result of `['a', 'b', 'c']` we would like to see
 `"abc"` because that's the short form for lists of chars. Instead we get
 `#[1, 'a', #[1, 'b', #[1, 'c', #[0]]]]`
 
-There is existing code in the type-checker that adds a type-annotation
-to print statements, in the hope that it could later on be used to guide
-printing. This was a mistake and needs to be rolled back.
-
 There are two problems here:
 
 1. in a polymorphic context the type-checker can only provide partial
-   information to the print statement
-2. the PRINT bytecode op has no access to that type information.
+   information to the print statement.
+2. the PRINT bytecode op has no access to that type information in any
+   case.
 
 I can't think of any way to solve the first problem without passing around
 run-time type information, which is a bad case of the tail wagging the
