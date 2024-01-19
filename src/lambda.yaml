@@ -213,6 +213,7 @@ enums:
         - NEG
         - NOT
         - PUTC
+        - PUTN
 
 unions:
     LamExp:

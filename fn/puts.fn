@@ -1,10 +1,1 @@
-let
-    fn puts {
-        ([]) { true }
-        (h @ t) {
-          putc(h);
-          puts(t)
-        }
-    }
-in
-    puts("Hello World, finally!\n")
+puts("Hello World, finally!\n")

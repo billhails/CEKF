@@ -30,7 +30,7 @@
  * helper functions
  */
 
-static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
+static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }
 
 /*
  * print functions

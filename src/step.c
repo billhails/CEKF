@@ -71,6 +71,10 @@ static inline Value peek(int index) {
     return peekValue(&state.S, index);
 }
 
+static inline Value tos(void) {
+    return peekTop(&state.S);
+}
+
 static void copyToVec(Vec *v) {
     copyTopToValues(&state.S, &(v->values[0]), v->size);
 }
@@ -613,9 +617,18 @@ static void step() {
             break;
             case BYTECODE_PRIM_PUTC: { // peek value, print it
                 DEBUGPRINTF("PUTC\n");
-                Value b = pop();
+                Value b = tos();
                 putchar(b.val.c);
-                push(b);
+            }
+            break;
+            case BYTECODE_PRIM_PUTN: { // peek value, print it
+                DEBUGPRINTF("PUTN\n");
+                Value b = tos();
+                if (b.type == VALUE_TYPE_BIGINT) {
+                    fprintBigInt(stdout, b.val.b);
+                } else {
+                    printf("%d", b.val.z);
+                }
             }
             break;
             case BYTECODE_PRIM_CMP: { // pop two values, perform the binop and push the result

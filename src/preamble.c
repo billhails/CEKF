@@ -16,6 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// these are typedefs and functions that the compiler requires to be
+// pre-defined, for example the infix `@` is mapped to `cons`, `@@` to `append`,
+// prefix `<` to `car` etc.
+// `puts` is required for the print system, and `cmp` for the `<=>` operator.
 const char *preamble =
 "let"
 "    typedef cmp { lt | eq | gt }"
@@ -30,6 +34,13 @@ const char *preamble =
 "    }"
 "    fn cdr {"
 "        (_ @ t) { t }"
+"    }"
+"    fn puts {"
+"        ([]) { true }"
+"        (h @ t) {"
+"          putc(h);"
+"          puts(t)"
+"        }"
 "    }"
 "in {";
 

@@ -1,0 +1,53 @@
+let
+    typedef Tree(#k, #v) { leaf | tree(Tree(#k, #v), #k, #v, Tree(#k, #v)) }
+    fn printList(helper, l) {
+        let
+            fn h1 {
+                ([]) { true }
+                (h @ t) {
+                    helper(h);
+                    h2(t)
+                }
+            }
+            fn h2 {
+                ([]) { true }
+                (h @ t) {
+                    puts(", ");
+                    helper(h);
+                    h2(t)
+                }
+            }
+        in
+            puts("[");
+            h1(l);
+            puts("]")
+    }
+    fn printInt(n) { putn(n) }
+    fn printString(s) {
+        putc('"');
+        puts(s);
+        putc('"')
+    }
+    fn printTree(pk, pv, t) {
+        let
+            fn h {
+                (leaf) { puts("leaf") }
+                (tree(l, k, v, r)) {
+                    puts("tree(");
+                    h(l);
+                    puts(", ");
+                    pk(k);
+                    puts(", ");
+                    pv(v);
+                    puts(", ");
+                    h(r);
+                    puts(")")
+                }
+            }
+        in
+            h(t)
+    }
+    sample = tree(tree(leaf, "hello", [1, 2], leaf), "goodbye", [3, 4], leaf);
+in
+    printTree(printString, printList(printInt))(sample);
+    puts("\n")

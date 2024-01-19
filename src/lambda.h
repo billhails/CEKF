@@ -55,6 +55,7 @@ typedef enum LamUnaryOp {
     LAMUNARYOP_TYPE_NEG,
     LAMUNARYOP_TYPE_NOT,
     LAMUNARYOP_TYPE_PUTC,
+    LAMUNARYOP_TYPE_PUTN,
 } LamUnaryOp;
 
 typedef enum LamExpType {

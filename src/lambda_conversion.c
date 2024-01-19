@@ -29,6 +29,7 @@
 #include "symbols.h"
 #include "tpmc_logic.h"
 #include "ast_debug.h"
+#include "print.h"
 
 #define ARG_CATEGORY_VAR 0
 #define ARG_CATEGORY_CONST 1
@@ -84,11 +85,14 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     (void) PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(nest->definitions, env);
     PROTECT(funcDefsList);
+#ifdef NOTDEF
+    funcDefsList = makePrintFunctions(typeDefList, funcDefsList);
+    PROTECT(funcDefsList);
+#endif
     LamSequence *body = convertSequence(nest->expressions, env);
     (void) PROTECT(body);
     LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
     (void) PROTECT(letRecBody);
-
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
         LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(funcDefsList), funcDefsList, letRecBody);
@@ -782,6 +786,7 @@ static LamExp *makeLamAmb(LamList *args) {
 
 static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     if (symbol == putcSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_PUTC, args);
+    if (symbol == putnSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_PUTN, args);
     if (symbol == negSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
     if (symbol == notSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_NOT, args);
     if (symbol == hereSymbol()) return makeCallCC(args);

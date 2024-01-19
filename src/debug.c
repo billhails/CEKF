@@ -35,7 +35,7 @@ static void printCons(Cons *x);
 static void printVec(Vec *x);
 
 static void printPad(int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
 }
 
 void printContainedValue(Value x, int depth) {
@@ -542,6 +542,14 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_VOID: {
                 eprintf("VOID\n");
+            }
+            break;
+            case BYTECODE_PRIM_PUTC: {
+                eprintf("PUTC\n");
+            }
+            break;
+            case BYTECODE_PRIM_PUTN: {
+                eprintf("PUTN\n");
             }
             break;
             case BYTECODE_STDINT: {

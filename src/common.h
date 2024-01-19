@@ -59,4 +59,6 @@ void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
+#define PAD_WIDTH 2
+
 #endif

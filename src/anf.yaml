@@ -192,6 +192,7 @@ enums:
         - CDR
         - NOT
         - PUTC
+        - PUTN
 
     CexpBoolType:
         - AND

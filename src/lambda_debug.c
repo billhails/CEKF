@@ -31,7 +31,7 @@
  * helper functions
  */
 
-static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
+static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }
 
 /*
  * print functions
@@ -155,6 +155,10 @@ void printLamUnaryApp(struct LamUnaryApp * x, int depth) {
         case LAMUNARYOP_TYPE_PUTC:
             pad(depth + 1);
             eprintf("LAMUNARYOP_TYPE_PUTC");
+            break;
+        case LAMUNARYOP_TYPE_PUTN:
+            pad(depth + 1);
+            eprintf("LAMUNARYOP_TYPE_PUTN");
             break;
     }
     eprintf("\n");
@@ -887,6 +891,9 @@ bool eqLamUnaryApp(struct LamUnaryApp * a, struct LamUnaryApp * b) {
             if (a != b) return false;
             break;
         case LAMUNARYOP_TYPE_PUTC:
+            if (a != b) return false;
+            break;
+        case LAMUNARYOP_TYPE_PUTN:
             if (a != b) return false;
             break;
     }

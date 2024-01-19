@@ -369,6 +369,7 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
     TcType *res = NULL;
     switch (app->type) {
         case LAMUNARYOP_TYPE_NEG:
+        case LAMUNARYOP_TYPE_PUTN:
             res = analyzeUnaryArith(app->exp, env, ng);
             break;
         case LAMUNARYOP_TYPE_NOT:
@@ -1014,7 +1015,7 @@ static void markType(void *ptr) {
 }
 
 static void printType(void *ptr, int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     ppTcType(*((TcType **) ptr));
 }
 

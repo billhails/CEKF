@@ -37,6 +37,14 @@ HashSymbol *putcSymbol() {
     return res;
 }
 
+HashSymbol *putnSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putn");
+    }
+    return res;
+}
+
 HashSymbol *notSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
@@ -297,6 +305,14 @@ HashSymbol *boolSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("bool");
+    }
+    return res;
+}
+
+HashSymbol *listSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("list");
     }
     return res;
 }

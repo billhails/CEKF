@@ -119,6 +119,7 @@ extern Snapshot noSnapshot;
 void pushValue(Stack *stack, Value v);
 struct Value popValue(Stack *stack);
 struct Value peekValue(Stack *stack, int offset);
+struct Value peekTop(Stack *s);
 void copyTopToValues(Stack *s, Value *values, int size);
 void markStack(Stack *stack);
 void initStack(Stack *stack);

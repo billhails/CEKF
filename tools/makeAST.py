@@ -1551,7 +1551,7 @@ elif args.type == 'debug_c':
     for include in limited_includes:
         print(f'#include "{include}"')
     printSection("helper functions")
-    print('static void pad(int depth) { eprintf("%*s", depth * 4, ""); }')
+    print('static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }')
     printSection("print functions")
     catalog.printPrintFunctions()
     printSection("compare functions")

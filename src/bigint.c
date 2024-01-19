@@ -1251,7 +1251,7 @@ void freeBigInt(BigInt *x) {
 }
 
 void printBigInt(BigInt *x, int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     fprintBigInt(stderr, x);
 }
 

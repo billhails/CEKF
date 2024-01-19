@@ -1,3 +1,5 @@
+#ifndef cekf_print_h
+#define cekf_print_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -16,12 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include "ast_helper.h"
-#include "symbol.h"
+#include "lambda.h"
 
-void printAstSymbol(struct HashSymbol * x, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    if (x == NULL) { eprintf("AstSymbol (NULL)"); return; }
-    eprintf("AstSymbol[\"%s\"]", x->name);
-}
+LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest);
+ #endif

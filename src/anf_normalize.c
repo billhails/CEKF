@@ -1021,6 +1021,8 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
             return AEXPUNARYOP_TYPE_NOT;
         case LAMUNARYOP_TYPE_PUTC:
             return AEXPUNARYOP_TYPE_PUTC;
+        case LAMUNARYOP_TYPE_PUTN:
+            return AEXPUNARYOP_TYPE_PUTN;
         default:
             cant_happen("unrecognised type %d in mapUnaryOp", op);
     }
