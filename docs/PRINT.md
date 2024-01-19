@@ -257,23 +257,76 @@ although
 
 would still work, if slightly less efficiently.
 
-## last issue, type unavailable
+## Better Idea - currying
+
+Instead of a special-purpose `make-printer` function, we can just
+rearrange the arguments to the generated printers so the thing to print
+comes last, then compose them in the same way, but directly. Additionally
+we can write the bespoke printers for list and string directly in F natural.
+
+For example assume the typedef for Tree as given above, and a `printTree`
+function taking a key printer, a value printer and a Tree, written in
+F natural, along with a printInt function. We can then print a Tree of
+string to list of int simply as
+
+```
+printTree(printString, printList(printInt)) (tree)
+```
+
+This poses no problems for type-checking either, and the fact we can write
+printers for user-defined types allows the possibility of overriding the
+generated ones. That is useful because in a map or set we don't really
+want to expose the implementation, it's not useful to the user. An
+example set, implemented as a red/black tree, say
+
+```
+typedef Set(#t) {
+  leaf |
+  red(Set(#t), #t, Set(#t)) |
+  black(Set(#t), #t, Set(#t))
+}
+```
+
+could be given a printer like:
+
+```
+fn printSet(helper, s) {
+    let
+        fn h {
+            (leaf) { true }
+            (red(l, v, r)) |
+            (black(l, v, r) {
+                helper(v);
+                puts(", ");
+                true
+            }
+        }
+    in
+        puts("{");
+        h(s);
+        puts("}")
+        s;
+}
+```
+
+With a bit more effort I'm sure we could avoid printing a trailing comma.
+
+## Last issue, type unavailable
 
 In a polymorphic context, where type information is missing, we just need
 a generic `print$` function that does exactly what `print` does currently.
 
-So if we'd introduced debugging to print a list inside say `length` which
-can take a list of anything, we'd just replace it with `((make-printer
-print$list print$) l)` because we'd determined that `l` has type
+So if we'd introduced debugging to print a list inside say `length`
+which can take a list of anything, we'd just replace it with
+`print$list(print$)(l)` because we'd determined that `l` has type
 `list(#t)` in this context (`#t` is still a variable).
 
-## other last issue
+## Other last issue
 
 Implementing `puts`.
 
-Probably easy, mostly,
-it expects strings to have been pushed on to the stack for it, followed
-by a count, so
+Probably easy, mostly, it expects strings to have been pushed on to the
+stack for it, followed by a count, so
 
 ```scheme
 (puts "Hello")
@@ -292,4 +345,4 @@ return values, maybe just `vTrue`.
 
 Compiling these printer functions at run time is sub-optimal, though
 still a good approach imo. Maybe they could be hoisted out to globals
-so they don't re-compile for every print statement.
+so they don't re-compile for every print statement execution.
