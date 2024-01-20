@@ -48,6 +48,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstr
 static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type, bool someoneHasFields, int enumCount, int index, int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
+static HashSymbol *dollarSubstitute(HashSymbol *original);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #include "debugging_on.h"
@@ -77,19 +78,27 @@ MAKE_COUNT_LIST(AstArgList)
 
 MAKE_COUNT_LIST(AstCompositeFunction)
 
+static bool inPreamble = true; // preamble is treated specially
+static bool preambleLocked = false;
+
 LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest);
+    bool hasLock = inPreamble && !preambleLocked;
+    if (hasLock)
+        preambleLocked = true;
     env = extendLamContext(env);
     int save = PROTECT(env);
     LamTypeDefList *typeDefList = collectTypeDefs(nest->definitions, env);
     (void) PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(nest->definitions, env);
     PROTECT(funcDefsList);
-#ifdef NOTDEF
-    funcDefsList = makePrintFunctions(typeDefList, funcDefsList);
+    funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
     PROTECT(funcDefsList);
-#endif
+    if (hasLock)
+        inPreamble = false;
     LamSequence *body = convertSequence(nest->expressions, env);
+    if (hasLock)
+        inPreamble = true;
     (void) PROTECT(body);
     LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
     (void) PROTECT(letRecBody);
@@ -706,10 +715,35 @@ static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamL
     ENTER(prependDefine);
     LamExp *exp = convertExpression(define->expression, env);
     int save = PROTECT(exp);
-    LamLetRecBindings *this = newLamLetRecBindings(define->symbol, exp, next);
+    LamLetRecBindings *this = newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
+}
+
+static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
+    if (!inPreamble) return symbol;
+    bool needs_substitution = false;
+    for (char *s = symbol->name; *s != 0; s++) {
+        if (*s == '_') {
+            needs_substitution = true;
+            break;
+        }
+    }
+    if (needs_substitution) {
+        char * buf = NEW_ARRAY(char, strlen(symbol->name) + 1);
+        strcpy(buf, symbol->name);
+        for (int i = 0; buf[i] != 0; i++) {
+            if (buf[i] == '_') {
+                buf[i] = '$';
+            }
+        }
+        HashSymbol *replacement = newSymbol(buf);
+        FREE_ARRAY(char, buf, strlen(buf) + 1);
+        return replacement;
+    } else {
+        return symbol;
+    }
 }
 
 #define CHECK_ONE_ARG(name, args) do { \
@@ -897,6 +931,7 @@ static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
     if (info == NULL) {
         DEBUG("convertSymbol %s is not a constructor", symbol->name);
+        symbol = dollarSubstitute(symbol);
         LamExp *res = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
         return res;
     }

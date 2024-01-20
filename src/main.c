@@ -102,6 +102,8 @@ int main(int argc, char *argv[]) {
     ppLamExp(exp);
     eprintf("\n");
 #endif
+    ppLamExp(exp);
+    eprintf("\n");
     // type checking
     TcEnv *env = tc_init();
     PROTECT(env);

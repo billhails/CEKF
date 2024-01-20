@@ -56,6 +56,7 @@ HashSymbol *orSymbol(void);
 HashSymbol *powSymbol(void);
 HashSymbol *putcSymbol(void);
 HashSymbol *putnSymbol(void);
+HashSymbol *putsSymbol(void);
 HashSymbol *putvSymbol(void);
 HashSymbol *subSymbol(void);
 HashSymbol *thenSymbol(void);

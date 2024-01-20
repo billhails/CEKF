@@ -21,7 +21,7 @@
 #include "lambda.h"
 #include "value.h"
 
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest);
+LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest, LamContext *env, bool inPreamble);
 
 void putValue(Value v);
 
