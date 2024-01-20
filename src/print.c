@@ -393,6 +393,15 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors, LamContext
     }
     int save = PROTECT(match);
     LamExp *res = newLamExp(LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
+    PROTECT(res);
+    // print functions should all return their argument
+    LamExp *ret = printArgVar();
+    PROTECT(ret);
+    LamSequence *seq = newLamSequence(ret, NULL);
+    PROTECT(seq);
+    seq = newLamSequence(res, seq);
+    PROTECT(seq);
+    res = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     UNPROTECT(save);
     return res;
 }
