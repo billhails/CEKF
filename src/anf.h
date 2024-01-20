@@ -64,6 +64,7 @@ typedef enum AexpUnaryOp {
     AEXPUNARYOP_TYPE_NOT,
     AEXPUNARYOP_TYPE_PUTC,
     AEXPUNARYOP_TYPE_PUTN,
+    AEXPUNARYOP_TYPE_PUTV,
 } AexpUnaryOp;
 
 typedef enum CexpBoolType {

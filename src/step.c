@@ -30,6 +30,7 @@
 #include "cekf.h"
 #include "step.h"
 #include "hash.h"
+#include "print.h"
 
 #ifdef DEBUG_STEP
 #define DEBUGPRINTF(...) printf(__VA_ARGS__)
@@ -308,9 +309,11 @@ static int _cmp(Value a, Value b) {
     printContainedValue(b, 0);
     eprintf("\n");
 #endif
+#ifdef SAFETY_CHECKS
     if (a.type != b.type) {
         cant_happen("different types in _cmp");
     }
+#endif
     switch (a.type) {
         case VALUE_TYPE_VOID:
             return 0;
@@ -421,10 +424,12 @@ static Value cons(Value a, Value b) {
 }
 
 static Value vec(Value index, Value vector) {
+#ifdef SAFETY_CHECKS
     if (index.type != VALUE_TYPE_STDINT)
         cant_happen("invalid index type for vec %d", index.type);
     if (vector.type != VALUE_TYPE_VEC)
         cant_happen("invalid vector type for vec %d", vector.type);
+#endif
     int i = index.val.z;
     Vec *v = vector.val.vec;
     if (i < 0 || i >= v->size)
@@ -621,6 +626,12 @@ static void step() {
                 putchar(b.val.c);
             }
             break;
+            case BYTECODE_PRIM_PUTV: { // peek value, print it
+                DEBUGPRINTF("PUTC\n");
+                Value b = tos();
+                putValue(b);
+            }
+            break;
             case BYTECODE_PRIM_PUTN: { // peek value, print it
                 DEBUGPRINTF("PUTN\n");
                 Value b = tos();
@@ -749,8 +760,7 @@ static void step() {
             break;
             case BYTECODE_PRIM_PRINT: { // pop value, perform the op and push the result
                 DEBUGPRINTF("PRINT\n");
-                Value a = pop();
-                push(a);
+                Value a = tos();
                 printContainedValue(a, 0);
                 printf("\n");
             }
@@ -822,10 +832,12 @@ static void step() {
                 printf("\n");
 #endif
                 Value v = pop();
+#ifdef SAFETY_CHECKS
                 if (v.type != VALUE_TYPE_STDINT)
                     cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_STDINT, v.type);
                 if (v.val.z < 0 || v.val.z >= size)
                     cant_happen("match expression index out of range (%d)", v.val.z);
+#endif
                 state.C = readCurrentOffsetAt(v.val.z);
             }
             break;
@@ -930,9 +942,11 @@ static void step() {
             break;
             case BYTECODE_CUT: { // discard the current failure continuation
                 DEBUGPRINTF("CUT\n");
+#ifdef SAFETY_CHECKS
                 if (state.F == NULL) {
                     cant_happen("cut with no extant failure continuation");
                 }
+#endif
                 state.F = state.F->next;
             }
             break;

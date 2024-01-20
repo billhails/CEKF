@@ -1,0 +1,3 @@
+puts("hello\n");
+putv("hello\n");
+puts("\n")

@@ -378,6 +378,9 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
         case LAMUNARYOP_TYPE_PUTC:
             res = analyzeUnaryChar(app->exp, env, ng);
             break;
+        case LAMUNARYOP_TYPE_PUTV:
+            res = analyzeExp(app->exp, env, ng);
+            break;
         default:
             cant_happen("unrecognized type %d in analyzeUnary", app->type);
     }

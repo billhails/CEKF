@@ -199,6 +199,10 @@ void printAexpUnaryApp(struct AexpUnaryApp * x, int depth) {
             pad(depth + 1);
             eprintf("AEXPUNARYOP_TYPE_PUTN");
             break;
+        case AEXPUNARYOP_TYPE_PUTV:
+            pad(depth + 1);
+            eprintf("AEXPUNARYOP_TYPE_PUTV");
+            break;
     }
     eprintf("\n");
     printAexp(x->exp, depth + 1);
@@ -759,6 +763,9 @@ bool eqAexpUnaryApp(struct AexpUnaryApp * a, struct AexpUnaryApp * b) {
             if (a != b) return false;
             break;
         case AEXPUNARYOP_TYPE_PUTN:
+            if (a != b) return false;
+            break;
+        case AEXPUNARYOP_TYPE_PUTV:
             if (a != b) return false;
             break;
     }

@@ -214,6 +214,7 @@ enums:
         - NOT
         - PUTC
         - PUTN
+        - PUTV
 
 unions:
     LamExp:

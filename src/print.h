@@ -19,6 +19,10 @@
  */
 
 #include "lambda.h"
+#include "value.h"
 
 LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest);
+
+void putValue(Value v);
+
  #endif

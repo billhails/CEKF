@@ -54,7 +54,17 @@ void printContainedValue(Value x, int depth) {
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
-            eprintf("'%c'", x.val.c);
+            switch (x.val.c) {
+                case '\n':
+                    eprintf("'\\n'");
+                    break;
+                case '\t':
+                    eprintf("'\\t'");
+                    break;
+                default:
+                    eprintf("'%c'", x.val.c);
+                    break;
+            }
             break;
         case VALUE_TYPE_CLO:
             printClo(x.val.clo, depth);
@@ -160,7 +170,17 @@ void printElidedValue(Value x) {
             eprintf("%d", x.val.z);
             break;
         case VALUE_TYPE_CHARACTER:
-            eprintf("'%c'", x.val.c);
+            switch (x.val.c) {
+                case '\n':
+                    eprintf("'\\n'");
+                    break;
+                case '\t':
+                    eprintf("'\\t'");
+                    break;
+                default:
+                    eprintf("'%c'", x.val.c);
+                    break;
+            }
             break;
         case VALUE_TYPE_CONS:
             printCons(x.val.cons);

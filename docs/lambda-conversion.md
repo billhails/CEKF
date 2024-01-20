@@ -1,6 +1,6 @@
 # Lambda Conversion
 
-This is the stage after type checking where we desugar and rewrite the
+This is the stage before type checking where we desugar and rewrite the
 input into something close to the lambda calculus, which then becomes
 input to the final A-Normal form conversion to generate the structures
 that are used to generate the bytecode which is input to the CEKF machine
@@ -10,8 +10,8 @@ for execution.
 flowchart TD
 source -->
 AST[Parser] --abstract syntax-->
-check[Type Checking] --abstract syntax-->
 lambda[Lambda Conversion] --lambda calculus-->
+check[Type Checking] --lambda calculus-->
 desugaring1[Desugaring] -- simplified lambda calculus-->
 anf[A-Normal Form Conversion] --ANF-->
 static[Static Analysis] --annotated ANF-->

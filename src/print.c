@@ -18,7 +18,9 @@
 
 // print function generator and compiler code
 
+#include <stdio.h>
 #include "print.h"
+#include "cekf.h"
 #include "common.h"
 #include "lambda.h"
 #include "symbol.h"
@@ -28,6 +30,8 @@
 #else
 #include "debugging_off.h"
 #endif
+
+static void putVec(Vec *x);
 
 #ifdef NOTDEF
 static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindings *next);
@@ -93,3 +97,52 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindin
     }
 }
 #endif
+
+void putValue(Value x) {
+    switch (x.type) {
+        case VALUE_TYPE_VOID:
+            printf("<void>");
+            break;
+        case VALUE_TYPE_STDINT:
+            printf("%d", x.val.z);
+            break;
+        case VALUE_TYPE_BIGINT:
+            fprintBigInt(stdout, x.val.b);
+            break;
+        case VALUE_TYPE_CHARACTER:
+            switch (x.val.c) {
+                case '\t':
+                    printf("'\\t'");
+                    break;
+                case '\n':
+                    printf("'\\n'");
+                    break;
+                default:
+                    printf("'%c'", x.val.c);
+                    break;
+            }
+            break;
+        case VALUE_TYPE_CLO:
+            printf("<closure>");
+            break;
+        case VALUE_TYPE_CONT:
+            printf("<continuation>");
+            break;
+        case VALUE_TYPE_VEC:
+            putVec(x.val.vec);
+            break;
+        default:
+            cant_happen("unrecognised value type in putValue");
+    }
+}
+
+static void putVec(Vec *x) {
+    printf("#[");
+    for (int i = 0; i < x->size; i++) {
+        putValue(x->values[i]);
+        if (i + 1 < x->size) {
+            printf(" ");
+        }
+    }
+    printf("]");
+}

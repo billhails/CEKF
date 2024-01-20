@@ -45,6 +45,14 @@ HashSymbol *putnSymbol() {
     return res;
 }
 
+HashSymbol *putvSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putv");
+    }
+    return res;
+}
+
 HashSymbol *notSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

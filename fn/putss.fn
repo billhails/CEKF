@@ -1,0 +1,18 @@
+let
+
+    fn putss(s) {
+        let
+            fn helper {
+                ([]) { true }
+                (h @ t) {
+                    putc(h);
+                    helper(t)
+                }
+            }
+        in
+            helper(s);
+            s
+    }
+
+in
+    putss("Hello\n")

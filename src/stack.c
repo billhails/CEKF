@@ -96,16 +96,20 @@ void markStack(Stack *s) {
 }
 
 Value peekValue(Stack *s, int offset) {
+#ifdef SAFETY_CHECKS
     if (offset >= s->sp) {
         cant_happen("peek beyond top of stack not allowed");
     }
+#endif
     return s->stack[offset];
 }
 
 Value peekTop(Stack *s) {
+#ifdef SAFETY_CHECKS
     if (s->sp == 0) {
         cant_happen("peek top of empty stack not allowed");
     }
+#endif
     return s->stack[s->sp - 1];
 }
 
@@ -181,7 +185,9 @@ void pushN(Stack *s, int n) {
 
 void popN(Stack *s, int n) {
     s->sp -= n;
+#ifdef SAFETY_CHECKS
     if (s->sp < 0) {
         cant_happen("stack underflow in popN");
     }
+#endif
 }

@@ -193,6 +193,7 @@ enums:
         - NOT
         - PUTC
         - PUTN
+        - PUTV
 
     CexpBoolType:
         - AND

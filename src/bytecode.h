@@ -83,6 +83,7 @@ typedef enum ByteCodes {
     BYTECODE_PRIM_CMP,
     BYTECODE_PRIM_PUTC,
     BYTECODE_PRIM_PUTN,
+    BYTECODE_PRIM_PUTV,
 } ByteCodes;
 
 typedef struct ByteCodeArray {

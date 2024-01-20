@@ -180,6 +180,9 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
         case AEXPUNARYOP_TYPE_PUTN:
             prim = BYTECODE_PRIM_PUTN;
             break;
+        case AEXPUNARYOP_TYPE_PUTV:
+            prim = BYTECODE_PRIM_PUTV;
+            break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
     }
