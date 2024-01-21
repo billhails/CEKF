@@ -102,6 +102,8 @@ int main(int argc, char *argv[]) {
     ppLamExp(exp);
     eprintf("\n");
 #endif
+    ppLamExp(exp);
+    eprintf("\n");
     // type checking
     TcEnv *env = tc_init();
     PROTECT(env);
@@ -132,8 +134,7 @@ int main(int argc, char *argv[]) {
     writeEnd(&byteCodes);
     UNPROTECT(save);
     // execution
-    printContainedValue(run(byteCodes), 1);
-    printf("\n");
+    run(byteCodes);
     // report stats etc.
     if (report_flag) {
         clock_t end = clock();

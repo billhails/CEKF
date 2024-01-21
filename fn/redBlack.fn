@@ -31,9 +31,9 @@ let
                 (x, black(a, x, b), throw) { throw(s) }
                 (x, red(a, y, b), throw) {
                     if (x < y) {
-                        red(ins(x, a, throw), y, b)
+                        balance(ins(x, a, throw), y, b)
                     } else {
-                        red(a, y, ins(x, b, throw))
+                        balance(a, y, ins(x, b, throw))
                     }
                 }
                 (x, black(a, y, b), throw) {

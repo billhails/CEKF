@@ -62,7 +62,7 @@ static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpVarList *convertVarList(LamVarList *args);
 static AexpList *replaceLamList(LamList *list, HashTable *replacements);
-static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements);
+static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, HashTable *replacements);
 static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements);
 static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements);
@@ -823,6 +823,14 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
     return res;
 }
 
+static Aexp *replaceLamDeconstruct(LamDeconstruct *lamDeconstruct, HashTable *replacements) {
+    LamPrimApp *primApp = deconstructToPrimApp(lamDeconstruct);
+    int save = PROTECT(primApp);
+    Aexp *res = replaceLamPrim(primApp, replacements); // prim needs lamExp
+    UNPROTECT(save);
+    return res;
+}
+
 static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
     ENTER(replaceLamExp);
     Aexp *res = NULL;
@@ -840,7 +848,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
             res = aexpNormalizeStdInteger(lamExp->val.stdint);
             break;
         case LAMEXP_TYPE_PRIM:
-            res = replaceLamPrim(lamExp, replacements); // prim needs lamExp
+            res = replaceLamPrim(lamExp->val.prim, replacements);
             break;
         case LAMEXP_TYPE_UNARY:
             res = replaceLamUnary(lamExp->val.unary, replacements);
@@ -859,6 +867,9 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
             break;
         case LAMEXP_TYPE_TYPEDEFS:
             res = replaceLamCexp(lamExp->val.typedefs->body, replacements);
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            res = replaceLamDeconstruct(lamExp->val.deconstruct, replacements);
             break;
         case LAMEXP_TYPE_CHARACTER:
             res = aexpNormalizeCharacter(lamExp->val.character);
@@ -1004,9 +1015,8 @@ static AexpList *replaceLamList(LamList *list, HashTable *replacements) {
     return res;
 }
 
-static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements) {
+static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, HashTable *replacements) {
     ENTER(replaceLamPrim);
-    LamPrimApp *lamPrimApp = lamExp->val.prim;
     Aexp *exp1 = replaceLamExp(lamPrimApp->exp1, replacements);
     int save = PROTECT(exp1);
     Aexp *exp2 = replaceLamExp(lamPrimApp->exp2, replacements);
