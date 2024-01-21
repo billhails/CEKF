@@ -20,9 +20,12 @@
 
 #include "lambda.h"
 #include "value.h"
+#include "tc.h"
 
 LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest, LamContext *env, bool inPreamble);
 
 void putValue(Value v);
+
+LamExp *makePrinterForType(TcType *type);
 
  #endif

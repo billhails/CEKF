@@ -143,6 +143,9 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_CALLCC:
             ppLamCallCC(exp->val.callcc); // LamExp
             break;
+        case LAMEXP_TYPE_PRINT:
+            ppLamPrint(exp->val.print);
+            break;
         case LAMEXP_TYPE_LETREC:
             ppLamLetRec(exp->val.letrec);
             break;
@@ -399,6 +402,16 @@ void ppLamCallCC(LamExp *exp) {
     }
     eprintf("(call/cc ");
     ppLamExp(exp);
+    eprintf(")");
+}
+
+void ppLamPrint(LamPrint *print) {
+    if (print == NULL) {
+        eprintf("<NULL print>");
+        return;
+    }
+    eprintf("(print ");
+    ppLamExp(print->exp);
     eprintf(")");
 }
 

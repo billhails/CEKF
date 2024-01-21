@@ -251,6 +251,7 @@ struct LamPrint * newLamPrint(struct LamExp * exp) {
     struct LamPrint * x = NEW(LamPrint, OBJTYPE_LAMPRINT);
     DEBUG("new LamPrint %pn", x);
     x->exp = exp;
+    x->printer = NULL;
     return x;
 }
 
@@ -739,6 +740,7 @@ struct LamPrint * copyLamPrint(struct LamPrint * o) {
     x->header = _h;
     int save = PROTECT(x);
     x->exp = copyLamExp(o->exp);
+    x->printer = copyLamExp(o->printer);
     UNPROTECT(save);
     return x;
 }
@@ -1254,6 +1256,7 @@ void markLamPrint(struct LamPrint * x) {
     if (MARKED(x)) return;
     MARK(x);
     markLamExp(x->exp);
+    markLamExp(x->printer);
 }
 
 void markLamTypeDefs(struct LamTypeDefs * x) {

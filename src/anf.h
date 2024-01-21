@@ -100,7 +100,6 @@ typedef enum CexpType {
     CEXP_TYPE_IFF,
     CEXP_TYPE_COND,
     CEXP_TYPE_CALLCC,
-    CEXP_TYPE_PRINT,
     CEXP_TYPE_LETREC,
     CEXP_TYPE_AMB,
     CEXP_TYPE_CUT,
@@ -145,7 +144,6 @@ typedef union CexpVal {
     struct CexpIf * iff;
     struct CexpCond * cond;
     struct Aexp * callCC;
-    struct Aexp * print;
     struct CexpLetRec * letRec;
     struct CexpAmb * amb;
     struct CexpCut * cut;
@@ -478,7 +476,6 @@ void freeExp(struct Exp * x);
 #define CEXP_VAL_IFF(x) ((union CexpVal ){.iff = (x)})
 #define CEXP_VAL_COND(x) ((union CexpVal ){.cond = (x)})
 #define CEXP_VAL_CALLCC(x) ((union CexpVal ){.callCC = (x)})
-#define CEXP_VAL_PRINT(x) ((union CexpVal ){.print = (x)})
 #define CEXP_VAL_LETREC(x) ((union CexpVal ){.letRec = (x)})
 #define CEXP_VAL_AMB(x) ((union CexpVal ){.amb = (x)})
 #define CEXP_VAL_CUT(x) ((union CexpVal ){.cut = (x)})

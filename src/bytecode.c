@@ -626,11 +626,6 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             addByte(b, BYTECODE_CALLCC);
         }
         break;
-        case CEXP_TYPE_PRINT: {
-            writeAexp(x->val.print, b);
-            addByte(b, BYTECODE_PRIM_PRINT);
-        }
-        break;
         case CEXP_TYPE_LETREC: {
             writeCexpLetRec(x->val.letRec, b);
         }

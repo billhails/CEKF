@@ -44,3 +44,6 @@ $(EXTRA_DEBUG_C_TARGETS): src/%_debug.c: src/%.yaml tools/makeAST.py
 
 
 generated: $(EXTRA_TARGETS)
+
+tags: src/*
+	ctags src/*

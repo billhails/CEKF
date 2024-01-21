@@ -72,6 +72,7 @@ let
     }
 in
     makeList(
+        print(
         makeSet(
             "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymk"
             "fpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdoz"
@@ -84,4 +85,4 @@ in
             "vvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpaw"
             "kahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximva"
             "auocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbk"
-            "zxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol"))
+            "zxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")))

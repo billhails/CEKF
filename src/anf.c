@@ -665,9 +665,6 @@ struct Cexp * copyCexp(struct Cexp * o) {
         case CEXP_TYPE_CALLCC:
             x->val.callCC = copyAexp(o->val.callCC);
             break;
-        case CEXP_TYPE_PRINT:
-            x->val.print = copyAexp(o->val.print);
-            break;
         case CEXP_TYPE_LETREC:
             x->val.letRec = copyCexpLetRec(o->val.letRec);
             break;
@@ -973,9 +970,6 @@ void markCexp(struct Cexp * x) {
             break;
         case CEXP_TYPE_CALLCC:
             markAexp(x->val.callCC);
-            break;
-        case CEXP_TYPE_PRINT:
-            markAexp(x->val.print);
             break;
         case CEXP_TYPE_LETREC:
             markCexpLetRec(x->val.letRec);

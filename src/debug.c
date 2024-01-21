@@ -449,10 +449,6 @@ void dumpByteCode(ByteCodeArray *b) {
                 eprintf("NOT\n");
             }
             break;
-            case BYTECODE_PRIM_PRINT: {
-                eprintf("PRINT\n");
-            }
-            break;
             case BYTECODE_PRIM_MAKEVEC: {
                 int size = readByte(b, &i);
                 eprintf("MAKEVEC [%d]\n", size);

@@ -66,6 +66,7 @@ static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements);
 static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements);
 static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements);
+static Aexp *replaceLamPrint(LamPrint *print, HashTable *replacements);
 static Aexp *replaceLamCexp(LamExp *apply, HashTable *replacements);
 static Exp *normalizeMakeVec(LamMakeVec *makeVec, Exp *tail);
 static Exp *wrapTail(Exp *exp, Exp *tail);
@@ -349,19 +350,19 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
     return res;
 }
 
+static LamApply *printToApply(LamPrint *lamPrint) {
+    LamList *args = newLamList(lamPrint->exp, NULL);
+    int save = PROTECT(args);
+    LamApply *lamApply = newLamApply(lamPrint->printer, 1, args);
+    UNPROTECT(save);
+    return lamApply;
+}
+
 static Exp *normalizePrint(LamPrint *lamPrint, Exp *tail) {
     ENTER(normalizePrint);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(lamPrint->exp, replacements);
-    int save2 = PROTECT(aexp);
-    Cexp *cexp = newCexp(CEXP_TYPE_PRINT, CEXP_VAL_PRINT(aexp));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
+    LamApply *lamApply = printToApply(lamPrint);
+    int save = PROTECT(lamApply);
+    Exp *res = normalizeApply(lamApply, tail);
     UNPROTECT(save);
     LEAVE(normalizePrint);
     return res;
@@ -844,6 +845,9 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
         case LAMEXP_TYPE_UNARY:
             res = replaceLamUnary(lamExp->val.unary, replacements);
             break;
+        case LAMEXP_TYPE_PRINT:
+            res = replaceLamPrint(lamExp->val.print, replacements);
+            break;
         case LAMEXP_TYPE_MAKEVEC:
             res = replaceLamMakeVec(lamExp->val.makeVec, replacements);
             break;
@@ -968,6 +972,18 @@ static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements) {
     Aexp *res = newAexp(AEXP_TYPE_MAKEVEC, AEXP_VAL_MAKEVEC(aexpMakeVec));
     UNPROTECT(save);
     LEAVE(replaceLamMakeVec);
+    return res;
+}
+
+static Aexp *replaceLamPrint(LamPrint *print, HashTable *replacements) {
+    ENTER(replaceLamPrint);
+    LamApply *lamApply = printToApply(print);
+    int save = PROTECT(lamApply);
+    LamExp *lamExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(lamApply));
+    PROTECT(lamExp);
+    Aexp *res = replaceLamExp(lamExp, replacements);
+    UNPROTECT(save);
+    LEAVE(replaceLamPrint);
     return res;
 }
 

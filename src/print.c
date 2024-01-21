@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// print function generator and compiler code
+// print function generator, compiler and run-time code
 
 #include <stdio.h>
 #include "print.h"
@@ -37,6 +37,12 @@ static void putVec(Vec *x);
 
 static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindings *next, LamContext *env, bool inPreamble);
 static HashSymbol *makePrintName(char *prefix, char *name);
+
+/****************************************************************
+ * print function generator
+ * invoked during lambda conversion
+ * generates a print function for each typedef
+ ****************************************************************/
 
 LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *next, LamContext *env, bool inPreamble) {
     ENTER(makePrintFunctions);
@@ -286,6 +292,12 @@ static LamSequence *makeVecMatchParts(int index, LamTypeConstructorArgs *args, L
     int save = PROTECT(next);
     LamExp *exp = makePrintConstructorArg(args->arg, index);
     PROTECT(exp);
+    if (next != tail) {
+        LamExp *comma = makePutsString(", ");
+        PROTECT(comma);
+        next = newLamSequence(comma, next);
+        PROTECT(next);
+    }
     LamSequence *res = newLamSequence(exp, next);
     UNPROTECT(save);
     return res;
@@ -428,6 +440,106 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindin
         return makePrintTypeFunction(typeDef, env, next);
     }
 }
+
+/****************************************************************
+ * print function compiler
+ * invoked during type checking
+ * computes a print function that will print the given type
+ ****************************************************************/
+static LamExp *makePrinterForFunction(TcFunction *function);
+static LamExp *makePrinterForPair(TcPair *pair);
+static LamExp *makePrinterForVar(TcVar *var);
+static LamExp *makePrinterForInt();
+static LamExp *makePrinterForChar();
+static LamExp *makePrinterForTypeDef(TcTypeDef *typeDef);
+
+LamExp *makePrinterForType(TcType *type) {
+    LamExp *res = NULL;
+    ppTcType(type);
+    eprintf("\n");
+    switch (type->type) {
+        case TCTYPE_TYPE_FUNCTION:
+            res = makePrinterForFunction(type->val.function);
+            break;
+        case TCTYPE_TYPE_PAIR:
+            res = makePrinterForPair(type->val.pair);
+            break;
+        case TCTYPE_TYPE_VAR:
+            res = makePrinterForVar(type->val.var);
+            break;
+        case TCTYPE_TYPE_SMALLINTEGER:
+        case TCTYPE_TYPE_BIGINTEGER:
+            res = makePrinterForInt();
+            break;
+        case TCTYPE_TYPE_CHARACTER:
+            res = makePrinterForChar();
+            break;
+        case TCTYPE_TYPE_TYPEDEF:
+            res = makePrinterForTypeDef(type->val.typeDef);
+            break;
+        default:
+            cant_happen("unrecognised TcType %d in makePrinterForType", type->type);
+    }
+    return res;
+}
+
+static LamExp *makePrinterForFunction(TcFunction *function __attribute__((unused))) {
+    return makePutsString("<function>");
+}
+
+static LamExp *makePrinterForPair(TcPair *pair __attribute__((unused))) {
+    cant_happen("makePrinterForPair not implemented yet");
+}
+
+static LamExp *makePrinterForVar(TcVar *var) {
+    if (var->instance == NULL) {
+        return makeSymbolExpr("print$");
+    }
+    return makePrinterForType(var->instance);
+}
+
+static LamExp *makePrinterForInt() {
+    return makePrintInt();
+}
+
+static LamExp *makePrinterForChar() {
+    return makePrintChar();
+}
+
+static LamList *makePrinterForTypeDefArgs(TcTypeDefArgs *args) {
+    if (args == NULL) return NULL;
+    LamList *next = makePrinterForTypeDefArgs(args->next);
+    int save = PROTECT(next);
+    LamExp *this = makePrinterForType(args->type);
+    PROTECT(this);
+    LamList *res = newLamList(this, next);
+    UNPROTECT(save);
+    return res;
+}
+
+static LamExp *makePrinterForTypeDef(TcTypeDef *typeDef) {
+    HashSymbol *name = makePrintName("print$", typeDef->name->name);
+    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    int save = PROTECT(exp);
+    LamList *args = makePrinterForTypeDefArgs(typeDef->args);
+    PROTECT(args);
+    int nargs = countLamList(args);
+    if (nargs == 0) {
+        UNPROTECT(save);
+        return exp;
+    }
+    LamApply *apply = newLamApply(exp, nargs, args);
+    PROTECT(apply);
+    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return res;
+}
+
+
+/****************************************************************
+ * run-time print code supporting putv
+ * used when the type cannot be detrmined.
+ ****************************************************************/
 
 void putValue(Value x) {
     switch (x.type) {

@@ -758,13 +758,6 @@ static void step() {
                 push(not(a));
             }
             break;
-            case BYTECODE_PRIM_PRINT: { // pop value, perform the op and push the result
-                DEBUGPRINTF("PRINT\n");
-                Value a = tos();
-                printContainedValue(a, 0);
-                printf("\n");
-            }
-            break;
             case BYTECODE_PRIM_CONS: { // pop two values, perform the binop and push the result
                 DEBUGPRINTF("CONS\n");
                 Value b = pop();

@@ -25,6 +25,7 @@
 #include "hash.h"
 #include "tc_debug.h"
 #include "tc_helper.h"
+#include "print.h"
 
 #ifdef DEBUG_TC
 #include "debugging_on.h"
@@ -592,8 +593,12 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
-    // a -> a
-    return analyzeExp(print->exp, env, ng);
+    // a -> a, but installs a printer for type a
+    TcType *type = analyzeExp(print->exp, env, ng);
+    int save = PROTECT(type);
+    print->printer = makePrinterForType(type);
+    UNPROTECT(save);
+    return type;
 }
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {

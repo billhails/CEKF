@@ -151,7 +151,6 @@ unions:
         iff: CexpIf
         cond: CexpCond
         callCC: Aexp
-        print: Aexp
         letRec: CexpLetRec
         amb: CexpAmb
         cut: CexpCut

@@ -576,11 +576,6 @@ eprintf("void * %p", x->val.error);
             eprintf("CEXP_TYPE_CALLCC\n");
             printAexp(x->val.callCC, depth + 1);
             break;
-        case CEXP_TYPE_PRINT:
-            pad(depth + 1);
-            eprintf("CEXP_TYPE_PRINT\n");
-            printAexp(x->val.print, depth + 1);
-            break;
         case CEXP_TYPE_LETREC:
             pad(depth + 1);
             eprintf("CEXP_TYPE_LETREC\n");
@@ -1005,9 +1000,6 @@ bool eqCexp(struct Cexp * a, struct Cexp * b) {
             break;
         case CEXP_TYPE_CALLCC:
             if (!eqAexp(a->val.callCC, b->val.callCC)) return false;
-            break;
-        case CEXP_TYPE_PRINT:
-            if (!eqAexp(a->val.print, b->val.print)) return false;
             break;
         case CEXP_TYPE_LETREC:
             if (!eqCexpLetRec(a->val.letRec, b->val.letRec)) return false;
