@@ -30,6 +30,7 @@
 #include "cekf.h"
 #include "step.h"
 #include "hash.h"
+#include "print.h"
 
 #ifdef DEBUG_STEP
 #define DEBUGPRINTF(...) printf(__VA_ARGS__)
@@ -71,6 +72,10 @@ static inline Value peek(int index) {
     return peekValue(&state.S, index);
 }
 
+static inline Value tos(void) {
+    return peekTop(&state.S);
+}
+
 static void copyToVec(Vec *v) {
     copyTopToValues(&state.S, &(v->values[0]), v->size);
 }
@@ -97,24 +102,24 @@ Value run(ByteCodeArray B) {
     return state.V;
 }
 
-static inline int readCurrentByte() {
+static inline int readCurrentByte(void) {
     return readByte(&state.B, &state.C);
 }
 
-static inline int readCurrentWord() {
+static inline int readCurrentWord(void) {
     return readWord(&state.B, &state.C);
 }
 
-static inline int readCurrentInt() {
+static inline int readCurrentInt(void) {
     return readInt(&state.B, &state.C);
 }
 
-static inline BigInt *readCurrentBigInt() {
+static inline BigInt *readCurrentBigInt(void) {
     bigint bi = readBigint(&state.B, &state.C);
     return newBigInt(bi);
 }
 
-static inline int readCurrentOffset() {
+static inline int readCurrentOffset(void) {
     return readOffset(&state.B, &state.C);
 }
 
@@ -304,9 +309,11 @@ static int _cmp(Value a, Value b) {
     printContainedValue(b, 0);
     eprintf("\n");
 #endif
+#ifdef SAFETY_CHECKS
     if (a.type != b.type) {
         cant_happen("different types in _cmp");
     }
+#endif
     switch (a.type) {
         case VALUE_TYPE_VOID:
             return 0;
@@ -322,6 +329,19 @@ static int _cmp(Value a, Value b) {
             return _vecCmp(a.val.vec, b.val.vec);
         default:
             cant_happen("unexpected type for _cmp (%d)", a.type);
+    }
+}
+
+static Value cmp(Value a, Value b) {
+    switch (_cmp(a, b)) {
+        case -1:
+            return vLt;
+        case 0:
+            return vEq;
+        case 1:
+            return vGt;
+        default:
+            cant_happen("unexpected value from _cmp");
     }
 }
 
@@ -404,10 +424,12 @@ static Value cons(Value a, Value b) {
 }
 
 static Value vec(Value index, Value vector) {
+#ifdef SAFETY_CHECKS
     if (index.type != VALUE_TYPE_STDINT)
         cant_happen("invalid index type for vec %d", index.type);
     if (vector.type != VALUE_TYPE_VEC)
         cant_happen("invalid vector type for vec %d", vector.type);
+#endif
     int i = index.val.z;
     Vec *v = vector.val.vec;
     if (i < 0 || i >= v->size)
@@ -525,9 +547,14 @@ static void applyProc(int naargs) {
 
 #define printCEKF(state)
 
+static int count = 0;
+
+void reportSteps(void) {
+    printf("%d instructions executed\n", count);
+}
+
 static void step() {
 #ifdef DEBUG_STEP
-    int count = 0;
     dumpByteCode(&state.B);
 #endif
     if (bigint_flag) {
@@ -547,11 +574,13 @@ static void step() {
     }
     state.C = 0;
     while (state.C != UINT64_MAX) {
+        ++count;
+        int bytecode;
 #ifdef DEBUG_STEP
         printCEKF(&state);
-        printf("%4d) %04lx ### ", ++count, state.C);
+        printf("%4d) %04lx ### ", count, state.C);
 #endif
-        switch (readCurrentByte()) {
+        switch (bytecode = readCurrentByte()) {
             case BYTECODE_NONE: {
                 cant_happen("encountered NONE in step()");
             }
@@ -589,6 +618,35 @@ static void step() {
                 int size = readCurrentByte();
                 DEBUGPRINTF("PUSHN [%d]\n", size);
                 pushN(&state.S, size);
+            }
+            break;
+            case BYTECODE_PRIM_PUTC: { // peek value, print it
+                DEBUGPRINTF("PUTC\n");
+                Value b = tos();
+                putchar(b.val.c);
+            }
+            break;
+            case BYTECODE_PRIM_PUTV: { // peek value, print it
+                DEBUGPRINTF("PUTC\n");
+                Value b = tos();
+                putValue(b);
+            }
+            break;
+            case BYTECODE_PRIM_PUTN: { // peek value, print it
+                DEBUGPRINTF("PUTN\n");
+                Value b = tos();
+                if (b.type == VALUE_TYPE_BIGINT) {
+                    fprintBigInt(stdout, b.val.b);
+                } else {
+                    printf("%d", b.val.z);
+                }
+            }
+            break;
+            case BYTECODE_PRIM_CMP: { // pop two values, perform the binop and push the result
+                DEBUGPRINTF("CMP\n");
+                Value b = pop();
+                Value a = pop();
+                push(cmp(a, b));
             }
             break;
             case BYTECODE_PRIM_ADD: { // pop two values, perform the binop and push the result
@@ -700,14 +758,6 @@ static void step() {
                 push(not(a));
             }
             break;
-            case BYTECODE_PRIM_PRINT: { // pop value, perform the op and push the result
-                DEBUGPRINTF("PRINT\n");
-                Value a = pop();
-                push(a);
-                printContainedValue(a, 0);
-                printf("\n");
-            }
-            break;
             case BYTECODE_PRIM_CONS: { // pop two values, perform the binop and push the result
                 DEBUGPRINTF("CONS\n");
                 Value b = pop();
@@ -775,10 +825,12 @@ static void step() {
                 printf("\n");
 #endif
                 Value v = pop();
+#ifdef SAFETY_CHECKS
                 if (v.type != VALUE_TYPE_STDINT)
                     cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_STDINT, v.type);
                 if (v.val.z < 0 || v.val.z >= size)
                     cant_happen("match expression index out of range (%d)", v.val.z);
+#endif
                 state.C = readCurrentOffsetAt(v.val.z);
             }
             break;
@@ -883,9 +935,11 @@ static void step() {
             break;
             case BYTECODE_CUT: { // discard the current failure continuation
                 DEBUGPRINTF("CUT\n");
+#ifdef SAFETY_CHECKS
                 if (state.F == NULL) {
                     cant_happen("cut with no extant failure continuation");
                 }
+#endif
                 state.F = state.F->next;
             }
             break;
@@ -988,11 +1042,17 @@ static void step() {
             break;
             case BYTECODE_DONE: { // can't happen, probably
                 DEBUGPRINTF("DONE\n");
-                state.C = -1;
+                state.C = UINT64_MAX;
+            }
+            break;
+            case BYTECODE_ERROR: {
+                DEBUGPRINTF("ERROR\n");
+                state.C = UINT64_MAX;
+                eprintf("pattern match exhausted in step\n");
             }
             break;
             default:
-                cant_happen("unrecognised bytecode %d in step()", readCurrentByte(0));
+                cant_happen("unrecognised bytecode %d in step()", bytecode);
         }
 #ifdef DEBUG_STEP
 #ifdef DEBUG_SLOW_STEP

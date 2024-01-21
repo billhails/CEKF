@@ -19,38 +19,12 @@
  */
 
 #include "cekf.h"
-#include "exp.h"
+#include "anf.h"
 #include "analysis.h"
 #include "bytecode.h"
 
-void printAexp(Aexp *x);
-void printAexpAnnotatedVar(AexpAnnotatedVar *x);
-void printAexpLam(AexpLam *x);
-void printAexpList(AexpList *x);
-void printAexpPrimApp(AexpPrimApp *x);
-void printAexpUnaryApp(AexpUnaryApp *x);
-void printAexpVar(HashSymbol *x);
-void printAexpVarList(AexpVarList *x);
-void printBareAexpList(AexpList *x);
 void printCEKF(CEKF *x);
-void printCexpAmb(CexpAmb *x);
-void printCexpCut(CexpCut *x);
-void printCexpApply(CexpApply *x);
-void printCexpBool(CexpBool *x);
-void printCexp(Cexp *x);
-void printCexpMatch(CexpMatch *x);
-void printMatchList(MatchList *x);
-void printCexpIf(CexpIf *x);
-void printCexpCond(CexpCond *x);
-void printCexpCondCases(CexpCondCases *x);
-void printCexpIntCondCases(CexpIntCondCases *x);
-void printCexpCharCondCases(CexpCharCondCases *x);
-void printCexpLetRec(CexpLetRec *x);
 void printCTEnv(CTEnv *x);
-void printExp(Exp *x);
-void printExpLet(ExpLet *x);
-void printLetRecBindings(LetRecBindings *x);
-void printAexpMakeVec(AexpMakeVec *x);
 
 void printContainedValue(Value x, int depth);
 void printValue(Value x, int depth);

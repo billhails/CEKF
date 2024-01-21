@@ -1,0 +1,49 @@
+# this makefile fragment contains the extra rules to generate the
+# various boilerplate code for structs and trees from the yaml
+# files in src using tools/makeAST.py
+
+# I didn't want to add python to the build requirements on github,
+# so the generated files are committed and included as part of the
+# repo, but if you need to make alterations it would be better to
+# use the generator, so this sample is included for reference
+
+# to use this fragment, simply copy Makefile.extra.sample to
+# Makefile.extra and `make generated` to regenerate the c and h files.
+
+.PHONY: generated
+
+EXTRA_YAML=$(wildcard src/*.yaml)
+EXTRA_C_TARGETS=$(patsubst src/%.yaml,src/%.c,$(EXTRA_YAML))
+EXTRA_H_TARGETS=$(patsubst src/%.yaml,src/%.h,$(EXTRA_YAML))
+EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,src/%_objtypes.h,$(EXTRA_YAML))
+EXTRA_DEBUG_H_TARGETS=$(patsubst src/%.yaml,src/%_debug.h,$(EXTRA_YAML))
+EXTRA_DEBUG_C_TARGETS=$(patsubst src/%.yaml,src/%_debug.c,$(EXTRA_YAML))
+
+EXTRA_TARGETS= \
+    $(EXTRA_C_TARGETS) \
+    $(EXTRA_H_TARGETS) \
+    $(EXTRA_OBJTYPES_H_TARGETS) \
+    $(EXTRA_DEBUG_H_TARGETS) \
+    $(EXTRA_DEBUG_C_TARGETS)
+
+
+$(EXTRA_C_TARGETS): src/%.c: src/%.yaml tools/makeAST.py
+	python3 tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_H_TARGETS): src/%.h: src/%.yaml tools/makeAST.py
+	python3 tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_OBJTYPES_H_TARGETS): src/%_objtypes.h: src/%.yaml tools/makeAST.py
+	python3 tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DEBUG_H_TARGETS): src/%_debug.h: src/%.yaml tools/makeAST.py
+	python3 tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DEBUG_C_TARGETS): src/%_debug.c: src/%.yaml tools/makeAST.py
+	python3 tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
+
+
+generated: $(EXTRA_TARGETS)
+
+tags: src/*
+	ctags src/*

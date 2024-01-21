@@ -14,1018 +14,1339 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * ANF structures to be converted to bytecode.
+ *
+ * Generated from src/anf.yaml by tools/makeAST.py
  */
 
 #include "anf.h"
-#include "common.h"
-#include "hash.h"
-#include "symbol.h"
-#include "memory.h"
-#include "lambda_helper.h"
-#include "bigint.h"
-
-#ifdef DEBUG_ANF
 #include <stdio.h>
-#include <unistd.h>
-#include "debug.h"
-#include "lambda_pp.h"
+#include <strings.h>
+#include "common.h"
+#ifdef DEBUG_ALLOC
 #include "debugging_on.h"
 #else
 #include "debugging_off.h"
 #endif
 
-static Exp *normalize(LamExp *lamExp, Exp *tail);
-static Exp *normalizeLam(LamLam *lamLam, Exp *tail);
-static Exp *normalizeVar(HashSymbol *var, Exp *tail);
-static Exp *normalizeBigInteger(BigInt *integer, Exp *tail);
-static Exp *normalizeStdInteger(int integer, Exp *tail);
-static Exp *normalizeCharacter(char character, Exp *tail);
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
-static Exp *normalizeAnd(LamAnd *app, Exp *tail);
-static Exp *normalizeOr(LamOr *app, Exp *tail);
-static Exp *normalizeAmb(LamAmb *app, Exp *tail);
-static Exp *normalizeSequence(LamSequence *sequence, Exp *tail);
-static Exp *normalizePrim(LamPrimApp *app, Exp *tail);
-static Exp *normalizeApply(LamApply *lamApply, Exp *tail);
-static Exp *normalizeBack(Exp *tail);
-static Exp *normalizeError(Exp *tail);
-static HashSymbol *freshSymbol();
-static HashTable *makeLamExpHashTable();
-static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements);
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op);
-static Exp *letBind(Exp *body, HashTable *replacements);
-static AexpPrimOp mapPrimOp(LamPrimOp op);
-static Aexp *aexpNormalizeVar(HashSymbol *var);
-static Aexp *aexpNormalizeBigInteger(BigInt *integer);
-static Aexp *aexpNormalizeStdInteger(int integer);
-static Aexp *aexpNormalizeCharacter(char character);
-static Aexp *aexpNormalizeLam(LamLam *lamLam);
-static AexpVarList *convertVarList(LamVarList *args);
-static AexpList *replaceLamList(LamList *list, HashTable *replacements);
-static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements);
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements);
-static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements);
-static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements);
-static Aexp *replaceLamCexp(LamExp *apply, HashTable *replacements);
-static Exp *normalizeMakeVec(LamMakeVec *makeVec, Exp *tail);
-static Exp *wrapTail(Exp *exp, Exp *tail);
-static Exp *normalizeIff(LamIff *lamIff, Exp *tail);
-static Exp *normalizeCallCc(LamExp *callcc, Exp *tail);
-static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail);
-static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
-static Exp *normalizeMatch(LamMatch *match, Exp *tail);
-static MatchList *normalizeMatchList(LamMatchList *matchList);
-static AexpIntList *convertIntList(LamIntList *list);
-static Exp *normalizeCond(LamCond *cond, Exp *tail);
-static CexpCondCases *normalizeCondCases(LamCondCases *cases);
-static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
-static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
-static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
+/*
+ * constructor functions
+ */
 
-Exp *anfNormalize(LamExp *lamExp) {
-    return normalize(lamExp, NULL);
+struct AexpLam * newAexpLam(int nargs, int letRecOffset, struct AexpVarList * args, struct Exp * exp) {
+    struct AexpLam * x = NEW(AexpLam, OBJTYPE_AEXPLAM);
+    DEBUG("new AexpLam %pn", x);
+    x->nargs = nargs;
+    x->letRecOffset = letRecOffset;
+    x->args = args;
+    x->exp = exp;
+    return x;
 }
 
-static Exp *normalize(LamExp *lamExp, Exp *tail) {
-    ENTER(normalize);
-    IFDEBUG(ppLamExp(lamExp));
-    switch (lamExp->type) {
-        case LAMEXP_TYPE_LAM:
-            return normalizeLam(lamExp->val.lam, tail);
-        case LAMEXP_TYPE_VAR:
-            return normalizeVar(lamExp->val.var, tail);
-        case LAMEXP_TYPE_STDINT:
-            return normalizeStdInteger(lamExp->val.stdint, tail);
-        case LAMEXP_TYPE_BIGINTEGER:
-            return normalizeBigInteger(lamExp->val.biginteger, tail);
-        case LAMEXP_TYPE_PRIM:
-            return normalizePrim(lamExp->val.prim, tail);
-        case LAMEXP_TYPE_UNARY:
-            return normalizeUnary(lamExp->val.unary, tail);
-        case LAMEXP_TYPE_AND:
-            return normalizeAnd(lamExp->val.and, tail);
-        case LAMEXP_TYPE_OR:
-            return normalizeOr(lamExp->val.or, tail);
-        case LAMEXP_TYPE_AMB:
-            return normalizeAmb(lamExp->val.amb, tail);
-        case LAMEXP_TYPE_LIST:
-            return normalizeSequence(lamExp->val.list, tail);
-        case LAMEXP_TYPE_MAKEVEC:
-            return normalizeMakeVec(lamExp->val.makeVec, tail);
-        case LAMEXP_TYPE_TYPEDEFS:
-            return normalize(lamExp->val.typedefs->body, tail);
-        case LAMEXP_TYPE_APPLY:
-            return normalizeApply(lamExp->val.apply, tail);
-        case LAMEXP_TYPE_IFF:
-            return normalizeIff(lamExp->val.iff, tail);
-        case LAMEXP_TYPE_CALLCC:
-            return normalizeCallCc(lamExp->val.callcc, tail);
-        case LAMEXP_TYPE_LETREC:
-            return normalizeLetRec(lamExp->val.letrec, tail);
-        case LAMEXP_TYPE_DECONSTRUCT:
-            return normalizeDeconstruct(lamExp->val.deconstruct, tail);
-        case LAMEXP_TYPE_CONSTRUCT:
-            return normalizeConstruct(lamExp->val.construct, tail);
-        case LAMEXP_TYPE_CONSTANT:
-            return normalizeStdInteger(lamExp->val.constant->tag, tail);
-        case LAMEXP_TYPE_LET:
-            return normalizeLet(lamExp->val.let, tail);
-        case LAMEXP_TYPE_MATCH:
-            return normalizeMatch(lamExp->val.match, tail);
-        case LAMEXP_TYPE_COND:
-            return normalizeCond(lamExp->val.cond, tail);
-        case LAMEXP_TYPE_CHARACTER:
-            return normalizeCharacter(lamExp->val.character, tail);
-        case LAMEXP_TYPE_BACK:
-            return normalizeBack(tail);
-        case LAMEXP_TYPE_ERROR:
-            return normalizeError(tail);
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("normalize encountered cond default");
+struct AexpVarList * newAexpVarList(HashSymbol * var, struct AexpVarList * next) {
+    struct AexpVarList * x = NEW(AexpVarList, OBJTYPE_AEXPVARLIST);
+    DEBUG("new AexpVarList %pn", x);
+    x->var = var;
+    x->next = next;
+    return x;
+}
+
+struct AexpAnnotatedVar * newAexpAnnotatedVar(enum AexpAnnotatedVarType  type, int frame, int offset, HashSymbol * var) {
+    struct AexpAnnotatedVar * x = NEW(AexpAnnotatedVar, OBJTYPE_AEXPANNOTATEDVAR);
+    DEBUG("new AexpAnnotatedVar %pn", x);
+    x->type = type;
+    x->frame = frame;
+    x->offset = offset;
+    x->var = var;
+    return x;
+}
+
+struct AexpPrimApp * newAexpPrimApp(enum AexpPrimOp  type, struct Aexp * exp1, struct Aexp * exp2) {
+    struct AexpPrimApp * x = NEW(AexpPrimApp, OBJTYPE_AEXPPRIMAPP);
+    DEBUG("new AexpPrimApp %pn", x);
+    x->type = type;
+    x->exp1 = exp1;
+    x->exp2 = exp2;
+    return x;
+}
+
+struct AexpUnaryApp * newAexpUnaryApp(enum AexpUnaryOp  type, struct Aexp * exp) {
+    struct AexpUnaryApp * x = NEW(AexpUnaryApp, OBJTYPE_AEXPUNARYAPP);
+    DEBUG("new AexpUnaryApp %pn", x);
+    x->type = type;
+    x->exp = exp;
+    return x;
+}
+
+struct AexpList * newAexpList(struct Aexp * exp, struct AexpList * next) {
+    struct AexpList * x = NEW(AexpList, OBJTYPE_AEXPLIST);
+    DEBUG("new AexpList %pn", x);
+    x->exp = exp;
+    x->next = next;
+    return x;
+}
+
+struct AexpIntList * newAexpIntList(int integer, struct AexpIntList * next) {
+    struct AexpIntList * x = NEW(AexpIntList, OBJTYPE_AEXPINTLIST);
+    DEBUG("new AexpIntList %pn", x);
+    x->integer = integer;
+    x->next = next;
+    return x;
+}
+
+struct CexpApply * newCexpApply(struct Aexp * function, int nargs, struct AexpList * args) {
+    struct CexpApply * x = NEW(CexpApply, OBJTYPE_CEXPAPPLY);
+    DEBUG("new CexpApply %pn", x);
+    x->function = function;
+    x->nargs = nargs;
+    x->args = args;
+    return x;
+}
+
+struct AexpMakeVec * newAexpMakeVec(int nargs, struct AexpList * args) {
+    struct AexpMakeVec * x = NEW(AexpMakeVec, OBJTYPE_AEXPMAKEVEC);
+    DEBUG("new AexpMakeVec %pn", x);
+    x->nargs = nargs;
+    x->args = args;
+    return x;
+}
+
+struct CexpIf * newCexpIf(struct Aexp * condition, struct Exp * consequent, struct Exp * alternative) {
+    struct CexpIf * x = NEW(CexpIf, OBJTYPE_CEXPIF);
+    DEBUG("new CexpIf %pn", x);
+    x->condition = condition;
+    x->consequent = consequent;
+    x->alternative = alternative;
+    return x;
+}
+
+struct CexpCond * newCexpCond(struct Aexp * condition, struct CexpCondCases * cases) {
+    struct CexpCond * x = NEW(CexpCond, OBJTYPE_CEXPCOND);
+    DEBUG("new CexpCond %pn", x);
+    x->condition = condition;
+    x->cases = cases;
+    return x;
+}
+
+struct CexpIntCondCases * newCexpIntCondCases(BigInt * option, struct Exp * body, struct CexpIntCondCases * next) {
+    struct CexpIntCondCases * x = NEW(CexpIntCondCases, OBJTYPE_CEXPINTCONDCASES);
+    DEBUG("new CexpIntCondCases %pn", x);
+    x->option = option;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
+struct CexpCharCondCases * newCexpCharCondCases(char option, struct Exp * body, struct CexpCharCondCases * next) {
+    struct CexpCharCondCases * x = NEW(CexpCharCondCases, OBJTYPE_CEXPCHARCONDCASES);
+    DEBUG("new CexpCharCondCases %pn", x);
+    x->option = option;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
+struct CexpMatch * newCexpMatch(struct Aexp * condition, struct MatchList * clauses) {
+    struct CexpMatch * x = NEW(CexpMatch, OBJTYPE_CEXPMATCH);
+    DEBUG("new CexpMatch %pn", x);
+    x->condition = condition;
+    x->clauses = clauses;
+    return x;
+}
+
+struct MatchList * newMatchList(struct AexpIntList * matches, struct Exp * body, struct MatchList * next) {
+    struct MatchList * x = NEW(MatchList, OBJTYPE_MATCHLIST);
+    DEBUG("new MatchList %pn", x);
+    x->matches = matches;
+    x->body = body;
+    x->next = next;
+    return x;
+}
+
+struct CexpLetRec * newCexpLetRec(int nbindings, struct LetRecBindings * bindings, struct Exp * body) {
+    struct CexpLetRec * x = NEW(CexpLetRec, OBJTYPE_CEXPLETREC);
+    DEBUG("new CexpLetRec %pn", x);
+    x->nbindings = nbindings;
+    x->bindings = bindings;
+    x->body = body;
+    return x;
+}
+
+struct LetRecBindings * newLetRecBindings(HashSymbol * var, struct Aexp * val, struct LetRecBindings * next) {
+    struct LetRecBindings * x = NEW(LetRecBindings, OBJTYPE_LETRECBINDINGS);
+    DEBUG("new LetRecBindings %pn", x);
+    x->var = var;
+    x->val = val;
+    x->next = next;
+    return x;
+}
+
+struct CexpAmb * newCexpAmb(struct Exp * exp1, struct Exp * exp2) {
+    struct CexpAmb * x = NEW(CexpAmb, OBJTYPE_CEXPAMB);
+    DEBUG("new CexpAmb %pn", x);
+    x->exp1 = exp1;
+    x->exp2 = exp2;
+    return x;
+}
+
+struct CexpCut * newCexpCut(struct Exp * exp) {
+    struct CexpCut * x = NEW(CexpCut, OBJTYPE_CEXPCUT);
+    DEBUG("new CexpCut %pn", x);
+    x->exp = exp;
+    return x;
+}
+
+struct CexpBool * newCexpBool(enum CexpBoolType  type, struct Exp * exp1, struct Exp * exp2) {
+    struct CexpBool * x = NEW(CexpBool, OBJTYPE_CEXPBOOL);
+    DEBUG("new CexpBool %pn", x);
+    x->type = type;
+    x->exp1 = exp1;
+    x->exp2 = exp2;
+    return x;
+}
+
+struct ExpLet * newExpLet(HashSymbol * var, struct Exp * val, struct Exp * body) {
+    struct ExpLet * x = NEW(ExpLet, OBJTYPE_EXPLET);
+    DEBUG("new ExpLet %pn", x);
+    x->var = var;
+    x->val = val;
+    x->body = body;
+    return x;
+}
+
+struct CexpCondCases * newCexpCondCases(enum CexpCondCasesType  type, union CexpCondCasesVal  val) {
+    struct CexpCondCases * x = NEW(CexpCondCases, OBJTYPE_CEXPCONDCASES);
+    DEBUG("new CexpCondCases %pn", x);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+struct Aexp * newAexp(enum AexpType  type, union AexpVal  val) {
+    struct Aexp * x = NEW(Aexp, OBJTYPE_AEXP);
+    DEBUG("new Aexp %pn", x);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+struct Cexp * newCexp(enum CexpType  type, union CexpVal  val) {
+    struct Cexp * x = NEW(Cexp, OBJTYPE_CEXP);
+    DEBUG("new Cexp %pn", x);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+struct Exp * newExp(enum ExpType  type, union ExpVal  val) {
+    struct Exp * x = NEW(Exp, OBJTYPE_EXP);
+    DEBUG("new Exp %pn", x);
+    x->type = type;
+    x->val = val;
+    return x;
+}
+
+
+/*
+ * copy functions
+ */
+
+struct AexpLam * copyAexpLam(struct AexpLam * o) {
+    if (o == NULL) return NULL;
+    struct AexpLam * x = NEW(AexpLam, OBJTYPE_AEXPLAM);
+    DEBUG("copy AexpLam %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpLam));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->nargs = o->nargs;
+    x->letRecOffset = o->letRecOffset;
+    x->args = copyAexpVarList(o->args);
+    x->exp = copyExp(o->exp);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpVarList * copyAexpVarList(struct AexpVarList * o) {
+    if (o == NULL) return NULL;
+    struct AexpVarList * x = NEW(AexpVarList, OBJTYPE_AEXPVARLIST);
+    DEBUG("copy AexpVarList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpVarList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->var = o->var;
+    x->next = copyAexpVarList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpAnnotatedVar * copyAexpAnnotatedVar(struct AexpAnnotatedVar * o) {
+    if (o == NULL) return NULL;
+    struct AexpAnnotatedVar * x = NEW(AexpAnnotatedVar, OBJTYPE_AEXPANNOTATEDVAR);
+    DEBUG("copy AexpAnnotatedVar %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpAnnotatedVar));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->type = o->type;
+    x->frame = o->frame;
+    x->offset = o->offset;
+    x->var = o->var;
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpPrimApp * copyAexpPrimApp(struct AexpPrimApp * o) {
+    if (o == NULL) return NULL;
+    struct AexpPrimApp * x = NEW(AexpPrimApp, OBJTYPE_AEXPPRIMAPP);
+    DEBUG("copy AexpPrimApp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpPrimApp));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->type = o->type;
+    x->exp1 = copyAexp(o->exp1);
+    x->exp2 = copyAexp(o->exp2);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpUnaryApp * copyAexpUnaryApp(struct AexpUnaryApp * o) {
+    if (o == NULL) return NULL;
+    struct AexpUnaryApp * x = NEW(AexpUnaryApp, OBJTYPE_AEXPUNARYAPP);
+    DEBUG("copy AexpUnaryApp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpUnaryApp));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->type = o->type;
+    x->exp = copyAexp(o->exp);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpList * copyAexpList(struct AexpList * o) {
+    if (o == NULL) return NULL;
+    struct AexpList * x = NEW(AexpList, OBJTYPE_AEXPLIST);
+    DEBUG("copy AexpList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->exp = copyAexp(o->exp);
+    x->next = copyAexpList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpIntList * copyAexpIntList(struct AexpIntList * o) {
+    if (o == NULL) return NULL;
+    struct AexpIntList * x = NEW(AexpIntList, OBJTYPE_AEXPINTLIST);
+    DEBUG("copy AexpIntList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpIntList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->integer = o->integer;
+    x->next = copyAexpIntList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpApply * copyCexpApply(struct CexpApply * o) {
+    if (o == NULL) return NULL;
+    struct CexpApply * x = NEW(CexpApply, OBJTYPE_CEXPAPPLY);
+    DEBUG("copy CexpApply %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpApply));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->function = copyAexp(o->function);
+    x->nargs = o->nargs;
+    x->args = copyAexpList(o->args);
+    UNPROTECT(save);
+    return x;
+}
+
+struct AexpMakeVec * copyAexpMakeVec(struct AexpMakeVec * o) {
+    if (o == NULL) return NULL;
+    struct AexpMakeVec * x = NEW(AexpMakeVec, OBJTYPE_AEXPMAKEVEC);
+    DEBUG("copy AexpMakeVec %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct AexpMakeVec));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->nargs = o->nargs;
+    x->args = copyAexpList(o->args);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpIf * copyCexpIf(struct CexpIf * o) {
+    if (o == NULL) return NULL;
+    struct CexpIf * x = NEW(CexpIf, OBJTYPE_CEXPIF);
+    DEBUG("copy CexpIf %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpIf));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->condition = copyAexp(o->condition);
+    x->consequent = copyExp(o->consequent);
+    x->alternative = copyExp(o->alternative);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpCond * copyCexpCond(struct CexpCond * o) {
+    if (o == NULL) return NULL;
+    struct CexpCond * x = NEW(CexpCond, OBJTYPE_CEXPCOND);
+    DEBUG("copy CexpCond %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpCond));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->condition = copyAexp(o->condition);
+    x->cases = copyCexpCondCases(o->cases);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpIntCondCases * copyCexpIntCondCases(struct CexpIntCondCases * o) {
+    if (o == NULL) return NULL;
+    struct CexpIntCondCases * x = NEW(CexpIntCondCases, OBJTYPE_CEXPINTCONDCASES);
+    DEBUG("copy CexpIntCondCases %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpIntCondCases));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->option = o->option;
+    x->body = copyExp(o->body);
+    x->next = copyCexpIntCondCases(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpCharCondCases * copyCexpCharCondCases(struct CexpCharCondCases * o) {
+    if (o == NULL) return NULL;
+    struct CexpCharCondCases * x = NEW(CexpCharCondCases, OBJTYPE_CEXPCHARCONDCASES);
+    DEBUG("copy CexpCharCondCases %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpCharCondCases));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->option = o->option;
+    x->body = copyExp(o->body);
+    x->next = copyCexpCharCondCases(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpMatch * copyCexpMatch(struct CexpMatch * o) {
+    if (o == NULL) return NULL;
+    struct CexpMatch * x = NEW(CexpMatch, OBJTYPE_CEXPMATCH);
+    DEBUG("copy CexpMatch %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpMatch));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->condition = copyAexp(o->condition);
+    x->clauses = copyMatchList(o->clauses);
+    UNPROTECT(save);
+    return x;
+}
+
+struct MatchList * copyMatchList(struct MatchList * o) {
+    if (o == NULL) return NULL;
+    struct MatchList * x = NEW(MatchList, OBJTYPE_MATCHLIST);
+    DEBUG("copy MatchList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct MatchList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->matches = copyAexpIntList(o->matches);
+    x->body = copyExp(o->body);
+    x->next = copyMatchList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpLetRec * copyCexpLetRec(struct CexpLetRec * o) {
+    if (o == NULL) return NULL;
+    struct CexpLetRec * x = NEW(CexpLetRec, OBJTYPE_CEXPLETREC);
+    DEBUG("copy CexpLetRec %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpLetRec));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->nbindings = o->nbindings;
+    x->bindings = copyLetRecBindings(o->bindings);
+    x->body = copyExp(o->body);
+    UNPROTECT(save);
+    return x;
+}
+
+struct LetRecBindings * copyLetRecBindings(struct LetRecBindings * o) {
+    if (o == NULL) return NULL;
+    struct LetRecBindings * x = NEW(LetRecBindings, OBJTYPE_LETRECBINDINGS);
+    DEBUG("copy LetRecBindings %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct LetRecBindings));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->var = o->var;
+    x->val = copyAexp(o->val);
+    x->next = copyLetRecBindings(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpAmb * copyCexpAmb(struct CexpAmb * o) {
+    if (o == NULL) return NULL;
+    struct CexpAmb * x = NEW(CexpAmb, OBJTYPE_CEXPAMB);
+    DEBUG("copy CexpAmb %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpAmb));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->exp1 = copyExp(o->exp1);
+    x->exp2 = copyExp(o->exp2);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpCut * copyCexpCut(struct CexpCut * o) {
+    if (o == NULL) return NULL;
+    struct CexpCut * x = NEW(CexpCut, OBJTYPE_CEXPCUT);
+    DEBUG("copy CexpCut %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpCut));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->exp = copyExp(o->exp);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpBool * copyCexpBool(struct CexpBool * o) {
+    if (o == NULL) return NULL;
+    struct CexpBool * x = NEW(CexpBool, OBJTYPE_CEXPBOOL);
+    DEBUG("copy CexpBool %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpBool));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->type = o->type;
+    x->exp1 = copyExp(o->exp1);
+    x->exp2 = copyExp(o->exp2);
+    UNPROTECT(save);
+    return x;
+}
+
+struct ExpLet * copyExpLet(struct ExpLet * o) {
+    if (o == NULL) return NULL;
+    struct ExpLet * x = NEW(ExpLet, OBJTYPE_EXPLET);
+    DEBUG("copy ExpLet %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct ExpLet));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->var = o->var;
+    x->val = copyExp(o->val);
+    x->body = copyExp(o->body);
+    UNPROTECT(save);
+    return x;
+}
+
+struct CexpCondCases * copyCexpCondCases(struct CexpCondCases * o) {
+    if (o == NULL) return NULL;
+    struct CexpCondCases * x = NEW(CexpCondCases, OBJTYPE_CEXPCONDCASES);
+    DEBUG("copy CexpCondCases %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct CexpCondCases));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case CEXPCONDCASES_TYPE_CHARCASES:
+            x->val.charCases = copyCexpCharCondCases(o->val.charCases);
+            break;
+        case CEXPCONDCASES_TYPE_INTCASES:
+            x->val.intCases = copyCexpIntCondCases(o->val.intCases);
+            break;
         default:
-            cant_happen("unrecognized type %d in normalize", lamExp->type);
+            cant_happen("unrecognised type %d in copyCexpCondCases", o->type);
     }
-    LEAVE(normalize);
-}
-
-static Exp *wrapAexp(Aexp *aexp) {
-    return newExp(EXP_TYPE_AEXP, EXP_VAL_AEXP(aexp));
-}
-
-static Exp *wrapCexp(Cexp *cexp) {
-    return newExp(EXP_TYPE_CEXP, EXP_VAL_CEXP(cexp));
-}
-
-static Exp *normalizeCond(LamCond *cond, Exp *tail) {
-    ENTER(normalizeCond);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *value = replaceLamExp(cond->value, replacements);
-    int save2 = PROTECT(value);
-    CexpCondCases *cases = normalizeCondCases(cond->cases);
-    PROTECT(cases);
-    CexpCond *cexpCond = newCexpCond(value, cases);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpCond);
-    Cexp *cexp = newCexp(CEXP_TYPE_COND, CEXP_VAL_COND(cexpCond));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    exp = letBind(exp, replacements);
+    x->type = o->type;
     UNPROTECT(save);
-    LEAVE(normalizeCond);
-    return exp;
+    return x;
 }
 
-static Exp *normalizeMatch(LamMatch *match, Exp *tail) {
-    ENTER(normalizeMatch);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *index = replaceLamExp(match->index, replacements);
-    int save2 = PROTECT(index);
-    MatchList *matchList = normalizeMatchList(match->cases);
-    PROTECT(matchList);
-    CexpMatch *cexpMatch = newCexpMatch(index, matchList);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpMatch);
-    Cexp *cexp = newCexp(CEXP_TYPE_MATCH, CEXP_VAL_MATCH(cexpMatch));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeMatch);
-    return res;
-}
-
-static MatchList *normalizeMatchList(LamMatchList *matchList) {
-    ENTER(normalizeMatchList);
-    if (matchList == NULL) {
-        LEAVE(normalizeMatchList);
-        return NULL;
-    }
-    MatchList *next = normalizeMatchList(matchList->next);
-    int save = PROTECT(next);
-    AexpIntList *matches = convertIntList(matchList->matches);
-    PROTECT(matches);
-    Exp *body = normalize(matchList->body, NULL);
-    PROTECT(body);
-    MatchList *this = newMatchList(matches, body, next);
-    UNPROTECT(save);
-    LEAVE(normalizeMatchList);
-    return this;
-}
-
-static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
-    ENTER(normalizeLet);
-    Exp *value = normalize(lamLet->value, NULL);
-    int save = PROTECT(value);
-    Exp *body = normalize(lamLet->body, tail);
-    PROTECT(body);
-    ExpLet *expLet = newExpLet(lamLet->var, value, body);
-    PROTECT(expLet);
-    Exp *exp = newExp(EXP_TYPE_LET, EXP_VAL_LET(expLet));
-    UNPROTECT(save);
-    LEAVE(normalizeLet);
-    return exp;
-}
-
-static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
-    LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(deconstruct->vec));
-    int save = PROTECT(index);
-    LamPrimApp *res = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
-    UNPROTECT(save);
-    return res;
-}
-
-static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
-    ENTER(noramaalizeDeconstruct);
-    LamPrimApp *primApp = deconstructToPrimApp(deconstruct);
-    int save = PROTECT(primApp);
-    Exp *res = normalizePrim(primApp, tail);
-    UNPROTECT(save);
-    LEAVE(noramaalizeDeconstruct);
-    return res;
-}
-
-static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
-    ENTER(normalizeLetRec);
-    IFDEBUG(ppLamLetRec(lamLetRec));
-    Exp* body = normalize(lamLetRec->body, tail);
-    int save = PROTECT(body);
-    CexpLetRec *cexpLetRec = newCexpLetRec(NULL, body);
-    PROTECT(cexpLetRec);
-    cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRec->bindings);
-    PROTECT(cexpLetRec);
-    if (cexpLetRec->bindings == NULL) {
-        UNPROTECT(save);
-        validateLastAlloc();
-        LEAVE(normalizeLetRec);
-        return cexpLetRec->body;
-    }
-    Cexp *cexp = newCexp(CEXP_TYPE_LETREC, CEXP_VAL_LETREC(cexpLetRec));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    UNPROTECT(save);
-    LEAVE(normalizeLetRec);
-    return exp;
-}
-
-static Exp *normalizeError(Exp *tail) {
-    ENTER(normalizeError);
-    Cexp *error = newCexp(CEXP_TYPE_ERROR, CEXP_VAL_ERROR());
-    int save = PROTECT(error);
-    Exp *exp = wrapCexp(error);
-    REPLACE_PROTECT(save, exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeError);
-    return exp;
-}
-
-static Exp *normalizeBack(Exp *tail) {
-    ENTER(normalizeBack);
-    Cexp *back = newCexp(CEXP_TYPE_BACK, CEXP_VAL_BACK());
-    int save = PROTECT(back);
-    Exp *exp = wrapCexp(back);
-    REPLACE_PROTECT(save, exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeBack);
-    return exp;
-}
-
-static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
-    ENTER(normalizeCallCc);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(lamExp, replacements);
-    int save2 = PROTECT(aexp);
-    Cexp *cexp = newCexp(CEXP_TYPE_CALLCC, CEXP_VAL_CALLCC(aexp));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeCallCc);
-    return res;
-}
-
-static Exp *normalizeIff(LamIff *lamIff, Exp *tail) {
-    ENTER(normalizeIff);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *condition = replaceLamExp(lamIff->condition, replacements);
-    int save2 = PROTECT(condition);
-    Exp *consequent = normalize(lamIff->consequent, NULL);
-    PROTECT(consequent);
-    Exp *alternative = normalize(lamIff->alternative, NULL);
-    PROTECT(alternative);
-    CexpIf *cexpIf = newCexpIf(condition, consequent, alternative);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpIf);
-    Cexp *cexp = newCexp(CEXP_TYPE_IF, CEXP_VAL_IF(cexpIf));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeIff);
-    return res;
-}
-
-static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
-    ENTER(normalizeMakeVec);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamMakeVec->args, replacements);
-    int save2 = PROTECT(args);
-    AexpMakeVec *aexpMakeVec = newAexpMakeVec(args);
-    REPLACE_PROTECT(save2, aexpMakeVec);
-    Aexp *aexp = newAexp(AEXP_TYPE_MAKEVEC, AEXP_VAL_MAKEVEC(aexpMakeVec));
-    REPLACE_PROTECT(save2, aexp);
-    Exp *exp = wrapAexp(aexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeMakeVec);
-    return res;
-}
-
-static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nargs = 0;
-    for (LamList *args = construct->args; args != NULL; args = args->next) {
-        nargs++;
-    }
-    LamExp *newArg = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(construct->tag));
-    int save = PROTECT(newArg);
-    LamList *extraItem = newLamList(newArg, construct->args);
-    PROTECT(extraItem);
-    LamMakeVec *res = newLamMakeVec(nargs + 1, extraItem);
-    UNPROTECT(save);
-    return res;
-}
-
-static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
-    ENTER(normalizeConstruct);
-    LamMakeVec *makeVec = constructToMakeVec(construct);
-    int save = PROTECT(makeVec);
-    Exp *res = normalizeMakeVec(makeVec, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeConstruct);
-    return res;
-}
-
-// sequences are not covered by the algorithm
-// however the algorithm states that "All non-atomic
-// (complex) expressions must be let-bound or appear
-// in tail position". The working scheme ANF for the
-// liars puzzle has the expressions in a sequence
-// let-bound, so we basically need to translate
-// ((exp1) (exp2) (exp3))
-// to
-// (let (f1 (exp1)) (let (f2 (exp2)) (exp3)))
-// not forgetting that those exp* themselves may have
-// let-bindings of their own, and that a let nested
-// within a let value like:
-// (let (a (let (b (c)) b)) d)
-// is not legal, `let` is an exp, but the value in a let
-// expression can only be a cexp.
-// so the algorithm should be right recursive, normalizing
-// the last expression in the sequence then binding prior
-// expressions within a let. The only remaining problem is
-// to flatten the result, i.e. after normalizing the penultimate
-// expression, we have a form like
-// (let (anf$123 (expr1)) (expr2 anf$123))
-// and a tail <expr3> and we want to build
-// (let (anf$123 (expr1)) (let (f (expr2 anf$123)) <expr3>))
-static Exp *normalizeSequence(LamSequence *sequence, Exp *tail) {
-    ENTER(normalizeSequence);
-    if (sequence == NULL) {
-        cant_happen("empty sequence in normalizeSequence");
-    }
-    if (sequence->next == NULL) {
-        return normalize(sequence->exp, tail);
-    }
-    Exp *next = normalizeSequence(sequence->next, tail);
-    int save = PROTECT(next);
-    Exp *this = normalize(sequence->exp, next);
-    UNPROTECT(save);
-    LEAVE(normalizeSequence);
-    return this;
-}
-
-static Exp *wrapTail(Exp *exp, Exp *tail) {
-    ENTER(wrapTail);
-    if (tail == NULL) {
-        LEAVE(wrapTail);
-        return exp;
-    }
-    HashSymbol *s = freshSymbol();
-    ExpLet *let = newExpLet(s, exp, tail);
-    int save = PROTECT(let);
-    exp = newExp(EXP_TYPE_LET, EXP_VAL_LET(let));
-    UNPROTECT(save);
-    LEAVE(wrapTail);
-    return exp;
-}
-
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail) {
-    ENTER(normalizeUnary);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(app->exp, replacements);
-    int save2 = PROTECT(aexp);
-    AexpUnaryApp *aexpUnaryApp = newAexpUnaryApp(mapUnaryOp(app->type), aexp);
-    UNPROTECT(save2);
-    save2 = PROTECT(aexpUnaryApp);
-    Aexp *aexp2 = newAexp(AEXP_TYPE_UNARY, AEXP_VAL_UNARY(aexpUnaryApp));
-    REPLACE_PROTECT(save2, aexp2);
-    Exp *exp = wrapAexp(aexp2);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeUnary);
-    return res;
-}
-
-static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
-    ENTER(normalizePrim);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *exp1 = replaceLamExp(app->exp1, replacements);
-    int save2 = PROTECT(exp1);
-    Aexp *exp2 = replaceLamExp(app->exp2, replacements);
-    PROTECT(exp2);
-    AexpPrimApp *aexpPrimApp = newAexpPrimApp(mapPrimOp(app->type), exp1, exp2);
-    UNPROTECT(save2);
-    save2 = PROTECT(aexpPrimApp);
-    Aexp *aexp = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(aexpPrimApp));
-    REPLACE_PROTECT(save2, aexp);
-    Exp *exp = wrapAexp(aexp);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizePrim);
-    return res;
-}
-
-static Exp *normalizeAnd(LamAnd *app, Exp *tail) {
-    Exp *left = normalize(app->left, NULL);
-    int save = PROTECT(left);
-    Exp *right = normalize(app->right, NULL);
-    PROTECT(right);
-    CexpBool *and = newCexpBool(BOOL_TYPE_AND, left, right);
-    PROTECT(and);
-    Cexp *cexp = newCexp(CEXP_TYPE_BOOL, CEXP_VAL_BOOL(and));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    PROTECT(exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    return exp;
-}
-
-static Exp *normalizeOr(LamOr *app, Exp *tail) {
-    Exp *left = normalize(app->left, NULL);
-    int save = PROTECT(left);
-    Exp *right = normalize(app->right, NULL);
-    PROTECT(right);
-    CexpBool *or = newCexpBool(BOOL_TYPE_OR, left, right);
-    PROTECT(or);
-    Cexp *cexp = newCexp(CEXP_TYPE_BOOL, CEXP_VAL_BOOL(or));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    PROTECT(exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    return exp;
-}
-
-static Exp *normalizeAmb(LamAmb *app, Exp *tail) {
-    Exp *left = normalize(app->left, NULL);
-    int save = PROTECT(left);
-    Exp *right = normalize(app->right, NULL);
-    PROTECT(right);
-    CexpAmb *amb = newCexpAmb(left, right);
-    PROTECT(amb);
-    Cexp *cexp = newCexp(CEXP_TYPE_AMB, CEXP_VAL_AMB(amb));
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    PROTECT(exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    return exp;
-}
-
-static Exp *normalizeVar(HashSymbol *var, Exp *tail) {
-    ENTER(normalizeVar);
-    if (tail != NULL) {
-        LEAVE(normalizeVar);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeVar(var);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeVar);
-    return exp;
-}
-
-static Exp *normalizeCharacter(char character, Exp *tail) {
-    ENTER(normalizeCharacter);
-    if (tail != NULL) {
-        LEAVE(normalizeCharacter);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeCharacter(character);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeCharacter);
-    return exp;
-}
-
-static Exp *normalizeBigInteger(BigInt *integer, Exp *tail) {
-    ENTER(normalizeBigInteger);
-    if (tail != NULL) {
-        LEAVE(normalizeBigInteger);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeBigInteger(integer);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeBigInteger);
-    return exp;
-}
-
-static Exp *normalizeStdInteger(int integer, Exp *tail) {
-    ENTER(normalizeStdInteger);
-    if (tail != NULL) {
-        LEAVE(normalizeStdInteger);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeStdInteger(integer);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeStdInteger);
-    return exp;
-}
-
-static Exp *normalizeLam(LamLam *lamLam, Exp *tail) {
-    ENTER(normalizeLam);
-    if (tail != NULL) {
-        LEAVE(normalizeLam);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeLam(lamLam);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeLam);
-    return exp;
-}
-
-static Aexp *aexpNormalizeLam(LamLam *lamLam) {
-    ENTER(aexpNormalizeLam);
-    AexpVarList *varList = convertVarList(lamLam->args);
-    int save = PROTECT(varList);
-    Exp *body = normalize(lamLam->exp, NULL);
-    PROTECT(body);
-    AexpLam *aexpLam = newAexpLam(varList, body);
-    PROTECT(aexpLam);
-    Aexp *aexp = newAexp(AEXP_TYPE_LAM, AEXP_VAL_LAM(aexpLam));
-    UNPROTECT(save);
-    LEAVE(aexpNormalizeLam);
-    return aexp;
-}
-
-static AexpIntList *convertIntList(LamIntList *list) {
-    ENTER(convertIntList);
-    if (list == NULL) {
-        LEAVE(convertIntList);
-        return NULL;
-    }
-    AexpIntList *next = convertIntList(list->next);
-    int save = PROTECT(next);
-    AexpIntList *this = newAexpIntList(next, list->item);
-    UNPROTECT(save);
-    LEAVE(convertIntList);
-    return this;
-}
-
-static AexpVarList *convertVarList(LamVarList *args) {
-    ENTER(convertVarList);
-    if (args == NULL) {
-        LEAVE(convertVarList);
-        return NULL;
-    }
-    AexpVarList *next = convertVarList(args->next);
-    int save = PROTECT(next);
-    AexpVarList *this = newAexpVarList(next, args->var);
-    UNPROTECT(save);
-    LEAVE(convertVarList);
-    return this;
-}
-
-static HashTable *makeLamExpHashTable() {
-    return newHashTable(sizeof(LamExp *), markLamExpFn, printLamExpFn);
-}
-
-static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
-    ENTER(normalizeApply);
-    HashTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *function = replaceLamExp(lamApply->function, replacements);
-    int save2 = PROTECT(function);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamApply->args, replacements);
-    PROTECT(args);
-    DEBUG("back from replaceLamList");
-    IFDEBUG(printHashTable(replacements, 0));
-    CexpApply *cexpApply = newCexpApply(function, args);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpApply);
-    Cexp *cexp = newCexp(CEXP_TYPE_APPLY, CEXP_VAL_APPLY(cexpApply));
-    REPLACE_PROTECT(save2, cexp);
-    Exp *exp = wrapCexp(cexp);
-    REPLACE_PROTECT(save2, exp);
-    DEBUG("calling wrapTail");
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeApply);
-    return res;
-}
-
-static Exp *letBind(Exp *body, HashTable *replacements) {
-    ENTER(letBind);
-    // DEBUG("sleep %d", sleep(1));
-    IFDEBUG(printExp(body));
-    IFDEBUG(printHashTable(replacements, 0));
-    if (replacements->count == 0) {
-        LEAVE(letBind);
-        return body;
-    }
-    int save = PROTECT(body);
-    LamExp *lamExpVal = NULL;
-    int i = 0;
-    HashSymbol *key = NULL;
-    while ((key = iterateHashTable(replacements, &i, &lamExpVal)) != NULL) {
-        DEBUG("letBind iteration %d", i);
-        Exp *exp = normalize(lamExpVal, NULL);
-        int save2 = PROTECT(exp);
-        ExpLet *let = newExpLet(key, exp, body);
-        PROTECT(let);
-        body = newExp(EXP_TYPE_LET, EXP_VAL_LET(let));
-        UNPROTECT(save2);
-        REPLACE_PROTECT(save, body);
-    }
-    UNPROTECT(save);
-    LEAVE(letBind);
-    return body;
-}
-
-static Aexp *aexpNormalizeVar(HashSymbol *var) {
-    DEBUG("aexpNormalizeVar %s", var->name);
-    return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(var));
-}
-
-static Aexp *aexpNormalizeBigInteger(BigInt *integer) {
-    return newAexp(AEXP_TYPE_BIGINT, AEXP_VAL_BIGINT(integer));
-}
-
-static Aexp *aexpNormalizeStdInteger(int integer) {
-    return newAexp(AEXP_TYPE_LITTLEINT, AEXP_VAL_LITTLEINT(integer));
-}
-
-static Aexp *aexpNormalizeCharacter(char character) {
-    return newAexp(AEXP_TYPE_CHAR, AEXP_VAL_CHAR(character));
-}
-
-static CexpIntCondCases *normalizeIntCondCases(LamIntCondCases *cases) {
-    if (cases == NULL) return NULL;
-    CexpIntCondCases *next = normalizeIntCondCases(cases->next);
-    int save = PROTECT(next);
-    Exp *body = normalize(cases->body, NULL);
-    PROTECT(body);
-    CexpIntCondCases *this = newCexpIntCondCases(cases->constant, body, next);
-    UNPROTECT(save);
-    return this;
-}
-
-static CexpCharCondCases *normalizeCharCondCases(LamCharCondCases *cases) {
-    if (cases == NULL) return NULL;
-    CexpCharCondCases *next = normalizeCharCondCases(cases->next);
-    int save = PROTECT(next);
-    Exp *body = normalize(cases->body, NULL);
-    PROTECT(body);
-    CexpCharCondCases *this = newCexpCharCondCases(cases->constant, body, next);
-    UNPROTECT(save);
-    return this;
-}
-
-static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
-    ENTER(normalizeCondCases);
-    if (cases == NULL) {
-        LEAVE(normalizeCondCases);
-        return NULL;
-    }
-    CexpCondCases *res = NULL;
-    int save = PROTECT(NULL);
-    switch (cases->type) {
-        case LAMCONDCASES_TYPE_INTEGERS: {
-            CexpIntCondCases *intCases = normalizeIntCondCases(cases->val.integers);
-            PROTECT(intCases);
-            res = newCexpCondCases(CONDCASE_TYPE_INT, CONDCASE_VAL_INT(intCases));
-        }
-        break;
-        case LAMCONDCASES_TYPE_CHARACTERS: {
-            CexpCharCondCases *charCases = normalizeCharCondCases(cases->val.characters);
-            PROTECT(charCases);
-            res = newCexpCondCases(CONDCASE_TYPE_CHAR, CONDCASE_VAL_CHAR(charCases));
-        }
-        break;
+struct Aexp * copyAexp(struct Aexp * o) {
+    if (o == NULL) return NULL;
+    struct Aexp * x = NEW(Aexp, OBJTYPE_AEXP);
+    DEBUG("copy Aexp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct Aexp));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case AEXP_TYPE_T:
+            x->val.t = o->val.t;
+            break;
+        case AEXP_TYPE_F:
+            x->val.f = o->val.f;
+            break;
+        case AEXP_TYPE_V:
+            x->val.v = o->val.v;
+            break;
+        case AEXP_TYPE_LAM:
+            x->val.lam = copyAexpLam(o->val.lam);
+            break;
+        case AEXP_TYPE_VAR:
+            x->val.var = o->val.var;
+            break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            x->val.annotatedVar = copyAexpAnnotatedVar(o->val.annotatedVar);
+            break;
+        case AEXP_TYPE_BIGINTEGER:
+            x->val.biginteger = o->val.biginteger;
+            break;
+        case AEXP_TYPE_LITTLEINTEGER:
+            x->val.littleinteger = o->val.littleinteger;
+            break;
+        case AEXP_TYPE_CHARACTER:
+            x->val.character = o->val.character;
+            break;
+        case AEXP_TYPE_PRIM:
+            x->val.prim = copyAexpPrimApp(o->val.prim);
+            break;
+        case AEXP_TYPE_UNARY:
+            x->val.unary = copyAexpUnaryApp(o->val.unary);
+            break;
+        case AEXP_TYPE_LIST:
+            x->val.list = copyAexpList(o->val.list);
+            break;
+        case AEXP_TYPE_MAKEVEC:
+            x->val.makeVec = copyAexpMakeVec(o->val.makeVec);
+            break;
         default:
-            cant_happen("unrecognized type %d in normlizeCondCases", cases->type);
+            cant_happen("unrecognised type %d in copyAexp", o->type);
     }
+    x->type = o->type;
     UNPROTECT(save);
-    LEAVE(normalizeCondCases);
-    return res;
+    return x;
 }
 
-static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
-    ENTER(replaceLamExp);
-    Aexp *res = NULL;
-    switch (lamExp->type) {
-        case LAMEXP_TYPE_LAM:
-            res = aexpNormalizeLam(lamExp->val.lam);
+struct Cexp * copyCexp(struct Cexp * o) {
+    if (o == NULL) return NULL;
+    struct Cexp * x = NEW(Cexp, OBJTYPE_CEXP);
+    DEBUG("copy Cexp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct Cexp));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case CEXP_TYPE_BACK:
+            x->val.back = o->val.back;
             break;
-        case LAMEXP_TYPE_VAR:
-            res = aexpNormalizeVar(lamExp->val.var);
+        case CEXP_TYPE_ERROR:
+            x->val.error = o->val.error;
             break;
-        case LAMEXP_TYPE_BIGINTEGER:
-            res = aexpNormalizeBigInteger(lamExp->val.biginteger);
+        case CEXP_TYPE_APPLY:
+            x->val.apply = copyCexpApply(o->val.apply);
             break;
-        case LAMEXP_TYPE_STDINT:
-            res = aexpNormalizeStdInteger(lamExp->val.stdint);
+        case CEXP_TYPE_IFF:
+            x->val.iff = copyCexpIf(o->val.iff);
             break;
-        case LAMEXP_TYPE_PRIM:
-            res = replaceLamPrim(lamExp, replacements); // prim needs lamExp
+        case CEXP_TYPE_COND:
+            x->val.cond = copyCexpCond(o->val.cond);
             break;
-        case LAMEXP_TYPE_UNARY:
-            res = replaceLamUnary(lamExp->val.unary, replacements);
+        case CEXP_TYPE_CALLCC:
+            x->val.callCC = copyAexp(o->val.callCC);
             break;
-        case LAMEXP_TYPE_MAKEVEC:
-            res = replaceLamMakeVec(lamExp->val.makeVec, replacements);
+        case CEXP_TYPE_LETREC:
+            x->val.letRec = copyCexpLetRec(o->val.letRec);
             break;
-        case LAMEXP_TYPE_CONSTRUCT:
-            res = replaceLamConstruct(lamExp->val.construct, replacements);
+        case CEXP_TYPE_AMB:
+            x->val.amb = copyCexpAmb(o->val.amb);
             break;
-        case LAMEXP_TYPE_CONSTANT:
-            res = aexpNormalizeStdInteger(lamExp->val.constant->tag);
+        case CEXP_TYPE_CUT:
+            x->val.cut = copyCexpCut(o->val.cut);
             break;
-        case LAMEXP_TYPE_TYPEDEFS:
-            res = replaceLamCexp(lamExp->val.typedefs->body, replacements);
+        case CEXP_TYPE_BOOLEAN:
+            x->val.boolean = copyCexpBool(o->val.boolean);
             break;
-        case LAMEXP_TYPE_CHARACTER:
-            res = aexpNormalizeCharacter(lamExp->val.character);
+        case CEXP_TYPE_MATCH:
+            x->val.match = copyCexpMatch(o->val.match);
             break;
-        case LAMEXP_TYPE_LIST:
-        case LAMEXP_TYPE_APPLY:
-        case LAMEXP_TYPE_IFF:
-        case LAMEXP_TYPE_CALLCC:
-        case LAMEXP_TYPE_LETREC:
-        case LAMEXP_TYPE_LET:
-        case LAMEXP_TYPE_MATCH:
-        case LAMEXP_TYPE_COND:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_AND:
-        case LAMEXP_TYPE_OR:
-        case LAMEXP_TYPE_AMB:
-            res = replaceLamCexp(lamExp, replacements);
-            break;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("replaceLamExp encountered cond default");
         default:
-            cant_happen("unrecognised type %d in replaceLamExp", lamExp->type);
+            cant_happen("unrecognised type %d in copyCexp", o->type);
     }
-    LEAVE(replaceLamExp);
-    return res;
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
 }
 
-static bool lamExpIsConst(LamExp *val) {
-    switch (val->type) {
-        case LAMEXP_TYPE_LAM:
-            return true;
-        case LAMEXP_TYPE_VAR:
-        case LAMEXP_TYPE_BIGINTEGER:
-        case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_CONSTANT:
-        case LAMEXP_TYPE_CONSTRUCT:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_AMB:
-        case LAMEXP_TYPE_PRIM:
-        case LAMEXP_TYPE_UNARY:
-        case LAMEXP_TYPE_LIST:
-        case LAMEXP_TYPE_APPLY:
-        case LAMEXP_TYPE_IFF:
-        case LAMEXP_TYPE_CALLCC:
-        case LAMEXP_TYPE_LETREC:
-        case LAMEXP_TYPE_TYPEDEFS:
-        case LAMEXP_TYPE_LET:
-        case LAMEXP_TYPE_MATCH:
-        case LAMEXP_TYPE_COND:
-        case LAMEXP_TYPE_AND:
-        case LAMEXP_TYPE_OR:
-        case LAMEXP_TYPE_MAKEVEC:
-            return false;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("lamExpIsConst encountered cond default");
+struct Exp * copyExp(struct Exp * o) {
+    if (o == NULL) return NULL;
+    struct Exp * x = NEW(Exp, OBJTYPE_EXP);
+    DEBUG("copy Exp %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct Exp));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case EXP_TYPE_DONE:
+            x->val.done = o->val.done;
+            break;
+        case EXP_TYPE_AEXP:
+            x->val.aexp = copyAexp(o->val.aexp);
+            break;
+        case EXP_TYPE_CEXP:
+            x->val.cexp = copyCexp(o->val.cexp);
+            break;
+        case EXP_TYPE_LET:
+            x->val.let = copyExpLet(o->val.let);
+            break;
         default:
-            cant_happen("unrecognised LamExp type %d in lamExpIsConst", val->type);
+            cant_happen("unrecognised type %d in copyExp", o->type);
     }
-}
-
-static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings) {
-    if (lamLetRecBindings == NULL) {
-        return cexpLetRec;
-    }
-    cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRecBindings->next);
-    int save = PROTECT(cexpLetRec);
-    if (lamExpIsConst(lamLetRecBindings->val)) {
-        Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
-        PROTECT(val);
-        cexpLetRec->bindings = newLetRecBindings(cexpLetRec->bindings, lamLetRecBindings->var, val);
-        cexpLetRec->nbindings++;
-    } else {
-        Exp *val = normalize(lamLetRecBindings->val, NULL);
-        PROTECT(val);
-        Exp *exp = NULL;
-        if (cexpLetRec->bindings != NULL) {
-            Cexp *cexp = newCexp(CEXP_TYPE_LETREC, CEXP_VAL_LETREC(cexpLetRec));
-            PROTECT(cexp);
-            exp = wrapCexp(cexp);
-            PROTECT(exp);
-        } else {
-            exp = cexpLetRec->body;
-        }
-        ExpLet *expLet = newExpLet(lamLetRecBindings->var, val, exp);
-        PROTECT(expLet);
-        exp = newExp(EXP_TYPE_LET, EXP_VAL_LET(expLet));
-        PROTECT(exp);
-        cexpLetRec = newCexpLetRec(NULL, exp);
-    }
+    x->type = o->type;
     UNPROTECT(save);
-    return cexpLetRec;
+    return x;
 }
 
-static Aexp *replaceLamConstruct(LamConstruct *construct, HashTable *replacements) {
-    LamMakeVec *makeVec = constructToMakeVec(construct);
-    int save = PROTECT(makeVec);
-    Aexp *res = replaceLamMakeVec(makeVec, replacements);
-    UNPROTECT(save);
-    return res;
+
+/*
+ * push functions
+ */
+
+
+/*
+ * mark functions
+ */
+
+void markAexpLam(struct AexpLam * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpVarList(x->args);
+    markExp(x->exp);
 }
 
-static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, HashTable *replacements) {
-    ENTER(replaceLamMakeVec);
-    DEBUG("calling replaceLamList");
-    AexpList *aexpList = replaceLamList(makeVec->args, replacements);
-    int save = PROTECT(aexpList);
-    AexpMakeVec *aexpMakeVec = newAexpMakeVec(aexpList);
-    PROTECT(aexpMakeVec);
-    Aexp *res = newAexp(AEXP_TYPE_MAKEVEC, AEXP_VAL_MAKEVEC(aexpMakeVec));
-    UNPROTECT(save);
-    LEAVE(replaceLamMakeVec);
-    return res;
+void markAexpVarList(struct AexpVarList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpVarList(x->next);
 }
 
-static AexpList *replaceLamList(LamList *list, HashTable *replacements) {
-    ENTER(replaceLamList);
-    if (list == NULL) {
-        LEAVE(replaceLamList);
-        return NULL;
-    }
-    DEBUG("calling replaceLamList");
-    AexpList *next = replaceLamList(list->next, replacements);
-    int save = PROTECT(next);
-    Aexp *val = replaceLamExp(list->exp, replacements);
-    PROTECT(val);
-    AexpList *res = newAexpList(next, val);
-    UNPROTECT(save);
-    LEAVE(replaceLamList);
-    return res;
+void markAexpAnnotatedVar(struct AexpAnnotatedVar * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
 }
 
-static Aexp *replaceLamPrim(LamExp *lamExp, HashTable *replacements) {
-    ENTER(replaceLamPrim);
-    LamPrimApp *lamPrimApp = lamExp->val.prim;
-    Aexp *exp1 = replaceLamExp(lamPrimApp->exp1, replacements);
-    int save = PROTECT(exp1);
-    Aexp *exp2 = replaceLamExp(lamPrimApp->exp2, replacements);
-    PROTECT(exp2);
-    AexpPrimApp *prim = newAexpPrimApp(mapPrimOp(lamPrimApp->type), exp1, exp2);
-    PROTECT(prim);
-    Aexp *res = newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(prim));
-    UNPROTECT(save);
-    LEAVE(replaceLamPrim);
-    return res;
+void markAexpPrimApp(struct AexpPrimApp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->exp1);
+    markAexp(x->exp2);
 }
 
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp, HashTable *replacements) {
-    ENTER(replaceLamUnary);
-    Aexp *exp = replaceLamExp(lamUnaryApp->exp, replacements);
-    int save = PROTECT(exp);
-    AexpUnaryApp *unary = newAexpUnaryApp(mapUnaryOp(lamUnaryApp->type), exp);
-    PROTECT(unary);
-    Aexp *res = newAexp(AEXP_TYPE_UNARY, AEXP_VAL_UNARY(unary));
-    UNPROTECT(save);
-    LEAVE(replaceLamUnary);
-    return res;
+void markAexpUnaryApp(struct AexpUnaryApp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->exp);
 }
 
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
-    switch(op) {
-        case LAMUNARYOP_TYPE_NOT:
-            return AEXP_UNARY_NOT;
-        case LAMUNARYOP_TYPE_PRINT:
-            return AEXP_UNARY_PRINT;
+void markAexpList(struct AexpList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->exp);
+    markAexpList(x->next);
+}
+
+void markAexpIntList(struct AexpIntList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpIntList(x->next);
+}
+
+void markCexpApply(struct CexpApply * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->function);
+    markAexpList(x->args);
+}
+
+void markAexpMakeVec(struct AexpMakeVec * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpList(x->args);
+}
+
+void markCexpIf(struct CexpIf * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->condition);
+    markExp(x->consequent);
+    markExp(x->alternative);
+}
+
+void markCexpCond(struct CexpCond * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->condition);
+    markCexpCondCases(x->cases);
+}
+
+void markCexpIntCondCases(struct CexpIntCondCases * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markBigInt(x->option);
+    markExp(x->body);
+    markCexpIntCondCases(x->next);
+}
+
+void markCexpCharCondCases(struct CexpCharCondCases * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->body);
+    markCexpCharCondCases(x->next);
+}
+
+void markCexpMatch(struct CexpMatch * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->condition);
+    markMatchList(x->clauses);
+}
+
+void markMatchList(struct MatchList * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexpIntList(x->matches);
+    markExp(x->body);
+    markMatchList(x->next);
+}
+
+void markCexpLetRec(struct CexpLetRec * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markLetRecBindings(x->bindings);
+    markExp(x->body);
+}
+
+void markLetRecBindings(struct LetRecBindings * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markAexp(x->val);
+    markLetRecBindings(x->next);
+}
+
+void markCexpAmb(struct CexpAmb * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->exp1);
+    markExp(x->exp2);
+}
+
+void markCexpCut(struct CexpCut * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->exp);
+}
+
+void markCexpBool(struct CexpBool * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->exp1);
+    markExp(x->exp2);
+}
+
+void markExpLet(struct ExpLet * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    markExp(x->val);
+    markExp(x->body);
+}
+
+void markCexpCondCases(struct CexpCondCases * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case CEXPCONDCASES_TYPE_CHARCASES:
+            markCexpCharCondCases(x->val.charCases);
+            break;
+        case CEXPCONDCASES_TYPE_INTCASES:
+            markCexpIntCondCases(x->val.intCases);
+            break;
         default:
-            cant_happen("unrecognised type %d in mapUnaryOp", op);
+            cant_happen("unrecognised type %d in markCexpCondCases", x->type);
     }
 }
 
-static AexpPrimOp mapPrimOp(LamPrimOp op) {
-    switch (op) {
-        case LAMPRIMOP_TYPE_ADD:
-            return AEXP_PRIM_ADD;
-        case LAMPRIMOP_TYPE_SUB:
-            return AEXP_PRIM_SUB;
-        case LAMPRIMOP_TYPE_MUL:
-            return AEXP_PRIM_MUL;
-        case LAMPRIMOP_TYPE_DIV:
-            return AEXP_PRIM_DIV;
-        case LAMPRIMOP_TYPE_POW:
-            return AEXP_PRIM_POW;
-        case LAMPRIMOP_TYPE_EQ:
-            return AEXP_PRIM_EQ;
-        case LAMPRIMOP_TYPE_NE:
-            return AEXP_PRIM_NE;
-        case LAMPRIMOP_TYPE_GT:
-            return AEXP_PRIM_GT;
-        case LAMPRIMOP_TYPE_LT:
-            return AEXP_PRIM_LT;
-        case LAMPRIMOP_TYPE_GE:
-            return AEXP_PRIM_GE;
-        case LAMPRIMOP_TYPE_LE:
-            return AEXP_PRIM_LE;
-        case LAMPRIMOP_TYPE_VEC:
-            return AEXP_PRIM_VEC;
-        case LAMPRIMOP_TYPE_XOR:
-            return AEXP_PRIM_XOR;
-        case LAMPRIMOP_TYPE_MOD:
-            return AEXP_PRIM_MOD;
+void markAexp(struct Aexp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case AEXP_TYPE_T:
+            break;
+        case AEXP_TYPE_F:
+            break;
+        case AEXP_TYPE_V:
+            break;
+        case AEXP_TYPE_LAM:
+            markAexpLam(x->val.lam);
+            break;
+        case AEXP_TYPE_VAR:
+            break;
+        case AEXP_TYPE_ANNOTATEDVAR:
+            markAexpAnnotatedVar(x->val.annotatedVar);
+            break;
+        case AEXP_TYPE_BIGINTEGER:
+            markBigInt(x->val.biginteger);
+            break;
+        case AEXP_TYPE_LITTLEINTEGER:
+            break;
+        case AEXP_TYPE_CHARACTER:
+            break;
+        case AEXP_TYPE_PRIM:
+            markAexpPrimApp(x->val.prim);
+            break;
+        case AEXP_TYPE_UNARY:
+            markAexpUnaryApp(x->val.unary);
+            break;
+        case AEXP_TYPE_LIST:
+            markAexpList(x->val.list);
+            break;
+        case AEXP_TYPE_MAKEVEC:
+            markAexpMakeVec(x->val.makeVec);
+            break;
         default:
-            cant_happen("unrecognised op type %d in mapPrimOp", op);
+            cant_happen("unrecognised type %d in markAexp", x->type);
     }
 }
 
-static HashSymbol *freshSymbol() {
-    HashSymbol *res = genSym("anf$");
-    DEBUG("freshHashSymbol %s", res->name);
-    return res;
-}
-
-static Aexp *replaceLamCexp(LamExp *apply, HashTable *replacements) {
-    ENTER(replaceLamCexp);
-    if (replacements == NULL) {
-        cant_happen("replaceLamCexp called with null replacements");
+void markCexp(struct Cexp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case CEXP_TYPE_BACK:
+            break;
+        case CEXP_TYPE_ERROR:
+            break;
+        case CEXP_TYPE_APPLY:
+            markCexpApply(x->val.apply);
+            break;
+        case CEXP_TYPE_IFF:
+            markCexpIf(x->val.iff);
+            break;
+        case CEXP_TYPE_COND:
+            markCexpCond(x->val.cond);
+            break;
+        case CEXP_TYPE_CALLCC:
+            markAexp(x->val.callCC);
+            break;
+        case CEXP_TYPE_LETREC:
+            markCexpLetRec(x->val.letRec);
+            break;
+        case CEXP_TYPE_AMB:
+            markCexpAmb(x->val.amb);
+            break;
+        case CEXP_TYPE_CUT:
+            markCexpCut(x->val.cut);
+            break;
+        case CEXP_TYPE_BOOLEAN:
+            markCexpBool(x->val.boolean);
+            break;
+        case CEXP_TYPE_MATCH:
+            markCexpMatch(x->val.match);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markCexp", x->type);
     }
-    HashSymbol *subst = freshSymbol();
-    hashSet(replacements, subst, &apply);
-    IFDEBUG(printHashTable(replacements, 0));
-    LEAVE(replaceLamCexp);
-    return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(subst));
 }
 
+void markExp(struct Exp * x) {
+    if (x == NULL) return;
+    if (MARKED(x)) return;
+    MARK(x);
+    switch(x->type) {
+        case EXP_TYPE_DONE:
+            break;
+        case EXP_TYPE_AEXP:
+            markAexp(x->val.aexp);
+            break;
+        case EXP_TYPE_CEXP:
+            markCexp(x->val.cexp);
+            break;
+        case EXP_TYPE_LET:
+            markExpLet(x->val.let);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markExp", x->type);
+    }
+}
+
+
+/*
+ * generic mark function
+ */
+
+void markAnfObj(struct Header *h) {
+    switch(h->type) {
+        case OBJTYPE_AEXPLAM:
+            markAexpLam((AexpLam *)h);
+            break;
+        case OBJTYPE_AEXPVARLIST:
+            markAexpVarList((AexpVarList *)h);
+            break;
+        case OBJTYPE_AEXPANNOTATEDVAR:
+            markAexpAnnotatedVar((AexpAnnotatedVar *)h);
+            break;
+        case OBJTYPE_AEXPPRIMAPP:
+            markAexpPrimApp((AexpPrimApp *)h);
+            break;
+        case OBJTYPE_AEXPUNARYAPP:
+            markAexpUnaryApp((AexpUnaryApp *)h);
+            break;
+        case OBJTYPE_AEXPLIST:
+            markAexpList((AexpList *)h);
+            break;
+        case OBJTYPE_AEXPINTLIST:
+            markAexpIntList((AexpIntList *)h);
+            break;
+        case OBJTYPE_CEXPAPPLY:
+            markCexpApply((CexpApply *)h);
+            break;
+        case OBJTYPE_AEXPMAKEVEC:
+            markAexpMakeVec((AexpMakeVec *)h);
+            break;
+        case OBJTYPE_CEXPIF:
+            markCexpIf((CexpIf *)h);
+            break;
+        case OBJTYPE_CEXPCOND:
+            markCexpCond((CexpCond *)h);
+            break;
+        case OBJTYPE_CEXPINTCONDCASES:
+            markCexpIntCondCases((CexpIntCondCases *)h);
+            break;
+        case OBJTYPE_CEXPCHARCONDCASES:
+            markCexpCharCondCases((CexpCharCondCases *)h);
+            break;
+        case OBJTYPE_CEXPMATCH:
+            markCexpMatch((CexpMatch *)h);
+            break;
+        case OBJTYPE_MATCHLIST:
+            markMatchList((MatchList *)h);
+            break;
+        case OBJTYPE_CEXPLETREC:
+            markCexpLetRec((CexpLetRec *)h);
+            break;
+        case OBJTYPE_LETRECBINDINGS:
+            markLetRecBindings((LetRecBindings *)h);
+            break;
+        case OBJTYPE_CEXPAMB:
+            markCexpAmb((CexpAmb *)h);
+            break;
+        case OBJTYPE_CEXPCUT:
+            markCexpCut((CexpCut *)h);
+            break;
+        case OBJTYPE_CEXPBOOL:
+            markCexpBool((CexpBool *)h);
+            break;
+        case OBJTYPE_EXPLET:
+            markExpLet((ExpLet *)h);
+            break;
+        case OBJTYPE_CEXPCONDCASES:
+            markCexpCondCases((CexpCondCases *)h);
+            break;
+        case OBJTYPE_AEXP:
+            markAexp((Aexp *)h);
+            break;
+        case OBJTYPE_CEXP:
+            markCexp((Cexp *)h);
+            break;
+        case OBJTYPE_EXP:
+            markExp((Exp *)h);
+            break;
+        default:
+            cant_happen("unrecognised type %d in markAnfObj\n", h->type);
+    }
+}
+
+/*
+ * free functions
+ */
+
+void freeAexpLam(struct AexpLam * x) {
+    FREE(x, AexpLam);
+}
+
+void freeAexpVarList(struct AexpVarList * x) {
+    FREE(x, AexpVarList);
+}
+
+void freeAexpAnnotatedVar(struct AexpAnnotatedVar * x) {
+    FREE(x, AexpAnnotatedVar);
+}
+
+void freeAexpPrimApp(struct AexpPrimApp * x) {
+    FREE(x, AexpPrimApp);
+}
+
+void freeAexpUnaryApp(struct AexpUnaryApp * x) {
+    FREE(x, AexpUnaryApp);
+}
+
+void freeAexpList(struct AexpList * x) {
+    FREE(x, AexpList);
+}
+
+void freeAexpIntList(struct AexpIntList * x) {
+    FREE(x, AexpIntList);
+}
+
+void freeCexpApply(struct CexpApply * x) {
+    FREE(x, CexpApply);
+}
+
+void freeAexpMakeVec(struct AexpMakeVec * x) {
+    FREE(x, AexpMakeVec);
+}
+
+void freeCexpIf(struct CexpIf * x) {
+    FREE(x, CexpIf);
+}
+
+void freeCexpCond(struct CexpCond * x) {
+    FREE(x, CexpCond);
+}
+
+void freeCexpIntCondCases(struct CexpIntCondCases * x) {
+    FREE(x, CexpIntCondCases);
+}
+
+void freeCexpCharCondCases(struct CexpCharCondCases * x) {
+    FREE(x, CexpCharCondCases);
+}
+
+void freeCexpMatch(struct CexpMatch * x) {
+    FREE(x, CexpMatch);
+}
+
+void freeMatchList(struct MatchList * x) {
+    FREE(x, MatchList);
+}
+
+void freeCexpLetRec(struct CexpLetRec * x) {
+    FREE(x, CexpLetRec);
+}
+
+void freeLetRecBindings(struct LetRecBindings * x) {
+    FREE(x, LetRecBindings);
+}
+
+void freeCexpAmb(struct CexpAmb * x) {
+    FREE(x, CexpAmb);
+}
+
+void freeCexpCut(struct CexpCut * x) {
+    FREE(x, CexpCut);
+}
+
+void freeCexpBool(struct CexpBool * x) {
+    FREE(x, CexpBool);
+}
+
+void freeExpLet(struct ExpLet * x) {
+    FREE(x, ExpLet);
+}
+
+void freeCexpCondCases(struct CexpCondCases * x) {
+    FREE(x, CexpCondCases);
+}
+
+void freeAexp(struct Aexp * x) {
+    FREE(x, Aexp);
+}
+
+void freeCexp(struct Cexp * x) {
+    FREE(x, Cexp);
+}
+
+void freeExp(struct Exp * x) {
+    FREE(x, Exp);
+}
+
+
+/*
+ * generic free function
+ */
+
+void freeAnfObj(struct Header *h) {
+    switch(h->type) {
+        case OBJTYPE_AEXPLAM:
+            freeAexpLam((AexpLam *)h);
+            break;
+        case OBJTYPE_AEXPVARLIST:
+            freeAexpVarList((AexpVarList *)h);
+            break;
+        case OBJTYPE_AEXPANNOTATEDVAR:
+            freeAexpAnnotatedVar((AexpAnnotatedVar *)h);
+            break;
+        case OBJTYPE_AEXPPRIMAPP:
+            freeAexpPrimApp((AexpPrimApp *)h);
+            break;
+        case OBJTYPE_AEXPUNARYAPP:
+            freeAexpUnaryApp((AexpUnaryApp *)h);
+            break;
+        case OBJTYPE_AEXPLIST:
+            freeAexpList((AexpList *)h);
+            break;
+        case OBJTYPE_AEXPINTLIST:
+            freeAexpIntList((AexpIntList *)h);
+            break;
+        case OBJTYPE_CEXPAPPLY:
+            freeCexpApply((CexpApply *)h);
+            break;
+        case OBJTYPE_AEXPMAKEVEC:
+            freeAexpMakeVec((AexpMakeVec *)h);
+            break;
+        case OBJTYPE_CEXPIF:
+            freeCexpIf((CexpIf *)h);
+            break;
+        case OBJTYPE_CEXPCOND:
+            freeCexpCond((CexpCond *)h);
+            break;
+        case OBJTYPE_CEXPINTCONDCASES:
+            freeCexpIntCondCases((CexpIntCondCases *)h);
+            break;
+        case OBJTYPE_CEXPCHARCONDCASES:
+            freeCexpCharCondCases((CexpCharCondCases *)h);
+            break;
+        case OBJTYPE_CEXPMATCH:
+            freeCexpMatch((CexpMatch *)h);
+            break;
+        case OBJTYPE_MATCHLIST:
+            freeMatchList((MatchList *)h);
+            break;
+        case OBJTYPE_CEXPLETREC:
+            freeCexpLetRec((CexpLetRec *)h);
+            break;
+        case OBJTYPE_LETRECBINDINGS:
+            freeLetRecBindings((LetRecBindings *)h);
+            break;
+        case OBJTYPE_CEXPAMB:
+            freeCexpAmb((CexpAmb *)h);
+            break;
+        case OBJTYPE_CEXPCUT:
+            freeCexpCut((CexpCut *)h);
+            break;
+        case OBJTYPE_CEXPBOOL:
+            freeCexpBool((CexpBool *)h);
+            break;
+        case OBJTYPE_EXPLET:
+            freeExpLet((ExpLet *)h);
+            break;
+        case OBJTYPE_CEXPCONDCASES:
+            freeCexpCondCases((CexpCondCases *)h);
+            break;
+        case OBJTYPE_AEXP:
+            freeAexp((Aexp *)h);
+            break;
+        case OBJTYPE_CEXP:
+            freeCexp((Cexp *)h);
+            break;
+        case OBJTYPE_EXP:
+            freeExp((Exp *)h);
+            break;
+        default:
+            cant_happen("unrecognised type %d in freeAnfObj\n", h->type);
+    }
+}
+
+/*
+ * type identifier function
+ */
+
+char *typenameAnfObj(int type) {
+    switch(type) {
+        case OBJTYPE_AEXPLAM:
+            return "AexpLam";
+        case OBJTYPE_AEXPVARLIST:
+            return "AexpVarList";
+        case OBJTYPE_AEXPANNOTATEDVAR:
+            return "AexpAnnotatedVar";
+        case OBJTYPE_AEXPPRIMAPP:
+            return "AexpPrimApp";
+        case OBJTYPE_AEXPUNARYAPP:
+            return "AexpUnaryApp";
+        case OBJTYPE_AEXPLIST:
+            return "AexpList";
+        case OBJTYPE_AEXPINTLIST:
+            return "AexpIntList";
+        case OBJTYPE_CEXPAPPLY:
+            return "CexpApply";
+        case OBJTYPE_AEXPMAKEVEC:
+            return "AexpMakeVec";
+        case OBJTYPE_CEXPIF:
+            return "CexpIf";
+        case OBJTYPE_CEXPCOND:
+            return "CexpCond";
+        case OBJTYPE_CEXPINTCONDCASES:
+            return "CexpIntCondCases";
+        case OBJTYPE_CEXPCHARCONDCASES:
+            return "CexpCharCondCases";
+        case OBJTYPE_CEXPMATCH:
+            return "CexpMatch";
+        case OBJTYPE_MATCHLIST:
+            return "MatchList";
+        case OBJTYPE_CEXPLETREC:
+            return "CexpLetRec";
+        case OBJTYPE_LETRECBINDINGS:
+            return "LetRecBindings";
+        case OBJTYPE_CEXPAMB:
+            return "CexpAmb";
+        case OBJTYPE_CEXPCUT:
+            return "CexpCut";
+        case OBJTYPE_CEXPBOOL:
+            return "CexpBool";
+        case OBJTYPE_EXPLET:
+            return "ExpLet";
+        case OBJTYPE_CEXPCONDCASES:
+            return "CexpCondCases";
+        case OBJTYPE_AEXP:
+            return "Aexp";
+        case OBJTYPE_CEXP:
+            return "Cexp";
+        case OBJTYPE_EXP:
+            return "Exp";
+        default:
+            cant_happen("unrecognised type %d in typenameAnfObj\n", type);
+    }
+}

@@ -17,14 +17,22 @@
  *
  * Structures to support type inference
  *
- * generated from src/tc.yaml by makeAST.py
+ * Generated from src/tc.yaml by tools/makeAST.py
  */
 
 #include <stdio.h>
 
 #include "tc_debug.h"
 
-static void pad(int depth) { eprintf("%*s", depth * 4, ""); }
+/*
+ * helper functions
+ */
+
+static void pad(int depth) { eprintf("%*s", depth * PAD_WIDTH, ""); }
+
+/*
+ * print functions
+ */
 
 void printTcEnv(struct TcEnv * x, int depth) {
     pad(depth);
@@ -165,7 +173,9 @@ eprintf("void * %p", x->val.character);
 }
 
 
-/***************************************/
+/*
+ * compare functions
+ */
 
 bool eqTcEnv(struct TcEnv * a, struct TcEnv * b, HashTable *map) {
     if (a == b) return true;

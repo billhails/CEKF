@@ -1,0 +1,128 @@
+let
+    typedef Color { R | B | BB }
+    typedef Tree(#t) { E | EE | T(Color, Tree(#t), #t, Tree(#t)) }
+
+    fn balance {
+        (B, T(R, T(R, a, x, b), y, c), z, d) |
+        (B, T(R, a, x, T(R, b, y, c)), z, d) |
+        (B, a, x, T(R, T(R, b, y, c), z, d)) |
+        (B, a, x, T(R, b, y, T(R, c, z, d))) |
+        (BB, T(R, a, x, T(R, b, y, c)), z, d) |
+        (BB, T(R, a, x, T(R, b, y, c)), z, d) { T(B, T(B, a, x, b), y, T(B, c, z, d)) }
+        (color, a, b, c) { T(color, a, b, c) }
+    }
+
+    fn member {
+        (x, E) { false }
+        (x, T(_, _, x, _)) { true }
+        (x, T(_, a, y, b)) {
+            if (x < y) {
+                member(x, a)
+            } else {
+                member(x, b)
+            }}
+    }
+
+    fn insert(x, s) {
+        let
+            fn blacken {
+                (T(R, a=T(R, _, _, _), x, b)) |
+                (T(R, a, x, b=T(R, _, _, _))) { T(B, a, x, b) }
+                (t) { t }
+            }
+            fn ins {
+                (x, E, _) { T(R, E, x, E) }
+                (x, T(_, _, x, _), throw) { throw(s) }
+                (x, T(color, a, y, b), throw) {
+                    if (x < y) {
+                        balance(color, ins(x, a, throw), y, b)
+                    } else {
+                        balance(color, a, y, ins(x, b, throw))
+                    }
+                }
+            }
+        in
+            here fn (throw) { blacken(ins(x, s, throw)) }
+    }
+
+    fn delete(x, s) {
+        let
+            fn del {
+                (_, E, throw) { throw(s) }
+                (x, T(R, E, x, E), _) { E }
+                (x, T(B, E, x, E), _) { EE }
+                (_, T(B, E, _, E), throw) |
+                (_, T(B, E, _, E), throw) { throw(s) }
+                (x, T(B, T(R, E, y, E), x, E), _) { T(B, E, y, E) }
+                (x, T(B, T(R, E, y, E), z, E), throw) {
+                    if (x < z) {
+                        T(B, del(x, T(R, E, y, E), throw), z, E)
+                    } else {
+                        throw(s)
+                    }
+                }
+                (x, T(c, a, x, b), _) {
+                    let
+                        y2 = min_del_y(b);
+                        b2 = min_del_b(b);
+                    in
+                        rotate(c, a, y2, b2)
+                }
+                (x, T(c, a, y, b), throw) {
+                    if (x < y) {
+                        rotate(c, del(x, a, throw), y, b)
+                    } else {
+                        rotate(c, a, y, del(x, b, throw))
+                    }
+                }
+            }
+
+            fn redden {
+                (T(B, a=T(B, _, _, _), y, b=T(B, _, _, _))) { T(R, a, y, b) }
+                (a) { a }
+            }
+
+            fn rotate {
+                (R, T(BB, a, x, b), y, T(B, c, z, d)) { balance(B, T(R, T(B, a, x, b), y, c), z, d) }
+                (R, EE, y, T(B, c, z, d)) { balance(B, T(R, E, y, c), z, d) }
+                (R, T(B, a, x, b), y, T(BB, c, z, d)) { balance(B, a, x, T(R, b, y, T(B, c, z, d))) }
+                (R, T(B, a, x, b), y, EE) { balance(B, a, x, T(R, b, y, E)) }
+                (B, T(BB, a, x, b), y, T(B, c, z, d)) { balance(BB, T(R, T(B, a, x, b), y, c), z, d) }
+                (B, EE, y, T(B, c, z, d)) { balance(BB, T(R, E, y, c), z, d) }
+                (B, T(B, a, x, b), y, T(BB, c, z, d)) { balance(BB, a, x, T(R, b, y, T(B, c, z, d))) }
+                (B, T(B, a, x, b), y, EE) { balance(BB, a, x, T(R, b, y, E)) }
+                (B, T(BB, a, w, b), x, T(R, T(B, c, y, d), z, e)) { T(B, balance(B, T(R, T(B, a, w, b), x, c), y, d), z, e) }
+                (B, EE, x, T(R, T(B, c, y, d), z, e)) { T(B, balance(B, T(R, E, x, c), y, d), z, e) }
+                (B, T(R, a, w, T(B, b, x, c)), y, T(BB, d, z, e)) { T(B, a, w, balance(B, b, x, T(R, c, y, T(B, d, z, e)))) }
+                (B, T(R, a, w, T(B, b, x, c)), y, EE) { T(B, a, w, balance(B, b, x, T(R, c, y, E))) }
+                (color, a, x, b) { T(color, a, x, b) }
+            }
+
+            fn min_del_y {
+                (T(R, E, x, E)) | (T(B, E, x, E)) { x }
+                (T(B, E, x, T(R, E, _, E))) { x }
+                (T(c, a, x, b)) { min_del_y(a) }
+
+            }
+
+            fn min_del_b {
+                (T(R, E, _, E))             { E }
+                (T(B, E, _, E))             { EE }
+                (T(B, E, _, T(R, E, y, E))) { T(B, E, y, E) }
+                (T(c, a, x, b))             { rotate(c, min_del_b(a), x, b) }
+            }
+        in
+            here fn (throw) { del(x, redden(s), throw) }
+    }
+
+    fn makeSet(lst) {
+       let fn helper {
+           ([], tr) { tr }
+           (h @ t, tr) { helper(t, insert(h, tr)) }
+       }
+       in
+           helper(lst, E)
+    }
+ 
+in
+    member('m', delete('m', makeSet("kgimtseettepmupybbbmplgntqzutrfxqarki")))

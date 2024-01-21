@@ -27,90 +27,24 @@
 #include "lambda_debug.h"
 #include "lambda_conversion.h"
 #include "module.h"
-// #include "parser.h"
 #include "analysis.h"
-#include "exp.h"
+#include "anf.h"
+#include "anf_normalize.h"
 #include "memory.h"
 #include "step.h"
 #include "debug.h"
+#include "anf_pp.h"
 #include "bytecode.h"
 #include "desugaring.h"
 #include "hash.h"
 #include "lambda_pp.h"
-#include "anf.h"
+#include "anf_normalize.h"
 #include "bigint.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
 
-#ifdef DEBUG_RUN_TESTS
-#if DEBUG_RUN_TESTS == 1
-
-#include "tests/exp.inc"
-
-#elif DEBUG_RUN_TESTS == 2 /* testing parser */
-
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    printAstNest(result, 0);
-    enableGC();
-    printf("\n");
-    char *foo = NEW_ARRAY(char, 10); // force gc
-}
-
-#elif DEBUG_RUN_TESTS == 3 // testing type inference
-
-extern void testTin();
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    testTin();
-}
-
-#else // testing lambda conversion
-
-extern AstNest *result;
-
-int main(int argc, char *argv[]) {
-    initProtection();
-    disableGC();
-    if (argc < 2) {
-        eprintf("need filename\n");
-        exit(1);
-    }
-    AstNest *result = pm_parseFile(argv[1]);
-    PROTECT(result);
-    enableGC();
-    // quietPrintHashTable = true;
-    WResult *wr = WTop(result);
-    // showTinMonoType(wr->monoType);
-    // printf("\n");
-    validateLastAlloc();
-    if (hadErrors()) {
-        printf("(errors detected)\n");
-    } else {
-        LamExp *exp = lamConvertNest(result, NULL);
-        int save = PROTECT(exp);
-        // ppLamExp(exp);
-        // printf("\n");
-        Exp *anfExp = anfNormalize(exp);
-        printExp(anfExp);
-        eprintf("\n");
-    }
-}
-
-#endif
-
-#else
-
-int report_mem_flag = 0;
-static int report_time_flag = 0;
+int report_flag = 0;
+static int help_flag = 0;
 
 int main(int argc, char *argv[]) {
     int c;
@@ -120,8 +54,8 @@ int main(int argc, char *argv[]) {
         static struct option long_options[] =
         {
           {"bigint", no_argument, &bigint_flag, 1},
-          {"report-memory", no_argument, &report_mem_flag, 1},
-          {"report-time", no_argument, &report_time_flag, 1},
+          {"report", no_argument, &report_flag, 1},
+          {"help", no_argument, &help_flag, 1},
           {0, 0, 0, 0}
         };
         int option_index = 0;
@@ -130,6 +64,15 @@ int main(int argc, char *argv[]) {
 
         if (c == -1)
             break;
+    }
+
+    if (help_flag) {
+        printf("%s",
+            "--bigint        use arbitrary precision integers\n"
+            "--report        report statistics\n"
+            "--help          this help\n"
+        );
+        exit(0);
     }
 
     ByteCodeArray byteCodes;
@@ -177,28 +120,26 @@ int main(int argc, char *argv[]) {
     anfExp = desugarExp(anfExp);
     PROTECT(anfExp);
     enableGC();
-#ifdef DEBUG_ANF
-    printExp(anfExp);
-    eprintf("\n");
-#endif
     // static analysis: ANF => annotated ANF (de bruijn)
     analizeExp(anfExp, NULL);
+#ifdef DEBUG_ANF
+    ppExp(anfExp);
+    eprintf("\n");
+#endif
     // byte code generation
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
     UNPROTECT(save);
     // execution
-    printContainedValue(run(byteCodes), 1);
-    printf("\n");
+    run(byteCodes);
     // report stats etc.
-    if (report_mem_flag)
-        reportMemory();
-    if (report_time_flag) {
+    if (report_flag) {
         clock_t end = clock();
         double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-        printf("elapsed time %.3lf\n", time_spent);
+        printf("\nelapsed time %.3lf\n", time_spent);
+        reportMemory();
+        reportSteps();
     }
 }
 
-#endif

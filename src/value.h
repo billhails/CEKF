@@ -63,6 +63,9 @@ typedef struct Value {
 extern Value vTrue;
 extern Value vFalse;
 extern Value vVoid;
+extern Value vLt;
+extern Value vEq;
+extern Value vGt;
 
 
 #endif

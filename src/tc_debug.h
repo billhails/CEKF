@@ -19,10 +19,14 @@
  *
  * Structures to support type inference
  *
- * generated from src/tc.yaml by makeAST.py
+ * Generated from src/tc.yaml by tools/makeAST.py
  */
 
 #include "tc_helper.h"
+
+/*
+ * print declarations
+ */
 
 void printTcEnv(struct TcEnv * x, int depth);
 void printTcNg(struct TcNg * x, int depth);
@@ -32,6 +36,10 @@ void printTcTypeDef(struct TcTypeDef * x, int depth);
 void printTcTypeDefArgs(struct TcTypeDefArgs * x, int depth);
 void printTcVar(struct TcVar * x, int depth);
 void printTcType(struct TcType * x, int depth);
+
+/*
+ * compare declarations
+ */
 
 bool eqTcEnv(struct TcEnv * a, struct TcEnv * b, HashTable *map);
 bool eqTcNg(struct TcNg * a, struct TcNg * b, HashTable *map);

@@ -143,8 +143,9 @@ primitives:
 
     LamExp:
         cname: "LamExp *"
-        printFn: "ppLamExpD"
-        markFn: "markLamExp"
+        printFn: ppLamExpD
+        markFn: markLamExp
+        copyFn: copyLamExp
         valued: true
 
     BigInt:
@@ -155,8 +156,9 @@ primitives:
 
     LamTypeConstructorInfo:
         cname: "LamTypeConstructorInfo *"
-        printFn: "printLamTypeConstructorInfo"
-        markFn: "markLamTypeConstructorInfo"
+        printFn: printLamTypeConstructorInfo
+        markFn: markLamTypeConstructorInfo
+        copyFn: copyLamTypeConstructorInfo
         valued: true
 
     int:

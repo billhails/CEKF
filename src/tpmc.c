@@ -17,7 +17,7 @@
  *
  * Term Pattern Matching Compiler types
  *
- * generated from src/tpmc.yaml by makeAST.py
+ * Generated from src/tpmc.yaml by tools/makeAST.py
  */
 
 #include "tpmc.h"
@@ -29,6 +29,10 @@
 #else
 #include "debugging_off.h"
 #endif
+
+/*
+ * constructor functions
+ */
 
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables) {
     struct TpmcMatchRules * x = NEW(TpmcMatchRules, OBJTYPE_TPMCMATCHRULES);
@@ -147,11 +151,11 @@ struct TpmcStateValue * newTpmcStateValue(enum TpmcStateValueType  type, union T
 
 struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
     struct TpmcMatchRuleArray * x = NEW(TpmcMatchRuleArray, OBJTYPE_TPMCMATCHRULEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcMatchRuleArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcMatchRule *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -160,11 +164,11 @@ struct TpmcMatchRuleArray * newTpmcMatchRuleArray(void) {
 
 struct TpmcVariableArray * newTpmcVariableArray(void) {
     struct TpmcVariableArray * x = NEW(TpmcVariableArray, OBJTYPE_TPMCVARIABLEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcVariableArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(HashSymbol *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -173,12 +177,12 @@ struct TpmcVariableArray * newTpmcVariableArray(void) {
 
 struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
     struct TpmcPatternArray * x = NEW(TpmcPatternArray, OBJTYPE_TPMCPATTERNARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcPatternArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcPattern *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -187,12 +191,12 @@ struct TpmcPatternArray * newTpmcPatternArray(char * _tag) {
 
 struct TpmcStateArray * newTpmcStateArray(char * _tag) {
     struct TpmcStateArray * x = NEW(TpmcStateArray, OBJTYPE_TPMCSTATEARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcStateArray %p", x);
     x->entries = NULL;
     x->_tag = _tag;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcState *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -201,11 +205,11 @@ struct TpmcStateArray * newTpmcStateArray(char * _tag) {
 
 struct TpmcArcArray * newTpmcArcArray(void) {
     struct TpmcArcArray * x = NEW(TpmcArcArray, OBJTYPE_TPMCARCARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcArcArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(struct TpmcArc *, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -214,11 +218,11 @@ struct TpmcArcArray * newTpmcArcArray(void) {
 
 struct TpmcIntArray * newTpmcIntArray(void) {
     struct TpmcIntArray * x = NEW(TpmcIntArray, OBJTYPE_TPMCINTARRAY);
-    int save = PROTECT(x);
     DEBUG("new TpmcIntArray %p", x);
     x->entries = NULL;
     x->size = 0;
     x->capacity = 0;
+    int save = PROTECT(x);
     x->entries = NEW_ARRAY(int, 4);
     x->capacity = 4;
     UNPROTECT(save);
@@ -227,11 +231,11 @@ struct TpmcIntArray * newTpmcIntArray(void) {
 
 struct TpmcMatrix * newTpmcMatrix(int width, int height) {
     struct TpmcMatrix * x = NEW(TpmcMatrix, OBJTYPE_TPMCMATRIX);
-    int save = PROTECT(x);
     DEBUG("new TpmcMatrix %p", x);
     x->entries = NULL;
     x->width = 0;
     x->height = 0;
+    int save = PROTECT(x);
     if (width * height > 0) {
         x->entries = NEW_ARRAY(struct TpmcPattern *, width * height);
         bzero(x->entries, sizeof(struct TpmcPattern *) * width * height);
@@ -242,6 +246,398 @@ struct TpmcMatrix * newTpmcMatrix(int width, int height) {
     return x;
 }
 
+
+/*
+ * copy functions
+ */
+
+struct TpmcMatchRules * copyTpmcMatchRules(struct TpmcMatchRules * o) {
+    if (o == NULL) return NULL;
+    struct TpmcMatchRules * x = NEW(TpmcMatchRules, OBJTYPE_TPMCMATCHRULES);
+    DEBUG("copy TpmcMatchRules %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcMatchRules));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->rules = copyTpmcMatchRuleArray(o->rules);
+    x->rootVariables = copyTpmcVariableArray(o->rootVariables);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcMatchRule * copyTpmcMatchRule(struct TpmcMatchRule * o) {
+    if (o == NULL) return NULL;
+    struct TpmcMatchRule * x = NEW(TpmcMatchRule, OBJTYPE_TPMCMATCHRULE);
+    DEBUG("copy TpmcMatchRule %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcMatchRule));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->action = copyTpmcState(o->action);
+    x->patterns = copyTpmcPatternArray(o->patterns);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcComparisonPattern * copyTpmcComparisonPattern(struct TpmcComparisonPattern * o) {
+    if (o == NULL) return NULL;
+    struct TpmcComparisonPattern * x = NEW(TpmcComparisonPattern, OBJTYPE_TPMCCOMPARISONPATTERN);
+    DEBUG("copy TpmcComparisonPattern %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcComparisonPattern));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->previous = copyTpmcPattern(o->previous);
+    x->current = copyTpmcPattern(o->current);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcAssignmentPattern * copyTpmcAssignmentPattern(struct TpmcAssignmentPattern * o) {
+    if (o == NULL) return NULL;
+    struct TpmcAssignmentPattern * x = NEW(TpmcAssignmentPattern, OBJTYPE_TPMCASSIGNMENTPATTERN);
+    DEBUG("copy TpmcAssignmentPattern %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcAssignmentPattern));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->name = o->name;
+    x->value = copyTpmcPattern(o->value);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcConstructorPattern * copyTpmcConstructorPattern(struct TpmcConstructorPattern * o) {
+    if (o == NULL) return NULL;
+    struct TpmcConstructorPattern * x = NEW(TpmcConstructorPattern, OBJTYPE_TPMCCONSTRUCTORPATTERN);
+    DEBUG("copy TpmcConstructorPattern %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcConstructorPattern));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->tag = o->tag;
+    x->info = copyLamTypeConstructorInfo(o->info);
+    x->components = copyTpmcPatternArray(o->components);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcPattern * copyTpmcPattern(struct TpmcPattern * o) {
+    if (o == NULL) return NULL;
+    struct TpmcPattern * x = NEW(TpmcPattern, OBJTYPE_TPMCPATTERN);
+    DEBUG("copy TpmcPattern %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcPattern));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->path = o->path;
+    x->pattern = copyTpmcPatternValue(o->pattern);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcTestState * copyTpmcTestState(struct TpmcTestState * o) {
+    if (o == NULL) return NULL;
+    struct TpmcTestState * x = NEW(TpmcTestState, OBJTYPE_TPMCTESTSTATE);
+    DEBUG("copy TpmcTestState %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcTestState));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->path = o->path;
+    x->arcs = copyTpmcArcArray(o->arcs);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcFinalState * copyTpmcFinalState(struct TpmcFinalState * o) {
+    if (o == NULL) return NULL;
+    struct TpmcFinalState * x = NEW(TpmcFinalState, OBJTYPE_TPMCFINALSTATE);
+    DEBUG("copy TpmcFinalState %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcFinalState));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->action = copyLamExp(o->action);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcState * copyTpmcState(struct TpmcState * o) {
+    if (o == NULL) return NULL;
+    struct TpmcState * x = NEW(TpmcState, OBJTYPE_TPMCSTATE);
+    DEBUG("copy TpmcState %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcState));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->refcount = o->refcount;
+    x->stamp = o->stamp;
+    x->freeVariables = o->freeVariables;
+    x->state = copyTpmcStateValue(o->state);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcArc * copyTpmcArc(struct TpmcArc * o) {
+    if (o == NULL) return NULL;
+    struct TpmcArc * x = NEW(TpmcArc, OBJTYPE_TPMCARC);
+    DEBUG("copy TpmcArc %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcArc));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->state = copyTpmcState(o->state);
+    x->test = copyTpmcPattern(o->test);
+    x->freeVariables = o->freeVariables;
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcArcList * copyTpmcArcList(struct TpmcArcList * o) {
+    if (o == NULL) return NULL;
+    struct TpmcArcList * x = NEW(TpmcArcList, OBJTYPE_TPMCARCLIST);
+    DEBUG("copy TpmcArcList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcArcList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->arc = copyTpmcArc(o->arc);
+    x->next = copyTpmcArcList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcIntList * copyTpmcIntList(struct TpmcIntList * o) {
+    if (o == NULL) return NULL;
+    struct TpmcIntList * x = NEW(TpmcIntList, OBJTYPE_TPMCINTLIST);
+    DEBUG("copy TpmcIntList %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcIntList));
+    x->header = _h;
+    int save = PROTECT(x);
+    x->integer = o->integer;
+    x->next = copyTpmcIntList(o->next);
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcPatternValue * copyTpmcPatternValue(struct TpmcPatternValue * o) {
+    if (o == NULL) return NULL;
+    struct TpmcPatternValue * x = NEW(TpmcPatternValue, OBJTYPE_TPMCPATTERNVALUE);
+    DEBUG("copy TpmcPatternValue %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcPatternValue));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case TPMCPATTERNVALUE_TYPE_VAR:
+            x->val.var = o->val.var;
+            break;
+        case TPMCPATTERNVALUE_TYPE_COMPARISON:
+            x->val.comparison = copyTpmcComparisonPattern(o->val.comparison);
+            break;
+        case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
+            x->val.assignment = copyTpmcAssignmentPattern(o->val.assignment);
+            break;
+        case TPMCPATTERNVALUE_TYPE_WILDCARD:
+            x->val.wildcard = o->val.wildcard;
+            break;
+        case TPMCPATTERNVALUE_TYPE_CHARACTER:
+            x->val.character = o->val.character;
+            break;
+        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
+            x->val.biginteger = o->val.biginteger;
+            break;
+        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
+            x->val.constructor = copyTpmcConstructorPattern(o->val.constructor);
+            break;
+        default:
+            cant_happen("unrecognised type %d in copyTpmcPatternValue", o->type);
+    }
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcStateValue * copyTpmcStateValue(struct TpmcStateValue * o) {
+    if (o == NULL) return NULL;
+    struct TpmcStateValue * x = NEW(TpmcStateValue, OBJTYPE_TPMCSTATEVALUE);
+    DEBUG("copy TpmcStateValue %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcStateValue));
+    x->header = _h;
+    int save = PROTECT(x);
+    switch(o->type) {
+        case TPMCSTATEVALUE_TYPE_TEST:
+            x->val.test = copyTpmcTestState(o->val.test);
+            break;
+        case TPMCSTATEVALUE_TYPE_FINAL:
+            x->val.final = copyTpmcFinalState(o->val.final);
+            break;
+        case TPMCSTATEVALUE_TYPE_ERROR:
+            x->val.error = o->val.error;
+            break;
+        default:
+            cant_happen("unrecognised type %d in copyTpmcStateValue", o->type);
+    }
+    x->type = o->type;
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcMatchRuleArray * copyTpmcMatchRuleArray(struct TpmcMatchRuleArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcMatchRuleArray * x = NEW(TpmcMatchRuleArray, OBJTYPE_TPMCMATCHRULEARRAY);
+    DEBUG("copy TpmcMatchRuleArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcMatchRuleArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(struct TpmcMatchRule *, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = copyTpmcMatchRule(o->entries[i]);
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcVariableArray * copyTpmcVariableArray(struct TpmcVariableArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcVariableArray * x = NEW(TpmcVariableArray, OBJTYPE_TPMCVARIABLEARRAY);
+    DEBUG("copy TpmcVariableArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcVariableArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(HashSymbol *, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = o->entries[i];
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcPatternArray * copyTpmcPatternArray(struct TpmcPatternArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcPatternArray * x = NEW(TpmcPatternArray, OBJTYPE_TPMCPATTERNARRAY);
+    DEBUG("copy TpmcPatternArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcPatternArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(struct TpmcPattern *, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = copyTpmcPattern(o->entries[i]);
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcStateArray * copyTpmcStateArray(struct TpmcStateArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcStateArray * x = NEW(TpmcStateArray, OBJTYPE_TPMCSTATEARRAY);
+    DEBUG("copy TpmcStateArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcStateArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(struct TpmcState *, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = copyTpmcState(o->entries[i]);
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcArcArray * copyTpmcArcArray(struct TpmcArcArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcArcArray * x = NEW(TpmcArcArray, OBJTYPE_TPMCARCARRAY);
+    DEBUG("copy TpmcArcArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcArcArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(struct TpmcArc *, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = copyTpmcArc(o->entries[i]);
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcIntArray * copyTpmcIntArray(struct TpmcIntArray * o) {
+    if (o == NULL) return NULL;
+    struct TpmcIntArray * x = NEW(TpmcIntArray, OBJTYPE_TPMCINTARRAY);
+    DEBUG("copy TpmcIntArray %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcIntArray));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(int, x->capacity);
+        x->size = 0;
+        x->capacity = o->capacity;
+        for (int i = 0; i < o->size; i++) {
+            x->entries[i] = o->entries[i];
+            x->size++;
+        }
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+struct TpmcMatrix * copyTpmcMatrix(struct TpmcMatrix * o) {
+    if (o == NULL) return NULL;
+    struct TpmcMatrix * x = NEW(TpmcMatrix, OBJTYPE_TPMCMATRIX);
+    DEBUG("copy TpmcMatrix %pn", x);
+    Header _h = x->header;
+    bzero(x, sizeof(struct TpmcMatrix));
+    x->header = _h;
+    int save = PROTECT(x);
+    if (o->entries != NULL) {
+        x->entries = NEW_ARRAY(struct TpmcPattern *, x->width * x->height);
+        x->width = 0;
+        x->height = 0;
+        for (int i = 0; i < (o->width * o->height); i++) {
+            x->entries[i] = copyTpmcPattern(o->entries[i]);
+        }
+        x->height = o->height;
+        x->width = o->width;
+    }
+    UNPROTECT(save);
+    return x;
+}
+
+
+/*
+ * push functions
+ */
 
 void pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * x, struct TpmcMatchRule * entry) {
     if (x->size == x->capacity) {
@@ -292,7 +688,9 @@ void pushTpmcIntArray(struct TpmcIntArray * x, int entry) {
 }
 
 
-/************************************/
+/*
+ * mark functions
+ */
 
 void markTpmcMatchRules(struct TpmcMatchRules * x) {
     if (x == NULL) return;
@@ -501,6 +899,10 @@ void markTpmcMatrix(struct TpmcMatrix * x) {
 }
 
 
+/*
+ * generic mark function
+ */
+
 void markTpmcObj(struct Header *h) {
     switch(h->type) {
         case OBJTYPE_TPMCMATCHRULES:
@@ -571,7 +973,9 @@ void markTpmcObj(struct Header *h) {
     }
 }
 
-/************************************/
+/*
+ * free functions
+ */
 
 void freeTpmcMatchRules(struct TpmcMatchRules * x) {
     FREE(x, TpmcMatchRules);
@@ -665,6 +1069,10 @@ void freeTpmcMatrix(struct TpmcMatrix * x) {
 }
 
 
+/*
+ * generic free function
+ */
+
 void freeTpmcObj(struct Header *h) {
     switch(h->type) {
         case OBJTYPE_TPMCMATCHRULES:
@@ -735,6 +1143,10 @@ void freeTpmcObj(struct Header *h) {
     }
 }
 
+/*
+ * type identifier function
+ */
+
 char *typenameTpmcObj(int type) {
     switch(type) {
         case OBJTYPE_TPMCMATCHRULES:
@@ -783,4 +1195,3 @@ char *typenameTpmcObj(int type) {
             cant_happen("unrecognised type %d in typenameTpmcObj\n", type);
     }
 }
-

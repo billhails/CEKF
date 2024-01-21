@@ -27,9 +27,10 @@
 #include "analysis.h"
 #include "memory.h"
 #include "step.h"
-#include "exp.h"
+#include "anf.h"
 #include "cekf.h"
 #include "module.h"
+#include "symbol.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -54,7 +55,7 @@ typedef struct ProtectionStack {
 } ProtectionStack;
 
 void reportMemory() {
-    printf("\ngc runs: %d, current memory: %d, max memory: %d\n",
+    printf("gc runs: %d, current memory: %d, max memory: %d\n",
         numGc, bytesAllocated, maxMem);
 }
 
@@ -68,50 +69,8 @@ void validateLastAlloc() {
 
 const char *typeName(ObjType type, void *p) {
     switch (type) {
-        case OBJTYPE_AMB:
-            return "amb";
-        case OBJTYPE_CUT:
-            return "cut";
-        case OBJTYPE_BOOL:
-            return "bool";
-        case OBJTYPE_APPLY:
-            return "apply";
-        case OBJTYPE_BINDINGS:
-            return "bindings";
-        case OBJTYPE_IF:
-            return "if";
-        case OBJTYPE_AEXP:
-            return "aexp";
-        case OBJTYPE_CEXP:
-            return "cexp";
-        case OBJTYPE_EXP:
-            return "exp";
-        case OBJTYPE_EXPLIST:
-            return "explist";
-        case OBJTYPE_AEXPINTLIST:
-            return "aexpintlist";
-        case OBJTYPE_LAM:
-            return "lam";
-        case OBJTYPE_LET:
-            return "let";
-        case OBJTYPE_LETREC:
-            return "letrec";
-        case OBJTYPE_PRIMAPP:
-            return "primapp";
-        case OBJTYPE_UNARYAPP:
-            return "unaryapp";
         case OBJTYPE_HASHSYMBOL:
             return "var";
-        case OBJTYPE_ANNOTATEDVAR:
-            return "annotatedvar";
-        case OBJTYPE_VARLIST:
-            return "varlist";
-        case OBJTYPE_MAKEVEC:
-            return "makevec";
-        case OBJTYPE_MATCH:
-            return "match";
-        case OBJTYPE_MATCHLIST:
-            return "matchlist";
         case OBJTYPE_CLO:
             return "clo";
         case OBJTYPE_ENV:
@@ -136,6 +95,8 @@ const char *typeName(ObjType type, void *p) {
             return "bigint";
         case OBJTYPE_PMMODULE:
             return "pmmodule";
+        ANF_OBJTYPE_CASES()
+            return typenameAnfObj(type);
         AST_OBJTYPE_CASES()
             return typenameAstObj(type);
         LAMBDA_OBJTYPE_CASES()
@@ -310,32 +271,6 @@ void markObj(Header *h, int i) {
     eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
-        case OBJTYPE_AMB:
-        case OBJTYPE_CUT:
-        case OBJTYPE_APPLY:
-        case OBJTYPE_BINDINGS:
-        case OBJTYPE_BOOL:
-        case OBJTYPE_IF:
-        case OBJTYPE_COND:
-        case OBJTYPE_CONDCASES:
-        case OBJTYPE_INTCONDCASES:
-        case OBJTYPE_CHARCONDCASES:
-        case OBJTYPE_AEXP:
-        case OBJTYPE_CEXP:
-        case OBJTYPE_EXP:
-        case OBJTYPE_EXPLIST:
-        case OBJTYPE_AEXPINTLIST:
-        case OBJTYPE_LAM:
-        case OBJTYPE_LET:
-        case OBJTYPE_LETREC:
-        case OBJTYPE_PRIMAPP:
-        case OBJTYPE_ANNOTATEDVAR:
-        case OBJTYPE_VARLIST:
-        case OBJTYPE_MAKEVEC:
-        case OBJTYPE_MATCH:
-        case OBJTYPE_MATCHLIST:
-            markExpObj(h);
-            break;
         case OBJTYPE_CLO:
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
@@ -359,6 +294,9 @@ void markObj(Header *h, int i) {
             break;
         case OBJTYPE_PMMODULE:
             markPmModule(h);
+            break;
+        ANF_OBJTYPE_CASES()
+            markAnfObj(h);
             break;
         AST_OBJTYPE_CASES()
             markAstObj(h);
@@ -386,32 +324,6 @@ static void freeProtectionObj(Header *h) {
 
 void freeObj(Header *h) {
     switch (h->type) {
-        case OBJTYPE_BOOL:
-        case OBJTYPE_AMB:
-        case OBJTYPE_CUT:
-        case OBJTYPE_APPLY:
-        case OBJTYPE_BINDINGS:
-        case OBJTYPE_IF:
-        case OBJTYPE_COND:
-        case OBJTYPE_CONDCASES:
-        case OBJTYPE_INTCONDCASES:
-        case OBJTYPE_AEXP:
-        case OBJTYPE_CEXP:
-        case OBJTYPE_EXP:
-        case OBJTYPE_EXPLIST:
-        case OBJTYPE_AEXPINTLIST:
-        case OBJTYPE_LAM:
-        case OBJTYPE_LET:
-        case OBJTYPE_LETREC:
-        case OBJTYPE_PRIMAPP:
-        case OBJTYPE_UNARYAPP:
-        case OBJTYPE_ANNOTATEDVAR:
-        case OBJTYPE_VARLIST:
-        case OBJTYPE_MAKEVEC:
-        case OBJTYPE_MATCH:
-        case OBJTYPE_MATCHLIST:
-            freeExpObj(h);
-            break;
         case OBJTYPE_CLO:
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
@@ -438,6 +350,9 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PMMODULE:
             freePmModule(h);
+            break;
+        ANF_OBJTYPE_CASES()
+            freeAnfObj(h);
             break;
         AST_OBJTYPE_CASES()
             freeAstObj(h);
@@ -470,9 +385,6 @@ static void mark() {
     markVarTable();
 #ifdef DEBUG_LOG_GC
     eprintf("markVarTable done\n");
-#endif
-#ifdef TEST_STACK
-    markTestStack();
 #endif
 }
 

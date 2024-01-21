@@ -1,0 +1,88 @@
+let
+    typedef tree(#t) {
+        leaf |
+        red(tree(#t), #t, tree(#t)) |
+        black(tree(#t), #t, tree(#t))
+    }
+
+    fn member {
+        (_, leaf) { false }
+        (x, red(_, x, _)) |
+        (x, black(_, x, _)) { true }
+        (x, red(l, y, r)) |
+        (x, black(l, y, r)) {
+            if (x < y) { member(x, l) } else { member(x, r) }
+        }
+    }
+
+    fn insert(x, s) {
+        let
+            fn balance {
+                (red(red(a, x, b), y, c), z, d) |
+                (red(a, x, red(b, y, c)), z, d) |
+                (a, x, red(red(b, y, c), z, d)) |
+                (a, x, red(b, y, red(c, z, d))) { red(black(a, x, b), y, black(c, z, d)) }
+                (a, x, b) { black(a, x, b) }
+            }
+
+            fn ins {
+                (_, leaf, _) { red(leaf, x, leaf) }
+                (x, red(a, x, b), throw) |
+                (x, black(a, x, b), throw) { throw(s) }
+                (x, red(a, y, b), throw) {
+                    if (x < y) {
+                        balance(ins(x, a, throw), y, b)
+                    } else {
+                        balance(a, y, ins(x, b, throw))
+                    }
+                }
+                (x, black(a, y, b), throw) {
+                    if (x < y) {
+                        balance(ins(x, a, throw), y, b)
+                    } else {
+                        balance(a, y, ins(x, b, throw))
+                    }
+                }
+            }
+        in
+            here fn (throw) { ins(x, s, throw) }
+    }
+ 
+    fn makeSet(lst) {
+       let fn helper {
+           ([], tr) { tr }
+           (h @ t, tr) { helper(t, insert(h, tr)) }
+       }
+       in
+           helper(lst, leaf)
+    }
+
+    // tree(#t) -> list(#t)
+    fn makeList(tree) {
+        let
+            fn part_flatten {
+                (red(left, t, right), already_flat) |
+                (black(left, t, right), already_flat) {
+                    part_flatten(left, t @ part_flatten(right, already_flat))
+                }
+                (leaf, already_flat) { already_flat }
+            }
+        in
+            part_flatten(tree, [])
+    }
+in
+    makeList(
+        print(
+        makeSet(
+            "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymk"
+            "fpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdoz"
+            "zyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcis"
+            "xevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknja"
+            "uctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupu"
+            "wdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggim"
+            "fsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhox"
+            "nywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskci"
+            "vvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpaw"
+            "kahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximva"
+            "auocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbk"
+            "zxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")))

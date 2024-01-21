@@ -23,13 +23,11 @@
 
  typedef uint32_t hash_t;
 
-// #define DEBUG_RUN_TESTS 1
-// #define TEST_STACK
 // #define DEBUG_STACK
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #define DEBUG_SLOW_STEP
-// define this to cause a GC at every possible step (catches memory leaks early)
+// define this to cause a GC at every malloc (catches memory leaks early)
 #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
@@ -60,5 +58,7 @@ void cant_happen(const char *message, ...) __attribute__((noreturn, format(print
 void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+#define PAD_WIDTH 2
 
 #endif

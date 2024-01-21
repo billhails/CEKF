@@ -270,7 +270,7 @@ void printHashSymbol(HashSymbol *symbol) {
 
 void printHashTable(HashTable *table, int depth) {
     int count = 0;
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     if (table == NULL) {
         eprintf("HashTable: (NULL)");
         return;
@@ -283,7 +283,7 @@ void printHashTable(HashTable *table, int depth) {
                 first = false;
                 eprintf("\n");
             }
-            eprintf("%*s", (depth + 1) * 4, "");
+            eprintf("%*s", (depth + 1) * PAD_WIDTH, "");
             printHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->printfunction != NULL && !quietPrintHashTable) {
                 eprintf(" =>");
@@ -302,7 +302,7 @@ void printHashTable(HashTable *table, int depth) {
     if (first)
         eprintf("}");
     else
-        eprintf("%*s}", depth * 4, "");
+        eprintf("%*s}", depth * PAD_WIDTH, "");
 }
 
 HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {

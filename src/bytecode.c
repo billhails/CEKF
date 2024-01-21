@@ -143,12 +143,12 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
     ENTER(writeAexpAnnotatedVar);
     if (x == NULL) return;
     switch (x->type) {
-        case VAR_TYPE_ENV:
+        case AEXPANNOTATEDVARTYPE_TYPE_ENV:
             addByte(b, BYTECODE_VAR);
             addByte(b, x->frame);
             addByte(b, x->offset);
             break;
-        case VAR_TYPE_STACK:
+        case AEXPANNOTATEDVARTYPE_TYPE_STACK:
             addByte(b, BYTECODE_LVAR);
             addByte(b, x->offset);
             break;
@@ -164,18 +164,24 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
     if (x == NULL) return;
     writeAexp(x->exp, b);
     byte prim;
-    switch (x->op) {
-        case AEXP_UNARY_CAR:
+    switch (x->type) {
+        case AEXPUNARYOP_TYPE_CAR:
             prim = BYTECODE_PRIM_CAR;
             break;
-        case AEXP_UNARY_CDR:
+        case AEXPUNARYOP_TYPE_CDR:
             prim = BYTECODE_PRIM_CDR;
             break;
-        case AEXP_UNARY_NOT:
+        case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODE_PRIM_NOT;
             break;
-        case AEXP_UNARY_PRINT:
-            prim = BYTECODE_PRIM_PRINT;
+        case AEXPUNARYOP_TYPE_PUTC:
+            prim = BYTECODE_PRIM_PUTC;
+            break;
+        case AEXPUNARYOP_TYPE_PUTN:
+            prim = BYTECODE_PRIM_PUTN;
+            break;
+        case AEXPUNARYOP_TYPE_PUTV:
+            prim = BYTECODE_PRIM_PUTV;
             break;
         default:
             cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
@@ -190,51 +196,54 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     writeAexp(x->exp1, b);
     writeAexp(x->exp2, b);
     byte prim;
-    switch (x->op) {
-        case AEXP_PRIM_ADD:
+    switch (x->type) {
+        case AEXPPRIMOP_TYPE_ADD:
             prim = BYTECODE_PRIM_ADD;
             break;
-        case AEXP_PRIM_SUB:
+        case AEXPPRIMOP_TYPE_SUB:
             prim = BYTECODE_PRIM_SUB;
             break;
-        case AEXP_PRIM_MUL:
+        case AEXPPRIMOP_TYPE_MUL:
             prim = BYTECODE_PRIM_MUL;
             break;
-        case AEXP_PRIM_DIV:
+        case AEXPPRIMOP_TYPE_DIV:
             prim = BYTECODE_PRIM_DIV;
             break;
-        case AEXP_PRIM_POW:
+        case AEXPPRIMOP_TYPE_POW:
             prim = BYTECODE_PRIM_POW;
             break;
-        case AEXP_PRIM_MOD:
+        case AEXPPRIMOP_TYPE_MOD:
             prim = BYTECODE_PRIM_MOD;
             break;
-        case AEXP_PRIM_EQ:
+        case AEXPPRIMOP_TYPE_EQ:
             prim = BYTECODE_PRIM_EQ;
             break;
-        case AEXP_PRIM_NE:
+        case AEXPPRIMOP_TYPE_NE:
             prim = BYTECODE_PRIM_NE;
             break;
-        case AEXP_PRIM_GT:
+        case AEXPPRIMOP_TYPE_GT:
             prim = BYTECODE_PRIM_GT;
             break;
-        case AEXP_PRIM_LT:
+        case AEXPPRIMOP_TYPE_LT:
             prim = BYTECODE_PRIM_LT;
             break;
-        case AEXP_PRIM_GE:
+        case AEXPPRIMOP_TYPE_GE:
             prim = BYTECODE_PRIM_GE;
             break;
-        case AEXP_PRIM_LE:
+        case AEXPPRIMOP_TYPE_LE:
             prim = BYTECODE_PRIM_LE;
             break;
-        case AEXP_PRIM_XOR:
+        case AEXPPRIMOP_TYPE_XOR:
             prim = BYTECODE_PRIM_XOR;
             break;
-        case AEXP_PRIM_CONS:
+        case AEXPPRIMOP_TYPE_CONS:
             prim = BYTECODE_PRIM_CONS;
             break;
-        case AEXP_PRIM_VEC:
+        case AEXPPRIMOP_TYPE_VEC:
             prim = BYTECODE_PRIM_VEC;
+            break;
+        case AEXPPRIMOP_TYPE_CMP:
+            prim = BYTECODE_PRIM_CMP;
             break;
         default:
             cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
@@ -409,10 +418,10 @@ void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
     ENTER(writeCexpCond);
     writeAexp(x->condition, b);
     switch (x->cases->type) {
-        case CONDCASE_TYPE_INT:
+        case CEXPCONDCASES_TYPE_INTCASES:
             writeCexpIntCond(x->cases->val.intCases, b);
             break;
-        case CONDCASE_TYPE_CHAR:
+        case CEXPCONDCASES_TYPE_CHARCASES:
             writeCexpCharCond(x->cases->val.charCases, b);
             break;
         default:
@@ -543,24 +552,24 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             writeAexpAnnotatedVar(x->val.annotatedVar, b);
         }
         break;
-        case AEXP_TYPE_TRUE: {
+        case AEXP_TYPE_T: {
             addByte(b, BYTECODE_TRUE);
         }
         break;
-        case AEXP_TYPE_FALSE: {
+        case AEXP_TYPE_F: {
             addByte(b, BYTECODE_FALSE);
         }
         break;
-        case AEXP_TYPE_VOID: {
+        case AEXP_TYPE_V: {
             addByte(b, BYTECODE_VOID);
         }
         break;
-        case AEXP_TYPE_LITTLEINT: {
+        case AEXP_TYPE_LITTLEINTEGER: {
             addByte(b, BYTECODE_STDINT);
             addInt(b, x->val.littleinteger);
         }
         break;
-        case AEXP_TYPE_BIGINT: {
+        case AEXP_TYPE_BIGINTEGER: {
             if (bigint_flag) {
                 addByte(b, BYTECODE_BIGINT);
                 addBig(b, x->val.biginteger->bi);
@@ -570,7 +579,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             }
         }
         break;
-        case AEXP_TYPE_CHAR: {
+        case AEXP_TYPE_CHARACTER: {
             addByte(b, BYTECODE_CHAR);
             addByte(b, x->val.character);
         }
@@ -600,7 +609,7 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             writeCexpApply(x->val.apply, b);
         }
         break;
-        case CEXP_TYPE_IF: {
+        case CEXP_TYPE_IFF: {
             writeCexpIf(x->val.iff, b);
         }
         break;

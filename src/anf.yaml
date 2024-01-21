@@ -1,0 +1,227 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2023  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: anf
+    limited_includes:
+    - bigint.h
+    - ast_helper.h
+    - tc.h
+    - tc_debug.h
+
+description: ANF structures to be converted to bytecode.
+
+structs:
+    AexpLam:
+        nargs: int
+        letRecOffset: int
+        args: AexpVarList
+        exp: Exp
+
+    AexpVarList:
+        var: HashSymbol
+        next: AexpVarList
+
+    AexpAnnotatedVar:
+        type: AexpAnnotatedVarType
+        frame: int
+        offset: int
+        var: HashSymbol
+
+    AexpPrimApp:
+        type: AexpPrimOp
+        exp1: Aexp
+        exp2: Aexp
+
+    AexpUnaryApp:
+        type: AexpUnaryOp
+        exp: Aexp
+
+    AexpList:
+        exp: Aexp
+        next: AexpList
+
+    AexpIntList:
+        integer: int
+        next: AexpIntList
+
+    CexpApply:
+        function: Aexp
+        nargs: int
+        args: AexpList
+
+    AexpMakeVec:
+        nargs: int
+        args: AexpList
+
+    CexpIf:
+        condition: Aexp
+        consequent: Exp
+        alternative: Exp
+
+    CexpCond:
+        condition: Aexp
+        cases: CexpCondCases
+
+    CexpIntCondCases:
+        option: BigInt
+        body: Exp
+        next: CexpIntCondCases
+
+    CexpCharCondCases:
+        option: char
+        body: Exp
+        next: CexpCharCondCases
+
+    CexpMatch:
+        condition: Aexp
+        clauses: MatchList
+
+    MatchList:
+        matches: AexpIntList
+        body: Exp
+        next: MatchList
+
+    CexpLetRec:
+        nbindings: int
+        bindings: LetRecBindings
+        body: Exp
+
+    LetRecBindings:
+        var: HashSymbol
+        val: Aexp
+        next: LetRecBindings
+
+    CexpAmb:
+        exp1: Exp
+        exp2: Exp
+
+    CexpCut:
+        exp: Exp
+
+    CexpBool:
+        type: CexpBoolType
+        exp1: Exp
+        exp2: Exp
+
+    ExpLet:
+        var: HashSymbol
+        val: Exp
+        body: Exp
+
+unions:
+    CexpCondCases:
+        charCases: CexpCharCondCases
+        intCases: CexpIntCondCases
+
+    Aexp:
+        t: void_ptr
+        f: void_ptr
+        v: void_ptr
+        lam: AexpLam
+        var: HashSymbol
+        annotatedVar: AexpAnnotatedVar
+        biginteger: BigInt
+        littleinteger: int
+        character: char
+        prim: AexpPrimApp
+        unary: AexpUnaryApp
+        list: AexpList
+        makeVec: AexpMakeVec
+
+    Cexp:
+        back: void_ptr
+        error: void_ptr
+        apply: CexpApply
+        iff: CexpIf
+        cond: CexpCond
+        callCC: Aexp
+        letRec: CexpLetRec
+        amb: CexpAmb
+        cut: CexpCut
+        boolean: CexpBool
+        match: CexpMatch
+
+    Exp:
+        done: void_ptr
+        aexp: Aexp
+        cexp: Cexp
+        let: ExpLet
+
+enums:
+    AexpAnnotatedVarType:
+        - STACK
+        - ENV
+
+    AexpPrimOp:
+        - ADD
+        - SUB
+        - MUL
+        - DIV
+        - POW
+        - EQ
+        - NE
+        - LT
+        - GT
+        - LE
+        - GE
+        - CONS
+        - VEC
+        - XOR
+        - MOD
+        - CMP
+
+    AexpUnaryOp:
+        - CAR
+        - CDR
+        - NOT
+        - PUTC
+        - PUTN
+        - PUTV
+
+    CexpBoolType:
+        - AND
+        - OR
+
+primitives:
+    HashSymbol:
+        cname: "HashSymbol *"
+        printFn: "printAstSymbol"
+        valued: true
+    char:
+        cname: "char"
+        printf: "%c"
+        valued: true
+    int:
+        cname: "int"
+        printf: "%d"
+        valued: true
+    void_ptr:
+        cname: "void *"
+        printf: "%p"
+        valued: false
+    BigInt:
+        cname: "BigInt *"
+        printFn: "printBigInt"
+        markFn: "markBigInt"
+        valued: true
+    TcType:
+        cname: "struct TcType *"
+        printFn: printTcType
+        markFn: markTcType
+        valued: true

@@ -25,6 +25,8 @@
 #include "hash.h"
 #include "tc_debug.h"
 #include "tc_helper.h"
+#include "print.h"
+#include "lambda_pp.h"
 
 #ifdef DEBUG_TC
 #include "debugging_on.h"
@@ -42,6 +44,7 @@ static void addToNg(TcNg *env, HashSymbol *symbol, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static TcType *makeBoolean(void);
+static TcType *makeStarship(void);
 static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
@@ -54,6 +57,7 @@ static void addIfToEnv(TcEnv *env);
 static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addNegToEnv(TcEnv *env);
 static void addNotToEnv(TcEnv *env);
+static void addPutcToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
@@ -69,6 +73,7 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng);
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng);
 static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng);
 static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng);
+static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng);
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng);
 static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng);
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng);
@@ -86,8 +91,9 @@ static bool occursInType(TcType *a, TcType *b);
 static bool occursIn(TcType *a, TcType *b);
 static bool sameType(TcType *a, TcType *b);
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
-static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
@@ -119,6 +125,7 @@ TcEnv *tc_init(void) {
     addIntBinOpToEnv(env, subSymbol());
     addNegToEnv(env);
     addNotToEnv(env);
+    addPutcToEnv(env);
     addThenToEnv(env);
     UNPROTECT(save);
     return env;
@@ -151,7 +158,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LIST:
             return analyzeSequence(exp->val.list, env, ng);
         case LAMEXP_TYPE_MAKEVEC:
-            cant_happen("encountered make-vec in analyzeLamExp");
+            cant_happen("encountered make-vec in analyzeExp");
         case LAMEXP_TYPE_CONSTRUCT:
             return analyzeConstruct(exp->val.construct, env, ng);
         case LAMEXP_TYPE_DECONSTRUCT:
@@ -164,6 +171,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return analyzeIff(exp->val.iff, env, ng);
         case LAMEXP_TYPE_CALLCC:
             return analyzeCallCC(exp->val.callcc, env, ng);
+        case LAMEXP_TYPE_PRINT:
+            return analyzePrint(exp->val.print, env, ng);
         case LAMEXP_TYPE_LETREC:
             return analyzeLetRec(exp->val.letrec, env, ng);
         case LAMEXP_TYPE_TYPEDEFS:
@@ -187,9 +196,9 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_ERROR:
             return analyzeError();
         case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("encountered cond default in analyzeLamExp");
+            cant_happen("encountered cond default in analyzeExp");
         default:
-            cant_happen("unrecognized type %d in analyzeLamExp", exp->type);
+            cant_happen("unrecognized type %d in analyzeExp", exp->type);
     }
 }
 
@@ -279,9 +288,34 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *n
     int save = PROTECT(type1);
     TcType *type2 = analyzeExp(exp2, env, ng);
     PROTECT(type2);
-    unify(type1, type2);
+    if (!unify(type1, type2)) {
+        eprintf("while unifying comparison:\n");
+        ppLamExp(exp1);
+        eprintf("\nwith\n");
+        ppLamExp(exp1);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     TcType *res = makeBoolean();
+    LEAVE(analyzeComparison);
+    return res;
+}
+
+static TcType *analyzeStarship(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeComparison);
+    TcType *type1 = analyzeExp(exp1, env, ng);
+    int save = PROTECT(type1);
+    TcType *type2 = analyzeExp(exp2, env, ng);
+    PROTECT(type2);
+    if (!unify(type1, type2)) {
+        eprintf("while unifying <=>:\n");
+        ppLamExp(exp1);
+        eprintf("\nwith\n");
+        ppLamExp(exp1);
+        eprintf("\n");
+    }
+    UNPROTECT(save);
+    TcType *res = makeStarship();
     LEAVE(analyzeComparison);
     return res;
 }
@@ -295,52 +329,53 @@ static TcType *analyzeBinaryBool(LamExp *exp1, LamExp *exp2, TcEnv *env, TcNg *n
 }
 
 static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
-    ENTER(analyzeBinaryBool);
+    ENTER(analyzeUnaryBool);
     TcType *res = analyzeBooleanExp(exp, env, ng);
-    LEAVE(analyzeBinaryBool);
+    LEAVE(analyzeUnaryBool);
+    return res;
+}
+
+static TcType *analyzeUnaryChar(LamExp *exp, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeUnaryChar);
+    TcType *res = analyzeCharacterExp(exp, env, ng);
+    LEAVE(analyzeUnaryChar);
     return res;
 }
 
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     ENTER(analyzePrim);
+    TcType *res = NULL;
     switch (app->type) {
         case LAMPRIMOP_TYPE_ADD:
         case LAMPRIMOP_TYPE_SUB:
         case LAMPRIMOP_TYPE_MUL:
         case LAMPRIMOP_TYPE_DIV:
         case LAMPRIMOP_TYPE_MOD:
-        case LAMPRIMOP_TYPE_POW: {
-            TcType *res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
+        case LAMPRIMOP_TYPE_POW:
+            res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
+            break;
         case LAMPRIMOP_TYPE_EQ:
         case LAMPRIMOP_TYPE_NE:
         case LAMPRIMOP_TYPE_GT:
         case LAMPRIMOP_TYPE_LT:
         case LAMPRIMOP_TYPE_GE:
-        case LAMPRIMOP_TYPE_LE: {
-            TcType *res = analyzeComparison(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
-        case LAMPRIMOP_TYPE_VEC: {
-            // Hacky, but the only time the type checker should encounter a literal vec
-            // is the (vec 0 <exp>) to retrieve the tag of a constructor. All other calls to vec
-            // should be hidden behind (deconstruct ...) syntax
-            // plus in this case the exp2 arg will always be a simple var so analysis would not prove anything
-            TcType *res = makeSmallInteger();
-            LEAVE(analyzePrim);
-            return res;
-        }
-        case LAMPRIMOP_TYPE_XOR: {
-            TcType *res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
-            LEAVE(analyzePrim);
-            return res;
-        }
+        case LAMPRIMOP_TYPE_LE:
+            res = analyzeComparison(app->exp1, app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_CMP:
+            res = analyzeStarship(app->exp1, app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_VEC:
+            res = analyzeExp(app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_XOR:
+            res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
+            break;
         default:
             cant_happen("unrecognised type %d in analyzePrim", app->type);
     }
+    LEAVE(analyzePrim);
+    return res;
 }
 
 static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
@@ -348,12 +383,16 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
     TcType *res = NULL;
     switch (app->type) {
         case LAMUNARYOP_TYPE_NEG:
+        case LAMUNARYOP_TYPE_PUTN:
             res = analyzeUnaryArith(app->exp, env, ng);
             break;
         case LAMUNARYOP_TYPE_NOT:
             res = analyzeUnaryBool(app->exp, env, ng);
             break;
-        case LAMUNARYOP_TYPE_PRINT:
+        case LAMUNARYOP_TYPE_PUTC:
+            res = analyzeUnaryChar(app->exp, env, ng);
+            break;
+        case LAMUNARYOP_TYPE_PUTV:
             res = analyzeExp(app->exp, env, ng);
             break;
         default:
@@ -436,10 +475,6 @@ static TcType *findResultType(TcType *fn) {
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng) {
     ENTER(analyzeDeconstruct);
     IFDEBUG(ppLamDeconstruct(deconstruct));
-    /*
-    TcType *constructor = NULL;
-    if (!getFromEnv(env, deconstruct->name, &constructor)) {
-    */
     TcType *constructor = lookup(env, deconstruct->name, ng);
     int save = PROTECT(constructor);
     if (constructor == NULL) {
@@ -452,7 +487,11 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg 
     TcType *resultType = findResultType(constructor);
     TcType *expType = analyzeExp(deconstruct->exp, env, ng);
     PROTECT(expType);
-    unify(expType, resultType);
+    if (!unify(expType, resultType)) {
+        eprintf("while unifying deconstruct:\n");
+        ppLamDeconstruct(deconstruct);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeDeconstruct);
     IFDEBUG(ppTcType(fieldType));
@@ -519,7 +558,13 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
             PROTECT(res);
             TcType *functionType = makeFn(arg, res);
             PROTECT(functionType);
-            unify(fn, functionType);
+            if (!unify(fn, functionType)) {
+                eprintf("while analyzing apply ");
+                ppLamExp(apply->function);
+                eprintf(" to ");
+                ppLamExp(apply->args->exp);
+                eprintf("\n");
+            }
             UNPROTECT(save);
             LEAVE(analyzeApply);
             IFDEBUG(ppLamApply(apply));
@@ -547,7 +592,13 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
     int save = PROTECT(consequent);
     TcType *alternative = analyzeExp(iff->alternative, env, ng);
     PROTECT(alternative);
-    unify(consequent, alternative);
+    if (!unify(consequent, alternative)) {
+        eprintf("while unifying consequent:\n");
+        ppLamExp(iff->consequent);
+        eprintf("\nwith alternative:\n");
+        ppLamExp(iff->alternative);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeIff);
     return consequent;
@@ -565,9 +616,22 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
     PROTECT(aba);
     TcType *calledType = analyzeExp(called, env, ng);
     PROTECT(calledType);
-    unify(calledType, aba);
+    if (!unify(calledType, aba)) {
+        eprintf("while unifying call/cc:\n");
+        ppLamExp(called);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     return a;
+}
+
+static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
+    // a -> a, but installs a printer for type a
+    TcType *type = analyzeExp(print->exp, env, ng);
+    int save = PROTECT(type);
+    print->printer = compilePrinterForType(type);
+    UNPROTECT(save);
+    return type;
 }
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
@@ -590,7 +654,11 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
         }
         int save2 = PROTECT(freshVar);
-        TcType *type = analyzeExp(bindings->val, env, ng);
+        // Recursive functions need to be statically typed inside their own context:
+        TcNg *ng2 = extendNg(ng);
+        PROTECT(ng2);
+        addToNg(ng2, freshVar->val.var->name, freshVar);
+        TcType *type = analyzeExp(bindings->val, env, ng2);
         PROTECT(type);
         unify(freshVar, type);
         DEBUG("analyzeLetRec binding %s, result:", bindings->var->name);
@@ -765,7 +833,11 @@ static TcType *analyzeMatchCases(LamMatchList *cases, TcEnv *env, TcNg *ng) {
     int save = PROTECT(rest);
     TcType *this = analyzeExp(cases->body, env, ng);
     PROTECT(this);
-    unify(this, rest);
+    if (!unify(this, rest)) {
+        eprintf("while unifying match cases:\n");
+        ppLamExp(cases->body);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeMatchCases);
     return this;
@@ -777,7 +849,11 @@ static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     int save = PROTECT(type);
     TcType *integer = makeBigInteger();
     PROTECT(integer);
-    unify(type, integer);
+    if(!unify(type, integer)) {
+        eprintf("while analyzing bigint expr:\n");
+        ppLamExp(exp);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeBigIntegerExp);
     return integer;
@@ -789,7 +865,11 @@ static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     int save = PROTECT(type);
     TcType *integer = makeSmallInteger();
     PROTECT(integer);
-    unify(type, integer);
+    if (!unify(type, integer)) {
+        eprintf("while analyzing smallint expr:\n");
+        ppLamExp(exp);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeSmallIntegerExp);
     return integer;
@@ -801,17 +881,91 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     int save = PROTECT(type);
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
-    unify(type, boolean);
+    if (!unify(type, boolean)) {
+        eprintf("while analyzing boolean expr:\n");
+        ppLamExp(exp);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeBooleanExp);
     return boolean;
 }
 
+static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeCharacterExp);
+    TcType *type = analyzeExp(exp, env, ng);
+    int save = PROTECT(type);
+    TcType *character = makeCharacter();
+    PROTECT(character);
+    if (!unify(type, character)) {
+        eprintf("while analyzing character expr:\n");
+        ppLamExp(exp);
+        eprintf("\n");
+    }
+    UNPROTECT(save);
+    LEAVE(analyzeCharacterExp);
+    return character;
+}
+
+static TcType *lookupConstructorType(HashSymbol *name, TcEnv *env, TcNg *ng) {
+    ENTER(lookupConstructorType);
+    TcType *res = lookup(env, name, ng);
+    if (res == NULL) {
+        cant_happen("lookupConstructorType %s failed", name->name);
+    }
+    res = findResultType(res);
+    LEAVE(lookupConstructorType);
+    return res;
+}
+
+static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeIntList);
+    if (intList == NULL) {
+        LEAVE(analyzeIntList);
+        return makeFreshVar("intList");
+    }
+    TcType *next = analyzeIntList(intList->next, env, ng);
+    int save = PROTECT(next);
+    TcType *this = lookupConstructorType(intList->name, env, ng);
+    PROTECT(this);
+    if (!unify(next, this)) {
+        eprintf("while analyzing intList case %s\n", intList->name->name);
+    }
+    LEAVE(analyzeIntList);
+    UNPROTECT(save);
+    return this;
+}
+
+static TcType *findCaseType(LamMatchList *matchList, TcEnv *env, TcNg *ng) {
+    ENTER(findCaseType);
+    if (matchList == NULL) {
+        LEAVE(findCaseType);
+        return makeFreshVar("caseType");
+    }
+    TcType *next = findCaseType(matchList->next, env, ng);
+    int save = PROTECT(next);
+    TcType *this = analyzeIntList(matchList->matches, env, ng);
+    PROTECT(this);
+    if (!unify(this, next)) {
+        eprintf("while finding case type\n");
+    }
+    UNPROTECT(save);
+    LEAVE(findCaseType);
+    return this;
+}
+
 static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng) {
     ENTER(analyzeMatch);
-    (void) analyzeSmallIntegerExp(match->index, env, ng);
+    TcType *caseType = findCaseType(match->cases, env, ng);
+    int save = PROTECT(caseType);
+    TcType *indexType = analyzeExp(match->index, env, ng);
+    PROTECT(indexType);
+    if (!unify(caseType, indexType)) {
+        eprintf("while analyzing match\n");
+    }
     TcType *res = analyzeMatchCases(match->cases, env, ng);
     LEAVE(analyzeMatch);
+    UNPROTECT(save);
     return res;
 }
 
@@ -825,7 +979,9 @@ static TcType *analyzeIntCondCases(LamIntCondCases *cases, TcEnv *env, TcNg *ng)
     int save = PROTECT(rest);
     TcType *this = analyzeExp(cases->body, env, ng);
     PROTECT(this);
-    unify(this, rest);
+    if (!unify(this, rest)) {
+        eprintf("while analyzing int cond cases\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeIntCondCases);
     return this;
@@ -841,7 +997,9 @@ static TcType *analyzeCharCondCases(LamCharCondCases *cases, TcEnv *env, TcNg *n
     int save = PROTECT(rest);
     TcType *this = analyzeExp(cases->body, env, ng);
     PROTECT(this);
-    unify(this, rest);
+    if (!unify(this, rest)) {
+        eprintf("while analyzing char cond cases\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeCharCondCases);
     return this;
@@ -857,14 +1015,22 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
         case LAMCONDCASES_TYPE_INTEGERS: {
             TcType *integer = makeBigInteger();
             PROTECT(integer);
-            unify(value, integer);
+            if (!unify(value, integer)) {
+                eprintf("while analyzing integer cond:\n");
+                ppLamExp(cond->value);
+                eprintf("\n");
+            }
             result = analyzeIntCondCases(cond->cases->val.integers, env, ng);
         }
         break;
         case LAMCONDCASES_TYPE_CHARACTERS: {
             TcType *character = makeCharacter();
             PROTECT(character);
-            unify(value, character);
+            if (!unify(value, character)) {
+                eprintf("while analyzing character cond:\n");
+                ppLamExp(cond->value);
+                eprintf("\n");
+            }
             result = analyzeCharCondCases(cond->cases->val.characters, env, ng);
         }
         break;
@@ -896,7 +1062,13 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
     int save = PROTECT(left);
     TcType *right = analyzeExp(amb->right, env, ng);
     PROTECT(right);
-    unify(left, right);
+    if (!unify(left, right)) {
+        eprintf("while unifying amb:\n");
+        ppLamExp(amb->left);
+        eprintf("\nwith:\n");
+        ppLamExp(amb->right);
+        eprintf("\n");
+    }
     UNPROTECT(save);
     LEAVE(analyzeAmb);
     return left;
@@ -928,7 +1100,7 @@ static void markType(void *ptr) {
 }
 
 static void printType(void *ptr, int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     ppTcType(*((TcType **) ptr));
 }
 
@@ -945,13 +1117,11 @@ static bool getFromEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
     if (hashGet(env->table, symbol, type)) {
         return true;
     }
-    bool res = getFromEnv(env->next, symbol, type);
-    return res;
+    return getFromEnv(env->next, symbol, type);
 }
 
 static HashTable *makeTypeMap() {
-    HashTable *res = newHashTable(sizeof(TcType *), markType, printType);
-    return res;
+    return newHashTable(sizeof(TcType *), markType, printType);
 }
 
 static TcType *freshFunction(TcFunction *fn, TcNg *ng, HashTable *map) {
@@ -1108,6 +1278,11 @@ static TcType *makeBoolean() {
     return res;
 }
 
+static TcType *makeStarship() {
+    TcType *res = makeTypeDef(starshipSymbol(), NULL);
+    return res;
+}
+
 static TcType *makeFn(TcType *arg, TcType *result) {
     TcFunction *fn = newTcFunction(arg, result);
     int save = PROTECT(fn);
@@ -1187,6 +1362,13 @@ static void addNotToEnv(TcEnv *env) {
     TcType *boolean = makeBoolean();
     int save = PROTECT(boolean);
     addUnOpToEnv(env, negSymbol(), boolean);
+    UNPROTECT(save);
+}
+
+static void addPutcToEnv(TcEnv *env) {
+    TcType *character = makeCharacter();
+    int save = PROTECT(character);
+    addUnOpToEnv(env, putcSymbol(), character);
     UNPROTECT(save);
 }
 
@@ -1290,7 +1472,7 @@ static bool unifyPairs(TcPair *a, TcPair *b) {
 
 static bool unifyTypeDefs(TcTypeDef *a, TcTypeDef *b) {
     if (a->name != b->name) {
-        can_happen("unification failed");
+        can_happen("unification failed[1]");
         ppTcTypeDef(a);
         eprintf(" vs ");
         ppTcTypeDef(b);
@@ -1307,7 +1489,7 @@ static bool unifyTypeDefs(TcTypeDef *a, TcTypeDef *b) {
         bArgs = bArgs->next;
     }
     if (aArgs != NULL || bArgs != NULL) {
-        can_happen("unification failed");
+        can_happen("unification failed[2]");
         ppTcTypeDef(a);
         eprintf(" vs ");
         ppTcTypeDef(b);
@@ -1344,15 +1526,7 @@ static bool unify(TcType *a, TcType *b) {
         return unify(b, a);
     } else {
         if (a->type != b->type) {
-            if ((a->type == TCTYPE_TYPE_SMALLINTEGER &&
-                 b->type == TCTYPE_TYPE_TYPEDEF) ||
-                (a->type == TCTYPE_TYPE_TYPEDEF &&
-                 b->type == TCTYPE_TYPE_SMALLINTEGER)) {
-                // small integers are *only* used as type tags
-                // so can unify with typeDefs
-                return true;
-            }
-            can_happen("unification failed");
+            can_happen("unification failed[3]");
             ppTcType(a);
             eprintf(" vs ");
             ppTcType(b);

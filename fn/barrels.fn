@@ -63,4 +63,5 @@ let
             beer
     }
 in
-    barrels_of_fun()
+    print(barrels_of_fun());
+    puts("\n")

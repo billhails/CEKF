@@ -50,10 +50,11 @@ in
     require(abs(smith - fletcher) != 1);
     require(abs(fletcher - cooper) != 1);
     
-    [
+    print([
         result("baker", baker),
         result("cooper", cooper),
         result("fletcher", fletcher),
         result("miller", miller),
         result("smith", smith)
-    ]
+    ]);
+    print("\n")

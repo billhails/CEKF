@@ -96,10 +96,21 @@ void markStack(Stack *s) {
 }
 
 Value peekValue(Stack *s, int offset) {
+#ifdef SAFETY_CHECKS
     if (offset >= s->sp) {
         cant_happen("peek beyond top of stack not allowed");
     }
+#endif
     return s->stack[offset];
+}
+
+Value peekTop(Stack *s) {
+#ifdef SAFETY_CHECKS
+    if (s->sp == 0) {
+        cant_happen("peek top of empty stack not allowed");
+    }
+#endif
+    return s->stack[s->sp - 1];
 }
 
 void copyTopToValues(Stack *s, Value *values, int size) {
@@ -174,166 +185,9 @@ void pushN(Stack *s, int n) {
 
 void popN(Stack *s, int n) {
     s->sp -= n;
+#ifdef SAFETY_CHECKS
     if (s->sp < 0) {
         cant_happen("stack underflow in popN");
     }
-}
-
-#ifdef TEST_STACK
-
-#define EXPECT(EXP) do { if (EXP) printf("assertion " #EXP " passed\n"); else printf("ASSERTION " #EXP " FAILED\n"); } while(0)
-
-static Stack S;
-
-void markTestStack() {
-    printf("markTestStack()\n");
-    markStack(&S);
-}
-
-static Value integer(int i) {
-    Value v;
-    v.type = VALUE_TYPE_INTEGER;
-    v.val = VALUE_VAL_INTEGER(i);
-    return v;
-}
-
-bool isInteger(Value v, int i) {
-    return v.type == VALUE_TYPE_INTEGER && v.val.z == i;
-}
-
-void testStack() {
-    Value v;
-    initStack(&S);
-
-    EXPECT(S.pushable == false);
-    EXPECT(S.popable == false);
-    EXPECT(S.capacity == 0);
-    EXPECT(S.sp == 0);
-    EXPECT(S.fp == 0);
-    EXPECT(S.stack == NULL);
-    EXPECT(frameSize(&S) == 0);
-
-    pushValue(&S, integer(100));
-    EXPECT(S.capacity == 1);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 0);
-    EXPECT(frameSize(&S) == 1);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == false);
-    EXPECT(S.stack != NULL);
-    EXPECT(frameSize(&S) == 1);
-    v = peekValue(&S, 0);
-    EXPECT(isInteger(v, 100));
-
-    pushValue(&S, integer(101));
-    EXPECT(S.capacity == 2);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 0);
-    EXPECT(frameSize(&S) == 2);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == false);
-    v = peekValue(&S, 0);
-    EXPECT(isInteger(v, 100));
-    v = peekValue(&S, 1);
-    EXPECT(isInteger(v, 101);
-
-    v = popValue(&S);
-    EXPECT(isInteger(v, 101));
-    EXPECT(S.capacity == 2);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 1);
-    EXPECT(frameSize(&S) == 1);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    v = popValue(&S);
-    EXPECT(isInteger(v, 100));
-    EXPECT(S.capacity == 2);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 0);
-    EXPECT(frameSize(&S) == 0);
-    EXPECT(S.popable == false);
-    EXPECT(S.pushable == true);
-
-    pushValue(&S, vTrue);
-    pushValue(&S, vFalse);
-    pushValue(&S, vTrue);
-    EXPECT(S.capacity == 4);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 3);
-    EXPECT(frameSize(&S) == 3);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    setFrame(&S, 1);
-    EXPECT(S.capacity == 4);
-    EXPECT(S.fp == 2);
-    EXPECT(S.sp == 3);
-    EXPECT(frameSize(&S) == 1);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    pushValue(&S, vFalse);
-    EXPECT(S.capacity == 4);
-    EXPECT(S.fp == 2);
-    EXPECT(S.sp == 0);
-    EXPECT(frameSize(&S) == 2);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    v.type = VALUE_TYPE_INTEGER;
-    v.val = VALUE_VAL_INTEGER(100);
-    pushValue(&S, v);
-    EXPECT(S.capacity == 4);
-    EXPECT(S.fp == 2);
-    EXPECT(S.sp == 1);
-    EXPECT(frameSize(&S) == 3);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    v.val = VALUE_VAL_INTEGER(101);
-    pushValue(&S, v);
-    EXPECT(S.capacity == 4);
-    EXPECT(S.fp == 2);
-    EXPECT(S.sp == 2);
-    EXPECT(frameSize(&S) == 4);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == false);
-
-    v.val = VALUE_VAL_INTEGER(102);
-    pushValue(&S, v);
-    EXPECT(S.capacity == 8);
-    EXPECT(S.fp == 0);
-    EXPECT(S.sp == 5);
-    EXPECT(frameSize(&S) == 5);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-    v = peekValue(&S, 0);
-    EXPECT(v.type == VALUE_TYPE_TRUE);
-
-    v = peekValue(&S, 1);
-    EXPECT(v.type == VALUE_TYPE_FALSE);
-
-    v = peekValue(&S, 2);
-    EXPECT(v.type == VALUE_TYPE_INTEGER);
-    EXPECT(v.val.z == 100);
-
-    v = peekValue(&S, 3);
-    EXPECT(v.type == VALUE_TYPE_INTEGER);
-    EXPECT(v.val.z == 101);
-
-    v = peekValue(&S, 4);
-    EXPECT(v.type == VALUE_TYPE_INTEGER);
-    EXPECT(v.val.z == 102);
-
-    setFrame(&S, 1);
-    EXPECT(S.capacity == 8);
-    EXPECT(S.fp == 4);
-    EXPECT(S.sp == 5);
-    EXPECT(frameSize(&S) == 1);
-    EXPECT(S.popable == true);
-    EXPECT(S.pushable == true);
-
-}
 #endif
+}

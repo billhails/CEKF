@@ -1,25 +1,77 @@
+// naive unbalanced tree example
+// see redBlack.fn for a balanced tree
+// and dictionary.fn for a red-black map
+
 let
+    typedef set(#t) { branch(set(#t), #t, set(#t)) | leaf }
 
-    typedef tree(#t) { branch(tree(#t), #t, tree(#t)) | leaf }
+    fn insert(val, set) {
+        let
+            fn safe_insert {
+                (t, leaf, _) { branch(leaf, t, leaf) }
+                (t, branch(left, t, right), throw) { throw(set) }
+                (t, branch(left, u, right), throw) {
+                    if (t < u) {
+                        branch(safe_insert(t, left, throw), u, right)
+                    } else {
+                        branch(left, u, safe_insert(t, right, throw))
+                    }
+                }
+            }
+        in
+            here fn (throw) { safe_insert(val, set, throw) }
+    }
 
-    fn insert {
-        (t, leaf) { branch(leaf, t, leaf) }
-        (t, x = branch(left, u, right)) {
+    fn contains {
+        (_, leaf) { false }
+        (t, branch(left, t, right)) { true }
+        (t, branch(left, u, right)) {
             if (t < u) {
-                branch(insert(t, left), u, right)
-            } else if (t == u) {
-                x
+                contains(t, left)
             } else {
-                branch(left, u, insert(t, right))
+                contains(t, right)
             }
         }
     }
 
-    fn flatten {
-        (leaf) { [] }
-        (branch(l, u, r)) { flatten(l) @@ [u] @@ flatten(r) }
+    // set(#t) -> list(#t)
+    fn flatten(set) {
+        let
+            fn part_flatten {
+                (branch(left, t, right), already_flat) {
+                    part_flatten(left, t @ part_flatten(right, already_flat))
+                }
+                (leaf, already_flat) { already_flat }
+            }
+        in
+            part_flatten(set, [])
+    }
+ 
+    fn makeSet(lst) {
+       let fn helper {
+           ([], tr) { tr }
+           (h @ t, tr) { helper(t, insert(h, tr)) }
+       }
+       in
+           helper(lst, leaf)
     }
 
 in
 
-    flatten(insert(1, insert(3, insert(2, insert(4, insert(3, leaf))))))
+    flatten(
+        makeSet("kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslf"
+                "ewhnjouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqia"
+                "oodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadl"
+                "dkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwc"
+                "isxevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjo"
+                "uyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmyp"
+                "fkbxonkusuzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggysp"
+                "doswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuuknt"
+                "ggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpck"
+                "bxdxwfocqjchijeylcyhoxnywikniqzpqeeqtucengrvgbbntwmv"
+                "yeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczd"
+                "nbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyx"
+                "gbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefp"
+                "vjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndi"
+                "fklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxx"
+                "zfvdvesewzqotfdlqfibzkchndafnmxirrruol"))

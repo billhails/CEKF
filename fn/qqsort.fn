@@ -1,0 +1,83 @@
+let
+    // 3328 characters. with DEBUG_STRESS_GC this takes an age!
+    unsorted = "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwb"
+                "mhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflw"
+                "iwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqs"
+                "ludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkus"
+                "uzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgo"
+                "zvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchi"
+                "jeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskciv"
+                "vsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpa"
+                "rgbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuyn"
+                "vcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibz"
+                "kchndafnmxirrruoluwghokrgadfanokngfgrwnuxboualnlhxmighxpwfhcvsdgyiryiehzsaqpelnh"
+                "mzbejngybaqnnwthmxohakvwulpyzsdltquyyxfjtmfrkajmroebudshflggonmhmqahdvdmytvalcdi"
+                "gjqzsiefihwiihqwuvptripgpzwwbjkqrqwmacsjoqbphilfrkuaqbcqvedwkpmbmxdclajloiimciya"
+                "trpuhddbpknmkydzxpxqbmiyugulmxxaffpqlurwechzjgsgzrivnzsdbihytchqxvderrjxsoilgyzi"
+                "zpumoaexhovuadssebduwakznwigstaxgcjixnwfplffmdmpnkgtnrcbkeefpgbdxpjxlrxoiabhhzfn"
+                "lnshiwszijzfnstudgnqnvvqyshcnekqokcftgiqirhfgxvttijoohfaaapgdrxjiqwmbhwcvudlcexq"
+                "ybceknreincfokgvoznyfymbjfihngowqecfrwyiwcoawpxnwmxjqdjfsswewbparjwvgmqoqkqsltop"
+                "vdbvfdwuzgyymdfwxbwccsyzqrvgwgwbmjxqwdcpszcvgghjmwbdsiyrruoparniylkdwxyfsosxzfwz"
+                "nazzvorretnjpvfndbepurvghnzzzsmoffqoqqcibiblqwsjbjakclgwuuirisihetsykmzhtvrkrqcn"
+                "paupfvwtyvdbvdoketzlpdhkirmttkgvmqwjfqcqikbnyzvlsuxpnvptcbkjoggygghbvkmbaebikvly"
+                "lavudzccjyunjnqazihlpeecbxeiimimmjjewztrmggfrhsbvxnvqhjbyhtgfftkyyhiajqtkjmlurbl"
+                "aiuxppzfzumynhridmymfeaonqyrnrqdachqhsixnnfhsfmfkosolwoarhkmhbmxrfwicojiqrvzllbo"
+                "vlkdlsurbczlcvfddcnxiccstfqyudnfjwhdpdvwpguowkjvpwbecsjtuxdbtevwpkbdoutwatjoblgs"
+                "csfapnxdxaxyanuwvuddoqgilxdcznpmdykiskewnbqdsvrnmpbngzvrhkgglfyhqtypoejtqiqcuwjq"
+                "kbiuwxnjtwvegqhoneeewxdbwqqdipyzvfqmslutyuqfebtwdfoboobxruzspspguysayinklowkfggl"
+                "yosgqorbuuozjfkqzehptptdbfknkfdmaphktpuzwgjcluxiigpytlejqajvosrpfqvokpaurhzqxydb"
+                "aphihujakxkgpkktvsywqbeqqnvqfpkokpduowffpqeddgaeesuvrehtttezbrmqmsheeduzztooeleu"
+                "tvbazyjscveflomwwwkfcxzbzuuxxymgtnczxqhmfmvpactzcovibwizgjpzkxbghbyvraqjjozcwufu"
+                "bvzcsewyschjxucgkcftobwyrkkervodvvpeabzxbkfyobqmhrycezkrtyqbyddfazuezibxsajclayh"
+                "yoatnljujvftuedcygqzyfchbenwoffrfkhdhnchecuwkljmuwmjqfxmskimzhrztpagllrosusaofjm"
+                "kvqzljjlminstxbxydteofdhsjrvpxmjrfpwtevvcxiuabkthrqltmgvpmomklfpknorfxmcvmmmvumo"
+                "duwboexdejvlwjtpslwnhobenhyzlvyvkclmbqpdgjvflqfzdyshwhtqlsojdlgnazymlutdlzgxdomo"
+                "bqmcqcvojgmqlyiokaxrorxcswvngwmhsruhshzqlaybhjbctzizftuzbaljjxsjyxmzstvmyinbszsq"
+                "fylacpgmclczrxlgenrxatrkdgcnytjtxgrtqopssjjzrcsafpacrvtvscthxrpmsdrmenvaaetklhez"
+                "oqbfhweopoxvadkxqvbhiipegtasxonteityfibkpnuigancwisyowxeihfjuadsfjoxlewpnifjjceg"
+                "zitjxqpxcousmucwisdmvtinsuuwpzwuuawpcxzscpnqafftsadxcwtrragewwjlnavplniaeathgovt"
+                "usbgytesbncqtdazvhhjyvdbobuaqdeukualscrywgcqnsrwxupqymypjtgkxlezymjerjjwkrgrnmmy"
+                "lsxlwsdglcouajefvwfhjylykjgeojbnuirxdgtjsissxhdedndtfuruyxalrricqnkqpupskajjyltj"
+                "ezgzpdtlktykbvrierzvvzskehmvzgzieizwxhggddfanpnxbyjrekojhdorkzwkplgyumlqmyveesor"
+                "othsffgsuxdsealasqkycajhgdwgvjqyqlxfsghaaarruxplabewjpxkqwmckbaipcxhebrukmgpeaug"
+                "uuxicchlzzhhcrctuulypiwtcpsmmhhrllbrcuztikkewrumznhujmgibzzpnxiycmedaawqomhrsika"
+                "wqzyvdtqcjrzuhapyruccjotrkrlvyrgkrjglomqzxxjmev";
+
+    fn sort(lst) {
+        let
+            fn full_sort {
+                ([]) { [] }
+                (first @ rest) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ full_sort(greater))
+                    })
+                }
+            }
+            fn partial_sort {
+                (first @ rest, already_sorted) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ partial_sort(greater, already_sorted))
+                    })
+                }
+                ([], sorted) { sorted }
+            }
+            fn partition(key, lst, kont) {
+                let fn helper {
+                    ([], lesser, greater) { kont(lesser, greater) }
+                    (first @ rest, lesser, greater) {
+                        if (key < first) {
+                            helper(rest, lesser, first @ greater)
+                        } else {
+                            helper(rest, first @ lesser, greater)
+                        }
+                    }
+                }
+                in helper(lst, [], [])
+            }
+        in
+            full_sort(lst)
+    }
+
+
+in
+    sort(unsorted)

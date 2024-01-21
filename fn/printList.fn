@@ -1,0 +1,25 @@
+let
+    fn printList(lst, helper) {
+        let
+            fn h1 {
+                ([]) { true }
+                (h @ t) {
+                    helper(h);
+                    h2(t)
+                }
+            }
+            fn h2 {
+                ([]) { true }
+                (h @ t) {
+                    puts(", ");
+                    helper(h);
+                    h2(t)
+                }
+            }
+        in
+            puts("[");
+            h1(lst);
+            puts("]")
+    }
+in
+    printList

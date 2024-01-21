@@ -23,7 +23,7 @@
 
 
 void printLambdaSymbol(HashSymbol *x, int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     if (x == NULL) { eprintf("LambdaSymbol (NULL)"); return; }
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
@@ -37,7 +37,7 @@ void printLamExpFn(void *ptr, int depth) {
 }
 
 static void printLamContextFn(void *ptr, int depth) {
-    eprintf("%*s", depth * 4, "");
+    eprintf("%*s", depth * PAD_WIDTH, "");
     printLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr, depth);
 }
 

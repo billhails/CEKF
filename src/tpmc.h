@@ -19,7 +19,7 @@
  *
  * Term Pattern Matching Compiler types
  *
- * generated from src/tpmc.yaml by makeAST.py
+ * Generated from src/tpmc.yaml by tools/makeAST.py
  */
 
 #include "hash.h"
@@ -28,6 +28,10 @@
 #include "lambda.h"
 #include "lambda_pp.h"
 #include "bigint.h"
+
+/*
+ * typedefs
+ */
 
 typedef enum TpmcPatternValueType {
     TPMCPATTERNVALUE_TYPE_VAR,
@@ -205,6 +209,11 @@ typedef struct TpmcMatrix {
     struct TpmcPattern * *entries;
 } TpmcMatrix;
 
+
+/*
+ * constructor declaration
+ */
+
 struct TpmcMatchRules * newTpmcMatchRules(struct TpmcMatchRuleArray * rules, struct TpmcVariableArray * rootVariables);
 struct TpmcMatchRule * newTpmcMatchRule(struct TpmcState * action, struct TpmcPatternArray * patterns);
 struct TpmcComparisonPattern * newTpmcComparisonPattern(struct TpmcPattern * previous, struct TpmcPattern * current);
@@ -226,6 +235,36 @@ struct TpmcStateArray * newTpmcStateArray(char * _tag);
 struct TpmcArcArray * newTpmcArcArray(void);
 struct TpmcIntArray * newTpmcIntArray(void);
 struct TpmcMatrix * newTpmcMatrix(int width, int height);
+
+/*
+ * copy declarations
+ */
+
+struct TpmcMatchRules * copyTpmcMatchRules(struct TpmcMatchRules * o);
+struct TpmcMatchRule * copyTpmcMatchRule(struct TpmcMatchRule * o);
+struct TpmcComparisonPattern * copyTpmcComparisonPattern(struct TpmcComparisonPattern * o);
+struct TpmcAssignmentPattern * copyTpmcAssignmentPattern(struct TpmcAssignmentPattern * o);
+struct TpmcConstructorPattern * copyTpmcConstructorPattern(struct TpmcConstructorPattern * o);
+struct TpmcPattern * copyTpmcPattern(struct TpmcPattern * o);
+struct TpmcTestState * copyTpmcTestState(struct TpmcTestState * o);
+struct TpmcFinalState * copyTpmcFinalState(struct TpmcFinalState * o);
+struct TpmcState * copyTpmcState(struct TpmcState * o);
+struct TpmcArc * copyTpmcArc(struct TpmcArc * o);
+struct TpmcArcList * copyTpmcArcList(struct TpmcArcList * o);
+struct TpmcIntList * copyTpmcIntList(struct TpmcIntList * o);
+struct TpmcPatternValue * copyTpmcPatternValue(struct TpmcPatternValue * o);
+struct TpmcStateValue * copyTpmcStateValue(struct TpmcStateValue * o);
+struct TpmcMatchRuleArray * copyTpmcMatchRuleArray(struct TpmcMatchRuleArray * o);
+struct TpmcVariableArray * copyTpmcVariableArray(struct TpmcVariableArray * o);
+struct TpmcPatternArray * copyTpmcPatternArray(struct TpmcPatternArray * o);
+struct TpmcStateArray * copyTpmcStateArray(struct TpmcStateArray * o);
+struct TpmcArcArray * copyTpmcArcArray(struct TpmcArcArray * o);
+struct TpmcIntArray * copyTpmcIntArray(struct TpmcIntArray * o);
+struct TpmcMatrix * copyTpmcMatrix(struct TpmcMatrix * o);
+
+/*
+ * mark declarations
+ */
 
 void markTpmcMatchRules(struct TpmcMatchRules * x);
 void markTpmcMatchRule(struct TpmcMatchRule * x);
@@ -249,6 +288,10 @@ void markTpmcArcArray(struct TpmcArcArray * x);
 void markTpmcIntArray(struct TpmcIntArray * x);
 void markTpmcMatrix(struct TpmcMatrix * x);
 
+/*
+ * free declarations
+ */
+
 void freeTpmcMatchRules(struct TpmcMatchRules * x);
 void freeTpmcMatchRule(struct TpmcMatchRule * x);
 void freeTpmcComparisonPattern(struct TpmcComparisonPattern * x);
@@ -271,12 +314,20 @@ void freeTpmcArcArray(struct TpmcArcArray * x);
 void freeTpmcIntArray(struct TpmcIntArray * x);
 void freeTpmcMatrix(struct TpmcMatrix * x);
 
+/*
+ * push declarations
+ */
+
 void pushTpmcMatchRuleArray(struct TpmcMatchRuleArray * obj, struct TpmcMatchRule * entry);
 void pushTpmcVariableArray(struct TpmcVariableArray * obj, HashSymbol * entry);
 void pushTpmcPatternArray(struct TpmcPatternArray * obj, struct TpmcPattern * entry);
 void pushTpmcStateArray(struct TpmcStateArray * obj, struct TpmcState * entry);
 void pushTpmcArcArray(struct TpmcArcArray * obj, struct TpmcArc * entry);
 void pushTpmcIntArray(struct TpmcIntArray * obj, int entry);
+
+/*
+ * defines
+ */
 
 #define TPMCPATTERNVALUE_VAL_VAR(x) ((union TpmcPatternValueVal ){.var = (x)})
 #define TPMCPATTERNVALUE_VAL_COMPARISON(x) ((union TpmcPatternValueVal ){.comparison = (x)})
@@ -288,6 +339,10 @@ void pushTpmcIntArray(struct TpmcIntArray * obj, int entry);
 #define TPMCSTATEVALUE_VAL_TEST(x) ((union TpmcStateValueVal ){.test = (x)})
 #define TPMCSTATEVALUE_VAL_FINAL(x) ((union TpmcStateValueVal ){.final = (x)})
 #define TPMCSTATEVALUE_VAL_ERROR() ((union TpmcStateValueVal ){.error = (NULL)})
+
+/*
+ * access declarations
+ */
 
 static inline struct TpmcPattern * getTpmcMatrixIndex(struct TpmcMatrix * obj, int x, int y) {
     if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {

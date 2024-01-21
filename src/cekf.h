@@ -27,7 +27,7 @@
 
 #include "bytecode.h"
 #include "common.h"
-#include "exp.h"
+#include "anf.h"
 #include "memory.h"
 #include "value.h"
 
@@ -119,6 +119,7 @@ extern Snapshot noSnapshot;
 void pushValue(Stack *stack, Value v);
 struct Value popValue(Stack *stack);
 struct Value peekValue(Stack *stack, int offset);
+struct Value peekTop(Stack *s);
 void copyTopToValues(Stack *s, Value *values, int size);
 void markStack(Stack *stack);
 void initStack(Stack *stack);
@@ -143,10 +144,5 @@ void markKont(Kont *x);
 void markFail(Fail *x);
 void markCons(Cons *x);
 void markVec(Vec *x);
-
-#ifdef TEST_STACK
-void testStack(void);
-void markTestStack(void);
-#endif
 
 #endif

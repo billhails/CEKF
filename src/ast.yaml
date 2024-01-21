@@ -96,6 +96,14 @@ structs:
         arg: AstArg
         next: AstArgList
 
+    AstAltArgs: # temp struct used by the parser for `fn (...) | (...) { ... }` alternative arguments
+        argList: AstArgList
+        next: AstAltArgs
+
+    AstAltFunction: # ditto
+        altArgs: AstAltArgs
+        nest: AstNest
+
     AstUnpack:
         symbol: HashSymbol
         argList: AstArgList
@@ -128,6 +136,9 @@ structs:
         test: AstExpression
         consequent: AstNest
         alternative: AstNest
+
+    AstPrint:
+        exp: AstExpression
 
 unions:
     AstDefinition:
@@ -165,16 +176,22 @@ unions:
         env: AstEnv
         nest: AstNest
         iff: AstIff
+        print: AstPrint
+
+arrays:
+    AstCharArray:
+        dimension: 1
+        entries: char
 
 enums: {}
 
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
-        printFn: "printAstSymbol"
+        printFn: printAstSymbol
         valued: true
     char:
-        cname: "char"
+        cname: char
         printf: "%c"
         valued: true
     void_ptr:
@@ -183,10 +200,6 @@ primitives:
         valued: false
     BigInt:
         cname: "BigInt *"
-        printFn: "printBigInt"
-        markFn: "markBigInt"
-        valued: true
-    hash_t:
-        cname: "hash_t"
-        printf: "%x"
+        printFn: printBigInt
+        markFn: markBigInt
         valued: true

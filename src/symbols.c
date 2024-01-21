@@ -29,6 +29,38 @@ HashSymbol *negSymbol() {
     return res;
 }
 
+HashSymbol *putcSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putc");
+    }
+    return res;
+}
+
+HashSymbol *putnSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putn");
+    }
+    return res;
+}
+
+HashSymbol *putsSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("puts");
+    }
+    return res;
+}
+
+HashSymbol *putvSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("putv");
+    }
+    return res;
+}
+
 HashSymbol *notSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
@@ -137,6 +169,22 @@ HashSymbol *leSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("le$");
+    }
+    return res;
+}
+
+HashSymbol *cmpSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("cmp$");
+    }
+    return res;
+}
+
+HashSymbol *starshipSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("cmp");
     }
     return res;
 }
@@ -273,6 +321,14 @@ HashSymbol *boolSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("bool");
+    }
+    return res;
+}
+
+HashSymbol *listSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("list");
     }
     return res;
 }

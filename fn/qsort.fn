@@ -1,5 +1,7 @@
+// naive un-optimised quicksort implementation to
+// demonstrate the principle, see qqsort.fn for
+// an optimised version.
 let
-    // unsorted = ["hello", "goodbye", "here", "there", "everywhere"];
     unsorted = "rhrtgefewhgjtyjyuosfsfswfgikpzxxvcbfvwfh";
 
     fn qsort {

@@ -19,13 +19,17 @@
  *
  * Term Pattern Matching Compiler types
  *
- * generated from src/tpmc.yaml by makeAST.py
+ * Generated from src/tpmc.yaml by tools/makeAST.py
  */
 
 #include "tpmc_helper.h"
 #include "lambda_debug.h"
 #include "lambda_pp.h"
 #include "bigint.h"
+
+/*
+ * print declarations
+ */
 
 void printTpmcMatchRules(struct TpmcMatchRules * x, int depth);
 void printTpmcMatchRule(struct TpmcMatchRule * x, int depth);
@@ -48,6 +52,10 @@ void printTpmcStateArray(struct TpmcStateArray * x, int depth);
 void printTpmcArcArray(struct TpmcArcArray * x, int depth);
 void printTpmcIntArray(struct TpmcIntArray * x, int depth);
 void printTpmcMatrix(struct TpmcMatrix * x, int depth);
+
+/*
+ * compare declarations
+ */
 
 bool eqTpmcMatchRules(struct TpmcMatchRules * a, struct TpmcMatchRules * b);
 bool eqTpmcMatchRule(struct TpmcMatchRule * a, struct TpmcMatchRule * b);

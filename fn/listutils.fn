@@ -6,7 +6,7 @@ fn member {
 
 fn map {
     (_, []) { [] }
-    (f, h @ t) { f(h) @ map(f, t)) }
+    (func, h @ t) { func(h) @ map(func, t)) }
 }
 
 fn length {
@@ -16,24 +16,24 @@ fn length {
 
 fn foldl {
     (_, [], acc) { acc }
-    (f, h @ t, acc) { foldl(f, t, f(h, acc)) }
+    (func, h @ t, acc) { foldl(func, t, func(h, acc)) }
 }
 
-fn foldr {
-    (f, l, acc) { foldl(f, reverse(l), acc) }
+fn foldr(func, lst, acc) {
+    foldl(func, reverse(lst), acc)
 }
 
-fn reverse (l) {
-    foldl((elem, acc) { elem @ acc }, l, [])
+fn reverse (lst) {
+    foldl(fn (elem, acc) { elem @ acc }, lst, [])
 }
 
 fn filter {
     (_, []) { [] }
-    (f, h @ t) {
-        if (f(h)) {
-            h @ filter(f, t)
+    (func, h @ t) {
+        if (func(h)) {
+            h @ filter(func, t)
         } else {
-            filter(f, t)
+            filter(func, t)
         }
     }
 }
@@ -41,4 +41,60 @@ fn filter {
 fn fill {
     (0, _) { [] }
     (n, v) { v @ fill(n - 1, v) }
+}
+
+fn nth {
+    (0, h @ _) { h }
+    (n, _ @ t) { nth(n - 1, t) }
+}
+
+fn sum(lst) {
+    foldl(fn (elm, acc) { elm + acc }, lst, 0)
+}
+
+fn range(low, high) {
+    if (low >= high) { [] }
+    else { low @ range(low + 1, high) }
+}
+
+fn dedup {
+    ([]) { [] }
+    (h @ t) {
+        h @ dedup(filter(t, fn(i) { h != i }))
+    }
+}
+
+fn sort(lst) {
+    let
+        fn full_sort {
+            ([]) { [] }
+            (first @ rest) {
+                partition(first, rest, fn (lesser, greater) {
+                    partial_sort(lesser, first @ full_sort(greater))
+                })
+            }
+        }
+        fn partial_sort {
+            (first @ rest, already_sorted) {
+                partition(first, rest, fn (lesser, greater) {
+                    partial_sort(lesser, first @ partial_sort(greater, already_sorted))
+                })
+            }
+            ([], sorted) { sorted }
+        }
+        fn partition(key, lst, kont) {
+            let fn helper {
+                ([], lesser, greater) { kont(lesser, greater) }
+                (first @ rest, lesser, greater) {
+                    if (key < first) {
+                        helper(rest, lesser, first @ greater)
+                    } else {
+                        helper(rest, first @ lesser, greater)
+                    }
+                }
+            }
+            in helper(lst, [], [])
+        }
+    in
+        full_sort(lst)
 }

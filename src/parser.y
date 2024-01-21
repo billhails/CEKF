@@ -47,32 +47,33 @@ static AstFunCall *unOpToFunCall(HashSymbol *op, AstExpression *arg) {
     );
 }
 
-static AstFunCall *newStringList(char *str) {
-    if (*str == '\0') {
-        return newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(nilSymbol())), NULL);
+static AstFunCall *newStringList(AstCharArray *str) {
+    AstFunCall *res =
+        newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(nilSymbol())), NULL);
+    for (int size = str->size; size > 0; size--) {
+        res = newAstFunCall(
+            newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(consSymbol())),
+            newAstExpressions(
+                newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER(str->entries[size-1])),
+                newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL(res)), NULL)
+            )
+        );
     }
-    AstFunCall *rest = newStringList(str + 1);
-    return newAstFunCall(
-        newAstExpression(AST_EXPRESSION_TYPE_SYMBOL, AST_EXPRESSION_VAL_SYMBOL(consSymbol())),
-        newAstExpressions(
-            newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER(*str)),
-            newAstExpressions(newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL(rest)), NULL)
-        )
-    );
+    return res;
 }
 
-static AstUnpack *newStringUnpack(char *str) {
-    if (*str == '\0') {
-        return newAstUnpack(nilSymbol(), NULL);
+static AstUnpack *newStringUnpack(AstCharArray *str) {
+    AstUnpack *res = newAstUnpack(nilSymbol(), NULL);
+    for (int size = str->size; size > 0; size--) {
+        res = newAstUnpack(
+            consSymbol(),
+            newAstArgList(
+                newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(str->entries[size-1])),
+                newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK(res)), NULL)
+            )
+        );
     }
-    AstUnpack *rest = newStringUnpack(str + 1);
-    return newAstUnpack(
-        consSymbol(),
-        newAstArgList(
-            newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(*str)),
-            newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK(rest)), NULL)
-        )
-    );
+    return res;
 }
 
 static BigInt *makeBigInt(char *digits) {
@@ -86,6 +87,27 @@ static BigInt *makeBigInt(char *digits) {
         int i = atoi(digits);
         return fakeBigInt(i);
     }
+}
+
+static AstCharArray *appendCharArray(AstCharArray *res, char *str) {
+    while (*str) {
+        pushAstCharArray(res, *str);
+        str++;
+    }
+    return res;
+}
+
+static AstCharArray *newCharArray(char *str) {
+    AstCharArray *res = newAstCharArray();
+    return appendCharArray(res, str);
+}
+
+static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions, AstCompositeFunction *rest) {
+    for (AstAltArgs *args = functions->altArgs; args != NULL; args = args->next) {
+        AstFunction *this = newAstFunction(args->argList, copyAstNest(functions->nest));
+        rest = newAstCompositeFunction(this, rest);
+    }
+    return rest;
 }
 
 %}
@@ -110,11 +132,11 @@ static BigInt *makeBigInt(char *digits) {
     AstExpressions *expressions;
     AstFlatType *flatType;
     AstFunCall *funCall;
-    AstFunction *function;
     AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
     AstPackage *package;
+    AstPrint *print;
     AstPrototypeBody *prototypeBody;
     AstPrototype *prototype;
     AstPrototypeSymbolType *prototypeSymbolType;
@@ -130,8 +152,12 @@ static BigInt *makeBigInt(char *digits) {
     AstType *type;
     AstUnpack *unpack;
     AstIff *iff;
+    AstCharArray *chars;
+    AstAltFunction *altFunction;
+    AstAltArgs * altArgs;
 }
 
+%type <chars> str
 %type <bi> number
 %type <arg> farg
 %type <argList> fargs
@@ -145,11 +171,11 @@ static BigInt *makeBigInt(char *digits) {
 %type <expressions> expressions expression_statements
 %type <flatType> flat_type
 %type <funCall> fun_call binop conslist unop switch string
-%type <function> function
 %type <load> load
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
 %type <package> package extends
+%type <print> print
 %type <prototypeBody> prototype_body
 %type <prototypeSymbolType> prototype_symbol_type
 %type <prototype> prototype
@@ -165,6 +191,8 @@ static BigInt *makeBigInt(char *digits) {
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
 %type <iff> iff
+%type <altFunction> alt_function
+%type <altArgs> alt_args
 
 %token AS
 %token BACK
@@ -179,6 +207,7 @@ static BigInt *makeBigInt(char *digits) {
 %token KW_INT
 %token LET
 %token LOAD
+%token PRINT
 %token PROTOTYPE
 %token SWITCH
 %token TRUE
@@ -196,6 +225,7 @@ static BigInt *makeBigInt(char *digits) {
 %left AND OR XOR
 %nonassoc NOT
 %nonassoc EQ NE GT LT GE LE
+%nonassoc CMP
 %nonassoc '='
 %nonassoc ':'
 %right CONS APPEND
@@ -332,7 +362,7 @@ iff_nest : iff  { $$ = newAstNest(NULL, newAstExpressions(newAstExpression(AST_E
 switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstFunCall(newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($5)), $3); }
        ;
 
-fun : function              { $$ = newAstCompositeFunction($1, NULL); }
+fun : alt_function          { $$ = makeAstCompositeFunction($1, NULL); }
     | composite_function    { $$ = $1; }
     ;
 
@@ -342,12 +372,16 @@ nest : '{' nest_body '}'    { $$ = $2; }
 composite_function : '{' functions '}'  { $$ = $2; }
                    ;
 
-functions : function            { $$ = newAstCompositeFunction($1, NULL); }
-          | function functions  { $$ = newAstCompositeFunction($1, $2); }
+functions : alt_function            { $$ = makeAstCompositeFunction($1, NULL); }
+          | alt_function functions  { $$ = makeAstCompositeFunction($1, $2); }
           ;
 
-function : '(' fargs ')' nest   { $$ = newAstFunction($2, $4); }
+alt_args : '(' fargs ')'               { $$ = newAstAltArgs($2, NULL); }
+         | '(' fargs ')' '|' alt_args  { $$ = newAstAltArgs($2, $5); }
          ;
+
+alt_function : alt_args nest    { $$ = newAstAltFunction($1, $2); }
+             ;
 
 fargs : %empty            { $$ = NULL; }
       | farg              { $$ = newAstArgList($1, NULL); }
@@ -376,11 +410,15 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
 unpack : symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
        ;
 
-stringarg : STRING { $$ = newStringUnpack($1); }
+stringarg : str { $$ = newStringUnpack($1); }
        ;
 
-string : STRING { $$ = newStringList($1); }
+string : str { $$ = newStringList($1); }
        ;
+
+str : STRING            { $$ = newCharArray($1); }
+    | str STRING        { $$ = appendCharArray($1, $2); }
+    ;
 
 cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;
@@ -405,6 +443,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | string               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | CHAR                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
+           | print                { $$ = newAstExpression(AST_EXPRESSION_TYPE_PRINT, AST_EXPRESSION_VAL_PRINT($1)); }
            | '(' expression ')'   { $$ = $2; }
            ;
 
@@ -428,6 +467,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression LT expression        { $$ = binOpToFunCall(ltSymbol(), $1, $3); }
       | expression GE expression        { $$ = binOpToFunCall(geSymbol(), $1, $3); }
       | expression LE expression        { $$ = binOpToFunCall(leSymbol(), $1, $3); }
+      | expression CMP expression       { $$ = binOpToFunCall(cmpSymbol(), $1, $3); }
       | expression CONS expression      { $$ = binOpToFunCall(consSymbol(), $1, $3); }
       | expression APPEND expression    { $$ = binOpToFunCall(appendSymbol(), $1, $3); }
       | expression '+' expression       { $$ = binOpToFunCall(addSymbol(), $1, $3); }
@@ -471,6 +511,9 @@ env_body : '{' definitions '}'  { $$ = $2; }
 
 symbol : VAR    { $$ = newSymbol($1); }
        ;
+
+print : PRINT '(' expression ')' { $$ = newAstPrint($3); }
+      ;
 
 %%
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg) {
