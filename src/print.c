@@ -190,10 +190,6 @@ static LamExp *makePlainMatchBody(LamTypeConstructor *constructor) {
 static LamExp *makePrintAccessor(int index, LamTypeConstructorInfo *info) {
     LamExp *printArg = printArgVar();
     int save = PROTECT(printArg);
-    // LamExp *indexVal = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(index + 1));
-    // PROTECT(indexVal);
-    // LamPrimApp *primApp = newLamPrimApp(LAMPRIMOP_TYPE_VEC, indexVal, printArg);
-    // PROTECT(primApp);
     LamDeconstruct *dec = newLamDeconstruct(info->type->name, index, printArg);
     PROTECT(dec);
     LamExp *res = newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(dec));
@@ -221,7 +217,6 @@ static LamExp *makePrintVar(HashSymbol *var) {
     return exp;
 }
 
-
 static LamExp *makePrinter(LamTypeConstructorType *arg);
 
 static LamList *makePrintArgs(LamTypeConstructorArgs *args) {
@@ -236,6 +231,12 @@ static LamList *makePrintArgs(LamTypeConstructorArgs *args) {
 }
 
 static LamExp *makePrintType(LamTypeFunction *function) {
+    if (function->name == listSymbol()) {
+        if (function->args && function->args->arg->type == LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER) {
+            HashSymbol *name = newSymbol("print$string");
+            return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+        }
+    }
     HashSymbol *name = makePrintName("print$", function->name->name);
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
@@ -269,7 +270,7 @@ static LamExp *makePrinter(LamTypeConstructorType *arg) {
             printer = makePrintType(arg->val.function);
             break;
         default:
-            cant_happen("unrecognised type %d in makePrintConstructorArg", arg->type);
+            cant_happen("unrecognised type %d in makePrinter", arg->type);
     }
     return printer;
 }
@@ -517,7 +518,17 @@ static LamList *compilePrinterForTypeDefArgs(TcTypeDefArgs *args) {
     return res;
 }
 
+static LamExp *compilePrinterForString() {
+    HashSymbol *name = newSymbol("print$string");
+    return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+}
+
 static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef) {
+    if (typeDef->name == listSymbol()) {
+        if (typeDef->args && typeDef->args->type->type == TCTYPE_TYPE_CHARACTER) {
+            return compilePrinterForString();
+        }
+    }
     HashSymbol *name = makePrintName("print$", typeDef->name->name);
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);

@@ -56,4 +56,5 @@ in
         result("fletcher", fletcher),
         result("miller", miller),
         result("smith", smith)
-    ])
+    ]);
+    print("\n")
