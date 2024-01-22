@@ -38,7 +38,6 @@ typedef union {
     char c;
     struct Clo *clo;
     struct Kont *k;
-    struct Cons *cons;
     struct Vec *vec;
 } ValueVal;
 

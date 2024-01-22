@@ -184,14 +184,6 @@ void markKont(Kont *x) {
     markKont(x->next);
 }
 
-void markCons(Cons *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
-    MARK(x);
-    markValue(x->car);
-    markValue(x->cdr);
-}
-
 void markVec(Vec *x) {
     if (x == NULL) return;
     if (MARKED(x)) return;
@@ -225,9 +217,6 @@ void markCekfObj(Header *h) {
         case OBJTYPE_KONT:
             markKont((Kont *)h);
             break;
-        case OBJTYPE_CONS:
-            markCons((Cons *)h);
-            break;
         case OBJTYPE_VALUELIST:
             markValueList((ValueList *)h);
             break;
@@ -238,9 +227,6 @@ void markCekfObj(Header *h) {
 
 void freeCekfObj(Header *h) {
     switch (h->type) {
-        case OBJTYPE_CONS:
-            reallocate((void *)h, sizeof(Cons), 0);
-            break;
         case OBJTYPE_VEC:
             Vec *vec = (Vec *)h;
             FREE_VEC(vec);
