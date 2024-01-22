@@ -265,23 +265,6 @@ static Value littleModulo(Value a, Value b) {
 
 static int _cmp(Value a, Value b);
 
-static int _consCmp(Cons *a, Cons *b) {
-    if (a == b) {
-        return 0;
-    }
-    if (a == NULL) {
-        return 1;
-    }
-    if (b == NULL) {
-        return -1;
-    }
-    int cmp = _cmp(a->car, b->car);
-    if (cmp == 0) {
-        return _cmp(a->cdr, b->cdr);
-    }
-    return cmp;
-}
-
 static int _vecCmp(Vec *a, Vec *b) {
     if (a == b) {
         return 0;
@@ -323,8 +306,6 @@ static int _cmp(Value a, Value b) {
             return a.val.z < b.val.z ? -1 : a.val.z == b.val.z ? 0 : 1;
         case VALUE_TYPE_CHARACTER:
             return a.val.c < b.val.c ? -1 : a.val.c == b.val.c ? 0 : 1;
-        case VALUE_TYPE_CONS:
-            return _consCmp(a.val.cons, b.val.cons);
         case VALUE_TYPE_VEC:
             return _vecCmp(a.val.vec, b.val.vec);
         default:
@@ -399,30 +380,6 @@ static Value not(Value a) {
     return truthy(a) ? vFalse : vTrue;
 }
 
-static Value car(Value cons) {
-    if (cons.type == VALUE_TYPE_CONS) {
-        return cons.val.cons->car;
-    } else {
-        cant_happen("unrecognised type for car %d", cons.type);
-    }
-}
-
-static Value cdr(Value cons) {
-    if (cons.type == VALUE_TYPE_CONS) {
-        return cons.val.cons->cdr;
-    } else {
-        cant_happen("unrecognised type for cdr %d", cons.type);
-    }
-}
-
-static Value cons(Value a, Value b) {
-    Cons *result = newCons(a, b);
-    Value v;
-    v.type = VALUE_TYPE_CONS;
-    v.val = VALUE_VAL_CONS(result);
-    return v;
-}
-
 static Value vec(Value index, Value vector) {
 #ifdef SAFETY_CHECKS
     if (index.type != VALUE_TYPE_STDINT)
@@ -452,8 +409,6 @@ static int protectValue(Value v) {
             return PROTECT(v.val.clo);
         case VALUE_TYPE_CONT:
             return PROTECT(v.val.k);
-        case VALUE_TYPE_CONS:
-            return PROTECT(v.val.cons);
         case VALUE_TYPE_VEC:
             return PROTECT(v.val.vec);
         case VALUE_TYPE_BIGINT:
@@ -740,34 +695,10 @@ static void step() {
                 push(xor(a, b));
             }
             break;
-            case BYTECODE_PRIM_CAR: { // pop value, perform the op and push the result
-                DEBUGPRINTF("CAR\n");
-                Value a = pop();
-                push(car(a));
-            }
-            break;
-            case BYTECODE_PRIM_CDR: { // pop value, perform the op and push the result
-                DEBUGPRINTF("CDR\n");
-                Value a = pop();
-                push(cdr(a));
-            }
-            break;
             case BYTECODE_PRIM_NOT: { // pop value, perform the op and push the result
                 DEBUGPRINTF("NOT\n");
                 Value a = pop();
                 push(not(a));
-            }
-            break;
-            case BYTECODE_PRIM_CONS: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("CONS\n");
-                Value b = pop();
-                int save = protectValue(b);
-                Value a = pop();
-                protectValue(a);
-                Value result = cons(a, b);
-                protectValue(result);
-                push(result);
-                UNPROTECT(save);
             }
             break;
             case BYTECODE_PRIM_VEC: {

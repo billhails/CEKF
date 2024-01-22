@@ -93,9 +93,6 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_XOR:
             eprintf("xor ");
             break;
-        case AEXPPRIMOP_TYPE_CONS:
-            eprintf("cons ");
-            break;
         case AEXPPRIMOP_TYPE_VEC:
             eprintf("vec ");
             break;
@@ -116,12 +113,6 @@ void ppAexpPrimApp(AexpPrimApp *x) {
 void ppAexpUnaryApp(AexpUnaryApp *x) {
     eprintf("(");
     switch(x->type) {
-        case AEXPUNARYOP_TYPE_CAR:
-            eprintf("car ");
-            break;
-        case AEXPUNARYOP_TYPE_CDR:
-            eprintf("cdr ");
-            break;
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;
@@ -363,9 +354,6 @@ void ppAexp(Aexp *x) {
             break;
         case AEXP_TYPE_UNARY:
             ppAexpUnaryApp(x->val.unary);
-            break;
-        case AEXP_TYPE_LIST:
-            ppAexpMakeList(x->val.list);
             break;
         case AEXP_TYPE_MAKEVEC:
             ppAexpMakeVec(x->val.makeVec);

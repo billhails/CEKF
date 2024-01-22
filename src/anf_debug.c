@@ -144,10 +144,6 @@ void printAexpPrimApp(struct AexpPrimApp * x, int depth) {
             pad(depth + 1);
             eprintf("AEXPPRIMOP_TYPE_GE");
             break;
-        case AEXPPRIMOP_TYPE_CONS:
-            pad(depth + 1);
-            eprintf("AEXPPRIMOP_TYPE_CONS");
-            break;
         case AEXPPRIMOP_TYPE_VEC:
             pad(depth + 1);
             eprintf("AEXPPRIMOP_TYPE_VEC");
@@ -179,14 +175,6 @@ void printAexpUnaryApp(struct AexpUnaryApp * x, int depth) {
     if (x == NULL) { eprintf("AexpUnaryApp (NULL)"); return; }
     eprintf("AexpUnaryApp[\n");
     switch (x->type) {
-        case AEXPUNARYOP_TYPE_CAR:
-            pad(depth + 1);
-            eprintf("AEXPUNARYOP_TYPE_CAR");
-            break;
-        case AEXPUNARYOP_TYPE_CDR:
-            pad(depth + 1);
-            eprintf("AEXPUNARYOP_TYPE_CDR");
-            break;
         case AEXPUNARYOP_TYPE_NOT:
             pad(depth + 1);
             eprintf("AEXPUNARYOP_TYPE_NOT");
@@ -521,11 +509,6 @@ eprintf("char %c", x->val.character);
             eprintf("AEXP_TYPE_UNARY\n");
             printAexpUnaryApp(x->val.unary, depth + 1);
             break;
-        case AEXP_TYPE_LIST:
-            pad(depth + 1);
-            eprintf("AEXP_TYPE_LIST\n");
-            printAexpList(x->val.list, depth + 1);
-            break;
         case AEXP_TYPE_MAKEVEC:
             pad(depth + 1);
             eprintf("AEXP_TYPE_MAKEVEC\n");
@@ -720,9 +703,6 @@ bool eqAexpPrimApp(struct AexpPrimApp * a, struct AexpPrimApp * b) {
         case AEXPPRIMOP_TYPE_GE:
             if (a != b) return false;
             break;
-        case AEXPPRIMOP_TYPE_CONS:
-            if (a != b) return false;
-            break;
         case AEXPPRIMOP_TYPE_VEC:
             if (a != b) return false;
             break;
@@ -745,12 +725,6 @@ bool eqAexpUnaryApp(struct AexpUnaryApp * a, struct AexpUnaryApp * b) {
     if (a == b) return true;
     if (a == NULL || b == NULL) return false;
     switch (a->type) {
-        case AEXPUNARYOP_TYPE_CAR:
-            if (a != b) return false;
-            break;
-        case AEXPUNARYOP_TYPE_CDR:
-            if (a != b) return false;
-            break;
         case AEXPUNARYOP_TYPE_NOT:
             if (a != b) return false;
             break;
@@ -965,9 +939,6 @@ bool eqAexp(struct Aexp * a, struct Aexp * b) {
             break;
         case AEXP_TYPE_UNARY:
             if (!eqAexpUnaryApp(a->val.unary, b->val.unary)) return false;
-            break;
-        case AEXP_TYPE_LIST:
-            if (!eqAexpList(a->val.list, b->val.list)) return false;
             break;
         case AEXP_TYPE_MAKEVEC:
             if (!eqAexpMakeVec(a->val.makeVec, b->val.makeVec)) return false;

@@ -31,7 +31,6 @@ static void printEnv(Env *x, int depth);
 static void printFail(Fail *x, int depth);
 static void printKont(Kont *x, int depth);
 static void printStack(Stack *x, int depth);
-static void printCons(Cons *x);
 static void printVec(Vec *x);
 
 static void printPad(int depth) {
@@ -71,10 +70,6 @@ void printContainedValue(Value x, int depth) {
             break;
         case VALUE_TYPE_CONT:
             printKont(x.val.k, depth);
-            break;
-        case VALUE_TYPE_CONS:
-            printPad(depth);
-            printCons(x.val.cons);
             break;
         case VALUE_TYPE_VEC:
             printPad(depth);
@@ -141,14 +136,6 @@ void printElidedKont(Kont *x) {
     eprintf("]");
 }
 
-void printCons(Cons *x) {
-    eprintf("(");
-    printContainedValue(x->car, 0);
-    eprintf(" . ");
-    printContainedValue(x->cdr, 0);
-    eprintf(")");
-}
-
 void printVec(Vec *x) {
     eprintf("#[");
     for (int i = 0; i < x->size; i++) {
@@ -181,9 +168,6 @@ void printElidedValue(Value x) {
                     eprintf("'%c'", x.val.c);
                     break;
             }
-            break;
-        case VALUE_TYPE_CONS:
-            printCons(x.val.cons);
             break;
         case VALUE_TYPE_VEC:
             printVec(x.val.vec);
@@ -431,18 +415,6 @@ void dumpByteCode(ByteCodeArray *b) {
             break;
             case BYTECODE_PRIM_XOR: {
                 eprintf("XOR\n");
-            }
-            break;
-            case BYTECODE_PRIM_CONS: {
-                eprintf("CONS\n");
-            }
-            break;
-            case BYTECODE_PRIM_CAR: {
-                eprintf("CAR\n");
-            }
-            break;
-            case BYTECODE_PRIM_CDR: {
-                eprintf("CDR\n");
             }
             break;
             case BYTECODE_PRIM_NOT: {

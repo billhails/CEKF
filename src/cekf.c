@@ -110,13 +110,6 @@ Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next) {
     return x;
 }
 
-Cons *newCons(Value car, Value cdr) {
-    Cons *x = NEW(Cons, OBJTYPE_CONS);
-    x->car = car;
-    x->cdr = cdr;
-    return x;
-}
-
 Vec *newVec(int size) {
     Vec *x = NEW_VEC(size);
     x->size = size;
@@ -138,9 +131,6 @@ void markValue(Value x) {
             break;
         case VALUE_TYPE_CONT:
             markKont(x.val.k);
-            break;
-        case VALUE_TYPE_CONS:
-            markCons(x.val.cons);
             break;
         case VALUE_TYPE_VEC:
             markVec(x.val.vec);

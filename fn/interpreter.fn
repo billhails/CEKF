@@ -58,7 +58,7 @@ let
     }
 in
     // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 3
-    eval(
+    print(eval(
         application(
             lambda(
                 symbol("x"),
@@ -71,4 +71,5 @@ in
             symbol("a")
         ),
         frame("a", number(3), root)
-    )
+    ));
+    puts("\n")

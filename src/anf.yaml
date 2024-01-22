@@ -141,7 +141,6 @@ unions:
         character: char
         prim: AexpPrimApp
         unary: AexpUnaryApp
-        list: AexpList
         makeVec: AexpMakeVec
 
     Cexp:
@@ -180,15 +179,12 @@ enums:
         - GT
         - LE
         - GE
-        - CONS
         - VEC
         - XOR
         - MOD
         - CMP
 
     AexpUnaryOp:
-        - CAR
-        - CDR
         - NOT
         - PUTC
         - PUTN

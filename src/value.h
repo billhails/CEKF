@@ -28,7 +28,6 @@ typedef enum {
     VALUE_TYPE_CLO,
     VALUE_TYPE_PCLO,
     VALUE_TYPE_CONT,
-    VALUE_TYPE_CONS,
     VALUE_TYPE_VEC,
 } ValueType;
 
@@ -55,7 +54,6 @@ typedef struct Value {
 #define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
 #define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
 #define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
-#define VALUE_VAL_CONS(x)      ((ValueVal){.cons = (x)})
 #define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
 #define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
