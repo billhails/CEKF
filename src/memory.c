@@ -81,8 +81,6 @@ const char *typeName(ObjType type, void *p) {
             return "fail";
         case OBJTYPE_KONT:
             return "kont";
-        case OBJTYPE_CONS:
-            return "cons";
         case OBJTYPE_VEC:
             return "vec";
         case OBJTYPE_VALUELIST:
@@ -275,7 +273,6 @@ void markObj(Header *h, int i) {
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
-        case OBJTYPE_CONS:
         case OBJTYPE_VEC:
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
@@ -328,7 +325,6 @@ void freeObj(Header *h) {
         case OBJTYPE_ENV:
         case OBJTYPE_FAIL:
         case OBJTYPE_KONT:
-        case OBJTYPE_CONS:
         case OBJTYPE_VEC:
         case OBJTYPE_VALUELIST:
             freeCekfObj(h);

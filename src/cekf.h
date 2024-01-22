@@ -91,12 +91,6 @@ typedef struct Fail {
     struct Fail *next;
 } Fail;
 
-typedef struct Cons {
-    struct Header header;
-    struct Value car;
-    struct Value cdr;
-} Cons;
-
 typedef struct Vec {
     struct Header header;
     int size;
@@ -133,7 +127,6 @@ Clo *newClo(int nvar, Control c, Env *rho);
 Env *newEnv(Env *next, int count);
 Kont *newKont(Control body, Env *rho, Kont *next);
 Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next);
-Cons *newCons(Value car, Value cdr);
 Vec *newVec(int size);
 
 void markValue(Value x);
@@ -142,7 +135,6 @@ void markClo(Clo *x);
 void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
-void markCons(Cons *x);
 void markVec(Vec *x);
 
 #endif

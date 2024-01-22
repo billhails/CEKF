@@ -51,7 +51,6 @@ typedef enum AexpPrimOp {
     AEXPPRIMOP_TYPE_GT,
     AEXPPRIMOP_TYPE_LE,
     AEXPPRIMOP_TYPE_GE,
-    AEXPPRIMOP_TYPE_CONS,
     AEXPPRIMOP_TYPE_VEC,
     AEXPPRIMOP_TYPE_XOR,
     AEXPPRIMOP_TYPE_MOD,
@@ -59,8 +58,6 @@ typedef enum AexpPrimOp {
 } AexpPrimOp;
 
 typedef enum AexpUnaryOp {
-    AEXPUNARYOP_TYPE_CAR,
-    AEXPUNARYOP_TYPE_CDR,
     AEXPUNARYOP_TYPE_NOT,
     AEXPUNARYOP_TYPE_PUTC,
     AEXPUNARYOP_TYPE_PUTN,
@@ -89,7 +86,6 @@ typedef enum AexpType {
     AEXP_TYPE_CHARACTER,
     AEXP_TYPE_PRIM,
     AEXP_TYPE_UNARY,
-    AEXP_TYPE_LIST,
     AEXP_TYPE_MAKEVEC,
 } AexpType;
 
@@ -133,7 +129,6 @@ typedef union AexpVal {
     char character;
     struct AexpPrimApp * prim;
     struct AexpUnaryApp * unary;
-    struct AexpList * list;
     struct AexpMakeVec * makeVec;
 } AexpVal;
 
@@ -468,7 +463,6 @@ void freeExp(struct Exp * x);
 #define AEXP_VAL_CHARACTER(x) ((union AexpVal ){.character = (x)})
 #define AEXP_VAL_PRIM(x) ((union AexpVal ){.prim = (x)})
 #define AEXP_VAL_UNARY(x) ((union AexpVal ){.unary = (x)})
-#define AEXP_VAL_LIST(x) ((union AexpVal ){.list = (x)})
 #define AEXP_VAL_MAKEVEC(x) ((union AexpVal ){.makeVec = (x)})
 #define CEXP_VAL_BACK() ((union CexpVal ){.back = (NULL)})
 #define CEXP_VAL_ERROR() ((union CexpVal ){.error = (NULL)})

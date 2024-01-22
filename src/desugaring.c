@@ -289,13 +289,6 @@ static ExpLet *desugarExpLet(ExpLet *x) {
     return x;
 }
 
-static Aexp * listToCons(AexpList * x) {
-    if (x == NULL) {
-        return newAexp(AEXP_TYPE_V, AEXP_VAL_V());
-    }
-    return newAexp(AEXP_TYPE_PRIM, AEXP_VAL_PRIM(newAexpPrimApp(AEXPPRIMOP_TYPE_CONS, desugarAexp(x->exp), listToCons(x->next))));
-}
-
 static Aexp *desugarAexp(Aexp *x) {
     DEBUG_DESUGAR(Aexp, x);
     switch (x->type) {
@@ -324,8 +317,6 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
             break;
-        case AEXP_TYPE_LIST:
-            return listToCons(x->val.list);
         default:
             cant_happen("unrecognized type %d in desugarAexp", x->type);
     }

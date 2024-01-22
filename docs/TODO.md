@@ -7,7 +7,6 @@
 * unpacking function return values (tuples only)
 * `now()` expression returns current time in milliseconds.
 * macro support (see [MACROS](./MACROS.md) for initial thoughts).
-* remove old `cons` from ANF and bytecodes.
 * more numbers:
    * rationals: 1/3
    * irrationals: sqrt(2)

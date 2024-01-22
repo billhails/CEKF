@@ -165,12 +165,6 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
     writeAexp(x->exp, b);
     byte prim;
     switch (x->type) {
-        case AEXPUNARYOP_TYPE_CAR:
-            prim = BYTECODE_PRIM_CAR;
-            break;
-        case AEXPUNARYOP_TYPE_CDR:
-            prim = BYTECODE_PRIM_CDR;
-            break;
         case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODE_PRIM_NOT;
             break;
@@ -235,9 +229,6 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
             break;
         case AEXPPRIMOP_TYPE_XOR:
             prim = BYTECODE_PRIM_XOR;
-            break;
-        case AEXPPRIMOP_TYPE_CONS:
-            prim = BYTECODE_PRIM_CONS;
             break;
         case AEXPPRIMOP_TYPE_VEC:
             prim = BYTECODE_PRIM_VEC;

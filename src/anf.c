@@ -624,9 +624,6 @@ struct Aexp * copyAexp(struct Aexp * o) {
         case AEXP_TYPE_UNARY:
             x->val.unary = copyAexpUnaryApp(o->val.unary);
             break;
-        case AEXP_TYPE_LIST:
-            x->val.list = copyAexpList(o->val.list);
-            break;
         case AEXP_TYPE_MAKEVEC:
             x->val.makeVec = copyAexpMakeVec(o->val.makeVec);
             break;
@@ -938,9 +935,6 @@ void markAexp(struct Aexp * x) {
             break;
         case AEXP_TYPE_UNARY:
             markAexpUnaryApp(x->val.unary);
-            break;
-        case AEXP_TYPE_LIST:
-            markAexpList(x->val.list);
             break;
         case AEXP_TYPE_MAKEVEC:
             markAexpMakeVec(x->val.makeVec);
