@@ -40,6 +40,8 @@ EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP)
 
+TMP_H=tmp/parser.h tmp/lexer.h
+
 all: $(TARGET)
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
@@ -57,17 +59,17 @@ $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
-$(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep
+$(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep $(TMP_H)
 	$(CC) -I tmp/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(EXTRA_DEP): dep/%.d: tmp/%.c | dep
+$(EXTRA_DEP): dep/%.d: tmp/%.c | dep $(TMP_H)
 	$(LAXCC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(TEST_DEP): dep/%.d: tests/src/%.c | dep
+$(TEST_DEP): dep/%.d: tests/src/%.c | dep $(TMP_H)
 	$(CC) -I src/ -I /tmp -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-tmp/lexer.c tmp/lexer.h: src/lexer.l tmp/parser.h | tmp
-	flex --header-file=tmp/lexer.h -o $@ $<
+tmp/lexer.c tmp/lexer.h: src/lexer.l | tmp
+	flex --header-file=tmp/lexer.h -o tmp/lexer.c $<
 
 tmp/parser.c tmp/parser.h: src/parser.y | tmp
 	bison -v -Werror --header=tmp/parser.h -o tmp/parser.c $<
@@ -78,20 +80,14 @@ test: $(TEST_TARGETS)
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm
 
-dep:
-	mkdir $@
-
-obj:
-	mkdir $@
-
-tmp:
+dep obj tmp:
 	mkdir $@
 
 clean: deps
-	rm -f $(TARGET) obj/* callgrind.out.* tmp/*
+	rm -rf $(TARGET) obj callgrind.out.* tmp $(TEST_TARGETS)
 
 deps:
-	rm -f dep/*
+	rm -rf dep
 
 profile: all
 	rm -f callgrind.out.*

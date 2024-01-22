@@ -5,6 +5,7 @@ junk/
 out_scm/
 tmp_scm/
 cekf
+tags
 .*.swp
 .$*.drawio.*
 callgrind.out.*
@@ -12,5 +13,4 @@ core*
 Makefile.extra
 gmon.out
 .idea
-tests/.test_*-success
 tests/test_*
