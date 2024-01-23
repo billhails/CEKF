@@ -485,7 +485,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
 }
 
 static LamExp *compilePrinterForFunction(TcFunction *function __attribute__((unused))) {
-    return makePutsString("<function>");
+    return makeSymbolExpr("print$fn");
 }
 
 static LamExp *compilePrinterForPair(TcPair *pair __attribute__((unused))) {

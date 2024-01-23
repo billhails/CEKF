@@ -1,0 +1,30 @@
+// naive un-optimised quicksort implementation to
+// demonstrate the principle, see qqsort.fn for
+// an optimised version.
+let
+    fn f1(a) { a + 1 }
+    fn f2(a) { a - 1 }
+
+    fn qsort {
+        ([]) { [] }
+        (pivot @ rest) {
+            let
+                lesser = filter(fn (a, b) { a >= b }(pivot), rest);
+                greater = filter(fn (a, b) { a < b }(pivot), rest);
+            in
+                qsort(lesser) @@ [pivot] @@ qsort(greater)
+        }
+    }
+
+    fn filter {
+        (f, []) { [] }
+        (f, h @ t) {
+            if (f(h)) {
+                h @ filter(f, t)
+            } else {
+                filter(f, t)
+            }
+        }
+    }
+in
+    print(qsort([f1, f2]))

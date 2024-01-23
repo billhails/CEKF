@@ -1,0 +1,9 @@
+let
+    fn bad() {
+        let
+            typedef doh { re | mi }
+        in
+            re
+    }
+in
+    print(bad())
