@@ -119,6 +119,8 @@ int main(int argc, char *argv[]) {
     // desugaring
     anfExp = desugarExp(anfExp);
     PROTECT(anfExp);
+    ppExp(anfExp);
+    eprintf("\n");
     enableGC();
     // static analysis: ANF => annotated ANF (de bruijn)
     analizeExp(anfExp, NULL);

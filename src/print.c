@@ -451,12 +451,12 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindin
  ****************************************************************/
 static LamExp *compilePrinterForFunction(TcFunction *function);
 static LamExp *compilePrinterForPair(TcPair *pair);
-static LamExp *compilePrinterForVar(TcVar *var);
+static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env);
 static LamExp *compilePrinterForInt();
 static LamExp *compilePrinterForChar();
-static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef);
+static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env);
 
-LamExp *compilePrinterForType(TcType *type) {
+LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     LamExp *res = NULL;
     switch (type->type) {
         case TCTYPE_TYPE_FUNCTION:
@@ -466,7 +466,7 @@ LamExp *compilePrinterForType(TcType *type) {
             res = compilePrinterForPair(type->val.pair);
             break;
         case TCTYPE_TYPE_VAR:
-            res = compilePrinterForVar(type->val.var);
+            res = compilePrinterForVar(type->val.var, env);
             break;
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
@@ -476,7 +476,7 @@ LamExp *compilePrinterForType(TcType *type) {
             res = compilePrinterForChar();
             break;
         case TCTYPE_TYPE_TYPEDEF:
-            res = compilePrinterForTypeDef(type->val.typeDef);
+            res = compilePrinterForTypeDef(type->val.typeDef, env);
             break;
         default:
             cant_happen("unrecognised TcType %d in compilePrinterForType", type->type);
@@ -492,11 +492,11 @@ static LamExp *compilePrinterForPair(TcPair *pair __attribute__((unused))) {
     cant_happen("compilePrinterForPair not implemented yet");
 }
 
-static LamExp *compilePrinterForVar(TcVar *var) {
+static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env) {
     if (var->instance == NULL) {
         return makeSymbolExpr("print$");
     }
-    return compilePrinterForType(var->instance);
+    return compilePrinterForType(var->instance, env);
 }
 
 static LamExp *compilePrinterForInt() {
@@ -507,11 +507,11 @@ static LamExp *compilePrinterForChar() {
     return makePrintChar();
 }
 
-static LamList *compilePrinterForTypeDefArgs(TcTypeDefArgs *args) {
+static LamList *compilePrinterForTypeDefArgs(TcTypeDefArgs *args, TcEnv *env) {
     if (args == NULL) return NULL;
-    LamList *next = compilePrinterForTypeDefArgs(args->next);
+    LamList *next = compilePrinterForTypeDefArgs(args->next, env);
     int save = PROTECT(next);
-    LamExp *this = compilePrinterForType(args->type);
+    LamExp *this = compilePrinterForType(args->type, env);
     PROTECT(this);
     LamList *res = newLamList(this, next);
     UNPROTECT(save);
@@ -523,16 +523,19 @@ static LamExp *compilePrinterForString() {
     return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
-static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef) {
+static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env) {
     if (typeDef->name == listSymbol()) {
         if (typeDef->args && typeDef->args->type->type == TCTYPE_TYPE_CHARACTER) {
             return compilePrinterForString();
         }
     }
     HashSymbol *name = makePrintName("print$", typeDef->name->name);
+    if (!getFromTcEnv(env, name, NULL)) {
+        return makeSymbolExpr("print$");
+    }
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
-    LamList *args = compilePrinterForTypeDefArgs(typeDef->args);
+    LamList *args = compilePrinterForTypeDefArgs(typeDef->args, env);
     PROTECT(args);
     int nargs = countLamList(args);
     if (nargs == 0) {

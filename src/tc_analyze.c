@@ -39,7 +39,6 @@
 static TcEnv *extendEnv(TcEnv *parent);
 static TcNg *extendNg(TcNg *parent);
 static void addToEnv(TcEnv *env, HashSymbol *key, TcType *type);
-static bool getFromEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 static void addToNg(TcNg *env, HashSymbol *symbol, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
@@ -211,7 +210,7 @@ static TcType *makeFunctionType(LamVarList *args, TcEnv *env, TcType *returnType
     TcType *next = makeFunctionType(args->next, env, returnType);
     int save = PROTECT(next);
     TcType *this = NULL;
-    if (!getFromEnv(env, args->var, &this)) {
+    if (!getFromTcEnv(env, args->var, &this)) {
         cant_happen("cannot find var in env in makeFunctionType");
     }
     TcType *ret = makeFn(this, next);
@@ -629,7 +628,7 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     // a -> a, but installs a printer for type a
     TcType *type = analyzeExp(print->exp, env, ng);
     int save = PROTECT(type);
-    print->printer = compilePrinterForType(type);
+    print->printer = compilePrinterForType(type, env);
     UNPROTECT(save);
     return type;
 }
@@ -650,7 +649,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL; bindings = bindings->next) {
         DEBUG("analyzeLetRec considering %s", bindings->var->name);
         TcType *freshVar = NULL;
-        if (!getFromEnv(env, bindings->var, &freshVar)) {
+        if (!getFromTcEnv(env, bindings->var, &freshVar)) {
             cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
         }
         int save2 = PROTECT(freshVar);
@@ -1110,14 +1109,14 @@ static void addToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
     hashSet(env->table, symbol, &type);
 }
 
-static bool getFromEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
+bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
     if (env == NULL) {
         return false;
     }
     if (hashGet(env->table, symbol, type)) {
         return true;
     }
-    return getFromEnv(env->next, symbol, type);
+    return getFromTcEnv(env->next, symbol, type);
 }
 
 static HashTable *makeTypeMap() {
@@ -1256,7 +1255,7 @@ static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
     ENTER(lookup);
     DEBUG("lookup: %s", symbol->name);
     TcType *type = NULL;
-    if (getFromEnv(env, symbol, &type)) {
+    if (getFromTcEnv(env, symbol, &type)) {
         TcType *res = fresh(type, ng);
         LEAVE(lookup);
         IFDEBUG(ppTcType(res));
