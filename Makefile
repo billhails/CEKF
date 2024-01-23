@@ -17,9 +17,23 @@ CCMODE = $(DEBUGGING)
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)
 
+EXTRA_YAML=$(wildcard src/*.yaml)
+EXTRA_C_TARGETS=$(patsubst src/%.yaml,tmp/%.c,$(EXTRA_YAML))
+EXTRA_H_TARGETS=$(patsubst src/%.yaml,tmp/%.h,$(EXTRA_YAML))
+EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,tmp/%_objtypes.h,$(EXTRA_YAML))
+EXTRA_DEBUG_H_TARGETS=$(patsubst src/%.yaml,tmp/%_debug.h,$(EXTRA_YAML))
+EXTRA_DEBUG_C_TARGETS=$(patsubst src/%.yaml,tmp/%_debug.c,$(EXTRA_YAML))
+
+EXTRA_TARGETS= \
+    $(EXTRA_C_TARGETS) \
+    $(EXTRA_H_TARGETS) \
+    $(EXTRA_OBJTYPES_H_TARGETS) \
+    $(EXTRA_DEBUG_H_TARGETS) \
+    $(EXTRA_DEBUG_C_TARGETS)
+
 MAIN=src/main.c
 CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
-EXTRA_CFILES=tmp/lexer.c tmp/parser.c
+EXTRA_CFILES=tmp/lexer.c tmp/parser.c $(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
 TEST_CFILES=$(wildcard tests/src/*.c)
 
 TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
@@ -48,8 +62,29 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) -lm
 
 include $(ALL_DEP)
--include Makefile.extra
 
+
+$(EXTRA_C_TARGETS): tmp/%.c: src/%.yaml tools/makeAST.py | tmp
+	python3 tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_H_TARGETS): tmp/%.h: src/%.yaml tools/makeAST.py | tmp
+	python3 tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_OBJTYPES_H_TARGETS): tmp/%_objtypes.h: src/%.yaml tools/makeAST.py | tmp
+	python3 tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DEBUG_H_TARGETS): tmp/%_debug.h: src/%.yaml tools/makeAST.py | tmp
+	python3 tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DEBUG_C_TARGETS): tmp/%_debug.c: src/%.yaml tools/makeAST.py | tmp
+	python3 tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
+
+
+.generated: $(EXTRA_TARGETS) $(TMP_H)
+	touch $@
+
+tags: src/*
+	ctags src/*
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I tmp/ -I src/ -c $< -o $@
 
@@ -59,14 +94,14 @@ $(EXTRA_OBJ): obj/%.o: tmp/%.c | obj
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(LAXCC) -I src/ -I tmp/ -c $< -o $@
 
-$(MAIN_DEP) $(DEP): dep/%.d: src/%.c | dep $(TMP_H)
+$(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) -I tmp/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(EXTRA_DEP): dep/%.d: tmp/%.c | dep $(TMP_H)
+$(EXTRA_DEP): dep/%.d: tmp/%.c .generated | dep
 	$(LAXCC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(TEST_DEP): dep/%.d: tests/src/%.c | dep $(TMP_H)
-	$(CC) -I src/ -I /tmp -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
+	$(CC) -I src/ -I tmp/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 tmp/lexer.c tmp/lexer.h: src/lexer.l | tmp
 	flex --header-file=tmp/lexer.h -o tmp/lexer.c $<

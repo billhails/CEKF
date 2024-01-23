@@ -6,6 +6,7 @@ out_scm/
 tmp_scm/
 cekf
 tags
+.generated
 .*.swp
 .$*.drawio.*
 callgrind.out.*
