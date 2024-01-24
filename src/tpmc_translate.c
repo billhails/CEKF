@@ -375,12 +375,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar, HashTable
             PROTECT(matches);
             LamExp *testExp = NULL;
             if (info->vec) {
-                // zero is the index of the enum tag in the vector
-                LamExp *zero = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
-                PROTECT(zero);
-                LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, zero, testVar);
-                PROTECT(vec);
-                testExp = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
+                testExp = newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(testVar));
                 PROTECT(testExp);
             } else {
                 testExp = testVar;

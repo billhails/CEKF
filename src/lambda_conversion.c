@@ -424,6 +424,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
         case LAMEXP_TYPE_CONSTRUCT:
             exp->val.construct = performConstructSubstitutions(exp->val.construct, substitutions);
             break;
+        case LAMEXP_TYPE_TAG:
+            exp->val.tag = lamPerformSubstitutions(exp->val.tag, substitutions);
+            break;
         case LAMEXP_TYPE_APPLY:
             exp->val.apply = performApplySubstitutions(exp->val.apply, substitutions);
             break;

@@ -378,16 +378,12 @@ static LamMatch *makePlainMatch(LamTypeConstructorList *constructors, LamContext
     return res;
 }
 
-static LamMatch *makeVecMatch(LamTypeConstructorList *constructors, LamContext *env) {
+static LamMatch *makeTagMatch(LamTypeConstructorList *constructors, LamContext *env) {
     LamMatchList *cases = makeVecMatchList(constructors, env);
     int save = PROTECT(cases);
-    LamExp *zero = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
-    PROTECT(zero);
     LamExp *var = printArgVar();
     PROTECT(var);
-    LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, zero, var);
-    PROTECT(vec);
-    LamExp *prim = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
+    LamExp *prim = newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(var));
     PROTECT(prim);
     LamMatch *res = newLamMatch(prim, cases);
     UNPROTECT(save);
@@ -402,7 +398,7 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors, LamContext
     }
     LamMatch *match = NULL;
     if (info->vec) {
-        match = makeVecMatch(constructors, env);
+        match = makeTagMatch(constructors, env);
     } else {
         match = makePlainMatch(constructors, env);
     }

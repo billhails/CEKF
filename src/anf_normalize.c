@@ -83,6 +83,7 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec, LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
+static Exp *normalizeTag(LamExp *tag, Exp *tail);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -159,6 +160,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeDeconstruct(lamExp->val.deconstruct, tail);
         case LAMEXP_TYPE_CONSTRUCT:
             return normalizeConstruct(lamExp->val.construct, tail);
+        case LAMEXP_TYPE_TAG:
+            return normalizeTag(lamExp->val.tag, tail);
         case LAMEXP_TYPE_CONSTANT:
             return normalizeStdInteger(lamExp->val.constant->tag, tail);
         case LAMEXP_TYPE_LET:
@@ -275,6 +278,14 @@ static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
     return res;
 }
 
+static LamPrimApp *tagToPrimApp(LamExp *tagged) {
+    LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
+    int save = PROTECT(index);
+    LamPrimApp *res = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, tagged);
+    UNPROTECT(save);
+    return res;
+}
+
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
     ENTER(noramaalizeDeconstruct);
     LamPrimApp *primApp = deconstructToPrimApp(deconstruct);
@@ -282,6 +293,16 @@ static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
     Exp *res = normalizePrim(primApp, tail);
     UNPROTECT(save);
     LEAVE(noramaalizeDeconstruct);
+    return res;
+}
+
+static Exp *normalizeTag(LamExp *tagged, Exp *tail) {
+    ENTER(noramaalizeTag);
+    LamPrimApp *primApp = tagToPrimApp(tagged);
+    int save = PROTECT(primApp);
+    Exp *res = normalizePrim(primApp, tail);
+    UNPROTECT(save);
+    LEAVE(noramaalizeTag);
     return res;
 }
 
@@ -826,7 +847,15 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
 static Aexp *replaceLamDeconstruct(LamDeconstruct *lamDeconstruct, HashTable *replacements) {
     LamPrimApp *primApp = deconstructToPrimApp(lamDeconstruct);
     int save = PROTECT(primApp);
-    Aexp *res = replaceLamPrim(primApp, replacements); // prim needs lamExp
+    Aexp *res = replaceLamPrim(primApp, replacements);
+    UNPROTECT(save);
+    return res;
+}
+
+static Aexp *replaceLamTag(LamExp *tagged, HashTable *replacements) {
+    LamPrimApp *primApp = tagToPrimApp(tagged);
+    int save = PROTECT(primApp);
+    Aexp *res = replaceLamPrim(primApp, replacements);
     UNPROTECT(save);
     return res;
 }
@@ -861,6 +890,9 @@ static Aexp *replaceLamExp(LamExp *lamExp, HashTable *replacements) {
             break;
         case LAMEXP_TYPE_CONSTRUCT:
             res = replaceLamConstruct(lamExp->val.construct, replacements);
+            break;
+        case LAMEXP_TYPE_TAG:
+            res = replaceLamTag(lamExp->val.tag, replacements);
             break;
         case LAMEXP_TYPE_CONSTANT:
             res = aexpNormalizeStdInteger(lamExp->val.constant->tag);

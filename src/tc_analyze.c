@@ -68,6 +68,7 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng);
 static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng);
 static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env, TcNg *ng);
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng);
+static TcType *analyzeTag(LamExp *tag, TcEnv *env, TcNg *ng);
 static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng);
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng);
 static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng);
@@ -162,6 +163,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return analyzeConstruct(exp->val.construct, env, ng);
         case LAMEXP_TYPE_DECONSTRUCT:
             return analyzeDeconstruct(exp->val.deconstruct, env, ng);
+        case LAMEXP_TYPE_TAG:
+            return analyzeTag(exp->val.tag, env, ng);
         case LAMEXP_TYPE_CONSTANT:
             return analyzeConstant(exp->val.constant, env, ng);
         case LAMEXP_TYPE_APPLY:
@@ -365,7 +368,7 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
             res = analyzeStarship(app->exp1, app->exp2, env, ng);
             break;
         case LAMPRIMOP_TYPE_VEC:
-            res = analyzeExp(app->exp2, env, ng);
+            cant_happen("encountered VEC in analyzePrim");
             break;
         case LAMPRIMOP_TYPE_XOR:
             res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
@@ -496,6 +499,10 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg 
     IFDEBUG(ppTcType(fieldType));
     IFDEBUG(ppTcType(resultType));
     return fieldType;
+}
+
+static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
+    return analyzeExp(tagged, env, ng);
 }
 
 static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
