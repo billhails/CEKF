@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile check-grammar list-cores test clean-test
+.PHONY: all clean deps profile check-grammar list-cores test
 
 TARGET=cekf
 
@@ -13,9 +13,9 @@ DEBUGGING=-g
 # CCMODE = $(OPTIMIZING)
 CCMODE = $(DEBUGGING)
 
-
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)
+PYTHON=python3
 
 EXTRA_YAML=$(wildcard src/*.yaml)
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,tmp/%.c,$(EXTRA_YAML))
@@ -55,6 +55,7 @@ ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP)
 
 TMP_H=tmp/parser.h tmp/lexer.h
+TMP_C=tmp/parser.c tmp/lexer.c
 
 all: $(TARGET)
 
@@ -63,28 +64,28 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 
 include $(ALL_DEP)
 
-
 $(EXTRA_C_TARGETS): tmp/%.c: src/%.yaml tools/makeAST.py | tmp
-	python3 tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): tmp/%.h: src/%.yaml tools/makeAST.py | tmp
-	python3 tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_OBJTYPES_H_TARGETS): tmp/%_objtypes.h: src/%.yaml tools/makeAST.py | tmp
-	python3 tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_H_TARGETS): tmp/%_debug.h: src/%.yaml tools/makeAST.py | tmp
-	python3 tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_C_TARGETS): tmp/%_debug.c: src/%.yaml tools/makeAST.py | tmp
-	python3 tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
 
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
 
-tags: src/*
-	ctags src/*
+tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
+	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
+
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I tmp/ -I src/ -c $< -o $@
 
@@ -133,4 +134,5 @@ check-grammar:
 
 list-cores:
 	ls -rt1 /var/lib/apport/coredump/* | tail -1
-# vim: noet,sw=8,tabstop=8
+
+# vim: noet sw=8

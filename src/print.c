@@ -345,13 +345,13 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors, La
     return res;
 }
 
-static LamMatchList *makeVecMatchList(LamTypeConstructorList *constructors, LamContext *env) {
+static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors, LamContext *env) {
     if (constructors == NULL) return NULL;
-    LamMatchList *next = makeVecMatchList(constructors->next, env);
+    LamMatchList *next = makeTagMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info = lookupInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
-        cant_happen("cannot find info for type constructor %s in makeVecMatchList",
+        cant_happen("cannot find info for type constructor %s in makeTagMatchList",
                     constructors->constructor->name->name);
     }
     LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
@@ -378,16 +378,12 @@ static LamMatch *makePlainMatch(LamTypeConstructorList *constructors, LamContext
     return res;
 }
 
-static LamMatch *makeVecMatch(LamTypeConstructorList *constructors, LamContext *env) {
-    LamMatchList *cases = makeVecMatchList(constructors, env);
+static LamMatch *makeTagMatch(LamTypeConstructorList *constructors, LamContext *env) {
+    LamMatchList *cases = makeTagMatchList(constructors, env);
     int save = PROTECT(cases);
-    LamExp *zero = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
-    PROTECT(zero);
     LamExp *var = printArgVar();
     PROTECT(var);
-    LamPrimApp *vec = newLamPrimApp(LAMPRIMOP_TYPE_VEC, zero, var);
-    PROTECT(vec);
-    LamExp *prim = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(vec));
+    LamExp *prim = newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(var));
     PROTECT(prim);
     LamMatch *res = newLamMatch(prim, cases);
     UNPROTECT(save);
@@ -402,7 +398,7 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors, LamContext
     }
     LamMatch *match = NULL;
     if (info->vec) {
-        match = makeVecMatch(constructors, env);
+        match = makeTagMatch(constructors, env);
     } else {
         match = makePlainMatch(constructors, env);
     }

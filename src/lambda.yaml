@@ -191,7 +191,6 @@ structs:
         size: int # number of alternatives
         index: int # index into list of alternatives
 
-
 enums:
     LamPrimOp:
         - ADD
@@ -206,9 +205,9 @@ enums:
         - LT
         - GE
         - LE
-        - VEC
         - XOR
         - CMP
+        - VEC
 
     LamUnaryOp:
         - NEG
@@ -229,6 +228,7 @@ unions:
         makeVec: LamMakeVec
         construct: LamConstruct
         deconstruct: LamDeconstruct
+        tag: LamExp
         constant: LamConstant
         apply: LamApply
         iff: LamIff
