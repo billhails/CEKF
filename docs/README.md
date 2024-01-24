@@ -1,6 +1,7 @@
 # Random bits of documentation
 
 * [ANF](ANF.md) A-Normalization
+* [CODEGEN](CODEGEN.md) Notes on the code generator utility.
 * [LEXICAL ADDRESSING](LEXICAL_ADDRESSING.md) De-Bruijn indexing for fast variable look up.
 * [MACROS](MACROS.md) initial thoughts on a simple macro system.
 * [MATCH](MATCH.md) initial notes on the `match` and `cond` internal (lambda) constructs.
