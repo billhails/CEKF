@@ -345,13 +345,13 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors, La
     return res;
 }
 
-static LamMatchList *makeVecMatchList(LamTypeConstructorList *constructors, LamContext *env) {
+static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors, LamContext *env) {
     if (constructors == NULL) return NULL;
-    LamMatchList *next = makeVecMatchList(constructors->next, env);
+    LamMatchList *next = makeTagMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info = lookupInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
-        cant_happen("cannot find info for type constructor %s in makeVecMatchList",
+        cant_happen("cannot find info for type constructor %s in makeTagMatchList",
                     constructors->constructor->name->name);
     }
     LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
@@ -379,7 +379,7 @@ static LamMatch *makePlainMatch(LamTypeConstructorList *constructors, LamContext
 }
 
 static LamMatch *makeTagMatch(LamTypeConstructorList *constructors, LamContext *env) {
-    LamMatchList *cases = makeVecMatchList(constructors, env);
+    LamMatchList *cases = makeTagMatchList(constructors, env);
     int save = PROTECT(cases);
     LamExp *var = printArgVar();
     PROTECT(var);

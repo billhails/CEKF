@@ -55,6 +55,7 @@ ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP)
 
 TMP_H=tmp/parser.h tmp/lexer.h
+TMP_C=tmp/parser.c tmp/lexer.c
 
 all: $(TARGET)
 
@@ -62,7 +63,6 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) -lm
 
 include $(ALL_DEP)
-
 
 $(EXTRA_C_TARGETS): tmp/%.c: src/%.yaml tools/makeAST.py | tmp
 	$(PYTHON) tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
@@ -83,8 +83,8 @@ $(EXTRA_DEBUG_C_TARGETS): tmp/%_debug.c: src/%.yaml tools/makeAST.py | tmp
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
 
-tags: src/*
-	ctags src/*
+tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
+	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I tmp/ -I src/ -c $< -o $@
@@ -134,4 +134,5 @@ check-grammar:
 
 list-cores:
 	ls -rt1 /var/lib/apport/coredump/* | tail -1
-# vim: noet,sw=8,tabstop=8
+
+# vim: noet sw=8
