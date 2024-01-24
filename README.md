@@ -115,3 +115,9 @@ Rather than forcing a requirement on an external library like
 opted to incorporate a much smaller, public domain implementation
 from [983](https://github.com/983/bigint), only slightly amended to
 play nice with the CEKF memory management and garbage collection.
+
+## Code Generation
+
+While not properly part of the language description, I'm using some
+hand-written code generators to make development easier and they're
+documented [here](docs/CODEGEN.md).
