@@ -284,6 +284,8 @@ static int _vecCmp(Vec *a, Vec *b) {
     return 0;
 }
 
+#define _CMP_(a, b) ((a) < (b) ? -1 : (a) == (b) ? 0 : 1)
+
 static int _cmp(Value a, Value b) {
 #ifdef DEBUG_STEP
     eprintf("_cmp:\n");
@@ -303,9 +305,14 @@ static int _cmp(Value a, Value b) {
         case VALUE_TYPE_BIGINT:
             return cmpBigInt(a.val.b, b.val.b);
         case VALUE_TYPE_STDINT:
-            return a.val.z < b.val.z ? -1 : a.val.z == b.val.z ? 0 : 1;
+            return _CMP_(a.val.z, b.val.z);
         case VALUE_TYPE_CHARACTER:
-            return a.val.c < b.val.c ? -1 : a.val.c == b.val.c ? 0 : 1;
+            return _CMP_(a.val.c, b.val.c);
+        case VALUE_TYPE_CLO:
+        case VALUE_TYPE_PCLO:
+            return _CMP_(a.val.clo->c, b.val.clo->c);
+        case VALUE_TYPE_CONT:
+            return _CMP_(a.val.k->body, b.val.k->body);
         case VALUE_TYPE_VEC:
             return _vecCmp(a.val.vec, b.val.vec);
         default:

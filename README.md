@@ -11,7 +11,7 @@ but using a bytecode interpreter rather than a tree-walking interpreter,
 and utilising a hybrid stack/closure/continuation implementation where
 variables local to a function are directly accessible on the stack, and
 closures and continuations are snapshots of stack frames. It additionally
-makes use of fast lexical addressing (an implementation of
+makes use of fast lexical addressing (technically
 [De Bruijn Indexing](https://en.wikipedia.org/wiki/De_Bruijn_index)) for
 added efficiency gains and an implementation of Hindley-Milner
 Algorithm W for strict implicit type checking.
@@ -52,7 +52,10 @@ in two specific cases:
    `amb`, "backtracking" to the decision point and allowing the alternative
    to be produced.
 
-For all the details see [SICP pp.
+To see `amb` in action, look at the sample [fn/barrels.fn](fn/barrels.fn).
+Note that in this language `amb` is an infix operator called `then`.
+
+For a good description of `amb` see [SICP pp.
 412-437](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/full-text/book/book-Z-H-28.html#%_sec_4.3).
 
 What makes a CEK machine such an easy way to implement `amb` is that

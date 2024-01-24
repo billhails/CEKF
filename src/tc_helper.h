@@ -26,5 +26,6 @@ void ppTcFunction(TcFunction *function);
 void ppTcPair(TcPair *pair);
 void ppTcVar(TcVar *var);
 void ppTcTypeDef(TcTypeDef *typeDef);
+bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 
 #endif

@@ -1,6 +1,8 @@
 # TODO
 
 * over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`
+* completely hide `vec` from type checker (`(tag thing)` == `(vec 0 thing)`)
+* allow user overrides of print functions
 * tuples - can use vec type to implement.
    * BUT - fn args are not tuples, that might interfere with currying.
    * tc has support for pairs and we might leverage those as a start, but flat vecs will be more efficient.

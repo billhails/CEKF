@@ -286,6 +286,13 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *subst
     return letrec;
 }
 
+static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, HashTable *substitutions) {
+    ENTER(performTypeDefsSubstitutions);
+    typedefs->body = lamPerformSubstitutions(typedefs->body, substitutions);
+    LEAVE(performTypeDefsSubstitutions);
+    return typedefs;
+}
+
 static LamMatchList *performCaseSubstitutions(LamMatchList *cases, HashTable *substitutions) {
     ENTER(performCaseSubstitutions);
     if (cases == NULL) {
@@ -434,6 +441,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
             break;
         case LAMEXP_TYPE_LETREC:
             exp->val.letrec = performLetRecSubstitutions(exp->val.letrec, substitutions);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            exp->val.typedefs = performTypeDefsSubstitutions(exp->val.typedefs, substitutions);
             break;
         case LAMEXP_TYPE_MATCH:
             exp->val.match = performMatchSubstitutions(exp->val.match, substitutions);

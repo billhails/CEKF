@@ -26,6 +26,6 @@ LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBinding
 
 void putValue(Value v);
 
-LamExp *compilePrinterForType(TcType *type);
+LamExp *compilePrinterForType(TcType *type, TcEnv *env);
 
  #endif

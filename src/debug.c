@@ -342,7 +342,8 @@ void dumpByteCode(ByteCodeArray *b) {
     size_t i = 0;
     while (i < b->count) {
         eprintf("%04lx ### ", i);
-        switch (readByte(b, &i)) {
+        int thisByte;
+        switch (thisByte = readByte(b, &i)) {
             case BYTECODE_NONE: {
                 eprintf("NONE\n");
             }
@@ -540,6 +541,10 @@ void dumpByteCode(ByteCodeArray *b) {
                 eprintf("PUTN\n");
             }
             break;
+            case BYTECODE_PRIM_PUTV: {
+                eprintf("PUTV\n");
+            }
+            break;
             case BYTECODE_STDINT: {
                 int val = readInt(b, &i);
                 eprintf("STDINT [%d]\n", val);
@@ -571,7 +576,7 @@ void dumpByteCode(ByteCodeArray *b) {
             }
             break;
             default:
-                cant_happen("unrecognised bytecode %d in dumpByteCode", b->entries[i]);
+                cant_happen("unrecognised bytecode %d in dumpByteCode", thisByte);
         }
     }
 }
