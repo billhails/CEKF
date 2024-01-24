@@ -633,20 +633,32 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     return type;
 }
 
+static bool isLambdaBinding(LamLetRecBindings *bindings) {
+    return bindings->val->type == LAMEXP_TYPE_LAM;
+}
+
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
-    DEBUG("***************************************");
     ENTER(analyzeLetRec);
     env = extendEnv(env);
     int save = PROTECT(env);
     ng = extendNg(ng);
     PROTECT(ng);
+    // bind lambdas early
     for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL; bindings = bindings->next) {
-        TcType *freshVar = makeFreshVar(bindings->var->name);
-        int save2 = PROTECT(freshVar);
-        addToEnv(env, bindings->var, freshVar);
-        UNPROTECT(save2);
+        if (isLambdaBinding(bindings)) {
+            TcType *freshVar = makeFreshVar(bindings->var->name);
+            int save2 = PROTECT(freshVar);
+            addToEnv(env, bindings->var, freshVar);
+            UNPROTECT(save2);
+        }
     }
     for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL; bindings = bindings->next) {
+        if (!isLambdaBinding(bindings)) {
+            TcType *freshVar = makeFreshVar(bindings->var->name);
+            int save2 = PROTECT(freshVar);
+            addToEnv(env, bindings->var, freshVar);
+            UNPROTECT(save2);
+        }
         DEBUG("analyzeLetRec considering %s", bindings->var->name);
         TcType *freshVar = NULL;
         if (!getFromTcEnv(env, bindings->var, &freshVar)) {
