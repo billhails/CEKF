@@ -129,17 +129,45 @@ static inline int readCurrentOffsetAt(int i) {
     return readOffsetAt(&state.B, state.C, i);
 }
 
-static Value intValue(int i) {
+static inline Value charValue(char c) {
     Value value;
-    value.type = VALUE_TYPE_STDINT;
-    value.val = VALUE_VAL_STDINT(i); 
+    value.type = VALUE_TYPE_CHARACTER;
+    value.val = VALUE_VAL_CHARACTER(c);
     return value;
 }
 
-static Value bigIntValue(BigInt *i) {
+static inline Value intValue(int i) {
+    Value value;
+    value.type = VALUE_TYPE_STDINT;
+    value.val = VALUE_VAL_STDINT(i);
+    return value;
+}
+
+static inline Value vecValue(Vec *v) {
+    Value value;
+    value.type = VALUE_TYPE_VEC;
+    value.val = VALUE_VAL_VEC(v);
+    return value;
+}
+
+static inline Value kontValue(Kont *c) {
+    Value value;
+    value.type = VALUE_TYPE_CONT;
+    value.val = VALUE_VAL_CONT(c);
+    return value;
+}
+
+static inline Value bigIntValue(BigInt *i) {
     Value value;
     value.type = VALUE_TYPE_BIGINT;
-    value.val = VALUE_VAL_BIGINT(i); 
+    value.val = VALUE_VAL_BIGINT(i);
+    return value;
+}
+
+static inline Value cloValue(Clo *k) {
+    Value value;
+    value.type = VALUE_TYPE_CLO;
+    value.val = VALUE_VAL_CLO(k);
     return value;
 }
 
@@ -555,9 +583,7 @@ static void step() {
                 Clo *clo = newClo(nargs, state.C, state.E);
                 int save = PROTECT(clo);
                 snapshotClo(&state.S, clo, letRecOffset);
-                Value v;
-                v.type = VALUE_TYPE_CLO;
-                v.val = VALUE_VAL_CLO(clo);
+                Value v = cloValue(clo);
                 push(v);
                 UNPROTECT(save);
                 state.C = end;
@@ -729,9 +755,7 @@ static void step() {
                 int save = PROTECT(v);
                 copyToVec(v);
                 popn(size);
-                Value val;
-                val.type = VALUE_TYPE_VEC;
-                val.val = VALUE_VAL_VEC(v);
+                Value val = vecValue(v);
                 push(val);
                 UNPROTECT(save);
             }
@@ -912,9 +936,7 @@ static void step() {
                 DEBUGPRINTF("CALLCC\n");
                 Value aexp = pop();
                 int save = protectValue(aexp);
-                Value cc;
-                cc.type = VALUE_TYPE_CONT;
-                cc.val = VALUE_VAL_CONT(state.K);
+                Value cc = kontValue(state.K);
                 push(cc);
                 push(aexp);
                 UNPROTECT(save);
@@ -939,18 +961,14 @@ static void step() {
             case BYTECODE_STDINT: { // push literal int
                 int val = readCurrentInt();
                 DEBUGPRINTF("STDINT [%d]\n", val);
-                Value v;
-                v.type = VALUE_TYPE_STDINT;
-                v.val = VALUE_VAL_STDINT(val);
+                Value v = intValue(val);
                 push(v);
             }
             break;
             case BYTECODE_CHAR: { // push literal char
                 char c = readCurrentByte();
                 DEBUGPRINTF("CHAR [%c]\n", c);
-                Value v;
-                v.type = VALUE_TYPE_CHARACTER;
-                v.val = VALUE_VAL_CHARACTER(c);
+                Value v = charValue(c);
                 push(v);
             }
             break;
@@ -962,18 +980,14 @@ static void step() {
                 fprintBigInt(stdout, bigInt);
                 printf("]\n");
 #endif
-                Value v;
-                v.type = VALUE_TYPE_BIGINT;
-                v.val = VALUE_VAL_BIGINT(bigInt);
+                Value v = bigIntValue(bigInt);
                 push(v);
                 UNPROTECT(save);
             }
             break;
             case BYTECODE_RETURN: { // push the current continuation and apply
                 DEBUGPRINTF("RETURN\n");
-                Value k;
-                k.type = VALUE_TYPE_CONT;
-                k.val = VALUE_VAL_CONT(state.K);
+                Value k = kontValue(state.K);
                 push(k);
                 applyProc(1);
             }

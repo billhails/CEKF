@@ -445,6 +445,7 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef, LamLetRecBindin
  * invoked during type checking
  * computes a print function that will print the given type
  ****************************************************************/
+
 static LamExp *compilePrinterForFunction(TcFunction *function);
 static LamExp *compilePrinterForPair(TcPair *pair);
 static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env);
@@ -544,7 +545,6 @@ static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env) {
     UNPROTECT(save);
     return res;
 }
-
 
 /****************************************************************
  * run-time print code supporting putv
