@@ -995,11 +995,13 @@ static void step() {
             }
             break;
             case BYTECODE_GETENV: {
+                DEBUGPRINTF("GETENV\n");
                 Value v = envValue(state.E);
                 push(v);
             }
             break;
             case BYTECODE_SETENV: {
+                DEBUGPRINTF("SETENV\n");
                 Value v = pop();
                 int save = protectValue(v);
 #ifdef SAFETY_CHECKS
@@ -1010,6 +1012,7 @@ static void step() {
             }
             break;
             case BYTECODE_SWAP: {
+                DEBUGPRINTF("SWAP\n");
                 Value a = pop();
                 int save = protectValue(a);
                 Value b = pop();

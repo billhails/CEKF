@@ -553,6 +553,18 @@ void dumpByteCode(ByteCodeArray *b) {
                 eprintf("CHAR [%c]\n", c);
             }
             break;
+            case BYTECODE_GETENV: {
+                eprintf("GETENV\n");
+            }
+            break;
+            case BYTECODE_SETENV: {
+                eprintf("SETENV\n");
+            }
+            break;
+            case BYTECODE_SWAP: {
+                eprintf("SWAP\n");
+            }
+            break;
             case BYTECODE_RETURN: {
                 eprintf("RETURN\n");
             }
