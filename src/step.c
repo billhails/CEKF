@@ -171,6 +171,13 @@ static inline Value cloValue(Clo *k) {
     return value;
 }
 
+static inline Value envValue(Env *e) {
+    Value value;
+    value.type = VALUE_TYPE_ENV;
+    value.val = VALUE_VAL_ENV(e);
+    return value;
+}
+
 static bool truthy(Value v) {
     return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
 }
@@ -448,6 +455,8 @@ static int protectValue(Value v) {
             return PROTECT(v.val.vec);
         case VALUE_TYPE_BIGINT:
             return PROTECT(v.val.b);
+        case VALUE_TYPE_ENV:
+            return PROTECT(v.val.env);
         default:
             return PROTECT(NULL);
     }
@@ -982,6 +991,31 @@ static void step() {
 #endif
                 Value v = bigIntValue(bigInt);
                 push(v);
+                UNPROTECT(save);
+            }
+            break;
+            case BYTECODE_GETENV: {
+                Value v = envValue(state.E);
+                push(v);
+            }
+            break;
+            case BYTECODE_SETENV: {
+                Value v = pop();
+                int save = protectValue(v);
+#ifdef SAFETY_CHECKS
+                assert(v.type == VALUE_TYPE_ENV);
+#endif
+                state.E = v.val.env;
+                UNPROTECT(save);
+            }
+            break;
+            case BYTECODE_SWAP: {
+                Value a = pop();
+                int save = protectValue(a);
+                Value b = pop();
+                protectValue(b);
+                push(a);
+                push(b);
                 UNPROTECT(save);
             }
             break;

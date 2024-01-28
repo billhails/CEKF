@@ -168,6 +168,7 @@ unions:
 
     AstExpression:
         back: void_ptr
+        getEnv: void_ptr
         funCall: AstFunCall
         symbol: HashSymbol
         number: BigInt

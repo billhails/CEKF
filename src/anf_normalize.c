@@ -74,8 +74,10 @@ static Exp *normalizeIff(LamIff *lamIff, Exp *tail);
 static Exp *normalizeCallCc(LamExp *callcc, Exp *tail);
 static Exp *normalizePrint(LamPrint *print, Exp *tail);
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail);
+static Exp *normalizeEnv(LamEnv *lamEnv, Exp *tail);
 static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
 static Exp *normalizeMatch(LamMatch *match, Exp *tail);
+static Exp *normalizeGetEnv(Exp *tail);
 static MatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpIntList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
@@ -106,17 +108,6 @@ static int countAexpList(AexpList *list) {
     }
     return count;
 }
-
-/*
-static int countLetRecBindings(LetRecBindings *list) {
-    int count = 0;
-    while (list != NULL) {
-        count++;
-        list = list->next;
-    }
-    return count;
-}
-*/
 
 static Exp *normalize(LamExp *lamExp, Exp *tail) {
     ENTER(normalize);
@@ -176,6 +167,10 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeBack(tail);
         case LAMEXP_TYPE_ERROR:
             return normalizeError(tail);
+        case LAMEXP_TYPE_GETENV:
+            return normalizeGetEnv(tail);
+        case LAMEXP_TYPE_ENV:
+            return normalizeEnv(lamExp->val.env, tail);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
@@ -329,6 +324,31 @@ static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
     return exp;
 }
 
+static AexpVarList *lamTypeArgsToAexpVarList(LamTypeArgs *args) {
+    if (args == NULL) return NULL;
+    AexpVarList *next = lamTypeArgsToAexpVarList(args->next);
+    int save = PROTECT(next);
+    AexpVarList *this = newAexpVarList(args->name, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static Exp *normalizeEnv(LamEnv *lamEnv, Exp *tail) {
+    ENTER(normalizeEnv);
+    Exp *body = normalize(lamEnv->env, tail);
+    int save = PROTECT(body);
+    AexpVarList *context = lamTypeArgsToAexpVarList(lamEnv->base);
+    PROTECT(context);
+    CexpEnv *cexpEnv = newCexpEnv(context, body);
+    PROTECT(cexpEnv);
+    Cexp *cexp = newCexp(CEXP_TYPE_ENV, CEXP_VAL_ENV(cexpEnv));
+    PROTECT(cexp);
+    Exp *result = newExp(EXP_TYPE_CEXP, EXP_VAL_CEXP(cexp));
+    LEAVE(normalizeEnv);
+    UNPROTECT(save);
+    return result;
+}
+
 static Exp *normalizeError(Exp *tail) {
     ENTER(normalizeError);
     Cexp *error = newCexp(CEXP_TYPE_ERROR, CEXP_VAL_ERROR());
@@ -338,6 +358,18 @@ static Exp *normalizeError(Exp *tail) {
     exp = wrapTail(exp, tail);
     UNPROTECT(save);
     LEAVE(normalizeError);
+    return exp;
+}
+
+static Exp *normalizeGetEnv(Exp *tail) {
+    ENTER(normalizeGetEnv);
+    Aexp *aexp = newAexp(AEXP_TYPE_GETENV, AEXP_VAL_GETENV());
+    int save = PROTECT(aexp);
+    Exp *exp = wrapAexp(aexp);
+    REPLACE_PROTECT(save, exp);
+    exp = wrapTail(exp, tail);
+    UNPROTECT(save);
+    LEAVE(normalizeGetEnv);
     return exp;
 }
 
@@ -956,6 +988,7 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_AND:
         case LAMEXP_TYPE_OR:
         case LAMEXP_TYPE_MAKEVEC:
+        case LAMEXP_TYPE_ENV:
             return false;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("lamExpIsConst encountered cond default");
@@ -1120,6 +1153,8 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
             return AEXPPRIMOP_TYPE_MOD;
         case LAMPRIMOP_TYPE_CMP:
             return AEXPPRIMOP_TYPE_CMP;
+        case LAMPRIMOP_TYPE_DOT:
+            return AEXPPRIMOP_TYPE_DOT;
         default:
             cant_happen("unrecognised op type %d in mapPrimOp", op);
     }

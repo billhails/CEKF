@@ -165,7 +165,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <define> defun denv
 %type <definition> definition
 %type <definitions> let_in definitions env_body
-%type <env> env env_expr
+%type <env> env_expr
 %type <envType> env_type
 %type <expression> expression
 %type <expressions> expressions expression_statements
@@ -236,7 +236,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %nonassoc NEG
 %nonassoc HERE
 %left '('
-%right '.'
+%left '.'
 
 %start top
 
@@ -434,7 +434,6 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | unop                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | '[' conslist ']'     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
            | FN fun               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
-           | env                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
            | BACK                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
            | iff                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)); }
            | switch               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
@@ -496,9 +495,6 @@ conslist : %empty                     { $$ = newAstFunCall(newAstExpression(AST_
 expression_statements : expression                              { $$ = newAstExpressions($1, NULL); }
                       | expression ';' expression_statements    { $$ = newAstExpressions($1, $3); }
                       ;
-
-env : ENV env_expr  { $$ = $2; }
-    ;
 
 env_expr : extends env_body { $$ = newAstEnv($1, $2); }
          ;

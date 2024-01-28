@@ -99,6 +99,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_MOD:
             eprintf("mod ");
             break;
+        case AEXPPRIMOP_TYPE_DOT:
+            eprintf("dot ");
+            break;
         default:
             cant_happen("unrecognized op in ppAexpPrimApp (%d)", x->type);
     }
@@ -367,9 +370,18 @@ void ppAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             ppAexpMakeVec(x->val.makeVec);
             break;
+        case AEXP_TYPE_GETENV:
+            eprintf("(getenv)");
+            break;
         default:
             cant_happen("unrecognised aexp %d in ppAexp", x->type);
     }
+}
+
+void ppCexpEnv(CexpEnv *env) {
+    eprintf("(env (TODO) ");
+    ppExp(env->body);
+    eprintf(")");
 }
 
 void ppCexp(Cexp *x) {
@@ -402,6 +414,9 @@ void ppCexp(Cexp *x) {
             break;
         case CEXP_TYPE_MATCH:
             ppCexpMatch(x->val.match);
+            break;
+        case CEXP_TYPE_ENV:
+            ppCexpEnv(x->val.env);
             break;
         case CEXP_TYPE_BACK:
             eprintf("(back)");

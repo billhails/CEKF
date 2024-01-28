@@ -24,18 +24,8 @@
  #include "anf.h"
  #include "hash.h"
  #include "memory.h"
+ #include "cte.h"
 
-typedef struct CTEnv {
-    struct Header header;
-    bool isLocal;
-    struct CTEnv *next;
-    struct HashTable *table;
-} CTEnv;
-
-void analizeExp(Exp *x, CTEnv *env);
-
-CTEnv *newCTEnv(bool isLocal, CTEnv *next);
-void markCTEnv(Header *env);
-void freeCTEnv(Header *env);
+CTEnv *analizeExp(Exp *x, CTEnv *env);
 
 #endif

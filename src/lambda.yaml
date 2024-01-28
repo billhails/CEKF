@@ -191,6 +191,11 @@ structs:
         size: int # number of alternatives
         index: int # index into list of alternatives
 
+    # Environment Types
+    LamEnv:
+        env: LamExp
+        base: LamTypeArgs # re-use: `env.emv.env`
+
 enums:
     LamPrimOp:
         - ADD
@@ -208,6 +213,7 @@ enums:
         - XOR
         - CMP
         - VEC
+        - DOT
 
     LamUnaryOp:
         - NEG
@@ -245,7 +251,9 @@ unions:
         character: character
         back: void_ptr
         error: void_ptr
+        getenv: void_ptr
         cond_default: void_ptr
+        env: LamEnv
 
     LamCondCases:
         integers: LamIntCondCases

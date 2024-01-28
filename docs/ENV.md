@@ -44,3 +44,44 @@ the lexical address of its contents?)
 Type checking all this is where the fun starts, but there is an insight
 that should help: the type of an environment is precisely the type
 environment that was constructed while type checking it.
+
+## Namespaces Only
+
+As an alternative to fully first-class environments, which may not be
+possible with fast lexical addressing, we could look at `env` declarations
+purely as namespaces, that is the names of envs are not variables but
+constant names to be used literally. This is certainly simpler, but the
+semantics are a bit wooly, so how would it work?
+
+The `.` operator would evaluate its rhs in the context of the namespace
+on the lhs, like `myns.doSomething(arg)`. The dot operator would have to
+have higher precedence than even function calls, so that would parse as
+`(myns.doSomething)(arg)`. Bytecode might then be something like
+
+```
+| ..arg.. | SAVENV | myns | SETENV | VAR[n][n] | SWAP | RESTORENV | APPLY |
+```
+
+I'm not sure I like the save and restore because we don't currently have
+an environment stack, and we'd need Forth-level stack twiddling to use
+the existing stack (i.e. the `VAR` lookup would leave its result top of
+stack hence the need for a SWAP bytecode or similar).
+
+Also what's the representation of `myns` in bytecode if it's not a var?
+It has to refer to an environment in some way.
+
+Also how would static analysis find `myns`? We'll likely need a second
+environment mapping namespaces to envs, and those envs in turn would need
+to be paired with namespace envs, unless we have the one env do double-duty
+and store both the frame offset of the var and optionally the env it
+refers to if it's an env. Not impossible but starts to feel messy. On the
+other hand making envs vars again but requiring them to be instantiated
+statically would solve the bytecode issue too. `myns` just becomes another
+`VAR` lookup.
+
+What about type checking? Again if `myns` is bound to a `TcEnv` during
+type checking, that env can be used to validate the rhs of the dot
+operator.
+
+Any other holes in this idea? ANF conversion is purely local transforms
+that shouldn't be affected, desugaring likewise.

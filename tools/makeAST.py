@@ -883,7 +883,10 @@ class SimpleStruct(Base):
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
-            print("    x->{f} = {d};".format(f=field.getFieldName(), d=field.default))
+            f = field.getFieldName()
+            d = field.default
+            print(f"    bzero(&(x->{f}), sizeof(x->{f}));")
+            print(f"    x->{f} = {d};")
         print("    return x;")
         print("}\n")
 

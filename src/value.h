@@ -29,6 +29,7 @@ typedef enum {
     VALUE_TYPE_PCLO,
     VALUE_TYPE_CONT,
     VALUE_TYPE_VEC,
+    VALUE_TYPE_ENV,
 } ValueType;
 
 typedef union {
@@ -39,6 +40,7 @@ typedef union {
     struct Clo *clo;
     struct Kont *k;
     struct Vec *vec;
+    struct Env *env;
 } ValueVal;
 
 typedef struct Value {
@@ -54,6 +56,7 @@ typedef struct Value {
 #define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
 #define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
 #define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
+#define VALUE_VAL_ENV(x)       ((ValueVal){.env  = (x)})
 #define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
 // constants

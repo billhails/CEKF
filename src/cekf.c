@@ -138,6 +138,9 @@ void markValue(Value x) {
         case VALUE_TYPE_BIGINT:
             markBigInt(x.val.b);
             break;
+        case VALUE_TYPE_ENV:
+            markEnv(x.val.env);
+            break;
         default:
             cant_happen("unrecognised type in markValue (%d)", x.type);
     }

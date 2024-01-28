@@ -184,9 +184,25 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
     LEAVE(writeAexpUnaryApp);
 }
 
+void writeDotExpression(Aexp *lhs, Aexp *rhs, ByteCodeArray *b) {
+    writeAexp(lhs, b);            // replacement env from lhs var is now TOS
+    addByte(b, BYTECODE_GETENV);  // save current env
+    addByte(b, BYTECODE_SWAP);    // make replacement env TOS again
+    addByte(b, BYTECODE_SETENV);  // replace
+    writeAexp(rhs, b);
+    addByte(b, BYTECODE_SWAP);    // make env TOS
+    addByte(b, BYTECODE_SETENV);  // restore
+}
+
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     ENTER(writeAexpPrimApp);
     if (x == NULL) return;
+    if (x->type == AEXPPRIMOP_TYPE_DOT) {
+        // not really semantically a primitive,
+        // requires special treatment
+        writeDotExpression(x->exp1, x->exp2, b);
+        return;
+    }
     writeAexp(x->exp1, b);
     writeAexp(x->exp2, b);
     byte prim;
@@ -237,7 +253,7 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
             prim = BYTECODE_PRIM_CMP;
             break;
         default:
-            cant_happen("unrecognised AexpPrimOp in writeAexpPrimApp");
+            cant_happen("unrecognised AexpPrimOp %d in writeAexpPrimApp", x->type);
     }
     addByte(b, prim);
     LEAVE(writeAexpPrimApp);
@@ -528,6 +544,10 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     LEAVE(writeExpLet);
 }
 
+void writeCexpEnv(CexpEnv *env, ByteCodeArray *b) {
+    writeExp(env->body, b);
+}
+
 void writeAexp(Aexp *x, ByteCodeArray *b) {
     ENTER(writeAexp);
     switch (x->type) {
@@ -553,6 +573,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         break;
         case AEXP_TYPE_V: {
             addByte(b, BYTECODE_VOID);
+        }
+        break;
+        case AEXP_TYPE_GETENV: {
+            addByte(b, BYTECODE_GETENV);
         }
         break;
         case AEXP_TYPE_LITTLEINTEGER: {
@@ -588,7 +612,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         }
         break;
         default:
-            cant_happen("unrecognized Aexp type in writeAexp");
+            cant_happen("unrecognized Aexp type %d in writeAexp", x->type);
     }
     LEAVE(writeAexp);
 }
@@ -619,6 +643,10 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
         break;
         case CEXP_TYPE_LETREC: {
             writeCexpLetRec(x->val.letRec, b);
+        }
+        break;
+        case CEXP_TYPE_ENV: {
+            writeCexpEnv(x->val.env, b);
         }
         break;
         case CEXP_TYPE_AMB: {

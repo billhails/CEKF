@@ -75,8 +75,6 @@ const char *typeName(ObjType type, void *p) {
             return "clo";
         case OBJTYPE_ENV:
             return "env";
-        case OBJTYPE_CTENV:
-            return "ctenv";
         case OBJTYPE_FAIL:
             return "fail";
         case OBJTYPE_KONT:
@@ -103,6 +101,8 @@ const char *typeName(ObjType type, void *p) {
             return typenameTpmcObj(type);
         TC_OBJTYPE_CASES()
             return typenameTcObj(type);
+        CTE_OBJTYPE_CASES()
+            return typenameCteObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
@@ -277,9 +277,6 @@ void markObj(Header *h, int i) {
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;
-        case OBJTYPE_CTENV:
-            markCTEnv(h);
-            break;
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
@@ -307,6 +304,9 @@ void markObj(Header *h, int i) {
         TC_OBJTYPE_CASES()
             markTcObj(h);
             break;
+        CTE_OBJTYPE_CASES()
+            markCteObj(h);
+            break;
         case OBJTYPE_BIGINT:
             markBigInt((BigInt *)h);
             break;
@@ -331,9 +331,6 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_BIGINT:
             freeBigInt((BigInt *)h);
-            break;
-        case OBJTYPE_CTENV:
-            freeCTEnv(h);
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
@@ -361,6 +358,9 @@ void freeObj(Header *h) {
             break;
         TC_OBJTYPE_CASES()
             freeTcObj(h);
+            break;
+        CTE_OBJTYPE_CASES()
+            freeCteObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj at %p", h->type, (void *)h);

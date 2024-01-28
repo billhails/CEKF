@@ -82,6 +82,7 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
 static TcType *analyzeAnd(LamAnd *and, TcEnv *env, TcNg *ng);
 static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
+static TcType *analyzeEnv(LamEnv *lamEnv, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
@@ -96,6 +97,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
+static TcType *captureEnv(TcEnv *env);
 static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
 static void markType(void *ptr);
 static void printType(void *ptr, int depth);
@@ -189,6 +191,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return analyzeAnd(exp->val.and, env, ng);
         case LAMEXP_TYPE_OR:
             return analyzeOr(exp->val.or, env, ng);
+        case LAMEXP_TYPE_ENV:
+            return analyzeEnv(exp->val.env, env, ng);
         case LAMEXP_TYPE_AMB:
             return analyzeAmb(exp->val.amb, env, ng);
         case LAMEXP_TYPE_CHARACTER:
@@ -197,6 +201,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return analyzeBack();
         case LAMEXP_TYPE_ERROR:
             return analyzeError();
+        case LAMEXP_TYPE_GETENV:
+            return captureEnv(env);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -344,6 +350,23 @@ static TcType *analyzeUnaryChar(LamExp *exp, TcEnv *env, TcNg *ng) {
     return res;
 }
 
+static TcType *analyzeDot(LamExp *lhs, LamExp *rhs, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeDot);
+    TcType *lhsType = analyzeExp(lhs, env, ng);
+    int save = PROTECT(lhsType);
+    if (lhsType->type != TCTYPE_TYPE_ENV) {
+        can_happen("lhs of '.' operator must be an env, got type %d", lhsType->type);
+        LEAVE(analyzeDot);
+        UNPROTECT(save);
+        return lhsType;
+    }
+    TcEnv *newContext = lhsType->val.env;
+    TcType *result = analyzeExp(rhs, newContext, ng);
+    LEAVE(analyzeDot);
+    UNPROTECT(save);
+    return result;
+}
+
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     ENTER(analyzePrim);
     TcType *res = NULL;
@@ -372,6 +395,9 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
             break;
         case LAMPRIMOP_TYPE_XOR:
             res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
+            break;
+        case LAMPRIMOP_TYPE_DOT:
+            res = analyzeDot(app->exp1, app->exp2, env, ng);
             break;
         default:
             cant_happen("unrecognised type %d in analyzePrim", app->type);
@@ -1092,6 +1118,28 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
     return left;
 }
 
+static TcEnv *findBaseEnv(LamTypeArgs *path, TcEnv *current) {
+    if (path == NULL) return current;
+    TcType *type = NULL;
+    if (!getFromTcEnv(current, path->name, &type)) {
+        can_happen("failed to find environment %s", path->name->name);
+        return current;
+    }
+    if (type->type != TCTYPE_TYPE_ENV) {
+        can_happen("%s is not an environment", path->name->name);
+        return current;
+    }
+    return findBaseEnv(path->next, type->val.env);
+}
+
+static TcType *analyzeEnv(LamEnv *lamEnv, TcEnv *env, TcNg *ng) {
+    ENTER(analyzeEnv);
+    TcEnv *baseEnv = findBaseEnv(lamEnv->base, env);
+    TcType *result = analyzeExp(lamEnv->env, baseEnv, ng);
+    LEAVE(analyzeEnv);
+    return result;
+}
+
 static TcType *analyzeCharacter() {
     ENTER(analyzeCharacter);
     TcType *res = makeCharacter();
@@ -1248,6 +1296,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
+        case TCTYPE_TYPE_ENV:
             return type;
         case TCTYPE_TYPE_TYPEDEF: {
             TcType *res = freshTypeDef(type->val.typeDef, ng, map);
@@ -1360,6 +1409,10 @@ static TcType *makeCharacter() {
     TcType *res = newTcType(TCTYPE_TYPE_CHARACTER, TCTYPE_VAL_CHARACTER());
     DEBUG("makeCharacter %p", res);
     return res;
+}
+
+static TcType *captureEnv(TcEnv *env) {
+    return newTcType(TCTYPE_TYPE_ENV, TCTYPE_VAL_ENV(env));
 }
 
 static void addUnOpToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
@@ -1682,6 +1735,7 @@ static bool occursIn(TcType *a, TcType *b) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
+        case TCTYPE_TYPE_ENV:
             return false;
         case TCTYPE_TYPE_TYPEDEF:
             return occursInTypeDef(a, b->val.typeDef);

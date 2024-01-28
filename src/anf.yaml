@@ -97,6 +97,10 @@ structs:
         body: Exp
         next: MatchList
 
+    CexpEnv:
+        context: AexpVarList
+        body: Exp
+
     CexpLetRec:
         nbindings: int
         bindings: LetRecBindings
@@ -142,6 +146,7 @@ unions:
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
+        getEnv: void_ptr
 
     Cexp:
         back: void_ptr
@@ -155,6 +160,7 @@ unions:
         cut: CexpCut
         boolean: CexpBool
         match: CexpMatch
+        env: CexpEnv
 
     Exp:
         done: void_ptr
@@ -183,6 +189,7 @@ enums:
         - XOR
         - MOD
         - CMP
+        - DOT
 
     AexpUnaryOp:
         - NOT

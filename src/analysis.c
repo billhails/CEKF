@@ -30,145 +30,214 @@
 
 #ifdef DEBUG_ANALIZE
 #include "debug.h"
+#include "anf_debug.h"
+#include "cte_debug.h"
+
+static bool debugging = false;
 #endif
 
-static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
-static void populateCTEnv(CTEnv *env, HashSymbol *var);
+static bool locate(HashSymbol *var, CTEnv *env, int *frame, CTEntry **offset);
+static bool lookUpInCTEnv(HashSymbol *var, CTEnv *env, CTEntry **entry);
+static void populateCTEnv(CTEnv *env, HashSymbol *var, CTEnv *context);
 
-static void analizeAexpLam(AexpLam *x, CTEnv *env);
+static CTEnv *analizeAexpLam(AexpLam *x, CTEnv *env);
 static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env);
-static void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env);
-static void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
-static void analizeAexpList(AexpList *x, CTEnv *env);
-static void analizeCexpApply(CexpApply *x, CTEnv *env);
-static void analizeCexpIf(CexpIf *x, CTEnv *env);
-static void analizeCexpCond(CexpCond *x, CTEnv *env);
-static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env);
-static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env);
-static void analizeCexpAmb(CexpAmb *x, CTEnv *env);
-static void analizeCexpCut(CexpCut *x, CTEnv *env);
-static void analizeExpLet(ExpLet *x, CTEnv *env);
-static void analizeAexp(Aexp *x, CTEnv *env);
-static void analizeCexp(Cexp *x, CTEnv *env);
+static CTEnv *analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env);
+static CTEnv *analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
+static CTEnv *analizeAexpList(AexpList *x, CTEnv *env);
+static CTEnv *analizeCexpApply(CexpApply *x, CTEnv *env);
+static CTEnv *analizeCexpIf(CexpIf *x, CTEnv *env);
+static CTEnv *analizeCexpCond(CexpCond *x, CTEnv *env);
+static CTEnv *analizeCexpEnv(CexpEnv *x, CTEnv *env);
+static CTEnv *analizeCexpCondCases(CexpCondCases *x, CTEnv *env);
+static CTEnv *analizeCexpLetRec(CexpLetRec *x, CTEnv *env);
+static CTEnv *analizeCexpAmb(CexpAmb *x, CTEnv *env);
+static CTEnv *analizeCexpCut(CexpCut *x, CTEnv *env);
+static CTEnv *analizeExpLet(ExpLet *x, CTEnv *env);
+static CTEnv *analizeAexp(Aexp *x, CTEnv *env);
+static CTEnv *analizeCexp(Cexp *x, CTEnv *env);
+static CTEnv *getEnvFromEnv(HashSymbol *var, CTEnv *env);
+static CTEnv *makeCTEnv(bool isLocal, CTEnv *parent);
 
-static void hashAddCTVar(HashTable *table, HashSymbol *var) {
-    int count = table->count;
-    hashSet(table, var, &count);
+static void hashAddCTVar(HashTable *table, HashSymbol *var, CTEnv *context) {
+    struct CTEntry *entry = newCTEntry(table->count, context);
+    int save = PROTECT(entry);
+    hashSet(table, var, &entry);
+    UNPROTECT(save);
 }
 
-static void analizeAexpLam(AexpLam *x, CTEnv *env) {
+static CTEnv *analizeAexpLam(AexpLam *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpLam "); printAexpLam(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeAexpLam "); printAexpLam(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
+    env = makeCTEnv(false, env);
     int save = PROTECT(env);
-    env = newCTEnv(false, env);
-    UNPROTECT(save);
-    save = PROTECT(env);
     AexpVarList *args = x->args;
     while (args != NULL) {
-        populateCTEnv(env, args->var);
+        populateCTEnv(env, args->var, NULL);
         args = args->next;
     }
-    analizeExp(x->exp, env);
+    CTEnv *res = analizeExp(x->exp, env);
     UNPROTECT(save);
+    return res;
 }
 
 static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpVar "); printAexpVar(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeAexpVar "); eprintf("%s", x->name); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     int frame;
-    int offset;
+    CTEntry *offset = NULL;
     if (locate(x, env, &frame, &offset)) {
+        AexpAnnotatedVar *result;
+        int save = PROTECT(offset);
         if (frame == 0) {
-            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_STACK, frame, offset, x);
+            result = newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_STACK, frame, offset->location, x);
         } else {
-            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_ENV, frame - 1, offset, x);
+            result = newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_ENV, frame - 1, offset->location, x);
         }
+        UNPROTECT(save);
+        return result;
     }
     cant_happen("no binding for var '%s' in analizeAexpVar", x->name);
 }
 
-static void analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
-#ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpPrimApp "); printAexpPrimApp(x); eprintf("  "); printCTEnv(env); eprintf("\n");
-#endif
-    analizeAexp(x->exp1, env);
-    analizeAexp(x->exp2, env);
+static HashSymbol *getDotLhs(Aexp *aexp) {
+    if (aexp->type != AEXP_TYPE_ANNOTATEDVAR) {
+        cant_happen("lhs of dot operator must be an env");
+    }
+    return aexp->val.annotatedVar->var;
 }
 
-static void analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
+static CTEnv *analizeAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpPrimApp "); printAexpUnaryApp(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeAexpPrimApp "); printAexpPrimApp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
+#endif
+    if (x->type == AEXPPRIMOP_TYPE_DOT) {
+#ifdef DEBUG_ANALIZE
+        debugging = true;
+#endif
+        analizeAexp(x->exp1, env);
+        HashSymbol *var = getDotLhs(x->exp1);
+        CTEnv *context = getEnvFromEnv(var, env);
+        analizeAexp(x->exp2, context);
+#ifdef DEBUG_ANALIZE
+        debugging = false;
+#endif
+    } else {
+        analizeAexp(x->exp1, env);
+        analizeAexp(x->exp2, env);
+    }
+    return env;
+}
+
+static CTEnv *analizeAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    if (debugging) { eprintf("analizeAexpPrimApp "); printAexpUnaryApp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     analizeAexp(x->exp, env);
+    return env;
 }
 
-static void analizeAexpList(AexpList *x, CTEnv *env) {
+static CTEnv *analizeAexpList(AexpList *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpList "); printAexpList(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeAexpList "); printAexpList(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     while(x != NULL) {
         analizeAexp(x->exp, env);
         x = x->next;
     }
+    return env;
 }
 
-static void analizeCexpApply(CexpApply *x, CTEnv *env) {
+static CTEnv *analizeCexpApply(CexpApply *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpApply "); printCexpApply(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpApply "); printCexpApply(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
-    analizeAexp(x->function, env);
+    CTEnv *res = analizeAexp(x->function, env);
     analizeAexpList(x->args, env);
+    return res;
 }
 
-static void analizeCexpIf(CexpIf *x, CTEnv *env) {
+static CTEnv *analizeCexpIf(CexpIf *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpIf "); printCexpIf(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpIf "); printCexpIf(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     analizeAexp(x->condition, env);
     analizeExp(x->consequent, env);
     analizeExp(x->alternative, env);
+    return env;
 }
 
-static void analizeCexpCond(CexpCond *x, CTEnv *env) {
+static CTEnv *analizeCexpCond(CexpCond *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpCond "); printCexpCond(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpCond "); printCexpCond(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     analizeAexp(x->condition, env);
     analizeCexpCondCases(x->cases, env);
+    return env;
 }
 
-static void analizeCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
-    if (x == NULL) return;
+static CTEnv *getEnvFromEnv(HashSymbol *var, CTEnv *env) {
+    CTEntry *entry;
+    if (!lookUpInCTEnv(var, env, &entry)) {
+        cant_happen("cannot locate environment %s", var->name);
+    }
+    if (entry->env == NULL) {
+        cant_happen("%s is not an environment", var->name);
+    }
+#ifdef DEBUG_ANALIZE
+    if (debugging) { eprintf("getEnvFromEnv "); printHashSymbol(var); eprintf(" found "); printCTEntry(entry, 0); eprintf("\n"); }
+#endif
+    return entry->env;
+}
+
+static CTEnv *walkExtendsPath(AexpVarList *path, CTEnv *env) {
+    if (path == NULL) {
+        return env;
+    }
+    CTEnv *context = getEnvFromEnv(path->var, env);
+    return walkExtendsPath(path->next, context);
+}
+
+static CTEnv *analizeCexpEnv(CexpEnv *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    eprintf("analizeCexpEnv "); printCexpEnv(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n");
+#endif
+    CTEnv *context = walkExtendsPath(x->context, env);
+    return analizeExp(x->body, context);
+}
+
+static CTEnv *analizeCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
+    if (x == NULL) return env;
     analizeExp(x->body, env);
     analizeCexpIntCondCases(x->next, env);
+    return env;
 }
 
-static void analizeCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
-    if (x == NULL) return;
+static CTEnv *analizeCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
+    if (x == NULL) return env;
     analizeExp(x->body, env);
     analizeCexpCharCondCases(x->next, env);
+    return env;
 }
 
-static void analizeCexpCondCases(CexpCondCases *x, CTEnv *env) {
-    if (x == NULL) return;
+static CTEnv *analizeCexpCondCases(CexpCondCases *x, CTEnv *env) {
+    if (x == NULL) return env;
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpCondCases "); printCexpCondCases(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpCondCases "); printCexpCondCases(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     switch (x->type) {
         case CEXPCONDCASES_TYPE_INTCASES:
-            analizeCexpIntCondCases(x->val.intCases, env);
-            break;
+            return analizeCexpIntCondCases(x->val.intCases, env);
         case CEXPCONDCASES_TYPE_CHARCASES:
-            analizeCexpCharCondCases(x->val.charCases, env);
-            break;
+            return analizeCexpCharCondCases(x->val.charCases, env);
         default:
             cant_happen("unrecognised type %d in analizeCexpCondCases", x->type);
     }
 }
 
-static void analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
+static CTEnv *analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
             AexpLam *lam = x->val.lam;
@@ -178,19 +247,18 @@ static void analizeLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
         default:
             cant_happen("letrec bindings can only contain lambdas");
     }
+    return env;
 }
 
-static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env) {
+static CTEnv *analizeCexpLetRec(CexpLetRec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpLetRec "); printCexpLetRec(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpLetRec "); printCexpLetRec(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
+    env = makeCTEnv(true, env);
     int save = PROTECT(env);
-    env = newCTEnv(true, env);
-    UNPROTECT(save);
-    save = PROTECT(env);
     LetRecBindings *bindings = x->bindings;
     while (bindings != NULL) {
-        populateCTEnv(env, bindings->var);
+        populateCTEnv(env, bindings->var, NULL);
         bindings = bindings->next;
     }
     bindings = x->bindings;
@@ -200,156 +268,168 @@ static void analizeCexpLetRec(CexpLetRec *x, CTEnv *env) {
         bindings = bindings->next;
         letRecOffset++;
     }
-    analizeExp(x->body, env);
+    CTEnv *res = analizeExp(x->body, env);
     UNPROTECT(save);
+    return res;
 }
 
-static void analizeCexpAmb(CexpAmb *x, CTEnv *env) {
+static CTEnv *analizeCexpAmb(CexpAmb *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpAmb "); printCexpAmb(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpAmb "); printCexpAmb(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     analizeExp(x->exp1, env);
     analizeExp(x->exp2, env);
+    return env;
 }
 
-static void analizeCexpCut(CexpCut *x, CTEnv *env) {
+static CTEnv *analizeCexpCut(CexpCut *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpCut "); printCexpCut(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpCut "); printCexpCut(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
-    analizeExp(x->exp, env);
+    return analizeExp(x->exp, env);
 }
 
-static void analizeExpLet(ExpLet *x, CTEnv *env) {
+static bool expIsEnv(Exp *x) {
+    return x->type == EXP_TYPE_CEXP && x->val.cexp->type == CEXP_TYPE_ENV;
+}
+
+static CTEnv *analizeExpLet(ExpLet *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeExpLet "); printExpLet(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeExpLet "); printExpLet(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
-    analizeExp(x->val, env);
     int save = PROTECT(env);
-    env = newCTEnv(true, env);
-    UNPROTECT(save);
-    save = PROTECT(env);
-    populateCTEnv(env, x->var);
-    analizeExp(x->body, env);
-    UNPROTECT(save);
-}
-
-static void analizeAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexpMakeVec "); printAexpMakeVec(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (expIsEnv(x->val)) { debugging = true; eprintf(">>>>>>>>>>>>>>>>>>>>\n"); }
 #endif
-    analizeAexpList(x->args, env);
+    CTEnv *candidate = analizeExp(x->val, env);
+#ifdef DEBUG_ANALIZE
+    if (expIsEnv(x->val)) { debugging = false; eprintf("<<<<<<<<<<<<<<<<<<<<\n"); }
+#endif
+    PROTECT(candidate);
+#ifdef DEBUG_ANALIZE
+    if (expIsEnv(x->val)) { eprintf("candidate "); printHashSymbol(x->var); eprintf(" => "); printCTEnv(candidate, 0); eprintf("\n"); }
+#endif
+    env = makeCTEnv(true, env);
+    PROTECT(env);
+    populateCTEnv(env, x->var, expIsEnv(x->val) ? candidate : NULL);
+    CTEnv *res = analizeExp(x->body, env);
+    UNPROTECT(save);
+    return res;
 }
 
-static void analizeAexp(Aexp *x, CTEnv *env) {
+static CTEnv *analizeAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeAexp "); printAexp(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeAexpMakeVec "); printAexpMakeVec(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
+#endif
+    return analizeAexpList(x->args, env);
+}
+
+static CTEnv *analizeAexp(Aexp *x, CTEnv *env) {
+#ifdef DEBUG_ANALIZE
+    if (debugging) { eprintf("analizeAexp "); printAexp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     switch (x->type) {
         case AEXP_TYPE_LAM:
-            analizeAexpLam(x->val.lam, env);
-            break;
+            return analizeAexpLam(x->val.lam, env);
         case AEXP_TYPE_VAR:
             x->val.annotatedVar = analizeAexpVar(x->val.var, env);
             x->type = AEXP_TYPE_ANNOTATEDVAR;
-            break;
+            return env;
         case AEXP_TYPE_ANNOTATEDVAR:
             cant_happen("analizeAexp called on annotated var %s", x->val.annotatedVar->var->name);
-            break;
         case AEXP_TYPE_T:
         case AEXP_TYPE_F:
         case AEXP_TYPE_BIGINTEGER:
         case AEXP_TYPE_LITTLEINTEGER:
         case AEXP_TYPE_CHARACTER:
         case AEXP_TYPE_V:
-            break;
+            return env;
+        case AEXP_TYPE_GETENV:
+#ifdef DEBUG_ANALIZE
+    eprintf("analizeAexp "); printAexp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n");
+#endif
+            return env;
         case AEXP_TYPE_PRIM:
-            analizeAexpPrimApp(x->val.prim, env);
-            break;
+            return analizeAexpPrimApp(x->val.prim, env);
         case AEXP_TYPE_UNARY:
-            analizeAexpUnaryApp(x->val.unary, env);
-            break;
+            return analizeAexpUnaryApp(x->val.unary, env);
         case AEXP_TYPE_MAKEVEC:
-            analizeAexpMakeVec(x->val.makeVec, env);
-            break;
+            return analizeAexpMakeVec(x->val.makeVec, env);
         default:
             cant_happen("unrecognized type %d in analizeAexp", x->type);
     }
 }
 
-static void analizeMatchList(MatchList *x, CTEnv *env) {
+static CTEnv *analizeMatchList(MatchList *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeMatchList "); printMatchList(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeMatchList "); printMatchList(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
-    if (x == NULL) return;
+    if (x == NULL) return env;
     analizeExp(x->body, env);
-    analizeMatchList(x->next, env);
+    return analizeMatchList(x->next, env);
 }
 
-static void analizeCexpMatch(CexpMatch *x, CTEnv *env) {
+static CTEnv *analizeCexpMatch(CexpMatch *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexpMatch "); printCexpMatch(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexpMatch "); printCexpMatch(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     analizeAexp(x->condition, env);
-    analizeMatchList(x->clauses, env);
+    return analizeMatchList(x->clauses, env);
 }
 
-static void analizeCexp(Cexp *x, CTEnv *env) {
+static CTEnv *analizeCexp(Cexp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeCexp "); printCexp(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeCexp "); printCexp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
     switch (x->type) {
         case CEXP_TYPE_APPLY:
-            analizeCexpApply(x->val.apply, env);
-            break;
+            return analizeCexpApply(x->val.apply, env);
         case CEXP_TYPE_IFF:
-            analizeCexpIf(x->val.iff, env);
-            break;
+            return analizeCexpIf(x->val.iff, env);
         case CEXP_TYPE_COND:
-            analizeCexpCond(x->val.cond, env);
-            break;
+            return analizeCexpCond(x->val.cond, env);
         case CEXP_TYPE_CALLCC:
-            analizeAexp(x->val.callCC, env);
-            break;
+            return analizeAexp(x->val.callCC, env);
         case CEXP_TYPE_LETREC:
-            analizeCexpLetRec(x->val.letRec, env);
-            break;
+            return analizeCexpLetRec(x->val.letRec, env);
         case CEXP_TYPE_AMB:
-            analizeCexpAmb(x->val.amb, env);
-            break;
+            return analizeCexpAmb(x->val.amb, env);
         case CEXP_TYPE_CUT:
-            analizeCexpCut(x->val.cut, env);
-            break;
+            return analizeCexpCut(x->val.cut, env);
         case CEXP_TYPE_MATCH:
-            analizeCexpMatch(x->val.match, env);
-            break;
+            return analizeCexpMatch(x->val.match, env);
+        case CEXP_TYPE_ENV:
+            return analizeCexpEnv(x->val.env, env);
         case CEXP_TYPE_BACK:
         case CEXP_TYPE_ERROR:
-            break;
+            return env;
         default:
             cant_happen("unrecognized type %d in analizeCexp", x->type);
     }
 }
 
-void analizeExp(Exp *x, CTEnv *env) {
+CTEnv *analizeExp(Exp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
-    eprintf("analizeExp "); printExp(x); eprintf("  "); printCTEnv(env); eprintf("\n");
+    if (debugging) { eprintf("analizeExp "); printExp(x, 0); eprintf("  "); printCTEnv(env, 0); eprintf("\n"); }
 #endif
+    CTEnv *result = NULL;
     int save = -1;
     if (env == NULL) {
-        env = newCTEnv(false, NULL);
+        env = makeCTEnv(false, NULL);
         save = PROTECT(env);
     }
     switch (x->type) {
         case EXP_TYPE_AEXP:
-            analizeAexp(x->val.aexp, env);
+            result = analizeAexp(x->val.aexp, env);
             break;
         case EXP_TYPE_CEXP:
-            analizeCexp(x->val.cexp, env);
+            result = analizeCexp(x->val.cexp, env);
             break;
         case EXP_TYPE_LET:
-            analizeExpLet(x->val.let, env);
+            result = analizeExpLet(x->val.let, env);
             break;
         case EXP_TYPE_DONE:
+            result = env;
             break;
         default:
             cant_happen("unrecognized type in analizeExp");
@@ -357,38 +437,19 @@ void analizeExp(Exp *x, CTEnv *env) {
     if (save != -1) {
         UNPROTECT(save);
     }
+    return result;
 }
 
-static void printCTHashTableValue(void *intptr, int depth __attribute__((unused))) {
-    eprintf("%d", *((int *)intptr));
-}
-
-CTEnv *newCTEnv(bool isLocal, CTEnv *next) {
-    CTEnv *x = NEW(CTEnv, OBJTYPE_CTENV);
-    int save = PROTECT(x);
-    x->isLocal = isLocal;
-    x->next = next;
-    x->table = NULL;
-    x->table = newHashTable(sizeof(int), NULL, printCTHashTableValue);
-    validateLastAlloc();
+static CTEnv *makeCTEnv(bool isLocal, CTEnv *parent) {
+    HashTable *table = newCTHashTable();
+    int save = PROTECT(table);
+    CTEnv *env = newCTEnv(isLocal, table, parent);
     UNPROTECT(save);
-    return x;
+    return env;
 }
 
-void markCTEnv(Header *h) {
-    CTEnv *env = (CTEnv *) h;
-    if (env == NULL) return;
-    if (MARKED(env)) return;
-    MARK(env);
-    markHashTableObj((Header *)env->table);
-}
-
-void freeCTEnv(Header *h) {
-    reallocate((void *)h, sizeof(CTEnv), 0);
-}
-
-static void populateCTEnv(CTEnv *env, HashSymbol *var) {
-    hashAddCTVar(env->table, var);
+static void populateCTEnv(CTEnv *env, HashSymbol *var, CTEnv *context) {
+    hashAddCTVar(env->table, var, context);
 }
 
 static int calculateAdjustment(CTEnv *env) {
@@ -406,20 +467,32 @@ static int calculateAdjustment(CTEnv *env) {
     return adjustment;
 }
 
-static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
+static bool lookUpInCTEnv(HashSymbol *var, CTEnv *env, CTEntry **entry) {
 #ifdef DEBUG_ANALIZE
-    eprintf("locate ");
-    printAexpVar(var);
-    eprintf(" in ");
-    printCTEnv(env);
+    if (debugging) { eprintf("lookUpInCTEnv "); eprintf("%s\n", var->name); }
 #endif
+    while (env != NULL) {
+        if (hashGet(env->table, var, entry)) {
+            return true;
+        }
+        env = env->next;
+    }
+    return false;
+}
+
+static bool locate(HashSymbol *var, CTEnv *env, int *frame, CTEntry **entry) {
+#ifdef DEBUG_ANALIZE
+    if (debugging) { eprintf("locate "); eprintf("%s", var->name); eprintf(" in "); printCTEnv(env, 0); }
+#endif
+    CTEntry *localEntry = NULL;
     *frame = 0;
     while (env != NULL) {
-        if (hashGet(env->table, var, offset)) {
+        if (hashGet(env->table, var, &localEntry)) {
 #ifdef DEBUG_ANALIZE
-            eprintf(" -> [%d:%d]\n", *frame, *offset);
+            if (debugging) { eprintf(" -> [%d:%d]\n", *frame, localEntry->location); }
 #endif
-            *offset += calculateAdjustment(env);
+            *entry = newCTEntry(localEntry->location, localEntry->env);
+            (*entry)->location += calculateAdjustment(env);
             return true;
         }
         if (!env->isLocal) {
@@ -428,7 +501,7 @@ static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
         env = env->next;
     }
 #ifdef DEBUG_ANALIZE
-    eprintf(" FAILED!\n");
+    if (debugging) { eprintf(" FAILED!\n"); }
 #endif
     return false;
 }

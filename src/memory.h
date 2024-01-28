@@ -28,13 +28,13 @@ struct Header;
 #include "lambda_objtypes.h"
 #include "tpmc_objtypes.h"
 #include "tc_objtypes.h"
+#include "cte_objtypes.h"
 
 typedef enum {
 
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,
-    OBJTYPE_CTENV,
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
 
@@ -53,6 +53,7 @@ typedef enum {
     LAMBDA_OBJTYPES(),
     TPMC_OBJTYPES(),
     TC_OBJTYPES(),
+    CTE_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

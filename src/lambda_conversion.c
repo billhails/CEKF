@@ -137,6 +137,43 @@ static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     return result;
 }
 
+static LamTypeArgs *lamConvertPackage(AstPackage *package) {
+    if (package == NULL) return NULL;
+    LamTypeArgs *next = lamConvertPackage(package->next);
+    int save = PROTECT(next);
+    LamTypeArgs *this = newLamTypeArgs(package->symbol, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamExp *lamConvertDefinitions(AstDefinitions *definitions, LamContext *context) {
+    ENTER(lamConvertDefinitions);
+    AstExpression *getEnv = newAstExpression(AST_EXPRESSION_TYPE_GETENV, AST_EXPRESSION_VAL_GETENV());
+    int save = PROTECT(getEnv);
+    AstExpressions *body = newAstExpressions(getEnv, NULL);
+    PROTECT(body);
+    AstNest *tmp = newAstNest(definitions, body);
+    PROTECT(tmp);
+    LamExp *result = lamConvertNest(tmp, context);
+    UNPROTECT(save);
+    LEAVE(lamConvertDefinitions);
+    return result;
+}
+
+static LamExp *lamConvertEnv(AstEnv *astEnv, LamContext *context) {
+    ENTER(lamConvertEnv);
+    LamTypeArgs *base = lamConvertPackage(astEnv->package);
+    int save = PROTECT(base);
+    LamExp *bindings = lamConvertDefinitions(astEnv->definitions, context);
+    PROTECT(bindings);
+    LamEnv *lamEnv = newLamEnv(bindings, base);
+    PROTECT(lamEnv);
+    LamExp *result = newLamExp(LAMEXP_TYPE_ENV, LAMEXP_VAL_ENV(lamEnv));
+    UNPROTECT(save);
+    LEAVE(lamConvertEnv);
+    return result;
+}
+
 static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     ENTER(lamConvertPrint);
     LamExp *exp = convertExpression(print->exp, context);
@@ -855,6 +892,7 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     if (symbol == modSymbol()) return makeBinOp(LAMPRIMOP_TYPE_MOD, args);
     if (symbol == powSymbol()) return makeBinOp(LAMPRIMOP_TYPE_POW, args);
     if (symbol == cmpSymbol()) return makeBinOp(LAMPRIMOP_TYPE_CMP, args);
+    if (symbol == dotSymbol()) return makeBinOp(LAMPRIMOP_TYPE_DOT, args);
     return NULL;
 }
 
@@ -959,12 +997,29 @@ static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
     }
 }
 
+static LamExp *newGetEnvLambda() {
+    LamExp *body = newLamExp(LAMEXP_TYPE_GETENV, LAMEXP_VAL_GETENV());
+    int save = PROTECT(body);
+    LamLam *lam = newLamLam(0, NULL, body);
+    REPLACE_PROTECT(save, lam);
+    LamExp *lambda = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam));
+    REPLACE_PROTECT(save, lambda);
+    LamApply *apply = newLamApply(lambda, 0, NULL);
+    REPLACE_PROTECT(save, apply);
+    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return result;
+}
+
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression);
     LamExp *result = NULL;
     switch (expression->type) {
         case AST_EXPRESSION_TYPE_BACK:
             result = newLamExp(LAMEXP_TYPE_BACK, LAMEXP_VAL_BACK());
+            break;
+        case AST_EXPRESSION_TYPE_GETENV:
+            result = newGetEnvLambda();
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             result = convertFunCall(expression->val.funCall, env);
@@ -986,6 +1041,9 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_IFF:
             result = lamConvertIff(expression->val.iff, env);
+            break;
+        case AST_EXPRESSION_TYPE_ENV:
+            result = lamConvertEnv(expression->val.env, env);
             break;
         case AST_EXPRESSION_TYPE_PRINT:
             result = lamConvertPrint(expression->val.print, env);
