@@ -236,7 +236,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %nonassoc NEG
 %nonassoc HERE
 %left '('
-%left '.'
+%right '.'
 
 %start top
 

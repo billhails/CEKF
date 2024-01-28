@@ -104,7 +104,7 @@ static AexpAnnotatedVar *analizeAexpVar(HashSymbol *x, CTEnv *env) {
 
 static HashSymbol *getDotLhs(Aexp *aexp) {
     if (aexp->type != AEXP_TYPE_ANNOTATEDVAR) {
-        cant_happen("lhs of dot operator must be an env");
+        cant_happen("lhs of dot operator must be an env, got type %d", aexp->type);
     }
     return aexp->val.annotatedVar->var;
 }
