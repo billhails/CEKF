@@ -28,10 +28,12 @@
 
 static bool errors = false;
 
+#define __OUT__ stderr
+
 void cant_happen(const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(stderr, message, args);
+    vfprintf(__OUT__, message, args);
     va_end(args);
     eprintf("\n");
 #ifdef DEBUG_DUMP_CORE
@@ -44,10 +46,17 @@ void cant_happen(const char *message, ...) {
 void can_happen(const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(stderr, message, args);
+    vfprintf(__OUT__, message, args);
     va_end(args);
     eprintf("\n");
     errors = true;
+}
+
+void eprintf(const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(__OUT__, message, args);
+    va_end(args);
 }
 
 bool hadErrors() {

@@ -110,8 +110,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     PROTECT(res);
-    ppTcType(res);
-    eprintf("\n");
     // normalization: LamExp => ANF
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);

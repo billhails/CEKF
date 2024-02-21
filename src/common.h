@@ -45,9 +45,12 @@
 #define DEBUG_DUMP_CORE
 // #define DEBUG_TC
 // #define DEBUG_LAMBDA_CONVERT
+// #define DEBUG_LAMBDA_SUBSTITUTE
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
 // #define DEBUG_ALLOC
+// #define DEBUG_PRINT_GENERATOR
+// #define DEBUG_PRINT_COMPILER
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
 #define SAFETY_CHECKS
 
@@ -56,8 +59,8 @@
 #endif
 void cant_happen(const char *message, ...) __attribute__((noreturn, format(printf, 1, 2)));
 void can_happen(const char *message, ...) __attribute__((format(printf, 1, 2)));
+void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
-#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 #define PAD_WIDTH 2
 

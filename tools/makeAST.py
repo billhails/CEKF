@@ -166,7 +166,7 @@ class Catalog:
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
         print('        default:')
-        print(f'            cant_happen("unrecognised type %d in typename{self.typeName.capitalize()}Obj\\n", type);')
+        print(f'            return "???"; // no error, can be used during error reporting')
         print('    }')
         print('}')
 
@@ -305,8 +305,9 @@ class EnumField:
         self.owner = owner
         self.name = name
 
-    def printEnumTypedefLine(self):
-        print("    {field},".format(field=self.makeTypeName()))
+    def printEnumTypedefLine(self, count):
+        field = self.makeTypeName()
+        print(f"    {field}, // {count}");
 
     def makeTypeName(self):
         v = self.owner + '_type_' + self.name
@@ -883,7 +884,10 @@ class SimpleStruct(Base):
         for field in self.getNewArgs():
             print("    x->{f} = {f};".format(f=field.getFieldName()))
         for field in self.getDefaultArgs():
-            print("    x->{f} = {d};".format(f=field.getFieldName(), d=field.default))
+            f = field.getFieldName()
+            d = field.default
+            print(f"    bzero(&(x->{f}), sizeof(x->{f}));")
+            print(f"    x->{f} = {d};")
         print("    return x;")
         print("}\n")
 
@@ -1217,8 +1221,10 @@ class SimpleEnum(Base):
 
     def printTypedef(self, catalog):
         print("typedef enum {name} {{".format(name=self.getName()))
+        count = 0
         for  field in self.fields:
-            field.printEnumTypedefLine()
+            field.printEnumTypedefLine(count)
+            count += 1
         print("}} {name};\n".format(name=self.getName()))
 
     def isEnum(self):
@@ -1266,8 +1272,10 @@ class DiscriminatedUnionEnum(Base):
 
     def printTypedef(self, catalog):
         print("typedef enum {name} {{".format(name=self.getName()))
+        count = 0
         for  field in self.fields:
-            field.printEnumTypedefLine()
+            field.printEnumTypedefLine(count)
+            count += 1
         print("}} {name};\n".format(name=self.getName()))
 
     def getSignature(self, catalog):

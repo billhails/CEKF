@@ -28,7 +28,7 @@
 #include "ast_helper.h"
 #include "symbol.h"
 #include "memory.h"
-#include "lambda_conversion.h"
+#include "lambda_substitution.h"
 #include "lambda_pp.h"
 #ifdef DEBUG_TPMC_LOGIC
 #include "debugging_on.h"

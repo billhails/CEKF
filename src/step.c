@@ -30,7 +30,6 @@
 #include "cekf.h"
 #include "step.h"
 #include "hash.h"
-#include "print.h"
 
 #ifdef DEBUG_STEP
 #define DEBUGPRINTF(...) printf(__VA_ARGS__)
@@ -45,6 +44,7 @@
 static void step();
 static Value lookup(int frame, int offset);
 static int protectValue(Value v);
+void putValue(Value x);
 
 static CEKF state;
 
@@ -998,4 +998,54 @@ static void step() {
 #endif
 #endif
     }
+}
+static void putVec(Vec *x);
+
+void putValue(Value x) {
+    switch (x.type) {
+        case VALUE_TYPE_VOID:
+            printf("<void>");
+            break;
+        case VALUE_TYPE_STDINT:
+            printf("%d", x.val.z);
+            break;
+        case VALUE_TYPE_BIGINT:
+            fprintBigInt(stdout, x.val.b);
+            break;
+        case VALUE_TYPE_CHARACTER:
+            switch (x.val.c) {
+                case '\t':
+                    printf("'\\t'");
+                    break;
+                case '\n':
+                    printf("'\\n'");
+                    break;
+                default:
+                    printf("'%c'", x.val.c);
+                    break;
+            }
+            break;
+        case VALUE_TYPE_CLO:
+            printf("<closure>");
+            break;
+        case VALUE_TYPE_CONT:
+            printf("<continuation>");
+            break;
+        case VALUE_TYPE_VEC:
+            putVec(x.val.vec);
+            break;
+        default:
+            cant_happen("unrecognised value type in putValue");
+    }
+}
+
+static void putVec(Vec *x) {
+    printf("#[");
+    for (int i = 0; i < x->size; i++) {
+        putValue(x->values[i]);
+        if (i + 1 < x->size) {
+            printf(" ");
+        }
+    }
+    printf("]");
 }

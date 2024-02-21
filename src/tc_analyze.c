@@ -25,7 +25,7 @@
 #include "hash.h"
 #include "tc_debug.h"
 #include "tc_helper.h"
-#include "print.h"
+#include "print_compiler.h"
 #include "lambda_pp.h"
 
 #ifdef DEBUG_TC

@@ -1,5 +1,5 @@
-#ifndef cekf_print_h
-#define cekf_print_h
+#ifndef cekf_lambda_substitution_h
+#define cekf_lambda_substitution_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,14 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "ast.h"
 #include "lambda.h"
-#include "value.h"
-#include "tc.h"
 
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest, LamContext *env, bool inPreamble);
-
-void putValue(Value v);
-
-LamExp *compilePrinterForType(TcType *type, TcEnv *env);
-
- #endif
+LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
+#endif
