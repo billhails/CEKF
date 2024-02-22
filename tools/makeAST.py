@@ -197,6 +197,9 @@ class Base:
         self.bespokeCmpImplementation = False
         self.extraCmpArgs = {}
 
+    def isSelfInitializing(self):
+        return False
+
     def noteExtraCmpArgs(self, args):
         self.extraCmpArgs = args
 
@@ -305,6 +308,9 @@ class EnumField:
         self.owner = owner
         self.name = name
 
+    def isSelfInitializing(self, catalog):
+        return False
+
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
         print(f"    {field}, // {count}");
@@ -349,6 +355,18 @@ class SimpleField:
             self.typeName = typeName
             self.default = None
 
+    def isSelfInitializing(self, catalog):
+        obj = catalog.get(self.typeName)
+        return obj.isSelfInitializing()
+
+    def getConstructorName(self, catalog):
+        obj = catalog.get(self.typeName)
+        return obj.getConstructorName()
+
+    def printPrintDeclaration(self, catalog):
+        obj = catalog.get(self.typeName)
+        obj.printPrintDeclaration(catalog)
+
     def getTypeDeclaration(self, catalog):
         obj = catalog.get(self.typeName)
         return obj.getTypeDeclaration()
@@ -373,6 +391,14 @@ class SimpleField:
     def printMarkArrayLine(self, catalog, key, depth):
         obj = catalog.get(self.typeName)
         obj.printMarkField(f"{self.name}[{key}]", depth)
+
+    def printMarkHashLine(self, catalog, depth):
+        obj = catalog.get(self.typeName)
+        obj.printMarkHashField(depth)
+
+    def printPrintHashLine(self, catalog, depth):
+        obj = catalog.get(self.typeName)
+        obj.printPrintHashField(depth)
 
     def printCompareLine(self, catalog, depth):
         obj = catalog.get(self.typeName)
@@ -405,6 +431,87 @@ class SimpleField:
         print("    {decl};".format(decl=self.getArraySignature(catalog)))
 
 
+class SimpleHash(Base):
+    """
+    Hash tables
+    """
+    def __init__(self, name, data):
+        super().__init__(name)
+        if "entries" in data:
+            self.entries = SimpleField(self.name, "entries", data["entries"])
+        else:
+            self.entries = None
+    
+    def isSelfInitializing(self):
+        return True # other constructors will call this automatically
+
+    def getConstructorName(self):
+        myName = self.getName()
+        return f"new{myName}"
+
+    def getTypeDeclaration(self):
+        return "struct HashTable *"
+
+    def printNewDeclaration(self, catalog):
+        decl=self.getNewSignature()
+        print(f"{decl};")
+
+    def getNewSignature(self):
+        myType = self.getTypeDeclaration()
+        myConstructor = self.getConstructorName()
+        return f"{myType}{myConstructor}()"
+
+    def printCopyField(self, field, depth, prefix=''):
+        myConstructor = self.getConstructorName()
+        print(f'    x->{prefix}{field} = {myConstructor}();')
+        print(f'    copyHashTable(x->{prefix}{field}, o->{prefix}{field});')
+
+    def printPrintHashField(self, depth):
+        pad(depth)
+        print(f'printHashTable(*(HashTable **)ptr, depth + 1); // SimpleHash')
+
+    def printPrintField(self, field, depth, prefix=''):
+        pad(depth)
+        print(f'printHashTable(x->{prefix}{field}, depth + 1); // SimpleHash')
+
+    def printCompareField(self, field, depth, prefix=''):
+        pad(depth)
+        print("return false;")
+
+    def printNewFunction(self, catalog):
+        decl = self.getNewSignature()
+        myName = self.getName()
+        if self.entries is None:
+            size = '0'
+            markFn = 'NULL'
+            printFn = 'NULL'
+        else:
+            size = f'sizeof({self.entries.getTypeDeclaration(catalog)})'
+            markFn = f'mark{myName}'
+            printFn = f'print{myName}'
+            print(f'static void mark{myName}(void *ptr) {{ // SimpleHash.printNewFunction')
+            self.entries.printMarkHashLine(catalog, 1)
+            print('} // SimpleHash.printNewFunction')
+            print('')
+            self.entries.printPrintDeclaration(catalog)
+            print('')
+            print(f'static void print{myName}(void *ptr, int depth) {{ // SimpleHash.printNewFunction')
+            self.entries.printPrintHashLine(catalog, 1);
+            print('}')
+            print('')
+        print(f'{decl} {{ // SimpleHash.printNewFunction')
+        print('    return newHashTable( // SimpleHash.printNewFunction')
+        print(f'        {size}, // SimpleHash.printNewFunction')
+        print(f'        {markFn}, // SimpleHash.printNewFunction')
+        print(f'        {printFn} // SimpleHash.printNewFunction')
+        print('    ); // SimpleHash.printNewFunction')
+        print('}')
+        print('')
+
+    def printMarkField(self, field, depth, prefix=''):
+        pad(depth)
+        print("markHashTable(x->{prefix}{field});".format(field=field, prefix=prefix))
+
 class SimpleArray(Base):
     """
     Array structures declared in the yaml
@@ -434,12 +541,17 @@ class SimpleArray(Base):
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field});')
+        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleArray')
+
+    def printPrintHashField(self, depth):
+        pad(depth)
+        myName=self.getName()
+        print(f'print{myName}(*({myName} **)ptr, depth + 1); // SimpleArray')
 
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(x->{prefix}{field}, depth+1);')
+        print(f'print{myName}(x->{prefix}{field}, depth+1); // SimpleArray')
 
     def printAccessDeclarations(self, catalog):
         if self.dimension == 2:
@@ -500,7 +612,7 @@ class SimpleArray(Base):
     def objTypeArray(self):
         return [ self.getObjType() ]
 
-    def getNewArgs(self):
+    def getNewArgs(self, catalog):
         if self.tagged:
             return [self.tagField] + self._getNewArgs()
         else:
@@ -514,7 +626,7 @@ class SimpleArray(Base):
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration()
         args = []
-        for field in self.getNewArgs():
+        for field in self.getNewArgs(catalog):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
@@ -760,13 +872,18 @@ class SimpleArray(Base):
         pad(3)
         print('return "{name}";'.format(name=self.getName()))
 
+    def printMarkHashField(self, depth):
+        myName = self.getName()
+        pad(depth)
+        print(f'mark{myName}(*({myName} **)ptr); // SimpleArray')
+
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
         print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
 
-
     def isArray(self):
         return True
+
 
 class SimpleStruct(Base):
     """
@@ -836,16 +953,16 @@ class SimpleStruct(Base):
         extraCmpArgs = self.getExtraCmpFargs(catalog)
         return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
 
-    def getNewArgs(self):
-        return [x for x in self.fields if x.default is None]
+    def getNewArgs(self, catalog):
+        return [x for x in self.fields if x.default is None and not x.isSelfInitializing(catalog)]
 
-    def getDefaultArgs(self):
-        return [x for x in self.fields if x.default is not None]
+    def getDefaultArgs(self, catalog):
+        return [x for x in self.fields if x.default is not None or x.isSelfInitializing(catalog)]
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration()
         args = []
-        for field in self.getNewArgs():
+        for field in self.getNewArgs(catalog):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
@@ -875,21 +992,27 @@ class SimpleStruct(Base):
         print("{decl};".format(decl=self.getCompareSignature(catalog)))
 
     def printNewFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getNewSignature(catalog)))
+        print("{decl} {{ // SimpleStruct.printNewFunction".format(decl=self.getNewSignature(catalog)))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print("    {myType} x = NEW({myName}, {myObjType});".format(myType=myType, myName=myName, myObjType=myObjType))
-        print(f'    DEBUG("new {myName} %pn", x);')
-        for field in self.getNewArgs():
-            print("    x->{f} = {f};".format(f=field.getFieldName()))
-        for field in self.getDefaultArgs():
+        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printNewFunction")
+        print("    int save = PROTECT(x);")
+        print(f'    DEBUG("new {myName} %pn", x); // SimpleStruct.printNewFunction')
+        for field in self.getNewArgs(catalog):
+            print("    x->{f} = {f}; // SimpleStruct.printNewFunction".format(f=field.getFieldName()))
+        for field in self.getDefaultArgs(catalog):
             f = field.getFieldName()
-            d = field.default
-            print(f"    bzero(&(x->{f}), sizeof(x->{f}));")
-            print(f"    x->{f} = {d};")
-        print("    return x;")
-        print("}\n")
+            if field.isSelfInitializing(catalog) and field.default is None:
+                d = f'{field.getConstructorName(catalog)}()'
+            else:
+                d = field.default
+            print(f"    bzero(&(x->{f}), sizeof(x->{f})); // SimpleStruct.printNewFunction")
+            print(f"    x->{f} = {d}; // SimpleStruct.printNewFunction")
+        print("    UNPROTECT(save);")
+        print("    return x; // SimpleStruct.printNewFunction")
+        print("} // SimpleStruct.printNewFunction")
+        print("")
 
     def printMarkFunctionBody(self, catalog):
         for field in self.fields:
@@ -906,30 +1029,40 @@ class SimpleStruct(Base):
     def printPrintFunctionBody(self, catalog):
         for field in self.fields:
             field.printPrintLine(catalog, 1)
-            print('    eprintf("\\n");')
+            print('    eprintf("\\n"); // SimpleStruct')
+
+    def printMarkHashField(self, depth):
+        myName = self.getName()
+        pad(depth)
+        print(f'mark{myName}(*({myName} **)ptr); // SimpleStruct')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
-        print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
+        print("mark{myName}(x->{prefix}{field}); // SimpleStruct".format(field=field, myName=self.getName(), prefix=prefix))
 
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
         extraArgs = self.getExtraCmpAargs({})
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false;")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false; // SimpleStruct")
+
+    def printPrintHashField(self, depth):
+        myName=self.getName()
+        pad(depth)
+        print(f'print{myName}(*({myName} **)ptr, depth + 1); // SimpleStruct.printPrintHashField')
 
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(x->{prefix}{field}, depth + 1);')
+        print(f'print{myName}(x->{prefix}{field}, depth + 1); // SimpleStruct')
 
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field});')
+        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleStruct')
 
     def printMarkFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getMarkSignature(catalog)))
+        print("{decl} {{ // SimpleStruct".format(decl=self.getMarkSignature(catalog)))
         print("    if (x == NULL) return;")
         print("    if (MARKED(x)) return;")
         print("    MARK(x);")
@@ -937,13 +1070,13 @@ class SimpleStruct(Base):
         print("}\n")
 
     def printFreeFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getFreeSignature(catalog)))
+        print("{decl} {{ // SimpleStruct".format(decl=self.getFreeSignature(catalog)))
         print(f"    FREE(x, {self.getName()});")
         print("}\n")
 
     def printMarkObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleStruct')
         pad(3)
         print('mark{name}(({name} *)h);'.format(name=self.getName()))
         pad(3)
@@ -1131,7 +1264,7 @@ class DiscriminatedUnion(SimpleStruct):
         print("    {union} {field};".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
         print("}} {name};\n".format(name=self.getName()))
 
-    def getNewArgs(self):
+    def getNewArgs(self, catalog):
         return [self.enum, self.union]
 
     def getUnion(self):
@@ -1238,6 +1371,17 @@ class SimpleEnum(Base):
         pad(depth)
         print('}')
 
+    def printPrintHashField(self, depth):
+        myName = self.getName()
+        pad(depth)
+        print(f'{MyName} *_{myName} = *({myName} **)ptr; // SimpleEnum.printPrintHashField')
+        pad(depth)
+        print(f'switch (_{myName}->type) {{ // SimpleEnum.printPrintHashField')
+        for field in self.fields:
+            field.printPrintCase(depth + 1)
+        pad(depth)
+        print('}')
+
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
         print('switch (x->type) {')
@@ -1318,10 +1462,15 @@ class Primitive(Base):
             self.printMarkField(self.name, 3, 'val.')
             print("            break;")
 
+    def printMarkHashField(self, depth):
+        if self.markFn is not None:
+            pad(depth)
+            print(f'{self.markFn}(*({self.cname}*)ptr); // Primitive')
+
     def printMarkField(self, field, depth, prefix=''):
         if self.markFn is not None:
             pad(depth)
-            print("{markFn}(x->{prefix}{field});".format(field=field, markFn=self.markFn, prefix=prefix))
+            print("{markFn}(x->{prefix}{field}); // Primitive".format(field=field, markFn=self.markFn, prefix=prefix))
 
     def getTypeDeclaration(self):
         return self.cname
@@ -1332,6 +1481,14 @@ class Primitive(Base):
             print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false;")
         else:
             print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+
+    def printPrintHashField(self, depth):
+        pad(depth)
+        if self.printFn == 'printf':
+            print(f'eprintf("{self.cname} {self.printf}", *({self.cname} *)ptr); // Primitive.printPrintHashField')
+        else:
+            print(f'{self.printFn}(*({self.cname} *)ptr, depth + 1); // Primitive.printPrintHashField')
+
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
@@ -1413,6 +1570,10 @@ else:
 
 catalog = Catalog(typeName)
 
+if "hashes" in document:
+    for name in document["hashes"]:
+        catalog.add(SimpleHash(name, document["hashes"][name]))
+
 if "structs" in document:
     for name in document["structs"]:
         catalog.add(SimpleStruct(name, document["structs"][name]))
@@ -1468,7 +1629,7 @@ if args.type == "h":
         print(f'#include "{include}"')
     printSection("typedefs")
     catalog.printTypedefs()
-    printSection("constructor declaration")
+    printSection("constructor declarations")
     catalog.printNewDeclarations()
     printSection("copy declarations")
     catalog.printCopyDeclarations()

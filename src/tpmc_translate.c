@@ -669,7 +669,7 @@ static LamExp *prependLetRec(HashTable *lambdaCache, LamExp *body) {
 
 LamExp *tpmcTranslate(TpmcState *dfa) {
     ENTER(tpmcTranslate);
-    HashTable *lambdaCache = newHashTable(sizeof(LamExp *), markLamExpFn, printLamExpFn);
+    HashTable *lambdaCache = newLamExpTable();
     int save = PROTECT(lambdaCache);
     recalculateRefCounts(dfa);
     if (dfa->state->type == TPMCSTATEVALUE_TYPE_FINAL) {

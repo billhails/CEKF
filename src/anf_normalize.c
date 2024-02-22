@@ -718,7 +718,7 @@ static AexpVarList *convertVarList(LamVarList *args) {
 }
 
 static HashTable *makeLamExpHashTable() {
-    return newHashTable(sizeof(LamExp *), markLamExpFn, printLamExpFn);
+    return newLamExpTable();
 }
 
 static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {

@@ -97,8 +97,6 @@ static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
-static void markType(void *ptr);
-static void printType(void *ptr, int depth);
 
 static int id_counter = 0;
 
@@ -800,7 +798,7 @@ static void collectTypeDefConstructor(LamTypeConstructor *constructor, TcType *t
 }
 
 static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
-    HashTable *map = newHashTable(sizeof(TcType *), markType, printType);
+    HashTable *map = newTcTypeTable();
     int save = PROTECT(map);
     LamType *lamType = lamTypeDef->type;
     TcType *tcType = makeTcTypeDefType(lamType, map);
@@ -1113,15 +1111,6 @@ static TcType *analyzeError() {
     return res;
 }
 
-static void markType(void *ptr) {
-    markTcType(*((TcType **) ptr));
-}
-
-static void printType(void *ptr, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    ppTcType(*((TcType **) ptr));
-}
-
 static void addToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
     DEBUG("addToEnv %s =>", symbol->name);
     IFDEBUG(ppTcType(type));
@@ -1136,10 +1125,6 @@ bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
         return true;
     }
     return getFromTcEnv(env->next, symbol, type);
-}
-
-static HashTable *makeTypeMap() {
-    return newHashTable(sizeof(TcType *), markType, printType);
 }
 
 static TcType *freshFunction(TcFunction *fn, TcNg *ng, HashTable *map) {
@@ -1261,7 +1246,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map) {
 static TcType *fresh(TcType *type, TcNg *ng) {
     ENTER(fresh);
     IFDEBUG(ppTcType(type));
-    HashTable *map = makeTypeMap();
+    HashTable *map = newTcTypeTable();
     int save = PROTECT(map);
     TcType *res = freshRec(type, ng, map);
     UNPROTECT(save);
@@ -1312,20 +1297,12 @@ static TcType *makeFn(TcType *arg, TcType *result) {
 }
 
 static TcEnv *extendEnv(TcEnv *parent) {
-    HashTable *table = newHashTable(sizeof(TcType *), markType, printType);
-    int save = PROTECT(table);
-    table->shortEntries = true;
-    TcEnv *env = newTcEnv(table, parent);
-    UNPROTECT(save);
+    TcEnv *env = newTcEnv(parent);
     return env;
 }
 
 static TcNg *extendNg(TcNg *parent) {
-    HashTable *table = newHashTable(sizeof(TcType *), markType, printType);
-    int save = PROTECT(table);
-    table->shortEntries = true;
-    TcNg *ng = newTcNg(table, parent);
-    UNPROTECT(save);
+    TcNg *ng = newTcNg(parent);
     return ng;
 }
 

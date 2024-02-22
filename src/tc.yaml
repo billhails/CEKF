@@ -29,11 +29,11 @@ cmp:
 
 structs:
     TcEnv:
-        table: HashTable
+        table: TcTypeTable
         next: TcEnv
 
     TcNg:
-        table: HashTable
+        table: TcTypeTable
         next: TcNg
 
     TcFunction:
@@ -57,6 +57,10 @@ structs:
         id: int
         instance: TcType=NULL
 
+hashes:
+    TcTypeTable:
+        entries: TcType
+
 unions:
     TcType:
         function: TcFunction
@@ -67,17 +71,10 @@ unions:
         character: void_ptr
         typeDef: TcTypeDef
 
-enums: {}
-
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
         printFn: printAstSymbol
-        valued: true
-    HashTable:
-        cname: "HashTable *"
-        printFn: printHashTable
-        markFn: markHashTable
         valued: true
     int:
         cname: int

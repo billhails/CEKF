@@ -24,7 +24,6 @@
 #include "bytecode.h"
 
 void printCEKF(CEKF *x);
-void printCTEnv(CTEnv *x);
 
 void printContainedValue(Value x, int depth);
 void printValue(Value x, int depth);

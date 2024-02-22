@@ -75,8 +75,6 @@ const char *typeName(ObjType type, void *p) {
             return "clo";
         case OBJTYPE_ENV:
             return "env";
-        case OBJTYPE_CTENV:
-            return "ctenv";
         case OBJTYPE_FAIL:
             return "fail";
         case OBJTYPE_KONT:
@@ -277,9 +275,6 @@ void markObj(Header *h, int i) {
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;
-        case OBJTYPE_CTENV:
-            markCTEnv(h);
-            break;
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
@@ -331,9 +326,6 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_BIGINT:
             freeBigInt((BigInt *)h);
-            break;
-        case OBJTYPE_CTENV:
-            freeCTEnv(h);
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);

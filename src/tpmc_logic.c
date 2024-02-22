@@ -189,7 +189,7 @@ static TpmcState *makeErrorState() {
     int save = PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
-    state->freeVariables = newHashTable(0, NULL, NULL);
+    state->freeVariables = newTpmcVariableTable();
     UNPROTECT(save);
     return state;
 }
@@ -299,14 +299,6 @@ static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern, HashTable *s
     return pattern;
 }
 
-static void printHashTablePattern(void *p, int d) {
-    printTpmcPattern((TpmcPattern *)p, d);
-}
-
-static void printHashTableSymbol(void *p, int d) {
-    printAstSymbol((HashSymbol *)p, d);
-}
-
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *seen) {
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
@@ -327,7 +319,7 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *se
 }
 
 static void replaceComparisonRule(TpmcMatchRule *rule) {
-    HashTable *seen = newHashTable(sizeof(TpmcPattern *), NULL, printHashTablePattern);
+    HashTable *seen = newTpmcPatternTable();
     int save = PROTECT(seen);
     for (int i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] = replaceComparisonPattern(rule->patterns->entries[i], seen);
@@ -382,7 +374,7 @@ static void populateFreeVariables(TpmcState *state, HashTable *substitutions) {
     if (state->state->type != TPMCSTATEVALUE_TYPE_FINAL) {
         cant_happen("attempt to call populateFreeCariables on non-final state");
     }
-    state->freeVariables = newHashTable(0, NULL, NULL);
+    state->freeVariables = newTpmcVariableTable();
     int i = 0;
     HashSymbol *path = NULL;
     HashSymbol *key;
@@ -411,7 +403,7 @@ static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable 
 }
 
 static void performRuleSubstitutions(TpmcMatchRule *rule) {
-    HashTable *substitutions = newHashTable(sizeof(HashSymbol *), NULL, printHashTableSymbol);
+    HashTable *substitutions = newTpmcSubstitutionTable();
     int save = PROTECT(substitutions);
     for (int i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] = collectPatternSubstitutions(rule->patterns->entries[i], substitutions);

@@ -359,34 +359,6 @@ void analizeExp(Exp *x, CTEnv *env) {
     }
 }
 
-static void printCTHashTableValue(void *intptr, int depth __attribute__((unused))) {
-    eprintf("%d", *((int *)intptr));
-}
-
-CTEnv *newCTEnv(bool isLocal, CTEnv *next) {
-    CTEnv *x = NEW(CTEnv, OBJTYPE_CTENV);
-    int save = PROTECT(x);
-    x->isLocal = isLocal;
-    x->next = next;
-    x->table = NULL;
-    x->table = newHashTable(sizeof(int), NULL, printCTHashTableValue);
-    validateLastAlloc();
-    UNPROTECT(save);
-    return x;
-}
-
-void markCTEnv(Header *h) {
-    CTEnv *env = (CTEnv *) h;
-    if (env == NULL) return;
-    if (MARKED(env)) return;
-    MARK(env);
-    markHashTableObj((Header *)env->table);
-}
-
-void freeCTEnv(Header *h) {
-    reallocate((void *)h, sizeof(CTEnv), 0);
-}
-
 static void populateCTEnv(CTEnv *env, HashSymbol *var) {
     hashAddCTVar(env->table, var);
 }

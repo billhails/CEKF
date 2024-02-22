@@ -36,25 +36,6 @@ void printLamExpFn(void *ptr, int depth) {
     ppLamExpD(*((LamExp **) ptr), depth);
 }
 
-static void printLamContextFn(void *ptr, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    printLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr, depth);
-}
-
-static void markLamContextFn(void *ptr) {
-    markLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr);
-}
-
-static HashTable *newLamContextTable() {
-    HashTable *h = newHashTable(
-        sizeof(LamTypeConstructorInfo *),
-        markLamContextFn,
-        printLamContextFn
-    );
-    h->shortEntries = false;
-    return h;
-}
-
 void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info) {
     hashSet(context->frame, symbol, &info);
 }
@@ -69,9 +50,5 @@ LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var)
 }
 
 LamContext *extendLamContext(LamContext *parent) {
-    HashTable *frame = newLamContextTable();
-    int save = PROTECT(frame);
-    LamContext *context = newLamContext(frame, parent);
-    UNPROTECT(save);
-    return context;
+    return newLamContext(parent);
 }

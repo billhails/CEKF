@@ -269,16 +269,6 @@ void printEnv(Env *x, int depth) {
     eprintf("]");
 }
 
-void printCTEnv(CTEnv *x) {
-    eprintf("CTEnv[");
-    while (x != NULL) {
-        printHashTable(x->table, 0);
-        if (x->next != NULL) eprintf(", ");
-        x = x->next;
-    }
-    eprintf("]");
-}
-
 void printElidedEnv(Env *x) {
     if (x == NULL) {
         eprintf("E/");

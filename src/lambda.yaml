@@ -124,7 +124,7 @@ structs:
         next: LamLetRecBindings
 
     LamContext:
-        frame: HashTable
+        frame: LamInfoTable
         parent: LamContext
 
     LamAnd:
@@ -257,16 +257,18 @@ unions:
         var: HashSymbol
         function: LamTypeFunction
 
+hashes:
+    LamInfoTable:
+        entries: LamTypeConstructorInfo
+
+    LamExpTable:
+        entries: LamExp
+    
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printLambdaSymbol"
         markFn: "markHashSymbol"
-        valued: true
-    HashTable:
-        cname: "HashTable *"
-        printFn: "printHashTable"
-        markFn: "markHashTable"
         valued: true
     BigInt:
         cname: "BigInt *"

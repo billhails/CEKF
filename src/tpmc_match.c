@@ -462,7 +462,7 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern, HashTable *boundVar
 
 static HashTable *variablesBoundByPattern(TpmcPattern *pattern) {
     ENTER(variablesBoundByPattern);
-    HashTable *boundVariables = newHashTable(0, NULL, NULL);
+    HashTable *boundVariables = newTpmcVariableTable();
     int save = PROTECT(boundVariables);
     collectPathsBoundByPattern(pattern, boundVariables);
     UNPROTECT(save);
@@ -473,7 +473,7 @@ static HashTable *variablesBoundByPattern(TpmcPattern *pattern) {
 static HashTable *getTestStatesFreeVariables(TpmcTestState *testState) {
     // The free variables of a test state is the union of the free variables of the outgoing arcs, plus the test variable.
     ENTER(getTestStatesFreeVariables);
-    HashTable *freeVariables = newHashTable(0, NULL, NULL);
+    HashTable *freeVariables = newTpmcVariableTable();
     int save = PROTECT(freeVariables);
     hashSet(freeVariables, testState->path, NULL);
     for (int i = 0; i < testState->arcs->size; ++i) {
@@ -513,8 +513,8 @@ static HashTable *getStatesFreeVariables(TpmcState *state) {
 
 static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
     ENTER(makeTpmcArc);
-    HashTable *freeVariables = newHashTable(0, NULL, NULL);
-    int save = PROTECT(freeVariables);
+    TpmcArc *arc = newTpmcArc(state, pattern);
+    int save = PROTECT(arc);
     // the free variables of an arc are the free variables of its state minus the variables bound in the pattern
     HashTable *boundVariables = variablesBoundByPattern(pattern);
     PROTECT(boundVariables);
@@ -525,13 +525,12 @@ static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
     while ((key = iterateHashTable(statesFreeVariables, &i, NULL)) != NULL) {
         if (!hashGet(boundVariables, key, NULL)) {
             DEBUG("makeTpmcArc adding free variable %s", key->name);
-            hashSet(freeVariables, key, NULL);
+            hashSet(arc->freeVariables, key, NULL);
         }
     }
     state->refcount++;
     DEBUG("makeTpmcArc creating arc to state with refcount %d", state->refcount);
     IFDEBUG(printTpmcState(state, 0));
-    TpmcArc *arc = newTpmcArc(state, pattern, freeVariables);
     UNPROTECT(save);
     LEAVE(makeTpmcArc);
     return arc;

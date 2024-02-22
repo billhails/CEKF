@@ -34,7 +34,6 @@ typedef enum {
     // cekf types
     OBJTYPE_CLO,
     OBJTYPE_ENV,
-    OBJTYPE_CTENV,
     OBJTYPE_FAIL,
     OBJTYPE_KONT,
 

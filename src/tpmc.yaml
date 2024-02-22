@@ -62,13 +62,13 @@ structs:
     TpmcState:
         refcount: int=0
         stamp: int
-        freeVariables: HashTable=NULL
+        freeVariables: TpmcVariableTable=NULL
         state: TpmcStateValue
 
     TpmcArc:
         state: TpmcState
         test: TpmcPattern
-        freeVariables: HashTable
+        freeVariables: TpmcVariableTable
 
     TpmcArcList:
         arc: TpmcArc
@@ -77,6 +77,15 @@ structs:
     TpmcIntList:
         integer: int
         next: TpmcIntList
+
+hashes:
+    TpmcVariableTable: {}
+
+    TpmcSubstitutionTable:
+        entries: HashSymbol
+
+    TpmcPatternTable:
+        entries: TpmcPattern
 
 unions:
     TpmcPatternValue:
@@ -163,6 +172,11 @@ primitives:
 
     int:
         cname: "int"
+        printf: "%d"
+        valued: true
+
+    bool:
+        cname: bool
         printf: "%d"
         valued: true
 
