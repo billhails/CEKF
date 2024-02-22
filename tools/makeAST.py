@@ -1496,11 +1496,13 @@ class Primitive(Base):
 
 
     def printPrintField(self, field, depth, prefix=''):
-        pad(depth)
         if self.printFn == 'printf':
+            pad(depth)
             print('pad(depth + 1); // Primitive.printPrintField')
+            pad(depth)
             print(f'eprintf("{self.cname} {self.printf}", x->{prefix}{field}); // Primitive.printPrintField')
         else:
+            pad(depth)
             print(f'{self.printFn}(x->{prefix}{field}, depth + 1); // Primitive.printPrintField')
 
     def printCopyField(self, field, depth, prefix=''):
