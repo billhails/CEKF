@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "analysis.h"
+#include "annotate.h"
 #include "memory.h"
 #include "step.h"
 #include "anf.h"

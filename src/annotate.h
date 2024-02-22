@@ -1,5 +1,5 @@
-#ifndef cekf_analysis_h
-#define cekf_analysis_h
+#ifndef cekf_annotate_h
+#define cekf_annotate_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -25,6 +25,6 @@
  #include "hash.h"
  #include "memory.h"
 
-void analizeExp(Exp *x, CTEnv *env);
+void annotateExp(Exp *x, CTEnv *env);
 
 #endif

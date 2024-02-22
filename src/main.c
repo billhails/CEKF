@@ -27,7 +27,7 @@
 #include "lambda_debug.h"
 #include "lambda_conversion.h"
 #include "module.h"
-#include "analysis.h"
+#include "annotate.h"
 #include "anf.h"
 #include "anf_normalize.h"
 #include "memory.h"
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     PROTECT(anfExp);
     enableGC();
     // static analysis: ANF => annotated ANF (de bruijn)
-    analizeExp(anfExp, NULL);
+    annotateExp(anfExp, NULL);
 #ifdef DEBUG_ANF
     ppExp(anfExp);
     eprintf("\n");

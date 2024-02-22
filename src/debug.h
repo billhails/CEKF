@@ -20,7 +20,7 @@
 
 #include "cekf.h"
 #include "anf.h"
-#include "analysis.h"
+#include "annotate.h"
 #include "bytecode.h"
 
 void printCEKF(CEKF *x);
