@@ -141,34 +141,37 @@ class Catalog:
             entity.printFreeFunction(self)
 
     def printMarkObjFunction(self):
+        comment = '// Catalog.printMarkObjFunction'
         print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{')
-        print('    switch(h->type) {')
+        print(f'    switch(h->type) {{ {comment}')
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
-        print('        default:')
-        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);')
-        print('    }')
-        print('}')
+        print(f'        default: {comment}')
+        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type); {comment}')
+        print(f'    }} {comment}')
+        print(f'}} {comment}')
 
     def printFreeObjFunction(self):
-        print(f'void free{self.typeName.capitalize()}Obj(struct Header *h) {{')
-        print('    switch(h->type) {')
+        comment = '// Catalog.printFreeObjFunction'
+        print(f'void free{self.typeName.capitalize()}Obj(struct Header *h) {{ {comment}')
+        print(f'    switch(h->type) {{ {comment}')
         for entity in self.contents.values():
             entity.printFreeObjCase(self)
-        print('        default:')
-        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);')
-        print('    }')
-        print('}')
+        print(f'        default: {comment}')
+        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type); {comment}')
+        print(f'    }} {comment}')
+        print(f'}} {comment}')
 
     def printTypeObjFunction(self):
-        print(f'char *typename{self.typeName.capitalize()}Obj(int type) {{')
-        print('    switch(type) {')
+        comment = '// Catalog.printTypeObjFunction'
+        print(f'char *typename{self.typeName.capitalize()}Obj(int type) {{ {comment}')
+        print(f'    switch(type) {{ {comment}')
         for entity in self.contents.values():
             entity.printTypeObjCase(self)
-        print('        default:')
-        print(f'            return "???"; // no error, can be used during error reporting')
-        print('    }')
-        print('}')
+        print(f'        default: {comment}')
+        print(f'            return "???"; {comment} no error, can be used during error reporting')
+        print(f'    }} {comment}')
+        print(f'}} {comment}')
 
     def printObjTypeDefine(self):
         objTypeArray = []
@@ -321,24 +324,26 @@ class EnumField:
         return v
 
     def printCompareCase(self, depth):
+        comment = '// EnumField.printCompareCase'
         typeName = self.makeTypeName()
         pad(depth)
-        print(f'case {typeName}:')
+        print(f'case {typeName}: {comment}')
         pad(depth + 1)
-        print("if (a != b) return false;")
+        print(f"if (a != b) return false; {comment}")
         pad(depth + 1)
-        print('break;')
+        print(f'break; {comment}')
 
     def printPrintCase(self, depth):
+        comment = '// EnumField.printPrintCase'
         typeName = self.makeTypeName()
         pad(depth)
-        print(f'case {typeName}:')
+        print(f'case {typeName}: {comment}')
         pad(depth + 1)
-        print('pad(depth + 1);')
+        print(f'pad(depth + 1); {comment}')
         pad(depth + 1)
-        print(f'eprintf("{typeName}");')
+        print(f'eprintf("{typeName}"); {comment}')
         pad(depth + 1)
-        print('break;')
+        print(f'break; {comment}')
 
 class SimpleField:
     """
@@ -425,10 +430,10 @@ class SimpleField:
         obj.printCompareField(f"{self.name}[{key}]", depth)
 
     def printStructTypedefLine(self, catalog):
-        print("    {decl};".format(decl=self.getSignature(catalog)))
+        print("    {decl}; // SimpleField.printStructTypedefLine".format(decl=self.getSignature(catalog)))
 
     def printArrayTypedefLine(self, catalog):
-        print("    {decl};".format(decl=self.getArraySignature(catalog)))
+        print("    {decl}; // SimpleField.printArrayTypedefLine".format(decl=self.getArraySignature(catalog)))
 
 
 class SimpleHash(Base):
@@ -454,29 +459,29 @@ class SimpleHash(Base):
 
     def printNewDeclaration(self, catalog):
         decl=self.getNewSignature()
-        print(f"{decl};")
+        print(f"{decl}; // SimpleHash.printNewDeclaration")
 
     def getNewSignature(self):
         myType = self.getTypeDeclaration()
         myConstructor = self.getConstructorName()
-        return f"{myType}{myConstructor}()"
+        return f"{myType}{myConstructor}(void)"
 
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
-        print(f'    x->{prefix}{field} = {myConstructor}();')
-        print(f'    copyHashTable(x->{prefix}{field}, o->{prefix}{field});')
+        print(f'    x->{prefix}{field} = {myConstructor}(); // SimpleHash.printCopyField')
+        print(f'    copyHashTable(x->{prefix}{field}, o->{prefix}{field}); // SimpleHash.printCopyField')
 
     def printPrintHashField(self, depth):
         pad(depth)
-        print(f'printHashTable(*(HashTable **)ptr, depth + 1); // SimpleHash')
+        print(f'printHashTable(*(HashTable **)ptr, depth + 1); // SimpleHash.printPrintHashField')
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print(f'printHashTable(x->{prefix}{field}, depth + 1); // SimpleHash')
+        print(f'printHashTable(x->{prefix}{field}, depth + 1); // SimpleHash.printPrintField')
 
     def printCompareField(self, field, depth, prefix=''):
         pad(depth)
-        print("return false;")
+        print("return false; // SimpleHash.printCompareField")
 
     def printNewFunction(self, catalog):
         decl = self.getNewSignature()
@@ -510,7 +515,7 @@ class SimpleHash(Base):
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
-        print("markHashTable(x->{prefix}{field});".format(field=field, prefix=prefix))
+        print("markHashTable(x->{prefix}{field}); // SimpleHash.printMarkField".format(field=field, prefix=prefix))
 
 class SimpleArray(Base):
     """
@@ -536,71 +541,71 @@ class SimpleArray(Base):
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false; // SimpleArray.printCompareField")
 
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleArray')
+        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleArray.printCopyField')
 
     def printPrintHashField(self, depth):
         pad(depth)
         myName=self.getName()
-        print(f'print{myName}(*({myName} **)ptr, depth + 1); // SimpleArray')
+        print(f'print{myName}(*({myName} **)ptr, depth + 1); // SimpleArray.printPrintHashField')
 
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(x->{prefix}{field}, depth+1); // SimpleArray')
+        print(f'print{myName}(x->{prefix}{field}, depth+1); // SimpleArray.printPrintField')
 
     def printAccessDeclarations(self, catalog):
         if self.dimension == 2:
-            print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{")
-            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {");
-            print('        cant_happen("2d matrix bounds exceeded");')
+            print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{ // SimpleArray.printAccessDeclarations")
+            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
+            print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    }")
-            print("    return obj->entries[x + y * obj->width];")
-            print("}")
+            print("    return obj->entries[x + y * obj->width]; // SimpleArray.printAccessDeclarations")
+            print("} // SimpleArray.printAccessDeclarations")
             print("")
-            print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{")
-            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) {");
-            print('        cant_happen("2d matrix bounds exceeded");')
-            print("    }")
-            print("    obj->entries[x + y * obj->width] = val;")
-            print("}")
+            print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{ // SimpleArray.printAccessDeclarations")
+            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
+            print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
+            print("    } // SimpleArray.printAccessDeclarations")
+            print("    obj->entries[x + y * obj->width] = val; // SimpleArray.printAccessDeclarations")
+            print("} // SimpleArray.printAccessDeclarations")
 
     def printTypedef(self, catalog):
-        print("typedef struct {name} {{".format(name=self.getName()))
-        print("    Header header;")
+        print("typedef struct {name} {{ // SimpleArray.printTypeDef".format(name=self.getName()))
+        print("    Header header; // SimpleArray.printTypeDef")
         if self.tagged:
-            print("    char *_tag;")
+            print("    char *_tag; // SimpleArray.printTypeDef")
         if self.dimension == 2: # 2D arrays are fixed size
-            print("    int width;")
-            print("    int height;")
+            print("    int width; // SimpleArray.printTypeDef")
+            print("    int height; // SimpleArray.printTypeDef")
         else:                   # 1D arrays can grow
-            print("    int size;")
-            print("    int capacity;")
+            print("    int size; // SimpleArray.printTypeDef")
+            print("    int capacity; // SimpleArray.printTypeDef")
         self.entries.printArrayTypedefLine(catalog)
-        print("}} {name};\n".format(name=self.getName()))
+        print("}} {name}; // SimpleArray.printTypeDef\n".format(name=self.getName()))
 
     def printMarkDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getMarkSignature(catalog)))
+        print("{decl}; // SimpleArray.printMarkDeclaration".format(decl=self.getMarkSignature(catalog)))
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration()
         return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def printFreeDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getFreeSignature(catalog)))
+        print("{decl}; // simpleArray.printFreeDeclaration".format(decl=self.getFreeSignature(catalog)))
 
     def printFreeFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getFreeSignature(catalog)))
+        print("{decl} {{ // SimpleArray.printFreeFunction".format(decl=self.getFreeSignature(catalog)))
         if self.dimension == 1:
-            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity);")
+            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity); // SimpleArray.printFreeFunction")
         else:
-            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->width * x->height);")
-        print(f"    FREE(x, {self.getName()});")
-        print("}\n")
+            print(f"    FREE_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->width * x->height); // SimpleArray.printFreeFunction")
+        print(f"    FREE(x, {self.getName()}); // SimpleArray.printFreeFunction")
+        print("} // SimpleArray.printFreeFunction\n")
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration()
@@ -638,63 +643,63 @@ class SimpleArray(Base):
         return f"{myType} copy{myName}({myType} o)"
 
     def printNewFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getNewSignature(catalog)))
+        print("{decl} {{ // SimpleArray.printNewFunction".format(decl=self.getNewSignature(catalog)))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print(f"    {myType} x = NEW({myName}, {myObjType});")
-        print(f'    DEBUG("new {myName} %p", x);')
-        print("    x->entries = NULL;")
+        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleArray.printNewFunction")
+        print(f'    DEBUG("new {myName} %p", x); // SimpleArray.printNewFunction')
+        print("    x->entries = NULL; // SimpleArray.printNewFunction")
         if self.tagged:
-            print("    x->_tag = _tag;")
+            print("    x->_tag = _tag; // SimpleArray.printNewFunction")
         if self.dimension == 1:
-            print("    x->size = 0;")
-            print("    x->capacity = 0;")
-            print("    int save = PROTECT(x);")
-            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4);")
-            print("    x->capacity = 4;")
+            print("    x->size = 0; // SimpleArray.printNewFunction")
+            print("    x->capacity = 0; // SimpleArray.printNewFunction")
+            print("    int save = PROTECT(x); // SimpleArray.printNewFunction")
+            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4); // SimpleArray.printNewFunction")
+            print("    x->capacity = 4; // SimpleArray.printNewFunction")
         else:
-            print("    x->width = 0;")
-            print("    x->height = 0;")
-            print("    int save = PROTECT(x);")
-            print("    if (width * height > 0) {")
-            print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height);")
-            print(f"        bzero(x->entries, sizeof({self.entries.getTypeDeclaration(catalog)}) * width * height);")
-            print("    }")
-            print("    x->width = width;")
-            print("    x->height = height;")
-        print("    UNPROTECT(save);");
-        print("    return x;")
-        print("}\n")
+            print("    x->width = 0; // SimpleArray.printNewFunction")
+            print("    x->height = 0; // SimpleArray.printNewFunction")
+            print("    int save = PROTECT(x); // SimpleArray.printNewFunction")
+            print("    if (width * height > 0) { // SimpleArray.printNewFunction")
+            print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, width * height); // SimpleArray.printNewFunction")
+            print(f"        bzero(x->entries, sizeof({self.entries.getTypeDeclaration(catalog)}) * width * height); // SimpleArray.printNewFunction")
+            print("    } // SimpleArray.printNewFunction")
+            print("    x->width = width; // SimpleArray.printNewFunction")
+            print("    x->height = height; // SimpleArray.printNewFunction")
+        print("    UNPROTECT(save); // SimpleArray.printNewFunction");
+        print("    return x; // SimpleArray.printNewFunction")
+        print("} // SimpleArray.printNewFunction\n")
 
     def printNewDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getNewSignature(catalog)))
+        print("{decl}; // SimpleArray.printNewDeclaration".format(decl=self.getNewSignature(catalog)))
 
     def printCopyDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getCopySignature()))
+        print("{decl}; // SimpleArray.printCopyDeclaration".format(decl=self.getCopySignature()))
 
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} obj, {self.entries.getTypeDeclaration(catalog)} entry);")
+            print(f"void push{self.getName()}({self.getTypeDeclaration()} obj, {self.entries.getTypeDeclaration(catalog)} entry); // simpleArray.printPushDeclaration")
 
 
     def printPushFunction(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{")
-            print("    if (x->size == x->capacity) {")
-            print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2);")
-            print("        x->capacity *= 2;")
-            print("    }")
-            print("    x->entries[x->size++] = entry;")
-            print("}\n")
+            print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{ // SimpleArray.printPushFunction")
+            print("    if (x->size == x->capacity) { // SimpleArray.printPushFunction")
+            print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2); // SimpleArray.printPushFunction")
+            print("        x->capacity *= 2; // SimpleArray.printPushFunction")
+            print("    } // SimpleArray.printPushFunction")
+            print("    x->entries[x->size++] = entry; // SimpleArray.printPushFunction")
+            print("} // SimpleArray.printPushFunction\n")
 
     def printMarkFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getMarkSignature(catalog)))
-        print("    if (x == NULL) return;")
-        print("    if (MARKED(x)) return;")
-        print("    MARK(x);")
+        print("{decl} {{ // SimpleArray.printMarkFunction".format(decl=self.getMarkSignature(catalog)))
+        print("    if (x == NULL) return; // SimpleArray.printMarkFunction")
+        print("    if (MARKED(x)) return; // SimpleArray.printMarkFunction")
+        print("    MARK(x); // SimpleArray.printMarkFunction")
         self.printMarkFunctionBody(catalog)
-        print("}\n")
+        print("} // SimpleArray.printMarkFunction\n")
 
     def printMarkFunctionBody(self, catalog):
         if self.dimension == 1:
@@ -703,21 +708,21 @@ class SimpleArray(Base):
             self.printMark2dFunctionBody(catalog)
 
     def printMark1dFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->size; i++) {")
+        print("    for (int i = 0; i < x->size; i++) { // SimpleArray.print1dFunctionBody")
         self.entries.printMarkArrayLine(catalog, "i", 2)
-        print("    }")
+        print("    } // SimpleArray.print1dFunctionBody")
 
     def printMark2dFunctionBody(self, catalog):
-        print("    int size = x->width * x->height;")
-        print("    for (int i = 0; i < size; i++) {")
+        print("    int size = x->width * x->height; // SimpleArray.print2dFunctionBody")
+        print("    for (int i = 0; i < size; i++) { // SimpleArray.print2dFunctionBody")
         self.entries.printMarkArrayLine(catalog, "i", 2)
-        print("    }")
+        print("    } // SimpleArray.print2dFunctionBody")
 
     def printPrintDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getPrintSignature(catalog)))
+        print("{decl}; // SimpleArray.printPrintDeclaration".format(decl=self.getPrintSignature(catalog)))
 
     def printCompareDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getCompareSignature(catalog)))
+        print("{decl}; // SimpleArray.printCompareDeclaration".format(decl=self.getCompareSignature(catalog)))
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration()
@@ -748,38 +753,38 @@ class SimpleArray(Base):
             print("")
             return
         myName = self.getName()
-        print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
-        print("    if (a == b) return true;")
-        print("    if (a == NULL || b == NULL) return false;")
+        print("{decl} {{ // SimpleArray.printCompareFunction".format(decl=self.getCompareSignature(catalog)))
+        print("    if (a == b) return true; // SimpleArray.printCompareFunction")
+        print("    if (a == NULL || b == NULL) return false; // SimpleArray.printCompareFunction")
         if self.dimension == 1:
-            print("    if (a->size != b->size) return false;")
-            print("    for (int i = 0; i < a->size; i++) {")
+            print("    if (a->size != b->size) return false; // SimpleArray.printCompareFunction")
+            print("    for (int i = 0; i < a->size; i++) { // SimpleArray.printCompareFunction")
             self.entries.printCompareArrayLine(catalog, "i", 2)
-            print("    }")
+            print("    } // SimpleArray.printCompareFunction")
         else:
-            print("    if (a->width != b->width || a->height != b->height) return false;")
-            print("    for (int i = 0; i < (a->width * a->height); i++) {")
+            print("    if (a->width != b->width || a->height != b->height) return false; // SimpleArray.printCompareFunction")
+            print("    for (int i = 0; i < (a->width * a->height); i++) { // SimpleArray.printCompareFunction")
             self.entries.printCompareArrayLine(catalog, "i", 2)
-            print("    }")
-        print("    return true;")
-        print("}\n")
+            print("    } // SimpleArray.printCompareFunction")
+        print("    return true; // SimpleArray.printCompareFunction")
+        print("} // SimpleArray.printCompareFunction\n")
 
     def printCopyFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getCopySignature()))
+        print("{decl} {{ // SimpleArray.printCopyFunction".format(decl=self.getCopySignature()))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print("    if (o == NULL) return NULL;")
-        print(f"    {myType} x = NEW({myName}, {myObjType});")
-        print(f'    DEBUG("copy {myName} %pn", x);')
-        print("    Header _h = x->header;")
-        print(f"    bzero(x, sizeof(struct {myName}));")
-        print("    x->header = _h;")
-        print("    int save = PROTECT(x);")
+        print("    if (o == NULL) return NULL; // SimpleArray.printCopyFunction")
+        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleArray.printCopyFunction")
+        print(f'    DEBUG("copy {myName} %pn", x); // SimpleArray.printCopyFunction')
+        print("    Header _h = x->header; // SimpleArray.printCopyFunction")
+        print(f"    bzero(x, sizeof(struct {myName})); // SimpleArray.printCopyFunction")
+        print("    x->header = _h; // SimpleArray.printCopyFunction")
+        print("    int save = PROTECT(x); // SimpleArray.printCopyFunction")
         self.printCopyFunctionBody(catalog)
-        print("    UNPROTECT(save);")
-        print("    return x;")
-        print("}\n")
+        print("    UNPROTECT(save); // SimpleArray.printCopyFunction")
+        print("    return x; // SimpleArray.printCopyFunction")
+        print("} // SimpleArray.printCopyFunction\n")
 
     def printCopyFunctionBody(self, catalog):
         if self.dimension == 1:
@@ -788,43 +793,43 @@ class SimpleArray(Base):
             self.print2dCopyFunctionBody(catalog)
 
     def print1dCopyFunctionBody(self, catalog):
-        print("    if (o->entries != NULL) {")
-        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->capacity);")
-        print("        x->size = 0;")
-        print("        x->capacity = o->capacity;")
-        print("        for (int i = 0; i < o->size; i++) {")
+        print("    if (o->entries != NULL) { // SimpleArray.print1dCopyFunctionBody")
+        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->capacity); // SimpleArray.print1dCopyFunctionBody")
+        print("        x->size = 0; // SimpleArray.print1dCopyFunctionBody")
+        print("        x->capacity = o->capacity; // SimpleArray.print1dCopyFunctionBody")
+        print("        for (int i = 0; i < o->size; i++) { // SimpleArray.print1dCopyFunctionBody")
         self.entries.printCopyArrayLine(catalog, "i", 3)
-        print("            x->size++;")
-        print("        }")
-        print("    }")
+        print("            x->size++; // SimpleArray.print1dCopyFunctionBody")
+        print("        } // SimpleArray.print1dCopyFunctionBody")
+        print("    } // SimpleArray.print1dCopyFunctionBody")
 
     def print2dCopyFunctionBody(self, catalog):
-        print("    if (o->entries != NULL) {")
-        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->width * x->height);")
-        print("        x->width = 0;")
-        print("        x->height = 0;")
-        print("        for (int i = 0; i < (o->width * o->height); i++) {")
+        print("    if (o->entries != NULL) { // SimpleArray.print2dCopyFunctionBody")
+        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->width * x->height); // SimpleArray.print2dCopyFunctionBody")
+        print("        x->width = 0; // SimpleArray.print2dCopyFunctionBody")
+        print("        x->height = 0; // SimpleArray.print2dCopyFunctionBody")
+        print("        for (int i = 0; i < (o->width * o->height); i++) { // SimpleArray.print2dCopyFunctionBody")
         self.entries.printCopyArrayLine(catalog, "i", 3)
-        print("        }")
-        print("        x->height = o->height;")
-        print("        x->width = o->width;")
-        print("    }")
+        print("        } // SimpleArray.print2dCopyFunctionBody")
+        print("        x->height = o->height; // SimpleArray.print2dCopyFunctionBody")
+        print("        x->width = o->width; // SimpleArray.print2dCopyFunctionBody")
+        print("    } // SimpleArray.print2dCopyFunctionBody")
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
-        print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
-        print("    pad(depth);")
-        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
+        print("{decl} {{ // SimpleArray.printPrintFunction".format(decl=self.getPrintSignature(catalog)))
+        print("    pad(depth); // SimpleArray.printPrintFunction")
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} // SimpleArray.printPrintFunction')
         if self.tagged:
-            print('    eprintf("<<%s>>", x->_tag);')
+            print('    eprintf("<<%s>>", x->_tag); // SimpleArray.printPrintFunction')
         if self.dimension == 1:
-            print(f'    eprintf("{myName}(%d)[\\n", x->size);')
+            print(f'    eprintf("{myName}(%d)[\\n", x->size); // SimpleArray.printPrintFunction')
         else:
-            print(f'    eprintf("{myName}(%d * %d)[\\n", x->width, x->height);')
+            print(f'    eprintf("{myName}(%d * %d)[\\n", x->width, x->height); // SimpleArray.printPrintFunction')
         self.printPrintFunctionBody(catalog)
-        print("    pad(depth);")
-        print('    eprintf("]");')
-        print("}\n")
+        print("    pad(depth); // SimpleArray.printPrintFunction")
+        print('    eprintf("]"); // SimpleArray.printPrintFunction')
+        print("} // SimpleArray.printPrintFunction\n")
 
     def printPrintFunctionBody(self, catalog):
         if self.dimension == 1:
@@ -833,53 +838,53 @@ class SimpleArray(Base):
             self.print2dPrintFunctionBody(catalog)
 
     def print1dPrintFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->size; i++) {")
+        print("    for (int i = 0; i < x->size; i++) { // SimpleArray.print1dPrintFunctionBody")
         self.entries.printPrintArrayLine(catalog, "i", 2)
-        print('        eprintf("\\n");')
-        print("    }")
+        print('        eprintf("\\n"); // SimpleArray.print1dPrintFunctionBody')
+        print("    } // SimpleArray.print1dPrintFunctionBody")
 
     def print2dPrintFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->height; i++) {")
-        print("        pad(depth);")
-        print('        eprintf("[\\n");')
-        print("        for (int j = 0; j < x->width; j++) {")
+        print("    for (int i = 0; i < x->height; i++) { // SimpleArray.print2dPrintFunctionBody")
+        print("        pad(depth); // SimpleArray.print2dPrintFunctionBody")
+        print('        eprintf("[\\n"); // SimpleArray.print2dPrintFunctionBody')
+        print("        for (int j = 0; j < x->width; j++) { // SimpleArray.print2dPrintFunctionBody")
         self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
-        print('            eprintf("\\n");')
-        print("        }")
-        print("        pad(depth);")
-        print('        eprintf("]\\n");')
-        print("    }")
+        print('            eprintf("\\n"); // SimpleArray.print2dPrintFunctionBody')
+        print("        } // SimpleArray.print2dPrintFunctionBody")
+        print("        pad(depth); // SimpleArray.print2dPrintFunctionBody")
+        print('        eprintf("]\\n"); // SimpleArray.print2dPrintFunctionBody')
+        print("    } // SimpleArray.print2dPrintFunctionBody")
 
     def printFreeObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleArray.printFreeObjCase')
         pad(3)
-        print('free{name}(({name} *)h);'.format(name=self.getName()))
+        print('free{name}(({name} *)h); // SimpleArray.printFreeObjCase'.format(name=self.getName()))
         pad(3)
-        print('break;')
+        print('break; // SimpleArray.printFreeObjCase')
 
     def printMarkObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleArray.printMarkObjCase')
         pad(3)
-        print('mark{name}(({name} *)h);'.format(name=self.getName()))
+        print('mark{name}(({name} *)h); // SimpleArray.printMarkObjCase'.format(name=self.getName()))
         pad(3)
-        print('break;')
+        print('break; // SimpleArray.printMarkObjCase')
 
     def printTypeObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleArray.printTypeObjCase')
         pad(3)
-        print('return "{name}";'.format(name=self.getName()))
+        print('return "{name}"; // SimpleArray.printTypeObjCase'.format(name=self.getName()))
 
     def printMarkHashField(self, depth):
         myName = self.getName()
         pad(depth)
-        print(f'mark{myName}(*({myName} **)ptr); // SimpleArray')
+        print(f'mark{myName}(*({myName} **)ptr); // SimpleArray.printMarkHashField')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
-        print("mark{myName}(x->{prefix}{field});".format(field=field, myName=self.getName(), prefix=prefix))
+        print("mark{myName}(x->{prefix}{field}); // SimpleArray..printMarkField".format(field=field, myName=self.getName(), prefix=prefix))
 
     def isArray(self):
         return True
@@ -894,11 +899,11 @@ class SimpleStruct(Base):
         self.fields = [self.makeField(x, data[x]) for x in data.keys()]
 
     def printTypedef(self, catalog):
-        print("typedef struct {name} {{".format(name=self.getName()))
-        print("    Header header;")
+        print("typedef struct {name} {{ // SimpleStruct.printTypedef".format(name=self.getName()))
+        print("    Header header; // SimpleStruct.printTypedef")
         for field in self.fields:
             field.printStructTypedefLine(catalog)
-        print("}} {name};\n".format(name=self.getName()))
+        print("}} {name}; // SimpleStruct.printTypedef\n".format(name=self.getName()))
 
     def isStruct(self):
         return True
@@ -974,30 +979,35 @@ class SimpleStruct(Base):
         return f"{myType} copy{myName}({myType} o)"
 
     def printNewDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getNewSignature(catalog)))
+        print("{decl}; // SimpleStruct.printNewDeclaration".format(decl=self.getNewSignature(catalog)))
 
     def printCopyDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getCopySignature()))
+        print("{decl}; // SimpleStruct.printCopyDeclaration".format(decl=self.getCopySignature()))
 
     def printFreeDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getFreeSignature(catalog)))
+        print("{decl}; // SimpleStruct.printFreeDeclaration".format(decl=self.getFreeSignature(catalog)))
 
     def printMarkDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getMarkSignature(catalog)))
+        print("{decl}; // SimpleStruct.printMarkDeclaration".format(decl=self.getMarkSignature(catalog)))
 
     def printPrintDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getPrintSignature(catalog)))
+        print("{decl}; // SimpleStruct.printPrintDeclaration".format(decl=self.getPrintSignature(catalog)))
 
     def printCompareDeclaration(self, catalog):
-        print("{decl};".format(decl=self.getCompareSignature(catalog)))
+        print("{decl}; // SimpleStruct.printCompareDeclaration".format(decl=self.getCompareSignature(catalog)))
 
     def printNewFunction(self, catalog):
         print("{decl} {{ // SimpleStruct.printNewFunction".format(decl=self.getNewSignature(catalog)))
+        hasInternalConstructors = False
+        for field in self.getDefaultArgs(catalog):
+            if field.isSelfInitializing(catalog) and field.default is None:
+                hasInternalConstructors = True
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printNewFunction")
-        print("    int save = PROTECT(x);")
+        if hasInternalConstructors:
+            print("    int save = PROTECT(x); // SimpleStruct.printNewFunction")
         print(f'    DEBUG("new {myName} %pn", x); // SimpleStruct.printNewFunction')
         for field in self.getNewArgs(catalog):
             print("    x->{f} = {f}; // SimpleStruct.printNewFunction".format(f=field.getFieldName()))
@@ -1009,7 +1019,8 @@ class SimpleStruct(Base):
                 d = field.default
             print(f"    bzero(&(x->{f}), sizeof(x->{f})); // SimpleStruct.printNewFunction")
             print(f"    x->{f} = {d}; // SimpleStruct.printNewFunction")
-        print("    UNPROTECT(save);")
+        if hasInternalConstructors:
+            print("    UNPROTECT(save); // SimpleStruct.printNewFunction")
         print("    return x; // SimpleStruct.printNewFunction")
         print("} // SimpleStruct.printNewFunction")
         print("")
@@ -1029,22 +1040,22 @@ class SimpleStruct(Base):
     def printPrintFunctionBody(self, catalog):
         for field in self.fields:
             field.printPrintLine(catalog, 1)
-            print('    eprintf("\\n"); // SimpleStruct')
+            print('    eprintf("\\n"); // SimpleStruct.printPrintFunctionBody')
 
     def printMarkHashField(self, depth):
         myName = self.getName()
         pad(depth)
-        print(f'mark{myName}(*({myName} **)ptr); // SimpleStruct')
+        print(f'mark{myName}(*({myName} **)ptr); // SimpleStruct.printMarkHashField')
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
-        print("mark{myName}(x->{prefix}{field}); // SimpleStruct".format(field=field, myName=self.getName(), prefix=prefix))
+        print("mark{myName}(x->{prefix}{field}); // SimpleStruct.printMarkField".format(field=field, myName=self.getName(), prefix=prefix))
 
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
         extraArgs = self.getExtraCmpAargs({})
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false; // SimpleStruct")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraArgs})) return false; // SimpleStruct.printCompareField")
 
     def printPrintHashField(self, depth):
         myName=self.getName()
@@ -1054,47 +1065,47 @@ class SimpleStruct(Base):
     def printPrintField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'print{myName}(x->{prefix}{field}, depth + 1); // SimpleStruct')
+        print(f'print{myName}(x->{prefix}{field}, depth + 1); // SimpleStruct.printPrintField')
 
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
         pad(depth)
-        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleStruct')
+        print(f'x->{prefix}{field} = copy{myName}(o->{prefix}{field}); // SimpleStruct.printCopyField')
 
     def printMarkFunction(self, catalog):
-        print("{decl} {{ // SimpleStruct".format(decl=self.getMarkSignature(catalog)))
-        print("    if (x == NULL) return;")
-        print("    if (MARKED(x)) return;")
-        print("    MARK(x);")
+        print("{decl} {{ // SimpleStruct.printMarkFunction".format(decl=self.getMarkSignature(catalog)))
+        print("    if (x == NULL) return; // SimpleStruct.printMarkFunction")
+        print("    if (MARKED(x)) return; // SimpleStruct.printMarkFunction")
+        print("    MARK(x); // SimpleStruct.printMarkFunction")
         self.printMarkFunctionBody(catalog)
-        print("}\n")
+        print("} // SimpleStruct.printMarkFunction\n")
 
     def printFreeFunction(self, catalog):
-        print("{decl} {{ // SimpleStruct".format(decl=self.getFreeSignature(catalog)))
-        print(f"    FREE(x, {self.getName()});")
-        print("}\n")
+        print("{decl} {{ // SimpleStruct.printFreeFunction".format(decl=self.getFreeSignature(catalog)))
+        print(f"    FREE(x, {self.getName()}); // SimpleStruct.printFreeFunction")
+        print("} // SimpleStruct.printFreeFunction\n")
 
     def printMarkObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}: // SimpleStruct')
+        print(f'case {self.getObjType()}: // SimpleStruct.printMarkObjectCase')
         pad(3)
-        print('mark{name}(({name} *)h);'.format(name=self.getName()))
+        print('mark{name}(({name} *)h); // SimpleStruct.printMarkObjectCase'.format(name=self.getName()))
         pad(3)
-        print('break;')
+        print('break; // SimpleStruct.printMarkObjectCase')
 
     def printFreeObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleStruct.preintFreeObjectCase')
         pad(3)
-        print('free{name}(({name} *)h);'.format(name=self.getName()))
+        print('free{name}(({name} *)h); // SimpleStruct.preintFreeObjectCase'.format(name=self.getName()))
         pad(3)
-        print('break;')
+        print('break; // SimpleStruct.preintFreeObjectCase')
 
     def printTypeObjCase(self, catalog):
         pad(2)
-        print(f'case {self.getObjType()}:')
+        print(f'case {self.getObjType()}: // SimpleStruct.printTypeObjCase')
         pad(3)
-        print('return "{name}";'.format(name=self.getName()))
+        print('return "{name}"; // SimpleStruct.printTypeObjCase'.format(name=self.getName()))
 
     def printCompareFunction(self, catalog):
         if self.bespokeCmpImplementation:
@@ -1103,46 +1114,40 @@ class SimpleStruct(Base):
             print("")
             return
         myName = self.getName()
-        print("{decl} {{".format(decl=self.getCompareSignature(catalog)))
-        print("    if (a == b) return true;")
-        print("    if (a == NULL || b == NULL) return false;")
+        print("{decl} {{ // SimpleStruct.printCompareFunction".format(decl=self.getCompareSignature(catalog)))
+        print("    if (a == b) return true; // SimpleStruct.printCompareFunction")
+        print("    if (a == NULL || b == NULL) return false; // SimpleStruct.printCompareFunction")
         self.printCompareFunctionBody(catalog)
-        print("    return true;")
-        print("}\n")
+        print("    return true; // SimpleStruct.printCompareFunction")
+        print("} // SimpleStruct.printCompareFunction\n")
 
     def printCopyFunction(self, catalog):
-        print("{decl} {{".format(decl=self.getCopySignature()))
+        print("{decl} {{ // SimpleStruct.printCopyFunction".format(decl=self.getCopySignature()))
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print("    if (o == NULL) return NULL;")
-        print(f"    {myType} x = NEW({myName}, {myObjType});")
-        print(f'    DEBUG("copy {myName} %pn", x);')
-        print("    Header _h = x->header;")
-        print(f"    bzero(x, sizeof(struct {myName}));")
-        print("    x->header = _h;")
-        print("    int save = PROTECT(x);")
-        """
-        for field in self.fields:
-            f = field.getFieldName()
-            cp = field.getCopyCall(f"o->{f}", catalog)
-            print(f"    x->{f} = {cp};")
-        """
+        print("    if (o == NULL) return NULL; // SimpleStruct.printCopyFunction")
+        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printCopyFunction")
+        print(f'    DEBUG("copy {myName} %pn", x); // SimpleStruct.printCopyFunction')
+        print("    Header _h = x->header; // SimpleStruct.printCopyFunction")
+        print(f"    bzero(x, sizeof(struct {myName})); // SimpleStruct.printCopyFunction")
+        print("    x->header = _h; // SimpleStruct.printCopyFunction")
+        print("    int save = PROTECT(x); // SimpleStruct.printCopyFunction")
         self.printCopyFunctionBody(catalog)
-        print("    UNPROTECT(save);")
-        print("    return x;")
-        print("}\n")
+        print("    UNPROTECT(save); // SimpleStruct.printCopyFunction")
+        print("    return x; // SimpleStruct.printCopyFunction")
+        print("} // SimpleStruct.printCopyFunction\n")
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
-        print("{decl} {{".format(decl=self.getPrintSignature(catalog)))
-        print("    pad(depth);")
-        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }}')
-        print(f'    eprintf("{myName}[\\n");')
+        print("{decl} {{ // SimpleStruct.printPrintFunction".format(decl=self.getPrintSignature(catalog)))
+        print("    pad(depth); // SimpleStruct.printPrintFunction")
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} // SimpleStruct.printPrintFunction')
+        print(f'    eprintf("{myName}[\\n"); // SimpleStruct.printPrintFunction')
         self.printPrintFunctionBody(catalog)
-        print("    pad(depth);")
-        print('    eprintf("]");')
-        print("}\n")
+        print("    pad(depth); // SimpleStruct.printPrintFunction")
+        print('    eprintf("]"); // SimpleStruct.printPrintFunction')
+        print("} // SimpleStruct.printPrintFunction\n")
 
     def getDefineValue(self):
         return 'x'
@@ -1165,7 +1170,7 @@ class DiscriminatedUnionField(EnumField):
 
     def printStructTypedefLine(self, catalog):
         obj = catalog.get(self.typeName)
-        print("    {type} {name};".format(type=obj.getTypeDeclaration(), name=self.name))
+        print("    {type} {name}; // DiscriminatedUnionField.printStructTypedefLine".format(type=obj.getTypeDeclaration(), name=self.name))
 
     def getSignature(self, catalog):
         obj = catalog.get(self.typeName)
@@ -1211,33 +1216,33 @@ class DiscriminatedUnionField(EnumField):
 
     def printMarkCase(self, catalog):
         typeName = self.makeTypeName()
-        print(f"        case {typeName}:")
+        print(f"        case {typeName}: // DiscriminatedUnionField.printMarkCase")
         obj = catalog.get(self.typeName)
         obj.printMarkField(self.name, 3, 'val.')
-        print("            break;")
+        print("            break; // DiscriminatedUnionField.printMarkCase")
 
     def printCompareCase(self, catalog):
         typeName = self.makeTypeName()
-        print(f"        case {typeName}:")
+        print(f"        case {typeName}: // DiscriminatedUnionField.printCompareCase")
         obj = catalog.get(self.typeName)
         obj.printCompareField(self.name, 3, 'val.')
-        print("            break;")
+        print("            break; // DiscriminatedUnionField.printCompareCase")
 
     def printPrintCase(self, catalog):
         typeName = self.makeTypeName()
-        print(f"        case {typeName}:")
-        print(f'            pad(depth + 1);')
-        print(f'            eprintf("{typeName}\\n");')
+        print(f"        case {typeName}: // DiscriminatedUnionField.printPrintCase")
+        print(f'            pad(depth + 1); // DiscriminatedUnionField.printPrintCase')
+        print(f'            eprintf("{typeName}\\n"); // DiscriminatedUnionField.printPrintCase')
         obj = catalog.get(self.typeName)
         obj.printPrintField(self.name, 3, 'val.')
-        print("            break;")
+        print("            break; // DiscriminatedUnionField.printPrintCase")
 
     def printCopyCase(self, catalog):
         typeName = self.makeTypeName()
-        print(f"        case {typeName}:")
+        print(f"        case {typeName}: // DiscriminatedUnionField.printCopyCase")
         obj = catalog.get(self.typeName)
         obj.printCopyField(self.name, 3, 'val.')
-        print("            break;")
+        print("            break; // DiscriminatedUnionField.printCopyCase")
 
 
 class DiscriminatedUnion(SimpleStruct):
@@ -1258,11 +1263,11 @@ class DiscriminatedUnion(SimpleStruct):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)
 
     def printTypedef(self, catalog):
-        print("typedef struct {name} {{".format(name=self.getName()))
-        print("    Header header;")
-        print("    {enum} {field};".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
-        print("    {union} {field};".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
-        print("}} {name};\n".format(name=self.getName()))
+        print("typedef struct {name} {{ // DiscriminatedUnion.printTypeDef".format(name=self.getName()))
+        print("    Header header; // DiscriminatedUnion.printTypeDef")
+        print("    {enum} {field}; // DiscriminatedUnion.printTypeDef".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
+        print("    {union} {field}; // DiscriminatedUnion.printTypeDef".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
+        print("}} {name}; // DiscriminatedUnion.printTypeDef\n".format(name=self.getName()))
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -1275,39 +1280,39 @@ class DiscriminatedUnion(SimpleStruct):
             field.printDefines(catalog)
 
     def printMarkFunctionBody(self, catalog):
-        print("    switch(x->type) {")
+        print("    switch(x->type) { // DiscriminatedUnion.printMarkFunctionBody")
         for field in self.fields:
             field.printMarkCase(catalog)
-        print("        default:")
-        print('            cant_happen("unrecognised type %d in mark{myName}", x->type);'.format(myName=self.getName()))
-        print("    }")
+        print("        default: // DiscriminatedUnion.printMarkFunctionBody")
+        print('            cant_happen("unrecognised type %d in mark{myName}", x->type); // DiscriminatedUnion.printMarkFunctionBody'.format(myName=self.getName()))
+        print("    } // DiscriminatedUnion.printMarkFunctionBody")
 
     def printCompareFunctionBody(self, catalog):
-        print("    if (a->type != b->type) return false;")
-        print("    switch(a->type) {")
+        print("    if (a->type != b->type) return false; // DiscriminatedUnion.printCompareFunctionBody")
+        print("    switch(a->type) { // DiscriminatedUnion.printCompareFunctionBody")
         for field in self.fields:
             field.printCompareCase(catalog)
-        print("        default:")
-        print('            cant_happen("unrecognised type %d in eq{myName}", a->type);'.format(myName=self.getName()))
+        print("        default: // DiscriminatedUnion.printCompareFunctionBody")
+        print('            cant_happen("unrecognised type %d in eq{myName}", a->type); // DiscriminatedUnion.printCompareFunctionBody'.format(myName=self.getName()))
         print("    }")
 
     def printCopyFunctionBody(self, catalog):
-        print("    switch(o->type) {")
+        print("    switch(o->type) { // DiscriminatedUnion.printCopyFunctionBody")
         for field in self.fields:
             field.printCopyCase(catalog)
-        print("        default:")
-        print('            cant_happen("unrecognised type %d in copy{myName}", o->type);'.format(myName=self.getName()))
-        print("    }")
-        print('    x->type = o->type;')
+        print("        default: // DiscriminatedUnion.printCopyFunctionBody")
+        print('            cant_happen("unrecognised type %d in copy{myName}", o->type); // DiscriminatedUnion.printCopyFunctionBody'.format(myName=self.getName()))
+        print("    } // DiscriminatedUnion.printCopyFunctionBody")
+        print('    x->type = o->type; // DiscriminatedUnion.printCopyFunctionBody')
 
     def printPrintFunctionBody(self, catalog):
-        print("    switch(x->type) {")
+        print("    switch(x->type) { // DiscriminatedUnion.printPrintFunctionBody")
         for field in self.fields:
             field.printPrintCase(catalog)
-        print("        default:")
-        print('            cant_happen("unrecognised type %d in print{myName}", x->type);'.format(myName=self.getName()))
-        print("    }")
-        print('    eprintf("\\n");')
+        print("        default: // DiscriminatedUnion.printPrintFunctionBody")
+        print('            cant_happen("unrecognised type %d in print{myName}", x->type); // DiscriminatedUnion.printPrintFunctionBody'.format(myName=self.getName()))
+        print("    } // DiscriminatedUnion.printPrintFunctionBody")
+        print('    eprintf("\\n"); // DiscriminatedUnion.printPrintFunctionBody')
 
 
 class DiscriminatedUnionUnion(Base):
@@ -1335,10 +1340,10 @@ class DiscriminatedUnionUnion(Base):
         return "{type} val".format(type=self.getTypeDeclaration())
 
     def printTypedef(self, catalog):
-        print("typedef union {name} {{".format(name=self.getName()))
+        print("typedef union {name} {{ // DiscriminatedUnionUnion.printTypeDef".format(name=self.getName()))
         for field in self.fields:
             field.printStructTypedefLine(catalog)
-        print("}} {name};\n".format(name=self.getName()))
+        print("}} {name}; // DiscriminatedUnionUnion.printTypeDef\n".format(name=self.getName()))
 
 
 class SimpleEnum(Base):
@@ -1353,23 +1358,23 @@ class SimpleEnum(Base):
         return "enum {name} ".format(name=self.getName())
 
     def printTypedef(self, catalog):
-        print("typedef enum {name} {{".format(name=self.getName()))
+        print("typedef enum {name} {{ // SimpleEnum.printTypeDef".format(name=self.getName()))
         count = 0
         for  field in self.fields:
             field.printEnumTypedefLine(count)
             count += 1
-        print("}} {name};\n".format(name=self.getName()))
+        print("}} {name}; // SimpleEnum.printTypeDef\n".format(name=self.getName()))
 
     def isEnum(self):
         return True
 
     def printCompareField(self, field, depth, prefix=''):
         pad(depth)
-        print("switch (a->type) {")
+        print("switch (a->type) { // SimpleEnum.printCompareField")
         for field in self.fields:
             field.printCompareCase(depth + 1)
         pad(depth)
-        print('}')
+        print('} // SimpleEnum.printCompareField')
 
     def printPrintHashField(self, depth):
         myName = self.getName()
@@ -1380,19 +1385,19 @@ class SimpleEnum(Base):
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
-        print('}')
+        print('} // SimpleEnum.printPrintHashField')
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print('switch (x->type) {')
+        print('switch (x->type) { // SimpleEnum.printPrintField')
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
-        print('}')
+        print('} // SimpleEnum.printPrintField')
 
     def printCopyField(self, field, depth, prefix=''):
         pad(depth)
-        print(f'x->{field} = o->{field};')
+        print(f'x->{field} = o->{field}; // SimpleEnum.printCopyField')
 
 
 
@@ -1415,12 +1420,12 @@ class DiscriminatedUnionEnum(Base):
         return "enum {name} ".format(name=self.getName())
 
     def printTypedef(self, catalog):
-        print("typedef enum {name} {{".format(name=self.getName()))
+        print("typedef enum {name} {{ // DiscriminatedUnionEnum.printTypeDef".format(name=self.getName()))
         count = 0
         for  field in self.fields:
             field.printEnumTypedefLine(count)
             count += 1
-        print("}} {name};\n".format(name=self.getName()))
+        print("}} {name}; // DiscriminatedUnionEnum.printTypeDef\n".format(name=self.getName()))
 
     def getSignature(self, catalog):
         return "{type} type".format(type=self.getTypeDeclaration())
@@ -1458,19 +1463,19 @@ class Primitive(Base):
     def printMarkCase(self, catalog):
         if self.markFn is not None:
             typeName = self.makeTypeName()
-            print(f"        case {typeName}:")
+            print(f"        case {typeName}: // Primitive.printMarkCase")
             self.printMarkField(self.name, 3, 'val.')
-            print("            break;")
+            print("            break; // Primitive.printMarkCase")
 
     def printMarkHashField(self, depth):
         if self.markFn is not None:
             pad(depth)
-            print(f'{self.markFn}(*({self.cname}*)ptr); // Primitive')
+            print(f'{self.markFn}(*({self.cname}*)ptr); // Primitive.printMarkHashField')
 
     def printMarkField(self, field, depth, prefix=''):
         if self.markFn is not None:
             pad(depth)
-            print("{markFn}(x->{prefix}{field}); // Primitive".format(field=field, markFn=self.markFn, prefix=prefix))
+            print("{markFn}(x->{prefix}{field}); // Primitive.printMarkField".format(field=field, markFn=self.markFn, prefix=prefix))
 
     def getTypeDeclaration(self):
         return self.cname
@@ -1478,9 +1483,9 @@ class Primitive(Base):
     def printCompareField(self, field, depth, prefix=''):
         pad(depth)
         if self.compareFn is None:
-            print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false;")
+            print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false; // Primitive.printCompareField")
         else:
-            print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false;")
+            print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
 
     def printPrintHashField(self, depth):
         pad(depth)
@@ -1493,17 +1498,17 @@ class Primitive(Base):
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
         if self.printFn == 'printf':
-            print('pad(depth + 1);')
-            print(f'eprintf("{self.cname} {self.printf}", x->{prefix}{field});')
+            print('pad(depth + 1); // Primitive.printPrintField')
+            print(f'eprintf("{self.cname} {self.printf}", x->{prefix}{field}); // Primitive.printPrintField')
         else:
-            print(f'{self.printFn}(x->{prefix}{field}, depth + 1);')
+            print(f'{self.printFn}(x->{prefix}{field}, depth + 1); // Primitive.printPrintField')
 
     def printCopyField(self, field, depth, prefix=''):
         pad(depth)
         if self.copyFn is None:
-            print(f"x->{prefix}{field} = o->{prefix}{field};")
+            print(f"x->{prefix}{field} = o->{prefix}{field}; // Primitive.printCopyField")
         else:
-            print(f"x->{prefix}{field} = {self.copyFn}(o->{prefix}{field});")
+            print(f"x->{prefix}{field} = {self.copyFn}(o->{prefix}{field}); // Primitive.printCopyField")
 
     def getDefineValue(self):
         return 'x' if self.valued else 'NULL'
