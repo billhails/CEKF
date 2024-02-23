@@ -1,4 +1,4 @@
-.PHONY: all clean deps profile check-grammar list-cores test
+.PHONY: all clean deps profile check-grammar list-cores test indent
 
 TARGET=cekf
 
@@ -33,7 +33,8 @@ EXTRA_TARGETS= \
 
 MAIN=src/main.c
 CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
-EXTRA_CFILES=generated/lexer.c generated/parser.c $(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
+EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
+PARSER_CFILES=generated/lexer.c generated/parser.c
 TEST_CFILES=$(wildcard tests/src/*.c)
 
 TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
@@ -49,10 +50,12 @@ DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
 EXTRA_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
+PARSER_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(PARSER_CFILES)))
 EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
+PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
-ALL_OBJ=$(OBJ) $(EXTRA_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP)
+ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP)
 
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
@@ -65,20 +68,19 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 include $(ALL_DEP)
 
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< c -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< h -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< objtypes_h -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_h -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_c -st > $@ || (rm -f $@ ; exit 1)
-
+	$(PYTHON) tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
@@ -89,8 +91,11 @@ tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) -I generated/ -I src/ -c $< -o $@
 
-$(EXTRA_OBJ): obj/%.o: generated/%.c | obj
+$(PARSER_OBJ): obj/%.o: generated/%.c | obj
 	$(LAXCC) -I src/ -I generated/ -c $< -o $@
+
+$(EXTRA_OBJ): obj/%.o: generated/%.c | obj
+	$(CC) -I src/ -I generated/ -c $< -o $@
 
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(LAXCC) -I src/ -I generated/ -c $< -o $@
@@ -99,7 +104,10 @@ $(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) -I generated/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep
-	$(LAXCC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+
+$(PARSER_DEP): dep/%.d: generated/%.c .generated | dep
+	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
 	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
@@ -120,7 +128,7 @@ dep obj generated:
 	mkdir $@
 
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS)
+	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) tags .typedefs src/*~
 
 deps:
 	rm -rf dep
@@ -128,6 +136,11 @@ deps:
 profile: all
 	rm -f callgrind.out.*
 	valgrind --tool=callgrind ./$(TARGET)
+
+indent: .typedefs
+	(cd src; indent `cat ../.typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Control -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value *.[ch])
+
+.typedefs: .generated
 
 check-grammar:
 	bison -Wcex --feature=syntax-only src/parser.y

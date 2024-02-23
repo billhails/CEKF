@@ -1,5 +1,5 @@
 #ifndef cekf_step_h
-#define cekf_step_h
+#    define cekf_step_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bytecode.h"
-#include "value.h"
+#    include "bytecode.h"
+#    include "value.h"
 
 Value run(ByteCodeArray B);
 

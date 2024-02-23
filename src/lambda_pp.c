@@ -80,7 +80,8 @@ void ppLamAmb(LamAmb *amb) {
 }
 
 static void _ppLamVarList(LamVarList *varList) {
-    if (varList == NULL) return;
+    if (varList == NULL)
+        return;
     ppHashSymbol(varList->var);
     if (varList->next != NULL) {
         eprintf(" ");
@@ -141,7 +142,7 @@ void ppLamExp(LamExp *exp) {
             ppLamIff(exp->val.iff);
             break;
         case LAMEXP_TYPE_CALLCC:
-            ppLamCallCC(exp->val.callcc); // LamExp
+            ppLamCallCC(exp->val.callcc);       // LamExp
             break;
         case LAMEXP_TYPE_PRINT:
             ppLamPrint(exp->val.print);
@@ -290,7 +291,8 @@ void ppLamUnaryOp(LamUnaryOp type) {
 }
 
 static void _ppLamSequence(LamSequence *sequence) {
-    if (sequence == NULL) return;
+    if (sequence == NULL)
+        return;
     ppLamExp(sequence->exp);
     if (sequence->next != NULL) {
         eprintf(" ");
@@ -299,7 +301,8 @@ static void _ppLamSequence(LamSequence *sequence) {
 }
 
 static void _ppLamList(LamList *list) {
-    if (list == NULL) return;
+    if (list == NULL)
+        return;
     eprintf(" ");
     ppLamExp(list->exp);
     _ppLamList(list->next);
@@ -377,7 +380,8 @@ static void _ppLamCondCases(LamCondCases *cases) {
             _ppLamCharCondCases(cases->val.characters);
             break;
         default:
-            cant_happen("unrecognised type %d in _ppLamCondCases", cases->type);
+            cant_happen("unrecognised type %d in _ppLamCondCases",
+                        cases->type);
     }
 }
 
@@ -461,7 +465,8 @@ void ppLamLet(LamLet *let) {
 }
 
 static void _ppLamMatchList(LamMatchList *cases) {
-    if (cases == NULL) return;
+    if (cases == NULL)
+        return;
     eprintf("(");
     ppLamIntList(cases->matches);
     if (cases->body) {
@@ -490,7 +495,8 @@ void ppLamMatch(LamMatch *match) {
 }
 
 static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
-    if (bindings == NULL) return;
+    if (bindings == NULL)
+        return;
     eprintf("(");
     ppHashSymbol(bindings->var);
     eprintf(" ");
@@ -498,7 +504,7 @@ static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
     eprintf(")");
     if (bindings->next) {
         eprintf(" ");
-       _ppLamLetRecBindings(bindings->next);
+        _ppLamLetRecBindings(bindings->next);
     }
 }
 
@@ -509,7 +515,8 @@ void ppLamLetRecBindings(LamLetRecBindings *bindings) {
 }
 
 static void _ppLamTypeArgs(LamTypeArgs *args) {
-    if (args == NULL) return;
+    if (args == NULL)
+        return;
     eprintf(" ");
     ppHashSymbol(args->name);
     _ppLamTypeArgs(args->next);
@@ -550,12 +557,14 @@ static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
             _ppLamTypeFunction(type->val.function);
             break;
         default:
-            cant_happen("unrecognised type %d in _ppLamTypeConstructorType", type->type);
+            cant_happen("unrecognised type %d in _ppLamTypeConstructorType",
+                        type->type);
     }
 }
 
 static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args) {
-    if (args == NULL) return;
+    if (args == NULL)
+        return;
     eprintf(" ");
     _ppLamTypeConstructorType(args->arg);
     _ppLamTypeConstructorArgs(args->next);
@@ -574,7 +583,8 @@ static void _ppLamTypeConstructor(LamTypeConstructor *constructor) {
 }
 
 static void _ppLamTypeConstructorList(LamTypeConstructorList *list) {
-    if (list == NULL) return;
+    if (list == NULL)
+        return;
     eprintf(" ");
     _ppLamTypeConstructor(list->constructor);
     _ppLamTypeConstructorList(list->next);
@@ -588,7 +598,8 @@ void ppLamTypeDef(LamTypeDef *typeDef) {
 }
 
 static void _ppLamTypeDefList(LamTypeDefList *list) {
-    if (list == NULL) return;
+    if (list == NULL)
+        return;
     ppLamTypeDef(list->typeDef);
     if (list->next) {
         eprintf(" ");
@@ -603,7 +614,8 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList) {
 }
 
 static void _ppLamIntList(LamIntList *list) {
-    if (list == NULL) return;
+    if (list == NULL)
+        return;
     eprintf("%d:%s", list->item, list->name->name);
     if (list->next != NULL) {
         eprintf(" ");

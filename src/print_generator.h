@@ -1,5 +1,5 @@
 #ifndef cekf_print_generator_h
-#define cekf_print_generator_h
+#    define cekf_print_generator_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,15 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "lambda.h"
-#include "value.h"
-#include "tc.h"
+#    include "lambda.h"
+#    include "value.h"
+#    include "tc.h"
 
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs, LamLetRecBindings *rest, LamContext *env, bool inPreamble);
+LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
+                                      LamLetRecBindings *rest,
+                                      LamContext *env, bool inPreamble);
 LamExp *makeSymbolExpr(char *name);
 LamExp *makePrintInt();
 LamExp *makePrintChar();
 HashSymbol *makePrintName(char *prefix, char *name);
 int countLamList(LamList *list);
 
- #endif
+#endif

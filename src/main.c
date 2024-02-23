@@ -51,16 +51,15 @@ int main(int argc, char *argv[]) {
     clock_t begin = clock();
 
     while (1) {
-        static struct option long_options[] =
-        {
-          {"bigint", no_argument, &bigint_flag, 1},
-          {"report", no_argument, &report_flag, 1},
-          {"help", no_argument, &help_flag, 1},
-          {0, 0, 0, 0}
+        static struct option long_options[] = {
+            { "bigint", no_argument, &bigint_flag, 1 },
+            { "report", no_argument, &report_flag, 1 },
+            { "help", no_argument, &help_flag, 1 },
+            { 0, 0, 0, 0 }
         };
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "", long_options, &option_index);
+        c = getopt_long(argc, argv, "", long_options, &option_index);
 
         if (c == -1)
             break;
@@ -68,10 +67,9 @@ int main(int argc, char *argv[]) {
 
     if (help_flag) {
         printf("%s",
-            "--bigint        use arbitrary precision integers\n"
-            "--report        report statistics\n"
-            "--help          this help\n"
-        );
+               "--bigint        use arbitrary precision integers\n"
+               "--report        report statistics\n"
+               "--help          this help\n");
         exit(0);
     }
 
@@ -79,12 +77,12 @@ int main(int argc, char *argv[]) {
     initProtection();
     disableGC();
     /*
-    printf("char: %ld\n", sizeof(char));
-    printf("word: %ld\n", sizeof(word));
-    printf("int: %ld\n", sizeof(int));
-    printf("bigint_word: %ld\n", sizeof(bigint_word));
-    printf("void *: %ld\n", sizeof(void *));
-    */
+       printf("char: %ld\n", sizeof(char));
+       printf("word: %ld\n", sizeof(word));
+       printf("int: %ld\n", sizeof(int));
+       printf("bigint_word: %ld\n", sizeof(bigint_word));
+       printf("void *: %ld\n", sizeof(void *));
+     */
 
     if (optind >= argc) {
         eprintf("need filename\n");
@@ -134,10 +132,9 @@ int main(int argc, char *argv[]) {
     // report stats etc.
     if (report_flag) {
         clock_t end = clock();
-        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
         printf("\nelapsed time %.3lf\n", time_spent);
         reportMemory();
         reportSteps();
     }
 }
-

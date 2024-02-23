@@ -1,5 +1,5 @@
 #ifndef cekf_annotate_h
-#define cekf_annotate_h
+#    define cekf_annotate_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,12 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdbool.h>
+#    include <stdbool.h>
 
- #include "common.h"
- #include "anf.h"
- #include "hash.h"
- #include "memory.h"
+#    include "common.h"
+#    include "anf.h"
+#    include "hash.h"
+#    include "memory.h"
 
 void annotateExp(Exp *x, CTEnv *env);
 

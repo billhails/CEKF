@@ -232,6 +232,10 @@ class Base:
         self.bespokeCmpImplementation = False
         self.extraCmpArgs = {}
 
+    def noteTypedef(self):
+        with open(".typedefs", "a") as f:
+            print(f'-T {self.name}', file=f)
+
     def isSelfInitializing(self):
         return False
 
@@ -355,6 +359,9 @@ class Base:
     def printIteratorFunction(self, catalog):
         pass
 
+    def hasMarkFn(self):
+        return True
+
 
 class EnumField:
     """
@@ -440,6 +447,10 @@ class SimpleField:
 
     def getFieldName(self):
         return self.name
+
+    def hasMarkFn(self, catalog):
+        obj = catalog.get(self.typeName)
+        return obj.hasMarkFn()
 
     def getCopyCall(self, arg, catalog):
         obj = catalog.get(self.typeName)
@@ -603,10 +614,11 @@ class SimpleHash(Base):
         print('}')
         
     def printTypedef(self, catalog):
+        self.noteTypedef()
         myName = self.getName()
-        print(f'typedef struct {myName} {{ // SimpleHash.printTypeDef')
-        print('    struct HashTable wrapped; // SimpleHash.printTypeDef')
-        print(f'}} {myName}; // SimpleHash.printTypeDef')
+        print(f'typedef struct {myName} {{ // SimpleHash.printTypedef')
+        print('    struct HashTable wrapped; // SimpleHash.printTypedef')
+        print(f'}} {myName}; // SimpleHash.printTypedef')
 
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
@@ -634,12 +646,15 @@ class SimpleHash(Base):
             printFn = 'NULL'
         else:
             size = f'sizeof({self.entries.getTypeDeclaration(catalog)})'
-            markFn = f'mark{myName}'
             printFn = f'print{myName}'
-            print(f'static void mark{myName}(void *ptr) {{ // SimpleHash.printNewFunction')
-            self.entries.printMarkHashLine(catalog, 1)
-            print('} // SimpleHash.printNewFunction')
-            print('')
+            if self.entries.hasMarkFn(catalog):
+                markFn = f'mark{myName}'
+                print(f'static void mark{myName}(void *ptr) {{ // SimpleHash.printNewFunction')
+                self.entries.printMarkHashLine(catalog, 1)
+                print('} // SimpleHash.printNewFunction')
+                print('')
+            else:
+                markFn = 'NULL'
             self.entries.printPrintDeclaration(catalog)
             print('')
             print(f'static void print{myName}(void *ptr, int depth) {{ // SimpleHash.printNewFunction')
@@ -717,18 +732,19 @@ class SimpleArray(Base):
             print("} // SimpleArray.printAccessDeclarations")
 
     def printTypedef(self, catalog):
-        print("typedef struct {name} {{ // SimpleArray.printTypeDef".format(name=self.getName()))
-        print("    Header header; // SimpleArray.printTypeDef")
+        self.noteTypedef()
+        print("typedef struct {name} {{ // SimpleArray.printTypedef".format(name=self.getName()))
+        print("    Header header; // SimpleArray.printTypedef")
         if self.tagged:
-            print("    char *_tag; // SimpleArray.printTypeDef")
+            print("    char *_tag; // SimpleArray.printTypedef")
         if self.dimension == 2: # 2D arrays are fixed size
-            print("    int width; // SimpleArray.printTypeDef")
-            print("    int height; // SimpleArray.printTypeDef")
+            print("    int width; // SimpleArray.printTypedef")
+            print("    int height; // SimpleArray.printTypedef")
         else:                   # 1D arrays can grow
-            print("    int size; // SimpleArray.printTypeDef")
-            print("    int capacity; // SimpleArray.printTypeDef")
+            print("    int size; // SimpleArray.printTypedef")
+            print("    int capacity; // SimpleArray.printTypedef")
         self.entries.printArrayTypedefLine(catalog)
-        print("}} {name}; // SimpleArray.printTypeDef\n".format(name=self.getName()))
+        print("}} {name}; // SimpleArray.printTypedef\n".format(name=self.getName()))
 
     def printMarkDeclaration(self, catalog):
         print("{decl}; // SimpleArray.printMarkDeclaration".format(decl=self.getMarkSignature(catalog)))
@@ -1041,6 +1057,7 @@ class SimpleStruct(Base):
         self.fields = [self.makeField(x, data[x]) for x in data.keys()]
 
     def printTypedef(self, catalog):
+        self.noteTypedef()
         print("typedef struct {name} {{ // SimpleStruct.printTypedef".format(name=self.getName()))
         print("    Header header; // SimpleStruct.printTypedef")
         for field in self.fields:
@@ -1405,11 +1422,12 @@ class DiscriminatedUnion(SimpleStruct):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)
 
     def printTypedef(self, catalog):
-        print("typedef struct {name} {{ // DiscriminatedUnion.printTypeDef".format(name=self.getName()))
-        print("    Header header; // DiscriminatedUnion.printTypeDef")
-        print("    {enum} {field}; // DiscriminatedUnion.printTypeDef".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
-        print("    {union} {field}; // DiscriminatedUnion.printTypeDef".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
-        print("}} {name}; // DiscriminatedUnion.printTypeDef\n".format(name=self.getName()))
+        self.noteTypedef()
+        print("typedef struct {name} {{ // DiscriminatedUnion.printTypedef".format(name=self.getName()))
+        print("    Header header; // DiscriminatedUnion.printTypedef")
+        print("    {enum} {field}; // DiscriminatedUnion.printTypedef".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
+        print("    {union} {field}; // DiscriminatedUnion.printTypedef".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
+        print("}} {name}; // DiscriminatedUnion.printTypedef\n".format(name=self.getName()))
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -1482,10 +1500,11 @@ class DiscriminatedUnionUnion(Base):
         return "{type} val".format(type=self.getTypeDeclaration())
 
     def printTypedef(self, catalog):
-        print("typedef union {name} {{ // DiscriminatedUnionUnion.printTypeDef".format(name=self.getName()))
+        self.noteTypedef()
+        print("typedef union {name} {{ // DiscriminatedUnionUnion.printTypedef".format(name=self.getName()))
         for field in self.fields:
             field.printStructTypedefLine(catalog)
-        print("}} {name}; // DiscriminatedUnionUnion.printTypeDef\n".format(name=self.getName()))
+        print("}} {name}; // DiscriminatedUnionUnion.printTypedef\n".format(name=self.getName()))
 
 
 class SimpleEnum(Base):
@@ -1500,12 +1519,13 @@ class SimpleEnum(Base):
         return "enum {name} ".format(name=self.getName())
 
     def printTypedef(self, catalog):
-        print("typedef enum {name} {{ // SimpleEnum.printTypeDef".format(name=self.getName()))
+        self.noteTypedef()
+        print("typedef enum {name} {{ // SimpleEnum.printTypedef".format(name=self.getName()))
         count = 0
         for  field in self.fields:
             field.printEnumTypedefLine(count)
             count += 1
-        print("}} {name}; // SimpleEnum.printTypeDef\n".format(name=self.getName()))
+        print("}} {name}; // SimpleEnum.printTypedef\n".format(name=self.getName()))
 
     def isEnum(self):
         return True
@@ -1562,12 +1582,13 @@ class DiscriminatedUnionEnum(Base):
         return "enum {name} ".format(name=self.getName())
 
     def printTypedef(self, catalog):
-        print("typedef enum {name} {{ // DiscriminatedUnionEnum.printTypeDef".format(name=self.getName()))
+        self.noteTypedef()
+        print("typedef enum {name} {{ // DiscriminatedUnionEnum.printTypedef".format(name=self.getName()))
         count = 0
         for  field in self.fields:
             field.printEnumTypedefLine(count)
             count += 1
-        print("}} {name}; // DiscriminatedUnionEnum.printTypeDef\n".format(name=self.getName()))
+        print("}} {name}; // DiscriminatedUnionEnum.printTypedef\n".format(name=self.getName()))
 
     def getSignature(self, catalog):
         return "{type} type".format(type=self.getTypeDeclaration())
@@ -1609,6 +1630,9 @@ class Primitive(Base):
             self.printMarkField(self.name, 3, 'val.')
             print("            break; // Primitive.printMarkCase")
 
+    def hasMarkFn(self):
+        return self.markFn is not None
+
     def printMarkHashField(self, depth):
         if self.markFn is not None:
             pad(depth)
@@ -1630,6 +1654,8 @@ class Primitive(Base):
             print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
 
     def printPrintHashField(self, depth):
+        pad(depth)
+        print('eprintf("%*s", depth * PAD_WIDTH, "");')
         pad(depth)
         if self.printFn == 'printf':
             print(f'eprintf("{self.cname} {self.printf}", *({self.cname} *)ptr); // Primitive.printPrintHashField')

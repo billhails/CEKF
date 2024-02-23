@@ -32,9 +32,9 @@
 #include "hash.h"
 
 #ifdef DEBUG_STEP
-#define DEBUGPRINTF(...) printf(__VA_ARGS__)
+#    define DEBUGPRINTF(...) printf(__VA_ARGS__)
 #else
-#define DEBUGPRINTF(...)
+#    define DEBUGPRINTF(...)
 #endif
 
 /**
@@ -132,19 +132,20 @@ static inline int readCurrentOffsetAt(int i) {
 static Value intValue(int i) {
     Value value;
     value.type = VALUE_TYPE_STDINT;
-    value.val = VALUE_VAL_STDINT(i); 
+    value.val = VALUE_VAL_STDINT(i);
     return value;
 }
 
 static Value bigIntValue(BigInt *i) {
     Value value;
     value.type = VALUE_TYPE_BIGINT;
-    value.val = VALUE_VAL_BIGINT(i); 
+    value.val = VALUE_VAL_BIGINT(i);
     return value;
 }
 
 static bool truthy(Value v) {
-    return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0) || v.type == VALUE_TYPE_VOID);
+    return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0)
+             || v.type == VALUE_TYPE_VOID);
 }
 
 typedef Value (*IntegerBinOp)(Value, Value);
@@ -279,7 +280,8 @@ static int _vecCmp(Vec *a, Vec *b) {
 #endif
     for (int i = 0; i < a->size; ++i) {
         int cmp = _cmp(a->values[i], b->values[i]);
-        if (cmp != 0) return cmp;
+        if (cmp != 0)
+            return cmp;
     }
     return 0;
 }
@@ -436,71 +438,79 @@ static void applyProc(int naargs) {
     Value callable = pop();
     int save = protectValue(callable);
     switch (callable.type) {
-        case VALUE_TYPE_PCLO: {
-            Clo *clo = callable.val.clo;
-            if (clo->nvar == naargs) {
-                state.C = clo->c;
-                state.E = clo->rho->next;
-                copyValues(state.S.stack, clo->rho->values, clo->rho->count);
-                copyValues(&(state.S.stack[clo->rho->count]), &(state.S.stack[state.S.sp - clo->nvar]), clo->nvar);
-                state.S.sp = clo->rho->count + clo->nvar;
-            } else if (naargs == 0) {
-                push(callable);
-            } else if (naargs < clo->nvar) {
-                Env *e = newEnv(clo->rho->next, naargs + clo->rho->count);
-                int save = PROTECT(e);
-                copyValues(e->values, clo->rho->values, clo->rho->count);
-                copyValues(&(e->values[clo->rho->count]), &(state.S.stack[state.S.sp - naargs]), naargs);
-                Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
-                PROTECT(pclo);
-                callable.type = VALUE_TYPE_PCLO;
-                callable.val.clo = pclo;
-                push(callable);
-                UNPROTECT(save);
-            } else {
-                cant_happen("too many arguments to partial closure, expected %d, got %d", clo->nvar, naargs);
+        case VALUE_TYPE_PCLO:{
+                Clo *clo = callable.val.clo;
+                if (clo->nvar == naargs) {
+                    state.C = clo->c;
+                    state.E = clo->rho->next;
+                    copyValues(state.S.stack, clo->rho->values,
+                               clo->rho->count);
+                    copyValues(&(state.S.stack[clo->rho->count]),
+                               &(state.S.stack[state.S.sp - clo->nvar]),
+                               clo->nvar);
+                    state.S.sp = clo->rho->count + clo->nvar;
+                } else if (naargs == 0) {
+                    push(callable);
+                } else if (naargs < clo->nvar) {
+                    Env *e = newEnv(clo->rho->next, naargs + clo->rho->count);
+                    int save = PROTECT(e);
+                    copyValues(e->values, clo->rho->values, clo->rho->count);
+                    copyValues(&(e->values[clo->rho->count]),
+                               &(state.S.stack[state.S.sp - naargs]), naargs);
+                    Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                    PROTECT(pclo);
+                    callable.type = VALUE_TYPE_PCLO;
+                    callable.val.clo = pclo;
+                    push(callable);
+                    UNPROTECT(save);
+                } else {
+                    cant_happen
+                        ("too many arguments to partial closure, expected %d, got %d",
+                         clo->nvar, naargs);
+                }
             }
-        }
-        break;
-        case VALUE_TYPE_CLO: {
-            Clo *clo = callable.val.clo;
-            if (clo->nvar == naargs) {
-                state.C = clo->c;
-                state.E = clo->rho;
-                setFrame(&state.S, clo->nvar);
-            } else if (naargs == 0) {
-                push(callable);
-            } else if (naargs < clo->nvar) {
-                Env *e = newEnv(clo->rho, naargs);
-                int save = PROTECT(e);
-                copyTosToEnv(&state.S, e, naargs);
-                Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
-                PROTECT(pclo);
-                callable.type = VALUE_TYPE_PCLO;
-                callable.val.clo = pclo;
-                push(callable);
-                UNPROTECT(save);
-            } else {
-                cant_happen("too many arguments to closure, expected %d, got %d", clo->nvar, naargs);
+            break;
+        case VALUE_TYPE_CLO:{
+                Clo *clo = callable.val.clo;
+                if (clo->nvar == naargs) {
+                    state.C = clo->c;
+                    state.E = clo->rho;
+                    setFrame(&state.S, clo->nvar);
+                } else if (naargs == 0) {
+                    push(callable);
+                } else if (naargs < clo->nvar) {
+                    Env *e = newEnv(clo->rho, naargs);
+                    int save = PROTECT(e);
+                    copyTosToEnv(&state.S, e, naargs);
+                    Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                    PROTECT(pclo);
+                    callable.type = VALUE_TYPE_PCLO;
+                    callable.val.clo = pclo;
+                    push(callable);
+                    UNPROTECT(save);
+                } else {
+                    cant_happen
+                        ("too many arguments to closure, expected %d, got %d",
+                         clo->nvar, naargs);
+                }
             }
-        }
-        break;
-        case VALUE_TYPE_CONT: {
-            if (callable.val.k == NULL) {
-                state.V = pop();
-                state.C = UINT64_MAX;
-            } else {
-                Value result = pop();
-                protectValue(result);
-                Kont *k = callable.val.k;
-                state.C = k->body;
-                state.K = k->next;
-                state.E = k->rho;
-                restoreKont(&state.S, k);
-                push(result);
+            break;
+        case VALUE_TYPE_CONT:{
+                if (callable.val.k == NULL) {
+                    state.V = pop();
+                    state.C = UINT64_MAX;
+                } else {
+                    Value result = pop();
+                    protectValue(result);
+                    Kont *k = callable.val.k;
+                    state.C = k->body;
+                    state.K = k->next;
+                    state.E = k->rho;
+                    restoreKont(&state.S, k);
+                    push(result);
+                }
             }
-        }
-        break;
+            break;
         default:
             cant_happen("unexpected type %d in APPLY", callable.type);
     }
@@ -543,462 +553,507 @@ static void step() {
         printf("%4d) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
-            case BYTECODE_NONE: {
-                cant_happen("encountered NONE in step()");
-            }
-            break;
-            case BYTECODE_LAM: { // create a closure and push it
-                int nargs = readCurrentByte();
-                int letRecOffset = readCurrentByte();
-                int end = readCurrentOffset();
-                DEBUGPRINTF("LAM nargs:[%d] letrec:[%d] end:[%04x]\n", nargs, letRecOffset, end);
-                Clo *clo = newClo(nargs, state.C, state.E);
-                int save = PROTECT(clo);
-                snapshotClo(&state.S, clo, letRecOffset);
-                Value v;
-                v.type = VALUE_TYPE_CLO;
-                v.val = VALUE_VAL_CLO(clo);
-                push(v);
-                UNPROTECT(save);
-                state.C = end;
-            }
-            break;
-            case BYTECODE_VAR: { // look up an environment variable and push it
-                int frame = readCurrentByte();
-                int offset = readCurrentByte();
-                DEBUGPRINTF("VAR [%d:%d]\n", frame, offset);
-                push(lookup(frame, offset));
-            }
-            break;
-            case BYTECODE_LVAR: { // look up a stack variable and push it
-                int offset = readCurrentByte();
-                DEBUGPRINTF("LVAR [%d]\n", offset);
-                push(peek(offset));
-            }
-            break;
-            case BYTECODE_PUSHN: { // allocate space for n variables on the stack
-                int size = readCurrentByte();
-                DEBUGPRINTF("PUSHN [%d]\n", size);
-                pushN(&state.S, size);
-            }
-            break;
-            case BYTECODE_PRIM_PUTC: { // peek value, print it
-                DEBUGPRINTF("PUTC\n");
-                Value b = tos();
-                putchar(b.val.c);
-            }
-            break;
-            case BYTECODE_PRIM_PUTV: { // peek value, print it
-                DEBUGPRINTF("PUTC\n");
-                Value b = tos();
-                putValue(b);
-            }
-            break;
-            case BYTECODE_PRIM_PUTN: { // peek value, print it
-                DEBUGPRINTF("PUTN\n");
-                Value b = tos();
-                if (b.type == VALUE_TYPE_BIGINT) {
-                    fprintBigInt(stdout, b.val.b);
-                } else {
-                    printf("%d", b.val.z);
+            case BYTECODE_NONE:{
+                    cant_happen("encountered NONE in step()");
                 }
-            }
-            break;
-            case BYTECODE_PRIM_CMP: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("CMP\n");
-                Value b = pop();
-                Value a = pop();
-                push(cmp(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_ADD: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("ADD\n");
-                Value b = pop();
-                Value a = pop();
-                push(add(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_SUB: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("SUB\n");
-                Value b = pop();
-                Value a = pop();
-                push(sub(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_MUL: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("MUL\n");
-                Value b = pop();
-                Value a = pop();
-                push(mul(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_DIV: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("DIV\n");
-                Value b = pop();
-                Value a = pop();
-                push(divide(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_POW: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("POW\n");
-                Value b = pop();
-                Value a = pop();
-                push(power(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_MOD: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("MOD\n");
-                Value b = pop();
-                Value a = pop();
-                push(modulo(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_EQ: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("EQ\n");
-                Value b = pop();
-                Value a = pop();
-                push(eq(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_NE: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("NE\n");
-                Value b = pop();
-                Value a = pop();
-                push(ne(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_GT: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("GT\n");
-                Value b = pop();
-                Value a = pop();
-                push(gt(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_LT: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("LT\n");
-                Value b = pop();
-                Value a = pop();
-                push(lt(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_GE: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("GE\n");
-                Value b = pop();
-                Value a = pop();
-                push(ge(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_LE: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("LE\n");
-                Value b = pop();
-                Value a = pop();
-                push(le(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_XOR: { // pop two values, perform the binop and push the result
-                DEBUGPRINTF("XOR\n");
-                Value b = pop();
-                Value a = pop();
-                push(xor(a, b));
-            }
-            break;
-            case BYTECODE_PRIM_NOT: { // pop value, perform the op and push the result
-                DEBUGPRINTF("NOT\n");
-                Value a = pop();
-                push(not(a));
-            }
-            break;
-            case BYTECODE_PRIM_VEC: {
-                DEBUGPRINTF("VEC\n");
-                Value b = pop();
-                int save = protectValue(b);
-                Value a = pop();
-                protectValue(a);
-                Value result = vec(a, b);
-                protectValue(result);
-                push(result);
-                UNPROTECT(save);
-            }
-            break;
-            case BYTECODE_PRIM_MAKEVEC: {
-                int size = readCurrentByte();
-                DEBUGPRINTF("MAKEVEC [%d]\n", size);
-                // at this point there will be `size` arguments on the stack. Rather than
-                // popping then individually we can just memcpy them into a new struct Vec
-                Vec *v = newVec(size);
-                int save = PROTECT(v);
-                copyToVec(v);
-                popn(size);
-                Value val;
-                val.type = VALUE_TYPE_VEC;
-                val.val = VALUE_VAL_VEC(v);
-                push(val);
-                UNPROTECT(save);
-            }
-            break;
-            case BYTECODE_APPLY: { // apply the callable at the top of the stack to the arguments beneath it
-                int nargs = readCurrentByte();
-                DEBUGPRINTF("APPLY [%d]\n", nargs);
-                applyProc(nargs);
-            }
-            break;
-            case BYTECODE_IF: { // pop the test result and jump to the appropriate branch
-                int branch = readCurrentOffset();
-                DEBUGPRINTF("IF [%04x]\n", branch);
-                Value aexp = pop();
-                if (!truthy(aexp)) {
-                    state.C = branch;
+                break;
+            case BYTECODE_LAM:{// create a closure and push it
+                    int nargs = readCurrentByte();
+                    int letRecOffset = readCurrentByte();
+                    int end = readCurrentOffset();
+                    DEBUGPRINTF("LAM nargs:[%d] letrec:[%d] end:[%04x]\n",
+                                nargs, letRecOffset, end);
+                    Clo *clo = newClo(nargs, state.C, state.E);
+                    int save = PROTECT(clo);
+                    snapshotClo(&state.S, clo, letRecOffset);
+                    Value v;
+                    v.type = VALUE_TYPE_CLO;
+                    v.val = VALUE_VAL_CLO(clo);
+                    push(v);
+                    UNPROTECT(save);
+                    state.C = end;
                 }
-            }
-            break;
-            case BYTECODE_MATCH: { // pop the dispach code, verify it's an integer and in range, and dispatch
-                int size = readCurrentByte();
+                break;
+            case BYTECODE_VAR:{// look up an environment variable and push it
+                    int frame = readCurrentByte();
+                    int offset = readCurrentByte();
+                    DEBUGPRINTF("VAR [%d:%d]\n", frame, offset);
+                    push(lookup(frame, offset));
+                }
+                break;
+            case BYTECODE_LVAR:{
+                    // look up a stack variable and push it
+                    int offset = readCurrentByte();
+                    DEBUGPRINTF("LVAR [%d]\n", offset);
+                    push(peek(offset));
+                }
+                break;
+            case BYTECODE_PUSHN:{
+                    // allocate space for n variables on the stack
+                    int size = readCurrentByte();
+                    DEBUGPRINTF("PUSHN [%d]\n", size);
+                    pushN(&state.S, size);
+                }
+                break;
+            case BYTECODE_PRIM_PUTC:{
+                    // peek value, print it
+                    DEBUGPRINTF("PUTC\n");
+                    Value b = tos();
+                    putchar(b.val.c);
+                }
+                break;
+            case BYTECODE_PRIM_PUTV:{
+                    // peek value, print it
+                    DEBUGPRINTF("PUTC\n");
+                    Value b = tos();
+                    putValue(b);
+                }
+                break;
+            case BYTECODE_PRIM_PUTN:{
+                    // peek value, print it
+                    DEBUGPRINTF("PUTN\n");
+                    Value b = tos();
+                    if (b.type == VALUE_TYPE_BIGINT) {
+                        fprintBigInt(stdout, b.val.b);
+                    } else {
+                        printf("%d", b.val.z);
+                    }
+                }
+                break;
+            case BYTECODE_PRIM_CMP:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("CMP\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(cmp(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_ADD:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("ADD\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(add(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_SUB:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("SUB\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(sub(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_MUL:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("MUL\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(mul(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_DIV:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("DIV\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(divide(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_POW:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("POW\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(power(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_MOD:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("MOD\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(modulo(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_EQ:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("EQ\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(eq(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_NE:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("NE\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(ne(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_GT:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("GT\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(gt(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_LT:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("LT\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(lt(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_GE:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("GE\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(ge(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_LE:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("LE\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(le(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_XOR:{
+                    // pop two values, perform the binop and push the result
+                    DEBUGPRINTF("XOR\n");
+                    Value b = pop();
+                    Value a = pop();
+                    push(xor(a, b));
+                }
+                break;
+            case BYTECODE_PRIM_NOT:{
+                    // pop value, perform the op and push the result
+                    DEBUGPRINTF("NOT\n");
+                    Value a = pop();
+                    push(not(a));
+                }
+                break;
+            case BYTECODE_PRIM_VEC:{
+                    DEBUGPRINTF("VEC\n");
+                    Value b = pop();
+                    int save = protectValue(b);
+                    Value a = pop();
+                    protectValue(a);
+                    Value result = vec(a, b);
+                    protectValue(result);
+                    push(result);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_PRIM_MAKEVEC:{
+                    int size = readCurrentByte();
+                    DEBUGPRINTF("MAKEVEC [%d]\n", size);
+                    // at this point there will be `size` arguments on the stack. Rather than
+                    // popping then individually we can just memcpy them into a new struct Vec
+                    Vec *v = newVec(size);
+                    int save = PROTECT(v);
+                    copyToVec(v);
+                    popn(size);
+                    Value val;
+                    val.type = VALUE_TYPE_VEC;
+                    val.val = VALUE_VAL_VEC(v);
+                    push(val);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_APPLY:{
+                    // apply the callable at the top of the stack to the arguments beneath it
+                    int nargs = readCurrentByte();
+                    DEBUGPRINTF("APPLY [%d]\n", nargs);
+                    applyProc(nargs);
+                }
+                break;
+            case BYTECODE_IF:{ // pop the test result and jump to the appropriate branch
+                    int branch = readCurrentOffset();
+                    DEBUGPRINTF("IF [%04x]\n", branch);
+                    Value aexp = pop();
+                    if (!truthy(aexp)) {
+                        state.C = branch;
+                    }
+                }
+                break;
+            case BYTECODE_MATCH:{
+                    // pop the dispach code, verify it's an integer and in range, and dispatch
+                    int size = readCurrentByte();
 #ifdef DEBUG_STEP
-                printf("MATCH [%d]", size);
-                int save = state.C;
-                for (int c = 0; c < size; c++) {
-                    printf("[%04x]", readCurrentOffset());
-                }
-                state.C = save;
-                printf("\n");
+                    printf("MATCH [%d]", size);
+                    int save = state.C;
+                    for (int c = 0; c < size; c++) {
+                        printf("[%04x]", readCurrentOffset());
+                    }
+                    state.C = save;
+                    printf("\n");
 #endif
-                Value v = pop();
+                    Value v = pop();
 #ifdef SAFETY_CHECKS
-                if (v.type != VALUE_TYPE_STDINT)
-                    cant_happen("match expression must be an integer, expected type %d, got %d", VALUE_TYPE_STDINT, v.type);
-                if (v.val.z < 0 || v.val.z >= size)
-                    cant_happen("match expression index out of range (%d)", v.val.z);
+                    if (v.type != VALUE_TYPE_STDINT)
+                        cant_happen
+                            ("match expression must be an integer, expected type %d, got %d",
+                             VALUE_TYPE_STDINT, v.type);
+                    if (v.val.z < 0 || v.val.z >= size)
+                        cant_happen
+                            ("match expression index out of range (%d)",
+                             v.val.z);
 #endif
-                state.C = readCurrentOffsetAt(v.val.z);
-            }
-            break;
-            case BYTECODE_INTCOND: { // pop the value, walk the dispatch table looking for a match, or run the default
-                int size = readCurrentWord();
+                    state.C = readCurrentOffsetAt(v.val.z);
+                }
+                break;
+            case BYTECODE_INTCOND:{
+                    // pop the value, walk the dispatch table looking for a match, or run the default
+                    int size = readCurrentWord();
 #ifdef DEBUG_STEP
-                printf("INTCOND [%d]", size);
-                int here = state.C;
-                for (int c = 0; c < size; c++) {
-                    printf(" ");
+                    printf("INTCOND [%d]", size);
+                    int here = state.C;
+                    for (int c = 0; c < size; c++) {
+                        printf(" ");
+                        if (bigint_flag) {
+                            BigInt *bigInt = readCurrentBigInt();
+                            fprintBigInt(stdout, bigInt);
+                        } else {
+                            int Int = readCurrentInt();
+                            printf("%d", Int);
+                        }
+                        int offset = readCurrentOffset();
+                        printf(":[%04x]", offset);
+                    }
+                    printf("\n");
+                    state.C = here;
+#endif
+                    Value v = pop();
+                    int save = protectValue(v);
                     if (bigint_flag) {
-                        BigInt *bigInt = readCurrentBigInt();
-                        fprintBigInt(stdout, bigInt);
+                        for (int c = 0; c < size; c++) {
+                            BigInt *bigInt = readCurrentBigInt();
+                            int offset = readCurrentOffset();
+                            if (cmpBigInt(bigInt, v.val.b) == 0) {
+                                state.C = offset;
+                                break;
+                            }
+                        }
                     } else {
-                        int Int = readCurrentInt();
-                        printf("%d", Int);
-                    }
-                    int offset = readCurrentOffset();
-                    printf(":[%04x]", offset);
-                }
-                printf("\n");
-                state.C = here;
-#endif
-                Value v = pop();
-                int save = protectValue(v);
-                if (bigint_flag) {
-                    for (int c = 0; c < size; c++) {
-                        BigInt *bigInt = readCurrentBigInt();
-                        int offset = readCurrentOffset();
-                        if (cmpBigInt(bigInt, v.val.b) == 0) {
-                            state.C = offset;
-                            break;
+                        for (int c = 0; c < size; c++) {
+                            int option = readCurrentInt();
+                            int offset = readCurrentOffset();
+                            if (option == v.val.z) {
+                                state.C = offset;
+                                break;
+                            }
                         }
                     }
-                } else {
-                    for (int c = 0; c < size; c++) {
-                        int option = readCurrentInt();
-                        int offset = readCurrentOffset();
-                        if (option == v.val.z) {
-                            state.C = offset;
-                            break;
-                        }
-                    }
+                    UNPROTECT(save);
                 }
-                UNPROTECT(save);
-            }
-            break;
-            case BYTECODE_CHARCOND: { // pop the value, walk the dispatch table looking for a match, or run the default
-                int size = readCurrentWord();
+                break;
+            case BYTECODE_CHARCOND:{
+                    // pop the value, walk the dispatch table looking for a match, or run the default
+                    int size = readCurrentWord();
 #ifdef DEBUG_STEP
-                printf("CHARCOND [%d]", size);
-                int here = state.C;
-                for (int c = 0; c < size; c++) {
-                    int val = readCurrentInt();
-                    int offset = readCurrentOffset();
-                    printf(" %d:[%04x]", val, offset);
-                }
-                printf("\n");
-                state.C = here;
+                    printf("CHARCOND [%d]", size);
+                    int here = state.C;
+                    for (int c = 0; c < size; c++) {
+                        int val = readCurrentInt();
+                        int offset = readCurrentOffset();
+                        printf(" %d:[%04x]", val, offset);
+                    }
+                    printf("\n");
+                    state.C = here;
 #endif
-                Value v = pop();
-                int option = 0;
-                switch (v.type) {
-                    case VALUE_TYPE_STDINT:
-                        option = v.val.z;
-                        break;
-                    case VALUE_TYPE_CHARACTER:
-                        option = (int) v.val.c;
-                        break;
-                    default:
-                        cant_happen("unexpected type %d for CHARCOND value", v.type);
-                }
-                for (int c = 0; c < size; c++) {
-                    int val = readCurrentInt();
-                    int offset = readCurrentOffset();
-                    if (option == val) {
-                        state.C = offset;
-                        break;
+                    Value v = pop();
+                    int option = 0;
+                    switch (v.type) {
+                        case VALUE_TYPE_STDINT:
+                            option = v.val.z;
+                            break;
+                        case VALUE_TYPE_CHARACTER:
+                            option = (int) v.val.c;
+                            break;
+                        default:
+                            cant_happen
+                                ("unexpected type %d for CHARCOND value",
+                                 v.type);
+                    }
+                    for (int c = 0; c < size; c++) {
+                        int val = readCurrentInt();
+                        int offset = readCurrentOffset();
+                        if (option == val) {
+                            state.C = offset;
+                            break;
+                        }
                     }
                 }
-            }
-            break;
-            case BYTECODE_LETREC: { // patch each of the lambdas environments with the current stack frame
-                int nargs = readCurrentByte();
-                DEBUGPRINTF("LETREC [%d]\n", nargs);
-                for (int i = frameSize(&state.S) - nargs; i < frameSize(&state.S); i++) {
-                    Value v = peek(i);
-                    if (v.type == VALUE_TYPE_CLO) {
-                        patchClo(&state.S, v.val.clo);
-                    } else {
-                        cant_happen("non-lambda value (%d) for letrec", v.type);
+                break;
+            case BYTECODE_LETREC:{
+                    // patch each of the lambdas environments with the current stack frame
+                    int nargs = readCurrentByte();
+                    DEBUGPRINTF("LETREC [%d]\n", nargs);
+                    for (int i = frameSize(&state.S) - nargs;
+                         i < frameSize(&state.S); i++) {
+                        Value v = peek(i);
+                        if (v.type == VALUE_TYPE_CLO) {
+                            patchClo(&state.S, v.val.clo);
+                        } else {
+                            cant_happen("non-lambda value (%d) for letrec",
+                                        v.type);
+                        }
                     }
                 }
-            }
-            break;
-            case BYTECODE_AMB: { // create a new failure continuation to resume at the alternative
-                int branch = readCurrentOffset();
-                DEBUGPRINTF("AMB [%04x]\n", branch);
-                state.F = newFail(branch, state.E, state.K, state.F);
-                snapshotFail(&state.S, state.F);
-            }
-            break;
-            case BYTECODE_CUT: { // discard the current failure continuation
-                DEBUGPRINTF("CUT\n");
+                break;
+            case BYTECODE_AMB:{// create a new failure continuation to resume at the alternative
+                    int branch = readCurrentOffset();
+                    DEBUGPRINTF("AMB [%04x]\n", branch);
+                    state.F = newFail(branch, state.E, state.K, state.F);
+                    snapshotFail(&state.S, state.F);
+                }
+                break;
+            case BYTECODE_CUT:{// discard the current failure continuation
+                    DEBUGPRINTF("CUT\n");
 #ifdef SAFETY_CHECKS
-                if (state.F == NULL) {
-                    cant_happen("cut with no extant failure continuation");
-                }
+                    if (state.F == NULL) {
+                        cant_happen
+                            ("cut with no extant failure continuation");
+                    }
 #endif
-                state.F = state.F->next;
-            }
-            break;
-            case BYTECODE_BACK: { // restore the failure continuation or halt
-                DEBUGPRINTF("BACK\n");
-                if (state.F == NULL) {
-                    state.C = -1;
-                } else {
-                    state.C = state.F->exp;
-                    state.E = state.F->rho;
-                    state.K = state.F->k;
-                    restoreFail(&state.S, state.F);
                     state.F = state.F->next;
                 }
-            }
-            break;
-            case BYTECODE_LET: { // create a new continuation to resume the body, and transfer control to the expression
-                int offset = readCurrentOffset();
-                DEBUGPRINTF("LET [%04x]\n", offset);
-                state.K = newKont(offset, state.E, state.K);
-                validateLastAlloc();
-                snapshotKont(&state.S, state.K);
-            }
-            break;
-            case BYTECODE_JMP: { // jump forward a specified amount
-                int offset = readCurrentOffset();
-                DEBUGPRINTF("JMP [%04x]\n", offset);
-                state.C = offset;
-            }
-            break;
-            case BYTECODE_CALLCC: { // pop the callable, push the current continuation, push the callable and apply
-                DEBUGPRINTF("CALLCC\n");
-                Value aexp = pop();
-                int save = protectValue(aexp);
-                Value cc;
-                cc.type = VALUE_TYPE_CONT;
-                cc.val = VALUE_VAL_CONT(state.K);
-                push(cc);
-                push(aexp);
-                UNPROTECT(save);
-                applyProc(1);
-            }
-            break;
-            case BYTECODE_TRUE: { // push true
-                DEBUGPRINTF("TRUE\n");
-                push(vTrue);
-            }
-            break;
-            case BYTECODE_FALSE: { // push false
-                DEBUGPRINTF("FALSE\n");
-                push(vFalse);
-            }
-            break;
-            case BYTECODE_VOID: { // push void
-                DEBUGPRINTF("VOID\n");
-                push(vVoid);
-            }
-            break;
-            case BYTECODE_STDINT: { // push literal int
-                int val = readCurrentInt();
-                DEBUGPRINTF("STDINT [%d]\n", val);
-                Value v;
-                v.type = VALUE_TYPE_STDINT;
-                v.val = VALUE_VAL_STDINT(val);
-                push(v);
-            }
-            break;
-            case BYTECODE_CHAR: { // push literal char
-                char c = readCurrentByte();
-                DEBUGPRINTF("CHAR [%c]\n", c);
-                Value v;
-                v.type = VALUE_TYPE_CHARACTER;
-                v.val = VALUE_VAL_CHARACTER(c);
-                push(v);
-            }
-            break;
-            case BYTECODE_BIGINT: {
-                BigInt *bigInt = readCurrentBigInt();
-                int save = PROTECT(bigInt);
+                break;
+            case BYTECODE_BACK:{
+                    // restore the failure continuation or halt
+                    DEBUGPRINTF("BACK\n");
+                    if (state.F == NULL) {
+                        state.C = -1;
+                    } else {
+                        state.C = state.F->exp;
+                        state.E = state.F->rho;
+                        state.K = state.F->k;
+                        restoreFail(&state.S, state.F);
+                        state.F = state.F->next;
+                    }
+                }
+                break;
+            case BYTECODE_LET:{// create a new continuation to resume the body, and transfer control to the expression
+                    int offset = readCurrentOffset();
+                    DEBUGPRINTF("LET [%04x]\n", offset);
+                    state.K = newKont(offset, state.E, state.K);
+                    validateLastAlloc();
+                    snapshotKont(&state.S, state.K);
+                }
+                break;
+            case BYTECODE_JMP:{// jump forward a specified amount
+                    int offset = readCurrentOffset();
+                    DEBUGPRINTF("JMP [%04x]\n", offset);
+                    state.C = offset;
+                }
+                break;
+            case BYTECODE_CALLCC:{
+                    // pop the callable, push the current continuation, push the callable and apply
+                    DEBUGPRINTF("CALLCC\n");
+                    Value aexp = pop();
+                    int save = protectValue(aexp);
+                    Value cc;
+                    cc.type = VALUE_TYPE_CONT;
+                    cc.val = VALUE_VAL_CONT(state.K);
+                    push(cc);
+                    push(aexp);
+                    UNPROTECT(save);
+                    applyProc(1);
+                }
+                break;
+            case BYTECODE_TRUE:{
+                    // push true
+                    DEBUGPRINTF("TRUE\n");
+                    push(vTrue);
+                }
+                break;
+            case BYTECODE_FALSE:{
+                    // push false
+                    DEBUGPRINTF("FALSE\n");
+                    push(vFalse);
+                }
+                break;
+            case BYTECODE_VOID:{
+                    // push void
+                    DEBUGPRINTF("VOID\n");
+                    push(vVoid);
+                }
+                break;
+            case BYTECODE_STDINT:{
+                    // push literal int
+                    int val = readCurrentInt();
+                    DEBUGPRINTF("STDINT [%d]\n", val);
+                    Value v;
+                    v.type = VALUE_TYPE_STDINT;
+                    v.val = VALUE_VAL_STDINT(val);
+                    push(v);
+                }
+                break;
+            case BYTECODE_CHAR:{
+                    // push literal char
+                    char c = readCurrentByte();
+                    DEBUGPRINTF("CHAR [%c]\n", c);
+                    Value v;
+                    v.type = VALUE_TYPE_CHARACTER;
+                    v.val = VALUE_VAL_CHARACTER(c);
+                    push(v);
+                }
+                break;
+            case BYTECODE_BIGINT:{
+                    BigInt *bigInt = readCurrentBigInt();
+                    int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
-                printf("BIGINT [");
-                fprintBigInt(stdout, bigInt);
-                printf("]\n");
+                    printf("BIGINT [");
+                    fprintBigInt(stdout, bigInt);
+                    printf("]\n");
 #endif
-                Value v;
-                v.type = VALUE_TYPE_BIGINT;
-                v.val = VALUE_VAL_BIGINT(bigInt);
-                push(v);
-                UNPROTECT(save);
-            }
-            break;
-            case BYTECODE_RETURN: { // push the current continuation and apply
-                DEBUGPRINTF("RETURN\n");
-                Value k;
-                k.type = VALUE_TYPE_CONT;
-                k.val = VALUE_VAL_CONT(state.K);
-                push(k);
-                applyProc(1);
-            }
-            break;
-            case BYTECODE_DONE: { // can't happen, probably
-                DEBUGPRINTF("DONE\n");
-                state.C = UINT64_MAX;
-            }
-            break;
-            case BYTECODE_ERROR: {
-                DEBUGPRINTF("ERROR\n");
-                state.C = UINT64_MAX;
-                eprintf("pattern match exhausted in step\n");
-            }
-            break;
+                    Value v;
+                    v.type = VALUE_TYPE_BIGINT;
+                    v.val = VALUE_VAL_BIGINT(bigInt);
+                    push(v);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_RETURN:{
+                    // push the current continuation and apply
+                    DEBUGPRINTF("RETURN\n");
+                    Value k;
+                    k.type = VALUE_TYPE_CONT;
+                    k.val = VALUE_VAL_CONT(state.K);
+                    push(k);
+                    applyProc(1);
+                }
+                break;
+            case BYTECODE_DONE:{
+                    // can't happen, probably
+                    DEBUGPRINTF("DONE\n");
+                    state.C = UINT64_MAX;
+                }
+                break;
+            case BYTECODE_ERROR:{
+                    DEBUGPRINTF("ERROR\n");
+                    state.C = UINT64_MAX;
+                    eprintf("pattern match exhausted in step\n");
+                }
+                break;
             default:
                 cant_happen("unrecognised bytecode %d in step()", bytecode);
         }
 #ifdef DEBUG_STEP
-#ifdef DEBUG_SLOW_STEP
+#    ifdef DEBUG_SLOW_STEP
         sleep(1);
-#endif
+#    endif
 #endif
     }
 }
+
 static void putVec(Vec *x);
 
 void putValue(Value x) {

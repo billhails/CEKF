@@ -1,5 +1,5 @@
 #ifndef cekf_bytecode_h
-#define cekf_bytecode_h
+#    define cekf_bytecode_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "anf.h"
-#include "memory.h"
+#    include "anf.h"
+#    include "memory.h"
 
 typedef uint8_t byte;
 typedef uint16_t word;
@@ -167,6 +167,5 @@ static inline bigint readBigint(ByteCodeArray *b, size_t *i) {
     a.neg = neg;
     return a;
 }
-
 
 #endif

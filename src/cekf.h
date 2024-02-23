@@ -1,5 +1,5 @@
 #ifndef cekf_cekf_h
-#define cekf_cekf_h
+#    define cekf_cekf_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -22,14 +22,14 @@
  * The structures of the CEKF machine.
  */
 
-#include <stdbool.h>
-#include <stddef.h>
+#    include <stdbool.h>
+#    include <stddef.h>
 
-#include "bytecode.h"
-#include "common.h"
-#include "anf.h"
-#include "memory.h"
-#include "value.h"
+#    include "bytecode.h"
+#    include "common.h"
+#    include "anf.h"
+#    include "memory.h"
+#    include "value.h"
 
 typedef size_t Control;
 
@@ -120,7 +120,6 @@ void initStack(Stack *stack);
 int frameSize(Stack *stack);
 void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
-
 
 ValueList *newValueList(int count);
 Clo *newClo(int nvar, Control c, Env *rho);

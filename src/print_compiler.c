@@ -31,9 +31,9 @@
 #include "symbols.h"
 
 #ifdef DEBUG_PRINT_COMPILER
-#include "debugging_on.h"
+#    include "debugging_on.h"
 #else
-#include "debugging_off.h"
+#    include "debugging_off.h"
 #endif
 
 static LamExp *compilePrinterForFunction(TcFunction *function);
@@ -66,12 +66,14 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
             res = compilePrinterForTypeDef(type->val.typeDef, env);
             break;
         default:
-            cant_happen("unrecognised TcType %d in compilePrinterForType", type->type);
+            cant_happen("unrecognised TcType %d in compilePrinterForType",
+                        type->type);
     }
     return res;
 }
 
-static LamExp *compilePrinterForFunction(TcFunction *function __attribute__((unused))) {
+static LamExp *compilePrinterForFunction(TcFunction *function
+                                         __attribute__((unused))) {
     return makeSymbolExpr("print$fn");
 }
 
@@ -95,7 +97,8 @@ static LamExp *compilePrinterForChar() {
 }
 
 static LamList *compilePrinterForTypeDefArgs(TcTypeDefArgs *args, TcEnv *env) {
-    if (args == NULL) return NULL;
+    if (args == NULL)
+        return NULL;
     LamList *next = compilePrinterForTypeDefArgs(args->next, env);
     int save = PROTECT(next);
     LamExp *this = compilePrinterForType(args->type, env);
@@ -112,7 +115,8 @@ static LamExp *compilePrinterForString() {
 
 static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env) {
     if (typeDef->name == listSymbol()) {
-        if (typeDef->args && typeDef->args->type->type == TCTYPE_TYPE_CHARACTER) {
+        if (typeDef->args
+            && typeDef->args->type->type == TCTYPE_TYPE_CHARACTER) {
             return compilePrinterForString();
         }
     }

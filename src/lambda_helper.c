@@ -21,10 +21,12 @@
 #include "lambda_helper.h"
 #include "lambda_pp.h"
 
-
 void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
-    if (x == NULL) { eprintf("LambdaSymbol (NULL)"); return; }
+    if (x == NULL) {
+        eprintf("LambdaSymbol (NULL)");
+        return;
+    }
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
@@ -36,12 +38,15 @@ void printLamExpFn(void *ptr, int depth) {
     ppLamExpD(*((LamExp **) ptr), depth);
 }
 
-void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info) {
+void addToLamContext(LamContext *context, HashSymbol *symbol,
+                     LamTypeConstructorInfo *info) {
     setLamInfoTable(context->frame, symbol, info);
 }
 
-LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var) {
-    if (context == NULL) return NULL;
+LamTypeConstructorInfo *lookupInLamContext(LamContext *context,
+                                           HashSymbol *var) {
+    if (context == NULL)
+        return NULL;
     LamTypeConstructorInfo *result;
     if (getLamInfoTable(context->frame, var, &result)) {
         return result;

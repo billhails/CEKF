@@ -15,3 +15,5 @@ Makefile.extra
 gmon.out
 .idea
 tests/test_*
+src/*~
+.typedefs

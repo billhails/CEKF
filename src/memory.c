@@ -55,8 +55,8 @@ typedef struct ProtectionStack {
 } ProtectionStack;
 
 void reportMemory() {
-    printf("gc runs: %d, current memory: %d, max memory: %d\n",
-        numGc, bytesAllocated, maxMem);
+    printf("gc runs: %d, current memory: %d, max memory: %d\n", numGc,
+           bytesAllocated, maxMem);
 }
 
 static ProtectionStack *protected = NULL;
@@ -91,16 +91,16 @@ const char *typeName(ObjType type, void *p) {
             return "bigint";
         case OBJTYPE_PMMODULE:
             return "pmmodule";
-        ANF_OBJTYPE_CASES()
-            return typenameAnfObj(type);
-        AST_OBJTYPE_CASES()
-            return typenameAstObj(type);
-        LAMBDA_OBJTYPE_CASES()
-            return typenameLambdaObj(type);
-        TPMC_OBJTYPE_CASES()
-            return typenameTpmcObj(type);
-        TC_OBJTYPE_CASES()
-            return typenameTcObj(type);
+            ANF_OBJTYPE_CASES()
+                return typenameAnfObj(type);
+            AST_OBJTYPE_CASES()
+                return typenameAstObj(type);
+            LAMBDA_OBJTYPE_CASES()
+                return typenameLambdaObj(type);
+            TPMC_OBJTYPE_CASES()
+                return typenameTpmcObj(type);
+            TC_OBJTYPE_CASES()
+                return typenameTcObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
@@ -108,7 +108,8 @@ const char *typeName(ObjType type, void *p) {
 
 char *safeStrdup(char *s) {
     char *t = strdup(s);
-    if (t == NULL) exit(1);
+    if (t == NULL)
+        exit(1);
     return t;
 }
 
@@ -143,21 +144,17 @@ void replaceProtect(int i, Header *obj) {
 
 int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
-    fprintf(
-        stderr,
-        "PROTECT(%p:%s) -> %d (%d)\n",
-        obj,
-        (obj == NULL ? "NULL" : typeName(obj->type, obj)),
-        protected->sp,
-        protected->capacity
-    );
+    fprintf(stderr, "PROTECT(%p:%s) -> %d (%d)\n", obj,
+            (obj == NULL ? "NULL" : typeName(obj->type, obj)), protected->sp,
+            protected->capacity);
 #endif
-    if (obj == NULL) return protected->sp;
+    if (obj == NULL)
+        return protected->sp;
 
     protected->stack[protected->sp++] = obj;
     if (protected->sp == protected->capacity) {
 #ifdef DEBUG_LOG_GC
-        eprintf("protect old stack: %p\n", (void *)protected);
+        eprintf("protect old stack: %p\n", (void *) protected);
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
@@ -166,12 +163,12 @@ int protect(Header *obj) {
         }
         protected = tmp;
 #ifdef DEBUG_LOG_GC
-    eprintf("protect new stack: %p\n", (void *)protected);
+        eprintf("protect new stack: %p\n", (void *) protected);
 #endif
     }
-
 #ifdef DEBUG_LOG_GC
-    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj), protected->sp, protected->capacity);
+    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj),
+            protected->sp, protected->capacity);
 #endif
     return protected->sp - 1;
 }
@@ -185,7 +182,9 @@ void unProtect(int index) {
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
-    eprintf("reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n", bytesAllocated, newSize, oldSize, numAlloc, pointer);
+    eprintf
+        ("reallocate bytesAllocated %d + newsize %lu - oldsize %lu [%d] pointer %p\n",
+         bytesAllocated, newSize, oldSize, numAlloc, pointer);
     if (newSize > oldSize)
         numAlloc++;
     if (newSize < oldSize)
@@ -196,7 +195,8 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #endif
     bytesAllocated += newSize - oldSize;
     if (bytesAllocated < 0)
-        cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]", bytesAllocated, newSize, oldSize, numAlloc);
+        cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]",
+                    bytesAllocated, newSize, oldSize, numAlloc);
 
     if (bytesAllocated > maxMem) {
         maxMem = bytesAllocated;
@@ -214,7 +214,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     if (newSize == 0) {
 #ifdef DEBUG_STRESS_GC
-        char *zerop = (char *)pointer;
+        char *zerop = (char *) pointer;
         for (size_t i = 0; i < oldSize; i++) {
             zerop[i] = '\0';
         }
@@ -224,7 +224,8 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     }
 
     void *result = realloc(pointer, newSize);
-    if (result == NULL) exit(1);
+    if (result == NULL)
+        exit(1);
 #ifdef DEBUG_LOG_GC
     eprintf("reallocate ptr %p => %p\n", pointer, result);
 #endif
@@ -233,9 +234,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    eprintf("allocate type %s %d %lu [%d]\n", typeName(type, 0), bytesAllocated, size, numAlloc);
+    eprintf("allocate type %s %d %lu [%d]\n", typeName(type, 0),
+            bytesAllocated, size, numAlloc);
 #endif
-    Header *newObj = (Header *)reallocate(NULL, (size_t)0, size);
+    Header *newObj = (Header *) reallocate(NULL, (size_t) 0, size);
     newObj->type = type;
     newObj->keep = false;
     newObj->next = allocated;
@@ -245,7 +247,7 @@ void *allocate(size_t size, ObjType type) {
     } else {
         lastAlloc = NULL;
     }
-    return (void *)newObj;
+    return (void *) newObj;
 }
 
 static void markProtectionObj(Header *h) {
@@ -253,7 +255,7 @@ static void markProtectionObj(Header *h) {
     eprintf("markProtectionObj\n");
 #endif
     MARK(h);
-    ProtectionStack *protected = (ProtectionStack *)h;
+    ProtectionStack *protected = (ProtectionStack *) h;
     for (int i = 0; i < protected->sp; ++i) {
         markObj(protected->stack[i], i);
     }
@@ -287,26 +289,27 @@ void markObj(Header *h, int i) {
         case OBJTYPE_PMMODULE:
             markPmModule(h);
             break;
-        ANF_OBJTYPE_CASES()
-            markAnfObj(h);
+            ANF_OBJTYPE_CASES()
+                markAnfObj(h);
             break;
-        AST_OBJTYPE_CASES()
-            markAstObj(h);
+            AST_OBJTYPE_CASES()
+                markAstObj(h);
             break;
-        LAMBDA_OBJTYPE_CASES()
-            markLambdaObj(h);
+            LAMBDA_OBJTYPE_CASES()
+                markLambdaObj(h);
             break;
-        TPMC_OBJTYPE_CASES()
-            markTpmcObj(h);
+            TPMC_OBJTYPE_CASES()
+                markTpmcObj(h);
             break;
-        TC_OBJTYPE_CASES()
-            markTcObj(h);
+            TC_OBJTYPE_CASES()
+                markTcObj(h);
             break;
         case OBJTYPE_BIGINT:
-            markBigInt((BigInt *)h);
+            markBigInt((BigInt *) h);
             break;
         default:
-            cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type, i);
+            cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
+                        i);
     }
 }
 
@@ -325,7 +328,7 @@ void freeObj(Header *h) {
             freeCekfObj(h);
             break;
         case OBJTYPE_BIGINT:
-            freeBigInt((BigInt *)h);
+            freeBigInt((BigInt *) h);
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
@@ -339,23 +342,24 @@ void freeObj(Header *h) {
         case OBJTYPE_PMMODULE:
             freePmModule(h);
             break;
-        ANF_OBJTYPE_CASES()
-            freeAnfObj(h);
+            ANF_OBJTYPE_CASES()
+                freeAnfObj(h);
             break;
-        AST_OBJTYPE_CASES()
-            freeAstObj(h);
+            AST_OBJTYPE_CASES()
+                freeAstObj(h);
             break;
-        LAMBDA_OBJTYPE_CASES()
-            freeLambdaObj(h);
+            LAMBDA_OBJTYPE_CASES()
+                freeLambdaObj(h);
             break;
-        TPMC_OBJTYPE_CASES()
-            freeTpmcObj(h);
+            TPMC_OBJTYPE_CASES()
+                freeTpmcObj(h);
             break;
-        TC_OBJTYPE_CASES()
-            freeTcObj(h);
+            TC_OBJTYPE_CASES()
+                freeTcObj(h);
             break;
         default:
-            cant_happen("unrecognised ObjType %d in freeObj at %p", h->type, (void *)h);
+            cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
+                        (void *) h);
     }
 }
 
@@ -385,8 +389,9 @@ static void sweep() {
             current->keep = false;
         } else {
 #ifdef DEBUG_LOG_GC
-            eprintf("sweep discard %p\n", (void *)current);
-            eprintf("              type %s\n", typeName(current->type, current));
+            eprintf("sweep discard %p\n", (void *) current);
+            eprintf("              type %s\n",
+                    typeName(current->type, current));
 #endif
             *previous = current->next;
             freeObj(current);
@@ -396,7 +401,8 @@ static void sweep() {
 }
 
 static void collectGarbage() {
-    if (!gcEnabled) return;
+    if (!gcEnabled)
+        return;
     numGc++;
 #ifdef DEBUG_LOG_GC
     eprintf("GC started\n");
@@ -407,12 +413,14 @@ static void collectGarbage() {
     mark();
 #ifdef DEBUG_ALLOC
     if (lastAlloc && !MARKED(lastAlloc)) {
-        cant_happen("alloc of %s (%p) immediately dropped", typeName(lastAlloc->type, lastAlloc), lastAlloc);
+        cant_happen("alloc of %s (%p) immediately dropped",
+                    typeName(lastAlloc->type, lastAlloc), lastAlloc);
     }
 #endif
     sweep();
     nextGC = bytesAllocated * 2;
 #ifdef DEBUG_LOG_GC
-    eprintf("GC finished, bytesAllocated %d, nextGC %d\n", bytesAllocated, nextGC);
+    eprintf("GC finished, bytesAllocated %d, nextGC %d\n", bytesAllocated,
+            nextGC);
 #endif
 }

@@ -37,7 +37,8 @@ static PmModule *newPmModule() {
     return x;
 }
 
-static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {
+static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs,
+                           const char *origin) {
     PmBufStack *bufStack = ALLOCATE(PmBufStack);
     bufStack->next = mod->bufStack;
     mod->bufStack = bufStack;
@@ -54,13 +55,13 @@ static FILE *safeFOpen(const char *filename) {
     return f;
 }
 
-PmModule *newPmModuleFromFileHandle(FILE *f, const char *origin) {
-	PmModule *mod = newPmModule();
+PmModule *newPmModuleFromFileHandle(FILE * f, const char *origin) {
+    PmModule *mod = newPmModule();
     int save = PROTECT(mod);
     YY_BUFFER_STATE bs = yy_create_buffer(f, YY_BUF_SIZE, mod->scanner);
     pushPmBufStack(mod, bs, origin);
     UNPROTECT(save);
-	return mod;
+    return mod;
 }
 
 PmModule *newPmModuleFromStdin() {
@@ -72,7 +73,7 @@ PmModule *newPmModuleFromFile(const char *filename) {
 }
 
 PmModule *newPmModuleFromString(char *s, char *id) {
-	PmModule *mod = newPmModule();
+    PmModule *mod = newPmModule();
     int save = PROTECT(mod);
     YY_BUFFER_STATE bs = yy_scan_string(s, mod->scanner);
     pushPmBufStack(mod, bs, id);
@@ -80,7 +81,8 @@ PmModule *newPmModuleFromString(char *s, char *id) {
     return mod;
 }
 
-static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {
+static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
+                                       const char *origin) {
     int save = PROTECT(mod);
     pushPmBufStack(mod, yy_scan_string(postamble, mod->scanner), "postamble");
     pushPmBufStack(mod, bs, origin);
@@ -88,9 +90,11 @@ static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs, const 
     UNPROTECT(save);
 }
 
-PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin) {
-	PmModule *mod = newPmModule();
-    pushPmToplevelFromBufState(mod, yy_create_buffer(f, YY_BUF_SIZE, mod->scanner), origin);
+PmModule *newPmToplevelFromFileHandle(FILE * f, const char *origin) {
+    PmModule *mod = newPmModule();
+    pushPmToplevelFromBufState(mod,
+                               yy_create_buffer(f, YY_BUF_SIZE, mod->scanner),
+                               origin);
     return mod;
 }
 
@@ -103,13 +107,12 @@ PmModule *newPmToplevelFromFile(const char *filename) {
 }
 
 PmModule *newPmToplevelFromString(char *s, char *id) {
-	PmModule *mod = newPmModule();
+    PmModule *mod = newPmModule();
     pushPmToplevelFromBufState(mod, yy_scan_string(s, mod->scanner), id);
     return mod;
 }
 
-
-static void freePmBufStack(PmModule *mod, PmBufStack *x) {
+static void freePmBufStack(PmModule *mod, PmBufStack * x) {
     if (x == NULL) {
         return;
     }
@@ -121,30 +124,33 @@ static void freePmBufStack(PmModule *mod, PmBufStack *x) {
 }
 
 void freePmModule(Header *h) {
-    if (h == NULL) return;
-    PmModule *mod = (PmModule *)h;
-	freePmBufStack(mod, mod->bufStack);
+    if (h == NULL)
+        return;
+    PmModule *mod = (PmModule *) h;
+    freePmBufStack(mod, mod->bufStack);
     yylex_destroy(mod->scanner);
-	FREE(mod, PmModule);
+    FREE(mod, PmModule);
 }
 
 void markPmModule(Header *h) {
-    if (h == NULL) return;
+    if (h == NULL)
+        return;
     MARK(h);
     markAstNest(((PmModule *) h)->nest);
 }
 
 int pmParseModule(PmModule *mod) {
-	int res;
+    int res;
 
-	yy_switch_to_buffer(mod->bufStack->bs, mod->scanner);
-	res = yyparse(mod->scanner, mod);
+    yy_switch_to_buffer(mod->bufStack->bs, mod->scanner);
+    res = yyparse(mod->scanner, mod);
 
-	return res;
+    return res;
 }
 
 int popPmFile(PmModule *mod) {
-    if (mod->bufStack == NULL) return 0;
+    if (mod->bufStack == NULL)
+        return 0;
 
     PmBufStack *old = mod->bufStack;
     free(old->filename);
@@ -152,18 +158,20 @@ int popPmFile(PmModule *mod) {
     mod->bufStack = mod->bufStack->next;
     FREE(old, PmBufStack);
 
-    if (mod->bufStack == NULL) return 0;
+    if (mod->bufStack == NULL)
+        return 0;
 
-	yy_switch_to_buffer(mod->bufStack->bs, mod->scanner);
+    yy_switch_to_buffer(mod->bufStack->bs, mod->scanner);
 
     return 1;
 }
 
 void incLineNo(PmModule *mod) {
-    if (mod != NULL && mod->bufStack != NULL) mod->bufStack->lineno++;
+    if (mod != NULL && mod->bufStack != NULL)
+        mod->bufStack->lineno++;
 }
 
-void showModuleState(FILE *fp, PmModule *mod) {
+void showModuleState(FILE * fp, PmModule *mod) {
     if (mod == NULL) {
         fprintf(fp, "module is null\n");
         return;
@@ -172,5 +180,6 @@ void showModuleState(FILE *fp, PmModule *mod) {
         fprintf(fp, "module->bufStack is null\n");
         return;
     }
-    fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename, mod->bufStack->lineno + 1);
+    fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename,
+            mod->bufStack->lineno + 1);
 }

@@ -20,8 +20,11 @@
 #include "ast_helper.h"
 #include "symbol.h"
 
-void printAstSymbol(struct HashSymbol * x, int depth) {
+void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
-    if (x == NULL) { eprintf("AstSymbol (NULL)"); return; }
+    if (x == NULL) {
+        eprintf("AstSymbol (NULL)");
+        return;
+    }
     eprintf("AstSymbol[\"%s\"]", x->name);
 }

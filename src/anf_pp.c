@@ -59,7 +59,7 @@ void ppAexpAnnotatedVar(AexpAnnotatedVar *x) {
 
 void ppAexpPrimApp(AexpPrimApp *x) {
     eprintf("(");
-    switch(x->type) {
+    switch (x->type) {
         case AEXPPRIMOP_TYPE_ADD:
             eprintf("add ");
             break;
@@ -112,7 +112,7 @@ void ppAexpPrimApp(AexpPrimApp *x) {
 
 void ppAexpUnaryApp(AexpUnaryApp *x) {
     eprintf("(");
-    switch(x->type) {
+    switch (x->type) {
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;
@@ -309,7 +309,8 @@ void ppCexpBool(CexpBool *x) {
 }
 
 void ppMatchList(MatchList *x) {
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     eprintf("(");
     ppAexpIntList(x->matches);
     eprintf(" ");
