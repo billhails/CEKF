@@ -257,11 +257,11 @@ static void renameRules(TpmcMatchRules *input) {
     }
 }
 
-static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *seen);
+static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, TpmcPatternTable *seen);
 
-static TpmcPattern *replaceVarPattern(TpmcPattern *pattern, HashTable *seen) {
+static TpmcPattern *replaceVarPattern(TpmcPattern *pattern, TpmcPatternTable *seen) {
     TpmcPattern *other = NULL;
-    if (hashGet(seen, pattern->pattern->val.var, &other)) {
+    if (getTpmcPatternTable(seen, pattern->pattern->val.var, &other)) {
         if (other->pattern->type == TPMCPATTERNVALUE_TYPE_ASSIGNMENT) {
             // FIXME should be possible to allow this? assignments are just variable bindings
             // would be necessary to refine the patternsMatchingPattern algorithm in tpmc_match.c:mixture()
@@ -275,23 +275,23 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern, HashTable *seen) {
         UNPROTECT(save);
         return result;
     } else {
-        hashSet(seen, pattern->pattern->val.var, &pattern);
+        setTpmcPatternTable(seen, pattern->pattern->val.var, pattern);
         return pattern;
     }
 }
 
-static TpmcPattern *replaceAssignmentPattern(TpmcPattern *pattern, HashTable *seen) {
+static TpmcPattern *replaceAssignmentPattern(TpmcPattern *pattern, TpmcPatternTable *seen) {
     TpmcPattern *other = NULL;
-    if (hashGet(seen, pattern->pattern->val.assignment->name, &other)) {
+    if (getTpmcPatternTable(seen, pattern->pattern->val.assignment->name, &other)) {
         can_happen("cannot compare assignment (var %s)", pattern->pattern->val.assignment->name->name);
     } else {
-        hashSet(seen, pattern->pattern->val.assignment->name, &pattern);
+        setTpmcPatternTable(seen, pattern->pattern->val.assignment->name, pattern);
     }
     pattern->pattern->val.assignment->value = replaceComparisonPattern(pattern->pattern->val.assignment->value, seen);
     return pattern;
 }
 
-static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern, HashTable *seen) {
+static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern, TpmcPatternTable *seen) {
     TpmcPatternArray *components = pattern->pattern->val.constructor->components;
     for (int i = 0; i < components->size; ++i) {
         components->entries[i] = replaceComparisonPattern(components->entries[i], seen);
@@ -299,7 +299,7 @@ static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern, HashTable *s
     return pattern;
 }
 
-static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *seen) {
+static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, TpmcPatternTable *seen) {
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
@@ -319,7 +319,7 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern, HashTable *se
 }
 
 static void replaceComparisonRule(TpmcMatchRule *rule) {
-    HashTable *seen = newTpmcPatternTable();
+    TpmcPatternTable *seen = newTpmcPatternTable();
     int save = PROTECT(seen);
     for (int i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] = replaceComparisonPattern(rule->patterns->entries[i], seen);
@@ -334,22 +334,22 @@ static void replaceComparisonRules(TpmcMatchRules *input) {
     }
 }
 
-static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable *substitutions);
+static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions);
 
-static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
-    hashSet(substitutions, pattern->pattern->val.var, &(pattern->path));
+static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
+    setTpmcSubstitutionTable(substitutions, pattern->pattern->val.var, pattern->path);
     TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD, TPMCPATTERNVALUE_VAL_WILDCARD());
     pattern->pattern = wc;
     return pattern;
 }
 
-static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
-    hashSet(substitutions, pattern->pattern->val.assignment->name, &(pattern->path));
+static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
+    setTpmcSubstitutionTable(substitutions, pattern->pattern->val.assignment->name, pattern->path);
     // we no longer need to remember this is an assignment now we have the substitution
     return collectPatternSubstitutions(pattern->pattern->val.assignment->value, substitutions);
 }
 
-static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
+static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
     TpmcPatternArray *components = pattern->pattern->val.constructor->components;
     for (int i = 0; i < components->size; ++i) {
         components->entries[i] = collectPatternSubstitutions(components->entries[i], substitutions);
@@ -357,20 +357,20 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, HashTa
     return pattern;
 }
 
-static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
+static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
     pattern->pattern->val.comparison->previous = collectPatternSubstitutions(pattern->pattern->val.comparison->previous, substitutions);
     pattern->pattern->val.comparison->current = collectPatternSubstitutions(pattern->pattern->val.comparison->current, substitutions);
     return pattern;
 }
 
-static void performActionSubstitution(TpmcState *state, HashTable *substitutions) {
+static void performActionSubstitution(TpmcState *state, TpmcSubstitutionTable *substitutions) {
     if (state->state->type != TPMCSTATEVALUE_TYPE_FINAL) {
         cant_happen("attempt to call performActionSubstitution on non-final state");
     }
     state->state->val.final->action = lamPerformSubstitutions(state->state->val.final->action, substitutions);
 }
 
-static void populateFreeVariables(TpmcState *state, HashTable *substitutions) {
+static void populateFreeVariables(TpmcState *state, TpmcSubstitutionTable *substitutions) {
     if (state->state->type != TPMCSTATEVALUE_TYPE_FINAL) {
         cant_happen("attempt to call populateFreeCariables on non-final state");
     }
@@ -378,12 +378,12 @@ static void populateFreeVariables(TpmcState *state, HashTable *substitutions) {
     int i = 0;
     HashSymbol *path = NULL;
     HashSymbol *key;
-    while ((key = iterateHashTable(substitutions, &i, &path)) != NULL) {
-        hashSet(state->freeVariables, path, NULL);
+    while ((key = iterateTpmcSubstitutionTable(substitutions, &i, &path)) != NULL) {
+        setTpmcVariableTable(state->freeVariables, path);
     }
 }
 
-static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable *substitutions) {
+static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
@@ -403,7 +403,7 @@ static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, HashTable 
 }
 
 static void performRuleSubstitutions(TpmcMatchRule *rule) {
-    HashTable *substitutions = newTpmcSubstitutionTable();
+    TpmcSubstitutionTable *substitutions = newTpmcSubstitutionTable();
     int save = PROTECT(substitutions);
     for (int i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] = collectPatternSubstitutions(rule->patterns->entries[i], substitutions);

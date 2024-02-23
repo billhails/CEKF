@@ -37,13 +37,13 @@ void printLamExpFn(void *ptr, int depth) {
 }
 
 void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info) {
-    hashSet(context->frame, symbol, &info);
+    setLamInfoTable(context->frame, symbol, info);
 }
 
 LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var) {
     if (context == NULL) return NULL;
     LamTypeConstructorInfo *result;
-    if (hashGet(context->frame, var, &result)) {
+    if (getLamInfoTable(context->frame, var, &result)) {
         return result;
     }
     return lookupInLamContext(context->parent, var);

@@ -37,9 +37,9 @@
 #include "debugging_off.h"
 #endif
 
-static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
+static HashSymbol *performVarSubstitutions(HashSymbol *var, TpmcSubstitutionTable *substitutions);
 
-static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *substitutions) {
+static LamVarList *performVarListSubstitutions(LamVarList *varList, TpmcSubstitutionTable *substitutions) {
     ENTER(performVarListSubstitutions);
     if (varList == NULL) {
         LEAVE(performVarListSubstitutions);
@@ -51,7 +51,7 @@ static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *s
     return varList;
 }
 
-static LamLam *performLamSubstitutions(LamLam *lam, HashTable *substitutions) {
+static LamLam *performLamSubstitutions(LamLam *lam, TpmcSubstitutionTable *substitutions) {
     ENTER(performLamSubstitutions);
     lam->args = performVarListSubstitutions(lam->args, substitutions);
     lam->exp = lamPerformSubstitutions(lam->exp, substitutions);
@@ -59,17 +59,17 @@ static LamLam *performLamSubstitutions(LamLam *lam, HashTable *substitutions) {
     return lam;
 }
 
-static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions) {
+static HashSymbol *performVarSubstitutions(HashSymbol *var, TpmcSubstitutionTable *substitutions) {
     ENTER(performVarSubstitutions);
     HashSymbol *replacement = NULL;
-    if (hashGet(substitutions, var, &replacement)) {
+    if (getTpmcSubstitutionTable(substitutions, var, &replacement)) {
         return replacement;
     }
     LEAVE(performVarSubstitutions);
     return var;
 }
 
-static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, HashTable *substitutions) {
+static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, TpmcSubstitutionTable *substitutions) {
     ENTER(performPrimSubstitutions);
     prim->exp1 = lamPerformSubstitutions(prim->exp1, substitutions);
     prim->exp2 = lamPerformSubstitutions(prim->exp2, substitutions);
@@ -77,14 +77,14 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, HashTable *substit
     return prim;
 }
 
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, HashTable *substitutions) {
+static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, TpmcSubstitutionTable *substitutions) {
     ENTER(performUnarySubstitutions);
     unary->exp = lamPerformSubstitutions(unary->exp, substitutions);
     LEAVE(performUnarySubstitutions);
     return unary;
 }
 
-static LamSequence *performSequenceSubstitutions(LamSequence *sequence, HashTable *substitutions) {
+static LamSequence *performSequenceSubstitutions(LamSequence *sequence, TpmcSubstitutionTable *substitutions) {
     ENTER(performSequenceSubstitutions);
     if (sequence == NULL) {
         LEAVE(performSequenceSubstitutions);
@@ -96,7 +96,7 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence, HashTabl
     return sequence;
 }
 
-static LamList *performListSubstitutions(LamList *list, HashTable *substitutions) {
+static LamList *performListSubstitutions(LamList *list, TpmcSubstitutionTable *substitutions) {
     ENTER(performListSubstitutions);
     if (list == NULL) {
         LEAVE(performListSubstitutions);
@@ -108,28 +108,28 @@ static LamList *performListSubstitutions(LamList *list, HashTable *substitutions
     return list;
 }
 
-static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *substitutions) {
+static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable *substitutions) {
     ENTER(performMakeVecSubstitutions);
     makeVec->args = performListSubstitutions(makeVec->args, substitutions);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
 
-static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, HashTable *substitutions) {
+static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, TpmcSubstitutionTable *substitutions) {
     ENTER(performDeconstructSubstitutions);
     deconstruct->exp = lamPerformSubstitutions(deconstruct->exp, substitutions);
     LEAVE(performDeconstructSubstitutions);
     return deconstruct;
 }
 
-static LamConstruct *performConstructSubstitutions(LamConstruct *construct, HashTable *substitutions) {
+static LamConstruct *performConstructSubstitutions(LamConstruct *construct, TpmcSubstitutionTable *substitutions) {
     ENTER(performConstructSubstitutions);
     construct->args = performListSubstitutions(construct->args, substitutions);
     LEAVE(performConstructSubstitutions);
     return construct;
 }
 
-static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitutions) {
+static LamApply *performApplySubstitutions(LamApply *apply, TpmcSubstitutionTable *substitutions) {
     ENTER(performApplySubstitutions);
     apply->function = lamPerformSubstitutions(apply->function, substitutions);
     apply->args = performListSubstitutions(apply->args, substitutions);
@@ -137,7 +137,7 @@ static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitut
     return apply;
 }
 
-static LamIff *performIffSubstitutions(LamIff *iff, HashTable *substitutions) {
+static LamIff *performIffSubstitutions(LamIff *iff, TpmcSubstitutionTable *substitutions) {
     ENTER(performIffSubstitutions);
     iff->condition = lamPerformSubstitutions(iff->condition, substitutions);
     iff->consequent = lamPerformSubstitutions(iff->consequent, substitutions);
@@ -146,7 +146,7 @@ static LamIff *performIffSubstitutions(LamIff *iff, HashTable *substitutions) {
     return iff;
 }
 
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, HashTable *substitutions) {
+static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, TpmcSubstitutionTable *substitutions) {
     ENTER(performBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performBindingsSubstitutions);
@@ -159,7 +159,7 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
     return bindings;
 }
 
-static LamLet *performLetSubstitutions(LamLet *let, HashTable *substitutions) {
+static LamLet *performLetSubstitutions(LamLet *let, TpmcSubstitutionTable *substitutions) {
     ENTER(performLetSubstitutions);
     let->var = performVarSubstitutions(let->var, substitutions);
     let->value = lamPerformSubstitutions(let->value, substitutions);
@@ -168,7 +168,7 @@ static LamLet *performLetSubstitutions(LamLet *let, HashTable *substitutions) {
     return let;
 }
 
-static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *substitutions) {
+static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, TpmcSubstitutionTable *substitutions) {
     ENTER(performLetRecSubstitutions);
     letrec->bindings = performBindingsSubstitutions(letrec->bindings, substitutions);
     letrec->body = lamPerformSubstitutions(letrec->body, substitutions);
@@ -176,14 +176,14 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *subst
     return letrec;
 }
 
-static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, HashTable *substitutions) {
+static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, TpmcSubstitutionTable *substitutions) {
     ENTER(performTypeDefsSubstitutions);
     typedefs->body = lamPerformSubstitutions(typedefs->body, substitutions);
     LEAVE(performTypeDefsSubstitutions);
     return typedefs;
 }
 
-static LamMatchList *performCaseSubstitutions(LamMatchList *cases, HashTable *substitutions) {
+static LamMatchList *performCaseSubstitutions(LamMatchList *cases, TpmcSubstitutionTable *substitutions) {
     ENTER(performCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCaseSubstitutions);
@@ -195,7 +195,7 @@ static LamMatchList *performCaseSubstitutions(LamMatchList *cases, HashTable *su
     return cases;
 }
 
-static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitutions) {
+static LamMatch *performMatchSubstitutions(LamMatch *match, TpmcSubstitutionTable *substitutions) {
     ENTER(performMatchSubstitutions);
     match->index = lamPerformSubstitutions(match->index, substitutions);
     match->cases = performCaseSubstitutions(match->cases, substitutions);
@@ -203,7 +203,7 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitut
     return match;
 }
 
-static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
+static LamAnd *performAndSubstitutions(LamAnd *and, TpmcSubstitutionTable *substitutions) {
     ENTER(performAndSubstitutions);
     and->left = lamPerformSubstitutions(and->left, substitutions);
     and->right = lamPerformSubstitutions(and->right, substitutions);
@@ -211,7 +211,7 @@ static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
     return and;
 }
 
-static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
+static LamOr *performOrSubstitutions(LamOr *or, TpmcSubstitutionTable *substitutions) {
     ENTER(performOrSubstitutions);
     or->left = lamPerformSubstitutions(or->left, substitutions);
     or->right = lamPerformSubstitutions(or->right, substitutions);
@@ -219,7 +219,7 @@ static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
     return or;
 }
 
-static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
+static LamAmb *performAmbSubstitutions(LamAmb *amb, TpmcSubstitutionTable *substitutions) {
     ENTER(performAmbSubstitutions);
     amb->left = lamPerformSubstitutions(amb->left, substitutions);
     amb->right = lamPerformSubstitutions(amb->right, substitutions);
@@ -227,7 +227,7 @@ static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
     return amb;
 }
 
-static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, HashTable *substitutions) {
+static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, TpmcSubstitutionTable *substitutions) {
     ENTER(performIntCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performIntCondCaseSubstitutions);
@@ -239,7 +239,7 @@ static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, 
     return cases;
 }
 
-static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, HashTable *substitutions) {
+static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, TpmcSubstitutionTable *substitutions) {
     ENTER(performCharCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCharCondCaseSubstitutions);
@@ -251,7 +251,7 @@ static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *case
     return cases;
 }
 
-static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable *substitutions) {
+static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, TpmcSubstitutionTable *substitutions) {
     ENTER(performCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCondCaseSubstitutions);
@@ -271,7 +271,7 @@ static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable
     return cases;
 }
 
-static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions) {
+static LamCond *performCondSubstitutions(LamCond *cond, TpmcSubstitutionTable *substitutions) {
     ENTER(performCondSubstitutions);
     cond->value = lamPerformSubstitutions(cond->value, substitutions);
     cond->cases = performCondCaseSubstitutions(cond->cases, substitutions);
@@ -279,7 +279,7 @@ static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions
     return cond;
 }
 
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
+LamExp *lamPerformSubstitutions(LamExp *exp, TpmcSubstitutionTable *substitutions) {
     ENTER(lamPerformSubstitutions);
     switch (exp->type) {
         case LAMEXP_TYPE_BIGINTEGER:

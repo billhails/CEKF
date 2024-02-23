@@ -75,6 +75,10 @@ class Catalog:
         for entity in self.contents.values():
             if entity.isArray():
                 entity.printTypedef(self)
+        print("\n")
+        for entity in self.contents.values():
+            if entity.isHash():
+                entity.printTypedef(self)
 
     def printMarkDeclarations(self):
         for entity in self.contents.values():
@@ -91,6 +95,34 @@ class Catalog:
     def printPushFunctions(self):
         for entity in self.contents.values():
             entity.printPushFunction(self)
+
+    def printSetDeclarations(self):
+        for entity in self.contents.values():
+            entity.printSetDeclaration(self)
+
+    def printGetDeclarations(self):
+        for entity in self.contents.values():
+            entity.printGetDeclaration(self)
+
+    def printSetFunctions(self):
+        for entity in self.contents.values():
+            entity.printSetFunction(self)
+
+    def printGetFunctions(self):
+        for entity in self.contents.values():
+            entity.printGetFunction(self)
+
+    def printIteratorDeclarations(self):
+        for entity in self.contents.values():
+            entity.printIteratorDeclaration(self)
+
+    def printCountDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCountDeclaration(self)
+
+    def printIteratorFunctions(self):
+        for entity in self.contents.values():
+            entity.printIteratorFunction(self)
 
     def printFreeDeclarations(self):
         for entity in self.contents.values():
@@ -290,6 +322,9 @@ class Base:
     def isArray(self):
         return False
 
+    def isHash(self):
+        return False
+
     def noteBespokeCmpImplementation(self):
         self.bespokeCmpImplementation = True
 
@@ -297,6 +332,27 @@ class Base:
         return arg
 
     def printMarkField(self, field, depth, prefix=''):
+        pass
+
+    def printSetDeclaration(self, catalog):
+        pass
+
+    def printGetDeclaration(self, catalog):
+        pass
+
+    def printIteratorDeclaration(self, catalog):
+        pass
+
+    def printCountDeclaration(self, catalog):
+        pass
+
+    def printSetFunction(self, catalog):
+        pass
+
+    def printGetFunction(self, catalog):
+        pass
+
+    def printIteratorFunction(self, catalog):
         pass
 
 
@@ -447,6 +503,9 @@ class SimpleHash(Base):
         else:
             self.entries = None
     
+    def isHash(self):
+        return True
+
     def isSelfInitializing(self):
         return True # other constructors will call this automatically
 
@@ -455,7 +514,8 @@ class SimpleHash(Base):
         return f"new{myName}"
 
     def getTypeDeclaration(self):
-        return "struct HashTable *"
+        myName = self.getName()
+        return f"struct {myName} *"
 
     def printNewDeclaration(self, catalog):
         decl=self.getNewSignature()
@@ -466,10 +526,92 @@ class SimpleHash(Base):
         myConstructor = self.getConstructorName()
         return f"{myType}{myConstructor}(void)"
 
+    def getSetDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        if self.entries is None:
+            return f'void set{myName}({myType} table, HashSymbol *key)'
+        else:
+            valueType = self.entries.getTypeDeclaration(catalog)
+            return f'void set{myName}({myType} table, HashSymbol *key, {valueType} value)'
+
+    def printSetDeclaration(self, catalog):
+        decl = self.getSetDeclaration(catalog)
+        print(f'{decl}; // SimpleHash.printSetDeclaration')
+
+    def getGetDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        if self.entries is None:
+            return f'bool get{myName}({myType} table, HashSymbol *key)'
+        else:
+            valueType = self.entries.getTypeDeclaration(catalog)
+            return f'bool get{myName}({myType} table, HashSymbol *key, {valueType}* value)'
+        
+    def printGetDeclaration(self, catalog):
+        decl = self.getGetDeclaration(catalog)
+        print(f'{decl}; // SimpleHash.printGetDeclaration')
+
+    def getIteratorDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        if self.entries is None:
+            return f'HashSymbol * iterate{myName}({myType} table, int *i)'
+        else:
+            valueType = self.entries.getTypeDeclaration(catalog)
+            return f'HashSymbol * iterate{myName}({myType} table, int *i, {valueType}*value)'
+
+    def printIteratorDeclaration(self, catalog):
+        decl = self.getIteratorDeclaration(catalog)
+        print(f'{decl}; // SimpleHask.printIteratorDeclaration')
+
+    def printIteratorFunction(self, catalog):
+        decl = self.getIteratorDeclaration(catalog)
+        print(f'{decl} {{ // SimpleHask.printIteratorFunction')
+        if self.entries is None:
+            print('    return iterateHashTable((HashTable *)table, i, NULL);')
+        else:
+            print('    return iterateHashTable((HashTable *)table, i, value);')
+        print('} // SimpleHash.printIteratorFunction')
+        print('')
+        
+    def printSetFunction(self, catalog):
+        decl = self.getSetDeclaration(catalog)
+        print(f'{decl} {{ // SimpleHash.printSetFunction')
+        if self.entries is None:
+            print('    hashSet((HashTable *)table, key, NULL); // SimpleHash.printSetFunction')
+        else:
+            print('    hashSet((HashTable *)table, key, &value); // SimpleHash.printSetFunction')
+        print('} // SimpleHash.printSetFunction')
+        print('')
+
+    def printGetFunction(self, catalog):
+        decl = self.getGetDeclaration(catalog)
+        print(f'{decl} {{ // SimpleHash.printGetFunction')
+        if self.entries is None:
+            print('    return hashGet((HashTable *)table, key, NULL); // SimpleHash.printGetFunction')
+        else:
+            print('    return hashGet((HashTable *)table, key, value); // SimpleHash.printGetFunction')
+        print('} // SimpleHash.printGetFunction')
+        print('')
+
+    def printCountDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        print(f'static inline int count{myName}({myType} table) {{')
+        print('    return ((HashTable *)table)->count;')
+        print('}')
+        
+    def printTypedef(self, catalog):
+        myName = self.getName()
+        print(f'typedef struct {myName} {{ // SimpleHash.printTypeDef')
+        print('    struct HashTable wrapped; // SimpleHash.printTypeDef')
+        print(f'}} {myName}; // SimpleHash.printTypeDef')
+
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
         print(f'    x->{prefix}{field} = {myConstructor}(); // SimpleHash.printCopyField')
-        print(f'    copyHashTable(x->{prefix}{field}, o->{prefix}{field}); // SimpleHash.printCopyField')
+        print(f'    copyHashTable((HashTable *)x->{prefix}{field}, (HashTable *)o->{prefix}{field}); // SimpleHash.printCopyField')
 
     def printPrintHashField(self, depth):
         pad(depth)
@@ -477,7 +619,7 @@ class SimpleHash(Base):
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print(f'printHashTable(x->{prefix}{field}, depth + 1); // SimpleHash.printPrintField')
+        print(f'printHashTable((HashTable *)x->{prefix}{field}, depth + 1); // SimpleHash.printPrintField')
 
     def printCompareField(self, field, depth, prefix=''):
         pad(depth)
@@ -505,7 +647,7 @@ class SimpleHash(Base):
             print('}')
             print('')
         print(f'{decl} {{ // SimpleHash.printNewFunction')
-        print('    return newHashTable( // SimpleHash.printNewFunction')
+        print(f'    return ({myName} *)newHashTable( // SimpleHash.printNewFunction')
         print(f'        {size}, // SimpleHash.printNewFunction')
         print(f'        {markFn}, // SimpleHash.printNewFunction')
         print(f'        {printFn} // SimpleHash.printNewFunction')
@@ -515,7 +657,7 @@ class SimpleHash(Base):
 
     def printMarkField(self, field, depth, prefix=''):
         pad(depth)
-        print("markHashTable(x->{prefix}{field}); // SimpleHash.printMarkField".format(field=field, prefix=prefix))
+        print("markHashTable((HashTable *)x->{prefix}{field}); // SimpleHash.printMarkField".format(field=field, prefix=prefix))
 
 class SimpleArray(Base):
     """
@@ -1646,6 +1788,11 @@ if args.type == "h":
     catalog.printFreeDeclarations()
     printSection("push declarations")
     catalog.printPushDeclarations()
+    printSection("hash getter and setter declarations")
+    catalog.printGetDeclarations()
+    catalog.printSetDeclarations()
+    catalog.printIteratorDeclarations()
+    catalog.printCountDeclarations()
     printSection("defines")
     catalog.printDefines()
     printSection("access declarations")
@@ -1688,6 +1835,10 @@ elif args.type == "c":
     catalog.printCopyFunctions()
     printSection("push functions")
     catalog.printPushFunctions()
+    printSection("hash getter and setter functions")
+    catalog.printGetFunctions()
+    catalog.printSetFunctions()
+    catalog.printIteratorFunctions()
     printSection("mark functions")
     catalog.printMarkFunctions()
     printSection("generic mark function")

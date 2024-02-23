@@ -425,19 +425,19 @@ static TpmcState *deduplicateState(TpmcState *state, TpmcStateArray *knownStates
     return state;
 }
 
-static void collectPathsBoundByConstructor(TpmcPatternArray *components, HashTable *boundVariables) {
+static void collectPathsBoundByConstructor(TpmcPatternArray *components, TpmcVariableTable *boundVariables) {
     ENTER(collectPathsBoundByConstructor);
     for (int i = 0; i < components->size; ++i) {
         TpmcPattern *pattern = components->entries[i];
-        hashSet(boundVariables, pattern->path, NULL);
+        setTpmcVariableTable(boundVariables, pattern->path);
     }
     LEAVE(collectPathsBoundByConstructor);
 }
 
-static void collectPathsBoundByPattern(TpmcPattern *pattern, HashTable *boundVariables) {
+static void collectPathsBoundByPattern(TpmcPattern *pattern, TpmcVariableTable *boundVariables) {
     ENTER(collecPathsBoundByPattern);
     // FIXME is this correct?
-    hashSet(boundVariables, pattern->path, NULL);
+    setTpmcVariableTable(boundVariables, pattern->path);
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             cant_happen("collectPathsBoundByPattern encountered VAR");
@@ -460,9 +460,9 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern, HashTable *boundVar
     LEAVE("collecPathsBoundByPattern");
 }
 
-static HashTable *variablesBoundByPattern(TpmcPattern *pattern) {
+static TpmcVariableTable *variablesBoundByPattern(TpmcPattern *pattern) {
     ENTER(variablesBoundByPattern);
-    HashTable *boundVariables = newTpmcVariableTable();
+    TpmcVariableTable *boundVariables = newTpmcVariableTable();
     int save = PROTECT(boundVariables);
     collectPathsBoundByPattern(pattern, boundVariables);
     UNPROTECT(save);
@@ -470,12 +470,12 @@ static HashTable *variablesBoundByPattern(TpmcPattern *pattern) {
     return boundVariables;
 }
 
-static HashTable *getTestStatesFreeVariables(TpmcTestState *testState) {
+static TpmcVariableTable *getTestStatesFreeVariables(TpmcTestState *testState) {
     // The free variables of a test state is the union of the free variables of the outgoing arcs, plus the test variable.
     ENTER(getTestStatesFreeVariables);
-    HashTable *freeVariables = newTpmcVariableTable();
+    TpmcVariableTable *freeVariables = newTpmcVariableTable();
     int save = PROTECT(freeVariables);
-    hashSet(freeVariables, testState->path, NULL);
+    setTpmcVariableTable(freeVariables, testState->path);
     for (int i = 0; i < testState->arcs->size; ++i) {
         TpmcArc *arc = testState->arcs->entries[i];
         if (arc->freeVariables == NULL) {
@@ -483,8 +483,8 @@ static HashTable *getTestStatesFreeVariables(TpmcTestState *testState) {
         }
         int i = 0;
         HashSymbol *key;
-        while ((key = iterateHashTable(arc->freeVariables, &i, NULL)) != NULL) {
-            hashSet(freeVariables, key, NULL);
+        while ((key = iterateTpmcVariableTable(arc->freeVariables, &i)) != NULL) {
+            setTpmcVariableTable(freeVariables, key);
         }
     }
     UNPROTECT(save);
@@ -492,7 +492,7 @@ static HashTable *getTestStatesFreeVariables(TpmcTestState *testState) {
     return freeVariables;
 }
 
-static HashTable *getStatesFreeVariables(TpmcState *state) {
+static TpmcVariableTable *getStatesFreeVariables(TpmcState *state) {
     ENTER(getStatesFreeVariables);
     if (state->freeVariables == NULL) {
         switch (state->state->type) {
@@ -516,16 +516,16 @@ static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
     TpmcArc *arc = newTpmcArc(state, pattern);
     int save = PROTECT(arc);
     // the free variables of an arc are the free variables of its state minus the variables bound in the pattern
-    HashTable *boundVariables = variablesBoundByPattern(pattern);
+    TpmcVariableTable *boundVariables = variablesBoundByPattern(pattern);
     PROTECT(boundVariables);
-    HashTable *statesFreeVariables = getStatesFreeVariables(state);
+    TpmcVariableTable *statesFreeVariables = getStatesFreeVariables(state);
     PROTECT(statesFreeVariables);
     int i = 0;
     HashSymbol *key;
-    while ((key = iterateHashTable(statesFreeVariables, &i, NULL)) != NULL) {
-        if (!hashGet(boundVariables, key, NULL)) {
+    while ((key = iterateTpmcVariableTable(statesFreeVariables, &i)) != NULL) {
+        if (!getTpmcVariableTable(boundVariables, key)) {
             DEBUG("makeTpmcArc adding free variable %s", key->name);
-            hashSet(arc->freeVariables, key, NULL);
+            setTpmcVariableTable(arc->freeVariables, key);
         }
     }
     state->refcount++;

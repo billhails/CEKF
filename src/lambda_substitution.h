@@ -19,7 +19,8 @@
  */
 
 #include "ast.h"
+#include "tpmc.h"
 #include "lambda.h"
 
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions);
+LamExp *lamPerformSubstitutions(LamExp *exp, TpmcSubstitutionTable *substitutions);
 #endif

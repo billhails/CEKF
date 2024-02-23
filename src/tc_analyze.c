@@ -94,7 +94,7 @@ static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
-static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map);
+static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
 
@@ -687,17 +687,17 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static TcTypeDefArgs *makeTcTypeDefArgs(LamTypeArgs *lamTypeArgs, HashTable *map) {
+static TcTypeDefArgs *makeTcTypeDefArgs(LamTypeArgs *lamTypeArgs, TcTypeTable *map) {
     if (lamTypeArgs == NULL) {
         return NULL;
     }
     TcTypeDefArgs *next = makeTcTypeDefArgs(lamTypeArgs->next, map);
     int save = PROTECT(next);
     TcType *name = NULL;
-    if (!hashGet(map, lamTypeArgs->name, &name)) {
+    if (!getTcTypeTable(map, lamTypeArgs->name, &name)) {
         name = makeVar(lamTypeArgs->name);
         int save2 = PROTECT(name);
-        hashSet(map, lamTypeArgs->name, &name);
+        setTcTypeTable(map, lamTypeArgs->name, name);
         UNPROTECT(save2);
     }
     TcTypeDefArgs *this = newTcTypeDefArgs(name, next);
@@ -715,7 +715,7 @@ static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args) {
     return res;
 }
 
-static TcType *makeTcTypeDefType(LamType *lamType, HashTable *map) {
+static TcType *makeTcTypeDefType(LamType *lamType, TcTypeTable *map) {
     TcTypeDefArgs *args = makeTcTypeDefArgs(lamType->args, map);
     int save = PROTECT(args);
     TcType *res = makeTypeDef(lamType->name, args);
@@ -723,9 +723,9 @@ static TcType *makeTcTypeDefType(LamType *lamType, HashTable *map) {
     return res;
 }
 
-static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, HashTable *map);
+static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, TcTypeTable *map);
 
-static TcTypeDefArgs *makeTypeDefArgs(LamTypeConstructorArgs *args, HashTable *map) {
+static TcTypeDefArgs *makeTypeDefArgs(LamTypeConstructorArgs *args, TcTypeTable *map) {
     if (args == NULL) {
         return NULL;
     }
@@ -738,7 +738,7 @@ static TcTypeDefArgs *makeTypeDefArgs(LamTypeConstructorArgs *args, HashTable *m
     return this;
 }
 
-static TcType *makeTypeConstructorApplication(LamTypeFunction *func, HashTable *map) {
+static TcType *makeTypeConstructorApplication(LamTypeFunction *func, TcTypeTable *map) {
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
     TcTypeDefArgs *args = makeTypeDefArgs(func->args, map);
@@ -748,7 +748,7 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func, HashTable *
     return res;
 }
 
-static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, HashTable *map) {
+static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, TcTypeTable *map) {
     TcType *res = NULL;
     switch (arg->type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
@@ -758,10 +758,10 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, HashTable *ma
             res = makeCharacter();
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_VAR: {
-            if (!hashGet(map, arg->val.var, &res)) {
+            if (!getTcTypeTable(map, arg->val.var, &res)) {
                 res = makeVar(arg->val.var);
                 int save = PROTECT(res);
-                hashSet(map, arg->val.var, &res);
+                setTcTypeTable(map, arg->val.var, res);
                 UNPROTECT(save);
             }
         }
@@ -775,7 +775,7 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg, HashTable *ma
     return res;
 }
 
-static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args, TcType *result, HashTable *map) {
+static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args, TcType *result, TcTypeTable *map) {
     // this code is building the top-level type of a type constructor, i.e.
     // pair => t -> list(t) -> list(t)
     if (args == NULL) {
@@ -790,7 +790,7 @@ static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args, TcType *resu
     return res;
 }
 
-static void collectTypeDefConstructor(LamTypeConstructor *constructor, TcType *type, TcEnv *env, HashTable *map) {
+static void collectTypeDefConstructor(LamTypeConstructor *constructor, TcType *type, TcEnv *env, TcTypeTable *map) {
     TcType *res = makeTypeDefConstructor(constructor->args, type, map);
     int save = PROTECT(res);
     addToEnv(env, constructor->name, res);
@@ -798,7 +798,7 @@ static void collectTypeDefConstructor(LamTypeConstructor *constructor, TcType *t
 }
 
 static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
-    HashTable *map = newTcTypeTable();
+    TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     LamType *lamType = lamTypeDef->type;
     TcType *tcType = makeTcTypeDefType(lamType, map);
@@ -1114,20 +1114,20 @@ static TcType *analyzeError() {
 static void addToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
     DEBUG("addToEnv %s =>", symbol->name);
     IFDEBUG(ppTcType(type));
-    hashSet(env->table, symbol, &type);
+    setTcTypeTable(env->table, symbol, type);
 }
 
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
     if (env == NULL) {
         return false;
     }
-    if (hashGet(env->table, symbol, type)) {
+    if (getTcTypeTable(env->table, symbol, type)) {
         return true;
     }
     return getFromTcEnv(env->next, symbol, type);
 }
 
-static TcType *freshFunction(TcFunction *fn, TcNg *ng, HashTable *map) {
+static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
     TcType *arg = freshRec(fn->arg, ng, map);
     int save = PROTECT(arg);
     TcType *result = freshRec(fn->result, ng, map);
@@ -1146,7 +1146,7 @@ static TcType *makePair(TcType *first, TcType *second) {
     return res;
 }
 
-static TcType *freshPair(TcPair *pair, TcNg *ng, HashTable *map) {
+static TcType *freshPair(TcPair *pair, TcNg *ng, TcTypeTable *map) {
     TcType *first = freshRec(pair->first, ng, map);
     int save = PROTECT(first);
     TcType *second = freshRec(pair->second, ng, map);
@@ -1156,7 +1156,7 @@ static TcType *freshPair(TcPair *pair, TcNg *ng, HashTable *map) {
     return res;
 }
 
-static TcTypeDefArgs *freshTypeDefArgs(TcTypeDefArgs *args, TcNg *ng, HashTable *map) {
+static TcTypeDefArgs *freshTypeDefArgs(TcTypeDefArgs *args, TcNg *ng, TcTypeTable *map) {
     if (args == NULL) return NULL;
     TcTypeDefArgs *next = freshTypeDefArgs(args->next, ng, map);
     int save = PROTECT(next);
@@ -1167,7 +1167,7 @@ static TcTypeDefArgs *freshTypeDefArgs(TcTypeDefArgs *args, TcNg *ng, HashTable 
     return this;
 }
 
-static TcType *freshTypeDef(TcTypeDef *typeDef, TcNg *ng, HashTable *map) {
+static TcType *freshTypeDef(TcTypeDef *typeDef, TcNg *ng, TcTypeTable *map) {
     ENTER(freshTypeDef);
     TcTypeDefArgs *args = freshTypeDefArgs(typeDef->args, ng, map);
     int save = PROTECT(args);
@@ -1187,7 +1187,7 @@ static bool isGeneric(TcType *typeVar, TcNg *ng) {
         int i = 0;
         TcType *entry = NULL;
         HashSymbol *s = NULL;
-        while ((s = iterateHashTable(ng->table, &i, &entry)) != NULL) {
+        while ((s = iterateTcTypeTable(ng->table, &i, &entry)) != NULL) {
             if (occursInType(typeVar, entry)) {
                 LEAVE(isGeneric);
                 DEBUG("false");
@@ -1201,17 +1201,17 @@ static bool isGeneric(TcType *typeVar, TcNg *ng) {
     return true;
 }
 
-static TcType *typeGetOrPut(HashTable *map, TcType *typeVar, TcType *defaultValue) {
+static TcType *typeGetOrPut(TcTypeTable *map, TcType *typeVar, TcType *defaultValue) {
     HashSymbol *name = typeVar->val.var->name;
     TcType *res = NULL;
-    if (hashGet(map, name, &res)) {
+    if (getTcTypeTable(map, name, &res)) {
         return res;
     }
-    hashSet(map, name, &defaultValue);
+    setTcTypeTable(map, name, defaultValue);
     return defaultValue;
 }
 
-static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map) {
+static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
     type = prune(type);
     switch (type->type) {
         case TCTYPE_TYPE_FUNCTION:
@@ -1246,7 +1246,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, HashTable *map) {
 static TcType *fresh(TcType *type, TcNg *ng) {
     ENTER(fresh);
     IFDEBUG(ppTcType(type));
-    HashTable *map = newTcTypeTable();
+    TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     TcType *res = freshRec(type, ng, map);
     UNPROTECT(save);
@@ -1273,7 +1273,7 @@ static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
 static void addToNg(TcNg *ng, HashSymbol *symbol, TcType *type) {
     DEBUG("addToNg %s =>", symbol->name);
     IFDEBUG(ppTcType(type));
-    hashSet(ng->table, symbol, &type);
+    setTcTypeTable(ng->table, symbol, type);
 }
 
 static TcType *makeBoolean() {

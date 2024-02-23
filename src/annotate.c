@@ -49,9 +49,9 @@ static void annotateExpLet(ExpLet *x, CTEnv *env);
 static void annotateAexp(Aexp *x, CTEnv *env);
 static void annotateCexp(Cexp *x, CTEnv *env);
 
-static void hashAddCTVar(HashTable *table, HashSymbol *var) {
-    int count = table->count;
-    hashSet(table, var, &count);
+static void hashAddCTVar(CTIntTable *table, HashSymbol *var) {
+    int count = countCTIntTable(table);
+    setCTIntTable(table, var, count);
 }
 
 static void annotateAexpLam(AexpLam *x, CTEnv *env) {
@@ -366,7 +366,7 @@ static int calculateAdjustment(CTEnv *env) {
     while (env != NULL) {
         if (env->isLocal) {
             if (env->next) {
-                adjustment += env->next->table->count;
+                adjustment += countCTIntTable(env->next->table);
             }
             env = env->next;
         } else {
@@ -385,7 +385,7 @@ static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
 #endif
     *frame = 0;
     while (env != NULL) {
-        if (hashGet(env->table, var, offset)) {
+        if (getCTIntTable(env->table, var, offset)) {
 #ifdef DEBUG_ANALIZE
             eprintf(" -> [%d:%d]\n", *frame, *offset);
 #endif
