@@ -65,19 +65,19 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 include $(ALL_DEP)
 
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< c | indent -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< c -st > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< h | indent -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< h -st > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< objtypes_h | indent -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< objtypes_h -st > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_h | indent -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< debug_h -st > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_c | indent -st > $@ || (rm -f $@ ; exit 1)
+	$(PYTHON) tools/makeAST.py $< debug_c -st > $@ || (rm -f $@ ; exit 1)
 
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
