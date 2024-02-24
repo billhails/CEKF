@@ -1,5 +1,5 @@
-#ifndef cekf_tpmc_logic_h
-#    define cekf_tpmc_logic_h
+#ifndef cekf_lambda_substitution_h
+#    define cekf_lambda_substitution_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -19,8 +19,9 @@
  */
 
 #    include "ast.h"
+#    include "tpmc.h"
 #    include "lambda.h"
 
-LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList,
-                    LamExp **actions, LamContext *env);
+LamExp *lamPerformSubstitutions(LamExp *exp,
+                                TpmcSubstitutionTable *substitutions);
 #endif

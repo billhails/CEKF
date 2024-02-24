@@ -27,10 +27,10 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef DEBUG_STACK
-#include "debug.h"
-#include "debugging_on.h"
+#    include "debug.h"
+#    include "debugging_on.h"
 #else
-#include "debugging_off.h"
+#    include "debugging_off.h"
 #endif
 
 Snapshot noSnapshot = {
@@ -152,7 +152,8 @@ void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
 
 void patchClo(Stack *s, Clo *target) {
     DEBUG("patchClo, sp = %d, capacity = %d", s->sp, s->capacity);
-    target->rho->values = GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
+    target->rho->values =
+        GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
     copyToValues(s, target->rho->values, 0);
     target->rho->count = s->sp;
 }
@@ -168,12 +169,14 @@ void snapshotFail(Stack *s, Fail *target) {
 }
 
 void restoreKont(Stack *s, Kont *source) {
-    DEBUG("restoreKont, size = %d, capacity = %d", source->snapshot.frameSize, s->capacity);
+    DEBUG("restoreKont, size = %d, capacity = %d", source->snapshot.frameSize,
+          s->capacity);
     copyFromSnapshot(s, source->snapshot);
 }
 
 void restoreFail(Stack *s, Fail *source) {
-    DEBUG("restoreFail, size = %d, capacity = %d", source->snapshot.frameSize, s->capacity);
+    DEBUG("restoreFail, size = %d, capacity = %d", source->snapshot.frameSize,
+          s->capacity);
     copyFromSnapshot(s, source->snapshot);
 }
 

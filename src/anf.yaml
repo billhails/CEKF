@@ -27,6 +27,11 @@ config:
 description: ANF structures to be converted to bytecode.
 
 structs:
+    CTEnv:
+        isLocal: bool
+        table: CTIntTable
+        next: CTEnv
+
     AexpLam:
         nargs: int
         letRecOffset: int
@@ -194,10 +199,20 @@ enums:
         - AND
         - OR
 
+hashes:
+    AnfSymbolTable: {}
+
+    CTIntTable:
+        entries: int
+
 primitives:
     HashSymbol:
         cname: "HashSymbol *"
         printFn: "printAstSymbol"
+        valued: true
+    bool:
+        cname: "bool"
+        printf: "%d"
         valued: true
     char:
         cname: "char"

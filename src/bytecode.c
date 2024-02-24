@@ -28,11 +28,10 @@
 #include "common.h"
 
 #ifdef DEBUG_BYTECODE
-#include "debugging_on.h"
+#    include "debugging_on.h"
 #else
-#include "debugging_off.h"
+#    include "debugging_off.h"
 #endif
-
 
 void initByteCodeArray(ByteCodeArray *b) {
     b->count = 0;
@@ -49,7 +48,8 @@ void resetByteCodeArray(ByteCodeArray *b) {
 
 static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     int oldCapacity = byteCodes->capacity;
-    byte *entries = GROW_ARRAY(byte, byteCodes->entries, oldCapacity, newCapacity);
+    byte *entries =
+        GROW_ARRAY(byte, byteCodes->entries, oldCapacity, newCapacity);
 
     for (int i = oldCapacity; i < newCapacity; i++) {
         entries[i] = BYTECODE_NONE;
@@ -128,7 +128,8 @@ static void addBig(ByteCodeArray *b, bigint bi) {
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     ENTER(writeAexpLam);
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
     addByte(b, x->letRecOffset);
@@ -141,7 +142,8 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
 
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
     ENTER(writeAexpAnnotatedVar);
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     switch (x->type) {
         case AEXPANNOTATEDVARTYPE_TYPE_ENV:
             addByte(b, BYTECODE_VAR);
@@ -155,13 +157,14 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
         default:
             cant_happen("unrecognised annotated var type");
     }
-            
+
     LEAVE(writeAexpAnnotatedVar);
 }
 
 void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
     ENTER(writeAexpUnaryApp);
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     writeAexp(x->exp, b);
     byte prim;
     switch (x->type) {
@@ -186,7 +189,8 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
 
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     ENTER(writeAexpPrimApp);
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     writeAexp(x->exp1, b);
     writeAexp(x->exp2, b);
     byte prim;
@@ -301,13 +305,15 @@ static int countCexpIntCondCases(CexpIntCondCases *x) {
     return val;
 }
 
-void writeCexpCharCondCases(int depth, int *values, int *addresses, int *jumps, CexpCharCondCases *x, ByteCodeArray *b) {
+void writeCexpCharCondCases(int depth, int *values, int *addresses,
+                            int *jumps, CexpCharCondCases *x,
+                            ByteCodeArray *b) {
     ENTER(writeCexpCharCondCases);
     if (x == NULL) {
         return;
     }
     writeCexpCharCondCases(depth + 1, values, addresses, jumps, x->next, b);
-    if (x->next == NULL) { // default
+    if (x->next == NULL) {      // default
         writeExp(x->body, b);
     } else {
         writeIntAt(values[depth], b, x->option);
@@ -331,16 +337,16 @@ void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b) {
     ENTER(writeCexpCharCond);
     addByte(b, BYTECODE_CHARCOND);
     int numCases = countCexpCharCondCases(x);
-    numCases--; // don't count the default case
+    numCases--;                 // don't count the default case
     if (numCases <= 0) {
         cant_happen("zero cases in writeCexpCharCond");
     }
     addWord(b, numCases);
-    int *values = NEW_ARRAY(int, numCases); // address in b for each index_i
-    int *addresses = NEW_ARRAY(int, numCases); // address in b for each addr(exp_i)
-    int *jumps = NEW_ARRAY(int, numCases); // address in b for the JMP patch address at the end of each expression
+    int *values = NEW_ARRAY(int, numCases);     // address in b for each index_i
+    int *addresses = NEW_ARRAY(int, numCases);  // address in b for each addr(exp_i)
+    int *jumps = NEW_ARRAY(int, numCases);      // address in b for the JMP patch address at the end of each expression
     for (int i = 0; i < numCases; i++) {
-        values[i] = reserveInt(b); // TODO can change this to a char later, but then again, wchar_t...
+        values[i] = reserveInt(b);      // TODO can change this to a char later, but then again, wchar_t...
         addresses[i] = reserveWord(b);
     }
     writeCexpCharCondCases(0, values, addresses, jumps, x, b);
@@ -353,15 +359,17 @@ void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b) {
     LEAVE(writeCexpCharCond);
 }
 
-void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b, int *endJumps, int *dispatches, int index) {
+void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b,
+                           int *endJumps, int *dispatches, int index) {
     ENTER(writeCexpIntCondCases);
-    if (x == NULL) return;
+    if (x == NULL)
+        return;
     writeCexpIntCondCases(x->next, b, endJumps, dispatches, index + 1);
-    if (x->next != NULL) { // last case is default, first one written, no dispatch as it follows the jmp table
+    if (x->next != NULL) {      // last case is default, first one written, no dispatch as it follows the jmp table
         writeCurrentAddressAt(dispatches[index + 1], b);
     }
     writeExp(x->body, b);
-    if (index != -1) { // -1 is first case. last one written out, doesn't need a JMP to end as the end immediately follows
+    if (index != -1) {          // -1 is first case. last one written out, doesn't need a JMP to end as the end immediately follows
         addByte(b, BYTECODE_JMP);
         endJumps[index] = reserveWord(b);
     }
@@ -374,7 +382,7 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     int numCases = countCexpIntCondCases(x);
     // eprintf("writeCexpIntCond size %d\n", numCases);
     // printCexpIntCondCases(x);
-    numCases--; // don't count the default case
+    numCases--;                 // don't count the default case
     if (numCases <= 0) {
         cant_happen("zero cases in writeCexpIntCond");
     }
@@ -384,7 +392,8 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     {
         int i = 0;
         for (CexpIntCondCases *xx = x; xx != NULL; xx = xx->next) {
-            if (xx->next == NULL) break; // default case doesn't get a test
+            if (xx->next == NULL)
+                break;          // default case doesn't get a test
             if (bigint_flag) {
                 addBig(b, xx->option->bi);
             } else {
@@ -394,10 +403,10 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
         }
     }
     // next we right-recurse on the expressions (so the default directly follows the dispatch table)
-    int *endJumps = NEW_ARRAY(int, numCases); // address in b for the JMP patch address at the end of each expression which jumps to the end
+    int *endJumps = NEW_ARRAY(int, numCases);   // address in b for the JMP patch address at the end of each expression which jumps to the end
     writeCexpIntCondCases(x, b, endJumps, dispatches, -1);
     // lastly we patch the escape addresses of the clauses.
-    for (int  i = 0; i < numCases; i++) {
+    for (int i = 0; i < numCases; i++) {
         writeCurrentAddressAt(endJumps[i], b);
     }
     FREE_ARRAY(int, dispatches, numCases);
@@ -416,7 +425,8 @@ void writeCexpCond(CexpCond *x, ByteCodeArray *b) {
             writeCexpCharCond(x->cases->val.charCases, b);
             break;
         default:
-            cant_happen("unrecognised type %d in writeCexpCond", x->cases->type);
+            cant_happen("unrecognised type %d in writeCexpCond",
+                        x->cases->type);
     }
     LEAVE(writeCexpCond);
 }
@@ -436,7 +446,8 @@ static int validateCexpMatch(CexpMatch *x) {
         seen[i] = false;
     }
     for (MatchList *m = x->clauses; m != NULL; m = m->next) {
-        for (AexpIntList *matches = m->matches; matches != NULL; matches = matches->next) {
+        for (AexpIntList *matches = m->matches; matches != NULL;
+             matches = matches->next) {
             int index = matches->integer;
             if (seen[index]) {
                 cant_happen("duplicate index %d in validateCexpMatch", index);
@@ -449,7 +460,8 @@ static int validateCexpMatch(CexpMatch *x) {
     for (int i = 0; i < 256; ++i) {
         if (seen[i]) {
             if (end)
-                cant_happen("non-contiguous match indices in validateCexpMatch");
+                cant_happen
+                    ("non-contiguous match indices in validateCexpMatch");
             else
                 count = i + 1;
         } else {
@@ -531,62 +543,62 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
 void writeAexp(Aexp *x, ByteCodeArray *b) {
     ENTER(writeAexp);
     switch (x->type) {
-        case AEXP_TYPE_LAM: {
-            writeAexpLam(x->val.lam, b);
-        }
-        break;
-        case AEXP_TYPE_VAR: {
-            cant_happen("un-annotated var in writeAexp");
-        }
-        break;
-        case AEXP_TYPE_ANNOTATEDVAR: {
-            writeAexpAnnotatedVar(x->val.annotatedVar, b);
-        }
-        break;
-        case AEXP_TYPE_T: {
-            addByte(b, BYTECODE_TRUE);
-        }
-        break;
-        case AEXP_TYPE_F: {
-            addByte(b, BYTECODE_FALSE);
-        }
-        break;
-        case AEXP_TYPE_V: {
-            addByte(b, BYTECODE_VOID);
-        }
-        break;
-        case AEXP_TYPE_LITTLEINTEGER: {
-            addByte(b, BYTECODE_STDINT);
-            addInt(b, x->val.littleinteger);
-        }
-        break;
-        case AEXP_TYPE_BIGINTEGER: {
-            if (bigint_flag) {
-                addByte(b, BYTECODE_BIGINT);
-                addBig(b, x->val.biginteger->bi);
-            } else {
-                addByte(b, BYTECODE_STDINT);
-                addInt(b, x->val.biginteger->little);
+        case AEXP_TYPE_LAM:{
+                writeAexpLam(x->val.lam, b);
             }
-        }
-        break;
-        case AEXP_TYPE_CHARACTER: {
-            addByte(b, BYTECODE_CHAR);
-            addByte(b, x->val.character);
-        }
-        break;
-        case AEXP_TYPE_PRIM: {
-            writeAexpPrimApp(x->val.prim, b);
-        }
-        break;
-        case AEXP_TYPE_UNARY: {
-            writeAexpUnaryApp(x->val.unary, b);
-        }
-        break;
-        case AEXP_TYPE_MAKEVEC: {
-            writeAexpMakeVec(x->val.makeVec, b);
-        }
-        break;
+            break;
+        case AEXP_TYPE_VAR:{
+                cant_happen("un-annotated var in writeAexp");
+            }
+            break;
+        case AEXP_TYPE_ANNOTATEDVAR:{
+                writeAexpAnnotatedVar(x->val.annotatedVar, b);
+            }
+            break;
+        case AEXP_TYPE_T:{
+                addByte(b, BYTECODE_TRUE);
+            }
+            break;
+        case AEXP_TYPE_F:{
+                addByte(b, BYTECODE_FALSE);
+            }
+            break;
+        case AEXP_TYPE_V:{
+                addByte(b, BYTECODE_VOID);
+            }
+            break;
+        case AEXP_TYPE_LITTLEINTEGER:{
+                addByte(b, BYTECODE_STDINT);
+                addInt(b, x->val.littleinteger);
+            }
+            break;
+        case AEXP_TYPE_BIGINTEGER:{
+                if (bigint_flag) {
+                    addByte(b, BYTECODE_BIGINT);
+                    addBig(b, x->val.biginteger->bi);
+                } else {
+                    addByte(b, BYTECODE_STDINT);
+                    addInt(b, x->val.biginteger->little);
+                }
+            }
+            break;
+        case AEXP_TYPE_CHARACTER:{
+                addByte(b, BYTECODE_CHAR);
+                addByte(b, x->val.character);
+            }
+            break;
+        case AEXP_TYPE_PRIM:{
+                writeAexpPrimApp(x->val.prim, b);
+            }
+            break;
+        case AEXP_TYPE_UNARY:{
+                writeAexpUnaryApp(x->val.unary, b);
+            }
+            break;
+        case AEXP_TYPE_MAKEVEC:{
+                writeAexpMakeVec(x->val.makeVec, b);
+            }
+            break;
         default:
             cant_happen("unrecognized Aexp type in writeAexp");
     }
@@ -596,47 +608,47 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
 void writeCexp(Cexp *x, ByteCodeArray *b) {
     ENTER(writeCexp);
     switch (x->type) {
-        case CEXP_TYPE_APPLY: {
-            writeCexpApply(x->val.apply, b);
-        }
-        break;
-        case CEXP_TYPE_IFF: {
-            writeCexpIf(x->val.iff, b);
-        }
-        break;
-        case CEXP_TYPE_COND: {
-            writeCexpCond(x->val.cond, b);
-        }
-        break;
-        case CEXP_TYPE_MATCH: {
-            writeCexpMatch(x->val.match, b);
-        }
-        break;
-        case CEXP_TYPE_CALLCC: {
-            writeAexp(x->val.callCC, b);
-            addByte(b, BYTECODE_CALLCC);
-        }
-        break;
-        case CEXP_TYPE_LETREC: {
-            writeCexpLetRec(x->val.letRec, b);
-        }
-        break;
-        case CEXP_TYPE_AMB: {
-            writeCexpAmb(x->val.amb, b);
-        }
-        break;
-        case CEXP_TYPE_CUT: {
-            writeCexpCut(x->val.cut, b);
-        }
-        break;
-        case CEXP_TYPE_BACK: {
-            addByte(b, BYTECODE_BACK);
-        }
-        break;
-        case CEXP_TYPE_ERROR: {
-            addByte(b, BYTECODE_ERROR);
-        }
-        break;
+        case CEXP_TYPE_APPLY:{
+                writeCexpApply(x->val.apply, b);
+            }
+            break;
+        case CEXP_TYPE_IFF:{
+                writeCexpIf(x->val.iff, b);
+            }
+            break;
+        case CEXP_TYPE_COND:{
+                writeCexpCond(x->val.cond, b);
+            }
+            break;
+        case CEXP_TYPE_MATCH:{
+                writeCexpMatch(x->val.match, b);
+            }
+            break;
+        case CEXP_TYPE_CALLCC:{
+                writeAexp(x->val.callCC, b);
+                addByte(b, BYTECODE_CALLCC);
+            }
+            break;
+        case CEXP_TYPE_LETREC:{
+                writeCexpLetRec(x->val.letRec, b);
+            }
+            break;
+        case CEXP_TYPE_AMB:{
+                writeCexpAmb(x->val.amb, b);
+            }
+            break;
+        case CEXP_TYPE_CUT:{
+                writeCexpCut(x->val.cut, b);
+            }
+            break;
+        case CEXP_TYPE_BACK:{
+                addByte(b, BYTECODE_BACK);
+            }
+            break;
+        case CEXP_TYPE_ERROR:{
+                addByte(b, BYTECODE_ERROR);
+            }
+            break;
         default:
             cant_happen("unrecognized Cexp type %d in writeCexp", x->type);
     }
@@ -646,22 +658,22 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
 void writeExp(Exp *x, ByteCodeArray *b) {
     ENTER(writeExp);
     switch (x->type) {
-        case EXP_TYPE_AEXP: {
-            writeAexp(x->val.aexp, b);
-        }
-        break;
-        case EXP_TYPE_CEXP: {
-            writeCexp(x->val.cexp, b);
-        }
-        break;
-        case EXP_TYPE_LET: {
-            writeExpLet(x->val.let, b);
-        }
-        break;
-        case EXP_TYPE_DONE: {
-            addByte(b, BYTECODE_DONE);
-        }
-        break;
+        case EXP_TYPE_AEXP:{
+                writeAexp(x->val.aexp, b);
+            }
+            break;
+        case EXP_TYPE_CEXP:{
+                writeCexp(x->val.cexp, b);
+            }
+            break;
+        case EXP_TYPE_LET:{
+                writeExpLet(x->val.let, b);
+            }
+            break;
+        case EXP_TYPE_DONE:{
+                addByte(b, BYTECODE_DONE);
+            }
+            break;
         default:
             cant_happen("unrecognized Exp type in writeExp");
     }

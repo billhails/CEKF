@@ -1,6 +1,6 @@
 obj/
 dep/
-tmp/
+generated/
 junk/
 out_scm/
 tmp_scm/
@@ -15,3 +15,5 @@ Makefile.extra
 gmon.out
 .idea
 tests/test_*
+src/*~
+.typedefs

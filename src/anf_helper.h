@@ -1,5 +1,5 @@
 #ifndef cekf_anf_helper_h
-#define cekf_anf_helper_h
+#    define cekf_anf_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -22,6 +22,6 @@
  * Generated from src/anf.yaml by tools/makeAST.py
  */
 
-#include "anf.h"
+#    include "anf.h"
 
 #endif

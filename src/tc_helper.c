@@ -20,12 +20,12 @@
 #include "symbol.h"
 
 void ppTcType(TcType *type) {
-   if (type == NULL) {
-       eprintf("<null type>");
-       return;
-   }
-   switch (type->type) {
-       case TCTYPE_TYPE_FUNCTION:
+    if (type == NULL) {
+        eprintf("<null type>");
+        return;
+    }
+    switch (type->type) {
+        case TCTYPE_TYPE_FUNCTION:
             ppTcFunction(type->val.function);
             break;
         case TCTYPE_TYPE_PAIR:
@@ -78,7 +78,8 @@ void ppTcVar(TcVar *var) {
 static void ppTypeDefArgs(TcTypeDefArgs *args) {
     while (args != NULL) {
         ppTcType(args->type);
-        if (args->next) eprintf(", ");
+        if (args->next)
+            eprintf(", ");
         args = args->next;
     }
 }
@@ -89,9 +90,11 @@ void ppTcTypeDef(TcTypeDef *typeDef) {
     eprintf(")");
 }
 
-bool eqTcVar(struct TcVar * a, struct TcVar * b, HashTable *map) {
-    if (a == b) return true;
-    if (a->name == b->name) return true;
+bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {
+    if (a == b)
+        return true;
+    if (a->name == b->name)
+        return true;
     HashSymbol *common = NULL;
     if (hashGet(map, a->name, &common)) {
         HashSymbol *other = NULL;

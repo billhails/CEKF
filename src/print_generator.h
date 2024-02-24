@@ -1,5 +1,5 @@
-#ifndef cekf_analysis_h
-#define cekf_analysis_h
+#ifndef cekf_print_generator_h
+#    define cekf_print_generator_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,24 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include <stdbool.h>
+#    include "lambda.h"
+#    include "value.h"
+#    include "tc.h"
 
- #include "common.h"
- #include "anf.h"
- #include "hash.h"
- #include "memory.h"
-
-typedef struct CTEnv {
-    struct Header header;
-    bool isLocal;
-    struct CTEnv *next;
-    struct HashTable *table;
-} CTEnv;
-
-void analizeExp(Exp *x, CTEnv *env);
-
-CTEnv *newCTEnv(bool isLocal, CTEnv *next);
-void markCTEnv(Header *env);
-void freeCTEnv(Header *env);
+LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
+                                      LamLetRecBindings *rest,
+                                      LamContext *env, bool inPreamble);
+LamExp *makeSymbolExpr(char *name);
+LamExp *makePrintInt();
+LamExp *makePrintChar();
+HashSymbol *makePrintName(char *prefix, char *name);
+int countLamList(LamList *list);
 
 #endif

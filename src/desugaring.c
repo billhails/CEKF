@@ -26,7 +26,7 @@
 #include "symbol.h"
 
 #ifdef DEBUG_DESUGARING
-#include "debug.h"
+#    include "debug.h"
 #endif
 
 static AexpLam *desugarAexpLam(AexpLam *x);
@@ -45,9 +45,9 @@ static Aexp *desugarAexp(Aexp *x);
 static Cexp *desugarCexp(Cexp *x);
 
 #ifdef DEBUG_DESUGARING
-#define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
+#    define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
 #else
-#define DEBUG_DESUGAR(type, val) do {} while(0)
+#    define DEBUG_DESUGAR(type, val) do {} while(0)
 #endif
 
 static AexpLam *desugarAexpLam(AexpLam *x) {
@@ -77,7 +77,7 @@ static HashSymbol *desugarAexpVar(HashSymbol *x) {
 static AexpList *desugarAexpList(AexpList *x) {
     DEBUG_DESUGAR(AexpList, x);
     AexpList *y = x;
-    while(x != NULL) {
+    while (x != NULL) {
         x->exp = desugarAexp(x->exp);
         x = x->next;
     }
@@ -132,7 +132,8 @@ static CexpCondCases *desugarCexpCondCases(CexpCondCases *x) {
             x->val.charCases = desugarCexpCharCondCases(x->val.charCases);
             break;
         default:
-            cant_happen("unrecognized type %d in desugarCexpCondCases", x->type);
+            cant_happen("unrecognized type %d in desugarCexpCondCases",
+                        x->type);
     }
     return x;
 }
@@ -177,39 +178,38 @@ static Exp *aexpAndToExp(Aexp *exp1, Exp *exp2) {
                   EXP_VAL_CEXP(newCexp
                                (CEXP_TYPE_IFF,
                                 CEXP_VAL_IFF(newCexpIf
-                                              (exp1,
-                                               exp2,
-                                               newExp(EXP_TYPE_AEXP,
-                                                      EXP_VAL_AEXP(newAexp
-                                                                   (AEXP_TYPE_F,
-                                                                    AEXP_VAL_F
-                                                                    ()))))))));
+                                             (exp1, exp2,
+                                              newExp(EXP_TYPE_AEXP,
+                                                     EXP_VAL_AEXP(newAexp
+                                                                  (AEXP_TYPE_F,
+                                                                   AEXP_VAL_F
+                                                                   ()))))))));
 }
 
-static Exp *expAndToExp(Exp * exp1, Exp * exp2) {
+static Exp *expAndToExp(Exp *exp1, Exp *exp2) {
     HashSymbol *sym = genSym("and_");
     return newExp(EXP_TYPE_LET,
                   EXP_VAL_LET(newExpLet
-                              (sym,
-                               exp1,
+                              (sym, exp1,
                                newExp(EXP_TYPE_CEXP,
                                       EXP_VAL_CEXP(newCexp
                                                    (CEXP_TYPE_IFF,
                                                     CEXP_VAL_IFF(newCexpIf
-                                                                  (newAexp
-                                                                   (AEXP_TYPE_VAR,
-                                                                    AEXP_VAL_VAR
-                                                                    (sym)),
-                                                                   exp2,
-                                                                   newExp
-                                                                   (EXP_TYPE_AEXP,
-                                                                    EXP_VAL_AEXP
-                                                                    (newAexp
-                                                                     (AEXP_TYPE_F,
-                                                                      AEXP_VAL_F())))))))))));
+                                                                 (newAexp
+                                                                  (AEXP_TYPE_VAR,
+                                                                   AEXP_VAL_VAR
+                                                                   (sym)),
+                                                                  exp2,
+                                                                  newExp
+                                                                  (EXP_TYPE_AEXP,
+                                                                   EXP_VAL_AEXP
+                                                                   (newAexp
+                                                                    (AEXP_TYPE_F,
+                                                                     AEXP_VAL_F
+                                                                     ())))))))))));
 }
 
-static Exp *andToExp(CexpBool * x) {
+static Exp *andToExp(CexpBool *x) {
     // (and <exp1> <exp2>) => (let (<sym> <exp1>) (if <sym> <exp2> #f))
     // (and <aexp> <exp>) => (if <aexp> <exp> #f)
     Exp *exp1 = desugarExp(x->exp1);
@@ -226,36 +226,36 @@ static Exp *aexpOrToExp(Aexp *exp1, Exp *exp2) {
                   EXP_VAL_CEXP(newCexp
                                (CEXP_TYPE_IFF,
                                 CEXP_VAL_IFF(newCexpIf
-                                              (exp1,
-                                               newExp(EXP_TYPE_AEXP,
-                                                      EXP_VAL_AEXP(newAexp
-                                                                   (AEXP_TYPE_T,
-                                                                    AEXP_VAL_T()))),
-                                               exp2)))));
+                                             (exp1,
+                                              newExp(EXP_TYPE_AEXP,
+                                                     EXP_VAL_AEXP(newAexp
+                                                                  (AEXP_TYPE_T,
+                                                                   AEXP_VAL_T
+                                                                   ()))),
+                                              exp2)))));
 }
 
 static Exp *expOrToExp(Exp *exp1, Exp *exp2) {
     HashSymbol *sym = genSym("or_");
-    return
-        newExp(EXP_TYPE_LET,
-               EXP_VAL_LET(newExpLet
-                           (sym,
-                            exp1,
-                            newExp(EXP_TYPE_CEXP,
-                                   EXP_VAL_CEXP(newCexp
-                                                (CEXP_TYPE_IFF,
-                                                 CEXP_VAL_IFF(newCexpIf
-                                                               (newAexp
-                                                                (AEXP_TYPE_VAR,
-                                                                 AEXP_VAL_VAR
-                                                                 (sym)),
-                                                                newExp
-                                                                (EXP_TYPE_AEXP,
-                                                                 EXP_VAL_AEXP
+    return newExp(EXP_TYPE_LET,
+                  EXP_VAL_LET(newExpLet
+                              (sym, exp1,
+                               newExp(EXP_TYPE_CEXP,
+                                      EXP_VAL_CEXP(newCexp
+                                                   (CEXP_TYPE_IFF,
+                                                    CEXP_VAL_IFF(newCexpIf
                                                                  (newAexp
-                                                                  (AEXP_TYPE_T,
-                                                                   AEXP_VAL_T()))),
-                                                                exp2))))))));
+                                                                  (AEXP_TYPE_VAR,
+                                                                   AEXP_VAL_VAR
+                                                                   (sym)),
+                                                                  newExp
+                                                                  (EXP_TYPE_AEXP,
+                                                                   EXP_VAL_AEXP
+                                                                   (newAexp
+                                                                    (AEXP_TYPE_T,
+                                                                     AEXP_VAL_T
+                                                                     ()))),
+                                                                  exp2))))))));
 }
 
 static Exp *orToExp(CexpBool *x) {
@@ -325,7 +325,8 @@ static Aexp *desugarAexp(Aexp *x) {
 
 static MatchList *desugarMatchList(MatchList *x) {
     DEBUG_DESUGAR(MatchList, x);
-    if (x == NULL) return NULL;
+    if (x == NULL)
+        return NULL;
     x->body = desugarExp(x->body);
     x->next = desugarMatchList(x->next);
     return x;

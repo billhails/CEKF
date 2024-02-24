@@ -191,7 +191,7 @@ static void printClo(Clo *x, int depth) {
     eprintf("]");
 }
 
-void printCEKF(CEKF *x) {
+void printCEKF(CEKF * x) {
     int depth = 1;
     eprintf("\nCEKF (\n");
     printPad(depth);
@@ -211,7 +211,7 @@ void printCEKF(CEKF *x) {
 
 static void printStack(Stack *x, int depth) {
     printPad(depth);
-    if (x == NULL || x->sp ==0) {
+    if (x == NULL || x->sp == 0) {
         eprintf("S/");
         return;
     }
@@ -261,21 +261,12 @@ void printEnv(Env *x, int depth) {
     eprintf("E[\n");
     while (x != NULL) {
         printValues(x->values, x->count, depth + 1);
-        if (x->next != NULL) eprintf(",");
+        if (x->next != NULL)
+            eprintf(",");
         eprintf("\n");
         x = x->next;
     }
     printPad(depth);
-    eprintf("]");
-}
-
-void printCTEnv(CTEnv *x) {
-    eprintf("CTEnv[");
-    while (x != NULL) {
-        printHashTable(x->table, 0);
-        if (x->next != NULL) eprintf(", ");
-        x = x->next;
-    }
     eprintf("]");
 }
 
@@ -287,7 +278,8 @@ void printElidedEnv(Env *x) {
     eprintf("E[");
     while (x != NULL) {
         printElidedValues(x->values, x->count);
-        if (x->next != NULL) eprintf(", ");
+        if (x->next != NULL)
+            eprintf(", ");
         x = x->next;
     }
     eprintf("]");
@@ -344,239 +336,241 @@ void dumpByteCode(ByteCodeArray *b) {
         eprintf("%04lx ### ", i);
         int thisByte;
         switch (thisByte = readByte(b, &i)) {
-            case BYTECODE_NONE: {
-                eprintf("NONE\n");
-            }
-            break;
-            case BYTECODE_LAM: {
-                int nargs = readByte(b, &i);
-                int letRecOffset = readByte(b, &i);
-                int offset = readOffset(b, &i);
-                eprintf("LAM [%d] [%d] [%04x]\n", nargs, letRecOffset, offset);
-            }
-            break;
-            case BYTECODE_VAR: {
-                int frame = readByte(b, &i);
-                int offset = readByte(b, &i);
-                eprintf("VAR [%d:%d]\n", frame, offset);
-            }
-            break;
-            case BYTECODE_LVAR: {
-                int offset = readByte(b, &i);
-                eprintf("LVAR [%d]\n", offset);
-            }
-            break;
-            case BYTECODE_PRIM_ADD: {
-                eprintf("ADD\n");
-            }
-            break;
-            case BYTECODE_PRIM_SUB: {
-                eprintf("SUB\n");
-            }
-            break;
-            case BYTECODE_PRIM_MUL: {
-                eprintf("MUL\n");
-            }
-            break;
-            case BYTECODE_PRIM_DIV: {
-                eprintf("DIV\n");
-            }
-            break;
-            case BYTECODE_PRIM_POW: {
-                eprintf("POW\n");
-            }
-            break;
-            case BYTECODE_PRIM_MOD: {
-                eprintf("MOD\n");
-            }
-            break;
-            case BYTECODE_PRIM_EQ: {
-                eprintf("EQ\n");
-            }
-            break;
-            case BYTECODE_PRIM_NE: {
-                eprintf("NE\n");
-            }
-            break;
-            case BYTECODE_PRIM_GT: {
-                eprintf("GT\n");
-            }
-            break;
-            case BYTECODE_PRIM_LT: {
-                eprintf("LT\n");
-            }
-            break;
-            case BYTECODE_PRIM_GE: {
-                eprintf("GE\n");
-            }
-            break;
-            case BYTECODE_PRIM_LE: {
-                eprintf("LE\n");
-            }
-            break;
-            case BYTECODE_PRIM_XOR: {
-                eprintf("XOR\n");
-            }
-            break;
-            case BYTECODE_PRIM_NOT: {
-                eprintf("NOT\n");
-            }
-            break;
-            case BYTECODE_PRIM_MAKEVEC: {
-                int size = readByte(b, &i);
-                eprintf("MAKEVEC [%d]\n", size);
-            }
-            break;
-            case BYTECODE_PRIM_VEC: {
-                eprintf("VEC\n");
-            }
-            break;
-            case BYTECODE_APPLY: {
-                int nargs = readByte(b, &i);
-                eprintf("APPLY [%d]\n", nargs);
-            }
-            break;
-            case BYTECODE_IF: {
-                int offset = readOffset(b, &i);
-                eprintf("IF [%04x]\n", offset);
-            }
-            break;
-            case BYTECODE_MATCH: {
-                int count = readByte(b, &i);
-                eprintf("MATCH [%d]", count);
-                while (count > 0) {
-                    int offset = readOffset(b, &i);
-                    eprintf("[%04x]", offset);
-                    count--;
+            case BYTECODE_NONE:{
+                    eprintf("NONE\n");
                 }
-                eprintf("\n");
-            }
-            break;
-            case BYTECODE_CHARCOND: {
-                int count = readWord(b, &i);
-                eprintf("CHARCOND [%d]", count);
-                while (count > 0) {
-                    int val = readInt(b, &i);
+                break;
+            case BYTECODE_LAM:{
+                    int nargs = readByte(b, &i);
+                    int letRecOffset = readByte(b, &i);
                     int offset = readOffset(b, &i);
-                    eprintf(" %d:[%04x]", val, offset);
-                    count--;
+                    eprintf("LAM [%d] [%d] [%04x]\n", nargs, letRecOffset,
+                            offset);
                 }
-                eprintf("\n");
-            }
-            break;
-            case BYTECODE_INTCOND: {
-                int count = readWord(b, &i);
-                eprintf("INTCOND [%d]", count);
-                while (count > 0) {
-                    if (bigint_flag) {
-                        bigint bi = readBigint(b, &i);
-                        eprintf(" ");
-                        bigint_fprint(stderr, &bi);
-                        bigint_free(&bi);
-                    } else {
-                        int li = readInt(b, &i);
-                        eprintf(" %d", li);
+                break;
+            case BYTECODE_VAR:{
+                    int frame = readByte(b, &i);
+                    int offset = readByte(b, &i);
+                    eprintf("VAR [%d:%d]\n", frame, offset);
+                }
+                break;
+            case BYTECODE_LVAR:{
+                    int offset = readByte(b, &i);
+                    eprintf("LVAR [%d]\n", offset);
+                }
+                break;
+            case BYTECODE_PRIM_ADD:{
+                    eprintf("ADD\n");
+                }
+                break;
+            case BYTECODE_PRIM_SUB:{
+                    eprintf("SUB\n");
+                }
+                break;
+            case BYTECODE_PRIM_MUL:{
+                    eprintf("MUL\n");
+                }
+                break;
+            case BYTECODE_PRIM_DIV:{
+                    eprintf("DIV\n");
+                }
+                break;
+            case BYTECODE_PRIM_POW:{
+                    eprintf("POW\n");
+                }
+                break;
+            case BYTECODE_PRIM_MOD:{
+                    eprintf("MOD\n");
+                }
+                break;
+            case BYTECODE_PRIM_EQ:{
+                    eprintf("EQ\n");
+                }
+                break;
+            case BYTECODE_PRIM_NE:{
+                    eprintf("NE\n");
+                }
+                break;
+            case BYTECODE_PRIM_GT:{
+                    eprintf("GT\n");
+                }
+                break;
+            case BYTECODE_PRIM_LT:{
+                    eprintf("LT\n");
+                }
+                break;
+            case BYTECODE_PRIM_GE:{
+                    eprintf("GE\n");
+                }
+                break;
+            case BYTECODE_PRIM_LE:{
+                    eprintf("LE\n");
+                }
+                break;
+            case BYTECODE_PRIM_XOR:{
+                    eprintf("XOR\n");
+                }
+                break;
+            case BYTECODE_PRIM_NOT:{
+                    eprintf("NOT\n");
+                }
+                break;
+            case BYTECODE_PRIM_MAKEVEC:{
+                    int size = readByte(b, &i);
+                    eprintf("MAKEVEC [%d]\n", size);
+                }
+                break;
+            case BYTECODE_PRIM_VEC:{
+                    eprintf("VEC\n");
+                }
+                break;
+            case BYTECODE_APPLY:{
+                    int nargs = readByte(b, &i);
+                    eprintf("APPLY [%d]\n", nargs);
+                }
+                break;
+            case BYTECODE_IF:{
+                    int offset = readOffset(b, &i);
+                    eprintf("IF [%04x]\n", offset);
+                }
+                break;
+            case BYTECODE_MATCH:{
+                    int count = readByte(b, &i);
+                    eprintf("MATCH [%d]", count);
+                    while (count > 0) {
+                        int offset = readOffset(b, &i);
+                        eprintf("[%04x]", offset);
+                        count--;
                     }
-                    int offset = readOffset(b, &i);
-                    eprintf(":[%04x]", offset);
-                    count--;
+                    eprintf("\n");
                 }
-                eprintf("\n");
-            }
-            break;
-            case BYTECODE_LETREC: {
-                int size = readByte(b, &i);
-                eprintf("LETREC [%d]\n", size);
-            }
-            break;
-            case BYTECODE_AMB: {
-                int offset = readOffset(b, &i);
-                eprintf("AMB [%04x]\n", offset);
-            }
-            break;
-            case BYTECODE_CUT: {
-                eprintf("CUT\n");
-            }
-            break;
-            case BYTECODE_BACK: {
-                eprintf("BACK\n");
-            }
-            break;
-            case BYTECODE_LET: {
-                int offset = readOffset(b, &i);
-                eprintf("LET [%04x]\n", offset);
-            }
-            break;
-            case BYTECODE_JMP: {
-                int offset = readOffset(b, &i);
-                eprintf("JMP [%04x]\n", offset);
-            }
-            break;
-            case BYTECODE_PUSHN: {
-                int size = readByte(b, &i);
-                eprintf("PUSHN [%d]\n", size);
-            }
-            break;
-            case BYTECODE_CALLCC: {
-                eprintf("CALLCC\n");
-            }
-            break;
-            case BYTECODE_TRUE: {
-                eprintf("TRUE\n");
-            }
-            break;
-            case BYTECODE_FALSE: {
-                eprintf("FALSE\n");
-            }
-            break;
-            case BYTECODE_VOID: {
-                eprintf("VOID\n");
-            }
-            break;
-            case BYTECODE_PRIM_PUTC: {
-                eprintf("PUTC\n");
-            }
-            break;
-            case BYTECODE_PRIM_PUTN: {
-                eprintf("PUTN\n");
-            }
-            break;
-            case BYTECODE_PRIM_PUTV: {
-                eprintf("PUTV\n");
-            }
-            break;
-            case BYTECODE_STDINT: {
-                int val = readInt(b, &i);
-                eprintf("STDINT [%d]\n", val);
-            }
-            break;
-            case BYTECODE_BIGINT: {
-                eprintf("BIGINT [");
-                bigint bi = readBigint(b, &i);
-                bigint_fprint(stderr, &bi);
-                eprintf("]\n");
-                bigint_free(&bi);
-            }
-            break;
-            case BYTECODE_CHAR: {
-                char c = readByte(b, &i);
-                eprintf("CHAR [%c]\n", c);
-            }
-            break;
-            case BYTECODE_RETURN: {
-                eprintf("RETURN\n");
-            }
-            break;
-            case BYTECODE_DONE: {
-                eprintf("DONE\n");
-            }
-            break;
-            case BYTECODE_ERROR: {
-                eprintf("ERROR\n");
-            }
-            break;
+                break;
+            case BYTECODE_CHARCOND:{
+                    int count = readWord(b, &i);
+                    eprintf("CHARCOND [%d]", count);
+                    while (count > 0) {
+                        int val = readInt(b, &i);
+                        int offset = readOffset(b, &i);
+                        eprintf(" %d:[%04x]", val, offset);
+                        count--;
+                    }
+                    eprintf("\n");
+                }
+                break;
+            case BYTECODE_INTCOND:{
+                    int count = readWord(b, &i);
+                    eprintf("INTCOND [%d]", count);
+                    while (count > 0) {
+                        if (bigint_flag) {
+                            bigint bi = readBigint(b, &i);
+                            eprintf(" ");
+                            bigint_fprint(stderr, &bi);
+                            bigint_free(&bi);
+                        } else {
+                            int li = readInt(b, &i);
+                            eprintf(" %d", li);
+                        }
+                        int offset = readOffset(b, &i);
+                        eprintf(":[%04x]", offset);
+                        count--;
+                    }
+                    eprintf("\n");
+                }
+                break;
+            case BYTECODE_LETREC:{
+                    int size = readByte(b, &i);
+                    eprintf("LETREC [%d]\n", size);
+                }
+                break;
+            case BYTECODE_AMB:{
+                    int offset = readOffset(b, &i);
+                    eprintf("AMB [%04x]\n", offset);
+                }
+                break;
+            case BYTECODE_CUT:{
+                    eprintf("CUT\n");
+                }
+                break;
+            case BYTECODE_BACK:{
+                    eprintf("BACK\n");
+                }
+                break;
+            case BYTECODE_LET:{
+                    int offset = readOffset(b, &i);
+                    eprintf("LET [%04x]\n", offset);
+                }
+                break;
+            case BYTECODE_JMP:{
+                    int offset = readOffset(b, &i);
+                    eprintf("JMP [%04x]\n", offset);
+                }
+                break;
+            case BYTECODE_PUSHN:{
+                    int size = readByte(b, &i);
+                    eprintf("PUSHN [%d]\n", size);
+                }
+                break;
+            case BYTECODE_CALLCC:{
+                    eprintf("CALLCC\n");
+                }
+                break;
+            case BYTECODE_TRUE:{
+                    eprintf("TRUE\n");
+                }
+                break;
+            case BYTECODE_FALSE:{
+                    eprintf("FALSE\n");
+                }
+                break;
+            case BYTECODE_VOID:{
+                    eprintf("VOID\n");
+                }
+                break;
+            case BYTECODE_PRIM_PUTC:{
+                    eprintf("PUTC\n");
+                }
+                break;
+            case BYTECODE_PRIM_PUTN:{
+                    eprintf("PUTN\n");
+                }
+                break;
+            case BYTECODE_PRIM_PUTV:{
+                    eprintf("PUTV\n");
+                }
+                break;
+            case BYTECODE_STDINT:{
+                    int val = readInt(b, &i);
+                    eprintf("STDINT [%d]\n", val);
+                }
+                break;
+            case BYTECODE_BIGINT:{
+                    eprintf("BIGINT [");
+                    bigint bi = readBigint(b, &i);
+                    bigint_fprint(stderr, &bi);
+                    eprintf("]\n");
+                    bigint_free(&bi);
+                }
+                break;
+            case BYTECODE_CHAR:{
+                    char c = readByte(b, &i);
+                    eprintf("CHAR [%c]\n", c);
+                }
+                break;
+            case BYTECODE_RETURN:{
+                    eprintf("RETURN\n");
+                }
+                break;
+            case BYTECODE_DONE:{
+                    eprintf("DONE\n");
+                }
+                break;
+            case BYTECODE_ERROR:{
+                    eprintf("ERROR\n");
+                }
+                break;
             default:
-                cant_happen("unrecognised bytecode %d in dumpByteCode", thisByte);
+                cant_happen("unrecognised bytecode %d in dumpByteCode",
+                            thisByte);
         }
     }
 }

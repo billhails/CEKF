@@ -47,7 +47,8 @@ bool tpmcStateValueEq(TpmcStateValue *a, TpmcStateValue *b) {
         case TPMCSTATEVALUE_TYPE_ERROR:
             return true;
         default:
-            cant_happen("unrecognised type %d passed to tpmcStateValueEq", a->type);
+            cant_happen("unrecognised type %d passed to tpmcStateValueEq",
+                        a->type);
     }
 }
 
@@ -71,7 +72,8 @@ bool tpmcArcArrayEq(TpmcArcArray *a, TpmcArcArray *b) {
 
 bool tpmcArcEq(TpmcArc *a, TpmcArc *b) {
     PREAMBLE();
-    return (tpmcStateEq(a->state, b->state) && tpmcPatternEq(a->test, b->test));
+    return (tpmcStateEq(a->state, b->state)
+            && tpmcPatternEq(a->test, b->test));
 }
 
 bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray) {
@@ -97,9 +99,11 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             return a->val.var == b->val.var;
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            return tpmcComparisonPatternEq(a->val.comparison, b->val.comparison);
+            return tpmcComparisonPatternEq(a->val.comparison,
+                                           b->val.comparison);
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
-            return tpmcAssignmentPatternEq(a->val.assignment, b->val.assignment);
+            return tpmcAssignmentPatternEq(a->val.assignment,
+                                           b->val.assignment);
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
             return true;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
@@ -107,25 +111,31 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             return cmpBigInt(a->val.biginteger, b->val.biginteger) == 0;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            return tpmcConstructorPatternEq(a->val.constructor, b->val.constructor);
+            return tpmcConstructorPatternEq(a->val.constructor,
+                                            b->val.constructor);
         default:
             cant_happen("unrecognised type %d in tpmcPatternEq", a->type);
     }
 }
 
-bool tpmcComparisonPatternEq(TpmcComparisonPattern *a, TpmcComparisonPattern *b) {
+bool tpmcComparisonPatternEq(TpmcComparisonPattern *a,
+                             TpmcComparisonPattern *b) {
     PREAMBLE();
-    return tpmcPatternEq(a->previous, b->previous) && tpmcPatternEq(a->current, b->current);
+    return tpmcPatternEq(a->previous, b->previous)
+        && tpmcPatternEq(a->current, b->current);
 }
 
-bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a, TpmcAssignmentPattern *b) {
+bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a,
+                             TpmcAssignmentPattern *b) {
     PREAMBLE();
     return a->name == b->name && tpmcPatternEq(a->value, b->value);
 }
 
-bool tpmcConstructorPatternEq(TpmcConstructorPattern *a, TpmcConstructorPattern *b) {
+bool tpmcConstructorPatternEq(TpmcConstructorPattern *a,
+                              TpmcConstructorPattern *b) {
     PREAMBLE();
-    return a->tag == b->tag && tpmcPatternArrayEq(a->components, b->components);
+    return a->tag == b->tag
+        && tpmcPatternArrayEq(a->components, b->components);
 }
 
 bool tpmcPatternArrayEq(TpmcPatternArray *a, TpmcPatternArray *b) {

@@ -1,5 +1,5 @@
 #ifndef cekf_desugaring_h
-#define cekf_desugaring_h
+#    define cekf_desugaring_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "anf.h"
+#    include "anf.h"
 
 Exp *desugarExp(Exp *expr);
 

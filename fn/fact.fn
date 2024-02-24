@@ -4,4 +4,5 @@ let
         (n) { n * fact(n - 1) }
     }
 in
-    fact(1000)
+    print(fact(1000));
+    puts("\n")

@@ -1,5 +1,5 @@
-#ifndef cekf_tpmc_logic_h
-#    define cekf_tpmc_logic_h
+#ifndef cekf_annotate_h
+#    define cekf_annotate_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "ast.h"
-#    include "lambda.h"
+#    include <stdbool.h>
 
-LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList,
-                    LamExp **actions, LamContext *env);
+#    include "common.h"
+#    include "anf.h"
+#    include "hash.h"
+#    include "memory.h"
+
+void annotateExp(Exp *x, CTEnv *env);
+
 #endif

@@ -144,8 +144,10 @@ void markValue(Value x) {
 }
 
 void markValueList(ValueList *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     for (int i = 0; i < x->count; ++i) {
         markValue(x->values[i]);
@@ -153,15 +155,19 @@ void markValueList(ValueList *x) {
 }
 
 void markClo(Clo *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     markEnv(x->rho);
 }
 
 void markEnv(Env *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     markEnv(x->next);
     for (int i = 0; i < x->count; i++) {
@@ -176,8 +182,10 @@ static void markSnapshot(Snapshot s) {
 }
 
 void markKont(Kont *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     markSnapshot(x->snapshot);
     markEnv(x->rho);
@@ -185,8 +193,10 @@ void markKont(Kont *x) {
 }
 
 void markVec(Vec *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     for (int i = 0; i < x->size; i++) {
         markValue(x->values[i]);
@@ -194,8 +204,10 @@ void markVec(Vec *x) {
 }
 
 void markFail(Fail *x) {
-    if (x == NULL) return;
-    if (MARKED(x)) return;
+    if (x == NULL)
+        return;
+    if (MARKED(x))
+        return;
     MARK(x);
     markSnapshot(x->snapshot);
     markEnv(x->rho);
@@ -206,19 +218,19 @@ void markFail(Fail *x) {
 void markCekfObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_CLO:
-            markClo((Clo *)h);
+            markClo((Clo *) h);
             break;
         case OBJTYPE_ENV:
-            markEnv((Env *)h);
+            markEnv((Env *) h);
             break;
         case OBJTYPE_FAIL:
-            markFail((Fail *)h);
+            markFail((Fail *) h);
             break;
         case OBJTYPE_KONT:
-            markKont((Kont *)h);
+            markKont((Kont *) h);
             break;
         case OBJTYPE_VALUELIST:
-            markValueList((ValueList *)h);
+            markValueList((ValueList *) h);
             break;
         default:
             cant_happen("unrecognised header type in markCekfObj");
@@ -228,36 +240,36 @@ void markCekfObj(Header *h) {
 void freeCekfObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_VEC:
-            Vec *vec = (Vec *)h;
+            Vec *vec = (Vec *) h;
             FREE_VEC(vec);
             break;
         case OBJTYPE_CLO:
-            reallocate((void *)h, sizeof(Clo), 0);
+            reallocate((void *) h, sizeof(Clo), 0);
             break;
-        case OBJTYPE_ENV: {
-                Env *env = (Env *)h;
+        case OBJTYPE_ENV:{
+                Env *env = (Env *) h;
                 FREE_ARRAY(Value, env->values, env->count);
-                reallocate((void *)h, sizeof(Env), 0);
+                reallocate((void *) h, sizeof(Env), 0);
             }
             break;
-        case OBJTYPE_FAIL: {
-                Fail *f = (Fail *)h;
+        case OBJTYPE_FAIL:{
+                Fail *f = (Fail *) h;
                 FREE_ARRAY(Value, f->snapshot.frame, f->snapshot.frameSize);
-                reallocate((void *)h, sizeof(Fail), 0);
+                reallocate((void *) h, sizeof(Fail), 0);
             }
             break;
-        case OBJTYPE_KONT: {
-                Kont *k = (Kont *)h;
+        case OBJTYPE_KONT:{
+                Kont *k = (Kont *) h;
                 FREE_ARRAY(Value, k->snapshot.frame, k->snapshot.frameSize);
-                reallocate((void *)h, sizeof(Kont), 0);
+                reallocate((void *) h, sizeof(Kont), 0);
             }
             break;
-        case OBJTYPE_VALUELIST: {
-                ValueList *vl = (ValueList *)h;
+        case OBJTYPE_VALUELIST:{
+                ValueList *vl = (ValueList *) h;
                 if (vl->count > 0) {
                     FREE_ARRAY(Value, vl->values, vl->count);
                 }
-                reallocate((void *)h, sizeof(ValueList), 0);
+                reallocate((void *) h, sizeof(ValueList), 0);
             }
             break;
         default:

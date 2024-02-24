@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_compare_h
-#define cekf_tpmc_compare_h
+#    define cekf_tpmc_compare_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -20,8 +20,8 @@
  * Term Pattern Matching Compiler logic
  */
 
-#include <stdbool.h>
-#include "tpmc.h"
+#    include <stdbool.h>
+#    include "tpmc.h"
 
 bool tpmcStateEq(TpmcState *a, TpmcState *b);
 bool tpmcStateValueEq(TpmcStateValue *a, TpmcStateValue *b);
@@ -30,11 +30,13 @@ bool tpmcArcArrayEq(TpmcArcArray *a, TpmcArcArray *b);
 bool tpmcArcEq(TpmcArc *a, TpmcArc *b);
 bool tpmcPatternEq(TpmcPattern *a, TpmcPattern *b);
 bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b);
-bool tpmcComparisonPatternEq(TpmcComparisonPattern *a, TpmcComparisonPattern *b);
-bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a, TpmcAssignmentPattern *b);
-bool tpmcConstructorPatternEq(TpmcConstructorPattern *a, TpmcConstructorPattern *b);
+bool tpmcComparisonPatternEq(TpmcComparisonPattern *a,
+                             TpmcComparisonPattern *b);
+bool tpmcAssignmentPatternEq(TpmcAssignmentPattern *a,
+                             TpmcAssignmentPattern *b);
+bool tpmcConstructorPatternEq(TpmcConstructorPattern *a,
+                              TpmcConstructorPattern *b);
 bool tpmcPatternArrayEq(TpmcPatternArray *a, TpmcPatternArray *b);
 bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray);
 
 #endif
-

@@ -29,31 +29,38 @@
 #include "symbols.h"
 #include "tpmc_logic.h"
 #include "ast_debug.h"
-#include "print.h"
+#include "print_generator.h"
 
-#define ARG_CATEGORY_VAR 0
-#define ARG_CATEGORY_CONST 1
-#define ARG_CATEGORY_STRUCT 2
-#define ARG_CATEGORY_ENV 3
-
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env);
-static LamList *convertExpressions(AstExpressions *expressions, LamContext *env);
-static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env);
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next);
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
+                                          LamContext *env);
+static LamList *convertExpressions(AstExpressions *expressions,
+                                   LamContext *env);
+static LamSequence *convertSequence(AstExpressions *expressions,
+                                    LamContext *env);
+static LamLetRecBindings *prependDefinition(AstDefinition *definition,
+                                            LamContext *env,
+                                            LamLetRecBindings *next);
+static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
+                                        LamLetRecBindings *next);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
-static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env);
-static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstructor, LamType *type, int size, int index, bool hasFields, LamContext *env);
-static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions);
-static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type, bool someoneHasFields, int enumCount, int index, int arity, LamContext *env);
+static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
+                                       LamContext *env);
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
+                                                  *typeConstructor,
+                                                  LamType *type, int size,
+                                                  int index, bool hasFields,
+                                                  LamContext *env);
+static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
+                            bool someoneHasFields, int enumCount, int index,
+                            int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 
 #ifdef DEBUG_LAMBDA_CONVERT
-#include "debugging_on.h"
+#    include "debugging_on.h"
 #else
-#include "debugging_off.h"
+#    include "debugging_off.h"
 #endif
 
 #define MAKE_COUNT_LIST(type)           \
@@ -68,20 +75,13 @@ static int count ## type (type *list) { \
     return count;                       \
 }
 
-MAKE_COUNT_LIST(LamLetRecBindings)
-
-MAKE_COUNT_LIST(AstTypeList)
-
-MAKE_COUNT_LIST(AstExpressions)
-
-MAKE_COUNT_LIST(AstArgList)
-
+MAKE_COUNT_LIST(LamLetRecBindings) MAKE_COUNT_LIST(AstTypeList)
+MAKE_COUNT_LIST(AstExpressions) MAKE_COUNT_LIST(AstArgList)
 MAKE_COUNT_LIST(AstCompositeFunction)
+     static bool inPreamble = true;     // preamble is treated specially
+     static bool preambleLocked = false;
 
-static bool inPreamble = true; // preamble is treated specially
-static bool preambleLocked = false;
-
-LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
+     LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest);
     bool hasLock = inPreamble && !preambleLocked;
     if (hasLock)
@@ -92,7 +92,8 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     (void) PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(nest->definitions, env);
     PROTECT(funcDefsList);
-    funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
+    funcDefsList =
+        makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
     PROTECT(funcDefsList);
     if (hasLock)
         inPreamble = false;
@@ -104,7 +105,9 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     (void) PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
-        LamLetRec *letRec = newLamLetRec(countLamLetRecBindings(funcDefsList), funcDefsList, letRecBody);
+        LamLetRec *letRec =
+            newLamLetRec(countLamLetRecBindings(funcDefsList), funcDefsList,
+                         letRecBody);
         (void) PROTECT(letRec);
         result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
     } else {
@@ -114,12 +117,13 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     if (typeDefList != NULL) {
         LamTypeDefs *typeDefs = newLamTypeDefs(typeDefList, result);
         (void) PROTECT(typeDefs);
-        result = newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
+        result =
+            newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
     }
     UNPROTECT(save);
     LEAVE(lamConvertNest);
     return result;
-}
+     }
 
 static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     ENTER(lamConvertIff);
@@ -149,332 +153,16 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     return result;
 }
 
-static LamVarList *performVarListSubstitutions(LamVarList *varList, HashTable *substitutions) {
-    ENTER(performVarListSubstitutions);
-    if (varList == NULL) {
-        LEAVE(performVarListSubstitutions);
-        return NULL;
-    }
-    varList->next = performVarListSubstitutions(varList->next, substitutions);
-    varList->var = performVarSubstitutions(varList->var, substitutions);
-    LEAVE(performVarListSubstitutions);
-    return varList;
-}
-
-static LamLam *performLamSubstitutions(LamLam *lam, HashTable *substitutions) {
-    ENTER(performLamSubstitutions);
-    lam->args = performVarListSubstitutions(lam->args, substitutions);
-    lam->exp = lamPerformSubstitutions(lam->exp, substitutions);
-    LEAVE(performLamSubstitutions);
-    return lam;
-}
-
-static HashSymbol *performVarSubstitutions(HashSymbol *var, HashTable *substitutions) {
-    ENTER(performVarSubstitutions);
-    HashSymbol *replacement = NULL;
-    if (hashGet(substitutions, var, &replacement)) {
-        return replacement;
-    }
-    LEAVE(performVarSubstitutions);
-    return var;
-}
-
-static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, HashTable *substitutions) {
-    ENTER(performPrimSubstitutions);
-    prim->exp1 = lamPerformSubstitutions(prim->exp1, substitutions);
-    prim->exp2 = lamPerformSubstitutions(prim->exp2, substitutions);
-    LEAVE(performPrimSubstitutions);
-    return prim;
-}
-
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, HashTable *substitutions) {
-    ENTER(performUnarySubstitutions);
-    unary->exp = lamPerformSubstitutions(unary->exp, substitutions);
-    LEAVE(performUnarySubstitutions);
-    return unary;
-}
-
-static LamSequence *performSequenceSubstitutions(LamSequence *sequence, HashTable *substitutions) {
-    ENTER(performSequenceSubstitutions);
-    if (sequence == NULL) {
-        LEAVE(performSequenceSubstitutions);
-        return NULL;
-    }
-    sequence->next = performSequenceSubstitutions(sequence->next, substitutions);
-    sequence->exp = lamPerformSubstitutions(sequence->exp, substitutions);
-    LEAVE(performSequenceSubstitutions);
-    return sequence;
-}
-
-static LamList *performListSubstitutions(LamList *list, HashTable *substitutions) {
-    ENTER(performListSubstitutions);
-    if (list == NULL) {
-        LEAVE(performListSubstitutions);
-        return NULL;
-    }
-    list->next = performListSubstitutions(list->next, substitutions);
-    list->exp = lamPerformSubstitutions(list->exp, substitutions);
-    LEAVE(performListSubstitutions);
-    return list;
-}
-
-static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, HashTable *substitutions) {
-    ENTER(performMakeVecSubstitutions);
-    makeVec->args = performListSubstitutions(makeVec->args, substitutions);
-    LEAVE(performMakeVecSubstitutions);
-    return makeVec;
-}
-
-static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, HashTable *substitutions) {
-    ENTER(performDeconstructSubstitutions);
-    deconstruct->exp = lamPerformSubstitutions(deconstruct->exp, substitutions);
-    LEAVE(performDeconstructSubstitutions);
-    return deconstruct;
-}
-
-static LamConstruct *performConstructSubstitutions(LamConstruct *construct, HashTable *substitutions) {
-    ENTER(performConstructSubstitutions);
-    construct->args = performListSubstitutions(construct->args, substitutions);
-    LEAVE(performConstructSubstitutions);
-    return construct;
-}
-
-static LamApply *performApplySubstitutions(LamApply *apply, HashTable *substitutions) {
-    ENTER(performApplySubstitutions);
-    apply->function = lamPerformSubstitutions(apply->function, substitutions);
-    apply->args = performListSubstitutions(apply->args, substitutions);
-    LEAVE(performApplySubstitutions);
-    return apply;
-}
-
-static LamIff *performIffSubstitutions(LamIff *iff, HashTable *substitutions) {
-    ENTER(performIffSubstitutions);
-    iff->condition = lamPerformSubstitutions(iff->condition, substitutions);
-    iff->consequent = lamPerformSubstitutions(iff->consequent, substitutions);
-    iff->alternative = lamPerformSubstitutions(iff->alternative, substitutions);
-    LEAVE(performIffSubstitutions);
-    return iff;
-}
-
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, HashTable *substitutions) {
-    ENTER(performBindingsSubstitutions);
-    if (bindings == NULL) {
-        LEAVE(performBindingsSubstitutions);
-        return NULL;
-    }
-    bindings->next = performBindingsSubstitutions(bindings->next, substitutions);
-    bindings->var = performVarSubstitutions(bindings->var, substitutions);
-    bindings->val = lamPerformSubstitutions(bindings->val, substitutions);
-    LEAVE(performBindingsSubstitutions);
-    return bindings;
-}
-
-static LamLet *performLetSubstitutions(LamLet *let, HashTable *substitutions) {
-    ENTER(performLetSubstitutions);
-    let->var = performVarSubstitutions(let->var, substitutions);
-    let->value = lamPerformSubstitutions(let->value, substitutions);
-    let->body = lamPerformSubstitutions(let->body, substitutions);
-    LEAVE(performLetSubstitutions);
-    return let;
-}
-
-static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, HashTable *substitutions) {
-    ENTER(performLetRecSubstitutions);
-    letrec->bindings = performBindingsSubstitutions(letrec->bindings, substitutions);
-    letrec->body = lamPerformSubstitutions(letrec->body, substitutions);
-    LEAVE(performLetRecSubstitutions);
-    return letrec;
-}
-
-static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, HashTable *substitutions) {
-    ENTER(performTypeDefsSubstitutions);
-    typedefs->body = lamPerformSubstitutions(typedefs->body, substitutions);
-    LEAVE(performTypeDefsSubstitutions);
-    return typedefs;
-}
-
-static LamMatchList *performCaseSubstitutions(LamMatchList *cases, HashTable *substitutions) {
-    ENTER(performCaseSubstitutions);
-    if (cases == NULL) {
-        LEAVE(performCaseSubstitutions);
-        return NULL;
-    }
-    cases->next = performCaseSubstitutions(cases->next, substitutions);
-    cases->body = lamPerformSubstitutions(cases->body, substitutions);
-    LEAVE(performCaseSubstitutions);
-    return cases;
-}
-
-static LamMatch *performMatchSubstitutions(LamMatch *match, HashTable *substitutions) {
-    ENTER(performMatchSubstitutions);
-    match->index = lamPerformSubstitutions(match->index, substitutions);
-    match->cases = performCaseSubstitutions(match->cases, substitutions);
-    LEAVE(performMatchSubstitutions);
-    return match;
-}
-
-static LamAnd *performAndSubstitutions(LamAnd *and, HashTable *substitutions) {
-    ENTER(performAndSubstitutions);
-    and->left = lamPerformSubstitutions(and->left, substitutions);
-    and->right = lamPerformSubstitutions(and->right, substitutions);
-    LEAVE(performAndSubstitutions);
-    return and;
-}
-
-static LamOr *performOrSubstitutions(LamOr *or, HashTable *substitutions) {
-    ENTER(performOrSubstitutions);
-    or->left = lamPerformSubstitutions(or->left, substitutions);
-    or->right = lamPerformSubstitutions(or->right, substitutions);
-    LEAVE(performOrSubstitutions);
-    return or;
-}
-
-static LamAmb *performAmbSubstitutions(LamAmb *amb, HashTable *substitutions) {
-    ENTER(performAmbSubstitutions);
-    amb->left = lamPerformSubstitutions(amb->left, substitutions);
-    amb->right = lamPerformSubstitutions(amb->right, substitutions);
-    LEAVE(performAmbSubstitutions);
-    return amb;
-}
-
-static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, HashTable *substitutions) {
-    ENTER(performIntCondCaseSubstitutions);
-    if (cases == NULL) {
-        LEAVE(performIntCondCaseSubstitutions);
-        return NULL;
-    }
-    cases->body = lamPerformSubstitutions(cases->body, substitutions);
-    cases->next = performIntCondCaseSubstitutions(cases->next, substitutions);
-    LEAVE(performIntCondCaseSubstitutions);
-    return cases;
-}
-
-static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, HashTable *substitutions) {
-    ENTER(performCharCondCaseSubstitutions);
-    if (cases == NULL) {
-        LEAVE(performCharCondCaseSubstitutions);
-        return NULL;
-    }
-    cases->body = lamPerformSubstitutions(cases->body, substitutions);
-    cases->next = performCharCondCaseSubstitutions(cases->next, substitutions);
-    LEAVE(performCharCondCaseSubstitutions);
-    return cases;
-}
-
-static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, HashTable *substitutions) {
-    ENTER(performCondCaseSubstitutions);
-    if (cases == NULL) {
-        LEAVE(performCondCaseSubstitutions);
-        return NULL;
-    }
-    switch (cases->type) {
-        case LAMCONDCASES_TYPE_INTEGERS:
-            cases->val.integers = performIntCondCaseSubstitutions(cases->val.integers, substitutions);
-            break;
-        case LAMCONDCASES_TYPE_CHARACTERS:
-            cases->val.characters = performCharCondCaseSubstitutions(cases->val.characters, substitutions);
-            break;
-        default:
-            cant_happen("unrecognised type %d in performCondCaseSubstitutions", cases->type);
-    }
-    LEAVE(performCondCaseSubstitutions);
-    return cases;
-}
-
-static LamCond *performCondSubstitutions(LamCond *cond, HashTable *substitutions) {
-    ENTER(performCondSubstitutions);
-    cond->value = lamPerformSubstitutions(cond->value, substitutions);
-    cond->cases = performCondCaseSubstitutions(cond->cases, substitutions);
-    LEAVE(performCondSubstitutions);
-    return cond;
-}
-
-LamExp *lamPerformSubstitutions(LamExp *exp, HashTable *substitutions) {
-    ENTER(lamPerformSubstitutions);
-    switch (exp->type) {
-        case LAMEXP_TYPE_BIGINTEGER:
-        case LAMEXP_TYPE_STDINT:
-        case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_COND_DEFAULT:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_CONSTANT:
-            break;
-        case LAMEXP_TYPE_LAM:
-            exp->val.lam = performLamSubstitutions(exp->val.lam, substitutions);
-            break;
-        case LAMEXP_TYPE_VAR:
-            exp->val.var = performVarSubstitutions(exp->val.var, substitutions);
-            break;
-        case LAMEXP_TYPE_PRIM:
-            exp->val.prim = performPrimSubstitutions(exp->val.prim, substitutions);
-            break;
-        case LAMEXP_TYPE_UNARY:
-            exp->val.unary = performUnarySubstitutions(exp->val.unary, substitutions);
-            break;
-        case LAMEXP_TYPE_LIST:
-            exp->val.list = performSequenceSubstitutions(exp->val.list, substitutions);
-            break;
-        case LAMEXP_TYPE_MAKEVEC:
-            exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, substitutions);
-            break;
-        case LAMEXP_TYPE_DECONSTRUCT:
-            exp->val.deconstruct = performDeconstructSubstitutions(exp->val.deconstruct, substitutions);
-            break;
-        case LAMEXP_TYPE_CONSTRUCT:
-            exp->val.construct = performConstructSubstitutions(exp->val.construct, substitutions);
-            break;
-        case LAMEXP_TYPE_TAG:
-            exp->val.tag = lamPerformSubstitutions(exp->val.tag, substitutions);
-            break;
-        case LAMEXP_TYPE_APPLY:
-            exp->val.apply = performApplySubstitutions(exp->val.apply, substitutions);
-            break;
-        case LAMEXP_TYPE_IFF:
-            exp->val.iff = performIffSubstitutions(exp->val.iff, substitutions);
-            break;
-        case LAMEXP_TYPE_COND:
-            exp->val.cond = performCondSubstitutions(exp->val.cond, substitutions);
-            break;
-        case LAMEXP_TYPE_CALLCC:
-            exp->val.callcc = lamPerformSubstitutions(exp->val.callcc, substitutions);
-            break;
-        case LAMEXP_TYPE_LET:
-            exp->val.let = performLetSubstitutions(exp->val.let, substitutions);
-            break;
-        case LAMEXP_TYPE_LETREC:
-            exp->val.letrec = performLetRecSubstitutions(exp->val.letrec, substitutions);
-            break;
-        case LAMEXP_TYPE_TYPEDEFS:
-            exp->val.typedefs = performTypeDefsSubstitutions(exp->val.typedefs, substitutions);
-            break;
-        case LAMEXP_TYPE_MATCH:
-            exp->val.match = performMatchSubstitutions(exp->val.match, substitutions);
-            break;
-        case LAMEXP_TYPE_AND:
-            exp->val.and = performAndSubstitutions(exp->val.and, substitutions);
-            break;
-        case LAMEXP_TYPE_OR:
-            exp->val.or = performOrSubstitutions(exp->val.or, substitutions);
-            break;
-        case LAMEXP_TYPE_AMB:
-            exp->val.amb = performAmbSubstitutions(exp->val.amb, substitutions);
-            break;
-        default:
-            cant_happen("unrecognized LamExp type (%d) in lamPerformSubstitutions", exp->type);
-    }
-    LEAVE(lamPerformSubstitutions);
-    return exp;
-}
-
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env) {
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
+                                          LamContext *env) {
     ENTER(convertFuncDefs);
     if (definitions == NULL) {
         return NULL;
     }
     LamLetRecBindings *next = convertFuncDefs(definitions->next, env);
     int save = PROTECT(next);
-    LamLetRecBindings *this = prependDefinition(definitions->definition, env, next);
+    LamLetRecBindings *this =
+        prependDefinition(definitions->definition, env, next);
     UNPROTECT(save);
     LEAVE(convertFuncDefs);
     return this;
@@ -490,7 +178,8 @@ static int countTypeBodies(AstTypeBody *typeBody) {
 }
 
 static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
-    if (symbols == NULL) return NULL;
+    if (symbols == NULL)
+        return NULL;
     LamTypeArgs *next = convertTypeSymbols(symbols->next);
     int save = PROTECT(next);
     LamTypeArgs *this = newLamTypeArgs(symbols->typeSymbol, next);
@@ -506,43 +195,59 @@ static LamType *convertTypeDefType(AstFlatType *flat) {
     return res;
 }
 
-static LamTypeFunction *convertAstTypeFunction(AstTypeFunction *astTypeFunction) {
-    LamTypeConstructorArgs *lamTypeConstructorArgs = convertAstTypeList(astTypeFunction->typeList);
+static LamTypeFunction *convertAstTypeFunction(AstTypeFunction
+                                               *astTypeFunction) {
+    LamTypeConstructorArgs *lamTypeConstructorArgs =
+        convertAstTypeList(astTypeFunction->typeList);
     int save = PROTECT(lamTypeConstructorArgs);
-    LamTypeFunction *this = newLamTypeFunction(astTypeFunction->symbol, lamTypeConstructorArgs);
+    LamTypeFunction *this =
+        newLamTypeFunction(astTypeFunction->symbol, lamTypeConstructorArgs);
     UNPROTECT(save);
     return this;
 }
 
-static LamTypeConstructorType *convertAstTypeClause(AstTypeClause *astTypeClause) {
+static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
+                                                    *astTypeClause) {
     switch (astTypeClause->type) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
-            return newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER, LAMTYPECONSTRUCTORTYPE_VAL_INTEGER());
+            return
+                newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER,
+                                          LAMTYPECONSTRUCTORTYPE_VAL_INTEGER
+                                          ());
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
-            return newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER, LAMTYPECONSTRUCTORTYPE_VAL_CHARACTER());
+            return
+                newLamTypeConstructorType
+                (LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER,
+                 LAMTYPECONSTRUCTORTYPE_VAL_CHARACTER());
             break;
         case AST_TYPECLAUSE_TYPE_VAR:
-            return newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_VAR, LAMTYPECONSTRUCTORTYPE_VAL_VAR(astTypeClause->val.var));
+            return newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_VAR,
+                                             LAMTYPECONSTRUCTORTYPE_VAL_VAR
+                                             (astTypeClause->val.var));
             break;
-        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION: {
-            LamTypeFunction *lamTypeFunction = convertAstTypeFunction(astTypeClause->val.typeFunction);
-            int save = PROTECT(lamTypeFunction);
-            LamTypeConstructorType *this =
-                newLamTypeConstructorType(
-                    LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION,
-                    LAMTYPECONSTRUCTORTYPE_VAL_FUNCTION(lamTypeFunction)
-                );
-            UNPROTECT(save);
-            return this;
-        }
-        break;
+        case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:{
+                LamTypeFunction *lamTypeFunction =
+                    convertAstTypeFunction(astTypeClause->val.typeFunction);
+                int save = PROTECT(lamTypeFunction);
+                LamTypeConstructorType *this =
+                    newLamTypeConstructorType
+                    (LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION,
+                     LAMTYPECONSTRUCTORTYPE_VAL_FUNCTION(lamTypeFunction)
+                    );
+                UNPROTECT(save);
+                return this;
+            }
+            break;
         default:
-            cant_happen("unrecognised astTypeClause type %d in convertAstTypeClause", astTypeClause->type);
+            cant_happen
+                ("unrecognised astTypeClause type %d in convertAstTypeClause",
+                 astTypeClause->type);
     }
 }
 
-static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs, LamTypeConstructorType *rhs) {
+static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
+                                  LamTypeConstructorType *rhs) {
     LamTypeConstructorArgs *rhsArg = newLamTypeConstructorArgs(rhs, NULL);
     int save = PROTECT(rhsArg);
     LamTypeConstructorArgs *args = newLamTypeConstructorArgs(lhs, rhsArg);
@@ -553,17 +258,19 @@ static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs, LamTypeConstructo
 }
 
 static LamTypeConstructorType *convertAstType(AstType *astType) {
-    if (astType->next) { // it's a function
+    if (astType->next) {        // it's a function
         LamTypeConstructorType *next = convertAstType(astType->next);
         int save = PROTECT(next);
-        LamTypeConstructorType *this = convertAstTypeClause(astType->typeClause);
+        LamTypeConstructorType *this =
+            convertAstTypeClause(astType->typeClause);
         PROTECT(this);
         LamTypeFunction *arrow = makeArrow(this, next);
         PROTECT(arrow);
-        LamTypeConstructorType *res = newLamTypeConstructorType(
-            LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION,
-            LAMTYPECONSTRUCTORTYPE_VAL_FUNCTION(arrow)
-        );
+        LamTypeConstructorType *res =
+            newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION,
+                                      LAMTYPECONSTRUCTORTYPE_VAL_FUNCTION
+                                      (arrow)
+            );
         UNPROTECT(save);
         return res;
     } else {
@@ -572,7 +279,8 @@ static LamTypeConstructorType *convertAstType(AstType *astType) {
 }
 
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
-    if (typeList == NULL) return NULL;
+    if (typeList == NULL)
+        return NULL;
     LamTypeConstructorArgs *next = convertAstTypeList(typeList->next);
     int save = PROTECT(next);
     LamTypeConstructorType *arg = convertAstType(typeList->type);
@@ -582,36 +290,34 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
     return this;
 }
 
-static void collectTypeInfo(
-    HashSymbol *symbol,
-    LamTypeConstructor *type,
-    bool someoneHasFields,
-    int enumCount, int index,
-    int arity,
-    LamContext *env
-) {
+static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
+                            bool someoneHasFields, int enumCount, int index,
+                            int arity, LamContext *env) {
     ENTER(collectTypeInfo);
-    LamTypeConstructorInfo *info = newLamTypeConstructorInfo(type, someoneHasFields, arity, enumCount, index);
+    LamTypeConstructorInfo *info =
+        newLamTypeConstructorInfo(type, someoneHasFields, arity, enumCount,
+                                  index);
     int save = PROTECT(info);
     addToLamContext(env, symbol, info);
     UNPROTECT(save);
     LEAVE(collectTypeInfo);
 }
 
-static LamTypeConstructor *collectTypeConstructor(
-    AstTypeConstructor *typeConstructor,
-    LamType *type,
-    int enumCount,
-    int index,
-    bool someoneHasFields,
-    LamContext *env
-) {
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
+                                                  *typeConstructor,
+                                                  LamType *type,
+                                                  int enumCount, int index,
+                                                  bool someoneHasFields,
+                                                  LamContext *env) {
     int nargs = countAstTypeList(typeConstructor->typeList);
-    LamTypeConstructorArgs *args = convertAstTypeList(typeConstructor->typeList);
+    LamTypeConstructorArgs *args =
+        convertAstTypeList(typeConstructor->typeList);
     int save = PROTECT(args);
-    LamTypeConstructor *lamTypeConstructor = newLamTypeConstructor(typeConstructor->symbol, type, args);
+    LamTypeConstructor *lamTypeConstructor =
+        newLamTypeConstructor(typeConstructor->symbol, type, args);
     PROTECT(lamTypeConstructor);
-    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor, someoneHasFields, enumCount, index, nargs, env);
+    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor,
+                    someoneHasFields, enumCount, index, nargs, env);
     UNPROTECT(save);
     return lamTypeConstructor;
 }
@@ -626,19 +332,17 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
     LamTypeConstructorList *lamTypeConstructorList = NULL;
     int save2 = PROTECT(type);
     while (typeBody != NULL) {
-        LamTypeConstructor *lamTypeConstructor = collectTypeConstructor(
-            typeBody->typeConstructor,
-            type,
-            enumCount,
-            index,
-            hasFields,
-            env
-        );
+        LamTypeConstructor *lamTypeConstructor =
+            collectTypeConstructor(typeBody->typeConstructor,
+                                   type,
+                                   enumCount,
+                                   index,
+                                   hasFields,
+                                   env);
         int save3 = PROTECT(lamTypeConstructor);
-        lamTypeConstructorList = newLamTypeConstructorList(
-            lamTypeConstructor,
-            lamTypeConstructorList
-        );
+        lamTypeConstructorList =
+            newLamTypeConstructorList(lamTypeConstructor,
+                                      lamTypeConstructorList);
         REPLACE_PROTECT(save2, lamTypeConstructorList);
         UNPROTECT(save3);
         typeBody = typeBody->next;
@@ -649,12 +353,14 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
     return res;
 }
 
-static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
+static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
+                                       LamContext *env) {
     if (definitions == NULL) {
         return NULL;
     }
     if (definitions->definition->type == AST_DEFINITION_TYPE_TYPEDEF) {
-        LamTypeDef *lamTypeDef = collectTypeDef(definitions->definition->val.typeDef, env);
+        LamTypeDef *lamTypeDef =
+            collectTypeDef(definitions->definition->val.typeDef, env);
         int save = PROTECT(lamTypeDef);
         LamTypeDefList *rest = collectTypeDefs(definitions->next, env);
         PROTECT(rest);
@@ -666,7 +372,9 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *
     }
 }
 
-static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContext *env, LamLetRecBindings *next) {
+static LamLetRecBindings *prependDefinition(AstDefinition *definition,
+                                            LamContext *env,
+                                            LamLetRecBindings *next) {
     ENTER(prependDefinition);
     LamLetRecBindings *result = NULL;
     switch (definition->type) {
@@ -677,7 +385,9 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition, LamContex
             result = next;
             break;
         default:
-            cant_happen("unrecognised definition type %d in prependDefinition", definition->type);
+            cant_happen
+                ("unrecognised definition type %d in prependDefinition",
+                 definition->type);
     }
     LEAVE(prependDefinition);
     return result;
@@ -697,7 +407,8 @@ static bool typeHasFields(AstTypeBody *typeBody) {
 static LamExp *makeConstruct(HashSymbol *name, int tag, LamList *args) {
     LamConstruct *construct = newLamConstruct(name, tag, args);
     int save = PROTECT(construct);
-    LamExp *res = newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(construct));
+    LamExp *res =
+        newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(construct));
     UNPROTECT(save);
     return res;
 }
@@ -705,37 +416,27 @@ static LamExp *makeConstruct(HashSymbol *name, int tag, LamList *args) {
 static LamExp *makeConstant(HashSymbol *name, int tag) {
     LamConstant *constant = newLamConstant(name, tag);
     int save = PROTECT(constant);
-    LamExp *res = newLamExp(LAMEXP_TYPE_CONSTANT, LAMEXP_VAL_CONSTANT(constant));
+    LamExp *res =
+        newLamExp(LAMEXP_TYPE_CONSTANT, LAMEXP_VAL_CONSTANT(constant));
     UNPROTECT(save);
     return res;
 }
 
-/*
-static LamExp *makeMakeVec(int nargs, int index, LamList *args) {
-    LamExp *indexExp = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(index));
-    int save = PROTECT(indexExp);
-    args = newLamList(indexExp, args);
-    (void) PROTECT(args);
-    LamMakeVec *makeVec = newLamMakeVec(nargs + 1, args);
-    (void) PROTECT(makeVec);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_MAKEVEC, LAMEXP_VAL_MAKEVEC(makeVec));
-    UNPROTECT(save);
-    return exp;
-}
-*/
-
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next) {
+static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
+                                        LamLetRecBindings *next) {
     ENTER(prependDefine);
     LamExp *exp = convertExpression(define->expression, env);
     int save = PROTECT(exp);
-    LamLetRecBindings *this = newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);
+    LamLetRecBindings *this =
+        newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
 }
 
 static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
-    if (!inPreamble) return symbol;
+    if (!inPreamble)
+        return symbol;
     bool needs_substitution = false;
     for (char *s = symbol->name; *s != 0; s++) {
         if (*s == '_') {
@@ -744,7 +445,7 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
         }
     }
     if (needs_substitution) {
-        char * buf = NEW_ARRAY(char, strlen(symbol->name) + 1);
+        char *buf = NEW_ARRAY(char, strlen(symbol->name) + 1);
         strcpy(buf, symbol->name);
         for (int i = 0; buf[i] != 0; i++) {
             if (buf[i] == '_') {
@@ -779,7 +480,6 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
         cant_happen("expected 2 args in " #name ", got > 2"); \
     } \
 } while(0)
-
 
 static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
     CHECK_ONE_ARG(makeUnaryOp, args);
@@ -832,33 +532,56 @@ static LamExp *makeLamAmb(LamList *args) {
 }
 
 static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
-    if (symbol == putcSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_PUTC, args);
-    if (symbol == putnSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_PUTN, args);
-    if (symbol == putvSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_PUTV, args);
-    if (symbol == negSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
-    if (symbol == notSymbol()) return makeUnaryOp(LAMUNARYOP_TYPE_NOT, args);
-    if (symbol == hereSymbol()) return makeCallCC(args);
-    if (symbol == thenSymbol()) return makeLamAmb(args);
-    if (symbol == andSymbol()) return makeLamAnd(args);
-    if (symbol == orSymbol()) return makeLamOr(args);
-    if (symbol == xorSymbol()) return makeBinOp(LAMPRIMOP_TYPE_XOR, args);
-    if (symbol == eqSymbol()) return makeBinOp(LAMPRIMOP_TYPE_EQ, args);
-    if (symbol == neSymbol()) return makeBinOp(LAMPRIMOP_TYPE_NE, args);
-    if (symbol == gtSymbol()) return makeBinOp(LAMPRIMOP_TYPE_GT, args);
-    if (symbol == ltSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LT, args);
-    if (symbol == geSymbol()) return makeBinOp(LAMPRIMOP_TYPE_GE, args);
-    if (symbol == leSymbol()) return makeBinOp(LAMPRIMOP_TYPE_LE, args);
-    if (symbol == addSymbol()) return makeBinOp(LAMPRIMOP_TYPE_ADD, args);
-    if (symbol == subSymbol()) return makeBinOp(LAMPRIMOP_TYPE_SUB, args);
-    if (symbol == mulSymbol()) return makeBinOp(LAMPRIMOP_TYPE_MUL, args);
-    if (symbol == divSymbol()) return makeBinOp(LAMPRIMOP_TYPE_DIV, args);
-    if (symbol == modSymbol()) return makeBinOp(LAMPRIMOP_TYPE_MOD, args);
-    if (symbol == powSymbol()) return makeBinOp(LAMPRIMOP_TYPE_POW, args);
-    if (symbol == cmpSymbol()) return makeBinOp(LAMPRIMOP_TYPE_CMP, args);
+    if (symbol == putcSymbol())
+        return makeUnaryOp(LAMUNARYOP_TYPE_PUTC, args);
+    if (symbol == putnSymbol())
+        return makeUnaryOp(LAMUNARYOP_TYPE_PUTN, args);
+    if (symbol == putvSymbol())
+        return makeUnaryOp(LAMUNARYOP_TYPE_PUTV, args);
+    if (symbol == negSymbol())
+        return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
+    if (symbol == notSymbol())
+        return makeUnaryOp(LAMUNARYOP_TYPE_NOT, args);
+    if (symbol == hereSymbol())
+        return makeCallCC(args);
+    if (symbol == thenSymbol())
+        return makeLamAmb(args);
+    if (symbol == andSymbol())
+        return makeLamAnd(args);
+    if (symbol == orSymbol())
+        return makeLamOr(args);
+    if (symbol == xorSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_XOR, args);
+    if (symbol == eqSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_EQ, args);
+    if (symbol == neSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_NE, args);
+    if (symbol == gtSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_GT, args);
+    if (symbol == ltSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_LT, args);
+    if (symbol == geSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_GE, args);
+    if (symbol == leSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_LE, args);
+    if (symbol == addSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_ADD, args);
+    if (symbol == subSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_SUB, args);
+    if (symbol == mulSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_MUL, args);
+    if (symbol == divSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_DIV, args);
+    if (symbol == modSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_MOD, args);
+    if (symbol == powSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_POW, args);
+    if (symbol == cmpSymbol())
+        return makeBinOp(LAMPRIMOP_TYPE_CMP, args);
     return NULL;
 }
 
-static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
+static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     AstExpression *function = funCall->function;
     LamList *args = convertExpressions(funCall->arguments, env);
     int actualNargs = countAstExpressions(funCall->arguments);
@@ -874,14 +597,18 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
             if (info != NULL) {
                 if (info->vec) {
                     if (actualNargs == info->arity) {
-                        LamExp *inLine = makeConstruct(symbol, info->index, args);
+                        LamExp *inLine =
+                            makeConstruct(symbol, info->index, args);
                         UNPROTECT(save);
                         return inLine;
                     } else {
-                        cant_happen("wrong number of arguments to constructor %s", symbol->name);
+                        cant_happen
+                            ("wrong number of arguments to constructor %s",
+                             symbol->name);
                     }
                 } else {
-                    cant_happen("arguments to empty constructor %s", symbol->name);
+                    cant_happen("arguments to empty constructor %s",
+                                symbol->name);
                 }
             }
         }
@@ -896,9 +623,8 @@ static LamExp * convertFunCall(AstFunCall *funCall, LamContext *env) {
     return result;
 }
 
-/*******************************************/
-
-static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun, LamContext *env) {
+static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
+                                      LamContext *env) {
     ENTER(convertCompositeBodies);
     int nBodies = countAstCompositeFunction(fun);
     if (nBodies == 0) {
@@ -918,18 +644,17 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun, LamC
     }
     LamLam *result = tpmcConvert(nargs, nBodies, argLists, actions, env);
     PROTECT(result);
-    FREE_ARRAY(LamExp*, actions, nBodies);
-    FREE_ARRAY(AstArgList*, argLists, nBodies);
+    FREE_ARRAY(LamExp *, actions, nBodies);
+    FREE_ARRAY(AstArgList *, argLists, nBodies);
     UNPROTECT(p);
     LEAVE(convertCompositeBodies);
     return result;
 }
 
-/*******************************************/
-
-static LamExp * convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
+static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
     ENTER(convertCompositeFun);
-    if (fun == NULL) cant_happen("composite function with no components");
+    if (fun == NULL)
+        cant_happen("composite function with no components");
     int nargs = countAstArgList(fun->function->argList);
     LamLam *lambda = convertCompositeBodies(nargs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
@@ -973,10 +698,14 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = convertSymbol(expression->val.symbol, env);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
-            result = newLamExp(LAMEXP_TYPE_BIGINTEGER, LAMEXP_VAL_BIGINTEGER(expression->val.number));
+            result =
+                newLamExp(LAMEXP_TYPE_BIGINTEGER,
+                          LAMEXP_VAL_BIGINTEGER(expression->val.number));
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
-            result = newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(expression->val.character));
+            result =
+                newLamExp(LAMEXP_TYPE_CHARACTER,
+                          LAMEXP_VAL_CHARACTER(expression->val.character));
             break;
         case AST_EXPRESSION_TYPE_FUN:
             result = convertCompositeFun(expression->val.fun, env);
@@ -991,14 +720,18 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = lamConvertPrint(expression->val.print, env);
             break;
         default:
-            cant_happen("unrecognised expression type %d in convertExpression", expression->type);
+            cant_happen
+                ("unrecognised expression type %d in convertExpression",
+                 expression->type);
     }
     LEAVE(convertExpression);
     return result;
 }
 
-static LamList *convertExpressions(AstExpressions *expressions, LamContext *env) {
-    if (expressions == NULL) return NULL;
+static LamList *convertExpressions(AstExpressions *expressions,
+                                   LamContext *env) {
+    if (expressions == NULL)
+        return NULL;
     LamList *next = convertExpressions(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
@@ -1008,8 +741,10 @@ static LamList *convertExpressions(AstExpressions *expressions, LamContext *env)
     return this;
 }
 
-static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env) {
-    if (expressions == NULL) return NULL;
+static LamSequence *convertSequence(AstExpressions *expressions,
+                                    LamContext *env) {
+    if (expressions == NULL)
+        return NULL;
     LamSequence *next = convertSequence(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
@@ -1018,4 +753,3 @@ static LamSequence *convertSequence(AstExpressions *expressions, LamContext *env
     UNPROTECT(save);
     return this;
 }
-

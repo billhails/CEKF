@@ -36,7 +36,6 @@ HashSymbol *newSymbol(char *name) {
     return res;
 }
 
-
 HashSymbol *genSym(char *prefix) {
     static int symbolCounter = 0;
     char buffer[128];
@@ -57,4 +56,3 @@ HashSymbol *genSym(char *prefix) {
         }
     }
 }
-

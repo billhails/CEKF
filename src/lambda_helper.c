@@ -21,10 +21,12 @@
 #include "lambda_helper.h"
 #include "lambda_pp.h"
 
-
 void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
-    if (x == NULL) { eprintf("LambdaSymbol (NULL)"); return; }
+    if (x == NULL) {
+        eprintf("LambdaSymbol (NULL)");
+        return;
+    }
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
@@ -36,42 +38,22 @@ void printLamExpFn(void *ptr, int depth) {
     ppLamExpD(*((LamExp **) ptr), depth);
 }
 
-static void printLamContextFn(void *ptr, int depth) {
-    eprintf("%*s", depth * PAD_WIDTH, "");
-    printLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr, depth);
+void addToLamContext(LamContext *context, HashSymbol *symbol,
+                     LamTypeConstructorInfo *info) {
+    setLamInfoTable(context->frame, symbol, info);
 }
 
-static void markLamContextFn(void *ptr) {
-    markLamTypeConstructorInfo(*(LamTypeConstructorInfo **)ptr);
-}
-
-static HashTable *newLamContextTable() {
-    HashTable *h = newHashTable(
-        sizeof(LamTypeConstructorInfo *),
-        markLamContextFn,
-        printLamContextFn
-    );
-    h->shortEntries = false;
-    return h;
-}
-
-void addToLamContext(LamContext *context, HashSymbol *symbol, LamTypeConstructorInfo *info) {
-    hashSet(context->frame, symbol, &info);
-}
-
-LamTypeConstructorInfo *lookupInLamContext(LamContext *context, HashSymbol *var) {
-    if (context == NULL) return NULL;
+LamTypeConstructorInfo *lookupInLamContext(LamContext *context,
+                                           HashSymbol *var) {
+    if (context == NULL)
+        return NULL;
     LamTypeConstructorInfo *result;
-    if (hashGet(context->frame, var, &result)) {
+    if (getLamInfoTable(context->frame, var, &result)) {
         return result;
     }
     return lookupInLamContext(context->parent, var);
 }
 
 LamContext *extendLamContext(LamContext *parent) {
-    HashTable *frame = newLamContextTable();
-    int save = PROTECT(frame);
-    LamContext *context = newLamContext(frame, parent);
-    UNPROTECT(save);
-    return context;
+    return newLamContext(parent);
 }

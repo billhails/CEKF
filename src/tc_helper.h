@@ -1,5 +1,5 @@
 #ifndef cekf_tc_helper_h
-#define cekf_tc_helper_h
+#    define cekf_tc_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ast_helper.h"
-#include "tc.h"
+#    include "ast_helper.h"
+#    include "tc.h"
 
 void ppTcType(TcType *type);
 void ppTcFunction(TcFunction *function);
