@@ -268,8 +268,8 @@ static void populateSubPatternMatrixRowWithComponents(TpmcMatrix *matrix,
     }
     for (int i = 0; i < arity; i++) {
         setTpmcMatrixIndex(matrix, i, y,
-                           pattern->pattern->val.constructor->components->
-                           entries[i]);
+                           pattern->pattern->val.constructor->
+                           components->entries[i]);
     }
     LEAVE(populateSubPatternMatrixRowWithComponents);
 }
@@ -511,8 +511,9 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern,
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
-            collectPathsBoundByConstructor(pattern->pattern->val.constructor->
-                                           components, boundVariables);
+            collectPathsBoundByConstructor(pattern->pattern->val.
+                                           constructor->components,
+                                           boundVariables);
             break;
         default:
             cant_happen("unrecognised type %d in collectPathsBoundByPattern",

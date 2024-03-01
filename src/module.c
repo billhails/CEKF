@@ -55,7 +55,7 @@ static FILE *safeFOpen(const char *filename) {
     return f;
 }
 
-PmModule *newPmModuleFromFileHandle(FILE * f, const char *origin) {
+PmModule *newPmModuleFromFileHandle(FILE *f, const char *origin) {
     PmModule *mod = newPmModule();
     int save = PROTECT(mod);
     YY_BUFFER_STATE bs = yy_create_buffer(f, YY_BUF_SIZE, mod->scanner);
@@ -90,7 +90,7 @@ static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
     UNPROTECT(save);
 }
 
-PmModule *newPmToplevelFromFileHandle(FILE * f, const char *origin) {
+PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin) {
     PmModule *mod = newPmModule();
     pushPmToplevelFromBufState(mod,
                                yy_create_buffer(f, YY_BUF_SIZE, mod->scanner),
@@ -171,7 +171,7 @@ void incLineNo(PmModule *mod) {
         mod->bufStack->lineno++;
 }
 
-void showModuleState(FILE * fp, PmModule *mod) {
+void showModuleState(FILE *fp, PmModule *mod) {
     if (mod == NULL) {
         fprintf(fp, "module is null\n");
         return;

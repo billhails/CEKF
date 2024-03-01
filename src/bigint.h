@@ -53,10 +53,10 @@ extern "C" {
     void markBigInt(BigInt *bi);
     void freeBigInt(BigInt *bi);
     void printBigInt(BigInt *bi, int depth);
-    void fprintBigInt(FILE * f, BigInt *x);
+    void fprintBigInt(FILE *f, BigInt *x);
     void sprintBigInt(char *s, BigInt *x);
     int cmpBigInt(BigInt *a, BigInt *b);
-    void dumpBigInt(FILE * fp, BigInt *big);
+    void dumpBigInt(FILE *fp, BigInt *big);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
     BigInt *addBigInt(BigInt *a, BigInt *b);
@@ -65,7 +65,7 @@ extern "C" {
     BigInt *divBigInt(BigInt *a, BigInt *b);
     BigInt *modBigInt(BigInt *a, BigInt *b);
     BigInt *powBigInt(BigInt *a, BigInt *b);
-    void bigint_fprint(FILE * f, bigint * bi);
+    void bigint_fprint(FILE *f, bigint * bi);
 
 // END CEKF additions
 
