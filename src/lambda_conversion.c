@@ -187,10 +187,10 @@ static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
     return this;
 }
 
-static LamType *convertTypeDefType(AstFlatType *flat) {
-    LamTypeArgs *args = convertTypeSymbols(flat->typeSymbols);
+static LamType *convertTypeDefType(AstUserType *userType) {
+    LamTypeArgs *args = convertTypeSymbols(userType->typeSymbols);
     int save = PROTECT(args);
-    LamType *res = newLamType(flat->symbol, args);
+    LamType *res = newLamType(userType->symbol, args);
     UNPROTECT(save);
     return res;
 }
@@ -323,7 +323,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
 }
 
 static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
-    LamType *type = convertTypeDefType(typeDef->flatType);
+    LamType *type = convertTypeDefType(typeDef->userType);
     int save = PROTECT(type);
     AstTypeBody *typeBody = typeDef->typeBody;
     bool hasFields = typeHasFields(typeBody);

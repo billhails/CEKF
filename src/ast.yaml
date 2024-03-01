@@ -36,27 +36,15 @@ structs:
         symbol: HashSymbol
         expression: AstExpression
 
-    AstPrototype:
-        symbol: HashSymbol
-        body: AstPrototypeBody
-
-    AstPrototypeBody:
-        single: AstSinglePrototype
-        next: AstPrototypeBody
-
-    AstPrototypeSymbolType:
-        symbol: HashSymbol
-        type: AstType
-
     AstLoad:
         package: AstPackage
         symbol: HashSymbol
 
     AstTypeDef:
-        flatType: AstFlatType
+        userType: AstUserType
         typeBody: AstTypeBody
 
-    AstFlatType:
+    AstUserType:
         symbol: HashSymbol
         typeSymbols: AstTypeSymbols
 
@@ -143,14 +131,9 @@ structs:
 unions:
     AstDefinition:
         define: AstDefine
-        prototype: AstPrototype
         load: AstLoad
         typeDef: AstTypeDef
 
-    AstSinglePrototype:
-        symbolType: AstPrototypeSymbolType
-        prototype: AstPrototype
-    
     AstTypeClause:
         integer: void_ptr
         character: void_ptr
