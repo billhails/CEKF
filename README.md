@@ -69,12 +69,12 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 flowchart TD
 
 source -->
-AST[Parser] --abstract syntax-->  
-lambda[Lambda Conversion] --lambda calculus-->  
+AST[Parser] --abstract syntax-->
+lambda[Lambda Conversion] --lambda calculus-->
 check[Type Checking] --typed lambda calculus-->
-anf[A-Normal Form Conversion] --ANF-->  
-desugaring2[Desugaring]  --ANF-->
-static[Static Analysis] --annotated ANF-->  
+anf[A-Normal Form Conversion] --ANF-->
+desugaring[Desugaring]  --ANF-->
+static[Static Analysis] --annotated ANF-->
 Bytecode[Bytecode Generation] --bytecode-->
 VM
 ```
