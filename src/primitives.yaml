@@ -1,0 +1,38 @@
+# common primitive types not defined by the schemas
+
+HashSymbol:
+    cname: "HashSymbol *"
+    printFn: printAstSymbol
+    valued: true
+
+int:
+    cname: int
+    printf: "%d"
+    valued: true
+
+void_ptr:
+    cname: "void *"
+    printf: "%p"
+    valued: false
+
+bool:
+    cname: "bool"
+    printf: "%d"
+    valued: true
+
+char:
+    cname: "char"
+    printf: "%c"
+    valued: true
+
+BigInt:
+    cname: "BigInt *"
+    printFn: "printBigInt"
+    markFn: "markBigInt"
+    valued: true
+
+string:
+    cname: "char *"
+    printf: "%s"
+    valued: true
+

@@ -22,6 +22,7 @@ import yaml
 import sys
 import argparse
 import re
+import os
 
 class Catalog:
     def __init__(self, typeName):
@@ -1719,6 +1720,23 @@ def printGpl(file, document):
     print(f" * Generated from {file} by tools/makeAST.py")
     print(" */")
 
+class Loader(yaml.SafeLoader):
+
+    def __init__(self, stream):
+
+        self._root = os.path.split(stream.name)[0]
+
+        super(Loader, self).__init__(stream)
+
+    def include(self, node):
+
+        filename = os.path.join(self._root, self.construct_scalar(node))
+
+        with open(filename, 'r') as f:
+            return yaml.load(f, Loader)
+
+Loader.add_constructor('!include', Loader.include)
+
 ##################################################################
 
 parser = argparse.ArgumentParser()
@@ -1731,7 +1749,7 @@ args = parser.parse_args()
 
 stream = open(args.yaml, 'r')
 
-document = yaml.load(stream, Loader=yaml.Loader)
+document = yaml.load(stream, Loader)
 
 typeName = document['config']['name']
 if 'includes' in document['config']:
@@ -1764,6 +1782,10 @@ if "enums" in document:
 if "primitives" in document:
     for name in document["primitives"]:
         catalog.add(Primitive(name, document["primitives"][name]))
+
+if "external" in document:
+    for name in document["external"]:
+        catalog.add(Primitive(name, document["external"][name]))
 
 if "arrays" in document:
     for name in document["arrays"]:

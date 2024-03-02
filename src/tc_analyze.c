@@ -1537,9 +1537,7 @@ static bool unify(TcType *a, TcType *b) {
     a = prune(a);
     b = prune(b);
     DEBUG("UNIFY");
-    IFDEBUG(ppTcType(a);
-            eprintf(" WITH ");
-            ppTcType(b));
+    IFDEBUG(ppTcType(a); eprintf(" WITH "); ppTcType(b));
     if (a == b)
         return true;
     if (a->type == TCTYPE_TYPE_VAR) {

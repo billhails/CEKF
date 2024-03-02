@@ -166,23 +166,4 @@ arrays:
         dimension: 1
         entries: char
 
-enums: {}
-
-primitives:
-    HashSymbol:
-        cname: "HashSymbol *"
-        printFn: printAstSymbol
-        valued: true
-    char:
-        cname: char
-        printf: "%c"
-        valued: true
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false
-    BigInt:
-        cname: "BigInt *"
-        printFn: printBigInt
-        markFn: markBigInt
-        valued: true
+primitives: !include primitives.yaml

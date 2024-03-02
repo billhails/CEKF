@@ -90,7 +90,7 @@ structs:
         next: LamIntCondCases
 
     LamCharCondCases:
-        constant: character
+        constant: char
         body: LamExp
         next: LamCharCondCases
 
@@ -242,7 +242,7 @@ unions:
         or: LamOr
         amb: LamAmb
         print: LamPrint
-        character: character
+        character: char
         back: void_ptr
         error: void_ptr
         cond_default: void_ptr
@@ -264,35 +264,11 @@ hashes:
     LamExpTable:
         entries: LamExp
     
-primitives:
-    HashSymbol:
-        cname: "HashSymbol *"
-        printFn: "printLambdaSymbol"
-        markFn: "markHashSymbol"
-        valued: true
-    BigInt:
-        cname: "BigInt *"
-        printFn: "printBigInt"
-        markFn: "markBigInt"
-        valued: true
+primitives: !include primitives.yaml
+
+external:
     TcType:
         cname: "struct TcType *"
         printFn: printTcType
         markFn: markTcType
-        valued: true
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false
-    int:
-        cname: "int"
-        printf: "%d"
-        valued: true
-    bool:
-        cname: "bool"
-        printf: "%d"
-        valued: true
-    character:
-        cname: "char"
-        printf: "%c"
         valued: true
