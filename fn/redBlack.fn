@@ -21,7 +21,9 @@ let
                 (red(red(a, x, b), y, c), z, d) |
                 (red(a, x, red(b, y, c)), z, d) |
                 (a, x, red(red(b, y, c), z, d)) |
-                (a, x, red(b, y, red(c, z, d))) { red(black(a, x, b), y, black(c, z, d)) }
+                (a, x, red(b, y, red(c, z, d))) {
+                    red(black(a, x, b), y, black(c, z, d))
+                }
                 (a, x, b) { black(a, x, b) }
             }
 
@@ -63,7 +65,8 @@ let
             fn part_flatten {
                 (red(left, t, right), already_flat) |
                 (black(left, t, right), already_flat) {
-                    part_flatten(left, t @ part_flatten(right, already_flat))
+                    part_flatten(left,
+                                 t @ part_flatten(right, already_flat))
                 }
                 (leaf, already_flat) { already_flat }
             }
@@ -74,15 +77,19 @@ in
     makeList(
         print(
         makeSet(
-            "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymk"
-            "fpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdoz"
-            "zyppmdyzhvyhfadldkflwiwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcis"
-            "xevzlvbtnobaaokqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknja"
-            "uctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhktvjonlfiuoeoupu"
-            "wdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgozvxgtvtxgyuukntggim"
-            "fsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhox"
-            "nywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskci"
-            "vvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpaw"
-            "kahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximva"
-            "auocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbk"
-            "zxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")))
+            "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhn"
+            "jouuyiepnswymkfpyovclntwbmhngufnoeidjfmhxxaqmqiaoodslwlw"
+            "wnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflwiwvmfut"
+            "feckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaao"
+            "kqbutzqumbzlgqwqsludnrygnynsqcvjekjouyyplgyzlhlsbakaknja"
+            "uctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkusuzigleakcrnqhkt"
+            "vjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbr"
+            "rivirlcgozvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiq"
+            "hdjexiaojatkhdjdcpckbxdxwfocqjchijeylcyhoxnywikniqzpqeeq"
+            "tucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskci"
+            "vvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxm"
+            "knhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtl"
+            "fefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuynvcvtndi"
+            "fklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvd"
+            "vesewzqotfdlqfibzkchndafnmxirrruol")));
+    puts("\n")
