@@ -75,13 +75,18 @@ static int count ## type (type *list) { \
     return count;                       \
 }
 
-MAKE_COUNT_LIST(LamLetRecBindings) MAKE_COUNT_LIST(AstTypeList)
-MAKE_COUNT_LIST(AstExpressions) MAKE_COUNT_LIST(AstArgList)
+/* *INDENT-OFF* */
+MAKE_COUNT_LIST(LamLetRecBindings)
+MAKE_COUNT_LIST(AstTypeList)
+MAKE_COUNT_LIST(AstExpressions)
+MAKE_COUNT_LIST(AstArgList)
 MAKE_COUNT_LIST(AstCompositeFunction)
-     static bool inPreamble = true;     // preamble is treated specially
-     static bool preambleLocked = false;
+/* *INDENT-ON* */
 
-     LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
+static bool inPreamble = true;  // preamble is treated specially
+static bool preambleLocked = false;
+
+LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest);
     bool hasLock = inPreamble && !preambleLocked;
     if (hasLock)
@@ -123,7 +128,7 @@ MAKE_COUNT_LIST(AstCompositeFunction)
     UNPROTECT(save);
     LEAVE(lamConvertNest);
     return result;
-     }
+}
 
 static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     ENTER(lamConvertIff);
