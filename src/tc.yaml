@@ -44,13 +44,13 @@ structs:
         first: TcType
         second: TcType
 
-    TcTypeDef:
+    TcUserType:
         name: HashSymbol
-        args: TcTypeDefArgs
+        args: TcUserTypeArgs
 
-    TcTypeDefArgs:
+    TcUserTypeArgs:
         type: TcType
-        next: TcTypeDefArgs
+        next: TcUserTypeArgs
 
     TcVar:
         name: HashSymbol
@@ -69,6 +69,6 @@ unions:
         smallinteger: void_ptr
         biginteger: void_ptr
         character: void_ptr
-        typeDef: TcTypeDef
+        userType: TcUserType
 
 primitives: !include primitives.yaml

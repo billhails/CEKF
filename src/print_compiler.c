@@ -41,7 +41,7 @@ static LamExp *compilePrinterForPair(TcPair *pair);
 static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env);
 static LamExp *compilePrinterForInt();
 static LamExp *compilePrinterForChar();
-static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env);
+static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env);
 
 LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     LamExp *res = NULL;
@@ -62,8 +62,8 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
         case TCTYPE_TYPE_CHARACTER:
             res = compilePrinterForChar();
             break;
-        case TCTYPE_TYPE_TYPEDEF:
-            res = compilePrinterForTypeDef(type->val.typeDef, env);
+        case TCTYPE_TYPE_USERTYPE:
+            res = compilePrinterForUserType(type->val.userType, env);
             break;
         default:
             cant_happen("unrecognised TcType %d in compilePrinterForType",
@@ -96,10 +96,11 @@ static LamExp *compilePrinterForChar() {
     return makePrintChar();
 }
 
-static LamList *compilePrinterForTypeDefArgs(TcTypeDefArgs *args, TcEnv *env) {
+static LamList *compilePrinterForUserTypeArgs(TcUserTypeArgs *args,
+                                              TcEnv *env) {
     if (args == NULL)
         return NULL;
-    LamList *next = compilePrinterForTypeDefArgs(args->next, env);
+    LamList *next = compilePrinterForUserTypeArgs(args->next, env);
     int save = PROTECT(next);
     LamExp *this = compilePrinterForType(args->type, env);
     PROTECT(this);
@@ -113,20 +114,20 @@ static LamExp *compilePrinterForString() {
     return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
-static LamExp *compilePrinterForTypeDef(TcTypeDef *typeDef, TcEnv *env) {
-    if (typeDef->name == listSymbol()) {
-        if (typeDef->args
-            && typeDef->args->type->type == TCTYPE_TYPE_CHARACTER) {
+static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
+    if (userType->name == listSymbol()) {
+        if (userType->args
+            && userType->args->type->type == TCTYPE_TYPE_CHARACTER) {
             return compilePrinterForString();
         }
     }
-    HashSymbol *name = makePrintName("print$", typeDef->name->name);
+    HashSymbol *name = makePrintName("print$", userType->name->name);
     if (!getFromTcEnv(env, name, NULL)) {
         return makeSymbolExpr("print$");
     }
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
-    LamList *args = compilePrinterForTypeDefArgs(typeDef->args, env);
+    LamList *args = compilePrinterForUserTypeArgs(userType->args, env);
     PROTECT(args);
     int nargs = countLamList(args);
     if (nargs == 0) {

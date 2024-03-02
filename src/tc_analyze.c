@@ -98,7 +98,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
-static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args);
+static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args);
 
 static int id_counter = 0;
 
@@ -704,12 +704,12 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static TcTypeDefArgs *makeTcTypeDefArgs(LamTypeArgs *lamTypeArgs,
-                                        TcTypeTable *map) {
+static TcUserTypeArgs *makeTcUserTypeArgs(LamTypeArgs *lamTypeArgs,
+                                          TcTypeTable *map) {
     if (lamTypeArgs == NULL) {
         return NULL;
     }
-    TcTypeDefArgs *next = makeTcTypeDefArgs(lamTypeArgs->next, map);
+    TcUserTypeArgs *next = makeTcUserTypeArgs(lamTypeArgs->next, map);
     int save = PROTECT(next);
     TcType *name = NULL;
     if (!getTcTypeTable(map, lamTypeArgs->name, &name)) {
@@ -718,26 +718,26 @@ static TcTypeDefArgs *makeTcTypeDefArgs(LamTypeArgs *lamTypeArgs,
         setTcTypeTable(map, lamTypeArgs->name, name);
         UNPROTECT(save2);
     }
-    TcTypeDefArgs *this = newTcTypeDefArgs(name, next);
+    TcUserTypeArgs *this = newTcUserTypeArgs(name, next);
     UNPROTECT(save);
     return this;
 }
 
-static TcType *makeTypeDef(HashSymbol *name, TcTypeDefArgs *args) {
-    TcTypeDef *tcTypeDef = newTcTypeDef(name, args);
-    int save = PROTECT(tcTypeDef);
+static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args) {
+    TcUserType *tcUserType = newTcUserType(name, args);
+    int save = PROTECT(tcUserType);
     TcType *res =
-        newTcType(TCTYPE_TYPE_TYPEDEF, TCTYPE_VAL_TYPEDEF(tcTypeDef));
+        newTcType(TCTYPE_TYPE_USERTYPE, TCTYPE_VAL_USERTYPE(tcUserType));
     UNPROTECT(save);
-    DEBUG("makeTypeDef: %s %p", name->name, res);
-    IFDEBUG(ppTcTypeDef(tcTypeDef));
+    DEBUG("makeUserType: %s %p", name->name, res);
+    IFDEBUG(ppTcUserType(tcUserType));
     return res;
 }
 
-static TcType *makeTcTypeDefType(LamType *lamType, TcTypeTable *map) {
-    TcTypeDefArgs *args = makeTcTypeDefArgs(lamType->args, map);
+static TcType *makeTcUserType(LamType *lamType, TcTypeTable *map) {
+    TcUserTypeArgs *args = makeTcUserTypeArgs(lamType->args, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeDef(lamType->name, args);
+    TcType *res = makeUserType(lamType->name, args);
     UNPROTECT(save);
     return res;
 }
@@ -745,16 +745,16 @@ static TcType *makeTcTypeDefType(LamType *lamType, TcTypeTable *map) {
 static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
                                       TcTypeTable *map);
 
-static TcTypeDefArgs *makeTypeDefArgs(LamTypeConstructorArgs *args,
-                                      TcTypeTable *map) {
+static TcUserTypeArgs *makeUserTypeArgs(LamTypeConstructorArgs *args,
+                                        TcTypeTable *map) {
     if (args == NULL) {
         return NULL;
     }
-    TcTypeDefArgs *next = makeTypeDefArgs(args->next, map);
+    TcUserTypeArgs *next = makeUserTypeArgs(args->next, map);
     int save = PROTECT(next);
     TcType *arg = makeTypeConstructorArg(args->arg, map);
     PROTECT(arg);
-    TcTypeDefArgs *this = newTcTypeDefArgs(arg, next);
+    TcUserTypeArgs *this = newTcUserTypeArgs(arg, next);
     UNPROTECT(save);
     return this;
 }
@@ -763,9 +763,9 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
                                               TcTypeTable *map) {
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
-    TcTypeDefArgs *args = makeTypeDefArgs(func->args, map);
+    TcUserTypeArgs *args = makeUserTypeArgs(func->args, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeDef(func->name, args);
+    TcType *res = makeUserType(func->name, args);
     UNPROTECT(save);
     return res;
 }
@@ -828,7 +828,7 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
     TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     LamType *lamType = lamTypeDef->type;
-    TcType *tcType = makeTcTypeDefType(lamType, map);
+    TcType *tcType = makeTcUserType(lamType, map);
     PROTECT(tcType);
     for (LamTypeConstructorList *list = lamTypeDef->constructors;
          list != NULL; list = list->next) {
@@ -1191,27 +1191,27 @@ static TcType *freshPair(TcPair *pair, TcNg *ng, TcTypeTable *map) {
     return res;
 }
 
-static TcTypeDefArgs *freshTypeDefArgs(TcTypeDefArgs *args, TcNg *ng,
-                                       TcTypeTable *map) {
+static TcUserTypeArgs *freshUserTypeArgs(TcUserTypeArgs *args, TcNg *ng,
+                                         TcTypeTable *map) {
     if (args == NULL)
         return NULL;
-    TcTypeDefArgs *next = freshTypeDefArgs(args->next, ng, map);
+    TcUserTypeArgs *next = freshUserTypeArgs(args->next, ng, map);
     int save = PROTECT(next);
     TcType *type = freshRec(args->type, ng, map);
     PROTECT(type);
-    TcTypeDefArgs *this = newTcTypeDefArgs(type, next);
+    TcUserTypeArgs *this = newTcUserTypeArgs(type, next);
     UNPROTECT(save);
     return this;
 }
 
-static TcType *freshTypeDef(TcTypeDef *typeDef, TcNg *ng, TcTypeTable *map) {
-    ENTER(freshTypeDef);
-    TcTypeDefArgs *args = freshTypeDefArgs(typeDef->args, ng, map);
+static TcType *freshUserType(TcUserType *userType, TcNg *ng, TcTypeTable *map) {
+    ENTER(freshUserType);
+    TcUserTypeArgs *args = freshUserTypeArgs(userType->args, ng, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeDef(typeDef->name, args);
+    TcType *res = makeUserType(userType->name, args);
     UNPROTECT(save);
-    LEAVE(freshTypeDef);
-    IFDEBUG(ppTcTypeDef(typeDef));
+    LEAVE(freshUserType);
+    IFDEBUG(ppTcUserType(userType));
     IFDEBUG(ppTcType(res));
     return res;
 }
@@ -1272,8 +1272,8 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
             return type;
-        case TCTYPE_TYPE_TYPEDEF:{
-                TcType *res = freshTypeDef(type->val.typeDef, ng, map);
+        case TCTYPE_TYPE_USERTYPE:{
+                TcType *res = freshUserType(type->val.userType, ng, map);
                 return res;
             }
         default:
@@ -1315,12 +1315,12 @@ static void addToNg(TcNg *ng, HashSymbol *symbol, TcType *type) {
 }
 
 static TcType *makeBoolean() {
-    TcType *res = makeTypeDef(boolSymbol(), NULL);
+    TcType *res = makeUserType(boolSymbol(), NULL);
     return res;
 }
 
 static TcType *makeStarship() {
-    TcType *res = makeTypeDef(starshipSymbol(), NULL);
+    TcType *res = makeUserType(starshipSymbol(), NULL);
     return res;
 }
 
@@ -1504,17 +1504,17 @@ static bool unifyPairs(TcPair *a, TcPair *b) {
     return res;
 }
 
-static bool unifyTypeDefs(TcTypeDef *a, TcTypeDef *b) {
+static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
         can_happen("unification failed[1]");
-        ppTcTypeDef(a);
+        ppTcUserType(a);
         eprintf(" vs ");
-        ppTcTypeDef(b);
+        ppTcUserType(b);
         eprintf("\n");
         return false;
     }
-    TcTypeDefArgs *aArgs = a->args;
-    TcTypeDefArgs *bArgs = b->args;
+    TcUserTypeArgs *aArgs = a->args;
+    TcUserTypeArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {
         if (!unify(aArgs->type, bArgs->type)) {
             return false;
@@ -1524,9 +1524,9 @@ static bool unifyTypeDefs(TcTypeDef *a, TcTypeDef *b) {
     }
     if (aArgs != NULL || bArgs != NULL) {
         can_happen("unification failed[2]");
-        ppTcTypeDef(a);
+        ppTcUserType(a);
         eprintf(" vs ");
-        ppTcTypeDef(b);
+        ppTcUserType(b);
         eprintf("\n");
         return false;
     }
@@ -1537,7 +1537,9 @@ static bool unify(TcType *a, TcType *b) {
     a = prune(a);
     b = prune(b);
     DEBUG("UNIFY");
-    IFDEBUG(ppTcType(a); eprintf(" WITH "); ppTcType(b));
+    IFDEBUG(ppTcType(a);
+            eprintf(" WITH ");
+            ppTcType(b));
     if (a == b)
         return true;
     if (a->type == TCTYPE_TYPE_VAR) {
@@ -1579,8 +1581,8 @@ static bool unify(TcType *a, TcType *b) {
             case TCTYPE_TYPE_BIGINTEGER:
             case TCTYPE_TYPE_CHARACTER:
                 return true;
-            case TCTYPE_TYPE_TYPEDEF:
-                return unifyTypeDefs(a->val.typeDef, b->val.typeDef);
+            case TCTYPE_TYPE_USERTYPE:
+                return unifyUserTypes(a->val.userType, b->val.userType);
             default:
                 cant_happen("unrecognised type %d in unify", a->type);
         }
@@ -1588,7 +1590,7 @@ static bool unify(TcType *a, TcType *b) {
     cant_happen("reached end of unify");
 }
 
-static void pruneTypeDefArgs(TcTypeDefArgs *args) {
+static void pruneUserTypeArgs(TcUserTypeArgs *args) {
     while (args != NULL) {
         args->type = prune(args->type);
         args = args->next;
@@ -1603,8 +1605,8 @@ static TcType *prune(TcType *t) {
             t->val.var->instance = prune(t->val.var->instance);
             return t->val.var->instance;
         }
-    } else if (t->type == TCTYPE_TYPE_TYPEDEF) {
-        pruneTypeDefArgs(t->val.typeDef->args);
+    } else if (t->type == TCTYPE_TYPE_USERTYPE) {
+        pruneUserTypeArgs(t->val.userType->args);
     } else if (t->type == TCTYPE_TYPE_FUNCTION) {
         t->val.function->arg = prune(t->val.function->arg);
         t->val.function->result = prune(t->val.function->result);
@@ -1620,12 +1622,12 @@ static bool samePairType(TcPair *a, TcPair *b) {
     return sameType(a->first, b->first) && sameType(a->second, b->second);
 }
 
-static bool sameTypeDefType(TcTypeDef *a, TcTypeDef *b) {
+static bool sameUserType(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
         return false;
     }
-    TcTypeDefArgs *aArgs = a->args;
-    TcTypeDefArgs *bArgs = b->args;
+    TcUserTypeArgs *aArgs = a->args;
+    TcUserTypeArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {
         if (!sameType(aArgs->type, bArgs->type))
             return false;
@@ -1658,8 +1660,8 @@ static bool sameType(TcType *a, TcType *b) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_CHARACTER:
             return true;
-        case TCTYPE_TYPE_TYPEDEF:
-            return sameTypeDefType(a->val.typeDef, b->val.typeDef);
+        case TCTYPE_TYPE_USERTYPE:
+            return sameUserType(a->val.userType, b->val.userType);
         default:
             cant_happen("unrecognised type %d in sameType", a->type);
     }
@@ -1683,8 +1685,9 @@ static bool occursInPair(TcType *var, TcPair *pair) {
     return occursInType(var, pair->first) || occursInType(var, pair->second);
 }
 
-static bool occursInTypeDef(TcType *var, TcTypeDef *typeDef) {
-    for (TcTypeDefArgs *args = typeDef->args; args != NULL; args = args->next) {
+static bool occursInUserType(TcType *var, TcUserType *userType) {
+    for (TcUserTypeArgs *args = userType->args; args != NULL;
+         args = args->next) {
         if (occursInType(var, args->type))
             return true;
     }
@@ -1703,8 +1706,8 @@ static bool occursIn(TcType *a, TcType *b) {
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
             return false;
-        case TCTYPE_TYPE_TYPEDEF:
-            return occursInTypeDef(a, b->val.typeDef);
+        case TCTYPE_TYPE_USERTYPE:
+            return occursInUserType(a, b->val.userType);
         default:
             cant_happen("unrecognised type %d in occursIn", b->type);
     }
