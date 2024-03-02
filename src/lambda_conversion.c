@@ -595,7 +595,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
         } else {
             LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
             if (info != NULL) {
-                if (info->vec) {
+                if (info->needsVec) {
                     if (actualNargs == info->arity) {
                         LamExp *inLine =
                             makeConstruct(symbol, info->index, args);
@@ -674,7 +674,7 @@ static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
         return res;
     }
     DEBUG("convertSymbol %s is a constructor", symbol->name);
-    if (info->vec) {
+    if (info->needsVec) {
         if (info->arity > 0) {
             cant_happen("too few arguments to constructor %s", symbol->name);
         }

@@ -424,7 +424,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                                                 lambdaCache);
                 PROTECT(matches);
                 LamExp *testExp = NULL;
-                if (info->vec) {
+                if (info->needsVec) {
                     testExp =
                         newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(testVar));
                     PROTECT(testExp);

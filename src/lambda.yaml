@@ -186,7 +186,7 @@ structs:
 
     LamTypeConstructorInfo:
         type: LamTypeConstructor
-        vec: bool # does this need to be a vector?
+        needsVec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
         size: int # number of alternatives
         index: int # index into list of alternatives

@@ -422,7 +422,7 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
              constructors->constructor->name->name);
     }
     LamMatch *match = NULL;
-    if (info->vec) {
+    if (info->needsVec) {
         match = makeTagMatch(constructors, env);
     } else {
         match = makePlainMatch(constructors, env);
