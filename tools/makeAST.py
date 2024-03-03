@@ -85,6 +85,14 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
 
+    def printCountDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCountDeclaration(self)
+
+    def printCountFunctions(self):
+        for entity in self.contents.values():
+            entity.printCountFunction(self)
+
     def printAccessDeclarations(self):
         for entity in self.contents.values():
             entity.printAccessDeclarations(self)
@@ -116,10 +124,6 @@ class Catalog:
     def printIteratorDeclarations(self):
         for entity in self.contents.values():
             entity.printIteratorDeclaration(self)
-
-    def printCountDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCountDeclaration(self)
 
     def printIteratorFunctions(self):
         for entity in self.contents.values():
@@ -312,7 +316,10 @@ class Base:
     def printPushDeclaration(self, catalog):
         pass
 
-    def printPushFunction(selfself, catalog):
+    def printPushFunction(self, catalog):
+        pass
+
+    def printCountFunction(self, catalog):
         pass
 
     def isEnum(self):
@@ -375,6 +382,9 @@ class EnumField:
         self.owner = owner
         self.name = name
 
+    def isSimpleField(self):
+        return False;
+
     def isSelfInitializing(self, catalog):
         return False
 
@@ -423,6 +433,18 @@ class SimpleField:
         else:
             self.typeName = typeName
             self.default = None
+
+    def isSimpleField(self):
+        return True
+
+    def getName(self):
+        return self.name
+
+    def getObj(self, catalog):
+        return catalog.get(self.typeName)
+
+    def getObjName(self, catalog):
+        return self.getObj(catalog).getName()
 
     def isSelfInitializing(self, catalog):
         obj = catalog.get(self.typeName)
@@ -1077,8 +1099,43 @@ class SimpleStruct(Base):
     def getObjType(self):
         return ('objtype_' + self.getName()).upper()
 
+    def isSinglySelfReferential(self, catalog):
+        count = 0
+        for field in self.fields:
+            if field.isSimpleField() and field.getObjName(catalog) == self.getName():
+                count += 1
+        return count == 1
+
+    def getSelfReferentialField(self, catalog):
+        for field in self.fields:
+            if field.isSimpleField() and field.getObjName(catalog) == self.getName():
+                return field.getName()
+        raise Exception(f'cannot find self-referential field name for {self.getName()}')
+
     def objTypeArray(self):
         return [ self.getObjType() ]
+
+    def getCountSignature(self):
+        myType = self.getTypeDeclaration()
+        myName = self.getName()
+        return f'int count{myName}({myType} x)'
+
+    def printCountDeclaration(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            print(f'{self.getCountSignature()}; // SimpleStruct.printCountDeclaration')
+
+    def printCountFunction(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            print(f'{self.getCountSignature()} {{ // SimpleStruct.printCountFunction')
+            selfRefField = self.getSelfReferentialField(catalog)
+            print('    int count = 0; // SimpleStruct.printCountFunction')
+            print('    while (x != NULL) { // SimpleStruct.printCountFunction')
+            print(f'        x = x->{selfRefField}; // SimpleStruct.printCountFunction')
+            print('        count++;; // SimpleStruct.printCountFunction')
+            print('    } // SimpleStruct.printCountFunction')
+            print('    return count; // SimpleStruct.printCountFunction')
+            print('} // SimpleStruct.printCountFunction')
+            print('')
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration()
@@ -1840,11 +1897,12 @@ if args.type == "h":
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
     catalog.printIteratorDeclarations()
-    catalog.printCountDeclarations()
     printSection("defines")
     catalog.printDefines()
     printSection("access declarations")
     catalog.printAccessDeclarations()
+    printSection("count declarations")
+    catalog.printCountDeclarations()
     print("")
     print("#endif")
 
@@ -1887,6 +1945,8 @@ elif args.type == "c":
     catalog.printGetFunctions()
     catalog.printSetFunctions()
     catalog.printIteratorFunctions()
+    printSection("count functions")
+    catalog.printCountFunctions()
     printSection("mark functions")
     catalog.printMarkFunctions()
     printSection("generic mark function")

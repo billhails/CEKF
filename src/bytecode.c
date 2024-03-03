@@ -287,24 +287,6 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     LEAVE(writeCexpIf);
 }
 
-static int countCexpCharCondCases(CexpCharCondCases *x) {
-    int val = 0;
-    while (x != NULL) {
-        val++;
-        x = x->next;
-    }
-    return val;
-}
-
-static int countCexpIntCondCases(CexpIntCondCases *x) {
-    int val = 0;
-    while (x != NULL) {
-        val++;
-        x = x->next;
-    }
-    return val;
-}
-
 void writeCexpCharCondCases(int depth, int *values, int *addresses,
                             int *jumps, CexpCharCondCases *x,
                             ByteCodeArray *b) {

@@ -79,24 +79,6 @@ HashSymbol *makePrintName(char *prefix, char *name) {
     return res;
 }
 
-static int countLamVarList(LamVarList *list) {
-    int res = 0;
-    while (list != NULL) {
-        list = list->next;
-        res++;
-    }
-    return res;
-}
-
-int countLamList(LamList *list) {
-    int res = 0;
-    while (list != NULL) {
-        list = list->next;
-        res++;
-    }
-    return res;
-}
-
 static HashSymbol *printArgSymbol(void) {
     static HashSymbol *res = NULL;
     if (res == NULL)

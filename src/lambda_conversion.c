@@ -63,26 +63,6 @@ static HashSymbol *dollarSubstitute(HashSymbol *original);
 #    include "debugging_off.h"
 #endif
 
-#define MAKE_COUNT_LIST(type)           \
-static int count ## type (type *list) { \
-    ENTER(count ## type);               \
-    int count = 0;                      \
-    while (list != NULL) {              \
-        count++;                        \
-        list = list->next;              \
-    }                                   \
-    LEAVE(count ## type);               \
-    return count;                       \
-}
-
-/* *INDENT-OFF* */
-MAKE_COUNT_LIST(LamLetRecBindings)
-MAKE_COUNT_LIST(AstTypeList)
-MAKE_COUNT_LIST(AstExpressions)
-MAKE_COUNT_LIST(AstArgList)
-MAKE_COUNT_LIST(AstCompositeFunction)
-/* *INDENT-ON* */
-
 static bool inPreamble = true;  // preamble is treated specially
 static bool preambleLocked = false;
 
@@ -125,6 +105,8 @@ LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
         result =
             newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
     }
+    if (hasLock)
+        preambleLocked = false;
     UNPROTECT(save);
     LEAVE(lamConvertNest);
     return result;

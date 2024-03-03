@@ -426,15 +426,6 @@ static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng) {
     return type;
 }
 
-static int countLamList(LamList *list) {
-    int i = 0;
-    while (list != NULL) {
-        i++;
-        list = list->next;
-    }
-    return i;
-}
-
 static LamApply *constructToApply(LamConstruct *construct) {
     ENTER(constructToApply);
     LamExp *constructor =

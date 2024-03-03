@@ -94,35 +94,6 @@ Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
 }
 
-static int countAexpVarList(AexpVarList *list) {
-    int count = 0;
-    while (list != NULL) {
-        count++;
-        list = list->next;
-    }
-    return count;
-}
-
-static int countAexpList(AexpList *list) {
-    int count = 0;
-    while (list != NULL) {
-        count++;
-        list = list->next;
-    }
-    return count;
-}
-
-/*
-static int countLetRecBindings(LetRecBindings *list) {
-    int count = 0;
-    while (list != NULL) {
-        count++;
-        list = list->next;
-    }
-    return count;
-}
-*/
-
 static Exp *normalize(LamExp *lamExp, Exp *tail) {
     ENTER(normalize);
     IFDEBUG(ppLamExp(lamExp));
