@@ -642,6 +642,7 @@ class SimpleHash(Base):
         print(f'typedef struct {myName} {{ // SimpleHash.printTypedef')
         print('    struct HashTable wrapped; // SimpleHash.printTypedef')
         print(f'}} {myName}; // SimpleHash.printTypedef')
+        print('')
 
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
@@ -685,11 +686,7 @@ class SimpleHash(Base):
             print('}')
             print('')
         print(f'{decl} {{ // SimpleHash.printNewFunction')
-        print(f'    return ({myName} *)newHashTable( // SimpleHash.printNewFunction')
-        print(f'        {size}, // SimpleHash.printNewFunction')
-        print(f'        {markFn}, // SimpleHash.printNewFunction')
-        print(f'        {printFn} // SimpleHash.printNewFunction')
-        print('    ); // SimpleHash.printNewFunction')
+        print(f'    return ({myName} *)newHashTable({size}, {markFn}, {printFn});// SimpleHash.printNewFunction')
         print('}')
         print('')
 
