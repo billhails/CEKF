@@ -597,11 +597,11 @@ class SimpleHash(Base):
 
     def printIteratorDeclaration(self, catalog):
         decl = self.getIteratorDeclaration(catalog)
-        print(f'{decl}; // SimpleHask.printIteratorDeclaration')
+        print(f'{decl}; // SimpleHash.printIteratorDeclaration')
 
     def printIteratorFunction(self, catalog):
         decl = self.getIteratorDeclaration(catalog)
-        print(f'{decl} {{ // SimpleHask.printIteratorFunction')
+        print(f'{decl} {{ // SimpleHash.printIteratorFunction')
         if self.entries is None:
             print('    return iterateHashTable((HashTable *)table, i, NULL);')
         else:
@@ -632,9 +632,10 @@ class SimpleHash(Base):
     def printCountDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration()
-        print(f'static inline int count{myName}({myType} table) {{')
-        print('    return ((HashTable *)table)->count;')
-        print('}')
+        print(f'static inline int count{myName}({myType} table) {{ // SimpleHash.printCountDeclaration')
+        print('    return ((HashTable *)table)->count; // SimpleHash.printCountDeclaration')
+        print('} // SimpleHash.printCountDeclaration')
+        print('')
         
     def printTypedef(self, catalog):
         self.noteTypedef()
@@ -738,16 +739,20 @@ class SimpleArray(Base):
     def printAccessDeclarations(self, catalog):
         if self.dimension == 2:
             print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{ // SimpleArray.printAccessDeclarations")
+            print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
             print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    }")
+            print("#endif // SimpleArray.printAccessDeclarations");
             print("    return obj->entries[x + y * obj->width]; // SimpleArray.printAccessDeclarations")
             print("} // SimpleArray.printAccessDeclarations")
             print("")
             print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{ // SimpleArray.printAccessDeclarations")
+            print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
             print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    } // SimpleArray.printAccessDeclarations")
+            print("#endif // SimpleArray.printAccessDeclarations");
             print("    obj->entries[x + y * obj->width] = val; // SimpleArray.printAccessDeclarations")
             print("} // SimpleArray.printAccessDeclarations")
 
@@ -909,6 +914,17 @@ class SimpleArray(Base):
     def getCtype(self, astType, catalog):
         return f"{astType} *"
 
+    def printCountDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        print(f'static inline int count{myName}({myType} x) {{ // SimpleArray.printCountDeclaration')
+        if self.dimension == 1:
+            print('    return x->size; // SimpleArray.printCountDeclaration')
+        else:
+            print('    return x->width * x->height; // SimpleArray.printCountDeclaration')
+        print('} // SimpleArray.printCountDeclaration')
+        print('')
+        
     def getExtraCmpFargs(self, catalog):
         extra = []
         for name in self.extraCmpArgs:
