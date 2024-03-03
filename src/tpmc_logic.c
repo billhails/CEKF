@@ -405,8 +405,8 @@ static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, TpmcSub
                              pattern->pattern->val.assignment->name,
                              pattern->path);
     // we no longer need to remember this is an assignment now we have the substitution
-    return collectPatternSubstitutions(pattern->pattern->val.
-                                       assignment->value, substitutions);
+    TpmcPattern *value = pattern->pattern->val.assignment->value;
+    return collectPatternSubstitutions(value, substitutions);
 }
 
 static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
@@ -423,9 +423,9 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSu
 
 static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
                                                    *substitutions) {
+    TpmcPattern *previous = pattern->pattern->val.comparison->previous;
     pattern->pattern->val.comparison->previous =
-        collectPatternSubstitutions(pattern->pattern->val.
-                                    comparison->previous, substitutions);
+        collectPatternSubstitutions(previous, substitutions);
     pattern->pattern->val.comparison->current =
         collectPatternSubstitutions(pattern->pattern->val.comparison->current,
                                     substitutions);

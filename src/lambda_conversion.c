@@ -586,44 +586,61 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     return NULL;
 }
 
-static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
-    AstExpression *function = funCall->function;
-    LamList *args = convertExpressions(funCall->arguments, env);
-    int actualNargs = countAstExpressions(funCall->arguments);
-    int save = PROTECT(args);
-    // see if it's a type constructor we can inline FIXME - or a primitive
-    if (function->type == AST_EXPRESSION_TYPE_SYMBOL) {
-        HashSymbol *symbol = function->val.symbol;
-        LamExp *primApp = makePrimApp(symbol, args);
-        if (primApp != NULL) {
-            return primApp;
-        } else {
-            LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-            if (info != NULL) {
-                if (info->needsVec) {
-                    if (actualNargs == info->arity) {
-                        LamExp *inLine =
-                            makeConstruct(symbol, info->index, args);
-                        UNPROTECT(save);
-                        return inLine;
-                    } else {
-                        cant_happen
-                            ("wrong number of arguments to constructor %s",
-                             symbol->name);
-                    }
-                } else {
-                    cant_happen("arguments to empty constructor %s",
-                                symbol->name);
-                }
+static LamExp *inlineConstructor(HashSymbol *symbol, LamList *args,
+                                 LamContext *env) {
+    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    if (info != NULL) {
+        int actualNargs = countLamList(args);
+        if (info->needsVec) {
+            if (actualNargs == info->arity) {
+                return makeConstruct(symbol, info->index, args);
+            } else {
+                cant_happen("wrong number of arguments to constructor %s",
+                            symbol->name);
             }
+        } else {
+            if (actualNargs > 0) {
+                cant_happen("arguments to constant constructor %s",
+                            symbol->name);
+            }
+            return makeConstant(symbol, info->index);
+        }
+    }
+    return NULL;
+}
+
+static LamExp *convertApplication(AstFunCall *funCall, LamList *args,
+                                  LamContext *env) {
+    int actualNargs = countAstExpressions(funCall->arguments);
+    LamExp *fun = convertExpression(funCall->function, env);
+    int save = PROTECT(fun);
+    LamApply *apply = newLamApply(fun, actualNargs, args);
+    PROTECT(apply);
+    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return result;
+}
+
+static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
+    LamList *args = convertExpressions(funCall->arguments, env);
+    int save = PROTECT(args);
+    LamExp *result = NULL;
+    if (funCall->function->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        HashSymbol *symbol = funCall->function->val.symbol;
+        result = makePrimApp(symbol, args);
+        if (result != NULL) {
+            UNPROTECT(save);
+            return result;
+        }
+        // see if it's a type constructor we can inline FIXME - or a primitive
+        result = inlineConstructor(symbol, args, env);
+        if (result != NULL) {
+            UNPROTECT(save);
+            return result;
         }
     }
     // otherwise we convert as normal
-    LamExp *fun = convertExpression(function, env);
-    (void) PROTECT(fun);
-    LamApply *apply = newLamApply(fun, actualNargs, args);
-    (void) PROTECT(apply);
-    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    result = convertApplication(funCall, args, env);
     UNPROTECT(save);
     return result;
 }
@@ -671,22 +688,12 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
 }
 
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-    if (info == NULL) {
-        DEBUG("convertSymbol %s is not a constructor", symbol->name);
+    LamExp *result = inlineConstructor(symbol, NULL, env);
+    if (result == NULL) {
         symbol = dollarSubstitute(symbol);
-        LamExp *res = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
-        return res;
+        result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     }
-    DEBUG("convertSymbol %s is a constructor", symbol->name);
-    if (info->needsVec) {
-        if (info->arity > 0) {
-            cant_happen("too few arguments to constructor %s", symbol->name);
-        }
-        return makeConstruct(symbol, info->index, NULL);
-    } else {
-        return makeConstant(symbol, info->index);
-    }
+    return result;
 }
 
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
