@@ -446,6 +446,7 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
                                             LamContext *env,
                                             bool inPreamble) {
     if (inPreamble && isListType(typeDef->type)) {
+        // print$list is hand-coded in the preamble
         return next;
     } else {
         return makePrintTypeFunction(typeDef, env, next);

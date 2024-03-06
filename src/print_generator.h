@@ -29,6 +29,5 @@ LamExp *makeSymbolExpr(char *name);
 LamExp *makePrintInt();
 LamExp *makePrintChar();
 HashSymbol *makePrintName(char *prefix, char *name);
-int countLamList(LamList *list);
 
 #endif

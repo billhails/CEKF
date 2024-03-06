@@ -49,10 +49,10 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
 static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type, int size,
-                                                  int index, bool hasFields,
+                                                  int index, bool needsVec,
                                                   LamContext *env);
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
-                            bool someoneHasFields, int enumCount, int index,
+                            bool needsVec, int enumCount, int index,
                             int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
@@ -153,15 +153,6 @@ static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
     UNPROTECT(save);
     LEAVE(convertFuncDefs);
     return this;
-}
-
-static int countTypeBodies(AstTypeBody *typeBody) {
-    int count = 0;
-    while (typeBody != NULL) {
-        count++;
-        typeBody = typeBody->next;
-    }
-    return count;
 }
 
 static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
@@ -278,11 +269,11 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
 }
 
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
-                            bool someoneHasFields, int enumCount, int index,
+                            bool needsVec, int enumCount, int index,
                             int arity, LamContext *env) {
     ENTER(collectTypeInfo);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(type, someoneHasFields, arity, enumCount,
+        newLamTypeConstructorInfo(type, needsVec, arity, enumCount,
                                   index);
     int save = PROTECT(info);
     addToLamContext(env, symbol, info);
@@ -294,7 +285,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type,
                                                   int enumCount, int index,
-                                                  bool someoneHasFields,
+                                                  bool needsVec,
                                                   LamContext *env) {
     int nargs = countAstTypeList(typeConstructor->typeList);
     LamTypeConstructorArgs *args =
@@ -303,8 +294,8 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
     LamTypeConstructor *lamTypeConstructor =
         newLamTypeConstructor(typeConstructor->symbol, type, args);
     PROTECT(lamTypeConstructor);
-    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor,
-                    someoneHasFields, enumCount, index, nargs, env);
+    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor, needsVec,
+                    enumCount, index, nargs, env);
     UNPROTECT(save);
     return lamTypeConstructor;
 }
@@ -313,8 +304,8 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
     LamType *type = convertUserType(typeDef->userType);
     int save = PROTECT(type);
     AstTypeBody *typeBody = typeDef->typeBody;
-    bool hasFields = typeHasFields(typeBody);
-    int enumCount = countTypeBodies(typeBody);
+    bool needsVec = typeHasFields(typeBody);
+    int enumCount = countAstTypeBody(typeBody);
     int index = 0;
     LamTypeConstructorList *lamTypeConstructorList = NULL;
     int save2 = PROTECT(type);
@@ -324,7 +315,7 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
                                    type,
                                    enumCount,
                                    index,
-                                   hasFields,
+                                   needsVec,
                                    env);
         int save3 = PROTECT(lamTypeConstructor);
         lamTypeConstructorList =
@@ -448,24 +439,15 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
 }
 
 #define CHECK_ONE_ARG(name, args) do { \
-    if ((args) == NULL) { \
-        cant_happen("expected 1 arg in " #name ", got 0"); \
-    } \
-    if ((args)->next != NULL) { \
-        cant_happen("expected 1 arg in " #name ", got > 1"); \
-    } \
+    int count = countLamList(args); \
+    if (count != 1) \
+        cant_happen("expected 1 arg in " #name ", got %d", count); \
 } while(0)
 
 #define CHECK_TWO_ARGS(name, args) do { \
-    if ((args) == NULL) { \
-        cant_happen("expected 2 args in " #name ", got 0"); \
-    } \
-    if ((args)->next == NULL) { \
-        cant_happen("expected 2 args in " #name ", got 1"); \
-    } \
-    if ((args)->next->next != NULL) { \
-        cant_happen("expected 2 args in " #name ", got > 2"); \
-    } \
+    int count = countLamList(args); \
+    if (count != 2) \
+        cant_happen("expected 2 args in " #name ", got %d", count); \
 } while(0)
 
 static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
@@ -614,7 +596,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
             UNPROTECT(save);
             return result;
         }
-        // see if it's a type constructor we can inline FIXME - or a primitive
+        // see if it's a type constructor we can inline
         result = inlineConstructor(symbol, args, env);
         if (result != NULL) {
             UNPROTECT(save);
