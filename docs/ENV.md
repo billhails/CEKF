@@ -473,3 +473,52 @@ Also it's not yet clear how this might work if we plan to implement the
 any really useful language.
 
 Anyway, food for thought, and maybe there's a hybrid approach.
+
+Returning to this, actually there is a way to get a dispatch function
+past the type-checker, if we declare a type that contains all possible
+arguments and another type that contains all popssible result types,
+for example:
+
+```
+let
+    env a {
+        fn map {
+            (_, []) { [] }
+            (f, h @ t) { f(h) @ map(f, t) }
+        }
+        fn fact {
+          (0) { 1 }
+          (n) { n * fact(n - 1) }
+        }
+    }
+in
+    a.factorial(5)
+```
+becomes something like
+```
+let
+    typedef a$args(#f, #u) { a$map$args(#f, list(#t)) | a$fact$args(int) }
+    typedef a$results(#u) { a$map$result(list(#u)) | a$fact$result(int) }
+    fn a$dispatch(args) {
+        let
+            fn map {
+                (_, []) { [] }
+                (f, h @ t) { f(h) @ map(f, t) }
+            }
+            fn fact {
+              (0) { 1 }
+              (n) { n * fact(n - 1) }
+            }
+        in
+            switch(args) {
+                (a_map_args(f, u)) { a_map_result(map(f, u)) }
+                (a_fact_args(n) { a_fact_result(fact(n)) }
+            }
+    }
+in
+    switch (a$dispatch(a$fact$args(5))) {
+        (a$fact$result(n)) { n }
+    }
+```
+That might just work but I'm not sure I like it.
+
