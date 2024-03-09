@@ -785,7 +785,7 @@ static void step() {
                 break;
             case BYTECODE_MATCH:{
                     // pop the dispach code, verify it's an integer and in range, and dispatch
-                    int size = readCurrentByte();
+                    int size __attribute__((unused)) = readCurrentByte();
 #ifdef DEBUG_STEP
                     printf("MATCH [%d]", size);
                     int save = state.C;

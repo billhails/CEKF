@@ -9,13 +9,12 @@ PROFILING=-pg
 OPTIMIZING=-O2
 DEBUGGING=-g
 
-# CCMODE = $(PROFILING)
-# CCMODE = $(OPTIMIZING)
 CCMODE = $(DEBUGGING)
 
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)
 PYTHON=python3
+MAKEAST=$(PYTHON) ./tools/makeAST.py
 
 EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
@@ -68,19 +67,19 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 include $(ALL_DEP)
 
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(PYTHON) tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(PYTHON) tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(PYTHON) tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(PYTHON) tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
