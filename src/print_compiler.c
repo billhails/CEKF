@@ -31,9 +31,9 @@
 #include "symbols.h"
 
 #ifdef DEBUG_PRINT_COMPILER
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static LamExp *compilePrinterForFunction(TcFunction *function);

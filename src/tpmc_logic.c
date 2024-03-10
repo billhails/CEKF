@@ -31,9 +31,9 @@
 #include "lambda_substitution.h"
 #include "lambda_pp.h"
 #ifdef DEBUG_TPMC_LOGIC
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);

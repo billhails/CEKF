@@ -29,10 +29,10 @@
 #include "lambda_pp.h"
 
 #ifdef DEBUG_TC
-#    include "debugging_on.h"
-#    include "lambda_pp.h"
+#  include "debugging_on.h"
+#  include "lambda_pp.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static TcEnv *extendEnv(TcEnv *parent);

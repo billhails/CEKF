@@ -7,9 +7,9 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef DEBUG_BIGINT
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 #define BIGINT_ASSERT(a, op, b) assert((a) op (b));

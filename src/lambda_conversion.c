@@ -58,9 +58,9 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 
 #ifdef DEBUG_LAMBDA_CONVERT
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static bool inPreamble = true;  // preamble is treated specially

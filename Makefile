@@ -5,11 +5,11 @@ TARGET=cekf
 # in Ubuntu 22.10
 # `ulimit -c unlimited` to turn on core dumps
 # written to /var/lib/apport/coredump/
-PROFILING=-pg
-OPTIMIZING=-O2
-DEBUGGING=-g
+MODE_P=-pg
+MODE_O=-O2
+MODE_D=-g -DDEBUG_ANY
 
-CCMODE = $(DEBUGGING)
+CCMODE = $(MODE_D)
 
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)

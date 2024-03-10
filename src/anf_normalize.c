@@ -25,13 +25,13 @@
 #include "bigint.h"
 
 #ifdef DEBUG_ANF
-#    include <stdio.h>
-#    include <unistd.h>
-#    include "debug.h"
-#    include "lambda_pp.h"
-#    include "debugging_on.h"
+#  include <stdio.h>
+#  include <unistd.h>
+#  include "debug.h"
+#  include "lambda_pp.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static Exp *normalize(LamExp *lamExp, Exp *tail);

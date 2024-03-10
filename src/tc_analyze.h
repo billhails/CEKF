@@ -1,5 +1,5 @@
 #ifndef cekf_tc_analyze_h
-#    define cekf_tc_analyze_h
+#  define cekf_tc_analyze_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "tc.h"
-#    include "lambda.h"
+#  include "tc.h"
+#  include "lambda.h"
 
 TcEnv *tc_init(void);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);

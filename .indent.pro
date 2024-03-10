@@ -13,7 +13,7 @@
 --no-space-after-function-call-names
 --no-tabs
 --pointer-align-right
---preprocessor-indentation4
+--preprocessor-indentation2
 --space-after-for
 --space-after-if
 --space-after-while

@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_translate_h
-#    define cekf_tpmc_translate_h
+#  define cekf_tpmc_translate_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "tpmc.h"
-#    include "lambda.h"
+#  include "tpmc.h"
+#  include "lambda.h"
 
 LamExp *tpmcTranslate(TpmcState *dfa);
 #endif

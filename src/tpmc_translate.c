@@ -27,10 +27,10 @@
 #include "common.h"
 
 #ifdef DEBUG_TPMC_TRANSLATE
-#    include "debug_tpmc.h"
-#    include "debugging_on.h"
+#  include "debug_tpmc.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static LamExp *translateStateToInlineCode(TpmcState *dfa,

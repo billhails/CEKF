@@ -27,9 +27,9 @@
 #include "hash.h"
 #include "memory.h"
 #ifdef DEBUG_HASHTABLE
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 bool quietPrintHashTable = false;
@@ -166,10 +166,10 @@ void hashSet(HashTable *table, HashSymbol *var, void *src) {
         void *target = valuePtr(table, index);
 #if defined(DEBUG_HASHTABLE) || defined(DEBUG_LEAK)
         eprintf("memcpy(%p, %p, %ld);\n", target, src, table->valuesize);
-#    ifdef DEBUG_LEAK
+#  ifdef DEBUG_LEAK
         eprintf("// *%p == %p, table->values == %p\n", src, *((void **) src),
                 table->values);
-#    endif
+#  endif
 #endif
         memcpy(target, src, table->valuesize);
     }

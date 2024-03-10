@@ -1,5 +1,5 @@
 #ifndef cekf_debugging
-#    define cekf_debugging
+#  define cekf_debugging
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -20,14 +20,14 @@
  * Term Pattern Matching Compiler stage 4. code generation
  */
 
-#    define ENTER(n)
-#    define LEAVE(n)
-#    define DEBUG(...)
-#    define DEBUGN(...)
-#    define IFDEBUG(x)
-#    define IFDEBUGN(x)
-#    define NEWLINE()
-#    define DEBUGGING_ON()
-#    define DEBUGGING_OFF()
+#  define ENTER(n)
+#  define LEAVE(n)
+#  define DEBUG(...)
+#  define DEBUGN(...)
+#  define IFDEBUG(x)
+#  define IFDEBUGN(x)
+#  define NEWLINE()
+#  define DEBUGGING_ON()
+#  define DEBUGGING_OFF()
 
 #endif

@@ -1,5 +1,5 @@
 #ifndef cekf_anf_normalize_h
-#    define cekf_anf_normalize_h
+#  define cekf_anf_normalize_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,8 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "lambda.h"
-#    include "anf.h"
+#  include "lambda.h"
+#  include "anf.h"
 
 Exp *anfNormalize(LamExp *exp);
 

@@ -26,7 +26,7 @@
 #include "symbol.h"
 
 #ifdef DEBUG_DESUGARING
-#    include "debug.h"
+#  include "debug.h"
 #endif
 
 static AexpLam *desugarAexpLam(AexpLam *x);
@@ -45,9 +45,9 @@ static Aexp *desugarAexp(Aexp *x);
 static Cexp *desugarCexp(Cexp *x);
 
 #ifdef DEBUG_DESUGARING
-#    define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
+#  define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
 #else
-#    define DEBUG_DESUGAR(type, val) do {} while(0)
+#  define DEBUG_DESUGAR(type, val) do {} while(0)
 #endif
 
 static AexpLam *desugarAexpLam(AexpLam *x) {

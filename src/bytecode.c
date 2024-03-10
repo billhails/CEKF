@@ -28,9 +28,9 @@
 #include "common.h"
 
 #ifdef DEBUG_BYTECODE
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 void initByteCodeArray(ByteCodeArray *b) {

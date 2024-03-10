@@ -29,9 +29,9 @@
 #include "print_generator.h"
 
 #ifdef DEBUG_LAMBDA_SUBSTITUTE
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static HashSymbol *performVarSubstitutions(HashSymbol *var, TpmcSubstitutionTable

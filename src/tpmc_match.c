@@ -29,9 +29,9 @@
 #include "symbol.h"
 
 #ifdef DEBUG_TPMC_MATCH
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 TpmcState *tpmcMakeState(TpmcStateValue *val) {
@@ -643,9 +643,9 @@ void ppPattern(TpmcPattern *pattern) {
     }
 }
 
-#    define PPPATTERN(p) ppPattern(p); eprintf("\n")
+#  define PPPATTERN(p) ppPattern(p); eprintf("\n")
 #else
-#    define PPPATTERN(p)
+#  define PPPATTERN(p)
 #endif
 
 static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,

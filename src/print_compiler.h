@@ -1,5 +1,5 @@
 #ifndef cekf_print_compiler_h
-#    define cekf_print_compiler_h
+#  define cekf_print_compiler_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "lambda.h"
-#    include "value.h"
-#    include "tc.h"
+#  include "lambda.h"
+#  include "value.h"
+#  include "tc.h"
 
 LamExp *compilePrinterForType(TcType *type, TcEnv *env);
 

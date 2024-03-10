@@ -1,5 +1,5 @@
 #ifndef cekf_value_h
-#    define cekf_value_h
+#  define cekf_value_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "bigint.h"
+#  include "bigint.h"
 
 typedef enum {
     VALUE_TYPE_VOID,
@@ -46,15 +46,15 @@ typedef struct Value {
     ValueVal val;
 } Value;
 
-#    define VALUE_VAL_STDINT(x)    ((ValueVal){.z    = (x)})
-#    define VALUE_VAL_BIGINT(x)    ((ValueVal){.b    = (x)})
-#    define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
+#  define VALUE_VAL_STDINT(x)    ((ValueVal){.z    = (x)})
+#  define VALUE_VAL_BIGINT(x)    ((ValueVal){.b    = (x)})
+#  define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
 // CLO and PCLO share the same Clo struct
-#    define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
-#    define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
-#    define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
-#    define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
-#    define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
+#  define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
+#  define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
+#  define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
+#  define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
+#  define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
 // constants
 extern Value vTrue;

@@ -1,5 +1,5 @@
 #ifndef cekf_common_h
-#    define cekf_common_h
+#  define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,11 +18,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include <stdbool.h>
-#    include <stdint.h>
+#  include <stdbool.h>
+#  include <stdint.h>
 
 typedef uint32_t hash_t;
 
+#  ifdef DEBUG_ANY
 // #define DEBUG_STACK
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
@@ -53,10 +54,11 @@ typedef uint32_t hash_t;
 // #define DEBUG_PRINT_COMPILER
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
 #    define SAFETY_CHECKS
+#  endif
 
-#    ifndef __GNUC__
-#        define __attribute__(x)
-#    endif
+#  ifndef __GNUC__
+#    define __attribute__(x)
+#  endif
 void cant_happen(const char *message, ...)
     __attribute__((noreturn, format(printf, 1, 2)));
 void can_happen(const char *message, ...)
@@ -64,6 +66,6 @@ void can_happen(const char *message, ...)
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 
-#    define PAD_WIDTH 2
+#  define PAD_WIDTH 2
 
 #endif

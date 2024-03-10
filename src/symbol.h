@@ -1,5 +1,5 @@
 #ifndef cekf_symbol_h
-#    define cekf_symbol_h
+#  define cekf_symbol_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "hash.h"
+#  include "hash.h"
 
 HashSymbol *genSym(char *prefix);
 

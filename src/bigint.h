@@ -1,35 +1,35 @@
 #ifndef BIGINT_H_INCLUDED
-#    define BIGINT_H_INCLUDED
+#  define BIGINT_H_INCLUDED
 
-#    ifdef __cplusplus
+#  ifdef __cplusplus
 extern "C" {
-#    endif
+#  endif
 
-#    include <limits.h>
-#    include <stdint.h>
-#    include <stdio.h>
-#    include <string.h>
-#    include "memory.h"
+#  include <limits.h>
+#  include <stdint.h>
+#  include <stdio.h>
+#  include <string.h>
+#  include "memory.h"
 
 /* any unsigned integer type */
     typedef uint32_t bigint_word;
 
-#    define BIGINT_KARATSUBA_WORD_THRESHOLD 20
+#  define BIGINT_KARATSUBA_WORD_THRESHOLD 20
 
-#    define BIGINT_WORD_BITS ((sizeof(bigint_word) * CHAR_BIT))
-#    define BIGINT_WORD_MAX ((bigint_word)-1)
-#    define BIGINT_HALF_WORD_MAX (BIGINT_WORD_MAX >> BIGINT_WORD_BITS / 2)
+#  define BIGINT_WORD_BITS ((sizeof(bigint_word) * CHAR_BIT))
+#  define BIGINT_WORD_MAX ((bigint_word)-1)
+#  define BIGINT_HALF_WORD_MAX (BIGINT_WORD_MAX >> BIGINT_WORD_BITS / 2)
 
-#    define BIGINT_WORD_LO(a) ((a) & BIGINT_HALF_WORD_MAX)
-#    define BIGINT_WORD_HI(a) ((a) >> sizeof(a) * CHAR_BIT / 2)
+#  define BIGINT_WORD_LO(a) ((a) & BIGINT_HALF_WORD_MAX)
+#  define BIGINT_WORD_HI(a) ((a) >> sizeof(a) * CHAR_BIT / 2)
 
-#    define BIGINT_MIN(a, b) ((a) < (b) ? (a) : (b))
-#    define BIGINT_MAX(a, b) ((a) > (b) ? (a) : (b))
-#    define BIGINT_INT_ABS(a) ((a) < 0 ? -(unsigned int)(a) : (unsigned int)(a))
+#  define BIGINT_MIN(a, b) ((a) < (b) ? (a) : (b))
+#  define BIGINT_MAX(a, b) ((a) > (b) ? (a) : (b))
+#  define BIGINT_INT_ABS(a) ((a) < 0 ? -(unsigned int)(a) : (unsigned int)(a))
 
-#    define BIGINT_SWAP(type, a, b) do { type _tmp = a; a = b; b = _tmp; } while (0)
+#  define BIGINT_SWAP(type, a, b) do { type _tmp = a; a = b; b = _tmp; } while (0)
 
-#    define BIGINT_REVERSE(type, data, n) do {\
+#  define BIGINT_REVERSE(type, data, n) do {\
     int _i;\
     for (_i = 0; _i < (n)/2; _i++) BIGINT_SWAP(type, data[_i], data[n - 1 - _i]);\
 } while (0)
@@ -178,7 +178,7 @@ extern "C" {
 
     double bigint_double(const bigint * src);
 
-#    ifdef __cplusplus
+#  ifdef __cplusplus
 }
-#    endif
+#  endif
 #endif

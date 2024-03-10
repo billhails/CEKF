@@ -1,5 +1,5 @@
 #ifndef cekf_hash_h
-#    define cekf_hash_h
+#  define cekf_hash_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,13 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include <stdbool.h>
+#  include <stdbool.h>
 
-#    include "common.h"
-#    include "memory.h"
-#    include "value.h"
+#  include "common.h"
+#  include "memory.h"
+#  include "value.h"
 
-#    define HASH_MAX_LOAD 0.75
+#  define HASH_MAX_LOAD 0.75
 
 typedef struct HashSymbol {
     struct Header header;
