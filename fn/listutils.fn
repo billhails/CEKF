@@ -100,6 +100,11 @@ let
         (_, _) { [] }
     }
 
+    fn zipWith {
+        (f, h1 @ t1, h2 @ t2) { f(h1, h2) @ zipWith(f, t1, t2) }
+        (_, _, _) { [] }
+    }
+
     // BUG replacing (a @ []) with ([a]) causes error
     fn last {
         (a @ []) { a }
@@ -179,5 +184,5 @@ let
     }
 
 in
-    print(sort(dedup("the quick brown fox jumps over the lazy dog")));
+    print(zipWith(fn (x, y) { x * y }, [1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]));
     puts("\n")
