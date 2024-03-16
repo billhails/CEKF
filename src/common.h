@@ -29,7 +29,7 @@ typedef uint32_t hash_t;
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #define DEBUG_SLOW_STEP
 // define this to cause a GC at every malloc (catches memory leaks early)
-#    define DEBUG_STRESS_GC
+// #    define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
 // #define DEBUG_TPMC_MATCH
@@ -53,7 +53,7 @@ typedef uint32_t hash_t;
 // #define DEBUG_PRINT_GENERATOR
 // #define DEBUG_PRINT_COMPILER
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
-#    define SAFETY_CHECKS
+// #    define SAFETY_CHECKS
 #  endif
 
 #  ifndef __GNUC__
