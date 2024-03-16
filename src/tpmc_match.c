@@ -262,6 +262,7 @@ static void populateSubPatternMatrixRowWithComponents(TpmcMatrix *matrix,
                                                       TpmcPattern *pattern) {
     ENTER(populateSubPatternMatrixRowWithComponents);
     if (arity != pattern->pattern->val.constructor->components->size) {
+        printTpmcPattern(pattern, 0);
         cant_happen
             ("arity %d does not match constructor arity %d in populateSubPatternMatrixRowWithComponents",
              arity, pattern->pattern->val.constructor->components->size);

@@ -1,33 +1,9 @@
 let
 
-    // foldl :: (a -> b -> b) -> b -> list(a) -> b
-    // ((#cn) -> (#ym) -> #hn [#ym]) -> (#ym) -> (list(#cn)) -> #ym
-    // (a     -> b     -> b        ) -> b     -> list(a)     -> b
-    fn foldl {
-        (_, acc, []) { acc }
-        (func, acc, h @ t) { foldl(func, func(h, acc), t) }
-    }
-
-    // foldr :: (a -> b -> b) -> b -> list(a) -> b
-    // ((#nn) -> (#xn) -> #xn) -> (#xn) -> (#mn) -> #xn
-    // (a     -> b     -> b  ) -> b     -> ???   -> b
-    fn foldr(func, acc, lst) {
-        foldl(func, acc, reverse(lst))
-    }
-
-    // reverse :: list(#t) -> list(#t)
-    // (list(#no)) -> list(#no)
-    fn reverse (lst) {
-        foldl(fn (elem, acc) { elem @ acc }, [], lst)
-    }
-
-    // BUG concat list of strings prints as a list of char rather than a string
-    // BUT if we define reverse before foldl it all works.
-    // concat :: list(list(#t)) -> list(#t)
-    // (<p$17/406>380) -> list(<#t/421>395)
-    fn concat(lst) {
-        foldr(fn (elem, acc) { elem @@ acc }, [], lst)
+    fn last {
+        ([a]) { a }
+        (_ @ t) { last(t) }
     }
 
 in
-    print(concat(["well", " ", "hi", " ", "there"]))
+    print(last(["well", " ", "hi", " ", "there"]))

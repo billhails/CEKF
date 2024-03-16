@@ -7,9 +7,9 @@ TARGET=cekf
 # written to /var/lib/apport/coredump/
 MODE_P=-pg
 MODE_O=-O2
-MODE_D=-g -DDEBUG_ANY
+MODE_D=-g
 
-CCMODE = $(MODE_O)
+CCMODE = $(MODE_D)
 
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)

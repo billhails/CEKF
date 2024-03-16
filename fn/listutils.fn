@@ -56,7 +56,6 @@ let
         }
     }
 
-    // BUG concat list of strings prints as a list of char rather than a string
     fn concat(lst) {
         foldr(fn (elem, acc) { elem @@ acc }, [], lst)
     }
@@ -105,7 +104,6 @@ let
         (_, _, _) { [] }
     }
 
-    // BUG replacing (a @ []) with ([a]) causes error
     fn last {
         (a @ []) { a }
         (_ @ t) { last(t) }

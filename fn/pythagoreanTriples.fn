@@ -26,5 +26,5 @@ in {
     in
         print(triple);
         puts("\n");
-        require(<triple > 50) // until
+        require(<triple > 200) // until
 }
