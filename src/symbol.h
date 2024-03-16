@@ -21,6 +21,7 @@
 #  include "hash.h"
 
 HashSymbol *genSym(char *prefix);
+HashSymbol *genAlphaSym(char *prefix);
 
 HashSymbol *newSymbol(char *name);
 

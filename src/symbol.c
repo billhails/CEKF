@@ -19,31 +19,75 @@
 #include <stdio.h>
 #include "symbol.h"
 
+typedef enum GenSymFmt {
+    DECIMAL,
+    ALPHABETIC
+} GenSymFmt;
+
 // application-wide global symbol store
 
 static HashTable *symbolTable = NULL;
+static HashTable *genSymTable = NULL;
 
 void markVarTable() {
     markHashTableObj((Header *) symbolTable);
+    markHashTableObj((Header *) genSymTable);
 }
 
-HashSymbol *newSymbol(char *name) {
+static void initSymbolTable() {
     if (symbolTable == NULL) {
         symbolTable = newHashTable(0, NULL, NULL);
     }
+}
+
+static void initGenSymTable() {
+    if (genSymTable == NULL) {
+        genSymTable = newHashTable(sizeof(int), NULL, NULL);
+    }
+}
+
+HashSymbol *newSymbol(char *name) {
+    initSymbolTable();
     HashSymbol *res = uniqueHashSymbol(symbolTable, name, NULL);
     validateLastAlloc();
     return res;
 }
 
-HashSymbol *genSym(char *prefix) {
-    static int symbolCounter = 0;
-    char buffer[128];
-    if (symbolTable == NULL) {
-        symbolTable = newHashTable(0, NULL, NULL);
+HashSymbol *newSymbolCounter(char *baseName) {
+    initGenSymTable();
+    HashSymbol *base = newSymbol(baseName);
+    if (!hashGet(genSymTable, base, NULL)) {
+        int i = 0;
+        hashSet(genSymTable, base, &i);
     }
+    return base;
+}
+
+HashSymbol *_genSym(char *prefix, GenSymFmt fmt) {
+    int symbolCounter = 0;
+    char buffer[128];
+    initSymbolTable();
+    HashSymbol *base = newSymbolCounter(prefix);
+    hashGet(genSymTable, base, &symbolCounter);
     for (;;) {
-        sprintf(buffer, "%s%d", prefix, symbolCounter++);
+        switch (fmt) {
+            case DECIMAL:
+                sprintf(buffer, "%s%d", prefix, symbolCounter++);
+                break;
+            case ALPHABETIC:{
+                    char *alphabet = "abcdefghijklmnopqrstuvwxyz";
+                    char suffix[128];
+                    int index = 0;
+                    int value = symbolCounter++;
+                    while (value > 0) {
+                        suffix[index++] = alphabet[value % 26];
+                        suffix[index] = '\0';
+                        value = value / 26;
+                    }
+                    sprintf(buffer, "%s%s", prefix, suffix);
+                }
+                break;
+        }
         if (hashGetVar(symbolTable, buffer) == NULL) {
             HashSymbol *x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
             int save = PROTECT(x);
@@ -51,8 +95,16 @@ HashSymbol *genSym(char *prefix) {
             x->hash = hashString(buffer);
             hashSet(symbolTable, x, NULL);
             UNPROTECT(save);
-            validateLastAlloc();
+            hashSet(genSymTable, base, &symbolCounter);
             return x;
         }
     }
+}
+
+HashSymbol *genSym(char *prefix) {
+    return _genSym(prefix, DECIMAL);
+}
+
+HashSymbol *genAlphaSym(char *prefix) {
+    return _genSym(prefix, ALPHABETIC);
 }

@@ -67,7 +67,7 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcVar(TcVar *var) {
-    eprintf("<%s>%d", var->name->name, var->id);
+    eprintf("%s", var->name->name);
     if (var->instance != NULL) {
         eprintf(" [");
         ppTcType(var->instance);

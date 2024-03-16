@@ -1,0 +1,12 @@
+let
+    fn odd {
+        (0) { false }
+        (n) { even(n - 1) }
+    }
+    fn even {
+        (0) { true }
+        (n) { odd(n - 1) }
+    }
+in
+    print(odd(3));
+    puts("\n")

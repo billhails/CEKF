@@ -44,6 +44,7 @@ static LamExp *compilePrinterForChar();
 static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env);
 
 LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
+    ENTER(compilePrinterForType);
     LamExp *res = NULL;
     switch (type->type) {
         case TCTYPE_TYPE_FUNCTION:
@@ -69,6 +70,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
             cant_happen("unrecognised TcType %d in compilePrinterForType",
                         type->type);
     }
+    LEAVE(compilePrinterForType);
     return res;
 }
 
@@ -98,14 +100,18 @@ static LamExp *compilePrinterForChar() {
 
 static LamList *compilePrinterForUserTypeArgs(TcUserTypeArgs *args,
                                               TcEnv *env) {
-    if (args == NULL)
+    ENTER(compilePrinterForUserTypeArgs);
+    if (args == NULL) {
+        LEAVE(compilePrinterForUserTypeArgs);
         return NULL;
+    }
     LamList *next = compilePrinterForUserTypeArgs(args->next, env);
     int save = PROTECT(next);
     LamExp *this = compilePrinterForType(args->type, env);
     PROTECT(this);
     LamList *res = newLamList(this, next);
     UNPROTECT(save);
+    LEAVE(compilePrinterForUserTypeArgs);
     return res;
 }
 
@@ -115,6 +121,7 @@ static LamExp *compilePrinterForString() {
 }
 
 static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
+    IFDEBUG(printTcUserType(userType, 0));
     if (userType->name == listSymbol()) {
         if (userType->args
             && userType->args->type->type == TCTYPE_TYPE_CHARACTER) {

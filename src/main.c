@@ -109,6 +109,8 @@ int main(int argc, char *argv[]) {
     }
     PROTECT(res);
     // normalization: LamExp => ANF
+    ppTcType(res);
+    eprintf("\n");
     Exp *anfExp = anfNormalize(exp);
     PROTECT(anfExp);
     disableGC();

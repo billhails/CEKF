@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "lambda_pp.h"
+void ppLamTag(LamExp *tag);
 
 void ppLamExpD(LamExp *exp, int depth) {
     while (depth > 0) {
@@ -131,6 +132,9 @@ void ppLamExp(LamExp *exp) {
             break;
         case LAMEXP_TYPE_CONSTRUCT:
             ppLamConstruct(exp->val.construct);
+            break;
+        case LAMEXP_TYPE_TAG:
+            ppLamTag(exp->val.tag);
             break;
         case LAMEXP_TYPE_CONSTANT:
             ppLamConstant(exp->val.constant);
@@ -634,6 +638,12 @@ void ppLamConstruct(LamConstruct *construct) {
     ppHashSymbol(construct->name);
     eprintf(" %d", construct->tag);
     _ppLamList(construct->args);
+    eprintf(")");
+}
+
+void ppLamTag(LamExp *tag) {
+    eprintf("(tag ");
+    ppLamExp(tag);
     eprintf(")");
 }
 
