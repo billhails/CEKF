@@ -38,7 +38,7 @@
 static TcEnv *extendEnv(TcEnv *parent);
 static TcNg *extendNg(TcNg *parent);
 static void addToEnv(TcEnv *env, HashSymbol *key, TcType *type);
-static void addToNg(TcNg *env, HashSymbol *symbol, TcType *type);
+static void addToNg(TcNg *env, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static TcType *makeBoolean(void);
@@ -233,7 +233,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
         TcType *freshType = makeFreshVar(args->var->name);
         int save2 = PROTECT(freshType);
         addToEnv(env, args->var, freshType);
-        addToNg(ng, freshType->val.var->name, freshType);
+        addToNg(ng, freshType);
         UNPROTECT(save2);
     }
     TcType *returnType = analyzeExp(lam->exp, env, ng);
@@ -644,20 +644,20 @@ static void prepareLetRecEnv(LamLetRecBindings *bindings, TcEnv *env) {
 
 static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
                                  TcNg *ng) {
-    TcType *freshType = NULL;
-    if (!getFromTcEnv(env, bindings->var, &freshType)) {
+    TcType *existingType = NULL;
+    if (!getFromTcEnv(env, bindings->var, &existingType)) {
         cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
     }
-    int save = PROTECT(freshType);
+    int save = PROTECT(existingType);
     // Recursive functions need to be statically typed inside their own context:
     TcNg *ng2 = extendNg(ng);
     PROTECT(ng2);
-    addToNg(ng2, freshType->val.var->name, freshType);
+    addToNg(ng2, existingType);
     TcType *type = analyzeExp(bindings->val, env, ng2);
     PROTECT(type);
-    unify(freshType, type, "letrec");
+    unify(existingType, type, "letrec");
     DEBUGN("analyzeLetRec %s :: ", bindings->var->name);
-    IFDEBUGN(ppTcType(freshType));
+    IFDEBUGN(ppTcType(existingType));
     UNPROTECT(save);
 }
 
@@ -1280,8 +1280,13 @@ static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
     return NULL;
 }
 
-static void addToNg(TcNg *ng, HashSymbol *symbol, TcType *type) {
-    setTcTypeTable(ng->table, symbol, type);
+static void addToNg(TcNg *ng, TcType *type) {
+#ifdef SAFETY_CHECKS
+    if (type->type != TCTYPE_TYPE_VAR) {
+        cant_happen("non-var type passed to addToNg");
+    }
+#endif
+    setTcTypeTable(ng->table, type->val.var->name, type);
 }
 
 static TcType *makeBoolean() {
@@ -1550,16 +1555,14 @@ static bool _unify(TcType *a, TcType *b) {
 }
 
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
+    // *INDENT-OFF*
     DEBUGN("unify(%s) :> ", trace);
-    IFDEBUGN(ppTcType(a);
-             eprintf(" =?= ");
-             ppTcType(b));
+    IFDEBUGN(ppTcType(a); eprintf(" =?= "); ppTcType(b));
     bool res = _unify(a, b);
     DEBUGN("unify(%s) <: ", trace);
-    IFDEBUGN(ppTcType(a);
-             eprintf(" === ");
-             ppTcType(b));
+    IFDEBUGN(ppTcType(a); eprintf(" === "); ppTcType(b));
     return res;
+    // *INDENT-ON*
 }
 
 static void pruneUserTypeArgs(TcUserTypeArgs *args) {

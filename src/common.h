@@ -44,7 +44,7 @@ typedef uint32_t hash_t;
 // #define DEBUG_BYTECODE
 // define this to make fatal errors dump core (if ulimit allows)
 #    define DEBUG_DUMP_CORE
-#    define DEBUG_TC
+// #    define DEBUG_TC
 // #define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LAMBDA_SUBSTITUTE
 // #define DEBUG_LEAK
