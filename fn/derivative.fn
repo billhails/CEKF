@@ -1,0 +1,20 @@
+let
+    typedef term { num(int) |
+                   var(char) |
+                   add(term, term) |
+                   sub(term, term) |
+                   mul(term, term) |
+                   div(term, term) |
+                   pow(term, term) }
+    fn deriv {
+        (x, x) { num(1) }
+        (num(_), _) { num(0) }
+        (pow(x, num(n)), x) { mul(num(n), pow(x, num(n - 1))) }
+        (add(f, g), x) { add(deriv(f, x), deriv(g, x)) }
+        (sub(f, g), x) { sub(deriv(f, x), deriv(g, x)) }
+        (mul(f, g), x) { add(mul(g, deriv(f, x)), mul(f, deriv(g, x))) }
+        (div(num(1), f), x) { div(sub(num(0), deriv(f, x)), mul(f, f)) }
+        (div(f, g), x) { div(sub(mul(g, deriv(f, x)), mul(f, deriv(g, x))), mul(g, g)) }
+    }
+in
+    print(deriv(add(add(pow(var('x'), num(2)), var('x')), num(1)), var('x')))
