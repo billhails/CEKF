@@ -24,6 +24,7 @@
 #include "tpmc_match.h"
 #include "tpmc_compare.h"
 #include "tpmc_debug.h"
+#include "tpmc_pp.h"
 #include "lambda_debug.h"
 #include "lambda_helper.h"
 #include "symbol.h"
@@ -49,16 +50,14 @@ TpmcState *tpmcMakeState(TpmcStateValue *val) {
 // TPMCPATTERNVALUE_TYPE_INTEGER
 // TPMCPATTERNVALUE_TYPE_CONSTRUCTOR
 
-static bool patternIsWildcard(TpmcMatrix *m, int x, int y) {
-    TpmcPatternValueType type = getTpmcMatrixIndex(m, x, y)->pattern->type;
-    DEBUG("patternIsWildcard x = %d, y = %d, type = %d", x, y, type);
-    return type == TPMCPATTERNVALUE_TYPE_WILDCARD;
+static bool patternIsWildcard(TpmcPattern *pattern) {
+    bool res = pattern->pattern->type == TPMCPATTERNVALUE_TYPE_WILDCARD;
+    return res;
 }
 
 static bool noRemainingTests(TpmcMatrix *matrix) {
-    DEBUG("noRemainingTests %d", matrix->width);
     for (int x = 0; x < matrix->width; x++) {
-        if (!patternIsWildcard(matrix, x, 0)) {
+        if (!patternIsWildcard(getTpmcMatrixIndex(matrix, x, 0))) {
             return false;
         }
     }
@@ -67,7 +66,7 @@ static bool noRemainingTests(TpmcMatrix *matrix) {
 
 static int findFirstConstructorColumn(TpmcMatrix *matrix) {
     for (int x = 0; x < matrix->width; x++) {
-        if (!patternIsWildcard(matrix, x, 0)) {
+        if (!patternIsWildcard(getTpmcMatrixIndex(matrix, x, 0))) {
             return x;
         }
     }
@@ -75,7 +74,6 @@ static int findFirstConstructorColumn(TpmcMatrix *matrix) {
 }
 
 static TpmcState *makeEmptyTestState(HashSymbol *path) {
-    ENTER(makeEmptyTestState);
     TpmcArcArray *arcs = newTpmcArcArray();
     int save = PROTECT(arcs);
     TpmcTestState *test = newTpmcTestState(path, arcs);
@@ -84,37 +82,21 @@ static TpmcState *makeEmptyTestState(HashSymbol *path) {
                                             TPMCSTATEVALUE_VAL_TEST(test));
     PROTECT(val);
     TpmcState *state = tpmcMakeState(val);
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("makeEmptyTestState returning: ");
-    printTpmcState(state, 0);
-    eprintf("\n");
-#endif
     UNPROTECT(save);
-    LEAVE(makeEmptyTestState);
     return state;
 }
 
 static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
-    ENTER(patternMatches);
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("patternMatches constructor: ");
-    printTpmcPattern(constructor, 0);
-    eprintf("\npatternMatches pattern: ");
-    printTpmcPattern(pattern, 0);
-    eprintf("\n");
-#endif
     bool isComparison =
         (constructor->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON);
     switch (pattern->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_VAR:
             cant_happen("patternMatches ennncountered var");
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
-            LEAVE(patternMatches);
-            return true;
+            return eqTpmcPattern(constructor, pattern);
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
             cant_happen("patternMatches encountered assignment");
         case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            LEAVE(patternMatches);
             return true;
         case TPMCPATTERNVALUE_TYPE_CHARACTER:{
                 bool res = isComparison
@@ -122,7 +104,6 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                         TPMCPATTERNVALUE_TYPE_CHARACTER
                         && constructor->pattern->val.character ==
                         pattern->pattern->val.character);
-                LEAVE(patternMatches);
                 return res;
             }
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:{
@@ -131,7 +112,6 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                         TPMCPATTERNVALUE_TYPE_BIGINTEGER
                         && cmpBigInt(constructor->pattern->val.biginteger,
                                      pattern->pattern->val.biginteger) == 0);
-                LEAVE(patternMatches);
                 return res;
             }
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:{
@@ -142,7 +122,6 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                      // pointer equivalence works for hash symbols
                      constructor->pattern->val.constructor->tag ==
                      pattern->pattern->val.constructor->tag) || isComparison;
-                LEAVE(patternMatches);
                 return res;
             }
         default:
@@ -151,66 +130,108 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
     }
 }
 
-static bool patternIndexMatches(TpmcMatrix *matrix, int x, int y, int yy) {
-    if (y == yy) {
-#ifdef DEBUG_TPMC_MATCH2
-        eprintf("patternIndexMatches is true trivially\n");
-#endif
-        return true;
-    }
-    TpmcPattern *constructor = getTpmcMatrixIndex(matrix, x, y);
-    TpmcPattern *pattern = getTpmcMatrixIndex(matrix, x, yy);
-    return patternMatches(constructor, pattern);
-}
-
-TpmcIntArray *findPatternsMatching(TpmcMatrix *matrix, int x, int y) {
-    ENTER(findPatternsMatching);
+TpmcIntArray *findPatternsMatching(TpmcPattern *c, TpmcPatternArray *N) {
     TpmcIntArray *res = newTpmcIntArray();
     int save = PROTECT(res);
-    for (int yy = 0; yy < matrix->height; yy++) {
-        if (patternIndexMatches(matrix, x, y, yy)) {
-            pushTpmcIntArray(res, yy);
+    int i = 0;
+    TpmcPattern *candidate;
+    while (iterateTpmcPatternArray(N, &i, &candidate, NULL)) {
+        if (patternMatches(c, candidate)) {
+            pushTpmcIntArray(res, i - 1);
         }
     }
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("findPatternsMatching %d %d returning: ", x, y);
-    printTpmcIntArray(res, 0);
-    eprintf("\n");
-#endif
     UNPROTECT(save);
-    LEAVE(findPatternsMatching);
     return res;
 }
 
-static TpmcPatternArray *extractMatrixColumnSubset(TpmcMatrix *matrix, int x,
-                                                   TpmcIntArray *ys) {
-    ENTER(extractMatrixColumnSubset);
-    TpmcPatternArray *res = newTpmcPatternArray("extractMatrixColumnSubset");
+static TpmcPatternArray *extractColumnSubset(TpmcPatternArray *N,
+                                             TpmcIntArray *ys) {
+    TpmcPatternArray *res = newTpmcPatternArray("extractColumnSubset");
     int save = PROTECT(res);
-    for (int i = 0; i < ys->size; ++i) {
-        int y = ys->entries[i];
+    int i = 0;
+    int y;
+    while (iterateTpmcIntArray(ys, &i, &y, NULL)) {
+        pushTpmcPatternArray(res, N->entries[y]);
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static TpmcPatternArray *extractMatrixColumn(TpmcMatrix *matrix, int x) {
+    TpmcPatternArray *res = newTpmcPatternArray("extractMatrixColumn");
+    int save = PROTECT(res);
+    for (int y = 0; y < matrix->height; y++) {
         pushTpmcPatternArray(res, getTpmcMatrixIndex(matrix, x, y));
     }
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("extractMatrixColumnSubset returning: ");
-    printTpmcPatternArray(res, 0);
-    eprintf("\n");
-#endif
     UNPROTECT(save);
-    LEAVE(extractMatrixColumnSubset);
+    return res;
+}
+
+static TpmcMatrix *discardMatrixColumn(TpmcMatrix *matrix, int column) {
+    TpmcMatrix *res = newTpmcMatrix(matrix->width - 1, matrix->height);
+    int save = PROTECT(res);
+    for (int x = 0; x < matrix->width; x++) {
+        for (int y = 0; y < matrix->height; y++) {
+            if (x < column) {
+                setTpmcMatrixIndex(res, x, y,
+                                   getTpmcMatrixIndex(matrix, x, y));
+            } else if (x > column) {
+                setTpmcMatrixIndex(res, x - 1, y,
+                                   getTpmcMatrixIndex(matrix, x, y));
+            } else {
+                // no-op
+            }
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static TpmcMatrix *extractMatrixRows(TpmcMatrix *matrix,
+                                     TpmcIntArray *indices) {
+    TpmcMatrix *res = newTpmcMatrix(matrix->width, indices->size);
+    int save = PROTECT(res);
+    int resy = 0;
+    int iy = 0;
+    int i = 0;
+    while (iterateTpmcIntArray(indices, &i, &iy, NULL)) {
+        for (int x = 0; x < res->width; ++x) {
+            setTpmcMatrixIndex(res, x, resy,
+                               getTpmcMatrixIndex(matrix, x, iy));
+        }
+        resy++;
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static TpmcMatrix *appendMatrices(TpmcMatrix *prefix, TpmcMatrix *suffix) {
+    if (prefix->height != suffix->height) {
+        cant_happen
+            ("appendMatrices given matrices with different heights, %d vs %d",
+             prefix->height, suffix->height);
+    }
+    TpmcMatrix *res =
+        newTpmcMatrix(prefix->width + suffix->width, prefix->height);
+    int save = PROTECT(res);
+    for (int x = 0; x < res->width; ++x) {
+        for (int y = 0; y < res->height; ++y) {
+            if (x >= prefix->width) {
+                setTpmcMatrixIndex(res, x, y,
+                                   getTpmcMatrixIndex(suffix,
+                                                      x - prefix->width, y));
+            } else {
+                setTpmcMatrixIndex(res, x, y,
+                                   getTpmcMatrixIndex(prefix, x, y));
+            }
+        }
+    }
+    UNPROTECT(save);
     return res;
 }
 
 static TpmcStateArray *extractStateArraySubset(TpmcStateArray *all,
                                                TpmcIntArray *indices) {
-    ENTER(extractStateArraySubset);
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("extractStateArraySubset all: ");
-    printTpmcStateArray(all, 0);
-    eprintf("\nextractStateArraySubset indices: ");
-    printTpmcIntArray(indices, 0);
-    eprintf("\n");
-#endif
     TpmcStateArray *res = newTpmcStateArray("extractStateArraySubset");
     int save = PROTECT(res);
     for (int i = 0; i < indices->size; ++i) {
@@ -218,7 +239,6 @@ static TpmcStateArray *extractStateArraySubset(TpmcStateArray *all,
         pushTpmcStateArray(res, all->entries[j]);
     }
     UNPROTECT(save);
-    LEAVE(extractStateArraySubset);
     return res;
 }
 
@@ -226,8 +246,6 @@ static int determineArity(TpmcPattern *pattern) {
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         LamTypeConstructorInfo *info =
             pattern->pattern->val.constructor->info;
-        DEBUG("'%s' has arity %d",
-              pattern->pattern->val.constructor->tag->name, info->arity);
         return info->arity;
     } else {
         return 0;
@@ -237,7 +255,6 @@ static int determineArity(TpmcPattern *pattern) {
 static void populateSubPatternMatrixRowWithWildcards(TpmcMatrix *matrix,
                                                      int y, int arity,
                                                      TpmcPattern *pattern) {
-    ENTER(populateSubPatternMatrixRowWithWildcards);
     // FIXME safeMalloc this from strlen + some n
     char buf[512];
     for (int i = 0; i < arity; i++) {
@@ -254,15 +271,13 @@ static void populateSubPatternMatrixRowWithWildcards(TpmcMatrix *matrix,
         getTpmcMatrixIndex(matrix, i, y)->path = path;
         UNPROTECT(save);
     }
-    LEAVE(populateSubPatternMatrixRowWithWildcards);
 }
 
 static void populateSubPatternMatrixRowWithComponents(TpmcMatrix *matrix,
                                                       int y, int arity,
                                                       TpmcPattern *pattern) {
-    ENTER(populateSubPatternMatrixRowWithComponents);
     if (arity != pattern->pattern->val.constructor->components->size) {
-        printTpmcPattern(pattern, 0);
+        ppTpmcPattern(pattern);
         cant_happen
             ("arity %d does not match constructor arity %d in populateSubPatternMatrixRowWithComponents",
              arity, pattern->pattern->val.constructor->components->size);
@@ -272,22 +287,20 @@ static void populateSubPatternMatrixRowWithComponents(TpmcMatrix *matrix,
             pattern->pattern->val.constructor->components->entries[i];
         setTpmcMatrixIndex(matrix, i, y, entry);
     }
-    LEAVE(populateSubPatternMatrixRowWithComponents);
 }
 
-static void populateSubPatternMatrix(TpmcMatrix *matrix,
-                                     TpmcPatternArray *patterns, int arity) {
-    ENTER(populateSubPatternMatrix);
+static TpmcMatrix *makeSubPatternMatrix(TpmcPatternArray *patterns, int arity) {
+    TpmcMatrix *matrix = newTpmcMatrix(arity, patterns->size);
     if (arity == 0) {
-        LEAVE(populateSubPatternMatrix);
-        return;
+        return matrix;
     }
+    int save = PROTECT(matrix);
     for (int i = 0; i < patterns->size; ++i) {
         TpmcPattern *pattern = patterns->entries[i];
         switch (pattern->pattern->type) {
             case TPMCPATTERNVALUE_TYPE_VAR:
                 cant_happen
-                    ("encountered pattern type var during populateSubPatternMatrix");
+                    ("encountered pattern type var during makeSubPatternMatrix");
             case TPMCPATTERNVALUE_TYPE_COMPARISON:
             case TPMCPATTERNVALUE_TYPE_WILDCARD:
                 populateSubPatternMatrixRowWithWildcards(matrix, i, arity,
@@ -299,64 +312,24 @@ static void populateSubPatternMatrix(TpmcMatrix *matrix,
                 break;
             case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
                 cant_happen
-                    ("encountered pattern type assignment during populateSubPatternMatrix");
+                    ("encountered pattern type assignment during makeSubPatternMatrix");
             case TPMCPATTERNVALUE_TYPE_CHARACTER:
                 cant_happen
-                    ("encountered pattern type char during populateSubPatternMatrix");
+                    ("encountered pattern type char during makeSubPatternMatrix");
             case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
                 cant_happen
-                    ("encountered pattern type int during populateSubPatternMatrix");
+                    ("encountered pattern type int during makeSubPatternMatrix");
             default:
                 cant_happen
-                    ("unrecognised pattern type %d during populateSubPatternMatrix",
+                    ("unrecognised pattern type %d during makeSubPatternMatrix",
                      pattern->pattern->type);
         }
     }
-    LEAVE(populateSubPatternMatrix);
-}
-
-static void copyMatrixExceptColAndOnlyRows(int col, TpmcIntArray *ys,
-                                           TpmcMatrix *from, TpmcMatrix *to) {
-    ENTER(copyMatrixExceptColAndOnlyRows);
-    DEBUG("copyMatrixExceptColAndOnlyRows col : %d", col);
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("copyMatrixExceptColAndOnlyRows rows: ");
-    printTpmcIntArray(ys, 0);
-    eprintf("\n");
-    DEBUG("copyMatrixExceptColAndOnlyRows from: %d * %d to: %d * %d",
-          from->width, from->height, to->width, to->height);
-#endif
-    int tx = 0;
-    for (int x = 0; x < from->width; x++) {
-        if (x != col) {
-            for (int iy = 0; iy < ys->size; ++iy) {
-                int y = ys->entries[iy];
-                DEBUG("copyMatrixExceptCol(%d), to[%d][%d] <= from[%d][%d]",
-                      col, tx, iy, x, y);
-                setTpmcMatrixIndex(to, tx, iy,
-                                   getTpmcMatrixIndex(from, x, y));
-            }
-            tx++;
-        }
-    }
-    LEAVE(copyMatrixExceptColAndOnlyRows);
-}
-
-static void copyMatrixWithOffset(int offset, TpmcMatrix *from, TpmcMatrix *to) {
-    ENTER(copyMatrixWithOffset);
-    for (int x = 0; x < from->width; x++) {
-        for (int y = 0; y < from->height; ++y) {
-            DEBUG("copyMatrixWithOffset(%d), to[%d][%d] <= from[%d][%d]",
-                  offset, x + offset, y, x, y);
-            setTpmcMatrixIndex(to, x + offset, y,
-                               getTpmcMatrixIndex(from, x, y));
-        }
-    }
-    LEAVE(copyMatrixWithOffset);
+    UNPROTECT(save);
+    return matrix;
 }
 
 static TpmcPattern *replaceComponentsWithWildcards(TpmcPattern *pattern) {
-    ENTER(replaceComponentsWithWildcards);
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         TpmcConstructorPattern *constructor =
             pattern->pattern->val.constructor;
@@ -387,23 +360,19 @@ static TpmcPattern *replaceComponentsWithWildcards(TpmcPattern *pattern) {
             TpmcPattern *replacement = newTpmcPattern(patternValue);
             replacement->path = pattern->path;
             UNPROTECT(save);
-            LEAVE(replaceComponentsWithWildcards);
             return replacement;
         }
     }
-    LEAVE(replaceComponentsWithWildcards);
     return pattern;
 }
 
 static TpmcIntArray *makeTpmcIntArray(int size, int initialValue) {
-    ENTER(makeTpmcIntArray);
     TpmcIntArray *res = newTpmcIntArray();
     int save = PROTECT(res);
     for (int i = 0; i < size; ++i) {
         pushTpmcIntArray(res, initialValue);
     }
     UNPROTECT(save);
-    LEAVE(makeTpmcIntArray);
     return res;
 }
 
@@ -455,7 +424,6 @@ static bool constructorsAreExhaustive(TpmcState *state) {
 }
 
 static TpmcPattern *makeNamedWildcardPattern(HashSymbol *path) {
-    ENTER(makeNamedWildcardPattern);
     TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
                                                TPMCPATTERNVALUE_VAL_WILDCARD
                                                ());
@@ -463,7 +431,6 @@ static TpmcPattern *makeNamedWildcardPattern(HashSymbol *path) {
     TpmcPattern *pattern = newTpmcPattern(wc);
     pattern->path = path;
     UNPROTECT(save);
-    LEAVE(makeNamedWildcardPattern);
     return pattern;
 }
 
@@ -471,31 +438,25 @@ static TpmcState *deduplicateState(TpmcState *state,
                                    TpmcStateArray *knownStates) {
     for (int i = 0; i < knownStates->size; i++) {
         if (tpmcStateEq(state, knownStates->entries[i])) {
-            DEBUG("deduplicateState found dup");
             validateLastAlloc();
             return knownStates->entries[i];
         }
     }
-    DEBUG("deduplicateState adding new");
     pushTpmcStateArray(knownStates, state);
-    DEBUG("deduplicateState added new");
     return state;
 }
 
 static void collectPathsBoundByConstructor(TpmcPatternArray *components,
                                            TpmcVariableTable *boundVariables) 
 {
-    ENTER(collectPathsBoundByConstructor);
     for (int i = 0; i < components->size; ++i) {
         TpmcPattern *pattern = components->entries[i];
         setTpmcVariableTable(boundVariables, pattern->path);
     }
-    LEAVE(collectPathsBoundByConstructor);
 }
 
 static void collectPathsBoundByPattern(TpmcPattern *pattern,
                                        TpmcVariableTable *boundVariables) {
-    ENTER(collecPathsBoundByPattern);
     // FIXME is this correct?
     setTpmcVariableTable(boundVariables, pattern->path);
     switch (pattern->pattern->type) {
@@ -521,22 +482,19 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern,
             cant_happen("unrecognised type %d in collectPathsBoundByPattern",
                         pattern->pattern->type);
     }
-    LEAVE("collecPathsBoundByPattern");
 }
 
 static TpmcVariableTable *variablesBoundByPattern(TpmcPattern *pattern) {
-    ENTER(variablesBoundByPattern);
     TpmcVariableTable *boundVariables = newTpmcVariableTable();
     int save = PROTECT(boundVariables);
     collectPathsBoundByPattern(pattern, boundVariables);
     UNPROTECT(save);
-    LEAVE(variablesBoundByPattern);
     return boundVariables;
 }
 
 static TpmcVariableTable *getTestStatesFreeVariables(TpmcTestState *testState) {
-    // The free variables of a test state is the union of the free variables of the outgoing arcs, plus the test variable.
-    ENTER(getTestStatesFreeVariables);
+    // The free variables of a test state is the union of the free variables
+    // of the outgoing arcs, plus the test variable.
     TpmcVariableTable *freeVariables = newTpmcVariableTable();
     int save = PROTECT(freeVariables);
     setTpmcVariableTable(freeVariables, testState->path);
@@ -554,12 +512,10 @@ static TpmcVariableTable *getTestStatesFreeVariables(TpmcTestState *testState) {
         }
     }
     UNPROTECT(save);
-    LEAVE(getTestStatesFreeVariables);
     return freeVariables;
 }
 
 static TpmcVariableTable *getStatesFreeVariables(TpmcState *state) {
-    ENTER(getStatesFreeVariables);
     if (state->freeVariables == NULL) {
         switch (state->state->type) {
             case TPMCSTATEVALUE_TYPE_TEST:
@@ -578,12 +534,10 @@ static TpmcVariableTable *getStatesFreeVariables(TpmcState *state) {
                      state->state->type);
         }
     }
-    LEAVE(getStatesFreeVariables);
     return state->freeVariables;
 }
 
 static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
-    ENTER(makeTpmcArc);
     TpmcArc *arc = newTpmcArc(state, pattern);
     int save = PROTECT(arc);
     // the free variables of an arc are the free variables of its state minus the variables bound in the pattern
@@ -595,108 +549,59 @@ static TpmcArc *makeTpmcArc(TpmcState *state, TpmcPattern *pattern) {
     HashSymbol *key;
     while ((key = iterateTpmcVariableTable(statesFreeVariables, &i)) != NULL) {
         if (!getTpmcVariableTable(boundVariables, key)) {
-            DEBUG("makeTpmcArc adding free variable %s", key->name);
             setTpmcVariableTable(arc->freeVariables, key);
         }
     }
     state->refcount++;
-    DEBUG("makeTpmcArc creating arc to state with refcount %d",
-          state->refcount);
-    IFDEBUG(printTpmcState(state, 0));
     UNPROTECT(save);
-    LEAVE(makeTpmcArc);
     return arc;
 }
 
-#ifdef DEBUG_TPMC_MATCH
-void ppPattern(TpmcPattern *pattern) {
-    eprintf("%s == ", pattern->path->name);
-    switch (pattern->pattern->type) {
-        case TPMCPATTERNVALUE_TYPE_COMPARISON:{
-                TpmcComparisonPattern *c = pattern->pattern->val.comparison;
-                eprintf("(%s == %s)", c->previous->path->name,
-                        c->current->path->name);
-                break;
-            }
-        case TPMCPATTERNVALUE_TYPE_WILDCARD:
-            eprintf("_");
-            break;
-        case TPMCPATTERNVALUE_TYPE_CHARACTER:
-            eprintf("'%c'", pattern->pattern->val.character);
-            break;
-        case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-            fprintBigInt(stderr, pattern->pattern->val.biginteger);
-            break;
-        case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:{
-                TpmcConstructorPattern *c = pattern->pattern->val.constructor;
-                eprintf("%s(", c->tag->name);
-                for (int i = 0; i < c->components->size; ++i) {
-                    ppPattern(c->components->entries[i]);
-                    if (i + 1 < c->components->size) {
-                        eprintf(", ");
-                    }
-                }
-                eprintf(")");
-                break;
-            }
-        default:
-            cant_happen("ppPattern encountered unexpected type");
-    }
-}
-
-#  define PPPATTERN(p) ppPattern(p); eprintf("\n")
-#else
-#  define PPPATTERN(p)
-#endif
-
-static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
+static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcState *errorState,
                           TpmcStateArray *knownStates) {
     ENTER(mixture);
-    // there is some column whose topmost pattern is a constructor
-    int x = findFirstConstructorColumn(matrix);
-    // The goal is to build a test state with the variable v and some outgoing arcs (one for each constructor and possibly a default arc).
-    TpmcState *state =
-        makeEmptyTestState(getTpmcMatrixIndex(matrix, x, 0)->path);
-    int save = PROTECT(state);
+    // there is some column N whose topmost pattern is a constructor
+    int index = findFirstConstructorColumn(M);
+    DEBUG("mixture found constructor in column %d of %dx%d", index, M->width, M->height);
+    TpmcPatternArray *N = extractMatrixColumn(M, index);
+    int save = PROTECT(N);
+    DEBUGN("mixture extracted column %d: ", index);
+    IFDEBUGN(ppTpmcPatternArray(N));
+    TpmcMatrix *MN = discardMatrixColumn(M, index);
+    PROTECT(MN);
+    // The goal is to build a test state with the variable v and some outgoing arcs
+    // (one for each constructor and possibly a default arc).
+    TpmcState *state = makeEmptyTestState(N->entries[0]->path);
+    PROTECT(state);
     // For each constructor c in the selected column, its arc is defined as follows:
-    for (int y = 0; y < matrix->height; y++) {
-        DEBUG("mixture examining[%d][%d]", x, y);
-        PPPATTERN(getTpmcMatrixIndex(matrix, x, y));
-        if (!patternIsWildcard(matrix, x, y)) {
-            DEBUG("mixture pattern is not wildcard");
-            TpmcPattern *c = getTpmcMatrixIndex(matrix, x, y);
-            // Let {i1 , ... , ij} be the row-indices of the patterns in the column that match c.
-            TpmcIntArray *matchingIndices =
-                findPatternsMatching(matrix, x, y);
-            validateLastAlloc();
+    for (int row = 0; row < N->size; row++) {
+        TpmcPattern *c = N->entries[row];
+        if (!patternIsWildcard(c)) {
+            DEBUGN("mixture considering pattern on row %d ", row);
+            IFDEBUGN(ppTpmcPattern(c));
+            // Let {i1 , ... , ij} be the row-indices of the patterns in N that match c.
+            TpmcIntArray *matchingIndices = findPatternsMatching(c, N);
             int save2 = PROTECT(matchingIndices);
             // Let {pat1 , ... , patj} be the patterns in the column corresponding to the indices computed above,
             TpmcPatternArray *matchingPatterns =
-                extractMatrixColumnSubset(matrix, x, matchingIndices);
+                extractColumnSubset(N, matchingIndices);
             PROTECT(matchingPatterns);
             // let n be the arity of the constructor c
             int arity = determineArity(c);
-            //  ... a pattern matrix with n columns and j rows (create ahead of time)
-            DEBUG("mixture - creating sub-pattern matrix %d * %d", arity,
-                  matchingPatterns->size);
-            TpmcMatrix *subPatternMatrix = newTpmcMatrix(arity, matchingPatterns->size);        // could be zero-width
-            PROTECT(subPatternMatrix);
+            DEBUG("arity %d\n", arity);
             // For each pati, its n sub-patterns are extracted;
             // if pati is a wildcard, n wildcards are produced instead, each tagged with the right path variable.
-            populateSubPatternMatrix(subPatternMatrix, matchingPatterns,
-                                     arity);
-            // This matrix is then appended to the result of selecting, from each column in the rest of the
-            // original matrix, those rows whose indices are in {i1 , ... , ij}. 
-            TpmcMatrix *newMatrix = newTpmcMatrix(matrix->width + arity - 1,
-                                                  matchingPatterns->size);
-            DEBUG("mixture - created newMatrix %d * %d", newMatrix->width,
-                  newMatrix->height);
+            TpmcMatrix *subPatternMatrix =
+                makeSubPatternMatrix(matchingPatterns, arity);
+            PROTECT(subPatternMatrix);
+            // This matrix is then appended to the result of selecting, from each column in MN,
+            // those rows whose indices are in {i1 , ... , ij}. 
+            TpmcMatrix *prefixMatrix = extractMatrixRows(MN, matchingIndices);
+            PROTECT(prefixMatrix);
+            TpmcMatrix *newMatrix =
+                appendMatrices(prefixMatrix, subPatternMatrix);
             PROTECT(newMatrix);
-            copyMatrixExceptColAndOnlyRows(x, matchingIndices, matrix,
-                                           newMatrix);
-            copyMatrixWithOffset(matrix->width - 1, subPatternMatrix,
-                                 newMatrix);
             // Finally the indices are used to select the corresponding final states that go with these rows.
             TpmcStateArray *newFinalStates =
                 extractStateArraySubset(finalStates, matchingIndices);
@@ -706,6 +611,7 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
             TpmcPattern *cPrime = replaceComponentsWithWildcards(c);
             PROTECT(cPrime);
             // and state is the result of recursively applying match to the new matrix and the new sequence of final states
+            DEBUG("mixture calling match for normal case, column %d row %d of %dx%d", index, row, M->width, M->height);
             TpmcState *newState =
                 tpmcMatch(newMatrix, newFinalStates, errorState, knownStates);
             PROTECT(newState);
@@ -715,6 +621,8 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                 arc->state->refcount--;
                 validateLastAlloc();
             } else {
+                DEBUGN("mixture constructed new arc: ");
+                IFDEBUGN(ppTpmcArc(arc));
                 pushTpmcArcArray(state->state->val.test->arcs, arc);
             }
             UNPROTECT(save2);
@@ -725,7 +633,6 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     if (constructorsAreExhaustive(state)) {
         TpmcState *res = deduplicateState(state, knownStates);
         UNPROTECT(save);
-        DEBUG("mixture - constructors are exhaustive");
         LEAVE(mixture);
         return res;
     }
@@ -733,47 +640,46 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     // If there are any wildcard patterns in the selected column
     TpmcIntArray *wcIndices = newTpmcIntArray();
     PROTECT(wcIndices);
-    for (int y = 0; y < matrix->height; y++) {
-        if (patternIsWildcard(matrix, x, y)) {
-            pushTpmcIntArray(wcIndices, y);
+    int row = 0;
+    TpmcPattern *candidate;
+    while (iterateTpmcPatternArray(N, &row, &candidate, NULL)) {
+        if (patternIsWildcard(candidate)) {
+            pushTpmcIntArray(wcIndices, row - 1);
         }
     }
-    if (wcIndices->size > 0) {
+    if (countTpmcIntArray(wcIndices) > 0) {
         // then their rows are selected from the rest of the matrix and the final states
-        TpmcMatrix *wcMatrix =
-            newTpmcMatrix(matrix->width - 1, wcIndices->size);
+        TpmcMatrix *wcMatrix = extractMatrixRows(MN, wcIndices);
         PROTECT(wcMatrix);
-        copyMatrixExceptColAndOnlyRows(x, wcIndices, matrix, wcMatrix);
         TpmcStateArray *wcFinalStates =
             extractStateArraySubset(finalStates, wcIndices);
         PROTECT(wcFinalStates);
         // and the state is the result of applying match to the new matrix and states
+        DEBUG("mixture calling match for error case");
         TpmcState *wcState =
             tpmcMatch(wcMatrix, wcFinalStates, errorState, knownStates);
         PROTECT(wcState);
         TpmcPattern *wcPattern =
-            makeNamedWildcardPattern(getTpmcMatrixIndex(matrix, x, 0)->path);
+            makeNamedWildcardPattern(N->entries[0]->path);
         PROTECT(wcPattern);
         TpmcArc *wcArc = makeTpmcArc(wcState, wcPattern);
         PROTECT(wcArc);
         pushTpmcArcArray(state->state->val.test->arcs, wcArc);
         TpmcState *res = deduplicateState(state, knownStates);
         UNPROTECT(save);
-        DEBUG("mixture - wildcards supply default");
         LEAVE(mixture);
         return res;
     } else {
         validateLastAlloc();
         // Otherwise, the error state is used after its reference count has been incremented
         TpmcPattern *errorPattern =
-            makeNamedWildcardPattern(getTpmcMatrixIndex(matrix, x, 0)->path);
+            makeNamedWildcardPattern(N->entries[0]->path);
         PROTECT(errorPattern);
         TpmcArc *errorArc = makeTpmcArc(errorState, errorPattern);
         PROTECT(errorArc);
         pushTpmcArcArray(state->state->val.test->arcs, errorArc);
         TpmcState *res = deduplicateState(state, knownStates);
         UNPROTECT(save);
-        DEBUG("mixture - error state supplies default");
         LEAVE(mixture);
         return res;
     }
@@ -781,30 +687,21 @@ static TpmcState *mixture(TpmcMatrix *matrix, TpmcStateArray *finalStates,
 
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                      TpmcState *errorState, TpmcStateArray *knownStates) {
-    ENTER(tpmcMatch);
+    ENTER(match);
+    IFDEBUG(ppTpmcMatrix(matrix));
+    IFDEBUG(ppTpmcStateArray(finalStates));
     if (matrix->height == 0) {
         cant_happen("zero-height matrix passed to match");
     }
     TpmcState *res = NULL;
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("tpmcMatch: matrix: ");
-    printTpmcMatrix(matrix, 0);
-    eprintf("\ntpmcMatch: finalStates: ");
-    printTpmcStateArray(finalStates, 0);
-    eprintf("\n");
-#endif
     if (noRemainingTests(matrix)) {
-        DEBUG("variable rule applies");
+        DEBUG("match: variable rule applies");
         res = finalStates->entries[0];
     } else {
-        DEBUG("mixture rule applies");
+        DEBUG("match: mixture rule applies");
         res = mixture(matrix, finalStates, errorState, knownStates);
     }
-    LEAVE(tpmcMatch);
-#ifdef DEBUG_TPMC_MATCH2
-    eprintf("tpmcMatch returning: ");
-    printTpmcState(res, 0);
-    eprintf("\n");
-#endif
+    IFDEBUG(ppTpmcState(res));
+    LEAVE(match);
     return res;
 }

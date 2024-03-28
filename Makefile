@@ -54,7 +54,7 @@ EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
 
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c

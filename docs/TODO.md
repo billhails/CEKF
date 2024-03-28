@@ -5,6 +5,7 @@
 * tuples - can use vec type to implement.
    * BUT - fn args are not tuples, that might interfere with currying.
    * tc has support for pairs and we might leverage those as a start, but flat vecs will be more efficient.
+   * specific syntax: `#(2, "hi")` might be better than just round braces.
 * unpacking function return values (tuples only)
 * `now()` expression returns current time in milliseconds.
 * macro support (see [MACROS](./MACROS.md) for initial thoughts).
@@ -24,3 +25,6 @@
 * command-line arguments for libraries etc.
 * fail on non-exhaustive pattern match (optional).
 * error function
+* user definable infix operators
+   * with precedence and associativity
+* curried binary operators `(2+)` etc.

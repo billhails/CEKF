@@ -47,6 +47,7 @@ BigInt:
     cname: "BigInt *"
     printFn: "printBigInt"
     markFn: "markBigInt"
+    compareFn: "cmpBigInt"
     valued: true
 
 string:

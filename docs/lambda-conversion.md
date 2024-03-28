@@ -459,6 +459,104 @@ has a complete algorithm described and working that does exactly what I want!
 
 Plan now is to get that working as a Python prototype, then translate into C.
 
+## Description of the TPMC Algorithm
+
+Explaining it to myself.
+
+### Step 1. Renaming
+
+All patterns in the arguments to a composite function are collected into a matrix
+of patterns, and the components are renamed and labelled in a consistent way,
+such thar the same variable position has the same name, for example in
+
+```
+fn map {
+    (_, nil) { nil }
+    (f, pair(h, t)) { pair(f(h), map(f, t)) }
+}
+```
+
+The matrix is
+
+```
+(_, nil)
+(f, pair(h, t))
+```
+
+and after renaming and labelling that becomes
+
+```
+(p$0=_, p$1=nil)
+(p$0=_, p$1=pair(p$1$0=_, p$1$1=_))
+```
+
+An array of final states (the bodies of the individual functions) is also constructed
+
+```
+{ nil }
+{ pair(p$0(p$1$0), map(p$0, p$1$1)) }
+```
+
+### Step 2. Generating the DFA
+
+The input to the `match` algorithm is that matrix of patterns M and the array of final states S.
+The output of the `match` algorithm is the DFA for the matrix.
+
+`match` inspects the first (top) row of M. If all of the patterns in the row are
+variables then it cannot fail to match any arguments. This invokes the "Variable Rule".
+Otherwise at least one pattern in the top row is a constructor or constant. This situation
+invokes the "Mixture Rule".
+
+#### The Variable Rule
+
+If there are no constructors or constants in the top row then the result is the first state in the array of final states.
+
+#### The Mixture Rule
+
+* select any column C whose first pattern is not a wildcard.
+* construct an array N containing the patterns from any column whose first pattern is not a wildcard.
+* construct a new matrix MN consisting of all the columns from M except that column.
+* construct a new test state T.
+* for each constructor K in N:
+   * let AK be the arity of K.
+   * let {i1 .. ii} be the indices of the patterns in N (both wildcards and equal constructors) that match that constructor.
+   * let {p1 .. pi} be the patterns at those indices.
+   * let L be the size of {p1 .. pi}
+   * construct a matrix MNC from MN by selecting rows {i1 .. ii}
+   * construct a matrix NC with AK columns and L rows
+   * for each pattern pj in {p1 .. pi}
+       * if pj is a constructor place a row of the constructor's AK arguments in row j of NC
+       * otherwise place a row of AK wildcards with appropriate names (p$1$1 etc.( in row j of NC
+   * construct a new matrix MNCNC by appending MN to MNC
+   * let SN be an array of S's states {i1 .. ii}
+   * call `match` on MNCNC and SN to get state F
+   * create an arc from T to F, labelling it with the constructor K
+* if the list of constructors in N is exhaustive
+   * return T
+* else if there are wildcards in N:
+   * let {w1 .. wi} be the indices of the wildcards in N
+   * construct a matrix MNF by selecting rows {w1 .. wn}
+   * construct a state array SF from S by selecting states {w1 .. wi}
+   * call match on MNF and SF resulting in a DFA F
+   * add an arc from T to F labelled with a wildcard
+   * return T
+* else:
+   * add an arc from T to the error state E
+   * return T
+
+### Step 3. Optimize the DFA
+
+This just involves reference counting states and removing duplicates.
+States with a reference count greater than one will become local functions.
+
+### Step 4. Generate Intermediate Code
+
+Again this is fairly straightforward, local procedures are created for those
+states with multiple entry points, so track must be kept of free variables etc.
+Otherwise a test state becomes a switch statement (in our case either a `MATCH`
+for constructors or a `COND` for constants), an arc becomes a case in that statement,
+and a final state is either the body of the state or a call to the local procedure.
+
 And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.py). For sample inputs here's the output:
 
 ```scheme

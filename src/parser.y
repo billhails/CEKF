@@ -485,9 +485,9 @@ print : PRINT '(' expression ')' { $$ = newAstPrint($3); }
 
 %%
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg) {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(errout, "%s\n", msg);
     if (mod && mod->bufStack) {
-        showModuleState(stderr, mod);
+        showModuleState(errout, mod);
     }
     abort();
 }

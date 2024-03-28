@@ -42,6 +42,7 @@
 #include "bigint.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
+#include "tpmc_mermaid.h"
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -53,6 +54,7 @@ static void processArgs(int argc, char *argv[]) {
         static struct option long_options[] = {
             { "bigint", no_argument, &bigint_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
+            { "tpmc-mermaid", no_argument, &tpmc_mermaid_flag, 1 },
             { "help", no_argument, &help_flag, 1 },
             { 0, 0, 0, 0 }
         };
@@ -68,6 +70,7 @@ static void processArgs(int argc, char *argv[]) {
         printf("%s",
                "--bigint        use arbitrary precision integers\n"
                "--report        report statistics\n"
+               "--tpmc-mermaid  produce a mermaid graph of each TPMC state table\n"
                "--help          this help\n");
         exit(0);
     }

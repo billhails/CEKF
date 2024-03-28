@@ -110,7 +110,7 @@ void ppLamExp(LamExp *exp) {
             ppHashSymbol(exp->val.var);
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            fprintBigInt(stderr, exp->val.biginteger);
+            fprintBigInt(errout, exp->val.biginteger);
             break;
         case LAMEXP_TYPE_STDINT:
             eprintf("%d", exp->val.stdint);
@@ -355,7 +355,7 @@ void ppLamIff(LamIff *iff) {
 
 static void _ppLamIntCondCases(LamIntCondCases *cases) {
     eprintf("(");
-    fprintBigInt(stderr, cases->constant);
+    fprintBigInt(errout, cases->constant);
     eprintf(" ");
     ppLamExp(cases->body);
     eprintf(")");
@@ -636,7 +636,7 @@ void ppLamIntList(LamIntList *list) {
 void ppLamConstruct(LamConstruct *construct) {
     eprintf("(construct ");
     ppHashSymbol(construct->name);
-    eprintf(" %d", construct->tag);
+    eprintf(" [%d]", construct->tag);
     _ppLamList(construct->args);
     eprintf(")");
 }
@@ -656,7 +656,7 @@ void ppLamConstant(LamConstant *constant) {
 void ppLamDeconstruct(LamDeconstruct *deconstruct) {
     eprintf("(deconstruct ");
     ppHashSymbol(deconstruct->name);
-    eprintf(" %d ", deconstruct->vec);
+    eprintf("[%d]", deconstruct->vec);
     ppLamExp(deconstruct->exp);
     eprintf(")");
 }

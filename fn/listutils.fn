@@ -39,8 +39,8 @@ let
 
     fn scanl (func, acc, lst) {
         let fn scan {
-            (accl, []) { accl }
-            (acc = acch @ acct, lsth @ lstt) { scan(func(lsth, acch) @ acc, lstt) }
+            (acc, []) { acc }
+            (acc = acc_h @ _, lst_h @ lst_t) { scan(func(lst_h, acc_h) @ acc, lst_t) }
         }
         in scan([acc], lst)
     }
@@ -105,7 +105,7 @@ let
     }
 
     fn last {
-        (a @ []) { a }
+        ([a]) { a }
         (_ @ t) { last(t) }
     }
 
@@ -135,7 +135,7 @@ let
     }
 
     fn range(low, high) {
-        if (low >= high) { [] }
+        if (low > high) { [] }
         else { low @ range(low + 1, high) }
     }
 
@@ -182,5 +182,5 @@ let
     }
 
 in
-    print(concat(["well", " ", "hi", " ", "there"]));
+    print(concat(take(3, ["well", " ", "hi", " ", "there"])));
     puts("\n")

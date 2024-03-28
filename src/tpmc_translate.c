@@ -27,7 +27,7 @@
 #include "common.h"
 
 #ifdef DEBUG_TPMC_TRANSLATE
-#  include "debug_tpmc.h"
+#  include "tpmc_debug.h"
 #  include "debugging_on.h"
 #else
 #  include "debugging_off.h"
@@ -576,26 +576,6 @@ static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList,
     LEAVE(translateConstantArcList);
     return res;
 }
-
-#ifdef DEBUG_TPMC_TRANSLATE
-static int arcListLength(TpmcArcList *list) {
-    int i = 0;
-    while (list != NULL) {
-        list = list->next;
-        i++;
-    }
-    return i;
-}
-
-static int intListLength(LamIntList *list) {
-    int i = 0;
-    while (list != NULL) {
-        list = list->next;
-        i++;
-    }
-    return i;
-}
-#endif
 
 static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                                                  LamExp *testVar, LamIntList

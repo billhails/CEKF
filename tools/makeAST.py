@@ -1080,6 +1080,93 @@ class SimpleArray(Base):
         pad(depth)
         print("mark{myName}(x->{prefix}{field}); // SimpleArray..printMarkField".format(field=field, myName=self.getName(), prefix=prefix))
 
+    def getIterator1DDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        myContainedType = self.entries.getTypeDeclaration(catalog)
+        return f'bool iterate{myName}({myType} table, int *i, {myContainedType} *res, bool *more)'
+
+    def getIterator2DDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        myContainedType = self.entries.getTypeDeclaration(catalog)
+        return f'bool iterate{myName}({myType} table, int *x, int *y, {myContainedType} *res, bool *more_x, bool *more_y)'
+
+    def printIteratorDeclaration(self, catalog):
+        if self.dimension == 2:
+            self.printIterator2DDeclaration(catalog);
+        else:
+            self.printIterator1DDeclaration(catalog)
+
+    def printIterator1DDeclaration(self, catalog):
+        decl = self.getIterator1DDeclaration(catalog)
+        print(f'{decl}; // SimpleArray.printIterator1DDeclaration')
+
+    def printIterator2DDeclaration(self, catalog):
+        decl = self.getIterator2DDeclaration(catalog)
+        print(f'{decl}; // SimpleArray.printIterator2DDeclaration')
+
+    def printIteratorFunction(self, catalog):
+        if self.dimension == 2:
+            self.printIterator2DFunction(catalog)
+        else:
+            self.printIterator1DFunction(catalog)
+
+    def printIterator1DFunction(self, catalog):
+        decl = self.getIterator1DDeclaration(catalog)
+        print(f'{decl} {{ // SimpleArray.printIterator1DFunction')
+        print('    if (*i < 0 || *i >= table->size) {')
+        print('        if (more != NULL) {')
+        print('            *more = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else {')
+        print('        if (more != NULL) {')
+        print('            *more = (*i + 1 < table->size);')
+        print('        }')
+        print('        if (res != NULL) {')
+        print('            *res = table->entries[*i];')
+        print('        }')
+        print('        *i = *i + 1;')
+        print('        return true;')
+        print('    }')
+        print('} // SimpleArray.printIteratorFunction')
+        print('')
+
+    def printIterator2DFunction(self, catalog):
+        decl = self.getIterator2DDeclaration(catalog)
+        print(f'{decl} {{ // SimpleArray.printIterator2DFunction')
+        print('    if (*x < 0 || *x >= table->width) {')
+        print('        if (more_x != NULL) {')
+        print('            *more_x = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else if (*y < 0 || *y >= table->height) {')
+        print('        if (more_y != NULL) {')
+        print('            *more_y = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else {')
+        print('        if (more_x != NULL) {')
+        print('            *more_x = (*x + 1 < table->width);')
+        print('        }')
+        print('        if (more_y != NULL) {')
+        print('            *more_y = (*y + 1 < table->height);')
+        print('        }')
+        print('        if (res != NULL) {')
+        print('            *res = table->entries[*x * table->width + *y];')
+        print('        }')
+        print('        if (*x + 1 == table->width) {')
+        print('            *x = 0;')
+        print('            *y = *y + 1;')
+        print('        } else {')
+        print('            *x = *x + 1;')
+        print('        }')
+        print('        return true;')
+        print('    }')
+        print('} // SimpleArray.printIteratorFunction')
+        print('')
+
     def isArray(self):
         return True
 
@@ -1722,7 +1809,7 @@ class Primitive(Base):
         if self.compareFn is None:
             print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false; // Primitive.printCompareField")
         else:
-            print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
+            print(f"if ({self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
 
     def printPrintHashField(self, depth):
         pad(depth)

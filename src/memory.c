@@ -144,7 +144,7 @@ void replaceProtect(int i, Header *obj) {
 
 int protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
-    fprintf(stderr, "PROTECT(%p:%s) -> %d (%d)\n", obj,
+    fprintf(errout, "PROTECT(%p:%s) -> %d (%d)\n", obj,
             (obj == NULL ? "NULL" : typeName(obj->type, obj)), protected->sp,
             protected->capacity);
 #endif

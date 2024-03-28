@@ -18,6 +18,8 @@
  * Term Pattern Matching Compiler logic
  */
 
+// TODO should be able to get rid of this now we auto-generate comparison functions
+
 #include "tpmc_compare.h"
 
 #define PREAMBLE() do {\

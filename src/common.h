@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#  include <stdio.h>
 #  include <stdbool.h>
 #  include <stdint.h>
 
@@ -34,9 +35,9 @@ typedef uint32_t hash_t;
 #    define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
-// #define DEBUG_TPMC_MATCH
-// #define DEBUG_TPMC_TRANSLATE
-// #define DEBUG_TPMC_LOGIC
+#    define DEBUG_TPMC_MATCH
+// #    define DEBUG_TPMC_TRANSLATE
+#    define DEBUG_TPMC_LOGIC
 // #define DEBUG_ANNOTATE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
@@ -47,7 +48,7 @@ typedef uint32_t hash_t;
 // define this to make fatal errors dump core (if ulimit allows)
 #    define DEBUG_DUMP_CORE
 // #    define DEBUG_TC
-// #define DEBUG_LAMBDA_CONVERT
+// #    define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LAMBDA_SUBSTITUTE
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
@@ -61,6 +62,7 @@ typedef uint32_t hash_t;
 #  ifndef __GNUC__
 #    define __attribute__(x)
 #  endif
+#  define errout stdout
 void cant_happen(const char *message, ...)
     __attribute__((noreturn, format(printf, 1, 2)));
 void can_happen(const char *message, ...)
