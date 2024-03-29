@@ -63,12 +63,14 @@ typedef uint32_t hash_t;
 #    define __attribute__(x)
 #  endif
 #  define errout stdout
-void cant_happen(const char *message, ...)
-    __attribute__((noreturn, format(printf, 1, 2)));
+void _cant_happen(char *file, int line, const char *message, ...)
+    __attribute__((noreturn, format(printf, 3, 4)));
 void can_happen(const char *message, ...)
     __attribute__((format(printf, 1, 2)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
+
+#define cant_happen(...) _cant_happen(__FILE__, __LINE__, __VA_ARGS__)
 
 #  define PAD_WIDTH 2
 

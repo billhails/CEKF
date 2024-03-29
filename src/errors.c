@@ -28,12 +28,12 @@
 
 static bool errors = false;
 
-void cant_happen(const char *message, ...) {
+void _cant_happen(char *file, int line, const char *message, ...) {
     va_list args;
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    eprintf("\n");
+    eprintf(" at %s line %d\n", file, line);
 #ifdef DEBUG_DUMP_CORE
     abort();
 #else
