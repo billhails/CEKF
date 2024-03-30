@@ -141,6 +141,14 @@ class Catalog:
         for entity in self.contents.values():
             entity.printCopyDeclaration(self)
 
+    def printNameFunctionDeclarations(self):
+        for entity in self.contents.values():
+            entity.printNameFunctionDeclaration()
+
+    def printNameFunctionBodies(self):
+        for entity in self.contents.values():
+            entity.printNameFunctionBody()
+
     def printPrintFunctions(self):
         for entity in self.contents.values():
             entity.printPrintFunction(self)
@@ -260,6 +268,12 @@ class Base:
         pass
 
     def printTypedef(self, catalog):
+        pass
+
+    def printNameFunctionDeclaration(self):
+        pass
+
+    def printNameFunctionBody(self):
         pass
 
     def printFreeDeclaration(self, catalog):
@@ -391,6 +405,10 @@ class EnumField:
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
         print(f"    {field}, // {count}");
+
+    def printNameFunctionLine(self):
+        field = self.makeTypeName()
+        print(f'        case {field}: return "{field}";')
 
     def makeTypeName(self):
         v = self.owner + '_type_' + self.name
@@ -1736,6 +1754,30 @@ class DiscriminatedUnionEnum(Base):
     def getFieldName(self):
         return 'type'
 
+    def getNameFunctionDeclaration(self):
+        name = self.getName();
+        camel = name[0].lower() + name[1:]
+        return f"char * {camel}Name(enum {name} type)"
+
+    def printNameFunctionDeclaration(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl}; // DiscriminatedUnionEnum.printNameFunctionDeclaration")
+
+    def printNameFunctionBody(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl} {{ // DiscriminatedUnionEnum.printNameFunctionDeclaration")
+        print("    switch(type) {")
+        for  field in self.fields:
+            field.printNameFunctionLine()
+        print("        default: {")
+        print("            static char buf[64];")
+        print('            sprintf(buf, "%d", type);')
+        print("            return buf;");
+        print("        }")
+        print("    }")
+        print("}")
+        print("")
+
     def getTypeDeclaration(self):
         return "enum {name} ".format(name=self.getName())
 
@@ -2003,6 +2045,8 @@ if args.type == "h":
     catalog.printAccessDeclarations()
     printSection("count declarations")
     catalog.printCountDeclarations()
+    printSection("name declarations")
+    catalog.printNameFunctionDeclarations()
     print("")
     print("#endif")
 
@@ -2057,6 +2101,8 @@ elif args.type == "c":
     catalog.printFreeObjFunction()
     printSection("type identifier function")
     catalog.printTypeObjFunction()
+    printSection("type name function")
+    catalog.printNameFunctionBodies()
 
 elif args.type == 'debug_h':
 

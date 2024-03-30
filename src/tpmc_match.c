@@ -127,8 +127,8 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                 return res;
             }
         default:
-            cant_happen("unrecognized pattern type %d in patternMatches",
-                        pattern->pattern->type);
+            cant_happen("unrecognized pattern type %s in patternMatches",
+                        tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
@@ -322,8 +322,8 @@ static TpmcMatrix *makeSubPatternMatrix(TpmcPatternArray *patterns, int arity) {
                     ("encountered pattern type int during makeSubPatternMatrix");
             default:
                 cant_happen
-                    ("unrecognised pattern type %d during makeSubPatternMatrix",
-                     pattern->pattern->type);
+                    ("unrecognised pattern type %s during makeSubPatternMatrix",
+                     tpmcPatternValueTypeName(pattern->pattern->type));
         }
     }
     UNPROTECT(save);
@@ -478,8 +478,8 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern,
             }
             break;
         default:
-            cant_happen("unrecognised type %d in collectPathsBoundByPattern",
-                        pattern->pattern->type);
+            cant_happen("unrecognised type %s in collectPathsBoundByPattern",
+                        tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
@@ -529,8 +529,8 @@ static TpmcVariableTable *getStatesFreeVariables(TpmcState *state) {
                     ("getStatesFreeVariables encountered error state with null free variables");
             default:
                 cant_happen
-                    ("unrecognised state type %d in getStateFreeVariables",
-                     state->state->type);
+                    ("unrecognised state type %s in getStateFreeVariables",
+                     tpmcStateValueTypeName(state->state->type));
         }
     }
     return state->freeVariables;
