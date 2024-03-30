@@ -26,17 +26,41 @@ int tpmc_mermaid_flag = 0;
 static char *mermaidState(TpmcState *state);
 static void mermaidPattern(TpmcPattern *pattern);
 
+static TpmcVariableTable *seen = NULL;
+
+static int initSeenTable() {
+    seen = newTpmcVariableTable();
+    return PROTECT(seen);
+}
+
+static void terminateSeenTable(int save) {
+    UNPROTECT(save);
+    seen = NULL;
+}
+
 static bool seenName(char *name) {
-    static TpmcVariableTable *seen = NULL;
-    if (seen == NULL) {
-        seen = newTpmcVariableTable();
-        PROTECT(seen);
-    }
     HashSymbol *symbol = newSymbol(name);
     if (getTpmcVariableTable(seen, symbol))
         return true;
     setTpmcVariableTable(seen, symbol);
     return false;
+}
+
+static void mermaidFreeVariables(TpmcVariableTable *freeVariables) {
+    printf("[");
+    if (freeVariables != NULL) {
+        int i = 0;
+        int count = 0;
+        HashSymbol *key;
+        while ((key = iterateTpmcVariableTable(freeVariables, &i)) != NULL) {
+            printf("%s", key->name);
+            count++;
+            if (count < countTpmcVariableTable(freeVariables)) {
+                printf(" ");
+            }
+        }
+    }
+    printf("]");
 }
 
 static char *mermaidStateName(TpmcState *state) {
@@ -45,8 +69,10 @@ static char *mermaidStateName(TpmcState *state) {
         case TPMCSTATEVALUE_TYPE_TEST:
             sprintf(buf, "T%d", state->stamp);
             if (!seenName(buf)) {
-                printf("%s(\"%s\")\n", buf,
+                printf("%s(\"%s\\n", buf,
                        state->state->val.test->path->name);
+                mermaidFreeVariables(state->freeVariables);
+                printf("\")\n");
             }
             break;
         case TPMCSTATEVALUE_TYPE_FINAL:
@@ -54,6 +80,8 @@ static char *mermaidStateName(TpmcState *state) {
             if (!seenName(buf)) {
                 printf("%s(\"", buf);
                 ppLamExp(state->state->val.final->action);
+                printf("\\n");
+                mermaidFreeVariables(state->freeVariables);
                 printf("\")\n");
             }
             break;
@@ -115,6 +143,8 @@ static void mermaidPattern(TpmcPattern *pattern) {
 static void mermaidArcLabel(TpmcArc *arc) {
     printf("\"");
     mermaidPattern(arc->test);
+    printf("\\n");
+    mermaidFreeVariables(arc->freeVariables);
     printf("\"");
 }
 
@@ -132,16 +162,6 @@ static void mermaidTestState(char *name, TpmcTestState *testState) {
     }
 }
 
-static void mermaidFinalState(char *name
-                              __attribute__((unused)),
-                              TpmcFinalState *finalState
-                              __attribute__((unused))) {
-
-}
-
-static void mermaidErrorState(char *name __attribute__((unused))) {
-}
-
 static void mermaidStateValue(char *name, TpmcStateValue *value) {
     if (value == NULL) {
         return;
@@ -151,10 +171,7 @@ static void mermaidStateValue(char *name, TpmcStateValue *value) {
             mermaidTestState(name, value->val.test);
             break;
         case TPMCSTATEVALUE_TYPE_FINAL:
-            mermaidFinalState(name, value->val.final);
-            break;
         case TPMCSTATEVALUE_TYPE_ERROR:
-            mermaidErrorState(name);
             break;
         default:
             cant_happen
@@ -174,10 +191,11 @@ static char *mermaidState(TpmcState *state) {
 
 void tpmcMermaid(TpmcState *state) {
     if (tpmc_mermaid_flag) {
-        printf("## %p\n", state);
+        int save = initSeenTable();
         printf("```mermaid\n");
         printf("flowchart TD\n");
         free(mermaidState(state));
         printf("```\n");
+        terminateSeenTable(save);
     }
 }

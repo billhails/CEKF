@@ -46,6 +46,7 @@ static TcType *makeStarship(void);
 static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
+static TcType *makeUnknown(HashSymbol *var);
 static TcType *makeFreshVar(char *name __attribute__((unused)));
 static TcType *makeVar(HashSymbol *t);
 static TcType *makeFn(TcType *arg, TcType *result);
@@ -249,6 +250,7 @@ static TcType *analyzeVar(HashSymbol *var, TcEnv *env, TcNg *ng) {
     TcType *res = lookup(env, var, ng);
     if (res == NULL) {
         can_happen("undefined variable %s in analyzeVar", var->name);
+        return makeUnknown(var);
     }
     // LEAVE(analyzeVar);
     return res;
@@ -1245,6 +1247,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
+        case TCTYPE_TYPE_UNKNOWN:
             return type;
         case TCTYPE_TYPE_USERTYPE:{
                 TcType *res = freshUserType(type->val.userType, ng, map);
@@ -1340,6 +1343,11 @@ static TcType *makeSmallInteger() {
 
 static TcType *makeBigInteger() {
     TcType *res = newTcType(TCTYPE_TYPE_BIGINTEGER, TCTYPE_VAL_BIGINTEGER());
+    return res;
+}
+
+static TcType *makeUnknown(HashSymbol *var) {
+    TcType *res = newTcType(TCTYPE_TYPE_UNKNOWN, TCTYPE_VAL_UNKNOWN(var));
     return res;
 }
 
@@ -1508,8 +1516,11 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
 static bool _unify(TcType *a, TcType *b) {
     a = prune(a);
     b = prune(b);
-    if (a == b)
+    if (a == b) {
+        if (a->type == TCTYPE_TYPE_UNKNOWN)
+            return false;
         return true;
+    }
     if (a->type == TCTYPE_TYPE_VAR) {
         if (b->type != TCTYPE_TYPE_VAR) {
             if (occursInType(a, b)) {
@@ -1545,6 +1556,8 @@ static bool _unify(TcType *a, TcType *b) {
             case TCTYPE_TYPE_BIGINTEGER:
             case TCTYPE_TYPE_CHARACTER:
                 return true;
+            case TCTYPE_TYPE_UNKNOWN:
+                return false;
             case TCTYPE_TYPE_USERTYPE:
                 return unifyUserTypes(a->val.userType, b->val.userType);
             default:
@@ -1635,6 +1648,8 @@ static bool sameType(TcType *a, TcType *b) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_CHARACTER:
             return true;
+        case TCTYPE_TYPE_UNKNOWN:
+            return false;
         case TCTYPE_TYPE_USERTYPE:
             return sameUserType(a->val.userType, b->val.userType);
         default:
@@ -1680,6 +1695,7 @@ static bool occursIn(TcType *a, TcType *b) {
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
+        case TCTYPE_TYPE_UNKNOWN:
             return false;
         case TCTYPE_TYPE_USERTYPE:
             return occursInUserType(a, b->val.userType);

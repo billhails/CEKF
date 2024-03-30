@@ -22,8 +22,6 @@
 #  include <stdbool.h>
 #  include <stdint.h>
 
-typedef uint32_t hash_t;
-
 #  define DEBUG_ANY
 
 #  ifdef DEBUG_ANY

@@ -642,3 +642,82 @@ And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.
                                                (let (p1$2 (vec 2 p1))
                                                     E3)))))))))
 ```
+
+### Extending TPMC to Support Comparison
+
+The language requires an addition, if possible to the kinds of pattern matching available.
+Specific example is `member`
+
+```
+let
+  fn member {
+    (_, []) { false }
+    (x, x @ _) { true }
+    (x, _ @ t) { member(x, t) }
+  }
+in
+  member('c', "abc")
+```
+
+Where the second match succeeds if the first argument equals the head of the second argument.
+
+While I thought I had this working, simply treating comparison as a new kind of "constructor",
+in fact in my tests it was only working accidentally.
+In general there is no guarantee that the variable representing the thing being compared is
+in scope when the comparison happens. In the above example x in the second match is only in scope
+because it is bound at the top level.
+
+In the original algorithm variables are brought in to scope by the conversion of the arc pattern.
+But the non-locality of the variable being compared causes problems.
+
+```
+let
+    typedef baz { foo(int) | bar(baz) }
+    fn fail {
+        (x, x) { 1 }
+        (bar(x), x) { 2 }
+    }
+in
+    print(fail(foo(1), foo(1)))
+###
+undefined variable p$15$0 in analyzeVar
+```
+
+The intermediate code generated is
+```scheme
+(lambda (p$15 p$16)
+  (letrec (($tpmc38 (lambda () (error))))
+    (if (eq p$15 p$16)
+      (begin 1)
+      (if (eq p$15$0 p$16)
+        (match (tag p$15)
+               ((1:bar) (begin 2))
+               ((0:foo) ($tpmc38)))
+        ($tpmc38)))))
+```
+
+So walking through, the matrix will be
+
+```
+(p$15,             p$16==p$15)
+(p$15=bar(p$15$0), p$16==p$15$0)
+
+The mixture rule applies on row 1 column 2 because it is a comparison
+not just a var.
+
+N is
+
+```
+p$16==p$15
+p$16==p$15$0
+```
+
+M-N is
+
+```
+(p$15            )
+(p$15=bar(p$15$0))
+```
+
+both rows match so the indices are {1, 2}
+

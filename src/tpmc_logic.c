@@ -554,7 +554,6 @@ static LamVarList *arrayToVarList(TpmcVariableArray *array) {
 
 LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
                     LamExp **actions, LamContext *env) {
-    system("clear");
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);
     TpmcMatchRuleArray *rules =

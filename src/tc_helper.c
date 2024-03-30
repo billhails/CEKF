@@ -43,11 +43,14 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_CHARACTER:
             eprintf("char");
             break;
+        case TCTYPE_TYPE_UNKNOWN:
+            eprintf("unknown:%s", type->val.unknown->name);
+            break;
         case TCTYPE_TYPE_USERTYPE:
             ppTcUserType(type->val.userType);
             break;
         default:
-            cant_happen("unrecognized type %d in ppTcType", type->type);
+            eprintf("unrecognized type %d", type->type);
     }
 }
 

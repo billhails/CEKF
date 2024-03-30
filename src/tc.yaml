@@ -69,6 +69,7 @@ unions:
         smallinteger: void_ptr
         biginteger: void_ptr
         character: void_ptr
+        unknown: HashSymbol
         userType: TcUserType
 
 primitives: !include primitives.yaml

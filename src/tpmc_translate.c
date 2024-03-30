@@ -152,11 +152,13 @@ static LamExp *storeLambdaAndTranslateToApply(TpmcState *dfa,
 
 static LamExp *translateComparisonArcToTest(TpmcArc *arc) {
     ENTER(translateComparisonArcToTest);
+#ifdef SAFETY_CHECKS
     if (arc->test->pattern->type != TPMCPATTERNVALUE_TYPE_COMPARISON) {
         cant_happen
-            ("translateComparisonArcToTest ecncountered non-comparison type %d",
+            ("translateComparisonArcToTest encountered non-comparison type %d",
              arc->test->pattern->type);
     }
+#endif
     TpmcComparisonPattern *pattern = arc->test->pattern->val.comparison;
     LamExp *a =
         newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->previous->path));
@@ -179,19 +181,25 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                                   TpmcVariableTable *freeVariables,
                                   LamExp *body) {
     ENTER(prependLetBindings);
+#ifdef SAFETY_CHECKS
     if (test->pattern->type != TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         cant_happen("prependLetBindings passed non-constructor %d",
                     test->pattern->type);
     }
+#endif
     TpmcConstructorPattern *constructor = test->pattern->val.constructor;
     if (constructor->components->size == 0) {
+        LEAVE(prependLetBindings);
         return body;
     }
     HashSymbol *name = constructor->info->type->name;
     int save = PROTECT(body);
+    DEBUG("constructor %s has size %d", name->name, constructor->components->size);
     for (int i = 0; i < constructor->components->size; i++) {
         HashSymbol *path = constructor->components->entries[i]->path;
+        DEBUG("considering variable %s", path->name);
         if (getTpmcVariableTable(freeVariables, path)) {
+            DEBUG("%s is free", path->name);
             LamExp *base =
                 newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
             int save2 = PROTECT(base);
@@ -208,6 +216,8 @@ static LamExp *prependLetBindings(TpmcPattern *test,
             body = newLamExp(LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
             REPLACE_PROTECT(save, body);
             UNPROTECT(save2);
+        } else {
+            DEBUG("%s is not free", path->name);
         }
     }
     LEAVE(prependLetBindings);
@@ -367,9 +377,11 @@ static LamExp *translateComparisonArcListToIf(TpmcArcList *arcList,
 static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                                 LamExpTable *lambdaCache) {
     ENTER(translateArcList);
+#ifdef SAFETY_CHECKS
     if (arcList == NULL) {
         cant_happen("ran out of arcs in translateArcList");
     }
+#endif
     LamExp *res = NULL;
     switch (arcList->arc->test->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_COMPARISON:{
@@ -487,9 +499,11 @@ static LamIntCondCases *translateConstantIntArcList(TpmcArcList *arcList,
                                                     LamExp *testVar,
                                                     LamExpTable *lambdaCache) 
 {
+#ifdef SAFETY_CHECKS
     if (arcList == NULL) {
         cant_happen("ran out of arcs in translateConstantIntArcList");
     }
+#endif
     ENTER(translateConstantIntArcList);
     LamIntCondCases *res = NULL;
     switch (arcList->arc->test->pattern->type) {
@@ -534,9 +548,11 @@ static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList,
                                                       LamExp *testVar,
                                                       LamExpTable
                                                       *lambdaCache) {
+#ifdef SAFETY_CHECKS
     if (arcList == NULL) {
         cant_happen("ran out of arcs in translateConstantCharArcList");
     }
+#endif
     ENTER(translateConstantCharArcList);
     LamCharCondCases *res = NULL;
     switch (arcList->arc->test->pattern->type) {
@@ -584,15 +600,18 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
     ENTER(translateConstructorArcList);
     if (arcList == NULL) {
         if (unexhaustedIndices == NULL) {
+            LEAVE(translateConstructorArcList);
             return NULL;
         } else {
             cant_happen
                 ("ran out of arcs with unexhausted indices in translateConstructorArcList");
         }
     }
+#ifdef SAFETY_CHECKS
     if (unexhaustedIndices == NULL) {
         cant_happen("all indices exhausted with arcs remaining");
     }
+#endif
     LamMatchList *res = NULL;
     switch (arcList->arc->test->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_COMPARISON:{

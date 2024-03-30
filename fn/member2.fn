@@ -1,0 +1,8 @@
+let
+    fn member2 {
+        ([], _)       { false }
+        (item @ t, item) { true }
+        (_ @ tail, item) { member2(tail, item) }
+    }
+in
+    member2("abc", 'c')

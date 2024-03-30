@@ -656,7 +656,7 @@ void ppLamConstant(LamConstant *constant) {
 void ppLamDeconstruct(LamDeconstruct *deconstruct) {
     eprintf("(deconstruct ");
     ppHashSymbol(deconstruct->name);
-    eprintf("[%d]", deconstruct->vec);
+    eprintf("[%d] ", deconstruct->vec);
     ppLamExp(deconstruct->exp);
     eprintf(")");
 }

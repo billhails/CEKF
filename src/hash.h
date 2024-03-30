@@ -26,6 +26,8 @@
 
 #  define HASH_MAX_LOAD 0.75
 
+typedef uint32_t hash_t;
+
 typedef struct HashSymbol {
     struct Header header;
     hash_t hash;

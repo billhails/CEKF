@@ -85,12 +85,15 @@ void ppTpmcPattern(TpmcPattern *pattern) {
         return;
     }
     if (pattern->path == NULL) {
-        eprintf("<NULL path>=(");
+        eprintf("<NULL path>");
     } else {
-        eprintf("%s=(", pattern->path->name);
+        eprintf("%s", pattern->path->name);
     }
-    ppTpmcPatternValue(pattern->pattern);
-    eprintf(")");
+    if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_WILDCARD) {
+        eprintf("=(");
+        ppTpmcPatternValue(pattern->pattern);
+        eprintf(")");
+    }
 }
 
 void ppTpmcMatrix(TpmcMatrix *matrix) {
