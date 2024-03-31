@@ -22,6 +22,7 @@
 #include "tpmc_mermaid.h"
 
 int tpmc_mermaid_flag = 0;
+char *tpmc_mermaid_function = NULL;
 
 static char *mermaidState(TpmcState *state);
 static void mermaidPattern(TpmcPattern *pattern);
@@ -192,6 +193,7 @@ static char *mermaidState(TpmcState *state) {
 void tpmcMermaid(TpmcState *state) {
     if (tpmc_mermaid_flag) {
         int save = initSeenTable();
+        printf("## %s\n", tpmc_mermaid_function);
         printf("```mermaid\n");
         printf("flowchart TD\n");
         free(mermaidState(state));

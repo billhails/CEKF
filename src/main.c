@@ -54,8 +54,8 @@ static void processArgs(int argc, char *argv[]) {
         static struct option long_options[] = {
             { "bigint", no_argument, &bigint_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
-            { "tpmc-mermaid", no_argument, &tpmc_mermaid_flag, 1 },
             { "help", no_argument, &help_flag, 1 },
+            { "tpmc-mermaid", required_argument, 0, 'm' },
             { 0, 0, 0, 0 }
         };
         int option_index = 0;
@@ -64,14 +64,18 @@ static void processArgs(int argc, char *argv[]) {
 
         if (c == -1)
             break;
+
+        if (c == 'm') {
+            tpmc_mermaid_function = optarg;
+        }
     }
 
     if (help_flag) {
         printf("%s",
-               "--bigint        use arbitrary precision integers\n"
-               "--report        report statistics\n"
-               "--tpmc-mermaid  produce a mermaid graph of each TPMC state table\n"
-               "--help          this help\n");
+               "--bigint                use arbitrary precision integers\n"
+               "--report                report statistics\n"
+               "--tpmc-mermaid=function produce a mermaid graph of the function's TPMC state table\n"
+               "--help                  this help\n");
         exit(0);
     }
 

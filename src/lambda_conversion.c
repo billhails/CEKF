@@ -28,6 +28,7 @@
 #include "lambda_helper.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
+#include "tpmc_mermaid.h"
 #include "ast_debug.h"
 #include "print_generator.h"
 
@@ -400,10 +401,17 @@ static LamExp *makeConstant(HashSymbol *name, int tag) {
     return res;
 }
 
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
-                                        LamLetRecBindings *next) {
+static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
+                                        LamLetRecBindings * next) {
     ENTER(prependDefine);
+    bool doMermaid = (tpmc_mermaid_function != NULL
+                      && strcmp(tpmc_mermaid_function,
+                                define->symbol->name) == 0);
+    if (doMermaid)
+        tpmc_mermaid_flag = 1;
     LamExp *exp = convertExpression(define->expression, env);
+    if (doMermaid)
+        tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
         newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);

@@ -33,9 +33,9 @@
 #    define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
-#    define DEBUG_TPMC_MATCH
+// #    define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
-#    define DEBUG_TPMC_LOGIC
+// #    define DEBUG_TPMC_LOGIC
 // #define DEBUG_ANNOTATE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE

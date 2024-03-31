@@ -683,7 +683,27 @@ in
 undefined variable p$15$0 in analyzeVar
 ```
 
-The intermediate code generated is
+The DFA constructed is
+
+```mermaid
+flowchart TD
+T39("p$16\n[]")
+F36("(begin 1)\n[p$16]")
+T39 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+T40("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T40 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
+ERROR
+T40 --"p$15:_\n[]"--> ERROR
+T39 --"p$16:p$15$0:_==p$16:_\n[p$15$0 p$15]"--> T40
+ERROR
+T39 --"p$16:_\n[]"--> ERROR
+```
+
+(`cekf --tpmc-mermaid` will generate the above diagram)
+
+And the intermediate code generated is
+
 ```scheme
 (lambda (p$15 p$16)
   (letrec (($tpmc38 (lambda () (error))))
@@ -696,28 +716,96 @@ The intermediate code generated is
         ($tpmc38)))))
 ```
 
-So walking through, the matrix will be
+So walking through, the matrix M and final states S will be
 
-```
-(p$15,             p$16==p$15)
-(p$15=bar(p$15$0), p$16==p$15$0)
+| M1                  | M2              | S           |
+| ------------------- | --------------- | ----------- |
+| `p$15`              | `p$16==p$15`    | `(begin 1)` |
+| `p$15=bar(p$15$0)`  | `p$16==p$15$0`  | `(begin 2)` |
+
+
 
 The mixture rule applies on row 1 column 2 because it is a comparison
 not just a var.
 
-N is
+So The algorithm finds two constructors in column 2, both are distict
+comparisons so don't match one another.
 
+Construction of the first arc for Row 1 compiles fine, match recurses
+on `p$15` where the variable rule applies and the final state `1` is
+returned, then an arc from the start state to the first final state is
+constructed, labelled by the comparison:
+
+```mermaid
+flowchart LR
+T39("p$16\n[]")
+F36("(begin 1)\n[p$16]")
+T39 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
 ```
-p$16==p$15
-p$16==p$15$0
+
+The reason this compiles ok is that `p$15` (the first `x` in of the
+source function) is bound by the top-level function before the comparison
+is done.
+
+The free variable `[p$15]` on the arc is because of an earlier attempt
+to fix the issue, it wouldn't be there in the vanilla implementation.
+
+Anyway the problem occurs when compiling the second row of the matrix.
+Match recurses on `p$15=bar(p$15$0)` where the mixture rule applies,
+eventually resulting in an intermediate test state and arc to the final
+state labelled with the constructor:
+
+```mermaid
+flowchart LR
+T41("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T41 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
 ```
 
-M-N is
+and `mixture` then prepends this with an arc from the start state,
+labelled with the comparison:
 
+```mermaid
+flowchart LR
+T40("p$16\n[]")
+T41("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T41 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
+T40 --"p$16:p$15$0:_==p$16:_\n[p$15$0 p$15]"--> T41
 ```
-(p$15            )
-(p$15=bar(p$15$0))
+
+The problem is that when the intermediate code is generated, `p$15$0`
+is free (not yet bound by the second match) at the time the comparison
+code is emitted.
+
+To summarise, the algorithm given the initial matrix skips past the
+plain var `x` in row 1 to find column 2, which in turn results in row
+2 column 2 being processed before row 2 column 1.
+
+### Possible Solutions
+
+One possibility, extend the algorithm so that after identifying column
+2 in the above, it finally decides to process column 1 instead, because
+it sees the depenancy of row 2 column 2 on row 2 column 1. In fact could
+it just say "because there is a pattern in the first row, process the
+first column"? I suspect not, there are potentially no constructors
+in column 1, but would that be a problem? Very easy to try out and it
+seems to work! The generated DFA for `fail` has one extra state, so maybe
+it's less optimised, but all tests still pass and fail now works!
+
+```mermaid
+flowchart TD
+T40("p$15\n[]")
+T41("p$16\n[p$16 p$15$0 p$15]")
+F36("(begin 1)\n[p$16]")
+T41 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+F37("(begin 2)\n[p$16]")
+T41 --"p$16:p$15$0:_==p$16:_\n[p$15$0]"--> F37
+F38("(begin 3)\n[]")
+T41 --"p$16:_\n[]"--> F38
+T40 --"p$15:bar(p$15$0:_)\n[p$16]"--> T41
+T42("p$16\n[p$16 p$15]")
+T42 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+T42 --"p$16:_\n[]"--> F38
+T40 --"p$15:_\n[p$16]"--> T42
 ```
-
-both rows match so the indices are {1, 2}
-

@@ -409,8 +409,7 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs) {
 static bool constructorsAreExhaustive(TpmcState *state) {
     TpmcTestState *testState = state->state->val.test;
     if (testState->arcs->size == 0) {
-        cant_happen
-            ("constructorsAreExhaustive() passed a test state with zero arcs");
+        return false;
     }
     TpmcPattern *pattern = testState->arcs->entries[0]->test;
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_WILDCARD) {
@@ -585,6 +584,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
     ENTER(mixture);
     // there is some column N whose topmost pattern is a constructor
     int firstConstructorColumn = findFirstConstructorColumn(M);
+    firstConstructorColumn = 0;
     TpmcPatternArray *N = extractMatrixColumn(firstConstructorColumn, M);
     int save = PROTECT(N);
     // let M-N be all the columns in M except N

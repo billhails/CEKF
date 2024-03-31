@@ -23,4 +23,7 @@
 void tpmcMermaid(TpmcState *state);
 
 extern int tpmc_mermaid_flag;
+
+extern char *tpmc_mermaid_function;
+
 #endif
