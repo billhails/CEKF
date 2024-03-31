@@ -459,6 +459,104 @@ has a complete algorithm described and working that does exactly what I want!
 
 Plan now is to get that working as a Python prototype, then translate into C.
 
+## Description of the TPMC Algorithm
+
+Explaining it to myself.
+
+### Step 1. Renaming
+
+All patterns in the arguments to a composite function are collected into a matrix
+of patterns, and the components are renamed and labelled in a consistent way,
+such thar the same variable position has the same name, for example in
+
+```
+fn map {
+    (_, nil) { nil }
+    (f, pair(h, t)) { pair(f(h), map(f, t)) }
+}
+```
+
+The matrix is
+
+```
+(_, nil)
+(f, pair(h, t))
+```
+
+and after renaming and labelling that becomes
+
+```
+(p$0=_, p$1=nil)
+(p$0=_, p$1=pair(p$1$0=_, p$1$1=_))
+```
+
+An array of final states (the bodies of the individual functions) is also constructed
+
+```
+{ nil }
+{ pair(p$0(p$1$0), map(p$0, p$1$1)) }
+```
+
+### Step 2. Generating the DFA
+
+The input to the `match` algorithm is that matrix of patterns M and the array of final states S.
+The output of the `match` algorithm is the DFA for the matrix.
+
+`match` inspects the first (top) row of M. If all of the patterns in the row are
+variables then it cannot fail to match any arguments. This invokes the "Variable Rule".
+Otherwise at least one pattern in the top row is a constructor or constant. This situation
+invokes the "Mixture Rule".
+
+#### The Variable Rule
+
+If there are no constructors or constants in the top row then the result is the first state in the array of final states.
+
+#### The Mixture Rule
+
+* select any column C whose first pattern is not a wildcard.
+* construct an array N containing the patterns from any column whose first pattern is not a wildcard.
+* construct a new matrix MN consisting of all the columns from M except that column.
+* construct a new test state T.
+* for each constructor K in N:
+   * let AK be the arity of K.
+   * let {i1 .. ii} be the indices of the patterns in N (both wildcards and equal constructors) that match that constructor.
+   * let {p1 .. pi} be the patterns at those indices.
+   * let L be the size of {p1 .. pi}
+   * construct a matrix MNC from MN by selecting rows {i1 .. ii}
+   * construct a matrix NC with AK columns and L rows
+   * for each pattern pj in {p1 .. pi}
+       * if pj is a constructor place a row of the constructor's AK arguments in row j of NC
+       * otherwise place a row of AK wildcards with appropriate names (p$1$1 etc.( in row j of NC
+   * construct a new matrix MNCNC by appending MN to MNC
+   * let SN be an array of S's states {i1 .. ii}
+   * call `match` on MNCNC and SN to get state F
+   * create an arc from T to F, labelling it with the constructor K
+* if the list of constructors in N is exhaustive
+   * return T
+* else if there are wildcards in N:
+   * let {w1 .. wi} be the indices of the wildcards in N
+   * construct a matrix MNF by selecting rows {w1 .. wn}
+   * construct a state array SF from S by selecting states {w1 .. wi}
+   * call match on MNF and SF resulting in a DFA F
+   * add an arc from T to F labelled with a wildcard
+   * return T
+* else:
+   * add an arc from T to the error state E
+   * return T
+
+### Step 3. Optimize the DFA
+
+This just involves reference counting states and removing duplicates.
+States with a reference count greater than one will become local functions.
+
+### Step 4. Generate Intermediate Code
+
+Again this is fairly straightforward, local procedures are created for those
+states with multiple entry points, so track must be kept of free variables etc.
+Otherwise a test state becomes a switch statement (in our case either a `MATCH`
+for constructors or a `COND` for constants), an arc becomes a case in that statement,
+and a final state is either the body of the state or a call to the local procedure.
+
 And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.py). For sample inputs here's the output:
 
 ```scheme
@@ -543,4 +641,171 @@ And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.
                                      ((1) (let (p1$1 (vec 1 p1))
                                                (let (p1$2 (vec 2 p1))
                                                     E3)))))))))
+```
+
+### Extending TPMC to Support Comparison
+
+The language requires an addition, if possible to the kinds of pattern matching available.
+Specific example is `member`
+
+```
+let
+  fn member {
+    (_, []) { false }
+    (x, x @ _) { true }
+    (x, _ @ t) { member(x, t) }
+  }
+in
+  member('c', "abc")
+```
+
+Where the second match succeeds if the first argument equals the head of the second argument.
+
+While I thought I had this working, simply treating comparison as a new kind of "constructor",
+in fact in my tests it was only working accidentally.
+In general there is no guarantee that the variable representing the thing being compared is
+in scope when the comparison happens. In the above example x in the second match is only in scope
+because it is bound at the top level.
+
+In the original algorithm variables are brought in to scope by the conversion of the arc pattern.
+But the non-locality of the variable being compared causes problems.
+
+```
+let
+    typedef baz { foo(int) | bar(baz) }
+    fn fail {
+        (x, x) { 1 }
+        (bar(x), x) { 2 }
+    }
+in
+    print(fail(foo(1), foo(1)))
+###
+undefined variable p$15$0 in analyzeVar
+```
+
+The DFA constructed is
+
+```mermaid
+flowchart TD
+T39("p$16\n[]")
+F36("(begin 1)\n[p$16]")
+T39 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+T40("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T40 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
+ERROR
+T40 --"p$15:_\n[]"--> ERROR
+T39 --"p$16:p$15$0:_==p$16:_\n[p$15$0 p$15]"--> T40
+ERROR
+T39 --"p$16:_\n[]"--> ERROR
+```
+
+(`cekf --tpmc-mermaid` will generate the above diagram)
+
+And the intermediate code generated is
+
+```scheme
+(lambda (p$15 p$16)
+  (letrec (($tpmc38 (lambda () (error))))
+    (if (eq p$15 p$16)
+      (begin 1)
+      (if (eq p$15$0 p$16)
+        (match (tag p$15)
+               ((1:bar) (begin 2))
+               ((0:foo) ($tpmc38)))
+        ($tpmc38)))))
+```
+
+So walking through, the matrix M and final states S will be
+
+| M1                  | M2              | S           |
+| ------------------- | --------------- | ----------- |
+| `p$15`              | `p$16==p$15`    | `(begin 1)` |
+| `p$15=bar(p$15$0)`  | `p$16==p$15$0`  | `(begin 2)` |
+
+
+
+The mixture rule applies on row 1 column 2 because it is a comparison
+not just a var.
+
+So The algorithm finds two constructors in column 2, both are distict
+comparisons so don't match one another.
+
+Construction of the first arc for Row 1 compiles fine, match recurses
+on `p$15` where the variable rule applies and the final state `1` is
+returned, then an arc from the start state to the first final state is
+constructed, labelled by the comparison:
+
+```mermaid
+flowchart LR
+T39("p$16\n[]")
+F36("(begin 1)\n[p$16]")
+T39 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+```
+
+The reason this compiles ok is that `p$15` (the first `x` in of the
+source function) is bound by the top-level function before the comparison
+is done.
+
+The free variable `[p$15]` on the arc is because of an earlier attempt
+to fix the issue, it wouldn't be there in the vanilla implementation.
+
+Anyway the problem occurs when compiling the second row of the matrix.
+Match recurses on `p$15=bar(p$15$0)` where the mixture rule applies,
+eventually resulting in an intermediate test state and arc to the final
+state labelled with the constructor:
+
+```mermaid
+flowchart LR
+T41("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T41 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
+```
+
+and `mixture` then prepends this with an arc from the start state,
+labelled with the comparison:
+
+```mermaid
+flowchart LR
+T40("p$16\n[]")
+T41("p$15\n[p$16 p$15]")
+F37("(begin 2)\n[p$16]")
+T41 --"p$15:bar(p$15$0:_)\n[p$16]"--> F37
+T40 --"p$16:p$15$0:_==p$16:_\n[p$15$0 p$15]"--> T41
+```
+
+The problem is that when the intermediate code is generated, `p$15$0`
+is free (not yet bound by the second match) at the time the comparison
+code is emitted.
+
+To summarise, the algorithm given the initial matrix skips past the
+plain var `x` in row 1 to find column 2, which in turn results in row
+2 column 2 being processed before row 2 column 1.
+
+### Possible Solutions
+
+One possibility, extend the algorithm so that after identifying column
+2 in the above, it finally decides to process column 1 instead, because
+it sees the depenancy of row 2 column 2 on row 2 column 1. In fact could
+it just say "because there is a pattern in the first row, process the
+first column"? I suspect not, there are potentially no constructors
+in column 1, but would that be a problem? Very easy to try out and it
+seems to work! The generated DFA for `fail` has one extra state, so maybe
+it's less optimised, but all tests still pass and fail now works!
+
+```mermaid
+flowchart TD
+T40("p$15\n[]")
+T41("p$16\n[p$16 p$15$0 p$15]")
+F36("(begin 1)\n[p$16]")
+T41 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+F37("(begin 2)\n[p$16]")
+T41 --"p$16:p$15$0:_==p$16:_\n[p$15$0]"--> F37
+F38("(begin 3)\n[]")
+T41 --"p$16:_\n[]"--> F38
+T40 --"p$15:bar(p$15$0:_)\n[p$16]"--> T41
+T42("p$16\n[p$16 p$15]")
+T42 --"p$16:p$15:_==p$16:_\n[p$15]"--> F36
+T42 --"p$16:_\n[]"--> F38
+T40 --"p$15:_\n[p$16]"--> T42
 ```

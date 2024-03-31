@@ -1,5 +1,5 @@
 #ifndef cekf_lambda_substitution_h
-#    define cekf_lambda_substitution_h
+#  define cekf_lambda_substitution_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "ast.h"
-#    include "tpmc.h"
-#    include "lambda.h"
+#  include "ast.h"
+#  include "tpmc.h"
+#  include "lambda.h"
 
 LamExp *lamPerformSubstitutions(LamExp *exp,
                                 TpmcSubstitutionTable *substitutions);

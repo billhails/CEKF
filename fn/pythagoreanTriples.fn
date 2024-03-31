@@ -3,8 +3,6 @@ let
         condition or back
     }
 
-    fn square(x) { x * x }
-
     fn integers_from(n) {
        n then integers_from(n + 1)
     }
@@ -20,13 +18,12 @@ let
             x = integers_between(1, z);
             y = integers_between(x, z);
         in
-            require(square(x) + square(y) == square(z));
+            require(x**2 + y**2 == z**2);
             [x, y, z]
     }
 in {
     let triple = pythagorean_triples();
     in
         print(triple);
-        puts("\n");
         require(<triple > 20) // until
 }

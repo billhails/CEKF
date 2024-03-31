@@ -22,6 +22,7 @@ import yaml
 import sys
 import argparse
 import re
+import os
 
 class Catalog:
     def __init__(self, typeName):
@@ -84,6 +85,14 @@ class Catalog:
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
 
+    def printCountDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCountDeclaration(self)
+
+    def printCountFunctions(self):
+        for entity in self.contents.values():
+            entity.printCountFunction(self)
+
     def printAccessDeclarations(self):
         for entity in self.contents.values():
             entity.printAccessDeclarations(self)
@@ -116,10 +125,6 @@ class Catalog:
         for entity in self.contents.values():
             entity.printIteratorDeclaration(self)
 
-    def printCountDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCountDeclaration(self)
-
     def printIteratorFunctions(self):
         for entity in self.contents.values():
             entity.printIteratorFunction(self)
@@ -135,6 +140,14 @@ class Catalog:
     def printCopyDeclarations(self):
         for entity in self.contents.values():
             entity.printCopyDeclaration(self)
+
+    def printNameFunctionDeclarations(self):
+        for entity in self.contents.values():
+            entity.printNameFunctionDeclaration()
+
+    def printNameFunctionBodies(self):
+        for entity in self.contents.values():
+            entity.printNameFunctionBody()
 
     def printPrintFunctions(self):
         for entity in self.contents.values():
@@ -257,6 +270,12 @@ class Base:
     def printTypedef(self, catalog):
         pass
 
+    def printNameFunctionDeclaration(self):
+        pass
+
+    def printNameFunctionBody(self):
+        pass
+
     def printFreeDeclaration(self, catalog):
         pass
 
@@ -311,7 +330,10 @@ class Base:
     def printPushDeclaration(self, catalog):
         pass
 
-    def printPushFunction(selfself, catalog):
+    def printPushFunction(self, catalog):
+        pass
+
+    def printCountFunction(self, catalog):
         pass
 
     def isEnum(self):
@@ -374,12 +396,19 @@ class EnumField:
         self.owner = owner
         self.name = name
 
+    def isSimpleField(self):
+        return False;
+
     def isSelfInitializing(self, catalog):
         return False
 
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
         print(f"    {field}, // {count}");
+
+    def printNameFunctionLine(self):
+        field = self.makeTypeName()
+        print(f'        case {field}: return "{field}";')
 
     def makeTypeName(self):
         v = self.owner + '_type_' + self.name
@@ -422,6 +451,18 @@ class SimpleField:
         else:
             self.typeName = typeName
             self.default = None
+
+    def isSimpleField(self):
+        return True
+
+    def getName(self):
+        return self.name
+
+    def getObj(self, catalog):
+        return catalog.get(self.typeName)
+
+    def getObjName(self, catalog):
+        return self.getObj(catalog).getName()
 
     def isSelfInitializing(self, catalog):
         obj = catalog.get(self.typeName)
@@ -574,11 +615,11 @@ class SimpleHash(Base):
 
     def printIteratorDeclaration(self, catalog):
         decl = self.getIteratorDeclaration(catalog)
-        print(f'{decl}; // SimpleHask.printIteratorDeclaration')
+        print(f'{decl}; // SimpleHash.printIteratorDeclaration')
 
     def printIteratorFunction(self, catalog):
         decl = self.getIteratorDeclaration(catalog)
-        print(f'{decl} {{ // SimpleHask.printIteratorFunction')
+        print(f'{decl} {{ // SimpleHash.printIteratorFunction')
         if self.entries is None:
             print('    return iterateHashTable((HashTable *)table, i, NULL);')
         else:
@@ -609,9 +650,10 @@ class SimpleHash(Base):
     def printCountDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration()
-        print(f'static inline int count{myName}({myType} table) {{')
-        print('    return ((HashTable *)table)->count;')
-        print('}')
+        print(f'static inline int count{myName}({myType} table) {{ // SimpleHash.printCountDeclaration')
+        print('    return ((HashTable *)table)->count; // SimpleHash.printCountDeclaration')
+        print('} // SimpleHash.printCountDeclaration')
+        print('')
         
     def printTypedef(self, catalog):
         self.noteTypedef()
@@ -619,6 +661,7 @@ class SimpleHash(Base):
         print(f'typedef struct {myName} {{ // SimpleHash.printTypedef')
         print('    struct HashTable wrapped; // SimpleHash.printTypedef')
         print(f'}} {myName}; // SimpleHash.printTypedef')
+        print('')
 
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
@@ -662,11 +705,7 @@ class SimpleHash(Base):
             print('}')
             print('')
         print(f'{decl} {{ // SimpleHash.printNewFunction')
-        print(f'    return ({myName} *)newHashTable( // SimpleHash.printNewFunction')
-        print(f'        {size}, // SimpleHash.printNewFunction')
-        print(f'        {markFn}, // SimpleHash.printNewFunction')
-        print(f'        {printFn} // SimpleHash.printNewFunction')
-        print('    ); // SimpleHash.printNewFunction')
+        print(f'    return ({myName} *)newHashTable({size}, {markFn}, {printFn});// SimpleHash.printNewFunction')
         print('}')
         print('')
 
@@ -718,16 +757,20 @@ class SimpleArray(Base):
     def printAccessDeclarations(self, catalog):
         if self.dimension == 2:
             print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{ // SimpleArray.printAccessDeclarations")
+            print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
             print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    }")
+            print("#endif // SimpleArray.printAccessDeclarations");
             print("    return obj->entries[x + y * obj->width]; // SimpleArray.printAccessDeclarations")
             print("} // SimpleArray.printAccessDeclarations")
             print("")
             print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{ // SimpleArray.printAccessDeclarations")
+            print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
             print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    } // SimpleArray.printAccessDeclarations")
+            print("#endif // SimpleArray.printAccessDeclarations");
             print("    obj->entries[x + y * obj->width] = val; // SimpleArray.printAccessDeclarations")
             print("} // SimpleArray.printAccessDeclarations")
 
@@ -889,6 +932,17 @@ class SimpleArray(Base):
     def getCtype(self, astType, catalog):
         return f"{astType} *"
 
+    def printCountDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        print(f'static inline int count{myName}({myType} x) {{ // SimpleArray.printCountDeclaration')
+        if self.dimension == 1:
+            print('    return x->size; // SimpleArray.printCountDeclaration')
+        else:
+            print('    return x->width * x->height; // SimpleArray.printCountDeclaration')
+        print('} // SimpleArray.printCountDeclaration')
+        print('')
+        
     def getExtraCmpFargs(self, catalog):
         extra = []
         for name in self.extraCmpArgs:
@@ -1044,6 +1098,93 @@ class SimpleArray(Base):
         pad(depth)
         print("mark{myName}(x->{prefix}{field}); // SimpleArray..printMarkField".format(field=field, myName=self.getName(), prefix=prefix))
 
+    def getIterator1DDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        myContainedType = self.entries.getTypeDeclaration(catalog)
+        return f'bool iterate{myName}({myType} table, int *i, {myContainedType} *res, bool *more)'
+
+    def getIterator2DDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration()
+        myContainedType = self.entries.getTypeDeclaration(catalog)
+        return f'bool iterate{myName}({myType} table, int *x, int *y, {myContainedType} *res, bool *more_x, bool *more_y)'
+
+    def printIteratorDeclaration(self, catalog):
+        if self.dimension == 2:
+            self.printIterator2DDeclaration(catalog);
+        else:
+            self.printIterator1DDeclaration(catalog)
+
+    def printIterator1DDeclaration(self, catalog):
+        decl = self.getIterator1DDeclaration(catalog)
+        print(f'{decl}; // SimpleArray.printIterator1DDeclaration')
+
+    def printIterator2DDeclaration(self, catalog):
+        decl = self.getIterator2DDeclaration(catalog)
+        print(f'{decl}; // SimpleArray.printIterator2DDeclaration')
+
+    def printIteratorFunction(self, catalog):
+        if self.dimension == 2:
+            self.printIterator2DFunction(catalog)
+        else:
+            self.printIterator1DFunction(catalog)
+
+    def printIterator1DFunction(self, catalog):
+        decl = self.getIterator1DDeclaration(catalog)
+        print(f'{decl} {{ // SimpleArray.printIterator1DFunction')
+        print('    if (*i < 0 || *i >= table->size) {')
+        print('        if (more != NULL) {')
+        print('            *more = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else {')
+        print('        if (more != NULL) {')
+        print('            *more = (*i + 1 < table->size);')
+        print('        }')
+        print('        if (res != NULL) {')
+        print('            *res = table->entries[*i];')
+        print('        }')
+        print('        *i = *i + 1;')
+        print('        return true;')
+        print('    }')
+        print('} // SimpleArray.printIteratorFunction')
+        print('')
+
+    def printIterator2DFunction(self, catalog):
+        decl = self.getIterator2DDeclaration(catalog)
+        print(f'{decl} {{ // SimpleArray.printIterator2DFunction')
+        print('    if (*x < 0 || *x >= table->width) {')
+        print('        if (more_x != NULL) {')
+        print('            *more_x = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else if (*y < 0 || *y >= table->height) {')
+        print('        if (more_y != NULL) {')
+        print('            *more_y = false;')
+        print('        }')
+        print('        return false;')
+        print('    } else {')
+        print('        if (more_x != NULL) {')
+        print('            *more_x = (*x + 1 < table->width);')
+        print('        }')
+        print('        if (more_y != NULL) {')
+        print('            *more_y = (*y + 1 < table->height);')
+        print('        }')
+        print('        if (res != NULL) {')
+        print('            *res = table->entries[*x * table->width + *y];')
+        print('        }')
+        print('        if (*x + 1 == table->width) {')
+        print('            *x = 0;')
+        print('            *y = *y + 1;')
+        print('        } else {')
+        print('            *x = *x + 1;')
+        print('        }')
+        print('        return true;')
+        print('    }')
+        print('} // SimpleArray.printIteratorFunction')
+        print('')
+
     def isArray(self):
         return True
 
@@ -1076,8 +1217,43 @@ class SimpleStruct(Base):
     def getObjType(self):
         return ('objtype_' + self.getName()).upper()
 
+    def isSinglySelfReferential(self, catalog):
+        count = 0
+        for field in self.fields:
+            if field.isSimpleField() and field.getObjName(catalog) == self.getName():
+                count += 1
+        return count == 1
+
+    def getSelfReferentialField(self, catalog):
+        for field in self.fields:
+            if field.isSimpleField() and field.getObjName(catalog) == self.getName():
+                return field.getName()
+        raise Exception(f'cannot find self-referential field name for {self.getName()}')
+
     def objTypeArray(self):
         return [ self.getObjType() ]
+
+    def getCountSignature(self):
+        myType = self.getTypeDeclaration()
+        myName = self.getName()
+        return f'int count{myName}({myType} x)'
+
+    def printCountDeclaration(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            print(f'{self.getCountSignature()}; // SimpleStruct.printCountDeclaration')
+
+    def printCountFunction(self, catalog):
+        if self.isSinglySelfReferential(catalog):
+            print(f'{self.getCountSignature()} {{ // SimpleStruct.printCountFunction')
+            selfRefField = self.getSelfReferentialField(catalog)
+            print('    int count = 0; // SimpleStruct.printCountFunction')
+            print('    while (x != NULL) { // SimpleStruct.printCountFunction')
+            print(f'        x = x->{selfRefField}; // SimpleStruct.printCountFunction')
+            print('        count++;; // SimpleStruct.printCountFunction')
+            print('    } // SimpleStruct.printCountFunction')
+            print('    return count; // SimpleStruct.printCountFunction')
+            print('} // SimpleStruct.printCountFunction')
+            print('')
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration()
@@ -1578,6 +1754,30 @@ class DiscriminatedUnionEnum(Base):
     def getFieldName(self):
         return 'type'
 
+    def getNameFunctionDeclaration(self):
+        name = self.getName();
+        camel = name[0].lower() + name[1:]
+        return f"char * {camel}Name(enum {name} type)"
+
+    def printNameFunctionDeclaration(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl}; // DiscriminatedUnionEnum.printNameFunctionDeclaration")
+
+    def printNameFunctionBody(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl} {{ // DiscriminatedUnionEnum.printNameFunctionDeclaration")
+        print("    switch(type) {")
+        for  field in self.fields:
+            field.printNameFunctionLine()
+        print("        default: {")
+        print("            static char buf[64];")
+        print('            sprintf(buf, "%d", type);')
+        print("            return buf;");
+        print("        }")
+        print("    }")
+        print("}")
+        print("")
+
     def getTypeDeclaration(self):
         return "enum {name} ".format(name=self.getName())
 
@@ -1651,7 +1851,7 @@ class Primitive(Base):
         if self.compareFn is None:
             print(f"if (a->{prefix}{field} != b->{prefix}{field}) return false; // Primitive.printCompareField")
         else:
-            print(f"if (!{self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
+            print(f"if ({self.compareFn}(a->{prefix}{field}, b->{prefix}{field})) return false; // Primitive.printCompareField")
 
     def printPrintHashField(self, depth):
         pad(depth)
@@ -1719,6 +1919,23 @@ def printGpl(file, document):
     print(f" * Generated from {file} by tools/makeAST.py")
     print(" */")
 
+class Loader(yaml.SafeLoader):
+
+    def __init__(self, stream):
+
+        self._root = os.path.split(stream.name)[0]
+
+        super(Loader, self).__init__(stream)
+
+    def include(self, node):
+
+        filename = os.path.join(self._root, self.construct_scalar(node))
+
+        with open(filename, 'r') as f:
+            return yaml.load(f, Loader)
+
+Loader.add_constructor('!include', Loader.include)
+
 ##################################################################
 
 parser = argparse.ArgumentParser()
@@ -1731,7 +1948,7 @@ args = parser.parse_args()
 
 stream = open(args.yaml, 'r')
 
-document = yaml.load(stream, Loader=yaml.Loader)
+document = yaml.load(stream, Loader)
 
 typeName = document['config']['name']
 if 'includes' in document['config']:
@@ -1764,6 +1981,10 @@ if "enums" in document:
 if "primitives" in document:
     for name in document["primitives"]:
         catalog.add(Primitive(name, document["primitives"][name]))
+
+if "external" in document:
+    for name in document["external"]:
+        catalog.add(Primitive(name, document["external"][name]))
 
 if "arrays" in document:
     for name in document["arrays"]:
@@ -1818,11 +2039,14 @@ if args.type == "h":
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
     catalog.printIteratorDeclarations()
-    catalog.printCountDeclarations()
     printSection("defines")
     catalog.printDefines()
     printSection("access declarations")
     catalog.printAccessDeclarations()
+    printSection("count declarations")
+    catalog.printCountDeclarations()
+    printSection("name declarations")
+    catalog.printNameFunctionDeclarations()
     print("")
     print("#endif")
 
@@ -1865,6 +2089,8 @@ elif args.type == "c":
     catalog.printGetFunctions()
     catalog.printSetFunctions()
     catalog.printIteratorFunctions()
+    printSection("count functions")
+    catalog.printCountFunctions()
     printSection("mark functions")
     catalog.printMarkFunctions()
     printSection("generic mark function")
@@ -1875,6 +2101,8 @@ elif args.type == "c":
     catalog.printFreeObjFunction()
     printSection("type identifier function")
     catalog.printTypeObjFunction()
+    printSection("type name function")
+    catalog.printNameFunctionBodies()
 
 elif args.type == 'debug_h':
 

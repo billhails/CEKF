@@ -1,5 +1,5 @@
 #ifndef cekf_common_h
-#    define cekf_common_h
+#  define cekf_common_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,11 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include <stdbool.h>
-#    include <stdint.h>
+#  include <stdio.h>
+#  include <stdbool.h>
+#  include <stdint.h>
 
-typedef uint32_t hash_t;
+#  define DEBUG_ANY
 
+#  ifdef DEBUG_ANY
 // #define DEBUG_STACK
 // #define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
@@ -31,10 +33,10 @@ typedef uint32_t hash_t;
 #    define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 // #define DEBUG_GC
-// #define DEBUG_TPMC_MATCH
-// #define DEBUG_TPMC_TRANSLATE
-// #define DEBUG_TPMC_LOGIC
-// #define DEBUG_ANALIZE
+// #    define DEBUG_TPMC_MATCH
+// #    define DEBUG_TPMC_TRANSLATE
+// #    define DEBUG_TPMC_LOGIC
+// #define DEBUG_ANNOTATE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE
 // #define DEBUG_TIN_SUBSTITUTION
@@ -43,8 +45,8 @@ typedef uint32_t hash_t;
 // #define DEBUG_BYTECODE
 // define this to make fatal errors dump core (if ulimit allows)
 #    define DEBUG_DUMP_CORE
-// #define DEBUG_TC
-// #define DEBUG_LAMBDA_CONVERT
+// #    define DEBUG_TC
+// #    define DEBUG_LAMBDA_CONVERT
 // #define DEBUG_LAMBDA_SUBSTITUTE
 // #define DEBUG_LEAK
 // #define DEBUG_ANF
@@ -53,17 +55,21 @@ typedef uint32_t hash_t;
 // #define DEBUG_PRINT_COMPILER
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
 #    define SAFETY_CHECKS
+#  endif
 
-#    ifndef __GNUC__
-#        define __attribute__(x)
-#    endif
-void cant_happen(const char *message, ...)
-    __attribute__((noreturn, format(printf, 1, 2)));
+#  ifndef __GNUC__
+#    define __attribute__(x)
+#  endif
+#  define errout stdout
+void _cant_happen(char *file, int line, const char *message, ...)
+    __attribute__((noreturn, format(printf, 3, 4)));
 void can_happen(const char *message, ...)
     __attribute__((format(printf, 1, 2)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
 
-#    define PAD_WIDTH 2
+#define cant_happen(...) _cant_happen(__FILE__, __LINE__, __VA_ARGS__)
+
+#  define PAD_WIDTH 2
 
 #endif

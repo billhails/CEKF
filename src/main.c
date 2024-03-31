@@ -42,19 +42,20 @@
 #include "bigint.h"
 #include "tc_analyze.h"
 #include "tc_debug.h"
+#include "tpmc_mermaid.h"
 
 int report_flag = 0;
 static int help_flag = 0;
 
-int main(int argc, char *argv[]) {
+static void processArgs(int argc, char *argv[]) {
     int c;
-    clock_t begin = clock();
 
     while (1) {
         static struct option long_options[] = {
             { "bigint", no_argument, &bigint_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
             { "help", no_argument, &help_flag, 1 },
+            { "tpmc-mermaid", required_argument, 0, 'm' },
             { 0, 0, 0, 0 }
         };
         int option_index = 0;
@@ -63,73 +64,89 @@ int main(int argc, char *argv[]) {
 
         if (c == -1)
             break;
+
+        if (c == 'm') {
+            tpmc_mermaid_function = optarg;
+        }
     }
 
     if (help_flag) {
         printf("%s",
-               "--bigint        use arbitrary precision integers\n"
-               "--report        report statistics\n"
-               "--help          this help\n");
+               "--bigint                use arbitrary precision integers\n"
+               "--report                report statistics\n"
+               "--tpmc-mermaid=function produce a mermaid graph of the\n"
+               "                        function's TPMC state table\n"
+               "--help                  this help\n");
         exit(0);
     }
-
-    ByteCodeArray byteCodes;
-    initProtection();
-    disableGC();
-    /*
-       printf("char: %ld\n", sizeof(char));
-       printf("word: %ld\n", sizeof(word));
-       printf("int: %ld\n", sizeof(int));
-       printf("bigint_word: %ld\n", sizeof(bigint_word));
-       printf("void *: %ld\n", sizeof(void *));
-     */
 
     if (optind >= argc) {
         eprintf("need filename\n");
         exit(1);
     }
-    // parse => AST
-    PmModule *mod = newPmToplevelFromFile(argv[optind]);
-    PROTECT(mod);
+}
+
+static AstNest *parseFile(char *file) {
+    disableGC();
+    PmModule *mod = newPmToplevelFromFile(file);
+    int save = PROTECT(mod);
     pmParseModule(mod);
     enableGC();
-    // lambda conversion: AST => LamExp
-    LamExp *exp = lamConvertNest(mod->nest, NULL);
+    UNPROTECT(save);
+    return mod->nest;
+}
+
+static LamExp *convertNest(AstNest *nest) {
+    LamExp *exp = lamConvertNest(nest, NULL);
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
     eprintf("\n");
 #endif
-    // type checking
+    UNPROTECT(save);
+    return exp;
+}
+
+static void typeCheck(LamExp *exp) {
     TcEnv *env = tc_init();
-    PROTECT(env);
-    TcType *res = tc_analyze(exp, env);
+    int save = PROTECT(env);
+    TcType *res __attribute__((unused)) = tc_analyze(exp, env);
     if (hadErrors()) {
-        return 1;
+        exit(1);
     }
-    PROTECT(res);
-    // normalization: LamExp => ANF
-    Exp *anfExp = anfNormalize(exp);
-    PROTECT(anfExp);
+#ifdef DEBUG_TC
+    ppTcType(res);
+    eprintf("\n");
+#endif
+    UNPROTECT(save);
+}
+
+static Exp *desugar(Exp *anfExp) {
     disableGC();
-    // desugaring
     anfExp = desugarExp(anfExp);
-    PROTECT(anfExp);
+    int save = PROTECT(anfExp);
     enableGC();
-    // static analysis: ANF => annotated ANF (de bruijn)
+    UNPROTECT(save);
+    return anfExp;
+}
+
+static void annotate(Exp *anfExp) {
     annotateExp(anfExp, NULL);
 #ifdef DEBUG_ANF
     ppExp(anfExp);
     eprintf("\n");
 #endif
-    // byte code generation
+}
+
+static ByteCodeArray generateByteCodes(Exp *anfExp) {
+    ByteCodeArray byteCodes;
     initByteCodeArray(&byteCodes);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
-    UNPROTECT(save);
-    // execution
-    run(byteCodes);
-    // report stats etc.
+    return byteCodes;
+}
+
+static void report(clock_t begin) {
     if (report_flag) {
         clock_t end = clock();
         double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
@@ -137,4 +154,36 @@ int main(int argc, char *argv[]) {
         reportMemory();
         reportSteps();
     }
+}
+
+int main(int argc, char *argv[]) {
+    clock_t begin = clock();
+    processArgs(argc, argv);
+    initProtection();
+
+    AstNest *nest = parseFile(argv[optind]);
+    int save = PROTECT(nest);
+
+    LamExp *exp = convertNest(nest);
+    REPLACE_PROTECT(save, exp);
+
+    typeCheck(exp);
+
+    Exp *anfExp = anfNormalize(exp);
+    REPLACE_PROTECT(save, anfExp);
+
+    anfExp = desugar(anfExp);
+    REPLACE_PROTECT(save, anfExp);
+
+    annotate(anfExp);
+
+    ByteCodeArray byteCodes = generateByteCodes(anfExp);
+
+    UNPROTECT(save);
+
+    run(byteCodes);
+
+    report(begin);
+
+    exit(0);
 }

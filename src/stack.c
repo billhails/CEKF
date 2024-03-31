@@ -27,10 +27,10 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef DEBUG_STACK
-#    include "debug.h"
-#    include "debugging_on.h"
+#  include "debug.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 Snapshot noSnapshot = {

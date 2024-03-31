@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_helper_h
-#    define cekf_tpmc_helper_h
+#  define cekf_tpmc_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,9 +18,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "ast_helper.h"
-#    include "tpmc.h"
-#    include "hash.h"
-#    include "memory.h"
+#  include "ast_helper.h"
+#  include "tpmc.h"
+#  include "hash.h"
+#  include "memory.h"
 
 #endif

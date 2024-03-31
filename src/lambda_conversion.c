@@ -28,6 +28,7 @@
 #include "lambda_helper.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
+#include "tpmc_mermaid.h"
 #include "ast_debug.h"
 #include "print_generator.h"
 
@@ -49,39 +50,24 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
 static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type, int size,
-                                                  int index, bool hasFields,
+                                                  int index, bool needsVec,
                                                   LamContext *env);
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
-                            bool someoneHasFields, int enumCount, int index,
+                            bool needsVec, int enumCount, int index,
                             int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 
 #ifdef DEBUG_LAMBDA_CONVERT
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
-#define MAKE_COUNT_LIST(type)           \
-static int count ## type (type *list) { \
-    ENTER(count ## type);               \
-    int count = 0;                      \
-    while (list != NULL) {              \
-        count++;                        \
-        list = list->next;              \
-    }                                   \
-    LEAVE(count ## type);               \
-    return count;                       \
-}
+static bool inPreamble = true;  // preamble is treated specially
+static bool preambleLocked = false;
 
-MAKE_COUNT_LIST(LamLetRecBindings) MAKE_COUNT_LIST(AstTypeList)
-MAKE_COUNT_LIST(AstExpressions) MAKE_COUNT_LIST(AstArgList)
-MAKE_COUNT_LIST(AstCompositeFunction)
-     static bool inPreamble = true;     // preamble is treated specially
-     static bool preambleLocked = false;
-
-     LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
+LamExp *lamConvertNest(AstNest *nest, LamContext *env) {
     ENTER(lamConvertNest);
     bool hasLock = inPreamble && !preambleLocked;
     if (hasLock)
@@ -120,10 +106,12 @@ MAKE_COUNT_LIST(AstCompositeFunction)
         result =
             newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
     }
+    if (hasLock)
+        preambleLocked = false;
     UNPROTECT(save);
     LEAVE(lamConvertNest);
     return result;
-     }
+}
 
 static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     ENTER(lamConvertIff);
@@ -168,15 +156,6 @@ static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
     return this;
 }
 
-static int countTypeBodies(AstTypeBody *typeBody) {
-    int count = 0;
-    while (typeBody != NULL) {
-        count++;
-        typeBody = typeBody->next;
-    }
-    return count;
-}
-
 static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
     if (symbols == NULL)
         return NULL;
@@ -187,10 +166,10 @@ static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
     return this;
 }
 
-static LamType *convertTypeDefType(AstFlatType *flat) {
-    LamTypeArgs *args = convertTypeSymbols(flat->typeSymbols);
+static LamType *convertUserType(AstUserType *userType) {
+    LamTypeArgs *args = convertTypeSymbols(userType->typeSymbols);
     int save = PROTECT(args);
-    LamType *res = newLamType(flat->symbol, args);
+    LamType *res = newLamType(userType->symbol, args);
     UNPROTECT(save);
     return res;
 }
@@ -291,11 +270,11 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
 }
 
 static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
-                            bool someoneHasFields, int enumCount, int index,
+                            bool needsVec, int enumCount, int index,
                             int arity, LamContext *env) {
     ENTER(collectTypeInfo);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(type, someoneHasFields, arity, enumCount,
+        newLamTypeConstructorInfo(type, needsVec, arity, enumCount,
                                   index);
     int save = PROTECT(info);
     addToLamContext(env, symbol, info);
@@ -307,7 +286,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type,
                                                   int enumCount, int index,
-                                                  bool someoneHasFields,
+                                                  bool needsVec,
                                                   LamContext *env) {
     int nargs = countAstTypeList(typeConstructor->typeList);
     LamTypeConstructorArgs *args =
@@ -316,18 +295,18 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
     LamTypeConstructor *lamTypeConstructor =
         newLamTypeConstructor(typeConstructor->symbol, type, args);
     PROTECT(lamTypeConstructor);
-    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor,
-                    someoneHasFields, enumCount, index, nargs, env);
+    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor, needsVec,
+                    enumCount, index, nargs, env);
     UNPROTECT(save);
     return lamTypeConstructor;
 }
 
 static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
-    LamType *type = convertTypeDefType(typeDef->flatType);
+    LamType *type = convertUserType(typeDef->userType);
     int save = PROTECT(type);
     AstTypeBody *typeBody = typeDef->typeBody;
-    bool hasFields = typeHasFields(typeBody);
-    int enumCount = countTypeBodies(typeBody);
+    bool needsVec = typeHasFields(typeBody);
+    int enumCount = countAstTypeBody(typeBody);
     int index = 0;
     LamTypeConstructorList *lamTypeConstructorList = NULL;
     int save2 = PROTECT(type);
@@ -337,7 +316,7 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
                                    type,
                                    enumCount,
                                    index,
-                                   hasFields,
+                                   needsVec,
                                    env);
         int save3 = PROTECT(lamTypeConstructor);
         lamTypeConstructorList =
@@ -422,10 +401,17 @@ static LamExp *makeConstant(HashSymbol *name, int tag) {
     return res;
 }
 
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
-                                        LamLetRecBindings *next) {
+static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
+                                        LamLetRecBindings * next) {
     ENTER(prependDefine);
+    bool doMermaid = (tpmc_mermaid_function != NULL
+                      && strcmp(tpmc_mermaid_function,
+                                define->symbol->name) == 0);
+    if (doMermaid)
+        tpmc_mermaid_flag = 1;
     LamExp *exp = convertExpression(define->expression, env);
+    if (doMermaid)
+        tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
         newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);
@@ -461,24 +447,15 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
 }
 
 #define CHECK_ONE_ARG(name, args) do { \
-    if ((args) == NULL) { \
-        cant_happen("expected 1 arg in " #name ", got 0"); \
-    } \
-    if ((args)->next != NULL) { \
-        cant_happen("expected 1 arg in " #name ", got > 1"); \
-    } \
+    int count = countLamList(args); \
+    if (count != 1) \
+        cant_happen("expected 1 arg in " #name ", got %d", count); \
 } while(0)
 
 #define CHECK_TWO_ARGS(name, args) do { \
-    if ((args) == NULL) { \
-        cant_happen("expected 2 args in " #name ", got 0"); \
-    } \
-    if ((args)->next == NULL) { \
-        cant_happen("expected 2 args in " #name ", got 1"); \
-    } \
-    if ((args)->next->next != NULL) { \
-        cant_happen("expected 2 args in " #name ", got > 2"); \
-    } \
+    int count = countLamList(args); \
+    if (count != 2) \
+        cant_happen("expected 2 args in " #name ", got %d", count); \
 } while(0)
 
 static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
@@ -581,44 +558,61 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     return NULL;
 }
 
-static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
-    AstExpression *function = funCall->function;
-    LamList *args = convertExpressions(funCall->arguments, env);
-    int actualNargs = countAstExpressions(funCall->arguments);
-    int save = PROTECT(args);
-    // see if it's a type constructor we can inline FIXME - or a primitive
-    if (function->type == AST_EXPRESSION_TYPE_SYMBOL) {
-        HashSymbol *symbol = function->val.symbol;
-        LamExp *primApp = makePrimApp(symbol, args);
-        if (primApp != NULL) {
-            return primApp;
-        } else {
-            LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-            if (info != NULL) {
-                if (info->vec) {
-                    if (actualNargs == info->arity) {
-                        LamExp *inLine =
-                            makeConstruct(symbol, info->index, args);
-                        UNPROTECT(save);
-                        return inLine;
-                    } else {
-                        cant_happen
-                            ("wrong number of arguments to constructor %s",
-                             symbol->name);
-                    }
-                } else {
-                    cant_happen("arguments to empty constructor %s",
-                                symbol->name);
-                }
+static LamExp *inlineConstructor(HashSymbol *symbol, LamList *args,
+                                 LamContext *env) {
+    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    if (info != NULL) {
+        int actualNargs = countLamList(args);
+        if (info->needsVec) {
+            if (actualNargs == info->arity) {
+                return makeConstruct(symbol, info->index, args);
+            } else {
+                cant_happen("wrong number of arguments to constructor %s",
+                            symbol->name);
             }
+        } else {
+            if (actualNargs > 0) {
+                cant_happen("arguments to constant constructor %s",
+                            symbol->name);
+            }
+            return makeConstant(symbol, info->index);
+        }
+    }
+    return NULL;
+}
+
+static LamExp *convertApplication(AstFunCall *funCall, LamList *args,
+                                  LamContext *env) {
+    int actualNargs = countAstExpressions(funCall->arguments);
+    LamExp *fun = convertExpression(funCall->function, env);
+    int save = PROTECT(fun);
+    LamApply *apply = newLamApply(fun, actualNargs, args);
+    PROTECT(apply);
+    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return result;
+}
+
+static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
+    LamList *args = convertExpressions(funCall->arguments, env);
+    int save = PROTECT(args);
+    LamExp *result = NULL;
+    if (funCall->function->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        HashSymbol *symbol = funCall->function->val.symbol;
+        result = makePrimApp(symbol, args);
+        if (result != NULL) {
+            UNPROTECT(save);
+            return result;
+        }
+        // see if it's a type constructor we can inline
+        result = inlineConstructor(symbol, args, env);
+        if (result != NULL) {
+            UNPROTECT(save);
+            return result;
         }
     }
     // otherwise we convert as normal
-    LamExp *fun = convertExpression(function, env);
-    (void) PROTECT(fun);
-    LamApply *apply = newLamApply(fun, actualNargs, args);
-    (void) PROTECT(apply);
-    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    result = convertApplication(funCall, args, env);
     UNPROTECT(save);
     return result;
 }
@@ -666,22 +660,12 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
 }
 
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
-    if (info == NULL) {
-        DEBUG("convertSymbol %s is not a constructor", symbol->name);
+    LamExp *result = inlineConstructor(symbol, NULL, env);
+    if (result == NULL) {
         symbol = dollarSubstitute(symbol);
-        LamExp *res = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
-        return res;
+        result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     }
-    DEBUG("convertSymbol %s is a constructor", symbol->name);
-    if (info->vec) {
-        if (info->arity > 0) {
-            cant_happen("too few arguments to constructor %s", symbol->name);
-        }
-        return makeConstruct(symbol, info->index, NULL);
-    } else {
-        return makeConstant(symbol, info->index);
-    }
+    return result;
 }
 
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {

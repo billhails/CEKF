@@ -19,6 +19,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "common.h"
 #include "tpmc_logic.h"
 #include "tpmc_translate.h"
@@ -30,22 +31,27 @@
 #include "memory.h"
 #include "lambda_substitution.h"
 #include "lambda_pp.h"
+#include "tpmc_mermaid.h"
+#include "tpmc_pp.h"
 #ifdef DEBUG_TPMC_LOGIC
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
 
 static TpmcVariableArray *createRootVariables(int nargs) {
+    ENTER(createRootVariables);
     TpmcVariableArray *rootVariables = newTpmcVariableArray();
     int p = PROTECT(rootVariables);
     for (int i = 0; i < nargs; i++) {
         HashSymbol *s = genSym("p$");
+        IFDEBUG(eprintf("%s", s->name));
         pushTpmcVariableArray(rootVariables, s);
     }
     UNPROTECT(p);
+    LEAVE(createRootVariables);
     return rootVariables;
 }
 
@@ -241,6 +247,7 @@ static void renameConstructorPattern(TpmcConstructorPattern *pattern,
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
             can_happen("maximum path depth exceeded");
         }
+        DEBUG("renameConstructorPattern: %s", buf);
         HashSymbol *newPath = newSymbol(buf);
         renamePattern(components->entries[i], newPath);
     }
@@ -362,7 +369,7 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
             return replaceConstructorPattern(pattern, seen);
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             cant_happen
-                ("encounterted comparison pattern during replaceComparisonPattern");
+                ("encounterted nested comparison pattern during replaceComparisonPattern");
         default:
             cant_happen("unrecognised pattern type in renamePattern");
     }
@@ -405,8 +412,8 @@ static TpmcPattern *collectAssignmentSubstitutions(TpmcPattern *pattern, TpmcSub
                              pattern->pattern->val.assignment->name,
                              pattern->path);
     // we no longer need to remember this is an assignment now we have the substitution
-    return collectPatternSubstitutions(pattern->pattern->val.assignment->
-                                       value, substitutions);
+    TpmcPattern *value = pattern->pattern->val.assignment->value;
+    return collectPatternSubstitutions(value, substitutions);
 }
 
 static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
@@ -423,9 +430,9 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSu
 
 static TpmcPattern *collectComparisonSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable
                                                    *substitutions) {
+    TpmcPattern *previous = pattern->pattern->val.comparison->previous;
     pattern->pattern->val.comparison->previous =
-        collectPatternSubstitutions(pattern->pattern->val.comparison->
-                                    previous, substitutions);
+        collectPatternSubstitutions(previous, substitutions);
     pattern->pattern->val.comparison->current =
         collectPatternSubstitutions(pattern->pattern->val.comparison->current,
                                     substitutions);
@@ -557,12 +564,12 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     replaceComparisonRules(input);
     renameRules(input);
     performRulesSubstitutions(input);
-    DEBUG("*** RULES ***");
-    IFDEBUG(printTpmcMatchRules(input, 0));
+    // DEBUG("*** RULES ***");
+    // IFDEBUG(printTpmcMatchRules(input, 0));
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
     DEBUG("*** MATRIX ***");
-    IFDEBUG(printTpmcMatrix(matrix, 0));
+    IFDEBUG(ppTpmcMatrix(matrix));
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
     TpmcStateArray *knownStates = newTpmcStateArray("tpmcConvert");
@@ -574,11 +581,12 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     PROTECT(errorState);
     TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates);
     PROTECT(dfa);
-    DEBUG("*** DFA ***");
-    IFDEBUG(printTpmcState(dfa, 0));
+    // DEBUG("*** DFA ***");
+    // IFDEBUG(printTpmcState(dfa, 0));
+    tpmcMermaid(dfa);
     LamExp *body = tpmcTranslate(dfa);
     PROTECT(body);
-    DEBUG("tpmcTranslate returned %p", body);
+    // DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(rootVariables->size, args, body);

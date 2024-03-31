@@ -28,14 +28,12 @@
 
 static bool errors = false;
 
-#define __OUT__ stderr
-
-void cant_happen(const char *message, ...) {
+void _cant_happen(char *file, int line, const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(__OUT__, message, args);
+    vfprintf(errout, message, args);
     va_end(args);
-    eprintf("\n");
+    eprintf(" at %s line %d\n", file, line);
 #ifdef DEBUG_DUMP_CORE
     abort();
 #else
@@ -46,7 +44,7 @@ void cant_happen(const char *message, ...) {
 void can_happen(const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(__OUT__, message, args);
+    vfprintf(errout, message, args);
     va_end(args);
     eprintf("\n");
     errors = true;
@@ -55,7 +53,7 @@ void can_happen(const char *message, ...) {
 void eprintf(const char *message, ...) {
     va_list args;
     va_start(args, message);
-    vfprintf(__OUT__, message, args);
+    vfprintf(errout, message, args);
     va_end(args);
 }
 

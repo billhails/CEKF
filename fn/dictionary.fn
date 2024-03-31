@@ -9,7 +9,6 @@ let
         (B, D(R, a, x, D(R, b, y, c)), z, d)  |
         (B, a, x, D(R, D(R, b, y, c), z, d))  |
         (B, a, x, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
-
         (BB, D(R, a, x, D(R, b, y, c)), z, d) |
         (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
         (color, a, b, c)                      { D(color, a, b, c) }
@@ -125,4 +124,4 @@ let
     }
  
 in
-    lookup('f', delete('f', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki")))
+    print(lookup('f', delete('k', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki"))))

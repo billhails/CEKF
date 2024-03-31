@@ -44,13 +44,13 @@ structs:
         first: TcType
         second: TcType
 
-    TcTypeDef:
+    TcUserType:
         name: HashSymbol
-        args: TcTypeDefArgs
+        args: TcUserTypeArgs
 
-    TcTypeDefArgs:
+    TcUserTypeArgs:
         type: TcType
-        next: TcTypeDefArgs
+        next: TcUserTypeArgs
 
     TcVar:
         name: HashSymbol
@@ -69,18 +69,7 @@ unions:
         smallinteger: void_ptr
         biginteger: void_ptr
         character: void_ptr
-        typeDef: TcTypeDef
+        unknown: HashSymbol
+        userType: TcUserType
 
-primitives:
-    HashSymbol:
-        cname: "HashSymbol *"
-        printFn: printAstSymbol
-        valued: true
-    int:
-        cname: int
-        printf: "%d"
-        valued: true
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false
+primitives: !include primitives.yaml

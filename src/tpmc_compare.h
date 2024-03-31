@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_compare_h
-#    define cekf_tpmc_compare_h
+#  define cekf_tpmc_compare_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -20,8 +20,8 @@
  * Term Pattern Matching Compiler logic
  */
 
-#    include <stdbool.h>
-#    include "tpmc.h"
+#  include <stdbool.h>
+#  include "tpmc.h"
 
 bool tpmcStateEq(TpmcState *a, TpmcState *b);
 bool tpmcStateValueEq(TpmcStateValue *a, TpmcStateValue *b);

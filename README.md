@@ -67,16 +67,25 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ```mermaid
 flowchart TD
-
-source -->
-AST[Parser] --abstract syntax-->  
-lambda[Lambda Conversion] --lambda calculus-->  
-check[Type Checking] --typed lambda calculus-->
-anf[A-Normal Form Conversion] --ANF-->  
-desugaring2[Desugaring]  --ANF-->
-static[Static Analysis] --annotated ANF-->  
-Bytecode[Bytecode Generation] --bytecode-->
-VM
+classDef process fill:#aef;
+source(Source) -->
+parser([Parser]):::process -->
+ast(AST) -->
+lc([Lambda Conversion]):::process <--> tpmc([Tpmc]):::process
+lc <--> pg([Print Function Generator]):::process
+lc <--> ci([Constructor Inlining]):::process
+tpmc <--> vs([Variable Substitution]):::process
+lc ----> lambda1(Plain Lambda Form)
+lambda1 --> tc([Type Checking]):::process
+tc <--> pc([Print Compiler]):::process
+tc ---> lambda2(Plain Lambda Form)
+lambda2 --> anfc([A-Normal Form Conversion]):::process
+anfc --> anf(ANF)
+anf --> desug([Desugaring]):::process
+desug --> danf(Desugared ANF)
+danf --> bcc([Bytecode Compiler]):::process
+bcc --> bc(Byte Code)
+bc --> cekf([CEKF Runtime VM]):::process
 ```
 All stages basically complete, but it needs a lot of testing now.
 

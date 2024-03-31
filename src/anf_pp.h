@@ -1,5 +1,5 @@
 #ifndef cekf_anf_pp_h
-#    define cekf_anf_pp_h
+#  define cekf_anf_pp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -20,11 +20,11 @@
 
 // Bespoke pretty-printer for anf
 
-#    include <stdio.h>
-#    include <stdlib.h>
+#  include <stdio.h>
+#  include <stdlib.h>
 
-#    include "common.h"
-#    include "anf.h"
+#  include "common.h"
+#  include "anf.h"
 
 void ppAexpLam(AexpLam *x);
 void ppAexpVarList(AexpVarList *x);

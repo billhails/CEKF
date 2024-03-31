@@ -5,19 +5,18 @@ TARGET=cekf
 # in Ubuntu 22.10
 # `ulimit -c unlimited` to turn on core dumps
 # written to /var/lib/apport/coredump/
-PROFILING=-pg
-OPTIMIZING=-O2
-DEBUGGING=-g
+MODE_P=-pg
+MODE_O=-O2
+MODE_D=-g
 
-# CCMODE = $(PROFILING)
-# CCMODE = $(OPTIMIZING)
-CCMODE = $(DEBUGGING)
+CCMODE = $(MODE_D)
 
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)
 PYTHON=python3
+MAKEAST=$(PYTHON) ./tools/makeAST.py
 
-EXTRA_YAML=$(wildcard src/*.yaml)
+EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
 EXTRA_H_TARGETS=$(patsubst src/%.yaml,generated/%.h,$(EXTRA_YAML))
 EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,generated/%_objtypes.h,$(EXTRA_YAML))
@@ -55,7 +54,7 @@ EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
 
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
@@ -67,20 +66,20 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 
 include $(ALL_DEP)
 
-$(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< c > $@ || (rm -f $@ ; exit 1)
+$(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+	$(MAKEAST) $< c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKEAST) $< h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+$(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+	$(MAKEAST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_h > $@ || (rm -f $@ ; exit 1)
+$(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+	$(MAKEAST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py | generated
-	$(PYTHON) tools/makeAST.py $< debug_c > $@ || (rm -f $@ ; exit 1)
+$(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+	$(MAKEAST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
@@ -137,8 +136,9 @@ profile: all
 	rm -f callgrind.out.*
 	valgrind --tool=callgrind ./$(TARGET)
 
-indent: .typedefs
-	(cd src; indent `cat ../.typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Control -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value *.[ch])
+indent: .typedefs .indent.pro
+	indent `cat .typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Control -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value -T FILE src/*.[ch] generated/*.[ch]
+	rm -f src/*~ generated/*~
 
 .typedefs: .generated
 

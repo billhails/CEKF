@@ -62,6 +62,10 @@ static AstFunCall *newStringList(AstCharArray *str) {
     return res;
 }
 
+static AstArg *newAstNilArg() {
+    return newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(nilSymbol()));
+}
+
 static AstUnpack *newStringUnpack(AstCharArray *str) {
     AstUnpack *res = newAstUnpack(nilSymbol(), NULL);
     for (int size = str->size; size > 0; size--) {
@@ -130,17 +134,13 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstEnvType *envType;
     AstExpression *expression;
     AstExpressions *expressions;
-    AstFlatType *flatType;
+    AstUserType *userType;
     AstFunCall *funCall;
     AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
     AstPackage *package;
     AstPrint *print;
-    AstPrototypeBody *prototypeBody;
-    AstPrototype *prototype;
-    AstPrototypeSymbolType *prototypeSymbolType;
-    AstSinglePrototype *singlePrototype;
     HashSymbol *symbol;
     AstTypeBody *typeBody;
     AstTypeClause *typeClause;
@@ -169,17 +169,13 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <envType> env_type
 %type <expression> expression
 %type <expressions> expressions expression_statements
-%type <flatType> flat_type
+%type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
 %type <load> load
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
 %type <package> package extends
 %type <print> print
-%type <prototypeBody> prototype_body
-%type <prototypeSymbolType> prototype_symbol_type
-%type <prototype> prototype
-%type <singlePrototype> single_prototype
 %type <symbol> symbol type_symbol as
 %type <typeBody> type_body
 %type <typeClause> type_clause
@@ -260,42 +256,14 @@ definitions : %empty                     { $$ = NULL; }
             ;
 
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
-           | prototype  { $$ = newAstDefinition( AST_DEFINITION_TYPE_PROTOTYPE, AST_DEFINITION_VAL_PROTOTYPE($1)); }
            | load       { $$ = newAstDefinition( AST_DEFINITION_TYPE_LOAD, AST_DEFINITION_VAL_LOAD($1)); }
            | typedef    { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
            | defun      { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
            | denv       { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
            ;
 
-prototype : PROTOTYPE symbol '{' prototype_body '}' { $$ = newAstPrototype($2, $4); }
-          ;
-
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
-
-prototype_body : %empty                          { $$ = NULL; }
-               | single_prototype prototype_body {
-                                                    if ($2 == NULL) $$ = newAstPrototypeBody($1, NULL);
-                                                    else $$ = newAstPrototypeBody($1, $2);
-                                                 }
-               ;
-
-single_prototype : prototype_symbol_type ';'  {
-                                            $$ = newAstSinglePrototype(
-                                                AST_SINGLEPROTOTYPE_TYPE_SYMBOLTYPE,
-                                                AST_SINGLEPROTOTYPE_VAL_SYMBOLTYPE($1)
-                                            );
-                                        }
-                 | prototype            {
-                                            $$ = newAstSinglePrototype(
-                                                AST_SINGLEPROTOTYPE_TYPE_PROTOTYPE,
-                                                AST_SINGLEPROTOTYPE_VAL_PROTOTYPE($1)
-                                            );
-                                        }
-                 ;
-
-prototype_symbol_type : symbol ':' type { $$ = newAstPrototypeSymbolType($1, $3); }
-                      ;
 
 denv : ENV symbol env_expr  { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($3))); }
      ;
@@ -309,11 +277,11 @@ as : %empty     { $$ = NULL; }
 
 /******************************** types */
 
-typedef : TYPEDEF flat_type '{' type_body '}'   { $$ = newAstTypeDef($2, $4); }
+typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef($2, $4); }
         ;
 
-flat_type : symbol                      { $$ = newAstFlatType($1, NULL); }
-          | symbol '(' type_symbols ')' { $$ = newAstFlatType($1, $3); }
+user_type : symbol                      { $$ = newAstUserType($1, NULL); }
+          | symbol '(' type_symbols ')' { $$ = newAstUserType($1, $3); }
           ;
 
 type_symbols : type_symbol                  { $$ = newAstTypeSymbols($1, NULL); }
@@ -388,7 +356,7 @@ fargs : %empty            { $$ = NULL; }
       | farg ',' fargs    { $$ = newAstArgList($1, $3); }
       ;
 
-consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList($1, NULL)); }
+consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstNilArg(), NULL))); }
           | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
@@ -398,13 +366,16 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | named_farg          { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
-     | '[' ']'             { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(nilSymbol())); }
+     | '[' ']'             { $$ = newAstNilArg(); }
      | '[' consfargs ']'   { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
      | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
      | number              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
      | stringarg           { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
      | WILDCARD            { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
+     ;
+
+cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;
 
 unpack : symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
@@ -419,9 +390,6 @@ string : str { $$ = newStringList($1); }
 str : STRING            { $$ = newCharArray($1); }
     | str STRING        { $$ = appendCharArray($1, $2); }
     ;
-
-cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
-     ;
 
 env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
          ;
@@ -517,9 +485,9 @@ print : PRINT '(' expression ')' { $$ = newAstPrint($3); }
 
 %%
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg) {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(errout, "%s\n", msg);
     if (mod && mod->bufStack) {
-        showModuleState(stderr, mod);
+        showModuleState(errout, mod);
     }
     abort();
 }

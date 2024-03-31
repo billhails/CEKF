@@ -1,0 +1,9 @@
+let
+    typedef baz { foo(int) | bar(baz) }
+    fn fail {
+        (x, x) { 1 }
+        (bar(x), x) { 2 }
+        (_, _) { 3 }
+    }
+in
+    print(fail(foo(1), foo(1)))

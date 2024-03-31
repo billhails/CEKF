@@ -1,5 +1,5 @@
 #ifndef cekf_symbols_h
-#    define cekf_symbols_h
+#  define cekf_symbols_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "symbol.h"
+#  include "symbol.h"
 
 HashSymbol *addSymbol(void);
 HashSymbol *andSymbol(void);
@@ -45,7 +45,7 @@ HashSymbol *leSymbol(void);
 HashSymbol *listSymbol(void);
 HashSymbol *ltSymbol(void);
 HashSymbol *cmpSymbol(void);
-HashSymbol *starshipSymbol(void);
+HashSymbol *spaceshipSymbol(void);
 HashSymbol *modSymbol(void);
 HashSymbol *mulSymbol(void);
 HashSymbol *negSymbol(void);

@@ -27,7 +27,7 @@
 #include "anf.h"
 
 #ifdef DEBUG_ANNOTATE
-#    include "debug.h"
+#  include "debug.h"
 #endif
 
 static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);

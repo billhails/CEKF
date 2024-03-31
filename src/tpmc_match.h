@@ -1,5 +1,5 @@
 #ifndef cekf_tpmc_match_h
-#    define cekf_tpmc_match_h
+#  define cekf_tpmc_match_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -20,7 +20,7 @@
  * Term Pattern Matching Compiler match algorithm
  */
 
-#    include "tpmc.h"
+#  include "tpmc.h"
 
 TpmcState *tpmcMakeState(TpmcStateValue *val);
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *states,

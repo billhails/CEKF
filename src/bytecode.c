@@ -28,9 +28,9 @@
 #include "common.h"
 
 #ifdef DEBUG_BYTECODE
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 void initByteCodeArray(ByteCodeArray *b) {
@@ -285,24 +285,6 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     writeExp(x->alternative, b);
     writeCurrentAddressAt(patch2, b);
     LEAVE(writeCexpIf);
-}
-
-static int countCexpCharCondCases(CexpCharCondCases *x) {
-    int val = 0;
-    while (x != NULL) {
-        val++;
-        x = x->next;
-    }
-    return val;
-}
-
-static int countCexpIntCondCases(CexpIntCondCases *x) {
-    int val = 0;
-    while (x != NULL) {
-        val++;
-        x = x->next;
-    }
-    return val;
 }
 
 void writeCexpCharCondCases(int depth, int *values, int *addresses,

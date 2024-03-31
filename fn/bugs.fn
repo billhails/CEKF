@@ -1,0 +1,9 @@
+let
+
+    fn last {
+        ([a]) { a }
+        (_ @ t) { last(t) }
+    }
+
+in
+    print(last(["well", " ", "hi", " ", "there"]))

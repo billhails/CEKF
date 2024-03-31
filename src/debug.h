@@ -1,5 +1,5 @@
 #ifndef cekf_debug_h
-#    define cekf_debug_h
+#  define cekf_debug_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,10 +18,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#    include "cekf.h"
-#    include "anf.h"
-#    include "annotate.h"
-#    include "bytecode.h"
+#  include "cekf.h"
+#  include "anf.h"
+#  include "annotate.h"
+#  include "bytecode.h"
 
 void printCEKF(CEKF * x);
 

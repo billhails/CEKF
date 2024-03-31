@@ -181,7 +181,7 @@ HashSymbol *cmpSymbol() {
     return res;
 }
 
-HashSymbol *starshipSymbol() {
+HashSymbol *spaceshipSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("cmp");

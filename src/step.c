@@ -32,9 +32,9 @@
 #include "hash.h"
 
 #ifdef DEBUG_STEP
-#    define DEBUGPRINTF(...) printf(__VA_ARGS__)
+#  define DEBUGPRINTF(...) printf(__VA_ARGS__)
 #else
-#    define DEBUGPRINTF(...)
+#  define DEBUGPRINTF(...)
 #endif
 
 /**
@@ -785,7 +785,7 @@ static void step() {
                 break;
             case BYTECODE_MATCH:{
                     // pop the dispach code, verify it's an integer and in range, and dispatch
-                    int size = readCurrentByte();
+                    int size __attribute__((unused)) = readCurrentByte();
 #ifdef DEBUG_STEP
                     printf("MATCH [%d]", size);
                     int save = state.C;
@@ -1047,9 +1047,9 @@ static void step() {
                 cant_happen("unrecognised bytecode %d in step()", bytecode);
         }
 #ifdef DEBUG_STEP
-#    ifdef DEBUG_SLOW_STEP
+#  ifdef DEBUG_SLOW_STEP
         sleep(1);
-#    endif
+#  endif
 #endif
     }
 }

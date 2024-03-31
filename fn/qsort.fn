@@ -1,29 +1,110 @@
-// naive un-optimised quicksort implementation to
-// demonstrate the principle, see qqsort.fn for
-// an optimised version.
+// qsort is a naive un-optimised quicksort implementation to
+// demonstrate the principle, qqsort is an optimised version.
 let
-    unsorted = "rhrtgefewhgjtyjyuosfsfswfgikpzxxvcbfvwfh";
+    unsorted = "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovclntwb"
+                "mhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyhfadldkflw"
+                "iwvmfutfeckzsqulxlenvpwpbqdjwxpphhtyeuojmvmhgwcisxevzlvbtnobaaokqbutzqumbzlgqwqs"
+                "ludnrygnynsqcvjekjouyyplgyzlhlsbakaknjauctsspolsvifpwrklfxjfbxrnkecgmypfkbxonkus"
+                "uzigleakcrnqhktvjonlfiuoeoupuwdtzyytsmggyspdoswafjvceqyzgtksocdhszgybbrrivirlcgo"
+                "zvxgtvtxgyuukntggimfsoprufwmdngqkabxolitehdjbiqhdjexiaojatkhdjdcpckbxdxwfocqjchi"
+                "jeylcyhoxnywikniqzpqeeqtucengrvgbbntwmvyeoddjxlgqablttpyrmxlckrvstwmvmfcvmbskciv"
+                "vsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvjfmhmshxmknhonxyxgbgpawkahqbknbqpa"
+                "rgbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocpwspyalpahadximvaauocirfgpijbhqskcuuyn"
+                "vcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrmoypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibz"
+                "kchndafnmxirrruoluwghokrgadfanokngfgrwnuxboualnlhxmighxpwfhcvsdgyiryiehzsaqpelnh"
+                "mzbejngybaqnnwthmxohakvwulpyzsdltquyyxfjtmfrkajmroebudshflggonmhmqahdvdmytvalcdi"
+                "gjqzsiefihwiihqwuvptripgpzwwbjkqrqwmacsjoqbphilfrkuaqbcqvedwkpmbmxdclajloiimciya"
+                "trpuhddbpknmkydzxpxqbmiyugulmxxaffpqlurwechzjgsgzrivnzsdbihytchqxvderrjxsoilgyzi"
+                "zpumoaexhovuadssebduwakznwigstaxgcjixnwfplffmdmpnkgtnrcbkeefpgbdxpjxlrxoiabhhzfn"
+                "lnshiwszijzfnstudgnqnvvqyshcnekqokcftgiqirhfgxvttijoohfaaapgdrxjiqwmbhwcvudlcexq"
+                "ybceknreincfokgvoznyfymbjfihngowqecfrwyiwcoawpxnwmxjqdjfsswewbparjwvgmqoqkqsltop"
+                "vdbvfdwuzgyymdfwxbwccsyzqrvgwgwbmjxqwdcpszcvgghjmwbdsiyrruoparniylkdwxyfsosxzfwz"
+                "nazzvorretnjpvfndbepurvghnzzzsmoffqoqqcibiblqwsjbjakclgwuuirisihetsykmzhtvrkrqcn"
+                "paupfvwtyvdbvdoketzlpdhkirmttkgvmqwjfqcqikbnyzvlsuxpnvptcbkjoggygghbvkmbaebikvly"
+                "lavudzccjyunjnqazihlpeecbxeiimimmjjewztrmggfrhsbvxnvqhjbyhtgfftkyyhiajqtkjmlurbl"
+                "aiuxppzfzumynhridmymfeaonqyrnrqdachqhsixnnfhsfmfkosolwoarhkmhbmxrfwicojiqrvzllbo"
+                "vlkdlsurbczlcvfddcnxiccstfqyudnfjwhdpdvwpguowkjvpwbecsjtuxdbtevwpkbdoutwatjoblgs"
+                "csfapnxdxaxyanuwvuddoqgilxdcznpmdykiskewnbqdsvrnmpbngzvrhkgglfyhqtypoejtqiqcuwjq"
+                "kbiuwxnjtwvegqhoneeewxdbwqqdipyzvfqmslutyuqfebtwdfoboobxruzspspguysayinklowkfggl"
+                "yosgqorbuuozjfkqzehptptdbfknkfdmaphktpuzwgjcluxiigpytlejqajvosrpfqvokpaurhzqxydb"
+                "aphihujakxkgpkktvsywqbeqqnvqfpkokpduowffpqeddgaeesuvrehtttezbrmqmsheeduzztooeleu"
+                "tvbazyjscveflomwwwkfcxzbzuuxxymgtnczxqhmfmvpactzcovibwizgjpzkxbghbyvraqjjozcwufu"
+                "bvzcsewyschjxucgkcftobwyrkkervodvvpeabzxbkfyobqmhrycezkrtyqbyddfazuezibxsajclayh"
+                "yoatnljujvftuedcygqzyfchbenwoffrfkhdhnchecuwkljmuwmjqfxmskimzhrztpagllrosusaofjm"
+                "kvqzljjlminstxbxydteofdhsjrvpxmjrfpwtevvcxiuabkthrqltmgvpmomklfpknorfxmcvmmmvumo"
+                "duwboexdejvlwjtpslwnhobenhyzlvyvkclmbqpdgjvflqfzdyshwhtqlsojdlgnazymlutdlzgxdomo"
+                "bqmcqcvojgmqlyiokaxrorxcswvngwmhsruhshzqlaybhjbctzizftuzbaljjxsjyxmzstvmyinbszsq"
+                "fylacpgmclczrxlgenrxatrkdgcnytjtxgrtqopssjjzrcsafpacrvtvscthxrpmsdrmenvaaetklhez"
+                "oqbfhweopoxvadkxqvbhiipegtasxonteityfibkpnuigancwisyowxeihfjuadsfjoxlewpnifjjceg"
+                "zitjxqpxcousmucwisdmvtinsuuwpzwuuawpcxzscpnqafftsadxcwtrragewwjlnavplniaeathgovt"
+                "usbgytesbncqtdazvhhjyvdbobuaqdeukualscrywgcqnsrwxupqymypjtgkxlezymjerjjwkrgrnmmy"
+                "lsxlwsdglcouajefvwfhjylykjgeojbnuirxdgtjsissxhdedndtfuruyxalrricqnkqpupskajjyltj"
+                "ezgzpdtlktykbvrierzvvzskehmvzgzieizwxhggddfanpnxbyjrekojhdorkzwkplgyumlqmyveesor"
+                "othsffgsuxdsealasqkycajhgdwgvjqyqlxfsghaaarruxplabewjpxkqwmckbaipcxhebrukmgpeaug"
+                "uuxicchlzzhhcrctuulypiwtcpsmmhhrllbrcuztikkewrumznhujmgibzzpnxiycmedaawqomhrsika"
+                "wqzyvdtqcjrzuhapyruccjotrkrlvyrgkrjglomqzxxjmev";
 
-    fn qsort {
-        ([]) { [] }
-        (pivot @ rest) {
-            let
-                lesser = filter(fn (a, b) { a >= b }(pivot), rest);
-                greater = filter(fn (a, b) { a < b }(pivot), rest);
-            in
-                qsort(lesser) @@ [pivot] @@ qsort(greater)
-        }
+    // ~3.6 times faster than simple qsort
+    fn qqsort(lst) {
+        let
+            fn full_sort {
+                ([]) { [] }
+                (first @ rest) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ full_sort(greater))
+                    })
+                }
+            }
+            fn partial_sort {
+                (first @ rest, already_sorted) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ partial_sort(greater, already_sorted))
+                    })
+                }
+                ([], already_sorted) { already_sorted }
+            }
+            fn partition(key, lst, kont) {
+                let fn helper {
+                    ([], lesser, greater) { kont(lesser, greater) }
+                    (first @ rest, lesser, greater) {
+                        if (key < first) {
+                            helper(rest, lesser, first @ greater)
+                        } else {
+                            helper(rest, first @ lesser, greater)
+                        }
+                    }
+                }
+                in helper(lst, [], [])
+            }
+        in
+            full_sort(lst)
     }
 
-    fn filter {
-        (f, []) { [] }
-        (f, h @ t) {
-            if (f(h)) {
-                h @ filter(f, t)
-            } else {
-                filter(f, t)
+    fn qsort(lst) {
+        let
+            fn sort {
+                ([]) { [] }
+                (pivot @ rest) {
+                    let
+                        lesser = filter(fn (a, b) { a >= b }(pivot), rest);
+                        greater = filter(fn (a, b) { a < b }(pivot), rest);
+                    in
+                        sort(lesser) @@ [pivot] @@ sort(greater)
+                }
             }
-        }
+
+            fn filter {
+                (f, []) { [] }
+                (f, h @ t) {
+                    if (f(h)) {
+                        h @ filter(f, t)
+                    } else {
+                        filter(f, t)
+                    }
+                }
+            }
+        in
+            sort(lst)
     }
 in
-    qsort(unsorted)
+    qqsort(unsorted)

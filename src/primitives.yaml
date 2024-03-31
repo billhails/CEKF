@@ -1,0 +1,57 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2023  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+# common primitive types not defined by the schemas
+
+HashSymbol:
+    cname: "HashSymbol *"
+    printFn: printAstSymbol
+    valued: true
+
+int:
+    cname: int
+    printf: "%d"
+    valued: true
+
+void_ptr:
+    cname: "void *"
+    printf: "%p"
+    valued: false
+
+bool:
+    cname: "bool"
+    printf: "%d"
+    valued: true
+
+char:
+    cname: "char"
+    printf: "%c"
+    valued: true
+
+BigInt:
+    cname: "BigInt *"
+    printFn: "printBigInt"
+    markFn: "markBigInt"
+    compareFn: "cmpBigInt"
+    valued: true
+
+string:
+    cname: "char *"
+    printf: "%s"
+    valued: true
+

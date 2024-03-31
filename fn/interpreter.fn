@@ -71,5 +71,4 @@ in
             symbol("a")
         ),
         frame("a", number(3), root)
-    ));
-    puts("\n")
+    ))

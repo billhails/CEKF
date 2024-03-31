@@ -135,32 +135,14 @@ arrays:
         dimension: 2
         entries: TpmcPattern
 
-enums: {}
+primitives: !include primitives.yaml
 
-primitives:
-    HashTable:
-        cname: "HashTable *"
-        printFn: "printHashTable"
-        markFn: "markHashTable"
-        valued: true
-
-    HashSymbol:
-        cname: "HashSymbol *"
-        printFn: "printAstSymbol"
-        markFn: "markHashSymbol"
-        valued: true
-
+external:
     LamExp:
         cname: "LamExp *"
         printFn: ppLamExpD
         markFn: markLamExp
         copyFn: copyLamExp
-        valued: true
-
-    BigInt:
-        cname: "BigInt *"
-        printFn: "printBigInt"
-        markFn: "markBigInt"
         valued: true
 
     LamTypeConstructorInfo:
@@ -170,27 +152,3 @@ primitives:
         copyFn: copyLamTypeConstructorInfo
         valued: true
 
-    int:
-        cname: "int"
-        printf: "%d"
-        valued: true
-
-    bool:
-        cname: bool
-        printf: "%d"
-        valued: true
-
-    string:
-        cname: "char *"
-        printf: "%s"
-        valued: true
-
-    char:
-        cname: "char"
-        printf: "'%c'"
-        valued: true
-
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false

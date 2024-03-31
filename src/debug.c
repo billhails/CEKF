@@ -49,7 +49,7 @@ void printContainedValue(Value x, int depth) {
             break;
         case VALUE_TYPE_BIGINT:
             printPad(depth);
-            fprintBigInt(stderr, x.val.b);
+            fprintBigInt(errout, x.val.b);
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
@@ -464,7 +464,7 @@ void dumpByteCode(ByteCodeArray *b) {
                         if (bigint_flag) {
                             bigint bi = readBigint(b, &i);
                             eprintf(" ");
-                            bigint_fprint(stderr, &bi);
+                            bigint_fprint(errout, &bi);
                             bigint_free(&bi);
                         } else {
                             int li = readInt(b, &i);
@@ -546,7 +546,7 @@ void dumpByteCode(ByteCodeArray *b) {
             case BYTECODE_BIGINT:{
                     eprintf("BIGINT [");
                     bigint bi = readBigint(b, &i);
-                    bigint_fprint(stderr, &bi);
+                    bigint_fprint(errout, &bi);
                     eprintf("]\n");
                     bigint_free(&bi);
                 }

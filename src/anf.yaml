@@ -205,32 +205,9 @@ hashes:
     CTIntTable:
         entries: int
 
-primitives:
-    HashSymbol:
-        cname: "HashSymbol *"
-        printFn: "printAstSymbol"
-        valued: true
-    bool:
-        cname: "bool"
-        printf: "%d"
-        valued: true
-    char:
-        cname: "char"
-        printf: "%c"
-        valued: true
-    int:
-        cname: "int"
-        printf: "%d"
-        valued: true
-    void_ptr:
-        cname: "void *"
-        printf: "%p"
-        valued: false
-    BigInt:
-        cname: "BigInt *"
-        printFn: "printBigInt"
-        markFn: "markBigInt"
-        valued: true
+primitives: !include primitives.yaml
+
+external:
     TcType:
         cname: "struct TcType *"
         printFn: printTcType

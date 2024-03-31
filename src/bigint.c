@@ -7,9 +7,9 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef DEBUG_BIGINT
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 #define BIGINT_ASSERT(a, op, b) assert((a) op (b));
@@ -1301,10 +1301,10 @@ void freeBigInt(BigInt *x) {
 
 void printBigInt(BigInt *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
-    fprintBigInt(stderr, x);
+    fprintBigInt(errout, x);
 }
 
-void bigint_fprint(FILE * f, bigint * bi) {
+void bigint_fprint(FILE *f, bigint * bi) {
     int size = bigint_write_size(bi, 10);
     if (size < 256) {
         static char buffer[256];
@@ -1318,7 +1318,7 @@ void bigint_fprint(FILE * f, bigint * bi) {
     }
 }
 
-void fprintBigInt(FILE * f, BigInt *x) {
+void fprintBigInt(FILE *f, BigInt *x) {
     if (x == NULL) {
         fprintf(f, "<null>");
         return;
@@ -1394,7 +1394,7 @@ BigInt *powBigInt(BigInt *a, BigInt *b) {
     return res;
 }
 
-void dumpBigInt(FILE * fp, BigInt *big) {
+void dumpBigInt(FILE *fp, BigInt *big) {
     fprintf(fp, "BigInt %p", big);
     if (big != NULL) {
         fprintf(fp, " size:%d, capacity:%d, neg:%d, words:[", big->bi.size,

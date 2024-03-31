@@ -32,9 +32,9 @@
 #include "symbols.h"
 
 #ifdef DEBUG_PRINT_GENERATOR
-#    include "debugging_on.h"
+#  include "debugging_on.h"
 #else
-#    include "debugging_off.h"
+#  include "debugging_off.h"
 #endif
 
 static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
@@ -75,24 +75,6 @@ HashSymbol *makePrintName(char *prefix, char *name) {
         sprintf(buf, "%s%s", prefix, name);
         res = newSymbol(buf);
         FREE_ARRAY(char, buf, size);
-    }
-    return res;
-}
-
-static int countLamVarList(LamVarList *list) {
-    int res = 0;
-    while (list != NULL) {
-        list = list->next;
-        res++;
-    }
-    return res;
-}
-
-int countLamList(LamList *list) {
-    int res = 0;
-    while (list != NULL) {
-        list = list->next;
-        res++;
     }
     return res;
 }
@@ -422,7 +404,7 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
              constructors->constructor->name->name);
     }
     LamMatch *match = NULL;
-    if (info->vec) {
+    if (info->needsVec) {
         match = makeTagMatch(constructors, env);
     } else {
         match = makePlainMatch(constructors, env);
@@ -464,6 +446,7 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
                                             LamContext *env,
                                             bool inPreamble) {
     if (inPreamble && isListType(typeDef->type)) {
+        // print$list is hand-coded in the preamble
         return next;
     } else {
         return makePrintTypeFunction(typeDef, env, next);

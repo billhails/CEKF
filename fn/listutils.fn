@@ -1,100 +1,185 @@
-fn member {
-    (_, []) { false }
-    (x, x @ _) { true }
-    (x, _ @ t) { member(x, t) }
-}
+let
+    fn member {
+        (_, []) { false }
+        (x, x @ _) { true }
+        (x, _ @ t) { member(x, t) }
+    }
 
-fn map {
-    (_, []) { [] }
-    (func, h @ t) { func(h) @ map(func, t)) }
-}
+    fn map {
+        (_, []) { [] }
+        (func, h @ t) { func(h) @ map(func, t) }
+    }
 
-fn length {
-    ([]) { 0 }
-    (_ @ t) { 1 + length(t) }
-}
+    fn length {
+        ([]) { 0 }
+        (_ @ t) { 1 + length(t) }
+    }
 
-fn foldl {
-    (_, [], acc) { acc }
-    (func, h @ t, acc) { foldl(func, t, func(h, acc)) }
-}
+    fn foldl {
+        (_, acc, []) { acc }
+        (func, acc, h @ t) { foldl(func, func(h, acc), t) }
+    }
 
-fn foldr(func, lst, acc) {
-    foldl(func, reverse(lst), acc)
-}
+    fn foldr(func, acc, lst) {
+        foldl(func, acc, reverse(lst))
+    }
 
-fn reverse (lst) {
-    foldl(fn (elem, acc) { elem @ acc }, lst, [])
-}
+    fn foldl1(func, h @ t) {
+        foldl(func, h, t)
+    }
 
-fn filter {
-    (_, []) { [] }
-    (func, h @ t) {
-        if (func(h)) {
-            h @ filter(func, t)
-        } else {
-            filter(func, t)
+    fn foldr1(func, lst) {
+        foldl1(func, reverse(lst))
+    }
+
+    // reverse = foldl((@), [])
+    fn reverse (lst) {
+        foldl(fn (elem, acc) { elem @ acc }, [], lst)
+    }
+
+    fn scanl (func, acc, lst) {
+        let fn scan {
+            (acc, []) { acc }
+            (acc = acc_h @ _, lst_h @ lst_t) { scan(func(lst_h, acc_h) @ acc, lst_t) }
         }
+        in scan([acc], lst)
     }
-}
 
-fn fill {
-    (0, _) { [] }
-    (n, v) { v @ fill(n - 1, v) }
-}
-
-fn nth {
-    (0, h @ _) { h }
-    (n, _ @ t) { nth(n - 1, t) }
-}
-
-fn sum(lst) {
-    foldl(fn (elm, acc) { elm + acc }, lst, 0)
-}
-
-fn range(low, high) {
-    if (low >= high) { [] }
-    else { low @ range(low + 1, high) }
-}
-
-fn dedup {
-    ([]) { [] }
-    (h @ t) {
-        h @ dedup(filter(t, fn(i) { h != i }))
-    }
-}
-
-fn sort(lst) {
-    let
-        fn full_sort {
-            ([]) { [] }
-            (first @ rest) {
-                partition(first, rest, fn (lesser, greater) {
-                    partial_sort(lesser, first @ full_sort(greater))
-                })
+    fn filter {
+        (_, []) { [] }
+        (func, h @ t) {
+            if (func(h)) {
+                h @ filter(func, t)
+            } else {
+                filter(func, t)
             }
         }
-        fn partial_sort {
-            (first @ rest, already_sorted) {
-                partition(first, rest, fn (lesser, greater) {
-                    partial_sort(lesser, first @ partial_sort(greater, already_sorted))
-                })
-            }
-            ([], sorted) { sorted }
+    }
+
+    fn concat(lst) {
+        foldr(fn (elem, acc) { elem @@ acc }, [], lst)
+    }
+
+    fn any {
+        (_, []) { false }
+        (f, h @ t) { f(h) or any(f, t) }
+    }
+
+    fn none(f, l) {
+        not any(f, l)
+    }
+
+    fn all {
+        (_, []) { true }
+        (f, h @ t) { f(h) and all(f, t) }
+    }
+
+    fn repeat {
+        (0, _) { [] }
+        (n, v) { v @ repeat(n - 1, v) }
+    }
+
+    fn nth {
+        (0, h @ _) { h }
+        (n, _ @ t) { nth(n - 1, t) }
+    }
+
+    // sum = foldl((+), 0)
+    fn sum(lst) {
+        foldl(fn (elm, acc) { elm + acc }, 0, lst)
+    }
+
+    // product = foldl((*), 1)
+    fn product(lst) {
+        foldl(fn (elm, acc) { elm * acc }, 1, lst)
+    }
+
+    fn zip {
+        (h1 @ t1, h2 @ t2) { [h1, h2] @ zip(t1, t2) }
+        (_, _) { [] }
+    }
+
+    fn zipWith {
+        (f, h1 @ t1, h2 @ t2) { f(h1, h2) @ zipWith(f, t1, t2) }
+        (_, _, _) { [] }
+    }
+
+    fn last {
+        ([a]) { a }
+        (_ @ t) { last(t) }
+    }
+
+    fn empty {
+        ([]) { true }
+        (_) { false }
+    }
+
+    fn take {
+        (0, _) { [] }
+        (n, []) { [] }
+        (n, h @ t) { h @ take(n - 1, t) }
+    }
+
+    fn drop {
+        (0, l) { l }
+        (n, []) { [] }
+        (n, _ @ t) { drop(n - 1, t) }
+    }
+
+    fn minimum(lst) {
+        foldl1(fn (elem, acc) { if (elem < acc) { elem } else { acc } }, lst)
+    }
+
+    fn maximum(lst) {
+        foldl1(fn (elem, acc) { if (elem > acc) { elem } else { acc } }, lst)
+    }
+
+    fn range(low, high) {
+        if (low > high) { [] }
+        else { low @ range(low + 1, high) }
+    }
+
+    fn dedup {
+        ([]) { [] }
+        (h @ t) {
+            h @ dedup(filter(fn(i) { h != i }, t))
         }
-        fn partition(key, lst, kont) {
-            let fn helper {
-                ([], lesser, greater) { kont(lesser, greater) }
-                (first @ rest, lesser, greater) {
-                    if (key < first) {
-                        helper(rest, lesser, first @ greater)
-                    } else {
-                        helper(rest, first @ lesser, greater)
-                    }
+    }
+
+    fn sort(lst) {
+        let
+            fn full_sort {
+                ([]) { [] }
+                (first @ rest) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ full_sort(greater))
+                    })
                 }
             }
-            in helper(lst, [], [])
-        }
-    in
-        full_sort(lst)
-}
+            fn partial_sort {
+                (first @ rest, already_sorted) {
+                    partition(first, rest, fn (lesser, greater) {
+                        partial_sort(lesser, first @ partial_sort(greater, already_sorted))
+                    })
+                }
+                ([], sorted) { sorted }
+            }
+            fn partition(key, lst, kont) {
+                let fn helper {
+                    ([], lesser, greater) { kont(lesser, greater) }
+                    (first @ rest, lesser, greater) {
+                        if (key < first) {
+                            helper(rest, lesser, first @ greater)
+                        } else {
+                            helper(rest, first @ lesser, greater)
+                        }
+                    }
+                }
+                in helper(lst, [], [])
+            }
+        in
+            full_sort(lst)
+    }
+
+in
+    print(concat(take(3, ["well", " ", "hi", " ", "there"])))

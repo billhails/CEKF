@@ -1,5 +1,5 @@
 #ifndef cekf_debugging
-#    define cekf_debugging
+#  define cekf_debugging
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -22,9 +22,9 @@ static int _debugInvocationId __attribute__((unused)) = 0;
 static bool _debuggingOn __attribute__((unused)) = true;
 static int _debuggingDepth __attribute__((unused)) = 0;
 
-#    define __DEBUGPAD__() do { for (int pads = _debuggingDepth / 4; pads > 0; pads--) { eprintf("   |"); } eprintf("%*s", _debuggingDepth % 4, ""); } while (false)
+#  define __DEBUGPAD__() do { for (int pads = _debuggingDepth / 4; pads > 0; pads--) { eprintf("   |"); } eprintf("%*s", _debuggingDepth % 4, ""); } while (false)
 
-#    define DEBUG(...) do { \
+#  define DEBUG(...) do { \
     if (_debuggingOn) { \
         eprintf("%s:%-5d", __FILE__, __LINE__); \
         __DEBUGPAD__(); \
@@ -33,7 +33,7 @@ static int _debuggingDepth __attribute__((unused)) = 0;
     } \
 } while(0)
 
-#    define DEBUGN(...) do { \
+#  define DEBUGN(...) do { \
     if (_debuggingOn) { \
         eprintf("%s:%-5d", __FILE__, __LINE__); \
         __DEBUGPAD__(); \
@@ -41,18 +41,18 @@ static int _debuggingDepth __attribute__((unused)) = 0;
     } \
 } while(0)
 
-#    define ENTER(name) int _debugMyId = _debugInvocationId++; DEBUG("ENTER " #name " #%d", _debugMyId); _debuggingDepth++
+#  define ENTER(name) int _debugMyId = _debugInvocationId++; DEBUG("ENTER " #name " #%d", _debugMyId); _debuggingDepth++
 
-#    define LEAVE(name) _debuggingDepth--; DEBUG("LEAVE " #name " #%d", _debugMyId)
+#  define LEAVE(name) _debuggingDepth--; DEBUG("LEAVE " #name " #%d", _debugMyId)
 
-#    define NEWLINE() do { if (_debuggingOn) eprintf("\n"); } while(0)
+#  define NEWLINE() do { if (_debuggingOn) eprintf("\n"); } while(0)
 
-#    define IFDEBUG(x) do { if (_debuggingOn) { eprintf("%s:%-5d", __FILE__, __LINE__); __DEBUGPAD__(); x; NEWLINE(); } } while(0)
+#  define IFDEBUG(x) do { if (_debuggingOn) { eprintf("%s:%-5d", __FILE__, __LINE__); __DEBUGPAD__(); x; NEWLINE(); } } while(0)
 
-#    define IFDEBUGN(x) do { if (_debuggingOn) { x; NEWLINE(); } } while(0)
+#  define IFDEBUGN(x) do { if (_debuggingOn) { x; NEWLINE(); } } while(0)
 
-#    define DEBUGGING_ON() do { _debuggingOn = true; } while (0)
+#  define DEBUGGING_ON() do { _debuggingOn = true; } while (0)
 
-#    define DEBUGGING_OFF() do { _debuggingOn = false; } while (0)
+#  define DEBUGGING_OFF() do { _debuggingOn = false; } while (0)
 
 #endif
