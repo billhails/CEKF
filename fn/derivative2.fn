@@ -13,13 +13,13 @@ let
         } else {
             switch(t) {
                 (num(_)) { num(0) }
-                (pow(x1, num(n))) {
-                    if (x1 == x) {
-                        mul(num(n), pow(x1, num(n - 1)))
+                (pow(y, num(n))) {
+                    if (y == x) {
+                        mul(num(n), pow(y, num(n - 1)))
                     } else {
-                        let t = simplify(x1);
+                        let t = simplify(y);
                         in
-                        if (t == x1) {
+                        if (t == y) {
                             pow(t, num(n))
                         } else {
                             deriv(pow(t, num(n)), x)

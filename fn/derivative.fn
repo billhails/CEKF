@@ -6,15 +6,56 @@ let
                    mul(term, term) |
                    div(term, term) |
                    pow(term, term) }
+
     fn deriv {
         (x, x) { num(1) }
         (num(_), _) { num(0) }
         (pow(x, num(n)), x) { mul(num(n), pow(x, num(n - 1))) }
+        (pow(y, n), x) {
+            let t = simplify(y);
+            in
+                if (t == y) {
+                    pow(t, n)
+                } else {
+                    deriv(pow(t, n), x)
+                }
+        }
         (add(f, g), x) { add(deriv(f, x), deriv(g, x)) }
         (sub(f, g), x) { sub(deriv(f, x), deriv(g, x)) }
         (mul(f, g), x) { add(mul(g, deriv(f, x)), mul(f, deriv(g, x))) }
         (div(num(1), f), x) { div(sub(num(0), deriv(f, x)), mul(f, f)) }
         (div(f, g), x) { div(sub(mul(g, deriv(f, x)), mul(f, deriv(g, x))), mul(g, g)) }
     }
+
+    fn simplify {
+        (x=num(_))            { x }
+        (x=var(_))            { x }
+        (add(a, num(0)))      |
+        (add(num(0), a))      { simplify(a) }
+        (add(num(a), num(b))) { num(a + b) }
+        (add(num(a), add(num(b), x))) |
+        (add(num(a), add(x, num(b)))) |
+        (add(add(x, num(b)), num(a))) |
+        (add(add(num(b), x), num(a))) { simplify(add(num(a + b), x)) }
+        (add(a, num(n)))      |
+        (add(a, b))           { add(simplify(a), simplify(b)) }
+        (sub(a, num(0)))      { simplify(a) }
+        (sub(a, b))           { sub(simplify(a), simplify(b)) }
+        (mul(num(0), _))      |
+        (mul(_, num(0)))      { num(0) }
+        (mul(num(1), a))      |
+        (mul(a, num(1)))      { simplify(a) }
+        (mul(num(a), num(b))) { num(a * b) }
+        (mul(a, b))           { mul(simplify(a), simplify(b)) }
+        (div(a, num(1)))      { simplify(a) }
+        (div(num(0), a))      { num(0) }
+        (div(a, b))           { div(simplify(a), simplify(b)) }
+        (pow(a, num(1)))      { simplify(a) }
+        (pow(a, num(0)))      { num(1) }
+        (pow(num(a), num(b))) { num(a**b) }
+        // (a + b)**2 == a**2 + 2ab + b**2
+        (pow(add(a, b), num(2))) { simplify(add(pow(a, num(2)), add(mul(num(2), mul(a, b)), pow(b, num(2))))) }
+        (pow(a, b)) { pow(simplify(a), simplify(b)) }
+    }
 in
-    print(deriv(add(add(pow(var('x'), num(2)), var('x')), num(1)), var('x')))
+    print(simplify(deriv(add(add(pow(add(var('x'), num(1)), num(2)), var('x')), num(1)), var('x'))))

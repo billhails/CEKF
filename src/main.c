@@ -74,7 +74,8 @@ static void processArgs(int argc, char *argv[]) {
         printf("%s",
                "--bigint                use arbitrary precision integers\n"
                "--report                report statistics\n"
-               "--tpmc-mermaid=function produce a mermaid graph of the function's TPMC state table\n"
+               "--tpmc-mermaid=function produce a mermaid graph of the\n"
+               "                        function's TPMC state table\n"
                "--help                  this help\n");
         exit(0);
     }
