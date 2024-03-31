@@ -42,7 +42,7 @@ static void addToNg(TcNg *env, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static TcType *makeBoolean(void);
-static TcType *makeStarship(void);
+static TcType *makeSpaceship(void);
 static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
@@ -303,7 +303,7 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     return res;
 }
 
-static TcType *analyzeStarship(LamExp *exp1, LamExp *exp2, TcEnv *env,
+static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
                                TcNg *ng) {
     // ENTER(analyzeComparison);
     TcType *type1 = analyzeExp(exp1, env, ng);
@@ -318,7 +318,7 @@ static TcType *analyzeStarship(LamExp *exp1, LamExp *exp2, TcEnv *env,
         eprintf("\n");
     }
     UNPROTECT(save);
-    TcType *res = makeStarship();
+    TcType *res = makeSpaceship();
     // LEAVE(analyzeComparison);
     return res;
 }
@@ -367,7 +367,7 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
             res = analyzeComparison(app->exp1, app->exp2, env, ng);
             break;
         case LAMPRIMOP_TYPE_CMP:
-            res = analyzeStarship(app->exp1, app->exp2, env, ng);
+            res = analyzeSpaceship(app->exp1, app->exp2, env, ng);
             break;
         case LAMPRIMOP_TYPE_VEC:
             cant_happen("encountered VEC in analyzePrim");
@@ -1297,8 +1297,8 @@ static TcType *makeBoolean() {
     return res;
 }
 
-static TcType *makeStarship() {
-    TcType *res = makeUserType(starshipSymbol(), NULL);
+static TcType *makeSpaceship() {
+    TcType *res = makeUserType(spaceshipSymbol(), NULL);
     return res;
 }
 
