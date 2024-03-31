@@ -124,5 +124,4 @@ let
     }
  
 in
-    print(lookup('f', delete('k', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki"))));
-    puts("\n")
+    print(lookup('f', delete('k', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki"))))

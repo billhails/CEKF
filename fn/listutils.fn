@@ -182,5 +182,4 @@ let
     }
 
 in
-    print(concat(take(3, ["well", " ", "hi", " ", "there"])));
-    puts("\n")
+    print(concat(take(3, ["well", " ", "hi", " ", "there"])))

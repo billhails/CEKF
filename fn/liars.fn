@@ -44,5 +44,4 @@ let
             [betty, ethel, joan, kitty, mary]
     }
 in
-    print(liars());
-    puts("\n")
+    print(liars())

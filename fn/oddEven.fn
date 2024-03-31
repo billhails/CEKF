@@ -8,5 +8,4 @@ let
         (n) { odd(n - 1) }
     }
 in
-    print(odd(3));
-    puts("\n")
+    print(odd(3))
