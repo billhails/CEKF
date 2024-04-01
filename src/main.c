@@ -56,6 +56,7 @@ static void processArgs(int argc, char *argv[]) {
             { "report", no_argument, &report_flag, 1 },
             { "help", no_argument, &help_flag, 1 },
             { "tpmc-mermaid", required_argument, 0, 'm' },
+            { "lambda-conversion", required_argument, 0, 'l' },
             { 0, 0, 0, 0 }
         };
         int option_index = 0;
@@ -67,6 +68,10 @@ static void processArgs(int argc, char *argv[]) {
 
         if (c == 'm') {
             tpmc_mermaid_function = optarg;
+        }
+
+        if (c == 'l') {
+            lambda_conversion_function = optarg;
         }
     }
 

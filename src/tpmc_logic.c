@@ -141,6 +141,18 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     return pattern;
 }
 
+static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
+    TpmcPatternArray *tuple = convertArgList(args, env);
+    int save = PROTECT(tuple);
+    TpmcPatternValue *val =
+        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_TUPLE,
+                            TPMCPATTERNVALUE_VAL_TUPLE(tuple));
+    PROTECT(val);
+    TpmcPattern *pattern = newTpmcPattern(val);
+    UNPROTECT(save);
+    return pattern;
+}
+
 static TpmcPattern *makeBigIntegerPattern(BigInt *number) {
     TpmcPatternValue *val =
         newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_BIGINTEGER,
@@ -173,13 +185,15 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
             cant_happen("env arg type not supported yet in convertPattern");
         case AST_ARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
+        case AST_ARG_TYPE_TUPLE:
+            return makeTuplePattern(arg->val.tuple, env);
         case AST_ARG_TYPE_NUMBER:
             return makeBigIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
         default:
-            cant_happen("unrecognized arg type %d in convertPattern",
-                        arg->type);
+            cant_happen("unrecognized arg type %s in convertPattern",
+                        astArgTypeName(arg->type));
     }
 }
 
@@ -253,6 +267,19 @@ static void renameConstructorPattern(TpmcConstructorPattern *pattern,
     }
 }
 
+static void renameTuplePattern(TpmcPatternArray *components,
+                                     HashSymbol *path) {
+    char buf[512];
+    for (int i = 0; i < components->size; i++) {
+        if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
+            can_happen("maximum path depth exceeded");
+        }
+        DEBUG("renameTuplePattern: %s", buf);
+        HashSymbol *newPath = newSymbol(buf);
+        renamePattern(components->entries[i], newPath);
+    }
+}
+
 static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
     pattern->path = variable;
     switch (pattern->pattern->type) {
@@ -273,8 +300,11 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
             renameConstructorPattern(pattern->pattern->val.constructor,
                                      variable);
             break;
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            renameTuplePattern(pattern->pattern->val.tuple, variable);
+            break;
         default:
-            cant_happen("unrecognised pattern type in renamePattern");
+            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
@@ -354,6 +384,16 @@ static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern,
     return pattern;
 }
 
+static TpmcPattern *replaceTuplePattern(TpmcPattern *pattern,
+                                        TpmcPatternTable *seen) {
+    TpmcPatternArray *components = pattern->pattern->val.tuple;
+    for (int i = 0; i < components->size; ++i) {
+        components->entries[i] =
+            replaceComparisonPattern(components->entries[i], seen);
+    }
+    return pattern;
+}
+
 static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
                                              TpmcPatternTable *seen) {
     switch (pattern->pattern->type) {
@@ -365,13 +405,15 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
             return replaceVarPattern(pattern, seen);
         case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
             return replaceAssignmentPattern(pattern, seen);
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            return replaceTuplePattern(pattern, seen);
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return replaceConstructorPattern(pattern, seen);
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             cant_happen
                 ("encounterted nested comparison pattern during replaceComparisonPattern");
         default:
-            cant_happen("unrecognised pattern type in renamePattern");
+            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 
@@ -420,6 +462,17 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSu
                                                     *substitutions) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
+    for (int i = 0; i < components->size; ++i) {
+        components->entries[i] =
+            collectPatternSubstitutions(components->entries[i],
+                                        substitutions);
+    }
+    return pattern;
+}
+
+static TpmcPattern *collectTupleSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
+    TpmcPatternArray *components =
+        pattern->pattern->val.tuple;
     for (int i = 0; i < components->size; ++i) {
         components->entries[i] =
             collectPatternSubstitutions(components->entries[i],
@@ -479,10 +532,12 @@ static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubsti
             return collectAssignmentSubstitutions(pattern, substitutions);
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return collectConstructorSubstitutions(pattern, substitutions);
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            return collectTupleSubstitutions(pattern, substitutions);
         case TPMCPATTERNVALUE_TYPE_COMPARISON:
             return collectComparisonSubstitutions(pattern, substitutions);
         default:
-            cant_happen("unrecognised pattern type in renamePattern");
+            cant_happen("unrecognised pattern type %s", tpmcPatternValueTypeName(pattern->pattern->type));
     }
 }
 

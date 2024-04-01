@@ -187,8 +187,11 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_COND_DEFAULT:
             eprintf("default");
             break;
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            ppLamTupleIndex(exp->val.tuple_index);
+            break;
         default:
-            cant_happen("unrecognized type %d in ppLamExp", exp->type);
+            cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
@@ -495,6 +498,16 @@ void ppLamMatch(LamMatch *match) {
         eprintf(" ");
         _ppLamMatchList(match->cases);
     }
+    eprintf(")");
+}
+
+void ppLamTupleIndex(LamTupleIndex *index) {
+    if (index == NULL) {
+        eprintf("<NULL tuple index>");
+        return;
+    }
+    eprintf("(index %d ", index->vec);
+    ppLamExp(index->exp);
     eprintf(")");
 }
 

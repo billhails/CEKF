@@ -96,6 +96,7 @@ unions:
         character: char
         biginteger: BigInt
         constructor: TpmcConstructorPattern
+        tuple: TpmcPatternArray
 
     TpmcStateValue:
         test: TpmcTestState

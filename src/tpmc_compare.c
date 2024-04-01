@@ -21,6 +21,14 @@
 // TODO should be able to get rid of this now we auto-generate comparison functions
 
 #include "tpmc_compare.h"
+#include "tpmc_pp.h"
+#include "common.h"
+
+#ifdef DEBUG_TPMC_COMPARE
+#  include "debugging_on.h"
+#else
+#  include "debugging_off.h"
+#endif
 
 #define PREAMBLE() do {\
     if (a == b) { \
@@ -79,11 +87,15 @@ bool tpmcArcEq(TpmcArc *a, TpmcArc *b) {
 }
 
 bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray) {
+    DEBUGN("tpmcArcInArray: ");
+    IFDEBUGN(ppTpmcPattern(arc->test));
     for (int i = 0; i < arcArray->size; i++) {
         if (tpmcArcEq(arcArray->entries[i], arc)) {
+            DEBUG("tpmcArcInArray returning true");
             return true;
         }
     }
+    DEBUG("tpmcArcInArray returning false");
     return false;
 }
 
@@ -115,8 +127,10 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return tpmcConstructorPatternEq(a->val.constructor,
                                             b->val.constructor);
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            return tpmcPatternArrayEq(a->val.tuple, b->val.tuple);
         default:
-            cant_happen("unrecognised type %d in tpmcPatternEq", a->type);
+            cant_happen("unrecognised type %s", tpmcPatternValueTypeName(a->type));
     }
 }
 

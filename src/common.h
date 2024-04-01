@@ -36,6 +36,7 @@
 // #    define DEBUG_TPMC_MATCH
 // #    define DEBUG_TPMC_TRANSLATE
 // #    define DEBUG_TPMC_LOGIC
+// #    define DEBUG_TPMC_COMPARE
 // #define DEBUG_ANNOTATE
 // #define DEBUG_DESUGARING
 // #define DEBUG_HASHTABLE

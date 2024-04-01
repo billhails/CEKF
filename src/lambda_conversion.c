@@ -32,6 +32,8 @@
 #include "ast_debug.h"
 #include "print_generator.h"
 
+char *lambda_conversion_function = NULL; // set by --lambda-conversion flag
+
 static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
                                           LamContext *env);
 static LamList *convertExpressions(AstExpressions *expressions,
@@ -139,6 +141,14 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     UNPROTECT(save);
     LEAVE(lamConvertPrint);
     return result;
+}
+
+static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
+    LamList *expressions = convertExpressions(tuple, env);
+    int save = PROTECT(expressions);
+    LamExp *res = newLamExp(LAMEXP_TYPE_MAKE_TUPLE, LAMEXP_VAL_MAKE_TUPLE(expressions));
+    UNPROTECT(save);
+    return res;
 }
 
 static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
@@ -410,6 +420,10 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
     if (doMermaid)
         tpmc_mermaid_flag = 1;
     LamExp *exp = convertExpression(define->expression, env);
+    if (lambda_conversion_function != NULL && strcmp(lambda_conversion_function, define->symbol->name) == 0) {
+        ppLamExp(exp);
+        eprintf("\n");
+    }
     if (doMermaid)
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
@@ -703,10 +717,13 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_PRINT:
             result = lamConvertPrint(expression->val.print, env);
             break;
+        case AST_EXPRESSION_TYPE_TUPLE:
+            result = lamConvertTuple(expression->val.tuple, env);
+            break;
         default:
             cant_happen
-                ("unrecognised expression type %d in convertExpression",
-                 expression->type);
+                ("unrecognised expression type %s",
+                 astExpressionTypeName(expression->type));
     }
     LEAVE(convertExpression);
     return result;

@@ -87,6 +87,8 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
                                      LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
+static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail);
+static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
 
@@ -132,6 +134,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizePrint(lamExp->val.print, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            return normalizeTupleIndex(lamExp->val.tuple_index, tail);
         case LAMEXP_TYPE_DECONSTRUCT:
             return normalizeDeconstruct(lamExp->val.deconstruct, tail);
         case LAMEXP_TYPE_CONSTRUCT:
@@ -152,10 +156,12 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeBack(tail);
         case LAMEXP_TYPE_ERROR:
             return normalizeError(tail);
+        case LAMEXP_TYPE_MAKE_TUPLE:
+            return normalizeMakeTuple(lamExp->val.make_tuple, tail);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
-            cant_happen("unrecognized type %d in normalize", lamExp->type);
+            cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
     }
     LEAVE(normalize);
 }
@@ -273,6 +279,27 @@ static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
     LEAVE(noramaalizeDeconstruct);
     return res;
 }
+
+static LamPrimApp *tupleIndexToPrimApp(LamTupleIndex *tupleIndex) {
+    LamExp *index =
+        newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(tupleIndex->vec));
+    int save = PROTECT(index);
+    LamPrimApp *res =
+        newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, tupleIndex->exp);
+    UNPROTECT(save);
+    return res;
+}
+
+static Exp *normalizeTupleIndex(LamTupleIndex *index, Exp *tail) {
+    ENTER(noramaalizeTupleIndex);
+    LamPrimApp *primApp = tupleIndexToPrimApp(index);
+    int save = PROTECT(primApp);
+    Exp *res = normalizePrim(primApp, tail);
+    UNPROTECT(save);
+    LEAVE(noramaalizeTupleIndex);
+    return res;
+}
+
 
 static Exp *normalizeTag(LamExp *tagged, Exp *tail) {
     ENTER(noramaalizeTag);
@@ -414,10 +441,7 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
 }
 
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nargs = 0;
-    for (LamList *args = construct->args; args != NULL; args = args->next) {
-        nargs++;
-    }
+    int nargs = countLamList(construct->args);
     LamExp *newArg =
         newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(construct->tag));
     int save = PROTECT(newArg);
@@ -428,6 +452,12 @@ static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
     return res;
 }
 
+static LamMakeVec *tupleToMakeVec(LamList *tuple) {
+    int nargs = countLamList(tuple);
+    LamMakeVec *res = newLamMakeVec(nargs, tuple);
+    return res;
+}
+
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
     ENTER(normalizeConstruct);
     LamMakeVec *makeVec = constructToMakeVec(construct);
@@ -435,6 +465,14 @@ static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
     Exp *res = normalizeMakeVec(makeVec, tail);
     UNPROTECT(save);
     LEAVE(normalizeConstruct);
+    return res;
+}
+
+static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail) {
+    LamMakeVec *makeVec = tupleToMakeVec(tuple);
+    int save = PROTECT(makeVec);
+    Exp *res = normalizeMakeVec(makeVec, tail);
+    UNPROTECT(save);
     return res;
 }
 
@@ -912,13 +950,13 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_AND:
         case LAMEXP_TYPE_OR:
         case LAMEXP_TYPE_AMB:
+        case LAMEXP_TYPE_MAKE_TUPLE:
             res = replaceLamCexp(lamExp, replacements);
             break;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("replaceLamExp encountered cond default");
         default:
-            cant_happen("unrecognised type %d in replaceLamExp",
-                        lamExp->type);
+            cant_happen("unrecognised type %s", lamExpTypeName(lamExp->type));
     }
     LEAVE(replaceLamExp);
     return res;

@@ -727,6 +727,12 @@ class SimpleArray(Base):
             self.height = SimpleField(self.name, "height", "int")
         self.entries = SimpleField(self.name,"entries", data["entries"])
 
+    def getDefineValue(self):
+        return 'x'
+
+    def getDefineArg(self):
+        return 'x'
+
     def tag(self):
         super().tag()
         self.tagField = SimpleField(self.name, "_tag", "string")
@@ -736,8 +742,9 @@ class SimpleArray(Base):
 
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
+        extraCmpArgs = self.getExtraCmpAargs(catalog)
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false; // SimpleArray.printCompareField")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraCmpArgs})) return false; // SimpleArray.printCompareField")
 
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
@@ -948,6 +955,14 @@ class SimpleArray(Base):
         for name in self.extraCmpArgs:
             ctype = self.getCtype(self.extraCmpArgs[name], catalog)
             extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getExtraCmpAargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            extra += [name]
         if len(extra) > 0:
             return ", " + ", ".join(extra)
         return ""

@@ -73,7 +73,7 @@ static char *mermaidStateName(TpmcState *state) {
                 printf("%s(\"%s\\n", buf,
                        state->state->val.test->path->name);
                 mermaidFreeVariables(state->freeVariables);
-                printf("\")\n");
+                printf("\\n(arcs %d)\")\n", countTpmcArcArray(state->state->val.test->arcs));
             }
             break;
         case TPMCSTATEVALUE_TYPE_FINAL:
@@ -135,9 +135,13 @@ static void mermaidPattern(TpmcPattern *pattern) {
             mermaidConstructorComponents(value->val.constructor->components);
             printf(")");
             break;
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            printf("#(");
+            mermaidConstructorComponents(value->val.tuple);
+            printf(")");
+            break;
         default:
-            cant_happen("unrecognised type %d in mermaidArcLabel",
-                        value->type);
+            cant_happen("unrecognised type %s", tpmcPatternValueTypeName(value->type));
     }
 }
 

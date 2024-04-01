@@ -1,0 +1,8 @@
+let
+    typedef T(#a, #b, #c) { triple(#a, #b, #c) }
+    fn testTriple {
+        (triple(1, c, d)) { c * d }
+        (triple(2, c, d)) { c + d }
+    }
+in
+    true
