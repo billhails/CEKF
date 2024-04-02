@@ -107,6 +107,8 @@ void setFrame(Stack *stack, int nargs);
 void clearFrame(Stack *stack);
 void copyTosToEnv(Stack *s, Env *e, int n);
 void copyValues(Value *to, Value *from, int size);
+// safe version of copyValues:
+void moveValues(Value *to, Value *from, int size);
 
 extern Snapshot noSnapshot;
 
@@ -135,5 +137,6 @@ void markEnv(Env *x);
 void markKont(Kont *x);
 void markFail(Fail *x);
 void markVec(Vec *x);
+void dumpStack(Stack *stack);
 
 #endif

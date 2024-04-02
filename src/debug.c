@@ -25,7 +25,7 @@
 #include "debug.h"
 #include "hash.h"
 
-static void printClo(Clo *x, int depth);
+static void printClo(Clo *x, char *type, int depth);
 static void printElidedEnv(Env *x);
 static void printEnv(Env *x, int depth);
 static void printFail(Fail *x, int depth);
@@ -66,7 +66,10 @@ void printContainedValue(Value x, int depth) {
             }
             break;
         case VALUE_TYPE_CLO:
-            printClo(x.val.clo, depth);
+            printClo(x.val.clo, "C", depth);
+            break;
+        case VALUE_TYPE_PCLO:
+            printClo(x.val.clo, "PC", depth);
             break;
         case VALUE_TYPE_CONT:
             printKont(x.val.k, depth);
@@ -76,7 +79,7 @@ void printContainedValue(Value x, int depth) {
             printVec(x.val.vec);
             break;
         default:
-            cant_happen("unrecognised value type in printContainedValue");
+            cant_happen("unrecognised value type %d", x.type);
     }
 }
 
@@ -119,8 +122,8 @@ void printValue(Value x, int depth) {
     eprintf("]");
 }
 
-void printElidedClo(Clo *x) {
-    eprintf("C[%d, %04lx, E[<...>], ", x->nvar, x->c);
+void printElidedClo(Clo *x, char *type) {
+    eprintf("%s[%d, %04lx, E[<...>], ", type, x->nvar, x->c);
     eprintf("]");
 }
 
@@ -173,7 +176,10 @@ void printElidedValue(Value x) {
             printVec(x.val.vec);
             break;
         case VALUE_TYPE_CLO:
-            printElidedClo(x.val.clo);
+            printElidedClo(x.val.clo, "C");
+            break;
+        case VALUE_TYPE_PCLO:
+            printElidedClo(x.val.clo, "PC");
             break;
         case VALUE_TYPE_CONT:
             printElidedKont(x.val.k);
@@ -184,9 +190,9 @@ void printElidedValue(Value x) {
     eprintf("]");
 }
 
-static void printClo(Clo *x, int depth) {
+static void printClo(Clo *x, char *type, int depth) {
     printPad(depth);
-    eprintf("C[%d, %04lx, ", x->nvar, x->c);
+    eprintf("%s[%d, %04lx, ", type, x->nvar, x->c);
     printElidedEnv(x->rho);
     eprintf("]");
 }

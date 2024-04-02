@@ -413,10 +413,13 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
             exp->val.amb =
                 performAmbSubstitutions(exp->val.amb, substitutions);
             break;
+        case LAMEXP_TYPE_MAKE_TUPLE:
+            exp->val.make_tuple =
+                performListSubstitutions(exp->val.make_tuple, substitutions);
+            break;
         default:
             cant_happen
-                ("unrecognized LamExp type (%d) in lamPerformSubstitutions",
-                 exp->type);
+                ("unrecognized LamExp type %s", lamExpTypeName(exp->type));
     }
     LEAVE(lamPerformSubstitutions);
     return exp;

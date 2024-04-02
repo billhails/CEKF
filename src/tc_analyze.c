@@ -1555,6 +1555,7 @@ static bool unifyPairs(TcPair *a, TcPair *b) {
 
 static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
     if (a->size != b->size) {
+        can_happen("tuple sizes differ: %d vs %d", a->size, b->size);
         return false;
     }
     bool unified = true;

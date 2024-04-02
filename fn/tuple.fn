@@ -1,7 +1,7 @@
 let
     fn testTuple {
-        (#(1, c, d)) { c * d }
-        (#(2, c, d)) { c + d }
+        (#(1, c, d)) { #(c, d, 'h', c * d) }
+        (#(2, c, d)) { #(c, d, 'h', c + d) }
     }
 in
     print(testTuple(#(1, 2, 3)))

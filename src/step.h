@@ -27,4 +27,6 @@ void markCEKF(void);
 
 void reportSteps(void);
 
+extern int dump_bytecode_flag;
+
 #endif

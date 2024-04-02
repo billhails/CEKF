@@ -31,6 +31,8 @@
 #include "step.h"
 #include "hash.h"
 
+int dump_bytecode_flag = 0;
+
 #ifdef DEBUG_STEP
 #  define DEBUGPRINTF(...) printf(__VA_ARGS__)
 #else
@@ -392,14 +394,14 @@ static Value not(Value a) {
 static Value vec(Value index, Value vector) {
 #ifdef SAFETY_CHECKS
     if (index.type != VALUE_TYPE_STDINT)
-        cant_happen("invalid index type for vec %d", index.type);
+        cant_happen("invalid index type for vec %d location %04lx", index.type, state.C);
     if (vector.type != VALUE_TYPE_VEC)
-        cant_happen("invalid vector type for vec %d", vector.type);
+        cant_happen("invalid vector type for vec %d location %04lx", vector.type, state.C);
 #endif
     int i = index.val.z;
     Vec *v = vector.val.vec;
     if (i < 0 || i >= v->size)
-        cant_happen("index out of range 0 - %d for vec (%d)", v->size, i);
+        cant_happen("index out of range 0 - %d for vec (%d), location %04lx", v->size, i, state.C);
     return v->values[i];
 }
 
@@ -440,15 +442,30 @@ static void applyProc(int naargs) {
     switch (callable.type) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
+#ifdef DEBUG_STEP
+                eprintf("partial closure, count == %d, nvar == %d, naargs == %d\n", clo->rho->count, clo->nvar, naargs);
+#endif
                 if (clo->nvar == naargs) {
                     state.C = clo->c;
                     state.E = clo->rho->next;
-                    copyValues(state.S.stack, clo->rho->values,
-                               clo->rho->count);
-                    copyValues(&(state.S.stack[clo->rho->count]),
+#ifdef DEBUG_STEP
+                    eprintf("copying %d values from stack[%d] to stack[%d]\n", clo->nvar, state.S.sp - clo->nvar, clo->rho->count);
+#endif
+                    moveValues(&(state.S.stack[clo->rho->count]),
                                &(state.S.stack[state.S.sp - clo->nvar]),
                                clo->nvar);
+#ifdef DEBUG_STEP
+                    eprintf("copying %d values from closure[0] to stack[0]\n", clo->rho->count);
+#endif
+                    copyValues(state.S.stack, clo->rho->values,
+                               clo->rho->count);
+#ifdef DEBUG_STEP
+                    eprintf("setting stack sp to %d\n", clo->rho->count + clo->nvar);
+#endif
                     state.S.sp = clo->rho->count + clo->nvar;
+#ifdef DEBUG_STEP
+                    dumpStack(&state.S);
+#endif
                 } else if (naargs == 0) {
                     push(callable);
                 } else if (naargs < clo->nvar) {
@@ -526,9 +543,8 @@ void reportSteps(void) {
 }
 
 static void step() {
-#ifdef DEBUG_STEP
-    dumpByteCode(&state.B);
-#endif
+    if (dump_bytecode_flag)
+        dumpByteCode(&state.B);
     if (bigint_flag) {
         add = bigAdd;
         mul = bigMul;
@@ -584,7 +600,11 @@ static void step() {
             case BYTECODE_LVAR:{
                     // look up a stack variable and push it
                     int offset = readCurrentByte();
-                    DEBUGPRINTF("LVAR [%d]\n", offset);
+                    DEBUGPRINTF("LVAR [%d] ", offset);
+#ifdef DEBUG_STEP
+                    printValue(peek(offset), 0);
+                    eprintf("\n");
+#endif
                     push(peek(offset));
                 }
                 break;
