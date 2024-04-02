@@ -727,6 +727,12 @@ class SimpleArray(Base):
             self.height = SimpleField(self.name, "height", "int")
         self.entries = SimpleField(self.name,"entries", data["entries"])
 
+    def getDefineValue(self):
+        return 'x'
+
+    def getDefineArg(self):
+        return 'x'
+
     def tag(self):
         super().tag()
         self.tagField = SimpleField(self.name, "_tag", "string")
@@ -736,8 +742,9 @@ class SimpleArray(Base):
 
     def printCompareField(self, field, depth, prefix=''):
         myName=self.getName()
+        extraCmpArgs = self.getExtraCmpAargs(catalog)
         pad(depth)
-        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field})) return false; // SimpleArray.printCompareField")
+        print(f"if (!eq{myName}(a->{prefix}{field}, b->{prefix}{field}{extraCmpArgs})) return false; // SimpleArray.printCompareField")
 
     def printCopyField(self, field, depth, prefix=''):
         myName=self.getName()
@@ -948,6 +955,14 @@ class SimpleArray(Base):
         for name in self.extraCmpArgs:
             ctype = self.getCtype(self.extraCmpArgs[name], catalog)
             extra += [f"{ctype}{name}"]
+        if len(extra) > 0:
+            return ", " + ", ".join(extra)
+        return ""
+
+    def getExtraCmpAargs(self, catalog):
+        extra = []
+        for name in self.extraCmpArgs:
+            extra += [name]
         if len(extra) > 0:
             return ", " + ", ".join(extra)
         return ""
@@ -1737,6 +1752,30 @@ class SimpleEnum(Base):
         pad(depth)
         print(f'x->{field} = o->{field}; // SimpleEnum.printCopyField')
 
+    def getNameFunctionDeclaration(self):
+        name = self.getName();
+        camel = name[0].lower() + name[1:]
+        return f"char * {camel}Name(enum {name} type)"
+
+    def printNameFunctionDeclaration(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl}; // SimpleEnum.printNameFunctionDeclaration")
+
+    def printNameFunctionBody(self):
+        decl = self.getNameFunctionDeclaration()
+        comment = '// SimpleEnum.printNameFunctionDeclaration'
+        print(f"{decl} {{ {comment}")
+        print(f"    switch(type) {{ {comment}")
+        for  field in self.fields:
+            field.printNameFunctionLine()
+        print(f"        default: {{ {comment}")
+        print(f"            static char buf[64]; {comment}")
+        print(f'            sprintf(buf, "%d", type); {comment}')
+        print(f"            return buf; {comment}");
+        print(f"        }} {comment}")
+        print(f"    }} {comment}")
+        print(f"}} {comment}")
+        print("")
 
 
 class DiscriminatedUnionEnum(Base):
@@ -1765,17 +1804,18 @@ class DiscriminatedUnionEnum(Base):
 
     def printNameFunctionBody(self):
         decl = self.getNameFunctionDeclaration()
-        print(f"{decl} {{ // DiscriminatedUnionEnum.printNameFunctionDeclaration")
-        print("    switch(type) {")
+        comment = '// DiscriminatedUnionEnum.printNameFunctionDeclaration'
+        print(f"{decl} {{ {comment}")
+        print(f"    switch(type) {{ {comment}")
         for  field in self.fields:
             field.printNameFunctionLine()
-        print("        default: {")
-        print("            static char buf[64];")
-        print('            sprintf(buf, "%d", type);')
-        print("            return buf;");
-        print("        }")
-        print("    }")
-        print("}")
+        print(f"        default: {{ {comment}")
+        print(f"            static char buf[64]; {comment}")
+        print(f'            sprintf(buf, "%d", type); {comment}')
+        print(f"            return buf; {comment}");
+        print(f"        }} {comment}")
+        print(f"    }} {comment}")
+        print(f"}} {comment}")
         print("")
 
     def getTypeDeclaration(self):

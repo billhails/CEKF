@@ -26,8 +26,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "debug.h"
 #ifdef DEBUG_STACK
-#  include "debug.h"
 #  include "debugging_on.h"
 #else
 #  include "debugging_off.h"
@@ -78,6 +78,17 @@ void pushValue(Stack *s, Value v) {
         growCapacity(s, s->capacity < 8 ? 8 : s->capacity * 2);
     }
     s->stack[s->sp++] = v;
+}
+
+void dumpStack(Stack *s) {
+    eprintf("STACK DUMP sp = %d, capacity = %d\n", s->sp, s->capacity);
+    eprintf("=================================\n");
+    for (int i = 0; i < s->sp; i++) {
+        eprintf("[%d] *** ", i);
+        printValue(s->stack[i], 0);
+        eprintf("\n");
+    }
+    eprintf("=================================\n");
 }
 
 Value popValue(Stack *s) {
@@ -136,6 +147,10 @@ static void copyToSnapshot(Stack *s, Snapshot *ss) {
 
 void copyValues(Value *to, Value *from, int size) {
     COPY_ARRAY(Value, to, from, size);
+}
+
+void moveValues(Value *to, Value *from, int size) {
+    MOVE_ARRAY(Value, to, from, size);
 }
 
 void copyTosToEnv(Stack *s, Env *e, int n) {

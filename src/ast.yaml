@@ -148,6 +148,7 @@ unions:
         unpack: AstUnpack
         number: BigInt
         character: char
+        tuple: AstArgList
 
     AstExpression:
         back: void_ptr
@@ -160,6 +161,7 @@ unions:
         nest: AstNest
         iff: AstIff
         print: AstPrint
+        tuple: AstExpressions
 
 arrays:
     AstCharArray:

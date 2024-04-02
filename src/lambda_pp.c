@@ -187,8 +187,14 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_COND_DEFAULT:
             eprintf("default");
             break;
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            ppLamTupleIndex(exp->val.tuple_index);
+            break;
+        case LAMEXP_TYPE_MAKE_TUPLE:
+            ppLamMakeTuple(exp->val.make_tuple);
+            break;
         default:
-            cant_happen("unrecognized type %d in ppLamExp", exp->type);
+            cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
@@ -310,6 +316,12 @@ static void _ppLamList(LamList *list) {
     eprintf(" ");
     ppLamExp(list->exp);
     _ppLamList(list->next);
+}
+
+void ppLamMakeTuple(LamList *args) {
+    eprintf("(make-tuple");
+    _ppLamList(args);
+    eprintf(")");
 }
 
 void ppLamSequence(LamSequence *sequence) {
@@ -495,6 +507,16 @@ void ppLamMatch(LamMatch *match) {
         eprintf(" ");
         _ppLamMatchList(match->cases);
     }
+    eprintf(")");
+}
+
+void ppLamTupleIndex(LamTupleIndex *index) {
+    if (index == NULL) {
+        eprintf("<NULL tuple index>");
+        return;
+    }
+    eprintf("(index %d ", index->vec);
+    ppLamExp(index->exp);
     eprintf(")");
 }
 

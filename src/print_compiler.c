@@ -27,6 +27,7 @@
 #include "common.h"
 #include "lambda.h"
 #include "lambda_helper.h"
+#include "lambda_pp.h"
 #include "symbol.h"
 #include "symbols.h"
 
@@ -42,6 +43,7 @@ static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env);
 static LamExp *compilePrinterForInt();
 static LamExp *compilePrinterForChar();
 static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env);
+static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env);
 static LamExp *compilePrinter(TcType *type, TcEnv *env);
 
 LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
@@ -110,9 +112,11 @@ static LamExp *compilePrinter(TcType *type, TcEnv *env) {
         case TCTYPE_TYPE_USERTYPE:
             res = compilePrinterForUserType(type->val.userType, env);
             break;
+        case TCTYPE_TYPE_TUPLE:
+            res = compilePrinterForTuple(type->val.tuple, env);
+            break;
         default:
-            cant_happen("unrecognised TcType %d in compilePrinter",
-                        type->type);
+            cant_happen("unrecognised TcType %s", tcTypeTypeName(type->type));
     }
     LEAVE(compilePrinter);
     return res;
@@ -159,6 +163,20 @@ static LamList *compilePrinterForUserTypeArgs(TcUserTypeArgs *args,
     return res;
 }
 
+static LamList *compilePrinterForTupleArgs(TcTypeArray *tuple, TcEnv *env) {
+    LamList *res = NULL;
+    int save = PROTECT(res);
+    for (int i = tuple->size; i > 0; i--) {
+        int index = i - 1;
+        LamExp *this = compilePrinter(tuple->entries[index], env);
+        PROTECT(this);
+        res = newLamList(this, res);
+        PROTECT(res);
+    }
+    UNPROTECT(save);
+    return res;
+}
+
 static LamExp *compilePrinterForString() {
     HashSymbol *name = newSymbol("print$string");
     return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
@@ -190,4 +208,30 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
+}
+
+static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env) {
+    ENTER(compilePrinterForTuple);
+    if (tuple->size < 5) {
+        char buf[16];
+        sprintf(buf, "print$tuple$%d", tuple->size);
+        LamExp *exp = makeSymbolExpr(buf);
+        if (tuple->size == 0) {
+            LEAVE(compilePrinterForTuple);
+            return exp;
+        }
+        int save = PROTECT(exp);
+        LamList *args = compilePrinterForTupleArgs(tuple, env);
+        PROTECT(args);
+        LamApply *apply = newLamApply(exp, tuple->size, args);
+        PROTECT(apply);
+        LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+        UNPROTECT(save);
+        IFDEBUG(ppLamExp(res));
+        LEAVE(compilePrinterForTuple);
+        return res;
+    } else {
+        LEAVE(compilePrinterForTuple);
+        return makeSymbolExpr("print$");
+    }
 }

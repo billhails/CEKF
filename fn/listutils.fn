@@ -146,7 +146,7 @@ let
         }
     }
 
-    fn sort(lst) {
+    fn sortBy(predicate, lst) {
         let
             fn full_sort {
                 ([]) { [] }
@@ -168,7 +168,7 @@ let
                 let fn helper {
                     ([], lesser, greater) { kont(lesser, greater) }
                     (first @ rest, lesser, greater) {
-                        if (key < first) {
+                        if (predicate(key, first) == lt) {
                             helper(rest, lesser, first @ greater)
                         } else {
                             helper(rest, first @ lesser, greater)
@@ -180,6 +180,8 @@ let
         in
             full_sort(lst)
     }
+
+    sort = sortBy(fn (a, b) { a <=> b });
 
 in
     print(concat(take(3, ["well", " ", "hi", " ", "there"])))

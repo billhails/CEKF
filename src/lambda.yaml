@@ -71,6 +71,11 @@ structs:
         vec: int         # offset of the field in the vector
         exp: LamExp      # expression being deconstructed
 
+    LamTupleIndex:
+        vec: int         # offset of the field in the untagged tuple vector
+        size: int        # size of the tuple
+        exp: LamExp      # expression being accessed
+
     LamMakeVec:
         nargs: int
         args: LamList
@@ -228,6 +233,9 @@ unions:
         makeVec: LamMakeVec
         construct: LamConstruct
         deconstruct: LamDeconstruct
+        tuple_index: LamTupleIndex
+        tuple: LamList
+        make_tuple: LamList
         tag: LamExp
         constant: LamConstant
         apply: LamApply

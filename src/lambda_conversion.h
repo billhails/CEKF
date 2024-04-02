@@ -22,4 +22,7 @@
 #  include "lambda.h"
 
 LamExp *lamConvertNest(AstNest *nest, LamContext *env);
+
+extern char *lambda_conversion_function;
+
 #endif

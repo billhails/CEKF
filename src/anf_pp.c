@@ -45,6 +45,22 @@ void ppAexpVarList(AexpVarList *x) {
     eprintf(")");
 }
 
+static void ppChar(char c) {
+    switch(c) {
+        case '\n':
+            eprintf("\"\\n\"");
+            break;
+        case '\t':
+            eprintf("\"\\t\"");
+            break;
+        case '\"':
+            eprintf("\"\\\"\"");
+            break;
+        default:
+            eprintf("\"%c\"", c);
+    }
+}
+
 void ppAexpVar(HashSymbol *x) {
     eprintf("%s", x->name);
 }
@@ -99,8 +115,11 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_MOD:
             eprintf("mod ");
             break;
+        case AEXPPRIMOP_TYPE_CMP:
+            eprintf("cmp ");
+            break;
         default:
-            cant_happen("unrecognized op in ppAexpPrimApp (%d)", x->type);
+            cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
     ppAexp(x->exp1);
     if (x->exp2 != NULL) {
@@ -228,7 +247,9 @@ void ppCexpIntCondCases(CexpIntCondCases *x) {
 
 void ppCexpCharCondCases(CexpCharCondCases *x) {
     while (x != NULL) {
-        eprintf("('%c' ", x->option);
+        eprintf("(");
+        ppChar(x->option);
+        eprintf(" ");
         ppExp(x->body);
         eprintf(")");
         if (x->next) {
@@ -357,7 +378,7 @@ void ppAexp(Aexp *x) {
             eprintf("%d", x->val.littleinteger);
             break;
         case AEXP_TYPE_CHARACTER:
-            eprintf("'%c'", x->val.character);
+            ppChar(x->val.character);
             break;
         case AEXP_TYPE_PRIM:
             ppAexpPrimApp(x->val.prim);

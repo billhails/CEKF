@@ -50,6 +50,7 @@ static TcType *makeUnknown(HashSymbol *var);
 static TcType *makeFreshVar(char *name __attribute__((unused)));
 static TcType *makeVar(HashSymbol *t);
 static TcType *makeFn(TcType *arg, TcType *result);
+static TcType *makeTuple(int size);
 static void addBoolBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addHereToEnv(TcEnv *env);
 static void addIfToEnv(TcEnv *env);
@@ -84,6 +85,8 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
 static TcType *analyzeAnd(LamAnd *and, TcEnv *env, TcNg *ng);
 static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
+static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
+static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
@@ -198,10 +201,14 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeBack());
         case LAMEXP_TYPE_ERROR:
             return prune(analyzeError());
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            return prune(analyzeTupleIndex(exp->val.tuple_index, env, ng));
+        case LAMEXP_TYPE_MAKE_TUPLE:
+            return prune(analyzeMakeTuple(exp->val.make_tuple, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
-            cant_happen("unrecognized type %d in analyzeExp", exp->type);
+            cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
@@ -494,6 +501,37 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     return fieldType;
 }
 
+static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
+    TcType *tuple = analyzeExp(index->exp, env, ng);
+    int save = PROTECT(tuple);
+    TcType *template = makeTuple(index->size);
+    PROTECT(template);
+    if (!unify(tuple, template, "tuple index")) {
+        eprintf("while analyzing tuple ");
+        ppTcType(tuple);
+        HashSymbol *name = newSymbol("tuple");
+        UNPROTECT(save);
+        return makeUnknown(name);
+    }
+    UNPROTECT(save);
+    return template->val.tuple->entries[index->vec];
+}
+
+static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
+    TcTypeArray *values = newTcTypeArray();
+    int save = PROTECT(values);
+    while (tuple != NULL) {
+        TcType *part = analyzeExp(tuple->exp, env, ng);
+        int save2 = PROTECT(part);
+        pushTcTypeArray(values, part);
+        UNPROTECT(save2);
+        tuple = tuple->next;
+    }
+    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(values));
+    UNPROTECT(save);
+    return res;
+}
+
 static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
     return analyzeExp(tagged, env, ng);
 }
@@ -686,10 +724,12 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         processLetRecBinding(bindings, env, ng);
     }
     // HACK! second pass through fixes up forward references
-    for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
-         bindings = bindings->next) {
-        if (isLambdaBinding(bindings)) {
-            processLetRecBinding(bindings, env, ng);
+    if (!hadErrors()) {
+        for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
+             bindings = bindings->next) {
+            if (isLambdaBinding(bindings)) {
+                processLetRecBinding(bindings, env, ng);
+            }
         }
     }
     TcType *res = analyzeExp(letRec->body, env, ng);
@@ -730,6 +770,20 @@ static TcType *makeTcUserType(LamType *lamType, TcTypeTable *map) {
     TcUserTypeArgs *args = makeTcUserTypeArgs(lamType->args, map);
     int save = PROTECT(args);
     TcType *res = makeUserType(lamType->name, args);
+    UNPROTECT(save);
+    return res;
+}
+
+static TcType *makeTuple(int size) {
+    TcTypeArray *array = newTcTypeArray();
+    int save = PROTECT(array);
+    while (size-- > 0) {
+        TcType *part = makeFreshVar("tuple");
+        int save2 = PROTECT(part);
+        pushTcTypeArray(array, part);
+        UNPROTECT(save2);
+    }
+    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(array));
     UNPROTECT(save);
     return res;
 }
@@ -1199,6 +1253,20 @@ static TcType *freshUserType(TcUserType *userType, TcNg *ng, TcTypeTable *map) {
     return res;
 }
 
+static TcType *freshTuple(TcTypeArray *tuple, TcNg *ng, TcTypeTable *map) {
+    TcTypeArray *fresh = newTcTypeArray();
+    int save = PROTECT(fresh);
+    for (int i = 0; i < tuple->size; i ++) {
+        TcType *part = freshRec(tuple->entries[i], ng, map);
+        int save2 = PROTECT(part);
+        pushTcTypeArray(fresh, part);
+        UNPROTECT(save2);
+    }
+    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(fresh));
+    UNPROTECT(save);
+    return res;
+}
+
 static bool isGeneric(TcType *typeVar, TcNg *ng) {
     while (ng != NULL) {
         int i = 0;
@@ -1228,9 +1296,10 @@ static TcType *typeGetOrPut(TcTypeTable *map, TcType *typeVar,
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
     type = prune(type);
     switch (type->type) {
-        case TCTYPE_TYPE_FUNCTION:
+        case TCTYPE_TYPE_FUNCTION: {
             TcType *res = freshFunction(type->val.function, ng, map);
             return res;
+        }
         case TCTYPE_TYPE_PAIR:{
                 TcType *res = freshPair(type->val.pair, ng, map);
                 return res;
@@ -1253,8 +1322,10 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
                 TcType *res = freshUserType(type->val.userType, ng, map);
                 return res;
             }
+        case TCTYPE_TYPE_TUPLE:
+            return freshTuple(type->val.tuple, ng, map);
         default:
-            cant_happen("unrecognised type %d in freshRec", type->type);
+            cant_happen("unrecognised type %s", tcTypeTypeName(type->type));
     }
 }
 
@@ -1484,6 +1555,20 @@ static bool unifyPairs(TcPair *a, TcPair *b) {
     return res;
 }
 
+static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
+    if (a->size != b->size) {
+        can_happen("tuple sizes differ: %d vs %d", a->size, b->size);
+        return false;
+    }
+    bool unified = true;
+    for (int i = 0; i < a->size; i++) {
+        if (!unify(a->entries[i], b->entries[i], "tuples")) {
+            unified = false;
+        }
+    }
+    return unified;
+}
+
 static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
         can_happen("unification failed[1]");
@@ -1560,8 +1645,10 @@ static bool _unify(TcType *a, TcType *b) {
                 return false;
             case TCTYPE_TYPE_USERTYPE:
                 return unifyUserTypes(a->val.userType, b->val.userType);
+            case TCTYPE_TYPE_TUPLE:
+                return unifyTuples(a->val.tuple, b->val.tuple);
             default:
-                cant_happen("unrecognised type %d in unify", a->type);
+                cant_happen("unrecognised type %s", tcTypeTypeName(a->type));
         }
     }
     cant_happen("reached end of unify");
@@ -1684,6 +1771,15 @@ static bool occursInUserType(TcType *var, TcUserType *userType) {
     return false;
 }
 
+static bool occursInTuple(TcType *var, TcTypeArray *tuple) {
+    for (int i = 0; i < tuple->size; ++i) {
+        if (occursInType(var, tuple->entries[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool occursIn(TcType *a, TcType *b) {
     switch (b->type) {
         case TCTYPE_TYPE_FUNCTION:
@@ -1699,7 +1795,9 @@ static bool occursIn(TcType *a, TcType *b) {
             return false;
         case TCTYPE_TYPE_USERTYPE:
             return occursInUserType(a, b->val.userType);
+        case TCTYPE_TYPE_TUPLE:
+            return occursInTuple(a, b->val.tuple);
         default:
-            cant_happen("unrecognised type %d in occursIn", b->type);
+            cant_happen("unrecognised type %s", tcTypeTypeName(b->type));
     }
 }

@@ -114,6 +114,12 @@ static LamList *performListSubstitutions(LamList *list, TpmcSubstitutionTable
     return list;
 }
 
+static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex,
+                                                     TpmcSubstitutionTable *substitutions) {
+    tupleIndex->exp = lamPerformSubstitutions(tupleIndex->exp, substitutions);
+    return tupleIndex;
+}
+
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
                                                *substitutions) {
     ENTER(performMakeVecSubstitutions);
@@ -413,10 +419,17 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
             exp->val.amb =
                 performAmbSubstitutions(exp->val.amb, substitutions);
             break;
+        case LAMEXP_TYPE_MAKE_TUPLE:
+            exp->val.make_tuple =
+                performListSubstitutions(exp->val.make_tuple, substitutions);
+            break;
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            exp->val.tuple_index =
+                performTupleIndexSubstitutions(exp->val.tuple_index, substitutions);
+            break;
         default:
             cant_happen
-                ("unrecognized LamExp type (%d) in lamPerformSubstitutions",
-                 exp->type);
+                ("unrecognized LamExp type %s", lamExpTypeName(exp->type));
     }
     LEAVE(lamPerformSubstitutions);
     return exp;

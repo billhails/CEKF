@@ -35,6 +35,11 @@ void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern) {
     ppTpmcPatternArray(constructorPattern->components);
 }
 
+void ppTpmcTuplePattern(TpmcPatternArray *tuple) {
+    eprintf("#");
+    ppTpmcPatternArray(tuple);
+}
+
 void ppTpmcPatternArray(TpmcPatternArray *patternArray) {
     eprintf("(");
     int i = 0;
@@ -72,6 +77,9 @@ void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
             break;
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
             fprintBigInt(errout, patternValue->val.biginteger);
+            break;
+        case TPMCPATTERNVALUE_TYPE_TUPLE:
+            ppTpmcTuplePattern(patternValue->val.tuple);
             break;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             ppTpmcConstructorPattern(patternValue->val.constructor);

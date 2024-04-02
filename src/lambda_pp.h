@@ -46,7 +46,9 @@ void ppLamConstant(LamConstant *constant);
 void ppLamTypeDefs(LamTypeDefs *typeDefs);
 void ppLamLet(LamLet *let);
 void ppLamMatch(LamMatch *match);
+void ppLamTupleIndex(LamTupleIndex *index);
 void ppLamLetRecBindings(LamLetRecBindings *bindings);
 void ppLamIntList(LamIntList *list);
+void ppLamMakeTuple(LamList *args);
 
 #endif

@@ -61,6 +61,11 @@ hashes:
     TcTypeTable:
         entries: TcType
 
+arrays:
+    TcTypeArray:
+        dimension: 1
+        entries: TcType
+
 unions:
     TcType:
         function: TcFunction
@@ -71,5 +76,6 @@ unions:
         character: void_ptr
         unknown: HashSymbol
         userType: TcUserType
+        tuple: TcTypeArray
 
 primitives: !include primitives.yaml

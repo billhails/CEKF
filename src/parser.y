@@ -160,7 +160,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <chars> str
 %type <bi> number
 %type <arg> farg
-%type <argList> fargs
+%type <argList> fargs arg_tuple
 %type <compositeFunction> composite_function functions fun
 %type <define> defun denv
 %type <definition> definition
@@ -168,7 +168,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <env> env env_expr
 %type <envType> env_type
 %type <expression> expression
-%type <expressions> expressions expression_statements
+%type <expressions> expressions expression_statements tuple
 %type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
 %type <load> load
@@ -362,6 +362,7 @@ consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList(
 
 number : NUMBER  { $$ = makeBigInt($1); }
        ;
+
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
@@ -373,7 +374,11 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
      | stringarg           { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
      | WILDCARD            { $$ = newAstArg(AST_ARG_TYPE_WILDCARD, AST_ARG_VAL_WILDCARD()); }
+     | arg_tuple           { $$ = newAstArg(AST_ARG_TYPE_TUPLE, AST_ARG_VAL_TUPLE($1)); }
      ;
+
+arg_tuple: '#' '(' fargs ')'  { $$ = $3; }
+         ;
 
 cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;
@@ -412,6 +417,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | CHAR                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_CHARACTER, AST_EXPRESSION_VAL_CHARACTER($1)); }
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
            | print                { $$ = newAstExpression(AST_EXPRESSION_TYPE_PRINT, AST_EXPRESSION_VAL_PRINT($1)); }
+           | tuple                { $$ = newAstExpression(AST_EXPRESSION_TYPE_TUPLE, AST_EXPRESSION_VAL_TUPLE($1)); }
            | '(' expression ')'   { $$ = $2; }
            ;
 
@@ -424,6 +430,9 @@ unop : '-' expression %prec NEG   { $$ = unOpToFunCall(negSymbol(), $2); }
 
 fun_call :  expression '(' expressions ')' { $$ = newAstFunCall($1, $3); }
          ;
+
+tuple : '#' '(' expressions ')'   { $$ = $3; }
+      ;
 
 binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, $3); }
       | expression AND expression       { $$ = binOpToFunCall(andSymbol(), $1, $3); }
