@@ -48,13 +48,16 @@ int frameSize(Stack *s) {
     return s->sp;
 }
 
-void setFrame(Stack *s, int n) {
-    DEBUG("setFrame(%d)", n);
+// safe move n bytes from sp - n to base
+// set sp to base + n
+void setFrame(Stack *s, int base, int n) {
+    DEBUG("setFrame(%d, %d)", base, n);
+    ensureCapacity(s, base + n);
     if (n) {
-        //         type,  dest,     src,                  amount
-        MOVE_ARRAY(Value, s->stack, &s->stack[s->sp - n], n);
+        //         type,  dest,            src,                  amount
+        MOVE_ARRAY(Value, &s->stack[base], &s->stack[s->sp - n], n);
     }
-    s->sp = n;
+    s->sp = base + n;
 }
 
 void clearFrame(Stack *s) {
@@ -62,10 +65,16 @@ void clearFrame(Stack *s) {
     s->sp = 0;
 }
 
-static void growCapacity(Stack *s, int newCapacity) {
-    DEBUG("growCapacity(%d)", newCapacity);
+static void growCapacity(Stack *s) {
+    int newCapacity = s->capacity < 8 ? 8 : s->capacity * 2;
     s->stack = GROW_ARRAY(Value, s->stack, s->capacity, newCapacity);
     s->capacity = newCapacity;
+}
+
+void ensureCapacity(Stack *s, int size) {
+    while (s->capacity <= size) {
+        growCapacity(s);
+    }
 }
 
 void pushValue(Stack *s, Value v) {
@@ -75,7 +84,7 @@ void pushValue(Stack *s, Value v) {
     eprintf(") sp = %d, capacity = %d\n", s->sp, s->capacity);
 #endif
     if (s->sp == s->capacity) {
-        growCapacity(s, s->capacity < 8 ? 8 : s->capacity * 2);
+        growCapacity(s);
     }
     s->stack[s->sp++] = v;
 }
@@ -160,17 +169,17 @@ void copyTosToEnv(Stack *s, Env *e, int n) {
 
 void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
     DEBUG("snapshotClo, sp = %d, capacity = %d", s->sp, s->capacity);
-    Env *env = newEnv(target->rho, s->sp - letRecOffset);
-    target->rho = env;
+    Env *env = newEnv(target->env, s->sp - letRecOffset);
+    target->env = env;
     copyToValues(s, env->values, letRecOffset);
 }
 
 void patchClo(Stack *s, Clo *target) {
     DEBUG("patchClo, sp = %d, capacity = %d", s->sp, s->capacity);
-    target->rho->values =
-        GROW_ARRAY(Value, target->rho->values, target->rho->count, s->sp);
-    copyToValues(s, target->rho->values, 0);
-    target->rho->count = s->sp;
+    target->env->values =
+        GROW_ARRAY(Value, target->env->values, target->env->count, s->sp);
+    copyToValues(s, target->env->values, 0);
+    target->env->count = s->sp;
 }
 
 void snapshotKont(Stack *s, Kont *target) {

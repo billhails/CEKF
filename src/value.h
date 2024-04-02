@@ -33,11 +33,11 @@ typedef enum {
 
 typedef union {
     void *none;
-    int z;
-    BigInt *b;
-    char c;
+    int stdint;
+    BigInt *bigint;
+    char character;
     struct Clo *clo;
-    struct Kont *k;
+    struct Kont *kont;
     struct Vec *vec;
 } ValueVal;
 
@@ -46,13 +46,13 @@ typedef struct Value {
     ValueVal val;
 } Value;
 
-#  define VALUE_VAL_STDINT(x)    ((ValueVal){.z    = (x)})
-#  define VALUE_VAL_BIGINT(x)    ((ValueVal){.b    = (x)})
-#  define VALUE_VAL_CHARACTER(x) ((ValueVal){.c    = (x)})
+#  define VALUE_VAL_STDINT(x)    ((ValueVal){.stdint    = (x)})
+#  define VALUE_VAL_BIGINT(x)    ((ValueVal){.bigint    = (x)})
+#  define VALUE_VAL_CHARACTER(x) ((ValueVal){.character    = (x)})
 // CLO and PCLO share the same Clo struct
 #  define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
 #  define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
-#  define VALUE_VAL_CONT(x)      ((ValueVal){.k    = (x)})
+#  define VALUE_VAL_CONT(x)      ((ValueVal){.kont    = (x)})
 #  define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
 #  define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
