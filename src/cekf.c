@@ -66,11 +66,11 @@ ValueList *newValueList(int count) {
     return x;
 }
 
-Clo *newClo(int nvar, Control c, Env *rho) {
+Clo *newClo(int pending, Control ip, Env *env) {
     Clo *x = NEW(Clo, OBJTYPE_CLO);
-    x->nvar = nvar;
-    x->c = c;
-    x->rho = rho;
+    x->pending = pending;
+    x->ip = ip;
+    x->env = env;
     return x;
 }
 
@@ -91,20 +91,20 @@ Env *newEnv(Env *next, int count) {
     return x;
 }
 
-Kont *newKont(Control body, Env *rho, Kont *next) {
+Kont *newKont(Control body, Env *env, Kont *next) {
     Kont *x = NEW(Kont, OBJTYPE_KONT);
     x->body = body;
-    x->rho = rho;
+    x->env = env;
     x->next = next;
     x->snapshot = noSnapshot;
     return x;
 }
 
-Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next) {
+Fail *newFail(Control exp, Env *env, Kont *kont, Fail *next) {
     Fail *x = NEW(Fail, OBJTYPE_FAIL);
     x->exp = exp;
-    x->rho = rho;
-    x->k = k;
+    x->env = env;
+    x->kont = kont;
     x->next = next;
     x->snapshot = noSnapshot;
     return x;
@@ -130,13 +130,13 @@ void markValue(Value x) {
             markClo(x.val.clo);
             break;
         case VALUE_TYPE_CONT:
-            markKont(x.val.k);
+            markKont(x.val.kont);
             break;
         case VALUE_TYPE_VEC:
             markVec(x.val.vec);
             break;
         case VALUE_TYPE_BIGINT:
-            markBigInt(x.val.b);
+            markBigInt(x.val.bigint);
             break;
         default:
             cant_happen("unrecognised type in markValue (%d)", x.type);
@@ -160,7 +160,7 @@ void markClo(Clo *x) {
     if (MARKED(x))
         return;
     MARK(x);
-    markEnv(x->rho);
+    markEnv(x->env);
 }
 
 void markEnv(Env *x) {
@@ -188,7 +188,7 @@ void markKont(Kont *x) {
         return;
     MARK(x);
     markSnapshot(x->snapshot);
-    markEnv(x->rho);
+    markEnv(x->env);
     markKont(x->next);
 }
 
@@ -210,8 +210,8 @@ void markFail(Fail *x) {
         return;
     MARK(x);
     markSnapshot(x->snapshot);
-    markEnv(x->rho);
-    markKont(x->k);
+    markEnv(x->env);
+    markKont(x->kont);
     markFail(x->next);
 }
 
@@ -259,8 +259,8 @@ void freeCekfObj(Header *h) {
             }
             break;
         case OBJTYPE_KONT:{
-                Kont *k = (Kont *) h;
-                FREE_ARRAY(Value, k->snapshot.frame, k->snapshot.frameSize);
+                Kont *kont = (Kont *) h;
+                FREE_ARRAY(Value, kont->snapshot.frame, kont->snapshot.frameSize);
                 reallocate((void *) h, sizeof(Kont), 0);
             }
             break;

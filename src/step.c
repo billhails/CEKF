@@ -78,8 +78,8 @@ static inline Value tos(void) {
     return peekTop(&state.S);
 }
 
-static void copyToVec(Vec *v) {
-    copyTopToValues(&state.S, &(v->values[0]), v->size);
+static void copyToVec(Vec *vec) {
+    copyTopToValues(&state.S, &(vec->values[0]), vec->size);
 }
 
 static void inject(ByteCodeArray B) {
@@ -92,7 +92,7 @@ static void inject(ByteCodeArray B) {
     if (first) {
         initStack(&state.S);
     } else {
-        setFrame(&state.S, 0);
+        clearFrame(&state.S);
     }
     state.B = B;
     first = false;
@@ -146,7 +146,7 @@ static Value bigIntValue(BigInt *i) {
 }
 
 static bool truthy(Value v) {
-    return !((v.type == VALUE_TYPE_STDINT && v.val.z == 0)
+    return !((v.type == VALUE_TYPE_STDINT && v.val.stdint == 0)
              || v.type == VALUE_TYPE_VOID);
 }
 
@@ -154,178 +154,178 @@ typedef Value (*IntegerBinOp)(Value, Value);
 
 static IntegerBinOp add;
 
-static Value bigAdd(Value a, Value b) {
+static Value bigAdd(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = addBigInt(a.val.b, b.val.b);
+    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littleAdd(Value a, Value b) {
+static Value littleAdd(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(a.val.z + b.val.z);
+    return intValue(left.val.stdint + right.val.stdint);
 }
 
 static IntegerBinOp mul;
 
-static Value bigMul(Value a, Value b) {
+static Value bigMul(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = mulBigInt(a.val.b, b.val.b);
+    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littleMul(Value a, Value b) {
+static Value littleMul(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(a.val.z * b.val.z);
+    return intValue(left.val.stdint * right.val.stdint);
 }
 
 static IntegerBinOp sub;
 
-static Value bigSub(Value a, Value b) {
+static Value bigSub(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = subBigInt(a.val.b, b.val.b);
+    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littleSub(Value a, Value b) {
+static Value littleSub(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(a.val.z - b.val.z);
+    return intValue(left.val.stdint - right.val.stdint);
 }
 
 static IntegerBinOp divide;
 
-static Value bigDivide(Value a, Value b) {
+static Value bigDivide(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = divBigInt(a.val.b, b.val.b);
+    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littleDivide(Value a, Value b) {
+static Value littleDivide(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(a.val.z / b.val.z);
+    return intValue(left.val.stdint / right.val.stdint);
 }
 
 static IntegerBinOp power;
 
-static Value bigPower(Value a, Value b) {
+static Value bigPower(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = powBigInt(a.val.b, b.val.b);
+    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littlePower(Value a, Value b) {
+static Value littlePower(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(pow(a.val.z, b.val.z));
+    return intValue(pow(left.val.stdint, right.val.stdint));
 }
 
 static IntegerBinOp modulo;
 
-static Value bigModulo(Value a, Value b) {
+static Value bigModulo(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_BIGINT);
-    assert(b.type == VALUE_TYPE_BIGINT);
+    assert(left.type == VALUE_TYPE_BIGINT);
+    assert(right.type == VALUE_TYPE_BIGINT);
 #endif
-    BigInt *result = modBigInt(a.val.b, b.val.b);
+    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
     return bigIntValue(result);
 }
 
-static Value littleModulo(Value a, Value b) {
+static Value littleModulo(Value left, Value right) {
 #ifdef SAFETY_CHECKS
-    assert(a.type == VALUE_TYPE_STDINT);
-    assert(b.type == VALUE_TYPE_STDINT);
+    assert(left.type == VALUE_TYPE_STDINT);
+    assert(right.type == VALUE_TYPE_STDINT);
 #endif
-    return intValue(a.val.z % b.val.z);
+    return intValue(left.val.stdint % right.val.stdint);
 }
 
-static int _cmp(Value a, Value b);
+static int _cmp(Value left, Value right);
 
-static int _vecCmp(Vec *a, Vec *b) {
-    if (a == b) {
+static int _vecCmp(Vec *left, Vec *right) {
+    if (left == right) {
         return 0;
     }
 #ifdef SAFETY_CHECKS
-    if (a == NULL || b == NULL) {
-        cant_happen("null vecs in _vecCmp(%p, %p)", a, b);
+    if (left == NULL || right == NULL) {
+        cant_happen("null vecs in _vecCmp(%p, %p)", left, right);
     }
-    if (a->size == 0 || b->size == 0) {
+    if (left->size == 0 || right->size == 0) {
         cant_happen("empty vecs in _vecCmp()");
     }
 #endif
-    for (int i = 0; i < a->size; ++i) {
-        int cmp = _cmp(a->values[i], b->values[i]);
+    for (int i = 0; i < left->size; ++i) {
+        int cmp = _cmp(left->values[i], right->values[i]);
         if (cmp != 0)
             return cmp;
     }
     return 0;
 }
 
-#define _CMP_(a, b) ((a) < (b) ? -1 : (a) == (b) ? 0 : 1)
+#define _CMP_(left, right) ((left) < (right) ? -1 : (left) == (right) ? 0 : 1)
 
-static int _cmp(Value a, Value b) {
+static int _cmp(Value left, Value right) {
 #ifdef DEBUG_STEP
     eprintf("_cmp:\n");
-    printContainedValue(a, 0);
+    printContainedValue(left, 0);
     eprintf("\n");
-    printContainedValue(b, 0);
+    printContainedValue(right, 0);
     eprintf("\n");
 #endif
 #ifdef SAFETY_CHECKS
-    if (a.type != b.type) {
+    if (left.type != right.type) {
         cant_happen("different types in _cmp");
     }
 #endif
-    switch (a.type) {
+    switch (left.type) {
         case VALUE_TYPE_VOID:
             return 0;
         case VALUE_TYPE_BIGINT:
-            return cmpBigInt(a.val.b, b.val.b);
+            return cmpBigInt(left.val.bigint, right.val.bigint);
         case VALUE_TYPE_STDINT:
-            return _CMP_(a.val.z, b.val.z);
+            return _CMP_(left.val.stdint, right.val.stdint);
         case VALUE_TYPE_CHARACTER:
-            return _CMP_(a.val.c, b.val.c);
+            return _CMP_(left.val.character, right.val.character);
         case VALUE_TYPE_CLO:
         case VALUE_TYPE_PCLO:
-            return _CMP_(a.val.clo->c, b.val.clo->c);
+            return _CMP_(left.val.clo->ip, right.val.clo->ip);
         case VALUE_TYPE_CONT:
-            return _CMP_(a.val.k->body, b.val.k->body);
+            return _CMP_(left.val.kont->body, right.val.kont->body);
         case VALUE_TYPE_VEC:
-            return _vecCmp(a.val.vec, b.val.vec);
+            return _vecCmp(left.val.vec, right.val.vec);
         default:
-            cant_happen("unexpected type for _cmp (%d)", a.type);
+            cant_happen("unexpected type for _cmp (%d)", left.type);
     }
 }
 
-static Value cmp(Value a, Value b) {
-    switch (_cmp(a, b)) {
+static Value cmp(Value left, Value right) {
+    switch (_cmp(left, right)) {
         case -1:
             return vLt;
         case 0:
@@ -337,58 +337,58 @@ static Value cmp(Value a, Value b) {
     }
 }
 
-static bool _eq(Value a, Value b) {
-    return _cmp(a, b) == 0;
+static bool _eq(Value left, Value right) {
+    return _cmp(left, right) == 0;
 }
 
-static bool _gt(Value a, Value b) {
-    return _cmp(a, b) == 1;
+static bool _gt(Value left, Value right) {
+    return _cmp(left, right) == 1;
 }
 
-static bool _lt(Value a, Value b) {
-    return _cmp(a, b) == -1;
+static bool _lt(Value left, Value right) {
+    return _cmp(left, right) == -1;
 }
 
-static bool _xor(Value a, Value b) {
-    return truthy(a) ? !truthy(b) : truthy(b);
+static bool _xor(Value left, Value right) {
+    return truthy(left) ? !truthy(right) : truthy(right);
 }
 
-static Value eq(Value a, Value b) {
-    bool result = _eq(a, b);
+static Value eq(Value left, Value right) {
+    bool result = _eq(left, right);
     return result ? vTrue : vFalse;
 }
 
-static Value ne(Value a, Value b) {
-    bool result = _eq(a, b);
+static Value ne(Value left, Value right) {
+    bool result = _eq(left, right);
     return result ? vFalse : vTrue;
 }
 
-static Value gt(Value a, Value b) {
-    bool result = _gt(a, b);
+static Value gt(Value left, Value right) {
+    bool result = _gt(left, right);
     return result ? vTrue : vFalse;
 }
 
-static Value lt(Value a, Value b) {
-    bool result = _lt(a, b);
+static Value lt(Value left, Value right) {
+    bool result = _lt(left, right);
     return result ? vTrue : vFalse;
 }
 
-static Value ge(Value a, Value b) {
-    bool result = _lt(a, b);
+static Value ge(Value left, Value right) {
+    bool result = _lt(left, right);
     return result ? vFalse : vTrue;
 }
 
-static Value xor(Value a, Value b) {
-    return _xor(a, b) ? vTrue : vFalse;
+static Value xor(Value left, Value right) {
+    return _xor(left, right) ? vTrue : vFalse;
 }
 
-static Value le(Value a, Value b) {
-    bool result = _gt(a, b);
+static Value le(Value left, Value right) {
+    bool result = _gt(left, right);
     return result ? vFalse : vTrue;
 }
 
-static Value not(Value a) {
-    return truthy(a) ? vFalse : vTrue;
+static Value not(Value left) {
+    return truthy(left) ? vFalse : vTrue;
 }
 
 static Value vec(Value index, Value vector) {
@@ -398,11 +398,11 @@ static Value vec(Value index, Value vector) {
     if (vector.type != VALUE_TYPE_VEC)
         cant_happen("invalid vector type for vec %d location %04lx", vector.type, state.C);
 #endif
-    int i = index.val.z;
-    Vec *v = vector.val.vec;
-    if (i < 0 || i >= v->size)
-        cant_happen("index out of range 0 - %d for vec (%d), location %04lx", v->size, i, state.C);
-    return v->values[i];
+    int i = index.val.stdint;
+    Vec *vec = vector.val.vec;
+    if (i < 0 || i >= vec->size)
+        cant_happen("index out of range 0 - %d for vec (%d), location %04lx", vec->size, i, state.C);
+    return vec->values[i];
 }
 
 static Value lookup(int frame, int offset) {
@@ -419,11 +419,11 @@ static int protectValue(Value v) {
         case VALUE_TYPE_CLO:
             return PROTECT(v.val.clo);
         case VALUE_TYPE_CONT:
-            return PROTECT(v.val.k);
+            return PROTECT(v.val.kont);
         case VALUE_TYPE_VEC:
             return PROTECT(v.val.vec);
         case VALUE_TYPE_BIGINT:
-            return PROTECT(v.val.b);
+            return PROTECT(v.val.bigint);
         default:
             return PROTECT(NULL);
     }
@@ -442,39 +442,26 @@ static void applyProc(int naargs) {
     switch (callable.type) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
-#ifdef DEBUG_STEP
-                eprintf("partial closure, count == %d, nvar == %d, naargs == %d\n", clo->rho->count, clo->nvar, naargs);
-#endif
-                if (clo->nvar == naargs) {
-                    state.C = clo->c;
-                    state.E = clo->rho->next;
-#ifdef DEBUG_STEP
-                    eprintf("copying %d values from stack[%d] to stack[%d]\n", clo->nvar, state.S.sp - clo->nvar, clo->rho->count);
-#endif
-                    moveValues(&(state.S.stack[clo->rho->count]),
-                               &(state.S.stack[state.S.sp - clo->nvar]),
-                               clo->nvar);
-#ifdef DEBUG_STEP
-                    eprintf("copying %d values from closure[0] to stack[0]\n", clo->rho->count);
-#endif
-                    copyValues(state.S.stack, clo->rho->values,
-                               clo->rho->count);
-#ifdef DEBUG_STEP
-                    eprintf("setting stack sp to %d\n", clo->rho->count + clo->nvar);
-#endif
-                    state.S.sp = clo->rho->count + clo->nvar;
-#ifdef DEBUG_STEP
-                    dumpStack(&state.S);
-#endif
+                int ncaptured = clo->env->count;
+                if (clo->pending == naargs) {
+                    state.C = clo->ip;
+                    state.E = clo->env->next;
+                    int stackSize = ncaptured + naargs;
+                    // move the new args to the right place on the stack, leaving just enough
+                    // space for the captured args below them
+                    setFrame(&state.S, ncaptured, naargs);
+                    // then copy the already captured args to the base of the stack
+                    copyValues(state.S.stack, clo->env->values, ncaptured);
+                    state.S.sp = stackSize;
                 } else if (naargs == 0) {
                     push(callable);
-                } else if (naargs < clo->nvar) {
-                    Env *e = newEnv(clo->rho->next, naargs + clo->rho->count);
-                    int save = PROTECT(e);
-                    copyValues(e->values, clo->rho->values, clo->rho->count);
-                    copyValues(&(e->values[clo->rho->count]),
+                } else if (naargs < clo->pending) {
+                    Env *env = newEnv(clo->env->next, naargs + ncaptured);
+                    int save = PROTECT(env);
+                    copyValues(env->values, clo->env->values, ncaptured);
+                    copyValues(&(env->values[clo->env->count]),
                                &(state.S.stack[state.S.sp - naargs]), naargs);
-                    Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                    Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
                     PROTECT(pclo);
                     callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
@@ -483,23 +470,23 @@ static void applyProc(int naargs) {
                 } else {
                     cant_happen
                         ("too many arguments to partial closure, expected %d, got %d",
-                         clo->nvar, naargs);
+                         clo->pending, naargs);
                 }
             }
             break;
         case VALUE_TYPE_CLO:{
                 Clo *clo = callable.val.clo;
-                if (clo->nvar == naargs) {
-                    state.C = clo->c;
-                    state.E = clo->rho;
-                    setFrame(&state.S, clo->nvar);
+                if (clo->pending == naargs) {
+                    state.C = clo->ip;
+                    state.E = clo->env;
+                    setFrame(&state.S, 0, clo->pending);
                 } else if (naargs == 0) {
                     push(callable);
-                } else if (naargs < clo->nvar) {
-                    Env *e = newEnv(clo->rho, naargs);
-                    int save = PROTECT(e);
-                    copyTosToEnv(&state.S, e, naargs);
-                    Clo *pclo = newClo(clo->nvar - naargs, clo->c, e);
+                } else if (naargs < clo->pending) {
+                    Env *env = newEnv(clo->env, naargs);
+                    int save = PROTECT(env);
+                    copyTosToEnv(&state.S, env, naargs);
+                    Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
                     PROTECT(pclo);
                     callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
@@ -508,22 +495,22 @@ static void applyProc(int naargs) {
                 } else {
                     cant_happen
                         ("too many arguments to closure, expected %d, got %d",
-                         clo->nvar, naargs);
+                         clo->pending, naargs);
                 }
             }
             break;
         case VALUE_TYPE_CONT:{
-                if (callable.val.k == NULL) {
+                if (callable.val.kont == NULL) {
                     state.V = pop();
                     state.C = UINT64_MAX;
                 } else {
                     Value result = pop();
                     protectValue(result);
-                    Kont *k = callable.val.k;
-                    state.C = k->body;
-                    state.K = k->next;
-                    state.E = k->rho;
-                    restoreKont(&state.S, k);
+                    Kont *kont = callable.val.kont;
+                    state.C = kont->body;
+                    state.K = kont->next;
+                    state.E = kont->env;
+                    restoreKont(&state.S, kont);
                     push(result);
                 }
             }
@@ -600,11 +587,7 @@ static void step() {
             case BYTECODE_LVAR:{
                     // look up a stack variable and push it
                     int offset = readCurrentByte();
-                    DEBUGPRINTF("LVAR [%d] ", offset);
-#ifdef DEBUG_STEP
-                    printValue(peek(offset), 0);
-                    eprintf("\n");
-#endif
+                    DEBUGPRINTF("LVAR [%d]\n", offset);
                     push(peek(offset));
                 }
                 break;
@@ -619,7 +602,7 @@ static void step() {
                     // peek value, print it
                     DEBUGPRINTF("PUTC\n");
                     Value b = tos();
-                    putchar(b.val.c);
+                    putchar(b.val.character);
                 }
                 break;
             case BYTECODE_PRIM_PUTV:{
@@ -634,122 +617,122 @@ static void step() {
                     DEBUGPRINTF("PUTN\n");
                     Value b = tos();
                     if (b.type == VALUE_TYPE_BIGINT) {
-                        fprintBigInt(stdout, b.val.b);
+                        fprintBigInt(stdout, b.val.bigint);
                     } else {
-                        printf("%d", b.val.z);
+                        printf("%d", b.val.stdint);
                     }
                 }
                 break;
             case BYTECODE_PRIM_CMP:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("CMP\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(cmp(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(cmp(left, right));
                 }
                 break;
             case BYTECODE_PRIM_ADD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("ADD\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(add(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(add(left, right));
                 }
                 break;
             case BYTECODE_PRIM_SUB:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("SUB\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(sub(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(sub(left, right));
                 }
                 break;
             case BYTECODE_PRIM_MUL:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MUL\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(mul(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(mul(left, right));
                 }
                 break;
             case BYTECODE_PRIM_DIV:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("DIV\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(divide(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(divide(left, right));
                 }
                 break;
             case BYTECODE_PRIM_POW:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("POW\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(power(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(power(left, right));
                 }
                 break;
             case BYTECODE_PRIM_MOD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MOD\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(modulo(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(modulo(left, right));
                 }
                 break;
             case BYTECODE_PRIM_EQ:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("EQ\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(eq(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(eq(left, right));
                 }
                 break;
             case BYTECODE_PRIM_NE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("NE\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(ne(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(ne(left, right));
                 }
                 break;
             case BYTECODE_PRIM_GT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GT\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(gt(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(gt(left, right));
                 }
                 break;
             case BYTECODE_PRIM_LT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LT\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(lt(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(lt(left, right));
                 }
                 break;
             case BYTECODE_PRIM_GE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GE\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(ge(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(ge(left, right));
                 }
                 break;
             case BYTECODE_PRIM_LE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LE\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(le(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(le(left, right));
                 }
                 break;
             case BYTECODE_PRIM_XOR:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("XOR\n");
-                    Value b = pop();
-                    Value a = pop();
-                    push(xor(a, b));
+                    Value right = pop();
+                    Value left = pop();
+                    push(xor(left, right));
                 }
                 break;
             case BYTECODE_PRIM_NOT:{
@@ -809,7 +792,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("MATCH [%d]", size);
                     int save = state.C;
-                    for (int c = 0; c < size; c++) {
+                    for (int ip = 0; ip < size; ip++) {
                         printf("[%04x]", readCurrentOffset());
                     }
                     state.C = save;
@@ -821,12 +804,12 @@ static void step() {
                         cant_happen
                             ("match expression must be an integer, expected type %d, got %d",
                              VALUE_TYPE_STDINT, v.type);
-                    if (v.val.z < 0 || v.val.z >= size)
+                    if (v.val.stdint < 0 || v.val.stdint >= size)
                         cant_happen
                             ("match expression index out of range (%d)",
-                             v.val.z);
+                             v.val.stdint);
 #endif
-                    state.C = readCurrentOffsetAt(v.val.z);
+                    state.C = readCurrentOffsetAt(v.val.stdint);
                 }
                 break;
             case BYTECODE_INTCOND:{
@@ -835,7 +818,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("INTCOND [%d]", size);
                     int here = state.C;
-                    for (int c = 0; c < size; c++) {
+                    for (int ip = 0; ip < size; ip++) {
                         printf(" ");
                         if (bigint_flag) {
                             BigInt *bigInt = readCurrentBigInt();
@@ -853,19 +836,19 @@ static void step() {
                     Value v = pop();
                     int save = protectValue(v);
                     if (bigint_flag) {
-                        for (int c = 0; c < size; c++) {
+                        for (int ip = 0; ip < size; ip++) {
                             BigInt *bigInt = readCurrentBigInt();
                             int offset = readCurrentOffset();
-                            if (cmpBigInt(bigInt, v.val.b) == 0) {
+                            if (cmpBigInt(bigInt, v.val.bigint) == 0) {
                                 state.C = offset;
                                 break;
                             }
                         }
                     } else {
-                        for (int c = 0; c < size; c++) {
+                        for (int ip = 0; ip < size; ip++) {
                             int option = readCurrentInt();
                             int offset = readCurrentOffset();
-                            if (option == v.val.z) {
+                            if (option == v.val.stdint) {
                                 state.C = offset;
                                 break;
                             }
@@ -880,7 +863,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("CHARCOND [%d]", size);
                     int here = state.C;
-                    for (int c = 0; c < size; c++) {
+                    for (int ip = 0; ip < size; ip++) {
                         int val = readCurrentInt();
                         int offset = readCurrentOffset();
                         printf(" %d:[%04x]", val, offset);
@@ -892,17 +875,17 @@ static void step() {
                     int option = 0;
                     switch (v.type) {
                         case VALUE_TYPE_STDINT:
-                            option = v.val.z;
+                            option = v.val.stdint;
                             break;
                         case VALUE_TYPE_CHARACTER:
-                            option = (int) v.val.c;
+                            option = (int) v.val.character;
                             break;
                         default:
                             cant_happen
                                 ("unexpected type %d for CHARCOND value",
                                  v.type);
                     }
-                    for (int c = 0; c < size; c++) {
+                    for (int ip = 0; ip < size; ip++) {
                         int val = readCurrentInt();
                         int offset = readCurrentOffset();
                         if (option == val) {
@@ -953,8 +936,8 @@ static void step() {
                         state.C = -1;
                     } else {
                         state.C = state.F->exp;
-                        state.E = state.F->rho;
-                        state.K = state.F->k;
+                        state.E = state.F->env;
+                        state.K = state.F->kont;
                         restoreFail(&state.S, state.F);
                         state.F = state.F->next;
                     }
@@ -1044,10 +1027,10 @@ static void step() {
             case BYTECODE_RETURN:{
                     // push the current continuation and apply
                     DEBUGPRINTF("RETURN\n");
-                    Value k;
-                    k.type = VALUE_TYPE_CONT;
-                    k.val = VALUE_VAL_CONT(state.K);
-                    push(k);
+                    Value kont;
+                    kont.type = VALUE_TYPE_CONT;
+                    kont.val = VALUE_VAL_CONT(state.K);
+                    push(kont);
                     applyProc(1);
                 }
                 break;
@@ -1082,13 +1065,13 @@ void putValue(Value x) {
             printf("<void>");
             break;
         case VALUE_TYPE_STDINT:
-            printf("%d", x.val.z);
+            printf("%d", x.val.stdint);
             break;
         case VALUE_TYPE_BIGINT:
-            fprintBigInt(stdout, x.val.b);
+            fprintBigInt(stdout, x.val.bigint);
             break;
         case VALUE_TYPE_CHARACTER:
-            switch (x.val.c) {
+            switch (x.val.character) {
                 case '\t':
                     printf("'\\t'");
                     break;
@@ -1096,7 +1079,7 @@ void putValue(Value x) {
                     printf("'\\n'");
                     break;
                 default:
-                    printf("'%c'", x.val.c);
+                    printf("'%c'", x.val.character);
                     break;
             }
             break;

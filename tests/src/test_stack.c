@@ -41,7 +41,7 @@ static Value integer(int i) {
 }
 
 bool isInteger(Value v, int i) {
-    return v.type == VALUE_TYPE_STDINT && v.val.z == i;
+    return v.type == VALUE_TYPE_STDINT && v.val.stdint == i;
 }
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
@@ -90,7 +90,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     assert(S.sp == 3);
     assert(frameSize(&S) == 3);
 
-    setFrame(&S, 1);
+    setFrame(&S, 0, 1);
     assert(S.capacity == 8);
     assert(S.sp == 1);
     assert(frameSize(&S) == 1);
@@ -127,17 +127,17 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 
     v = peekValue(&S, 2);
     assert(v.type == VALUE_TYPE_STDINT);
-    assert(v.val.z == 100);
+    assert(v.val.stdint == 100);
 
     v = peekValue(&S, 3);
     assert(v.type == VALUE_TYPE_STDINT);
-    assert(v.val.z == 101);
+    assert(v.val.stdint == 101);
 
     v = peekValue(&S, 4);
     assert(v.type == VALUE_TYPE_STDINT);
-    assert(v.val.z == 102);
+    assert(v.val.stdint == 102);
 
-    setFrame(&S, 1);
+    setFrame(&S, 0, 1);
     assert(S.capacity == 8);
     assert(S.sp == 1);
     assert(frameSize(&S) == 1);

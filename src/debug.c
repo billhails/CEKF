@@ -45,15 +45,15 @@ void printContainedValue(Value x, int depth) {
             break;
         case VALUE_TYPE_STDINT:
             printPad(depth);
-            eprintf("%d", x.val.z);
+            eprintf("%d", x.val.stdint);
             break;
         case VALUE_TYPE_BIGINT:
             printPad(depth);
-            fprintBigInt(errout, x.val.b);
+            fprintBigInt(errout, x.val.bigint);
             break;
         case VALUE_TYPE_CHARACTER:
             printPad(depth);
-            switch (x.val.c) {
+            switch (x.val.character) {
                 case '\n':
                     eprintf("'\\n'");
                     break;
@@ -61,7 +61,7 @@ void printContainedValue(Value x, int depth) {
                     eprintf("'\\t'");
                     break;
                 default:
-                    eprintf("'%c'", x.val.c);
+                    eprintf("'%c'", x.val.character);
                     break;
             }
             break;
@@ -72,7 +72,7 @@ void printContainedValue(Value x, int depth) {
             printClo(x.val.clo, "PC", depth);
             break;
         case VALUE_TYPE_CONT:
-            printKont(x.val.k, depth);
+            printKont(x.val.kont, depth);
             break;
         case VALUE_TYPE_VEC:
             printPad(depth);
@@ -123,7 +123,7 @@ void printValue(Value x, int depth) {
 }
 
 void printElidedClo(Clo *x, char *type) {
-    eprintf("%s[%d, %04lx, E[<...>], ", type, x->nvar, x->c);
+    eprintf("%s[%d, %04lx, E[<...>], ", type, x->pending, x->ip);
     eprintf("]");
 }
 
@@ -157,10 +157,10 @@ void printElidedValue(Value x) {
             eprintf("#V");
             break;
         case VALUE_TYPE_STDINT:
-            eprintf("%d", x.val.z);
+            eprintf("%d", x.val.stdint);
             break;
         case VALUE_TYPE_CHARACTER:
-            switch (x.val.c) {
+            switch (x.val.character) {
                 case '\n':
                     eprintf("'\\n'");
                     break;
@@ -168,7 +168,7 @@ void printElidedValue(Value x) {
                     eprintf("'\\t'");
                     break;
                 default:
-                    eprintf("'%c'", x.val.c);
+                    eprintf("'%c'", x.val.character);
                     break;
             }
             break;
@@ -182,7 +182,7 @@ void printElidedValue(Value x) {
             printElidedClo(x.val.clo, "PC");
             break;
         case VALUE_TYPE_CONT:
-            printElidedKont(x.val.k);
+            printElidedKont(x.val.kont);
             break;
         default:
             cant_happen("unrecognised value type in printElidedValue");
@@ -192,8 +192,8 @@ void printElidedValue(Value x) {
 
 static void printClo(Clo *x, char *type, int depth) {
     printPad(depth);
-    eprintf("%s[%d, %04lx, ", type, x->nvar, x->c);
-    printElidedEnv(x->rho);
+    eprintf("%s[%d, %04lx, ", type, x->pending, x->ip);
+    printElidedEnv(x->env);
     eprintf("]");
 }
 
@@ -301,7 +301,7 @@ static void printKont(Kont *x, int depth) {
     if (x != NULL) {
         printPad(depth + 1);
         eprintf("%04lx,\n", x->body);
-        printEnv(x->rho, depth + 1);
+        printEnv(x->env, depth + 1);
         eprintf(",\n");
         printSnapshot(x->snapshot, depth + 1);
         eprintf(",\n");
@@ -323,11 +323,11 @@ static void printFail(Fail *x, int depth) {
         printPad(depth + 1);
         eprintf("%04lx", x->exp);
         eprintf(",\n");
-        printEnv(x->rho, depth + 1);
+        printEnv(x->env, depth + 1);
         eprintf(",\n");
         printSnapshot(x->snapshot, depth + 1);
         eprintf(",\n");
-        printKont(x->k, depth + 1);
+        printKont(x->kont, depth + 1);
         eprintf(",\n");
         printFail(x->next, depth + 1);
         eprintf("\n");
@@ -336,32 +336,32 @@ static void printFail(Fail *x, int depth) {
     eprintf("]");
 }
 
-void dumpByteCode(ByteCodeArray *b) {
+void dumpByteCode(ByteCodeArray *bca) {
     size_t i = 0;
-    while (i < b->count) {
+    while (i < bca->count) {
         eprintf("%04lx ### ", i);
         int thisByte;
-        switch (thisByte = readByte(b, &i)) {
+        switch (thisByte = readByte(bca, &i)) {
             case BYTECODE_NONE:{
                     eprintf("NONE\n");
                 }
                 break;
             case BYTECODE_LAM:{
-                    int nargs = readByte(b, &i);
-                    int letRecOffset = readByte(b, &i);
-                    int offset = readOffset(b, &i);
+                    int nargs = readByte(bca, &i);
+                    int letRecOffset = readByte(bca, &i);
+                    int offset = readOffset(bca, &i);
                     eprintf("LAM [%d] [%d] [%04x]\n", nargs, letRecOffset,
                             offset);
                 }
                 break;
             case BYTECODE_VAR:{
-                    int frame = readByte(b, &i);
-                    int offset = readByte(b, &i);
+                    int frame = readByte(bca, &i);
+                    int offset = readByte(bca, &i);
                     eprintf("VAR [%d:%d]\n", frame, offset);
                 }
                 break;
             case BYTECODE_LVAR:{
-                    int offset = readByte(b, &i);
+                    int offset = readByte(bca, &i);
                     eprintf("LVAR [%d]\n", offset);
                 }
                 break;
@@ -422,7 +422,7 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_PRIM_MAKEVEC:{
-                    int size = readByte(b, &i);
+                    int size = readByte(bca, &i);
                     eprintf("MAKEVEC [%d]\n", size);
                 }
                 break;
@@ -431,20 +431,20 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_APPLY:{
-                    int nargs = readByte(b, &i);
+                    int nargs = readByte(bca, &i);
                     eprintf("APPLY [%d]\n", nargs);
                 }
                 break;
             case BYTECODE_IF:{
-                    int offset = readOffset(b, &i);
+                    int offset = readOffset(bca, &i);
                     eprintf("IF [%04x]\n", offset);
                 }
                 break;
             case BYTECODE_MATCH:{
-                    int count = readByte(b, &i);
+                    int count = readByte(bca, &i);
                     eprintf("MATCH [%d]", count);
                     while (count > 0) {
-                        int offset = readOffset(b, &i);
+                        int offset = readOffset(bca, &i);
                         eprintf("[%04x]", offset);
                         count--;
                     }
@@ -452,11 +452,11 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_CHARCOND:{
-                    int count = readWord(b, &i);
+                    int count = readWord(bca, &i);
                     eprintf("CHARCOND [%d]", count);
                     while (count > 0) {
-                        int val = readInt(b, &i);
-                        int offset = readOffset(b, &i);
+                        int val = readInt(bca, &i);
+                        int offset = readOffset(bca, &i);
                         eprintf(" %d:[%04x]", val, offset);
                         count--;
                     }
@@ -464,19 +464,19 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_INTCOND:{
-                    int count = readWord(b, &i);
+                    int count = readWord(bca, &i);
                     eprintf("INTCOND [%d]", count);
                     while (count > 0) {
                         if (bigint_flag) {
-                            bigint bi = readBigint(b, &i);
+                            bigint bi = readBigint(bca, &i);
                             eprintf(" ");
                             bigint_fprint(errout, &bi);
                             bigint_free(&bi);
                         } else {
-                            int li = readInt(b, &i);
+                            int li = readInt(bca, &i);
                             eprintf(" %d", li);
                         }
-                        int offset = readOffset(b, &i);
+                        int offset = readOffset(bca, &i);
                         eprintf(":[%04x]", offset);
                         count--;
                     }
@@ -484,12 +484,12 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_LETREC:{
-                    int size = readByte(b, &i);
+                    int size = readByte(bca, &i);
                     eprintf("LETREC [%d]\n", size);
                 }
                 break;
             case BYTECODE_AMB:{
-                    int offset = readOffset(b, &i);
+                    int offset = readOffset(bca, &i);
                     eprintf("AMB [%04x]\n", offset);
                 }
                 break;
@@ -502,17 +502,17 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_LET:{
-                    int offset = readOffset(b, &i);
+                    int offset = readOffset(bca, &i);
                     eprintf("LET [%04x]\n", offset);
                 }
                 break;
             case BYTECODE_JMP:{
-                    int offset = readOffset(b, &i);
+                    int offset = readOffset(bca, &i);
                     eprintf("JMP [%04x]\n", offset);
                 }
                 break;
             case BYTECODE_PUSHN:{
-                    int size = readByte(b, &i);
+                    int size = readByte(bca, &i);
                     eprintf("PUSHN [%d]\n", size);
                 }
                 break;
@@ -545,20 +545,20 @@ void dumpByteCode(ByteCodeArray *b) {
                 }
                 break;
             case BYTECODE_STDINT:{
-                    int val = readInt(b, &i);
+                    int val = readInt(bca, &i);
                     eprintf("STDINT [%d]\n", val);
                 }
                 break;
             case BYTECODE_BIGINT:{
                     eprintf("BIGINT [");
-                    bigint bi = readBigint(b, &i);
+                    bigint bi = readBigint(bca, &i);
                     bigint_fprint(errout, &bi);
                     eprintf("]\n");
                     bigint_free(&bi);
                 }
                 break;
             case BYTECODE_CHAR:{
-                    char c = readByte(b, &i);
+                    char c = readByte(bca, &i);
                     eprintf("CHAR [%c]\n", c);
                 }
                 break;

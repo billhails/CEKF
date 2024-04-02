@@ -1,30 +1,26 @@
 # TODO
 
-* over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
-* allow user overrides of print functions.
-* tuples - can use vec type to implement.
-   * BUT - the collection of args to a function is not itself a tuple, that might interfere with currying.
-   * tc has support for pairs and we might leverage those as a start, but flat vecs will be more efficient.
-   * specific syntax: `#(2, "hi")` might be better than just round braces.
-* unpacking function return values (tuples only).
+* Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
+* Allow user overrides of print functions.
+* Unpacking function return values (tuples only).
 * `now()` expression returns current time in milliseconds.
-* macro support (see [MACROS](./MACROS.md) for initial thoughts).
-* more numbers:
-   * rationals: 1/3.
-   * irrationals: sqrt(2).
-   * complex numbers.
+* Macro support (see [MACROS](./MACROS.md) for initial thoughts).
+* More numbers:
+   * Rationals: 1/3.
+   * Irrationals: sqrt(2).
+   * Complex numbers.
 * UTF8 and `wchar_t`.
-* first class environments.
-* libraries.
-   * probably use file system layout.
-   * env var to specify the root location(s).
-   * better preable/postamble handling.
-* propagate file and line numbers into all error reporting.
-   * much better error reporting.
-* error recovery.
-* command-line arguments for libraries etc.
-* fail on non-exhaustive pattern match (optional).
-* error function.
-* user definable infix operators.
-   * with precedence and associativity.
-* curried binary operators `(2+)` etc.
+* Namespaces.
+* Libraries.
+   * Probably use file system layout.
+   * Env var to specify the root location(s).
+   * Better preable/postamble handling.
+* Propagate file and line numbers into all error reporting.
+   * Much better error reporting.
+* Error recovery.
+* Command-line arguments for libraries etc.
+* Fail on non-exhaustive pattern match (optional).
+* Error function.
+* User definable infix operators.
+   * With precedence and associativity.
+* Curried binary operators `(2+)` etc.

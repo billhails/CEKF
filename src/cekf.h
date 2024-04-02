@@ -64,7 +64,7 @@ typedef struct Snapshot {
 typedef struct Kont {
     struct Header header;
     Control body;
-    struct Env *rho;
+    struct Env *env;
     Snapshot snapshot;
     struct Kont *next;
 } Kont;
@@ -77,16 +77,16 @@ typedef struct ValueList {
 
 typedef struct Clo {
     struct Header header;
-    int nvar;
-    Control c;
-    struct Env *rho;
+    int pending;
+    Control ip;
+    struct Env *env;
 } Clo;
 
 typedef struct Fail {
     struct Header header;
     Control exp;
-    struct Env *rho;
-    struct Kont *k;
+    struct Env *env;
+    struct Kont *kont;
     Snapshot snapshot;
     struct Fail *next;
 } Fail;
@@ -103,7 +103,7 @@ void snapshotKont(Stack *stack, struct Kont *target);
 void snapshotFail(Stack *stack, struct Fail *target);
 void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
-void setFrame(Stack *stack, int nargs);
+void setFrame(Stack *stack, int base, int nargs);
 void clearFrame(Stack *stack);
 void copyTosToEnv(Stack *s, Env *e, int n);
 void copyValues(Value *to, Value *from, int size);
@@ -122,12 +122,13 @@ void initStack(Stack *stack);
 int frameSize(Stack *stack);
 void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
+void ensureCapacity(Stack *s, int n);
 
 ValueList *newValueList(int count);
-Clo *newClo(int nvar, Control c, Env *rho);
+Clo *newClo(int nvar, Control ip, Env *env);
 Env *newEnv(Env *next, int count);
-Kont *newKont(Control body, Env *rho, Kont *next);
-Fail *newFail(Control exp, Env *rho, Kont *k, Fail *next);
+Kont *newKont(Control body, Env *env, Kont *next);
+Fail *newFail(Control exp, Env *env, Kont *kont, Fail *next);
 Vec *newVec(int size);
 
 void markValue(Value x);
