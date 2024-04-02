@@ -724,10 +724,12 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         processLetRecBinding(bindings, env, ng);
     }
     // HACK! second pass through fixes up forward references
-    for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
-         bindings = bindings->next) {
-        if (isLambdaBinding(bindings)) {
-            processLetRecBinding(bindings, env, ng);
+    if (!hadErrors()) {
+        for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
+             bindings = bindings->next) {
+            if (isLambdaBinding(bindings)) {
+                processLetRecBinding(bindings, env, ng);
+            }
         }
     }
     TcType *res = analyzeExp(letRec->body, env, ng);

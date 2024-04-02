@@ -114,6 +114,12 @@ static LamList *performListSubstitutions(LamList *list, TpmcSubstitutionTable
     return list;
 }
 
+static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex,
+                                                     TpmcSubstitutionTable *substitutions) {
+    tupleIndex->exp = lamPerformSubstitutions(tupleIndex->exp, substitutions);
+    return tupleIndex;
+}
+
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
                                                *substitutions) {
     ENTER(performMakeVecSubstitutions);
@@ -416,6 +422,10 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
         case LAMEXP_TYPE_MAKE_TUPLE:
             exp->val.make_tuple =
                 performListSubstitutions(exp->val.make_tuple, substitutions);
+            break;
+        case LAMEXP_TYPE_TUPLE_INDEX:
+            exp->val.tuple_index =
+                performTupleIndexSubstitutions(exp->val.tuple_index, substitutions);
             break;
         default:
             cant_happen
