@@ -1752,6 +1752,30 @@ class SimpleEnum(Base):
         pad(depth)
         print(f'x->{field} = o->{field}; // SimpleEnum.printCopyField')
 
+    def getNameFunctionDeclaration(self):
+        name = self.getName();
+        camel = name[0].lower() + name[1:]
+        return f"char * {camel}Name(enum {name} type)"
+
+    def printNameFunctionDeclaration(self):
+        decl = self.getNameFunctionDeclaration()
+        print(f"{decl}; // SimpleEnum.printNameFunctionDeclaration")
+
+    def printNameFunctionBody(self):
+        decl = self.getNameFunctionDeclaration()
+        comment = '// SimpleEnum.printNameFunctionDeclaration'
+        print(f"{decl} {{ {comment}")
+        print(f"    switch(type) {{ {comment}")
+        for  field in self.fields:
+            field.printNameFunctionLine()
+        print(f"        default: {{ {comment}")
+        print(f"            static char buf[64]; {comment}")
+        print(f'            sprintf(buf, "%d", type); {comment}')
+        print(f"            return buf; {comment}");
+        print(f"        }} {comment}")
+        print(f"    }} {comment}")
+        print(f"}} {comment}")
+        print("")
 
 
 class DiscriminatedUnionEnum(Base):
@@ -1780,17 +1804,18 @@ class DiscriminatedUnionEnum(Base):
 
     def printNameFunctionBody(self):
         decl = self.getNameFunctionDeclaration()
-        print(f"{decl} {{ // DiscriminatedUnionEnum.printNameFunctionDeclaration")
-        print("    switch(type) {")
+        comment = '// DiscriminatedUnionEnum.printNameFunctionDeclaration'
+        print(f"{decl} {{ {comment}")
+        print(f"    switch(type) {{ {comment}")
         for  field in self.fields:
             field.printNameFunctionLine()
-        print("        default: {")
-        print("            static char buf[64];")
-        print('            sprintf(buf, "%d", type);')
-        print("            return buf;");
-        print("        }")
-        print("    }")
-        print("}")
+        print(f"        default: {{ {comment}")
+        print(f"            static char buf[64]; {comment}")
+        print(f'            sprintf(buf, "%d", type); {comment}')
+        print(f"            return buf; {comment}");
+        print(f"        }} {comment}")
+        print(f"    }} {comment}")
+        print(f"}} {comment}")
         print("")
 
     def getTypeDeclaration(self):

@@ -115,8 +115,11 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_MOD:
             eprintf("mod ");
             break;
+        case AEXPPRIMOP_TYPE_CMP:
+            eprintf("cmp ");
+            break;
         default:
-            cant_happen("unrecognized op in ppAexpPrimApp (%d)", x->type);
+            cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
     ppAexp(x->exp1);
     if (x->exp2 != NULL) {
