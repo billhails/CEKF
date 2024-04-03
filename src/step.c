@@ -23,13 +23,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
-#include <math.h>
 
 #include "common.h"
 #include "debug.h"
 #include "cekf.h"
 #include "step.h"
 #include "hash.h"
+#include "arithmetic.h"
 
 int dump_bytecode_flag = 0;
 
@@ -131,139 +131,9 @@ static inline int readCurrentOffsetAt(int i) {
     return readOffsetAt(&state.B, state.C, i);
 }
 
-static Value intValue(int i) {
-    Value value;
-    value.type = VALUE_TYPE_STDINT;
-    value.val = VALUE_VAL_STDINT(i);
-    return value;
-}
-
-static Value bigIntValue(BigInt *i) {
-    Value value;
-    value.type = VALUE_TYPE_BIGINT;
-    value.val = VALUE_VAL_BIGINT(i);
-    return value;
-}
-
 static bool truthy(Value v) {
     return !((v.type == VALUE_TYPE_STDINT && v.val.stdint == 0)
              || v.type == VALUE_TYPE_VOID);
-}
-
-typedef Value (*IntegerBinOp)(Value, Value);
-
-static IntegerBinOp add;
-
-static Value bigAdd(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleAdd(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint + right.val.stdint);
-}
-
-static IntegerBinOp mul;
-
-static Value bigMul(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleMul(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint * right.val.stdint);
-}
-
-static IntegerBinOp sub;
-
-static Value bigSub(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleSub(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint - right.val.stdint);
-}
-
-static IntegerBinOp divide;
-
-static Value bigDivide(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleDivide(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint / right.val.stdint);
-}
-
-static IntegerBinOp power;
-
-static Value bigPower(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littlePower(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(pow(left.val.stdint, right.val.stdint));
-}
-
-static IntegerBinOp modulo;
-
-static Value bigModulo(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleModulo(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint % right.val.stdint);
 }
 
 static int _cmp(Value left, Value right);
@@ -532,21 +402,7 @@ void reportSteps(void) {
 static void step() {
     if (dump_bytecode_flag)
         dumpByteCode(&state.B);
-    if (bigint_flag) {
-        add = bigAdd;
-        mul = bigMul;
-        sub = bigSub;
-        divide = bigDivide;
-        power = bigPower;
-        modulo = bigModulo;
-    } else {
-        add = littleAdd;
-        mul = littleMul;
-        sub = littleSub;
-        divide = littleDivide;
-        power = littlePower;
-        modulo = littleModulo;
-    }
+    init_arithmetic();
     state.C = 0;
     while (state.C != UINT64_MAX) {
         ++count;

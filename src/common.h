@@ -73,4 +73,10 @@ bool hadErrors(void);
 
 #  define PAD_WIDTH 2
 
+#define ASSERT(assertion) do {\
+    if (!(assertion)) { \
+        cant_happen("assertion failed " #assertion); \
+    } \
+} while (0);
+
 #endif
