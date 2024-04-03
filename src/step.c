@@ -45,7 +45,6 @@ int dump_bytecode_flag = 0;
 
 static void step();
 static Value lookup(int frame, int offset);
-static int protectValue(Value v);
 void putValue(Value x);
 
 static CEKF state;
@@ -284,21 +283,6 @@ static Value lookup(int frame, int offset) {
     return env->values[offset];
 }
 
-static int protectValue(Value v) {
-    switch (v.type) {
-        case VALUE_TYPE_CLO:
-            return PROTECT(v.val.clo);
-        case VALUE_TYPE_CONT:
-            return PROTECT(v.val.kont);
-        case VALUE_TYPE_VEC:
-            return PROTECT(v.val.vec);
-        case VALUE_TYPE_BIGINT:
-            return PROTECT(v.val.bigint);
-        default:
-            return PROTECT(NULL);
-    }
-}
-
 /**
  * on reaching this point, the stack will contain a number
  * of arguments, and the callable on top.
@@ -472,10 +456,20 @@ static void step() {
                     // peek value, print it
                     DEBUGPRINTF("PUTN\n");
                     Value b = tos();
-                    if (b.type == VALUE_TYPE_BIGINT) {
-                        fprintBigInt(stdout, b.val.bigint);
-                    } else {
-                        printf("%d", b.val.stdint);
+                    switch (b.type) {
+                        case VALUE_TYPE_BIGINT:
+                            fprintBigInt(stdout, b.val.bigint);
+                            break;
+                        case VALUE_TYPE_STDINT:
+                            printf("%d", b.val.stdint);
+                            break;
+                        case VALUE_TYPE_RATIONAL:
+                            putValue(b.val.vec->values[0]);
+                            printf("/");
+                            putValue(b.val.vec->values[1]);
+                            break;
+                        default:
+                            cant_happen("unrecognised type %d", b.type);
                     }
                 }
                 break;

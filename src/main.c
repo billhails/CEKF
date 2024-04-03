@@ -43,6 +43,7 @@
 #include "tc_analyze.h"
 #include "tc_debug.h"
 #include "tpmc_mermaid.h"
+#include "arithmetic.h"
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -54,6 +55,7 @@ static void processArgs(int argc, char *argv[]) {
     while (1) {
         static struct option long_options[] = {
             { "bigint", no_argument, &bigint_flag, 1 },
+            { "rational", no_argument, &rational_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
             { "anf", no_argument, &anf_flag, 1 },
             { "dump-bytecode", no_argument, &dump_bytecode_flag, 1 },
@@ -81,6 +83,7 @@ static void processArgs(int argc, char *argv[]) {
     if (help_flag) {
         printf("%s",
                "--bigint                use arbitrary precision integers\n"
+               "--rational              use precision-preserving rational numbers\n"
                "--report                report statistics\n"
                "--anf                   display the generated ANF\n"
                "--lambda=function       display the intermediate code\n"

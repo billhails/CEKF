@@ -132,6 +132,7 @@ void markValue(Value x) {
         case VALUE_TYPE_CONT:
             markKont(x.val.kont);
             break;
+        case VALUE_TYPE_RATIONAL:
         case VALUE_TYPE_VEC:
             markVec(x.val.vec);
             break;
@@ -217,6 +218,9 @@ void markFail(Fail *x) {
 
 void markCekfObj(Header *h) {
     switch (h->type) {
+        case OBJTYPE_VEC:
+            markVec((Vec *) h);
+            break;
         case OBJTYPE_CLO:
             markClo((Clo *) h);
             break;
@@ -233,7 +237,7 @@ void markCekfObj(Header *h) {
             markValueList((ValueList *) h);
             break;
         default:
-            cant_happen("unrecognised header type in markCekfObj");
+            cant_happen("unrecognised header type %d in markCekfObj", h->type);
     }
 }
 
@@ -274,5 +278,21 @@ void freeCekfObj(Header *h) {
             break;
         default:
             cant_happen("unrecognised header type in freeCekfObj");
+    }
+}
+
+int protectValue(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_CLO:
+            return PROTECT(v.val.clo);
+        case VALUE_TYPE_CONT:
+            return PROTECT(v.val.kont);
+        case VALUE_TYPE_VEC:
+        case VALUE_TYPE_RATIONAL:
+            return PROTECT(v.val.vec);
+        case VALUE_TYPE_BIGINT:
+            return PROTECT(v.val.bigint);
+        default:
+            return PROTECT(NULL);
     }
 }

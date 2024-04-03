@@ -24,6 +24,7 @@ typedef enum {
     VALUE_TYPE_VOID,
     VALUE_TYPE_STDINT,
     VALUE_TYPE_BIGINT,
+    VALUE_TYPE_RATIONAL,
     VALUE_TYPE_CHARACTER,
     VALUE_TYPE_CLO,
     VALUE_TYPE_PCLO,
@@ -53,7 +54,9 @@ typedef struct Value {
 #  define VALUE_VAL_CLO(x)       ((ValueVal){.clo  = (x)})
 #  define VALUE_VAL_PCLO(x)      ((ValueVal){.clo  = (x)})
 #  define VALUE_VAL_CONT(x)      ((ValueVal){.kont    = (x)})
+// RATIONAL and VEC share the same Vec struct
 #  define VALUE_VAL_VEC(x)       ((ValueVal){.vec  = (x)})
+#  define VALUE_VAL_RATIONAL(x)  ((ValueVal){.vec  = (x)})
 #  define VALUE_VAL_NONE()       ((ValueVal){.none = NULL})
 
 // constants

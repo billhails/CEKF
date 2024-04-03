@@ -54,6 +54,7 @@
 // #    define DEBUG_ALLOC
 // #    define DEBUG_PRINT_GENERATOR
 // #    define DEBUG_PRINT_COMPILER
+// #    define DEBUG_ARITHMETIC
 // define this to turn on additional safety checks for things that shouldn't but just possibly might happen
 #    define SAFETY_CHECKS
 #  endif
@@ -61,7 +62,9 @@
 #  ifndef __GNUC__
 #    define __attribute__(x)
 #  endif
+
 #  define errout stdout
+
 void _cant_happen(char *file, int line, const char *message, ...)
     __attribute__((noreturn, format(printf, 3, 4)));
 void can_happen(const char *message, ...)

@@ -20,7 +20,12 @@
 
 #include "value.h"
 
+typedef int (*CmpBinOp)(Value, Value);
 typedef Value (*IntegerBinOp)(Value, Value);
+typedef Value (*IntegerUnOp)(Value);
+typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
+
+extern int rational_flag;
 
 extern IntegerBinOp add;
 extern IntegerBinOp sub;
@@ -30,5 +35,6 @@ extern IntegerBinOp power;
 extern IntegerBinOp modulo;
 
 void init_arithmetic(void);
+void markArithmetic(void);
 
 #endif
