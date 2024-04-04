@@ -51,10 +51,12 @@ static IntegerBinOp int_modulo;
 
 static IntegerBinOp int_gcd;
 static CmpBinOp int_cmp;
+static voidOp int_neg;
+static boolOp int_isneg;
 
 static Value One = {
-    .type = VALUE_TYPE_BIGINT,
-    .val = VALUE_VAL_BIGINT(NULL)
+    .type = VALUE_TYPE_STDINT,
+    .val = VALUE_VAL_STDINT(1)
 };
 
 #ifdef DEBUG_ARITHMETIC
@@ -84,10 +86,10 @@ static void ppNumber(Value number) {
 ////////////////////////////////
 
 static Value intValue(int i) {
-    Value value;
-    value.type = VALUE_TYPE_STDINT;
-    value.val = VALUE_VAL_STDINT(i);
-    return value;
+    Value val;
+    val.type = VALUE_TYPE_STDINT;
+    val.val = VALUE_VAL_STDINT(i);
+    return val;
 }
 
 #ifdef SAFETY_CHECKS
@@ -157,6 +159,153 @@ static int littleCmp(Value left, Value right) {
     return left.val.stdint < right.val.stdint ? -1 : left.val.stdint == right.val.stdint ? 0 : 1;
 }
 
+static void littleNeg(Value v) {
+    ASSERT_STDINT(v);
+    v.val.stdint = -v.val.stdint;
+}
+
+static bool littleIsNeg(Value v) {
+    ASSERT_STDINT(v);
+    return v.val.stdint < 0;
+}
+
+////////////////////////////////////
+// arbitrary size integer operations
+////////////////////////////////////
+
+#ifdef SAFETY_CHECKS
+#  define ASSERT_BIGINT(x) ASSERT((x).type == VALUE_TYPE_BIGINT)
+#else
+#  define ASSERT_BIGINT(x)
+#endif
+
+static Value bigIntValue(BigInt *i) {
+    Value val;
+    val.type = VALUE_TYPE_BIGINT;
+    val.val = VALUE_VAL_BIGINT(i);
+    return val;
+}
+
+static Value bigAdd(Value left, Value right) {
+    ENTER(bigAdd);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    LEAVE(bigAdd);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigMul(Value left, Value right) {
+    ENTER(bigMul);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    LEAVE(bigMul);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigSub(Value left, Value right) {
+    ENTER(bigSub);
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    LEAVE(bigSub);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigDivide(Value left, Value right) {
+    ENTER(bigDivide);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    protectValue(res);
+    LEAVE(bigDivide);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigPower(Value left, Value right) {
+    ENTER(bigPower);
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    LEAVE(bigPower);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigModulo(Value left, Value right) {
+    ENTER(bigModulo);
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(result);
+    Value res = bigIntValue(result);
+    LEAVE(bigModulo);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value bigGcd(Value left, Value right) {
+    ENTER(bigGcd);
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    BigInt *gcd = gcdBigInt(left.val.bigint, right.val.bigint);
+    int save = PROTECT(gcd);
+    Value res = bigIntValue(gcd);
+    LEAVE(bigGcd);
+    UNPROTECT(save);
+    return res;
+}
+
+static int bigCmp(Value left, Value right) {
+    ENTER(bigCmp);
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    LEAVE(bigCmp);
+    return cmpBigInt(left.val.bigint, right.val.bigint);
+}
+
+static void bigNeg(Value v) {
+    ASSERT_BIGINT(v);
+    negateBigInt(v.val.bigint);
+}
+
+static bool bigIsNeg(Value v) {
+    ASSERT_BIGINT(v);
+    return isNegBigInt(v.val.bigint);
+}
+
+///////////////////////////////////////
+// unspecified size rational operations
+///////////////////////////////////////
+
+#ifdef SAFETY_CHECKS
+#  define ASSERT_RATIONAL(x) ASSERT((x).type == VALUE_TYPE_RATIONAL)
+#else
+#  define ASSERT_RATIONAL(x)
+#endif
+
 static Value makeRational(Value numerator, Value denominator) {
     Vec *vec = newVec(2);
     vec->values[NUMERATOR] = numerator;
@@ -167,88 +316,6 @@ static Value makeRational(Value numerator, Value denominator) {
     };
     return res;
 }
-
-////////////////////////////////////
-// arbitrary size integer operations
-////////////////////////////////////
-
-#ifdef SAFETY_CHECKS
-#  define ASSERT_BIGINT(x) ASSERT((x).type == VALUE_TYPE_STDINT)
-#else
-#  define ASSERT_BIGINT(x)
-#endif
-
-static Value bigIntValue(BigInt *i) {
-    Value value;
-    value.type = VALUE_TYPE_BIGINT;
-    value.val = VALUE_VAL_BIGINT(i);
-    return value;
-}
-
-static Value bigAdd(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigMul(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigSub(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigDivide(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigPower(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigModulo(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value bigGcd(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *gcd = gcdBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(gcd);
-}
-
-static int bigCmp(Value left, Value right) {
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    return cmpBigInt(left.val.bigint, right.val.bigint);
-}
-
-////////////////////////////////////
-// arbitrary size integer operations
-////////////////////////////////////
-
-#ifdef SAFETY_CHECKS
-#  define ASSERT_RATIONAL(x) ASSERT((x).type == VALUE_TYPE_RATIONAL)
-#else
-#  define ASSERT_RATIONAL(x)
-#endif
 
 static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp intOp, bool simplify) {
     ENTER(ratOp);
@@ -261,52 +328,71 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
         if (right.type == VALUE_TYPE_RATIONAL) {
             // both rational
             res = op(intOp, left, right);
+            protectValue(res);
         } else {
             // only left rational
             right = makeRational(right, One);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
+            protectValue(res);
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         // only right rational
         left = makeRational(left, One);
         protectValue(left);
         res = ratOp(left, right, op, intOp, false);
+        protectValue(res);
     } else {
         // neither rational
         if (simplify) {
             res = intOp(left, right);
+            protectValue(res);
         } else {
             left = makeRational(left, One);
             protectValue(left);
             right = makeRational(right, One);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
+            protectValue(res);
         }
     }
     LEAVE(ratOp);
+    IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
 static Value ratSimplify(Value numerator, Value denominator) {
+    ENTER(ratSimplify);
+    IFDEBUG(ppNumber(numerator));
+    IFDEBUG(ppNumber(denominator));
     Value gcd = int_gcd(numerator, denominator);
     int save = protectValue(gcd);
-    Value numerator2 = int_divide(numerator, gcd);
-    protectValue(numerator2);
-    if (int_cmp(gcd, denominator) == 0) {
-        UNPROTECT(save);
-        return numerator2;
-    } else {
-        Value denominator2 = int_divide(denominator, gcd);
-        protectValue(denominator2);
-        Value res = makeRational(numerator2, denominator2);
-        UNPROTECT(save);
-        return res;
+    Value res;
+    if (int_cmp(gcd, One) != 0) {
+        numerator = int_divide(numerator, gcd);
+        protectValue(numerator);
+        denominator = int_divide(denominator, gcd);
+        protectValue(denominator);
     }
+    if (int_isneg(denominator)) {
+        int_neg(numerator);
+        int_neg(denominator);
+    }
+    if (int_cmp(denominator, One) == 0) {
+        res = numerator;
+    } else {
+        res = makeRational(numerator, denominator);
+        protectValue(res);
+    }
+    LEAVE(ratSimplify);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
 }
 
 static Value _rat_add_sub(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(rat_add_sub);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
     Value a1b2 =
@@ -325,20 +411,32 @@ static Value _rat_add_sub(IntegerBinOp base_op, Value left, Value right) {
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     UNPROTECT(save);
+    LEAVE(rat_add_sub);
     return res;
 }
 
 static Value ratAdd(Value left, Value right) {
-    return ratOp(left, right, _rat_add_sub, int_add, true);
+    ENTER(ratAdd);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    Value res = ratOp(left, right, _rat_add_sub, int_add, true);
+    LEAVE(ratAdd);
+    return res;
 }
 
 static Value ratSub(Value left, Value right) {
-    return ratOp(left, right, _rat_add_sub, int_sub, true);
+    ENTER(ratSub);
+    Value res = ratOp(left, right, _rat_add_sub, int_sub, true);
+    LEAVE(ratSub);
+    return res;
 }
 
 static Value _rat_mul(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(_rat_mul);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
     Value numerator =
         base_op(left.val.vec->values[NUMERATOR],
                 right.val.vec->values[NUMERATOR]);
@@ -348,20 +446,37 @@ static Value _rat_mul(IntegerBinOp base_op, Value left, Value right) {
                 right.val.vec->values[DENOMINATOR]);
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
+    protectValue(res);
+    LEAVE(_rat_mul);
+    IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
 static Value ratMul(Value left, Value right) {
-    return ratOp(left, right, _rat_mul, int_mul, true);
+    ENTER(ratMul);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    Value res = ratOp(left, right, _rat_mul, int_mul, true);
+    int save = protectValue(res);
+    LEAVE(ratMul);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
 }
 
 static Value _rat_div(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(_rat_div);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
     Value newRight = makeRational(right.val.vec->values[DENOMINATOR], right.val.vec->values[NUMERATOR]);
     int save = protectValue(newRight);
     Value res = _rat_mul(base_op, left, newRight);
+    protectValue(res);
+    LEAVE(_rat_div);
+    IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
@@ -370,13 +485,18 @@ static Value ratDivide(Value left, Value right) {
     ENTER(ratDivide);
     // N.B. int_mul not int_div
     Value res = ratOp(left, right, _rat_div, int_mul, false);
+    int save = protectValue(res);
     LEAVE(ratDivide);
     IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
     return res;
 }
 
 static Value ratModulo(Value left, Value right) {
-    return ratOp(left, right, _rat_add_sub, int_modulo, true);
+    ENTER(ratModulo);
+    Value res = ratOp(left, right, _rat_add_sub, int_modulo, true);
+    LEAVE(ratModulo);
+    return res;
 }
 
 void init_arithmetic() {
@@ -389,7 +509,10 @@ void init_arithmetic() {
         int_modulo = bigModulo;
         int_gcd = bigGcd;
         int_cmp = bigCmp;
+        int_neg = bigNeg;
+        int_isneg = bigIsNeg;
         BigInt *one = bigIntFromInt(1);
+        One.type = VALUE_TYPE_BIGINT;
         One.val = VALUE_VAL_BIGINT(one);
     } else {
         int_add = littleAdd;
@@ -400,14 +523,16 @@ void init_arithmetic() {
         int_modulo = littleModulo;
         int_gcd = littleGcd;
         int_cmp = littleCmp;
-        One.type = VALUE_TYPE_STDINT;
-        One.val = VALUE_VAL_STDINT(1);
+        int_neg = littleNeg;
+        int_isneg = littleIsNeg;
     }
+
     if (rational_flag) {
         add = ratAdd;
         sub = ratSub;
         mul = ratMul;
         divide = ratDivide;
+        power = int_power;
         modulo = ratModulo;
     } else {
         add = int_add;

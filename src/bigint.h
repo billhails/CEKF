@@ -68,6 +68,8 @@ extern "C" {
     BigInt *powBigInt(BigInt *a, BigInt *b);
     BigInt *gcdBigInt(BigInt *a, BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
+    void negateBigInt(BigInt *b);
+    bool isNegBigInt(BigInt *b);
 
 // END CEKF additions
 

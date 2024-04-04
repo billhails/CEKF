@@ -1420,3 +1420,19 @@ void dumpBigInt(FILE *fp, BigInt *big) {
     }
     fprintf(fp, "\n");
 }
+
+void negateBigInt(BigInt *b) {
+    if (bigint_flag) {
+        bigint_negate(&b->bi);
+    } else {
+        b->little = -b->little;
+    }
+}
+
+bool isNegBigInt(BigInt *b) {
+    if (bigint_flag) {
+        return b->bi.neg != 0;
+    } else {
+        return b->little < 0;
+    }
+}

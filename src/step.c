@@ -477,119 +477,163 @@ static void step() {
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("CMP\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(cmp(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_ADD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("ADD\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(add(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_SUB:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("SUB\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(sub(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_MUL:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MUL\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(mul(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_DIV:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("DIV\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(divide(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_POW:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("POW\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(power(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_MOD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MOD\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(modulo(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_EQ:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("EQ\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(eq(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_NE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("NE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(ne(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_GT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GT\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(gt(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_LT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LT\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(lt(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_GE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(ge(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_LE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(le(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_XOR:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("XOR\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(xor(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_NOT:{
                     // pop value, perform the op and push the result
                     DEBUGPRINTF("NOT\n");
                     Value a = pop();
+                    int save = protectValue(a);
                     push(not(a));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_VEC:{
