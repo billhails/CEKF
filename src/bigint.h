@@ -50,6 +50,7 @@ extern "C" {
 
     BigInt *newBigInt(bigint bi);
     BigInt *fakeBigInt(int little);
+    BigInt *bigIntFromInt(int c);
     void markBigInt(BigInt *bi);
     void freeBigInt(BigInt *bi);
     void printBigInt(BigInt *bi, int depth);
@@ -65,7 +66,10 @@ extern "C" {
     BigInt *divBigInt(BigInt *a, BigInt *b);
     BigInt *modBigInt(BigInt *a, BigInt *b);
     BigInt *powBigInt(BigInt *a, BigInt *b);
+    BigInt *gcdBigInt(BigInt *a, BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
+    void negateBigInt(BigInt *b);
+    bool isNegBigInt(BigInt *b);
 
 // END CEKF additions
 

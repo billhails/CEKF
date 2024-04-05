@@ -31,6 +31,7 @@
 #include "cekf.h"
 #include "module.h"
 #include "symbol.h"
+#include "arithmetic.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -371,6 +372,7 @@ static void markProtected() {
 static void mark() {
     markCEKF();
     markProtected();
+    markArithmetic();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTable\n");
 #endif

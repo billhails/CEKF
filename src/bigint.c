@@ -1288,6 +1288,13 @@ BigInt *fakeBigInt(int little) {
     return x;
 }
 
+BigInt *bigIntFromInt(int i) {
+    bigint c;
+    bigint_init(&c);
+    bigint_from_int(&c, i);
+    return newBigInt(c);
+}
+
 void markBigInt(BigInt *x) {
     if (x == NULL)
         return;
@@ -1380,6 +1387,10 @@ BigInt *modBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_mod, a, b);
 }
 
+BigInt *gcdBigInt(BigInt *a, BigInt *b) {
+    return _opBigInt(bigint_gcd, a, b);
+}
+
 BigInt *powBigInt(BigInt *a, BigInt *b) {
     int save = PROTECT(a);
     PROTECT(b);
@@ -1408,4 +1419,20 @@ void dumpBigInt(FILE *fp, BigInt *big) {
         fprintf(fp, "]");
     }
     fprintf(fp, "\n");
+}
+
+void negateBigInt(BigInt *b) {
+    if (bigint_flag) {
+        bigint_negate(&b->bi);
+    } else {
+        b->little = -b->little;
+    }
+}
+
+bool isNegBigInt(BigInt *b) {
+    if (bigint_flag) {
+        return b->bi.neg != 0;
+    } else {
+        return b->little < 0;
+    }
 }

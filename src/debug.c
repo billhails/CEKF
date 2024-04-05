@@ -74,6 +74,7 @@ void printContainedValue(Value x, int depth) {
         case VALUE_TYPE_CONT:
             printKont(x.val.kont, depth);
             break;
+        case VALUE_TYPE_RATIONAL:
         case VALUE_TYPE_VEC:
             printPad(depth);
             printVec(x.val.vec);

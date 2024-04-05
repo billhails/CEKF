@@ -97,6 +97,8 @@ typedef struct Vec {
     struct Value values[0];
 } Vec;
 
+int protectValue(Value v);
+
 void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);

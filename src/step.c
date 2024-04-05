@@ -23,13 +23,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
-#include <math.h>
 
 #include "common.h"
 #include "debug.h"
 #include "cekf.h"
 #include "step.h"
 #include "hash.h"
+#include "arithmetic.h"
 
 int dump_bytecode_flag = 0;
 
@@ -45,7 +45,6 @@ int dump_bytecode_flag = 0;
 
 static void step();
 static Value lookup(int frame, int offset);
-static int protectValue(Value v);
 void putValue(Value x);
 
 static CEKF state;
@@ -131,139 +130,9 @@ static inline int readCurrentOffsetAt(int i) {
     return readOffsetAt(&state.B, state.C, i);
 }
 
-static Value intValue(int i) {
-    Value value;
-    value.type = VALUE_TYPE_STDINT;
-    value.val = VALUE_VAL_STDINT(i);
-    return value;
-}
-
-static Value bigIntValue(BigInt *i) {
-    Value value;
-    value.type = VALUE_TYPE_BIGINT;
-    value.val = VALUE_VAL_BIGINT(i);
-    return value;
-}
-
 static bool truthy(Value v) {
     return !((v.type == VALUE_TYPE_STDINT && v.val.stdint == 0)
              || v.type == VALUE_TYPE_VOID);
-}
-
-typedef Value (*IntegerBinOp)(Value, Value);
-
-static IntegerBinOp add;
-
-static Value bigAdd(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleAdd(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint + right.val.stdint);
-}
-
-static IntegerBinOp mul;
-
-static Value bigMul(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleMul(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint * right.val.stdint);
-}
-
-static IntegerBinOp sub;
-
-static Value bigSub(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleSub(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint - right.val.stdint);
-}
-
-static IntegerBinOp divide;
-
-static Value bigDivide(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleDivide(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint / right.val.stdint);
-}
-
-static IntegerBinOp power;
-
-static Value bigPower(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littlePower(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(pow(left.val.stdint, right.val.stdint));
-}
-
-static IntegerBinOp modulo;
-
-static Value bigModulo(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_BIGINT);
-    assert(right.type == VALUE_TYPE_BIGINT);
-#endif
-    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
-    return bigIntValue(result);
-}
-
-static Value littleModulo(Value left, Value right) {
-#ifdef SAFETY_CHECKS
-    assert(left.type == VALUE_TYPE_STDINT);
-    assert(right.type == VALUE_TYPE_STDINT);
-#endif
-    return intValue(left.val.stdint % right.val.stdint);
 }
 
 static int _cmp(Value left, Value right);
@@ -414,21 +283,6 @@ static Value lookup(int frame, int offset) {
     return env->values[offset];
 }
 
-static int protectValue(Value v) {
-    switch (v.type) {
-        case VALUE_TYPE_CLO:
-            return PROTECT(v.val.clo);
-        case VALUE_TYPE_CONT:
-            return PROTECT(v.val.kont);
-        case VALUE_TYPE_VEC:
-            return PROTECT(v.val.vec);
-        case VALUE_TYPE_BIGINT:
-            return PROTECT(v.val.bigint);
-        default:
-            return PROTECT(NULL);
-    }
-}
-
 /**
  * on reaching this point, the stack will contain a number
  * of arguments, and the callable on top.
@@ -532,21 +386,7 @@ void reportSteps(void) {
 static void step() {
     if (dump_bytecode_flag)
         dumpByteCode(&state.B);
-    if (bigint_flag) {
-        add = bigAdd;
-        mul = bigMul;
-        sub = bigSub;
-        divide = bigDivide;
-        power = bigPower;
-        modulo = bigModulo;
-    } else {
-        add = littleAdd;
-        mul = littleMul;
-        sub = littleSub;
-        divide = littleDivide;
-        power = littlePower;
-        modulo = littleModulo;
-    }
+    init_arithmetic();
     state.C = 0;
     while (state.C != UINT64_MAX) {
         ++count;
@@ -616,10 +456,20 @@ static void step() {
                     // peek value, print it
                     DEBUGPRINTF("PUTN\n");
                     Value b = tos();
-                    if (b.type == VALUE_TYPE_BIGINT) {
-                        fprintBigInt(stdout, b.val.bigint);
-                    } else {
-                        printf("%d", b.val.stdint);
+                    switch (b.type) {
+                        case VALUE_TYPE_BIGINT:
+                            fprintBigInt(stdout, b.val.bigint);
+                            break;
+                        case VALUE_TYPE_STDINT:
+                            printf("%d", b.val.stdint);
+                            break;
+                        case VALUE_TYPE_RATIONAL:
+                            putValue(b.val.vec->values[0]);
+                            printf("/");
+                            putValue(b.val.vec->values[1]);
+                            break;
+                        default:
+                            cant_happen("unrecognised type %d", b.type);
                     }
                 }
                 break;
@@ -627,119 +477,163 @@ static void step() {
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("CMP\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(cmp(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_ADD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("ADD\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(add(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_SUB:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("SUB\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(sub(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_MUL:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MUL\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(mul(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_DIV:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("DIV\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(divide(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_POW:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("POW\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(power(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_MOD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MOD\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(modulo(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_EQ:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("EQ\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(eq(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_NE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("NE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(ne(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_GT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GT\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(gt(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_LT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LT\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(lt(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_GE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(ge(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_LE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LE\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(le(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_XOR:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("XOR\n");
                     Value right = pop();
+                    int save = protectValue(right);
                     Value left = pop();
+                    protectValue(left);
                     push(xor(left, right));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_NOT:{
                     // pop value, perform the op and push the result
                     DEBUGPRINTF("NOT\n");
                     Value a = pop();
+                    int save = protectValue(a);
                     push(not(a));
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_PRIM_VEC:{
