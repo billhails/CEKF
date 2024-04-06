@@ -24,7 +24,7 @@ typedef int (*CmpBinOp)(Value, Value);
 typedef Value (*IntegerBinOp)(Value, Value);
 typedef Value (*IntegerUnOp)(Value);
 typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
-typedef void (*voidOp)(Value);
+typedef void (*voidOp)(Value *);
 typedef bool (*boolOp)(Value);
 
 extern int rational_flag;
@@ -35,6 +35,7 @@ extern IntegerBinOp mul;
 extern IntegerBinOp divide;
 extern IntegerBinOp power;
 extern IntegerBinOp modulo;
+extern IntegerUnOp neg;
 
 void init_arithmetic(void);
 void markArithmetic(void);

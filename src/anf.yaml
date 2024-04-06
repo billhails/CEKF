@@ -190,6 +190,7 @@ enums:
         - CMP
 
     AexpUnaryOp:
+        - NEG
         - NOT
         - PUTC
         - PUTN

@@ -1295,6 +1295,13 @@ BigInt *bigIntFromInt(int i) {
     return newBigInt(c);
 }
 
+BigInt *copyBigInt(BigInt *b) {
+    bigint bi;
+    bigint_init(&bi);
+    bigint_cpy(&bi, &b->bi);
+    return newBigInt(bi);
+}
+
 void markBigInt(BigInt *x) {
     if (x == NULL)
         return;
