@@ -21,6 +21,12 @@
 #  include "bigint.h"
 
 typedef enum {
+    VALUE_CMP_LT = -1,
+    VALUE_CMP_EQ = 0,
+    VALUE_CMP_GT = 1
+} ValueCmp;
+
+typedef enum {
     VALUE_TYPE_VOID,
     VALUE_TYPE_STDINT,
     VALUE_TYPE_BIGINT,

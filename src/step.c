@@ -135,9 +135,9 @@ static bool truthy(Value v) {
              || v.type == VALUE_TYPE_VOID);
 }
 
-static int _cmp(Value left, Value right);
+static ValueCmp _cmp(Value left, Value right);
 
-static int _vecCmp(Vec *left, Vec *right) {
+static ValueCmp _vecCmp(Vec *left, Vec *right) {
     if (left == right) {
         return 0;
     }
@@ -151,15 +151,15 @@ static int _vecCmp(Vec *left, Vec *right) {
 #endif
     for (int i = 0; i < left->size; ++i) {
         int cmp = _cmp(left->values[i], right->values[i]);
-        if (cmp != 0)
+        if (cmp != VALUE_CMP_EQ)
             return cmp;
     }
-    return 0;
+    return VALUE_CMP_EQ;
 }
 
-#define _CMP_(left, right) ((left) < (right) ? -1 : (left) == (right) ? 0 : 1)
+#define _CMP_(left, right) ((left) < (right) ? VALUE_CMP_LT : (left) == (right) ? VALUE_CMP_EQ : VALUE_CMP_GT)
 
-static int _cmp(Value left, Value right) {
+static ValueCmp _cmp(Value left, Value right) {
 #ifdef DEBUG_STEP
     eprintf("_cmp:\n");
     printContainedValue(left, 0);
@@ -176,9 +176,9 @@ static int _cmp(Value left, Value right) {
         case VALUE_TYPE_VOID:
             return 0;
         case VALUE_TYPE_BIGINT:
-            return cmpBigInt(left.val.bigint, right.val.bigint);
         case VALUE_TYPE_STDINT:
-            return _CMP_(left.val.stdint, right.val.stdint);
+        case VALUE_TYPE_RATIONAL:
+            return ncmp(left, right);
         case VALUE_TYPE_CHARACTER:
             return _CMP_(left.val.character, right.val.character);
         case VALUE_TYPE_CLO:
@@ -193,13 +193,13 @@ static int _cmp(Value left, Value right) {
     }
 }
 
-static Value cmp(Value left, Value right) {
+static Value vcmp(Value left, Value right) {
     switch (_cmp(left, right)) {
-        case -1:
+        case VALUE_CMP_LT:
             return vLt;
-        case 0:
+        case VALUE_CMP_EQ:
             return vEq;
-        case 1:
+        case VALUE_CMP_GT:
             return vGt;
         default:
             cant_happen("unexpected value from _cmp");
@@ -207,15 +207,15 @@ static Value cmp(Value left, Value right) {
 }
 
 static bool _eq(Value left, Value right) {
-    return _cmp(left, right) == 0;
+    return _cmp(left, right) == VALUE_CMP_EQ;
 }
 
 static bool _gt(Value left, Value right) {
-    return _cmp(left, right) == 1;
+    return _cmp(left, right) == VALUE_CMP_GT;
 }
 
 static bool _lt(Value left, Value right) {
-    return _cmp(left, right) == -1;
+    return _cmp(left, right) == VALUE_CMP_LT;
 }
 
 static bool _xor(Value left, Value right) {
@@ -480,7 +480,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(cmp(left, right));
+                    push(vcmp(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -491,7 +491,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(add(left, right));
+                    push(nadd(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -502,7 +502,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(sub(left, right));
+                    push(nsub(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -513,7 +513,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(mul(left, right));
+                    push(nmul(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -524,7 +524,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(divide(left, right));
+                    push(ndiv(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -535,7 +535,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(power(left, right));
+                    push(npow(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -546,7 +546,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(modulo(left, right));
+                    push(nmod(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -641,7 +641,7 @@ static void step() {
                     DEBUGPRINTF("NEG\n");
                     Value a = pop();
                     int save = protectValue(a);
-                    push(neg(a));
+                    push(nneg(a));
                     UNPROTECT(save);
             }
             break;

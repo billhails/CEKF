@@ -35,13 +35,14 @@
 
 int rational_flag = 0;
 
-IntegerBinOp add;
-IntegerBinOp sub;
-IntegerBinOp mul;
-IntegerBinOp divide;
-IntegerBinOp power;
-IntegerBinOp modulo;
-IntegerUnOp neg;
+IntegerBinOp nadd;
+IntegerBinOp nsub;
+IntegerBinOp nmul;
+IntegerBinOp ndiv;
+IntegerBinOp npow;
+IntegerBinOp nmod;
+IntegerUnOp nneg;
+CmpBinOp ncmp;
 
 static IntegerBinOp int_add;
 static IntegerBinOp int_sub;
@@ -50,6 +51,7 @@ static IntegerBinOp int_divide;
 static IntegerBinOp int_power;
 static IntegerBinOp int_modulo;
 static IntegerUnOp int_neg;
+static CmpBinOp int_cmp;
 
 static IntegerBinOp int_gcd;
 static CmpBinOp int_cmp;
@@ -105,10 +107,12 @@ static Value intValue(int i) {
 #  define ASSERT_STDINT(x)
 #endif
 
-static int littleCmp(Value left, Value right) {
+static ValueCmp littleCmp(Value left, Value right) {
     ASSERT_STDINT(left);
     ASSERT_STDINT(right);
-    return left.val.stdint < right.val.stdint ? -1 : left.val.stdint == right.val.stdint ? 0 : 1;
+    return left.val.stdint < right.val.stdint ? VALUE_CMP_LT :
+        left.val.stdint == right.val.stdint ? VALUE_CMP_EQ :
+        VALUE_CMP_GT;
 }
 
 static Value littleAdd(Value left, Value right) {
@@ -198,12 +202,13 @@ static bool littleIsNeg(Value v) {
 #  define ASSERT_BIGINT(x)
 #endif
 
-static int bigCmp(Value left, Value right) {
+static ValueCmp bigCmp(Value left, Value right) {
     ENTER(bigCmp);
     ASSERT_BIGINT(left);
     ASSERT_BIGINT(right);
     LEAVE(bigCmp);
-    return cmpBigInt(left.val.bigint, right.val.bigint);
+    int i = cmpBigInt(left.val.bigint, right.val.bigint);
+    return i < 0 ? VALUE_CMP_LT : i == 0 ? VALUE_CMP_EQ : VALUE_CMP_GT;
 }
 
 static Value bigIntValue(BigInt *i) {
@@ -343,6 +348,22 @@ static bool bigIsNeg(Value v) {
 #  define ASSERT_RATIONAL(x)
 #endif
 
+static ValueCmp _rat_cmp(Value left, Value right) {
+    ENTER(_rat_cmp);
+    ASSERT_RATIONAL(left);
+    ASSERT_RATIONAL(right);
+    Value ad = int_mul(left.val.vec->values[NUMERATOR],
+                       right.val.vec->values[DENOMINATOR]);
+    int save = protectValue(ad);
+    Value bc = int_mul(left.val.vec->values[DENOMINATOR],
+                       right.val.vec->values[NUMERATOR]);
+    protectValue(bc);
+    ValueCmp res = int_cmp(ad, bc);
+    LEAVE(_rat_cmp);
+    UNPROTECT(save);
+    return res;
+}
+
 static Value makeRational(Value numerator, Value denominator) {
     Vec *vec = newVec(2);
     vec->values[NUMERATOR] = numerator;
@@ -351,6 +372,32 @@ static Value makeRational(Value numerator, Value denominator) {
         .type = VALUE_TYPE_RATIONAL,
         .val = VALUE_VAL_RATIONAL(vec)
     };
+    return res;
+}
+
+static ValueCmp ratCmp(Value left, Value right) {
+    ENTER(ratCmp);
+    ValueCmp res;
+    int save = PROTECT(NULL);
+    if (left.type == VALUE_TYPE_RATIONAL) {
+        if (right.type == VALUE_TYPE_RATIONAL) {
+            res = _rat_cmp(left, right);
+        } else {
+            right = makeRational(right, One);
+            protectValue(right);
+            res = _rat_cmp(left, right);
+        }
+    } else {
+        if (right.type == VALUE_TYPE_RATIONAL) {
+            left = makeRational(left, One);
+            protectValue(left);
+            res = _rat_cmp(left, right);
+        } else {
+            res = int_cmp(left, right);
+        }
+    }
+    LEAVE(ratCmp);
+    UNPROTECT(save);
     return res;
 }
 
@@ -624,29 +671,31 @@ void init_arithmetic() {
         int_power = littlePower;
         int_modulo = littleModulo;
         int_gcd = littleGcd;
-        int_cmp = littleCmp;
         int_neg_in_place = littleNegInPlace;
         int_neg = littleNeg;
         int_isneg = littleIsNeg;
         int_neg = littleNeg;
+        int_cmp = littleCmp;
     }
 
     if (rational_flag) {
-        add = ratAdd;
-        sub = ratSub;
-        mul = ratMul;
-        divide = ratDivide;
-        power = ratPower;
-        modulo = ratModulo;
-        neg = ratNeg;
+        nadd = ratAdd;
+        nsub = ratSub;
+        nmul = ratMul;
+        ndiv = ratDivide;
+        npow = ratPower;
+        nmod = ratModulo;
+        nneg = ratNeg;
+        ncmp = ratCmp;
     } else {
-        add = int_add;
-        mul = int_mul;
-        sub = int_sub;
-        divide = int_divide;
-        power = int_power;
-        modulo = int_modulo;
-        neg = int_neg;
+        nadd = int_add;
+        nmul = int_mul;
+        nsub = int_sub;
+        ndiv = int_divide;
+        npow = int_power;
+        nmod = int_modulo;
+        nneg = int_neg;
+        ncmp = int_cmp;
     }
 }
 
