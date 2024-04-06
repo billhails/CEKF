@@ -213,7 +213,7 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
 static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env) {
     ENTER(compilePrinterForTuple);
     if (tuple->size < 5) {
-        char buf[16];
+        char buf[64];
         sprintf(buf, "print$tuple$%d", tuple->size);
         LamExp *exp = makeSymbolExpr(buf);
         if (tuple->size == 0) {

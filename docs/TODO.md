@@ -6,9 +6,16 @@
 * `now()` expression returns current time in milliseconds.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
 * More numbers:
-   * Rationals: 1/3.
-   * Irrationals: sqrt(2).
+   * Irrationals.
    * Complex numbers.
+   * NaN.
+* Improve arithmetic.
+   * General overhaul.
+   * Pre-compute constant values at compile time.
+   * allow numeric (not symbolic) arithmetic expressions in patterns.
+   * allow unpacking of numerator and denominator variables in patterns.
+      * special case because there is a canonical form
+      * can't allow arbitrary ops and combinations because i.e. `(a + 2) * b` can't determine `a` and `b`, and `a ** 2` would require `a` to be bound to the square root of the actual argument.
 * UTF8 and `wchar_t`.
 * Namespaces.
 * Libraries.
