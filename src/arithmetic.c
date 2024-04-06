@@ -41,6 +41,7 @@ IntegerBinOp mul;
 IntegerBinOp divide;
 IntegerBinOp power;
 IntegerBinOp modulo;
+IntegerUnOp neg;
 
 static IntegerBinOp int_add;
 static IntegerBinOp int_sub;
@@ -48,10 +49,11 @@ static IntegerBinOp int_mul;
 static IntegerBinOp int_divide;
 static IntegerBinOp int_power;
 static IntegerBinOp int_modulo;
+static IntegerUnOp int_neg;
 
 static IntegerBinOp int_gcd;
 static CmpBinOp int_cmp;
-static voidOp int_neg;
+static voidOp int_neg_in_place;
 static boolOp int_isneg;
 
 static Value One = {
@@ -170,9 +172,15 @@ static Value littleGcd(Value left, Value right) {
     return intValue(gcd(left.val.stdint, right.val.stdint));
 }
 
-static void littleNeg(Value v) {
+static void littleNegInPlace(Value *v) {
+    ASSERT_STDINT(*v);
+    v->val.stdint = -(v->val.stdint);
+}
+
+static Value littleNeg(Value v) {
     ASSERT_STDINT(v);
-    v.val.stdint = -v.val.stdint;
+    v.val.stdint = -(v.val.stdint);
+    return v;
 }
 
 static bool littleIsNeg(Value v) {
@@ -303,9 +311,21 @@ static Value bigGcd(Value left, Value right) {
     return res;
 }
 
-static void bigNeg(Value v) {
+static Value bigNeg(Value v) {
+    ENTER(bigNeg);
     ASSERT_BIGINT(v);
-    negateBigInt(v.val.bigint);
+    BigInt *bi = copyBigInt(v.val.bigint);
+    int save = PROTECT(bi);
+    negateBigInt(bi);
+    Value res = bigIntValue(bi);
+    LEAVE(bigNeg);
+    UNPROTECT(save);
+    return res;
+}
+
+static void bigNegInPlace(Value *v) {
+    ASSERT_BIGINT(*v);
+    negateBigInt(v->val.bigint);
 }
 
 static bool bigIsNeg(Value v) {
@@ -393,8 +413,8 @@ static Value ratSimplify(Value numerator, Value denominator) {
         protectValue(denominator);
     }
     if (int_isneg(denominator)) {
-        int_neg(numerator);
-        int_neg(denominator);
+        int_neg_in_place(&numerator);
+        int_neg_in_place(&denominator);
     }
     if (int_cmp(denominator, One) == 0) {
         res = numerator;
@@ -562,6 +582,21 @@ static Value ratPower(Value left, Value right) {
     return res;
 }
 
+static Value ratNeg(Value v) {
+    ENTER(ratNeg);
+    Value res;
+    if (v.type == VALUE_TYPE_RATIONAL) {
+        Value numerator = int_neg(v.val.vec->values[NUMERATOR]);
+        int save = protectValue(numerator);
+        res = makeRational(numerator, v.val.vec->values[DENOMINATOR]);
+        UNPROTECT(save);
+    } else {
+        res = int_neg(v);
+    }
+    LEAVE(ratNeg);
+    return res;
+}
+
 void init_arithmetic() {
     if (bigint_flag) {
         int_add = bigAdd;
@@ -572,8 +607,9 @@ void init_arithmetic() {
         int_modulo = bigModulo;
         int_gcd = bigGcd;
         int_cmp = bigCmp;
-        int_neg = bigNeg;
+        int_neg_in_place = bigNegInPlace;
         int_isneg = bigIsNeg;
+        int_neg = bigNeg;
         BigInt *zero = bigIntFromInt(0);
         Zero.type = VALUE_TYPE_BIGINT;
         Zero.val = VALUE_VAL_BIGINT(zero);
@@ -589,8 +625,10 @@ void init_arithmetic() {
         int_modulo = littleModulo;
         int_gcd = littleGcd;
         int_cmp = littleCmp;
+        int_neg_in_place = littleNegInPlace;
         int_neg = littleNeg;
         int_isneg = littleIsNeg;
+        int_neg = littleNeg;
     }
 
     if (rational_flag) {
@@ -600,6 +638,7 @@ void init_arithmetic() {
         divide = ratDivide;
         power = ratPower;
         modulo = ratModulo;
+        neg = ratNeg;
     } else {
         add = int_add;
         mul = int_mul;
@@ -607,6 +646,7 @@ void init_arithmetic() {
         divide = int_divide;
         power = int_power;
         modulo = int_modulo;
+        neg = int_neg;
     }
 }
 

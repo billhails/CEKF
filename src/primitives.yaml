@@ -55,3 +55,7 @@ string:
     printf: "%s"
     valued: true
 
+double:
+    cname: double
+    printf: "%f"
+    valued: true

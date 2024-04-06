@@ -636,6 +636,15 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
+            case BYTECODE_PRIM_NEG:{
+                    // pop value, perform the op and push the result
+                    DEBUGPRINTF("NEG\n");
+                    Value a = pop();
+                    int save = protectValue(a);
+                    push(neg(a));
+                    UNPROTECT(save);
+            }
+            break;
             case BYTECODE_PRIM_VEC:{
                     DEBUGPRINTF("VEC\n");
                     Value b = pop();

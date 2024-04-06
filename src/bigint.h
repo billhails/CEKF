@@ -51,13 +51,14 @@ extern "C" {
     BigInt *newBigInt(bigint bi);
     BigInt *fakeBigInt(int little);
     BigInt *bigIntFromInt(int c);
-    void markBigInt(BigInt *bi);
-    void freeBigInt(BigInt *bi);
-    void printBigInt(BigInt *bi, int depth);
+    BigInt *copyBigInt(BigInt *b);
+    void markBigInt(BigInt *b);
+    void freeBigInt(BigInt *b);
+    void printBigInt(BigInt *b, int depth);
     void fprintBigInt(FILE *f, BigInt *x);
     void sprintBigInt(char *s, BigInt *x);
     int cmpBigInt(BigInt *a, BigInt *b);
-    void dumpBigInt(FILE *fp, BigInt *big);
+    void dumpBigInt(FILE *fp, BigInt *b);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
     BigInt *addBigInt(BigInt *a, BigInt *b);
