@@ -118,6 +118,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_CMP:
             eprintf("cmp ");
             break;
+        case AEXPPRIMOP_TYPE_POW:
+            eprintf("pow ");
+            break;
         default:
             cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
@@ -132,6 +135,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
 void ppAexpUnaryApp(AexpUnaryApp *x) {
     eprintf("(");
     switch (x->type) {
+        case AEXPUNARYOP_TYPE_NEG:
+            eprintf("neg ");
+            break;
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;

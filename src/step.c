@@ -169,7 +169,22 @@ static ValueCmp _cmp(Value left, Value right) {
 #endif
 #ifdef SAFETY_CHECKS
     if (left.type != right.type) {
-        cant_happen("different types in _cmp");
+        switch (left.type) {
+            case VALUE_TYPE_BIGINT:
+            case VALUE_TYPE_STDINT:
+            case VALUE_TYPE_RATIONAL:
+                switch (right.type) {
+                    case VALUE_TYPE_BIGINT:
+                    case VALUE_TYPE_STDINT:
+                    case VALUE_TYPE_RATIONAL:
+                        break;
+                    default:
+                        cant_happen("different types in _cmp");
+                }
+                break;
+            default:
+                cant_happen("different types in _cmp");
+        }
     }
 #endif
     switch (left.type) {

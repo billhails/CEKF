@@ -29,6 +29,7 @@
 #  include <unistd.h>
 #  include "debug.h"
 #  include "lambda_pp.h"
+#  include "anf_debug.h"
 #  include "debugging_on.h"
 #else
 #  include "debugging_off.h"
@@ -750,7 +751,7 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
     AexpList *args = replaceLamList(lamApply->args, replacements);
     PROTECT(args);
     DEBUG("back from replaceLamList");
-    IFDEBUG(printHashTable(replacements, 0));
+    IFDEBUG(printLamExpTable(replacements, 0));
     CexpApply *cexpApply = newCexpApply(function, countAexpList(args), args);
     UNPROTECT(save2);
     save2 = PROTECT(cexpApply);
@@ -770,8 +771,8 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
 static Exp *letBind(Exp *body, LamExpTable *replacements) {
     ENTER(letBind);
     // DEBUG("sleep %d", sleep(1));
-    IFDEBUG(printExp(body));
-    IFDEBUG(printHashTable(replacements, 0));
+    IFDEBUG(printExp(body, 0));
+    IFDEBUG(printLamExpTable(replacements, 0));
     if (countLamExpTable(replacements) == 0) {
         LEAVE(letBind);
         return body;
@@ -1181,7 +1182,7 @@ static Aexp *replaceLamCexp(LamExp *apply, LamExpTable *replacements) {
     }
     HashSymbol *subst = freshSymbol();
     setLamExpTable(replacements, subst, apply);
-    IFDEBUG(printHashTable(replacements, 0));
+    IFDEBUG(printLamExpTable(replacements, 0));
     LEAVE(replaceLamCexp);
     return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(subst));
 }
