@@ -11,6 +11,7 @@
    * NaN.
 * Improve arithmetic.
    * General overhaul.
+   * move to [libgmp](https://gmplib.org/)
    * Pre-compute constant values at compile time.
    * allow numeric (not symbolic) arithmetic expressions in patterns.
    * allow unpacking of numerator and denominator variables in patterns.
@@ -31,3 +32,4 @@
 * User definable infix operators.
    * With precedence and associativity.
 * Curried binary operators `(2+)` etc.
+* Allow trailing semicolons ffs.

@@ -29,6 +29,7 @@
 // #    define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #    define DEBUG_SLOW_STEP
+// #    define DEBUG_BYTECODE
 // define this to cause a GC at every malloc (catches memory leaks early)
 #    define DEBUG_STRESS_GC
 // #    define DEBUG_LOG_GC
@@ -43,7 +44,6 @@
 // #    define DEBUG_TIN_SUBSTITUTION
 // #    define DEBUG_TIN_INSTANTIATION
 // #    define DEBUG_TIN_UNIFICATION
-// #    define DEBUG_BYTECODE
 // define this to make fatal errors dump core (if ulimit allows)
 #    define DEBUG_DUMP_CORE
 // #    define DEBUG_TC

@@ -135,9 +135,9 @@ static bool truthy(Value v) {
              || v.type == VALUE_TYPE_VOID);
 }
 
-static ValueCmp _cmp(Value left, Value right);
+static Cmp _cmp(Value left, Value right);
 
-static ValueCmp _vecCmp(Vec *left, Vec *right) {
+static Cmp _vecCmp(Vec *left, Vec *right) {
     if (left == right) {
         return 0;
     }
@@ -151,15 +151,15 @@ static ValueCmp _vecCmp(Vec *left, Vec *right) {
 #endif
     for (int i = 0; i < left->size; ++i) {
         int cmp = _cmp(left->values[i], right->values[i]);
-        if (cmp != VALUE_CMP_EQ)
+        if (cmp != CMP_EQ)
             return cmp;
     }
-    return VALUE_CMP_EQ;
+    return CMP_EQ;
 }
 
-#define _CMP_(left, right) ((left) < (right) ? VALUE_CMP_LT : (left) == (right) ? VALUE_CMP_EQ : VALUE_CMP_GT)
+#define _CMP_(left, right) ((left) < (right) ? CMP_LT : (left) == (right) ? CMP_EQ : CMP_GT)
 
-static ValueCmp _cmp(Value left, Value right) {
+static Cmp _cmp(Value left, Value right) {
 #ifdef DEBUG_STEP
     eprintf("_cmp:\n");
     printContainedValue(left, 0);
@@ -210,11 +210,11 @@ static ValueCmp _cmp(Value left, Value right) {
 
 static Value vcmp(Value left, Value right) {
     switch (_cmp(left, right)) {
-        case VALUE_CMP_LT:
+        case CMP_LT:
             return vLt;
-        case VALUE_CMP_EQ:
+        case CMP_EQ:
             return vEq;
-        case VALUE_CMP_GT:
+        case CMP_GT:
             return vGt;
         default:
             cant_happen("unexpected value from _cmp");
@@ -222,15 +222,15 @@ static Value vcmp(Value left, Value right) {
 }
 
 static bool _eq(Value left, Value right) {
-    return _cmp(left, right) == VALUE_CMP_EQ;
+    return _cmp(left, right) == CMP_EQ;
 }
 
 static bool _gt(Value left, Value right) {
-    return _cmp(left, right) == VALUE_CMP_GT;
+    return _cmp(left, right) == CMP_GT;
 }
 
 static bool _lt(Value left, Value right) {
-    return _cmp(left, right) == VALUE_CMP_LT;
+    return _cmp(left, right) == CMP_LT;
 }
 
 static bool _xor(Value left, Value right) {
@@ -396,6 +396,7 @@ static int count = 0;
 
 void reportSteps(void) {
     printf("%d instructions executed\n", count);
+    printf("%d final stack capacity\n", state.S.capacity);
 }
 
 static void step() {
@@ -517,7 +518,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(nsub(left, right));
+                    Value res = nsub(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -738,12 +741,19 @@ static void step() {
                     int here = state.C;
                     for (int ip = 0; ip < size; ip++) {
                         printf(" ");
-                        if (bigint_flag) {
-                            BigInt *bigInt = readCurrentBigInt();
-                            fprintBigInt(stdout, bigInt);
-                        } else {
-                            int Int = readCurrentInt();
-                            printf("%d", Int);
+                        switch(readCurrentByte()) {
+                            case BYTECODE_BIGINT: {
+                                BigInt *bigInt = readCurrentBigInt();
+                                fprintBigInt(stdout, bigInt);
+                            }
+                            break;
+                            case BYTECODE_STDINT: {
+                                int Int = readCurrentInt();
+                                printf("%d", Int);
+                            }
+                            break;
+                            default:
+                                cant_happen("expected int or bigint in INTCOND cases");
                         }
                         int offset = readCurrentOffset();
                         printf(":[%04x]", offset);
@@ -753,25 +763,40 @@ static void step() {
 #endif
                     Value v = pop();
                     int save = protectValue(v);
-                    if (bigint_flag) {
-                        for (int ip = 0; ip < size; ip++) {
-                            BigInt *bigInt = readCurrentBigInt();
-                            int offset = readCurrentOffset();
-                            if (cmpBigInt(bigInt, v.val.bigint) == 0) {
-                                state.C = offset;
-                                break;
+                    for (int ip = 0; ip < size; ip++) {
+                        switch(readCurrentByte()) {
+                            case BYTECODE_BIGINT: {
+                                BigInt *bigInt = readCurrentBigInt();
+                                PROTECT(bigInt);
+                                Value u;
+                                u.type = VALUE_TYPE_BIGINT;
+                                u.val = VALUE_VAL_BIGINT(bigInt);
+                                protectValue(u);
+                                int offset = readCurrentOffset();
+                                if (ncmp(u, v) == CMP_EQ) {
+                                    state.C = offset;
+                                    goto FINISHED_INTCOND;
+                                }
                             }
-                        }
-                    } else {
-                        for (int ip = 0; ip < size; ip++) {
-                            int option = readCurrentInt();
-                            int offset = readCurrentOffset();
-                            if (option == v.val.stdint) {
-                                state.C = offset;
-                                break;
+                            break;
+                            case BYTECODE_STDINT: {
+                                int option = readCurrentInt();
+                                Value u;
+                                u.type = VALUE_TYPE_STDINT;
+                                u.val = VALUE_VAL_STDINT(option);
+                                protectValue(u);
+                                int offset = readCurrentOffset();
+                                if (ncmp(u, v) == CMP_EQ) {
+                                    state.C = offset;
+                                    goto FINISHED_INTCOND;
+                                }
                             }
+                            break;
+                            default:
+                                cant_happen("expected int or bigint in INTCOND cases");
                         }
                     }
+                FINISHED_INTCOND:
                     UNPROTECT(save);
                 }
                 break;

@@ -17,6 +17,7 @@
  */
 
 #include <math.h>
+#include <limits.h>
 
 #include "common.h"
 #include "bigint.h"
@@ -43,20 +44,6 @@ IntegerBinOp npow;
 IntegerBinOp nmod;
 IntegerUnOp nneg;
 CmpBinOp ncmp;
-
-static IntegerBinOp int_add;
-static IntegerBinOp int_sub;
-static IntegerBinOp int_mul;
-static IntegerBinOp int_divide;
-static IntegerBinOp int_power;
-static IntegerBinOp int_modulo;
-static IntegerUnOp int_neg;
-static CmpBinOp int_cmp;
-
-static IntegerBinOp int_gcd;
-static CmpBinOp int_cmp;
-static voidOp int_neg_in_place;
-static boolOp int_isneg;
 
 static Value One = {
     .type = VALUE_TYPE_STDINT,
@@ -90,9 +77,7 @@ static void ppNumber(Value number) {
 }
 #endif
 
-////////////////////////////////
-// fixed size integer operations
-////////////////////////////////
+#define IS_BIGINT(x) ((x).type == VALUE_TYPE_BIGINT)
 
 static Value intValue(int i) {
     Value val;
@@ -101,60 +86,269 @@ static Value intValue(int i) {
     return val;
 }
 
-#ifdef SAFETY_CHECKS
-#  define ASSERT_STDINT(x) ASSERT((x).type == VALUE_TYPE_STDINT)
-#else
-#  define ASSERT_STDINT(x)
-#endif
-
-static ValueCmp littleCmp(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return left.val.stdint < right.val.stdint ? VALUE_CMP_LT :
-        left.val.stdint == right.val.stdint ? VALUE_CMP_EQ :
-        VALUE_CMP_GT;
+static Value bigIntValue(BigInt *i) {
+    Value val;
+    val.type = VALUE_TYPE_BIGINT;
+    val.val = VALUE_VAL_BIGINT(i);
+    return val;
 }
 
-static Value littleAdd(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return intValue(left.val.stdint + right.val.stdint);
-}
-
-static Value littleMul(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return intValue(left.val.stdint * right.val.stdint);
-}
-
-static Value littleSub(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return intValue(left.val.stdint - right.val.stdint);
-}
-
-static Value littleDivide(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    if (littleCmp(right, Zero) == 0) {
-        cant_happen("attempted div zero");
+static Cmp int_cmp(Value left, Value right) {
+    ENTER(int_cmp);
+    Cmp res;
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            res = cmpBigInt(left.val.bigint, right.val.bigint);
+        } else {
+            res = cmpBigIntInt(left.val.bigint, right.val.stdint);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            res = cmpIntBigInt(left.val.stdint, right.val.bigint);
+        } else {
+            res = left.val.stdint < right.val.stdint ? CMP_LT :
+                left.val.stdint == right.val.stdint ? CMP_EQ :
+                CMP_GT;
+        }
     }
-    return intValue(left.val.stdint / right.val.stdint);
+    LEAVE(int_cmp);
+    return res;
 }
 
-static Value littlePower(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return intValue(pow(left.val.stdint, right.val.stdint));
-}
-
-static Value littleModulo(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    if (littleCmp(right, Zero) == 0) {
-        cant_happen("attempted mod zero");
+static Value safe_add(int a, int b) {
+    int c;
+    if (__builtin_add_overflow(a, b, &c)) {
+        BigInt *big = bigIntFromAddition(a, b);
+        int save = PROTECT(big);
+        Value res = bigIntValue(big);
+        UNPROTECT(save);
+        return res;
+    } else {
+        return intValue(c);
     }
-    return intValue(left.val.stdint % right.val.stdint);
+}
+
+static Value int_add(Value left, Value right) {
+    ENTER(int_add);
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            BigInt *b = addBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(b);
+            res = bigIntValue(b);
+        } else {
+            BigInt *b = addBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(b);
+            res = bigIntValue(b);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            BigInt *b = addBigIntInt(right.val.bigint, left.val.stdint);
+            PROTECT(b);
+            res = bigIntValue(b);
+        } else {
+            res = safe_add(left.val.stdint, right.val.stdint);
+        }
+    }
+    LEAVE(int_add);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value safe_mul(int a, int b) {
+    int c;
+    if (__builtin_mul_overflow(a, b, &c)) {
+        BigInt *big = bigIntFromMultiplication(a, b);
+        int save = PROTECT(big);
+        Value res = bigIntValue(big);
+        UNPROTECT(save);
+        return res;
+    } else {
+        return intValue(c);
+    }
+}
+
+static Value int_mul(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = mulBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            BigInt *bi = mulBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = mulBigIntInt(right.val.bigint, left.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            res = safe_mul(left.val.stdint, right.val.stdint);
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static Value safe_sub(int a, int b) {
+    int c;
+    if (__builtin_sub_overflow(a, b, &c)) {
+        BigInt *big = bigIntFromSubtraction(a, b);
+        int save = PROTECT(big);
+        Value res = bigIntValue(big);
+        UNPROTECT(save);
+        return res;
+    } else {
+        return intValue(c);
+    }
+}
+
+static Value int_sub(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = subBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            BigInt *bi = subBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = subIntBigInt(left.val.stdint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            res = safe_sub(left.val.stdint, right.val.stdint);
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static Value int_div(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            if (int_cmp(right, Zero) == CMP_EQ) {
+                cant_happen("attempted div zero");
+            }
+            BigInt *bi = divBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            if (right.val.stdint == 0) {
+                cant_happen("attempted div zero");
+            }
+            BigInt *bi = divBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            if (int_cmp(right, Zero) == CMP_EQ) {
+                cant_happen("attempted div zero");
+            }
+            BigInt *bi = divIntBigInt(left.val.stdint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            if (right.val.stdint == 0) {
+                cant_happen("attempted div zero");
+            }
+            // division can't overflow
+            res = intValue(left.val.stdint / right.val.stdint);
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static Value safe_pow(int a, int b) {
+    float f = powf((float) a, (float) b);
+    if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
+        BigInt *big = bigIntFromPower(a, b);
+        int save = PROTECT(big);
+        Value res = bigIntValue(big);
+        UNPROTECT(save);
+        return res;
+    } else {
+        return intValue((int) f);
+    }
+}
+
+static Value int_pow(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = powIntBigInt(left.val.stdint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            res = safe_pow(left.val.stdint, right.val.stdint);
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static Value int_mod(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            if (int_cmp(right, Zero) == CMP_EQ) {
+                cant_happen("attempted mod zero");
+            }
+            BigInt *bi = modBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            if (right.val.stdint == 0) {
+                cant_happen("attempted mod zero");
+            }
+            BigInt *bi = modBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(right)) {
+            if (int_cmp(right, Zero) == CMP_EQ) {
+                cant_happen("attempted mod zero");
+            }
+            BigInt *bi = modIntBigInt(left.val.stdint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            if (right.val.stdint == 0) {
+                cant_happen("attempted mod zero");
+            }
+            // modulus can't overflow
+            res = intValue(left.val.stdint % right.val.stdint);
+        }
+    }
+    UNPROTECT(save);
+    return res;
 }
 
 static int gcd (int a, int b) {
@@ -170,177 +364,65 @@ static int gcd (int a, int b) {
 	return gcd;
 }
 
-static Value littleGcd(Value left, Value right) {
-    ASSERT_STDINT(left);
-    ASSERT_STDINT(right);
-    return intValue(gcd(left.val.stdint, right.val.stdint));
+static Value int_gcd(Value left, Value right) {
+    Value res;
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(left)) {
+        if (IS_BIGINT(right)) {
+            BigInt *bi = gcdBigInt(left.val.bigint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            BigInt *bi = gcdBigIntInt(left.val.bigint, right.val.stdint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        }
+    } else {
+        if (IS_BIGINT(left)) {
+            BigInt *bi = gcdIntBigInt(left.val.stdint, right.val.bigint);
+            PROTECT(bi);
+            res = bigIntValue(bi);
+        } else {
+            res = intValue(gcd(left.val.stdint, right.val.stdint));
+        }
+    }
+    UNPROTECT(save);
+    return res;
 }
 
-static void littleNegInPlace(Value *v) {
-    ASSERT_STDINT(*v);
-    v->val.stdint = -(v->val.stdint);
+static void int_neg_in_place(Value *v) {
+    if (IS_BIGINT(*v)) {
+        negateBigInt(v->val.bigint);
+    } else {
+        v->val.stdint = -(v->val.stdint);
+    }
 }
 
-static Value littleNeg(Value v) {
-    ASSERT_STDINT(v);
-    v.val.stdint = -(v.val.stdint);
+static Value int_neg(Value v) {
+    int save = PROTECT(NULL);
+    if (IS_BIGINT(v)) {
+        BigInt *bi = copyBigInt(v.val.bigint);
+        PROTECT(bi);
+        negateBigInt(bi);
+        v = bigIntValue(bi);
+    } else {
+        v.val.stdint = -(v.val.stdint);
+    }
+    UNPROTECT(save);
     return v;
 }
 
-static bool littleIsNeg(Value v) {
-    ASSERT_STDINT(v);
-    return v.val.stdint < 0;
-}
-
-////////////////////////////////////
-// arbitrary size integer operations
-////////////////////////////////////
-
-#ifdef SAFETY_CHECKS
-#  define ASSERT_BIGINT(x) ASSERT((x).type == VALUE_TYPE_BIGINT)
-#else
-#  define ASSERT_BIGINT(x)
-#endif
-
-static ValueCmp bigCmp(Value left, Value right) {
-    ENTER(bigCmp);
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    LEAVE(bigCmp);
-    int i = cmpBigInt(left.val.bigint, right.val.bigint);
-    return i < 0 ? VALUE_CMP_LT : i == 0 ? VALUE_CMP_EQ : VALUE_CMP_GT;
-}
-
-static Value bigIntValue(BigInt *i) {
-    Value val;
-    val.type = VALUE_TYPE_BIGINT;
-    val.val = VALUE_VAL_BIGINT(i);
-    return val;
-}
-
-static Value bigAdd(Value left, Value right) {
-    ENTER(bigAdd);
-    IFDEBUG(ppNumber(left));
-    IFDEBUG(ppNumber(right));
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = addBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    LEAVE(bigAdd);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigMul(Value left, Value right) {
-    ENTER(bigMul);
-    IFDEBUG(ppNumber(left));
-    IFDEBUG(ppNumber(right));
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = mulBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    LEAVE(bigMul);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigSub(Value left, Value right) {
-    ENTER(bigSub);
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = subBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    LEAVE(bigSub);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigDivide(Value left, Value right) {
-    ENTER(bigDivide);
-    IFDEBUG(ppNumber(left));
-    IFDEBUG(ppNumber(right));
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    if (bigCmp(right, Zero) == 0) {
-        cant_happen("attempted div zero");
+static bool int_isneg(Value v) {
+    if (IS_BIGINT(v)) {
+        return isNegBigInt(v.val.bigint);
+    } else {
+        return v.val.stdint < 0;
     }
-    BigInt *result = divBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    protectValue(res);
-    LEAVE(bigDivide);
-    IFDEBUG(ppNumber(res));
-    UNPROTECT(save);
-    return res;
 }
 
-static Value bigPower(Value left, Value right) {
-    ENTER(bigPower);
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *result = powBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    LEAVE(bigPower);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigModulo(Value left, Value right) {
-    ENTER(bigModulo);
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    if (bigCmp(right, Zero) == 0) {
-        cant_happen("attempted mod zero");
-    }
-    BigInt *result = modBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(result);
-    Value res = bigIntValue(result);
-    LEAVE(bigModulo);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigGcd(Value left, Value right) {
-    ENTER(bigGcd);
-    ASSERT_BIGINT(left);
-    ASSERT_BIGINT(right);
-    BigInt *gcd = gcdBigInt(left.val.bigint, right.val.bigint);
-    int save = PROTECT(gcd);
-    Value res = bigIntValue(gcd);
-    LEAVE(bigGcd);
-    UNPROTECT(save);
-    return res;
-}
-
-static Value bigNeg(Value v) {
-    ENTER(bigNeg);
-    ASSERT_BIGINT(v);
-    BigInt *bi = copyBigInt(v.val.bigint);
-    int save = PROTECT(bi);
-    negateBigInt(bi);
-    Value res = bigIntValue(bi);
-    LEAVE(bigNeg);
-    UNPROTECT(save);
-    return res;
-}
-
-static void bigNegInPlace(Value *v) {
-    ASSERT_BIGINT(*v);
-    negateBigInt(v->val.bigint);
-}
-
-static bool bigIsNeg(Value v) {
-    ASSERT_BIGINT(v);
-    return isNegBigInt(v.val.bigint);
-}
-
-///////////////////////////////////////
-// unspecified size rational operations
-///////////////////////////////////////
+////////////////////////
+// rational operations
+////////////////////////
 
 #ifdef SAFETY_CHECKS
 #  define ASSERT_RATIONAL(x) ASSERT((x).type == VALUE_TYPE_RATIONAL)
@@ -348,7 +430,7 @@ static bool bigIsNeg(Value v) {
 #  define ASSERT_RATIONAL(x)
 #endif
 
-static ValueCmp _rat_cmp(Value left, Value right) {
+static Cmp _rat_cmp(Value left, Value right) {
     ENTER(_rat_cmp);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
@@ -358,7 +440,7 @@ static ValueCmp _rat_cmp(Value left, Value right) {
     Value bc = int_mul(left.val.vec->values[DENOMINATOR],
                        right.val.vec->values[NUMERATOR]);
     protectValue(bc);
-    ValueCmp res = int_cmp(ad, bc);
+    Cmp res = int_cmp(ad, bc);
     LEAVE(_rat_cmp);
     UNPROTECT(save);
     return res;
@@ -375,9 +457,9 @@ static Value makeRational(Value numerator, Value denominator) {
     return res;
 }
 
-static ValueCmp ratCmp(Value left, Value right) {
+static Cmp ratCmp(Value left, Value right) {
     ENTER(ratCmp);
-    ValueCmp res;
+    Cmp res;
     int save = PROTECT(NULL);
     if (left.type == VALUE_TYPE_RATIONAL) {
         if (right.type == VALUE_TYPE_RATIONAL) {
@@ -453,17 +535,17 @@ static Value ratSimplify(Value numerator, Value denominator) {
     Value gcd = int_gcd(numerator, denominator);
     int save = protectValue(gcd);
     Value res;
-    if (int_cmp(gcd, One) != 0) {
-        numerator = int_divide(numerator, gcd);
+    if (int_cmp(gcd, One) != CMP_EQ) {
+        numerator = int_div(numerator, gcd);
         protectValue(numerator);
-        denominator = int_divide(denominator, gcd);
+        denominator = int_div(denominator, gcd);
         protectValue(denominator);
     }
     if (int_isneg(denominator)) {
         int_neg_in_place(&numerator);
         int_neg_in_place(&denominator);
     }
-    if (int_cmp(denominator, One) == 0) {
+    if (int_cmp(denominator, One) == CMP_EQ) {
         res = numerator;
     } else {
         res = makeRational(numerator, denominator);
@@ -578,7 +660,7 @@ static Value ratDivide(Value left, Value right) {
 
 static Value ratModulo(Value left, Value right) {
     ENTER(ratModulo);
-    Value res = ratOp(left, right, _rat_add_sub, int_modulo, true);
+    Value res = ratOp(left, right, _rat_add_sub, int_mod, true);
     LEAVE(ratModulo);
     return res;
 }
@@ -588,9 +670,9 @@ static Value _ratPower(Value left, Value right) {
     ASSERT_RATIONAL(left);
     Value numerator = left.val.vec->values[NUMERATOR];
     Value denominator = left.val.vec->values[DENOMINATOR];
-    numerator = int_power(numerator, right);
+    numerator = int_pow(numerator, right);
     int save = protectValue(numerator);
-    denominator = int_power(denominator, right);
+    denominator = int_pow(denominator, right);
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     protectValue(res);
@@ -620,7 +702,7 @@ static Value ratPower(Value left, Value right) {
         cant_happen("raising numbers to a rational power not supported yet");
     } else {
         // neither rational
-        res = int_power(left, right);
+        res = int_pow(left, right);
         protectValue(res);
     }
     LEAVE(ratPower);
@@ -645,38 +727,12 @@ static Value ratNeg(Value v) {
 }
 
 void init_arithmetic() {
-    if (bigint_flag) {
-        int_add = bigAdd;
-        int_mul = bigMul;
-        int_sub = bigSub;
-        int_divide = bigDivide;
-        int_power = bigPower;
-        int_modulo = bigModulo;
-        int_gcd = bigGcd;
-        int_cmp = bigCmp;
-        int_neg_in_place = bigNegInPlace;
-        int_isneg = bigIsNeg;
-        int_neg = bigNeg;
-        BigInt *zero = bigIntFromInt(0);
-        Zero.type = VALUE_TYPE_BIGINT;
-        Zero.val = VALUE_VAL_BIGINT(zero);
-        BigInt *one = bigIntFromInt(1);
-        One.type = VALUE_TYPE_BIGINT;
-        One.val = VALUE_VAL_BIGINT(one);
-    } else {
-        int_add = littleAdd;
-        int_mul = littleMul;
-        int_sub = littleSub;
-        int_divide = littleDivide;
-        int_power = littlePower;
-        int_modulo = littleModulo;
-        int_gcd = littleGcd;
-        int_neg_in_place = littleNegInPlace;
-        int_neg = littleNeg;
-        int_isneg = littleIsNeg;
-        int_neg = littleNeg;
-        int_cmp = littleCmp;
-    }
+    BigInt *zero = bigIntFromInt(0);
+    Zero.type = VALUE_TYPE_BIGINT;
+    Zero.val = VALUE_VAL_BIGINT(zero);
+    BigInt *one = bigIntFromInt(1);
+    One.type = VALUE_TYPE_BIGINT;
+    One.val = VALUE_VAL_BIGINT(one);
 
     if (rational_flag) {
         nadd = ratAdd;
@@ -691,9 +747,9 @@ void init_arithmetic() {
         nadd = int_add;
         nmul = int_mul;
         nsub = int_sub;
-        ndiv = int_divide;
-        npow = int_power;
-        nmod = int_modulo;
+        ndiv = int_div;
+        npow = int_pow;
+        nmod = int_mod;
         nneg = int_neg;
         ncmp = int_cmp;
     }

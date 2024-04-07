@@ -80,16 +80,65 @@ static AstUnpack *newStringUnpack(AstCharArray *str) {
     return res;
 }
 
-static BigInt *makeBigInt(char *digits) {
-    if (bigint_flag) {
-        bigint bi;
-        bigint_init(&bi);
-        bigint_from_str(&bi, digits);
-        BigInt *bbi = newBigInt(bi);
+static void bigint_mul_by_ten(bigint *b) {
+    bigint old;
+    bigint_init(&old);
+    bigint_cpy(&old, b);
+    bigint_free(b);
+    bigint_init(b);
+    bigint ten;
+    bigint_init(&ten);
+    bigint_from_int(&ten, 10);
+    bigint_mul(b, &ten, &old);
+    bigint_free(&ten);
+    bigint_free(&old);
+}
+
+static void bigint_add_n(bigint *b, int n) {
+    bigint old;
+    bigint_init(&old);
+    bigint_cpy(&old, b);
+    bigint_free(b);
+    bigint_init(b);
+    bigint_add_word(b, &old, n);
+    bigint_free(&old);
+}
+
+static MaybeBigInt *makeMaybeBigInt(char *digits) {
+    bool overflowed = false;
+    int a = 0;
+    bigint bi;
+    for (char *p = digits; *p != '\0'; ++p) {
+        int n = *p - '0';
+        if(overflowed) {
+            bigint_mul_by_ten(&bi);
+            bigint_add_n(&bi, n);
+        } else {
+            int c;
+            if (__builtin_mul_overflow(a, 10, &c)) {
+                overflowed = true;
+                bigint_init(&bi);
+                bigint_from_int(&bi, a);
+                bigint_mul_by_ten(&bi);
+                bigint_add_n(&bi, n);
+            } else {
+                a = c;
+                if (__builtin_add_overflow(a, n, &c)) {
+                    overflowed = true;
+                    bigint_init(&bi);
+                    bigint_from_int(&bi, a);
+                    bigint_add_n(&bi, n);
+                } else {
+                    a = c;
+                }
+            }
+        }
+    }
+    if (overflowed) {
+        MaybeBigInt *bbi = newMaybeBigInt(bi);
         return bbi;
     } else {
-        int i = atoi(digits);
-        return fakeBigInt(i);
+        return fakeBigInt(a);
     }
 }
 
@@ -123,7 +172,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %union {
     char *s;
     char c;
-    BigInt *bi;
+    MaybeBigInt *bi;
     AstArg *arg;
     AstArgList *argList;
     AstCompositeFunction *compositeFunction;
@@ -360,7 +409,7 @@ consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList(
           | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
-number : NUMBER  { $$ = makeBigInt($1); }
+number : NUMBER  { $$ = makeMaybeBigInt($1); }
        ;
 
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }

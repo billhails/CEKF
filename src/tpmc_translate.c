@@ -483,7 +483,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
 }
 
 static LamIntCondCases *makeConstantIntCondCase(TpmcArcList *arcList,
-                                                BigInt *constant,
+                                                MaybeBigInt *constant,
                                                 LamExp *testVar,
                                                 LamExpTable *lambdaCache) {
     LamIntCondCases *next =
@@ -546,7 +546,7 @@ static LamIntCondCases *translateConstantIntArcList(TpmcArcList *arcList,
                     ("encountered character case when cinstructing an integer cond");
             }
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:{
-                BigInt *integer = arcList->arc->test->pattern->val.biginteger;
+                MaybeBigInt *integer = arcList->arc->test->pattern->val.biginteger;
                 res =
                     makeConstantIntCondCase(arcList, integer, testVar,
                                             lambdaCache);

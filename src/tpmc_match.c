@@ -124,7 +124,7 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                 bool res = isComparison
                     || (constructor->pattern->type ==
                         TPMCPATTERNVALUE_TYPE_BIGINTEGER
-                        && cmpBigInt(constructor->pattern->val.biginteger,
+                        && cmpMaybeBigInt(constructor->pattern->val.biginteger,
                                      pattern->pattern->val.biginteger) == 0);
                 return res;
             }

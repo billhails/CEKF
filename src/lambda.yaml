@@ -90,7 +90,7 @@ structs:
         cases: LamCondCases
 
     LamIntCondCases:
-        constant: BigInt
+        constant: MaybeBigInt
         body: LamExp
         next: LamIntCondCases
 
@@ -226,7 +226,7 @@ unions:
         lam: LamLam
         var: HashSymbol
         stdint: int
-        biginteger: BigInt
+        biginteger: MaybeBigInt
         prim: LamPrimApp
         unary: LamUnaryApp
         list: LamSequence

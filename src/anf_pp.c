@@ -240,7 +240,7 @@ void ppCexpCond(CexpCond *x) {
 void ppCexpIntCondCases(CexpIntCondCases *x) {
     while (x != NULL) {
         eprintf("(");
-        fprintBigInt(errout, x->option);
+        fprintMaybeBigInt(errout, x->option);
         eprintf(" ");
         ppExp(x->body);
         eprintf(")");
@@ -378,7 +378,7 @@ void ppAexp(Aexp *x) {
             eprintf("nil");
             break;
         case AEXP_TYPE_BIGINTEGER:
-            fprintBigInt(errout, x->val.biginteger);
+            fprintMaybeBigInt(errout, x->val.biginteger);
             break;
         case AEXP_TYPE_LITTLEINTEGER:
             eprintf("%d", x->val.littleinteger);

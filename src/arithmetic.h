@@ -19,8 +19,9 @@
  */
 
 #include "value.h"
+#include "cmp.h"
 
-typedef ValueCmp (*CmpBinOp)(Value, Value);
+typedef Cmp (*CmpBinOp)(Value, Value);
 typedef Value (*IntegerBinOp)(Value, Value);
 typedef Value (*IntegerUnOp)(Value);
 typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);

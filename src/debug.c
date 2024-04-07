@@ -468,14 +468,22 @@ void dumpByteCode(ByteCodeArray *bca) {
                     int count = readWord(bca, &i);
                     eprintf("INTCOND [%d]", count);
                     while (count > 0) {
-                        if (bigint_flag) {
-                            bigint bi = readBigint(bca, &i);
-                            eprintf(" ");
-                            bigint_fprint(errout, &bi);
-                            bigint_free(&bi);
-                        } else {
-                            int li = readInt(bca, &i);
-                            eprintf(" %d", li);
+                        int type = readByte(bca, &i);
+                        switch (type) {
+                            case BYTECODE_BIGINT: {
+                                bigint bi = readBigint(bca, &i);
+                                eprintf(" [bigint]");
+                                bigint_fprint(errout, &bi);
+                                bigint_free(&bi);
+                            }
+                            break;
+                            case BYTECODE_STDINT: {
+                                int li = readInt(bca, &i);
+                                eprintf(" [int]%d", li);
+                            }
+                            break;
+                            default:
+                                cant_happen("expected INT or BIGINT in BYTECODE_INTCOND cases");
                         }
                         int offset = readOffset(bca, &i);
                         eprintf(":[%04x]", offset);

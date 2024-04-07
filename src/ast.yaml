@@ -146,7 +146,7 @@ unions:
         named: AstNamedArg
         env: AstEnvType
         unpack: AstUnpack
-        number: BigInt
+        number: MaybeBigInt
         character: char
         tuple: AstArgList
 
@@ -154,7 +154,7 @@ unions:
         back: void_ptr
         funCall: AstFunCall
         symbol: HashSymbol
-        number: BigInt
+        number: MaybeBigInt
         character: char
         fun: AstCompositeFunction
         env: AstEnv

@@ -38,7 +38,7 @@
 static Exp *normalize(LamExp *lamExp, Exp *tail);
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
-static Exp *normalizeBigInteger(BigInt *integer, Exp *tail);
+static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
 static Exp *normalizeCharacter(char character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
@@ -57,7 +57,7 @@ static AexpUnaryOp mapUnaryOp(LamUnaryOp op);
 static Exp *letBind(Exp *body, LamExpTable *replacements);
 static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
-static Aexp *aexpNormalizeBigInteger(BigInt *integer);
+static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
@@ -108,7 +108,7 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
         case LAMEXP_TYPE_STDINT:
             return normalizeStdInteger(lamExp->val.stdint, tail);
         case LAMEXP_TYPE_BIGINTEGER:
-            return normalizeBigInteger(lamExp->val.biginteger, tail);
+            return normalizeMaybeBigInteger(lamExp->val.biginteger, tail);
         case LAMEXP_TYPE_PRIM:
             return normalizePrim(lamExp->val.prim, tail);
         case LAMEXP_TYPE_UNARY:
@@ -652,17 +652,17 @@ static Exp *normalizeCharacter(char character, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeBigInteger(BigInt *integer, Exp *tail) {
-    ENTER(normalizeBigInteger);
+static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail) {
+    ENTER(normalizeMaybeBigInteger);
     if (tail != NULL) {
-        LEAVE(normalizeBigInteger);
+        LEAVE(normalizeMaybeBigInteger);
         return tail;
     }
-    Aexp *aexp = aexpNormalizeBigInteger(integer);
+    Aexp *aexp = aexpNormalizeMaybeBigInteger(integer);
     int save = PROTECT(aexp);
     Exp *exp = wrapAexp(aexp);
     UNPROTECT(save);
-    LEAVE(normalizeBigInteger);
+    LEAVE(normalizeMaybeBigInteger);
     return exp;
 }
 
@@ -801,7 +801,7 @@ static Aexp *aexpNormalizeVar(HashSymbol *var) {
     return newAexp(AEXP_TYPE_VAR, AEXP_VAL_VAR(var));
 }
 
-static Aexp *aexpNormalizeBigInteger(BigInt *integer) {
+static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer) {
     return newAexp(AEXP_TYPE_BIGINTEGER, AEXP_VAL_BIGINTEGER(integer));
 }
 
@@ -902,7 +902,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
             res = aexpNormalizeVar(lamExp->val.var);
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            res = aexpNormalizeBigInteger(lamExp->val.biginteger);
+            res = aexpNormalizeMaybeBigInteger(lamExp->val.biginteger);
             break;
         case LAMEXP_TYPE_STDINT:
             res = aexpNormalizeStdInteger(lamExp->val.stdint);

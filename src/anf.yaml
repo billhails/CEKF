@@ -84,7 +84,7 @@ structs:
         cases: CexpCondCases
 
     CexpIntCondCases:
-        option: BigInt
+        option: MaybeBigInt
         body: Exp
         next: CexpIntCondCases
 
@@ -141,7 +141,7 @@ unions:
         lam: AexpLam
         var: HashSymbol
         annotatedVar: AexpAnnotatedVar
-        biginteger: BigInt
+        biginteger: MaybeBigInt
         littleinteger: int
         character: char
         prim: AexpPrimApp

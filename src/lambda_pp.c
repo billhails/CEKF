@@ -110,7 +110,7 @@ void ppLamExp(LamExp *exp) {
             ppHashSymbol(exp->val.var);
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            fprintBigInt(errout, exp->val.biginteger);
+            fprintMaybeBigInt(errout, exp->val.biginteger);
             break;
         case LAMEXP_TYPE_STDINT:
             eprintf("%d", exp->val.stdint);
@@ -370,7 +370,7 @@ void ppLamIff(LamIff *iff) {
 
 static void _ppLamIntCondCases(LamIntCondCases *cases) {
     eprintf("(");
-    fprintBigInt(errout, cases->constant);
+    fprintMaybeBigInt(errout, cases->constant);
     eprintf(" ");
     ppLamExp(cases->body);
     eprintf(")");
