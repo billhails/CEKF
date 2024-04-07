@@ -21,23 +21,14 @@
 #include "value.h"
 #include "cmp.h"
 
-typedef Cmp (*CmpBinOp)(Value, Value);
-typedef Value (*IntegerBinOp)(Value, Value);
-typedef Value (*IntegerUnOp)(Value);
-typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
-typedef void (*voidOp)(Value *);
-typedef bool (*boolOp)(Value);
-
-extern int rational_flag;
-
-extern IntegerBinOp nadd;
-extern IntegerBinOp nsub;
-extern IntegerBinOp nmul;
-extern IntegerBinOp ndiv;
-extern IntegerBinOp npow;
-extern IntegerBinOp nmod;
-extern IntegerUnOp nneg;
-extern CmpBinOp ncmp;
+Value nadd(Value, Value);
+Value nsub(Value, Value);
+Value nmul(Value, Value);
+Value ndiv(Value, Value);
+Value npow(Value, Value);
+Value nmod(Value, Value);
+Value nneg(Value);
+Cmp ncmp(Value, Value);
 
 void init_arithmetic(void);
 void markArithmetic(void);

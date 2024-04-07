@@ -54,7 +54,6 @@ static void processArgs(int argc, char *argv[]) {
 
     while (1) {
         static struct option long_options[] = {
-            { "rational", no_argument, &rational_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
             { "anf", no_argument, &anf_flag, 1 },
             { "dump-bytecode", no_argument, &dump_bytecode_flag, 1 },
@@ -81,7 +80,6 @@ static void processArgs(int argc, char *argv[]) {
 
     if (help_flag) {
         printf("%s",
-               "--rational              use precision-preserving rational numbers\n"
                "--report                report statistics\n"
                "--anf                   display the generated ANF\n"
                "--lambda=function       display the intermediate code\n"

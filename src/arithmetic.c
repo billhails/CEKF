@@ -34,16 +34,10 @@
 #define NUMERATOR 0
 #define DENOMINATOR 1
 
-int rational_flag = 0;
+typedef Value (*IntegerBinOp)(Value, Value);
+typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
 
-IntegerBinOp nadd;
-IntegerBinOp nsub;
-IntegerBinOp nmul;
-IntegerBinOp ndiv;
-IntegerBinOp npow;
-IntegerBinOp nmod;
-IntegerUnOp nneg;
-CmpBinOp ncmp;
+int rational_flag = 0;
 
 static Value One = {
     .type = VALUE_TYPE_STDINT,
@@ -457,8 +451,8 @@ static Value makeRational(Value numerator, Value denominator) {
     return res;
 }
 
-static Cmp ratCmp(Value left, Value right) {
-    ENTER(ratCmp);
+Cmp ncmp(Value left, Value right) {
+    ENTER(ncmp);
     Cmp res;
     int save = PROTECT(NULL);
     if (left.type == VALUE_TYPE_RATIONAL) {
@@ -478,7 +472,7 @@ static Cmp ratCmp(Value left, Value right) {
             res = int_cmp(left, right);
         }
     }
-    LEAVE(ratCmp);
+    LEAVE(ncmp);
     UNPROTECT(save);
     return res;
 }
@@ -581,19 +575,19 @@ static Value _rat_add_sub(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
-static Value ratAdd(Value left, Value right) {
-    ENTER(ratAdd);
+Value nadd(Value left, Value right) {
+    ENTER(nadd);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     Value res = ratOp(left, right, _rat_add_sub, int_add, true);
-    LEAVE(ratAdd);
+    LEAVE(nadd);
     return res;
 }
 
-static Value ratSub(Value left, Value right) {
-    ENTER(ratSub);
+Value nsub(Value left, Value right) {
+    ENTER(nsub);
     Value res = ratOp(left, right, _rat_add_sub, int_sub, true);
-    LEAVE(ratSub);
+    LEAVE(nsub);
     return res;
 }
 
@@ -619,13 +613,13 @@ static Value _rat_mul(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
-static Value ratMul(Value left, Value right) {
-    ENTER(ratMul);
+Value nmul(Value left, Value right) {
+    ENTER(nmul);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     Value res = ratOp(left, right, _rat_mul, int_mul, true);
     int save = protectValue(res);
-    LEAVE(ratMul);
+    LEAVE(nmul);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
@@ -647,21 +641,21 @@ static Value _rat_div(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
-static Value ratDivide(Value left, Value right) {
-    ENTER(ratDivide);
+Value ndiv(Value left, Value right) {
+    ENTER(ndiv);
     // N.B. int_mul not int_div
     Value res = ratOp(left, right, _rat_div, int_mul, false);
     int save = protectValue(res);
-    LEAVE(ratDivide);
+    LEAVE(ndiv);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
-static Value ratModulo(Value left, Value right) {
-    ENTER(ratModulo);
+Value nmod(Value left, Value right) {
+    ENTER(nmod);
     Value res = ratOp(left, right, _rat_add_sub, int_mod, true);
-    LEAVE(ratModulo);
+    LEAVE(nmod);
     return res;
 }
 
@@ -682,9 +676,8 @@ static Value _ratPower(Value left, Value right) {
     return res;
 }
 
-static Value ratPower(Value left, Value right) {
-    ENTER(ratPower);
-    LEAVE(ratPower);
+Value npow(Value left, Value right) {
+    ENTER(npow);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     Value res;
@@ -705,14 +698,14 @@ static Value ratPower(Value left, Value right) {
         res = int_pow(left, right);
         protectValue(res);
     }
-    LEAVE(ratPower);
+    LEAVE(npow);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
-static Value ratNeg(Value v) {
-    ENTER(ratNeg);
+Value nneg(Value v) {
+    ENTER(nneg);
     Value res;
     if (v.type == VALUE_TYPE_RATIONAL) {
         Value numerator = int_neg(v.val.vec->values[NUMERATOR]);
@@ -722,7 +715,7 @@ static Value ratNeg(Value v) {
     } else {
         res = int_neg(v);
     }
-    LEAVE(ratNeg);
+    LEAVE(nneg);
     return res;
 }
 
@@ -733,26 +726,6 @@ void init_arithmetic() {
     BigInt *one = bigIntFromInt(1);
     One.type = VALUE_TYPE_BIGINT;
     One.val = VALUE_VAL_BIGINT(one);
-
-    if (rational_flag) {
-        nadd = ratAdd;
-        nsub = ratSub;
-        nmul = ratMul;
-        ndiv = ratDivide;
-        npow = ratPower;
-        nmod = ratModulo;
-        nneg = ratNeg;
-        ncmp = ratCmp;
-    } else {
-        nadd = int_add;
-        nmul = int_mul;
-        nsub = int_sub;
-        ndiv = int_div;
-        npow = int_pow;
-        nmod = int_mod;
-        nneg = int_neg;
-        ncmp = int_cmp;
-    }
 }
 
 void markArithmetic() {
