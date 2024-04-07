@@ -54,8 +54,6 @@ static void processArgs(int argc, char *argv[]) {
 
     while (1) {
         static struct option long_options[] = {
-            { "bigint", no_argument, &bigint_flag, 1 },
-            { "rational", no_argument, &rational_flag, 1 },
             { "report", no_argument, &report_flag, 1 },
             { "anf", no_argument, &anf_flag, 1 },
             { "dump-bytecode", no_argument, &dump_bytecode_flag, 1 },
@@ -82,8 +80,6 @@ static void processArgs(int argc, char *argv[]) {
 
     if (help_flag) {
         printf("%s",
-               "--bigint                use arbitrary precision integers\n"
-               "--rational              use precision-preserving rational numbers\n"
                "--report                report statistics\n"
                "--anf                   display the generated ANF\n"
                "--lambda=function       display the intermediate code\n"
@@ -161,11 +157,16 @@ static ByteCodeArray generateByteCodes(Exp *anfExp) {
     return byteCodes;
 }
 
-static void report(clock_t begin) {
+static void report(clock_t begin, clock_t compiled) {
     if (report_flag) {
         clock_t end = clock();
+        printf("\n");
         double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-        printf("\nelapsed time %.3lf\n", time_spent);
+        printf("elapsed time %.3lf\n", time_spent);
+        double compile_time = (double) (compiled - begin) / CLOCKS_PER_SEC;
+        printf("compile time %.3lf\n", compile_time);
+        double run_time = (double) (end - compiled) / CLOCKS_PER_SEC;
+        printf("run time %.3lf\n", run_time);
         reportMemory();
         reportSteps();
     }
@@ -201,9 +202,11 @@ int main(int argc, char *argv[]) {
 
     UNPROTECT(save);
 
+    clock_t compiled = clock();
+
     run(byteCodes);
 
-    report(begin);
+    report(begin, compiled);
 
     exit(0);
 }

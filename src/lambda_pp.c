@@ -110,7 +110,7 @@ void ppLamExp(LamExp *exp) {
             ppHashSymbol(exp->val.var);
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            fprintBigInt(errout, exp->val.biginteger);
+            fprintMaybeBigInt(errout, exp->val.biginteger);
             break;
         case LAMEXP_TYPE_STDINT:
             eprintf("%d", exp->val.stdint);
@@ -283,6 +283,9 @@ void ppLamUnary(LamUnaryApp *unaryApp) {
 
 void ppLamUnaryOp(LamUnaryOp type) {
     switch (type) {
+        case LAMUNARYOP_TYPE_NEG:
+            eprintf("neg");
+            break;
         case LAMUNARYOP_TYPE_NOT:
             eprintf("not");
             break;
@@ -296,7 +299,7 @@ void ppLamUnaryOp(LamUnaryOp type) {
             eprintf("putv");
             break;
         default:
-            cant_happen("unrecognised type %d in ppLamUnaryOp", type);
+            cant_happen("unrecognised type %s in ppLamUnaryOp", lamUnaryOpName(type));
     }
 }
 
@@ -367,7 +370,7 @@ void ppLamIff(LamIff *iff) {
 
 static void _ppLamIntCondCases(LamIntCondCases *cases) {
     eprintf("(");
-    fprintBigInt(errout, cases->constant);
+    fprintMaybeBigInt(errout, cases->constant);
     eprintf(" ");
     ppLamExp(cases->body);
     eprintf(")");

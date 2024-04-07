@@ -153,7 +153,7 @@ static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
     return pattern;
 }
 
-static TpmcPattern *makeBigIntegerPattern(BigInt *number) {
+static TpmcPattern *makeMaybeBigIntegerPattern(MaybeBigInt *number) {
     TpmcPatternValue *val =
         newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_BIGINTEGER,
                             TPMCPATTERNVALUE_VAL_BIGINTEGER(number));
@@ -188,7 +188,7 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
         case AST_ARG_TYPE_TUPLE:
             return makeTuplePattern(arg->val.tuple, env);
         case AST_ARG_TYPE_NUMBER:
-            return makeBigIntegerPattern(arg->val.number);
+            return makeMaybeBigIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
         default:

@@ -94,7 +94,7 @@ unions:
         assignment: TpmcAssignmentPattern
         wildcard: void_ptr
         character: char
-        biginteger: BigInt
+        biginteger: MaybeBigInt
         constructor: TpmcConstructorPattern
         tuple: TpmcPatternArray
 

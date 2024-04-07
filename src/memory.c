@@ -331,6 +331,9 @@ void freeObj(Header *h) {
         case OBJTYPE_BIGINT:
             freeBigInt((BigInt *) h);
             break;
+        case OBJTYPE_MAYBEBIGINT:
+            freeMaybeBigInt((MaybeBigInt *) h);
+            break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
             break;

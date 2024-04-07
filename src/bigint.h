@@ -10,6 +10,7 @@ extern "C" {
 #  include <stdio.h>
 #  include <string.h>
 #  include "memory.h"
+#  include "cmp.h"
 
 /* any unsigned integer type */
     typedef uint32_t bigint_word;
@@ -34,40 +35,67 @@ extern "C" {
     for (_i = 0; _i < (n)/2; _i++) BIGINT_SWAP(type, data[_i], data[n - 1 - _i]);\
 } while (0)
 
-    extern int bigint_flag;
-
     typedef struct bigint {
         bigint_word *words;
         int neg, size, capacity;
     } bigint;
 
 // CEKF wrapper for memory management
+    // compile-time bigint
+    typedef struct MaybeBigInt {
+        Header header;
+        bigint bi;
+        bool fake;
+        int little;
+    } MaybeBigInt;
+
+    // run-time bigint
     typedef struct BigInt {
         Header header;
         bigint bi;
-        int little;
     } BigInt;
 
     BigInt *newBigInt(bigint bi);
-    BigInt *fakeBigInt(int little);
+    MaybeBigInt *newMaybeBigInt(bigint bi);
+    MaybeBigInt *fakeBigInt(int little);
     BigInt *bigIntFromInt(int c);
+    BigInt *bigIntFromAddition(int a, int b);
+    BigInt *bigIntFromMultiplication(int a, int b);
+    BigInt *bigIntFromPower(int a, int b);
+    static inline BigInt *bigIntFromSubtraction(int a, int b) { return bigIntFromAddition(a, -b); }
     BigInt *copyBigInt(BigInt *b);
     void markBigInt(BigInt *b);
+    void markMaybeBigInt(MaybeBigInt *b);
     void freeBigInt(BigInt *b);
-    void printBigInt(BigInt *b, int depth);
+    void freeMaybeBigInt(MaybeBigInt *b);
+    void printMaybeBigInt(MaybeBigInt *b, int depth);
     void fprintBigInt(FILE *f, BigInt *x);
-    void sprintBigInt(char *s, BigInt *x);
-    int cmpBigInt(BigInt *a, BigInt *b);
-    void dumpBigInt(FILE *fp, BigInt *b);
+    void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
+    Cmp cmpBigInt(BigInt *a, BigInt *b);
+    Cmp cmpBigIntInt(BigInt *a, int b);
+    static inline Cmp cmpIntBigInt(int a, BigInt *b) { return (Cmp)(cmpBigIntInt(b, a) * -1); }
+    int cmpMaybeBigInt(MaybeBigInt *a, MaybeBigInt *b);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
     BigInt *addBigInt(BigInt *a, BigInt *b);
+    BigInt *addBigIntInt(BigInt *a, int b);
     BigInt *subBigInt(BigInt *a, BigInt *b);
+    BigInt *subIntBigInt(int a, BigInt *b);
+    static inline BigInt *subBigIntInt(BigInt *a, int b) { return addBigIntInt(a, -b); }
     BigInt *mulBigInt(BigInt *a, BigInt *b);
+    BigInt *mulBigIntInt(BigInt *a, int b);
     BigInt *divBigInt(BigInt *a, BigInt *b);
+    BigInt *divBigIntInt(BigInt *a, int b);
+    BigInt *divIntBigInt(int a, BigInt *b);
     BigInt *modBigInt(BigInt *a, BigInt *b);
+    BigInt *modBigIntInt(BigInt *a, int b);
+    BigInt *modIntBigInt(int a, BigInt *b);
     BigInt *powBigInt(BigInt *a, BigInt *b);
+    BigInt *powBigIntInt(BigInt *a, int b);
+    BigInt *powIntBigInt(int a, BigInt *b);
     BigInt *gcdBigInt(BigInt *a, BigInt *b);
+    BigInt *gcdBigIntInt(BigInt *a, int b);
+    BigInt *gcdIntBigInt(int a, BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
     void negateBigInt(BigInt *b);
     bool isNegBigInt(BigInt *b);

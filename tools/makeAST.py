@@ -663,6 +663,23 @@ class SimpleHash(Base):
         print(f'}} {myName}; // SimpleHash.printTypedef')
         print('')
 
+    def getPrintSignature(self, catalog):
+        myType = self.getTypeDeclaration()
+        myName = self.getName()
+        return f"void print{myName}({myType} x, int depth)"
+
+    def printPrintDeclaration(self, catalog):
+        decl = self.getPrintSignature(catalog);
+        print(f"{decl}; // SimpleHash.printPrintDeclaration")
+
+    def printPrintFunction(self, catalog):
+        decl = self.getPrintSignature(catalog);
+        comment = "// SimpleHash.printPrintFunction"
+        print(f"{decl} {{ {comment}")
+        print(f"    printHashTable(&(x->wrapped), depth); {comment}")
+        print(f"}} {comment}")
+        print("")
+
     def printCopyField(self, field, depth, prefix=''):
         myConstructor = self.getConstructorName()
         print(f'    x->{prefix}{field} = {myConstructor}(); // SimpleHash.printCopyField')
@@ -689,10 +706,10 @@ class SimpleHash(Base):
             printFn = 'NULL'
         else:
             size = f'sizeof({self.entries.getTypeDeclaration(catalog)})'
-            printFn = f'print{myName}'
+            printFn = f'_print{myName}'
             if self.entries.hasMarkFn(catalog):
-                markFn = f'mark{myName}'
-                print(f'static void mark{myName}(void *ptr) {{ // SimpleHash.printNewFunction')
+                markFn = f'_mark{myName}'
+                print(f'static void {markFn}(void *ptr) {{ // SimpleHash.printNewFunction')
                 self.entries.printMarkHashLine(catalog, 1)
                 print('} // SimpleHash.printNewFunction')
                 print('')
@@ -700,7 +717,7 @@ class SimpleHash(Base):
                 markFn = 'NULL'
             self.entries.printPrintDeclaration(catalog)
             print('')
-            print(f'static void print{myName}(void *ptr, int depth) {{ // SimpleHash.printNewFunction')
+            print(f'static void {printFn}(void *ptr, int depth) {{ // SimpleHash.printNewFunction')
             self.entries.printPrintHashLine(catalog, 1);
             print('}')
             print('')

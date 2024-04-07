@@ -1269,21 +1269,27 @@ double bigint_double(const bigint * src) {
 
 // additional CEKF code
 
-// set true by main/getopts to enable bigint usage
-int bigint_flag = 0;
-
-BigInt *newBigInt(bigint bi) {
-    BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
-    DEBUG("newBigInt %p", x);
+MaybeBigInt *newMaybeBigInt(bigint bi) {
+    MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
+    DEBUG("newMaybeBigInt %p", x);
     x->little = 0;
+    x->fake = false;
     x->bi = bi;
     return x;
 }
 
-BigInt *fakeBigInt(int little) {
+BigInt *newBigInt(bigint bi) {
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
     DEBUG("newBigInt %p", x);
+    x->bi = bi;
+    return x;
+}
+
+MaybeBigInt *fakeBigInt(int little) {
+    MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_BIGINT);
+    DEBUG("fakeBigInt %p", x);
     x->little = little;
+    x->fake = true;
     bzero(&x->bi, sizeof(bigint));
     return x;
 }
@@ -1293,6 +1299,40 @@ BigInt *bigIntFromInt(int i) {
     bigint_init(&c);
     bigint_from_int(&c, i);
     return newBigInt(c);
+}
+
+static BigInt *bigIntFromOperation(bigint_binop op, int a, int b) {
+    bigint c;
+    bigint_init(&c);
+    bigint_from_int(&c, a);
+    bigint d;
+    bigint_init(&d);
+    bigint_from_int(&d, b);
+    bigint e;
+    bigint_init(&e);
+    op(&e, &c, &d);
+    bigint_free(&c);
+    bigint_free(&d);
+    return newBigInt(e);
+}
+
+BigInt *bigIntFromAddition(int a, int b) {
+    return bigIntFromOperation(bigint_add, a, b);
+}
+
+BigInt *bigIntFromMultiplication(int a, int b) {
+    return bigIntFromOperation(bigint_mul, a, b);
+}
+
+BigInt *bigIntFromPower(int a, int b) {
+    bigint c;
+    bigint_init(&c);
+    bigint_from_int(&c, a);
+    bigint d;
+    bigint_init(&d);
+    bigint_pow_word(&d, &c, b);
+    bigint_free(&c);
+    return newBigInt(d);
 }
 
 BigInt *copyBigInt(BigInt *b) {
@@ -1308,14 +1348,27 @@ void markBigInt(BigInt *x) {
     MARK(x);
 }
 
+void markMaybeBigInt(MaybeBigInt *x) {
+    if (x == NULL)
+        return;
+    MARK(x);
+}
+
 void freeBigInt(BigInt *x) {
     FREE_ARRAY(bigint_word, x->bi.words, x->bi.capacity);
     FREE(x, BigInt);
 }
 
-void printBigInt(BigInt *x, int depth) {
+void freeMaybeBigInt(MaybeBigInt *x) {
+    if (!x->fake) {
+        FREE_ARRAY(bigint_word, x->bi.words, x->bi.capacity);
+    }
+    FREE(x, MaybeBigInt);
+}
+
+void printMaybeBigInt(MaybeBigInt *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
-    fprintBigInt(errout, x);
+    fprintMaybeBigInt(errout, x);
 }
 
 void bigint_fprint(FILE *f, bigint * bi) {
@@ -1337,30 +1390,62 @@ void fprintBigInt(FILE *f, BigInt *x) {
         fprintf(f, "<null>");
         return;
     }
-    if (bigint_flag) {
-        bigint_fprint(f, &x->bi);
-    } else {
-        fprintf(f, "%d", x->little);
-    }
+    bigint_fprint(f, &x->bi);
 }
 
-void sprintBigInt(char *s, BigInt *x) {
+void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
     if (x == NULL) {
-        sprintf(s, "<null>");
+        fprintf(f, "<null>");
         return;
     }
-    if (bigint_flag) {
-        int size = bigint_write_size(&x->bi, 10);
-        bigint_write(s, size, &x->bi);
+    if (x->fake) {
+        fprintf(f, "%d", x->little);
     } else {
-        sprintf(s, "%d", x->little);
+        bigint_fprint(f, &x->bi);
     }
 }
 
-int cmpBigInt(BigInt *a, BigInt *b) {
-    if (bigint_flag)
-        return bigint_cmp(&a->bi, &b->bi);
-    return a->little < b->little ? -1 : a->little == b->little ? 0 : 1;
+Cmp cmpBigInt(BigInt *a, BigInt *b) {
+    return (Cmp) bigint_cmp(&a->bi, &b->bi);
+}
+
+Cmp cmpBigIntInt(BigInt *a, int b) {
+    bigint bi;
+    bigint_init(&bi);
+    bigint_from_int(&bi, b);
+    Cmp res = (Cmp) bigint_cmp(&a->bi, &bi);
+    bigint_free(&bi);
+    return res;
+}
+
+Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
+    if (x->fake) {
+        if (y->fake) {
+            return x->little < y->little ?
+                   -1 :
+                   x->little == y->little ?
+                   0 :
+                   1;
+        } else {
+            bigint bx;
+            bigint_init(&bx);
+            bigint_from_int(&bx, x->little);
+            Cmp res = (Cmp) bigint_cmp(&bx, &y->bi);
+            bigint_free(&bx);
+            return res;
+        }
+    } else {
+        if (y->fake) {
+            bigint by;
+            bigint_init(&by);
+            bigint_from_int(&by, y->little);
+            Cmp res = (Cmp) bigint_cmp(&x->bi, &by);
+            bigint_free(&by);
+            return res;
+        } else {
+            return (Cmp) bigint_cmp(&x->bi, &y->bi);
+        }
+    }
 }
 
 static BigInt *_opBigInt(bigint_binop op, BigInt *a, BigInt *b) {
@@ -1374,28 +1459,92 @@ static BigInt *_opBigInt(bigint_binop op, BigInt *a, BigInt *b) {
     return res;
 }
 
+static BigInt *_opBigIntInt(bigint_binop op, BigInt *a, int i) {
+    int save = PROTECT(a);
+    bigint b;
+    bigint_init(&b);
+    bigint_from_int(&b, i);
+    bigint c;
+    bigint_init(&c);
+    op(&c, &a->bi, &b);
+    bigint_free(&b);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
+}
+
+static BigInt *_opIntBigInt(bigint_binop op, int i, BigInt *a) {
+    int save = PROTECT(a);
+    bigint b;
+    bigint_init(&b);
+    bigint_from_int(&b, i);
+    bigint c;
+    bigint_init(&c);
+    op(&c, &b, &a->bi);
+    bigint_free(&b);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
+}
+
 BigInt *addBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_add, a, b);
+}
+
+BigInt *addBigIntInt(BigInt *a, int b) {
+    return _opBigIntInt(bigint_add, a, b);
 }
 
 BigInt *subBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_sub, a, b);
 }
 
+BigInt *subIntBigInt(int a, BigInt *b) {
+    return _opIntBigInt(bigint_sub, a, b);
+}
+
 BigInt *mulBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_mul, a, b);
+}
+
+BigInt *mulBigIntInt(BigInt *a, int b) {
+    return _opBigIntInt(bigint_mul, a, b);
 }
 
 BigInt *divBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_div, a, b);
 }
 
+BigInt *divBigIntInt(BigInt *a, int b) {
+    return _opBigIntInt(bigint_div, a, b);
+}
+
+BigInt *divIntBigInt(int a, BigInt *b) {
+    return _opIntBigInt(bigint_div, a, b);
+}
+
 BigInt *modBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_mod, a, b);
 }
 
+BigInt *modIntBigInt(int a, BigInt *b) {
+    return _opIntBigInt(bigint_mod, a, b);
+}
+
+BigInt *modBigIntInt(BigInt *a, int b) {
+    return _opBigIntInt(bigint_mod, a, b);
+}
+
 BigInt *gcdBigInt(BigInt *a, BigInt *b) {
     return _opBigInt(bigint_gcd, a, b);
+}
+
+BigInt *gcdBigIntInt(BigInt *a, int b) {
+    return _opBigIntInt(bigint_gcd, a, b);
+}
+
+BigInt *gcdIntBigInt(int a, BigInt *b) {
+    return _opIntBigInt(bigint_gcd, a, b);
 }
 
 BigInt *powBigInt(BigInt *a, BigInt *b) {
@@ -1412,34 +1561,37 @@ BigInt *powBigInt(BigInt *a, BigInt *b) {
     return res;
 }
 
-void dumpBigInt(FILE *fp, BigInt *big) {
-    fprintf(fp, "BigInt %p", big);
-    if (big != NULL) {
-        fprintf(fp, " size:%d, capacity:%d, neg:%d, words:[", big->bi.size,
-                big->bi.capacity, big->bi.neg);
-        for (int i = 0; i < big->bi.capacity;) {
-            fprintf(fp, "%d", big->bi.words[i]);
-            i++;
-            if (i < big->bi.capacity)
-                eprintf(", ");
-        }
-        fprintf(fp, "]");
+BigInt *powBigIntInt(BigInt *a, int b) {
+    int save = PROTECT(a);
+    bigint c;
+    bigint_init(&c);
+    bigint_pow_word(&c, &a->bi, b);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
+}
+
+BigInt *powIntBigInt(int a, BigInt *b) {
+    int save = PROTECT(b);
+    if (b->bi.size > 1) {
+        cant_happen("maximum exponent for bigint exceeded");
     }
-    fprintf(fp, "\n");
+    bigint c;
+    bigint_init(&c);
+    bigint bigA;
+    bigint_init(&bigA);
+    bigint_from_int(&bigA, a);
+    bigint_pow_word(&c, &bigA, b->bi.words[0]);
+    bigint_free(&bigA);
+    BigInt *res = newBigInt(c);
+    UNPROTECT(save);
+    return res;
 }
 
 void negateBigInt(BigInt *b) {
-    if (bigint_flag) {
-        bigint_negate(&b->bi);
-    } else {
-        b->little = -b->little;
-    }
+    bigint_negate(&b->bi);
 }
 
 bool isNegBigInt(BigInt *b) {
-    if (bigint_flag) {
-        return b->bi.neg != 0;
-    } else {
-        return b->little < 0;
-    }
+    return b->bi.neg != 0;
 }

@@ -24,6 +24,7 @@
 #include "common.h"
 #include "desugaring.h"
 #include "symbol.h"
+#include "anf_pp.h"
 
 #ifdef DEBUG_DESUGARING
 #  include "debug.h"
@@ -45,7 +46,7 @@ static Aexp *desugarAexp(Aexp *x);
 static Cexp *desugarCexp(Cexp *x);
 
 #ifdef DEBUG_DESUGARING
-#  define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); print ## type (val); printf("\n"); } while(0)
+#  define DEBUG_DESUGAR(type, val) do { printf("desugar" #type ": "); pp ## type (val); printf("\n"); } while(0)
 #else
 #  define DEBUG_DESUGAR(type, val) do {} while(0)
 #endif
@@ -70,7 +71,7 @@ static AexpUnaryApp *desugarAexpUnaryApp(AexpUnaryApp *x) {
 }
 
 static HashSymbol *desugarAexpVar(HashSymbol *x) {
-    DEBUG_DESUGAR(HashSymbol, x);
+    DEBUG_DESUGAR(AexpVar, x);
     return x;
 }
 

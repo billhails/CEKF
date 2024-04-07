@@ -135,9 +135,9 @@ static bool truthy(Value v) {
              || v.type == VALUE_TYPE_VOID);
 }
 
-static int _cmp(Value left, Value right);
+static Cmp _cmp(Value left, Value right);
 
-static int _vecCmp(Vec *left, Vec *right) {
+static Cmp _vecCmp(Vec *left, Vec *right) {
     if (left == right) {
         return 0;
     }
@@ -151,15 +151,15 @@ static int _vecCmp(Vec *left, Vec *right) {
 #endif
     for (int i = 0; i < left->size; ++i) {
         int cmp = _cmp(left->values[i], right->values[i]);
-        if (cmp != 0)
+        if (cmp != CMP_EQ)
             return cmp;
     }
-    return 0;
+    return CMP_EQ;
 }
 
-#define _CMP_(left, right) ((left) < (right) ? -1 : (left) == (right) ? 0 : 1)
+#define _CMP_(left, right) ((left) < (right) ? CMP_LT : (left) == (right) ? CMP_EQ : CMP_GT)
 
-static int _cmp(Value left, Value right) {
+static Cmp _cmp(Value left, Value right) {
 #ifdef DEBUG_STEP
     eprintf("_cmp:\n");
     printContainedValue(left, 0);
@@ -169,16 +169,31 @@ static int _cmp(Value left, Value right) {
 #endif
 #ifdef SAFETY_CHECKS
     if (left.type != right.type) {
-        cant_happen("different types in _cmp");
+        switch (left.type) {
+            case VALUE_TYPE_BIGINT:
+            case VALUE_TYPE_STDINT:
+            case VALUE_TYPE_RATIONAL:
+                switch (right.type) {
+                    case VALUE_TYPE_BIGINT:
+                    case VALUE_TYPE_STDINT:
+                    case VALUE_TYPE_RATIONAL:
+                        break;
+                    default:
+                        cant_happen("different types in _cmp");
+                }
+                break;
+            default:
+                cant_happen("different types in _cmp");
+        }
     }
 #endif
     switch (left.type) {
         case VALUE_TYPE_VOID:
             return 0;
         case VALUE_TYPE_BIGINT:
-            return cmpBigInt(left.val.bigint, right.val.bigint);
         case VALUE_TYPE_STDINT:
-            return _CMP_(left.val.stdint, right.val.stdint);
+        case VALUE_TYPE_RATIONAL:
+            return ncmp(left, right);
         case VALUE_TYPE_CHARACTER:
             return _CMP_(left.val.character, right.val.character);
         case VALUE_TYPE_CLO:
@@ -193,13 +208,13 @@ static int _cmp(Value left, Value right) {
     }
 }
 
-static Value cmp(Value left, Value right) {
+static Value vcmp(Value left, Value right) {
     switch (_cmp(left, right)) {
-        case -1:
+        case CMP_LT:
             return vLt;
-        case 0:
+        case CMP_EQ:
             return vEq;
-        case 1:
+        case CMP_GT:
             return vGt;
         default:
             cant_happen("unexpected value from _cmp");
@@ -207,15 +222,15 @@ static Value cmp(Value left, Value right) {
 }
 
 static bool _eq(Value left, Value right) {
-    return _cmp(left, right) == 0;
+    return _cmp(left, right) == CMP_EQ;
 }
 
 static bool _gt(Value left, Value right) {
-    return _cmp(left, right) == 1;
+    return _cmp(left, right) == CMP_GT;
 }
 
 static bool _lt(Value left, Value right) {
-    return _cmp(left, right) == -1;
+    return _cmp(left, right) == CMP_LT;
 }
 
 static bool _xor(Value left, Value right) {
@@ -377,10 +392,11 @@ static void applyProc(int naargs) {
 
 #define printCEKF(state)
 
-static int count = 0;
+static unsigned long int count = 0;
 
 void reportSteps(void) {
-    printf("%d instructions executed\n", count);
+    printf("%lu instructions executed\n", count);
+    printf("%d final stack capacity\n", state.S.capacity);
 }
 
 static void step() {
@@ -480,7 +496,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(cmp(left, right));
+                    push(vcmp(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -491,7 +507,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(add(left, right));
+                    push(nadd(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -502,7 +518,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(sub(left, right));
+                    Value res = nsub(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -513,7 +531,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(mul(left, right));
+                    push(nmul(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -524,7 +542,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(divide(left, right));
+                    push(ndiv(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -535,7 +553,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(power(left, right));
+                    push(npow(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -546,7 +564,7 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(modulo(left, right));
+                    push(nmod(left, right));
                     UNPROTECT(save);
                 }
                 break;
@@ -641,7 +659,7 @@ static void step() {
                     DEBUGPRINTF("NEG\n");
                     Value a = pop();
                     int save = protectValue(a);
-                    push(neg(a));
+                    push(nneg(a));
                     UNPROTECT(save);
             }
             break;
@@ -723,12 +741,19 @@ static void step() {
                     int here = state.C;
                     for (int ip = 0; ip < size; ip++) {
                         printf(" ");
-                        if (bigint_flag) {
-                            BigInt *bigInt = readCurrentBigInt();
-                            fprintBigInt(stdout, bigInt);
-                        } else {
-                            int Int = readCurrentInt();
-                            printf("%d", Int);
+                        switch(readCurrentByte()) {
+                            case BYTECODE_BIGINT: {
+                                BigInt *bigInt = readCurrentBigInt();
+                                fprintBigInt(stdout, bigInt);
+                            }
+                            break;
+                            case BYTECODE_STDINT: {
+                                int Int = readCurrentInt();
+                                printf("%d", Int);
+                            }
+                            break;
+                            default:
+                                cant_happen("expected int or bigint in INTCOND cases");
                         }
                         int offset = readCurrentOffset();
                         printf(":[%04x]", offset);
@@ -738,25 +763,40 @@ static void step() {
 #endif
                     Value v = pop();
                     int save = protectValue(v);
-                    if (bigint_flag) {
-                        for (int ip = 0; ip < size; ip++) {
-                            BigInt *bigInt = readCurrentBigInt();
-                            int offset = readCurrentOffset();
-                            if (cmpBigInt(bigInt, v.val.bigint) == 0) {
-                                state.C = offset;
-                                break;
+                    for (int ip = 0; ip < size; ip++) {
+                        switch(readCurrentByte()) {
+                            case BYTECODE_BIGINT: {
+                                BigInt *bigInt = readCurrentBigInt();
+                                PROTECT(bigInt);
+                                Value u;
+                                u.type = VALUE_TYPE_BIGINT;
+                                u.val = VALUE_VAL_BIGINT(bigInt);
+                                protectValue(u);
+                                int offset = readCurrentOffset();
+                                if (ncmp(u, v) == CMP_EQ) {
+                                    state.C = offset;
+                                    goto FINISHED_INTCOND;
+                                }
                             }
-                        }
-                    } else {
-                        for (int ip = 0; ip < size; ip++) {
-                            int option = readCurrentInt();
-                            int offset = readCurrentOffset();
-                            if (option == v.val.stdint) {
-                                state.C = offset;
-                                break;
+                            break;
+                            case BYTECODE_STDINT: {
+                                int option = readCurrentInt();
+                                Value u;
+                                u.type = VALUE_TYPE_STDINT;
+                                u.val = VALUE_VAL_STDINT(option);
+                                protectValue(u);
+                                int offset = readCurrentOffset();
+                                if (ncmp(u, v) == CMP_EQ) {
+                                    state.C = offset;
+                                    goto FINISHED_INTCOND;
+                                }
                             }
+                            break;
+                            default:
+                                cant_happen("expected int or bigint in INTCOND cases");
                         }
                     }
+                FINISHED_INTCOND:
                     UNPROTECT(save);
                 }
                 break;

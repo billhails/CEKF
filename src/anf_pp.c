@@ -118,6 +118,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_CMP:
             eprintf("cmp ");
             break;
+        case AEXPPRIMOP_TYPE_POW:
+            eprintf("pow ");
+            break;
         default:
             cant_happen("unrecognized op %s", aexpPrimOpName(x->type));
     }
@@ -132,6 +135,9 @@ void ppAexpPrimApp(AexpPrimApp *x) {
 void ppAexpUnaryApp(AexpUnaryApp *x) {
     eprintf("(");
     switch (x->type) {
+        case AEXPUNARYOP_TYPE_NEG:
+            eprintf("neg ");
+            break;
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;
@@ -234,7 +240,7 @@ void ppCexpCond(CexpCond *x) {
 void ppCexpIntCondCases(CexpIntCondCases *x) {
     while (x != NULL) {
         eprintf("(");
-        fprintBigInt(errout, x->option);
+        fprintMaybeBigInt(errout, x->option);
         eprintf(" ");
         ppExp(x->body);
         eprintf(")");
@@ -372,7 +378,7 @@ void ppAexp(Aexp *x) {
             eprintf("nil");
             break;
         case AEXP_TYPE_BIGINTEGER:
-            fprintBigInt(errout, x->val.biginteger);
+            fprintMaybeBigInt(errout, x->val.biginteger);
             break;
         case AEXP_TYPE_LITTLEINTEGER:
             eprintf("%d", x->val.littleinteger);

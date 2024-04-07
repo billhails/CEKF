@@ -50,6 +50,13 @@ BigInt:
     compareFn: "cmpBigInt"
     valued: true
 
+MaybeBigInt:
+    cname: "MaybeBigInt *"
+    printFn: "printMaybeBigInt"
+    markFn: "markMaybeBigInt"
+    compareFn: "cmpMaybeBigInt"
+    valued: true
+
 string:
     cname: "char *"
     printf: "%s"

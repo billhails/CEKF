@@ -1,5 +1,5 @@
-#ifndef cekf_arithmetic_h
-#define cekf_arithmetic_h
+#ifndef cekf_cmp_h
+#  define cekf_cmp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,19 +18,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "value.h"
-#include "cmp.h"
 
-Value nadd(Value, Value);
-Value nsub(Value, Value);
-Value nmul(Value, Value);
-Value ndiv(Value, Value);
-Value npow(Value, Value);
-Value nmod(Value, Value);
-Value nneg(Value);
-Cmp ncmp(Value, Value);
-
-void init_arithmetic(void);
-void markArithmetic(void);
+typedef enum Cmp {
+    CMP_LT = -1,
+    CMP_EQ = 0,
+    CMP_GT = 1
+} Cmp;
 
 #endif
