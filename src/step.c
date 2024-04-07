@@ -392,10 +392,10 @@ static void applyProc(int naargs) {
 
 #define printCEKF(state)
 
-static int count = 0;
+static unsigned long int count = 0;
 
 void reportSteps(void) {
-    printf("%d instructions executed\n", count);
+    printf("%lu instructions executed\n", count);
     printf("%d final stack capacity\n", state.S.capacity);
 }
 

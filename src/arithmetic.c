@@ -87,22 +87,38 @@ static Value bigIntValue(BigInt *i) {
     return val;
 }
 
+static inline Cmp int_cmp_bb(Value left, Value right) {
+    return cmpBigInt(left.val.bigint, right.val.bigint);
+}
+
+static inline Cmp int_cmp_bi(Value left, Value right) {
+    return cmpBigIntInt(left.val.bigint, right.val.stdint);
+}
+
+static inline Cmp int_cmp_ib(Value left, Value right) {
+    return cmpIntBigInt(left.val.stdint, right.val.bigint);
+}
+
+static inline Cmp int_cmp_ii(Value left, Value right) {
+    return left.val.stdint < right.val.stdint ? CMP_LT :
+        left.val.stdint == right.val.stdint ? CMP_EQ :
+        CMP_GT;
+}
+
 static Cmp int_cmp(Value left, Value right) {
     ENTER(int_cmp);
     Cmp res;
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
-            res = cmpBigInt(left.val.bigint, right.val.bigint);
+            res = int_cmp_bb(left, right);
         } else {
-            res = cmpBigIntInt(left.val.bigint, right.val.stdint);
+            res = int_cmp_bi(left, right);
         }
     } else {
         if (IS_BIGINT(right)) {
-            res = cmpIntBigInt(left.val.stdint, right.val.bigint);
+            res = int_cmp_ib(left, right);
         } else {
-            res = left.val.stdint < right.val.stdint ? CMP_LT :
-                left.val.stdint == right.val.stdint ? CMP_EQ :
-                CMP_GT;
+            res = int_cmp_ii(left, right);
         }
     }
     LEAVE(int_cmp);
@@ -233,7 +249,7 @@ static Value int_div(Value left, Value right) {
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
-            if (int_cmp(right, Zero) == CMP_EQ) {
+            if (int_cmp_bb(right, Zero) == CMP_EQ) {
                 cant_happen("attempted div zero");
             }
             BigInt *bi = divBigInt(left.val.bigint, right.val.bigint);
@@ -249,7 +265,7 @@ static Value int_div(Value left, Value right) {
         }
     } else {
         if (IS_BIGINT(right)) {
-            if (int_cmp(right, Zero) == CMP_EQ) {
+            if (int_cmp_bb(right, Zero) == CMP_EQ) {
                 cant_happen("attempted div zero");
             }
             BigInt *bi = divIntBigInt(left.val.stdint, right.val.bigint);
@@ -311,7 +327,7 @@ static Value int_mod(Value left, Value right) {
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
-            if (int_cmp(right, Zero) == CMP_EQ) {
+            if (int_cmp_bb(right, Zero) == CMP_EQ) {
                 cant_happen("attempted mod zero");
             }
             BigInt *bi = modBigInt(left.val.bigint, right.val.bigint);
@@ -327,7 +343,7 @@ static Value int_mod(Value left, Value right) {
         }
     } else {
         if (IS_BIGINT(right)) {
-            if (int_cmp(right, Zero) == CMP_EQ) {
+            if (int_cmp_bb(right, Zero) == CMP_EQ) {
                 cant_happen("attempted mod zero");
             }
             BigInt *bi = modIntBigInt(left.val.stdint, right.val.bigint);
