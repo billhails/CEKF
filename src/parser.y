@@ -169,6 +169,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 #include "module.h"
 #include "ast.h"
 }
+
 %union {
     char *s;
     char c;
@@ -519,9 +520,13 @@ conslist : %empty                     { $$ = newAstFunCall(newAstExpression(AST_
          | expression ',' conslist    { $$ = binOpToFunCall(consSymbol(), $1, newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($3))); }
          ;
 
-expression_statements : expression                              { $$ = newAstExpressions($1, NULL); }
+expression_statements : expression optional_semicolon           { $$ = newAstExpressions($1, NULL); }
                       | expression ';' expression_statements    { $$ = newAstExpressions($1, $3); }
                       ;
+
+optional_semicolon : %empty
+                   | ';'
+                   ;
 
 env : ENV env_expr  { $$ = $2; }
     ;
@@ -534,6 +539,7 @@ extends : %empty            { $$ = NULL; }
         ;
 
 env_body : '{' definitions '}'  { $$ = $2; }
+         ;
 
 symbol : VAR    { $$ = newSymbol($1); }
        ;
