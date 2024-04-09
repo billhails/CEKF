@@ -1270,27 +1270,31 @@ double bigint_double(const bigint * src) {
 // additional CEKF code
 
 MaybeBigInt *newMaybeBigInt(bigint bi) {
+    ENTER(newMaybeBigInt);
     MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("newMaybeBigInt %p", x);
-    x->little = 0;
-    x->fake = false;
-    x->bi = bi;
+    x->type = BI_BIG;
+    x->big = bi;
+    LEAVE(newMaybeBigInt);
     return x;
 }
 
 BigInt *newBigInt(bigint bi) {
+    ENTER(newBigInt);
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
     DEBUG("newBigInt %p", x);
     x->bi = bi;
+    LEAVE(newBigInt);
     return x;
 }
 
 MaybeBigInt *fakeBigInt(int little) {
-    MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_BIGINT);
+    ENTER(fakeBigInt);
+    MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("fakeBigInt %p", x);
-    x->little = little;
-    x->fake = true;
-    bzero(&x->bi, sizeof(bigint));
+    x->small = little;
+    x->type = BI_SMALL;
+    LEAVE(fakeBigInt);
     return x;
 }
 
@@ -1355,15 +1359,19 @@ void markMaybeBigInt(MaybeBigInt *x) {
 }
 
 void freeBigInt(BigInt *x) {
+    ENTER(freeBigInt);
     FREE_ARRAY(bigint_word, x->bi.words, x->bi.capacity);
     FREE(x, BigInt);
+    LEAVE(freeBigInt);
 }
 
 void freeMaybeBigInt(MaybeBigInt *x) {
-    if (!x->fake) {
-        FREE_ARRAY(bigint_word, x->bi.words, x->bi.capacity);
+    ENTER(freeMaybeBigInt);
+    if (x->type == BI_BIG) {
+        FREE_ARRAY(bigint_word, x->big.words, x->big.capacity);
     }
     FREE(x, MaybeBigInt);
+    LEAVE(freeMaybeBigInt);
 }
 
 void printMaybeBigInt(MaybeBigInt *x, int depth) {
@@ -1398,10 +1406,18 @@ void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
         fprintf(f, "<null>");
         return;
     }
-    if (x->fake) {
-        fprintf(f, "%d", x->little);
-    } else {
-        bigint_fprint(f, &x->bi);
+    switch (x->type) {
+        case BI_SMALL:
+            fprintf(f, "%d", x->small);
+            break;
+        case BI_BIG:
+            bigint_fprint(f, &x->big);
+            break;
+        case BI_IRRATIONAL:
+            fprintf(f, "%f", x->irrational);
+            break;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
 }
 
@@ -1419,32 +1435,60 @@ Cmp cmpBigIntInt(BigInt *a, int b) {
 }
 
 Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
-    if (x->fake) {
-        if (y->fake) {
-            return x->little < y->little ?
-                   -1 :
-                   x->little == y->little ?
-                   0 :
-                   1;
-        } else {
-            bigint bx;
-            bigint_init(&bx);
-            bigint_from_int(&bx, x->little);
-            Cmp res = (Cmp) bigint_cmp(&bx, &y->bi);
-            bigint_free(&bx);
-            return res;
-        }
-    } else {
-        if (y->fake) {
-            bigint by;
-            bigint_init(&by);
-            bigint_from_int(&by, y->little);
-            Cmp res = (Cmp) bigint_cmp(&x->bi, &by);
-            bigint_free(&by);
-            return res;
-        } else {
-            return (Cmp) bigint_cmp(&x->bi, &y->bi);
-        }
+    switch (x->type) {
+        case BI_SMALL:
+            switch (y->type) {
+                case BI_SMALL:
+                    return x->small < y->small ?  -1 :
+                           x->small == y->small ?  0 : 1;
+                case BI_BIG:
+                    bigint bx;
+                    bigint_init(&bx);
+                    bigint_from_int(&bx, x->small);
+                    Cmp res = (Cmp) bigint_cmp(&bx, &y->big);
+                    bigint_free(&bx);
+                    return res;
+                case BI_IRRATIONAL:
+                    return x->small < y->irrational ?  -1 :
+                           x->small == y->irrational ?  0 : 1;
+                default:
+                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+            }
+            break;
+        case BI_BIG:
+            switch (y->type) {
+                case BI_SMALL:
+                    bigint by;
+                    bigint_init(&by);
+                    bigint_from_int(&by, y->small);
+                    Cmp res = (Cmp) bigint_cmp(&x->big, &by);
+                    bigint_free(&by);
+                    return res;
+                case BI_BIG:
+                    return (Cmp) bigint_cmp(&x->big, &y->big);
+                case BI_IRRATIONAL:
+                    cant_happen("attempt to compare bigint and rational");
+                    break;
+                default:
+                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+            }
+            break;
+        case BI_IRRATIONAL:
+            switch (y->type) {
+                case BI_SMALL:
+                    return x->irrational < y->small ?  -1 :
+                           x->irrational == y->small ?  0 : 1;
+                case BI_BIG:
+                    cant_happen("attempt to compare bigint and rational");
+                case BI_IRRATIONAL:
+                    return x->irrational < y->irrational ?  -1 :
+                           x->irrational == y->irrational ?  0 : 1;
+                default:
+                    cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+            }
+            break;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
 }
 

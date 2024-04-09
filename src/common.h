@@ -25,6 +25,7 @@
 #  define DEBUG_ANY
 
 #  ifdef DEBUG_ANY
+// #    define DEBUG_BIGINT
 // #    define DEBUG_STACK
 // #    define DEBUG_STEP
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step

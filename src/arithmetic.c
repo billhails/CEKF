@@ -37,7 +37,7 @@
 typedef Value (*IntegerBinOp)(Value, Value);
 typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
 
-int rational_flag = 0;
+bool arithmetic_initialized = false;
 
 static Value One = {
     .type = VALUE_TYPE_STDINT,
@@ -105,8 +105,8 @@ static inline Cmp int_cmp_ii(Value left, Value right) {
         CMP_GT;
 }
 
-static Cmp int_cmp(Value left, Value right) {
-    ENTER(int_cmp);
+static Cmp intCmp(Value left, Value right) {
+    ENTER(intCmp);
     Cmp res;
     if (IS_BIGINT(left)) {
         if (IS_BIGINT(right)) {
@@ -121,7 +121,7 @@ static Cmp int_cmp(Value left, Value right) {
             res = int_cmp_ii(left, right);
         }
     }
-    LEAVE(int_cmp);
+    LEAVE(intCmp);
     return res;
 }
 
@@ -138,8 +138,8 @@ static Value safe_add(int a, int b) {
     }
 }
 
-static Value int_add(Value left, Value right) {
-    ENTER(int_add);
+static Value intAdd(Value left, Value right) {
+    ENTER(intAdd);
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -161,7 +161,7 @@ static Value int_add(Value left, Value right) {
             res = safe_add(left.val.stdint, right.val.stdint);
         }
     }
-    LEAVE(int_add);
+    LEAVE(intAdd);
     UNPROTECT(save);
     return res;
 }
@@ -179,7 +179,7 @@ static Value safe_mul(int a, int b) {
     }
 }
 
-static Value int_mul(Value left, Value right) {
+static Value intMul(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -218,7 +218,7 @@ static Value safe_sub(int a, int b) {
     }
 }
 
-static Value int_sub(Value left, Value right) {
+static Value intSub(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -244,7 +244,7 @@ static Value int_sub(Value left, Value right) {
     return res;
 }
 
-static Value int_div(Value left, Value right) {
+static Value intDiv(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -296,7 +296,7 @@ static Value safe_pow(int a, int b) {
     }
 }
 
-static Value int_pow(Value left, Value right) {
+static Value intPow(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -322,7 +322,7 @@ static Value int_pow(Value left, Value right) {
     return res;
 }
 
-static Value int_mod(Value left, Value right) {
+static Value intMod(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -374,7 +374,7 @@ static int gcd (int a, int b) {
 	return gcd;
 }
 
-static Value int_gcd(Value left, Value right) {
+static Value intGcd(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -400,7 +400,7 @@ static Value int_gcd(Value left, Value right) {
     return res;
 }
 
-static void int_neg_in_place(Value *v) {
+static void intNegInPlace(Value *v) {
     if (IS_BIGINT(*v)) {
         negateBigInt(v->val.bigint);
     } else {
@@ -408,7 +408,7 @@ static void int_neg_in_place(Value *v) {
     }
 }
 
-static Value int_neg(Value v) {
+static Value intNeg(Value v) {
     int save = PROTECT(NULL);
     if (IS_BIGINT(v)) {
         BigInt *bi = copyBigInt(v.val.bigint);
@@ -422,7 +422,7 @@ static Value int_neg(Value v) {
     return v;
 }
 
-static bool int_isneg(Value v) {
+static bool intIsNeg(Value v) {
     if (IS_BIGINT(v)) {
         return isNegBigInt(v.val.bigint);
     } else {
@@ -440,18 +440,18 @@ static bool int_isneg(Value v) {
 #  define ASSERT_RATIONAL(x)
 #endif
 
-static Cmp _rat_cmp(Value left, Value right) {
-    ENTER(_rat_cmp);
+static Cmp ratCmp(Value left, Value right) {
+    ENTER(ratCmp);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
-    Value ad = int_mul(left.val.vec->values[NUMERATOR],
+    Value ad = intMul(left.val.vec->values[NUMERATOR],
                        right.val.vec->values[DENOMINATOR]);
     int save = protectValue(ad);
-    Value bc = int_mul(left.val.vec->values[DENOMINATOR],
+    Value bc = intMul(left.val.vec->values[DENOMINATOR],
                        right.val.vec->values[NUMERATOR]);
     protectValue(bc);
-    Cmp res = int_cmp(ad, bc);
-    LEAVE(_rat_cmp);
+    Cmp res = intCmp(ad, bc);
+    LEAVE(ratCmp);
     UNPROTECT(save);
     return res;
 }
@@ -464,32 +464,6 @@ static Value makeRational(Value numerator, Value denominator) {
         .type = VALUE_TYPE_RATIONAL,
         .val = VALUE_VAL_RATIONAL(vec)
     };
-    return res;
-}
-
-Cmp ncmp(Value left, Value right) {
-    ENTER(ncmp);
-    Cmp res;
-    int save = PROTECT(NULL);
-    if (left.type == VALUE_TYPE_RATIONAL) {
-        if (right.type == VALUE_TYPE_RATIONAL) {
-            res = _rat_cmp(left, right);
-        } else {
-            right = makeRational(right, One);
-            protectValue(right);
-            res = _rat_cmp(left, right);
-        }
-    } else {
-        if (right.type == VALUE_TYPE_RATIONAL) {
-            left = makeRational(left, One);
-            protectValue(left);
-            res = _rat_cmp(left, right);
-        } else {
-            res = int_cmp(left, right);
-        }
-    }
-    LEAVE(ncmp);
-    UNPROTECT(save);
     return res;
 }
 
@@ -542,20 +516,20 @@ static Value ratSimplify(Value numerator, Value denominator) {
     ENTER(ratSimplify);
     IFDEBUG(ppNumber(numerator));
     IFDEBUG(ppNumber(denominator));
-    Value gcd = int_gcd(numerator, denominator);
+    Value gcd = intGcd(numerator, denominator);
     int save = protectValue(gcd);
     Value res;
-    if (int_cmp(gcd, One) != CMP_EQ) {
-        numerator = int_div(numerator, gcd);
+    if (intCmp(gcd, One) != CMP_EQ) {
+        numerator = intDiv(numerator, gcd);
         protectValue(numerator);
-        denominator = int_div(denominator, gcd);
+        denominator = intDiv(denominator, gcd);
         protectValue(denominator);
     }
-    if (int_isneg(denominator)) {
-        int_neg_in_place(&numerator);
-        int_neg_in_place(&denominator);
+    if (intIsNeg(denominator)) {
+        intNegInPlace(&numerator);
+        intNegInPlace(&denominator);
     }
-    if (int_cmp(denominator, One) == CMP_EQ) {
+    if (intCmp(denominator, One) == CMP_EQ) {
         res = numerator;
     } else {
         res = makeRational(numerator, denominator);
@@ -567,22 +541,23 @@ static Value ratSimplify(Value numerator, Value denominator) {
     return res;
 }
 
-static Value _rat_add_sub(IntegerBinOp base_op, Value left, Value right) {
+// a/b o c/d = (ad o bc) / bd
+static Value rat_ad_bc_cd(IntegerBinOp base_op, Value left, Value right) {
     ENTER(rat_add_sub);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
     Value a1b2 =
-        int_mul(left.val.vec->values[NUMERATOR],
+        intMul(left.val.vec->values[NUMERATOR],
                 right.val.vec->values[DENOMINATOR]);
     int save = protectValue(a1b2);
     Value a2b1 =
-        int_mul(left.val.vec->values[DENOMINATOR],
+        intMul(left.val.vec->values[DENOMINATOR],
                 right.val.vec->values[NUMERATOR]);
     protectValue(a2b1);
     Value numerator = base_op(a1b2, a2b1);
     protectValue(numerator);
     Value denominator =
-        int_mul(left.val.vec->values[DENOMINATOR],
+        intMul(left.val.vec->values[DENOMINATOR],
                 right.val.vec->values[DENOMINATOR]);
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
@@ -591,24 +566,9 @@ static Value _rat_add_sub(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
-Value nadd(Value left, Value right) {
-    ENTER(nadd);
-    IFDEBUG(ppNumber(left));
-    IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, _rat_add_sub, int_add, true);
-    LEAVE(nadd);
-    return res;
-}
-
-Value nsub(Value left, Value right) {
-    ENTER(nsub);
-    Value res = ratOp(left, right, _rat_add_sub, int_sub, true);
-    LEAVE(nsub);
-    return res;
-}
-
-static Value _rat_mul(IntegerBinOp base_op, Value left, Value right) {
-    ENTER(_rat_mul);
+// a/b o c/d = ac o bd
+static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(rat_ac_bd);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
     IFDEBUG(ppNumber(left));
@@ -623,17 +583,80 @@ static Value _rat_mul(IntegerBinOp base_op, Value left, Value right) {
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     protectValue(res);
-    LEAVE(_rat_mul);
+    LEAVE(rat_ac_bd);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
-Value nmul(Value left, Value right) {
-    ENTER(nmul);
+static Value ratDiv(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(ratDiv);
+    ASSERT_RATIONAL(left);
+    ASSERT_RATIONAL(right);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, _rat_mul, int_mul, true);
+    Value newRight = makeRational(right.val.vec->values[DENOMINATOR], right.val.vec->values[NUMERATOR]);
+    int save = protectValue(newRight);
+    Value res = rat_ac_bd(base_op, left, newRight);
+    protectValue(res);
+    LEAVE(ratDiv);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
+}
+
+static Value ratPow(Value left, Value right) {
+    ENTER(ratPow);
+    ASSERT_RATIONAL(left);
+    Value numerator = left.val.vec->values[NUMERATOR];
+    Value denominator = left.val.vec->values[DENOMINATOR];
+    numerator = intPow(numerator, right);
+    int save = protectValue(numerator);
+    denominator = intPow(denominator, right);
+    protectValue(denominator);
+    Value res = ratSimplify(numerator, denominator);
+    protectValue(res);
+    LEAVE(ratPow);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
+}
+
+#ifdef SAFETY_CHECKS
+#  define CHECK_INITIALIZED() do { \
+    if (!arithmetic_initialized) { \
+        cant_happen("arithmetic not initialized yet"); \
+    } \
+} while(0)
+#else
+#  define CHECK_INITIALIZED()
+#endif
+
+
+Value nadd(Value left, Value right) {
+    ENTER(nadd);
+    CHECK_INITIALIZED();
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    Value res = ratOp(left, right, rat_ad_bc_cd, intAdd, true);
+    LEAVE(nadd);
+    return res;
+}
+
+Value nsub(Value left, Value right) {
+    ENTER(nsub);
+    CHECK_INITIALIZED();
+    Value res = ratOp(left, right, rat_ad_bc_cd, intSub, true);
+    LEAVE(nsub);
+    return res;
+}
+
+Value nmul(Value left, Value right) {
+    ENTER(nmul);
+    CHECK_INITIALIZED();
+    IFDEBUG(ppNumber(left));
+    IFDEBUG(ppNumber(right));
+    Value res = ratOp(left, right, rat_ac_bd, intMul, true);
     int save = protectValue(res);
     LEAVE(nmul);
     IFDEBUG(ppNumber(res));
@@ -641,26 +664,11 @@ Value nmul(Value left, Value right) {
     return res;
 }
 
-static Value _rat_div(IntegerBinOp base_op, Value left, Value right) {
-    ENTER(_rat_div);
-    ASSERT_RATIONAL(left);
-    ASSERT_RATIONAL(right);
-    IFDEBUG(ppNumber(left));
-    IFDEBUG(ppNumber(right));
-    Value newRight = makeRational(right.val.vec->values[DENOMINATOR], right.val.vec->values[NUMERATOR]);
-    int save = protectValue(newRight);
-    Value res = _rat_mul(base_op, left, newRight);
-    protectValue(res);
-    LEAVE(_rat_div);
-    IFDEBUG(ppNumber(res));
-    UNPROTECT(save);
-    return res;
-}
-
 Value ndiv(Value left, Value right) {
     ENTER(ndiv);
-    // N.B. int_mul not int_div
-    Value res = ratOp(left, right, _rat_div, int_mul, false);
+    CHECK_INITIALIZED();
+    // N.B. intMul not intDiv
+    Value res = ratOp(left, right, ratDiv, intMul, false);
     int save = protectValue(res);
     LEAVE(ndiv);
     IFDEBUG(ppNumber(res));
@@ -670,30 +678,15 @@ Value ndiv(Value left, Value right) {
 
 Value nmod(Value left, Value right) {
     ENTER(nmod);
-    Value res = ratOp(left, right, _rat_add_sub, int_mod, true);
+    CHECK_INITIALIZED();
+    Value res = ratOp(left, right, rat_ad_bc_cd, intMod, true);
     LEAVE(nmod);
-    return res;
-}
-
-static Value _ratPower(Value left, Value right) {
-    ENTER(_ratPower);
-    ASSERT_RATIONAL(left);
-    Value numerator = left.val.vec->values[NUMERATOR];
-    Value denominator = left.val.vec->values[DENOMINATOR];
-    numerator = int_pow(numerator, right);
-    int save = protectValue(numerator);
-    denominator = int_pow(denominator, right);
-    protectValue(denominator);
-    Value res = ratSimplify(numerator, denominator);
-    protectValue(res);
-    LEAVE(_ratPower);
-    IFDEBUG(ppNumber(res));
-    UNPROTECT(save);
     return res;
 }
 
 Value npow(Value left, Value right) {
     ENTER(npow);
+    CHECK_INITIALIZED();
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     Value res;
@@ -704,14 +697,14 @@ Value npow(Value left, Value right) {
             cant_happen("raising numbers to a rational power not supported yet");
         } else {
             // only left rational
-            res = _ratPower(left, right);
+            res = ratPow(left, right);
             protectValue(res);
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         cant_happen("raising numbers to a rational power not supported yet");
     } else {
         // neither rational
-        res = int_pow(left, right);
+        res = intPow(left, right);
         protectValue(res);
     }
     LEAVE(npow);
@@ -720,16 +713,44 @@ Value npow(Value left, Value right) {
     return res;
 }
 
+Cmp ncmp(Value left, Value right) {
+    ENTER(ncmp);
+    CHECK_INITIALIZED();
+    Cmp res;
+    int save = PROTECT(NULL);
+    if (left.type == VALUE_TYPE_RATIONAL) {
+        if (right.type == VALUE_TYPE_RATIONAL) {
+            res = ratCmp(left, right);
+        } else {
+            right = makeRational(right, One);
+            protectValue(right);
+            res = ratCmp(left, right);
+        }
+    } else {
+        if (right.type == VALUE_TYPE_RATIONAL) {
+            left = makeRational(left, One);
+            protectValue(left);
+            res = ratCmp(left, right);
+        } else {
+            res = intCmp(left, right);
+        }
+    }
+    LEAVE(ncmp);
+    UNPROTECT(save);
+    return res;
+}
+
 Value nneg(Value v) {
     ENTER(nneg);
+    CHECK_INITIALIZED();
     Value res;
     if (v.type == VALUE_TYPE_RATIONAL) {
-        Value numerator = int_neg(v.val.vec->values[NUMERATOR]);
+        Value numerator = intNeg(v.val.vec->values[NUMERATOR]);
         int save = protectValue(numerator);
         res = makeRational(numerator, v.val.vec->values[DENOMINATOR]);
         UNPROTECT(save);
     } else {
-        res = int_neg(v);
+        res = intNeg(v);
     }
     LEAVE(nneg);
     return res;
@@ -742,6 +763,7 @@ void init_arithmetic() {
     BigInt *one = bigIntFromInt(1);
     One.type = VALUE_TYPE_BIGINT;
     One.val = VALUE_VAL_BIGINT(one);
+    arithmetic_initialized = true;
 }
 
 void markArithmetic() {

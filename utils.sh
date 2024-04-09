@@ -1,3 +1,3 @@
 fnd () {
-    grep -rwn $1 src generated
+    grep -Irwn $1 src generated
 }

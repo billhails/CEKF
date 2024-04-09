@@ -42,11 +42,20 @@ extern "C" {
 
 // CEKF wrapper for memory management
     // compile-time bigint
+    typedef enum MaybeBigIntType {
+        BI_BIG,
+        BI_SMALL,
+        BI_IRRATIONAL
+    } MaybeBigIntType;
+
     typedef struct MaybeBigInt {
         Header header;
-        bigint bi;
-        bool fake;
-        int little;
+        MaybeBigIntType type;
+        union {
+            bigint big;
+            int small;
+            double irrational;
+        };
     } MaybeBigInt;
 
     // run-time bigint
