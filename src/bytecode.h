@@ -68,6 +68,7 @@ typedef enum ByteCodes {
     BYTECODE_STDINT,
 
     BYTECODE_BIGINT,
+    BYTECODE_IRRATIONAL,
     BYTECODE_CHAR,
     BYTECODE_RETURN,
     BYTECODE_JMP,
@@ -134,9 +135,20 @@ static inline void _readInt(ByteCodeArray *b, size_t *i, int *a) {
     (*i) += sizeof(int);
 }
 
+static inline void _readDouble(ByteCodeArray *b, size_t *i, double *a) {
+    memcpy(a, &b->entries[*i], sizeof(double));
+    (*i) += sizeof(double);
+}
+
 static inline int readInt(ByteCodeArray *b, size_t *i) {
     int a;
     _readInt(b, i, &a);
+    return a;
+}
+
+static inline double readDouble(ByteCodeArray *b, size_t *i) {
+    double a;
+    _readDouble(b, i, &a);
     return a;
 }
 

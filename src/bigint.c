@@ -1279,6 +1279,16 @@ MaybeBigInt *newMaybeBigInt(bigint bi) {
     return x;
 }
 
+MaybeBigInt *irrationalBigInt(double f) {
+    ENTER(irrationalBigInt);
+    MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
+    DEBUG("newMaybeBigInt %p", x);
+    x->type = BI_IRRATIONAL;
+    x->irrational = f;
+    LEAVE(irrationalBigInt);
+    return x;
+}
+
 BigInt *newBigInt(bigint bi) {
     ENTER(newBigInt);
     BigInt *x = NEW(BigInt, OBJTYPE_BIGINT);
@@ -1434,23 +1444,36 @@ Cmp cmpBigIntInt(BigInt *a, int b) {
     return res;
 }
 
+static int bigint_cmp_double(bigint *b, double d) {
+    double bi = bigint_double(b);
+    return bi < d ? CMP_LT : bi == d ? CMP_EQ : CMP_GT;
+}
+
+static int bigint_cmp_int(bigint *b, int i) {
+    bigint bi;
+    bigint_init(&bi);
+    bigint_from_int(&bi, i);
+    Cmp res = (Cmp) bigint_cmp(b, &bi);
+    bigint_free(&bi);
+    return res;
+}
+
+Cmp cmpBigIntDouble(BigInt *a, double b) {
+    return bigint_cmp_double(&a->bi, b);
+}
+
 Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
     switch (x->type) {
         case BI_SMALL:
             switch (y->type) {
                 case BI_SMALL:
-                    return x->small < y->small ?  -1 :
-                           x->small == y->small ?  0 : 1;
+                    return x->small < y->small ?  CMP_LT :
+                           x->small == y->small ?  CMP_EQ : CMP_GT;
                 case BI_BIG:
-                    bigint bx;
-                    bigint_init(&bx);
-                    bigint_from_int(&bx, x->small);
-                    Cmp res = (Cmp) bigint_cmp(&bx, &y->big);
-                    bigint_free(&bx);
-                    return res;
+                    return (Cmp)(bigint_cmp_int(&y->big, x->small) * -1);
                 case BI_IRRATIONAL:
-                    return x->small < y->irrational ?  -1 :
-                           x->small == y->irrational ?  0 : 1;
+                    return x->small < y->irrational ?  CMP_LT :
+                           x->small == y->irrational ?  CMP_EQ : CMP_GT;
                 default:
                     cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
             }
@@ -1458,6 +1481,7 @@ Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
         case BI_BIG:
             switch (y->type) {
                 case BI_SMALL:
+                    return (Cmp)(bigint_cmp_int(&x->big, y->small));
                     bigint by;
                     bigint_init(&by);
                     bigint_from_int(&by, y->small);
@@ -1467,7 +1491,7 @@ Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
                 case BI_BIG:
                     return (Cmp) bigint_cmp(&x->big, &y->big);
                 case BI_IRRATIONAL:
-                    cant_happen("attempt to compare bigint and rational");
+                    return bigint_cmp_double(&x->big, y->irrational);
                     break;
                 default:
                     cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
@@ -1476,13 +1500,14 @@ Cmp cmpMaybeBigInt(MaybeBigInt *x, MaybeBigInt *y) {
         case BI_IRRATIONAL:
             switch (y->type) {
                 case BI_SMALL:
-                    return x->irrational < y->small ?  -1 :
-                           x->irrational == y->small ?  0 : 1;
+                    return x->irrational < y->small ?  CMP_LT :
+                           x->irrational == y->small ?  CMP_EQ : CMP_GT;
                 case BI_BIG:
+                    return (Cmp)(bigint_cmp_double(&x->big, x->irrational) * -1);
                     cant_happen("attempt to compare bigint and rational");
                 case BI_IRRATIONAL:
-                    return x->irrational < y->irrational ?  -1 :
-                           x->irrational == y->irrational ?  0 : 1;
+                    return x->irrational < y->irrational ?  CMP_LT :
+                           x->irrational == y->irrational ?  CMP_EQ : CMP_GT;
                 default:
                     cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
             }
@@ -1638,4 +1663,8 @@ void negateBigInt(BigInt *b) {
 
 bool isNegBigInt(BigInt *b) {
     return b->bi.neg != 0;
+}
+
+double bigIntToDouble(BigInt *bi) {
+    return bigint_double(&bi->bi);
 }

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <math.h>
 
 #include "common.h"
 #include "debug.h"
@@ -113,6 +114,10 @@ static inline int readCurrentWord(void) {
 
 static inline int readCurrentInt(void) {
     return readInt(&state.B, &state.C);
+}
+
+static inline double readCurrentIrrational(void) {
+    return readDouble(&state.B, &state.C);
 }
 
 static inline BigInt *readCurrentBigInt(void) {
@@ -478,6 +483,12 @@ static void step() {
                             break;
                         case VALUE_TYPE_STDINT:
                             printf("%d", b.val.stdint);
+                            break;
+                        case VALUE_TYPE_IRRATIONAL:
+                            if( fmod(b.val.irrational, 1) == 0)
+                                printf("%.1f", b.val.irrational);
+                            else
+                                printf("%g", b.val.irrational);
                             break;
                         case VALUE_TYPE_RATIONAL:
                             putValue(b.val.vec->values[0]);
@@ -932,6 +943,16 @@ static void step() {
                     push(vVoid);
                 }
                 break;
+            case BYTECODE_IRRATIONAL:{
+                    // push literal double
+                    double f = readCurrentIrrational();
+                    DEBUGPRINTF("IRRATIONAL [%f]\n", val);
+                    Value v;
+                    v.type = VALUE_TYPE_IRRATIONAL;
+                    v.val = VALUE_VAL_IRRATIONAL(f);
+                    push(v);
+            }
+            break;
             case BYTECODE_STDINT:{
                     // push literal int
                     int val = readCurrentInt();

@@ -123,6 +123,7 @@ void markValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_VOID:
         case VALUE_TYPE_STDINT:
+        case VALUE_TYPE_IRRATIONAL:
         case VALUE_TYPE_CHARACTER:
             break;
         case VALUE_TYPE_PCLO:

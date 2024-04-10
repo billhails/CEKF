@@ -34,6 +34,29 @@
 #define NUMERATOR 0
 #define DENOMINATOR 1
 
+#define IS_BIGINT(x) ((x).type == VALUE_TYPE_BIGINT)
+#define IS_IRRATIONAL(x) ((x).type == VALUE_TYPE_IRRATIONAL)
+#define IS_RATIONAL(x) ((x).type == VALUE_TYPE_RATIONAL)
+#define IS_STDINT(x) ((x).type == VALUE_TYPE_STDINT)
+#define IS_INT(x) (IS_STDINT(x) || IS_BIGINT(x))
+
+#ifdef SAFETY_CHECKS
+#  define ASSERT_RATIONAL(x) ASSERT(IS_RATIONAL(x))
+#  define ASSERT_IRRATIONAL(x) ASSERT(IS_IRRATIONAL(x))
+#  define ASSERT_BIGINT(x) ASSERT(IS_BIGINT(x))
+#  define ASSERT_STDINT(x) ASSERT(IS_STDINT(x))
+#  define ASSERT_INT(x) ASSERT(IS_INT(x))
+#else
+#  define ASSERT_RATIONAL(x)
+#  define ASSERT_IRRATIONAL(x)
+#  define ASSERT_BIGINT(x)
+#  define ASSERT_STDINT(x)
+#  define ASSERT_INT(x)
+#endif
+
+// promote adds this to its result if it malloc'd a right value
+#define RIGHT_INDICATOR 1024
+
 typedef Value (*IntegerBinOp)(Value, Value);
 typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
 
@@ -65,18 +88,28 @@ static void ppNumber(Value number) {
             eprintf("/");
             ppNumber(number.val.vec->values[1]);
             break;
+        case VALUE_TYPE_IRRATIONAL:
+            eprintf("%f", number.val.irrational);
+            break;
         default:
             eprintf("??? %d ???", number.type);
     }
 }
 #endif
 
-#define IS_BIGINT(x) ((x).type == VALUE_TYPE_BIGINT)
-
 static Value intValue(int i) {
     Value val;
     val.type = VALUE_TYPE_STDINT;
     val.val = VALUE_VAL_STDINT(i);
+    return val;
+}
+
+static Value irrValue(double f) __attribute__((unused));
+
+static Value irrValue(double f) {
+    Value val;
+    val.type = VALUE_TYPE_IRRATIONAL;
+    val.val = VALUE_VAL_IRRATIONAL(f);
     return val;
 }
 
@@ -87,12 +120,134 @@ static Value bigIntValue(BigInt *i) {
     return val;
 }
 
+static Value ratValue(Value numerator, Value denominator) {
+    Vec *vec = newVec(2);
+    vec->values[NUMERATOR] = numerator;
+    vec->values[DENOMINATOR] = denominator;
+    Value res = {
+        .type = VALUE_TYPE_RATIONAL,
+        .val = VALUE_VAL_RATIONAL(vec)
+    };
+    return res;
+}
+
+static Value int_to_irrational(Value *integer) {
+    ASSERT_INT(*integer);
+    if (integer->type == VALUE_TYPE_BIGINT) {
+        return irrValue(bigIntToDouble(integer->val.bigint));
+    } else {
+        return irrValue(integer->val.stdint);
+    }
+}
+
+static Value rational_to_irrational(Value *rational) {
+    ASSERT_RATIONAL(*rational);
+    Value numerator = int_to_irrational(&(rational->val.vec->values[NUMERATOR]));
+    Value denominator = int_to_irrational(&(rational->val.vec->values[DENOMINATOR]));
+    return irrValue(numerator.val.irrational / denominator.val.irrational);
+}
+
+static Value int_to_rational(Value *integer) {
+    ASSERT_INT(*integer);
+    Value one = intValue(1);
+    return ratValue(*integer, one);
+}
+
+static Value bigint_to_irrational(Value *v) {
+    ASSERT_BIGINT(*v);
+    return irrValue(bigIntToDouble(v->val.bigint));
+}
+
+static Value int_to_bigint(Value *v) {
+    ASSERT_STDINT(*v);
+    return bigIntValue(bigIntFromInt(v->val.stdint));
+}
+
+static int promote(Value *left, Value *right) {
+    switch(left->type) {
+        case VALUE_TYPE_RATIONAL:
+            switch(right->type) {
+                case VALUE_TYPE_RATIONAL:
+                    return VALUE_TYPE_RATIONAL;
+                case VALUE_TYPE_IRRATIONAL:
+                    *left = rational_to_irrational(left);
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_BIGINT:
+                    *right = int_to_rational(right);
+                    return VALUE_TYPE_RATIONAL + RIGHT_INDICATOR;
+                case VALUE_TYPE_STDINT:
+                    *right = int_to_rational(right);
+                    return VALUE_TYPE_RATIONAL + RIGHT_INDICATOR;
+                default:
+                    cant_happen("unrecognised right number type %d", right->type);
+            }
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            switch(right->type) {
+                case VALUE_TYPE_RATIONAL:
+                    *right = rational_to_irrational(right);
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_IRRATIONAL:
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_BIGINT:
+                    *right = bigint_to_irrational(right);
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_STDINT:
+                    *right = int_to_irrational(right);
+                    return VALUE_TYPE_IRRATIONAL;
+                default:
+                    cant_happen("unrecognised right number type %d", right->type);
+            }
+            break;
+        case VALUE_TYPE_BIGINT:
+            switch(right->type) {
+                case VALUE_TYPE_RATIONAL:
+                    *left = int_to_rational(left);
+                    return VALUE_TYPE_RATIONAL;
+                case VALUE_TYPE_IRRATIONAL:
+                    *left = bigint_to_irrational(left);
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_BIGINT:
+                    return VALUE_TYPE_BIGINT;
+                case VALUE_TYPE_STDINT:
+                    *right = int_to_bigint(right);
+                    return VALUE_TYPE_BIGINT + RIGHT_INDICATOR;
+                default:
+                    cant_happen("unrecognised right number type %d", right->type);
+            }
+            break;
+        case VALUE_TYPE_STDINT:
+            switch(right->type) {
+                case VALUE_TYPE_RATIONAL:
+                    *left = int_to_rational(left);
+                    return VALUE_TYPE_RATIONAL;
+                case VALUE_TYPE_IRRATIONAL:
+                    *left = int_to_irrational(left);
+                    return VALUE_TYPE_IRRATIONAL;
+                case VALUE_TYPE_BIGINT:
+                    *left = int_to_bigint(left);
+                    return VALUE_TYPE_BIGINT;
+                case VALUE_TYPE_STDINT:
+                    return VALUE_TYPE_STDINT;
+                default:
+                    cant_happen("unrecognised right number type %d", right->type);
+            }
+            break;
+        default:
+            cant_happen("unrecognised left number type %d", left->type);
+    }
+}
+
 static inline Cmp int_cmp_bb(Value left, Value right) {
     return cmpBigInt(left.val.bigint, right.val.bigint);
 }
 
 static inline Cmp int_cmp_bi(Value left, Value right) {
     return cmpBigIntInt(left.val.bigint, right.val.stdint);
+}
+
+static inline Cmp int_cmp_bf(Value left, Value right) {
+    return cmpBigIntDouble(left.val.bigint, right.val.irrational);
 }
 
 static inline Cmp int_cmp_ib(Value left, Value right) {
@@ -105,23 +260,82 @@ static inline Cmp int_cmp_ii(Value left, Value right) {
         CMP_GT;
 }
 
-static Cmp intCmp(Value left, Value right) {
-    ENTER(intCmp);
+static inline Cmp int_cmp_if(Value left, Value right) {
+    return left.val.stdint < right.val.irrational ? CMP_LT :
+        left.val.stdint == right.val.irrational ? CMP_EQ :
+        CMP_GT;
+}
+
+static inline Cmp int_cmp_fb(Value left, Value right) {
+    return cmpDoubleBigInt(left.val.stdint, right.val.bigint);
+}
+
+static inline Cmp int_cmp_fi(Value left, Value right) {
+    return left.val.irrational < right.val.stdint ? CMP_LT :
+        left.val.irrational == right.val.stdint ? CMP_EQ :
+        CMP_GT;
+}
+
+static inline Cmp int_cmp_ff(Value left, Value right) {
+    return left.val.irrational < right.val.irrational ? CMP_LT :
+        left.val.irrational == right.val.irrational ? CMP_EQ :
+        CMP_GT;
+}
+
+static Cmp numCmp(Value left, Value right) {
+    ENTER(numCmp);
     Cmp res;
-    if (IS_BIGINT(left)) {
-        if (IS_BIGINT(right)) {
-            res = int_cmp_bb(left, right);
-        } else {
-            res = int_cmp_bi(left, right);
-        }
-    } else {
-        if (IS_BIGINT(right)) {
-            res = int_cmp_ib(left, right);
-        } else {
-            res = int_cmp_ii(left, right);
-        }
+    switch (left.type) {
+        case VALUE_TYPE_BIGINT:
+            switch (right.type) {
+                case VALUE_TYPE_BIGINT:
+                    res = int_cmp_bb(left, right);
+                    break;
+                case VALUE_TYPE_STDINT:
+                    res = int_cmp_bi(left, right);
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    res = int_cmp_bf(left, right);
+                    break;
+                default:
+                    cant_happen("invalid number type");
+            }
+            break;
+        case VALUE_TYPE_STDINT:
+            switch (right.type) {
+                case VALUE_TYPE_BIGINT:
+                    res = int_cmp_ib(left, right);
+                    break;
+                case VALUE_TYPE_STDINT:
+                    res = int_cmp_ii(left, right);
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    res = int_cmp_if(left, right);
+                    break;
+                default:
+                    cant_happen("invalid number type");
+            }
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            switch (right.type) {
+                case VALUE_TYPE_BIGINT:
+                    res = int_cmp_fb(left, right);
+                    break;
+                case VALUE_TYPE_STDINT:
+                    res = int_cmp_fi(left, right);
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    res = int_cmp_ff(left, right);
+                    break;
+                default:
+                    cant_happen("invalid number type");
+            }
+            break;
+        default:
+            cant_happen("invalid number type");
     }
-    LEAVE(intCmp);
+
+    LEAVE(numCmp);
     return res;
 }
 
@@ -244,7 +458,7 @@ static Value intSub(Value left, Value right) {
     return res;
 }
 
-static Value intDiv(Value left, Value right) {
+static Value basicIntDiv(Value left, Value right) {
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -297,6 +511,8 @@ static Value safe_pow(int a, int b) {
 }
 
 static Value intPow(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -323,6 +539,8 @@ static Value intPow(Value left, Value right) {
 }
 
 static Value intMod(Value left, Value right) {
+    ASSERT_INT(left);
+    ASSERT_INT(right);
     Value res;
     int save = PROTECT(NULL);
     if (IS_BIGINT(left)) {
@@ -409,6 +627,7 @@ static void intNegInPlace(Value *v) {
 }
 
 static Value intNeg(Value v) {
+    ASSERT_INT(v);
     int save = PROTECT(NULL);
     if (IS_BIGINT(v)) {
         BigInt *bi = copyBigInt(v.val.bigint);
@@ -422,6 +641,15 @@ static Value intNeg(Value v) {
     return v;
 }
 
+static Value numNeg(Value v) {
+    if (IS_IRRATIONAL(v)) {
+        v.val.irrational = -v.val.irrational;
+        return v;
+    } else {
+        return intNeg(v);
+    }
+}
+
 static bool intIsNeg(Value v) {
     if (IS_BIGINT(v)) {
         return isNegBigInt(v.val.bigint);
@@ -431,14 +659,30 @@ static bool intIsNeg(Value v) {
 }
 
 ////////////////////////
-// rational operations
+// bigint operations
 ////////////////////////
 
-#ifdef SAFETY_CHECKS
-#  define ASSERT_RATIONAL(x) ASSERT((x).type == VALUE_TYPE_RATIONAL)
-#else
-#  define ASSERT_RATIONAL(x)
-#endif
+static inline Cmp bigCmp(Value left, Value right) {
+    ASSERT_BIGINT(left);
+    ASSERT_BIGINT(right);
+    return cmpBigInt(left.val.bigint, right.val.bigint);
+}
+
+////////////////////////
+// stdint operations
+////////////////////////
+
+static inline Cmp stdCmp(Value left, Value right) {
+    ASSERT_STDINT(left);
+    ASSERT_STDINT(right);
+    return left.val.stdint < right.val.stdint ? CMP_LT :
+           left.val.stdint == right.val.stdint ? CMP_EQ : CMP_GT;
+
+}
+
+////////////////////////
+// rational operations
+////////////////////////
 
 static Cmp ratCmp(Value left, Value right) {
     ENTER(ratCmp);
@@ -450,20 +694,9 @@ static Cmp ratCmp(Value left, Value right) {
     Value bc = intMul(left.val.vec->values[DENOMINATOR],
                        right.val.vec->values[NUMERATOR]);
     protectValue(bc);
-    Cmp res = intCmp(ad, bc);
+    Cmp res = numCmp(ad, bc);
     LEAVE(ratCmp);
     UNPROTECT(save);
-    return res;
-}
-
-static Value makeRational(Value numerator, Value denominator) {
-    Vec *vec = newVec(2);
-    vec->values[NUMERATOR] = numerator;
-    vec->values[DENOMINATOR] = denominator;
-    Value res = {
-        .type = VALUE_TYPE_RATIONAL,
-        .val = VALUE_VAL_RATIONAL(vec)
-    };
     return res;
 }
 
@@ -481,26 +714,27 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
             protectValue(res);
         } else {
             // only left rational
-            right = makeRational(right, One);
+            right = ratValue(right, One);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
             protectValue(res);
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         // only right rational
-        left = makeRational(left, One);
+        left = ratValue(left, One);
         protectValue(left);
         res = ratOp(left, right, op, intOp, false);
         protectValue(res);
     } else {
         // neither rational
+        eprintf("simplify\n");
         if (simplify) {
             res = intOp(left, right);
             protectValue(res);
         } else {
-            left = makeRational(left, One);
+            left = ratValue(left, One);
             protectValue(left);
-            right = makeRational(right, One);
+            right = ratValue(right, One);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
             protectValue(res);
@@ -519,20 +753,20 @@ static Value ratSimplify(Value numerator, Value denominator) {
     Value gcd = intGcd(numerator, denominator);
     int save = protectValue(gcd);
     Value res;
-    if (intCmp(gcd, One) != CMP_EQ) {
-        numerator = intDiv(numerator, gcd);
+    if (numCmp(gcd, One) != CMP_EQ) {
+        numerator = basicIntDiv(numerator, gcd);
         protectValue(numerator);
-        denominator = intDiv(denominator, gcd);
+        denominator = basicIntDiv(denominator, gcd);
         protectValue(denominator);
     }
     if (intIsNeg(denominator)) {
         intNegInPlace(&numerator);
         intNegInPlace(&denominator);
     }
-    if (intCmp(denominator, One) == CMP_EQ) {
+    if (numCmp(denominator, One) == CMP_EQ) {
         res = numerator;
     } else {
-        res = makeRational(numerator, denominator);
+        res = ratValue(numerator, denominator);
         protectValue(res);
     }
     LEAVE(ratSimplify);
@@ -589,25 +823,30 @@ static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
-static Value ratDiv(IntegerBinOp base_op, Value left, Value right) {
-    ENTER(ratDiv);
+static Value ratDiv3(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(ratDiv3);
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value newRight = makeRational(right.val.vec->values[DENOMINATOR], right.val.vec->values[NUMERATOR]);
+    Value newRight = ratValue(right.val.vec->values[DENOMINATOR], right.val.vec->values[NUMERATOR]);
     int save = protectValue(newRight);
     Value res = rat_ac_bd(base_op, left, newRight);
     protectValue(res);
-    LEAVE(ratDiv);
+    LEAVE(ratDiv3);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
+static Value ratDiv(Value left, Value right) {
+    return ratDiv3(intMul, left, right);
+}
+
 static Value ratPow(Value left, Value right) {
     ENTER(ratPow);
     ASSERT_RATIONAL(left);
+    ASSERT_INT(right);
     Value numerator = left.val.vec->values[NUMERATOR];
     Value denominator = left.val.vec->values[DENOMINATOR];
     numerator = intPow(numerator, right);
@@ -622,6 +861,77 @@ static Value ratPow(Value left, Value right) {
     return res;
 }
 
+static Value ratMod(Value left, Value right) {
+    ENTER(ratMod);
+    ASSERT_RATIONAL(left);
+    ASSERT_RATIONAL(right);
+    Value res = ratOp(left, right, rat_ad_bc_cd, intMod, true);
+    LEAVE(ratMod);
+    return res;
+}
+
+static Value ratMul(Value left, Value right) {
+    return ratOp(left, right, rat_ac_bd, intMul, true);
+}
+
+static Value intDiv(Value left, Value right) {
+    // N.B. intMul not basicIntDiv
+    return ratOp(left, right, ratDiv3, intMul, false);
+}
+
+static Value ratSub(Value left, Value right) {
+    return ratOp(left, right, rat_ad_bc_cd, intSub, true);
+}
+
+static Value ratAdd(Value left, Value right) {
+    return ratOp(left, right, rat_ad_bc_cd, intAdd, true);
+}
+
+//////////////////////////
+// irrational operations
+//////////////////////////
+
+static inline Cmp irrCmp(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return left.val.irrational < right.val.irrational ? CMP_LT :
+           left.val.irrational == right.val.irrational ? CMP_EQ : CMP_GT;
+}
+
+static Value irrMod(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return irrValue(fmod(left.val.irrational, right.val.irrational));
+}
+
+static Value irrMul(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return irrValue(left.val.irrational * right.val.irrational);
+}
+
+static Value irrDiv(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return irrValue(left.val.irrational / right.val.irrational);
+}
+
+static Value irrSub(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return irrValue(left.val.irrational - right.val.irrational);
+}
+
+static Value irrAdd(Value left, Value right) {
+    ASSERT_IRRATIONAL(left);
+    ASSERT_IRRATIONAL(right);
+    return irrValue(left.val.irrational * right.val.irrational);
+}
+
+////////////////////////
+// generic operations
+////////////////////////
+
 #ifdef SAFETY_CHECKS
 #  define CHECK_INITIALIZED() do { \
     if (!arithmetic_initialized) { \
@@ -632,13 +942,49 @@ static Value ratPow(Value left, Value right) {
 #  define CHECK_INITIALIZED()
 #endif
 
+typedef Value (*ValOp)(Value, Value);
+
+static Value dispatch(Value left, Value right, ValOp intOp, ValOp bigOp, ValOp ratOp, ValOp irrOp) {
+    ENTER(dispatch);
+    int save = PROTECT(NULL);
+    Value res;
+    switch (promote(&left, &right)) {
+        case VALUE_TYPE_RATIONAL:
+            protectValue(left);
+            res = ratOp(left, right);
+            break;
+        case VALUE_TYPE_RATIONAL + RIGHT_INDICATOR:
+            protectValue(right);
+            res = ratOp(left, right);
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            res = irrOp(left, right);
+            break;
+        case VALUE_TYPE_STDINT:
+            res = intOp(left, right);
+            break;
+        case VALUE_TYPE_BIGINT:
+            protectValue(left);
+            res = bigOp(left, right);
+            break;
+        case VALUE_TYPE_BIGINT + RIGHT_INDICATOR:
+            protectValue(left);
+            res = bigOp(left, right);
+            break;
+        default:
+            cant_happen("unexpected result from promote");
+    }
+    LEAVE(dispatch);
+    UNPROTECT(save);
+    return res;
+}
 
 Value nadd(Value left, Value right) {
     ENTER(nadd);
     CHECK_INITIALIZED();
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ad_bc_cd, intAdd, true);
+    Value res = dispatch(left, right, intAdd, intAdd, ratAdd, irrAdd);
     LEAVE(nadd);
     return res;
 }
@@ -646,7 +992,7 @@ Value nadd(Value left, Value right) {
 Value nsub(Value left, Value right) {
     ENTER(nsub);
     CHECK_INITIALIZED();
-    Value res = ratOp(left, right, rat_ad_bc_cd, intSub, true);
+    Value res = dispatch(left, right, intSub, intSub, ratSub, irrSub);
     LEAVE(nsub);
     return res;
 }
@@ -656,7 +1002,7 @@ Value nmul(Value left, Value right) {
     CHECK_INITIALIZED();
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ac_bd, intMul, true);
+    Value res = dispatch(left, right, intMul, intMul, ratMul, irrMul);
     int save = protectValue(res);
     LEAVE(nmul);
     IFDEBUG(ppNumber(res));
@@ -667,19 +1013,16 @@ Value nmul(Value left, Value right) {
 Value ndiv(Value left, Value right) {
     ENTER(ndiv);
     CHECK_INITIALIZED();
-    // N.B. intMul not intDiv
-    Value res = ratOp(left, right, ratDiv, intMul, false);
-    int save = protectValue(res);
+    Value res = dispatch(left, right, intDiv, intDiv, ratDiv, irrDiv);
     LEAVE(ndiv);
     IFDEBUG(ppNumber(res));
-    UNPROTECT(save);
     return res;
 }
 
 Value nmod(Value left, Value right) {
     ENTER(nmod);
     CHECK_INITIALIZED();
-    Value res = ratOp(left, right, rat_ad_bc_cd, intMod, true);
+    Value res = dispatch(left, right, intMod, intMod, ratMod, irrMod);
     LEAVE(nmod);
     return res;
 }
@@ -690,22 +1033,85 @@ Value npow(Value left, Value right) {
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     Value res;
-    int save = protectValue(left);
-    protectValue(right);
-    if (left.type == VALUE_TYPE_RATIONAL) {
-        if (right.type == VALUE_TYPE_RATIONAL) {
-            cant_happen("raising numbers to a rational power not supported yet");
-        } else {
-            // only left rational
-            res = ratPow(left, right);
-            protectValue(res);
-        }
-    } else if (right.type == VALUE_TYPE_RATIONAL) {
-        cant_happen("raising numbers to a rational power not supported yet");
-    } else {
-        // neither rational
-        res = intPow(left, right);
-        protectValue(res);
+    int save = PROTECT(NULL);
+    switch(left.type) {
+        case VALUE_TYPE_RATIONAL:
+            switch(right.type) {
+                case VALUE_TYPE_RATIONAL:
+                    left = rational_to_irrational(&left);
+                    right = rational_to_irrational(&right);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    left = rational_to_irrational(&left);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_BIGINT:
+                case VALUE_TYPE_STDINT:
+                    res = ratPow(left, right);
+                    break;
+                default:
+                    cant_happen("unrecognised right number type %d", right.type);
+            }
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            switch(right.type) {
+                case VALUE_TYPE_RATIONAL:
+                    right = rational_to_irrational(&right);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_BIGINT:
+                case VALUE_TYPE_STDINT:
+                    right = int_to_irrational(&right);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                default:
+                    cant_happen("unrecognised right number type %d", right.type);
+            }
+            break;
+        case VALUE_TYPE_BIGINT:
+            switch(right.type) {
+                case VALUE_TYPE_RATIONAL:
+                    left = int_to_irrational(&left);
+                    right = rational_to_irrational(&right);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    left = int_to_irrational(&left);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_BIGINT:
+                case VALUE_TYPE_STDINT:
+                    res = intPow(left, right);
+                    break;
+                default:
+                    cant_happen("unrecognised right number type %d", right.type);
+            }
+            break;
+        case VALUE_TYPE_STDINT:
+            switch(right.type) {
+                case VALUE_TYPE_RATIONAL:
+                    left = int_to_irrational(&left);
+                    right = rational_to_irrational(&right);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_IRRATIONAL:
+                    left = int_to_irrational(&left);
+                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_BIGINT:
+                case VALUE_TYPE_STDINT:
+                    res = intPow(left, right);
+                    break;
+                default:
+                    cant_happen("unrecognised right number type %d", right.type);
+            }
+            break;
+        default:
+            cant_happen("unrecognised left number type %d", left.type);
     }
     LEAVE(npow);
     IFDEBUG(ppNumber(res));
@@ -718,22 +1124,31 @@ Cmp ncmp(Value left, Value right) {
     CHECK_INITIALIZED();
     Cmp res;
     int save = PROTECT(NULL);
-    if (left.type == VALUE_TYPE_RATIONAL) {
-        if (right.type == VALUE_TYPE_RATIONAL) {
-            res = ratCmp(left, right);
-        } else {
-            right = makeRational(right, One);
-            protectValue(right);
-            res = ratCmp(left, right);
-        }
-    } else {
-        if (right.type == VALUE_TYPE_RATIONAL) {
-            left = makeRational(left, One);
+    switch (promote(&left, &right)) {
+        case VALUE_TYPE_RATIONAL:
             protectValue(left);
             res = ratCmp(left, right);
-        } else {
-            res = intCmp(left, right);
-        }
+            break;
+        case VALUE_TYPE_RATIONAL + RIGHT_INDICATOR:
+            protectValue(right);
+            res = ratCmp(left, right);
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            res = irrCmp(left, right);
+            break;
+        case VALUE_TYPE_STDINT:
+            res = stdCmp(left, right);
+            break;
+        case VALUE_TYPE_BIGINT:
+            protectValue(left);
+            res = bigCmp(left, right);
+            break;
+        case VALUE_TYPE_BIGINT + RIGHT_INDICATOR:
+            protectValue(left);
+            res = bigCmp(left, right);
+            break;
+        default:
+            cant_happen("unexpected result from promote");
     }
     LEAVE(ncmp);
     UNPROTECT(save);
@@ -747,10 +1162,10 @@ Value nneg(Value v) {
     if (v.type == VALUE_TYPE_RATIONAL) {
         Value numerator = intNeg(v.val.vec->values[NUMERATOR]);
         int save = protectValue(numerator);
-        res = makeRational(numerator, v.val.vec->values[DENOMINATOR]);
+        res = ratValue(numerator, v.val.vec->values[DENOMINATOR]);
         UNPROTECT(save);
     } else {
-        res = intNeg(v);
+        res = numNeg(v);
     }
     LEAVE(nneg);
     return res;

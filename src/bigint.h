@@ -64,9 +64,11 @@ extern "C" {
         bigint bi;
     } BigInt;
 
-    BigInt *newBigInt(bigint bi);
     MaybeBigInt *newMaybeBigInt(bigint bi);
     MaybeBigInt *fakeBigInt(int little);
+    MaybeBigInt *irrationalBigInt(double f);
+
+    BigInt *newBigInt(bigint bi);
     BigInt *bigIntFromInt(int c);
     BigInt *bigIntFromAddition(int a, int b);
     BigInt *bigIntFromMultiplication(int a, int b);
@@ -82,7 +84,9 @@ extern "C" {
     void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
     Cmp cmpBigInt(BigInt *a, BigInt *b);
     Cmp cmpBigIntInt(BigInt *a, int b);
+    Cmp cmpBigIntDouble(BigInt *a, double b);
     static inline Cmp cmpIntBigInt(int a, BigInt *b) { return (Cmp)(cmpBigIntInt(b, a) * -1); }
+    static inline Cmp cmpDoubleBigInt(double a, BigInt *b) { return (Cmp)(cmpBigIntDouble(b, a) * -1); }
     int cmpMaybeBigInt(MaybeBigInt *a, MaybeBigInt *b);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
@@ -105,6 +109,7 @@ extern "C" {
     BigInt *gcdBigInt(BigInt *a, BigInt *b);
     BigInt *gcdBigIntInt(BigInt *a, int b);
     BigInt *gcdIntBigInt(int a, BigInt *b);
+    double bigIntToDouble(BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
     void negateBigInt(BigInt *b);
     bool isNegBigInt(BigInt *b);

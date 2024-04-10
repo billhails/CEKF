@@ -84,6 +84,11 @@ static void writeIntAt(int loc, ByteCodeArray *b, int word) {
     memcpy(&b->entries[loc], &word, sizeof(int));
 }
 
+static void writeDoubleAt(int loc, ByteCodeArray *b, double f) {
+    DEBUG("%04x writeDouble %f", loc, f);
+    memcpy(&b->entries[loc], &f, sizeof(double));
+}
+
 static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
     word offset = b->count - patch;
     writeWordAt(patch, b, offset);
@@ -105,6 +110,12 @@ static void addInt(ByteCodeArray *b, int word) {
     reserve(b, sizeof(int));
     writeIntAt(b->count, b, word);
     b->count += sizeof(int);
+}
+
+static void addIrrational(ByteCodeArray *b, double f) {
+    reserve(b, sizeof(double));
+    writeDoubleAt(b->count, b, f);
+    b->count += sizeof(double);
 }
 
 static int reserveInt(ByteCodeArray *b) {
@@ -388,6 +399,10 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
                     addByte(b, BYTECODE_BIGINT);
                     addBig(b, xx->option->big);
                     break;
+                case BI_IRRATIONAL:
+                    addByte(b, BYTECODE_IRRATIONAL);
+                    addIrrational(b, xx->option->irrational);
+                    break;
                 default:
                     cant_happen("unsupported MaybeBigIntType %d", xx->option->type);
             }
@@ -573,6 +588,10 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
                     case BI_BIG:
                         addByte(b, BYTECODE_BIGINT);
                         addBig(b, x->val.biginteger->big);
+                        break;
+                    case BI_IRRATIONAL:
+                        addByte(b, BYTECODE_IRRATIONAL);
+                        addIrrational(b, x->val.biginteger->irrational);
                         break;
                     default:
                         cant_happen("unsupported MaybeBigInt type %d", x->val.biginteger->type);
