@@ -54,13 +54,13 @@
 #  define ASSERT_INT(x)
 #endif
 
-// promote adds this to its result if it malloc'd a right value
+// coerce adds this to its result if it malloc'd a right value
 #define RIGHT_INDICATOR 1024
 
 typedef Value (*IntegerBinOp)(Value, Value);
 typedef Value (*ParameterizedBinOp)(IntegerBinOp, Value, Value);
 
-bool arithmetic_initialized = false;
+static bool arithmetic_initialized = false;
 
 static Value One = {
     .type = VALUE_TYPE_STDINT,
@@ -137,7 +137,7 @@ static Value int_to_bigint(Value *v) {
     return bigintValue(bigIntFromInt(v->val.stdint));
 }
 
-static int promote(Value *left, Value *right) {
+static int coerce(Value *left, Value *right) {
     switch(left->type) {
         case VALUE_TYPE_RATIONAL:
             switch(right->type) {
@@ -922,7 +922,7 @@ static Value dispatch(Value left, Value right, ValOp intOp, ValOp bigOp, ValOp r
     ENTER(dispatch);
     int save = PROTECT(NULL);
     Value res;
-    switch (promote(&left, &right)) {
+    switch (coerce(&left, &right)) {
         case VALUE_TYPE_RATIONAL:
             protectValue(left);
             res = ratOp(left, right);
@@ -946,7 +946,7 @@ static Value dispatch(Value left, Value right, ValOp intOp, ValOp bigOp, ValOp r
             res = bigOp(left, right);
             break;
         default:
-            cant_happen("unexpected result from promote");
+            cant_happen("unexpected result from coerce");
     }
     LEAVE(dispatch);
     UNPROTECT(save);
@@ -1098,7 +1098,7 @@ Cmp ncmp(Value left, Value right) {
     CHECK_INITIALIZED();
     Cmp res;
     int save = PROTECT(NULL);
-    switch (promote(&left, &right)) {
+    switch (coerce(&left, &right)) {
         case VALUE_TYPE_RATIONAL:
             protectValue(left);
             res = ratCmp(left, right);
@@ -1122,7 +1122,7 @@ Cmp ncmp(Value left, Value right) {
             res = bigCmp(left, right);
             break;
         default:
-            cant_happen("unexpected result from promote");
+            cant_happen("unexpected result from coerce");
     }
     LEAVE(ncmp);
     UNPROTECT(save);
