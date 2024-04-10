@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <math.h>
 
 #include "common.h"
 #include "debug.h"
@@ -113,6 +114,10 @@ static inline int readCurrentWord(void) {
 
 static inline int readCurrentInt(void) {
     return readInt(&state.B, &state.C);
+}
+
+static inline double readCurrentIrrational(void) {
+    return readDouble(&state.B, &state.C);
 }
 
 static inline BigInt *readCurrentBigInt(void) {
@@ -425,9 +430,7 @@ static void step() {
                     Clo *clo = newClo(nargs, state.C, state.E);
                     int save = PROTECT(clo);
                     snapshotClo(&state.S, clo, letRecOffset);
-                    Value v;
-                    v.type = VALUE_TYPE_CLO;
-                    v.val = VALUE_VAL_CLO(clo);
+                    Value v = cloValue(clo);
                     push(v);
                     UNPROTECT(save);
                     state.C = end;
@@ -478,6 +481,12 @@ static void step() {
                             break;
                         case VALUE_TYPE_STDINT:
                             printf("%d", b.val.stdint);
+                            break;
+                        case VALUE_TYPE_IRRATIONAL:
+                            if( fmod(b.val.irrational, 1) == 0)
+                                printf("%.1f", b.val.irrational);
+                            else
+                                printf("%g", b.val.irrational);
                             break;
                         case VALUE_TYPE_RATIONAL:
                             putValue(b.val.vec->values[0]);
@@ -684,9 +693,7 @@ static void step() {
                     int save = PROTECT(v);
                     copyToVec(v);
                     popn(size);
-                    Value val;
-                    val.type = VALUE_TYPE_VEC;
-                    val.val = VALUE_VAL_VEC(v);
+                    Value val = vecValue(v);
                     push(val);
                     UNPROTECT(save);
                 }
@@ -768,9 +775,7 @@ static void step() {
                             case BYTECODE_BIGINT: {
                                 BigInt *bigInt = readCurrentBigInt();
                                 PROTECT(bigInt);
-                                Value u;
-                                u.type = VALUE_TYPE_BIGINT;
-                                u.val = VALUE_VAL_BIGINT(bigInt);
+                                Value u = bigintValue(bigInt);
                                 protectValue(u);
                                 int offset = readCurrentOffset();
                                 if (ncmp(u, v) == CMP_EQ) {
@@ -781,10 +786,17 @@ static void step() {
                             break;
                             case BYTECODE_STDINT: {
                                 int option = readCurrentInt();
-                                Value u;
-                                u.type = VALUE_TYPE_STDINT;
-                                u.val = VALUE_VAL_STDINT(option);
-                                protectValue(u);
+                                Value u = stdintValue(option);
+                                int offset = readCurrentOffset();
+                                if (ncmp(u, v) == CMP_EQ) {
+                                    state.C = offset;
+                                    goto FINISHED_INTCOND;
+                                }
+                            }
+                            break;
+                            case BYTECODE_IRRATIONAL: {
+                                double option = readCurrentIrrational();
+                                Value u = irrationalValue(option);
                                 int offset = readCurrentOffset();
                                 if (ncmp(u, v) == CMP_EQ) {
                                     state.C = offset;
@@ -932,13 +944,19 @@ static void step() {
                     push(vVoid);
                 }
                 break;
+            case BYTECODE_IRRATIONAL:{
+                    // push literal double
+                    double f = readCurrentIrrational();
+                    DEBUGPRINTF("IRRATIONAL [%f]\n", f);
+                    Value v = irrationalValue(f);
+                    push(v);
+            }
+            break;
             case BYTECODE_STDINT:{
                     // push literal int
                     int val = readCurrentInt();
                     DEBUGPRINTF("STDINT [%d]\n", val);
-                    Value v;
-                    v.type = VALUE_TYPE_STDINT;
-                    v.val = VALUE_VAL_STDINT(val);
+                    Value v = stdintValue(val);
                     push(v);
                 }
                 break;
@@ -946,9 +964,7 @@ static void step() {
                     // push literal char
                     char c = readCurrentByte();
                     DEBUGPRINTF("CHAR [%c]\n", c);
-                    Value v;
-                    v.type = VALUE_TYPE_CHARACTER;
-                    v.val = VALUE_VAL_CHARACTER(c);
+                    Value v = characterValue(c);
                     push(v);
                 }
                 break;
@@ -960,9 +976,7 @@ static void step() {
                     fprintBigInt(stdout, bigInt);
                     printf("]\n");
 #endif
-                    Value v;
-                    v.type = VALUE_TYPE_BIGINT;
-                    v.val = VALUE_VAL_BIGINT(bigInt);
+                    Value v = bigintValue(bigInt);
                     push(v);
                     UNPROTECT(save);
                 }
@@ -970,9 +984,7 @@ static void step() {
             case BYTECODE_RETURN:{
                     // push the current continuation and apply
                     DEBUGPRINTF("RETURN\n");
-                    Value kont;
-                    kont.type = VALUE_TYPE_CONT;
-                    kont.val = VALUE_VAL_CONT(state.K);
+                    Value kont = kontValue(state.K);
                     push(kont);
                     applyProc(1);
                 }

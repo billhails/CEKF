@@ -84,6 +84,11 @@ static void writeIntAt(int loc, ByteCodeArray *b, int word) {
     memcpy(&b->entries[loc], &word, sizeof(int));
 }
 
+static void writeDoubleAt(int loc, ByteCodeArray *b, double f) {
+    DEBUG("%04x writeDouble %f", loc, f);
+    memcpy(&b->entries[loc], &f, sizeof(double));
+}
+
 static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
     word offset = b->count - patch;
     writeWordAt(patch, b, offset);
@@ -105,6 +110,12 @@ static void addInt(ByteCodeArray *b, int word) {
     reserve(b, sizeof(int));
     writeIntAt(b->count, b, word);
     b->count += sizeof(int);
+}
+
+static void addIrrational(ByteCodeArray *b, double f) {
+    reserve(b, sizeof(double));
+    writeDoubleAt(b->count, b, f);
+    b->count += sizeof(double);
 }
 
 static int reserveInt(ByteCodeArray *b) {
@@ -379,12 +390,21 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
         for (CexpIntCondCases *xx = x; xx != NULL; xx = xx->next) {
             if (xx->next == NULL)
                 break;          // default case doesn't get a test
-            if (xx->option->fake) {
-                addByte(b, BYTECODE_STDINT);
-                addInt(b, xx->option->little);
-            } else {
-                addByte(b, BYTECODE_BIGINT);
-                addBig(b, xx->option->bi);
+            switch (xx->option->type) {
+                case BI_SMALL:
+                    addByte(b, BYTECODE_STDINT);
+                    addInt(b, xx->option->small);
+                    break;
+                case BI_BIG:
+                    addByte(b, BYTECODE_BIGINT);
+                    addBig(b, xx->option->big);
+                    break;
+                case BI_IRRATIONAL:
+                    addByte(b, BYTECODE_IRRATIONAL);
+                    addIrrational(b, xx->option->irrational);
+                    break;
+                default:
+                    cant_happen("unsupported MaybeBigIntType %d", xx->option->type);
             }
             dispatches[i++] = reserveWord(b);
         }
@@ -560,12 +580,21 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             }
             break;
         case AEXP_TYPE_BIGINTEGER:{
-                if (x->val.biginteger->fake) {
-                    addByte(b, BYTECODE_STDINT);
-                    addInt(b, x->val.biginteger->little);
-                } else {
-                    addByte(b, BYTECODE_BIGINT);
-                    addBig(b, x->val.biginteger->bi);
+                switch (x->val.biginteger->type) {
+                    case BI_SMALL:
+                        addByte(b, BYTECODE_STDINT);
+                        addInt(b, x->val.biginteger->small);
+                        break;
+                    case BI_BIG:
+                        addByte(b, BYTECODE_BIGINT);
+                        addBig(b, x->val.biginteger->big);
+                        break;
+                    case BI_IRRATIONAL:
+                        addByte(b, BYTECODE_IRRATIONAL);
+                        addIrrational(b, x->val.biginteger->irrational);
+                        break;
+                    default:
+                        cant_happen("unsupported MaybeBigInt type %d", x->val.biginteger->type);
                 }
             }
             break;

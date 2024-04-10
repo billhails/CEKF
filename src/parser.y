@@ -104,6 +104,11 @@ static void bigint_add_n(bigint *b, int n) {
     bigint_free(&old);
 }
 
+static MaybeBigInt *makeIrrational(char *str) {
+    double f = atof(str);
+    return irrationalBigInt(f);
+}
+
 static MaybeBigInt *makeMaybeBigInt(char *digits) {
     bool overflowed = false;
     int a = 0;
@@ -265,6 +270,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %token <s> STRING
 %token <s> TYPE_VAR
 %token <s> VAR
+%token <s> IRRATIONAL
 
 %right ARROW
 %right THEN
@@ -410,7 +416,8 @@ consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList(
           | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
-number : NUMBER  { $$ = makeMaybeBigInt($1); }
+number : NUMBER      { $$ = makeMaybeBigInt($1); }
+       | IRRATIONAL  { $$ = makeIrrational($1); }
        ;
 
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
