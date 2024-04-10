@@ -97,46 +97,20 @@ static void ppNumber(Value number) {
 }
 #endif
 
-static Value intValue(int i) {
-    Value val;
-    val.type = VALUE_TYPE_STDINT;
-    val.val = VALUE_VAL_STDINT(i);
-    return val;
-}
-
-static Value irrValue(double f) __attribute__((unused));
-
-static Value irrValue(double f) {
-    Value val;
-    val.type = VALUE_TYPE_IRRATIONAL;
-    val.val = VALUE_VAL_IRRATIONAL(f);
-    return val;
-}
-
-static Value bigIntValue(BigInt *i) {
-    Value val;
-    val.type = VALUE_TYPE_BIGINT;
-    val.val = VALUE_VAL_BIGINT(i);
-    return val;
-}
-
 static Value ratValue(Value numerator, Value denominator) {
     Vec *vec = newVec(2);
     vec->values[NUMERATOR] = numerator;
     vec->values[DENOMINATOR] = denominator;
-    Value res = {
-        .type = VALUE_TYPE_RATIONAL,
-        .val = VALUE_VAL_RATIONAL(vec)
-    };
+    Value res = rationalValue(vec);
     return res;
 }
 
 static Value int_to_irrational(Value *integer) {
     ASSERT_INT(*integer);
     if (integer->type == VALUE_TYPE_BIGINT) {
-        return irrValue(bigIntToDouble(integer->val.bigint));
+        return irrationalValue(bigIntToDouble(integer->val.bigint));
     } else {
-        return irrValue(integer->val.stdint);
+        return irrationalValue(integer->val.stdint);
     }
 }
 
@@ -144,23 +118,23 @@ static Value rational_to_irrational(Value *rational) {
     ASSERT_RATIONAL(*rational);
     Value numerator = int_to_irrational(&(rational->val.vec->values[NUMERATOR]));
     Value denominator = int_to_irrational(&(rational->val.vec->values[DENOMINATOR]));
-    return irrValue(numerator.val.irrational / denominator.val.irrational);
+    return irrationalValue(numerator.val.irrational / denominator.val.irrational);
 }
 
 static Value int_to_rational(Value *integer) {
     ASSERT_INT(*integer);
-    Value one = intValue(1);
+    Value one = stdintValue(1);
     return ratValue(*integer, one);
 }
 
 static Value bigint_to_irrational(Value *v) {
     ASSERT_BIGINT(*v);
-    return irrValue(bigIntToDouble(v->val.bigint));
+    return irrationalValue(bigIntToDouble(v->val.bigint));
 }
 
 static Value int_to_bigint(Value *v) {
     ASSERT_STDINT(*v);
-    return bigIntValue(bigIntFromInt(v->val.stdint));
+    return bigintValue(bigIntFromInt(v->val.stdint));
 }
 
 static int promote(Value *left, Value *right) {
@@ -344,11 +318,11 @@ static Value safe_add(int a, int b) {
     if (__builtin_add_overflow(a, b, &c)) {
         BigInt *big = bigIntFromAddition(a, b);
         int save = PROTECT(big);
-        Value res = bigIntValue(big);
+        Value res = bigintValue(big);
         UNPROTECT(save);
         return res;
     } else {
-        return intValue(c);
+        return stdintValue(c);
     }
 }
 
@@ -360,17 +334,17 @@ static Value intAdd(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *b = addBigInt(left.val.bigint, right.val.bigint);
             PROTECT(b);
-            res = bigIntValue(b);
+            res = bigintValue(b);
         } else {
             BigInt *b = addBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(b);
-            res = bigIntValue(b);
+            res = bigintValue(b);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *b = addBigIntInt(right.val.bigint, left.val.stdint);
             PROTECT(b);
-            res = bigIntValue(b);
+            res = bigintValue(b);
         } else {
             res = safe_add(left.val.stdint, right.val.stdint);
         }
@@ -385,11 +359,11 @@ static Value safe_mul(int a, int b) {
     if (__builtin_mul_overflow(a, b, &c)) {
         BigInt *big = bigIntFromMultiplication(a, b);
         int save = PROTECT(big);
-        Value res = bigIntValue(big);
+        Value res = bigintValue(big);
         UNPROTECT(save);
         return res;
     } else {
-        return intValue(c);
+        return stdintValue(c);
     }
 }
 
@@ -400,17 +374,17 @@ static Value intMul(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = mulBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             BigInt *bi = mulBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *bi = mulBigIntInt(right.val.bigint, left.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             res = safe_mul(left.val.stdint, right.val.stdint);
         }
@@ -424,11 +398,11 @@ static Value safe_sub(int a, int b) {
     if (__builtin_sub_overflow(a, b, &c)) {
         BigInt *big = bigIntFromSubtraction(a, b);
         int save = PROTECT(big);
-        Value res = bigIntValue(big);
+        Value res = bigintValue(big);
         UNPROTECT(save);
         return res;
     } else {
-        return intValue(c);
+        return stdintValue(c);
     }
 }
 
@@ -439,17 +413,17 @@ static Value intSub(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = subBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             BigInt *bi = subBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *bi = subIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             res = safe_sub(left.val.stdint, right.val.stdint);
         }
@@ -468,14 +442,14 @@ static Value basicIntDiv(Value left, Value right) {
             }
             BigInt *bi = divBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted div zero");
             }
             BigInt *bi = divBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(right)) {
@@ -484,13 +458,13 @@ static Value basicIntDiv(Value left, Value right) {
             }
             BigInt *bi = divIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted div zero");
             }
             // division can't overflow
-            res = intValue(left.val.stdint / right.val.stdint);
+            res = stdintValue(left.val.stdint / right.val.stdint);
         }
     }
     UNPROTECT(save);
@@ -502,11 +476,11 @@ static Value safe_pow(int a, int b) {
     if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
         BigInt *big = bigIntFromPower(a, b);
         int save = PROTECT(big);
-        Value res = bigIntValue(big);
+        Value res = bigintValue(big);
         UNPROTECT(save);
         return res;
     } else {
-        return intValue((int) f);
+        return stdintValue((int) f);
     }
 }
 
@@ -519,17 +493,17 @@ static Value intPow(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *bi = powIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             res = safe_pow(left.val.stdint, right.val.stdint);
         }
@@ -550,14 +524,14 @@ static Value intMod(Value left, Value right) {
             }
             BigInt *bi = modBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted mod zero");
             }
             BigInt *bi = modBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(right)) {
@@ -566,13 +540,13 @@ static Value intMod(Value left, Value right) {
             }
             BigInt *bi = modIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted mod zero");
             }
             // modulus can't overflow
-            res = intValue(left.val.stdint % right.val.stdint);
+            res = stdintValue(left.val.stdint % right.val.stdint);
         }
     }
     UNPROTECT(save);
@@ -599,19 +573,19 @@ static Value intGcd(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = gcdBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
             BigInt *bi = gcdBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         }
     } else {
         if (IS_BIGINT(left)) {
             BigInt *bi = gcdIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigIntValue(bi);
+            res = bigintValue(bi);
         } else {
-            res = intValue(gcd(left.val.stdint, right.val.stdint));
+            res = stdintValue(gcd(left.val.stdint, right.val.stdint));
         }
     }
     UNPROTECT(save);
@@ -633,7 +607,7 @@ static Value intNeg(Value v) {
         BigInt *bi = copyBigInt(v.val.bigint);
         PROTECT(bi);
         negateBigInt(bi);
-        v = bigIntValue(bi);
+        v = bigintValue(bi);
     } else {
         v.val.stdint = -(v.val.stdint);
     }
@@ -901,31 +875,31 @@ static inline Cmp irrCmp(Value left, Value right) {
 static Value irrMod(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrValue(fmod(left.val.irrational, right.val.irrational));
+    return irrationalValue(fmod(left.val.irrational, right.val.irrational));
 }
 
 static Value irrMul(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrValue(left.val.irrational * right.val.irrational);
+    return irrationalValue(left.val.irrational * right.val.irrational);
 }
 
 static Value irrDiv(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrValue(left.val.irrational / right.val.irrational);
+    return irrationalValue(left.val.irrational / right.val.irrational);
 }
 
 static Value irrSub(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrValue(left.val.irrational - right.val.irrational);
+    return irrationalValue(left.val.irrational - right.val.irrational);
 }
 
 static Value irrAdd(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrValue(left.val.irrational * right.val.irrational);
+    return irrationalValue(left.val.irrational * right.val.irrational);
 }
 
 ////////////////////////
@@ -1040,11 +1014,11 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL:
                     left = rational_to_irrational(&left);
                     right = rational_to_irrational(&right);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = rational_to_irrational(&left);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
@@ -1058,15 +1032,15 @@ Value npow(Value left, Value right) {
             switch(right.type) {
                 case VALUE_TYPE_RATIONAL:
                     right = rational_to_irrational(&right);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_IRRATIONAL:
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     right = int_to_irrational(&right);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
@@ -1077,11 +1051,11 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL:
                     left = int_to_irrational(&left);
                     right = rational_to_irrational(&right);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(&left);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
@@ -1096,11 +1070,11 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL:
                     left = int_to_irrational(&left);
                     right = rational_to_irrational(&right);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(&left);
-                    res = irrValue(pow(left.val.irrational, right.val.irrational));
+                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:

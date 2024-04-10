@@ -70,4 +70,75 @@ extern Value vLt;
 extern Value vEq;
 extern Value vGt;
 
+static inline Value voidValue() {
+    Value v;
+    v.type = VALUE_TYPE_VOID;
+    v.val = VALUE_VAL_NONE();
+    return v;
+}
+
+static inline Value stdintValue(int x) {
+    Value v;
+    v.type = VALUE_TYPE_STDINT;
+    v.val = VALUE_VAL_STDINT(x);
+    return v;
+}
+static inline Value bigintValue(BigInt * x) {
+    Value v;
+    v.type = VALUE_TYPE_BIGINT;
+    v.val = VALUE_VAL_BIGINT(x);
+    return v;
+}
+
+static inline Value irrationalValue(double x) {
+    Value v;
+    v.type = VALUE_TYPE_IRRATIONAL;
+    v.val = VALUE_VAL_IRRATIONAL(x);
+    return v;
+}
+
+static inline Value characterValue(char x) {
+    Value v;
+    v.type = VALUE_TYPE_CHARACTER;
+    v.val = VALUE_VAL_CHARACTER(x);
+    return v;
+}
+
+static inline Value cloValue(struct Clo * x) {
+    Value v;
+    v.type = VALUE_TYPE_CLO;
+    v.val = VALUE_VAL_CLO(x);
+    return v;
+}
+
+static inline Value pcloValue(struct Clo * x) {
+    Value v;
+    v.type = VALUE_TYPE_PCLO;
+    v.val = VALUE_VAL_PCLO(x);
+    return v;
+}
+
+static inline Value kontValue(struct Kont * x) {
+    Value v;
+    v.type = VALUE_TYPE_CONT;
+    v.val = VALUE_VAL_CONT(x);
+    return v;
+}
+
+static inline Value rationalValue(struct Vec * x) {
+    Value v;
+    v.type = VALUE_TYPE_RATIONAL;
+    v.val = VALUE_VAL_RATIONAL(x);
+    return v;
+}
+
+static inline Value vecValue(struct Vec * x) {
+    Value v;
+    v.type = VALUE_TYPE_VEC;
+    v.val = VALUE_VAL_VEC(x);
+    return v;
+}
+
+
+
 #endif
