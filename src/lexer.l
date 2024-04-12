@@ -25,7 +25,9 @@ struct PmModule *mod = yyextra;
 \/\/.* { }
 
 [0-9]*\.[0-9]+ { yylval->s = yytext; return IRRATIONAL; }
+[0-9]*\.[0-9]+i { yylval->s = yytext; return IRRATIONAL_I; }
 [0-9]+         { yylval->s = yytext; return NUMBER; }
+[0-9]+i         { yylval->s = yytext; return NUMBER_I; }
 
 "and"       { return AND; }
 "as"        { return AS; }

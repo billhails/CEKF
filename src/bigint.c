@@ -1269,22 +1269,24 @@ double bigint_double(const bigint * src) {
 
 // additional CEKF code
 
-MaybeBigInt *newMaybeBigInt(bigint bi) {
+MaybeBigInt *newMaybeBigInt(bigint bi, bool imag) {
     ENTER(newMaybeBigInt);
     MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("newMaybeBigInt %p", x);
     x->type = BI_BIG;
     x->big = bi;
+    x->imag = imag;
     LEAVE(newMaybeBigInt);
     return x;
 }
 
-MaybeBigInt *irrationalBigInt(double f) {
+MaybeBigInt *irrationalBigInt(double f, bool imag) {
     ENTER(irrationalBigInt);
     MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("newMaybeBigInt %p", x);
     x->type = BI_IRRATIONAL;
     x->irrational = f;
+    x->imag = imag;
     LEAVE(irrationalBigInt);
     return x;
 }
@@ -1298,12 +1300,13 @@ BigInt *newBigInt(bigint bi) {
     return x;
 }
 
-MaybeBigInt *fakeBigInt(int little) {
+MaybeBigInt *fakeBigInt(int little, bool imag) {
     ENTER(fakeBigInt);
     MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("fakeBigInt %p", x);
     x->small = little;
     x->type = BI_SMALL;
+    x->imag = imag;
     LEAVE(fakeBigInt);
     return x;
 }

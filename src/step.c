@@ -136,6 +136,7 @@ static inline int readCurrentOffsetAt(int i) {
 }
 
 static bool truthy(Value v) {
+    // FIXME this can't be right now!
     return !((v.type == VALUE_TYPE_STDINT && v.val.stdint == 0)
              || v.type == VALUE_TYPE_VOID);
 }
@@ -178,10 +179,19 @@ static Cmp _cmp(Value left, Value right) {
             case VALUE_TYPE_BIGINT:
             case VALUE_TYPE_STDINT:
             case VALUE_TYPE_RATIONAL:
+            case VALUE_TYPE_IRRATIONAL:
+            case VALUE_TYPE_BIGINT_IMAG:
+            case VALUE_TYPE_STDINT_IMAG:
+            case VALUE_TYPE_IRRATIONAL_IMAG:
+            case VALUE_TYPE_COMPLEX:
                 switch (right.type) {
                     case VALUE_TYPE_BIGINT:
                     case VALUE_TYPE_STDINT:
                     case VALUE_TYPE_RATIONAL:
+                    case VALUE_TYPE_BIGINT_IMAG:
+                    case VALUE_TYPE_STDINT_IMAG:
+                    case VALUE_TYPE_IRRATIONAL_IMAG:
+                    case VALUE_TYPE_COMPLEX:
                         break;
                     default:
                         cant_happen("different types in _cmp");
@@ -198,6 +208,10 @@ static Cmp _cmp(Value left, Value right) {
         case VALUE_TYPE_BIGINT:
         case VALUE_TYPE_STDINT:
         case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_BIGINT_IMAG:
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+        case VALUE_TYPE_COMPLEX:
             return ncmp(left, right);
         case VALUE_TYPE_CHARACTER:
             return _CMP_(left.val.character, right.val.character);
@@ -477,21 +491,15 @@ static void step() {
                     Value b = tos();
                     switch (b.type) {
                         case VALUE_TYPE_BIGINT:
-                            fprintBigInt(stdout, b.val.bigint);
-                            break;
                         case VALUE_TYPE_STDINT:
-                            printf("%d", b.val.stdint);
-                            break;
                         case VALUE_TYPE_IRRATIONAL:
-                            if( fmod(b.val.irrational, 1) == 0)
-                                printf("%.1f", b.val.irrational);
-                            else
-                                printf("%g", b.val.irrational);
-                            break;
                         case VALUE_TYPE_RATIONAL:
-                            putValue(b.val.vec->values[0]);
-                            printf("/");
-                            putValue(b.val.vec->values[1]);
+                        case VALUE_TYPE_BIGINT_IMAG:
+                        case VALUE_TYPE_STDINT_IMAG:
+                        case VALUE_TYPE_IRRATIONAL_IMAG:
+                        case VALUE_TYPE_RATIONAL_IMAG:
+                        case VALUE_TYPE_COMPLEX:
+                            putValue(b);
                             break;
                         default:
                             cant_happen("unrecognised type %d", b.type);
@@ -516,7 +524,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(nadd(left, right));
+                    Value res = nadd(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -540,7 +550,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(nmul(left, right));
+                    Value res = nmul(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -551,7 +563,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(ndiv(left, right));
+                    Value res = ndiv(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -562,7 +576,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(npow(left, right));
+                    Value res = npow(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -573,7 +589,9 @@ static void step() {
                     int save = protectValue(right);
                     Value left = pop();
                     protectValue(left);
-                    push(nmod(left, right));
+                    Value res = nmod(left, right);
+                    protectValue(res);
+                    push(res);
                     UNPROTECT(save);
                 }
                 break;
@@ -952,11 +970,27 @@ static void step() {
                     push(v);
             }
             break;
+            case BYTECODE_IRRATIONAL_IMAG:{
+                    // push literal double
+                    double f = readCurrentIrrational();
+                    DEBUGPRINTF("IRRATIONAL_IMAG [%f]\n", f);
+                    Value v = irrationalimagValue(f);
+                    push(v);
+            }
+            break;
             case BYTECODE_STDINT:{
                     // push literal int
                     int val = readCurrentInt();
                     DEBUGPRINTF("STDINT [%d]\n", val);
                     Value v = stdintValue(val);
+                    push(v);
+                }
+                break;
+            case BYTECODE_STDINT_IMAG:{
+                    // push literal int
+                    int val = readCurrentInt();
+                    DEBUGPRINTF("STDINT_IMAG [%d]\n", val);
+                    Value v = stdintimagValue(val);
                     push(v);
                 }
                 break;
@@ -977,6 +1011,19 @@ static void step() {
                     printf("]\n");
 #endif
                     Value v = bigintValue(bigInt);
+                    push(v);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_BIGINT_IMAG:{
+                    BigInt *bigInt = readCurrentBigInt();
+                    int save = PROTECT(bigInt);
+#ifdef DEBUG_STEP
+                    printf("BIGINT_IMAG [");
+                    fprintBigInt(stdout, bigInt);
+                    printf("]\n");
+#endif
+                    Value v = bigintimagValue(bigInt);
                     push(v);
                     UNPROTECT(save);
                 }
@@ -1022,8 +1069,44 @@ void putValue(Value x) {
         case VALUE_TYPE_STDINT:
             printf("%d", x.val.stdint);
             break;
+        case VALUE_TYPE_STDINT_IMAG:
+            printf("%di", x.val.stdint);
+            break;
         case VALUE_TYPE_BIGINT:
             fprintBigInt(stdout, x.val.bigint);
+            break;
+        case VALUE_TYPE_BIGINT_IMAG:
+            fprintBigInt(stdout, x.val.bigint);
+            printf("i");
+            break;
+        case VALUE_TYPE_RATIONAL:
+            putValue(x.val.vec->values[0]);
+            printf("/");
+            putValue(x.val.vec->values[1]);
+            break;
+        case VALUE_TYPE_RATIONAL_IMAG:
+            printf("(");
+            putValue(x.val.vec->values[0]);
+            printf("/");
+            putValue(x.val.vec->values[1]);
+            printf(")i");
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            if( fmod(x.val.irrational, 1) == 0)
+                printf("%.1f", x.val.irrational);
+            else
+                printf("%g", x.val.irrational);
+            break;
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+            if( fmod(x.val.irrational, 1) == 0)
+                printf("%.1fi", x.val.irrational);
+            else
+                printf("%gi", x.val.irrational);
+            break;
+        case VALUE_TYPE_COMPLEX:
+            putValue(x.val.vec->values[0]);
+            printf("+");
+            putValue(x.val.vec->values[1]);
             break;
         case VALUE_TYPE_CHARACTER:
             switch (x.val.character) {

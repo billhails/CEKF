@@ -51,6 +51,7 @@ extern "C" {
     typedef struct MaybeBigInt {
         Header header;
         MaybeBigIntType type;
+        bool imag;
         union {
             bigint big;
             int small;
@@ -64,9 +65,9 @@ extern "C" {
         bigint bi;
     } BigInt;
 
-    MaybeBigInt *newMaybeBigInt(bigint bi);
-    MaybeBigInt *fakeBigInt(int little);
-    MaybeBigInt *irrationalBigInt(double f);
+    MaybeBigInt *newMaybeBigInt(bigint bi, bool imag);
+    MaybeBigInt *fakeBigInt(int little, bool imag);
+    MaybeBigInt *irrationalBigInt(double f, bool imag);
 
     BigInt *newBigInt(bigint bi);
     BigInt *bigIntFromInt(int c);

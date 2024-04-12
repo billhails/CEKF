@@ -26,6 +26,11 @@ typedef enum {
     VALUE_TYPE_BIGINT,
     VALUE_TYPE_RATIONAL,
     VALUE_TYPE_IRRATIONAL,
+    VALUE_TYPE_STDINT_IMAG,
+    VALUE_TYPE_BIGINT_IMAG,
+    VALUE_TYPE_RATIONAL_IMAG,
+    VALUE_TYPE_IRRATIONAL_IMAG,
+    VALUE_TYPE_COMPLEX,
     VALUE_TYPE_CHARACTER,
     VALUE_TYPE_CLO,
     VALUE_TYPE_PCLO,
@@ -49,18 +54,22 @@ typedef struct Value {
     ValueVal val;
 } Value;
 
-#  define VALUE_VAL_STDINT(x)     ((ValueVal){.stdint     = (x)})
-#  define VALUE_VAL_BIGINT(x)     ((ValueVal){.bigint     = (x)})
-#  define VALUE_VAL_CHARACTER(x)  ((ValueVal){.character  = (x)})
-#  define VALUE_VAL_IRRATIONAL(x) ((ValueVal){.irrational = (x)})
+#  define VALUE_VAL_STDINT(x)          ((ValueVal){.stdint     = (x)})
+#  define VALUE_VAL_BIGINT(x)          ((ValueVal){.bigint     = (x)})
+#  define VALUE_VAL_IRRATIONAL(x)      ((ValueVal){.irrational = (x)})
+#  define VALUE_VAL_STDINT_IMAG(x)     ((ValueVal){.stdint     = (x)})
+#  define VALUE_VAL_BIGINT_IMAG(x)     ((ValueVal){.bigint     = (x)})
+#  define VALUE_VAL_IRRATIONAL_IMAG(x) ((ValueVal){.irrational = (x)})
+#  define VALUE_VAL_CHARACTER(x)       ((ValueVal){.character  = (x)})
 // CLO and PCLO share the same Clo struct
-#  define VALUE_VAL_CLO(x)        ((ValueVal){.clo  = (x)})
-#  define VALUE_VAL_PCLO(x)       ((ValueVal){.clo  = (x)})
-#  define VALUE_VAL_CONT(x)       ((ValueVal){.kont = (x)})
-// RATIONAL and VEC share the same Vec struct
-#  define VALUE_VAL_VEC(x)        ((ValueVal){.vec  = (x)})
-#  define VALUE_VAL_RATIONAL(x)   ((ValueVal){.vec  = (x)})
-#  define VALUE_VAL_NONE()        ((ValueVal){.none = NULL})
+#  define VALUE_VAL_CLO(x)             ((ValueVal){.clo  = (x)})
+#  define VALUE_VAL_PCLO(x)            ((ValueVal){.clo  = (x)})
+#  define VALUE_VAL_CONT(x)            ((ValueVal){.kont = (x)})
+// RATIONAL VEC and COMPLEX share the same Vec struct
+#  define VALUE_VAL_VEC(x)             ((ValueVal){.vec  = (x)})
+#  define VALUE_VAL_RATIONAL(x)        ((ValueVal){.vec  = (x)})
+#  define VALUE_VAL_COMPLEX(x)         ((ValueVal){.vec  = (x)})
+#  define VALUE_VAL_NONE()             ((ValueVal){.none = NULL})
 
 // constants
 extern Value vTrue;
@@ -83,6 +92,14 @@ static inline Value stdintValue(int x) {
     v.val = VALUE_VAL_STDINT(x);
     return v;
 }
+
+static inline Value stdintimagValue(int x) {
+    Value v;
+    v.type = VALUE_TYPE_STDINT_IMAG;
+    v.val = VALUE_VAL_STDINT_IMAG(x);
+    return v;
+}
+
 static inline Value bigintValue(BigInt * x) {
     Value v;
     v.type = VALUE_TYPE_BIGINT;
@@ -90,10 +107,24 @@ static inline Value bigintValue(BigInt * x) {
     return v;
 }
 
+static inline Value bigintimagValue(BigInt * x) {
+    Value v;
+    v.type = VALUE_TYPE_BIGINT_IMAG;
+    v.val = VALUE_VAL_BIGINT_IMAG(x);
+    return v;
+}
+
 static inline Value irrationalValue(double x) {
     Value v;
     v.type = VALUE_TYPE_IRRATIONAL;
     v.val = VALUE_VAL_IRRATIONAL(x);
+    return v;
+}
+
+static inline Value irrationalimagValue(double x) {
+    Value v;
+    v.type = VALUE_TYPE_IRRATIONAL_IMAG;
+    v.val = VALUE_VAL_IRRATIONAL_IMAG(x);
     return v;
 }
 
@@ -138,6 +169,14 @@ static inline Value vecValue(struct Vec * x) {
     v.val = VALUE_VAL_VEC(x);
     return v;
 }
+
+static inline Value complexValue(struct Vec * x) {
+    Value v;
+    v.type = VALUE_TYPE_COMPLEX;
+    v.val = VALUE_VAL_COMPLEX(x);
+    return v;
+}
+
 
 
 
