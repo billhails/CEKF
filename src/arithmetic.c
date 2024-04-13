@@ -77,6 +77,8 @@ static Value Zero = {
 };
 
 #ifdef DEBUG_ARITHMETIC
+// be careful with this, printing a bigint can cause a GC
+// so make sure everything is protected before calling.
 static void ppNumber(Value number) {
     switch (number.type) {
         case VALUE_TYPE_STDINT:
@@ -1251,6 +1253,17 @@ static Value comSimplify(Value real, Value imag) {
     return comValue(real, imag);
 }
 
+static inline void extractFromComplexArg(Value *a, Value *b, Value v) {
+    ASSERT_COMPLEX(v);
+    *a = realPart(v);
+    *b = imag_to_real(imagPart(v));
+}
+
+static inline void extractFromComplexArgs(Value *a, Value *b, Value *c, Value *d, Value left, Value right) {
+    extractFromComplexArg(a, b, left);
+    extractFromComplexArg(c, d, right);
+}
+
 // (a + bi) + (c + di) = (a + c) + (b + d)i
 static Value comAdd(Value left, Value right) {
     ENTER(comAdd);
@@ -1258,9 +1271,11 @@ static Value comAdd(Value left, Value right) {
     IFDEBUG(ppNumber(right));
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
-    Value a_c = nadd(realPart(left), realPart(right));
+    Value a, b, c, d;
+    extractFromComplexArgs(&a, &b, &c, &d, left, right);
+    Value a_c = nadd(a, c);
     int save = protectValue(a_c);
-    Value b_d = nadd(imag_to_real(imagPart(left)), imag_to_real(imagPart(right)));
+    Value b_d = nadd(b, d);
     protectValue(b_d);
     Value res = comSimplify(a_c, real_to_imag(b_d));
     protectValue(res);
@@ -1277,9 +1292,11 @@ static Value comSub(Value left, Value right) {
     IFDEBUG(ppNumber(right));
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
-    Value a_c = nsub(realPart(left), realPart(right));
+    Value a, b, c, d;
+    extractFromComplexArgs(&a, &b, &c, &d, left, right);
+    Value a_c = nsub(a, c);
     int save = protectValue(a_c);
-    Value b_d = nsub(imag_to_real(imagPart(left)), imag_to_real(imagPart(right)));
+    Value b_d = nsub(b, d);
     protectValue(b_d);
     Value res = comSimplify(a_c, real_to_imag(b_d));
     protectValue(res);
@@ -1296,10 +1313,8 @@ static Value comMul(Value left, Value right) {
     IFDEBUG(ppNumber(right));
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
-    Value a = realPart(left);
-    Value b = imag_to_real(imagPart(left));
-    Value c = realPart(right);
-    Value d = imag_to_real(imagPart(right));
+    Value a, b, c, d;
+    extractFromComplexArgs(&a, &b, &c, &d, left, right);
     Value ac = nmul(a, c);
     int save = protectValue(ac);
     Value bd = nmul(b, d);
@@ -1327,10 +1342,8 @@ static Value comDiv(Value left, Value right) {
     IFDEBUG(ppNumber(right));
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
-    Value a = realPart(left);
-    Value b = imag_to_real(imagPart(left));
-    Value c = realPart(right);
-    Value d = imag_to_real(imagPart(right));
+    Value a, b, c, d;
+    extractFromComplexArgs(&a, &b, &c, &d, left, right);
     Value ac = nmul(a, c);
     int save = protectValue(ac);
     Value bd = nmul(b, d);
@@ -1369,10 +1382,8 @@ static Value comMod(Value left, Value right) {
     IFDEBUG(ppNumber(right));
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
-    Value a = realPart(left);
-    Value b = imag_to_real(imagPart(left));
-    Value c = realPart(right);
-    Value d = imag_to_real(imagPart(right));
+    Value a, b, c, d;
+    extractFromComplexArgs(&a, &b, &c, &d, left, right);
     Value ac = nmod(a, c);
     int save = protectValue(ac);
     Value bd = nmod(b, d);
@@ -1422,8 +1433,8 @@ static Value comPow(Value left, Value right) {
 
 static Value comMag(Value v) {
     ASSERT_COMPLEX(v);
-    Value a = realPart(v);
-    Value b = imag_to_real(imagPart(v));
+    Value a, b;
+    extractFromComplexArg(&a, &b, v);
     Value aa = npow(a, stdintValue(2));
     int save = protectValue(aa);
     Value bb = npow(b, stdintValue(2));
@@ -1805,13 +1816,15 @@ Value nneg(Value v) {
 }
 
 void init_arithmetic() {
-    BigInt *zero = bigIntFromInt(0);
-    Zero.type = VALUE_TYPE_BIGINT;
-    Zero.val = VALUE_VAL_BIGINT(zero);
-    BigInt *one = bigIntFromInt(1);
-    One.type = VALUE_TYPE_BIGINT;
-    One.val = VALUE_VAL_BIGINT(one);
-    arithmetic_initialized = true;
+    if (!arithmetic_initialized) {
+        BigInt *zero = bigIntFromInt(0);
+        Zero.type = VALUE_TYPE_BIGINT;
+        Zero.val = VALUE_VAL_BIGINT(zero);
+        BigInt *one = bigIntFromInt(1);
+        One.type = VALUE_TYPE_BIGINT;
+        One.val = VALUE_VAL_BIGINT(one);
+        arithmetic_initialized = true;
+    }
 }
 
 void markArithmetic() {

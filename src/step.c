@@ -421,7 +421,6 @@ void reportSteps(void) {
 static void step() {
     if (dump_bytecode_flag)
         dumpByteCode(&state.B);
-    init_arithmetic();
     state.C = 0;
     while (state.C != UINT64_MAX) {
         ++count;

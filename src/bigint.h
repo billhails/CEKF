@@ -113,7 +113,9 @@ extern "C" {
     double bigIntToDouble(BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
     void negateBigInt(BigInt *b);
-    bool isNegBigInt(BigInt *b);
+    static inline bool isNegBigInt(BigInt *b) {
+        return b->bi.neg != 0;
+    }
 
 // END CEKF additions
 

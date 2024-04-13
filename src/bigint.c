@@ -1664,10 +1664,6 @@ void negateBigInt(BigInt *b) {
     bigint_negate(&b->bi);
 }
 
-bool isNegBigInt(BigInt *b) {
-    return b->bi.neg != 0;
-}
-
 double bigIntToDouble(BigInt *bi) {
     return bigint_double(&bi->bi);
 }
