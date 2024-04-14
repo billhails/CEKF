@@ -43,6 +43,7 @@
 #define IS_RATIONAL(x) ((x).type == VALUE_TYPE_RATIONAL)
 #define IS_STDINT(x) ((x).type == VALUE_TYPE_STDINT)
 #define IS_INT(x) (IS_STDINT(x) || IS_BIGINT(x))
+#define IS_RATIONAL_OR_INT(x) ((x).type == VALUE_TYPE_RATIONAL || IS_INT(x))
 
 #ifdef SAFETY_CHECKS
 #  define ASSERT_COMPLEX(x) ASSERT(IS_COMPLEX(x))
@@ -51,6 +52,7 @@
 #  define ASSERT_BIGINT(x) ASSERT(IS_BIGINT(x))
 #  define ASSERT_STDINT(x) ASSERT(IS_STDINT(x))
 #  define ASSERT_INT(x) ASSERT(IS_INT(x))
+#  define ASSERT_RATIONAL_OR_INT(x) ASSERT(IS_RATIONAL_OR_INT(x))
 #else
 #  define ASSERT_COMPLEX(x)
 #  define ASSERT_RATIONAL(x)
@@ -58,6 +60,7 @@
 #  define ASSERT_BIGINT(x)
 #  define ASSERT_STDINT(x)
 #  define ASSERT_INT(x)
+#  define ASSERT_RATIONAL_OR_INT(x)
 #endif
 
 typedef Value (*ValOp)(Value, Value);
@@ -75,6 +78,8 @@ static Value Zero = {
     .type = VALUE_TYPE_STDINT,
     .val = VALUE_VAL_STDINT(0)
 };
+
+static Value ratSimplify(Value numerator, Value denominator);
 
 #ifdef DEBUG_ARITHMETIC
 // be careful with this, printing a bigint can cause a GC
@@ -178,6 +183,21 @@ static Value rational_to_irrational(Value rational) {
     return irrationalValue(numerator.val.irrational / denominator.val.irrational);
 }
 
+static Value to_irrational(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_STDINT:
+        case VALUE_TYPE_BIGINT:
+            return int_to_irrational(v);
+        case VALUE_TYPE_RATIONAL:
+            return rational_to_irrational(v);
+        case VALUE_TYPE_IRRATIONAL:
+            return v;
+        default:
+            cant_happen("invalid imaginary type %d", v.type);
+    }
+    return v;
+}
+
 static Value int_to_rational(Value integer) {
     ASSERT_INT(integer);
     Value one = stdintValue(1);
@@ -243,6 +263,48 @@ static Value real_to_imag(Value v) {
             cant_happen("invalid real type %d", v.type);
     }
     return v;
+}
+
+static bool intIsNeg(Value v) {
+    ASSERT_INT(v);
+    if (IS_BIGINT(v)) {
+        return isNegBigInt(v.val.bigint);
+    } else {
+        return v.val.stdint < 0;
+    }
+}
+
+static bool ratIsNeg(Value v) {
+    ASSERT_RATIONAL(v);
+    return intIsNeg(numeratorPart(v));
+}
+
+static bool irratIsNeg(Value v) {
+    ASSERT_IRRATIONAL(v);
+    return v.val.irrational < 0.0;
+}
+
+static bool isNeg(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_STDINT:
+        case VALUE_TYPE_BIGINT:
+            return intIsNeg(v);
+        case VALUE_TYPE_RATIONAL:
+            return ratIsNeg(v);
+        case VALUE_TYPE_IRRATIONAL:
+            return irratIsNeg(v);
+        default:
+            cant_happen("invalid real type %d", v.type);
+    }
+}
+
+static bool intIsEven(Value v) {
+    ASSERT_INT(v);
+    if (IS_BIGINT(v)) {
+        return isEvenBigInt(v.val.bigint);
+    } else {
+        return (v.val.stdint & 1) == 0;
+    }
 }
 
 // RULE: rationals contain only plain integers, big or little.
@@ -729,7 +791,7 @@ static Value basicIntDiv(Value left, Value right) {
     return res;
 }
 
-static Value safe_pow(int a, int b) {
+static Value safe_powf(int a, int b) {
     float f = powf((float) a, (float) b);
     if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
         BigInt *big = bigIntFromPower(a, b);
@@ -743,36 +805,145 @@ static Value safe_pow(int a, int b) {
     }
 }
 
+static Value irratSimplify(double result) {
+    Value res;
+    int save = PROTECT(NULL);
+    if(fmod(result, 1.0) == 0.0) {
+        if (result > (double)INT_MAX || result < (double)INT_MIN) {
+            // FIXME need doubleToBigInt
+            res = irrationalValue(result);
+            protectValue(res);
+        } else {
+            res = stdintValue((int) result);
+            protectValue(res);
+        }
+    } else {
+        res = irrationalValue(result);
+        protectValue(res);
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+// raise a real number to a rational power
+static Value realPowRat(Value base, Value exponent) {
+    ENTER(realPowRat);
+    IFDEBUG(ppNumber(base));
+    IFDEBUG(ppNumber(exponent));
+    ASSERT_RATIONAL(exponent);
+    Value res;
+    int save = PROTECT(NULL);
+    if (isNeg(base)) {
+        Value pos = nmul(base, stdintValue(-1)); // make the base positive
+        protectValue(pos);
+        Value neg = realPowRat(pos, exponent); // recurse on positive base
+        protectValue(neg);
+        if (intIsEven(denominatorPart(exponent))) {
+            res = nmul(neg, stdintimagValue(1)); // return imaginary number
+            protectValue(res);
+        } else {
+            res = nmul(neg, stdintValue(-1)); // return the negation
+            protectValue(res);
+        }
+    } else if (ratIsNeg(exponent)) {
+        Value pos = nmul(exponent, stdintValue(-1)); // make the exponent positive
+        protectValue(pos);
+        Value inv = realPowRat(base, pos); // recurse on positive base, positive exponent
+        protectValue(inv);
+        res = ndiv(stdintValue(1), inv); // return the inverse
+        protectValue(res);
+    } else {
+        if (IS_RATIONAL(base)) { // attempt to preserve
+            Value num = realPowRat(numeratorPart(base), exponent);
+            protectValue(num);
+            Value denom = realPowRat(denominatorPart(base), exponent);
+            protectValue(denom);
+            if (IS_INT(num) && IS_INT(denom)) {
+                res = ratSimplify(num, denom);
+                protectValue(res);
+            } else {
+                num = to_irrational(num);
+                protectValue(num);
+                denom = to_irrational(denom);
+                protectValue(denom);
+                double result = num.val.irrational / denom.val.irrational;
+                res = irratSimplify(result);
+                protectValue(res);
+            }
+        } else {
+            Value fbase = to_irrational(base);
+            protectValue(fbase);
+            Value fexponent = rational_to_irrational(exponent);
+            protectValue(fexponent);
+            double result = pow(fbase.val.irrational, fexponent.val.irrational);
+            IFDEBUG(eprintf("doing pow(%f, %f) = %f", fbase.val.irrational, fexponent.val.irrational, result));
+            res = irratSimplify(result);
+            protectValue(res);
+        }
+    }
+    LEAVE(realPowRat);
+    IFDEBUG(ppNumber(res));
+    UNPROTECT(save);
+    return res;
+}
+
 static Value intPow(Value left, Value right) {
     ENTER(intPow);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    ASSERT_INT(left);
-    ASSERT_INT(right);
     Value res;
     int save = PROTECT(NULL);
-    if (IS_BIGINT(left)) {
-        if (IS_BIGINT(right)) {
-            BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
-            PROTECT(bi);
-            res = bigintValue(bi);
-            protectValue(res);
-        } else {
-            BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
-            PROTECT(bi);
-            res = bigintValue(bi);
-            protectValue(res);
-        }
-    } else {
-        if (IS_BIGINT(right)) {
-            BigInt *bi = powIntBigInt(left.val.stdint, right.val.bigint);
-            PROTECT(bi);
-            res = bigintValue(bi);
-            protectValue(res);
-        } else {
-            res = safe_pow(left.val.stdint, right.val.stdint);
-            protectValue(res);
-        }
+    switch (left.type) {
+        case VALUE_TYPE_BIGINT:
+            switch (right.type) {
+                case VALUE_TYPE_BIGINT: {
+                    BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
+                    PROTECT(bi);
+                    res = bigintValue(bi);
+                    protectValue(res);
+                }
+                break;
+                case VALUE_TYPE_STDINT: {
+                    BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
+                    PROTECT(bi);
+                    res = bigintValue(bi);
+                    protectValue(res);
+                }
+                break;
+                case VALUE_TYPE_RATIONAL: {
+                    res = realPowRat(left, right);
+                    protectValue(res);
+                }
+                break;
+                default:
+                    cant_happen("invalid rhs arg to intPow %d", left.type);
+            }
+            break;
+        case VALUE_TYPE_STDINT:
+            switch (right.type) {
+                case VALUE_TYPE_BIGINT: {
+                    BigInt *bi = powIntBigInt(left.val.stdint, right.val.bigint);
+                    PROTECT(bi);
+                    res = bigintValue(bi);
+                    protectValue(res);
+                }
+                break;
+                case VALUE_TYPE_STDINT: {
+                    res = safe_powf(left.val.stdint, right.val.stdint);
+                    protectValue(res);
+                }
+                break;
+                case VALUE_TYPE_RATIONAL: {
+                    res = realPowRat(left, right);
+                    protectValue(res);
+                }
+                break;
+                default:
+                    cant_happen("invalid rhs arg to intPow %d", left.type);
+            }
+            break;
+        default:
+            cant_happen("invalid lhs arg to intPow %d", left.type);
     }
     LEAVE(intPow);
     IFDEBUG(ppNumber(res));
@@ -907,14 +1078,6 @@ static Value numNeg(Value v) {
         return v;
     } else {
         return intNeg(v);
-    }
-}
-
-static bool intIsNeg(Value v) {
-    if (IS_BIGINT(v)) {
-        return isNegBigInt(v.val.bigint);
-    } else {
-        return v.val.stdint < 0;
     }
 }
 
@@ -1114,7 +1277,7 @@ static Value ratPow(Value left, Value right) {
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     ASSERT_RATIONAL(left);
-    ASSERT_INT(right);
+    ASSERT_RATIONAL_OR_INT(right);
     Value numerator = numeratorPart(left);
     Value denominator = denominatorPart(left);
     numerator = intPow(numerator, right);
@@ -1229,7 +1392,7 @@ static Value irrSub(Value left, Value right) {
 static Value irrAdd(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(left.val.irrational * right.val.irrational);
+    return irrationalValue(left.val.irrational + right.val.irrational);
 }
 
 //////////////////////////////
@@ -1569,9 +1732,7 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_RATIONAL:
             switch(right.type) {
                 case VALUE_TYPE_RATIONAL:
-                    left = rational_to_irrational(left);
-                    right = rational_to_irrational(right);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = realPowRat(left, right);
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = rational_to_irrational(left);
@@ -1594,8 +1755,7 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_IRRATIONAL:
             switch(right.type) {
                 case VALUE_TYPE_RATIONAL:
-                    right = rational_to_irrational(right);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = realPowRat(left, right);
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     res = irrationalValue(pow(left.val.irrational, right.val.irrational));
@@ -1618,9 +1778,7 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_BIGINT:
             switch(right.type) {
                 case VALUE_TYPE_RATIONAL:
-                    left = int_to_irrational(left);
-                    right = rational_to_irrational(right);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = realPowRat(left, right);
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(left);
@@ -1642,14 +1800,12 @@ Value npow(Value left, Value right) {
             break;
         case VALUE_TYPE_STDINT:
             switch(right.type) {
-                case VALUE_TYPE_RATIONAL:
-                    left = int_to_irrational(left);
-                    right = rational_to_irrational(right);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
-                    break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(left);
                     res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    break;
+                case VALUE_TYPE_RATIONAL:
+                    res = realPowRat(left, right);
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:

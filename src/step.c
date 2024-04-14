@@ -1091,7 +1091,7 @@ void putValue(Value x) {
             printf(")i");
             break;
         case VALUE_TYPE_IRRATIONAL:
-            if( fmod(x.val.irrational, 1) == 0)
+            if(fmod(x.val.irrational, 1) == 0)
                 printf("%.1f", x.val.irrational);
             else
                 printf("%g", x.val.irrational);

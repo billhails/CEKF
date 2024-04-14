@@ -1667,3 +1667,7 @@ void negateBigInt(BigInt *b) {
 double bigIntToDouble(BigInt *bi) {
     return bigint_double(&bi->bi);
 }
+
+bool isEvenBigInt(BigInt *bi) {
+    return bi->bi.size == 0 || (bi->bi.words[0] & 1) == 0;
+}

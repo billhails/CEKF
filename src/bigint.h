@@ -116,6 +116,7 @@ extern "C" {
     static inline bool isNegBigInt(BigInt *b) {
         return b->bi.neg != 0;
     }
+    bool isEvenBigInt(BigInt *b);
 
 // END CEKF additions
 
