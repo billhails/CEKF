@@ -1568,7 +1568,7 @@ static Value comPow(Value left, Value right) {
     ASSERT_INT(right);
     int save;
     Value res;
-    if (ncmp(right, stdintValue(0)) == CMP_LT) {
+    if (intIsNeg(right)) {
         Value pos = intNeg(right);
         save = protectValue(pos);
         Value pow = comPow(left, pos);
@@ -1736,7 +1736,7 @@ Value npow(Value left, Value right) {
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = rational_to_irrational(left);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = irratSimplify(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
@@ -1758,12 +1758,12 @@ Value npow(Value left, Value right) {
                     res = realPowRat(left, right);
                     break;
                 case VALUE_TYPE_IRRATIONAL:
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = irratSimplify(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     right = int_to_irrational(right);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = irratSimplify(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT_IMAG:
                 case VALUE_TYPE_STDINT_IMAG:
@@ -1782,7 +1782,7 @@ Value npow(Value left, Value right) {
                     break;
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(left);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = irratSimplify(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
@@ -1802,7 +1802,7 @@ Value npow(Value left, Value right) {
             switch(right.type) {
                 case VALUE_TYPE_IRRATIONAL:
                     left = int_to_irrational(left);
-                    res = irrationalValue(pow(left.val.irrational, right.val.irrational));
+                    res = irratSimplify(pow(left.val.irrational, right.val.irrational));
                     break;
                 case VALUE_TYPE_RATIONAL:
                     res = realPowRat(left, right);
