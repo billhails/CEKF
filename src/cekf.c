@@ -124,6 +124,8 @@ void markValue(Value x) {
         case VALUE_TYPE_VOID:
         case VALUE_TYPE_STDINT:
         case VALUE_TYPE_IRRATIONAL:
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
         case VALUE_TYPE_CHARACTER:
             break;
         case VALUE_TYPE_PCLO:
@@ -134,10 +136,13 @@ void markValue(Value x) {
             markKont(x.val.kont);
             break;
         case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_RATIONAL_IMAG:
         case VALUE_TYPE_VEC:
+        case VALUE_TYPE_COMPLEX:
             markVec(x.val.vec);
             break;
         case VALUE_TYPE_BIGINT:
+        case VALUE_TYPE_BIGINT_IMAG:
             markBigInt(x.val.bigint);
             break;
         default:
@@ -285,15 +290,26 @@ void freeCekfObj(Header *h) {
 int protectValue(Value v) {
     switch (v.type) {
         case VALUE_TYPE_CLO:
+        case VALUE_TYPE_PCLO:
             return PROTECT(v.val.clo);
         case VALUE_TYPE_CONT:
             return PROTECT(v.val.kont);
         case VALUE_TYPE_VEC:
         case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_RATIONAL_IMAG:
+        case VALUE_TYPE_COMPLEX:
             return PROTECT(v.val.vec);
         case VALUE_TYPE_BIGINT:
+        case VALUE_TYPE_BIGINT_IMAG:
             return PROTECT(v.val.bigint);
-        default:
+        case VALUE_TYPE_VOID:
+        case VALUE_TYPE_STDINT:
+        case VALUE_TYPE_IRRATIONAL:
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+        case VALUE_TYPE_CHARACTER:
             return PROTECT(NULL);
+        default:
+            cant_happen("unrecognised type %d in protectValue", v.type);
     }
 }

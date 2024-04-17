@@ -176,6 +176,7 @@ int main(int argc, char *argv[]) {
     clock_t begin = clock();
     processArgs(argc, argv);
     initProtection();
+    init_arithmetic();
 
     AstNest *nest = parseFile(argv[optind]);
     int save = PROTECT(nest);

@@ -1,6 +1,7 @@
 # Random bits of documentation
 
 * [ANF](ANF.md) A-Normalization
+* [Arithmetic](Arithmetic.md) Notes on rational and complex arithmetic.
 * [CODEGEN](CODEGEN.md) Notes on the code generator utility.
 * [LEXICAL ADDRESSING](LEXICAL_ADDRESSING.md) De-Bruijn indexing for fast variable look up.
 * [MACROS](MACROS.md) initial thoughts on a simple macro system.

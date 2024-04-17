@@ -6,8 +6,6 @@
 * `now()` expression returns current time in milliseconds.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
 * More numbers:
-   * Irrationals.
-   * Complex numbers.
    * NaN.
 * Improve arithmetic.
    * General overhaul.
@@ -32,4 +30,3 @@
 * User definable infix operators.
    * With precedence and associativity.
 * Curried binary operators `(2+)` etc.
-* Allow trailing semicolons ffs.

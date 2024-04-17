@@ -392,15 +392,15 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
                 break;          // default case doesn't get a test
             switch (xx->option->type) {
                 case BI_SMALL:
-                    addByte(b, BYTECODE_STDINT);
+                    addByte(b, xx->option->imag ? BYTECODE_STDINT_IMAG : BYTECODE_STDINT);
                     addInt(b, xx->option->small);
                     break;
                 case BI_BIG:
-                    addByte(b, BYTECODE_BIGINT);
+                    addByte(b, xx->option->imag ? BYTECODE_BIGINT_IMAG : BYTECODE_BIGINT);
                     addBig(b, xx->option->big);
                     break;
                 case BI_IRRATIONAL:
-                    addByte(b, BYTECODE_IRRATIONAL);
+                    addByte(b, xx->option->imag ? BYTECODE_IRRATIONAL_IMAG : BYTECODE_IRRATIONAL);
                     addIrrational(b, xx->option->irrational);
                     break;
                 default:
@@ -582,15 +582,15 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
         case AEXP_TYPE_BIGINTEGER:{
                 switch (x->val.biginteger->type) {
                     case BI_SMALL:
-                        addByte(b, BYTECODE_STDINT);
+                        addByte(b, x->val.biginteger->imag ? BYTECODE_STDINT_IMAG : BYTECODE_STDINT);
                         addInt(b, x->val.biginteger->small);
                         break;
                     case BI_BIG:
-                        addByte(b, BYTECODE_BIGINT);
+                        addByte(b, x->val.biginteger->imag ? BYTECODE_BIGINT_IMAG : BYTECODE_BIGINT);
                         addBig(b, x->val.biginteger->big);
                         break;
                     case BI_IRRATIONAL:
-                        addByte(b, BYTECODE_IRRATIONAL);
+                        addByte(b, x->val.biginteger->imag ? BYTECODE_IRRATIONAL_IMAG : BYTECODE_IRRATIONAL);
                         addIrrational(b, x->val.biginteger->irrational);
                         break;
                     default:
