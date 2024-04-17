@@ -80,6 +80,8 @@ static Value Zero = {
 };
 
 static Value ratSimplify(Value numerator, Value denominator);
+static Value comMag(Value v);
+static Value comTheta(Value v);
 
 #ifdef DEBUG_ARITHMETIC
 // be careful with this, printing a bigint can cause a GC
@@ -263,6 +265,15 @@ static Value real_to_imag(Value v) {
             cant_happen("invalid real type %d", v.type);
     }
     return v;
+}
+
+static int rec_to_polar(Value com, Value *r, Value *theta) {
+    ASSERT_COMPLEX(com);
+    *r = comMag(com);
+    int save = protectValue(*r);
+    *theta = comTheta(com);
+    protectValue(*theta);
+    return save;
 }
 
 static bool intIsNeg(Value v) {
@@ -1609,6 +1620,49 @@ static Value comMag(Value v) {
     return res;
 }
 
+static Value comTheta(Value v) {
+    ASSERT_COMPLEX(v);
+    Value a, b;
+    extractFromComplexArg(&a, &b, v);
+    a = to_irrational(a);
+    b = to_irrational(b);
+    Value res = irrationalValue(atan2(b.val.irrational, a.val.irrational));
+    return res;
+}
+
+static Value comRoot(Value v, Value n) {
+    ASSERT_COMPLEX(v);
+    ASSERT_INT(n);
+    Value r, theta;
+    int save = rec_to_polar(v, &r, &theta);
+    Value inv_n = ratValue(stdintValue(1), n);
+    protectValue(inv_n);
+    Value r_n = npow(r, n);
+    protectValue(r_n);
+    Value theta_n = ndiv(theta, n);
+    protectValue(theta_n);
+    theta_n = to_irrational(theta_n);
+    Value cos_theta_n = irrationalValue(cos(theta_n.val.irrational));
+    protectValue(cos_theta_n);
+    Value i_sin_theta_n = irrationalimagValue(sin(theta_n.val.irrational));
+    protectValue(i_sin_theta_n);
+    Value base = comValue(cos_theta_n, i_sin_theta_n);
+    protectValue(base);
+    Value res = nmul(r_n, base);
+    UNPROTECT(save);
+    return res;
+}
+
+static Value comPowRat(Value com, Value rat) {
+    ASSERT_COMPLEX(com);
+    ASSERT_RATIONAL(rat);
+    Value root = comRoot(com, denominatorPart(rat));
+    int save = protectValue(root);
+    Value res = comPow(root, numeratorPart(rat));
+    UNPROTECT(save);
+    return res;
+}
+
 static Cmp comCmp(Value left, Value right) {
     ASSERT_COMPLEX(left);
     ASSERT_COMPLEX(right);
@@ -1824,8 +1878,13 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_BIGINT_IMAG:
             switch (right.type) {
                 case VALUE_TYPE_RATIONAL:
-                case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to a non-integral power not supported yet");
+                case VALUE_TYPE_IRRATIONAL:{
+                    Value real = imag_to_real(left);
+                    res = npow(real, right);
+                    protectValue(res);
+                    res = real_to_imag(res);
+                }
+                break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
@@ -1843,8 +1902,13 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_STDINT_IMAG:
             switch (right.type) {
                 case VALUE_TYPE_RATIONAL:
-                case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to a non-integral power not supported yet");
+                case VALUE_TYPE_IRRATIONAL:{
+                    Value real = imag_to_real(left);
+                    res = npow(real, right);
+                    protectValue(res);
+                    res = real_to_imag(res);
+                }
+                break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
@@ -1862,8 +1926,13 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_RATIONAL_IMAG:
             switch (right.type) {
                 case VALUE_TYPE_RATIONAL:
-                case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to a non-integral power not supported yet");
+                case VALUE_TYPE_IRRATIONAL:{
+                    Value real = imag_to_real(left);
+                    res = npow(real, right);
+                    protectValue(res);
+                    res = real_to_imag(res);
+                }
+                break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
@@ -1881,8 +1950,13 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_IRRATIONAL_IMAG:
             switch (right.type) {
                 case VALUE_TYPE_RATIONAL:
-                case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to a non-integral power not supported yet");
+                case VALUE_TYPE_IRRATIONAL:{
+                    Value real = imag_to_real(left);
+                    res = npow(real, right);
+                    protectValue(res);
+                    res = real_to_imag(res);
+                }
+                break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
@@ -1900,8 +1974,10 @@ Value npow(Value left, Value right) {
         case VALUE_TYPE_COMPLEX:
             switch (right.type) {
                 case VALUE_TYPE_RATIONAL:
+                    res = comPowRat(left, right);
+                    break;
                 case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to a non-integral power not supported yet");
+                    cant_happen("raising a complex number to an irrational power not supported yet");
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
