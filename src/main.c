@@ -157,16 +157,15 @@ static ByteCodeArray generateByteCodes(Exp *anfExp) {
     return byteCodes;
 }
 
-static void report(clock_t begin, clock_t compiled) {
+static void report(clock_t begin, clock_t compiled, clock_t end) {
     if (report_flag) {
-        clock_t end = clock();
         printf("\n");
         double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-        printf("elapsed time %.3lf\n", time_spent);
+        printf("elapsed time: %.3lf\n", time_spent);
         double compile_time = (double) (compiled - begin) / CLOCKS_PER_SEC;
-        printf("compile time %.3lf\n", compile_time);
+        printf("compile time: %.3lf\n", compile_time);
         double run_time = (double) (end - compiled) / CLOCKS_PER_SEC;
-        printf("run time %.3lf\n", run_time);
+        printf("run time: %.3lf\n", run_time);
         reportMemory();
         reportSteps();
     }
@@ -207,7 +206,9 @@ int main(int argc, char *argv[]) {
 
     run(byteCodes);
 
-    report(begin, compiled);
+    clock_t end = clock();
+
+    report(begin, compiled, end);
 
     exit(0);
 }

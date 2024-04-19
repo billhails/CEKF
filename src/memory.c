@@ -55,12 +55,15 @@ typedef struct ProtectionStack {
     Header *stack[0];
 } ProtectionStack;
 
-void reportMemory() {
-    printf("gc runs: %d, current memory: %d, max memory: %d\n", numGc,
-           bytesAllocated, maxMem);
-}
-
 static ProtectionStack *protected = NULL;
+
+void reportMemory() {
+    printf("gc runs: %d\ncurrent memory: %d\nmax memory: %d\n", numGc,
+           bytesAllocated, maxMem);
+    if (protected) {
+        printf("max protected capacity: %d\n", protected->capacity);
+    }
+}
 
 static Header *allocated = NULL;
 

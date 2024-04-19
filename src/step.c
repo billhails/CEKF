@@ -414,8 +414,8 @@ static void applyProc(int naargs) {
 static unsigned long int count = 0;
 
 void reportSteps(void) {
-    printf("%lu instructions executed\n", count);
-    printf("%d final stack capacity\n", state.S.capacity);
+    printf("instructions executed: %lu\n", count);
+    printf("max stack capacity: %d\n", state.S.capacity);
 }
 
 static void step() {
