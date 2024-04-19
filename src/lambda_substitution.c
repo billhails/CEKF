@@ -120,6 +120,12 @@ static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex,
     return tupleIndex;
 }
 
+static LamPrint *performPrintSubstitutions(LamPrint *print, TpmcSubstitutionTable *substitutions) {
+    print->exp = lamPerformSubstitutions(print->exp, substitutions);
+    print->printer = lamPerformSubstitutions(print->printer, substitutions);
+    return print;
+}
+
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
                                                *substitutions) {
     ENTER(performMakeVecSubstitutions);
@@ -328,108 +334,113 @@ static LamCond *performCondSubstitutions(LamCond *cond, TpmcSubstitutionTable
 LamExp *lamPerformSubstitutions(LamExp *exp,
                                 TpmcSubstitutionTable *substitutions) {
     ENTER(lamPerformSubstitutions);
-    switch (exp->type) {
-        case LAMEXP_TYPE_BIGINTEGER:
-        case LAMEXP_TYPE_STDINT:
-        case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_COND_DEFAULT:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_CONSTANT:
-            break;
-        case LAMEXP_TYPE_LAM:
-            exp->val.lam =
-                performLamSubstitutions(exp->val.lam, substitutions);
-            break;
-        case LAMEXP_TYPE_VAR:
-            exp->val.var =
-                performVarSubstitutions(exp->val.var, substitutions);
-            break;
-        case LAMEXP_TYPE_PRIM:
-            exp->val.prim =
-                performPrimSubstitutions(exp->val.prim, substitutions);
-            break;
-        case LAMEXP_TYPE_UNARY:
-            exp->val.unary =
-                performUnarySubstitutions(exp->val.unary, substitutions);
-            break;
-        case LAMEXP_TYPE_LIST:
-            exp->val.list =
-                performSequenceSubstitutions(exp->val.list, substitutions);
-            break;
-        case LAMEXP_TYPE_MAKEVEC:
-            exp->val.makeVec =
-                performMakeVecSubstitutions(exp->val.makeVec, substitutions);
-            break;
-        case LAMEXP_TYPE_DECONSTRUCT:
-            exp->val.deconstruct =
-                performDeconstructSubstitutions(exp->val.deconstruct,
-                                                substitutions);
-            break;
-        case LAMEXP_TYPE_CONSTRUCT:
-            exp->val.construct =
-                performConstructSubstitutions(exp->val.construct,
-                                              substitutions);
-            break;
-        case LAMEXP_TYPE_TAG:
-            exp->val.tag =
-                lamPerformSubstitutions(exp->val.tag, substitutions);
-            break;
-        case LAMEXP_TYPE_APPLY:
-            exp->val.apply =
-                performApplySubstitutions(exp->val.apply, substitutions);
-            break;
-        case LAMEXP_TYPE_IFF:
-            exp->val.iff =
-                performIffSubstitutions(exp->val.iff, substitutions);
-            break;
-        case LAMEXP_TYPE_COND:
-            exp->val.cond =
-                performCondSubstitutions(exp->val.cond, substitutions);
-            break;
-        case LAMEXP_TYPE_CALLCC:
-            exp->val.callcc =
-                lamPerformSubstitutions(exp->val.callcc, substitutions);
-            break;
-        case LAMEXP_TYPE_LET:
-            exp->val.let =
-                performLetSubstitutions(exp->val.let, substitutions);
-            break;
-        case LAMEXP_TYPE_LETREC:
-            exp->val.letrec =
-                performLetRecSubstitutions(exp->val.letrec, substitutions);
-            break;
-        case LAMEXP_TYPE_TYPEDEFS:
-            exp->val.typedefs =
-                performTypeDefsSubstitutions(exp->val.typedefs,
-                                             substitutions);
-            break;
-        case LAMEXP_TYPE_MATCH:
-            exp->val.match =
-                performMatchSubstitutions(exp->val.match, substitutions);
-            break;
-        case LAMEXP_TYPE_AND:
-            exp->val.and =
-                performAndSubstitutions(exp->val.and, substitutions);
-            break;
-        case LAMEXP_TYPE_OR:
-            exp->val.or = performOrSubstitutions(exp->val.or, substitutions);
-            break;
-        case LAMEXP_TYPE_AMB:
-            exp->val.amb =
-                performAmbSubstitutions(exp->val.amb, substitutions);
-            break;
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            exp->val.make_tuple =
-                performListSubstitutions(exp->val.make_tuple, substitutions);
-            break;
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            exp->val.tuple_index =
-                performTupleIndexSubstitutions(exp->val.tuple_index, substitutions);
-            break;
-        default:
-            cant_happen
-                ("unrecognized LamExp type %s", lamExpTypeName(exp->type));
+    if (exp != NULL) {
+        switch (exp->type) {
+            case LAMEXP_TYPE_BIGINTEGER:
+            case LAMEXP_TYPE_STDINT:
+            case LAMEXP_TYPE_CHARACTER:
+            case LAMEXP_TYPE_BACK:
+            case LAMEXP_TYPE_COND_DEFAULT:
+            case LAMEXP_TYPE_ERROR:
+            case LAMEXP_TYPE_CONSTANT:
+                break;
+            case LAMEXP_TYPE_LAM:
+                exp->val.lam =
+                    performLamSubstitutions(exp->val.lam, substitutions);
+                break;
+            case LAMEXP_TYPE_VAR:
+                exp->val.var =
+                    performVarSubstitutions(exp->val.var, substitutions);
+                break;
+            case LAMEXP_TYPE_PRIM:
+                exp->val.prim =
+                    performPrimSubstitutions(exp->val.prim, substitutions);
+                break;
+            case LAMEXP_TYPE_UNARY:
+                exp->val.unary =
+                    performUnarySubstitutions(exp->val.unary, substitutions);
+                break;
+            case LAMEXP_TYPE_LIST:
+                exp->val.list =
+                    performSequenceSubstitutions(exp->val.list, substitutions);
+                break;
+            case LAMEXP_TYPE_MAKEVEC:
+                exp->val.makeVec =
+                    performMakeVecSubstitutions(exp->val.makeVec, substitutions);
+                break;
+            case LAMEXP_TYPE_DECONSTRUCT:
+                exp->val.deconstruct =
+                    performDeconstructSubstitutions(exp->val.deconstruct,
+                                                    substitutions);
+                break;
+            case LAMEXP_TYPE_CONSTRUCT:
+                exp->val.construct =
+                    performConstructSubstitutions(exp->val.construct,
+                                                  substitutions);
+                break;
+            case LAMEXP_TYPE_TAG:
+                exp->val.tag =
+                    lamPerformSubstitutions(exp->val.tag, substitutions);
+                break;
+            case LAMEXP_TYPE_APPLY:
+                exp->val.apply =
+                    performApplySubstitutions(exp->val.apply, substitutions);
+                break;
+            case LAMEXP_TYPE_IFF:
+                exp->val.iff =
+                    performIffSubstitutions(exp->val.iff, substitutions);
+                break;
+            case LAMEXP_TYPE_COND:
+                exp->val.cond =
+                    performCondSubstitutions(exp->val.cond, substitutions);
+                break;
+            case LAMEXP_TYPE_CALLCC:
+                exp->val.callcc =
+                    lamPerformSubstitutions(exp->val.callcc, substitutions);
+                break;
+            case LAMEXP_TYPE_LET:
+                exp->val.let =
+                    performLetSubstitutions(exp->val.let, substitutions);
+                break;
+            case LAMEXP_TYPE_LETREC:
+                exp->val.letrec =
+                    performLetRecSubstitutions(exp->val.letrec, substitutions);
+                break;
+            case LAMEXP_TYPE_TYPEDEFS:
+                exp->val.typedefs =
+                    performTypeDefsSubstitutions(exp->val.typedefs,
+                                                 substitutions);
+                break;
+            case LAMEXP_TYPE_MATCH:
+                exp->val.match =
+                    performMatchSubstitutions(exp->val.match, substitutions);
+                break;
+            case LAMEXP_TYPE_AND:
+                exp->val.and =
+                    performAndSubstitutions(exp->val.and, substitutions);
+                break;
+            case LAMEXP_TYPE_OR:
+                exp->val.or = performOrSubstitutions(exp->val.or, substitutions);
+                break;
+            case LAMEXP_TYPE_AMB:
+                exp->val.amb =
+                    performAmbSubstitutions(exp->val.amb, substitutions);
+                break;
+            case LAMEXP_TYPE_MAKE_TUPLE:
+                exp->val.make_tuple =
+                    performListSubstitutions(exp->val.make_tuple, substitutions);
+                break;
+            case LAMEXP_TYPE_TUPLE_INDEX:
+                exp->val.tuple_index =
+                    performTupleIndexSubstitutions(exp->val.tuple_index, substitutions);
+                break;
+            case LAMEXP_TYPE_PRINT:
+                exp->val.print = performPrintSubstitutions(exp->val.print, substitutions);
+                break;
+            default:
+                cant_happen
+                    ("unrecognized LamExp type %s", lamExpTypeName(exp->type));
+        }
     }
     LEAVE(lamPerformSubstitutions);
     return exp;

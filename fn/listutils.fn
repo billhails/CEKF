@@ -1,42 +1,50 @@
 let
+    // member: #a -> list(#a) -> bool
     fn member {
         (_, []) { false }
         (x, x @ _) { true }
         (x, _ @ t) { member(x, t) }
     }
 
+    // map: (#a -> #b) -> list(#a) -> list(#b)
     fn map {
         (_, []) { [] }
         (func, h @ t) { func(h) @ map(func, t) }
     }
 
+    // length: list(#s) -> int
     fn length {
         ([]) { 0 }
         (_ @ t) { 1 + length(t) }
     }
 
+    // foldl (#a -> #b -> #b) -> #b -> list(#a) -> #b
     fn foldl {
         (_, acc, []) { acc }
         (func, acc, h @ t) { foldl(func, func(h, acc), t) }
     }
 
+    // foldr (#a -> #b -> #b) -> #b -> list(#a) -> #b
     fn foldr(func, acc, lst) {
         foldl(func, acc, reverse(lst))
     }
 
+    // foldl1 (#a -> #a -> #a) -> list(#a) -> #a
     fn foldl1(func, h @ t) {
         foldl(func, h, t)
     }
 
+    // foldr1 (#a -> #a -> #a) -> list(#a) -> #a
     fn foldr1(func, lst) {
         foldl1(func, reverse(lst))
     }
 
-    // reverse = foldl((@), [])
+    // reverse: list)#a) -> list(#a)
     fn reverse (lst) {
         foldl(fn (elem, acc) { elem @ acc }, [], lst)
     }
 
+    // scanl: (#a -> #b -> #b) -> list(#a) -> list(list(#b))
     fn scanl (func, acc, lst) {
         let fn scan {
             (acc, []) { acc }
@@ -45,6 +53,7 @@ let
         in scan([acc], lst)
     }
 
+    // filter: (#a -> bool) list(#a) -> list(#a)
     fn filter {
         (_, []) { [] }
         (func, h @ t) {
@@ -56,89 +65,113 @@ let
         }
     }
 
+    // concat: list(list(#a)) -> list(#a)
     fn concat(lst) {
         foldr(fn (elem, acc) { elem @@ acc }, [], lst)
     }
 
+    // join: list(#a) -> list(list(#a)) -> list(#a)
+    fn join(sep, lst) {
+        foldr(fn {
+            (elem, []) { elem }
+            (elem, acc) { elem @@ sep @@ acc }
+        }, [], lst)
+    }
+
+    // any: (#a -> bool) -> list(#a) -> bool
     fn any {
         (_, []) { false }
         (f, h @ t) { f(h) or any(f, t) }
     }
 
+    // none: (#a -> bool) -> list(#a) -> bool
     fn none(f, l) {
         not any(f, l)
     }
 
+    // all: (#a -> bool) -> list(#a) -> bool
     fn all {
         (_, []) { true }
         (f, h @ t) { f(h) and all(f, t) }
     }
 
+    // repeat: int -> #a -> list(#a)
     fn repeat {
         (0, _) { [] }
         (n, v) { v @ repeat(n - 1, v) }
     }
 
+    // nth: int -> list(#a) -> #a
     fn nth {
         (0, h @ _) { h }
         (n, _ @ t) { nth(n - 1, t) }
     }
 
-    // sum = foldl((+), 0)
+    // sum: list(int) -> int
     fn sum(lst) {
         foldl(fn (elm, acc) { elm + acc }, 0, lst)
     }
 
-    // product = foldl((*), 1)
+    // product: list(int) -> int
     fn product(lst) {
         foldl(fn (elm, acc) { elm * acc }, 1, lst)
     }
 
+    // zip: list(#a) -> list(#b) -> list(#(#a, #b))
     fn zip {
-        (h1 @ t1, h2 @ t2) { [h1, h2] @ zip(t1, t2) }
+        (h1 @ t1, h2 @ t2) { #(h1, h2) @ zip(t1, t2) }
         (_, _) { [] }
     }
 
+    // zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
     fn zipWith {
         (f, h1 @ t1, h2 @ t2) { f(h1, h2) @ zipWith(f, t1, t2) }
         (_, _, _) { [] }
     }
 
+    // last: list(#a) -> #a
     fn last {
         ([a]) { a }
         (_ @ t) { last(t) }
     }
 
+    // empty: list(#a) -> bool
     fn empty {
         ([]) { true }
         (_) { false }
     }
 
+    // take: int -> list(#a) -> list(#a)
     fn take {
         (0, _) { [] }
         (n, []) { [] }
         (n, h @ t) { h @ take(n - 1, t) }
     }
 
+    // drop: int -> list(#a) -> list(#a)
     fn drop {
         (0, l) { l }
         (n, []) { [] }
         (n, _ @ t) { drop(n - 1, t) }
     }
 
+    // minimum: list(#a) -> #a
     fn minimum(lst) {
         foldl1(fn (elem, acc) { if (elem < acc) { elem } else { acc } }, lst)
     }
 
+    // maximum: list(#a) -> #a
     fn maximum(lst) {
         foldl1(fn (elem, acc) { if (elem > acc) { elem } else { acc } }, lst)
     }
 
+    // range: int -> int -> list(int)
     fn range(low, high) {
-        if (low > high) { [] }
+        if (low >= high) { [] }
         else { low @ range(low + 1, high) }
     }
 
+    // dedup: list(#a) -> list(#a)
     fn dedup {
         ([]) { [] }
         (h @ t) {
@@ -146,6 +179,7 @@ let
         }
     }
 
+    // sortBy: (#a -> #a -> cmp) -> list(#a) -> list(#a)
     fn sortBy(predicate, lst) {
         let
             fn full_sort {
@@ -162,7 +196,7 @@ let
                         partial_sort(lesser, first @ partial_sort(greater, already_sorted))
                     })
                 }
-                ([], sorted) { sorted }
+                ([], already_sorted) { already_sorted }
             }
             fn partition(key, lst, kont) {
                 let fn helper {
@@ -181,7 +215,19 @@ let
             full_sort(lst)
     }
 
+    // sort: list(#a) -> list(#a)
     sort = sortBy(fn (a, b) { a <=> b });
 
-in
-    print(concat(take(3, ["well", " ", "hi", " ", "there"])))
+in {
+    let
+        data = ["well", " ", "hi", " ", "there"];
+    in
+        print(concat(sort(take(3, data))));
+        print(join(", ", data));
+        print(range(5, 10));
+        print(dedup(concat(data)));
+        print(filter(fn (n) { n < 5 }, range(0, 10)));
+        print(any(fn (n) { n < 5 }, range(5, 10)));
+        print(dedup(data));
+        print(length(data));
+}
