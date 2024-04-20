@@ -791,6 +791,20 @@ static TcType *makeTuple(int size) {
 static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
                                       TcTypeTable *map);
 
+static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args, TcTypeTable *map) {
+    TcTypeArray *array = newTcTypeArray();
+    int save = PROTECT(array);
+    while (args != NULL) {
+        TcType *arg = makeTypeConstructorArg(args->arg, map);
+        int save2 = PROTECT(arg);
+        pushTcTypeArray(array, arg);
+        UNPROTECT(save2);
+        args = args->next;
+    }
+    UNPROTECT(save);
+    return array;
+}
+
 static TcUserTypeArgs *makeUserTypeArgs(LamTypeConstructorArgs *args,
                                         TcTypeTable *map) {
     if (args == NULL) {
@@ -812,6 +826,14 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
     TcUserTypeArgs *args = makeUserTypeArgs(func->args, map);
     int save = PROTECT(args);
     TcType *res = makeUserType(func->name, args);
+    UNPROTECT(save);
+    return res;
+}
+
+static TcType *makeTupleApplication(LamTypeConstructorArgs *tuple, TcTypeTable *map) {
+    TcTypeArray *array = makeTupleArray(tuple, map);
+    int save = PROTECT(array);
+    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(array));
     UNPROTECT(save);
     return res;
 }
@@ -838,9 +860,12 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
             res = makeTypeConstructorApplication(arg->val.function, map);
             break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+            res = makeTupleApplication(arg->val.tuple, map);
+            break;
         default:
-            cant_happen("unrecognised type %d in collectTypeConstructorArg",
-                        arg->type);
+            cant_happen("unrecognised type %s in collectTypeConstructorArg",
+                        lamTypeConstructorTypeTypeName(arg->type));
     }
     return res;
 }

@@ -1,1 +1,7 @@
-print(#(1, 2, 3))
+let
+    typedef t(#a, #b) { test(#(#a, #a), #(#b, #b)) }
+    typedef t2(#a) { test2(#(#a, #a, #a, #a, #a)) }
+in
+print(test(#(1, 2), #('a', 'b')));
+print(test2(#(1, 2, 3, 4, 5)));
+print(#(1, 2, 3, 4, 5));
