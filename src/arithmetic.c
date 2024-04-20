@@ -1609,11 +1609,11 @@ static Value comMag(Value v) {
     ASSERT_COMPLEX(v);
     Value a, b;
     extractFromComplexArg(&a, &b, v);
-    Value aa = npow(a, stdintValue(2));
-    int save = protectValue(aa);
-    Value bb = npow(b, stdintValue(2));
-    protectValue(bb);
-    Value sum = nadd(aa, bb);
+    a = npow(a, stdintValue(2));
+    int save = protectValue(a);
+    b = npow(b, stdintValue(2));
+    protectValue(b);
+    Value sum = nadd(a, b);
     protectValue(sum);
     Value res = npow(sum, irrationalValue(0.5));
     UNPROTECT(save);
@@ -1637,7 +1637,7 @@ static Value comRoot(Value v, Value n) {
     int save = rec_to_polar(v, &r, &theta);
     Value inv_n = ratValue(stdintValue(1), n);
     protectValue(inv_n);
-    Value r_n = npow(r, n);
+    Value r_n = npow(r, inv_n);
     protectValue(r_n);
     Value theta_n = ndiv(theta, n);
     protectValue(theta_n);

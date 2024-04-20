@@ -1,0 +1,2 @@
+let fn adder(a) { fn (b) { a + b } }
+in print(adder(1, 2));

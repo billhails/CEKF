@@ -26,9 +26,9 @@
 #include "hash.h"
 
 static void printClo(Clo *x, char *type, int depth);
-static void printElidedEnv(Env *x);
+static void printElidedEnv(Env *x) __attribute__((unused));
 static void printEnv(Env *x, int depth);
-static void printFail(Fail *x, int depth);
+static void printFail(Fail *x, int depth) __attribute__((unused));
 static void printKont(Kont *x, int depth);
 static void printStack(Stack *x, int depth);
 static void printVec(Vec *x);
@@ -194,26 +194,26 @@ void printElidedValue(Value x) {
 static void printClo(Clo *x, char *type, int depth) {
     printPad(depth);
     eprintf("%s[%d, %04lx, ", type, x->pending, x->ip);
-    printElidedEnv(x->env);
+    // printElidedEnv(x->env);
     eprintf("]");
 }
 
 void printCEKF(CEKF * x) {
     int depth = 1;
-    eprintf("\nCEKF (\n");
-    printPad(depth);
-    eprintf("%04lx", x->C);
-    eprintf(",\n");
-    printEnv(x->E, depth);
-    eprintf(",\n");
-    printKont(x->K, depth);
-    eprintf(",\n");
-    printFail(x->F, depth);
-    eprintf(",\n");
-    printValue(x->V, depth);
-    eprintf(",\n");
+    // eprintf("\nCEKF (\n");
+    // printPad(depth);
+    // eprintf("%04lx", x->C);
+    // eprintf(",\n");
+    // printEnv(x->E, depth);
+    // eprintf(",\n");
+    // printKont(x->K, depth);
+    // eprintf(",\n");
+    // printFail(x->F, depth);
+    // eprintf(",\n");
+    // printValue(x->V, depth);
+    // eprintf(",\n");
     printStack(&x->S, depth);
-    eprintf("\n)\n\n");
+    // eprintf("\n)\n\n");
 }
 
 static void printStack(Stack *x, int depth) {
@@ -222,16 +222,16 @@ static void printStack(Stack *x, int depth) {
         eprintf("S/");
         return;
     }
-    eprintf("S[\n");
+    eprintf("S[ ");
     for (int i = 0; i < x->sp; ++i) {
         printContainedValue(peekValue(x, i), depth + 1);
         if (i < x->sp - 1) {
             eprintf(",");
         }
-        eprintf("\n");
+        // eprintf("\n");
     }
-    printPad(depth);
-    eprintf("]");
+    // printPad(depth);
+    eprintf("]\n");
 }
 
 static void printValues(Value *values, int count, int depth) {
@@ -568,7 +568,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                 break;
             case BYTECODE_CHAR:{
                     char c = readByte(bca, &i);
-                    eprintf("CHAR [%c]\n", c);
+                    eprintf("CHAR [%s]\n", charRep(c));
                 }
                 break;
             case BYTECODE_RETURN:{

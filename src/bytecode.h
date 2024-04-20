@@ -94,6 +94,8 @@ typedef struct ByteCodeArray {
     byte *entries;
 } ByteCodeArray;
 
+char *charRep(char c);
+
 void initByteCodeArray(ByteCodeArray *b);
 void resetByteCodeArray(ByteCodeArray *b);
 
