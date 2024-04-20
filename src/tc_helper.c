@@ -49,8 +49,11 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_USERTYPE:
             ppTcUserType(type->val.userType);
             break;
+        case TCTYPE_TYPE_TUPLE:
+            ppTcTuple(type->val.tuple);
+            break;
         default:
-            eprintf("unrecognized type %d", type->type);
+            eprintf("unrecognized type %s", tcTypeTypeName(type->type));
     }
 }
 
@@ -76,6 +79,17 @@ void ppTcVar(TcVar *var) {
         ppTcType(var->instance);
         eprintf("]");
     }
+}
+
+void ppTcTuple(TcTypeArray *tuple) {
+    eprintf("#(");
+    for (int i = 0; i < tuple->size; i++) {
+        ppTcType(tuple->entries[i]);
+        if (i + 1 < tuple->size) {
+            eprintf(", ");
+        }
+    }
+    eprintf(")");
 }
 
 static void ppUserTypeArgs(TcUserTypeArgs *args) {

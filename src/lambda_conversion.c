@@ -228,6 +228,16 @@ static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
                 return this;
             }
             break;
+        case AST_TYPECLAUSE_TYPE_TYPETUPLE: {
+            LamTypeConstructorArgs *lamTypeConstructorArgs =
+                convertAstTypeList(astTypeClause->val.typeTuple);
+            int save = PROTECT(lamTypeConstructorArgs);
+            LamTypeConstructorType *this = newLamTypeConstructorType(LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE,
+                                                                     LAMTYPECONSTRUCTORTYPE_VAL_TUPLE(lamTypeConstructorArgs));
+            UNPROTECT(save);
+            return this;
+        }
+        break;
         default:
             cant_happen
                 ("unrecognised astTypeClause type %d in convertAstTypeClause",

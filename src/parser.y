@@ -237,7 +237,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <typeConstructor> type_constructor
 %type <typeFunction> type_function
 %type <typeDef> typedef
-%type <typeList> type_list
+%type <typeList> type_list type_tuple
 %type <typeSymbols> type_symbols
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
@@ -370,10 +370,14 @@ type : type_clause              { $$ = newAstType($1, NULL); }
      | '(' type ')'             { $$ = $2; }
      ;
 
+type_tuple : '#' '(' type_list ')' { $$ = $3; }
+           ;
+
 type_clause : KW_INT                { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_INTEGER, AST_TYPECLAUSE_VAL_INTEGER()); }
             | KW_CHAR               { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_CHARACTER, AST_TYPECLAUSE_VAL_CHARACTER()); }
             | type_symbol           { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_VAR, AST_TYPECLAUSE_VAL_VAR($1)); }
             | type_function         { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPEFUNCTION, AST_TYPECLAUSE_VAL_TYPEFUNCTION($1)); }
+            | type_tuple            { $$ = newAstTypeClause(AST_TYPECLAUSE_TYPE_TYPETUPLE, AST_TYPECLAUSE_VAL_TYPETUPLE($1)); }
             ;
 
 /******************************** expressions */

@@ -243,6 +243,29 @@ static LamExp *makePrintType(LamTypeFunction *function) {
     return res;
 }
 
+static LamExp *makePrintTuple(LamTypeConstructorArgs *tuple) {
+    int size = countLamTypeConstructorArgs(tuple);
+    HashSymbol *name = NULL;
+    if (size <= 4) {
+        char buf[64];
+        sprintf(buf, "%d", size);
+        name = makePrintName("print$tuple$", buf);
+    } else {
+        name = newSymbol("print$");
+        LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+        return exp;
+    }
+    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    int save = PROTECT(exp);
+    LamList *args = makePrintArgs(tuple);
+    PROTECT(args);
+    LamApply *apply = newLamApply(exp, size, args);
+    PROTECT(apply);
+    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return res;
+}
+
 static LamExp *makePrinter(LamTypeConstructorType *arg) {
     LamExp *printer = NULL;
     switch (arg->type) {
@@ -258,8 +281,11 @@ static LamExp *makePrinter(LamTypeConstructorType *arg) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
             printer = makePrintType(arg->val.function);
             break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+            printer = makePrintTuple(arg->val.tuple);
+            break;
         default:
-            cant_happen("unrecognised type %d in makePrinter", arg->type);
+            cant_happen("unrecognised type %s in makePrinter", lamTypeConstructorTypeTypeName(arg->type));
     }
     return printer;
 }

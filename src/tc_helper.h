@@ -26,6 +26,7 @@ void ppTcFunction(TcFunction *function);
 void ppTcPair(TcPair *pair);
 void ppTcVar(TcVar *var);
 void ppTcUserType(TcUserType *userType);
+void ppTcTuple(TcTypeArray *tuple);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 
 #endif

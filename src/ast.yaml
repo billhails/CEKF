@@ -139,6 +139,7 @@ unions:
         character: void_ptr
         var: HashSymbol
         typeFunction: AstTypeFunction
+        typeTuple: AstTypeList
 
     AstArg:
         wildcard: void_ptr

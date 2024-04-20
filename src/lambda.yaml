@@ -264,6 +264,7 @@ unions:
         character: void_ptr
         var: HashSymbol
         function: LamTypeFunction
+        tuple: LamTypeConstructorArgs
 
 hashes:
     LamInfoTable:
