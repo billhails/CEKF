@@ -65,6 +65,22 @@ static void reserve(ByteCodeArray *b, size_t size) {
     }
 }
 
+char *charRep(char c) {
+    switch (c) {
+        case '\n':
+            return "\\n";
+        case '\t':
+            return "\\t";
+        case '\0':
+            return "\\0";
+        default: {
+            static char buf[8];
+            sprintf(buf, "%c", c);
+            return buf;
+        }
+    }
+}
+
 static void addByte(ByteCodeArray *b, int code) {
     if (code > 255) {
         cant_happen("maximim byte size exceeded");

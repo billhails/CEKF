@@ -332,27 +332,37 @@ static void applyProc(int naargs) {
                 Clo *clo = callable.val.clo;
                 int ncaptured = clo->env->count;
                 if (clo->pending == naargs) {
-                    state.C = clo->ip;
-                    state.E = clo->env->next;
-                    int stackSize = ncaptured + naargs;
                     // move the new args to the right place on the stack, leaving just enough
-                    // space for the captured args below them
+                    // space for the captured args below them:
+                    // | ..captured.. | ..aargs.. |
+                    //                  ^^^^^^^^^ ^
+                    //                    moved   SP
                     setFrame(&state.S, ncaptured, naargs);
                     // then copy the already captured args to the base of the stack
                     copyValues(state.S.stack, clo->env->values, ncaptured);
-                    state.S.sp = stackSize;
+                    // set the stack pointer to the last arg
+                    state.S.sp = ncaptured + naargs;
+                    // and set up the machine for the next step into the body of the closure
+                    state.E = clo->env->next;
+                    state.C = clo->ip;
                 } else if (naargs == 0) {
+                    // args expected, no args passed, no-op
                     push(callable);
                 } else if (naargs < clo->pending) {
+                    // create a new partial closure capturing the additional arguments so far
+                    // create a new env which is a sibling of the partial closure's env.
                     Env *env = newEnv(clo->env->next, naargs + ncaptured);
                     int save = PROTECT(env);
+                    // copy already captured arguments into the new env
                     copyValues(env->values, clo->env->values, ncaptured);
+                    // copy the additional arguments after them
                     copyValues(&(env->values[clo->env->count]),
                                &(state.S.stack[state.S.sp - naargs]), naargs);
+                    // create a new closure with correct pending, ip and the new env
                     Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
                     PROTECT(pclo);
-                    callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
+                    // and push it as the result
                     push(callable);
                     UNPROTECT(save);
                 } else {
@@ -409,7 +419,7 @@ static void applyProc(int naargs) {
     UNPROTECT(save);
 }
 
-#define printCEKF(state)
+// #define printCEKF(state)
 
 static unsigned long int count = 0;
 
@@ -427,7 +437,7 @@ static void step() {
         int bytecode;
 #ifdef DEBUG_STEP
         printCEKF(&state);
-        printf("%4d) %04lx ### ", count, state.C);
+        printf("%4ld) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
             case BYTECODE_NONE:{
@@ -996,7 +1006,7 @@ static void step() {
             case BYTECODE_CHAR:{
                     // push literal char
                     char c = readCurrentByte();
-                    DEBUGPRINTF("CHAR [%c]\n", c);
+                    DEBUGPRINTF("CHAR [%s]\n", charRep(c));
                     Value v = characterValue(c);
                     push(v);
                 }
