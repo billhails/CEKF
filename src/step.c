@@ -1113,9 +1113,11 @@ void putValue(Value x) {
                 printf("%gi", x.val.irrational);
             break;
         case VALUE_TYPE_COMPLEX:
+            printf("(");
             putValue(x.val.vec->values[0]);
-            printf("+");
+            printf(" + ");
             putValue(x.val.vec->values[1]);
+            printf(")");
             break;
         case VALUE_TYPE_CHARACTER:
             switch (x.val.character) {
