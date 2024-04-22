@@ -28,6 +28,7 @@ struct Header;
 #  include "lambda_objtypes.h"
 #  include "tpmc_objtypes.h"
 #  include "tc_objtypes.h"
+#  include "builtins_objtypes.h"
 
 typedef enum {
 
@@ -53,6 +54,7 @@ typedef enum {
     LAMBDA_OBJTYPES(),
     TPMC_OBJTYPES(),
     TC_OBJTYPES(),
+    BUILTINS_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

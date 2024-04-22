@@ -2098,6 +2098,20 @@ Value nneg(Value v) {
     return res;
 }
 
+// very weak deterministic random number generator
+// used by the `rand` built-in
+Value nrand(Value prev) {
+    CHECK_INITIALIZED();
+    ASSERT_IRRATIONAL(prev);
+    double seed = fmod(prev.val.irrational, 1.0);
+    if (seed < 0) seed = -seed;
+    seed *= UINT_MAX;
+    seed = fmod(seed * 1103515245.0 + 12345.0, (double)UINT_MAX);
+    seed /= UINT_MAX;
+    Value v = irrationalValue(seed);
+    return v;
+}
+
 void init_arithmetic() {
     if (!arithmetic_initialized) {
         BigInt *zero = bigIntFromInt(0);

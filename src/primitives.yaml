@@ -19,7 +19,7 @@
 # common primitive types not defined by the schemas
 
 HashSymbol:
-    cname: "HashSymbol *"
+    cname: "struct HashSymbol *"
     printFn: printAstSymbol
     valued: true
 
@@ -44,14 +44,14 @@ char:
     valued: true
 
 BigInt:
-    cname: "BigInt *"
+    cname: "struct BigInt *"
     printFn: "printBigInt"
     markFn: "markBigInt"
     compareFn: "cmpBigInt"
     valued: true
 
 MaybeBigInt:
-    cname: "MaybeBigInt *"
+    cname: "struct MaybeBigInt *"
     printFn: "printMaybeBigInt"
     markFn: "markMaybeBigInt"
     compareFn: "cmpMaybeBigInt"

@@ -20,8 +20,9 @@
 
 #  include "tc.h"
 #  include "lambda.h"
+#  include "builtins.h"
 
-TcEnv *tc_init(void);
+TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);
 
 #endif

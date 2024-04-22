@@ -24,13 +24,14 @@
 #include "common.h"
 #include "debug.h"
 #include "hash.h"
+#include "builtins_debug.h"
 
 static void printClo(Clo *x, char *type, int depth);
 static void printElidedEnv(Env *x) __attribute__((unused));
 static void printEnv(Env *x, int depth);
 static void printFail(Fail *x, int depth) __attribute__((unused));
 static void printKont(Kont *x, int depth);
-static void printStack(Stack *x, int depth);
+static void printStack(Stack *x, int depth) __attribute__((unused));
 static void printVec(Vec *x);
 
 static void printPad(int depth) {
@@ -78,6 +79,9 @@ void printContainedValue(Value x, int depth) {
         case VALUE_TYPE_VEC:
             printPad(depth);
             printVec(x.val.vec);
+            break;
+        case VALUE_TYPE_BUILTIN:
+            printBuiltInImplementation(x.val.builtIn, depth);
             break;
         default:
             cant_happen("unrecognised value type %d", x.type);
@@ -204,15 +208,15 @@ void printCEKF(CEKF * x) {
     // printPad(depth);
     // eprintf("%04lx", x->C);
     // eprintf(",\n");
-    // printEnv(x->E, depth);
-    // eprintf(",\n");
+    printEnv(x->E, depth);
+    eprintf(",\n");
     // printKont(x->K, depth);
     // eprintf(",\n");
     // printFail(x->F, depth);
     // eprintf(",\n");
     // printValue(x->V, depth);
     // eprintf(",\n");
-    printStack(&x->S, depth);
+    // printStack(&x->S, depth);
     // eprintf("\n)\n\n");
 }
 
@@ -566,6 +570,11 @@ void dumpByteCode(ByteCodeArray *bca) {
                     bigint_free(&bi);
                 }
                 break;
+            case BYTECODE_IRRATIONAL:{
+                double f = readDouble(bca, &i);
+                eprintf("IRRATIONAL [%f]\n", f);
+            }
+            break;
             case BYTECODE_CHAR:{
                     char c = readByte(bca, &i);
                     eprintf("CHAR [%s]\n", charRep(c));

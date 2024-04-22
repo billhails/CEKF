@@ -1,5 +1,3 @@
-#ifndef cekf_arithmetic_h
-#define cekf_arithmetic_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,20 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "value.h"
-#include "cmp.h"
+#include "builtins_impl.h"
+#include "arithmetic.h"
 
-Value nadd(Value, Value);
-Value nsub(Value, Value);
-Value nmul(Value, Value);
-Value ndiv(Value, Value);
-Value npow(Value, Value);
-Value nmod(Value, Value);
-Value nneg(Value);
-Cmp ncmp(Value, Value);
-Value nrand(Value);
-
-void init_arithmetic(void);
-void markArithmetic(void);
-
-#endif
+Value builtin_rand(Vec *v) {
+    return nrand(v->values[0]);
+}

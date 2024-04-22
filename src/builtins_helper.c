@@ -1,5 +1,3 @@
-#ifndef cekf_arithmetic_h
-#define cekf_arithmetic_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,20 +16,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "value.h"
-#include "cmp.h"
+#include "builtins_helper.h"
+#include "builtins_impl.h"
+#include "memory.h"
+#include "symbol.h"
 
-Value nadd(Value, Value);
-Value nsub(Value, Value);
-Value nmul(Value, Value);
-Value ndiv(Value, Value);
-Value npow(Value, Value);
-Value nmod(Value, Value);
-Value nneg(Value);
-Cmp ncmp(Value, Value);
-Value nrand(Value);
+static void registerRand(BuiltIns *registry);
 
-void init_arithmetic(void);
-void markArithmetic(void);
+BuiltIns *registerBuiltIns() {
+    BuiltIns *res = newBuiltIns();
+    int save = PROTECT(res);
+    registerRand(res);
+    UNPROTECT(save);
+    return res;
+}
 
-#endif
+static void registerRand(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushBuiltInArgs(args, BUILTINARGTYPE_TYPE_NUMBER);
+    BuiltIn *decl = newBuiltIn(newSymbol("rand"), BUILTINARGTYPE_TYPE_NUMBER, args, (void *)builtin_rand);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}

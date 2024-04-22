@@ -22,7 +22,6 @@
 
 #  include "common.h"
 #  include "memory.h"
-#  include "value.h"
 
 #  define HASH_MAX_LOAD 0.75
 

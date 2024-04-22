@@ -24,7 +24,8 @@
 #  include "anf.h"
 #  include "hash.h"
 #  include "memory.h"
+#  include "builtins.h"
 
-void annotateExp(Exp *x, CTEnv *env);
+void annotateAnf(Exp *x, BuiltIns *builtIns);
 
 #endif

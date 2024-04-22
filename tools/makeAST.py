@@ -1740,11 +1740,12 @@ class SimpleEnum(Base):
 
     def printCompareField(self, field, depth, prefix=''):
         pad(depth)
-        print("switch (a->type) { // SimpleEnum.printCompareField")
+        comment = '// SimpleEnum.printCompareField';
+        print(f"switch (a->{prefix}{field}) {{ {comment}")
         for field in self.fields:
             field.printCompareCase(depth + 1)
         pad(depth)
-        print('} // SimpleEnum.printCompareField')
+        print(f'}} {comment}')
 
     def printPrintHashField(self, depth):
         myName = self.getName()
@@ -1759,11 +1760,12 @@ class SimpleEnum(Base):
 
     def printPrintField(self, field, depth, prefix=''):
         pad(depth)
-        print('switch (x->type) { // SimpleEnum.printPrintField')
+        comment = '// SimpleEnum.printPrintField';
+        print(f'switch (x->{prefix}{field}) {{ {comment}')
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
-        print('} // SimpleEnum.printPrintField')
+        print(f'}} // {comment}')
 
     def printCopyField(self, field, depth, prefix=''):
         pad(depth)

@@ -44,6 +44,7 @@
 #include "tc_debug.h"
 #include "tpmc_mermaid.h"
 #include "arithmetic.h"
+#include "builtins_helper.h"
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -118,8 +119,8 @@ static LamExp *convertNest(AstNest *nest) {
     return exp;
 }
 
-static void typeCheck(LamExp *exp) {
-    TcEnv *env = tc_init();
+static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
+    TcEnv *env = tc_init(builtIns);
     int save = PROTECT(env);
     TcType *res __attribute__((unused)) = tc_analyze(exp, env);
     if (hadErrors()) {
@@ -141,8 +142,8 @@ static Exp *desugar(Exp *anfExp) {
     return anfExp;
 }
 
-static void annotate(Exp *anfExp) {
-    annotateExp(anfExp, NULL);
+static void annotate(Exp *anfExp, BuiltIns *builtIns) {
+    annotateAnf(anfExp, builtIns);
 #ifdef DEBUG_ANF
     ppExp(anfExp);
     eprintf("\n");
@@ -177,16 +178,19 @@ int main(int argc, char *argv[]) {
     initProtection();
     init_arithmetic();
 
+    BuiltIns *builtIns = registerBuiltIns();
+    int save = PROTECT(builtIns);
+
     AstNest *nest = parseFile(argv[optind]);
-    int save = PROTECT(nest);
+    int save2 = PROTECT(nest);
 
     LamExp *exp = convertNest(nest);
-    REPLACE_PROTECT(save, exp);
+    REPLACE_PROTECT(save2, exp);
 
-    typeCheck(exp);
+    typeCheck(exp, builtIns);
 
     Exp *anfExp = anfNormalize(exp);
-    REPLACE_PROTECT(save, anfExp);
+    REPLACE_PROTECT(save2, anfExp);
 
     if (anf_flag) {
         ppExp(anfExp);
@@ -194,17 +198,19 @@ int main(int argc, char *argv[]) {
     }
 
     anfExp = desugar(anfExp);
-    REPLACE_PROTECT(save, anfExp);
+    REPLACE_PROTECT(save2, anfExp);
 
-    annotate(anfExp);
+    annotate(anfExp, builtIns);
 
     ByteCodeArray byteCodes = generateByteCodes(anfExp);
 
-    UNPROTECT(save);
+    UNPROTECT(save2);
 
     clock_t compiled = clock();
 
-    run(byteCodes);
+    run(byteCodes, builtIns);
+
+    UNPROTECT(save);
 
     clock_t end = clock();
 

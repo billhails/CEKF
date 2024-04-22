@@ -308,6 +308,9 @@ void markObj(Header *h, int i) {
             TC_OBJTYPE_CASES()
                 markTcObj(h);
             break;
+            BUILTINS_OBJTYPE_CASES()
+                markBuiltinsObj(h);
+            break;
         case OBJTYPE_BIGINT:
             markBigInt((BigInt *) h);
             break;
@@ -363,6 +366,9 @@ void freeObj(Header *h) {
             break;
             TC_OBJTYPE_CASES()
                 freeTcObj(h);
+            break;
+            BUILTINS_OBJTYPE_CASES()
+                freeBuiltinsObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
