@@ -19,8 +19,9 @@
  */
 
 #  include "bigint.h"
+#  include "builtins.h"
 
-typedef enum {
+typedef enum ValueType {
     VALUE_TYPE_VOID,
     VALUE_TYPE_STDINT,
     VALUE_TYPE_BIGINT,
@@ -36,6 +37,7 @@ typedef enum {
     VALUE_TYPE_PCLO,
     VALUE_TYPE_CONT,
     VALUE_TYPE_VEC,
+    VALUE_TYPE_BUILTIN,
 } ValueType;
 
 typedef union {
@@ -47,6 +49,7 @@ typedef union {
     struct Clo *clo;
     struct Kont *kont;
     struct Vec *vec;
+    struct BuiltInImplementation *builtIn;
 } ValueVal;
 
 typedef struct Value {
@@ -70,6 +73,7 @@ typedef struct Value {
 #  define VALUE_VAL_RATIONAL(x)        ((ValueVal){.vec  = (x)})
 #  define VALUE_VAL_COMPLEX(x)         ((ValueVal){.vec  = (x)})
 #  define VALUE_VAL_NONE()             ((ValueVal){.none = NULL})
+#  define VALUE_VAL_BUILTIN(x)         ((ValueVal){.builtIn = (x)})
 
 // constants
 extern Value vTrue;
@@ -177,7 +181,11 @@ static inline Value complexValue(struct Vec * x) {
     return v;
 }
 
-
-
+static inline Value builtInValue(struct BuiltInImplementation * x) {
+    Value v;
+    v.type = VALUE_TYPE_BUILTIN;
+    v.val = VALUE_VAL_BUILTIN(x);
+    return v;
+}
 
 #endif

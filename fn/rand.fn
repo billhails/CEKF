@@ -1,0 +1,12 @@
+let fn test {
+    (0, seed) { seed }
+    (n, seed) {
+        let
+            v = rand(seed);
+        in
+            print(v);
+            test(n - 1, v)
+    }
+}
+in
+    test(100, 0.5);

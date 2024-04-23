@@ -31,6 +31,8 @@
 #include "step.h"
 #include "hash.h"
 #include "arithmetic.h"
+#include "builtins_impl.h"
+#include "builtins_debug.h"
 
 int dump_bytecode_flag = 0;
 
@@ -82,10 +84,28 @@ static void copyToVec(Vec *vec) {
     copyTopToValues(&state.S, &(vec->values[0]), vec->size);
 }
 
-static void inject(ByteCodeArray B) {
+static Env *builtInsToEnv(BuiltIns *b)__attribute__((unused));
+
+static Env *builtInsToEnv(BuiltIns *b) {
+    // printBuiltIns(b, 0);
+    // eprintf("\n");
+    Env *env = newEnv(NULL, b->size);
+    int save = PROTECT(env);
+    for (int i = 0; i < b->size; i++) {
+        BuiltIn *builtIn = b->entries[i];
+        BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
+        // printBuiltInImplementation(implementation, 0);
+        // eprintf("\n");
+        env->values[i] = builtInValue(implementation);
+    }
+    UNPROTECT(save);
+    return env;
+}
+
+static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) {
     static bool first = true;
     state.C = 0;
-    state.E = NULL;
+    state.E = builtInsToEnv(builtIns);
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
@@ -98,8 +118,8 @@ static void inject(ByteCodeArray B) {
     first = false;
 }
 
-Value run(ByteCodeArray B) {
-    inject(B);
+Value run(ByteCodeArray B, BuiltIns *builtIns) {
+    inject(B, builtIns);
     step();
     return state.V;
 }
@@ -208,8 +228,10 @@ static Cmp _cmp(Value left, Value right) {
         case VALUE_TYPE_BIGINT:
         case VALUE_TYPE_STDINT:
         case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_IRRATIONAL:
         case VALUE_TYPE_BIGINT_IMAG:
         case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_RATIONAL_IMAG:
         case VALUE_TYPE_IRRATIONAL_IMAG:
         case VALUE_TYPE_COMPLEX:
             return ncmp(left, right);
@@ -413,6 +435,25 @@ static void applyProc(int naargs) {
                 }
             }
             break;
+        case VALUE_TYPE_BUILTIN:{
+            BuiltInImplementation *impl = callable.val.builtIn;
+            if (naargs == impl->nargs) {
+                BuiltInFunction fn = (BuiltInFunction) impl->implementation;
+                Vec *v = newVec(impl->nargs);
+                int save = PROTECT(v);
+                copyValues(v->values, &(state.S.stack[state.S.sp - impl->nargs]), impl->nargs);
+                Value res = fn(v);
+                protectValue(res);
+                state.S.sp -= impl->nargs;
+                push(res);
+                UNPROTECT(save);
+            } else if (naargs == 0) {
+                push(callable);
+            } else {
+                cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nargs, naargs);
+            }
+        }
+        break;
         default:
             cant_happen("unexpected type %d in APPLY", callable.type);
     }
@@ -444,7 +485,8 @@ static void step() {
                     cant_happen("encountered NONE in step()");
                 }
                 break;
-            case BYTECODE_LAM:{// create a closure and push it
+            case BYTECODE_LAM:{
+                    // create a closure and push it
                     int nargs = readCurrentByte();
                     int letRecOffset = readCurrentByte();
                     int end = readCurrentOffset();
@@ -459,7 +501,8 @@ static void step() {
                     state.C = end;
                 }
                 break;
-            case BYTECODE_VAR:{// look up an environment variable and push it
+            case BYTECODE_VAR:{
+                    // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
                     DEBUGPRINTF("VAR [%d:%d]\n", frame, offset);
@@ -732,7 +775,8 @@ static void step() {
                     applyProc(nargs);
                 }
                 break;
-            case BYTECODE_IF:{ // pop the test result and jump to the appropriate branch
+            case BYTECODE_IF:{
+                    // pop the test result and jump to the appropriate branch
                     int branch = readCurrentOffset();
                     DEBUGPRINTF("IF [%04x]\n", branch);
                     Value aexp = pop();
@@ -893,14 +937,16 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_AMB:{// create a new failure continuation to resume at the alternative
+            case BYTECODE_AMB:{
+                    // create a new failure continuation to resume at the alternative
                     int branch = readCurrentOffset();
                     DEBUGPRINTF("AMB [%04x]\n", branch);
                     state.F = newFail(branch, state.E, state.K, state.F);
                     snapshotFail(&state.S, state.F);
                 }
                 break;
-            case BYTECODE_CUT:{// discard the current failure continuation
+            case BYTECODE_CUT:{
+                    // discard the current failure continuation
                     DEBUGPRINTF("CUT\n");
 #ifdef SAFETY_CHECKS
                     if (state.F == NULL) {
@@ -925,7 +971,8 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_LET:{// create a new continuation to resume the body, and transfer control to the expression
+            case BYTECODE_LET:{
+                    // create a new continuation to resume the body, and transfer control to the expression
                     int offset = readCurrentOffset();
                     DEBUGPRINTF("LET [%04x]\n", offset);
                     state.K = newKont(offset, state.E, state.K);
@@ -933,7 +980,8 @@ static void step() {
                     snapshotKont(&state.S, state.K);
                 }
                 break;
-            case BYTECODE_JMP:{// jump forward a specified amount
+            case BYTECODE_JMP:{
+                    // jump forward a specified amount
                     int offset = readCurrentOffset();
                     DEBUGPRINTF("JMP [%04x]\n", offset);
                     state.C = offset;

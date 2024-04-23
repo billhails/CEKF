@@ -20,8 +20,9 @@
 
 #  include "bytecode.h"
 #  include "value.h"
+#  include "builtins.h"
 
-Value run(ByteCodeArray B);
+Value run(ByteCodeArray B, BuiltIns *builtIns);
 
 void markCEKF(void);
 

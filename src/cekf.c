@@ -128,6 +128,9 @@ void markValue(Value x) {
         case VALUE_TYPE_IRRATIONAL_IMAG:
         case VALUE_TYPE_CHARACTER:
             break;
+        case VALUE_TYPE_BUILTIN:
+            markBuiltInImplementation(x.val.builtIn);
+            break;
         case VALUE_TYPE_PCLO:
         case VALUE_TYPE_CLO:
             markClo(x.val.clo);
@@ -308,6 +311,7 @@ int protectValue(Value v) {
         case VALUE_TYPE_STDINT_IMAG:
         case VALUE_TYPE_IRRATIONAL_IMAG:
         case VALUE_TYPE_CHARACTER:
+        case VALUE_TYPE_BUILTIN:
             return PROTECT(NULL);
         default:
             cant_happen("unrecognised type %d in protectValue", v.type);

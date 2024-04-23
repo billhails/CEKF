@@ -41,6 +41,7 @@ static void addToEnv(TcEnv *env, HashSymbol *key, TcType *type);
 static void addToNg(TcNg *env, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
+static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns);
 static TcType *makeBoolean(void);
 static TcType *makeSpaceship(void);
 static TcType *makeSmallInteger(void);
@@ -106,7 +107,7 @@ static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args);
 
 static int id_counter = 0;
 
-TcEnv *tc_init(void) {
+TcEnv *tc_init(BuiltIns *builtIns) {
     TcEnv *env = extendEnv(NULL);
     int save = PROTECT(env);
     addBoolBinOpToEnv(env, andSymbol());
@@ -131,6 +132,7 @@ TcEnv *tc_init(void) {
     addNotToEnv(env);
     addPutcToEnv(env);
     addThenToEnv(env);
+    addBuiltinsToEnv(env, builtIns);
     UNPROTECT(save);
     return env;
 }
@@ -1494,6 +1496,49 @@ static void addIfToEnv(TcEnv *env) {
     (void) PROTECT(baaa);
     addToEnv(env, ifSymbol(), baaa);
     UNPROTECT(save);
+}
+
+static TcType *builtInTypeToTcType(BuiltInArgType type) {
+    switch (type) {
+        case BUILTINARGTYPE_TYPE_NUMBER:
+            return makeBigInteger();
+        default:
+            cant_happen("unregistered value type %d", type);
+    }
+}
+
+static TcType *builtInArgsToType(BuiltInArgs *args, int pos, TcType *follows) {
+    if (pos == 0) {
+        return follows;
+    }
+    follows = builtInArgsToType(args, pos - 1, follows);
+    int save = PROTECT(follows);
+    TcType *this = builtInTypeToTcType(args->entries[pos - 1]);
+    PROTECT(this);
+    TcType *res = makeFn(this, follows);
+    UNPROTECT(save);
+    return res;
+}
+
+static TcType *constructBuiltInType(BuiltIn *builtIn) {
+    TcType *result = builtInTypeToTcType(builtIn->result);
+    int save = PROTECT(result);
+    result = builtInArgsToType(builtIn->args, builtIn->args->size, result);
+    UNPROTECT(save);
+    return result;
+}
+
+static void addBuiltInToEnv(TcEnv *env, BuiltIn *builtIn) {
+    TcType *type = constructBuiltInType(builtIn);
+    int save = PROTECT(type);
+    addToEnv(env, builtIn->name, type);
+    UNPROTECT(save);
+}
+
+static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
+    for (int i = 0; i < builtIns->size; i++) {
+        addBuiltInToEnv(env, builtIns->entries[i]);
+    }
 }
 
 static void addHereToEnv(TcEnv *env) {

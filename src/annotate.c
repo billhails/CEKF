@@ -33,6 +33,7 @@
 static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
 static void populateCTEnv(CTEnv *env, HashSymbol *var);
 
+static void annotateExp(Exp *x, CTEnv *env);
 static void annotateAexpLam(AexpLam *x, CTEnv *env);
 static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env);
 static void annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
@@ -408,7 +409,7 @@ static void annotateCexp(Cexp *x, CTEnv *env) {
     }
 }
 
-void annotateExp(Exp *x, CTEnv *env) {
+static void annotateExp(Exp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateExp ");
     printExp(x);
@@ -416,11 +417,6 @@ void annotateExp(Exp *x, CTEnv *env) {
     printCTEnv(env, 0);
     eprintf("\n");
 #endif
-    int save = -1;
-    if (env == NULL) {
-        env = newCTEnv(false, NULL);
-        save = PROTECT(env);
-    }
     switch (x->type) {
         case EXP_TYPE_AEXP:
             annotateAexp(x->val.aexp, env);
@@ -436,9 +432,22 @@ void annotateExp(Exp *x, CTEnv *env) {
         default:
             cant_happen("unrecognized type in annotateExp");
     }
-    if (save != -1) {
-        UNPROTECT(save);
+}
+
+void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
+    for (int i = 0; i < b->size; i++) {
+        populateCTEnv(env, b->entries[i]->name);
     }
+}
+
+void annotateAnf(Exp *x, BuiltIns *b) {
+    CTEnv *env = newCTEnv(false, NULL);
+    int save = PROTECT(env);
+    addBuiltInsToCTEnv(env, b);
+    env = newCTEnv(false, env);
+    REPLACE_PROTECT(save, env);
+    annotateExp(x, env);
+    UNPROTECT(save);
 }
 
 static void populateCTEnv(CTEnv *env, HashSymbol *var) {
