@@ -44,6 +44,8 @@
 #define IS_STDINT(x) ((x).type == VALUE_TYPE_STDINT)
 #define IS_INT(x) (IS_STDINT(x) || IS_BIGINT(x))
 #define IS_RATIONAL_OR_INT(x) ((x).type == VALUE_TYPE_RATIONAL || IS_INT(x))
+#define IS_REAL(x) (IS_RATIONAL_OR_INT(x) || IS_IRRATIONAL(x))
+#define IS_NOT_REAL(x) (!IS_REAL(x))
 
 #ifdef SAFETY_CHECKS
 #  define ASSERT_COMPLEX(x) ASSERT(IS_COMPLEX(x))
@@ -53,6 +55,8 @@
 #  define ASSERT_STDINT(x) ASSERT(IS_STDINT(x))
 #  define ASSERT_INT(x) ASSERT(IS_INT(x))
 #  define ASSERT_RATIONAL_OR_INT(x) ASSERT(IS_RATIONAL_OR_INT(x))
+#  define ASSERT_REAL(x) ASSERT(IS_REAL(x))
+#  define ASSERT_NOT_REAL(x) ASSERT(IS_NOT_REAL(x))
 #else
 #  define ASSERT_COMPLEX(x)
 #  define ASSERT_RATIONAL(x)
@@ -61,6 +65,8 @@
 #  define ASSERT_STDINT(x)
 #  define ASSERT_INT(x)
 #  define ASSERT_RATIONAL_OR_INT(x)
+#  define ASSERT_REAL(x)
+#  define ASSERT_NOT_REAL(x)
 #endif
 
 typedef Value (*ValOp)(Value, Value);
@@ -84,9 +90,10 @@ static Value comMag(Value v);
 static Value comTheta(Value v);
 static Value imag_to_real(Value v);
 
-#ifdef DEBUG_ARITHMETIC
 // be careful with this, printing a bigint can cause a GC
 // so make sure everything is protected before calling.
+static void ppNumber(Value number)__attribute__((unused));
+
 static void ppNumber(Value number) {
     switch (number.type) {
         case VALUE_TYPE_STDINT:
@@ -132,7 +139,6 @@ static void ppNumber(Value number) {
             eprintf("??? %d ???", number.type);
     }
 }
-#endif
 
 static inline Value realPart(Value v) {
     return v.val.vec->values[REAL];
@@ -207,7 +213,7 @@ static Value to_irrational(Value v) {
         case VALUE_TYPE_IRRATIONAL:
             return v;
         default:
-            cant_happen("invalid imaginary type %d", v.type);
+            cant_happen("invalid type %d", v.type);
     }
     return v;
 }
@@ -1446,7 +1452,7 @@ static Value irrPowCom(Value c, Value right) {
     extractFromComplexArg(&a, &b, right);
     a = to_irrational(a);
     b = to_irrational(b);
-    Value c_a = irrationalValue(pow(c.val.irrational, a.val.irrational));
+    Value c_a = npow(c, a);
     double ln_c = log(c.val.irrational);
     double b_ln_c = b.val.irrational * ln_c;
     Value cos_b_ln_c = irrationalValue(cos(b_ln_c));
@@ -1461,13 +1467,6 @@ static Value irrPowCom(Value c, Value right) {
 //////////////////////////////
 // complex number operations
 //////////////////////////////
-
-Value nadd(Value, Value);
-Value nsub(Value, Value);
-Value nmul(Value, Value);
-Value ndiv(Value, Value);
-Value nmod(Value, Value);
-Cmp ncmp(Value, Value);
 
 static Value comSimplify(Value real, Value imag) {
     if (ncmp(stdintValue(0), imag_to_real(imag)) == CMP_EQ) {
@@ -1700,6 +1699,28 @@ static Value comPowRat(Value com, Value rat) {
     Value root = comRoot(com, denominatorPart(rat));
     int save = protectValue(root);
     Value res = comPow(root, numeratorPart(rat));
+    UNPROTECT(save);
+    return res;
+}
+
+// (a + bi)^(c + di) = e^((ln(r) + theta * i) * (c + di))
+static Value comPowCom(Value base, Value exponent) {
+    ASSERT_NOT_REAL(base);
+    ASSERT_NOT_REAL(exponent);
+    base = to_complex(base);
+    int save = protectValue(base);
+    exponent = to_complex(exponent);
+    protectValue(exponent);
+    Value theta, r;
+    rec_to_polar(base, &r, &theta);
+    Value irr_r = to_irrational(r);
+    Value ln_r = irrationalValue(log(irr_r.val.irrational));
+    Value ln_r_i_theta = comValue(ln_r, real_to_imag(theta));
+    protectValue(ln_r_i_theta);
+    Value prod = nmul(ln_r_i_theta, exponent);
+    protectValue(prod);
+    Value e = irrationalValue(M_E);
+    Value res = npow(e, prod);
     UNPROTECT(save);
     return res;
 }
@@ -1945,7 +1966,8 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL_IMAG:
                 case VALUE_TYPE_IRRATIONAL_IMAG:
                 case VALUE_TYPE_COMPLEX:
-                    cant_happen("raising a complex number to a complex power not supported yet");
+                    res = comPowCom(left, right);
+                    break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
             }
@@ -1969,7 +1991,8 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL_IMAG:
                 case VALUE_TYPE_IRRATIONAL_IMAG:
                 case VALUE_TYPE_COMPLEX:
-                    cant_happen("raising a complex number to a complex power not supported yet");
+                    res = comPowCom(left, right);
+                    break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
             }
@@ -1993,7 +2016,8 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL_IMAG:
                 case VALUE_TYPE_IRRATIONAL_IMAG:
                 case VALUE_TYPE_COMPLEX:
-                    cant_happen("raising a complex number to a complex power not supported yet");
+                    res = comPowCom(left, right);
+                    break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
             }
@@ -2017,7 +2041,8 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL_IMAG:
                 case VALUE_TYPE_IRRATIONAL_IMAG:
                 case VALUE_TYPE_COMPLEX:
-                    cant_happen("raising a complex number to a complex power not supported yet");
+                    res = comPowCom(left, right);
+                    break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
             }
@@ -2028,7 +2053,10 @@ Value npow(Value left, Value right) {
                     res = comPowRat(left, right);
                     break;
                 case VALUE_TYPE_IRRATIONAL:
-                    cant_happen("raising a complex number to an irrational power not supported yet");
+                    right = real_to_complex(right);
+                    protectValue(right);
+                    res = comPowCom(left, right);
+                    break;
                 case VALUE_TYPE_BIGINT:
                 case VALUE_TYPE_STDINT:
                     res = comPow(left, right);
@@ -2038,7 +2066,8 @@ Value npow(Value left, Value right) {
                 case VALUE_TYPE_RATIONAL_IMAG:
                 case VALUE_TYPE_IRRATIONAL_IMAG:
                 case VALUE_TYPE_COMPLEX:
-                    cant_happen("raising a complex number to a complex power not supported yet");
+                    res = comPowCom(left, right);
+                    break;
                 default:
                     cant_happen("unrecognised right number type %d", right.type);
             }
