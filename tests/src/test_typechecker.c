@@ -18,6 +18,7 @@
 
 #include "test.h"
 #include "symbol.h"
+#include "builtins_helper.h"
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
@@ -104,7 +105,9 @@ static TcType *makeCharacter() {
 static TcType *analyze(AstNest *nest) {
     LamExp *exp = lamConvertNest(nest, NULL);
     int save = PROTECT(exp);
-    TcEnv *env = tc_init();
+    BuiltIns *builtIns = registerBuiltIns();
+    PROTECT(builtIns);
+    TcEnv *env = tc_init(builtIns);
     PROTECT(env);
     TcType *res = tc_analyze(exp, env);
     PROTECT(res);
