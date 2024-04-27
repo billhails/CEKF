@@ -50,8 +50,8 @@ static Header *lastAlloc = NULL;
 
 typedef struct ProtectionStack {
     Header header;
-    int capacity;
-    int sp;
+    Index capacity;
+    Index sp;
     Header *stack[0];
 } ProtectionStack;
 
@@ -142,11 +142,11 @@ void initProtection(void) {
     protected->sp = 0;
 }
 
-void replaceProtect(int i, Header *obj) {
+void replaceProtect(Index i, Header *obj) {
     protected->stack[i] = obj;
 }
 
-int protect(Header *obj) {
+Index protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(errout, "PROTECT(%p:%s) -> %d (%d)\n", obj,
             (obj == NULL ? "NULL" : typeName(obj->type, obj)), protected->sp,
@@ -177,7 +177,7 @@ int protect(Header *obj) {
     return protected->sp - 1;
 }
 
-void unProtect(int index) {
+void unProtect(Index index) {
 #ifdef DEBUG_LOG_GC
     eprintf("UNPROTECT(%d)\n", index);
 #endif
@@ -260,7 +260,7 @@ static void markProtectionObj(Header *h) {
 #endif
     MARK(h);
     ProtectionStack *protected = (ProtectionStack *) h;
-    for (int i = 0; i < protected->sp; ++i) {
+    for (Index i = 0; i < protected->sp; ++i) {
         markObj(protected->stack[i], i);
     }
 #ifdef DEBUG_LOG_GC
@@ -268,7 +268,7 @@ static void markProtectionObj(Header *h) {
 #endif
 }
 
-void markObj(Header *h, int i) {
+void markObj(Header *h, Index i) {
 #ifdef DEBUG_LOG_GC
     eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif

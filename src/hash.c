@@ -101,7 +101,7 @@ static void growCapacity(HashTable *table, int capacity) {
               values);
     }
 
-    for (int old_index = 0; old_index < table->capacity; old_index++) {
+    for (Index old_index = 0; old_index < table->capacity; old_index++) {
         HashSymbol *var = table->keys[old_index];
         if (var == NULL)
             continue;
@@ -209,7 +209,7 @@ void markHashTable(HashTable *table) {
     if (MARKED(table))
         return;
     MARK(table);
-    for (int i = 0; i < table->capacity; i++) {
+    for (Index i = 0; i < table->capacity; i++) {
         if (table->keys[i] != NULL) {
             markHashSymbol(table->keys[i]);
             if (table->valuesize > 0 && table->markfunction != NULL) {
@@ -267,7 +267,7 @@ void printHashTable(HashTable *table, int depth) {
     }
     eprintf("HashTable %d: {", table->id);
     bool first = true;
-    for (int i = 0; i < table->capacity; ++i) {
+    for (Index i = 0; i < table->capacity; ++i) {
         if (table->keys[i] != NULL) {
             if (first) {
                 first = false;
@@ -297,7 +297,7 @@ void printHashTable(HashTable *table, int depth) {
         eprintf("%*s}", depth * PAD_WIDTH, "");
 }
 
-HashSymbol *iterateHashTable(HashTable *table, int *index, void *data) {
+HashSymbol *iterateHashTable(HashTable *table, Index *index, void *data) {
     while (*index < table->capacity) {
         if (table->keys[*index] != NULL) {
             if (data != NULL) {
@@ -319,7 +319,7 @@ void copyHashTable(HashTable *to, HashTable *from) {
             ("attempt to copy between hash tables with different storage size: %ld vs %ld",
              from->valuesize, to->valuesize);
     }
-    for (int i = 0; i < from->capacity; ++i) {
+    for (Index i = 0; i < from->capacity; ++i) {
         if (from->keys[i] != NULL) {
             void *data = valuePtr(from, i);
             hashSet(to, from->keys[i], data);

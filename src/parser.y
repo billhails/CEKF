@@ -19,6 +19,7 @@
 #include "module.h"
 #include "parser.h"
 #include "lexer.h"
+#include "types.h"
 
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg);
 
@@ -105,7 +106,7 @@ static void bigint_add_n(bigint *b, int n) {
 }
 
 static MaybeBigInt *makeIrrational(char *str, bool imag) {
-    double f = atof(str);
+    Double f = atof(str);
     return irrationalBigInt(f, imag);
 }
 

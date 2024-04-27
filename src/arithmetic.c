@@ -24,6 +24,7 @@
 #include "arithmetic.h"
 #include "cekf.h"
 #include "debug.h"
+#include "types.h"
 
 #ifdef DEBUG_ARITHMETIC
 #  include "debugging_on.h"
@@ -304,10 +305,10 @@ static Value real_to_imag(Value v) {
     return v;
 }
 
-static int rec_to_polar(Value com, Value *r, Value *theta) {
+static Integer rec_to_polar(Value com, Value *r, Value *theta) {
     ASSERT_COMPLEX(com);
     *r = comMag(com);
-    int save = protectValue(*r);
+    Integer save = protectValue(*r);
     *theta = comTheta(com);
     protectValue(*theta);
     return save;
@@ -359,7 +360,7 @@ static bool intIsEven(Value v) {
 // rationals can NOT contain imaginary numbers even imaginary integers.
 // instead rationals can BE imaginary.
 
-static int coerce(Value *left, Value *right, int *save) {
+static Integer coerce(Value *left, Value *right, int *save) {
     *save = PROTECT(NULL);
     switch(left->type) {
         case VALUE_TYPE_RATIONAL:
@@ -644,8 +645,8 @@ static Cmp numCmp(Value left, Value right) {
     return res;
 }
 
-static Value safe_add(int a, int b) {
-    int c;
+static Value safe_add(Integer a, Integer b) {
+    Integer c;
     if (__builtin_add_overflow(a, b, &c)) {
         BigInt *big = bigIntFromAddition(a, b);
         int save = PROTECT(big);
@@ -692,8 +693,8 @@ static Value intAdd(Value left, Value right) {
     return res;
 }
 
-static Value safe_mul(int a, int b) {
-    int c;
+static Value safe_mul(Integer a, Integer b) {
+    Integer c;
     if (__builtin_mul_overflow(a, b, &c)) {
         BigInt *big = bigIntFromMultiplication(a, b);
         int save = PROTECT(big);
@@ -740,8 +741,8 @@ static Value intMul(Value left, Value right) {
     return res;
 }
 
-static Value safe_sub(int a, int b) {
-    int c;
+static Value safe_sub(Integer a, Integer b) {
+    Integer c;
     if (__builtin_sub_overflow(a, b, &c)) {
         BigInt *big = bigIntFromSubtraction(a, b);
         int save = PROTECT(big);
@@ -839,7 +840,7 @@ static Value basicIntDiv(Value left, Value right) {
     return res;
 }
 
-static Value safe_powf(int a, int b) {
+static Value safe_powf(Integer a, Integer b) {
     float f = powf((float) a, (float) b);
     if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
         BigInt *big = bigIntFromPower(a, b);
@@ -849,20 +850,20 @@ static Value safe_powf(int a, int b) {
         UNPROTECT(save);
         return res;
     } else {
-        return stdintValue((int) f);
+        return stdintValue((Integer) f);
     }
 }
 
-static Value irratSimplify(double result) {
+static Value irratSimplify(Double result) {
     Value res;
     int save = PROTECT(NULL);
     if(fmod(result, 1.0) == 0.0) {
-        if (result > (double)INT_MAX || result < (double)INT_MIN) {
+        if (result > (Double)INT_MAX || result < (Double)INT_MIN) {
             // FIXME need doubleToBigInt
             res = irrationalValue(result);
             protectValue(res);
         } else {
-            res = stdintValue((int) result);
+            res = stdintValue((Integer) result);
             protectValue(res);
         }
     } else {
@@ -914,7 +915,7 @@ static Value realPowRat(Value base, Value exponent) {
                 protectValue(num);
                 denom = to_irrational(denom);
                 protectValue(denom);
-                double result = num.val.irrational / denom.val.irrational;
+                Double result = num.val.irrational / denom.val.irrational;
                 res = irratSimplify(result);
                 protectValue(res);
             }
@@ -923,7 +924,7 @@ static Value realPowRat(Value base, Value exponent) {
             protectValue(fbase);
             Value fexponent = rational_to_irrational(exponent);
             protectValue(fexponent);
-            double result = pow(fbase.val.irrational, fexponent.val.irrational);
+            Double result = pow(fbase.val.irrational, fexponent.val.irrational);
             IFDEBUG(eprintf("doing pow(%f, %f) = %f", fbase.val.irrational, fexponent.val.irrational, result));
             res = irratSimplify(result);
             protectValue(res);
@@ -1049,8 +1050,8 @@ static Value intMod(Value left, Value right) {
     return res;
 }
 
-static int gcd (int a, int b) {
-	int i = 0, min_num = a, gcd = 1;
+static Integer gcd (Integer a, Integer b) {
+	Integer i = 0, min_num = a, gcd = 1;
 	if (a > b) {
 		min_num = b;
 	}
@@ -1453,8 +1454,8 @@ static Value irrPowCom(Value c, Value right) {
     a = to_irrational(a);
     b = to_irrational(b);
     Value c_a = npow(c, a);
-    double ln_c = log(c.val.irrational);
-    double b_ln_c = b.val.irrational * ln_c;
+    Double ln_c = log(c.val.irrational);
+    Double b_ln_c = b.val.irrational * ln_c;
     Value cos_b_ln_c = irrationalValue(cos(b_ln_c));
     Value i_sin_b_ln_c = irrationalimagValue(sin(b_ln_c));
     Value com = comValue(cos_b_ln_c, i_sin_b_ln_c);
@@ -2132,10 +2133,10 @@ Value nneg(Value v) {
 Value nrand(Value prev) {
     CHECK_INITIALIZED();
     ASSERT_IRRATIONAL(prev);
-    double seed = fmod(prev.val.irrational, 1.0);
+    Double seed = fmod(prev.val.irrational, 1.0);
     if (seed < 0) seed = -seed;
     seed *= UINT_MAX;
-    seed = fmod(seed * 1103515245.0 + 12345.0, (double)UINT_MAX);
+    seed = fmod(seed * 1103515245.0 + 12345.0, (Double)UINT_MAX);
     seed /= UINT_MAX;
     Value v = irrationalValue(seed);
     return v;

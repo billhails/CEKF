@@ -779,7 +779,7 @@ static Exp *letBind(Exp *body, LamExpTable *replacements) {
     }
     int save = PROTECT(body);
     LamExp *lamExpVal = NULL;
-    int i = 0;
+    Index i = 0;
     HashSymbol *key = NULL;
     while ((key = iterateLamExpTable(replacements, &i, &lamExpVal)) != NULL) {
         DEBUG("letBind iteration %d", i);

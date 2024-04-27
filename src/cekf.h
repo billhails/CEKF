@@ -30,8 +30,8 @@
 #  include "anf.h"
 #  include "memory.h"
 #  include "value.h"
+#  include "types.h"
 
-typedef size_t Control;
 
 typedef struct Stack {
     int capacity;

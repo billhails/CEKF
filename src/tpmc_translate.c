@@ -53,7 +53,7 @@ static LamVarList *makeCanonicalArgs(TpmcVariableTable *freeVariables) {
     }
     TpmcVariableArray *sorted = newTpmcVariableArray();
     int save = PROTECT(sorted);
-    int i = 0;
+    Index i = 0;
     HashSymbol *key;
     while ((key = iterateTpmcVariableTable(freeVariables, &i)) != NULL) {
         pushTpmcVariableArray(sorted, key);
@@ -71,7 +71,7 @@ static LamVarList *makeCanonicalArgs(TpmcVariableTable *freeVariables) {
     // claim an extra slot
     int save2 = PROTECT(sorted);
     LamVarList *res = NULL;
-    for (int i = 0; i < sorted->size; i++) {
+    for (Index i = 0; i < sorted->size; i++) {
         res = newLamVarList(sorted->entries[i], res);
         REPLACE_PROTECT(save2, res);
     }
@@ -184,7 +184,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
             HashSymbol *name = constructor->info->type->name;
             DEBUG("constructor %s has size %d", name->name, components->size);
             IFDEBUG(ppTpmcConstructorPattern(constructor));
-            for (int i = 0; i < components->size; i++) {
+            for (Index i = 0; i < components->size; i++) {
                 HashSymbol *path = components->entries[i]->path;
                 DEBUG("considering variable %s", path->name);
                 if (getTpmcVariableTable(freeVariables, path)) {
@@ -278,7 +278,7 @@ static LamExp *translateComparisonArcAndAlternativeToIf(TpmcArc *arc, LamExpTabl
     return res;
 }
 
-static TpmcArcList *_arcArrayToList(TpmcArcArray *arcArray, int index) {
+static TpmcArcList *_arcArrayToList(TpmcArcArray *arcArray, Index index) {
     if (index >= arcArray->size) {
         return NULL;
     }
@@ -724,7 +724,7 @@ static void resetStateRefCountsToZero(TpmcState *dfa) {
     switch (dfa->state->type) {
         case TPMCSTATEVALUE_TYPE_TEST:
             TpmcArcArray *arcs = dfa->state->val.test->arcs;
-            for (int i = 0; i < arcs->size; ++i) {
+            for (Index i = 0; i < arcs->size; ++i) {
                 resetStateRefCountsToZero(arcs->entries[i]->state);
             }
             break;
@@ -743,7 +743,7 @@ static void incrementStateRefCounts(TpmcState *dfa) {
         switch (dfa->state->type) {
             case TPMCSTATEVALUE_TYPE_TEST:
                 TpmcArcArray *arcs = dfa->state->val.test->arcs;
-                for (int i = 0; i < arcs->size; ++i) {
+                for (Index i = 0; i < arcs->size; ++i) {
                     incrementStateRefCounts(arcs->entries[i]->state);
                 }
                 break;
@@ -769,7 +769,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     LamLetRecBindings *bindings = NULL;
     int save = -1;
     HashSymbol *key;
-    int i = 0;
+    Index i = 0;
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
         nbindings++;

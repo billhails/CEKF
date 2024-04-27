@@ -29,6 +29,7 @@ struct Header;
 #  include "tpmc_objtypes.h"
 #  include "tc_objtypes.h"
 #  include "builtins_objtypes.h"
+#  include "types.h"
 
 typedef enum {
 
@@ -64,28 +65,22 @@ typedef struct Header {
 } Header;
 
 void *reallocate(void *ptr, size_t oldSize, size_t newSize);
-int protect(Header *obj);
-void replaceProtect(int i, Header *obj);
-int startProtect(void);
-void unProtect(int index);
+Index protect(Header *obj);
+void replaceProtect(Index i, Header *obj);
+Index startProtect(void);
+void unProtect(Index index);
 void *allocate(size_t size, ObjType type);
 char *safeStrdup(char *s);
-
-void markObj(Header *h, int i);
+void markObj(Header *h, Index i);
 void markCekfObj(Header *x);
 void markHashTableObj(Header *x);
-
 void freeObj(Header *h);
 void freeCekfObj(Header *x);
 void freeHashTableObj(Header *x);
-
 bool enableGC(void);
 bool disableGC(void);
-
 void initProtection(void);
-
 void validateLastAlloc(void);
-
 void reportMemory(void);
 
 #  define EXIT_OOM 2
