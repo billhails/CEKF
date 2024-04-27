@@ -65,7 +65,7 @@ static void reserve(ByteCodeArray *b, size_t size) {
     }
 }
 
-char *charRep(char c) {
+char *charRep(Character c) {
     switch (c) {
         case '\n':
             return "\\n";
@@ -140,7 +140,7 @@ static void addIrrational(ByteCodeArray *b, Double f) {
     b->count += sizeof(Double);
 }
 
-static int reserveInt(ByteCodeArray *b) {
+static int reserveInteger(ByteCodeArray *b) {
     int address = b->count;
     addInteger(b, 0);
     return address;
@@ -166,7 +166,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_LAM);
     addByte(b, x->nargs);
     addByte(b, x->letRecOffset);
-    int patch = reserveWord(b);
+    Control patch = reserveWord(b);
     writeExp(x->exp, b);
     addByte(b, BYTECODE_RETURN);
     writeCurrentAddressAt(patch, b);
@@ -313,18 +313,18 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b) {
     ENTER(writeCexpIf);
     writeAexp(x->condition, b);
     addByte(b, BYTECODE_IF);
-    int patch = reserveWord(b);
+    Control patch = reserveWord(b);
     writeExp(x->consequent, b);
     addByte(b, BYTECODE_JMP);
-    int patch2 = reserveWord(b);
+    Control patch2 = reserveWord(b);
     writeCurrentAddressAt(patch, b);
     writeExp(x->alternative, b);
     writeCurrentAddressAt(patch2, b);
     LEAVE(writeCexpIf);
 }
 
-void writeCexpCharCondCases(int depth, int *values, int *addresses,
-                            int *jumps, CexpCharCondCases *x,
+void writeCexpCharCondCases(int depth, Control *values, Control *addresses,
+                            Control *jumps, CexpCharCondCases *x,
                             ByteCodeArray *b) {
     ENTER(writeCexpCharCondCases);
     if (x == NULL) {
@@ -354,31 +354,31 @@ void writeCexpCharCondCases(int depth, int *values, int *addresses,
 void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b) {
     ENTER(writeCexpCharCond);
     addByte(b, BYTECODE_CHARCOND);
-    int numCases = countCexpCharCondCases(x);
-    numCases--;                 // don't count the default case
-    if (numCases <= 0) {
+    Index numCases = countCexpCharCondCases(x);
+    if (numCases <= 1) {
         cant_happen("zero cases in writeCexpCharCond");
     }
+    numCases--;                 // don't count the default case
     addWord(b, numCases);
-    int *values = NEW_ARRAY(int, numCases);     // address in b for each index_i
-    int *addresses = NEW_ARRAY(int, numCases);  // address in b for each addr(exp_i)
-    int *jumps = NEW_ARRAY(int, numCases);      // address in b for the JMP patch address at the end of each expression
-    for (int i = 0; i < numCases; i++) {
-        values[i] = reserveInt(b);      // TODO can change this to a char later, but then again, wchar_t...
+    Control *values = NEW_ARRAY(Control, numCases);     // address in b for each index_i
+    Control *addresses = NEW_ARRAY(Control, numCases);  // address in b for each addr(exp_i)
+    Control *jumps = NEW_ARRAY(Control, numCases);      // address in b for the JMP patch address at the end of each expression
+    for (Index i = 0; i < numCases; i++) {
+        values[i] = reserveInteger(b);      // TODO can change this to a char later, but then again, wchar_t...
         addresses[i] = reserveWord(b);
     }
     writeCexpCharCondCases(0, values, addresses, jumps, x, b);
-    for (int i = 0; i < numCases; i++) {
+    for (Index i = 0; i < numCases; i++) {
         writeCurrentAddressAt(jumps[i], b);
     }
-    FREE_ARRAY(int, values, numCases);
-    FREE_ARRAY(int, addresses, numCases);
-    FREE_ARRAY(int, jumps, numCases);
+    FREE_ARRAY(Control, values, numCases);
+    FREE_ARRAY(Control, addresses, numCases);
+    FREE_ARRAY(Control, jumps, numCases);
     LEAVE(writeCexpCharCond);
 }
 
 void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b,
-                           int *endJumps, int *dispatches, int index) {
+                           Control *endJumps, Control *dispatches, int index) {
     ENTER(writeCexpIntCondCases);
     if (x == NULL)
         return;
@@ -397,16 +397,16 @@ void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b,
 void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
     ENTER(writeCexpIntCond);
     addByte(b, BYTECODE_INTCOND);
-    int numCases = countCexpIntCondCases(x);
+    Index numCases = countCexpIntCondCases(x);
     // eprintf("writeCexpIntCond size %d\n", numCases);
     // printCexpIntCondCases(x);
-    numCases--;                 // don't count the default case
-    if (numCases <= 0) {
+    if (numCases <= 1) {
         cant_happen("zero cases in writeCexpIntCond");
     }
+    numCases--;                 // don't count the default case
     addWord(b, numCases);
     // we start out by writing each of the cases, reserving a slot in memory for each dispatch address after each (variable length) value.
-    int *dispatches = NEW_ARRAY(int, numCases); // address of the slots for each dispatch address
+    Control *dispatches = NEW_ARRAY(Control, numCases); // address of the slots for each dispatch address
     {
         int i = 0;
         for (CexpIntCondCases *xx = x; xx != NULL; xx = xx->next) {
@@ -432,14 +432,14 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
         }
     }
     // next we right-recurse on the expressions (so the default directly follows the dispatch table)
-    int *endJumps = NEW_ARRAY(int, numCases);   // address in b for the JMP patch address at the end of each expression which jumps to the end
+    Control *endJumps = NEW_ARRAY(Control, numCases);   // address in b for the JMP patch address at the end of each expression which jumps to the end
     writeCexpIntCondCases(x, b, endJumps, dispatches, -1);
     // lastly we patch the escape addresses of the clauses.
-    for (int i = 0; i < numCases; i++) {
+    for (Index i = 0; i < numCases; i++) {
         writeCurrentAddressAt(endJumps[i], b);
     }
-    FREE_ARRAY(int, dispatches, numCases);
-    FREE_ARRAY(int, endJumps, numCases);
+    FREE_ARRAY(Control, dispatches, numCases);
+    FREE_ARRAY(Control, endJumps, numCases);
     LEAVE(writeCexpIntCond);
 }
 
@@ -509,8 +509,8 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b) {
     addByte(b, BYTECODE_MATCH);
     // create a dispatch table
     addByte(b, count);
-    int patches[256];
-    int jumps[256];
+    Control patches[256];
+    Control jumps[256];
     for (int i = 0; i < count; ++i) {
         patches[i] = reserveWord(b);
     }
@@ -541,10 +541,10 @@ void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b) {
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b) {
     ENTER(writeCexpAmb);
     addByte(b, BYTECODE_AMB);
-    int patch = reserveWord(b);
+    Control patch = reserveWord(b);
     writeExp(x->exp1, b);
     addByte(b, BYTECODE_JMP);
-    int patch2 = reserveWord(b);
+    Control patch2 = reserveWord(b);
     writeCurrentAddressAt(patch, b);
     writeExp(x->exp2, b);
     writeCurrentAddressAt(patch2, b);
@@ -561,7 +561,7 @@ void writeCexpCut(CexpCut *x, ByteCodeArray *b) {
 void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     ENTER(writeExpLet);
     addByte(b, BYTECODE_LET);
-    int patch = reserveWord(b);
+    Control patch = reserveWord(b);
     writeExp(x->val, b);
     addByte(b, BYTECODE_RETURN);
     writeCurrentAddressAt(patch, b);

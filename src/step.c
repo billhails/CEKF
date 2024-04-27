@@ -424,7 +424,7 @@ static void applyProc(int naargs) {
         case VALUE_TYPE_CONT:{
                 if (callable.val.kont == NULL) {
                     state.V = pop();
-                    state.C = UINT64_MAX;
+                    state.C = MAX_CONTROL;
                 } else {
                     Value result = pop();
                     protectValue(result);
@@ -475,7 +475,7 @@ static void step() {
     if (dump_bytecode_flag)
         dumpByteCode(&state.B);
     state.C = 0;
-    while (state.C != UINT64_MAX) {
+    while (state.C != MAX_CONTROL) {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
@@ -1098,12 +1098,12 @@ static void step() {
             case BYTECODE_DONE:{
                     // can't happen, probably
                     DEBUGPRINTF("DONE\n");
-                    state.C = UINT64_MAX;
+                    state.C = MAX_CONTROL;
                 }
                 break;
             case BYTECODE_ERROR:{
                     DEBUGPRINTF("ERROR\n");
-                    state.C = UINT64_MAX;
+                    state.C = MAX_CONTROL;
                     eprintf("pattern match exhausted in step\n");
                 }
                 break;
