@@ -27,6 +27,7 @@
 #include "tc_helper.h"
 #include "print_compiler.h"
 #include "lambda_pp.h"
+#include "types.h"
 
 #ifdef DEBUG_TC
 #  include "debugging_on.h"
@@ -1283,7 +1284,7 @@ static TcType *freshUserType(TcUserType *userType, TcNg *ng, TcTypeTable *map) {
 static TcType *freshTuple(TcTypeArray *tuple, TcNg *ng, TcTypeTable *map) {
     TcTypeArray *fresh = newTcTypeArray();
     int save = PROTECT(fresh);
-    for (int i = 0; i < tuple->size; i ++) {
+    for (Index i = 0; i < tuple->size; i ++) {
         TcType *part = freshRec(tuple->entries[i], ng, map);
         int save2 = PROTECT(part);
         pushTcTypeArray(fresh, part);
@@ -1296,7 +1297,7 @@ static TcType *freshTuple(TcTypeArray *tuple, TcNg *ng, TcTypeTable *map) {
 
 static bool isGeneric(TcType *typeVar, TcNg *ng) {
     while (ng != NULL) {
-        int i = 0;
+        Index i = 0;
         TcType *entry = NULL;
         HashSymbol *s = NULL;
         while ((s = iterateTcTypeTable(ng->table, &i, &entry)) != NULL) {
@@ -1536,7 +1537,7 @@ static void addBuiltInToEnv(TcEnv *env, BuiltIn *builtIn) {
 }
 
 static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
-    for (int i = 0; i < builtIns->size; i++) {
+    for (Index i = 0; i < builtIns->size; i++) {
         addBuiltInToEnv(env, builtIns->entries[i]);
     }
 }
@@ -1631,7 +1632,7 @@ static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
         return false;
     }
     bool unified = true;
-    for (int i = 0; i < a->size; i++) {
+    for (Index i = 0; i < a->size; i++) {
         if (!unify(a->entries[i], b->entries[i], "tuples")) {
             unified = false;
         }
@@ -1842,7 +1843,7 @@ static bool occursInUserType(TcType *var, TcUserType *userType) {
 }
 
 static bool occursInTuple(TcType *var, TcTypeArray *tuple) {
-    for (int i = 0; i < tuple->size; ++i) {
+    for (Index i = 0; i < tuple->size; ++i) {
         if (occursInType(var, tuple->entries[i])) {
             return true;
         }

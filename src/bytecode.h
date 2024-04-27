@@ -20,9 +20,7 @@
 
 #  include "anf.h"
 #  include "memory.h"
-
-typedef uint8_t byte;
-typedef uint16_t word;
+#  include "types.h"
 
 typedef enum ByteCodes {
     BYTECODE_NONE,
@@ -89,9 +87,9 @@ typedef enum ByteCodes {
 
 typedef struct ByteCodeArray {
     struct Header header;
-    size_t capacity;
-    size_t count;
-    byte *entries;
+    Control capacity;
+    Control count;
+    Byte *entries;
 } ByteCodeArray;
 
 char *charRep(char c);
@@ -120,62 +118,66 @@ void writeExp(Exp *x, ByteCodeArray *b);
 
 void writeEnd(ByteCodeArray *b);
 
-static inline byte readByte(ByteCodeArray *b, size_t *i) {
+static inline Byte readByte(ByteCodeArray *b, Control *i) {
     return b->entries[(*i)++];
 }
 
-static inline void _readWord(ByteCodeArray *b, size_t *i, word *a) {
-    memcpy(a, &b->entries[*i], sizeof(word));
-    (*i) += sizeof(word);
+static inline Character readCharacter(ByteCodeArray *b, Control *i) {
+    return b->entries[(*i)++];
 }
 
-static inline word readWord(ByteCodeArray *b, size_t *i) {
-    word a;
+static inline void _readWord(ByteCodeArray *b, Control *i, Word *a) {
+    memcpy(a, &b->entries[*i], sizeof(Word));
+    (*i) += sizeof(Word);
+}
+
+static inline Word readWord(ByteCodeArray *b, Control *i) {
+    Word a;
     _readWord(b, i, &a);
     return a;
 }
 
-static inline void _readInt(ByteCodeArray *b, size_t *i, int *a) {
-    memcpy(a, &b->entries[*i], sizeof(int));
-    (*i) += sizeof(int);
+static inline void _readInteger(ByteCodeArray *b, Control *i, Integer *a) {
+    memcpy(a, &b->entries[*i], sizeof(Integer));
+    (*i) += sizeof(Integer);
 }
 
-static inline void _readDouble(ByteCodeArray *b, size_t *i, double *a) {
-    memcpy(a, &b->entries[*i], sizeof(double));
-    (*i) += sizeof(double);
+static inline void _readDouble(ByteCodeArray *b, Control *i, Double *a) {
+    memcpy(a, &b->entries[*i], sizeof(Double));
+    (*i) += sizeof(Double);
 }
 
-static inline int readInt(ByteCodeArray *b, size_t *i) {
-    int a;
-    _readInt(b, i, &a);
+static inline Integer readInteger(ByteCodeArray *b, Control *i) {
+    Integer a;
+    _readInteger(b, i, &a);
     return a;
 }
 
-static inline double readDouble(ByteCodeArray *b, size_t *i) {
-    double a;
+static inline Double readDouble(ByteCodeArray *b, Control *i) {
+    Double a;
     _readDouble(b, i, &a);
     return a;
 }
 
-static inline int readOffset(ByteCodeArray *b, size_t *i) {
-    int ii = *i;
-    int offset = readWord(b, i);
+static inline Integer readOffset(ByteCodeArray *b, Control *i) {
+    Integer ii = *i;
+    Word offset = readWord(b, i);
     return ii + offset;
 }
 
-static inline int readOffsetAt(ByteCodeArray *b, int i, int step) {
-    size_t ii = i + step * sizeof(word);
-    int offset = readWord(b, &ii);
-    return i + offset + step * sizeof(word);
+static inline Integer readOffsetAt(ByteCodeArray *b, Control i, int step) {
+    size_t ii = i + step * sizeof(Word);
+    Word offset = readWord(b, &ii);
+    return (Integer)(i + offset + step * sizeof(Word));
 }
 
-static inline bigint readBigint(ByteCodeArray *b, size_t *i) {
+static inline bigint readBigint(ByteCodeArray *b, Control *i) {
     bigint a;
     bigint_init(&a);
     int size;
     int capacity;
-    _readInt(b, i, &size);
-    _readInt(b, i, &capacity);
+    _readInteger(b, i, &size);
+    _readInteger(b, i, &capacity);
     int neg = readByte(b, i);
     bigint_reserve(&a, capacity);
     int nbytes = capacity * sizeof(bigint_word);

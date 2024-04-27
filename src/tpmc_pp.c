@@ -42,7 +42,7 @@ void ppTpmcTuplePattern(TpmcPatternArray *tuple) {
 
 void ppTpmcPatternArray(TpmcPatternArray *patternArray) {
     eprintf("(");
-    int i = 0;
+    Index i = 0;
     TpmcPattern *pattern = NULL;
     bool more = false;
     while (iterateTpmcPatternArray(patternArray, &i, &pattern, &more)) {
@@ -110,9 +110,9 @@ void ppTpmcMatrix(TpmcMatrix *matrix) {
         return;
     }
     eprintf("TpmcMatrix[\n");
-    for (int height = 0; height < matrix->height; height++) {
+    for (Index height = 0; height < matrix->height; height++) {
         eprintf("  (");
-        for (int width = 0; width < matrix->width; width++) {
+        for (Index width = 0; width < matrix->width; width++) {
             ppTpmcPattern(getTpmcMatrixIndex(matrix, width, height));
             if (width + 1 < matrix->width)
                 eprintf(", ");
@@ -146,8 +146,8 @@ void ppTpmcState(TpmcState *state) {
 void ppTpmcVariableTable(TpmcVariableTable *table) {
     eprintf("[");
     if (table != NULL) {
-        int i = 0;
-        int count = 0;
+        Index i = 0;
+        Index count = 0;
         HashSymbol *symbol;
         while ((symbol = iterateTpmcVariableTable(table, &i)) != NULL) {
             ppTpmcSymbol(symbol);
@@ -186,7 +186,7 @@ void ppTpmcTestState(TpmcTestState *test) {
 
 void ppTpmcArcArray(TpmcArcArray *arcs) {
     eprintf("{");
-    int i = 0;
+    Index i = 0;
     TpmcArc *arc;
     bool more;
     while (iterateTpmcArcArray(arcs, &i, &arc, &more)) {
@@ -213,7 +213,7 @@ void ppTpmcFinalState(TpmcFinalState *final) {
 
 void ppTpmcIntArray(TpmcIntArray *array) {
     eprintf("[");
-    int i = 0;
+    Index i = 0;
     int entry;
     bool more;
     while (iterateTpmcIntArray(array, &i, &entry, &more)) {
@@ -224,7 +224,7 @@ void ppTpmcIntArray(TpmcIntArray *array) {
 
 void ppTpmcStateArray(TpmcStateArray *array) {
     eprintf("[\n");
-    int i = 0;
+    Index i = 0;
     TpmcState *state;
     bool more;
     while (iterateTpmcStateArray(array, &i, &state, &more)) {

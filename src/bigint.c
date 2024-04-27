@@ -1280,7 +1280,7 @@ MaybeBigInt *newMaybeBigInt(bigint bi, bool imag) {
     return x;
 }
 
-MaybeBigInt *irrationalBigInt(double f, bool imag) {
+MaybeBigInt *irrationalBigInt(Double f, bool imag) {
     ENTER(irrationalBigInt);
     MaybeBigInt *x = NEW(MaybeBigInt, OBJTYPE_MAYBEBIGINT);
     DEBUG("newMaybeBigInt %p", x);
@@ -1461,7 +1461,7 @@ static int bigint_cmp_int(bigint *b, int i) {
     return res;
 }
 
-Cmp cmpBigIntDouble(BigInt *a, double b) {
+Cmp cmpBigIntDouble(BigInt *a, Double b) {
     return bigint_cmp_double(&a->bi, b);
 }
 
@@ -1664,7 +1664,7 @@ void negateBigInt(BigInt *b) {
     bigint_negate(&b->bi);
 }
 
-double bigIntToDouble(BigInt *bi) {
+Double bigIntToDouble(BigInt *bi) {
     return bigint_double(&bi->bi);
 }
 

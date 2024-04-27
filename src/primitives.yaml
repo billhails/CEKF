@@ -24,7 +24,7 @@ HashSymbol:
     valued: true
 
 int:
-    cname: int
+    cname: Integer
     printf: "%d"
     valued: true
 
@@ -39,7 +39,7 @@ bool:
     valued: true
 
 char:
-    cname: "char"
+    cname: Character
     printf: "%c"
     valued: true
 
@@ -63,6 +63,6 @@ string:
     valued: true
 
 double:
-    cname: double
+    cname: Double
     printf: "%f"
     valued: true

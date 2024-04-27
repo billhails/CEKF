@@ -48,8 +48,8 @@ void resetByteCodeArray(ByteCodeArray *b) {
 
 static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
     int oldCapacity = byteCodes->capacity;
-    byte *entries =
-        GROW_ARRAY(byte, byteCodes->entries, oldCapacity, newCapacity);
+    Byte *entries =
+        GROW_ARRAY(Byte, byteCodes->entries, oldCapacity, newCapacity);
 
     for (int i = oldCapacity; i < newCapacity; i++) {
         entries[i] = BYTECODE_NONE;
@@ -81,68 +81,74 @@ char *charRep(char c) {
     }
 }
 
+static void addCharacter(ByteCodeArray *b, Character code) {
+    DEBUG("%04lx addCharacter %02x", b->count, code);
+    reserve(b, sizeof(Character));
+    b->entries[b->count++] = code;
+}
+
 static void addByte(ByteCodeArray *b, int code) {
     if (code > 255) {
         cant_happen("maximim byte size exceeded");
     }
     DEBUG("%04lx addByte %02x", b->count, code);
-    reserve(b, sizeof(byte));
+    reserve(b, sizeof(Byte));
     b->entries[b->count++] = code;
 }
 
-static void writeWordAt(int loc, ByteCodeArray *b, word word) {
+static void writeWordAt(Control loc, ByteCodeArray *b, Word word) {
     DEBUG("%04x writeWord %04x", loc, word);
-    memcpy(&b->entries[loc], &word, sizeof(word));
+    memcpy(&b->entries[loc], &word, sizeof(Word));
 }
 
-static void writeIntAt(int loc, ByteCodeArray *b, int word) {
+static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer word) {
     DEBUG("%04x writeInt %d", loc, word);
-    memcpy(&b->entries[loc], &word, sizeof(int));
+    memcpy(&b->entries[loc], &word, sizeof(Integer));
 }
 
-static void writeDoubleAt(int loc, ByteCodeArray *b, double f) {
+static void writeDoubleAt(Control loc, ByteCodeArray *b, Double f) {
     DEBUG("%04x writeDouble %f", loc, f);
-    memcpy(&b->entries[loc], &f, sizeof(double));
+    memcpy(&b->entries[loc], &f, sizeof(Double));
 }
 
 static void writeCurrentAddressAt(int patch, ByteCodeArray *b) {
-    word offset = b->count - patch;
+    Word offset = b->count - patch;
     writeWordAt(patch, b, offset);
 }
 
-static void addWord(ByteCodeArray *b, word w) {
-    reserve(b, sizeof(word));
+static void addWord(ByteCodeArray *b, Word w) {
+    reserve(b, sizeof(Word));
     writeWordAt(b->count, b, w);
-    b->count += sizeof(word);
+    b->count += sizeof(Word);
 }
 
-static int reserveWord(ByteCodeArray *b) {
-    int address = b->count;
+static Control reserveWord(ByteCodeArray *b) {
+    Control address = b->count;
     addWord(b, 0);
     return address;
 }
 
-static void addInt(ByteCodeArray *b, int word) {
-    reserve(b, sizeof(int));
-    writeIntAt(b->count, b, word);
-    b->count += sizeof(int);
+static void addInteger(ByteCodeArray *b, Integer word) {
+    reserve(b, sizeof(Integer));
+    writeIntegerAt(b->count, b, word);
+    b->count += sizeof(Integer);
 }
 
-static void addIrrational(ByteCodeArray *b, double f) {
-    reserve(b, sizeof(double));
+static void addIrrational(ByteCodeArray *b, Double f) {
+    reserve(b, sizeof(Double));
     writeDoubleAt(b->count, b, f);
-    b->count += sizeof(double);
+    b->count += sizeof(Double);
 }
 
 static int reserveInt(ByteCodeArray *b) {
     int address = b->count;
-    addInt(b, 0);
+    addInteger(b, 0);
     return address;
 }
 
 static void addBig(ByteCodeArray *b, bigint bi) {
-    addInt(b, bi.size);
-    addInt(b, bi.capacity);
+    addInteger(b, bi.size);
+    addInteger(b, bi.capacity);
     addByte(b, bi.neg);
     size_t nBytes = bi.capacity * sizeof(bigint_word);
     reserve(b, nBytes);
@@ -193,7 +199,7 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
     if (x == NULL)
         return;
     writeAexp(x->exp, b);
-    byte prim;
+    Byte prim;
     switch (x->type) {
         case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODE_PRIM_NOT;
@@ -223,7 +229,7 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
         return;
     writeAexp(x->exp1, b);
     writeAexp(x->exp2, b);
-    byte prim;
+    Byte prim;
     switch (x->type) {
         case AEXPPRIMOP_TYPE_ADD:
             prim = BYTECODE_PRIM_ADD;
@@ -328,7 +334,7 @@ void writeCexpCharCondCases(int depth, int *values, int *addresses,
     if (x->next == NULL) {      // default
         writeExp(x->body, b);
     } else {
-        writeIntAt(values[depth], b, x->option);
+        writeIntegerAt(values[depth], b, x->option);
         writeCurrentAddressAt(addresses[depth], b);
         writeExp(x->body, b);
     }
@@ -409,7 +415,7 @@ void writeCexpIntCond(CexpIntCondCases *x, ByteCodeArray *b) {
             switch (xx->option->type) {
                 case BI_SMALL:
                     addByte(b, xx->option->imag ? BYTECODE_STDINT_IMAG : BYTECODE_STDINT);
-                    addInt(b, xx->option->small);
+                    addInteger(b, xx->option->small);
                     break;
                 case BI_BIG:
                     addByte(b, xx->option->imag ? BYTECODE_BIGINT_IMAG : BYTECODE_BIGINT);
@@ -592,14 +598,14 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             break;
         case AEXP_TYPE_LITTLEINTEGER:{
                 addByte(b, BYTECODE_STDINT);
-                addInt(b, x->val.littleinteger);
+                addInteger(b, x->val.littleinteger);
             }
             break;
         case AEXP_TYPE_BIGINTEGER:{
                 switch (x->val.biginteger->type) {
                     case BI_SMALL:
                         addByte(b, x->val.biginteger->imag ? BYTECODE_STDINT_IMAG : BYTECODE_STDINT);
-                        addInt(b, x->val.biginteger->small);
+                        addInteger(b, x->val.biginteger->small);
                         break;
                     case BI_BIG:
                         addByte(b, x->val.biginteger->imag ? BYTECODE_BIGINT_IMAG : BYTECODE_BIGINT);
@@ -616,7 +622,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             break;
         case AEXP_TYPE_CHARACTER:{
                 addByte(b, BYTECODE_CHAR);
-                addByte(b, x->val.character);
+                addCharacter(b, x->val.character);
             }
             break;
         case AEXP_TYPE_PRIM:{

@@ -18,6 +18,7 @@
 
 #include "tc_helper.h"
 #include "symbol.h"
+#include "types.h"
 
 void ppTcType(TcType *type) {
     if (type == NULL) {
@@ -83,7 +84,7 @@ void ppTcVar(TcVar *var) {
 
 void ppTcTuple(TcTypeArray *tuple) {
     eprintf("#(");
-    for (int i = 0; i < tuple->size; i++) {
+    for (Index i = 0; i < tuple->size; i++) {
         ppTcType(tuple->entries[i]);
         if (i + 1 < tuple->size) {
             eprintf(", ");

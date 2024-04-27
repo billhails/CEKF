@@ -22,6 +22,7 @@
 
 #  include "common.h"
 #  include "memory.h"
+#  include "types.h"
 
 #  define HASH_MAX_LOAD 0.75
 
@@ -39,8 +40,8 @@ typedef void (*PrintHashValueFunction)(void *value, int depth);
 typedef struct HashTable {
     struct Header header;
     int id;
-    int count;
-    int capacity;
+    Index count;
+    Index capacity;
     size_t valuesize;
     HashSymbol **keys;
     void *values;
@@ -70,7 +71,7 @@ extern bool quietPrintHashTable;
 void printHashTable(HashTable *table, int depth);
 void printHashSymbol(HashSymbol *symbol);
 
-HashSymbol *iterateHashTable(HashTable *table, int *index, void *data);
+HashSymbol *iterateHashTable(HashTable *table, Index *index, void *data);
 
 void markHashTable(HashTable *table);
 

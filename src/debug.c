@@ -460,7 +460,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                     int count = readWord(bca, &i);
                     eprintf("CHARCOND [%d]", count);
                     while (count > 0) {
-                        int val = readInt(bca, &i);
+                        int val = readInteger(bca, &i);
                         int offset = readOffset(bca, &i);
                         eprintf(" %d:[%04x]", val, offset);
                         count--;
@@ -482,7 +482,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                             }
                             break;
                             case BYTECODE_STDINT: {
-                                int li = readInt(bca, &i);
+                                int li = readInteger(bca, &i);
                                 eprintf(" [int]%d", li);
                             }
                             break;
@@ -558,7 +558,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                 }
                 break;
             case BYTECODE_STDINT:{
-                    int val = readInt(bca, &i);
+                    int val = readInteger(bca, &i);
                     eprintf("STDINT [%d]\n", val);
                 }
                 break;
@@ -571,7 +571,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                 }
                 break;
             case BYTECODE_IRRATIONAL:{
-                double f = readDouble(bca, &i);
+                Double f = readDouble(bca, &i);
                 eprintf("IRRATIONAL [%f]\n", f);
             }
             break;

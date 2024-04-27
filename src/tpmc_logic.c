@@ -33,6 +33,7 @@
 #include "lambda_pp.h"
 #include "tpmc_mermaid.h"
 #include "tpmc_pp.h"
+#include "types.h"
 #ifdef DEBUG_TPMC_LOGIC
 #  include "debugging_on.h"
 #else
@@ -257,7 +258,7 @@ static void renameConstructorPattern(TpmcConstructorPattern *pattern,
                                      HashSymbol *path) {
     TpmcPatternArray *components = pattern->components;
     char buf[512];
-    for (int i = 0; i < components->size; i++) {
+    for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
             can_happen("maximum path depth exceeded");
         }
@@ -270,7 +271,7 @@ static void renameConstructorPattern(TpmcConstructorPattern *pattern,
 static void renameTuplePattern(TpmcPatternArray *components,
                                      HashSymbol *path) {
     char buf[512];
-    for (int i = 0; i < components->size; i++) {
+    for (Index i = 0; i < components->size; i++) {
         if (snprintf(buf, 512, "%s$%d", path->name, i) >= 511) {
             can_happen("maximum path depth exceeded");
         }
@@ -316,13 +317,13 @@ static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables) {
         eprintf("\n");
         cant_happen("size mismatch in renameRule");
     }
-    for (int i = 0; i < rootVariables->size; i++) {
+    for (Index i = 0; i < rootVariables->size; i++) {
         renamePattern(rule->patterns->entries[i], rootVariables->entries[i]);
     }
 }
 
 static void renameRules(TpmcMatchRules *input) {
-    for (int i = 0; i < input->rules->size; i++) {
+    for (Index i = 0; i < input->rules->size; i++) {
         renameRule(input->rules->entries[i], input->rootVariables);
     }
 }
@@ -377,7 +378,7 @@ static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern,
                                               TpmcPatternTable *seen) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
-    for (int i = 0; i < components->size; ++i) {
+    for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
             replaceComparisonPattern(components->entries[i], seen);
     }
@@ -387,7 +388,7 @@ static TpmcPattern *replaceConstructorPattern(TpmcPattern *pattern,
 static TpmcPattern *replaceTuplePattern(TpmcPattern *pattern,
                                         TpmcPatternTable *seen) {
     TpmcPatternArray *components = pattern->pattern->val.tuple;
-    for (int i = 0; i < components->size; ++i) {
+    for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
             replaceComparisonPattern(components->entries[i], seen);
     }
@@ -420,7 +421,7 @@ static TpmcPattern *replaceComparisonPattern(TpmcPattern *pattern,
 static void replaceComparisonRule(TpmcMatchRule *rule) {
     TpmcPatternTable *seen = newTpmcPatternTable();
     int save = PROTECT(seen);
-    for (int i = 0; i < rule->patterns->size; i++) {
+    for (Index i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] =
             replaceComparisonPattern(rule->patterns->entries[i], seen);
     }
@@ -429,7 +430,7 @@ static void replaceComparisonRule(TpmcMatchRule *rule) {
 }
 
 static void replaceComparisonRules(TpmcMatchRules *input) {
-    for (int i = 0; i < input->rules->size; i++) {
+    for (Index i = 0; i < input->rules->size; i++) {
         replaceComparisonRule(input->rules->entries[i]);
     }
 }
@@ -462,7 +463,7 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSu
                                                     *substitutions) {
     TpmcPatternArray *components =
         pattern->pattern->val.constructor->components;
-    for (int i = 0; i < components->size; ++i) {
+    for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
             collectPatternSubstitutions(components->entries[i],
                                         substitutions);
@@ -473,7 +474,7 @@ static TpmcPattern *collectConstructorSubstitutions(TpmcPattern *pattern, TpmcSu
 static TpmcPattern *collectTupleSubstitutions(TpmcPattern *pattern, TpmcSubstitutionTable *substitutions) {
     TpmcPatternArray *components =
         pattern->pattern->val.tuple;
-    for (int i = 0; i < components->size; ++i) {
+    for (Index i = 0; i < components->size; ++i) {
         components->entries[i] =
             collectPatternSubstitutions(components->entries[i],
                                         substitutions);
@@ -510,7 +511,7 @@ static void populateFreeVariables(TpmcState *state,
             ("attempt to call populateFreeCariables on non-final state");
     }
     state->freeVariables = newTpmcVariableTable();
-    int i = 0;
+    Index i = 0;
     HashSymbol *path = NULL;
     HashSymbol *key;
     while ((key =
@@ -544,7 +545,7 @@ static TpmcPattern *collectPatternSubstitutions(TpmcPattern *pattern, TpmcSubsti
 static void performRuleSubstitutions(TpmcMatchRule *rule) {
     TpmcSubstitutionTable *substitutions = newTpmcSubstitutionTable();
     int save = PROTECT(substitutions);
-    for (int i = 0; i < rule->patterns->size; i++) {
+    for (Index i = 0; i < rule->patterns->size; i++) {
         rule->patterns->entries[i] =
             collectPatternSubstitutions(rule->patterns->entries[i],
                                         substitutions);
@@ -555,14 +556,14 @@ static void performRuleSubstitutions(TpmcMatchRule *rule) {
 }
 
 static void performRulesSubstitutions(TpmcMatchRules *input) {
-    for (int i = 0; i < input->rules->size; i++) {
+    for (Index i = 0; i < input->rules->size; i++) {
         performRuleSubstitutions(input->rules->entries[i]);
     }
 }
 
 static void populateMatrixRow(TpmcMatchRule *rule, TpmcMatrix *matrix,
                               int row) {
-    for (int col = 0; col < rule->patterns->size; col++) {
+    for (Index col = 0; col < rule->patterns->size; col++) {
         setTpmcMatrixIndex(matrix, col, row, rule->patterns->entries[col]);
     }
 }
@@ -570,7 +571,7 @@ static void populateMatrixRow(TpmcMatchRule *rule, TpmcMatrix *matrix,
 static TpmcStateArray *extractFinalStates(TpmcMatchRules *input) {
     TpmcStateArray *res = newTpmcStateArray("extractFinalStates");
     int save = PROTECT(res);
-    for (int i = 0; i < input->rules->size; i++) {
+    for (Index i = 0; i < input->rules->size; i++) {
         pushTpmcStateArray(res, input->rules->entries[i]->action);
     }
     UNPROTECT(save);
@@ -592,7 +593,7 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
     return matrix;
 }
 
-static LamVarList *_arrayToVarList(TpmcVariableArray *array, int count) {
+static LamVarList *_arrayToVarList(TpmcVariableArray *array, Index count) {
     if (count == array->size) {
         return NULL;
     }
@@ -629,7 +630,7 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     PROTECT(finalStates);
     TpmcStateArray *knownStates = newTpmcStateArray("tpmcConvert");
     PROTECT(knownStates);
-    for (int i = 0; i < finalStates->size; ++i) {
+    for (Index i = 0; i < finalStates->size; ++i) {
         pushTpmcStateArray(knownStates, finalStates->entries[i]);
     }
     TpmcState *errorState = makeErrorState();

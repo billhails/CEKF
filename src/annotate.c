@@ -25,6 +25,7 @@
 #include "common.h"
 #include "annotate.h"
 #include "anf.h"
+#include "types.h"
 
 #ifdef DEBUG_ANNOTATE
 #  include "debug.h"
@@ -239,11 +240,8 @@ static void annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
         bindings = bindings->next;
     }
     bindings = x->bindings;
-    int letRecOffset = 0;
-    while (bindings != NULL) {
+    for (int letRecOffset = 0; bindings != NULL; bindings = bindings->next, letRecOffset++) {
         annotateLetRecLam(bindings->val, env, letRecOffset);
-        bindings = bindings->next;
-        letRecOffset++;
     }
     annotateExp(x->body, env);
     UNPROTECT(save);
@@ -435,7 +433,7 @@ static void annotateExp(Exp *x, CTEnv *env) {
 }
 
 void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
-    for (int i = 0; i < b->size; i++) {
+    for (Index i = 0; i < b->size; i++) {
         populateCTEnv(env, b->entries[i]->name);
     }
 }

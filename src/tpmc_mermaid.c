@@ -50,8 +50,8 @@ static bool seenName(char *name) {
 static void mermaidFreeVariables(TpmcVariableTable *freeVariables) {
     printf("[");
     if (freeVariables != NULL) {
-        int i = 0;
-        int count = 0;
+        Index i = 0;
+        Index count = 0;
         HashSymbol *key;
         while ((key = iterateTpmcVariableTable(freeVariables, &i)) != NULL) {
             printf("%s", key->name);
@@ -98,7 +98,7 @@ static char *mermaidStateName(TpmcState *state) {
 }
 
 static void mermaidConstructorComponents(TpmcPatternArray *patterns) {
-    for (int i = 0; i < countTpmcPatternArray(patterns); ++i) {
+    for (Index i = 0; i < countTpmcPatternArray(patterns); ++i) {
         mermaidPattern(patterns->entries[i]);
         if (i < (countTpmcPatternArray(patterns) - 1)) {
             printf(", ");
@@ -162,7 +162,7 @@ static void mermaidArc(char *stateName, TpmcArc *arc) {
 }
 
 static void mermaidTestState(char *name, TpmcTestState *testState) {
-    for (int i = 0; i < countTpmcArcArray(testState->arcs); i++) {
+    for (Index i = 0; i < countTpmcArcArray(testState->arcs); i++) {
         mermaidArc(name, testState->arcs->entries[i]);
     }
 }

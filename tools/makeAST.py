@@ -608,10 +608,10 @@ class SimpleHash(Base):
         myName = self.getName()
         myType = self.getTypeDeclaration()
         if self.entries is None:
-            return f'HashSymbol * iterate{myName}({myType} table, int *i)'
+            return f'HashSymbol * iterate{myName}({myType} table, Index *i)'
         else:
             valueType = self.entries.getTypeDeclaration(catalog)
-            return f'HashSymbol * iterate{myName}({myType} table, int *i, {valueType}*value)'
+            return f'HashSymbol * iterate{myName}({myType} table, Index *i, {valueType}*value)'
 
     def printIteratorDeclaration(self, catalog):
         decl = self.getIteratorDeclaration(catalog)
@@ -650,7 +650,7 @@ class SimpleHash(Base):
     def printCountDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration()
-        print(f'static inline int count{myName}({myType} table) {{ // SimpleHash.printCountDeclaration')
+        print(f'static inline Index count{myName}({myType} table) {{ // SimpleHash.printCountDeclaration')
         print('    return ((HashTable *)table)->count; // SimpleHash.printCountDeclaration')
         print('} // SimpleHash.printCountDeclaration')
         print('')
@@ -780,18 +780,18 @@ class SimpleArray(Base):
 
     def printAccessDeclarations(self, catalog):
         if self.dimension == 2:
-            print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y) {{ // SimpleArray.printAccessDeclarations")
+            print(f"static inline {self.entries.getTypeDeclaration(catalog)} get{self.getName()}Index({self.getTypeDeclaration()} obj, Index x, Index y) {{ // SimpleArray.printAccessDeclarations")
             print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
-            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
+            print("    if (x >= obj->width || y >= obj->height) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    }")
             print("#endif // SimpleArray.printAccessDeclarations");
             print("    return obj->entries[x + y * obj->width]; // SimpleArray.printAccessDeclarations")
             print("} // SimpleArray.printAccessDeclarations")
             print("")
-            print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, int x, int y, {self.entries.getTypeDeclaration(catalog)} val) {{ // SimpleArray.printAccessDeclarations")
+            print(f"static inline void set{self.getName()}Index({self.getTypeDeclaration()} obj, Index x, Index y, {self.entries.getTypeDeclaration(catalog)} val) {{ // SimpleArray.printAccessDeclarations")
             print("#ifdef SAFETY_CHECKS // SimpleArray.printAccessDeclarations");
-            print("    if (x >= obj->width || y >= obj->height || x < 0 || y < 0) { // SimpleArray.printAccessDeclarations");
+            print("    if (x >= obj->width || y >= obj->height) { // SimpleArray.printAccessDeclarations");
             print('        cant_happen("2d matrix bounds exceeded"); // SimpleArray.printAccessDeclarations')
             print("    } // SimpleArray.printAccessDeclarations")
             print("#endif // SimpleArray.printAccessDeclarations");
@@ -805,11 +805,11 @@ class SimpleArray(Base):
         if self.tagged:
             print("    char *_tag; // SimpleArray.printTypedef")
         if self.dimension == 2: # 2D arrays are fixed size
-            print("    int width; // SimpleArray.printTypedef")
-            print("    int height; // SimpleArray.printTypedef")
+            print("    Index width; // SimpleArray.printTypedef")
+            print("    Index height; // SimpleArray.printTypedef")
         else:                   # 1D arrays can grow
-            print("    int size; // SimpleArray.printTypedef")
-            print("    int capacity; // SimpleArray.printTypedef")
+            print("    Index size; // SimpleArray.printTypedef")
+            print("    Index capacity; // SimpleArray.printTypedef")
         self.entries.printArrayTypedefLine(catalog)
         print("}} {name}; // SimpleArray.printTypedef\n".format(name=self.getName()))
 
@@ -933,13 +933,13 @@ class SimpleArray(Base):
             self.printMark2dFunctionBody(catalog)
 
     def printMark1dFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->size; i++) { // SimpleArray.print1dFunctionBody")
+        print("    for (Index i = 0; i < x->size; i++) { // SimpleArray.print1dFunctionBody")
         self.entries.printMarkArrayLine(catalog, "i", 2)
         print("    } // SimpleArray.print1dFunctionBody")
 
     def printMark2dFunctionBody(self, catalog):
-        print("    int size = x->width * x->height; // SimpleArray.print2dFunctionBody")
-        print("    for (int i = 0; i < size; i++) { // SimpleArray.print2dFunctionBody")
+        print("    Index size = x->width * x->height; // SimpleArray.print2dFunctionBody")
+        print("    for (Index i = 0; i < size; i++) { // SimpleArray.print2dFunctionBody")
         self.entries.printMarkArrayLine(catalog, "i", 2)
         print("    } // SimpleArray.print2dFunctionBody")
 
@@ -959,7 +959,7 @@ class SimpleArray(Base):
     def printCountDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration()
-        print(f'static inline int count{myName}({myType} x) {{ // SimpleArray.printCountDeclaration')
+        print(f'static inline Index count{myName}({myType} x) {{ // SimpleArray.printCountDeclaration')
         if self.dimension == 1:
             print('    return x->size; // SimpleArray.printCountDeclaration')
         else:
@@ -1002,12 +1002,12 @@ class SimpleArray(Base):
         print("    if (a == NULL || b == NULL) return false; // SimpleArray.printCompareFunction")
         if self.dimension == 1:
             print("    if (a->size != b->size) return false; // SimpleArray.printCompareFunction")
-            print("    for (int i = 0; i < a->size; i++) { // SimpleArray.printCompareFunction")
+            print("    for (Index i = 0; i < a->size; i++) { // SimpleArray.printCompareFunction")
             self.entries.printCompareArrayLine(catalog, "i", 2)
             print("    } // SimpleArray.printCompareFunction")
         else:
             print("    if (a->width != b->width || a->height != b->height) return false; // SimpleArray.printCompareFunction")
-            print("    for (int i = 0; i < (a->width * a->height); i++) { // SimpleArray.printCompareFunction")
+            print("    for (Index i = 0; i < (a->width * a->height); i++) { // SimpleArray.printCompareFunction")
             self.entries.printCompareArrayLine(catalog, "i", 2)
             print("    } // SimpleArray.printCompareFunction")
         print("    return true; // SimpleArray.printCompareFunction")
@@ -1041,7 +1041,7 @@ class SimpleArray(Base):
         print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->capacity); // SimpleArray.print1dCopyFunctionBody")
         print("        x->size = 0; // SimpleArray.print1dCopyFunctionBody")
         print("        x->capacity = o->capacity; // SimpleArray.print1dCopyFunctionBody")
-        print("        for (int i = 0; i < o->size; i++) { // SimpleArray.print1dCopyFunctionBody")
+        print("        for (Index i = 0; i < o->size; i++) { // SimpleArray.print1dCopyFunctionBody")
         self.entries.printCopyArrayLine(catalog, "i", 3)
         print("            x->size++; // SimpleArray.print1dCopyFunctionBody")
         print("        } // SimpleArray.print1dCopyFunctionBody")
@@ -1052,7 +1052,7 @@ class SimpleArray(Base):
         print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->width * x->height); // SimpleArray.print2dCopyFunctionBody")
         print("        x->width = 0; // SimpleArray.print2dCopyFunctionBody")
         print("        x->height = 0; // SimpleArray.print2dCopyFunctionBody")
-        print("        for (int i = 0; i < (o->width * o->height); i++) { // SimpleArray.print2dCopyFunctionBody")
+        print("        for (Index i = 0; i < (o->width * o->height); i++) { // SimpleArray.print2dCopyFunctionBody")
         self.entries.printCopyArrayLine(catalog, "i", 3)
         print("        } // SimpleArray.print2dCopyFunctionBody")
         print("        x->height = o->height; // SimpleArray.print2dCopyFunctionBody")
@@ -1082,16 +1082,16 @@ class SimpleArray(Base):
             self.print2dPrintFunctionBody(catalog)
 
     def print1dPrintFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->size; i++) { // SimpleArray.print1dPrintFunctionBody")
+        print("    for (Index i = 0; i < x->size; i++) { // SimpleArray.print1dPrintFunctionBody")
         self.entries.printPrintArrayLine(catalog, "i", 2)
         print('        eprintf("\\n"); // SimpleArray.print1dPrintFunctionBody')
         print("    } // SimpleArray.print1dPrintFunctionBody")
 
     def print2dPrintFunctionBody(self, catalog):
-        print("    for (int i = 0; i < x->height; i++) { // SimpleArray.print2dPrintFunctionBody")
+        print("    for (Index i = 0; i < x->height; i++) { // SimpleArray.print2dPrintFunctionBody")
         print("        pad(depth); // SimpleArray.print2dPrintFunctionBody")
         print('        eprintf("[\\n"); // SimpleArray.print2dPrintFunctionBody')
-        print("        for (int j = 0; j < x->width; j++) { // SimpleArray.print2dPrintFunctionBody")
+        print("        for (Index j = 0; j < x->width; j++) { // SimpleArray.print2dPrintFunctionBody")
         self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
         print('            eprintf("\\n"); // SimpleArray.print2dPrintFunctionBody')
         print("        } // SimpleArray.print2dPrintFunctionBody")
@@ -1134,13 +1134,13 @@ class SimpleArray(Base):
         myName = self.getName()
         myType = self.getTypeDeclaration()
         myContainedType = self.entries.getTypeDeclaration(catalog)
-        return f'bool iterate{myName}({myType} table, int *i, {myContainedType} *res, bool *more)'
+        return f'bool iterate{myName}({myType} table, Index *i, {myContainedType} *res, bool *more)'
 
     def getIterator2DDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration()
         myContainedType = self.entries.getTypeDeclaration(catalog)
-        return f'bool iterate{myName}({myType} table, int *x, int *y, {myContainedType} *res, bool *more_x, bool *more_y)'
+        return f'bool iterate{myName}({myType} table, Index *x, Index *y, {myContainedType} *res, bool *more_x, bool *more_y)'
 
     def printIteratorDeclaration(self, catalog):
         if self.dimension == 2:
@@ -1165,7 +1165,7 @@ class SimpleArray(Base):
     def printIterator1DFunction(self, catalog):
         decl = self.getIterator1DDeclaration(catalog)
         print(f'{decl} {{ // SimpleArray.printIterator1DFunction')
-        print('    if (*i < 0 || *i >= table->size) {')
+        print('    if (*i >= table->size) {')
         print('        if (more != NULL) {')
         print('            *more = false;')
         print('        }')
@@ -1186,12 +1186,12 @@ class SimpleArray(Base):
     def printIterator2DFunction(self, catalog):
         decl = self.getIterator2DDeclaration(catalog)
         print(f'{decl} {{ // SimpleArray.printIterator2DFunction')
-        print('    if (*x < 0 || *x >= table->width) {')
+        print('    if (*x >= table->width) {')
         print('        if (more_x != NULL) {')
         print('            *more_x = false;')
         print('        }')
         print('        return false;')
-        print('    } else if (*y < 0 || *y >= table->height) {')
+        print('    } else if (*y >= table->height) {')
         print('        if (more_y != NULL) {')
         print('            *more_y = false;')
         print('        }')
@@ -1268,7 +1268,7 @@ class SimpleStruct(Base):
     def getCountSignature(self):
         myType = self.getTypeDeclaration()
         myName = self.getName()
-        return f'int count{myName}({myType} x)'
+        return f'Index count{myName}({myType} x)'
 
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
@@ -1278,10 +1278,10 @@ class SimpleStruct(Base):
         if self.isSinglySelfReferential(catalog):
             print(f'{self.getCountSignature()} {{ // SimpleStruct.printCountFunction')
             selfRefField = self.getSelfReferentialField(catalog)
-            print('    int count = 0; // SimpleStruct.printCountFunction')
+            print('    Index count = 0; // SimpleStruct.printCountFunction')
             print('    while (x != NULL) { // SimpleStruct.printCountFunction')
             print(f'        x = x->{selfRefField}; // SimpleStruct.printCountFunction')
-            print('        count++;; // SimpleStruct.printCountFunction')
+            print('        count++; // SimpleStruct.printCountFunction')
             print('    } // SimpleStruct.printCountFunction')
             print('    return count; // SimpleStruct.printCountFunction')
             print('} // SimpleStruct.printCountFunction')
@@ -2078,6 +2078,7 @@ if args.type == "h":
     print('#include "hash.h"')
     print('#include "memory.h"')
     print('#include "common.h"')
+    print('#include "types.h"')
     for include in includes:
         print(f'#include "{include}"')
     for include in limited_includes:

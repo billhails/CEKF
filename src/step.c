@@ -91,11 +91,9 @@ static Env *builtInsToEnv(BuiltIns *b) {
     // eprintf("\n");
     Env *env = newEnv(NULL, b->size);
     int save = PROTECT(env);
-    for (int i = 0; i < b->size; i++) {
+    for (Index i = 0; i < b->size; i++) {
         BuiltIn *builtIn = b->entries[i];
         BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
-        // printBuiltInImplementation(implementation, 0);
-        // eprintf("\n");
         env->values[i] = builtInValue(implementation);
     }
     UNPROTECT(save);
@@ -128,15 +126,19 @@ static inline int readCurrentByte(void) {
     return readByte(&state.B, &state.C);
 }
 
+static inline Character readCurrentCharacter(void) {
+    return readCharacter(&state.B, &state.C);
+}
+
 static inline int readCurrentWord(void) {
     return readWord(&state.B, &state.C);
 }
 
-static inline int readCurrentInt(void) {
-    return readInt(&state.B, &state.C);
+static inline Integer readCurrentInt(void) {
+    return readInteger(&state.B, &state.C);
 }
 
-static inline double readCurrentIrrational(void) {
+static inline Double readCurrentIrrational(void) {
     return readDouble(&state.B, &state.C);
 }
 
@@ -826,7 +828,7 @@ static void step() {
                             }
                             break;
                             case BYTECODE_STDINT: {
-                                int Int = readCurrentInt();
+                                Integer Int = readCurrentInt();
                                 printf("%d", Int);
                             }
                             break;
@@ -856,7 +858,7 @@ static void step() {
                             }
                             break;
                             case BYTECODE_STDINT: {
-                                int option = readCurrentInt();
+                                Integer option = readCurrentInt();
                                 Value u = stdintValue(option);
                                 int offset = readCurrentOffset();
                                 if (ncmp(u, v) == CMP_EQ) {
@@ -866,7 +868,7 @@ static void step() {
                             }
                             break;
                             case BYTECODE_IRRATIONAL: {
-                                double option = readCurrentIrrational();
+                                Double option = readCurrentIrrational();
                                 Value u = irrationalValue(option);
                                 int offset = readCurrentOffset();
                                 if (ncmp(u, v) == CMP_EQ) {
@@ -890,7 +892,7 @@ static void step() {
                     printf("CHARCOND [%d]", size);
                     int here = state.C;
                     for (int ip = 0; ip < size; ip++) {
-                        int val = readCurrentInt();
+                        Integer val = readCurrentInt();
                         int offset = readCurrentOffset();
                         printf(" %d:[%04x]", val, offset);
                     }
@@ -912,7 +914,7 @@ static void step() {
                                  v.type);
                     }
                     for (int ip = 0; ip < size; ip++) {
-                        int val = readCurrentInt();
+                        Integer val = readCurrentInt();
                         int offset = readCurrentOffset();
                         if (option == val) {
                             state.C = offset;
@@ -1020,16 +1022,16 @@ static void step() {
                 }
                 break;
             case BYTECODE_IRRATIONAL:{
-                    // push literal double
-                    double f = readCurrentIrrational();
+                    // push literal Double
+                    Double f = readCurrentIrrational();
                     DEBUGPRINTF("IRRATIONAL [%f]\n", f);
                     Value v = irrationalValue(f);
                     push(v);
             }
             break;
             case BYTECODE_IRRATIONAL_IMAG:{
-                    // push literal double
-                    double f = readCurrentIrrational();
+                    // push literal Double
+                    Double f = readCurrentIrrational();
                     DEBUGPRINTF("IRRATIONAL_IMAG [%f]\n", f);
                     Value v = irrationalimagValue(f);
                     push(v);
@@ -1037,7 +1039,7 @@ static void step() {
             break;
             case BYTECODE_STDINT:{
                     // push literal int
-                    int val = readCurrentInt();
+                    Integer val = readCurrentInt();
                     DEBUGPRINTF("STDINT [%d]\n", val);
                     Value v = stdintValue(val);
                     push(v);
@@ -1045,7 +1047,7 @@ static void step() {
                 break;
             case BYTECODE_STDINT_IMAG:{
                     // push literal int
-                    int val = readCurrentInt();
+                    Integer val = readCurrentInt();
                     DEBUGPRINTF("STDINT_IMAG [%d]\n", val);
                     Value v = stdintimagValue(val);
                     push(v);
@@ -1053,7 +1055,7 @@ static void step() {
                 break;
             case BYTECODE_CHAR:{
                     // push literal char
-                    char c = readCurrentByte();
+                    Character c = readCurrentCharacter();
                     DEBUGPRINTF("CHAR [%s]\n", charRep(c));
                     Value v = characterValue(c);
                     push(v);

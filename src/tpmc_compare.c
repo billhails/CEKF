@@ -23,6 +23,7 @@
 #include "tpmc_compare.h"
 #include "tpmc_pp.h"
 #include "common.h"
+#include "types.h"
 
 #ifdef DEBUG_TPMC_COMPARE
 #  include "debugging_on.h"
@@ -72,7 +73,7 @@ bool tpmcArcArrayEq(TpmcArcArray *a, TpmcArcArray *b) {
     if (a->size != b->size) {
         return false;
     }
-    for (int i = 0; i < a->size; ++i) {
+    for (Index i = 0; i < a->size; ++i) {
         if (!tpmcArcEq(a->entries[i], b->entries[i])) {
             return false;
         }
@@ -89,7 +90,7 @@ bool tpmcArcEq(TpmcArc *a, TpmcArc *b) {
 bool tpmcArcInArray(TpmcArc *arc, TpmcArcArray *arcArray) {
     DEBUGN("tpmcArcInArray: ");
     IFDEBUGN(ppTpmcPattern(arc->test));
-    for (int i = 0; i < arcArray->size; i++) {
+    for (Index i = 0; i < arcArray->size; i++) {
         if (tpmcArcEq(arcArray->entries[i], arc)) {
             DEBUG("tpmcArcInArray returning true");
             return true;
@@ -159,7 +160,7 @@ bool tpmcPatternArrayEq(TpmcPatternArray *a, TpmcPatternArray *b) {
     if (a->size != b->size) {
         return false;
     }
-    for (int i = 0; i < a->size; ++i) {
+    for (Index i = 0; i < a->size; ++i) {
         if (!tpmcPatternEq(a->entries[i], b->entries[i])) {
             return false;
         }

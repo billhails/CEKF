@@ -11,6 +11,7 @@ extern "C" {
 #  include <string.h>
 #  include "memory.h"
 #  include "cmp.h"
+#  include "types.h"
 
 /* any unsigned integer type */
     typedef uint32_t bigint_word;
@@ -55,7 +56,7 @@ extern "C" {
         union {
             bigint big;
             int small;
-            double irrational;
+            Double irrational;
         };
     } MaybeBigInt;
 
@@ -67,7 +68,7 @@ extern "C" {
 
     MaybeBigInt *newMaybeBigInt(bigint bi, bool imag);
     MaybeBigInt *fakeBigInt(int little, bool imag);
-    MaybeBigInt *irrationalBigInt(double f, bool imag);
+    MaybeBigInt *irrationalBigInt(Double f, bool imag);
 
     BigInt *newBigInt(bigint bi);
     BigInt *bigIntFromInt(int c);
@@ -85,9 +86,9 @@ extern "C" {
     void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
     Cmp cmpBigInt(BigInt *a, BigInt *b);
     Cmp cmpBigIntInt(BigInt *a, int b);
-    Cmp cmpBigIntDouble(BigInt *a, double b);
+    Cmp cmpBigIntDouble(BigInt *a, Double b);
     static inline Cmp cmpIntBigInt(int a, BigInt *b) { return (Cmp)(cmpBigIntInt(b, a) * -1); }
-    static inline Cmp cmpDoubleBigInt(double a, BigInt *b) { return (Cmp)(cmpBigIntDouble(b, a) * -1); }
+    static inline Cmp cmpDoubleBigInt(Double a, BigInt *b) { return (Cmp)(cmpBigIntDouble(b, a) * -1); }
     int cmpMaybeBigInt(MaybeBigInt *a, MaybeBigInt *b);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
@@ -110,7 +111,7 @@ extern "C" {
     BigInt *gcdBigInt(BigInt *a, BigInt *b);
     BigInt *gcdBigIntInt(BigInt *a, int b);
     BigInt *gcdIntBigInt(int a, BigInt *b);
-    double bigIntToDouble(BigInt *b);
+    Double bigIntToDouble(BigInt *b);
     void bigint_fprint(FILE *f, bigint * bi);
     void negateBigInt(BigInt *b);
     static inline bool isNegBigInt(BigInt *b) {

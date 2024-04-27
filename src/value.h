@@ -20,6 +20,7 @@
 
 #  include "bigint.h"
 #  include "builtins.h"
+#  include "types.h"
 
 typedef enum ValueType {
     VALUE_TYPE_VOID,
@@ -42,10 +43,10 @@ typedef enum ValueType {
 
 typedef union {
     void *none;
-    int stdint;
+    Integer stdint;
     BigInt *bigint;
-    double irrational;
-    char character;
+    Double irrational;
+    Character character;
     struct Clo *clo;
     struct Kont *kont;
     struct Vec *vec;
@@ -90,14 +91,14 @@ static inline Value voidValue() {
     return v;
 }
 
-static inline Value stdintValue(int x) {
+static inline Value stdintValue(Integer x) {
     Value v;
     v.type = VALUE_TYPE_STDINT;
     v.val = VALUE_VAL_STDINT(x);
     return v;
 }
 
-static inline Value stdintimagValue(int x) {
+static inline Value stdintimagValue(Integer x) {
     Value v;
     v.type = VALUE_TYPE_STDINT_IMAG;
     v.val = VALUE_VAL_STDINT_IMAG(x);
@@ -118,21 +119,21 @@ static inline Value bigintimagValue(BigInt * x) {
     return v;
 }
 
-static inline Value irrationalValue(double x) {
+static inline Value irrationalValue(Double x) {
     Value v;
     v.type = VALUE_TYPE_IRRATIONAL;
     v.val = VALUE_VAL_IRRATIONAL(x);
     return v;
 }
 
-static inline Value irrationalimagValue(double x) {
+static inline Value irrationalimagValue(Double x) {
     Value v;
     v.type = VALUE_TYPE_IRRATIONAL_IMAG;
     v.val = VALUE_VAL_IRRATIONAL_IMAG(x);
     return v;
 }
 
-static inline Value characterValue(char x) {
+static inline Value characterValue(Character x) {
     Value v;
     v.type = VALUE_TYPE_CHARACTER;
     v.val = VALUE_VAL_CHARACTER(x);
