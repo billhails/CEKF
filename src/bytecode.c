@@ -46,12 +46,12 @@ void resetByteCodeArray(ByteCodeArray *b) {
     }
 }
 
-static void growCapacity(ByteCodeArray *byteCodes, int newCapacity) {
+static void growCapacity(ByteCodeArray *byteCodes, Control newCapacity) {
     int oldCapacity = byteCodes->capacity;
     Byte *entries =
         GROW_ARRAY(Byte, byteCodes->entries, oldCapacity, newCapacity);
 
-    for (int i = oldCapacity; i < newCapacity; i++) {
+    for (Control i = oldCapacity; i < newCapacity; i++) {
         entries[i] = BYTECODE_NONE;
     }
 
