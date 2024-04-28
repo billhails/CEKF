@@ -1,0 +1,71 @@
+let
+    typedef tree { leaf | node(tree, tree) }
+    typedef result { res(int, tree) }
+
+    // start with a root node, toss a coin and if it comes up
+    // heads, create two children and repeat the process on each
+    fn generate (seed) {
+        let
+            fn helper (seed, depth) {
+                let
+                    s0 = rand(seed);
+                in
+                    if (depth > 50 or s0 < 0.5) {
+                        res(s0, leaf)
+                    } else {
+                        switch(helper(s0, depth + 1)) {
+                            (res(s1, t1)) {
+                                switch(helper(s1, depth + 1)) {
+                                    (res(s2, t2)) {
+                                        res(s2, node(t1, t2))
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+        in
+            helper(seed, 0)
+    }
+
+    fn printTree(res(s, t)) {
+        let
+            fn inner {
+                (id, leaf) {
+                    puts("a");
+                    putn(id);
+                    puts("[label=\"\"]\n");
+                    id;
+                }
+                (id, node(l, r)) {
+                    switch (inner(id + 1, l)) {
+                        (id1) {
+                            puts("a");
+                            putn(id);
+                            puts("[label=\"\"]\n");
+                            puts("a");
+                            putn(id);
+                            puts(" -> a");
+                            putn(id + 1);
+                            puts("\n");
+                            switch(inner(id1 + 1, r)) {
+                                (id2) {
+                                    puts("a");
+                                    putn(id);
+                                    puts(" -> a");
+                                    putn(id1 + 1);
+                                    puts("\n");
+                                    id2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        in
+            puts("digraph {\n");
+            inner(1, t);
+            puts("}\n");
+    }
+in
+    printTree(generate(0.640))
