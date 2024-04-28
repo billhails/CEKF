@@ -30,24 +30,19 @@ struct PmModule *mod = yyextra;
 [0-9]+i         { yylval->s = yytext; return NUMBER_I; }
 
 "and"       { return AND; }
-"as"        { return AS; }
 "back"      { return BACK; }
 "char"      { return KW_CHAR; }
 "else"      { return ELSE; }
-"env"       { return ENV; }
-"extends"   { return EXTENDS; }
 "fn"        { return FN; }
 "here"      { return HERE; }
 "if"        { return IF; }
 "in"        { return IN; }
 "int"       { return KW_INT; }
 "let"       { return LET; }
-"load"      { return LOAD; }
 "not"       { return NOT; }
 "or"        { return OR; }
 "xor"       { return XOR; }
 "print"     { return PRINT; }
-"prototype" { return PROTOTYPE; }
 "_"         { return WILDCARD; }
 "switch"    { return SWITCH; }
 "then"      { return THEN; }

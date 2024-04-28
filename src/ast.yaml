@@ -36,10 +36,6 @@ structs:
         symbol: HashSymbol
         expression: AstExpression
 
-    AstLoad:
-        package: AstPackage
-        symbol: HashSymbol
-
     AstTypeDef:
         userType: AstUserType
         typeBody: AstTypeBody
@@ -100,25 +96,13 @@ structs:
         name: HashSymbol
         arg: AstArg
 
-    AstEnvType:
-        name: HashSymbol
-        prototype: HashSymbol
-
     AstFunCall:
         function: AstExpression
         arguments: AstExpressions
 
-    AstPackage:
-        symbol: HashSymbol
-        next: AstPackage
-
     AstExpressions:
         expression: AstExpression
         next: AstExpressions
-
-    AstEnv:
-        package: AstPackage
-        definitions: AstDefinitions
 
     AstIff:
         test: AstExpression
@@ -131,7 +115,6 @@ structs:
 unions:
     AstDefinition:
         define: AstDefine
-        load: AstLoad
         typeDef: AstTypeDef
 
     AstTypeClause:
@@ -145,7 +128,6 @@ unions:
         wildcard: void_ptr
         symbol: HashSymbol
         named: AstNamedArg
-        env: AstEnvType
         unpack: AstUnpack
         number: MaybeBigInt
         character: char
@@ -158,7 +140,6 @@ unions:
         number: MaybeBigInt
         character: char
         fun: AstCompositeFunction
-        env: AstEnv
         nest: AstNest
         iff: AstIff
         print: AstPrint

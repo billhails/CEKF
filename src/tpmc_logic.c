@@ -182,8 +182,6 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
             return makeVarPattern(arg->val.symbol, env);
         case AST_ARG_TYPE_NAMED:
             return makeAssignmentPattern(arg->val.named, env);
-        case AST_ARG_TYPE_ENV:
-            cant_happen("env arg type not supported yet in convertPattern");
         case AST_ARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
         case AST_ARG_TYPE_TUPLE:

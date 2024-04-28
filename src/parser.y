@@ -186,16 +186,12 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstDefine *define;
     AstDefinition *definition;
     AstDefinitions *definitions;
-    AstEnv *env;
-    AstEnvType *envType;
     AstExpression *expression;
     AstExpressions *expressions;
     AstUserType *userType;
     AstFunCall *funCall;
-    AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
-    AstPackage *package;
     AstPrint *print;
     HashSymbol *symbol;
     AstTypeBody *typeBody;
@@ -218,21 +214,17 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <arg> farg
 %type <argList> fargs arg_tuple
 %type <compositeFunction> composite_function functions fun
-%type <define> defun denv
+%type <define> defun
 %type <definition> definition
-%type <definitions> let_in definitions env_body
-%type <env> env env_expr
-%type <envType> env_type
+%type <definitions> let_in definitions
 %type <expression> expression
 %type <expressions> expressions expression_statements tuple
 %type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
-%type <load> load
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
-%type <package> package extends
 %type <print> print
-%type <symbol> symbol type_symbol as
+%type <symbol> symbol type_symbol
 %type <typeBody> type_body
 %type <typeClause> type_clause
 %type <typeConstructor> type_constructor
@@ -246,11 +238,8 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <altFunction> alt_function
 %type <altArgs> alt_args
 
-%token AS
 %token BACK
 %token ELSE
-%token ENV
-%token EXTENDS
 %token FALSE
 %token FN
 %token IF
@@ -258,9 +247,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %token KW_CHAR
 %token KW_INT
 %token LET
-%token LOAD
 %token PRINT
-%token PROTOTYPE
 %token SWITCH
 %token TRUE
 %token TYPEDEF
@@ -291,7 +278,6 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %nonassoc NEG
 %nonassoc HERE
 %left '('
-%right '.'
 
 %start top
 
@@ -315,24 +301,12 @@ definitions : %empty                     { $$ = NULL; }
             ;
 
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
-           | load       { $$ = newAstDefinition( AST_DEFINITION_TYPE_LOAD, AST_DEFINITION_VAL_LOAD($1)); }
            | typedef    { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
            | defun      { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
-           | denv       { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
            ;
 
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
-
-denv : ENV symbol env_expr  { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($3))); }
-     ;
-
-load : LOAD package as  { $$ = newAstLoad($2, $3); }
-     ;
-
-as : %empty     { $$ = NULL; }
-   | AS symbol  { $$ = $2; }
-   ;
 
 /******************************** types */
 
@@ -435,7 +409,6 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
      | named_farg          { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
      | '[' ']'             { $$ = newAstNilArg(); }
      | '[' consfargs ']'   { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
-     | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
      | number              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
      | stringarg           { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
@@ -462,9 +435,6 @@ str : STRING            { $$ = newCharArray($1); }
     | str STRING        { $$ = appendCharArray($1, $2); }
     ;
 
-env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
-         ;
-
 named_farg : symbol '=' farg  { $$ = newAstNamedArg($1, $3); }
            ;
 
@@ -473,7 +443,6 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | unop                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | '[' conslist ']'     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
            | FN fun               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
-           | env                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
            | BACK                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
            | iff                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)); }
            | switch               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
@@ -519,12 +488,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression '/' expression       { $$ = binOpToFunCall(divSymbol(), $1, $3); }
       | expression '%' expression       { $$ = binOpToFunCall(modSymbol(), $1, $3); }
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
-      | expression '.' expression       { $$ = binOpToFunCall(dotSymbol(), $1, $3); }
       ;
-
-package : symbol                { $$ = newAstPackage($1, NULL); }
-        | symbol '.' package    { $$ = newAstPackage($1, $3); }
-        ;
 
 expressions : %empty                        { $$ = NULL; }
             | expression                    { $$ = newAstExpressions($1, NULL); }
@@ -543,19 +507,6 @@ expression_statements : expression optional_semicolon           { $$ = newAstExp
 optional_semicolon : %empty
                    | ';'
                    ;
-
-env : ENV env_expr  { $$ = $2; }
-    ;
-
-env_expr : extends env_body { $$ = newAstEnv($1, $2); }
-         ;
-
-extends : %empty            { $$ = NULL; }
-        | EXTENDS package   { $$ = $2; }
-        ;
-
-env_body : '{' definitions '}'  { $$ = $2; }
-         ;
 
 symbol : VAR    { $$ = newSymbol($1); }
        ;
