@@ -69,7 +69,26 @@ lhs of the `.` operator.
 ### Version Control
 
 This is quite a big piece of work, so I plan to create sub-branches off
-of a co-ordinating `namespaces` branch to keep some sort of control.
+of a co-ordinating `namespaces` branch to keep some sort of control, and
+(this time) using tags to allow easier recovery.
+
+```mermaid
+gitGraph TB:
+	commit
+	branch namespaces
+	checkout namespaces
+	commit tag: "namespaces-v1"
+	branch parsing
+	checkout parsing
+	commit
+	checkout namespaces
+	branch lambda
+	checkout lambda
+	commit
+	checkout namespaces
+	merge parsing tag: "parsing-v1"
+	merge lambda tag: "lambda-v1"
+```
 
 ### Parsing
 
