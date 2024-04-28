@@ -183,3 +183,13 @@ void showModuleState(FILE *fp, PmModule *mod) {
     fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename,
             mod->bufStack->lineno + 1);
 }
+
+char *currentPmFile(PmModule *mod) {
+    if (mod == NULL) {
+        return NULL;
+    }
+    if (mod->bufStack == NULL) {
+        return NULL;
+    }
+    return mod->bufStack->filename;
+}

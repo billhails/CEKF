@@ -28,8 +28,17 @@ structs:
         definitions: AstDefinitions
         expressions: AstExpressions
 
+    AstNameSpaceImpl:
+        symbol: HashSymbol
+        definitions: AstDefinitions
+
+    AstNameSpaceRef:
+        symbol: HashSymbol
+        reference: AstNameSpaceImpl
+
     AstDefinitions:
         definition: AstDefinition
+        exported: bool
         next: AstDefinitions
 
     AstDefine:
@@ -113,9 +122,14 @@ structs:
         exp: AstExpression
 
 unions:
+    AstNameSpace:
+        implementation: AstNameSpaceImpl
+        reference: AstNameSpaceRef
+
     AstDefinition:
         define: AstDefine
         typeDef: AstTypeDef
+        nameSpace: AstNameSpace
 
     AstTypeClause:
         integer: void_ptr

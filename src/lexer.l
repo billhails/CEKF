@@ -29,6 +29,10 @@ struct PmModule *mod = yyextra;
 [0-9]+         { yylval->s = yytext; return NUMBER; }
 [0-9]+i         { yylval->s = yytext; return NUMBER_I; }
 
+"namespace" { return NAMESPACE; }
+"as"        { return AS; }
+"export"    { return EXPORT; }
+"import"    { return IMPORT; }
 "and"       { return AND; }
 "back"      { return BACK; }
 "char"      { return KW_CHAR; }

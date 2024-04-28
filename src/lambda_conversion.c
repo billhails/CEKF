@@ -381,12 +381,13 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
             result = prependDefine(definition->val.define, env, next);
             break;
         case AST_DEFINITION_TYPE_TYPEDEF:
+        case AST_DEFINITION_TYPE_NAMESPACE:
             result = next;
             break;
         default:
             cant_happen
-                ("unrecognised definition type %d in prependDefinition",
-                 definition->type);
+                ("unrecognised definition type %s in prependDefinition",
+                 astDefinitionTypeName(definition->type));
     }
     LEAVE(prependDefinition);
     return result;
@@ -684,11 +685,14 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
 }
 
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
+    ENTER(convertSymbol);
+    DEBUG("convertSymbol %s", symbol->name);
     LamExp *result = inlineConstructor(symbol, NULL, env);
     if (result == NULL) {
         symbol = dollarSubstitute(symbol);
         result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     }
+    LEAVE(convertSymbol);
     return result;
 }
 
@@ -697,37 +701,47 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     LamExp *result = NULL;
     switch (expression->type) {
         case AST_EXPRESSION_TYPE_BACK:
+            DEBUG("back");
             result = newLamExp(LAMEXP_TYPE_BACK, LAMEXP_VAL_BACK());
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
+            DEBUG("funcall");
             result = convertFunCall(expression->val.funCall, env);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
+            DEBUG("symbol");
             result = convertSymbol(expression->val.symbol, env);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
+            DEBUG("number");
             result =
                 newLamExp(LAMEXP_TYPE_BIGINTEGER,
                           LAMEXP_VAL_BIGINTEGER(expression->val.number));
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
+            DEBUG("character");
             result =
                 newLamExp(LAMEXP_TYPE_CHARACTER,
                           LAMEXP_VAL_CHARACTER(expression->val.character));
             break;
         case AST_EXPRESSION_TYPE_FUN:
+            DEBUG("fun");
             result = convertCompositeFun(expression->val.fun, env);
             break;
         case AST_EXPRESSION_TYPE_NEST:
+            DEBUG("nest");
             result = lamConvertNest(expression->val.nest, env);
             break;
         case AST_EXPRESSION_TYPE_IFF:
+            DEBUG("iff");
             result = lamConvertIff(expression->val.iff, env);
             break;
         case AST_EXPRESSION_TYPE_PRINT:
+            DEBUG("print");
             result = lamConvertPrint(expression->val.print, env);
             break;
         case AST_EXPRESSION_TYPE_TUPLE:
+            DEBUG("tuple");
             result = lamConvertTuple(expression->val.tuple, env);
             break;
         default:

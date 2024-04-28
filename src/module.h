@@ -28,5 +28,6 @@ int pmParseModule(PmModule *mod);
 void incLineNo(PmModule *mod);
 int popPmFile(PmModule *mod);
 void showModuleState(FILE *fp, PmModule *mod);
+char *currentPmFile(PmModule *mod);
 
 #endif

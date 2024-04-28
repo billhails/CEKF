@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "common.h"
 #include "ast_helper.h"
@@ -169,6 +170,57 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     return rest;
 }
 
+static char *calculatePath(char *file, PmModule *mod) {
+    if (*file == '/') {
+        return file;
+    }
+    char *currentFile = currentPmFile(mod);
+    if (currentFile == NULL) {
+        return strdup(file);
+    }
+    currentFile = strdup(currentFile);
+    char *slash = strrchr(currentFile, '/');
+    if (slash == NULL) {
+        free(currentFile);
+        return strdup(file);
+    }
+    *slash = '\0';
+    char *buf = malloc(sizeof(char) * (strlen(currentFile) + 1 + strlen(file) + 10));
+    if (buf == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    sprintf(buf, "%s/%s", currentFile, file);
+    free(currentFile);
+    return buf;
+}
+
+static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
+    char *path = calculatePath(file, mod);
+    FILE *fh = fopen(path, "r");
+    if (fh == NULL) {
+        cant_happen("cannot read file \"%s\"", path);
+    }
+    PmModule *new = newPmModuleFromFileHandle(fh, path);
+    int res = pmParseModule(new);
+    if (res != 0) {
+        cant_happen("syntax error in %s", path);
+    }
+    fclose(fh);
+    AstNest *nest = new->nest;
+    if (nest == NULL) {
+        cant_happen("null result parsing %s", path);
+    }
+    if (nest->definitions == NULL) {
+        cant_happen("null definitions parsing %s", path);
+    }
+    AstNameSpaceImpl *impl = newAstNameSpaceImpl(symbol, nest->definitions);
+    AstNameSpace *ns = newAstNameSpace(AST_NAMESPACE_TYPE_IMPLEMENTATION, AST_NAMESPACE_VAL_IMPLEMENTATION(impl));
+    // freePmModule((Header *)new);
+    free(path);
+    return ns;
+}
+
 %}
 %code requires
 {
@@ -207,6 +259,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstCharArray *chars;
     AstAltFunction *altFunction;
     AstAltArgs * altArgs;
+    AstNameSpace *nameSpace;
 }
 
 %type <chars> str
@@ -216,7 +269,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <compositeFunction> composite_function functions fun
 %type <define> defun
 %type <definition> definition
-%type <definitions> let_in definitions
+%type <definitions> let_in definitions namespace_definitions
 %type <expression> expression
 %type <expressions> expressions expression_statements tuple
 %type <userType> user_type
@@ -237,6 +290,7 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <iff> iff
 %type <altFunction> alt_function
 %type <altArgs> alt_args
+%type <nameSpace> name_space
 
 %token BACK
 %token ELSE
@@ -252,6 +306,10 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %token TRUE
 %token TYPEDEF
 %token WILDCARD
+%token EXPORT
+%token IMPORT
+%token NAMESPACE
+%token AS
 
 %token <c> CHAR
 %token <s> NUMBER
@@ -289,6 +347,7 @@ top : %empty     { $$ = NULL; }
 
 nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
           | expression_statements        { $$ = newAstNest(NULL, $1); }
+          | namespace_definitions        { $$ = newAstNest($1, NULL); }
           ;
 
 /******************************** definitions */
@@ -296,17 +355,25 @@ nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
 let_in : LET definitions IN { $$ = $2; }
        ;
 
-definitions : %empty                     { $$ = NULL; }
-            | definition definitions     { $$ = newAstDefinitions($1, $2); }
+namespace_definitions : NAMESPACE definitions   { $$ = $2; }
+                      ;
+
+definitions : %empty                            { $$ = NULL; }
+            | definition definitions            { $$ = newAstDefinitions($1, false, $2); }
+            | EXPORT definition definitions     { $$ = newAstDefinitions($2, true, $3); }
             ;
 
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
-           | typedef    { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
-           | defun      { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
+           | typedef                   { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
+           | defun                     { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
+           | name_space                { $$ = newAstDefinition( AST_DEFINITION_TYPE_NAMESPACE, AST_DEFINITION_VAL_NAMESPACE($1)); }
            ;
 
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
+
+name_space : IMPORT STRING AS symbol { $$ = parseImport($2, $4, mod); }
+           ;
 
 /******************************** types */
 
