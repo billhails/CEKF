@@ -105,6 +105,14 @@ class Catalog:
         for entity in self.contents.values():
             entity.printPushFunction(self)
 
+    def printPopDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPopDeclaration(self)
+
+    def printPopFunctions(self):
+        for entity in self.contents.values():
+            entity.printPopFunction(self)
+
     def printSetDeclarations(self):
         for entity in self.contents.values():
             entity.printSetDeclaration(self)
@@ -331,6 +339,12 @@ class Base:
         pass
 
     def printPushFunction(self, catalog):
+        pass
+
+    def printPopDeclaration(self, catalog):
+        pass
+
+    def printPopFunction(self, catalog):
         pass
 
     def printCountFunction(self, catalog):
@@ -905,18 +919,49 @@ class SimpleArray(Base):
 
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} obj, {self.entries.getTypeDeclaration(catalog)} entry); // simpleArray.printPushDeclaration")
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPushDeclaration'
+            print(f"Index push{name}({myType} obj, {entryType} entry); {c}")
 
+    def printPopDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPopDeclaration'
+            print(f"{entryType} pop{name}({myType} obj); {c}")
 
     def printPushFunction(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{ // SimpleArray.printPushFunction")
-            print("    if (x->size == x->capacity) { // SimpleArray.printPushFunction")
-            print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2); // SimpleArray.printPushFunction")
-            print("        x->capacity *= 2; // SimpleArray.printPushFunction")
-            print("    } // SimpleArray.printPushFunction")
-            print("    x->entries[x->size++] = entry; // SimpleArray.printPushFunction")
-            print("} // SimpleArray.printPushFunction\n")
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPushFunction'
+            print(f"Index push{name}({myType} x, {entryType} entry) {{ {c}")
+            print(f"    if (x->size == x->capacity) {{ {c}")
+            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
+            print(f"        x->capacity *= 2; {c}")
+            print(f"    }} {c}")
+            print(f"    x->entries[x->size++] = entry; {c}")
+            print(f"    return x->size - 1; {c}")
+            print(f"}} {c}\n")
+
+    def printPopFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPopFunction'
+            print(f"{entryType} pop{name}({myType} x) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS {c}")
+            print(f"    if (x->size == 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif {c}")
+            print(f"    return x->entries[--(x->size)]; {c}")
+            print(f"}} {c}\n")
 
     def printMarkFunction(self, catalog):
         print("{decl} {{ // SimpleArray.printMarkFunction".format(decl=self.getMarkSignature(catalog)))
@@ -2093,8 +2138,9 @@ if args.type == "h":
     catalog.printMarkDeclarations()
     printSection("free declarations")
     catalog.printFreeDeclarations()
-    printSection("push declarations")
+    printSection("push/pop declarations")
     catalog.printPushDeclarations()
+    catalog.printPopDeclarations()
     printSection("hash getter and setter declarations")
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
@@ -2143,8 +2189,9 @@ elif args.type == "c":
     catalog.printNewFunctions()
     printSection("copy functions")
     catalog.printCopyFunctions()
-    printSection("push functions")
+    printSection("push/pop functions")
     catalog.printPushFunctions()
+    catalog.printPopFunctions()
     printSection("hash getter and setter functions")
     catalog.printGetFunctions()
     catalog.printSetFunctions()

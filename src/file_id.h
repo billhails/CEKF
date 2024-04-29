@@ -1,5 +1,5 @@
-#ifndef cekf_ast_helper_h
-#  define cekf_ast_helper_h
+#ifndef cekf_file_id_h
+#  define cekf_file_id_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,20 +18,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "ast.h"
-#  include "hash.h"
-#  include "memory.h"
+// attempt at an operating-system agnostic file id, at least in the sense
+// that it can be redefined for different operating systems without having
+// to change usage throughout the code
 
-extern AstNameSpaceArray *nameSpaces;
+#include <sys/stat.h>
 
-void markAstSymbolTable(void);
+#include "memory.h"
+#include "cmp.h"
 
-void printAstSymbol(HashSymbol *x, int depth);
+typedef struct AgnosticFileId {
+    Header header;
+    dev_t st_dev;
+    ino_t st_ino;
+    char *name;
+} AgnosticFileId;
 
-void initNameSpaces();
-
-int lookupNameSpace(AgnosticFileId *);
-
-void markNameSpaces();
+void printAgnosticFileId(AgnosticFileId *, int);
+void markAgnosticFileId(AgnosticFileId *);
+Cmp cmpAgnosticFileId(AgnosticFileId *, AgnosticFileId *);
+AgnosticFileId *makeAgnosticFileId(char *);
 
 #endif

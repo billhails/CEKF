@@ -90,11 +90,27 @@ static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
     UNPROTECT(save);
 }
 
+static void pushPmNamespaceFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
+                                        const char *origin) {
+    int save = PROTECT(mod);
+    pushPmBufStack(mod, bs, origin);
+    pushPmBufStack(mod, yy_scan_string("__namespace__ ", mod->scanner), "namespace token");
+    UNPROTECT(save);
+}
+
 PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin) {
     PmModule *mod = newPmModule();
     pushPmToplevelFromBufState(mod,
                                yy_create_buffer(f, YY_BUF_SIZE, mod->scanner),
                                origin);
+    return mod;
+}
+
+PmModule *newPmNameSpaceFromFileHandle(FILE *f, const char *origin) {
+    PmModule *mod = newPmModule();
+    pushPmNamespaceFromBufState(mod,
+                                yy_create_buffer(f, YY_BUF_SIZE, mod->scanner),
+                                origin);
     return mod;
 }
 

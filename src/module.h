@@ -18,6 +18,7 @@ PmModule *newPmModuleFromFile(const char *filename);
 PmModule *newPmModuleFromString(char *src, char *id);
 
 PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin);
+PmModule *newPmNameSpaceFromFileHandle(FILE *f, const char *origin);
 PmModule *newPmToplevelFromStdin(void);
 PmModule *newPmToplevelFromFile(const char *filename);
 PmModule *newPmToplevelFromString(char *src, char *id);

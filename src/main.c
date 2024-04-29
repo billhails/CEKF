@@ -177,6 +177,7 @@ int main(int argc, char *argv[]) {
     processArgs(argc, argv);
     initProtection();
     init_arithmetic();
+    initNameSpaces();
 
     BuiltIns *builtIns = registerBuiltIns();
     int save = PROTECT(builtIns);

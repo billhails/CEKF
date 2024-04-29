@@ -137,7 +137,7 @@ profile: all
 	valgrind --tool=callgrind ./$(TARGET)
 
 indent: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Control -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value -T FILE src/*.[ch] generated/*.[ch]
+	indent `cat .typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value -T FILE -T Byte -T Character -T Word -T Integer -T Index -T Double -T Control src/*.[ch] generated/*.[ch]
 	rm -f src/*~ generated/*~
 
 .typedefs: .generated

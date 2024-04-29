@@ -385,6 +385,7 @@ static void mark() {
     markCEKF();
     markProtected();
     markArithmetic();
+    markNameSpaces();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTable\n");
 #endif

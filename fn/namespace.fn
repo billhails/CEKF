@@ -1,4 +1,4 @@
 let
-    import "listutils.fn" as listutils
+    import "listutils.fn" as list
 in
-    1;
+    list.sort([3, 1, 2]);

@@ -28,6 +28,18 @@ int:
     printf: "%d"
     valued: true
 
+index:
+    cname: Index
+    printf: "%u"
+    valued: true
+
+file_id:
+    cname: "struct AgnosticFileId *"
+    printFn: printAgnosticFileId
+    compareFn: cmpAgnosticFileId
+    markFn: markAgnosticFileId
+    valued: true
+
 void_ptr:
     cname: "void *"
     printf: "%p"

@@ -29,28 +29,28 @@ struct PmModule *mod = yyextra;
 [0-9]+         { yylval->s = yytext; return NUMBER; }
 [0-9]+i         { yylval->s = yytext; return NUMBER_I; }
 
-"namespace" { return NAMESPACE; }
-"as"        { return AS; }
-"export"    { return EXPORT; }
-"import"    { return IMPORT; }
-"and"       { return AND; }
-"back"      { return BACK; }
-"char"      { return KW_CHAR; }
-"else"      { return ELSE; }
-"fn"        { return FN; }
-"here"      { return HERE; }
-"if"        { return IF; }
-"in"        { return IN; }
-"int"       { return KW_INT; }
-"let"       { return LET; }
-"not"       { return NOT; }
-"or"        { return OR; }
-"xor"       { return XOR; }
-"print"     { return PRINT; }
-"_"         { return WILDCARD; }
-"switch"    { return SWITCH; }
-"then"      { return THEN; }
-"typedef"   { return TYPEDEF; }
+"__namespace__" { return NAMESPACE_TOKEN; }
+"as"            { return AS; }
+"export"        { return EXPORT; }
+"import"        { return IMPORT; }
+"and"           { return AND; }
+"back"          { return BACK; }
+"char"          { return KW_CHAR; }
+"else"          { return ELSE; }
+"fn"            { return FN; }
+"here"          { return HERE; }
+"if"            { return IF; }
+"in"            { return IN; }
+"int"           { return KW_INT; }
+"let"           { return LET; }
+"not"           { return NOT; }
+"or"            { return OR; }
+"xor"           { return XOR; }
+"print"         { return PRINT; }
+"_"             { return WILDCARD; }
+"switch"        { return SWITCH; }
+"then"          { return THEN; }
+"typedef"       { return TYPEDEF; }
 
 \"((\\.)|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
 \'((\\.)|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }

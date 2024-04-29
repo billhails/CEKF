@@ -195,18 +195,46 @@ static char *calculatePath(char *file, PmModule *mod) {
     return buf;
 }
 
+static AstFileIdArray *fileIdStack = NULL;
+
+static int lookupFileId(AgnosticFileId *id) {
+    for (Index i = 0; i < fileIdStack->size; ++i) {
+        if (cmpAgnosticFileId(id, fileIdStack->entries[i]) == CMP_EQ) {
+            return (int) i;
+        }
+    }
+    return -1;
+}
+
 static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
+    if (fileIdStack == NULL) {
+        fileIdStack = newAstFileIdArray();
+    }
     char *path = calculatePath(file, mod);
+    AgnosticFileId *id = makeAgnosticFileId(path);
+    if (id == NULL) {
+        cant_happen("cannot stat file \"%s\"", path);
+    }
+    int found = lookupNameSpace(id);
+    if (found != -1) {
+        return newAstNameSpace(symbol, found);
+    }
+    if (lookupFileId(id) != -1) {
+        cant_happen("recursive include detected for %s", path);
+    }
+    pushAstFileIdArray(fileIdStack, id);
     FILE *fh = fopen(path, "r");
     if (fh == NULL) {
         cant_happen("cannot read file \"%s\"", path);
     }
-    PmModule *new = newPmModuleFromFileHandle(fh, path);
+    PmModule *new = newPmNameSpaceFromFileHandle(fh, path);
     int res = pmParseModule(new);
     if (res != 0) {
         cant_happen("syntax error in %s", path);
     }
     fclose(fh);
+    // TODO implement pop
+    (void) popAstFileIdArray(fileIdStack);
     AstNest *nest = new->nest;
     if (nest == NULL) {
         cant_happen("null result parsing %s", path);
@@ -214,9 +242,10 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
     if (nest->definitions == NULL) {
         cant_happen("null definitions parsing %s", path);
     }
-    AstNameSpaceImpl *impl = newAstNameSpaceImpl(symbol, nest->definitions);
-    AstNameSpace *ns = newAstNameSpace(AST_NAMESPACE_TYPE_IMPLEMENTATION, AST_NAMESPACE_VAL_IMPLEMENTATION(impl));
-    // freePmModule((Header *)new);
+    AstNameSpaceImpl *impl = newAstNameSpaceImpl(id, nest->definitions);
+    // TODO push should return index
+    found = pushAstNameSpaceArray(nameSpaces, impl);
+    AstNameSpace *ns = newAstNameSpace(symbol, found);
     free(path);
     return ns;
 }
@@ -308,7 +337,7 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
 %token WILDCARD
 %token EXPORT
 %token IMPORT
-%token NAMESPACE
+%token NAMESPACE_TOKEN
 %token AS
 
 %token <c> CHAR
@@ -355,7 +384,7 @@ nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
 let_in : LET definitions IN { $$ = $2; }
        ;
 
-namespace_definitions : NAMESPACE definitions   { $$ = $2; }
+namespace_definitions : NAMESPACE_TOKEN definitions   { $$ = $2; }
                       ;
 
 definitions : %empty                            { $$ = NULL; }
