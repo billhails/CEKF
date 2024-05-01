@@ -418,6 +418,10 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("LE\n");
                 }
                 break;
+            case BYTECODE_PRIM_CMP:{
+                    eprintf("CMP\n");
+                }
+                break;
             case BYTECODE_PRIM_XOR:{
                     eprintf("XOR\n");
                 }

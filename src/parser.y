@@ -365,6 +365,7 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
 %nonassoc NEG
 %nonassoc HERE
 %left '('
+%right '.'
 
 %start top
 
@@ -409,6 +410,7 @@ name_space : IMPORT STRING AS symbol { $$ = parseImport($2, $4, mod); }
 typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef($2, $4); }
         ;
 
+/* a type function being defined */
 user_type : symbol                      { $$ = newAstUserType($1, NULL); }
           | symbol '(' type_symbols ')' { $$ = newAstUserType($1, $3); }
           ;
@@ -424,10 +426,12 @@ type_body : type_constructor                { $$ = newAstTypeBody($1, NULL); }
           | type_constructor '|' type_body  { $$ = newAstTypeBody($1, $3); }
           ;
 
+/* a type constructor being defined */
 type_constructor : symbol                   { $$ = newAstTypeConstructor($1, NULL); }
                  | symbol '(' type_list ')' { $$ = newAstTypeConstructor($1, $3); }
                  ;
 
+/* a type function being used in the body of a type constructor */
 type_function : symbol                   { $$ = newAstTypeFunction($1, NULL); }
               | symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
               ;

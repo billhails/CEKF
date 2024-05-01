@@ -19,27 +19,22 @@ more limited but hopefully practical approach of namespaces.
 ## Syntax
 
 ```
-import "path/to/myname.fn";
+import "path/to/myname.fn" as myname;
 ```
 
-Will import and declare a namespace called `myname` using the basename of
-the file.  Repeated imports of the same file should not create repeated
-compilation units. By default the path will be relative to the file doing
-the import.
+Will import and declare a namespace called `myname`.  Repeated imports
+of the same file should not create repeated compilation units.  The path
+will be relative to the file doing the import.
 
 ```
-import "path/to/myname.fn" as anothername;
-```
-
-Overrides the default name for the namespace.
-
-```
-export fn foo ...
-export id = ...
+export typedef foo ...
+export fn bar ...
+export baz = ...
 ```
 
 Within the namespace file, marks certain entities as being part of the
-namespace's interface. any entities not so marked are private.
+namespace's interface. any entities not so marked will not be visible
+outside of the namespace.
 
 ```
 myname.foo
@@ -102,6 +97,9 @@ reference to the previous import, distinguished from the import itself
 to avoid re-compilation. I'll need to start the re-entrant parser in a
 different state though.
 
+We'll also need to separate out the parsing of the prelude. We can treat it
+as a namespace for this purpose, but not install it as one.
+
 ### Lambda Conversion
 
 Mostly straightforward, will require a new lambda construct or two,
@@ -109,7 +107,7 @@ tagging of exported values etc. Typedefs exported by a namespace
 should be available to pattern matching:
 
 ```
-import "dict.fn";
+import "dict.fn" as dict;
 
 fn foo {
     (dict.leaf) { ... }
@@ -136,7 +134,89 @@ There shouldn't be any new constructs to desugar specifically.
 
 ### Bytecode Generation
 
-We will need to think about the environment available to the namespace. It
-will need the standard prelude but probably shouldn't inherit any other
-random context, maybe a separate bytecode array per namespace? That
-would require a re-entrant VM, but may still be the best solution.
+Thinking ahead, it might be better to plan the bytecode first and work
+backwards, so here's a first attempt.
+
+![bytecode](Namespaces.png)
+
+#### Bytecode Generation
+
+* First off we'll need to parse the standard prelude separately, resulting
+  in the first purple block of bytecodes.
+* Next a new bytecode `BYTECODE_NS` introduces the namespaces. it is
+  followed by an integer holding the number of namespaces to be expected.
+* Then each namespace is compiled to a sequence of lambdas etc.,
+  and each compiled namespace is terminated by another new bytecode
+  `BYTECODE_NS_END`.
+* After each `BYTECODE_NS_END` we write the number of stack slots the
+  namespace will consume, and the number of the namespace (zero indexed)
+  added to the number of slots consumed by the prelude, resulting in the
+  stack position of the namespace.
+* After the last namespace, we write a new `BYTECODE_NS_FINISH` followed
+  by the number of namespaces.
+
+#### Bytecode Execution
+
+* The prelude execution is unchanged: skip over each lambda storing and
+  pushing a closure with it's entry point address.
+* On seeing `BYTECODE_NS`. read the following number and allocate that
+  many stack slots.
+* Subsequent lambdas etc, are processed normally, each getting
+  pushed onto the stack, after the namespace slots.
+* When a `BYTECODE_NS_END` is encountered:
+  * Read the number of slots to pop and the namespace stack position.
+  * Before popping anything, create a new Value type NAMESPACE with a
+    copy of the current stack.
+  * Then put that into the stack at the designated location.
+  * Lastly pop the namespace internals off of the stack.
+* When `BYTECODE_NS_FINISH` is encountered, read the number of namespaces.
+  * For each namespace slot:
+    * copy the entire block of completed namespace slots over the same
+      locations in the namespace's snapshot.
+* The body is then executed in the normal way.
+
+#### Bytecode for Namespace Access
+
+We can't treat the `.` operator like a normal postfix, because the rhs
+will be an expression that expects to be evaluated in the context of
+the lhs, an'd we haven't run in to the `.` bytecode yet. Consider a
+normal apply:
+
+```
+| ..argn.. | ... | ..arg1.. | ..fn-expr.. | APPLY |
+```
+
+If that `fn-expr` is namespace-prefixed, any postfix operation will only
+be encountered after it, just before the `APPLY`. So if the namespace
+itself is treated as a normal VAR or LVAR then we'd need to follow
+it with an op that installs the namespace as the new current context,
+and after the `fn-expr` another op that restores the previous context:
+
+```
+| ..argn.. | ... | ..arg1.. | (L)VAR | NS_INSTALL | ..fn-expr.. | NS_UNINSTALL | APPLY |
+                            |                                                  |
+                            |------written by the code generating the dot------|
+```
+
+We should figure out if this `NS_UNINSTALL` can be accomplished with an
+existing continuation operation like `RETURN` rather than adding yet
+another bytecode. `NS_INSTALL` will probably need the address of the
+instruction following the `RETURN` if we do that, it may be more
+efficient to have the additional `NS_RETURN` instruction instead.
+
+So how would that be executed?
+
+![access](NamespaceAccess.png)
+
+* `args` first the args are evaluated and pushed (1) - (3)
+* `(L)VAR` then the namespace is evaluated (looked up) and pushed (4)
+* `NS_INSTALL` then the namespace at TOS is installed (5):
+  * pop the namespace
+  * snapshot the stack to a new continuation (K).
+  * replace the stack with the one in the namespace.
+* `fn-expr` then the `fn-expr` is evaluated, leaving the result on the top of the stack (6)
+* `NS_UNINSTALL` then the previous continuation is restored (7):
+  * the value at TOS is popped and stashed
+  * the stack is restored
+  * the popped result is pushed back
+* `APPLY` finally the closure at the TOS is applied to its arguments (8).
