@@ -83,7 +83,9 @@ lambda2 --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> desug([Desugaring]):::process
 desug --> danf(Desugared ANF)
-danf --> bcc([Bytecode Compiler]):::process
+danf --> lexa([Lexical Analysis]):::process
+lexa --> ann(Annotated ANF)
+ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
 bc --> cekf([CEKF Runtime VM]):::process
 ```

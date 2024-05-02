@@ -61,6 +61,10 @@ In general we'll need a new concept of namespace, distinct from types
 and variables, so a "namespace for namespaces" used for lookup on the
 lhs of the `.` operator.
 
+### Design and Documentation
+
+You're looking at it :grin:.
+
 ### Version Control
 
 This is quite a big piece of work, so I plan to create sub-branches off
@@ -100,11 +104,37 @@ different state though.
 We'll also need to separate out the parsing of the prelude. We can treat it
 as a namespace for this purpose, but not install it as one.
 
+**UPDATE** Parsing of `import` and `export` is now done, though the
+prelude has not been separated out yet, so it's worth documenting what
+happens at the moment.
+
+On encountering an `import` statement, the parser creates a child parser
+for that file which parses it into a completely independant AST and
+stores that in an array. The parent parser then just returns the index of
+the AST in that array.  The inode and device id of the file are stored
+alongside the AST so another import of the same file will just retrieve the
+existing AST.  The parent parser then creates a letrec binding from the
+symbol (after the `as`) to the indirect reference to the namespace's AST
+(e.g. the index into the array).
+
+On encountering an `export` statement, the parser just creates an
+`ASTDefinition` as any other, but the `ASTDefinition` type has been
+extended to contain a boolean `exported` flag which the parser sets
+`true` for those exported declarations only.
+
+The parser allows nested imports (namespaces importing namespaces) but
+detects and disallows recursive imports.
+
+This is potentially not foolproof, i.e. if the namespace was previously
+imported then recursively imported it might not get detected, may need
+to maintain a DAG to validate. Pretty sure recusive imports would always
+be detected but need to be sure.
+
 ### Lambda Conversion
 
 Mostly straightforward, will require a new lambda construct or two,
-tagging of exported values etc. Typedefs exported by a namespace
-should be available to pattern matching:
+tagging of exported values etc. Typedefs exported by a namespace should
+be available to pattern matching:
 
 ```
 import "dict.fn" as dict;
@@ -132,7 +162,12 @@ so if there are issues this may be the ime to do it.
 
 There shouldn't be any new constructs to desugar specifically.
 
-### Bytecode Generation
+### Lexical Analysis
+
+We'll need to swap in the context for each namespace before lexical analysis,
+the context is basically the prelude plus the namespaces themselves.
+
+### Bytecode
 
 Thinking ahead, it might be better to plan the bytecode first and work
 backwards, so here's a first attempt.
@@ -154,6 +189,20 @@ backwards, so here's a first attempt.
   stack position of the namespace.
 * After the last namespace, we write a new `BYTECODE_NS_FINISH` followed
   by the number of namespaces.
+
+##### Requirements of Bytecode Generation
+
+We'll need a few new ANF constructs to describe the structure of the
+code to be generated. The entire body will be broken into three sections:
+
+1. The Prelude
+2. The Namespaces
+3. The Body
+
+Each individual namespace will in turn require its own wrapper.
+
+The only other thing will be some sort of `CexpDot` with a lhs
+namespace symbol and a rhs expression.
 
 #### Bytecode Execution
 
@@ -220,3 +269,109 @@ So how would that be executed?
   * the stack is restored
   * the popped result is pushed back
 * `APPLY` finally the closure at the TOS is applied to its arguments (8).
+
+### Lexical Analysis
+
+I can't think of any specific downstream requirements that the
+bytecode generation places on the lexical analysis phase, other
+than correctly locating the variables in the context of a namespace.
+We do however need to be precise about how that is to be achieved.
+
+#### Analysis of the prelude
+
+Currently the prelude + body is analysed as a letrec, and there is only
+one parse done.
+
+As we are splitting up the parse, the result of analysing the prelude
+will be a `CTEnv` that gets used as the base for analysing each namespace,
+but to avoid pollution we may need to replicate it for each parse.
+
+#### Analysis within each namespace
+
+Need to check that hash tables support deep copy - hash tables only
+support shallow copy,they don't clone their references. This might be a
+problem but then again there are some recursive loops that pass through
+hash tables, envs containing closures etc. May have problems here.
+
+Remember `CTEnv` has an `isLocal` flag to distinguish lets and letrecs
+from true closures. Probably doesn't matter as the envs used to check
+namespaces will be clones of the top-level prelude env (plus namespace
+slots).
+
+#### Analysis of the body
+
+Analysis of the body will be unchanged except for the special case
+of namespace lookup.
+
+#### Analysis of namespace lookup
+
+The `CTEnv` resulting from the namespace analysis will be the prelude
+env, with the namespace slots populated by the CTEnvs of each namespace.
+so namespace lookup will find the correct env for the lhs and annotate the
+rhs in that context.
+
+Worth thinking about what we get from the parser at this stage, see
+above.  The `import <string> as <name>` statement results in `<name>`
+being bound to an indirect reference to the AST of the namespace. By the
+time we reach the point of lexical analysis this will be an equivalent
+(still indirect) reference to the ANF form of the AST, so it should be
+a simple lookup to find the AST.
+
+Lexical analysis can disregard any export status, in fact that can be
+discarded by anf conversion as type checking will have detected illegal
+access.
+
+### Desugaring
+
+Apart from accepting and traversing the new constructs, there is nothing
+new to explicitly desugar here.
+
+### ANF Conversion
+
+Again this is purely static analysis and traversal, separate namespaces
+can be dealt with individually. One little wrinkle though, it should be
+possible to treat namespace access to an AExp as an AExp and namespace
+access to a CExp as a CExp. After all the namespace lookup is just a var.
+
+### Type Checking
+
+First the prelude is type checked. As with Lexical Analysis, a TcEnv
+will result and (copies of?) that are used to typecheck each namespace.
+The results are new TcEnv structs that are associated with each namespace
+slot. Another potential pitfall here, the order in which they are checked
+may be significant, in which case we may need that same DAG mentioned
+above to order the checker so that enclosed namespaces are checked before
+enclosing ones. Such generated environments are pruned before subsequent
+use so that only exported symbols remain.
+
+Finally the body can be checked in the resulting context.
+
+#### Print Compilation
+
+Done as part of type checking, any typedef in a namespace will have
+a generated print function alongside it, and these could be exported
+even if the types themselves are not. then the compilation of a print
+expression referring to types inside the namespace could namespace-qualify
+the calls to the print functions.
+
+Actually, it might be an idea to requre that any exported function in
+a namespace that returns a type defined in that namespace would cause
+a type-check error if the type is not also exported.  Then the lambda
+conversion need only export print functions for exported types.
+
+### Lambda Conversion
+
+I'm thinking the output of this stage should be a single struct,
+representing the entire program, something like:
+
+```yaml
+LamProg:
+  prelude: LamExp                 # typedefs/letrec extended with exported flags
+  namespaces: LamNameSpaceArray   # keep the array structure for easy lookup
+  dag: LamDAG                     # to control the order of namespace analysis
+  body: LamExp                    # body as before
+```
+
+Apart from the additions above, the only other bit is the dot operator,
+maybe just a binary op, though it's lhs could be constrained to being
+a symbol if we have a separate type for it.
