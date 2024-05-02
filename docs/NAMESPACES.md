@@ -375,3 +375,21 @@ LamProg:
 Apart from the additions above, the only other bit is the dot operator,
 maybe just a binary op, though it's lhs could be constrained to being
 a symbol if we have a separate type for it.
+
+#### TypeDefs
+
+typedefs should be able to reference namespace qualified types
+(i.e. `list(random.junk)`).
+
+#### TPMC
+
+The language must support namespace qualified type constructors in patterns.
+
+**TODO** flesh this out.
+
+#### Constructor Inlining
+
+namespace-qualified constructors should be inlined too.
+
+**TODO** more detail here too.
+
