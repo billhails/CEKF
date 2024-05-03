@@ -130,6 +130,13 @@ imported then recursively imported it might not get detected, may need
 to maintain a DAG to validate. Pretty sure recusive imports would always
 be detected but need to be sure.
 
+Other things needing looking at. 
+* the parser allows syntactically the `export` of values from any letrec,
+  we should make that an error semantically if the export is not at the
+  top-level of a namespace. That can be done during lambda conversion.
+* the parser allows `export` of namespace declarations. As a first attempt
+  it might be easier to disallow that too.
+
 ### Lambda Conversion
 
 Mostly straightforward, will require a new lambda construct or two,
@@ -385,11 +392,35 @@ typedefs should be able to reference namespace qualified types
 
 The language must support namespace qualified type constructors in patterns.
 
-**TODO** flesh this out.
+Assuming we have a new type for "qualified var", like in
+
+```
+fn foo {
+   (ns.c1) { ... }
+   (ns.c2) { ... }
+}
+```
+
+where `c1` abd `c2` are values of a type exported by `ns`, then it
+comes down to what is currently `makeVarPattern` in `tpmc_logic.c`.
+
+All that does is look for the type constructor in the environment,
+if it finds it, it's a constructor, otherwise it's a variable.
+
+It would be best if that lookup process could be extended
+to deal with the qualifier internally, as the process will always be
+the same. However the current lookup just returns `NULL` if the
+constructor doesn't exist, wheras if it's namespace-qualified, it
+already knows it should exist and so can throw an error if it can't
+find it. So lookup would locate the namespace (error if not found)
+then recurse on that with the rhs of the qualification.
+
+Since type-checking hasn't been done yet, the lookup will need to
+check the `exported` status of any symbol it finds.
 
 #### Constructor Inlining
 
 namespace-qualified constructors should be inlined too.
 
-**TODO** more detail here too.
+The same application of lookup should apply here too.
 
