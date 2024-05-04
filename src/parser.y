@@ -223,26 +223,11 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
         cant_happen("recursive include detected for %s", path);
     }
     pushAstFileIdArray(fileIdStack, id);
-    FILE *fh = fopen(path, "r");
-    if (fh == NULL) {
-        cant_happen("cannot read file \"%s\"", path);
-    }
-    PmModule *mod2 = newPmNameSpaceFromFileHandle(fh, path);
-    int res = pmParseModule(mod2);
-    if (res != 0) {
-        cant_happen("syntax error in %s", path);
-    }
-    fclose(fh);
-    (void) popAstFileIdArray(fileIdStack);
-    AstNest *nest = mod2->nest;
-    if (nest == NULL) {
-        cant_happen("null result parsing %s", path);
-    }
-    if (nest->definitions == NULL) {
+    AstDefinitions *definitions = parseNameSpaceFromFileName(path);
+    if (definitions == NULL) {
         cant_happen("null definitions parsing %s", path);
     }
-    freePmModule(mod2);
-    AstNameSpaceImpl *impl = newAstNameSpaceImpl(id, nest->definitions);
+    AstNameSpaceImpl *impl = newAstNameSpaceImpl(id, definitions);
     found = pushAstNameSpaceArray(nameSpaces, impl);
     AstNameSpace *ns = newAstNameSpace(symbol, found);
     free(path);

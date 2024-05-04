@@ -28,26 +28,17 @@ static bool compareTcTypes(TcType *a, TcType *b) {
     return res;
 }
 
-static AstNest *parseWrapped(char *string) {
+static AstNest *parseWrapped(char *string, char *origin) {
     disableGC();
-    PmModule *mod = newPmToplevelFromString(string, string);
-    int save = PROTECT(mod);
-    int res = pmParseModule(mod);
-    assert(res == 0);
-    enableGC();
-    UNPROTECT(save);
-    assert(mod->nest != NULL);
-    return mod->nest;
+    AstNest *nest = parseTopLevelFromString(string, origin);
+    assert(nest != NULL);
+    return nest;
 }
 
-static AstNest *parseSolo(char *string) {
+static AstNest *parseSolo(char *string, char *origin) {
     disableGC();
-    PmModule *mod = newPmModuleFromString(string, string);
-    int res = pmParseModule(mod);
-    assert(res == 0);
-    assert(mod->nest != NULL);
-    AstNest *nest = mod->nest;
-    freePmModule(mod);
+    AstNest *nest = parseSingleString(string, origin);
+    assert(nest != NULL);
     enableGC();
     return nest;
 }
@@ -120,7 +111,7 @@ static TcType *analyze(AstNest *nest) {
 
 static void test_cdr() {
     printf("test_cdr\n");
-    AstNest *result = parseWrapped("cdr");
+    AstNest *result = parseWrapped("cdr", "test_cdr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -136,7 +127,7 @@ static void test_cdr() {
 
 static void test_car() {
     printf("test_car\n");
-    AstNest *result = parseWrapped("car");
+    AstNest *result = parseWrapped("car", "test_car");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -152,7 +143,7 @@ static void test_car() {
 
 static void test_car_of() {
     printf("test_car_of\n");
-    AstNest *result = parseWrapped("<[1]");
+    AstNest *result = parseWrapped("<[1]", "test_car_of");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -164,7 +155,7 @@ static void test_car_of() {
 
 static void test_adder() {
     printf("test_adder\n");
-    AstNest *result = parseSolo("fn(a,b){a+b}");
+    AstNest *result = parseSolo("fn(a,b){a+b}", "test_adder");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -178,7 +169,7 @@ static void test_adder() {
 
 static void test_fact() {
     printf("test_fact\n");
-    AstNest *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact");
+    AstNest *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -192,7 +183,7 @@ static void test_fact() {
 
 static void test_add1() {
     printf("test_add1\n");
-    AstNest *result = parseSolo("let fn add1(x) { 1 + x } in add1(2)");
+    AstNest *result = parseSolo("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -204,7 +195,7 @@ static void test_add1() {
 
 static void test_caddr() {
     printf("test_caddr\n");
-    AstNest *result = parseWrapped("let x = [1, 2, 3, 4]; in <>>x");
+    AstNest *result = parseWrapped("let x = [1, 2, 3, 4]; in <>>x", "test_caddr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -216,7 +207,7 @@ static void test_caddr() {
 
 static void test_curry() {
     printf("test_curry\n");
-    AstNest *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)");
+    AstNest *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)", "test_curry");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -238,7 +229,8 @@ static void test_here() {
 "        } else {"
 "            3"
 "        }"
-"    }"
+"    }",
+        "test_here"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -251,7 +243,7 @@ static void test_here() {
 
 static void test_if() {
     printf("test_if\n");
-    AstNest *result = parseWrapped("if (true and true) { 10 } else { 20 }");
+    AstNest *result = parseWrapped("if (true and true) { 10 } else { 20 }", "test_if");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -279,7 +271,8 @@ static void test_id() {
 "    }"
 ""
 "in"
-"    checkId(\"hello\")"
+"    checkId(\"hello\")",
+        "test_id"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -292,7 +285,7 @@ static void test_id() {
 
 static void test_either_1() {
     printf("test_either_1\n");
-    AstNest *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)");
+    AstNest *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)", "test_either");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -321,7 +314,7 @@ static void test_tostr() {
 "        (blue) { \"blue\" }"
 "    }"
 "in"
-"    tostr(red)"
+"    tostr(red)", "test_tostr"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -336,7 +329,7 @@ static void test_tostr() {
 
 static void test_lol() {
     printf("test_lol\n");
-    AstNest *result = parseWrapped("[[1]]");
+    AstNest *result = parseWrapped("[[1]]", "test_lol");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -359,7 +352,7 @@ static void test_map() {
 "        (f, h @ t) { f(h) @ map(f, t) }"
 "    }"
 "in"
-"    map"
+"    map", "test_map"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);

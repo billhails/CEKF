@@ -101,12 +101,16 @@ reference to the previous import, distinguished from the import itself
 to avoid re-compilation. I'll need to start the re-entrant parser in a
 different state though.
 
-We'll also need to separate out the parsing of the prelude. We can treat it
+We'll also need to separate out the parsing of the preamble. We can treat it
 as a namespace for this purpose, but not install it as one.
 
-**UPDATE** Parsing of `import` and `export` is now done, though the
-prelude has not been separated out yet, so it's worth documenting what
-happens at the moment.
+**UPDATE** Parsing of `import` and `export` is now done, so it's worth
+documenting what happens at the moment.
+
+The preamble is parsed separately, and a nest is constructed using the
+preamble as the definitions section and the body of the file as a second
+nest expression. This will alow us to more easily inject the namespaces
+between the preamble and the body later.
 
 On encountering an `import` statement, the parser creates a child parser
 for that file which parses it into a completely independant AST and
@@ -136,10 +140,6 @@ Other things needing looking at.
   top-level of a namespace. That can be done during lambda conversion.
 * the parser allows `export` of namespace declarations. As a first attempt
   it might be easier to disallow that too.
-* re-enrant parsers are currently memory-managed by the garbage collector.
-  Not only is this pointless because garbage collection is disabled during
-  parsing, but it causes problems because the parsers cannot be manually
-  freed, and accumulate.
 
 ### Lambda Conversion
 
@@ -176,7 +176,7 @@ There shouldn't be any new constructs to desugar specifically.
 ### Lexical Analysis
 
 We'll need to swap in the context for each namespace before lexical analysis,
-the context is basically the prelude plus the namespaces themselves.
+the context is basically the preamble plus the namespaces themselves.
 
 ### Bytecode
 
@@ -187,7 +187,7 @@ backwards, so here's a first attempt.
 
 #### Bytecode Generation
 
-* First off we'll need to parse the standard prelude separately, resulting
+* First off we'll need to parse the standard preamble separately, resulting
   in the first purple block of bytecodes.
 * Next a new bytecode `BYTECODE_NS` introduces the namespaces. it is
   followed by an integer holding the number of namespaces to be expected.
@@ -196,7 +196,7 @@ backwards, so here's a first attempt.
   `BYTECODE_NS_END`.
 * After each `BYTECODE_NS_END` we write the number of stack slots the
   namespace will consume, and the number of the namespace (zero indexed)
-  added to the number of slots consumed by the prelude, resulting in the
+  added to the number of slots consumed by the preamble, resulting in the
   stack position of the namespace.
 * After the last namespace, we write a new `BYTECODE_NS_FINISH` followed
   by the number of namespaces.
@@ -217,7 +217,7 @@ namespace symbol and a rhs expression.
 
 #### Bytecode Execution
 
-* The prelude execution is unchanged: skip over each lambda storing and
+* The preamble execution is unchanged: skip over each lambda storing and
   pushing a closure with it's entry point address.
 * On seeing `BYTECODE_NS`. read the following number and allocate that
   many stack slots.
@@ -288,12 +288,12 @@ bytecode generation places on the lexical analysis phase, other
 than correctly locating the variables in the context of a namespace.
 We do however need to be precise about how that is to be achieved.
 
-#### Analysis of the prelude
+#### Analysis of the preamble
 
-Currently the prelude + body is analysed as a letrec, and there is only
+Currently the preamble + body is analysed as a letrec, and there is only
 one parse done.
 
-As we are splitting up the parse, the result of analysing the prelude
+As we are splitting up the parse, the result of analysing the preamble
 will be a `CTEnv` that gets used as the base for analysing each namespace,
 but to avoid pollution we may need to replicate it for each parse.
 
@@ -306,7 +306,7 @@ hash tables, envs containing closures etc. May have problems here.
 
 Remember `CTEnv` has an `isLocal` flag to distinguish lets and letrecs
 from true closures. Probably doesn't matter as the envs used to check
-namespaces will be clones of the top-level prelude env (plus namespace
+namespaces will be clones of the top-level preamble env (plus namespace
 slots).
 
 #### Analysis of the body
@@ -316,7 +316,7 @@ of namespace lookup.
 
 #### Analysis of namespace lookup
 
-The `CTEnv` resulting from the namespace analysis will be the prelude
+The `CTEnv` resulting from the namespace analysis will be the preamble
 env, with the namespace slots populated by the CTEnvs of each namespace.
 so namespace lookup will find the correct env for the lhs and annotate the
 rhs in that context.
@@ -346,7 +346,7 @@ access to a CExp as a CExp. After all the namespace lookup is just a var.
 
 ### Type Checking
 
-First the prelude is type checked. As with Lexical Analysis, a TcEnv
+First the preamble is type checked. As with Lexical Analysis, a TcEnv
 will result and (copies of?) that are used to typecheck each namespace.
 The results are new TcEnv structs that are associated with each namespace
 slot. Another potential pitfall here, the order in which they are checked
@@ -377,7 +377,7 @@ representing the entire program, something like:
 
 ```yaml
 LamProg:
-  prelude: LamExp                 # typedefs/letrec extended with exported flags
+  preamble: LamExp                # typedefs/letrec extended with exported flags
   namespaces: LamNameSpaceArray   # keep the array structure for easy lookup
   dag: LamDAG                     # to control the order of namespace analysis
   body: LamExp                    # body as before

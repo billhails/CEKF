@@ -11,19 +11,14 @@ typedef struct PmModule {
     AstNest *nest;
 } PmModule;
 
-PmModule *newPmModuleFromFileHandle(FILE *f, const char *origin);
-PmModule *newPmModuleFromStdin(void);
-PmModule *newPmModuleFromFile(const char *filename);
-PmModule *newPmModuleFromString(char *src, char *id);
+AstDefinitions *parseNameSpaceFromString(const char *namespace, const char *origin);
+AstDefinitions *parseNameSpaceFromFileHandle(FILE *f, const char *origin);
+AstDefinitions *parseNameSpaceFromFileName(const char *fileName);
+AstNest *parseTopLevelFromFileHandle(FILE *f, const char *origin);
+AstNest *parseTopLevelFromFileName(const char *fileName);
+AstNest *parseTopLevelFromString(const char *string, const char *origin);
+AstNest *parseSingleString(char *string, char *origin);
 
-PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin);
-PmModule *newPmNameSpaceFromFileHandle(FILE *f, const char *origin);
-PmModule *newPmToplevelFromStdin(void);
-PmModule *newPmToplevelFromFile(const char *filename);
-PmModule *newPmToplevelFromString(char *src, char *id);
-
-void freePmModule(PmModule *mod);
-int pmParseModule(PmModule *mod);
 void incLineNo(PmModule *mod);
 int popPmFile(PmModule *mod);
 void showModuleState(FILE *fp, PmModule *mod);

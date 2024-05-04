@@ -23,7 +23,6 @@
 
 // *INDENT-OFF*
 const char *preamble =
-    "let"
     "    typedef cmp { lt | eq | gt }"
     "    typedef bool { false | true }"
     "    typedef list(#t) { nil | cons(#t, list(#t)) }"
@@ -136,8 +135,5 @@ const char *preamble =
     "       p4(d);"
     "       puts(\")\");"
     "       t"
-    "    }"
-    "in {";
+    "    }";
 // *INDENT-ON*
-
-const char *postamble = "}";

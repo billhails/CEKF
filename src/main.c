@@ -105,10 +105,7 @@ static void processArgs(int argc, char *argv[]) {
 
 static AstNest *parseFile(char *file) {
     disableGC();
-    PmModule *mod = newPmToplevelFromFile(file);
-    pmParseModule(mod);
-    AstNest *nest = mod->nest;
-    freePmModule(mod);
+    AstNest *nest = parseTopLevelFromFileName(file);
     enableGC();
     return nest;
 }
