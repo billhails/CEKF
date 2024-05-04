@@ -136,6 +136,10 @@ Other things needing looking at.
   top-level of a namespace. That can be done during lambda conversion.
 * the parser allows `export` of namespace declarations. As a first attempt
   it might be easier to disallow that too.
+* re-enrant parsers are currently memory-managed by the garbage collector.
+  Not only is this pointless because garbage collection is disabled during
+  parsing, but it causes problems because the parsers cannot be manually
+  freed, and accumulate.
 
 ### Lambda Conversion
 
@@ -423,4 +427,37 @@ check the `exported` status of any symbol it finds.
 namespace-qualified constructors should be inlined too.
 
 The same application of lookup should apply here too.
+
+### DAG
+
+A little thought on that Directed Acyclic Graph I mentioned a few times.
+
+Consider this scenario:
+
+```mermaid
+flowchart LR
+one((1)) --> two((2)) --> three((3))
+one --> four((4)) --> three
+```
+
+The circles represent namespaces, the arrows indicate imports, so 1
+imports 2 which imports 3, then 1 imports 4 which also imports 3. The
+namespaces are numbered in the order they will be encountered by the
+parser, and therefore the order they will be stored in the namespaces
+array.
+
+During lambda conversion, type-checking and lexical analysis, we want to
+process these in such a way that any namespace has been analysed before
+any namespace that refers to definitions in it.  Because the graph
+is acyclic (we disallow recursive loops) such an ordering is always
+possible, but the naiive reverse order of discovery is not adequate,
+in this example four would be analysed before three.
+
+It should be enough to generate this DAG during parsing, and traverse
+it bredth-first to produce a suitable ordering for processing. Probably
+simpler to do this once immediately after parsing and generate an array
+of indices `[3, 4, 2, 1]` that can be re-used by each analysis phase.
+
+One little addition, we'll need to de-duplicate the result because of
+repeated includes of the same file.
 
