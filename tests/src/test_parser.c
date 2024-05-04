@@ -21,11 +21,10 @@
 static void test_parse(char *filename) {
     disableGC();
     PmModule *mod = newPmToplevelFromFile(filename);
-    int save = PROTECT(mod);
     pmParseModule(mod);
     enableGC();
     assert(mod->nest != NULL);
-    UNPROTECT(save);
+    freePmModule(mod);
 }
 
 

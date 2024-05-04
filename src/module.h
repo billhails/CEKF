@@ -2,11 +2,10 @@
 #  define cekf_module_h
 
 #  include <stdio.h>
+#  include "common.h"
 #  include "ast.h"
-#  include "memory.h"
 
 typedef struct PmModule {
-    Header header;
     struct PmBufStack *bufStack;
     void *scanner;
     AstNest *nest;
@@ -23,8 +22,7 @@ PmModule *newPmToplevelFromStdin(void);
 PmModule *newPmToplevelFromFile(const char *filename);
 PmModule *newPmToplevelFromString(char *src, char *id);
 
-void markPmModule(Header *h);
-void freePmModule(Header *h);
+void freePmModule(PmModule *mod);
 int pmParseModule(PmModule *mod);
 void incLineNo(PmModule *mod);
 int popPmFile(PmModule *mod);

@@ -43,13 +43,13 @@ static AstNest *parseWrapped(char *string) {
 static AstNest *parseSolo(char *string) {
     disableGC();
     PmModule *mod = newPmModuleFromString(string, string);
-    int save = PROTECT(mod);
     int res = pmParseModule(mod);
     assert(res == 0);
-    enableGC();
-    UNPROTECT(save);
     assert(mod->nest != NULL);
-    return mod->nest;
+    AstNest *nest = mod->nest;
+    freePmModule(mod);
+    enableGC();
+    return nest;
 }
 
 static TcType *makeVar(char *name) {

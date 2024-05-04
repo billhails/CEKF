@@ -106,11 +106,11 @@ static void processArgs(int argc, char *argv[]) {
 static AstNest *parseFile(char *file) {
     disableGC();
     PmModule *mod = newPmToplevelFromFile(file);
-    int save = PROTECT(mod);
     pmParseModule(mod);
+    AstNest *nest = mod->nest;
+    freePmModule(mod);
     enableGC();
-    UNPROTECT(save);
-    return mod->nest;
+    return nest;
 }
 
 static LamExp *convertNest(AstNest *nest) {

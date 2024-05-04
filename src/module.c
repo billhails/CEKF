@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include "module.h"
 #include "parser.h"
 #include "lexer.h"
@@ -28,7 +29,7 @@ typedef struct PmBufStack {
 } PmBufStack;
 
 static PmModule *newPmModule() {
-    PmModule *x = NEW(PmModule, OBJTYPE_PMMODULE);
+    PmModule *x = malloc(sizeof(PmModule));
     yyscan_t scanner;
     yylex_init_extra(x, &scanner);
     x->bufStack = NULL;
@@ -39,7 +40,7 @@ static PmModule *newPmModule() {
 
 static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs,
                            const char *origin) {
-    PmBufStack *bufStack = ALLOCATE(PmBufStack);
+    PmBufStack *bufStack = malloc(sizeof(PmBufStack));
     bufStack->next = mod->bufStack;
     mod->bufStack = bufStack;
     bufStack->bs = bs;
@@ -57,10 +58,8 @@ static FILE *safeFOpen(const char *filename) {
 
 PmModule *newPmModuleFromFileHandle(FILE *f, const char *origin) {
     PmModule *mod = newPmModule();
-    int save = PROTECT(mod);
     YY_BUFFER_STATE bs = yy_create_buffer(f, YY_BUF_SIZE, mod->scanner);
     pushPmBufStack(mod, bs, origin);
-    UNPROTECT(save);
     return mod;
 }
 
@@ -74,28 +73,22 @@ PmModule *newPmModuleFromFile(const char *filename) {
 
 PmModule *newPmModuleFromString(char *s, char *id) {
     PmModule *mod = newPmModule();
-    int save = PROTECT(mod);
     YY_BUFFER_STATE bs = yy_scan_string(s, mod->scanner);
     pushPmBufStack(mod, bs, id);
-    UNPROTECT(save);
     return mod;
 }
 
 static void pushPmToplevelFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
                                        const char *origin) {
-    int save = PROTECT(mod);
     pushPmBufStack(mod, yy_scan_string(postamble, mod->scanner), "postamble");
     pushPmBufStack(mod, bs, origin);
     pushPmBufStack(mod, yy_scan_string(preamble, mod->scanner), "preamble");
-    UNPROTECT(save);
 }
 
 static void pushPmNamespaceFromBufState(PmModule *mod, YY_BUFFER_STATE bs,
                                         const char *origin) {
-    int save = PROTECT(mod);
     pushPmBufStack(mod, bs, origin);
     pushPmBufStack(mod, yy_scan_string("__namespace__ ", mod->scanner), "namespace token");
-    UNPROTECT(save);
 }
 
 PmModule *newPmToplevelFromFileHandle(FILE *f, const char *origin) {
@@ -136,23 +129,15 @@ static void freePmBufStack(PmModule *mod, PmBufStack * x) {
     x->next = NULL;
     free(x->filename);
     yy_delete_buffer(x->bs, mod->scanner);
-    FREE(x, PmBufStack);
+    free(x);
 }
 
-void freePmModule(Header *h) {
-    if (h == NULL)
+void freePmModule(PmModule *mod) {
+    if (mod == NULL)
         return;
-    PmModule *mod = (PmModule *) h;
     freePmBufStack(mod, mod->bufStack);
     yylex_destroy(mod->scanner);
-    FREE(mod, PmModule);
-}
-
-void markPmModule(Header *h) {
-    if (h == NULL)
-        return;
-    MARK(h);
-    markAstNest(((PmModule *) h)->nest);
+    free(mod);
 }
 
 int pmParseModule(PmModule *mod) {
@@ -172,7 +157,7 @@ int popPmFile(PmModule *mod) {
     free(old->filename);
     yy_delete_buffer(old->bs, mod->scanner);
     mod->bufStack = mod->bufStack->next;
-    FREE(old, PmBufStack);
+    free(old);
 
     if (mod->bufStack == NULL)
         return 0;

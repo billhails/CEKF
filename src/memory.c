@@ -93,8 +93,6 @@ const char *typeName(ObjType type, void *p) {
             return "protection";
         case OBJTYPE_BIGINT:
             return "bigint";
-        case OBJTYPE_PMMODULE:
-            return "pmmodule";
             ANF_OBJTYPE_CASES()
                 return typenameAnfObj(type);
             AST_OBJTYPE_CASES()
@@ -281,6 +279,9 @@ void markObj(Header *h, Index i) {
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;
+        case OBJTYPE_AGNOSTICFILEID:
+            markAgnosticFileId((AgnosticFileId *)h);
+            break;
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
@@ -289,9 +290,6 @@ void markObj(Header *h, Index i) {
             break;
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
-            break;
-        case OBJTYPE_PMMODULE:
-            markPmModule(h);
             break;
             ANF_OBJTYPE_CASES()
                 markAnfObj(h);
@@ -340,6 +338,9 @@ void freeObj(Header *h) {
         case OBJTYPE_MAYBEBIGINT:
             freeMaybeBigInt((MaybeBigInt *) h);
             break;
+        case OBJTYPE_AGNOSTICFILEID:
+            freeAgnosticFileId((AgnosticFileId *) h);
+            break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
             break;
@@ -348,9 +349,6 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
-            break;
-        case OBJTYPE_PMMODULE:
-            freePmModule(h);
             break;
             ANF_OBJTYPE_CASES()
                 freeAnfObj(h);

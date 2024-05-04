@@ -36,6 +36,7 @@ typedef struct AgnosticFileId {
 
 void printAgnosticFileId(AgnosticFileId *, int);
 void markAgnosticFileId(AgnosticFileId *);
+void freeAgnosticFileId(AgnosticFileId *);
 Cmp cmpAgnosticFileId(AgnosticFileId *, AgnosticFileId *);
 AgnosticFileId *makeAgnosticFileId(char *);
 

@@ -36,6 +36,10 @@ void markAgnosticFileId(AgnosticFileId *id) {
     MARK(id);
 }
 
+void freeAgnosticFileId(AgnosticFileId *id) {
+    FREE(id, AgnosticFileId);
+}
+
 Cmp cmpAgnosticFileId(AgnosticFileId *a, AgnosticFileId *b) {
     if (major(a->st_dev) == major(b->st_dev)) {
         if (minor(a->st_dev) == minor(b->st_dev)) {
