@@ -64,6 +64,7 @@ static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs,
     mod->bufStack = bufStack;
     bufStack->bs = bs;
     bufStack->filename = strdup(origin);
+    bufStack->lineno = 0;
 }
 
 static int pmParseModule(PmModule *mod) {

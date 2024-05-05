@@ -430,34 +430,58 @@ The same application of lookup should apply here too.
 
 ### DAG
 
-A little thought on that Directed Acyclic Graph I mentioned a few times.
+A little thought on that DAG I mentioned a few times.
 
 Consider this scenario:
 
 ```mermaid
 flowchart LR
 one((1)) --> two((2)) --> three((3))
-one --> four((4)) --> three
+one --> four((4)) --> five((5)) --> three
+five --> six((6))
+four --> seven((7))
 ```
 
-The circles represent namespaces, the arrows indicate imports, so 1
-imports 2 which imports 3, then 1 imports 4 which also imports 3. The
-namespaces are numbered in the order they will be encountered by the
-parser, and therefore the order they will be stored in the namespaces
-array.
+The circles represent namespaces, the arrows indicate imports.
 
-During lambda conversion, type-checking and lexical analysis, we want to
-process these in such a way that any namespace has been analysed before
-any namespace that refers to definitions in it.  Because the graph
-is acyclic (we disallow recursive loops) such an ordering is always
-possible, but the naiive reverse order of discovery is not adequate,
-in this example four would be analysed before three.
+It turns out the DAG is not necessary because of the order that these
+imports will be stored in the namespaces array.
 
-It should be enough to generate this DAG during parsing, and traverse
-it bredth-first to produce a suitable ordering for processing. Probably
-simpler to do this once immediately after parsing and generate an array
-of indices `[3, 4, 2, 1]` that can be re-used by each analysis phase.
+A namespace is only recorded after it has been completely parsed, by
+which time any of its imports will have been recorded ahead of it. In
+the example above the parse order is:
 
-One little addition, we'll need to de-duplicate the result because of
-repeated includes of the same file.
+```
+1
++-2
+| +-3
+|   RECORD 3
+| RECORD 2
++-4
+  +-5
+  | +-3
+  | | (already recorded 3)
+  | +-6
+  |   RECORD 6
+  | RECORD 5
+  +-7
+    RECORD 7
+  RECORD 4
+RECORD 1
+```
+
+so the namespaces are stored in the following order
+
+```
+3
+2
+6
+5
+7
+4
+1
+```
+
+which satisfies the requirement that namespaces will be analysed before
+anything that refers to them.
 

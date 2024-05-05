@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "ast_helper.h"
+#include "ast_debug.h"
 #include "symbol.h"
 #include "symbols.h"
 #include "bigint.h"
@@ -197,38 +198,43 @@ static char *calculatePath(char *file, PmModule *mod) {
 
 static AstFileIdArray *fileIdStack = NULL;
 
-static int lookupFileId(AgnosticFileId *id) {
-    for (Index i = 0; i < fileIdStack->size; ++i) {
-        if (cmpAgnosticFileId(id, fileIdStack->entries[i]) == CMP_EQ) {
-            return (int) i;
+static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
+    for (Index i = 0; i < array->size; ++i) {
+        if (cmpAgnosticFileId(id, array->entries[i]) == CMP_EQ) {
+            return true;
         }
     }
-    return -1;
+    return false;
 }
 
+// Careful. Somewhat accidentally this algorithm stores the namespaces
+// in precisely the correct order that they will need to be processed in.
+// Specifically because a namespace is parsed before it is recorded,
+// all of its imports are recorded ahead of it.
 static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
     if (fileIdStack == NULL) {
         fileIdStack = newAstFileIdArray();
     }
     char *path = calculatePath(file, mod);
-    AgnosticFileId *id = makeAgnosticFileId(path);
-    if (id == NULL) {
+    AgnosticFileId *fileId = makeAgnosticFileId(path);
+    if (fileId == NULL) {
         cant_happen("cannot stat file \"%s\"", path);
     }
-    int found = lookupNameSpace(id);
+    int found = lookupNameSpace(fileId);
     if (found != -1) {
         return newAstNameSpace(symbol, found);
     }
-    if (lookupFileId(id) != -1) {
+    if (fileIdInArray(fileId, fileIdStack)) {
         cant_happen("recursive include detected for %s", path);
     }
-    pushAstFileIdArray(fileIdStack, id);
+    pushAstFileIdArray(fileIdStack, fileId);
     AstDefinitions *definitions = parseNameSpaceFromFileName(path);
     if (definitions == NULL) {
-        cant_happen("null definitions parsing %s", path);
+        cant_happen("syntax error parsing %s", path);
     }
-    AstNameSpaceImpl *impl = newAstNameSpaceImpl(id, definitions);
+    AstNameSpaceImpl *impl = newAstNameSpaceImpl(fileId, definitions);
     found = pushAstNameSpaceArray(nameSpaces, impl);
+    popAstFileIdArray(fileIdStack);
     AstNameSpace *ns = newAstNameSpace(symbol, found);
     free(path);
     return ns;

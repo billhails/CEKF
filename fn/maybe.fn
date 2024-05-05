@@ -1,1 +1,1 @@
-typedef maybe(#t) { nothing | just(#t) }
+export typedef maybe(#t) { nothing | just(#t) }
