@@ -547,9 +547,9 @@ static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *n
         cant_happen("failed to retrieve namespaces");
     }
     for (Index i = 0; i < nsArray->size; i++) {
-        TcEnv *env2 = copyTcEnv(env);
+        TcEnv *env2 = newTcEnv(env);
         int save = PROTECT(env2);
-        TcNg *ng2 = copyTcNg(ng);
+        TcNg *ng2 = newTcNg(ng);
         PROTECT(ng2);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
         PROTECT(res);
