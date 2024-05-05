@@ -36,13 +36,12 @@
 #  include "debugging_off.h"
 #endif
 
-static TcEnv *extendEnv(TcEnv *parent);
-static TcNg *extendNg(TcNg *parent);
 static void addToEnv(TcEnv *env, HashSymbol *key, TcType *type);
 static void addToNg(TcNg *env, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns);
+static void addNameSpacesToEnv(TcEnv *env);
 static TcType *makeBoolean(void);
 static TcType *makeSpaceship(void);
 static TcType *makeSmallInteger(void);
@@ -89,9 +88,11 @@ static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
 static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
 static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
+static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
+static TcType *analyzeEnv(TcEnv *env);
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused)));
 static TcType *prune(TcType *t);
 static bool occursInType(TcType *a, TcType *b);
@@ -109,7 +110,7 @@ static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args);
 static int id_counter = 0;
 
 TcEnv *tc_init(BuiltIns *builtIns) {
-    TcEnv *env = extendEnv(NULL);
+    TcEnv *env = newTcEnv(NULL);
     int save = PROTECT(env);
     addBoolBinOpToEnv(env, andSymbol());
     addBoolBinOpToEnv(env, orSymbol());
@@ -134,12 +135,13 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addPutcToEnv(env);
     addThenToEnv(env);
     addBuiltinsToEnv(env, builtIns);
+    addNameSpacesToEnv(env);
     UNPROTECT(save);
     return env;
 }
 
 TcType *tc_analyze(LamExp *exp, TcEnv *env) {
-    TcNg *ng = extendNg(NULL);
+    TcNg *ng = newTcNg(NULL);
     int save = PROTECT(ng);
     TcType *res = analyzeExp(exp, env, ng);
     UNPROTECT(save);
@@ -208,6 +210,10 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeTupleIndex(exp->val.tuple_index, env, ng));
         case LAMEXP_TYPE_MAKE_TUPLE:
             return prune(analyzeMakeTuple(exp->val.make_tuple, env, ng));
+        case LAMEXP_TYPE_NAMESPACES:
+            return prune(analyzeNameSpaces(exp->val.namespaces, env, ng));
+        case LAMEXP_TYPE_ENV:
+            return prune(analyzeEnv(env));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -236,9 +242,9 @@ static TcType *makeFunctionType(LamVarList *args, TcEnv *env,
 
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeLam);
-    env = extendEnv(env);
+    env = newTcEnv(env);
     int save = PROTECT(env);
-    ng = extendNg(ng);
+    ng = newTcNg(ng);
     PROTECT(ng);
     for (LamVarList *args = lam->args; args != NULL; args = args->next) {
         TcType *freshType = makeFreshVar(args->var->name);
@@ -535,6 +541,28 @@ static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
     return res;
 }
 
+static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *ng) {
+    TcType *nsType = NULL;
+    if (!getFromTcEnv(env, nameSpacesSymbol(), &nsType)) {
+        cant_happen("failed to retrieve namespaces");
+    }
+    for (Index i = 0; i < nsArray->size; i++) {
+        TcEnv *env2 = copyTcEnv(env);
+        int save = PROTECT(env2);
+        TcNg *ng2 = copyTcNg(ng);
+        PROTECT(ng2);
+        TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
+        PROTECT(res);
+        pushTcNameSpaceArray(nsType->val.namespaces, res);
+        UNPROTECT(save);
+    }
+    return nsType;
+}
+
+static TcType *analyzeEnv(TcEnv *env) {
+    return newTcType(TCTYPE_TYPE_ENV, TCTYPE_VAL_ENV(env));
+}
+
 static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
     return analyzeExp(tagged, env, ng);
 }
@@ -693,7 +721,7 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
     }
     int save = PROTECT(existingType);
     // Recursive functions need to be statically typed inside their own context:
-    TcNg *ng2 = extendNg(ng);
+    TcNg *ng2 = newTcNg(ng);
     PROTECT(ng2);
     addToNg(ng2, existingType);
     TcType *type = analyzeExp(bindings->val, env, ng2);
@@ -706,9 +734,9 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeLetRec);
-    env = extendEnv(env);
+    env = newTcEnv(env);
     int save = PROTECT(env);
-    ng = extendNg(ng);
+    ng = newTcNg(ng);
     PROTECT(ng);
     // bind lambdas early
     for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
@@ -913,7 +941,7 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
 
 static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeTypeDefs);
-    env = extendEnv(env);
+    env = newTcEnv(env);
     int save = PROTECT(env);
     for (LamTypeDefList *list = typeDefs->typeDefs; list != NULL;
          list = list->next) {
@@ -930,7 +958,7 @@ static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng) {
     // let expression is evaluated in the current environment
     TcType *valType = analyzeExp(let->value, env, ng);
     int save = PROTECT(valType);
-    env = extendEnv(env);
+    env = newTcEnv(env);
     PROTECT(env);
     addToEnv(env, let->var, valType);
     TcType *res = analyzeExp(let->body, env, ng);
@@ -1412,16 +1440,6 @@ static TcType *makeFn(TcType *arg, TcType *result) {
     return type;
 }
 
-static TcEnv *extendEnv(TcEnv *parent) {
-    TcEnv *env = newTcEnv(parent);
-    return env;
-}
-
-static TcNg *extendNg(TcNg *parent) {
-    TcNg *ng = newTcNg(parent);
-    return ng;
-}
-
 static TcType *makeVar(HashSymbol *t) {
     TcVar *var = newTcVar(t, id_counter++);
     int save = PROTECT(var);
@@ -1540,6 +1558,15 @@ static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
     for (Index i = 0; i < builtIns->size; i++) {
         addBuiltInToEnv(env, builtIns->entries[i]);
     }
+}
+
+static void addNameSpacesToEnv(TcEnv *env) {
+    TcNameSpaceArray *namespaces = newTcNameSpaceArray();
+    int save = PROTECT(namespaces);
+    TcType *nsType = newTcType(TCTYPE_TYPE_NAMESPACES, TCTYPE_VAL_NAMESPACES(namespaces));
+    PROTECT(nsType);
+    addToEnv(env, nameSpacesSymbol(), nsType);
+    UNPROTECT(save);
 }
 
 static void addHereToEnv(TcEnv *env) {

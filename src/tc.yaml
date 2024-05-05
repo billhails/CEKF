@@ -66,6 +66,10 @@ arrays:
         dimension: 1
         entries: TcType
 
+    TcNameSpaceArray:
+        dimension: 1
+        entries: TcType
+
 unions:
     TcType:
         function: TcFunction
@@ -77,5 +81,7 @@ unions:
         unknown: HashSymbol
         userType: TcUserType
         tuple: TcTypeArray
+        namespaces: TcNameSpaceArray
+        env: TcEnv
 
 primitives: !include primitives.yaml

@@ -20,6 +20,7 @@
 
 #  include "symbol.h"
 
+HashSymbol *nameSpacesSymbol(void);
 HashSymbol *addSymbol(void);
 HashSymbol *andSymbol(void);
 HashSymbol *appendSymbol(void);
