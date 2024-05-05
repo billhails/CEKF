@@ -60,7 +60,10 @@ static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 static LamExp *convertNest(AstNest *nest, LamContext *env);
-static LamExp *lamConvertDefsAndExprs(AstDefinitions *definitions, AstExpressions *expressions, LamContext *env);
+static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
+                                        AstNameSpaceArray *nsArray,
+                                        AstExpressions *expressions,
+                                        LamContext *env);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #  include "debugging_on.h"
@@ -75,31 +78,56 @@ LamExp *lamConvertProg(AstProg *prog) {
     inPreamble = true;
     LamContext *env = extendLamContext(NULL);
     int save = PROTECT(env);
-    LamTypeDefList *typeDefList = collectTypeDefs(prog->preamble, env);
-    PROTECT(typeDefList);
-    LamLetRecBindings *funcDefsList = convertFuncDefs(prog->preamble, env);
+    LamExp *result = lamConvertDefsNsAndExprs(prog->preamble, prog->namespaces, prog->body, env);
+    UNPROTECT(save);
+    LEAVE(lamConvertProg);
+    return result;
+}
+
+static LamExp *convertNest(AstNest *nest, LamContext *env) {
+    ENTER(convertNest);
+    env = extendLamContext(env);
+    int save = PROTECT(env);
+    LamExp *result = lamConvertDefsNsAndExprs(nest->definitions, NULL, nest->expressions, env);
+    PROTECT(result);
+    UNPROTECT(save);
+    LEAVE(convertNest);
+    return result;
+}
+
+static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
+                                        AstNameSpaceArray *nsArray,
+                                        AstExpressions *expressions,
+                                        LamContext *env) {
+    ENTER(lamConvertDefsNsAndExprs);
+    LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
+    int save = PROTECT(typeDefList);
+    LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
     PROTECT(funcDefsList);
-    inPreamble = false;
-    LamNameSpaceArray *namespaces = newLamNameSpaceArray();
-    PROTECT(namespaces);
-    for (Index i = 0; i < prog->namespaces->size; ++i) {
-        AstNameSpaceImpl *namespace = prog->namespaces->entries[i];
-        LamContext *nsEnv = extendLamContext(env);
-        int save2 = PROTECT(nsEnv);
-        AstExpression *envToken = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV());
-        PROTECT(envToken);
-        AstExpressions *body = newAstExpressions(envToken, NULL);
-        PROTECT(body);
-        LamExp *lamNameSpace = lamConvertDefsAndExprs(namespace->definitions, body, nsEnv);
-        PROTECT(lamNameSpace);
-        pushLamNameSpaceArray(namespaces, lamNameSpace);
-        UNPROTECT(save2);
+    LamNameSpaceArray *namespaces = NULL;
+    if (nsArray != NULL) {
+        inPreamble = false; // dodgy, we must be in the preamble because we're being called with namespaces
+        namespaces = newLamNameSpaceArray();
+        PROTECT(namespaces);
+        for (Index i = 0; i < nsArray->size; ++i) {
+            AstNameSpaceImpl *namespace = nsArray->entries[i];
+            LamContext *nsEnv = extendLamContext(env);
+            int save2 = PROTECT(nsEnv);
+            AstExpression *envToken = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV());
+            PROTECT(envToken);
+            AstExpressions *body = newAstExpressions(envToken, NULL);
+            PROTECT(body);
+            LamExp *lamNameSpace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
+            PROTECT(lamNameSpace);
+            pushLamNameSpaceArray(namespaces, lamNameSpace);
+            UNPROTECT(save2);
+        }
     }
-    LamSequence *body = convertSequence(prog->body, env);
+    LamSequence *body = convertSequence(expressions, env);
     PROTECT(body);
-    if (namespaces->size > 0) {
+    if (namespaces != NULL && namespaces->size > 0) {
         LamExp *lamNameSpaces = newLamExp(LAMEXP_TYPE_NAMESPACES, LAMEXP_VAL_NAMESPACES(namespaces));
         PROTECT(lamNameSpaces);
         body = newLamSequence(lamNameSpaces, body);
@@ -125,53 +153,7 @@ LamExp *lamConvertProg(AstProg *prog) {
             newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
     }
     UNPROTECT(save);
-    LEAVE(lamConvertProg);
-    return result;
-}
-
-static LamExp *convertNest(AstNest *nest, LamContext *env) {
-    ENTER(convertNest);
-    env = extendLamContext(env);
-    int save = PROTECT(env);
-    LamExp *result = lamConvertDefsAndExprs(nest->definitions, nest->expressions, env);
-    PROTECT(result);
-    UNPROTECT(save);
-    LEAVE(convertNest);
-    return result;
-}
-
-static LamExp *lamConvertDefsAndExprs(AstDefinitions *definitions, AstExpressions *expressions, LamContext *env) {
-    ENTER(lamConvertDefsAndExprs);
-    LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
-    int save = PROTECT(typeDefList);
-    LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
-    PROTECT(funcDefsList);
-    funcDefsList =
-        makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
-    PROTECT(funcDefsList);
-    LamSequence *body = convertSequence(expressions, env);
-    PROTECT(body);
-    LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
-    PROTECT(letRecBody);
-    LamExp *result = NULL;
-    if (funcDefsList != NULL) {
-        LamLetRec *letRec =
-            newLamLetRec(countLamLetRecBindings(funcDefsList), funcDefsList,
-                         letRecBody);
-        PROTECT(letRec);
-        result = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letRec));
-    } else {
-        result = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
-    }
-    PROTECT(result);
-    if (typeDefList != NULL) {
-        LamTypeDefs *typeDefs = newLamTypeDefs(typeDefList, result);
-        PROTECT(typeDefs);
-        result =
-            newLamExp(LAMEXP_TYPE_TYPEDEFS, LAMEXP_VAL_TYPEDEFS(typeDefs));
-    }
-    UNPROTECT(save);
-    LEAVE(lamConvertDefsAndExprs);
+    LEAVE(lamConvertDefsNsAndExprs);
     return result;
 }
 
