@@ -51,7 +51,11 @@ An important point to note about the dot operator `namespace.expr`. This
 is *not* just variable lookup, it is the evaluation of the `expr` in
 the context of the namespace. If the expression happens to be a simple
 variable then it is equivalent to variable lookup, but care must be
-taken not to fall into the trap of treating it as such.
+taken not to fall into the trap of treating it as such. The appropriate
+action on seeing a dot operator should always be:
+1. push the namespace.
+2. process the rhs in that context.
+3. pop the namespace.
 
 ## Implementation
 
@@ -339,9 +343,8 @@ Finally the body can be checked in the resulting context.
 
 #### Print Compilation
 
-Done as part of type checking, any typedef in a namespace will have
-a generated print function alongside it.
-Then the compilation of a print
+Done as part of type checking, any typedef in a namespace will have a
+generated print function alongside it.  Then the compilation of a print
 expression referring to types inside the namespace could namespace-qualify
 the calls to the print functions.
 
@@ -354,11 +357,44 @@ representing the entire program, something like:
 LamProg:
   preamble: LamExp                # typedefs/letrec
   namespaces: LamNameSpaceArray   # keep the array structure for easy lookup
-  dag: LamDAG                     # to control the order of namespace analysis
   body: LamExp                    # body as before
 ```
 
-Apart from the additions above, the only other bit is the dot operator,
+The current top-level for lambda conversion is `lamConvertNest` which
+we keep pretty much unchanged, if a bit simplified, but can delegate
+to `static` as we don't need public access. The new top-level will be
+`lamConvertProg` and it would be good to have that return something as
+close to the current as possible. So what is returned by `lamConverNest`
+is like:
+
+```scheme
+(typedefs (...)
+   (letrec (...) ;; includes print functions
+      <body>))
+```
+
+where the typedefs and the letrec are from the preamble. I guess all we
+need is another level:
+
+```scheme
+(typedefs (...)
+   (letrec (...)
+      [namespaces]
+      <body>))
+```
+
+However individual namespaces must also be parsed, and they are structured
+like typedefs, but there is no actual body. I'm thinking a special token
+like `env` could be used to both provide a body and direct processors
+to return the environment at this point:
+
+```scheme
+(typedefs (...)
+   (letrec (...)
+      env))
+```
+
+Apart from the additions above, the other bit is the dot operator,
 maybe just a binary op, though it's lhs could be constrained to being
 a symbol if we have a separate type for it.
 

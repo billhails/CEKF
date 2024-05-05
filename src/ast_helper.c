@@ -54,3 +54,12 @@ int lookupNameSpace(AgnosticFileId *id) {
     }
     return -1;
 }
+
+AstProg *astNestToProg(AstNest *nest) {
+#ifdef SAFETY_CHECKS
+    if (nameSpaces == NULL) {
+        cant_happen("null namespace");
+    }
+#endif
+    return newAstProg(nest->definitions, nameSpaces, nest->expressions);
+}

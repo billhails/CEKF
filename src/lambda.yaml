@@ -223,6 +223,7 @@ enums:
 
 unions:
     LamExp:
+        namespaces: LamNameSpaceArray
         lam: LamLam
         var: HashSymbol
         stdint: int
@@ -254,6 +255,7 @@ unions:
         back: void_ptr
         error: void_ptr
         cond_default: void_ptr
+        env: void_ptr
 
     LamCondCases:
         integers: LamIntCondCases
@@ -273,6 +275,11 @@ hashes:
     LamExpTable:
         entries: LamExp
     
+arrays:
+    LamNameSpaceArray:
+        dimension: 1
+        entries: LamExp
+
 primitives: !include primitives.yaml
 
 external:

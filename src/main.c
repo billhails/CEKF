@@ -103,15 +103,16 @@ static void processArgs(int argc, char *argv[]) {
     }
 }
 
-static AstNest *parseFile(char *file) {
+static AstProg *parseFile(char *file) {
     disableGC();
     AstNest *nest = parseTopLevelFromFileName(file);
+    AstProg *prog = astNestToProg(nest);
     enableGC();
-    return nest;
+    return prog;
 }
 
-static LamExp *convertNest(AstNest *nest) {
-    LamExp *exp = lamConvertNest(nest, NULL);
+static LamExp *convertProg(AstProg *prog) {
+    LamExp *exp = lamConvertProg(prog);
     int save = PROTECT(exp);
 #ifdef DEBUG_LAMBDA_CONVERT
     ppLamExp(exp);
@@ -184,10 +185,10 @@ int main(int argc, char *argv[]) {
     BuiltIns *builtIns = registerBuiltIns();
     int save = PROTECT(builtIns);
 
-    AstNest *nest = parseFile(argv[optind]);
-    int save2 = PROTECT(nest);
+    AstProg *prog = parseFile(argv[optind]);
+    int save2 = PROTECT(prog);
 
-    LamExp *exp = convertNest(nest);
+    LamExp *exp = convertProg(prog);
     REPLACE_PROTECT(save2, exp);
 
     typeCheck(exp, builtIns);

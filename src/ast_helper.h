@@ -32,6 +32,8 @@ void initNameSpaces();
 
 int lookupNameSpace(AgnosticFileId *);
 
+AstProg *astNestToProg(AstNest *nest);
+
 void markNameSpaces();
 
 #endif
