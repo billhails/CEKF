@@ -39,7 +39,6 @@ structs:
 
     AstDefinitions:
         definition: AstDefinition
-        exported: bool
         next: AstDefinitions
 
     AstDefine:

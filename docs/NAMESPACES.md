@@ -8,10 +8,11 @@ that feature, off the top of my head I can think of two:
 
 1. Typechecking - The type of an environment would be the type environment
    produced while checking, not a problem, but any function using such an
-   environment would have to somehow explicitly declare its type.
+   environment would have to somehow explicitly declare its type if it was
+   allowed as argument to a function.
 2. Lexical addressing - Two environments with the same type would almost
    certainly not have their values at the same locations, so lexical
-   addressing of access outside of one would fail when applied to another.
+   addressing of access to one would fail when applied to another.
 
 Given those, and probably other obstacles, I'm going to try for the much
 more limited but hopefully practical approach of namespaces.
@@ -26,34 +27,31 @@ Will import and declare a namespace called `myname`.  Repeated imports
 of the same file should not create repeated compilation units.  The path
 will be relative to the file doing the import.
 
-```
-export typedef foo ...
-export fn bar ...
-export baz = ...
-```
-
-Within the namespace file, marks certain entities as being part of the
-namespace's interface. any entities not so marked will not be visible
-outside of the namespace.
 
 ```
-myname.foo
+myname.expr
 ```
 
-Outside of the namespace allows access to exported entities.
+The lhs of the operator is constrained to be the name of
+a namespace, but the rhs can be any expression to be evaluated
+in the context of that namespace.
 
 ## Semantics
 
 * Namespaces are not first class. They are static labels referring to
   compilation units.
 * Namespaces can nest.
-* (later) Namespaces should be able to export other namespaces, or at
-  least export values imported from other namespaces.
 * All namespaces are constructed at compile-time.
 * The structure of namespace files is costrained to a set of letrec
   bindings.
 * Recusive nesting of namespaces will be an error at least initially,
   there may be solutions with backfilling later.
+
+An important point to note about the dot operator `namespace.expr`. This
+is *not* just variable lookup, it is the evaluation of the `expr` in
+the context of the namespace. If the expression happens to be a simple
+variable then it is equivalent to variable lookup, but care must be
+taken not to fall into the trap of treating it as such.
 
 ## Implementation
 
@@ -89,6 +87,9 @@ gitGraph TB:
 	merge lambda tag: "lambda-v1"
 ```
 
+Also, because of the scope, I think it makes sense to get an end to end
+implementation of import working alone, before attacking the dot operator.
+
 ### Parsing
 
 Some initial clean-up required, I'll remove all reference to `env` syntax.
@@ -104,8 +105,8 @@ different state though.
 We'll also need to separate out the parsing of the preamble. We can treat it
 as a namespace for this purpose, but not install it as one.
 
-**UPDATE** Parsing of `import` and `export` is now done, so it's worth
-documenting what happens at the moment.
+**UPDATE** Parsing of `import` is done, so it's worth documenting what
+happens at the moment.
 
 The preamble is parsed separately, and a nest is constructed using the
 preamble as the definitions section and the body of the file as a second
@@ -121,31 +122,17 @@ existing AST.  The parent parser then creates a letrec binding from the
 symbol (after the `as`) to the indirect reference to the namespace's AST
 (e.g. the index into the array).
 
-On encountering an `export` statement, the parser just creates an
-`ASTDefinition` as any other, but the `ASTDefinition` type has been
-extended to contain a boolean `exported` flag which the parser sets
-`true` for those exported declarations only.
-
 The parser allows nested imports (namespaces importing namespaces) but
-detects and disallows recursive imports.
+detects and disallows recursive (looping) imports.
 
 This is potentially not foolproof, i.e. if the namespace was previously
 imported then recursively imported it might not get detected, may need
 to maintain a DAG to validate. Pretty sure recusive imports would always
 be detected but need to be sure.
 
-Other things needing looking at. 
-* the parser allows syntactically the `export` of values from any letrec,
-  we should make that an error semantically if the export is not at the
-  top-level of a namespace. That can be done during lambda conversion.
-* the parser allows `export` of namespace declarations. As a first attempt
-  it might be easier to disallow that too.
-
 ### Lambda Conversion
 
-Mostly straightforward, will require a new lambda construct or two,
-tagging of exported values etc. Typedefs exported by a namespace should
-be available to pattern matching:
+Mostly straightforward, will require a new lambda construct or two.
 
 ```
 import "dict.fn" as dict;
@@ -155,19 +142,17 @@ fn foo {
 }
 ```
 
-and to the print compiler, ideally the print compiler would provide
-namespace prefixes to the output, but that may prove impractical.
-
 ### Type Chacking
 
 As mentioned, the type of a namespace is the type-environment constructed
-while checking it, however that type environment needs to be pruned of
-any private entities before it is used outside of the namespace.
+while checking it. This is done so that the type-checker can use the
+lhs of a dot expression to retrieve the type environment appropriate
+for type-checking the rhs.
 
 ### ANF Conversion
 
 Hopefully no issues here, the ANF conversion currently needs an overhaul,
-so if there are issues this may be the ime to do it.
+so if there are issues this may be the time to do it.
 
 ### Desugaring
 
@@ -318,8 +303,8 @@ of namespace lookup.
 
 The `CTEnv` resulting from the namespace analysis will be the preamble
 env, with the namespace slots populated by the CTEnvs of each namespace.
-so namespace lookup will find the correct env for the lhs and annotate the
-rhs in that context.
+so namespace lookup will find the correct env for the lhs and annotate
+the rhs in that context.
 
 Worth thinking about what we get from the parser at this stage, see
 above.  The `import <string> as <name>` statement results in `<name>`
@@ -327,10 +312,6 @@ being bound to an indirect reference to the AST of the namespace. By the
 time we reach the point of lexical analysis this will be an equivalent
 (still indirect) reference to the ANF form of the AST, so it should be
 a simple lookup to find the AST.
-
-Lexical analysis can disregard any export status, in fact that can be
-discarded by anf conversion as type checking will have detected illegal
-access.
 
 ### Desugaring
 
@@ -352,23 +333,17 @@ The results are new TcEnv structs that are associated with each namespace
 slot. Another potential pitfall here, the order in which they are checked
 may be significant, in which case we may need that same DAG mentioned
 above to order the checker so that enclosed namespaces are checked before
-enclosing ones. Such generated environments are pruned before subsequent
-use so that only exported symbols remain.
+enclosing ones.
 
 Finally the body can be checked in the resulting context.
 
 #### Print Compilation
 
 Done as part of type checking, any typedef in a namespace will have
-a generated print function alongside it, and these could be exported
-even if the types themselves are not. then the compilation of a print
+a generated print function alongside it.
+Then the compilation of a print
 expression referring to types inside the namespace could namespace-qualify
 the calls to the print functions.
-
-Actually, it might be an idea to requre that any exported function in
-a namespace that returns a type defined in that namespace would cause
-a type-check error if the type is not also exported.  Then the lambda
-conversion need only export print functions for exported types.
 
 ### Lambda Conversion
 
@@ -377,7 +352,7 @@ representing the entire program, something like:
 
 ```yaml
 LamProg:
-  preamble: LamExp                # typedefs/letrec extended with exported flags
+  preamble: LamExp                # typedefs/letrec
   namespaces: LamNameSpaceArray   # keep the array structure for easy lookup
   dag: LamDAG                     # to control the order of namespace analysis
   body: LamExp                    # body as before
@@ -405,7 +380,7 @@ fn foo {
 }
 ```
 
-where `c1` abd `c2` are values of a type exported by `ns`, then it
+where `c1` abd `c2` are values of a type defined by `ns`, then it
 comes down to what is currently `makeVarPattern` in `tpmc_logic.c`.
 
 All that does is look for the type constructor in the environment,
@@ -418,9 +393,6 @@ constructor doesn't exist, wheras if it's namespace-qualified, it
 already knows it should exist and so can throw an error if it can't
 find it. So lookup would locate the namespace (error if not found)
 then recurse on that with the rhs of the qualification.
-
-Since type-checking hasn't been done yet, the lookup will need to
-check the `exported` status of any symbol it finds.
 
 #### Constructor Inlining
 

@@ -31,7 +31,6 @@ struct PmModule *mod = yyextra;
 
 "__namespace__" { return NAMESPACE_TOKEN; }
 "as"            { return AS; }
-"export"        { return EXPORT; }
 "import"        { return IMPORT; }
 "and"           { return AND; }
 "back"          { return BACK; }

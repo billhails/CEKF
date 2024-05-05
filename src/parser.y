@@ -325,7 +325,6 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
 %token TRUE
 %token TYPEDEF
 %token WILDCARD
-%token EXPORT
 %token IMPORT
 %token NAMESPACE_TOKEN
 %token AS
@@ -379,8 +378,7 @@ namespace_definitions : NAMESPACE_TOKEN definitions   { $$ = $2; }
                       ;
 
 definitions : %empty                            { $$ = NULL; }
-            | definition definitions            { $$ = newAstDefinitions($1, false, $2); }
-            | EXPORT definition definitions     { $$ = newAstDefinitions($2, true, $3); }
+            | definition definitions            { $$ = newAstDefinitions($1, $2); }
             ;
 
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
