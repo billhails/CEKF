@@ -290,9 +290,11 @@ static void annotateExpLet(ExpLet *x, CTEnv *env) {
 
 static void annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
     for (Index i = 0; i < x->size; ++i) {
-        CTEnv *env2 = newCTEnv(false, env);
+        CTEnv *env2 = newCTEnv(true, env);
         int save = PROTECT(env2);
-        annotateExp(x->entries[i], env2);
+        env2->isNameSpace = true;
+        annotateExp(x->entries[i]->body, env2);
+        x->entries[i]->nbindings = env2->nbindings;
         UNPROTECT(save);
     }
 }
@@ -424,6 +426,19 @@ static void annotateCexp(Cexp *x, CTEnv *env) {
     }
 }
 
+static void annotateExpEnv(CTEnv *env) {
+    int nbindings = 0;
+    while (env != NULL) {
+        nbindings += countCTIntTable(env->table);
+        if (env->isNameSpace) {
+            env->nbindings = nbindings;
+            return;
+        }
+        env = env->next;
+    }
+    cant_happen("failed to find namespace env");
+}
+
 static void annotateExp(Exp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateExp ");
@@ -442,8 +457,10 @@ static void annotateExp(Exp *x, CTEnv *env) {
         case EXP_TYPE_LET:
             annotateExpLet(x->val.let, env);
             break;
-        case EXP_TYPE_DONE:
         case EXP_TYPE_ENV:
+            annotateExpEnv(env);
+            break;
+        case EXP_TYPE_DONE:
             break;
         default:
             cant_happen("unrecognized type %s", expTypeName(x->type));

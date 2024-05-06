@@ -39,6 +39,7 @@ typedef enum ValueType {
     VALUE_TYPE_CONT,
     VALUE_TYPE_VEC,
     VALUE_TYPE_BUILTIN,
+    VALUE_TYPE_NAMESPACE,
 } ValueType;
 
 typedef union {
@@ -51,6 +52,7 @@ typedef union {
     struct Kont *kont;
     struct Vec *vec;
     struct BuiltInImplementation *builtIn;
+    struct ValueList *namespace;
 } ValueVal;
 
 typedef struct Value {
@@ -75,6 +77,7 @@ typedef struct Value {
 #  define VALUE_VAL_COMPLEX(x)         ((ValueVal){.vec  = (x)})
 #  define VALUE_VAL_NONE()             ((ValueVal){.none = NULL})
 #  define VALUE_VAL_BUILTIN(x)         ((ValueVal){.builtIn = (x)})
+#  define VALUE_VAL_NAMESPACE(x)       ((ValueVal){.namespace = (x)})
 
 // constants
 extern Value vTrue;
@@ -186,6 +189,13 @@ static inline Value builtInValue(struct BuiltInImplementation * x) {
     Value v;
     v.type = VALUE_TYPE_BUILTIN;
     v.val = VALUE_VAL_BUILTIN(x);
+    return v;
+}
+
+static inline Value nameSpaceValue(struct ValueList *x) {
+    Value v;
+    v.type = VALUE_TYPE_NAMESPACE;
+    v.val = VALUE_VAL_NAMESPACE(x);
     return v;
 }
 

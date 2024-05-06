@@ -596,6 +596,22 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("ERROR\n");
                 }
                 break;
+            case BYTECODE_NS:{
+                    int count = readWord(bca, &i);
+                    eprintf("NS [%d]\n", count);
+                }
+                break;
+            case BYTECODE_NS_END:{
+                    int numLambdas = readWord(bca, &i);
+                    int stackOffset = readWord(bca, &i);
+                    eprintf("NS_END [%d] [%d]\n", numLambdas, stackOffset);
+                }
+                break;
+            case BYTECODE_NS_FINISH:{
+                    int count = readWord(bca, &i);
+                    eprintf("NS_FINISH [%d]\n", count);
+                }
+                break;
             default:
                 cant_happen("unrecognised bytecode %d in dumpByteCode",
                             thisByte);

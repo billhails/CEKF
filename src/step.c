@@ -60,8 +60,24 @@ void markCEKF() {
     markStack(&state.S);
 }
 
+static inline void patch(Value v, int num) {
+    patchValueList(&state.S, v.val.namespace, num);
+}
+
+static inline void poke(int offset, Value v) {
+    pokeValue(&state.S, offset, v);
+}
+
 static inline void push(Value v) {
     pushValue(&state.S, v);
+}
+
+static inline void extend(int i) {
+    extendStack(&state.S, i);
+}
+
+static inline void discard(int num) {
+    discardStackTop(&state.S, num);
 }
 
 static inline Value pop() {
@@ -1093,6 +1109,42 @@ static void step() {
                     Value kont = kontValue(state.K);
                     push(kont);
                     applyProc(1);
+                }
+                break;
+            case BYTECODE_NS:{
+                    int num = readCurrentWord();
+                    DEBUGPRINTF("NS [%d]\n", num);
+                    extend(num);
+                }
+                break;
+            case BYTECODE_NS_END:{
+                    int numLambdas = readCurrentWord();
+                    int stackOffset = readCurrentWord();
+                    DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
+                    ValueList *snapshot = snapshotNamespace(&state.S);
+                    int save = PROTECT(snapshot);
+                    Value ns = nameSpaceValue(snapshot);
+                    // eprintf("poke(%d - (%d + %d) = %d)\n", state.S.sp, numLambdas, stackOffset, state.S.sp - (numLambdas + stackOffset));
+                    poke(0 - (numLambdas + stackOffset), ns);
+                    discard(numLambdas);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_NS_FINISH:{
+                    int num = readCurrentWord();
+                    DEBUGPRINTF("NS_FINISH [%d]\n", num);
+                    // at this point we need to patch each of the namespaces with the
+                    // final block of populated namespaces, size num, and at TOS
+                    for (int i = 0; i < num; i++) {
+                        Value ns = peek(0 - (i + 1));
+#ifdef SAFETY_CHECKS
+                        // eprintf("peek(%d - (%d + 1) = %d)\n", state.S.sp, i, state.S.sp - (i + 1));
+                        if (ns.type != VALUE_TYPE_NAMESPACE) {
+                            cant_happen("expected namespace, got %d", ns.type);
+                        }
+#endif
+                        patch(ns, num);
+                    }
                 }
                 break;
             case BYTECODE_DONE:{

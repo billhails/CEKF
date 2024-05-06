@@ -201,6 +201,25 @@ void ppAexpMakeVec(AexpMakeVec *x) {
     eprintf(")");
 }
 
+void ppAexpNameSpaceArray(AexpNameSpaceArray *x) {
+    for (Index i = 0; i < x->size; i++) {
+        eprintf("[");
+        ppExp(x->entries[i]->body);
+        eprintf("]");
+        if (i + 1 < x->size) {
+            eprintf(" ");
+        }
+    }
+}
+
+void ppAexpNameSpaces(AexpNameSpaces *x) {
+    eprintf("(namespaces ");
+    ppAexpNameSpaceArray(x->namespaces);
+    eprintf(" ");
+    ppExp(x->body);
+    eprintf(")");
+}
+
 void ppBareAexpList(AexpList *x) {
     while (x != NULL) {
         ppAexp(x->exp);
@@ -395,8 +414,11 @@ void ppAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             ppAexpMakeVec(x->val.makeVec);
             break;
+        case AEXP_TYPE_NAMESPACES:
+            ppAexpNameSpaces(x->val.namespaces);
+            break;
         default:
-            cant_happen("unrecognised aexp %d in ppAexp", x->type);
+            cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
     }
 }
 
@@ -456,8 +478,11 @@ void ppExp(Exp *x) {
         case EXP_TYPE_DONE:
             eprintf("<DONE>");
             break;
+        case EXP_TYPE_ENV:
+            eprintf("ENV");
+            break;
         default:
-            eprintf("<unrecognised exp %d>", x->type);
+            eprintf("<unrecognised exp %s>", expTypeName(x->type));
             exit(1);
     }
 }

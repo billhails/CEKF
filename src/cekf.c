@@ -148,6 +148,9 @@ void markValue(Value x) {
         case VALUE_TYPE_BIGINT_IMAG:
             markBigInt(x.val.bigint);
             break;
+        case VALUE_TYPE_NAMESPACE:
+            markValueList(x.val.namespace);
+            break;
         default:
             cant_happen("unrecognised type in markValue (%d)", x.type);
     }

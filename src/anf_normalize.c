@@ -708,7 +708,9 @@ static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray) {
     for (Index i = 0; i < nsArray->size; i++) {
         Exp *nsExp = normalize(nsArray->entries[i], NULL);
         int save2 = PROTECT(nsExp);
-        pushAexpNameSpaceArray(res, nsExp);
+        AexpNameSpace *ns = newAexpNameSpace(nsExp);
+        PROTECT(ns);
+        pushAexpNameSpaceArray(res, ns);
         UNPROTECT(save2);
     }
     UNPROTECT(save);

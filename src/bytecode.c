@@ -300,6 +300,28 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
     LEAVE(writeAexpMakeVec);
 }
 
+void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b) {
+    if (x->size > 0) {
+        addByte(b, BYTECODE_NS);
+        addWord(b, x->size);
+        for (Index i = 0; i < x->size; i++) {
+            writeExp(x->entries[i]->body, b);
+            addByte(b, BYTECODE_NS_END);
+            addWord(b, x->entries[i]->nbindings);
+            addWord(b, x->size - i);
+        }
+        addByte(b, BYTECODE_NS_FINISH);
+        addWord(b, x->size);
+    }
+}
+
+void writeAexpNameSpaces(AexpNameSpaces *x, ByteCodeArray *b) {
+    ENTER(writeAexpNameSpaces);
+    writeAexpNameSpaceArray(x->namespaces, b);
+    writeExp(x->body, b);
+    LEAVE(writeAexpNameSpaces);
+}
+
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
     ENTER(writeCexpApply);
     writeAexpList(x->args, b);
@@ -637,8 +659,12 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
                 writeAexpMakeVec(x->val.makeVec, b);
             }
             break;
+        case AEXP_TYPE_NAMESPACES:{
+                writeAexpNameSpaces(x->val.namespaces, b);
+            }
+            break;
         default:
-            cant_happen("unrecognized Aexp type in writeAexp");
+            cant_happen("unrecognized Aexp type %s", aexpTypeName(x->type));
     }
     LEAVE(writeAexp);
 }
@@ -688,7 +714,7 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             }
             break;
         default:
-            cant_happen("unrecognized Cexp type %d in writeCexp", x->type);
+            cant_happen("unrecognized Cexp type %s", cexpTypeName(x->type));
     }
     LEAVE(writeCexp);
 }
@@ -712,8 +738,10 @@ void writeExp(Exp *x, ByteCodeArray *b) {
                 addByte(b, BYTECODE_DONE);
             }
             break;
+        case EXP_TYPE_ENV:
+            break;
         default:
-            cant_happen("unrecognized Exp type in writeExp");
+            cant_happen("unrecognized Exp type %s", expTypeName(x->type));
     }
     LEAVE(writeExp);
 }

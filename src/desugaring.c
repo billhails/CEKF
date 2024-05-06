@@ -94,7 +94,7 @@ static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
 static AexpNameSpaceArray *desugarAexpNameSpaceArray(AexpNameSpaceArray *x) {
     DEBUG_DESUGAR(AexpNameSpaceArray, x);
     for (Index i = 0; i < x->size; i++) {
-        x->entries[i] = desugarExp(x->entries[i]);
+        x->entries[i]->body = desugarExp(x->entries[i]->body);
     }
     return x;
 }

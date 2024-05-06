@@ -59,10 +59,6 @@ action on seeing a dot operator should always be:
 
 ## Implementation
 
-In general we'll need a new concept of namespace, distinct from types
-and variables, so a "namespace for namespaces" used for lookup on the
-lhs of the `.` operator.
-
 ### Design and Documentation
 
 You're looking at it :grin:.
@@ -184,9 +180,9 @@ backwards, so here's a first attempt.
   and each compiled namespace is terminated by another new bytecode
   `BYTECODE_NS_END`.
 * After each `BYTECODE_NS_END` we write the number of stack slots the
-  namespace will consume, and the number of the namespace (zero indexed)
-  added to the number of slots consumed by the preamble, resulting in the
-  stack position of the namespace.
+  namespace will consume, and the number of namespaces minus the number of
+  the namespace (zero indexed) resulting in the offset of the namespace
+  from the top of stack (after the lambdas are popped).
 * After the last namespace, we write a new `BYTECODE_NS_FINISH` followed
   by the number of namespaces.
 
@@ -216,7 +212,8 @@ namespace symbol and a rhs expression.
   * Read the number of slots to pop and the namespace stack position.
   * Before popping anything, create a new Value type NAMESPACE with a
     copy of the current stack.
-  * Then put that into the stack at the designated location.
+  * Then put that into the stack at the designated location (stack top
+    minus number of slots to pop minus namespace stack position).
   * Lastly pop the namespace internals off of the stack.
 * When `BYTECODE_NS_FINISH` is encountered, read the number of namespaces.
   * For each namespace slot:
@@ -276,6 +273,9 @@ I can't think of any specific downstream requirements that the
 bytecode generation places on the lexical analysis phase, other
 than correctly locating the variables in the context of a namespace.
 We do however need to be precise about how that is to be achieved.
+
+Specifically the presence of namespaces on the stack may need to be
+taken into account when calculating the locations of data after them.
 
 #### Analysis of the preamble
 

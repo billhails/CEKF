@@ -99,6 +99,7 @@ typedef struct Vec {
 
 int protectValue(Value v);
 
+ValueList *snapshotNamespace(Stack *s);
 void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);
@@ -114,6 +115,7 @@ void moveValues(Value *to, Value *from, int size);
 
 extern Snapshot noSnapshot;
 
+void extendStack(Stack *s, int extra);
 void pushValue(Stack *stack, Value v);
 struct Value popValue(Stack *stack);
 struct Value peekValue(Stack *stack, int offset);
@@ -124,6 +126,9 @@ void initStack(Stack *stack);
 int frameSize(Stack *stack);
 void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
+void pokeValue(Stack *s, int offset, Value v);
+void discardStackTop(Stack *s, int num);
+void patchValueList(Stack *s, ValueList *v, int num);
 void ensureCapacity(Stack *s, int n);
 
 ValueList *newValueList(int count);
