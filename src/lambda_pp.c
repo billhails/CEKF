@@ -193,9 +193,25 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_MAKE_TUPLE:
             ppLamMakeTuple(exp->val.make_tuple);
             break;
+        case LAMEXP_TYPE_NAMESPACES:
+            ppLamNameSpaces(exp->val.namespaces);
+            break;
+        case LAMEXP_TYPE_ENV:
+            eprintf("env");
+            break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
+}
+
+void ppLamNameSpaces(LamNameSpaceArray *arr) {
+    eprintf("(namespaces");
+    for (Index i = 0; i < arr->size; ++i) {
+        eprintf(" [");
+        ppLamExp(arr->entries[i]);
+        eprintf("]");
+    }
+    eprintf(")");
 }
 
 void ppHashSymbol(HashSymbol *symbol) {

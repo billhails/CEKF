@@ -37,6 +37,7 @@
 
 static Exp *normalize(LamExp *lamExp, Exp *tail);
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail);
+static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
@@ -61,6 +62,7 @@ static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
+static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
 static AexpList *replaceLamList(LamList *list, LamExpTable *replacements);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
@@ -159,6 +161,10 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeError(tail);
         case LAMEXP_TYPE_MAKE_TUPLE:
             return normalizeMakeTuple(lamExp->val.make_tuple, tail);
+        case LAMEXP_TYPE_NAMESPACES:
+            return normalizeNameSpaces(lamExp->val.namespaces, tail);
+        case LAMEXP_TYPE_ENV:
+            return tail;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
@@ -678,6 +684,35 @@ static Exp *normalizeStdInteger(int integer, Exp *tail) {
     UNPROTECT(save);
     LEAVE(normalizeStdInteger);
     return exp;
+}
+
+static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail) {
+    ENTER(normalizeNameSpaces);
+    AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(nsArray);
+    int save = PROTECT(nsa);
+    AexpNameSpaces *nso = newAexpNameSpaces(nsa, tail);
+    PROTECT(nso);
+    Aexp *aexp = newAexp(AEXP_TYPE_NAMESPACES, AEXP_VAL_NAMESPACES(nso));
+    PROTECT(aexp);
+    Exp *exp = wrapAexp(aexp);
+    UNPROTECT(save);
+    LEAVE(normalizeNameSpaces);
+    return exp;
+}
+
+static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray) {
+    ENTER(aexpNormalizeNameSpaces);
+    AexpNameSpaceArray *res = newAexpNameSpaceArray();
+    int save = PROTECT(res);
+    for (Index i = 0; i < nsArray->size; i++) {
+        Exp *nsExp = normalize(nsArray->entries[i], NULL);
+        int save2 = PROTECT(nsExp);
+        pushAexpNameSpaceArray(res, nsExp);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    LEAVE(aexpNormalizeNameSpaces);
+    return res;
 }
 
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail) {

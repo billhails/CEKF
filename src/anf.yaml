@@ -74,6 +74,10 @@ structs:
         nargs: int
         args: AexpList
 
+    AexpNameSpaces:
+        namespaces: AexpNameSpaceArray
+        body: Exp
+
     CexpIf:
         condition: Aexp
         consequent: Exp
@@ -147,6 +151,7 @@ unions:
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
+        namespaces: AexpNameSpaces
 
     Cexp:
         back: void_ptr
@@ -205,6 +210,10 @@ hashes:
 
     CTIntTable:
         entries: int
+
+arrays:
+    AexpNameSpaceArray:
+        entries: Exp
 
 primitives: !include primitives.yaml
 

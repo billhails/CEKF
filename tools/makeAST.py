@@ -750,7 +750,7 @@ class SimpleArray(Base):
     """
     def __init__(self, name, data):
         super().__init__(name)
-        self.dimension = data["dimension"] or 1
+        self.dimension = data["dimension"] if "dimension" in data else 1
         if self.dimension > 2:
             raise Exception("only 1 or 2 dimensional arrays supported for now")
         if self.dimension == 2:
