@@ -288,6 +288,20 @@ static void annotateExpLet(ExpLet *x, CTEnv *env) {
     UNPROTECT(save);
 }
 
+static void annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
+    for (Index i = 0; i < x->size; ++i) {
+        CTEnv *env2 = newCTEnv(false, env);
+        int save = PROTECT(env2);
+        annotateExp(x->entries[i], env2);
+        UNPROTECT(save);
+    }
+}
+
+static void annotateAexpNameSpaces(AexpNameSpaces *x, CTEnv *env) {
+    annotateAexpNameSpaceArray(x->namespaces, env);
+    annotateExp(x->body, env);
+}
+
 static void annotateAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpMakeVec ");
@@ -335,8 +349,11 @@ static void annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_MAKEVEC:
             annotateAexpMakeVec(x->val.makeVec, env);
             break;
+        case AEXP_TYPE_NAMESPACES:
+            annotateAexpNameSpaces(x->val.namespaces, env);
+            break;
         default:
-            cant_happen("unrecognized type %d in annotateAexp", x->type);
+            cant_happen("unrecognized type %s in annotateAexp", aexpTypeName(x->type));
     }
 }
 
@@ -426,9 +443,10 @@ static void annotateExp(Exp *x, CTEnv *env) {
             annotateExpLet(x->val.let, env);
             break;
         case EXP_TYPE_DONE:
+        case EXP_TYPE_ENV:
             break;
         default:
-            cant_happen("unrecognized type in annotateExp");
+            cant_happen("unrecognized type %s", expTypeName(x->type));
     }
 }
 
