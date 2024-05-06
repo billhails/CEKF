@@ -94,6 +94,7 @@ static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail);
 static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
+static Exp *normalizeEnv(Exp *tail);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -164,7 +165,7 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
         case LAMEXP_TYPE_NAMESPACES:
             return normalizeNameSpaces(lamExp->val.namespaces, tail);
         case LAMEXP_TYPE_ENV:
-            return tail;
+            return normalizeEnv(tail);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
@@ -713,6 +714,17 @@ static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray) {
     UNPROTECT(save);
     LEAVE(aexpNormalizeNameSpaces);
     return res;
+}
+
+static Exp *normalizeEnv(Exp *tail) {
+    ENTER(normalizeEnv);
+    if (tail != NULL) {
+        LEAVE(normalizeEnv);
+        return tail;
+    }
+    Exp *exp = newExp(EXP_TYPE_ENV, EXP_VAL_ENV());
+    LEAVE(normalizeLam);
+    return exp;
 }
 
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail) {

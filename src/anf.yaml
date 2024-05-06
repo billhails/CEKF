@@ -167,6 +167,7 @@ unions:
         match: CexpMatch
 
     Exp:
+        env: void_ptr
         done: void_ptr
         aexp: Aexp
         cexp: Cexp

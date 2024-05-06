@@ -91,6 +91,21 @@ static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
     return x;
 }
 
+static AexpNameSpaceArray *desugarAexpNameSpaceArray(AexpNameSpaceArray *x) {
+    DEBUG_DESUGAR(AexpNameSpaceArray, x);
+    for (Index i = 0; i < x->size; i++) {
+        x->entries[i] = desugarExp(x->entries[i]);
+    }
+    return x;
+}
+
+static AexpNameSpaces *desugarAexpNameSpaces(AexpNameSpaces *x) {
+    DEBUG_DESUGAR(AexpNameSpaces, x);
+    x->namespaces = desugarAexpNameSpaceArray(x->namespaces);
+    x->body = desugarExp(x->body);
+    return x;
+}
+
 static CexpApply *desugarCexpApply(CexpApply *x) {
     DEBUG_DESUGAR(CexpApply, x);
     x->function = desugarAexp(x->function);
@@ -318,8 +333,11 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
             break;
+        case AEXP_TYPE_NAMESPACES:
+            x->val.namespaces = desugarAexpNameSpaces(x->val.namespaces);
+            break;
         default:
-            cant_happen("unrecognized type %d in desugarAexp", x->type);
+            cant_happen("unrecognized type %s in desugarAexp", aexpTypeName(x->type));
     }
     return x;
 }
@@ -374,7 +392,7 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_BACK:
             break;
         default:
-            cant_happen("unrecognized type %d in desugarCexp", x->type);
+            cant_happen("unrecognized type %s in desugarCexp", cexpTypeName(x->type));
     }
     return x;
 }
@@ -396,9 +414,10 @@ Exp *desugarExp(Exp *x) {
             x->val.let = desugarExpLet(x->val.let);
             break;
         case EXP_TYPE_DONE:
+        case EXP_TYPE_ENV:
             break;
         default:
-            cant_happen("unrecognized type %d in desugarExp", x->type);
+            cant_happen("unrecognized type %s in desugarExp", expTypeName(x->type));
     }
     return x;
 }
