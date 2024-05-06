@@ -1,0 +1,31 @@
+let
+    import "ambutils.fn" as amb
+    import "listutils.fn" as list
+
+    fn barrels_of_fun() {
+            // A wine merchant has six barrels of wine and beer containing:
+            //
+            //    30 gallons
+            //    32 gallons
+            //    36 gallons
+            //    38 gallons
+            //    40 gallons
+            //    62 gallons
+            //
+            // Five barrels are filled with wine and one with beer.
+            // The first customer purchases two barrels of wine.
+            // The second customer purchases twice as much wine as the first customer.
+            // Which barrel contains beer? 
+        let
+            barrels = [30, 32, 36, 38, 40, 62];
+            beer = amb.one_of(barrels);
+            wine = list.exclude([beer], barrels);
+            barrel_1 = amb.one_of(wine);
+            barrel_2 = amb.one_of(exclude([barrel_1], wine));
+            purchase = amb.some_of(exclude([barrel_1, barrel_2], wine));
+        in
+            amb.require((barrel_1 + barrel_2) * 2 == list.sum(purchase));
+            beer
+    }
+in
+    print(barrels_of_fun())

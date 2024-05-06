@@ -576,6 +576,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression '/' expression       { $$ = binOpToFunCall(divSymbol(), $1, $3); }
       | expression '%' expression       { $$ = binOpToFunCall(modSymbol(), $1, $3); }
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
+      | expression '.' expression       { $$ = binOpToFunCall(dotSymbol(), $1, $3); }
       ;
 
 expressions : %empty                        { $$ = NULL; }

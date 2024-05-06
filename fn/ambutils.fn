@@ -1,0 +1,16 @@
+fn require(condition) {
+    condition or back
+}
+
+fn one_of {
+    ([]) { back }
+    (h @ t) {
+        h then one_of(t)
+    }
+}
+
+fn some_of {
+    ([]) { back }
+    (h @ t) { [h] then some_of(t) then h @ some_of(t) }
+}
+
