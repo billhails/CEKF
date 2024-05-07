@@ -256,6 +256,7 @@ unions:
         error: void_ptr
         cond_default: void_ptr
         env: void_ptr
+        nsref: int
 
     LamCondCases:
         integers: LamIntCondCases
