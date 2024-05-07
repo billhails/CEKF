@@ -218,7 +218,7 @@ static void annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
             lam->letRecOffset = letRecOffset;
             break;
         default:
-            cant_happen("letrec bindings can only contain lambdas");
+            cant_happen("letrec bindings can only contain lambdas, got %s", aexpTypeName(x->type));
     }
 }
 

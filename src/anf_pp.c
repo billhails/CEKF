@@ -376,6 +376,14 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
+void ppExpLookUp(ExpLookUp *x) {
+    eprintf("(lookup ");
+    printHashSymbol(x->namespace);
+    eprintf(" ");
+    ppExp(x->body);
+    eprintf(")");
+}
+
 void ppAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
@@ -416,6 +424,9 @@ void ppAexp(Aexp *x) {
             break;
         case AEXP_TYPE_NAMESPACES:
             ppAexpNameSpaces(x->val.namespaces);
+            break;
+        case AEXP_TYPE_NSREF:
+            eprintf("<namespace %d>", x->val.nsref);
             break;
         default:
             cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
@@ -480,6 +491,9 @@ void ppExp(Exp *x) {
             break;
         case EXP_TYPE_ENV:
             eprintf("ENV");
+            break;
+        case EXP_TYPE_LOOKUP:
+            ppExpLookUp(x->val.lookUp);
             break;
         default:
             eprintf("<unrecognised exp %s>", expTypeName(x->type));

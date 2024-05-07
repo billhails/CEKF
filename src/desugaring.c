@@ -323,6 +323,7 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_BIGINTEGER:
         case AEXP_TYPE_CHARACTER:
         case AEXP_TYPE_V:
+        case AEXP_TYPE_NSREF:
             break;
         case AEXP_TYPE_PRIM:
             x->val.prim = desugarAexpPrimApp(x->val.prim);
@@ -355,6 +356,11 @@ static CexpMatch *desugarCexpMatch(CexpMatch *x) {
     DEBUG_DESUGAR(CexpMatch, x);
     x->condition = desugarAexp(x->condition);
     x->clauses = desugarMatchList(x->clauses);
+    return x;
+}
+
+static ExpLookUp *desugarExpLookUp(ExpLookUp *x) {
+    x->body = desugarExp(x->body);
     return x;
 }
 
@@ -413,6 +419,8 @@ Exp *desugarExp(Exp *x) {
         case EXP_TYPE_LET:
             x->val.let = desugarExpLet(x->val.let);
             break;
+        case EXP_TYPE_LOOKUP:
+            x->val.lookUp = desugarExpLookUp(x->val.lookUp);
         case EXP_TYPE_DONE:
         case EXP_TYPE_ENV:
             break;
