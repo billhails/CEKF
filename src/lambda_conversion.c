@@ -195,6 +195,16 @@ static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
     return res;
 }
 
+static LamExp *lamConvertLookUp(AstLookUp *lookUp, LamContext *env) {
+    LamExp *expression = convertExpression(lookUp->expression, env);
+    int save = PROTECT(expression);
+    LamLookUp *llu = newLamLookUp(lookUp->namespace, expression);
+    PROTECT(llu);
+    LamExp *res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
+    UNPROTECT(save);
+    return res;
+}
+
 static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
                                           LamContext *env) {
     ENTER(convertFuncDefs);
@@ -805,6 +815,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_TUPLE:
             DEBUG("tuple");
             result = lamConvertTuple(expression->val.tuple, env);
+            break;
+        case AST_EXPRESSION_TYPE_LOOKUP:
+            DEBUG("lookup");
+            result = lamConvertLookUp(expression->val.lookUp, env);
             break;
         default:
             cant_happen

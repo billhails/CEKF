@@ -53,6 +53,9 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_TUPLE:
             ppTcTuple(type->val.tuple);
             break;
+        case TCTYPE_TYPE_ENV:
+            eprintf("<env>");
+            break;
         default:
             eprintf("unrecognized type %s", tcTypeTypeName(type->type));
     }

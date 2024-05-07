@@ -21,8 +21,8 @@ let
             beer = amb.one_of(barrels);
             wine = list.exclude([beer], barrels);
             barrel_1 = amb.one_of(wine);
-            barrel_2 = amb.one_of(exclude([barrel_1], wine));
-            purchase = amb.some_of(exclude([barrel_1, barrel_2], wine));
+            barrel_2 = amb.one_of(list.exclude([barrel_1], wine));
+            purchase = amb.some_of(list.exclude([barrel_1, barrel_2], wine));
         in
             amb.require((barrel_1 + barrel_2) * 2 == list.sum(purchase));
             beer

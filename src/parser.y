@@ -279,6 +279,7 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
     AstAltFunction *altFunction;
     AstAltArgs * altArgs;
     AstNameSpace *nameSpace;
+    AstLookUp *lookUp;
 }
 
 %type <chars> str
@@ -310,6 +311,7 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
 %type <altFunction> alt_function
 %type <altArgs> alt_args
 %type <nameSpace> name_space
+%type <lookUp> look_up
 
 %token BACK
 %token ELSE
@@ -541,6 +543,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
            | print                { $$ = newAstExpression(AST_EXPRESSION_TYPE_PRINT, AST_EXPRESSION_VAL_PRINT($1)); }
            | tuple                { $$ = newAstExpression(AST_EXPRESSION_TYPE_TUPLE, AST_EXPRESSION_VAL_TUPLE($1)); }
+           | look_up              { $$ = newAstExpression(AST_EXPRESSION_TYPE_LOOKUP, AST_EXPRESSION_VAL_LOOKUP($1)); }
            | '(' expression ')'   { $$ = $2; }
            ;
 
@@ -576,8 +579,10 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression '/' expression       { $$ = binOpToFunCall(divSymbol(), $1, $3); }
       | expression '%' expression       { $$ = binOpToFunCall(modSymbol(), $1, $3); }
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
-      | expression '.' expression       { $$ = binOpToFunCall(dotSymbol(), $1, $3); }
       ;
+
+look_up : symbol '.' expression         { $$ = newAstLookUp($1, $3); }
+        ;
 
 expressions : %empty                        { $$ = NULL; }
             | expression                    { $$ = newAstExpressions($1, NULL); }

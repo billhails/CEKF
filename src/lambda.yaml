@@ -57,6 +57,10 @@ structs:
         nargs: int
         args: LamList
 
+    LamLookUp:
+        namespace: HashSymbol
+        exp: LamExp
+
     LamConstant:
         name: HashSymbol # the name of the constructor
         tag: int         # the tag of the constructor
@@ -257,6 +261,7 @@ unions:
         cond_default: void_ptr
         env: void_ptr
         nsref: int
+        lookUp: LamLookUp
 
     LamCondCases:
         integers: LamIntCondCases

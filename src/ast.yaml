@@ -118,6 +118,10 @@ structs:
         expression: AstExpression
         next: AstExpressions
 
+    AstLookUp:
+        namespace: HashSymbol
+        expression: AstExpression
+
     AstIff:
         test: AstExpression
         consequent: AstNest
@@ -151,6 +155,7 @@ unions:
     AstExpression:
         back: void_ptr
         funCall: AstFunCall
+        lookUp: AstLookUp
         symbol: HashSymbol
         number: MaybeBigInt
         character: char
