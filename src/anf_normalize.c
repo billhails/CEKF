@@ -41,6 +41,7 @@ static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
+static Exp *normalizeNsRef(int, Exp *);
 static Exp *normalizeCharacter(char character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAnd(LamAnd *app, Exp *tail);
@@ -110,6 +111,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeLam(lamExp->val.lam, tail);
         case LAMEXP_TYPE_VAR:
             return normalizeVar(lamExp->val.var, tail);
+        case LAMEXP_TYPE_NSREF:
+            return normalizeNsRef(lamExp->val.nsref, tail);
         case LAMEXP_TYPE_STDINT:
             return normalizeStdInteger(lamExp->val.stdint, tail);
         case LAMEXP_TYPE_BIGINTEGER:
@@ -691,6 +694,20 @@ static Exp *normalizeStdInteger(int integer, Exp *tail) {
     return exp;
 }
 
+static Exp *normalizeNsRef(int integer, Exp *tail) {
+    ENTER(normalizeNsRef);
+    if (tail != NULL) {
+        LEAVE(normalizeNsRef);
+        return tail;
+    }
+    Aexp *aexp = aexpNormalizeNsRef(integer);
+    int save = PROTECT(aexp);
+    Exp *exp = wrapAexp(aexp);
+    UNPROTECT(save);
+    LEAVE(normalizeNsRef);
+    return exp;
+}
+
 static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail) {
     ENTER(normalizeNameSpaces);
     AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(nsArray);
@@ -1034,11 +1051,11 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
     return res;
 }
 
-static bool lamExpIsConst(LamExp *val) {
+static bool lamExpIsLambda(LamExp *val) {
     switch (val->type) {
         case LAMEXP_TYPE_LAM:
-        case LAMEXP_TYPE_NSREF:
             return true;
+        case LAMEXP_TYPE_NSREF:
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_BIGINTEGER:
         case LAMEXP_TYPE_CHARACTER:
@@ -1063,9 +1080,9 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_MAKEVEC:
             return false;
         case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("lamExpIsConst encountered cond default");
+            cant_happen("lamExpIsLambda encountered cond default");
         default:
-            cant_happen("unrecognised LamExp type %s in lamExpIsConst",
+            cant_happen("unrecognised LamExp type %s in lamExpIsLambda",
                         lamExpTypeName(val->type));
     }
 }
@@ -1077,7 +1094,7 @@ static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
     }
     cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRecBindings->next);
     int save = PROTECT(cexpLetRec);
-    if (lamExpIsConst(lamLetRecBindings->val)) {
+    if (lamExpIsLambda(lamLetRecBindings->val)) {
         Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
         PROTECT(val);
         cexpLetRec->bindings =

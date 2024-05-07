@@ -199,6 +199,9 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_ENV:
             eprintf("env");
             break;
+        case LAMEXP_TYPE_NSREF:
+            eprintf("<namespace %d>", exp->val.nsref);
+            break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }

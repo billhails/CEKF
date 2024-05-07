@@ -1147,6 +1147,14 @@ static void step() {
                     }
                 }
                 break;
+            case BYTECODE_NS_REF:{
+                    int index = readCurrentWord();
+                    DEBUGPRINTF("NS_REF [%d]\n", index);
+                    // TODO - push the namespace itself.
+                    Value v = stdintValue(index);
+                    push(v);
+                }
+                break;
             case BYTECODE_DONE:{
                     // can't happen, probably
                     DEBUGPRINTF("DONE\n");

@@ -86,7 +86,8 @@ typedef enum ByteCodes {
     BYTECODE_IRRATIONAL_IMAG,
     BYTECODE_NS,
     BYTECODE_NS_END,
-    BYTECODE_NS_FINISH
+    BYTECODE_NS_FINISH,
+    BYTECODE_NS_REF,
 } ByteCodes;
 
 typedef struct ByteCodeArray {

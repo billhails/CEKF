@@ -663,6 +663,11 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
                 writeAexpNameSpaces(x->val.namespaces, b);
             }
             break;
+        case AEXP_TYPE_NSREF:{
+                addByte(b, BYTECODE_NS_REF);
+                addWord(b, x->val.nsref);
+            }
+            break;
         default:
             cant_happen("unrecognized Aexp type %s", aexpTypeName(x->type));
     }
