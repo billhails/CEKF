@@ -139,6 +139,10 @@ structs:
         val: Exp
         body: Exp
 
+    ExpLookUp:
+        namespace: HashSymbol
+        body: Exp
+
 unions:
     CexpCondCases:
         charCases: CexpCharCondCases
@@ -158,6 +162,7 @@ unions:
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
         namespaces: AexpNameSpaces
+        nsref: int
 
     Cexp:
         back: void_ptr
@@ -178,6 +183,7 @@ unions:
         aexp: Aexp
         cexp: Cexp
         let: ExpLet
+        lookUp: ExpLookUp
 
 enums:
     AexpAnnotatedVarType:

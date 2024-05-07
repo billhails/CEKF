@@ -60,6 +60,7 @@ static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
 static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
+static Aexp *aexpNormalizeNsRef(int);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray);
@@ -95,6 +96,7 @@ static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
 static Exp *normalizeEnv(Exp *tail);
+static Exp *normalizeLamLookUp(LamLookUp *, Exp *);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -166,6 +168,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeNameSpaces(lamExp->val.namespaces, tail);
         case LAMEXP_TYPE_ENV:
             return normalizeEnv(tail);
+        case LAMEXP_TYPE_LOOKUP:
+            return normalizeLamLookUp(lamExp->val.lookUp, tail);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
@@ -729,6 +733,16 @@ static Exp *normalizeEnv(Exp *tail) {
     return exp;
 }
 
+static Exp *normalizeLamLookUp(LamLookUp *lookUp, Exp *tail) {
+    Exp *rest = normalize(lookUp->exp, tail);
+    int save = PROTECT(rest);
+    ExpLookUp *exp = newExpLookUp(lookUp->namespace, rest);
+    PROTECT(exp);
+    Exp *res = newExp(EXP_TYPE_LOOKUP, EXP_VAL_LOOKUP(exp));
+    UNPROTECT(save);
+    return res;
+}
+
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail) {
     ENTER(normalizeLam);
     if (tail != NULL) {
@@ -858,6 +872,10 @@ static Aexp *aexpNormalizeStdInteger(int integer) {
     return newAexp(AEXP_TYPE_LITTLEINTEGER, AEXP_VAL_LITTLEINTEGER(integer));
 }
 
+static Aexp *aexpNormalizeNsRef(int nsref) {
+    return newAexp(AEXP_TYPE_NSREF, AEXP_VAL_NSREF(nsref));
+}
+
 static Aexp *aexpNormalizeCharacter(char character) {
     return newAexp(AEXP_TYPE_CHARACTER, AEXP_VAL_CHARACTER(character));
 }
@@ -956,6 +974,9 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_STDINT:
             res = aexpNormalizeStdInteger(lamExp->val.stdint);
             break;
+        case LAMEXP_TYPE_NSREF:
+            res = aexpNormalizeNsRef(lamExp->val.nsref);
+            break;
         case LAMEXP_TYPE_PRIM:
             res = replaceLamPrim(lamExp->val.prim, replacements);
             break;
@@ -987,6 +1008,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_CHARACTER:
             res = aexpNormalizeCharacter(lamExp->val.character);
             break;
+        case LAMEXP_TYPE_LOOKUP:
         case LAMEXP_TYPE_LIST:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
@@ -1015,6 +1037,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
 static bool lamExpIsConst(LamExp *val) {
     switch (val->type) {
         case LAMEXP_TYPE_LAM:
+        case LAMEXP_TYPE_NSREF:
             return true;
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_BIGINTEGER:
@@ -1042,8 +1065,8 @@ static bool lamExpIsConst(LamExp *val) {
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("lamExpIsConst encountered cond default");
         default:
-            cant_happen("unrecognised LamExp type %d in lamExpIsConst",
-                        val->type);
+            cant_happen("unrecognised LamExp type %s in lamExpIsConst",
+                        lamExpTypeName(val->type));
     }
 }
 
