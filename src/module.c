@@ -34,6 +34,7 @@ static PmModule *newPmModule() {
     yylex_init_extra(x, &scanner);
     x->bufStack = NULL;
     x->nest = NULL;
+    x->namespaces = newAstIntTable();
     x->scanner = scanner;
     return x;
 }

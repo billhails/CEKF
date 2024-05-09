@@ -240,6 +240,22 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
     return ns;
 }
 
+static void storeNameSpace(PmModule *mod, AstNameSpace *ns) {
+    if (getAstIntTable(mod->namespaces, ns->symbol, NULL)) {
+        cant_happen("redefinition of namespace %s", ns->symbol->name);
+    }
+    setAstIntTable(mod->namespaces, ns->symbol, ns->reference);
+}
+
+static AstLookUp *makeAstLookUp(PmModule *mod, HashSymbol *symbol, AstExpression *expr) {
+    int index = 0;
+    if (getAstIntTable(mod->namespaces, symbol, &index)) {
+        return newAstLookUp(index, expr);
+    } else {
+        cant_happen("cannot resolve namespace %s", symbol->name);
+    }
+}
+
 %}
 %code requires
 {
@@ -386,7 +402,10 @@ definitions : %empty                            { $$ = NULL; }
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
            | typedef                   { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
            | defun                     { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
-           | name_space                { $$ = newAstDefinition( AST_DEFINITION_TYPE_NAMESPACE, AST_DEFINITION_VAL_NAMESPACE($1)); }
+           | name_space                {
+                                           storeNameSpace(mod, $1);
+                                           $$ = newAstDefinition( AST_DEFINITION_TYPE_BLANK, AST_DEFINITION_VAL_BLANK());
+                                       }
            ;
 
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
@@ -581,7 +600,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
       ;
 
-look_up : symbol '.' expression         { $$ = newAstLookUp($1, $3); }
+look_up : symbol '.' expression         { $$ = makeAstLookUp(mod, $1, $3); }
         ;
 
 expressions : %empty                        { $$ = NULL; }

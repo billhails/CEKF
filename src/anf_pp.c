@@ -25,6 +25,22 @@
 #include "anf_pp.h"
 #include "hash.h"
 
+void ppCTEnv(CTEnv *env) {
+    eprintf("[\n");
+    if (env == NULL) {
+        eprintf("]\n");
+        return;
+    }
+    Index i = 0;
+    HashSymbol *key;
+    int value;
+    while ((key = iterateCTIntTable(env->table, &i, &value)) != NULL) {
+        eprintf("%s: %d\n", key->name, value);
+    }
+    ppCTEnv(env->next);
+    eprintf("]\n");
+}
+
 void ppAexpLam(AexpLam *x) {
     eprintf("(lambda ");
     ppAexpVarList(x->args);
@@ -377,9 +393,7 @@ void ppCexpMatch(CexpMatch *x) {
 }
 
 void ppExpLookUp(ExpLookUp *x) {
-    eprintf("(lookup ");
-    printHashSymbol(x->namespace);
-    eprintf(" ");
+    eprintf("(lookup <namespace %d> ", x->namespace);
     ppExp(x->body);
     eprintf(")");
 }

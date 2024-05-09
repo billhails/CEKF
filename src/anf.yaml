@@ -31,6 +31,7 @@ structs:
         isLocal: bool
         isNameSpace: bool = false
         nbindings: int = 0
+        nsEnvs: CTEnvArray = NULL
         table: CTIntTable
         next: CTEnv
 
@@ -140,7 +141,7 @@ structs:
         body: Exp
 
     ExpLookUp:
-        namespace: HashSymbol
+        namespace: index
         body: Exp
 
 unions:
@@ -227,6 +228,9 @@ hashes:
 arrays:
     AexpNameSpaceArray:
         entries: AexpNameSpace
+
+    CTEnvArray:
+        entries: CTEnv
 
 primitives: !include primitives.yaml
 

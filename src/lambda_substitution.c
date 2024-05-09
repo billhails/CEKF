@@ -127,7 +127,6 @@ static LamPrint *performPrintSubstitutions(LamPrint *print, TpmcSubstitutionTabl
 }
 
 static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp, TpmcSubstitutionTable *substitutions) {
-    lookUp->namespace = performVarSubstitutions(lookUp->namespace, substitutions);
     lookUp->exp = lamPerformSubstitutions(lookUp->exp, substitutions);
     return lookUp;
 }

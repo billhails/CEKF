@@ -41,7 +41,6 @@ static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
-static Exp *normalizeNsRef(int, Exp *);
 static Exp *normalizeCharacter(char character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAnd(LamAnd *app, Exp *tail);
@@ -61,7 +60,6 @@ static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
 static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
-static Aexp *aexpNormalizeNsRef(int);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray);
@@ -111,8 +109,6 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeLam(lamExp->val.lam, tail);
         case LAMEXP_TYPE_VAR:
             return normalizeVar(lamExp->val.var, tail);
-        case LAMEXP_TYPE_NSREF:
-            return normalizeNsRef(lamExp->val.nsref, tail);
         case LAMEXP_TYPE_STDINT:
             return normalizeStdInteger(lamExp->val.stdint, tail);
         case LAMEXP_TYPE_BIGINTEGER:
@@ -694,20 +690,6 @@ static Exp *normalizeStdInteger(int integer, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeNsRef(int integer, Exp *tail) {
-    ENTER(normalizeNsRef);
-    if (tail != NULL) {
-        LEAVE(normalizeNsRef);
-        return tail;
-    }
-    Aexp *aexp = aexpNormalizeNsRef(integer);
-    int save = PROTECT(aexp);
-    Exp *exp = wrapAexp(aexp);
-    UNPROTECT(save);
-    LEAVE(normalizeNsRef);
-    return exp;
-}
-
 static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail) {
     ENTER(normalizeNameSpaces);
     AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(nsArray);
@@ -889,10 +871,6 @@ static Aexp *aexpNormalizeStdInteger(int integer) {
     return newAexp(AEXP_TYPE_LITTLEINTEGER, AEXP_VAL_LITTLEINTEGER(integer));
 }
 
-static Aexp *aexpNormalizeNsRef(int nsref) {
-    return newAexp(AEXP_TYPE_NSREF, AEXP_VAL_NSREF(nsref));
-}
-
 static Aexp *aexpNormalizeCharacter(char character) {
     return newAexp(AEXP_TYPE_CHARACTER, AEXP_VAL_CHARACTER(character));
 }
@@ -991,9 +969,6 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_STDINT:
             res = aexpNormalizeStdInteger(lamExp->val.stdint);
             break;
-        case LAMEXP_TYPE_NSREF:
-            res = aexpNormalizeNsRef(lamExp->val.nsref);
-            break;
         case LAMEXP_TYPE_PRIM:
             res = replaceLamPrim(lamExp->val.prim, replacements);
             break;
@@ -1055,7 +1030,6 @@ static bool lamExpIsLambda(LamExp *val) {
     switch (val->type) {
         case LAMEXP_TYPE_LAM:
             return true;
-        case LAMEXP_TYPE_NSREF:
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_BIGINTEGER:
         case LAMEXP_TYPE_CHARACTER:

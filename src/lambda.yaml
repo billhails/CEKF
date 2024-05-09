@@ -58,7 +58,7 @@ structs:
         args: LamList
 
     LamLookUp:
-        namespace: HashSymbol
+        namespace: int
         exp: LamExp
 
     LamConstant:
@@ -260,7 +260,6 @@ unions:
         error: void_ptr
         cond_default: void_ptr
         env: void_ptr
-        nsref: int
         lookUp: LamLookUp
 
     LamCondCases:

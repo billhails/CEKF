@@ -9,6 +9,7 @@ typedef struct PmModule {
     struct PmBufStack *bufStack;
     void *scanner;
     AstNest *nest;
+    AstIntTable *namespaces;
 } PmModule;
 
 AstDefinitions *parseNameSpaceFromString(const char *namespace, const char *origin);

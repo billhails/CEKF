@@ -25,7 +25,9 @@
 #include "common.h"
 #include "annotate.h"
 #include "anf.h"
+#include "anf_pp.h"
 #include "types.h"
+#include "symbol.h"
 
 #ifdef DEBUG_ANNOTATE
 #  include "debug.h"
@@ -34,29 +36,30 @@
 static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
 static void populateCTEnv(CTEnv *env, HashSymbol *var);
 
-static void annotateExp(Exp *x, CTEnv *env);
-static void annotateAexpLam(AexpLam *x, CTEnv *env);
+static CTEnv *annotateExp(Exp *x, CTEnv *env);
+static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env);
 static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env);
-static void annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
-static void annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
-static void annotateAexpList(AexpList *x, CTEnv *env);
-static void annotateCexpApply(CexpApply *x, CTEnv *env);
-static void annotateCexpIf(CexpIf *x, CTEnv *env);
-static void annotateCexpCond(CexpCond *x, CTEnv *env);
-static void annotateCexpCondCases(CexpCondCases *x, CTEnv *env);
-static void annotateCexpLetRec(CexpLetRec *x, CTEnv *env);
-static void annotateCexpAmb(CexpAmb *x, CTEnv *env);
-static void annotateCexpCut(CexpCut *x, CTEnv *env);
-static void annotateExpLet(ExpLet *x, CTEnv *env);
-static void annotateAexp(Aexp *x, CTEnv *env);
-static void annotateCexp(Cexp *x, CTEnv *env);
+static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
+static CTEnv *annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
+static CTEnv *annotateAexpList(AexpList *x, CTEnv *env);
+static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env);
+static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env);
+static CTEnv *annotateCexpCond(CexpCond *x, CTEnv *env);
+static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env);
+static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env);
+static CTEnv *annotateCexpAmb(CexpAmb *x, CTEnv *env);
+static CTEnv *annotateCexpCut(CexpCut *x, CTEnv *env);
+static CTEnv *annotateExpLet(ExpLet *x, CTEnv *env);
+static CTEnv *annotateAexp(Aexp *x, CTEnv *env);
+static CTEnv *annotateCexp(Cexp *x, CTEnv *env);
+static CTEnvArray *getNsEnvs(CTEnv *env);
 
 static void hashAddCTVar(CTIntTable *table, HashSymbol *var) {
     int count = countCTIntTable(table);
     setCTIntTable(table, var, count);
 }
 
-static void annotateAexpLam(AexpLam *x, CTEnv *env) {
+static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpLam ");
     printAexpLam(x);
@@ -75,6 +78,7 @@ static void annotateAexpLam(AexpLam *x, CTEnv *env) {
     }
     annotateExp(x->exp, env);
     UNPROTECT(save);
+    return env;
 }
 
 static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env) {
@@ -96,10 +100,11 @@ static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env) {
                                        frame - 1, offset, x);
         }
     }
+    ppCTEnv(env);
     cant_happen("no binding for var '%s' in annotateAexpVar", x->name);
 }
 
-static void annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
+static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpPrimApp ");
     printAexpPrimApp(x);
@@ -109,9 +114,10 @@ static void annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
 #endif
     annotateAexp(x->exp1, env);
     annotateAexp(x->exp2, env);
+    return env;
 }
 
-static void annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
+static CTEnv *annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpPrimApp ");
     printAexpUnaryApp(x);
@@ -120,9 +126,10 @@ static void annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
     eprintf("\n");
 #endif
     annotateAexp(x->exp, env);
+    return env;
 }
 
-static void annotateAexpList(AexpList *x, CTEnv *env) {
+static CTEnv *annotateAexpList(AexpList *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpList ");
     printAexpList(x);
@@ -130,13 +137,15 @@ static void annotateAexpList(AexpList *x, CTEnv *env) {
     printCTEnv(env, 0);
     eprintf("\n");
 #endif
+    CTEnv *res;
     while (x != NULL) {
-        annotateAexp(x->exp, env);
+        res = annotateAexp(x->exp, env);
         x = x->next;
     }
+    return res;
 }
 
-static void annotateCexpApply(CexpApply *x, CTEnv *env) {
+static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpApply ");
     printCexpApply(x);
@@ -146,9 +155,10 @@ static void annotateCexpApply(CexpApply *x, CTEnv *env) {
 #endif
     annotateAexp(x->function, env);
     annotateAexpList(x->args, env);
+    return env;
 }
 
-static void annotateCexpIf(CexpIf *x, CTEnv *env) {
+static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpIf ");
     printCexpIf(x);
@@ -159,9 +169,10 @@ static void annotateCexpIf(CexpIf *x, CTEnv *env) {
     annotateAexp(x->condition, env);
     annotateExp(x->consequent, env);
     annotateExp(x->alternative, env);
+    return env;
 }
 
-static void annotateCexpCond(CexpCond *x, CTEnv *env) {
+static CTEnv *annotateCexpCond(CexpCond *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpCond ");
     printCexpCond(x);
@@ -171,25 +182,28 @@ static void annotateCexpCond(CexpCond *x, CTEnv *env) {
 #endif
     annotateAexp(x->condition, env);
     annotateCexpCondCases(x->cases, env);
+    return env;
 }
 
-static void annotateCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
+static CTEnv *annotateCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
     if (x == NULL)
-        return;
+        return env;
     annotateExp(x->body, env);
     annotateCexpIntCondCases(x->next, env);
+    return env;
 }
 
-static void annotateCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
+static CTEnv *annotateCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
     if (x == NULL)
-        return;
+        return env;
     annotateExp(x->body, env);
     annotateCexpCharCondCases(x->next, env);
+    return env;
 }
 
-static void annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
+static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
     if (x == NULL)
-        return;
+        return env;
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpCondCases ");
     printCexpCondCases(x);
@@ -199,18 +213,16 @@ static void annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
 #endif
     switch (x->type) {
         case CEXPCONDCASES_TYPE_INTCASES:
-            annotateCexpIntCondCases(x->val.intCases, env);
-            break;
+            return annotateCexpIntCondCases(x->val.intCases, env);
         case CEXPCONDCASES_TYPE_CHARCASES:
-            annotateCexpCharCondCases(x->val.charCases, env);
-            break;
+            return annotateCexpCharCondCases(x->val.charCases, env);
         default:
             cant_happen("unrecognised type %d in annotateCexpCondCases",
                         x->type);
     }
 }
 
-static void annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
+static CTEnv *annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
             AexpLam *lam = x->val.lam;
@@ -220,9 +232,10 @@ static void annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
         default:
             cant_happen("letrec bindings can only contain lambdas, got %s", aexpTypeName(x->type));
     }
+    return env;
 }
 
-static void annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
+static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpLetRec ");
     printCexpLetRec(x);
@@ -245,9 +258,10 @@ static void annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
     }
     annotateExp(x->body, env);
     UNPROTECT(save);
+    return env;
 }
 
-static void annotateCexpAmb(CexpAmb *x, CTEnv *env) {
+static CTEnv *annotateCexpAmb(CexpAmb *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpAmb ");
     printCexpAmb(x);
@@ -257,9 +271,10 @@ static void annotateCexpAmb(CexpAmb *x, CTEnv *env) {
 #endif
     annotateExp(x->exp1, env);
     annotateExp(x->exp2, env);
+    return env;
 }
 
-static void annotateCexpCut(CexpCut *x, CTEnv *env) {
+static CTEnv *annotateCexpCut(CexpCut *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpCut ");
     printCexpCut(x);
@@ -268,9 +283,10 @@ static void annotateCexpCut(CexpCut *x, CTEnv *env) {
     eprintf("\n");
 #endif
     annotateExp(x->exp, env);
+    return env;
 }
 
-static void annotateExpLet(ExpLet *x, CTEnv *env) {
+static CTEnv *annotateExpLet(ExpLet *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateExpLet ");
     printExpLet(x);
@@ -286,25 +302,49 @@ static void annotateExpLet(ExpLet *x, CTEnv *env) {
     populateCTEnv(env, x->var);
     annotateExp(x->body, env);
     UNPROTECT(save);
+    return env;
 }
 
-static void annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
+static CTEnvArray *getNsEnvs(CTEnv *env) {
+    while (env->next != NULL) {
+        env = env->next; // should be at the root
+    }
+#ifdef SAFETY_CHECKS
+    if (env->nsEnvs == NULL) {
+        cant_happen("namespaces not registered");
+    }
+#endif
+    return env->nsEnvs;
+}
+
+static CTEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
+    CTEnvArray *nsEnvs = getNsEnvs(env);
     for (Index i = 0; i < x->size; ++i) {
+        char buf[80];
+        sprintf(buf, "$ns%u", i);
+        HashSymbol *nsName = newSymbol(buf);
+        setCTIntTable(env->table, nsName, (Integer) i); // pad
         CTEnv *env2 = newCTEnv(true, env);
         int save = PROTECT(env2);
         env2->isNameSpace = true;
-        annotateExp(x->entries[i]->body, env2);
+        CTEnv *env3 = annotateExp(x->entries[i]->body, env2);
+        PROTECT(env3);
         x->entries[i]->nbindings = env2->nbindings;
+        pushCTEnvArray(nsEnvs, env3);
+        eprintf("annotateAexpNameSpaceArray\n");
+        ppCTEnv(env2);
         UNPROTECT(save);
     }
+    return env;
 }
 
-static void annotateAexpNameSpaces(AexpNameSpaces *x, CTEnv *env) {
+static CTEnv *annotateAexpNameSpaces(AexpNameSpaces *x, CTEnv *env) {
     annotateAexpNameSpaceArray(x->namespaces, env);
     annotateExp(x->body, env);
+    return env;
 }
 
-static void annotateAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
+static CTEnv *annotateAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexpMakeVec ");
     printAexpMakeVec(x);
@@ -313,9 +353,10 @@ static void annotateAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
     eprintf("\n");
 #endif
     annotateAexpList(x->args, env);
+    return env;
 }
 
-static void annotateAexp(Aexp *x, CTEnv *env) {
+static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateAexp ");
     printAexp(x);
@@ -325,16 +366,14 @@ static void annotateAexp(Aexp *x, CTEnv *env) {
 #endif
     switch (x->type) {
         case AEXP_TYPE_LAM:
-            annotateAexpLam(x->val.lam, env);
-            break;
+            return annotateAexpLam(x->val.lam, env);
         case AEXP_TYPE_VAR:
             x->val.annotatedVar = annotateAexpVar(x->val.var, env);
             x->type = AEXP_TYPE_ANNOTATEDVAR;
-            break;
+            return env;
         case AEXP_TYPE_ANNOTATEDVAR:
             cant_happen("annotateAexp called on annotated var %s",
                         x->val.annotatedVar->var->name);
-            break;
         case AEXP_TYPE_T:
         case AEXP_TYPE_F:
         case AEXP_TYPE_BIGINTEGER:
@@ -342,25 +381,21 @@ static void annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_CHARACTER:
         case AEXP_TYPE_V:
         case AEXP_TYPE_NSREF:
-            break;
+            return env;
         case AEXP_TYPE_PRIM:
-            annotateAexpPrimApp(x->val.prim, env);
-            break;
+            return annotateAexpPrimApp(x->val.prim, env);
         case AEXP_TYPE_UNARY:
-            annotateAexpUnaryApp(x->val.unary, env);
-            break;
+            return annotateAexpUnaryApp(x->val.unary, env);
         case AEXP_TYPE_MAKEVEC:
-            annotateAexpMakeVec(x->val.makeVec, env);
-            break;
+            return annotateAexpMakeVec(x->val.makeVec, env);
         case AEXP_TYPE_NAMESPACES:
-            annotateAexpNameSpaces(x->val.namespaces, env);
-            break;
+            return annotateAexpNameSpaces(x->val.namespaces, env);
         default:
             cant_happen("unrecognized type %s in annotateAexp", aexpTypeName(x->type));
     }
 }
 
-static void annotateMatchList(MatchList *x, CTEnv *env) {
+static CTEnv *annotateMatchList(MatchList *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateMatchList ");
     printMatchList(x);
@@ -369,12 +404,13 @@ static void annotateMatchList(MatchList *x, CTEnv *env) {
     eprintf("\n");
 #endif
     if (x == NULL)
-        return;
+        return env;
     annotateExp(x->body, env);
     annotateMatchList(x->next, env);
+    return env;
 }
 
-static void annotateCexpMatch(CexpMatch *x, CTEnv *env) {
+static CTEnv *annotateCexpMatch(CexpMatch *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexpMatch ");
     printCexpMatch(x);
@@ -384,9 +420,10 @@ static void annotateCexpMatch(CexpMatch *x, CTEnv *env) {
 #endif
     annotateAexp(x->condition, env);
     annotateMatchList(x->clauses, env);
+    return env;
 }
 
-static void annotateCexp(Cexp *x, CTEnv *env) {
+static CTEnv *annotateCexp(Cexp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateCexp ");
     printCexp(x);
@@ -396,51 +433,54 @@ static void annotateCexp(Cexp *x, CTEnv *env) {
 #endif
     switch (x->type) {
         case CEXP_TYPE_APPLY:
-            annotateCexpApply(x->val.apply, env);
-            break;
+            return annotateCexpApply(x->val.apply, env);
         case CEXP_TYPE_IFF:
-            annotateCexpIf(x->val.iff, env);
-            break;
+            return annotateCexpIf(x->val.iff, env);
         case CEXP_TYPE_COND:
-            annotateCexpCond(x->val.cond, env);
-            break;
+            return annotateCexpCond(x->val.cond, env);
         case CEXP_TYPE_CALLCC:
-            annotateAexp(x->val.callCC, env);
-            break;
+            return annotateAexp(x->val.callCC, env);
         case CEXP_TYPE_LETREC:
-            annotateCexpLetRec(x->val.letRec, env);
-            break;
+            return annotateCexpLetRec(x->val.letRec, env);
         case CEXP_TYPE_AMB:
-            annotateCexpAmb(x->val.amb, env);
-            break;
+            return annotateCexpAmb(x->val.amb, env);
         case CEXP_TYPE_CUT:
-            annotateCexpCut(x->val.cut, env);
-            break;
+            return annotateCexpCut(x->val.cut, env);
         case CEXP_TYPE_MATCH:
-            annotateCexpMatch(x->val.match, env);
-            break;
+            return annotateCexpMatch(x->val.match, env);
         case CEXP_TYPE_BACK:
         case CEXP_TYPE_ERROR:
-            break;
+            return env;
         default:
             cant_happen("unrecognized type %d in annotateCexp", x->type);
     }
 }
 
-static void annotateExpEnv(CTEnv *env) {
+static CTEnv *annotateExpEnv(CTEnv *env) {
     int nbindings = 0;
+    CTEnv *orig = env;
     while (env != NULL) {
         nbindings += countCTIntTable(env->table);
         if (env->isNameSpace) {
             env->nbindings = nbindings;
-            return;
+            return orig;
         }
         env = env->next;
     }
     cant_happen("failed to find namespace env");
 }
 
-static void annotateExp(Exp *x, CTEnv *env) {
+static CTEnv *annotateExpLookup(ExpLookUp *lookup, CTEnv *env) {
+    CTEnvArray *envs = getNsEnvs(env);
+#ifdef SAFETY_chECKS
+    if (lookup->namespace >= envs->size) {
+        cant_happen("namespace index %u out of range", lookup->namespace);
+    }
+#endif
+    return annotateExp(lookup->body, envs->entries[lookup->namespace]);
+}
+
+static CTEnv * annotateExp(Exp *x, CTEnv *env) {
 #ifdef DEBUG_ANALIZE
     eprintf("annotateExp ");
     printExp(x);
@@ -450,25 +490,23 @@ static void annotateExp(Exp *x, CTEnv *env) {
 #endif
     switch (x->type) {
         case EXP_TYPE_AEXP:
-            annotateAexp(x->val.aexp, env);
-            break;
+            return annotateAexp(x->val.aexp, env);
         case EXP_TYPE_CEXP:
-            annotateCexp(x->val.cexp, env);
-            break;
+            return annotateCexp(x->val.cexp, env);
         case EXP_TYPE_LET:
-            annotateExpLet(x->val.let, env);
-            break;
+            return annotateExpLet(x->val.let, env);
         case EXP_TYPE_ENV:
-            annotateExpEnv(env);
-            break;
+            return annotateExpEnv(env);
         case EXP_TYPE_DONE:
-            break;
+            return env;
+        case EXP_TYPE_LOOKUP:
+            return annotateExpLookup(x->val.lookUp, env);
         default:
             cant_happen("unrecognized type %s", expTypeName(x->type));
     }
 }
 
-void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
+static void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
     for (Index i = 0; i < b->size; i++) {
         populateCTEnv(env, b->entries[i]->name);
     }
@@ -477,6 +515,7 @@ void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
 void annotateAnf(Exp *x, BuiltIns *b) {
     CTEnv *env = newCTEnv(false, NULL);
     int save = PROTECT(env);
+    env->nsEnvs = newCTEnvArray();
     addBuiltInsToCTEnv(env, b);
     env = newCTEnv(false, env);
     REPLACE_PROTECT(save, env);

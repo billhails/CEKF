@@ -45,8 +45,6 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
                                             LamLetRecBindings *next);
 static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
                                         LamLetRecBindings *next);
-static LamLetRecBindings *prependNameSpace(AstNameSpace *nameSpace,
-                                        LamLetRecBindings *next);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
@@ -437,8 +435,8 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
         case AST_DEFINITION_TYPE_TYPEDEF:
             result = next;
             break;
-        case AST_DEFINITION_TYPE_NAMESPACE:
-            result = prependNameSpace(definition->val.nameSpace, next);
+        case AST_DEFINITION_TYPE_BLANK:
+            result = next;
             break;
         default:
             cant_happen
@@ -498,17 +496,6 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
         newLamLetRecBindings(dollarSubstitute(define->symbol), exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
-    return this;
-}
-
-static LamLetRecBindings *prependNameSpace(AstNameSpace * nameSpace, LamLetRecBindings * next) {
-    ENTER(prependNameSpace);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_NSREF, LAMEXP_VAL_NSREF(nameSpace->reference));
-    int save = PROTECT(exp);
-    LamLetRecBindings *this =
-        newLamLetRecBindings(nameSpace->symbol, exp, next);
-    UNPROTECT(save);
-    LEAVE(prependNameSpace);
     return this;
 }
 

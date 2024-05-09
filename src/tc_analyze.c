@@ -216,8 +216,6 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeNameSpaces(exp->val.namespaces, env, ng));
         case LAMEXP_TYPE_ENV:
             return prune(analyzeEnv(env));
-        case LAMEXP_TYPE_NSREF:
-            return lookupNsRef(exp->val.nsref, env);
         case LAMEXP_TYPE_LOOKUP:
             return prune(analyzeLookUp(exp->val.lookUp, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
@@ -562,12 +560,8 @@ static TcType *lookupNsRef(int index, TcEnv *env) {
 }
 
 static TcType *analyzeLookUp(LamLookUp *lookUp, TcEnv *env, TcNg *ng) {
-    TcType *nsEnv = analyzeVar(lookUp->namespace, env, ng);
-    if (nsEnv->type != TCTYPE_TYPE_ENV) {
-        can_happen("%s should be a namespace, got %s", lookUp->namespace->name, tcTypeTypeName(nsEnv->type));
-        return nsEnv; // or anything really
-    }
-    return analyzeExp(lookUp->exp, nsEnv->val.env, ng);
+    TcType *nsType = lookupNsRef(lookUp->namespace, env);
+    return analyzeExp(lookUp->exp, nsType->val.env, ng);
 }
 
 static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *ng) {
