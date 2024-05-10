@@ -1157,14 +1157,6 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_NS_REF:{
-                    int index = readCurrentWord();
-                    DEBUGPRINTF("NS_REF [%d]\n", index);
-                    // TODO - not used
-                    Value v = stdintValue(index);
-                    push(v);
-                }
-                break;
             case BYTECODE_NS_PUSHS:{
                     int offset = readCurrentWord();
                     DEBUGPRINTF("NS_PUSHS [%d]\n", offset);

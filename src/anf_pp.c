@@ -439,9 +439,6 @@ void ppAexp(Aexp *x) {
         case AEXP_TYPE_NAMESPACES:
             ppAexpNameSpaces(x->val.namespaces);
             break;
-        case AEXP_TYPE_NSREF:
-            eprintf("<namespace %d>", x->val.nsref);
-            break;
         default:
             cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
     }

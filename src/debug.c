@@ -693,11 +693,6 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("NS_FINISH [%d]\n", count);
                 }
                 break;
-            case BYTECODE_NS_REF:{
-                    int index = readWord(bca, &i);
-                    eprintf("NS_REF [%d]\n", index); // TODO unused
-                }
-                break;
             case BYTECODE_NS_PUSHS:{
                     int offset = readWord(bca, &i);
                     eprintf("NS_PUSHS [%d]\n", offset);

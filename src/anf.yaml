@@ -164,7 +164,6 @@ unions:
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
         namespaces: AexpNameSpaces
-        nsref: int
 
     Cexp:
         back: void_ptr

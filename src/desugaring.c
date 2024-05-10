@@ -323,7 +323,6 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_BIGINTEGER:
         case AEXP_TYPE_CHARACTER:
         case AEXP_TYPE_V:
-        case AEXP_TYPE_NSREF:
             break;
         case AEXP_TYPE_PRIM:
             x->val.prim = desugarAexpPrimApp(x->val.prim);

@@ -387,7 +387,6 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_LITTLEINTEGER:
         case AEXP_TYPE_CHARACTER:
         case AEXP_TYPE_V:
-        case AEXP_TYPE_NSREF:
             return env;
         case AEXP_TYPE_PRIM:
             return annotateAexpPrimApp(x->val.prim, env);

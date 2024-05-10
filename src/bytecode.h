@@ -87,9 +87,8 @@ typedef enum ByteCodes {
     BYTECODE_NS_START,
     BYTECODE_NS_END,
     BYTECODE_NS_FINISH,
-    BYTECODE_NS_REF,
-
     BYTECODE_NS_PUSHS,
+
     BYTECODE_NS_PUSHE,
     BYTECODE_NS_POP,
 } ByteCodes;
