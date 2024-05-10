@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2024-05-06T13:52:09.351Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.5 Chrome/114.0.5735.243 Electron/25.3.1 Safari/537.36" etag="cuWcFQtD9HfAIMx-mdvD" version="21.6.5" type="device">
+<mxfile host="Electron" modified="2024-05-09T11:14:39.214Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.5 Chrome/114.0.5735.243 Electron/25.3.1 Safari/537.36" etag="0FTlrreOmK3rTLc4BkGG" version="21.6.5" type="device">
   <diagram name="Page-1" id="yIDAEztSjo-4_MmFZCgr">
     <mxGraphModel dx="1146" dy="1185" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -323,8 +323,8 @@
         <mxCell id="PpCb7u349MtG7CTALe52-5" value="BYTECODE_NS_FINISH" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontStyle=1" parent="1" vertex="1">
           <mxGeometry x="320" y="680" width="150" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="pXGmpi00mEqz8ZOzGqVF-36" value="BYTECODE_NS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="320" y="240" width="110" height="40" as="geometry" />
+        <mxCell id="pXGmpi00mEqz8ZOzGqVF-36" value="BYTECODE_NS_START" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="320" y="240" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="PpCb7u349MtG7CTALe52-10" value="Number of namespaces to expect." style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="170" y="285" width="140" height="30" as="geometry" />
@@ -425,7 +425,7 @@
         <mxCell id="PpCb7u349MtG7CTALe52-42" value="Number of namespaces&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="230" y="725" width="80" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="lr1bdg0yy20Js8qpLIee-1" value="Namespace offset from TOS" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="lr1bdg0yy20Js8qpLIee-1" value="Namespace offset from TOS" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="220" y="645" width="90" height="30" as="geometry" />
         </mxCell>
       </root>

@@ -76,6 +76,10 @@ static inline void extend(int i) {
     extendStack(&state.S, i);
 }
 
+static inline void recordNsPosition() {
+    state.nsPosition = state.S.sp;
+}
+
 static inline void discard(int num) {
     discardStackTop(&state.S, num);
 }
@@ -94,6 +98,10 @@ static inline Value peek(int index) {
 
 static inline Value tos(void) {
     return peekTop(&state.S);
+}
+
+static inline Value getNamespace(int index) {
+    return peek(state.nsPosition + index);
 }
 
 static void copyToVec(Vec *vec) {
@@ -123,6 +131,7 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
+    state.nsPosition = 0;
     if (first) {
         initStack(&state.S);
     } else {
@@ -1111,9 +1120,10 @@ static void step() {
                     applyProc(1);
                 }
                 break;
-            case BYTECODE_NS:{
+            case BYTECODE_NS_START:{
                     int num = readCurrentWord();
-                    DEBUGPRINTF("NS [%d]\n", num);
+                    DEBUGPRINTF("NS_START [%d]\n", num);
+                    recordNsPosition();
                     extend(num);
                 }
                 break;
@@ -1150,9 +1160,50 @@ static void step() {
             case BYTECODE_NS_REF:{
                     int index = readCurrentWord();
                     DEBUGPRINTF("NS_REF [%d]\n", index);
-                    // TODO - push the namespace itself.
+                    // TODO - not used
                     Value v = stdintValue(index);
                     push(v);
+                }
+                break;
+            case BYTECODE_NS_PUSHS:{
+                    int offset = readCurrentWord();
+                    DEBUGPRINTF("NS_PUSHS [%d]\n", offset);
+                    Value v = peek(offset);
+#ifdef SAFETY_CHECKS
+                    if (v.type != VALUE_TYPE_NAMESPACE) {
+                        cant_happen("expected namespace, got type %d", v.type);
+                    }
+#endif
+                    state.K = newKont(offset, state.E, state.K);
+                    snapshotKont(&state.S, state.K);
+                    restoreNamespace(&state.S, v.val.namespace);
+                }
+                break;
+            case BYTECODE_NS_PUSHE:{
+                    int frame = readCurrentWord();
+                    int offset = readCurrentWord();
+                    DEBUGPRINTF("NS_PUSHE [%d][%d]\n", frame, offset);
+                    Value v = lookup(frame, offset);
+#ifdef SAFETY_CHECKS
+                    if (v.type != VALUE_TYPE_NAMESPACE) {
+                        cant_happen("expected namespace, got type %d", v.type);
+                    }
+#endif
+                    state.K = newKont(offset, state.E, state.K);
+                    snapshotKont(&state.S, state.K);
+                    restoreNamespace(&state.S, v.val.namespace);
+                }
+                break;
+            case BYTECODE_NS_POP:{
+                    DEBUGPRINTF("NS_POP\n");
+                    Value result = pop();
+                    int save = protectValue(result);
+                    Kont *kont = state.K;
+                    PROTECT(kont);
+                    state.K = kont->next;
+                    restoreKont(&state.S, kont);
+                    push(result);
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_DONE:{

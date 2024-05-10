@@ -47,6 +47,7 @@ typedef struct {
     struct Value V;
     struct Stack S;
     struct ByteCodeArray B;
+    Index nsPosition;
 } CEKF;
 
 typedef struct Env {
@@ -100,6 +101,7 @@ typedef struct Vec {
 int protectValue(Value v);
 
 ValueList *snapshotNamespace(Stack *s);
+void restoreNamespace(Stack *s, ValueList *vl);
 void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
 void patchClo(Stack *stack, struct Clo *target);
 void snapshotKont(Stack *stack, struct Kont *target);

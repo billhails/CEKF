@@ -174,7 +174,7 @@ backwards, so here's a first attempt.
 
 * First off we'll need to parse the standard preamble separately, resulting
   in the first purple block of bytecodes.
-* Next a new bytecode `BYTECODE_NS` introduces the namespaces. it is
+* Next a new bytecode `BYTECODE_NS_START` introduces the namespaces. it is
   followed by an integer holding the number of namespaces to be expected.
 * Then each namespace is compiled to a sequence of lambdas etc.,
   and each compiled namespace is terminated by another new bytecode
@@ -204,7 +204,7 @@ namespace symbol and a rhs expression.
 
 * The preamble execution is unchanged: skip over each lambda storing and
   pushing a closure with it's entry point address.
-* On seeing `BYTECODE_NS`. read the following number and allocate that
+* On seeing `BYTECODE_NS_START`. read the following number and allocate that
   many stack slots.
 * Subsequent lambdas etc, are processed normally, each getting
   pushed onto the stack, after the namespace slots.

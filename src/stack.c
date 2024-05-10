@@ -140,7 +140,7 @@ Value peekValue(Stack *s, int offset) {
     }
 #ifdef SAFETY_CHECKS
     if (offset >= s->sp || offset < 0) {
-        cant_happen("peek out of bounds");
+        cant_happen("peek out of bounds %d/%d", offset, s->sp);
     }
 #endif
     return s->stack[offset];
@@ -173,6 +173,11 @@ void copyTopToValues(Stack *s, Value *values, int size) {
 
 static void copyToValues(Stack *s, Value *values, int size) {
     COPY_ARRAY(Value, values, s->stack, s->sp - size);
+}
+
+static void copyFromValues(Stack *s, Value *values, int size) {
+    COPY_ARRAY(Value, s->stack, values, size);
+    s->sp = size;
 }
 
 static void copyFromSnapshot(Stack *s, Snapshot ss) {
@@ -223,10 +228,14 @@ void patchValueList(Stack *s, ValueList *v, int num) {
     copyValues(&v->values[s->sp - num], &s->stack[s->sp - num], num);
 }
 
+void restoreNamespace(Stack *s, ValueList *vl) {
+    copyFromValues(s, vl->values, vl->count);
+}
+
 ValueList *snapshotNamespace(Stack *s) {
-    ValueList *valueList = newValueList(s->sp);
-    copyToValues(s, valueList->values, 0);
-    return valueList;
+    ValueList *vl = newValueList(s->sp);
+    copyToValues(s, vl->values, 0);
+    return vl;
 }
 
 void patchClo(Stack *s, Clo *target) {

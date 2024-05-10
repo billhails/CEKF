@@ -302,7 +302,7 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
 
 void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b) {
     if (x->size > 0) {
-        addByte(b, BYTECODE_NS);
+        addByte(b, BYTECODE_NS_START);
         addWord(b, x->size);
         for (Index i = 0; i < x->size; i++) {
             writeExp(x->entries[i]->body, b);
@@ -591,6 +591,29 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     LEAVE(writeExpLet);
 }
 
+void writeLookup(ExpLookUp *x, ByteCodeArray *b) {
+#ifdef SAFETY_CHECKS
+    if (x->annotatedVar == NULL) {
+        cant_happen("annotated var missing from lookup");
+    }
+#endif
+    switch(x->annotatedVar->type) {
+        case AEXPANNOTATEDVARTYPE_TYPE_STACK:
+            addByte(b, BYTECODE_NS_PUSHS);
+            addWord(b, x->annotatedVar->offset);
+            break;
+        case AEXPANNOTATEDVARTYPE_TYPE_ENV:
+            addByte(b, BYTECODE_NS_PUSHE);
+            addWord(b, x->annotatedVar->frame);
+            addWord(b, x->annotatedVar->offset);
+            break;
+        default:
+            cant_happen("unrecognised annotation type %d", x->annotatedVar->type);
+    }
+    writeExp(x->body, b);
+    addByte(b, BYTECODE_NS_POP);
+}
+
 void writeAexp(Aexp *x, ByteCodeArray *b) {
     ENTER(writeAexp);
     switch (x->type) {
@@ -741,6 +764,10 @@ void writeExp(Exp *x, ByteCodeArray *b) {
             break;
         case EXP_TYPE_DONE:{
                 addByte(b, BYTECODE_DONE);
+            }
+            break;
+        case EXP_TYPE_LOOKUP:{
+                writeLookup(x->val.lookUp, b);
             }
             break;
         case EXP_TYPE_ENV:

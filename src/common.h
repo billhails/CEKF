@@ -42,6 +42,7 @@
 // #    define DEBUG_TPMC_COMPARE
 // #    define DEBUG_ANNOTATE
 // #    define DEBUG_DESUGARING
+// #    define DEBUG_ANNOTATE
 // #    define DEBUG_HASHTABLE
 // #    define DEBUG_TIN_SUBSTITUTION
 // #    define DEBUG_TIN_INSTANTIATION

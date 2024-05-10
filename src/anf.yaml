@@ -142,6 +142,7 @@ structs:
 
     ExpLookUp:
         namespace: index
+        annotatedVar: AexpAnnotatedVar = NULL
         body: Exp
 
 unions:

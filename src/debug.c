@@ -202,14 +202,95 @@ static void printClo(Clo *x, char *type, int depth) {
     eprintf("]");
 }
 
+static void ppValue(Value v) {
+    switch (v.type) {
+        case VALUE_TYPE_VOID:
+            eprintf("VOI");
+            break;
+        case VALUE_TYPE_STDINT:
+            eprintf("INT");
+            break;
+        case VALUE_TYPE_BIGINT:
+            eprintf("BIG");
+            break;
+        case VALUE_TYPE_RATIONAL:
+            eprintf("RAT");
+            break;
+        case VALUE_TYPE_IRRATIONAL:
+            eprintf("IRR");
+            break;
+        case VALUE_TYPE_STDINT_IMAG:
+            eprintf("IMA");
+            break;
+        case VALUE_TYPE_BIGINT_IMAG:
+            eprintf("IMA");
+            break;
+        case VALUE_TYPE_RATIONAL_IMAG:
+            eprintf("IMA");
+            break;
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+            eprintf("IMA");
+            break;
+        case VALUE_TYPE_COMPLEX:
+            eprintf("COM");
+            break;
+        case VALUE_TYPE_CHARACTER:
+            eprintf("CHA");
+            break;
+        case VALUE_TYPE_CLO:
+            eprintf("CLO");
+            break;
+        case VALUE_TYPE_PCLO:
+            eprintf("PCL");
+            break;
+        case VALUE_TYPE_CONT:
+            eprintf("KON");
+            break;
+        case VALUE_TYPE_VEC:
+            eprintf("VEC");
+            break;
+        case VALUE_TYPE_BUILTIN:
+            eprintf("BIN");
+            break;
+        case VALUE_TYPE_NAMESPACE:
+            eprintf("NAS");
+            break;
+        default:
+            cant_happen("unrecognised value type %d", v.type);
+    }
+}
+
+static void ppStack(Stack *s) {
+    eprintf("S:|");
+    for (int i = 0; i < s->sp; ++i) {
+        ppValue(s->stack[i]);
+        eprintf("|");
+    }
+    eprintf("\n");
+}
+
+static void ppEnv(struct Env *e) {
+    while (e != NULL) {
+        eprintf("E:|");
+        for (int i = 0; i < e->count; ++i) {
+            ppValue(e->values[i]);
+            eprintf("|");
+        }
+        eprintf("\n");
+        e = e->next;
+    }
+}
+
 void printCEKF(CEKF * x) {
-    int depth = 1;
+    // int depth = 1;
     // eprintf("\nCEKF (\n");
     // printPad(depth);
     // eprintf("%04lx", x->C);
     // eprintf(",\n");
-    printEnv(x->E, depth);
-    eprintf(",\n");
+    // printEnv(x->E, depth);
+    // eprintf(",\n");
+    ppStack(&x->S);
+    ppEnv(x->E);
     // printKont(x->K, depth);
     // eprintf(",\n");
     // printFail(x->F, depth);
@@ -355,7 +436,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                     int nargs = readByte(bca, &i);
                     int letRecOffset = readByte(bca, &i);
                     int offset = readOffset(bca, &i);
-                    eprintf("LAM [%d] [%d] [%04x]\n", nargs, letRecOffset,
+                    eprintf("LAM [%d][%d][%04x]\n", nargs, letRecOffset,
                             offset);
                 }
                 break;
@@ -596,15 +677,15 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("ERROR\n");
                 }
                 break;
-            case BYTECODE_NS:{
+            case BYTECODE_NS_START:{
                     int count = readWord(bca, &i);
-                    eprintf("NS [%d]\n", count);
+                    eprintf("NS_START [%d]\n", count);
                 }
                 break;
             case BYTECODE_NS_END:{
                     int numLambdas = readWord(bca, &i);
                     int stackOffset = readWord(bca, &i);
-                    eprintf("NS_END [%d] [%d]\n", numLambdas, stackOffset);
+                    eprintf("NS_END [%d][%d]\n", numLambdas, stackOffset);
                 }
                 break;
             case BYTECODE_NS_FINISH:{
@@ -614,7 +695,22 @@ void dumpByteCode(ByteCodeArray *bca) {
                 break;
             case BYTECODE_NS_REF:{
                     int index = readWord(bca, &i);
-                    eprintf("NS_REF [%d]\n", index);
+                    eprintf("NS_REF [%d]\n", index); // TODO unused
+                }
+                break;
+            case BYTECODE_NS_PUSHS:{
+                    int offset = readWord(bca, &i);
+                    eprintf("NS_PUSHS [%d]\n", offset);
+                }
+                break;
+            case BYTECODE_NS_PUSHE:{
+                    int frame = readWord(bca, &i);
+                    int offset = readWord(bca, &i);
+                    eprintf("NS_PUSHE [%d][%d]\n", frame, offset);
+                }
+                break;
+            case BYTECODE_NS_POP:{
+                    eprintf("NS_POP\n");
                 }
                 break;
             default:
