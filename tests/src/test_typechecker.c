@@ -29,22 +29,18 @@ static bool compareTcTypes(TcType *a, TcType *b) {
 }
 
 static AstProg *parseWrapped(char *string, char *origin) {
-    disableGC();
     forceInitNamespaces();
     AstNest *nest = parseTopLevelFromString(string, origin);
     assert(nest != NULL);
     AstProg *prog = astNestToProg(nest);
-    enableGC();
     return prog;
 }
 
 static AstProg *parseSolo(char *string, char *origin) {
-    disableGC();
     forceInitNamespaces();
-    AstNest *nest = parseTopLevelFromString(string, origin);
+    AstNest *nest = parseSingleString(string, origin);
     assert(nest != NULL);
     AstProg *prog = astNestToProg(nest);
-    enableGC();
     return prog;
 }
 
@@ -380,6 +376,7 @@ static void test_map() {
 
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
+    disableGC();
     initProtection();
     test_car();
     test_cdr();
