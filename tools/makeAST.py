@@ -422,7 +422,7 @@ class EnumField:
 
     def printNameFunctionLine(self):
         field = self.makeTypeName()
-        print(f'        case {field}: return "{field}";')
+        print(f'        case {field}: return "{field}"; // EnumField.printNameFunctionLine')
 
     def makeTypeName(self):
         v = self.owner + '_type_' + self.name
@@ -1868,7 +1868,7 @@ class DiscriminatedUnionEnum(Base):
 
     def printNameFunctionBody(self):
         decl = self.getNameFunctionDeclaration()
-        comment = '// DiscriminatedUnionEnum.printNameFunctionDeclaration'
+        comment = '// DiscriminatedUnionEnum.printNameFunctionBody'
         print(f"{decl} {{ {comment}")
         print(f"    switch(type) {{ {comment}")
         for  field in self.fields:
