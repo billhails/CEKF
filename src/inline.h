@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_helper_h
-#  define cekf_lambda_helper_h
+#ifndef cekf_inline_h
+#  define cekf_inline_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,14 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "lambda.h"
-#  include "lambda_debug.h"
-#  include "hash.h"
-#  include "memory.h"
 
-void printLambdaSymbol(HashSymbol *x, int depth);
-LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var);
-LamContext *lookupNamespaceInLamContext(LamContext *context, Index index);
-void markLamExpFn(void *ptr);
-void printLamExpFn(void *ptr, int depth);
+#  include "lambda.h"
+
+LamExp *inlineLamExp(LamExp *);
 #endif

@@ -76,7 +76,7 @@ static bool inPreamble;  // preamble is treated specially
 LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     inPreamble = true;
-    LamContext *env = extendLamContext(NULL);
+    LamContext *env = newLamContext(NULL);
     int save = PROTECT(env);
     LamExp *result = lamConvertDefsNsAndExprs(prog->preamble, prog->namespaces, prog->body, env);
     UNPROTECT(save);
@@ -86,13 +86,31 @@ LamExp *lamConvertProg(AstProg *prog) {
 
 static LamExp *convertNest(AstNest *nest, LamContext *env) {
     ENTER(convertNest);
-    env = extendLamContext(env);
+    env = newLamContext(env);
     int save = PROTECT(env);
     LamExp *result = lamConvertDefsNsAndExprs(nest->definitions, NULL, nest->expressions, env);
     PROTECT(result);
     UNPROTECT(save);
     LEAVE(convertNest);
     return result;
+}
+
+static void addConstructorInfoToLamContext(LamContext *context, HashSymbol *symbol,
+                         LamTypeConstructorInfo *info) {
+    LamInfo *lamInfo = newLamInfo(LAMINFO_TYPE_TYPECONSTRUCTORINFO, LAMINFO_VAL_TYPECONSTRUCTORINFO(info));
+    int save = PROTECT(lamInfo);
+    setLamInfoTable(context->frame, symbol, lamInfo);
+    UNPROTECT(save);
+}
+
+static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, Index namespace) {
+    char buf[80];
+    sprintf(buf, "$ns%u", namespace);
+    HashSymbol *symbol = newSymbol(buf);
+    LamInfo *lamInfo = newLamInfo(LAMINFO_TYPE_NAMESPACEINFO, LAMINFO_VAL_NAMESPACEINFO(info));
+    int save = PROTECT(lamInfo);
+    setLamInfoTable(context->frame, symbol, lamInfo);
+    UNPROTECT(save);
 }
 
 static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
@@ -113,7 +131,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
         PROTECT(namespaces);
         for (Index i = 0; i < nsArray->size; ++i) {
             AstNamespaceImpl *namespace = nsArray->entries[i];
-            LamContext *nsEnv = extendLamContext(env);
+            LamContext *nsEnv = newLamContext(env);
             int save2 = PROTECT(nsEnv);
             AstExpression *envToken = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV());
             PROTECT(envToken);
@@ -122,6 +140,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
             LamExp *lamNamespace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
             PROTECT(lamNamespace);
             pushLamNamespaceArray(namespaces, lamNamespace);
+            addNamespaceInfoToLamContext(env, nsEnv, i);
             UNPROTECT(save2);
         }
     }
@@ -194,7 +213,11 @@ static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
 }
 
 static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
-    LamExp *expression = convertExpression(lookup->expression, env);
+    LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
+    LamExp *expression = convertExpression(lookup->expression, nsEnv);
+    if (expression->type == LAMEXP_TYPE_CONSTRUCTOR) { // second pass will inline constructors
+        return expression;
+    }
     int save = PROTECT(expression);
     LamLookup *llu = newLamLookup(lookup->namespace, expression);
     PROTECT(llu);
@@ -346,10 +369,10 @@ static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
                             int arity, LamContext *env) {
     ENTER(collectTypeInfo);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(type, needsVec, arity, enumCount,
+        newLamTypeConstructorInfo(symbol, type, needsVec, arity, enumCount,
                                   index);
     int save = PROTECT(info);
-    addToLamContext(env, symbol, info);
+    addConstructorInfoToLamContext(env, symbol, info);
     UNPROTECT(save);
     LEAVE(collectTypeInfo);
 }
@@ -456,24 +479,6 @@ static bool typeHasFields(AstTypeBody *typeBody) {
         typeBody = typeBody->next;
     }
     return false;
-}
-
-static LamExp *makeConstruct(HashSymbol *name, int tag, LamList *args) {
-    LamConstruct *construct = newLamConstruct(name, tag, args);
-    int save = PROTECT(construct);
-    LamExp *res =
-        newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(construct));
-    UNPROTECT(save);
-    return res;
-}
-
-static LamExp *makeConstant(HashSymbol *name, int tag) {
-    LamConstant *constant = newLamConstant(name, tag);
-    int save = PROTECT(constant);
-    LamExp *res =
-        newLamExp(LAMEXP_TYPE_CONSTANT, LAMEXP_VAL_CONSTANT(constant));
-    UNPROTECT(save);
-    return res;
 }
 
 static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
@@ -637,25 +642,10 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     return NULL;
 }
 
-static LamExp *inlineConstructor(HashSymbol *symbol, LamList *args,
-                                 LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info != NULL) {
-        int actualNargs = countLamList(args);
-        if (info->needsVec) {
-            if (actualNargs == info->arity) {
-                return makeConstruct(symbol, info->index, args);
-            } else {
-                cant_happen("wrong number of arguments to constructor %s",
-                            symbol->name);
-            }
-        } else {
-            if (actualNargs > 0) {
-                cant_happen("arguments to constant constructor %s",
-                            symbol->name);
-            }
-            return makeConstant(symbol, info->index);
-        }
+        return newLamExp(LAMEXP_TYPE_CONSTRUCTOR, LAMEXP_VAL_CONSTRUCTOR(info));
     }
     return NULL;
 }
@@ -667,6 +657,15 @@ static LamExp *convertApplication(AstFunCall *funCall, LamList *args,
     int save = PROTECT(fun);
     LamApply *apply = newLamApply(fun, actualNargs, args);
     PROTECT(apply);
+    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    UNPROTECT(save);
+    return result;
+}
+
+static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
+    int actualNargs = constructor->val.constructor->arity;
+    LamApply *apply = newLamApply(constructor, actualNargs, args);
+    int save = PROTECT(apply);
     LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return result;
@@ -684,8 +683,10 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
             return result;
         }
         // see if it's a type constructor we can inline
-        result = inlineConstructor(symbol, args, env);
+        result = makeConstructor(symbol, env);
         if (result != NULL) {
+            PROTECT(result);
+            result = makeConstructorApplication(result, args);
             UNPROTECT(save);
             return result;
         }
@@ -741,7 +742,7 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
 static LamExp *convertSymbol(HashSymbol *symbol, LamContext *env) {
     ENTER(convertSymbol);
     DEBUG("convertSymbol %s", symbol->name);
-    LamExp *result = inlineConstructor(symbol, NULL, env);
+    LamExp *result = makeConstructor(symbol, env);
     if (result == NULL) {
         symbol = dollarSubstitute(symbol);
         result = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));

@@ -45,6 +45,7 @@
 #include "tpmc_mermaid.h"
 #include "arithmetic.h"
 #include "builtins_helper.h"
+#include "inline.h"
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -192,6 +193,9 @@ int main(int argc, char *argv[]) {
     int save2 = PROTECT(prog);
 
     LamExp *exp = convertProg(prog);
+    REPLACE_PROTECT(save2, exp);
+
+    exp = inlineLamExp(exp);
     REPLACE_PROTECT(save2, exp);
 
     typeCheck(exp, builtIns);

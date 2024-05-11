@@ -81,7 +81,7 @@ static TpmcPattern *makeWildcardPattern() {
 }
 
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info == NULL) {
         TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR,
                                                     TPMCPATTERNVALUE_VAL_VAR
@@ -123,7 +123,7 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
 }
 
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, unpack->symbol);
+    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
         cant_happen("makeConstructorPattern() passed invalid constructor: %s",
                     unpack->symbol->name);

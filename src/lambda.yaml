@@ -194,6 +194,7 @@ structs:
         args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
+        name: HashSymbol
         type: LamTypeConstructor
         needsVec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
@@ -261,6 +262,7 @@ unions:
         cond_default: void_ptr
         env: void_ptr
         lookup: LamLookup
+        constructor: LamTypeConstructorInfo
 
     LamCondCases:
         integers: LamIntCondCases
@@ -273,9 +275,13 @@ unions:
         function: LamTypeFunction
         tuple: LamTypeConstructorArgs
 
+    LamInfo:
+        typeConstructorInfo: LamTypeConstructorInfo
+        namespaceInfo: LamContext
+
 hashes:
     LamInfoTable:
-        entries: LamTypeConstructorInfo
+        entries: LamInfo
 
     LamExpTable:
         entries: LamExp

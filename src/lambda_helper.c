@@ -20,6 +20,7 @@
 
 #include "lambda_helper.h"
 #include "lambda_pp.h"
+#include "symbol.h"
 
 void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
@@ -38,22 +39,43 @@ void printLamExpFn(void *ptr, int depth) {
     ppLamExpD(*((LamExp **) ptr), depth);
 }
 
-void addToLamContext(LamContext *context, HashSymbol *symbol,
-                     LamTypeConstructorInfo *info) {
-    setLamInfoTable(context->frame, symbol, info);
-}
-
-LamTypeConstructorInfo *lookupInLamContext(LamContext *context,
-                                           HashSymbol *var) {
+LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var) {
     if (context == NULL)
-        return NULL;
-    LamTypeConstructorInfo *result;
+        return NULL; // not an error
+    LamInfo *result;
     if (getLamInfoTable(context->frame, var, &result)) {
-        return result;
+        switch (result->type) {
+            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+                return result->val.typeConstructorInfo;
+            case LAMINFO_TYPE_NAMESPACEINFO:
+                cant_happen("expected type constructor found namespace called %s", var->name);
+            default:
+                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        }
     }
-    return lookupInLamContext(context->parent, var);
+    return lookupConstructorInLamContext(context->parent, var);
 }
 
-LamContext *extendLamContext(LamContext *parent) {
-    return newLamContext(parent);
+static LamContext *_lookupNamespaceInLamContext(LamContext *context, HashSymbol *var) {
+    if (context == NULL)
+        cant_happen("cannot find namespace %s", var->name); // always an error
+    LamInfo *result;
+    if (getLamInfoTable(context->frame, var, &result)) {
+        switch (result->type) {
+            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+                cant_happen("expected namespace found typeconstructor called %s", var->name);
+            case LAMINFO_TYPE_NAMESPACEINFO:
+                return result->val.namespaceInfo;
+            default:
+                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        }
+    }
+    return _lookupNamespaceInLamContext(context->parent, var);
+}
+
+LamContext *lookupNamespaceInLamContext(LamContext *context, Index index) {
+    char buf[80];
+    sprintf(buf, "$ns%u", index);
+    HashSymbol *var = newSymbol(buf);
+    return _lookupNamespaceInLamContext(context, var);
 }

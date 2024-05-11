@@ -493,3 +493,17 @@ so the namespaces are stored in the following order
 which satisfies the requirement that namespaces will be analysed before
 anything that refers to them.
 
+## Phase 2
+
+`import` of normal values and access to them via the dot operator is
+now apparently working.
+
+Phase 2 is to extend this to allow access to typedefs. specifically the
+type constructors.  We'll leave use of imported type constructors in
+patterns to phase 3, but phase 2 should include the print compiler.
+
+The lambda conversion stage should detect these uses and inline the
+constructors as it does for local ones, but currently it seems to
+be treating them as normal variables and passing them through. The
+typechecker is happy, and the code gets all the way to annotation
+(lexical analysis) before the error is detected).

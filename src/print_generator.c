@@ -354,7 +354,7 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors,
     LamMatchList *next = makePlainMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makePlainMatchList",
@@ -376,7 +376,7 @@ static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors,
     LamMatchList *next = makeTagMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeTagMatchList",
@@ -423,7 +423,7 @@ static LamMatch *makeTagMatch(LamTypeConstructorList *constructors,
 static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeFunctionBody",

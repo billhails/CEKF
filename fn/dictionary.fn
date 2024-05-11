@@ -1,127 +1,116 @@
 let
-    typedef Color { R | B | BB }
-    typedef Tup(#t, #u) { T(#t, #u) }
-    typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), Tup(#t, #u), Dict(#t, #u)) }
-    typedef Maybe(#t) { none | some(#t) }
+typedef Color { R | B | BB }
+typedef Tup(#t, #u) { T(#t, #u) }
+typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), Tup(#t, #u), Dict(#t, #u)) }
 
-    fn balance {
-        (B, D(R, D(R, a, x, b), y, c), z, d)  |
-        (B, D(R, a, x, D(R, b, y, c)), z, d)  |
-        (B, a, x, D(R, D(R, b, y, c), z, d))  |
-        (B, a, x, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
-        (BB, D(R, a, x, D(R, b, y, c)), z, d) |
-        (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
-        (color, a, b, c)                      { D(color, a, b, c) }
-    }
+import "maybe.fn" as maybe
 
-    // #t -> Dict(#t, #u) -> Maybe(#u)
-    fn lookup {
-        (_, E) | (_, EE) { none }
-        (x, D(_, _, T(x, y), _)) { some(y) }
-        (x, D(_, a, T(y, _), b)) {
-            if (x < y) {
-                lookup(x, a)
-            } else {
-                lookup(x, b)
-            }
+fn balance {
+    (B, D(R, D(R, a, x, b), y, c), z, d)  |
+    (B, D(R, a, x, D(R, b, y, c)), z, d)  |
+    (B, a, x, D(R, D(R, b, y, c), z, d))  |
+    (B, a, x, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
+    (BB, D(R, a, x, D(R, b, y, c)), z, d) |
+    (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
+    (color, a, b, c)                      { D(color, a, b, c) }
+}
+
+// #t -> Dict(#t, #u) -> Maybe(#u)
+fn lookup {
+    (_, E) | (_, EE) { maybe.nothing }
+    (x, D(_, _, T(x, y), _)) { maybe.some(y) }
+    (x, D(_, a, T(y, _), b)) {
+        if (x < y) {
+            lookup(x, a)
+        } else {
+            lookup(x, b)
         }
     }
+}
 
-    fn insert(x, v, s) {
-        let
-            fn blacken {
-                (D(R, t=D(R, _, _, _), y, c)) { D(B, t, y, c) }
-                (D(R, a, x, t=D(R, _, _, _))) { D(B, a, x, t) }
-                (t) { t }
-            }
-            fn ins {
-                (x, EE) | (x, E) { D(R, E, T(x, v), E) }
-                (x, D(c, a, T(x, _), b)) { D(c, a, T(x, v), b) }
-                (x, D(color, a, s=T(y, _), b)) {
-                    if (x < y) {
-                        balance(color, ins(x, a), s, b)
-                    } else {
-                        balance(color, a, s, ins(x, b))
-                    }
+fn insert(x, v, s) {
+    let
+        fn blacken {
+            (D(R, t=D(R, _, _, _), y, c)) { D(B, t, y, c) }
+            (D(R, a, x, t=D(R, _, _, _))) { D(B, a, x, t) }
+            (t) { t }
+        }
+        fn ins {
+            (x, EE) | (x, E) { D(R, E, T(x, v), E) }
+            (x, D(c, a, T(x, _), b)) { D(c, a, T(x, v), b) }
+            (x, D(color, a, s=T(y, _), b)) {
+                if (x < y) {
+                    balance(color, ins(x, a), s, b)
+                } else {
+                    balance(color, a, s, ins(x, b))
                 }
             }
-        in
-            blacken(ins(x, s))
-    }
+        }
+    in
+        blacken(ins(x, s))
+}
 
-    fn delete(x, s) {
-        let
-            fn del {
-                (_, EE, throw) | (_, E, throw) { throw(s) }
-                (x, D(R, E, T(x, _), E), _) { E }
-                (x, D(B, E, T(x, _), E), _) { EE }
-                (_, D(B, E, _, E), throw) { throw(s) }
-                (x, D(B, D(R, E, y, E), T(x, _), E), _) { D(B, E, y, E) }
-                (x, D(B, D(R, E, y, E), T(z, zv), E), throw) {
-                    if (x < z) {
-                        D(B, del(x, D(R, E, y, E), throw), T(z, zv), E)
-                    } else {
-                        throw(s)
-                    }
-                }
-                (x, D(c, a, T(x, _), b), _) {
-                    rotate(c, a, leftmost_successor(b), del_leftmost_successor(b))
-                }
-                (x, D(c, a, s=T(y, _), b), throw) {
-                    if (x < y) {
-                        rotate(c, del(x, a, throw), s, b)
-                    } else {
-                        rotate(c, a, s, del(x, b, throw))
-                    }
+fn delete(x, s) {
+    let
+        fn del {
+            (_, EE, throw) | (_, E, throw) { throw(s) }
+            (x, D(R, E, T(x, _), E), _) { E }
+            (x, D(B, E, T(x, _), E), _) { EE }
+            (_, D(B, E, _, E), throw) { throw(s) }
+            (x, D(B, D(R, E, y, E), T(x, _), E), _) { D(B, E, y, E) }
+            (x, D(B, D(R, E, y, E), T(z, zv), E), throw) {
+                if (x < z) {
+                    D(B, del(x, D(R, E, y, E), throw), T(z, zv), E)
+                } else {
+                    throw(s)
                 }
             }
-
-            fn redden {
-                (D(B, a=D(B, _, _, _), y, b=D(B, _, _, _))) { D(R, a, y, b) }
-                (a) { a }
+            (x, D(c, a, T(x, _), b), _) {
+                rotate(c, a, leftmost_successor(b), del_leftmost_successor(b))
             }
-
-            fn rotate {
-                (R, D(BB, a, x, b), y, D(B, c, z, d)) { balance(B, D(R, D(B, a, x, b), y, c), z, d) }
-                (R, EE, y, D(B, c, z, d)) { balance(B, D(R, E, y, c), z, d) }
-                (R, D(B, a, x, b), y, D(BB, c, z, d)) { balance(B, a, x, D(R, b, y, D(B, c, z, d))) }
-                (R, D(B, a, x, b), y, EE) { balance(B, a, x, D(R, b, y, E)) }
-                (B, D(BB, a, x, b), y, D(B, c, z, d)) { balance(BB, D(R, D(B, a, x, b), y, c), z, d) }
-                (B, EE, y, D(B, c, z, d)) { balance(BB, D(R, E, y, c), z, d) }
-                (B, D(B, a, x, b), y, D(BB, c, z, d)) { balance(BB, a, x, D(R, b, y, D(B, c, z, d))) }
-                (B, D(B, a, x, b), y, EE) { balance(BB, a, x, D(R, b, y, E)) }
-                (B, D(BB, a, w, b), x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, D(B, a, w, b), x, c), y, d), z, e) }
-                (B, EE, x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, E, x, c), y, d), z, e) }
-                (B, D(R, a, w, D(B, b, x, c)), y, D(BB, d, z, e)) { D(B, a, w, balance(B, b, x, D(R, c, y, D(B, d, z, e)))) }
-                (B, D(R, a, w, D(B, b, x, c)), y, EE) { D(B, a, w, balance(B, b, x, D(R, c, y, E))) }
-                (color, a, x, b) { D(color, a, x, b) }
+            (x, D(c, a, s=T(y, _), b), throw) {
+                if (x < y) {
+                    rotate(c, del(x, a, throw), s, b)
+                } else {
+                    rotate(c, a, s, del(x, b, throw))
+                }
             }
+        }
 
-            fn leftmost_successor {
-                (D(_, E, x, E))             |
-                (D(B, E, x, D(R, E, _, E))) { x }
-                (D(_, a, _, _))             { leftmost_successor(a) }
-            }
+        fn redden {
+            (D(B, a=D(B, _, _, _), y, b=D(B, _, _, _))) { D(R, a, y, b) }
+            (a) { a }
+        }
 
-            fn del_leftmost_successor {
-                (D(R, E, _, E))             { E }
-                (D(B, E, _, E))             { EE }
-                (D(B, E, _, D(R, E, y, E))) { D(B, E, y, E) }
-                (D(c, a, x, b))             { rotate(c, del_leftmost_successor(a), x, b) }
-            }
-        in
-            here fn (throw) { del(x, redden(s), throw) }
-    }
+        fn rotate {
+            (R, D(BB, a, x, b), y, D(B, c, z, d)) { balance(B, D(R, D(B, a, x, b), y, c), z, d) }
+            (R, EE, y, D(B, c, z, d)) { balance(B, D(R, E, y, c), z, d) }
+            (R, D(B, a, x, b), y, D(BB, c, z, d)) { balance(B, a, x, D(R, b, y, D(B, c, z, d))) }
+            (R, D(B, a, x, b), y, EE) { balance(B, a, x, D(R, b, y, E)) }
+            (B, D(BB, a, x, b), y, D(B, c, z, d)) { balance(BB, D(R, D(B, a, x, b), y, c), z, d) }
+            (B, EE, y, D(B, c, z, d)) { balance(BB, D(R, E, y, c), z, d) }
+            (B, D(B, a, x, b), y, D(BB, c, z, d)) { balance(BB, a, x, D(R, b, y, D(B, c, z, d))) }
+            (B, D(B, a, x, b), y, EE) { balance(BB, a, x, D(R, b, y, E)) }
+            (B, D(BB, a, w, b), x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, D(B, a, w, b), x, c), y, d), z, e) }
+            (B, EE, x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, E, x, c), y, d), z, e) }
+            (B, D(R, a, w, D(B, b, x, c)), y, D(BB, d, z, e)) { D(B, a, w, balance(B, b, x, D(R, c, y, D(B, d, z, e)))) }
+            (B, D(R, a, w, D(B, b, x, c)), y, EE) { D(B, a, w, balance(B, b, x, D(R, c, y, E))) }
+            (color, a, x, b) { D(color, a, x, b) }
+        }
 
-    fn makeDict(lst) {
-       let fn helper {
-           ([], tr) |
-           (h @ [], tr) { tr }
-           (h @ h2 @ t, tr) { helper(t, insert(h, h2, tr)) }
-       }
-       in
-           helper(lst, E)
-    }
- 
-in
-    print(lookup('f', delete('k', makeDict("kgimtseettepmupybbbmplgntqzutrfxqarki"))))
+        fn leftmost_successor {
+            (D(_, E, x, E))             |
+            (D(B, E, x, D(R, E, _, E))) { x }
+            (D(_, a, _, _))             { leftmost_successor(a) }
+        }
+
+        fn del_leftmost_successor {
+            (D(R, E, _, E))             { E }
+            (D(B, E, _, E))             { EE }
+            (D(B, E, _, D(R, E, y, E))) { D(B, E, y, E) }
+            (D(c, a, x, b))             { rotate(c, del_leftmost_successor(a), x, b) }
+        }
+    in
+        here fn (throw) { del(x, redden(s), throw) }
+}
+in 1
