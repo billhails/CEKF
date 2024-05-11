@@ -118,7 +118,7 @@ generated/parser.c generated/parser.h: src/parser.y | generated
 	bison -v -Werror --header=generated/parser.h -o generated/parser.c $<
 
 test: $(TEST_TARGETS)
-	for t in $(TEST_TARGETS) ; do $$t || exit 1 ; done
+	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm

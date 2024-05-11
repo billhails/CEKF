@@ -30,6 +30,8 @@ void printAstSymbol(HashSymbol *x, int depth);
 
 void initNamespaces();
 
+void forceInitNamespaces();
+
 int lookupNamespace(AgnosticFileId *);
 
 AstProg *astNestToProg(AstNest *nest);

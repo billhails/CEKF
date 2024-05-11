@@ -41,6 +41,11 @@ void initNamespaces() {
     }
 }
 
+// for tests
+void forceInitNamespaces() {
+    namespaces = newAstNamespaceArray();
+}
+
 int lookupNamespace(AgnosticFileId *id) {
 #ifdef SAFETY_CHECKS
     if (namespaces == NULL) {
