@@ -326,7 +326,7 @@ static HashSymbol *makeNsName(Index index) {
     return newSymbol(buf);
 }
 
-static CTEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
+static CTEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, CTEnv *env) {
     CTEnvArray *nsEnvs = getNsEnvs(env);
     for (Index i = 0; i < x->size; ++i) {
         HashSymbol *nsName = makeNsName(i);
@@ -335,7 +335,7 @@ static CTEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
     for (Index i = 0; i < x->size; ++i) {
         CTEnv *env2 = newCTEnv(true, env);
         int save = PROTECT(env2);
-        env2->isNameSpace = true;
+        env2->isNamespace = true;
         CTEnv *env3 = annotateExp(x->entries[i]->body, env2);
         PROTECT(env3);
         x->entries[i]->nbindings = env2->nbindings;
@@ -345,8 +345,8 @@ static CTEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateAexpNameSpaces(AexpNameSpaces *x, CTEnv *env) {
-    annotateAexpNameSpaceArray(x->namespaces, env);
+static CTEnv *annotateAexpNamespaces(AexpNamespaces *x, CTEnv *env) {
+    annotateAexpNamespaceArray(x->namespaces, env);
     annotateExp(x->body, env);
     return env;
 }
@@ -395,7 +395,7 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_MAKEVEC:
             return annotateAexpMakeVec(x->val.makeVec, env);
         case AEXP_TYPE_NAMESPACES:
-            return annotateAexpNameSpaces(x->val.namespaces, env);
+            return annotateAexpNamespaces(x->val.namespaces, env);
         default:
             cant_happen("unrecognized type %s in annotateAexp", aexpTypeName(x->type));
     }
@@ -467,7 +467,7 @@ static CTEnv *annotateExpEnv(CTEnv *env) {
     CTEnv *orig = env;
     while (env != NULL) {
         nbindings += countCTIntTable(env->table);
-        if (env->isNameSpace) {
+        if (env->isNamespace) {
             env->nbindings = nbindings;
             return orig;
         }
@@ -476,19 +476,19 @@ static CTEnv *annotateExpEnv(CTEnv *env) {
     cant_happen("failed to find namespace env");
 }
 
-static AexpAnnotatedVar *lookUpNameSpaceInEnv(Index index, CTEnv *env) {
+static AexpAnnotatedVar *lookupNamespaceInEnv(Index index, CTEnv *env) {
     HashSymbol *name = makeNsName(index);
     return annotateAexpVar(name, env);
 }
 
-static CTEnv *annotateExpLookup(ExpLookUp *lookup, CTEnv *env) {
+static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
     CTEnvArray *envs = getNsEnvs(env);
 #ifdef SAFETY_chECKS
     if (lookup->namespace >= envs->size) {
         cant_happen("namespace index %u out of range", lookup->namespace);
     }
 #endif
-    lookup->annotatedVar = lookUpNameSpaceInEnv(lookup->namespace, env);
+    lookup->annotatedVar = lookupNamespaceInEnv(lookup->namespace, env);
     return annotateExp(lookup->body, envs->entries[lookup->namespace]);
 }
 
@@ -512,7 +512,7 @@ static CTEnv * annotateExp(Exp *x, CTEnv *env) {
         case EXP_TYPE_DONE:
             return env;
         case EXP_TYPE_LOOKUP:
-            return annotateExpLookup(x->val.lookUp, env);
+            return annotateExpLookup(x->val.lookup, env);
         default:
             cant_happen("unrecognized type %s", expTypeName(x->type));
     }

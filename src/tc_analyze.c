@@ -41,7 +41,7 @@ static void addToNg(TcNg *env, TcType *type);
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns);
-static void addNameSpacesToEnv(TcEnv *env);
+static void addNamespacesToEnv(TcEnv *env);
 static TcType *makeBoolean(void);
 static TcType *makeSpaceship(void);
 static TcType *makeSmallInteger(void);
@@ -88,7 +88,7 @@ static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
 static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
 static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
-static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *ng);
+static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
@@ -107,7 +107,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args);
 static TcType *lookupNsRef(int index, TcEnv *env);
-static TcType *analyzeLookUp(LamLookUp *, TcEnv *, TcNg *);
+static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
 
 static int id_counter = 0;
 
@@ -137,7 +137,7 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addPutcToEnv(env);
     addThenToEnv(env);
     addBuiltinsToEnv(env, builtIns);
-    addNameSpacesToEnv(env);
+    addNamespacesToEnv(env);
     UNPROTECT(save);
     return env;
 }
@@ -213,11 +213,11 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_MAKE_TUPLE:
             return prune(analyzeMakeTuple(exp->val.make_tuple, env, ng));
         case LAMEXP_TYPE_NAMESPACES:
-            return prune(analyzeNameSpaces(exp->val.namespaces, env, ng));
+            return prune(analyzeNamespaces(exp->val.namespaces, env, ng));
         case LAMEXP_TYPE_ENV:
             return prune(analyzeEnv(env));
         case LAMEXP_TYPE_LOOKUP:
-            return prune(analyzeLookUp(exp->val.lookUp, env, ng));
+            return prune(analyzeLookup(exp->val.lookup, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -548,7 +548,7 @@ static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
 static TcType *lookupNsRef(int index, TcEnv *env) {
     Index i = index;
     TcType *nsType = NULL;
-    if (!getFromTcEnv(env, nameSpacesSymbol(), &nsType)) {
+    if (!getFromTcEnv(env, namespacesSymbol(), &nsType)) {
         cant_happen("failed to retrieve namespaces");
     }
 #ifdef SAFETY_CHECKS
@@ -559,14 +559,14 @@ static TcType *lookupNsRef(int index, TcEnv *env) {
     return nsType->val.namespaces->entries[i];
 }
 
-static TcType *analyzeLookUp(LamLookUp *lookUp, TcEnv *env, TcNg *ng) {
-    TcType *nsType = lookupNsRef(lookUp->namespace, env);
-    return analyzeExp(lookUp->exp, nsType->val.env, ng);
+static TcType *analyzeLookup(LamLookup *lookup, TcEnv *env, TcNg *ng) {
+    TcType *nsType = lookupNsRef(lookup->namespace, env);
+    return analyzeExp(lookup->exp, nsType->val.env, ng);
 }
 
-static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *ng) {
+static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *ng) {
     TcType *nsType = NULL;
-    if (!getFromTcEnv(env, nameSpacesSymbol(), &nsType)) {
+    if (!getFromTcEnv(env, namespacesSymbol(), &nsType)) {
         cant_happen("failed to retrieve namespaces");
     }
     for (Index i = 0; i < nsArray->size; i++) {
@@ -576,7 +576,7 @@ static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env, TcNg *n
         PROTECT(ng2);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
         PROTECT(res);
-        pushTcNameSpaceArray(nsType->val.namespaces, res);
+        pushTcNamespaceArray(nsType->val.namespaces, res);
         UNPROTECT(save);
     }
     return nsType;
@@ -1585,12 +1585,12 @@ static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
     }
 }
 
-static void addNameSpacesToEnv(TcEnv *env) {
-    TcNameSpaceArray *namespaces = newTcNameSpaceArray();
+static void addNamespacesToEnv(TcEnv *env) {
+    TcNamespaceArray *namespaces = newTcNamespaceArray();
     int save = PROTECT(namespaces);
     TcType *nsType = newTcType(TCTYPE_TYPE_NAMESPACES, TCTYPE_VAL_NAMESPACES(namespaces));
     PROTECT(nsType);
-    addToEnv(env, nameSpacesSymbol(), nsType);
+    addToEnv(env, namespacesSymbol(), nsType);
     UNPROTECT(save);
 }
 

@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
     processArgs(argc, argv);
     initProtection();
     init_arithmetic();
-    initNameSpaces();
+    initNamespaces();
 
     BuiltIns *builtIns = registerBuiltIns();
     int save = PROTECT(builtIns);

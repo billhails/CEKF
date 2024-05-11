@@ -61,7 +61,7 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 static LamExp *convertNest(AstNest *nest, LamContext *env);
 static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
-                                        AstNameSpaceArray *nsArray,
+                                        AstNamespaceArray *nsArray,
                                         AstExpressions *expressions,
                                         LamContext *env);
 
@@ -96,7 +96,7 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
 }
 
 static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
-                                        AstNameSpaceArray *nsArray,
+                                        AstNamespaceArray *nsArray,
                                         AstExpressions *expressions,
                                         LamContext *env) {
     ENTER(lamConvertDefsNsAndExprs);
@@ -106,31 +106,31 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
     PROTECT(funcDefsList);
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
     PROTECT(funcDefsList);
-    LamNameSpaceArray *namespaces = NULL;
+    LamNamespaceArray *namespaces = NULL;
     if (nsArray != NULL) {
         inPreamble = false; // dodgy, we must be in the preamble because we're being called with namespaces
-        namespaces = newLamNameSpaceArray();
+        namespaces = newLamNamespaceArray();
         PROTECT(namespaces);
         for (Index i = 0; i < nsArray->size; ++i) {
-            AstNameSpaceImpl *namespace = nsArray->entries[i];
+            AstNamespaceImpl *namespace = nsArray->entries[i];
             LamContext *nsEnv = extendLamContext(env);
             int save2 = PROTECT(nsEnv);
             AstExpression *envToken = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV());
             PROTECT(envToken);
             AstExpressions *body = newAstExpressions(envToken, NULL);
             PROTECT(body);
-            LamExp *lamNameSpace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
-            PROTECT(lamNameSpace);
-            pushLamNameSpaceArray(namespaces, lamNameSpace);
+            LamExp *lamNamespace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
+            PROTECT(lamNamespace);
+            pushLamNamespaceArray(namespaces, lamNamespace);
             UNPROTECT(save2);
         }
     }
     LamSequence *body = convertSequence(expressions, env);
     PROTECT(body);
     if (namespaces != NULL && namespaces->size > 0) {
-        LamExp *lamNameSpaces = newLamExp(LAMEXP_TYPE_NAMESPACES, LAMEXP_VAL_NAMESPACES(namespaces));
-        PROTECT(lamNameSpaces);
-        body = newLamSequence(lamNameSpaces, body);
+        LamExp *lamNamespaces = newLamExp(LAMEXP_TYPE_NAMESPACES, LAMEXP_VAL_NAMESPACES(namespaces));
+        PROTECT(lamNamespaces);
+        body = newLamSequence(lamNamespaces, body);
         PROTECT(body);
     }
     LamExp *letRecBody = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(body));
@@ -193,10 +193,10 @@ static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
     return res;
 }
 
-static LamExp *lamConvertLookUp(AstLookUp *lookUp, LamContext *env) {
-    LamExp *expression = convertExpression(lookUp->expression, env);
+static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
+    LamExp *expression = convertExpression(lookup->expression, env);
     int save = PROTECT(expression);
-    LamLookUp *llu = newLamLookUp(lookUp->namespace, expression);
+    LamLookup *llu = newLamLookup(lookup->namespace, expression);
     PROTECT(llu);
     LamExp *res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
     UNPROTECT(save);
@@ -805,7 +805,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_LOOKUP:
             DEBUG("lookup");
-            result = lamConvertLookUp(expression->val.lookUp, env);
+            result = lamConvertLookup(expression->val.lookup, env);
             break;
         default:
             cant_happen

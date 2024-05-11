@@ -1133,7 +1133,7 @@ static void step() {
                     DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
                     ValueList *snapshot = snapshotNamespace(&state.S);
                     int save = PROTECT(snapshot);
-                    Value ns = nameSpaceValue(snapshot);
+                    Value ns = namespaceValue(snapshot);
                     // eprintf("poke(%d - (%d + %d) = %d)\n", state.S.sp, numLambdas, stackOffset, state.S.sp - (numLambdas + stackOffset));
                     poke(0 - (numLambdas + stackOffset), ns);
                     discard(numLambdas);

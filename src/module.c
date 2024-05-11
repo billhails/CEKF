@@ -82,7 +82,7 @@ static FILE *safeFOpen(const char *filename) {
     return f;
 }
 
-static AstDefinitions *parseNameSpace(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {
+static AstDefinitions *parseNamespace(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {
     pushPmBufStack(mod, bs, origin);
     pushPmBufStack(mod, yy_scan_string("__namespace__ ", mod->scanner), "namespace token");
     int res = pmParseModule(mod);
@@ -93,26 +93,26 @@ static AstDefinitions *parseNameSpace(PmModule *mod, YY_BUFFER_STATE bs, const c
     return definitions;
 }
 
-AstDefinitions *parseNameSpaceFromString(const char *namespace, const char *origin) {
+AstDefinitions *parseNamespaceFromString(const char *namespace, const char *origin) {
     PmModule *mod = newPmModule();
-    AstDefinitions *definitions = parseNameSpace(mod, yy_scan_string(namespace, mod->scanner), origin);
+    AstDefinitions *definitions = parseNamespace(mod, yy_scan_string(namespace, mod->scanner), origin);
     freePmModule(mod);
     return definitions;
 }
 
-AstDefinitions *parseNameSpaceFromFileHandle(FILE *f, const char *origin) {
+AstDefinitions *parseNamespaceFromFileHandle(FILE *f, const char *origin) {
     PmModule *mod = newPmModule();
-    AstDefinitions *definitions = parseNameSpace(mod, yy_create_buffer(f, YY_BUF_SIZE, mod->scanner), origin);
+    AstDefinitions *definitions = parseNamespace(mod, yy_create_buffer(f, YY_BUF_SIZE, mod->scanner), origin);
     freePmModule(mod);
     return definitions;
 }
 
-AstDefinitions *parseNameSpaceFromFileName(const char *fileName) {
-    return parseNameSpaceFromFileHandle(safeFOpen(fileName), fileName);
+AstDefinitions *parseNamespaceFromFileName(const char *fileName) {
+    return parseNamespaceFromFileHandle(safeFOpen(fileName), fileName);
 }
 
 static AstDefinitions *parsePreamble() {
-    return parseNameSpaceFromString(preamble, "preamble");
+    return parseNamespaceFromString(preamble, "preamble");
 }
 
 static AstNest *parseTopLevel(PmModule *mod, YY_BUFFER_STATE bs, const char *origin) {

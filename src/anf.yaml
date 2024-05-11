@@ -29,7 +29,7 @@ description: ANF structures to be converted to bytecode.
 structs:
     CTEnv:
         isLocal: bool
-        isNameSpace: bool = false
+        isNamespace: bool = false
         nbindings: int = 0
         nsEnvs: CTEnvArray = NULL
         table: CTIntTable
@@ -77,12 +77,12 @@ structs:
         nargs: int
         args: AexpList
 
-    AexpNameSpace:
+    AexpNamespace:
         nbindings: int = 0
         body: Exp
 
-    AexpNameSpaces:
-        namespaces: AexpNameSpaceArray
+    AexpNamespaces:
+        namespaces: AexpNamespaceArray
         body: Exp
 
     CexpIf:
@@ -140,7 +140,7 @@ structs:
         val: Exp
         body: Exp
 
-    ExpLookUp:
+    ExpLookup:
         namespace: index
         annotatedVar: AexpAnnotatedVar = NULL
         body: Exp
@@ -163,7 +163,7 @@ unions:
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
-        namespaces: AexpNameSpaces
+        namespaces: AexpNamespaces
 
     Cexp:
         back: void_ptr
@@ -184,7 +184,7 @@ unions:
         aexp: Aexp
         cexp: Cexp
         let: ExpLet
-        lookUp: ExpLookUp
+        lookup: ExpLookup
 
 enums:
     AexpAnnotatedVarType:
@@ -226,8 +226,8 @@ hashes:
         entries: int
 
 arrays:
-    AexpNameSpaceArray:
-        entries: AexpNameSpace
+    AexpNamespaceArray:
+        entries: AexpNamespace
 
     CTEnvArray:
         entries: CTEnv

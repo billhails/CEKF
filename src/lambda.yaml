@@ -57,7 +57,7 @@ structs:
         nargs: int
         args: LamList
 
-    LamLookUp:
+    LamLookup:
         namespace: int
         exp: LamExp
 
@@ -227,7 +227,7 @@ enums:
 
 unions:
     LamExp:
-        namespaces: LamNameSpaceArray
+        namespaces: LamNamespaceArray
         lam: LamLam
         var: HashSymbol
         stdint: int
@@ -260,7 +260,7 @@ unions:
         error: void_ptr
         cond_default: void_ptr
         env: void_ptr
-        lookUp: LamLookUp
+        lookup: LamLookup
 
     LamCondCases:
         integers: LamIntCondCases
@@ -281,7 +281,7 @@ hashes:
         entries: LamExp
     
 arrays:
-    LamNameSpaceArray:
+    LamNamespaceArray:
         dimension: 1
         entries: LamExp
 

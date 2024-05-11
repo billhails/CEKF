@@ -217,7 +217,7 @@ void ppAexpMakeVec(AexpMakeVec *x) {
     eprintf(")");
 }
 
-void ppAexpNameSpaceArray(AexpNameSpaceArray *x) {
+void ppAexpNamespaceArray(AexpNamespaceArray *x) {
     for (Index i = 0; i < x->size; i++) {
         eprintf("[");
         ppExp(x->entries[i]->body);
@@ -228,9 +228,9 @@ void ppAexpNameSpaceArray(AexpNameSpaceArray *x) {
     }
 }
 
-void ppAexpNameSpaces(AexpNameSpaces *x) {
+void ppAexpNamespaces(AexpNamespaces *x) {
     eprintf("(namespaces ");
-    ppAexpNameSpaceArray(x->namespaces);
+    ppAexpNamespaceArray(x->namespaces);
     eprintf(" ");
     ppExp(x->body);
     eprintf(")");
@@ -392,7 +392,7 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
-void ppExpLookUp(ExpLookUp *x) {
+void ppExpLookup(ExpLookup *x) {
     eprintf("(lookup <namespace %d> ", x->namespace);
     ppExp(x->body);
     eprintf(")");
@@ -437,7 +437,7 @@ void ppAexp(Aexp *x) {
             ppAexpMakeVec(x->val.makeVec);
             break;
         case AEXP_TYPE_NAMESPACES:
-            ppAexpNameSpaces(x->val.namespaces);
+            ppAexpNamespaces(x->val.namespaces);
             break;
         default:
             cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
@@ -504,7 +504,7 @@ void ppExp(Exp *x) {
             eprintf("ENV");
             break;
         case EXP_TYPE_LOOKUP:
-            ppExpLookUp(x->val.lookUp);
+            ppExpLookup(x->val.lookup);
             break;
         default:
             eprintf("<unrecognised exp %s>", expTypeName(x->type));

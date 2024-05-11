@@ -29,7 +29,7 @@ HashSymbol *negSymbol() {
     return res;
 }
 
-HashSymbol *nameSpacesSymbol() {
+HashSymbol *namespacesSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("$namespaces");

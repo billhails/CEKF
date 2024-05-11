@@ -37,7 +37,7 @@
 
 static Exp *normalize(LamExp *lamExp, Exp *tail);
 static Exp *normalizeLam(LamLam *lamLam, Exp *tail);
-static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail);
+static Exp *normalizeNamespaces(LamNamespaceArray *nsArray, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
@@ -62,7 +62,7 @@ static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
 static Aexp *aexpNormalizeCharacter(char character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
-static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray);
+static AexpNamespaceArray *aexpNormalizeNamespaces(LamNamespaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
 static AexpList *replaceLamList(LamList *list, LamExpTable *replacements);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
@@ -95,7 +95,7 @@ static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
 static Exp *normalizeEnv(Exp *tail);
-static Exp *normalizeLamLookUp(LamLookUp *, Exp *);
+static Exp *normalizeLamLookup(LamLookup *, Exp *);
 
 Exp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -164,11 +164,11 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
         case LAMEXP_TYPE_MAKE_TUPLE:
             return normalizeMakeTuple(lamExp->val.make_tuple, tail);
         case LAMEXP_TYPE_NAMESPACES:
-            return normalizeNameSpaces(lamExp->val.namespaces, tail);
+            return normalizeNamespaces(lamExp->val.namespaces, tail);
         case LAMEXP_TYPE_ENV:
             return normalizeEnv(tail);
         case LAMEXP_TYPE_LOOKUP:
-            return normalizeLamLookUp(lamExp->val.lookUp, tail);
+            return normalizeLamLookup(lamExp->val.lookup, tail);
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("normalize encountered cond default");
         default:
@@ -690,34 +690,34 @@ static Exp *normalizeStdInteger(int integer, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeNameSpaces(LamNameSpaceArray *nsArray, Exp *tail) {
-    ENTER(normalizeNameSpaces);
-    AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(nsArray);
+static Exp *normalizeNamespaces(LamNamespaceArray *nsArray, Exp *tail) {
+    ENTER(normalizeNamespaces);
+    AexpNamespaceArray *nsa = aexpNormalizeNamespaces(nsArray);
     int save = PROTECT(nsa);
-    AexpNameSpaces *nso = newAexpNameSpaces(nsa, tail);
+    AexpNamespaces *nso = newAexpNamespaces(nsa, tail);
     PROTECT(nso);
     Aexp *aexp = newAexp(AEXP_TYPE_NAMESPACES, AEXP_VAL_NAMESPACES(nso));
     PROTECT(aexp);
     Exp *exp = wrapAexp(aexp);
     UNPROTECT(save);
-    LEAVE(normalizeNameSpaces);
+    LEAVE(normalizeNamespaces);
     return exp;
 }
 
-static AexpNameSpaceArray *aexpNormalizeNameSpaces(LamNameSpaceArray *nsArray) {
-    ENTER(aexpNormalizeNameSpaces);
-    AexpNameSpaceArray *res = newAexpNameSpaceArray();
+static AexpNamespaceArray *aexpNormalizeNamespaces(LamNamespaceArray *nsArray) {
+    ENTER(aexpNormalizeNamespaces);
+    AexpNamespaceArray *res = newAexpNamespaceArray();
     int save = PROTECT(res);
     for (Index i = 0; i < nsArray->size; i++) {
         Exp *nsExp = normalize(nsArray->entries[i], NULL);
         int save2 = PROTECT(nsExp);
-        AexpNameSpace *ns = newAexpNameSpace(nsExp);
+        AexpNamespace *ns = newAexpNamespace(nsExp);
         PROTECT(ns);
-        pushAexpNameSpaceArray(res, ns);
+        pushAexpNamespaceArray(res, ns);
         UNPROTECT(save2);
     }
     UNPROTECT(save);
-    LEAVE(aexpNormalizeNameSpaces);
+    LEAVE(aexpNormalizeNamespaces);
     return res;
 }
 
@@ -732,10 +732,10 @@ static Exp *normalizeEnv(Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeLamLookUp(LamLookUp *lookUp, Exp *tail) {
-    Exp *rest = normalize(lookUp->exp, tail);
+static Exp *normalizeLamLookup(LamLookup *lookup, Exp *tail) {
+    Exp *rest = normalize(lookup->exp, tail);
     int save = PROTECT(rest);
-    ExpLookUp *exp = newExpLookUp(lookUp->namespace, rest);
+    ExpLookup *exp = newExpLookup(lookup->namespace, rest);
     PROTECT(exp);
     Exp *res = newExp(EXP_TYPE_LOOKUP, EXP_VAL_LOOKUP(exp));
     UNPROTECT(save);

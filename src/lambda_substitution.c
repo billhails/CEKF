@@ -126,9 +126,9 @@ static LamPrint *performPrintSubstitutions(LamPrint *print, TpmcSubstitutionTabl
     return print;
 }
 
-static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp, TpmcSubstitutionTable *substitutions) {
-    lookUp->exp = lamPerformSubstitutions(lookUp->exp, substitutions);
-    return lookUp;
+static LamLookup *performLookupSubstitutions(LamLookup *lookup, TpmcSubstitutionTable *substitutions) {
+    lookup->exp = lamPerformSubstitutions(lookup->exp, substitutions);
+    return lookup;
 }
 
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
@@ -443,7 +443,7 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 exp->val.print = performPrintSubstitutions(exp->val.print, substitutions);
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                exp->val.lookUp = performLookUpSubstitutions(exp->val.lookUp, substitutions);
+                exp->val.lookup = performLookupSubstitutions(exp->val.lookup, substitutions);
                 break;
             default:
                 cant_happen

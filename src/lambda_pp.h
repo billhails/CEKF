@@ -50,6 +50,6 @@ void ppLamTupleIndex(LamTupleIndex *index);
 void ppLamLetRecBindings(LamLetRecBindings *bindings);
 void ppLamIntList(LamIntList *list);
 void ppLamMakeTuple(LamList *args);
-void ppLamNameSpaces(LamNameSpaceArray *arr);
+void ppLamNamespaces(LamNamespaceArray *arr);
 
 #endif

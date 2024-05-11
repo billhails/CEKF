@@ -211,7 +211,7 @@ static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
 // in precisely the correct order that they will need to be processed in.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
-static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
+static AstNamespace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
     if (fileIdStack == NULL) {
         fileIdStack = newAstFileIdArray();
     }
@@ -220,37 +220,37 @@ static AstNameSpace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) 
     if (fileId == NULL) {
         cant_happen("cannot stat file \"%s\"", path);
     }
-    int found = lookupNameSpace(fileId);
+    int found = lookupNamespace(fileId);
     if (found != -1) {
-        return newAstNameSpace(symbol, found);
+        return newAstNamespace(symbol, found);
     }
     if (fileIdInArray(fileId, fileIdStack)) {
         cant_happen("recursive include detected for %s", path);
     }
     pushAstFileIdArray(fileIdStack, fileId);
-    AstDefinitions *definitions = parseNameSpaceFromFileName(path);
+    AstDefinitions *definitions = parseNamespaceFromFileName(path);
     if (definitions == NULL) {
         cant_happen("syntax error parsing %s", path);
     }
-    AstNameSpaceImpl *impl = newAstNameSpaceImpl(fileId, definitions);
-    found = pushAstNameSpaceArray(nameSpaces, impl);
+    AstNamespaceImpl *impl = newAstNamespaceImpl(fileId, definitions);
+    found = pushAstNamespaceArray(namespaces, impl);
     popAstFileIdArray(fileIdStack);
-    AstNameSpace *ns = newAstNameSpace(symbol, found);
+    AstNamespace *ns = newAstNamespace(symbol, found);
     free(path);
     return ns;
 }
 
-static void storeNameSpace(PmModule *mod, AstNameSpace *ns) {
+static void storeNamespace(PmModule *mod, AstNamespace *ns) {
     if (getAstIntTable(mod->namespaces, ns->symbol, NULL)) {
         cant_happen("redefinition of namespace %s", ns->symbol->name);
     }
     setAstIntTable(mod->namespaces, ns->symbol, ns->reference);
 }
 
-static AstLookUp *makeAstLookUp(PmModule *mod, HashSymbol *symbol, AstExpression *expr) {
+static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression *expr) {
     int index = 0;
     if (getAstIntTable(mod->namespaces, symbol, &index)) {
-        return newAstLookUp(index, expr);
+        return newAstLookup(index, expr);
     } else {
         cant_happen("cannot resolve namespace %s", symbol->name);
     }
@@ -294,8 +294,8 @@ static AstLookUp *makeAstLookUp(PmModule *mod, HashSymbol *symbol, AstExpression
     AstCharArray *chars;
     AstAltFunction *altFunction;
     AstAltArgs * altArgs;
-    AstNameSpace *nameSpace;
-    AstLookUp *lookUp;
+    AstNamespace *namespace;
+    AstLookup *lookup;
 }
 
 %type <chars> str
@@ -326,8 +326,8 @@ static AstLookUp *makeAstLookUp(PmModule *mod, HashSymbol *symbol, AstExpression
 %type <iff> iff
 %type <altFunction> alt_function
 %type <altArgs> alt_args
-%type <nameSpace> name_space
-%type <lookUp> look_up
+%type <namespace> name_space
+%type <lookup> look_up
 
 %token BACK
 %token ELSE
@@ -403,7 +403,7 @@ definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_T
            | typedef                   { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
            | defun                     { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
            | name_space                {
-                                           storeNameSpace(mod, $1);
+                                           storeNamespace(mod, $1);
                                            $$ = newAstDefinition( AST_DEFINITION_TYPE_BLANK, AST_DEFINITION_VAL_BLANK());
                                        }
            ;
@@ -600,7 +600,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
       ;
 
-look_up : symbol '.' expression         { $$ = makeAstLookUp(mod, $1, $3); }
+look_up : symbol '.' expression         { $$ = makeAstLookup(mod, $1, $3); }
         ;
 
 expressions : %empty                        { $$ = NULL; }

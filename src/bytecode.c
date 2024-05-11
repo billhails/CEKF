@@ -300,7 +300,7 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
     LEAVE(writeAexpMakeVec);
 }
 
-void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b) {
+void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b) {
     if (x->size > 0) {
         addByte(b, BYTECODE_NS_START);
         addWord(b, x->size);
@@ -315,11 +315,11 @@ void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b) {
     }
 }
 
-void writeAexpNameSpaces(AexpNameSpaces *x, ByteCodeArray *b) {
-    ENTER(writeAexpNameSpaces);
-    writeAexpNameSpaceArray(x->namespaces, b);
+void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b) {
+    ENTER(writeAexpNamespaces);
+    writeAexpNamespaceArray(x->namespaces, b);
     writeExp(x->body, b);
-    LEAVE(writeAexpNameSpaces);
+    LEAVE(writeAexpNamespaces);
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
@@ -591,7 +591,7 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     LEAVE(writeExpLet);
 }
 
-void writeLookup(ExpLookUp *x, ByteCodeArray *b) {
+void writeLookup(ExpLookup *x, ByteCodeArray *b) {
 #ifdef SAFETY_CHECKS
     if (x->annotatedVar == NULL) {
         cant_happen("annotated var missing from lookup");
@@ -683,7 +683,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             }
             break;
         case AEXP_TYPE_NAMESPACES:{
-                writeAexpNameSpaces(x->val.namespaces, b);
+                writeAexpNamespaces(x->val.namespaces, b);
             }
             break;
         default:
@@ -762,7 +762,7 @@ void writeExp(Exp *x, ByteCodeArray *b) {
             }
             break;
         case EXP_TYPE_LOOKUP:{
-                writeLookup(x->val.lookUp, b);
+                writeLookup(x->val.lookup, b);
             }
             break;
         case EXP_TYPE_ENV:

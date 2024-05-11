@@ -192,7 +192,7 @@ static inline Value builtInValue(struct BuiltInImplementation * x) {
     return v;
 }
 
-static inline Value nameSpaceValue(struct ValueList *x) {
+static inline Value namespaceValue(struct ValueList *x) {
     Value v;
     v.type = VALUE_TYPE_NAMESPACE;
     v.val = VALUE_VAL_NAMESPACE(x);

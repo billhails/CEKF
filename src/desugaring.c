@@ -91,17 +91,17 @@ static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
     return x;
 }
 
-static AexpNameSpaceArray *desugarAexpNameSpaceArray(AexpNameSpaceArray *x) {
-    DEBUG_DESUGAR(AexpNameSpaceArray, x);
+static AexpNamespaceArray *desugarAexpNamespaceArray(AexpNamespaceArray *x) {
+    DEBUG_DESUGAR(AexpNamespaceArray, x);
     for (Index i = 0; i < x->size; i++) {
         x->entries[i]->body = desugarExp(x->entries[i]->body);
     }
     return x;
 }
 
-static AexpNameSpaces *desugarAexpNameSpaces(AexpNameSpaces *x) {
-    DEBUG_DESUGAR(AexpNameSpaces, x);
-    x->namespaces = desugarAexpNameSpaceArray(x->namespaces);
+static AexpNamespaces *desugarAexpNamespaces(AexpNamespaces *x) {
+    DEBUG_DESUGAR(AexpNamespaces, x);
+    x->namespaces = desugarAexpNamespaceArray(x->namespaces);
     x->body = desugarExp(x->body);
     return x;
 }
@@ -334,7 +334,7 @@ static Aexp *desugarAexp(Aexp *x) {
             x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
             break;
         case AEXP_TYPE_NAMESPACES:
-            x->val.namespaces = desugarAexpNameSpaces(x->val.namespaces);
+            x->val.namespaces = desugarAexpNamespaces(x->val.namespaces);
             break;
         default:
             cant_happen("unrecognized type %s in desugarAexp", aexpTypeName(x->type));
@@ -358,7 +358,7 @@ static CexpMatch *desugarCexpMatch(CexpMatch *x) {
     return x;
 }
 
-static ExpLookUp *desugarExpLookUp(ExpLookUp *x) {
+static ExpLookup *desugarExpLookup(ExpLookup *x) {
     x->body = desugarExp(x->body);
     return x;
 }
@@ -419,7 +419,7 @@ Exp *desugarExp(Exp *x) {
             x->val.let = desugarExpLet(x->val.let);
             break;
         case EXP_TYPE_LOOKUP:
-            x->val.lookUp = desugarExpLookUp(x->val.lookUp);
+            x->val.lookup = desugarExpLookup(x->val.lookup);
         case EXP_TYPE_DONE:
         case EXP_TYPE_ENV:
             break;

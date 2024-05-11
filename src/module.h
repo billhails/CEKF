@@ -12,9 +12,9 @@ typedef struct PmModule {
     AstIntTable *namespaces;
 } PmModule;
 
-AstDefinitions *parseNameSpaceFromString(const char *namespace, const char *origin);
-AstDefinitions *parseNameSpaceFromFileHandle(FILE *f, const char *origin);
-AstDefinitions *parseNameSpaceFromFileName(const char *fileName);
+AstDefinitions *parseNamespaceFromString(const char *namespace, const char *origin);
+AstDefinitions *parseNamespaceFromFileHandle(FILE *f, const char *origin);
+AstDefinitions *parseNamespaceFromFileName(const char *fileName);
 AstNest *parseTopLevelFromFileHandle(FILE *f, const char *origin);
 AstNest *parseTopLevelFromFileName(const char *fileName);
 AstNest *parseTopLevelFromString(const char *string, const char *origin);

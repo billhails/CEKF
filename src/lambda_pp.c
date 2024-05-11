@@ -194,7 +194,7 @@ void ppLamExp(LamExp *exp) {
             ppLamMakeTuple(exp->val.make_tuple);
             break;
         case LAMEXP_TYPE_NAMESPACES:
-            ppLamNameSpaces(exp->val.namespaces);
+            ppLamNamespaces(exp->val.namespaces);
             break;
         case LAMEXP_TYPE_ENV:
             eprintf("env");
@@ -204,7 +204,7 @@ void ppLamExp(LamExp *exp) {
     }
 }
 
-void ppLamNameSpaces(LamNameSpaceArray *arr) {
+void ppLamNamespaces(LamNamespaceArray *arr) {
     eprintf("(namespaces");
     for (Index i = 0; i < arr->size; ++i) {
         eprintf(" [");
