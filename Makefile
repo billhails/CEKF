@@ -14,7 +14,7 @@ CCMODE = $(MODE_D)
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)
 PYTHON=python3
-MAKEAST=$(PYTHON) ./tools/makeAST.py
+MAKE_AST=$(PYTHON) ./tools/makeAST.py
 
 EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
@@ -22,6 +22,8 @@ EXTRA_H_TARGETS=$(patsubst src/%.yaml,generated/%.h,$(EXTRA_YAML))
 EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,generated/%_objtypes.h,$(EXTRA_YAML))
 EXTRA_DEBUG_H_TARGETS=$(patsubst src/%.yaml,generated/%_debug.h,$(EXTRA_YAML))
 EXTRA_DEBUG_C_TARGETS=$(patsubst src/%.yaml,generated/%_debug.c,$(EXTRA_YAML))
+
+EXTRA_DOCS=$(patsubst src/%.yaml,docs/%.md,$(EXTRA_YAML))
 
 EXTRA_TARGETS= \
     $(EXTRA_C_TARGETS) \
@@ -59,27 +61,32 @@ ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
 
-all: $(TARGET)
+all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) -lm
 
+docs: $(EXTRA_DOCS)
+
 include $(ALL_DEP)
 
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(MAKEAST) $< c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
-	$(MAKEAST) $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(MAKEAST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(MAKEAST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
-	$(MAKEAST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DOCS): docs/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml
+	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
 	touch $@
@@ -123,7 +130,7 @@ test: $(TEST_TARGETS)
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm
 
-dep obj generated:
+dep obj generated docs/generated:
 	mkdir $@
 
 clean: deps

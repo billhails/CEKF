@@ -193,6 +193,10 @@ class Catalog:
         for entity in self.contents.values():
             entity.printFreeFunction(self)
 
+    def printMermaid(self):
+        for entity in self.contents.values():
+            entity.printMermaid(self)
+
     def printMarkObjFunction(self):
         comment = '// Catalog.printMarkObjFunction'
         print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{')
@@ -410,6 +414,9 @@ class EnumField:
         self.owner = owner
         self.name = name
 
+    def getName(self):
+        return self.name
+
     def isSimpleField(self):
         return False;
 
@@ -572,6 +579,13 @@ class SimpleHash(Base):
     def isHash(self):
         return True
 
+    def printMermaid(self, catalog):
+        myName = self.getName()
+        if self.entries is None:
+            print(myName)
+        else:
+            print(f"{myName} --entries--> {self.entries.getName()}")
+        
     def isSelfInitializing(self):
         return True # other constructors will call this automatically
 
@@ -758,6 +772,11 @@ class SimpleArray(Base):
             self.height = SimpleField(self.name, "height", "int")
         self.entries = SimpleField(self.name,"entries", data["entries"])
 
+    def printMermaid(self, catalog):
+        myName = self.getName()
+        mySpec = '[]' * self.dimension
+        print(f'{myName}["{myName}{mySpec}"] --entries--> {self.entries.getObjName(catalog)}')
+        
     def getDefineValue(self):
         return 'x'
 
@@ -1285,6 +1304,10 @@ class SimpleStruct(Base):
     def isStruct(self):
         return True
 
+    def printMermaid(self, catalog):
+        for field in self.fields:
+            print(f"{self.getName()} --{field.getName()}--> {field.getObjName(catalog)}")
+
     def makeField(self, fieldName, fieldType):
         return SimpleField(self.name, fieldName, fieldType)
 
@@ -1580,6 +1603,9 @@ class DiscriminatedUnionField(EnumField):
         self.typeName = typeName
         self.default = None
 
+    def getObjName(self, catalog):
+        return self.typeName
+
     def printStructTypedefLine(self, catalog):
         obj = catalog.get(self.typeName)
         print("    {type} {name}; // DiscriminatedUnionField.printStructTypedefLine".format(type=obj.getTypeDeclaration(), name=self.name))
@@ -1740,6 +1766,9 @@ class DiscriminatedUnionUnion(Base):
     def getName(self):
         return self.name + "Val"
 
+    def printMermaid(self, catalog):
+        print(self.getName())
+
     def getTypeDeclaration(self):
         return "union {name} ".format(name=self.getName())
 
@@ -1770,6 +1799,9 @@ class SimpleEnum(Base):
 
     def getTypeDeclaration(self):
         return "enum {name} ".format(name=self.getName())
+
+    def printMermaid(self, catalog):
+        print(f'{self.getName()}["enum {self.getName()}"]')
 
     def printTypedef(self, catalog):
         self.noteTypedef()
@@ -1854,6 +1886,9 @@ class DiscriminatedUnionEnum(Base):
     def getName(self):
         return self.name + "Type"
 
+    def printMermaid(self, catalog):
+        print(self.getName())
+
     def getFieldName(self):
         return 'type'
 
@@ -1926,6 +1961,9 @@ class Primitive(Base):
             self.copyFn = data['copyFn']
         else:
             self.copyFn = None
+
+    def printMermaid(self, catalog):
+        pass
 
     def printMarkCase(self, catalog):
         if self.markFn is not None:
@@ -2046,7 +2084,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("yaml", help="input yaml file")
 parser.add_argument("type",
                     type=str,
-                    choices=["h", "c", "objtypes_h", "debug_h", "debug_c"],
+                    choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md"],
                     help="the type of output to produce")
 args = parser.parse_args()
 
@@ -2244,3 +2282,18 @@ elif args.type == 'debug_c':
     catalog.printPrintFunctions()
     printSection("compare functions")
     catalog.printCompareFunctions()
+
+elif args.type == 'md':
+
+    print(f"# {typeName}")
+    print("")
+    if 'description' in document:
+        print(document['description'])
+        print("")
+
+    print("```mermaid")
+    print("flowchart TD")
+    catalog.printMermaid()
+    print("```")
+    print("")
+    print(f"> Generated from {args.yaml} by tools/makeAST.py")
