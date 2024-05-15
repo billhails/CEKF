@@ -218,6 +218,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeEnv(env));
         case LAMEXP_TYPE_LOOKUP:
             return prune(analyzeLookup(exp->val.lookup, env, ng));
+        case LAMEXP_TYPE_CONSTRUCTOR:
+            return prune(analyzeVar(exp->val.constructor->name, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:

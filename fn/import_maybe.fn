@@ -1,5 +1,5 @@
 let
     import "maybe.fn" as maybe
 in
-    maybe.some(1)
+    print(maybe.some(1))
     // maybe.nothing

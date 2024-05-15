@@ -212,10 +212,10 @@ int main(int argc, char *argv[]) {
     LamExp *exp = convertProg(prog);
     REPLACE_PROTECT(save2, exp);
 
-    // exp = inlineExp(exp);
-    // REPLACE_PROTECT(save2, exp);
-
     typeCheck(exp, builtIns);
+
+    exp = inlineExp(exp);
+    REPLACE_PROTECT(save2, exp);
 
     Exp *anfExp = anfNormalize(exp);
     REPLACE_PROTECT(save2, anfExp);

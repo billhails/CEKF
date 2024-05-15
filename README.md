@@ -73,13 +73,14 @@ parser([Parser]):::process -->
 ast(AST) -->
 lc([Lambda Conversion]):::process <--> tpmc([Tpmc]):::process
 lc <--> pg([Print Function Generator]):::process
-lc <--> ci([Constructor Inlining]):::process
 tpmc <--> vs([Variable Substitution]):::process
 lc ----> lambda1(Plain Lambda Form)
 lambda1 --> tc([Type Checking]):::process
 tc <--> pc([Print Compiler]):::process
 tc ---> lambda2(Plain Lambda Form)
-lambda2 --> anfc([A-Normal Form Conversion]):::process
+lambda2 --> ci([Constructor Inlining]):::process
+ci --> lambda3(Inlined Lambda)
+lambda3 --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> desug([Desugaring]):::process
 desug --> danf(Desugared ANF)
