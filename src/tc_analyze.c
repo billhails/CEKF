@@ -446,8 +446,7 @@ static LamApply *constructToApply(LamConstruct *construct) {
     LamExp *constructor =
         newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(construct->name));
     int save = PROTECT(constructor);
-    LamApply *apply = newLamApply(constructor, countLamList(construct->args),
-                                  construct->args);
+    LamApply *apply = newLamApply(constructor, construct->args);
     UNPROTECT(save);
     // LEAVE(constructToApply);
     return apply;
@@ -608,12 +607,12 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
                                      LamList *args) {
     if (nargs == 1) {
-        LamApply *res = newLamApply(function, 1, args);
+        LamApply *res = newLamApply(function, args);
         return res;
     }
     LamList *singleArg = newLamList(args->exp, NULL);
     int save = PROTECT(singleArg);
-    LamApply *new = newLamApply(function, 1, singleArg);
+    LamApply *new = newLamApply(function, singleArg);
     PROTECT(new);
     LamExp *newFunction = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(new));
     PROTECT(newFunction);
@@ -624,12 +623,12 @@ static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
 }
 
 static LamApply *curryLamApply(LamApply *apply) {
-    return curryLamApplyHelper(apply->nargs, apply->function, apply->args);
+    return curryLamApplyHelper(countLamList(apply->args), apply->function, apply->args);
 }
 
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeApply);
-    switch (apply->nargs) {
+    switch (countLamList(apply->args)) {
         case 0:{
                 TcType *res = analyzeExp(apply->function, env, ng);
                 // LEAVE(analyzeApply);

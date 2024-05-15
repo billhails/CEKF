@@ -507,3 +507,89 @@ constructors as it does for local ones, but currently it seems to
 be treating them as normal variables and passing them through. The
 typechecker is happy, and the code gets all the way to annotation
 (lexical analysis) before the error is detected).
+
+One option is to defer the inlining until after type checking, and
+since the type constructor will see the constructors themselves
+rather than the inlined `construct` operations. It should treat
+them as normal functions. But that means it will allow them to be
+curried. We might be on to a winner here if we go with that and
+detect curried applications of constructors in the inlining
+phase, we can convert those into anonymous closures. so after:
+
+```
+typedef dict(#k, #v) { leaf | tree(dict(#k, #v), #k, #v, dict(#k, #v)) }
+```
+
+on seeing:
+
+```
+tree(leaf, 1, "hello", leaf)
+```
+
+the constructor is directly inlined, but on seeing:
+
+```
+tree(leaf, 1)
+```
+
+the result is:
+
+```
+fn(a, b) { tree(leaf, 1, a, b) }
+```
+
+or the lambda equivalent. Again the final constructor is inlined in the
+body of the anonymous function.
+
+The big problem here is that TPMC has already run at this stage, but
+it may be ok, since these functions only have one branch?  No, not ok,
+the error clauses etc need to be added.
+
+So there may be major surgery required to the overall architecture:
+
+```
+parser -> lambda-conversion -> type-checking -> constructor inlining -> TPMC -> ...
+```
+
+wheras currently TPMC happens as part of lambda conversion.  Quite a
+problem as TPMC currently operates on the AST from the parser.
+
+Also if TPMC isn't done until after type-checking the type-checker
+will need to be aware of the "pseudo-unification" feature of the
+arguments, the lambda args can no longer be a simple list of
+variables.
+
+Another option might be to do that currying of type constructors
+during lambda conversion.
+
+Back to the currying, a simpler way to do the currying is to detect
+partial application of a constructor, and wrap the constructor in
+a normal function and apply that to its arguments to get a PCLO.
+
+Example:
+
+
+```
+typedef dict(#k, #v) { leaf | tree(dict(#k, #v), #k, #v, dict(#k, #v)) }
+```
+
+on seeing:
+
+```
+tree(leaf, 1, "hello", leaf)
+```
+
+the constructor is directly inlined, but on seeing:
+
+```
+tree(leaf, 1)
+```
+
+the result is:
+
+```
+fn(a, b, c, d) { tree(a, b, c, d) }(leaf, 1);
+```
+
+Same result, but let the existing currying capability do the heavy lifting.
+

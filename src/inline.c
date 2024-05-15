@@ -41,8 +41,13 @@ static LamPrint *inlinePrint(LamPrint *x);
 static LamLookup *inlineLookup(LamLookup *x);
 static LamTupleIndex *inlineTupleIndex(LamTupleIndex *x);
 static LamMatch *inlineMatch(LamMatch *x);
+static LamCond *inlineCond(LamCond *x);
+static LamCondCases *inlineCondCases(LamCondCases *x);
+static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x);
+static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x);
 static LamExp *makeConstruct(HashSymbol *name, int tag, LamList *args);
 static LamExp *makeConstant(HashSymbol *name, int tag);
+static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x);
 
 static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x) {
     for (Index i = 0; i < x->size; ++i) {
@@ -131,26 +136,38 @@ static LamExp *inlineConstant(LamTypeConstructorInfo *x) {
     }
 }
 
+static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x) {
+    switch (x->type) {
+        case LAMEXP_TYPE_CONSTRUCTOR:
+            return x->val.constructor;
+        case LAMEXP_TYPE_LOOKUP:
+            return resolveTypeConstructor(x->val.lookup->exp);
+        default:
+            return NULL;
+    }
+}
+
 static LamExp *inlineApply(LamApply *x) {
     x->args = inlineList(x->args);
-    if (x->function->type == LAMEXP_TYPE_CONSTRUCTOR) {
-        LamTypeConstructorInfo *info = x->function->val.constructor;
+    LamTypeConstructorInfo *info = resolveTypeConstructor(x->function);
+    if (info == NULL) {
+        x->function = inlineExp(x->function);
+    } else {
+        int nargs = countLamList(x->args);
         if (info->needsVec) {
-            if (x->nargs == info->arity) {
+            if (nargs == info->arity) {
                 return makeConstruct(info->name, info->index, x->args);
             } else {
                 cant_happen("wrong number of arguments to constructor %s, got %d, expected %d",
-                            info->name->name, x->nargs, info->arity);
+                            info->name->name, nargs, info->arity);
             }
         } else {
-            if (x->nargs > 0) {
+            if (nargs > 0) {
                 cant_happen("arguments to constant constructor %s",
                             info->name->name);
             }
             return makeConstant(info->name, info->index);
         }
-    } else {
-        x->function = inlineExp(x->function);
     }
     return newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(x));
 }
@@ -212,6 +229,44 @@ static LamLookup *inlineLookup(LamLookup *x) {
 
 static LamTupleIndex *inlineTupleIndex(LamTupleIndex *x) {
     x->exp = inlineExp(x->exp);
+    return x;
+}
+
+static LamCond *inlineCond(LamCond *x) {
+    x->value = inlineExp(x->value);
+    x->cases = inlineCondCases(x->cases);
+    return x;
+}
+
+static LamCondCases *inlineCondCases(LamCondCases *x) {
+    if (x != NULL) {
+        switch (x->type) {
+            case LAMCONDCASES_TYPE_INTEGERS:
+                x->val.integers = inlineIntCondCases(x->val.integers);
+                break;
+            case LAMCONDCASES_TYPE_CHARACTERS:
+                x->val.characters = inlineCharCondCases(x->val.characters);
+                break;
+            default:
+                cant_happen("unrecognized %s", lamCondCasesTypeName(x->type));
+        }
+    }
+    return x;
+}
+
+static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x) {
+    if (x != NULL) {
+        x->next = inlineCharCondCases(x->next);
+        x->body = inlineExp(x->body);
+    }
+    return x;
+}
+
+static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x) {
+    if (x != NULL) {
+        x->next = inlineIntCondCases(x->next);
+        x->body = inlineExp(x->body);
+    }
     return x;
 }
 
@@ -297,6 +352,8 @@ static LamExp *inlineExp(LamExp *x) {
             x->val.construct->args = inlineList(x->val.construct->args);
             break;
         case LAMEXP_TYPE_COND:
+            x->val.cond = inlineCond(x->val.cond);
+            break;
         case LAMEXP_TYPE_TUPLE:
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered %s", lamExpTypeName(x->type));

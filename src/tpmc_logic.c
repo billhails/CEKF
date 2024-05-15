@@ -643,7 +643,7 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     // DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
-    LamLam *res = newLamLam(rootVariables->size, args, body);
+    LamLam *res = newLamLam(args, body);
     PROTECT(res);
 #ifdef DEBUG_TPMC_LOGIC
     LamExp *tmp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));

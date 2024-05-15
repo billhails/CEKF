@@ -70,7 +70,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     // (printer x) (putc '\n') x)
     LamList *args = newLamList(var, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, 1, args);
+    LamApply *apply = newLamApply(printer, args);
     PROTECT(apply);
     LamExp *applyExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     PROTECT(applyExp);
@@ -82,7 +82,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     PROTECT(fargs);
     LamExp *body = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     PROTECT(body);
-    LamLam *lambda = newLamLam(1, fargs, body);
+    LamLam *lambda = newLamLam(fargs, body);
     PROTECT(lambda);
     LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
@@ -203,7 +203,7 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, nargs, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -223,7 +223,7 @@ static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env) {
         int save = PROTECT(exp);
         LamList *args = compilePrinterForTupleArgs(tuple, env);
         PROTECT(args);
-        LamApply *apply = newLamApply(exp, tuple->size, args);
+        LamApply *apply = newLamApply(exp, args);
         PROTECT(apply);
         LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
         UNPROTECT(save);

@@ -215,9 +215,6 @@ static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
 static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
     LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
-    if (expression->type == LAMEXP_TYPE_CONSTRUCTOR) { // second pass will inline constructors
-        return expression;
-    }
     int save = PROTECT(expression);
     LamLookup *llu = newLamLookup(lookup->namespace, expression);
     PROTECT(llu);
@@ -650,51 +647,128 @@ static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
     return NULL;
 }
 
-static LamExp *convertApplication(AstFunCall *funCall, LamList *args,
-                                  LamContext *env) {
-    int actualNargs = countAstExpressions(funCall->arguments);
-    LamExp *fun = convertExpression(funCall->function, env);
-    int save = PROTECT(fun);
-    LamApply *apply = newLamApply(fun, actualNargs, args);
-    PROTECT(apply);
-    LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
-    UNPROTECT(save);
-    return result;
-}
-
-static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
-    int actualNargs = constructor->val.constructor->arity;
-    LamApply *apply = newLamApply(constructor, actualNargs, args);
+static LamExp *makeApplication(LamExp *fun, LamList *args) {
+    LamApply *apply = newLamApply(fun, args);
     int save = PROTECT(apply);
     LamExp *result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return result;
 }
 
+static LamList *varListToList(LamVarList *list) {
+    if (list == NULL) return NULL;
+    LamList *next = varListToList(list->next);
+    int save = PROTECT(next);
+    LamExp *var = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(list->var));
+    PROTECT(var);
+    LamList *this = newLamList(var, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamVarList *genSymVarList(int nargs) {
+    if (nargs == 0) {
+        return NULL;
+    }
+    LamVarList *rest = genSymVarList(nargs - 1);
+    int save = PROTECT(rest);
+    HashSymbol *s = genSym("$x");
+    LamVarList *this = newLamVarList(s, rest);
+    UNPROTECT(save);
+    return this;
+}
+
+static int findUnderlyingArity(LamExp *exp) {
+    switch (exp->type) {
+        case LAMEXP_TYPE_CONSTRUCTOR:
+            return exp->val.constructor->arity;
+        case LAMEXP_TYPE_LOOKUP:
+            return findUnderlyingArity(exp->val.lookup->exp);
+        default:
+            cant_happen("expected lookup or constructor");
+    }
+}
+
+static int findUnderlyingType(LamExp *exp) {
+    switch (exp->type) {
+        case LAMEXP_TYPE_LOOKUP:
+            return findUnderlyingType(exp->val.lookup->exp);
+        default:
+            return exp->type;
+    }
+}
+
+static LamExp *findUnderlyingValue(LamExp *exp) {
+    switch (exp->type) {
+        case LAMEXP_TYPE_LOOKUP:
+            return findUnderlyingValue(exp->val.lookup->exp);
+        default:
+            return exp;
+    }
+}
+
+// (costructor4 arg1 arg2) =>
+// ((lambda (x1 x2 x3 x4) (constructor4 x1 x2 x3 x4)) arg1 arg2)
+
+static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
+    int nargs = (int) countLamList(args);
+    LamExp *result;
+    int arity = findUnderlyingArity(constructor);
+    if (nargs < arity) {
+        LamVarList *fargs = genSymVarList(arity);
+        int save = PROTECT(fargs);
+        LamList *aargs = varListToList(fargs);
+        PROTECT(aargs);
+        LamApply *innerApply = newLamApply(constructor, aargs);
+        PROTECT(innerApply);
+        LamExp *applyExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(innerApply));
+        PROTECT(applyExp);
+        LamLam *lambda = newLamLam(fargs, applyExp);
+        PROTECT(lambda);
+        LamExp *lamExp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
+        PROTECT(lamExp);
+        LamApply *apply = newLamApply(lamExp, args);
+        PROTECT(apply);
+        result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+        UNPROTECT(save);
+    } else {
+        LamApply *apply = newLamApply(constructor, args);
+        int save = PROTECT(apply);
+        result = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+        UNPROTECT(save);
+    }
+    return result;
+}
+
 static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     LamList *args = convertExpressions(funCall->arguments, env);
     int save = PROTECT(args);
+    LamExp *function = convertExpression(funCall->function, env);
+    PROTECT(function);
     LamExp *result = NULL;
-    if (funCall->function->type == AST_EXPRESSION_TYPE_SYMBOL) {
-        HashSymbol *symbol = funCall->function->val.symbol;
-        result = makePrimApp(symbol, args);
-        if (result != NULL) {
+    switch (findUnderlyingType(function)) {
+        case LAMEXP_TYPE_VAR:{
+            LamExp *symbol = findUnderlyingValue(function);
+            result = makePrimApp(symbol->val.var, args);
+            if (result != NULL) {
+                UNPROTECT(save);
+                return result;
+            }
+            result = makeApplication(function, args);
             UNPROTECT(save);
             return result;
         }
-        // see if it's a type constructor we can inline
-        result = makeConstructor(symbol, env);
-        if (result != NULL) {
-            PROTECT(result);
-            result = makeConstructorApplication(result, args);
+        case LAMEXP_TYPE_CONSTRUCTOR:{
+            result = makeConstructorApplication(function, args);
+            UNPROTECT(save);
+            return result;
+        }
+        default:{
+            result = makeApplication(function, args);
             UNPROTECT(save);
             return result;
         }
     }
-    // otherwise we convert as normal
-    result = convertApplication(funCall, args, env);
-    UNPROTECT(save);
-    return result;
 }
 
 static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,

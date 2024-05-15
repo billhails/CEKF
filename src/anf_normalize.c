@@ -390,7 +390,7 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
 static LamApply *printToApply(LamPrint *lamPrint) {
     LamList *args = newLamList(lamPrint->exp, NULL);
     int save = PROTECT(args);
-    LamApply *lamApply = newLamApply(lamPrint->printer, 1, args);
+    LamApply *lamApply = newLamApply(lamPrint->printer, args);
     UNPROTECT(save);
     return lamApply;
 }

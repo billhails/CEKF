@@ -148,7 +148,7 @@ static LamExp *putsExp(LamExp *string) {
     int save = PROTECT(puts);
     LamList *args = newLamList(string, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(puts, 1, args);
+    LamApply *apply = newLamApply(puts, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -236,7 +236,7 @@ static LamExp *makePrintType(LamTypeFunction *function) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, nargs, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -259,7 +259,7 @@ static LamExp *makePrintTuple(LamTypeConstructorArgs *tuple) {
     int save = PROTECT(exp);
     LamList *args = makePrintArgs(tuple);
     PROTECT(args);
-    LamApply *apply = newLamApply(exp, size, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -299,7 +299,7 @@ static LamExp *makePrintConstructorArg(LamTypeConstructorType *arg,
     PROTECT(printer);
     LamList *args = newLamList(accessor, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, 1, args);
+    LamApply *apply = newLamApply(printer, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -458,7 +458,7 @@ static LamLetRecBindings *makePrintTypeFunction(LamTypeDef *typeDef,
     int save = PROTECT(args);
     LamExp *body = makeFunctionBody(typeDef->constructors, env);
     PROTECT(body);
-    LamLam *lam = newLamLam(countLamVarList(args), args, body);
+    LamLam *lam = newLamLam(args, body);
     PROTECT(lam);
     LamExp *val = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam));
     PROTECT(val);

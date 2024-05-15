@@ -164,7 +164,7 @@ void ppLamExp(LamExp *exp) {
             ppLamMatch(exp->val.match);
             break;
         case LAMEXP_TYPE_CHARACTER:
-            eprintf("'%c'", exp->val.character);
+            eprintf("\"%c\"", exp->val.character);
             break;
         case LAMEXP_TYPE_BACK:
             eprintf("(back)");
@@ -198,6 +198,9 @@ void ppLamExp(LamExp *exp) {
             break;
         case LAMEXP_TYPE_ENV:
             eprintf("env");
+            break;
+        case LAMEXP_TYPE_CONSTRUCTOR:
+            eprintf("constructor:%s", exp->val.constructor->name->name);
             break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
@@ -397,7 +400,7 @@ static void _ppLamIntCondCases(LamIntCondCases *cases) {
 }
 
 static void _ppLamCharCondCases(LamCharCondCases *cases) {
-    eprintf("('%c' ", cases->constant);
+    eprintf("(\"%c\" ", cases->constant);
     ppLamExp(cases->body);
     eprintf(")");
     if (cases->next != NULL) {
@@ -677,7 +680,7 @@ void ppLamIntList(LamIntList *list) {
 void ppLamConstruct(LamConstruct *construct) {
     eprintf("(construct ");
     ppHashSymbol(construct->name);
-    eprintf(" [%d]", construct->tag);
+    eprintf(":%d", construct->tag);
     _ppLamList(construct->args);
     eprintf(")");
 }

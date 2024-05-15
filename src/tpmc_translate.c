@@ -104,9 +104,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     PROTECT(cargs);
     LamList *args = convertVarListToList(cargs);
     PROTECT(args);
-    LamApply *apply =
-        newLamApply(function, countTpmcVariableTable(dfa->freeVariables),
-                    args);
+    LamApply *apply = newLamApply(function, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -121,7 +119,7 @@ static LamExp *translateToLambda(TpmcState *dfa, LamExpTable *lambdaCache) {
     LamVarList *args = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(args);
     LamLam *lambda =
-        newLamLam(countTpmcVariableTable(dfa->freeVariables), args, exp);
+        newLamLam(args, exp);
     PROTECT(lambda);
     LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
