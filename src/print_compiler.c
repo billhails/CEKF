@@ -30,6 +30,7 @@
 #include "lambda_pp.h"
 #include "symbol.h"
 #include "symbols.h"
+#include "tc_analyze.h"
 
 #ifdef DEBUG_PRINT_COMPILER
 #  include "debugging_on.h"
@@ -182,6 +183,24 @@ static LamExp *compilePrinterForString() {
     return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
+static TcEnv *getNsEnv(int index, TcEnv *env) {
+    if (index == NS_GLOBAL || index == NS_UNKNOWN) {
+        return env;
+    }
+    TcType *currentNs = NULL;
+    getFromTcEnv(env, namespaceSymbol(), &currentNs);
+#ifdef SAFETY_CHECKS
+    if (currentNs == NULL) {
+        cant_happen("cannot find current namespace");
+    }
+#endif
+    if (currentNs->val.namespace == index) {
+        return env;
+    }
+    TcType *res = lookupNsRef(index, env);
+    return res->val.env;
+}
+
 static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
     IFDEBUG(printTcUserType(userType, 0));
     if (userType->name == listSymbol()) {
@@ -190,12 +209,23 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
             return compilePrinterForString();
         }
     }
+    if (userType->ns == NS_UNKNOWN) {
+        eprintf("WARNING: unknown namespace for user type %s", userType->name->name);
+        return makeSymbolExpr("print$");
+    }
     HashSymbol *name = makePrintName("print$", userType->name->name);
-    if (!getFromTcEnv(env, name, NULL)) {
+    TcEnv *nsEnv = getNsEnv(userType->ns, env);
+    if (!getFromTcEnv(nsEnv, name, NULL)) {
         return makeSymbolExpr("print$");
     }
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
+    if (env != nsEnv) {
+        LamLookup *lookup = newLamLookup(userType->ns, NULL, exp);
+        PROTECT(lookup);
+        exp = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(lookup));
+        PROTECT(exp);
+    }
     LamList *args = compilePrinterForUserTypeArgs(userType->args, env);
     PROTECT(args);
     int nargs = countLamList(args);

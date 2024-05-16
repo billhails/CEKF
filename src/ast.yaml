@@ -120,6 +120,7 @@ structs:
 
     AstLookup:
         namespace: int
+        name: HashSymbol
         expression: AstExpression
 
     AstIff:

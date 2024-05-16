@@ -105,8 +105,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
-static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args);
-static TcType *lookupNsRef(int index, TcEnv *env);
+static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid);
 static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
 
 static int id_counter = 0;
@@ -145,6 +144,9 @@ TcEnv *tc_init(BuiltIns *builtIns) {
 TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     TcNg *ng = newTcNg(NULL);
     int save = PROTECT(ng);
+    TcType *nsType = newTcType(TCTYPE_TYPE_NAMESPACE, TCTYPE_VAL_NAMESPACE(NS_GLOBAL)); // global ns
+    PROTECT(nsType);
+    addToEnv(env, namespaceSymbol(), nsType);
     TcType *res = analyzeExp(exp, env, ng);
     UNPROTECT(save);
     return res;
@@ -546,13 +548,16 @@ static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static TcType *lookupNsRef(int index, TcEnv *env) {
+TcType *lookupNsRef(int index, TcEnv *env) {
     Index i = index;
     TcType *nsType = NULL;
     if (!getFromTcEnv(env, namespacesSymbol(), &nsType)) {
         cant_happen("failed to retrieve namespaces");
     }
 #ifdef SAFETY_CHECKS
+    if (nsType->type != TCTYPE_TYPE_NAMESPACES) {
+        cant_happen("expected namespaces");
+    }
     if (i >= nsType->val.namespaces->size) {
         cant_happen("index out of range");
     }
@@ -575,6 +580,9 @@ static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *n
         int save = PROTECT(env2);
         TcNg *ng2 = newTcNg(ng);
         PROTECT(ng2);
+        TcType *nsId = newTcType(TCTYPE_TYPE_NAMESPACE, TCTYPE_VAL_NAMESPACE((int) i));
+        PROTECT(nsId);
+        addToEnv(env2, namespaceSymbol(), nsId);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
         PROTECT(res);
         pushTcNamespaceArray(nsType->val.namespaces, res);
@@ -812,8 +820,8 @@ static TcUserTypeArgs *makeTcUserTypeArgs(LamTypeArgs *lamTypeArgs,
     return this;
 }
 
-static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args) {
-    TcUserType *tcUserType = newTcUserType(name, args);
+static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid) {
+    TcUserType *tcUserType = newTcUserType(name, args, nsid);
     int save = PROTECT(tcUserType);
     TcType *res =
         newTcType(TCTYPE_TYPE_USERTYPE, TCTYPE_VAL_USERTYPE(tcUserType));
@@ -821,10 +829,10 @@ static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args) {
     return res;
 }
 
-static TcType *makeTcUserType(LamType *lamType, TcTypeTable *map) {
+static TcType *makeTcUserType(LamType *lamType, TcTypeTable *map, int nsid) {
     TcUserTypeArgs *args = makeTcUserTypeArgs(lamType->args, map);
     int save = PROTECT(args);
-    TcType *res = makeUserType(lamType->name, args);
+    TcType *res = makeUserType(lamType->name, args, nsid);
     UNPROTECT(save);
     return res;
 }
@@ -880,7 +888,7 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
     // list(t) in the context of t -> list(t) -> list(t)
     TcUserTypeArgs *args = makeUserTypeArgs(func->args, map);
     int save = PROTECT(args);
-    TcType *res = makeUserType(func->name, args);
+    TcType *res = makeUserType(func->name, args, NS_UNKNOWN);
     UNPROTECT(save);
     return res;
 }
@@ -954,7 +962,18 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
     TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     LamType *lamType = lamTypeDef->type;
-    TcType *tcType = makeTcUserType(lamType, map);
+    TcType *ns = NULL;
+
+    getFromTcEnv(env, namespaceSymbol(), &ns);
+#ifdef SAFETY_CHECKS
+    if (ns == NULL) {
+        cant_happen("cannot find namespace in env");
+    }
+    if (ns->type != TCTYPE_TYPE_NAMESPACE) {
+        cant_happen("namespace corrupted");
+    }
+#endif
+    TcType *tcType = makeTcUserType(lamType, map, ns->val.namespace);
     PROTECT(tcType);
     for (LamTypeConstructorList *list = lamTypeDef->constructors;
          list != NULL; list = list->next) {
@@ -1328,7 +1347,7 @@ static TcUserTypeArgs *freshUserTypeArgs(TcUserTypeArgs *args, TcNg *ng,
 static TcType *freshUserType(TcUserType *userType, TcNg *ng, TcTypeTable *map) {
     TcUserTypeArgs *args = freshUserTypeArgs(userType->args, ng, map);
     int save = PROTECT(args);
-    TcType *res = makeUserType(userType->name, args);
+    TcType *res = makeUserType(userType->name, args, userType->ns);
     UNPROTECT(save);
     return res;
 }
@@ -1446,12 +1465,12 @@ static void addToNg(TcNg *ng, TcType *type) {
 }
 
 static TcType *makeBoolean() {
-    TcType *res = makeUserType(boolSymbol(), NULL);
+    TcType *res = makeUserType(boolSymbol(), NULL, NS_GLOBAL);
     return res;
 }
 
 static TcType *makeSpaceship() {
-    TcType *res = makeUserType(spaceshipSymbol(), NULL);
+    TcType *res = makeUserType(spaceshipSymbol(), NULL, NS_GLOBAL);
     return res;
 }
 
@@ -1695,13 +1714,22 @@ static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
 
 static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
-        can_happen("unification failed[1]");
+        can_happen("unification failed [usertype name mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
         eprintf("\n");
         return false;
     }
+    if (a->ns != b->ns && a->ns != NS_UNKNOWN && b->ns != NS_UNKNOWN) {
+        can_happen("unification failed [usertype namespace mismatch]");
+        ppTcUserType(a);
+        eprintf(" vs ");
+        ppTcUserType(b);
+        eprintf("\n");
+        return false;
+    }
+
     TcUserTypeArgs *aArgs = a->args;
     TcUserTypeArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {
@@ -1712,12 +1740,17 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         bArgs = bArgs->next;
     }
     if (aArgs != NULL || bArgs != NULL) {
-        can_happen("unification failed[2]");
+        can_happen("unification failed [usertype arg count mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
         eprintf("\n");
         return false;
+    }
+    if (a->ns == NS_UNKNOWN) {
+        a->ns = b->ns;
+    } else if (b->ns == NS_UNKNOWN) {
+        b->ns = a->ns;
     }
     return true;
 }
@@ -1726,9 +1759,7 @@ static bool _unify(TcType *a, TcType *b) {
     a = prune(a);
     b = prune(b);
     if (a == b) {
-        if (a->type == TCTYPE_TYPE_UNKNOWN)
-            return false;
-        return true;
+        return a->type != TCTYPE_TYPE_UNKNOWN;
     }
     if (a->type == TCTYPE_TYPE_VAR) {
         if (b->type != TCTYPE_TYPE_VAR) {
@@ -1747,7 +1778,7 @@ static bool _unify(TcType *a, TcType *b) {
         return unify(b, a, "unify");
     } else {
         if (a->type != b->type) {
-            can_happen("unification failed[3]");
+            can_happen("unification failed [type mismatch]");
             ppTcType(a);
             eprintf(" vs ");
             ppTcType(b);
@@ -1780,11 +1811,9 @@ static bool _unify(TcType *a, TcType *b) {
 
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
     // *INDENT-OFF*
-    DEBUGN("unify(%s) :> ", trace);
-    IFDEBUGN(ppTcType(a); eprintf(" =?= "); ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(a); eprintf(" =?= "); ppTcType(b));
     bool res = _unify(a, b);
-    DEBUGN("unify(%s) <: ", trace);
-    IFDEBUGN(ppTcType(a); eprintf(" === "); ppTcType(b));
+    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(a); eprintf(" === "); ppTcType(b));
     return res;
     // *INDENT-ON*
 }

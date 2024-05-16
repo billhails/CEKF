@@ -20,7 +20,6 @@
 
 #  include "symbol.h"
 
-HashSymbol *namespacesSymbol(void);
 HashSymbol *addSymbol(void);
 HashSymbol *andSymbol(void);
 HashSymbol *appendSymbol(void);
@@ -30,6 +29,7 @@ HashSymbol *boolSymbol(void);
 HashSymbol *carSymbol(void);
 HashSymbol *cdrSymbol(void);
 HashSymbol *charSymbol(void);
+HashSymbol *cmpSymbol(void);
 HashSymbol *consSymbol(void);
 HashSymbol *divSymbol(void);
 HashSymbol *dotSymbol(void);
@@ -45,10 +45,10 @@ HashSymbol *intSymbol(void);
 HashSymbol *leSymbol(void);
 HashSymbol *listSymbol(void);
 HashSymbol *ltSymbol(void);
-HashSymbol *cmpSymbol(void);
-HashSymbol *spaceshipSymbol(void);
 HashSymbol *modSymbol(void);
 HashSymbol *mulSymbol(void);
+HashSymbol *namespacesSymbol(void);
+HashSymbol *namespaceSymbol(void);
 HashSymbol *negSymbol(void);
 HashSymbol *neSymbol(void);
 HashSymbol *nilSymbol(void);
@@ -59,6 +59,7 @@ HashSymbol *putcSymbol(void);
 HashSymbol *putnSymbol(void);
 HashSymbol *putsSymbol(void);
 HashSymbol *putvSymbol(void);
+HashSymbol *spaceshipSymbol(void);
 HashSymbol *subSymbol(void);
 HashSymbol *thenSymbol(void);
 HashSymbol *trueSymbol(void);

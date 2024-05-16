@@ -22,6 +22,7 @@ LamList --next--> LamList
 LamApply --function--> LamExp
 LamApply --args--> LamList
 LamLookup --namespace--> int
+LamLookup --name--> HashSymbol
 LamLookup --exp--> LamExp
 LamConstant --name--> HashSymbol
 LamConstant --tag--> int

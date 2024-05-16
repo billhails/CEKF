@@ -15,6 +15,7 @@ TcPair --first--> TcType
 TcPair --second--> TcType
 TcUserType --name--> HashSymbol
 TcUserType --args--> TcUserTypeArgs
+TcUserType --ns--> int
 TcUserTypeArgs --type--> TcType
 TcUserTypeArgs --next--> TcUserTypeArgs
 TcVar --name--> HashSymbol
@@ -31,6 +32,7 @@ TcType --userType--> TcUserType
 TcType --tuple--> TcTypeArray
 TcType --namespaces--> TcNamespaceArray
 TcType --env--> TcEnv
+TcType --namespace--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
 TcTypeVal

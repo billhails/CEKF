@@ -53,6 +53,7 @@ AstFunCall --arguments--> AstExpressions
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
 AstLookup --namespace--> int
+AstLookup --name--> HashSymbol
 AstLookup --expression--> AstExpression
 AstIff --test--> AstExpression
 AstIff --consequent--> AstNest

@@ -47,6 +47,7 @@ structs:
     TcUserType:
         name: HashSymbol
         args: TcUserTypeArgs
+        ns: int
 
     TcUserTypeArgs:
         type: TcType
@@ -83,5 +84,6 @@ unions:
         tuple: TcTypeArray
         namespaces: TcNamespaceArray
         env: TcEnv
+        namespace: int
 
 primitives: !include primitives.yaml

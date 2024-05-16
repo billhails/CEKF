@@ -57,6 +57,7 @@ structs:
 
     LamLookup:
         namespace: int
+        name: HashSymbol
         exp: LamExp
 
     LamConstant:

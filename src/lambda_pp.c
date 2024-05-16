@@ -202,9 +202,18 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_CONSTRUCTOR:
             eprintf("constructor:%s", exp->val.constructor->name->name);
             break;
+        case LAMEXP_TYPE_LOOKUP:
+            ppLamLookup(exp->val.lookup);
+            break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
+}
+
+void ppLamLookup(LamLookup *lookup) {
+    eprintf("(lookup %s:%d ", lookup->name == NULL ? "" : lookup->name->name, lookup->namespace);
+    ppLamExp(lookup->exp);
+    eprintf(")");
 }
 
 void ppLamNamespaces(LamNamespaceArray *arr) {

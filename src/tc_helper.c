@@ -106,7 +106,7 @@ static void ppUserTypeArgs(TcUserTypeArgs *args) {
 }
 
 void ppTcUserType(TcUserType *userType) {
-    eprintf("%s(", userType->name->name);
+    eprintf("%s:%d(", userType->name->name, userType->ns);
     ppUserTypeArgs(userType->args);
     eprintf(")");
 }

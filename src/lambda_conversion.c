@@ -216,7 +216,7 @@ static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
     LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookup *llu = newLamLookup(lookup->namespace, expression);
+    LamLookup *llu = newLamLookup(lookup->namespace, lookup->name, expression);
     PROTECT(llu);
     LamExp *res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
     UNPROTECT(save);

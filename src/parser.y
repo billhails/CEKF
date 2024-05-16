@@ -250,7 +250,7 @@ static void storeNamespace(PmModule *mod, AstNamespace *ns) {
 static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression *expr) {
     int index = 0;
     if (getAstIntTable(mod->namespaces, symbol, &index)) {
-        return newAstLookup(index, expr);
+        return newAstLookup(index, symbol, expr);
     } else {
         cant_happen("cannot resolve namespace %s", symbol->name);
     }

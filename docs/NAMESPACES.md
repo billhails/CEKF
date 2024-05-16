@@ -500,7 +500,7 @@ now apparently working.
 
 Phase 2 is to extend this to allow access to typedefs. specifically the
 type constructors.  We'll leave use of imported type constructors in
-patterns to phase 3, but phase 2 should include the print compiler.
+patterns to phase 4, and phase 3 should cover the print compiler.
 
 The lambda conversion stage should detect these uses and inline the
 constructors as it does for local ones, but currently it seems to
@@ -535,61 +535,55 @@ tree(leaf, 1)
 the result is:
 
 ```
-fn(a, b) { tree(leaf, 1, a, b) }
+fn(a, b, c, d) { tree(a, b, c, d) }(leaf, 1)
 ```
 
 or the lambda equivalent. Again the final constructor is inlined in the
 body of the anonymous function.
 
 The big problem here is that TPMC has already run at this stage, but
-it may be ok, since these functions only have one branch?  No, not ok,
-the error clauses etc need to be added.
+it may be ok, since these functions only have one branch.
 
-So there may be major surgery required to the overall architecture:
+## Phase 3
 
-```
-parser -> lambda-conversion -> type-checking -> constructor inlining -> TPMC -> ...
-```
-
-wheras currently TPMC happens as part of lambda conversion.  Quite a
-problem as TPMC currently operates on the AST from the parser.
-
-Also if TPMC isn't done until after type-checking the type-checker
-will need to be aware of the "pseudo-unification" feature of the
-arguments, the lambda args can no longer be a simple list of
-variables.
-
-Another option might be to do that currying of type constructors
-during lambda conversion.
-
-Back to the currying, a simpler way to do the currying is to detect
-partial application of a constructor, and wrap the constructor in
-a normal function and apply that to its arguments to get a PCLO.
-
-Example:
-
+basic type importing is done, though I suspect it has issues, anyway
 
 ```
-typedef dict(#k, #v) { leaf | tree(dict(#k, #v), #k, #v, dict(#k, #v)) }
+let
+    import "maybe.fn" as m
+in
+    print(m.some(1))
 ```
 
-on seeing:
+works and prints `#[1, 1]`
+
+The issue is that it merely removes the namespace context from the
+types and compares them in one global env, so if two imports happen to
+define types with the same names they will appear superficially to be the
+same types. We'll clear this up as part of phase 3, print compilation,
+as the print compiler also needs access to the namespace information.
+
+There are two competing approaches:
+
+1. Wrap namespaced types in new `TcLookup` constructs that contain
+the namespace context.
+2. Tag user-defined types with the integer namespace index (-1 for global)
+   and include that tag in unification comparisons etc.
+
+Option 1 seems more correct, but more problematic, because if typechecking
+i.e.  `m.some(1)` The type would be i.e. `(lookup m ((#t) -> maybe(#t)))`
+and `analyzeApply` would attempt to unify that with `(number -> #u)`
+which will fail, and even if it could be made to work the type of `#u`
+should unify with `(lookup m maybe(number))` not just `maybe(number)`.
+
+Option 2 should just work for unification, provided the extra id is
+included in the comparison. How would print compilation use it?
 
 ```
-tree(leaf, 1, "hello", leaf)
+print(m.some(1))
 ```
 
-the constructor is directly inlined, but on seeing:
-
-```
-tree(leaf, 1)
-```
-
-the result is:
-
-```
-fn(a, b, c, d) { tree(a, b, c, d) }(leaf, 1);
-```
-
-Same result, but let the existing currying capability do the heavy lifting.
-
+The type of the argument to `print` would come out something like
+`maybe:0(1)` where `0` is the namespace id. The print compiler
+could use this id to find the namespace in which to lookup the
+`print$maybe` function.
