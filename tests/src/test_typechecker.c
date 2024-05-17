@@ -19,6 +19,7 @@
 #include "test.h"
 #include "symbol.h"
 #include "builtins_helper.h"
+#include "tc_analyze.h"
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
@@ -53,9 +54,9 @@ static TcType *makeVar(char *name) {
     return var;
 }
 
-static TcType *makeUserType(char *name, TcUserTypeArgs *args) {
+static TcType *makeUserType(char *name, TcUserTypeArgs *args, int nsid) {
     HashSymbol *sym = newSymbol(name);
-    TcUserType *typeDef = newTcUserType(sym, args);
+    TcUserType *typeDef = newTcUserType(sym, args, nsid);
     int save = PROTECT(typeDef);
     TcType *td = newTcType(TCTYPE_TYPE_USERTYPE, TCTYPE_VAL_USERTYPE(typeDef));
     UNPROTECT(save);
@@ -65,7 +66,7 @@ static TcType *makeUserType(char *name, TcUserTypeArgs *args) {
 static TcType *listOf(TcType *type) {
     TcUserTypeArgs *args = newTcUserTypeArgs(type, NULL);
     int save = PROTECT(args);
-    TcType *td = makeUserType("list", args);
+    TcType *td = makeUserType("list", args, NS_GLOBAL);
     UNPROTECT(save);
     return td;
 }
@@ -278,7 +279,7 @@ static void test_id() {
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *expected = makeUserType("bool", NULL);
+    TcType *expected = makeUserType("bool", NULL, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
@@ -298,7 +299,7 @@ static void test_either_1() {
     PROTECT(args);
     args = newTcUserTypeArgs(big, args);
     PROTECT(args);
-    TcType *expected = makeUserType("either", args);
+    TcType *expected = makeUserType("either", args, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);

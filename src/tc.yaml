@@ -26,6 +26,7 @@ cmp:
         map: HashTable
     bespokeImplementation:
     - TcVar
+    - TcUserType
 
 structs:
     TcEnv:
