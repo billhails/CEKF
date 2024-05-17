@@ -71,7 +71,7 @@ structs:
         typeList: AstTypeList
 
     AstTypeFunction:
-        symbol: HashSymbol
+        symbol: AstLookupOrSymbol
         typeList: AstTypeList
 
     AstTypeList:
@@ -118,6 +118,11 @@ structs:
         expression: AstExpression
         next: AstExpressions
 
+    AstLookupSymbol: # specific to type functions
+        namespace: int
+        name: HashSymbol
+        symbol: HashSymbol
+
     AstLookup:
         namespace: int
         name: HashSymbol
@@ -132,6 +137,10 @@ structs:
         exp: AstExpression
 
 unions:
+    AstLookupOrSymbol:
+        symbol: HashSymbol
+        lookup: AstLookupSymbol
+
     AstDefinition:
         define: AstDefine
         typeDef: AstTypeDef

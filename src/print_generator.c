@@ -217,8 +217,41 @@ static LamList *makePrintArgs(LamTypeConstructorArgs *args) {
     return this;
 }
 
+static bool functionIsList(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol == listSymbol();
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return false;
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol->name;
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return los->val.lookup->symbol->name;
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static LamExp *wrapTypeFunction(LamExp *res, LamLookupOrSymbol *los) {
+    if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
+        LamLookupSymbol *ls = los->val.lookup;
+        LamLookup *llu = newLamLookup(ls->namespace, ls->name, res);
+        int save = PROTECT(llu);
+        res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
+        UNPROTECT(save);
+    }
+    return res;
+}
+
 static LamExp *makePrintType(LamTypeFunction *function) {
-    if (function->name == listSymbol()) {
+    if (functionIsList(function->name)) {
         if (function->args
             && function->args->arg->type ==
             LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER) {
@@ -226,9 +259,11 @@ static LamExp *makePrintType(LamTypeFunction *function) {
             return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
         }
     }
-    HashSymbol *name = makePrintName("print$", function->name->name);
+    HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
+    exp = wrapTypeFunction(exp, function->name);
+    REPLACE_PROTECT(save, exp);
     LamList *args = makePrintArgs(function->args);
     PROTECT(args);
     int nargs = countLamList(args);

@@ -256,13 +256,36 @@ static LamType *convertUserType(AstUserType *userType) {
     return res;
 }
 
+static LamLookupSymbol *convertAstLookupSymbol(AstLookupSymbol *ls) {
+    return newLamLookupSymbol(ls->namespace, ls->name, ls->symbol);
+}
+
+static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {
+    switch (los->type) {
+        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+            return newLamLookupOrSymbol(LAMLOOKUPORSYMBOL_TYPE_SYMBOL,
+                                        LAMLOOKUPORSYMBOL_VAL_SYMBOL(los->val.symbol));
+        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
+            LamLookupSymbol *ls = convertAstLookupSymbol(los->val.lookup);
+            int save = PROTECT(ls);
+            LamLookupOrSymbol *llos = newLamLookupOrSymbol(LAMLOOKUPORSYMBOL_TYPE_LOOKUP,
+                                                           LAMLOOKUPORSYMBOL_VAL_LOOKUP(ls));
+            UNPROTECT(save);
+            return llos;
+        }
+        default:
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+    }
+}
+
 static LamTypeFunction *convertAstTypeFunction(AstTypeFunction
                                                *astTypeFunction) {
     LamTypeConstructorArgs *lamTypeConstructorArgs =
         convertAstTypeList(astTypeFunction->typeList);
     int save = PROTECT(lamTypeConstructorArgs);
-    LamTypeFunction *this =
-        newLamTypeFunction(astTypeFunction->symbol, lamTypeConstructorArgs);
+    LamLookupOrSymbol *los = convertAstLookupOrSymbol(astTypeFunction->symbol);
+    PROTECT(los);
+    LamTypeFunction *this = newLamTypeFunction(los, lamTypeConstructorArgs);
     UNPROTECT(save);
     return this;
 }
@@ -323,7 +346,10 @@ static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
     int save = PROTECT(rhsArg);
     LamTypeConstructorArgs *args = newLamTypeConstructorArgs(lhs, rhsArg);
     PROTECT(args);
-    LamTypeFunction *res = newLamTypeFunction(arrowSymbol(), args);
+    LamLookupOrSymbol *los = newLamLookupOrSymbol(LAMLOOKUPORSYMBOL_TYPE_SYMBOL,
+                                                  LAMLOOKUPORSYMBOL_VAL_SYMBOL(arrowSymbol()));
+    PROTECT(los);
+    LamTypeFunction *res = newLamTypeFunction(los, args);
     UNPROTECT(save);
     return res;
 }

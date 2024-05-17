@@ -587,3 +587,9 @@ The type of the argument to `print` would come out something like
 `maybe:0(1)` where `0` is the namespace id. The print compiler
 could use this id to find the namespace in which to lookup the
 `print$maybe` function.
+
+## Phase 4
+
+Use of scoped types in pattern matching.
+
+

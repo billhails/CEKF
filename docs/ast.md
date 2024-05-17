@@ -28,7 +28,7 @@ AstTypeBody --typeConstructor--> AstTypeConstructor
 AstTypeBody --next--> AstTypeBody
 AstTypeConstructor --symbol--> HashSymbol
 AstTypeConstructor --typeList--> AstTypeList
-AstTypeFunction --symbol--> HashSymbol
+AstTypeFunction --symbol--> AstLookupOrSymbol
 AstTypeFunction --typeList--> AstTypeList
 AstTypeList --type--> AstType
 AstTypeList --next--> AstTypeList
@@ -52,6 +52,9 @@ AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
+AstLookupSymbol --namespace--> int
+AstLookupSymbol --name--> HashSymbol
+AstLookupSymbol --symbol--> HashSymbol
 AstLookup --namespace--> int
 AstLookup --name--> HashSymbol
 AstLookup --expression--> AstExpression
@@ -59,6 +62,8 @@ AstIff --test--> AstExpression
 AstIff --consequent--> AstNest
 AstIff --alternative--> AstNest
 AstPrint --exp--> AstExpression
+AstLookupOrSymbol --symbol--> HashSymbol
+AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
 AstDefinition --typeDef--> AstTypeDef
 AstDefinition --blank--> void_ptr
@@ -89,6 +94,8 @@ AstExpression --env--> void_ptr
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstLookupOrSymbolVal
+AstLookupOrSymbolType
 AstDefinitionVal
 AstDefinitionType
 AstTypeClauseVal

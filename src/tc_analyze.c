@@ -852,13 +852,13 @@ static TcType *makeTuple(int size) {
 }
 
 static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
-                                      TcTypeTable *map);
+                                      TcTypeTable *map, TcEnv *env);
 
-static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args, TcTypeTable *map) {
+static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args, TcTypeTable *map, TcEnv *env) {
     TcTypeArray *array = newTcTypeArray();
     int save = PROTECT(array);
     while (args != NULL) {
-        TcType *arg = makeTypeConstructorArg(args->arg, map);
+        TcType *arg = makeTypeConstructorArg(args->arg, map, env);
         int save2 = PROTECT(arg);
         pushTcTypeArray(array, arg);
         UNPROTECT(save2);
@@ -869,32 +869,64 @@ static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args, TcTypeTable *ma
 }
 
 static TcUserTypeArgs *makeUserTypeArgs(LamTypeConstructorArgs *args,
-                                        TcTypeTable *map) {
+                                        TcTypeTable *map, TcEnv *env) {
     if (args == NULL) {
         return NULL;
     }
-    TcUserTypeArgs *next = makeUserTypeArgs(args->next, map);
+    TcUserTypeArgs *next = makeUserTypeArgs(args->next, map, env);
     int save = PROTECT(next);
-    TcType *arg = makeTypeConstructorArg(args->arg, map);
+    TcType *arg = makeTypeConstructorArg(args->arg, map, env);
     PROTECT(arg);
     TcUserTypeArgs *this = newTcUserTypeArgs(arg, next);
     UNPROTECT(save);
     return this;
 }
 
+static int findNameSpace(LamLookupOrSymbol *los, TcEnv *env) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return los->val.lookup->namespace;
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:{
+            TcType *ns = NULL;
+            getFromTcEnv(env, namespaceSymbol(), &ns);
+#ifdef SAFETY_CHECKS
+            if (ns == NULL) {
+                cant_happen("cannot locate current namespace");
+            }
+#endif
+            return ns->val.namespace;
+        }
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static HashSymbol *getUnderlyingFunction(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return los->val.lookup->symbol;
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol;
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
 static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
-                                              TcTypeTable *map) {
+                                              TcTypeTable *map,
+                                              TcEnv *env) {
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
-    TcUserTypeArgs *args = makeUserTypeArgs(func->args, map);
+    TcUserTypeArgs *args = makeUserTypeArgs(func->args, map, env);
     int save = PROTECT(args);
-    TcType *res = makeUserType(func->name, args, NS_UNKNOWN);
+    int ns = findNameSpace(func->name, env);
+    TcType *res = makeUserType(getUnderlyingFunction(func->name), args, ns);
     UNPROTECT(save);
     return res;
 }
 
-static TcType *makeTupleApplication(LamTypeConstructorArgs *tuple, TcTypeTable *map) {
-    TcTypeArray *array = makeTupleArray(tuple, map);
+static TcType *makeTupleApplication(LamTypeConstructorArgs *tuple, TcTypeTable *map, TcEnv *env) {
+    TcTypeArray *array = makeTupleArray(tuple, map, env);
     int save = PROTECT(array);
     TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(array));
     UNPROTECT(save);
@@ -902,7 +934,7 @@ static TcType *makeTupleApplication(LamTypeConstructorArgs *tuple, TcTypeTable *
 }
 
 static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
-                                      TcTypeTable *map) {
+                                      TcTypeTable *map, TcEnv *env) {
     TcType *res = NULL;
     switch (arg->type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
@@ -921,10 +953,10 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
             }
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            res = makeTypeConstructorApplication(arg->val.function, map);
+            res = makeTypeConstructorApplication(arg->val.function, map, env);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-            res = makeTupleApplication(arg->val.tuple, map);
+            res = makeTupleApplication(arg->val.tuple, map, env);
             break;
         default:
             cant_happen("unrecognised type %s in collectTypeConstructorArg",
@@ -934,15 +966,15 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
 }
 
 static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args,
-                                      TcType *result, TcTypeTable *map) {
+                                      TcType *result, TcTypeTable *map, TcEnv *env) {
     // this code is building the top-level type of a type constructor, i.e.
     // pair => t -> list(t) -> list(t)
     if (args == NULL) {
         return result;
     }
-    TcType *next = makeTypeDefConstructor(args->next, result, map);
+    TcType *next = makeTypeDefConstructor(args->next, result, map, env);
     int save = PROTECT(next);
-    TcType *this = makeTypeConstructorArg(args->arg, map);
+    TcType *this = makeTypeConstructorArg(args->arg, map, env);
     PROTECT(this);
     TcType *res = makeFn(this, next);
     UNPROTECT(save);
@@ -952,7 +984,7 @@ static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args,
 static void collectTypeDefConstructor(LamTypeConstructor *constructor,
                                       TcType *type, TcEnv *env,
                                       TcTypeTable *map) {
-    TcType *res = makeTypeDefConstructor(constructor->args, type, map);
+    TcType *res = makeTypeDefConstructor(constructor->args, type, map, env);
     int save = PROTECT(res);
     addToEnv(env, constructor->name, res);
     UNPROTECT(save);
@@ -963,7 +995,6 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
     int save = PROTECT(map);
     LamType *lamType = lamTypeDef->type;
     TcType *ns = NULL;
-
     getFromTcEnv(env, namespaceSymbol(), &ns);
 #ifdef SAFETY_CHECKS
     if (ns == NULL) {

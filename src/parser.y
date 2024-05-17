@@ -256,6 +256,16 @@ static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression
     }
 }
 
+static AstLookupOrSymbol *makeAstLookupOrSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    int index = 0;
+    if (getAstIntTable(mod->namespaces, nsName, &index)) {
+        AstLookupSymbol *als = newAstLookupSymbol(index, nsName, symbol);
+        return newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_LOOKUP, AST_LOOKUPORSYMBOL_VAL_LOOKUP(als));
+    } else {
+        cant_happen("cannot resolve namespace %s", symbol->name);
+    }
+}
+
 %}
 %code requires
 {
@@ -296,6 +306,7 @@ static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression
     AstAltArgs * altArgs;
     AstNamespace *namespace;
     AstLookup *lookup;
+    AstLookupOrSymbol *los;
 }
 
 %type <chars> str
@@ -328,6 +339,7 @@ static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression
 %type <altArgs> alt_args
 %type <namespace> name_space
 %type <lookup> look_up
+%type <los> scoped_symbol
 
 %token BACK
 %token ELSE
@@ -441,8 +453,12 @@ type_constructor : symbol                   { $$ = newAstTypeConstructor($1, NUL
                  ;
 
 /* a type function being used in the body of a type constructor */
-type_function : symbol                   { $$ = newAstTypeFunction($1, NULL); }
-              | symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
+type_function : scoped_symbol                   { $$ = newAstTypeFunction($1, NULL); }
+              | scoped_symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
+              ;
+
+scoped_symbol : symbol              { $$ = newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_SYMBOL, AST_LOOKUPORSYMBOL_VAL_SYMBOL($1)); }
+              | symbol '.' symbol   { $$ = makeAstLookupOrSymbol(mod, $1, $3); }
               ;
 
 type_list : type                { $$ = newAstTypeList($1, NULL); }

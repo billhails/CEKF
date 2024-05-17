@@ -60,6 +60,11 @@ structs:
         name: HashSymbol
         exp: LamExp
 
+    LamLookupSymbol:
+        namespace: int
+        name: HashSymbol
+        symbol: HashSymbol
+
     LamConstant:
         name: HashSymbol # the name of the constructor
         tag: int         # the tag of the constructor
@@ -189,7 +194,7 @@ structs:
         next: LamTypeConstructorArgs
 
     LamTypeFunction:
-        name: HashSymbol
+        name: LamLookupOrSymbol
         args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
@@ -262,6 +267,10 @@ unions:
         env: void_ptr
         lookup: LamLookup
         constructor: LamTypeConstructorInfo
+
+    LamLookupOrSymbol:
+        symbol: HashSymbol
+        lookup: LamLookupSymbol
 
     LamCondCases:
         integers: LamIntCondCases

@@ -24,6 +24,9 @@ LamApply --args--> LamList
 LamLookup --namespace--> int
 LamLookup --name--> HashSymbol
 LamLookup --exp--> LamExp
+LamLookupSymbol --namespace--> int
+LamLookupSymbol --name--> HashSymbol
+LamLookupSymbol --symbol--> HashSymbol
 LamConstant --name--> HashSymbol
 LamConstant --tag--> int
 LamConstruct --name--> HashSymbol
@@ -92,7 +95,7 @@ LamTypeConstructor --type--> LamType
 LamTypeConstructor --args--> LamTypeConstructorArgs
 LamTypeConstructorArgs --arg--> LamTypeConstructorType
 LamTypeConstructorArgs --next--> LamTypeConstructorArgs
-LamTypeFunction --name--> HashSymbol
+LamTypeFunction --name--> LamLookupOrSymbol
 LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
 LamTypeConstructorInfo --type--> LamTypeConstructor
@@ -135,6 +138,8 @@ LamExp --cond_default--> void_ptr
 LamExp --env--> void_ptr
 LamExp --lookup--> LamLookup
 LamExp --constructor--> LamTypeConstructorInfo
+LamLookupOrSymbol --symbol--> HashSymbol
+LamLookupOrSymbol --lookup--> LamLookupSymbol
 LamCondCases --integers--> LamIntCondCases
 LamCondCases --characters--> LamCharCondCases
 LamTypeConstructorType --integer--> void_ptr
@@ -149,6 +154,8 @@ LamUnaryOp["enum LamUnaryOp"]
 LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp
 LamExpVal
 LamExpType
+LamLookupOrSymbolVal
+LamLookupOrSymbolType
 LamCondCasesVal
 LamCondCasesType
 LamTypeConstructorTypeVal
