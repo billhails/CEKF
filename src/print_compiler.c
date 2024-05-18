@@ -184,7 +184,7 @@ static LamExp *compilePrinterForString() {
 }
 
 static TcEnv *getNsEnv(int index, TcEnv *env) {
-    if (index == NS_GLOBAL || index == NS_UNKNOWN) {
+    if (index == NS_GLOBAL) {
         return env;
     }
     TcType *currentNs = NULL;
@@ -208,10 +208,6 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
             && userType->args->type->type == TCTYPE_TYPE_CHARACTER) {
             return compilePrinterForString();
         }
-    }
-    if (userType->ns == NS_UNKNOWN) {
-        eprintf("WARNING: unknown namespace for user type %s", userType->name->name);
-        return makeSymbolExpr("print$");
     }
     HashSymbol *name = makePrintName("print$", userType->name->name);
     TcEnv *nsEnv = getNsEnv(userType->ns, env);

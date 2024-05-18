@@ -1084,7 +1084,7 @@ class SimpleArray(Base):
         myName = self.getName()
         print("    if (o == NULL) return NULL; // SimpleArray.printCopyFunction")
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleArray.printCopyFunction")
-        print(f'    DEBUG("copy {myName} %pn", x); // SimpleArray.printCopyFunction')
+        print(f'    DEBUG("copy {myName} %p", x); // SimpleArray.printCopyFunction')
         print("    Header _h = x->header; // SimpleArray.printCopyFunction")
         print(f"    bzero(x, sizeof(struct {myName})); // SimpleArray.printCopyFunction")
         print("    x->header = _h; // SimpleArray.printCopyFunction")
@@ -1443,7 +1443,7 @@ class SimpleStruct(Base):
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printNewFunction")
         if hasInternalConstructors:
             print("    int save = PROTECT(x); // SimpleStruct.printNewFunction")
-        print(f'    DEBUG("new {myName} %pn", x); // SimpleStruct.printNewFunction')
+        print(f'    DEBUG("new {myName} %p", x); // SimpleStruct.printNewFunction')
         for field in self.getNewArgs(catalog):
             print("    x->{f} = {f}; // SimpleStruct.printNewFunction".format(f=field.getFieldName()))
         for field in self.getDefaultArgs(catalog):
@@ -1563,7 +1563,7 @@ class SimpleStruct(Base):
         myName = self.getName()
         print("    if (o == NULL) return NULL; // SimpleStruct.printCopyFunction")
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printCopyFunction")
-        print(f'    DEBUG("copy {myName} %pn", x); // SimpleStruct.printCopyFunction')
+        print(f'    DEBUG("copy {myName} %p", x); // SimpleStruct.printCopyFunction')
         print("    Header _h = x->header; // SimpleStruct.printCopyFunction")
         print(f"    bzero(x, sizeof(struct {myName})); // SimpleStruct.printCopyFunction")
         print("    x->header = _h; // SimpleStruct.printCopyFunction")

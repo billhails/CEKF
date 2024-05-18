@@ -23,7 +23,6 @@
 #  include "builtins.h"
 
 #define NS_GLOBAL -1
-#define NS_UNKNOWN -2
 
 TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);

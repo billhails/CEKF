@@ -135,14 +135,3 @@ bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {
     }
     return true;
 }
-
-bool eqTcUserType(struct TcUserType * a, struct TcUserType * b, HashTable *map) {
-    if (a == b) return true;
-    if (a == NULL || b == NULL) return false;
-    if (a->name != b->name) return false;
-    if (!eqTcUserTypeArgs(a->args, b->args, map)) return false;
-    if (a->ns != b->ns && a->ns != NS_UNKNOWN && b->ns != NS_UNKNOWN) return false;
-    return true;
-}
-
-

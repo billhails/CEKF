@@ -1752,7 +1752,7 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         eprintf("\n");
         return false;
     }
-    if (a->ns != b->ns && a->ns != NS_UNKNOWN && b->ns != NS_UNKNOWN) {
+    if (a->ns != b->ns) {
         can_happen("unification failed [usertype namespace mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
@@ -1777,11 +1777,6 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         ppTcUserType(b);
         eprintf("\n");
         return false;
-    }
-    if (a->ns == NS_UNKNOWN) {
-        a->ns = b->ns;
-    } else if (b->ns == NS_UNKNOWN) {
-        b->ns = a->ns;
     }
     return true;
 }

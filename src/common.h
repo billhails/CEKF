@@ -23,9 +23,7 @@
 #  include <stdint.h>
 #  include <stdlib.h>
 
-#  define DEBUG_ANY
-
-#  ifdef DEBUG_ANY
+#  if true
 // #    define DEBUG_BIGINT
 // #    define DEBUG_STACK
 // #    define DEBUG_STEP
