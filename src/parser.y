@@ -256,14 +256,23 @@ static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression
     }
 }
 
-static AstLookupOrSymbol *makeAstLookupOrSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+static AstLookupSymbol *makeAstLookupSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
     int index = 0;
     if (getAstIntTable(mod->namespaces, nsName, &index)) {
-        AstLookupSymbol *als = newAstLookupSymbol(index, nsName, symbol);
-        return newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_LOOKUP, AST_LOOKUPORSYMBOL_VAL_LOOKUP(als));
+        return newAstLookupSymbol(index, nsName, symbol);
     } else {
         cant_happen("cannot resolve namespace %s", symbol->name);
     }
+}
+
+static AstLookupOrSymbol *makeAstLookupOrSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    AstLookupSymbol *als = makeAstLookupSymbol(mod, nsName, symbol);
+    return newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_LOOKUP, AST_LOOKUPORSYMBOL_VAL_LOOKUP(als));
+}
+
+static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    AstLookupSymbol *als = makeAstLookupSymbol(mod, nsName, symbol);
+    return newAstArg(AST_ARG_TYPE_LOOKUP, AST_ARG_VAL_LOOKUP(als));
 }
 
 %}
@@ -529,6 +538,7 @@ number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
        ;
 
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
+     | symbol '.' symbol   { $$ = makeAstLookupArg(mod, $1, $3); }
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | named_farg          { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }

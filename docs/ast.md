@@ -74,6 +74,7 @@ AstTypeClause --typeFunction--> AstTypeFunction
 AstTypeClause --typeTuple--> AstTypeList
 AstArg --wildcard--> void_ptr
 AstArg --symbol--> HashSymbol
+AstArg --lookup--> AstLookupSymbol
 AstArg --named--> AstNamedArg
 AstArg --unpack--> AstUnpack
 AstArg --number--> MaybeBigInt

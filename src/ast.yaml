@@ -156,6 +156,7 @@ unions:
     AstArg:
         wildcard: void_ptr
         symbol: HashSymbol
+        lookup: AstLookupSymbol
         named: AstNamedArg
         unpack: AstUnpack
         number: MaybeBigInt
