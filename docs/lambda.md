@@ -33,6 +33,7 @@ LamConstruct --name--> HashSymbol
 LamConstruct --tag--> int
 LamConstruct --args--> LamList
 LamDeconstruct --name--> HashSymbol
+LamDeconstruct --namespace--> int
 LamDeconstruct --vec--> int
 LamDeconstruct --exp--> LamExp
 LamTupleIndex --vec--> int
@@ -58,6 +59,7 @@ LamMatchList --body--> LamExp
 LamMatchList --next--> LamMatchList
 LamIntList --item--> int
 LamIntList --name--> HashSymbol
+LamIntList --namespace--> int
 LamIntList --next--> LamIntList
 LamLet --var--> HashSymbol
 LamLet --value--> LamExp
@@ -98,6 +100,7 @@ LamTypeConstructorArgs --next--> LamTypeConstructorArgs
 LamTypeFunction --name--> LamLookupOrSymbol
 LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
+LamTypeConstructorInfo --namespace--> int
 LamTypeConstructorInfo --type--> LamTypeConstructor
 LamTypeConstructorInfo --needsVec--> bool
 LamTypeConstructorInfo --arity--> int
@@ -149,6 +152,7 @@ LamTypeConstructorType --function--> LamTypeFunction
 LamTypeConstructorType --tuple--> LamTypeConstructorArgs
 LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
 LamInfo --namespaceInfo--> LamContext
+LamInfo --namespace--> int
 LamPrimOp["enum LamPrimOp"]
 LamUnaryOp["enum LamUnaryOp"]
 LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp

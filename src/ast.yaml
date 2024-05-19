@@ -103,7 +103,7 @@ structs:
         nest: AstNest
 
     AstUnpack:
-        symbol: HashSymbol
+        symbol: AstLookupOrSymbol
         argList: AstArgList
 
     AstNamedArg:

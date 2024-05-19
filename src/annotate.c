@@ -28,14 +28,13 @@
 #include "anf_pp.h"
 #include "types.h"
 #include "symbol.h"
+#include "lambda_helper.h"
 
 #ifdef DEBUG_ANNOTATE
 #  include "debug.h"
 #  include "anf_debug.h"
 #  include "anf_pp.h"
 #endif
-
-#define NS_FORMAT "$ns%u"
 
 static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
 static void populateCTEnv(CTEnv *env, HashSymbol *var);

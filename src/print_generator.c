@@ -175,7 +175,7 @@ static LamExp *makePrintAccessor(int index, LamTypeConstructorInfo *info) {
     LamExp *printArg = printArgVar();
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(info->type->name, index, printArg);
+        newLamDeconstruct(info->type->name, info->namespace, index, printArg);
     PROTECT(dec);
     LamExp *res =
         newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(dec));
@@ -395,7 +395,7 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors,
             ("cannot find info for type constructor %s in makePlainMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
+    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
     LamExp *body = makePlainMatchBody(constructors->constructor);
     PROTECT(body);
@@ -417,7 +417,7 @@ static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors,
             ("cannot find info for type constructor %s in makeTagMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
+    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {

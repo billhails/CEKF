@@ -73,11 +73,19 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
 
 static bool inPreamble;  // preamble is treated specially
 
+static void addCurrentNamespaceToContext(LamContext *context, int id) {
+    LamInfo *lamInfo = newLamInfo(LAMINFO_TYPE_NAMESPACE, LAMINFO_VAL_NAMESPACE(id));
+    int save = PROTECT(lamInfo);
+    setLamInfoTable(context->frame, namespaceSymbol(), lamInfo);
+    UNPROTECT(save);
+}
+
 LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     inPreamble = true;
     LamContext *env = newLamContext(NULL);
     int save = PROTECT(env);
+    addCurrentNamespaceToContext(env, NS_GLOBAL);
     LamExp *result = lamConvertDefsNsAndExprs(prog->preamble, prog->namespaces, prog->body, env);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
@@ -105,7 +113,7 @@ static void addConstructorInfoToLamContext(LamContext *context, HashSymbol *symb
 
 static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, Index namespace) {
     char buf[80];
-    sprintf(buf, "$ns%u", namespace);
+    sprintf(buf, NS_FORMAT, namespace);
     HashSymbol *symbol = newSymbol(buf);
     LamInfo *lamInfo = newLamInfo(LAMINFO_TYPE_NAMESPACEINFO, LAMINFO_VAL_NAMESPACEINFO(info));
     int save = PROTECT(lamInfo);
@@ -133,6 +141,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
             AstNamespaceImpl *namespace = nsArray->entries[i];
             LamContext *nsEnv = newLamContext(env);
             int save2 = PROTECT(nsEnv);
+            addCurrentNamespaceToContext(env, (int) i);
             AstExpression *envToken = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV());
             PROTECT(envToken);
             AstExpressions *body = newAstExpressions(envToken, NULL);
@@ -391,9 +400,10 @@ static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
                             bool needsVec, int enumCount, int index,
                             int arity, LamContext *env) {
     ENTER(collectTypeInfo);
+    int namespace = lookupCurrentNamespaceInLamContext(env);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(symbol, type, needsVec, arity, enumCount,
-                                  index);
+        newLamTypeConstructorInfo(symbol, namespace, type, needsVec,
+                                  arity, enumCount, index);
     int save = PROTECT(info);
     addConstructorInfoToLamContext(env, symbol, info);
     UNPROTECT(save);

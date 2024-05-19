@@ -69,10 +69,17 @@ static AstArg *newAstNilArg() {
     return newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(nilSymbol()));
 }
 
+static AstUnpack *makeAstUnpack(HashSymbol *symbol, AstArgList *args) {
+    return newAstUnpack(
+        newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_SYMBOL, AST_LOOKUPORSYMBOL_VAL_SYMBOL(symbol)),
+        args
+    );
+}
+
 static AstUnpack *newStringUnpack(AstCharArray *str) {
-    AstUnpack *res = newAstUnpack(nilSymbol(), NULL);
+    AstUnpack *res = makeAstUnpack(nilSymbol(), NULL);
     for (int size = str->size; size > 0; size--) {
-        res = newAstUnpack(
+        res = makeAstUnpack(
             consSymbol(),
             newAstArgList(
                 newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(str->entries[size-1])),
@@ -527,8 +534,8 @@ fargs : %empty            { $$ = NULL; }
       | farg ',' fargs    { $$ = newAstArgList($1, $3); }
       ;
 
-consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstNilArg(), NULL))); }
-          | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
+consfargs : farg                { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstNilArg(), NULL))); }
+          | farg ',' consfargs  { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
 number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
@@ -554,10 +561,10 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
 arg_tuple: '#' '(' fargs ')'  { $$ = $3; }
          ;
 
-cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
+cons : farg CONS farg { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;
 
-unpack : symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
+unpack : scoped_symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
        ;
 
 stringarg : str { $$ = newStringUnpack($1); }

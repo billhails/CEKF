@@ -135,3 +135,59 @@ bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {
     }
     return true;
 }
+
+static inline void pad(int depth) {
+    eprintf("%*s", depth, "");
+}
+
+static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces);
+
+static void _ppTcNamespaces(TcNamespaceArray *namespaces, int depth) {
+    if (namespaces == NULL) return;
+    for (Index i = 0; i < namespaces->size; i++) {
+        pad(depth);
+        eprintf("[%u]: ", i);
+        if (namespaces->entries[i]->type == TCTYPE_TYPE_ENV) {
+            _ppTcEnv(namespaces->entries[i]->val.env, depth + 1, true);
+        } else {
+            eprintf("%s\n", tcTypeTypeName(namespaces->entries[i]->type));
+        }
+    }
+}
+
+static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
+    if (env == NULL) {
+        pad(depth);
+        eprintf("<NULL> env\n");
+        return;
+    }
+    pad(depth);
+    eprintf("{\n");
+    HashSymbol *name;
+    Index i = 0;
+    TcType *value;
+    while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
+        pad(depth);
+        if (value->type == TCTYPE_TYPE_NAMESPACE) {
+            eprintf(" %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.namespace);
+        } else if (value->type == TCTYPE_TYPE_NAMESPACES) {
+            if (done_namespaces) {
+                eprintf(" %s => %s\n", name->name, tcTypeTypeName(value->type));
+            } else {
+                eprintf(" %s => %s [\n", name->name, tcTypeTypeName(value->type));
+                _ppTcNamespaces(value->val.namespaces, depth + 1);
+                pad(depth);
+                eprintf(" ]\n");
+            }
+        } else {
+            eprintf(" %s => %s\n", name->name, tcTypeTypeName(value->type));
+        }
+    }
+    _ppTcEnv(env->next, depth + 1, done_namespaces);
+    pad(depth);
+    eprintf("}\n");
+}
+
+void ppTcEnv(TcEnv *env) {
+    _ppTcEnv(env, 0, false);
+}

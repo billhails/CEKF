@@ -44,7 +44,7 @@ AstAltArgs --argList--> AstArgList
 AstAltArgs --next--> AstAltArgs
 AstAltFunction --altArgs--> AstAltArgs
 AstAltFunction --nest--> AstNest
-AstUnpack --symbol--> HashSymbol
+AstUnpack --symbol--> AstLookupOrSymbol
 AstUnpack --argList--> AstArgList
 AstNamedArg --name--> HashSymbol
 AstNamedArg --arg--> AstArg

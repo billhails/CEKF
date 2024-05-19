@@ -76,6 +76,7 @@ structs:
 
     LamDeconstruct:
         name: HashSymbol # name of the constructor being deconstructed
+        namespace: int   # namespace of the constructor being deconstructed
         vec: int         # offset of the field in the vector
         exp: LamExp      # expression being deconstructed
 
@@ -119,6 +120,7 @@ structs:
     LamIntList:
         item: int
         name: HashSymbol
+        namespace: int
         next: LamIntList
 
     LamLet:
@@ -199,6 +201,7 @@ structs:
 
     LamTypeConstructorInfo:
         name: HashSymbol
+        namespace: int
         type: LamTypeConstructor
         needsVec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
@@ -286,6 +289,7 @@ unions:
     LamInfo:
         typeConstructorInfo: LamTypeConstructorInfo
         namespaceInfo: LamContext
+        namespace: int
 
 hashes:
     LamInfoTable:

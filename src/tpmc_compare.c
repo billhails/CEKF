@@ -152,6 +152,7 @@ bool tpmcConstructorPatternEq(TpmcConstructorPattern *a,
                               TpmcConstructorPattern *b) {
     PREAMBLE();
     return a->tag == b->tag
+        && a->namespace == b->namespace
         && tpmcPatternArrayEq(a->components, b->components);
 }
 

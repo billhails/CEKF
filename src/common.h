@@ -23,6 +23,8 @@
 #  include <stdint.h>
 #  include <stdlib.h>
 
+#  define NS_GLOBAL -1
+
 #  if true
 // #    define DEBUG_BIGINT
 // #    define DEBUG_STACK

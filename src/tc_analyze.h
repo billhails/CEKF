@@ -22,8 +22,6 @@
 #  include "lambda.h"
 #  include "builtins.h"
 
-#define NS_GLOBAL -1
-
 TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);
 TcType *lookupNsRef(int index, TcEnv *env);

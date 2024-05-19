@@ -166,9 +166,8 @@ Index protect(Header *obj) {
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
-        for (tmp->sp = 0; tmp->sp < protected->sp; tmp->sp++) {
-            tmp->stack[tmp->sp] = protected->stack[tmp->sp];
-        }
+        tmp->sp = protected->sp;
+        COPY_ARRAY(Header *, tmp->stack, protected->stack, protected->sp);
         protected = tmp;
 #ifdef DEBUG_LOG_GC
         eprintf("protect new stack: %p\n", (void *) protected);

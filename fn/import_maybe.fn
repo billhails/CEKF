@@ -1,5 +1,5 @@
 let
     import "maybe.fn" as maybe
 in
-    print(maybe.some(1))
+    print(fn { (maybe.some(x)) { x } }(maybe.some(1)))
     // maybe.nothing

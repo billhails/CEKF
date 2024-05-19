@@ -402,7 +402,7 @@ static TpmcPattern *replacePatternComponentsWithWildcards(TpmcPattern *pattern) 
                 TpmcPatternArray *components = replaceComponentsWithWildcards(constructor->components);
                 int save = PROTECT(components);
                 TpmcConstructorPattern *newCons =
-                    newTpmcConstructorPattern(constructor->tag, constructor->info,
+                    newTpmcConstructorPattern(constructor->tag, constructor->namespace, constructor->info,
                                               components);
                 PROTECT(newCons);
                 TpmcPatternValue *patternValue =

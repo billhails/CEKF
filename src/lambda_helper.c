@@ -21,6 +21,7 @@
 #include "lambda_helper.h"
 #include "lambda_pp.h"
 #include "symbol.h"
+#include "symbols.h"
 
 void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
@@ -49,6 +50,8 @@ LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashS
                 return result->val.typeConstructorInfo;
             case LAMINFO_TYPE_NAMESPACEINFO:
                 cant_happen("expected type constructor found namespace called %s", var->name);
+            case LAMINFO_TYPE_NAMESPACE:
+                cant_happen("expected type constructor found namespace %d", result->val.namespace);
             default:
                 cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
         }
@@ -66,6 +69,8 @@ static LamContext *_lookupNamespaceInLamContext(LamContext *context, HashSymbol 
                 cant_happen("expected namespace found typeconstructor called %s", var->name);
             case LAMINFO_TYPE_NAMESPACEINFO:
                 return result->val.namespaceInfo;
+            case LAMINFO_TYPE_NAMESPACE:
+                cant_happen("expected namespace info found namespace %d", result->val.namespace);
             default:
                 cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
         }
@@ -75,7 +80,52 @@ static LamContext *_lookupNamespaceInLamContext(LamContext *context, HashSymbol 
 
 LamContext *lookupNamespaceInLamContext(LamContext *context, Index index) {
     char buf[80];
-    sprintf(buf, "$ns%u", index);
+    sprintf(buf, NS_FORMAT, index);
     HashSymbol *var = newSymbol(buf);
     return _lookupNamespaceInLamContext(context, var);
+}
+
+LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *context, AstLookupOrSymbol *scoped) {
+    switch (scoped->type) {
+        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+            return lookupConstructorInLamContext(context, scoped->val.symbol);
+        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
+            LamContext *namespace = lookupNamespaceInLamContext(context, scoped->val.lookup->namespace);
+            return lookupConstructorInLamContext(namespace, scoped->val.lookup->symbol);
+        }
+        default:
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(scoped->type));
+    }
+}
+
+LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped) {
+    switch (scoped->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return lookupConstructorInLamContext(context, scoped->val.symbol);
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:{
+            LamContext *namespace = lookupNamespaceInLamContext(context, scoped->val.lookup->namespace);
+            return lookupConstructorInLamContext(namespace, scoped->val.lookup->symbol);
+        }
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(scoped->type));
+    }
+}
+
+int lookupCurrentNamespaceInLamContext(LamContext *context) {
+    if (context == NULL)
+        cant_happen("cannot find current namespace"); // always an error
+    LamInfo *result;
+    if (getLamInfoTable(context->frame, namespaceSymbol(), &result)) {
+        switch (result->type) {
+            case LAMINFO_TYPE_TYPECONSTRUCTORINFO:
+                cant_happen("expected namespace id found typeconstructor");
+            case LAMINFO_TYPE_NAMESPACEINFO:
+                cant_happen("expected namespace id found namespace info");
+            case LAMINFO_TYPE_NAMESPACE:
+                return result->val.namespace;
+            default:
+                cant_happen("unrecognized type %s", lamInfoTypeName(result->type));
+        }
+    }
+    return lookupCurrentNamespaceInLamContext(context->parent);
 }

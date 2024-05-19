@@ -107,6 +107,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid);
 static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
+static TcType *lookupConstructorType(HashSymbol *name, int namespace, TcEnv *env, TcNg *ng);
 
 static int id_counter = 0;
 
@@ -471,7 +472,7 @@ static TcType *findNthArg(int n, TcType *fn) {
         cant_happen("findNthArg hit NULL");
     }
     if (fn->type != TCTYPE_TYPE_FUNCTION) {
-        cant_happen("findNthArg given non-function type %d", fn->type);
+        cant_happen("findNthArg given non-function type %s", tcTypeTypeName(fn->type));
     }
     if (n == 0) {
         return fn->val.function->arg;
@@ -494,8 +495,11 @@ static TcType *findResultType(TcType *fn) {
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
                                   TcNg *ng) {
     // ENTER(analyzeDeconstruct);
-    TcType *constructor = lookup(env, deconstruct->name, ng);
+    // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
+    // ppTcEnv(env);
+    TcType *constructor = lookupConstructorType(deconstruct->name, deconstruct->namespace, env, ng);
     int save = PROTECT(constructor);
+    // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
         can_happen("undefined type deconstructor %s",
                    deconstruct->name->name);
@@ -549,6 +553,11 @@ static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
 }
 
 TcType *lookupNsRef(int index, TcEnv *env) {
+#ifdef SAFETY_CHECKS
+    if (index == NS_GLOBAL) {
+        cant_happen("lookupNsRef passed global namespace");
+    }
+#endif
     Index i = index;
     TcType *nsType = NULL;
     if (!getFromTcEnv(env, namespacesSymbol(), &nsType)) {
@@ -1126,14 +1135,31 @@ static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return character;
 }
 
-static TcType *lookupConstructorType(HashSymbol *name, TcEnv *env, TcNg *ng) {
+static TcType *lookupConstructorType(HashSymbol *name, int namespace, TcEnv *env, TcNg *ng) {
     // ENTER(lookupConstructorType);
-    TcType *res = lookup(env, name, ng);
+    TcType *currentNamespace = NULL;
+    getFromTcEnv(env, namespaceSymbol(), &currentNamespace);
+#ifdef SAFETY_CHECKS
+    if (currentNamespace == NULL) {
+        cant_happen("cannot locate current namespace");
+    }
+#endif
+    TcType *res = NULL;
+    if (currentNamespace->val.namespace == namespace || namespace == NS_GLOBAL) {
+        // eprintf("lookupConstructorType looking up %s in current namespace %d\n", name->name, namespace);
+        res = lookup(env, name, ng);
+    } else {
+        // eprintf("lookupConstructorType looking up %s in namespace %d\n", name->name, namespace);
+        TcType *nsType = lookupNsRef(namespace, env);
+        res = lookup(nsType->val.env, name, ng);
+    }
     if (res == NULL) {
         cant_happen("lookupConstructorType %s failed", name->name);
     }
-    res = findResultType(res);
     // LEAVE(lookupConstructorType);
+    // eprintf("lookupConstructorType %s => ", name->name);
+    // ppTcType(res);
+    // eprintf("\n");
     return res;
 }
 
@@ -1145,7 +1171,9 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
     }
     TcType *next = analyzeIntList(intList->next, env, ng);
     int save = PROTECT(next);
-    TcType *this = lookupConstructorType(intList->name, env, ng);
+    TcType *this = lookupConstructorType(intList->name, intList->namespace, env, ng);
+    PROTECT(this);
+    this = findResultType(this);
     PROTECT(this);
     if (!unify(next, this, "int list")) {
         eprintf("while analyzing intList case %s\n", intList->name->name);
