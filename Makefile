@@ -9,7 +9,7 @@ MODE_P=-pg
 MODE_O=-O2
 MODE_D=-g
 
-CCMODE = $(MODE_D)
+CCMODE = $(MODE_O)
 
 CC=cc -Wall -Wextra -Werror $(CCMODE)
 LAXCC=cc -Werror $(CCMODE)

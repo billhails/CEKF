@@ -3,6 +3,28 @@ typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), #(#t, #u), Dict(#t, #u)) 
 
 import "maybe.fn" as maybe;
 
+print Dict(pt, pu, d) {
+    let
+        fn pd {
+            (E) | (EE) { [] }
+            (D(_, l, #(t, u), r)) {
+                pd(l);
+                puts("  ");
+                pt(t);
+                puts(": ");
+                pu(u);
+                puts("\n");
+                pd(r);
+                []
+            }
+        }
+    in
+        puts("{\n");
+        pd(d);
+        puts("}");
+        d;
+}
+
 fn balance {
     (B, D(R, D(R, a, x, b), y, c), z, d)  |
     (B, D(R, a, x, D(R, b, y, c)), z, d)  |

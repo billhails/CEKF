@@ -616,6 +616,12 @@ static void _ppLamTypeFunction(LamTypeFunction *function) {
     eprintf(")");
 }
 
+static void _ppLamTypeTuple(LamTypeConstructorArgs *args) {
+    eprintf("#(");
+    _ppLamTypeConstructorArgs(args);
+    eprintf(")");
+}
+
 static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
     switch (type->type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
@@ -630,9 +636,12 @@ static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
             _ppLamTypeFunction(type->val.function);
             break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+            _ppLamTypeTuple(type->val.tuple);
+            break;
         default:
-            cant_happen("unrecognised type %d in _ppLamTypeConstructorType",
-                        type->type);
+            cant_happen("unrecognised type %s in _ppLamTypeConstructorType",
+                        lamTypeConstructorTypeTypeName(type->type));
     }
 }
 

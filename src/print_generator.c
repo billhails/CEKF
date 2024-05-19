@@ -485,10 +485,19 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
     return res;
 }
 
+static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
+    if (bindings == NULL) return false;
+    if (bindings->var == printName) return true;
+    return userDefined(printName, bindings->next);
+}
+
 static LamLetRecBindings *makePrintTypeFunction(LamTypeDef *typeDef,
                                                 LamContext *env,
                                                 LamLetRecBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
+    if (userDefined(name, next)) {
+        return next;
+    }
     LamVarList *args = makePrintTypeFunctionArgs(typeDef->type->args);
     int save = PROTECT(args);
     LamExp *body = makeFunctionBody(typeDef->constructors, env);
@@ -509,7 +518,6 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
     if (inPreamble && isListType(typeDef->type)) {
         // print$list is hand-coded in the preamble
         return next;
-    } else {
-        return makePrintTypeFunction(typeDef, env, next);
     }
+    return makePrintTypeFunction(typeDef, env, next);
 }

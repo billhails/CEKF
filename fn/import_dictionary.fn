@@ -8,4 +8,5 @@ in
         (maybe.some(s)) { s }
         (maybe.nothing) { "nothing" }
     }(dict.lookup(2, dd)));
+    print(dd);
     
