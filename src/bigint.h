@@ -89,7 +89,7 @@ extern "C" {
     Cmp cmpBigIntDouble(BigInt *a, Double b);
     static inline Cmp cmpIntBigInt(int a, BigInt *b) { return (Cmp)(cmpBigIntInt(b, a) * -1); }
     static inline Cmp cmpDoubleBigInt(Double a, BigInt *b) { return (Cmp)(cmpBigIntDouble(b, a) * -1); }
-    int cmpMaybeBigInt(MaybeBigInt *a, MaybeBigInt *b);
+    Cmp cmpMaybeBigInt(MaybeBigInt *a, MaybeBigInt *b);
     typedef bigint *(*bigint_binop)(bigint * dst, const bigint * a,
                                     const bigint * b);
     BigInt *addBigInt(BigInt *a, BigInt *b);

@@ -104,9 +104,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     PROTECT(cargs);
     LamList *args = convertVarListToList(cargs);
     PROTECT(args);
-    LamApply *apply =
-        newLamApply(function, countTpmcVariableTable(dfa->freeVariables),
-                    args);
+    LamApply *apply = newLamApply(function, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -121,7 +119,7 @@ static LamExp *translateToLambda(TpmcState *dfa, LamExpTable *lambdaCache) {
     LamVarList *args = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(args);
     LamLam *lambda =
-        newLamLam(countTpmcVariableTable(dfa->freeVariables), args, exp);
+        newLamLam(args, exp);
     PROTECT(lambda);
     LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
@@ -193,7 +191,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                         newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
                     int save2 = PROTECT(base);
                     LamDeconstruct *deconstruct =
-                        newLamDeconstruct(name, i + 1, base);
+                        newLamDeconstruct(name, constructor->info->namespace, i + 1, base);
                     PROTECT(deconstruct);
                     LamExp *deconstructExp = newLamExp(LAMEXP_TYPE_DECONSTRUCT,
                                                        LAMEXP_VAL_DECONSTRUCT
@@ -360,7 +358,7 @@ static LamIntList *makeUnexhaustedIndices(LamTypeConstructorInfo *info) {
     LamIntList *res = NULL;
     int save = PROTECT(res);
     for (int i = 0; i < info->size; ++i) {
-        res = newLamIntList(i, info->type->name, res);
+        res = newLamIntList(i, info->type->name, info->namespace, res);
         PROTECT(res);
     }
     UNPROTECT(save);
@@ -670,7 +668,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                 DEBUG("translateArcToCode returned %p", body);
                 PROTECT(body);
                 LamIntList *index =
-                    newLamIntList(info->index, info->type->name, NULL);
+                    newLamIntList(info->index, info->type->name, info->namespace, NULL);
                 PROTECT(index);
                 res = newLamMatchList(index, body, next);
                 UNPROTECT(save);

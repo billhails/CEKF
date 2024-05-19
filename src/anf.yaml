@@ -29,6 +29,9 @@ description: ANF structures to be converted to bytecode.
 structs:
     CTEnv:
         isLocal: bool
+        isNamespace: bool = false
+        nbindings: int = 0
+        nsEnvs: CTEnvArray = NULL
         table: CTIntTable
         next: CTEnv
 
@@ -73,6 +76,14 @@ structs:
     AexpMakeVec:
         nargs: int
         args: AexpList
+
+    AexpNamespace:
+        nbindings: int = 0
+        body: Exp
+
+    AexpNamespaces:
+        namespaces: AexpNamespaceArray
+        body: Exp
 
     CexpIf:
         condition: Aexp
@@ -129,6 +140,11 @@ structs:
         val: Exp
         body: Exp
 
+    ExpLookup:
+        namespace: index
+        annotatedVar: AexpAnnotatedVar = NULL
+        body: Exp
+
 unions:
     CexpCondCases:
         charCases: CexpCharCondCases
@@ -147,6 +163,7 @@ unions:
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec
+        namespaces: AexpNamespaces
 
     Cexp:
         back: void_ptr
@@ -162,10 +179,12 @@ unions:
         match: CexpMatch
 
     Exp:
+        env: void_ptr
         done: void_ptr
         aexp: Aexp
         cexp: Cexp
         let: ExpLet
+        lookup: ExpLookup
 
 enums:
     AexpAnnotatedVarType:
@@ -205,6 +224,13 @@ hashes:
 
     CTIntTable:
         entries: int
+
+arrays:
+    AexpNamespaceArray:
+        entries: AexpNamespace
+
+    CTEnvArray:
+        entries: CTEnv
 
 primitives: !include primitives.yaml
 

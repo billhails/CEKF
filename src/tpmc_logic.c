@@ -80,8 +80,28 @@ static TpmcPattern *makeWildcardPattern() {
     return pattern;
 }
 
+static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupScopedAstSymbolInLamContext(env, lookup);
+    if (info == NULL) {
+        cant_happen("makeLookupPattern() passed invalid constructor");
+    }
+    TpmcPatternArray *args = newTpmcPatternArray("makeLookupPattern");
+    int save = PROTECT(args);
+    TpmcConstructorPattern *constructor =
+        newTpmcConstructorPattern(lookup->symbol, lookup->namespace, info, args);
+    PROTECT(constructor);
+    TpmcPatternValue *val =
+        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
+                            TPMCPATTERNVALUE_VAL_CONSTRUCTOR
+                            (constructor));
+    PROTECT(val);
+    TpmcPattern *pattern = newTpmcPattern(val);
+    UNPROTECT(save);
+    return pattern;
+}
+
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, symbol);
+    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info == NULL) {
         TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR,
                                                     TPMCPATTERNVALUE_VAL_VAR
@@ -91,10 +111,11 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
         UNPROTECT(save);
         return pattern;
     } else {
-        TpmcPatternArray *args = newTpmcPatternArray("makeVarPatern");
+        TpmcPatternArray *args = newTpmcPatternArray("makeVarPattern");
         int save = PROTECT(args);
+        int namespace = lookupCurrentNamespaceInLamContext(env);
         TpmcConstructorPattern *constructor =
-            newTpmcConstructorPattern(symbol, info, args);
+            newTpmcConstructorPattern(symbol, namespace, info, args);
         PROTECT(constructor);
         TpmcPatternValue *val =
             newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
@@ -122,16 +143,34 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     return pattern;
 }
 
+static void getSymbolAndNamespace(AstLookupOrSymbol *los, LamContext *env, HashSymbol **name, int *namespace) {
+    switch (los->type) {
+        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
+            *name = los->val.lookup->symbol;
+            *namespace = los->val.lookup->namespace;
+            break;
+        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
+                *namespace = lookupCurrentNamespaceInLamContext(env);
+                *name = los->val.symbol;
+            }
+            break;
+        default:
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+    }
+}
+
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupInLamContext(env, unpack->symbol);
+    LamTypeConstructorInfo *info = lookupScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor: %s",
-                    unpack->symbol->name);
+        cant_happen("makeConstructorPattern() passed invalid constructor");
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
+    HashSymbol *symbol = NULL;
+    int namespace = 0;
+    getSymbolAndNamespace(unpack->symbol, env, &symbol, &namespace);
     TpmcConstructorPattern *constructor =
-        newTpmcConstructorPattern(unpack->symbol, info, patterns);
+        newTpmcConstructorPattern(symbol, namespace, info, patterns);
     PROTECT(constructor);
     TpmcPatternValue *val =
         newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
@@ -182,8 +221,6 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
             return makeVarPattern(arg->val.symbol, env);
         case AST_ARG_TYPE_NAMED:
             return makeAssignmentPattern(arg->val.named, env);
-        case AST_ARG_TYPE_ENV:
-            cant_happen("env arg type not supported yet in convertPattern");
         case AST_ARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
         case AST_ARG_TYPE_TUPLE:
@@ -192,6 +229,8 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
             return makeMaybeBigIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
+        case AST_ARG_TYPE_LOOKUP:
+            return makeLookupPattern(arg->val.lookup, env);
         default:
             cant_happen("unrecognized arg type %s in convertPattern",
                         astArgTypeName(arg->type));
@@ -645,7 +684,7 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     // DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(rootVariables);
     PROTECT(args);
-    LamLam *res = newLamLam(rootVariables->size, args, body);
+    LamLam *res = newLamLam(args, body);
     PROTECT(res);
 #ifdef DEBUG_TPMC_LOGIC
     LamExp *tmp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));

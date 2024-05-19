@@ -164,7 +164,7 @@ void ppLamExp(LamExp *exp) {
             ppLamMatch(exp->val.match);
             break;
         case LAMEXP_TYPE_CHARACTER:
-            eprintf("'%c'", exp->val.character);
+            eprintf("\"%c\"", exp->val.character);
             break;
         case LAMEXP_TYPE_BACK:
             eprintf("(back)");
@@ -193,9 +193,37 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_MAKE_TUPLE:
             ppLamMakeTuple(exp->val.make_tuple);
             break;
+        case LAMEXP_TYPE_NAMESPACES:
+            ppLamNamespaces(exp->val.namespaces);
+            break;
+        case LAMEXP_TYPE_ENV:
+            eprintf("env");
+            break;
+        case LAMEXP_TYPE_CONSTRUCTOR:
+            eprintf("constructor:%s", exp->val.constructor->name->name);
+            break;
+        case LAMEXP_TYPE_LOOKUP:
+            ppLamLookup(exp->val.lookup);
+            break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
+}
+
+void ppLamLookup(LamLookup *lookup) {
+    eprintf("(lookup %s:%d ", lookup->name == NULL ? "" : lookup->name->name, lookup->namespace);
+    ppLamExp(lookup->exp);
+    eprintf(")");
+}
+
+void ppLamNamespaces(LamNamespaceArray *arr) {
+    eprintf("(namespaces");
+    for (Index i = 0; i < arr->size; ++i) {
+        eprintf(" [");
+        ppLamExp(arr->entries[i]);
+        eprintf("]");
+    }
+    eprintf(")");
 }
 
 void ppHashSymbol(HashSymbol *symbol) {
@@ -381,7 +409,7 @@ static void _ppLamIntCondCases(LamIntCondCases *cases) {
 }
 
 static void _ppLamCharCondCases(LamCharCondCases *cases) {
-    eprintf("('%c' ", cases->constant);
+    eprintf("(\"%c\" ", cases->constant);
     ppLamExp(cases->body);
     eprintf(")");
     if (cases->next != NULL) {
@@ -562,12 +590,35 @@ static void _ppLamType(LamType *type) {
     eprintf(")");
 }
 
+static void ppLookupSymbol(LamLookupSymbol *ls) {
+    eprintf("(lookup %s:%d %s)", ls->name->name, ls->namespace, ls->symbol->name);
+}
+
+static void ppLookupOrSymbol(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            ppHashSymbol(los->val.symbol);
+            break;
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            ppLookupSymbol(los->val.lookup);
+            break;
+        default:
+            cant_happen("unrecognised %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
 static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args);
 
 static void _ppLamTypeFunction(LamTypeFunction *function) {
     eprintf("(");
-    ppHashSymbol(function->name);
+    ppLookupOrSymbol(function->name);
     _ppLamTypeConstructorArgs(function->args);
+    eprintf(")");
+}
+
+static void _ppLamTypeTuple(LamTypeConstructorArgs *args) {
+    eprintf("#(");
+    _ppLamTypeConstructorArgs(args);
     eprintf(")");
 }
 
@@ -585,9 +636,12 @@ static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
             _ppLamTypeFunction(type->val.function);
             break;
+        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+            _ppLamTypeTuple(type->val.tuple);
+            break;
         default:
-            cant_happen("unrecognised type %d in _ppLamTypeConstructorType",
-                        type->type);
+            cant_happen("unrecognised type %s in _ppLamTypeConstructorType",
+                        lamTypeConstructorTypeTypeName(type->type));
     }
 }
 
@@ -645,7 +699,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList) {
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL)
         return;
-    eprintf("%d:%s", list->item, list->name->name);
+    eprintf("%d:%s:%d", list->item, list->name->name, list->namespace);
     if (list->next != NULL) {
         eprintf(" ");
         _ppLamIntList(list->next);
@@ -661,7 +715,7 @@ void ppLamIntList(LamIntList *list) {
 void ppLamConstruct(LamConstruct *construct) {
     eprintf("(construct ");
     ppHashSymbol(construct->name);
-    eprintf(" [%d]", construct->tag);
+    eprintf(":%d", construct->tag);
     _ppLamList(construct->args);
     eprintf(")");
 }

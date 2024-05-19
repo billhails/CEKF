@@ -1,0 +1,2 @@
+import "three.fn" as three;
+import "six.fn" as six;

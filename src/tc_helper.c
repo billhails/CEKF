@@ -17,6 +17,7 @@
  */
 
 #include "tc_helper.h"
+#include "tc_analyze.h"
 #include "symbol.h"
 #include "types.h"
 
@@ -52,6 +53,9 @@ void ppTcType(TcType *type) {
             break;
         case TCTYPE_TYPE_TUPLE:
             ppTcTuple(type->val.tuple);
+            break;
+        case TCTYPE_TYPE_ENV:
+            eprintf("<env>");
             break;
         default:
             eprintf("unrecognized type %s", tcTypeTypeName(type->type));
@@ -103,7 +107,7 @@ static void ppUserTypeArgs(TcUserTypeArgs *args) {
 }
 
 void ppTcUserType(TcUserType *userType) {
-    eprintf("%s(", userType->name->name);
+    eprintf("%s:%d(", userType->name->name, userType->ns);
     ppUserTypeArgs(userType->args);
     eprintf(")");
 }
@@ -130,4 +134,60 @@ bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {
         hashSet(map, b->name, &common);
     }
     return true;
+}
+
+static inline void pad(int depth) {
+    eprintf("%*s", depth, "");
+}
+
+static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces);
+
+static void _ppTcNamespaces(TcNamespaceArray *namespaces, int depth) {
+    if (namespaces == NULL) return;
+    for (Index i = 0; i < namespaces->size; i++) {
+        pad(depth);
+        eprintf("[%u]: ", i);
+        if (namespaces->entries[i]->type == TCTYPE_TYPE_ENV) {
+            _ppTcEnv(namespaces->entries[i]->val.env, depth + 1, true);
+        } else {
+            eprintf("%s\n", tcTypeTypeName(namespaces->entries[i]->type));
+        }
+    }
+}
+
+static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
+    if (env == NULL) {
+        pad(depth);
+        eprintf("<NULL> env\n");
+        return;
+    }
+    pad(depth);
+    eprintf("{\n");
+    HashSymbol *name;
+    Index i = 0;
+    TcType *value;
+    while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
+        pad(depth);
+        if (value->type == TCTYPE_TYPE_NAMESPACE) {
+            eprintf(" %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.namespace);
+        } else if (value->type == TCTYPE_TYPE_NAMESPACES) {
+            if (done_namespaces) {
+                eprintf(" %s => %s\n", name->name, tcTypeTypeName(value->type));
+            } else {
+                eprintf(" %s => %s [\n", name->name, tcTypeTypeName(value->type));
+                _ppTcNamespaces(value->val.namespaces, depth + 1);
+                pad(depth);
+                eprintf(" ]\n");
+            }
+        } else {
+            eprintf(" %s => %s\n", name->name, tcTypeTypeName(value->type));
+        }
+    }
+    _ppTcEnv(env->next, depth + 1, done_namespaces);
+    pad(depth);
+    eprintf("}\n");
+}
+
+void ppTcEnv(TcEnv *env) {
+    _ppTcEnv(env, 0, false);
 }

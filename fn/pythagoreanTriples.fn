@@ -1,29 +1,18 @@
 let
-    fn require(condition) {
-        condition or back
-    }
-
-    fn integers_from(n) {
-       n then integers_from(n + 1)
-    }
-
-    fn integers_between(lower, upper) {
-        require(lower <= upper);
-        lower then integers_between(lower + 1, upper)
-    }
+    import "ambutils.fn" as amb;
 
     fn pythagorean_triples() {
         let
-            z = integers_from(1);
-            x = integers_between(1, z);
-            y = integers_between(x, z);
+            z = amb.integers_from(1);
+            x = amb.integers_between(1, z);
+            y = amb.integers_between(x, z);
         in
-            require(x**2 + y**2 == z**2);
+            amb.require(x**2 + y**2 == z**2);
             [x, y, z]
     }
 in {
     let triple = pythagorean_triples();
     in
         print(triple);
-        require(<triple > 20) // until
+        amb.require(<triple > 20) // until
 }

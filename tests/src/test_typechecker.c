@@ -19,6 +19,7 @@
 #include "test.h"
 #include "symbol.h"
 #include "builtins_helper.h"
+#include "tc_analyze.h"
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
@@ -28,28 +29,20 @@ static bool compareTcTypes(TcType *a, TcType *b) {
     return res;
 }
 
-static AstNest *parseWrapped(char *string) {
-    disableGC();
-    PmModule *mod = newPmToplevelFromString(string, string);
-    int save = PROTECT(mod);
-    int res = pmParseModule(mod);
-    assert(res == 0);
-    enableGC();
-    UNPROTECT(save);
-    assert(mod->nest != NULL);
-    return mod->nest;
+static AstProg *parseWrapped(char *string, char *origin) {
+    forceInitNamespaces();
+    AstNest *nest = parseTopLevelFromString(string, origin);
+    assert(nest != NULL);
+    AstProg *prog = astNestToProg(nest);
+    return prog;
 }
 
-static AstNest *parseSolo(char *string) {
-    disableGC();
-    PmModule *mod = newPmModuleFromString(string, string);
-    int save = PROTECT(mod);
-    int res = pmParseModule(mod);
-    assert(res == 0);
-    enableGC();
-    UNPROTECT(save);
-    assert(mod->nest != NULL);
-    return mod->nest;
+static AstProg *parseSolo(char *string, char *origin) {
+    forceInitNamespaces();
+    AstNest *nest = parseSingleString(string, origin);
+    assert(nest != NULL);
+    AstProg *prog = astNestToProg(nest);
+    return prog;
 }
 
 static TcType *makeVar(char *name) {
@@ -61,9 +54,9 @@ static TcType *makeVar(char *name) {
     return var;
 }
 
-static TcType *makeUserType(char *name, TcUserTypeArgs *args) {
+static TcType *makeUserType(char *name, TcUserTypeArgs *args, int nsid) {
     HashSymbol *sym = newSymbol(name);
-    TcUserType *typeDef = newTcUserType(sym, args);
+    TcUserType *typeDef = newTcUserType(sym, args, nsid);
     int save = PROTECT(typeDef);
     TcType *td = newTcType(TCTYPE_TYPE_USERTYPE, TCTYPE_VAL_USERTYPE(typeDef));
     UNPROTECT(save);
@@ -73,7 +66,7 @@ static TcType *makeUserType(char *name, TcUserTypeArgs *args) {
 static TcType *listOf(TcType *type) {
     TcUserTypeArgs *args = newTcUserTypeArgs(type, NULL);
     int save = PROTECT(args);
-    TcType *td = makeUserType("list", args);
+    TcType *td = makeUserType("list", args, NS_GLOBAL);
     UNPROTECT(save);
     return td;
 }
@@ -102,8 +95,8 @@ static TcType *makeCharacter() {
     return newTcType(TCTYPE_TYPE_CHARACTER, TCTYPE_VAL_CHARACTER());
 }
 
-static TcType *analyze(AstNest *nest) {
-    LamExp *exp = lamConvertNest(nest, NULL);
+static TcType *analyze(AstProg *prog) {
+    LamExp *exp = lamConvertProg(prog);
     int save = PROTECT(exp);
     BuiltIns *builtIns = registerBuiltIns();
     PROTECT(builtIns);
@@ -120,7 +113,7 @@ static TcType *analyze(AstNest *nest) {
 
 static void test_cdr() {
     printf("test_cdr\n");
-    AstNest *result = parseWrapped("cdr");
+    AstProg *result = parseWrapped("cdr", "test_cdr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -136,7 +129,7 @@ static void test_cdr() {
 
 static void test_car() {
     printf("test_car\n");
-    AstNest *result = parseWrapped("car");
+    AstProg *result = parseWrapped("car", "test_car");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -152,7 +145,7 @@ static void test_car() {
 
 static void test_car_of() {
     printf("test_car_of\n");
-    AstNest *result = parseWrapped("<[1]");
+    AstProg *result = parseWrapped("<[1]", "test_car_of");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -164,7 +157,7 @@ static void test_car_of() {
 
 static void test_adder() {
     printf("test_adder\n");
-    AstNest *result = parseSolo("fn(a,b){a+b}");
+    AstProg *result = parseSolo("fn(a,b){a+b}", "test_adder");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -178,7 +171,7 @@ static void test_adder() {
 
 static void test_fact() {
     printf("test_fact\n");
-    AstNest *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact");
+    AstProg *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -192,7 +185,7 @@ static void test_fact() {
 
 static void test_add1() {
     printf("test_add1\n");
-    AstNest *result = parseSolo("let fn add1(x) { 1 + x } in add1(2)");
+    AstProg *result = parseSolo("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -204,7 +197,7 @@ static void test_add1() {
 
 static void test_caddr() {
     printf("test_caddr\n");
-    AstNest *result = parseWrapped("let x = [1, 2, 3, 4]; in <>>x");
+    AstProg *result = parseWrapped("let x = [1, 2, 3, 4]; in <>>x", "test_caddr");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -216,7 +209,7 @@ static void test_caddr() {
 
 static void test_curry() {
     printf("test_curry\n");
-    AstNest *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)");
+    AstProg *result = parseWrapped("let fn add3(a, b, c) { a + b + c } in add3(1)(2)(3)", "test_curry");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -228,7 +221,7 @@ static void test_curry() {
 
 static void test_here() {
     printf("test_here\n");
-    AstNest *result = parseWrapped(
+    AstProg *result = parseWrapped(
 "let"
 "    fn funky(k) { k(1) }"
 "in"
@@ -238,7 +231,8 @@ static void test_here() {
 "        } else {"
 "            3"
 "        }"
-"    }"
+"    }",
+        "test_here"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -251,7 +245,7 @@ static void test_here() {
 
 static void test_if() {
     printf("test_if\n");
-    AstNest *result = parseWrapped("if (true and true) { 10 } else { 20 }");
+    AstProg *result = parseWrapped("if (true and true) { 10 } else { 20 }", "test_if");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -263,7 +257,7 @@ static void test_if() {
 
 static void test_id() {
     printf("test_id\n");
-    AstNest *result = parseWrapped(
+    AstProg *result = parseWrapped(
 "let"
 "    fn id (x) { x }"
 ""
@@ -279,12 +273,13 @@ static void test_id() {
 "    }"
 ""
 "in"
-"    checkId(\"hello\")"
+"    checkId(\"hello\")",
+        "test_id"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *expected = makeUserType("bool", NULL);
+    TcType *expected = makeUserType("bool", NULL, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
@@ -292,7 +287,7 @@ static void test_id() {
 
 static void test_either_1() {
     printf("test_either_1\n");
-    AstNest *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)");
+    AstProg *result = parseWrapped("let typedef either(#a, #b) { a(#a) | b(#b) } in a(1)", "test_either");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -304,7 +299,7 @@ static void test_either_1() {
     PROTECT(args);
     args = newTcUserTypeArgs(big, args);
     PROTECT(args);
-    TcType *expected = makeUserType("either", args);
+    TcType *expected = makeUserType("either", args, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
@@ -312,7 +307,7 @@ static void test_either_1() {
 
 static void test_tostr() {
     printf("test_tostr\n");
-    AstNest *result = parseWrapped(
+    AstProg *result = parseWrapped(
 "let"
 "    typedef colour { red | green | blue }"
 "    fn tostr {"
@@ -321,7 +316,7 @@ static void test_tostr() {
 "        (blue) { \"blue\" }"
 "    }"
 "in"
-"    tostr(red)"
+"    tostr(red)", "test_tostr"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -336,7 +331,7 @@ static void test_tostr() {
 
 static void test_lol() {
     printf("test_lol\n");
-    AstNest *result = parseWrapped("[[1]]");
+    AstProg *result = parseWrapped("[[1]]", "test_lol");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -352,14 +347,14 @@ static void test_lol() {
 
 static void test_map() {
     printf("test_map\n");
-    AstNest *result = parseWrapped(
+    AstProg *result = parseWrapped(
 "let"
 "    fn map {"
 "        (_, []) { [] }"
 "        (f, h @ t) { f(h) @ map(f, t) }"
 "    }"
 "in"
-"    map"
+"    map", "test_map"
     );
     int save = PROTECT(result);
     TcType *res = analyze(result);
@@ -382,6 +377,7 @@ static void test_map() {
 
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
+    disableGC();
     initProtection();
     test_car();
     test_cdr();

@@ -1,0 +1,21 @@
+let
+    import "maybe.fn" as maybe;
+    import "listutils.fn" as list;
+
+    fn enq (t, #(head, tail)) {
+        #(head, t @ tail)
+    }
+
+    fn deq {
+        (#(h @ head, tail)) {
+            #(maybe.some(h), #(head, tail))
+        }
+        (x = #(_, [])) {
+            #(maybe.nothing, x)
+        }
+        (#(_, tail)) {
+            deq(#(list.reverse(tail), []))
+        }
+    }
+in
+    print(deq(enq(1, enq(2, enq(3, #([], []))))))

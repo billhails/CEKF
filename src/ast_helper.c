@@ -20,6 +20,8 @@
 #include "ast_helper.h"
 #include "symbol.h"
 
+AstNamespaceArray *namespaces = NULL;
+
 void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
     if (x == NULL) {
@@ -27,4 +29,42 @@ void printAstSymbol(struct HashSymbol *x, int depth) {
         return;
     }
     eprintf("AstSymbol[\"%s\"]", x->name);
+}
+
+void markNamespaces() {
+    markAstNamespaceArray(namespaces);
+}
+
+void initNamespaces() {
+    if (namespaces == NULL) {
+        namespaces = newAstNamespaceArray();
+    }
+}
+
+// for tests
+void forceInitNamespaces() {
+    namespaces = newAstNamespaceArray();
+}
+
+int lookupNamespace(AgnosticFileId *id) {
+#ifdef SAFETY_CHECKS
+    if (namespaces == NULL) {
+        cant_happen("null namespace");
+    }
+#endif
+    for (Index i = 0; i < namespaces->size; i++) {
+        if (cmpAgnosticFileId(id, namespaces->entries[i]->id) == CMP_EQ) {
+            return (int) i;
+        }
+    }
+    return -1;
+}
+
+AstProg *astNestToProg(AstNest *nest) {
+#ifdef SAFETY_CHECKS
+    if (namespaces == NULL) {
+        cant_happen("null namespace");
+    }
+#endif
+    return newAstProg(nest->definitions, namespaces, nest->expressions);
 }

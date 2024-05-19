@@ -25,6 +25,22 @@
 #include "anf_pp.h"
 #include "hash.h"
 
+void ppCTEnv(CTEnv *env) {
+    eprintf("[\n");
+    if (env == NULL) {
+        eprintf("]\n");
+        return;
+    }
+    Index i = 0;
+    HashSymbol *key;
+    int value;
+    while ((key = iterateCTIntTable(env->table, &i, &value)) != NULL) {
+        eprintf("%s: %d\n", key->name, value);
+    }
+    ppCTEnv(env->next);
+    eprintf("]\n");
+}
+
 void ppAexpLam(AexpLam *x) {
     eprintf("(lambda ");
     ppAexpVarList(x->args);
@@ -201,6 +217,25 @@ void ppAexpMakeVec(AexpMakeVec *x) {
     eprintf(")");
 }
 
+void ppAexpNamespaceArray(AexpNamespaceArray *x) {
+    for (Index i = 0; i < x->size; i++) {
+        eprintf("[");
+        ppExp(x->entries[i]->body);
+        eprintf("]");
+        if (i + 1 < x->size) {
+            eprintf(" ");
+        }
+    }
+}
+
+void ppAexpNamespaces(AexpNamespaces *x) {
+    eprintf("(namespaces ");
+    ppAexpNamespaceArray(x->namespaces);
+    eprintf(" ");
+    ppExp(x->body);
+    eprintf(")");
+}
+
 void ppBareAexpList(AexpList *x) {
     while (x != NULL) {
         ppAexp(x->exp);
@@ -357,6 +392,12 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
+void ppExpLookup(ExpLookup *x) {
+    eprintf("(lookup <namespace %d> ", x->namespace);
+    ppExp(x->body);
+    eprintf(")");
+}
+
 void ppAexp(Aexp *x) {
     switch (x->type) {
         case AEXP_TYPE_LAM:
@@ -395,8 +436,11 @@ void ppAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             ppAexpMakeVec(x->val.makeVec);
             break;
+        case AEXP_TYPE_NAMESPACES:
+            ppAexpNamespaces(x->val.namespaces);
+            break;
         default:
-            cant_happen("unrecognised aexp %d in ppAexp", x->type);
+            cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
     }
 }
 
@@ -456,8 +500,14 @@ void ppExp(Exp *x) {
         case EXP_TYPE_DONE:
             eprintf("<DONE>");
             break;
+        case EXP_TYPE_ENV:
+            eprintf("ENV");
+            break;
+        case EXP_TYPE_LOOKUP:
+            ppExpLookup(x->val.lookup);
+            break;
         default:
-            eprintf("<unrecognised exp %d>", x->type);
+            eprintf("<unrecognised exp %s>", expTypeName(x->type));
             exit(1);
     }
 }

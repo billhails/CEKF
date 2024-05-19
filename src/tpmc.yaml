@@ -45,6 +45,7 @@ structs:
 
     TpmcConstructorPattern:
         tag: HashSymbol
+        namespace: int
         info: LamTypeConstructorInfo
         components: TpmcPatternArray
 

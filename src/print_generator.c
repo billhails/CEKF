@@ -148,7 +148,7 @@ static LamExp *putsExp(LamExp *string) {
     int save = PROTECT(puts);
     LamList *args = newLamList(string, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(puts, 1, args);
+    LamApply *apply = newLamApply(puts, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -175,7 +175,7 @@ static LamExp *makePrintAccessor(int index, LamTypeConstructorInfo *info) {
     LamExp *printArg = printArgVar();
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(info->type->name, index, printArg);
+        newLamDeconstruct(info->type->name, info->namespace, index, printArg);
     PROTECT(dec);
     LamExp *res =
         newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(dec));
@@ -217,8 +217,41 @@ static LamList *makePrintArgs(LamTypeConstructorArgs *args) {
     return this;
 }
 
+static bool functionIsList(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol == listSymbol();
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return false;
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol->name;
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return los->val.lookup->symbol->name;
+        default:
+            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static LamExp *wrapTypeFunction(LamExp *res, LamLookupOrSymbol *los) {
+    if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
+        LamLookupSymbol *ls = los->val.lookup;
+        LamLookup *llu = newLamLookup(ls->namespace, ls->name, res);
+        int save = PROTECT(llu);
+        res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
+        UNPROTECT(save);
+    }
+    return res;
+}
+
 static LamExp *makePrintType(LamTypeFunction *function) {
-    if (function->name == listSymbol()) {
+    if (functionIsList(function->name)) {
         if (function->args
             && function->args->arg->type ==
             LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER) {
@@ -226,9 +259,11 @@ static LamExp *makePrintType(LamTypeFunction *function) {
             return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
         }
     }
-    HashSymbol *name = makePrintName("print$", function->name->name);
+    HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
+    exp = wrapTypeFunction(exp, function->name);
+    REPLACE_PROTECT(save, exp);
     LamList *args = makePrintArgs(function->args);
     PROTECT(args);
     int nargs = countLamList(args);
@@ -236,7 +271,7 @@ static LamExp *makePrintType(LamTypeFunction *function) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, nargs, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -259,7 +294,7 @@ static LamExp *makePrintTuple(LamTypeConstructorArgs *tuple) {
     int save = PROTECT(exp);
     LamList *args = makePrintArgs(tuple);
     PROTECT(args);
-    LamApply *apply = newLamApply(exp, size, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -299,7 +334,7 @@ static LamExp *makePrintConstructorArg(LamTypeConstructorType *arg,
     PROTECT(printer);
     LamList *args = newLamList(accessor, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, 1, args);
+    LamApply *apply = newLamApply(printer, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -354,13 +389,13 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors,
     LamMatchList *next = makePlainMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makePlainMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
+    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
     LamExp *body = makePlainMatchBody(constructors->constructor);
     PROTECT(body);
@@ -376,13 +411,13 @@ static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors,
     LamMatchList *next = makeTagMatchList(constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeTagMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, NULL);
+    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {
@@ -423,7 +458,7 @@ static LamMatch *makeTagMatch(LamTypeConstructorList *constructors,
 static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
-        lookupInLamContext(env, constructors->constructor->name);
+        lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeFunctionBody",
@@ -450,15 +485,24 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
     return res;
 }
 
+static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
+    if (bindings == NULL) return false;
+    if (bindings->var == printName) return true;
+    return userDefined(printName, bindings->next);
+}
+
 static LamLetRecBindings *makePrintTypeFunction(LamTypeDef *typeDef,
                                                 LamContext *env,
                                                 LamLetRecBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
+    if (userDefined(name, next)) {
+        return next;
+    }
     LamVarList *args = makePrintTypeFunctionArgs(typeDef->type->args);
     int save = PROTECT(args);
     LamExp *body = makeFunctionBody(typeDef->constructors, env);
     PROTECT(body);
-    LamLam *lam = newLamLam(countLamVarList(args), args, body);
+    LamLam *lam = newLamLam(args, body);
     PROTECT(lam);
     LamExp *val = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam));
     PROTECT(val);
@@ -474,7 +518,6 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
     if (inPreamble && isListType(typeDef->type)) {
         // print$list is hand-coded in the preamble
         return next;
-    } else {
-        return makePrintTypeFunction(typeDef, env, next);
     }
+    return makePrintTypeFunction(typeDef, env, next);
 }

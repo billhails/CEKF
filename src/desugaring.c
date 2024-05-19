@@ -91,6 +91,21 @@ static AexpMakeVec *desugarAexpMakeVec(AexpMakeVec *x) {
     return x;
 }
 
+static AexpNamespaceArray *desugarAexpNamespaceArray(AexpNamespaceArray *x) {
+    DEBUG_DESUGAR(AexpNamespaceArray, x);
+    for (Index i = 0; i < x->size; i++) {
+        x->entries[i]->body = desugarExp(x->entries[i]->body);
+    }
+    return x;
+}
+
+static AexpNamespaces *desugarAexpNamespaces(AexpNamespaces *x) {
+    DEBUG_DESUGAR(AexpNamespaces, x);
+    x->namespaces = desugarAexpNamespaceArray(x->namespaces);
+    x->body = desugarExp(x->body);
+    return x;
+}
+
 static CexpApply *desugarCexpApply(CexpApply *x) {
     DEBUG_DESUGAR(CexpApply, x);
     x->function = desugarAexp(x->function);
@@ -318,8 +333,11 @@ static Aexp *desugarAexp(Aexp *x) {
         case AEXP_TYPE_MAKEVEC:
             x->val.makeVec = desugarAexpMakeVec(x->val.makeVec);
             break;
+        case AEXP_TYPE_NAMESPACES:
+            x->val.namespaces = desugarAexpNamespaces(x->val.namespaces);
+            break;
         default:
-            cant_happen("unrecognized type %d in desugarAexp", x->type);
+            cant_happen("unrecognized type %s in desugarAexp", aexpTypeName(x->type));
     }
     return x;
 }
@@ -337,6 +355,11 @@ static CexpMatch *desugarCexpMatch(CexpMatch *x) {
     DEBUG_DESUGAR(CexpMatch, x);
     x->condition = desugarAexp(x->condition);
     x->clauses = desugarMatchList(x->clauses);
+    return x;
+}
+
+static ExpLookup *desugarExpLookup(ExpLookup *x) {
+    x->body = desugarExp(x->body);
     return x;
 }
 
@@ -374,7 +397,7 @@ static Cexp *desugarCexp(Cexp *x) {
         case CEXP_TYPE_BACK:
             break;
         default:
-            cant_happen("unrecognized type %d in desugarCexp", x->type);
+            cant_happen("unrecognized type %s in desugarCexp", cexpTypeName(x->type));
     }
     return x;
 }
@@ -395,10 +418,13 @@ Exp *desugarExp(Exp *x) {
         case EXP_TYPE_LET:
             x->val.let = desugarExpLet(x->val.let);
             break;
+        case EXP_TYPE_LOOKUP:
+            x->val.lookup = desugarExpLookup(x->val.lookup);
         case EXP_TYPE_DONE:
+        case EXP_TYPE_ENV:
             break;
         default:
-            cant_happen("unrecognized type %d in desugarExp", x->type);
+            cant_happen("unrecognized type %s in desugarExp", expTypeName(x->type));
     }
     return x;
 }

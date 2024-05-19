@@ -23,12 +23,16 @@
 #  include "hash.h"
 #  include "memory.h"
 
+#define NS_FORMAT "ns$%u"
+
 void printLambdaSymbol(HashSymbol *x, int depth);
-LamContext *extendLamContext(LamContext *parent);
-void addToLamContext(LamContext *context, HashSymbol *symbol,
-                     LamTypeConstructorInfo *info);
-LamTypeConstructorInfo *lookupInLamContext(LamContext *context,
-                                           HashSymbol *var);
+LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var);
+LamContext *lookupNamespaceInLamContext(LamContext *context, Index index);
+LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *context, AstLookupOrSymbol *scoped);
+LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped);
+LamTypeConstructorInfo *lookupScopedLamSymbolInLamContext(LamContext *context, LamLookupSymbol *lookup);
+LamTypeConstructorInfo *lookupScopedAstSymbolInLamContext(LamContext *context, AstLookupSymbol *lookup);
+int lookupCurrentNamespaceInLamContext(LamContext *context);
 void markLamExpFn(void *ptr);
 void printLamExpFn(void *ptr, int depth);
 #endif

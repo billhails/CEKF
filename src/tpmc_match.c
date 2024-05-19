@@ -43,7 +43,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                      TpmcState *errorState, TpmcStateArray *knownStates) {
 #ifdef DEBUG_TPMC_MATCH
-    system("clear");
+    // system("clear");
 #endif
     return match(matrix, finalStates, errorState, knownStates);
 }
@@ -402,7 +402,7 @@ static TpmcPattern *replacePatternComponentsWithWildcards(TpmcPattern *pattern) 
                 TpmcPatternArray *components = replaceComponentsWithWildcards(constructor->components);
                 int save = PROTECT(components);
                 TpmcConstructorPattern *newCons =
-                    newTpmcConstructorPattern(constructor->tag, constructor->info,
+                    newTpmcConstructorPattern(constructor->tag, constructor->namespace, constructor->info,
                                               components);
                 PROTECT(newCons);
                 TpmcPatternValue *patternValue =
@@ -561,9 +561,11 @@ static void collectPathsBoundByPattern(TpmcPattern *pattern,
 }
 
 static TpmcVariableTable *variablesBoundByPattern(TpmcPattern *pattern) {
+    ENTER(variablesBoundByPattern);
     TpmcVariableTable *boundVariables = newTpmcVariableTable();
     int save = PROTECT(boundVariables);
     collectPathsBoundByPattern(pattern, boundVariables);
+    LEAVE(variablesBoundByPattern);
     UNPROTECT(save);
     return boundVariables;
 }
@@ -622,11 +624,16 @@ static void addFreeVariablesRequiredByPattern(TpmcPattern *pattern, TpmcVariable
 }
 
 static TpmcArc *makeTpmcArc(TpmcPattern *pattern, TpmcState *state) {
+    ENTER(makeTpmcArc);
+    DEBUG("makeTpmcArc pattern=%p state=%p", pattern, state);
+    int save = PROTECT(pattern);
+    PROTECT(state);
     TpmcArc *arc = newTpmcArc(state, pattern);
-    int save = PROTECT(arc);
+    PROTECT(arc);
     // the free variables of an arc are the free variables of its state minus the variables bound in the pattern
     TpmcVariableTable *boundVariables = variablesBoundByPattern(pattern);
     PROTECT(boundVariables);
+    validateLastAlloc();
     TpmcVariableTable *statesFreeVariables = getStatesFreeVariables(state);
     PROTECT(statesFreeVariables);
     Index i = 0;
@@ -638,6 +645,7 @@ static TpmcArc *makeTpmcArc(TpmcPattern *pattern, TpmcState *state) {
     }
     addFreeVariablesRequiredByPattern(pattern, arc->freeVariables);
     state->refcount++;
+    LEAVE(makeTpmcArc);
     UNPROTECT(save);
     return arc;
 }
@@ -758,8 +766,8 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates) {
     ENTER(match);
-    IFDEBUG(ppTpmcMatrix(matrix));
-    IFDEBUG(ppTpmcStateArray(finalStates));
+    // IFDEBUG(ppTpmcMatrix(matrix));
+    // IFDEBUG(ppTpmcStateArray(finalStates));
     if (matrix->height == 0) {
         cant_happen("zero-height matrix passed to match");
     }

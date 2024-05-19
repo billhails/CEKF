@@ -45,6 +45,10 @@ HashTable *newHashTable(size_t valuesize, MarkHashValueFunction markfunction,
                         PrintHashValueFunction printfunction) {
     DEBUG("newHashTable() [id=%d, valuesize=%lu]", idCounter, valuesize);
     HashTable *x = NEW(HashTable, OBJTYPE_HASHTABLE);
+#ifdef DEBUG_ALLOC
+    eprintf("%s:%-5d", __FILE__, __LINE__);
+    eprintf("new HashTable %pn\n", x); // SimpleStruct.printNewFunction
+#endif
     x->id = idCounter++;
     x->count = 0;
     x->capacity = 0;

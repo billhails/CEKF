@@ -21,10 +21,11 @@
 #  include <stdio.h>
 #  include <stdbool.h>
 #  include <stdint.h>
+#  include <stdlib.h>
 
-#  define DEBUG_ANY
+#  define NS_GLOBAL -1
 
-#  ifdef DEBUG_ANY
+#  if true
 // #    define DEBUG_BIGINT
 // #    define DEBUG_STACK
 // #    define DEBUG_STEP
@@ -41,6 +42,7 @@
 // #    define DEBUG_TPMC_COMPARE
 // #    define DEBUG_ANNOTATE
 // #    define DEBUG_DESUGARING
+// #    define DEBUG_ANNOTATE
 // #    define DEBUG_HASHTABLE
 // #    define DEBUG_TIN_SUBSTITUTION
 // #    define DEBUG_TIN_INSTANTIATION

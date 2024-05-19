@@ -29,6 +29,22 @@ HashSymbol *negSymbol() {
     return res;
 }
 
+HashSymbol *namespacesSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("$namespaces");
+    }
+    return res;
+}
+
+HashSymbol *namespaceSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("$namespace");
+    }
+    return res;
+}
+
 HashSymbol *putcSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

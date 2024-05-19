@@ -1,0 +1,8 @@
+let
+    import "maybe.fn" as maybe;
+in
+    print(fn {
+        (maybe.some(x)) { x }
+        (maybe.nothing) { 0 }
+    }(maybe.some(1)))
+    // maybe.nothing

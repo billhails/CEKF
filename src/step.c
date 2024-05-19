@@ -60,8 +60,28 @@ void markCEKF() {
     markStack(&state.S);
 }
 
+static inline void patch(Value v, int num) {
+    patchValueList(&state.S, v.val.namespace, num);
+}
+
+static inline void poke(int offset, Value v) {
+    pokeValue(&state.S, offset, v);
+}
+
 static inline void push(Value v) {
     pushValue(&state.S, v);
+}
+
+static inline void extend(int i) {
+    extendStack(&state.S, i);
+}
+
+static inline void recordNsPosition() {
+    state.nsPosition = state.S.sp;
+}
+
+static inline void discard(int num) {
+    discardStackTop(&state.S, num);
 }
 
 static inline Value pop() {
@@ -78,6 +98,10 @@ static inline Value peek(int index) {
 
 static inline Value tos(void) {
     return peekTop(&state.S);
+}
+
+static inline Value getNamespace(int index) {
+    return peek(state.nsPosition + index);
 }
 
 static void copyToVec(Vec *vec) {
@@ -107,6 +131,7 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     state.K = NULL;
     state.F = NULL;
     state.V = vVoid;
+    state.nsPosition = 0;
     if (first) {
         initStack(&state.S);
     } else {
@@ -1093,6 +1118,84 @@ static void step() {
                     Value kont = kontValue(state.K);
                     push(kont);
                     applyProc(1);
+                }
+                break;
+            case BYTECODE_NS_START:{
+                    int num = readCurrentWord();
+                    DEBUGPRINTF("NS_START [%d]\n", num);
+                    recordNsPosition();
+                    extend(num);
+                }
+                break;
+            case BYTECODE_NS_END:{
+                    int numLambdas = readCurrentWord();
+                    int stackOffset = readCurrentWord();
+                    DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
+                    ValueList *snapshot = snapshotNamespace(&state.S);
+                    int save = PROTECT(snapshot);
+                    Value ns = namespaceValue(snapshot);
+                    // eprintf("poke(%d - (%d + %d) = %d)\n", state.S.sp, numLambdas, stackOffset, state.S.sp - (numLambdas + stackOffset));
+                    poke(0 - (numLambdas + stackOffset), ns);
+                    discard(numLambdas);
+                    UNPROTECT(save);
+                }
+                break;
+            case BYTECODE_NS_FINISH:{
+                    int num = readCurrentWord();
+                    DEBUGPRINTF("NS_FINISH [%d]\n", num);
+                    // at this point we need to patch each of the namespaces with the
+                    // final block of populated namespaces, size num, and at TOS
+                    for (int i = 0; i < num; i++) {
+                        Value ns = peek(0 - (i + 1));
+#ifdef SAFETY_CHECKS
+                        // eprintf("peek(%d - (%d + 1) = %d)\n", state.S.sp, i, state.S.sp - (i + 1));
+                        if (ns.type != VALUE_TYPE_NAMESPACE) {
+                            cant_happen("expected namespace, got %d", ns.type);
+                        }
+#endif
+                        patch(ns, num);
+                    }
+                }
+                break;
+            case BYTECODE_NS_PUSHS:{
+                    int offset = readCurrentWord();
+                    DEBUGPRINTF("NS_PUSHS [%d]\n", offset);
+                    Value v = peek(offset);
+#ifdef SAFETY_CHECKS
+                    if (v.type != VALUE_TYPE_NAMESPACE) {
+                        cant_happen("expected namespace, got type %d", v.type);
+                    }
+#endif
+                    state.K = newKont(offset, state.E, state.K);
+                    snapshotKont(&state.S, state.K);
+                    restoreNamespace(&state.S, v.val.namespace);
+                }
+                break;
+            case BYTECODE_NS_PUSHE:{
+                    int frame = readCurrentWord();
+                    int offset = readCurrentWord();
+                    DEBUGPRINTF("NS_PUSHE [%d][%d]\n", frame, offset);
+                    Value v = lookup(frame, offset);
+#ifdef SAFETY_CHECKS
+                    if (v.type != VALUE_TYPE_NAMESPACE) {
+                        cant_happen("expected namespace, got type %d", v.type);
+                    }
+#endif
+                    state.K = newKont(offset, state.E, state.K);
+                    snapshotKont(&state.S, state.K);
+                    restoreNamespace(&state.S, v.val.namespace);
+                }
+                break;
+            case BYTECODE_NS_POP:{
+                    DEBUGPRINTF("NS_POP\n");
+                    Value result = pop();
+                    int save = protectValue(result);
+                    Kont *kont = state.K;
+                    PROTECT(kont);
+                    state.K = kont->next;
+                    restoreKont(&state.S, kont);
+                    push(result);
+                    UNPROTECT(save);
                 }
                 break;
             case BYTECODE_DONE:{

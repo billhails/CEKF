@@ -300,12 +300,34 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b) {
     LEAVE(writeAexpMakeVec);
 }
 
+void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b) {
+    if (x->size > 0) {
+        addByte(b, BYTECODE_NS_START);
+        addWord(b, x->size);
+        for (Index i = 0; i < x->size; i++) {
+            writeExp(x->entries[i]->body, b);
+            addByte(b, BYTECODE_NS_END);
+            addWord(b, x->entries[i]->nbindings);
+            addWord(b, x->size - i);
+        }
+        addByte(b, BYTECODE_NS_FINISH);
+        addWord(b, x->size);
+    }
+}
+
+void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b) {
+    ENTER(writeAexpNamespaces);
+    writeAexpNamespaceArray(x->namespaces, b);
+    writeExp(x->body, b);
+    LEAVE(writeAexpNamespaces);
+}
+
 void writeCexpApply(CexpApply *x, ByteCodeArray *b) {
     ENTER(writeCexpApply);
     writeAexpList(x->args, b);
     writeAexp(x->function, b);
     addByte(b, BYTECODE_APPLY);
-    addByte(b, x->nargs);
+    addByte(b, countAexpList(x->args));
     LEAVE(writeCexpApply);
 }
 
@@ -569,6 +591,29 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b) {
     LEAVE(writeExpLet);
 }
 
+void writeLookup(ExpLookup *x, ByteCodeArray *b) {
+#ifdef SAFETY_CHECKS
+    if (x->annotatedVar == NULL) {
+        cant_happen("annotated var missing from lookup");
+    }
+#endif
+    switch(x->annotatedVar->type) {
+        case AEXPANNOTATEDVARTYPE_TYPE_STACK:
+            addByte(b, BYTECODE_NS_PUSHS);
+            addWord(b, x->annotatedVar->offset);
+            break;
+        case AEXPANNOTATEDVARTYPE_TYPE_ENV:
+            addByte(b, BYTECODE_NS_PUSHE);
+            addWord(b, x->annotatedVar->frame);
+            addWord(b, x->annotatedVar->offset);
+            break;
+        default:
+            cant_happen("unrecognised annotation type %d", x->annotatedVar->type);
+    }
+    writeExp(x->body, b);
+    addByte(b, BYTECODE_NS_POP);
+}
+
 void writeAexp(Aexp *x, ByteCodeArray *b) {
     ENTER(writeAexp);
     switch (x->type) {
@@ -637,8 +682,12 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
                 writeAexpMakeVec(x->val.makeVec, b);
             }
             break;
+        case AEXP_TYPE_NAMESPACES:{
+                writeAexpNamespaces(x->val.namespaces, b);
+            }
+            break;
         default:
-            cant_happen("unrecognized Aexp type in writeAexp");
+            cant_happen("unrecognized Aexp type %s", aexpTypeName(x->type));
     }
     LEAVE(writeAexp);
 }
@@ -688,7 +737,7 @@ void writeCexp(Cexp *x, ByteCodeArray *b) {
             }
             break;
         default:
-            cant_happen("unrecognized Cexp type %d in writeCexp", x->type);
+            cant_happen("unrecognized Cexp type %s", cexpTypeName(x->type));
     }
     LEAVE(writeCexp);
 }
@@ -712,8 +761,14 @@ void writeExp(Exp *x, ByteCodeArray *b) {
                 addByte(b, BYTECODE_DONE);
             }
             break;
+        case EXP_TYPE_LOOKUP:{
+                writeLookup(x->val.lookup, b);
+            }
+            break;
+        case EXP_TYPE_ENV:
+            break;
         default:
-            cant_happen("unrecognized Exp type in writeExp");
+            cant_happen("unrecognized Exp type %s", expTypeName(x->type));
     }
     LEAVE(writeExp);
 }

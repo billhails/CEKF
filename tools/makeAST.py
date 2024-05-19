@@ -105,6 +105,14 @@ class Catalog:
         for entity in self.contents.values():
             entity.printPushFunction(self)
 
+    def printPopDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPopDeclaration(self)
+
+    def printPopFunctions(self):
+        for entity in self.contents.values():
+            entity.printPopFunction(self)
+
     def printSetDeclarations(self):
         for entity in self.contents.values():
             entity.printSetDeclaration(self)
@@ -184,6 +192,10 @@ class Catalog:
     def printFreeFunctions(self):
         for entity in self.contents.values():
             entity.printFreeFunction(self)
+
+    def printMermaid(self):
+        for entity in self.contents.values():
+            entity.printMermaid(self)
 
     def printMarkObjFunction(self):
         comment = '// Catalog.printMarkObjFunction'
@@ -333,6 +345,12 @@ class Base:
     def printPushFunction(self, catalog):
         pass
 
+    def printPopDeclaration(self, catalog):
+        pass
+
+    def printPopFunction(self, catalog):
+        pass
+
     def printCountFunction(self, catalog):
         pass
 
@@ -396,6 +414,9 @@ class EnumField:
         self.owner = owner
         self.name = name
 
+    def getName(self):
+        return self.name
+
     def isSimpleField(self):
         return False;
 
@@ -408,7 +429,7 @@ class EnumField:
 
     def printNameFunctionLine(self):
         field = self.makeTypeName()
-        print(f'        case {field}: return "{field}";')
+        print(f'        case {field}: return "{field}"; // EnumField.printNameFunctionLine')
 
     def makeTypeName(self):
         v = self.owner + '_type_' + self.name
@@ -558,6 +579,13 @@ class SimpleHash(Base):
     def isHash(self):
         return True
 
+    def printMermaid(self, catalog):
+        myName = self.getName()
+        if self.entries is None:
+            print(myName)
+        else:
+            print(f"{myName} --entries--> {self.entries.getName()}")
+        
     def isSelfInitializing(self):
         return True # other constructors will call this automatically
 
@@ -736,7 +764,7 @@ class SimpleArray(Base):
     """
     def __init__(self, name, data):
         super().__init__(name)
-        self.dimension = data["dimension"] or 1
+        self.dimension = data["dimension"] if "dimension" in data else 1
         if self.dimension > 2:
             raise Exception("only 1 or 2 dimensional arrays supported for now")
         if self.dimension == 2:
@@ -744,6 +772,11 @@ class SimpleArray(Base):
             self.height = SimpleField(self.name, "height", "int")
         self.entries = SimpleField(self.name,"entries", data["entries"])
 
+    def printMermaid(self, catalog):
+        myName = self.getName()
+        mySpec = '[]' * self.dimension
+        print(f'{myName}["{myName}{mySpec}"] --entries--> {self.entries.getObjName(catalog)}')
+        
     def getDefineValue(self):
         return 'x'
 
@@ -905,18 +938,49 @@ class SimpleArray(Base):
 
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} obj, {self.entries.getTypeDeclaration(catalog)} entry); // simpleArray.printPushDeclaration")
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPushDeclaration'
+            print(f"Index push{name}({myType} obj, {entryType} entry); {c}")
 
+    def printPopDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPopDeclaration'
+            print(f"{entryType} pop{name}({myType} obj); {c}")
 
     def printPushFunction(self, catalog):
         if self.dimension == 1:
-            print(f"void push{self.getName()}({self.getTypeDeclaration()} x, {self.entries.getTypeDeclaration(catalog)} entry) {{ // SimpleArray.printPushFunction")
-            print("    if (x->size == x->capacity) { // SimpleArray.printPushFunction")
-            print(f"        x->entries = GROW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->entries, x->capacity, x->capacity *2); // SimpleArray.printPushFunction")
-            print("        x->capacity *= 2; // SimpleArray.printPushFunction")
-            print("    } // SimpleArray.printPushFunction")
-            print("    x->entries[x->size++] = entry; // SimpleArray.printPushFunction")
-            print("} // SimpleArray.printPushFunction\n")
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPushFunction'
+            print(f"Index push{name}({myType} x, {entryType} entry) {{ {c}")
+            print(f"    if (x->size == x->capacity) {{ {c}")
+            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
+            print(f"        x->capacity *= 2; {c}")
+            print(f"    }} {c}")
+            print(f"    x->entries[x->size++] = entry; {c}")
+            print(f"    return x->size - 1; {c}")
+            print(f"}} {c}\n")
+
+    def printPopFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration()
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = '// simpleArray.printPopFunction'
+            print(f"{entryType} pop{name}({myType} x) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS {c}")
+            print(f"    if (x->size == 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif {c}")
+            print(f"    return x->entries[--(x->size)]; {c}")
+            print(f"}} {c}\n")
 
     def printMarkFunction(self, catalog):
         print("{decl} {{ // SimpleArray.printMarkFunction".format(decl=self.getMarkSignature(catalog)))
@@ -1020,7 +1084,7 @@ class SimpleArray(Base):
         myName = self.getName()
         print("    if (o == NULL) return NULL; // SimpleArray.printCopyFunction")
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleArray.printCopyFunction")
-        print(f'    DEBUG("copy {myName} %pn", x); // SimpleArray.printCopyFunction')
+        print(f'    DEBUG("copy {myName} %p", x); // SimpleArray.printCopyFunction')
         print("    Header _h = x->header; // SimpleArray.printCopyFunction")
         print(f"    bzero(x, sizeof(struct {myName})); // SimpleArray.printCopyFunction")
         print("    x->header = _h; // SimpleArray.printCopyFunction")
@@ -1240,6 +1304,10 @@ class SimpleStruct(Base):
     def isStruct(self):
         return True
 
+    def printMermaid(self, catalog):
+        for field in self.fields:
+            print(f"{self.getName()} --{field.getName()}--> {field.getObjName(catalog)}")
+
     def makeField(self, fieldName, fieldType):
         return SimpleField(self.name, fieldName, fieldType)
 
@@ -1375,7 +1443,7 @@ class SimpleStruct(Base):
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printNewFunction")
         if hasInternalConstructors:
             print("    int save = PROTECT(x); // SimpleStruct.printNewFunction")
-        print(f'    DEBUG("new {myName} %pn", x); // SimpleStruct.printNewFunction')
+        print(f'    DEBUG("new {myName} %p", x); // SimpleStruct.printNewFunction')
         for field in self.getNewArgs(catalog):
             print("    x->{f} = {f}; // SimpleStruct.printNewFunction".format(f=field.getFieldName()))
         for field in self.getDefaultArgs(catalog):
@@ -1495,7 +1563,7 @@ class SimpleStruct(Base):
         myName = self.getName()
         print("    if (o == NULL) return NULL; // SimpleStruct.printCopyFunction")
         print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printCopyFunction")
-        print(f'    DEBUG("copy {myName} %pn", x); // SimpleStruct.printCopyFunction')
+        print(f'    DEBUG("copy {myName} %p", x); // SimpleStruct.printCopyFunction')
         print("    Header _h = x->header; // SimpleStruct.printCopyFunction")
         print(f"    bzero(x, sizeof(struct {myName})); // SimpleStruct.printCopyFunction")
         print("    x->header = _h; // SimpleStruct.printCopyFunction")
@@ -1534,6 +1602,9 @@ class DiscriminatedUnionField(EnumField):
         super().__init__(owner, name)
         self.typeName = typeName
         self.default = None
+
+    def getObjName(self, catalog):
+        return self.typeName
 
     def printStructTypedefLine(self, catalog):
         obj = catalog.get(self.typeName)
@@ -1695,6 +1766,9 @@ class DiscriminatedUnionUnion(Base):
     def getName(self):
         return self.name + "Val"
 
+    def printMermaid(self, catalog):
+        print(self.getName())
+
     def getTypeDeclaration(self):
         return "union {name} ".format(name=self.getName())
 
@@ -1725,6 +1799,9 @@ class SimpleEnum(Base):
 
     def getTypeDeclaration(self):
         return "enum {name} ".format(name=self.getName())
+
+    def printMermaid(self, catalog):
+        print(f'{self.getName()}["enum {self.getName()}"]')
 
     def printTypedef(self, catalog):
         self.noteTypedef()
@@ -1809,6 +1886,9 @@ class DiscriminatedUnionEnum(Base):
     def getName(self):
         return self.name + "Type"
 
+    def printMermaid(self, catalog):
+        print(self.getName())
+
     def getFieldName(self):
         return 'type'
 
@@ -1823,7 +1903,7 @@ class DiscriminatedUnionEnum(Base):
 
     def printNameFunctionBody(self):
         decl = self.getNameFunctionDeclaration()
-        comment = '// DiscriminatedUnionEnum.printNameFunctionDeclaration'
+        comment = '// DiscriminatedUnionEnum.printNameFunctionBody'
         print(f"{decl} {{ {comment}")
         print(f"    switch(type) {{ {comment}")
         for  field in self.fields:
@@ -1881,6 +1961,9 @@ class Primitive(Base):
             self.copyFn = data['copyFn']
         else:
             self.copyFn = None
+
+    def printMermaid(self, catalog):
+        pass
 
     def printMarkCase(self, catalog):
         if self.markFn is not None:
@@ -2001,7 +2084,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("yaml", help="input yaml file")
 parser.add_argument("type",
                     type=str,
-                    choices=["h", "c", "objtypes_h", "debug_h", "debug_c"],
+                    choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md"],
                     help="the type of output to produce")
 args = parser.parse_args()
 
@@ -2093,8 +2176,9 @@ if args.type == "h":
     catalog.printMarkDeclarations()
     printSection("free declarations")
     catalog.printFreeDeclarations()
-    printSection("push declarations")
+    printSection("push/pop declarations")
     catalog.printPushDeclarations()
+    catalog.printPopDeclarations()
     printSection("hash getter and setter declarations")
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
@@ -2143,8 +2227,9 @@ elif args.type == "c":
     catalog.printNewFunctions()
     printSection("copy functions")
     catalog.printCopyFunctions()
-    printSection("push functions")
+    printSection("push/pop functions")
     catalog.printPushFunctions()
+    catalog.printPopFunctions()
     printSection("hash getter and setter functions")
     catalog.printGetFunctions()
     catalog.printSetFunctions()
@@ -2197,3 +2282,18 @@ elif args.type == 'debug_c':
     catalog.printPrintFunctions()
     printSection("compare functions")
     catalog.printCompareFunctions()
+
+elif args.type == 'md':
+
+    print(f"# {typeName}")
+    print("")
+    if 'description' in document:
+        print(document['description'])
+        print("")
+
+    print("```mermaid")
+    print("flowchart TD")
+    catalog.printMermaid()
+    print("```")
+    print("")
+    print(f"> Generated from {args.yaml} by tools/makeAST.py")

@@ -10,9 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "common.h"
 #include "ast_helper.h"
+#include "ast_debug.h"
 #include "symbol.h"
 #include "symbols.h"
 #include "bigint.h"
@@ -20,6 +22,7 @@
 #include "parser.h"
 #include "lexer.h"
 #include "types.h"
+#include "print_generator.h"
 
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg);
 
@@ -67,10 +70,17 @@ static AstArg *newAstNilArg() {
     return newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL(nilSymbol()));
 }
 
+static AstUnpack *makeAstUnpack(HashSymbol *symbol, AstArgList *args) {
+    return newAstUnpack(
+        newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_SYMBOL, AST_LOOKUPORSYMBOL_VAL_SYMBOL(symbol)),
+        args
+    );
+}
+
 static AstUnpack *newStringUnpack(AstCharArray *str) {
-    AstUnpack *res = newAstUnpack(nilSymbol(), NULL);
+    AstUnpack *res = makeAstUnpack(nilSymbol(), NULL);
     for (int size = str->size; size > 0; size--) {
-        res = newAstUnpack(
+        res = makeAstUnpack(
             consSymbol(),
             newAstArgList(
                 newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER(str->entries[size-1])),
@@ -169,6 +179,110 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     return rest;
 }
 
+static char *calculatePath(char *file, PmModule *mod) {
+    if (*file == '/') {
+        return file;
+    }
+    char *currentFile = currentPmFile(mod);
+    if (currentFile == NULL) {
+        return strdup(file);
+    }
+    currentFile = strdup(currentFile);
+    char *slash = strrchr(currentFile, '/');
+    if (slash == NULL) {
+        free(currentFile);
+        return strdup(file);
+    }
+    *slash = '\0';
+    char *buf = malloc(sizeof(char) * (strlen(currentFile) + 1 + strlen(file) + 10));
+    if (buf == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    sprintf(buf, "%s/%s", currentFile, file);
+    free(currentFile);
+    return buf;
+}
+
+static AstFileIdArray *fileIdStack = NULL;
+
+static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
+    for (Index i = 0; i < array->size; ++i) {
+        if (cmpAgnosticFileId(id, array->entries[i]) == CMP_EQ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Careful. Somewhat accidentally this algorithm stores the namespaces
+// in precisely the correct order that they will need to be processed in.
+// Specifically because a namespace is parsed before it is recorded,
+// all of its imports are recorded ahead of it.
+static AstNamespace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
+    if (fileIdStack == NULL) {
+        fileIdStack = newAstFileIdArray();
+    }
+    char *path = calculatePath(file, mod);
+    AgnosticFileId *fileId = makeAgnosticFileId(path);
+    if (fileId == NULL) {
+        cant_happen("cannot stat file \"%s\"", path);
+    }
+    int found = lookupNamespace(fileId);
+    if (found != -1) {
+        return newAstNamespace(symbol, found);
+    }
+    if (fileIdInArray(fileId, fileIdStack)) {
+        cant_happen("recursive include detected for %s", path);
+    }
+    pushAstFileIdArray(fileIdStack, fileId);
+    AstDefinitions *definitions = parseNamespaceFromFileName(path);
+    if (definitions == NULL) {
+        cant_happen("syntax error parsing %s", path);
+    }
+    AstNamespaceImpl *impl = newAstNamespaceImpl(fileId, definitions);
+    found = pushAstNamespaceArray(namespaces, impl);
+    popAstFileIdArray(fileIdStack);
+    AstNamespace *ns = newAstNamespace(symbol, found);
+    free(path);
+    return ns;
+}
+
+static void storeNamespace(PmModule *mod, AstNamespace *ns) {
+    if (getAstIntTable(mod->namespaces, ns->symbol, NULL)) {
+        cant_happen("redefinition of namespace %s", ns->symbol->name);
+    }
+    setAstIntTable(mod->namespaces, ns->symbol, ns->reference);
+}
+
+static AstLookup *makeAstLookup(PmModule *mod, HashSymbol *symbol, AstExpression *expr) {
+    int index = 0;
+    if (getAstIntTable(mod->namespaces, symbol, &index)) {
+        return newAstLookup(index, symbol, expr);
+    } else {
+        cant_happen("cannot resolve namespace %s", symbol->name);
+    }
+}
+
+static AstLookupSymbol *makeAstLookupSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    int index = 0;
+    if (getAstIntTable(mod->namespaces, nsName, &index)) {
+        return newAstLookupSymbol(index, nsName, symbol);
+    } else {
+        cant_happen("cannot resolve namespace %s", symbol->name);
+    }
+}
+
+static AstLookupOrSymbol *makeAstLookupOrSymbol(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    AstLookupSymbol *als = makeAstLookupSymbol(mod, nsName, symbol);
+    return newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_LOOKUP, AST_LOOKUPORSYMBOL_VAL_LOOKUP(als));
+}
+
+static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *symbol) {
+    AstLookupSymbol *als = makeAstLookupSymbol(mod, nsName, symbol);
+    return newAstArg(AST_ARG_TYPE_LOOKUP, AST_ARG_VAL_LOOKUP(als));
+}
+
 %}
 %code requires
 {
@@ -186,16 +300,12 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstDefine *define;
     AstDefinition *definition;
     AstDefinitions *definitions;
-    AstEnv *env;
-    AstEnvType *envType;
     AstExpression *expression;
     AstExpressions *expressions;
     AstUserType *userType;
     AstFunCall *funCall;
-    AstLoad *load;
     AstNamedArg *namedArg;
     AstNest *nest;
-    AstPackage *package;
     AstPrint *print;
     HashSymbol *symbol;
     AstTypeBody *typeBody;
@@ -211,6 +321,9 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     AstCharArray *chars;
     AstAltFunction *altFunction;
     AstAltArgs * altArgs;
+    AstNamespace *namespace;
+    AstLookup *lookup;
+    AstLookupOrSymbol *los;
 }
 
 %type <chars> str
@@ -218,21 +331,17 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <arg> farg
 %type <argList> fargs arg_tuple
 %type <compositeFunction> composite_function functions fun
-%type <define> defun denv
+%type <define> defun
 %type <definition> definition
-%type <definitions> let_in definitions env_body
-%type <env> env env_expr
-%type <envType> env_type
+%type <definitions> let_in definitions namespace_definitions
 %type <expression> expression
 %type <expressions> expressions expression_statements tuple
 %type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
-%type <load> load
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
-%type <package> package extends
 %type <print> print
-%type <symbol> symbol type_symbol as
+%type <symbol> symbol type_symbol
 %type <typeBody> type_body
 %type <typeClause> type_clause
 %type <typeConstructor> type_constructor
@@ -245,12 +354,12 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %type <iff> iff
 %type <altFunction> alt_function
 %type <altArgs> alt_args
+%type <namespace> name_space
+%type <lookup> look_up
+%type <los> scoped_symbol
 
-%token AS
 %token BACK
 %token ELSE
-%token ENV
-%token EXTENDS
 %token FALSE
 %token FN
 %token IF
@@ -258,13 +367,14 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
 %token KW_CHAR
 %token KW_INT
 %token LET
-%token LOAD
 %token PRINT
-%token PROTOTYPE
 %token SWITCH
 %token TRUE
 %token TYPEDEF
 %token WILDCARD
+%token IMPORT
+%token NAMESPACE_TOKEN
+%token AS
 
 %token <c> CHAR
 %token <s> NUMBER
@@ -303,6 +413,7 @@ top : %empty     { $$ = NULL; }
 
 nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
           | expression_statements        { $$ = newAstNest(NULL, $1); }
+          | namespace_definitions        { $$ = newAstNest($1, NULL); }
           ;
 
 /******************************** definitions */
@@ -310,35 +421,35 @@ nest_body : let_in expression_statements { $$ = newAstNest($1, $2); }
 let_in : LET definitions IN { $$ = $2; }
        ;
 
-definitions : %empty                     { $$ = NULL; }
-            | definition definitions     { $$ = newAstDefinitions($1, $2); }
+namespace_definitions : NAMESPACE_TOKEN definitions   { $$ = $2; }
+                      ;
+
+definitions : %empty                            { $$ = NULL; }
+            | definition definitions            { $$ = newAstDefinitions($1, $2); }
             ;
 
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
-           | load       { $$ = newAstDefinition( AST_DEFINITION_TYPE_LOAD, AST_DEFINITION_VAL_LOAD($1)); }
-           | typedef    { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
-           | defun      { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
-           | denv       { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
+           | typedef                   { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
+           | defun                     { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
+           | name_space ';'            {
+                                           storeNamespace(mod, $1);
+                                           $$ = newAstDefinition( AST_DEFINITION_TYPE_BLANK, AST_DEFINITION_VAL_BLANK());
+                                       }
            ;
 
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
+      | PRINT symbol fun { $$ = newAstDefine(makePrintName("print$", $2->name), newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
 
-denv : ENV symbol env_expr  { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($3))); }
-     ;
-
-load : LOAD package as  { $$ = newAstLoad($2, $3); }
-     ;
-
-as : %empty     { $$ = NULL; }
-   | AS symbol  { $$ = $2; }
-   ;
+name_space : IMPORT STRING AS symbol { $$ = parseImport($2, $4, mod); }
+           ;
 
 /******************************** types */
 
 typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef($2, $4); }
         ;
 
+/* a type function being defined */
 user_type : symbol                      { $$ = newAstUserType($1, NULL); }
           | symbol '(' type_symbols ')' { $$ = newAstUserType($1, $3); }
           ;
@@ -354,12 +465,18 @@ type_body : type_constructor                { $$ = newAstTypeBody($1, NULL); }
           | type_constructor '|' type_body  { $$ = newAstTypeBody($1, $3); }
           ;
 
+/* a type constructor being defined */
 type_constructor : symbol                   { $$ = newAstTypeConstructor($1, NULL); }
                  | symbol '(' type_list ')' { $$ = newAstTypeConstructor($1, $3); }
                  ;
 
-type_function : symbol                   { $$ = newAstTypeFunction($1, NULL); }
-              | symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
+/* a type function being used in the body of a type constructor */
+type_function : scoped_symbol                   { $$ = newAstTypeFunction($1, NULL); }
+              | scoped_symbol '(' type_list ')' { $$ = newAstTypeFunction($1, $3); }
+              ;
+
+scoped_symbol : symbol              { $$ = newAstLookupOrSymbol(AST_LOOKUPORSYMBOL_TYPE_SYMBOL, AST_LOOKUPORSYMBOL_VAL_SYMBOL($1)); }
+              | symbol '.' symbol   { $$ = makeAstLookupOrSymbol(mod, $1, $3); }
               ;
 
 type_list : type                { $$ = newAstTypeList($1, NULL); }
@@ -419,8 +536,8 @@ fargs : %empty            { $$ = NULL; }
       | farg ',' fargs    { $$ = newAstArgList($1, $3); }
       ;
 
-consfargs : farg                { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstNilArg(), NULL))); }
-          | farg ',' consfargs  { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
+consfargs : farg                { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstNilArg(), NULL))); }
+          | farg ',' consfargs  { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList(newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($3)), NULL))); }
           ;
 
 number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
@@ -430,12 +547,12 @@ number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
        ;
 
 farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYMBOL($1)); }
+     | symbol '.' symbol   { $$ = makeAstLookupArg(mod, $1, $3); }
      | unpack              { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | cons                { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | named_farg          { $$ = newAstArg(AST_ARG_TYPE_NAMED, AST_ARG_VAL_NAMED($1)); }
      | '[' ']'             { $$ = newAstNilArg(); }
      | '[' consfargs ']'   { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($2)); }
-     | env_type            { $$ = newAstArg(AST_ARG_TYPE_ENV, AST_ARG_VAL_ENV($1)); }
      | number              { $$ = newAstArg(AST_ARG_TYPE_NUMBER, AST_ARG_VAL_NUMBER($1)); }
      | stringarg           { $$ = newAstArg(AST_ARG_TYPE_UNPACK, AST_ARG_VAL_UNPACK($1)); }
      | CHAR                { $$ = newAstArg(AST_ARG_TYPE_CHARACTER, AST_ARG_VAL_CHARACTER($1)); }
@@ -446,10 +563,10 @@ farg : symbol              { $$ = newAstArg(AST_ARG_TYPE_SYMBOL, AST_ARG_VAL_SYM
 arg_tuple: '#' '(' fargs ')'  { $$ = $3; }
          ;
 
-cons : farg CONS farg { $$ = newAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
+cons : farg CONS farg { $$ = makeAstUnpack(consSymbol(), newAstArgList($1, newAstArgList($3, NULL))); }
      ;
 
-unpack : symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
+unpack : scoped_symbol '(' fargs ')'   { $$ = newAstUnpack($1, $3); }
        ;
 
 stringarg : str { $$ = newStringUnpack($1); }
@@ -462,9 +579,6 @@ str : STRING            { $$ = newCharArray($1); }
     | str STRING        { $$ = appendCharArray($1, $2); }
     ;
 
-env_type : symbol ':' symbol { $$ = newAstEnvType($1, $3); }
-         ;
-
 named_farg : symbol '=' farg  { $$ = newAstNamedArg($1, $3); }
            ;
 
@@ -473,7 +587,6 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | unop                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
            | '[' conslist ']'     { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($2)); }
            | FN fun               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($2)); }
-           | env                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_ENV, AST_EXPRESSION_VAL_ENV($1)); }
            | BACK                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_BACK, AST_EXPRESSION_VAL_BACK()); }
            | iff                  { $$ = newAstExpression(AST_EXPRESSION_TYPE_IFF, AST_EXPRESSION_VAL_IFF($1)); }
            | switch               { $$ = newAstExpression(AST_EXPRESSION_TYPE_FUNCALL, AST_EXPRESSION_VAL_FUNCALL($1)); }
@@ -484,6 +597,7 @@ expression : binop                { $$ = newAstExpression(AST_EXPRESSION_TYPE_FU
            | nest                 { $$ = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST($1)); }
            | print                { $$ = newAstExpression(AST_EXPRESSION_TYPE_PRINT, AST_EXPRESSION_VAL_PRINT($1)); }
            | tuple                { $$ = newAstExpression(AST_EXPRESSION_TYPE_TUPLE, AST_EXPRESSION_VAL_TUPLE($1)); }
+           | look_up              { $$ = newAstExpression(AST_EXPRESSION_TYPE_LOOKUP, AST_EXPRESSION_VAL_LOOKUP($1)); }
            | '(' expression ')'   { $$ = $2; }
            ;
 
@@ -519,11 +633,9 @@ binop : expression THEN expression      { $$ = binOpToFunCall(thenSymbol(), $1, 
       | expression '/' expression       { $$ = binOpToFunCall(divSymbol(), $1, $3); }
       | expression '%' expression       { $$ = binOpToFunCall(modSymbol(), $1, $3); }
       | expression POW expression       { $$ = binOpToFunCall(powSymbol(), $1, $3); }
-      | expression '.' expression       { $$ = binOpToFunCall(dotSymbol(), $1, $3); }
       ;
 
-package : symbol                { $$ = newAstPackage($1, NULL); }
-        | symbol '.' package    { $$ = newAstPackage($1, $3); }
+look_up : symbol '.' expression         { $$ = makeAstLookup(mod, $1, $3); }
         ;
 
 expressions : %empty                        { $$ = NULL; }
@@ -543,19 +655,6 @@ expression_statements : expression optional_semicolon           { $$ = newAstExp
 optional_semicolon : %empty
                    | ';'
                    ;
-
-env : ENV env_expr  { $$ = $2; }
-    ;
-
-env_expr : extends env_body { $$ = newAstEnv($1, $2); }
-         ;
-
-extends : %empty            { $$ = NULL; }
-        | EXTENDS package   { $$ = $2; }
-        ;
-
-env_body : '{' definitions '}'  { $$ = $2; }
-         ;
 
 symbol : VAR    { $$ = newSymbol($1); }
        ;

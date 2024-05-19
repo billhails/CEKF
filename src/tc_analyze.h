@@ -24,5 +24,7 @@
 
 TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);
+TcType *lookupNsRef(int index, TcEnv *env);
+bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 
 #endif

@@ -93,18 +93,22 @@ const char *typeName(ObjType type, void *p) {
             return "protection";
         case OBJTYPE_BIGINT:
             return "bigint";
-        case OBJTYPE_PMMODULE:
-            return "pmmodule";
-            ANF_OBJTYPE_CASES()
-                return typenameAnfObj(type);
-            AST_OBJTYPE_CASES()
-                return typenameAstObj(type);
-            LAMBDA_OBJTYPE_CASES()
-                return typenameLambdaObj(type);
-            TPMC_OBJTYPE_CASES()
-                return typenameTpmcObj(type);
-            TC_OBJTYPE_CASES()
-                return typenameTcObj(type);
+        case OBJTYPE_AGNOSTICFILEID:
+            return "file_id";
+        case OBJTYPE_MAYBEBIGINT:
+            return "maybebigint";
+        ANF_OBJTYPE_CASES()
+            return typenameAnfObj(type);
+        AST_OBJTYPE_CASES()
+            return typenameAstObj(type);
+        LAMBDA_OBJTYPE_CASES()
+            return typenameLambdaObj(type);
+        TPMC_OBJTYPE_CASES()
+            return typenameTpmcObj(type);
+        TC_OBJTYPE_CASES()
+            return typenameTcObj(type);
+        BUILTINS_OBJTYPE_CASES()
+            return typenameBuiltinsObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
@@ -162,9 +166,8 @@ Index protect(Header *obj) {
 #endif
         ProtectionStack *tmp = NEW_PROTECT(protected->capacity * 2);
         tmp->capacity = protected->capacity * 2;
-        for (tmp->sp = 0; tmp->sp < protected->sp; tmp->sp++) {
-            tmp->stack[tmp->sp] = protected->stack[tmp->sp];
-        }
+        tmp->sp = protected->sp;
+        COPY_ARRAY(Header *, tmp->stack, protected->stack, protected->sp);
         protected = tmp;
 #ifdef DEBUG_LOG_GC
         eprintf("protect new stack: %p\n", (void *) protected);
@@ -227,11 +230,14 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
         return NULL;
     }
 
+#ifdef DEBUG_LOG_GC
+    eprintf("reallocate ptr %p => ", pointer);
+#endif
     void *result = realloc(pointer, newSize);
     if (result == NULL)
         exit(1);
 #ifdef DEBUG_LOG_GC
-    eprintf("reallocate ptr %p => %p\n", pointer, result);
+    eprintf("%p\n", result);
 #endif
     return result;
 }
@@ -270,7 +276,7 @@ static void markProtectionObj(Header *h) {
 
 void markObj(Header *h, Index i) {
 #ifdef DEBUG_LOG_GC
-    eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
+    // eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
         case OBJTYPE_CLO:
@@ -281,6 +287,9 @@ void markObj(Header *h, Index i) {
         case OBJTYPE_VALUELIST:
             markCekfObj(h);
             break;
+        case OBJTYPE_AGNOSTICFILEID:
+            markAgnosticFileId((AgnosticFileId *)h);
+            break;
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
@@ -289,9 +298,6 @@ void markObj(Header *h, Index i) {
             break;
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
-            break;
-        case OBJTYPE_PMMODULE:
-            markPmModule(h);
             break;
             ANF_OBJTYPE_CASES()
                 markAnfObj(h);
@@ -311,8 +317,11 @@ void markObj(Header *h, Index i) {
             BUILTINS_OBJTYPE_CASES()
                 markBuiltinsObj(h);
             break;
-        case OBJTYPE_BIGINT:
-            markBigInt((BigInt *) h);
+            case OBJTYPE_MAYBEBIGINT:
+                markMaybeBigInt((MaybeBigInt *) h);
+            break;
+            case OBJTYPE_BIGINT:
+                markBigInt((BigInt *) h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
@@ -340,6 +349,9 @@ void freeObj(Header *h) {
         case OBJTYPE_MAYBEBIGINT:
             freeMaybeBigInt((MaybeBigInt *) h);
             break;
+        case OBJTYPE_AGNOSTICFILEID:
+            freeAgnosticFileId((AgnosticFileId *) h);
+            break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
             break;
@@ -348,9 +360,6 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
-            break;
-        case OBJTYPE_PMMODULE:
-            freePmModule(h);
             break;
             ANF_OBJTYPE_CASES()
                 freeAnfObj(h);
@@ -385,6 +394,7 @@ static void mark() {
     markCEKF();
     markProtected();
     markArithmetic();
+    markNamespaces();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTable\n");
 #endif

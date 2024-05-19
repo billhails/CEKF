@@ -17,4 +17,3 @@
  */
 
 extern const char *preamble;
-extern const char *postamble;

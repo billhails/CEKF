@@ -1,1 +1,6 @@
-typedef maybe(#t) { nothing | just(#t) }
+typedef maybe(#t) { nothing | some(#t) }
+
+fn nmap {
+    (_, nothing) { nothing }
+    (f, some(t)) { some(f(t)) }
+}

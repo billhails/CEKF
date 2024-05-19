@@ -1,0 +1,3 @@
+import "three.fn" as three;
+
+x = 42;

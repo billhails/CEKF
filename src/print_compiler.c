@@ -30,6 +30,7 @@
 #include "lambda_pp.h"
 #include "symbol.h"
 #include "symbols.h"
+#include "tc_analyze.h"
 
 #ifdef DEBUG_PRINT_COMPILER
 #  include "debugging_on.h"
@@ -70,7 +71,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     // (printer x) (putc '\n') x)
     LamList *args = newLamList(var, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, 1, args);
+    LamApply *apply = newLamApply(printer, args);
     PROTECT(apply);
     LamExp *applyExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     PROTECT(applyExp);
@@ -82,7 +83,7 @@ LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
     PROTECT(fargs);
     LamExp *body = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     PROTECT(body);
-    LamLam *lambda = newLamLam(1, fargs, body);
+    LamLam *lambda = newLamLam(fargs, body);
     PROTECT(lambda);
     LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
@@ -182,6 +183,24 @@ static LamExp *compilePrinterForString() {
     return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
+static TcEnv *getNsEnv(int index, TcEnv *env) {
+    if (index == NS_GLOBAL) {
+        return env;
+    }
+    TcType *currentNs = NULL;
+    getFromTcEnv(env, namespaceSymbol(), &currentNs);
+#ifdef SAFETY_CHECKS
+    if (currentNs == NULL) {
+        cant_happen("cannot find current namespace");
+    }
+#endif
+    if (currentNs->val.namespace == index) {
+        return env;
+    }
+    TcType *res = lookupNsRef(index, env);
+    return res->val.env;
+}
+
 static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
     IFDEBUG(printTcUserType(userType, 0));
     if (userType->name == listSymbol()) {
@@ -191,11 +210,18 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
         }
     }
     HashSymbol *name = makePrintName("print$", userType->name->name);
-    if (!getFromTcEnv(env, name, NULL)) {
+    TcEnv *nsEnv = getNsEnv(userType->ns, env);
+    if (!getFromTcEnv(nsEnv, name, NULL)) {
         return makeSymbolExpr("print$");
     }
     LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
+    if (env != nsEnv) {
+        LamLookup *lookup = newLamLookup(userType->ns, NULL, exp);
+        PROTECT(lookup);
+        exp = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(lookup));
+        PROTECT(exp);
+    }
     LamList *args = compilePrinterForUserTypeArgs(userType->args, env);
     PROTECT(args);
     int nargs = countLamList(args);
@@ -203,7 +229,7 @@ static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, nargs, args);
+    LamApply *apply = newLamApply(exp, args);
     PROTECT(apply);
     LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
@@ -223,7 +249,7 @@ static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env) {
         int save = PROTECT(exp);
         LamList *args = compilePrinterForTupleArgs(tuple, env);
         PROTECT(args);
-        LamApply *apply = newLamApply(exp, tuple->size, args);
+        LamApply *apply = newLamApply(exp, args);
         PROTECT(apply);
         LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
         UNPROTECT(save);

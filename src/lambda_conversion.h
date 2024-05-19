@@ -21,7 +21,7 @@
 #  include "ast.h"
 #  include "lambda.h"
 
-LamExp *lamConvertNest(AstNest *nest, LamContext *env);
+LamExp *lamConvertProg(AstProg *prog);
 
 extern char *lambda_conversion_function;
 

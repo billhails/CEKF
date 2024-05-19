@@ -1,0 +1,25 @@
+fn require(condition) {
+    condition or back
+}
+
+fn one_of {
+    ([]) { back }
+    (h @ t) {
+        h then one_of(t)
+    }
+}
+
+fn some_of {
+    ([]) { back }
+    (h @ t) { [h] then some_of(t) then h @ some_of(t) }
+}
+
+fn integers_from(n) {
+   n then integers_from(n + 1)
+}
+
+fn integers_between(lower, upper) {
+    require(lower <= upper);
+    lower then integers_between(lower + 1, upper)
+}
+

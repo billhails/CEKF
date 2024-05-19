@@ -65,6 +65,15 @@ void clearFrame(Stack *s) {
     s->sp = 0;
 }
 
+void discardStackTop(Stack *s, int num) {
+#ifdef SAFETY_CHECKS
+    if (num > s->sp || num < 0) {
+        cant_happen("discard out of bounds");
+    }
+#endif
+    s->sp -= num;
+}
+
 static void growCapacity(Stack *s) {
     int newCapacity = s->capacity < 8 ? 8 : s->capacity * 2;
     s->stack = GROW_ARRAY(Value, s->stack, s->capacity, newCapacity);
@@ -87,6 +96,16 @@ void pushValue(Stack *s, Value v) {
         growCapacity(s);
     }
     s->stack[s->sp++] = v;
+}
+
+void extendStack(Stack *s, int extra) {
+    DEBUG("extendStack(%d)", extra);
+    while (s->sp + extra >= s->capacity) {
+        growCapacity(s);
+    }
+    while (extra-- > 0) {
+        s->stack[s->sp++] = vVoid;
+    }
 }
 
 void dumpStack(Stack *s) {
@@ -116,12 +135,27 @@ void markStack(Stack *s) {
 }
 
 Value peekValue(Stack *s, int offset) {
+    if (offset < 0) {
+        offset = s->sp + offset;
+    }
 #ifdef SAFETY_CHECKS
-    if (offset >= s->sp) {
-        cant_happen("peek beyond top of stack not allowed");
+    if (offset >= s->sp || offset < 0) {
+        cant_happen("peek out of bounds %d/%d", offset, s->sp);
     }
 #endif
     return s->stack[offset];
+}
+
+void pokeValue(Stack *s, int offset, Value v) {
+    if (offset < 0) {
+        offset = s->sp + offset;
+    }
+#ifdef SAFETY_CHECKS
+    if (offset >= s->sp || offset < 0) {
+        cant_happen("poke out of bounds");
+    }
+#endif
+    s->stack[offset] = v;
 }
 
 Value peekTop(Stack *s) {
@@ -139,6 +173,11 @@ void copyTopToValues(Stack *s, Value *values, int size) {
 
 static void copyToValues(Stack *s, Value *values, int size) {
     COPY_ARRAY(Value, values, s->stack, s->sp - size);
+}
+
+static void copyFromValues(Stack *s, Value *values, int size) {
+    COPY_ARRAY(Value, s->stack, values, size);
+    s->sp = size;
 }
 
 static void copyFromSnapshot(Stack *s, Snapshot ss) {
@@ -172,6 +211,31 @@ void snapshotClo(Stack *s, Clo *target, int letRecOffset) {
     Env *env = newEnv(target->env, s->sp - letRecOffset);
     target->env = env;
     copyToValues(s, env->values, letRecOffset);
+}
+
+void patchValueList(Stack *s, ValueList *v, int num) {
+#ifdef SAFETY_CHECKS
+    if (num < 0) {
+        cant_happen("negative count");
+    }
+    if (num > s->sp) {
+        cant_happen("not enough values on stack");
+    }
+    if (s->sp > v->count) {
+        cant_happen("not enough space in target");
+    }
+#endif
+    copyValues(&v->values[s->sp - num], &s->stack[s->sp - num], num);
+}
+
+void restoreNamespace(Stack *s, ValueList *vl) {
+    copyFromValues(s, vl->values, vl->count);
+}
+
+ValueList *snapshotNamespace(Stack *s) {
+    ValueList *vl = newValueList(s->sp);
+    copyToValues(s, vl->values, 0);
+    return vl;
 }
 
 void patchClo(Stack *s, Clo *target) {
