@@ -25,7 +25,7 @@
 
 #  define NS_GLOBAL -1
 
-#  if false
+#  if true
 // #    define DEBUG_BIGINT
 // #    define DEBUG_STACK
 // #    define DEBUG_STEP
