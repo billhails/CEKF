@@ -80,6 +80,26 @@ static TpmcPattern *makeWildcardPattern() {
     return pattern;
 }
 
+static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) {
+    LamTypeConstructorInfo *info = lookupScopedAstSymbolInLamContext(env, lookup);
+    if (info == NULL) {
+        cant_happen("makeLookupPattern() passed invalid constructor");
+    }
+    TpmcPatternArray *args = newTpmcPatternArray("makeLookupPattern");
+    int save = PROTECT(args);
+    TpmcConstructorPattern *constructor =
+        newTpmcConstructorPattern(lookup->symbol, lookup->namespace, info, args);
+    PROTECT(constructor);
+    TpmcPatternValue *val =
+        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
+                            TPMCPATTERNVALUE_VAL_CONSTRUCTOR
+                            (constructor));
+    PROTECT(val);
+    TpmcPattern *pattern = newTpmcPattern(val);
+    UNPROTECT(save);
+    return pattern;
+}
+
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info == NULL) {
@@ -91,7 +111,7 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
         UNPROTECT(save);
         return pattern;
     } else {
-        TpmcPatternArray *args = newTpmcPatternArray("makeVarPatern");
+        TpmcPatternArray *args = newTpmcPatternArray("makeVarPattern");
         int save = PROTECT(args);
         int namespace = lookupCurrentNamespaceInLamContext(env);
         TpmcConstructorPattern *constructor =
@@ -209,6 +229,8 @@ static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
             return makeMaybeBigIntegerPattern(arg->val.number);
         case AST_ARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
+        case AST_ARG_TYPE_LOOKUP:
+            return makeLookupPattern(arg->val.lookup, env);
         default:
             cant_happen("unrecognized arg type %s in convertPattern",
                         astArgTypeName(arg->type));

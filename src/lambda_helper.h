@@ -30,6 +30,8 @@ LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashS
 LamContext *lookupNamespaceInLamContext(LamContext *context, Index index);
 LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *context, AstLookupOrSymbol *scoped);
 LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped);
+LamTypeConstructorInfo *lookupScopedLamSymbolInLamContext(LamContext *context, LamLookupSymbol *lookup);
+LamTypeConstructorInfo *lookupScopedAstSymbolInLamContext(LamContext *context, AstLookupSymbol *lookup);
 int lookupCurrentNamespaceInLamContext(LamContext *context);
 void markLamExpFn(void *ptr);
 void printLamExpFn(void *ptr, int depth);

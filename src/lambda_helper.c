@@ -98,13 +98,22 @@ LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *conte
     }
 }
 
+LamTypeConstructorInfo *lookupScopedLamSymbolInLamContext(LamContext *context, LamLookupSymbol *lookup) {
+    LamContext *namespace = lookupNamespaceInLamContext(context, lookup->namespace);
+    return lookupConstructorInLamContext(namespace, lookup->symbol);
+}
+
+LamTypeConstructorInfo *lookupScopedAstSymbolInLamContext(LamContext *context, AstLookupSymbol *lookup) {
+    LamContext *namespace = lookupNamespaceInLamContext(context, lookup->namespace);
+    return lookupConstructorInLamContext(namespace, lookup->symbol);
+}
+
 LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped) {
     switch (scoped->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             return lookupConstructorInLamContext(context, scoped->val.symbol);
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:{
-            LamContext *namespace = lookupNamespaceInLamContext(context, scoped->val.lookup->namespace);
-            return lookupConstructorInLamContext(namespace, scoped->val.lookup->symbol);
+            return lookupScopedLamSymbolInLamContext(context, scoped->val.lookup);
         }
         default:
             cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(scoped->type));
