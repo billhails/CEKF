@@ -1,5 +1,5 @@
 let
-    import "listutils.fn" as list
-    import "listutils.fn" as list2
+    import "listutils.fn" as list;
+    import "listutils.fn" as list2;
 in
     1;

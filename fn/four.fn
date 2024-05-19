@@ -1,2 +1,2 @@
-import "five.fn" as five
-import "seven.fn" as seven
+import "five.fn" as five;
+import "seven.fn" as seven;

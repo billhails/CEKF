@@ -1,5 +1,5 @@
 let
-    import "four.fn" as four
-    import "two.fn" as two
+    import "four.fn" as four;
+    import "two.fn" as two;
 in
     1

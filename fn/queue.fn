@@ -1,6 +1,6 @@
 let
-    import "maybe.fn" as maybe
-    import "listutils.fn" as list
+    import "maybe.fn" as maybe;
+    import "listutils.fn" as list;
 
     fn enq (t, #(head, tail)) {
         #(head, t @ tail)

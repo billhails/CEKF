@@ -1,7 +1,7 @@
 typedef Color { R | B | BB }
 typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), #(#t, #u), Dict(#t, #u)) }
 
-import "maybe.fn" as maybe
+import "maybe.fn" as maybe;
 
 fn balance {
     (B, D(R, D(R, a, x, b), y, c), z, d)  |

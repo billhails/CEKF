@@ -22,6 +22,7 @@
 #include "parser.h"
 #include "lexer.h"
 #include "types.h"
+#include "print_generator.h"
 
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg);
 
@@ -430,13 +431,14 @@ definitions : %empty                            { $$ = NULL; }
 definition : symbol '=' expression ';' { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE(newAstDefine($1, $3))); }
            | typedef                   { $$ = newAstDefinition( AST_DEFINITION_TYPE_TYPEDEF, AST_DEFINITION_VAL_TYPEDEF($1)); }
            | defun                     { $$ = newAstDefinition( AST_DEFINITION_TYPE_DEFINE, AST_DEFINITION_VAL_DEFINE($1)); }
-           | name_space                {
+           | name_space ';'            {
                                            storeNamespace(mod, $1);
                                            $$ = newAstDefinition( AST_DEFINITION_TYPE_BLANK, AST_DEFINITION_VAL_BLANK());
                                        }
            ;
 
 defun : FN symbol fun { $$ = newAstDefine($2, newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
+      | PRINT symbol fun { $$ = newAstDefine(makePrintName("print$", $2->name), newAstExpression(AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
 
 name_space : IMPORT STRING AS symbol { $$ = parseImport($2, $4, mod); }

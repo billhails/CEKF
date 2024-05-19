@@ -1,5 +1,5 @@
 let
-    import "ambutils.fn" as amb
+    import "ambutils.fn" as amb;
 
     fn pythagorean_triples() {
         let
