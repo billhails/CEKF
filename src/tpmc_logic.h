@@ -20,7 +20,8 @@
 
 #  include "ast.h"
 #  include "lambda.h"
+#include "parser_info.h"
 
-LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argList,
+LamLam *tpmcConvert(ParserInfo I, int nargs, int nbodies, AstArgList **argList,
                     LamExp **actions, LamContext *env);
 #endif

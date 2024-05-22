@@ -18,6 +18,7 @@
 
 config:
     name: ast
+    parserInfo: true
     limited_includes:
     - bigint.h
     - file_id.h

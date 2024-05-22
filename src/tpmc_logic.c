@@ -632,22 +632,22 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
     return matrix;
 }
 
-static LamVarList *_arrayToVarList(TpmcVariableArray *array, Index count) {
+static LamVarList *_arrayToVarList(ParserInfo I, TpmcVariableArray *array, Index count) {
     if (count == array->size) {
         return NULL;
     }
-    LamVarList *next = _arrayToVarList(array, count + 1);
+    LamVarList *next = _arrayToVarList(I, array, count + 1);
     int save = PROTECT(next);
-    LamVarList *this = newLamVarList(array->entries[count], next);
+    LamVarList *this = newLamVarList(I, array->entries[count], next);
     UNPROTECT(save);
     return this;
 }
 
-static LamVarList *arrayToVarList(TpmcVariableArray *array) {
-    return _arrayToVarList(array, 0);
+static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
+    return _arrayToVarList(I, array, 0);
 }
 
-LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
+LamLam *tpmcConvert(ParserInfo I, int nargs, int nbodies, AstArgList **argLists,
                     LamExp **actions, LamContext *env) {
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);
@@ -679,15 +679,15 @@ LamLam *tpmcConvert(int nargs, int nbodies, AstArgList **argLists,
     // DEBUG("*** DFA ***");
     // IFDEBUG(printTpmcState(dfa, 0));
     tpmcMermaid(dfa);
-    LamExp *body = tpmcTranslate(dfa);
+    LamExp *body = tpmcTranslate(I, dfa);
     PROTECT(body);
     // DEBUG("tpmcTranslate returned %p", body);
-    LamVarList *args = arrayToVarList(rootVariables);
+    LamVarList *args = arrayToVarList(I, rootVariables);
     PROTECT(args);
-    LamLam *res = newLamLam(args, body);
+    LamLam *res = newLamLam(I, args, body);
     PROTECT(res);
 #ifdef DEBUG_TPMC_LOGIC
-    LamExp *tmp = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));
+    LamExp *tmp = newLamExp(I, LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));
     PROTECT(tmp);
 #endif
     DEBUG("*** BODY ***");

@@ -1,5 +1,5 @@
-#ifndef cekf_print_compiler_h
-#  define cekf_print_compiler_h
+#ifndef cekf_parser_info_h
+#  define cekf_parser_info_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -18,10 +18,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "lambda.h"
-#  include "value.h"
-#  include "tc.h"
+#  include "common.h"
 
-LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env);
+typedef struct ParserInfo {
+    int lineno;
+    char *filename;
+} ParserInfo;
+
+typedef struct HeaderAndInfo {
+    struct Header header;
+    struct ParserInfo info;
+} HeaderAndInfo;
+
+#  define COPY_PARSER_INFO(from) ((from)->_yy_parser_info)
+
+static inline void _reportParserInfo(HeaderAndInfo *I) {
+    eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);
+}
+
+#  define REPORT_PARSER_INFO(x) _reportParserInfo((HeaderAndInfo *)(x))
 
 #endif

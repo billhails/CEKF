@@ -393,7 +393,7 @@ void ppCexpMatch(CexpMatch *x) {
 }
 
 void ppExpLookup(ExpLookup *x) {
-    eprintf("(lookup <namespace %d> ", x->namespace);
+    eprintf("(lookup %d ", x->namespace);
     ppExp(x->body);
     eprintf(")");
 }

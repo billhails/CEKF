@@ -20,6 +20,7 @@
 
 #  include "tpmc.h"
 #  include "lambda.h"
+#  include "parser_info.h"
 
-LamExp *tpmcTranslate(TpmcState *dfa);
+LamExp *tpmcTranslate(ParserInfo I, TpmcState *dfa);
 #endif

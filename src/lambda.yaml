@@ -18,6 +18,7 @@
 
 config:
     name: lambda
+    parserInfo: true
     limited_includes:
     - bigint.h
     - tc.h

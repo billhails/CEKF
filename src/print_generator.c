@@ -37,7 +37,7 @@
 #  include "debugging_off.h"
 #endif
 
-static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
+static LamLetRecBindings *makePrintFunction(ParserInfo I, LamTypeDef *typeDef,
                                             LamLetRecBindings *next,
                                             LamContext *env, bool inPreamble);
 
@@ -52,7 +52,7 @@ LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
     next = makePrintFunctions(typeDefs->next, next, env, inPreamble);
     int save = PROTECT(next);
 
-    next = makePrintFunction(typeDefs->typeDef, next, env, inPreamble);
+    next = makePrintFunction(COPY_PARSER_INFO(typeDefs->typeDef), typeDefs->typeDef, next, env, inPreamble);
 
     UNPROTECT(save);
     LEAVE(makePrintFunctions);
@@ -86,133 +86,133 @@ static HashSymbol *printArgSymbol(void) {
     return res;
 }
 
-static LamExp *printArgVar() {
+static LamExp *printArgVar(ParserInfo I) {
     HashSymbol *name = printArgSymbol();
-    return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    return newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
-static LamVarList *makeLastArg(void) {
+static LamVarList *makeLastArg(ParserInfo I) {
     HashSymbol *name = printArgSymbol();
-    return newLamVarList(name, NULL);
+    return newLamVarList(I, name, NULL);
 }
 
-static LamVarList *makePrintTypeFunctionArgs(LamTypeArgs *args) {
+static LamVarList *makePrintTypeFunctionArgs(ParserInfo I, LamTypeArgs *args) {
     if (args == NULL)
-        return makeLastArg();
-    LamVarList *next = makePrintTypeFunctionArgs(args->next);
+        return makeLastArg(I);
+    LamVarList *next = makePrintTypeFunctionArgs(I, args->next);
     int save = PROTECT(next);
     HashSymbol *name = makePrintName("print", args->name->name);
-    LamVarList *res = newLamVarList(name, next);
+    LamVarList *res = newLamVarList(I, name, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makeNullList() {
-    LamConstruct *nil = newLamConstruct(nilSymbol(), 0, NULL);
+static LamExp *makeNullList(ParserInfo I) {
+    LamConstruct *nil = newLamConstruct(I, nilSymbol(), 0, NULL);
     int save = PROTECT(nil);
-    LamExp *res = newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(nil));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(nil));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makeCharList(char c, LamExp *tail) {
+static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     LamExp *character =
-        newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(c));
+        newLamExp(I, LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER(c));
     int save = PROTECT(character);
-    LamList *args = newLamList(tail, NULL);
+    LamList *args = newLamList(I, tail, NULL);
     PROTECT(args);
-    args = newLamList(character, args);
+    args = newLamList(I, character, args);
     PROTECT(args);
-    LamConstruct *cons = newLamConstruct(consSymbol(), 1, args);
+    LamConstruct *cons = newLamConstruct(I, consSymbol(), 1, args);
     PROTECT(cons);
     LamExp *res =
-        newLamExp(LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(cons));
+        newLamExp(I, LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(cons));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *stringToList(char *name) {
+static LamExp *stringToList(ParserInfo I, char *name) {
     if (*name == 0) {
-        return makeNullList();
+        return makeNullList(I);
     }
-    LamExp *next = stringToList(name + 1);
+    LamExp *next = stringToList(I, name + 1);
     int save = PROTECT(next);
-    LamExp *this = makeCharList(*name, next);
+    LamExp *this = makeCharList(I, *name, next);
     UNPROTECT(save);
     return this;
 }
 
-static LamExp *putsExp(LamExp *string) {
+static LamExp *putsExp(ParserInfo I, LamExp *string) {
     HashSymbol *sym = putsSymbol();
-    LamExp *puts = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(sym));
+    LamExp *puts = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(sym));
     int save = PROTECT(puts);
-    LamList *args = newLamList(string, NULL);
+    LamList *args = newLamList(I, string, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(puts, args);
+    LamApply *apply = newLamApply(I, puts, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makePutsString(char *str) {
-    LamExp *string = stringToList(str);
+static LamExp *makePutsString(ParserInfo I, char *str) {
+    LamExp *string = stringToList(I, str);
     int save = PROTECT(string);
-    LamExp *res = putsExp(string);
+    LamExp *res = putsExp(I, string);
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makePlainMatchBody(LamTypeConstructor *constructor) {
-    LamExp *string = stringToList(constructor->name->name);
+static LamExp *makePlainMatchBody(ParserInfo I, LamTypeConstructor *constructor) {
+    LamExp *string = stringToList(I, constructor->name->name);
     int save = PROTECT(string);
-    LamExp *puts = putsExp(string);
+    LamExp *puts = putsExp(I, string);
     UNPROTECT(save);
     return puts;
 }
 
-static LamExp *makePrintAccessor(int index, LamTypeConstructorInfo *info) {
-    LamExp *printArg = printArgVar();
+static LamExp *makePrintAccessor(ParserInfo I, int index, LamTypeConstructorInfo *info) {
+    LamExp *printArg = printArgVar(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(info->type->name, info->namespace, index, printArg);
+        newLamDeconstruct(I, info->type->name, info->namespace, index, printArg);
     PROTECT(dec);
     LamExp *res =
-        newLamExp(LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(dec));
+        newLamExp(I, LAMEXP_TYPE_DECONSTRUCT, LAMEXP_VAL_DECONSTRUCT(dec));
     UNPROTECT(save);
     return res;
 }
 
-LamExp *makeSymbolExpr(char *name) {
+LamExp *makeSymbolExpr(ParserInfo I, char *name) {
     HashSymbol *symbol = newSymbol(name);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(symbol));
     return exp;
 }
 
-LamExp *makePrintInt() {
-    return makeSymbolExpr("print$int");
+LamExp *makePrintInt(ParserInfo I) {
+    return makeSymbolExpr(I, "print$int");
 }
 
-LamExp *makePrintChar() {
-    return makeSymbolExpr("print$char");
+LamExp *makePrintChar(ParserInfo I) {
+    return makeSymbolExpr(I, "print$char");
 }
 
-static LamExp *makePrintVar(HashSymbol *var) {
+static LamExp *makePrintVar(ParserInfo I, HashSymbol *var) {
     HashSymbol *name = makePrintName("print", var->name);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     return exp;
 }
 
-static LamExp *makePrinter(LamTypeConstructorType *arg);
+static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg);
 
-static LamList *makePrintArgs(LamTypeConstructorArgs *args) {
+static LamList *makePrintArgs(ParserInfo I, LamTypeConstructorArgs *args) {
     if (args == NULL)
         return NULL;
-    LamList *next = makePrintArgs(args->next);
+    LamList *next = makePrintArgs(I, args->next);
     int save = PROTECT(next);
-    LamExp *printer = makePrinter(args->arg);
+    LamExp *printer = makePrinter(I, args->arg);
     PROTECT(printer);
-    LamList *this = newLamList(printer, next);
+    LamList *this = newLamList(I, printer, next);
     UNPROTECT(save);
     return this;
 }
@@ -239,46 +239,46 @@ static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
     }
 }
 
-static LamExp *wrapTypeFunction(LamExp *res, LamLookupOrSymbol *los) {
+static LamExp *wrapTypeFunction(ParserInfo I, LamExp *res, LamLookupOrSymbol *los) {
     if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
         LamLookupSymbol *ls = los->val.lookup;
-        LamLookup *llu = newLamLookup(ls->namespace, ls->name, res);
+        LamLookup *llu = newLamLookup(I, ls->namespace, ls->name, res);
         int save = PROTECT(llu);
-        res = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
+        res = newLamExp(I, LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(llu));
         UNPROTECT(save);
     }
     return res;
 }
 
-static LamExp *makePrintType(LamTypeFunction *function) {
+static LamExp *makePrintType(ParserInfo I, LamTypeFunction *function) {
     if (functionIsList(function->name)) {
         if (function->args
             && function->args->arg->type ==
             LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER) {
             HashSymbol *name = newSymbol("print$string");
-            return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+            return newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
         }
     }
     HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
-    exp = wrapTypeFunction(exp, function->name);
+    exp = wrapTypeFunction(I, exp, function->name);
     REPLACE_PROTECT(save, exp);
-    LamList *args = makePrintArgs(function->args);
+    LamList *args = makePrintArgs(I, function->args);
     PROTECT(args);
     int nargs = countLamList(args);
     if (nargs == 0) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, args);
+    LamApply *apply = newLamApply(I, exp, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makePrintTuple(LamTypeConstructorArgs *tuple) {
+static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     int size = countLamTypeConstructorArgs(tuple);
     HashSymbol *name = NULL;
     if (size <= 4) {
@@ -287,37 +287,37 @@ static LamExp *makePrintTuple(LamTypeConstructorArgs *tuple) {
         name = makePrintName("print$tuple$", buf);
     } else {
         name = newSymbol("print$");
-        LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+        LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
         return exp;
     }
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
-    LamList *args = makePrintArgs(tuple);
+    LamList *args = makePrintArgs(I, tuple);
     PROTECT(args);
-    LamApply *apply = newLamApply(exp, args);
+    LamApply *apply = newLamApply(I, exp, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makePrinter(LamTypeConstructorType *arg) {
+static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg) {
     LamExp *printer = NULL;
     switch (arg->type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
-            printer = makePrintInt();
+            printer = makePrintInt(I);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
-            printer = makePrintChar();
+            printer = makePrintChar(I);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
-            printer = makePrintVar(arg->val.var);
+            printer = makePrintVar(I, arg->val.var);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            printer = makePrintType(arg->val.function);
+            printer = makePrintType(I, arg->val.function);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-            printer = makePrintTuple(arg->val.tuple);
+            printer = makePrintTuple(I, arg->val.tuple);
             break;
         default:
             cant_happen("unrecognised type %s in makePrinter", lamTypeConstructorTypeTypeName(arg->type));
@@ -325,68 +325,68 @@ static LamExp *makePrinter(LamTypeConstructorType *arg) {
     return printer;
 }
 
-static LamExp *makePrintConstructorArg(LamTypeConstructorType *arg,
+static LamExp *makePrintConstructorArg(ParserInfo I, LamTypeConstructorType *arg,
                                        LamTypeConstructorInfo *info,
                                        int index) {
-    LamExp *accessor = makePrintAccessor(index, info);
+    LamExp *accessor = makePrintAccessor(I, index, info);
     int save = PROTECT(accessor);
-    LamExp *printer = makePrinter(arg);
+    LamExp *printer = makePrinter(I, arg);
     PROTECT(printer);
-    LamList *args = newLamList(accessor, NULL);
+    LamList *args = newLamList(I, accessor, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, args);
+    LamApply *apply = newLamApply(I, printer, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
 }
 
-static LamSequence *makeVecMatchParts(int index, LamTypeConstructorArgs *args,
+static LamSequence *makeVecMatchParts(ParserInfo I, int index, LamTypeConstructorArgs *args,
                                       LamTypeConstructorInfo *info,
                                       LamSequence *tail) {
     if (args == NULL)
         return tail;
-    LamSequence *next = makeVecMatchParts(index + 1, args->next, info, tail);
+    LamSequence *next = makeVecMatchParts(I, index + 1, args->next, info, tail);
     int save = PROTECT(next);
-    LamExp *exp = makePrintConstructorArg(args->arg, info, index + 1);
+    LamExp *exp = makePrintConstructorArg(I, args->arg, info, index + 1);
     PROTECT(exp);
     if (next != tail) {
-        LamExp *comma = makePutsString(", ");
+        LamExp *comma = makePutsString(I, ", ");
         PROTECT(comma);
-        next = newLamSequence(comma, next);
+        next = newLamSequence(I, comma, next);
         PROTECT(next);
     }
-    LamSequence *res = newLamSequence(exp, next);
+    LamSequence *res = newLamSequence(I, exp, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makeVecMatchBody(LamTypeConstructorInfo *info) {
+static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     LamTypeConstructor *constructor = info->type;
-    LamExp *header = makePlainMatchBody(constructor);
+    LamExp *header = makePlainMatchBody(I, constructor);
     int save = PROTECT(header);
-    LamExp *open = makePutsString("(");
+    LamExp *open = makePutsString(I, "(");
     PROTECT(open);
-    LamExp *close = makePutsString(")");
+    LamExp *close = makePutsString(I, ")");
     PROTECT(close);
-    LamSequence *seq = newLamSequence(close, NULL);
+    LamSequence *seq = newLamSequence(I, close, NULL);
     int save2 = PROTECT(seq);
-    seq = makeVecMatchParts(0, constructor->args, info, seq);
+    seq = makeVecMatchParts(I, 0, constructor->args, info, seq);
     REPLACE_PROTECT(save2, seq);
-    seq = newLamSequence(open, seq);
+    seq = newLamSequence(I, open, seq);
     REPLACE_PROTECT(save2, seq);
-    seq = newLamSequence(header, seq);
+    seq = newLamSequence(I, header, seq);
     REPLACE_PROTECT(save2, seq);
-    LamExp *res = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     UNPROTECT(save);
     return res;
 }
 
-static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors,
+static LamMatchList *makePlainMatchList(ParserInfo I, LamTypeConstructorList *constructors,
                                         LamContext *env) {
     if (constructors == NULL)
         return NULL;
-    LamMatchList *next = makePlainMatchList(constructors->next, env);
+    LamMatchList *next = makePlainMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
         lookupConstructorInLamContext(env, constructors->constructor->name);
@@ -395,20 +395,20 @@ static LamMatchList *makePlainMatchList(LamTypeConstructorList *constructors,
             ("cannot find info for type constructor %s in makePlainMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
-    LamExp *body = makePlainMatchBody(constructors->constructor);
+    LamExp *body = makePlainMatchBody(I, constructors->constructor);
     PROTECT(body);
-    LamMatchList *res = newLamMatchList(matches, body, next);
+    LamMatchList *res = newLamMatchList(I, matches, body, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors,
+static LamMatchList *makeTagMatchList(ParserInfo I, LamTypeConstructorList *constructors,
                                       LamContext *env) {
     if (constructors == NULL)
         return NULL;
-    LamMatchList *next = makeTagMatchList(constructors->next, env);
+    LamMatchList *next = makeTagMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
         lookupConstructorInLamContext(env, constructors->constructor->name);
@@ -417,45 +417,45 @@ static LamMatchList *makeTagMatchList(LamTypeConstructorList *constructors,
             ("cannot find info for type constructor %s in makeTagMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(info->index, info->type->name, info->namespace, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->namespace, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {
-        body = makeVecMatchBody(info);
+        body = makeVecMatchBody(I, info);
     } else {
-        body = makePlainMatchBody(constructors->constructor);
+        body = makePlainMatchBody(I, constructors->constructor);
     }
     PROTECT(body);
-    LamMatchList *res = newLamMatchList(matches, body, next);
+    LamMatchList *res = newLamMatchList(I, matches, body, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamMatch *makePlainMatch(LamTypeConstructorList *constructors,
+static LamMatch *makePlainMatch(ParserInfo I, LamTypeConstructorList *constructors,
                                 LamContext *env) {
-    LamMatchList *cases = makePlainMatchList(constructors, env);
+    LamMatchList *cases = makePlainMatchList(I, constructors, env);
     int save = PROTECT(cases);
-    LamExp *var = printArgVar();
+    LamExp *var = printArgVar(I);
     PROTECT(var);
-    LamMatch *res = newLamMatch(var, cases);
+    LamMatch *res = newLamMatch(I, var, cases);
     UNPROTECT(save);
     return res;
 }
 
-static LamMatch *makeTagMatch(LamTypeConstructorList *constructors,
+static LamMatch *makeTagMatch(ParserInfo I, LamTypeConstructorList *constructors,
                               LamContext *env) {
-    LamMatchList *cases = makeTagMatchList(constructors, env);
+    LamMatchList *cases = makeTagMatchList(I, constructors, env);
     int save = PROTECT(cases);
-    LamExp *var = printArgVar();
+    LamExp *var = printArgVar(I);
     PROTECT(var);
-    LamExp *prim = newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(var));
+    LamExp *prim = newLamExp(I, LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(var));
     PROTECT(prim);
-    LamMatch *res = newLamMatch(prim, cases);
+    LamMatch *res = newLamMatch(I, prim, cases);
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
+static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
         lookupConstructorInLamContext(env, constructors->constructor->name);
@@ -466,21 +466,21 @@ static LamExp *makeFunctionBody(LamTypeConstructorList *constructors,
     }
     LamMatch *match = NULL;
     if (info->needsVec) {
-        match = makeTagMatch(constructors, env);
+        match = makeTagMatch(I, constructors, env);
     } else {
-        match = makePlainMatch(constructors, env);
+        match = makePlainMatch(I, constructors, env);
     }
     int save = PROTECT(match);
-    LamExp *res = newLamExp(LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
     PROTECT(res);
     // print functions should all return their argument
-    LamExp *ret = printArgVar();
+    LamExp *ret = printArgVar(I);
     PROTECT(ret);
-    LamSequence *seq = newLamSequence(ret, NULL);
+    LamSequence *seq = newLamSequence(I, ret, NULL);
     PROTECT(seq);
-    seq = newLamSequence(res, seq);
+    seq = newLamSequence(I, res, seq);
     PROTECT(seq);
-    res = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
+    res = newLamExp(I, LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     UNPROTECT(save);
     return res;
 }
@@ -491,27 +491,27 @@ static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
     return userDefined(printName, bindings->next);
 }
 
-static LamLetRecBindings *makePrintTypeFunction(LamTypeDef *typeDef,
+static LamLetRecBindings *makePrintTypeFunction(ParserInfo I, LamTypeDef *typeDef,
                                                 LamContext *env,
                                                 LamLetRecBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
     if (userDefined(name, next)) {
         return next;
     }
-    LamVarList *args = makePrintTypeFunctionArgs(typeDef->type->args);
+    LamVarList *args = makePrintTypeFunctionArgs(I, typeDef->type->args);
     int save = PROTECT(args);
-    LamExp *body = makeFunctionBody(typeDef->constructors, env);
+    LamExp *body = makeFunctionBody(I, typeDef->constructors, env);
     PROTECT(body);
-    LamLam *lam = newLamLam(args, body);
+    LamLam *lam = newLamLam(I, args, body);
     PROTECT(lam);
-    LamExp *val = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam));
+    LamExp *val = newLamExp(I, LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam));
     PROTECT(val);
-    LamLetRecBindings *res = newLamLetRecBindings(name, val, next);
+    LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
+static LamLetRecBindings *makePrintFunction(ParserInfo I, LamTypeDef *typeDef,
                                             LamLetRecBindings *next,
                                             LamContext *env,
                                             bool inPreamble) {
@@ -519,5 +519,5 @@ static LamLetRecBindings *makePrintFunction(LamTypeDef *typeDef,
         // print$list is hand-coded in the preamble
         return next;
     }
-    return makePrintTypeFunction(typeDef, env, next);
+    return makePrintTypeFunction(I, typeDef, env, next);
 }

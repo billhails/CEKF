@@ -25,7 +25,7 @@
 LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
                                       LamLetRecBindings *rest,
                                       LamContext *env, bool inPreamble);
-LamExp *makeSymbolExpr(char *name);
+LamExp *makeSymbolExpr(ParserInfo I, char *name);
 LamExp *makePrintInt();
 LamExp *makePrintChar();
 HashSymbol *makePrintName(char *prefix, char *name);

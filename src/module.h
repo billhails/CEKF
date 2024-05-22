@@ -12,6 +12,8 @@ typedef struct PmModule {
     AstIntTable *namespaces;
 } PmModule;
 
+#define PIM(m) ((struct ParserInfo){.filename = currentPmFile(m), .lineno = currentPmLine(m)})
+
 AstDefinitions *parseNamespaceFromString(const char *namespace, const char *origin);
 AstDefinitions *parseNamespaceFromFileHandle(FILE *f, const char *origin);
 AstDefinitions *parseNamespaceFromFileName(const char *fileName);
@@ -24,5 +26,6 @@ void incLineNo(PmModule *mod);
 int popPmFile(PmModule *mod);
 void showModuleState(FILE *fp, PmModule *mod);
 char *currentPmFile(PmModule *mod);
+int currentPmLine(PmModule *mod);
 
 #endif

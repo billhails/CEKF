@@ -1,50 +1,72 @@
-fn normalize_term (M) { normalize(M, fn (x) { x }) }
+let
+    typedef expr {
+        lambda(list(expr), expr) |
+        let_expr(expr, expr, expr) |
+        if_expr(expr, expr, expr) |
+        apply(expr, list(expr)) |
+        value(int) |
+        cmp_expr(expr, expr) |
+        var_expr(list(char)) |
+        nada
+    }
 
-fn normalize {
-    (lambda(params, body), k) {
-        k(lambda(params, normalize_term(body)))
-    }
-    (let_exp(x, M1, M2), k) {
-        normalize(M1, fn (N1) { let_expr(x, N1, normalize(M2, k)) }
-    }
-    (if_expr(M1, M2, M3), k) {
-        normalize_name(M1, fn (t) {
-            k(if_expr(t, normalize_term(M2), normalize_term(M3)))
-        })
-    }
-    (apply(Fn, Ms), k) {
-        normalize_name(Fn, fn (t) {
-            normalize_names(Ms, fn (ts) {
-                k(apply(t, ts))
-            })
-        })
-    }
-    (v=value(_), k) { k(v) }
-}
+    fn gensym() { var_expr("gen") }
 
-fn normalize_name(M, k) {
-    normalize(M, fn {
-        (N=value(_)) {
-            k(N)
+    fn normalize_term (M) { normalize(M, fn (x) { x }) }
+
+    fn normalize {
+        (lambda(params, body), k) {
+            k(lambda(params, normalize_term(body)))
         }
-        (N) {
-            let
-                t = gensym()
-            in
-                let_expr(t, N, k(t)) // !
+        (let_expr(x, M1, M2), k) {
+            normalize(M1, fn (N1) { let_expr(x, N1, normalize(M2, k)) })
         }
-    })
-}
-
-fn normalize_names {
-    ([], k) {
-        k([])
-    }
-    (H @ T, k) {
-        normalize_name(H, fn (t) {
-            normalize_names(T, fn (ts) {
-                k(apply(t, ts))
+        (if_expr(M1, M2, M3), k) {
+            normalize_name(M1, fn (t) {
+                k(if_expr(t, normalize_term(M2), normalize_term(M3)))
             })
+        }
+        (apply(Fn, Ms), k) {
+            normalize_name(Fn, fn (t) {
+                normalize_names(Ms, fn (ts) {
+                    k(apply(t, ts))
+                })
+            })
+        }
+        (v=value(_), k) { k(v) }
+    }
+
+    fn normalize_name(M, k) {
+        normalize(M, fn {
+            (N=value(_)) {
+                k(N)
+            }
+            (N) {
+                let
+                    t = gensym();
+                in
+                    let_expr(t, N, k(t)) // !
+            }
         })
     }
-}
+
+    fn normalize_names {
+        ([], k) {
+            k(nada)
+        }
+        (H @ T, k) {
+            normalize_name(H, fn (t) {
+                normalize_names(T, fn (ts) {
+                    k(apply(t, ts))
+                })
+            })
+        }
+    }
+in
+    print(
+        normalize(
+            apply(lambda([var_expr("a")],
+                if_expr(cmp_expr(var_expr("a"), value(1)),
+                    var_expr("b"),
+                    var_expr("c"))),
+            [value(1)])))

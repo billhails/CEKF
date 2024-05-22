@@ -38,83 +38,83 @@
 #  include "debugging_off.h"
 #endif
 
-static LamExp *compilePrinterForFunction(TcFunction *function);
-static LamExp *compilePrinterForPair(TcPair *pair);
-static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env);
-static LamExp *compilePrinterForInt();
-static LamExp *compilePrinterForChar();
-static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env);
-static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env);
-static LamExp *compilePrinter(TcType *type, TcEnv *env);
+static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function);
+static LamExp *compilePrinterForPair(ParserInfo I, TcPair *pair);
+static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env);
+static LamExp *compilePrinterForInt(ParserInfo I);
+static LamExp *compilePrinterForChar(ParserInfo I);
+static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcEnv *env);
+static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *env);
+static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env);
 
-LamExp *compilePrinterForType(TcType *type, TcEnv *env) {
+LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     // (lambda (x) (begin (printer x) (putc '\n') x)
-    LamExp *printer = compilePrinter(type, env);
+    LamExp *printer = compilePrinter(I, type, env);
     int save = PROTECT(printer);
     // x)
     HashSymbol *name = genSym("x$");
-    LamExp *var = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *var = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     PROTECT(var);
-    LamSequence *seq = newLamSequence(var, NULL);
+    LamSequence *seq = newLamSequence(I, var, NULL);
     PROTECT(seq);
 
     // (putc '\n') x)
-    LamExp *newline = newLamExp(LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER('\n'));
+    LamExp *newline = newLamExp(I, LAMEXP_TYPE_CHARACTER, LAMEXP_VAL_CHARACTER('\n'));
     PROTECT(newline);
-    LamUnaryApp *app = newLamUnaryApp(LAMUNARYOP_TYPE_PUTC, newline);
+    LamUnaryApp *app = newLamUnaryApp(I, LAMUNARYOP_TYPE_PUTC, newline);
     PROTECT(app);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_UNARY, LAMEXP_VAL_UNARY(app));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_UNARY, LAMEXP_VAL_UNARY(app));
     PROTECT(exp);
-    seq = newLamSequence(exp, seq);
+    seq = newLamSequence(I, exp, seq);
     PROTECT(seq);
 
     // (printer x) (putc '\n') x)
-    LamList *args = newLamList(var, NULL);
+    LamList *args = newLamList(I, var, NULL);
     PROTECT(args);
-    LamApply *apply = newLamApply(printer, args);
+    LamApply *apply = newLamApply(I, printer, args);
     PROTECT(apply);
-    LamExp *applyExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *applyExp = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     PROTECT(applyExp);
-    seq = newLamSequence(applyExp, seq);
+    seq = newLamSequence(I, applyExp, seq);
     PROTECT(seq);
 
     // (lambda (x) (begin (printer x) (putc '\n') x)
-    LamVarList *fargs = newLamVarList(name, NULL);
+    LamVarList *fargs = newLamVarList(I, name, NULL);
     PROTECT(fargs);
-    LamExp *body = newLamExp(LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
+    LamExp *body = newLamExp(I, LAMEXP_TYPE_LIST, LAMEXP_VAL_LIST(seq));
     PROTECT(body);
-    LamLam *lambda = newLamLam(fargs, body);
+    LamLam *lambda = newLamLam(I, fargs, body);
     PROTECT(lambda);
-    LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *compilePrinter(TcType *type, TcEnv *env) {
+static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
     ENTER(compilePrinter);
     LamExp *res = NULL;
     switch (type->type) {
         case TCTYPE_TYPE_FUNCTION:
-            res = compilePrinterForFunction(type->val.function);
+            res = compilePrinterForFunction(I, type->val.function);
             break;
         case TCTYPE_TYPE_PAIR:
-            res = compilePrinterForPair(type->val.pair);
+            res = compilePrinterForPair(I, type->val.pair);
             break;
         case TCTYPE_TYPE_VAR:
-            res = compilePrinterForVar(type->val.var, env);
+            res = compilePrinterForVar(I, type->val.var, env);
             break;
         case TCTYPE_TYPE_SMALLINTEGER:
         case TCTYPE_TYPE_BIGINTEGER:
-            res = compilePrinterForInt();
+            res = compilePrinterForInt(I);
             break;
         case TCTYPE_TYPE_CHARACTER:
-            res = compilePrinterForChar();
+            res = compilePrinterForChar(I);
             break;
         case TCTYPE_TYPE_USERTYPE:
-            res = compilePrinterForUserType(type->val.userType, env);
+            res = compilePrinterForUserType(I, type->val.userType, env);
             break;
         case TCTYPE_TYPE_TUPLE:
-            res = compilePrinterForTuple(type->val.tuple, env);
+            res = compilePrinterForTuple(I, type->val.tuple, env);
             break;
         default:
             cant_happen("unrecognised TcType %s", tcTypeTypeName(type->type));
@@ -123,64 +123,64 @@ static LamExp *compilePrinter(TcType *type, TcEnv *env) {
     return res;
 }
 
-static LamExp *compilePrinterForFunction(TcFunction *function
+static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function
                                          __attribute__((unused))) {
-    return makeSymbolExpr("print$fn");
+    return makeSymbolExpr(I, "print$fn");
 }
 
-static LamExp *compilePrinterForPair(TcPair *pair __attribute__((unused))) {
+static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPair *pair __attribute__((unused))) {
     cant_happen("compilePrinterForPair not implemented yet");
 }
 
-static LamExp *compilePrinterForVar(TcVar *var, TcEnv *env) {
+static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env) {
     if (var->instance == NULL) {
-        return makeSymbolExpr("print$");
+        return makeSymbolExpr(I, "print$");
     }
-    return compilePrinter(var->instance, env);
+    return compilePrinter(I, var->instance, env);
 }
 
-static LamExp *compilePrinterForInt() {
-    return makePrintInt();
+static LamExp *compilePrinterForInt(ParserInfo I) {
+    return makePrintInt(I);
 }
 
-static LamExp *compilePrinterForChar() {
-    return makePrintChar();
+static LamExp *compilePrinterForChar(ParserInfo I) {
+    return makePrintChar(I);
 }
 
-static LamList *compilePrinterForUserTypeArgs(TcUserTypeArgs *args,
+static LamList *compilePrinterForUserTypeArgs(ParserInfo I, TcUserTypeArgs *args,
                                               TcEnv *env) {
     ENTER(compilePrinterForUserTypeArgs);
     if (args == NULL) {
         LEAVE(compilePrinterForUserTypeArgs);
         return NULL;
     }
-    LamList *next = compilePrinterForUserTypeArgs(args->next, env);
+    LamList *next = compilePrinterForUserTypeArgs(I, args->next, env);
     int save = PROTECT(next);
-    LamExp *this = compilePrinter(args->type, env);
+    LamExp *this = compilePrinter(I, args->type, env);
     PROTECT(this);
-    LamList *res = newLamList(this, next);
+    LamList *res = newLamList(I, this, next);
     UNPROTECT(save);
     LEAVE(compilePrinterForUserTypeArgs);
     return res;
 }
 
-static LamList *compilePrinterForTupleArgs(TcTypeArray *tuple, TcEnv *env) {
+static LamList *compilePrinterForTupleArgs(ParserInfo I, TcTypeArray *tuple, TcEnv *env) {
     LamList *res = NULL;
     int save = PROTECT(res);
     for (int i = tuple->size; i > 0; i--) {
         int index = i - 1;
-        LamExp *this = compilePrinter(tuple->entries[index], env);
+        LamExp *this = compilePrinter(I, tuple->entries[index], env);
         PROTECT(this);
-        res = newLamList(this, res);
+        res = newLamList(I, this, res);
         PROTECT(res);
     }
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *compilePrinterForString() {
+static LamExp *compilePrinterForString(ParserInfo I) {
     HashSymbol *name = newSymbol("print$string");
-    return newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    return newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
 }
 
 static TcEnv *getNsEnv(int index, TcEnv *env) {
@@ -201,63 +201,63 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
     return res->val.env;
 }
 
-static LamExp *compilePrinterForUserType(TcUserType *userType, TcEnv *env) {
+static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcEnv *env) {
     IFDEBUG(printTcUserType(userType, 0));
     if (userType->name == listSymbol()) {
         if (userType->args
             && userType->args->type->type == TCTYPE_TYPE_CHARACTER) {
-            return compilePrinterForString();
+            return compilePrinterForString(I);
         }
     }
     HashSymbol *name = makePrintName("print$", userType->name->name);
     TcEnv *nsEnv = getNsEnv(userType->ns, env);
     if (!getFromTcEnv(nsEnv, name, NULL)) {
-        return makeSymbolExpr("print$");
+        return makeSymbolExpr(I, "print$");
     }
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(exp);
     if (env != nsEnv) {
-        LamLookup *lookup = newLamLookup(userType->ns, NULL, exp);
+        LamLookup *lookup = newLamLookup(I, userType->ns, NULL, exp);
         PROTECT(lookup);
-        exp = newLamExp(LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(lookup));
+        exp = newLamExp(I, LAMEXP_TYPE_LOOKUP, LAMEXP_VAL_LOOKUP(lookup));
         PROTECT(exp);
     }
-    LamList *args = compilePrinterForUserTypeArgs(userType->args, env);
+    LamList *args = compilePrinterForUserTypeArgs(I, userType->args, env);
     PROTECT(args);
     int nargs = countLamList(args);
     if (nargs == 0) {
         UNPROTECT(save);
         return exp;
     }
-    LamApply *apply = newLamApply(exp, args);
+    LamApply *apply = newLamApply(I, exp, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     return res;
 }
 
-static LamExp *compilePrinterForTuple(TcTypeArray *tuple, TcEnv *env) {
+static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *env) {
     ENTER(compilePrinterForTuple);
     if (tuple->size < 5) {
         char buf[64];
         sprintf(buf, "print$tuple$%d", tuple->size);
-        LamExp *exp = makeSymbolExpr(buf);
+        LamExp *exp = makeSymbolExpr(I, buf);
         if (tuple->size == 0) {
             LEAVE(compilePrinterForTuple);
             return exp;
         }
         int save = PROTECT(exp);
-        LamList *args = compilePrinterForTupleArgs(tuple, env);
+        LamList *args = compilePrinterForTupleArgs(I, tuple, env);
         PROTECT(args);
-        LamApply *apply = newLamApply(exp, args);
+        LamApply *apply = newLamApply(I, exp, args);
         PROTECT(apply);
-        LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+        LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
         UNPROTECT(save);
         IFDEBUG(ppLamExp(res));
         LEAVE(compilePrinterForTuple);
         return res;
     } else {
         LEAVE(compilePrinterForTuple);
-        return makeSymbolExpr("print$");
+        return makeSymbolExpr(I, "print$");
     }
 }
