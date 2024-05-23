@@ -28,6 +28,7 @@ class Catalog:
     def __init__(self, typeName):
         self.typeName = typeName
         self.contents = {}
+        self.parserInfo = False
 
     def add(self, value):
         name = value.getName()
@@ -42,6 +43,9 @@ class Catalog:
     def noteExtraCmpArgs(self, args):
         for key in self.contents:
             self.contents[key].noteExtraCmpArgs(args)
+
+    def noteParserInfo(self):
+        self.parserInfo = True
 
     def noteBespokeCmpImplementation(self, name):
         if name in self.contents:
@@ -1297,6 +1301,8 @@ class SimpleStruct(Base):
         self.noteTypedef()
         print("typedef struct {name} {{ // SimpleStruct.printTypedef".format(name=self.getName()))
         print("    Header header; // SimpleStruct.printTypedef")
+        if catalog.parserInfo:
+            print("    ParserInfo _yy_parser_info; // SimpleStruct.printTypedef")
         for field in self.fields:
             field.printStructTypedefLine(catalog)
         print("}} {name}; // SimpleStruct.printTypedef\n".format(name=self.getName()))
@@ -1401,12 +1407,16 @@ class SimpleStruct(Base):
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration()
+        myName=self.getName()
         args = []
         for field in self.getNewArgs(catalog):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
-        return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
+        if catalog.parserInfo:
+            args = ['ParserInfo _PI'] + args
+
+        return f"{myType} new{myName}({', '.join(args)})"
 
     def getCopySignature(self):
         myType = self.getTypeDeclaration()
@@ -1414,7 +1424,8 @@ class SimpleStruct(Base):
         return f"{myType} copy{myName}({myType} o)"
 
     def printNewDeclaration(self, catalog):
-        print("{decl}; // SimpleStruct.printNewDeclaration".format(decl=self.getNewSignature(catalog)))
+        decl = self.getNewSignature(catalog)
+        print(f"{decl}; // SimpleStruct.printNewDeclaration")
 
     def printCopyDeclaration(self, catalog):
         print("{decl}; // SimpleStruct.printCopyDeclaration".format(decl=self.getCopySignature()))
@@ -1432,7 +1443,9 @@ class SimpleStruct(Base):
         print("{decl}; // SimpleStruct.printCompareDeclaration".format(decl=self.getCompareSignature(catalog)))
 
     def printNewFunction(self, catalog):
-        print("{decl} {{ // SimpleStruct.printNewFunction".format(decl=self.getNewSignature(catalog)))
+        comment = '// SimpleStruct.printNewFunction'
+        decl = self.getNewSignature(catalog)
+        print(f"{decl} {{ {comment}")
         hasInternalConstructors = False
         for field in self.getDefaultArgs(catalog):
             if field.isSelfInitializing(catalog) and field.default is None:
@@ -1440,24 +1453,27 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printNewFunction")
+        print(f"    {myType} x = NEW({myName}, {myObjType}); {comment}")
         if hasInternalConstructors:
-            print("    int save = PROTECT(x); // SimpleStruct.printNewFunction")
-        print(f'    DEBUG("new {myName} %p", x); // SimpleStruct.printNewFunction')
+            print(f"    int save = PROTECT(x); {comment}")
+        print(f'    DEBUG("new {myName} %p", x); {comment}')
+        if catalog.parserInfo:
+            print(f"    x->_yy_parser_info = _PI; {comment}")
         for field in self.getNewArgs(catalog):
-            print("    x->{f} = {f}; // SimpleStruct.printNewFunction".format(f=field.getFieldName()))
+            f = field.getFieldName()
+            print(f"    x->{f} = {f}; {comment}")
         for field in self.getDefaultArgs(catalog):
             f = field.getFieldName()
             if field.isSelfInitializing(catalog) and field.default is None:
                 d = f'{field.getConstructorName(catalog)}()'
             else:
                 d = field.default
-            print(f"    bzero(&(x->{f}), sizeof(x->{f})); // SimpleStruct.printNewFunction")
-            print(f"    x->{f} = {d}; // SimpleStruct.printNewFunction")
+            print(f"    bzero(&(x->{f}), sizeof(x->{f})); {comment}")
+            print(f"    x->{f} = {d}; {comment}")
         if hasInternalConstructors:
-            print("    UNPROTECT(save); // SimpleStruct.printNewFunction")
-        print("    return x; // SimpleStruct.printNewFunction")
-        print("} // SimpleStruct.printNewFunction")
+            print(f"    UNPROTECT(save); {comment}")
+        print(f"    return x; {comment}")
+        print(f"}} {comment}")
         print("")
 
     def printMarkFunctionBody(self, catalog):
@@ -1557,21 +1573,26 @@ class SimpleStruct(Base):
         print("} // SimpleStruct.printCompareFunction\n")
 
     def printCopyFunction(self, catalog):
-        print("{decl} {{ // SimpleStruct.printCopyFunction".format(decl=self.getCopySignature()))
+        comment = '// SimpleStruct.printCopyFunction'
+        decl = self.getCopySignature()
+        print(f"{decl} {{ {comment}")
         myType = self.getTypeDeclaration()
         myObjType = self.getObjType()
         myName = self.getName()
-        print("    if (o == NULL) return NULL; // SimpleStruct.printCopyFunction")
-        print(f"    {myType} x = NEW({myName}, {myObjType}); // SimpleStruct.printCopyFunction")
-        print(f'    DEBUG("copy {myName} %p", x); // SimpleStruct.printCopyFunction')
-        print("    Header _h = x->header; // SimpleStruct.printCopyFunction")
-        print(f"    bzero(x, sizeof(struct {myName})); // SimpleStruct.printCopyFunction")
-        print("    x->header = _h; // SimpleStruct.printCopyFunction")
-        print("    int save = PROTECT(x); // SimpleStruct.printCopyFunction")
+        print(f"    if (o == NULL) return NULL; {comment}")
+        print(f"    {myType} x = NEW({myName}, {myObjType}); {comment}")
+        print(f'    DEBUG("copy {myName} %p", x); {comment}')
+        print(f"    Header _h = x->header; {comment}")
+        print(f"    bzero(x, sizeof(struct {myName})); {comment}")
+        print(f"    x->header = _h; {comment}")
+        print(f"    int save = PROTECT(x); {comment}")
+        if catalog.parserInfo:
+            print(f"    x->_yy_parser_info = o->_yy_parser_info; {comment}")
         self.printCopyFunctionBody(catalog)
-        print("    UNPROTECT(save); // SimpleStruct.printCopyFunction")
-        print("    return x; // SimpleStruct.printCopyFunction")
-        print("} // SimpleStruct.printCopyFunction\n")
+        print(f"    UNPROTECT(save); {comment}")
+        print(f"    return x; {comment}")
+        print(f"}} {comment}")
+        print("")
 
     def printPrintFunction(self, catalog):
         myName = self.getName()
@@ -1704,6 +1725,8 @@ class DiscriminatedUnion(SimpleStruct):
         self.noteTypedef()
         print("typedef struct {name} {{ // DiscriminatedUnion.printTypedef".format(name=self.getName()))
         print("    Header header; // DiscriminatedUnion.printTypedef")
+        if catalog.parserInfo:
+            print("    ParserInfo _yy_parser_info; // DiscriminatedUnion.printTypedef")
         print("    {enum} {field}; // DiscriminatedUnion.printTypedef".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
         print("    {union} {field}; // DiscriminatedUnion.printTypedef".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
         print("}} {name}; // DiscriminatedUnion.printTypedef\n".format(name=self.getName()))
@@ -2102,7 +2125,12 @@ if 'limited_includes' in document['config']:
 else:
     limited_includes = []
 
+parserInfo = document['config']['parserInfo'] if 'parserInfo' in document['config'] else False
+
 catalog = Catalog(typeName)
+
+if parserInfo:
+    catalog.noteParserInfo()
 
 if "hashes" in document:
     for name in document["hashes"]:
@@ -2162,6 +2190,8 @@ if args.type == "h":
     print('#include "memory.h"')
     print('#include "common.h"')
     print('#include "types.h"')
+    if parserInfo:
+        print('#include "parser_info.h"')
     for include in includes:
         print(f'#include "{include}"')
     for include in limited_includes:

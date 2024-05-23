@@ -20,6 +20,7 @@
 #include "parser.h"
 #include "lexer.h"
 #include "preamble.h"
+#include "parser_info.h"
 
 typedef struct PmBufStack {
     int lineno;
@@ -45,7 +46,8 @@ static void freePmBufStack(PmModule *mod, PmBufStack * x) {
     }
     freePmBufStack(mod, x->next);
     x->next = NULL;
-    free(x->filename);
+    // gets used by ast and persists
+    // free(x->filename);
     yy_delete_buffer(x->bs, mod->scanner);
     free(x);
 }
@@ -65,7 +67,7 @@ static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs,
     mod->bufStack = bufStack;
     bufStack->bs = bs;
     bufStack->filename = strdup(origin);
-    bufStack->lineno = 0;
+    bufStack->lineno = 1;
 }
 
 static int pmParseModule(PmModule *mod) {
@@ -123,9 +125,9 @@ static AstNest *parseTopLevel(PmModule *mod, YY_BUFFER_STATE bs, const char *ori
     if (res) {
         return NULL;
     }
-    AstExpression *expression = newAstExpression(AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST(mod->nest));
-    AstExpressions *expressions = newAstExpressions(expression, NULL);
-    AstNest *nest = newAstNest(definitions, expressions);
+    AstExpression *expression = newAstExpression(PIM(mod), AST_EXPRESSION_TYPE_NEST, AST_EXPRESSION_VAL_NEST(mod->nest));
+    AstExpressions *expressions = newAstExpressions(COPY_PARSER_INFO(expression), expression, NULL);
+    AstNest *nest = newAstNest(COPY_PARSER_INFO(expression), definitions, expressions);
     return nest;
 }
 
@@ -167,7 +169,8 @@ int popPmFile(PmModule *mod) {
     if (mod->bufStack == NULL)
         return 0;
     PmBufStack *old = mod->bufStack;
-    free(old->filename);
+    // we promise NOT to free these so they can be shared
+    // free(old->filename);
     yy_delete_buffer(old->bs, mod->scanner);
     mod->bufStack = mod->bufStack->next;
     free(old);
@@ -192,15 +195,27 @@ void showModuleState(FILE *fp, PmModule *mod) {
         return;
     }
     fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename,
-            mod->bufStack->lineno + 1);
+            mod->bufStack->lineno);
 }
 
 char *currentPmFile(PmModule *mod) {
     if (mod == NULL) {
-        return NULL;
+        return "no-file";
     }
     if (mod->bufStack == NULL) {
-        return NULL;
+        return "no-file";
     }
     return mod->bufStack->filename;
 }
+
+int currentPmLine(PmModule *mod) {
+    if (mod == NULL) {
+        return 0;
+    }
+    if (mod->bufStack == NULL) {
+        return 0;
+    }
+    return mod->bufStack->lineno;
+}
+
+

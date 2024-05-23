@@ -66,5 +66,5 @@ AstProg *astNestToProg(AstNest *nest) {
         cant_happen("null namespace");
     }
 #endif
-    return newAstProg(nest->definitions, namespaces, nest->expressions);
+    return newAstProg(COPY_PARSER_INFO(nest), nest->definitions, namespaces, nest->expressions);
 }

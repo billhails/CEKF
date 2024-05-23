@@ -265,18 +265,18 @@ static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
 
 static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
     LamExp *index =
-        newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(deconstruct->vec));
+        newLamExp(COPY_PARSER_INFO(deconstruct), LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(deconstruct->vec));
     int save = PROTECT(index);
     LamPrimApp *res =
-        newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
+        newLamPrimApp(COPY_PARSER_INFO(deconstruct), LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
     UNPROTECT(save);
     return res;
 }
 
 static LamPrimApp *tagToPrimApp(LamExp *tagged) {
-    LamExp *index = newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
+    LamExp *index = newLamExp(COPY_PARSER_INFO(tagged), LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(0));
     int save = PROTECT(index);
-    LamPrimApp *res = newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, tagged);
+    LamPrimApp *res = newLamPrimApp(COPY_PARSER_INFO(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
     UNPROTECT(save);
     return res;
 }
@@ -293,10 +293,10 @@ static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
 
 static LamPrimApp *tupleIndexToPrimApp(LamTupleIndex *tupleIndex) {
     LamExp *index =
-        newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(tupleIndex->vec));
+        newLamExp(COPY_PARSER_INFO(tupleIndex), LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(tupleIndex->vec));
     int save = PROTECT(index);
     LamPrimApp *res =
-        newLamPrimApp(LAMPRIMOP_TYPE_VEC, index, tupleIndex->exp);
+        newLamPrimApp(COPY_PARSER_INFO(tupleIndex), LAMPRIMOP_TYPE_VEC, index, tupleIndex->exp);
     UNPROTECT(save);
     return res;
 }
@@ -388,9 +388,9 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
 }
 
 static LamApply *printToApply(LamPrint *lamPrint) {
-    LamList *args = newLamList(lamPrint->exp, NULL);
+    LamList *args = newLamList(COPY_PARSER_INFO(lamPrint), lamPrint->exp, NULL);
     int save = PROTECT(args);
-    LamApply *lamApply = newLamApply(lamPrint->printer, args);
+    LamApply *lamApply = newLamApply(COPY_PARSER_INFO(lamPrint), lamPrint->printer, args);
     UNPROTECT(save);
     return lamApply;
 }
@@ -454,18 +454,18 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
     int nargs = countLamList(construct->args);
     LamExp *newArg =
-        newLamExp(LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(construct->tag));
+        newLamExp(COPY_PARSER_INFO(construct), LAMEXP_TYPE_STDINT, LAMEXP_VAL_STDINT(construct->tag));
     int save = PROTECT(newArg);
-    LamList *extraItem = newLamList(newArg, construct->args);
+    LamList *extraItem = newLamList(COPY_PARSER_INFO(construct), newArg, construct->args);
     PROTECT(extraItem);
-    LamMakeVec *res = newLamMakeVec(nargs + 1, extraItem);
+    LamMakeVec *res = newLamMakeVec(COPY_PARSER_INFO(construct), nargs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
 static LamMakeVec *tupleToMakeVec(LamList *tuple) {
     int nargs = countLamList(tuple);
-    LamMakeVec *res = newLamMakeVec(nargs, tuple);
+    LamMakeVec *res = newLamMakeVec(COPY_PARSER_INFO(tuple), nargs, tuple);
     return res;
 }
 
@@ -1125,7 +1125,7 @@ static Aexp *replaceLamPrint(LamPrint *print, LamExpTable *replacements) {
     ENTER(replaceLamPrint);
     LamApply *lamApply = printToApply(print);
     int save = PROTECT(lamApply);
-    LamExp *lamExp = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(lamApply));
+    LamExp *lamExp = newLamExp(COPY_PARSER_INFO(print), LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(lamApply));
     PROTECT(lamExp);
     Aexp *res = replaceLamExp(lamExp, replacements);
     UNPROTECT(save);

@@ -35,6 +35,8 @@
 #  include "debugging_off.h"
 #endif
 
+static ParserInfo I;
+
 static LamExp *translateStateToInlineCode(TpmcState *dfa,
                                           LamExpTable *lambdaCache);
 static LamExp *translateState(TpmcState *dfa, LamExpTable *lambdaCache);
@@ -72,7 +74,7 @@ static LamVarList *makeCanonicalArgs(TpmcVariableTable *freeVariables) {
     int save2 = PROTECT(sorted);
     LamVarList *res = NULL;
     for (Index i = 0; i < sorted->size; i++) {
-        res = newLamVarList(sorted->entries[i], res);
+        res = newLamVarList(I, sorted->entries[i], res);
         REPLACE_PROTECT(save2, res);
     }
     UNPROTECT(save);
@@ -88,9 +90,9 @@ static LamList *convertVarListToList(LamVarList *vars) {
     }
     LamList *next = convertVarListToList(vars->next);
     int save = PROTECT(next);
-    LamExp *exp = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(vars->var));
+    LamExp *exp = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(vars->var));
     PROTECT(exp);
-    LamList *this = newLamList(exp, next);
+    LamList *this = newLamList(I, exp, next);
     UNPROTECT(save);
     LEAVE(convertVarListToList);
     return this;
@@ -98,15 +100,15 @@ static LamList *convertVarListToList(LamVarList *vars) {
 
 static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     ENTER(translateToApply);
-    LamExp *function = newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
+    LamExp *function = newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(name));
     int save = PROTECT(function);
     LamVarList *cargs = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(cargs);
     LamList *args = convertVarListToList(cargs);
     PROTECT(args);
-    LamApply *apply = newLamApply(function, args);
+    LamApply *apply = newLamApply(I, function, args);
     PROTECT(apply);
-    LamExp *res = newLamExp(LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(apply));
     UNPROTECT(save);
     LEAVE(translateToApply);
     return res;
@@ -119,9 +121,9 @@ static LamExp *translateToLambda(TpmcState *dfa, LamExpTable *lambdaCache) {
     LamVarList *args = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(args);
     LamLam *lambda =
-        newLamLam(args, exp);
+        newLamLam(I, args, exp);
     PROTECT(lambda);
-    LamExp *res = newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lambda));
     UNPROTECT(save);
     LEAVE(translateToLambda);
     return res;
@@ -157,14 +159,14 @@ static LamExp *translateComparisonArcToTest(TpmcArc *arc) {
 #endif
     TpmcComparisonPattern *pattern = arc->test->pattern->val.comparison;
     LamExp *a =
-        newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->previous->path));
+        newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->previous->path));
     int save = PROTECT(a);
     LamExp *b =
-        newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->current->path));
+        newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(pattern->current->path));
     PROTECT(b);
-    LamPrimApp *eq = newLamPrimApp(LAMPRIMOP_TYPE_EQ, a, b);
+    LamPrimApp *eq = newLamPrimApp(I, LAMPRIMOP_TYPE_EQ, a, b);
     PROTECT(eq);
-    LamExp *res = newLamExp(LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(eq));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_PRIM, LAMEXP_VAL_PRIM(eq));
     UNPROTECT(save);
     LEAVE(translateComparisonArcToTest);
     return res;
@@ -188,18 +190,18 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                 if (getTpmcVariableTable(freeVariables, path)) {
                     DEBUG("%s is free", path->name);
                     LamExp *base =
-                        newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
+                        newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
                     int save2 = PROTECT(base);
                     LamDeconstruct *deconstruct =
-                        newLamDeconstruct(name, constructor->info->namespace, i + 1, base);
+                        newLamDeconstruct(I, name, constructor->info->namespace, i + 1, base);
                     PROTECT(deconstruct);
-                    LamExp *deconstructExp = newLamExp(LAMEXP_TYPE_DECONSTRUCT,
+                    LamExp *deconstructExp = newLamExp(I, LAMEXP_TYPE_DECONSTRUCT,
                                                        LAMEXP_VAL_DECONSTRUCT
                                                        (deconstruct));
                     PROTECT(deconstructExp);
-                    LamLet *let = newLamLet(path, deconstructExp, body);
+                    LamLet *let = newLamLet(I, path, deconstructExp, body);
                     PROTECT(let);
-                    body = newLamExp(LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
+                    body = newLamExp(I, LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
                     REPLACE_PROTECT(save, body);
                     UNPROTECT(save2);
                 } else {
@@ -215,16 +217,16 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                 HashSymbol *path = components->entries[i]->path;
                 if (getTpmcVariableTable(freeVariables, path)) {
                     LamExp *base =
-                        newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
+                        newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(test->path));
                     int save2 = PROTECT(base);
-                    LamTupleIndex *index = newLamTupleIndex(i, size, base);
+                    LamTupleIndex *index = newLamTupleIndex(I, i, size, base);
                     PROTECT(index);
-                    LamExp *tupleIndex = newLamExp(LAMEXP_TYPE_TUPLE_INDEX,
+                    LamExp *tupleIndex = newLamExp(I, LAMEXP_TYPE_TUPLE_INDEX,
                                                    LAMEXP_VAL_TUPLE_INDEX(index));
                     PROTECT(tupleIndex);
-                    LamLet *let = newLamLet(path, tupleIndex, body);
+                    LamLet *let = newLamLet(I, path, tupleIndex, body);
                     PROTECT(let);
-                    body = newLamExp(LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
+                    body = newLamExp(I, LAMEXP_TYPE_LET, LAMEXP_VAL_LET(let));
                     REPLACE_PROTECT(save, body);
                     UNPROTECT(save2);
                 }
@@ -268,9 +270,9 @@ static LamExp *translateComparisonArcAndAlternativeToIf(TpmcArc *arc, LamExpTabl
     LamExp *consequent = translateArcToCode(arc, lambdaCache);
     DEBUG("translateArcToCode returned %p", consequent);
     PROTECT(consequent);
-    LamIff *iff = newLamIff(test, consequent, alternative);
+    LamIff *iff = newLamIff(I, test, consequent, alternative);
     PROTECT(iff);
-    LamExp *res = newLamExp(LAMEXP_TYPE_IFF, LAMEXP_VAL_IFF(iff));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_IFF, LAMEXP_VAL_IFF(iff));
     UNPROTECT(save);
     LEAVE(translateComparisonArcAndAlternativeToIf);
     return res;
@@ -345,7 +347,7 @@ static LamExp *translateTestState(TpmcTestState *testState,
     TpmcArcList *arcList = arcArrayToList(testState->arcs);
     int save = PROTECT(arcList);
     LamExp *testVar =
-        newLamExp(LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(testState->path));
+        newLamExp(I, LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(testState->path));
     PROTECT(testVar);
     LamExp *res = translateArcList(arcList, testVar, lambdaCache);
     UNPROTECT(save);
@@ -358,7 +360,7 @@ static LamIntList *makeUnexhaustedIndices(LamTypeConstructorInfo *info) {
     LamIntList *res = NULL;
     int save = PROTECT(res);
     for (int i = 0; i < info->size; ++i) {
-        res = newLamIntList(i, info->type->name, info->namespace, res);
+        res = newLamIntList(I, i, info->type->name, info->namespace, res);
         PROTECT(res);
     }
     UNPROTECT(save);
@@ -416,12 +418,12 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                                                  lambdaCache);
                 int save = PROTECT(charCases);
                 LamCondCases *cases =
-                    newLamCondCases(LAMCONDCASES_TYPE_CHARACTERS,
+                    newLamCondCases(I, LAMCONDCASES_TYPE_CHARACTERS,
                                     LAMCONDCASES_VAL_CHARACTERS(charCases));
                 PROTECT(cases);
-                LamCond *cond = newLamCond(testVar, cases);
+                LamCond *cond = newLamCond(I, testVar, cases);
                 PROTECT(cond);
-                res = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
+                res = newLamExp(I, LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
                 UNPROTECT(save);
                 break;
             }
@@ -431,12 +433,12 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                                                 lambdaCache);
                 int save = PROTECT(intCases);
                 LamCondCases *cases =
-                    newLamCondCases(LAMCONDCASES_TYPE_INTEGERS,
+                    newLamCondCases(I, LAMCONDCASES_TYPE_INTEGERS,
                                     LAMCONDCASES_VAL_INTEGERS(intCases));
                 PROTECT(cases);
-                LamCond *cond = newLamCond(testVar, cases);
+                LamCond *cond = newLamCond(I, testVar, cases);
                 PROTECT(cond);
-                res = newLamExp(LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
+                res = newLamExp(I, LAMEXP_TYPE_COND, LAMEXP_VAL_COND(cond));
                 UNPROTECT(save);
                 break;
             }
@@ -458,14 +460,14 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                 LamExp *testExp = NULL;
                 if (info->needsVec) {
                     testExp =
-                        newLamExp(LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(testVar));
+                        newLamExp(I, LAMEXP_TYPE_TAG, LAMEXP_VAL_TAG(testVar));
                     PROTECT(testExp);
                 } else {
                     testExp = testVar;
                 }
-                LamMatch *match = newLamMatch(testExp, matches);
+                LamMatch *match = newLamMatch(I, testExp, matches);
                 PROTECT(match);
-                res = newLamExp(LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
+                res = newLamExp(I, LAMEXP_TYPE_MATCH, LAMEXP_VAL_MATCH(match));
                 UNPROTECT(save);
                 break;
             }
@@ -489,13 +491,13 @@ static LamIntCondCases *makeConstantIntCondCase(TpmcArcList *arcList,
     int save = PROTECT(next);
     LamExp *body = translateState(arcList->arc->state, lambdaCache);
     PROTECT(body);
-    LamIntCondCases *res = newLamIntCondCases(constant, body, next);
+    LamIntCondCases *res = newLamIntCondCases(I, constant, body, next);
     UNPROTECT(save);
     return res;
 }
 
 static LamIntCondCases *makeIntCondDefault(LamExp *action) {
-    LamIntCondCases *res = newLamIntCondCases(NULL, action, NULL);
+    LamIntCondCases *res = newLamIntCondCases(I, NULL, action, NULL);
     return res;
 }
 
@@ -508,13 +510,13 @@ static LamCharCondCases *makeConstantCharCondCase(TpmcArcList *arcList,
     int save = PROTECT(next);
     LamExp *body = translateState(arcList->arc->state, lambdaCache);
     PROTECT(body);
-    LamCharCondCases *res = newLamCharCondCases(constant, body, next);
+    LamCharCondCases *res = newLamCharCondCases(I, constant, body, next);
     UNPROTECT(save);
     return res;
 }
 
 static LamCharCondCases *makeCharCondDefault(LamExp *action) {
-    LamCharCondCases *res = newLamCharCondCases(0, action, NULL);
+    LamCharCondCases *res = newLamCharCondCases(I, 0, action, NULL);
     return res;
 }
 
@@ -641,7 +643,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                 LamExp *iff = translateComparisonArcListToIf(arcList, testVar,
                                                              lambdaCache);
                 int save = PROTECT(iff);
-                res = newLamMatchList(unexhaustedIndices, iff, NULL);
+                res = newLamMatchList(I, unexhaustedIndices, iff, NULL);
                 UNPROTECT(save);
                 break;
             }
@@ -649,7 +651,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                 LamExp *body =
                     translateState(arcList->arc->state, lambdaCache);
                 int save = PROTECT(body);
-                res = newLamMatchList(unexhaustedIndices, body, NULL);
+                res = newLamMatchList(I, unexhaustedIndices, body, NULL);
                 UNPROTECT(save);
                 break;
             }
@@ -668,9 +670,9 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                 DEBUG("translateArcToCode returned %p", body);
                 PROTECT(body);
                 LamIntList *index =
-                    newLamIntList(info->index, info->type->name, info->namespace, NULL);
+                    newLamIntList(I, info->index, info->type->name, info->namespace, NULL);
                 PROTECT(index);
-                res = newLamMatchList(index, body, next);
+                res = newLamMatchList(I, index, body, next);
                 UNPROTECT(save);
                 break;
             }
@@ -695,7 +697,7 @@ static LamExp *translateStateToInlineCode(TpmcState *dfa,
             res = dfa->state->val.final->action;
             break;
         case TPMCSTATEVALUE_TYPE_ERROR:
-            res = newLamExp(LAMEXP_TYPE_ERROR, LAMEXP_VAL_ERROR());
+            res = newLamExp(I, LAMEXP_TYPE_ERROR, LAMEXP_VAL_ERROR());
             break;
         default:
             cant_happen("unrecognised state type %d in tpmcTranslate",
@@ -771,24 +773,25 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
         nbindings++;
-        bindings = newLamLetRecBindings(key, val, bindings);
+        bindings = newLamLetRecBindings(I, key, val, bindings);
         if (save == -1) {
             save = PROTECT(bindings);
         } else {
             REPLACE_PROTECT(save, bindings);
         }
     }
-    LamLetRec *letrec = newLamLetRec(nbindings, bindings, body);
+    LamLetRec *letrec = newLamLetRec(I, nbindings, bindings, body);
     PROTECT(letrec);
-    LamExp *res = newLamExp(LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letrec));
+    LamExp *res = newLamExp(I, LAMEXP_TYPE_LETREC, LAMEXP_VAL_LETREC(letrec));
     UNPROTECT(save);
     LEAVE(prependLetRec);
     return res;
 }
 
-LamExp *tpmcTranslate(TpmcState *dfa) {
+LamExp *tpmcTranslate(ParserInfo PI, TpmcState *dfa) {
     // IFDEBUG(system("clear"));
     ENTER(tpmcTranslate);
+    I = PI;
     IFDEBUG(ppTpmcState(dfa));
     LamExpTable *lambdaCache = newLamExpTable();
     int save = PROTECT(lambdaCache);
