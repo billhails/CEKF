@@ -1,6 +1,48 @@
 typedef maybe(#t) { nothing | some(#t) }
 
-fn nmap {
+// map: (#t -> #u) -> maybe(#t) -> maybe(#u)
+fn map {
     (_, nothing) { nothing }
-    (f, some(t)) { some(f(t)) }
+    (f, some(x)) { some(f(x)) }
 }
+
+// bind: maybe(#t) -> (#t -> maybe(#u)) -> maybe(#u)
+fn bind {
+    (some(x), f) { f(x) }
+    (nothing, _) { nothing }
+}
+
+// // safediv: int -> int -> maybe(int)
+// fn safediv {
+//     (_, 0) { nothing }
+//     (x, y) { some(x / y) }
+// }
+//
+// // eval(expr) -> maybe(int)
+//
+// fn eval {
+//    (val(n)) { some(n) }
+//    (div(x, y)) {
+//        bind(eval(x), fn (n) {
+//            bind(eval(y), fn (m) {
+//                safediv(n, m)
+//            })
+//        })
+//    }
+// }
+//
+// // do notation
+//
+// fn eval {
+//    (val(n)) { return(n) } // return == some
+//    (div(x, y)) {
+//        do n <- eval(x) // a <- b rest == bind(b, fn(a) { rest })
+//           m <- eval(y)
+//           safediv(n, m)
+//    }
+// }
+//
+// The Maybe Monad:
+// type: maybe(#t)
+// return: #a -> maybe(#a)
+// bind: maybe(#a) -> (#a -> maybe(#b)) -> maybe(#b)
