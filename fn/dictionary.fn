@@ -1,7 +1,7 @@
 typedef Color { R | B | BB }
 typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), #(#t, #u), Dict(#t, #u)) }
 
-import "maybe.fn" as maybe;
+link "maybe.fn" as maybe;
 
 print Dict(pt, pu, d) {
     let

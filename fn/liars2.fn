@@ -1,6 +1,6 @@
 let
-    import "ambutils.fn" as amb;
-    import "listutils.fn" as list;
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
 
     // Five schoolgirls sat for an examination. Their parents—so they
     // thought—showed an undue degree of interest in the result.

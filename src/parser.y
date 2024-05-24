@@ -223,7 +223,7 @@ static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
 // in precisely the correct order that they will need to be processed in.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
-static AstNamespace *parseImport(char *file, HashSymbol *symbol, PmModule *mod) {
+static AstNamespace *parseLink(char *file, HashSymbol *symbol, PmModule *mod) {
     if (fileIdStack == NULL) {
         fileIdStack = newAstFileIdArray();
     }
@@ -376,7 +376,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token TRUE
 %token TYPEDEF
 %token WILDCARD
-%token IMPORT
+%token LINK
 %token NAMESPACE_TOKEN
 %token AS
 
@@ -445,7 +445,7 @@ defun : FN symbol fun { $$ = newAstDefine(PIM(mod), $2, newAstExpression(PIM(mod
       | PRINT symbol fun { $$ = newAstDefine(PIM(mod), makePrintName("print$", $2->name), newAstExpression(PIM(mod), AST_EXPRESSION_TYPE_FUN, AST_EXPRESSION_VAL_FUN($3))); }
       ;
 
-name_space : IMPORT STRING AS symbol { $$ = parseImport($2, $4, mod); }
+name_space : LINK STRING AS symbol { $$ = parseLink($2, $4, mod); }
            ;
 
 /******************************** types */
