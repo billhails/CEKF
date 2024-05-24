@@ -62,7 +62,7 @@ static void addPutcToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
-static TcType *analyzeVar(HashSymbol *var, TcEnv *env, TcNg *ng);
+static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
@@ -160,7 +160,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LAM:
             return prune(analyzeLam(exp->val.lam, env, ng));
         case LAMEXP_TYPE_VAR:
-            return prune(analyzeVar(exp->val.var, env, ng));
+            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.var, env, ng));
         case LAMEXP_TYPE_STDINT:
             return prune(analyzeSmallInteger());
         case LAMEXP_TYPE_BIGINTEGER:
@@ -222,7 +222,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LOOKUP:
             return prune(analyzeLookup(exp->val.lookup, env, ng));
         case LAMEXP_TYPE_CONSTRUCTOR:
-            return prune(analyzeVar(exp->val.constructor->name, env, ng));
+            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.constructor->name, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -270,11 +270,11 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     return functionType;
 }
 
-static TcType *analyzeVar(HashSymbol *var, TcEnv *env, TcNg *ng) {
+static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeVar);
     TcType *res = lookup(env, var, ng);
     if (res == NULL) {
-        can_happen("undefined variable %s in analyzeVar", var->name);
+        can_happen("undefined variable %s in %s, line %d", var->name, I.filename, I.lineno);
         return makeUnknown(var);
     }
     // LEAVE(analyzeVar);
@@ -317,12 +317,14 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "comparison")) {
         eprintf("while unifying comparison:\n");
-        REPORT_PARSER_INFO(exp1);
         ppLamExp(exp1);
         eprintf("\nwith\n");
-        REPORT_PARSER_INFO(exp2);
         ppLamExp(exp2);
         eprintf("\n");
+        REPORT_PARSER_INFO(exp1);
+        if (!EQ_PARSER_INFO(exp1, exp2)) {
+            REPORT_PARSER_INFO(exp2);
+        }
     }
     UNPROTECT(save);
     TcType *res = makeBoolean();
@@ -339,12 +341,14 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "<=>")) {
         eprintf("while unifying <=>:\n");
-        REPORT_PARSER_INFO(exp1);
         ppLamExp(exp1);
         eprintf("\nwith\n");
-        REPORT_PARSER_INFO(exp2);
         ppLamExp(exp1);
         eprintf("\n");
+        REPORT_PARSER_INFO(exp1);
+        if (!EQ_PARSER_INFO(exp1, exp2)) {
+            REPORT_PARSER_INFO(exp2);
+        }
     }
     UNPROTECT(save);
     TcType *res = makeSpaceship();
@@ -681,7 +685,9 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
                     ppLamExp(apply->args->exp);
                     eprintf("\n");
                     REPORT_PARSER_INFO(apply->function);
-                    REPORT_PARSER_INFO(apply->args);
+                    if (!EQ_PARSER_INFO(apply->function, apply->args)) {
+                        REPORT_PARSER_INFO(apply->args);
+                    }
                 }
                 UNPROTECT(save);
                 // LEAVE(analyzeApply);
@@ -714,7 +720,9 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
         ppLamExp(iff->alternative);
         eprintf("\n");
         REPORT_PARSER_INFO(iff->consequent);
-        REPORT_PARSER_INFO(iff->alternative);
+        if (!EQ_PARSER_INFO(iff->consequent, iff->alternative)) {
+            REPORT_PARSER_INFO(iff->alternative);
+        }
     }
     UNPROTECT(save);
     // LEAVE(analyzeIff);
@@ -1346,12 +1354,14 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
     PROTECT(right);
     if (!unify(left, right, "amb")) {
         eprintf("while unifying amb:\n");
-        REPORT_PARSER_INFO(amb->left);
         ppLamExp(amb->left);
         eprintf("\nwith:\n");
-        REPORT_PARSER_INFO(amb->right);
         ppLamExp(amb->right);
         eprintf("\n");
+        REPORT_PARSER_INFO(amb->left);
+        if (!EQ_PARSER_INFO(amb->left, amb->right)) {
+            REPORT_PARSER_INFO(amb->right);
+        }
     }
     UNPROTECT(save);
     // LEAVE(analyzeAmb);

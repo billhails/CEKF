@@ -3,7 +3,6 @@
 More of a wish-list than a hard and fast plan.
 
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
-* Allow user overrides of print functions.
 * Unpacking function return values (tuples only).
 * `now()` expression returns current time in milliseconds.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
@@ -29,16 +28,7 @@ More of a wish-list than a hard and fast plan.
    * Would play nicely with strings being lists of char.
    * Store the Unicode values internally.
    * Combining characters need special handling.
-* Built-ins.
-   * Supply an extensible mechanism to link C libraries and make the functions available.
-* Namespaces.
-* Libraries.
-   * Closely linked to namespaces.
-   * Probably use file system layout.
-   * Env var to specify the root locations.
-   * Better preable/postamble handling.
-* Propagate file and line numbers into all error reporting.
-   * Much better error reporting.
+* Much better error reporting.
 * Error recovery.
 * Command-line arguments for libraries etc.
 * Fail on non-exhaustive pattern match (optional).
@@ -46,3 +36,13 @@ More of a wish-list than a hard and fast plan.
 * User definable infix operators.
    * With precedence and associativity.
 * Curried binary operators `(2+)` etc.
+* (Internal) generate constructors for each enumerated type.
+   * `newLamExpLam(lam)` as an alias for `newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam))`.
+   * Can make them static inline.
+* Structs and aliases
+   * `alias some = maybe.some;`
+   * `alias string = list(char);`
+   * `struct customer{ name: string, address: list(string) }`
+   * `x = customer{ name: "Charlie", address: ["12, ...", ...] }`
+   * `x:name // "Charlie"`
+   * `struct named_list(#t) { name: list(char), value: list(#t) }`
