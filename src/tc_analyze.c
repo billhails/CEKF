@@ -62,7 +62,7 @@ static void addPutcToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
-static TcType *analyzeVar(HashSymbol *var, TcEnv *env, TcNg *ng);
+static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
@@ -145,7 +145,7 @@ TcEnv *tc_init(BuiltIns *builtIns) {
 TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     TcNg *ng = newTcNg(NULL);
     int save = PROTECT(ng);
-    TcType *nsType = newTcType(TCTYPE_TYPE_NAMESPACE, TCTYPE_VAL_NAMESPACE(NS_GLOBAL)); // global ns
+    TcType *nsType = newTcType_Namespace(NS_GLOBAL); // global ns
     PROTECT(nsType);
     addToEnv(env, namespaceSymbol(), nsType);
     TcType *res = analyzeExp(exp, env, ng);
@@ -160,7 +160,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LAM:
             return prune(analyzeLam(exp->val.lam, env, ng));
         case LAMEXP_TYPE_VAR:
-            return prune(analyzeVar(exp->val.var, env, ng));
+            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.var, env, ng));
         case LAMEXP_TYPE_STDINT:
             return prune(analyzeSmallInteger());
         case LAMEXP_TYPE_BIGINTEGER:
@@ -222,7 +222,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LOOKUP:
             return prune(analyzeLookup(exp->val.lookup, env, ng));
         case LAMEXP_TYPE_CONSTRUCTOR:
-            return prune(analyzeVar(exp->val.constructor->name, env, ng));
+            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.constructor->name, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -270,11 +270,11 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     return functionType;
 }
 
-static TcType *analyzeVar(HashSymbol *var, TcEnv *env, TcNg *ng) {
+static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeVar);
     TcType *res = lookup(env, var, ng);
     if (res == NULL) {
-        can_happen("undefined variable %s in analyzeVar", var->name);
+        can_happen("undefined variable %s in %s, line %d", var->name, I.filename, I.lineno);
         return makeUnknown(var);
     }
     // LEAVE(analyzeVar);
@@ -317,12 +317,14 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "comparison")) {
         eprintf("while unifying comparison:\n");
-        REPORT_PARSER_INFO(exp1);
         ppLamExp(exp1);
         eprintf("\nwith\n");
-        REPORT_PARSER_INFO(exp2);
         ppLamExp(exp2);
         eprintf("\n");
+        REPORT_PARSER_INFO(exp1);
+        if (!EQ_PARSER_INFO(exp1, exp2)) {
+            REPORT_PARSER_INFO(exp2);
+        }
     }
     UNPROTECT(save);
     TcType *res = makeBoolean();
@@ -339,12 +341,14 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     PROTECT(type2);
     if (!unify(type1, type2, "<=>")) {
         eprintf("while unifying <=>:\n");
-        REPORT_PARSER_INFO(exp1);
         ppLamExp(exp1);
         eprintf("\nwith\n");
-        REPORT_PARSER_INFO(exp2);
         ppLamExp(exp1);
         eprintf("\n");
+        REPORT_PARSER_INFO(exp1);
+        if (!EQ_PARSER_INFO(exp1, exp2)) {
+            REPORT_PARSER_INFO(exp2);
+        }
     }
     UNPROTECT(save);
     TcType *res = makeSpaceship();
@@ -453,7 +457,7 @@ static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng) {
 static LamApply *constructToApply(LamConstruct *construct) {
     // ENTER(constructToApply);
     LamExp *constructor =
-        newLamExp(COPY_PARSER_INFO(construct), LAMEXP_TYPE_VAR, LAMEXP_VAL_VAR(construct->name));
+        newLamExp_Var(COPY_PARSER_INFO(construct), construct->name);
     int save = PROTECT(constructor);
     LamApply *apply = newLamApply(COPY_PARSER_INFO(construct), constructor, construct->args);
     UNPROTECT(save);
@@ -554,7 +558,7 @@ static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
         UNPROTECT(save2);
         tuple = tuple->next;
     }
-    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(values));
+    TcType *res = newTcType_Tuple(values);
     UNPROTECT(save);
     return res;
 }
@@ -596,7 +600,7 @@ static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *n
         int save = PROTECT(env2);
         TcNg *ng2 = newTcNg(ng);
         PROTECT(ng2);
-        TcType *nsId = newTcType(TCTYPE_TYPE_NAMESPACE, TCTYPE_VAL_NAMESPACE((int) i));
+        TcType *nsId = newTcType_Namespace((int) i);
         PROTECT(nsId);
         addToEnv(env2, namespaceSymbol(), nsId);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
@@ -608,7 +612,7 @@ static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *n
 }
 
 static TcType *analyzeEnv(TcEnv *env) {
-    return newTcType(TCTYPE_TYPE_ENV, TCTYPE_VAL_ENV(env));
+    return newTcType_Env(env);
 }
 
 static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
@@ -640,7 +644,7 @@ static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
     int save = PROTECT(singleArg);
     LamApply *new = newLamApply(COPY_PARSER_INFO(function), function, singleArg);
     PROTECT(new);
-    LamExp *newFunction = newLamExp(COPY_PARSER_INFO(new), LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(new));
+    LamExp *newFunction = newLamExp_Apply(COPY_PARSER_INFO(new), new);
     PROTECT(newFunction);
     LamApply *curried =
         curryLamApplyHelper(nargs - 1, newFunction, args->next);
@@ -681,7 +685,9 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
                     ppLamExp(apply->args->exp);
                     eprintf("\n");
                     REPORT_PARSER_INFO(apply->function);
-                    REPORT_PARSER_INFO(apply->args);
+                    if (!EQ_PARSER_INFO(apply->function, apply->args)) {
+                        REPORT_PARSER_INFO(apply->args);
+                    }
                 }
                 UNPROTECT(save);
                 // LEAVE(analyzeApply);
@@ -714,7 +720,9 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
         ppLamExp(iff->alternative);
         eprintf("\n");
         REPORT_PARSER_INFO(iff->consequent);
-        REPORT_PARSER_INFO(iff->alternative);
+        if (!EQ_PARSER_INFO(iff->consequent, iff->alternative)) {
+            REPORT_PARSER_INFO(iff->alternative);
+        }
     }
     UNPROTECT(save);
     // LEAVE(analyzeIff);
@@ -850,7 +858,7 @@ static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid) {
     TcUserType *tcUserType = newTcUserType(name, args, nsid);
     int save = PROTECT(tcUserType);
     TcType *res =
-        newTcType(TCTYPE_TYPE_USERTYPE, TCTYPE_VAL_USERTYPE(tcUserType));
+        newTcType_UserType(tcUserType);
     UNPROTECT(save);
     return res;
 }
@@ -872,7 +880,7 @@ static TcType *makeTuple(int size) {
         pushTcTypeArray(array, part);
         UNPROTECT(save2);
     }
-    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(array));
+    TcType *res = newTcType_Tuple(array);
     UNPROTECT(save);
     return res;
 }
@@ -954,7 +962,7 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
 static TcType *makeTupleApplication(LamTypeConstructorArgs *tuple, TcTypeTable *map, TcEnv *env) {
     TcTypeArray *array = makeTupleArray(tuple, map, env);
     int save = PROTECT(array);
-    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(array));
+    TcType *res = newTcType_Tuple(array);
     UNPROTECT(save);
     return res;
 }
@@ -1346,12 +1354,14 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
     PROTECT(right);
     if (!unify(left, right, "amb")) {
         eprintf("while unifying amb:\n");
-        REPORT_PARSER_INFO(amb->left);
         ppLamExp(amb->left);
         eprintf("\nwith:\n");
-        REPORT_PARSER_INFO(amb->right);
         ppLamExp(amb->right);
         eprintf("\n");
+        REPORT_PARSER_INFO(amb->left);
+        if (!EQ_PARSER_INFO(amb->left, amb->right)) {
+            REPORT_PARSER_INFO(amb->right);
+        }
     }
     UNPROTECT(save);
     // LEAVE(analyzeAmb);
@@ -1406,7 +1416,7 @@ static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
 static TcType *makePair(TcType *first, TcType *second) {
     TcPair *resPair = newTcPair(first, second);
     int save = PROTECT(resPair);
-    TcType *res = newTcType(TCTYPE_TYPE_PAIR, TCTYPE_VAL_PAIR(resPair));
+    TcType *res = newTcType_Pair(resPair);
     UNPROTECT(save);
     return res;
 }
@@ -1451,7 +1461,7 @@ static TcType *freshTuple(TcTypeArray *tuple, TcNg *ng, TcTypeTable *map) {
         pushTcTypeArray(fresh, part);
         UNPROTECT(save2);
     }
-    TcType *res = newTcType(TCTYPE_TYPE_TUPLE, TCTYPE_VAL_TUPLE(fresh));
+    TcType *res = newTcType_Tuple(fresh);
     UNPROTECT(save);
     return res;
 }
@@ -1570,7 +1580,7 @@ static TcType *makeFn(TcType *arg, TcType *result) {
     TcFunction *fn = newTcFunction(arg, result);
     int save = PROTECT(fn);
     assert(fn != NULL);
-    TcType *type = newTcType(TCTYPE_TYPE_FUNCTION, TCTYPE_VAL_FUNCTION(fn));
+    TcType *type = newTcType_Function(fn);
     UNPROTECT(save);
     return type;
 }
@@ -1578,7 +1588,7 @@ static TcType *makeFn(TcType *arg, TcType *result) {
 static TcType *makeVar(HashSymbol *t) {
     TcVar *var = newTcVar(t, id_counter++);
     int save = PROTECT(var);
-    TcType *res = newTcType(TCTYPE_TYPE_VAR, TCTYPE_VAL_VAR(var));
+    TcType *res = newTcType_Var(var);
     UNPROTECT(save);
     return res;
 }
@@ -1589,22 +1599,22 @@ static TcType *makeFreshVar(char *name __attribute__((unused))) {
 
 static TcType *makeSmallInteger() {
     TcType *res =
-        newTcType(TCTYPE_TYPE_SMALLINTEGER, TCTYPE_VAL_SMALLINTEGER());
+        newTcType_Smallinteger();
     return res;
 }
 
 static TcType *makeBigInteger() {
-    TcType *res = newTcType(TCTYPE_TYPE_BIGINTEGER, TCTYPE_VAL_BIGINTEGER());
+    TcType *res = newTcType_Biginteger();
     return res;
 }
 
 static TcType *makeUnknown(HashSymbol *var) {
-    TcType *res = newTcType(TCTYPE_TYPE_UNKNOWN, TCTYPE_VAL_UNKNOWN(var));
+    TcType *res = newTcType_Unknown(var);
     return res;
 }
 
 static TcType *makeCharacter() {
-    TcType *res = newTcType(TCTYPE_TYPE_CHARACTER, TCTYPE_VAL_CHARACTER());
+    TcType *res = newTcType_Character();
     return res;
 }
 
@@ -1698,7 +1708,7 @@ static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns) {
 static void addNamespacesToEnv(TcEnv *env) {
     TcNamespaceArray *namespaces = newTcNamespaceArray();
     int save = PROTECT(namespaces);
-    TcType *nsType = newTcType(TCTYPE_TYPE_NAMESPACES, TCTYPE_VAL_NAMESPACES(namespaces));
+    TcType *nsType = newTcType_Namespaces(namespaces);
     PROTECT(nsType);
     addToEnv(env, namespacesSymbol(), nsType);
     UNPROTECT(save);

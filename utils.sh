@@ -9,3 +9,12 @@ run_gdb () {
 cores () {
     ulimit -c unlimited
 }
+
+watch_make () {
+    inotifywait -q -e close_write -m ./src |
+    while read -r directory events filename; do
+        if [ -e ./src/$filename ] ; then
+            make
+        fi
+    done
+}

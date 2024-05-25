@@ -36,6 +36,12 @@ static inline void _reportParserInfo(HeaderAndInfo *I) {
     eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);
 }
 
+static inline int _eqParserInfo(HeaderAndInfo *I, HeaderAndInfo *J) {
+    return I->info.filename == J->info.filename &&
+           I->info.lineno == J->info.lineno;
+}
+
 #  define REPORT_PARSER_INFO(x) _reportParserInfo((HeaderAndInfo *)(x))
+#  define EQ_PARSER_INFO(x, y) _eqParserInfo((HeaderAndInfo *)(x), (HeaderAndInfo *)(y))
 
 #endif

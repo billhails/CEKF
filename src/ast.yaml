@@ -134,8 +134,19 @@ structs:
         consequent: AstNest
         alternative: AstNest
 
+    AstOperator:
+        name: HashSymbol
+        position: AstPosition
+        precedence: index
+
     AstPrint:
         exp: AstExpression
+
+enums:
+    AstPosition:
+        - PREFIX
+        - INFIX
+        - POSTFIX
 
 unions:
     AstLookupOrSymbol:
@@ -181,6 +192,9 @@ unions:
 hashes:
     AstIntTable:
         entries: int
+
+    AstOperatorTable:
+        entries: AstOperator
 
 arrays:
     AstCharArray:

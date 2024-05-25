@@ -1,0 +1,18 @@
+let
+    fn move(from, to) {
+        putc(from);
+        puts(" -> ");
+        putc(to);
+        putc('\n');
+    }
+
+    fn hanoi {
+        (1, from, to, _) { move(from, to) }
+        (n, from, to, via) {
+            hanoi(n - 1, from, via, to);
+            move(from, to);
+            hanoi(n - 1, via, to, from);
+        }
+    }
+in
+    hanoi(3, 'A', 'B', 'C')

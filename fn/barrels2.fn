@@ -1,6 +1,6 @@
 let
-    import "ambutils.fn" as amb;
-    import "listutils.fn" as list;
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
 
     // A wine merchant has six barrels of wine and beer containing:
     //
