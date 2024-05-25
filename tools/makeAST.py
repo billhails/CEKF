@@ -64,6 +64,10 @@ class Catalog:
         for entity in list(self.contents.values()):
             entity.build(self)
 
+    def printHelperNewDeclarations(self):
+        for entity in self.contents.values():
+            entity.printHelperNewDeclarations(self)
+
     def printTypedefs(self):
         for entity in self.contents.values():
             if entity.isEnum():
@@ -280,10 +284,16 @@ class Base:
     def getName(self):
         return self.name
 
+    def hasParserInfo(self, catalog):
+        return False
+
     def build(self, catalog):
         pass
 
     def printTypedef(self, catalog):
+        pass
+
+    def printHelperNewDeclarations(self, catalog):
         pass
 
     def printNameFunctionDeclaration(self):
@@ -1297,6 +1307,9 @@ class SimpleStruct(Base):
         super().__init__(name)
         self.fields = [self.makeField(x, data[x]) for x in data.keys()]
 
+    def hasParserInfo(self, catalog):
+        return catalog.parserInfo
+
     def printTypedef(self, catalog):
         self.noteTypedef()
         print("typedef struct {name} {{ // SimpleStruct.printTypedef".format(name=self.getName()))
@@ -1627,6 +1640,33 @@ class DiscriminatedUnionField(EnumField):
     def getObjName(self, catalog):
         return self.typeName
 
+    def printHelperNewDeclaration(self, catalog):
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        comment = '// DiscriminatedUnionField.printHelperNewDeclaration'
+        arg = self.getDefineArg(catalog);
+        macroArg = arg;
+        typeName = self.makeTypeName()
+        argMacro = self.getDefineMacro(catalog, self.getName())
+        obj = catalog.get(self.typeName)
+        owner = catalog.get(self.owner)
+        argType = ''
+        if arg != '':
+            argType = obj.getTypeDeclaration() + ' '
+        parserInfoFarg = ''
+        parserInfoAarg = ''
+        if owner.hasParserInfo(catalog):
+            parserInfoFarg = 'struct ParserInfo I'
+            parserInfoAarg = 'I, '
+            if argType != '':
+                argType = ', ' + argType
+        else:
+            if arg == '':
+                arg = 'void'
+        print(f'static inline {self.owner} *new{self.owner}_{ucfirst}({parserInfoFarg}{argType}{arg}) {{ {comment}')
+        print(f'    return new{self.owner}({parserInfoAarg}{typeName}, {argMacro}({macroArg})); {comment}')
+        print(f'}} {comment}')
+        print('')
+
     def printStructTypedefLine(self, catalog):
         obj = catalog.get(self.typeName)
         print("    {type} {name}; // DiscriminatedUnionField.printStructTypedefLine".format(type=obj.getTypeDeclaration(), name=self.name))
@@ -1730,6 +1770,10 @@ class DiscriminatedUnion(SimpleStruct):
         print("    {enum} {field}; // DiscriminatedUnion.printTypedef".format(enum=self.enum.getTypeDeclaration(), field=self.enum.getFieldName()))
         print("    {union} {field}; // DiscriminatedUnion.printTypedef".format(union=self.union.getTypeDeclaration(), field=self.union.getFieldName()))
         print("}} {name}; // DiscriminatedUnion.printTypedef\n".format(name=self.getName()))
+
+    def printHelperNewDeclarations(self, catalog):
+        for field in self.fields:
+            field.printHelperNewDeclaration(catalog)
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -2215,6 +2259,8 @@ if args.type == "h":
     catalog.printIteratorDeclarations()
     printSection("defines")
     catalog.printDefines()
+    printSection("discriminated union helper constructor declarations")
+    catalog.printHelperNewDeclarations()
     printSection("access declarations")
     catalog.printAccessDeclarations()
     printSection("count declarations")

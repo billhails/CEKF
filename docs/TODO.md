@@ -40,9 +40,6 @@ More of a wish-list than a hard and fast plan.
    * `prefix 45 $ fn(a) { ... }`
    * `suffix 60 ! factorial`
 * Curried binary operators `(2+)` etc.
-* (Internal) generate constructors for each enumerated type.
-   * `newLamExpLam(lam)` as an alias for `newLamExp(LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(lam))`.
-   * Can make them static inline.
 * Structs and aliases
    * `alias some = maybe.some;`
    * `alias string = list(char);`

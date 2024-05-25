@@ -111,7 +111,7 @@ static LamExp *makeConstruct(ParserInfo I, HashSymbol *name, int tag, LamList *a
     LamConstruct *construct = newLamConstruct(I, name, tag, args);
     int save = PROTECT(construct);
     LamExp *res =
-        newLamExp(I, LAMEXP_TYPE_CONSTRUCT, LAMEXP_VAL_CONSTRUCT(construct));
+        newLamExp_Construct(I, construct);
     UNPROTECT(save);
     return res;
 }
@@ -120,7 +120,7 @@ static LamExp *makeConstant(ParserInfo I, HashSymbol *name, int tag) {
     LamConstant *constant = newLamConstant(I, name, tag);
     int save = PROTECT(constant);
     LamExp *res =
-        newLamExp(I, LAMEXP_TYPE_CONSTANT, LAMEXP_VAL_CONSTANT(constant));
+        newLamExp_Constant(I, constant);
     UNPROTECT(save);
     return res;
 }
@@ -169,7 +169,7 @@ static LamExp *inlineApply(LamApply *x) {
             return makeConstant(COPY_PARSER_INFO(x), info->name, info->index);
         }
     }
-    return newLamExp(COPY_PARSER_INFO(x), LAMEXP_TYPE_APPLY, LAMEXP_VAL_APPLY(x));
+    return newLamExp_Apply(COPY_PARSER_INFO(x), x);
 }
 
 static LamIff *inlineIff(LamIff *x) {

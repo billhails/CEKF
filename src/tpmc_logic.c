@@ -71,9 +71,7 @@ static TpmcPatternArray *convertArgList(AstArgList *argList, LamContext *env) {
 }
 
 static TpmcPattern *makeWildcardPattern() {
-    TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
-                                               TPMCPATTERNVALUE_VAL_WILDCARD
-                                               ());
+    TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
     int save = PROTECT(wc);
     TpmcPattern *pattern = newTpmcPattern(wc);
     UNPROTECT(save);
@@ -91,9 +89,7 @@ static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) 
         newTpmcConstructorPattern(lookup->symbol, lookup->namespace, info, args);
     PROTECT(constructor);
     TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
-                            TPMCPATTERNVALUE_VAL_CONSTRUCTOR
-                            (constructor));
+        newTpmcPatternValue_Constructor(constructor);
     PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -103,9 +99,7 @@ static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) 
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info == NULL) {
-        TpmcPatternValue *val = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_VAR,
-                                                    TPMCPATTERNVALUE_VAL_VAR
-                                                    (symbol));
+        TpmcPatternValue *val = newTpmcPatternValue_Var(symbol);
         int save = PROTECT(val);
         TpmcPattern *pattern = newTpmcPattern(val);
         UNPROTECT(save);
@@ -117,10 +111,7 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
         TpmcConstructorPattern *constructor =
             newTpmcConstructorPattern(symbol, namespace, info, args);
         PROTECT(constructor);
-        TpmcPatternValue *val =
-            newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
-                                TPMCPATTERNVALUE_VAL_CONSTRUCTOR
-                                (constructor));
+        TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
         PROTECT(val);
         TpmcPattern *pattern = newTpmcPattern(val);
         UNPROTECT(save);
@@ -134,9 +125,7 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     TpmcAssignmentPattern *assignment =
         newTpmcAssignmentPattern(named->name, value);
     PROTECT(assignment);
-    TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_ASSIGNMENT,
-                            TPMCPATTERNVALUE_VAL_ASSIGNMENT(assignment));
+    TpmcPatternValue *val = newTpmcPatternValue_Assignment(assignment);
     PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -172,9 +161,7 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     TpmcConstructorPattern *constructor =
         newTpmcConstructorPattern(symbol, namespace, info, patterns);
     PROTECT(constructor);
-    TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
-                            TPMCPATTERNVALUE_VAL_CONSTRUCTOR(constructor));
+    TpmcPatternValue *val = newTpmcPatternValue_Constructor(constructor);
     PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -184,9 +171,7 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
 static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
     TpmcPatternArray *tuple = convertArgList(args, env);
     int save = PROTECT(tuple);
-    TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_TUPLE,
-                            TPMCPATTERNVALUE_VAL_TUPLE(tuple));
+    TpmcPatternValue *val = newTpmcPatternValue_Tuple(tuple);
     PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -194,9 +179,7 @@ static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
 }
 
 static TpmcPattern *makeMaybeBigIntegerPattern(MaybeBigInt *number) {
-    TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_BIGINTEGER,
-                            TPMCPATTERNVALUE_VAL_BIGINTEGER(number));
+    TpmcPatternValue *val = newTpmcPatternValue_Biginteger(number);
     int save = PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -204,9 +187,7 @@ static TpmcPattern *makeMaybeBigIntegerPattern(MaybeBigInt *number) {
 }
 
 static TpmcPattern *makeCharacterPattern(char character) {
-    TpmcPatternValue *val =
-        newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CHARACTER,
-                            TPMCPATTERNVALUE_VAL_CHARACTER(character));
+    TpmcPatternValue *val = newTpmcPatternValue_Character(character);
     int save = PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
@@ -243,9 +224,7 @@ static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action,
     int save = PROTECT(patterns);
     TpmcFinalState *finalState = newTpmcFinalState(action);
     PROTECT(finalState);
-    TpmcStateValue *stateVal = newTpmcStateValue(TPMCSTATEVALUE_TYPE_FINAL,
-                                                 TPMCSTATEVALUE_VAL_FINAL
-                                                 (finalState));
+    TpmcStateValue *stateVal = newTpmcStateValue_Final(finalState);
     PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
@@ -271,8 +250,7 @@ static TpmcMatchRuleArray *convertComposite(int nbodies,
 }
 
 static TpmcState *makeErrorState() {
-    TpmcStateValue *stateVal = newTpmcStateValue(TPMCSTATEVALUE_TYPE_ERROR,
-                                                 TPMCSTATEVALUE_VAL_ERROR());
+    TpmcStateValue *stateVal = newTpmcStateValue_Error();
     int save = PROTECT(stateVal);
     TpmcState *state = tpmcMakeState(stateVal);
     PROTECT(state);
@@ -383,9 +361,7 @@ static TpmcPattern *replaceVarPattern(TpmcPattern *pattern,
         TpmcComparisonPattern *comp =
             newTpmcComparisonPattern(other, pattern);
         int save = PROTECT(comp);
-        TpmcPatternValue *val =
-            newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_COMPARISON,
-                                TPMCPATTERNVALUE_VAL_COMPARISON(comp));
+        TpmcPatternValue *val = newTpmcPatternValue_Comparison(comp);
         PROTECT(val);
         TpmcPattern *result = newTpmcPattern(val);
         UNPROTECT(save);
@@ -481,9 +457,7 @@ static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, TpmcSubstituti
                                             *substitutions) {
     setTpmcSubstitutionTable(substitutions, pattern->pattern->val.var,
                              pattern->path);
-    TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
-                                               TPMCPATTERNVALUE_VAL_WILDCARD
-                                               ());
+    TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
     pattern->pattern = wc;
     return pattern;
 }
@@ -687,7 +661,7 @@ LamLam *tpmcConvert(ParserInfo I, int nargs, int nbodies, AstArgList **argLists,
     LamLam *res = newLamLam(I, args, body);
     PROTECT(res);
 #ifdef DEBUG_TPMC_LOGIC
-    LamExp *tmp = newLamExp(I, LAMEXP_TYPE_LAM, LAMEXP_VAL_LAM(res));
+    LamExp *tmp = newLamExp_Lam(I, res);
     PROTECT(tmp);
 #endif
     DEBUG("*** BODY ***");

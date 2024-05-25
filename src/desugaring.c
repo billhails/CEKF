@@ -190,39 +190,21 @@ static CexpCut *desugarCexpCut(CexpCut *x) {
 }
 
 static Exp *aexpAndToExp(Aexp *exp1, Exp *exp2) {
-    return newExp(EXP_TYPE_CEXP,
-                  EXP_VAL_CEXP(newCexp
-                               (CEXP_TYPE_IFF,
-                                CEXP_VAL_IFF(newCexpIf
-                                             (exp1, exp2,
-                                              newExp(EXP_TYPE_AEXP,
-                                                     EXP_VAL_AEXP(newAexp
-                                                                  (AEXP_TYPE_F,
-                                                                   AEXP_VAL_F
-                                                                   ()))))))));
+    return newExp_Cexp(newCexp_Iff(newCexpIf(exp1, exp2, newExp_Aexp(newAexp_F()))));
 }
 
 static Exp *expAndToExp(Exp *exp1, Exp *exp2) {
     HashSymbol *sym = genSym("and_");
-    return newExp(EXP_TYPE_LET,
-                  EXP_VAL_LET(newExpLet
-                              (sym, exp1,
-                               newExp(EXP_TYPE_CEXP,
-                                      EXP_VAL_CEXP(newCexp
-                                                   (CEXP_TYPE_IFF,
-                                                    CEXP_VAL_IFF(newCexpIf
-                                                                 (newAexp
-                                                                  (AEXP_TYPE_VAR,
-                                                                   AEXP_VAL_VAR
-                                                                   (sym)),
-                                                                  exp2,
-                                                                  newExp
-                                                                  (EXP_TYPE_AEXP,
-                                                                   EXP_VAL_AEXP
-                                                                   (newAexp
-                                                                    (AEXP_TYPE_F,
-                                                                     AEXP_VAL_F
-                                                                     ())))))))))));
+    return newExp_Let(
+        newExpLet(
+            sym,
+            exp1,
+            newExp_Cexp(
+                newCexp_Iff(
+                    newCexpIf(
+                        newAexp_Var(sym),
+                        exp2,
+                        newExp_Aexp(newAexp_F()))))));
 }
 
 static Exp *andToExp(CexpBool *x) {
@@ -238,40 +220,26 @@ static Exp *andToExp(CexpBool *x) {
 }
 
 static Exp *aexpOrToExp(Aexp *exp1, Exp *exp2) {
-    return newExp(EXP_TYPE_CEXP,
-                  EXP_VAL_CEXP(newCexp
-                               (CEXP_TYPE_IFF,
-                                CEXP_VAL_IFF(newCexpIf
-                                             (exp1,
-                                              newExp(EXP_TYPE_AEXP,
-                                                     EXP_VAL_AEXP(newAexp
-                                                                  (AEXP_TYPE_T,
-                                                                   AEXP_VAL_T
-                                                                   ()))),
-                                              exp2)))));
+    return newExp_Cexp(
+        newCexp_Iff(
+            newCexpIf(
+                exp1,
+                newExp_Aexp(newAexp_T()),
+                exp2)));
 }
 
 static Exp *expOrToExp(Exp *exp1, Exp *exp2) {
     HashSymbol *sym = genSym("or_");
-    return newExp(EXP_TYPE_LET,
-                  EXP_VAL_LET(newExpLet
-                              (sym, exp1,
-                               newExp(EXP_TYPE_CEXP,
-                                      EXP_VAL_CEXP(newCexp
-                                                   (CEXP_TYPE_IFF,
-                                                    CEXP_VAL_IFF(newCexpIf
-                                                                 (newAexp
-                                                                  (AEXP_TYPE_VAR,
-                                                                   AEXP_VAL_VAR
-                                                                   (sym)),
-                                                                  newExp
-                                                                  (EXP_TYPE_AEXP,
-                                                                   EXP_VAL_AEXP
-                                                                   (newAexp
-                                                                    (AEXP_TYPE_T,
-                                                                     AEXP_VAL_T
-                                                                     ()))),
-                                                                  exp2))))))));
+    return newExp_Let(
+        newExpLet(
+            sym,
+            exp1,
+            newExp_Cexp(
+                newCexp_Iff(
+                    newCexpIf(
+                        newAexp_Var(sym),
+                        newExp_Aexp(newAexp_T()),
+                        exp2)))));
 }
 
 static Exp *orToExp(CexpBool *x) {

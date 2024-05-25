@@ -93,8 +93,7 @@ static TpmcState *makeEmptyTestState(HashSymbol *path) {
     int save = PROTECT(arcs);
     TpmcTestState *test = newTpmcTestState(path, arcs);
     PROTECT(test);
-    TpmcStateValue *val = newTpmcStateValue(TPMCSTATEVALUE_TYPE_TEST,
-                                            TPMCSTATEVALUE_VAL_TEST(test));
+    TpmcStateValue *val = newTpmcStateValue_Test(test);
     PROTECT(val);
     TpmcState *testState = tpmcMakeState(val);
     UNPROTECT(save);
@@ -292,8 +291,7 @@ static void populateSubPatternMatrixRowWithWildcards(TpmcMatrix *matrix,
         }
         HashSymbol *path = newSymbol(buf);
         TpmcPatternValue *wc =
-            newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
-                                TPMCPATTERNVALUE_VAL_WILDCARD());
+            newTpmcPatternValue_Wildcard();
         int save = PROTECT(wc);
         setTpmcMatrixIndex(matrix, i, y, newTpmcPattern(wc));
         getTpmcMatrixIndex(matrix, i, y)->path = path;
@@ -378,9 +376,7 @@ static TpmcPatternArray *replaceComponentsWithWildcards(TpmcPatternArray *compon
     int save = PROTECT(result);
     for (Index i = 0; i < components->size; i++) {
         DEBUG("i = %d, size = %d", i, components->size);
-        TpmcPatternValue *wc =
-            newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
-                                TPMCPATTERNVALUE_VAL_WILDCARD());
+        TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
         int save2 = PROTECT(wc);
         TpmcPattern *replacement = newTpmcPattern(wc);
         PROTECT(replacement);
@@ -406,9 +402,7 @@ static TpmcPattern *replacePatternComponentsWithWildcards(TpmcPattern *pattern) 
                                               components);
                 PROTECT(newCons);
                 TpmcPatternValue *patternValue =
-                    newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_CONSTRUCTOR,
-                                        TPMCPATTERNVALUE_VAL_CONSTRUCTOR
-                                        (newCons));
+                    newTpmcPatternValue_Constructor(newCons);
                 PROTECT(patternValue);
                 TpmcPattern *replacement = newTpmcPattern(patternValue);
                 replacement->path = pattern->path;
@@ -423,9 +417,7 @@ static TpmcPattern *replacePatternComponentsWithWildcards(TpmcPattern *pattern) 
             if (tuple->size > 0) {
                 TpmcPatternArray *components = replaceComponentsWithWildcards(tuple);
                 int save = PROTECT(components);
-                TpmcPatternValue *patternValue =
-                    newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_TUPLE,
-                                        TPMCPATTERNVALUE_VAL_TUPLE(components));
+                TpmcPatternValue *patternValue = newTpmcPatternValue_Tuple(components);
                     PROTECT(patternValue);
                 TpmcPattern *replacement = newTpmcPattern(patternValue);
                 replacement->path = pattern->path;
@@ -497,9 +489,7 @@ static bool constructorsAreExhaustive(TpmcState *state) {
 }
 
 static TpmcPattern *makeNamedWildcardPattern(HashSymbol *path) {
-    TpmcPatternValue *wc = newTpmcPatternValue(TPMCPATTERNVALUE_TYPE_WILDCARD,
-                                               TPMCPATTERNVALUE_VAL_WILDCARD
-                                               ());
+    TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
     int save = PROTECT(wc);
     TpmcPattern *pattern = newTpmcPattern(wc);
     pattern->path = path;
