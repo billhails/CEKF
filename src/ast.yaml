@@ -148,7 +148,7 @@ structs:
         exp: AstExpression
 
     AstStruct:
-        symbol: HashSymbol
+        symbol: AstLookupOrSymbol
         expressions: AstTaggedExpressions
 
     AstTaggedExpressions:

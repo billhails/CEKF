@@ -388,9 +388,9 @@ static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     LamExp *header = makePlainMatchBody(I, constructor);
     int save = PROTECT(header);
     bool isStruct = info->tags != NULL;
-    LamExp *open = makePutsString(I, isStruct ? "{" : "(");
+    LamExp *open = makePutsString(I, isStruct ? "{ " : "(");
     PROTECT(open);
-    LamExp *close = makePutsString(I, isStruct ? "}" : ")");
+    LamExp *close = makePutsString(I, isStruct ? " }" : ")");
     PROTECT(close);
     LamSequence *seq = newLamSequence(I, close, NULL);
     PROTECT(seq);

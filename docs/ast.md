@@ -69,7 +69,7 @@ AstOperator --name--> HashSymbol
 AstOperator --position--> AstPosition
 AstOperator --precedence--> index
 AstPrint --exp--> AstExpression
-AstStruct --symbol--> HashSymbol
+AstStruct --symbol--> AstLookupOrSymbol
 AstStruct --expressions--> AstTaggedExpressions
 AstTaggedExpressions --tag--> HashSymbol
 AstTaggedExpressions --expression--> AstExpression

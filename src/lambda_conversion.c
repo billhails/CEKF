@@ -919,14 +919,20 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
 }
 
 static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
-    LamExp *constructor = makeConstructor(structure->symbol, env);
-    if (constructor == NULL) {
-        cant_happen("cannot find constructor %s", structure->symbol->name);
+    switch (structure->symbol->type) {
+        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
+            LamExp *constructor = makeConstructor(structure->symbol->val.symbol, env);
+            if (constructor == NULL) {
+                cant_happen("cannot find constructor %s", structure->symbol->val.symbol->name);
+            }
+            int save = PROTECT(constructor);
+            LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
+            UNPROTECT(save);
+            return result;
+        }
+        default:
+            cant_happen("%s not implemented yet!", astLookupOrSymbolTypeName(structure->symbol->type));
     }
-    int save = PROTECT(constructor);
-    LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
-    UNPROTECT(save);
-    return result;
 }
 
 static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {

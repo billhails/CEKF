@@ -666,7 +666,7 @@ unop : '-' expression %prec NEG   { $$ = unOpToFunCall(mod, negSymbol(), $2); }
 fun_call :  expression '(' expressions ')' { $$ = newAstFunCall(PIM(mod), $1, $3); }
          ;
 
-structure : symbol '{' tagged_expressions '}' { $$ = newAstStruct(PIM(mod), $1, $3); }
+structure : symbol '{' tagged_expressions '}' { $$ = newAstStruct(PIM(mod), newAstLookupOrSymbol_Symbol(PIM(mod), $1), $3); }
           ;
 
 tagged_expressions : symbol ':' expression                         { $$ = newAstTaggedExpressions(PIM(mod), $1, $3, NULL); }
