@@ -69,7 +69,7 @@ structs:
 
     AstTypeConstructor:
         symbol: HashSymbol
-        typeList: AstTypeList
+        args: AstTypeConstructorArgs
 
     AstTypeFunction:
         symbol: AstLookupOrSymbol
@@ -78,6 +78,11 @@ structs:
     AstTypeList:
         type: AstType
         next: AstTypeList
+
+    AstTypeMap:
+        key: HashSymbol
+        type: AstType
+        next: AstTypeMap
 
     AstType:
         typeClause: AstTypeClause
@@ -149,6 +154,10 @@ enums:
         - POSTFIX
 
 unions:
+    AstTypeConstructorArgs:
+        list: AstTypeList
+        map: AstTypeMap
+
     AstLookupOrSymbol:
         symbol: HashSymbol
         lookup: AstLookupSymbol

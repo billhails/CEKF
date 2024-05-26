@@ -54,10 +54,12 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   LamType *type, int size,
                                                   int index, bool needsVec,
                                                   LamContext *env);
-static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
+static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args, LamTypeConstructor *type,
                             bool needsVec, int enumCount, int index,
                             int arity, LamContext *env);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
+static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap);
+static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 static LamExp *convertNest(AstNest *nest, LamContext *env);
 static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
@@ -74,7 +76,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
 static bool inPreamble;  // preamble is treated specially
 
 static void addCurrentNamespaceToContext(LamContext *context, int id) {
-    LamInfo *lamInfo = newLamInfo_Namespace(COPY_PARSER_INFO(context), id);
+    LamInfo *lamInfo = newLamInfo_Namespace(CPI(context), id);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, namespaceSymbol(), lamInfo);
     UNPROTECT(save);
@@ -83,7 +85,7 @@ static void addCurrentNamespaceToContext(LamContext *context, int id) {
 LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     inPreamble = true;
-    LamContext *env = newLamContext(COPY_PARSER_INFO(prog), NULL);
+    LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
     addCurrentNamespaceToContext(env, NS_GLOBAL);
     LamExp *result = lamConvertDefsNsAndExprs(prog->preamble, prog->namespaces, prog->body, env);
@@ -94,7 +96,7 @@ LamExp *lamConvertProg(AstProg *prog) {
 
 static LamExp *convertNest(AstNest *nest, LamContext *env) {
     ENTER(convertNest);
-    env = newLamContext(COPY_PARSER_INFO(nest), env);
+    env = newLamContext(CPI(nest), env);
     int save = PROTECT(env);
     LamExp *result = lamConvertDefsNsAndExprs(nest->definitions, NULL, nest->expressions, env);
     PROTECT(result);
@@ -105,7 +107,7 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
 
 static void addConstructorInfoToLamContext(LamContext *context, HashSymbol *symbol,
                          LamTypeConstructorInfo *info) {
-    LamInfo *lamInfo = newLamInfo_TypeConstructorInfo(COPY_PARSER_INFO(context), info);
+    LamInfo *lamInfo = newLamInfo_TypeConstructorInfo(CPI(context), info);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, symbol, lamInfo);
     UNPROTECT(save);
@@ -115,7 +117,7 @@ static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, 
     char buf[80];
     sprintf(buf, NS_FORMAT, namespace);
     HashSymbol *symbol = newSymbol(buf);
-    LamInfo *lamInfo = newLamInfo_NamespaceInfo(COPY_PARSER_INFO(context), info);
+    LamInfo *lamInfo = newLamInfo_NamespaceInfo(CPI(context), info);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, symbol, lamInfo);
     UNPROTECT(save);
@@ -139,12 +141,12 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
         PROTECT(namespaces);
         for (Index i = 0; i < nsArray->size; ++i) {
             AstNamespaceImpl *namespace = nsArray->entries[i];
-            LamContext *nsEnv = newLamContext(COPY_PARSER_INFO(env), env);
+            LamContext *nsEnv = newLamContext(CPI(env), env);
             int save2 = PROTECT(nsEnv);
             addCurrentNamespaceToContext(env, (int) i);
-            AstExpression *envToken = newAstExpression_Env(COPY_PARSER_INFO(namespace));
+            AstExpression *envToken = newAstExpression_Env(CPI(namespace));
             PROTECT(envToken);
-            AstExpressions *body = newAstExpressions(COPY_PARSER_INFO(namespace), envToken, NULL);
+            AstExpressions *body = newAstExpressions(CPI(namespace), envToken, NULL);
             PROTECT(body);
             LamExp *lamNamespace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
             PROTECT(lamNamespace);
@@ -156,29 +158,29 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
     LamSequence *body = convertSequence(expressions, env);
     PROTECT(body);
     if (namespaces != NULL && namespaces->size > 0) {
-        LamExp *lamNamespaces = newLamExp_Namespaces(COPY_PARSER_INFO(env), namespaces);
+        LamExp *lamNamespaces = newLamExp_Namespaces(CPI(env), namespaces);
         PROTECT(lamNamespaces);
-        body = newLamSequence(COPY_PARSER_INFO(env), lamNamespaces, body);
+        body = newLamSequence(CPI(env), lamNamespaces, body);
         PROTECT(body);
     }
-    LamExp *letRecBody = newLamExp_List(COPY_PARSER_INFO(body), body);
+    LamExp *letRecBody = newLamExp_List(CPI(body), body);
     PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
         LamLetRec *letRec =
-            newLamLetRec(COPY_PARSER_INFO(letRecBody), countLamLetRecBindings(funcDefsList), funcDefsList,
+            newLamLetRec(CPI(letRecBody), countLamLetRecBindings(funcDefsList), funcDefsList,
                          letRecBody);
         PROTECT(letRec);
-        result = newLamExp_Letrec(COPY_PARSER_INFO(letRec), letRec);
+        result = newLamExp_Letrec(CPI(letRec), letRec);
     } else {
-        result = newLamExp_List(COPY_PARSER_INFO(body), body);
+        result = newLamExp_List(CPI(body), body);
     }
     PROTECT(result);
     if (typeDefList != NULL) {
-        LamTypeDefs *typeDefs = newLamTypeDefs(COPY_PARSER_INFO(typeDefList), typeDefList, result);
+        LamTypeDefs *typeDefs = newLamTypeDefs(CPI(typeDefList), typeDefList, result);
         PROTECT(typeDefs);
         result =
-            newLamExp_Typedefs(COPY_PARSER_INFO(typeDefs), typeDefs);
+            newLamExp_Typedefs(CPI(typeDefs), typeDefs);
     }
     UNPROTECT(save);
     LEAVE(lamConvertDefsNsAndExprs);
@@ -193,9 +195,9 @@ static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     PROTECT(consequent);
     LamExp *alternative = convertNest(iff->alternative, context);
     PROTECT(alternative);
-    LamIff *lamIff = newLamIff(COPY_PARSER_INFO(test), test, consequent, alternative);
+    LamIff *lamIff = newLamIff(CPI(test), test, consequent, alternative);
     PROTECT(lamIff);
-    LamExp *result = newLamExp_Iff(COPY_PARSER_INFO(test), lamIff);
+    LamExp *result = newLamExp_Iff(CPI(test), lamIff);
     UNPROTECT(save);
     LEAVE(lamConvertIff);
     return result;
@@ -205,9 +207,9 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     ENTER(lamConvertPrint);
     LamExp *exp = convertExpression(print->exp, context);
     int save = PROTECT(exp);
-    LamPrint *lamPrint = newLamPrint(COPY_PARSER_INFO(exp), exp);
+    LamPrint *lamPrint = newLamPrint(CPI(exp), exp);
     PROTECT(lamPrint);
-    LamExp *result = newLamExp_Print(COPY_PARSER_INFO(lamPrint), lamPrint);
+    LamExp *result = newLamExp_Print(CPI(lamPrint), lamPrint);
     UNPROTECT(save);
     LEAVE(lamConvertPrint);
     return result;
@@ -216,7 +218,7 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
 static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
     LamList *expressions = convertExpressions(tuple, env);
     int save = PROTECT(expressions);
-    LamExp *res = newLamExp_Make_tuple(COPY_PARSER_INFO(expressions), expressions);
+    LamExp *res = newLamExp_Make_tuple(CPI(expressions), expressions);
     UNPROTECT(save);
     return res;
 }
@@ -225,9 +227,9 @@ static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
     LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookup *llu = newLamLookup(COPY_PARSER_INFO(lookup), lookup->namespace, lookup->name, expression);
+    LamLookup *llu = newLamLookup(CPI(lookup), lookup->namespace, lookup->name, expression);
     PROTECT(llu);
-    LamExp *res = newLamExp_Lookup(COPY_PARSER_INFO(lookup), llu);
+    LamExp *res = newLamExp_Lookup(CPI(lookup), llu);
     UNPROTECT(save);
     return res;
 }
@@ -252,7 +254,7 @@ static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
         return NULL;
     LamTypeArgs *next = convertTypeSymbols(symbols->next);
     int save = PROTECT(next);
-    LamTypeArgs *this = newLamTypeArgs(COPY_PARSER_INFO(symbols), symbols->typeSymbol, next);
+    LamTypeArgs *this = newLamTypeArgs(CPI(symbols), symbols->typeSymbol, next);
     UNPROTECT(save);
     return this;
 }
@@ -260,23 +262,23 @@ static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
 static LamType *convertUserType(AstUserType *userType) {
     LamTypeArgs *args = convertTypeSymbols(userType->typeSymbols);
     int save = PROTECT(args);
-    LamType *res = newLamType(COPY_PARSER_INFO(userType), userType->symbol, args);
+    LamType *res = newLamType(CPI(userType), userType->symbol, args);
     UNPROTECT(save);
     return res;
 }
 
 static LamLookupSymbol *convertAstLookupSymbol(AstLookupSymbol *ls) {
-    return newLamLookupSymbol(COPY_PARSER_INFO(ls), ls->namespace, ls->name, ls->symbol);
+    return newLamLookupSymbol(CPI(ls), ls->namespace, ls->name, ls->symbol);
 }
 
 static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-            return newLamLookupOrSymbol_Symbol(COPY_PARSER_INFO(los), los->val.symbol);
+            return newLamLookupOrSymbol_Symbol(CPI(los), los->val.symbol);
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
             LamLookupSymbol *ls = convertAstLookupSymbol(los->val.lookup);
             int save = PROTECT(ls);
-            LamLookupOrSymbol *llos = newLamLookupOrSymbol_Lookup(COPY_PARSER_INFO(los), ls);
+            LamLookupOrSymbol *llos = newLamLookupOrSymbol_Lookup(CPI(los), ls);
             UNPROTECT(save);
             return llos;
         }
@@ -292,7 +294,7 @@ static LamTypeFunction *convertAstTypeFunction(AstTypeFunction
     int save = PROTECT(lamTypeConstructorArgs);
     LamLookupOrSymbol *los = convertAstLookupOrSymbol(astTypeFunction->symbol);
     PROTECT(los);
-    LamTypeFunction *this = newLamTypeFunction(COPY_PARSER_INFO(los), los, lamTypeConstructorArgs);
+    LamTypeFunction *this = newLamTypeFunction(CPI(los), los, lamTypeConstructorArgs);
     UNPROTECT(save);
     return this;
 }
@@ -302,21 +304,21 @@ static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
     switch (astTypeClause->type) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
             return
-                newLamTypeConstructorType_Integer(COPY_PARSER_INFO(astTypeClause));
+                newLamTypeConstructorType_Integer(CPI(astTypeClause));
             break;
         case AST_TYPECLAUSE_TYPE_CHARACTER:
             return
-                newLamTypeConstructorType_Character(COPY_PARSER_INFO(astTypeClause));
+                newLamTypeConstructorType_Character(CPI(astTypeClause));
             break;
         case AST_TYPECLAUSE_TYPE_VAR:
-            return newLamTypeConstructorType_Var(COPY_PARSER_INFO(astTypeClause), astTypeClause->val.var);
+            return newLamTypeConstructorType_Var(CPI(astTypeClause), astTypeClause->val.var);
             break;
         case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:{
                 LamTypeFunction *lamTypeFunction =
                     convertAstTypeFunction(astTypeClause->val.typeFunction);
                 int save = PROTECT(lamTypeFunction);
                 LamTypeConstructorType *this =
-                    newLamTypeConstructorType_Function(COPY_PARSER_INFO(astTypeClause), lamTypeFunction);
+                    newLamTypeConstructorType_Function(CPI(astTypeClause), lamTypeFunction);
                 UNPROTECT(save);
                 return this;
             }
@@ -326,7 +328,7 @@ static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
                 convertAstTypeList(astTypeClause->val.typeTuple);
             int save = PROTECT(lamTypeConstructorArgs);
             LamTypeConstructorType *this =
-                newLamTypeConstructorType_Tuple(COPY_PARSER_INFO(astTypeClause), lamTypeConstructorArgs);
+                newLamTypeConstructorType_Tuple(CPI(astTypeClause), lamTypeConstructorArgs);
             UNPROTECT(save);
             return this;
         }
@@ -340,13 +342,13 @@ static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
 
 static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
                                   LamTypeConstructorType *rhs) {
-    LamTypeConstructorArgs *rhsArg = newLamTypeConstructorArgs(COPY_PARSER_INFO(rhs), rhs, NULL);
+    LamTypeConstructorArgs *rhsArg = newLamTypeConstructorArgs(CPI(rhs), rhs, NULL);
     int save = PROTECT(rhsArg);
-    LamTypeConstructorArgs *args = newLamTypeConstructorArgs(COPY_PARSER_INFO(lhs), lhs, rhsArg);
-    PROTECT(args);
-    LamLookupOrSymbol *los = newLamLookupOrSymbol_Symbol(COPY_PARSER_INFO(lhs), arrowSymbol());
+    LamTypeConstructorArgs *argss = newLamTypeConstructorArgs(CPI(lhs), lhs, rhsArg);
+    PROTECT(argss);
+    LamLookupOrSymbol *los = newLamLookupOrSymbol_Symbol(CPI(lhs), arrowSymbol());
     PROTECT(los);
-    LamTypeFunction *res = newLamTypeFunction(COPY_PARSER_INFO(lhs), los, args);
+    LamTypeFunction *res = newLamTypeFunction(CPI(lhs), los, argss);
     UNPROTECT(save);
     return res;
 }
@@ -361,7 +363,7 @@ static LamTypeConstructorType *convertAstType(AstType *astType) {
         LamTypeFunction *arrow = makeArrow(this, next);
         PROTECT(arrow);
         LamTypeConstructorType *res =
-            newLamTypeConstructorType_Function(COPY_PARSER_INFO(astType), arrow);
+            newLamTypeConstructorType_Function(CPI(astType), arrow);
         UNPROTECT(save);
         return res;
     } else {
@@ -376,39 +378,105 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
     int save = PROTECT(next);
     LamTypeConstructorType *arg = convertAstType(typeList->type);
     PROTECT(arg);
-    LamTypeConstructorArgs *this = newLamTypeConstructorArgs(COPY_PARSER_INFO(arg), arg, next);
+    LamTypeConstructorArgs *this = newLamTypeConstructorArgs(CPI(arg), arg, next);
     UNPROTECT(save);
     return this;
 }
 
-static void collectTypeInfo(HashSymbol *symbol, LamTypeConstructor *type,
+static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap) {
+    if (typeMap == NULL)
+        return NULL;
+    LamTypeConstructorArgs *next = convertAstTypeMap(typeMap->next);
+    int save = PROTECT(next);
+    LamTypeConstructorType *arg = convertAstType(typeMap->type);
+    PROTECT(arg);
+    LamTypeConstructorArgs *this = newLamTypeConstructorArgs(CPI(arg), arg, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args) {
+    if (args == NULL) {
+        return NULL;
+    }
+    switch (args->type) {
+        case AST_TYPECONSTRUCTORARGS_TYPE_LIST:{
+            return convertAstTypeList(args->val.list);
+        }
+        case AST_TYPECONSTRUCTORARGS_TYPE_MAP:{
+            return convertAstTypeMap(args->val.map);
+        }
+        default:
+            cant_happen("unrecognized %s", astTypeConstructorArgsTypeName(args->type));
+    }
+}
+
+static LamTypeTags *astTypeConstructorArgMapToTags(AstTypeMap *map) {
+    if (map == NULL) return NULL;
+    LamTypeTags *next = astTypeConstructorArgMapToTags(map->next);
+    int save = PROTECT(next);
+    LamTypeTags *this = newLamTypeTags(CPI(map), map->key, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamTypeTags *makeLamTypeTags(AstTypeConstructorArgs *args) {
+    if (args == NULL) {
+        return NULL;
+    }
+    switch (args->type) {
+        case AST_TYPECONSTRUCTORARGS_TYPE_LIST:
+            return NULL;
+        case AST_TYPECONSTRUCTORARGS_TYPE_MAP:
+            return astTypeConstructorArgMapToTags(args->val.map);
+        default:
+            cant_happen("unrecognized %s", astTypeConstructorArgsTypeName(args->type));
+    }
+}
+
+static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args, LamTypeConstructor *type,
                             bool needsVec, int enumCount, int index,
                             int arity, LamContext *env) {
     ENTER(collectTypeInfo);
     int namespace = lookupCurrentNamespaceInLamContext(env);
+    LamTypeTags *tags = makeLamTypeTags(args);
+    int save = PROTECT(tags);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(COPY_PARSER_INFO(type), symbol, namespace, type, needsVec,
+        newLamTypeConstructorInfo(CPI(type), symbol, namespace, type, tags, needsVec,
                                   arity, enumCount, index);
-    int save = PROTECT(info);
+    PROTECT(info);
     addConstructorInfoToLamContext(env, symbol, info);
     UNPROTECT(save);
     LEAVE(collectTypeInfo);
 }
 
-static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
-                                                  *typeConstructor,
+static Index countAstTypeConstructorArgs(AstTypeConstructorArgs *args) {
+    if (args == NULL) return 0;
+    switch (args->type) {
+        case AST_TYPECONSTRUCTORARGS_TYPE_LIST:{
+            return countAstTypeList(args->val.list);
+        }
+        case AST_TYPECONSTRUCTORARGS_TYPE_MAP:{
+            return countAstTypeMap(args->val.map);
+        }
+        default:
+            cant_happen("unrecognized %s", astTypeConstructorArgsTypeName(args->type));
+    }
+}
+
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstructor,
                                                   LamType *type,
                                                   int enumCount, int index,
                                                   bool needsVec,
                                                   LamContext *env) {
-    int nargs = countAstTypeList(typeConstructor->typeList);
+    int nargs = countAstTypeConstructorArgs(typeConstructor->args);
     LamTypeConstructorArgs *args =
-        convertAstTypeList(typeConstructor->typeList);
+        convertAstTypeConstructorArgs(typeConstructor->args);
     int save = PROTECT(args);
     LamTypeConstructor *lamTypeConstructor =
-        newLamTypeConstructor(COPY_PARSER_INFO(type), typeConstructor->symbol, type, args);
+        newLamTypeConstructor(CPI(type), typeConstructor->symbol, type, args);
     PROTECT(lamTypeConstructor);
-    collectTypeInfo(typeConstructor->symbol, lamTypeConstructor, needsVec,
+    collectTypeInfo(typeConstructor->symbol, typeConstructor->args, lamTypeConstructor, needsVec,
                     enumCount, index, nargs, env);
     UNPROTECT(save);
     return lamTypeConstructor;
@@ -433,14 +501,14 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
                                    env);
         int save3 = PROTECT(lamTypeConstructor);
         lamTypeConstructorList =
-            newLamTypeConstructorList(COPY_PARSER_INFO(lamTypeConstructor), lamTypeConstructor,
+            newLamTypeConstructorList(CPI(lamTypeConstructor), lamTypeConstructor,
                                       lamTypeConstructorList);
         REPLACE_PROTECT(save2, lamTypeConstructorList);
         UNPROTECT(save3);
         typeBody = typeBody->next;
         index++;
     }
-    LamTypeDef *res = newLamTypeDef(COPY_PARSER_INFO(type), type, lamTypeConstructorList);
+    LamTypeDef *res = newLamTypeDef(CPI(type), type, lamTypeConstructorList);
     UNPROTECT(save);
     return res;
 }
@@ -456,7 +524,7 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
         int save = PROTECT(lamTypeDef);
         LamTypeDefList *rest = collectTypeDefs(definitions->next, env);
         PROTECT(rest);
-        LamTypeDefList *res = newLamTypeDefList(COPY_PARSER_INFO(lamTypeDef), lamTypeDef, rest);
+        LamTypeDefList *res = newLamTypeDefList(CPI(lamTypeDef), lamTypeDef, rest);
         UNPROTECT(save);
         return res;
     } else {
@@ -491,7 +559,7 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
 static bool typeHasFields(AstTypeBody *typeBody) {
     ENTER(typeHasFields);
     while (typeBody != NULL) {
-        if (typeBody->typeConstructor->typeList != NULL) {
+        if (typeBody->typeConstructor->args != NULL) {
             return true;
         }
         typeBody = typeBody->next;
@@ -516,7 +584,7 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
-        newLamLetRecBindings(COPY_PARSER_INFO(define), dollarSubstitute(define->symbol), exp, next);
+        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol), exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
@@ -562,50 +630,50 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
 
 static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
     CHECK_ONE_ARG(makeUnaryOp, args);
-    LamUnaryApp *app = newLamUnaryApp(COPY_PARSER_INFO(args), opCode, args->exp);
+    LamUnaryApp *app = newLamUnaryApp(CPI(args), opCode, args->exp);
     int save = PROTECT(app);
-    LamExp *exp = newLamExp_Unary(COPY_PARSER_INFO(app), app);
+    LamExp *exp = newLamExp_Unary(CPI(app), app);
     UNPROTECT(save);
     return exp;
 }
 
 static LamExp *makeCallCC(LamList *args) {
     CHECK_ONE_ARG(makeCallCC, args);
-    return newLamExp_Callcc(COPY_PARSER_INFO(args), args->exp);
+    return newLamExp_Callcc(CPI(args), args->exp);
 }
 
 static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
     CHECK_TWO_ARGS(makeBinOp, args);
-    LamPrimApp *app = newLamPrimApp(COPY_PARSER_INFO(args), opCode, args->exp, args->next->exp);
+    LamPrimApp *app = newLamPrimApp(CPI(args), opCode, args->exp, args->next->exp);
     int save = PROTECT(app);
-    LamExp *exp = newLamExp_Prim(COPY_PARSER_INFO(app), app);
+    LamExp *exp = newLamExp_Prim(CPI(app), app);
     UNPROTECT(save);
     return exp;
 }
 
 static LamExp *makeLamAnd(LamList *args) {
     CHECK_TWO_ARGS(makeLamAnd, args);
-    LamAnd *lamAnd = newLamAnd(COPY_PARSER_INFO(args), args->exp, args->next->exp);
+    LamAnd *lamAnd = newLamAnd(CPI(args), args->exp, args->next->exp);
     int save = PROTECT(lamAnd);
-    LamExp *res = newLamExp_And(COPY_PARSER_INFO(lamAnd), lamAnd);
+    LamExp *res = newLamExp_And(CPI(lamAnd), lamAnd);
     UNPROTECT(save);
     return res;
 }
 
 static LamExp *makeLamOr(LamList *args) {
     CHECK_TWO_ARGS(makeLamOr, args);
-    LamOr *lamOr = newLamOr(COPY_PARSER_INFO(args), args->exp, args->next->exp);
+    LamOr *lamOr = newLamOr(CPI(args), args->exp, args->next->exp);
     int save = PROTECT(lamOr);
-    LamExp *res = newLamExp_Or(COPY_PARSER_INFO(lamOr), lamOr);
+    LamExp *res = newLamExp_Or(CPI(lamOr), lamOr);
     UNPROTECT(save);
     return res;
 }
 
 static LamExp *makeLamAmb(LamList *args) {
     CHECK_TWO_ARGS(makeLamAmb, args);
-    LamAmb *lamAmb = newLamAmb(COPY_PARSER_INFO(args), args->exp, args->next->exp);
+    LamAmb *lamAmb = newLamAmb(CPI(args), args->exp, args->next->exp);
     int save = PROTECT(lamAmb);
-    LamExp *res = newLamExp_Amb(COPY_PARSER_INFO(lamAmb), lamAmb);
+    LamExp *res = newLamExp_Amb(CPI(lamAmb), lamAmb);
     UNPROTECT(save);
     return res;
 }
@@ -663,15 +731,15 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
 static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
     LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
     if (info != NULL) {
-        return newLamExp_Constructor(COPY_PARSER_INFO(info), info);
+        return newLamExp_Constructor(CPI(info), info);
     }
     return NULL;
 }
 
 static LamExp *makeApplication(LamExp *fun, LamList *args) {
-    LamApply *apply = newLamApply(COPY_PARSER_INFO(fun), fun, args);
+    LamApply *apply = newLamApply(CPI(fun), fun, args);
     int save = PROTECT(apply);
-    LamExp *result = newLamExp_Apply(COPY_PARSER_INFO(apply), apply);
+    LamExp *result = newLamExp_Apply(CPI(apply), apply);
     UNPROTECT(save);
     return result;
 }
@@ -680,9 +748,9 @@ static LamList *varListToList(LamVarList *list) {
     if (list == NULL) return NULL;
     LamList *next = varListToList(list->next);
     int save = PROTECT(next);
-    LamExp *var = newLamExp_Var(COPY_PARSER_INFO(list), list->var);
+    LamExp *var = newLamExp_Var(CPI(list), list->var);
     PROTECT(var);
-    LamList *this = newLamList(COPY_PARSER_INFO(var), var, next);
+    LamList *this = newLamList(CPI(var), var, next);
     UNPROTECT(save);
     return this;
 }
@@ -736,26 +804,26 @@ static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
     LamExp *result;
     int arity = findUnderlyingArity(constructor);
     if (nargs < arity) {
-        LamVarList *fargs = genSymVarList(COPY_PARSER_INFO(constructor), arity);
+        LamVarList *fargs = genSymVarList(CPI(constructor), arity);
         int save = PROTECT(fargs);
         LamList *aargs = varListToList(fargs);
         PROTECT(aargs);
-        LamApply *innerApply = newLamApply(COPY_PARSER_INFO(constructor), constructor, aargs);
+        LamApply *innerApply = newLamApply(CPI(constructor), constructor, aargs);
         PROTECT(innerApply);
-        LamExp *applyExp = newLamExp_Apply(COPY_PARSER_INFO(innerApply), innerApply);
+        LamExp *applyExp = newLamExp_Apply(CPI(innerApply), innerApply);
         PROTECT(applyExp);
-        LamLam *lambda = newLamLam(COPY_PARSER_INFO(fargs), fargs, applyExp);
+        LamLam *lambda = newLamLam(CPI(fargs), fargs, applyExp);
         PROTECT(lambda);
-        LamExp *lamExp = newLamExp_Lam(COPY_PARSER_INFO(lambda), lambda);
+        LamExp *lamExp = newLamExp_Lam(CPI(lambda), lambda);
         PROTECT(lamExp);
-        LamApply *apply = newLamApply(COPY_PARSER_INFO(lamExp), lamExp, args);
+        LamApply *apply = newLamApply(CPI(lamExp), lamExp, args);
         PROTECT(apply);
-        result = newLamExp_Apply(COPY_PARSER_INFO(apply), apply);
+        result = newLamExp_Apply(CPI(apply), apply);
         UNPROTECT(save);
     } else {
-        LamApply *apply = newLamApply(COPY_PARSER_INFO(constructor), constructor, args);
+        LamApply *apply = newLamApply(CPI(constructor), constructor, args);
         int save = PROTECT(apply);
-        result = newLamExp_Apply(COPY_PARSER_INFO(apply), apply);
+        result = newLamExp_Apply(CPI(apply), apply);
         UNPROTECT(save);
     }
     return result;
@@ -811,7 +879,7 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
         PROTECT(actions[i]);
         argLists[i] = func->argList;
     }
-    LamLam *result = tpmcConvert(COPY_PARSER_INFO(fun), nargs, nBodies, argLists, actions, env);
+    LamLam *result = tpmcConvert(CPI(fun), nargs, nBodies, argLists, actions, env);
     PROTECT(result);
     FREE_ARRAY(LamExp *, actions, nBodies);
     FREE_ARRAY(AstArgList *, argLists, nBodies);
@@ -828,7 +896,7 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
     LamLam *lambda = convertCompositeBodies(nargs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
     int save = PROTECT(lambda);
-    LamExp *result = newLamExp_Lam(COPY_PARSER_INFO(lambda), lambda);
+    LamExp *result = newLamExp_Lam(CPI(lambda), lambda);
     UNPROTECT(save);
     LEAVE(convertCompositeFun);
     return result;
@@ -852,7 +920,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     switch (expression->type) {
         case AST_EXPRESSION_TYPE_BACK:
             DEBUG("back");
-            result = newLamExp_Back(COPY_PARSER_INFO(expression));
+            result = newLamExp_Back(CPI(expression));
             break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             DEBUG("funcall");
@@ -860,22 +928,22 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
             DEBUG("symbol");
-            result = convertSymbol(COPY_PARSER_INFO(expression), expression->val.symbol, env);
+            result = convertSymbol(CPI(expression), expression->val.symbol, env);
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             DEBUG("number");
             result =
-                newLamExp_Biginteger(COPY_PARSER_INFO(expression), expression->val.number);
+                newLamExp_Biginteger(CPI(expression), expression->val.number);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             DEBUG("character");
             result =
-                newLamExp_Character(COPY_PARSER_INFO(expression), expression->val.character);
+                newLamExp_Character(CPI(expression), expression->val.character);
             break;
         case AST_EXPRESSION_TYPE_ENV:
             DEBUG("env");
             result =
-                newLamExp_Env(COPY_PARSER_INFO(expression));
+                newLamExp_Env(CPI(expression));
             break;
         case AST_EXPRESSION_TYPE_FUN:
             DEBUG("fun");
@@ -918,7 +986,7 @@ static LamList *convertExpressions(AstExpressions *expressions,
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
     (void) PROTECT(exp);
-    LamList *this = newLamList(COPY_PARSER_INFO(exp), exp, next);
+    LamList *this = newLamList(CPI(exp), exp, next);
     UNPROTECT(save);
     return this;
 }
@@ -931,7 +999,7 @@ static LamSequence *convertSequence(AstExpressions *expressions,
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
     (void) PROTECT(exp);
-    LamSequence *this = newLamSequence(COPY_PARSER_INFO(exp), exp, next);
+    LamSequence *this = newLamSequence(CPI(exp), exp, next);
     UNPROTECT(save);
     return this;
 }

@@ -174,7 +174,7 @@ structs:
         constructors: LamTypeConstructorList
 
     LamTypeConstructorList:
-        constructor: LamTypeConstructor # re-use
+        constructor: LamTypeConstructor
         next: LamTypeConstructorList
 
     # the following LamType* structs hold type information
@@ -182,6 +182,10 @@ structs:
     LamType:
         name: HashSymbol
         args: LamTypeArgs
+
+    LamTypeTags:
+        key: HashSymbol
+        next: LamTypeTags
 
     LamTypeArgs:
         name: HashSymbol
@@ -195,7 +199,7 @@ structs:
     LamTypeConstructorArgs:
         arg: LamTypeConstructorType
         next: LamTypeConstructorArgs
-
+    
     LamTypeFunction:
         name: LamLookupOrSymbol
         args: LamTypeConstructorArgs
@@ -204,6 +208,7 @@ structs:
         name: HashSymbol
         namespace: int
         type: LamTypeConstructor
+        tags: LamTypeTags
         needsVec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
         size: int # number of alternatives

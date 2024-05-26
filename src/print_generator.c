@@ -52,7 +52,7 @@ LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
     next = makePrintFunctions(typeDefs->next, next, env, inPreamble);
     int save = PROTECT(next);
 
-    next = makePrintFunction(COPY_PARSER_INFO(typeDefs->typeDef), typeDefs->typeDef, next, env, inPreamble);
+    next = makePrintFunction(CPI(typeDefs->typeDef), typeDefs->typeDef, next, env, inPreamble);
 
     UNPROTECT(save);
     LEAVE(makePrintFunctions);
@@ -341,6 +341,16 @@ static LamExp *makePrintConstructorArg(ParserInfo I, LamTypeConstructorType *arg
     return res;
 }
 
+static HashSymbol *findNthTag(int index, LamTypeTags *tags) {
+    if (tags == NULL) {
+        cant_happen("reached end of tags");
+    }
+    if (index == 0) {
+        return tags->key;
+    }
+    return findNthTag(index - 1, tags->next);
+}
+
 static LamSequence *makeVecMatchParts(ParserInfo I, int index, LamTypeConstructorArgs *args,
                                       LamTypeConstructorInfo *info,
                                       LamSequence *tail) {
@@ -357,6 +367,18 @@ static LamSequence *makeVecMatchParts(ParserInfo I, int index, LamTypeConstructo
         PROTECT(next);
     }
     LamSequence *res = newLamSequence(I, exp, next);
+    PROTECT(res);
+    if (info->tags != NULL) {
+        HashSymbol *tag = findNthTag(index, info->tags);
+        LamExp *colon = makePutsString(I, ": ");
+        PROTECT(colon);
+        res = newLamSequence(I, colon, res);
+        PROTECT(res);
+        LamExp *name = makePutsString(I, tag->name);
+        PROTECT(name);
+        res = newLamSequence(I, name, res);
+        PROTECT(next);
+    }
     UNPROTECT(save);
     return res;
 }
@@ -365,18 +387,19 @@ static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     LamTypeConstructor *constructor = info->type;
     LamExp *header = makePlainMatchBody(I, constructor);
     int save = PROTECT(header);
-    LamExp *open = makePutsString(I, "(");
+    bool isStruct = info->tags != NULL;
+    LamExp *open = makePutsString(I, isStruct ? "{" : "(");
     PROTECT(open);
-    LamExp *close = makePutsString(I, ")");
+    LamExp *close = makePutsString(I, isStruct ? "}" : ")");
     PROTECT(close);
     LamSequence *seq = newLamSequence(I, close, NULL);
-    int save2 = PROTECT(seq);
+    PROTECT(seq);
     seq = makeVecMatchParts(I, 0, constructor->args, info, seq);
-    REPLACE_PROTECT(save2, seq);
+    PROTECT(seq);
     seq = newLamSequence(I, open, seq);
-    REPLACE_PROTECT(save2, seq);
+    PROTECT(seq);
     seq = newLamSequence(I, header, seq);
-    REPLACE_PROTECT(save2, seq);
+    PROTECT(seq);
     LamExp *res = newLamExp_List(I, seq);
     UNPROTECT(save);
     return res;

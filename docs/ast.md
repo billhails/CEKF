@@ -28,11 +28,14 @@ AstTypeSymbols --next--> AstTypeSymbols
 AstTypeBody --typeConstructor--> AstTypeConstructor
 AstTypeBody --next--> AstTypeBody
 AstTypeConstructor --symbol--> HashSymbol
-AstTypeConstructor --typeList--> AstTypeList
+AstTypeConstructor --args--> AstTypeConstructorArgs
 AstTypeFunction --symbol--> AstLookupOrSymbol
 AstTypeFunction --typeList--> AstTypeList
 AstTypeList --type--> AstType
 AstTypeList --next--> AstTypeList
+AstTypeMap --key--> HashSymbol
+AstTypeMap --type--> AstType
+AstTypeMap --next--> AstTypeMap
 AstType --typeClause--> AstTypeClause
 AstType --next--> AstType
 AstCompositeFunction --function--> AstFunction
@@ -66,6 +69,8 @@ AstOperator --name--> HashSymbol
 AstOperator --position--> AstPosition
 AstOperator --precedence--> index
 AstPrint --exp--> AstExpression
+AstTypeConstructorArgs --list--> AstTypeList
+AstTypeConstructorArgs --map--> AstTypeMap
 AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
@@ -100,6 +105,8 @@ AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstTypeConstructorArgsVal
+AstTypeConstructorArgsType
 AstLookupOrSymbolVal
 AstLookupOrSymbolType
 AstDefinitionVal

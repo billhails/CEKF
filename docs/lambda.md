@@ -90,6 +90,8 @@ LamTypeConstructorList --constructor--> LamTypeConstructor
 LamTypeConstructorList --next--> LamTypeConstructorList
 LamType --name--> HashSymbol
 LamType --args--> LamTypeArgs
+LamTypeTags --key--> HashSymbol
+LamTypeTags --next--> LamTypeTags
 LamTypeArgs --name--> HashSymbol
 LamTypeArgs --next--> LamTypeArgs
 LamTypeConstructor --name--> HashSymbol
@@ -102,6 +104,7 @@ LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
 LamTypeConstructorInfo --namespace--> int
 LamTypeConstructorInfo --type--> LamTypeConstructor
+LamTypeConstructorInfo --tags--> LamTypeTags
 LamTypeConstructorInfo --needsVec--> bool
 LamTypeConstructorInfo --arity--> int
 LamTypeConstructorInfo --size--> int

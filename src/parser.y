@@ -165,8 +165,8 @@ static AstCharArray *newCharArray(char *str) {
 
 static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions, AstCompositeFunction *rest) {
     for (AstAltArgs *args = functions->altArgs; args != NULL; args = args->next) {
-        AstFunction *this = newAstFunction(COPY_PARSER_INFO(args), args->argList, copyAstNest(functions->nest));
-        rest = newAstCompositeFunction(COPY_PARSER_INFO(args), this, rest);
+        AstFunction *this = newAstFunction(CPI(args), args->argList, copyAstNest(functions->nest));
+        rest = newAstCompositeFunction(CPI(args), this, rest);
     }
     return rest;
 }
@@ -316,6 +316,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstNamespace *namespace;
     AstLookup *lookup;
     AstLookupOrSymbol *los;
+    AstTypeConstructorArgs *typeConstructorArgs;
+    AstTypeMap *typemap;
 }
 
 %type <chars> str
@@ -349,6 +351,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <namespace> name_space
 %type <lookup> look_up
 %type <los> scoped_symbol
+%type <typeConstructorArgs> type_constructor_args
+%type <typemap> type_map
 
 %token BACK
 %token ELSE
@@ -469,14 +473,18 @@ type_body : type_constructor                { $$ = newAstTypeBody(PIM(mod), $1, 
           ;
 
 /* a type constructor being defined */
-type_constructor : symbol                   { $$ = newAstTypeConstructor(PIM(mod), $1, NULL); }
-                 | symbol '(' type_list ')' { $$ = newAstTypeConstructor(PIM(mod), $1, $3); }
+type_constructor : symbol                       { $$ = newAstTypeConstructor(PIM(mod), $1, NULL); }
+                 | symbol type_constructor_args { $$ = newAstTypeConstructor(PIM(mod), $1, $2); }
                  ;
 
 /* a type function being used in the body of a type constructor */
 type_function : scoped_symbol                   { $$ = newAstTypeFunction(PIM(mod), $1, NULL); }
               | scoped_symbol '(' type_list ')' { $$ = newAstTypeFunction(PIM(mod), $1, $3); }
               ;
+
+type_constructor_args : '(' type_list ')'   { $$ = newAstTypeConstructorArgs_List(PIM(mod), $2); }
+                      | '{' type_map '}'    { $$ = newAstTypeConstructorArgs_Map(PIM(mod), $2); }
+                      ;
 
 scoped_symbol : symbol              { $$ = newAstLookupOrSymbol_Symbol(PIM(mod), $1); }
               | symbol '.' symbol   { $$ = makeAstLookupOrSymbol(mod, $1, $3); }
@@ -485,6 +493,10 @@ scoped_symbol : symbol              { $$ = newAstLookupOrSymbol_Symbol(PIM(mod),
 type_list : type                { $$ = newAstTypeList(PIM(mod), $1, NULL); }
           | type ',' type_list  { $$ = newAstTypeList(PIM(mod), $1, $3); }
           ;
+
+type_map : symbol ':' type              { $$ = newAstTypeMap(PIM(mod), $1, $3, NULL); }
+         | symbol ':' type ',' type_map { $$ = newAstTypeMap(PIM(mod), $1, $3, $5); }
+         ;
 
 type : type_clause              { $$ = newAstType(PIM(mod), $1, NULL); }
      | type_clause ARROW type   { $$ = newAstType(PIM(mod), $1, $3); }

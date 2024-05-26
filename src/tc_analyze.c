@@ -160,7 +160,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LAM:
             return prune(analyzeLam(exp->val.lam, env, ng));
         case LAMEXP_TYPE_VAR:
-            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.var, env, ng));
+            return prune(analyzeVar(CPI(exp), exp->val.var, env, ng));
         case LAMEXP_TYPE_STDINT:
             return prune(analyzeSmallInteger());
         case LAMEXP_TYPE_BIGINTEGER:
@@ -222,7 +222,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LOOKUP:
             return prune(analyzeLookup(exp->val.lookup, env, ng));
         case LAMEXP_TYPE_CONSTRUCTOR:
-            return prune(analyzeVar(COPY_PARSER_INFO(exp), exp->val.constructor->name, env, ng));
+            return prune(analyzeVar(CPI(exp), exp->val.constructor->name, env, ng));
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("encountered cond default in analyzeExp");
         default:
@@ -457,9 +457,9 @@ static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng) {
 static LamApply *constructToApply(LamConstruct *construct) {
     // ENTER(constructToApply);
     LamExp *constructor =
-        newLamExp_Var(COPY_PARSER_INFO(construct), construct->name);
+        newLamExp_Var(CPI(construct), construct->name);
     int save = PROTECT(constructor);
-    LamApply *apply = newLamApply(COPY_PARSER_INFO(construct), constructor, construct->args);
+    LamApply *apply = newLamApply(CPI(construct), constructor, construct->args);
     UNPROTECT(save);
     // LEAVE(constructToApply);
     return apply;
@@ -637,14 +637,14 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
                                      LamList *args) {
     if (nargs == 1) {
-        LamApply *res = newLamApply(COPY_PARSER_INFO(function), function, args);
+        LamApply *res = newLamApply(CPI(function), function, args);
         return res;
     }
-    LamList *singleArg = newLamList(COPY_PARSER_INFO(args), args->exp, NULL);
+    LamList *singleArg = newLamList(CPI(args), args->exp, NULL);
     int save = PROTECT(singleArg);
-    LamApply *new = newLamApply(COPY_PARSER_INFO(function), function, singleArg);
+    LamApply *new = newLamApply(CPI(function), function, singleArg);
     PROTECT(new);
-    LamExp *newFunction = newLamExp_Apply(COPY_PARSER_INFO(new), new);
+    LamExp *newFunction = newLamExp_Apply(CPI(new), new);
     PROTECT(newFunction);
     LamApply *curried =
         curryLamApplyHelper(nargs - 1, newFunction, args->next);
@@ -756,7 +756,7 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrint);
     TcType *type = analyzeExp(print->exp, env, ng);
     int save = PROTECT(type);
-    print->printer = compilePrinterForType(COPY_PARSER_INFO(print), type, env);
+    print->printer = compilePrinterForType(CPI(print), type, env);
     UNPROTECT(save);
     // LEAVE(analyzePrint);
     IFDEBUG(ppTcType(type));

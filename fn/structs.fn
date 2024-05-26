@@ -1,0 +1,4 @@
+let
+    typedef named_struct(#t) { named{name: list(char), value: list(#t)} | oopsie  }
+in
+    print(oopsie)
