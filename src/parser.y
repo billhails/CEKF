@@ -318,6 +318,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstLookupOrSymbol *los;
     AstTypeConstructorArgs *typeConstructorArgs;
     AstTypeMap *typemap;
+    AstStruct *structure;
+    AstTaggedExpressions *taggedExpressions;
 }
 
 %type <chars> str
@@ -353,6 +355,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <los> scoped_symbol
 %type <typeConstructorArgs> type_constructor_args
 %type <typemap> type_map
+%type <structure> structure
+%type <taggedExpressions> tagged_expressions
 
 %token BACK
 %token ELSE
@@ -634,6 +638,7 @@ named_farg : symbol '=' farg  { $$ = newAstNamedArg(PIM(mod), $1, $3); }
 
 expression : binop                { $$ = newAstExpression_FunCall(PIM(mod), $1); }
            | fun_call             { $$ = newAstExpression_FunCall(PIM(mod), $1); }
+           | structure            { $$ = newAstExpression_Structure(PIM(mod), $1); }
            | unop                 { $$ = newAstExpression_FunCall(PIM(mod), $1); }
            | '[' conslist ']'     { $$ = newAstExpression_FunCall(PIM(mod), $2); }
            | FN fun               { $$ = newAstExpression_Fun(PIM(mod), $2); }
@@ -660,6 +665,13 @@ unop : '-' expression %prec NEG   { $$ = unOpToFunCall(mod, negSymbol(), $2); }
 
 fun_call :  expression '(' expressions ')' { $$ = newAstFunCall(PIM(mod), $1, $3); }
          ;
+
+structure : symbol '{' tagged_expressions '}' { $$ = newAstStruct(PIM(mod), $1, $3); }
+          ;
+
+tagged_expressions : symbol ':' expression                         { $$ = newAstTaggedExpressions(PIM(mod), $1, $3, NULL); }
+                   | symbol ':' expression ',' tagged_expressions  { $$ = newAstTaggedExpressions(PIM(mod), $1, $3, $5); }
+                   ;
 
 tuple : '#' '(' expressions ')'   { $$ = $3; }
       ;

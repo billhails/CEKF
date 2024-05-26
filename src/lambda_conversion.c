@@ -66,6 +66,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
                                         AstNamespaceArray *nsArray,
                                         AstExpressions *expressions,
                                         LamContext *env);
+static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #  include "debugging_on.h"
@@ -796,6 +797,73 @@ static LamExp *findUnderlyingValue(LamExp *exp) {
     }
 }
 
+static void checkLamTagPresent(HashSymbol *tag, AstTaggedExpressions *astTags) {
+    if (astTags == NULL) {
+        cant_happen("missing tag %s", tag->name);
+    }
+    if (tag == astTags->tag) {
+        return;
+    }
+    checkLamTagPresent(tag, astTags->next);
+}
+
+static void checkAllTagsPresent(LamTypeTags *lamTags, AstTaggedExpressions *astTags) {
+    if (lamTags == NULL) return;
+    checkLamTagPresent(lamTags->tag, astTags);
+    checkAllTagsPresent(lamTags->next, astTags);
+}
+
+static void checkAstTagPresent(LamTypeTags *lamTags, HashSymbol *astTag) {
+    if (lamTags == NULL) {
+        cant_happen("missing constructor tag %s", astTag->name);
+    }
+    if (astTag == lamTags->tag) return;
+    checkAstTagPresent(lamTags->next, astTag);
+}
+
+static void checkNoUnrecognisedTags(LamTypeTags *lamTags, AstTaggedExpressions *astTags) {
+    if (astTags == NULL) return;
+    checkAstTagPresent(lamTags, astTags->tag);
+    checkNoUnrecognisedTags(lamTags, astTags->next);
+}
+
+static void checkTagNotDuplicate(HashSymbol *tag, AstTaggedExpressions *tags) {
+    if (tags == NULL) return;
+    if (tag == tags->tag) {
+        cant_happen("duplicate tag %s", tag->name);
+    }
+    checkTagNotDuplicate(tag, tags->next);
+}
+
+static void checkNoDuplicateTags(AstTaggedExpressions *tags) {
+    if (tags == NULL) return;
+    checkTagNotDuplicate(tags->tag, tags->next);
+    checkNoDuplicateTags(tags->next);
+}
+
+static AstExpression *findTaggedExpression(HashSymbol *tag, AstTaggedExpressions *tags) {
+#ifdef SAFETY_CHECKS
+    if (tags == NULL) {
+        cant_happen("cannot find value for tag %s", tag->name);
+    }
+#endif
+    if (tag == tags->tag) return tags->expression;
+    return findTaggedExpression(tag, tags->next);
+}
+
+static LamList *convertTagsToArgs(LamTypeTags *lamTags, AstTaggedExpressions *astTags, LamContext *env) {
+    // lamTags are in canonical order
+    if (lamTags == NULL) return NULL;
+    LamList *rest = convertTagsToArgs(lamTags->next, astTags, env);
+    int save = PROTECT(rest);
+    AstExpression *expression = findTaggedExpression(lamTags->tag, astTags);
+    LamExp *lamExp = convertExpression(expression, env);
+    PROTECT(lamExp);
+    LamList *this = newLamList(CPI(lamExp), lamExp, rest);
+    UNPROTECT(save);
+    return this;
+}
+
 // (costructor4 arg1 arg2) =>
 // ((lambda (x1 x2 x3 x4) (constructor4 x1 x2 x3 x4)) arg1 arg2)
 
@@ -826,6 +894,38 @@ static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
         result = newLamExp_Apply(CPI(apply), apply);
         UNPROTECT(save);
     }
+    return result;
+}
+
+static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpressions *tags, LamContext *env) {
+    if (constructor->val.constructor->tags == NULL) {
+        cant_happen("non-struct constructor applied to struct");
+    }
+    checkAllTagsPresent(constructor->val.constructor->tags, tags);
+    checkNoUnrecognisedTags(constructor->val.constructor->tags, tags);
+    checkNoDuplicateTags(tags);
+    int arity = constructor->val.constructor->arity;
+    int nargs = (int) countAstTaggedExpressions(tags);
+    if (nargs != arity) {
+        cant_happen("wrong number of args in structure application");
+    }
+    LamList *args = convertTagsToArgs(constructor->val.constructor->tags, tags, env);
+    int save = PROTECT(args);
+    LamApply *apply = newLamApply(CPI(constructor), constructor, args);
+    PROTECT(apply);
+    LamExp *result = newLamExp_Apply(CPI(apply), apply);
+    UNPROTECT(save);
+    return result;
+}
+
+static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
+    LamExp *constructor = makeConstructor(structure->symbol, env);
+    if (constructor == NULL) {
+        cant_happen("cannot find constructor %s", structure->symbol->name);
+    }
+    int save = PROTECT(constructor);
+    LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
+    UNPROTECT(save);
     return result;
 }
 
@@ -968,6 +1068,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_LOOKUP:
             DEBUG("lookup");
             result = lamConvertLookup(expression->val.lookup, env);
+            break;
+        case AST_EXPRESSION_TYPE_STRUCTURE:
+            DEBUG("structure");
+            result = convertStructure(expression->val.structure, env);
             break;
         default:
             cant_happen

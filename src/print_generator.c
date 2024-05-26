@@ -346,7 +346,7 @@ static HashSymbol *findNthTag(int index, LamTypeTags *tags) {
         cant_happen("reached end of tags");
     }
     if (index == 0) {
-        return tags->key;
+        return tags->tag;
     }
     return findNthTag(index - 1, tags->next);
 }

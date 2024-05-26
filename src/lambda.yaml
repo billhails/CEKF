@@ -184,7 +184,7 @@ structs:
         args: LamTypeArgs
 
     LamTypeTags:
-        key: HashSymbol
+        tag: HashSymbol
         next: LamTypeTags
 
     LamTypeArgs:

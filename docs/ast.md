@@ -69,6 +69,11 @@ AstOperator --name--> HashSymbol
 AstOperator --position--> AstPosition
 AstOperator --precedence--> index
 AstPrint --exp--> AstExpression
+AstStruct --symbol--> HashSymbol
+AstStruct --expressions--> AstTaggedExpressions
+AstTaggedExpressions --tag--> HashSymbol
+AstTaggedExpressions --expression--> AstExpression
+AstTaggedExpressions --next--> AstTaggedExpressions
 AstTypeConstructorArgs --list--> AstTypeList
 AstTypeConstructorArgs --map--> AstTypeMap
 AstLookupOrSymbol --symbol--> HashSymbol
@@ -101,6 +106,7 @@ AstExpression --iff--> AstIff
 AstExpression --print--> AstPrint
 AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
+AstExpression --structure--> AstStruct
 AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl

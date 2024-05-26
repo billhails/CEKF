@@ -90,7 +90,7 @@ LamTypeConstructorList --constructor--> LamTypeConstructor
 LamTypeConstructorList --next--> LamTypeConstructorList
 LamType --name--> HashSymbol
 LamType --args--> LamTypeArgs
-LamTypeTags --key--> HashSymbol
+LamTypeTags --tag--> HashSymbol
 LamTypeTags --next--> LamTypeTags
 LamTypeArgs --name--> HashSymbol
 LamTypeArgs --next--> LamTypeArgs

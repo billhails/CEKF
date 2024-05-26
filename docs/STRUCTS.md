@@ -210,7 +210,7 @@ least as a first attempt I'll say that the application of a constructor
 is limited to something like
 
 ```
-struct_application : scoped_symbol '{' tagged_fargs '}'
+struct_application : scoped_symbol '{' tagged_expressions '}'
                    ;
 ```
 

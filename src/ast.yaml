@@ -147,6 +147,15 @@ structs:
     AstPrint:
         exp: AstExpression
 
+    AstStruct:
+        symbol: HashSymbol
+        expressions: AstTaggedExpressions
+
+    AstTaggedExpressions:
+        tag: HashSymbol
+        expression: AstExpression
+        next: AstTaggedExpressions
+
 enums:
     AstPosition:
         - PREFIX
@@ -197,6 +206,7 @@ unions:
         print: AstPrint
         tuple: AstExpressions
         env: void_ptr
+        structure: AstStruct
 
 hashes:
     AstIntTable:

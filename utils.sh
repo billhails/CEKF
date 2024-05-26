@@ -10,6 +10,10 @@ cores () {
     ulimit -c unlimited
 }
 
+no_cores () {
+    ulimit -c 0
+}
+
 watch_make () {
     inotifywait -q -e close_write -m ./src |
     while read -r directory events filename; do
