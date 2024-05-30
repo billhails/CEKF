@@ -228,7 +228,7 @@ static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
     LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->nsid);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookup *llu = newLamLookup(CPI(lookup), lookup->nsid, lookup->name, expression);
+    LamLookup *llu = newLamLookup(CPI(lookup), lookup->nsid, lookup->nsSymbol, expression);
     PROTECT(llu);
     LamExp *res = newLamExp_Lookup(CPI(lookup), llu);
     UNPROTECT(save);
@@ -269,7 +269,7 @@ static LamType *convertUserType(AstUserType *userType) {
 }
 
 static LamLookupSymbol *convertAstLookupSymbol(AstLookupSymbol *ls) {
-    return newLamLookupSymbol(CPI(ls), ls->nsid, ls->name, ls->symbol);
+    return newLamLookupSymbol(CPI(ls), ls->nsid, ls->nsSymbol, ls->symbol);
 }
 
 static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {

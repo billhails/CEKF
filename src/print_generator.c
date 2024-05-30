@@ -242,7 +242,7 @@ static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
 static LamExp *wrapTypeFunction(ParserInfo I, LamExp *res, LamLookupOrSymbol *los) {
     if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
         LamLookupSymbol *ls = los->val.lookup;
-        LamLookup *llu = newLamLookup(I, ls->nsid, ls->name, res);
+        LamLookup *llu = newLamLookup(I, ls->nsid, ls->nsSymbol, res);
         int save = PROTECT(llu);
         res = newLamExp_Lookup(I, llu);
         UNPROTECT(save);

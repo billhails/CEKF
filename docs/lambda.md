@@ -22,10 +22,10 @@ LamList --next--> LamList
 LamApply --function--> LamExp
 LamApply --args--> LamList
 LamLookup --nsid--> int
-LamLookup --name--> HashSymbol
+LamLookup --nsSymbol--> HashSymbol
 LamLookup --exp--> LamExp
 LamLookupSymbol --nsid--> int
-LamLookupSymbol --name--> HashSymbol
+LamLookupSymbol --nsSymbol--> HashSymbol
 LamLookupSymbol --symbol--> HashSymbol
 LamConstant --name--> HashSymbol
 LamConstant --tag--> int

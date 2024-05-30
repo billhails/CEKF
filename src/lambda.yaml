@@ -58,12 +58,12 @@ structs:
 
     LamLookup:
         nsid: int
-        name: HashSymbol
+        nsSymbol: HashSymbol
         exp: LamExp
 
     LamLookupSymbol:
         nsid: int
-        name: HashSymbol
+        nsSymbol: HashSymbol
         symbol: HashSymbol
 
     LamConstant:

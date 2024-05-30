@@ -126,12 +126,12 @@ structs:
 
     AstLookupSymbol:
         nsid: int
-        name: HashSymbol
+        nsSymbol: HashSymbol
         symbol: HashSymbol
 
     AstLookup:
         nsid: int
-        name: HashSymbol
+        nsSymbol: HashSymbol
         expression: AstExpression
 
     AstIff:

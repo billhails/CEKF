@@ -211,7 +211,7 @@ void ppLamExp(LamExp *exp) {
 }
 
 void ppLamLookup(LamLookup *lookup) {
-    eprintf("(lookup %s:%d ", lookup->name == NULL ? "" : lookup->name->name, lookup->nsid);
+    eprintf("(lookup %s:%d ", lookup->nsSymbol == NULL ? "" : lookup->nsSymbol->name, lookup->nsid);
     ppLamExp(lookup->exp);
     eprintf(")");
 }
@@ -591,7 +591,7 @@ static void _ppLamType(LamType *type) {
 }
 
 static void ppLookupSymbol(LamLookupSymbol *ls) {
-    eprintf("(lookup %s:%d %s)", ls->name->name, ls->nsid, ls->symbol->name);
+    eprintf("(lookup %s:%d %s)", ls->nsSymbol->name, ls->nsid, ls->symbol->name);
 }
 
 static void ppLookupOrSymbol(LamLookupOrSymbol *los) {
