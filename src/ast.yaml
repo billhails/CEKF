@@ -124,7 +124,7 @@ structs:
         expression: AstExpression
         next: AstExpressions
 
-    AstLookupSymbol: # specific to type functions
+    AstLookupSymbol:
         namespace: int
         name: HashSymbol
         symbol: HashSymbol

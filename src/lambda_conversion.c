@@ -904,7 +904,7 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
     checkAllTagsPresent(constructor->val.constructor->tags, tags);
     checkNoUnrecognisedTags(constructor->val.constructor->tags, tags);
     checkNoDuplicateTags(tags);
-    int arity = constructor->val.constructor->arity;
+    int arity = findUnderlyingArity(constructor);
     int nargs = (int) countAstTaggedExpressions(tags);
     if (nargs != arity) {
         cant_happen("wrong number of args in structure application");
@@ -918,21 +918,39 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
     return result;
 }
 
-static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
-    switch (structure->symbol->type) {
+static LamTypeConstructorInfo *findConstructor(AstLookupOrSymbol *los, LamContext *env) {
+    switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
-            LamExp *constructor = makeConstructor(structure->symbol->val.symbol, env);
-            if (constructor == NULL) {
-                cant_happen("cannot find constructor %s", structure->symbol->val.symbol->name);
-            }
-            int save = PROTECT(constructor);
-            LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
-            UNPROTECT(save);
-            return result;
+            return lookupConstructorInLamContext(env, los->val.symbol);
         }
+        break;
+        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
+            AstLookupSymbol *lookup = los->val.lookup;
+            LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
+            return lookupConstructorInLamContext(nsEnv, lookup->symbol);
+        }
+        break;
         default:
-            cant_happen("%s not implemented yet!", astLookupOrSymbolTypeName(structure->symbol->type));
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
     }
+}
+
+static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
+    LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
+    if (info == NULL) {
+        cant_happen("cannot find constructor");
+    }
+    LamExp *constructor = newLamExp_Constructor(CPI(info), info);
+    int save = PROTECT(constructor);
+    LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
+    if (structure->symbol->type == AST_LOOKUPORSYMBOL_TYPE_LOOKUP) {
+        PROTECT(result);
+        LamLookup *lookup = newLamLookup(CPI(result), info->namespace, structure->symbol->val.lookup->symbol, result);
+        PROTECT(lookup);
+        result = newLamExp_Lookup(CPI(lookup), lookup);
+    }
+    UNPROTECT(save);
+    return result;
 }
 
 static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {

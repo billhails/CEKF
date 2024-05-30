@@ -194,7 +194,7 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
         cant_happen("cannot find current namespace");
     }
 #endif
-    if (currentNs->val.namespace == index) {
+    if (currentNs->val.nsid == index) {
         return env;
     }
     TcType *res = lookupNsRef(index, env);

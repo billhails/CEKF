@@ -739,3 +739,44 @@ void ppLamDeconstruct(LamDeconstruct *deconstruct) {
     ppLamExp(deconstruct->exp);
     eprintf(")");
 }
+
+static inline void pad(int depth) {
+    eprintf("%*s", depth, "");
+}
+
+static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
+    if (env == NULL) {
+        pad(depth);
+        eprintf("<NULL> env\n");
+        return;
+    }
+    pad(depth);
+    eprintf("{\n");
+    HashSymbol *name;
+    Index i = 0;
+    LamInfo *value;
+    while ((name = iterateLamInfoTable(env->frame, &i, &value)) != NULL) {
+        pad(depth);
+        if (value->type == LAMINFO_TYPE_NAMESPACEINFO) {
+            if (done_namespaces) {
+                eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
+            } else {
+                eprintf(" %s => %s [\n", name->name, lamInfoTypeName(value->type));
+                _ppLamContext(value->val.namespaceInfo, depth + 1, true);
+                pad(depth);
+                eprintf(" ]\n");
+            }
+        } else if (value->type == LAMINFO_TYPE_NAMESPACE) {
+            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), value->val.namespace);
+        } else {
+            eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
+        }
+    }
+    _ppLamContext(env->parent, depth + 1, done_namespaces);
+    pad(depth);
+    eprintf("}\n");
+}
+
+void ppLamContext(LamContext *env) {
+    _ppLamContext(env, 0, false);
+}

@@ -30,6 +30,7 @@ cmp:
 structs:
     TcEnv:
         table: TcTypeTable
+        userTypes: TcUserTypeTable
         next: TcEnv
 
     TcNg:
@@ -62,6 +63,9 @@ hashes:
     TcTypeTable:
         entries: TcType
 
+    TcUserTypeTable:
+        entries: TcUserType
+
 arrays:
     TcTypeArray:
         dimension: 1
@@ -84,6 +88,6 @@ unions:
         tuple: TcTypeArray
         namespaces: TcNamespaceArray
         env: TcEnv
-        namespace: int
+        nsid: int
 
 primitives: !include primitives.yaml

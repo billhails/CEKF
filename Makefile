@@ -1,10 +1,7 @@
-.PHONY: all clean deps profile check-grammar list-cores test indent
+.PHONY: all clean realclean deps profile check-grammar list-cores test indent docs
 
 TARGET=cekf
 
-# in Ubuntu 22.10
-# `ulimit -c unlimited` to turn on core dumps
-# written to /var/lib/apport/coredump/
 MODE_P=-pg
 MODE_O=-O2
 MODE_D=-g
@@ -58,6 +55,8 @@ PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
 
+INCLUDE_PATHS=-I generated/ -I src/
+
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
 
@@ -95,34 +94,31 @@ tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
-	$(CC) -I generated/ -I src/ -c $< -o $@
+	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(PARSER_OBJ): obj/%.o: generated/%.c | obj
-	$(LAXCC) -I src/ -I generated/ -c $< -o $@
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(EXTRA_OBJ): obj/%.o: generated/%.c | obj
-	$(CC) -I src/ -I generated/ -c $< -o $@
+	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
-	$(LAXCC) -I src/ -I generated/ -c $< -o $@
+	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
-	$(CC) -I generated/ -I src/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep
-	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-$(PARSER_DEP): dep/%.d: generated/%.c .generated | dep
-	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(PARSER_DEP) $(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
-	$(CC) -I src/ -I generated/ -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 generated/lexer.c generated/lexer.h: src/lexer.l | generated
 	flex --header-file=generated/lexer.h -o generated/lexer.c $<
 
 generated/parser.c generated/parser.h: src/parser.y | generated
-	bison -v -Werror --header=generated/parser.h -o generated/parser.c $<
+	bison -v -Werror -Wcounterexamples --header=generated/parser.h -o generated/parser.c $<
 
 test: $(TEST_TARGETS)
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
@@ -133,8 +129,11 @@ $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 dep obj generated docs/generated:
 	mkdir $@
 
+realclean: clean
+	rm -f tags
+
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) tags .typedefs src/*~
+	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~
 
 deps:
 	rm -rf dep
