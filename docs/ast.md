@@ -56,10 +56,10 @@ AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
-AstLookupSymbol --namespace--> int
+AstLookupSymbol --nsid--> int
 AstLookupSymbol --name--> HashSymbol
 AstLookupSymbol --symbol--> HashSymbol
-AstLookup --namespace--> int
+AstLookup --nsid--> int
 AstLookup --name--> HashSymbol
 AstLookup --expression--> AstExpression
 AstIff --test--> AstExpression

@@ -735,7 +735,7 @@ static Exp *normalizeEnv(Exp *tail) {
 static Exp *normalizeLamLookup(LamLookup *lookup, Exp *tail) {
     Exp *rest = normalize(lookup->exp, tail);
     int save = PROTECT(rest);
-    ExpLookup *exp = newExpLookup(lookup->namespace, rest);
+    ExpLookup *exp = newExpLookup(lookup->nsid, rest);
     PROTECT(exp);
     Exp *res = newExp_Lookup(exp);
     UNPROTECT(save);

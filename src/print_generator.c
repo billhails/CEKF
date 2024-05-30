@@ -175,7 +175,7 @@ static LamExp *makePrintAccessor(ParserInfo I, int index, LamTypeConstructorInfo
     LamExp *printArg = printArgVar(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(I, info->type->name, info->namespace, index, printArg);
+        newLamDeconstruct(I, info->type->name, info->nsid, index, printArg);
     PROTECT(dec);
     LamExp *res =
         newLamExp_Deconstruct(I, dec);
@@ -242,7 +242,7 @@ static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
 static LamExp *wrapTypeFunction(ParserInfo I, LamExp *res, LamLookupOrSymbol *los) {
     if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
         LamLookupSymbol *ls = los->val.lookup;
-        LamLookup *llu = newLamLookup(I, ls->namespace, ls->name, res);
+        LamLookup *llu = newLamLookup(I, ls->nsid, ls->name, res);
         int save = PROTECT(llu);
         res = newLamExp_Lookup(I, llu);
         UNPROTECT(save);
@@ -418,7 +418,7 @@ static LamMatchList *makePlainMatchList(ParserInfo I, LamTypeConstructorList *co
             ("cannot find info for type constructor %s in makePlainMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->namespace, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
     PROTECT(matches);
     LamExp *body = makePlainMatchBody(I, constructors->constructor);
     PROTECT(body);
@@ -440,7 +440,7 @@ static LamMatchList *makeTagMatchList(ParserInfo I, LamTypeConstructorList *cons
             ("cannot find info for type constructor %s in makeTagMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->namespace, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {

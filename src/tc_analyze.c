@@ -508,7 +508,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     // ENTER(analyzeDeconstruct);
     // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
     // ppTcEnv(env);
-    TcType *constructor = lookupConstructorType(deconstruct->name, deconstruct->namespace, env, ng);
+    TcType *constructor = lookupConstructorType(deconstruct->name, deconstruct->nsid, env, ng);
     int save = PROTECT(constructor);
     // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
@@ -589,7 +589,7 @@ TcType *lookupNsRef(int index, TcEnv *env) {
 }
 
 static TcType *analyzeLookup(LamLookup *lookup, TcEnv *env, TcNg *ng) {
-    TcType *nsType = lookupNsRef(lookup->namespace, env);
+    TcType *nsType = lookupNsRef(lookup->nsid, env);
     return analyzeExp(lookup->exp, nsType->val.env, ng);
 }
 
@@ -925,7 +925,7 @@ static TcUserTypeArgs *makeUserTypeArgs(LamTypeConstructorArgs *args,
 static int findNamespace(LamLookupOrSymbol *los, TcEnv *env) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return los->val.lookup->namespace;
+            return los->val.lookup->nsid;
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:{
             // eprintf("looking for %s in ", los->val.symbol->name);
             // ppTcEnv(env);
@@ -1214,7 +1214,7 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
     }
     TcType *next = analyzeIntList(intList->next, env, ng);
     int save = PROTECT(next);
-    TcType *this = lookupConstructorType(intList->name, intList->namespace, env, ng);
+    TcType *this = lookupConstructorType(intList->name, intList->nsid, env, ng);
     PROTECT(this);
     this = findResultType(this);
     PROTECT(this);

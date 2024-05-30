@@ -57,12 +57,12 @@ structs:
         args: LamList
 
     LamLookup:
-        namespace: int
+        nsid: int
         name: HashSymbol
         exp: LamExp
 
     LamLookupSymbol:
-        namespace: int
+        nsid: int
         name: HashSymbol
         symbol: HashSymbol
 
@@ -77,7 +77,7 @@ structs:
 
     LamDeconstruct:
         name: HashSymbol # name of the constructor being deconstructed
-        namespace: int   # namespace of the constructor being deconstructed
+        nsid: int        # namespace of the constructor being deconstructed
         vec: int         # offset of the field in the vector
         exp: LamExp      # expression being deconstructed
 
@@ -121,7 +121,7 @@ structs:
     LamIntList:
         item: int
         name: HashSymbol
-        namespace: int
+        nsid: int
         next: LamIntList
 
     LamLet:
@@ -206,7 +206,7 @@ structs:
 
     LamTypeConstructorInfo:
         name: HashSymbol
-        namespace: int
+        nsid: int
         type: LamTypeConstructor
         tags: LamTypeTags
         needsVec: bool # does this need to be a vector?
@@ -295,7 +295,7 @@ unions:
     LamInfo:
         typeConstructorInfo: LamTypeConstructorInfo
         namespaceInfo: LamContext
-        namespace: int
+        nsid: int
 
 hashes:
     LamInfoTable:

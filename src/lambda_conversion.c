@@ -77,7 +77,7 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env);
 static bool inPreamble;  // preamble is treated specially
 
 static void addCurrentNamespaceToContext(LamContext *context, int id) {
-    LamInfo *lamInfo = newLamInfo_Namespace(CPI(context), id);
+    LamInfo *lamInfo = newLamInfo_Nsid(CPI(context), id);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, namespaceSymbol(), lamInfo);
     UNPROTECT(save);
@@ -225,10 +225,10 @@ static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
 }
 
 static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
-    LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
+    LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->nsid);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookup *llu = newLamLookup(CPI(lookup), lookup->namespace, lookup->name, expression);
+    LamLookup *llu = newLamLookup(CPI(lookup), lookup->nsid, lookup->name, expression);
     PROTECT(llu);
     LamExp *res = newLamExp_Lookup(CPI(lookup), llu);
     UNPROTECT(save);
@@ -269,7 +269,7 @@ static LamType *convertUserType(AstUserType *userType) {
 }
 
 static LamLookupSymbol *convertAstLookupSymbol(AstLookupSymbol *ls) {
-    return newLamLookupSymbol(CPI(ls), ls->namespace, ls->name, ls->symbol);
+    return newLamLookupSymbol(CPI(ls), ls->nsid, ls->name, ls->symbol);
 }
 
 static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {
@@ -926,7 +926,7 @@ static LamTypeConstructorInfo *findConstructor(AstLookupOrSymbol *los, LamContex
         break;
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
             AstLookupSymbol *lookup = los->val.lookup;
-            LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->namespace);
+            LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->nsid);
             return lookupConstructorInLamContext(nsEnv, lookup->symbol);
         }
         break;
@@ -945,7 +945,7 @@ static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
     LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
     if (structure->symbol->type == AST_LOOKUPORSYMBOL_TYPE_LOOKUP) {
         PROTECT(result);
-        LamLookup *lookup = newLamLookup(CPI(result), info->namespace, structure->symbol->val.lookup->symbol, result);
+        LamLookup *lookup = newLamLookup(CPI(result), info->nsid, structure->symbol->val.lookup->symbol, result);
         PROTECT(lookup);
         result = newLamExp_Lookup(CPI(lookup), lookup);
     }

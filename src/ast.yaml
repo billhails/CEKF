@@ -125,12 +125,12 @@ structs:
         next: AstExpressions
 
     AstLookupSymbol:
-        namespace: int
+        nsid: int
         name: HashSymbol
         symbol: HashSymbol
 
     AstLookup:
-        namespace: int
+        nsid: int
         name: HashSymbol
         expression: AstExpression
 
