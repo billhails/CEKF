@@ -100,6 +100,11 @@ structs:
         arg: AstArg
         next: AstArgList
 
+    AstTaggedArgList:
+        tag: HashSymbol
+        arg: AstArg
+        next: AstTaggedArgList
+
     AstAltArgs: # temp struct used by the parser for `fn (...) | (...) { ... }` alternative arguments
         argList: AstArgList
         next: AstAltArgs
@@ -111,6 +116,10 @@ structs:
     AstUnpack:
         symbol: AstLookupOrSymbol
         argList: AstArgList
+
+    AstUnpackStruct:
+        symbol: AstLookupOrSymbol
+        argList: AstTaggedArgList
 
     AstNamedArg:
         name: HashSymbol
@@ -189,6 +198,7 @@ unions:
         lookup: AstLookupSymbol
         named: AstNamedArg
         unpack: AstUnpack
+        unpackStruct: AstUnpackStruct
         number: MaybeBigInt
         character: char
         tuple: AstArgList

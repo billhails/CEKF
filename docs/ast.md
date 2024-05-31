@@ -44,12 +44,17 @@ AstFunction --argList--> AstArgList
 AstFunction --nest--> AstNest
 AstArgList --arg--> AstArg
 AstArgList --next--> AstArgList
+AstTaggedArgList --tag--> HashSymbol
+AstTaggedArgList --arg--> AstArg
+AstTaggedArgList --next--> AstTaggedArgList
 AstAltArgs --argList--> AstArgList
 AstAltArgs --next--> AstAltArgs
 AstAltFunction --altArgs--> AstAltArgs
 AstAltFunction --nest--> AstNest
 AstUnpack --symbol--> AstLookupOrSymbol
 AstUnpack --argList--> AstArgList
+AstUnpackStruct --symbol--> AstLookupOrSymbol
+AstUnpackStruct --argList--> AstTaggedArgList
 AstNamedArg --name--> HashSymbol
 AstNamedArg --arg--> AstArg
 AstFunCall --function--> AstExpression
@@ -91,6 +96,7 @@ AstArg --symbol--> HashSymbol
 AstArg --lookup--> AstLookupSymbol
 AstArg --named--> AstNamedArg
 AstArg --unpack--> AstUnpack
+AstArg --unpackStruct--> AstUnpackStruct
 AstArg --number--> MaybeBigInt
 AstArg --character--> char
 AstArg --tuple--> AstArgList

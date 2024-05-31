@@ -984,6 +984,104 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     }
 }
 
+static AstArgList *rewriteAstArgList(AstArgList *args, LamContext *env);
+static AstArg *rewriteAstArg(AstArg *arg, LamContext *env);
+
+static AstArg *rewriteAstNamed(AstNamedArg *namedArg, LamContext *env) {
+    AstArg *arg = rewriteAstArg(namedArg->arg, env);
+    int save = PROTECT(arg);
+    AstNamedArg *this = newAstNamedArg(CPI(namedArg), namedArg->name, arg);
+    PROTECT(this);
+    AstArg *res = newAstArg_Named(CPI(this), this);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstArg *rewriteAstUnpack(AstUnpack *unpack, LamContext *env) {
+    AstArgList *args = rewriteAstArgList(unpack->argList, env);
+    int save = PROTECT(args);
+    AstUnpack *this = newAstUnpack(CPI(unpack), unpack->symbol, args);
+    PROTECT(this);
+    AstArg *res = newAstArg_Unpack(CPI(this), this);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstArg *getAstArgFromTaggedArgList(HashSymbol *tag, AstTaggedArgList *list, LamContext *env, ParserInfo I) {
+    if (list == NULL) {
+        return newAstArg_Wildcard(I);
+    }
+    if (tag == list->tag) {
+        return rewriteAstArg(list->arg, env);
+    }
+    return getAstArgFromTaggedArgList(tag, list->next, env, I);
+}
+
+static AstArgList *rewriteAstTaggedArgList(LamTypeTags *allTags, AstTaggedArgList *argTags, LamContext *env) {
+    if (allTags == NULL) return NULL;
+    AstArgList *next = rewriteAstTaggedArgList(allTags->next, argTags, env);
+    int save = PROTECT(next);
+    AstArg *arg = getAstArgFromTaggedArgList(allTags->tag, argTags, env, CPI(argTags));
+    PROTECT(arg);
+    AstArgList *this = newAstArgList(CPI(argTags), arg, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static AstArg *rewriteAstUnpackStruct(AstUnpackStruct *structure, LamContext *env) {
+    LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
+    if (info->tags == NULL) {
+        cant_happen("constructor not a struct");
+    }
+    AstArgList *args = rewriteAstTaggedArgList(info->tags, structure->argList, env);
+    int save = PROTECT(args);
+    AstUnpack *unpack = newAstUnpack(CPI(structure), structure->symbol, args);
+    PROTECT(unpack);
+    AstArg *res = newAstArg_Unpack(CPI(unpack), unpack);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstArg *rewriteAstTuple(AstArgList *tuple, LamContext *env) {
+    AstArgList *new = rewriteAstArgList(tuple, env);
+    int save = PROTECT(new);
+    AstArg *res = newAstArg_Tuple(CPI(tuple), new);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstArg *rewriteAstArg(AstArg *arg, LamContext *env) {
+    switch (arg->type) {
+        case AST_ARG_TYPE_WILDCARD:
+        case AST_ARG_TYPE_SYMBOL:
+        case AST_ARG_TYPE_NUMBER:
+        case AST_ARG_TYPE_CHARACTER:
+        case AST_ARG_TYPE_LOOKUP:
+            return arg;
+        case AST_ARG_TYPE_NAMED:
+            return rewriteAstNamed(arg->val.named, env);
+        case AST_ARG_TYPE_UNPACK:
+            return rewriteAstUnpack(arg->val.unpack, env);
+        case AST_ARG_TYPE_UNPACKSTRUCT:
+            return rewriteAstUnpackStruct(arg->val.unpackStruct, env);
+        case AST_ARG_TYPE_TUPLE:
+            return rewriteAstTuple(arg->val.tuple, env);
+        default:
+            cant_happen("unrecognized %s", astArgTypeName(arg->type));
+    }
+}
+
+static AstArgList *rewriteAstArgList(AstArgList *args, LamContext *env) {
+    if (args == NULL) return NULL;
+    AstArgList *next = rewriteAstArgList(args->next, env);
+    int save = PROTECT(next);
+    AstArg *arg = rewriteAstArg(args->arg, env);
+    PROTECT(arg);
+    AstArgList *this = newAstArgList(CPI(args), arg, next);
+    UNPROTECT(save);
+    return this;
+}
+
 static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
                                       LamContext *env) {
     ENTER(convertCompositeBodies);
@@ -1001,7 +1099,8 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
         AstFunction *func = f->function;
         actions[i] = convertNest(func->nest, env);
         PROTECT(actions[i]);
-        argLists[i] = func->argList;
+        argLists[i] = rewriteAstArgList(func->argList, env);
+        PROTECT(argLists[i]);
     }
     LamLam *result = tpmcConvert(CPI(fun), nargs, nBodies, argLists, actions, env);
     PROTECT(result);

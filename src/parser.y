@@ -309,6 +309,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstTypeSymbols *typeSymbols;
     AstType *type;
     AstUnpack *unpack;
+    AstUnpackStruct *unpackStruct;
+    AstTaggedArgList *taggedArgList;
     AstIff *iff;
     AstCharArray *chars;
     AstAltFunction *altFunction;
@@ -347,6 +349,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <typeSymbols> type_symbols
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
+%type <unpackStruct> unpack_struct
 %type <iff> iff
 %type <altFunction> alt_function
 %type <altArgs> alt_args
@@ -357,6 +360,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <typemap> type_map
 %type <structure> structure
 %type <taggedExpressions> tagged_expressions
+%type <taggedArgList> tagged_fargs
 
 %token BACK
 %token ELSE
@@ -595,6 +599,7 @@ number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
 farg : symbol              { $$ = newAstArg_Symbol(PIM(mod), $1); }
      | symbol '.' symbol   { $$ = makeAstLookupArg(mod, $1, $3); }
      | unpack              { $$ = newAstArg_Unpack(PIM(mod), $1); }
+     | unpack_struct       { $$ = newAstArg_UnpackStruct(PIM(mod), $1); }
      | cons                { $$ = newAstArg_Unpack(PIM(mod), $1); }
      | named_farg          { $$ = newAstArg_Named(PIM(mod), $1); }
      | '[' ']'             { $$ = newAstArg_Symbol(PIM(mod), nilSymbol()); }
@@ -606,8 +611,8 @@ farg : symbol              { $$ = newAstArg_Symbol(PIM(mod), $1); }
      | arg_tuple           { $$ = newAstArg_Tuple(PIM(mod), $1); }
      ;
 
-arg_tuple: '#' '(' fargs ')'  { $$ = $3; }
-         ;
+arg_tuple : '#' '(' fargs ')'  { $$ = $3; }
+          ;
 
 cons : farg CONS farg   {
                             $$ = makeAstUnpack(mod,
@@ -620,8 +625,15 @@ cons : farg CONS farg   {
                         }
      ;
 
-unpack : scoped_symbol '(' fargs ')'   { $$ = newAstUnpack(PIM(mod), $1, $3); }
+unpack : scoped_symbol '(' fargs ')'           { $$ = newAstUnpack(PIM(mod), $1, $3); }
        ;
+
+unpack_struct : scoped_symbol '{' tagged_fargs '}'     { $$ = newAstUnpackStruct(PIM(mod), $1, $3); }
+              ;
+
+tagged_fargs : symbol ':' farg                      { $$ = newAstTaggedArgList(PIM(mod), $1, $3, NULL); }
+             | symbol ':' farg ',' tagged_fargs     { $$ = newAstTaggedArgList(PIM(mod), $1, $3, $5); }
+             ;
 
 stringarg : str { $$ = makeStringUnpack(mod, $1); }
           ;

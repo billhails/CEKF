@@ -1,5 +1,7 @@
 let
     link "finance.fn" as fintech;
+    me = fintech.employee{ name: "me", manager: fintech.boss{ name: "the boss" } };
 in
     print(fintech.imperial(10, 15, 2));
-    print(fintech.employee{ name: "me", manager: fintech.boss{ name: "the boss" } })
+    print(me);
+    print(fintech.find_emp("me", me));

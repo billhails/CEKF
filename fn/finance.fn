@@ -13,3 +13,9 @@ typedef emp {
     }
 }
 
+fn find_emp {
+    (x, employee{name: x}) { true }
+    (x, boss{name: x}) { true }
+    (_, _) { false }
+}
+
