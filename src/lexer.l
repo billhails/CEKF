@@ -50,6 +50,7 @@ struct PmModule *mod = yyextra;
 "switch"        { return SWITCH; }
 "then"          { return THEN; }
 "typedef"       { return TYPEDEF; }
+"assert"        { return ASSERT; }
 
 \"((\\.)|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
 \'((\\.)|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }

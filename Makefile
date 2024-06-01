@@ -8,8 +8,14 @@ MODE_D=-g
 
 CCMODE = $(MODE_D)
 
-CC=cc -Wall -Wextra -Werror $(CCMODE)
-LAXCC=cc -Werror $(CCMODE)
+CC:=cc -Wall -Wextra -Werror $(CCMODE)
+LAXCC:=cc -Werror $(CCMODE)
+
+ifdef TESTING
+	CC := $(CC) -DNO_DEBUG_STRESS_GC
+	LAXCC := $(LAXCC) -DNO_DEBUG_STRESS_CC
+endif
+
 PYTHON=python3
 MAKE_AST=$(PYTHON) ./tools/makeAST.py
 
@@ -120,8 +126,9 @@ generated/lexer.c generated/lexer.h: src/lexer.l | generated
 generated/parser.c generated/parser.h: src/parser.y | generated
 	bison -v -Werror -Wcounterexamples --header=generated/parser.h -o generated/parser.c $<
 
-test: $(TEST_TARGETS)
+test: $(TEST_TARGETS) $(TARGET)
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+	for t in tests/fn/*.fn ; do ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm

@@ -217,6 +217,7 @@ unions:
         tuple: AstExpressions
         env: void_ptr
         structure: AstStruct
+        assertion: AstExpression
 
 hashes:
     AstIntTable:
@@ -237,5 +238,9 @@ arrays:
     AstFileIdArray:
         dimension: 1
         entries: file_id
+
+    AstStringArray:
+        dimension: 1
+        entries: string
 
 primitives: !include primitives.yaml

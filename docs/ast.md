@@ -113,10 +113,12 @@ AstExpression --print--> AstPrint
 AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
 AstExpression --structure--> AstStruct
+AstExpression --assertion--> AstExpression
 AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstStringArray["AstStringArray[]"] --entries--> string
 AstTypeConstructorArgsVal
 AstTypeConstructorArgsType
 AstLookupOrSymbolVal

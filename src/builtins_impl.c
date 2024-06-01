@@ -19,6 +19,17 @@
 #include "builtins_impl.h"
 #include "arithmetic.h"
 
+bool assertions_failed;
+int assertions_accumulate = 0;
+
 Value builtin_rand(Vec *v) {
     return nrand(v->values[0]);
+}
+
+Value builtin_assert(Vec *v __attribute__((unused))) {
+    assertions_failed = true;
+    if (assertions_accumulate) {
+        return vFalse;
+    }
+    exit(1);
 }

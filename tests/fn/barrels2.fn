@@ -1,0 +1,18 @@
+let
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
+
+    fn barrels_of_fun() {
+        let
+            barrels = [30, 32, 36, 38, 40, 62];
+            beer = amb.one_of(barrels);
+            wine = list.exclude([beer], barrels);
+            barrel_1 = amb.one_of(wine);
+            barrel_2 = amb.one_of(list.exclude([barrel_1], wine));
+            purchase = amb.some_of(list.exclude([barrel_1, barrel_2], wine));
+        in
+            amb.require((barrel_1 + barrel_2) * 2 == list.sum(purchase));
+            beer
+    }
+in
+    assert(barrels_of_fun() == 40)

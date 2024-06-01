@@ -1,0 +1,6 @@
+let
+    x = 4;
+in
+    assert(x == 4);
+    assert(x == 5);
+    assert(x == 6);

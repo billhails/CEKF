@@ -292,6 +292,9 @@ void ppLamPrimOp(LamPrimOp type) {
         case LAMPRIMOP_TYPE_POW:
             eprintf("pow");
             break;
+        case LAMPRIMOP_TYPE_CMP:
+            eprintf("cmp");
+            break;
         default:
             cant_happen("unrecognised type %d in ppLamPrimOp", type);
     }

@@ -5,7 +5,7 @@ More of a wish-list than a hard and fast plan.
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
 * Unpacking function return values (tuples only).
 * `now()` builtin returns current time in milliseconds.
-* `assert(assertion)` builtin exits with line and file info if assertion is false (for tests).
+* Error function.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
 * More numbers:
    * NaN.
@@ -33,18 +33,13 @@ More of a wish-list than a hard and fast plan.
 * Error recovery.
 * Command-line arguments for libraries etc.
 * Fail on non-exhaustive pattern match (optional).
-* Error function.
 * User definable operators.
    * With precedence and associativity.
    * `infix 55 left >>= fn(l, r) { ... }`
    * `prefix 45 $ fn(a) { ... }`
    * `suffix 60 ! factorial`
 * Curried binary operators `(2+)` etc.
-* Structs and aliases
+* Aliases
    * `alias some = maybe.some;`
    * `alias string = list(char);`
-   * `struct customer{ name: string, address: list(string) }`
-   * `x = customer{ name: "Charlie", address: ["12, ...", ...] }`
-   * `x:name // "Charlie"`
-   * `struct named_list(#t) { name: list(char), value: list(#t) }`
 * (internal) have a NEWZ variant of NEW that bzero's its result.

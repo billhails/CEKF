@@ -1693,8 +1693,12 @@ static TcType *builtInTypeToTcType(BuiltInArgType type) {
     switch (type) {
         case BUILTINARGTYPE_TYPE_NUMBER:
             return makeBigInteger();
+        case BUILTINARGTYPE_TYPE_BOOL:
+            return makeBoolean();
+        case BUILTINARGTYPE_TYPE_CHAR:
+            return makeCharacter();
         default:
-            cant_happen("unregistered value type %d", type);
+            cant_happen("unregistered %s", builtInArgTypeName(type));
     }
 }
 
