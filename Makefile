@@ -128,7 +128,7 @@ generated/parser.c generated/parser.h: src/parser.y | generated
 
 test: $(TEST_TARGETS) $(TARGET)
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
-	for t in tests/fn/*.fn ; do ./$(TARGET) --assertions-accumulate $$t || exit 1 ; done
+	for t in tests/fn/*.fn ; do ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm

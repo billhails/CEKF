@@ -239,4 +239,8 @@ arrays:
         dimension: 1
         entries: file_id
 
+    AstStringArray:
+        dimension: 1
+        entries: string
+
 primitives: !include primitives.yaml

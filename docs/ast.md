@@ -118,6 +118,7 @@ AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstStringArray["AstStringArray[]"] --entries--> string
 AstTypeConstructorArgsVal
 AstTypeConstructorArgsType
 AstLookupOrSymbolVal

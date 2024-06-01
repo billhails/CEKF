@@ -24,6 +24,8 @@
 #include "types.h"
 #include "print_generator.h"
 
+AstStringArray *include_paths = NULL;
+
 void yyerror (yyscan_t *locp, PmModule *mod, char const *msg);
 
 // #define YYDEBUG 1
@@ -171,29 +173,49 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     return rest;
 }
 
-static char *calculatePath(char *file, PmModule *mod) {
+static AgnosticFileId *tryFile(char *prefix, char *file) {
+    char *buf = malloc(sizeof(char) * (strlen(prefix) + 1 + strlen(file) + 10));
+    if (buf == NULL) {
+        perror("out of memory");
+        exit(1);
+    }
+    sprintf(buf, "%s/%s", prefix, file);
+    AgnosticFileId *result = makeAgnosticFileId(buf);
+    if (result == NULL) free(buf);
+    return result;
+}
+
+static AgnosticFileId *searchForFile(char *initialPrefix, char *fileToFind) {
+    AgnosticFileId *result = NULL;
+    result = tryFile(initialPrefix, fileToFind);
+    if (result != NULL) return result;
+    if (include_paths != NULL) {
+        for (Index i = 0; i < include_paths->size; i++) {
+            result = tryFile(include_paths->entries[i], fileToFind);
+            if (result != NULL) return result;
+        }
+    }
+    return NULL;
+}
+
+static AgnosticFileId *calculatePath(char *file, PmModule *mod) {
     if (*file == '/') {
-        return file;
+        return makeAgnosticFileId(file);
     }
     char *currentFile = currentPmFile(mod);
     if (currentFile == NULL) {
-        return strdup(file);
+        return searchForFile(".", file);
     }
     currentFile = strdup(currentFile);
     char *slash = strrchr(currentFile, '/');
     if (slash == NULL) {
         free(currentFile);
-        return strdup(file);
+        return searchForFile(".", file);
     }
     *slash = '\0';
-    char *buf = malloc(sizeof(char) * (strlen(currentFile) + 1 + strlen(file) + 10));
-    if (buf == NULL) {
-        perror("out of memory");
-        exit(1);
-    }
-    sprintf(buf, "%s/%s", currentFile, file);
+    AgnosticFileId *result = searchForFile(currentFile, file);
     free(currentFile);
-    return buf;
+    return result;
 }
 
 static AstFileIdArray *fileIdStack = NULL;
@@ -208,35 +230,33 @@ static bool fileIdInArray(AgnosticFileId *id, AstFileIdArray *array) {
 }
 
 // Careful. Somewhat accidentally this algorithm stores the namespaces
-// in precisely the correct order that they will need to be processed in.
+// in the order that they need to be processed.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
 static AstNamespace *parseLink(char *file, HashSymbol *symbol, PmModule *mod) {
     if (fileIdStack == NULL) {
         fileIdStack = newAstFileIdArray();
     }
-    char *path = calculatePath(file, mod);
-    AgnosticFileId *fileId = makeAgnosticFileId(path);
+    AgnosticFileId *fileId = calculatePath(file, mod);
     if (fileId == NULL) {
-        cant_happen("cannot stat file \"%s\"", path);
+        cant_happen("cannot find file \"%s\"", file);
     }
     int found = lookupNamespace(fileId);
     if (found != -1) {
         return newAstNamespace(PIM(mod), symbol, found);
     }
     if (fileIdInArray(fileId, fileIdStack)) {
-        cant_happen("recursive include detected for %s", path);
+        cant_happen("recursive include detected for %s", fileId->name);
     }
     pushAstFileIdArray(fileIdStack, fileId);
-    AstDefinitions *definitions = parseNamespaceFromFileName(path);
+    AstDefinitions *definitions = parseNamespaceFromFileName(fileId->name);
     if (definitions == NULL) {
-        cant_happen("syntax error parsing %s", path);
+        cant_happen("syntax error parsing %s", fileId->name);
     }
     AstNamespaceImpl *impl = newAstNamespaceImpl(PIM(mod), fileId, definitions);
     found = pushAstNamespaceArray(namespaces, impl);
     popAstFileIdArray(fileIdStack);
     AstNamespace *ns = newAstNamespace(PIM(mod), symbol, found);
-    free(path);
     return ns;
 }
 

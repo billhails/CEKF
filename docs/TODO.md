@@ -5,7 +5,6 @@ More of a wish-list than a hard and fast plan.
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
 * Unpacking function return values (tuples only).
 * `now()` builtin returns current time in milliseconds.
-* `assert(assertion)` function exits with line and file info if assertion is false (for tests).
 * Error function.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
 * More numbers:

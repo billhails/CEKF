@@ -55,6 +55,8 @@ static int inline_flag = 0;
 extern bool assertions_failed;
 extern int assertions_accumulate;
 
+extern AstStringArray *include_paths;
+
 static void processArgs(int argc, char *argv[]) {
     int c;
 
@@ -69,6 +71,7 @@ static void processArgs(int argc, char *argv[]) {
             { "assertions-accumulate", no_argument, &assertions_accumulate, 1 },
             { "tpmc", required_argument, 0, 'm' },
             { "lambda", required_argument, 0, 'l' },
+            { "include", required_argument, 0, 'i' },
             { 0, 0, 0, 0 }
         };
         int option_index = 0;
@@ -86,6 +89,10 @@ static void processArgs(int argc, char *argv[]) {
             lambda_conversion_function = optarg;
         }
 
+        if (c == 'i') {
+            pushAstStringArray(include_paths, strdup(optarg));
+        }
+
         if (c == '?') {
             help_flag = 1;
         }
@@ -94,6 +101,8 @@ static void processArgs(int argc, char *argv[]) {
     if (help_flag) {
         printf("\nusage: %s <options> <filename>\n", argv[0]);
         printf("options:\n%s",
+               "    --include=dir            Add dir to the list of directories to be\n"
+               "                             searched.\n"
                "    --report                 Report statistics.\n"
                "    --assertions-accumulate  Don't exit on the first assertion failure.\n"
                "    --anf                    Display the generated ANF.\n"
@@ -202,13 +211,15 @@ static void report(clock_t begin, clock_t compiled, clock_t end) {
 
 int main(int argc, char *argv[]) {
     clock_t begin = clock();
-    processArgs(argc, argv);
     initProtection();
     init_arithmetic();
     initNamespaces();
+    include_paths = newAstStringArray();
+    int save = PROTECT(include_paths);
+    processArgs(argc, argv);
 
     BuiltIns *builtIns = registerBuiltIns();
-    int save = PROTECT(builtIns);
+    PROTECT(builtIns);
 
     if (report_flag) eprintf("parse\n");
     AstProg *prog = parseFile(argv[optind]);
