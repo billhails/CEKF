@@ -31,6 +31,7 @@ typedef struct HeaderAndInfo {
 } HeaderAndInfo;
 
 #  define COPY_PARSER_INFO(from) ((from)->_yy_parser_info)
+#  define CPI(x) COPY_PARSER_INFO(x)
 
 static inline void _reportParserInfo(HeaderAndInfo *I) {
     eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);

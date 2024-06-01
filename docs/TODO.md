@@ -47,3 +47,4 @@ More of a wish-list than a hard and fast plan.
    * `x = customer{ name: "Charlie", address: ["12, ...", ...] }`
    * `x:name // "Charlie"`
    * `struct named_list(#t) { name: list(char), value: list(#t) }`
+* (internal) have a NEWZ variant of NEW that bzero's its result.

@@ -1,0 +1,21 @@
+typedef money {
+    decimal(int, int) |
+    imperial(int, int, int)
+}
+
+typedef emp {
+    employee {
+        name: list(char),
+        manager: emp
+    } |
+    boss {
+        name: list(char)
+    }
+}
+
+fn find_emp {
+    (x, employee{name: x}) { true }
+    (x, boss{name: x}) { true }
+    (_, _) { false }
+}
+

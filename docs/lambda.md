@@ -21,11 +21,11 @@ LamList --exp--> LamExp
 LamList --next--> LamList
 LamApply --function--> LamExp
 LamApply --args--> LamList
-LamLookup --namespace--> int
-LamLookup --name--> HashSymbol
+LamLookup --nsid--> int
+LamLookup --nsSymbol--> HashSymbol
 LamLookup --exp--> LamExp
-LamLookupSymbol --namespace--> int
-LamLookupSymbol --name--> HashSymbol
+LamLookupSymbol --nsid--> int
+LamLookupSymbol --nsSymbol--> HashSymbol
 LamLookupSymbol --symbol--> HashSymbol
 LamConstant --name--> HashSymbol
 LamConstant --tag--> int
@@ -33,7 +33,7 @@ LamConstruct --name--> HashSymbol
 LamConstruct --tag--> int
 LamConstruct --args--> LamList
 LamDeconstruct --name--> HashSymbol
-LamDeconstruct --namespace--> int
+LamDeconstruct --nsid--> int
 LamDeconstruct --vec--> int
 LamDeconstruct --exp--> LamExp
 LamTupleIndex --vec--> int
@@ -59,7 +59,7 @@ LamMatchList --body--> LamExp
 LamMatchList --next--> LamMatchList
 LamIntList --item--> int
 LamIntList --name--> HashSymbol
-LamIntList --namespace--> int
+LamIntList --nsid--> int
 LamIntList --next--> LamIntList
 LamLet --var--> HashSymbol
 LamLet --value--> LamExp
@@ -90,6 +90,8 @@ LamTypeConstructorList --constructor--> LamTypeConstructor
 LamTypeConstructorList --next--> LamTypeConstructorList
 LamType --name--> HashSymbol
 LamType --args--> LamTypeArgs
+LamTypeTags --tag--> HashSymbol
+LamTypeTags --next--> LamTypeTags
 LamTypeArgs --name--> HashSymbol
 LamTypeArgs --next--> LamTypeArgs
 LamTypeConstructor --name--> HashSymbol
@@ -100,8 +102,9 @@ LamTypeConstructorArgs --next--> LamTypeConstructorArgs
 LamTypeFunction --name--> LamLookupOrSymbol
 LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
-LamTypeConstructorInfo --namespace--> int
+LamTypeConstructorInfo --nsid--> int
 LamTypeConstructorInfo --type--> LamTypeConstructor
+LamTypeConstructorInfo --tags--> LamTypeTags
 LamTypeConstructorInfo --needsVec--> bool
 LamTypeConstructorInfo --arity--> int
 LamTypeConstructorInfo --size--> int
@@ -152,7 +155,7 @@ LamTypeConstructorType --function--> LamTypeFunction
 LamTypeConstructorType --tuple--> LamTypeConstructorArgs
 LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
 LamInfo --namespaceInfo--> LamContext
-LamInfo --namespace--> int
+LamInfo --nsid--> int
 LamPrimOp["enum LamPrimOp"]
 LamUnaryOp["enum LamUnaryOp"]
 LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp

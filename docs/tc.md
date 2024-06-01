@@ -5,7 +5,9 @@ Structures to support type inference
 ```mermaid
 flowchart TD
 TcTypeTable --entries--> entries
+TcUserTypeTable --entries--> entries
 TcEnv --table--> TcTypeTable
+TcEnv --userTypes--> TcUserTypeTable
 TcEnv --next--> TcEnv
 TcNg --table--> TcTypeTable
 TcNg --next--> TcNg
@@ -32,7 +34,7 @@ TcType --userType--> TcUserType
 TcType --tuple--> TcTypeArray
 TcType --namespaces--> TcNamespaceArray
 TcType --env--> TcEnv
-TcType --namespace--> int
+TcType --nsid--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
 TcTypeVal

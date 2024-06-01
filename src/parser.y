@@ -62,10 +62,6 @@ static AstFunCall *makeStringList(PmModule *mod, AstCharArray *str) {
     return res;
 }
 
-static AstArg *makeAstNilArg(PmModule *mod) {
-    return newAstArg_Symbol(PIM(mod), nilSymbol());
-}
-
 static AstUnpack *makeAstUnpack(PmModule *mod, HashSymbol *symbol, AstArgList *args) {
     return newAstUnpack(PIM(mod),
         newAstLookupOrSymbol_Symbol(PIM(mod), symbol),
@@ -169,8 +165,8 @@ static AstCharArray *newCharArray(char *str) {
 
 static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions, AstCompositeFunction *rest) {
     for (AstAltArgs *args = functions->altArgs; args != NULL; args = args->next) {
-        AstFunction *this = newAstFunction(COPY_PARSER_INFO(args), args->argList, copyAstNest(functions->nest));
-        rest = newAstCompositeFunction(COPY_PARSER_INFO(args), this, rest);
+        AstFunction *this = newAstFunction(CPI(args), args->argList, copyAstNest(functions->nest));
+        rest = newAstCompositeFunction(CPI(args), this, rest);
     }
     return rest;
 }
@@ -313,6 +309,8 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstTypeSymbols *typeSymbols;
     AstType *type;
     AstUnpack *unpack;
+    AstUnpackStruct *unpackStruct;
+    AstTaggedArgList *taggedArgList;
     AstIff *iff;
     AstCharArray *chars;
     AstAltFunction *altFunction;
@@ -320,6 +318,10 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstNamespace *namespace;
     AstLookup *lookup;
     AstLookupOrSymbol *los;
+    AstTypeConstructorArgs *typeConstructorArgs;
+    AstTypeMap *typemap;
+    AstStruct *structure;
+    AstTaggedExpressions *taggedExpressions;
 }
 
 %type <chars> str
@@ -347,12 +349,18 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <typeSymbols> type_symbols
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
+%type <unpackStruct> unpack_struct
 %type <iff> iff
 %type <altFunction> alt_function
 %type <altArgs> alt_args
 %type <namespace> name_space
 %type <lookup> look_up
 %type <los> scoped_symbol
+%type <typeConstructorArgs> type_constructor_args
+%type <typemap> type_map
+%type <structure> structure
+%type <taggedExpressions> tagged_expressions
+%type <taggedArgList> tagged_fargs
 
 %token BACK
 %token ELSE
@@ -424,17 +432,28 @@ definitions : %empty                            { $$ = NULL; }
             | definition definitions            { $$ = newAstDefinitions(PIM(mod), $1, $2); }
             ;
 
-definition : symbol '=' expression ';' { $$ = newAstDefinition_Define(PIM(mod), newAstDefine(PIM(mod), $1, $3)); }
-           | typedef                   { $$ = newAstDefinition_TypeDef(PIM(mod), $1); }
-           | defun                     { $$ = newAstDefinition_Define(PIM(mod), $1); }
-           | name_space ';'            {
+definition : symbol '=' expression ';'  {
+                                            $$ = newAstDefinition_Define(
+                                                    PIM(mod),
+                                                    newAstDefine(PIM(mod), $1, $3));
+                                        }
+           | typedef                    { $$ = newAstDefinition_TypeDef(PIM(mod), $1); }
+           | defun                      { $$ = newAstDefinition_Define(PIM(mod), $1); }
+           | name_space ';'             {
                                            storeNamespace(mod, $1);
                                            $$ = newAstDefinition_Blank(PIM(mod));
-                                       }
+                                        }
            ;
 
-defun : FN symbol fun { $$ = newAstDefine(PIM(mod), $2, newAstExpression_Fun(PIM(mod), $3)); }
-      | PRINT symbol fun { $$ = newAstDefine(PIM(mod), makePrintName("print$", $2->name), newAstExpression_Fun(PIM(mod), $3)); }
+defun : FN symbol fun       {
+                                $$ = newAstDefine(PIM(mod), $2,
+                                        newAstExpression_Fun(PIM(mod), $3));
+                            }
+      | PRINT symbol fun    {
+                                $$ = newAstDefine(PIM(mod),
+                                    makePrintName("print$", $2->name),
+                                    newAstExpression_Fun(PIM(mod), $3));
+                            }
       ;
 
 name_space : LINK STRING AS symbol { $$ = parseLink($2, $4, mod); }
@@ -462,14 +481,18 @@ type_body : type_constructor                { $$ = newAstTypeBody(PIM(mod), $1, 
           ;
 
 /* a type constructor being defined */
-type_constructor : symbol                   { $$ = newAstTypeConstructor(PIM(mod), $1, NULL); }
-                 | symbol '(' type_list ')' { $$ = newAstTypeConstructor(PIM(mod), $1, $3); }
+type_constructor : symbol                       { $$ = newAstTypeConstructor(PIM(mod), $1, NULL); }
+                 | symbol type_constructor_args { $$ = newAstTypeConstructor(PIM(mod), $1, $2); }
                  ;
 
 /* a type function being used in the body of a type constructor */
 type_function : scoped_symbol                   { $$ = newAstTypeFunction(PIM(mod), $1, NULL); }
               | scoped_symbol '(' type_list ')' { $$ = newAstTypeFunction(PIM(mod), $1, $3); }
               ;
+
+type_constructor_args : '(' type_list ')'   { $$ = newAstTypeConstructorArgs_List(PIM(mod), $2); }
+                      | '{' type_map '}'    { $$ = newAstTypeConstructorArgs_Map(PIM(mod), $2); }
+                      ;
 
 scoped_symbol : symbol              { $$ = newAstLookupOrSymbol_Symbol(PIM(mod), $1); }
               | symbol '.' symbol   { $$ = makeAstLookupOrSymbol(mod, $1, $3); }
@@ -478,6 +501,10 @@ scoped_symbol : symbol              { $$ = newAstLookupOrSymbol_Symbol(PIM(mod),
 type_list : type                { $$ = newAstTypeList(PIM(mod), $1, NULL); }
           | type ',' type_list  { $$ = newAstTypeList(PIM(mod), $1, $3); }
           ;
+
+type_map : symbol ':' type              { $$ = newAstTypeMap(PIM(mod), $1, $3, NULL); }
+         | symbol ':' type ',' type_map { $$ = newAstTypeMap(PIM(mod), $1, $3, $5); }
+         ;
 
 type : type_clause              { $$ = newAstType(PIM(mod), $1, NULL); }
      | type_clause ARROW type   { $$ = newAstType(PIM(mod), $1, $3); }
@@ -499,11 +526,21 @@ type_clause : KW_INT                { $$ = newAstTypeClause_Integer(PIM(mod)); }
 iff : IF '(' expression ')' nest ELSE iff_nest  { $$ = newAstIff(PIM(mod), $3, $5, $7); }
     ;
 
-iff_nest : iff  { $$ = newAstNest(PIM(mod), NULL, newAstExpressions(PIM(mod), newAstExpression_Iff(PIM(mod), $1), NULL)); }
+iff_nest : iff  {
+                    $$ = newAstNest(PIM(mod),
+                        NULL,
+                        newAstExpressions(PIM(mod),
+                            newAstExpression_Iff(PIM(mod), $1),
+                            NULL));
+                }
          | nest { $$ = $1; }
          ;
 
-switch : SWITCH '(' expressions ')' composite_function  { $$ = newAstFunCall(PIM(mod), newAstExpression_Fun(PIM(mod), $5), $3); }
+switch : SWITCH '(' expressions ')' composite_function  {
+                                                            $$ = newAstFunCall(PIM(mod),
+                                                                newAstExpression_Fun(PIM(mod), $5),
+                                                                $3);
+                                                        }
        ;
 
 fun : alt_function          { $$ = makeAstCompositeFunction($1, NULL); }
@@ -532,8 +569,25 @@ fargs : %empty            { $$ = NULL; }
       | farg ',' fargs    { $$ = newAstArgList(PIM(mod), $1, $3); }
       ;
 
-consfargs : farg                { $$ = makeAstUnpack(mod, consSymbol(), newAstArgList(PIM(mod), $1, newAstArgList(PIM(mod), makeAstNilArg(mod), NULL))); }
-          | farg ',' consfargs  { $$ = makeAstUnpack(mod, consSymbol(), newAstArgList(PIM(mod), $1, newAstArgList(PIM(mod), newAstArg_Unpack(PIM(mod), $3), NULL))); }
+consfargs : farg                {
+                                    $$ = makeAstUnpack(mod,
+                                        consSymbol(),
+                                        newAstArgList(PIM(mod),
+                                        $1,
+                                        newAstArgList(PIM(mod),
+                                        newAstArg_Symbol(PIM(mod),
+                                            nilSymbol()),
+                                            NULL)));
+                                }
+          | farg ',' consfargs  {
+                                    $$ = makeAstUnpack(mod,
+                                        consSymbol(),
+                                        newAstArgList(PIM(mod),
+                                            $1,
+                                            newAstArgList(PIM(mod),
+                                                newAstArg_Unpack(PIM(mod), $3),
+                                                NULL)));
+                                }
           ;
 
 number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
@@ -545,9 +599,10 @@ number : NUMBER        { $$ = makeMaybeBigInt($1, false); }
 farg : symbol              { $$ = newAstArg_Symbol(PIM(mod), $1); }
      | symbol '.' symbol   { $$ = makeAstLookupArg(mod, $1, $3); }
      | unpack              { $$ = newAstArg_Unpack(PIM(mod), $1); }
+     | unpack_struct       { $$ = newAstArg_UnpackStruct(PIM(mod), $1); }
      | cons                { $$ = newAstArg_Unpack(PIM(mod), $1); }
      | named_farg          { $$ = newAstArg_Named(PIM(mod), $1); }
-     | '[' ']'             { $$ = makeAstNilArg(mod); }
+     | '[' ']'             { $$ = newAstArg_Symbol(PIM(mod), nilSymbol()); }
      | '[' consfargs ']'   { $$ = newAstArg_Unpack(PIM(mod), $2); }
      | number              { $$ = newAstArg_Number(PIM(mod), $1); }
      | stringarg           { $$ = newAstArg_Unpack(PIM(mod), $1); }
@@ -556,17 +611,32 @@ farg : symbol              { $$ = newAstArg_Symbol(PIM(mod), $1); }
      | arg_tuple           { $$ = newAstArg_Tuple(PIM(mod), $1); }
      ;
 
-arg_tuple: '#' '(' fargs ')'  { $$ = $3; }
-         ;
+arg_tuple : '#' '(' fargs ')'  { $$ = $3; }
+          ;
 
-cons : farg CONS farg { $$ = makeAstUnpack(mod, consSymbol(), newAstArgList(PIM(mod), $1, newAstArgList(PIM(mod), $3, NULL))); }
+cons : farg CONS farg   {
+                            $$ = makeAstUnpack(mod,
+                                consSymbol(),
+                                newAstArgList(PIM(mod),
+                                    $1,
+                                    newAstArgList(PIM(mod),
+                                        $3,
+                                        NULL)));
+                        }
      ;
 
-unpack : scoped_symbol '(' fargs ')'   { $$ = newAstUnpack(PIM(mod), $1, $3); }
+unpack : scoped_symbol '(' fargs ')'           { $$ = newAstUnpack(PIM(mod), $1, $3); }
        ;
 
+unpack_struct : scoped_symbol '{' tagged_fargs '}'     { $$ = newAstUnpackStruct(PIM(mod), $1, $3); }
+              ;
+
+tagged_fargs : symbol ':' farg                      { $$ = newAstTaggedArgList(PIM(mod), $1, $3, NULL); }
+             | symbol ':' farg ',' tagged_fargs     { $$ = newAstTaggedArgList(PIM(mod), $1, $3, $5); }
+             ;
+
 stringarg : str { $$ = makeStringUnpack(mod, $1); }
-       ;
+          ;
 
 string : str { $$ = makeStringList(mod, $1); }
        ;
@@ -580,6 +650,7 @@ named_farg : symbol '=' farg  { $$ = newAstNamedArg(PIM(mod), $1, $3); }
 
 expression : binop                { $$ = newAstExpression_FunCall(PIM(mod), $1); }
            | fun_call             { $$ = newAstExpression_FunCall(PIM(mod), $1); }
+           | structure            { $$ = newAstExpression_Structure(PIM(mod), $1); }
            | unop                 { $$ = newAstExpression_FunCall(PIM(mod), $1); }
            | '[' conslist ']'     { $$ = newAstExpression_FunCall(PIM(mod), $2); }
            | FN fun               { $$ = newAstExpression_Fun(PIM(mod), $2); }
@@ -607,6 +678,13 @@ unop : '-' expression %prec NEG   { $$ = unOpToFunCall(mod, negSymbol(), $2); }
 fun_call :  expression '(' expressions ')' { $$ = newAstFunCall(PIM(mod), $1, $3); }
          ;
 
+structure : scoped_symbol '{' tagged_expressions '}' { $$ = newAstStruct(PIM(mod), $1, $3); }
+          ;
+
+tagged_expressions : symbol ':' expression                         { $$ = newAstTaggedExpressions(PIM(mod), $1, $3, NULL); }
+                   | symbol ':' expression ',' tagged_expressions  { $$ = newAstTaggedExpressions(PIM(mod), $1, $3, $5); }
+                   ;
+
 tuple : '#' '(' expressions ')'   { $$ = $3; }
       ;
 
@@ -631,7 +709,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(mod, thenSymbol(),
       | expression POW expression       { $$ = binOpToFunCall(mod, powSymbol(), $1, $3); }
       ;
 
-look_up : symbol '.' expression         { $$ = makeAstLookup(mod, $1, $3); }
+look_up : symbol '.' symbol         { $$ = makeAstLookup(mod, $1, newAstExpression_Symbol(PIM(mod), $3)); }
         ;
 
 expressions : %empty                        { $$ = NULL; }
@@ -639,9 +717,23 @@ expressions : %empty                        { $$ = NULL; }
             | expression ',' expressions    { $$ = newAstExpressions(PIM(mod), $1, $3); }
             ;
 
-conslist : %empty                     { $$ = newAstFunCall(PIM(mod), newAstExpression_Symbol(PIM(mod), nilSymbol()), NULL); }
-         | expression                 { $$ = binOpToFunCall(mod, consSymbol(), $1, newAstExpression_Symbol(PIM(mod), nilSymbol())); }
-         | expression ',' conslist    { $$ = binOpToFunCall(mod, consSymbol(), $1, newAstExpression_FunCall(PIM(mod), $3)); }
+conslist : %empty                   {
+                                        $$ = newAstFunCall(PIM(mod),
+                                            newAstExpression_Symbol(PIM(mod), nilSymbol()),
+                                            NULL);
+                                    }
+         | expression               {
+                                        $$ = binOpToFunCall(mod,
+                                            consSymbol(),
+                                            $1,
+                                            newAstExpression_Symbol(PIM(mod), nilSymbol()));
+                                    }
+         | expression ',' conslist  {
+                                        $$ = binOpToFunCall(mod,
+                                            consSymbol(),
+                                            $1,
+                                            newAstExpression_FunCall(PIM(mod), $3));
+                                    }
          ;
 
 expression_statements : expression optional_semicolon           { $$ = newAstExpressions(PIM(mod), $1, NULL); }

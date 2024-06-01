@@ -130,9 +130,9 @@ static LamExp *inlineConstant(LamTypeConstructorInfo *x) {
         cant_happen("missing arguments to constructor %s", x->name->name);
     }
     if (x->needsVec) {
-        return makeConstruct(COPY_PARSER_INFO(x), x->name, x->index, NULL);
+        return makeConstruct(CPI(x), x->name, x->index, NULL);
     } else {
-        return makeConstant(COPY_PARSER_INFO(x), x->name, x->index);
+        return makeConstant(CPI(x), x->name, x->index);
     }
 }
 
@@ -156,7 +156,7 @@ static LamExp *inlineApply(LamApply *x) {
         int nargs = countLamList(x->args);
         if (info->needsVec) {
             if (nargs == info->arity) {
-                return makeConstruct(COPY_PARSER_INFO(x), info->name, info->index, x->args);
+                return makeConstruct(CPI(x), info->name, info->index, x->args);
             } else {
                 cant_happen("wrong number of arguments to constructor %s, got %d, expected %d",
                             info->name->name, nargs, info->arity);
@@ -166,10 +166,10 @@ static LamExp *inlineApply(LamApply *x) {
                 cant_happen("arguments to constant constructor %s",
                             info->name->name);
             }
-            return makeConstant(COPY_PARSER_INFO(x), info->name, info->index);
+            return makeConstant(CPI(x), info->name, info->index);
         }
     }
-    return newLamExp_Apply(COPY_PARSER_INFO(x), x);
+    return newLamExp_Apply(CPI(x), x);
 }
 
 static LamIff *inlineIff(LamIff *x) {

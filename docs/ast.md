@@ -28,11 +28,14 @@ AstTypeSymbols --next--> AstTypeSymbols
 AstTypeBody --typeConstructor--> AstTypeConstructor
 AstTypeBody --next--> AstTypeBody
 AstTypeConstructor --symbol--> HashSymbol
-AstTypeConstructor --typeList--> AstTypeList
+AstTypeConstructor --args--> AstTypeConstructorArgs
 AstTypeFunction --symbol--> AstLookupOrSymbol
 AstTypeFunction --typeList--> AstTypeList
 AstTypeList --type--> AstType
 AstTypeList --next--> AstTypeList
+AstTypeMap --key--> HashSymbol
+AstTypeMap --type--> AstType
+AstTypeMap --next--> AstTypeMap
 AstType --typeClause--> AstTypeClause
 AstType --next--> AstType
 AstCompositeFunction --function--> AstFunction
@@ -41,23 +44,28 @@ AstFunction --argList--> AstArgList
 AstFunction --nest--> AstNest
 AstArgList --arg--> AstArg
 AstArgList --next--> AstArgList
+AstTaggedArgList --tag--> HashSymbol
+AstTaggedArgList --arg--> AstArg
+AstTaggedArgList --next--> AstTaggedArgList
 AstAltArgs --argList--> AstArgList
 AstAltArgs --next--> AstAltArgs
 AstAltFunction --altArgs--> AstAltArgs
 AstAltFunction --nest--> AstNest
 AstUnpack --symbol--> AstLookupOrSymbol
 AstUnpack --argList--> AstArgList
+AstUnpackStruct --symbol--> AstLookupOrSymbol
+AstUnpackStruct --argList--> AstTaggedArgList
 AstNamedArg --name--> HashSymbol
 AstNamedArg --arg--> AstArg
 AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
-AstLookupSymbol --namespace--> int
-AstLookupSymbol --name--> HashSymbol
+AstLookupSymbol --nsid--> int
+AstLookupSymbol --nsSymbol--> HashSymbol
 AstLookupSymbol --symbol--> HashSymbol
-AstLookup --namespace--> int
-AstLookup --name--> HashSymbol
+AstLookup --nsid--> int
+AstLookup --nsSymbol--> HashSymbol
 AstLookup --expression--> AstExpression
 AstIff --test--> AstExpression
 AstIff --consequent--> AstNest
@@ -66,6 +74,13 @@ AstOperator --name--> HashSymbol
 AstOperator --position--> AstPosition
 AstOperator --precedence--> index
 AstPrint --exp--> AstExpression
+AstStruct --symbol--> AstLookupOrSymbol
+AstStruct --expressions--> AstTaggedExpressions
+AstTaggedExpressions --tag--> HashSymbol
+AstTaggedExpressions --expression--> AstExpression
+AstTaggedExpressions --next--> AstTaggedExpressions
+AstTypeConstructorArgs --list--> AstTypeList
+AstTypeConstructorArgs --map--> AstTypeMap
 AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
@@ -81,6 +96,7 @@ AstArg --symbol--> HashSymbol
 AstArg --lookup--> AstLookupSymbol
 AstArg --named--> AstNamedArg
 AstArg --unpack--> AstUnpack
+AstArg --unpackStruct--> AstUnpackStruct
 AstArg --number--> MaybeBigInt
 AstArg --character--> char
 AstArg --tuple--> AstArgList
@@ -96,10 +112,13 @@ AstExpression --iff--> AstIff
 AstExpression --print--> AstPrint
 AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
+AstExpression --structure--> AstStruct
 AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
+AstTypeConstructorArgsVal
+AstTypeConstructorArgsType
 AstLookupOrSymbolVal
 AstLookupOrSymbolType
 AstDefinitionVal

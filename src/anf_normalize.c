@@ -265,18 +265,18 @@ static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
 
 static LamPrimApp *deconstructToPrimApp(LamDeconstruct *deconstruct) {
     LamExp *index =
-        newLamExp_Stdint(COPY_PARSER_INFO(deconstruct), deconstruct->vec);
+        newLamExp_Stdint(CPI(deconstruct), deconstruct->vec);
     int save = PROTECT(index);
     LamPrimApp *res =
-        newLamPrimApp(COPY_PARSER_INFO(deconstruct), LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
+        newLamPrimApp(CPI(deconstruct), LAMPRIMOP_TYPE_VEC, index, deconstruct->exp);
     UNPROTECT(save);
     return res;
 }
 
 static LamPrimApp *tagToPrimApp(LamExp *tagged) {
-    LamExp *index = newLamExp_Stdint(COPY_PARSER_INFO(tagged), 0);
+    LamExp *index = newLamExp_Stdint(CPI(tagged), 0);
     int save = PROTECT(index);
-    LamPrimApp *res = newLamPrimApp(COPY_PARSER_INFO(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
+    LamPrimApp *res = newLamPrimApp(CPI(tagged), LAMPRIMOP_TYPE_VEC, index, tagged);
     UNPROTECT(save);
     return res;
 }
@@ -293,10 +293,10 @@ static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail) {
 
 static LamPrimApp *tupleIndexToPrimApp(LamTupleIndex *tupleIndex) {
     LamExp *index =
-        newLamExp_Stdint(COPY_PARSER_INFO(tupleIndex), tupleIndex->vec);
+        newLamExp_Stdint(CPI(tupleIndex), tupleIndex->vec);
     int save = PROTECT(index);
     LamPrimApp *res =
-        newLamPrimApp(COPY_PARSER_INFO(tupleIndex), LAMPRIMOP_TYPE_VEC, index, tupleIndex->exp);
+        newLamPrimApp(CPI(tupleIndex), LAMPRIMOP_TYPE_VEC, index, tupleIndex->exp);
     UNPROTECT(save);
     return res;
 }
@@ -388,9 +388,9 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
 }
 
 static LamApply *printToApply(LamPrint *lamPrint) {
-    LamList *args = newLamList(COPY_PARSER_INFO(lamPrint), lamPrint->exp, NULL);
+    LamList *args = newLamList(CPI(lamPrint), lamPrint->exp, NULL);
     int save = PROTECT(args);
-    LamApply *lamApply = newLamApply(COPY_PARSER_INFO(lamPrint), lamPrint->printer, args);
+    LamApply *lamApply = newLamApply(CPI(lamPrint), lamPrint->printer, args);
     UNPROTECT(save);
     return lamApply;
 }
@@ -454,18 +454,18 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
     int nargs = countLamList(construct->args);
     LamExp *newArg =
-        newLamExp_Stdint(COPY_PARSER_INFO(construct), construct->tag);
+        newLamExp_Stdint(CPI(construct), construct->tag);
     int save = PROTECT(newArg);
-    LamList *extraItem = newLamList(COPY_PARSER_INFO(construct), newArg, construct->args);
+    LamList *extraItem = newLamList(CPI(construct), newArg, construct->args);
     PROTECT(extraItem);
-    LamMakeVec *res = newLamMakeVec(COPY_PARSER_INFO(construct), nargs + 1, extraItem);
+    LamMakeVec *res = newLamMakeVec(CPI(construct), nargs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
 static LamMakeVec *tupleToMakeVec(LamList *tuple) {
     int nargs = countLamList(tuple);
-    LamMakeVec *res = newLamMakeVec(COPY_PARSER_INFO(tuple), nargs, tuple);
+    LamMakeVec *res = newLamMakeVec(CPI(tuple), nargs, tuple);
     return res;
 }
 
@@ -735,7 +735,7 @@ static Exp *normalizeEnv(Exp *tail) {
 static Exp *normalizeLamLookup(LamLookup *lookup, Exp *tail) {
     Exp *rest = normalize(lookup->exp, tail);
     int save = PROTECT(rest);
-    ExpLookup *exp = newExpLookup(lookup->namespace, rest);
+    ExpLookup *exp = newExpLookup(lookup->nsid, rest);
     PROTECT(exp);
     Exp *res = newExp_Lookup(exp);
     UNPROTECT(save);
@@ -1048,6 +1048,7 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_AND:
         case LAMEXP_TYPE_OR:
         case LAMEXP_TYPE_MAKEVEC:
+        case LAMEXP_TYPE_LOOKUP:
             return false;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("lamExpIsLambda encountered cond default");
@@ -1120,7 +1121,7 @@ static Aexp *replaceLamPrint(LamPrint *print, LamExpTable *replacements) {
     ENTER(replaceLamPrint);
     LamApply *lamApply = printToApply(print);
     int save = PROTECT(lamApply);
-    LamExp *lamExp = newLamExp_Apply(COPY_PARSER_INFO(print), lamApply);
+    LamExp *lamExp = newLamExp_Apply(CPI(print), lamApply);
     PROTECT(lamExp);
     Aexp *res = replaceLamExp(lamExp, replacements);
     UNPROTECT(save);

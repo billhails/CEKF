@@ -6,8 +6,12 @@ run_gdb () {
     gdb -q ./cekf `ls -rt1 /var/lib/apport/coredump/* | tail -1`
 }
 
-cores () {
+cores_on () {
     ulimit -c unlimited
+}
+
+cores_off () {
+    ulimit -c 0
 }
 
 watch_make () {

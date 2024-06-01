@@ -126,8 +126,8 @@ static AstNest *parseTopLevel(PmModule *mod, YY_BUFFER_STATE bs, const char *ori
         return NULL;
     }
     AstExpression *expression = newAstExpression_Nest(PIM(mod), mod->nest);
-    AstExpressions *expressions = newAstExpressions(COPY_PARSER_INFO(expression), expression, NULL);
-    AstNest *nest = newAstNest(COPY_PARSER_INFO(expression), definitions, expressions);
+    AstExpressions *expressions = newAstExpressions(CPI(expression), expression, NULL);
+    AstNest *nest = newAstNest(CPI(expression), definitions, expressions);
     return nest;
 }
 

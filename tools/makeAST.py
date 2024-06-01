@@ -1468,6 +1468,9 @@ class SimpleStruct(Base):
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType}); {comment}")
         if hasInternalConstructors:
+            print(f"    Header _h = x->header; {comment}")
+            print(f"    bzero(x, sizeof(struct {myName})); {comment}")
+            print(f"    x->header = _h; {comment}")
             print(f"    int save = PROTECT(x); {comment}")
         print(f'    DEBUG("new {myName} %p", x); {comment}')
         if catalog.parserInfo:
@@ -1481,7 +1484,6 @@ class SimpleStruct(Base):
                 d = f'{field.getConstructorName(catalog)}()'
             else:
                 d = field.default
-            print(f"    bzero(&(x->{f}), sizeof(x->{f})); {comment}")
             print(f"    x->{f} = {d}; {comment}")
         if hasInternalConstructors:
             print(f"    UNPROTECT(save); {comment}")

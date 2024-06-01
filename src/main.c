@@ -206,17 +206,22 @@ int main(int argc, char *argv[]) {
     BuiltIns *builtIns = registerBuiltIns();
     int save = PROTECT(builtIns);
 
+    if (report_flag) eprintf("parse\n");
     AstProg *prog = parseFile(argv[optind]);
     int save2 = PROTECT(prog);
 
+    if (report_flag) eprintf("convert\n");
     LamExp *exp = convertProg(prog);
     REPLACE_PROTECT(save2, exp);
 
+    if (report_flag) eprintf("typecheck\n");
     typeCheck(exp, builtIns);
 
+    if (report_flag) eprintf("inline\n");
     exp = inlineExp(exp);
     REPLACE_PROTECT(save2, exp);
 
+    if (report_flag) eprintf("ANF\n");
     Exp *anfExp = anfNormalize(exp);
     REPLACE_PROTECT(save2, anfExp);
 
@@ -225,17 +230,20 @@ int main(int argc, char *argv[]) {
         eprintf("\n");
     }
 
+    if (report_flag) eprintf("desugar\n");
     anfExp = desugar(anfExp);
     REPLACE_PROTECT(save2, anfExp);
 
     annotate(anfExp, builtIns);
 
+    if (report_flag) eprintf("compile\n");
     ByteCodeArray byteCodes = generateByteCodes(anfExp);
 
     UNPROTECT(save2);
 
     clock_t compiled = clock();
 
+    if (report_flag) eprintf("run\n");
     run(byteCodes, builtIns);
 
     UNPROTECT(save);

@@ -57,13 +57,13 @@ structs:
         args: LamList
 
     LamLookup:
-        namespace: int
-        name: HashSymbol
+        nsid: int
+        nsSymbol: HashSymbol
         exp: LamExp
 
     LamLookupSymbol:
-        namespace: int
-        name: HashSymbol
+        nsid: int
+        nsSymbol: HashSymbol
         symbol: HashSymbol
 
     LamConstant:
@@ -77,7 +77,7 @@ structs:
 
     LamDeconstruct:
         name: HashSymbol # name of the constructor being deconstructed
-        namespace: int   # namespace of the constructor being deconstructed
+        nsid: int        # namespace of the constructor being deconstructed
         vec: int         # offset of the field in the vector
         exp: LamExp      # expression being deconstructed
 
@@ -121,7 +121,7 @@ structs:
     LamIntList:
         item: int
         name: HashSymbol
-        namespace: int
+        nsid: int
         next: LamIntList
 
     LamLet:
@@ -174,7 +174,7 @@ structs:
         constructors: LamTypeConstructorList
 
     LamTypeConstructorList:
-        constructor: LamTypeConstructor # re-use
+        constructor: LamTypeConstructor
         next: LamTypeConstructorList
 
     # the following LamType* structs hold type information
@@ -182,6 +182,10 @@ structs:
     LamType:
         name: HashSymbol
         args: LamTypeArgs
+
+    LamTypeTags:
+        tag: HashSymbol
+        next: LamTypeTags
 
     LamTypeArgs:
         name: HashSymbol
@@ -195,15 +199,16 @@ structs:
     LamTypeConstructorArgs:
         arg: LamTypeConstructorType
         next: LamTypeConstructorArgs
-
+    
     LamTypeFunction:
         name: LamLookupOrSymbol
         args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
         name: HashSymbol
-        namespace: int
+        nsid: int
         type: LamTypeConstructor
+        tags: LamTypeTags
         needsVec: bool # does this need to be a vector?
         arity: int # number of arguments to this constructor
         size: int # number of alternatives
@@ -290,7 +295,7 @@ unions:
     LamInfo:
         typeConstructorInfo: LamTypeConstructorInfo
         namespaceInfo: LamContext
-        namespace: int
+        nsid: int
 
 hashes:
     LamInfoTable:

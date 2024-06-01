@@ -69,7 +69,7 @@ structs:
 
     AstTypeConstructor:
         symbol: HashSymbol
-        typeList: AstTypeList
+        args: AstTypeConstructorArgs
 
     AstTypeFunction:
         symbol: AstLookupOrSymbol
@@ -78,6 +78,11 @@ structs:
     AstTypeList:
         type: AstType
         next: AstTypeList
+
+    AstTypeMap:
+        key: HashSymbol
+        type: AstType
+        next: AstTypeMap
 
     AstType:
         typeClause: AstTypeClause
@@ -95,6 +100,11 @@ structs:
         arg: AstArg
         next: AstArgList
 
+    AstTaggedArgList:
+        tag: HashSymbol
+        arg: AstArg
+        next: AstTaggedArgList
+
     AstAltArgs: # temp struct used by the parser for `fn (...) | (...) { ... }` alternative arguments
         argList: AstArgList
         next: AstAltArgs
@@ -106,6 +116,10 @@ structs:
     AstUnpack:
         symbol: AstLookupOrSymbol
         argList: AstArgList
+
+    AstUnpackStruct:
+        symbol: AstLookupOrSymbol
+        argList: AstTaggedArgList
 
     AstNamedArg:
         name: HashSymbol
@@ -119,14 +133,14 @@ structs:
         expression: AstExpression
         next: AstExpressions
 
-    AstLookupSymbol: # specific to type functions
-        namespace: int
-        name: HashSymbol
+    AstLookupSymbol:
+        nsid: int
+        nsSymbol: HashSymbol
         symbol: HashSymbol
 
     AstLookup:
-        namespace: int
-        name: HashSymbol
+        nsid: int
+        nsSymbol: HashSymbol
         expression: AstExpression
 
     AstIff:
@@ -142,6 +156,15 @@ structs:
     AstPrint:
         exp: AstExpression
 
+    AstStruct:
+        symbol: AstLookupOrSymbol
+        expressions: AstTaggedExpressions
+
+    AstTaggedExpressions:
+        tag: HashSymbol
+        expression: AstExpression
+        next: AstTaggedExpressions
+
 enums:
     AstPosition:
         - PREFIX
@@ -149,6 +172,10 @@ enums:
         - POSTFIX
 
 unions:
+    AstTypeConstructorArgs:
+        list: AstTypeList
+        map: AstTypeMap
+
     AstLookupOrSymbol:
         symbol: HashSymbol
         lookup: AstLookupSymbol
@@ -171,6 +198,7 @@ unions:
         lookup: AstLookupSymbol
         named: AstNamedArg
         unpack: AstUnpack
+        unpackStruct: AstUnpackStruct
         number: MaybeBigInt
         character: char
         tuple: AstArgList
@@ -188,6 +216,7 @@ unions:
         print: AstPrint
         tuple: AstExpressions
         env: void_ptr
+        structure: AstStruct
 
 hashes:
     AstIntTable:
