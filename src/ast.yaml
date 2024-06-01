@@ -217,6 +217,7 @@ unions:
         tuple: AstExpressions
         env: void_ptr
         structure: AstStruct
+        assertion: AstExpression
 
 hashes:
     AstIntTable:

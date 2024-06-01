@@ -332,7 +332,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <define> defun
 %type <definition> definition
 %type <definitions> let_in definitions namespace_definitions
-%type <expression> expression
+%type <expression> expression assertion
 %type <expressions> expressions expression_statements tuple
 %type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
@@ -379,6 +379,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token LINK
 %token NAMESPACE_TOKEN
 %token AS
+%token ASSERT
 
 %token <c> CHAR
 %token <s> NUMBER
@@ -665,8 +666,12 @@ expression : binop                { $$ = newAstExpression_FunCall(PIM(mod), $1);
            | print                { $$ = newAstExpression_Print(PIM(mod), $1); }
            | tuple                { $$ = newAstExpression_Tuple(PIM(mod), $1); }
            | look_up              { $$ = newAstExpression_Lookup(PIM(mod), $1); }
+           | assertion            { $$ = newAstExpression_Assertion(PIM(mod), $1); }
            | '(' expression ')'   { $$ = $2; }
            ;
+
+assertion : ASSERT '(' expression ')' { $$ = $3; }
+          ;
 
 unop : '-' expression %prec NEG   { $$ = unOpToFunCall(mod, negSymbol(), $2); }
      | NOT expression %prec NOT   { $$ = unOpToFunCall(mod, notSymbol(), $2); }

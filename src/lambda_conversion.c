@@ -1137,6 +1137,29 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) 
     return result;
 }
 
+
+static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
+    LamExp *exp = convertExpression(value, env);
+    int save = PROTECT(exp);
+    LamList *args = newLamList(CPI(exp), exp, NULL);
+    PROTECT(args);
+    LamExp *fileName = stringToLamList(CPI(exp), exp->_yy_parser_info.filename);
+    PROTECT(fileName);
+    args = newLamList(CPI(exp), fileName, args);
+    PROTECT(args);
+    MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineno, false);
+    PROTECT(num);
+    LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
+    PROTECT(lineNo);
+    args = newLamList(CPI(lineNo), lineNo, args);
+    PROTECT(args);
+    LamExp *function = newLamExp_Var(CPI(value), assertSymbol());
+    PROTECT(function);
+    LamExp *res = makeApplication(function, args);
+    UNPROTECT(save);
+    return res;
+}
+
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression);
     LamExp *result = NULL;
@@ -1155,18 +1178,15 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             DEBUG("number");
-            result =
-                newLamExp_Biginteger(CPI(expression), expression->val.number);
+            result = newLamExp_Biginteger(CPI(expression), expression->val.number);
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             DEBUG("character");
-            result =
-                newLamExp_Character(CPI(expression), expression->val.character);
+            result = newLamExp_Character(CPI(expression), expression->val.character);
             break;
         case AST_EXPRESSION_TYPE_ENV:
             DEBUG("env");
-            result =
-                newLamExp_Env(CPI(expression));
+            result = newLamExp_Env(CPI(expression));
             break;
         case AST_EXPRESSION_TYPE_FUN:
             DEBUG("fun");
@@ -1195,6 +1215,9 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_STRUCTURE:
             DEBUG("structure");
             result = convertStructure(expression->val.structure, env);
+            break;
+        case AST_EXPRESSION_TYPE_ASSERTION:
+            result = convertAssertion(expression->val.assertion, env);
             break;
         default:
             cant_happen

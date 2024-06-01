@@ -22,11 +22,13 @@
 #include "symbol.h"
 
 static void registerRand(BuiltIns *registry);
+static void registerAssert(BuiltIns *registry);
 
 BuiltIns *registerBuiltIns() {
     BuiltIns *res = newBuiltIns();
     int save = PROTECT(res);
     registerRand(res);
+    registerAssert(res);
     UNPROTECT(save);
     return res;
 }
@@ -36,6 +38,15 @@ static void registerRand(BuiltIns *registry) {
     int save = PROTECT(args);
     pushBuiltInArgs(args, BUILTINARGTYPE_TYPE_NUMBER);
     BuiltIn *decl = newBuiltIn(newSymbol("rand"), BUILTINARGTYPE_TYPE_NUMBER, args, (void *)builtin_rand);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}
+
+static void registerAssert(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    BuiltIn *decl = newBuiltIn(newSymbol("assertion"), BUILTINARGTYPE_TYPE_BOOL, args, (void *)builtin_assert);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

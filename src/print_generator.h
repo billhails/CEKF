@@ -29,5 +29,6 @@ LamExp *makeSymbolExpr(ParserInfo I, char *name);
 LamExp *makePrintInt();
 LamExp *makePrintChar();
 HashSymbol *makePrintName(char *prefix, char *name);
+LamExp *stringToLamList(ParserInfo I, char *name);
 
 #endif

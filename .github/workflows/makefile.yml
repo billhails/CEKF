@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: make
+      run: make TESTING=yes
 
     - name: Run check
-      run: make test
+      run: make test TESTING=yes

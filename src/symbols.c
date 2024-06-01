@@ -29,6 +29,14 @@ HashSymbol *negSymbol() {
     return res;
 }
 
+HashSymbol *assertSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("assert$");
+    }
+    return res;
+}
+
 HashSymbol *namespacesSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

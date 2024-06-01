@@ -40,10 +40,13 @@
 
 #define IS_COMPLEX(x) ((x).type == VALUE_TYPE_COMPLEX)
 #define IS_BIGINT(x) ((x).type == VALUE_TYPE_BIGINT)
+#define IS_BIGINT_IMAG(x) ((x).type == VALUE_TYPE_BIGINT_IMAG)
 #define IS_IRRATIONAL(x) ((x).type == VALUE_TYPE_IRRATIONAL)
 #define IS_RATIONAL(x) ((x).type == VALUE_TYPE_RATIONAL)
 #define IS_STDINT(x) ((x).type == VALUE_TYPE_STDINT)
+#define IS_STDINT_IMAG(x) ((x).type == VALUE_TYPE_STDINT_IMAG)
 #define IS_INT(x) (IS_STDINT(x) || IS_BIGINT(x))
+#define IS_IMAGINT(x) (IS_STDINT_IMAG(x) || IS_BIGINT_IMAG(x))
 #define IS_RATIONAL_OR_INT(x) ((x).type == VALUE_TYPE_RATIONAL || IS_INT(x))
 #define IS_REAL(x) (IS_RATIONAL_OR_INT(x) || IS_IRRATIONAL(x))
 #define IS_NOT_REAL(x) (!IS_REAL(x))
@@ -1107,7 +1110,6 @@ static void intNegInPlace(Value *v) {
 }
 
 static Value intNeg(Value v) {
-    ASSERT_INT(v);
     int save = PROTECT(NULL);
     if (IS_BIGINT(v)) {
         BigInt *bi = copyBigInt(v.val.bigint);

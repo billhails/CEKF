@@ -131,11 +131,11 @@ static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     return res;
 }
 
-static LamExp *stringToList(ParserInfo I, char *name) {
+LamExp *stringToLamList(ParserInfo I, char *name) {
     if (*name == 0) {
         return makeNullList(I);
     }
-    LamExp *next = stringToList(I, name + 1);
+    LamExp *next = stringToLamList(I, name + 1);
     int save = PROTECT(next);
     LamExp *this = makeCharList(I, *name, next);
     UNPROTECT(save);
@@ -156,7 +156,7 @@ static LamExp *putsExp(ParserInfo I, LamExp *string) {
 }
 
 static LamExp *makePutsString(ParserInfo I, char *str) {
-    LamExp *string = stringToList(I, str);
+    LamExp *string = stringToLamList(I, str);
     int save = PROTECT(string);
     LamExp *res = putsExp(I, string);
     UNPROTECT(save);
@@ -164,7 +164,7 @@ static LamExp *makePutsString(ParserInfo I, char *str) {
 }
 
 static LamExp *makePlainMatchBody(ParserInfo I, LamTypeConstructor *constructor) {
-    LamExp *string = stringToList(I, constructor->name->name);
+    LamExp *string = stringToLamList(I, constructor->name->name);
     int save = PROTECT(string);
     LamExp *puts = putsExp(I, string);
     UNPROTECT(save);

@@ -38,6 +38,7 @@ enums:
     BuiltInArgType:
     - NUMBER
     - CHAR
+    - BOOL
 
 arrays:
     BuiltInArgs:
