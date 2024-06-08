@@ -19,6 +19,8 @@ AstDefinitions --definition--> AstDefinition
 AstDefinitions --next--> AstDefinitions
 AstDefine --symbol--> HashSymbol
 AstDefine --expression--> AstExpression
+AstAlias --name--> HashSymbol
+AstAlias --type--> AstType
 AstTypeDef --userType--> AstUserType
 AstTypeDef --typeBody--> AstTypeBody
 AstUserType --symbol--> HashSymbol
@@ -85,6 +87,7 @@ AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
 AstDefinition --typeDef--> AstTypeDef
+AstDefinition --alias--> AstAlias
 AstDefinition --blank--> void_ptr
 AstTypeClause --integer--> void_ptr
 AstTypeClause --character--> void_ptr

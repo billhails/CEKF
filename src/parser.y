@@ -342,6 +342,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstTypeMap *typemap;
     AstStruct *structure;
     AstTaggedExpressions *taggedExpressions;
+    AstAlias *alias;
 }
 
 %type <chars> str
@@ -359,14 +360,14 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
 %type <print> print
-%type <symbol> symbol type_symbol
+%type <symbol> symbol type_variable
 %type <typeBody> type_body
 %type <typeClause> type_clause
 %type <typeConstructor> type_constructor
 %type <typeFunction> type_function
 %type <typeDef> typedef
 %type <typeList> type_list type_tuple
-%type <typeSymbols> type_symbols
+%type <typeSymbols> type_variables
 %type <type> type
 %type <unpack> unpack cons consfargs stringarg
 %type <unpackStruct> unpack_struct
@@ -381,6 +382,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <structure> structure
 %type <taggedExpressions> tagged_expressions
 %type <taggedArgList> tagged_fargs
+%type <alias> alias
 
 %token BACK
 %token ELSE
@@ -400,6 +402,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token NAMESPACE_TOKEN
 %token AS
 %token ASSERT
+%token ALIAS
 
 %token <c> CHAR
 %token <s> NUMBER
@@ -464,6 +467,7 @@ definition : symbol '=' expression ';'  {
                                            storeNamespace(mod, $1);
                                            $$ = newAstDefinition_Blank(PIM(mod));
                                         }
+           | alias                      { $$ = newAstDefinition_Alias(PIM(mod), $1); }
            ;
 
 defun : FN symbol fun       {
@@ -480,6 +484,8 @@ defun : FN symbol fun       {
 name_space : LINK STRING AS symbol { $$ = parseLink($2, $4, mod); }
            ;
 
+alias : ALIAS symbol '=' type ';' { $$ = newAstAlias(PIM(mod), $2, $4); }
+
 /******************************** types */
 
 typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef(PIM(mod), $2, $4); }
@@ -487,14 +493,14 @@ typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef(PIM(mod), $
 
 /* a type function being defined */
 user_type : symbol                      { $$ = newAstUserType(PIM(mod), $1, NULL); }
-          | symbol '(' type_symbols ')' { $$ = newAstUserType(PIM(mod), $1, $3); }
+          | symbol '(' type_variables ')' { $$ = newAstUserType(PIM(mod), $1, $3); }
           ;
 
-type_symbols : type_symbol                  { $$ = newAstTypeSymbols(PIM(mod), $1, NULL); }
-             | type_symbol ',' type_symbols { $$ = newAstTypeSymbols(PIM(mod), $1, $3); }
+type_variables : type_variable                  { $$ = newAstTypeSymbols(PIM(mod), $1, NULL); }
+             | type_variable ',' type_variables { $$ = newAstTypeSymbols(PIM(mod), $1, $3); }
              ;
 
-type_symbol : TYPE_VAR  { $$ = newSymbol($1); }
+type_variable : TYPE_VAR  { $$ = newSymbol($1); }
             ;
 
 type_body : type_constructor                { $$ = newAstTypeBody(PIM(mod), $1, NULL); }
@@ -537,7 +543,7 @@ type_tuple : '#' '(' type_list ')' { $$ = $3; }
 
 type_clause : KW_INT                { $$ = newAstTypeClause_Integer(PIM(mod)); }
             | KW_CHAR               { $$ = newAstTypeClause_Character(PIM(mod)); }
-            | type_symbol           { $$ = newAstTypeClause_Var(PIM(mod), $1); }
+            | type_variable           { $$ = newAstTypeClause_Var(PIM(mod), $1); }
             | type_function         { $$ = newAstTypeClause_TypeFunction(PIM(mod), $1); }
             | type_tuple            { $$ = newAstTypeClause_TypeTuple(PIM(mod), $1); }
             ;

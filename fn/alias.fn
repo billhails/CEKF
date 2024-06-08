@@ -1,0 +1,5 @@
+let
+    alias str = list(char);
+    typedef named_list(#t) { nl(str, list(#t)) }
+in
+    print(nl("mine", [1, 2, 3]))

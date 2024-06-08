@@ -40,6 +40,16 @@ void printLamExpFn(void *ptr, int depth) {
     ppLamExpD(*((LamExp **) ptr), depth);
 }
 
+LamTypeConstructorType *lookupConstructorTypeInLamContext(LamContext *context, HashSymbol *var) {
+    if (context == NULL)
+        return NULL; // not an error
+    LamTypeConstructorType *result = NULL;
+    if (getLamAliasTable(context->aliases, var, &result)) {
+        return result;
+    }
+    return lookupConstructorTypeInLamContext(context->parent, var);
+}
+
 LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var) {
     if (context == NULL)
         return NULL; // not an error

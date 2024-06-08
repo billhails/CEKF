@@ -51,6 +51,7 @@ struct PmModule *mod = yyextra;
 "then"          { return THEN; }
 "typedef"       { return TYPEDEF; }
 "assert"        { return ASSERT; }
+"alias"         { return ALIAS; }
 
 \"((\\.)|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
 \'((\\.)|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }
