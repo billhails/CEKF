@@ -51,6 +51,10 @@ structs:
         symbol: HashSymbol
         expression: AstExpression
 
+    AstAlias:
+        name: HashSymbol
+        type: AstType
+
     AstTypeDef:
         userType: AstUserType
         typeBody: AstTypeBody
@@ -183,6 +187,7 @@ unions:
     AstDefinition:
         define: AstDefine
         typeDef: AstTypeDef
+        alias: AstAlias
         blank: void_ptr
 
     AstTypeClause:

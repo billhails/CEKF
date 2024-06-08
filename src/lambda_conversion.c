@@ -49,17 +49,19 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
                                        LamContext *env);
+static void collectAliases(AstDefinitions *definitions, LamContext *env);
 static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type, int size,
                                                   int index, bool needsVec,
                                                   LamContext *env);
-static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args, LamTypeConstructor *type,
+static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args,
+                            LamTypeConstructor *type,
                             bool needsVec, int enumCount, int index,
                             int arity, LamContext *env);
-static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList);
-static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap);
-static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args);
+static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList, LamContext *env);
+static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap, LamContext *env);
+static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args, LamContext *env);
 static HashSymbol *dollarSubstitute(HashSymbol *original);
 static LamExp *convertNest(AstNest *nest, LamContext *env);
 static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
@@ -129,6 +131,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
                                         AstExpressions *expressions,
                                         LamContext *env) {
     ENTER(lamConvertDefsNsAndExprs);
+    collectAliases(definitions, env);
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
@@ -288,10 +291,33 @@ static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {
     }
 }
 
-static LamTypeFunction *convertAstTypeFunction(AstTypeFunction
-                                               *astTypeFunction) {
+static LamTypeConstructorType *expandSymbolAlias(AstLookupOrSymbol *los, LamContext *env) {
+    switch (los->type) {
+        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
+                LamTypeConstructorType *found =
+                    lookupConstructorTypeInLamContext(env, los->val.symbol);
+                if (found != NULL) {
+                    return found;
+                }
+                return NULL;
+            }
+        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+            return NULL;
+        default:
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+    }
+}
+
+static LamTypeConstructorType *expandFunctionAlias(AstTypeFunction *function, LamContext *env) {
+    if (function->typeList != NULL) {
+        return NULL;
+    }
+    return expandSymbolAlias(function->symbol, env);
+}
+
+static LamTypeFunction *convertAstTypeFunction(AstTypeFunction *astTypeFunction, LamContext *env) {
     LamTypeConstructorArgs *lamTypeConstructorArgs =
-        convertAstTypeList(astTypeFunction->typeList);
+        convertAstTypeList(astTypeFunction->typeList, env);
     int save = PROTECT(lamTypeConstructorArgs);
     LamLookupOrSymbol *los = convertAstLookupOrSymbol(astTypeFunction->symbol);
     PROTECT(los);
@@ -300,40 +326,36 @@ static LamTypeFunction *convertAstTypeFunction(AstTypeFunction
     return this;
 }
 
-static LamTypeConstructorType *convertAstTypeClause(AstTypeClause
-                                                    *astTypeClause) {
+static LamTypeConstructorType *convertAstTypeClause(AstTypeClause *astTypeClause, LamContext *env) {
     switch (astTypeClause->type) {
         case AST_TYPECLAUSE_TYPE_INTEGER:
-            return
-                newLamTypeConstructorType_Integer(CPI(astTypeClause));
-            break;
+            return newLamTypeConstructorType_Integer(CPI(astTypeClause));
         case AST_TYPECLAUSE_TYPE_CHARACTER:
-            return
-                newLamTypeConstructorType_Character(CPI(astTypeClause));
-            break;
+            return newLamTypeConstructorType_Character(CPI(astTypeClause));
         case AST_TYPECLAUSE_TYPE_VAR:
             return newLamTypeConstructorType_Var(CPI(astTypeClause), astTypeClause->val.var);
-            break;
         case AST_TYPECLAUSE_TYPE_TYPEFUNCTION:{
+                LamTypeConstructorType *alias = expandFunctionAlias(astTypeClause->val.typeFunction, env);
+                if (alias != NULL) {
+                    return alias;
+                }
                 LamTypeFunction *lamTypeFunction =
-                    convertAstTypeFunction(astTypeClause->val.typeFunction);
+                    convertAstTypeFunction(astTypeClause->val.typeFunction, env);
                 int save = PROTECT(lamTypeFunction);
                 LamTypeConstructorType *this =
                     newLamTypeConstructorType_Function(CPI(astTypeClause), lamTypeFunction);
                 UNPROTECT(save);
                 return this;
             }
-            break;
         case AST_TYPECLAUSE_TYPE_TYPETUPLE: {
             LamTypeConstructorArgs *lamTypeConstructorArgs =
-                convertAstTypeList(astTypeClause->val.typeTuple);
+                convertAstTypeList(astTypeClause->val.typeTuple, env);
             int save = PROTECT(lamTypeConstructorArgs);
             LamTypeConstructorType *this =
                 newLamTypeConstructorType_Tuple(CPI(astTypeClause), lamTypeConstructorArgs);
             UNPROTECT(save);
             return this;
         }
-        break;
         default:
             cant_happen
                 ("unrecognised astTypeClause type %d in convertAstTypeClause",
@@ -354,12 +376,12 @@ static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
     return res;
 }
 
-static LamTypeConstructorType *convertAstType(AstType *astType) {
+static LamTypeConstructorType *convertAstType(AstType *astType, LamContext *env) {
     if (astType->next) {        // it's a function
-        LamTypeConstructorType *next = convertAstType(astType->next);
+        LamTypeConstructorType *next = convertAstType(astType->next, env);
         int save = PROTECT(next);
         LamTypeConstructorType *this =
-            convertAstTypeClause(astType->typeClause);
+            convertAstTypeClause(astType->typeClause, env);
         PROTECT(this);
         LamTypeFunction *arrow = makeArrow(this, next);
         PROTECT(arrow);
@@ -368,44 +390,44 @@ static LamTypeConstructorType *convertAstType(AstType *astType) {
         UNPROTECT(save);
         return res;
     } else {
-        return convertAstTypeClause(astType->typeClause);
+        return convertAstTypeClause(astType->typeClause, env);
     }
 }
 
-static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList) {
+static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList, LamContext *env) {
     if (typeList == NULL)
         return NULL;
-    LamTypeConstructorArgs *next = convertAstTypeList(typeList->next);
+    LamTypeConstructorArgs *next = convertAstTypeList(typeList->next, env);
     int save = PROTECT(next);
-    LamTypeConstructorType *arg = convertAstType(typeList->type);
+    LamTypeConstructorType *arg = convertAstType(typeList->type, env);
     PROTECT(arg);
     LamTypeConstructorArgs *this = newLamTypeConstructorArgs(CPI(arg), arg, next);
     UNPROTECT(save);
     return this;
 }
 
-static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap) {
+static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap, LamContext *env) {
     if (typeMap == NULL)
         return NULL;
-    LamTypeConstructorArgs *next = convertAstTypeMap(typeMap->next);
+    LamTypeConstructorArgs *next = convertAstTypeMap(typeMap->next, env);
     int save = PROTECT(next);
-    LamTypeConstructorType *arg = convertAstType(typeMap->type);
+    LamTypeConstructorType *arg = convertAstType(typeMap->type, env);
     PROTECT(arg);
     LamTypeConstructorArgs *this = newLamTypeConstructorArgs(CPI(arg), arg, next);
     UNPROTECT(save);
     return this;
 }
 
-static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args) {
+static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args, LamContext *env) {
     if (args == NULL) {
         return NULL;
     }
     switch (args->type) {
         case AST_TYPECONSTRUCTORARGS_TYPE_LIST:{
-            return convertAstTypeList(args->val.list);
+            return convertAstTypeList(args->val.list, env);
         }
         case AST_TYPECONSTRUCTORARGS_TYPE_MAP:{
-            return convertAstTypeMap(args->val.map);
+            return convertAstTypeMap(args->val.map, env);
         }
         default:
             cant_happen("unrecognized %s", astTypeConstructorArgsTypeName(args->type));
@@ -472,7 +494,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstr
                                                   LamContext *env) {
     int nargs = countAstTypeConstructorArgs(typeConstructor->args);
     LamTypeConstructorArgs *args =
-        convertAstTypeConstructorArgs(typeConstructor->args);
+        convertAstTypeConstructorArgs(typeConstructor->args, env);
     int save = PROTECT(args);
     LamTypeConstructor *lamTypeConstructor =
         newLamTypeConstructor(CPI(type), typeConstructor->symbol, type, args);
@@ -514,22 +536,51 @@ static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
     return res;
 }
 
-static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
-                                       LamContext *env) {
+static void collectAlias(AstAlias *alias, LamContext *env) {
+    LamTypeConstructorType *type = convertAstType(alias->type, env);
+    int save = PROTECT(type);
+    setLamAliasTable(env->aliases, alias->name, type);
+    UNPROTECT(save);
+}
+
+static void collectAliases(AstDefinitions *definitions, LamContext *env) {
+    if (definitions == NULL) {
+        return;
+    }
+    switch (definitions->definition->type) {
+        case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_BLANK:
+        case AST_DEFINITION_TYPE_TYPEDEF:
+            break;
+        case AST_DEFINITION_TYPE_ALIAS:
+            collectAlias(definitions->definition->val.alias, env);
+            break;
+        default:
+            cant_happen("unrecognised %s", astDefinitionTypeName(definitions->definition->type));
+    }
+    collectAliases(definitions->next, env);
+}
+
+static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
     if (definitions == NULL) {
         return NULL;
     }
-    if (definitions->definition->type == AST_DEFINITION_TYPE_TYPEDEF) {
-        LamTypeDef *lamTypeDef =
-            collectTypeDef(definitions->definition->val.typeDef, env);
-        int save = PROTECT(lamTypeDef);
-        LamTypeDefList *rest = collectTypeDefs(definitions->next, env);
-        PROTECT(rest);
-        LamTypeDefList *res = newLamTypeDefList(CPI(lamTypeDef), lamTypeDef, rest);
-        UNPROTECT(save);
-        return res;
-    } else {
-        return collectTypeDefs(definitions->next, env);
+    switch (definitions->definition->type) {
+        case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_ALIAS:
+        case AST_DEFINITION_TYPE_BLANK:
+            return collectTypeDefs(definitions->next, env);
+        case AST_DEFINITION_TYPE_TYPEDEF:{
+                LamTypeDef *lamTypeDef = collectTypeDef(definitions->definition->val.typeDef, env);
+                int save = PROTECT(lamTypeDef);
+                LamTypeDefList *rest = collectTypeDefs(definitions->next, env);
+                PROTECT(rest);
+                LamTypeDefList *res = newLamTypeDefList(CPI(lamTypeDef), lamTypeDef, rest);
+                UNPROTECT(save);
+                return res;
+            }
+        default:
+            cant_happen("unrecognised %s", astDefinitionTypeName(definitions->definition->type));
     }
 }
 
@@ -542,16 +593,13 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
         case AST_DEFINITION_TYPE_DEFINE:
             result = prependDefine(definition->val.define, env, next);
             break;
+        case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_TYPEDEF:
-            result = next;
-            break;
         case AST_DEFINITION_TYPE_BLANK:
             result = next;
             break;
         default:
-            cant_happen
-                ("unrecognised definition type %s in prependDefinition",
-                 astDefinitionTypeName(definition->type));
+            cant_happen("unrecognised %s", astDefinitionTypeName(definition->type));
     }
     LEAVE(prependDefinition);
     return result;

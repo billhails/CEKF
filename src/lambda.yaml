@@ -141,6 +141,7 @@ structs:
 
     LamContext:
         frame: LamInfoTable
+        aliases: LamAliasTable
         parent: LamContext
 
     LamAnd:
@@ -300,6 +301,9 @@ unions:
 hashes:
     LamInfoTable:
         entries: LamInfo
+
+    LamAliasTable:
+        entries: LamTypeConstructorType
 
     LamExpTable:
         entries: LamExp
