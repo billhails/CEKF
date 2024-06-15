@@ -1,4 +1,6 @@
 let
+    link "listutils.fn" as list;
+
     typedef expr {
         lambda(list(expr), expr) |
         let_expr(expr, expr, expr) |
@@ -9,7 +11,62 @@ let
         nada
     }
 
-    fn debug(s) { puts(s); putc('\n'); }
+    print expr {
+        (x=lambda(args, expr)) {
+            puts("(lambda (");
+            list.map (fn(e) { print(e) }, args);
+            puts(") ");
+            print(expr);
+            puts(")");
+            x;
+        }
+        (x=let_expr(e1, e2, e3)) {
+            puts("(let (");
+            print(e1);
+            print(e2);
+            puts(") ");
+            print(e3);
+            puts(")");
+            x;
+        }
+        (x=if_expr(e1, e2, e3)) {
+            puts("(if ");
+            print(e1);
+            print(e2);
+            print(e3);
+            puts(")");
+            x;
+        }
+        (x=apply(e1, args)) {
+            puts("(");
+            print(e1);
+            list.map (fn(e) { print(e) }, args);
+            puts(")");
+            x;
+        }
+        (x=value(i)) {
+            putn(i);
+            x;
+        }
+        (x=var_expr(chars)) {
+            puts(chars);
+            x;
+        }
+        (x=nada) {
+            puts("nil");
+            x;
+        }
+    }
+
+    fn debug(s) {
+        if (false) {
+            puts(s);
+            putc('\n');
+            0;
+        } else {
+            0;
+        }
+    }
 
     fn gensym() { debug("gensym"); var_expr("gen") }
 

@@ -1,3 +1,5 @@
+#ifndef cekf_cekfs_helper_h
+#  define cekf_cekfs_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
@@ -15,3 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+#include "cekfs.h"
+
+#endif

@@ -1,6 +1,6 @@
 #
 # CEKF - VM supporting amb
-# Copyright (C) 2022-2023  Bill Hails
+# Copyright (C) 2022-2024  Bill Hails
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import sys
 import argparse
 import re
 import os
+import datetime
 
 class Catalog:
     def __init__(self, typeName):
@@ -214,7 +215,7 @@ class Catalog:
 
     def printMarkObjFunction(self):
         c = self.comment('printMarkObjFunction')
-        print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{')
+        print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{ {c}')
         print(f'    switch(h->type) {{ {c}')
         for entity in self.contents.values():
             entity.printMarkObjCase(self)
@@ -271,6 +272,9 @@ class Base:
         self.tagged = False
         self.bespokeCmpImplementation = False
         self.extraCmpArgs = {}
+
+    def isCBV(self, catalog):
+        return False
 
     def noteTypedef(self):
         with open(".typedefs", "a") as f:
@@ -513,6 +517,10 @@ class SimpleField:
     def getObjName(self, catalog):
         return self.getObj(catalog).getName()
 
+    def isCBV(self, catalog):
+        obj = catalog.get(self.typeName)
+        return obj.isCBV(catalog)
+
     def isSelfInitializing(self, catalog):
         obj = catalog.get(self.typeName)
         return obj.isSelfInitializing()
@@ -527,7 +535,7 @@ class SimpleField:
 
     def getTypeDeclaration(self, catalog):
         obj = catalog.get(self.typeName)
-        return obj.getTypeDeclaration()
+        return obj.getTypeDeclaration(catalog)
 
     def getSignature(self, catalog):
         return "{type} {name}".format(type=self.getTypeDeclaration(catalog), name=self.name)
@@ -583,7 +591,7 @@ class SimpleField:
 
     def printCopyArrayLine(self, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printCopyField(False, f"{self.name}[{key}]", depth)
+        obj.printCopyField(obj.isCBV(catalog), f"{self.name}[{key}]", depth)
 
     def printCompareArrayLine(self, catalog, key, depth):
         obj = catalog.get(self.typeName)
@@ -636,7 +644,7 @@ class SimpleHash(Base):
         myName = self.getName()
         return f"new{myName}"
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         myName = self.getName()
         return f"struct {myName} *"
 
@@ -649,13 +657,13 @@ class SimpleHash(Base):
         print(f"{decl}; {c}")
 
     def getNewSignature(self):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myConstructor = self.getConstructorName()
         return f"{myType}{myConstructor}(void)"
 
     def getSetDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         if self.entries is None:
             return f'void set{myName}({myType} table, HashSymbol *key)'
         else:
@@ -669,7 +677,7 @@ class SimpleHash(Base):
 
     def getGetDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         if self.entries is None:
             return f'bool get{myName}({myType} table, HashSymbol *key)'
         else:
@@ -683,7 +691,7 @@ class SimpleHash(Base):
 
     def getIteratorDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         if self.entries is None:
             return f'HashSymbol * iterate{myName}({myType} table, Index *i)'
         else:
@@ -731,7 +739,7 @@ class SimpleHash(Base):
     def printCountDeclaration(self, catalog):
         c = self.comment('printCountDeclaration')
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         print(f'static inline Index count{myName}({myType} table) {{ {c}')
         print(f'    return ((HashTable *)table)->count; {c}')
         print(f'}} {c}')
@@ -747,7 +755,7 @@ class SimpleHash(Base):
         print('')
 
     def getPrintSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f"void print{myName}({myType} x, int depth)"
 
@@ -758,7 +766,7 @@ class SimpleHash(Base):
 
     def printPrintFunction(self, catalog):
         decl = self.getPrintSignature(catalog);
-        c = "// SimpleHash.printPrintFunction"
+        c = self.comment('printPrintFunction')
         print(f"{decl} {{ {c}")
         print(f"    printHashTable(&(x->wrapped), depth); {c}")
         print(f"}} {c}")
@@ -853,14 +861,14 @@ class SimpleArray(Base):
         super().tag()
         self.tagField = SimpleField(self.name, "_tag", "string")
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return "struct {name} *".format(name=self.getName())
 
     def printCompareField(self, isCBV, field, depth, prefix=''):
         myName=self.getName()
         extraCmpArgs = self.getExtraCmpAargs(catalog)
         a = '.' if isCBV else '->'
-        c = "// SimpleArray.printCompareField"
+        c = self.comment('printCompareField')
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
@@ -885,13 +893,13 @@ class SimpleArray(Base):
         myName=self.getName()
         a = '.' if isCBV else '->'
         pad(depth)
-        print(f'print{myName}(x{a}{prefix}{field}, depth+1); {c}')
+        print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
     def printAccessDeclarations(self, catalog):
         entryType = self.entries.getTypeDeclaration(catalog)
         myName = self.getName()
-        myType = self.getTypeDeclaration()
-        c = "// SimpleArray.printAccessDeclarations"
+        myType = self.getTypeDeclaration(catalog)
+        c = self.comment('printAccessDeclarations')
         if self.dimension == 2:
             print(f"static inline {entryType} get{myName}Index({myType} obj, Index x, Index y) {{ {c}")
             print(f"#ifdef SAFETY_CHECKS");
@@ -935,7 +943,7 @@ class SimpleArray(Base):
         print(f"{decl}; {c}")
 
     def getMarkSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def printFreeDeclaration(self, catalog):
@@ -958,7 +966,7 @@ class SimpleArray(Base):
         print("")
 
     def getFreeSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def getObjType(self):
@@ -979,7 +987,7 @@ class SimpleArray(Base):
         return [self.width, self.height]
 
     def getNewSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         args = []
         for field in self.getNewArgs(catalog):
             args += [field.getSignature(catalog)]
@@ -987,13 +995,13 @@ class SimpleArray(Base):
             args += ['void']
         return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
 
-    def getCopySignature(self):
-        myType = self.getTypeDeclaration()
+    def getCopySignature(self, catalog):
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f"{myType} copy{myName}({myType} o)"
 
     def printNewFunction(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
         decl = self.getNewSignature(catalog)
@@ -1032,13 +1040,13 @@ class SimpleArray(Base):
 
     def printCopyDeclaration(self, catalog):
         c = self.comment('printCopyDeclaration')
-        decl=self.getCopySignature()
+        decl=self.getCopySignature(catalog)
         print(f"{decl}; {c}")
 
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
-            myType = self.getTypeDeclaration()
+            myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPushDeclaration')
             print(f"Index push{name}({myType} obj, {entryType} entry); {c}")
@@ -1046,7 +1054,7 @@ class SimpleArray(Base):
     def printPopDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
-            myType = self.getTypeDeclaration()
+            myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPopDeclaration')
             print(f"{entryType} pop{name}({myType} obj); {c}")
@@ -1054,7 +1062,7 @@ class SimpleArray(Base):
     def printPushFunction(self, catalog):
         if self.dimension == 1:
             name = self.getName()
-            myType = self.getTypeDeclaration()
+            myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPushFunction')
             print(f"Index push{name}({myType} x, {entryType} entry) {{ {c}")
@@ -1069,7 +1077,7 @@ class SimpleArray(Base):
     def printPopFunction(self, catalog):
         if self.dimension == 1:
             name = self.getName()
-            myType = self.getTypeDeclaration()
+            myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPopFunction')
             print(f"{entryType} pop{name}({myType} x) {{ {c}")
@@ -1083,7 +1091,7 @@ class SimpleArray(Base):
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
-        c = "// SimpleArray.printMarkFunction"
+        c = self.comment('printMarkFunction')
         print(f"{decl} {{ {c}")
         print(f"    if (x == NULL) return; {c}")
         print(f"    if (MARKED(x)) return; {c}")
@@ -1122,7 +1130,7 @@ class SimpleArray(Base):
         print(f"{decl}; {c}")
 
     def getPrintSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
     def getCtype(self, astType, catalog):
@@ -1130,7 +1138,7 @@ class SimpleArray(Base):
 
     def printCountDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         c = self.comment('printCountDeclaration')
         print(f'static inline Index count{myName}({myType} x) {{ {c}')
         if self.dimension == 1:
@@ -1158,7 +1166,7 @@ class SimpleArray(Base):
         return ""
 
     def getCompareSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
         return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
@@ -1190,8 +1198,8 @@ class SimpleArray(Base):
 
     def printCopyFunction(self, catalog):
         c = self.comment('printCopyFunction')
-        decl = self.getCopySignature()
-        myType = self.getTypeDeclaration()
+        decl = self.getCopySignature(catalog)
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
         print(f"{decl} {{ {c}")
@@ -1215,14 +1223,19 @@ class SimpleArray(Base):
 
     def print1dCopyFunctionBody(self, catalog):
         c = self.comment('print1dCopyFunctionBody')
+        entryType = self.entries.getTypeDeclaration(catalog)
         print(f"    if (o->entries != NULL) {{ {c}")
-        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, x->capacity); {c}")
-        print(f"        x->size = 0; {c}")
+        print(f"        x->entries = NEW_ARRAY({entryType}, x->capacity); {c}")
         print(f"        x->capacity = o->capacity; {c}")
-        print(f"        for (Index i = 0; i < o->size; i++) {{ {c}")
-        self.entries.printCopyArrayLine(catalog, "i", 3)
-        print(f"            x->size++; {c}")
-        print(f"        }} {c}")
+        if self.entries.isCBV(catalog):
+            print(f"        COPY_ARRAY({entryType}, x->entries, o->entries, o->size); {c}")
+            print(f"        x->size = o->size; {c}")
+        else:
+            print(f"        x->size = 0; {c}")
+            print(f"        for (Index i = 0; i < o->size; i++) {{ {c}")
+            self.entries.printCopyArrayLine(catalog, "i", 3)
+            print(f"            x->size++; {c}")
+            print(f"        }} {c}")
         print(f"    }} {c}")
 
     def print2dCopyFunctionBody(self, catalog):
@@ -1328,13 +1341,13 @@ class SimpleArray(Base):
 
     def getIterator1DDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myContainedType = self.entries.getTypeDeclaration(catalog)
         return f'bool iterate{myName}({myType} table, Index *i, {myContainedType} *res, bool *more)'
 
     def getIterator2DDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myContainedType = self.entries.getTypeDeclaration(catalog)
         return f'bool iterate{myName}({myType} table, Index *x, Index *y, {myContainedType} *res, bool *more_x, bool *more_y)'
 
@@ -1424,7 +1437,8 @@ class SimpleArray(Base):
 class SimpleVector(Base):
     """
     Simple vectors declared directly in the yaml.
-    Vectors are fixed-size arrays with a simpler and more efficient implementation
+    Vectors are fixed-size arrays with a simpler
+    and more efficient flat implementation
     """
     def __init__(self, name, data):
         super().__init__(name)
@@ -1433,12 +1447,23 @@ class SimpleVector(Base):
     def isVector(self):
         return True
 
+    def printTypedef(self, catalog):
+        self.noteTypedef()
+        c = self.comment('printTypeDef')
+        name = self.getName()
+        print(f"typedef struct {name} {{ {c}")
+        print(f"    Header header; {c}")
+        print(f"    Index size; {c}")
+        self.entries.printVectorTypedefLine(catalog)
+        print(f"}} {name}; {c}")
+        print("")
+
     def printMermaid(self, catalog):
         myName = self.getName()
         print(f'{myName}["{myName}[]"] --entries--> {self.entries.getObjName(catalog)}')
 
     def getNewSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f"{myType} new{myName}(int size)"
 
@@ -1451,7 +1476,7 @@ class SimpleVector(Base):
         print(f"{decl}; {c}")
 
     def printNewFunction(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
         fieldType = self.entries.getTypeDeclaration(catalog)
@@ -1475,7 +1500,7 @@ class SimpleVector(Base):
         a = '.' if isCBV else '->'
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return "struct {name} *".format(name=self.getName())
 
     def getDefineValue(self):
@@ -1524,11 +1549,11 @@ class SimpleVector(Base):
 
     def printCopyFunction(self, catalog):
         c = self.comment('printCopyFunction')
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         fieldType = self.entries.getTypeDeclaration(catalog)
         myName = self.getName()
-        decl = self.getCopySignature()
+        decl = self.getCopySignature(catalog)
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
         print(f"    {myType} x = NEW_VECTOR(o->size, {myName}, {fieldType}, {myObjType}); {c}")
@@ -1537,31 +1562,24 @@ class SimpleVector(Base):
         print(f"    bzero(x, sizeof(struct {myName})); {c}")
         print(f"    x->header = _h; {c}")
         print(f"    int save = PROTECT(x); {c}")
+        if self.entries.isCBV(catalog):
+            print(f"    COPY_ARRAY({fieldType}, x->entries, o->entries, o->size); {c}")
+        else:
+            print(f"    for (Index i = 0; i < o->size; ++i) {{ {c}")
+            self.entries.printCopyArrayLine(catalog, "i", 3)
+            print(f"    }} {c}")
         print(f"    UNPROTECT(save); {c}")
         print(f"    return x; {c}")
         print(f"}} {c}")
         print("")
 
-    def getCopySignature(self):
-        myType = self.getTypeDeclaration()
+    def getCopySignature(self, catalog):
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f"{myType} copy{myName}({myType} o)"
 
-    def printTypedef(self, catalog):
-        self.noteTypedef()
-        c = self.comment('printTypeDef')
-        name = self.getName()
-        print(f"typedef struct {name} {{ {c}")
-        print(f"    Header header; {c}")
-        if self.tagged:
-            print(f"    char *_tag; {c}")
-        print(f"    Index size; {c}")
-        self.entries.printVectorTypedefLine(catalog)
-        print(f"}} {name}; {c}")
-        print("")
-
     def getPrintSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
     def printPrintDeclaration(self, catalog):
@@ -1575,14 +1593,14 @@ class SimpleVector(Base):
         print(f"{decl}; {c}")
 
     def getCompareSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
         return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
-        c = "// SimpleVector.printMarkFunction"
+        c = self.comment('printMarkFunction')
         print(f"{decl} {{ {c}")
         print(f"    if (x == NULL) return; {c}")
         print(f"    if (MARKED(x)) return; {c}")
@@ -1615,7 +1633,7 @@ class SimpleVector(Base):
 
     def printCountDeclaration(self, catalog):
         myName = self.getName()
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         c = self.comment('printCountDeclaration')
         print(f'static inline Index count{myName}({myType} x) {{ {c}')
         print(f'    return x->size; {c}')
@@ -1645,7 +1663,7 @@ class SimpleVector(Base):
         print(f"{decl}; {c}")
 
     def getMarkSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def printFreeDeclaration(self, catalog):
@@ -1654,15 +1672,15 @@ class SimpleVector(Base):
         print(f"{decl}; {c}")
 
     def getFreeSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def printFreeFunction(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         fieldType = self.entries.getTypeDeclaration(catalog)
         decl = self.getFreeSignature(catalog)
-        c = "// simpleVector.printFreeFunction"
+        c = self.comment('printFreeFunction')
         print(f"{decl} {{ {c}")
         print(f"    FREE_VECTOR(x, {myName}, {fieldType}, x->size); {c}")
         print(f"}} {c}")
@@ -1694,7 +1712,24 @@ class SimpleVector(Base):
         pad(depth)
         print(f'mark{myName}(*({myName} **)ptr); {c}')
 
+    def printMarkField(self, isCBV, field, depth, prefix=''):
+        c = self.comment('printMarkField')
+        myName=self.getName()
+        pad(depth)
+        a = '.' if isCBV else '->'
+        print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
+    def printFreeObjCase(self, catalog):
+        if self.isCBV(catalog):
+            return
+        c = self.comment('printFreeObjCase')
+        name=self.getName()
+        pad(2)
+        print(f'case {self.getObjType()}: {c}')
+        pad(3)
+        print(f'free{name}(({name} *)h); {c}')
+        pad(3)
+        print(f'break; {c}')
 
 
 class SimpleStruct(Base):
@@ -1704,7 +1739,6 @@ class SimpleStruct(Base):
     def __init__(self, name, data):
         super().__init__(name)
         self.fields = [self.makeField(x, data[x]) for x in data.keys()]
-        self.isCBV = False
 
     def hasParserInfo(self, catalog):
         return catalog.parserInfo
@@ -1731,9 +1765,9 @@ class SimpleStruct(Base):
     def makeField(self, fieldName, fieldType):
         return SimpleField(self.name, fieldName, fieldType)
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         name=self.getName()
-        if self.isCBV:
+        if self.isCBV(catalog):
             return f"struct {name} "
         else:
             return f"struct {name} *"
@@ -1758,7 +1792,7 @@ class SimpleStruct(Base):
         return [ self.getObjType() ]
 
     def getCountSignature(self):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f'Index count{myName}({myType} x)'
 
@@ -1785,15 +1819,15 @@ class SimpleStruct(Base):
             print('')
 
     def getMarkSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def getFreeSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
 
     def getPrintSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
 
     def getCtype(self, astType, catalog):
@@ -1817,7 +1851,7 @@ class SimpleStruct(Base):
         return ""
 
     def getCompareSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
         return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
@@ -1829,7 +1863,7 @@ class SimpleStruct(Base):
         return [x for x in self.fields if x.default is not None or x.isSelfInitializing(catalog)]
 
     def getNewSignature(self, catalog):
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myName=self.getName()
         args = []
         for field in self.getNewArgs(catalog):
@@ -1841,8 +1875,8 @@ class SimpleStruct(Base):
 
         return f"{myType} new{myName}({', '.join(args)})"
 
-    def getCopySignature(self):
-        myType = self.getTypeDeclaration()
+    def getCopySignature(self, catalog):
+        myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f"{myType} copy{myName}({myType} o)"
 
@@ -1853,7 +1887,7 @@ class SimpleStruct(Base):
 
     def printCopyDeclaration(self, catalog):
         c = self.comment('printCopyDeclaration')
-        decl=self.getCopySignature()
+        decl=self.getCopySignature(catalog)
         print(f"{decl}; {c}")
 
     def printFreeDeclaration(self, catalog):
@@ -1884,7 +1918,7 @@ class SimpleStruct(Base):
         for field in self.getDefaultArgs(catalog):
             if field.isSelfInitializing(catalog) and field.default is None:
                 hasInternalConstructors = True
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
         print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
@@ -1914,20 +1948,20 @@ class SimpleStruct(Base):
 
     def printMarkFunctionBody(self, catalog):
         for field in self.fields:
-            field.printMarkLine(self.isCBV, catalog, 1)
+            field.printMarkLine(self.isCBV(catalog), catalog, 1)
 
     def printCompareFunctionBody(self, catalog):
         for field in self.fields:
-            field.printCompareLine(self.isCBV, catalog, 1)
+            field.printCompareLine(self.isCBV(catalog), catalog, 1)
 
     def printCopyFunctionBody(self, catalog):
         for field in self.fields:
-            field.printCopyLine(self.isCBV, catalog, 1)
+            field.printCopyLine(self.isCBV(catalog), catalog, 1)
 
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         for field in self.fields:
-            field.printPrintLine(self.isCBV, catalog, 1)
+            field.printPrintLine(self.isCBV(catalog), catalog, 1)
             print(f'    eprintf("\\n"); {c}')
 
     def printMarkHashField(self, depth):
@@ -1975,7 +2009,7 @@ class SimpleStruct(Base):
         c = self.comment('printMarkFunction')
         decl = self.getMarkSignature(catalog)
         print(f"{decl} {{ {c}")
-        if not self.isCBV:
+        if not self.isCBV(catalog):
             print(f"    if (x == NULL) return; {c}")
             print(f"    if (MARKED(x)) return; {c}")
             print(f"    MARK(x); {c}")
@@ -1990,32 +2024,32 @@ class SimpleStruct(Base):
         print(f"}} {c}\n")
 
     def printMarkObjCase(self, catalog):
+        if self.isCBV(catalog):
+            return
         c = self.comment('printMarkObjCase')
         name=self.getName()
         pad(2)
         print(f'case {self.getObjType()}: {c}')
         pad(3)
-        if self.isCBV:
-            print(f'cant_happen("attempt to mark CBV"); {c}')
-        else:
-            print(f'mark{name}(({name} *)h); {c}')
+        print(f'mark{name}(({name} *)h); {c}')
         pad(3)
         print(f'break; {c}')
 
     def printFreeObjCase(self, catalog):
+        if self.isCBV(catalog):
+            return
         c = self.comment('printFreeObjCase')
         name=self.getName()
         pad(2)
         print(f'case {self.getObjType()}: {c}')
         pad(3)
-        if self.isCBV:
-            print(f'cant_happen("attempt to free CBV"); {c}')
-        else:
-            print(f'free{name}(({name} *)h); {c}')
+        print(f'free{name}(({name} *)h); {c}')
         pad(3)
         print(f'break; {c}')
 
     def printTypeObjCase(self, catalog):
+        if self.isCBV(catalog):
+            return
         c = self.comment('printTypeObjCase')
         name=self.getName()
         pad(2)
@@ -2033,7 +2067,7 @@ class SimpleStruct(Base):
         c = self.comment('printCompareFunction')
         decl=self.getCompareSignature(catalog)
         print(f"{decl} {{ {c}")
-        if not self.isCBV:
+        if not self.isCBV(catalog):
             print(f"    if (a == b) return true; {c}")
             print(f"    if (a == NULL || b == NULL) return false; {c}")
         self.printCompareFunctionBody(catalog)
@@ -2042,9 +2076,9 @@ class SimpleStruct(Base):
 
     def printCopyFunction(self, catalog):
         c = self.comment('printCopyFunction')
-        decl = self.getCopySignature()
+        decl = self.getCopySignature(catalog)
         print(f"{decl} {{ {c}")
-        myType = self.getTypeDeclaration()
+        myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
         print(f"    if (o == NULL) return NULL; {c}")
@@ -2068,7 +2102,7 @@ class SimpleStruct(Base):
         decl=self.getPrintSignature(catalog)
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
-        if not self.isCBV:
+        if not self.isCBV(catalog):
             print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         print(f'    eprintf("{myName}[\\n"); {c}')
         self.printPrintFunctionBody(catalog)
@@ -2112,7 +2146,7 @@ class DiscriminatedUnionField(EnumField):
         owner = catalog.get(self.owner)
         argType = ''
         if arg != '':
-            argType = obj.getTypeDeclaration() + ' '
+            argType = obj.getTypeDeclaration(catalog) + ' '
         parserInfoFarg = ''
         parserInfoAarg = ''
         if owner.hasParserInfo(catalog):
@@ -2136,13 +2170,13 @@ class DiscriminatedUnionField(EnumField):
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         obj = catalog.get(self.typeName)
-        otype=obj.getTypeDeclaration()
+        otype=obj.getTypeDeclaration(catalog)
         name=self.name
         print(f"    {otype} {name}; {c}")
 
     def getSignature(self, catalog):
         obj = catalog.get(self.typeName)
-        return "{type} {name}".format(type=obj.getTypeDeclaration(), name=self.name)
+        return "{type} {name}".format(type=obj.getTypeDeclaration(catalog), name=self.name)
 
     def getCopyCall(self, arg, catalog):
         return f'DiscriminatedUnionField_getCopyCall({arg})'
@@ -2160,7 +2194,7 @@ class DiscriminatedUnionField(EnumField):
         return obj.getDefineArg()
 
     def getDefineType(self, catalog):
-        return catalog.get(self.owner).getUnion().getTypeDeclaration()
+        return catalog.get(self.owner).getUnion().getTypeDeclaration(catalog)
 
     def getDefineField(self, catalog):
         return self.name
@@ -2226,7 +2260,6 @@ class DiscriminatedUnion(SimpleStruct):
         super().__init__(name, data)
         self.union = DiscriminatedUnionUnion(self.name, self.fields)
         self.enum = DiscriminatedUnionEnum(self.name, self.fields)
-        self.isCBV = False
 
     def build(self, catalog):
         catalog.add(self.union)
@@ -2242,12 +2275,12 @@ class DiscriminatedUnion(SimpleStruct):
         c = self.comment('printTypedef')
         name=self.getName()
         self.noteTypedef()
-        enum=self.enum.getTypeDeclaration()
+        enum=self.enum.getTypeDeclaration(catalog)
         efield=self.enum.getFieldName()
-        union=self.union.getTypeDeclaration()
+        union=self.union.getTypeDeclaration(catalog)
         ufield=self.union.getFieldName()
         print(f"typedef struct {name} {{ {c}")
-        if not self.isCBV:
+        if not self.isCBV(catalog):
             print(f"    Header header; {c}")
         if catalog.parserInfo:
             print(f"    ParserInfo _yy_parser_info; {c}")
@@ -2257,7 +2290,7 @@ class DiscriminatedUnion(SimpleStruct):
 
     def printHelperNewDeclarations(self, catalog):
         for field in self.fields:
-            field.printHelperNewDeclaration(catalog, self.isCBV)
+            field.printHelperNewDeclaration(catalog, self.isCBV(catalog))
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -2272,10 +2305,10 @@ class DiscriminatedUnion(SimpleStruct):
     def printMarkFunctionBody(self, catalog):
         c = self.comment('printMarkFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV else '->'
+        a = '.' if self.isCBV(catalog) else '->'
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
-            field.printMarkCase(self.isCBV, catalog)
+            field.printMarkCase(self.isCBV(catalog), catalog)
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in mark{myName}", x{a}type); {c}')
         print(f"    }} {c}")
@@ -2283,11 +2316,11 @@ class DiscriminatedUnion(SimpleStruct):
     def printCompareFunctionBody(self, catalog):
         c = self.comment('printCompareFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV else '->'
+        a = '.' if self.isCBV(catalog) else '->'
         print(f"    if (a{a}type != b{a}type) return false; {c}")
         print(f"    switch(a{a}type) {{ {c}")
         for field in self.fields:
-            field.printCompareCase(self.isCBV, catalog)
+            field.printCompareCase(self.isCBV(catalog), catalog)
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in eq{myName}", a{a}type); {c}')
         print(f"    }} {c}")
@@ -2295,10 +2328,10 @@ class DiscriminatedUnion(SimpleStruct):
     def printCopyFunctionBody(self, catalog):
         c = self.comment('printCopyFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV else '->'
+        a = '.' if self.isCBV(catalog) else '->'
         print(f"    switch(o{a}type) {{ {c}")
         for field in self.fields:
-            field.printCopyCase(catalog, self.isCBV)
+            field.printCopyCase(catalog, self.isCBV(catalog))
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in copy{myName}", o{a}type); {c}')
         print(f"    }} {c}")
@@ -2307,10 +2340,10 @@ class DiscriminatedUnion(SimpleStruct):
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV else '->'
+        a = '.' if self.isCBV(catalog) else '->'
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
-            field.printPrintCase(catalog, self.isCBV)
+            field.printPrintCase(catalog, self.isCBV(catalog))
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in print{myName}", x{a}type); {c}')
         print(f"    }} {c}")
@@ -2325,7 +2358,9 @@ class DiscriminatedCBVUnion(DiscriminatedUnion):
     """
     def __init__(self, name, data):
         super().__init__(name, data)
-        self.isCBV = True
+
+    def isCBV(self, catalog):
+        return True
 
     def printNewFunction(self, catalog):
         pass
@@ -2339,21 +2374,17 @@ class DiscriminatedCBVUnion(DiscriminatedUnion):
     def printFreeDeclaration(self, catalog):
         pass
 
+    def objTypeArray(self):
+        return []
+
     def comment(self, method):
         return f'// DiscriminatedCBVUnion.{method}'
 
+    def printCopyDeclaration(self, catalog):
+        pass
+
     def printCopyFunction(self, catalog):
-        c = self.comment('printCopyFunction')
-        decl = self.getCopySignature()
-        print(f"{decl} {{ {c}")
-        myType = self.getTypeDeclaration()
-        myObjType = self.getObjType()
-        myName = self.getName()
-        print(f"    {myType} x; {c}")
-        self.printCopyFunctionBody(catalog)
-        print(f"    return x; {c}")
-        print(f"}} {c}")
-        print("")
+        pass
 
 class DiscriminatedUnionUnion(Base):
     """
@@ -2373,7 +2404,7 @@ class DiscriminatedUnionUnion(Base):
     def printMermaid(self, catalog):
         print(self.getName())
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return "union {name} ".format(name=self.getName())
 
     def getFieldName(self):
@@ -2383,7 +2414,7 @@ class DiscriminatedUnionUnion(Base):
         return True
 
     def getSignature(self, catalog):
-        return "{type} val".format(type=self.getTypeDeclaration())
+        return "{type} val".format(type=self.getTypeDeclaration(catalog))
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
@@ -2403,7 +2434,7 @@ class SimpleEnum(Base):
         super().__init__(name)
         self.fields = [EnumField(name, x) for x in data]
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return "enum {name} ".format(name=self.getName())
 
     def printMermaid(self, catalog):
@@ -2538,7 +2569,7 @@ class DiscriminatedUnionEnum(Base):
         print(f"}} {c}")
         print("")
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return "enum {name} ".format(name=self.getName())
 
     def printTypedef(self, catalog):
@@ -2553,7 +2584,7 @@ class DiscriminatedUnionEnum(Base):
         print(f"}} {name}; {c}\n")
 
     def getSignature(self, catalog):
-        return "{type} type".format(type=self.getTypeDeclaration())
+        return "{type} type".format(type=self.getTypeDeclaration(catalog))
 
     def isEnum(self):
         return True
@@ -2588,6 +2619,9 @@ class Primitive(Base):
     def printMermaid(self, catalog):
         pass
 
+    def isCBV(self, catalog):
+        return True
+
     def comment(self, method):
         return f'// Primitive.{method}'
 
@@ -2608,6 +2642,7 @@ class Primitive(Base):
             pad(depth)
             print(f'{self.markFn}(*({self.cname}*)ptr); {c}')
 
+    # Primitive
     def printMarkField(self, isCBV, field, depth, prefix=''):
         if self.markFn is not None:
             c = self.comment('printMarkField')
@@ -2616,7 +2651,7 @@ class Primitive(Base):
             a = '.' if isCBV else '->'
             print(f"{markFn}(x{a}{prefix}{field}); {c}")
 
-    def getTypeDeclaration(self):
+    def getTypeDeclaration(self, catalog):
         return self.cname
 
     def printCompareField(self, isCBV, field, depth, prefix=''):
@@ -2676,9 +2711,10 @@ def pad(depth):
     print("    " * depth, end='')
 
 def printGpl(file, document):
+    now = datetime.datetime.now()
     print(f"""/*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-{now.year}  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

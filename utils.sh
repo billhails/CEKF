@@ -22,3 +22,27 @@ watch_make () {
         fi
     done
 }
+
+new_h () {
+    file="src/$1.h"
+    if [ -e $file ] ; then
+        echo $file already exists
+    else
+        define="cekf_${1}_h"
+        echo "#ifndef $define" > $file
+        echo "#  define $define" >> $file
+        cat docs/gpl.c >> $file
+        echo "" >> $file
+        echo "#endif" >> $file
+    fi
+}
+
+new_c () {
+    file="src/$1.c"
+    if [ -e $file ] ; then
+        echo $file already exists
+    else
+        cat docs/gpl.c > $file
+        echo "" >> $file
+    fi
+}

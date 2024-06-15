@@ -1392,6 +1392,11 @@ void printMaybeBigInt(MaybeBigInt *x, int depth) {
     fprintMaybeBigInt(errout, x);
 }
 
+void printBigInt(BigInt *x, int depth) {
+    eprintf("%*s", depth * PAD_WIDTH, "");
+    fprintBigInt(errout, x);
+}
+
 void bigint_fprint(FILE *f, bigint * bi) {
     int size = bigint_write_size(bi, 10);
     if (size < 256) {

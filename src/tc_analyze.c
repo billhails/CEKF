@@ -59,6 +59,7 @@ static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addNegToEnv(TcEnv *env);
 static void addNotToEnv(TcEnv *env);
 static void addPutcToEnv(TcEnv *env);
+static void addPutnToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
@@ -137,6 +138,7 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addNegToEnv(env);
     addNotToEnv(env);
     addPutcToEnv(env);
+    addPutnToEnv(env);
     addThenToEnv(env);
     addBuiltinsToEnv(env, builtIns);
     addNamespacesToEnv(env);
@@ -1179,7 +1181,6 @@ static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *lookupConstructorType(HashSymbol *name, int nsid, TcEnv *env, TcNg *ng) {
-    // ENTER(lookupConstructorType);
     TcType *currentNamespace = NULL;
     getFromTcEnv(env, namespaceSymbol(), &currentNamespace);
 #ifdef SAFETY_CHECKS
@@ -1189,27 +1190,19 @@ static TcType *lookupConstructorType(HashSymbol *name, int nsid, TcEnv *env, TcN
 #endif
     TcType *res = NULL;
     if (currentNamespace->val.nsid == nsid || nsid == NS_GLOBAL) {
-        // eprintf("lookupConstructorType looking up %s in current namespace %d\n", name->name, nsid);
         res = lookup(env, name, ng);
     } else {
-        // eprintf("lookupConstructorType looking up %s in namespace %d\n", name->name, nsid);
         TcType *nsType = lookupNsRef(nsid, env);
         res = lookup(nsType->val.env, name, ng);
     }
     if (res == NULL) {
-        cant_happen("lookupConstructorType %s failed", name->name);
+        cant_happen("lookupConstructorType %s failed (nsid %d)", name->name, nsid);
     }
-    // LEAVE(lookupConstructorType);
-    // eprintf("lookupConstructorType %s => ", name->name);
-    // ppTcType(res);
-    // eprintf("\n");
     return res;
 }
 
 static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeIntList);
     if (intList == NULL) {
-        // LEAVE(analyzeIntList);
         return makeFreshVar("intList");
     }
     TcType *next = analyzeIntList(intList->next, env, ng);
@@ -1222,7 +1215,6 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
         eprintf("while analyzing intList case %s\n", intList->name->name);
         REPORT_PARSER_INFO(intList);
     }
-    // LEAVE(analyzeIntList);
     UNPROTECT(save);
     return this;
 }
@@ -1670,6 +1662,13 @@ static void addPutcToEnv(TcEnv *env) {
     TcType *character = makeCharacter();
     int save = PROTECT(character);
     addUnOpToEnv(env, putcSymbol(), character);
+    UNPROTECT(save);
+}
+
+static void addPutnToEnv(TcEnv *env) {
+    TcType *integer = makeBigInteger();
+    int save = PROTECT(integer);
+    addUnOpToEnv(env, putnSymbol(), integer);
     UNPROTECT(save);
 }
 

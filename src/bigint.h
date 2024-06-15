@@ -83,6 +83,7 @@ extern "C" {
     void freeMaybeBigInt(MaybeBigInt *b);
     void printMaybeBigInt(MaybeBigInt *b, int depth);
     void fprintBigInt(FILE *f, BigInt *x);
+    void printBigInt(BigInt *x, int depth);
     void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
     Cmp cmpBigInt(BigInt *a, BigInt *b);
     Cmp cmpBigIntInt(BigInt *a, int b);
