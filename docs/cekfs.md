@@ -1,6 +1,6 @@
 # cekfs
 
-Runtime support for CEKFs
+The structures of the CEKFs machine
 
 ```mermaid
 flowchart TD
@@ -14,7 +14,7 @@ CekfsEnv --values--> CekfsStack
 CekfsEnv --next--> CekfsEnv
 CekfsKont --body--> control
 CekfsKont --env--> CekfsEnv
-CekfsKont --snapshot--> CekfsStack
+CekfsKont --snapshot--> CekfsSnapshot
 CekfsKont --next--> CekfsKont
 CekfsClo --pending--> int
 CekfsClo --ip--> control
@@ -22,10 +22,9 @@ CekfsClo --env--> CekfsEnv
 CekfsFail --exp--> control
 CekfsFail --env--> CekfsEnv
 CekfsFail --kont--> CekfsKont
-CekfsFail --snapshot--> CekfsStack
+CekfsFail --snapshot--> CekfsSnapshot
 CekfsFail --next--> CekfsFail
 CekfsVec["CekfsVec[]"] --entries--> CekfsValue
-CekfsValueList["CekfsValueList[]"] --entries--> CekfsValue
 CekfsValue --none--> void_ptr
 CekfsValue --stdint--> int
 CekfsValue --bigint--> BigInt
@@ -42,9 +41,10 @@ CekfsValue --pclo--> CekfsClo
 CekfsValue --kont--> CekfsKont
 CekfsValue --vec--> CekfsVec
 CekfsValue --builtIn--> BuiltInImplementation
-CekfsValue --namespace--> CekfsStack
-CekfsByteCode["enum CekfsByteCode"]
+CekfsValue --namespace--> CekfsVec
 CekfsStack["CekfsStack[]"] --entries--> CekfsValue
+CekfsSnapshot["CekfsSnapshot[]"] --entries--> CekfsValue
+CekfsByteCode["enum CekfsByteCode"]
 CekfsByteCodeArray["CekfsByteCodeArray[]"] --entries--> byte
 CekfsValueVal
 CekfsValueType

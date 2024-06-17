@@ -56,7 +56,7 @@ fn reverse (lst) {
     foldl(fn (elem, acc) { elem @ acc }, [], lst)
 }
 
-// scanl: (#a -> #b -> #b) -> list(#a) -> list(list(#b))
+// scanl: (#a -> #b -> #b) -> #a-> list(#a) -> list(list(#b))
 fn scanl (func, acc, lst) {
     let fn scan {
         (acc, []) { acc }
@@ -228,4 +228,4 @@ fn sortBy(predicate, lst) {
 }
 
 // sort: list(#a) -> list(#a)
-sort = sortBy(fn (a, b) { a <=> b });
+fn sort(l) { sortBy(fn (a, b) { a <=> b }, l) }

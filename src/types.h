@@ -48,6 +48,6 @@ typedef unsigned int Index;
 typedef double Double;
 typedef size_t Control;
 
-#define MAX_CONTROL UINT64_MAX
+#define END_CONTROL UINT64_MAX
 
  #endif

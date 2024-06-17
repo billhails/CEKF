@@ -55,10 +55,11 @@ class Catalog:
             raise Exception("bespoke cmp implementation declared for nonexistant entry " + name)
 
     def get(self, key):
+        key = key.strip()
         if key in self.contents:
             return self.contents[key]
         else:
-            raise Exception("key " + key + " not found in catalog")
+            raise Exception("key '" + key + "' not found in catalog")
 
     def build(self):
         values = []
@@ -73,23 +74,18 @@ class Catalog:
         for entity in self.contents.values():
             if entity.isEnum():
                 entity.printTypedef(self)
-        print("\n")
-        for entity in self.contents.values():
-            if entity.isUnion():
-                entity.printTypedef(self)
-        print("\n")
-        for entity in self.contents.values():
-            if entity.isStruct():
-                entity.printTypedef(self)
-        print("\n")
         for entity in self.contents.values():
             if entity.isArray():
                 entity.printTypedef(self)
-        print("\n")
+        for entity in self.contents.values():
+            if entity.isUnion():
+                entity.printTypedef(self)
+        for entity in self.contents.values():
+            if entity.isStruct():
+                entity.printTypedef(self)
         for entity in self.contents.values():
             if entity.isHash():
                 entity.printTypedef(self)
-        print("\n")
         for entity in self.contents.values():
             if entity.isVector():
                 entity.printTypedef(self)
@@ -153,6 +149,14 @@ class Catalog:
     def printFreeDeclarations(self):
         for entity in self.contents.values():
             entity.printFreeDeclaration(self)
+
+    def printProtectDeclarations(self):
+        for entity in self.contents.values():
+            entity.printProtectDeclaration(self)
+
+    def printProtectFunctions(self):
+        for entity in self.contents.values():
+            entity.printProtectFunction(self)
 
     def printNewDeclarations(self):
         for entity in self.contents.values():
@@ -273,7 +277,7 @@ class Base:
         self.bespokeCmpImplementation = False
         self.extraCmpArgs = {}
 
-    def isCBV(self, catalog):
+    def isInline(self, catalog):
         return False
 
     def noteTypedef(self):
@@ -314,6 +318,12 @@ class Base:
         pass
 
     def printFreeDeclaration(self, catalog):
+        pass
+
+    def printProtectDeclaration(self, catalog):
+        pass
+
+    def printProtectFunction(self, catalog):
         pass
 
     def printMarkDeclaration(self, catalog):
@@ -403,7 +413,7 @@ class Base:
     def makeCopyCommand(self, arg, catalog):
         return arg
 
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         pass
 
     def printSetDeclaration(self, catalog):
@@ -446,14 +456,14 @@ class EnumField:
         return self.name
 
     def isSimpleField(self):
-        return False;
+        return False
 
     def isSelfInitializing(self, catalog):
         return False
 
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
-        print(f"    {field}, // {count}");
+        print(f"    {field}, // {count}")
 
     def comment(self, method):
         return f'// EnumField.{method}'
@@ -517,9 +527,9 @@ class SimpleField:
     def getObjName(self, catalog):
         return self.getObj(catalog).getName()
 
-    def isCBV(self, catalog):
+    def isInline(self, catalog):
         obj = catalog.get(self.typeName)
-        return obj.isCBV(catalog)
+        return obj.isInline(catalog)
 
     def isSelfInitializing(self, catalog):
         obj = catalog.get(self.typeName)
@@ -557,13 +567,13 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         return obj.makeCopyCommand(arg, catalog)
 
-    def printMarkLine(self, isCBV, catalog, depth):
+    def printMarkLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
-        obj.printMarkField(isCBV, self.name, depth)
+        obj.printMarkField(isInline, self.name, depth)
 
-    def printMarkArrayLine(self, catalog, key, depth):
+    def printMarkArrayLine(self, isInline, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printMarkField(False, f"{self.name}[{key}]", depth)
+        obj.printMarkField(isInline, f"{self.name}[{key}]", depth)
 
     def printMarkHashLine(self, catalog, depth):
         obj = catalog.get(self.typeName)
@@ -573,29 +583,29 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printPrintHashField(depth)
 
-    def printCompareLine(self, isCBV, catalog, depth):
+    def printCompareLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
-        obj.printCompareField(isCBV, self.name, depth)
+        obj.printCompareField(isInline, self.name, depth)
 
-    def printPrintLine(self, isCBV, catalog, depth):
+    def printPrintLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
-        obj.printPrintField(isCBV, self.name, depth)
+        obj.printPrintField(isInline, self.name, depth)
 
-    def printCopyLine(self, isCBV, catalog, depth):
+    def printCopyLine(self, isInline, catalog, depth):
         obj = catalog.get(self.typeName)
-        obj.printCopyField(isCBV, self.name, depth)
+        obj.printCopyField(isInline, self.name, depth)
 
-    def printPrintArrayLine(self, catalog, key, depth):
+    def printPrintArrayLine(self, isInline, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printPrintField(False, f"{self.name}[{key}]", depth)
+        obj.printPrintField(isInline, f"{self.name}[{key}]", depth)
 
     def printCopyArrayLine(self, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printCopyField(obj.isCBV(catalog), f"{self.name}[{key}]", depth)
+        obj.printCopyField(obj.isInline(catalog), f"{self.name}[{key}]", depth)
 
-    def printCompareArrayLine(self, catalog, key, depth):
+    def printCompareArrayLine(self, isInline, catalog, key, depth):
         obj = catalog.get(self.typeName)
-        obj.printCompareField(False, f"{self.name}[{key}]", depth)
+        obj.printCompareField(isInline, f"{self.name}[{key}]", depth)
 
     def comment(self, method):
         return f'// SimpleField.{method}'
@@ -761,21 +771,21 @@ class SimpleHash(Base):
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
-        decl = self.getPrintSignature(catalog);
+        decl = self.getPrintSignature(catalog)
         print(f"{decl}; {c}")
 
     def printPrintFunction(self, catalog):
-        decl = self.getPrintSignature(catalog);
+        decl = self.getPrintSignature(catalog)
         c = self.comment('printPrintFunction')
         print(f"{decl} {{ {c}")
         print(f"    printHashTable(&(x->wrapped), depth); {c}")
         print(f"}} {c}")
         print("")
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         myConstructor = self.getConstructorName()
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'    x{a}{prefix}{field} = {myConstructor}(); {c}')
         print(f'    copyHashTable((HashTable *)x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
 
@@ -784,13 +794,13 @@ class SimpleHash(Base):
         pad(depth)
         print(f'printHashTable(*(HashTable **)ptr, depth + 1); {c}')
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f'printHashTable((HashTable *)x{a}{prefix}{field}, depth + 1); {c}')
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printCompareField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         pad(depth)
         print(f"return false; {c}")
@@ -817,7 +827,7 @@ class SimpleHash(Base):
             self.entries.printPrintDeclaration(catalog)
             print('')
             print(f'static void {printFn}(void *ptr, int depth) {{ {c}')
-            self.entries.printPrintHashLine(catalog, 1);
+            self.entries.printPrintHashLine(catalog, 1)
             print(f'}} {c}')
             print('')
         print(f'{decl} {{ {c}')
@@ -825,11 +835,17 @@ class SimpleHash(Base):
         print(f'}} {c}')
         print('')
 
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         c = self.comment('printMarkField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f"markHashTable((HashTable *)x{a}{prefix}{field}); {c}")
+
+    def printProtectField(self, isInline, field, depth, prefix=''):
+        c = self.comment('printProtectField')
+        pad(depth)
+        a = '.' if isInline else '->'
+        print(f"return PROTECT((HashTable *)x{a}{prefix}{field}); {c}")
 
 
 class SimpleArray(Base):
@@ -862,12 +878,14 @@ class SimpleArray(Base):
         self.tagField = SimpleField(self.name, "_tag", "string")
 
     def getTypeDeclaration(self, catalog):
-        return "struct {name} *".format(name=self.getName())
+        a = '' if self.isInline(catalog) else '*'
+        name = self.getName()
+        return f"struct {name} {a}"
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printCompareField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
         extraCmpArgs = self.getExtraCmpAargs(catalog)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         c = self.comment('printCompareField')
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
@@ -875,11 +893,11 @@ class SimpleArray(Base):
     def comment(self, method):
         return f'// SimpleArray.{method}'
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
         c = self.comment('printCopyField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printPrintHashField(self, depth):
@@ -888,10 +906,10 @@ class SimpleArray(Base):
         myName=self.getName()
         print(f'print{myName}(*({myName} **)ptr, depth + 1); {c}')
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
@@ -902,20 +920,20 @@ class SimpleArray(Base):
         c = self.comment('printAccessDeclarations')
         if self.dimension == 2:
             print(f"static inline {entryType} get{myName}Index({myType} obj, Index x, Index y) {{ {c}")
-            print(f"#ifdef SAFETY_CHECKS");
-            print(f"    if (x >= obj->width || y >= obj->height) {{ {c}");
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (x >= obj->width || y >= obj->height) {{ {c}")
             print(f'        cant_happen("2d matrix bounds exceeded"); {c}')
             print(f"    }}")
-            print(f"#endif");
+            print(f"#endif")
             print(f"    return obj->entries[x + y * obj->width]; {c}")
             print(f"}} {c}")
             print("")
             print(f"static inline void set{myName}Index({myType} obj, Index x, Index y, {entryType} val) {{ {c}")
-            print(f"#ifdef SAFETY_CHECKS");
-            print(f"    if (x >= obj->width || y >= obj->height) {{ {c}");
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (x >= obj->width || y >= obj->height) {{ {c}")
             print(f'        cant_happen("2d matrix bounds exceeded"); {c}')
             print(f"    }} {c}")
-            print(f"#endif");
+            print(f"#endif")
             print(f"    obj->entries[x + y * obj->width] = val; {c}")
             print(f"}} {c}")
             print("")
@@ -925,7 +943,8 @@ class SimpleArray(Base):
         self.noteTypedef()
         name = self.getName()
         print(f"typedef struct {name} {{ {c}")
-        print(f"    Header header; {c}")
+        if not self.isInline(catalog):
+            print(f"    Header header; {c}")
         if self.tagged:
             print(f"    char *_tag; {c}")
         if self.dimension == 2: # 2D arrays are fixed size
@@ -1028,7 +1047,7 @@ class SimpleArray(Base):
             print(f"    }} {c}")
             print(f"    x->width = width; {c}")
             print(f"    x->height = height; {c}")
-        print(f"    UNPROTECT(save); {c}");
+        print(f"    UNPROTECT(save); {c}")
         print(f"    return x; {c}")
         print(f"}} {c}")
         print("")
@@ -1065,13 +1084,14 @@ class SimpleArray(Base):
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPushFunction')
+            a = '.' if self.isInline(catalog) else '->'
             print(f"Index push{name}({myType} x, {entryType} entry) {{ {c}")
-            print(f"    if (x->size == x->capacity) {{ {c}")
-            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
-            print(f"        x->capacity *= 2; {c}")
+            print(f"    if (x{a}size == x{a}capacity) {{ {c}")
+            print(f"        x{a}entries = GROW_ARRAY({entryType}, x{a}entries, x{a}capacity, x{a}capacity *2); {c}")
+            print(f"        x{a}capacity *= 2; {c}")
             print(f"    }} {c}")
-            print(f"    x->entries[x->size++] = entry; {c}")
-            print(f"    return x->size - 1; {c}")
+            print(f"    x{a}entries[x{a}size++] = entry; {c}")
+            print(f"    return x{a}size - 1; {c}")
             print(f"}} {c}\n")
 
     def printPopFunction(self, catalog):
@@ -1079,23 +1099,25 @@ class SimpleArray(Base):
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
+            a = '.' if self.isInline(catalog) else '->'
             c = self.comment('printPopFunction')
             print(f"{entryType} pop{name}({myType} x) {{ {c}")
             print(f"#ifdef SAFETY_CHECKS {c}")
-            print(f"    if (x->size == 0) {{ {c}")
+            print(f"    if (x{a}size == 0) {{ {c}")
             print(f'        cant_happen("stack underflow"); {c}')
             print(f"    }} {c}")
             print(f"#endif {c}")
-            print(f"    return x->entries[--(x->size)]; {c}")
+            print(f"    return x{a}entries[--(x{a}size)]; {c}")
             print(f"}} {c}\n")
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
         c = self.comment('printMarkFunction')
         print(f"{decl} {{ {c}")
-        print(f"    if (x == NULL) return; {c}")
-        print(f"    if (MARKED(x)) return; {c}")
-        print(f"    MARK(x); {c}")
+        if not self.isInline(catalog):
+            print(f"    if (x == NULL) return; {c}")
+            print(f"    if (MARKED(x)) return; {c}")
+            print(f"    MARK(x); {c}")
         self.printMarkFunctionBody(catalog)
         print(f"}} {c}")
         print("")
@@ -1108,15 +1130,17 @@ class SimpleArray(Base):
 
     def printMark1dFunctionBody(self, catalog):
         c = self.comment('print1dFunctionBody')
-        print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
-        self.entries.printMarkArrayLine(catalog, "i", 2)
+        a = '.' if self.isInline(catalog) else '->'
+        print(f"    for (Index i = 0; i < x{a}size; i++) {{ {c}")
+        self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
 
     def printMark2dFunctionBody(self, catalog):
         c = self.comment('print2dFunctionBody')
-        print(f"    Index size = x->width * x->height; {c}")
+        a = '.' if self.isInline(catalog) else '->'
+        print(f"    Index size = x{a}width * x{a}height; {c}")
         print(f"    for (Index i = 0; i < size; i++) {{ {c}")
-        self.entries.printMarkArrayLine(catalog, "i", 2)
+        self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
 
     def printPrintDeclaration(self, catalog):
@@ -1140,11 +1164,12 @@ class SimpleArray(Base):
         myName = self.getName()
         myType = self.getTypeDeclaration(catalog)
         c = self.comment('printCountDeclaration')
+        a = '.' if self.isInline(catalog) else '->'
         print(f'static inline Index count{myName}({myType} x) {{ {c}')
         if self.dimension == 1:
-            print(f'    return x->size; {c}')
+            print(f'    return x{a}size; {c}')
         else:
-            print(f'    return x->width * x->height; {c}')
+            print(f'    return x{a}width * x{a}height; {c}')
         print(f'}} {c}')
         print('')
 
@@ -1174,24 +1199,26 @@ class SimpleArray(Base):
     def printCompareFunction(self, catalog):
         c = self.comment('printCompareFunction')
         if self.bespokeCmpImplementation:
-            print("// Bespoke implementation required for");
+            print("// Bespoke implementation required for")
             print("// {decl}".format(decl=self.getCompareSignature(catalog)))
             print("")
             return
         myName = self.getName()
         decl = self.getCompareSignature(catalog)
+        a = '.' if self.isInline(catalog) else '->'
         print(f"{decl} {{ {c}")
-        print(f"    if (a == b) return true; {c}")
-        print(f"    if (a == NULL || b == NULL) return false; {c}")
+        if not self.isInline(catalog):
+            print(f"    if (a == b) return true; {c}")
+            print(f"    if (a == NULL || b == NULL) return false; {c}")
         if self.dimension == 1:
-            print(f"    if (a->size != b->size) return false; {c}")
-            print(f"    for (Index i = 0; i < a->size; i++) {{ {c}")
-            self.entries.printCompareArrayLine(catalog, "i", 2)
+            print(f"    if (a{a}size != b{a}size) return false; {c}")
+            print(f"    for (Index i = 0; i < a{a}size; i++) {{ {c}")
+            self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
             print(f"    }} {c}")
         else:
-            print(f"    if (a->width != b->width || a->height != b->height) return false; {c}")
-            print(f"    for (Index i = 0; i < (a->width * a->height); i++) {{ {c}")
-            self.entries.printCompareArrayLine(catalog, "i", 2)
+            print(f"    if (a{a}width != b{a}width || a{a}height != b{a}height) return false; {c}")
+            print(f"    for (Index i = 0; i < (a{a}width * a{a}height); i++) {{ {c}")
+            self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
             print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}\n")
@@ -1227,7 +1254,7 @@ class SimpleArray(Base):
         print(f"    if (o->entries != NULL) {{ {c}")
         print(f"        x->entries = NEW_ARRAY({entryType}, x->capacity); {c}")
         print(f"        x->capacity = o->capacity; {c}")
-        if self.entries.isCBV(catalog):
+        if self.entries.isInline(catalog):
             print(f"        COPY_ARRAY({entryType}, x->entries, o->entries, o->size); {c}")
             print(f"        x->size = o->size; {c}")
         else:
@@ -1254,16 +1281,18 @@ class SimpleArray(Base):
     def printPrintFunction(self, catalog):
         myName = self.getName()
         decl = self.getPrintSignature(catalog)
+        a = '.' if self.isInline(catalog) else '->'
         c = self.comment('printPrintFunction')
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
-        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+        if not self.isInline(catalog):
+            print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         if self.tagged:
-            print(f'    eprintf("<<%s>>", x->_tag); {c}')
+            print(f'    eprintf("<<%s>>", x{a}_tag); {c}')
         if self.dimension == 1:
-            print(f'    eprintf("{myName}(%d)[\\n", x->size); {c}')
+            print(f'    eprintf("{myName}(%d)[\\n", x{a}size); {c}')
         else:
-            print(f'    eprintf("{myName}(%d * %d)[\\n", x->width, x->height); {c}')
+            print(f'    eprintf("{myName}(%d * %d)[\\n", x{a}width, x{a}height); {c}')
         self.printPrintFunctionBody(catalog)
         print(f"    pad(depth); {c}")
         print(f'    eprintf("]"); {c}')
@@ -1278,18 +1307,20 @@ class SimpleArray(Base):
 
     def print1dPrintFunctionBody(self, catalog):
         c = self.comment('print1dPrintFunctionBody')
-        print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
-        self.entries.printPrintArrayLine(catalog, "i", 2)
+        a = '.' if self.isInline(catalog) else '->'
+        print(f"    for (Index i = 0; i < x{a}size; i++) {{ {c}")
+        self.entries.printPrintArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f'        eprintf("\\n"); {c}')
         print(f"    }} {c}")
 
     def print2dPrintFunctionBody(self, catalog):
         c = self.comment('print2dPrintFunctionBody')
-        print(f"    for (Index i = 0; i < x->height; i++) {{ {c}")
+        a = '.' if self.isInline(catalog) else '->'
+        print(f"    for (Index i = 0; i < x{a}height; i++) {{ {c}")
         print(f"        pad(depth); {c}")
         print(f'        eprintf("[\\n"); {c}')
-        print(f"        for (Index j = 0; j < x->width; j++) {{ {c}")
-        self.entries.printPrintArrayLine(catalog, "i * x->width + j", 3)
+        print(f"        for (Index j = 0; j < x{a}width; j++) {{ {c}")
+        self.entries.printPrintArrayLine(self.isInline(catalog), catalog, f"i * x{a}width + j", 3)
         print(f'            eprintf("\\n"); {c}')
         print(f"        }} {c}")
         print(f"        pad(depth); {c}")
@@ -1297,6 +1328,8 @@ class SimpleArray(Base):
         print(f"    }} {c}")
 
     def printFreeObjCase(self, catalog):
+        if self.isInline(catalog):
+            return
         c = self.comment('printFreeObjCase')
         name = self.getName()
         pad(2)
@@ -1318,6 +1351,8 @@ class SimpleArray(Base):
         print(f'break; {c}')
 
     def printTypeObjCase(self, catalog):
+        if self.isInline(catalog):
+            return
         objType = self.getObjType()
         name = self.getName()
         c = self.comment('printTypeObjCase')
@@ -1332,12 +1367,18 @@ class SimpleArray(Base):
         pad(depth)
         print(f'mark{myName}(*({myName} **)ptr); {c}')
 
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
+
+    def printProtectField(self, isInline, field, depth, prefix=''):
+        c = self.comment('printProtectField')
+        pad(depth)
+        a = '.' if isInline else '->'
+        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def getIterator1DDeclaration(self, catalog):
         myName = self.getName()
@@ -1353,7 +1394,7 @@ class SimpleArray(Base):
 
     def printIteratorDeclaration(self, catalog):
         if self.dimension == 2:
-            self.printIterator2DDeclaration(catalog);
+            self.printIterator2DDeclaration(catalog)
         else:
             self.printIterator1DDeclaration(catalog)
 
@@ -1376,18 +1417,19 @@ class SimpleArray(Base):
     def printIterator1DFunction(self, catalog):
         c = self.comment('printIterator1DFunction')
         decl = self.getIterator1DDeclaration(catalog)
+        a = '.' if self.isInline(catalog) else '->'
         print(f'{decl} {{ {c}')
-        print(f'    if (*i >= table->size) {{ {c}')
+        print(f'    if (*i >= table{a}size) {{ {c}')
         print(f'        if (more != NULL) {{ {c}')
         print(f'            *more = false; {c}')
         print(f'        }} {c}')
         print(f'        return false; {c}')
         print(f'    }} else {{ {c}')
         print(f'        if (more != NULL) {{ {c}')
-        print(f'            *more = (*i + 1 < table->size); {c}')
+        print(f'            *more = (*i + 1 < table{a}size); {c}')
         print(f'        }} {c}')
         print(f'        if (res != NULL) {{ {c}')
-        print(f'            *res = table->entries[*i]; {c}')
+        print(f'            *res = table{a}entries[*i]; {c}')
         print(f'        }} {c}')
         print(f'        *i = *i + 1; {c}')
         print(f'        return true; {c}')
@@ -1398,26 +1440,27 @@ class SimpleArray(Base):
     def printIterator2DFunction(self, catalog):
         c = self.comment('printIterator2DFunction')
         decl = self.getIterator2DDeclaration(catalog)
+        a = '.' if self.isInline(catalog) else '->'
         print(f'{decl} {{ {c}')
-        print(f'    if (*x >= table->width) {{ {c}')
+        print(f'    if (*x >= table{a}width) {{ {c}')
         print(f'        if (more_x != NULL) {{ {c}')
         print(f'            *more_x = false; {c}')
         print(f'        }} {c}')
         print(f'        return false; {c}')
-        print(f'    }} else if (*y >= table->height) {{ {c}')
+        print(f'    }} else if (*y >= table{a}height) {{ {c}')
         print(f'        if (more_y != NULL) {{ {c}')
         print(f'            *more_y = false; {c}')
         print(f'        }} {c}')
         print(f'        return false; {c}')
         print(f'    }} else {{ {c}')
         print(f'        if (more_x != NULL) {{ {c}')
-        print(f'            *more_x = (*x + 1 < table->width); {c}')
+        print(f'            *more_x = (*x + 1 < table{a}width); {c}')
         print(f'        }} {c}')
         print(f'        if (more_y != NULL) {{ {c}')
-        print(f'            *more_y = (*y + 1 < table->height); {c}')
+        print(f'            *more_y = (*y + 1 < table{a}height); {c}')
         print(f'        }} {c}')
         print(f'        if (res != NULL) {{ {c}')
-        print(f'            *res = table->entries[*x * table->width + *y]; {c}')
+        print(f'            *res = table{a}entries[*x * table{a}width + *y]; {c}')
         print(f'        }} {c}')
         print(f'        if (*x + 1 == table->width) {{ {c}')
         print(f'            *x = 0; {c}')
@@ -1433,6 +1476,45 @@ class SimpleArray(Base):
     def isArray(self):
         return True
 
+class InlineArray(SimpleArray):
+    """
+    Call-by-value inline Array structures declared in the yaml
+    """
+    def __init__(self, name, data):
+        super().__init__(name, data)
+    
+    def isInline(self, catalog):
+        return True
+
+    def printNewFunction(self, catalog):
+        pass
+
+    def printNewDeclaration(self, catalog):
+        pass
+
+    def printFreeFunction(self, catalog):
+        pass
+
+    def printFreeDeclaration(self, catalog):
+        pass
+
+    def objTypeArray(self):
+        return []
+
+    def comment(self, method):
+        return f'// InlineArray.{method}'
+
+    def printCopyDeclaration(self, catalog):
+        c = self.comment('printCopyDeclaration')
+        typeName = self.getTypeDeclaration(catalog)
+        myName = self.getName()
+        print(f'static inline {typeName} copy{myName}({typeName} o) {{ return o; }}; {c}')
+
+    def printCopyFunction(self, catalog):
+        pass
+
+    def printMarkObjCase(self, catalog):
+        pass
 
 class SimpleVector(Base):
     """
@@ -1449,10 +1531,11 @@ class SimpleVector(Base):
 
     def printTypedef(self, catalog):
         self.noteTypedef()
-        c = self.comment('printTypeDef')
+        c = self.comment('printTypedef')
         name = self.getName()
         print(f"typedef struct {name} {{ {c}")
-        print(f"    Header header; {c}")
+        if not self.isInline(catalog):
+            print(f"    Header header; {c}")
         print(f"    Index size; {c}")
         self.entries.printVectorTypedefLine(catalog)
         print(f"}} {name}; {c}")
@@ -1493,11 +1576,11 @@ class SimpleVector(Base):
         print(f"}} {c}")
         print("")
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
         c = self.comment('printCopyField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def getTypeDeclaration(self, catalog):
@@ -1509,18 +1592,18 @@ class SimpleVector(Base):
     def getDefineArg(self):
         return 'x'
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth+1); {c}')
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printCompareField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         myName=self.getName()
         extraCmpArgs = self.getExtraCmpAargs(catalog)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
@@ -1547,6 +1630,11 @@ class SimpleVector(Base):
     def getObjType(self):
         return ('objtype_' + self.getName()).upper()
 
+    def printCopyDeclaration(self, catalog):
+        decl = self.getCopySignature(catalog)
+        c = self.comment('printCopyDectaration')
+        print(f"{decl}; {c}")
+
     def printCopyFunction(self, catalog):
         c = self.comment('printCopyFunction')
         myType = self.getTypeDeclaration(catalog)
@@ -1562,7 +1650,7 @@ class SimpleVector(Base):
         print(f"    bzero(x, sizeof(struct {myName})); {c}")
         print(f"    x->header = _h; {c}")
         print(f"    int save = PROTECT(x); {c}")
-        if self.entries.isCBV(catalog):
+        if self.entries.isInline(catalog):
             print(f"    COPY_ARRAY({fieldType}, x->entries, o->entries, o->size); {c}")
         else:
             print(f"    for (Index i = 0; i < o->size; ++i) {{ {c}")
@@ -1606,7 +1694,7 @@ class SimpleVector(Base):
         print(f"    if (MARKED(x)) return; {c}")
         print(f"    MARK(x); {c}")
         print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
-        self.entries.printMarkArrayLine(catalog, "i", 2)
+        self.entries.printMarkArrayLine(False, catalog, "i", 2)
         print(f"    }} {c}")
         print(f"}} {c}")
         print("")
@@ -1625,7 +1713,7 @@ class SimpleVector(Base):
         print(f"    if (a == NULL || b == NULL) return false; {c}")
         print(f"    if (a->size != b->size) return false; {c}")
         print(f"    for (Index i = 0; i < a->size; i++) {{ {c}")
-        self.entries.printCompareArrayLine(catalog, "i", 2)
+        self.entries.printCompareArrayLine(False, catalog, "i", 2)
         print(f"    }} {c}")
         print(f"    return true; {c}")
         print(f"}} {c}")
@@ -1649,7 +1737,7 @@ class SimpleVector(Base):
         print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         print(f'    eprintf("{myName}(%d)[\\n", x->size); {c}')
         print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
-        self.entries.printPrintArrayLine(catalog, "i", 2)
+        self.entries.printPrintArrayLine(False, catalog, "i", 2)
         print(f'        eprintf("\\n"); {c}')
         print(f"    }} {c}")
         print(f"    pad(depth); {c}")
@@ -1712,15 +1800,22 @@ class SimpleVector(Base):
         pad(depth)
         print(f'mark{myName}(*({myName} **)ptr); {c}')
 
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
+    def printProtectField(self, isInline, field, depth, prefix=''):
+        c = self.comment('printProtectField')
+        myName=self.getName()
+        pad(depth)
+        a = '.' if isInline else '->'
+        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+
     def printFreeObjCase(self, catalog):
-        if self.isCBV(catalog):
+        if self.isInline(catalog):
             return
         c = self.comment('printFreeObjCase')
         name=self.getName()
@@ -1748,7 +1843,8 @@ class SimpleStruct(Base):
         self.noteTypedef()
         name = self.getName()
         print(f"typedef struct {name} {{ {c}")
-        print(f"    Header header; {c}")
+        if not self.isInline(catalog):
+            print(f"    Header header; {c}")
         if catalog.parserInfo:
             print(f"    ParserInfo _yy_parser_info; {c}")
         for field in self.fields:
@@ -1767,7 +1863,7 @@ class SimpleStruct(Base):
 
     def getTypeDeclaration(self, catalog):
         name=self.getName()
-        if self.isCBV(catalog):
+        if self.isInline(catalog):
             return f"struct {name} "
         else:
             return f"struct {name} *"
@@ -1948,20 +2044,20 @@ class SimpleStruct(Base):
 
     def printMarkFunctionBody(self, catalog):
         for field in self.fields:
-            field.printMarkLine(self.isCBV(catalog), catalog, 1)
+            field.printMarkLine(self.isInline(catalog), catalog, 1)
 
     def printCompareFunctionBody(self, catalog):
         for field in self.fields:
-            field.printCompareLine(self.isCBV(catalog), catalog, 1)
+            field.printCompareLine(self.isInline(catalog), catalog, 1)
 
     def printCopyFunctionBody(self, catalog):
         for field in self.fields:
-            field.printCopyLine(self.isCBV(catalog), catalog, 1)
+            field.printCopyLine(self.isInline(catalog), catalog, 1)
 
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         for field in self.fields:
-            field.printPrintLine(self.isCBV(catalog), catalog, 1)
+            field.printPrintLine(self.isInline(catalog), catalog, 1)
             print(f'    eprintf("\\n"); {c}')
 
     def printMarkHashField(self, depth):
@@ -1970,18 +2066,25 @@ class SimpleStruct(Base):
         pad(depth)
         print(f'mark{myName}(*({myName} **)ptr); {c}')
 
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printProtectField(self, isInline, field, depth, prefix=''):
+        c = self.comment('printProtectField')
+        myName=self.getName()
+        pad(depth)
+        a = '.' if isInline else '->'
+        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+
+    def printCompareField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         myName=self.getName()
         extraArgs = self.getExtraCmpAargs({})
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
 
@@ -1991,25 +2094,25 @@ class SimpleStruct(Base):
         pad(depth)
         print(f'print{myName}(*({myName} **)ptr, depth + 1); {c}')
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printMarkFunction(self, catalog):
         c = self.comment('printMarkFunction')
         decl = self.getMarkSignature(catalog)
         print(f"{decl} {{ {c}")
-        if not self.isCBV(catalog):
+        if not self.isInline(catalog):
             print(f"    if (x == NULL) return; {c}")
             print(f"    if (MARKED(x)) return; {c}")
             print(f"    MARK(x); {c}")
@@ -2024,7 +2127,7 @@ class SimpleStruct(Base):
         print(f"}} {c}\n")
 
     def printMarkObjCase(self, catalog):
-        if self.isCBV(catalog):
+        if self.isInline(catalog):
             return
         c = self.comment('printMarkObjCase')
         name=self.getName()
@@ -2036,7 +2139,7 @@ class SimpleStruct(Base):
         print(f'break; {c}')
 
     def printFreeObjCase(self, catalog):
-        if self.isCBV(catalog):
+        if self.isInline(catalog):
             return
         c = self.comment('printFreeObjCase')
         name=self.getName()
@@ -2048,7 +2151,7 @@ class SimpleStruct(Base):
         print(f'break; {c}')
 
     def printTypeObjCase(self, catalog):
-        if self.isCBV(catalog):
+        if self.isInline(catalog):
             return
         c = self.comment('printTypeObjCase')
         name=self.getName()
@@ -2059,7 +2162,7 @@ class SimpleStruct(Base):
 
     def printCompareFunction(self, catalog):
         if self.bespokeCmpImplementation:
-            print("// Bespoke implementation required for");
+            print("// Bespoke implementation required for")
             print("// {decl}".format(decl=self.getCompareSignature(catalog)))
             print("")
             return
@@ -2067,7 +2170,7 @@ class SimpleStruct(Base):
         c = self.comment('printCompareFunction')
         decl=self.getCompareSignature(catalog)
         print(f"{decl} {{ {c}")
-        if not self.isCBV(catalog):
+        if not self.isInline(catalog):
             print(f"    if (a == b) return true; {c}")
             print(f"    if (a == NULL || b == NULL) return false; {c}")
         self.printCompareFunctionBody(catalog)
@@ -2102,7 +2205,7 @@ class SimpleStruct(Base):
         decl=self.getPrintSignature(catalog)
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
-        if not self.isCBV(catalog):
+        if not self.isInline(catalog):
             print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         print(f'    eprintf("{myName}[\\n"); {c}')
         self.printPrintFunctionBody(catalog)
@@ -2135,11 +2238,11 @@ class DiscriminatedUnionField(EnumField):
     def comment(self, method):
         return f'// DiscriminatedUnionField.{method}'
 
-    def printHelperNewDeclaration(self, catalog, isCBV):
+    def printHelperNewDeclaration(self, catalog, isInline):
         ucfirst = self.getName()[0].upper() + self.getName()[1:]
         c = self.comment('printHelperNewDeclaration')
-        arg = self.getDefineArg(catalog);
-        macroArg = arg;
+        arg = self.getDefineArg(catalog)
+        macroArg = arg
         typeName = self.makeTypeName()
         argMacro = self.getDefineMacro(catalog, self.getName())
         obj = catalog.get(self.typeName)
@@ -2157,8 +2260,8 @@ class DiscriminatedUnionField(EnumField):
         else:
             if arg == '':
                 arg = 'void'
-        if isCBV:
-            consPrefix = self.owner[0].lower() + self.owner[1:];
+        if isInline:
+            consPrefix = self.owner[0].lower() + self.owner[1:]
             print(f'static inline {self.owner} {consPrefix}_{ucfirst}({parserInfoFarg}{argType}{arg}) {{ {c}')
             print(f'    return ({self.owner}) {{ .type = {parserInfoAarg}{typeName}, .val = {argMacro}({macroArg}) }}; {c}')
         else:
@@ -2216,38 +2319,45 @@ class DiscriminatedUnionField(EnumField):
     def printDefines(self, catalog):
         self.printDefine(catalog, self.name, self.getDefineValue(catalog))
 
-    def printMarkCase(self, isCBV, catalog):
+    def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
         typeName = self.makeTypeName()
         print(f"        case {typeName}: {c}")
         obj = catalog.get(self.typeName)
-        obj.printMarkField(isCBV, self.name, 3, 'val.')
+        obj.printMarkField(isInline, self.name, 3, 'val.')
         print(f"            break; {c}")
 
-    def printCompareCase(self, isCBV, catalog):
+    def printProtectCase(self, isInline, catalog):
+        c = self.comment('printProtectCase')
+        typeName = self.makeTypeName()
+        print(f"        case {typeName}: {c}")
+        obj = catalog.get(self.typeName)
+        obj.printProtectField(isInline, self.name, 3, 'val.')
+
+    def printCompareCase(self, isInline, catalog):
         c = self.comment('printCompareCase')
         typeName = self.makeTypeName()
         print(f"        case {typeName}: {c}")
         obj = catalog.get(self.typeName)
-        obj.printCompareField(isCBV, self.name, 3, 'val.')
+        obj.printCompareField(isInline, self.name, 3, 'val.')
         print(f"            break; {c}")
 
-    def printPrintCase(self, catalog, isCBV):
+    def printPrintCase(self, catalog, isInline):
         c = self.comment('printPrintCase')
         typeName = self.makeTypeName()
         print(f"        case {typeName}: {c}")
         print(f'            pad(depth + 1); {c}')
         print(f'            eprintf("{typeName}\\n"); {c}')
         obj = catalog.get(self.typeName)
-        obj.printPrintField(isCBV, self.name, 3, 'val.')
+        obj.printPrintField(isInline, self.name, 3, 'val.')
         print(f"            break; {c}")
 
-    def printCopyCase(self, catalog, isCBV):
+    def printCopyCase(self, catalog, isInline):
         c = self.comment('printCopyCase')
         typeName = self.makeTypeName()
         print(f"        case {typeName}: {c}")
         obj = catalog.get(self.typeName)
-        obj.printCopyField(isCBV, self.name, 3, 'val.')
+        obj.printCopyField(isInline, self.name, 3, 'val.')
         print(f"            break; {c}")
 
 
@@ -2280,7 +2390,7 @@ class DiscriminatedUnion(SimpleStruct):
         union=self.union.getTypeDeclaration(catalog)
         ufield=self.union.getFieldName()
         print(f"typedef struct {name} {{ {c}")
-        if not self.isCBV(catalog):
+        if not self.isInline(catalog):
             print(f"    Header header; {c}")
         if catalog.parserInfo:
             print(f"    ParserInfo _yy_parser_info; {c}")
@@ -2290,7 +2400,7 @@ class DiscriminatedUnion(SimpleStruct):
 
     def printHelperNewDeclarations(self, catalog):
         for field in self.fields:
-            field.printHelperNewDeclaration(catalog, self.isCBV(catalog))
+            field.printHelperNewDeclaration(catalog, self.isInline(catalog))
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -2305,10 +2415,10 @@ class DiscriminatedUnion(SimpleStruct):
     def printMarkFunctionBody(self, catalog):
         c = self.comment('printMarkFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV(catalog) else '->'
+        a = '.' if self.isInline(catalog) else '->'
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
-            field.printMarkCase(self.isCBV(catalog), catalog)
+            field.printMarkCase(self.isInline(catalog), catalog)
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in mark{myName}", x{a}type); {c}')
         print(f"    }} {c}")
@@ -2316,11 +2426,11 @@ class DiscriminatedUnion(SimpleStruct):
     def printCompareFunctionBody(self, catalog):
         c = self.comment('printCompareFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV(catalog) else '->'
+        a = '.' if self.isInline(catalog) else '->'
         print(f"    if (a{a}type != b{a}type) return false; {c}")
         print(f"    switch(a{a}type) {{ {c}")
         for field in self.fields:
-            field.printCompareCase(self.isCBV(catalog), catalog)
+            field.printCompareCase(self.isInline(catalog), catalog)
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in eq{myName}", a{a}type); {c}')
         print(f"    }} {c}")
@@ -2328,10 +2438,10 @@ class DiscriminatedUnion(SimpleStruct):
     def printCopyFunctionBody(self, catalog):
         c = self.comment('printCopyFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV(catalog) else '->'
+        a = '.' if self.isInline(catalog) else '->'
         print(f"    switch(o{a}type) {{ {c}")
         for field in self.fields:
-            field.printCopyCase(catalog, self.isCBV(catalog))
+            field.printCopyCase(catalog, self.isInline(catalog))
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in copy{myName}", o{a}type); {c}')
         print(f"    }} {c}")
@@ -2340,26 +2450,28 @@ class DiscriminatedUnion(SimpleStruct):
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         myName=self.getName()
-        a = '.' if self.isCBV(catalog) else '->'
+        a = '.' if self.isInline(catalog) else '->'
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
-            field.printPrintCase(catalog, self.isCBV(catalog))
+            field.printPrintCase(catalog, self.isInline(catalog))
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in print{myName}", x{a}type); {c}')
         print(f"    }} {c}")
         print(f'    eprintf("\\n"); {c}')
 
 
-class DiscriminatedCBVUnion(DiscriminatedUnion):
+class DiscriminatedInlineUnion(DiscriminatedUnion):
     """
-    CBV (call by value) structs live on the stack not the heap, they are passed by
-    value not by reference, and they are not directly memory-maneged (though their
-    components may be, so they still need mark functions, just not new and free functions.
+    Inline (call by value) structs live on the stack not the heap, they are
+    passed by value not by reference, and they are not directly memory-maneged
+    (though their components may be, so they still need mark functions,
+    just not new and free functions.
     """
+
     def __init__(self, name, data):
         super().__init__(name, data)
 
-    def isCBV(self, catalog):
+    def isInline(self, catalog):
         return True
 
     def printNewFunction(self, catalog):
@@ -2374,11 +2486,35 @@ class DiscriminatedCBVUnion(DiscriminatedUnion):
     def printFreeDeclaration(self, catalog):
         pass
 
+    def getProtectDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        return f'int protect{myName}({myType} x)'
+
+    def printProtectDeclaration(self, catalog):
+        decl = self.getProtectDeclaration(catalog)
+        c = self.comment('printProtectDeclaration')
+        print(f'{decl}; {c}')
+
+    def printProtectFunction(self, catalog):
+        decl = self.getProtectDeclaration(catalog)
+        a = '.' if self.isInline(catalog) else '->'
+        c = self.comment('printProtectFunction')
+        print(f'{decl} {{ {c}')
+        print(f'    switch(x{a}type) {{ {c}')
+        for field in self.fields:
+            field.printProtectCase(self.isInline(catalog), catalog)
+        print(f"        default: {c}")
+        print(f'            cant_happen("unrecognised type %d", x{a}type); {c}')
+        print(f'    }} {c}')
+        print(f'}} {c}')
+        print('')
+
     def objTypeArray(self):
         return []
 
     def comment(self, method):
-        return f'// DiscriminatedCBVUnion.{method}'
+        return f'// DiscriminatedInlineUnion.{method}'
 
     def printCopyDeclaration(self, catalog):
         pass
@@ -2457,10 +2593,10 @@ class SimpleEnum(Base):
     def isEnum(self):
         return True
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printCompareField(self, isInline, field, depth, prefix=''):
         pad(depth)
         c = self.comment('printCompareField')
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f"switch (a{a}{prefix}{field}) {{ {c}")
         for field in self.fields:
             field.printCompareCase(depth + 1)
@@ -2479,24 +2615,24 @@ class SimpleEnum(Base):
         pad(depth)
         print(f'}} {c}')
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         pad(depth)
         c = self.comment('printPrintField')
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'switch (x{a}{prefix}{field}) {{ {c}')
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
         print(f'}} {c}')
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         print(f'x{a}{field} = o{a}{field}; {c}')
 
     def getNameFunctionDeclaration(self):
-        name = self.getName();
+        name = self.getName()
         camel = name[0].lower() + name[1:]
         return f"char * {camel}Name(enum {name} type)"
 
@@ -2515,7 +2651,7 @@ class SimpleEnum(Base):
         print(f"        default: {{ {c}")
         print(f"            static char buf[64]; {c}")
         print(f'            sprintf(buf, "%d", type); {c}')
-        print(f"            return buf; {c}");
+        print(f"            return buf; {c}")
         print(f"        }} {c}")
         print(f"    }} {c}")
         print(f"}} {c}")
@@ -2544,7 +2680,7 @@ class DiscriminatedUnionEnum(Base):
         return 'type'
 
     def getNameFunctionDeclaration(self):
-        name = self.getName();
+        name = self.getName()
         camel = name[0].lower() + name[1:]
         return f"char * {camel}Name(enum {name} type)"
 
@@ -2563,7 +2699,7 @@ class DiscriminatedUnionEnum(Base):
         print(f"        default: {{ {c}")
         print(f"            static char buf[64]; {c}")
         print(f'            sprintf(buf, "%d", type); {c}')
-        print(f"            return buf; {c}");
+        print(f"            return buf; {c}")
         print(f"        }} {c}")
         print(f"    }} {c}")
         print(f"}} {c}")
@@ -2619,18 +2755,18 @@ class Primitive(Base):
     def printMermaid(self, catalog):
         pass
 
-    def isCBV(self, catalog):
+    def isInline(self, catalog):
         return True
 
     def comment(self, method):
         return f'// Primitive.{method}'
 
-    def printMarkCase(self, isCBV, catalog):
+    def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
         if self.markFn is not None:
             typeName = self.makeTypeName()
             print(f"        case {typeName}: {c}")
-            self.printMarkField(isCBV, self.name, 3, 'val.')
+            self.printMarkField(isInline, self.name, 3, 'val.')
             print("            break; {c}")
 
     def hasMarkFn(self):
@@ -2643,21 +2779,30 @@ class Primitive(Base):
             print(f'{self.markFn}(*({self.cname}*)ptr); {c}')
 
     # Primitive
-    def printMarkField(self, isCBV, field, depth, prefix=''):
+    def printMarkField(self, isInline, field, depth, prefix=''):
         if self.markFn is not None:
             c = self.comment('printMarkField')
             markFn=self.markFn
             pad(depth)
-            a = '.' if isCBV else '->'
+            a = '.' if isInline else '->'
             print(f"{markFn}(x{a}{prefix}{field}); {c}")
+
+    def printProtectField(self, isInline, field, depth, prefix=''):
+        c = self.comment('printProtectField')
+        pad(depth)
+        if self.markFn is None:
+            print(f"return PROTECT(NULL); {c}")
+        else:
+            a = '.' if isInline else '->'
+            print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def getTypeDeclaration(self, catalog):
         return self.cname
 
-    def printCompareField(self, isCBV, field, depth, prefix=''):
+    def printCompareField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         if self.compareFn is None:
             print(f"if (a{a}{prefix}{field} != b{a}{prefix}{field}) return false; {c}")
         else:
@@ -2674,9 +2819,9 @@ class Primitive(Base):
             print(f'{self.printFn}(*({self.cname} *)ptr, depth + 1); {c}')
 
 
-    def printPrintField(self, isCBV, field, depth, prefix=''):
+    def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         if self.printFn == 'printf':
             pad(depth)
             print(f'pad(depth + 1); {c}')
@@ -2686,10 +2831,10 @@ class Primitive(Base):
             pad(depth)
             print(f'{self.printFn}(x{a}{prefix}{field}, depth + 1); {c}')
 
-    def printCopyField(self, isCBV, field, depth, prefix=''):
+    def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         pad(depth)
-        a = '.' if isCBV else '->'
+        a = '.' if isInline else '->'
         if self.copyFn is None:
             print(f"x{a}{prefix}{field} = o{a}{prefix}{field}; {c}")
         else:
@@ -2791,13 +2936,26 @@ if "structs" in document:
     for name in document["structs"]:
         catalog.add(SimpleStruct(name, document["structs"][name]))
 
+# vectors are variable sized so could never be inlined
 if "vectors" in document:
     for name in document["vectors"]:
         catalog.add(SimpleVector(name, document["vectors"][name]))
 
-if "cbv_unions" in document:
-    for name in document["cbv_unions"]:
-        catalog.add(DiscriminatedCBVUnion(name, document["cbv_unions"][name]))
+# Inline components are different in a few consistent ways:
+# 1. They are not directly memory managed.
+#    So they have no Header, and no new or free functions.
+#    They do however have mark functions to mark their components.
+# 2. They are passed by value rather than by reference.
+# 3. They are shallow rather than deep copied.
+# 4. They may have their own protect functions.
+if "inline" in document:
+    if "unions" in document["inline"]:
+        for name in document["inline"]["unions"]:
+            catalog.add(DiscriminatedInlineUnion(name, document["inline"]["unions"][name]))
+
+    if "arrays" in document["inline"]:
+        for name in document["inline"]["arrays"]:
+            catalog.add(InlineArray(name, document["inline"]["arrays"][name]))
 
 if "unions" in document:
     for name in document["unions"]:
@@ -2821,7 +2979,7 @@ if "arrays" in document:
 
 if "tags" in document:
     for tag in document["tags"]:
-        catalog.tag(tag);
+        catalog.tag(tag)
 
 if "cmp" in document:
     if "extraArgs" in document["cmp"]:
@@ -2865,6 +3023,8 @@ if args.type == "h":
     catalog.printMarkDeclarations()
     printSection("free declarations")
     catalog.printFreeDeclarations()
+    printSection("protect declarations")
+    catalog.printProtectDeclarations()
     printSection("push/pop declarations")
     catalog.printPushDeclarations()
     catalog.printPopDeclarations()
@@ -2906,9 +3066,9 @@ elif args.type == "c":
     printGpl(args.yaml, document)
     print("")
     print(f'#include "{typeName}.h"')
-    print("#include <stdio.h>");
-    print("#include <strings.h>");
-    print('#include "common.h"');
+    print("#include <stdio.h>")
+    print("#include <strings.h>")
+    print('#include "common.h"')
     print('#ifdef DEBUG_ALLOC')
     print('#include "debugging_on.h"')
     print('#else')
@@ -2939,6 +3099,8 @@ elif args.type == "c":
     catalog.printTypeObjFunction()
     printSection("type name function")
     catalog.printNameFunctionBodies()
+    printSection("protect functions")
+    catalog.printProtectFunctions()
 
 elif args.type == 'debug_h':
 

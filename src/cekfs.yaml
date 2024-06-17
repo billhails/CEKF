@@ -24,7 +24,7 @@ config:
         - builtins_debug.h
         - types.h
 
-description: Runtime support for CEKFs
+description: The structures of the CEKFs machine
 
 structs:
     CekfsState:
@@ -42,7 +42,7 @@ structs:
     CekfsKont:
         body: control
         env: CekfsEnv
-        snapshot: CekfsStack
+        snapshot: CekfsSnapshot
         next: CekfsKont
 
     CekfsClo:
@@ -54,41 +54,43 @@ structs:
         exp: control
         env: CekfsEnv
         kont: CekfsKont
-        snapshot: CekfsStack
+        snapshot: CekfsSnapshot
         next: CekfsFail
 
-cbv_unions:
-    CekfsValue:
-        none: void_ptr
-        stdint: int
-        bigint: BigInt
-        rational: CekfsVec
-        rational_imag: Vec
-        irrational: double
-        stdint_imag: int
-        bigint_imag: BigInt
-        rational_imag: CekfsVec
-        irrational_imag: double
-        complex: CekfsVec
-        character: char
-        clo: CekfsClo
-        pclo: CekfsClo
-        kont: CekfsKont
-        vec: CekfsVec
-        builtIn: BuiltInImplementation
-        namespace: CekfsStack
-        
+inline:
+    unions:
+        CekfsValue:
+            none: void_ptr
+            stdint: int
+            bigint: BigInt
+            rational: CekfsVec
+            rational_imag: Vec
+            irrational: double
+            stdint_imag: int
+            bigint_imag: BigInt
+            rational_imag: CekfsVec
+            irrational_imag: double
+            complex: CekfsVec
+            character: char
+            clo: CekfsClo
+            pclo: CekfsClo
+            kont: CekfsKont
+            vec: CekfsVec
+            builtIn: BuiltInImplementation
+            namespace: CekfsVec
+
+    arrays:
+        CekfsStack:
+            entries: CekfsValue
+
+        CekfsSnapshot:
+            entries: CekfsValue
+
 vectors:
     CekfsVec:
         entries: CekfsValue
 
-    CekfsValueList:
-        entries: CekfsValue
-
 arrays:
-    CekfsStack:
-        entries: CekfsValue
-
     CekfsByteCodeArray:
         entries: byte
 
