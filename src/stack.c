@@ -121,9 +121,11 @@ void dumpStack(Stack *s) {
 
 Value popValue(Stack *s) {
     DEBUG("popValue()");
+#ifdef SAFETY_CHECKS
     if (s->sp == 0) {
         cant_happen("stack underflow");
     }
+#endif
     return s->stack[--s->sp];
 }
 
@@ -152,7 +154,7 @@ void pokeValue(Stack *s, int offset, Value v) {
     }
 #ifdef SAFETY_CHECKS
     if (offset >= s->sp || offset < 0) {
-        cant_happen("poke out of bounds");
+        cant_happen("poke out of bounds %d/%d", offset, s->sp);
     }
 #endif
     s->stack[offset] = v;
@@ -171,8 +173,8 @@ void copyTopToValues(Stack *s, Value *values, int size) {
     COPY_ARRAY(Value, values, &(s->stack[s->sp - size]), size);
 }
 
-static void copyToValues(Stack *s, Value *values, int size) {
-    COPY_ARRAY(Value, values, s->stack, s->sp - size);
+static void copyToValues(Stack *s, Value *values, int except) {
+    COPY_ARRAY(Value, values, s->stack, s->sp - except);
 }
 
 static void copyFromValues(Stack *s, Value *values, int size) {

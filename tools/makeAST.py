@@ -90,6 +90,14 @@ class Catalog:
             if entity.isVector():
                 entity.printTypedef(self)
 
+    def printInitDeclarations(self):
+        for entity in self.contents.values():
+            entity.printInitDeclaration(self)
+
+    def printInitFunctions(self):
+        for entity in self.contents.values():
+            entity.printInitFunction(self)
+
     def printMarkDeclarations(self):
         for entity in self.contents.values():
             entity.printMarkDeclaration(self)
@@ -118,9 +126,17 @@ class Catalog:
         for entity in self.contents.values():
             entity.printPopDeclaration(self)
 
+    def printExtendDeclarations(self):
+        for entity in self.contents.values():
+            entity.printExtendDeclaration(self)
+
     def printPopFunctions(self):
         for entity in self.contents.values():
             entity.printPopFunction(self)
+
+    def printExtendFunctions(self):
+        for entity in self.contents.values():
+            entity.printExtendFunction(self)
 
     def printSetDeclarations(self):
         for entity in self.contents.values():
@@ -335,6 +351,12 @@ class Base:
     def printFreeFunction(self, catalog):
         pass
 
+    def printInitDeclaration(self, catalog):
+        pass
+
+    def printInitFunction(self, catalog):
+        pass
+
     def printNewDeclaration(self, catalog):
         pass
 
@@ -383,7 +405,13 @@ class Base:
     def printPopDeclaration(self, catalog):
         pass
 
+    def printExtendDeclaration(self, catalog):
+        pass
+
     def printPopFunction(self, catalog):
+        pass
+
+    def printExtendFunction(self, catalog):
         pass
 
     def printCountFunction(self, catalog):
@@ -1028,9 +1056,9 @@ class SimpleArray(Base):
         print(f"{decl} {{ {c}")
         print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
         print(f'    DEBUG("new {myName} %p", x); {c}')
-        print(f"    x->entries = NULL; {c}")
         if self.tagged:
             print(f"    x->_tag = _tag; {c}")
+        print(f"    x->entries = NULL; {c}")
         if self.dimension == 1:
             print(f"    x->size = 0; {c}")
             print(f"    x->capacity = 0; {c}")
@@ -1062,21 +1090,45 @@ class SimpleArray(Base):
         decl=self.getCopySignature(catalog)
         print(f"{decl}; {c}")
 
+    def printExtendDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printExtendDeclaration')
+            print(f"void extend{name}({myType} {a}obj, Index size); {c}")
+
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPushDeclaration')
-            print(f"Index push{name}({myType} obj, {entryType} entry); {c}")
+            print(f"Index push{name}({myType} {a}obj, {entryType} entry); {c}")
 
     def printPopDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPopDeclaration')
-            print(f"{entryType} pop{name}({myType} obj); {c}")
+            print(f"{entryType} pop{name}({myType} {a}obj); {c}")
+
+    def printExtendFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = self.comment('printExtendFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"void extend{name}({myType} {a}x, Index size) {{ {c}")
+            print(f"    while (size > x->capacity) {{ {c}")
+            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
+            print(f"        x->capacity *= 2; {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
 
     def printPushFunction(self, catalog):
         if self.dimension == 1:
@@ -1084,14 +1136,14 @@ class SimpleArray(Base):
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             c = self.comment('printPushFunction')
-            a = '.' if self.isInline(catalog) else '->'
-            print(f"Index push{name}({myType} x, {entryType} entry) {{ {c}")
-            print(f"    if (x{a}size == x{a}capacity) {{ {c}")
-            print(f"        x{a}entries = GROW_ARRAY({entryType}, x{a}entries, x{a}capacity, x{a}capacity *2); {c}")
-            print(f"        x{a}capacity *= 2; {c}")
+            a = '*' if self.isInline(catalog) else ''
+            print(f"Index push{name}({myType} {a}x, {entryType} entry) {{ {c}")
+            print(f"    if (x->size == x->capacity) {{ {c}")
+            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
+            print(f"        x->capacity *= 2; {c}")
             print(f"    }} {c}")
-            print(f"    x{a}entries[x{a}size++] = entry; {c}")
-            print(f"    return x{a}size - 1; {c}")
+            print(f"    x->entries[x->size++] = entry; {c}")
+            print(f"    return x->size - 1; {c}")
             print(f"}} {c}\n")
 
     def printPopFunction(self, catalog):
@@ -1099,15 +1151,15 @@ class SimpleArray(Base):
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
-            a = '.' if self.isInline(catalog) else '->'
+            a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPopFunction')
-            print(f"{entryType} pop{name}({myType} x) {{ {c}")
+            print(f"{entryType} pop{name}({myType} {a}x) {{ {c}")
             print(f"#ifdef SAFETY_CHECKS {c}")
-            print(f"    if (x{a}size == 0) {{ {c}")
+            print(f"    if (x->size == 0) {{ {c}")
             print(f'        cant_happen("stack underflow"); {c}')
             print(f"    }} {c}")
             print(f"#endif {c}")
-            print(f"    return x{a}entries[--(x{a}size)]; {c}")
+            print(f"    return x->entries[--(x->size)]; {c}")
             print(f"}} {c}\n")
 
     def printMarkFunction(self, catalog):
@@ -1482,7 +1534,7 @@ class InlineArray(SimpleArray):
     """
     def __init__(self, name, data):
         super().__init__(name, data)
-    
+
     def isInline(self, catalog):
         return True
 
@@ -1512,6 +1564,29 @@ class InlineArray(SimpleArray):
 
     def printCopyFunction(self, catalog):
         pass
+
+    def printInitDeclaration(self, catalog):
+        if self.dimension != 1:
+            return
+        typeName = self.getTypeDeclaration(catalog)
+        myName = self.getName()
+        c = self.comment('printInitDeclaration')
+        print(f'void init{myName}({typeName} *x); {c}')
+
+    def printInitFunction(self, catalog):
+        if self.dimension != 1:
+            return
+        typeName = self.getTypeDeclaration(catalog)
+        myName = self.getName()
+        c = self.comment('printInitFunction')
+        print(f'void init{myName}({typeName} *x) {{ {c}')
+        print(f"    x->size = 0; {c}")
+        print(f"    x->capacity = 0; {c}")
+        print(f"    x->entries = NULL; {c}")
+        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4); {c}")
+        print(f"    x->capacity = 4; {c}")
+        print(f'}} {c}')
+        print("")
 
     def printMarkObjCase(self, catalog):
         pass
@@ -2460,7 +2535,7 @@ class DiscriminatedUnion(SimpleStruct):
         print(f'    eprintf("\\n"); {c}')
 
 
-class DiscriminatedInlineUnion(DiscriminatedUnion):
+class InlineDiscriminatedUnion(DiscriminatedUnion):
     """
     Inline (call by value) structs live on the stack not the heap, they are
     passed by value not by reference, and they are not directly memory-maneged
@@ -2514,7 +2589,7 @@ class DiscriminatedInlineUnion(DiscriminatedUnion):
         return []
 
     def comment(self, method):
-        return f'// DiscriminatedInlineUnion.{method}'
+        return f'// InlineDiscriminatedUnion.{method}'
 
     def printCopyDeclaration(self, catalog):
         pass
@@ -2951,7 +3026,7 @@ if "vectors" in document:
 if "inline" in document:
     if "unions" in document["inline"]:
         for name in document["inline"]["unions"]:
-            catalog.add(DiscriminatedInlineUnion(name, document["inline"]["unions"][name]))
+            catalog.add(InlineDiscriminatedUnion(name, document["inline"]["unions"][name]))
 
     if "arrays" in document["inline"]:
         for name in document["inline"]["arrays"]:
@@ -3017,6 +3092,8 @@ if args.type == "h":
     catalog.printTypedefs()
     printSection("constructor declarations")
     catalog.printNewDeclarations()
+    printSection("init declarations")
+    catalog.printInitDeclarations()
     printSection("copy declarations")
     catalog.printCopyDeclarations()
     printSection("mark declarations")
@@ -3028,6 +3105,7 @@ if args.type == "h":
     printSection("push/pop declarations")
     catalog.printPushDeclarations()
     catalog.printPopDeclarations()
+    catalog.printExtendDeclarations()
     printSection("hash getter and setter declarations")
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
@@ -3076,11 +3154,14 @@ elif args.type == "c":
     print('#endif')
     printSection("constructor functions")
     catalog.printNewFunctions()
+    printSection("init functions")
+    catalog.printInitFunctions()
     printSection("copy functions")
     catalog.printCopyFunctions()
     printSection("push/pop functions")
     catalog.printPushFunctions()
     catalog.printPopFunctions()
+    catalog.printExtendFunctions()
     printSection("hash getter and setter functions")
     catalog.printGetFunctions()
     catalog.printSetFunctions()
