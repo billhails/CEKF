@@ -38,6 +38,7 @@ Snapshot noSnapshot = {
     .frame = NULL
 };
 
+// init
 void initStack(Stack *stack) {
     stack->sp = 0;
     stack->capacity = 0;
@@ -48,23 +49,26 @@ int frameSize(Stack *s) {
     return s->sp;
 }
 
-// safe move n bytes from sp - n to base
-// set sp to base + n
-void setFrame(Stack *s, int base, int n) {
-    DEBUG("setFrame(%d, %d)", base, n);
-    ensureCapacity(s, base + n);
+// moveCekfsStack
+// safe move n values from sp - n to b
+// set sp to b + n
+void setFrame(Stack *s, int b, int n) {
+    DEBUG("setFrame(%d, %d)", b, n);
+    ensureCapacity(s, b + n);
     if (n) {
-        //         type,  dest,            src,                  amount
-        MOVE_ARRAY(Value, &s->stack[base], &s->stack[s->sp - n], n);
+        //         type,  dest,         src,                  amount
+        MOVE_ARRAY(Value, &s->stack[b], &s->stack[s->sp - n], n);
     }
-    s->sp = base + n;
+    s->sp = b + n;
 }
 
+// clearCekfsStack
 void clearFrame(Stack *s) {
     DEBUG("clearFrame()");
     s->sp = 0;
 }
 
+// popnCekfsStack
 void discardStackTop(Stack *s, int num) {
 #ifdef SAFETY_CHECKS
     if (num > s->sp || num < 0) {
@@ -80,12 +84,14 @@ static void growCapacity(Stack *s) {
     s->capacity = newCapacity;
 }
 
+// extendCekfsStack
 void ensureCapacity(Stack *s, int size) {
     while (s->capacity <= size) {
         growCapacity(s);
     }
 }
 
+// pushCekfsStack
 void pushValue(Stack *s, Value v) {
 #ifdef DEBUG_STACK
     eprintf("pushValue(");
@@ -98,11 +104,10 @@ void pushValue(Stack *s, Value v) {
     s->stack[s->sp++] = v;
 }
 
+// pushnCekfsStack
 void extendStack(Stack *s, int extra) {
     DEBUG("extendStack(%d)", extra);
-    while (s->sp + extra >= s->capacity) {
-        growCapacity(s);
-    }
+    ensureCapacity(s, s->sp + extra);
     while (extra-- > 0) {
         s->stack[s->sp++] = vVoid;
     }
@@ -119,6 +124,7 @@ void dumpStack(Stack *s) {
     eprintf("=================================\n");
 }
 
+// popCekfsStack
 Value popValue(Stack *s) {
     DEBUG("popValue()");
 #ifdef SAFETY_CHECKS
@@ -136,6 +142,7 @@ void markStack(Stack *s) {
     }
 }
 
+// peeknCekfsStack
 Value peekValue(Stack *s, int offset) {
     if (offset < 0) {
         offset = s->sp + offset;
@@ -148,6 +155,7 @@ Value peekValue(Stack *s, int offset) {
     return s->stack[offset];
 }
 
+// pokeCekfsStack
 void pokeValue(Stack *s, int offset, Value v) {
     if (offset < 0) {
         offset = s->sp + offset;
@@ -160,6 +168,7 @@ void pokeValue(Stack *s, int offset, Value v) {
     s->stack[offset] = v;
 }
 
+// peekCekfsStack
 Value peekTop(Stack *s) {
 #ifdef SAFETY_CHECKS
     if (s->sp == 0) {
@@ -170,19 +179,39 @@ Value peekTop(Stack *s) {
 }
 
 void copyTopToValues(Stack *s, Value *values, int size) {
+#ifdef SAFETY_CHECKS
+    if (size > s->sp) {
+        cant_happen("copy too big %d/%d", size, s->sp);
+    }
+#endif
     COPY_ARRAY(Value, values, &(s->stack[s->sp - size]), size);
 }
 
 static void copyToValues(Stack *s, Value *values, int except) {
+#ifdef SAFETY_CHECKS
+    if (except > s->sp) {
+        cant_happen("copy too big %d/%d", except, s->sp);
+    }
+#endif
     COPY_ARRAY(Value, values, s->stack, s->sp - except);
 }
 
 static void copyFromValues(Stack *s, Value *values, int size) {
+#ifdef SAFETY_CHECKS
+    if (size > s->capacity) {
+        cant_happen("copy too big %d/%d", size, s->capacity);
+    }
+#endif
     COPY_ARRAY(Value, s->stack, values, size);
     s->sp = size;
 }
 
 static void copyFromSnapshot(Stack *s, Snapshot ss) {
+#ifdef SAFETY_CHECKS
+    if (ss.frameSize > s->capacity) {
+        cant_happen("copy too big %d/%d", ss.frameSize, s->capacity);
+    }
+#endif
     COPY_ARRAY(Value, s->stack, ss.frame, ss.frameSize);
     s->sp = ss.frameSize;
 }
@@ -280,7 +309,7 @@ void popN(Stack *s, int n) {
     s->sp -= n;
 #ifdef SAFETY_CHECKS
     if (s->sp < 0) {
-        cant_happen("stack underflow in popN");
+        cant_happen("stack underflow");
     }
 #endif
 }

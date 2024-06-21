@@ -126,6 +126,42 @@ class Catalog:
         for entity in self.contents.values():
             entity.printPopDeclaration(self)
 
+    def printPopnDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPopnDeclaration(self)
+
+    def printMoveDeclarations(self):
+        for entity in self.contents.values():
+            entity.printMoveDeclaration(self)
+
+    def printPushnDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPushnDeclaration(self)
+
+    def printCopyTopDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCopyTopDeclaration(self)
+
+    def printCopyExceptTopDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCopyExceptTopDeclaration(self)
+
+    def printClearDeclarations(self):
+        for entity in self.contents.values():
+            entity.printClearDeclaration(self)
+
+    def printPeekDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPeekDeclaration(self)
+
+    def printPeeknDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPeeknDeclaration(self)
+
+    def printPokeDeclarations(self):
+        for entity in self.contents.values():
+            entity.printPokeDeclaration(self)
+
     def printExtendDeclarations(self):
         for entity in self.contents.values():
             entity.printExtendDeclaration(self)
@@ -133,6 +169,42 @@ class Catalog:
     def printPopFunctions(self):
         for entity in self.contents.values():
             entity.printPopFunction(self)
+
+    def printPopnFunctions(self):
+        for entity in self.contents.values():
+            entity.printPopnFunction(self)
+
+    def printMoveFunctions(self):
+        for entity in self.contents.values():
+            entity.printMoveFunction(self)
+
+    def printPushnFunctions(self):
+        for entity in self.contents.values():
+            entity.printPushnFunction(self)
+
+    def printCopyTopFunctions(self):
+        for entity in self.contents.values():
+            entity.printCopyTopFunction(self)
+
+    def printCopyExceptTopFunctions(self):
+        for entity in self.contents.values():
+            entity.printCopyExceptTopFunction(self)
+
+    def printClearFunctions(self):
+        for entity in self.contents.values():
+            entity.printClearFunction(self)
+
+    def printPeekFunctions(self):
+        for entity in self.contents.values():
+            entity.printPeekFunction(self)
+
+    def printPeeknFunctions(self):
+        for entity in self.contents.values():
+            entity.printPeeknFunction(self)
+
+    def printPokeFunctions(self):
+        for entity in self.contents.values():
+            entity.printPokeFunction(self)
 
     def printExtendFunctions(self):
         for entity in self.contents.values():
@@ -405,10 +477,64 @@ class Base:
     def printPopDeclaration(self, catalog):
         pass
 
+    def printPopnDeclaration(self, catalog):
+        pass
+
+    def printMoveDeclaration(self, catalog):
+        pass
+
+    def printPushnDeclaration(self, catalog):
+        pass
+
+    def printCopyTopDeclaration(self, catalog):
+        pass
+
+    def printCopyExceptTopDeclaration(self, catalog):
+        pass
+
+    def printClearDeclaration(self, catalog):
+        pass
+
+    def printPeekDeclaration(self, catalog):
+        pass
+
+    def printPeeknDeclaration(self, catalog):
+        pass
+
+    def printPokeDeclaration(self, catalog):
+        pass
+
     def printExtendDeclaration(self, catalog):
         pass
 
     def printPopFunction(self, catalog):
+        pass
+
+    def printPopnFunction(self, catalog):
+        pass
+
+    def printMoveFunction(self, catalog):
+        pass
+
+    def printPushnFunction(self, catalog):
+        pass
+
+    def printCopyTopFunction(self, catalog):
+        pass
+
+    def printCopyExceptTopFunction(self, catalog):
+        pass
+
+    def printClearFunction(self, catalog):
+        pass
+
+    def printPeekFunction(self, catalog):
+        pass
+
+    def printPeeknFunction(self, catalog):
+        pass
+
+    def printPokeFunction(self, catalog):
         pass
 
     def printExtendFunction(self, catalog):
@@ -1116,6 +1242,84 @@ class SimpleArray(Base):
             c = self.comment('printPopDeclaration')
             print(f"{entryType} pop{name}({myType} {a}obj); {c}")
 
+    def printPopnDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPopnDeclaration')
+            print(f"void popn{name}({myType} {a}obj, int n); {c}")
+
+    def printMoveDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printMoveDeclaration')
+            print(f"void move{name}({myType} {a}obj, int b, int n); {c}")
+
+    def printPushnDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPushnDeclaration')
+            print(f"void pushn{name}({myType} {a}obj, int n, {entryType} entry); {c}")
+
+    def printCopyTopDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyTopDeclaration')
+            print(f"void copyTop{name}({myType} {a}dest, {myType} {a}src, int n); {c}")
+
+    def printCopyExceptTopDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyExceptTopDeclaration')
+            print(f"void copyExceptTop{name}({myType} {a}dest, {myType} {a}src, int n); {c}")
+
+    def printClearDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printClearDeclaration')
+            print(f"void clear{name}({myType} {a}obj); {c}")
+
+    def printPeekDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPeekDeclaration')
+            print(f"{entryType} peek{name}({myType} {a}obj); {c}")
+
+    def printPeeknDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPeeknDeclaration')
+            print(f"{entryType} peekn{name}({myType} {a}obj, int offset); {c}")
+
+    def printPokeDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPokeDeclaration')
+            print(f"void poke{name}({myType} {a}obj, int offset, {entryType} val); {c}")
+
     def printExtendFunction(self, catalog):
         if self.dimension == 1:
             name = self.getName()
@@ -1154,12 +1358,167 @@ class SimpleArray(Base):
             a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPopFunction')
             print(f"{entryType} pop{name}({myType} {a}x) {{ {c}")
-            print(f"#ifdef SAFETY_CHECKS {c}")
+            print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (x->size == 0) {{ {c}")
             print(f'        cant_happen("stack underflow"); {c}')
             print(f"    }} {c}")
-            print(f"#endif {c}")
+            print(f"#endif")
             print(f"    return x->entries[--(x->size)]; {c}")
+            print(f"}} {c}\n")
+
+    def printPopnFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPopnFunction')
+            print(f"void popn{name}({myType} {a}x, int n) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (((int) x->size) - n < 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    x->size -= n; {c}")
+            print(f"}} {c}\n")
+
+    def printMoveFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printMoveFunction')
+            print(f"// safe move n entries from sp-n to b")
+            print(f"void move{name}({myType} {a}x, int b, int n) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (((int) x->size) - n < 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    if (n > 0) {{ {c}")
+            print(f"        extend{name}(x, x->size + n); {c}")
+            print(f"        MOVE_ARRAY({entryType}, &x->entries[b], &x->entries[x->size - n], n); {c}")
+            print(f"        x->size = (Index) (b + n); {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
+
+    def printPushnFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPushnFunction')
+            print(f"void pushn{name}({myType} {a}x, int n, {entryType} entry) {{ {c}")
+            print(f"    if (n > 0) {{ {c}")
+            print(f"        extend{name}(x, x->size + n); {c}")
+            print(f"        while (n-- > 0) {{ {c}")
+            print(f"            x->entries[x->size++] = entry; {c}")
+            print(f"        }} {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
+
+    def printCopyTopFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyTopFunction')
+            print(f"void copyTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+            print(f"    if (n > 0) {{ {c}")
+            print(f"        extend{name}(dest, n); {c}")
+            print(f"        COPY_ARRAY({entryType}, dest->entries, &src->entries[src->size - n], n); {c}")
+            print(f"        dest->size = n; {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
+
+    def printCopyExceptTopFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyExceptTopFunction')
+            print(f"void copyExceptTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (((int) src->size) - n < 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    if (((Index) n) < src->size) {{ {c}")
+            print(f"        extend{name}(dest, src->size - n); {c}")
+            print(f"        COPY_ARRAY({entryType}, dest->entries, src->entries, src->size - n); {c}")
+            print(f"        dest->size = src->size - n; {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}\n")
+
+    def printClearFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printClearFunction')
+            print(f"void clear{name}({myType} {a}x) {{ {c}")
+            print(f"    x->size = 0; {c}")
+            print(f"}} {c}\n")
+
+    def printPeekFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPeekFunction')
+            print(f"{entryType} peek{name}({myType} {a}x) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (x->size == 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    return x->entries[x->size - 1]; {c}")
+            print(f"}} {c}\n")
+
+    def printPeeknFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPeeknFunction')
+            print(f"{entryType} peekn{name}({myType} {a}x, int offset) {{ {c}")
+            print(f"    if (offset < 0) offset = ((int) x->size) + offset; {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (offset >= (int) x->size) {{ {c}")
+            print(f'        cant_happen("stack overflow"); {c}')
+            print(f"    }} {c}")
+            print(f"    if (offset < 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    return x->entries[offset]; {c}")
+            print(f"}} {c}\n")
+
+    def printPokeFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printPokeFunction')
+            print(f"void poke{name}({myType} {a}x, int offset, {entryType} val) {{ {c}")
+            print(f"    if (offset < 0) offset = ((int) x->size) + offset; {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"    if (offset >= (int) x->size) {{ {c}")
+            print(f'        cant_happen("stack overflow"); {c}')
+            print(f"    }} {c}")
+            print(f"    if (offset < 0) {{ {c}")
+            print(f'        cant_happen("stack underflow"); {c}')
+            print(f"    }} {c}")
+            print(f"#endif")
+            print(f"    x->entries[offset] = val; {c}")
             print(f"}} {c}\n")
 
     def printMarkFunction(self, catalog):
@@ -1571,7 +1930,7 @@ class InlineArray(SimpleArray):
         typeName = self.getTypeDeclaration(catalog)
         myName = self.getName()
         c = self.comment('printInitDeclaration')
-        print(f'void init{myName}({typeName} *x); {c}')
+        print(f'void init{myName}({typeName} *x, Index size); {c}')
 
     def printInitFunction(self, catalog):
         if self.dimension != 1:
@@ -1579,12 +1938,12 @@ class InlineArray(SimpleArray):
         typeName = self.getTypeDeclaration(catalog)
         myName = self.getName()
         c = self.comment('printInitFunction')
-        print(f'void init{myName}({typeName} *x) {{ {c}')
+        print(f'void init{myName}({typeName} *x, Index size) {{ {c}')
         print(f"    x->size = 0; {c}")
         print(f"    x->capacity = 0; {c}")
         print(f"    x->entries = NULL; {c}")
-        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 4); {c}")
-        print(f"    x->capacity = 4; {c}")
+        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, size); {c}")
+        print(f"    x->capacity = size; {c}")
         print(f'}} {c}')
         print("")
 
@@ -3105,6 +3464,15 @@ if args.type == "h":
     printSection("push/pop declarations")
     catalog.printPushDeclarations()
     catalog.printPopDeclarations()
+    catalog.printPopnDeclarations()
+    catalog.printMoveDeclarations()
+    catalog.printPushnDeclarations()
+    catalog.printCopyTopDeclarations()
+    catalog.printCopyExceptTopDeclarations()
+    catalog.printClearDeclarations()
+    catalog.printPeekDeclarations()
+    catalog.printPeeknDeclarations()
+    catalog.printPokeDeclarations()
     catalog.printExtendDeclarations()
     printSection("hash getter and setter declarations")
     catalog.printGetDeclarations()
@@ -3161,6 +3529,15 @@ elif args.type == "c":
     printSection("push/pop functions")
     catalog.printPushFunctions()
     catalog.printPopFunctions()
+    catalog.printPopnFunctions()
+    catalog.printMoveFunctions()
+    catalog.printPushnFunctions()
+    catalog.printCopyTopFunctions()
+    catalog.printCopyExceptTopFunctions()
+    catalog.printClearFunctions()
+    catalog.printPeekFunctions()
+    catalog.printPeeknFunctions()
+    catalog.printPokeFunctions()
     catalog.printExtendFunctions()
     printSection("hash getter and setter functions")
     catalog.printGetFunctions()

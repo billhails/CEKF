@@ -42,7 +42,7 @@ structs:
     CekfsKont:
         body: control
         env: CekfsEnv
-        snapshot: CekfsSnapshot
+        snapshot: CekfsStack
         next: CekfsKont
 
     CekfsClo:
@@ -54,7 +54,7 @@ structs:
         exp: control
         env: CekfsEnv
         kont: CekfsKont
-        snapshot: CekfsSnapshot
+        snapshot: CekfsStack
         next: CekfsFail
 
 inline:
@@ -81,9 +81,6 @@ inline:
 
     arrays:
         CekfsStack:
-            entries: CekfsValue
-
-        CekfsSnapshot:
             entries: CekfsValue
 
 vectors:

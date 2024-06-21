@@ -14,7 +14,7 @@ CekfsEnv --values--> CekfsStack
 CekfsEnv --next--> CekfsEnv
 CekfsKont --body--> control
 CekfsKont --env--> CekfsEnv
-CekfsKont --snapshot--> CekfsSnapshot
+CekfsKont --snapshot--> CekfsStack
 CekfsKont --next--> CekfsKont
 CekfsClo --pending--> int
 CekfsClo --ip--> control
@@ -22,7 +22,7 @@ CekfsClo --env--> CekfsEnv
 CekfsFail --exp--> control
 CekfsFail --env--> CekfsEnv
 CekfsFail --kont--> CekfsKont
-CekfsFail --snapshot--> CekfsSnapshot
+CekfsFail --snapshot--> CekfsStack
 CekfsFail --next--> CekfsFail
 CekfsVec["CekfsVec[]"] --entries--> CekfsValue
 CekfsValue --none--> void_ptr
@@ -43,7 +43,6 @@ CekfsValue --vec--> CekfsVec
 CekfsValue --builtIn--> BuiltInImplementation
 CekfsValue --namespace--> CekfsVec
 CekfsStack["CekfsStack[]"] --entries--> CekfsValue
-CekfsSnapshot["CekfsSnapshot[]"] --entries--> CekfsValue
 CekfsByteCode["enum CekfsByteCode"]
 CekfsByteCodeArray["CekfsByteCodeArray[]"] --entries--> byte
 CekfsValueVal
