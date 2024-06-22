@@ -424,15 +424,15 @@ static void printFail(Fail *x, int depth) {
 
 void dumpByteCode(ByteCodeArray *bca) {
     size_t i = 0;
-    while (i < bca->count) {
+    while (i < bca->size) {
         eprintf("%04lx ### ", i);
         int thisByte;
         switch (thisByte = readByte(bca, &i)) {
-            case BYTECODE_NONE:{
+            case BYTECODES_TYPE_NONE:{
                     eprintf("NONE\n");
                 }
                 break;
-            case BYTECODE_LAM:{
+            case BYTECODES_TYPE_LAM:{
                     int nargs = readByte(bca, &i);
                     int letRecOffset = readByte(bca, &i);
                     int offset = readOffset(bca, &i);
@@ -440,97 +440,97 @@ void dumpByteCode(ByteCodeArray *bca) {
                             offset);
                 }
                 break;
-            case BYTECODE_VAR:{
+            case BYTECODES_TYPE_VAR:{
                     int frame = readByte(bca, &i);
                     int offset = readByte(bca, &i);
                     eprintf("VAR [%d:%d]\n", frame, offset);
                 }
                 break;
-            case BYTECODE_LVAR:{
+            case BYTECODES_TYPE_LVAR:{
                     int offset = readByte(bca, &i);
                     eprintf("LVAR [%d]\n", offset);
                 }
                 break;
-            case BYTECODE_PRIM_ADD:{
+            case BYTECODES_TYPE_PRIM_ADD:{
                     eprintf("ADD\n");
                 }
                 break;
-            case BYTECODE_PRIM_SUB:{
+            case BYTECODES_TYPE_PRIM_SUB:{
                     eprintf("SUB\n");
                 }
                 break;
-            case BYTECODE_PRIM_MUL:{
+            case BYTECODES_TYPE_PRIM_MUL:{
                     eprintf("MUL\n");
                 }
                 break;
-            case BYTECODE_PRIM_DIV:{
+            case BYTECODES_TYPE_PRIM_DIV:{
                     eprintf("DIV\n");
                 }
                 break;
-            case BYTECODE_PRIM_POW:{
+            case BYTECODES_TYPE_PRIM_POW:{
                     eprintf("POW\n");
                 }
                 break;
-            case BYTECODE_PRIM_MOD:{
+            case BYTECODES_TYPE_PRIM_MOD:{
                     eprintf("MOD\n");
                 }
                 break;
-            case BYTECODE_PRIM_EQ:{
+            case BYTECODES_TYPE_PRIM_EQ:{
                     eprintf("EQ\n");
                 }
                 break;
-            case BYTECODE_PRIM_NE:{
+            case BYTECODES_TYPE_PRIM_NE:{
                     eprintf("NE\n");
                 }
                 break;
-            case BYTECODE_PRIM_GT:{
+            case BYTECODES_TYPE_PRIM_GT:{
                     eprintf("GT\n");
                 }
                 break;
-            case BYTECODE_PRIM_LT:{
+            case BYTECODES_TYPE_PRIM_LT:{
                     eprintf("LT\n");
                 }
                 break;
-            case BYTECODE_PRIM_GE:{
+            case BYTECODES_TYPE_PRIM_GE:{
                     eprintf("GE\n");
                 }
                 break;
-            case BYTECODE_PRIM_LE:{
+            case BYTECODES_TYPE_PRIM_LE:{
                     eprintf("LE\n");
                 }
                 break;
-            case BYTECODE_PRIM_CMP:{
+            case BYTECODES_TYPE_PRIM_CMP:{
                     eprintf("CMP\n");
                 }
                 break;
-            case BYTECODE_PRIM_XOR:{
+            case BYTECODES_TYPE_PRIM_XOR:{
                     eprintf("XOR\n");
                 }
                 break;
-            case BYTECODE_PRIM_NOT:{
+            case BYTECODES_TYPE_PRIM_NOT:{
                     eprintf("NOT\n");
                 }
                 break;
-            case BYTECODE_PRIM_MAKEVEC:{
+            case BYTECODES_TYPE_PRIM_MAKEVEC:{
                     int size = readByte(bca, &i);
                     eprintf("MAKEVEC [%d]\n", size);
                 }
                 break;
-            case BYTECODE_PRIM_VEC:{
+            case BYTECODES_TYPE_PRIM_VEC:{
                     eprintf("VEC\n");
                 }
                 break;
-            case BYTECODE_APPLY:{
+            case BYTECODES_TYPE_APPLY:{
                     int nargs = readByte(bca, &i);
                     eprintf("APPLY [%d]\n", nargs);
                 }
                 break;
-            case BYTECODE_IF:{
+            case BYTECODES_TYPE_IF:{
                     int offset = readOffset(bca, &i);
                     eprintf("IF [%04x]\n", offset);
                 }
                 break;
-            case BYTECODE_MATCH:{
+            case BYTECODES_TYPE_MATCH:{
                     int count = readByte(bca, &i);
                     eprintf("MATCH [%d]", count);
                     while (count > 0) {
@@ -541,7 +541,7 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("\n");
                 }
                 break;
-            case BYTECODE_CHARCOND:{
+            case BYTECODES_TYPE_CHARCOND:{
                     int count = readWord(bca, &i);
                     eprintf("CHARCOND [%d]", count);
                     while (count > 0) {
@@ -553,26 +553,26 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("\n");
                 }
                 break;
-            case BYTECODE_INTCOND:{
+            case BYTECODES_TYPE_INTCOND:{
                     int count = readWord(bca, &i);
                     eprintf("INTCOND [%d]", count);
                     while (count > 0) {
                         int type = readByte(bca, &i);
                         switch (type) {
-                            case BYTECODE_BIGINT: {
+                            case BYTECODES_TYPE_BIGINT: {
                                 bigint bi = readBigint(bca, &i);
                                 eprintf(" [bigint]");
                                 bigint_fprint(errout, &bi);
                                 bigint_free(&bi);
                             }
                             break;
-                            case BYTECODE_STDINT: {
+                            case BYTECODES_TYPE_STDINT: {
                                 int li = readInteger(bca, &i);
                                 eprintf(" [int]%d", li);
                             }
                             break;
                             default:
-                                cant_happen("expected INT or BIGINT in BYTECODE_INTCOND cases");
+                                cant_happen("expected INT or BIGINT in BYTECODES_TYPE_INTCOND cases");
                         }
                         int offset = readOffset(bca, &i);
                         eprintf(":[%04x]", offset);
@@ -581,73 +581,73 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("\n");
                 }
                 break;
-            case BYTECODE_LETREC:{
+            case BYTECODES_TYPE_LETREC:{
                     int size = readByte(bca, &i);
                     eprintf("LETREC [%d]\n", size);
                 }
                 break;
-            case BYTECODE_AMB:{
+            case BYTECODES_TYPE_AMB:{
                     int offset = readOffset(bca, &i);
                     eprintf("AMB [%04x]\n", offset);
                 }
                 break;
-            case BYTECODE_CUT:{
+            case BYTECODES_TYPE_CUT:{
                     eprintf("CUT\n");
                 }
                 break;
-            case BYTECODE_BACK:{
+            case BYTECODES_TYPE_BACK:{
                     eprintf("BACK\n");
                 }
                 break;
-            case BYTECODE_LET:{
+            case BYTECODES_TYPE_LET:{
                     int offset = readOffset(bca, &i);
                     eprintf("LET [%04x]\n", offset);
                 }
                 break;
-            case BYTECODE_JMP:{
+            case BYTECODES_TYPE_JMP:{
                     int offset = readOffset(bca, &i);
                     eprintf("JMP [%04x]\n", offset);
                 }
                 break;
-            case BYTECODE_PUSHN:{
+            case BYTECODES_TYPE_PUSHN:{
                     int size = readByte(bca, &i);
                     eprintf("PUSHN [%d]\n", size);
                 }
                 break;
-            case BYTECODE_CALLCC:{
+            case BYTECODES_TYPE_CALLCC:{
                     eprintf("CALLCC\n");
                 }
                 break;
-            case BYTECODE_TRUE:{
+            case BYTECODES_TYPE_TRUE:{
                     eprintf("TRUE\n");
                 }
                 break;
-            case BYTECODE_FALSE:{
+            case BYTECODES_TYPE_FALSE:{
                     eprintf("FALSE\n");
                 }
                 break;
-            case BYTECODE_VOID:{
+            case BYTECODES_TYPE_VOID:{
                     eprintf("VOID\n");
                 }
                 break;
-            case BYTECODE_PRIM_PUTC:{
+            case BYTECODES_TYPE_PRIM_PUTC:{
                     eprintf("PUTC\n");
                 }
                 break;
-            case BYTECODE_PRIM_PUTN:{
+            case BYTECODES_TYPE_PRIM_PUTN:{
                     eprintf("PUTN\n");
                 }
                 break;
-            case BYTECODE_PRIM_PUTV:{
+            case BYTECODES_TYPE_PRIM_PUTV:{
                     eprintf("PUTV\n");
                 }
                 break;
-            case BYTECODE_STDINT:{
+            case BYTECODES_TYPE_STDINT:{
                     int val = readInteger(bca, &i);
                     eprintf("STDINT [%d]\n", val);
                 }
                 break;
-            case BYTECODE_BIGINT:{
+            case BYTECODES_TYPE_BIGINT:{
                     eprintf("BIGINT [");
                     bigint bi = readBigint(bca, &i);
                     bigint_fprint(errout, &bi);
@@ -655,56 +655,56 @@ void dumpByteCode(ByteCodeArray *bca) {
                     bigint_free(&bi);
                 }
                 break;
-            case BYTECODE_IRRATIONAL:{
+            case BYTECODES_TYPE_IRRATIONAL:{
                 Double f = readDouble(bca, &i);
                 eprintf("IRRATIONAL [%f]\n", f);
             }
             break;
-            case BYTECODE_CHAR:{
+            case BYTECODES_TYPE_CHAR:{
                     char c = readByte(bca, &i);
                     eprintf("CHAR [%s]\n", charRep(c));
                 }
                 break;
-            case BYTECODE_RETURN:{
+            case BYTECODES_TYPE_RETURN:{
                     eprintf("RETURN\n");
                 }
                 break;
-            case BYTECODE_DONE:{
+            case BYTECODES_TYPE_DONE:{
                     eprintf("DONE\n");
                 }
                 break;
-            case BYTECODE_ERROR:{
+            case BYTECODES_TYPE_ERROR:{
                     eprintf("ERROR\n");
                 }
                 break;
-            case BYTECODE_NS_START:{
+            case BYTECODES_TYPE_NS_START:{
                     int count = readWord(bca, &i);
                     eprintf("NS_START [%d]\n", count);
                 }
                 break;
-            case BYTECODE_NS_END:{
+            case BYTECODES_TYPE_NS_END:{
                     int numLambdas = readWord(bca, &i);
                     int stackOffset = readWord(bca, &i);
                     eprintf("NS_END [%d][%d]\n", numLambdas, stackOffset);
                 }
                 break;
-            case BYTECODE_NS_FINISH:{
+            case BYTECODES_TYPE_NS_FINISH:{
                     int count = readWord(bca, &i);
                     eprintf("NS_FINISH [%d]\n", count);
                 }
                 break;
-            case BYTECODE_NS_PUSHS:{
+            case BYTECODES_TYPE_NS_PUSHS:{
                     int offset = readWord(bca, &i);
                     eprintf("NS_PUSHS [%d]\n", offset);
                 }
                 break;
-            case BYTECODE_NS_PUSHE:{
+            case BYTECODES_TYPE_NS_PUSHE:{
                     int frame = readWord(bca, &i);
                     int offset = readWord(bca, &i);
                     eprintf("NS_PUSHE [%d][%d]\n", frame, offset);
                 }
                 break;
-            case BYTECODE_NS_POP:{
+            case BYTECODES_TYPE_NS_POP:{
                     eprintf("NS_POP\n");
                 }
                 break;

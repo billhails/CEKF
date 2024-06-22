@@ -9,7 +9,7 @@ CekfsState --E--> CekfsEnv
 CekfsState --K--> CekfsKont
 CekfsState --F--> CekfsFail
 CekfsState --S--> CekfsStack
-CekfsState --B--> CekfsByteCodeArray
+CekfsState --B--> ByteCodeArray
 CekfsEnv --values--> CekfsStack
 CekfsEnv --next--> CekfsEnv
 CekfsKont --body--> control
@@ -43,8 +43,8 @@ CekfsValue --vec--> CekfsVec
 CekfsValue --builtIn--> BuiltInImplementation
 CekfsValue --namespace--> CekfsVec
 CekfsStack["CekfsStack[]"] --entries--> CekfsValue
-CekfsByteCode["enum CekfsByteCode"]
-CekfsByteCodeArray["CekfsByteCodeArray[]"] --entries--> byte
+ByteCodes["enum ByteCodes"]
+ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 CekfsValueVal
 CekfsValueType
 ```

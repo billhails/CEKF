@@ -510,11 +510,11 @@ static void step() {
         printf("%4ld) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
-            case BYTECODE_NONE:{
+            case BYTECODES_TYPE_NONE:{
                     cant_happen("encountered NONE in step()");
                 }
                 break;
-            case BYTECODE_LAM:{
+            case BYTECODES_TYPE_LAM:{
                     // create a closure and push it
                     int nargs = readCurrentByte();
                     int letRecOffset = readCurrentByte();
@@ -530,7 +530,7 @@ static void step() {
                     state.C = end;
                 }
                 break;
-            case BYTECODE_VAR:{
+            case BYTECODES_TYPE_VAR:{
                     // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
@@ -538,35 +538,35 @@ static void step() {
                     push(lookup(frame, offset));
                 }
                 break;
-            case BYTECODE_LVAR:{
+            case BYTECODES_TYPE_LVAR:{
                     // look up a stack variable and push it
                     int offset = readCurrentByte();
                     DEBUGPRINTF("LVAR [%d]\n", offset);
                     push(peek(offset));
                 }
                 break;
-            case BYTECODE_PUSHN:{
+            case BYTECODES_TYPE_PUSHN:{
                     // allocate space for n variables on the stack
                     int size = readCurrentByte();
                     DEBUGPRINTF("PUSHN [%d]\n", size);
                     pushN(&state.S, size);
                 }
                 break;
-            case BYTECODE_PRIM_PUTC:{
+            case BYTECODES_TYPE_PRIM_PUTC:{
                     // peek value, print it
                     DEBUGPRINTF("PUTC\n");
                     Value b = tos();
                     putchar(b.val.character);
                 }
                 break;
-            case BYTECODE_PRIM_PUTV:{
+            case BYTECODES_TYPE_PRIM_PUTV:{
                     // peek value, print it
                     DEBUGPRINTF("PUTC\n");
                     Value b = tos();
                     putValue(b);
                 }
                 break;
-            case BYTECODE_PRIM_PUTN:{
+            case BYTECODES_TYPE_PRIM_PUTN:{
                     // peek value, print it
                     DEBUGPRINTF("PUTN\n");
                     Value b = tos();
@@ -587,7 +587,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_PRIM_CMP:{
+            case BYTECODES_TYPE_PRIM_CMP:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("CMP\n");
                     Value right = pop();
@@ -598,7 +598,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_ADD:{
+            case BYTECODES_TYPE_PRIM_ADD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("ADD\n");
                     Value right = pop();
@@ -611,7 +611,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_SUB:{
+            case BYTECODES_TYPE_PRIM_SUB:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("SUB\n");
                     Value right = pop();
@@ -624,7 +624,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_MUL:{
+            case BYTECODES_TYPE_PRIM_MUL:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MUL\n");
                     Value right = pop();
@@ -637,7 +637,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_DIV:{
+            case BYTECODES_TYPE_PRIM_DIV:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("DIV\n");
                     Value right = pop();
@@ -650,7 +650,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_POW:{
+            case BYTECODES_TYPE_PRIM_POW:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("POW\n");
                     Value right = pop();
@@ -663,7 +663,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_MOD:{
+            case BYTECODES_TYPE_PRIM_MOD:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("MOD\n");
                     Value right = pop();
@@ -676,7 +676,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_EQ:{
+            case BYTECODES_TYPE_PRIM_EQ:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("EQ\n");
                     Value right = pop();
@@ -687,7 +687,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_NE:{
+            case BYTECODES_TYPE_PRIM_NE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("NE\n");
                     Value right = pop();
@@ -698,7 +698,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_GT:{
+            case BYTECODES_TYPE_PRIM_GT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GT\n");
                     Value right = pop();
@@ -709,7 +709,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_LT:{
+            case BYTECODES_TYPE_PRIM_LT:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LT\n");
                     Value right = pop();
@@ -720,7 +720,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_GE:{
+            case BYTECODES_TYPE_PRIM_GE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("GE\n");
                     Value right = pop();
@@ -731,7 +731,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_LE:{
+            case BYTECODES_TYPE_PRIM_LE:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("LE\n");
                     Value right = pop();
@@ -742,7 +742,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_XOR:{
+            case BYTECODES_TYPE_PRIM_XOR:{
                     // pop two values, perform the binop and push the result
                     DEBUGPRINTF("XOR\n");
                     Value right = pop();
@@ -753,7 +753,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_NOT:{
+            case BYTECODES_TYPE_PRIM_NOT:{
                     // pop value, perform the op and push the result
                     DEBUGPRINTF("NOT\n");
                     Value a = pop();
@@ -762,7 +762,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_NEG:{
+            case BYTECODES_TYPE_PRIM_NEG:{
                     // pop value, perform the op and push the result
                     DEBUGPRINTF("NEG\n");
                     Value a = pop();
@@ -771,7 +771,7 @@ static void step() {
                     UNPROTECT(save);
             }
             break;
-            case BYTECODE_PRIM_VEC:{
+            case BYTECODES_TYPE_PRIM_VEC:{
                     DEBUGPRINTF("VEC\n");
                     Value b = pop();
                     int save = protectValue(b);
@@ -783,7 +783,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_PRIM_MAKEVEC:{
+            case BYTECODES_TYPE_PRIM_MAKEVEC:{
                     int size = readCurrentByte();
                     DEBUGPRINTF("MAKEVEC [%d]\n", size);
                     // at this point there will be `size` arguments on the stack. Rather than
@@ -797,14 +797,14 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_APPLY:{
+            case BYTECODES_TYPE_APPLY:{
                     // apply the callable at the top of the stack to the arguments beneath it
                     int nargs = readCurrentByte();
                     DEBUGPRINTF("APPLY [%d]\n", nargs);
                     applyProc(nargs);
                 }
                 break;
-            case BYTECODE_IF:{
+            case BYTECODES_TYPE_IF:{
                     // pop the test result and jump to the appropriate branch
                     int branch = readCurrentOffset();
                     DEBUGPRINTF("IF [%04x]\n", branch);
@@ -814,7 +814,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_MATCH:{
+            case BYTECODES_TYPE_MATCH:{
                     // pop the dispach code, verify it's an integer and in range, and dispatch
                     int size __attribute__((unused)) = readCurrentByte();
 #ifdef DEBUG_STEP
@@ -840,7 +840,7 @@ static void step() {
                     state.C = readCurrentOffsetAt(v.val.stdint);
                 }
                 break;
-            case BYTECODE_INTCOND:{
+            case BYTECODES_TYPE_INTCOND:{
                     // pop the value, walk the dispatch table looking for a match, or run the default
                     int size = readCurrentWord();
 #ifdef DEBUG_STEP
@@ -849,12 +849,12 @@ static void step() {
                     for (int ip = 0; ip < size; ip++) {
                         printf(" ");
                         switch(readCurrentByte()) {
-                            case BYTECODE_BIGINT: {
+                            case BYTECODES_TYPE_BIGINT: {
                                 BigInt *bigInt = readCurrentBigInt();
                                 fprintBigInt(stdout, bigInt);
                             }
                             break;
-                            case BYTECODE_STDINT: {
+                            case BYTECODES_TYPE_STDINT: {
                                 Integer Int = readCurrentInt();
                                 printf("%d", Int);
                             }
@@ -872,7 +872,7 @@ static void step() {
                     int save = protectValue(v);
                     for (int ip = 0; ip < size; ip++) {
                         switch(readCurrentByte()) {
-                            case BYTECODE_BIGINT: {
+                            case BYTECODES_TYPE_BIGINT: {
                                 BigInt *bigInt = readCurrentBigInt();
                                 PROTECT(bigInt);
                                 Value u = bigintValue(bigInt);
@@ -884,7 +884,7 @@ static void step() {
                                 }
                             }
                             break;
-                            case BYTECODE_STDINT: {
+                            case BYTECODES_TYPE_STDINT: {
                                 Integer option = readCurrentInt();
                                 Value u = stdintValue(option);
                                 int offset = readCurrentOffset();
@@ -894,7 +894,7 @@ static void step() {
                                 }
                             }
                             break;
-                            case BYTECODE_IRRATIONAL: {
+                            case BYTECODES_TYPE_IRRATIONAL: {
                                 Double option = readCurrentIrrational();
                                 Value u = irrationalValue(option);
                                 int offset = readCurrentOffset();
@@ -912,7 +912,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_CHARCOND:{
+            case BYTECODES_TYPE_CHARCOND:{
                     // pop the value, walk the dispatch table looking for a match, or run the default
                     int size = readCurrentWord();
 #ifdef DEBUG_STEP
@@ -950,7 +950,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_LETREC:{
+            case BYTECODES_TYPE_LETREC:{
                     // patch each of the lambdas environments with the current stack frame
                     int nargs = readCurrentByte();
                     DEBUGPRINTF("LETREC [%d]\n", nargs);
@@ -966,7 +966,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_AMB:{
+            case BYTECODES_TYPE_AMB:{
                     // create a new failure continuation to resume at the alternative
                     int branch = readCurrentOffset();
                     DEBUGPRINTF("AMB [%04x]\n", branch);
@@ -974,7 +974,7 @@ static void step() {
                     snapshotFail(&state.S, state.F);
                 }
                 break;
-            case BYTECODE_CUT:{
+            case BYTECODES_TYPE_CUT:{
                     // discard the current failure continuation
                     DEBUGPRINTF("CUT\n");
 #ifdef SAFETY_CHECKS
@@ -986,7 +986,7 @@ static void step() {
                     state.F = state.F->next;
                 }
                 break;
-            case BYTECODE_BACK:{
+            case BYTECODES_TYPE_BACK:{
                     // restore the failure continuation or halt
                     DEBUGPRINTF("BACK\n");
                     if (state.F == NULL) {
@@ -1000,7 +1000,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_LET:{
+            case BYTECODES_TYPE_LET:{
                     // create a new continuation to resume the body, and transfer control to the expression
                     int offset = readCurrentOffset();
                     DEBUGPRINTF("LET [%04x]\n", offset);
@@ -1009,14 +1009,14 @@ static void step() {
                     snapshotKont(&state.S, state.K);
                 }
                 break;
-            case BYTECODE_JMP:{
+            case BYTECODES_TYPE_JMP:{
                     // jump forward a specified amount
                     int offset = readCurrentOffset();
                     DEBUGPRINTF("JMP [%04x]\n", offset);
                     state.C = offset;
                 }
                 break;
-            case BYTECODE_CALLCC:{
+            case BYTECODES_TYPE_CALLCC:{
                     // pop the callable, push the current continuation, push the callable and apply
                     DEBUGPRINTF("CALLCC\n");
                     Value aexp = pop();
@@ -1030,25 +1030,25 @@ static void step() {
                     applyProc(1);
                 }
                 break;
-            case BYTECODE_TRUE:{
+            case BYTECODES_TYPE_TRUE:{
                     // push true
                     DEBUGPRINTF("TRUE\n");
                     push(vTrue);
                 }
                 break;
-            case BYTECODE_FALSE:{
+            case BYTECODES_TYPE_FALSE:{
                     // push false
                     DEBUGPRINTF("FALSE\n");
                     push(vFalse);
                 }
                 break;
-            case BYTECODE_VOID:{
+            case BYTECODES_TYPE_VOID:{
                     // push void
                     DEBUGPRINTF("VOID\n");
                     push(vVoid);
                 }
                 break;
-            case BYTECODE_IRRATIONAL:{
+            case BYTECODES_TYPE_IRRATIONAL:{
                     // push literal Double
                     Double f = readCurrentIrrational();
                     DEBUGPRINTF("IRRATIONAL [%f]\n", f);
@@ -1056,7 +1056,7 @@ static void step() {
                     push(v);
             }
             break;
-            case BYTECODE_IRRATIONAL_IMAG:{
+            case BYTECODES_TYPE_IRRATIONAL_IMAG:{
                     // push literal Double
                     Double f = readCurrentIrrational();
                     DEBUGPRINTF("IRRATIONAL_IMAG [%f]\n", f);
@@ -1064,7 +1064,7 @@ static void step() {
                     push(v);
             }
             break;
-            case BYTECODE_STDINT:{
+            case BYTECODES_TYPE_STDINT:{
                     // push literal int
                     Integer val = readCurrentInt();
                     DEBUGPRINTF("STDINT [%d]\n", val);
@@ -1072,7 +1072,7 @@ static void step() {
                     push(v);
                 }
                 break;
-            case BYTECODE_STDINT_IMAG:{
+            case BYTECODES_TYPE_STDINT_IMAG:{
                     // push literal int
                     Integer val = readCurrentInt();
                     DEBUGPRINTF("STDINT_IMAG [%d]\n", val);
@@ -1080,7 +1080,7 @@ static void step() {
                     push(v);
                 }
                 break;
-            case BYTECODE_CHAR:{
+            case BYTECODES_TYPE_CHAR:{
                     // push literal char
                     Character c = readCurrentCharacter();
                     DEBUGPRINTF("CHAR [%s]\n", charRep(c));
@@ -1088,7 +1088,7 @@ static void step() {
                     push(v);
                 }
                 break;
-            case BYTECODE_BIGINT:{
+            case BYTECODES_TYPE_BIGINT:{
                     BigInt *bigInt = readCurrentBigInt();
                     int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
@@ -1101,7 +1101,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_BIGINT_IMAG:{
+            case BYTECODES_TYPE_BIGINT_IMAG:{
                     BigInt *bigInt = readCurrentBigInt();
                     int save = PROTECT(bigInt);
 #ifdef DEBUG_STEP
@@ -1114,7 +1114,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_RETURN:{
+            case BYTECODES_TYPE_RETURN:{
                     // push the current continuation and apply
                     DEBUGPRINTF("RETURN\n");
                     Value kont = kontValue(state.K);
@@ -1122,14 +1122,14 @@ static void step() {
                     applyProc(1);
                 }
                 break;
-            case BYTECODE_NS_START:{
+            case BYTECODES_TYPE_NS_START:{
                     int num = readCurrentWord();
                     DEBUGPRINTF("NS_START [%d]\n", num);
                     recordNsPosition();
                     extend(num);
                 }
                 break;
-            case BYTECODE_NS_END:{
+            case BYTECODES_TYPE_NS_END:{
                     int numLambdas = readCurrentWord();
                     int stackOffset = readCurrentWord();
                     DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
@@ -1142,7 +1142,7 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_NS_FINISH:{
+            case BYTECODES_TYPE_NS_FINISH:{
                     int num = readCurrentWord();
                     DEBUGPRINTF("NS_FINISH [%d]\n", num);
                     // at this point we need to patch each of the namespaces with the
@@ -1159,7 +1159,7 @@ static void step() {
                     }
                 }
                 break;
-            case BYTECODE_NS_PUSHS:{
+            case BYTECODES_TYPE_NS_PUSHS:{
                     int offset = readCurrentWord();
                     DEBUGPRINTF("NS_PUSHS [%d]\n", offset);
                     Value v = peek(offset);
@@ -1173,7 +1173,7 @@ static void step() {
                     restoreNamespace(&state.S, v.val.namespace);
                 }
                 break;
-            case BYTECODE_NS_PUSHE:{
+            case BYTECODES_TYPE_NS_PUSHE:{
                     int frame = readCurrentWord();
                     int offset = readCurrentWord();
                     DEBUGPRINTF("NS_PUSHE [%d][%d]\n", frame, offset);
@@ -1188,7 +1188,7 @@ static void step() {
                     restoreNamespace(&state.S, v.val.namespace);
                 }
                 break;
-            case BYTECODE_NS_POP:{
+            case BYTECODES_TYPE_NS_POP:{
                     DEBUGPRINTF("NS_POP\n");
                     Value result = pop();
                     int save = protectValue(result);
@@ -1200,13 +1200,13 @@ static void step() {
                     UNPROTECT(save);
                 }
                 break;
-            case BYTECODE_DONE:{
+            case BYTECODES_TYPE_DONE:{
                     // can't happen, probably
                     DEBUGPRINTF("DONE\n");
                     state.C = END_CONTROL;
                 }
                 break;
-            case BYTECODE_ERROR:{
+            case BYTECODES_TYPE_ERROR:{
                     DEBUGPRINTF("ERROR\n");
                     state.C = END_CONTROL;
                     eprintf("pattern match exhausted in step\n");

@@ -33,7 +33,7 @@ structs:
         K: CekfsKont
         F: CekfsFail
         S: CekfsStack
-        B: CekfsByteCodeArray
+        B: ByteCodeArray
 
     CekfsEnv:
         values: CekfsStack
@@ -88,11 +88,11 @@ vectors:
         entries: CekfsValue
 
 arrays:
-    CekfsByteCodeArray:
+    ByteCodeArray:
         entries: byte
 
 enums:
-    CekfsByteCode:
+    ByteCodes:
     - NONE
     - LAM
     - VAR
