@@ -1,0 +1,5 @@
+let
+    link "array.fn" as array;
+
+in
+    print(array.last(array.push('b', array.push('a', array.newArray()))));

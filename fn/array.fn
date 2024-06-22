@@ -1,0 +1,45 @@
+link "dictionary.fn" as dic;
+
+typedef Array(#t) { array(int, int, dic.Dict(int, #t)) }
+
+fn newArray() {
+    array(0, 0, dic.E)
+}
+
+fn push (v, array(low, high, dict)) {
+    array(low, high + 1, dic.insert(high, v, dict))
+}
+
+fn last (array(_, high, dict)) {
+    dic.lookup(high - 1, dict)
+}
+
+fn first (array(low, _, dict)) {
+    dic.lookup(low, dict)
+}
+
+fn pop {
+    (x = array(low, low, _)) { x }
+    (array(low, high, dict)) {
+        array(low, high - 1, dic.delete(high - 1, dict))
+    }
+}
+
+fn unshift(v, array(low, high, dict)) {
+    array(low - 1, high, dic.insert(low - 1, v, dict))
+}
+
+fn shift {
+    (x = array(low, low, _)) { x }
+    (array(low, high, dict)) {
+        array(low + 1, high, dic.delete(low, dict))
+    }
+}
+
+fn inspect(n, array(_, _, dict)) {
+    dic.lookup(n, dict)
+}
+
+fn size(array(low, high, _)) {
+    high - low
+}
