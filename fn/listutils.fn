@@ -42,7 +42,7 @@ fn foldr(func, acc, lst) {
 }
 
 // foldl1 (#a -> #a -> #a) -> list(#a) -> #a
-fn foldl1(func, h @ t) {
+unsafe fn foldl1(func, h @ t) {
     foldl(func, h, t)
 }
 
@@ -58,7 +58,7 @@ fn reverse (lst) {
 
 // scanl: (#a -> #b -> #b) -> #a-> list(#a) -> list(list(#b))
 fn scanl (func, acc, lst) {
-    let fn scan {
+    let unsafe fn scan {
         (acc, []) { acc }
         (acc = acc_h @ _, lst_h @ lst_t) { scan(func(lst_h, acc_h) @ acc, lst_t) }
     }
@@ -114,7 +114,7 @@ fn repeat {
 }
 
 // nth: int -> list(#a) -> #a
-fn nth {
+unsafe fn nth {
     (0, h @ _) { h }
     (n, _ @ t) { nth(n - 1, t) }
 }
@@ -142,7 +142,7 @@ fn zipWith {
 }
 
 // last: list(#a) -> #a
-fn last {
+unsafe fn last {
     ([a]) { a }
     (_ @ t) { last(t) }
 }

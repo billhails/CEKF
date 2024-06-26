@@ -46,11 +46,11 @@ const char *preamble =
     "        (h @ t, b) { h @ append(t, b) }\n"
     "    }\n"
 
-    "    fn car {\n"
+    "    unsafe fn car {\n"
     "        (h @ _) { h }\n"
     "    }\n"
 
-    "    fn cdr {\n"
+    "    unsafe fn cdr {\n"
     "        (_ @ t) { t }\n"
     "    }\n"
 
@@ -126,14 +126,14 @@ const char *preamble =
     "       t\n"
     "    }\n"
 
-    "    fn print_tuple_1(p1, t=#(a)) {\n"
+    "    unsafe fn print_tuple_1(p1, t=#(a)) {\n"
     "       puts(\"#(\");\n"
     "       p1(a);\n"
     "       puts(\")\");\n"
     "       t\n"
     "    }\n"
 
-    "    fn print_tuple_2(p1, p2, t=#(a, b)) {\n"
+    "    unsafe fn print_tuple_2(p1, p2, t=#(a, b)) {\n"
     "       puts(\"#(\");\n"
     "       p1(a);\n"
     "       puts(\", \");\n"
@@ -142,7 +142,7 @@ const char *preamble =
     "       t\n"
     "    }\n"
 
-    "    fn print_tuple_3(p1, p2, p3, t=#(a, b, c)) {\n"
+    "    unsafe fn print_tuple_3(p1, p2, p3, t=#(a, b, c)) {\n"
     "       puts(\"#(\");\n"
     "       p1(a);\n"
     "       puts(\", \");\n"
@@ -153,7 +153,7 @@ const char *preamble =
     "       t\n"
     "    }\n"
 
-    "    fn print_tuple_4(p1, p2, p3, p4, t=#(a, b, c, d)) {\n"
+    "    unsafe fn print_tuple_4(p1, p2, p3, p4, t=#(a, b, c, d)) {\n"
     "       puts(\"#(\");\n"
     "       p1(a);\n"
     "       puts(\", \");\n"

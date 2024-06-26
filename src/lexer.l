@@ -37,6 +37,7 @@ struct PmModule *mod = yyextra;
 "char"          { return KW_CHAR; }
 "else"          { return ELSE; }
 "fn"            { return FN; }
+"unsafe"        { return UNSAFE; }
 "here"          { return HERE; }
 "if"            { return IF; }
 "in"            { return IN; }

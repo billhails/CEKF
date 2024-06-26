@@ -305,6 +305,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %union {
     char *s;
     char c;
+    bool b;
     MaybeBigInt *bi;
     AstArg *arg;
     AstArgList *argList;
@@ -383,11 +384,13 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <taggedExpressions> tagged_expressions
 %type <taggedArgList> tagged_fargs
 %type <alias> alias
+%type <b> unsafe_fn unsafe_switch
 
 %token BACK
 %token ELSE
 %token FALSE
 %token FN
+%token UNSAFE
 %token IF
 %token IN
 %token KW_CHAR
@@ -470,7 +473,8 @@ definition : symbol '=' expression ';'  {
            | alias                      { $$ = newAstDefinition_Alias(PIM(mod), $1); }
            ;
 
-defun : FN symbol fun       {
+defun : unsafe_fn symbol fun {
+                                $3->unsafe = $1;
                                 $$ = newAstDefine(PIM(mod), $2,
                                         newAstExpression_Fun(PIM(mod), $3));
                             }
@@ -563,12 +567,21 @@ iff_nest : iff  {
          | nest { $$ = $1; }
          ;
 
-switch : SWITCH '(' expressions ')' composite_function  {
+switch : unsafe_switch '(' expressions ')' composite_function  {
+                                                            $5->unsafe = $1;
                                                             $$ = newAstFunCall(PIM(mod),
                                                                 newAstExpression_Fun(PIM(mod), $5),
                                                                 $3);
                                                         }
        ;
+
+unsafe_fn : FN              { $$ = false; }
+          | UNSAFE FN       { $$ = true; }
+          ;
+
+unsafe_switch : SWITCH              { $$ = false; }
+              | UNSAFE SWITCH       { $$ = true; }
+              ;
 
 fun : alt_function          { $$ = makeAstCompositeFunction($1, NULL); }
     | composite_function    { $$ = $1; }
@@ -680,7 +693,7 @@ expression : binop                { $$ = newAstExpression_FunCall(PIM(mod), $1);
            | structure            { $$ = newAstExpression_Structure(PIM(mod), $1); }
            | unop                 { $$ = newAstExpression_FunCall(PIM(mod), $1); }
            | '[' conslist ']'     { $$ = newAstExpression_FunCall(PIM(mod), $2); }
-           | FN fun               { $$ = newAstExpression_Fun(PIM(mod), $2); }
+           | unsafe_fn fun        { $2->unsafe = $1; $$ = newAstExpression_Fun(PIM(mod), $2); }
            | BACK                 { $$ = newAstExpression_Back(PIM(mod)); }
            | iff                  { $$ = newAstExpression_Iff(PIM(mod), $1); }
            | switch               { $$ = newAstExpression_FunCall(PIM(mod), $1); }
