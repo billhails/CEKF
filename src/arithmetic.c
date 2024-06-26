@@ -117,15 +117,15 @@ static void ppNumber(Value number) {
             eprintf("]i");
             break;
         case VALUE_TYPE_RATIONAL:
-            ppNumber(number.val.vec->values[0]);
+            ppNumber(number.val.vec->entries[0]);
             eprintf("/");
-            ppNumber(number.val.vec->values[1]);
+            ppNumber(number.val.vec->entries[1]);
             break;
         case VALUE_TYPE_RATIONAL_IMAG:
             eprintf("(");
-            ppNumber(number.val.vec->values[0]);
+            ppNumber(number.val.vec->entries[0]);
             eprintf("/");
-            ppNumber(number.val.vec->values[1]);
+            ppNumber(number.val.vec->entries[1]);
             eprintf(")i");
             break;
         case VALUE_TYPE_IRRATIONAL:
@@ -135,9 +135,9 @@ static void ppNumber(Value number) {
             eprintf("%fi", number.val.irrational);
             break;
         case VALUE_TYPE_COMPLEX:
-            ppNumber(number.val.vec->values[0]);
+            ppNumber(number.val.vec->entries[0]);
             eprintf("+");
-            ppNumber(number.val.vec->values[1]);
+            ppNumber(number.val.vec->entries[1]);
             break;
         default:
             eprintf("??? %d ???", number.type);
@@ -145,11 +145,11 @@ static void ppNumber(Value number) {
 }
 
 static inline Value realPart(Value v) {
-    return v.val.vec->values[REAL];
+    return v.val.vec->entries[REAL];
 }
 
 static inline Value imagPart(Value v) {
-    return v.val.vec->values[IMAG];
+    return v.val.vec->entries[IMAG];
 }
 
 static inline void extractFromComplexArg(Value *a, Value *b, Value v) {
@@ -164,37 +164,37 @@ static inline void extractFromComplexArgs(Value *a, Value *b, Value *c, Value *d
 }
 
 static inline Value denominatorPart(Value v) {
-    return v.val.vec->values[DENOMINATOR];
+    return v.val.vec->entries[DENOMINATOR];
 }
 
 static inline Value numeratorPart(Value v) {
-    return v.val.vec->values[NUMERATOR];
+    return v.val.vec->entries[NUMERATOR];
 }
 
 static Value ratValue(Value numerator, Value denominator) {
     Vec *vec = newVec(2);
     // PROTECT(vec);
-    vec->values[NUMERATOR] = numerator;
-    vec->values[DENOMINATOR] = denominator;
-    Value res = rationalValue(vec);
+    vec->entries[NUMERATOR] = numerator;
+    vec->entries[DENOMINATOR] = denominator;
+    Value res = value_Rational(vec);
     return res;
 }
 
 static Value comValue(Value real, Value imag) {
     Vec *vec = newVec(2);
     // PROTECT(vec);
-    vec->values[REAL] = real;
-    vec->values[IMAG] = imag;
-    Value res = complexValue(vec);
+    vec->entries[REAL] = real;
+    vec->entries[IMAG] = imag;
+    Value res = value_Complex(vec);
     return res;
 }
 
 static Value int_to_irrational(Value integer) {
     ASSERT_INT(integer);
     if (integer.type == VALUE_TYPE_BIGINT) {
-        return irrationalValue(bigIntToDouble(integer.val.bigint));
+        return value_Irrational(bigIntToDouble(integer.val.bigint));
     } else {
-        return irrationalValue(integer.val.stdint);
+        return value_Irrational(integer.val.stdint);
     }
 }
 
@@ -204,7 +204,7 @@ static Value rational_to_irrational(Value rational) {
     Value numerator = int_to_irrational(num);
     Value denom = denominatorPart(rational);
     Value denominator = int_to_irrational(denom);
-    return irrationalValue(numerator.val.irrational / denominator.val.irrational);
+    return value_Irrational(numerator.val.irrational / denominator.val.irrational);
 }
 
 static Value to_irrational(Value v) {
@@ -224,27 +224,27 @@ static Value to_irrational(Value v) {
 
 static Value int_to_rational(Value integer) {
     ASSERT_INT(integer);
-    Value one = stdintValue(1);
+    Value one = value_Stdint(1);
     return ratValue(integer, one);
 }
 
 static Value bigint_to_irrational(Value v) {
     ASSERT_BIGINT(v);
-    return irrationalValue(bigIntToDouble(v.val.bigint));
+    return value_Irrational(bigIntToDouble(v.val.bigint));
 }
 
 static Value int_to_bigint(Value v) {
     ASSERT_STDINT(v);
-    return bigintValue(bigIntFromInt(v.val.stdint));
+    return value_Bigint(bigIntFromInt(v.val.stdint));
 }
 
 static Value real_to_complex(Value real) {
-    Value imag = stdintimagValue(0);
+    Value imag = value_Stdint_imag(0);
     return comValue(real, imag);
 }
 
 static Value imag_to_complex(Value imag) {
-    Value real = stdintValue(0);
+    Value real = value_Stdint(0);
     return comValue(real, imag);
 }
 
@@ -653,11 +653,11 @@ static Value safe_add(Integer a, Integer b) {
     if (__builtin_add_overflow(a, b, &c)) {
         BigInt *big = bigIntFromAddition(a, b);
         int save = PROTECT(big);
-        Value res = bigintValue(big);
+        Value res = value_Bigint(big);
         UNPROTECT(save);
         return res;
     } else {
-        return stdintValue(c);
+        return value_Stdint(c);
     }
 }
 
@@ -671,19 +671,19 @@ static Value intAdd(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *b = addBigInt(left.val.bigint, right.val.bigint);
             PROTECT(b);
-            res = bigintValue(b);
+            res = value_Bigint(b);
             protectValue(res);
         } else {
             BigInt *b = addBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(b);
-            res = bigintValue(b);
+            res = value_Bigint(b);
             protectValue(res);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *b = addBigIntInt(right.val.bigint, left.val.stdint);
             PROTECT(b);
-            res = bigintValue(b);
+            res = value_Bigint(b);
             protectValue(res);
         } else {
             res = safe_add(left.val.stdint, right.val.stdint);
@@ -701,11 +701,11 @@ static Value safe_mul(Integer a, Integer b) {
     if (__builtin_mul_overflow(a, b, &c)) {
         BigInt *big = bigIntFromMultiplication(a, b);
         int save = PROTECT(big);
-        Value res = bigintValue(big);
+        Value res = value_Bigint(big);
         UNPROTECT(save);
         return res;
     } else {
-        return stdintValue(c);
+        return value_Stdint(c);
     }
 }
 
@@ -719,23 +719,23 @@ static Value intMul(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = mulBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             BigInt *bi = mulBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *bi = mulBigIntInt(right.val.bigint, left.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             res = safe_mul(left.val.stdint, right.val.stdint);
-            protectValue(res);
+           protectValue(res);
         }
     }
     LEAVE(intMul);
@@ -749,14 +749,14 @@ static Value safe_sub(Integer a, Integer b) {
     if (__builtin_sub_overflow(a, b, &c)) {
         BigInt *big = bigIntFromSubtraction(a, b);
         int save = PROTECT(big);
-        Value res = bigintValue(big);
+        Value res = value_Bigint(big);
         protectValue(res);
         IFDEBUG(eprintf("SUB OVERFLOW"));
         IFDEBUG(ppNumber(res));
         UNPROTECT(save);
         return res;
     } else {
-        return stdintValue(c);
+        return value_Stdint(c);
     }
 }
 
@@ -770,19 +770,19 @@ static Value intSub(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = subBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             BigInt *bi = subBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         }
     } else {
         if (IS_BIGINT(right)) {
             BigInt *bi = subIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             res = safe_sub(left.val.stdint, right.val.stdint);
@@ -808,7 +808,7 @@ static Value basicIntDiv(Value left, Value right) {
             }
             BigInt *bi = divBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             if (right.val.stdint == 0) {
@@ -816,7 +816,7 @@ static Value basicIntDiv(Value left, Value right) {
             }
             BigInt *bi = divBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         }
     } else {
@@ -826,14 +826,14 @@ static Value basicIntDiv(Value left, Value right) {
             }
             BigInt *bi = divIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted div zero");
             }
             // division can't overflow
-            res = stdintValue(left.val.stdint / right.val.stdint);
+            res = value_Stdint(left.val.stdint / right.val.stdint);
             protectValue(res);
         }
     }
@@ -848,12 +848,12 @@ static Value safe_powf(Integer a, Integer b) {
     if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
         BigInt *big = bigIntFromPower(a, b);
         int save = PROTECT(big);
-        Value res = bigintValue(big);
+        Value res = value_Bigint(big);
         protectValue(res);
         UNPROTECT(save);
         return res;
     } else {
-        return stdintValue((Integer) f);
+        return value_Stdint((Integer) f);
     }
 }
 
@@ -863,14 +863,14 @@ static Value irratSimplify(Double result) {
     if(fmod(result, 1.0) == 0.0) {
         if (result > (Double)INT_MAX || result < (Double)INT_MIN) {
             // FIXME need doubleToBigInt
-            res = irrationalValue(result);
+            res = value_Irrational(result);
             protectValue(res);
         } else {
-            res = stdintValue((Integer) result);
+            res = value_Stdint((Integer) result);
             protectValue(res);
         }
     } else {
-        res = irrationalValue(result);
+        res = value_Irrational(result);
         protectValue(res);
     }
     UNPROTECT(save);
@@ -886,23 +886,23 @@ static Value realPowRat(Value base, Value exponent) {
     Value res;
     int save = PROTECT(NULL);
     if (isNeg(base)) {
-        Value pos = nmul(base, stdintValue(-1)); // make the base positive
+        Value pos = nmul(base, value_Stdint(-1)); // make the base positive
         protectValue(pos);
         Value neg = realPowRat(pos, exponent); // recurse on positive base
         protectValue(neg);
         if (intIsEven(denominatorPart(exponent))) {
-            res = nmul(neg, stdintimagValue(1)); // return imaginary number
+            res = nmul(neg, value_Stdint_imag(1)); // return imaginary number
             protectValue(res);
         } else {
-            res = nmul(neg, stdintValue(-1)); // return the negation
+            res = nmul(neg, value_Stdint(-1)); // return the negation
             protectValue(res);
         }
     } else if (ratIsNeg(exponent)) {
-        Value pos = nmul(exponent, stdintValue(-1)); // make the exponent positive
+        Value pos = nmul(exponent, value_Stdint(-1)); // make the exponent positive
         protectValue(pos);
         Value inv = realPowRat(base, pos); // recurse on positive base, positive exponent
         protectValue(inv);
-        res = ndiv(stdintValue(1), inv); // return the inverse
+        res = ndiv(value_Stdint(1), inv); // return the inverse
         protectValue(res);
     } else {
         if (IS_RATIONAL(base)) { // attempt to preserve
@@ -951,14 +951,14 @@ static Value intPow(Value left, Value right) {
                 case VALUE_TYPE_BIGINT: {
                     BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
                     PROTECT(bi);
-                    res = bigintValue(bi);
+                    res = value_Bigint(bi);
                     protectValue(res);
                 }
                 break;
                 case VALUE_TYPE_STDINT: {
                     BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
                     PROTECT(bi);
-                    res = bigintValue(bi);
+                    res = value_Bigint(bi);
                     protectValue(res);
                 }
                 break;
@@ -976,7 +976,7 @@ static Value intPow(Value left, Value right) {
                 case VALUE_TYPE_BIGINT: {
                     BigInt *bi = powIntBigInt(left.val.stdint, right.val.bigint);
                     PROTECT(bi);
-                    res = bigintValue(bi);
+                    res = value_Bigint(bi);
                     protectValue(res);
                 }
                 break;
@@ -1018,7 +1018,7 @@ static Value intMod(Value left, Value right) {
             }
             BigInt *bi = modBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             if (right.val.stdint == 0) {
@@ -1026,7 +1026,7 @@ static Value intMod(Value left, Value right) {
             }
             BigInt *bi = modBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         }
     } else {
@@ -1036,14 +1036,14 @@ static Value intMod(Value left, Value right) {
             }
             BigInt *bi = modIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             if (right.val.stdint == 0) {
                 cant_happen("attempted mod zero");
             }
             // modulus can't overflow
-            res = stdintValue(left.val.stdint % right.val.stdint);
+            res = value_Stdint(left.val.stdint % right.val.stdint);
             protectValue(res);
         }
     }
@@ -1076,22 +1076,22 @@ static Value intGcd(Value left, Value right) {
         if (IS_BIGINT(right)) {
             BigInt *bi = gcdBigInt(left.val.bigint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
             BigInt *bi = gcdBigIntInt(left.val.bigint, right.val.stdint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         }
     } else {
         if (IS_BIGINT(left)) {
             BigInt *bi = gcdIntBigInt(left.val.stdint, right.val.bigint);
             PROTECT(bi);
-            res = bigintValue(bi);
+            res = value_Bigint(bi);
             protectValue(res);
         } else {
-            res = stdintValue(gcd(left.val.stdint, right.val.stdint));
+            res = value_Stdint(gcd(left.val.stdint, right.val.stdint));
             protectValue(res);
         }
     }
@@ -1115,7 +1115,7 @@ static Value intNeg(Value v) {
         BigInt *bi = copyBigInt(v.val.bigint);
         PROTECT(bi);
         negateBigInt(bi);
-        v = bigintValue(bi);
+        v = value_Bigint(bi);
     } else {
         v.val.stdint = -(v.val.stdint);
     }
@@ -1264,8 +1264,8 @@ static Value rat_ad_bc_bd(IntegerBinOp base_op, Value left, Value right) {
     Value numerator = base_op(a1b2, a2b1);
     protectValue(numerator);
     Value denominator =
-        intMul(left.val.vec->values[DENOMINATOR],
-                right.val.vec->values[DENOMINATOR]);
+        intMul(left.val.vec->entries[DENOMINATOR],
+                right.val.vec->entries[DENOMINATOR]);
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     protectValue(res);
@@ -1419,31 +1419,31 @@ static inline Cmp irrCmp(Value left, Value right) {
 static Value irrMod(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(fmod(left.val.irrational, right.val.irrational));
+    return value_Irrational(fmod(left.val.irrational, right.val.irrational));
 }
 
 static Value irrMul(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(left.val.irrational * right.val.irrational);
+    return value_Irrational(left.val.irrational * right.val.irrational);
 }
 
 static Value irrDiv(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(left.val.irrational / right.val.irrational);
+    return value_Irrational(left.val.irrational / right.val.irrational);
 }
 
 static Value irrSub(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(left.val.irrational - right.val.irrational);
+    return value_Irrational(left.val.irrational - right.val.irrational);
 }
 
 static Value irrAdd(Value left, Value right) {
     ASSERT_IRRATIONAL(left);
     ASSERT_IRRATIONAL(right);
-    return irrationalValue(left.val.irrational + right.val.irrational);
+    return value_Irrational(left.val.irrational + right.val.irrational);
 }
 
 // c^(a + bi) = c^a [cos(b ln c) + i sin(b ln c)]
@@ -1458,8 +1458,8 @@ static Value irrPowCom(Value c, Value right) {
     Value c_a = npow(c, a);
     Double ln_c = log(c.val.irrational);
     Double b_ln_c = b.val.irrational * ln_c;
-    Value cos_b_ln_c = irrationalValue(cos(b_ln_c));
-    Value i_sin_b_ln_c = irrationalimagValue(sin(b_ln_c));
+    Value cos_b_ln_c = value_Irrational(cos(b_ln_c));
+    Value i_sin_b_ln_c = value_Irrational_imag(sin(b_ln_c));
     Value com = comValue(cos_b_ln_c, i_sin_b_ln_c);
     protectValue(com);
     Value res = nmul(c_a, com);
@@ -1472,10 +1472,10 @@ static Value irrPowCom(Value c, Value right) {
 //////////////////////////////
 
 static Value comSimplify(Value real, Value imag) {
-    if (ncmp(stdintValue(0), imag_to_real(imag)) == CMP_EQ) {
+    if (ncmp(value_Stdint(0), imag_to_real(imag)) == CMP_EQ) {
         return real;
     }
-    if (ncmp(stdintValue(0), real) == CMP_EQ) {
+    if (ncmp(value_Stdint(0), real) == CMP_EQ) {
         return imag;
     }
     return comValue(real, imag);
@@ -1627,14 +1627,14 @@ static Value comPow(Value left, Value right) {
         save = protectValue(pos);
         Value pow = comPow(left, pos);
         protectValue(pow);
-        res = ndiv(stdintValue(1), pow);
+        res = ndiv(value_Stdint(1), pow);
         protectValue(res);
     } else {
-        res = comValue(stdintValue(1), stdintimagValue(0));
+        res = comValue(value_Stdint(1), value_Stdint_imag(0));
         save = protectValue(res);
-        while (ncmp(right, stdintValue(0)) == CMP_GT) {
+        while (ncmp(right, value_Stdint(0)) == CMP_GT) {
             int save2 = protectValue(res);
-            right = nsub(right, stdintValue(1));
+            right = nsub(right, value_Stdint(1));
             protectValue(right);
             protectValue(res);
             res = nmul(res, left);
@@ -1652,13 +1652,13 @@ static Value comMag(Value v) {
     ASSERT_COMPLEX(v);
     Value a, b;
     extractFromComplexArg(&a, &b, v);
-    a = npow(a, stdintValue(2));
+    a = npow(a, value_Stdint(2));
     int save = protectValue(a);
-    b = npow(b, stdintValue(2));
+    b = npow(b, value_Stdint(2));
     protectValue(b);
     Value sum = nadd(a, b);
     protectValue(sum);
-    Value res = npow(sum, irrationalValue(0.5));
+    Value res = npow(sum, value_Irrational(0.5));
     UNPROTECT(save);
     return res;
 }
@@ -1669,7 +1669,7 @@ static Value comTheta(Value v) {
     extractFromComplexArg(&a, &b, v);
     a = to_irrational(a);
     b = to_irrational(b);
-    Value res = irrationalValue(atan2(b.val.irrational, a.val.irrational));
+    Value res = value_Irrational(atan2(b.val.irrational, a.val.irrational));
     return res;
 }
 
@@ -1678,16 +1678,16 @@ static Value comRoot(Value v, Value n) {
     ASSERT_INT(n);
     Value r, theta;
     int save = rec_to_polar(v, &r, &theta);
-    Value inv_n = ratValue(stdintValue(1), n);
+    Value inv_n = ratValue(value_Stdint(1), n);
     protectValue(inv_n);
     Value r_n = npow(r, inv_n);
     protectValue(r_n);
     Value theta_n = ndiv(theta, n);
     protectValue(theta_n);
     theta_n = to_irrational(theta_n);
-    Value cos_theta_n = irrationalValue(cos(theta_n.val.irrational));
+    Value cos_theta_n = value_Irrational(cos(theta_n.val.irrational));
     protectValue(cos_theta_n);
-    Value i_sin_theta_n = irrationalimagValue(sin(theta_n.val.irrational));
+    Value i_sin_theta_n = value_Irrational_imag(sin(theta_n.val.irrational));
     protectValue(i_sin_theta_n);
     Value base = comValue(cos_theta_n, i_sin_theta_n);
     protectValue(base);
@@ -1717,12 +1717,12 @@ static Value comPowCom(Value base, Value exponent) {
     Value theta, r;
     rec_to_polar(base, &r, &theta);
     Value irr_r = to_irrational(r);
-    Value ln_r = irrationalValue(log(irr_r.val.irrational));
+    Value ln_r = value_Irrational(log(irr_r.val.irrational));
     Value ln_r_i_theta = comValue(ln_r, real_to_imag(theta));
     protectValue(ln_r_i_theta);
     Value prod = nmul(ln_r_i_theta, exponent);
     protectValue(prod);
-    Value e = irrationalValue(M_E);
+    Value e = value_Irrational(M_E);
     Value res = npow(e, prod);
     UNPROTECT(save);
     return res;
@@ -2140,7 +2140,7 @@ Value nrand(Value prev) {
     seed *= UINT_MAX;
     seed = fmod(seed * 1103515245.0 + 12345.0, (Double)UINT_MAX);
     seed /= UINT_MAX;
-    Value v = irrationalValue(seed);
+    Value v = value_Irrational(seed);
     return v;
 }
 

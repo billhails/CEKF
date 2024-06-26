@@ -15,9 +15,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "common.h"
 #include "cekf.h"
 #include "memory.h"
 #include "hash.h"
+#include "debug.h"
+#ifdef DEBUG_STACK
+#  include "debugging_on.h"
+#else
+#  include "debugging_off.h"
+#endif
 
 /*
  * constants and memory allocation functions for the CEKF machine
@@ -49,274 +56,109 @@ Value vGt = {
 };
 
 Value vVoid = {
-    .type = VALUE_TYPE_VOID,
+    .type = VALUE_TYPE_NONE,
     .val = VALUE_VAL_NONE()
 };
 
-ValueList *newValueList(int count) {
-    ValueList *x = NEW(ValueList, OBJTYPE_VALUELIST);
-    int save = PROTECT(x);
-    x->count = 0;
-    x->values = NEW_ARRAY(Value, count);
-    for (int i = 0; i < count; ++i) {
-        x->values[i] = vVoid;
+Env *makeEnv(Env *parent, Index size) {
+    Stack s;
+    initStack(&s, size);
+    Env *new = newEnv(s, parent);
+    return new;
+}
+
+Kont *makeKont(Control offset, Env *env, Kont *next) {
+    Stack s;
+    initStack(&s, 0);
+    return newKont(offset, env, s, next);
+}
+
+Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next) {
+    Stack s;
+    initStack(&s, 0);
+    return newFail(offset, env, k, s, next);
+}
+
+void dumpStack(Stack *s) {
+    eprintf("=================================\n");
+    eprintf("STACK DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
+    for (Index i = 0; i < s->size; i++) {
+        eprintf("[%03d] *** %s\n", i, valueTypeName(s->entries[i].type));
     }
-    x->count = count;
-    UNPROTECT(save);
-    return x;
+    eprintf("=================================\n");
 }
 
-Clo *newClo(int pending, Control ip, Env *env) {
-    Clo *x = NEW(Clo, OBJTYPE_CLO);
-    x->pending = pending;
-    x->ip = ip;
-    x->env = env;
-    return x;
+void copyValues(Value *to, Value *from, int size) {
+    COPY_ARRAY(Value, to, from, size);
 }
 
-Env *newEnv(Env *next, int count) {
-    Env *x = NEW(Env, OBJTYPE_ENV);
-    int save = PROTECT(x);
-    x->next = next;
-    x->count = 0;
-    x->values = NULL;
-    if (count > 0) {
-        x->values = NEW_ARRAY(Value, count);
-        x->count = count;
-        for (int i = 0; i < count; i++) {
-            x->values[i] = vVoid;
-        }
+void copyTosToVec(Vec *vec, Stack *s) {
+#ifdef SAFETY_CHECKS
+    if (vec->size > s->size) {
+        cant_happen("copy too big %u/%u", vec->size, s->size);
     }
-    UNPROTECT(save);
-    return x;
+#endif
+    copyValues(vec->entries, &(s->entries[s->size - vec->size]), vec->size);
 }
 
-Kont *newKont(Control body, Env *env, Kont *next) {
-    Kont *x = NEW(Kont, OBJTYPE_KONT);
-    x->body = body;
-    x->env = env;
-    x->next = next;
-    x->snapshot = noSnapshot;
-    return x;
+void copyTosToEnv(Env *e, Stack *s, int n) {
+    copyTopStack(&e->stack, s, n);
 }
 
-Fail *newFail(Control exp, Env *env, Kont *kont, Fail *next) {
-    Fail *x = NEW(Fail, OBJTYPE_FAIL);
-    x->exp = exp;
-    x->env = env;
-    x->kont = kont;
-    x->next = next;
-    x->snapshot = noSnapshot;
-    return x;
+void snapshotClo(Clo *target, Stack *s, int letRecOffset) {
+    Env *env = makeEnv(target->env, s->size - letRecOffset);
+    target->env = env;
+    copyExceptTopStack(&env->stack, s, letRecOffset);
 }
 
-Vec *newVec(int size) {
-    Vec *x = NEW_VEC(size);
-    x->size = size;
-    for (int i = 0; i < size; i++) {
-        x->values[i] = vVoid;
+void patchVec(Vec *v, Stack *s, int num) {
+#ifdef SAFETY_CHECKS
+    if (num < 0) {
+        cant_happen("negative count");
     }
-    return x;
-}
-
-void markValue(Value x) {
-    switch (x.type) {
-        case VALUE_TYPE_VOID:
-        case VALUE_TYPE_STDINT:
-        case VALUE_TYPE_IRRATIONAL:
-        case VALUE_TYPE_STDINT_IMAG:
-        case VALUE_TYPE_IRRATIONAL_IMAG:
-        case VALUE_TYPE_CHARACTER:
-            break;
-        case VALUE_TYPE_BUILTIN:
-            markBuiltInImplementation(x.val.builtIn);
-            break;
-        case VALUE_TYPE_PCLO:
-        case VALUE_TYPE_CLO:
-            markClo(x.val.clo);
-            break;
-        case VALUE_TYPE_CONT:
-            markKont(x.val.kont);
-            break;
-        case VALUE_TYPE_RATIONAL:
-        case VALUE_TYPE_RATIONAL_IMAG:
-        case VALUE_TYPE_VEC:
-        case VALUE_TYPE_COMPLEX:
-            markVec(x.val.vec);
-            break;
-        case VALUE_TYPE_BIGINT:
-        case VALUE_TYPE_BIGINT_IMAG:
-            markBigInt(x.val.bigint);
-            break;
-        case VALUE_TYPE_NAMESPACE:
-            markValueList(x.val.namespace);
-            break;
-        default:
-            cant_happen("unrecognised type in markValue (%d)", x.type);
+    if (num > (int) s->size) {
+        cant_happen("not enough values on stack");
     }
-}
-
-void markValueList(ValueList *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    for (int i = 0; i < x->count; ++i) {
-        markValue(x->values[i]);
+    if (s->size > v->size) {
+        cant_happen("not enough space in target");
     }
+#endif
+    int base = s->size - num;
+    copyValues(&v->entries[base], &s->entries[base], num);
 }
 
-void markClo(Clo *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    markEnv(x->env);
-}
-
-void markEnv(Env *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    markEnv(x->next);
-    for (int i = 0; i < x->count; i++) {
-        markValue(x->values[i]);
+void restoreNamespace(Stack *s, Vec *vl) {
+#ifdef SAFETY_CHECKS
+    if (vl->size > s->capacity) {
+        cant_happen("copy too big %d/%d", vl->size, s->capacity);
     }
+#endif
+    copyValues(s->entries, vl->entries, vl->size);
+    s->size = vl->size;
 }
 
-static void markSnapshot(Snapshot s) {
-    for (int i = 0; i < s.frameSize; i++) {
-        markValue(s.frame[i]);
-    }
+Vec *snapshotNamespace(Stack *s) {
+    Vec *vl = newVec(s->size);
+    copyValues(vl->entries, s->entries, s->size);
+    return vl;
 }
 
-void markKont(Kont *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    markSnapshot(x->snapshot);
-    markEnv(x->env);
-    markKont(x->next);
+void patchClo(Clo *target, Stack *s) {
+    copyStackEntries(&target->env->stack, s);
 }
 
-void markVec(Vec *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    for (int i = 0; i < x->size; i++) {
-        markValue(x->values[i]);
-    }
+void snapshotKont(Kont *target, Stack *s) {
+    copyStackEntries(&target->stack, s);
 }
 
-void markFail(Fail *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-    markSnapshot(x->snapshot);
-    markEnv(x->env);
-    markKont(x->kont);
-    markFail(x->next);
+void snapshotFail(Fail *target, Stack *s) {
+    copyStackEntries(&target->stack, s);
 }
 
-void markCekfObj(Header *h) {
-    switch (h->type) {
-        case OBJTYPE_VEC:
-            markVec((Vec *) h);
-            break;
-        case OBJTYPE_CLO:
-            markClo((Clo *) h);
-            break;
-        case OBJTYPE_ENV:
-            markEnv((Env *) h);
-            break;
-        case OBJTYPE_FAIL:
-            markFail((Fail *) h);
-            break;
-        case OBJTYPE_KONT:
-            markKont((Kont *) h);
-            break;
-        case OBJTYPE_VALUELIST:
-            markValueList((ValueList *) h);
-            break;
-        default:
-            cant_happen("unrecognised header type %d in markCekfObj", h->type);
-    }
+void restoreKont(Stack *s, Kont *source) {
+    copyStackEntries(s, &source->stack);
 }
 
-void freeCekfObj(Header *h) {
-    switch (h->type) {
-        case OBJTYPE_VEC:
-            Vec *vec = (Vec *) h;
-            FREE_VEC(vec);
-            break;
-        case OBJTYPE_CLO:
-            reallocate((void *) h, sizeof(Clo), 0);
-            break;
-        case OBJTYPE_ENV:{
-                Env *env = (Env *) h;
-                FREE_ARRAY(Value, env->values, env->count);
-                reallocate((void *) h, sizeof(Env), 0);
-            }
-            break;
-        case OBJTYPE_FAIL:{
-                Fail *f = (Fail *) h;
-                FREE_ARRAY(Value, f->snapshot.frame, f->snapshot.frameSize);
-                reallocate((void *) h, sizeof(Fail), 0);
-            }
-            break;
-        case OBJTYPE_KONT:{
-                Kont *kont = (Kont *) h;
-                FREE_ARRAY(Value, kont->snapshot.frame, kont->snapshot.frameSize);
-                reallocate((void *) h, sizeof(Kont), 0);
-            }
-            break;
-        case OBJTYPE_VALUELIST:{
-                ValueList *vl = (ValueList *) h;
-                if (vl->count > 0) {
-                    FREE_ARRAY(Value, vl->values, vl->count);
-                }
-                reallocate((void *) h, sizeof(ValueList), 0);
-            }
-            break;
-        default:
-            cant_happen("unrecognised header type in freeCekfObj");
-    }
-}
-
-int protectValue(Value v) {
-    switch (v.type) {
-        case VALUE_TYPE_CLO:
-        case VALUE_TYPE_PCLO:
-            return PROTECT(v.val.clo);
-        case VALUE_TYPE_CONT:
-            return PROTECT(v.val.kont);
-        case VALUE_TYPE_VEC:
-        case VALUE_TYPE_RATIONAL:
-        case VALUE_TYPE_RATIONAL_IMAG:
-        case VALUE_TYPE_COMPLEX:
-            return PROTECT(v.val.vec);
-        case VALUE_TYPE_BIGINT:
-        case VALUE_TYPE_BIGINT_IMAG:
-            return PROTECT(v.val.bigint);
-        case VALUE_TYPE_VOID:
-        case VALUE_TYPE_STDINT:
-        case VALUE_TYPE_IRRATIONAL:
-        case VALUE_TYPE_STDINT_IMAG:
-        case VALUE_TYPE_IRRATIONAL_IMAG:
-        case VALUE_TYPE_CHARACTER:
-        case VALUE_TYPE_BUILTIN:
-            return PROTECT(NULL);
-        default:
-            cant_happen("unrecognised type %d in protectValue", v.type);
-    }
+void restoreFail(Stack *s, Fail *source) {
+    copyStackEntries(s, &source->stack);
 }

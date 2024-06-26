@@ -35,13 +35,7 @@ struct Header;
 typedef enum {
 
     // cekf types
-    OBJTYPE_CLO,
-    OBJTYPE_ENV,
-    OBJTYPE_FAIL,
-    OBJTYPE_KONT,
 
-    OBJTYPE_VEC,
-    OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,

@@ -30,7 +30,7 @@ static Stack S;
 
 void markTestStack() {
     printf("markTestStack()\n");
-    markStack(&S);
+    markStack(S);
 }
 
 static Value integer(int i) {
@@ -46,100 +46,88 @@ bool isInteger(Value v, int i) {
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     Value v;
-    initStack(&S);
+    initStack(&S, 0);
 
     assert(S.capacity == 0);
-    assert(S.sp == 0);
-    assert(S.stack == NULL);
-    assert(frameSize(&S) == 0);
+    assert(S.entries == NULL);
+    assert(sizeStack(&S) == 0);
 
-    pushValue(&S, integer(100));
+    pushStack(&S, integer(100));
     assert(S.capacity == 8);
-    assert(S.sp == 1);
-    assert(frameSize(&S) == 1);
-    assert(S.stack != NULL);
-    assert(frameSize(&S) == 1);
-    v = peekValue(&S, 0);
+    assert(sizeStack(&S) == 1);
+    assert(S.entries != NULL);
+    assert(sizeStack(&S) == 1);
+    v = peeknStack(&S, 0);
     assert(isInteger(v, 100));
 
-    pushValue(&S, integer(101));
+    pushStack(&S, integer(101));
     assert(S.capacity == 8);
-    assert(S.sp == 2);
-    assert(frameSize(&S) == 2);
-    v = peekValue(&S, 0);
+    assert(sizeStack(&S) == 2);
+    v = peeknStack(&S, 0);
     assert(isInteger(v, 100));
-    v = peekValue(&S, 1);
+    v = peeknStack(&S, 1);
     assert(isInteger(v, 101));
 
-    v = popValue(&S);
+    v = popStack(&S);
     assert(isInteger(v, 101));
     assert(S.capacity == 8);
-    assert(S.sp == 1);
-    assert(frameSize(&S) == 1);
+    assert(sizeStack(&S) == 1);
 
-    v = popValue(&S);
+    v = popStack(&S);
     assert(isInteger(v, 100));
     assert(S.capacity == 8);
-    assert(S.sp == 0);
-    assert(frameSize(&S) == 0);
+    assert(sizeStack(&S) == 0);
 
-    pushValue(&S, vTrue);
-    pushValue(&S, vFalse);
-    pushValue(&S, vTrue);
+    pushStack(&S, vTrue);
+    pushStack(&S, vFalse);
+    pushStack(&S, vTrue);
     assert(S.capacity == 8);
-    assert(S.sp == 3);
-    assert(frameSize(&S) == 3);
+    assert(sizeStack(&S) == 3);
 
-    setFrame(&S, 0, 1);
+    moveStack(&S, 0, 1);
     assert(S.capacity == 8);
-    assert(S.sp == 1);
-    assert(frameSize(&S) == 1);
+    assert(sizeStack(&S) == 1);
 
-    pushValue(&S, vFalse);
+    pushStack(&S, vFalse);
     assert(S.capacity == 8);
-    assert(S.sp == 2);
-    assert(frameSize(&S) == 2);
+    assert(sizeStack(&S) == 2);
 
     v.type = VALUE_TYPE_STDINT;
     v.val = VALUE_VAL_STDINT(100);
-    pushValue(&S, v);
+    pushStack(&S, v);
     assert(S.capacity == 8);
-    assert(S.sp == 3);
-    assert(frameSize(&S) == 3);
+    assert(sizeStack(&S) == 3);
 
     v.val = VALUE_VAL_STDINT(101);
-    pushValue(&S, v);
+    pushStack(&S, v);
     assert(S.capacity == 8);
-    assert(S.sp == 4);
-    assert(frameSize(&S) == 4);
+    assert(sizeStack(&S) == 4);
 
     v.val = VALUE_VAL_STDINT(102);
-    pushValue(&S, v);
+    pushStack(&S, v);
     assert(S.capacity == 8);
-    assert(S.sp == 5);
-    assert(frameSize(&S) == 5);
+    assert(sizeStack(&S) == 5);
 
-    v = peekValue(&S, 0);
+    v = peeknStack(&S, 0);
     assert(v.type == VALUE_TYPE_STDINT);
 
-    v = peekValue(&S, 1);
+    v = peeknStack(&S, 1);
     assert(v.type == VALUE_TYPE_STDINT);
 
-    v = peekValue(&S, 2);
+    v = peeknStack(&S, 2);
     assert(v.type == VALUE_TYPE_STDINT);
     assert(v.val.stdint == 100);
 
-    v = peekValue(&S, 3);
+    v = peeknStack(&S, 3);
     assert(v.type == VALUE_TYPE_STDINT);
     assert(v.val.stdint == 101);
 
-    v = peekValue(&S, 4);
+    v = peeknStack(&S, 4);
     assert(v.type == VALUE_TYPE_STDINT);
     assert(v.val.stdint == 102);
 
-    setFrame(&S, 0, 1);
+    moveStack(&S, 0, 1);
     assert(S.capacity == 8);
-    assert(S.sp == 1);
-    assert(frameSize(&S) == 1);
+    assert(sizeStack(&S) == 1);
 
 }

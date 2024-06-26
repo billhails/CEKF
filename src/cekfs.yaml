@@ -29,63 +29,63 @@ description: The structures of the CEKFs machine
 structs:
     CekfsState:
         C: control
-        E: CekfsEnv
-        K: CekfsKont
-        F: CekfsFail
-        S: CekfsStack
+        E: Env
+        K: Kont
+        F: Fail
+        S: Stack
         B: ByteCodeArray
 
-    CekfsEnv:
-        values: CekfsStack
-        next: CekfsEnv
+    Env:
+        stack: Stack
+        next: Env
 
-    CekfsKont:
+    Kont:
         body: control
-        env: CekfsEnv
-        snapshot: CekfsStack
-        next: CekfsKont
+        env: Env
+        stack: Stack
+        next: Kont
 
-    CekfsClo:
+    Clo:
         pending: int
         ip: control
-        env: CekfsEnv
+        env: Env
 
-    CekfsFail:
+    Fail:
         exp: control
-        env: CekfsEnv
-        kont: CekfsKont
-        snapshot: CekfsStack
-        next: CekfsFail
+        env: Env
+        kont: Kont
+        stack: Stack
+        next: Fail
 
 inline:
     unions:
-        CekfsValue:
+        Value:
             none: void_ptr
             stdint: int
             bigint: BigInt
-            rational: CekfsVec
+            rational: Vec
             rational_imag: Vec
             irrational: double
             stdint_imag: int
             bigint_imag: BigInt
-            rational_imag: CekfsVec
+            rational_imag: Vec
             irrational_imag: double
-            complex: CekfsVec
+            complex: Vec
             character: char
-            clo: CekfsClo
-            pclo: CekfsClo
-            kont: CekfsKont
-            vec: CekfsVec
+            clo: Clo
+            pclo: Clo
+            kont: Kont
+            vec: Vec
             builtIn: BuiltInImplementation
-            namespace: CekfsVec
+            namespace: Vec
 
     arrays:
-        CekfsStack:
-            entries: CekfsValue
+        Stack:
+            entries: Value
 
 vectors:
-    CekfsVec:
-        entries: CekfsValue
+    Vec:
+        entries: Value
 
 arrays:
     ByteCodeArray:

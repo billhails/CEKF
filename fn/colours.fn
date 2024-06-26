@@ -1,10 +1,7 @@
-let
-    typedef colour { red | green | blue }
+typedef colour { red | green | blue }
 
-    fn tostr {
-        (red) { "red" }
-        (green) { "green" }
-        (blue) { "blue" }
-    }
-in
-    tostr(red)
+fn tostr {
+    (red) { "red" }
+    (green) { "green" }
+    (blue) { "blue" }
+}

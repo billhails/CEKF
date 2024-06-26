@@ -1,0 +1,10 @@
+let
+    typedef colour { red | green | blue }
+
+    fn tostr {
+        (red) { "red" }
+        (green) { "green" }
+        (blue) { "blue" }
+    }
+in
+    print(tostr(red));

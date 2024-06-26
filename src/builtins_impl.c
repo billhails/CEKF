@@ -23,7 +23,7 @@ bool assertions_failed;
 int assertions_accumulate = 0;
 
 Value builtin_rand(Vec *v) {
-    return nrand(v->values[0]);
+    return nrand(v->entries[0]);
 }
 
 Value builtin_assert(Vec *v __attribute__((unused))) {

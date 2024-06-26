@@ -146,6 +146,10 @@ class Catalog:
         for entity in self.contents.values():
             entity.printCopyExceptTopDeclaration(self)
 
+    def printCopyEntriesDeclarations(self):
+        for entity in self.contents.values():
+            entity.printCopyEntriesDeclaration(self)
+
     def printClearDeclarations(self):
         for entity in self.contents.values():
             entity.printClearDeclaration(self)
@@ -165,6 +169,10 @@ class Catalog:
     def printExtendDeclarations(self):
         for entity in self.contents.values():
             entity.printExtendDeclaration(self)
+
+    def printSizeDeclarations(self):
+        for entity in self.contents.values():
+            entity.printSizeDeclaration(self)
 
     def printPopFunctions(self):
         for entity in self.contents.values():
@@ -190,9 +198,9 @@ class Catalog:
         for entity in self.contents.values():
             entity.printCopyExceptTopFunction(self)
 
-    def printClearFunctions(self):
+    def printCopyEntriesFunctions(self):
         for entity in self.contents.values():
-            entity.printClearFunction(self)
+            entity.printCopyEntriesFunction(self)
 
     def printPeekFunctions(self):
         for entity in self.contents.values():
@@ -492,6 +500,9 @@ class Base:
     def printCopyExceptTopDeclaration(self, catalog):
         pass
 
+    def printCopyEntriesDeclaration(self, catalog):
+        pass
+
     def printClearDeclaration(self, catalog):
         pass
 
@@ -505,6 +516,9 @@ class Base:
         pass
 
     def printExtendDeclaration(self, catalog):
+        pass
+
+    def printSizeDeclaration(self, catalog):
         pass
 
     def printPopFunction(self, catalog):
@@ -525,7 +539,7 @@ class Base:
     def printCopyExceptTopFunction(self, catalog):
         pass
 
-    def printClearFunction(self, catalog):
+    def printCopyEntriesFunction(self, catalog):
         pass
 
     def printPeekFunction(self, catalog):
@@ -1224,6 +1238,14 @@ class SimpleArray(Base):
             c = self.comment('printExtendDeclaration')
             print(f"void extend{name}({myType} {a}obj, Index size); {c}")
 
+    def printSizeDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printSizeDeclaration')
+            print(f"static inline Index size{name}({myType} {a}obj) {{ return obj->size; }} {c}")
+
     def printPushDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
@@ -1248,7 +1270,11 @@ class SimpleArray(Base):
             myType = self.getTypeDeclaration(catalog)
             a = '*' if self.isInline(catalog) else ''
             c = self.comment('printPopnDeclaration')
+            print("#ifdef SAFETY_CHECKS")
             print(f"void popn{name}({myType} {a}obj, int n); {c}")
+            print("#else")
+            print(f"static inline void popn{name}({myType} {a}obj, int n) {{ obj->size -= n; }}; {c}")
+            print("#endif")
 
     def printMoveDeclaration(self, catalog):
         if self.dimension == 1:
@@ -1285,13 +1311,22 @@ class SimpleArray(Base):
             c = self.comment('printCopyExceptTopDeclaration')
             print(f"void copyExceptTop{name}({myType} {a}dest, {myType} {a}src, int n); {c}")
 
+    def printCopyEntriesDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyEntriesDeclaration')
+            print(f"void copy{name}Entries({myType} {a}dest, {myType} {a}src); {c}")
+
     def printClearDeclaration(self, catalog):
         if self.dimension == 1:
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             a = '*' if self.isInline(catalog) else ''
             c = self.comment('printClearDeclaration')
-            print(f"void clear{name}({myType} {a}obj); {c}")
+            print(f"static inline void clear{name}({myType} {a}obj) {{ obj->size = 0; }}; {c}")
 
     def printPeekDeclaration(self, catalog):
         if self.dimension == 1:
@@ -1331,7 +1366,9 @@ class SimpleArray(Base):
             print(f" * Ensures that `x` has at least a capacity of `size`.")
             print(f" */")
             print(f"void extend{name}({myType} {a}x, Index size) {{ {c}")
+            print(f'    DEBUG("extend{name}(%p, %u)", x, size);')
             print(f"    if (size > 0) {{ {c}")
+            print(f"        size = size < 8 ? 8 : size; {c}")
             print(f"        if (x->capacity == 0) {{ {c}")
             print(f"            x->entries = NEW_ARRAY({entryType}, size); {c}")
             print(f"            x->capacity = size; {c}")
@@ -1356,10 +1393,8 @@ class SimpleArray(Base):
             print(f" * Returns the stack pointer after the push.")
             print(f" */")
             print(f"Index push{name}({myType} {a}x, {entryType} entry) {{ {c}")
-            print(f"    if (x->size == x->capacity) {{ {c}")
-            print(f"        x->entries = GROW_ARRAY({entryType}, x->entries, x->capacity, x->capacity *2); {c}")
-            print(f"        x->capacity *= 2; {c}")
-            print(f"    }} {c}")
+            print(f'    DEBUG("push{name}(%p)", x);')
+            print(f"    extend{name}(x, x->size + 1); {c}")
             print(f"    x->entries[x->size++] = entry; {c}")
             print(f"    return x->size - 1; {c}")
             print(f"}} {c}\n")
@@ -1375,6 +1410,7 @@ class SimpleArray(Base):
             print(f" * Pops the top entry from `x` and returns it.")
             print(f" */")
             print(f"{entryType} pop{name}({myType} {a}x) {{ {c}")
+            print(f'    DEBUG("pop{name}(%p)", x);')
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (x->size == 0) {{ {c}")
             print(f'        cant_happen("stack underflow"); {c}')
@@ -1393,14 +1429,16 @@ class SimpleArray(Base):
             print(f"/**")
             print(f" * Discards the top `n` entries from `x`.")
             print(f" */")
-            print(f"void popn{name}({myType} {a}x, int n) {{ {c}")
             print(f"#ifdef SAFETY_CHECKS")
+            print(f"void popn{name}({myType} {a}x, int n) {{ {c}")
+            print(f'    DEBUG("popn{name}(%p, %d)", x, n);')
             print(f"    if (((int) x->size) - n < 0) {{ {c}")
             print(f'        cant_happen("stack underflow %d/%u", n, x->size); {c}')
             print(f"    }} {c}")
-            print(f"#endif")
             print(f"    x->size -= n; {c}")
-            print(f"}} {c}\n")
+            print(f"}} {c}")
+            print(f"#endif")
+            print("")
 
     def printMoveFunction(self, catalog):
         if self.dimension == 1:
@@ -1414,16 +1452,17 @@ class SimpleArray(Base):
             print(f" * sets sp to `b + n`.")
             print(f" */")
             print(f"void move{name}({myType} {a}x, int b, int n) {{ {c}")
+            print(f'    DEBUG("move{name}(%p, %d, %d)", x, b, n);')
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (((int) x->size) - n < 0) {{ {c}")
             print(f'        cant_happen("stack underflow %d/%u", n, x->size); {c}')
             print(f"    }} {c}")
             print(f"#endif")
             print(f"    if (n > 0) {{ {c}")
-            print(f"        extend{name}(x, x->size + n); {c}")
+            print(f"        extend{name}(x, b + n); {c}")
             print(f"        MOVE_ARRAY({entryType}, &x->entries[b], &x->entries[x->size - n], n); {c}")
-            print(f"        x->size = (Index) (b + n); {c}")
             print(f"    }} {c}")
+            print(f"    x->size = (Index) (b + n); {c}")
             print(f"}} {c}\n")
 
     def printPushnFunction(self, catalog):
@@ -1437,6 +1476,7 @@ class SimpleArray(Base):
             print(f" * Pushes `n` copies of `entry` on to `x`.")
             print(f" */")
             print(f"void pushn{name}({myType} {a}x, int n, {entryType} entry) {{ {c}")
+            print(f'    DEBUG("pushn{name}(%p, %d)", x, n);')
             print(f"    if (n > 0) {{ {c}")
             print(f"        extend{name}(x, x->size + n); {c}")
             print(f"        while (n-- > 0) {{ {c}")
@@ -1457,11 +1497,12 @@ class SimpleArray(Base):
             print(f" * sets `dest` size (sp) to `n`.")
             print(f" */")
             print(f"void copyTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+            print(f'    DEBUG("copyTop{name}(%p, %p, %d)", dest, src, n);')
             print(f"    if (n > 0) {{ {c}")
             print(f"        extend{name}(dest, n); {c}")
             print(f"        COPY_ARRAY({entryType}, dest->entries, &src->entries[src->size - n], n); {c}")
-            print(f"        dest->size = n; {c}")
             print(f"    }} {c}")
+            print(f"    dest->size = n; {c}")
             print(f"}} {c}\n")
 
     def printCopyExceptTopFunction(self, catalog):
@@ -1473,9 +1514,10 @@ class SimpleArray(Base):
             c = self.comment('printCopyExceptTopFunction')
             print(f"/**")
             print(f" * Copies all but top `n` entries from `src` to the base of `dest`,")
-            print(f" * sets `dest` sp to `dest->sp - n`.")
+            print(f" * sets `dest` sp to `src->sp - n`.")
             print(f" */")
             print(f"void copyExceptTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+            print(f'    DEBUG("copyExceptTop{name}(%p, %p, %d)", dest, src, n);')
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (((int) src->size) - n < 0) {{ {c}")
             print(f'        cant_happen("stack underflow %d/%u", n, src->size); {c}')
@@ -1484,22 +1526,26 @@ class SimpleArray(Base):
             print(f"    if (((Index) n) < src->size) {{ {c}")
             print(f"        extend{name}(dest, src->size - n); {c}")
             print(f"        COPY_ARRAY({entryType}, dest->entries, src->entries, src->size - n); {c}")
-            print(f"        dest->size = src->size - n; {c}")
             print(f"    }} {c}")
+            print(f"    dest->size = src->size - n; {c}")
             print(f"}} {c}\n")
 
-    def printClearFunction(self, catalog):
+    def printCopyEntriesFunction(self, catalog):
         if self.dimension == 1:
             name = self.getName()
             myType = self.getTypeDeclaration(catalog)
             entryType = self.entries.getTypeDeclaration(catalog)
             a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printCopyEntriesFunction')
             print(f"/**")
-            print(f" * Clears `x` (sets `x->sp` to 0).")
+            print(f" * Copies all entries from `src` to `dest`,")
+            print(f" * sets `dest` sp to `src->sp`.")
             print(f" */")
-            c = self.comment('printClearFunction')
-            print(f"void clear{name}({myType} {a}x) {{ {c}")
-            print(f"    x->size = 0; {c}")
+            print(f"void copy{name}Entries({myType} {a}dest, {myType} {a}src) {{ {c}")
+            print(f'    DEBUG("copyEntries{name}(%p, %p)", dest, src);')
+            print(f"    extend{name}(dest, src->size); {c}")
+            print(f"    COPY_ARRAY({entryType}, dest->entries, src->entries, src->size); {c}")
+            print(f"    dest->size = src->size; {c}")
             print(f"}} {c}\n")
 
     def printPeekFunction(self, catalog):
@@ -1513,6 +1559,7 @@ class SimpleArray(Base):
             print(f" * Returns the value at the top of `x`.")
             print(f" */")
             print(f"{entryType} peek{name}({myType} {a}x) {{ {c}")
+            print(f'    DEBUG("peek{name}(%p)", x);')
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (x->size == 0) {{ {c}")
             print(f'        cant_happen("stack underflow"); {c}')
@@ -1533,6 +1580,7 @@ class SimpleArray(Base):
             print(f" * otherwise returns the value at `n`.")
             print(f" */")
             print(f"{entryType} peekn{name}({myType} {a}x, int offset) {{ {c}")
+            print(f'    DEBUG("peekn{name}(%p, %d)", x, offset);')
             print(f"    if (offset < 0) offset = ((int) x->size) + offset; {c}")
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (offset >= (int) x->size) {{ {c}")
@@ -1557,6 +1605,7 @@ class SimpleArray(Base):
             print(f" * otherwise replaces the value at `n`.")
             print(f" */")
             print(f"void poke{name}({myType} {a}x, int offset, {entryType} val) {{ {c}")
+            print(f'    DEBUG("poke{name}(%p, %d)", x, offset);')
             print(f"    if (offset < 0) offset = ((int) x->size) + offset; {c}")
             print(f"#ifdef SAFETY_CHECKS")
             print(f"    if (offset >= (int) x->size) {{ {c}")
@@ -1722,6 +1771,8 @@ class SimpleArray(Base):
             self.entries.printCopyArrayLine(catalog, "i", 3)
             print(f"            x->size++; {c}")
             print(f"        }} {c}")
+        print(f"    }} else {{ {c}")
+        print(f"        x->size = 0; {c}")
         print(f"    }} {c}")
 
     def print2dCopyFunctionBody(self, catalog):
@@ -1990,8 +2041,10 @@ class InlineArray(SimpleArray):
         print(f"    x->size = 0; {c}")
         print(f"    x->capacity = 0; {c}")
         print(f"    x->entries = NULL; {c}")
-        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, size); {c}")
-        print(f"    x->capacity = size; {c}")
+        print(f"    if (size > 0) {{ {c}")
+        print(f"        x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, size); {c}")
+        print(f"        x->capacity = size; {c}")
+        print(f'    }} {c}')
         print(f'}} {c}')
         print("")
 
@@ -3517,11 +3570,13 @@ if args.type == "h":
     catalog.printPushnDeclarations()
     catalog.printCopyTopDeclarations()
     catalog.printCopyExceptTopDeclarations()
+    catalog.printCopyEntriesDeclarations()
     catalog.printClearDeclarations()
     catalog.printPeekDeclarations()
     catalog.printPeeknDeclarations()
     catalog.printPokeDeclarations()
     catalog.printExtendDeclarations()
+    catalog.printSizeDeclarations()
     printSection("hash getter and setter declarations")
     catalog.printGetDeclarations()
     catalog.printSetDeclarations()
@@ -3563,7 +3618,7 @@ elif args.type == "c":
     print("#include <stdio.h>")
     print("#include <strings.h>")
     print('#include "common.h"')
-    print('#ifdef DEBUG_ALLOC')
+    print(f'#ifdef DEBUG_{typeName.upper()}')
     print('#include "debugging_on.h"')
     print('#else')
     print('#include "debugging_off.h"')
@@ -3582,7 +3637,7 @@ elif args.type == "c":
     catalog.printPushnFunctions()
     catalog.printCopyTopFunctions()
     catalog.printCopyExceptTopFunctions()
-    catalog.printClearFunctions()
+    catalog.printCopyEntriesFunctions()
     catalog.printPeekFunctions()
     catalog.printPeeknFunctions()
     catalog.printPokeFunctions()
