@@ -106,7 +106,6 @@ static TcType *analyze(AstProg *prog) {
     PROTECT(res);
     ppTcType(res);
     eprintf("\n");
-    assert(!hadErrors());
     UNPROTECT(save);
     return res;
 }
@@ -171,7 +170,7 @@ static void test_adder() {
 
 static void test_fact() {
     printf("test_fact\n");
-    AstProg *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
+    AstProg *result = parseSolo("let unsafe fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -394,5 +393,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test_if();
     test_lol();
     test_map();
+    assert(!hadErrors());
 }
 

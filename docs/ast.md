@@ -40,6 +40,7 @@ AstTypeMap --type--> AstType
 AstTypeMap --next--> AstTypeMap
 AstType --typeClause--> AstTypeClause
 AstType --next--> AstType
+AstCompositeFunction --unsafe--> bool
 AstCompositeFunction --function--> AstFunction
 AstCompositeFunction --next--> AstCompositeFunction
 AstFunction --argList--> AstArgList

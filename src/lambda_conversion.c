@@ -1150,7 +1150,7 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
         argLists[i] = rewriteAstArgList(func->argList, env);
         PROTECT(argLists[i]);
     }
-    LamLam *result = tpmcConvert(CPI(fun), nargs, nBodies, argLists, actions, env);
+    LamLam *result = tpmcConvert(fun->unsafe, CPI(fun), nargs, nBodies, argLists, actions, env);
     PROTECT(result);
     FREE_ARRAY(LamExp *, actions, nBodies);
     FREE_ARRAY(AstArgList *, argLists, nBodies);

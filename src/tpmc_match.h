@@ -24,6 +24,7 @@
 
 TpmcState *tpmcMakeState(TpmcStateValue *val);
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *states,
-                     TpmcState *errorState, TpmcStateArray *knownStates);
+                     TpmcState *errorState, TpmcStateArray *knownStates,
+                     bool allow_unsafe, ParserInfo I);
 
 #endif

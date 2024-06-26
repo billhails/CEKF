@@ -621,7 +621,8 @@ static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
     return _arrayToVarList(I, array, 0);
 }
 
-LamLam *tpmcConvert(ParserInfo I, int nargs, int nbodies, AstArgList **argLists,
+LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs,
+                    int nbodies, AstArgList **argLists,
                     LamExp **actions, LamContext *env) {
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);
@@ -648,7 +649,7 @@ LamLam *tpmcConvert(ParserInfo I, int nargs, int nbodies, AstArgList **argLists,
     }
     TpmcState *errorState = makeErrorState();
     PROTECT(errorState);
-    TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates);
+    TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates, allow_unsafe, I);
     PROTECT(dfa);
     // DEBUG("*** DFA ***");
     // IFDEBUG(printTpmcState(dfa, 0));
