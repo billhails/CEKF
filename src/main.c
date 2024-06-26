@@ -189,7 +189,7 @@ static void annotate(Exp *anfExp, BuiltIns *builtIns) {
 
 static ByteCodeArray generateByteCodes(Exp *anfExp) {
     ByteCodeArray byteCodes;
-    initByteCodeArray(&byteCodes);
+    initByteCodeArray(&byteCodes, 8);
     writeExp(anfExp, &byteCodes);
     writeEnd(&byteCodes);
     return byteCodes;

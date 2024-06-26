@@ -28,19 +28,14 @@ struct Header;
 #  include "lambda_objtypes.h"
 #  include "tpmc_objtypes.h"
 #  include "tc_objtypes.h"
+#  include "cekfs_objtypes.h"
 #  include "builtins_objtypes.h"
 #  include "types.h"
 
 typedef enum {
 
     // cekf types
-    OBJTYPE_CLO,
-    OBJTYPE_ENV,
-    OBJTYPE_FAIL,
-    OBJTYPE_KONT,
 
-    OBJTYPE_VEC,
-    OBJTYPE_VALUELIST,
     // hash table types
     OBJTYPE_HASHTABLE,
     OBJTYPE_HASHSYMBOL,
@@ -56,6 +51,7 @@ typedef enum {
     TPMC_OBJTYPES(),
     TC_OBJTYPES(),
     BUILTINS_OBJTYPES(),
+    CEKFS_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -84,6 +80,9 @@ void validateLastAlloc(void);
 void reportMemory(void);
 
 #  define EXIT_OOM 2
+
+#define NEW_VECTOR(size, type, element_type, tag) ((type *)allocate(sizeof(type) + (size) * sizeof(element_type), (tag)))
+#define FREE_VECTOR(vector, type, element_type, count) ((void)reallocate(vector, sizeof(type) + (count) * sizeof(element_type), 0))
 
 #  define NEW_VEC(size) ((Vec *)allocate(sizeof(Vec) + size * sizeof(Value), OBJTYPE_VEC))
 #  define FREE_VEC(vec) ((void)reallocate(vec, sizeof(vec) + vec->size * sizeof(Value), 0))

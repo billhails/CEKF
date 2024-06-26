@@ -1,4 +1,4 @@
-.PHONY: all clean realclean deps profile check-grammar list-cores test indent docs
+.PHONY: all clean realclean deps profile check-grammar list-cores test indent indent-src indent-generated docs
 
 TARGET=cekf
 
@@ -73,6 +73,28 @@ $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 
 docs: $(EXTRA_DOCS)
 
+EXTRA_TYPES=bigint_word \
+BigInt \
+IntegerBinOp \
+ProtectionStack \
+HashSymbol \
+hash_t \
+Header \
+PmModule \
+HashTable \
+byte \
+word \
+Value \
+FILE \
+Byte \
+Character \
+Word \
+Integer \
+Index \
+Double \
+Control
+EXTRA_INDENT_ARGS=$(patsubst %,-T %,$(EXTRA_TYPES))
+
 include $(ALL_DEP)
 
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
@@ -128,7 +150,7 @@ generated/parser.c generated/parser.h: src/parser.y | generated
 
 test: $(TEST_TARGETS) $(TARGET)
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
-	for t in tests/fn/*.fn ; do ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	for t in tests/fn/*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) -lm
@@ -149,9 +171,15 @@ profile: all
 	rm -f callgrind.out.*
 	valgrind --tool=callgrind ./$(TARGET)
 
-indent: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` -T bigint_word -T BigInt -T IntegerBinOp -T Stack -T Env -T Snapshot -T Kont -T ValueList -T Clo -T Fail -T Vec -T ProtectionStack -T HashSymbol -T hash_t -T Header -T PmModule -T HashTable -T byte -T word -T ByteCodes -T ByteCodeArray -T Value -T FILE -T Byte -T Character -T Word -T Integer -T Index -T Double -T Control src/*.[ch] generated/*.[ch]
-	rm -f src/*~ generated/*~
+indent: indent-src indent-generated
+
+indent-src: .typedefs .indent.pro
+	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) src/*.[ch]
+	rm -f src/*~
+
+indent-generated: .typedefs .indent.pro
+	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) generated/*.[ch]
+	rm -f generated/*~
 
 .typedefs: .generated
 

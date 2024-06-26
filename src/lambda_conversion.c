@@ -147,7 +147,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
             AstNamespaceImpl *namespace = nsArray->entries[i];
             LamContext *nsEnv = newLamContext(CPI(env), env);
             int save2 = PROTECT(nsEnv);
-            addCurrentNamespaceToContext(env, (int) i);
+            addCurrentNamespaceToContext(nsEnv, (int) i);
             AstExpression *envToken = newAstExpression_Env(CPI(namespace));
             PROTECT(envToken);
             AstExpressions *body = newAstExpressions(CPI(namespace), envToken, NULL);

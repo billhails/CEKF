@@ -1,0 +1,34 @@
+let
+    link "listutils.fn" as list;
+
+    fn tostring(n) {
+        let
+            fn helper {
+                (0, h) { '0' @ h }
+                (1, h) { '1' @ h }
+                (2, h) { '2' @ h }
+                (3, h) { '3' @ h }
+                (4, h) { '4' @ h }
+                (5, h) { '5' @ h }
+                (6, h) { '6' @ h }
+                (7, h) { '7' @ h }
+                (8, h) { '8' @ h }
+                (9, h) { '9' @ h }
+                (n, h) {
+                    let
+                        r = n % 10;
+                        a = (n - r) / 10;
+                        s = helper(a, h);
+                    in
+                        helper(r, s);
+                }
+            }
+        in
+            if (n < 0) {
+                '-' @ list.reverse(helper(-n, []));
+            } else {
+                list.reverse(helper(n, []));
+            }
+    }
+in
+    print(tostring(-10240));

@@ -1,0 +1,160 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2024  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: cekfs
+    parserInfo: false
+    limited_includes:
+        - builtins.h
+        - builtins_debug.h
+        - types.h
+
+description: The structures of the CEKFs machine
+
+structs:
+    CEKF:
+        C: control
+        E: Env
+        K: Kont
+        F: Fail
+        S: Stack
+        B: ByteCodeArray
+
+    Env:
+        stack: Stack
+        next: Env
+
+    Kont:
+        body: control
+        env: Env
+        stack: Stack
+        next: Kont
+
+    Clo:
+        pending: int
+        ip: control
+        env: Env
+
+    Fail:
+        exp: control
+        env: Env
+        kont: Kont
+        stack: Stack
+        next: Fail
+
+inline:
+    unions:
+        Value:
+            none: void_ptr
+            stdint: int
+            bigint: BigInt
+            rational: Vec
+            rational_imag: Vec
+            irrational: double
+            stdint_imag: int
+            bigint_imag: BigInt
+            rational_imag: Vec
+            irrational_imag: double
+            complex: Vec
+            character: char
+            clo: Clo
+            pclo: Clo
+            kont: Kont
+            vec: Vec
+            builtIn: BuiltInImplementation
+            namespace: Vec
+
+    arrays:
+        Stack:
+            entries: Value
+
+        ByteCodeArray:
+            entries: byte
+
+vectors:
+    Vec:
+        entries: Value
+
+enums:
+    ByteCodes:
+    - NONE
+    - LAM
+    - VAR
+    - LVAR
+    - PRIM_ADD
+    - PRIM_SUB
+    - PRIM_MUL
+    - PRIM_DIV
+    - PRIM_POW
+    - PRIM_MOD
+    - PRIM_EQ
+    - PRIM_NE
+    - PRIM_GT
+    - PRIM_LT
+    - PRIM_GE
+    - PRIM_LE
+    - PRIM_XOR
+    - PRIM_MAKEVEC
+    - PRIM_VEC
+    - PRIM_NOT
+    - MATCH
+    - APPLY
+    - IF
+    - CHARCOND
+    - INTCOND
+    - LETREC
+    - AMB
+    - CUT
+    - BACK
+    - LET
+    - CALLCC
+    - "TRUE"
+    - "FALSE"
+    - VOID
+    - STDINT
+    - BIGINT
+    - IRRATIONAL
+    - CHAR
+    - RETURN
+    - JMP
+    - PUSHN
+    - DONE
+    - ERROR
+    - PRIM_CMP
+    - PRIM_PUTC
+    - PRIM_PUTN
+    - PRIM_PUTV
+    - PRIM_NEG
+    - STDINT_IMAG
+    - BIGINT_IMAG
+    - IRRATIONAL_IMAG
+    - NS_START
+    - NS_END
+    - NS_FINISH
+    - NS_PUSHS
+    - NS_PUSHE
+    - NS_POP
+
+primitives: !include primitives.yaml
+
+external:
+    BuiltInImplementation:
+        cname: "struct BuiltInImplementation *"
+        printFn: printBuiltInImplementation
+        markFn: markBuiltInImplementation
+        valued: true

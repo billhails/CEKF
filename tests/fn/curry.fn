@@ -1,0 +1,11 @@
+let
+    fn test_curry(n, f) {
+        f(n)
+    }
+
+    fn add(a, b) {
+        a + b
+    }
+
+in
+    assert(test_curry(2, add(3)) == 5)

@@ -1,8 +1,8 @@
-#ifndef cekf_value_h
-#  define cekf_value_h
+#ifndef cekf_cekfs_helper_h
+#  define cekf_cekfs_helper_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
+ * Copyright (C) 2022-2024  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,17 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "bigint.h"
-#  include "builtins.h"
-#  include "types.h"
-#  include "cekfs.h"
-
-// constants
-extern Value vTrue;
-extern Value vFalse;
-extern Value vVoid;
-extern Value vLt;
-extern Value vEq;
-extern Value vGt;
+#include "cekfs.h"
 
 #endif

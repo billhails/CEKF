@@ -22,6 +22,7 @@
 #  include <stdbool.h>
 #  include <stdint.h>
 #  include <stdlib.h>
+#  include <string.h>
 
 #  define NS_GLOBAL -1
 
@@ -32,6 +33,7 @@
 // if DEBUG_STEP is defined, this sleeps for 1 second between each machine step
 // #    define DEBUG_SLOW_STEP
 // #    define DEBUG_BYTECODE
+// #    define DEBUG_CEKFS
 #    ifndef NO_DEBUG_STRESS_GC
 // define this to cause a GC at every malloc (catches memory leaks early)
 #      define DEBUG_STRESS_GC

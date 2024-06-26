@@ -31,121 +31,31 @@
 #  include "memory.h"
 #  include "value.h"
 #  include "types.h"
+#  include "cekfs.h"
 
-
-typedef struct Stack {
-    int capacity;
-    int sp;
-    struct Value *stack;
-} Stack;
-
-typedef struct {
-    Control C;
-    struct Env *E;
-    struct Kont *K;
-    struct Fail *F;
-    struct Value V;
-    struct Stack S;
-    struct ByteCodeArray B;
-    Index nsPosition;
-} CEKF;
-
-typedef struct Env {
-    struct Header header;
-    struct Env *next;
-    int count;
-    struct Value *values;
-} Env;
-
-typedef struct Snapshot {
-    int frameSize;
-    struct Value *frame;
-} Snapshot;
-
-typedef struct Kont {
-    struct Header header;
-    Control body;
-    struct Env *env;
-    Snapshot snapshot;
-    struct Kont *next;
-} Kont;
-
-typedef struct ValueList {
-    struct Header header;
-    int count;
-    struct Value *values;
-} ValueList;
-
-typedef struct Clo {
-    struct Header header;
-    int pending;
-    Control ip;
-    struct Env *env;
-} Clo;
-
-typedef struct Fail {
-    struct Header header;
-    Control exp;
-    struct Env *env;
-    struct Kont *kont;
-    Snapshot snapshot;
-    struct Fail *next;
-} Fail;
-
-typedef struct Vec {
-    struct Header header;
-    int size;
-    struct Value values[0];
-} Vec;
-
-int protectValue(Value v);
-
-ValueList *snapshotNamespace(Stack *s);
-void restoreNamespace(Stack *s, ValueList *vl);
-void snapshotClo(Stack *stack, struct Clo *target, int letRecOffset);
-void patchClo(Stack *stack, struct Clo *target);
-void snapshotKont(Stack *stack, struct Kont *target);
-void snapshotFail(Stack *stack, struct Fail *target);
+Vec *snapshotNamespace(Stack *s);
+void restoreNamespace(Stack *s, Vec *vl);
+void snapshotClo(struct Clo *target, Stack *stack, int letRecOffset);
+void patchClo(struct Clo *target, Stack *stack);
+void snapshotKont(struct Kont *target, Stack *stack);
+void snapshotFail(struct Fail *target, Stack *stack);
 void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
-void setFrame(Stack *stack, int base, int nargs);
-void clearFrame(Stack *stack);
-void copyTosToEnv(Stack *s, Env *e, int n);
+void copyTosToEnv(Env *e, Stack *s, int n);
 void copyValues(Value *to, Value *from, int size);
-// safe version of copyValues:
-void moveValues(Value *to, Value *from, int size);
 
-extern Snapshot noSnapshot;
-
-void extendStack(Stack *s, int extra);
-void pushValue(Stack *stack, Value v);
-struct Value popValue(Stack *stack);
-struct Value peekValue(Stack *stack, int offset);
-struct Value peekTop(Stack *s);
-void copyTopToValues(Stack *s, Value *values, int size);
-void markStack(Stack *stack);
-void initStack(Stack *stack);
-int frameSize(Stack *stack);
+void copyTosToVec(Vec *vec, Stack *s);
 void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
-void pokeValue(Stack *s, int offset, Value v);
-void discardStackTop(Stack *s, int num);
-void patchValueList(Stack *s, ValueList *v, int num);
-void ensureCapacity(Stack *s, int n);
+void patchVec(Vec *v, Stack *s, int num);
+Env *makeEnv(Env *parent, Index size);
+Kont *makeKont(Control offset, Env *env, Kont *next);
+Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next);
 
-ValueList *newValueList(int count);
-Clo *newClo(int nvar, Control ip, Env *env);
-Env *newEnv(Env *next, int count);
-Kont *newKont(Control body, Env *env, Kont *next);
-Fail *newFail(Control exp, Env *env, Kont *kont, Fail *next);
 Vec *newVec(int size);
 
 void markValue(Value x);
-void markValueList(ValueList *x);
-void markClo(Clo *x);
 void markEnv(Env *x);
-void markKont(Kont *x);
-void markFail(Fail *x);
 void markVec(Vec *x);
 void dumpStack(Stack *stack);
 

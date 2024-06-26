@@ -85,8 +85,6 @@ const char *typeName(ObjType type, void *p) {
             return "kont";
         case OBJTYPE_VEC:
             return "vec";
-        case OBJTYPE_VALUELIST:
-            return "valuelist";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
         case OBJTYPE_PROTECTION:
@@ -279,13 +277,11 @@ void markObj(Header *h, Index i) {
     // eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
-        case OBJTYPE_CLO:
-        case OBJTYPE_ENV:
-        case OBJTYPE_FAIL:
-        case OBJTYPE_KONT:
-        case OBJTYPE_VEC:
-        case OBJTYPE_VALUELIST:
-            markCekfObj(h);
+        case OBJTYPE_MAYBEBIGINT:
+            markMaybeBigInt((MaybeBigInt *) h);
+            break;
+        case OBJTYPE_BIGINT:
+            markBigInt((BigInt *) h);
             break;
         case OBJTYPE_AGNOSTICFILEID:
             markAgnosticFileId((AgnosticFileId *)h);
@@ -299,29 +295,26 @@ void markObj(Header *h, Index i) {
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
             break;
-            ANF_OBJTYPE_CASES()
-                markAnfObj(h);
+        CEKFS_OBJTYPE_CASES()
+            markCekfsObj(h);
             break;
-            AST_OBJTYPE_CASES()
-                markAstObj(h);
+        ANF_OBJTYPE_CASES()
+            markAnfObj(h);
             break;
-            LAMBDA_OBJTYPE_CASES()
-                markLambdaObj(h);
+        AST_OBJTYPE_CASES()
+            markAstObj(h);
             break;
-            TPMC_OBJTYPE_CASES()
-                markTpmcObj(h);
+        LAMBDA_OBJTYPE_CASES()
+            markLambdaObj(h);
             break;
-            TC_OBJTYPE_CASES()
-                markTcObj(h);
+        TPMC_OBJTYPE_CASES()
+            markTpmcObj(h);
             break;
-            BUILTINS_OBJTYPE_CASES()
-                markBuiltinsObj(h);
+        TC_OBJTYPE_CASES()
+            markTcObj(h);
             break;
-            case OBJTYPE_MAYBEBIGINT:
-                markMaybeBigInt((MaybeBigInt *) h);
-            break;
-            case OBJTYPE_BIGINT:
-                markBigInt((BigInt *) h);
+        BUILTINS_OBJTYPE_CASES()
+            markBuiltinsObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
@@ -335,13 +328,8 @@ static void freeProtectionObj(Header *h) {
 
 void freeObj(Header *h) {
     switch (h->type) {
-        case OBJTYPE_CLO:
-        case OBJTYPE_ENV:
-        case OBJTYPE_FAIL:
-        case OBJTYPE_KONT:
-        case OBJTYPE_VEC:
-        case OBJTYPE_VALUELIST:
-            freeCekfObj(h);
+            CEKFS_OBJTYPE_CASES()
+            freeCekfsObj(h);
             break;
         case OBJTYPE_BIGINT:
             freeBigInt((BigInt *) h);
@@ -391,7 +379,7 @@ static void markProtected() {
 }
 
 static void mark() {
-    markCEKF();
+    markState();
     markProtected();
     markArithmetic();
     markNamespaces();

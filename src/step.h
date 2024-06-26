@@ -22,9 +22,9 @@
 #  include "value.h"
 #  include "builtins.h"
 
-Value run(ByteCodeArray B, BuiltIns *builtIns);
+void run(ByteCodeArray B, BuiltIns *builtIns);
 
-void markCEKF(void);
+void markState(void);
 
 void reportSteps(void);
 
