@@ -33,17 +33,6 @@
 #  include "types.h"
 #  include "cekfs.h"
 
-typedef struct {
-    Control C;
-    struct Env *E;
-    struct Kont *K;
-    struct Fail *F;
-    struct Value V;
-    struct Stack S;
-    struct ByteCodeArray B;
-    Index nsPosition;
-} CEKF;
-
 Vec *snapshotNamespace(Stack *s);
 void restoreNamespace(Stack *s, Vec *vl);
 void snapshotClo(struct Clo *target, Stack *stack, int letRecOffset);

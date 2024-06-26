@@ -4,12 +4,12 @@ The structures of the CEKFs machine
 
 ```mermaid
 flowchart TD
-CekfsState --C--> control
-CekfsState --E--> Env
-CekfsState --K--> Kont
-CekfsState --F--> Fail
-CekfsState --S--> Stack
-CekfsState --B--> ByteCodeArray
+CEKF --C--> control
+CEKF --E--> Env
+CEKF --K--> Kont
+CEKF --F--> Fail
+CEKF --S--> Stack
+CEKF --B--> ByteCodeArray
 Env --stack--> Stack
 Env --next--> Env
 Kont --body--> control
@@ -43,8 +43,8 @@ Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
 Value --namespace--> Vec
 Stack["Stack[]"] --entries--> Value
-ByteCodes["enum ByteCodes"]
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
+ByteCodes["enum ByteCodes"]
 ValueVal
 ValueType
 ```

@@ -379,7 +379,7 @@ static void markProtected() {
 }
 
 static void mark() {
-    markCEKF();
+    markState();
     markProtected();
     markArithmetic();
     markNamespaces();

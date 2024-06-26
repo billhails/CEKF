@@ -52,12 +52,9 @@ void putValue(Value x);
 
 static CEKF state;
 
-void markCEKF() {
-    markEnv(state.E);
-    markKont(state.K);
-    markFail(state.F);
-    markValue(state.V);
-    markStack(state.S);
+void markState() {
+    state.header.keep = false;
+    markCEKF(&state);
 }
 
 static inline void patch(Value v, int num) {
@@ -96,10 +93,6 @@ static inline Value tos(void) {
     return peekStack(&state.S);
 }
 
-static inline Value getNamespace(int index) {
-    return peek(state.nsPosition + index);
-}
-
 static inline void copyToVec(Vec *vec) {
     copyTosToVec(vec, &state.S);
 }
@@ -128,8 +121,6 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     state.E = builtInsToEnv(builtIns);
     state.K = NULL;
     state.F = NULL;
-    state.V = vVoid;
-    state.nsPosition = 0;
     if (first) {
         initStack(&state.S, 8);
     } else {
@@ -139,10 +130,9 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     first = false;
 }
 
-Value run(ByteCodeArray B, BuiltIns *builtIns) {
+void run(ByteCodeArray B, BuiltIns *builtIns) {
     inject(B, builtIns);
     step();
-    return state.V;
 }
 
 static inline int readCurrentByte(void) {
@@ -441,7 +431,6 @@ static void applyProc(int naargs) {
             break;
         case VALUE_TYPE_KONT:{
                 if (callable.val.kont == NULL) {
-                    state.V = pop();
                     state.C = END_CONTROL;
                 } else {
                     Value result = pop();

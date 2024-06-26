@@ -33,12 +33,6 @@
 #  include "debugging_off.h"
 #endif
 
-void initByteCodeArray(ByteCodeArray *b) {
-    b->size = 0;
-    b->capacity = 0;
-    b->entries = NULL;
-}
-
 void resetByteCodeArray(ByteCodeArray *b) {
     b->size = 0;
     for (size_t i = 0; i < b->capacity; i++) {

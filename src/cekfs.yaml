@@ -27,7 +27,7 @@ config:
 description: The structures of the CEKFs machine
 
 structs:
-    CekfsState:
+    CEKF:
         C: control
         E: Env
         K: Kont
@@ -83,13 +83,12 @@ inline:
         Stack:
             entries: Value
 
+        ByteCodeArray:
+            entries: byte
+
 vectors:
     Vec:
         entries: Value
-
-arrays:
-    ByteCodeArray:
-        entries: byte
 
 enums:
     ByteCodes:

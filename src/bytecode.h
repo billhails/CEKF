@@ -25,7 +25,6 @@
 
 char *charRep(Character c);
 
-void initByteCodeArray(ByteCodeArray *b);
 void resetByteCodeArray(ByteCodeArray *b);
 
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
