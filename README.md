@@ -63,7 +63,7 @@ the failure continuation is just an additional register, nothing else
 in the CEK machine needs to change, apart from two additional cases in
 the $step$ function: one to deal with `amb` and one to deal with `back`.
 
-## Progress
+## Progress/Architecture
 
 ```mermaid
 flowchart TD
