@@ -40,7 +40,7 @@
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool allow_unsafe, ParserInfo I);
+                        bool *unsafe);
 
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                      TpmcState *errorState, TpmcStateArray *knownStates,
@@ -48,7 +48,18 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
 #ifdef DEBUG_TPMC_MATCH
     // system("clear");
 #endif
-    return match(matrix, finalStates, errorState, knownStates, allow_unsafe, I);
+    bool unsafe = false;
+    TpmcState *result = match(matrix, finalStates, errorState, knownStates, &unsafe);
+    if (unsafe) {
+        if (!allow_unsafe) {
+            can_happen("unsafe function must be declared unsafe at %s line %d", I.filename, I.lineno);
+        }
+    } else {
+        if (allow_unsafe) {
+            can_happen("safe function declared unsafe at %s line %d", I.filename, I.lineno);
+        }
+    }
+    return result;
 }
 
 TpmcState *tpmcMakeState(TpmcStateValue *val) {
@@ -659,7 +670,7 @@ static TpmcIntArray *findWcIndices(TpmcPatternArray *N) {
 
 static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcState *errorState, TpmcStateArray *knownStates,
-                          bool allow_unsafe, ParserInfo I) {
+                          bool *unsafe) {
     ENTER(mixture);
     // there is some column N whose topmost pattern is a constructor
     int firstConstructorColumn = findFirstConstructorColumn(M);
@@ -706,7 +717,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcPattern *cPrime = replacePatternComponentsWithWildcards(c);
             PROTECT(cPrime);
             // and state is the result of recursively applying match to the new matrix and the new sequence of final states
-            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, allow_unsafe, I);
+            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, unsafe);
             PROTECT(newState);
             TpmcArc *arc = makeTpmcArc(cPrime, newState);
             PROTECT(arc);
@@ -733,7 +744,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcStateArray *wcFinalStates = extractStateArraySubset(wcIndices, finalStates);
             PROTECT(wcFinalStates);
             // and the state is the result of applying match to the new matrix and states
-            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, allow_unsafe, I);
+            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, unsafe);
             PROTECT(wcState);
             TpmcPattern *wcPattern = makeNamedWildcardPattern(N->entries[0]->path);
             PROTECT(wcPattern);
@@ -742,9 +753,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             pushTpmcArcArray(testState->state->val.test->arcs, wcArc);
         } else {
             validateLastAlloc();
-            if (!allow_unsafe) {
-                can_happen("unsafe function must be declared unsafe at %s line %d", I.filename, I.lineno);
-            }
+            *unsafe = true;
             // Otherwise, the error state is used after its reference count has been incremented
             TpmcPattern *errorPattern = makeNamedWildcardPattern(N->entries[0]->path);
             PROTECT(errorPattern);
@@ -761,7 +770,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool allow_unsafe, ParserInfo I) {
+                        bool *unsafe) {
     ENTER(match);
     // IFDEBUG(ppTpmcMatrix(matrix));
     // IFDEBUG(ppTpmcStateArray(finalStates));
@@ -772,7 +781,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     if (topRowOnlyVariables(matrix)) {
         res = finalStates->entries[0];
     } else {
-        res = mixture(matrix, finalStates, errorState, knownStates, allow_unsafe, I);
+        res = mixture(matrix, finalStates, errorState, knownStates, unsafe);
     }
     IFDEBUG(ppTpmcState(res));
     LEAVE(match);

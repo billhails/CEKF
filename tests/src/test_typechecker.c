@@ -170,7 +170,7 @@ static void test_adder() {
 
 static void test_fact() {
     printf("test_fact\n");
-    AstProg *result = parseSolo("let unsafe fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
+    AstProg *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
