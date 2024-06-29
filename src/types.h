@@ -23,6 +23,7 @@
 
 #  include <stdint.h>
 #  include <stddef.h>
+#  include <wchar.h>
 
 /*
  * on my machine:

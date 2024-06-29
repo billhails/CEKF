@@ -31,7 +31,6 @@ More of a wish-list than a hard and fast plan.
    * Combining characters need special handling.
 * Much better error reporting.
 * Error recovery.
-* Fail on non-exhaustive pattern match (optional).
 * User definable operators.
    * With precedence and associativity.
    * `infix 55 left >>= fn(l, r) { ... }`
@@ -42,4 +41,3 @@ More of a wish-list than a hard and fast plan.
    * `alias some = maybe.some;`
    * `alias string = list(char);`
 * (internal) have a NEWZ variant of NEW that bzero's its result.
-* (internal) replace the CEKF support code with generated code.

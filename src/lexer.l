@@ -12,7 +12,19 @@ void parseCS(char *text, char delimeter);
 %option noyywrap
 %option extra-type="struct PmModule *"
 
-ID [a-zA-Z_][a-zA-Z_0-9]*
+/* 0xD800 - 0xDFFF, 0xFFFE - 0xFFFF */
+UNICODE_INVALID (\xED[\xA0-\xBF][\x80-\xBF])|(\xEF\xBF[\xBE-\xBF])
+/* 0x80 - 0x9F */
+UNICODE_C1 \xC2[\x80-\x9F]
+/* 0x00A0 - 0xD7FF, 0xE000 - 0xFFFD */
+UNICODE (\xC2[\xA0-\xBF]|[\xC3-\xDF][\x80-\xBF]|(\xE0[\xA0-\xBF]|\xED[\x80-\x9F]|[\xE1-\xEC][\x80-\xBF])[\x80-\xBF])|(\xEF\xBF[\x80-\xBD]|(\xEF[\x80-\xBE]|\xEE[\x80-\xBF])[\x80-\xBF])
+
+ALPHA [a-zA-Z_]
+ALNUM [a-zA-Z_0-9]
+
+ID ({ALPHA}|{UNICODE})({ALNUM}|{UNICODE})*
+
+CODEPOINT {UNICODE}|.
 
 %%
 
@@ -21,8 +33,11 @@ struct PmModule *mod = yyextra;
 %}
 
 [ \t]+ {}
+{UNICODE_C1} {}
 [\n] { incLineNo(mod); }
 \/\/.* { }
+
+{UNICODE_INVALID} { cant_happen("invalid unicode character detected"); }
 
 [0-9]*\.[0-9]+ { yylval->s = yytext; return IRRATIONAL; }
 [0-9]*\.[0-9]+i { yylval->s = yytext; return IRRATIONAL_I; }
@@ -54,8 +69,8 @@ struct PmModule *mod = yyextra;
 "assert"        { return ASSERT; }
 "alias"         { return ALIAS; }
 
-\"((\\.)|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
-\'((\\.)|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }
+\"((\\{CODEPOINT})|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
+\'((\\{CODEPOINT})|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }
 
 "->" { return ARROW; }
 "==" { return EQ; }

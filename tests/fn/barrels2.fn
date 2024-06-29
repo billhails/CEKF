@@ -4,9 +4,9 @@ let
 
     fn barrels_of_fun() {
         let
-            barrels = [30, 32, 36, 38, 40, 62];
-            beer = amb.one_of(barrels);
-            wine = list.exclude([beer], barrels);
+            Σ = [30, 32, 36, 38, 40, 62];
+            beer = amb.one_of(Σ);
+            wine = list.exclude([beer], Σ);
             barrel_1 = amb.one_of(wine);
             barrel_2 = amb.one_of(list.exclude([barrel_1], wine));
             purchase = amb.some_of(list.exclude([barrel_1, barrel_2], wine));
