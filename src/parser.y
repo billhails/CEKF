@@ -311,7 +311,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 
 %union {
     char *s;
-    char c;
+    Character c;
     bool b;
     MaybeBigInt *bi;
     AstArg *arg;

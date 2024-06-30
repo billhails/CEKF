@@ -1,6 +1,7 @@
 %{
 #include "parser.h"
 #include "module.h"
+#include "utf8.h"
 
 void parseCS(char *text, char delimeter);
 %}
@@ -88,7 +89,9 @@ struct PmModule *mod = yyextra;
 "alias"         { return ALIAS; }
 
 \"((\\{CODEPOINT})|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }
-\'((\\{CODEPOINT})|[^'])\'  { parseCS(yytext, '\''); yylval->c = *yytext; return CHAR; }
+\'((\\{CODEPOINT})|[^'])\'  { parseCS(yytext, '\''); utf8_to_unicode_char(&yylval->c, yytext); return CHAR; }
+\'({UNICODE_ALL}|[^'])\'    { parseCS(yytext, '\''); utf8_to_unicode_char(&yylval->c, yytext); return CHAR; }
+\'\\u[0-9a-fA-F]+;\'        { parseCS(yytext, '\''); utf8_to_unicode_char(&yylval->c, yytext); return CHAR; }
 
 "->" { return ARROW; }
 "==" { return EQ; }
@@ -127,6 +130,108 @@ void parseCS(char *text, char delimiter) {
                 case 't':
                     *follow = '\t';
                     break;
+                case 'u': {
+                    *lead++;
+                    Character unicode = 0;
+                    bool finished = false;
+                    while (!finished) {
+                        switch (*lead) {
+                            case '0':
+                                unicode <<= 4;
+                                lead++;
+                                break;
+                            case '1':
+                                unicode <<= 4;
+                                unicode |= 0x01;
+                                lead++;
+                                break;
+                            case '2':
+                                unicode <<= 4;
+                                unicode |= 0x02;
+                                lead++;
+                                break;
+                            case '3':
+                                unicode <<= 4;
+                                unicode |= 0x03;
+                                lead++;
+                                break;
+                            case '4':
+                                unicode <<= 4;
+                                unicode |= 0x04;
+                                lead++;
+                                break;
+                            case '5':
+                                unicode <<= 4;
+                                unicode |= 0x05;
+                                lead++;
+                                break;
+                            case '6':
+                                unicode <<= 4;
+                                unicode |= 0x06;
+                                lead++;
+                                break;
+                            case '7':
+                                unicode <<= 4;
+                                unicode |= 0x07;
+                                lead++;
+                                break;
+                            case '8':
+                                unicode <<= 4;
+                                unicode |= 0x08;
+                                lead++;
+                                break;
+                            case '9':
+                                unicode <<= 4;
+                                unicode |= 0x09;
+                                lead++;
+                                break;
+                            case 'a':
+                            case 'A':
+                                unicode <<= 4;
+                                unicode |= 0x0A;
+                                lead++;
+                                break;
+                            case 'b':
+                            case 'B':
+                                unicode <<= 4;
+                                unicode |= 0x0B;
+                                lead++;
+                                break;
+                            case 'c':
+                            case 'C':
+                                unicode <<= 4;
+                                unicode |= 0x0C;
+                                lead++;
+                                break;
+                            case 'd':
+                            case 'D':
+                                unicode <<= 4;
+                                unicode |= 0x0D;
+                                lead++;
+                                break;
+                            case 'e':
+                            case 'E':
+                                unicode <<= 4;
+                                unicode |= 0x0E;
+                                lead++;
+                                break;
+                            case 'f':
+                            case 'F':
+                                unicode <<= 4;
+                                unicode |= 0x0F;
+                                lead++;
+                                break;
+                            case ';':
+                                finished = true;
+                                break;
+                            default:
+                                cant_happen("error parsing unicode escape");
+                        }
+                    }
+                    follow = writeChar(follow, unicode);
+                    follow--;
+                }
+                break;
                 default:
                     *follow = *lead;
             }
