@@ -1,4 +1,8 @@
 fnd () {
+    grep -Irwn $1 src
+}
+
+fnd_all () {
     grep -Irwn $1 src generated tests
 }
 

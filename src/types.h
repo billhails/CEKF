@@ -23,6 +23,7 @@
 
 #  include <stdint.h>
 #  include <stddef.h>
+#  include <wchar.h>
 
 /*
  * on my machine:
@@ -40,8 +41,14 @@
  * size_t: 64
  */
 
+// #define CHARACTER_IS_CHAR
+
 typedef uint8_t Byte;
+#ifdef CHARACTER_IS_CHAR
 typedef char Character;
+#else
+typedef wchar_t Character;
+#endif
 typedef unsigned short int Word;
 typedef int Integer;
 typedef unsigned int Index;

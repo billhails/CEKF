@@ -23,6 +23,7 @@
 #include "lexer.h"
 #include "types.h"
 #include "print_generator.h"
+#include "utf8.h"
 
 AstStringArray *include_paths = NULL;
 
@@ -154,8 +155,14 @@ static MaybeBigInt *makeMaybeBigInt(char *digits, bool imag) {
 
 static AstCharArray *appendCharArray(AstCharArray *res, char *str) {
     while (*str) {
+#ifdef CHARACTER_IS_CHAR
         pushAstCharArray(res, *str);
         str++;
+#else
+        Character unicode;
+        str = utf8_to_unicode_char(&unicode, str);
+        pushAstCharArray(res, unicode);
+#endif
     }
     return res;
 }
@@ -304,7 +311,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 
 %union {
     char *s;
-    char c;
+    Character c;
     bool b;
     MaybeBigInt *bi;
     AstArg *arg;

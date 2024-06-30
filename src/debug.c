@@ -265,7 +265,7 @@ void dumpByteCode(ByteCodeArray *bca) {
             }
             break;
             case BYTECODES_TYPE_CHAR:{
-                    char c = readByte(bca, &i);
+                    Character c = readCharacter(bca, &i);
                     eprintf("CHAR [%s]\n", charRep(c));
                 }
                 break;
