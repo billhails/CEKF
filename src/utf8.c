@@ -17,23 +17,27 @@
  */
 
 #include "common.h"
-#include "unicode.h"
+#include "utf8.h"
 
 #define ONE_BYTE_MASK         0b10000000
 #define ONE_BYTE_FLAG         0b00000000
 #define ONE_BYTE_PAYLOAD      (~ONE_BYTE_MASK)
 
+#define TWO_BYTE_START        0x80
 #define TWO_BYTE_MASK         0b11100000
 #define TWO_BYTE_FLAG         0b11000000
 #define TWO_BYTE_PAYLOAD      (~TWO_BYTE_MASK)
 
+#define THREE_BYTE_START      0x800
 #define THREE_BYTE_MASK       0b11110000
 #define THREE_BYTE_FLAG       0b11100000
 #define THREE_BYTE_PAYLOAD    (~THREE_BYTE_MASK)
 
+#define FOUR_BYTE_START       0x10000
 #define FOUR_BYTE_MASK        0b11111000
 #define FOUR_BYTE_FLAG        0b11110000
 #define FOUR_BYTE_PAYLOAD     (~FOUR_BYTE_MASK)
+#define FOUR_BYTE_END         0x10FFFF
 
 #define TRAILING_BYTE_MASK    0b11000000
 #define TRAILING_BYTE_FLAG    0b10000000
@@ -56,7 +60,7 @@ typedef enum ParseState {
 
 // validates and returns the number of characters in the utf8 encoded string
 // returns -1 if the string is invalid
-int utf8_len(char *string) {
+int utf8_len(unsigned char *string) {
     int len = 0;
 
     ParseState state = START;
@@ -106,7 +110,7 @@ int utf8_len(char *string) {
 // assumes the string has been validated.
 // assumes the string has at least one character in it.
 // returns the char * pointer to the next UTF-8 character.
-char *utf8_to_unicode_char(wchar_t *dest, char *src) {
+unsigned char *utf8_to_unicode_char(wchar_t *dest, unsigned char *src) {
     ParseState state = START;
     do {
         switch (state) {
@@ -153,8 +157,8 @@ char *utf8_to_unicode_char(wchar_t *dest, char *src) {
 // translates a utf8-encoded string to a wchar_t array.
 // assumes the string has been validated.
 // assumes the target array is big enough.
-// appends a trailing nuul wchar_t.
-void utf8_to_unicode_string(wchar_t *dest, char *src) {
+// appends a trailing NULL wchar_t.
+void utf8_to_unicode_string(wchar_t *dest, unsigned char *src) {
     while (*src) {
         src = utf8_to_unicode_char(dest, src);
         ++dest;
@@ -165,16 +169,17 @@ void utf8_to_unicode_string(wchar_t *dest, char *src) {
 // returns the number of bytes required to convert the unicode wchar_t
 // to UTF-8, not including the trailing NULL
 int byteSize(wchar_t c) {
-    if (c < 0x80) return 1;
-    if (c < 0x800) return 2;
-    if (c < 0x10000) return 3;
-    return 4;
+    if (c < TWO_BYTE_START) return 1;
+    if (c < THREE_BYTE_START) return 2;
+    if (c < FOUR_BYTE_START) return 3;
+    if (c <= FOUR_BYTE_END) return 4;
+    cant_happen("maximum unicode character exceeded: %x", c);
 }
 
 // returns the number of bytes required to convert the unicode wchar_t
-// array to UTF-8, including the trailing NULL
+// array to UTF-8, not including the trailing NULL
 int stringSize(wchar_t *s) {
-    int size = 1; // include trailing NULL
+    int size = 0;
     while (*s) {
         size += byteSize(*s);
         s++;
@@ -185,10 +190,10 @@ int stringSize(wchar_t *s) {
 // writes the wchar_t to the string, returns the pointer
 // past the end of the char written, assumes there is enough space in
 // the string, does *not* append a trailing NULL
-char *writeChar(char *dest, wchar_t character) {
+unsigned char *writeChar(unsigned char *dest, wchar_t character) {
     switch (byteSize(character)) {
         case 1:
-            *dest++ = (char) character;
+            *dest++ = (unsigned char) character;
             break;
         case 2:
             *dest++ = (character >> TRAILING_BYTE_SIZE) | TWO_BYTE_FLAG;

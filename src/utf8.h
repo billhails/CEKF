@@ -1,5 +1,5 @@
-#ifndef cekf_unicode_h
-#  define cekf_unicode_h
+#ifndef cekf_utf8_h
+#  define cekf_utf8_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
@@ -20,12 +20,12 @@
 
 #include <stdlib.h>
 
-int utf8_len(char *string);
-char *utf8_to_unicode_char(wchar_t *dest, char *src);
-void utf8_to_unicode_string(wchar_t *dest, char *src);
+int utf8_len(unsigned char *string);
+unsigned char *utf8_to_unicode_char(wchar_t *dest, unsigned char *src);
+void utf8_to_unicode_string(wchar_t *dest, unsigned char *src);
 int byteSize(wchar_t c);
 int stringSize(wchar_t *s);
-char *writeChar(char *dest, wchar_t character);
+unsigned char *writeChar(unsigned char *dest, wchar_t character);
 
 
 #endif

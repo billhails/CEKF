@@ -12,19 +12,37 @@ void parseCS(char *text, char delimeter);
 %option noyywrap
 %option extra-type="struct PmModule *"
 
-/* 0xD800 - 0xDFFF, 0xFFFE - 0xFFFF */
-UNICODE_INVALID (\xED[\xA0-\xBF][\x80-\xBF])|(\xEF\xBF[\xBE-\xBF])
-/* 0x80 - 0x9F */
-UNICODE_C1 \xC2[\x80-\x9F]
-/* 0x00A0 - 0xD7FF, 0xE000 - 0xFFFD */
-UNICODE (\xC2[\xA0-\xBF]|[\xC3-\xDF][\x80-\xBF]|(\xE0[\xA0-\xBF]|\xED[\x80-\x9F]|[\xE1-\xEC][\x80-\xBF])[\x80-\xBF])|(\xEF\xBF[\x80-\xBD]|(\xEF[\x80-\xBE]|\xEE[\x80-\xBF])[\x80-\xBF])
+/* 0x80 - 0x9F Control characters */
+UNICODE_CONTROL \xC2[\x80-\x9F]
+
+/* 0xA0 - 0xD7FF Normal characters */
+UNICODE_CHARACTERS_1 \xC2[\xA0-\xBF]|[\xC3-\xDF][\x80-\xBF]|(\xE0[\xA0-\xBF]|\xED[\x80-\x9F]|[\xE1-\xEC][\x80-\xBF])[\x80-\xBF]
+
+/* 0xD800 - 0xDFFF Reserved */
+UNICODE_RESERVED_1 \xED[\xA0-\xBF][\x80-\xBF]
+
+/* 0xE000 - 0xFFFD Normal Characters */
+UNICODE_CHARACTERS_2 \xEF\xBF[\x80-\xBD]|(\xEF[\x80-\xBE]|\xEE[\x80-\xBF])[\x80-\xBF]
+
+/* 0xFFFE 0xFFFF Reserved */
+UNICODE_RESERVED_2 \xEF\xBF[\xBE-\xBF]
+
+/* 0x1000 - 0x10FFFF Normal Characters */
+UNICODE_CHARACTERS_3 (\xF0[\x90-\xBF]|\xF4[\x80-\x8F]|[\xF1-\xF3][\x80-\xBF])[\x80-\xBF][\x80-\xBF]
+
+/* 0x80 - 0x10FFFF All high-bit Unicode */
+UNICODE_ALL [\xC2-\xDF][\x80-\xBF]|(\xE0[\xA0-\xBF]|[\xE1-\xEF][\x80-\xBF])[\x80-\xBF]|(\xF0[\x90-\xBF]|\xF4[\x80-\x8F]|[\xF1-\xF3][\x80-\xBF])[\x80-\xBF][\x80-\xBF]
+
+UNICODE_RESERVED {UNICODE_RESERVED_1}|{UNICODE_RESERVED_2}
+
+UNICODE_CHARACTERS {UNICODE_CHARACTERS_1}|{UNICODE_CHARACTERS_2}|{UNICODE_CHARACTERS_3}
 
 ALPHA [a-zA-Z_]
 ALNUM [a-zA-Z_0-9]
 
-ID ({ALPHA}|{UNICODE})({ALNUM}|{UNICODE})*
+ID ({ALPHA}|{UNICODE_CHARACTERS})({ALNUM}|{UNICODE_CHARACTERS})*
 
-CODEPOINT {UNICODE}|.
+CODEPOINT {UNICODE_ALL}|.
 
 %%
 
@@ -33,11 +51,11 @@ struct PmModule *mod = yyextra;
 %}
 
 [ \t]+ {}
-{UNICODE_C1} {}
+{UNICODE_CONTROL} {}
 [\n] { incLineNo(mod); }
 \/\/.* { }
 
-{UNICODE_INVALID} { cant_happen("invalid unicode character detected"); }
+{UNICODE_RESERVED} { cant_happen("invalid unicode character detected"); }
 
 [0-9]*\.[0-9]+ { yylval->s = yytext; return IRRATIONAL; }
 [0-9]*\.[0-9]+i { yylval->s = yytext; return IRRATIONAL_I; }
