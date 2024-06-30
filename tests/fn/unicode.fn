@@ -1,0 +1,4 @@
+let
+    link "listutils.fn" as list;
+in
+    assert(list.length("abcαβγ") == 6)

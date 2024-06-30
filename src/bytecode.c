@@ -26,6 +26,7 @@
 #include "bytecode.h"
 #include "debug.h"
 #include "common.h"
+#include "utf8.h"
 
 #ifdef DEBUG_BYTECODE
 #  include "debugging_on.h"
@@ -68,9 +69,14 @@ char *charRep(Character c) {
         case '\0':
             return "\\0";
         default: {
-            static char buf[8];
+            static unsigned char buf[8];
+#ifdef CHARACTER_IS_CHAR
             sprintf(buf, "%c", c);
-            return buf;
+#else
+            unsigned char *ptr = writeChar(buf, c);
+            *ptr = 0;
+#endif
+            return (char *) buf;
         }
     }
 }
@@ -78,7 +84,8 @@ char *charRep(Character c) {
 static void addCharacter(ByteCodeArray *b, Character code) {
     DEBUG("%04lx addCharacter %02x", b->size, code);
     reserve(b, sizeof(Character));
-    b->entries[b->size++] = code;
+    memcpy(&b->entries[b->size], &code, sizeof(Character));
+    b->size += sizeof(Character);
 }
 
 static void addByte(ByteCodeArray *b, int code) {

@@ -33,6 +33,7 @@
 #include "arithmetic.h"
 #include "builtins_impl.h"
 #include "builtins_debug.h"
+#include "utf8.h"
 
 int dump_bytecode_flag = 0;
 
@@ -49,6 +50,7 @@ int dump_bytecode_flag = 0;
 static void step();
 static Value lookup(int frame, int offset);
 void putValue(Value x);
+void putCharacter(Character x);
 
 static CEKF state;
 
@@ -539,7 +541,11 @@ static void step() {
                     // peek value, print it
                     DEBUGPRINTF("PUTC\n");
                     Value b = tos();
+#ifdef CHAR_IS_CHARACTER
                     putchar(b.val.character);
+#else
+                    putCharacter(b.val.character);
+#endif
                 }
                 break;
 
@@ -1255,6 +1261,13 @@ static void step() {
 
 static void putVec(Vec *x);
 
+void putCharacter(Character c) {
+    unsigned char buf[8];
+    unsigned char *ptr = writeChar(buf, c);
+    *ptr = 0;
+    printf("%s", buf);
+}
+
 void putValue(Value x) {
     switch (x.type) {
         case VALUE_TYPE_NONE:
@@ -1305,17 +1318,7 @@ void putValue(Value x) {
             printf(")");
             break;
         case VALUE_TYPE_CHARACTER:
-            switch (x.val.character) {
-                case '\t':
-                    printf("'\\t'");
-                    break;
-                case '\n':
-                    printf("'\\n'");
-                    break;
-                default:
-                    printf("'%c'", x.val.character);
-                    break;
-            }
+            printf("%s", charRep(x.val.character));
             break;
         case VALUE_TYPE_CLO:
             printf("<closure>");

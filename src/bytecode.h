@@ -53,7 +53,10 @@ static inline Byte readByte(ByteCodeArray *b, Control *i) {
 }
 
 static inline Character readCharacter(ByteCodeArray *b, Control *i) {
-    return b->entries[(*i)++];
+    Character c;
+    memcpy(&c, &b->entries[*i], sizeof(Character));
+    (*i) += sizeof(Character);
+    return c;
 }
 
 static inline void _readWord(ByteCodeArray *b, Control *i, Word *a) {

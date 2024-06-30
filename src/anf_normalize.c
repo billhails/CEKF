@@ -41,7 +41,7 @@ static Exp *normalizeNamespaces(LamNamespaceArray *nsArray, Exp *tail);
 static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
-static Exp *normalizeCharacter(char character, Exp *tail);
+static Exp *normalizeCharacter(Character character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAnd(LamAnd *app, Exp *tail);
 static Exp *normalizeOr(LamOr *app, Exp *tail);
@@ -60,7 +60,7 @@ static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
 static Aexp *aexpNormalizeMaybeBigInteger(MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(int integer);
-static Aexp *aexpNormalizeCharacter(char character);
+static Aexp *aexpNormalizeCharacter(Character character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpNamespaceArray *aexpNormalizeNamespaces(LamNamespaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
@@ -648,7 +648,7 @@ static Exp *normalizeVar(HashSymbol *var, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeCharacter(char character, Exp *tail) {
+static Exp *normalizeCharacter(Character character, Exp *tail) {
     ENTER(normalizeCharacter);
     if (tail != NULL) {
         LEAVE(normalizeCharacter);
@@ -871,7 +871,7 @@ static Aexp *aexpNormalizeStdInteger(int integer) {
     return newAexp_Littleinteger(integer);
 }
 
-static Aexp *aexpNormalizeCharacter(char character) {
+static Aexp *aexpNormalizeCharacter(Character character) {
     return newAexp_Character(character);
 }
 
