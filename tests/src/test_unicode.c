@@ -19,21 +19,22 @@
 #include "test.h"
 #include "utf8.h"
 
+#define TEST(c, s) do { \
+    printf("%X %d\n", c, s); \
+    character = c; \
+    assert(byteSize(character) == s); \
+    char *ptr = writeChar(bytes, character); \
+    *ptr = 0; \
+    assert(strlen(bytes) == s); \
+    assert(decodedLength(bytes) == 1); \
+    character = 0; \
+    utf8_to_unicode_char(&character, bytes); \
+    assert(character == c); \
+} while(0);
+
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     unsigned char bytes[128];
     wchar_t character;
-#define TEST(c, s) do { \
-        printf("%x %d\n", c, s); \
-        character = c; \
-        assert(byteSize(character) == s); \
-        char *ptr = writeChar(bytes, character); \
-        *ptr = 0; \
-        assert(strlen(bytes) == s); \
-        assert(utf8_len(bytes) == 1); \
-        character = 0; \
-        utf8_to_unicode_char(&character, bytes); \
-        assert(character == c); \
-    } while(0);
     TEST(0x1, 1);
     TEST(0x7f, 1);
     TEST(0x80, 2);

@@ -90,6 +90,10 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     return res;
 }
 
+static LamExp *compilePrinterForOpaque(ParserInfo I) {
+    return makeSymbolExpr(I, "print$opaque");
+}
+
 static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
     ENTER(compilePrinter);
     LamExp *res = NULL;
@@ -109,6 +113,9 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
             break;
         case TCTYPE_TYPE_CHARACTER:
             res = compilePrinterForChar(I);
+            break;
+        case TCTYPE_TYPE_OPAQUE:
+            res = compilePrinterForOpaque(I);
             break;
         case TCTYPE_TYPE_USERTYPE:
             res = compilePrinterForUserType(I, type->val.userType, env);

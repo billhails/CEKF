@@ -50,6 +50,12 @@ file_id:
     markFn: markAgnosticFileId
     valued: true
 
+opaque:
+    cname: "struct Opaque *"
+    printFn: printOpaque
+    markFn: markOpaque
+    valued: true
+
 void_ptr:
     cname: "void *"
     printf: "%p"

@@ -3392,41 +3392,27 @@ def pad(depth):
 
 def printGpl(file, document):
     now = datetime.datetime.now()
-    print(f"""/*
- * CEKF - VM supporting amb
- * Copyright (C) 2022-{now.year}  Bill Hails
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *""")
+    print('/*')
+    with open('docs/gpl') as gpl:
+        line = gpl.readline()
+        while line:
+            print(' * ', end='')
+            print(line, end='')
+            line = gpl.readline()
+    print(" *")
     if 'description' in document:
-        print(f" * {document['description']}\n *")
-
+        print(f" * {document['description']}")
     print(f" * Generated from {file} by tools/makeAST.py")
     print(" */")
 
 class Loader(yaml.SafeLoader):
 
     def __init__(self, stream):
-
         self._root = os.path.split(stream.name)[0]
-
         super(Loader, self).__init__(stream)
 
     def include(self, node):
-
         filename = os.path.join(self._root, self.construct_scalar(node))
-
         with open(filename, 'r') as f:
             return yaml.load(f, Loader)
 

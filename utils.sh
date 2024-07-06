@@ -18,6 +18,12 @@ cores_off () {
     ulimit -c 0
 }
 
+echo_gpl () {
+    echo '/*'
+    cat docs/gpl | sed -e 's/^/ * /'
+    echo ' */'
+}
+
 watch_make () {
     inotifywait -q -e close_write -m ./src |
     while read -r directory events filename; do
@@ -35,7 +41,7 @@ new_h () {
         define="cekf_${1}_h"
         echo "#ifndef $define" > $file
         echo "#  define $define" >> $file
-        cat docs/gpl.c >> $file
+        echo_gpl >> $file
         echo "" >> $file
         echo "#endif" >> $file
     fi
@@ -46,7 +52,7 @@ new_c () {
     if [ -e $file ] ; then
         echo $file already exists
     else
-        cat docs/gpl.c > $file
+        echo_gpl > $file
         echo "" >> $file
     fi
 }

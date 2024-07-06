@@ -33,6 +33,7 @@
 #include "arithmetic.h"
 #include "builtins_impl.h"
 #include "builtins_debug.h"
+#include "memory.h"
 #include "utf8.h"
 
 int dump_bytecode_flag = 0;
@@ -135,6 +136,11 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
 void run(ByteCodeArray B, BuiltIns *builtIns) {
     inject(B, builtIns);
     step();
+    state.E = NULL;
+    state.K = NULL;
+    state.F = NULL;
+    state.S.size = 0;
+    collectGarbage();
 }
 
 static inline int readCurrentByte(void) {

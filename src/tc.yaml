@@ -84,6 +84,7 @@ unions:
         biginteger: void_ptr
         character: void_ptr
         unknown: HashSymbol
+        opaque: HashSymbol
         userType: TcUserType
         tuple: TcTypeArray
         namespaces: TcNamespaceArray

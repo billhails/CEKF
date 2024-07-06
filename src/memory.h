@@ -34,7 +34,8 @@ struct Header;
 
 typedef enum {
 
-    // cekf types
+    // opaque type
+    OBJTYPE_OPAQUE,
 
     // hash table types
     OBJTYPE_HASHTABLE,
@@ -78,6 +79,7 @@ bool disableGC(void);
 void initProtection(void);
 void validateLastAlloc(void);
 void reportMemory(void);
+void collectGarbage();
 
 #  define EXIT_OOM 2
 

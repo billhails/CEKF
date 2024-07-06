@@ -42,9 +42,11 @@ Value --kont--> Kont
 Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
 Value --namespace--> Vec
+Value --opaque--> opaque
 Stack["Stack[]"] --entries--> Value
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 ByteCodes["enum ByteCodes"]
+CharArray["CharArray[]"] --entries--> char
 ValueVal
 ValueType
 ```

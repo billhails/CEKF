@@ -5,13 +5,12 @@ Support for declaring builtins
 ```mermaid
 flowchart TD
 BuiltIn --name--> HashSymbol
-BuiltIn --result--> BuiltInArgType
+BuiltIn --result--> TcType
 BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr
 BuiltInImplementation --implementation--> void_ptr
 BuiltInImplementation --nargs--> int
-BuiltInArgType["enum BuiltInArgType"]
-BuiltInArgs["BuiltInArgs[]"] --entries--> BuiltInArgType
+BuiltInArgs["BuiltInArgs[]"] --entries--> TcType
 BuiltIns["BuiltIns[]"] --entries--> BuiltIn
 ```
 

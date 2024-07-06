@@ -18,6 +18,8 @@
 
 #include "common.h"
 #include "utf8.h"
+#include "cekfs.h"
+#include "cekf.h"
 
 #define ONE_BYTE_MASK         0b10000000
 #define ONE_BYTE_FLAG         0b00000000
@@ -60,7 +62,7 @@ typedef enum ParseState {
 
 // validates and returns the number of characters in the utf8 encoded string
 // returns -1 if the string is invalid
-int utf8_len(unsigned char *string) {
+int decodedLength(unsigned char *string) {
     int len = 0;
 
     ParseState state = START;
@@ -178,7 +180,7 @@ int byteSize(wchar_t c) {
 
 // returns the number of bytes required to convert the unicode wchar_t
 // array to UTF-8, not including the trailing NULL
-int stringSize(wchar_t *s) {
+int encodedLength(wchar_t *s) {
     int size = 0;
     while (*s) {
         size += byteSize(*s);
@@ -190,28 +192,74 @@ int stringSize(wchar_t *s) {
 // writes the wchar_t to the string, returns the pointer
 // past the end of the char written, assumes there is enough space in
 // the string, does *not* append a trailing NULL
-unsigned char *writeChar(unsigned char *dest, wchar_t character) {
-    switch (byteSize(character)) {
+unsigned char *writeChar(unsigned char *utf8, wchar_t unicode) {
+    switch (byteSize(unicode)) {
         case 1:
-            *dest++ = (unsigned char) character;
+            *utf8++ = (unsigned char) unicode;
             break;
         case 2:
-            *dest++ = (character >> TRAILING_BYTE_SIZE) | TWO_BYTE_FLAG;
-            *dest++ = (character & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> TRAILING_BYTE_SIZE) | TWO_BYTE_FLAG;
+            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
             break;
         case 3:
-            *dest++ = (character >> (TRAILING_BYTE_SIZE * 2)) | THREE_BYTE_FLAG;
-            *dest++ = ((character >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *dest++ = (character & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> (TRAILING_BYTE_SIZE * 2)) | THREE_BYTE_FLAG;
+            *utf8++ = ((unicode >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
             break;
         case 4:
-            *dest++ = (character >> (TRAILING_BYTE_SIZE * 3)) | FOUR_BYTE_FLAG;
-            *dest++ = ((character >> (TRAILING_BYTE_SIZE * 2)) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *dest++ = ((character >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *dest++ = (character & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> (TRAILING_BYTE_SIZE * 3)) | FOUR_BYTE_FLAG;
+            *utf8++ = ((unicode >> (TRAILING_BYTE_SIZE * 2)) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = ((unicode >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
             break;
         default:
             cant_happen("invalid byteSize");
     }
-    return dest;
+    return utf8;
+}
+
+// converts the wchar_t array to a utf8 string
+// expects the wchar_t array to have a trailing null wchar_t
+// assumes there is enough space in dest
+// appends a trailing null byte.
+void unicode_to_utf8_string(unsigned char *dest, wchar_t *src) {
+    while (*src) {
+        dest = writeChar(dest, *src);
+        src++;
+    }
+    *dest = '\0';
+}
+
+// converts a list of char to a utf8 string.
+char *listToUtf8(Value v) {
+#ifdef SAFETY_CHECKS
+    if (v.type != VALUE_TYPE_VEC) {
+        cant_happen("unexpected %s", valueTypeName(v.type));
+    }
+#endif
+    CharArray *unicode = listToCharArray(v);
+    int save = PROTECT(unicode);
+    int size = encodedLength(unicode->entries);
+    unsigned char *buf = NEW_ARRAY(unsigned char, size + 1);
+    unicode_to_utf8_string(buf, unicode->entries);
+    UNPROTECT(save);
+    return (char *)buf;
+}
+
+// converts a utf8 string to a list of char (Value)
+// returns the empty list if the string is invalid
+Value utf8ToList(char *utf8) {
+    int size = decodedLength((unsigned char *)utf8);
+    CharArray *unicode = newCharArray();
+    int save = PROTECT(unicode);
+    if (size == -1) {
+        pushCharArray(unicode, (Character) 0);
+    } else {
+        extendCharArray(unicode, (Index)(size + 1));
+        utf8_to_unicode_string(unicode->entries, (unsigned char *)utf8);
+        unicode->size = (Index)(size + 1);
+    }
+    Value v = charArrayToList(unicode);
+    UNPROTECT(save);
+    return v;
 }

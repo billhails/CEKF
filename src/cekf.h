@@ -59,4 +59,7 @@ void markEnv(Env *x);
 void markVec(Vec *x);
 void dumpStack(Stack *stack);
 
+CharArray *listToCharArray(Value list);
+Value charArrayToList(CharArray *c);
+
 #endif

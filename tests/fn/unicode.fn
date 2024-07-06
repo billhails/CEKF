@@ -1,7 +1,9 @@
 let
     link "listutils.fn" as list;
+    Σ = "abc\u03b1;\u03b2;\u03b3;";
+    Ψ = "abcαβγ";
 in
-    assert(list.length("abc\u03b1;\u03b2;\u03b3;") == 6);
-    assert(list.length("abcαβγ") == 6);
-    assert("abc\u03b1;\u03b2;\u03b3;" == "abcαβγ");
+    assert(list.length(Σ) == 6);
+    assert(list.length(Ψ) == 6);
+    assert(Σ == Ψ);
     assert('\u03b1;' == 'α');

@@ -97,6 +97,11 @@ const char *preamble =
     "        f\n"
     "    }\n"
 
+    "    fn print_opaque(f) {\n"
+    "        puts(\"<opaque>\");\n"
+    "        f\n"
+    "    }\n"
+
     "    fn print_int(n) {\n"
     "        putn(n);\n"
     "        n\n"

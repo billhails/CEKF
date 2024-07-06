@@ -19,6 +19,8 @@ endif
 PYTHON=python3
 MAKE_AST=$(PYTHON) ./tools/makeAST.py
 
+LIBS=-lm -lsqlite3
+
 EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
 EXTRA_H_TARGETS=$(patsubst src/%.yaml,generated/%.h,$(EXTRA_YAML))
@@ -69,7 +71,7 @@ TMP_C=generated/parser.c generated/lexer.c
 all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
-	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) -lm
+	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
 
@@ -153,7 +155,7 @@ test: $(TEST_TARGETS) $(TARGET)
 	for t in tests/fn/*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
-	$(CC) -o $@ $< $(ALL_OBJ) -lm
+	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
 dep obj generated docs/generated:
 	mkdir $@

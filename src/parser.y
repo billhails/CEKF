@@ -167,7 +167,7 @@ static AstCharArray *appendCharArray(AstCharArray *res, char *str) {
     return res;
 }
 
-static AstCharArray *newCharArray(char *str) {
+static AstCharArray *makeCharArray(char *str) {
     AstCharArray *res = newAstCharArray();
     return appendCharArray(res, str);
 }
@@ -688,7 +688,7 @@ stringarg : str { $$ = makeStringUnpack(mod, $1); }
 string : str { $$ = makeStringList(mod, $1); }
        ;
 
-str : STRING            { $$ = newCharArray($1); }
+str : STRING            { $$ = makeCharArray($1); }
     | str STRING        { $$ = appendCharArray($1, $2); }
     ;
 
