@@ -410,6 +410,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token WILDCARD
 %token LINK
 %token NAMESPACE_TOKEN
+%token NAMESPACE
 %token AS
 %token ASSERT
 %token ALIAS
@@ -459,7 +460,7 @@ nest_body : let_in expression_statements { $$ = newAstNest(PIM(mod), $1, $2); }
 let_in : LET definitions IN { $$ = $2; }
        ;
 
-namespace_definitions : NAMESPACE_TOKEN definitions   { $$ = $2; }
+namespace_definitions : NAMESPACE_TOKEN NAMESPACE definitions   { $$ = $3; }
                       ;
 
 definitions : %empty                            { $$ = NULL; }

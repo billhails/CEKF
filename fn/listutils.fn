@@ -1,3 +1,4 @@
+namespace
 
 // member: #a -> list(#a) -> bool
 fn member {

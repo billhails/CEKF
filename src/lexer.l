@@ -64,6 +64,7 @@ struct PmModule *mod = yyextra;
 [0-9]+i         { yylval->s = yytext; return NUMBER_I; }
 
 "__namespace__" { return NAMESPACE_TOKEN; }
+"namespace"     { return NAMESPACE; }
 "as"            { return AS; }
 "link"          { return LINK; }
 "and"           { return AND; }

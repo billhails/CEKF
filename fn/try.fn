@@ -1,0 +1,2 @@
+namespace
+typedef try(#t) { failure(string) | success(#t) }

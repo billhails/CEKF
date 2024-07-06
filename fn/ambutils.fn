@@ -1,3 +1,5 @@
+namespace
+
 fn require(condition) {
     condition or back
 }

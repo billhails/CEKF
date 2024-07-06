@@ -1,3 +1,5 @@
+namespace
+
 typedef maybe(#t) { nothing | some(#t) }
 
 // map: (#t -> #u) -> maybe(#t) -> maybe(#u)

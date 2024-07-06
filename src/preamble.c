@@ -23,6 +23,7 @@
 
 // *INDENT-OFF*
 const char *preamble =
+    "    namespace"
     "    typedef cmp { lt | eq | gt }\n"
     "    typedef bool { false | true }\n"
     "    typedef list(#t) { nil | cons(#t, list(#t)) }\n"
