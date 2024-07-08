@@ -14,8 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install dependencies
+    - name: Install sqlite
+      run: make install-sqlite
+
+    - name: Create unicode database
+      run: make unicode.db
+
+    - name: Build executable
       run: make TESTING=yes
 
-    - name: Run check
+    - name: Run tests
       run: make test TESTING=yes
