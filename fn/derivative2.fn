@@ -1,5 +1,5 @@
 let
-    typedef term { num(int) |
+    typedef term { num(number) |
                    var(char) |
                    add(term, term) |
                    sub(term, term) |

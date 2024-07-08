@@ -1,6 +1,6 @@
 typedef money {
-    decimal(int, int) |
-    imperial(int, int, int)
+    decimal(number, number) |
+    imperial(number, number, number)
 }
 
 typedef emp {

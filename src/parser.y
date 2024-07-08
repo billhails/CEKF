@@ -401,7 +401,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token IF
 %token IN
 %token KW_CHAR
-%token KW_INT
+%token KW_NUM
 %token LET
 %token PRINT
 %token SWITCH
@@ -553,7 +553,7 @@ type : type_clause              { $$ = newAstType(PIM(mod), $1, NULL); }
 type_tuple : '#' '(' type_list ')' { $$ = $3; }
            ;
 
-type_clause : KW_INT                { $$ = newAstTypeClause_Integer(PIM(mod)); }
+type_clause : KW_NUM                { $$ = newAstTypeClause_Integer(PIM(mod)); }
             | KW_CHAR               { $$ = newAstTypeClause_Character(PIM(mod)); }
             | type_variable           { $$ = newAstTypeClause_Var(PIM(mod), $1); }
             | type_function         { $$ = newAstTypeClause_TypeFunction(PIM(mod), $1); }

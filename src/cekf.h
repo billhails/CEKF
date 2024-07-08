@@ -61,5 +61,7 @@ void dumpStack(Stack *stack);
 
 CharArray *listToCharArray(Value list);
 Value charArrayToList(CharArray *c);
+Value makeNull(void);
+Value makePair(Value car, Value cdr);
 
 #endif

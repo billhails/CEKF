@@ -1,5 +1,5 @@
 let
-    typedef named_result { result(list(char), int) }
+    typedef named_result { result(list(char), number) }
     
     fn head {
         (h @ _) { h }

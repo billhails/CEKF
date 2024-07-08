@@ -14,13 +14,13 @@ fn bind {
     (nothing, _) { nothing }
 }
 
-// // safediv: int -> int -> maybe(int)
+// // safediv: number -> number -> maybe(number)
 // fn safediv {
 //     (_, 0) { nothing }
 //     (x, y) { some(x / y) }
 // }
 //
-// // eval(expr) -> maybe(int)
+// // eval(expr) -> maybe(number)
 //
 // fn eval {
 //    (val(n)) { some(n) }

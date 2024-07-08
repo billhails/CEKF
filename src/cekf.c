@@ -203,13 +203,29 @@ Value charArrayToList(CharArray *c) {
     int save = protectValue(v);
     for (Index i = c->size; i > 0; --i) {
         Character cc = c->entries[i - 1];
-        Vec *pair = newVec(3);
-        pair->entries[0] = value_Stdint(1); // tag=pair
-        pair->entries[1] = value_Character(cc);
-        pair->entries[2] = v;
-        v = value_Vec(pair);
-        protectValue(v);
+        if (cc) {
+            Vec *pair = newVec(3);
+            pair->entries[0] = value_Stdint(1); // tag=pair
+            pair->entries[1] = value_Character(cc);
+            pair->entries[2] = v;
+            v = value_Vec(pair);
+            protectValue(v);
+        }
     }
     UNPROTECT(save);
     return v;
+}
+
+Value makeNull(void) {
+    Vec *vec = newVec(1);
+    vec->entries[0] = value_Stdint(0);
+    return value_Vec(vec);
+}
+
+Value makePair(Value car, Value cdr) {
+    Vec *vec = newVec(3);
+    vec->entries[0] = value_Stdint(1);
+    vec->entries[1] = car;
+    vec->entries[2] = cdr;
+    return value_Vec(vec);
 }

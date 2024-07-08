@@ -1,0 +1,57 @@
+namespace
+
+fn with_database(name, handler) {
+    switch (sqlite3_open(name)) {
+        (success(sqlite)) {
+            let data = handler(sqlite);
+            in sqlite3_close(sqlite);
+            data
+        }
+        (failure(errmsg)) {
+            puts("database error: ");
+            puts(errmsg);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn with_statement(query, handler, sqlite) {
+    switch (sqlite3_prepare(sqlite, query)) {
+        (success(statement)) {
+            let data = handler(statement);
+            in sqlite3_finalize(statement);
+            data
+        }
+        (failure(errCode)) {
+            puts("statement error: ");
+            putn(errCode);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn with_bindings(bindings, handler, statement) {
+    switch (sqlite3_bind(statement, bindings)) {
+        (0) {
+            handler(statement);
+        }
+        (n) {
+            puts("bind error: ");
+            putn(n);
+            putc('\n');
+            nothing
+        }
+    }
+}
+
+fn with_results(handler, statement) {
+    switch(sqlite3_fetch(statement)) {
+        (some(row)) {
+            handler(row);
+            with_results(handler, statement)
+        }
+        (nothing) { nothing }
+    }
+}

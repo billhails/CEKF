@@ -1,4 +1,4 @@
-// int bigint rational irrational
+// number bigint rational irrational
 // left right
 // + - * / % ** cmp
 let

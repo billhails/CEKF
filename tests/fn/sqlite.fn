@@ -1,4 +1,0 @@
-let
-    sqlite = sqlite3_open("./utf8.db");
-in
-    sqlite3_close(sqlite);

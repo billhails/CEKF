@@ -29,6 +29,7 @@ int encodedLength(wchar_t *s);
 unsigned char *writeChar(unsigned char *dest, wchar_t character);
 void unicode_to_utf8_string(unsigned char *dest, wchar_t *src);
 char *listToUtf8(Value v);
+Value utf8ToList(const char *utf8);
 
 
 #endif

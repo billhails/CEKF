@@ -8,7 +8,7 @@ let
         subtraction(expression, expression) |
         multiplication(expression, expression) |
         division(expression, expression) |
-        number(int) |
+        num(number) |
         symbol(list(char)) |
         conditional(expression, expression, expression) |
         lambda(expression, expression) |
@@ -22,7 +22,7 @@ let
         (subtraction(l, r), e)           { sub(eval(l, e), eval(r, e)) }
         (multiplication(l, r), e)        { mul(eval(l, e), eval(r, e)) }
         (division(l, r), e)              { div(eval(l, e), eval(r, e)) }
-        (i = number(_), e)               { i }
+        (i = num(_), e)               { i }
         (symbol(s), e)                   { lookup(s, e) }
         (conditional(test, pro, con), e) { cond(test, pro, con, e) }
         (l = lambda(_, _), e)            { closure(l, e) }
@@ -35,18 +35,18 @@ let
     }
 
     // built-ins
-    fn add (number(a), number(b)) { number(a + b) }
+    fn add (num(a), num(b)) { num(a + b) }
     
-    fn sub (number(a), number(b)) { number(a - b) }
+    fn sub (num(a), num(b)) { num(a - b) }
     
-    fn mul (number(a), number(b)) { number(a * b) }
+    fn mul (num(a), num(b)) { num(a * b) }
     
-    fn div (number(a), number(b)) { number(a / b) }
+    fn div (num(a), num(b)) { num(a / b) }
     
     fn cond(test, pro, con, e) {
         switch (eval(test, e)) {
-            (number(0)) { eval(con, e) } // 0 is false
-            (number(_)) { eval(pro, e) }
+            (num(0)) { eval(con, e) } // 0 is false
+            (num(_)) { eval(pro, e) }
         }
     }
 
@@ -54,7 +54,7 @@ let
     fn lookup {
         (s, frame(s, value, _))  { value }
         (s, frame(_, _, parent)) { lookup(s, parent) }
-        (s, root)                { number(0) } // error("mce symbol not defined " @@ s) }
+        (s, root)                { num(0) } // error("mce symbol not defined " @@ s) }
     }
 in
     // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 3
@@ -64,11 +64,11 @@ in
                 symbol("x"),
                 conditional(
                     symbol("x"),
-                    addition(symbol("x"), number(2)),
+                    addition(symbol("x"), num(2)),
                     symbol("x")
                 )
             ),
             symbol("a")
         ),
-        frame("a", number(3), root)
+        frame("a", num(3), root)
     ))

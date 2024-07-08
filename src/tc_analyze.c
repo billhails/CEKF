@@ -153,12 +153,49 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     return res;
 }
 
+TcType *makeListType(TcType *content) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    int save = PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("list"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeMaybeType(TcType *content) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    int save = PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("maybe"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeTryType(TcType *failure, TcType *success) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(success, NULL);
+    int save = PROTECT(args);
+    args = newTcUserTypeArgs(failure, args);
+    PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("try"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
 TcType *makeStringType(void) {
     TcType *character = newTcType_Character();
     int save = PROTECT(character);
-    TcUserTypeArgs *args = newTcUserTypeArgs(character, NULL);
-    PROTECT(args);
-    TcUserType *userType = newTcUserType(newSymbol("list"), args, -1);
+    TcType *res = makeListType(character);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeBasicType(void) {
+    TcUserType *userType = newTcUserType(newSymbol("basic_type"), NULL, -1);
+    int save = PROTECT(userType);
     PROTECT(userType);
     TcType *res = newTcType_UserType(userType);
     UNPROTECT(save);

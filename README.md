@@ -128,6 +128,21 @@ opted to incorporate a much smaller, public domain implementation
 from [983](https://github.com/983/bigint), only slightly amended to
 play nice with the CEKF memory management and garbage collection.
 
+## Unicode
+
+There is very basic support for Unicode, both in strings and in
+identifiers. The base `Character` type is now a `wchar_t` which stores
+raw Unicode code points. The only supported encoding is UTF8, which is
+used internally for C strings in the interpreter, to read source files
+and and to output characters to the terminal.
+
+## SQLite
+
+The implementation bundles SQLite3 and provides an interface to it, see
+[here](docs/SQLITE.md). The primary reason being to allow convenient
+and fast lookup of Unicode data for individual characters, should the
+need arise.
+
 ## Code Generation
 
 While not properly part of the language description, I'm using some

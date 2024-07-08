@@ -22,11 +22,20 @@
 #  include "lambda.h"
 #  include "builtins.h"
 
+#  define BASIC_TYPE_NULL 0
+#  define BASIC_TYPE_NUMBER 1
+#  define BASIC_TYPE_STRING 2
+#  define BASIC_TYPE_CHAR 3
+
 TcEnv *tc_init(BuiltIns *);
 TcType *tc_analyze(LamExp *exp, TcEnv *env);
 TcType *lookupNsRef(int index, TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 TcType *makeBoolean(void);
 TcType *makeStringType(void);
+TcType *makeListType(TcType *content);
+TcType *makeMaybeType(TcType *content);
+TcType *makeTryType(TcType *failure, TcType *success);
+TcType *makeBasicType(void);
 
 #endif

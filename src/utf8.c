@@ -248,7 +248,7 @@ char *listToUtf8(Value v) {
 
 // converts a utf8 string to a list of char (Value)
 // returns the empty list if the string is invalid
-Value utf8ToList(char *utf8) {
+Value utf8ToList(const char *utf8) {
     int size = decodedLength((unsigned char *)utf8);
     CharArray *unicode = newCharArray();
     int save = PROTECT(unicode);

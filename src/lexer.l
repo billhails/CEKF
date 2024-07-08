@@ -76,7 +76,7 @@ struct PmModule *mod = yyextra;
 "here"          { return HERE; }
 "if"            { return IF; }
 "in"            { return IN; }
-"int"           { return KW_INT; }
+"number"        { return KW_NUM; }
 "let"           { return LET; }
 "not"           { return NOT; }
 "or"            { return OR; }
