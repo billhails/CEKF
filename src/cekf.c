@@ -162,3 +162,70 @@ void restoreKont(Stack *s, Kont *source) {
 void restoreFail(Stack *s, Fail *source) {
     copyStackEntries(s, &source->stack);
 }
+
+CharArray *listToCharArray(Value list) {
+    CharArray *chars = newCharArray();
+    int save = PROTECT(chars);
+    while (list.val.vec) {
+#ifdef SAFETY_CHECKS
+        if (list.type != VALUE_TYPE_VEC) {
+            cant_happen("unexpected %s", valueTypeName(list.type));
+        }
+#endif
+        Vec *v = list.val.vec;
+#ifdef SAFETY_CHECKS
+        if (v->size != 3 && v->size != 1) {
+            cant_happen("unexpected %d", v->size);
+        }
+#endif
+        if (v->size == 3) {
+            Value character = v->entries[1];
+#ifdef SAFETY_CHECKS
+            if (character.type != VALUE_TYPE_CHARACTER) {
+                cant_happen("unexpected %s", valueTypeName(character.type));
+            }
+#endif
+            pushCharArray(chars, character.val.character);
+            list = v->entries[2];
+        } else {
+            list.val.vec = NULL;
+        }
+    }
+    pushCharArray(chars, (Character) 0); // null terminated
+    UNPROTECT(save);
+    return chars;
+}
+
+Value charArrayToList(CharArray *c) {
+    Vec *nullByte = newVec(1);
+    nullByte->entries[0] = value_Stdint(0); // tag=null
+    Value v = value_Vec(nullByte);
+    int save = protectValue(v);
+    for (Index i = c->size; i > 0; --i) {
+        Character cc = c->entries[i - 1];
+        if (cc) {
+            Vec *pair = newVec(3);
+            pair->entries[0] = value_Stdint(1); // tag=pair
+            pair->entries[1] = value_Character(cc);
+            pair->entries[2] = v;
+            v = value_Vec(pair);
+            protectValue(v);
+        }
+    }
+    UNPROTECT(save);
+    return v;
+}
+
+Value makeNull(void) {
+    Vec *vec = newVec(1);
+    vec->entries[0] = value_Stdint(0);
+    return value_Vec(vec);
+}
+
+Value makePair(Value car, Value cdr) {
+    Vec *vec = newVec(3);
+    vec->entries[0] = value_Stdint(1);
+    vec->entries[1] = car;
+    vec->entries[2] = cdr;
+    return value_Vec(vec);
+}

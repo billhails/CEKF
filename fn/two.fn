@@ -1,3 +1,4 @@
+namespace
 link "three.fn" as three;
 
 x = 42;

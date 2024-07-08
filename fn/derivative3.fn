@@ -1,5 +1,5 @@
 let
-    typedef baz { foo(int) | bar(baz) }
+    typedef baz { foo(number) | bar(baz) }
     fn fail {
         (x, x) { 1 }
         (bar(x), x) { 2 }

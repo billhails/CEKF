@@ -42,7 +42,6 @@ static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
 static void addCmpToEnv(TcEnv *env, HashSymbol *key);
 static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns);
 static void addNamespacesToEnv(TcEnv *env);
-static TcType *makeBoolean(void);
 static TcType *makeSpaceship(void);
 static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
@@ -69,10 +68,8 @@ static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
 static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng);
 static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng);
-static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env,
-                                TcNg *ng);
-static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
-                                  TcNg *ng);
+static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env, TcNg *ng);
+static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng);
 static TcType *analyzeTag(LamExp *tag, TcEnv *env, TcNg *ng);
 static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng);
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng);
@@ -100,8 +97,7 @@ static bool occursInType(TcType *a, TcType *b);
 static bool occursIn(TcType *a, TcType *b);
 static bool sameType(TcType *a, TcType *b);
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
-static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng)
-    __attribute__((unused));
+static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
@@ -153,6 +149,55 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     PROTECT(nsType);
     addToEnv(env, namespaceSymbol(), nsType);
     TcType *res = analyzeExp(exp, env, ng);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeListType(TcType *content) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    int save = PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("list"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeMaybeType(TcType *content) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    int save = PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("maybe"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeTryType(TcType *failure, TcType *success) {
+    TcUserTypeArgs *args = newTcUserTypeArgs(success, NULL);
+    int save = PROTECT(args);
+    args = newTcUserTypeArgs(failure, args);
+    PROTECT(args);
+    TcUserType *userType = newTcUserType(newSymbol("try"), args, -1);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeStringType(void) {
+    TcType *character = newTcType_Character();
+    int save = PROTECT(character);
+    TcType *res = makeListType(character);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeBasicType(void) {
+    TcUserType *userType = newTcUserType(newSymbol("basic_type"), NULL, -1);
+    int save = PROTECT(userType);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
     UNPROTECT(save);
     return res;
 }
@@ -1535,6 +1580,7 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
         case TCTYPE_TYPE_BIGINTEGER:
         case TCTYPE_TYPE_CHARACTER:
         case TCTYPE_TYPE_UNKNOWN:
+        case TCTYPE_TYPE_OPAQUE:
             return type;
         case TCTYPE_TYPE_USERTYPE:{
                 TcType *res = freshUserType(type->val.userType, ng, map);
@@ -1583,7 +1629,7 @@ static void addToNg(TcNg *ng, TcType *type) {
     setTcTypeTable(ng->table, type->val.var->name, type);
 }
 
-static TcType *makeBoolean() {
+TcType *makeBoolean() {
     TcType *res = makeUserType(boolSymbol(), NULL, NS_GLOBAL);
     return res;
 }
@@ -1688,26 +1734,13 @@ static void addIfToEnv(TcEnv *env) {
     UNPROTECT(save);
 }
 
-static TcType *builtInTypeToTcType(BuiltInArgType type) {
-    switch (type) {
-        case BUILTINARGTYPE_TYPE_NUMBER:
-            return makeBigInteger();
-        case BUILTINARGTYPE_TYPE_BOOL:
-            return makeBoolean();
-        case BUILTINARGTYPE_TYPE_CHAR:
-            return makeCharacter();
-        default:
-            cant_happen("unregistered %s", builtInArgTypeName(type));
-    }
-}
-
 static TcType *builtInArgsToType(BuiltInArgs *args, int pos, TcType *follows) {
     if (pos == 0) {
         return follows;
     }
     follows = builtInArgsToType(args, pos - 1, follows);
     int save = PROTECT(follows);
-    TcType *this = builtInTypeToTcType(args->entries[pos - 1]);
+    TcType *this = args->entries[pos - 1];
     PROTECT(this);
     TcType *res = makeFn(this, follows);
     UNPROTECT(save);
@@ -1715,11 +1748,7 @@ static TcType *builtInArgsToType(BuiltInArgs *args, int pos, TcType *follows) {
 }
 
 static TcType *constructBuiltInType(BuiltIn *builtIn) {
-    TcType *result = builtInTypeToTcType(builtIn->result);
-    int save = PROTECT(result);
-    result = builtInArgsToType(builtIn->args, builtIn->args->size, result);
-    UNPROTECT(save);
-    return result;
+    return builtInArgsToType(builtIn->args, builtIn->args->size, builtIn->result);
 }
 
 static void addBuiltInToEnv(TcEnv *env, BuiltIn *builtIn) {
@@ -1842,6 +1871,14 @@ static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
     return unified;
 }
 
+static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
+    if (a != b) {
+        can_happen("opaque type mismatch %s vs. %s", a->name, b->name);
+        return false;
+    }
+    return true;
+}
+
 static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
         can_happen("unification failed [usertype name mismatch]");
@@ -1925,6 +1962,8 @@ static bool _unify(TcType *a, TcType *b) {
                 return false;
             case TCTYPE_TYPE_USERTYPE:
                 return unifyUserTypes(a->val.userType, b->val.userType);
+            case TCTYPE_TYPE_OPAQUE:
+                return unifyOpaque(a->val.opaque, b->val.opaque);
             case TCTYPE_TYPE_TUPLE:
                 return unifyTuples(a->val.tuple, b->val.tuple);
             default:
@@ -2071,6 +2110,7 @@ static bool occursIn(TcType *a, TcType *b) {
         case TCTYPE_TYPE_CHARACTER:
         case TCTYPE_TYPE_UNKNOWN:
         case TCTYPE_TYPE_ENV:
+        case TCTYPE_TYPE_OPAQUE:
             return false;
         case TCTYPE_TYPE_USERTYPE:
             return occursInUserType(a, b->val.userType);

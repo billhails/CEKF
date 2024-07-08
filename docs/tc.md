@@ -30,6 +30,7 @@ TcType --smallinteger--> void_ptr
 TcType --biginteger--> void_ptr
 TcType --character--> void_ptr
 TcType --unknown--> HashSymbol
+TcType --opaque--> HashSymbol
 TcType --userType--> TcUserType
 TcType --tuple--> TcTypeArray
 TcType --namespaces--> TcNamespaceArray

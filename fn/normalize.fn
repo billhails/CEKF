@@ -6,7 +6,7 @@ let
         let_expr(expr, expr, expr) |
         if_expr(expr, expr, expr) |
         apply(expr, list(expr)) |
-        value(int) |
+        value(number) |
         var_expr(list(char)) |
         nada
     }

@@ -23,6 +23,7 @@ config:
         - builtins.h
         - builtins_debug.h
         - types.h
+        - opaque.h
 
 description: The structures of the CEKFs machine
 
@@ -78,6 +79,7 @@ inline:
             vec: Vec
             builtIn: BuiltInImplementation
             namespace: Vec
+            opaque: opaque
 
     arrays:
         Stack:
@@ -85,6 +87,10 @@ inline:
 
         ByteCodeArray:
             entries: byte
+
+arrays:
+    CharArray:
+        entries: char
 
 vectors:
     Vec:

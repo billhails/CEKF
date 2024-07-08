@@ -1,5 +1,5 @@
 let
-    typedef heap(#t) { E | T(int, #t, heap(#t), heap(#t)) }
+    typedef heap(#t) { E | T(number, #t, heap(#t), heap(#t)) }
 
     typedef maybe(#t) { none | some(#t) }
 

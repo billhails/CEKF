@@ -32,6 +32,7 @@
 #include "module.h"
 #include "symbol.h"
 #include "arithmetic.h"
+#include "opaque.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -40,13 +41,7 @@ static int numAlloc = 0;
 static int maxMem = 0;
 static int numGc = 0;
 
-static void collectGarbage();
-
 static Header *lastAlloc = NULL;
-
-/*
-#define MAX_PROTECTION 256
-*/
 
 typedef struct ProtectionStack {
     Header header;
@@ -73,6 +68,8 @@ void validateLastAlloc() {
 
 const char *typeName(ObjType type, void *p) {
     switch (type) {
+        case OBJTYPE_OPAQUE:
+            return "opaque";
         case OBJTYPE_HASHSYMBOL:
             return "var";
         case OBJTYPE_CLO:
@@ -277,6 +274,9 @@ void markObj(Header *h, Index i) {
     // eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
 #endif
     switch (h->type) {
+        case OBJTYPE_OPAQUE:
+            markOpaque((Opaque *) h);
+            break;
         case OBJTYPE_MAYBEBIGINT:
             markMaybeBigInt((MaybeBigInt *) h);
             break;
@@ -330,6 +330,9 @@ void freeObj(Header *h) {
     switch (h->type) {
             CEKFS_OBJTYPE_CASES()
             freeCekfsObj(h);
+            break;
+        case OBJTYPE_OPAQUE:
+            freeOpaque((Opaque *) h);
             break;
         case OBJTYPE_BIGINT:
             freeBigInt((BigInt *) h);
@@ -412,7 +415,7 @@ static void sweep() {
     }
 }
 
-static void collectGarbage() {
+void collectGarbage() {
     if (!gcEnabled)
         return;
     numGc++;

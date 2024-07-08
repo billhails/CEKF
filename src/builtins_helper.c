@@ -20,6 +20,8 @@
 #include "builtins_impl.h"
 #include "memory.h"
 #include "symbol.h"
+#include "tc_analyze.h"
+#include "builtin_sqlite.h"
 
 static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
@@ -29,6 +31,7 @@ BuiltIns *registerBuiltIns() {
     int save = PROTECT(res);
     registerRand(res);
     registerAssert(res);
+    registerSQLite(res);
     UNPROTECT(save);
     return res;
 }
@@ -36,8 +39,10 @@ BuiltIns *registerBuiltIns() {
 static void registerRand(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushBuiltInArgs(args, BUILTINARGTYPE_TYPE_NUMBER);
-    BuiltIn *decl = newBuiltIn(newSymbol("rand"), BUILTINARGTYPE_TYPE_NUMBER, args, (void *)builtin_rand);
+    TcType *integer = newTcType_Biginteger();
+    PROTECT(integer);
+    pushBuiltInArgs(args, integer);
+    BuiltIn *decl = newBuiltIn(newSymbol("rand"), integer, args, (void *)builtin_rand);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);
@@ -46,7 +51,9 @@ static void registerRand(BuiltIns *registry) {
 static void registerAssert(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    BuiltIn *decl = newBuiltIn(newSymbol("assertion"), BUILTINARGTYPE_TYPE_BOOL, args, (void *)builtin_assert);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    BuiltIn *decl = newBuiltIn(newSymbol("assertion"), boolean, args, (void *)builtin_assert);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

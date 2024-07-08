@@ -1,1 +1,2 @@
+namespace
 fn foo () { 1 }

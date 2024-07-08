@@ -57,6 +57,9 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_ENV:
             eprintf("<env>");
             break;
+        case TCTYPE_TYPE_OPAQUE:
+            eprintf("opaque:%s", type->val.opaque->name);
+            break;
         default:
             eprintf("unrecognized type %s", tcTypeTypeName(type->type));
     }

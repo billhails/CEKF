@@ -1,0 +1,11 @@
+let
+    link "listutils.fn" as list;
+    link "sqlite_types.fn" as sql;
+in
+    sql.with_database("unicode.db",
+        sql.with_statement("select * from unicode where code < ?",
+            sql.with_bindings([basic_string("0080")],
+                sql.with_results(fn (row) {
+                    print(list.length(row));
+                    print(row);
+                }))));

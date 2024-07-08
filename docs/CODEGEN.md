@@ -43,7 +43,8 @@ the `ast.yaml` example, from that file will be generated:
 * `generated/ast_debug.h` header for `ast_debug.c`
 * `generated/ast.h` header for `ast.c` includes the structure declarations themselves.
 * `generated/ast_objtypes.h` macros collecting the enums and case statements that can then easily be incorporated into the memory management system.
-* `docs/ast.md` A mermaid graph of the structs and their relationships (WiP, occasionally useful).
+* `docs/ast.md` A mermaid graph of the structs and their relationships
+(WiP, occasionally useful).
 
-This all means that it's relatively easy to make fairly sweeping changes to the various trees without all the
-tedious re-writing of the above.
+This all means that it's relatively easy to make fairly sweeping changes
+to the various trees without all the tedious re-writing of the above.

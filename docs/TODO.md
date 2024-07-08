@@ -25,10 +25,6 @@ More of a wish-list than a hard and fast plan.
    * allow unpacking of the real and imaginary parts of a complex number in patterns.
       * another special case: `a + b`, `b` would be bound to `0i` if the actual
         argument is not complex.
-* UTF8 and `wchar_t`.
-   * Would play nicely with strings being lists of char.
-   * Store the Unicode code points internally.
-   * Combining characters need special handling.
 * Much better error reporting.
 * Error recovery.
 * User definable operators.

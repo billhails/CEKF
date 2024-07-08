@@ -1,3 +1,4 @@
+namespace
 
 // member: #a -> list(#a) -> bool
 fn member {
@@ -24,7 +25,7 @@ fn map {
     (func, h @ t) { func(h) @ map(func, t) }
 }
 
-// length: list(#s) -> int
+// length: list(#s) -> number
 fn length {
     ([]) { 0 }
     (_ @ t) { 1 + length(t) }
@@ -107,24 +108,24 @@ fn all {
     (f, h @ t) { f(h) and all(f, t) }
 }
 
-// repeat: int -> #a -> list(#a)
+// repeat: number -> #a -> list(#a)
 fn repeat {
     (0, _) { [] }
     (n, v) { v @ repeat(n - 1, v) }
 }
 
-// nth: int -> list(#a) -> #a
+// nth: number -> list(#a) -> #a
 unsafe fn nth {
     (0, h @ _) { h }
     (n, _ @ t) { nth(n - 1, t) }
 }
 
-// sum: list(int) -> int
+// sum: list(number) -> number
 fn sum(lst) {
     foldl(fn (elm, acc) { elm + acc }, 0, lst)
 }
 
-// product: list(int) -> int
+// product: list(number) -> number
 fn product(lst) {
     foldl(fn (elm, acc) { elm * acc }, 1, lst)
 }
@@ -153,14 +154,14 @@ fn empty {
     (_) { false }
 }
 
-// take: int -> list(#a) -> list(#a)
+// take: number -> list(#a) -> list(#a)
 fn take {
     (0, _) { [] }
     (n, []) { [] }
     (n, h @ t) { h @ take(n - 1, t) }
 }
 
-// drop: int -> list(#a) -> list(#a)
+// drop: number -> list(#a) -> list(#a)
 fn drop {
     (0, l) { l }
     (n, []) { [] }
@@ -177,7 +178,7 @@ fn maximum(lst) {
     foldl1(fn (elem, acc) { if (elem > acc) { elem } else { acc } }, lst)
 }
 
-// range: int -> int -> list(int)
+// range: number -> number -> list(number)
 fn range(low, high) {
     if (low >= high) { [] }
     else { low @ range(low + 1, high) }

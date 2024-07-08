@@ -1,6 +1,6 @@
 link "dictionary.fn" as dic;
 
-typedef Array(#t) { array(int, int, dic.Dict(int, #t)) }
+typedef Array(#t) { array(number, number, dic.Dict(number, #t)) }
 
 fn newArray() {
     array(0, 0, dic.E)

@@ -167,7 +167,7 @@ static AstCharArray *appendCharArray(AstCharArray *res, char *str) {
     return res;
 }
 
-static AstCharArray *newCharArray(char *str) {
+static AstCharArray *makeCharArray(char *str) {
     AstCharArray *res = newAstCharArray();
     return appendCharArray(res, str);
 }
@@ -401,7 +401,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token IF
 %token IN
 %token KW_CHAR
-%token KW_INT
+%token KW_NUM
 %token LET
 %token PRINT
 %token SWITCH
@@ -410,6 +410,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %token WILDCARD
 %token LINK
 %token NAMESPACE_TOKEN
+%token NAMESPACE
 %token AS
 %token ASSERT
 %token ALIAS
@@ -459,7 +460,7 @@ nest_body : let_in expression_statements { $$ = newAstNest(PIM(mod), $1, $2); }
 let_in : LET definitions IN { $$ = $2; }
        ;
 
-namespace_definitions : NAMESPACE_TOKEN definitions   { $$ = $2; }
+namespace_definitions : NAMESPACE_TOKEN NAMESPACE definitions   { $$ = $3; }
                       ;
 
 definitions : %empty                            { $$ = NULL; }
@@ -552,7 +553,7 @@ type : type_clause              { $$ = newAstType(PIM(mod), $1, NULL); }
 type_tuple : '#' '(' type_list ')' { $$ = $3; }
            ;
 
-type_clause : KW_INT                { $$ = newAstTypeClause_Integer(PIM(mod)); }
+type_clause : KW_NUM                { $$ = newAstTypeClause_Integer(PIM(mod)); }
             | KW_CHAR               { $$ = newAstTypeClause_Character(PIM(mod)); }
             | type_variable           { $$ = newAstTypeClause_Var(PIM(mod), $1); }
             | type_function         { $$ = newAstTypeClause_TypeFunction(PIM(mod), $1); }
@@ -688,7 +689,7 @@ stringarg : str { $$ = makeStringUnpack(mod, $1); }
 string : str { $$ = makeStringList(mod, $1); }
        ;
 
-str : STRING            { $$ = newCharArray($1); }
+str : STRING            { $$ = makeCharArray($1); }
     | str STRING        { $$ = appendCharArray($1, $2); }
     ;
 
