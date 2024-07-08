@@ -44,7 +44,7 @@
 // #    define DEBUG_PRINT_COMPILER
 // #    define DEBUG_PRINT_GENERATOR
 // #    define DEBUG_SLOW_STEP
-#    define DEBUG_SQLITE
+// #    define DEBUG_SQLITE
 // #    define DEBUG_STACK
 // #    define DEBUG_STEP
 #    ifndef NO_DEBUG_STRESS_GC
