@@ -24,7 +24,8 @@
 typedef Value (*BuiltInFunction)(Vec *);
 
 Value builtin_assert(Vec *v __attribute__((unused)));
-
 Value builtin_rand(Vec *);
+Value builtin_ord(Vec *v);
+Value builtin_chr(Vec *v);
 
 #endif

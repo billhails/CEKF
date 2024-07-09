@@ -2,8 +2,12 @@ let
     link "listutils.fn" as list;
     Σ = "abc\u03b1;\u03b2;\u03b3;";
     Ψ = "abcαβγ";
+    α = '\u03b1;';
 in
     assert(list.length(Σ) == 6);
     assert(list.length(Ψ) == 6);
     assert(Σ == Ψ);
-    assert('\u03b1;' == 'α');
+    assert(α == 'α');
+    assert(ord(α) == 945);
+    assert(chr(945) == α);
+    assert(chr(0x3b1) == α);

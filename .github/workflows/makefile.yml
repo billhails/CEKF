@@ -17,9 +17,6 @@ jobs:
     - name: Install sqlite
       run: make install-sqlite3
 
-    - name: Create unicode database
-      run: make unicode.db
-
     - name: Build executable
       run: make TESTING=yes
 

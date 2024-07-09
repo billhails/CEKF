@@ -25,12 +25,16 @@
 
 static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
+static void registerOrd(BuiltIns *registry);
+static void registerChr(BuiltIns *registry);
 
 BuiltIns *registerBuiltIns() {
     BuiltIns *res = newBuiltIns();
     int save = PROTECT(res);
     registerRand(res);
     registerAssert(res);
+    registerOrd(res);
+    registerChr(res);
     registerSQLite(res);
     UNPROTECT(save);
     return res;
@@ -54,6 +58,34 @@ static void registerAssert(BuiltIns *registry) {
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
     BuiltIn *decl = newBuiltIn(newSymbol("assertion"), boolean, args, (void *)builtin_assert);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}
+
+static void registerOrd(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integer = newTcType_Biginteger();
+    PROTECT(integer);
+    TcType *character = newTcType_Character();
+    PROTECT(character);
+    pushBuiltInArgs(args, character);
+    BuiltIn *decl = newBuiltIn(newSymbol("ord"), integer, args, (void *)builtin_ord);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}
+
+static void registerChr(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integer = newTcType_Biginteger();
+    PROTECT(integer);
+    TcType *character = newTcType_Character();
+    PROTECT(character);
+    pushBuiltInArgs(args, integer);
+    BuiltIn *decl = newBuiltIn(newSymbol("chr"), character, args, (void *)builtin_chr);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

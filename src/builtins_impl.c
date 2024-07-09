@@ -33,3 +33,15 @@ Value builtin_assert(Vec *v __attribute__((unused))) {
     }
     exit(1);
 }
+
+Value builtin_ord(Vec *v) {
+    return value_Stdint((int) v->entries[0].val.character);
+}
+
+Value builtin_chr(Vec *v) {
+    if (v->entries[0].type == VALUE_TYPE_STDINT) {
+        return value_Character((Character) v->entries[0].val.stdint);
+    } else {
+        cant_happen("unsupported numeric type for chr: %s", valueTypeName(v->entries[0].type));
+    }
+}
