@@ -86,17 +86,17 @@ static AstUnpack *makeStringUnpack(PmModule *mod, AstCharArray *str) {
     return res;
 }
 
-static void bigint_mul_by_ten(bigint *b) {
+static void bigint_mul_by_n(bigint *b, int n) {
     bigint old;
     bigint_init(&old);
     bigint_cpy(&old, b);
     bigint_free(b);
     bigint_init(b);
-    bigint ten;
-    bigint_init(&ten);
-    bigint_from_int(&ten, 10);
-    bigint_mul(b, &ten, &old);
-    bigint_free(&ten);
+    bigint mul;
+    bigint_init(&mul);
+    bigint_from_int(&mul, n);
+    bigint_mul(b, &mul, &old);
+    bigint_free(&mul);
     bigint_free(&old);
 }
 
@@ -115,22 +115,59 @@ static MaybeBigInt *makeIrrational(char *str, bool imag) {
     return irrationalBigInt(f, imag);
 }
 
+static int convert_char(char c) {
+    switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            return c - '0';
+        case 'a':
+        case 'b':
+        case 'c':
+        case 'd':
+        case 'e':
+        case 'f':
+            return 10 + (c - 'a');
+        case 'A':
+        case 'B':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+            return 10 + (c - 'A');
+        default:
+            cant_happen("unrecognised numeric digit '%c'", c);
+    }
+}
+
 static MaybeBigInt *makeMaybeBigInt(char *digits, bool imag) {
     bool overflowed = false;
     int a = 0;
     bigint bi;
+    int multiplier = 10;
+    if (digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X')) {
+        digits += 2;
+        multiplier = 16;
+    }
     for (char *p = digits; *p != '\0' && *p != 'i'; ++p) {
-        int n = *p - '0';
+        int n = convert_char(*p);
         if(overflowed) {
-            bigint_mul_by_ten(&bi);
+            bigint_mul_by_n(&bi, multiplier);
             bigint_add_n(&bi, n);
         } else {
             int c;
-            if (__builtin_mul_overflow(a, 10, &c)) {
+            if (__builtin_mul_overflow(a, multiplier, &c)) {
                 overflowed = true;
                 bigint_init(&bi);
                 bigint_from_int(&bi, a);
-                bigint_mul_by_ten(&bi);
+                bigint_mul_by_n(&bi, multiplier);
                 bigint_add_n(&bi, n);
             } else {
                 a = c;

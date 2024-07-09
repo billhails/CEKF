@@ -16,3 +16,6 @@ gmon.out
 tests/test_*
 src/*~
 .typedefs
+UnicodeData.csv
+UnicodeData.txt
+unicode.db

@@ -150,7 +150,7 @@ generated/lexer.c generated/lexer.h: src/lexer.l | generated
 generated/parser.c generated/parser.h: src/parser.y | generated
 	bison -v -Werror -Wcounterexamples --header=generated/parser.h -o generated/parser.c $<
 
-test: $(TEST_TARGETS) $(TARGET)
+test: $(TEST_TARGETS) $(TARGET) unicode.db
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 	for t in tests/fn/*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
@@ -163,19 +163,15 @@ dep obj generated docs/generated:
 install-sqlite3:
 	sudo apt-get --yes install sqlite3 libsqlite3-dev
 
-define _make_db =
-sqlite3 unicode.db <<EOF
-.mode csv
-.import unicode/UnicodeData.csv unicode
-CREATE UNIQUE INDEX unicode_code on unicode(code);
-EOF
-endef
-
-export make_db = $(value _make_db)
-
-unicode.db:
+unicode.db: UnicodeData.csv ./tools/create_table.sql
 	rm -f $@
-	eval "$$make_db"
+	sqlite3 $@ < ./tools/create_table.sql
+
+UnicodeData.csv: UnicodeData.txt ./tools/convertCsv.py
+	$(PYTHON) ./tools/convertCsv.py
+
+UnicodeData.txt:
+	wget https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
 
 realclean: clean
 	rm -f tags

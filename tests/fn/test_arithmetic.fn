@@ -1,3 +1,6 @@
+assert(0xff == 255);
+assert(0XFF == 255);
+assert(0xafae20dcab26000i == 791193233420083200i);
 assert(10 - 1 == 9);
 assert((1/2 <=> 1) == lt);
 assert(1/2 < 1);
