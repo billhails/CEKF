@@ -191,7 +191,7 @@ int encodedLength(wchar_t *s) {
 
 // writes the wchar_t to the string, returns the pointer
 // past the end of the char written, assumes there is enough space in
-// the string, does *not* append a trailing NULL
+// the string, does not append a trailing NULL
 unsigned char *writeChar(unsigned char *utf8, wchar_t unicode) {
     switch (byteSize(unicode)) {
         case 1:

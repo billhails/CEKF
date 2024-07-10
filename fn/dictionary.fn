@@ -1,7 +1,9 @@
+namespace
+
+link "listutils.fn" as list;
+
 typedef Color { R | B | BB }
 typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), #(#t, #u), Dict(#t, #u)) }
-
-link "maybe.fn" as maybe;
 
 print Dict(pt, pu, d) {
     let
@@ -17,12 +19,25 @@ print Dict(pt, pu, d) {
                 pd(r);
                 []
             }
+            (D(_, _, _, _)) {
+                []
+            }
         }
     in
         puts("{\n");
         pd(d);
         puts("}");
         d;
+}
+
+unsafe fn foreach {
+    (_, E) | (_, EE) { nothing }
+    (f, D(_, l, #(t, u), r)) {
+        foreach(f, l);
+        f(t, u);
+        foreach(f, r);
+        nothing;
+    }
 }
 
 fn balance {
@@ -36,9 +51,9 @@ fn balance {
 }
 
 // #t -> Dict(#t, #u) -> Maybe(#u)
-fn lookup {
-    (_, E) | (_, EE) { maybe.nothing }
-    (x, D(_, _, #(x, y), _)) { maybe.some(y) }
+unsafe fn lookup {
+    (_, E) | (_, EE) { nothing }
+    (x, D(_, _, #(x, y), _)) { some(y) }
     (x, D(_, a, #(y, _), b)) {
         if (x < y) {
             lookup(x, a)
@@ -55,7 +70,7 @@ fn insert(x, v, s) {
             (D(R, a, x, t=D(R, _, _, _))) { D(B, a, x, t) }
             (t) { t }
         }
-        fn ins {
+        unsafe fn ins {
             (x, EE) | (x, E) { D(R, E, #(x, v), E) }
             (x, D(c, a, #(x, _), b)) { D(c, a, #(x, v), b) }
             (x, D(color, a, s=#(y, _), b)) {
@@ -72,7 +87,7 @@ fn insert(x, v, s) {
 
 fn delete(x, s) {
     let
-        fn del {
+        unsafe fn del {
             (_, EE, throw) | (_, E, throw) { throw(s) }
             (x, D(R, E, #(x, _), E), _) { E }
             (x, D(B, E, #(x, _), E), _) { EE }
@@ -118,13 +133,13 @@ fn delete(x, s) {
             (color, a, x, b) { D(color, a, x, b) }
         }
 
-        fn leftmost_successor {
+        unsafe fn leftmost_successor {
             (D(_, E, x, E))             |
             (D(B, E, x, D(R, E, _, E))) { x }
             (D(_, a, _, _))             { leftmost_successor(a) }
         }
 
-        fn del_leftmost_successor {
+        unsafe fn del_leftmost_successor {
             (D(R, E, _, E))             { E }
             (D(B, E, _, E))             { EE }
             (D(B, E, _, D(R, E, y, E))) { D(B, E, y, E) }
@@ -132,4 +147,8 @@ fn delete(x, s) {
         }
     in
         here fn (throw) { del(x, redden(s), throw) }
+}
+
+fn make (keys, values) {
+    list.foldl(unsafe fn (#(k, v), d) { insert(k, v, d) }, E, list.zip(keys, values))
 }

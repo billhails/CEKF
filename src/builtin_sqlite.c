@@ -37,6 +37,7 @@ static void registerSQLitePrepare(BuiltIns *registry);
 static void registerSQLiteFinalize(BuiltIns *registry);
 static void registerSQLiteBind(BuiltIns *registry);
 static void registerSQLiteFetch(BuiltIns *registry);
+static void registerSQLiteNames(BuiltIns *registry);
 
 void registerSQLite(BuiltIns *registry) {
     registerSQLiteOpen(registry);
@@ -45,6 +46,7 @@ void registerSQLite(BuiltIns *registry) {
     registerSQLiteFinalize(registry);
     registerSQLiteBind(registry);
     registerSQLiteFetch(registry);
+    registerSQLiteNames(registry);
 }
 
 static void opaque_sqlite3_close(Opaque *data) {
@@ -78,6 +80,12 @@ static Value makeSome(Value val) {
 }
 
 static Value makeNothing(void) {
+    Vec *v = newVec(1);
+    v->entries[0] = value_Stdint(0);
+    return value_Vec(v);
+}
+
+static Value makeEmptyList(void) {
     Vec *v = newVec(1);
     v->entries[0] = value_Stdint(0);
     return value_Vec(v);
@@ -349,6 +357,31 @@ static Value builtin_sqlite3_fetch(Vec *vec) {
     }
 }
 
+static Value builtin_sqlite3_names(Vec *vec) {
+#ifdef SAFETY_CHECKS
+    if (vec->entries[0].type != VALUE_TYPE_OPAQUE) {
+        cant_happen("unexpected %s", valueTypeName(vec->entries[0].type));
+    }
+#endif
+    sqlite3_stmt *stmt = (sqlite3_stmt *)vec->entries[0].val.opaque->data;
+    if (stmt == NULL) {
+        return makeEmptyList();
+    }
+    int nrows = sqlite3_column_count(stmt);
+    Value result = makeNull();
+    int save = protectValue(result);
+    for (int i = nrows; i > 0; i--) {
+        int iCol = i - 1;
+        const char *name = sqlite3_column_name(stmt, iCol);
+        Value s = utf8ToList(name);
+        protectValue(s);
+        result = makePair(s, result);
+        protectValue(result);
+    }
+    UNPROTECT(save);
+    return result;
+}
+
 static HashSymbol *sqliteSymbol(void) {
     static HashSymbol *symbol = NULL;
     if (symbol == NULL) {
@@ -416,9 +449,8 @@ static void registerSQLitePrepare(BuiltIns *registry) {
     PROTECT(statementType);
     TcType *tryStatementType = makeTryType(bigIntType, statementType);
     PROTECT(tryStatementType);
-    // reverse order, apparently :-(
-    pushBuiltInArgs(args, string);
     pushBuiltInArgs(args, sqlite);
+    pushBuiltInArgs(args, string);
     BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_prepare"), tryStatementType, args, (void *)builtin_sqlite3_prepare);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
@@ -464,9 +496,8 @@ static void registerSQLiteBind(BuiltIns *registry) {
     PROTECT(basicListType);
     TcType *bigIntType = newTcType_Biginteger();
     PROTECT(bigIntType);
-    // reverse order, apparently :-(
-    pushBuiltInArgs(args, basicListType);
     pushBuiltInArgs(args, statementType);
+    pushBuiltInArgs(args, basicListType);
     BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_bind"), bigIntType, args, (void *)builtin_sqlite3_bind);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
@@ -482,6 +513,22 @@ static void registerSQLiteFetch(BuiltIns *registry) {
     TcType *maybeListBasicType = makeMaybeListBasicType();
     PROTECT(maybeListBasicType);
     BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_fetch"), maybeListBasicType, args, (void *)builtin_sqlite3_fetch);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}
+
+static void registerSQLiteNames(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *statementType = makeSqliteStatementType();
+    PROTECT(statementType);
+    pushBuiltInArgs(args, statementType);
+    TcType *stringType = makeStringType();
+    PROTECT(stringType);
+    TcType *listStringType = makeListType(stringType);
+    PROTECT(listStringType);
+    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_names"), listStringType, args, (void *)builtin_sqlite3_names);
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

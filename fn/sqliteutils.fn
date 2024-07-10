@@ -1,5 +1,7 @@
 namespace
 
+link "dictionary.fn" as dict;
+
 fn with_database(name, handler) {
     switch (sqlite3_open(name)) {
         (success(sqlite)) {
@@ -47,11 +49,17 @@ fn with_bindings(bindings, handler, statement) {
 }
 
 fn with_results(handler, statement) {
-    switch(sqlite3_fetch(statement)) {
-        (some(row)) {
-            handler(row);
-            with_results(handler, statement)
+    let
+        fn _with_results(keys) {
+            switch(sqlite3_fetch(statement)) {
+                (some(row)) {
+                    handler(dict.make(keys, row));
+                    _with_results(keys)
+                }
+                (nothing) { nothing }
+            }
         }
-        (nothing) { nothing }
-    }
+        keys = sqlite3_names(statement);
+    in
+        _with_results(keys);
 }
