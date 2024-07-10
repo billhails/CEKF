@@ -1,11 +1,40 @@
 let
-    link "listutils.fn" as list;
-    link "sqlite_types.fn" as sql;
+    link "dictionary.fn" as dict;
+    link "sqliteutils.fn" as sql;
 in
     sql.with_database("unicode.db",
-        sql.with_statement("select * from unicode where code < ?",
-            sql.with_bindings([basic_string("0080")],
+        sql.with_statement("select * from unicode",
+            fn (statement) {
+                let
+                    names = sqlite3_names(statement);
+                in
+                    print(names);
+                    nothing;
+            }));
+
+    sql.with_database("unicode.db",
+        sql.with_statement("select * from unicode where int_code < ?",
+            sql.with_bindings([basic_number(0x80)],
                 sql.with_results(fn (row) {
-                    print(list.length(row));
-                    print(row);
+
+                    dict.foreach(fn (k, v) {
+                        puts(", ");
+                        puts(k);
+                        puts(": ");
+                        unsafe switch (v) {
+                            (basic_null) {
+                                []
+                            }
+                            (basic_number(n)) {
+                                putn(n);
+                                []
+                            }
+                            (basic_string(s)) {
+                                putc('"');
+                                puts(s);
+                                puts("\"");
+                            }
+                        }
+                    }, row);
+                    putc('\n')
                 }))));

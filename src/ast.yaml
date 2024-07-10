@@ -93,7 +93,7 @@ structs:
         next: AstType
 
     AstCompositeFunction:
-        unsafe: bool = "false"
+        unsafe: bool = false
         function: AstFunction
         next: AstCompositeFunction
 

@@ -1735,16 +1735,15 @@ static void addIfToEnv(TcEnv *env) {
 }
 
 static TcType *builtInArgsToType(BuiltInArgs *args, int pos, TcType *follows) {
-    if (pos == 0) {
-        return follows;
-    }
-    follows = builtInArgsToType(args, pos - 1, follows);
     int save = PROTECT(follows);
-    TcType *this = args->entries[pos - 1];
-    PROTECT(this);
-    TcType *res = makeFn(this, follows);
+    while (pos > 0) {
+        TcType *this = args->entries[--pos];
+        PROTECT(this);
+        follows = makeFn(this, follows);
+        PROTECT(follows);
+    }
     UNPROTECT(save);
-    return res;
+    return follows;
 }
 
 static TcType *constructBuiltInType(BuiltIn *builtIn) {
