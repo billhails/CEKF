@@ -24,8 +24,7 @@ If you want to stick around, maybe start by reading
 [the wiki]([wiki](https://github.com/billhails/CEKF/wiki)),
 then maybe [the math](docs/MATH.md)
 and comparing that with its implementation in [`step.c`](src/step.c), or
-start at [`main.c`](src/main.c) where you can see it currently constructs
-some expressions manually, then gives them to the machine to evaluate.
+start at [`main.c`](src/main.c) and work your way through.
 
 ### An aside on `amb`
 
