@@ -110,7 +110,19 @@ static void bigint_add_n(bigint *b, int n) {
     bigint_free(&old);
 }
 
+static void strip_underscores(char *str) {
+    char *follow = str;
+    while (*str != '\0') {
+        if (*str != '_') {
+            *(follow++) = *str;
+        }
+        ++str;
+    }
+    *follow = '\0';
+}
+
 static MaybeBigInt *makeIrrational(char *str, bool imag) {
+    strip_underscores(str);
     Double f = atof(str);
     return irrationalBigInt(f, imag);
 }
@@ -157,6 +169,7 @@ static MaybeBigInt *makeMaybeBigInt(char *digits, bool imag) {
         multiplier = 16;
     }
     for (char *p = digits; *p != '\0' && *p != 'i'; ++p) {
+        if (*p == '_') continue;
         int n = convert_char(*p);
         if(overflowed) {
             bigint_mul_by_n(&bi, multiplier);

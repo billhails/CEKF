@@ -3,20 +3,13 @@ let
     link "sqliteutils.fn" as sql;
 in
     sql.with_database("unicode.db",
-        sql.with_statement("select * from unicode",
-            fn (statement) {
-                let
-                    names = sqlite3_names(statement);
-                in
-                    print(names);
-                    nothing;
-            }));
-
-    sql.with_database("unicode.db",
-        sql.with_statement("select * from unicode where int_code < ?",
-            sql.with_bindings([basic_number(0x80)],
+        sql.with_statement("select * from unicode where int_code between ? and ?",
+            sql.with_bindings([basic_number(0x13000), basic_number(0x1342e)],
                 sql.with_results(fn (row) {
 
+                    unsafe switch (dict.lookup("int_code", row)) {
+                        (some(basic_number(n))) { putc(chr(n)) }
+                    };
                     dict.foreach(fn (k, v) {
                         puts(", ");
                         puts(k);
