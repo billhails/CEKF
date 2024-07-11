@@ -64,10 +64,6 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ## Progress/Architecture
 
-The components of the diagram below should link to the relevant implementation
-entry point, the various yaml files are just shorthand for C structs and
-support routines, used by the code generator.
-
 ```mermaid
 flowchart TD
 classDef process fill:#aef;
@@ -92,28 +88,26 @@ lexa --> ann(Annotated ANF)
 ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
 bc --> cekf([CEKF Runtime VM]):::process
-
-click parser  "https://github.com/billhails/CEKF/blob/main/src/parser.y"              "parser.y"
-click ast     "https://github.com/billhails/CEKF/blob/main/src/ast.yaml"              "ast.yaml"
-click lc      "https://github.com/billhails/CEKF/blob/main/src/lambda_conversion.c"   "lambda_conversion.c"
-click tpmc    "https://github.com/billhails/CEKF/blob/main/src/tpmc_logic.c"          "tpmc_logic.c"
-click pg      "https://github.com/billhails/CEKF/blob/main/src/print_generator.c"     "print_generator.c"
-click vs      "https://github.com/billhails/CEKF/blob/main/src/lambda_substitution.c" "lambda_substitution.c"
-click lambda1 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
-click lambda2 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
-click lambda3 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
-click tc      "https://github.com/billhails/CEKF/blob/main/src/tc_analyze.c"          "tc_analyze.c"
-click pc      "https://github.com/billhails/CEKF/blob/main/src/print_compiler.c"      "print_compiler.c"
-click ci      "https://github.com/billhails/CEKF/blob/main/src/inline.c"              "inline.c"
-click anfc    "https://github.com/billhails/CEKF/blob/main/src/anf_normalize.c"       "anf_normalize.c"
-click anf     "https://github.com/billhails/CEKF/blob/main/src/anf.yaml"              "anf.yaml"
-click danf    "https://github.com/billhails/CEKF/blob/main/src/anf.yaml"              "anf.yaml"
-click desug   "https://github.com/billhails/CEKF/blob/main/src/desugaring.c"          "desugaring.c"
-click lexa    "https://github.com/billhails/CEKF/blob/main/src/annotate.c"            "annotate.c"
-click bcc     "https://github.com/billhails/CEKF/blob/main/src/bytecode.c"            "bytecode.c"
-click bc      "https://github.com/billhails/CEKF/blob/main/src/cekfs.yaml"            "cekfs.yaml"
-click cekf    "https://github.com/billhails/CEKF/blob/main/src/step.c"                "step.c"
 ```
+
+The various components named in the diagram above are linked to their implementation entry point here:
+* Parser [parser.y](https://github.com/billhails/CEKF/blob/main/src/parser.y)
+* AST [ast.yaml](https://github.com/billhails/CEKF/blob/main/src/ast.yaml)
+* Lambda Conversion [lambda_conversion.c](https://github.com/billhails/CEKF/blob/main/src/lambda_conversion.c)
+* Tpmc [tpmc_logic.c](https://github.com/billhails/CEKF/blob/main/src/tpmc_logic.c)
+* Print Function Generator [print_generator.c](https://github.com/billhails/CEKF/blob/main/src/print_generator.c)
+* Variable Substitution [lambda_substitution.c](https://github.com/billhails/CEKF/blob/main/src/lambda_substitution.c)
+* Plain Lambda Form [lambda.yaml](https://github.com/billhails/CEKF/blob/main/src/lambda.yaml)
+* Type Checking [tc_analyze.c](https://github.com/billhails/CEKF/blob/main/src/tc_analyze.c)
+* Print Compiler [print_compiler.c](https://github.com/billhails/CEKF/blob/main/src/print_compiler.c)
+* Constructor Inlining [inline.c](https://github.com/billhails/CEKF/blob/main/src/inline.c)
+* A-Normal Form Conversion [anf_normalize.c](https://github.com/billhails/CEKF/blob/main/src/anf_normalize.c)
+* (Desugared) ANF [anf.yaml](https://github.com/billhails/CEKF/blob/main/src/anf.yaml)
+* Desugaring [desugaring.c](https://github.com/billhails/CEKF/blob/main/src/desugaring.c)
+* Lexical Analysis [annotate.c](https://github.com/billhails/CEKF/blob/main/src/annotate.c)
+* Byte Code Compiler [bytecode.c](https://github.com/billhails/CEKF/blob/main/src/bytecode.c)
+* Byte Code [cekfs.yaml](https://github.com/billhails/CEKF/blob/main/src/cekfs.yaml)
+* CEKF Runtime [step.c](https://github.com/billhails/CEKF/blob/main/src/step.c)
 
 All stages basically complete, but it needs a lot of testing now.
 
