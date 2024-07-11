@@ -89,6 +89,26 @@ ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
 bc --> cekf([CEKF Runtime VM]):::process
 ```
+
+The various components named in the diagram above are linked to their implementation entry point here:
+* Parser [parser.y](src/parser.y)
+* AST [ast.yaml](src/ast.yaml)
+* Lambda Conversion [lambda_conversion.c](src/lambda_conversion.c)
+* Tpmc [tpmc_logic.c](src/tpmc_logic.c)
+* Print Function Generator [print_generator.c](src/print_generator.c)
+* Variable Substitution [lambda_substitution.c](src/lambda_substitution.c)
+* Plain Lambda Form [lambda.yaml](src/lambda.yaml)
+* Type Checking [tc_analyze.c](src/tc_analyze.c)
+* Print Compiler [print_compiler.c](src/print_compiler.c)
+* Constructor Inlining [inline.c](src/inline.c)
+* A-Normal Form Conversion [anf_normalize.c](src/anf_normalize.c)
+* (Desugared) ANF [anf.yaml](src/anf.yaml)
+* Desugaring [desugaring.c](src/desugaring.c)
+* Lexical Analysis [annotate.c](src/annotate.c)
+* Byte Code Compiler [bytecode.c](src/bytecode.c)
+* Byte Code [cekfs.yaml](src/cekfs.yaml)
+* CEKF Runtime [step.c](src/step.c)
+
 All stages basically complete, but it needs a lot of testing now.
 
 The desugaring step is probably best done before ANF conversion, then ANF conversion has less to do, but
