@@ -58,12 +58,14 @@ struct PmModule *mod = yyextra;
 
 {UNICODE_RESERVED} { cant_happen("invalid unicode character detected"); }
 
-[0-9]*\.[0-9]+     { yylval->s = yytext; return IRRATIONAL; }
-[0-9]*\.[0-9]+i    { yylval->s = yytext; return IRRATIONAL_I; }
-0[xX][0-9a-fA-F]+  { yylval->s = yytext; return NUMBER; }
-0[xX][0-9a-fA-F]+i { yylval->s = yytext; return NUMBER_I; }
-[0-9]+             { yylval->s = yytext; return NUMBER; }
-[0-9]+i            { yylval->s = yytext; return NUMBER_I; }
+[0-9][0-9_]*\.[0-9_]* { yylval->s = yytext; return IRRATIONAL; }
+\.[0-9][0-9_]*        { yylval->s = yytext; return IRRATIONAL; }
+[0-9][0-9_]*\.[0-9]+i { yylval->s = yytext; return IRRATIONAL_I; }
+\.[0-9]*[0-9_]+i      { yylval->s = yytext; return IRRATIONAL_I; }
+0[xX][0-9a-fA-F_]+    { yylval->s = yytext; return NUMBER; }
+0[xX][0-9a-fA-F_]+i   { yylval->s = yytext; return NUMBER_I; }
+[0-9][0-9_]*          { yylval->s = yytext; return NUMBER; }
+[0-9][0-9_]*i         { yylval->s = yytext; return NUMBER_I; }
 
 "__namespace__" { return NAMESPACE_TOKEN; }
 "namespace"     { return NAMESPACE; }
