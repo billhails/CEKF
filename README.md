@@ -64,6 +64,10 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ## Progress/Architecture
 
+The components of the diagram below should link to the relevant implementation
+entry point, the various yaml files are just shorthand for C structs and
+support routines, used by the code generator.
+
 ```mermaid
 flowchart TD
 classDef process fill:#aef;
@@ -88,7 +92,29 @@ lexa --> ann(Annotated ANF)
 ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
 bc --> cekf([CEKF Runtime VM]):::process
+
+click parser  "https://github.com/billhails/CEKF/blob/main/src/parser.y"              "parser.y"
+click ast     "https://github.com/billhails/CEKF/blob/main/src/ast.yaml"              "ast.yaml"
+click lc      "https://github.com/billhails/CEKF/blob/main/src/lambda_conversion.c"   "lambda_conversion.c"
+click tpmc    "https://github.com/billhails/CEKF/blob/main/src/tpmc_logic.c"          "tpmc_logic.c"
+click pg      "https://github.com/billhails/CEKF/blob/main/src/print_generator.c"     "print_generator.c"
+click vs      "https://github.com/billhails/CEKF/blob/main/src/lambda_substitution.c" "lambda_substitution.c"
+click lambda1 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
+click lambda2 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
+click lambda3 "https://github.com/billhails/CEKF/blob/main/src/lambda.yaml"           "lambda.yaml"
+click tc      "https://github.com/billhails/CEKF/blob/main/src/tc_analyze.c"          "tc_analyze.c"
+click pc      "https://github.com/billhails/CEKF/blob/main/src/print_compiler.c"      "print_compiler.c"
+click ci      "https://github.com/billhails/CEKF/blob/main/src/inline.c"              "inline.c"
+click anfc    "https://github.com/billhails/CEKF/blob/main/src/anf_normalize.c"       "anf_normalize.c"
+click anf     "https://github.com/billhails/CEKF/blob/main/src/anf.yaml"              "anf.yaml"
+click danf    "https://github.com/billhails/CEKF/blob/main/src/anf.yaml"              "anf.yaml"
+click desug   "https://github.com/billhails/CEKF/blob/main/src/desugaring.c"          "desugaring.c"
+click lexa    "https://github.com/billhails/CEKF/blob/main/src/annotate.c"            "annotate.c"
+click bcc     "https://github.com/billhails/CEKF/blob/main/src/bytecode.c"            "bytecode.c"
+click bc      "https://github.com/billhails/CEKF/blob/main/src/cekfs.yaml"            "cekfs.yaml"
+click cekf    "https://github.com/billhails/CEKF/blob/main/src/step.c"                "step.c"
 ```
+
 All stages basically complete, but it needs a lot of testing now.
 
 The desugaring step is probably best done before ANF conversion, then ANF conversion has less to do, but

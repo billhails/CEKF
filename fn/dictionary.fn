@@ -2,6 +2,8 @@ namespace
 
 link "listutils.fn" as list;
 
+// see https://matt.might.net/papers/germane2014deletion.pdf
+
 typedef Color { R | B | BB }
 typedef Dict(#t, #u) { E | EE | D(Color, Dict(#t, #u), #(#t, #u), Dict(#t, #u)) }
 
