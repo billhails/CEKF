@@ -234,18 +234,6 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("VOID\n");
                 }
                 break;
-            case BYTECODES_TYPE_PRIM_PUTC:{
-                    eprintf("PUTC\n");
-                }
-                break;
-            case BYTECODES_TYPE_PRIM_PUTN:{
-                    eprintf("PUTN\n");
-                }
-                break;
-            case BYTECODES_TYPE_PRIM_PUTV:{
-                    eprintf("PUTV\n");
-                }
-                break;
             case BYTECODES_TYPE_STDINT:{
                     int val = readInteger(bca, &i);
                     eprintf("STDINT [%d]\n", val);

@@ -53,34 +53,10 @@ HashSymbol *namespaceSymbol() {
     return res;
 }
 
-HashSymbol *putcSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("putc");
-    }
-    return res;
-}
-
-HashSymbol *putnSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("putn");
-    }
-    return res;
-}
-
 HashSymbol *putsSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("puts");
-    }
-    return res;
-}
-
-HashSymbol *putvSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("putv");
     }
     return res;
 }

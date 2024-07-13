@@ -47,6 +47,20 @@ static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcE
 static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *env);
 static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env);
 
+static LamExp *makePutcExp(ParserInfo I, char c) {
+    LamExp *character = newLamExp_Character(I, c);
+    int save = PROTECT(character);
+    LamList *putcArgs = newLamList(I, character, NULL);
+    PROTECT(putcArgs);
+    LamExp *putc = newLamExp_Var(I, newSymbol("putc"));
+    PROTECT(putc);
+    LamApply *applyPutc = newLamApply(I, putc, putcArgs);
+    PROTECT(applyPutc);
+    LamExp *putcExp = newLamExp_Apply(I, applyPutc);
+    UNPROTECT(save);
+    return putcExp;
+}
+
 LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     // (lambda (x) (begin (printer x) (putc '\n') x)
     LamExp *printer = compilePrinter(I, type, env);
@@ -59,13 +73,9 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     PROTECT(seq);
 
     // (putc '\n') x)
-    LamExp *newline = newLamExp_Character(I, '\n');
-    PROTECT(newline);
-    LamUnaryApp *app = newLamUnaryApp(I, LAMUNARYOP_TYPE_PUTC, newline);
-    PROTECT(app);
-    LamExp *exp = newLamExp_Unary(I, app);
-    PROTECT(exp);
-    seq = newLamSequence(I, exp, seq);
+    LamExp *putcExp = makePutcExp(I, '\n');
+    PROTECT(putcExp);
+    seq = newLamSequence(I, putcExp, seq);
     PROTECT(seq);
 
     // (printer x) (putc '\n') x)

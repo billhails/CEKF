@@ -22,6 +22,7 @@
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "builtin_sqlite.h"
+#include "builtin_io.h"
 
 static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
@@ -35,6 +36,7 @@ BuiltIns *registerBuiltIns() {
     registerAssert(res);
     registerOrd(res);
     registerChr(res);
+    registerIO(res);
     registerSQLite(res);
     UNPROTECT(save);
     return res;

@@ -236,9 +236,6 @@ enums:
     LamUnaryOp:
         - NEG
         - NOT
-        - PUTC
-        - PUTN
-        - PUTV
 
 unions:
     LamExp:

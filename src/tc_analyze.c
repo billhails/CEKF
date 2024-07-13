@@ -47,7 +47,6 @@ static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
 static TcType *makeUnknown(HashSymbol *var);
-static TcType *makeFreshVar(char *name __attribute__((unused)));
 static TcType *makeVar(HashSymbol *t);
 static TcType *makeFn(TcType *arg, TcType *result);
 static TcType *makeTuple(int size);
@@ -57,8 +56,6 @@ static void addIfToEnv(TcEnv *env);
 static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addNegToEnv(TcEnv *env);
 static void addNotToEnv(TcEnv *env);
-static void addPutcToEnv(TcEnv *env);
-static void addPutnToEnv(TcEnv *env);
 static void addThenToEnv(TcEnv *env);
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
@@ -99,7 +96,6 @@ static bool sameType(TcType *a, TcType *b);
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
-static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid);
@@ -133,8 +129,6 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addIntBinOpToEnv(env, subSymbol());
     addNegToEnv(env);
     addNotToEnv(env);
-    addPutcToEnv(env);
-    addPutnToEnv(env);
     addThenToEnv(env);
     addBuiltinsToEnv(env, builtIns);
     addNamespacesToEnv(env);
@@ -422,13 +416,6 @@ static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static TcType *analyzeUnaryChar(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeUnaryChar);
-    TcType *res = analyzeCharacterExp(exp, env, ng);
-    // LEAVE(analyzeUnaryChar);
-    return res;
-}
-
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrim);
     TcType *res = NULL;
@@ -470,17 +457,10 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
     TcType *res = NULL;
     switch (app->type) {
         case LAMUNARYOP_TYPE_NEG:
-        case LAMUNARYOP_TYPE_PUTN:
             res = analyzeUnaryArith(app->exp, env, ng);
             break;
         case LAMUNARYOP_TYPE_NOT:
             res = analyzeUnaryBool(app->exp, env, ng);
-            break;
-        case LAMUNARYOP_TYPE_PUTC:
-            res = analyzeUnaryChar(app->exp, env, ng);
-            break;
-        case LAMUNARYOP_TYPE_PUTV:
-            res = analyzeExp(app->exp, env, ng);
             break;
         default:
             cant_happen("unrecognized type %d in analyzeUnary", app->type);
@@ -1208,23 +1188,6 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return boolean;
 }
 
-static TcType *analyzeCharacterExp(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeCharacterExp);
-    TcType *type = analyzeExp(exp, env, ng);
-    int save = PROTECT(type);
-    TcType *character = makeCharacter();
-    PROTECT(character);
-    if (!unify(type, character, "character exp")) {
-        eprintf("while analyzing character expr:\n");
-        ppLamExp(exp);
-        eprintf("\n");
-        REPORT_PARSER_INFO(exp);
-    }
-    UNPROTECT(save);
-    // LEAVE(analyzeCharacterExp);
-    return character;
-}
-
 static TcType *lookupConstructorType(HashSymbol *name, int nsid, TcEnv *env, TcNg *ng) {
     TcType *currentNamespace = NULL;
     getFromTcEnv(env, namespaceSymbol(), &currentNamespace);
@@ -1658,7 +1621,7 @@ static TcType *makeVar(HashSymbol *t) {
     return res;
 }
 
-static TcType *makeFreshVar(char *name __attribute__((unused))) {
+TcType *makeFreshVar(char *name __attribute__((unused))) {
     return makeVar(genAlphaSym("#"));
 }
 
@@ -1701,20 +1664,6 @@ static void addNotToEnv(TcEnv *env) {
     TcType *boolean = makeBoolean();
     int save = PROTECT(boolean);
     addUnOpToEnv(env, negSymbol(), boolean);
-    UNPROTECT(save);
-}
-
-static void addPutcToEnv(TcEnv *env) {
-    TcType *character = makeCharacter();
-    int save = PROTECT(character);
-    addUnOpToEnv(env, putcSymbol(), character);
-    UNPROTECT(save);
-}
-
-static void addPutnToEnv(TcEnv *env) {
-    TcType *integer = makeBigInteger();
-    int save = PROTECT(integer);
-    addUnOpToEnv(env, putnSymbol(), integer);
     UNPROTECT(save);
 }
 

@@ -35,6 +35,7 @@
 #include "builtins_debug.h"
 #include "memory.h"
 #include "utf8.h"
+#include "builtin_io.h"
 
 int dump_bytecode_flag = 0;
 
@@ -50,7 +51,6 @@ int dump_bytecode_flag = 0;
 
 static void step();
 static Value lookup(int frame, int offset);
-void putValue(Value x);
 void putCharacter(Character x);
 
 static CEKF state;
@@ -540,48 +540,6 @@ static void step() {
                     int size = readCurrentByte();
                     DEBUGPRINTF("PUSHN [%d]\n", size);
                     extend(size);
-                }
-                break;
-
-            case BYTECODES_TYPE_PRIM_PUTC:{
-                    // peek value, print it
-                    DEBUGPRINTF("PUTC\n");
-                    Value b = tos();
-#ifdef CHAR_IS_CHARACTER
-                    putchar(b.val.character);
-#else
-                    putCharacter(b.val.character);
-#endif
-                }
-                break;
-
-            case BYTECODES_TYPE_PRIM_PUTV:{
-                    // peek value, print it
-                    DEBUGPRINTF("PUTC\n");
-                    Value b = tos();
-                    putValue(b);
-                }
-                break;
-
-            case BYTECODES_TYPE_PRIM_PUTN:{
-                    // peek value, print it
-                    DEBUGPRINTF("PUTN\n");
-                    Value b = tos();
-                    switch (b.type) {
-                        case VALUE_TYPE_BIGINT:
-                        case VALUE_TYPE_STDINT:
-                        case VALUE_TYPE_IRRATIONAL:
-                        case VALUE_TYPE_RATIONAL:
-                        case VALUE_TYPE_BIGINT_IMAG:
-                        case VALUE_TYPE_STDINT_IMAG:
-                        case VALUE_TYPE_IRRATIONAL_IMAG:
-                        case VALUE_TYPE_RATIONAL_IMAG:
-                        case VALUE_TYPE_COMPLEX:
-                            putValue(b);
-                            break;
-                        default:
-                            cant_happen("unrecognised type %d", b.type);
-                    }
                 }
                 break;
 
@@ -1265,88 +1223,10 @@ static void step() {
     }
 }
 
-static void putVec(Vec *x);
 
 void putCharacter(Character c) {
     unsigned char buf[8];
     unsigned char *ptr = writeChar(buf, c);
     *ptr = 0;
     printf("%s", buf);
-}
-
-void putValue(Value x) {
-    switch (x.type) {
-        case VALUE_TYPE_NONE:
-            printf("<void>");
-            break;
-        case VALUE_TYPE_STDINT:
-            printf("%d", x.val.stdint);
-            break;
-        case VALUE_TYPE_STDINT_IMAG:
-            printf("%di", x.val.stdint);
-            break;
-        case VALUE_TYPE_BIGINT:
-            fprintBigInt(stdout, x.val.bigint);
-            break;
-        case VALUE_TYPE_BIGINT_IMAG:
-            fprintBigInt(stdout, x.val.bigint);
-            printf("i");
-            break;
-        case VALUE_TYPE_RATIONAL:
-            putValue(x.val.vec->entries[0]);
-            printf("/");
-            putValue(x.val.vec->entries[1]);
-            break;
-        case VALUE_TYPE_RATIONAL_IMAG:
-            printf("(");
-            putValue(x.val.vec->entries[0]);
-            printf("/");
-            putValue(x.val.vec->entries[1]);
-            printf(")i");
-            break;
-        case VALUE_TYPE_IRRATIONAL:
-            if(fmod(x.val.irrational, 1) == 0)
-                printf("%.1f", x.val.irrational);
-            else
-                printf("%g", x.val.irrational);
-            break;
-        case VALUE_TYPE_IRRATIONAL_IMAG:
-            if( fmod(x.val.irrational, 1) == 0)
-                printf("%.1fi", x.val.irrational);
-            else
-                printf("%gi", x.val.irrational);
-            break;
-        case VALUE_TYPE_COMPLEX:
-            printf("(");
-            putValue(x.val.vec->entries[0]);
-            printf(" + ");
-            putValue(x.val.vec->entries[1]);
-            printf(")");
-            break;
-        case VALUE_TYPE_CHARACTER:
-            printf("%s", charRep(x.val.character));
-            break;
-        case VALUE_TYPE_CLO:
-            printf("<closure>");
-            break;
-        case VALUE_TYPE_KONT:
-            printf("<continuation>");
-            break;
-        case VALUE_TYPE_VEC:
-            putVec(x.val.vec);
-            break;
-        default:
-            cant_happen("unrecognised value type in putValue");
-    }
-}
-
-static void putVec(Vec *x) {
-    printf("#[");
-    for (Index i = 0; i < x->size; i++) {
-        putValue(x->entries[i]);
-        if (i + 1 < x->size) {
-            printf(" ");
-        }
-    }
-    printf("]");
 }
