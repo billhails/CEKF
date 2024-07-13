@@ -18,8 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#  include "cekfs.h"
 #  include "builtins.h"
 
 BuiltIns *registerBuiltIns();
+struct Value makeTryResult(int code, struct Value val);
+struct Value makeSome(struct Value val);
+struct Value makeNothing(void);
+struct Value makeEmptyList(void);
+struct Value makeBasic(struct Value v, int code);
+
 
 #endif

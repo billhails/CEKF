@@ -1,0 +1,24 @@
+assert(switch(open("/tmp/junk.fn", io_write)) {
+    (success(fh)) {
+        fputs(fh, "Hello, World!\n");
+        close(fh);
+        true;
+    }
+    (failure(errmsg)) {
+        puts(errmsg);
+        false;
+    }
+});
+
+assert(switch(open("/tmp/junk.fn", io_read)) {
+    (success(fh)) {
+        let data = fgets(fh);
+        in
+        close(fh);
+        data == "Hello, World!";
+    }
+    (failure(errmsg)) {
+        puts(errmsg);
+        false;
+    }
+});

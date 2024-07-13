@@ -31,6 +31,7 @@ const char *preamble =
 "typedef maybe(#t) { nothing | some(#t) }\n"
 "typedef try(#f, #s) { failure(#f) | success(#s) }\n"
 "typedef basic_type { basic_null | basic_number(number) | basic_string(string) | basic_char(char) }\n"
+"typedef io_mode { io_read | io_write | io_append }\n"
 "\n"
 "fn assert_(line, file, condition) {\n"
 "    if (condition) {\n"
