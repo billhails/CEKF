@@ -21,43 +21,13 @@
 #include "cekfs.h"
 #include "cekf.h"
 
-#define ONE_BYTE_MASK         0b10000000
-#define ONE_BYTE_FLAG         0b00000000
-#define ONE_BYTE_PAYLOAD      (~ONE_BYTE_MASK)
-
-#define TWO_BYTE_START        0x80
-#define TWO_BYTE_MASK         0b11100000
-#define TWO_BYTE_FLAG         0b11000000
-#define TWO_BYTE_PAYLOAD      (~TWO_BYTE_MASK)
-
-#define THREE_BYTE_START      0x800
-#define THREE_BYTE_MASK       0b11110000
-#define THREE_BYTE_FLAG       0b11100000
-#define THREE_BYTE_PAYLOAD    (~THREE_BYTE_MASK)
-
-#define FOUR_BYTE_START       0x10000
-#define FOUR_BYTE_MASK        0b11111000
-#define FOUR_BYTE_FLAG        0b11110000
-#define FOUR_BYTE_PAYLOAD     (~FOUR_BYTE_MASK)
-#define FOUR_BYTE_END         0x10FFFF
-
-#define TRAILING_BYTE_MASK    0b11000000
-#define TRAILING_BYTE_FLAG    0b10000000
-#define TRAILING_BYTE_PAYLOAD (~TRAILING_BYTE_MASK)
-#define TRAILING_BYTE_SIZE    6
-
-#define IS_ONE_BYTE(x) (((x) & ONE_BYTE_MASK) == ONE_BYTE_FLAG)
-#define IS_TWO_BYTE(x) (((x) & TWO_BYTE_MASK) == TWO_BYTE_FLAG)
-#define IS_THREE_BYTE(x) (((x) & THREE_BYTE_MASK) == THREE_BYTE_FLAG)
-#define IS_FOUR_BYTE(x) (((x) & FOUR_BYTE_MASK) == FOUR_BYTE_FLAG)
-#define IS_TRAILING_BYTE(x) (((x) & TRAILING_BYTE_MASK) == TRAILING_BYTE_FLAG)
-
 typedef enum ParseState {
     START,
     TWO_BYTE,
     THREE_BYTE,
     FOUR_BYTE,
-    ERROR
+    ERROR,
+    RECOVERY
 } ParseState;
 
 // validates and returns the number of characters in the utf8 encoded string
@@ -70,28 +40,28 @@ int decodedLength(unsigned char *string) {
     while (*string) {
         switch (state) {
             case FOUR_BYTE:
-                state = IS_TRAILING_BYTE(*string) ? THREE_BYTE : ERROR;
+                state = isTrailingByteUtf8(*string) ? THREE_BYTE : ERROR;
                 break;
             case THREE_BYTE:
-                state = IS_TRAILING_BYTE(*string) ? TWO_BYTE : ERROR;
+                state = isTrailingByteUtf8(*string) ? TWO_BYTE : ERROR;
                 break;
             case TWO_BYTE:
-                state = IS_TRAILING_BYTE(*string) ? START : ERROR;
+                state = isTrailingByteUtf8(*string) ? START : ERROR;
                 break;
             case START:
-                if (IS_FOUR_BYTE(*string)) {
+                if (isFourByteUtf8(*string)) {
                     ++len;
                     state = FOUR_BYTE;
                 }
-                else if (IS_THREE_BYTE(*string)) {
+                else if (isThreeByteUtf8(*string)) {
                     ++len;
                     state = THREE_BYTE;
                 }
-                else if (IS_TWO_BYTE(*string)) {
+                else if (isTwoByteUtf8(*string)) {
                     ++len;
                     state = TWO_BYTE;
                 }
-                else if (IS_ONE_BYTE(*string)) {
+                else if (isOneByteUtf8(*string)) {
                     ++len;
                     state = START;
                 }
@@ -99,6 +69,7 @@ int decodedLength(unsigned char *string) {
                     state = ERROR;
                 }
                 break;
+            case RECOVERY:
             case ERROR:
                 return -1;
         }
@@ -106,6 +77,71 @@ int decodedLength(unsigned char *string) {
     }
 
     return state == START ? len : -1;
+}
+
+// fetches the next whole unicode character from the argument file handle.
+// will skip any initial trailing bytes.
+// Will return '\0' on EOF.
+// will return 0xfffd (unicode replacement character) on error.
+wchar_t utf8Fgetc(FILE *fh) {
+    ParseState state = START;
+    wchar_t dest = 0;
+    do {
+        int c = fgetc(fh);
+        if (c == EOF) return 0;
+        Byte src = (Byte) c;
+        switch (state) {
+            case RECOVERY:
+            case START:
+                if (isFourByteUtf8(src)) {
+                    dest = src & UTF8_FOUR_BYTE_PAYLOAD;
+                    state = FOUR_BYTE;
+                } else if (isThreeByteUtf8(src)) {
+                    dest = src & UTF8_THREE_BYTE_PAYLOAD;
+                    state = THREE_BYTE;
+                } else if (isTwoByteUtf8(src)) {
+                    dest = src & UTF8_TWO_BYTE_PAYLOAD;
+                    state = TWO_BYTE;
+                } else if (isOneByteUtf8(src)) {
+                    dest = src & UTF8_ONE_BYTE_PAYLOAD;
+                    state = START;
+                } else if (isTrailingByteUtf8(src)) {
+                    state = RECOVERY;
+                }
+                break;
+            case TWO_BYTE:
+                if (isTrailingByteUtf8(src)) {
+                    dest <<= UTF8_TRAILING_BYTE_SIZE;
+                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                    state = START;
+                } else {
+                    state = ERROR;
+                }
+                break;
+            case THREE_BYTE:
+                if (isTrailingByteUtf8(src)) {
+                    dest <<= UTF8_TRAILING_BYTE_SIZE;
+                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                    state = TWO_BYTE;
+                } else {
+                    state = ERROR;
+                }
+                break;
+            case FOUR_BYTE:
+                if (isTrailingByteUtf8(src)) {
+                    dest <<= UTF8_TRAILING_BYTE_SIZE;
+                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                    state = THREE_BYTE;
+                } else {
+                    state = ERROR;
+                }
+                break;
+            case ERROR:
+                return 0xfffd;
+                
+        }
+    } while (state != START);
+    return dest;
 }
 
 // translates a utf8-encoded character to a wchar_t.
@@ -117,37 +153,38 @@ unsigned char *utf8_to_unicode_char(wchar_t *dest, unsigned char *src) {
     do {
         switch (state) {
             case START:
-                if (IS_FOUR_BYTE(*src)) {
-                    *dest = *src & FOUR_BYTE_PAYLOAD;
+                if (isFourByteUtf8(*src)) {
+                    *dest = *src & UTF8_FOUR_BYTE_PAYLOAD;
                     state = FOUR_BYTE;
                 }
-                else if (IS_THREE_BYTE(*src)) {
-                    *dest = *src & THREE_BYTE_PAYLOAD;
+                else if (isThreeByteUtf8(*src)) {
+                    *dest = *src & UTF8_THREE_BYTE_PAYLOAD;
                     state = THREE_BYTE;
                 }
-                else if (IS_TWO_BYTE(*src)) {
-                    *dest = *src & TWO_BYTE_PAYLOAD;
+                else if (isTwoByteUtf8(*src)) {
+                    *dest = *src & UTF8_TWO_BYTE_PAYLOAD;
                     state = TWO_BYTE;
                 }
-                else if (IS_ONE_BYTE(*src)) {
-                    *dest = *src & ONE_BYTE_PAYLOAD;
+                else if (isOneByteUtf8(*src)) {
+                    *dest = *src & UTF8_ONE_BYTE_PAYLOAD;
                 }
                 break;
             case TWO_BYTE:
-                *dest <<= TRAILING_BYTE_SIZE;
-                *dest |= (*src & TRAILING_BYTE_PAYLOAD);
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (*src & UTF8_TRAILING_BYTE_PAYLOAD);
                 state = START;
                 break;
             case THREE_BYTE:
-                *dest <<= TRAILING_BYTE_SIZE;
-                *dest |= (*src & TRAILING_BYTE_PAYLOAD);
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (*src & UTF8_TRAILING_BYTE_PAYLOAD);
                 state = TWO_BYTE;
                 break;
             case FOUR_BYTE:
-                *dest <<= TRAILING_BYTE_SIZE;
-                *dest |= (*src & TRAILING_BYTE_PAYLOAD);
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (*src & UTF8_TRAILING_BYTE_PAYLOAD);
                 state = THREE_BYTE;
                 break;
+            case RECOVERY:
             case ERROR:
                 cant_happen("error state");
         }
@@ -171,10 +208,10 @@ void utf8_to_unicode_string(wchar_t *dest, unsigned char *src) {
 // returns the number of bytes required to convert the unicode wchar_t
 // to UTF-8, not including the trailing NULL
 int byteSize(wchar_t c) {
-    if (c < TWO_BYTE_START) return 1;
-    if (c < THREE_BYTE_START) return 2;
-    if (c < FOUR_BYTE_START) return 3;
-    if (c <= FOUR_BYTE_END) return 4;
+    if (c < UTF8_TWO_BYTE_START) return 1;
+    if (c < UTF8_THREE_BYTE_START) return 2;
+    if (c < UTF8_FOUR_BYTE_START) return 3;
+    if (c <= UTF8_FOUR_BYTE_END) return 4;
     cant_happen("maximum unicode character exceeded: %x", c);
 }
 
@@ -198,19 +235,19 @@ unsigned char *writeChar(unsigned char *utf8, wchar_t unicode) {
             *utf8++ = (unsigned char) unicode;
             break;
         case 2:
-            *utf8++ = (unicode >> TRAILING_BYTE_SIZE) | TWO_BYTE_FLAG;
-            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> UTF8_TRAILING_BYTE_SIZE) | UTF8_TWO_BYTE_FLAG;
+            *utf8++ = (unicode & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
             break;
         case 3:
-            *utf8++ = (unicode >> (TRAILING_BYTE_SIZE * 2)) | THREE_BYTE_FLAG;
-            *utf8++ = ((unicode >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> (UTF8_TRAILING_BYTE_SIZE * 2)) | UTF8_THREE_BYTE_FLAG;
+            *utf8++ = ((unicode >> UTF8_TRAILING_BYTE_SIZE) & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
             break;
         case 4:
-            *utf8++ = (unicode >> (TRAILING_BYTE_SIZE * 3)) | FOUR_BYTE_FLAG;
-            *utf8++ = ((unicode >> (TRAILING_BYTE_SIZE * 2)) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *utf8++ = ((unicode >> TRAILING_BYTE_SIZE) & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
-            *utf8++ = (unicode & TRAILING_BYTE_PAYLOAD) | TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode >> (UTF8_TRAILING_BYTE_SIZE * 3)) | UTF8_FOUR_BYTE_FLAG;
+            *utf8++ = ((unicode >> (UTF8_TRAILING_BYTE_SIZE * 2)) & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
+            *utf8++ = ((unicode >> UTF8_TRAILING_BYTE_SIZE) & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
+            *utf8++ = (unicode & UTF8_TRAILING_BYTE_PAYLOAD) | UTF8_TRAILING_BYTE_FLAG;
             break;
         default:
             cant_happen("invalid byteSize");

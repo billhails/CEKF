@@ -18,10 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#  include <stdio.h>
 #  include "builtins.h"
 
 void registerIO(BuiltIns *registry);
 void putValue(Value x);
+void fputValue(FILE *fh, Value x);
 void putVec(Vec *x);
+void fputVec(FILE *fh, Vec *x);
 
 #endif

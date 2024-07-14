@@ -1,24 +1,18 @@
-assert(switch(open("/tmp/junk.fn", io_write)) {
-    (success(fh)) {
-        fputs(fh, "Hello, World!\n");
-        close(fh);
-        true;
-    }
-    (failure(errmsg)) {
-        puts(errmsg);
-        false;
-    }
-});
+let
+    link "ioutils.fn" as io;
+    testFile = "/tmp/junk";
+    testData = "¡Hello, World!";
+in
+    io.with_output_to(testFile, fn(fh) {
+        fputs(fh, testData);
+    });
 
-assert(switch(open("/tmp/junk.fn", io_read)) {
-    (success(fh)) {
+    io.with_input_from(testFile, fn(fh) {
         let data = fgets(fh);
-        in
-        close(fh);
-        data == "Hello, World!";
-    }
-    (failure(errmsg)) {
-        puts(errmsg);
-        false;
-    }
-});
+        in assert(data == testData);
+    });
+
+    io.with_input_from(testFile, fn(fh) {
+        let data = fgetc(fh);
+        in assert(data == '\ua1;');
+    });
