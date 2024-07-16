@@ -211,9 +211,6 @@ enums:
     AexpUnaryOp:
         - NEG
         - NOT
-        - PUTC
-        - PUTN
-        - PUTV
 
     CexpBoolType:
         - AND

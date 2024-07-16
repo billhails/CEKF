@@ -205,15 +205,6 @@ void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
         case AEXPUNARYOP_TYPE_NOT:
             prim = BYTECODES_TYPE_PRIM_NOT;
             break;
-        case AEXPUNARYOP_TYPE_PUTC:
-            prim = BYTECODES_TYPE_PRIM_PUTC;
-            break;
-        case AEXPUNARYOP_TYPE_PUTN:
-            prim = BYTECODES_TYPE_PRIM_PUTN;
-            break;
-        case AEXPUNARYOP_TYPE_PUTV:
-            prim = BYTECODES_TYPE_PRIM_PUTV;
-            break;
         case AEXPUNARYOP_TYPE_NEG:
             prim = BYTECODES_TYPE_PRIM_NEG;
             break;

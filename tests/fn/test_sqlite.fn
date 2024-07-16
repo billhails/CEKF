@@ -4,16 +4,15 @@ let
 in
     sql.with_database("unicode.db",
         sql.with_statement("select * from unicode where int_code between ? and ?",
-            sql.with_bindings([basic_number(0x13000), basic_number(0x1342e)],
+            sql.with_bindings([basic_number(0x13420), basic_number(0x1342e)],
                 sql.with_results(fn (row) {
-
                     unsafe switch (dict.lookup("int_code", row)) {
                         (some(basic_number(n))) { putc(chr(n)) }
                     };
                     dict.foreach(fn (k, v) {
                         puts(", ");
                         puts(k);
-                        puts(": ");
+                        puts(":");
                         unsafe switch (v) {
                             (basic_null) {
                                 []
@@ -23,11 +22,9 @@ in
                                 []
                             }
                             (basic_string(s)) {
-                                putc('"');
                                 puts(s);
-                                puts("\"");
                             }
                         }
                     }, row);
-                    putc('\n')
+                    putc('\n');
                 }))));

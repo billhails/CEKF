@@ -92,6 +92,9 @@ arrays:
     CharArray:
         entries: char
 
+    ByteArray:
+        entries: byte
+
 vectors:
     Vec:
         entries: Value
@@ -142,9 +145,6 @@ enums:
     - DONE
     - ERROR
     - PRIM_CMP
-    - PRIM_PUTC
-    - PRIM_PUTN
-    - PRIM_PUTV
     - PRIM_NEG
     - STDINT_IMAG
     - BIGINT_IMAG

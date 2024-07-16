@@ -65,45 +65,6 @@ static void opaque_sqlite3_finalize(Opaque *data) {
     data->data = NULL;
 }
 
-static Value makeTryResult(int code, Value val) {
-    Vec *v = newVec(2);
-    v->entries[0] = value_Stdint(code);
-    v->entries[1] = val;
-    return value_Vec(v);
-}
-
-static Value makeSome(Value val) {
-    Vec *v = newVec(2);
-    v->entries[0] = value_Stdint(1);
-    v->entries[1] = val;
-    return value_Vec(v);
-}
-
-static Value makeNothing(void) {
-    Vec *v = newVec(1);
-    v->entries[0] = value_Stdint(0);
-    return value_Vec(v);
-}
-
-static Value makeEmptyList(void) {
-    Vec *v = newVec(1);
-    v->entries[0] = value_Stdint(0);
-    return value_Vec(v);
-}
-
-static Value makeBasic(Value v, int code) {
-    if (code == BASIC_TYPE_NULL) {
-        Vec *null = newVec(1);
-        null->entries[0] = value_Stdint(BASIC_TYPE_NULL);
-        return value_Vec(null);
-    } else {
-        Vec *val = newVec(2);
-        val->entries[0] = value_Stdint(code);
-        val->entries[1] = v;
-        return value_Vec(val);
-    }
-}
-
 static Value builtin_sqlite3_open(Vec *v) {
     char *buf = listToUtf8(v->entries[0]);
     sqlite3 *ppDb = NULL;

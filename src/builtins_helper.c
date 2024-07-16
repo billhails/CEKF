@@ -22,11 +22,51 @@
 #include "symbol.h"
 #include "tc_analyze.h"
 #include "builtin_sqlite.h"
+#include "builtin_io.h"
 
 static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
+
+Value makeTryResult(int code, Value val) {
+    Vec *v = newVec(2);
+    v->entries[0] = value_Stdint(code);
+    v->entries[1] = val;
+    return value_Vec(v);
+}
+
+Value makeSome(Value val) {
+    Vec *v = newVec(2);
+    v->entries[0] = value_Stdint(1);
+    v->entries[1] = val;
+    return value_Vec(v);
+}
+
+Value makeNothing(void) {
+    Vec *v = newVec(1);
+    v->entries[0] = value_Stdint(0);
+    return value_Vec(v);
+}
+
+Value makeEmptyList(void) {
+    Vec *v = newVec(1);
+    v->entries[0] = value_Stdint(0);
+    return value_Vec(v);
+}
+
+Value makeBasic(Value v, int code) {
+    if (code == BASIC_TYPE_NULL) {
+        Vec *null = newVec(1);
+        null->entries[0] = value_Stdint(BASIC_TYPE_NULL);
+        return value_Vec(null);
+    } else {
+        Vec *val = newVec(2);
+        val->entries[0] = value_Stdint(code);
+        val->entries[1] = v;
+        return value_Vec(val);
+    }
+}
 
 BuiltIns *registerBuiltIns() {
     BuiltIns *res = newBuiltIns();
@@ -35,6 +75,7 @@ BuiltIns *registerBuiltIns() {
     registerAssert(res);
     registerOrd(res);
     registerChr(res);
+    registerIO(res);
     registerSQLite(res);
     UNPROTECT(save);
     return res;

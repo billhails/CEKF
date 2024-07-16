@@ -728,12 +728,6 @@ static LamExp *makeLamAmb(LamList *args) {
 }
 
 static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
-    if (symbol == putcSymbol())
-        return makeUnaryOp(LAMUNARYOP_TYPE_PUTC, args);
-    if (symbol == putnSymbol())
-        return makeUnaryOp(LAMUNARYOP_TYPE_PUTN, args);
-    if (symbol == putvSymbol())
-        return makeUnaryOp(LAMUNARYOP_TYPE_PUTV, args);
     if (symbol == negSymbol())
         return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
     if (symbol == notSymbol())

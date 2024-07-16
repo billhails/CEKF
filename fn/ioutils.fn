@@ -1,0 +1,31 @@
+namespace
+
+fn with_output_to(filename, handler) {
+    switch (open(filename, io_write)) {
+        (success(filehandle)) {
+            let data = some(handler(filehandle));
+            in
+                close(filehandle);
+                data;
+        }
+        (failure(errmsg)) {
+            print(errmsg);
+            nothing;
+        }
+    }
+}
+
+fn with_input_from(filename, handler) {
+    switch (open(filename, io_read)) {
+        (success(filehandle)) {
+            let data = some(handler(filehandle));
+            in
+                close(filehandle);
+                data;
+        }
+        (failure(errmsg)) {
+            print(errmsg);
+            nothing;
+        }
+    }
+}

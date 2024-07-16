@@ -47,6 +47,7 @@ Stack["Stack[]"] --entries--> Value
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 ByteCodes["enum ByteCodes"]
 CharArray["CharArray[]"] --entries--> char
+ByteArray["ByteArray[]"] --entries--> byte
 ValueVal
 ValueType
 ```

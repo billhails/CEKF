@@ -320,15 +320,6 @@ void ppLamUnaryOp(LamUnaryOp type) {
         case LAMUNARYOP_TYPE_NOT:
             eprintf("not");
             break;
-        case LAMUNARYOP_TYPE_PUTC:
-            eprintf("putc");
-            break;
-        case LAMUNARYOP_TYPE_PUTN:
-            eprintf("putn");
-            break;
-        case LAMUNARYOP_TYPE_PUTV:
-            eprintf("putv");
-            break;
         default:
             cant_happen("unrecognised type %s in ppLamUnaryOp", lamUnaryOpName(type));
     }

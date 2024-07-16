@@ -37,5 +37,7 @@ TcType *makeListType(TcType *content);
 TcType *makeMaybeType(TcType *content);
 TcType *makeTryType(TcType *failure, TcType *success);
 TcType *makeBasicType(void);
+TcType *makeIOType(void);
+TcType *makeFreshVar(char *name __attribute__((unused)));
 
 #endif
