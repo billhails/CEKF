@@ -23,6 +23,16 @@
 #  include "types.h"
 #  include "cekfs.h"
 
+// MUST remember to increment this if bytecodes change
+#  define CEKF_BYTECODE_VERSION 1
+
+enum ReadByteCodeStatus {
+    BYTECODES_OK,
+    BYTECODES_BADFILE,
+    BYTECODES_BADHEADER,
+    BYTECODES_BADVERSION
+};
+
 char *charRep(Character c);
 
 void resetByteCodeArray(ByteCodeArray *b);
@@ -45,6 +55,9 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b);
 void writeAexp(Aexp *x, ByteCodeArray *b);
 void writeCexp(Cexp *x, ByteCodeArray *b);
 void writeExp(Exp *x, ByteCodeArray *b);
+
+bool writeBinaryOutputFile(ByteCodeArray *b, char *filename);
+enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename);
 
 void writeEnd(ByteCodeArray *b);
 

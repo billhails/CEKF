@@ -34,6 +34,7 @@
 #  include "debugging_off.h"
 #endif
 
+
 void resetByteCodeArray(ByteCodeArray *b) {
     b->size = 0;
     for (size_t i = 0; i < b->capacity; i++) {
@@ -769,4 +770,50 @@ void writeEnd(ByteCodeArray *b) {
     ENTER(writeEnd);
     addByte(b, BYTECODES_TYPE_RETURN);
     LEAVE(writeEnd);
+}
+
+enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename) {
+    FILE *fh = fopen(filename, "r");
+    if (fh == NULL) {
+        return BYTECODES_BADFILE; // errno will be set
+    }
+    if (fgetc(fh) != 'F') {
+        return BYTECODES_BADHEADER;
+    }
+    if (fgetc(fh) != 'N') {
+        return BYTECODES_BADHEADER;
+    }
+    int vh = fgetc(fh);
+    if (vh == EOF) {
+        return BYTECODES_BADHEADER;
+    }
+    int vl = fgetc(fh);
+    if (vl == EOF) {
+        return BYTECODES_BADHEADER;
+    }
+    if ((vl | (vh << 8)) != CEKF_BYTECODE_VERSION) {
+        fprintf(stderr, "bad version %d.%d\n", vh, vl);
+        return BYTECODES_BADVERSION;
+    }
+    int c;
+    while ((c = fgetc(fh)) != EOF) {
+        pushByteCodeArray(b, c);
+    }
+    return BYTECODES_OK;
+}
+
+bool writeBinaryOutputFile(ByteCodeArray *b, char *filename) {
+    FILE *fh = fopen(filename, "w");
+    if (fh == NULL) {
+        return false; // errno will be set
+    }
+    fputc('F', fh);
+    fputc('N', fh);
+    fputc((CEKF_BYTECODE_VERSION & 0xFF00) >> 8, fh);
+    fputc((CEKF_BYTECODE_VERSION & 0xFF), fh);
+    for (Index i = 0; i < b->size; i++) {
+        fputc((int) b->entries[i], fh);
+    }
+    fclose(fh);
+    return true;
 }
