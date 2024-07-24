@@ -18,9 +18,13 @@
 
 #include "builtins_impl.h"
 #include "arithmetic.h"
+#include "utf8.h"
 
 bool assertions_failed;
 int assertions_accumulate = 0;
+int builtin_args_argc = 0;
+int builtin_args_cargc = 0;
+char **builtin_args_argv;
 
 Value builtin_rand(Vec *v) {
     return nrand(v->entries[0]);
@@ -39,9 +43,27 @@ Value builtin_ord(Vec *v) {
 }
 
 Value builtin_chr(Vec *v) {
-    if (v->entries[0].type == VALUE_TYPE_STDINT) {
-        return value_Character((Character) v->entries[0].val.stdint);
-    } else {
+#ifdef SAFETY_CHECKS
+    if (v->entries[0].type != VALUE_TYPE_STDINT) {
         cant_happen("unsupported numeric type for chr: %s", valueTypeName(v->entries[0].type));
     }
+#endif
+    return value_Character((Character) v->entries[0].val.stdint);
+}
+
+Value builtin_args(Vec *v) {
+#ifdef SAFETY_CHECKS
+    if (v->entries[0].type != VALUE_TYPE_STDINT) {
+        cant_happen("unsupported argument for args: %s", valueTypeName(v->entries[0].type));
+    }
+#endif
+    int index = v->entries[0].val.stdint + builtin_args_cargc;
+    if (index < 0 || index >= builtin_args_argc) {
+        return makeNothing();
+    }
+    Value s = utf8ToList(builtin_args_argv[index]);
+    int save = protectValue(s);
+    Value result = makeSome(s);
+    UNPROTECT(save);
+    return result;
 }

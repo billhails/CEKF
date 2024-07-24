@@ -1,0 +1,41 @@
+namespace
+
+typedef PitchClass {
+      A |
+    | As | Bb
+    | B
+    | C
+    | Cs | Db
+    | D
+    | Ds | Eb
+    | E
+    | F
+    | Fs | Gb
+    | G
+    | Gs | Ab
+}
+
+typedef interval {
+    unison | first | second | third | fourth | fifth | sixth | seventh
+}
+
+typedef quality {
+    diminished | minor | major | augmented | perfect
+}
+
+fn equivalent {
+    (x, x) { true }
+    (Gs, Ab) |
+    (Ab, Gs) |
+    (As, Bb) |
+    (Bb, Gs) |
+    (Cs, Db) |
+    (Db, Cs) |
+    (Ds, Eb) |
+    (Eb, Ds) |
+    (Fs, Gb) |
+    (Gb, Fs) { true }
+    (_, _) { false }
+}
+
+

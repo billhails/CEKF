@@ -202,6 +202,6 @@ check-grammar:
 	bison -Wcex --feature=syntax-only src/parser.y
 
 list-cores:
-	ls -rt1 /var/lib/apport/coredump/* | tail -1
+	@ls -rt1 /var/lib/apport/coredump/* | tail -1
 
-# vim: noet sw=8
+# vim: set noet sw=4:

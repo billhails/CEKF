@@ -28,6 +28,7 @@ static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
+static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]);
 
 Value makeTryResult(int code, Value val) {
     Vec *v = newVec(2);
@@ -68,7 +69,7 @@ Value makeBasic(Value v, int code) {
     }
 }
 
-BuiltIns *registerBuiltIns() {
+BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     BuiltIns *res = newBuiltIns();
     int save = PROTECT(res);
     registerRand(res);
@@ -77,6 +78,7 @@ BuiltIns *registerBuiltIns() {
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
+    registerArgs(res, argc, cargc, argv);
     UNPROTECT(save);
     return res;
 }
@@ -130,4 +132,23 @@ static void registerChr(BuiltIns *registry) {
     PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);
+}
+
+static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integer = newTcType_Biginteger();
+    PROTECT(integer);
+    pushBuiltInArgs(args, integer);
+    TcType *stringType = makeStringType();
+    PROTECT(stringType);
+    TcType *maybeStringType = makeMaybeType(stringType);
+    PROTECT(maybeStringType);
+    BuiltIn *decl = newBuiltIn(newSymbol("args"), maybeStringType, args, (void *)builtin_args);
+    PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+    builtin_args_argc = argc;
+    builtin_args_cargc = cargc;
+    builtin_args_argv = argv;
 }

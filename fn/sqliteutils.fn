@@ -63,3 +63,16 @@ fn with_results(handler, statement) {
     in
         _with_results(keys);
 }
+
+fn print_row(row) {
+    dict.foreach(fn (k, v) {
+        puts(", ");
+        puts(k);
+        puts(":");
+        unsafe switch (v) {
+            (basic_null) { [] }
+            (basic_number(n)) { putn(n); [] }
+            (basic_string(s)) { puts(s); }
+        }
+    }, row);
+}

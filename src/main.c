@@ -82,7 +82,7 @@ static void usage(char *prog, int status) {
     exit(status);
 }
 
-static void processArgs(int argc, char *argv[]) {
+static int processArgs(int argc, char *argv[]) {
     int c;
 
     while (1) {
@@ -146,6 +146,8 @@ static void processArgs(int argc, char *argv[]) {
         eprintf("need filename or --binary-in argument\n");
         exit(1);
     }
+
+    return optind;
 }
 
 static AstProg *parseFile(char *file) {
@@ -240,8 +242,8 @@ int main(int argc, char *argv[]) {
     initNamespaces();
     include_paths = newAstStringArray();
     int save = PROTECT(include_paths);
-    processArgs(argc, argv);
-    BuiltIns *builtIns = registerBuiltIns();
+    int nextargc = processArgs(argc, argv);
+    BuiltIns *builtIns = registerBuiltIns(argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);
 
     if (binary_input_file) {
@@ -268,7 +270,7 @@ int main(int argc, char *argv[]) {
         clock_t end = clock();
         report(begin, compiled, end);
     } else {
-        AstProg *prog = parseFile(argv[optind]);
+        AstProg *prog = parseFile(argv[nextargc++]);
         int save2 = PROTECT(prog);
 
         LamExp *exp = convertProg(prog);

@@ -98,7 +98,7 @@ static TcType *makeCharacter() {
 static TcType *analyze(AstProg *prog) {
     LamExp *exp = lamConvertProg(prog);
     int save = PROTECT(exp);
-    BuiltIns *builtIns = registerBuiltIns();
+    BuiltIns *builtIns = registerBuiltIns(0, 0, NULL);
     PROTECT(builtIns);
     TcEnv *env = tc_init(builtIns);
     PROTECT(env);

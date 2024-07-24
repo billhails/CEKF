@@ -21,7 +21,7 @@
 #  include "cekfs.h"
 #  include "builtins.h"
 
-BuiltIns *registerBuiltIns();
+BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]);
 struct Value makeTryResult(int code, struct Value val);
 struct Value makeSome(struct Value val);
 struct Value makeNothing(void);

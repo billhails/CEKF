@@ -27,5 +27,10 @@ Value builtin_assert(Vec *v __attribute__((unused)));
 Value builtin_rand(Vec *);
 Value builtin_ord(Vec *v);
 Value builtin_chr(Vec *v);
+Value builtin_args(Vec *v);
+
+extern int builtin_args_argc;
+extern int builtin_args_cargc;
+extern char **builtin_args_argv;
 
 #endif
