@@ -19,3 +19,4 @@ src/*~
 UnicodeData.csv
 UnicodeData.txt
 unicode.db
+*.fnc
