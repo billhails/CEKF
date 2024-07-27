@@ -37,3 +37,6 @@ More of a wish-list than a hard and fast plan.
    * `alias some = maybe.some;`
    * `alias string = list(char);`
 * (internal) have a NEWZ variant of NEW that bzero's its result.
+* Builtins
+   * getenv
+   * opendir/readdir/stat

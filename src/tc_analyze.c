@@ -167,6 +167,14 @@ TcType *makeMaybeType(TcType *content) {
     return res;
 }
 
+TcType *makeMaybeStringType() {
+    TcType *stringType = makeStringType();
+    int save = PROTECT(stringType);
+    TcType *maybeStringType = makeMaybeType(stringType);
+    UNPROTECT(save);
+    return maybeStringType;
+}
+
 TcType *makeTryType(TcType *failure, TcType *success) {
     TcUserTypeArgs *args = newTcUserTypeArgs(success, NULL);
     int save = PROTECT(args);

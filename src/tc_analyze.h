@@ -39,5 +39,6 @@ TcType *makeTryType(TcType *failure, TcType *success);
 TcType *makeBasicType(void);
 TcType *makeIOType(void);
 TcType *makeFreshVar(char *name __attribute__((unused)));
+TcType *makeMaybeStringType();
 
 #endif
