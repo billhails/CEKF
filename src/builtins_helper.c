@@ -140,9 +140,7 @@ static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]) 
     TcType *integer = newTcType_Biginteger();
     PROTECT(integer);
     pushBuiltInArgs(args, integer);
-    TcType *stringType = makeStringType();
-    PROTECT(stringType);
-    TcType *maybeStringType = makeMaybeType(stringType);
+    TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
     BuiltIn *decl = newBuiltIn(newSymbol("args"), maybeStringType, args, (void *)builtin_args);
     PROTECT(decl);

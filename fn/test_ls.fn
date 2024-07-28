@@ -1,0 +1,34 @@
+let
+  fn ls(dir) {
+    let
+        fn helper {
+            (some(name), dh) {
+                let
+                path = dir @@ "/" @@ name;
+                in
+                puts(path);
+                putc(' ');
+                print(ftype(path));
+                helper(readdir(dh), dh);
+            }
+            (nothing, dh) {
+                closedir(dh);
+                'x'
+            }
+        }
+    in
+        switch(opendir(dir)) {
+            (success(dh)) {
+                helper(readdir(dh), dh)
+            }
+            (failure(errmsg)) {
+                puts(errmsg);
+                'x';
+            }
+        }
+  }
+in
+    ls(switch (args(0)) {
+        (some(name)) { name }
+        (nothing) { "." }
+    })

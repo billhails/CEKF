@@ -5,7 +5,7 @@ endif
 syn match fnDelimeter "(\|)\|\[\|\]\|,\|;\|{\|}"
 highlight link fnDelimeter Delimeter
 
-syntax keyword fnFunction print error rand car cdr putc fputc getc fgetc putn fputn putv fputv puts fputs gets fgets open close assert args
+syntax keyword fnFunction print error rand car cdr putc fputc getc fgetc putn fputn putv fputv puts fputs gets fgets open close assert args opendir closedir readdir ftype
 highlight link fnFunction Function
 
 syntax keyword fnConditional if else then back

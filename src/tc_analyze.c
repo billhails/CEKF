@@ -167,6 +167,14 @@ TcType *makeMaybeType(TcType *content) {
     return res;
 }
 
+TcType *makeMaybeStringType() {
+    TcType *stringType = makeStringType();
+    int save = PROTECT(stringType);
+    TcType *maybeStringType = makeMaybeType(stringType);
+    UNPROTECT(save);
+    return maybeStringType;
+}
+
 TcType *makeTryType(TcType *failure, TcType *success) {
     TcUserTypeArgs *args = newTcUserTypeArgs(success, NULL);
     int save = PROTECT(args);
@@ -198,6 +206,15 @@ TcType *makeBasicType(void) {
 
 TcType *makeIOType(void) {
     TcUserType *userType = newTcUserType(newSymbol("io_mode"), NULL, -1);
+    int save = PROTECT(userType);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
+TcType *makeFTypeType(void) {
+    TcUserType *userType = newTcUserType(newSymbol("ftype_type"), NULL, -1);
     int save = PROTECT(userType);
     PROTECT(userType);
     TcType *res = newTcType_UserType(userType);
