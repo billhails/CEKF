@@ -1728,15 +1728,64 @@ static Value comPowCom(Value base, Value exponent) {
     return res;
 }
 
-static Cmp comCmp(Value left, Value right) {
-    ASSERT_COMPLEX(left);
-    ASSERT_COMPLEX(right);
+// tie breaker for unequal complex numbers
+// *NOT* a general purpose comparison
+static Cmp magCmp(Value left, Value right) {
     Value lmag = comMag(left);
     int save = protectValue(lmag);
     Value rmag = comMag(right);
     protectValue(rmag);
     Cmp res = ncmp(lmag, rmag);
     UNPROTECT(save);
+    return res == CMP_LT ? CMP_LT : CMP_GT;
+}
+
+static Cmp comCmp(Value left, Value right) {
+    ASSERT_COMPLEX(left);
+    ASSERT_COMPLEX(right);
+    Value left_real, left_imag, right_real, right_imag;
+    extractFromComplexArg(&left_real, &left_imag, left);
+    extractFromComplexArg(&right_real, &right_imag, right);
+    Cmp real_cmp = ncmp(left_real, right_real);
+    Cmp imag_cmp = ncmp(left_imag, right_imag);
+    Cmp res;
+    switch (real_cmp) {
+        case CMP_LT:
+            switch (imag_cmp) {
+                case CMP_LT:
+                case CMP_EQ:
+                    res = CMP_LT;
+                    break;
+                case CMP_GT:
+                    res = magCmp(left, right);
+                    break;
+            }
+            break;
+        case CMP_EQ:
+            switch (imag_cmp) {
+                case CMP_LT:
+                    res = CMP_LT;
+                    break;
+                case CMP_EQ:
+                    res = CMP_EQ;
+                    break;
+                case CMP_GT:
+                    res = CMP_GT;
+                    break;
+            }
+            break;
+        case CMP_GT:
+            switch (imag_cmp) {
+                case CMP_LT:
+                    res = magCmp(left, right);
+                    break;
+                case CMP_EQ:
+                case CMP_GT:
+                    res = CMP_GT;
+                    break;
+            }
+            break;
+    }
     return res;
 }
 
