@@ -213,6 +213,15 @@ TcType *makeIOType(void) {
     return res;
 }
 
+TcType *makeFTypeType(void) {
+    TcUserType *userType = newTcUserType(newSymbol("ftype_type"), NULL, -1);
+    int save = PROTECT(userType);
+    PROTECT(userType);
+    TcType *res = newTcType_UserType(userType);
+    UNPROTECT(save);
+    return res;
+}
+
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     if (exp == NULL)
         return NULL;

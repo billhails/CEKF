@@ -3,8 +3,12 @@ let
     let
         fn helper {
             (some(name), dh) {
-                puts(name);
-                putc('\n');
+                let
+                path = dir @@ "/" @@ name;
+                in
+                puts(path);
+                putc(' ');
+                print(ftype(path));
                 helper(readdir(dh), dh);
             }
             (nothing, dh) {

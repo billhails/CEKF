@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include "common.h"
 #include "value.h"
@@ -59,7 +60,7 @@ static void registerOpenDir(BuiltIns *registry);
 static void registerReadDir(BuiltIns *registry);
 static void registerCloseDir(BuiltIns *registry);
 
-// static void registerFStat(BuiltIns *registry);
+static void registerFType(BuiltIns *registry);
 
 void registerIO(BuiltIns *registry) {
     registerPutc(registry);
@@ -79,7 +80,7 @@ void registerIO(BuiltIns *registry) {
     registerOpenDir(registry);
     registerReadDir(registry);
     registerCloseDir(registry);
-    // registerFStat(registry);
+    registerFType(registry);
 }
 
 static HashSymbol *fileSymbol(void) {
@@ -96,6 +97,14 @@ static TcType *makeFileType(void) {
 
 static TcType *makeDirType(void) {
     return newTcType_Opaque(dirSymbol());
+}
+
+static Value errnoToTry() {
+    Value errMsg = utf8ToList(strerror(errno));
+    int save = protectValue(errMsg);
+    Value result = makeTryResult(0, errMsg);
+    UNPROTECT(save);
+    return result;
 }
 
 static void private_fputc(FILE *fh, Character character) {
@@ -184,11 +193,7 @@ static Value builtin_open(Vec *args) {
     }
     FREE_ARRAY(char, filename, strlen(filename) + 1);
     if (file == NULL) {
-        Value errMsg = utf8ToList(strerror(errno));
-        int save = protectValue(errMsg);
-        Value result = makeTryResult(0, errMsg);
-        UNPROTECT(save);
-        return result;
+        return errnoToTry();
     }
     DEBUG("io open %p", file);
     Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
@@ -204,11 +209,7 @@ static Value builtin_opendir(Vec *args) {
     DIR *dir = opendir(dirname);
     FREE_ARRAY(char, dirname, strlen(dirname) + 1);
     if (dir == NULL) {
-        Value errMsg = utf8ToList(strerror(errno));
-        int save = protectValue(errMsg);
-        Value result = makeTryResult(0, errMsg);
-        UNPROTECT(save);
-        return result;
+        return errnoToTry();
     }
     DEBUG("io opendir %p", dir);
     Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL);
@@ -217,6 +218,42 @@ static Value builtin_opendir(Vec *args) {
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
+}
+
+#define FTYPE_SOCKET 0
+#define FTYPE_SYMLINK 1
+#define FTYPE_REGULAR 2
+#define FTYPE_BLOCK 3
+#define FTYPE_DIR 4
+#define FTYPE_CHAR 5
+#define FTYPE_FIFO 6
+
+static Value builtin_ftype(Vec *args) {
+    struct stat statbuf;
+    char *dirname = listToUtf8(args->entries[0]);
+    int status = stat(dirname, &statbuf);
+    FREE_ARRAY(char, dirname, strlen(dirname) + 1);
+    if (status == -1) {
+        return errnoToTry();
+    }
+    switch (statbuf.st_mode & S_IFMT) {
+        case S_IFSOCK:
+            return makeSome(value_Stdint(FTYPE_SOCKET));
+        case S_IFLNK:
+            return makeSome(value_Stdint(FTYPE_SYMLINK));
+        case S_IFREG:
+            return makeSome(value_Stdint(FTYPE_REGULAR));
+        case S_IFBLK:
+            return makeSome(value_Stdint(FTYPE_BLOCK));
+        case S_IFDIR:
+            return makeSome(value_Stdint(FTYPE_DIR));
+        case S_IFCHR:
+            return makeSome(value_Stdint(FTYPE_CHAR));
+        case S_IFIFO:
+            return makeSome(value_Stdint(FTYPE_FIFO));
+        default:
+            cant_happen("unrecognised file type %u", statbuf.st_mode & S_IFMT);
+    }
 }
 
 static Value builtin_close(Vec *args) {
@@ -480,6 +517,14 @@ static TcType *makeTryDirType(TcType *errorType) {
     return tryDirType;
 }
 
+static TcType *makeTryFTypeType(TcType *errorType) {
+    TcType *ftypeType = makeFTypeType();
+    int save = PROTECT(ftypeType);
+    TcType *tryFTypeType = makeTryType(errorType, ftypeType);
+    UNPROTECT(save);
+    return tryFTypeType;
+}
+
 static void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *returnType, BuiltInArgs *args, void *implementation) {
     BuiltIn *decl = newBuiltIn(newSymbol(name), returnType, args, implementation);
     int save = PROTECT(decl);
@@ -574,6 +619,16 @@ static void registerOpenDir(BuiltIns *registry) {
     TcType *tryDirType = makeTryDirType(stringType);
     PROTECT(tryDirType);
     pushNewBuiltIn(registry, "opendir", tryDirType, args, (void *)builtin_opendir);
+    UNPROTECT(save);
+}
+
+static void registerFType(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *stringType = pushStringType(args);
+    TcType *tryFTypeType = makeTryFTypeType(stringType);
+    PROTECT(tryFTypeType);
+    pushNewBuiltIn(registry, "ftype", tryFTypeType, args, (void *)builtin_ftype);
     UNPROTECT(save);
 }
 
