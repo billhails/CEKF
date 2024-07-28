@@ -445,23 +445,7 @@ static Value builtin_fputv(Vec *args) {
     return args->entries[0];
 }
 
-static TcType *pushCharType(BuiltInArgs *args) {
-    TcType *charType = newTcType_Character();
-    int save = PROTECT(charType);
-    pushBuiltInArgs(args, charType);
-    UNPROTECT(save);
-    return charType;
-}
-
-static TcType *pushStringType(BuiltInArgs *args) {
-    TcType *stringType = makeStringType();
-    int save = PROTECT(stringType);
-    pushBuiltInArgs(args, stringType);
-    UNPROTECT(save);
-    return stringType;
-}
-
-static TcType *pushFileType(BuiltInArgs *args) {
+static TcType *pushFileArg(BuiltInArgs *args) {
     TcType *fileType = makeFileType();
     int save = PROTECT(fileType);
     pushBuiltInArgs(args, fileType);
@@ -469,7 +453,7 @@ static TcType *pushFileType(BuiltInArgs *args) {
     return fileType;
 }
 
-static TcType *pushDirType(BuiltInArgs *args) {
+static TcType *pushDirArg(BuiltInArgs *args) {
     TcType *dirType = makeDirType();
     int save = PROTECT(dirType);
     pushBuiltInArgs(args, dirType);
@@ -477,15 +461,7 @@ static TcType *pushDirType(BuiltInArgs *args) {
     return dirType;
 }
 
-static TcType *pushNumberType(BuiltInArgs *args) {
-    TcType *numberType = newTcType_Biginteger();
-    int save = PROTECT(numberType);
-    pushBuiltInArgs(args, numberType);
-    UNPROTECT(save);
-    return numberType;
-}
-
-static TcType *pushAnyType(BuiltInArgs *args) {
+static TcType *pushAntArg(BuiltInArgs *args) {
     TcType *anyType = makeFreshVar("any");
     int save = PROTECT(anyType);
     pushBuiltInArgs(args, anyType);
@@ -493,7 +469,7 @@ static TcType *pushAnyType(BuiltInArgs *args) {
     return anyType;
 }
 
-static TcType *pushIOType(BuiltInArgs *args) {
+static TcType *pushIoArg(BuiltInArgs *args) {
     TcType *ioType = makeIOType();
     int save = PROTECT(ioType);
     pushBuiltInArgs(args, ioType);
@@ -525,18 +501,11 @@ static TcType *makeTryFTypeType(TcType *errorType) {
     return tryFTypeType;
 }
 
-static void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *returnType, BuiltInArgs *args, void *implementation) {
-    BuiltIn *decl = newBuiltIn(newSymbol(name), returnType, args, implementation);
-    int save = PROTECT(decl);
-    pushBuiltIns(registry, decl);
-    UNPROTECT(save);
-}
-
 // char -> char
 static void registerPutc(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *charType = pushCharType(args);
+    TcType *charType = pushCharacterArg(args);
     pushNewBuiltIn(registry, "putc", charType, args, (void *)builtin_putc);
     UNPROTECT(save);
 }
@@ -545,8 +514,8 @@ static void registerPutc(BuiltIns *registry) {
 static void registerFPutc(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
-    TcType *charType = pushCharType(args);
+    pushFileArg(args);
+    TcType *charType = pushCharacterArg(args);
     pushNewBuiltIn(registry, "fputc", charType, args, (void *)builtin_fputc);
     UNPROTECT(save);
 }
@@ -555,7 +524,7 @@ static void registerFPutc(BuiltIns *registry) {
 static void registerPutn(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *numberType = pushNumberType(args);
+    TcType *numberType = pushIntegerArg(args);
     pushNewBuiltIn(registry, "putn", numberType, args, (void *)builtin_putv); // re-use putv
     UNPROTECT(save);
 }
@@ -564,8 +533,8 @@ static void registerPutn(BuiltIns *registry) {
 static void registerFPutn(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
-    TcType *numberType = pushNumberType(args);
+    pushFileArg(args);
+    TcType *numberType = pushIntegerArg(args);
     pushNewBuiltIn(registry, "fputn", numberType, args, (void *)builtin_fputv); // re-use putv
     UNPROTECT(save);
 }
@@ -574,7 +543,7 @@ static void registerFPutn(BuiltIns *registry) {
 static void registerPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *anyType = pushAnyType(args);
+    TcType *anyType = pushAntArg(args);
     pushNewBuiltIn(registry, "putv", anyType, args, (void *)builtin_putv); // re-use putv
     UNPROTECT(save);
 }
@@ -583,8 +552,8 @@ static void registerPutv(BuiltIns *registry) {
 static void registerFPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
-    TcType *anyType = pushAnyType(args);
+    pushFileArg(args);
+    TcType *anyType = pushAntArg(args);
     pushNewBuiltIn(registry,"fputv", anyType, args, (void *)builtin_fputv); // re-use putv
     UNPROTECT(save);
 }
@@ -594,7 +563,7 @@ static void registerFPutv(BuiltIns *registry) {
 static void registerPuts(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *stringType = pushStringType(args);
+    TcType *stringType = pushStringArg(args);
     pushNewBuiltIn(registry, "puts", stringType, args, (void *)builtin_puts);
     UNPROTECT(save);
 }
@@ -603,8 +572,8 @@ static void registerPuts(BuiltIns *registry) {
 static void registerOpen(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *stringType = pushStringType(args);
-    pushIOType(args);
+    TcType *stringType = pushStringArg(args);
+    pushIoArg(args);
     TcType *tryFileType = makeTryFileType(stringType);
     PROTECT(tryFileType);
     pushNewBuiltIn(registry, "open", tryFileType, args, (void *)builtin_open);
@@ -615,7 +584,7 @@ static void registerOpen(BuiltIns *registry) {
 static void registerOpenDir(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *stringType = pushStringType(args);
+    TcType *stringType = pushStringArg(args);
     TcType *tryDirType = makeTryDirType(stringType);
     PROTECT(tryDirType);
     pushNewBuiltIn(registry, "opendir", tryDirType, args, (void *)builtin_opendir);
@@ -625,7 +594,7 @@ static void registerOpenDir(BuiltIns *registry) {
 static void registerFType(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *stringType = pushStringType(args);
+    TcType *stringType = pushStringArg(args);
     TcType *tryFTypeType = makeTryFTypeType(stringType);
     PROTECT(tryFTypeType);
     pushNewBuiltIn(registry, "ftype", tryFTypeType, args, (void *)builtin_ftype);
@@ -636,7 +605,7 @@ static void registerFType(BuiltIns *registry) {
 static void registerClose(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
+    pushFileArg(args);
     TcType *b = makeBoolean();
     PROTECT(b);
     pushNewBuiltIn(registry, "close", b, args, (void *)builtin_close);
@@ -647,7 +616,7 @@ static void registerClose(BuiltIns *registry) {
 static void registerCloseDir(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushDirType(args);
+    pushDirArg(args);
     TcType *b = makeBoolean();
     PROTECT(b);
     pushNewBuiltIn(registry, "closedir", b, args, (void *)builtin_closedir);
@@ -658,7 +627,7 @@ static void registerCloseDir(BuiltIns *registry) {
 static void registerReadDir(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushDirType(args);
+    pushDirArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
     pushNewBuiltIn(registry, "readdir", maybeStringType, args, (void *)builtin_readdir);
@@ -689,7 +658,7 @@ static void registerGetc(BuiltIns *registry) {
 static void registerFGetc(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
+    pushFileArg(args);
     TcType *charType = newTcType_Character();
     PROTECT(charType);
     pushNewBuiltIn(registry, "fgetc", charType, args, (void *)builtin_fgetc);
@@ -700,8 +669,8 @@ static void registerFGetc(BuiltIns *registry) {
 static void registerFPuts(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
-    TcType *stringType = pushStringType(args);
+    pushFileArg(args);
+    TcType *stringType = pushStringArg(args);
     pushNewBuiltIn(registry, "fputs", stringType, args, (void *)builtin_fputs);
     UNPROTECT(save);
 }
@@ -710,7 +679,7 @@ static void registerFPuts(BuiltIns *registry) {
 static void registerFGets(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    pushFileType(args);
+    pushFileArg(args);
     TcType *stringType = makeStringType();
     PROTECT(stringType);
     pushNewBuiltIn(registry, "fgets", stringType, args, (void *)builtin_fgets);

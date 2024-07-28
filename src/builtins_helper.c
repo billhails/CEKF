@@ -29,6 +29,7 @@ static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]);
+static void registerGetEnv(BuiltIns *registry);
 
 Value makeTryResult(int code, Value val) {
     Vec *v = newVec(2);
@@ -69,6 +70,37 @@ Value makeBasic(Value v, int code) {
     }
 }
 
+TcType *pushIntegerArg(BuiltInArgs *args) {
+    TcType *integer = newTcType_Biginteger();
+    int save = PROTECT(integer);
+    pushBuiltInArgs(args, integer);
+    UNPROTECT(save);
+    return integer;
+}
+
+TcType *pushCharacterArg(BuiltInArgs *args) {
+    TcType *character = newTcType_Character();
+    int save = PROTECT(character);
+    pushBuiltInArgs(args, character);
+    UNPROTECT(save);
+    return character;
+}
+
+TcType *pushStringArg(BuiltInArgs *args) {
+    TcType *string = makeStringType();
+    int save = PROTECT(string);
+    pushBuiltInArgs(args, string);
+    UNPROTECT(save);
+    return string;
+}
+
+void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *ret, BuiltInArgs *args, void *impl) {
+    BuiltIn *decl = newBuiltIn(newSymbol(name), ret, args, impl);
+    int save = PROTECT(decl);
+    pushBuiltIns(registry, decl);
+    UNPROTECT(save);
+}
+
 BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     BuiltIns *res = newBuiltIns();
     int save = PROTECT(res);
@@ -79,6 +111,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerIO(res);
     registerSQLite(res);
     registerArgs(res, argc, cargc, argv);
+    registerGetEnv(res);
     UNPROTECT(save);
     return res;
 }
@@ -86,12 +119,8 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
 static void registerRand(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *integer = newTcType_Biginteger();
-    PROTECT(integer);
-    pushBuiltInArgs(args, integer);
-    BuiltIn *decl = newBuiltIn(newSymbol("rand"), integer, args, (void *)builtin_rand);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    TcType *integer = pushIntegerArg(args);
+    pushNewBuiltIn(registry, "rand", integer, args, (void *)builtin_rand);
     UNPROTECT(save);
 }
 
@@ -100,9 +129,7 @@ static void registerAssert(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *boolean = makeBoolean();
     PROTECT(boolean);
-    BuiltIn *decl = newBuiltIn(newSymbol("assertion"), boolean, args, (void *)builtin_assert);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "assertion", boolean, args, (void *)builtin_assert);
     UNPROTECT(save);
 }
 
@@ -111,42 +138,40 @@ static void registerOrd(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *integer = newTcType_Biginteger();
     PROTECT(integer);
-    TcType *character = newTcType_Character();
-    PROTECT(character);
-    pushBuiltInArgs(args, character);
-    BuiltIn *decl = newBuiltIn(newSymbol("ord"), integer, args, (void *)builtin_ord);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "ord", integer, args, (void *)builtin_ord);
     UNPROTECT(save);
 }
 
 static void registerChr(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *integer = newTcType_Biginteger();
-    PROTECT(integer);
     TcType *character = newTcType_Character();
     PROTECT(character);
-    pushBuiltInArgs(args, integer);
-    BuiltIn *decl = newBuiltIn(newSymbol("chr"), character, args, (void *)builtin_chr);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushIntegerArg(args);
+    pushNewBuiltIn(registry, "chr", character, args, (void *)builtin_chr);
     UNPROTECT(save);
 }
 
 static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *integer = newTcType_Biginteger();
-    PROTECT(integer);
-    pushBuiltInArgs(args, integer);
+    pushIntegerArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
-    BuiltIn *decl = newBuiltIn(newSymbol("args"), maybeStringType, args, (void *)builtin_args);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "args", maybeStringType, args, (void *)builtin_args);
     UNPROTECT(save);
     builtin_args_argc = argc;
     builtin_args_cargc = cargc;
     builtin_args_argv = argv;
+}
+
+static void registerGetEnv(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushStringArg(args);
+    TcType *maybeStringType = makeMaybeStringType();
+    PROTECT(maybeStringType);
+    pushNewBuiltIn(registry, "getenv", maybeStringType, args, (void *)builtin_getenv);
+    UNPROTECT(save);
 }

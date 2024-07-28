@@ -1,0 +1,2 @@
+print(getenv("USERNAME"));
+print(getenv("NOSUCHVAR"))
