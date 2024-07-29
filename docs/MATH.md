@@ -12,7 +12,8 @@ CEKF stands for Control, Environment, Kontinuation and Failure. It adds a
 "Fail" register, a backtracking continuation allowing trivial support for
 `amb`.
 
-The rest of this document closely follows Matt Might's blog post,
+The rest of this document closely follows
+[Matt Might's blog post](https://matt.might.net/articles/cesk-machines/),
 slightly amended to describe a CEKF machine.
 
 ## Expressions `Exp` to be Evaluated
