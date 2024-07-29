@@ -3,7 +3,7 @@
 ![logo](./docs/CEKF2.png)
 
 Low level, hopefully fast C implementation of a CEK machine with an
-additional "F" failure continuation supporting amb.
+additional "F" failure continuation supporting amb (and a stack).
 
 This is heavily based on a blog post by Matt Might [Writing an
 interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/),
@@ -88,6 +88,10 @@ lexa --> ann(Annotated ANF)
 ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
 bc --> cekf([CEKF Runtime VM]):::process
+bc --> bcw([Bytecode Writer]):::process
+bcw --> bcf(Bytecode Files)
+bcf --> bcr([Bytecode Reader]):::process
+bcr --> bc
 ```
 
 The various components named in the diagram above are linked to their implementation entry point here:
