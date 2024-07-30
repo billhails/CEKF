@@ -1730,14 +1730,31 @@ static Value comPowCom(Value base, Value exponent) {
 
 // tie breaker for unequal complex numbers
 // *NOT* a general purpose comparison
-static Cmp magCmp(Value left, Value right) {
-    Value lmag = comMag(left);
-    int save = protectValue(lmag);
-    Value rmag = comMag(right);
-    protectValue(rmag);
-    Cmp res = ncmp(lmag, rmag);
-    UNPROTECT(save);
-    return res == CMP_LT ? CMP_LT : CMP_GT;
+static Cmp magCmp(Value left_real, Value left_imag, Value right_real, Value right_imag) {
+    Value left_c = nadd(left_real, left_imag);
+    int save = protectValue(left_c);
+    Value right_c = nadd(right_real, right_imag);
+    protectValue(right_c);
+    Cmp res;
+    Cmp res1 = ncmp(left_c, right_c);
+    switch (res1) {
+        case CMP_LT:
+            UNPROTECT(save);
+            res = CMP_LT;
+            break;
+        case CMP_EQ: {
+            Cmp res2 = ncmp(left_real, right_real);
+            UNPROTECT(save);
+            // ensures that comparison is order-independant
+            res = res2 == CMP_LT ? CMP_LT : CMP_GT;
+        }
+        break;
+        case CMP_GT:
+            UNPROTECT(save);
+            res = CMP_GT;
+            break;
+    }
+    return res;
 }
 
 static Cmp comCmp(Value left, Value right) {
@@ -1757,7 +1774,7 @@ static Cmp comCmp(Value left, Value right) {
                     res = CMP_LT;
                     break;
                 case CMP_GT:
-                    res = magCmp(left, right);
+                    res = magCmp(left_real, left_imag, right_real, right_imag);
                     break;
             }
             break;
@@ -1777,7 +1794,7 @@ static Cmp comCmp(Value left, Value right) {
         case CMP_GT:
             switch (imag_cmp) {
                 case CMP_LT:
-                    res = magCmp(left, right);
+                    res = magCmp(left_real, left_imag, right_real, right_imag);
                     break;
                 case CMP_EQ:
                 case CMP_GT:
