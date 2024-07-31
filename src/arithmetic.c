@@ -217,7 +217,7 @@ static Value to_irrational(Value v) {
         case VALUE_TYPE_IRRATIONAL:
             return v;
         default:
-            cant_happen("invalid type %d", v.type);
+            cant_happen("invalid type %s", valueTypeName(v.type));
     }
     return v;
 }
@@ -263,7 +263,7 @@ static Value to_complex(Value v) {
         case VALUE_TYPE_COMPLEX:
             return v;
         default:
-            cant_happen("invalid type %d", v.type);
+            cant_happen("invalid type %s", valueTypeName(v.type));
     }
 }
 
@@ -283,7 +283,7 @@ static Value imag_to_real(Value v) {
             v.type = VALUE_TYPE_IRRATIONAL;
             break;
         default:
-            cant_happen("invalid imaginary type %d", v.type);
+            cant_happen("invalid imaginary type %s", valueTypeName(v.type));
     }
     return v;
 }
@@ -303,7 +303,7 @@ static Value real_to_imag(Value v) {
             v.type = VALUE_TYPE_IRRATIONAL_IMAG;
             break;
         default:
-            cant_happen("invalid real type %d", v.type);
+            cant_happen("invalid real type %s", valueTypeName(v.type));
     }
     return v;
 }
@@ -346,7 +346,7 @@ static bool isNeg(Value v) {
         case VALUE_TYPE_IRRATIONAL:
             return irratIsNeg(v);
         default:
-            cant_happen("invalid real type %d", v.type);
+            cant_happen("invalid real type %s", valueTypeName(v.type));
     }
 }
 
@@ -395,7 +395,7 @@ static Integer coerce(Value *left, Value *right, int *save) {
                     *save = protectValue(*left);
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         case VALUE_TYPE_IRRATIONAL:
@@ -425,7 +425,7 @@ static Integer coerce(Value *left, Value *right, int *save) {
                     *save = protectValue(*left);
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         case VALUE_TYPE_BIGINT:
@@ -456,7 +456,7 @@ static Integer coerce(Value *left, Value *right, int *save) {
                     *save = protectValue(*left);
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         case VALUE_TYPE_STDINT:
@@ -486,7 +486,7 @@ static Integer coerce(Value *left, Value *right, int *save) {
                     *save = protectValue(*left);
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         case VALUE_TYPE_STDINT_IMAG:
@@ -517,7 +517,7 @@ static Integer coerce(Value *left, Value *right, int *save) {
                     *save = protectValue(*left);
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         case VALUE_TYPE_COMPLEX:
@@ -539,11 +539,11 @@ static Integer coerce(Value *left, Value *right, int *save) {
                 case VALUE_TYPE_COMPLEX:
                     return VALUE_TYPE_COMPLEX;
                 default:
-                    cant_happen("unrecognised right number type %d", right->type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right->type));
             }
             break;
         default:
-            cant_happen("unrecognised left number type %d", left->type);
+            cant_happen("unrecognised left number type %s", valueTypeName(left->type));
     }
 }
 
@@ -968,7 +968,7 @@ static Value intPow(Value left, Value right) {
                 }
                 break;
                 default:
-                    cant_happen("invalid rhs arg to intPow %d", left.type);
+                    cant_happen("invalid rhs arg to intPow %s", valueTypeName(left.type));
             }
             break;
         case VALUE_TYPE_STDINT:
@@ -991,11 +991,11 @@ static Value intPow(Value left, Value right) {
                 }
                 break;
                 default:
-                    cant_happen("invalid rhs arg to intPow %d", left.type);
+                    cant_happen("invalid rhs arg to intPow %s", valueTypeName(left.type));
             }
             break;
         default:
-            cant_happen("invalid lhs arg to intPow %d", left.type);
+            cant_happen("invalid lhs arg to intPow %s", valueTypeName(left.type));
     }
     LEAVE(intPow);
     IFDEBUG(ppNumber(res));
@@ -1937,7 +1937,7 @@ Value npow(Value left, Value right) {
                 }
                 break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_IRRATIONAL:
@@ -1961,7 +1961,7 @@ Value npow(Value left, Value right) {
                     res = irrPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_BIGINT:
@@ -1987,7 +1987,7 @@ Value npow(Value left, Value right) {
                 }
                 break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_STDINT:
@@ -2013,7 +2013,7 @@ Value npow(Value left, Value right) {
                 }
                 break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_BIGINT_IMAG:
@@ -2038,7 +2038,7 @@ Value npow(Value left, Value right) {
                     res = comPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_STDINT_IMAG:
@@ -2063,7 +2063,7 @@ Value npow(Value left, Value right) {
                     res = comPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_RATIONAL_IMAG:
@@ -2088,7 +2088,7 @@ Value npow(Value left, Value right) {
                     res = comPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_IRRATIONAL_IMAG:
@@ -2113,7 +2113,7 @@ Value npow(Value left, Value right) {
                     res = comPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         case VALUE_TYPE_COMPLEX:
@@ -2138,11 +2138,11 @@ Value npow(Value left, Value right) {
                     res = comPowCom(left, right);
                     break;
                 default:
-                    cant_happen("unrecognised right number type %d", right.type);
+                    cant_happen("unrecognised right number type %s", valueTypeName(right.type));
             }
             break;
         default:
-            cant_happen("unrecognised left number type %d", left.type);
+            cant_happen("unrecognised left number type %s", valueTypeName(left.type));
     }
     protectValue(res);
     LEAVE(npow);
@@ -2178,6 +2178,60 @@ Cmp ncmp(Value left, Value right) {
     LEAVE(ncmp);
     UNPROTECT(save);
     return res;
+}
+
+Value real_part(Value v) {
+    switch(v.type) {
+        case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_IRRATIONAL:
+        case VALUE_TYPE_BIGINT:
+        case VALUE_TYPE_STDINT:
+            return v;
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_BIGINT_IMAG:
+        case VALUE_TYPE_RATIONAL_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+            return value_Stdint(0);
+        case VALUE_TYPE_COMPLEX:
+            return realPart(v);
+        default:
+            cant_happen("unrecognised number type %s", valueTypeName(v.type));
+    }
+}
+
+Value imag_part(Value v) {
+    switch(v.type) {
+        case VALUE_TYPE_RATIONAL:
+        case VALUE_TYPE_IRRATIONAL:
+        case VALUE_TYPE_BIGINT:
+        case VALUE_TYPE_STDINT:
+            return value_Stdint_imag(0);
+        case VALUE_TYPE_STDINT_IMAG:
+        case VALUE_TYPE_BIGINT_IMAG:
+        case VALUE_TYPE_RATIONAL_IMAG:
+        case VALUE_TYPE_IRRATIONAL_IMAG:
+            return v;
+        case VALUE_TYPE_COMPLEX:
+            return imagPart(v);
+        default:
+            cant_happen("unrecognised number type %s", valueTypeName(v.type));
+    }
+}
+
+Value theta_part(Value v) {
+    Value c = to_complex(v);
+    int save = protectValue(c);
+    Value t = comTheta(c);
+    UNPROTECT(save);
+    return t;
+}
+
+Value mag_part(Value v) {
+    Value c = to_complex(v);
+    int save = protectValue(c);
+    Value t = comMag(c);
+    UNPROTECT(save);
+    return t;
 }
 
 Value nneg(Value v) {

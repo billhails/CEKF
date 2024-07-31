@@ -1,0 +1,13 @@
+let
+    link "listutils.fn" as list;
+    numbers = [
+        (0 + 2i),
+        (4 + 3i),
+        (3 + 4i),
+        2,
+        3i,
+        3,
+        4
+    ];
+in
+    print(list.sort(numbers));

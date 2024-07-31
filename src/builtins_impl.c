@@ -39,6 +39,22 @@ Value builtin_assert(Vec *args __attribute__((unused))) {
     exit(1);
 }
 
+Value builtin_real_part(Vec *args) {
+    return real_part(args->entries[0]);
+}
+
+Value builtin_imag_part(Vec *args) {
+    return imag_part(args->entries[0]);
+}
+
+Value builtin_mag_part(Vec *args) {
+    return mag_part(args->entries[0]);
+}
+
+Value builtin_theta_part(Vec *args) {
+    return theta_part(args->entries[0]);
+}
+
 Value builtin_ord(Vec *args) {
     return value_Stdint((int) args->entries[0].val.character);
 }

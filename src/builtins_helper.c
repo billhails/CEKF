@@ -30,6 +30,10 @@ static void registerOrd(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
+static void registerRealPart(BuiltIns *registry);
+static void registerImagPart(BuiltIns *registry);
+static void registerThetaPart(BuiltIns *registry);
+static void registerMagPart(BuiltIns *registry);
 
 Value makeTryResult(int code, Value val) {
     Vec *v = newVec(2);
@@ -112,6 +116,10 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerSQLite(res);
     registerArgs(res, argc, cargc, argv);
     registerGetEnv(res);
+    registerRealPart(res);
+    registerImagPart(res);
+    registerMagPart(res);
+    registerThetaPart(res);
     UNPROTECT(save);
     return res;
 }
@@ -173,5 +181,37 @@ static void registerGetEnv(BuiltIns *registry) {
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
     pushNewBuiltIn(registry, "getenv", maybeStringType, args, (void *)builtin_getenv);
+    UNPROTECT(save);
+}
+
+static void registerRealPart(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integerType = pushIntegerArg(args);
+    pushNewBuiltIn(registry, "com_real", integerType, args, (void *)builtin_real_part);
+    UNPROTECT(save);
+}
+
+static void registerImagPart(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integerType = pushIntegerArg(args);
+    pushNewBuiltIn(registry, "com_imag", integerType, args, (void *)builtin_imag_part);
+    UNPROTECT(save);
+}
+
+static void registerMagPart(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integerType = pushIntegerArg(args);
+    pushNewBuiltIn(registry, "com_mag", integerType, args, (void *)builtin_mag_part);
+    UNPROTECT(save);
+}
+
+static void registerThetaPart(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integerType = pushIntegerArg(args);
+    pushNewBuiltIn(registry, "com_theta", integerType, args, (void *)builtin_theta_part);
     UNPROTECT(save);
 }
