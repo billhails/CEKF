@@ -28,8 +28,13 @@ Value ndiv(Value, Value);
 Value npow(Value, Value);
 Value nmod(Value, Value);
 Value nneg(Value);
-Cmp ncmp(Value, Value);
 Value nrand(Value);
+Value real_part(Value);
+Value imag_part(Value);
+Value mag_part(Value);
+Value theta_part(Value);
+
+Cmp ncmp(Value, Value);
 
 void init_arithmetic(void);
 void markArithmetic(void);

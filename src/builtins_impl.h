@@ -29,6 +29,10 @@ Value builtin_ord(Vec *args);
 Value builtin_chr(Vec *args);
 Value builtin_args(Vec *args);
 Value builtin_getenv(Vec *args);
+Value builtin_real_part(Vec *args);
+Value builtin_imag_part(Vec *args);
+Value builtin_theta_part(Vec *args);
+Value builtin_mag_part(Vec *args);
 
 extern int builtin_args_argc;
 extern int builtin_args_cargc;

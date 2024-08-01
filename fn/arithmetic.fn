@@ -1,1 +1,3 @@
-print(1 / (5 + 7i))
+print(1 / (5 + 7i));
+print(com_mag(5 + 7i));
+print(com_theta(5 + 7i));
