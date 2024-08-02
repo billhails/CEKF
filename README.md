@@ -81,9 +81,7 @@ lambda2 --> ci([Constructor Inlining]):::process
 ci --> lambda3(Inlined Lambda)
 lambda3 --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
-anf --> desug([Desugaring]):::process
-desug --> danf(Desugared ANF)
-danf --> lexa([Lexical Analysis]):::process
+anf --> lexa([Lexical Analysis]):::process
 lexa --> ann(Annotated ANF)
 ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
@@ -106,8 +104,7 @@ The various components named in the diagram above are linked to their implementa
 * Print Compiler [print_compiler.c](src/print_compiler.c)
 * Constructor Inlining [inline.c](src/inline.c)
 * A-Normal Form Conversion [anf_normalize.c](src/anf_normalize.c)
-* (Desugared) ANF [anf.yaml](src/anf.yaml)
-* Desugaring [desugaring.c](src/desugaring.c)
+* ANF [anf.yaml](src/anf.yaml)
 * Lexical Analysis [annotate.c](src/annotate.c)
 * Byte Code Compiler [bytecode.c](src/bytecode.c)
 * Byte Code [cekfs.yaml](src/cekfs.yaml)
@@ -115,9 +112,8 @@ The various components named in the diagram above are linked to their implementa
 
 All stages basically complete, but it needs a lot of testing now.
 
-The desugaring step is probably best done before ANF conversion, then ANF conversion has less to do, but
-for the purposes of testing I have a Python script that directly generates the C structures from
-a Scheme input which is already in ANF, so the desugaring for that is done on the ANF structures.
+The desugaring step is now rolled into thae lambda conversion phase as eary
+as possible to simplify downstream processing.
 
 ## CEKF Formal Description
 

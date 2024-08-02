@@ -78,8 +78,6 @@ static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng);
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng);
 static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng);
 static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
-static TcType *analyzeAnd(LamAnd *and, TcEnv *env, TcNg *ng);
-static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
 static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
 static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
@@ -109,8 +107,6 @@ static int id_counter = 0;
 TcEnv *tc_init(BuiltIns *builtIns) {
     TcEnv *env = newTcEnv(NULL);
     int save = PROTECT(env);
-    addBoolBinOpToEnv(env, andSymbol());
-    addBoolBinOpToEnv(env, orSymbol());
     addBoolBinOpToEnv(env, xorSymbol());
     addCmpToEnv(env, eqSymbol());
     addCmpToEnv(env, geSymbol());
@@ -268,10 +264,6 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeMatch(exp->val.match, env, ng));
         case LAMEXP_TYPE_COND:
             return prune(analyzeCond(exp->val.cond, env, ng));
-        case LAMEXP_TYPE_AND:
-            return prune(analyzeAnd(exp->val.and, env, ng));
-        case LAMEXP_TYPE_OR:
-            return prune(analyzeOr(exp->val.or, env, ng));
         case LAMEXP_TYPE_AMB:
             return prune(analyzeAmb(exp->val.amb, env, ng));
         case LAMEXP_TYPE_CHARACTER:
@@ -1369,20 +1361,6 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
     UNPROTECT(save);
     // LEAVE(analyzeCond);
     return result;
-}
-
-static TcType *analyzeAnd(LamAnd *and, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeAnd);
-    TcType *res = analyzeBinaryBool(and->left, and->right, env, ng);
-    // LEAVE(analyzeAnd);
-    return res;
-}
-
-static TcType *analyzeOr(LamOr *or, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeOr);
-    TcType *res = analyzeBinaryBool(or->left, or->right, env, ng);
-    // LEAVE(analyzeOr);
-    return res;
 }
 
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {

@@ -65,9 +65,6 @@ LetRecBindings --next--> LetRecBindings
 CexpAmb --exp1--> Exp
 CexpAmb --exp2--> Exp
 CexpCut --exp--> Exp
-CexpBool --type--> CexpBoolType
-CexpBool --exp1--> Exp
-CexpBool --exp2--> Exp
 ExpLet --var--> HashSymbol
 ExpLet --val--> Exp
 ExpLet --body--> Exp
@@ -98,7 +95,6 @@ Cexp --callCC--> Aexp
 Cexp --letRec--> CexpLetRec
 Cexp --amb--> CexpAmb
 Cexp --cut--> CexpCut
-Cexp --boolean--> CexpBool
 Cexp --match--> CexpMatch
 Exp --env--> void_ptr
 Exp --done--> void_ptr
@@ -109,7 +105,6 @@ Exp --lookup--> ExpLookup
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpUnaryOp["enum AexpUnaryOp"]
-CexpBoolType["enum CexpBoolType"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
 CTEnvArray["CTEnvArray[]"] --entries--> CTEnv
 CexpCondCasesVal

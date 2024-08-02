@@ -700,22 +700,50 @@ static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
     return exp;
 }
 
-static LamExp *makeLamAnd(LamList *args) {
+static LamExp *makeLamAnd(LamList *args, LamContext *env) {
+    // (and a b) => (if a b #f)
     CHECK_TWO_ARGS(makeLamAnd, args);
-    LamAnd *lamAnd = newLamAnd(CPI(args), args->exp, args->next->exp);
-    int save = PROTECT(lamAnd);
-    LamExp *res = newLamExp_And(CPI(lamAnd), lamAnd);
+    LamExp *f = convertSymbol(CPI(args), falseSymbol(), env);
+    int save = PROTECT(f);
+    LamIff *lamIff = newLamIff(CPI(args), args->exp, args->next->exp, f);
+    PROTECT(lamIff);
+    LamExp *result = newLamExp_Iff(CPI(args), lamIff);
     UNPROTECT(save);
-    return res;
+    return result;
 }
 
-static LamExp *makeLamOr(LamList *args) {
-    CHECK_TWO_ARGS(makeLamOr, args);
-    LamOr *lamOr = newLamOr(CPI(args), args->exp, args->next->exp);
-    int save = PROTECT(lamOr);
-    LamExp *res = newLamExp_Or(CPI(lamOr), lamOr);
+static LamExp *makeLamNand(LamList *args, LamContext *env) {
+    // (nand a b) => (not (and a b))
+    LamExp *and = makeLamAnd(args, env);
+    int save = PROTECT(and);
+    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, and);
+    PROTECT(not);
+    LamExp *exp = newLamExp_Unary(CPI(not), not);
     UNPROTECT(save);
-    return res;
+    return exp;
+}
+
+static LamExp *makeLamOr(LamList *args, LamContext *env) {
+    // (or a b) => (if a #t b)
+    CHECK_TWO_ARGS(makeLamOr, args);
+    LamExp *t = convertSymbol(CPI(args), trueSymbol(), env);
+    int save = PROTECT(t);
+    LamIff *lamIff = newLamIff(CPI(args), args->exp, t, args->next->exp);
+    PROTECT(lamIff);
+    LamExp *result = newLamExp_Iff(CPI(args), lamIff);
+    UNPROTECT(save);
+    return result;
+}
+
+static LamExp *makeLamNor(LamList *args, LamContext *env) {
+    // (nor a b) => (not (or a b))
+    LamExp *or = makeLamOr(args, env);
+    int save = PROTECT(or);
+    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, or);
+    PROTECT(not);
+    LamExp *exp = newLamExp_Unary(CPI(not), not);
+    UNPROTECT(save);
+    return exp;
 }
 
 static LamExp *makeLamAmb(LamList *args) {
@@ -727,7 +755,7 @@ static LamExp *makeLamAmb(LamList *args) {
     return res;
 }
 
-static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
+static LamExp *makePrimApp(HashSymbol *symbol, LamList *args, LamContext *env) {
     if (symbol == negSymbol())
         return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
     if (symbol == notSymbol())
@@ -737,9 +765,13 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args) {
     if (symbol == thenSymbol())
         return makeLamAmb(args);
     if (symbol == andSymbol())
-        return makeLamAnd(args);
+        return makeLamAnd(args, env);
     if (symbol == orSymbol())
-        return makeLamOr(args);
+        return makeLamOr(args, env);
+    if (symbol == nandSymbol())
+        return makeLamNand(args, env);
+    if (symbol == norSymbol())
+        return makeLamNor(args, env);
     if (symbol == xorSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_XOR, args);
     if (symbol == eqSymbol())
@@ -1004,7 +1036,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     switch (findUnderlyingType(function)) {
         case LAMEXP_TYPE_VAR:{
             LamExp *symbol = findUnderlyingValue(function);
-            result = makePrimApp(symbol->val.var, args);
+            result = makePrimApp(symbol->val.var, args, env);
             if (result != NULL) {
                 UNPROTECT(save);
                 return result;

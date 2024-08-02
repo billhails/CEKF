@@ -36,7 +36,6 @@
 #include "debug.h"
 #include "anf_pp.h"
 #include "bytecode.h"
-#include "desugaring.h"
 #include "hash.h"
 #include "lambda_pp.h"
 #include "anf_normalize.h"
@@ -197,15 +196,6 @@ static void typeCheck(LamExp *exp, BuiltIns *builtIns) {
     UNPROTECT(save);
 }
 
-static Exp *desugar(Exp *anfExp) {
-    disableGC();
-    anfExp = desugarExp(anfExp);
-    int save = PROTECT(anfExp);
-    enableGC();
-    UNPROTECT(save);
-    return anfExp;
-}
-
 static void annotate(Exp *anfExp, BuiltIns *builtIns) {
     annotateAnf(anfExp, builtIns);
 #ifdef DEBUG_ANF
@@ -289,9 +279,6 @@ int main(int argc, char *argv[]) {
             ppExp(anfExp);
             eprintf("\n");
         }
-
-        anfExp = desugar(anfExp);
-        REPLACE_PROTECT(save2, anfExp);
 
         annotate(anfExp, builtIns);
 

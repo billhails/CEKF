@@ -74,10 +74,6 @@ LamLetRecBindings --next--> LamLetRecBindings
 LamContext --frame--> LamInfoTable
 LamContext --aliases--> LamAliasTable
 LamContext --parent--> LamContext
-LamAnd --left--> LamExp
-LamAnd --right--> LamExp
-LamOr --left--> LamExp
-LamOr --right--> LamExp
 LamAmb --left--> LamExp
 LamAmb --right--> LamExp
 LamPrint --exp--> LamExp
@@ -135,8 +131,6 @@ LamExp --typedefs--> LamTypeDefs
 LamExp --let--> LamLet
 LamExp --match--> LamMatch
 LamExp --cond--> LamCond
-LamExp --and--> LamAnd
-LamExp --or--> LamOr
 LamExp --amb--> LamAmb
 LamExp --print--> LamPrint
 LamExp --character--> char

@@ -244,24 +244,6 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, TpmcSubstitutionTabl
     return match;
 }
 
-static LamAnd *performAndSubstitutions(LamAnd *and,
-                                       TpmcSubstitutionTable *substitutions) {
-    ENTER(performAndSubstitutions);
-    and->left = lamPerformSubstitutions(and->left, substitutions);
-    and->right = lamPerformSubstitutions(and->right, substitutions);
-    LEAVE(performAndSubstitutions);
-    return and;
-}
-
-static LamOr *performOrSubstitutions(LamOr *or,
-                                     TpmcSubstitutionTable *substitutions) {
-    ENTER(performOrSubstitutions);
-    or->left = lamPerformSubstitutions(or->left, substitutions);
-    or->right = lamPerformSubstitutions(or->right, substitutions);
-    LEAVE(performOrSubstitutions);
-    return or;
-}
-
 static LamAmb *performAmbSubstitutions(LamAmb *amb,
                                        TpmcSubstitutionTable *substitutions) {
     ENTER(performAmbSubstitutions);
@@ -420,13 +402,6 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
             case LAMEXP_TYPE_MATCH:
                 exp->val.match =
                     performMatchSubstitutions(exp->val.match, substitutions);
-                break;
-            case LAMEXP_TYPE_AND:
-                exp->val.and =
-                    performAndSubstitutions(exp->val.and, substitutions);
-                break;
-            case LAMEXP_TYPE_OR:
-                exp->val.or = performOrSubstitutions(exp->val.or, substitutions);
                 break;
             case LAMEXP_TYPE_AMB:
                 exp->val.amb =

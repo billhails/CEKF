@@ -109,10 +109,26 @@ HashSymbol *andSymbol() {
     return res;
 }
 
+HashSymbol *nandSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("nand");
+    }
+    return res;
+}
+
 HashSymbol *orSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("or");
+    }
+    return res;
+}
+
+HashSymbol *norSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("nor");
     }
     return res;
 }

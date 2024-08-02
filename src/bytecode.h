@@ -49,8 +49,6 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
 void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b);
 void writeCexpCut(CexpCut *x, ByteCodeArray *b);
-void writeCexpAnd(CexpBool *x, ByteCodeArray *b);
-void writeCexpOr(CexpBool *x, ByteCodeArray *b);
 void writeExpLet(ExpLet *x, ByteCodeArray *b);
 void writeAexp(Aexp *x, ByteCodeArray *b);
 void writeCexp(Cexp *x, ByteCodeArray *b);
