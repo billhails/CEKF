@@ -1,0 +1,27 @@
+assert((not true) == false);
+assert((not false) == true);
+
+assert((true and true) == true);
+assert((true and false) == false);
+assert((false and true) == false);
+assert((false and false) == false);
+
+assert((true or true) == true);
+assert((true or false) == true);
+assert((false or true) == true);
+assert((false or false) == false);
+
+assert((true xor true) == false);
+assert((true xor false) == true);
+assert((false xor true) == true);
+assert((false xor false) == false);
+
+assert((true nand true) == false);
+assert((true nand false) == true);
+assert((false nand true) == true);
+assert((false nand false) == true);
+
+assert((true nor true) == false);
+assert((true nor false) == false);
+assert((false nor true) == false);
+assert((false nor false) == true);

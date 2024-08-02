@@ -22,6 +22,7 @@
 
 HashSymbol *addSymbol(void);
 HashSymbol *andSymbol(void);
+HashSymbol *nandSymbol(void);
 HashSymbol *appendSymbol(void);
 HashSymbol *arrowSymbol(void);
 HashSymbol *assertSymbol(void);
@@ -55,6 +56,7 @@ HashSymbol *neSymbol(void);
 HashSymbol *nilSymbol(void);
 HashSymbol *notSymbol(void);
 HashSymbol *orSymbol(void);
+HashSymbol *norSymbol(void);
 HashSymbol *powSymbol(void);
 HashSymbol *putsSymbol(void);
 HashSymbol *spaceshipSymbol(void);

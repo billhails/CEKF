@@ -44,30 +44,6 @@ void ppLamLam(LamLam *lam) {
     eprintf(")");
 }
 
-void ppLamAnd(LamAnd *and) {
-    if (and == NULL) {
-        eprintf("<NULL and>");
-        return;
-    }
-    eprintf("(and ");
-    ppLamExp(and->left);
-    eprintf(" ");
-    ppLamExp(and->right);
-    eprintf(")");
-}
-
-void ppLamOr(LamOr *or) {
-    if (or == NULL) {
-        eprintf("<NULL or>");
-        return;
-    }
-    eprintf("(or ");
-    ppLamExp(or->left);
-    eprintf(" ");
-    ppLamExp(or->right);
-    eprintf(")");
-}
-
 void ppLamAmb(LamAmb *amb) {
     if (amb == NULL) {
         eprintf("<NULL amb>");
@@ -174,12 +150,6 @@ void ppLamExp(LamExp *exp) {
             break;
         case LAMEXP_TYPE_COND:
             ppLamCond(exp->val.cond);
-            break;
-        case LAMEXP_TYPE_AND:
-            ppLamAnd(exp->val.and);
-            break;
-        case LAMEXP_TYPE_OR:
-            ppLamOr(exp->val.or);
             break;
         case LAMEXP_TYPE_AMB:
             ppLamAmb(exp->val.amb);

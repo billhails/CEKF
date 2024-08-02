@@ -48,7 +48,6 @@ void ppCexpLetRec(CexpLetRec *x);
 void ppLetRecBindings(LetRecBindings *x);
 void ppCexpAmb(CexpAmb *x);
 void ppCexpCut(CexpCut *x);
-void ppCexpBool(CexpBool *x);
 void ppMatchList(MatchList *x);
 void ppCexpMatch(CexpMatch *x);
 void ppAexp(Aexp *x);

@@ -144,14 +144,6 @@ structs:
         aliases: LamAliasTable
         parent: LamContext
 
-    LamAnd:
-        left: LamExp
-        right: LamExp
-
-    LamOr:
-        left: LamExp
-        right: LamExp
-
     LamAmb:
         left: LamExp
         right: LamExp
@@ -263,8 +255,6 @@ unions:
         let: LamLet
         match: LamMatch
         cond: LamCond
-        and: LamAnd
-        or: LamOr
         amb: LamAmb
         print: LamPrint
         character: char

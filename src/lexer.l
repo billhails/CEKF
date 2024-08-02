@@ -72,6 +72,7 @@ struct PmModule *mod = yyextra;
 "as"            { return AS; }
 "link"          { return LINK; }
 "and"           { return AND; }
+"nand"          { return NAND; }
 "back"          { return BACK; }
 "char"          { return KW_CHAR; }
 "else"          { return ELSE; }
@@ -84,6 +85,7 @@ struct PmModule *mod = yyextra;
 "let"           { return LET; }
 "not"           { return NOT; }
 "or"            { return OR; }
+"nor"           { return NOR; }
 "xor"           { return XOR; }
 "print"         { return PRINT; }
 "_"             { return WILDCARD; }

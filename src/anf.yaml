@@ -130,11 +130,6 @@ structs:
     CexpCut:
         exp: Exp
 
-    CexpBool:
-        type: CexpBoolType
-        exp1: Exp
-        exp2: Exp
-
     ExpLet:
         var: HashSymbol
         val: Exp
@@ -175,7 +170,6 @@ unions:
         letRec: CexpLetRec
         amb: CexpAmb
         cut: CexpCut
-        boolean: CexpBool
         match: CexpMatch
 
     Exp:
@@ -211,10 +205,6 @@ enums:
     AexpUnaryOp:
         - NEG
         - NOT
-
-    CexpBoolType:
-        - AND
-        - OR
 
 hashes:
     AnfSymbolTable: {}

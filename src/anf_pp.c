@@ -342,25 +342,6 @@ void ppCexpCut(CexpCut *x) {
     eprintf(")");
 }
 
-void ppCexpBool(CexpBool *x) {
-    eprintf("(");
-    switch (x->type) {
-        case CEXPBOOLTYPE_TYPE_AND:
-            eprintf("and");
-            break;
-        case CEXPBOOLTYPE_TYPE_OR:
-            eprintf("or");
-            break;
-        default:
-            cant_happen("unrecognised type %d in ppCexpBool", x->type);
-    }
-    eprintf(" ");
-    ppExp(x->exp1);
-    eprintf(" ");
-    ppExp(x->exp2);
-    eprintf(")");
-}
-
 void ppMatchList(MatchList *x) {
     if (x == NULL)
         return;
@@ -459,9 +440,6 @@ void ppCexp(Cexp *x) {
             break;
         case CEXP_TYPE_CUT:
             ppCexpCut(x->val.cut);
-            break;
-        case CEXP_TYPE_BOOLEAN:
-            ppCexpBool(x->val.boolean);
             break;
         case CEXP_TYPE_MATCH:
             ppCexpMatch(x->val.match);

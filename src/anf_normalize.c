@@ -43,8 +43,6 @@ static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
 static Exp *normalizeCharacter(Character character, Exp *tail);
 static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
-static Exp *normalizeAnd(LamAnd *app, Exp *tail);
-static Exp *normalizeOr(LamOr *app, Exp *tail);
 static Exp *normalizeAmb(LamAmb *app, Exp *tail);
 static Exp *normalizeSequence(LamSequence *sequence, Exp *tail);
 static Exp *normalizePrim(LamPrimApp *app, Exp *tail);
@@ -117,10 +115,6 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizePrim(lamExp->val.prim, tail);
         case LAMEXP_TYPE_UNARY:
             return normalizeUnary(lamExp->val.unary, tail);
-        case LAMEXP_TYPE_AND:
-            return normalizeAnd(lamExp->val.and, tail);
-        case LAMEXP_TYPE_OR:
-            return normalizeOr(lamExp->val.or, tail);
         case LAMEXP_TYPE_AMB:
             return normalizeAmb(lamExp->val.amb, tail);
         case LAMEXP_TYPE_LIST:
@@ -586,38 +580,6 @@ static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
     return res;
 }
 
-static Exp *normalizeAnd(LamAnd *app, Exp *tail) {
-    Exp *left = normalize(app->left, NULL);
-    int save = PROTECT(left);
-    Exp *right = normalize(app->right, NULL);
-    PROTECT(right);
-    CexpBool *and = newCexpBool(CEXPBOOLTYPE_TYPE_AND, left, right);
-    PROTECT(and);
-    Cexp *cexp = newCexp_Boolean(and);
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    PROTECT(exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    return exp;
-}
-
-static Exp *normalizeOr(LamOr *app, Exp *tail) {
-    Exp *left = normalize(app->left, NULL);
-    int save = PROTECT(left);
-    Exp *right = normalize(app->right, NULL);
-    PROTECT(right);
-    CexpBool *or = newCexpBool(CEXPBOOLTYPE_TYPE_OR, left, right);
-    PROTECT(or);
-    Cexp *cexp = newCexp_Boolean(or);
-    PROTECT(cexp);
-    Exp *exp = wrapCexp(cexp);
-    PROTECT(exp);
-    exp = wrapTail(exp, tail);
-    UNPROTECT(save);
-    return exp;
-}
-
 static Exp *normalizeAmb(LamAmb *app, Exp *tail) {
     Exp *left = normalize(app->left, NULL);
     int save = PROTECT(left);
@@ -1007,8 +969,6 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_COND:
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_AND:
-        case LAMEXP_TYPE_OR:
         case LAMEXP_TYPE_AMB:
         case LAMEXP_TYPE_MAKE_TUPLE:
             res = replaceLamCexp(lamExp, replacements);
@@ -1045,8 +1005,6 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_LET:
         case LAMEXP_TYPE_MATCH:
         case LAMEXP_TYPE_COND:
-        case LAMEXP_TYPE_AND:
-        case LAMEXP_TYPE_OR:
         case LAMEXP_TYPE_MAKEVEC:
         case LAMEXP_TYPE_LOOKUP:
             return false;
