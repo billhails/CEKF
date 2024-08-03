@@ -70,13 +70,15 @@ classDef process fill:#aef;
 source(Source) -->
 parser([Parser]):::process -->
 ast(AST) -->
-lc([Lambda Conversion]):::process <--> tpmc([Tpmc]):::process
-lc <--> pg([Print Function Generator]):::process
-tpmc <--> vs([Variable Substitution]):::process
-lc ----> lambda1(Plain Lambda Form)
+lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
+lc <---> pg([Print Function Generator]):::process
+tpmc --> vs([Variable Substitution]):::process
+vs --> lc
+lc <--> des([Desugaring]):::process
+lc --> lambda1(Plain Lambda Form)
 lambda1 --> tc([Type Checking]):::process
 tc <--> pc([Print Compiler]):::process
-tc ---> lambda2(Plain Lambda Form)
+tc --> lambda2(Plain Lambda Form)
 lambda2 --> ci([Constructor Inlining]):::process
 ci --> lambda3(Inlined Lambda)
 lambda3 --> anfc([A-Normal Form Conversion]):::process
@@ -85,11 +87,8 @@ anf --> lexa([Lexical Analysis]):::process
 lexa --> ann(Annotated ANF)
 ann --> bcc([Bytecode Compiler]):::process
 bcc --> bc(Byte Code)
+bc <--> bcf(Bytecode Files)
 bc --> cekf([CEKF Runtime VM]):::process
-bc --> bcw([Bytecode Writer]):::process
-bcw --> bcf(Bytecode Files)
-bcf --> bcr([Bytecode Reader]):::process
-bcr --> bc
 ```
 
 The various components named in the diagram above are linked to their implementation entry point here:

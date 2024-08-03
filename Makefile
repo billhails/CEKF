@@ -1,20 +1,29 @@
 .PHONY: all clean realclean deps profile check-grammar list-cores test indent indent-src indent-generated docs install-sqlite3
 
+# debugging, testing or production
+ifndef MODE
+MODE:=debugging
+endif
+
 TARGET=cekf
 
-MODE_P=-pg
-MODE_O=-O2
-MODE_D=-g
-
-CCMODE = $(MODE_D)
-
-CC:=cc -Wall -Wextra -Werror $(CCMODE)
-LAXCC:=cc -Werror $(CCMODE)
-
-ifdef TESTING
-	CC := $(CC) -DNO_DEBUG_STRESS_GC
-	LAXCC := $(LAXCC) -DNO_DEBUG_STRESS_GC
+ifeq ($(MODE),debugging)
+	CCMODE:= -g
+	EXTRA_DEFINES:=
 endif
+
+ifeq ($(MODE),testing)
+	CCMODE:= -g
+	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC
+endif
+
+ifeq ($(MODE),production)
+	CCMODE:= -O2
+	EXTRA_DEFINES:= -DPRODUCTION_BUILD
+endif
+
+CC:=cc -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)
+LAXCC:=cc -Werror $(CCMODE) $(EXTRA_DEFINES)
 
 PYTHON=python3
 MAKE_AST=$(PYTHON) ./tools/makeAST.py
@@ -182,9 +191,12 @@ clean: deps
 deps:
 	rm -rf dep
 
+PROF_SRC=fib20
+
 profile: all
 	rm -f callgrind.out.*
-	valgrind --tool=callgrind ./$(TARGET)
+	./$(TARGET) --binary-out=$(PROF_SRC).fnc fn/$(PROF_SRC).fn
+	valgrind --tool=callgrind ./$(TARGET) --binary-in=$(PROF_SRC).fnc
 
 indent: indent-src indent-generated
 

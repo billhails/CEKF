@@ -1735,7 +1735,7 @@ static Cmp magCmp(Value left_real, Value left_imag, Value right_real, Value righ
     int save = protectValue(left_c);
     Value right_c = nadd(right_real, right_imag);
     protectValue(right_c);
-    Cmp res;
+    Cmp res = CMP_EQ;
     Cmp res1 = ncmp(left_c, right_c);
     switch (res1) {
         case CMP_LT:
@@ -1765,7 +1765,7 @@ static Cmp comCmp(Value left, Value right) {
     extractFromComplexArg(&right_real, &right_imag, right);
     Cmp real_cmp = ncmp(left_real, right_real);
     Cmp imag_cmp = ncmp(left_imag, right_imag);
-    Cmp res;
+    Cmp res = CMP_EQ;
     switch (real_cmp) {
         case CMP_LT:
             switch (imag_cmp) {
@@ -2154,7 +2154,7 @@ Value npow(Value left, Value right) {
 Cmp ncmp(Value left, Value right) {
     ENTER(ncmp);
     CHECK_INITIALIZED();
-    Cmp res;
+    Cmp res = CMP_EQ;
     int save = PROTECT(NULL);
     switch (coerce(&left, &right, &save)) {
         case VALUE_TYPE_RATIONAL:
