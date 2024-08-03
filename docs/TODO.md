@@ -4,7 +4,6 @@ More of a wish-list than a hard and fast plan.
 
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
 * Unpacking function return values (tuples only).
-* `now()` builtin returns current time in milliseconds.
 * Error function.
 * Macro support (see [MACROS](./MACROS.md) for initial thoughts).
 * More numbers:
@@ -17,6 +16,7 @@ More of a wish-list than a hard and fast plan.
    * allow numeric (not symbolic) arithmetic expressions in patterns.
    * allow unpacking of numerator and denominator variables in patterns.
       * special case: `a / b` because there is a canonical form (via gcd).
+         * but does `a / 6` match `2 / 3` and bind `a` to `4`?
       * match would fail if the actual argument is not integer or rational.
       * `b` would be bound to `1` if the argument was an integer.
       * can't allow arbitrary ops and combinations because i.e. `(a + 2) * b`
@@ -38,5 +38,4 @@ More of a wish-list than a hard and fast plan.
    * `alias string = list(char);`
 * (internal) have a NEWZ variant of NEW that bzero's its result.
 * Builtins
-   * getenv
-   * opendir/readdir/stat
+   * `now()` builtin returns current time in milliseconds.

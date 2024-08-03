@@ -26,7 +26,7 @@
 
 #  define NS_GLOBAL -1
 
-#  if true
+#  ifndef PRODUCTION_BUILD
 // #    define DEBUG_ALLOC
 // #    define DEBUG_ANF
 // #    define DEBUG_ANNOTATE
