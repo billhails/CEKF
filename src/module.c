@@ -21,10 +21,11 @@
 #include "lexer.h"
 #include "preamble.h"
 #include "parser_info.h"
+#include "symbol.h"
 
 typedef struct PmBufStack {
     int lineno;
-    char *filename;
+    HashSymbol *filename;
     YY_BUFFER_STATE bs;
     struct PmBufStack *next;
 } PmBufStack;
@@ -66,7 +67,7 @@ static void pushPmBufStack(PmModule *mod, YY_BUFFER_STATE bs,
     bufStack->next = mod->bufStack;
     mod->bufStack = bufStack;
     bufStack->bs = bs;
-    bufStack->filename = strdup(origin);
+    bufStack->filename = newSymbol((char *) origin);
     bufStack->lineno = 1;
 }
 
@@ -194,7 +195,7 @@ void showModuleState(FILE *fp, PmModule *mod) {
         fprintf(fp, "module->bufStack is null\n");
         return;
     }
-    fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename,
+    fprintf(fp, "current file %s, line %d\n", mod->bufStack->filename->name,
             mod->bufStack->lineno);
 }
 
@@ -205,7 +206,7 @@ char *currentPmFile(PmModule *mod) {
     if (mod->bufStack == NULL) {
         return "no-file";
     }
-    return mod->bufStack->filename;
+    return mod->bufStack->filename->name;
 }
 
 int currentPmLine(PmModule *mod) {

@@ -48,7 +48,7 @@ void copyTosToVec(Vec *vec, Stack *s);
 void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
 void patchVec(Vec *v, Stack *s, int num);
-Env *makeEnv(Env *parent, Index size);
+Env *makeEnv(Env *parent);
 Kont *makeKont(Control offset, Env *env, Kont *next);
 Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next);
 
