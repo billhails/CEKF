@@ -60,23 +60,28 @@ Value vVoid = {
     .val = VALUE_VAL_NONE()
 };
 
-Env *makeEnv(Env *parent, Index size) {
-    Stack s;
-    initStack(&s, size);
+Env *makeEnv(Env *parent) {
+    Stack *s = newStack();
+    int save = PROTECT(s);
     Env *new = newEnv(s, parent);
+    UNPROTECT(save);
     return new;
 }
 
 Kont *makeKont(Control offset, Env *env, Kont *next) {
-    Stack s;
-    initStack(&s, 0);
-    return newKont(offset, env, s, next);
+    Stack *s = newStack();
+    int save = PROTECT(s);
+    Kont *k = newKont(offset, env, s, next);
+    UNPROTECT(save);
+    return k;
 }
 
 Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next) {
-    Stack s;
-    initStack(&s, 0);
-    return newFail(offset, env, k, s, next);
+    Stack *s = newStack();
+    int save = PROTECT(s);
+    Fail *f = newFail(offset, env, k, s, next);
+    UNPROTECT(save);
+    return f;
 }
 
 void dumpStack(Stack *s) {
@@ -102,13 +107,13 @@ void copyTosToVec(Vec *vec, Stack *s) {
 }
 
 void copyTosToEnv(Env *e, Stack *s, int n) {
-    copyTopStack(&e->stack, s, n);
+    copyTopStack(e->stack, s, n);
 }
 
 void snapshotClo(Clo *target, Stack *s, int letRecOffset) {
-    Env *env = makeEnv(target->env, s->size - letRecOffset);
+    Env *env = makeEnv(target->env);
     target->env = env;
-    copyExceptTopStack(&env->stack, s, letRecOffset);
+    copyExceptTopStack(env->stack, s, letRecOffset);
 }
 
 void patchVec(Vec *v, Stack *s, int num) {
@@ -144,23 +149,23 @@ Vec *snapshotNamespace(Stack *s) {
 }
 
 void patchClo(Clo *target, Stack *s) {
-    copyStackEntries(&target->env->stack, s);
+    copyStackEntries(target->env->stack, s);
 }
 
 void snapshotKont(Kont *target, Stack *s) {
-    copyStackEntries(&target->stack, s);
+    copyStackEntries(target->stack, s);
 }
 
 void snapshotFail(Fail *target, Stack *s) {
-    copyStackEntries(&target->stack, s);
+    copyStackEntries(target->stack, s);
 }
 
 void restoreKont(Stack *s, Kont *source) {
-    copyStackEntries(s, &source->stack);
+    copyStackEntries(s, source->stack);
 }
 
 void restoreFail(Stack *s, Fail *source) {
-    copyStackEntries(s, &source->stack);
+    copyStackEntries(s, source->stack);
 }
 
 CharArray *listToCharArray(Value list) {

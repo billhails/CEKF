@@ -79,11 +79,11 @@ HashSymbol *_genSym(char *prefix, GenSymFmt fmt) {
                     char suffix[128];
                     int index = 0;
                     int value = symbolCounter++;
-                    while (value > 0) {
+                    do {
                         suffix[index++] = alphabet[value % 26];
                         suffix[index] = '\0';
                         value = value / 26;
-                    }
+                    } while (value > 0);
                     sprintf(buffer, "%s%s", prefix, suffix);
                 }
                 break;

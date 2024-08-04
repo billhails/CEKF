@@ -61,43 +61,43 @@ void markState() {
 }
 
 static inline void patch(Value v, int num) {
-    patchVec(v.val.namespace, &state.S, num);
+    patchVec(v.val.namespace, state.S, num);
 }
 
 static inline void poke(int offset, Value v) {
-    pokeStack(&state.S, offset, v);
+    pokeStack(state.S, offset, v);
 }
 
 static inline void push(Value v) {
-    pushStack(&state.S, v);
+    pushStack(state.S, v);
 }
 
 static inline void extend(int i) {
-    pushnStack(&state.S, i, vVoid);
+    pushnStack(state.S, i, vVoid);
 }
 
 static inline void discard(int num) {
-    popnStack(&state.S, num);
+    popnStack(state.S, num);
 }
 
 static inline Value pop() {
-    return popStack(&state.S);
+    return popStack(state.S);
 }
 
 static inline void popn(int n) {
-    popnStack(&state.S, n);
+    popnStack(state.S, n);
 }
 
 static inline Value peek(int index) {
-    return peeknStack(&state.S, index);
+    return peeknStack(state.S, index);
 }
 
 static inline Value tos(void) {
-    return peekStack(&state.S);
+    return peekStack(state.S);
 }
 
 static inline void copyToVec(Vec *vec) {
-    copyTosToVec(vec, &state.S);
+    copyTosToVec(vec, state.S);
 }
 
 static Env *builtInsToEnv(BuiltIns *b)__attribute__((unused));
@@ -105,14 +105,14 @@ static Env *builtInsToEnv(BuiltIns *b)__attribute__((unused));
 static Env *builtInsToEnv(BuiltIns *b) {
     // printBuiltIns(b, 0);
     // eprintf("\n");
-    Env *env = makeEnv(NULL, b->size);
+    Env *env = makeEnv(NULL);
     int save = PROTECT(env);
     for (Index i = 0; i < b->size; i++) {
         BuiltIn *builtIn = b->entries[i];
         DEBUGPRINTF("adding builtin %s at %p\n", builtIn->name->name, builtIn->implementation);
         BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
         PROTECT(implementation);
-        pushStack(&env->stack, value_BuiltIn(implementation));
+        pushStack(env->stack, value_BuiltIn(implementation));
     }
     UNPROTECT(save);
     return env;
@@ -125,9 +125,9 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     state.K = NULL;
     state.F = NULL;
     if (first) {
-        initStack(&state.S, 8);
+        state.S = newStack();
     } else {
-        clearStack(&state.S);
+        clearStack(state.S);
     }
     state.B = B;
     first = false;
@@ -139,7 +139,7 @@ void run(ByteCodeArray B, BuiltIns *builtIns) {
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
-    state.S.size = 0;
+    state.S->size = 0;
     collectGarbage();
 }
 
@@ -352,7 +352,7 @@ static Value lookup(int frame, int offset) {
         env = env->next;
         frame--;
     }
-    return env->stack.entries[offset];
+    return env->stack->entries[offset];
 }
 
 /**
@@ -368,18 +368,18 @@ static void applyProc(int naargs) {
     switch (callable.type) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
-                int ncaptured = clo->env->stack.size;
+                int ncaptured = clo->env->stack->size;
                 if (clo->pending == naargs) {
                     // move the new args to the right place on the stack, leaving just enough
                     // space for the captured args below them:
                     // | ..captured.. | ..aargs.. |
                     //                  ^^^^^^^^^ ^
                     //                    moved   SP
-                    moveStack(&state.S, ncaptured, naargs);
+                    moveStack(state.S, ncaptured, naargs);
                     // then copy the already captured args to the base of the stack
-                    copyValues(state.S.entries, clo->env->stack.entries, ncaptured);
+                    copyValues(state.S->entries, clo->env->stack->entries, ncaptured);
                     // set the stack pointer to the last arg
-                    state.S.size = ncaptured + naargs;
+                    state.S->size = ncaptured + naargs;
                     // and set up the machine for the next step into the body of the closure
                     state.E = clo->env->next;
                     state.C = clo->ip;
@@ -389,13 +389,13 @@ static void applyProc(int naargs) {
                 } else if (naargs < clo->pending) {
                     // create a new partial closure capturing the additional arguments so far
                     // create a new env which is a sibling of the partial closure's env.
-                    Env *env = makeEnv(clo->env->next, naargs + ncaptured);
+                    Env *env = makeEnv(clo->env->next);
                     int save = PROTECT(env);
                     // copy already captured arguments into the new env
-                    copyValues(env->stack.entries, clo->env->stack.entries, ncaptured);
+                    copyValues(env->stack->entries, clo->env->stack->entries, ncaptured);
                     // copy the additional arguments after them
-                    copyValues(&(env->stack.entries[clo->env->stack.size]),
-                               &(state.S.entries[state.S.size - naargs]), naargs);
+                    copyValues(&(env->stack->entries[clo->env->stack->size]),
+                               &(state.S->entries[state.S->size - naargs]), naargs);
                     // create a new closure with correct pending, ip and the new env
                     Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
                     PROTECT(pclo);
@@ -416,13 +416,13 @@ static void applyProc(int naargs) {
                 if (clo->pending == naargs) {
                     state.C = clo->ip;
                     state.E = clo->env;
-                    moveStack(&state.S, 0, clo->pending);
+                    moveStack(state.S, 0, clo->pending);
                 } else if (naargs == 0) {
                     push(callable);
                 } else if (naargs < clo->pending) {
-                    Env *env = makeEnv(clo->env, naargs);
+                    Env *env = makeEnv(clo->env);
                     int save = PROTECT(env);
-                    copyTosToEnv(env, &state.S, naargs);
+                    copyTosToEnv(env, state.S, naargs);
                     Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
                     PROTECT(pclo);
                     callable.type = VALUE_TYPE_PCLO;
@@ -447,7 +447,7 @@ static void applyProc(int naargs) {
                     state.C = kont->body;
                     state.K = kont->next;
                     state.E = kont->env;
-                    restoreKont(&state.S, kont);
+                    restoreKont(state.S, kont);
                     push(result);
                 }
             }
@@ -458,10 +458,10 @@ static void applyProc(int naargs) {
                 BuiltInFunction fn = (BuiltInFunction) impl->implementation;
                 Vec *v = newVec(impl->nargs);
                 int save = PROTECT(v);
-                copyValues(v->entries, &(state.S.entries[state.S.size - impl->nargs]), impl->nargs);
+                copyValues(v->entries, &(state.S->entries[state.S->size - impl->nargs]), impl->nargs);
                 Value res = fn(v);
                 protectValue(res);
-                state.S.size -= impl->nargs;
+                state.S->size -= impl->nargs;
                 push(res);
                 UNPROTECT(save);
             } else if (naargs == 0) {
@@ -481,7 +481,7 @@ static unsigned long int count = 0;
 
 void reportSteps(void) {
     printf("instructions executed: %lu\n", count);
-    printf("max stack capacity: %d\n", state.S.capacity);
+    printf("max stack capacity: %d\n", state.S->capacity);
 }
 
 static void step() {
@@ -492,7 +492,7 @@ static void step() {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        // dumpStack(&state.S);
+        // dumpStack(state.S);
         printf("%4ld) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
@@ -510,7 +510,7 @@ static void step() {
                                 nargs, letRecOffset, end);
                     Clo *clo = newClo(nargs, state.C, state.E);
                     int save = PROTECT(clo);
-                    snapshotClo(clo, &state.S, letRecOffset);
+                    snapshotClo(clo, state.S, letRecOffset);
                     Value v = value_Clo(clo);
                     push(v);
                     UNPROTECT(save);
@@ -933,11 +933,11 @@ static void step() {
                     // patch each of the lambdas environments with the current stack frame
                     int nargs = readCurrentByte();
                     DEBUGPRINTF("LETREC [%d]\n", nargs);
-                    for (Index i = sizeStack(&state.S) - nargs;
-                         i < sizeStack(&state.S); i++) {
+                    for (Index i = sizeStack(state.S) - nargs;
+                         i < sizeStack(state.S); i++) {
                         Value v = peek(i);
                         if (v.type == VALUE_TYPE_CLO) {
-                            patchClo(v.val.clo, &state.S);
+                            patchClo(v.val.clo, state.S);
                         } else {
                             cant_happen("non-lambda value (%d) for letrec",
                                         v.type);
@@ -951,7 +951,7 @@ static void step() {
                     int branch = readCurrentOffset();
                     DEBUGPRINTF("AMB [%04x]\n", branch);
                     state.F = makeFail(branch, state.E, state.K, state.F);
-                    snapshotFail(state.F, &state.S);
+                    snapshotFail(state.F, state.S);
                 }
                 break;
 
@@ -977,7 +977,7 @@ static void step() {
                         state.C = state.F->exp;
                         state.E = state.F->env;
                         state.K = state.F->kont;
-                        restoreFail(&state.S, state.F);
+                        restoreFail(state.S, state.F);
                         state.F = state.F->next;
                     }
                 }
@@ -989,7 +989,7 @@ static void step() {
                     DEBUGPRINTF("LET [%04x]\n", offset);
                     state.K = makeKont(offset, state.E, state.K);
                     validateLastAlloc();
-                    snapshotKont(state.K, &state.S);
+                    snapshotKont(state.K, state.S);
                 }
                 break;
 
@@ -1128,7 +1128,7 @@ static void step() {
                     int numLambdas = readCurrentWord();
                     int stackOffset = readCurrentWord();
                     DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
-                    Vec *snapshot = snapshotNamespace(&state.S);
+                    Vec *snapshot = snapshotNamespace(state.S);
                     int save = PROTECT(snapshot);
                     Value ns = value_Namespace(snapshot);
                     poke(0 - (numLambdas + stackOffset), ns);
@@ -1164,8 +1164,8 @@ static void step() {
                     }
 #endif
                     state.K = makeKont(offset, state.E, state.K);
-                    snapshotKont(state.K, &state.S);
-                    restoreNamespace(&state.S, v.val.namespace);
+                    snapshotKont(state.K, state.S);
+                    restoreNamespace(state.S, v.val.namespace);
                 }
                 break;
 
@@ -1180,8 +1180,8 @@ static void step() {
                     }
 #endif
                     state.K = makeKont(offset, state.E, state.K);
-                    snapshotKont(state.K, &state.S);
-                    restoreNamespace(&state.S, v.val.namespace);
+                    snapshotKont(state.K, state.S);
+                    restoreNamespace(state.S, v.val.namespace);
                 }
                 break;
 
@@ -1192,7 +1192,7 @@ static void step() {
                     Kont *kont = state.K;
                     PROTECT(kont);
                     state.K = kont->next;
-                    restoreKont(&state.S, kont);
+                    restoreKont(state.S, kont);
                     push(result);
                     UNPROTECT(save);
                 }

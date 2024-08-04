@@ -195,7 +195,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
         cant_happen("more frees than mallocs!");
 
 #endif
-    bytesAllocated += newSize - oldSize;
+    bytesAllocated += (newSize - oldSize);
     if (bytesAllocated < 0)
         cant_happen("more bytes freed than allocated! %d += %lu - %lu [%d]",
                     bytesAllocated, newSize, oldSize, numAlloc);

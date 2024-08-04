@@ -82,9 +82,6 @@ inline:
             opaque: opaque
 
     arrays:
-        Stack:
-            entries: Value
-
         ByteCodeArray:
             entries: byte
 
@@ -94,6 +91,9 @@ arrays:
 
     ByteArray:
         entries: byte
+
+    Stack:
+        entries: Value
 
 vectors:
     Vec:

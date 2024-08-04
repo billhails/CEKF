@@ -1,6 +1,10 @@
-.PHONY: all clean realclean deps profile check-grammar list-cores test indent indent-src indent-generated docs install-sqlite3
+.PHONY: all clean realclean deps profile leak-check check-grammar list-cores test indent indent-src indent-generated docs install-sqlite3
 
-# debugging, testing or production
+# pass on the command line, i.e. `make test MODE=testing`
+#
+# debugging:  -g, and turns on DEBUG_STRESS_GC which forces a garbage collection on every malloc
+# testing:    -g, but no DEBUG_STRESS_GC
+# production: -O2, no DEBUG_STRESS_GC and disables all safety checks
 ifndef MODE
 MODE:=debugging
 endif
@@ -197,6 +201,9 @@ profile: all
 	rm -f callgrind.out.*
 	./$(TARGET) --binary-out=$(PROF_SRC).fnc fn/$(PROF_SRC).fn
 	valgrind --tool=callgrind ./$(TARGET) --binary-in=$(PROF_SRC).fnc
+
+leak-check: all
+	valgrind --leak-check=full ./$(TARGET) fn//$(PROF_SRC).fn
 
 indent: indent-src indent-generated
 
