@@ -31,6 +31,7 @@ TcType *pushIntegerArg(BuiltInArgs *args);
 TcType *pushCharacterArg(BuiltInArgs *args);
 void pushNewBuiltIn(BuiltIns *reg, char *name, TcType *ret, BuiltInArgs *args, void *impl);
 TcType *pushStringArg(BuiltInArgs *args);
+TcType *pushAnyArg(BuiltInArgs *args);
 
 
 #endif

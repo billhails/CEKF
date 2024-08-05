@@ -17,7 +17,7 @@ CREATE TABLE unicode (
     title_case INT                         -- 14
 );
 CREATE INDEX unicode_name ON unicode(name);
-.import --csv UnicodeData.csv unicode
+.import --csv unicode/UnicodeData.csv unicode
 UPDATE unicode SET gc = NULL WHERE gc = "";
 UPDATE unicode SET cc = NULL WHERE cc = -1;
 UPDATE unicode SET bc = NULL WHERE bc = "";

@@ -1,8 +1,8 @@
 import csv
 
-with open('UnicodeData.csv', 'w', newline='') as csvout:
+with open('unicode/UnicodeData.csv', 'w', newline='') as csvout:
     writer = csv.writer(csvout, delimiter=',', quotechar='"')
-    with open('UnicodeData.txt', newline='') as csvin:
+    with open('unicode/UnicodeData.txt', newline='') as csvin:
         reader = csv.reader(csvin, delimiter=';')
         for row in reader:
             # these -1 values wil get transformed to null by the sql import script

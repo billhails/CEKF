@@ -461,14 +461,6 @@ static TcType *pushDirArg(BuiltInArgs *args) {
     return dirType;
 }
 
-static TcType *pushAntArg(BuiltInArgs *args) {
-    TcType *anyType = makeFreshVar("any");
-    int save = PROTECT(anyType);
-    pushBuiltInArgs(args, anyType);
-    UNPROTECT(save);
-    return anyType;
-}
-
 static TcType *pushIoArg(BuiltInArgs *args) {
     TcType *ioType = makeIOType();
     int save = PROTECT(ioType);
@@ -543,7 +535,7 @@ static void registerFPutn(BuiltIns *registry) {
 static void registerPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *anyType = pushAntArg(args);
+    TcType *anyType = pushAnyArg(args);
     pushNewBuiltIn(registry, "putv", anyType, args, (void *)builtin_putv); // re-use putv
     UNPROTECT(save);
 }
@@ -553,7 +545,7 @@ static void registerFPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     pushFileArg(args);
-    TcType *anyType = pushAntArg(args);
+    TcType *anyType = pushAnyArg(args);
     pushNewBuiltIn(registry,"fputv", anyType, args, (void *)builtin_fputv); // re-use putv
     UNPROTECT(save);
 }

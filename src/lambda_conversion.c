@@ -1234,6 +1234,28 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     return res;
 }
 
+static LamExp *convertError(AstExpression *value, LamContext *env) {
+    LamExp *exp = convertExpression(value, env);
+    int save = PROTECT(exp);
+    LamList *args = newLamList(CPI(exp), exp, NULL);
+    PROTECT(args);
+    LamExp *fileName = stringToLamList(CPI(value), value->_yy_parser_info.filename);
+    PROTECT(fileName);
+    args = newLamList(CPI(exp), fileName, args);
+    PROTECT(args);
+    MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineno, false);
+    PROTECT(num);
+    LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
+    PROTECT(lineNo);
+    args = newLamList(CPI(lineNo), lineNo, args);
+    PROTECT(args);
+    LamExp *function = newLamExp_Var(CPI(value), fnErrorSymbol());
+    PROTECT(function);
+    LamExp *res = makeApplication(function, args);
+    UNPROTECT(save);
+    return res;
+}
+
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression);
     LamExp *result = NULL;
@@ -1292,6 +1314,9 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_ASSERTION:
             result = convertAssertion(expression->val.assertion, env);
+            break;
+        case AST_EXPRESSION_TYPE_ERROR:
+            result = convertError(expression->val.error, env);
             break;
         default:
             cant_happen

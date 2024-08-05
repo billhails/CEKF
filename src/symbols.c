@@ -37,6 +37,14 @@ HashSymbol *assertSymbol() {
     return res;
 }
 
+HashSymbol *fnErrorSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("error$");
+    }
+    return res;
+}
+
 HashSymbol *namespacesSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

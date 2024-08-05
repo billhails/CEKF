@@ -93,6 +93,7 @@ struct PmModule *mod = yyextra;
 "then"          { return THEN; }
 "typedef"       { return TYPEDEF; }
 "assert"        { return ASSERT; }
+"error"         { return ERROR; }
 "alias"         { return ALIAS; }
 
 \"((\\{CODEPOINT})|[^"])*\" { parseCS(yytext, '"'); yylval->s = yytext; return STRING; }

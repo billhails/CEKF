@@ -2,7 +2,7 @@ let
     link "dictionary.fn" as dict;
     link "sqliteutils.fn" as sql;
 in
-    sql.with_database("unicode.db",
+    sql.with_database("unicode/unicode.db",
         sql.with_statement("select * from unicode "
                            "where int_code between ? and ?",
             sql.with_bindings([basic_number(0x13420),
