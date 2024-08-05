@@ -118,6 +118,7 @@ AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
 AstExpression --structure--> AstStruct
 AstExpression --assertion--> AstExpression
+AstExpression --error--> AstExpression
 AstPosition["enum AstPosition"]
 AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl

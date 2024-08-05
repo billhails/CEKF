@@ -224,6 +224,7 @@ unions:
         env: void_ptr
         structure: AstStruct
         assertion: AstExpression
+        error: AstExpression
 
 hashes:
     AstIntTable:

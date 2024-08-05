@@ -33,6 +33,7 @@ Value builtin_real_part(Vec *args);
 Value builtin_imag_part(Vec *args);
 Value builtin_theta_part(Vec *args);
 Value builtin_mag_part(Vec *args);
+void builtin_exit(Vec *args);
 
 extern int builtin_args_argc;
 extern int builtin_args_cargc;

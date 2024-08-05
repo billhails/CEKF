@@ -34,6 +34,7 @@ static void registerRealPart(BuiltIns *registry);
 static void registerImagPart(BuiltIns *registry);
 static void registerThetaPart(BuiltIns *registry);
 static void registerMagPart(BuiltIns *registry);
+static void registerExit(BuiltIns *registry);
 
 Value makeTryResult(int code, Value val) {
     Vec *v = newVec(2);
@@ -72,6 +73,18 @@ Value makeBasic(Value v, int code) {
         val->entries[1] = v;
         return value_Vec(val);
     }
+}
+
+static TcType *makeAnyType(void) {
+    return makeFreshVar("any");
+}
+
+TcType *pushAnyArg(BuiltInArgs *args) {
+    TcType *anyType = makeAnyType();
+    int save = PROTECT(anyType);
+    pushBuiltInArgs(args, anyType);
+    UNPROTECT(save);
+    return anyType;
 }
 
 TcType *pushIntegerArg(BuiltInArgs *args) {
@@ -120,6 +133,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerImagPart(res);
     registerMagPart(res);
     registerThetaPart(res);
+    registerExit(res);
     UNPROTECT(save);
     return res;
 }
@@ -213,5 +227,15 @@ static void registerThetaPart(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *integerType = pushIntegerArg(args);
     pushNewBuiltIn(registry, "com_theta", integerType, args, (void *)builtin_theta_part);
+    UNPROTECT(save);
+}
+
+static void registerExit(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    pushIntegerArg(args);
+    TcType *anyType = makeAnyType();
+    PROTECT(anyType);
+    pushNewBuiltIn(registry, "exit", anyType, args, (void *)builtin_exit);
     UNPROTECT(save);
 }

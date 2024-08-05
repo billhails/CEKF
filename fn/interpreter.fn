@@ -1,63 +1,74 @@
 let
+
     // very simple environment
-    typedef environment { frame(list(char), expression, environment) | root }
-
-    // very simple AST
-    typedef expression {
-        addition(expression, expression) |
-        subtraction(expression, expression) |
-        multiplication(expression, expression) |
-        division(expression, expression) |
-        num(number) |
-        symbol(list(char)) |
-        conditional(expression, expression, expression) |
-        lambda(expression, expression) |
-        closure(expression, environment) |
-        application(expression, expression)
-    }
-
-    // an interpreter
-    fn eval {
-        (addition(l, r), e)              { add(eval(l, e), eval(r, e)) }
-        (subtraction(l, r), e)           { sub(eval(l, e), eval(r, e)) }
-        (multiplication(l, r), e)        { mul(eval(l, e), eval(r, e)) }
-        (division(l, r), e)              { div(eval(l, e), eval(r, e)) }
-        (i = num(_), e)               { i }
-        (symbol(s), e)                   { lookup(s, e) }
-        (conditional(test, pro, con), e) { cond(test, pro, con, e) }
-        (l = lambda(_, _), e)            { closure(l, e) }
-        (application(function, arg), e)  { apply(eval(function, e), eval(arg, e)) }
-    }
-
-    // function application
-    fn apply (closure(lambda(symbol(s), body), e), arg) {
-        eval(body, frame(s, arg, e))
-    }
-
-    // built-ins
-    fn add (num(a), num(b)) { num(a + b) }
-    
-    fn sub (num(a), num(b)) { num(a - b) }
-    
-    fn mul (num(a), num(b)) { num(a * b) }
-    
-    fn div (num(a), num(b)) { num(a / b) }
-    
-    fn cond(test, pro, con, e) {
-        switch (eval(test, e)) {
-            (num(0)) { eval(con, e) } // 0 is false
-            (num(_)) { eval(pro, e) }
-        }
-    }
+    typedef environment { frame(string, expression, environment) | root }
 
     // lookup access to the environment
     fn lookup {
         (s, frame(s, value, _))  { value }
         (s, frame(_, _, parent)) { lookup(s, parent) }
-        (s, root)                { num(0) } // error("mce symbol not defined " @@ s) }
+        (s, root)                { error("symbol not defined: " @@ s) }
     }
+
+    // very simple AST
+    typedef expression {
+          addition(expression, expression)
+        | subtraction(expression, expression)
+        | multiplication(expression, expression)
+        | division(expression, expression)
+        | num(number)
+        | symbol(string)
+        | conditional(expression, expression, expression)
+        | lambda(expression, expression)
+        | closure(expression, environment)
+        | application(expression, expression)
+    }
+
+    // an interpreter
+    unsafe fn eval {
+        (i = num(_), e)                  { i }
+        (symbol(s), e)                   { lookup(s, e) }
+        (addition(l, r), e)              { add(eval(l, e), eval(r, e)) }
+        (subtraction(l, r), e)           { sub(eval(l, e), eval(r, e)) }
+        (multiplication(l, r), e)        { mul(eval(l, e), eval(r, e)) }
+        (division(l, r), e)              { div(eval(l, e), eval(r, e)) }
+        (conditional(test, con, alt), e) { cond(test, con, alt, e) }
+        (l = lambda(_, _), e)            { closure(l, e) }
+        (application(function, arg), e)  { apply(eval(function, e), eval(arg, e)) }
+    }
+
+    // function application
+    unsafe fn apply (closure(lambda(symbol(s), body), e), arg) {
+        eval(body, frame(s, arg, e))
+    }
+
+    // built-ins
+    unsafe fn add (num(a), num(b)) {
+        num(a + b)
+    }
+
+    unsafe fn sub (num(a), num(b)) {
+        num(a - b)
+    }
+
+    unsafe fn mul (num(a), num(b)) {
+        num(a * b)
+    }
+
+    unsafe fn div (num(a), num(b)) {
+        num(a / b)
+    }
+
+    fn cond(test, pro, con, e) {
+        unsafe switch (eval(test, e)) {
+            (num(0)) { eval(con, e) } // 0 is false
+            (num(_)) { eval(pro, e) }
+        }
+    }
+
 in
-    // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 3
+
+    // try it out: ((lambda (x) (if x (+ x 2) x)) a) |- a: 4
     print(eval(
         application(
             lambda(
@@ -70,5 +81,5 @@ in
             ),
             symbol("a")
         ),
-        frame("a", num(3), root)
+        frame("a", num(4), root)
     ))

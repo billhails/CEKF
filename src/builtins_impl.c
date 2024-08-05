@@ -98,3 +98,8 @@ Value builtin_getenv(Vec *args) {
     UNPROTECT(save);
     return result;
 }
+
+void builtin_exit(Vec *args) {
+    int status = args->entries[0].val.stdint;
+    exit(status);
+}

@@ -163,34 +163,35 @@ generated/lexer.c generated/lexer.h: src/lexer.l | generated
 generated/parser.c generated/parser.h: src/parser.y | generated
 	bison -v -Werror -Wcounterexamples --header=generated/parser.h -o generated/parser.c $<
 
-test: $(TEST_TARGETS) $(TARGET) unicode.db
+test: $(TEST_TARGETS) $(TARGET) unicode/unicode.db
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 	for t in tests/fn/*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-dep obj generated docs/generated:
+dep obj generated docs/generated unicode:
 	mkdir $@
 
 install-sqlite3:
 	sudo apt-get --yes install sqlite3 libsqlite3-dev
 
-unicode.db: UnicodeData.csv ./tools/create_table.sql
+unicode/unicode.db: unicode/UnicodeData.csv ./tools/create_table.sql
 	rm -f $@
 	sqlite3 $@ < ./tools/create_table.sql
 
-UnicodeData.csv: UnicodeData.txt ./tools/convertCsv.py
+unicode/UnicodeData.csv: unicode/UnicodeData.txt ./tools/convertCsv.py
 	$(PYTHON) ./tools/convertCsv.py
 
-UnicodeData.txt:
+unicode/UnicodeData.txt: | unicode
 	wget https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
+	mv UnicodeData.txt $@
 
 realclean: clean
-	rm -f tags
+	rm -rf tags unicode
 
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~
+	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc
 
 deps:
 	rm -rf dep
