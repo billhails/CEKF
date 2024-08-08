@@ -39,7 +39,6 @@ typedef enum {
 
     // hash table types
     OBJTYPE_HASHTABLE,
-    OBJTYPE_HASHSYMBOL,
 
     OBJTYPE_PROTECTION,
     OBJTYPE_BIGINT,

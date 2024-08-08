@@ -89,12 +89,7 @@ HashSymbol *_genSym(char *prefix, GenSymFmt fmt) {
                 break;
         }
         if (hashGetVar(symbolTable, buffer) == NULL) {
-            HashSymbol *x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
-            int save = PROTECT(x);
-            x->name = safeStrdup(buffer);
-            x->hash = hashString(buffer);
-            hashSet(symbolTable, x, NULL);
-            UNPROTECT(save);
+            HashSymbol *x = uniqueHashSymbol(symbolTable, buffer, NULL);
             hashSet(genSymTable, base, &symbolCounter);
             return x;
         }

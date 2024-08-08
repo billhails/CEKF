@@ -70,8 +70,6 @@ const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_OPAQUE:
             return "opaque";
-        case OBJTYPE_HASHSYMBOL:
-            return "var";
         case OBJTYPE_CLO:
             return "clo";
         case OBJTYPE_ENV:
@@ -289,9 +287,6 @@ void markObj(Header *h, Index i) {
         case OBJTYPE_HASHTABLE:
             markHashTableObj(h);
             break;
-        case OBJTYPE_HASHSYMBOL:
-            markHashSymbolObj(h);
-            break;
         case OBJTYPE_PROTECTION:
             markProtectionObj(h);
             break;
@@ -345,9 +340,6 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_HASHTABLE:
             freeHashTableObj(h);
-            break;
-        case OBJTYPE_HASHSYMBOL:
-            freeHashSymbolObj(h);
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
