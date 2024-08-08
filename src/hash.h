@@ -63,8 +63,6 @@ void copyHashTable(HashTable *to, HashTable *from);
 HashSymbol *hashGetVar(HashTable *table, const char *name);
 HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
 
-void markHashSymbol(HashSymbol *x);
-
 extern bool quietPrintHashTable;
 
 void printHashTable(HashTable *table, int depth);
@@ -74,7 +72,4 @@ HashSymbol *iterateHashTable(HashTable *table, Index *index, void *data);
 
 void markHashTable(HashTable *table);
 
-static inline void markHashSymbolObj(struct Header *h) {
-    markHashSymbol((HashSymbol *) h);
-}
 #endif

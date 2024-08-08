@@ -327,11 +327,3 @@ void copyHashTable(HashTable *to, HashTable *from) {
         }
     }
 }
-
-void markHashSymbol(HashSymbol *x) {
-    if (x == NULL)
-        return;
-    if (MARKED(x))
-        return;
-    MARK(x);
-}
