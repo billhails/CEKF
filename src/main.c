@@ -59,8 +59,31 @@ static char *binary_input_file = NULL;
 
 extern AstStringArray *include_paths;
 
+static void report_build_mode(char *prog) {
+    printf("%s - ", prog);
+#ifdef BUILD_MODE
+    switch (BUILD_MODE) {
+        case 0:
+            printf("debug build\n");
+            break;
+        case 1:
+            printf("test build\n");
+            break;
+        case 2:
+            printf("production build\n");
+            break;
+        default:
+            printf("unrecognised build\n");
+            break;
+    }
+#else
+    printf("unspecified build\n");
+#endif
+}
+
 static void usage(char *prog, int status) {
-    printf("\nusage: %s <options> [<filename>] [<arguments> ...]\n", prog);
+    report_build_mode(prog);
+    printf("usage: %s <options> [<filename>] [<arguments> ...]\n", prog);
     printf("options:\n%s",
            "    --anf                    Display the generated ANF.\n"
            "    --assertions-accumulate  Don't exit on the first assertion failure.\n"
@@ -212,15 +235,16 @@ static ByteCodeArray generateByteCodes(Exp *anfExp) {
     return byteCodes;
 }
 
-static void report(clock_t begin, clock_t compiled, clock_t end) {
+static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
     if (report_flag) {
         printf("\n");
+        report_build_mode(prog);
         double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-        printf("elapsed time: %.3lf\n", time_spent);
+        printf("elapsed time: %.4lf\n", time_spent);
         double compile_time = (double) (compiled - begin) / CLOCKS_PER_SEC;
-        printf("compile time: %.3lf\n", compile_time);
+        printf("compile time: %.4lf\n", compile_time);
         double run_time = (double) (end - compiled) / CLOCKS_PER_SEC;
-        printf("run time: %.3lf\n", run_time);
+        printf("run time: %.4lf\n", run_time);
         reportMemory();
         reportSteps();
     }
@@ -259,7 +283,7 @@ int main(int argc, char *argv[]) {
         run(byteCodes, builtIns);
         UNPROTECT(save);
         clock_t end = clock();
-        report(begin, compiled, end);
+        report(argv[0], begin, compiled, end);
     } else {
         AstProg *prog = parseFile(argv[nextargc++]);
         int save2 = PROTECT(prog);
@@ -296,7 +320,7 @@ int main(int argc, char *argv[]) {
         run(byteCodes, builtIns);
         UNPROTECT(save);
         clock_t end = clock();
-        report(begin, compiled, end);
+        report(argv[0], begin, compiled, end);
     }
     exit(assertions_failed ? 1 : 0);
 }
