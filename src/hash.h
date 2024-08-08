@@ -64,7 +64,6 @@ HashSymbol *hashGetVar(HashTable *table, const char *name);
 HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *valuePtr);
 
 void markHashSymbol(HashSymbol *x);
-void freeHashSymbol(HashSymbol *x);
 
 extern bool quietPrintHashTable;
 
@@ -77,8 +76,5 @@ void markHashTable(HashTable *table);
 
 static inline void markHashSymbolObj(struct Header *h) {
     markHashSymbol((HashSymbol *) h);
-}
-static inline void freeHashSymbolObj(struct Header *h) {
-    freeHashSymbol((HashSymbol *) h);
 }
 #endif

@@ -196,7 +196,7 @@ clean: deps
 deps:
 	rm -rf dep
 
-PROF_SRC=fib20
+PROF_SRC=interpreter
 
 profile: all
 	rm -f callgrind.out.*
@@ -204,7 +204,7 @@ profile: all
 	valgrind --tool=callgrind ./$(TARGET) --binary-in=$(PROF_SRC).fnc
 
 leak-check: all
-	valgrind --leak-check=full ./$(TARGET) fn//$(PROF_SRC).fn
+	valgrind --leak-check=full ./$(TARGET) fn/$(PROF_SRC).fn
 
 indent: indent-src indent-generated
 

@@ -213,10 +213,9 @@ void markHashTable(HashTable *table) {
     if (MARKED(table))
         return;
     MARK(table);
-    for (Index i = 0; i < table->capacity; i++) {
-        if (table->keys[i] != NULL) {
-            markHashSymbol(table->keys[i]);
-            if (table->valuesize > 0 && table->markfunction != NULL) {
+    if (table->valuesize > 0 && table->markfunction != NULL) {
+        for (Index i = 0; i < table->capacity; i++) {
+            if (table->keys[i] != NULL) {
                 DEBUG("markHashTable() [%d][%d][%p]", table->id, i,
                       (char *) table->values + (i * table->valuesize));
                 table->markfunction((char *) table->values +
@@ -249,12 +248,10 @@ HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
     if (x != NULL) {
         return x;
     }
-    x = NEW(HashSymbol, OBJTYPE_HASHSYMBOL);
-    int save = PROTECT(x);
+    x = ALLOCATE(HashSymbol);
     x->name = safeStrdup(name);
     x->hash = hashString(name);
     hashSet(table, x, src);
-    UNPROTECT(save);
     return x;
 }
 
@@ -337,8 +334,4 @@ void markHashSymbol(HashSymbol *x) {
     if (MARKED(x))
         return;
     MARK(x);
-}
-
-void freeHashSymbol(HashSymbol *x) {
-    FREE(x, HashSymbol);
 }
