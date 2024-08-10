@@ -107,13 +107,13 @@ void copyTosToVec(Vec *vec, Stack *s) {
 }
 
 void copyTosToEnv(Env *e, Stack *s, int n) {
-    copyTopStack(e->stack, s, n);
+    copyTopStack(e->S, s, n);
 }
 
 void snapshotClo(Clo *target, Stack *s, int letRecOffset) {
-    Env *env = makeEnv(target->env);
-    target->env = env;
-    copyExceptTopStack(env->stack, s, letRecOffset);
+    Env *env = makeEnv(target->E);
+    target->E = env;
+    copyExceptTopStack(env->S, s, letRecOffset);
 }
 
 void patchVec(Vec *v, Stack *s, int num) {
@@ -149,23 +149,23 @@ Vec *snapshotNamespace(Stack *s) {
 }
 
 void patchClo(Clo *target, Stack *s) {
-    copyStackEntries(target->env->stack, s);
+    copyStackEntries(target->E->S, s);
 }
 
 void snapshotKont(Kont *target, Stack *s) {
-    copyStackEntries(target->stack, s);
+    copyStackEntries(target->S, s);
 }
 
 void snapshotFail(Fail *target, Stack *s) {
-    copyStackEntries(target->stack, s);
+    copyStackEntries(target->S, s);
 }
 
 void restoreKont(Stack *s, Kont *source) {
-    copyStackEntries(s, source->stack);
+    copyStackEntries(s, source->S);
 }
 
 void restoreFail(Stack *s, Fail *source) {
-    copyStackEntries(s, source->stack);
+    copyStackEntries(s, source->S);
 }
 
 CharArray *listToCharArray(Value list) {

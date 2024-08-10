@@ -112,7 +112,7 @@ static Env *builtInsToEnv(BuiltIns *b) {
         DEBUGPRINTF("adding builtin %s at %p\n", builtIn->name->name, builtIn->implementation);
         BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
         PROTECT(implementation);
-        pushStack(env->stack, value_BuiltIn(implementation));
+        pushStack(env->S, value_BuiltIn(implementation));
     }
     UNPROTECT(save);
     return env;
@@ -255,9 +255,9 @@ static Cmp _cmp(Value left, Value right) {
             return _CMP_(left.val.character, right.val.character);
         case VALUE_TYPE_CLO:
         case VALUE_TYPE_PCLO:
-            return _CMP_(left.val.clo->ip, right.val.clo->ip);
+            return _CMP_(left.val.clo->C, right.val.clo->C);
         case VALUE_TYPE_KONT:
-            return _CMP_(left.val.kont->body, right.val.kont->body);
+            return _CMP_(left.val.kont->C, right.val.kont->C);
         case VALUE_TYPE_VEC:
             return _vecCmp(left.val.vec, right.val.vec);
         default:
@@ -349,10 +349,10 @@ static Value vec(Value index, Value vector) {
 static Value lookup(int frame, int offset) {
     Env *env = state.E;
     while (frame > 0) {
-        env = env->next;
+        env = env->E;
         frame--;
     }
-    return env->stack->entries[offset];
+    return env->S->entries[offset];
 }
 
 /**
@@ -368,7 +368,7 @@ static void applyProc(int naargs) {
     switch (callable.type) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
-                int ncaptured = clo->env->stack->size;
+                int ncaptured = clo->E->S->size;
                 if (clo->pending == naargs) {
                     // move the new args to the right place on the stack, leaving just enough
                     // space for the captured args below them:
@@ -377,27 +377,27 @@ static void applyProc(int naargs) {
                     //                    moved   SP
                     moveStack(state.S, ncaptured, naargs);
                     // then copy the already captured args to the base of the stack
-                    copyValues(state.S->entries, clo->env->stack->entries, ncaptured);
+                    copyValues(state.S->entries, clo->E->S->entries, ncaptured);
                     // set the stack pointer to the last arg
                     state.S->size = ncaptured + naargs;
                     // and set up the machine for the next step into the body of the closure
-                    state.E = clo->env->next;
-                    state.C = clo->ip;
+                    state.E = clo->E->E;
+                    state.C = clo->C;
                 } else if (naargs == 0) {
                     // args expected, no args passed, no-op
                     push(callable);
                 } else if (naargs < clo->pending) {
                     // create a new partial closure capturing the additional arguments so far
                     // create a new env which is a sibling of the partial closure's env.
-                    Env *env = makeEnv(clo->env->next);
+                    Env *env = makeEnv(clo->E->E);
                     int save = PROTECT(env);
                     // copy already captured arguments into the new env
-                    copyValues(env->stack->entries, clo->env->stack->entries, ncaptured);
+                    copyValues(env->S->entries, clo->E->S->entries, ncaptured);
                     // copy the additional arguments after them
-                    copyValues(&(env->stack->entries[clo->env->stack->size]),
+                    copyValues(&(env->S->entries[clo->E->S->size]),
                                &(state.S->entries[state.S->size - naargs]), naargs);
-                    // create a new closure with correct pending, ip and the new env
-                    Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
+                    // create a new closure with correct pending, C and the new env
+                    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);
                     callable.val.clo = pclo;
                     // and push it as the result
@@ -414,16 +414,16 @@ static void applyProc(int naargs) {
         case VALUE_TYPE_CLO:{
                 Clo *clo = callable.val.clo;
                 if (clo->pending == naargs) {
-                    state.C = clo->ip;
-                    state.E = clo->env;
+                    state.C = clo->C;
+                    state.E = clo->E;
                     moveStack(state.S, 0, clo->pending);
                 } else if (naargs == 0) {
                     push(callable);
                 } else if (naargs < clo->pending) {
-                    Env *env = makeEnv(clo->env);
+                    Env *env = makeEnv(clo->E);
                     int save = PROTECT(env);
                     copyTosToEnv(env, state.S, naargs);
-                    Clo *pclo = newClo(clo->pending - naargs, clo->ip, env);
+                    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);
                     callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
@@ -444,9 +444,9 @@ static void applyProc(int naargs) {
                     Value result = pop();
                     protectValue(result);
                     Kont *kont = callable.val.kont;
-                    state.C = kont->body;
-                    state.K = kont->next;
-                    state.E = kont->env;
+                    state.C = kont->C;
+                    state.K = kont->K;
+                    state.E = kont->E;
                     restoreKont(state.S, kont);
                     push(result);
                 }
@@ -796,7 +796,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("MATCH [%d]", size);
                     int save = state.C;
-                    for (int ip = 0; ip < size; ip++) {
+                    for (int C = 0; C < size; C++) {
                         printf("[%04x]", readCurrentOffset());
                     }
                     state.C = save;
@@ -823,7 +823,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("INTCOND [%d]", size);
                     int here = state.C;
-                    for (int ip = 0; ip < size; ip++) {
+                    for (int C = 0; C < size; C++) {
                         printf(" ");
                         switch(readCurrentByte()) {
                             case BYTECODES_TYPE_BIGINT: {
@@ -847,7 +847,7 @@ static void step() {
 #endif
                     Value v = pop();
                     int save = protectValue(v);
-                    for (int ip = 0; ip < size; ip++) {
+                    for (int C = 0; C < size; C++) {
                         switch(readCurrentByte()) {
                             case BYTECODES_TYPE_BIGINT: {
                                 BigInt *bigInt = readCurrentBigInt();
@@ -896,7 +896,7 @@ static void step() {
 #ifdef DEBUG_STEP
                     printf("CHARCOND [%d]", size);
                     int here = state.C;
-                    for (int ip = 0; ip < size; ip++) {
+                    for (int C = 0; C < size; C++) {
                         Integer val = readCurrentInt();
                         int offset = readCurrentOffset();
                         printf(" %d:[%04x]", val, offset);
@@ -918,7 +918,7 @@ static void step() {
                                 ("unexpected type %d for CHARCOND value",
                                  v.type);
                     }
-                    for (int ip = 0; ip < size; ip++) {
+                    for (int C = 0; C < size; C++) {
                         Integer val = readCurrentInt();
                         int offset = readCurrentOffset();
                         if (option == val) {
@@ -964,7 +964,7 @@ static void step() {
                             ("cut with no extant failure continuation");
                     }
 #endif
-                    state.F = state.F->next;
+                    state.F = state.F->F;
                 }
                 break;
 
@@ -974,11 +974,11 @@ static void step() {
                     if (state.F == NULL) {
                         state.C = -1;
                     } else {
-                        state.C = state.F->exp;
-                        state.E = state.F->env;
-                        state.K = state.F->kont;
+                        state.C = state.F->C;
+                        state.E = state.F->E;
+                        state.K = state.F->K;
                         restoreFail(state.S, state.F);
-                        state.F = state.F->next;
+                        state.F = state.F->F;
                     }
                 }
                 break;
@@ -1191,7 +1191,7 @@ static void step() {
                     int save = protectValue(result);
                     Kont *kont = state.K;
                     PROTECT(kont);
-                    state.K = kont->next;
+                    state.K = kont->K;
                     restoreKont(state.S, kont);
                     push(result);
                     UNPROTECT(save);

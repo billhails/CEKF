@@ -62,5 +62,5 @@ in
             ),
             symbol("a")
         ),
-        frame("a", num(1), root)
+        frame("a", num(0), root)
     ));

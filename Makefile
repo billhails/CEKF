@@ -196,7 +196,7 @@ clean: deps
 deps:
 	rm -rf dep
 
-PROF_SRC=interpreter
+PROF_SRC=fib20
 
 profile: all
 	rm -f callgrind.out.*
