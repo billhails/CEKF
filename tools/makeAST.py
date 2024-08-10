@@ -674,7 +674,7 @@ class SimpleField:
     """
     def __init__(self, owner, name, typeName):
         self.owner = owner
-        parts = re.split("\s*=\s*", typeName, 1)
+        parts = re.split(r"\s*=\s*", typeName, 1)
         self.name = name
         if len(parts) == 2:
             self.typeName = parts[0]

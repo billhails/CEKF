@@ -931,6 +931,7 @@ static void step() {
 
             case BYTECODES_TYPE_LETREC:{
                     // patch each of the lambdas environments with the current stack frame
+                    // i.e. all the definitions in the current letrec.
                     int nargs = readCurrentByte();
                     DEBUGPRINTF("LETREC [%d]\n", nargs);
                     for (Index i = sizeStack(state.S) - nargs;
@@ -1154,9 +1155,9 @@ static void step() {
                 }
                 break;
 
-            case BYTECODES_TYPE_NS_PUSHS:{
+            case BYTECODES_TYPE_NS_PUSHSTACK:{
                     int offset = readCurrentWord();
-                    DEBUGPRINTF("NS_PUSHS [%d]\n", offset);
+                    DEBUGPRINTF("NS_PUSHSTACK [%d]\n", offset);
                     Value v = peek(offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
@@ -1169,10 +1170,10 @@ static void step() {
                 }
                 break;
 
-            case BYTECODES_TYPE_NS_PUSHE:{
+            case BYTECODES_TYPE_NS_PUSHENV:{
                     int frame = readCurrentWord();
                     int offset = readCurrentWord();
-                    DEBUGPRINTF("NS_PUSHE [%d][%d]\n", frame, offset);
+                    DEBUGPRINTF("NS_PUSHENV [%d][%d]\n", frame, offset);
                     Value v = lookup(frame, offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {

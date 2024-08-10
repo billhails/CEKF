@@ -592,11 +592,11 @@ void writeLookup(ExpLookup *x, ByteCodeArray *b) {
 #endif
     switch(x->annotatedVar->type) {
         case AEXPANNOTATEDVARTYPE_TYPE_STACK:
-            addByte(b, BYTECODES_TYPE_NS_PUSHS);
+            addByte(b, BYTECODES_TYPE_NS_PUSHSTACK);
             addWord(b, x->annotatedVar->offset);
             break;
         case AEXPANNOTATEDVARTYPE_TYPE_ENV:
-            addByte(b, BYTECODES_TYPE_NS_PUSHE);
+            addByte(b, BYTECODES_TYPE_NS_PUSHENV);
             addWord(b, x->annotatedVar->frame);
             addWord(b, x->annotatedVar->offset);
             break;

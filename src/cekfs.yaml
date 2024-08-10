@@ -152,8 +152,8 @@ enums:
     - NS_START
     - NS_END
     - NS_FINISH
-    - NS_PUSHS
-    - NS_PUSHE
+    - NS_PUSHSTACK
+    - NS_PUSHENV
     - NS_POP
 
 primitives: !include primitives.yaml

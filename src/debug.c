@@ -285,15 +285,15 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("NS_FINISH [%d]\n", count);
                 }
                 break;
-            case BYTECODES_TYPE_NS_PUSHS:{
+            case BYTECODES_TYPE_NS_PUSHSTACK:{
                     int offset = readWord(bca, &i);
-                    eprintf("NS_PUSHS [%d]\n", offset);
+                    eprintf("NS_PUSHSTACK [%d]\n", offset);
                 }
                 break;
-            case BYTECODES_TYPE_NS_PUSHE:{
+            case BYTECODES_TYPE_NS_PUSHENV:{
                     int frame = readWord(bca, &i);
                     int offset = readWord(bca, &i);
-                    eprintf("NS_PUSHE [%d][%d]\n", frame, offset);
+                    eprintf("NS_PUSHENV [%d][%d]\n", frame, offset);
                 }
                 break;
             case BYTECODES_TYPE_NS_POP:{
