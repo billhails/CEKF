@@ -55,6 +55,11 @@ typedef unsigned int Index;
 typedef double Double;
 typedef size_t Control;
 
+typedef struct StackFrame {
+    Index frame;
+    Index offset;
+} StackFrame;
+
 #define END_CONTROL UINT64_MAX
 
  #endif

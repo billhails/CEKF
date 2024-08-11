@@ -99,6 +99,10 @@ vectors:
     Vec:
         entries: Value
 
+stacks:
+    MyStack:
+        entries: Value
+
 enums:
     ByteCodes:
     - NONE

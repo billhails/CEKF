@@ -44,6 +44,7 @@ Value --builtIn--> BuiltInImplementation
 Value --namespace--> Vec
 Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
+MyStack["MyStack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]
 CharArray["CharArray[]"] --entries--> char
 ByteArray["ByteArray[]"] --entries--> byte
