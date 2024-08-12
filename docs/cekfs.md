@@ -49,6 +49,7 @@ ByteCodes["enum ByteCodes"]
 CharArray["CharArray[]"] --entries--> char
 ByteArray["ByteArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value
+Frame["Frame[]"] --entries--> Value
 ValueVal
 ValueType
 ```

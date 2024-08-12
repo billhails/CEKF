@@ -973,7 +973,7 @@ static void step() {
                     // restore the failure continuation or halt
                     DEBUGPRINTF("BACK\n");
                     if (state.F == NULL) {
-                        state.C = -1;
+                        state.C = END_CONTROL;
                     } else {
                         state.C = state.F->C;
                         state.E = state.F->E;

@@ -95,6 +95,9 @@ arrays:
     Stack:
         entries: Value
 
+    Frame:
+        entries: Value
+
 vectors:
     Vec:
         entries: Value
