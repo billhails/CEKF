@@ -712,6 +712,16 @@ static LamExp *makeLamAnd(LamList *args, LamContext *env) {
     return result;
 }
 
+static LamExp *makeLamXnor(LamList *args) {
+    LamExp *xor = makeBinOp(LAMPRIMOP_TYPE_XOR, args);
+    int save = PROTECT(xor);
+    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, xor);
+    PROTECT(not);
+    LamExp *exp = newLamExp_Unary(CPI(not), not);
+    UNPROTECT(save);
+    return exp;
+}
+
 static LamExp *makeLamNand(LamList *args, LamContext *env) {
     // (nand a b) => (not (and a b))
     LamExp *and = makeLamAnd(args, env);
@@ -787,6 +797,8 @@ static LamExp *makePrimApp(HashSymbol *symbol, LamList *args, LamContext *env) {
         return makeLamNor(args, env);
     if (symbol == xorSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_XOR, args);
+    if (symbol == xnorSymbol())
+        return makeLamXnor(args);
     if (symbol == eqSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_EQ, args);
     if (symbol == neSymbol())

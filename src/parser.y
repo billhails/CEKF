@@ -475,7 +475,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 
 %right ARROW
 %right THEN
-%left AND OR XOR NAND NOR
+%left AND OR XOR NAND NOR XNOR
 %nonassoc NOT
 %nonassoc EQ NE GT LT GE LE
 %nonassoc CMP
@@ -797,6 +797,7 @@ binop : expression THEN expression      { $$ = binOpToFunCall(mod, thenSymbol(),
       | expression AND expression       { $$ = binOpToFunCall(mod, andSymbol(), $1, $3); }
       | expression OR expression        { $$ = binOpToFunCall(mod, orSymbol(), $1, $3); }
       | expression XOR expression       { $$ = binOpToFunCall(mod, xorSymbol(), $1, $3); }
+      | expression XNOR expression      { $$ = binOpToFunCall(mod, xnorSymbol(), $1, $3); }
       | expression NOR expression       { $$ = binOpToFunCall(mod, norSymbol(), $1, $3); }
       | expression NAND expression      { $$ = binOpToFunCall(mod, nandSymbol(), $1, $3); }
       | expression EQ expression        { $$ = binOpToFunCall(mod, eqSymbol(), $1, $3); }

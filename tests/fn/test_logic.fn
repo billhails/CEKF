@@ -16,6 +16,11 @@ assert((true xor false) == true);
 assert((false xor true) == true);
 assert((false xor false) == false);
 
+assert((true xnor true) == true);
+assert((true xnor false) == false);
+assert((false xnor true) == false);
+assert((false xnor false) == true);
+
 assert((true nand true) == false);
 assert((true nand false) == true);
 assert((false nand true) == true);

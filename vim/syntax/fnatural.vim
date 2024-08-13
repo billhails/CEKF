@@ -33,7 +33,7 @@ syntax match fnOperator "\v\!\="
 syntax match fnOperator "\v\<"
 syntax match fnOperator "\v\>"
 syntax match fnOperator "\v\="
-syntax keyword fnOperator and nand or nor not xor
+syntax keyword fnOperator and nand or nor not xor xnor
 highlight link fnOperator Operator
 
 syntax region fnString start=/\v'/ skip=/\v\\./ end=/\v'/
