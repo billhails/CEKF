@@ -37,26 +37,26 @@ structs:
         B: ByteCodeArray
 
     Env:
-        stack: Stack
-        next: Env
+        S: Frame
+        E: Env
 
     Kont:
-        body: control
-        env: Env
-        stack: Stack
-        next: Kont
+        C: control
+        E: Env
+        S: Stack
+        K: Kont
 
     Clo:
         pending: int
-        ip: control
-        env: Env
+        C: control
+        E: Env
 
     Fail:
-        exp: control
-        env: Env
-        kont: Kont
-        stack: Stack
-        next: Fail
+        C: control
+        E: Env
+        K: Kont
+        S: Stack
+        F: Fail
 
 inline:
     unions:
@@ -92,11 +92,15 @@ arrays:
     ByteArray:
         entries: byte
 
-    Stack:
+    Frame:
         entries: Value
 
 vectors:
     Vec:
+        entries: Value
+
+stacks:
+    Stack:
         entries: Value
 
 enums:
@@ -152,8 +156,8 @@ enums:
     - NS_START
     - NS_END
     - NS_FINISH
-    - NS_PUSHS
-    - NS_PUSHE
+    - NS_PUSHSTACK
+    - NS_PUSHENV
     - NS_POP
 
 primitives: !include primitives.yaml

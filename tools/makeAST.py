@@ -674,7 +674,7 @@ class SimpleField:
     """
     def __init__(self, owner, name, typeName):
         self.owner = owner
-        parts = re.split("\s*=\s*", typeName, 1)
+        parts = re.split(r"\s*=\s*", typeName, 1)
         self.name = name
         if len(parts) == 2:
             self.typeName = parts[0]
@@ -1106,6 +1106,14 @@ class SimpleArray(Base):
             print(f"}} {c}")
             print("")
 
+    def printIndexFields(self):
+        c = self.comment('printIndexFields')
+        print(f"    Index size; {c}")
+        print(f"    Index capacity; {c}")
+
+    def printExtraStackEntries(self):
+        pass
+
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
         self.noteTypedef()
@@ -1119,9 +1127,9 @@ class SimpleArray(Base):
             print(f"    Index width; {c}")
             print(f"    Index height; {c}")
         else:                   # 1D arrays can grow
-            print(f"    Index size; {c}")
-            print(f"    Index capacity; {c}")
+            self.printIndexFields()
         self.entries.printArrayTypedefLine(catalog)
+        self.printExtraStackEntries()
         print(f"}} {name}; {c}\n")
 
     def printMarkDeclaration(self, catalog):
@@ -1187,6 +1195,20 @@ class SimpleArray(Base):
         myName = self.getName()
         return f"{myType} copy{myName}({myType} o)"
 
+    def printNullEntries(self):
+        c = self.comment('printNullEntries')
+        print(f"    x->entries = NULL; {c}")
+
+    def printZeroCapacities(self):
+        c = self.comment('printZeroCapacities')
+        print(f"    x->size = 0; {c}")
+        print(f"    x->capacity = 0; {c}")
+
+    def printInitEntries(self, catalog):
+        c = self.comment('printInitEntries')
+        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 8); {c}")
+        print(f"    x->capacity = 8; {c}")
+
     def printNewFunction(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
@@ -1198,13 +1220,11 @@ class SimpleArray(Base):
         print(f'    DEBUG("new {myName} %p", x); {c}')
         if self.tagged:
             print(f"    x->_tag = _tag; {c}")
-        print(f"    x->entries = NULL; {c}")
+        self.printNullEntries()
         if self.dimension == 1:
-            print(f"    x->size = 0; {c}")
-            print(f"    x->capacity = 0; {c}")
+            self.printZeroCapacities()
             print(f"    int save = PROTECT(x); {c}")
-            print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 8); {c}")
-            print(f"    x->capacity = 8; {c}")
+            self.printInitEntries(catalog)
         else:
             print(f"    x->width = 0; {c}")
             print(f"    x->height = 0; {c}")
@@ -1990,6 +2010,598 @@ class SimpleArray(Base):
 
     def isArray(self):
         return True
+
+class SimpleStack(SimpleArray):
+    """
+    Stacks don't expose a size, instead they have a frame pointer and a stack pointer
+    where the stack pointer is an offset from the frame pointer rather than an absolute
+    value. They have an additional pushable and popable array of frame pointers and
+    stack pointers.
+    """
+    def __init__(self, name, data):
+        super().__init__(name, data)
+        if self.dimension != 1:
+            raise Exception("stacks must have dimension 1")
+
+    def comment(self, method):
+        return f'// SimpleStack.{method}'
+
+    def printIndexFields(self):
+        c = self.comment('printIndexFields')
+        print(f"    Index frame; {c}")
+        print(f"    Index offset; {c}")
+        print(f"    Index entries_capacity; {c}")
+        print(f"    Index frames_capacity; {c}")
+        print(f"    Index frames_index; {c}")
+
+    def printExtraStackEntries(self):
+        c = self.comment('printExtraStackEntries')
+        print(f"    StackFrame *frames; {c}")
+
+    def printNullEntries(self):
+        c = self.comment('printNullEntries')
+        print(f"    x->entries = NULL; {c}")
+        print(f"    x->frames = NULL; {c}")
+
+    def printZeroCapacities(self):
+        c = self.comment('printZeroCapacities')
+        print(f"    x->frame = 0; {c}")
+        print(f"    x->offset = 0; {c}")
+        print(f"    x->entries_capacity = 0; {c}")
+        print(f"    x->frames_capacity = 0; {c}")
+        print(f"    x->frames_index = 0; {c}")
+
+    def printFreeFunction(self, catalog):
+        myName = self.getName()
+        decl = decl=self.getFreeSignature(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printFreeFunction')
+        print(f"{decl} {{ {c}")
+        print(f"    FREE_ARRAY({entryType}, x->entries, x->entries_capacity); {c}")
+        print(f"    FREE_ARRAY(StackFrame, x->frames, x->frames_capacity); {c}")
+        print(f"    FREE(x, {myName}); {c}")
+        print(f"}} {c}")
+        print("")
+
+    def printInitEntries(self, catalog):
+        c = self.comment('printInitEntries')
+        print(f"    x->entries = NEW_ARRAY({self.entries.getTypeDeclaration(catalog)}, 8); {c}")
+        print(f"    x->entries_capacity = 8; {c}")
+        print(f"    x->frames = NEW_ARRAY(StackFrame, 8); {c}")
+        print(f"    x->frames_capacity = 8; {c}")
+
+    def printExtendDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printExtendDeclaration')
+        print(f"void extend{name}Entries({myType} {a}obj, Index size); {c}")
+        print(f"void extend{name}Frames({myType} {a}obj, Index size); {c}")
+
+    def printSizeDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printSizeDeclaration')
+        print(f"static inline Index totalSize{name}({myType} {a}obj) {{ return obj->frame + obj->offset; }} {c}")
+        print(f"static inline Index frameSize{name}({myType} {a}obj) {{ return obj->frames_index; }} {c}")
+        print(f"static inline Index offset{name}({myType} {a}obj) {{ return obj->offset; }} {c}")
+
+    def printPushDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPushDeclaration')
+        print(f"Index push{name}Entry({myType} {a}x, {entryType} entry); {c}")
+        print(f"Index let{name}Frame({myType} {a}x); {c}")
+
+    def printCopyEntriesDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printCopyEntriesDeclaration')
+        print(f"void copyCurrent{name}Entries({myType} dest, {myType} src); {c}")
+        print(f"void copyAll{name}Entries({myType} dest, {myType} src); {c}")
+        print(f"void copy{name}Continuation({myType} dest, {myType} src); {c}")
+
+    def printPopDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPopDeclaration')
+        print(f"{entryType} pop{name}Entry({myType} {a}x); {c}")
+        print(f"void pop{name}Frame({myType} {a}x); {c}")
+
+    def printPopnDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPopnDeclaration')
+        print("#ifdef SAFETY_CHECKS")
+        print(f"void popn{name}({myType} {a}obj, int n); {c}")
+        print("#else")
+        print(f"static inline void popn{name}({myType} {a}obj, int n) {{ obj->offset -= n; }}; {c}")
+        print("#endif")
+
+    def printClearDeclaration(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            a = '*' if self.isInline(catalog) else ''
+            c = self.comment('printClearDeclaration')
+            print(f"static inline void clear{name}Entries({myType} {a}x) {{ x->offset = 0; }}; {c}")
+            print(f"static inline void clear{name}Frames({myType} {a}x) {{ x->frames_index = x->offset = x->frame = 0; }}; {c}")
+
+    def printExtendFunction(self, catalog):
+        if self.dimension == 1:
+            name = self.getName()
+            myType = self.getTypeDeclaration(catalog)
+            entryType = self.entries.getTypeDeclaration(catalog)
+            c = self.comment('printExtendFunction')
+            a = '*' if self.isInline(catalog) else ''
+            print(f"/**")
+            print(f" * Ensures that `x` has at least an absolute entries_capacity of `size`.")
+            print(f" */")
+            print(f"void extend{name}Entries({myType} {a}x, Index size) {{ {c}")
+            print(f'    DEBUG("extend{name}Entries(%p, %u)", x, size);')
+            print(f"    if (size > 0) {{ {c}")
+            print(f"        size = size < 8 ? 8 : size; {c}")
+            print(f"        if (x->entries_capacity == 0) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"            if (x->entries != NULL) {{ {c}")
+            print(f'                cant_happen("non-null entries with zero capacity"); {c}')
+            print(f"            }} {c}")
+            print(f"#endif")
+            print(f"            x->entries = NEW_ARRAY({entryType}, size); {c}")
+            print(f"            x->entries_capacity = size; {c}")
+            print(f"        }} else {{ {c}")
+            print(f"            while (size > x->entries_capacity) {{ {c}")
+            print(f"                x->entries = GROW_ARRAY({entryType}, x->entries, x->entries_capacity, x->entries_capacity *2); {c}")
+            print(f"                x->entries_capacity *= 2; {c}")
+            print(f"            }} {c}")
+            print(f"        }} {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}")
+            print(f"")
+            print(f"/**")
+            print(f" * Ensures that `x` has at least a frames_capacity of `size`.")
+            print(f" */")
+            print(f"void extend{name}Frames({myType} {a}x, Index size) {{ {c}")
+            print(f'    DEBUG("extend{name}Frames(%p, %u)", x, size);')
+            print(f"    if (size > 0) {{ {c}")
+            print(f"        size = size < 8 ? 8 : size; {c}")
+            print(f"        if (x->frames_capacity == 0) {{ {c}")
+            print(f"#ifdef SAFETY_CHECKS")
+            print(f"            if (x->frames != NULL) {{ {c}")
+            print(f'                cant_happen("non-null frames with zero capacity"); {c}')
+            print(f"            }} {c}")
+            print(f"#endif")
+            print(f"            x->frames = NEW_ARRAY(StackFrame, size); {c}")
+            print(f"            x->frames_capacity = size; {c}")
+            print(f"        }} else {{ {c}")
+            print(f"            while (size > x->frames_capacity) {{ {c}")
+            print(f"                x->frames = GROW_ARRAY(StackFrame, x->frames, x->frames_capacity, x->frames_capacity *2); {c}")
+            print(f"                x->frames_capacity *= 2; {c}")
+            print(f"            }} {c}")
+            print(f"        }} {c}")
+            print(f"    }} {c}")
+            print(f"}} {c}")
+            print(f"")
+
+    def printPushFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printPushFunction')
+        a = '*' if self.isInline(catalog) else ''
+        print(f"/**")
+        print(f" * Pushes `entry` on to `x`, extending `x` if required.")
+        print(f" * Returns the stack pointer after the push.")
+        print(f" */")
+        print(f"Index push{name}Entry({myType} {a}x, {entryType} entry) {{ {c}")
+        print(f'    DEBUG("push{name}Entry(%p)", x);')
+        print(f"    extend{name}Entries(x, x->frame + x->offset + 1); {c}")
+        print(f"    x->entries[x->frame + x->offset] = entry; {c}")
+        print(f"    x->offset++; {c}")
+        print(f"    return x->offset - 1; {c}")
+        print(f"}} {c}")
+        print(f"")
+        print(f"/**")
+        print(f" * Duplicates the top frame.")
+        print(f" */")
+        print(f"Index let{name}Frame({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("let{name}Frame(%p)", x);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (x == NULL) {{ {c}")
+        print(f'        cant_happen("null stack"); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    extend{name}Frames(x, x->frames_index + 1); {c}")
+        print(f"    x->frames[x->frames_index++] = (StackFrame) {{.frame = x->frame, .offset = x->offset }}; {c}")
+        print(f"    extend{name}Entries(x, x->frame + x->offset * 2); {c}")
+        print(f"    COPY_ARRAY({entryType}, &x->entries[x->frame + x->offset], &x->entries[x->frame], x->offset); {c}")
+        print(f"    x->frame += x->offset; {c}")
+        print(f"    return x->offset; {c}")
+        print(f"}} {c}")
+        print(f"")
+
+    def printPopFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPopFunction')
+        print(f"/**")
+        print(f" * Pops the top entry from `x` and returns it.")
+        print(f" */")
+        print(f"{entryType} pop{name}Entry({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("pop{name}Entry(%p)", x);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (x->offset == 0) {{ {c}")
+        print(f'        cant_happen("stack underflow"); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    return x->entries[--(x->offset) + x->frame]; {c}")
+        print(f"}} {c}")
+        print(f"")
+        print(f"/**")
+        print(f" * Pops the top frame from `x`.")
+        print(f" */")
+        print(f"void pop{name}Frame({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("pop{name}Frame(%p)", x);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (x->frames_index == 0) {{ {c}")
+        print(f'        cant_happen("stack underflow"); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    x->frames_index--; {c}")
+        print(f"    x->frame = x->frames[x->frames_index].frame; {c}")
+        print(f"    x->offset = x->frames[x->frames_index].offset; {c}")
+        print(f"}} {c}")
+        print(f"")
+
+    def printPopnFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPopnFunction')
+        print(f"/**")
+        print(f" * Discards the top `n` entries from `x`.")
+        print(f" */")
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"void popn{name}({myType} {a}x, int n) {{ {c}")
+        print(f'    DEBUG("popn{name}(%p, %d)", x, n);')
+        print(f"    if (((int) x->offset) - n < 0) {{ {c}")
+        print(f'        cant_happen("stack underflow %d/%u", n, x->offset); {c}')
+        print(f"    }} {c}")
+        print(f"    x->offset -= n; {c}")
+        print(f"}} {c}")
+        print(f"#endif")
+        print("")
+
+    def printMoveFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printMoveFunction')
+        print(f"/**")
+        print(f" * Safe move `n` entries from `sp - n` to `b`,")
+        print(f" * sets sp to `b + n`.")
+        print(f" */")
+        print(f"void move{name}({myType} {a}x, int b, int n) {{ {c}")
+        print(f'    DEBUG("move{name}(%p, %d, %d)", x, b, n);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (((int) x->offset) - n < 0) {{ {c}")
+        print(f'        cant_happen("stack underflow %d/%u", n, x->offset); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    if (n > 0) {{ {c}")
+        print(f"        extend{name}Entries(x, x->frame + b + n); {c}")
+        print(f"        MOVE_ARRAY({entryType}, &x->entries[x->frame + b], &x->entries[x->frame + x->offset - n], n); {c}")
+        print(f"    }} {c}")
+        print(f"    x->offset = (Index) (b + n); {c}")
+        print(f"}} {c}\n")
+
+    def printPushnFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPushnFunction')
+        print(f"/**")
+        print(f" * Pushes `n` copies of `entry` on to `x`.")
+        print(f" */")
+        print(f"void pushn{name}({myType} {a}x, int n, {entryType} entry) {{ {c}")
+        print(f'    DEBUG("pushn{name}(%p, %d)", x, n);')
+        print(f"    if (n > 0) {{ {c}")
+        print(f"        extend{name}Entries(x, x->frame + x->offset + n); {c}")
+        print(f"        while (n-- > 0) {{ {c}")
+        print(f"            x->entries[x->frame + x->offset++] = entry; {c}")
+        print(f"        }} {c}")
+        print(f"    }} {c}")
+        print(f"}} {c}\n")
+
+    def printCopyTopFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printCopyTopFunction')
+        print(f"/**")
+        print(f" * Copies the top `n` entries from `src` to the base of `dest`,")
+        print(f" * sets `dest` offset (sp) to `n`.")
+        print(f" */")
+        print(f"void copyTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+        print(f'    DEBUG("copyTop{name}(%p, %p, %d)", dest, src, n);')
+        print(f"    if (n > 0) {{ {c}")
+        print(f"        extend{name}Entries(dest, dest->frame + n); {c}")
+        print(f"        COPY_ARRAY({entryType}, &dest->entries[dest->frame], &src->entries[src->frame + src->offset - n], n); {c}")
+        print(f"    }} {c}")
+        print(f"    dest->offset = n; {c}")
+        print(f"}} {c}\n")
+
+    def printCopyExceptTopFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printCopyExceptTopFunction')
+        print(f"/**")
+        print(f" * Copies all but top `n` entries from `src` to the base of `dest`,")
+        print(f" * sets `dest` sp to `src->sp - n`.")
+        print(f" */")
+        print(f"void copyExceptTop{name}({myType} {a}dest, {myType} {a}src, int n) {{ {c}")
+        print(f'    DEBUG("copyExceptTop{name}(%p, %p, %d)", dest, src, n);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (((int) src->offset) - n < 0) {{ {c}")
+        print(f'        cant_happen("stack underflow %d/%u", n, src->offset); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    if (((Index) n) < src->offset) {{ {c}")
+        print(f"        extend{name}Entries(dest, dest->frame + src->offset - n); {c}")
+        print(f"        COPY_ARRAY({entryType}, &dest->entries[dest->frame], &src->entries[src->frame], src->offset - n); {c}")
+        print(f"    }} {c}")
+        print(f"    dest->offset = src->offset - n; {c}")
+        print(f"}} {c}\n")
+
+    def printCopyEntriesFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printCopyEntriesFunction')
+        print(f'/**')
+        print(f" * Copies the curent frame's entries from `src` to `dest`,")
+        print(f' * sets `dest` offset to `src->offset`.')
+        print(f' */')
+        print(f'void copyCurrent{name}Entries({myType} {a}dest, {myType} {a}src) {{ {c}')
+        print(f'    DEBUG("copyCurrent{name}Entries(%p, %p)", dest, src);')
+        print(f'    extend{name}Entries(dest, dest->frame + src->offset); {c}')
+        print(f'    COPY_ARRAY({entryType}, &dest->entries[dest->frame], &src->entries[src->frame], src->offset); {c}')
+        print(f'    dest->offset = src->offset; {c}')
+        print(f'}} {c}')
+        print(f'')
+        print(f'/**')
+        print(f' * Copies all entries from `src` to `dest`,')
+        print(f' */')
+        print(f'void copyAll{name}Entries({myType} {a}dest, {myType} {a}src) {{ {c}')
+        print(f'    DEBUG("copyAll{name}Entries(%p, %p)", dest, src);')
+        print(f'    extend{name}Entries(dest, src->frame + src->offset); {c}')
+        print(f'    extend{name}Frames(dest, src->frames_index); {c}')
+        print(f'    COPY_ARRAY({entryType}, dest->entries, src->entries, src->frame + src->offset); {c}')
+        print(f'    COPY_ARRAY(StackFrame, dest->frames, src->frames, src->frames_index); {c}')
+        print(f'    dest->frames_index = src->frames_index; {c}')
+        print(f'    dest->frame = src->frame; {c}')
+        print(f'    dest->offset = src->offset; {c}')
+        print(f'}} {c}')
+        print(f'')
+        print(f'/**')
+        print(f' * Copies all entries from `src` to `dest`, except the current frame,')
+        print(f' */')
+        print(f'void copy{name}Continuation({myType} {a}dest, {myType} {a}src) {{ {c}')
+        print(f'    DEBUG("copy{name}Continuation(%p, %p)", dest, src);')
+        print(f'    if (src->frames_index == 0) {{ {c}')
+        print(f'        dest->frames_index = dest->frame = dest->offset = 0; {c}')
+        print(f'        return; {c}')
+        print(f'    }} {c}')
+        print(f'    StackFrame sf = src->frames[src->frames_index - 1]; {c}')
+        print(f'    Index newSize = sf.frame + sf.offset; {c}')
+        print(f'    extend{name}Entries(dest, newSize); {c}')
+        print(f'    extend{name}Frames(dest, src->frames_index); {c}')
+        print(f'    COPY_ARRAY({entryType}, dest->entries, src->entries, newSize); {c}')
+        print(f'    COPY_ARRAY(StackFrame, dest->frames, src->frames, src->frames_index - 1); {c}')
+        print(f'    dest->frames_index = src->frames_index - 1; {c}')
+        print(f'    dest->frame = sf.frame; {c}')
+        print(f'    dest->offset = sf.offset; {c}')
+        print(f'}} {c}')
+        print(f'')
+
+    def printPeekFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPeekFunction')
+        print(f"/**")
+        print(f" * Returns the value at the top of `x`.")
+        print(f" */")
+        print(f"{entryType} peek{name}({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("peek{name}(%p)", x);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (x->offset == 0) {{ {c}")
+        print(f'        cant_happen("stack underflow"); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    return x->entries[x->frame + x->offset - 1]; {c}")
+        print(f"}} {c}\n")
+
+    def printPeeknFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPeeknFunction')
+        print(f"/**")
+        print(f" * If `n` is negative, returns the value at `sp - |n|`,")
+        print(f" * otherwise returns the value at `n`.")
+        print(f" */")
+        print(f"{entryType} peekn{name}({myType} {a}x, int offset) {{ {c}")
+        print(f'    DEBUG("peekn{name}(%p, %d)", x, offset);')
+        print(f"    if (offset < 0) offset = ((int) x->offset) + offset; {c}")
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (offset >= (int) x->offset) {{ {c}")
+        print(f'        cant_happen("stack overflow %d/%u", offset, x->offset); {c}')
+        print(f"    }} {c}")
+        print(f"    if (offset < 0) {{ {c}")
+        print(f'        cant_happen("stack underflow %d", offset); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    return x->entries[x->frame + offset]; {c}")
+        print(f"}} {c}\n")
+
+    def printPokeFunction(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        a = '*' if self.isInline(catalog) else ''
+        c = self.comment('printPokeFunction')
+        print(f"/**")
+        print(f" * If `n` is negative, replaces the value at `sp - |n|`,")
+        print(f" * otherwise replaces the value at `n`.")
+        print(f" */")
+        print(f"void poke{name}({myType} {a}x, int offset, {entryType} val) {{ {c}")
+        print(f'    DEBUG("poke{name}(%p, %d)", x, offset);')
+        print(f"    if (offset < 0) offset = ((int) x->offset) + offset; {c}")
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (offset >= (int) x->offset) {{ {c}")
+        print(f'        cant_happen("stack overflow %d/%u", offset, x->offset); {c}')
+        print(f"    }} {c}")
+        print(f"    if (offset < 0) {{ {c}")
+        print(f'        cant_happen("stack underflow %d", offset); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
+        print(f"    x->entries[x->frame + offset] = val; {c}")
+        print(f"}} {c}\n")
+
+    def printMark1dFunctionBody(self, catalog):
+        c = self.comment('print1dFunctionBody')
+        print(f'    DEBUG("markStack(%p, %d + %d)", x, x->frame, x->offset); {c}')
+        print(f"    for (Index i = 0; i < x->frame + x->offset; i++) {{ {c}")
+        self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
+        print(f"    }} {c}")
+
+    def printCountDeclaration(self, catalog):
+        myName = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        c = self.comment('printCountDeclaration')
+        print(f'static inline Index count{myName}Frame({myType} x) {{ {c}')
+        print(f'    return x->offset; {c}')
+        print(f'}} {c}')
+        print('')
+        print(f'static inline Index count{myName}Entries({myType} x) {{ {c}')
+        print(f'    return x->frame + x->offset; {c}')
+        print(f'}} {c}')
+        print('')
+        print(f'static inline Index count{myName}Frames({myType} x) {{ {c}')
+        print(f'    return x->frames_index; {c}')
+        print(f'}} {c}')
+        print('')
+
+    def printCompareFunction(self, catalog):
+        c = self.comment('printCompareFunction')
+        decl = self.getCompareSignature(catalog)
+        if self.bespokeCmpImplementation:
+            print(f"// Bespoke implementation required for {decl}")
+            print("")
+            return
+        myName = self.getName()
+        print(f"{decl} {{ {c}")
+        print(f"    if (a == b) return true; {c}")
+        print(f"    if (a == NULL || b == NULL) return false; {c}")
+        print(f"    if (a->frame != b->frame) return false; {c}")
+        print(f"    if (a->offset != b->offset) return false; {c}")
+        print(f"    if (a->frames_index != b->frames_index) return false; {c}")
+        print(f"    for (Index i = 0; i < a->frames_index; i++) {{ {c}")
+        print(f"        if (a->frames[i].frame != b->frames[i].frame) return false; {c}")
+        print(f"        if (a->frames[i].offset != b->frames[i].offset) return false; {c}")
+        print(f"    }} {c}")
+        print(f"    for (Index i = 0; i < a->frame + a->offset; i++) {{ {c}")
+        self.entries.printCompareArrayLine(self.isInline(catalog), catalog, "i", 2)
+        print(f"    }} {c}")
+        print(f"    return true; {c}")
+        print(f"}} {c}")
+        print("")
+
+    def print1dCopyFunctionBody(self, catalog):
+        c = self.comment('print1dCopyFunctionBody')
+        entryType = self.entries.getTypeDeclaration(catalog)
+        myName = self.getName()
+        print(f"    if (o->entries != NULL) {{ {c}")
+        print(f"        extend{myName}Entries(x, o->frame + o->offset); {c}")
+        if self.entries.isInline(catalog):
+            print(f"        COPY_ARRAY({entryType}, x->entries, o->entries, o->frame + o->offset); {c}")
+        else:
+            print(f"        for (Index i = 0; i < o->frame + o->offset; i++) {{ {c}")
+            self.entries.printCopyArrayLine(catalog, "i", 3)
+            print(f"        }} {c}")
+        print(f"        x->frame = o->frame; {c}")
+        print(f"        x->offset = o->offset; {c}")
+        print(f"    }} {c}")
+        print(f"    if (o->frames != NULL) {{ {c}")
+        print(f"        extend{myName}Frames(x, o->frames_index); {c}")
+        print(f"        COPY_ARRAY(StackFrame, x->frames, o->frames, o->frames_index); {c}")
+        print(f"        x->frames_index = o->frames_index; {c}")
+        print(f"    }} {c}")
+
+    def printPrintFunction(self, catalog):
+        myName = self.getName()
+        decl = self.getPrintSignature(catalog)
+        c = self.comment('printPrintFunction')
+        print(f"{decl} {{ {c}")
+        print(f"    pad(depth); {c}")
+        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+        if self.tagged:
+            print(f'    eprintf("<<%s>>", x->_tag); {c}')
+        print(f'    eprintf("{myName}(%d)[\\n", x->frames_index); {c}')
+        print(f"    for (Index i = 0; i < x->frames_index; i++) {{ {c}")
+        print(f"        for (Index j = 0; j < x->frames[i].offset; j++) {{ {c}")
+        print(f"            Index k = x->frames[i].frame + j; {c}")
+        self.entries.printPrintArrayLine(self.isInline(catalog), catalog, "k", 3)
+        print(f'            eprintf("\\n"); {c}')
+        print(f"        }} {c}")
+        print(f"        pad(depth + 1); {c}")
+        print(f'        eprintf("---\\n"); {c}')
+        print(f"    }} {c}")
+        print(f"    pad(depth); {c}")
+        print(f'    eprintf("]"); {c}')
+        print(f"}} {c}")
+        print("")
+
+    def printIterator1DFunction(self, catalog):
+        c = self.comment('printIterator1DFunction')
+        decl = self.getIterator1DDeclaration(catalog)
+        print(f'{decl} {{ {c}')
+        print(f'    if (*i >= table->offset) {{ {c}')
+        print(f'        if (more != NULL) {{ {c}')
+        print(f'            *more = false; {c}')
+        print(f'        }} {c}')
+        print(f'        return false; {c}')
+        print(f'    }} else {{ {c}')
+        print(f'        if (more != NULL) {{ {c}')
+        print(f'            *more = (*i + 1 < table->offset); {c}')
+        print(f'        }} {c}')
+        print(f'        if (res != NULL) {{ {c}')
+        print(f'            *res = table->entries[table->frame + *i]; {c}')
+        print(f'        }} {c}')
+        print(f'        *i = *i + 1; {c}')
+        print(f'        return true; {c}')
+        print(f'    }} {c}')
+        print(f'}} {c}')
+        print('')
 
 class InlineArray(SimpleArray):
     """
@@ -3486,6 +4098,10 @@ if "inline" in document:
 if "unions" in document:
     for name in document["unions"]:
         catalog.add(DiscriminatedUnion(name, document["unions"][name]))
+
+if "stacks" in document:
+    for name in document["stacks"]:
+        catalog.add(SimpleStack(name, document["stacks"][name]))
 
 if "enums" in document:
     for name in document["enums"]:

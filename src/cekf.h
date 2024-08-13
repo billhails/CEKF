@@ -49,7 +49,7 @@ void pushN(Stack *stack, int n);
 void popN(Stack *s, int n);
 void patchVec(Vec *v, Stack *s, int num);
 Env *makeEnv(Env *parent);
-Kont *makeKont(Control offset, Env *env, Kont *next);
+Kont *makeKont(Control offset, Env *env, bool makeStack, Kont *next);
 Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next);
 
 Vec *newVec(int size);
@@ -58,6 +58,7 @@ void markValue(Value x);
 void markEnv(Env *x);
 void markVec(Vec *x);
 void dumpStack(Stack *stack);
+void dumpFrame(Frame *frame);
 
 CharArray *listToCharArray(Value list);
 Value charArrayToList(CharArray *c);

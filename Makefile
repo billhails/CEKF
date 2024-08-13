@@ -191,12 +191,12 @@ realclean: clean
 	rm -rf tags unicode
 
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc
+	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc core
 
 deps:
 	rm -rf dep
 
-PROF_SRC=interpreter
+PROF_SRC=fib20
 
 profile: all
 	rm -f callgrind.out.*

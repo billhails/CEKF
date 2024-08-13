@@ -10,20 +10,20 @@ CEKF --K--> Kont
 CEKF --F--> Fail
 CEKF --S--> Stack
 CEKF --B--> ByteCodeArray
-Env --stack--> Stack
-Env --next--> Env
-Kont --body--> control
-Kont --env--> Env
-Kont --stack--> Stack
-Kont --next--> Kont
+Env --S--> Frame
+Env --E--> Env
+Kont --C--> control
+Kont --E--> Env
+Kont --S--> Stack
+Kont --K--> Kont
 Clo --pending--> int
-Clo --ip--> control
-Clo --env--> Env
-Fail --exp--> control
-Fail --env--> Env
-Fail --kont--> Kont
-Fail --stack--> Stack
-Fail --next--> Fail
+Clo --C--> control
+Clo --E--> Env
+Fail --C--> control
+Fail --E--> Env
+Fail --K--> Kont
+Fail --S--> Stack
+Fail --F--> Fail
 Vec["Vec[]"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
@@ -44,10 +44,11 @@ Value --builtIn--> BuiltInImplementation
 Value --namespace--> Vec
 Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
+Stack["Stack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]
 CharArray["CharArray[]"] --entries--> char
 ByteArray["ByteArray[]"] --entries--> byte
-Stack["Stack[]"] --entries--> Value
+Frame["Frame[]"] --entries--> Value
 ValueVal
 ValueType
 ```
