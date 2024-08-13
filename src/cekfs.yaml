@@ -149,7 +149,6 @@ enums:
     - DONE
     - ERROR
     - PRIM_CMP
-    - PRIM_NEG
     - STDINT_IMAG
     - BIGINT_IMAG
     - IRRATIONAL_IMAG

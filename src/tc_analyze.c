@@ -363,13 +363,6 @@ static TcType *analyzeBinaryArith(LamExp *exp1, LamExp *exp2, TcEnv *env,
     return res;
 }
 
-static TcType *analyzeUnaryArith(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeBinaryArith);
-    TcType *res = analyzeBigIntegerExp(exp, env, ng);
-    // LEAVE(analyzeBinaryArith);
-    return res;
-}
-
 static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
                                  TcNg *ng) {
     // ENTER(analyzeComparison);
@@ -474,9 +467,6 @@ static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeUnary);
     TcType *res = NULL;
     switch (app->type) {
-        case LAMUNARYOP_TYPE_NEG:
-            res = analyzeUnaryArith(app->exp, env, ng);
-            break;
         case LAMUNARYOP_TYPE_NOT:
             res = analyzeUnaryBool(app->exp, env, ng);
             break;

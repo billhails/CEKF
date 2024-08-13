@@ -1134,8 +1134,6 @@ static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp,
 
 static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
     switch (op) {
-        case LAMUNARYOP_TYPE_NEG:
-            return AEXPUNARYOP_TYPE_NEG;
         case LAMUNARYOP_TYPE_NOT:
             return AEXPUNARYOP_TYPE_NOT;
         default:
