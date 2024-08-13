@@ -10,7 +10,7 @@ CEKF --K--> Kont
 CEKF --F--> Fail
 CEKF --S--> Stack
 CEKF --B--> ByteCodeArray
-Env --S--> Stack
+Env --S--> Frame
 Env --E--> Env
 Kont --C--> control
 Kont --E--> Env
@@ -44,11 +44,10 @@ Value --builtIn--> BuiltInImplementation
 Value --namespace--> Vec
 Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
-MyStack["MyStack[]"] --entries--> Value
+Stack["Stack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]
 CharArray["CharArray[]"] --entries--> char
 ByteArray["ByteArray[]"] --entries--> byte
-Stack["Stack[]"] --entries--> Value
 Frame["Frame[]"] --entries--> Value
 ValueVal
 ValueType

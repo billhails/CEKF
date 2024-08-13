@@ -69,7 +69,7 @@ static inline void poke(int offset, Value v) {
 }
 
 static inline void push(Value v) {
-    pushStack(state.S, v);
+    pushStackEntry(state.S, v);
 }
 
 static inline void extend(int i) {
@@ -81,7 +81,7 @@ static inline void discard(int num) {
 }
 
 static inline Value pop() {
-    return popStack(state.S);
+    return popStackEntry(state.S);
 }
 
 static inline void popn(int n) {
@@ -112,7 +112,7 @@ static Env *builtInsToEnv(BuiltIns *b) {
         DEBUGPRINTF("adding builtin %s at %p\n", builtIn->name->name, builtIn->implementation);
         BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
         PROTECT(implementation);
-        pushStack(env->S, value_BuiltIn(implementation));
+        pushFrame(env->S, value_BuiltIn(implementation));
     }
     UNPROTECT(save);
     return env;
@@ -127,7 +127,7 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
     if (first) {
         state.S = newStack();
     } else {
-        clearStack(state.S);
+        clearStackFrames(state.S);
     }
     state.B = B;
     first = false;
@@ -139,7 +139,9 @@ void run(ByteCodeArray B, BuiltIns *builtIns) {
     state.E = NULL;
     state.K = NULL;
     state.F = NULL;
-    state.S->size = 0;
+    state.S->frame = 0;
+    state.S->offset = 0;
+    state.S->frames_index = 0;
     collectGarbage();
 }
 
@@ -355,6 +357,25 @@ static Value lookup(int frame, int offset) {
     return env->S->entries[offset];
 }
 
+static Value captureKont(void) {
+    Kont *K = state.K;
+    Value cc;
+    if (K == NULL) {
+        cc = value_Kont(NULL);
+    } else if (K->S == NULL) {
+        Stack *s = newStack();
+        int save = PROTECT(s);
+        copyAllStackEntries(s, state.S);
+        popStackFrame(s); // dicard current frame
+        Kont *newK = newKont(K->C, K->E, s, K->K);
+        cc = value_Kont(newK);
+        UNPROTECT(save);
+    } else {
+        cc = value_Kont(state.K);
+    }
+    return cc;
+}
+
 /**
  * on reaching this point, the stack will contain a number
  * of arguments, and the callable on top.
@@ -369,6 +390,7 @@ static void applyProc(int naargs) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
                 int ncaptured = clo->E->S->size;
+                DEBUGPRINTF("PCLO ncaptured = %d, naargs = %d, pending = %d\n", ncaptured, naargs, clo->pending);
                 if (clo->pending == naargs) {
                     // move the new args to the right place on the stack, leaving just enough
                     // space for the captured args below them:
@@ -377,9 +399,9 @@ static void applyProc(int naargs) {
                     //                    moved   SP
                     moveStack(state.S, ncaptured, naargs);
                     // then copy the already captured args to the base of the stack
-                    copyValues(state.S->entries, clo->E->S->entries, ncaptured);
+                    copyValues(&state.S->entries[state.S->frame], clo->E->S->entries, ncaptured);
                     // set the stack pointer to the last arg
-                    state.S->size = ncaptured + naargs;
+                    state.S->offset = ncaptured + naargs;
                     // and set up the machine for the next step into the body of the closure
                     state.E = clo->E->E;
                     state.C = clo->C;
@@ -395,7 +417,7 @@ static void applyProc(int naargs) {
                     copyValues(env->S->entries, clo->E->S->entries, ncaptured);
                     // copy the additional arguments after them
                     copyValues(&(env->S->entries[clo->E->S->size]),
-                               &(state.S->entries[state.S->size - naargs]), naargs);
+                               &(state.S->entries[totalSizeStack(state.S) - naargs]), naargs);
                     // create a new closure with correct pending, C and the new env
                     Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);
@@ -413,6 +435,7 @@ static void applyProc(int naargs) {
             break;
         case VALUE_TYPE_CLO:{
                 Clo *clo = callable.val.clo;
+                DEBUGPRINTF("CLO pending = %d, naargs = %d\n", clo->pending, naargs);
                 if (clo->pending == naargs) {
                     state.C = clo->C;
                     state.E = clo->E;
@@ -425,6 +448,10 @@ static void applyProc(int naargs) {
                     copyTosToEnv(env, state.S, naargs);
                     Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);
+#ifdef DEBUG_STEP
+                    dumpFrame(env->S);
+#endif
+                    DEBUGPRINTF("CREATED PCLO ncaptured = %d, naargs = %d, pending = %d\n", pclo->E->S->size, naargs, pclo->pending);
                     callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
                     popn(naargs);
@@ -458,10 +485,10 @@ static void applyProc(int naargs) {
                 BuiltInFunction fn = (BuiltInFunction) impl->implementation;
                 Vec *v = newVec(impl->nargs);
                 int save = PROTECT(v);
-                copyValues(v->entries, &(state.S->entries[state.S->size - impl->nargs]), impl->nargs);
+                copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nargs]), impl->nargs);
                 Value res = fn(v);
                 protectValue(res);
-                state.S->size -= impl->nargs;
+                state.S->offset -= impl->nargs;
                 push(res);
                 UNPROTECT(save);
             } else if (naargs == 0) {
@@ -481,7 +508,7 @@ static unsigned long int count = 0;
 
 void reportSteps(void) {
     printf("instructions executed: %lu\n", count);
-    printf("max stack capacity: %d\n", state.S->capacity);
+    printf("max stack capacity: %d\n", state.S->entries_capacity);
 }
 
 static void step() {
@@ -492,7 +519,7 @@ static void step() {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        // dumpStack(state.S);
+        dumpStack(state.S);
         printf("%4ld) %04lx ### ", count, state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
@@ -933,15 +960,13 @@ static void step() {
                     // patch each of the lambdas environments with the current stack frame
                     // i.e. all the definitions in the current letrec.
                     int nargs = readCurrentByte();
-                    DEBUGPRINTF("LETREC [%d]\n", nargs);
-                    for (Index i = sizeStack(state.S) - nargs;
-                         i < sizeStack(state.S); i++) {
+                    DEBUGPRINTF("LETREC [%d] state.S->offset = %d\n", nargs, state.S->offset);
+                    for (Index i = state.S->offset - nargs; i < state.S->offset; i++) {
                         Value v = peek(i);
                         if (v.type == VALUE_TYPE_CLO) {
                             patchClo(v.val.clo, state.S);
                         } else {
-                            cant_happen("non-lambda value (%d) for letrec",
-                                        v.type);
+                            cant_happen("non-lambda value (%d) for letrec", v.type);
                         }
                     }
                 }
@@ -988,9 +1013,9 @@ static void step() {
                     // create a new continuation to resume the body, and transfer control to the expression
                     int offset = readCurrentOffset();
                     DEBUGPRINTF("LET [%04x]\n", offset);
-                    state.K = makeKont(offset, state.E, state.K);
+                    letStackFrame(state.S);
+                    state.K = makeKont(offset, state.E, false, state.K);
                     validateLastAlloc();
-                    snapshotKont(state.K, state.S);
                 }
                 break;
 
@@ -1007,7 +1032,8 @@ static void step() {
                     DEBUGPRINTF("CALLCC\n");
                     Value aexp = pop();
                     int save = protectValue(aexp);
-                    Value cc = value_Kont(state.K);
+                    Value cc = captureKont();
+                    protectValue(cc);
                     push(cc);
                     push(aexp);
                     UNPROTECT(save);
@@ -1164,8 +1190,8 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
-                    state.K = makeKont(offset, state.E, state.K);
-                    snapshotKont(state.K, state.S);
+                    letStackFrame(state.S);
+                    state.K = makeKont(offset, state.E, false, state.K);
                     restoreNamespace(state.S, v.val.namespace);
                 }
                 break;
@@ -1180,8 +1206,8 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
-                    state.K = makeKont(offset, state.E, state.K);
-                    snapshotKont(state.K, state.S);
+                    letStackFrame(state.S);
+                    state.K = makeKont(offset, state.E, false, state.K);
                     restoreNamespace(state.S, v.val.namespace);
                 }
                 break;

@@ -61,15 +61,19 @@ Value vVoid = {
 };
 
 Env *makeEnv(Env *parent) {
-    Stack *s = newStack();
+    Frame *s = newFrame();
     int save = PROTECT(s);
     Env *new = newEnv(s, parent);
     UNPROTECT(save);
     return new;
 }
 
-Kont *makeKont(Control offset, Env *env, Kont *next) {
-    Stack *s = newStack();
+Kont *makeKont(Control offset, Env *env, bool makeStack, Kont *next) {
+    DEBUG("makeKont(%04lx, %p, %d, %p)", offset, env, makeStack, next);
+    Stack *s = NULL;
+    if (makeStack) {
+        s = newStack();
+    }
     int save = PROTECT(s);
     Kont *k = newKont(offset, env, s, next);
     UNPROTECT(save);
@@ -85,10 +89,27 @@ Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next) {
 }
 
 void dumpStack(Stack *s) {
+    for (Index i = 0; i < s->frames_index; i++) {
+        for (Index j = 0; j < s->frames[i].offset; j++) {
+            if (j == 0)
+                eprintf("      [%03d] [%03d] %s\n", i, j, valueTypeName(s->entries[s->frames[i].frame + j].type));
+            else
+                eprintf("            [%03d] %s\n", j, valueTypeName(s->entries[s->frames[i].frame + j].type));
+        }
+    }
+    for (Index i = 0; i < s->offset; i++) {
+        if (i == 0)
+            eprintf("      [%03d] [%03d] %s\n", s->frames_index, i, valueTypeName(s->entries[s->frame + i].type));
+        else
+            eprintf("            [%03d] %s\n", i, valueTypeName(s->entries[s->frame + i].type));
+    }
+}
+
+void dumpFrame(Frame *s) {
     eprintf("=================================\n");
-    eprintf("STACK DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
+    eprintf("FRAME DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
     for (Index i = 0; i < s->size; i++) {
-        eprintf("[%03d] *** %s\n", i, valueTypeName(s->entries[i].type));
+        eprintf("[%03d] %s\n", i, valueTypeName(s->entries[i].type));
     }
     eprintf("=================================\n");
 }
@@ -99,21 +120,37 @@ void copyValues(Value *to, Value *from, int size) {
 
 void copyTosToVec(Vec *vec, Stack *s) {
 #ifdef SAFETY_CHECKS
-    if (vec->size > s->size) {
-        cant_happen("copy too big %u/%u", vec->size, s->size);
+    if (vec->size > s->offset) {
+        cant_happen("copy too big %u > %u", vec->size, s->offset);
     }
 #endif
-    copyValues(vec->entries, &(s->entries[s->size - vec->size]), vec->size);
+    copyValues(vec->entries, &(s->entries[s->frame + s->offset - vec->size]), vec->size);
 }
 
 void copyTosToEnv(Env *e, Stack *s, int n) {
-    copyTopStack(e->S, s, n);
+    extendFrame(e->S, n);
+    copyValues(e->S->entries, &s->entries[s->frame + s->offset - n], n);
+    e->S->size = n;
 }
 
-void snapshotClo(Clo *target, Stack *s, int letRecOffset) {
+void copyStackToFrame(Stack *src, Frame *dest, int n) {
+    DEBUG("copyStackToFrame %p -> %p, %d-%d", src, dest, src->offset, n);
+#ifdef SAFETY_CHECKS
+    if ((int) src->offset - n < 0) {
+        cant_happen("stack underflow %d / %u", n, src->offset);
+    }
+#endif
+    if ((Index) n < src->offset) {
+        extendFrame(dest, src->offset - n);
+        copyValues(dest->entries, &src->entries[src->frame], src->offset - n);
+    }
+    dest->size = src->offset - n;
+}
+
+void snapshotClo(Clo *target, Stack *s, int n) {
     Env *env = makeEnv(target->E);
     target->E = env;
-    copyExceptTopStack(env->S, s, letRecOffset);
+    copyStackToFrame(s, env->S, n);
 }
 
 void patchVec(Vec *v, Stack *s, int num) {
@@ -121,51 +158,56 @@ void patchVec(Vec *v, Stack *s, int num) {
     if (num < 0) {
         cant_happen("negative count");
     }
-    if (num > (int) s->size) {
+    if (num > (int) s->offset) {
         cant_happen("not enough values on stack");
     }
-    if (s->size > v->size) {
+    if (s->offset > v->size) {
         cant_happen("not enough space in target");
     }
 #endif
-    int base = s->size - num;
-    copyValues(&v->entries[base], &s->entries[base], num);
+    int base = s->offset - num;
+    copyValues(&v->entries[base], &s->entries[s->frame + base], num);
 }
 
 void restoreNamespace(Stack *s, Vec *vl) {
+    extendStackEntries(s, s->frame + vl->size);
 #ifdef SAFETY_CHECKS
-    if (vl->size > s->capacity) {
-        cant_happen("copy too big %d/%d", vl->size, s->capacity);
+    if (vl->size > (s->entries_capacity - s->frame)) {
+        cant_happen("copy too big %d/%d", vl->size, s->entries_capacity - s->frame);
     }
 #endif
-    copyValues(s->entries, vl->entries, vl->size);
-    s->size = vl->size;
+    copyValues(&s->entries[s->frame], vl->entries, vl->size);
+    s->offset = vl->size;
 }
 
 Vec *snapshotNamespace(Stack *s) {
-    Vec *vl = newVec(s->size);
-    copyValues(vl->entries, s->entries, s->size);
+    Vec *vl = newVec(s->offset);
+    copyValues(vl->entries, &s->entries[s->frame], s->offset);
     return vl;
 }
 
 void patchClo(Clo *target, Stack *s) {
-    copyStackEntries(target->E->S, s);
+    copyStackToFrame(s, target->E->S, 0);
 }
 
 void snapshotKont(Kont *target, Stack *s) {
-    copyStackEntries(target->S, s);
+    copyAllStackEntries(target->S, s);
 }
 
 void snapshotFail(Fail *target, Stack *s) {
-    copyStackEntries(target->S, s);
+    copyAllStackEntries(target->S, s);
 }
 
 void restoreKont(Stack *s, Kont *source) {
-    copyStackEntries(s, source->S);
+    if (source->S == NULL) {
+        popStackFrame(s);
+    } else {
+        copyAllStackEntries(s, source->S);
+    }
 }
 
 void restoreFail(Stack *s, Fail *source) {
-    copyStackEntries(s, source->S);
+    copyAllStackEntries(s, source->S);
 }
 
 CharArray *listToCharArray(Value list) {

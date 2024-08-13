@@ -7,7 +7,7 @@ fnd_all () {
 }
 
 run_gdb () {
-    gdb -q ./cekf `ls -rt1 /var/lib/apport/coredump/* | tail -1`
+    gdb -q ./cekf core
 }
 
 cores_on () {

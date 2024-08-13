@@ -234,6 +234,11 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("VOID\n");
                 }
                 break;
+            case BYTECODES_TYPE_STDINT_IMAG:{
+                    int val = readInteger(bca, &i);
+                    eprintf("STDINT_IMAG [%d]\n", val);
+                }
+                break;
             case BYTECODES_TYPE_STDINT:{
                     int val = readInteger(bca, &i);
                     eprintf("STDINT [%d]\n", val);
@@ -247,9 +252,22 @@ void dumpByteCode(ByteCodeArray *bca) {
                     bigint_free(&bi);
                 }
                 break;
+            case BYTECODES_TYPE_BIGINT_IMAG:{
+                    eprintf("BIGINT_IMAG [");
+                    bigint bi = readBigint(bca, &i);
+                    bigint_fprint(errout, &bi);
+                    eprintf("]\n");
+                    bigint_free(&bi);
+                }
+                break;
             case BYTECODES_TYPE_IRRATIONAL:{
                 Double f = readDouble(bca, &i);
                 eprintf("IRRATIONAL [%f]\n", f);
+            }
+            break;
+            case BYTECODES_TYPE_IRRATIONAL_IMAG:{
+                Double f = readDouble(bca, &i);
+                eprintf("IRRATIONAL_IMAG [%f]\n", f);
             }
             break;
             case BYTECODES_TYPE_CHAR:{
@@ -301,8 +319,8 @@ void dumpByteCode(ByteCodeArray *bca) {
                 }
                 break;
             default:
-                cant_happen("unrecognised bytecode %d in dumpByteCode",
-                            thisByte);
+                cant_happen("unrecognised bytecode %s in dumpByteCode",
+                            byteCodesName(thisByte));
         }
     }
 }

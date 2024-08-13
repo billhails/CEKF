@@ -37,7 +37,7 @@ structs:
         B: ByteCodeArray
 
     Env:
-        S: Stack
+        S: Frame
         E: Env
 
     Kont:
@@ -92,9 +92,6 @@ arrays:
     ByteArray:
         entries: byte
 
-    Stack:
-        entries: Value
-
     Frame:
         entries: Value
 
@@ -103,7 +100,7 @@ vectors:
         entries: Value
 
 stacks:
-    MyStack:
+    Stack:
         entries: Value
 
 enums:

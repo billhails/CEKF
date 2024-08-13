@@ -49,65 +49,65 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     initProtection();
     S = newStack();
 
-    assert(S->capacity == 8);
+    assert(S->entries_capacity == 8);
     assert(S->entries != NULL);
-    assert(sizeStack(S) == 0);
+    assert(totalSizeStack(S) == 0);
 
-    pushStack(S, integer(100));
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 1);
+    pushStackEntry(S, integer(100));
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 1);
     assert(S->entries != NULL);
-    assert(sizeStack(S) == 1);
+    assert(totalSizeStack(S) == 1);
     v = peeknStack(S, 0);
     assert(isInteger(v, 100));
 
-    pushStack(S, integer(101));
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 2);
+    pushStackEntry(S, integer(101));
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 2);
     v = peeknStack(S, 0);
     assert(isInteger(v, 100));
     v = peeknStack(S, 1);
     assert(isInteger(v, 101));
 
-    v = popStack(S);
+    v = popStackEntry(S);
     assert(isInteger(v, 101));
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 1);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 1);
 
-    v = popStack(S);
+    v = popStackEntry(S);
     assert(isInteger(v, 100));
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 0);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 0);
 
-    pushStack(S, vTrue);
-    pushStack(S, vFalse);
-    pushStack(S, vTrue);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 3);
+    pushStackEntry(S, vTrue);
+    pushStackEntry(S, vFalse);
+    pushStackEntry(S, vTrue);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 3);
 
     moveStack(S, 0, 1);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 1);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 1);
 
-    pushStack(S, vFalse);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 2);
+    pushStackEntry(S, vFalse);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 2);
 
     v.type = VALUE_TYPE_STDINT;
     v.val = VALUE_VAL_STDINT(100);
-    pushStack(S, v);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 3);
+    pushStackEntry(S, v);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 3);
 
     v.val = VALUE_VAL_STDINT(101);
-    pushStack(S, v);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 4);
+    pushStackEntry(S, v);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 4);
 
     v.val = VALUE_VAL_STDINT(102);
-    pushStack(S, v);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 5);
+    pushStackEntry(S, v);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 5);
 
     v = peeknStack(S, 0);
     assert(v.type == VALUE_TYPE_STDINT);
@@ -128,7 +128,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     assert(v.val.stdint == 102);
 
     moveStack(S, 0, 1);
-    assert(S->capacity == 8);
-    assert(sizeStack(S) == 1);
+    assert(S->entries_capacity == 8);
+    assert(totalSizeStack(S) == 1);
 
 }

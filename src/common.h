@@ -35,7 +35,7 @@
 // #    define DEBUG_BYTECODE
 // #    define DEBUG_CEKFS
 // #    define DEBUG_DESUGARING
-// #    define DEBUG_DUMP_CORE
+#    define DEBUG_DUMP_CORE
 // #    define DEBUG_HASHTABLE
 // #    define DEBUG_LAMBDA_CONVERT
 // #    define DEBUG_LAMBDA_SUBSTITUTE

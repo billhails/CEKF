@@ -2,7 +2,6 @@ let
     fn close_enough(v1, v2) {
         let delta = 0.00001;
         in
-            print(#(v1, v2));
             v1 >= v2 - delta and v1 <= v2 + delta
     }
 in

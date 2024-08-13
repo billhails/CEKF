@@ -2096,6 +2096,14 @@ class SimpleStack(SimpleArray):
         print(f"Index push{name}Entry({myType} {a}x, {entryType} entry); {c}")
         print(f"Index let{name}Frame({myType} {a}x); {c}")
 
+    def printCopyEntriesDeclaration(self, catalog):
+        name = self.getName()
+        myType = self.getTypeDeclaration(catalog)
+        entryType = self.entries.getTypeDeclaration(catalog)
+        c = self.comment('printCopyEntriesDeclaration')
+        print(f"void copyCurrent{name}Entries({myType} dest, {myType} src); {c}")
+        print(f"void copyAll{name}Entries({myType} dest, {myType} src); {c}")
+
     def printPopDeclaration(self, catalog):
         name = self.getName()
         myType = self.getTypeDeclaration(catalog)
@@ -2122,8 +2130,8 @@ class SimpleStack(SimpleArray):
             myType = self.getTypeDeclaration(catalog)
             a = '*' if self.isInline(catalog) else ''
             c = self.comment('printClearDeclaration')
-            print(f"static inline void clear{name}Entries({myType} {a}obj) {{ obj->offset = 0; }}; {c}")
-            print(f"static inline void clear{name}Frames({myType} {a}obj) {{ obj->offset = obj->frame = 0; }}; {c}")
+            print(f"static inline void clear{name}Entries({myType} {a}x) {{ x->offset = 0; }}; {c}")
+            print(f"static inline void clear{name}Frames({myType} {a}x) {{ x->frames_index = x->offset = x->frame = 0; }}; {c}")
 
     def printExtendFunction(self, catalog):
         if self.dimension == 1:
@@ -2204,10 +2212,15 @@ class SimpleStack(SimpleArray):
         print(f" */")
         print(f"Index let{name}Frame({myType} {a}x) {{ {c}")
         print(f'    DEBUG("let{name}Frame(%p)", x);')
+        print(f"#ifdef SAFETY_CHECKS")
+        print(f"    if (x == NULL) {{ {c}")
+        print(f'        cant_happen("null stack"); {c}')
+        print(f"    }} {c}")
+        print(f"#endif")
         print(f"    extend{name}Frames(x, x->frames_index + 1); {c}")
         print(f"    x->frames[x->frames_index++] = (StackFrame) {{.frame = x->frame, .offset = x->offset }}; {c}")
         print(f"    extend{name}Entries(x, x->frame + x->offset * 2); {c}")
-        print(f"    COPY_ARRAY({entryType}, &x->entries[x->frame], &x->entries[x->frame + x->offset], x->offset); {c}")
+        print(f"    COPY_ARRAY({entryType}, &x->entries[x->frame + x->offset], &x->entries[x->frame], x->offset); {c}")
         print(f"    x->frame += x->offset; {c}")
         print(f"    return x->offset; {c}")
         print(f"}} {c}")
@@ -2222,8 +2235,8 @@ class SimpleStack(SimpleArray):
         print(f"/**")
         print(f" * Pops the top entry from `x` and returns it.")
         print(f" */")
-        print(f"{entryType} pop{name}Entries({myType} {a}x) {{ {c}")
-        print(f'    DEBUG("pop{name}(%p)", x);')
+        print(f"{entryType} pop{name}Entry({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("pop{name}Entry(%p)", x);')
         print(f"#ifdef SAFETY_CHECKS")
         print(f"    if (x->offset == 0) {{ {c}")
         print(f'        cant_happen("stack underflow"); {c}')
@@ -2235,8 +2248,8 @@ class SimpleStack(SimpleArray):
         print(f"/**")
         print(f" * Pops the top frame from `x`.")
         print(f" */")
-        print(f"void pop{name}Frames({myType} {a}x) {{ {c}")
-        print(f'    DEBUG("pop{name}(%p)", x);')
+        print(f"void pop{name}Frame({myType} {a}x) {{ {c}")
+        print(f'    DEBUG("pop{name}Frame(%p)", x);')
         print(f"#ifdef SAFETY_CHECKS")
         print(f"    if (x->frames_index == 0) {{ {c}")
         print(f'        cant_happen("stack underflow"); {c}')
@@ -2364,8 +2377,8 @@ class SimpleStack(SimpleArray):
         print(f" * Copies entries from `src` to `dest`,")
         print(f" * sets `dest` offset to `src->offset`.")
         print(f" */")
-        print(f"void copyFrame{name}Entries({myType} {a}dest, {myType} {a}src) {{ {c}")
-        print(f'    DEBUG("copyFrame{name}Entries(%p, %p)", dest, src);')
+        print(f"void copyCurrent{name}Entries({myType} {a}dest, {myType} {a}src) {{ {c}")
+        print(f'    DEBUG("copyCurrent{name}Entries(%p, %p)", dest, src);')
         print(f"    extend{name}Entries(dest, dest->frame + src->offset); {c}")
         print(f"    COPY_ARRAY({entryType}, &dest->entries[dest->frame], &src->entries[src->frame], src->offset); {c}")
         print(f"    dest->offset = src->offset; {c}")
@@ -2456,6 +2469,7 @@ class SimpleStack(SimpleArray):
 
     def printMark1dFunctionBody(self, catalog):
         c = self.comment('print1dFunctionBody')
+        print(f'    DEBUG("markStack(%p, %d + %d)", x, x->frame, x->offset); {c}')
         print(f"    for (Index i = 0; i < x->frame + x->offset; i++) {{ {c}")
         self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
