@@ -365,8 +365,7 @@ static Value captureKont(void) {
     } else if (K->S == NULL) {
         Stack *s = newStack();
         int save = PROTECT(s);
-        copyAllStackEntries(s, state.S);
-        popStackFrame(s); // dicard current frame
+        copyStackContinuation(s, state.S);
         Kont *newK = newKont(K->C, K->E, s, K->K);
         cc = value_Kont(newK);
         UNPROTECT(save);
