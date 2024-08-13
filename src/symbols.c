@@ -149,6 +149,14 @@ HashSymbol *xorSymbol() {
     return res;
 }
 
+HashSymbol *xnorSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("xnor");
+    }
+    return res;
+}
+
 HashSymbol *eqSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {

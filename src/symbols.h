@@ -65,5 +65,6 @@ HashSymbol *subSymbol(void);
 HashSymbol *thenSymbol(void);
 HashSymbol *trueSymbol(void);
 HashSymbol *xorSymbol(void);
+HashSymbol *xnorSymbol(void);
 
 #endif
