@@ -284,9 +284,6 @@ void ppLamUnary(LamUnaryApp *unaryApp) {
 
 void ppLamUnaryOp(LamUnaryOp type) {
     switch (type) {
-        case LAMUNARYOP_TYPE_NEG:
-            eprintf("neg");
-            break;
         case LAMUNARYOP_TYPE_NOT:
             eprintf("not");
             break;

@@ -203,7 +203,6 @@ enums:
         - CMP
 
     AexpUnaryOp:
-        - NEG
         - NOT
 
 hashes:

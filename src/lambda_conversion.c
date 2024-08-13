@@ -755,9 +755,22 @@ static LamExp *makeLamAmb(LamList *args) {
     return res;
 }
 
+static LamExp *makeUnaryNeg(LamList *args) {
+    CHECK_ONE_ARG(makeUnaryNeg, args);
+    MaybeBigInt *num = fakeBigInt(0, false);
+    int save = PROTECT(num);
+    LamExp *zero = newLamExp_Biginteger(CPI(args), num);
+    PROTECT(zero);
+    args = newLamList(CPI(args), zero, args);
+    PROTECT(args);
+    LamExp *result = makeBinOp(LAMPRIMOP_TYPE_SUB, args);
+    UNPROTECT(save);
+    return result;
+}
+
 static LamExp *makePrimApp(HashSymbol *symbol, LamList *args, LamContext *env) {
     if (symbol == negSymbol())
-        return makeUnaryOp(LAMUNARYOP_TYPE_NEG, args);
+        return makeUnaryNeg(args);
     if (symbol == notSymbol())
         return makeUnaryOp(LAMUNARYOP_TYPE_NOT, args);
     if (symbol == hereSymbol())

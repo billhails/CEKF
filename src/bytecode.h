@@ -24,7 +24,7 @@
 #  include "cekfs.h"
 
 // MUST remember to increment this if bytecodes change
-#  define CEKF_BYTECODE_VERSION 3
+#  define CEKF_BYTECODE_VERSION 4
 
 enum ReadByteCodeStatus {
     BYTECODES_OK,

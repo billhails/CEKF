@@ -151,9 +151,6 @@ void ppAexpPrimApp(AexpPrimApp *x) {
 void ppAexpUnaryApp(AexpUnaryApp *x) {
     eprintf("(");
     switch (x->type) {
-        case AEXPUNARYOP_TYPE_NEG:
-            eprintf("neg ");
-            break;
         case AEXPUNARYOP_TYPE_NOT:
             eprintf("not ");
             break;

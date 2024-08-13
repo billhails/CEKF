@@ -226,7 +226,6 @@ enums:
         - VEC
 
     LamUnaryOp:
-        - NEG
         - NOT
 
 unions:
