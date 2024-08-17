@@ -14,16 +14,18 @@ TARGET=cekf
 ifeq ($(MODE),debugging)
 	CCMODE:= -g
 	EXTRA_DEFINES:= -DBUILD_MODE=0
-endif
-
+else
 ifeq ($(MODE),testing)
 	CCMODE:= -g
 	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC -DBUILD_MODE=1
-endif
-
+else
 ifeq ($(MODE),production)
 	CCMODE:= -O2
 	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=2
+else
+$(error invalid MODE $(MODE))
+endif
+endif
 endif
 
 CC:=cc -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)

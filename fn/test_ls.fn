@@ -28,7 +28,7 @@ let
         }
   }
 in
-    ls(switch (args(0)) {
+    ls(switch (argv(0)) {
         (some(name)) { name }
         (nothing) { "." }
     })

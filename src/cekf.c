@@ -26,6 +26,11 @@
 #  include "debugging_off.h"
 #endif
 
+#ifdef SAFETY_CHECKS
+static int cont_pops = 0;
+static int cont_restores = 0;
+#endif
+
 /*
  * constants and memory allocation functions for the CEKF machine
  */
@@ -201,10 +206,24 @@ void snapshotFail(Fail *target, Stack *s) {
 void restoreKont(Stack *s, Kont *source) {
     if (source->S == NULL) {
         popStackFrame(s);
+#ifdef SAFETY_CHECKS
+        cont_pops++;
+#endif
     } else {
         copyAllStackEntries(s, source->S);
+#ifdef SAFETY_CHECKS
+        cont_restores++;
+#endif
     }
 }
+
+#ifdef SAFETY_CHECKS
+void reportKonts() {
+    printf("stack pops %d\n", cont_pops);
+    printf("stack restores %d\n", cont_restores);
+}
+#endif
+
 
 void restoreFail(Stack *s, Fail *source) {
     copyAllStackEntries(s, source->S);

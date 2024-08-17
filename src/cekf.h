@@ -43,6 +43,9 @@ void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
 void copyTosToEnv(Env *e, Stack *s, int n);
 void copyValues(Value *to, Value *from, int size);
+#  ifdef SAFETY_CHECKS
+void reportKonts(void);
+#  endif
 
 void copyTosToVec(Vec *vec, Stack *s);
 void pushN(Stack *stack, int n);

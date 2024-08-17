@@ -1,0 +1,188 @@
+// CEKF - VM supporting amb
+// Copyright (C) 2022-2024  Bill Hails
+// 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// This is a re-implementation of the underlying state machine that runs F♯,
+// implemented in F♯ itself.
+// 
+// for simplicity's sake it's not a bytecode interpreter and there's no stack,
+// also there is a Store register σ which is necessary to implement letrec
+// in a purely functional language. It does include the Fail register though,
+// making this technically a CESKF machineeσ
+let
+    link "listutils.fn" as list;
+
+    typedef prim { add | sub | mul | div }
+
+    typedef lam { λ(list(string), exp) }
+
+    typedef aexp {
+          lam(lam)
+        | var(string)
+        | T
+        | F
+        | num(number)
+        | primapp(prim, list(aexp))
+    }
+
+    typedef cexp {
+          application(aexp, list(aexp))
+        | conditional(aexp, exp, exp)
+        | callcc(aexp)
+        | letrec(list(#(string, aexp)), exp)
+        | amb(exp, exp)
+        | fail
+    }
+
+    typedef exp {
+          aexp(aexp)
+        | cexp(cexp)
+        | letexp(string, exp, exp)
+    }
+
+    typedef env { frame(string, number, env) | root }
+
+    alias store = list(value);
+
+    typedef value { void | z(number) | t | f | clo(lam, env) | kont(kont) }
+
+    typedef kont { letk(string, env, exp, kont) | halt }
+
+    typedef ceskf { Σ(exp, env, store, kont, ceskf) | end }
+
+    fn find {
+        (name, frame(name, index, _)) { index }
+        (name, frame(_, _, parent)) { find(name, parent) }
+        (name, root) { error("symbol not found: " @@ name) }
+    }
+
+    fn access(index, s) {
+        let
+            fn helper {
+                (0, hd @ tl) { hd }
+                (n, _ @ tl) { helper(n - 1, tl) }
+                (_, []) { error("store exhausted") }
+            }
+        in
+            helper(list.length(s) - (index + 1), s)
+    }
+
+    fn indices(arglist, s) {
+        let
+            low = list.length(s);
+            high = low + list.length(arglist) - 1;
+        in
+            list.reverse(list.range(low, high))
+    }
+
+    unsafe fn zipEnv {
+        ([], [], env) { env }
+        (ah @ at, fh @ ft, env) { frame(ah, fh, zipEnv(at, ft, env)) }
+    }
+
+    fn A {
+        (ρ, σ, var(s)) { access(find(s, ρ), σ) }
+        (_, _, num(n)) { z(n) }
+        (_, _, T) { t }
+        (_, _, F) { f }
+        (ρ, _, lam(l)) { clo(l, ρ) }
+        (ρ, σ, primapp(prim, arglist)) { O(prim)(list.map(A(ρ, σ), arglist)) }
+    }
+
+    fn O {
+        (add, arglist) { list.foldl(unsafe fn (z(a), z(b)) { z(a + b) }, z(0), arglist) }
+        (mul, arglist) { list.foldl(unsafe fn (z(a), z(b)) { z(a * b) }, z(1), arglist) }
+        (sub, arglist) { list.foldl1(unsafe fn (z(a), z(b)) { z(a - b) }, arglist) }
+        (div, arglist) { list.foldl1(unsafe fn (z(a), z(b)) { z(a / b) }, arglist) }
+    }
+
+    unsafe fn step {
+        (Σ(cexp(application(applicant, arglist)), ρ, σ, κ, ς)) {
+            let
+                proc = A(ρ, σ, applicant);
+                aargs = list.map(A(ρ, σ), arglist);
+            in
+                applyProc(proc, aargs, σ, κ, ς)
+        }
+        (Σ(aexp(a), ρ, σ, κ, ς)) {
+            let
+                val = A(ρ, σ, a);
+            in
+                applyKont(κ, val, σ, ς)
+        }
+        (Σ(cexp(conditional(a, con, alt)), ρ, σ, κ, ς)) {
+            switch (A(ρ, σ, a)) {
+                (f) { Σ(alt, ρ, σ, κ, ς) }
+                (_) { Σ(con, ρ, σ, κ, ς) }
+            }
+        }
+        (Σ(letexp(name, val, body), ρ, σ, κ, ς)) {
+            Σ(val, ρ, σ, letk(name, ρ, body, κ), ς)
+        }
+        (Σ(cexp(letrec(bindings, body)), ρ, σ, κ, ς)) {
+            let
+                inds = indices(bindings, σ);
+                ks = list.map(unsafe fn (#(k, _)) { k }, bindings);
+                e = zipEnv(ks, inds, ρ);
+                tempStore = list.repeat(list.length(inds), void);
+                vs = list.map(A(e, tempStore), (list.map(unsafe fn (#(_, v)) { v }, bindings)));
+                s = vs @@ σ;
+            in
+                Σ(body, e, s, κ, ς)
+        }
+        (Σ(cexp(callcc(e)), ρ, σ, κ, ς)) {
+            let
+                proc = A(ρ, σ, e);
+                k = kont(κ);
+            in
+                applyProc(proc, [k], σ, κ, ς)
+        }
+        (Σ(cexp(amb(e1, e2)), ρ, σ, κ, ς)) {
+            Σ(e1, ρ, σ, κ, Σ(e2, ρ, σ, κ, ς))
+        }
+        (Σ(cexp(fail), ρ, σ, κ, ς)) {
+            ς
+        }
+    }
+
+    fn run {
+        (end) { true }
+        (ς)   { run(step(ς)) }
+    }
+
+    fn inject(exp) {
+        run(Σ(exp, root, [], halt, end))
+    }
+
+    unsafe fn applyProc(clo(λ(fargs, body), ρ), aargs, σ, κ, ς) {
+        let
+            e = zipEnv(fargs, indices(aargs, σ), ρ);
+            s = aargs @@ σ;
+        in
+            Σ(body, e, s, κ, ς)
+    }
+
+    fn applyKont {
+        (letk(name, ρ, exp, κ), val, σ, ς) {
+            Σ(exp, frame(name, list.length(σ), ρ), val @ σ, κ, ς)
+        }
+        (halt, _, _, _) {
+            end
+        }
+    }
+in
+    // (let (a 5) b) ;; (expect an error, "b" not found)
+    inject(letexp("a", aexp(num(5)), aexp(var("b"))))
+

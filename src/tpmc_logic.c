@@ -148,10 +148,21 @@ static void getSymbolAndNamespace(AstLookupOrSymbol *los, LamContext *env, HashS
     }
 }
 
+static char *getLookupName(AstLookupOrSymbol *los) {
+    switch (los->type) {
+        case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
+            return los->val.lookup->symbol->name;
+        case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
+            return los->val.symbol->name;
+        default:
+            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+    }
+}
+
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     LamTypeConstructorInfo *info = lookupScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor");
+        cant_happen("makeConstructorPattern() passed invalid constructor %s", getLookupName(unpack->symbol));
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
