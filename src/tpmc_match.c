@@ -40,7 +40,7 @@
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool *unsafe);
+                        bool *unsafe, ParserInfo I);
 
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                      TpmcState *errorState, TpmcStateArray *knownStates,
@@ -49,7 +49,7 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     // system("clear");
 #endif
     bool unsafe = false;
-    TpmcState *result = match(matrix, finalStates, errorState, knownStates, &unsafe);
+    TpmcState *result = match(matrix, finalStates, errorState, knownStates, &unsafe, I);
     if (unsafe) {
         if (!allow_unsafe) {
             can_happen("unsafe function must be declared unsafe at %s line %d", I.filename, I.lineno);
@@ -456,20 +456,20 @@ static TpmcIntArray *makeTpmcIntArray(int size, int initialValue) {
     return res;
 }
 
-static bool arcsAreExhaustive(int size, TpmcArcArray *arcs) {
+static bool arcsAreExhaustive(int size, TpmcArcArray *arcs, ParserInfo I) {
     TpmcIntArray *flags = makeTpmcIntArray(size, 0);
     int save = PROTECT(flags);
     for (Index i = 0; i < arcs->size; ++i) {
         TpmcArc *arc = arcs->entries[i];
         TpmcPattern *pattern = arc->test;
         if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
-            cant_happen("arcsAreExhaustive given non-constructor arc");
+            cant_happen("arcsAreExhaustive given non-constructor arc while parsing %s, line %d", I.filename, I.lineno);
         }
         LamTypeConstructorInfo *info =
             pattern->pattern->val.constructor->info;
         if (info->index >= size) {
             cant_happen
-                ("arcsAreExhaustive given constructor with out-of-range index");
+                ("arcsAreExhaustive given constructor %s with out-of-range index (%d >= %d) while parsing %s, line %d", info->name->name, info->index, size, I.filename, I.lineno);
         }
         flags->entries[info->index] = 1;
     }
@@ -485,7 +485,7 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs) {
     return res;
 }
 
-static bool constructorsAreExhaustive(TpmcState *state) {
+static bool constructorsAreExhaustive(TpmcState *state, ParserInfo I) {
     TpmcTestState *testState = state->state->val.test;
     if (testState->arcs->size == 0) {
         return false;
@@ -493,10 +493,10 @@ static bool constructorsAreExhaustive(TpmcState *state) {
     TpmcPattern *pattern = testState->arcs->entries[0]->test;
     if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_WILDCARD) {
         cant_happen
-            ("constructorsAreExhaustive() passed a test state with wildcards");
+            ("constructorsAreExhaustive() passed a test state with wildcards while parsing %s, line %d", I.filename, I.lineno);
     } else if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         int size = pattern->pattern->val.constructor->info->size;
-        return arcsAreExhaustive(size, testState->arcs);
+        return arcsAreExhaustive(size, testState->arcs, I);
     } else {
         return false;
     }
@@ -670,7 +670,7 @@ static TpmcIntArray *findWcIndices(TpmcPatternArray *N) {
 
 static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcState *errorState, TpmcStateArray *knownStates,
-                          bool *unsafe) {
+                          bool *unsafe, ParserInfo I) {
     ENTER(mixture);
     // there is some column N whose topmost pattern is a constructor
     int firstConstructorColumn = findFirstConstructorColumn(M);
@@ -717,7 +717,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcPattern *cPrime = replacePatternComponentsWithWildcards(c);
             PROTECT(cPrime);
             // and state is the result of recursively applying match to the new matrix and the new sequence of final states
-            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, unsafe);
+            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, unsafe, I);
             PROTECT(newState);
             TpmcArc *arc = makeTpmcArc(cPrime, newState);
             PROTECT(arc);
@@ -732,7 +732,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
     }
     // Finally, the possibility for matching failure is considered.
     // If the set of constructors is exhaustive, then no more arcs are computed
-    if (!constructorsAreExhaustive(testState)) {
+    if (!constructorsAreExhaustive(testState, I)) {
         // Otherwise, a default arc (_,state) is the last arc.
         // If there are any wildcard patterns in the selected column
         TpmcIntArray *wcIndices = findWcIndices(N);
@@ -744,7 +744,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcStateArray *wcFinalStates = extractStateArraySubset(wcIndices, finalStates);
             PROTECT(wcFinalStates);
             // and the state is the result of applying match to the new matrix and states
-            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, unsafe);
+            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, unsafe, I);
             PROTECT(wcState);
             TpmcPattern *wcPattern = makeNamedWildcardPattern(N->entries[0]->path);
             PROTECT(wcPattern);
@@ -770,7 +770,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool *unsafe) {
+                        bool *unsafe, ParserInfo I) {
     ENTER(match);
     // IFDEBUG(ppTpmcMatrix(matrix));
     // IFDEBUG(ppTpmcStateArray(finalStates));
@@ -781,7 +781,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     if (topRowOnlyVariables(matrix)) {
         res = finalStates->entries[0];
     } else {
-        res = mixture(matrix, finalStates, errorState, knownStates, unsafe);
+        res = mixture(matrix, finalStates, errorState, knownStates, unsafe, I);
     }
     IFDEBUG(ppTpmcState(res));
     LEAVE(match);

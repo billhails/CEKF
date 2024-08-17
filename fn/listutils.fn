@@ -26,9 +26,14 @@ fn map {
 }
 
 // length: list(#s) -> number
-fn length {
-    ([]) { 0 }
-    (_ @ t) { 1 + length(t) }
+fn length(lst) {
+    let
+        fn helper {
+            ([], n) { n }
+            (_ @ t, n) { helper(t, n + 1) }
+        }
+    in
+        helper(lst, 0)
 }
 
 // foldl (#a -> #b -> #b) -> #b -> list(#a) -> #b
@@ -67,15 +72,21 @@ fn scanl (func, acc, lst) {
 }
 
 // filter: (#a -> bool) list(#a) -> list(#a)
-fn filter {
-    (_, []) { [] }
-    (func, h @ t) {
-        if (func(h)) {
-            h @ filter(func, t)
-        } else {
-            filter(func, t)
+// TCO, but does not preserve order
+fn filter(func, lst) {
+    let
+        fn helper {
+            ([], res) { res }
+            (h @ t, res) {
+                if (func(h)) {
+                    helper(t, h @ res)
+                } else {
+                    helper(t, res)
+                }
+            }
         }
-    }
+    in
+        helper(lst, [])
 }
 
 // concat: list(list(#a)) -> list(#a)
@@ -131,9 +142,8 @@ fn product(lst) {
 }
 
 // zip: list(#a) -> list(#b) -> list(#(#a, #b))
-fn zip {
-    (h1 @ t1, h2 @ t2) { #(h1, h2) @ zip(t1, t2) }
-    (_, _) { [] }
+fn zip(a, b) {
+    zipWith(fn (x, y) { #(x, y) }, a, b)
 }
 
 // zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
@@ -180,16 +190,30 @@ fn maximum(lst) {
 
 // range: number -> number -> list(number)
 fn range(low, high) {
-    if (low >= high) { [] }
-    else { low @ range(low + 1, high) }
+    let
+        fn helper(h, acc) {
+            if (h < low) {
+                acc
+            } else {
+                helper(h - 1, h @ acc)
+            }
+        }
+    in
+        helper(high, [])
 }
 
 // dedup: list(#a) -> list(#a)
-fn dedup {
-    ([]) { [] }
-    (h @ t) {
-        h @ dedup(filter(fn(i) { h != i }, t))
-    }
+// TCO, but does not preserve order
+fn dedup(lst) {
+    let
+        fn helper {
+            ([], acc) { acc }
+            (h @ t, acc) {
+                helper(filter(fn (i) { h != i }, t), h @ acc)
+            }
+        }
+    in
+        helper(lst, [])
 }
 
 // sortBy: (#a -> #a -> cmp) -> list(#a) -> list(#a)

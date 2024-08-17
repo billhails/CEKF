@@ -508,6 +508,9 @@ static unsigned long int count = 0;
 void reportSteps(void) {
     printf("instructions executed: %lu\n", count);
     printf("max stack capacity: %d\n", state.S->entries_capacity);
+#ifdef SAFETY_CHECKS
+    reportKonts();
+#endif
 }
 
 static void step() {

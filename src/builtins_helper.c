@@ -28,7 +28,7 @@ static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
-static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]);
+static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
 static void registerRealPart(BuiltIns *registry);
 static void registerImagPart(BuiltIns *registry);
@@ -127,7 +127,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
-    registerArgs(res, argc, cargc, argv);
+    registerArgv(res, argc, cargc, argv);
     registerGetEnv(res);
     registerRealPart(res);
     registerImagPart(res);
@@ -175,13 +175,13 @@ static void registerChr(BuiltIns *registry) {
     UNPROTECT(save);
 }
 
-static void registerArgs(BuiltIns *registry, int argc, int cargc, char *argv[]) {
+static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     pushIntegerArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
-    pushNewBuiltIn(registry, "args", maybeStringType, args, (void *)builtin_args);
+    pushNewBuiltIn(registry, "argv", maybeStringType, args, (void *)builtin_args);
     UNPROTECT(save);
     builtin_args_argc = argc;
     builtin_args_cargc = cargc;
