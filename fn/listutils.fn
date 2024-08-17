@@ -25,6 +25,17 @@ fn map {
     (func, h @ t) { func(h) @ map(func, t) }
 }
 
+// mapattach: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)
+fn mapprefix(func, lst, tail) {
+    let
+        fn helper {
+            ([]) { tail }
+            (h @ t) { func(h) @ helper(t) }
+        }
+    in
+        helper(lst)
+}
+
 // length: list(#s) -> number
 fn length(lst) {
     let
@@ -123,6 +134,17 @@ fn all {
 fn repeat {
     (0, _) { [] }
     (n, v) { v @ repeat(n - 1, v) }
+}
+
+// prefix: number -> #a -> list(#a) -> list(#a)
+fn repeatprefix(n, v, tail) {
+    let
+        fn helper {
+            (0) { tail }
+            (n) { v @ helper(n - 1) }
+        }
+    in
+        helper(n)
 }
 
 // nth: number -> list(#a) -> #a

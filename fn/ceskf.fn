@@ -20,7 +20,7 @@
 // for simplicity's sake it's not a bytecode interpreter and there's no stack,
 // also there is a Store register σ which is necessary to implement letrec
 // in a purely functional language. It does include the Fail register though,
-// making this technically a CESKF machineeσ
+// making this technically a CESKF machine
 let
     link "listutils.fn" as list;
 
@@ -35,6 +35,7 @@ let
         | F
         | num(number)
         | primapp(prim, list(aexp))
+        | prin(aexp)
     }
 
     typedef cexp {
@@ -56,7 +57,7 @@ let
 
     alias store = list(value);
 
-    typedef value { void | z(number) | t | f | clo(lam, env) | kont(kont) }
+    typedef value { z(number) | t | f | clo(lam, env) | kont(kont) }
 
     typedef kont { letk(string, env, exp, kont) | halt }
 
@@ -99,6 +100,13 @@ let
         (_, _, F) { f }
         (ρ, _, lam(l)) { clo(l, ρ) }
         (ρ, σ, primapp(prim, arglist)) { O(prim)(list.map(A(ρ, σ), arglist)) }
+        (ρ, σ, prin(a)) {
+            let
+                v = A(ρ, σ, a);
+            in
+                print(v);
+                v
+        }
     }
 
     fn O {
@@ -136,9 +144,8 @@ let
                 inds = indices(bindings, σ);
                 ks = list.map(unsafe fn (#(k, _)) { k }, bindings);
                 e = zipEnv(ks, inds, ρ);
-                tempStore = list.repeat(list.length(inds), void);
-                vs = list.map(A(e, tempStore), (list.map(unsafe fn (#(_, v)) { v }, bindings)));
-                s = vs @@ σ;
+                tempStore = list.repeatprefix(list.length(inds), f, σ);
+                s = list.mapprefix(A(e, tempStore), (list.map(unsafe fn (#(_, v)) { v }, bindings)), σ);
             in
                 Σ(body, e, s, κ, ς)
         }
@@ -166,12 +173,17 @@ let
         run(Σ(exp, root, [], halt, end))
     }
 
-    unsafe fn applyProc(clo(λ(fargs, body), ρ), aargs, σ, κ, ς) {
-        let
-            e = zipEnv(fargs, indices(aargs, σ), ρ);
-            s = aargs @@ σ;
-        in
-            Σ(body, e, s, κ, ς)
+    unsafe fn applyProc{
+        (clo(λ(fargs, body), ρ), aargs, σ, κ, ς) {
+            let
+                e = zipEnv(fargs, indices(aargs, σ), ρ);
+                s = aargs @@ σ;
+            in
+                Σ(body, e, s, κ, ς)
+        }
+        (kont(k), [val], σ, κ, ς) {
+            applyKont(k, val, σ, ς)
+        }
     }
 
     fn applyKont {
@@ -183,6 +195,19 @@ let
         }
     }
 in
-    // (let (a 5) b) ;; (expect an error, "b" not found)
-    inject(letexp("a", aexp(num(5)), aexp(var("b"))))
-
+    // (let (a 5) a)
+    inject(letexp("a", aexp(num(5)), aexp(var("a"))));
+    // (let (v (letrec ((funky (lambda (k) (k 5))))
+    //                 (callcc (lambda (k)
+    //                                 (let (r (funky k))
+    //                                      (if r 3 4))))))
+    //      (print v))
+    inject(letexp("v", 
+                  cexp(letrec([#("funky", lam(λ(["k"], cexp(application(var("k"), [num(5)])))))],
+                              cexp(callcc(lam(λ(["k"],
+                                                letexp("r",
+                                                       cexp(application(var("funky"), [var("k")])),
+                                                       cexp(conditional(var("r"),
+                                                                        aexp(num(3)),
+                                                                        aexp(num(4))))))))))),
+                  aexp(prin(var("v")))))
