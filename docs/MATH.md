@@ -466,3 +466,6 @@ Putting it all together:
 $$
 run(inject(\mathtt{Exp})) \rightharpoonup Value
 $$
+
+> Future Self - there is now a working implementation of this machine (or a close variant of it)
+> written in F♮ itself [here](../fn/ceskf.fn).
