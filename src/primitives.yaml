@@ -90,6 +90,16 @@ string:
     printf: "%s"
     valued: true
 
+PrattPrefixOp:
+    cname: PrattPrefixOp
+    printf: "%p"
+    valued: true
+
+PrattPostfixOp:
+    cname: PrattPostfixOp
+    printf: "%p"
+    valued: true
+
 double:
     cname: Double
     printf: "%f"

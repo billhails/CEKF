@@ -22,32 +22,49 @@ config:
     limited_includes:
     - file_id.h
     - ast_helper.h
+    - pratt_functions.h
 
 description: Pratt Parser support
 
 structs:
-    TestBinary:
+    PrattBinary:
         token: HashSymbol
-        left: TestExpr
-        right: TestExpr
+        left: PrattExpr
+        right: PrattExpr
 
-    TestUnary:
+    PrattUnary:
         token: HashSymbol
-        expr: TestExpr
+        expr: PrattExpr
+
+    PrattRecord:
+        token: HashSymbol
+        left: int
+        right: int
+        prefix: int
+        postfix: int
+        matchingRight: HashSymbol
+        prefixOp: PrattPrefixOp
+        postfixOp: PrattPostfixOp
+        infixOp: PrattPostfixOp
 
 unions:
-    TestExpr:
-        unary: TestUnary
-        binary: TestBinary
+    PrattExpr:
+        unary: PrattUnary
+        binary: PrattBinary
         atom: int
 
-    TestToken:
+    PrattToken:
         op: HashSymbol
         atom: int
         eof: void_ptr
 
 arrays:
-    TestLexer:
-        entries: TestToken
+    PrattLexer:
+        entries: PrattToken
+
+hashes:
+    PrattParser:
+        entries: PrattRecord
 
 primitives: !include primitives.yaml
+

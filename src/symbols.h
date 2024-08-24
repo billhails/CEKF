@@ -72,5 +72,7 @@ HashSymbol *leftRoundSymbol(void);
 HashSymbol *rightRoundSymbol(void);
 HashSymbol *leftSquareSymbol(void);
 HashSymbol *rightSquareSymbol(void);
+HashSymbol *questionMarkSymbol(void);
+HashSymbol *colonSymbol(void);
 
 #endif

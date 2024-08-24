@@ -436,3 +436,19 @@ HashSymbol *rightSquareSymbol() {
     }
     return res;
 }
+
+HashSymbol *questinMarkSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("?");
+    }
+    return res;
+}
+
+HashSymbol *colonSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol(":");
+    }
+    return res;
+}
