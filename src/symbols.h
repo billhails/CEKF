@@ -66,5 +66,11 @@ HashSymbol *thenSymbol(void);
 HashSymbol *trueSymbol(void);
 HashSymbol *xorSymbol(void);
 HashSymbol *xnorSymbol(void);
+HashSymbol *leftCurlySymbol(void);
+HashSymbol *rightCurlySymbol(void);
+HashSymbol *leftRoundSymbol(void);
+HashSymbol *rightRoundSymbol(void);
+HashSymbol *leftSquareSymbol(void);
+HashSymbol *rightSquareSymbol(void);
 
 #endif

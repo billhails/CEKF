@@ -293,6 +293,9 @@ void markObj(Header *h, Index i) {
         CEKFS_OBJTYPE_CASES()
             markCekfsObj(h);
             break;
+        PRATT_OBJTYPE_CASES()
+            markPrattObj(h);
+            break;
         ANF_OBJTYPE_CASES()
             markAnfObj(h);
             break;
@@ -323,9 +326,6 @@ static void freeProtectionObj(Header *h) {
 
 void freeObj(Header *h) {
     switch (h->type) {
-            CEKFS_OBJTYPE_CASES()
-            freeCekfsObj(h);
-            break;
         case OBJTYPE_OPAQUE:
             freeOpaque((Opaque *) h);
             break;
@@ -343,6 +343,12 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
+            break;
+            CEKFS_OBJTYPE_CASES()
+            freeCekfsObj(h);
+            break;
+            PRATT_OBJTYPE_CASES()
+            freePrattObj(h);
             break;
             ANF_OBJTYPE_CASES()
                 freeAnfObj(h);

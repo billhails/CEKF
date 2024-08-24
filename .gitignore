@@ -5,6 +5,7 @@ junk/
 out_scm/
 tmp_scm/
 cekf
+pratt_test
 tags
 .generated
 .*.swp

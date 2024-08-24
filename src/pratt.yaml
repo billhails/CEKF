@@ -1,0 +1,53 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2024  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: pratt
+    parserInfo: false
+    limited_includes:
+    - file_id.h
+    - ast_helper.h
+
+description: Pratt Parser support
+
+structs:
+    TestBinary:
+        token: HashSymbol
+        left: TestExpr
+        right: TestExpr
+
+    TestUnary:
+        token: HashSymbol
+        expr: TestExpr
+
+unions:
+    TestExpr:
+        unary: TestUnary
+        binary: TestBinary
+        atom: int
+
+    TestToken:
+        op: HashSymbol
+        atom: int
+        eof: void_ptr
+
+arrays:
+    TestLexer:
+        entries: TestToken
+
+primitives: !include primitives.yaml

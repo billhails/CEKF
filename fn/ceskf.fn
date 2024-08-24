@@ -144,8 +144,10 @@ let
                 inds = indices(bindings, σ);
                 ks = list.map(unsafe fn (#(k, _)) { k }, bindings);
                 e = zipEnv(ks, inds, ρ);
-                tempStore = list.repeatprefix(list.length(inds), f, σ);
-                s = list.mapprefix(A(e, tempStore), (list.map(unsafe fn (#(_, v)) { v }, bindings)), σ);
+                tempStore = list.repeat_prefix(list.length(inds), f, σ);
+                s = list.map_prefix(A(e, tempStore),
+                                    list.map(unsafe fn (#(_, v)) { v }, bindings),
+                                    σ);
             in
                 Σ(body, e, s, κ, ς)
         }
@@ -195,8 +197,9 @@ let
         }
     }
 in
-    // (let (a 5) a)
-    inject(letexp("a", aexp(num(5)), aexp(var("a"))));
+    // (let (a 1) (print a))
+    inject(letexp("a", aexp(num(1)), aexp(prin(var("a")))));
+
     // (let (v (letrec ((funky (lambda (k) (k 5))))
     //                 (callcc (lambda (k)
     //                                 (let (r (funky k))

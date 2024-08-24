@@ -388,3 +388,51 @@ HashSymbol *cdrSymbol() {
     }
     return res;
 }
+
+HashSymbol *leftCurlySymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("{");
+    }
+    return res;
+}
+
+HashSymbol *rightCurlySymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("}");
+    }
+    return res;
+}
+
+HashSymbol *leftRoundSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("(");
+    }
+    return res;
+}
+
+HashSymbol *rightRoundSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol(")");
+    }
+    return res;
+}
+
+HashSymbol *leftSquareSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("[");
+    }
+    return res;
+}
+
+HashSymbol *rightSquareSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("]");
+    }
+    return res;
+}

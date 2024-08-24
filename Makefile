@@ -10,6 +10,7 @@ MODE:=debugging
 endif
 
 TARGET=cekf
+PRATT_TEST_TARGET=pratt_test
 
 ifeq ($(MODE),debugging)
 	CCMODE:= -g
@@ -53,7 +54,8 @@ EXTRA_TARGETS= \
     $(EXTRA_DEBUG_C_TARGETS)
 
 MAIN=src/main.c
-CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
+PRATT_TEST=src/pratt_test.c
+CFILES=$(filter-out $(MAIN), $(filter-out $(PRATT_TEST), $(wildcard src/*.c)))
 EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
 PARSER_CFILES=generated/lexer.c generated/parser.c
 TEST_CFILES=$(wildcard tests/src/*.c)
@@ -63,6 +65,7 @@ TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
 TEST_SUCCESSES=$(patsubst tests/%,tests/.%-success,$(TEST_TARGETS))
 
 MAIN_OBJ=obj/main.o
+PRATT_TEST_OBJ=obj/pratt_test.o
 OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
 TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
 
@@ -83,10 +86,13 @@ INCLUDE_PATHS=-I generated/ -I src/
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
 
-all: $(TARGET) docs
+all: $(TARGET) $(PRATT_TEST_TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
+
+$(PRATT_TEST_TARGET): $(PRATT_TEST_OBJ) $(ALL_OBJ)
+	$(CC) -o $@ $(PRATT_TEST_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
 
@@ -138,7 +144,7 @@ $(EXTRA_DOCS): docs/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml
 tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 
-$(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
+$(MAIN_OBJ) $(PRATT_TEST_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(PARSER_OBJ): obj/%.o: generated/%.c | obj

@@ -32,6 +32,12 @@ More of a wish-list than a hard and fast plan.
    * `infix 55 left >>= fn(l, r) { ... }`
    * `prefix 45 $ fn(a) { ... }`
    * `suffix 60 ! factorial`
+   * precedence of prefix and postfix operators matters, i.e. `-2**2` is `-(2**2)` not `(-2)**2`.
+   * looks like this is a biggie and would involve replacing the existing parser (and probably lexer)
+     with a
+     [Pratt Parser](https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/). 
+     However this may be the right thing to do as it also opens up a much better approach to
+     [macros](https://journal.stuffwithstuff.com/2011/02/13/extending-syntax-from-within-a-language/).
 * Curried binary operators `(2+)` etc.
 * Aliases
    * `alias some = maybe.some;`
