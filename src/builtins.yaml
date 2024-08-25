@@ -18,12 +18,12 @@
 
 config:
     name: builtins
+    description: Support for declaring builtins
     limited_includes:
     - ast_helper.h
     - tc.h
     - tc_debug.h
 
-description: Support for declaring builtins
 
 structs:
     BuiltIn:

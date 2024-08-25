@@ -18,13 +18,13 @@
 
 config:
     name: pratt
+    description: Pratt Parser support
     parserInfo: false
     limited_includes:
     - file_id.h
     - ast_helper.h
     - pratt_functions.h
 
-description: Pratt Parser support
 
 structs:
     PrattBinary:
@@ -47,15 +47,23 @@ structs:
         postfixOp: PrattPostfixOp
         infixOp: PrattPostfixOp
 
+    PrattTrie:
+        character: byte
+        terminal: HashSymbol
+        siblings: PrattTrie
+        children: PrattTrie
+
 unions:
     PrattExpr:
         unary: PrattUnary
         binary: PrattBinary
-        atom: int
+        number: int
+        atom: HashSymbol
 
     PrattToken:
         op: HashSymbol
-        atom: int
+        atom: HashSymbol
+        number: int
         eof: void_ptr
 
 arrays:

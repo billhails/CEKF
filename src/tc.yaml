@@ -18,8 +18,8 @@
 
 config:
     name: tc
+    description: Structures to support type inference
 
-description: Structures to support type inference
 
 cmp:
     extraArgs:

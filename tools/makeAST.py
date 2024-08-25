@@ -4017,8 +4017,7 @@ def printGpl(file, document):
             print(line, end='')
             line = gpl.readline()
     print(" *")
-    if 'description' in document:
-        print(f" * {document['description']}")
+    print(f" * {document['config']['description']}")
     print(f" * Generated from {file} by tools/makeAST.py")
     print(" */")
 
@@ -4050,6 +4049,7 @@ stream = open(args.yaml, 'r')
 document = yaml.load(stream, Loader)
 
 typeName = document['config']['name']
+description = document['config']['description']
 if 'includes' in document['config']:
     includes = document['config']['includes']
 else:
@@ -4308,9 +4308,8 @@ elif args.type == 'md':
 
     print(f"# {typeName}")
     print("")
-    if 'description' in document:
-        print(document['description'])
-        print("")
+    print(description)
+    print("")
 
     print("```mermaid")
     print("flowchart TD")

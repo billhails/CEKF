@@ -17,12 +17,11 @@
  */
 
 #include <stdio.h>
-#include <ctype.h>
 
-#include"symbol.h"
 #include"pratt.h"
 #include"pratt_debug.h"
 #include"pratt_functions.h"
+#include"pratt_scanner.h"
 #include"symbols.h"
 
 // UTF8
@@ -66,21 +65,51 @@ static inline HashSymbol *S(char *name) { return newSymbol(name); }
 static PrattParser *makePrattParser() {
     PrattParser *res = newPrattParser();
     int save = PROTECT(res);
-    addParserRecord(res, "=",  2,  1, 9,  0, NULL, NULL,        NULL,            binaryInfix);
-    addParserRecord(res, "+",  5,  6, 9,  0, NULL, unaryPrefix, NULL,            binaryInfix);
-    addParserRecord(res, "-",  5,  6, 9,  0, NULL, unaryPrefix, NULL,            binaryInfix);
-    addParserRecord(res, "*",  7,  8, 0,  0, NULL, NULL,        NULL,            binaryInfix);
-    addParserRecord(res, "/",  7,  8, 0,  0, NULL, NULL,        NULL,            binaryInfix);
-    addParserRecord(res, ".", 14, 13, 0,  0, NULL, NULL,        NULL,            binaryInfix);
-    addParserRecord(res, "!",  0,  0, 0, 11, NULL, NULL,        unaryPostfix,    NULL);
-    addParserRecord(res, "[",  0,  0, 0, 11, "]",  NULL,        unaryPostfixGrp, NULL);
-    addParserRecord(res, "(",  0,  0, 0,  0, ")",  grouping,    NULL,            NULL);
-    addParserRecord(res, ")",  0,  0, 0,  0, NULL, NULL,        NULL,            NULL);
-    addParserRecord(res, "]",  0,  0, 0,  0, NULL, NULL,        NULL,            NULL);
-    addParserRecord(res, "?",  4,  3, 0,  0, ":",  NULL,        NULL,            binaryMfix);
-    addParserRecord(res, ":",  0,  0, 0,  0, NULL, NULL,        NULL,            NULL);
+    addParserRecord(res, "(",  0,  0,  0,  0, ")",  grouping,    NULL,            NULL);
+    addParserRecord(res, ")",  0,  0,  0,  0, NULL, NULL,        NULL,            NULL);
+    addParserRecord(res, "]",  0,  0,  0,  0, NULL, NULL,        NULL,            NULL);
+    addParserRecord(res, ":",  0,  0,  0,  0, NULL, NULL,        NULL,            NULL);
+    addParserRecord(res, "=", 11, 10,  0,  0, NULL, NULL,        NULL,            binaryInfix);
+    addParserRecord(res, "?", 21, 20,  0,  0, ":",  NULL,        NULL,            binaryMfix);
+    addParserRecord(res, "+", 30, 31, 50,  0, NULL, unaryPrefix, NULL,            binaryInfix);
+    addParserRecord(res, "-", 30, 31, 50,  0, NULL, unaryPrefix, NULL,            binaryInfix);
+    addParserRecord(res, "*", 40, 41,  0,  0, NULL, NULL,        NULL,            binaryInfix);
+    addParserRecord(res, "/", 40, 41,  0,  0, NULL, NULL,        NULL,            binaryInfix);
+    addParserRecord(res, "!",  0,  0,  0, 50, NULL, NULL,        unaryPostfix,    NULL);
+    addParserRecord(res, "[",  0,  0,  0, 50, "]",  NULL,        unaryPostfixGrp, NULL);
+    addParserRecord(res, ".", 61, 60,  0,  0, NULL, NULL,        NULL,            binaryInfix);
     UNPROTECT(save);
     return res;
+}
+
+static PrattTrie *makePrattTrie() {
+    PrattTrie *C = insertPrattTrie(NULL, S("="));
+    int save = PROTECT(C);
+    C = insertPrattTrie(C, S("+")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("-")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("*")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("/")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S(".")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("!")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("[")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("]")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("(")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S(")")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("{")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("}")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("?")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S(":")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S(">")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("<")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("@")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("@@")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S(">=")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("<=")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("<=>")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("and")); REPLACE_PROTECT(save, C);
+    C = insertPrattTrie(C, S("or")); REPLACE_PROTECT(save, C);
+    UNPROTECT(save);
+    return C;
 }
 
 void ppPrattBinary(PrattBinary *binary) {
@@ -99,8 +128,11 @@ void ppPrattUnary(PrattUnary *unary) {
 
 void ppPrattExpr(PrattExpr *expr) {
     switch (expr->type) {
+        case PRATTEXPR_TYPE_NUMBER:
+            printf("%d", expr->val.number);
+            break;
         case PRATTEXPR_TYPE_ATOM:
-            printf("%d", expr->val.atom);
+            printf("%s", expr->val.atom->name);
             break;
         case PRATTEXPR_TYPE_UNARY:
             ppPrattUnary(expr->val.unary);
@@ -111,59 +143,6 @@ void ppPrattExpr(PrattExpr *expr) {
         default:
             cant_happen("unexpected %s", prattExprTypeName(expr->type));
     }
-}
-
-static void reverseLexer(PrattLexer *lexer) {
-    int i = 0;
-    int j = lexer->size - 1;
-    while (i < j) {
-        PrattToken *tmp = lexer->entries[i];
-        lexer->entries[i] = lexer->entries[j];
-        lexer->entries[j] = tmp;
-        i++;
-        j--;
-    }
-}
-
-static PrattToken *makePrattTokenOp(char op) {
-    char buf[8];
-    sprintf(buf, "%c", op);
-    HashSymbol *name = newSymbol(buf);
-    PrattToken *result = newPrattToken_Op(name);
-    return result;
-}
-
-PrattLexer *makePrattLexer(char *input) {
-    PrattLexer *lexer = newPrattLexer();
-    int save = PROTECT(lexer);
-    while(*input) {
-        if(isspace(*input)) {
-            // skip
-        } else if (isdigit(*input)) {
-            PrattToken *atom = newPrattToken_Atom(*input - '0');
-            int save2 = PROTECT(atom);
-            pushPrattLexer(lexer, atom);
-            UNPROTECT(save2);
-        } else if (ispunct(*input)) {
-            PrattToken *op = makePrattTokenOp(*input);
-            int save2 = PROTECT(op);
-            pushPrattLexer(lexer, op);
-            UNPROTECT(save2);
-        } else {
-            cant_happen("unexpected %c", *input);
-        }
-        ++input;
-    }
-    PrattToken *eof = newPrattToken_Eof();
-    PROTECT(eof);
-    pushPrattLexer(lexer, eof);
-    reverseLexer(lexer);
-    UNPROTECT(save);
-    return lexer;
-}
-
-PrattToken *next(PrattLexer *lexer) {
-    return popPrattLexer(lexer);
 }
 
 static PrattExpr *makePrattBinary(HashSymbol *op, PrattExpr *lhs, PrattExpr *rhs) {
@@ -267,6 +246,10 @@ PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp) {
             lhs = newPrattExpr_Atom(tok->val.atom);
         }
         break;
+        case PRATTTOKEN_TYPE_NUMBER: {
+            lhs = newPrattExpr_Number(tok->val.number);
+        }
+        break;
         case PRATTTOKEN_TYPE_OP: {
             PrattRecord *record = fetchRecord(parser, tok->val.op);
             if (record->prefixOp == NULL) {
@@ -281,7 +264,7 @@ PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp) {
     }
     PROTECT(lhs);
     for (;;) {
-        PrattToken *op = peekPrattLexer(lexer);
+        PrattToken *op = peek(lexer);
         PROTECT(op);
         if (op->type == PRATTTOKEN_TYPE_EOF) {
             break;
@@ -311,8 +294,10 @@ PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp) {
 }
 
 static void test(char *expr) {
-    PrattLexer *lexer = makePrattLexer(expr);
-    int save = PROTECT(lexer);
+    PrattTrie *trie = makePrattTrie();
+    int save = PROTECT(trie);
+    PrattLexer *lexer = makePrattLexer(trie, expr);
+    PROTECT(lexer);
     PrattParser *parser = makePrattParser();
     PROTECT(parser);
     PrattExpr *result = expr_bp(lexer, parser, 0);
@@ -322,10 +307,10 @@ static void test(char *expr) {
     UNPROTECT(save);
 }
 
-
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
     test("1");
+    test("a123");
     test("1 + 2");
     test("1 + 2 * 3");
     test("1 * 2 + 3");
@@ -336,6 +321,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("--1 * 2!");
     test("1 * ((2 + 3))");
     test("1 * ((2 + 3[4 + 5]))");
-    test("1 = 2 = 3 ? 4 : 5 ? 6 : 7");
+    test("aa = bb = 3 ? 4 ? 5 : 6 : 7 ? 8 : 9");
     return 0;
 }

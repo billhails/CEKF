@@ -56,3 +56,15 @@ new_c () {
         echo "" >> $file
     fi
 }
+
+new_ch () {
+    cfile="src/$1.c"
+    if [ -e $cfile ] ; then
+        echo $cfile already exists
+    else
+        new_c $1
+        new_h $1
+        echo "#include \"$1.h\"" >> $cfile
+        echo "" >> $cfile
+    fi
+}

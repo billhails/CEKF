@@ -19,11 +19,17 @@ PrattRecord --matchingRight--> HashSymbol
 PrattRecord --prefixOp--> PrattPrefixOp
 PrattRecord --postfixOp--> PrattPostfixOp
 PrattRecord --infixOp--> PrattPostfixOp
+PrattTrie --character--> byte
+PrattTrie --terminal--> HashSymbol
+PrattTrie --siblings--> PrattTrie
+PrattTrie --children--> PrattTrie
 PrattExpr --unary--> PrattUnary
 PrattExpr --binary--> PrattBinary
-PrattExpr --atom--> int
+PrattExpr --number--> int
+PrattExpr --atom--> HashSymbol
 PrattToken --op--> HashSymbol
-PrattToken --atom--> int
+PrattToken --atom--> HashSymbol
+PrattToken --number--> int
 PrattToken --eof--> void_ptr
 PrattLexer["PrattLexer[]"] --entries--> PrattToken
 PrattExprVal

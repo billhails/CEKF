@@ -18,6 +18,7 @@
 
 config:
     name: cekfs
+    description: The structures of the CEKFs machine
     parserInfo: false
     limited_includes:
         - builtins.h
@@ -25,7 +26,6 @@ config:
         - types.h
         - opaque.h
 
-description: The structures of the CEKFs machine
 
 structs:
     CEKF:
