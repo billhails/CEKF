@@ -30,16 +30,20 @@
 // modified during parse
 // integrates with existing AST
 
+// only one precedence
+// operators can't be both infix and postfix
+// left associative infix operators parse the rhs with prec + 1
+// right associative infix operators parse the rhs with prec - 1
+// pareslets for grouping know their own matching close brace
+
 void ppPrattExpr(PrattExpr *expr);
 PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp);
 static PrattExpr *grouping(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
 static PrattExpr *unaryPrefix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
-/*
 static PrattExpr *unaryPostfix(PrattRecord *record,
                                PrattLexer *lexer __attribute__((unused)),
                                PrattParser *parser __attribute__((unused)),
                                PrattExpr *lhs);
-*/
 static PrattExpr *unaryPostfixGrp(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
 static PrattExpr *binaryInfix(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
 static PrattExpr *binaryNonassoc(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
@@ -101,55 +105,72 @@ static void setPostfixOp(PrattParser *parser, char *k, int prec, char *m, PrattP
     record->postfixOp = op;
 }
 
-
 static PrattParser *makePrattParser() {
     PrattParser *res = newPrattParser();
     int save = PROTECT(res);
-    setPrefixOp(res, "(", 0, ")", grouping);
-    setRightInfixOp(res, "->", 10, NULL, binaryInfix);
-    setRightInfixOp(res, "then", 20, NULL, binaryInfix);
-    setLeftInfixOp(res, "and", 30, NULL, binaryInfix);
-    setLeftInfixOp(res, "or", 30, NULL, binaryInfix);
-    setLeftInfixOp(res, "xor", 30, NULL, binaryInfix);
-    setLeftInfixOp(res, "nand", 30, NULL, binaryInfix);
-    setLeftInfixOp(res, "nor", 30, NULL, binaryInfix);
-    setLeftInfixOp(res, "xnor", 30, NULL, binaryInfix);
-    setPrefixOp(res, "not", 40, NULL, unaryPrefix);
-    setLeftInfixOp(res, "==", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, "!=", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, ">", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, "<", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, ">=", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, "<=", 50, NULL, binaryInfix);
-    setLeftInfixOp(res, "<=>", 60, NULL, binaryNonassoc);
-    setLeftInfixOp(res, "=", 70, NULL, binaryInfix);
-    setLeftInfixOp(res, ":", 80, NULL, binaryInfix);
-    setRightInfixOp(res, "@", 90, NULL, binaryInfix);
-    setRightInfixOp(res, "@@", 90, NULL, binaryInfix);
-    setPrefixOp(res, "<", 100, NULL, unaryPrefix);
-    setPrefixOp(res, ">", 100, NULL, unaryPrefix);
-    setLeftInfixOp(res, "+", 110, NULL, binaryInfix);
-    setLeftInfixOp(res, "-", 110, NULL, binaryInfix);
-    setLeftInfixOp(res, "*", 120, NULL, binaryInfix);
-    setLeftInfixOp(res, "/", 120, NULL, binaryInfix);
-    setLeftInfixOp(res, "%", 120, NULL, binaryInfix);
-    setRightInfixOp(res, "**", 130, NULL, binaryInfix);
-    setPrefixOp(res, "-", 140, NULL, unaryPrefix);
-    setPrefixOp(res, "here", 150, NULL, unaryPrefix);
-    setPostfixOp(res, "(", 160, ")", unaryPostfixGrp);
-    setRightInfixOp(res, ".", 160, NULL, binaryInfix);
+    int prec = 0;
+    setPrefixOp(res, "(", prec, ")", grouping);
+    prec = 10;
+    setRightInfixOp(res, "->", prec, NULL, binaryInfix);
+    prec = 20;
+    setRightInfixOp(res, "then", prec, NULL, binaryInfix);
+    prec = 30;
+    setLeftInfixOp(res, "and", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "or", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "xor", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "nand", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "nor", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "xnor", prec, NULL, binaryInfix);
+    prec = 40;
+    setPrefixOp(res, "not", prec, NULL, unaryPrefix);
+    prec = 50;
+    setLeftInfixOp(res, "==", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "!=", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, ">", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "<", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, ">=", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "<=", prec, NULL, binaryInfix);
+    prec = 60;
+    setLeftInfixOp(res, "<=>", prec, NULL, binaryNonassoc);
+    prec = 70;
+    setLeftInfixOp(res, "=", prec, NULL, binaryInfix);
+    prec = 80;
+    setLeftInfixOp(res, ":", prec, NULL, binaryInfix);
+    prec = 90;
+    setRightInfixOp(res, "@", prec, NULL, binaryInfix);
+    setRightInfixOp(res, "@@", prec, NULL, binaryInfix);
+    prec = 100;
+    setPrefixOp(res, "<", prec, NULL, unaryPrefix);
+    setPrefixOp(res, ">", prec, NULL, unaryPrefix);
+    prec = 110;
+    setLeftInfixOp(res, "+", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "-", prec, NULL, binaryInfix);
+    prec = 120;
+    setLeftInfixOp(res, "*", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "/", prec, NULL, binaryInfix);
+    setLeftInfixOp(res, "%", prec, NULL, binaryInfix);
+    prec = 130;
+    setRightInfixOp(res, "**", prec, NULL, binaryInfix);
+    prec = 140;
+    setPrefixOp(res, "-", prec, NULL, unaryPrefix);
+    prec = 150;
+    setPrefixOp(res, "here", prec, NULL, unaryPrefix);
+    setPostfixOp(res, "!", prec, NULL, unaryPostfix);
+    prec = 160;
+    setPostfixOp(res, "(", prec, ")", unaryPostfixGrp);
+    prec = 170;
+    setRightInfixOp(res, ".", prec, NULL, binaryInfix);
     UNPROTECT(save);
     return res;
 }
 
 static PrattTrie *makePrattTrie(PrattParser *parser) {
     PrattTrie *C = NULL;
-    PrattRecord *record = NULL;
     HashSymbol *token;
     Index i = 0;
-    int save = PROTECT(parser);
-    while ((token = iteratePrattParser(parser, &i, &record)) != NULL) {
-        C = insertPrattTrie(C, record->token);
+    int save = PROTECT(parser); // not C because we need to have a slot for REPLACE_PROTECT
+    while ((token = iteratePrattParser(parser, &i, NULL)) != NULL) {
+        C = insertPrattTrie(C, token);
         REPLACE_PROTECT(save, C);
     }
     UNPROTECT(save);
@@ -233,14 +254,12 @@ static PrattExpr *unaryPrefix(PrattRecord *record, PrattLexer *lexer, PrattParse
     return res;
 }
 
-/*
 static PrattExpr *unaryPostfix(PrattRecord *record,
                                PrattLexer *lexer __attribute__((unused)),
                                PrattParser *parser __attribute__((unused)),
                                PrattExpr *lhs) {
     return makePrattUnary(record->token, lhs);
 }
-*/
 
 static PrattExpr *unaryPostfixGrp(PrattRecord *record,
                                        PrattLexer *lexer,
@@ -296,14 +315,12 @@ PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp) {
     PrattToken *tok = next(lexer);
     int save = PROTECT(tok);
     switch(tok->type) {
-        case PRATTTOKEN_TYPE_ATOM: {
+        case PRATTTOKEN_TYPE_ATOM:
             lhs = newPrattExpr_Atom(tok->val.atom);
-        }
-        break;
-        case PRATTTOKEN_TYPE_NUMBER: {
+            break;
+        case PRATTTOKEN_TYPE_NUMBER:
             lhs = newPrattExpr_Number(tok->val.number);
-        }
-        break;
+            break;
         case PRATTTOKEN_TYPE_OP: {
             PrattRecord *record = fetchRecord(parser, tok->val.op);
             if (record->prefixOp == NULL) {
@@ -377,7 +394,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("1 . 2 . 3");
     test("- 1 . - 2 . 3");
     test("--1 * 2");
-    // test("--1 * 2!");
+    test("--1 * 2!");
     test("1 * ((2 + 3))");
     // test("1 * ((2 + 3[4 + 5]))");
     // test("aa = bb = 3 ? 4 ? 5 : 6 : 7 ? 8 : 9");
