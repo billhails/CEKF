@@ -48,7 +48,10 @@ static PrattToken *makePrattAtom(char **input) {
     return atom;
 }
 
-static HashSymbol *lookupTrieRecursive(PrattTrie *trie, unsigned char **input, unsigned char *last, HashSymbol *found) {
+static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
+                                       unsigned char **input,
+                                       unsigned char *last,
+                                       HashSymbol *found) {
     if (trie == NULL || **input > trie->character) {
         *input = last;
         return found;
@@ -59,8 +62,11 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie, unsigned char **input, u
     // trie matches
     ++*input;
     if (trie->terminal != NULL) {
-        found = trie->terminal;
-        last = *input;
+        // avoid i.e. "orbit" false matching "or"
+        if (!isalpha(trie->character) || !isalpha(**input)) {
+            found = trie->terminal;
+            last = *input;
+        }
     }
     return lookupTrieRecursive(trie->children, input, last, found);
 }
@@ -80,7 +86,10 @@ PrattLexer *makePrattLexer(PrattTrie *trie, char *input) {
         if(isspace(*input)) {
             ++input;
         } else if (isalpha(*input)) {
-            PrattToken *atom = makePrattAtom(&input);
+            PrattToken *atom = lookupTrieSymbol(trie, &input);
+            if (atom == NULL) {
+                atom = makePrattAtom(&input);
+            }
             int save2 = PROTECT(atom);
             pushPrattLexer(lexer, atom);
             UNPROTECT(save2);
