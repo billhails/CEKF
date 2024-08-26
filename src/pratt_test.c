@@ -24,6 +24,14 @@
 #include"pratt_scanner.h"
 #include"symbols.h"
 
+#define DEBUG_PRATT
+
+#ifdef DEBUG_PRATT
+#  include "debugging_on.h"
+#else
+#  include "debugging_off.h"
+#endif
+
 // UTF8
 // re-entrant
 // stacked input stream
@@ -39,127 +47,79 @@
 void ppPrattExpr(PrattExpr *expr);
 PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp);
 static PrattExpr *grouping(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
-static PrattExpr *unaryPrefix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
-static PrattExpr *unaryPostfix(PrattRecord *record,
-                               PrattLexer *lexer __attribute__((unused)),
-                               PrattParser *parser __attribute__((unused)),
-                               PrattExpr *lhs);
-static PrattExpr *unaryPostfixGrp(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
-static PrattExpr *binaryInfix(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
-static PrattExpr *binaryNonassoc(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
-static PrattExpr *binaryMfix(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
+static PrattExpr *prefix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
+static PrattExpr *prefixC(PrattRecord *record, PrattLexer *lexer, PrattParser *parser);
+static PrattExpr *postfix(PrattRecord *record,
+                          PrattLexer *lexer __attribute__((unused)),
+                          PrattParser *parser __attribute__((unused)),
+                          PrattExpr *lhs);
+static PrattExpr *postfixArg(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
+static PrattExpr *infixLeft(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
+static PrattExpr *infixRight(PrattRecord *, PrattLexer *, PrattParser *, PrattExpr *);
 
 static inline HashSymbol *S(char *name) { return newSymbol(name); }
 
-static PrattRecord *findRecord(PrattParser *parser, char *k) {
-    HashSymbol *key = newSymbol(k);
-    PrattRecord *record = NULL;
-    if (getPrattParser(parser, key, &record)) {
-        return record;
-    }
-    record = newPrattRecord(key, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+static void addRecord(PrattParser *parser,
+                      char *token,
+                      PrattPrefixOp prefix,
+                      PrattPostfixOp infix,
+                      PrattPostfixOp postfix,
+                      int precedence) {
+    PrattRecord *record = newPrattRecord(newSymbol(token), prefix, infix, postfix, precedence);
     int save = PROTECT(record);
-    setPrattParser(parser, key, record);
+    setPrattParser(parser, record->token, record);
     UNPROTECT(save);
-    return record;
-}
-
-static void setMatchingRight(PrattParser *parser, PrattRecord *record, char *m) {
-    if (m != NULL) {
-        PrattRecord *right = findRecord(parser, m);
-        record->matchingRight = right->token;
-    }
-}
-
-static void setPrefixOp(PrattParser *parser, char *k, int prec, char *m, PrattPrefixOp op) {
-    PrattRecord *record = findRecord(parser, k);
-    record->prefix = prec;
-    setMatchingRight(parser, record, m);
-    record->prefixOp = op;
-}
-
-static void setLeftInfixOp(PrattParser *parser, char *k, int prec, char *m, PrattPostfixOp op) {
-    PrattRecord *record = findRecord(parser, k);
-    if (prec > 0) {
-        record->left = prec;
-        record->right = prec + 1;
-    }
-    setMatchingRight(parser, record, m);
-    record->infixOp = op;
-}
-
-static void setRightInfixOp(PrattParser *parser, char *k, int prec, char *m, PrattPostfixOp op) {
-    PrattRecord *record = findRecord(parser, k);
-    if (prec > 0) {
-        record->left = prec + 1;
-        record->right = prec;
-    }
-    setMatchingRight(parser, record, m);
-    record->infixOp = op;
-}
-
-static void setPostfixOp(PrattParser *parser, char *k, int prec, char *m, PrattPostfixOp op) {
-    PrattRecord *record = findRecord(parser, k);
-    record->postfix = prec;
-    setMatchingRight(parser, record, m);
-    record->postfixOp = op;
 }
 
 static PrattParser *makePrattParser() {
     PrattParser *res = newPrattParser();
     int save = PROTECT(res);
-    int prec = 0;
-    setPrefixOp(res, "(", prec, ")", grouping);
-    prec = 10;
-    setRightInfixOp(res, "->", prec, NULL, binaryInfix);
-    prec = 20;
-    setRightInfixOp(res, "then", prec, NULL, binaryInfix);
-    prec = 30;
-    setLeftInfixOp(res, "and", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "or", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "xor", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "nand", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "nor", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "xnor", prec, NULL, binaryInfix);
-    prec = 40;
-    setPrefixOp(res, "not", prec, NULL, unaryPrefix);
-    prec = 50;
-    setLeftInfixOp(res, "==", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "!=", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, ">", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "<", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, ">=", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "<=", prec, NULL, binaryInfix);
-    prec = 60;
-    setLeftInfixOp(res, "<=>", prec, NULL, binaryNonassoc);
-    prec = 70;
-    setLeftInfixOp(res, "=", prec, NULL, binaryInfix);
-    prec = 80;
-    setLeftInfixOp(res, ":", prec, NULL, binaryInfix);
-    prec = 90;
-    setRightInfixOp(res, "@", prec, NULL, binaryInfix);
-    setRightInfixOp(res, "@@", prec, NULL, binaryInfix);
-    prec = 100;
-    setPrefixOp(res, "<", prec, NULL, unaryPrefix);
-    setPrefixOp(res, ">", prec, NULL, unaryPrefix);
-    prec = 110;
-    setLeftInfixOp(res, "+", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "-", prec, NULL, binaryInfix);
-    prec = 120;
-    setLeftInfixOp(res, "*", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "/", prec, NULL, binaryInfix);
-    setLeftInfixOp(res, "%", prec, NULL, binaryInfix);
-    prec = 130;
-    setRightInfixOp(res, "**", prec, NULL, binaryInfix);
-    prec = 140;
-    setPrefixOp(res, "-", prec, NULL, unaryPrefix);
-    prec = 150;
-    setPrefixOp(res, "here", prec, NULL, unaryPrefix);
-    setPostfixOp(res, "!", prec, NULL, unaryPostfix);
-    prec = 160;
-    setPostfixOp(res, "(", prec, ")", unaryPostfixGrp);
-    prec = 170;
-    setRightInfixOp(res, ".", prec, NULL, binaryInfix);
+    addRecord(res, "(",    grouping, NULL,       postfixArg, 0);
+    addRecord(res, ")",    NULL,     NULL,       NULL,       0);
+
+    addRecord(res, "->",   NULL,     infixRight, NULL,      10);
+
+    addRecord(res, "then", NULL,     infixRight, NULL,      20);
+
+    addRecord(res, "and",  NULL,     infixLeft,  NULL,      30);
+    addRecord(res, "or",   NULL,     infixLeft,  NULL,      30);
+    addRecord(res, "xor",  NULL,     infixLeft,  NULL,      30);
+    addRecord(res, "nand", NULL,     infixLeft,  NULL,      30);
+    addRecord(res, "nor",  NULL,     infixLeft,  NULL,      30);
+    addRecord(res, "xnor", NULL,     infixLeft,  NULL,      30);
+
+    addRecord(res, "not",  prefix,   NULL,       NULL,      40);
+
+    addRecord(res, "==",   NULL,     infixLeft,  NULL,      50);
+    addRecord(res, "!=",   NULL,     infixLeft,  NULL,      50);
+    addRecord(res, ">",    prefixC,  infixLeft,  NULL,      50);
+    addRecord(res, "<",    prefixC,  infixLeft,  NULL,      50);
+    addRecord(res, ">=",   NULL,     infixLeft,  NULL,      50);
+    addRecord(res, "<=",   NULL,     infixLeft,  NULL,      50);
+    addRecord(res, "<=>",  NULL,     infixLeft,  NULL,      50);
+
+    addRecord(res, "=",    NULL,     infixRight, NULL,      60);
+
+    addRecord(res, ":",    NULL,     infixLeft,  NULL,      70);
+
+    addRecord(res, "@@",   NULL,     infixRight, NULL,      80);
+
+    addRecord(res, "@",    NULL,     infixRight, NULL,      90);
+    addRecord(res, "+",    prefixC,  infixLeft,  NULL,      90);
+    addRecord(res, "-",    prefixC,  infixLeft,  NULL,      90);
+
+    addRecord(res, "*",    NULL,     infixLeft,  NULL,     100);
+    addRecord(res, "/",    NULL,     infixLeft,  NULL,     100);
+    addRecord(res, "%",    NULL,     infixLeft,  NULL,     100);
+
+    addRecord(res, "**",   NULL,     infixRight, NULL,     110);
+
+    addRecord(res, "here", prefix,   NULL,       NULL,     120);
+    addRecord(res, "#",    prefix,   NULL,       NULL,     120);
+    addRecord(res, "!",    NULL,     NULL,       postfix,  120);
+
+    addRecord(res, ".",    NULL,     infixRight, NULL,     130);
+
     UNPROTECT(save);
     return res;
 }
@@ -236,166 +196,195 @@ static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol) {
 }
 
 static PrattExpr *grouping(PrattRecord *record, PrattLexer *lexer, PrattParser *parser) {
-    PrattExpr *res = expr_bp(lexer, parser, 0);
+    ENTER(grouping);
+    PrattExpr *res = expr_bp(lexer, parser, record->precedence);
     int save = PROTECT(res);
     PrattToken *tok = next(lexer);
-    if (tok->type != PRATTTOKEN_TYPE_OP || tok->val.op != record->matchingRight) {
-        cant_happen("mismatched closing bracket");
+    if (tok->type != PRATTTOKEN_TYPE_OP || tok->val.op != S(")")) {
+        can_happen("mismatched closing bracket");
     }
+    LEAVE(grouping);
     UNPROTECT(save);
     return res;
 }
 
-static PrattExpr *unaryPrefix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser) {
-    PrattExpr *res = expr_bp(lexer, parser, record->right);
+static PrattExpr *prefix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser) {
+    ENTER(prefix);
+    PrattExpr *res = expr_bp(lexer, parser, record->precedence + 1);
     int save = PROTECT(res);
     res = makePrattUnary(record->token, res);
+    LEAVE(prefix);
     UNPROTECT(save);
     return res;
 }
 
-static PrattExpr *unaryPostfix(PrattRecord *record,
-                               PrattLexer *lexer __attribute__((unused)),
-                               PrattParser *parser __attribute__((unused)),
-                               PrattExpr *lhs) {
+static PrattExpr *prefixC(PrattRecord *record, PrattLexer *lexer, PrattParser *parser) {
+    ENTER(prefixC);
+    PrattExpr *res = expr_bp(lexer, parser, 100);
+    int save = PROTECT(res);
+    res = makePrattUnary(record->token, res);
+    LEAVE(prefixC);
+    UNPROTECT(save);
+    return res;
+}
+
+static PrattExpr *postfix(PrattRecord *record,
+                          PrattLexer *lexer __attribute__((unused)),
+                          PrattParser *parser __attribute__((unused)),
+                          PrattExpr *lhs) {
     return makePrattUnary(record->token, lhs);
 }
 
-static PrattExpr *unaryPostfixGrp(PrattRecord *record,
+static PrattExpr *postfixArg(PrattRecord *record,
                                        PrattLexer *lexer,
                                        PrattParser *parser,
                                        PrattExpr *lhs) {
+    ENTER(postfixArg);
     PrattExpr *rhs = expr_bp(lexer, parser, 0);
     int save = PROTECT(rhs);
     PrattToken *tok = next(lexer);
-    if (tok->type != PRATTTOKEN_TYPE_OP || tok->val.op != record->matchingRight) {
-        cant_happen("mismatched closing bracket");
+    if (tok->type != PRATTTOKEN_TYPE_OP || tok->val.op != S(")")) {
+        can_happen("mismatched closing bracket");
     }
     rhs = makePrattBinary(record->token, lhs, rhs);
+    LEAVE(postfixArg);
     UNPROTECT(save);
     return rhs;
 }
 
-static PrattExpr *binaryInfix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) {
-    PrattExpr *rhs = expr_bp(lexer, parser, record->right);
+static PrattExpr *infixLeft(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) {
+    ENTER(infixLeft);
+    PrattExpr *rhs = expr_bp(lexer, parser, record->precedence + 1);
     int save = PROTECT(rhs);
     rhs = makePrattBinary(record->token, lhs, rhs);
+    LEAVE(infixLeft);
     UNPROTECT(save);
     return rhs;
 }
 
-static PrattExpr *binaryNonassoc(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) {
-    PrattExpr *rhs = expr_bp(lexer, parser, 1000);
+static PrattExpr *infixRight(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) {
+    ENTER(infixRight);
+    PrattExpr *rhs = expr_bp(lexer, parser, record->precedence - 1);
     int save = PROTECT(rhs);
     rhs = makePrattBinary(record->token, lhs, rhs);
+    LEAVE(infixRight);
     UNPROTECT(save);
     return rhs;
-}
-
-static PrattExpr *binaryMfix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) __attribute__((unused));
-
-static PrattExpr *binaryMfix(PrattRecord *record, PrattLexer *lexer, PrattParser *parser, PrattExpr *lhs) {
-    PrattExpr *mhs = expr_bp(lexer, parser, 0);
-    int save = PROTECT(mhs);
-    PrattToken *tok = next(lexer);
-    if (tok->type != PRATTTOKEN_TYPE_OP || tok->val.op != record->matchingRight) {
-        cant_happen("unmatched '%s'", record->matchingRight->name);
-    }
-    PrattExpr *rhs = expr_bp(lexer, parser, record->right);
-    PROTECT(rhs);
-    mhs = makePrattBinary(record->matchingRight, mhs, rhs);
-    PROTECT(mhs);
-    mhs = makePrattBinary(record->token, lhs, mhs);
-    UNPROTECT(save);
-    return mhs;
 }
 
 PrattExpr *expr_bp(PrattLexer *lexer, PrattParser *parser, int min_bp) {
+    ENTER(expr_bp);
     PrattExpr *lhs = NULL;
     PrattToken *tok = next(lexer);
     int save = PROTECT(tok);
     switch(tok->type) {
         case PRATTTOKEN_TYPE_ATOM:
+            DEBUG("ATOM %s", tok->val.atom->name);
             lhs = newPrattExpr_Atom(tok->val.atom);
             break;
         case PRATTTOKEN_TYPE_NUMBER:
+            DEBUG("NUMBER %d", tok->val.number);
             lhs = newPrattExpr_Number(tok->val.number);
             break;
         case PRATTTOKEN_TYPE_OP: {
+            DEBUG("OP %s", tok->val.op->name);
             PrattRecord *record = fetchRecord(parser, tok->val.op);
             if (record->prefixOp == NULL) {
-                cant_happen("unexpected %s", tok->val.op->name);
+                can_happen("unexpected %s", tok->val.op->name);
             } else {
                 lhs = record->prefixOp(record, lexer, parser);
             }
         }
         break;
         default:
-            cant_happen("unexpected %s", prattTokenTypeName(tok->type));
+            can_happen("unexpected %s", prattTokenTypeName(tok->type));
     }
-    PROTECT(lhs);
+    REPLACE_PROTECT(save, lhs);
     for (;;) {
         PrattToken *op = peek(lexer);
-        PROTECT(op);
         if (op->type == PRATTTOKEN_TYPE_EOF) {
+            DEBUG("PEEKED EOF");
             break;
         } else if (op->type == PRATTTOKEN_TYPE_OP) {
+            DEBUG("PEEKED OP %s", op->val.op->name);
             PrattRecord *record = fetchRecord(parser, op->val.op);
-            if(record->postfix > 0) {
-                if (record->postfix < min_bp) {
+            if(record->postfixOp != NULL) {
+                DEBUG("postfix %d %d", record->precedence, min_bp);
+                if (record->precedence < min_bp) {
                     break;
                 }
                 next(lexer);
                 lhs = record->postfixOp(record, lexer, parser, lhs);
-                PROTECT(lhs);
-            } else if (record->left > 0) {
-                if (record->left < min_bp) {
+                REPLACE_PROTECT(save, lhs);
+            } else if (record->infixOp != NULL) {
+                DEBUG("infix %d %d", record->precedence, min_bp);
+                if (record->precedence < min_bp) {
                     break;
                 }
                 next(lexer);
                 lhs = record->infixOp(record, lexer, parser, lhs);
-                PROTECT(lhs);
+                REPLACE_PROTECT(save, lhs);
             } else {
+                DEBUG("prefix");
                 break;
             }
         } else {
-            cant_happen("syntax error!");
+            can_happen("syntax error!");
+            next(lexer);
         }
     }
+    LEAVE(expr_bp);
     UNPROTECT(save);
     return lhs;
 }
 
-static void test(char *expr) {
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser);
-    PROTECT(trie);
+static void test(PrattParser *parser, PrattTrie *trie, char *expr) {
+    eprintf("%-30s ", expr);
+    NEWLINE();
     PrattLexer *lexer = makePrattLexer(trie, expr);
-    PROTECT(lexer);
+    int save = PROTECT(lexer);
     PrattExpr *result = expr_bp(lexer, parser, 0);
+    if (lexer->size > 1) {
+        can_happen("unconsumed %u tokens", lexer->size);
+    }
     PROTECT(result);
     ppPrattExpr(result);
-    printf("\n");
+    eprintf("\n");
     UNPROTECT(save);
 }
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
+    PrattParser *p = makePrattParser();
+    PROTECT(p);
+    PrattTrie *t = makePrattTrie(p);
+    PROTECT(t);
     // test("a b c");
-    test("1");
-    test("a123");
-    test("1 + 2");
-    test("1 <=> 2 <=> 3");
-    test("1 + 2 * 3");
-    test("1 * 2 + 3");
-    test("an and andrew");
-    test("1 * 2 * 3");
-    test("1 . 2 . 3");
-    test("- 1 . - 2 . 3");
-    test("--1 * 2");
-    test("--1 * 2!");
-    test("1 * ((2 + 3))");
+    test(p, t, "1");
+    test(p, t, "a123");
+    test(p, t, "1 + 2");
+    test(p, t, "1 <=> 2 <=> 3");
+    test(p, t, "1 + 2 * 3");
+    test(p, t, "1 * 2 + 3");
+    test(p, t, "an and android");
+    test(p, t, "1 * 2 * 3");
+    test(p, t, "1 . 2 . 3");
+    test(p, t, "- 1 . - 2 . 3");
+    test(p, t, "--1 * 2");
+    test(p, t, "--1 * 2!");
+    test(p, t, "1 * ((2 + 3))");
+    test(p, t, "a -> b -> c");
+    test(p, t, "(a -> b) -> c");
+    test(p, t, "<a @ b");
+    test(p, t, "a @ b < c");
+    test(p, t, "1 then 2 then 3");
+    test(p, t, "a(b)");
+    test(p, t, "#(b)");
+    test(p, t, "#a + b");
+    test(p, t, "a + #b");
+    test(p, t, "a #b");
+    test(p, t, "a @ b @@ c @ d");
+
     // test("1 * ((2 + 3[4 + 5]))");
     // test("aa = bb = 3 ? 4 ? 5 : 6 : 7 ? 8 : 9");
     return 0;

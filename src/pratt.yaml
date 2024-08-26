@@ -38,14 +38,10 @@ structs:
 
     PrattRecord:
         token: HashSymbol
-        left: int
-        right: int
-        prefix: int
-        postfix: int
-        matchingRight: HashSymbol
         prefixOp: PrattPrefixOp
-        postfixOp: PrattPostfixOp
         infixOp: PrattPostfixOp
+        postfixOp: PrattPostfixOp
+        precedence: int
 
     PrattTrie:
         character: byte

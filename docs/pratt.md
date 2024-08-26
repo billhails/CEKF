@@ -11,14 +11,10 @@ PrattBinary --right--> PrattExpr
 PrattUnary --token--> HashSymbol
 PrattUnary --expr--> PrattExpr
 PrattRecord --token--> HashSymbol
-PrattRecord --left--> int
-PrattRecord --right--> int
-PrattRecord --prefix--> int
-PrattRecord --postfix--> int
-PrattRecord --matchingRight--> HashSymbol
 PrattRecord --prefixOp--> PrattPrefixOp
-PrattRecord --postfixOp--> PrattPostfixOp
 PrattRecord --infixOp--> PrattPostfixOp
+PrattRecord --postfixOp--> PrattPostfixOp
+PrattRecord --precedence--> int
 PrattTrie --character--> byte
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
