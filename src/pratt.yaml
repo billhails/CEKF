@@ -69,9 +69,9 @@ structs:
     # Pratt Parser table records
     PrattRecord:
         symbol: HashSymbol
-        prefixOp: PrattPrefixOp
-        infixOp: PrattPostfixOp
-        postfixOp: PrattPostfixOp
+        prefixOp: PrattOp
+        infixOp: PrattOp
+        postfixOp: PrattOp
         precedence: int
 
 enums:

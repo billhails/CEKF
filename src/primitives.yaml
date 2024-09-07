@@ -90,13 +90,8 @@ string:
     printf: "%s"
     valued: true
 
-PrattPrefixOp:
-    cname: PrattPrefixOp
-    printf: "%p"
-    valued: true
-
-PrattPostfixOp:
-    cname: PrattPostfixOp
+PrattOp:
+    cname: PrattOp
     printf: "%p"
     valued: true
 

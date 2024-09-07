@@ -34,4 +34,8 @@ static inline HashSymbol *S(char *name) { return newSymbol(name); }
 
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next);
+void consume(PrattLexer *lexer, HashSymbol *type, char *message);
+bool check(PrattLexer *lexer, HashSymbol *type);
+bool match(PrattLexer *lexer, HashSymbol *type);
+void errorAt(PrattToken *token, char *message);
 #endif

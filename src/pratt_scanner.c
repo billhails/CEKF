@@ -28,6 +28,10 @@
 #  include "debugging_off.h"
 #endif
 
+static void errorAtLexer(char *message, PrattLexer *lexer) {
+    can_happen("%s at %s line %d", message, lexer->bufList->filename->name, lexer->bufList->lineno);
+}
+
 static char *readFile(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
@@ -94,12 +98,12 @@ static PrattToken *lookupTrieSymbol(PrattLexer *lexer) {
     return res;
 }
 
-static void walkUtf8(PrattBuffer *buffer, int size) {
+static void walkUtf8(PrattBuffer *buffer, int size, HashSymbol *file, int line) {
     ++buffer->length;
     while (size > 0) {
         --size;
         if (!isTrailingByteUtf8(buffer->start[buffer->length])) {
-            cant_happen("malformed UTF8");
+            can_happen("malformed UTF8 at %s line %d", file->name, line);
         }
         ++buffer->length;
     }
@@ -111,11 +115,11 @@ static PrattToken *parseIdentifier(PrattLexer *lexer) {
         if (isalnum(buffer->start[buffer->length])) {
             ++buffer->length;
         } else if (isTwoByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(buffer, 1);
+            walkUtf8(buffer, 1, lexer->bufList->filename, lexer->bufList->lineno);
         } else if (isThreeByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(buffer, 2);
+            walkUtf8(buffer, 2, lexer->bufList->filename, lexer->bufList->lineno);
         } else if (isFourByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(buffer, 3);
+            walkUtf8(buffer, 3, lexer->bufList->filename, lexer->bufList->lineno);
         } else {
 #ifdef SAFETY_CHECKS
             if (buffer->length == 0) {
@@ -147,7 +151,7 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
                         state = PRATTNUMBERSTATE_TYPE_DEC;
                         break;
                     default:
-                        cant_happen("unrecognised char %d", buffer->start[buffer->length]);
+                        cant_happen("parseNumeric passed bad char %d", buffer->start[buffer->length]);
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_ZERO:
@@ -289,9 +293,13 @@ static PrattToken *parseString(PrattLexer *lexer) {
                         state = PRATTSTRINGSTATE_TYPE_END;
                         break;
                     case '\n':
-                        cant_happen("EOL while parsing string");
+                        errorAtLexer("EOL while parsing string", lexer);
+                        ++buffer->length;
+                        break;
                     case '\0':
-                        cant_happen("EOF while parsing string");
+                        errorAtLexer("EOF while parsing string", lexer);
+                        state = PRATTSTRINGSTATE_TYPE_END;
+                        break;
                     default:
                         ++buffer->length;
                         break;
@@ -303,8 +311,14 @@ static PrattToken *parseString(PrattLexer *lexer) {
                         ++buffer->length;
                         state = PRATTSTRINGSTATE_TYPE_UNI;
                         break;
+                    case '\n':
+                        errorAtLexer("EOL while parsing string", lexer);
+                        ++buffer->length;
+                        break;
                     case '\0':
-                        cant_happen("EOF while parsing string");
+                        errorAtLexer("EOF while parsing string", lexer);
+                        state = PRATTSTRINGSTATE_TYPE_END;
+                        break;
                     default:
                         ++buffer->length;
                         state = PRATTSTRINGSTATE_TYPE_STR;
@@ -323,9 +337,14 @@ static PrattToken *parseString(PrattLexer *lexer) {
                         state = PRATTSTRINGSTATE_TYPE_STR;
                         break;
                     case '\0':
-                        cant_happen("EOF while parsing unicode escape");
+                        errorAtLexer("EOF while parsing unicode escape", lexer);
+                        state = PRATTSTRINGSTATE_TYPE_END;
+                        break;
                     default:
-                        cant_happen("expected hex digit or ';'");
+                        errorAtLexer("expected hex digit or ';'", lexer);
+                        state = PRATTSTRINGSTATE_TYPE_END;
+                        ++buffer->length;
+                        break;
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_END:
@@ -364,11 +383,18 @@ static PrattToken *parseChar(PrattLexer *lexer) {
                 } else {
                     switch (buffer->start[buffer->length]) {
                         case '\'':
-                            cant_happen("empty char ''");
+                            errorAtLexer("empty char ''", lexer);
+                            ++buffer->length;
+                            state = PRATTCHARSTATE_TYPE_END;
+                            break;
                         case '\n':
-                            cant_happen("EOL while parsing char");
+                            errorAtLexer("EOL while parsing char", lexer);
+                            ++buffer->length;
+                            break;
                         case '\0':
-                            cant_happen("EOF while parsing char");
+                            errorAtLexer("EOF while parsing char", lexer);
+                            state = PRATTCHARSTATE_TYPE_END;
+                            break;
                         case '\\':
                             ++buffer->length;
                             state = PRATTCHARSTATE_TYPE_ESC;
@@ -521,15 +547,6 @@ PrattToken *next(PrattLexer *lexer) {
     }
 }
 
-PrattToken *peek(PrattLexer *lexer) {
-    DEBUG("peek");
-    PrattToken *token = next(lexer);
-    int save = PROTECT(token);
-    enqueueToken(lexer, token);
-    UNPROTECT(save);
-    return token;
-}
-
 static PrattTrie *makeTrie(HashSymbol *symbol, PrattTrie *siblings, unsigned char *bytes) {
     if (*bytes == 0) {
         return NULL;
@@ -586,6 +603,43 @@ static PrattBuffer *prattBufferFromString(char *string) {
 static PrattBuffer *prattBufferFromFileName(char *path) {
     char *content = readFile(path);
     return newPrattBuffer(content);
+}
+
+void errorAt(PrattToken *token, char *message) {
+    can_happen("%s at \"%s\" in %s line %d", message, token->type->name, token->filename->name, token->lineno);
+}
+
+PrattToken *peek(PrattLexer *lexer) {
+    DEBUG("peek");
+    PrattToken *token = next(lexer);
+    int save = PROTECT(token);
+    enqueueToken(lexer, token);
+    UNPROTECT(save);
+    return token;
+}
+
+bool check(PrattLexer *lexer, HashSymbol *type) {
+    PrattToken *token = peek(lexer);
+    return token->type == type;
+}
+
+bool match(PrattLexer *lexer, HashSymbol *type) {
+    PrattToken *token = next(lexer);
+    if (token->type == type) {
+        return true;
+    }
+    int save = PROTECT(token);
+    enqueueToken(lexer, token);
+    UNPROTECT(save);
+    return false;
+}
+
+void consume(PrattLexer *lexer, HashSymbol *type, char *message) {
+    PrattToken *token = next(lexer);
+    if (token->type == type) {
+        return;
+    }
+    errorAt(token, message);
 }
 
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {

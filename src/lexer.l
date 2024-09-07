@@ -3,7 +3,7 @@
 #include "module.h"
 #include "utf8.h"
 
-void parseCS(char *text, char delimeter);
+static void parseCS(char *text, char delimeter);
 %}
 
 %option nodefault
@@ -124,7 +124,7 @@ struct PmModule *mod = yyextra;
 
 %%
 
-void parseCS(char *text, char delimiter) {
+static void parseCS(char *text, char delimiter) {
     char *lead = text;
     char *follow = text;
     while (*lead != '\0') {

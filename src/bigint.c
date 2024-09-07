@@ -1437,6 +1437,9 @@ void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
         default:
             cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
     }
+    if (x->imag) {
+        fprintf(f, "i");
+    }
 }
 
 Cmp cmpBigInt(BigInt *a, BigInt *b) {

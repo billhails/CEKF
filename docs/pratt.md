@@ -28,9 +28,9 @@ PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattTable
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
-PrattRecord --prefixOp--> PrattPrefixOp
-PrattRecord --infixOp--> PrattPostfixOp
-PrattRecord --postfixOp--> PrattPostfixOp
+PrattRecord --prefixOp--> PrattOp
+PrattRecord --infixOp--> PrattOp
+PrattRecord --postfixOp--> PrattOp
 PrattRecord --precedence--> int
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
