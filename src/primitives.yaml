@@ -104,3 +104,9 @@ double:
     cname: Double
     printf: "%f"
     valued: true
+
+file:
+    cname: "FILE *"
+    printf: "%p"
+    valued: true
+

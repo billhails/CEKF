@@ -70,6 +70,7 @@ OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
 TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
 
 MAIN_DEP=dep/main.d
+PRATT_DEP=dep/pratt_test.d
 DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
@@ -79,7 +80,7 @@ EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP) $(PRATT_DEP)
 
 INCLUDE_PATHS=-I generated/ -I src/
 
@@ -156,7 +157,7 @@ $(EXTRA_OBJ): obj/%.o: generated/%.c | obj
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
+$(MAIN_DEP) $(PRATT_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(PARSER_DEP) $(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep

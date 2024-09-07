@@ -19,15 +19,19 @@
  */
 
 #include "pratt.h"
+#include "symbol.h"
 
 PrattLexer *makePrattLexer(PrattTrie *trie, char *input);
 PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
 
-static inline PrattToken *next(PrattLexer *lexer) {
-    return popPrattLexer(lexer);
-}
-static inline PrattToken *peek(PrattLexer *lexer) {
-    return peekPrattLexer(lexer);
-}
+PrattToken *next(PrattLexer *lexer);
 
+PrattToken *peek(PrattLexer *lexer);
+
+static inline ParserInfo TOKPI(PrattToken *token) { return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name }; }
+
+static inline HashSymbol *S(char *name) { return newSymbol(name); }
+
+PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
+PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next);
 #endif

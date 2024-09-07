@@ -110,4 +110,5 @@ void collectGarbage();
 #  define MARK(obj) (((Header *)(obj))->keep = true)
 #  define MARKED(obj) (((Header *)(obj))->keep == true)
 
+#define safeMalloc(size) reallocate(NULL, 0, size)
 #endif

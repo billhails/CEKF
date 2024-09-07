@@ -53,6 +53,23 @@ HashSymbol *newSymbol(char *name) {
     return res;
 }
 
+HashSymbol *newSymbolLength(char *name, int length) {
+    if (length < 80) {
+        static char buf[80];
+        memcpy(buf, name, length);
+        buf[length] = '\0';
+        HashSymbol *res = newSymbol(buf);
+        return res;
+    } else {
+        char *buf = (char *) safeMalloc(length + 1);
+        memcpy(buf, name, length);
+        buf[length] = '\0';
+        HashSymbol *res = newSymbol(buf);
+        reallocate(buf, length + 1, 0);
+        return res;
+    }
+}
+
 HashSymbol *newSymbolCounter(char *baseName) {
     initGenSymTable();
     HashSymbol *base = newSymbol(baseName);

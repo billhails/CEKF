@@ -109,8 +109,10 @@ const char *typeName(ObjType type, void *p) {
 
 char *safeStrdup(char *s) {
     char *t = strdup(s);
-    if (t == NULL)
+    if (t == NULL) {
+        perror("out of memory");
         exit(1);
+    }
     return t;
 }
 
@@ -227,8 +229,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     eprintf("reallocate ptr %p => ", pointer);
 #endif
     void *result = realloc(pointer, newSize);
-    if (result == NULL)
+    if (result == NULL) {
+        perror("out of memory");
         exit(1);
+    }
 #ifdef DEBUG_LOG_GC
     eprintf("%p\n", result);
 #endif

@@ -25,49 +25,85 @@ config:
     - ast_helper.h
     - pratt_functions.h
 
-
 structs:
-    PrattBinary:
-        token: HashSymbol
-        left: PrattExpr
-        right: PrattExpr
-
-    PrattUnary:
-        token: HashSymbol
-        expr: PrattExpr
-
-    PrattRecord:
-        token: HashSymbol
-        prefixOp: PrattPrefixOp
-        infixOp: PrattPostfixOp
-        postfixOp: PrattPostfixOp
-        precedence: int
-
+    # Scanner token parsing
     PrattTrie:
         character: byte
         terminal: HashSymbol
         siblings: PrattTrie
         children: PrattTrie
 
-unions:
-    PrattExpr:
-        unary: PrattUnary
-        binary: PrattBinary
-        number: int
-        atom: HashSymbol
+    # Both a parse buffer and a parse token data type (like yytext)
+    PrattBuffer:
+        data: string
+        start: string=NULL
+        length: int=0
 
+    # Stack of buffers parsed in order
+    PrattBufList:
+        lineno: int
+        filename: HashSymbol
+        buffer: PrattBuffer
+        next: PrattBufList
+
+    # Token after parsing
     PrattToken:
-        op: HashSymbol
-        atom: HashSymbol
-        number: int
-        eof: void_ptr
+        type: HashSymbol
+        filename: HashSymbol
+        lineno: int
+        value: PrattBuffer
+        next: PrattToken
 
-arrays:
+    # current state of the scanner
     PrattLexer:
-        entries: PrattToken
+        bufList: PrattBufList
+        trie: PrattTrie
+        tokenHead: PrattToken=NULL
+        tokenTail: PrattToken=NULL
+
+    # Scoped Parser
+    PrattParser:
+        rules: PrattTable
+        next: PrattParser
+
+    # Pratt Parser table records
+    PrattRecord:
+        symbol: HashSymbol
+        prefixOp: PrattPrefixOp
+        infixOp: PrattPostfixOp
+        postfixOp: PrattPostfixOp
+        precedence: int
+
+enums:
+    PrattNumberState:
+        - START
+        - ZERO
+        - HEX
+        - DEC
+        - FLOAT
+        - END
+
+    PrattStringState:
+        - START
+        - STR
+        - ESC
+        - UNI
+        - END
+
+    PrattCharState:
+        - START
+        - CHR
+        - ESC
+        - UNI
+        - CHR1
+        - CHR2
+        - CHR3
+        - CHR4
+        - END
 
 hashes:
-    PrattParser:
+    # Pratt parser table
+    PrattTable:
         entries: PrattRecord
 
 primitives: !include primitives.yaml
