@@ -51,7 +51,7 @@ structs:
         type: HashSymbol
         filename: HashSymbol
         lineno: int
-        value: PrattBuffer
+        value: PrattValue
         next: PrattToken
 
     # current state of the scanner
@@ -64,6 +64,8 @@ structs:
     # Scoped Parser
     PrattParser:
         rules: PrattTable
+        namespaces: PrattIntTable
+        lexer: PrattLexer
         next: PrattParser
 
     # Pratt Parser table records
@@ -88,23 +90,31 @@ enums:
         - STR
         - ESC
         - UNI
-        - END
-
-    PrattCharState:
-        - START
-        - CHR
-        - ESC
-        - UNI
         - CHR1
         - CHR2
         - CHR3
         - CHR4
         - END
 
+unions:
+    PrattValue:
+        string: PrattString
+        number: MaybeBigInt
+        character: PrattString
+        atom: HashSymbol
+        
 hashes:
     # Pratt parser table
     PrattTable:
         entries: PrattRecord
+
+    # namespace ids
+    PrattIntTable:
+        entries: int
+
+arrays:
+    PrattString:
+        entries: schar
 
 primitives: !include primitives.yaml
 

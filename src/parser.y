@@ -412,7 +412,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <definition> definition
 %type <definitions> let_in definitions namespace_definitions
 %type <expression> expression assertion fnerror
-%type <expressions> expressions expression_statements tuple
+%type <expressions> expressions statements tuple
 %type <userType> user_type
 %type <funCall> fun_call binop conslist unop switch string
 %type <namedArg> named_farg
@@ -499,9 +499,9 @@ top : %empty     { $$ = NULL; }
     | nest_body  { mod->nest = $$; }
     ;
 
-nest_body : let_in expression_statements { $$ = newAstNest(PIM(mod), $1, $2); }
-          | expression_statements        { $$ = newAstNest(PIM(mod), NULL, $1); }
-          | namespace_definitions        { $$ = newAstNest(PIM(mod), $1, NULL); }
+nest_body : let_in statements       { $$ = newAstNest(PIM(mod), $1, $2); }
+          | statements              { $$ = newAstNest(PIM(mod), NULL, $1); }
+          | namespace_definitions   { $$ = newAstNest(PIM(mod), $1, NULL); }
           ;
 
 /******************************** definitions */
@@ -546,6 +546,7 @@ name_space : LINK STRING AS symbol { $$ = parseLink($2, $4, mod); }
            ;
 
 alias : ALIAS symbol '=' type ';' { $$ = newAstAlias(PIM(mod), $2, $4); }
+      ;
 
 /******************************** types */
 
@@ -553,16 +554,16 @@ typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef(PIM(mod), $
         ;
 
 /* a type function being defined */
-user_type : symbol                      { $$ = newAstUserType(PIM(mod), $1, NULL); }
+user_type : symbol                        { $$ = newAstUserType(PIM(mod), $1, NULL); }
           | symbol '(' type_variables ')' { $$ = newAstUserType(PIM(mod), $1, $3); }
           ;
 
-type_variables : type_variable                  { $$ = newAstTypeSymbols(PIM(mod), $1, NULL); }
-             | type_variable ',' type_variables { $$ = newAstTypeSymbols(PIM(mod), $1, $3); }
-             ;
+type_variables : type_variable                    { $$ = newAstTypeSymbols(PIM(mod), $1, NULL); }
+               | type_variable ',' type_variables { $$ = newAstTypeSymbols(PIM(mod), $1, $3); }
+               ;
 
 type_variable : TYPE_VAR  { $$ = newSymbol($1); }
-            ;
+              ;
 
 type_body : type_constructor                { $$ = newAstTypeBody(PIM(mod), $1, NULL); }
           | type_constructor '|' type_body  { $$ = newAstTypeBody(PIM(mod), $1, $3); }
@@ -844,9 +845,9 @@ conslist : %empty                   {
                                     }
          ;
 
-expression_statements : expression optional_semicolon           { $$ = newAstExpressions(PIM(mod), $1, NULL); }
-                      | expression ';' expression_statements    { $$ = newAstExpressions(PIM(mod), $1, $3); }
-                      ;
+statements : expression optional_semicolon     { $$ = newAstExpressions(PIM(mod), $1, NULL); }
+           | expression ';' statements         { $$ = newAstExpressions(PIM(mod), $1, $3); }
+           ;
 
 optional_semicolon : %empty
                    | ';'

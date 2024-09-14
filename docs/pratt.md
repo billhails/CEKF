@@ -26,6 +26,7 @@ PrattLexer --trie--> PrattTrie
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattTable
+PrattParser --lexer--> PrattLexer
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefixOp--> PrattOp

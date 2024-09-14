@@ -71,6 +71,11 @@ char:
     printf: "%c"
     valued: true
 
+schar:
+    cname: char
+    printf: "%c"
+    valued: true
+
 BigInt:
     cname: "struct BigInt *"
     printFn: "printBigInt"
