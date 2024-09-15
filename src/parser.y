@@ -426,7 +426,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <typeDef> typedef
 %type <typeList> type_list type_tuple
 %type <typeSymbols> type_variables
-%type <type> type
+%type <type> type_type
 %type <unpack> unpack cons consfargs stringarg
 %type <unpackStruct> unpack_struct
 %type <iff> iff
@@ -545,7 +545,7 @@ defun : unsafe_fn symbol fun {
 name_space : LINK STRING AS symbol { $$ = parseLink($2, $4, mod); }
            ;
 
-alias : ALIAS symbol '=' type ';' { $$ = newAstAlias(PIM(mod), $2, $4); }
+alias : ALIAS symbol '=' type_type ';' { $$ = newAstAlias(PIM(mod), $2, $4); }
       ;
 
 /******************************** types */
@@ -587,25 +587,25 @@ scoped_symbol : symbol              { $$ = newAstLookupOrSymbol_Symbol(PIM(mod),
               | symbol '.' symbol   { $$ = makeAstLookupOrSymbol(mod, $1, $3); }
               ;
 
-type_list : type                { $$ = newAstTypeList(PIM(mod), $1, NULL); }
-          | type ',' type_list  { $$ = newAstTypeList(PIM(mod), $1, $3); }
+type_list : type_type                { $$ = newAstTypeList(PIM(mod), $1, NULL); }
+          | type_type ',' type_list  { $$ = newAstTypeList(PIM(mod), $1, $3); }
           ;
 
-type_map : symbol ':' type              { $$ = newAstTypeMap(PIM(mod), $1, $3, NULL); }
-         | symbol ':' type ',' type_map { $$ = newAstTypeMap(PIM(mod), $1, $3, $5); }
+type_map : symbol ':' type_type              { $$ = newAstTypeMap(PIM(mod), $1, $3, NULL); }
+         | symbol ':' type_type ',' type_map { $$ = newAstTypeMap(PIM(mod), $1, $3, $5); }
          ;
 
-type : type_clause              { $$ = newAstType(PIM(mod), $1, NULL); }
-     | type_clause ARROW type   { $$ = newAstType(PIM(mod), $1, $3); }
-     | '(' type ')'             { $$ = $2; }
-     ;
+type_type : type_clause                   { $$ = newAstType(PIM(mod), $1, NULL); }
+          | type_clause ARROW type_type   { $$ = newAstType(PIM(mod), $1, $3); }
+          | '(' type_type ')'             { $$ = $2; }
+          ;
 
 type_tuple : '#' '(' type_list ')' { $$ = $3; }
            ;
 
 type_clause : KW_NUM                { $$ = newAstTypeClause_Integer(PIM(mod)); }
             | KW_CHAR               { $$ = newAstTypeClause_Character(PIM(mod)); }
-            | type_variable           { $$ = newAstTypeClause_Var(PIM(mod), $1); }
+            | type_variable         { $$ = newAstTypeClause_Var(PIM(mod), $1); }
             | type_function         { $$ = newAstTypeClause_TypeFunction(PIM(mod), $1); }
             | type_tuple            { $$ = newAstTypeClause_TypeTuple(PIM(mod), $1); }
             ;

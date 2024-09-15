@@ -29,6 +29,18 @@
 #  include "debugging_off.h"
 #endif
 
+HashSymbol *TOK_KW_NUMBER(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("number");
+    return s;
+}
+
+HashSymbol *TOK_KW_CHAR(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("char");
+    return s;
+}
+
 HashSymbol *TOK_PIPE(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("|");
@@ -67,7 +79,7 @@ HashSymbol *TOK_FLOAT(void) {
 
 HashSymbol *TOK_EOF(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("FLOAT");
+    if (s == NULL) s = S("EOF");
     return s;
 }
 
