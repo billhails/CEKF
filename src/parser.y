@@ -669,12 +669,11 @@ fargs : %empty            { $$ = NULL; }
 
 consfargs : farg                {
                                     $$ = makeAstUnpack(mod,
-                                        consSymbol(),
-                                        newAstArgList(PIM(mod),
-                                        $1,
-                                        newAstArgList(PIM(mod),
-                                        newAstArg_Symbol(PIM(mod),
-                                            nilSymbol()),
+                                          consSymbol(),
+                                          newAstArgList(PIM(mod),
+                                            $1,
+                                            newAstArgList(PIM(mod),
+                                              newAstArg_Symbol(PIM(mod), nilSymbol()),
                                             NULL)));
                                 }
           | farg ',' consfargs  {

@@ -75,8 +75,9 @@ static AstTypeSymbols *type_variables(PrattParser *);
 static AstTypeBody *type_body(PrattParser *);
 static AstCompositeFunction *fun(PrattParser *);
 static AstCompositeFunction *functions(PrattParser *);
-static PrattString *string(PrattParser *);
-static AstNamespace *parseLink(PrattParser *, char *, HashSymbol *);
+static PrattUTF8 *rawString(PrattParser *);
+static PrattUTF8 *str(PrattParser *);
+static AstNamespace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
 static void storeNamespace(PrattParser *, AstNamespace *);
 static AstType *type_type(PrattParser *);
 static AstTypeClause *type_clause(PrattParser *);
@@ -94,6 +95,10 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *);
 static AstArgList *fargs(PrattParser *);
 static AstArg *farg(PrattParser *);
 static AstTaggedArgList *tagged_fargs(PrattParser *);
+static AstTaggedArgList *tagged_farg(PrattParser *);
+static AstUnpack *consfargs(PrattParser *);
+static AstUnpack *stringarg(PrattParser *);
+static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
 
 static void addRecord(PrattTable *table, HashSymbol *tok, PrattOp prefix, PrattOp infix, PrattOp postfix, int precedence) {
     PrattRecord *record = newPrattRecord(tok, prefix, infix, postfix, precedence);
@@ -192,6 +197,48 @@ static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions,
     return rest;
 }
 
+static AstUnpack *makeAstUnpack(ParserInfo I, HashSymbol *symbol, AstArgList *args) {
+    AstLookupOrSymbol *los = newAstLookupOrSymbol_Symbol(I, symbol);
+    int save = PROTECT(los);
+    AstUnpack *res = newAstUnpack(I, los, args);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstUnpack *makeStringUnpack(ParserInfo I, PrattUTF8 *str) {
+    PrattUnicode *unicode = PrattUTF8ToUnicode(str);
+    int save = PROTECT(unicode);
+    AstUnpack *res = makeAstUnpack(I, nilSymbol(), NULL);
+    PROTECT(res);
+    for (int size = unicode->size; size > 0; size--) {
+        AstArg *arg = newAstArg_Unpack(I, res);
+        PROTECT(arg);
+        AstArgList *args = newAstArgList(I, arg, NULL);
+        PROTECT(args);
+        AstArg *chr = newAstArg_Character(I, unicode->entries[size - 1]);
+        PROTECT(chr);
+        args = newAstArgList(I, chr, args);
+        PROTECT(args);
+        res = makeAstUnpack(I, consSymbol(), args);
+        UNPROTECT(save);
+        PROTECT(res);
+    }
+    return res;
+}
+
+static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *utf8) {
+    PrattUnicode *uni = newPrattUnicode();
+    int save = PROTECT(uni);
+    unsigned char *entry = utf8->entries;
+    while (*entry != 0) {
+        Character c;
+        entry = utf8_to_unicode_char(&c, entry);
+        pushPrattUnicode(uni, c);
+    }
+    UNPROTECT(save);
+    return uni;
+}
+
 static AgnosticFileId *tryFile(char *prefix, char *file) {
     char *buf = malloc(sizeof(char) * (strlen(prefix) + 1 + strlen(file) + 10));
     if (buf == NULL) {
@@ -225,22 +272,22 @@ static char *currentPrattFile(PrattParser *parser) {
     return parser->lexer->bufList->filename->name;
 }
 
-static AgnosticFileId *calculatePath(char *file, PrattParser *parser) {
+static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser) {
     if (*file == '/') {
-        return makeAgnosticFileId(file);
+        return makeAgnosticFileId((char *)file);
     }
     char *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {
-        return searchForFile(".", file);
+        return searchForFile(".", (char *)file);
     }
     currentFile = strdup(currentFile);
     char *slash = strrchr(currentFile, '/');
     if (slash == NULL) {
         free(currentFile);
-        return searchForFile(".", file);
+        return searchForFile(".", (char *)file);
     }
     *slash = '\0';
-    AgnosticFileId *result = searchForFile(currentFile, file);
+    AgnosticFileId *result = searchForFile(currentFile, (char *)file);
     free(currentFile);
     return result;
 }
@@ -293,7 +340,7 @@ static void storeNamespace(PrattParser *parser, AstNamespace *ns) {
 // in the order that they need to be processed.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
-static AstNamespace *parseLink(PrattParser *parser, char *file, HashSymbol *symbol) {
+static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSymbol *symbol) {
     static AstFileIdArray *fileIdStack = NULL;
 
     if (fileIdStack == NULL) {
@@ -718,18 +765,21 @@ static AstArgList *fargs(PrattParser *parser) {
     return this;
 }
 
-static AstLookupSymbol *makeAstLookupSymbol(ParserInfo I, PrattParser *parser, HashSymbol *nsName, HashSymbol *symbol) {
-    int index = 0;
-    if (getPrattIntTable(parser->namespaces, nsName, &index)) {
-        return newAstLookupSymbol(I, index, nsName, symbol);
-    } else {
-        cant_happen("cannot resolve namespace %s", symbol->name);
+static Character tokenToUnicodeChar(PrattToken *token) {
+#ifdef SAFETY_CHECKS
+    if (token->value->type != PRATTVALUE_TYPE_CHARACTER) {
+        cant_happen("unexpected %s", prattValueTypeName(token->value->type));
     }
+#endif
+    Character c;
+    utf8_to_unicode_char(&c, (unsigned char *) token->value->val.character->entries);
+    return c;
 }
 
 static AstArg *farg(PrattParser *parser) {
     AstArg *res = NULL;
-    int save = PROTECT(res);
+    PrattToken *first = peek(parser->lexer); // for ParserInfo
+    int save = PROTECT(first);
     if (check(parser->lexer, TOK_ATOM())) {
         AstLookupOrSymbol *los = scoped_symbol(parser);
         save = PROTECT(los);
@@ -771,8 +821,108 @@ static AstArg *farg(PrattParser *parser) {
             PROTECT(res);
         }
     } else if (match(parser->lexer, TOK_LSQUARE())) {
+        if (match(parser->lexer, TOK_RSQUARE())) {
+            res = newAstArg_Symbol(TOKPI(first), nilSymbol());
+            PROTECT(res);
+        } else {
+            AstUnpack *args = consfargs(parser);
+            PROTECT(args);
+            consume(parser->lexer, TOK_RSQUARE());
+            res = newAstArg_Unpack(CPI(args), args);
+            PROTECT(res);
+        }
+    } else if (check(parser->lexer, TOK_STRING())) {
+        AstUnpack *str = stringarg(parser);
+        PROTECT(str);
+        res = newAstArg_Unpack(CPI(str), str);
+        PROTECT(res);
+    } else if (match(parser->lexer, TOK_CHAR())) {
+        Character c = tokenToUnicodeChar(first);
+        res = newAstArg_Character(TOKPI(first), c);
+        PROTECT(res);
+    } else if (match(parser->lexer, TOK_WILDCARD())) {
+        res = newAstArg_Wildcard(TOKPI(first));
+        PROTECT(res);
+    } else if (match(parser->lexer, TOK_TUPLE())) {
+        AstArgList *args = fargs(parser);
+        PROTECT(args);
+        consume(parser->lexer, TOK_CLOSE());
+        res = newAstArg_Tuple(TOKPI(first), args);
+        PROTECT(res);
+    } else {
+        parserError(parser, "unexpected %s", first->type->name);
+        next(parser->lexer);
+        res = newAstArg_Symbol(TOKPI(first), TOK_ERROR());
+        PROTECT(res);
+    }
+    if (match(parser->lexer, TOK_CONS())) {
+        AstArg *cdr = farg(parser);
+        PROTECT(cdr);
+        AstArgList *cdrs = newAstArgList(CPI(cdr), cdr, NULL);
+        PROTECT(cdrs);
+        AstArgList *pair = newAstArgList(CPI(res), res, cdrs);
+        PROTECT(pair);
+        AstUnpack *cons = makeAstUnpack(CPI(pair), consSymbol(), pair);
+        PROTECT(cons);
+        res = newAstArg_Unpack(CPI(cons), cons);
+        PROTECT(res);
     }
     UNPROTECT(save);
+    return res;
+}
+
+static AstTaggedArgList *tagged_farg(PrattParser *parser) {
+    PrattToken *first = peek(parser->lexer);
+    int save = PROTECT(first);
+    HashSymbol *s = symbol(parser);
+    consume(parser->lexer, TOK_COLON());
+    AstArg *arg = farg(parser);
+    PROTECT(arg);
+    AstTaggedArgList *this = newAstTaggedArgList(TOKPI(first), s, arg, NULL);
+    UNPROTECT(save);
+    return this;
+}
+
+static AstTaggedArgList *tagged_fargs(PrattParser *parser) {
+    AstTaggedArgList *this = tagged_farg(parser);
+    int save = PROTECT(this);
+    if (match(parser->lexer, TOK_COMMA())) {
+        this->next = tagged_fargs(parser);
+    }
+    UNPROTECT(save);
+    return this;
+}
+
+static AstUnpack *consfargs(PrattParser *parser) {
+    AstArg *car = farg(parser);
+    int save = PROTECT(car);
+    AstArg *cdr = NULL;
+    if (match(parser->lexer, TOK_COMMA())) {
+        AstUnpack *rest = consfargs(parser);
+        PROTECT(rest);
+        cdr = newAstArg_Unpack(CPI(rest), rest);
+        PROTECT(cdr);
+    } else {
+        cdr = newAstArg_Symbol(CPI(car), nilSymbol());
+        PROTECT(cdr);
+    }
+    AstArgList *cdrArgs = newAstArgList(CPI(cdr), cdr, NULL);
+    PROTECT(cdrArgs);
+    AstArgList *consArgs = newAstArgList(CPI(car), car, cdrArgs);
+    PROTECT(consArgs);
+    AstUnpack *res = makeAstUnpack(CPI(consArgs), consSymbol(), consArgs);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstUnpack *stringarg(PrattParser *parser) {
+    PrattToken *tok = peek(parser->lexer);
+    int save = PROTECT(tok);
+    PrattUTF8 *s = str(parser);
+    PROTECT(s);
+    AstUnpack *u = makeStringUnpack(TOKPI(tok), s);
+    UNPROTECT(save);
+    return u;
 }
 
 static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
@@ -915,7 +1065,7 @@ static AstDefinition *link(PrattParser *parser) {
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     consume(parser->lexer, TOK_LINK());
-    PrattString *path = string(parser);
+    PrattUTF8 *path = rawString(parser);
     PROTECT(path);
     if (path == NULL) {
         AstDefinition *res = newAstDefinition_Blank(TOKPI(tok));
@@ -934,7 +1084,7 @@ static AstDefinition *link(PrattParser *parser) {
     }
 }
 
-static PrattString *string(PrattParser *parser) {
+static PrattUTF8 *rawString(PrattParser *parser) {
     PrattToken *tok = next(parser->lexer);
     if (tok->type == TOK_STRING()) {
 #ifdef SAFETY_CHECKS
@@ -945,8 +1095,35 @@ static PrattString *string(PrattParser *parser) {
         return tok->value->val.string;
     } else {
         parserError(parser, "expected string, got %s", tok->type->name);
-        return NULL;
+        PrattUTF8 *error = newPrattUTF8();
+        int save = PROTECT(error);
+        pushPrattUTF8(error, 0);
+        UNPROTECT(save);
+        return error;
     }
+}
+
+static void appendString(PrattParser *parser, PrattUTF8 *this) {
+    PrattUTF8 *next = rawString(parser);
+    int save = PROTECT(next);
+    this->size--; // backup over '\0'
+    for (Index i = 0; i < next->size; i++) {
+        pushPrattUTF8(this, next->entries[i]);
+    }
+    UNPROTECT(save);
+    if (check(parser->lexer, TOK_STRING())) {
+        appendString(parser, this);
+    }
+}
+
+static PrattUTF8 *str(PrattParser *parser) {
+    PrattUTF8 *this = rawString(parser);
+    int save = PROTECT(this);
+    if (check(parser->lexer, TOK_STRING())) {
+        appendString(parser, this);
+    }
+    UNPROTECT(save);
+    return this;
 }
 
 static AstCompositeFunction *fun(PrattParser *parser) {
@@ -1193,13 +1370,13 @@ static void test(PrattParser *parser, PrattTrie *trie, char *expr) {
     eprintf("%-30s ", expr);
     NEWLINE();
     parser->lexer = makePrattLexer(trie, "test", expr);
-    AstExpression *result = expr_bp(parser, 0);
+    AstNest *result = top(parser);
     int save = PROTECT(result);
     if (parser->lexer->bufList != NULL) {
         PrattToken *tok = next(parser->lexer);
         errorAt(tok, "unconsumed tokens");
     }
-    ppAstExpression(result);
+    ppAstNest(result);
     eprintf("\n");
     UNPROTECT(save);
 }

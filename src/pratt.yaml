@@ -98,9 +98,9 @@ enums:
 
 unions:
     PrattValue:
-        string: PrattString
+        string: PrattUTF8
         number: MaybeBigInt
-        character: PrattString
+        character: PrattUTF8
         atom: HashSymbol
         
 hashes:
@@ -113,8 +113,11 @@ hashes:
         entries: int
 
 arrays:
-    PrattString:
-        entries: schar
+    PrattUTF8:
+        entries: uchar
+
+    PrattUnicode:
+        entries: char
 
 primitives: !include primitives.yaml
 

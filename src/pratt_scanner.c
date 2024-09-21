@@ -461,7 +461,7 @@ static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
     return newSymbolLength(buffer->start, buffer->length);
 }
 
-static PrattToken *tokenFromString(PrattBufList *bufList, PrattString *string, HashSymbol *tokenType) {
+static PrattToken *tokenFromString(PrattBufList *bufList, PrattUTF8 *string, HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_String(string);
     int save = PROTECT(value);
     PrattToken *token = newPrattToken(tokenType, bufList->filename, bufList->lineno, value, NULL);
@@ -782,7 +782,7 @@ static PrattToken *tokenEOF() {
 
 static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
     PrattBuffer *buffer = lexer->bufList->buffer;
-    PrattString *string = newPrattString();
+    PrattUTF8 *string = newPrattUTF8();
     int save = PROTECT(string);
     PrattStringState state = PRATTSTRINGSTATE_TYPE_START;
     Character uni = 0;
@@ -799,15 +799,15 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 break;
             case PRATTSTRINGSTATE_TYPE_STR:
                 if (isTwoByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_CHR2;
                 } else if (isThreeByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_CHR3;
                 } else if (isFourByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_CHR4;
                 } else if (isTrailingByteUtf8(buffer->start[buffer->length])) {
@@ -835,7 +835,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                             state = PRATTSTRINGSTATE_TYPE_END;
                             break;
                         default:
-                            pushPrattString(string, buffer->start[buffer->length]);
+                            pushPrattUTF8(string, buffer->start[buffer->length]);
                             ++buffer->length;
                             break;
                     }
@@ -843,7 +843,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR4:
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_CHR3;
                 } else {
@@ -854,7 +854,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR3:
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_CHR2;
                 } else {
@@ -865,7 +865,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR2:
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattString(string, buffer->start[buffer->length]);
+                    pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
                     state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
                 } else {
@@ -924,11 +924,11 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                             errorAtLexer("Empty Unicode escape while parsing string", lexer);
                         } else {
                             int size = byteSize(uni);
-                            char *writePoint = &string->entries[string->size];
+                            unsigned char *writePoint = &string->entries[string->size];
                             while (size-- > 0) {
-                                pushPrattString(string, '\0'); // ensure capacity
+                                pushPrattUTF8(string, '\0'); // ensure capacity
                             }
-                            writeChar((unsigned char *)writePoint, uni);
+                            writeChar(writePoint, uni);
                         }
                         state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
                         break;
@@ -955,8 +955,8 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 cant_happen("end state in loop");
         }
     }
-    pushPrattString(string, '\0');
-    PrattToken *token = tokenFromString(lexer->bufList, string, TOK_STRING());
+    pushPrattUTF8(string, '\0');
+    PrattToken *token = tokenFromString(lexer->bufList, string, single ? TOK_CHAR() : TOK_STRING());
     advance(buffer);
     UNPROTECT(save);
     return token;
