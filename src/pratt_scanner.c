@@ -47,6 +47,12 @@ HashSymbol *TOK_PIPE(void) {
     return s;
 }
 
+HashSymbol *TOK_WILDCARD(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("_");
+    return s;
+}
+
 HashSymbol *TOK_LCURLY(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("{");
@@ -56,6 +62,18 @@ HashSymbol *TOK_LCURLY(void) {
 HashSymbol *TOK_RCURLY(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("}");
+    return s;
+}
+
+HashSymbol *TOK_LSQUARE(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("[");
+    return s;
+}
+
+HashSymbol *TOK_RSQUARE(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("]");
     return s;
 }
 

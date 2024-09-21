@@ -90,9 +90,10 @@ static AstTypeList *type_tuple(PrattParser *);
 static AstAltArgs *alt_args(PrattParser *);
 static AstNest *nest(PrattParser *);
 static AstNest *nest_body(PrattParser *, HashSymbol *);
-static AstLookupOrSymbol *scoped_symbol(PrattParser *parser);
+static AstLookupOrSymbol *scoped_symbol(PrattParser *);
 static AstArgList *fargs(PrattParser *);
 static AstArg *farg(PrattParser *);
+static AstTaggedArgList *tagged_fargs(PrattParser *);
 
 static void addRecord(PrattTable *table, HashSymbol *tok, PrattOp prefix, PrattOp infix, PrattOp postfix, int precedence) {
     PrattRecord *record = newPrattRecord(tok, prefix, infix, postfix, precedence);
@@ -122,10 +123,13 @@ static PrattParser *makePrattParser() {
     addRecord(table, TOK_TUPLE(),     tuple,    NULL,       NULL,       0);
     addRecord(table, TOK_OPEN(),      grouping, NULL,       postfixArg, 0);
     addRecord(table, TOK_CLOSE(),     NULL,     NULL,       NULL,       0);
+    addRecord(table, TOK_LSQUARE(),   NULL,     NULL,       NULL,       0);
+    addRecord(table, TOK_RSQUARE(),   NULL,     NULL,       NULL,       0);
     addRecord(table, TOK_COMMA(),     NULL,     NULL,       NULL,       0);
     addRecord(table, TOK_LCURLY(),    NULL,     NULL,       NULL,       0);
     addRecord(table, TOK_RCURLY(),    NULL,     NULL,       NULL,       0);
     addRecord(table, TOK_PIPE(),      NULL,     NULL,       NULL,       0);
+    addRecord(table, TOK_WILDCARD(),  NULL,     NULL,       NULL,       0);
 
     addRecord(table, TOK_ARROW(),     NULL,     infixRight, NULL,      10);
 
@@ -714,7 +718,61 @@ static AstArgList *fargs(PrattParser *parser) {
     return this;
 }
 
+static AstLookupSymbol *makeAstLookupSymbol(ParserInfo I, PrattParser *parser, HashSymbol *nsName, HashSymbol *symbol) {
+    int index = 0;
+    if (getPrattIntTable(parser->namespaces, nsName, &index)) {
+        return newAstLookupSymbol(I, index, nsName, symbol);
+    } else {
+        cant_happen("cannot resolve namespace %s", symbol->name);
+    }
+}
+
 static AstArg *farg(PrattParser *parser) {
+    AstArg *res = NULL;
+    int save = PROTECT(res);
+    if (check(parser->lexer, TOK_ATOM())) {
+        AstLookupOrSymbol *los = scoped_symbol(parser);
+        save = PROTECT(los);
+        if (match(parser->lexer, TOK_OPEN())) {
+            AstArgList *args = fargs(parser);
+            PROTECT(args);
+            consume(parser->lexer, TOK_CLOSE());
+            AstUnpack *unp = newAstUnpack(CPI(los), los, args);
+            PROTECT(unp);
+            res = newAstArg_Unpack(CPI(unp), unp);
+            PROTECT(res);
+        } else if (match(parser->lexer, TOK_LCURLY())) {
+            AstTaggedArgList *tfargs = tagged_fargs(parser);
+            PROTECT(tfargs);
+            consume(parser->lexer, TOK_RCURLY());
+            AstUnpackStruct *unp = newAstUnpackStruct(CPI(los), los, tfargs);
+            PROTECT(unp);
+            res = newAstArg_UnpackStruct(CPI(unp), unp);
+            PROTECT(res);
+        } else if (match(parser->lexer, TOK_ASSIGN())) {
+            if (los->type == AST_LOOKUPORSYMBOL_TYPE_LOOKUP) {
+                parserError(parser, "unexpected '='");
+                res = newAstArg_Symbol(CPI(los), TOK_ERROR());
+                PROTECT(res);
+            } else {
+                AstArg *arg = farg(parser);
+                PROTECT(arg);
+                AstNamedArg *narg = newAstNamedArg(CPI(los), los->val.symbol, arg);
+                PROTECT(narg); 
+                res = newAstArg_Named(CPI(narg), narg);
+                PROTECT(res);
+            }
+        } else {
+            if (los->type == AST_LOOKUPORSYMBOL_TYPE_SYMBOL) {
+                res = newAstArg_Symbol(CPI(los), los->val.symbol);
+            } else {
+                res = newAstArg_Lookup(CPI(los), los->val.lookup);
+            }
+            PROTECT(res);
+        }
+    } else if (match(parser->lexer, TOK_LSQUARE())) {
+    }
+    UNPROTECT(save);
 }
 
 static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
