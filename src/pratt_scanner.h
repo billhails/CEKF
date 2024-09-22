@@ -40,6 +40,8 @@ bool check(PrattLexer *lexer, HashSymbol *type);
 bool match(PrattLexer *lexer, HashSymbol *type);
 void errorAt(PrattToken *token, char *message);
 
+HashSymbol *TOK_IF(void);
+HashSymbol *TOK_ELSE(void);
 HashSymbol *TOK_WILDCARD(void);
 HashSymbol *TOK_KW_NUMBER(void);
 HashSymbol *TOK_KW_CHAR(void);

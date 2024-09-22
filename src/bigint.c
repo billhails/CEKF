@@ -1442,6 +1442,54 @@ void fprintMaybeBigInt(FILE *f, MaybeBigInt *x) {
     }
 }
 
+void sprintMaybeBigInt(char *s, MaybeBigInt *x) {
+    if (x == NULL) {
+        *s = '\0';
+    } else {
+        int size;
+        switch (x->type) {
+            case BI_SMALL:
+                size = sprintf(s, "%d", x->small);
+                break;
+            case BI_BIG: {
+                    size = bigint_write_size(&x->big, 10);
+                    bigint_write(s, size, &x->big);
+                }
+                break;
+            case BI_IRRATIONAL:
+                size = sprintf(s, "%f", x->irrational);
+                break;
+            default:
+                cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+        }
+        if (x->imag) {
+            sprintf(&s[size-1], "i");
+        }
+    }
+}
+
+size_t printSizeMaybeBigInt(MaybeBigInt *x) {
+    if (x == NULL) return 1;
+    size_t size;
+    switch (x->type) {
+        case BI_SMALL:
+            size = snprintf(NULL, 0, "%d", x->small) + 1;
+            break;
+        case BI_BIG:
+            size = bigint_write_size(&x->big, 10) - (x->big.neg ? 0 : 1);
+            break;
+        case BI_IRRATIONAL:
+            size = snprintf(NULL, 0, "%f", x->irrational) + 1;
+            break;
+        default:
+            cant_happen("unrecognized type of MaybeBigInt: %d", x->type);
+    }
+    if (x->imag) {
+        size += 1;
+    }
+    return size;
+}
+
 Cmp cmpBigInt(BigInt *a, BigInt *b) {
     return (Cmp) bigint_cmp(&a->bi, &b->bi);
 }

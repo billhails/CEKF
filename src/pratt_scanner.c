@@ -41,6 +41,18 @@ HashSymbol *TOK_KW_CHAR(void) {
     return s;
 }
 
+HashSymbol *TOK_IF(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("if");
+    return s;
+}
+
+HashSymbol *TOK_ELSE(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("else");
+    return s;
+}
+
 HashSymbol *TOK_PIPE(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("|");

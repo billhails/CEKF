@@ -674,7 +674,7 @@ consfargs : farg                {
                                             $1,
                                             newAstArgList(PIM(mod),
                                               newAstArg_Symbol(PIM(mod), nilSymbol()),
-                                            NULL)));
+                                              NULL)));
                                 }
           | farg ',' consfargs  {
                                     $$ = makeAstUnpack(mod,
