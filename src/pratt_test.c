@@ -94,11 +94,15 @@ AstExpression *expr_bp(PrattParser *parser, int min_bp);
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *prefix(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *prefixC(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *prefixCar(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *prefixCdr(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *postfix(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *tuple(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *postfixArg(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *infixLeft(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *infixRight(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *infixAppend(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *infixCons(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *iff(PrattRecord *, PrattParser *, AstExpression *);
 static AstDefinitions *definitions(PrattParser *, HashSymbol *);
 static AstExpressions *statements(PrattParser *, HashSymbol *);
@@ -166,75 +170,75 @@ static PrattParser *makePrattParser() {
     PrattParser *res = newPrattParser(NULL, NULL);
     int save = PROTECT(res);
     PrattTable *table = res->rules;
-    addRecord(table, TOK_SEMI(),      NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_ATOM(),      NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_STRING(),    NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_TYPEDEF(),   NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_UNSAFE(),    NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_FN(),        NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_LINK(),      NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_AS(),        NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_ALIAS(),     NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_ERROR(),     NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_NS(),        NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_NAMESPACE(), NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_LET(),       NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_IN(),        NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_TUPLE(),     tuple,    NULL,       NULL,       0);
-    addRecord(table, TOK_OPEN(),      grouping, NULL,       postfixArg, 0);
-    addRecord(table, TOK_CLOSE(),     NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_IF(),        iff,      NULL,       NULL,       0);
-    addRecord(table, TOK_ELSE(),      NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_LSQUARE(),   NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_RSQUARE(),   NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_COMMA(),     NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_LCURLY(),    NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_RCURLY(),    NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_PIPE(),      NULL,     NULL,       NULL,       0);
-    addRecord(table, TOK_WILDCARD(),  NULL,     NULL,       NULL,       0);
+    addRecord(table, TOK_SEMI(),      NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_ATOM(),      NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_STRING(),    NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_TYPEDEF(),   NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_UNSAFE(),    NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_FN(),        NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_LINK(),      NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_AS(),        NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_ALIAS(),     NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_ERROR(),     NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_NS(),        NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_NAMESPACE(), NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_LET(),       NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_IN(),        NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_TUPLE(),     tuple,     NULL,        NULL,       0);
+    addRecord(table, TOK_OPEN(),      grouping,  NULL,        postfixArg, 0);
+    addRecord(table, TOK_CLOSE(),     NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_IF(),        iff,       NULL,        NULL,       0);
+    addRecord(table, TOK_ELSE(),      NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_LSQUARE(),   NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_RSQUARE(),   NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_COMMA(),     NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_LCURLY(),    NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_RCURLY(),    NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_PIPE(),      NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_WILDCARD(),  NULL,      NULL,        NULL,       0);
 
-    addRecord(table, TOK_ARROW(),     NULL,     infixRight, NULL,      10);
+    addRecord(table, TOK_ARROW(),     NULL,      infixRight,  NULL,      10);
 
-    addRecord(table, TOK_THEN(),      NULL,     infixRight, NULL,      20);
+    addRecord(table, TOK_THEN(),      NULL,      infixRight,  NULL,      20);
 
-    addRecord(table, TOK_AND(),       NULL,     infixLeft,  NULL,      30);
-    addRecord(table, TOK_OR(),        NULL,     infixLeft,  NULL,      30);
-    addRecord(table, TOK_XOR(),       NULL,     infixLeft,  NULL,      30);
-    addRecord(table, TOK_NAND(),      NULL,     infixLeft,  NULL,      30);
-    addRecord(table, TOK_NOR(),       NULL,     infixLeft,  NULL,      30);
-    addRecord(table, TOK_NXOR(),      NULL,     infixLeft,  NULL,      30);
+    addRecord(table, TOK_AND(),       NULL,      infixLeft,   NULL,      30);
+    addRecord(table, TOK_OR(),        NULL,      infixLeft,   NULL,      30);
+    addRecord(table, TOK_XOR(),       NULL,      infixLeft,   NULL,      30);
+    addRecord(table, TOK_NAND(),      NULL,      infixLeft,   NULL,      30);
+    addRecord(table, TOK_NOR(),       NULL,      infixLeft,   NULL,      30);
+    addRecord(table, TOK_NXOR(),      NULL,      infixLeft,   NULL,      30);
 
-    addRecord(table, TOK_NOT(),       prefix,   NULL,       NULL,      40);
+    addRecord(table, TOK_NOT(),       prefix,    NULL,        NULL,      40);
 
-    addRecord(table, TOK_EQ(),        NULL,     infixLeft,  NULL,      50);
-    addRecord(table, TOK_NE(),        NULL,     infixLeft,  NULL,      50);
-    addRecord(table, TOK_GT(),        prefixC,  infixLeft,  NULL,      50);
-    addRecord(table, TOK_LT(),        prefixC,  infixLeft,  NULL,      50);
-    addRecord(table, TOK_GE(),        NULL,     infixLeft,  NULL,      50);
-    addRecord(table, TOK_LE(),        NULL,     infixLeft,  NULL,      50);
-    addRecord(table, TOK_CMP(),       NULL,     infixLeft,  NULL,      50);
+    addRecord(table, TOK_EQ(),        NULL,      infixLeft,   NULL,      50);
+    addRecord(table, TOK_NE(),        NULL,      infixLeft,   NULL,      50);
+    addRecord(table, TOK_GT(),        prefixCdr, infixLeft,   NULL,      50);
+    addRecord(table, TOK_LT(),        prefixCar, infixLeft,   NULL,      50);
+    addRecord(table, TOK_GE(),        NULL,      infixLeft,   NULL,      50);
+    addRecord(table, TOK_LE(),        NULL,      infixLeft,   NULL,      50);
+    addRecord(table, TOK_CMP(),       NULL,      infixLeft,   NULL,      50);
 
-    addRecord(table, TOK_ASSIGN(),    NULL,     infixRight, NULL,      60);
+    addRecord(table, TOK_ASSIGN(),    NULL,      infixRight,  NULL,      60);
 
-    addRecord(table, TOK_COLON(),     NULL,     infixLeft,  NULL,      70);
+    addRecord(table, TOK_COLON(),     NULL,      infixLeft,   NULL,      70);
 
-    addRecord(table, TOK_APPEND(),    NULL,     infixRight, NULL,      80);
+    addRecord(table, TOK_APPEND(),    NULL,      infixAppend, NULL,      80);
 
-    addRecord(table, TOK_CONS(),      NULL,     infixRight, NULL,      90);
-    addRecord(table, TOK_PLUS(),      prefixC,  infixLeft,  NULL,      90);
-    addRecord(table, TOK_MINUS(),     prefixC,  infixLeft,  NULL,      90);
+    addRecord(table, TOK_CONS(),      NULL,      infixCons,   NULL,      90);
+    addRecord(table, TOK_PLUS(),      prefixC,   infixLeft,   NULL,      90);
+    addRecord(table, TOK_MINUS(),     prefixC,   infixLeft,   NULL,      90);
 
-    addRecord(table, TOK_TIMES(),     NULL,     infixLeft,  NULL,     100);
-    addRecord(table, TOK_DIVIDE(),    NULL,     infixLeft,  NULL,     100);
-    addRecord(table, TOK_MOD(),       NULL,     infixLeft,  NULL,     100);
+    addRecord(table, TOK_TIMES(),     NULL,      infixLeft,   NULL,     100);
+    addRecord(table, TOK_DIVIDE(),    NULL,      infixLeft,   NULL,     100);
+    addRecord(table, TOK_MOD(),       NULL,      infixLeft,   NULL,     100);
 
-    addRecord(table, TOK_EXP(),       NULL,     infixRight, NULL,     110);
+    addRecord(table, TOK_EXP(),       NULL,      infixRight,  NULL,     110);
 
-    addRecord(table, TOK_HERE(),      prefix,   NULL,       NULL,     120);
-    addRecord(table, TOK_HASH(),      prefix,   NULL,       NULL,     120);
-    addRecord(table, TOK_BANG(),      NULL,     NULL,       postfix,  120);
+    addRecord(table, TOK_HERE(),      prefix,    NULL,        NULL,     120);
+    addRecord(table, TOK_HASH(),      prefix,    NULL,        NULL,     120);
+    addRecord(table, TOK_BANG(),      NULL,      NULL,        postfix,  120);
 
-    addRecord(table, TOK_PERIOD(),    NULL,     infixRight, NULL,     130);
+    addRecord(table, TOK_PERIOD(),    NULL,      infixRight,  NULL,     130);
 
     UNPROTECT(save);
     return res;
@@ -557,9 +561,9 @@ static void ppAstTypeConstructorArgs(PrattUTF8 *dest, AstTypeConstructorArgs *ty
                 psprintf(dest, ")");
                 break;
             case AST_TYPECONSTRUCTORARGS_TYPE_MAP:
-                psprintf(dest, "{");
+                psprintf(dest, "{ ");
                 ppAstTypeMap(dest, typeConstructorArgs->val.map);
-                psprintf(dest, "}");
+                psprintf(dest, " }");
                 break;
             default:
                 cant_happen("unrecognised %s", astTypeConstructorArgsTypeName(typeConstructorArgs->type));
@@ -754,9 +758,9 @@ static void ppAstUnpack(PrattUTF8 *dest, AstUnpack *unpack) {
 
 static void ppAstUnpackStruct(PrattUTF8 *dest, AstUnpackStruct *unpackStruct) {
     ppAstLookupOrSymbol(dest, unpackStruct->symbol);
-    psprintf(dest, "{");
+    psprintf(dest, "{ ");
     ppAstTaggedArgList(dest, unpackStruct->argList);
-    psprintf(dest, "}");
+    psprintf(dest, " }");
 }
 
 static void ppAstTaggedArgList(PrattUTF8 *dest, AstTaggedArgList *taggedArgList) {
@@ -775,7 +779,7 @@ static void ppMaybeBigInt(PrattUTF8 *dest, MaybeBigInt *maybe) {
     size_t size = printSizeMaybeBigInt(maybe);
     extendPrattUTF8(dest, dest->size + size);
     unsigned char *start = &dest->entries[dest->size];
-    sprintMaybeBigInt((char *)start, maybe);
+    size = sprintMaybeBigInt((char *)start, maybe);
     dest->size += size;
     dest->size--;
 }
@@ -1666,6 +1670,26 @@ static AstExpression *prefixC(PrattRecord *record, PrattParser *parser, AstExpre
     return res;
 }
 
+static AstExpression *prefixCar(PrattRecord *record __attribute__((unused)), PrattParser *parser, AstExpression *lhs __attribute__((unused))) {
+    ENTER(prefixCar);
+    AstExpression *res = expr_bp(parser, 100);
+    int save = PROTECT(res);
+    res = makePrattUnary(CPI(res), carSymbol(), res);
+    LEAVE(prefixCar);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstExpression *prefixCdr(PrattRecord *record __attribute__((unused)), PrattParser *parser, AstExpression *lhs __attribute__((unused))) {
+    ENTER(prefixCdr);
+    AstExpression *res = expr_bp(parser, 100);
+    int save = PROTECT(res);
+    res = makePrattUnary(CPI(res), cdrSymbol(), res);
+    LEAVE(prefixCdr);
+    UNPROTECT(save);
+    return res;
+}
+
 static AstExpression *postfix(PrattRecord *record,
                           PrattParser *parser __attribute__((unused)),
                           AstExpression *lhs) {
@@ -1740,6 +1764,26 @@ static AstExpression *infixRight(PrattRecord *record, PrattParser *parser, AstEx
     int save = PROTECT(rhs);
     rhs = makePrattBinary(CPI(rhs), record->symbol, lhs, rhs);
     LEAVE(infixRight);
+    UNPROTECT(save);
+    return rhs;
+}
+
+static AstExpression *infixAppend(PrattRecord *record, PrattParser *parser, AstExpression *lhs) {
+    ENTER(infixAppend);
+    AstExpression *rhs = expr_bp(parser, record->precedence - 1);
+    int save = PROTECT(rhs);
+    rhs = makePrattBinary(CPI(rhs), appendSymbol(), lhs, rhs);
+    LEAVE(infixAppend);
+    UNPROTECT(save);
+    return rhs;
+}
+
+static AstExpression *infixCons(PrattRecord *record, PrattParser *parser, AstExpression *lhs) {
+    ENTER(infixCons);
+    AstExpression *rhs = expr_bp(parser, record->precedence - 1);
+    int save = PROTECT(rhs);
+    rhs = makePrattBinary(CPI(rhs), consSymbol(), lhs, rhs);
+    LEAVE(infixCons);
     UNPROTECT(save);
     return rhs;
 }
@@ -1921,10 +1965,12 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test(p, t, "a #b");
     test(p, t, "a @ b @@ c @ d");
     test(p, t, "123456789012345678901234567890");
+    test(p, t, "12345678901234567890123456789i");
     test(p, t, "12345.6789i");
     test(p, t, "let fn i(x) { x } in i(0)");
     test(p, t, "if (a > 2) { 3 } else { 4 }");
     test(p, t, "let x = 1 then 2 then 3; in x");
+    test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl ");
 
     // test("1 * ((2 + 3[4 + 5]))");
     // test("aa = bb = 3 ? 4 ? 5 : 6 : 7 ? 8 : 9");

@@ -511,7 +511,7 @@ static void walkUtf8(PrattBuffer *buffer, int size, HashSymbol *file, int line) 
 static PrattToken *parseIdentifier(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
     while (true) {
-        if (isalnum(buffer->start[buffer->length])) {
+        if (isalnum(buffer->start[buffer->length]) || buffer->start[buffer->length] == '_') {
             ++buffer->length;
         } else if (isTwoByteUtf8(buffer->start[buffer->length])) {
             walkUtf8(buffer, 1, lexer->bufList->filename, lexer->bufList->lineno);

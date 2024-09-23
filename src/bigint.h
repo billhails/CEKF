@@ -85,7 +85,7 @@ extern "C" {
     void fprintBigInt(FILE *f, BigInt *x);
     void printBigInt(BigInt *x, int depth);
     void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
-    void sprintMaybeBigInt(char *f, MaybeBigInt *x);
+    size_t sprintMaybeBigInt(char *f, MaybeBigInt *x);
     Cmp cmpBigInt(BigInt *a, BigInt *b);
     Cmp cmpBigIntInt(BigInt *a, int b);
     Cmp cmpBigIntDouble(BigInt *a, Double b);
