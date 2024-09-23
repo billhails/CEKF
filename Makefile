@@ -10,7 +10,6 @@ MODE:=debugging
 endif
 
 TARGET=cekf
-PRATT_TEST_TARGET=pratt_test
 
 ifeq ($(MODE),debugging)
 	CCMODE:= -g
@@ -54,8 +53,7 @@ EXTRA_TARGETS= \
     $(EXTRA_DEBUG_C_TARGETS)
 
 MAIN=src/main.c
-PRATT_TEST=src/pratt_test.c
-CFILES=$(filter-out $(MAIN), $(filter-out $(PRATT_TEST), $(wildcard src/*.c)))
+CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
 EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
 PARSER_CFILES=generated/lexer.c generated/parser.c
 TEST_CFILES=$(wildcard tests/src/*.c)
@@ -65,12 +63,10 @@ TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
 TEST_SUCCESSES=$(patsubst tests/%,tests/.%-success,$(TEST_TARGETS))
 
 MAIN_OBJ=obj/main.o
-PRATT_TEST_OBJ=obj/pratt_test.o
 OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
 TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
 
 MAIN_DEP=dep/main.d
-PRATT_DEP=dep/pratt_test.d
 DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
@@ -80,20 +76,17 @@ EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP) $(PRATT_DEP)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
 
 INCLUDE_PATHS=-I generated/ -I src/
 
 TMP_H=generated/parser.h generated/lexer.h
 TMP_C=generated/parser.c generated/lexer.c
 
-all: $(TARGET) $(PRATT_TEST_TARGET) docs
+all: $(TARGET) docs
 
 $(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
-
-$(PRATT_TEST_TARGET): $(PRATT_TEST_OBJ) $(ALL_OBJ)
-	$(CC) -o $@ $(PRATT_TEST_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
 
@@ -145,7 +138,7 @@ $(EXTRA_DOCS): docs/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml
 tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
 
-$(MAIN_OBJ) $(PRATT_TEST_OBJ) $(OBJ): obj/%.o: src/%.c | obj
+$(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(PARSER_OBJ): obj/%.o: generated/%.c | obj
@@ -157,7 +150,7 @@ $(EXTRA_OBJ): obj/%.o: generated/%.c | obj
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(MAIN_DEP) $(PRATT_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
+$(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(PARSER_DEP) $(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep
