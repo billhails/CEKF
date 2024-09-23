@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "pratt.h"
 #include "pratt_parser.h"
@@ -31,8 +32,9 @@
 #include "print_generator.h"
 #include "file_id.h"
 
-static void test(PrattParser *parser, PrattTrie *trie, char *expr) {
-    printf("%-30s ", expr);
+static bool failed = false;
+
+static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expected) {
     parser->lexer = makePrattLexer(trie, "test", expr);
     AstNest *result = top(parser);
     int save = PROTECT(result);
@@ -43,8 +45,10 @@ static void test(PrattParser *parser, PrattTrie *trie, char *expr) {
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
     ppAstNest(dest, result);
-    printf("%s", dest->entries);
-    printf("\n");
+    if (strcmp(dest->entries, expected) != 0) {
+        printf("%s - expected %s got %s\n", expr, expected, dest->entries);
+        failed = true;
+    }
     UNPROTECT(save);
 }
 
@@ -54,45 +58,43 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     PROTECT(p);
     PrattTrie *t = makePrattTrie(p, NULL);
     PROTECT(t);
-    test(p, t, "1");
-    test(p, t, "5!");
-    test(p, t, "1i");
-    test(p, t, "Σ");
-    test(p, t, "'Σ'");
-    test(p, t, "a123");
-    test(p, t, "1 + 2");
-    test(p, t, "1 <=> 2 <=> 3");
-    test(p, t, "1 + 2 * 3");
-    test(p, t, "1 * 2 + 3");
-    test(p, t, "an and android");
-    test(p, t, "1 * 2 * 3");
-    test(p, t, "1 . 2 . 3");
-    test(p, t, "- 1 . - 2 . 3");
-    test(p, t, "--1 * 2");
-    test(p, t, "--1 * 2!");
-    test(p, t, "1 * ((2 + 3))");
-    test(p, t, "a -> b -> c");
-    test(p, t, "(a -> b) -> c");
-    test(p, t, "<a @ b");
-    test(p, t, "a @ b < c");
-    test(p, t, "1 then 2 then 3");
-    test(p, t, "a(b)");
-    test(p, t, "a(b, c)");
-    test(p, t, "#(b)");
-    test(p, t, "#(b, c)");
-    test(p, t, "#a + b");
-    test(p, t, "a + #b");
-    test(p, t, "a #b");
-    test(p, t, "a @ b @@ c @ d");
-    test(p, t, "123456789012345678901234567890");
-    test(p, t, "12345678901234567890123456789i");
-    test(p, t, "12345.6789i");
-    test(p, t, "let fn i(x) { x } in i(0)");
-    test(p, t, "if (a > 2) { 3 } else { 4 }");
-    test(p, t, "let x = 1 then 2 then 3; in x");
-    test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl ");
+    test(p, t, "1",                              "{ 1; }");
+    test(p, t, "5!",                             "{ !(5); }");
+    test(p, t, "1i",                             "{ 1i; }");
+    test(p, t, "Σ",                              "{ Σ; }");
+    test(p, t, "'Σ'",                            "{ 'Σ'; }");
+    test(p, t, "a123",                           "{ a123; }");
+    test(p, t, "1 + 2",                          "{ +(1, 2); }");
+    test(p, t, "1 <=> 2 <=> 3",                  "{ <=>(<=>(1, 2), 3); }");
+    test(p, t, "1 + 2 * 3",                      "{ +(1, *(2, 3)); }");
+    test(p, t, "1 * 2 + 3",                      "{ +(*(1, 2), 3); }");
+    test(p, t, "an and android",                 "{ and(an, android); }");
+    test(p, t, "1 * 2 * 3",                      "{ *(*(1, 2), 3); }");
+    test(p, t, "1 . 2 . 3",                      "{ .(1, .(2, 3)); }");
+    test(p, t, "- 1 . - 2 . 3",                  "{ -(.(1, -(.(2, 3)))); }");
+    test(p, t, "--1 * 2",                        "{ -(-(*(1, 2))); }");
+    test(p, t, "--1 * 2!",                       "{ -(-(*(1, !(2)))); }");
+    test(p, t, "1 * ((2 + 3))",                  "{ *(1, +(2, 3)); }");
+    test(p, t, "a -> b -> c",                    "{ ->(a, ->(b, c)); }");
+    test(p, t, "(a -> b) -> c",                  "{ ->(->(a, b), c); }");
+    test(p, t, "<a @ b",                         "{ cons(car(a), b); }");
+    test(p, t, "a @ b < c",                      "{ <(cons(a, b), c); }");
+    test(p, t, "1 then 2 then 3",                "{ then(1, then(2, 3)); }");
+    test(p, t, "a(b)",                           "{ a(b); }");
+    test(p, t, "a(b, c)",                        "{ a(b, c); }");
+    test(p, t, "#(b)",                           "{ #(b); }");
+    test(p, t, "#(b, c)",                        "{ #(b, c); }");
+    test(p, t, "#a + b",                         "{ +(#(a), b); }"); // ??
+    test(p, t, "a + #b",                         "{ +(a, #(b)); }"); // ??
+    test(p, t, "a #b",                           "{ a; }");
+    test(p, t, "a @ b @@ c @ d",                 "{ append(cons(a, b), cons(c, d)); }");
+    test(p, t, "123456789012345678901234567890", "{ 123456789012345678901234567890; }");
+    test(p, t, "12345678901234567890123456789i", "{ 12345678901234567890123456789i; }");
+    test(p, t, "12345.6789i",                    "{ 12345.678900i; }");
+    test(p, t, "let fn i(x) { x } in i(0)",      "{ let i = fn { (x) { x; } }; in i(0); }");
+    test(p, t, "if (a > 2) { 3 } else { 4 }",    "{ if (>(a, 2)) { 3; } else { 4; }; }");
+    test(p, t, "let x = 1 then 2 then 3; in x",  "{ let x = then(1, then(2, 3)); in x; }");
+    test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl", "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }");
 
-    // test("1 * ((2 + 3[4 + 5]))");
-    // test("aa = bb = 3 ? 4 ? 5 : 6 : 7 ? 8 : 9");
-    return 0;
+    return failed ? 1 : 0;
 }
