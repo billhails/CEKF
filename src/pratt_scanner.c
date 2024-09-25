@@ -35,6 +35,12 @@ HashSymbol *TOK_KW_NUMBER(void) {
     return s;
 }
 
+HashSymbol *TOK_SWITCH(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = S("switch");
+    return s;
+}
+
 HashSymbol *TOK_KW_CHAR(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("char");

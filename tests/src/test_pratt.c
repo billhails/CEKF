@@ -35,7 +35,7 @@
 static bool failed = false;
 
 static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expected) {
-    parser->lexer = makePrattLexer(trie, "test", expr);
+    parser->lexer = makePrattLexer(trie, expr, expr);
     AstNest *result = top(parser);
     int save = PROTECT(result);
     if (parser->lexer->bufList != NULL) {
@@ -92,9 +92,14 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test(p, t, "12345678901234567890123456789i", "{ 12345678901234567890123456789i; }");
     test(p, t, "12345.6789i",                    "{ 12345.678900i; }");
     test(p, t, "let fn i(x) { x } in i(0)",      "{ let i = fn { (x) { x; } }; in i(0); }");
+    test(p, t, "let unsafe fn i(x) { x } in i(0)", "{ let i = unsafe fn { (x) { x; } }; in i(0); }");
     test(p, t, "if (a > 2) { 3 } else { 4 }",    "{ if (>(a, 2)) { 3; } else { 4; }; }");
     test(p, t, "let x = 1 then 2 then 3; in x",  "{ let x = then(1, then(2, 3)); in x; }");
     test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl", "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }");
+    test(p, t, "let link \"bar\" as foo; in f",  "{ let ; in f; }");
+    test(p, t, "fn { (0) { 1 } (n) { n * fact(n - 1) } }", "{ fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }");
+    test(p, t, "unsafe fn { (0) { 1 } (n) { n * fact(n - 1) } }", "{ unsafe fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }");
+    test(p, t, "switch (x) { (0) { 1 } } }",   "{ fn { (0) { 1; } }(x); }");
 
     return failed ? 1 : 0;
 }
