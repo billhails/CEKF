@@ -32,14 +32,21 @@
 #include "print_generator.h"
 #include "file_id.h"
 
+extern AstStringArray *include_paths;
+
 static bool failed = false;
 
-static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expected) {
+static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expected, bool expectError) {
+    clearErrors();
     parser->lexer = makePrattLexer(trie, expr, expr);
+#ifdef DEBUG_PRATT_PARSER
+    disablePrattDebug();
+#endif
     AstNest *result = top(parser);
     int save = PROTECT(result);
     if (parser->lexer->bufList != NULL) {
         PrattToken *tok = next(parser->lexer);
+        validateLastAlloc();
         errorAt(tok, "unconsumed tokens");
     }
     PrattUTF8 *dest = newPrattUTF8();
@@ -49,57 +56,99 @@ static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expecte
         printf("%s - expected %s got %s\n", expr, expected, dest->entries);
         failed = true;
     }
+    if (hadErrors() != expectError) {
+        printf("%s - %sexpected error\n", expr, expectError ? "" : "un");
+        failed = true;
+    }
+    UNPROTECT(save);
+    validateLastAlloc();
+}
+
+static void testFile(PrattParser *parser, PrattTrie *trie, char *filename) {
+    clearErrors();
+    parser->lexer = makePrattLexerFromFilename(trie, filename);
+    AstNest *result = top(parser);
+    int save = PROTECT(result);
+    if (parser->lexer->bufList != NULL) {
+        PrattToken *tok = next(parser->lexer);
+        errorAt(tok, "unconsumed tokens");
+    }
+    PrattUTF8 *dest = newPrattUTF8();
+    PROTECT(dest);
+    ppAstNest(dest, result);
+    printf("%s\n", dest->entries);
+    if (hadErrors()) {
+        failed = true;
+    }
     UNPROTECT(save);
 }
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     initProtection();
+    include_paths = newAstStringArray();
+    int save = PROTECT(include_paths);
+    initFileIdStack();
+    initNamespaces();
     PrattParser *p = makePrattParser();
     PROTECT(p);
     PrattTrie *t = makePrattTrie(p, NULL);
     PROTECT(t);
-    test(p, t, "1",                              "{ 1; }");
-    test(p, t, "5!",                             "{ !(5); }");
-    test(p, t, "1i",                             "{ 1i; }");
-    test(p, t, "Σ",                              "{ Σ; }");
-    test(p, t, "'Σ'",                            "{ 'Σ'; }");
-    test(p, t, "a123",                           "{ a123; }");
-    test(p, t, "1 + 2",                          "{ +(1, 2); }");
-    test(p, t, "1 <=> 2 <=> 3",                  "{ <=>(<=>(1, 2), 3); }");
-    test(p, t, "1 + 2 * 3",                      "{ +(1, *(2, 3)); }");
-    test(p, t, "1 * 2 + 3",                      "{ +(*(1, 2), 3); }");
-    test(p, t, "an and android",                 "{ and(an, android); }");
-    test(p, t, "1 * 2 * 3",                      "{ *(*(1, 2), 3); }");
-    test(p, t, "1 . 2 . 3",                      "{ .(1, .(2, 3)); }");
-    test(p, t, "- 1 . - 2 . 3",                  "{ -(.(1, -(.(2, 3)))); }");
-    test(p, t, "--1 * 2",                        "{ -(-(*(1, 2))); }");
-    test(p, t, "--1 * 2!",                       "{ -(-(*(1, !(2)))); }");
-    test(p, t, "1 * ((2 + 3))",                  "{ *(1, +(2, 3)); }");
-    test(p, t, "a -> b -> c",                    "{ ->(a, ->(b, c)); }");
-    test(p, t, "(a -> b) -> c",                  "{ ->(->(a, b), c); }");
-    test(p, t, "<a @ b",                         "{ cons(car(a), b); }");
-    test(p, t, "a @ b < c",                      "{ <(cons(a, b), c); }");
-    test(p, t, "1 then 2 then 3",                "{ then(1, then(2, 3)); }");
-    test(p, t, "a(b)",                           "{ a(b); }");
-    test(p, t, "a(b, c)",                        "{ a(b, c); }");
-    test(p, t, "#(b)",                           "{ #(b); }");
-    test(p, t, "#(b, c)",                        "{ #(b, c); }");
-    test(p, t, "#a + b",                         "{ +(#(a), b); }"); // ??
-    test(p, t, "a + #b",                         "{ +(a, #(b)); }"); // ??
-    test(p, t, "a #b",                           "{ a; }");
-    test(p, t, "a @ b @@ c @ d",                 "{ append(cons(a, b), cons(c, d)); }");
-    test(p, t, "123456789012345678901234567890", "{ 123456789012345678901234567890; }");
-    test(p, t, "12345678901234567890123456789i", "{ 12345678901234567890123456789i; }");
-    test(p, t, "12345.6789i",                    "{ 12345.678900i; }");
-    test(p, t, "let fn i(x) { x } in i(0)",      "{ let i = fn { (x) { x; } }; in i(0); }");
-    test(p, t, "let unsafe fn i(x) { x } in i(0)", "{ let i = unsafe fn { (x) { x; } }; in i(0); }");
-    test(p, t, "if (a > 2) { 3 } else { 4 }",    "{ if (>(a, 2)) { 3; } else { 4; }; }");
-    test(p, t, "let x = 1 then 2 then 3; in x",  "{ let x = then(1, then(2, 3)); in x; }");
-    test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl", "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }");
-    test(p, t, "let link \"bar\" as foo; in f",  "{ let ; in f; }");
-    test(p, t, "fn { (0) { 1 } (n) { n * fact(n - 1) } }", "{ fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }");
-    test(p, t, "unsafe fn { (0) { 1 } (n) { n * fact(n - 1) } }", "{ unsafe fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }");
-    test(p, t, "switch (x) { (0) { 1 } } }",   "{ fn { (0) { 1; } }(x); }");
+    pushAstStringArray(include_paths, strdup("fn"));
+    test(p, t, "1",                              "{ 1; }", false);
+    test(p, t, "5!",                             "{ !(5); }", false);
+    test(p, t, "1i",                             "{ 1i; }", false);
+    test(p, t, "Σ",                              "{ Σ; }", false);
+    test(p, t, "'Σ'",                            "{ 'Σ'; }", false);
+    test(p, t, "a123",                           "{ a123; }", false);
+    test(p, t, "1 + 2",                          "{ +(1, 2); }", false);
+    test(p, t, "1 <=> 2 <=> 3",                  "{ <=>(<=>(1, 2), 3); }", false);
+    test(p, t, "1 + 2 * 3",                      "{ +(1, *(2, 3)); }", false);
+    test(p, t, "1 * 2 + 3",                      "{ +(*(1, 2), 3); }", false);
+    test(p, t, "an and android",                 "{ and(an, android); }", false);
+    test(p, t, "1 * 2 * 3",                      "{ *(*(1, 2), 3); }", false);
+    test(p, t, "1 . 2 . 3",                      "{ .(1, .(2, 3)); }", false);
+    test(p, t, "- 1 . - 2 . 3",                  "{ -(.(1, -(.(2, 3)))); }", false);
+    test(p, t, "--1 * 2",                        "{ -(-(*(1, 2))); }", false);
+    test(p, t, "--1 * 2!",                       "{ -(-(*(1, !(2)))); }", false);
+    test(p, t, "1 * ((2 + 3))",                  "{ *(1, +(2, 3)); }", false);
+    test(p, t, "a -> b -> c",                    "{ ->(a, ->(b, c)); }", false);
+    test(p, t, "(a -> b) -> c",                  "{ ->(->(a, b), c); }", false);
+    test(p, t, "<a @ b",                         "{ cons(car(a), b); }", false);
+    test(p, t, "a @ b < c",                      "{ <(cons(a, b), c); }", false);
+    test(p, t, "1 then 2 then 3",                "{ then(1, then(2, 3)); }", false);
+    test(p, t, "a(b)",                           "{ a(b); }", false);
+    test(p, t, "a(b, c)",                        "{ a(b, c); }", false);
+    test(p, t, "#(b)",                           "{ #(b); }", false);
+    test(p, t, "#(b, c)",                        "{ #(b, c); }", false);
+    test(p, t, "#a + b",                         "{ +(#(a), b); }", false); // ??
+    test(p, t, "a + #b",                         "{ +(a, #(b)); }", false); // ??
+    test(p, t, "a #b",                           "{ a; }", true);
+    test(p, t, "a @ b @@ c @ d",                 "{ append(cons(a, b), cons(c, d)); }", false);
+    test(p, t, "0x100",                          "{ 256; }", false);
+    test(p, t, "0X100i",                         "{ 256i; }", false);
+    test(p, t, "123456789012345678901234567_890","{ 123456789012345678901234567890; }", false);
+    test(p, t, "12345678901234567890123456789i", "{ 12345678901234567890123456789i; }", false);
+    test(p, t, "12345.6789i",                    "{ 12345.678900i; }", false);
+    test(p, t, "let fn i(x) { x } in i(0)",      "{ let i = fn { (x) { x; } }; in i(0); }", false);
+    test(p, t, "let unsafe fn i(x) { x } in i(0)", "{ let i = unsafe fn { (x) { x; } }; in i(0); }", false);
+    test(p, t, "if (a > 2) { 3 } else { 4 }",    "{ if (>(a, 2)) { 3; } else { 4; }; }", false);
+    test(p, t, "let x = 1 then 2 then 3; in x",  "{ let x = then(1, then(2, 3)); in x; }", false);
+    test(p, t, "let typedef named_list(#t) { nl(str, list(#t)) } in nl",
+               "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }", false);
+    test(p, t, "let link \"bar\" as foo; in f",  "{ let ; in f; }", true);
+    test(p, t, "fn { (0) { 1 } (n) { n * fact(n - 1) } }",
+               "{ fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }", false);
+    test(p, t, "unsafe fn { (0) { 1 } (n) { n * fact(n - 1) } }",
+               "{ unsafe fn { (0) { 1; } (n) { *(n, fact)(-(n, 1)); } }; }", false);
+    test(p, t, "switch (x) { (0) { 1 } } }",       "{ fn { (0) { 1; } }(x); }", true);
+    test(p, t, "unsafe switch (x) { (0) { 1 } }",  "{ unsafe fn { (0) { 1; } }(x); }", false);
+    test(p, t, "let alias string = list(char); in foo;",
+               "{ let alias string = list(char); in foo; }", false);
+    test(p, t, "let print list(a, b) { c; } in foo;",
+               "{ let print$list = fn { (a, b) { c; } }; in foo; }", false);
+    testFile(p, t, "fn/qqsort.fn");
+    testFile(p, t, "fn/import_dictionary.fn");
 
+    UNPROTECT(save);
     return failed ? 1 : 0;
 }

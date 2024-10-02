@@ -11,6 +11,7 @@ run_gdb () {
 }
 
 cores_on () {
+    sudo bash -c "echo 'core.%e' > /proc/sys/kernel/core_pattern"
     ulimit -c unlimited
 }
 

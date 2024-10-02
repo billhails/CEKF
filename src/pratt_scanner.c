@@ -349,7 +349,7 @@ HashSymbol *TOK_IN(void) {
 
 HashSymbol *TOK_NS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("__namespace__");
+    if (s == NULL) s = S("__NAMESPACE__");
     return s;
 }
 
@@ -411,6 +411,22 @@ HashSymbol *TOK_PRINT(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = S("print");
     return s;
+}
+
+ParserInfo LEXPI(PrattLexer *lexer) {
+    ParserInfo res;
+    res.lineno = 0;
+    res.filename = "undefined";
+    if (lexer) {
+        if (lexer->tokenHead) {
+            res.lineno = lexer->tokenHead->lineno;
+            res.filename = lexer->tokenHead->filename->name;
+        } else if (lexer->bufList) {
+            res.lineno = lexer->bufList->lineno;
+            res.filename = lexer->bufList->filename->name;
+        }
+    }
+    return res;
 }
 
 static void errorAtLexer(char *message, PrattLexer *lexer) {
@@ -784,7 +800,7 @@ static PrattToken *dequeueToken(PrattLexer *lexer) {
     }
 }
 
-static void enqueueToken(PrattLexer *lexer, PrattToken *token) {
+void enqueueToken(PrattLexer *lexer, PrattToken *token) {
     token->next = NULL;
     if (lexer->tokenTail == NULL) { // Queue is empty
         lexer->tokenHead = lexer->tokenTail = token;
@@ -1032,6 +1048,9 @@ PrattToken *next(PrattLexer *lexer) {
                 }
             }
             lexer->bufList = lexer->bufList->next;
+            if (lexer->bufList) {
+                fprintf(stderr, "next buffer %s\n", lexer->bufList->filename->name);
+            }
         }
         return tokenEOF();
     }
@@ -1096,7 +1115,7 @@ static PrattBuffer *prattBufferFromFileName(char *path) {
 }
 
 void errorAt(PrattToken *token, char *message) {
-    can_happen("%s at \"%s\" in %s line %d", message, token->type->name, token->filename->name, token->lineno);
+    can_happen("%s at \"%s\" in \"%s\" line %d", message, token->type->name, token->filename->name, token->lineno);
 }
 
 PrattToken *peek(PrattLexer *lexer) {
@@ -1116,6 +1135,7 @@ bool check(PrattLexer *lexer, HashSymbol *type) {
 bool match(PrattLexer *lexer, HashSymbol *type) {
     PrattToken *token = next(lexer);
     if (token->type == type) {
+        validateLastAlloc();
         return true;
     }
     int save = PROTECT(token);
@@ -1126,6 +1146,7 @@ bool match(PrattLexer *lexer, HashSymbol *type) {
 
 void consume(PrattLexer *lexer, HashSymbol *type) {
     PrattToken *token = next(lexer);
+    validateLastAlloc();
     if (token->type == type) {
         return;
     }
@@ -1150,6 +1171,14 @@ PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *n
 
 PrattLexer *makePrattLexer(PrattTrie *trie, char *origin, char *input) {
     PrattBufList *bl = prattBufListFromString(origin, input, NULL);
+    int save = PROTECT(bl);
+    PrattLexer *res = newPrattLexer(bl, trie);
+    UNPROTECT(save);
+    return res;
+}
+
+PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename) {
+    PrattBufList *bl = prattBufListFromFileName(filename, NULL);
     int save = PROTECT(bl);
     PrattLexer *res = newPrattLexer(bl, trie);
     UNPROTECT(save);

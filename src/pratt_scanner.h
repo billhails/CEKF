@@ -27,12 +27,15 @@ PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
 PrattToken *next(PrattLexer *lexer);
 
 PrattToken *peek(PrattLexer *lexer);
+void enqueueToken(PrattLexer *lexer, PrattToken *token);
 
+ParserInfo LEXPI(PrattLexer *);
 static inline ParserInfo BUFPI(PrattBufList *buf) { return (ParserInfo) { .lineno = buf->lineno, .filename = buf->filename->name }; }
 static inline ParserInfo TOKPI(PrattToken *token) { return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name }; }
 
 static inline HashSymbol *S(char *name) { return newSymbol(name); }
 
+PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next);
 void consume(PrattLexer *lexer, HashSymbol *type);

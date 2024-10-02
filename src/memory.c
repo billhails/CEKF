@@ -70,16 +70,6 @@ const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_OPAQUE:
             return "opaque";
-        case OBJTYPE_CLO:
-            return "clo";
-        case OBJTYPE_ENV:
-            return "env";
-        case OBJTYPE_FAIL:
-            return "fail";
-        case OBJTYPE_KONT:
-            return "kont";
-        case OBJTYPE_VEC:
-            return "vec";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
         case OBJTYPE_PROTECTION:
@@ -102,6 +92,10 @@ const char *typeName(ObjType type, void *p) {
             return typenameTcObj(type);
         BUILTINS_OBJTYPE_CASES()
             return typenameBuiltinsObj(type);
+        PRATT_OBJTYPE_CASES()
+            return typenamePrattObj(type);
+        CEKFS_OBJTYPE_CASES()
+            return typenameCekfsObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }

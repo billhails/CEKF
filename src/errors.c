@@ -60,3 +60,7 @@ void eprintf(const char *message, ...) {
 bool hadErrors() {
     return errors;
 }
+
+void clearErrors() {
+    errors = false;
+}

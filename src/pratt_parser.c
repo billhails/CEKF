@@ -53,6 +53,7 @@ extern AstStringArray *include_paths;
 AstExpression *expr_bp(PrattParser *parser, int min_bp);
 static AstExpression *errorExpression(ParserInfo);
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *prefix(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *prefixC(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *prefixCar(PrattRecord *, PrattParser *, AstExpression *);
@@ -106,8 +107,17 @@ static AstUnpack *consfargs(PrattParser *);
 static AstUnpack *stringarg(PrattParser *);
 static AstFunCall *switchFC(PrattParser *parser);
 static AstExpression *switchExp(PrattRecord *, PrattParser *, AstExpression *);
+static AstExpression *print(PrattRecord *, PrattParser *, AstExpression *);
 
 static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
+
+static AstFileIdArray *fileIdStack = NULL;
+
+#ifdef DEBUG_PRATT_PARSER
+void disablePrattDebug(void) {
+    DEBUGGING_OFF();
+}
+#endif
 
 static AstExpression *errorExpression(ParserInfo I) {
     return newAstExpression_Symbol(I, TOK_ERROR());
@@ -128,6 +138,7 @@ PrattParser *makePrattParser() {
     addRecord(table, TOK_ATOM(),      NULL,      NULL,        NULL,       0);
     addRecord(table, TOK_STRING(),    NULL,      NULL,        NULL,       0);
     addRecord(table, TOK_TYPEDEF(),   NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_PRINT(),     print,     NULL,        NULL,       0);
     addRecord(table, TOK_UNSAFE(),    unsafe,    NULL,        NULL,       0);
     addRecord(table, TOK_FN(),        fn,        NULL,        NULL,       0);
     addRecord(table, TOK_LINK(),      NULL,      NULL,        NULL,       0);
@@ -144,7 +155,7 @@ PrattParser *makePrattParser() {
     addRecord(table, TOK_CLOSE(),     NULL,      NULL,        NULL,       0);
     addRecord(table, TOK_IF(),        iff,       NULL,        NULL,       0);
     addRecord(table, TOK_ELSE(),      NULL,      NULL,        NULL,       0);
-    addRecord(table, TOK_LSQUARE(),   NULL,      NULL,        NULL,       0);
+    addRecord(table, TOK_LSQUARE(),   list,      NULL,        NULL,       0);
     addRecord(table, TOK_RSQUARE(),   NULL,      NULL,        NULL,       0);
     addRecord(table, TOK_COMMA(),     NULL,      NULL,        NULL,       0);
     addRecord(table, TOK_LCURLY(),    NULL,      NULL,        NULL,       0);
@@ -330,6 +341,8 @@ static void parserError(PrattParser *parser, const char *message, ...) {
 }
 
 static AstDefinitions *namespaceFromFileName(PrattParser *parser, char *filename) {
+    DEBUGGING_ON();
+    DEBUG("namespaceFromFileName %s", filename);
     PrattBufList *bufList = prattBufListFromFileName(filename, NULL);
     int save = PROTECT(bufList);
     bufList = prattBufListFromString(parser->lexer->bufList->filename->name, "__NAMESPACE__", bufList);
@@ -338,8 +351,11 @@ static AstDefinitions *namespaceFromFileName(PrattParser *parser, char *filename
     REPLACE_PROTECT(save, lexer);
     PrattParser *new = newPrattParser(lexer, parser);
     REPLACE_PROTECT(save, new);
+    DEBUG("namespaceFromFileName start top");
     AstNest *nest = top(new);
     UNPROTECT(save);
+    DEBUG("namespaceFromFileName done");
+    DEBUGGING_OFF();
     if (nest) return nest->definitions;
     return NULL;
 }
@@ -352,16 +368,18 @@ static void storeNamespace(PrattParser *parser, AstNamespace *ns) {
     }
 }
 
+int initFileIdStack() {
+    if (fileIdStack == NULL) {
+        fileIdStack = newAstFileIdArray();
+    }
+    return PROTECT(fileIdStack);
+}
+
 // Careful. Somewhat accidentally this algorithm stores the namespaces
 // in the order that they need to be processed.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
 static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSymbol *symbol) {
-    static AstFileIdArray *fileIdStack = NULL;
-
-    if (fileIdStack == NULL) {
-        fileIdStack = newAstFileIdArray();
-    }
     AgnosticFileId *fileId = calculatePath(file, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
@@ -384,6 +402,7 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
     }
     pushAstFileIdArray(fileIdStack, fileId);
     AstDefinitions *definitions = namespaceFromFileName(parser, fileId->name);
+    PROTECT(definitions);
     if (definitions == NULL) {
         parserError(parser, "errors detected while parsing %s", fileId->name);
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
@@ -391,9 +410,11 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
         return ns;
     }
     AstNamespaceImpl *impl = newAstNamespaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
+    PROTECT(impl);
     found = pushAstNamespaceArray(namespaces, impl);
     popAstFileIdArray(fileIdStack);
     AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, found);
+    UNPROTECT(save);
     return ns;
 }
 
@@ -437,60 +458,63 @@ static AstExpression *makePrattUnary(ParserInfo I, HashSymbol *op, AstExpression
 }
 
 AstNest *top(PrattParser *parser) {
+    ENTER(top);
+    DEBUG("%s", parser->lexer->bufList->buffer->data);
     AstNest *body = nest_body(parser, TOK_EOF());
     int save = PROTECT(body);
     consume(parser->lexer, TOK_EOF());
+    LEAVE(top);
     UNPROTECT(save);
     return body;
 }
 
 AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
+    ENTER(nest_body);
+    AstNest *res = NULL;
+    int save = -1;
     if (match(parser->lexer, TOK_LET())) {
         AstDefinitions *defs = definitions(parser, TOK_IN());
-        int save = PROTECT(defs);
+        save = PROTECT(defs);
         consume(parser->lexer, TOK_IN());
         AstExpressions *stats = statements(parser, terminal);
         PROTECT(stats);
-        AstNest *res = newAstNest(CPI(defs), defs, stats);
-        UNPROTECT(save);
-        return res;
+        res = newAstNest(CPI(defs), defs, stats);
     } else if (match(parser->lexer, TOK_NS())) {
         consume(parser->lexer, TOK_NAMESPACE());
         AstDefinitions *defs = definitions(parser, terminal);
-        int save = PROTECT(defs);
-        AstNest *res = newAstNest(CPI(defs), defs, NULL);
-        UNPROTECT(save);
-        return res;
+        save = PROTECT(defs);
+        res = newAstNest(CPI(defs), defs, NULL);
     } else {
         AstExpressions *stats = statements(parser, terminal);
-        int save = PROTECT(stats);
-        AstNest *res = newAstNest(CPI(stats), NULL, stats);
-        UNPROTECT(save);
-        return res;
+        save = PROTECT(stats);
+        res = newAstNest(CPI(stats), NULL, stats);
     }
+    LEAVE(nest_body);
+    UNPROTECT(save);
+    return res;
 }
 
 static AstExpressions *statements(PrattParser *parser, HashSymbol *terminal) {
+    ENTER(statements);
     AstExpression *expr = expression(parser);
     int save = PROTECT(expr);
+    AstExpressions *this = NULL;
     if (check(parser->lexer, TOK_SEMI())) {
         next(parser->lexer);
+        validateLastAlloc();
         if (check(parser->lexer, terminal)) {
-            AstExpressions *this = newAstExpressions(CPI(expr), expr, NULL);
-            UNPROTECT(save);
-            return this;
+            this = newAstExpressions(CPI(expr), expr, NULL);
         } else {
             AstExpressions *rest = statements(parser, terminal);
             PROTECT(rest);
-            AstExpressions *this = newAstExpressions(CPI(expr), expr, rest);
-            UNPROTECT(save);
-            return this;
+            this = newAstExpressions(CPI(expr), expr, rest);
         }
     } else {
-        AstExpressions *this = newAstExpressions(CPI(expr), expr, NULL);
-        UNPROTECT(save);
-        return this;
+        this = newAstExpressions(CPI(expr), expr, NULL);
     }
+    LEAVE(statements);
+    UNPROTECT(save);
+    return this;
 }
 
 static AstExpression *expression(PrattParser *parser) {
@@ -498,7 +522,9 @@ static AstExpression *expression(PrattParser *parser) {
 }
 
 static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
+    ENTER(definitions);
     if (check(parser->lexer, terminal)) {
+        LEAVE(definitions);
         return NULL;
     }
     AstDefinition *def = definition(parser);
@@ -506,37 +532,47 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
     AstDefinitions *next = definitions(parser, terminal);
     PROTECT(next);
     AstDefinitions *this = newAstDefinitions(CPI(def), def, next);
+    LEAVE(definitions);
     UNPROTECT(save);
     return this;
 }
 
 static AstDefinition *definition(PrattParser *parser) {
+    ENTER(definition);
+    AstDefinition *res = NULL;
     if (check(parser->lexer, TOK_ATOM())) {
-        return assignment(parser);
+        res = assignment(parser);
     } else if (check(parser->lexer, TOK_TYPEDEF())) {
-        return typedefinition(parser);
+        res = typedefinition(parser);
     } else if (check(parser->lexer, TOK_UNSAFE())) {
         next(parser->lexer);
+        validateLastAlloc();
         consume(parser->lexer, TOK_FN());
-        return defun(parser, true, false);
+        res = defun(parser, true, false);
     } else if (check(parser->lexer, TOK_FN())) {
         next(parser->lexer);
-        return defun(parser, false, false);
+        validateLastAlloc();
+        res = defun(parser, false, false);
     } else if (check(parser->lexer, TOK_PRINT())) {
         next(parser->lexer);
-        return defun(parser, false, true);
+        validateLastAlloc();
+        res = defun(parser, false, true);
     } else if (check(parser->lexer, TOK_LINK())) {
-        return link(parser);
+        res = link(parser);
     } else if (check(parser->lexer, TOK_ALIAS())) {
-        return alias(parser);
+        res = alias(parser);
     } else {
         PrattToken *tok = next(parser->lexer);
+        validateLastAlloc();
         errorAt(tok, "expecting definition");
-        return newAstDefinition_Blank(TOKPI(tok));
+        res = newAstDefinition_Blank(TOKPI(tok));
     }
+    LEAVE(definition);
+    return res;
 }
 
 static AstDefinition *alias(PrattParser *parser) {
+    ENTER(alias);
     consume(parser->lexer, TOK_ALIAS());
     HashSymbol *s = symbol(parser);
     consume(parser->lexer, TOK_ASSIGN());
@@ -546,71 +582,73 @@ static AstDefinition *alias(PrattParser *parser) {
     AstAlias *a = newAstAlias(CPI(t), s, t);
     PROTECT(a);
     AstDefinition *d = newAstDefinition_Alias(CPI(a), a);
+    LEAVE(alias);
     UNPROTECT(save);
     return d;
 }
 
 static AstType *type_type(PrattParser *parser) {
+    ENTER(type_type);
+    AstType *type = NULL;
+    int save = PROTECT(type);
     if (match(parser->lexer, TOK_OPEN())) {
-        AstType *type = type_type(parser);
-        int save = PROTECT(type);
+        type = type_type(parser);
+        PROTECT(type);
         consume(parser->lexer, TOK_CLOSE());
-        UNPROTECT(save);
-        return type;
     } else {
         AstTypeClause *clause = type_clause(parser);
-        int save = PROTECT(clause);
-        AstType *type = newAstType(CPI(clause), clause, NULL);
+        PROTECT(clause);
+        type = newAstType(CPI(clause), clause, NULL);
         PROTECT(type);
         if (match(parser->lexer, TOK_ARROW())) {
             type->next = type_type(parser);
         }
-        UNPROTECT(save);
-        return type;
     }
+    LEAVE(type_type);
+    UNPROTECT(save);
+    return type;
 }
 
 static AstTypeClause *type_clause(PrattParser *parser) {
+    ENTER(type_clause);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
+    AstTypeClause *ret = NULL;
     if (match(parser->lexer, TOK_KW_NUMBER())) {
-        AstTypeClause *ret = newAstTypeClause_Integer(TOKPI(tok));
-        UNPROTECT(save);
-        return ret;
+        ret = newAstTypeClause_Integer(TOKPI(tok));
     } else if (match(parser->lexer, TOK_KW_CHAR())) {
-        AstTypeClause *ret = newAstTypeClause_Character(TOKPI(tok));
-        UNPROTECT(save);
-        return ret;
+        ret = newAstTypeClause_Character(TOKPI(tok));
     } else if (tok->type == TOK_HASH()) {
         HashSymbol *typeVar = type_variable(parser);
-        AstTypeClause *ret = newAstTypeClause_Var(TOKPI(tok), typeVar);
-        UNPROTECT(save);
-        return ret;
+        ret = newAstTypeClause_Var(TOKPI(tok), typeVar);
     } else if (tok->type == TOK_ATOM()) {
         AstTypeFunction *fn = type_function(parser);
         PROTECT(fn);
-        AstTypeClause *ret = newAstTypeClause_TypeFunction(CPI(fn), fn);
-        UNPROTECT(save);
-        return ret;
+        ret = newAstTypeClause_TypeFunction(CPI(fn), fn);
     } else if (tok->type == TOK_TUPLE()) {
         AstTypeList *lst = type_tuple(parser);
         PROTECT(lst);
-        AstTypeClause *ret = newAstTypeClause_TypeTuple(CPI(lst), lst);
-        UNPROTECT(save);
-        return ret;
+        ret = newAstTypeClause_TypeTuple(CPI(lst), lst);
     } else {
         parserError(parser, "expected type clause");
-        UNPROTECT(save);
-        return NULL;
+        ret = newAstTypeClause_Integer(TOKPI(tok));
     }
+    LEAVE(type_clause);
+    UNPROTECT(save);
+    return ret;
 }
 
 static HashSymbol *type_variable(PrattParser *parser) {
+    ENTER(type_variable);
+    HashSymbol *res = NULL;
     consume(parser->lexer, TOK_HASH());
-    return symbol(parser);
+    res = symbol(parser);
+    LEAVE(type_variable);
+    return res;
 }
 
 static AstTypeList *type_list(PrattParser *parser) {
+    ENTER(type_list);
     AstType *type = type_type(parser);
     int save = PROTECT(type);
     AstTypeList *this = newAstTypeList(CPI(type), type, NULL);
@@ -618,11 +656,13 @@ static AstTypeList *type_list(PrattParser *parser) {
     if (match(parser->lexer, TOK_COMMA())) {
         this->next = type_list(parser);
     }
+    LEAVE(type_list);
     UNPROTECT(save);
     return this;
 }
 
 static AstTypeMap *type_map(PrattParser *parser) {
+    ENTER(type_map);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
@@ -634,21 +674,25 @@ static AstTypeMap *type_map(PrattParser *parser) {
     if (match(parser->lexer, TOK_COMMA())) {
         this->next = type_map(parser);
     }
+    LEAVE(type_map);
     UNPROTECT(save);
     return this;
 }
 
 static AstAltFunction *alt_function(PrattParser *parser) {
+    ENTER(alt_function);
     AstAltArgs *args = alt_args(parser);
     int save = PROTECT(args);
     AstNest *body = nest(parser);
     PROTECT(body);
     AstAltFunction *fn = newAstAltFunction(CPI(args), args, body);
+    LEAVE(alt_function);
     UNPROTECT(save);
     return fn;
 }
 
 static AstTypeFunction *type_function(PrattParser *parser) {
+    ENTER(type_function);
     AstLookupOrSymbol *name = scoped_symbol(parser);
     int save = PROTECT(name);
     AstTypeFunction *this = newAstTypeFunction(CPI(name), name, NULL);
@@ -657,20 +701,24 @@ static AstTypeFunction *type_function(PrattParser *parser) {
         this->typeList = type_list(parser);
         consume(parser->lexer, TOK_CLOSE());
     }
+    LEAVE(type_function);
     UNPROTECT(save);
     return this;
 }
 
 static AstTypeList *type_tuple(PrattParser *parser) {
+    ENTER(type_tuple);
     consume(parser->lexer, TOK_TUPLE());
     AstTypeList *body = type_list(parser);
     int save = PROTECT(body);
     consume(parser->lexer, TOK_CLOSE());
+    LEAVE(type_tuple);
     UNPROTECT(save);
     return body;
 }
 
 static AstAltArgs *alt_args(PrattParser *parser) {
+    ENTER(alt_args);
     PrattToken *tok= peek(parser->lexer);
     int save = PROTECT(tok);
     consume(parser->lexer, TOK_OPEN());
@@ -682,20 +730,24 @@ static AstAltArgs *alt_args(PrattParser *parser) {
     if (match(parser->lexer, TOK_PIPE())) {
         this->next = alt_args(parser);
     }
+    LEAVE(alt_args);
     UNPROTECT(save);
     return this;
 }
 
 static AstNest *nest(PrattParser *parser) {
+    ENTER(nest);
     consume(parser->lexer, TOK_LCURLY());
     AstNest *body = nest_body(parser, TOK_RCURLY());
     int save = PROTECT(body);
     consume(parser->lexer, TOK_RCURLY());
+    LEAVE(nest);
     UNPROTECT(save);
     return body;
 }
 
 static AstLookupOrSymbol *scoped_symbol(PrattParser *parser) {
+    ENTER(scoped_symbol);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *sym1 = symbol(parser);
@@ -706,19 +758,23 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser) {
             AstLookupSymbol *lus = newAstLookupSymbol(TOKPI(tok), index, sym1, sym2);
             PROTECT(lus);
             AstLookupOrSymbol *res = newAstLookupOrSymbol_Lookup(CPI(lus), lus);
+            LEAVE(scoped_symbol);
             UNPROTECT(save);
             return res;
         } else {
-            parserError(parser, "cannot resolve namespace %s", sym2->name);
+            parserError(parser, "cannot resolve namespace %s", sym1->name);
         }
     }
     AstLookupOrSymbol *res = newAstLookupOrSymbol_Symbol(TOKPI(tok), sym1);
+    LEAVE(scoped_symbol);
     UNPROTECT(save);
     return res;
 }
 
 static AstArgList *fargs(PrattParser *parser) {
+    ENTER(fargs);
     if (check(parser->lexer, TOK_CLOSE())) {
+        LEAVE(fargs);
         return NULL;
     }
     AstArg *arg = farg(parser);
@@ -728,6 +784,7 @@ static AstArgList *fargs(PrattParser *parser) {
     if (match(parser->lexer, TOK_COMMA())) {
         this->next = fargs(parser);
     }
+    LEAVE(fargs);
     UNPROTECT(save);
     return this;
 }
@@ -744,12 +801,13 @@ static Character tokenToUnicodeChar(PrattToken *token) {
 }
 
 static AstArg *farg(PrattParser *parser) {
+    ENTER(farg);
     AstArg *res = NULL;
     PrattToken *first = peek(parser->lexer); // for ParserInfo
     int save = PROTECT(first);
     if (check(parser->lexer, TOK_ATOM())) {
         AstLookupOrSymbol *los = scoped_symbol(parser);
-        save = PROTECT(los);
+        PROTECT(los);
         if (match(parser->lexer, TOK_OPEN())) {
             AstArgList *args = fargs(parser);
             PROTECT(args);
@@ -823,6 +881,7 @@ static AstArg *farg(PrattParser *parser) {
     } else {
         parserError(parser, "[1] unexpected %s", first->type->name);
         next(parser->lexer);
+        validateLastAlloc();
         res = newAstArg_Symbol(TOKPI(first), TOK_ERROR());
         PROTECT(res);
     }
@@ -838,11 +897,14 @@ static AstArg *farg(PrattParser *parser) {
         res = newAstArg_Unpack(CPI(cons), cons);
         PROTECT(res);
     }
+    DEBUG("farg = %s", astArgTypeName(res->type));
+    LEAVE(farg);
     UNPROTECT(save);
     return res;
 }
 
 static AstTaggedArgList *tagged_farg(PrattParser *parser) {
+    ENTER(tagged_farg);
     PrattToken *first = peek(parser->lexer);
     int save = PROTECT(first);
     HashSymbol *s = symbol(parser);
@@ -850,21 +912,25 @@ static AstTaggedArgList *tagged_farg(PrattParser *parser) {
     AstArg *arg = farg(parser);
     PROTECT(arg);
     AstTaggedArgList *this = newAstTaggedArgList(TOKPI(first), s, arg, NULL);
+    LEAVE(tagged_farg);
     UNPROTECT(save);
     return this;
 }
 
 static AstTaggedArgList *tagged_fargs(PrattParser *parser) {
+    ENTER(tagged_fargs);
     AstTaggedArgList *this = tagged_farg(parser);
     int save = PROTECT(this);
     if (match(parser->lexer, TOK_COMMA())) {
         this->next = tagged_fargs(parser);
     }
+    LEAVE(tagged_fargs);
     UNPROTECT(save);
     return this;
 }
 
 static AstUnpack *consfargs(PrattParser *parser) {
+    ENTER(consfargs);
     AstArg *car = farg(parser);
     int save = PROTECT(car);
     AstArg *cdr = NULL;
@@ -882,21 +948,25 @@ static AstUnpack *consfargs(PrattParser *parser) {
     AstArgList *consArgs = newAstArgList(CPI(car), car, cdrArgs);
     PROTECT(consArgs);
     AstUnpack *res = makeAstUnpack(CPI(consArgs), consSymbol(), consArgs);
+    LEAVE(consfargs);
     UNPROTECT(save);
     return res;
 }
 
 static AstUnpack *stringarg(PrattParser *parser) {
+    ENTER(stringarg);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     PrattUTF8 *s = str(parser);
     PROTECT(s);
     AstUnpack *u = makeStringUnpack(TOKPI(tok), s);
+    LEAVE(stringarg);
     UNPROTECT(save);
     return u;
 }
 
 static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
+    ENTER(defun);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
@@ -911,15 +981,19 @@ static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter) {
     AstDefine *def = newAstDefine(TOKPI(tok), s, expr);
     PROTECT(def);
     AstDefinition *res = newAstDefinition_Define(CPI(def), def);
+    LEAVE(defun);
     UNPROTECT(save);
     return res;
 }
 
 static HashSymbol *symbol(PrattParser *parser) {
+    ENTER(symbol);
     PrattToken *tok = next(parser->lexer);
+    validateLastAlloc();
     int save = PROTECT(tok);
     if (tok->type != TOK_ATOM()) {
         errorAt(tok, "expected ATOM");
+        LEAVE(symbol);
         UNPROTECT(save);
         return TOK_ERROR();
     }
@@ -929,11 +1003,14 @@ static HashSymbol *symbol(PrattParser *parser) {
     }
 #endif
     HashSymbol *s = tok->value->val.atom;
+    DEBUG("symbol: %s", s->name);
+    LEAVE(symbol);
     UNPROTECT(save);
     return s;
 }
 
 static AstDefinition *assignment(PrattParser* parser) {
+    ENTER(assignment);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
@@ -944,11 +1021,13 @@ static AstDefinition *assignment(PrattParser* parser) {
     AstDefine *def = newAstDefine(TOKPI(tok), s, expr);
     PROTECT(def);
     AstDefinition *res = newAstDefinition_Define(CPI(def), def);
+    LEAVE(assignment);
     UNPROTECT(save);
     return res;
 }
 
 static AstDefinition *typedefinition(PrattParser *parser) {
+    ENTER(typedefinition);
     consume(parser->lexer, TOK_TYPEDEF());
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
@@ -956,6 +1035,7 @@ static AstDefinition *typedefinition(PrattParser *parser) {
     AstUserType *userType = NULL;
     if (check(parser->lexer, TOK_OPEN())) {
         next(parser->lexer);
+        validateLastAlloc();
         AstTypeSymbols *variables = type_variables(parser);
         PROTECT(variables);
         consume(parser->lexer, TOK_CLOSE());
@@ -971,27 +1051,30 @@ static AstDefinition *typedefinition(PrattParser *parser) {
     AstTypeDef *typeDef = newAstTypeDef(CPI(userType), userType, typeBody);
     PROTECT(typeDef);
     AstDefinition *res = newAstDefinition_TypeDef(CPI(typeDef), typeDef);
+    LEAVE(typedefinition);
     UNPROTECT(save);
     return res;
 }
 
 static AstTypeBody *type_body(PrattParser *parser) {
+    ENTER(typedefinition);
     AstTypeConstructor *tc = type_constructor(parser);
     int save = PROTECT(tc);
+    AstTypeBody *this = NULL;
     if (match(parser->lexer, TOK_PIPE())) {
         AstTypeBody *rest = type_body(parser);
         PROTECT(rest);
-        AstTypeBody *this = newAstTypeBody(CPI(tc), tc, rest);
-        UNPROTECT(save);
-        return this;
+        this = newAstTypeBody(CPI(tc), tc, rest);
     } else {
-        AstTypeBody *this = newAstTypeBody(CPI(tc), tc, NULL);
-        UNPROTECT(save);
-        return this;
+        this = newAstTypeBody(CPI(tc), tc, NULL);
     }
+    LEAVE(typedefinition);
+    UNPROTECT(save);
+    return this;
 }
 
 static AstTypeConstructor *type_constructor(PrattParser *parser) {
+    ENTER(type_constructor);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
@@ -1010,38 +1093,40 @@ static AstTypeConstructor *type_constructor(PrattParser *parser) {
         PROTECT(args);
     }
     AstTypeConstructor *res = newAstTypeConstructor(TOKPI(tok), s, args);
+    LEAVE(type_constructor);
     UNPROTECT(save);
     return res;
 }
 
 static AstTypeSymbols *type_variables(PrattParser *parser) {
+    ENTER(type_variables);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     HashSymbol *s = type_variable(parser);
+    AstTypeSymbols *t = NULL;
     if (check(parser->lexer, TOK_CLOSE())) {
-        AstTypeSymbols *t = newAstTypeSymbols(TOKPI(tok), s, NULL);
-        UNPROTECT(save);
-        return t;
+        t = newAstTypeSymbols(TOKPI(tok), s, NULL);
     } else {
         consume(parser->lexer, TOK_COMMA());
         AstTypeSymbols *rest = type_variables(parser);
         PROTECT(rest);
-        AstTypeSymbols *t = newAstTypeSymbols(TOKPI(tok), s, rest);
-        UNPROTECT(save);
-        return t;
+        t = newAstTypeSymbols(TOKPI(tok), s, rest);
     }
+    LEAVE(type_variables);
+    UNPROTECT(save);
+    return t;
 }
 
 static AstDefinition *link(PrattParser *parser) {
+    ENTER(link);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     consume(parser->lexer, TOK_LINK());
     PrattUTF8 *path = rawString(parser);
     PROTECT(path);
+    AstDefinition *res = NULL;
     if (path == NULL) {
-        AstDefinition *res = newAstDefinition_Blank(TOKPI(tok));
-        UNPROTECT(save);
-        return res;
+        res = newAstDefinition_Blank(TOKPI(tok));
     } else {
         consume(parser->lexer, TOK_AS());
         HashSymbol *name = symbol(parser);
@@ -1049,32 +1134,38 @@ static AstDefinition *link(PrattParser *parser) {
         AstNamespace *ns = parseLink(parser, path->entries, name);
         PROTECT(ns);
         storeNamespace(parser, ns);
-        AstDefinition *res = newAstDefinition_Blank(CPI(ns));
-        UNPROTECT(save);
-        return res;
+        res = newAstDefinition_Blank(CPI(ns));
     }
+    LEAVE(link);
+    UNPROTECT(save);
+    return res;
 }
 
 static PrattUTF8 *rawString(PrattParser *parser) {
+    ENTER(rawString);
     PrattToken *tok = next(parser->lexer);
+    validateLastAlloc();
     if (tok->type == TOK_STRING()) {
 #ifdef SAFETY_CHECKS
         if (tok->value->type != PRATTVALUE_TYPE_STRING) {
             cant_happen("unexpected %s", prattValueTypeName(tok->value->type));
         }
 #endif
+        LEAVE(rawString);
         return tok->value->val.string;
     } else {
         parserError(parser, "expected string, got %s", tok->type->name);
         PrattUTF8 *error = newPrattUTF8();
         int save = PROTECT(error);
         pushPrattUTF8(error, 0);
+        LEAVE(rawString);
         UNPROTECT(save);
         return error;
     }
 }
 
 static void appendString(PrattParser *parser, PrattUTF8 *this) {
+    ENTER(appendString);
     PrattUTF8 *next = rawString(parser);
     int save = PROTECT(next);
     this->size--; // backup over '\0'
@@ -1085,35 +1176,41 @@ static void appendString(PrattParser *parser, PrattUTF8 *this) {
     if (check(parser->lexer, TOK_STRING())) {
         appendString(parser, this);
     }
+    LEAVE(appendString);
 }
 
 static PrattUTF8 *str(PrattParser *parser) {
+    ENTER(str);
     PrattUTF8 *this = rawString(parser);
     int save = PROTECT(this);
     if (check(parser->lexer, TOK_STRING())) {
         appendString(parser, this);
     }
+    LEAVE(str);
     UNPROTECT(save);
     return this;
 }
 
 static AstCompositeFunction *composite_function(PrattParser *parser) {
+    ENTER(composite_function);
+    AstCompositeFunction *res = NULL;
+    int save = PROTECT(res);
     if (match(parser->lexer, TOK_LCURLY())) {
-        AstCompositeFunction *res = functions(parser);
-        int save = PROTECT(res);
+        res = functions(parser);
+        PROTECT(res);
         consume(parser->lexer, TOK_RCURLY());
-        UNPROTECT(save);
-        return res;
     } else {
         AstAltFunction *f = alt_function(parser);
-        int save = PROTECT(f);
-        AstCompositeFunction *res = makeAstCompositeFunction(f, NULL);
-        UNPROTECT(save);
-        return res;
+        PROTECT(f);
+        res = makeAstCompositeFunction(f, NULL);
     }
+    LEAVE(composite_function);
+    UNPROTECT(save);
+    return res;
 }
 
 static AstCompositeFunction *functions(PrattParser *parser) {
+    ENTER(functions);
     AstAltFunction *f = alt_function(parser);
     int save = PROTECT(f);
     AstCompositeFunction *rest = NULL;
@@ -1122,6 +1219,7 @@ static AstCompositeFunction *functions(PrattParser *parser) {
         PROTECT(rest);
     }
     AstCompositeFunction *this = makeAstCompositeFunction(f, rest);
+    LEAVE(functions);
     UNPROTECT(save);
     return this;
 }
@@ -1143,6 +1241,48 @@ static AstExpression *grouping(PrattRecord *record, PrattParser *parser, AstExpr
     int save = PROTECT(res);
     consume(parser->lexer, TOK_CLOSE());
     LEAVE(grouping);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstFunCall *conslist(PrattParser *parser) {
+    ENTER(conslist);
+    AstFunCall *res = NULL;
+    int save = PROTECT(res);
+    if (check(parser->lexer, TOK_RSQUARE())) {
+        ParserInfo PI = LEXPI(parser->lexer);
+        DEBUG("conslist parser info %d %s", PI.lineno, PI.filename);
+        AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
+        PROTECT(nil);
+        res = newAstFunCall(PI, nil, NULL);
+    } else {
+        AstExpression *expr = expression(parser);
+        PROTECT(expr);
+        match(parser->lexer, TOK_COMMA());
+        AstFunCall *rest = conslist(parser);
+        PROTECT(rest);
+        AstExpression *fc = newAstExpression_FunCall(CPI(rest), rest);
+        PROTECT(fc);
+        AstExpression *cons = newAstExpression_Symbol(CPI(fc), consSymbol());
+        PROTECT(cons);
+        AstExpressions *args = newAstExpressions(CPI(fc), fc, NULL);
+        PROTECT(args);
+        args = newAstExpressions(CPI(expr), expr, args);
+        PROTECT(args);
+        res = newAstFunCall(CPI(expr), cons, args);
+    }
+    LEAVE(conslist);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstExpression *list(PrattRecord *record __attribute__((unused)), PrattParser *parser, AstExpression *lhs __attribute__((unused))) {
+    ENTER(list);
+    AstFunCall *conses = conslist(parser);
+    int save = PROTECT(conses);
+    consume(parser->lexer, TOK_RSQUARE());
+    AstExpression *res = newAstExpression_FunCall(CPI(conses), conses);
+    LEAVE(list);
     UNPROTECT(save);
     return res;
 }
@@ -1190,10 +1330,14 @@ static AstExpression *prefixCdr(PrattRecord *record __attribute__((unused)), Pra
 static AstExpression *postfix(PrattRecord *record,
                           PrattParser *parser __attribute__((unused)),
                           AstExpression *lhs) {
-    return makePrattUnary(CPI(lhs), record->symbol, lhs);
+    ENTER(postfix);
+    AstExpression *res = makePrattUnary(CPI(lhs), record->symbol, lhs);
+    LEAVE(postfix);
+    return res;
 }
 
 static AstExpressions *collectArguments(PrattParser *parser) {
+    ENTER(collectArguments);
     AstExpression *arg = expr_bp(parser, 0);
     int save = PROTECT(arg);
     AstExpressions *next = NULL;
@@ -1202,11 +1346,13 @@ static AstExpressions *collectArguments(PrattParser *parser) {
         PROTECT(next);
     }
     AstExpressions *this = newAstExpressions(CPI(arg), arg, next);
+    LEAVE(collectArguments);
     UNPROTECT(save);
     return this;
 }
 
 static AstExpressions *collectArgs(PrattParser *parser) {
+    ENTER(collectArgs);
     AstExpressions *args = NULL;
     int save = PROTECT(args);
     if (!check(parser->lexer, TOK_CLOSE())) {
@@ -1214,6 +1360,7 @@ static AstExpressions *collectArgs(PrattParser *parser) {
         PROTECT(args);
     }
     consume(parser->lexer, TOK_CLOSE());
+    LEAVE(collectArgs);
     UNPROTECT(save);
     return args;
 }
@@ -1233,15 +1380,18 @@ static AstExpression *postfixArg(PrattRecord *record __attribute__((unused)),
 }
 
 static AstFunCall *switchFC(PrattParser *parser) {
+    ENTER(switchFC);
     PrattToken *tok = peek(parser->lexer);
+    int save = PROTECT(tok);
     consume(parser->lexer, TOK_OPEN());
     AstExpressions *args = collectArgs(parser);
-    int save = PROTECT(args);
+    PROTECT(args);
     AstCompositeFunction *body = composite_function(parser);
     PROTECT(body);
     AstExpression *fun = newAstExpression_Fun(TOKPI(tok), body);
     PROTECT(fun);
     AstFunCall *res = newAstFunCall(TOKPI(tok), fun, args);
+    LEAVE(switchFC);
     UNPROTECT(save);
     return res;
 }
@@ -1249,11 +1399,27 @@ static AstFunCall *switchFC(PrattParser *parser) {
 static AstExpression *switchExp(PrattRecord *record __attribute__((unused)),
                                 PrattParser *parser,
                                 AstExpression *lhs __attribute__((unused))) {
+    ENTER(switchExp);
     AstFunCall *f = switchFC(parser);
     int save = PROTECT(f);
     AstExpression *expr = newAstExpression_FunCall(CPI(f), f);
+    LEAVE(switchExp);
     UNPROTECT(save);
     return expr;
+}
+
+static AstExpression *print(PrattRecord *record __attribute__((unused)),
+                            PrattParser *parser,
+                            AstExpression *lhs __attribute__((unused))) {
+    ENTER(print);
+    AstExpression *toPrint = expression(parser);
+    int save = PROTECT(toPrint);
+    AstPrint *printer = newAstPrint(CPI(toPrint), toPrint);
+    PROTECT(printer);
+    AstExpression *res = newAstExpression_Print(CPI(printer), printer);
+    LEAVE(print);
+    UNPROTECT(save);
+    return res;
 }
 
 static AstExpression *unsafe(PrattRecord *record __attribute__((unused)),
@@ -1353,6 +1519,7 @@ static AstExpression *infixCons(PrattRecord *record, PrattParser *parser, AstExp
 static AstExpression *iff(PrattRecord *record __attribute__((unused)),
                           PrattParser *parser,
                           AstExpression *lhs __attribute__((unused))) {
+    ENTER(iff);
     PrattToken *tok = peek(parser->lexer);
     int save = PROTECT(tok);
     consume(parser->lexer, TOK_OPEN());
@@ -1376,6 +1543,7 @@ static AstExpression *iff(PrattRecord *record __attribute__((unused)),
     AstIff *body = newAstIff(TOKPI(tok), condition, consequent, alternative);
     PROTECT(body);
     AstExpression *res = newAstExpression_Iff(CPI(body), body);
+    LEAVE(iff);
     UNPROTECT(save);
     return res;
 }
@@ -1415,6 +1583,50 @@ static AstExpression *makeChar(PrattToken *tok) {
     return res;
 }
 
+static AstFunCall *makeStringList(ParserInfo PI, PrattUnicode *str) {
+    AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
+    int save = PROTECT(nil);
+    AstFunCall *res = newAstFunCall(PI, nil, NULL);
+    PROTECT(res);
+    for (int size = str->size; size > 0; size--) {
+        AstExpression *character = newAstExpression_Character(PI, str->entries[size-1]);
+        int save2 = PROTECT(character);
+        AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
+        PROTECT(cons);
+        AstExpression *tail = newAstExpression_FunCall(PI, res);
+        PROTECT(tail);
+        AstExpressions *rhs = newAstExpressions(PI, tail, NULL);
+        PROTECT(rhs);
+        AstExpressions *args = newAstExpressions(PI, character, rhs);
+        PROTECT(args);
+        res = newAstFunCall(PI, cons, args);
+        REPLACE_PROTECT(save, res);
+        UNPROTECT(save2);
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static AstExpression *makeString(PrattParser *parser, PrattToken *tok) {
+    ENTER(makeString);
+#ifdef SAFETY_CHECKS
+    if (tok->value->type != PRATTVALUE_TYPE_STRING) {
+        cant_happen("unexpected %s", prattValueTypeName(tok->value->type));
+    }
+#endif
+    enqueueToken(parser->lexer, tok);
+    PrattUTF8 *utf8 = str(parser);
+    int save = PROTECT(utf8);
+    PrattUnicode *uni = PrattUTF8ToUnicode(utf8);
+    PROTECT(uni);
+    AstFunCall *list = makeStringList(TOKPI(tok), uni);
+    PROTECT(list);
+    AstExpression *res = newAstExpression_FunCall(TOKPI(tok), list);
+    LEAVE(makeString);
+    UNPROTECT(save);
+    return res;
+}
+
 AstExpression *expr_bp(PrattParser *parser, int min_bp) {
     ENTER(expr_bp);
     AstExpression *lhs = NULL;
@@ -1428,6 +1640,8 @@ AstExpression *expr_bp(PrattParser *parser, int min_bp) {
         lhs = makeNumber(tok);
     } else if (tok->type == TOK_CHAR()) {
         lhs = makeChar(tok);
+    } else if (tok->type == TOK_STRING()) {
+        lhs = makeString(parser, tok);
     } else {
         PrattRecord *record = fetchRecord(parser, tok->type);
         if (record->prefixOp == NULL) {
@@ -1452,6 +1666,7 @@ AstExpression *expr_bp(PrattParser *parser, int min_bp) {
                     break;
                 }
                 next(parser->lexer);
+                validateLastAlloc();
                 lhs = record->postfixOp(record,parser, lhs);
                 REPLACE_PROTECT(save, lhs);
             } else if (record->infixOp != NULL) {
@@ -1460,6 +1675,7 @@ AstExpression *expr_bp(PrattParser *parser, int min_bp) {
                     break;
                 }
                 next(parser->lexer);
+                validateLastAlloc();
                 lhs = record->infixOp(record, parser, lhs);
                 REPLACE_PROTECT(save, lhs);
             } else {

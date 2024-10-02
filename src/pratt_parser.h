@@ -18,11 +18,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "common.h"
 #include "pratt.h"
 #include "ast.h"
 
+#ifdef DEBUG_PRATT_PARSER
+void disablePrattDebug(void);
+#endif
 AstNest *top(PrattParser *);
 void ppAstNest(PrattUTF8 *, AstNest *);
 PrattParser *makePrattParser(void);
 PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
+int initFileIdStack(void);
 #endif

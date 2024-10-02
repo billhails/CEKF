@@ -75,6 +75,7 @@ void can_happen(const char *message, ...)
     __attribute__((format(printf, 1, 2)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
+void clearErrors(void);
 
 #define cant_happen(...) _cant_happen(__FILE__, __LINE__, __VA_ARGS__)
 
