@@ -1066,7 +1066,7 @@ PrattToken *next(PrattLexer *lexer) {
             }
             lexer->bufList = lexer->bufList->next;
             if (lexer->bufList) {
-                fprintf(stderr, "next buffer %s\n", lexer->bufList->filename->name);
+                DEBUG("next buffer %s", lexer->bufList->filename->name);
             }
         }
         return tokenEOF();

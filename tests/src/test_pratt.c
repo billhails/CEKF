@@ -94,7 +94,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     PrattTrie *t = makePrattTrie(p, NULL);
     PROTECT(t);
     pushAstStringArray(include_paths, strdup("fn"));
-    /*
     test(p, t, "1",                              "{ 1; }", false);
     test(p, t, "5!",                             "{ !(5); }", false);
     test(p, t, "1i",                             "{ 1i; }", false);
@@ -148,7 +147,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test(p, t, "let print list(a, b) { c; } in foo;",
                "{ let print$list = fn { (a, b) { c; } }; in foo; }", false);
     testFile(p, t, "fn/qqsort.fn");
-    */
     testFile(p, t, "fn/import_dictionary.fn");
 
     UNPROTECT(save);
