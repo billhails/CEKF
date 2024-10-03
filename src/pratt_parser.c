@@ -29,6 +29,7 @@
 #include "utf8.h"
 #include "print_generator.h"
 #include "file_id.h"
+#include "preamble.h"
 
 #ifdef DEBUG_PRATT_PARSER
 #  include "debugging_on.h"
@@ -50,7 +51,7 @@
 
 extern AstStringArray *include_paths;
 
-AstExpression *expr_bp(PrattParser *parser, int min_bp);
+static AstExpression *expr_bp(PrattParser *parser, int min_bp);
 static AstExpression *errorExpression(ParserInfo);
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *);
 static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *);
@@ -340,24 +341,52 @@ static void parserError(PrattParser *parser, const char *message, ...) {
     can_happen(" at %s line %d", bufList->filename->name, bufList->lineno);
 }
 
-static AstDefinitions *namespaceFromFileName(PrattParser *parser, char *filename) {
-    DEBUGGING_ON();
-    DEBUG("namespaceFromFileName %s", filename);
-    PrattBufList *bufList = prattBufListFromFileName(filename, NULL);
-    int save = PROTECT(bufList);
-    bufList = prattBufListFromString(parser->lexer->bufList->filename->name, "__NAMESPACE__", bufList);
-    REPLACE_PROTECT(save, bufList);
-    PrattLexer *lexer = newPrattLexer(bufList, parser->lexer->trie);
+static AstDefinitions *namespaceFromBufList(PrattParser *parser, PrattBufList *bufList) {
+    PrattBufList *bl = prattBufListFromString(parser->lexer->bufList->filename->name, TOK_NS()->name, bufList);
+    int save = PROTECT(bl);
+    PrattLexer *lexer = newPrattLexer(bl, parser->lexer->trie);
     REPLACE_PROTECT(save, lexer);
     PrattParser *new = newPrattParser(lexer, parser);
     REPLACE_PROTECT(save, new);
-    DEBUG("namespaceFromFileName start top");
     AstNest *nest = top(new);
     UNPROTECT(save);
-    DEBUG("namespaceFromFileName done");
-    DEBUGGING_OFF();
     if (nest) return nest->definitions;
     return NULL;
+}
+
+static AstDefinitions *namespaceFromString(PrattParser *parser, char *string, char *name) {
+    PrattBufList *bufList = prattBufListFromString(name, string, NULL);
+    int save = PROTECT(bufList);
+    AstDefinitions *res = namespaceFromBufList(parser, bufList);
+    UNPROTECT(save);
+    return res;
+}
+
+static AstDefinitions *namespaceFromFileName(PrattParser *parser, char *filename) {
+    PrattBufList *bufList = prattBufListFromFileName(filename, NULL);
+    int save = PROTECT(bufList);
+    AstDefinitions *res = namespaceFromBufList(parser, bufList);
+    UNPROTECT(save);
+    return res;
+}
+
+AstDefinitions *prattParsePreamble(PrattParser *parser) {
+    return namespaceFromString(parser, (char *) preamble, "src/preamble.fn");
+}
+
+AstNest *prattParseTopLevel(PrattParser *parser) {
+    AstDefinitions *definitions = prattParsePreamble(parser);
+    if (definitions == NULL) return NULL;
+    int save = PROTECT(definitions);
+    AstNest *nest = top(parser);
+    PROTECT(nest);
+    AstExpression *expression = newAstExpression_Nest(CPI(nest), nest);
+    PROTECT(expression);
+    AstExpressions *expressions = newAstExpressions(CPI(expression), expression, NULL);
+    PROTECT(expressions);
+    nest = newAstNest(CPI(expression), definitions, expressions);
+    UNPROTECT(save);
+    return nest;
 }
 
 static void storeNamespace(PrattParser *parser, AstNamespace *ns) {
@@ -468,7 +497,7 @@ AstNest *top(PrattParser *parser) {
     return body;
 }
 
-AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
+static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
     ENTER(nest_body);
     AstNest *res = NULL;
     int save = -1;
@@ -1627,7 +1656,7 @@ static AstExpression *makeString(PrattParser *parser, PrattToken *tok) {
     return res;
 }
 
-AstExpression *expr_bp(PrattParser *parser, int min_bp) {
+static AstExpression *expr_bp(PrattParser *parser, int min_bp) {
     ENTER(expr_bp);
     AstExpression *lhs = NULL;
     PrattToken *tok = next(parser->lexer);

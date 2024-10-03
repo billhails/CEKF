@@ -29,5 +29,7 @@ AstNest *top(PrattParser *);
 void ppAstNest(PrattUTF8 *, AstNest *);
 PrattParser *makePrattParser(void);
 PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
+AstDefinitions *prattParsePreamble(PrattParser *parser);
+AstNest *prattParseTopLevel(PrattParser *parser);
 int initFileIdStack(void);
 #endif

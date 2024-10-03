@@ -30,10 +30,14 @@ PrattToken *peek(PrattLexer *lexer);
 void enqueueToken(PrattLexer *lexer, PrattToken *token);
 
 ParserInfo LEXPI(PrattLexer *);
-static inline ParserInfo BUFPI(PrattBufList *buf) { return (ParserInfo) { .lineno = buf->lineno, .filename = buf->filename->name }; }
-static inline ParserInfo TOKPI(PrattToken *token) { return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name }; }
 
-static inline HashSymbol *S(char *name) { return newSymbol(name); }
+static inline ParserInfo BUFPI(PrattBufList *buf) {
+    return (ParserInfo) { .lineno = buf->lineno, .filename = buf->filename->name };
+}
+
+static inline ParserInfo TOKPI(PrattToken *token) {
+    return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name };
+}
 
 PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);

@@ -31,386 +31,398 @@
 
 HashSymbol *TOK_KW_NUMBER(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("number");
+    if (s == NULL) s = newSymbol("number");
     return s;
 }
 
 HashSymbol *TOK_SWITCH(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("switch");
+    if (s == NULL) s = newSymbol("switch");
     return s;
 }
 
 HashSymbol *TOK_KW_CHAR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("char");
+    if (s == NULL) s = newSymbol("char");
     return s;
 }
 
 HashSymbol *TOK_IF(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("if");
+    if (s == NULL) s = newSymbol("if");
     return s;
 }
 
 HashSymbol *TOK_ELSE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("else");
+    if (s == NULL) s = newSymbol("else");
     return s;
 }
 
 HashSymbol *TOK_PIPE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("|");
+    if (s == NULL) s = newSymbol("|");
     return s;
 }
 
 HashSymbol *TOK_WILDCARD(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("_");
+    if (s == NULL) s = newSymbol("_");
     return s;
 }
 
 HashSymbol *TOK_LCURLY(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("{");
+    if (s == NULL) s = newSymbol("{");
     return s;
 }
 
 HashSymbol *TOK_RCURLY(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("}");
+    if (s == NULL) s = newSymbol("}");
     return s;
 }
 
 HashSymbol *TOK_LSQUARE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("[");
+    if (s == NULL) s = newSymbol("[");
     return s;
 }
 
 HashSymbol *TOK_RSQUARE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("]");
+    if (s == NULL) s = newSymbol("]");
     return s;
 }
 
 HashSymbol *TOK_ATOM(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("ATOM");
+    if (s == NULL) s = newSymbol("ATOM");
     return s;
 }
 
 HashSymbol *TOK_INT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("INT");
+    if (s == NULL) s = newSymbol("INT");
     return s;
 }
 
 HashSymbol *TOK_FLOAT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("FLOAT");
+    if (s == NULL) s = newSymbol("FLOAT");
     return s;
 }
 
 HashSymbol *TOK_EOF(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("EOF");
+    if (s == NULL) s = newSymbol("EOF");
     return s;
 }
 
 HashSymbol *TOK_STRING(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("STRING");
+    if (s == NULL) s = newSymbol("STRING");
     return s;
 }
 
 HashSymbol *TOK_CHAR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("CHAR");
+    if (s == NULL) s = newSymbol("CHAR");
     return s;
 }
 
 HashSymbol *TOK_TUPLE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("#(");
+    if (s == NULL) s = newSymbol("#(");
     return s;
 }
 
 HashSymbol *TOK_OPEN(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("(");
+    if (s == NULL) s = newSymbol("(");
     return s;
 }
 
 HashSymbol *TOK_CLOSE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(")");
+    if (s == NULL) s = newSymbol(")");
     return s;
 }
 
 HashSymbol *TOK_COMMA(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(",");
+    if (s == NULL) s = newSymbol(",");
     return s;
 }
 
 HashSymbol *TOK_ARROW(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("->");
+    if (s == NULL) s = newSymbol("->");
     return s;
 }
 
 HashSymbol *TOK_THEN(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("then");
+    if (s == NULL) s = newSymbol("then");
     return s;
 }
 
 HashSymbol *TOK_AND(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("and");
+    if (s == NULL) s = newSymbol("and");
     return s;
 }
 
 HashSymbol *TOK_OR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("or");
+    if (s == NULL) s = newSymbol("or");
     return s;
 }
 
 HashSymbol *TOK_XOR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("xor");
+    if (s == NULL) s = newSymbol("xor");
     return s;
 }
 
 HashSymbol *TOK_NAND(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("namd");
+    if (s == NULL) s = newSymbol("namd");
     return s;
 }
 
 HashSymbol *TOK_NOR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("nor");
+    if (s == NULL) s = newSymbol("nor");
     return s;
 }
 
 HashSymbol *TOK_NXOR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("nxor");
+    if (s == NULL) s = newSymbol("nxor");
     return s;
 }
 
 HashSymbol *TOK_NOT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("not");
+    if (s == NULL) s = newSymbol("not");
     return s;
 }
 
 HashSymbol *TOK_EQ(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("==");
+    if (s == NULL) s = newSymbol("==");
     return s;
 }
 
 HashSymbol *TOK_NE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("!=");
+    if (s == NULL) s = newSymbol("!=");
     return s;
 }
 
 HashSymbol *TOK_GT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(">");
+    if (s == NULL) s = newSymbol(">");
     return s;
 }
 
 HashSymbol *TOK_LT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("<");
+    if (s == NULL) s = newSymbol("<");
     return s;
 }
 
 HashSymbol *TOK_GE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(">=");
+    if (s == NULL) s = newSymbol(">=");
     return s;
 }
 
 HashSymbol *TOK_LE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("<=");
+    if (s == NULL) s = newSymbol("<=");
     return s;
 }
 
 HashSymbol *TOK_CMP(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("<=>");
+    if (s == NULL) s = newSymbol("<=>");
     return s;
 }
 
 HashSymbol *TOK_ASSIGN(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("=");
+    if (s == NULL) s = newSymbol("=");
     return s;
 }
 
 HashSymbol *TOK_COLON(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(":");
+    if (s == NULL) s = newSymbol(":");
     return s;
 }
 
 HashSymbol *TOK_APPEND(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("@@");
+    if (s == NULL) s = newSymbol("@@");
     return s;
 }
 
 HashSymbol *TOK_CONS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("@");
+    if (s == NULL) s = newSymbol("@");
     return s;
 }
 
 HashSymbol *TOK_PLUS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("+");
+    if (s == NULL) s = newSymbol("+");
     return s;
 }
 
 HashSymbol *TOK_MINUS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("-");
+    if (s == NULL) s = newSymbol("-");
     return s;
 }
 
 HashSymbol *TOK_TIMES(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("*");
+    if (s == NULL) s = newSymbol("*");
     return s;
 }
 
 HashSymbol *TOK_DIVIDE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("/");
+    if (s == NULL) s = newSymbol("/");
     return s;
 }
 
 HashSymbol *TOK_MOD(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("%");
+    if (s == NULL) s = newSymbol("%");
     return s;
 }
 
 HashSymbol *TOK_EXP(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("**");
+    if (s == NULL) s = newSymbol("**");
     return s;
 }
 
 HashSymbol *TOK_HERE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("here");
+    if (s == NULL) s = newSymbol("here");
     return s;
 }
 
 HashSymbol *TOK_HASH(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("#");
+    if (s == NULL) s = newSymbol("#");
     return s;
 }
 
 HashSymbol *TOK_BANG(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("!");
+    if (s == NULL) s = newSymbol("!");
     return s;
 }
 
 HashSymbol *TOK_PERIOD(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(".");
+    if (s == NULL) s = newSymbol(".");
     return s;
 }
 
 HashSymbol *TOK_LET(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("let");
+    if (s == NULL) s = newSymbol("let");
     return s;
 }
 
 HashSymbol *TOK_IN(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("in");
+    if (s == NULL) s = newSymbol("in");
     return s;
 }
 
 HashSymbol *TOK_NS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("__NAMESPACE__");
+    if (s == NULL) s = newSymbol("__NAMESPACE__");
     return s;
 }
 
 HashSymbol *TOK_NAMESPACE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("namespace");
+    if (s == NULL) s = newSymbol("namespace");
     return s;
 }
 
 HashSymbol *TOK_ERROR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("ERROR");
+    if (s == NULL) s = newSymbol("ERROR");
     return s;
 }
 
 HashSymbol *TOK_TYPEDEF(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("typedef");
+    if (s == NULL) s = newSymbol("typedef");
     return s;
 }
 
 HashSymbol *TOK_UNSAFE(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("unsafe");
+    if (s == NULL) s = newSymbol("unsafe");
     return s;
 }
 
 HashSymbol *TOK_FN(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("fn");
+    if (s == NULL) s = newSymbol("fn");
     return s;
 }
 
 HashSymbol *TOK_LINK(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("link");
+    if (s == NULL) s = newSymbol("link");
     return s;
 }
 
 HashSymbol *TOK_AS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("as");
+    if (s == NULL) s = newSymbol("as");
     return s;
 }
 
 HashSymbol *TOK_ALIAS(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("alias");
+    if (s == NULL) s = newSymbol("alias");
     return s;
 }
 
 HashSymbol *TOK_SEMI(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S(";");
+    if (s == NULL) s = newSymbol(";");
     return s;
 }
 
 HashSymbol *TOK_PRINT(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = S("print");
+    if (s == NULL) s = newSymbol("print");
     return s;
+}
+
+static bool isLeadingUtf8(char c) {
+    return isTwoByteUtf8((Byte) c) || isThreeByteUtf8((Byte) c) || isFourByteUtf8((Byte) c);
+}
+
+static bool isALPHA(char c) {
+    return isalpha(c) || c == '_';
+}
+
+static bool isALNUM(char c) {
+    return isdigit(c) || isALPHA(c);
 }
 
 ParserInfo LEXPI(PrattLexer *lexer) {
@@ -453,7 +465,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
-    DEBUG("lookupTrieRecursive %p %c", trie, buffer->start[buffer->length]);
+    // DEBUG("lookupTrieRecursive %p %c", trie, buffer->start[buffer->length]);
     if (trie == NULL || buffer->start[buffer->length] > trie->character) {
         buffer->length = last;
         return found;
@@ -463,16 +475,12 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
     ++buffer->length;
     if (trie->terminal != NULL) {
         // avoid i.e. "orbit" false matching "or"
-        if (!isalpha(trie->character) || !isalpha(buffer->start[buffer->length])) {
+        if (!isALPHA(trie->character) || !isALPHA(buffer->start[buffer->length])) {
             found = trie->terminal;
             last = buffer->length;
         }
     }
     return lookupTrieRecursive(trie->children, buffer, last, found);
-}
-
-static bool isLeadingUtf8(char c) {
-    return isTwoByteUtf8((Byte) c) || isThreeByteUtf8((Byte) c) || isFourByteUtf8((Byte) c);
 }
 
 static PrattToken *tokenFromSymbol(PrattBufList *bufList, HashSymbol *symbol, HashSymbol *tokenType) {
@@ -509,7 +517,7 @@ static void advance(PrattBuffer *buffer) {
 }
 
 static PrattToken *lookupTrieSymbol(PrattLexer *lexer) {
-    DEBUG("lookupTrieSymbol \"%s\" (%d)", lexer->bufList->buffer->start, lexer->bufList->buffer->length);
+    // DEBUG("lookupTrieSymbol \"%s\" (%d)", lexer->bufList->buffer->start, lexer->bufList->buffer->length);
     HashSymbol *symbol = lookupTrieRecursive(lexer->trie, lexer->bufList->buffer, 0, NULL);
     if (symbol == NULL) {
         return NULL;
@@ -533,7 +541,7 @@ static void walkUtf8(PrattBuffer *buffer, int size, HashSymbol *file, int line) 
 static PrattToken *parseIdentifier(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
     while (true) {
-        if (isalnum(buffer->start[buffer->length]) || buffer->start[buffer->length] == '_') {
+        if (isALNUM(buffer->start[buffer->length])) {
             ++buffer->length;
         } else if (isTwoByteUtf8(buffer->start[buffer->length])) {
             walkUtf8(buffer, 1, lexer->bufList->filename, lexer->bufList->lineno);
@@ -823,6 +831,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
     while (state != PRATTSTRINGSTATE_TYPE_END) {
         switch (state) {
             case PRATTSTRINGSTATE_TYPE_START:
+                DEBUG("parseString %s %d (sep %c) START: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
 #ifdef SAFETCY_CHECKS
                 if (buffer->start[buffer->length] != sep) {
                     cant_happen("expected '%c' got '%c'", sep, buffer->start[buffer->length]);
@@ -832,6 +841,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 state = PRATTSTRINGSTATE_TYPE_STR;
                 break;
             case PRATTSTRINGSTATE_TYPE_STR:
+                DEBUG("parseString %s %d (sep %c) STR: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (isTwoByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -871,11 +881,13 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                         default:
                             pushPrattUTF8(string, buffer->start[buffer->length]);
                             ++buffer->length;
+                            state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
                             break;
                     }
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR4:
+                DEBUG("parseString %s %d (sep %c) CHR4: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -887,6 +899,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR3:
+                DEBUG("parseString %s %d (sep %c) CHR3: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -898,6 +911,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR2:
+                DEBUG("parseString %s %d (sep %c) CHR2: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -909,6 +923,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_ESC:
+                DEBUG("parseString %s %d (sep %c) ESC: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 switch (buffer->start[buffer->length]) {
                     case 'u': case 'U':
                         ++buffer->length;
@@ -929,6 +944,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_UNI:
+                DEBUG("parseString %s %d (sep %c) UNI: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 switch (buffer->start[buffer->length]) {
                     case '0': case '1': case '2': case '3': case '4': case '5':
                     case '6': case '7': case '8': case '9': {
@@ -978,6 +994,7 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR1: // only get here if single == true
+                DEBUG("parseString %s %d (sep %c) CHR1: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (buffer->start[buffer->length] == sep) {
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
@@ -999,10 +1016,10 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
 PrattToken *next(PrattLexer *lexer) {
     PrattToken *lookahead = dequeueToken(lexer);
     if (lookahead != NULL) {
-        DEBUG("next found lookahead %s", lookahead->type->name);
+        // DEBUG("next found lookahead %s", lookahead->type->name);
         return lookahead;
     } else {
-        DEBUG("next no lookahead");
+        // DEBUG("next no lookahead");
         while (lexer->bufList != NULL) {
             PrattBuffer *buffer = lexer->bufList->buffer;
             if (buffer->start == NULL) {
@@ -1022,7 +1039,7 @@ PrattToken *next(PrattLexer *lexer) {
                         ++buffer->start;
                         ++lexer->bufList->lineno;
                     }
-                } else if (isalpha(buffer->start[0]) || isLeadingUtf8(buffer->start[0])) {
+                } else if (isALPHA(buffer->start[0]) || isLeadingUtf8(buffer->start[0])) {
                     PrattToken *token = lookupTrieSymbol(lexer);
                     if (token != NULL) {
                         return token;
@@ -1119,7 +1136,7 @@ void errorAt(PrattToken *token, char *message) {
 }
 
 PrattToken *peek(PrattLexer *lexer) {
-    DEBUG("peek");
+    // DEBUG("peek");
     PrattToken *token = next(lexer);
     int save = PROTECT(token);
     enqueueToken(lexer, token);
@@ -1156,7 +1173,7 @@ void consume(PrattLexer *lexer, HashSymbol *type) {
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {
     PrattBuffer *buffer = prattBufferFromFileName(fileName);
     int save = PROTECT(buffer);
-    PrattBufList *res = newPrattBufList(1, S(fileName), buffer, next);
+    PrattBufList *res = newPrattBufList(1, newSymbol(fileName), buffer, next);
     UNPROTECT(save);
     return res;
 }
@@ -1164,7 +1181,7 @@ PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {
 PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next) {
     PrattBuffer *buffer = prattBufferFromString(string);
     int save = PROTECT(buffer);
-    PrattBufList *res = newPrattBufList(1, S(origin), buffer, next);
+    PrattBufList *res = newPrattBufList(1, newSymbol(origin), buffer, next);
     UNPROTECT(save);
     return res;
 }

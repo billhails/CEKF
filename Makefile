@@ -36,6 +36,7 @@ MAKE_AST=$(PYTHON) ./tools/makeAST.py
 
 LIBS=-lm -lsqlite3
 
+PREAMBLE_SRC=src/preamble.fn
 EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
 EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
 EXTRA_H_TARGETS=$(patsubst src/%.yaml,generated/%.h,$(EXTRA_YAML))
@@ -53,6 +54,7 @@ EXTRA_TARGETS= \
     $(EXTRA_DEBUG_C_TARGETS)
 
 MAIN=src/main.c
+PREAMBLE=generated/preamble.c
 CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
 EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
 PARSER_CFILES=generated/lexer.c generated/parser.c
@@ -63,10 +65,12 @@ TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
 TEST_SUCCESSES=$(patsubst tests/%,tests/.%-success,$(TEST_TARGETS))
 
 MAIN_OBJ=obj/main.o
+PREAMBLE_OBJ=obj/preamble.o
 OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
 TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
 
 MAIN_DEP=dep/main.d
+PREAMBLE_DEP=dep/preamble.d
 DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
@@ -75,8 +79,8 @@ PARSER_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(PARSER_CFILES)))
 EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
-ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP)
+ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ) $(PREAMBLE_OBJ)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I generated/ -I src/
 
@@ -114,6 +118,9 @@ EXTRA_INDENT_ARGS=$(patsubst %,-T %,$(EXTRA_TYPES))
 
 include $(ALL_DEP)
 
+$(PREAMBLE): $(PREAMBLE_SRC) | generated
+	tools/make-preamble.sh
+
 $(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
 	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
 
@@ -144,7 +151,7 @@ $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 $(PARSER_OBJ): obj/%.o: generated/%.c | obj
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(EXTRA_OBJ): obj/%.o: generated/%.c | obj
+$(EXTRA_OBJ) $(PREAMBLE_OBJ): obj/%.o: generated/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
@@ -153,7 +160,7 @@ $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 $(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(PARSER_DEP) $(EXTRA_DEP): dep/%.d: generated/%.c .generated | dep
+$(PARSER_DEP) $(EXTRA_DEP) $(PREAMBLE_DEP): dep/%.d: generated/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
