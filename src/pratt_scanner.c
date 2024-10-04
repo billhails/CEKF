@@ -35,9 +35,21 @@ HashSymbol *TOK_KW_NUMBER(void) {
     return s;
 }
 
+HashSymbol *TOK_BACK(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("back");
+    return s;
+}
+
 HashSymbol *TOK_SWITCH(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("switch");
+    return s;
+}
+
+HashSymbol *TOK_ASSERT(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("assert");
     return s;
 }
 
@@ -187,7 +199,7 @@ HashSymbol *TOK_XOR(void) {
 
 HashSymbol *TOK_NAND(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("namd");
+    if (s == NULL) s = newSymbol("nand");
     return s;
 }
 
@@ -197,9 +209,9 @@ HashSymbol *TOK_NOR(void) {
     return s;
 }
 
-HashSymbol *TOK_NXOR(void) {
+HashSymbol *TOK_XNOR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("nxor");
+    if (s == NULL) s = newSymbol("xnor");
     return s;
 }
 
@@ -361,7 +373,7 @@ HashSymbol *TOK_NAMESPACE(void) {
 
 HashSymbol *TOK_ERROR(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("ERROR");
+    if (s == NULL) s = newSymbol("error");
     return s;
 }
 
@@ -929,6 +941,16 @@ static PrattToken *parseString(PrattLexer *lexer, bool single, char sep) {
                         ++buffer->length;
                         uni = 0; // reset
                         state = PRATTSTRINGSTATE_TYPE_UNI;
+                        break;
+                    case 'n':
+                        pushPrattUTF8(string, '\n');
+                        ++buffer->length;
+                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                        break;
+                    case 't':
+                        pushPrattUTF8(string, '\t');
+                        ++buffer->length;
+                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
                         break;
                     case '\n':
                         errorAtLexer("unexpected EOL", lexer);

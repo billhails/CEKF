@@ -87,6 +87,24 @@ void ppAstNest(PrattUTF8 *dest, AstNest *nest) {
     psprintf(dest, "}");
 }
 
+void ppAstNamespaceImpl(PrattUTF8 *dest, AstNamespaceImpl *impl) {
+    psprintf(dest, "\"%s\": {", impl->id->name);
+    ppAstDefinitions(dest, impl->definitions);
+    psprintf(dest, "}");
+}
+
+void ppAstProg(PrattUTF8 *dest, AstProg *prog) {
+    psprintf(dest, "preamble: {");
+    ppAstDefinitions(dest, prog->preamble);
+    psprintf(dest, "} namespaces: [");
+    for (Index i = 0; i < prog->namespaces->size; ++i) {
+        ppAstNamespaceImpl(dest, prog->namespaces->entries[i]);
+    }
+    psprintf(dest, "] body: {");
+    ppAstExpressions(dest, prog->body);
+    psprintf(dest, "}");
+}
+
 void ppAstDefinitions(PrattUTF8 *dest, AstDefinitions *definitions) {
     while (definitions) {
         ppAstDefinition(dest, definitions->definition);

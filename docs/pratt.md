@@ -6,6 +6,7 @@ Pratt Parser support
 flowchart TD
 PrattTable --entries--> entries
 PrattIntTable --entries--> entries
+PrattSymbolTable --entries--> entries
 PrattTrie --character--> byte
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
@@ -29,12 +30,15 @@ PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattTable
 PrattParser --namespaces--> PrattIntTable
 PrattParser --lexer--> PrattLexer
+PrattParser --replacements--> PrattSymbolTable
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefixOp--> PrattOp
+PrattRecord --prefixPrec--> int
 PrattRecord --infixOp--> PrattOp
+PrattRecord --infixPrec--> int
 PrattRecord --postfixOp--> PrattOp
-PrattRecord --precedence--> int
+PrattRecord --postfixPrec--> int
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8

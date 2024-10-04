@@ -66,15 +66,18 @@ structs:
         rules: PrattTable
         namespaces: PrattIntTable
         lexer: PrattLexer
+        replacements: PrattSymbolTable
         next: PrattParser
 
     # Pratt Parser table records
     PrattRecord:
         symbol: HashSymbol
         prefixOp: PrattOp
+        prefixPrec: int
         infixOp: PrattOp
+        infixPrec: int
         postfixOp: PrattOp
-        precedence: int
+        postfixPrec: int
 
 enums:
     PrattNumberState:
@@ -111,6 +114,9 @@ hashes:
     # namespace ids
     PrattIntTable:
         entries: int
+
+    PrattSymbolTable:
+        entries: HashSymbol
 
 arrays:
     PrattUTF8:

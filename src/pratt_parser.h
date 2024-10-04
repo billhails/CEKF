@@ -27,6 +27,7 @@ void disablePrattDebug(void);
 #endif
 AstNest *top(PrattParser *);
 void ppAstNest(PrattUTF8 *, AstNest *);
+void ppAstProg(PrattUTF8 *, AstProg *);
 PrattParser *makePrattParser(void);
 PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
 AstDefinitions *prattParsePreamble(PrattParser *parser);

@@ -1,6 +1,6 @@
 let
 
-    fn last {
+    unsafe fn last {
         ([a]) { a }
         (_ @ t) { last(t) }
     }

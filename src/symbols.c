@@ -285,14 +285,6 @@ HashSymbol *powSymbol() {
     return res;
 }
 
-HashSymbol *dotSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("dot$");
-    }
-    return res;
-}
-
 HashSymbol *ifSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
@@ -329,14 +321,6 @@ HashSymbol *arrowSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("->");
-    }
-    return res;
-}
-
-HashSymbol *intSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("int");
     }
     return res;
 }
