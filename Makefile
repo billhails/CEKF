@@ -44,7 +44,7 @@ EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,generated/%_objtypes.h,$(EXTRA_YA
 EXTRA_DEBUG_H_TARGETS=$(patsubst src/%.yaml,generated/%_debug.h,$(EXTRA_YAML))
 EXTRA_DEBUG_C_TARGETS=$(patsubst src/%.yaml,generated/%_debug.c,$(EXTRA_YAML))
 
-EXTRA_DOCS=$(patsubst src/%.yaml,docs/%.md,$(EXTRA_YAML))
+EXTRA_DOCS=$(patsubst src/%.yaml,docs/generated/%.md,$(EXTRA_YAML))
 
 EXTRA_TARGETS= \
     $(EXTRA_C_TARGETS) \
@@ -136,7 +136,7 @@ $(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py src/p
 $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
 	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DOCS): docs/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml
+$(EXTRA_DOCS): docs/generated/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml | docs/generated
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS) $(TMP_H)
