@@ -11,7 +11,7 @@ let
         if (t == x) {
             num(1)
         } else {
-            switch(t) {
+            unsafe switch(t) {
                 (num(_)) { num(0) }
                 (pow(y, num(n))) {
                     if (y == x) {

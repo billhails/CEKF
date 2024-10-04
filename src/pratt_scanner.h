@@ -42,10 +42,9 @@ static inline ParserInfo TOKPI(PrattToken *token) {
 PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next);
-void consume(PrattLexer *lexer, HashSymbol *type);
+bool consume(PrattLexer *, HashSymbol *);
 bool check(PrattLexer *lexer, HashSymbol *type);
 bool match(PrattLexer *lexer, HashSymbol *type);
-void errorAt(PrattToken *token, char *message);
 
 HashSymbol *TOK_ALIAS(void);
 HashSymbol *TOK_AND(void);
@@ -69,14 +68,13 @@ HashSymbol *TOK_EOF(void);
 HashSymbol *TOK_EQ(void);
 HashSymbol *TOK_ERROR(void);
 HashSymbol *TOK_EXP(void);
-HashSymbol *TOK_FLOAT(void);
 HashSymbol *TOK_FN(void);
 HashSymbol *TOK_GE(void);
 HashSymbol *TOK_GT(void);
 HashSymbol *TOK_HASH(void);
 HashSymbol *TOK_HERE(void);
 HashSymbol *TOK_IF(void);
-HashSymbol *TOK_INT(void);
+HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_IN(void);
 HashSymbol *TOK_KW_CHAR(void);
 HashSymbol *TOK_KW_NUMBER(void);

@@ -31,6 +31,7 @@ PrattParser --rules--> PrattTable
 PrattParser --namespaces--> PrattIntTable
 PrattParser --lexer--> PrattLexer
 PrattParser --replacements--> PrattSymbolTable
+PrattParser --panicMode--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefixOp--> PrattOp

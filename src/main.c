@@ -187,6 +187,9 @@ static AstProg *parseFile(char *file) {
     parser->lexer = makePrattLexerFromFilename(trie, file);
     AstNest *nest = prattParseTopLevel(parser);
     PROTECT(nest);
+    if (hadErrors()) {
+        exit(1);
+    }
     AstProg *prog = astNestToProg(nest);
     PROTECT(prog);
     if (ast_flag) {

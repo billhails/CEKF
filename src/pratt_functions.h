@@ -22,7 +22,8 @@ struct PrattParser;
 struct PrattLexer;
 struct PrattRecord;
 struct PrattExpr;
+struct PrattToken;
 
-typedef struct AstExpression *(*PrattOp)(struct PrattRecord *, struct PrattParser *, struct AstExpression *);
+typedef struct AstExpression *(*PrattOp)(struct PrattRecord *, struct PrattParser *, struct AstExpression *, struct PrattToken *);
 
 #endif

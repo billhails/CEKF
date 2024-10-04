@@ -113,15 +113,9 @@ HashSymbol *TOK_ATOM(void) {
     return s;
 }
 
-HashSymbol *TOK_INT(void) {
+HashSymbol *TOK_NUMBER(void) {
     static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("INT");
-    return s;
-}
-
-HashSymbol *TOK_FLOAT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("FLOAT");
+    if (s == NULL) s = newSymbol("NUMBER");
     return s;
 }
 
@@ -690,7 +684,7 @@ static MaybeBigInt *makeIrrational(char *str, int length) {
 
 static PrattToken *parseNumeric(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
-    HashSymbol *type = TOK_INT();
+    HashSymbol *type = TOK_NUMBER();
     PrattNumberState state = PRATTNUMBERSTATE_TYPE_START;
     bool floating = false;
     while (state != PRATTNUMBERSTATE_TYPE_END) {
@@ -727,7 +721,6 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
                         break;
                     case '.':
                         ++buffer->length;
-                        type = TOK_FLOAT();
                         state = PRATTNUMBERSTATE_TYPE_FLOAT;
                         floating = true;
                         break;
@@ -765,7 +758,6 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
                         break;
                     case '.':
                         ++buffer->length;
-                        type = TOK_FLOAT();
                         state = PRATTNUMBERSTATE_TYPE_FLOAT;
                         floating = true;
                         break;
@@ -1153,10 +1145,6 @@ static PrattBuffer *prattBufferFromFileName(char *path) {
     return newPrattBuffer(content);
 }
 
-void errorAt(PrattToken *token, char *message) {
-    can_happen("%s at \"%s\" in \"%s\" line %d", message, token->type->name, token->filename->name, token->lineno);
-}
-
 PrattToken *peek(PrattLexer *lexer) {
     // DEBUG("peek");
     PrattToken *token = next(lexer);
@@ -1183,13 +1171,14 @@ bool match(PrattLexer *lexer, HashSymbol *type) {
     return false;
 }
 
-void consume(PrattLexer *lexer, HashSymbol *type) {
+bool consume(PrattLexer *lexer, HashSymbol *type) {
     PrattToken *token = next(lexer);
     validateLastAlloc();
     if (token->type == type) {
-        return;
+        return true;
     }
     can_happen("expected \"%s\" got \"%s\" in %s line %d", type->name, token->type->name, token->filename->name, token->lineno);
+    return false;
 }
 
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {
