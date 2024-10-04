@@ -24,9 +24,6 @@
 PrattLexer *makePrattLexer(PrattTrie *trie, char *origin, char *input);
 PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
 
-PrattToken *next(PrattLexer *lexer);
-
-PrattToken *peek(PrattLexer *lexer);
 void enqueueToken(PrattLexer *lexer, PrattToken *token);
 
 ParserInfo LEXPI(PrattLexer *);
@@ -42,9 +39,13 @@ static inline ParserInfo TOKPI(PrattToken *token) {
 PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next);
-bool consume(PrattLexer *, HashSymbol *);
-bool check(PrattLexer *lexer, HashSymbol *type);
-bool match(PrattLexer *lexer, HashSymbol *type);
+bool consume(PrattParser *, HashSymbol *);
+bool check(PrattParser *, HashSymbol *);
+bool match(PrattParser *, HashSymbol *);
+PrattToken *next(PrattParser *);
+
+void parserError(PrattParser *parser, const char *message, ...) __attribute__((format(printf, 2, 3)));
+PrattToken *peek(PrattParser *);
 
 HashSymbol *TOK_ALIAS(void);
 HashSymbol *TOK_AND(void);
@@ -74,9 +75,9 @@ HashSymbol *TOK_GT(void);
 HashSymbol *TOK_HASH(void);
 HashSymbol *TOK_HERE(void);
 HashSymbol *TOK_IF(void);
-HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_IN(void);
 HashSymbol *TOK_KW_CHAR(void);
+HashSymbol *TOK_KW_ERROR(void);
 HashSymbol *TOK_KW_NUMBER(void);
 HashSymbol *TOK_LCURLY(void);
 HashSymbol *TOK_LET(void);
@@ -92,7 +93,7 @@ HashSymbol *TOK_NE(void);
 HashSymbol *TOK_NOR(void);
 HashSymbol *TOK_NOT(void);
 HashSymbol *TOK_NS(void);
-HashSymbol *TOK_XNOR(void);
+HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_OPEN(void);
 HashSymbol *TOK_OR(void);
 HashSymbol *TOK_PERIOD(void);
@@ -110,6 +111,7 @@ HashSymbol *TOK_TUPLE(void);
 HashSymbol *TOK_TYPEDEF(void);
 HashSymbol *TOK_UNSAFE(void);
 HashSymbol *TOK_WILDCARD(void);
+HashSymbol *TOK_XNOR(void);
 HashSymbol *TOK_XOR(void);
 
 #endif
