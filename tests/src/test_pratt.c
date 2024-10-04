@@ -38,14 +38,13 @@ static bool failed = false;
 
 static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expected, bool expectError) {
     clearErrors();
+    parser->panicMode = false;
     printf("*** %s ***\n", expr);
     parser->lexer = makePrattLexer(trie, expr, expr);
     AstNest *result = top(parser);
     int save = PROTECT(result);
     if (parser->lexer->bufList != NULL) {
-        PrattToken *tok = next(parser->lexer);
-        validateLastAlloc();
-        errorAt(tok, "unconsumed tokens");
+        parserError(parser, "unconsumed tokens");
     }
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
@@ -64,12 +63,12 @@ static void test(PrattParser *parser, PrattTrie *trie, char *expr, char *expecte
 
 static void testFile(PrattParser *parser, PrattTrie *trie, char *filename) {
     clearErrors();
+    parser->panicMode = false;
     parser->lexer = makePrattLexerFromFilename(trie, filename);
     AstNest *result = prattParseTopLevel(parser);
     int save = PROTECT(result);
     if (parser->lexer->bufList != NULL) {
-        PrattToken *tok = next(parser->lexer);
-        errorAt(tok, "unconsumed tokens");
+        parserError(parser, "unconsumed tokens");
     }
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);

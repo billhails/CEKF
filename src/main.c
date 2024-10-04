@@ -187,6 +187,9 @@ static AstProg *parseFile(char *file) {
     parser->lexer = makePrattLexerFromFilename(trie, file);
     AstNest *nest = prattParseTopLevel(parser);
     PROTECT(nest);
+    if (parser->lexer->bufList != NULL) {
+        parserError(parser, "unconsumed tokens");
+    }
     if (hadErrors()) {
         exit(1);
     }

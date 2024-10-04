@@ -200,7 +200,7 @@ realclean: clean
 	rm -rf tags unicode
 
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc core
+	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc core.*
 
 deps:
 	rm -rf dep
