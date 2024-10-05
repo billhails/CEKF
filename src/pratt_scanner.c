@@ -1222,7 +1222,7 @@ PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {
     return res;
 }
 
-PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *next) {
+PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *next) {
     PrattBuffer *buffer = prattBufferFromString(string);
     int save = PROTECT(buffer);
     PrattBufList *res = newPrattBufList(1, newSymbol(origin), buffer, next);
@@ -1230,8 +1230,8 @@ PrattBufList *prattBufListFromString(char *origin, char *string, PrattBufList *n
     return res;
 }
 
-PrattLexer *makePrattLexer(PrattTrie *trie, char *origin, char *input) {
-    PrattBufList *bl = prattBufListFromString(origin, input, NULL);
+PrattLexer *makePrattLexer(PrattTrie *trie, char *input, char *origin) {
+    PrattBufList *bl = prattBufListFromString(input, origin, NULL);
     int save = PROTECT(bl);
     PrattLexer *res = newPrattLexer(bl, trie);
     UNPROTECT(save);

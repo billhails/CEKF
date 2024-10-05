@@ -20,6 +20,28 @@
 #include "symbol.h"
 #include "builtins_helper.h"
 #include "tc_analyze.h"
+#include "pratt_parser.h"
+#include "pratt_scanner.h"
+
+static AstNest *parseTopLevelFromString(char *string, char *origin) {
+    PrattParser *parser = makePrattParser();
+    int save = PROTECT(parser);
+    PrattTrie *trie = makePrattTrie(parser, NULL);
+    PROTECT(trie);
+    parser->lexer = makePrattLexer(trie, string, origin);
+    // parser->lexer = makePrattLexerFromFilename(trie, file);
+    AstNest *nest = prattParseTopLevel(parser);
+}
+
+static AstNest *parseSingleString(char *string, char *origin) {
+    PrattParser *parser = makePrattParser();
+    int save = PROTECT(parser);
+    PrattTrie *trie = makePrattTrie(parser, NULL);
+    PROTECT(trie);
+    parser->lexer = makePrattLexer(trie, string, origin);
+    // parser->lexer = makePrattLexerFromFilename(trie, file);
+    AstNest *nest = top(parser);
+}
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);

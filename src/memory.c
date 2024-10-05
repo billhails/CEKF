@@ -29,7 +29,6 @@
 #include "step.h"
 #include "anf.h"
 #include "cekf.h"
-#include "module.h"
 #include "symbol.h"
 #include "arithmetic.h"
 #include "opaque.h"

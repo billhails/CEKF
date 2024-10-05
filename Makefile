@@ -57,7 +57,6 @@ MAIN=src/main.c
 PREAMBLE=generated/preamble.c
 CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
 EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
-PARSER_CFILES=generated/lexer.c generated/parser.c
 TEST_CFILES=$(wildcard tests/src/*.c)
 
 TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
@@ -75,17 +74,12 @@ DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
 TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
 EXTRA_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
-PARSER_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(PARSER_CFILES)))
 EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
-PARSER_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(PARSER_OBJ)))
 
-ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PARSER_OBJ) $(PREAMBLE_OBJ)
-ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(PARSER_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
+ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PREAMBLE_OBJ)
+ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
 INCLUDE_PATHS=-I generated/ -I src/
-
-TMP_H=generated/parser.h generated/lexer.h
-TMP_C=generated/parser.c generated/lexer.c
 
 all: $(TARGET) docs
 
@@ -139,17 +133,14 @@ $(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/p
 $(EXTRA_DOCS): docs/generated/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml | docs/generated
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
-.generated: $(EXTRA_TARGETS) $(TMP_H)
+.generated: $(EXTRA_TARGETS)
 	touch $@
 
-tags: src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
-	ctags src/* $(EXTRA_TARGETS) $(TMP_H) $(TMP_C)
+tags: src/* $(EXTRA_TARGETS)
+	ctags src/* $(EXTRA_TARGETS)
 
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
-
-$(PARSER_OBJ): obj/%.o: generated/%.c | obj
-	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
 $(EXTRA_OBJ) $(PREAMBLE_OBJ): obj/%.o: generated/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
@@ -160,17 +151,11 @@ $(TEST_OBJ): obj/%.o: tests/src/%.c | obj
 $(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(PARSER_DEP) $(EXTRA_DEP) $(PREAMBLE_DEP): dep/%.d: generated/%.c .generated | dep
+$(EXTRA_DEP) $(PREAMBLE_DEP): dep/%.d: generated/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 $(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
-
-generated/lexer.c generated/lexer.h: src/lexer.l | generated
-	flex --header-file=generated/lexer.h -o generated/lexer.c $<
-
-generated/parser.c generated/parser.h: src/parser.y | generated
-	bison -v -Werror -Wcounterexamples --header=generated/parser.h -o generated/parser.c $<
 
 test: $(TEST_TARGETS) $(TARGET) unicode/unicode.db
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
@@ -226,9 +211,6 @@ indent-generated: .typedefs .indent.pro
 	rm -f generated/*~
 
 .typedefs: .generated
-
-check-grammar:
-	bison -Wcex --feature=syntax-only src/parser.y
 
 list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1

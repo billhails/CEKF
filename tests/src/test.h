@@ -21,7 +21,6 @@
 #include <assert.h>
 #include "memory.h"
 #include "ast.h"
-#include "module.h"
 #include "lambda_conversion.h"
 #include "lambda_pp.h"
 #include "tc_debug.h"

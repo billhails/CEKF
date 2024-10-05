@@ -48,7 +48,7 @@
 // right associative infix operators parse the rhs with prec - 1
 // pareslets for grouping know their own matching close brace
 
-extern AstStringArray *include_paths;
+AstStringArray *include_paths = NULL;
 
 static AstExpression *expr_bp(PrattParser *parser, int min_bp);
 static AstExpression *errorExpression(ParserInfo);
@@ -386,7 +386,7 @@ static void synchronize(PrattParser *parser) {
 }
 
 static AstDefinitions *namespaceFromBufList(PrattParser *parser, PrattBufList *bufList) {
-    PrattBufList *bl = prattBufListFromString(parser->lexer->bufList->filename->name, TOK_NS()->name, bufList);
+    PrattBufList *bl = prattBufListFromString(TOK_NS()->name, parser->lexer->bufList->filename->name, bufList);
     int save = PROTECT(bl);
     PrattLexer *lexer = newPrattLexer(bl, parser->lexer->trie);
     REPLACE_PROTECT(save, lexer);
@@ -399,7 +399,7 @@ static AstDefinitions *namespaceFromBufList(PrattParser *parser, PrattBufList *b
 }
 
 static AstDefinitions *namespaceFromString(PrattParser *parser, char *string, char *name) {
-    PrattBufList *bufList = prattBufListFromString(name, string, NULL);
+    PrattBufList *bufList = prattBufListFromString(string, name, NULL);
     int save = PROTECT(bufList);
     AstDefinitions *res = namespaceFromBufList(parser, bufList);
     UNPROTECT(save);

@@ -27,7 +27,6 @@
 #include "ast_debug.h"
 #include "lambda_debug.h"
 #include "lambda_conversion.h"
-#include "module.h"
 #include "annotate.h"
 #include "anf.h"
 #include "anf_normalize.h"

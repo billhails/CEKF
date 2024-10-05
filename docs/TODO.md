@@ -26,12 +26,14 @@ More of a wish-list than a hard and fast plan.
       * another special case: `a + b`, `b` would be bound to `0i` if the actual
         argument is not complex.
 * Much better error reporting.
+* `--expression="..."` to execute a snippet from the command line.
 * Error recovery.
 * User definable operators.
    * With precedence and associativity.
-   * `infix 55 left >>= fn(l, r) { ... }`
-   * `prefix 45 $ fn(a) { ... }`
-   * `suffix 60 ! factorial`
+   * `infix 55 left ">>=" fn(l, r) { ... }`
+   * `prefix 45 "$" fn(a) { ... }`
+   * `suffix 60 "!" factorial`
+   * `infix 40 "and" and` - where `and` would have to be a macro.
    * precedence of prefix and postfix operators matters, i.e. `-2**2` is `-(2**2)` not `(-2)**2`.
    * looks like this is a biggie and would involve replacing the existing parser (and probably lexer)
      with a
