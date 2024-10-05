@@ -618,6 +618,11 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
     return this;
 }
 
+static AstDefinition *infix(PrattParser *parser) {
+    ENTER(infix);
+    LEAVE(infix);
+}
+
 static AstDefinition *definition(PrattParser *parser) {
     ENTER(definition);
     AstDefinition *res = NULL;
@@ -642,6 +647,8 @@ static AstDefinition *definition(PrattParser *parser) {
         res = link(parser);
     } else if (check(parser, TOK_ALIAS())) {
         res = alias(parser);
+    } else if (check(parser, TOK_INFIX())) {
+        res = infix(parser);
     } else {
         PrattToken *tok = next(parser);
         validateLastAlloc();

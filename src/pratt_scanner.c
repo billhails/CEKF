@@ -30,6 +30,24 @@
 #  include "debugging_off.h"
 #endif
 
+HashSymbol *TOK_PREFIX(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("prefix");
+    return s;
+}
+
+HashSymbol *TOK_INFIX(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("infix");
+    return s;
+}
+
+HashSymbol *TOK_POSTFIX(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("postfix");
+    return s;
+}
+
 HashSymbol *TOK_KW_NUMBER(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("number");
