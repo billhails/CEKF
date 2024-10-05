@@ -85,6 +85,7 @@ extern "C" {
     void fprintBigInt(FILE *f, BigInt *x);
     void printBigInt(BigInt *x, int depth);
     void fprintMaybeBigInt(FILE *f, MaybeBigInt *x);
+    size_t sprintMaybeBigInt(char *f, MaybeBigInt *x);
     Cmp cmpBigInt(BigInt *a, BigInt *b);
     Cmp cmpBigIntInt(BigInt *a, int b);
     Cmp cmpBigIntDouble(BigInt *a, Double b);
@@ -119,6 +120,7 @@ extern "C" {
         return b->bi.neg != 0;
     }
     bool isEvenBigInt(BigInt *b);
+    size_t printSizeMaybeBigInt(MaybeBigInt *x);
 
 // END CEKF additions
 

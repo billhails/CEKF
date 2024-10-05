@@ -29,7 +29,6 @@
 #include "step.h"
 #include "anf.h"
 #include "cekf.h"
-#include "module.h"
 #include "symbol.h"
 #include "arithmetic.h"
 #include "opaque.h"
@@ -70,16 +69,6 @@ const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_OPAQUE:
             return "opaque";
-        case OBJTYPE_CLO:
-            return "clo";
-        case OBJTYPE_ENV:
-            return "env";
-        case OBJTYPE_FAIL:
-            return "fail";
-        case OBJTYPE_KONT:
-            return "kont";
-        case OBJTYPE_VEC:
-            return "vec";
         case OBJTYPE_HASHTABLE:
             return "hashtable";
         case OBJTYPE_PROTECTION:
@@ -102,6 +91,10 @@ const char *typeName(ObjType type, void *p) {
             return typenameTcObj(type);
         BUILTINS_OBJTYPE_CASES()
             return typenameBuiltinsObj(type);
+        PRATT_OBJTYPE_CASES()
+            return typenamePrattObj(type);
+        CEKFS_OBJTYPE_CASES()
+            return typenameCekfsObj(type);
         default:
             cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
     }
@@ -109,8 +102,10 @@ const char *typeName(ObjType type, void *p) {
 
 char *safeStrdup(char *s) {
     char *t = strdup(s);
-    if (t == NULL)
+    if (t == NULL) {
+        perror("out of memory");
         exit(1);
+    }
     return t;
 }
 
@@ -227,8 +222,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     eprintf("reallocate ptr %p => ", pointer);
 #endif
     void *result = realloc(pointer, newSize);
-    if (result == NULL)
+    if (result == NULL) {
+        perror("out of memory");
         exit(1);
+    }
 #ifdef DEBUG_LOG_GC
     eprintf("%p\n", result);
 #endif
@@ -293,6 +290,9 @@ void markObj(Header *h, Index i) {
         CEKFS_OBJTYPE_CASES()
             markCekfsObj(h);
             break;
+        PRATT_OBJTYPE_CASES()
+            markPrattObj(h);
+            break;
         ANF_OBJTYPE_CASES()
             markAnfObj(h);
             break;
@@ -323,9 +323,6 @@ static void freeProtectionObj(Header *h) {
 
 void freeObj(Header *h) {
     switch (h->type) {
-            CEKFS_OBJTYPE_CASES()
-            freeCekfsObj(h);
-            break;
         case OBJTYPE_OPAQUE:
             freeOpaque((Opaque *) h);
             break;
@@ -343,6 +340,12 @@ void freeObj(Header *h) {
             break;
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
+            break;
+            CEKFS_OBJTYPE_CASES()
+            freeCekfsObj(h);
+            break;
+            PRATT_OBJTYPE_CASES()
+            freePrattObj(h);
             break;
             ANF_OBJTYPE_CASES()
                 freeAnfObj(h);

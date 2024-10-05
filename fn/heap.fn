@@ -69,7 +69,7 @@ let
     }
  
 in
-    makeList(
+    print(makeList(
         makeHeap(
             "kgimtseettepmupybbbmplgntqzutrfxqarkivirlbjqjigntslfewhnjouuyiepnswymkfpyovc"
             "lntwbmhngufnoeidjfmhxxaqmqiaoodslwlwwnzxtdxawnfxbiesjtdwmrzkbdozzyppmdyzhvyh"
@@ -81,4 +81,4 @@ in
             "lttpyrmxlckrvstwmvmfcvmbskcivvsjlchmoczdnbczvznnkiaabonyiqvjmbiyeddetcczprvj"
             "fmhmshxmknhonxyxgbgpawkahqbknbqpargbnnunwgxphhlvedlyazkfzavezdtlfefpvjiooocp"
             "wspyalpahadximvaauocirfgpijbhqskcuuynvcvtndifklhczerlvjpfpjhnkxxprrsktdfnrrm"
-            "oypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol"))
+            "oypigecxbkzxflgtmdxxzfvdvesewzqotfdlqfibzkchndafnmxirrruol")))

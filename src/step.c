@@ -412,11 +412,15 @@ static void applyProc(int naargs) {
                     // create a new env which is a sibling of the partial closure's env.
                     Env *env = makeEnv(clo->E->E);
                     int save = PROTECT(env);
+                    // make sure that the new env has enough space
+                    extendFrame(env->S, ncaptured + naargs);
                     // copy already captured arguments into the new env
                     copyValues(env->S->entries, clo->E->S->entries, ncaptured);
                     // copy the additional arguments after them
                     copyValues(&(env->S->entries[clo->E->S->size]),
                                &(state.S->entries[totalSizeStack(state.S) - naargs]), naargs);
+                    // set the size of the new env
+                    env->S->size = ncaptured + naargs;
                     // create a new closure with correct pending, C and the new env
                     Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);

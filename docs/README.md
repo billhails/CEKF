@@ -21,10 +21,12 @@ the YAML files showing the relationships as mermaid flow charts. They're
 not always very useful being a bit difficult to read but for the sake of
 completeness:
 
-* [anf](anf.md) A-Normal form structures input to the bytecode compiler.
-* [ast](ast.md) Abstract Syntax Tree output from the parser.
-* [builtins](builtins.md) Support for builtin functions.
-* [lambda](lambda.md) Plain Lambda intermediate code generated from the AST.
-* [tc](tc.md) Type Checking support data structures
-* [tpmc](tpmc.md) Support structures for the Term Pattern Matching Compiler.
+* [generated/anf](generated/anf.md) A-Normal form structures input to the bytecode compiler.
+* [generated/ast](generated/ast.md) Abstract Syntax Tree output from the parser.
+* [generated/builtins](generated/builtins.md) Support for builtin functions.
+* [generated/cekfs](generated/cekfs.md) Structures used by the bytecode interpreter.
+* [generated/lambda](generated/lambda.md) Plain Lambda intermediate code generated from the AST.
+* [generated/pratt](generated/pratt.md) Structures used by the pratt parser.
+* [generated/tc](generated/tc.md) Type Checking support data structures.
+* [generated/tpmc](generated/tpmc.md) Support structures for the Term Pattern Matching Compiler.
 

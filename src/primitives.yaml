@@ -71,6 +71,16 @@ char:
     printf: "%c"
     valued: true
 
+uchar:
+    cname: unsigned char
+    printf: "%c"
+    valued: true
+
+schar:
+    cname: char
+    printf: "%c"
+    valued: true
+
 BigInt:
     cname: "struct BigInt *"
     printFn: "printBigInt"
@@ -90,7 +100,18 @@ string:
     printf: "%s"
     valued: true
 
+PrattOp:
+    cname: PrattOp
+    printf: "%p"
+    valued: true
+
 double:
     cname: Double
     printf: "%f"
     valued: true
+
+file:
+    cname: "FILE *"
+    printf: "%p"
+    valued: true
+

@@ -15,4 +15,4 @@ let
         }
     }
 in
-    hanoi(3, 'A', 'B', 'C')
+    hanoi(4, 'A', 'B', 'C')

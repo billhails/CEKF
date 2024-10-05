@@ -285,14 +285,6 @@ HashSymbol *powSymbol() {
     return res;
 }
 
-HashSymbol *dotSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("dot$");
-    }
-    return res;
-}
-
 HashSymbol *ifSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
@@ -329,14 +321,6 @@ HashSymbol *arrowSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("->");
-    }
-    return res;
-}
-
-HashSymbol *intSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("int");
     }
     return res;
 }
@@ -385,6 +369,70 @@ HashSymbol *cdrSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("cdr");
+    }
+    return res;
+}
+
+HashSymbol *leftCurlySymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("{");
+    }
+    return res;
+}
+
+HashSymbol *rightCurlySymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("}");
+    }
+    return res;
+}
+
+HashSymbol *leftRoundSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("(");
+    }
+    return res;
+}
+
+HashSymbol *rightRoundSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol(")");
+    }
+    return res;
+}
+
+HashSymbol *leftSquareSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("[");
+    }
+    return res;
+}
+
+HashSymbol *rightSquareSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("]");
+    }
+    return res;
+}
+
+HashSymbol *questinMarkSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol("?");
+    }
+    return res;
+}
+
+HashSymbol *colonSymbol() {
+    static HashSymbol *res = NULL;
+    if (res == NULL) {
+        res = newSymbol(":");
     }
     return res;
 }

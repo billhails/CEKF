@@ -25,8 +25,8 @@ fn map {
     (func, h @ t) { func(h) @ map(func, t) }
 }
 
-// mapattach: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)
-fn mapprefix(func, lst, tail) {
+// map_prefix: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)
+fn map_prefix(func, lst, tail) {
     let
         fn helper {
             ([]) { tail }
@@ -136,8 +136,9 @@ fn repeat {
     (n, v) { v @ repeat(n - 1, v) }
 }
 
-// prefix: number -> #a -> list(#a) -> list(#a)
-fn repeatprefix(n, v, tail) {
+// repeat_prefix: number -> #a -> list(#a) -> list(#a)
+// repeat_prefix(n, item, list) is a more efficient way of doing repeat(n, item) @@ list
+fn repeat_prefix(n, v, tail) {
     let
         fn helper {
             (0) { tail }

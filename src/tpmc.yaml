@@ -18,13 +18,13 @@
 
 config:
     name: tpmc
+    description: Term Pattern Matching Compiler types
     includes:
     - lambda.h
     limited_includes:
     - lambda_pp.h
     - bigint.h
 
-description: Term Pattern Matching Compiler types
 
 structs:
     TpmcMatchRules:

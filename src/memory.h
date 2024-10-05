@@ -30,6 +30,7 @@ struct Header;
 #  include "tc_objtypes.h"
 #  include "cekfs_objtypes.h"
 #  include "builtins_objtypes.h"
+#  include "pratt_objtypes.h"
 #  include "types.h"
 
 typedef enum {
@@ -52,6 +53,7 @@ typedef enum {
     TC_OBJTYPES(),
     BUILTINS_OBJTYPES(),
     CEKFS_OBJTYPES(),
+    PRATT_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {
@@ -108,4 +110,5 @@ void collectGarbage();
 #  define MARK(obj) (((Header *)(obj))->keep = true)
 #  define MARKED(obj) (((Header *)(obj))->keep == true)
 
+#define safeMalloc(size) reallocate(NULL, 0, size)
 #endif

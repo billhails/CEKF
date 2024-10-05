@@ -1,10 +1,12 @@
 let
     fn funky(k) { k(1) }
 in
-    4 + here fn (k) {
-        if (funky(k)) {
-            2
-        } else {
-            3
+    print(
+        4 + here fn (k) {
+            if (funky(k)) {
+                2
+            } else {
+                3
+            }
         }
-    }
+    )

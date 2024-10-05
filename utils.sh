@@ -11,6 +11,7 @@ run_gdb () {
 }
 
 cores_on () {
+    sudo bash -c "echo 'core.%e' > /proc/sys/kernel/core_pattern"
     ulimit -c unlimited
 }
 
@@ -54,5 +55,17 @@ new_c () {
     else
         echo_gpl > $file
         echo "" >> $file
+    fi
+}
+
+new_ch () {
+    cfile="src/$1.c"
+    if [ -e $cfile ] ; then
+        echo $cfile already exists
+    else
+        new_c $1
+        new_h $1
+        echo "#include \"$1.h\"" >> $cfile
+        echo "" >> $cfile
     fi
 }

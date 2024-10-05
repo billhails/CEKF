@@ -41,6 +41,8 @@
 // #    define DEBUG_LAMBDA_SUBSTITUTE
 // #    define DEBUG_LEAK
 // #    define DEBUG_LOG_GC
+// #    define DEBUG_PRATT_PARSER
+// #    define DEBUG_PRATT_SCANNER
 // #    define DEBUG_PRINT_COMPILER
 // #    define DEBUG_PRINT_GENERATOR
 // #    define DEBUG_SLOW_STEP
@@ -73,6 +75,7 @@ void can_happen(const char *message, ...)
     __attribute__((format(printf, 1, 2)));
 void eprintf(const char *message, ...) __attribute__((format(printf, 1, 2)));
 bool hadErrors(void);
+void clearErrors(void);
 
 #define cant_happen(...) _cant_happen(__FILE__, __LINE__, __VA_ARGS__)
 

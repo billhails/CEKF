@@ -1,6 +1,35 @@
+namespace
+
 link "dictionary.fn" as dic;
 
 typedef Array(#t) { array(number, number, dic.Dict(number, #t)) }
+
+print Array fn (pt, a = array(low, high, d) {
+    let
+        fn helper {
+            (n)) {
+                switch(dic.lookup(n, d)) {
+                    (some(v)) {
+                        pt(v);
+                        if (n < high - 1) {
+                            puts(", ");
+                            helper(n + 1);
+                        } else {
+                            true;
+                        }
+                    }
+                    (nothing) {
+                        true;
+                    }
+                }
+            }
+        }
+    in
+        puts("[");
+        helper(low);
+        puts("]");
+        a;
+}
 
 fn newArray() {
     array(0, 0, dic.E)
@@ -36,8 +65,8 @@ fn shift {
     }
 }
 
-fn inspect(n, array(_, _, dict)) {
-    dic.lookup(n, dict)
+fn inspect(n, array(low, _, dict)) {
+    dic.lookup(n + low, dict)
 }
 
 fn size(array(low, high, _)) {

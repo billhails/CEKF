@@ -1,0 +1,130 @@
+#
+# CEKF - VM supporting amb
+# Copyright (C) 2022-2024  Bill Hails
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+config:
+    name: pratt
+    description: Pratt Parser support
+    parserInfo: false
+    limited_includes:
+    - file_id.h
+    - ast_helper.h
+    - pratt_functions.h
+
+structs:
+    # Scanner token parsing
+    PrattTrie:
+        character: byte
+        terminal: HashSymbol
+        siblings: PrattTrie
+        children: PrattTrie
+
+    # Both a parse buffer and a parse token data type (like yytext)
+    PrattBuffer:
+        data: string
+        start: string=NULL
+        length: int=0
+
+    # Stack of buffers parsed in order
+    PrattBufList:
+        lineno: int
+        filename: HashSymbol
+        buffer: PrattBuffer
+        next: PrattBufList
+
+    # Token after parsing
+    PrattToken:
+        type: HashSymbol
+        filename: HashSymbol
+        lineno: int
+        value: PrattValue
+        next: PrattToken
+
+    # current state of the scanner
+    PrattLexer:
+        bufList: PrattBufList
+        trie: PrattTrie
+        tokenHead: PrattToken=NULL
+        tokenTail: PrattToken=NULL
+
+    # Scoped Parser
+    PrattParser:
+        rules: PrattTable
+        namespaces: PrattIntTable
+        lexer: PrattLexer
+        replacements: PrattSymbolTable
+        panicMode: bool=false
+        next: PrattParser
+
+    # Pratt Parser table records
+    PrattRecord:
+        symbol: HashSymbol
+        prefixOp: PrattOp
+        prefixPrec: int
+        infixOp: PrattOp
+        infixPrec: int
+        postfixOp: PrattOp
+        postfixPrec: int
+
+enums:
+    PrattNumberState:
+        - START
+        - ZERO
+        - HEX
+        - DEC
+        - FLOAT
+        - END
+
+    PrattStringState:
+        - START
+        - STR
+        - ESC
+        - UNI
+        - CHR1
+        - CHR2
+        - CHR3
+        - CHR4
+        - END
+
+unions:
+    PrattValue:
+        string: PrattUTF8
+        number: MaybeBigInt
+        character: PrattUTF8
+        atom: HashSymbol
+        
+hashes:
+    # Pratt parser table
+    PrattTable:
+        entries: PrattRecord
+
+    # namespace ids
+    PrattIntTable:
+        entries: int
+
+    PrattSymbolTable:
+        entries: HashSymbol
+
+arrays:
+    PrattUTF8:
+        entries: uchar
+
+    PrattUnicode:
+        entries: char
+
+primitives: !include primitives.yaml
+
