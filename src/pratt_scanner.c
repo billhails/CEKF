@@ -487,6 +487,16 @@ void parserError(PrattParser *parser, const char *message, ...) {
     }
 }
 
+void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message, ...) {
+    va_list args;
+    if (parser->panicMode) return;
+    parser->panicMode = true;
+    va_start(args, message);
+    vfprintf(errout, message, args);
+    va_end(args);
+    can_happen(" at %s line %d", PI.filename, PI.lineno);
+}
+
 static char *readFile(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {

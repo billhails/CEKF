@@ -44,7 +44,8 @@ bool check(PrattParser *, HashSymbol *);
 bool match(PrattParser *, HashSymbol *);
 PrattToken *next(PrattParser *);
 
-void parserError(PrattParser *parser, const char *message, ...) __attribute__((format(printf, 2, 3)));
+void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
+void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
 PrattToken *peek(PrattParser *);
 
 HashSymbol *TOK_ALIAS(void);
