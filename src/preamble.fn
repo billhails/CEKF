@@ -21,6 +21,7 @@
 // prefix `<` to `car` etc.
 // `puts` is required for the print system, and `cmp` for the `<=>` operator.
 namespace
+
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
 typedef list(#t) { nil | cons(#t, list(#t)) }
@@ -39,6 +40,8 @@ typedef ftype_type {
     ftype_fifo
 }
 
+infix right 90 "@" cons;
+
 fn assert_(line, file, condition) {
     if (condition) {
         true
@@ -51,6 +54,18 @@ fn assert_(line, file, condition) {
         assertion();
     }
 }
+
+fn factorial (n) {
+    let
+        fn h {
+            (0, a) { a }
+            (n, a) { h(n - 1, n * a) }
+        }
+    in
+        h(n, 1)
+}
+
+postfix 120 "!" factorial;
 
 fn error_(line, file, message) {
     puts("error: ");
@@ -68,13 +83,19 @@ fn append {
     (h @ t, b) { h @ append(t, b) }
 }
 
+infix right 80 "@@" append;
+
 unsafe fn car {
     (h @ _) { h }
 }
 
+prefix 55 "<" car;
+
 unsafe fn cdr {
     (_ @ t) { t }
 }
+
+prefix 55 ">" cdr;
 
 fn print_list(helper, l) {
     let

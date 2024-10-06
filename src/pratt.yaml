@@ -23,6 +23,7 @@ config:
     limited_includes:
     - file_id.h
     - ast_helper.h
+    - ast_debug.h
     - pratt_functions.h
 
 structs:
@@ -75,10 +76,13 @@ structs:
         symbol: HashSymbol
         prefixOp: PrattOp
         prefixPrec: int
+        prefixImpl: AstExpression=NULL
         infixOp: PrattOp
         infixPrec: int
+        infixImpl: AstExpression=NULL
         postfixOp: PrattOp
         postfixPrec: int
+        postfixImpl: AstExpression=NULL
 
 enums:
     PrattNumberState:
@@ -99,6 +103,11 @@ enums:
         - CHR3
         - CHR4
         - END
+
+    PrattFixity:
+        - PREFIX
+        - INFIX
+        - POSTFIX
 
 unions:
     PrattValue:
@@ -128,3 +137,9 @@ arrays:
 
 primitives: !include primitives.yaml
 
+external:
+    AstExpression:
+        cname: "struct AstExpression *"
+        printFn: printAstExpression
+        markFn: markAstExpression
+        valued: true

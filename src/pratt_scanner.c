@@ -23,12 +23,25 @@
 #include "pratt_scanner.h"
 #include "utf8.h"
 #include "bigint.h"
+#include "pratt_debug.h"
 
 #ifdef DEBUG_PRATT_SCANNER
 #  include "debugging_on.h"
 #else
 #  include "debugging_off.h"
 #endif
+
+HashSymbol *TOK_LEFT(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("left");
+    return s;
+}
+
+HashSymbol *TOK_RIGHT(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("right");
+    return s;
+}
 
 HashSymbol *TOK_PREFIX(void) {
     static HashSymbol *s = NULL;
@@ -568,15 +581,21 @@ static void advance(PrattBuffer *buffer) {
     buffer->length = 0;
 }
 
-static PrattToken *lookupTrieSymbol(PrattLexer *lexer) {
-    // DEBUG("lookupTrieSymbol \"%s\" (%d)", lexer->bufList->buffer->start, lexer->bufList->buffer->length);
+static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
     HashSymbol *symbol = lookupTrieRecursive(lexer->trie, lexer->bufList->buffer, 0, NULL);
-    if (symbol == NULL) {
-        return NULL;
+    if (symbol != NULL) {
+        PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
+        advance(lexer->bufList->buffer);
+        return res;
     }
-    PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
-    advance(lexer->bufList->buffer);
-    return res;
+    if (parser->next) {
+        return _lookupTrieSymbol(parser->next, lexer);
+    }
+    return NULL;
+}
+
+static PrattToken *lookupTrieSymbol(PrattParser *parser) {
+    return _lookupTrieSymbol(parser, parser->lexer);
 }
 
 static void walkUtf8(PrattParser *parser, int size) {
@@ -1106,7 +1125,7 @@ PrattToken *next(PrattParser *parser) {
                         ++lexer->bufList->lineno;
                     }
                 } else if (isALPHA(buffer->start[0]) || isLeadingUtf8(buffer->start[0])) {
-                    PrattToken *token = lookupTrieSymbol(lexer);
+                    PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     } else {
@@ -1119,11 +1138,12 @@ PrattToken *next(PrattParser *parser) {
                 } else if (buffer->start[0] == '\'') {
                     return parseString(parser, true, '\'');
                 } else if (ispunct(buffer->start[0])) {
-                    PrattToken *token = lookupTrieSymbol(lexer);
+                    PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     }
                     parserError(parser, "unrecognised operator %c", buffer->start[0]);
+                    printPrattParser(parser, 0);
                     ++buffer->start;
                     return tokenERROR(lexer);
                 } else if (isTrailingByteUtf8((Byte) (buffer->start[0]))) {
