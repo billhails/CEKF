@@ -55,6 +55,10 @@ structs:
         name: HashSymbol
         type: AstType
 
+    AstExprAlias:
+        name: HashSymbol
+        value: AstExpression
+
     AstTypeDef:
         userType: AstUserType
         typeBody: AstTypeBody
@@ -211,6 +215,8 @@ unions:
 
     AstExpression:
         back: void_ptr
+        wildcard: void_ptr
+        alias: AstExprAlias
         funCall: AstFunCall
         lookup: AstLookup
         symbol: HashSymbol

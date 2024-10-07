@@ -21,7 +21,7 @@
 #include "pratt.h"
 #include "symbol.h"
 
-PrattLexer *makePrattLexer(PrattTrie *trie, char *input, char *origin);
+PrattLexer *makePrattLexerFromString(char *input, char *origin);
 PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
 
 void enqueueToken(PrattLexer *lexer, PrattToken *token);
@@ -36,7 +36,7 @@ static inline ParserInfo TOKPI(PrattToken *token) {
     return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name };
 }
 
-PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename);
+PrattLexer *makePrattLexerFromFilename(char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *next);
 bool consume(PrattParser *, HashSymbol *);
@@ -44,7 +44,8 @@ bool check(PrattParser *, HashSymbol *);
 bool match(PrattParser *, HashSymbol *);
 PrattToken *next(PrattParser *);
 
-void parserError(PrattParser *parser, const char *message, ...) __attribute__((format(printf, 2, 3)));
+void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
+void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
 PrattToken *peek(PrattParser *);
 
 HashSymbol *TOK_ALIAS(void);
@@ -75,11 +76,13 @@ HashSymbol *TOK_GT(void);
 HashSymbol *TOK_HASH(void);
 HashSymbol *TOK_HERE(void);
 HashSymbol *TOK_IF(void);
+HashSymbol *TOK_INFIX(void);
 HashSymbol *TOK_IN(void);
 HashSymbol *TOK_KW_CHAR(void);
 HashSymbol *TOK_KW_ERROR(void);
 HashSymbol *TOK_KW_NUMBER(void);
 HashSymbol *TOK_LCURLY(void);
+HashSymbol *TOK_LEFT(void);
 HashSymbol *TOK_LET(void);
 HashSymbol *TOK_LE(void);
 HashSymbol *TOK_LINK(void);
@@ -92,15 +95,17 @@ HashSymbol *TOK_NAND(void);
 HashSymbol *TOK_NE(void);
 HashSymbol *TOK_NOR(void);
 HashSymbol *TOK_NOT(void);
-HashSymbol *TOK_NS(void);
 HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_OPEN(void);
 HashSymbol *TOK_OR(void);
 HashSymbol *TOK_PERIOD(void);
 HashSymbol *TOK_PIPE(void);
 HashSymbol *TOK_PLUS(void);
+HashSymbol *TOK_POSTFIX(void);
+HashSymbol *TOK_PREFIX(void);
 HashSymbol *TOK_PRINT(void);
 HashSymbol *TOK_RCURLY(void);
+HashSymbol *TOK_RIGHT(void);
 HashSymbol *TOK_RSQUARE(void);
 HashSymbol *TOK_SEMI(void);
 HashSymbol *TOK_STRING(void);

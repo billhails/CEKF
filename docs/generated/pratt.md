@@ -24,28 +24,32 @@ PrattToken --lineno--> int
 PrattToken --value--> PrattValue
 PrattToken --next--> PrattToken
 PrattLexer --bufList--> PrattBufList
-PrattLexer --trie--> PrattTrie
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattTable
 PrattParser --namespaces--> PrattIntTable
 PrattParser --lexer--> PrattLexer
+PrattParser --trie--> PrattTrie
 PrattParser --replacements--> PrattSymbolTable
 PrattParser --panicMode--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefixOp--> PrattOp
 PrattRecord --prefixPrec--> int
+PrattRecord --prefixImpl--> AstExpression
 PrattRecord --infixOp--> PrattOp
 PrattRecord --infixPrec--> int
+PrattRecord --infixImpl--> AstExpression
 PrattRecord --postfixOp--> PrattOp
 PrattRecord --postfixPrec--> int
+PrattRecord --postfixImpl--> AstExpression
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8
 PrattValue --atom--> HashSymbol
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
+PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
 PrattUnicode["PrattUnicode[]"] --entries--> char
 PrattValueVal
