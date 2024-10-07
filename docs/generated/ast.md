@@ -21,6 +21,8 @@ AstDefine --symbol--> HashSymbol
 AstDefine --expression--> AstExpression
 AstAlias --name--> HashSymbol
 AstAlias --type--> AstType
+AstExprAlias --name--> HashSymbol
+AstExprAlias --value--> AstExpression
 AstTypeDef --userType--> AstUserType
 AstTypeDef --typeBody--> AstTypeBody
 AstUserType --symbol--> HashSymbol
@@ -105,6 +107,8 @@ AstArg --number--> MaybeBigInt
 AstArg --character--> char
 AstArg --tuple--> AstArgList
 AstExpression --back--> void_ptr
+AstExpression --wildcard--> void_ptr
+AstExpression --alias--> AstExprAlias
 AstExpression --funCall--> AstFunCall
 AstExpression --lookup--> AstLookup
 AstExpression --symbol--> HashSymbol

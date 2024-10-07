@@ -38,17 +38,9 @@ static bool failed = false;
 
 static void test(char *expr, char *expected, bool expectError) {
     clearErrors();
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser, NULL);
-    PROTECT(trie);
     printf("*** %s ***\n", expr);
-    parser->lexer = makePrattLexer(trie, expr, expr);
-    AstNest *result = top(parser);
-    PROTECT(result);
-    if (parser->lexer->bufList != NULL) {
-        parserError(parser, "unconsumed tokens");
-    }
+    AstNest *result = prattParseStandaloneString(expr, expr);
+    int save = PROTECT(result);
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
     ppAstNest(dest, result);
@@ -66,19 +58,12 @@ static void test(char *expr, char *expected, bool expectError) {
 
 static void testFile(char *filename) {
     clearErrors();
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser, NULL);
-    PROTECT(trie);
-    parser->lexer = makePrattLexerFromFilename(trie, filename);
-    AstNest *result = prattParseTopLevel(parser);
-    PROTECT(result);
-    if (parser->lexer->bufList != NULL) {
-        parserError(parser, "unconsumed tokens");
-    }
+    PrattLexer *lexer = makePrattLexerFromFilename(filename);
+    AstProg *result = prattParseFile(filename);
+    int save = PROTECT(result);
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
-    ppAstNest(dest, result);
+    ppAstProg(dest, result);
     printf("%s\n", dest->entries);
     if (hadErrors()) {
         failed = true;

@@ -54,6 +54,7 @@ AstStringArray *include_paths = NULL;
 static AstExpression *expr_bp(PrattParser *parser, int min_bp);
 static AstExpression *errorExpression(ParserInfo);
 static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol, bool fatal);
+static PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
 
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -131,6 +132,8 @@ static AstArg *astTupleToFarg(PrattParser *parser, AstExpressions *tuple);
 static AstArg *astStructureToFarg(PrattParser *parser, AstStruct *structure);
 static AstArg *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
 static AstArgList *astExpressionsToArgList(PrattParser *parser, AstExpressions *exprs);
+static AstDefinitions *prattParseLink(PrattParser *, char *);
+static AstNest *top(PrattParser *parser);
 
 static AstFileIdArray *fileIdStack = NULL;
 
@@ -154,10 +157,10 @@ static void addRecord(PrattTable *table, HashSymbol *tok,
     UNPROTECT(save);
 }
 
-PrattParser *makePrattParser() {
-    PrattParser *res = newPrattParser(NULL, NULL);
-    int save = PROTECT(res);
-    PrattTable *table = res->rules;
+static PrattParser *makePrattParser(void) {
+    PrattParser *parser = newPrattParser(NULL);
+    int save = PROTECT(parser);
+    PrattTable *table = parser->rules;
     addRecord(table, TOK_SEMI(),      NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_PREFIX(),    NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_INFIX(),     NULL, 0,       NULL, 0,         NULL, 0);
@@ -177,7 +180,6 @@ PrattParser *makePrattParser() {
     addRecord(table, TOK_AS(),        NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_ALIAS(),     NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_KW_ERROR(),  error, 0,      NULL, 0,         NULL, 0);
-    addRecord(table, TOK_NS(),        NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_NAMESPACE(), NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_LET(),       NULL, 0,       NULL, 0,         NULL, 0);
     addRecord(table, TOK_IN(),        NULL, 0,       NULL, 0,         NULL, 0);
@@ -238,7 +240,7 @@ PrattParser *makePrattParser() {
 
     addRecord(table, TOK_PERIOD(),    NULL, 0,       lookup, 140,     NULL, 0);
 
-    PrattSymbolTable *replacements = res->replacements;
+    PrattSymbolTable *replacements = parser->replacements;
     setPrattSymbolTable(replacements, TOK_EQ(), eqSymbol());
     setPrattSymbolTable(replacements, TOK_NE(), neSymbol());
     setPrattSymbolTable(replacements, TOK_GT(), gtSymbol());
@@ -252,8 +254,9 @@ PrattParser *makePrattParser() {
     setPrattSymbolTable(replacements, TOK_DIVIDE(), divSymbol());
     setPrattSymbolTable(replacements, TOK_MOD(), modSymbol());
     setPrattSymbolTable(replacements, TOK_EXP(), powSymbol());
+    parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
-    return res;
+    return parser;
 }
 
 static AstCompositeFunction *makeAstCompositeFunction(AstAltFunction *functions, AstCompositeFunction *rest) {
@@ -364,65 +367,85 @@ static void synchronize(PrattParser *parser) {
     }
 }
 
-static void appendRules(PrattTable *to, PrattTable *from) {
-    Index i = 0;
-    PrattRecord *record = NULL;
-    HashSymbol *op;
-    while ((op = iteratePrattTable(from, &i, &record)) != NULL) {
-        setPrattTable(to, op, record);
-    }
-}
+// only a few scenarios we actually need to support:
+// 1. parse a standalone string, for tests ONLY
+// 2. parse a file after parsing the prelude, the normal case
+// 3. parse a string after parsing the prelude, allows a -e style command line option
+// 4. parse a linked file (within the parser)
 
-static AstDefinitions *namespaceFromBufList(PrattParser *parser, PrattBufList *bufList, bool collect) {
-    PrattBufList *bl = prattBufListFromString(TOK_NS()->name, parser->lexer->bufList->filename->name, bufList);
-    int save = PROTECT(bl);
-    PrattLexer *lexer = newPrattLexer(bl, parser->lexer->trie);
-    REPLACE_PROTECT(save, lexer);
-    PrattParser *new = newPrattParser(lexer, parser);
-    REPLACE_PROTECT(save, new);
-    AstNest *nest = top(new);
-    UNPROTECT(save);
-    if (collect) {
-        appendRules(parser->rules, new->rules);
-        parser->lexer->trie = lexer->trie;
-    }
-    if (nest) return nest->definitions;
-    return NULL;
-}
-
-static AstDefinitions *namespaceFromString(PrattParser *parser, char *string, char *name, bool collect) {
-    PrattBufList *bufList = prattBufListFromString(string, name, NULL);
-    int save = PROTECT(bufList);
-    AstDefinitions *res = namespaceFromBufList(parser, bufList, collect);
-    UNPROTECT(save);
-    return res;
-}
-
-static AstDefinitions *namespaceFromFileName(PrattParser *parser, char *filename) {
-    PrattBufList *bufList = prattBufListFromFileName(filename, NULL);
-    int save = PROTECT(bufList);
-    AstDefinitions *res = namespaceFromBufList(parser, bufList, false);
-    UNPROTECT(save);
-    return res;
-}
-
-AstDefinitions *prattParsePreamble(PrattParser *parser) {
-    return namespaceFromString(parser, (char *) preamble, "src/preamble.fn", true);
-}
-
-AstNest *prattParseTopLevel(PrattParser *parser) {
-    AstDefinitions *definitions = prattParsePreamble(parser);
-    if (definitions == NULL) return NULL;
-    int save = PROTECT(definitions);
+AstNest *prattParseStandaloneString(char *data, char *name) {
+    PrattParser *parser = makePrattParser();
+    int save = PROTECT(parser);
+    parser->lexer = makePrattLexerFromString(data, name);
     AstNest *nest = top(parser);
+    UNPROTECT(save);
+    return nest;
+}
+
+// create a parser and a lexer
+// parse the preamble with them
+// create a child parser
+// give it the lexer for the main data
+// parse the main data
+// collect namespaces etc.
+static AstProg *prattParseThing(PrattLexer *thing) {
+    PrattParser *parser = makePrattParser();
+    int save = PROTECT(parser);
+    parser->lexer = makePrattLexerFromString((char *) preamble, "preamble");
+    AstDefinitions *definitions = NULL;
+    AstNest *nest = top(parser);
+    if (parser->lexer->bufList != NULL) {
+        parserError(parser, "unconsumed tokens");
+    }
+    if (nest) {
+        definitions = nest->definitions;
+        PROTECT(definitions);
+    }
+    parser = newPrattParser(parser);
+    REPLACE_PROTECT(save, parser);
+    parser->lexer = thing;
+    nest = top(parser);
+    if (parser->lexer->bufList != NULL) {
+        parserError(parser, "unconsumed tokens");
+    }
     PROTECT(nest);
     AstExpression *expression = newAstExpression_Nest(CPI(nest), nest);
     PROTECT(expression);
     AstExpressions *exprs = newAstExpressions(CPI(expression), expression, NULL);
     PROTECT(exprs);
     nest = newAstNest(CPI(expression), definitions, exprs);
+    AstProg *prog = astNestToProg(nest);
     UNPROTECT(save);
-    return nest;
+    return prog;
+}
+
+AstProg *prattParseFile(char *file) {
+    PrattLexer *lexer = makePrattLexerFromFilename(file);
+    int save = PROTECT(lexer);
+    AstProg *prog = prattParseThing(lexer);
+    UNPROTECT(save);
+    return prog;
+}
+
+AstProg *prattParseString(char *data, char *name) {
+    PrattLexer *lexer = makePrattLexerFromString(data, name);
+    int save = PROTECT(lexer);
+    AstProg *prog = prattParseThing(lexer);
+    UNPROTECT(save);
+    return prog;
+}
+
+static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
+    parser = newPrattParser(parser);
+    int save = PROTECT(parser);
+    parser->lexer = makePrattLexerFromFilename(file);
+    AstDefinitions *definitions = NULL;
+    AstNest *nest = top(parser);
+    if (nest) {
+        definitions = nest->definitions;
+    }
+    UNPROTECT(save);
+    return definitions;
 }
 
 static void storeNamespace(PrattParser *parser, AstNamespace *ns) {
@@ -466,10 +489,9 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
         return ns;
     }
     pushAstFileIdArray(fileIdStack, fileId);
-    AstDefinitions *definitions = namespaceFromFileName(parser, fileId->name);
+    AstDefinitions *definitions = prattParseLink(parser, fileId->name);
     PROTECT(definitions);
     if (definitions == NULL) {
-        parserError(parser, "errors detected while parsing %s", fileId->name);
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
@@ -483,7 +505,7 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
     return ns;
 }
 
-PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C) {
+static PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C) {
     HashSymbol *tok;
     Index i = 0;
     int save = PROTECT(parser); // not C because we need to have a slot for REPLACE_PROTECT
@@ -522,7 +544,7 @@ static AstExpression *makePrattUnary(ParserInfo I, HashSymbol *op, AstExpression
     return res;
 }
 
-AstNest *top(PrattParser *parser) {
+static AstNest *top(PrattParser *parser) {
     ENTER(top);
     DEBUG("%s", parser->lexer->bufList->buffer->data);
     AstNest *body = nest_body(parser, TOK_EOF());
@@ -544,8 +566,7 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
         AstExpressions *stats = statements(parser, terminal);
         PROTECT(stats);
         res = newAstNest(CPI(defs), defs, stats);
-    } else if (match(parser, TOK_NS())) {
-        consume(parser, TOK_NAMESPACE());
+    } else if (match(parser, TOK_NAMESPACE())) {
         AstDefinitions *defs = definitions(parser, terminal);
         save = PROTECT(defs);
         res = newAstNest(CPI(defs), defs, NULL);
@@ -692,8 +713,11 @@ static void addOperator(PrattParser *parser,
             }
             break;
         }
+        parser->trie = insertPrattTrie(parser->trie, op);
+    }
+    if (record) {
+        // hoist - might have come from parent env
         setPrattTable(parser->rules, op, record);
-        parser->lexer->trie = insertPrattTrie(parser->lexer->trie, op);
     }
     UNPROTECT(save);
 }

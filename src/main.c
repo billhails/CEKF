@@ -179,21 +179,11 @@ static int processArgs(int argc, char *argv[]) {
 }
 
 static AstProg *parseFile(char *file) {
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser, NULL);
-    PROTECT(trie);
-    parser->lexer = makePrattLexerFromFilename(trie, file);
-    AstNest *nest = prattParseTopLevel(parser);
-    PROTECT(nest);
-    if (parser->lexer->bufList != NULL) {
-        parserError(parser, "unconsumed tokens");
-    }
+    AstProg *prog = prattParseFile(file);
+    int save = PROTECT(prog);
     if (hadErrors()) {
         exit(1);
     }
-    AstProg *prog = astNestToProg(nest);
-    PROTECT(prog);
     if (ast_flag) {
         PrattUTF8 *dest = newPrattUTF8();
         PROTECT(dest);

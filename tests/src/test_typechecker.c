@@ -23,26 +23,6 @@
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
 
-static AstNest *parseTopLevelFromString(char *string, char *origin) {
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser, NULL);
-    PROTECT(trie);
-    parser->lexer = makePrattLexer(trie, string, origin);
-    // parser->lexer = makePrattLexerFromFilename(trie, file);
-    AstNest *nest = prattParseTopLevel(parser);
-}
-
-static AstNest *parseSingleString(char *string, char *origin) {
-    PrattParser *parser = makePrattParser();
-    int save = PROTECT(parser);
-    PrattTrie *trie = makePrattTrie(parser, NULL);
-    PROTECT(trie);
-    parser->lexer = makePrattLexer(trie, string, origin);
-    // parser->lexer = makePrattLexerFromFilename(trie, file);
-    AstNest *nest = top(parser);
-}
-
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
     int save = PROTECT(map);
@@ -53,17 +33,16 @@ static bool compareTcTypes(TcType *a, TcType *b) {
 
 static AstProg *parseWrapped(char *string, char *origin) {
     forceInitNamespaces();
-    AstNest *nest = parseTopLevelFromString(string, origin);
-    assert(nest != NULL);
-    AstProg *prog = astNestToProg(nest);
+    AstProg *prog = prattParseString(string, origin);
     return prog;
 }
 
 static AstProg *parseSolo(char *string, char *origin) {
     forceInitNamespaces();
-    AstNest *nest = parseSingleString(string, origin);
-    assert(nest != NULL);
+    AstNest *nest = prattParseStandaloneString(string, origin);
+    int save = PROTECT(nest);
     AstProg *prog = astNestToProg(nest);
+    UNPROTECT(save);
     return prog;
 }
 

@@ -391,12 +391,6 @@ HashSymbol *TOK_IN(void) {
     return s;
 }
 
-HashSymbol *TOK_NS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("__NAMESPACE__");
-    return s;
-}
-
 HashSymbol *TOK_NAMESPACE(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("namespace");
@@ -582,7 +576,7 @@ static void advance(PrattBuffer *buffer) {
 }
 
 static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
-    HashSymbol *symbol = lookupTrieRecursive(lexer->trie, lexer->bufList->buffer, 0, NULL);
+    HashSymbol *symbol = lookupTrieRecursive(parser->trie, lexer->bufList->buffer, 0, NULL);
     if (symbol != NULL) {
         PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
         advance(lexer->bufList->buffer);
@@ -1278,18 +1272,18 @@ PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *n
     return res;
 }
 
-PrattLexer *makePrattLexer(PrattTrie *trie, char *input, char *origin) {
+PrattLexer *makePrattLexerFromString(char *input, char *origin) {
     PrattBufList *bl = prattBufListFromString(input, origin, NULL);
     int save = PROTECT(bl);
-    PrattLexer *res = newPrattLexer(bl, trie);
+    PrattLexer *res = newPrattLexer(bl);
     UNPROTECT(save);
     return res;
 }
 
-PrattLexer *makePrattLexerFromFilename(PrattTrie *trie, char *filename) {
+PrattLexer *makePrattLexerFromFilename(char *filename) {
     PrattBufList *bl = prattBufListFromFileName(filename, NULL);
     int save = PROTECT(bl);
-    PrattLexer *res = newPrattLexer(bl, trie);
+    PrattLexer *res = newPrattLexer(bl);
     UNPROTECT(save);
     return res;
 }

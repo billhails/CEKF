@@ -58,7 +58,6 @@ structs:
     # current state of the scanner
     PrattLexer:
         bufList: PrattBufList
-        trie: PrattTrie
         tokenHead: PrattToken=NULL
         tokenTail: PrattToken=NULL
 
@@ -66,7 +65,8 @@ structs:
     PrattParser:
         rules: PrattTable
         namespaces: PrattIntTable
-        lexer: PrattLexer
+        lexer: PrattLexer=NULL
+        trie: PrattTrie=NULL
         replacements: PrattSymbolTable
         panicMode: bool=false
         next: PrattParser
