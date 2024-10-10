@@ -229,6 +229,9 @@ static AstProg *parseString(char *string, char*origin) {
 static LamExp *convertProg(AstProg *prog) {
     LamExp *exp = lamConvertProg(prog);
     int save = PROTECT(exp);
+    if (hadErrors()) {
+        exit(1);
+    }
     if (lambda_flag) {
         ppLamExp(exp);
         eprintf("\n");

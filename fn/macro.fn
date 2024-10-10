@@ -1,0 +1,5 @@
+let
+    macro AND(a, b) { if (a) { b } else { false } }
+    infix left 30 "AND" AND;
+in
+    print(true AND false);

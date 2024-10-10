@@ -1,32 +1,25 @@
-#ifndef cekf_symbol_h
-#  define cekf_symbol_h
+#ifndef cekf_macro_substitution_h
+#  define cekf_macro_substitution_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2023  Bill Hails
- *
+ * Copyright (C) 2022-2024  Bill Hails
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#  include "hash.h"
+#  include "lambda.h"
 
-HashSymbol *genSym(char *prefix);
-HashSymbol *genSymDollar(char *prefix);
-HashSymbol *genAlphaSym(char *prefix);
-
-HashSymbol *newSymbol(char *name);
-HashSymbol *newSymbolLength(char *buf, int length); // tokens are not null terminated strings
-
-void markVarTable(void);
-
+LamExp *lamPerformMacroSubstitutions(LamExp *exp,
+                                LamExpTable *substitutions);
 #endif
