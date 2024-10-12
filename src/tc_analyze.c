@@ -50,7 +50,6 @@ static TcType *makeUnknown(HashSymbol *var);
 static TcType *makeVar(HashSymbol *t);
 static TcType *makeFn(TcType *arg, TcType *result);
 static TcType *makeTuple(int size);
-static void addBoolBinOpToEnv(TcEnv *env, HashSymbol *symbol);
 static void addHereToEnv(TcEnv *env);
 static void addIfToEnv(TcEnv *env);
 static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
@@ -107,7 +106,6 @@ static int id_counter = 0;
 TcEnv *tc_init(BuiltIns *builtIns) {
     TcEnv *env = newTcEnv(NULL);
     int save = PROTECT(env);
-    addBoolBinOpToEnv(env, xorSymbol());
     addCmpToEnv(env, eqSymbol());
     addCmpToEnv(env, geSymbol());
     addCmpToEnv(env, gtSymbol());
@@ -1768,14 +1766,6 @@ static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol) {
     TcType *integer = makeBigInteger();
     int save = PROTECT(integer);
     addBinOpToEnv(env, symbol, integer);
-    UNPROTECT(save);
-}
-
-static void addBoolBinOpToEnv(TcEnv *env, HashSymbol *symbol) {
-    // bool -> bool -> bool
-    TcType *boolean = makeBoolean();
-    int save = PROTECT(boolean);
-    addBinOpToEnv(env, symbol, boolean);
     UNPROTECT(save);
 }
 

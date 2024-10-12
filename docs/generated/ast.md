@@ -23,6 +23,8 @@ AstAlias --name--> HashSymbol
 AstAlias --type--> AstType
 AstExprAlias --name--> HashSymbol
 AstExprAlias --value--> AstExpression
+AstDefMacro --name--> HashSymbol
+AstDefMacro --definition--> AstAltFunction
 AstTypeDef --userType--> AstUserType
 AstTypeDef --typeBody--> AstTypeBody
 AstUserType --symbol--> HashSymbol
@@ -90,6 +92,7 @@ AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
 AstDefinition --typeDef--> AstTypeDef
+AstDefinition --macro--> AstDefMacro
 AstDefinition --alias--> AstAlias
 AstDefinition --blank--> void_ptr
 AstTypeClause --integer--> void_ptr
@@ -112,6 +115,7 @@ AstExpression --alias--> AstExprAlias
 AstExpression --funCall--> AstFunCall
 AstExpression --lookup--> AstLookup
 AstExpression --symbol--> HashSymbol
+AstExpression --gensym--> HashSymbol
 AstExpression --number--> MaybeBigInt
 AstExpression --character--> char
 AstExpression --fun--> AstCompositeFunction

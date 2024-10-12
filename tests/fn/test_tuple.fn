@@ -1,0 +1,5 @@
+let
+    tuple = #(1, "hello");
+in
+    assert(tuple == #(1, "hello"));
+    assert(tuple != #(2, "hello"));

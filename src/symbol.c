@@ -80,16 +80,21 @@ HashSymbol *newSymbolCounter(char *baseName) {
     return base;
 }
 
-HashSymbol *_genSym(char *prefix, GenSymFmt fmt) {
+static HashSymbol *_genSym(char *prefix, GenSymFmt fmt, char *sep) {
     int symbolCounter = 0;
-    char buffer[128];
+    static char buffer[128];
+    char *b = buffer;
+    int size = strlen(prefix) + 28;
+    if (size > 128) {
+        b = NEW_ARRAY(char, size);
+    }
     initSymbolTable();
     HashSymbol *base = newSymbolCounter(prefix);
     hashGet(genSymTable, base, &symbolCounter);
     for (;;) {
         switch (fmt) {
             case DECIMAL:
-                sprintf(buffer, "%s%d", prefix, symbolCounter++);
+                sprintf(buffer, "%s%s%d", prefix, sep, symbolCounter++);
                 break;
             case ALPHABETIC:{
                     char *alphabet = "abcdefghijklmnopqrstuvwxyz";
@@ -101,22 +106,29 @@ HashSymbol *_genSym(char *prefix, GenSymFmt fmt) {
                         suffix[index] = '\0';
                         value = value / 26;
                     } while (value > 0);
-                    sprintf(buffer, "%s%s", prefix, suffix);
+                    sprintf(buffer, "%s%s%s", prefix, sep, suffix);
                 }
                 break;
         }
         if (hashGetVar(symbolTable, buffer) == NULL) {
             HashSymbol *x = uniqueHashSymbol(symbolTable, buffer, NULL);
             hashSet(genSymTable, base, &symbolCounter);
+            if (b != buffer) {
+                FREE_ARRAY(char, b, size);
+            }
             return x;
         }
     }
 }
 
+HashSymbol *genSymDollar(char *prefix) {
+    return _genSym(prefix, DECIMAL, "$");
+}
+
 HashSymbol *genSym(char *prefix) {
-    return _genSym(prefix, DECIMAL);
+    return _genSym(prefix, DECIMAL, "");
 }
 
 HashSymbol *genAlphaSym(char *prefix) {
-    return _genSym(prefix, ALPHABETIC);
+    return _genSym(prefix, ALPHABETIC, "");
 }

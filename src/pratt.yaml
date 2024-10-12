@@ -67,7 +67,6 @@ structs:
         namespaces: PrattIntTable
         lexer: PrattLexer=NULL
         trie: PrattTrie=NULL
-        replacements: PrattSymbolTable
         panicMode: bool=false
         next: PrattParser
 

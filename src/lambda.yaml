@@ -31,6 +31,11 @@ structs:
         args: LamVarList
         exp: LamExp
 
+    LamMacro:
+        args: LamVarList
+        exp: LamExp
+        env: LamContext
+
     LamVarList:
         var: HashSymbol
         next: LamVarList
@@ -142,6 +147,8 @@ structs:
     LamContext:
         frame: LamInfoTable
         aliases: LamAliasTable
+        gensyms: LamGenSymTable
+        macros: LamMacroTable
         parent: LamContext
 
     LamAmb:
@@ -285,6 +292,12 @@ unions:
         nsid: int
 
 hashes:
+    LamMacroTable:
+        entries: LamMacro
+
+    LamGenSymTable:
+        entries: HashSymbol
+
     LamInfoTable:
         entries: LamInfo
 

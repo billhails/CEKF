@@ -1007,6 +1007,7 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_COND:
         case LAMEXP_TYPE_MAKEVEC:
         case LAMEXP_TYPE_LOOKUP:
+        case LAMEXP_TYPE_MAKE_TUPLE:
             return false;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("lamExpIsLambda encountered cond default");

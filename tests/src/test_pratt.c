@@ -64,7 +64,7 @@ static void testFile(char *filename) {
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
     ppAstProg(dest, result);
-    printf("%s\n", dest->entries);
+    // printf("%s\n", dest->entries);
     if (hadErrors()) {
         failed = true;
     }
@@ -78,31 +78,18 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     initFileIdStack();
     initNamespaces();
     pushAstStringArray(include_paths, strdup("fn"));
-    test("h then one_of(t)",               "{ then(h, one_of(t)); }", false);
     test("1",                              "{ 1; }", false);
     test("1i",                             "{ 1i; }", false);
     test("Σ",                              "{ Σ; }", false);
     test("'Σ'",                            "{ 'Σ'; }", false);
     test("a123",                           "{ a123; }", false);
-    test("1 + 2",                          "{ add$(1, 2); }", false);
-    test("n then a(n + 1)",                "{ then(n, a(add$(n, 1))); }", false);
-    test("1 <=> 2 <=> 3",                  "{ cmp$(cmp$(1, 2), 3); }", false);
-    test("1 + 2 * 3",                      "{ add$(1, mul$(2, 3)); }", false);
-    test("1 * 2 + 3",                      "{ add$(mul$(1, 2), 3); }", false);
-    test("an and android",                 "{ and(an, android); }", false);
-    test("1 * 2 * 3",                      "{ mul$(mul$(1, 2), 3); }", false);
     test("a . b",                          "{ a<0>.b; }", true);
-    test("--1 * 2",                        "{ neg$(neg$(mul$(1, 2))); }", false);
-    test("1 * ((2 + 3))",                  "{ mul$(1, add$(2, 3)); }", false);
     test("a -> b -> c",                    "{ ->(a, ->(b, c)); }", false);
     test("(a -> b) -> c",                  "{ ->(->(a, b), c); }", false);
-    test("1 then 2 then 3",                "{ then(1, then(2, 3)); }", false);
     test("a(b)",                           "{ a(b); }", false);
     test("a(b, c)",                        "{ a(b, c); }", false);
     test("#(b)",                           "{ #(b); }", false);
     test("#(b, c)",                        "{ #(b, c); }", false);
-    test("#a + b",                         "{ add$(#(a), b); }", false); // ??
-    test("a + #b",                         "{ add$(a, #(b)); }", false); // ??
     test("a #b",                           "{ a; }", true);
     test("0x100",                          "{ 256; }", false);
     test("0X100i",                         "{ 256i; }", false);
@@ -111,15 +98,9 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("12345.6789i",                    "{ 12345.678900i; }", false);
     test("let fn i(x) { x } in i(0)",      "{ let i = fn { (x) { x; } }; in i(0); }", false);
     test("let unsafe fn i(x) { x } in i(0)", "{ let i = unsafe fn { (x) { x; } }; in i(0); }", false);
-    test("if (a > 2) { 3 } else { 4 }",    "{ if (gt$(a, 2)) { 3; } else { 4; }; }", false);
-    test("let x = 1 then 2 then 3; in x",  "{ let x = then(1, then(2, 3)); in x; }", false);
     test("let typedef named_list(#t) { nl(str, list(#t)) } in nl",
                "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }", false);
     test("let link \"bar\" as foo; in f",  "{ let ; in f; }", true);
-    test("fn { (0) { 1 } (n) { n * fact(n - 1) } }",
-               "{ fn { (0) { 1; } (n) { mul$(n, fact(sub$(n, 1))); } }; }", false);
-    test("unsafe fn { (0) { 1 } (n) { n * fact(n - 1) } }",
-               "{ unsafe fn { (0) { 1; } (n) { mul$(n, fact(sub$(n, 1))); } }; }", false);
     test("switch (x) { (0) { 1 } } }",       "{ fn { (0) { 1; } }(x); }", true);
     test("unsafe switch (x) { (0) { 1 } }",  "{ unsafe fn { (0) { 1; } }(x); }", false);
     test("let alias string = list(char); in foo;",

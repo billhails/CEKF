@@ -22,6 +22,26 @@
 // `puts` is required for the print system, and `cmp` for the `<=>` operator.
 namespace
 
+macro identity_macro(x) { x }
+
+infix right 20 "then" then;
+infix left 50 "==" equal_to;
+infix left 50 "!=" not_equal_to;
+infix left 50 ">" greater_than;
+infix left 50 "<" less_than;
+infix left 50 "<=" less_than_or_equal_to;
+infix left 50 ">=" greater_than_or_equal_to;
+infix left 50 "<=>" comparison;
+infix left 90 "+" addition;
+infix left 90 "-" subtraction;
+prefix 100 "-" negation;
+prefix 100 "+" identity_macro;
+infix left 100 "*" multiplication;
+infix left 100 "/" division;
+infix left 100 "%" modulus;
+infix left 110 "**" exponential;
+prefix 120 "here" here;
+
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
 typedef list(#t) { nil | cons(#t, list(#t)) }
@@ -39,6 +59,35 @@ typedef ftype_type {
     ftype_char |
     ftype_fifo
 }
+
+fn not {
+    (true) { false }
+    (false) { true }
+}
+prefix 40 "not" not;
+
+macro and(a, b) { if (a) { b } else { false } }
+infix left 30 "and" and;
+
+macro or(a, b) { if (a) { true } else { b } }
+infix left 30 "or" or;
+
+fn xor {
+    (true, true) { false }
+    (true, false) { true }
+    (false, true) { true }
+    (false, false) { false }
+}
+infix left 30 "xor" xor;
+
+macro nand(a, b) { not (a and b) }
+infix left 30 "nand" nand;
+
+macro nor(a, b) { not (a or b) }
+infix left 30 "nor" nor;
+
+macro xnor(a, b) { not (a xor b) }
+infix left 30 "xnor" xnor;
 
 infix right 90 "@" cons;
 

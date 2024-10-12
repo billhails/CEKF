@@ -31,6 +31,18 @@
 #  include "debugging_off.h"
 #endif
 
+HashSymbol *TOK_MACRO(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("macro");
+    return s;
+}
+
+HashSymbol *TOK_DOLLAR(void) {
+    static HashSymbol *s = NULL;
+    if (s == NULL) s = newSymbol("$");
+    return s;
+}
+
 HashSymbol *TOK_LEFT(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("left");
@@ -205,96 +217,6 @@ HashSymbol *TOK_ARROW(void) {
     return s;
 }
 
-HashSymbol *TOK_THEN(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("then");
-    return s;
-}
-
-HashSymbol *TOK_AND(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("and");
-    return s;
-}
-
-HashSymbol *TOK_OR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("or");
-    return s;
-}
-
-HashSymbol *TOK_XOR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("xor");
-    return s;
-}
-
-HashSymbol *TOK_NAND(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("nand");
-    return s;
-}
-
-HashSymbol *TOK_NOR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("nor");
-    return s;
-}
-
-HashSymbol *TOK_XNOR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("xnor");
-    return s;
-}
-
-HashSymbol *TOK_NOT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("not");
-    return s;
-}
-
-HashSymbol *TOK_EQ(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("==");
-    return s;
-}
-
-HashSymbol *TOK_NE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("!=");
-    return s;
-}
-
-HashSymbol *TOK_GT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(">");
-    return s;
-}
-
-HashSymbol *TOK_LT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("<");
-    return s;
-}
-
-HashSymbol *TOK_GE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(">=");
-    return s;
-}
-
-HashSymbol *TOK_LE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("<=");
-    return s;
-}
-
-HashSymbol *TOK_CMP(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("<=>");
-    return s;
-}
-
 HashSymbol *TOK_ASSIGN(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("=");
@@ -304,60 +226,6 @@ HashSymbol *TOK_ASSIGN(void) {
 HashSymbol *TOK_COLON(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol(":");
-    return s;
-}
-
-HashSymbol *TOK_APPEND(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("@@");
-    return s;
-}
-
-HashSymbol *TOK_CONS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("@");
-    return s;
-}
-
-HashSymbol *TOK_PLUS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("+");
-    return s;
-}
-
-HashSymbol *TOK_MINUS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("-");
-    return s;
-}
-
-HashSymbol *TOK_TIMES(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("*");
-    return s;
-}
-
-HashSymbol *TOK_DIVIDE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("/");
-    return s;
-}
-
-HashSymbol *TOK_MOD(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("%");
-    return s;
-}
-
-HashSymbol *TOK_EXP(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("**");
-    return s;
-}
-
-HashSymbol *TOK_HERE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("here");
     return s;
 }
 
@@ -488,7 +356,7 @@ void parserError(PrattParser *parser, const char *message, ...) {
     va_end(args);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
-        can_happen(" at %s line %d", bufList->filename->name, bufList->lineno);
+        can_happen(" at +%d %s", bufList->lineno, bufList->filename->name);
     } else {
         can_happen(" at EOF");
     }
@@ -501,7 +369,7 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message, ...)
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at %s line %d", PI.filename, PI.lineno);
+    can_happen(" at +%d %s", PI.lineno, PI.filename);
 }
 
 static char *readFile(char *path) {

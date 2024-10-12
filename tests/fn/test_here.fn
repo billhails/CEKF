@@ -1,0 +1,4 @@
+let
+    fn funky(k) { k(3) }
+in
+    assert(1 + here fn (k) { if (funky(k)) { 1 } else { 2 } } == 4)

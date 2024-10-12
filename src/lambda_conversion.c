@@ -23,8 +23,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "common.h"
 #include "lambda_conversion.h"
+#include "macro_substitution.h"
 #include "lambda_helper.h"
 #include "symbols.h"
 #include "tpmc_logic.h"
@@ -50,6 +52,7 @@ static bool typeHasFields(AstTypeBody *typeBody);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
                                        LamContext *env);
 static void collectAliases(AstDefinitions *definitions, LamContext *env);
+static void collectMacros(AstDefinitions *definitions, LamContext *env);
 static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
                                                   *typeConstructor,
                                                   LamType *type, int size,
@@ -77,6 +80,16 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env);
 #endif
 
 static bool inPreamble;  // preamble is treated specially
+
+static void conversionError(ParserInfo, char *, ...) __attribute__((format(printf, 2, 3)));
+
+static void conversionError(ParserInfo I, char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(errout, message, args);
+    va_end(args);
+    can_happen(" at +%d %s", I.lineno, I.filename);
+}
 
 static void addCurrentNamespaceToContext(LamContext *context, int id) {
     LamInfo *lamInfo = newLamInfo_Nsid(CPI(context), id);
@@ -134,6 +147,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
     collectAliases(definitions, env);
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
+    collectMacros(definitions, env);
     LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
@@ -242,6 +256,7 @@ static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
                                           LamContext *env) {
     ENTER(convertFuncDefs);
     if (definitions == NULL) {
+        LEAVE(convertFuncDefs);
         return NULL;
     }
     LamLetRecBindings *next = convertFuncDefs(definitions->next, env);
@@ -551,6 +566,7 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
         case AST_DEFINITION_TYPE_DEFINE:
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_TYPEDEF:
+        case AST_DEFINITION_TYPE_MACRO:
             break;
         case AST_DEFINITION_TYPE_ALIAS:
             collectAlias(definitions->definition->val.alias, env);
@@ -561,6 +577,86 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
     collectAliases(definitions->next, env);
 }
 
+static HashSymbol *convertMacroArg(AstArg *arg) {
+    switch (arg->type) {
+        case AST_ARG_TYPE_SYMBOL:
+            return arg->val.symbol;
+        case AST_ARG_TYPE_WILDCARD:
+        case AST_ARG_TYPE_LOOKUP:
+        case AST_ARG_TYPE_NAMED:
+        case AST_ARG_TYPE_UNPACK:
+        case AST_ARG_TYPE_UNPACKSTRUCT:
+        case AST_ARG_TYPE_NUMBER:
+        case AST_ARG_TYPE_CHARACTER:
+        case AST_ARG_TYPE_TUPLE:
+            // should have been caught in the parser
+            cant_happen("unexpected %s", astArgTypeName(arg->type));
+        default:
+            cant_happen("unrecognized %s", astArgTypeName(arg->type));
+    }
+}
+
+static void checkDuplicateMacroArg(HashSymbol *arg, LamVarList *args) {
+    if (args == NULL) return;
+    if (arg == args->var) {
+        conversionError(CPI(args), "duplicate argument \"%s\" in macro definition", arg->name);
+        return;
+    }
+    checkDuplicateMacroArg(arg, args->next);
+}
+
+static LamVarList *collectMacroArgs(AstArgList *argList) {
+    if (argList == NULL) return NULL;
+    LamVarList *next = collectMacroArgs(argList->next);
+    int save = PROTECT(next);
+    HashSymbol *arg = convertMacroArg(argList->arg);
+    checkDuplicateMacroArg(arg, next);
+    LamVarList *this = newLamVarList(CPI(argList), arg, next);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamMacro *convertAstMacro(AstAltFunction *astMacro, LamContext *env) {
+    ENTER(convertAstMacro);
+    LamVarList *args = collectMacroArgs(astMacro->altArgs->argList);
+    int save = PROTECT(args);
+    LamExp *body = convertNest(astMacro->nest, env);
+    PROTECT(body);
+    LamMacro *res = newLamMacro(CPI(astMacro), args, body, env);
+    LEAVE(convertAstMacro);
+    UNPROTECT(save);
+    return res;
+}
+
+static void collectMacro(AstDefMacro *astMacro, LamContext *env) {
+    ENTER(collectMacro);
+    DEBUG("collectMacro %s", astMacro->name->name);
+    LamMacro *lamMacro = convertAstMacro(astMacro->definition, env);
+    int save = PROTECT(lamMacro);
+    setLamMacroTable(env->macros, astMacro->name, lamMacro);
+    LEAVE(collectMacro);
+    UNPROTECT(save);
+}
+
+static void collectMacros(AstDefinitions *definitions, LamContext *env) {
+    if (definitions == NULL) {
+        return;
+    }
+    switch (definitions->definition->type) {
+        case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_BLANK:
+        case AST_DEFINITION_TYPE_TYPEDEF:
+        case AST_DEFINITION_TYPE_ALIAS:
+            break;
+        case AST_DEFINITION_TYPE_MACRO:
+            collectMacro(definitions->definition->val.macro, env);
+            break;
+        default:
+            cant_happen("unrecognised %s", astDefinitionTypeName(definitions->definition->type));
+    }
+    collectMacros(definitions->next, env);
+}
+
 static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *env) {
     if (definitions == NULL) {
         return NULL;
@@ -569,6 +665,7 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *
         case AST_DEFINITION_TYPE_DEFINE:
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_BLANK:
+        case AST_DEFINITION_TYPE_MACRO:
             return collectTypeDefs(definitions->next, env);
         case AST_DEFINITION_TYPE_TYPEDEF:{
                 LamTypeDef *lamTypeDef = collectTypeDef(definitions->definition->val.typeDef, env);
@@ -596,6 +693,7 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_TYPEDEF:
         case AST_DEFINITION_TYPE_BLANK:
+        case AST_DEFINITION_TYPE_MACRO:
             result = next;
             break;
         default:
@@ -609,10 +707,12 @@ static bool typeHasFields(AstTypeBody *typeBody) {
     ENTER(typeHasFields);
     while (typeBody != NULL) {
         if (typeBody->typeConstructor->args != NULL) {
+            LEAVE(typeHasFields);
             return true;
         }
         typeBody = typeBody->next;
     }
+    LEAVE(typeHasFields);
     return false;
 }
 
@@ -677,15 +777,6 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
         cant_happen("expected 2 args in " #name ", got %d", count); \
 } while(0)
 
-static LamExp *makeUnaryOp(LamUnaryOp opCode, LamList *args) {
-    CHECK_ONE_ARG(makeUnaryOp, args);
-    LamUnaryApp *app = newLamUnaryApp(CPI(args), opCode, args->exp);
-    int save = PROTECT(app);
-    LamExp *exp = newLamExp_Unary(CPI(app), app);
-    UNPROTECT(save);
-    return exp;
-}
-
 static LamExp *makeCallCC(LamList *args) {
     CHECK_ONE_ARG(makeCallCC, args);
     return newLamExp_Callcc(CPI(args), args->exp);
@@ -696,62 +787,6 @@ static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
     LamPrimApp *app = newLamPrimApp(CPI(args), opCode, args->exp, args->next->exp);
     int save = PROTECT(app);
     LamExp *exp = newLamExp_Prim(CPI(app), app);
-    UNPROTECT(save);
-    return exp;
-}
-
-static LamExp *makeLamAnd(LamList *args, LamContext *env) {
-    // (and a b) => (if a b #f)
-    CHECK_TWO_ARGS(makeLamAnd, args);
-    LamExp *f = convertSymbol(CPI(args), falseSymbol(), env);
-    int save = PROTECT(f);
-    LamIff *lamIff = newLamIff(CPI(args), args->exp, args->next->exp, f);
-    PROTECT(lamIff);
-    LamExp *result = newLamExp_Iff(CPI(args), lamIff);
-    UNPROTECT(save);
-    return result;
-}
-
-static LamExp *makeLamXnor(LamList *args) {
-    LamExp *xor = makeBinOp(LAMPRIMOP_TYPE_XOR, args);
-    int save = PROTECT(xor);
-    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, xor);
-    PROTECT(not);
-    LamExp *exp = newLamExp_Unary(CPI(not), not);
-    UNPROTECT(save);
-    return exp;
-}
-
-static LamExp *makeLamNand(LamList *args, LamContext *env) {
-    // (nand a b) => (not (and a b))
-    LamExp *and = makeLamAnd(args, env);
-    int save = PROTECT(and);
-    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, and);
-    PROTECT(not);
-    LamExp *exp = newLamExp_Unary(CPI(not), not);
-    UNPROTECT(save);
-    return exp;
-}
-
-static LamExp *makeLamOr(LamList *args, LamContext *env) {
-    // (or a b) => (if a #t b)
-    CHECK_TWO_ARGS(makeLamOr, args);
-    LamExp *t = convertSymbol(CPI(args), trueSymbol(), env);
-    int save = PROTECT(t);
-    LamIff *lamIff = newLamIff(CPI(args), args->exp, t, args->next->exp);
-    PROTECT(lamIff);
-    LamExp *result = newLamExp_Iff(CPI(args), lamIff);
-    UNPROTECT(save);
-    return result;
-}
-
-static LamExp *makeLamNor(LamList *args, LamContext *env) {
-    // (nor a b) => (not (or a b))
-    LamExp *or = makeLamOr(args, env);
-    int save = PROTECT(or);
-    LamUnaryApp *not = newLamUnaryApp(CPI(args), LAMUNARYOP_TYPE_NOT, or);
-    PROTECT(not);
-    LamExp *exp = newLamExp_Unary(CPI(not), not);
     UNPROTECT(save);
     return exp;
 }
@@ -778,27 +813,52 @@ static LamExp *makeUnaryNeg(LamList *args) {
     return result;
 }
 
+static LamMacro *getMacro(HashSymbol *symbol, LamContext *env) {
+    if (env == NULL) return NULL;
+    LamMacro *result = NULL;
+    if (getLamMacroTable(env->macros, symbol, &result)) {
+        return result;
+    }
+    return getMacro(symbol, env->parent);
+}
+
+static void bindMacroArgs(LamExpTable *table, LamVarList *fargs, LamList *aargs) {
+    while (fargs && aargs) {
+        setLamExpTable(table, fargs->var, aargs->exp);
+        fargs = fargs->next;
+        aargs = aargs->next;
+    }
+}
+
+static LamExp *expandMacro(HashSymbol *name, LamMacro *macro, LamList *args) {
+    if (countLamList(args) != countLamVarList(macro->args)) {
+        conversionError(CPI(args), "wrong number of arguments to macro %s", name->name);
+        return newLamExp_Var(CPI(args), name);
+    }
+    if (countLamList(args) == 0) {
+        return macro->exp;
+    }
+    LamExpTable *table = newLamExpTable();
+    int save = PROTECT(table);
+    bindMacroArgs(table, macro->args, args);
+    LamExp *res = copyLamExp(macro->exp);
+    PROTECT(res);
+    res = lamPerformMacroSubstitutions(res, table);
+    UNPROTECT(save);
+    return res;
+}
+
 static LamExp *makePrimApp(HashSymbol *symbol, LamList *args, LamContext *env) {
+    LamMacro *macro = getMacro(symbol, env);
+    if (macro != NULL) {
+        return expandMacro(symbol, macro, args);
+    }
     if (symbol == negSymbol())
         return makeUnaryNeg(args);
-    if (symbol == notSymbol())
-        return makeUnaryOp(LAMUNARYOP_TYPE_NOT, args);
     if (symbol == hereSymbol())
         return makeCallCC(args);
     if (symbol == thenSymbol())
         return makeLamAmb(args);
-    if (symbol == andSymbol())
-        return makeLamAnd(args, env);
-    if (symbol == orSymbol())
-        return makeLamOr(args, env);
-    if (symbol == nandSymbol())
-        return makeLamNand(args, env);
-    if (symbol == norSymbol())
-        return makeLamNor(args, env);
-    if (symbol == xorSymbol())
-        return makeBinOp(LAMPRIMOP_TYPE_XOR, args);
-    if (symbol == xnorSymbol())
-        return makeLamXnor(args);
     if (symbol == eqSymbol())
         return makeBinOp(LAMPRIMOP_TYPE_EQ, args);
     if (symbol == neSymbol())
@@ -1226,8 +1286,8 @@ static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
 
 static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) {
     ENTER(convertSymbol);
-    DEBUG("convertSymbol %s", symbol->name);
     LamExp *result = makeConstructor(symbol, env);
+    DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineno, symbol->name, result ? "constructor" : "variable");
     if (result == NULL) {
         symbol = dollarSubstitute(symbol);
         result = newLamExp_Var(I, symbol);
@@ -1281,10 +1341,30 @@ static LamExp *convertError(AstExpression *value, LamContext *env) {
     return res;
 }
 
+static HashSymbol *lookupGenSym(HashSymbol *symbol, LamContext *env) {
+    if (env == NULL) return NULL;
+    HashSymbol *result = NULL;
+    if (getLamGenSymTable(env->gensyms, symbol, &result)) return result;
+    return lookupGenSym(symbol, env->parent);
+}
+
+static LamExp *handleGensym(ParserInfo PI, HashSymbol *symbol, LamContext *env) {
+    HashSymbol *replacement = lookupGenSym(symbol, env);
+    if (!replacement) {
+        replacement = genSymDollar(symbol->name);
+        setLamGenSymTable(env->gensyms, symbol, replacement);
+    }
+    return convertSymbol(PI, replacement, env);
+}
+
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression);
     LamExp *result = NULL;
     switch (expression->type) {
+        case AST_EXPRESSION_TYPE_GENSYM:
+            DEBUG("gensym");
+            result = handleGensym(CPI(expression), expression->val.gensym, env);
+            break;
         case AST_EXPRESSION_TYPE_BACK:
             DEBUG("back");
             result = newLamExp_Back(CPI(expression));

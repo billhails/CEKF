@@ -5,6 +5,7 @@ let
             v1 >= v2 - delta and v1 <= v2 + delta
     }
 in
+    assert(+1 == 1);
     assert(10.5 == 1_0._5);
     assert(0xff == 255);
     assert(0XFF == 255);

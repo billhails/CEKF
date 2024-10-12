@@ -31,6 +31,7 @@
 #include "file_id.h"
 #include "ast_pp.h"
 
+static void ppAstDefMacro(PrattUTF8 *, AstDefMacro *);
 static void ppAstDefinitions(PrattUTF8 *, AstDefinitions *);
 static void ppAstDefinition(PrattUTF8 *, AstDefinition *);
 static void ppAstDefine(PrattUTF8 *, AstDefine *);
@@ -126,9 +127,21 @@ static void ppAstDefinition(PrattUTF8 *dest, AstDefinition *definition) {
             break;
         case AST_DEFINITION_TYPE_BLANK:
             break;
+        case AST_DEFINITION_TYPE_MACRO:
+            ppAstDefMacro(dest, definition->val.macro);
+            break;
         default:
             cant_happen("unrecognised %s", astDefinitionTypeName(definition->type));
     }
+}
+
+static void ppAstDefMacro(PrattUTF8 *dest, AstDefMacro *defMacro) {
+    psprintf(dest, "macro ");
+    ppHashSymbol(dest, defMacro->name);
+    psprintf(dest, "(");
+    ppAstArgList(dest, defMacro->definition->altArgs->argList);
+    psprintf(dest, ") ");
+    ppAstNest(dest, defMacro->definition->nest);
 }
 
 static void ppAstDefine(PrattUTF8 *dest, AstDefine *define) {

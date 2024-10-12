@@ -11,10 +11,10 @@ highlight link fnFunction Function
 syntax keyword fnConditional if else then back
 highlight link fnConditional Conditional
 
-syntax keyword fnKeyword let fn in typedef here link as unsafe namespace switch alias
+syntax keyword fnKeyword let fn in typedef here link as unsafe namespace switch alias macro infix prefix suffix
 highlight link fnKeyword Keyword
 
-syntax keyword FnStatement true false lt eq gt nil cons
+syntax keyword FnStatement cons
 highlight link FnStatement Statement
 
 syntax match fnOperator "\v\*\*"
@@ -30,6 +30,7 @@ syntax match fnOperator "\v\<\="
 syntax match fnOperator "\v\>\="
 syntax match fnOperator "\v\=\="
 syntax match fnOperator "\v\!\="
+syntax match fnOperator "\v\!"
 syntax match fnOperator "\v\<"
 syntax match fnOperator "\v\>"
 syntax match fnOperator "\v\="
@@ -43,7 +44,7 @@ highlight link fnString String
 syntax match fnComment "\v\/\/.*$"
 highlight link fnComment Comment
 
-syntax keyword fnConstant true false null pair nothing some lt eq gt failure success basic_null basic_number basic_string basic_char io_read io_write io_append
+syntax keyword fnConstant true false null nothing some lt eq gt failure success basic_null basic_number basic_string basic_char io_read io_write io_append left right
 
 highlight link fnConstant Constant
 
