@@ -24,7 +24,7 @@
 HashSymbol *negSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("neg$");
+        res = newSymbol("negation");
     }
     return res;
 }
@@ -104,7 +104,7 @@ HashSymbol *errorSymbol() {
 HashSymbol *eqSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("eq$");
+        res = newSymbol("equal_to");
     }
     return res;
 }
@@ -112,7 +112,7 @@ HashSymbol *eqSymbol() {
 HashSymbol *neSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("ne$");
+        res = newSymbol("not_equal_to");
     }
     return res;
 }
@@ -120,7 +120,7 @@ HashSymbol *neSymbol() {
 HashSymbol *gtSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("gt$");
+        res = newSymbol("greater_than");
     }
     return res;
 }
@@ -128,7 +128,7 @@ HashSymbol *gtSymbol() {
 HashSymbol *ltSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("lt$");
+        res = newSymbol("less_than");
     }
     return res;
 }
@@ -136,7 +136,7 @@ HashSymbol *ltSymbol() {
 HashSymbol *geSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("ge$");
+        res = newSymbol("greater_than_or_equal_to");
     }
     return res;
 }
@@ -144,7 +144,7 @@ HashSymbol *geSymbol() {
 HashSymbol *leSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("le$");
+        res = newSymbol("less_than_or_equal_to");
     }
     return res;
 }
@@ -184,7 +184,7 @@ HashSymbol *appendSymbol() {
 HashSymbol *addSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("add$");
+        res = newSymbol("addition");
     }
     return res;
 }
@@ -192,7 +192,7 @@ HashSymbol *addSymbol() {
 HashSymbol *subSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("sub$");
+        res = newSymbol("subtraction");
     }
     return res;
 }
@@ -200,7 +200,7 @@ HashSymbol *subSymbol() {
 HashSymbol *mulSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("mul$");
+        res = newSymbol("multiplication");
     }
     return res;
 }
@@ -208,7 +208,7 @@ HashSymbol *mulSymbol() {
 HashSymbol *divSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("div$");
+        res = newSymbol("division");
     }
     return res;
 }
@@ -216,7 +216,7 @@ HashSymbol *divSymbol() {
 HashSymbol *modSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("mod$");
+        res = newSymbol("modulus");
     }
     return res;
 }
@@ -224,7 +224,7 @@ HashSymbol *modSymbol() {
 HashSymbol *powSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("pow$");
+        res = newSymbol("exponential");
     }
     return res;
 }

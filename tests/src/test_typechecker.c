@@ -157,7 +157,7 @@ static void test_car_of() {
 
 static void test_adder() {
     printf("test_adder\n");
-    AstProg *result = parseSolo("fn(a,b){a+b}", "test_adder");
+    AstProg *result = parseWrapped("fn(a,b){a+b}", "test_adder");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -171,7 +171,7 @@ static void test_adder() {
 
 static void test_fact() {
     printf("test_fact\n");
-    AstProg *result = parseSolo("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
+    AstProg *result = parseWrapped("let fn fact {(0) {1} (n) {n * fact(n - 1)} } in fact", "test_fact");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
@@ -185,7 +185,7 @@ static void test_fact() {
 
 static void test_add1() {
     printf("test_add1\n");
-    AstProg *result = parseSolo("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
+    AstProg *result = parseWrapped("let fn add1(x) { 1 + x } in add1(2)", "test_add1");
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);

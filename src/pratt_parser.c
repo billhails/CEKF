@@ -59,7 +59,6 @@ static PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *prefixC(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *tuple(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *unsafe(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -205,28 +204,11 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_ARROW(),     NULL, 0,       infixRight, 10,  NULL, 0);
 
-    addRecord(table, TOK_THEN(),      NULL, 0,       infixRight, 20,  NULL, 0);
-
-    addRecord(table, TOK_EQ(),        NULL, 0,       infixLeft, 50,   NULL, 0);
-    addRecord(table, TOK_NE(),        NULL, 0,       infixLeft, 50,   NULL, 0);
-    addRecord(table, TOK_GT(),        NULL, 0,       infixLeft, 50,   NULL, 0);
-    addRecord(table, TOK_LT(),        NULL, 0,       infixLeft, 50,   NULL, 0);
-    addRecord(table, TOK_GE(),        NULL, 0,       infixLeft, 50,   NULL, 0);
-    addRecord(table, TOK_LE(),        NULL, 0,       infixLeft, 50,   NULL, 0);
     addRecord(table, TOK_CMP(),       NULL, 0,       infixLeft, 50,   NULL, 0);
 
     addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0);
 
     addRecord(table, TOK_COLON(),     NULL, 0,       infixLeft, 70,   NULL, 0);
-
-    addRecord(table, TOK_PLUS(),      prefixC, 90,   infixLeft, 90,   NULL, 0);
-    addRecord(table, TOK_MINUS(),     prefixC, 90,   infixLeft, 90,   NULL, 0);
-
-    addRecord(table, TOK_TIMES(),     NULL, 0,       infixLeft, 100,  NULL, 0);
-    addRecord(table, TOK_DIVIDE(),    NULL, 0,       infixLeft, 100,  NULL, 0);
-    addRecord(table, TOK_MOD(),       NULL, 0,       infixLeft, 100,  NULL, 0);
-
-    addRecord(table, TOK_EXP(),       NULL, 0,       infixRight, 110, NULL, 0);
 
     addRecord(table, TOK_HERE(),      doPrefix, 120, NULL, 120,       NULL, 0);
     addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 120,       NULL, 0);
@@ -238,19 +220,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_DOLLAR(),    gensym, 0,     NULL, 150,       NULL, 0);
 
     PrattSymbolTable *replacements = parser->replacements;
-    setPrattSymbolTable(replacements, TOK_EQ(), eqSymbol());
-    setPrattSymbolTable(replacements, TOK_NE(), neSymbol());
-    setPrattSymbolTable(replacements, TOK_GT(), gtSymbol());
-    setPrattSymbolTable(replacements, TOK_LT(), ltSymbol());
-    setPrattSymbolTable(replacements, TOK_GE(), geSymbol());
-    setPrattSymbolTable(replacements, TOK_LE(), leSymbol());
     setPrattSymbolTable(replacements, TOK_CMP(), cmpSymbol());
-    setPrattSymbolTable(replacements, TOK_PLUS(), addSymbol());
-    setPrattSymbolTable(replacements, TOK_MINUS(), subSymbol());
-    setPrattSymbolTable(replacements, TOK_TIMES(), mulSymbol());
-    setPrattSymbolTable(replacements, TOK_DIVIDE(), divSymbol());
-    setPrattSymbolTable(replacements, TOK_MOD(), modSymbol());
-    setPrattSymbolTable(replacements, TOK_EXP(), powSymbol());
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
     return parser;
@@ -1722,17 +1692,6 @@ PrattToken *tok __attribute__((unused))) {
     int save = PROTECT(res);
     res = makePrattUnary(CPI(res), record->symbol, res);
     LEAVE(doPrefix);
-    UNPROTECT(save);
-    return res;
-}
-
-static AstExpression *prefixC(PrattRecord *record, PrattParser *parser, AstExpression *lhs __attribute__((unused)),
-PrattToken *tok __attribute__((unused))) {
-    ENTER(prefixC);
-    AstExpression *res = expr_bp(parser, 100);
-    int save = PROTECT(res);
-    res = makePrattUnary(CPI(res), record->symbol == TOK_MINUS() ? negSymbol() : record->symbol, res);
-    LEAVE(prefixC);
     UNPROTECT(save);
     return res;
 }
