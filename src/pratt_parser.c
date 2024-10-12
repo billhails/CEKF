@@ -122,7 +122,6 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *);
 static AstArgList *fargs(PrattParser *);
 static AstFunCall *switchFC(PrattParser *parser);
 static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
-static HashSymbol *substitute(PrattParser *parser, HashSymbol *symbol);
 static void synchronize(PrattParser *parser);
 
 static AstArg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
@@ -1905,23 +1904,12 @@ static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
-static HashSymbol *substitute(PrattParser *parser, HashSymbol *symbol) {
-    HashSymbol *replacement = NULL;
-    if (getPrattSymbolTable(parser->replacements, symbol, &replacement)) {
-        return replacement;
-    } else if (parser->next != NULL) {
-        return substitute(parser->next, symbol);
-    } else {
-        return symbol;
-    }
-}
-
 static AstExpression *infixLeft(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixLeft);
     AstExpression *rhs = expr_bp(parser, record->infixPrec + 1);
     int save = PROTECT(rhs);
-    rhs = makePrattBinary(CPI(lhs), substitute(parser, record->symbol), lhs, rhs);
+    rhs = makePrattBinary(CPI(lhs), record->symbol, lhs, rhs);
     LEAVE(infixLeft);
     UNPROTECT(save);
     return rhs;
@@ -1953,7 +1941,7 @@ PrattToken *tok __attribute__((unused))) {
     ENTER(infixRight);
     AstExpression *rhs = expr_bp(parser, record->infixPrec - 1);
     int save = PROTECT(rhs);
-    rhs = makePrattBinary(CPI(rhs), substitute(parser, record->symbol), lhs, rhs);
+    rhs = makePrattBinary(CPI(rhs), record->symbol, lhs, rhs);
     LEAVE(infixRight);
     UNPROTECT(save);
     return rhs;
