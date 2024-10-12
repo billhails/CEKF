@@ -83,7 +83,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("Σ",                              "{ Σ; }", false);
     test("'Σ'",                            "{ 'Σ'; }", false);
     test("a123",                           "{ a123; }", false);
-    test("1 <=> 2 <=> 3",                  "{ cmp$(cmp$(1, 2), 3); }", false);
     test("a . b",                          "{ a<0>.b; }", true);
     test("a -> b -> c",                    "{ ->(a, ->(b, c)); }", false);
     test("(a -> b) -> c",                  "{ ->(->(a, b), c); }", false);

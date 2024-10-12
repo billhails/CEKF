@@ -152,7 +152,7 @@ HashSymbol *leSymbol() {
 HashSymbol *cmpSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("cmp$");
+        res = newSymbol("comparison");
     }
     return res;
 }

@@ -217,12 +217,6 @@ HashSymbol *TOK_ARROW(void) {
     return s;
 }
 
-HashSymbol *TOK_CMP(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("<=>");
-    return s;
-}
-
 HashSymbol *TOK_ASSIGN(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("=");
@@ -232,12 +226,6 @@ HashSymbol *TOK_ASSIGN(void) {
 HashSymbol *TOK_COLON(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol(":");
-    return s;
-}
-
-HashSymbol *TOK_HERE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("here");
     return s;
 }
 

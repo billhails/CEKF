@@ -31,6 +31,7 @@ infix left 50 ">" greater_than;
 infix left 50 "<" less_than;
 infix left 50 "<=" less_than_or_equal_to;
 infix left 50 ">=" greater_than_or_equal_to;
+infix left 50 "<=>" comparison;
 infix left 90 "+" addition;
 infix left 90 "-" subtraction;
 prefix 100 "-" negation;
@@ -39,6 +40,7 @@ infix left 100 "*" multiplication;
 infix left 100 "/" division;
 infix left 100 "%" modulus;
 infix left 110 "**" exponential;
+prefix 120 "here" here;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }

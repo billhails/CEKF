@@ -204,14 +204,11 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_ARROW(),     NULL, 0,       infixRight, 10,  NULL, 0);
 
-    addRecord(table, TOK_CMP(),       NULL, 0,       infixLeft, 50,   NULL, 0);
-
     addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0);
 
     addRecord(table, TOK_COLON(),     NULL, 0,       infixLeft, 70,   NULL, 0);
 
-    addRecord(table, TOK_HERE(),      doPrefix, 120, NULL, 120,       NULL, 0);
-    addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 120,       NULL, 0);
+    addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 0,         NULL, 0);
 
     addRecord(table, TOK_OPEN(),      grouping, 0,   call, 130,       NULL, 0);
 
@@ -219,8 +216,6 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_DOLLAR(),    gensym, 0,     NULL, 150,       NULL, 0);
 
-    PrattSymbolTable *replacements = parser->replacements;
-    setPrattSymbolTable(replacements, TOK_CMP(), cmpSymbol());
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
     return parser;
