@@ -69,14 +69,6 @@ HashSymbol *putsSymbol() {
     return res;
 }
 
-HashSymbol *notSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("not");
-    }
-    return res;
-}
-
 HashSymbol *hereSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
@@ -105,54 +97,6 @@ HashSymbol *errorSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
         res = newSymbol("error");
-    }
-    return res;
-}
-
-HashSymbol *andSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("and");
-    }
-    return res;
-}
-
-HashSymbol *nandSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("nand");
-    }
-    return res;
-}
-
-HashSymbol *orSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("or");
-    }
-    return res;
-}
-
-HashSymbol *norSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("nor");
-    }
-    return res;
-}
-
-HashSymbol *xorSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("xor");
-    }
-    return res;
-}
-
-HashSymbol *xnorSymbol() {
-    static HashSymbol *res = NULL;
-    if (res == NULL) {
-        res = newSymbol("xnor");
     }
     return res;
 }

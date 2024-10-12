@@ -1,5 +1,36 @@
 let
+    fn NOT {
+        (true) { false }
+        (false) { true }
+    }
+    prefix 40 "NOT" NOT;
+
     macro AND(a, b) { if (a) { b } else { false } }
     infix left 30 "AND" AND;
+
+    macro OR(a, b) { if (a) { true } else { b } }
+    infix left 30 "OR" OR;
+
+    fn XOR {
+        (true, true) { false }
+        (true, false) { true }
+        (false, true) { true }
+        (false, false) { false }
+    }
+    infix left 30 "XOR" XOR;
+
+    macro NAND(a, b) { NOT (a AND b) }
+    infix left 30 "NAND" NAND;
+
+    macro NOR(a, b) { NOT (a OR b) }
+    infix left 30 "NOR" NOR;
+
+    macro XNOR(a, b) { NOT (a XOR b) }
+    infix left 30 "XNOR" XNOR;
+
+    fn a() { print("a called"); false }
+    fn b() { print("b called"); false }
+    fn c() { print("c called"); true }
 in
-    print(true AND false);
+    print(a() AND b() OR c());
+    print(a() AND (b() OR c()));

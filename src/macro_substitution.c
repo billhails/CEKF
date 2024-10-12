@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include "common.h"
 #include "macro_substitution.h"
+#include "lambda_pp.h"
 
 #ifdef DEBUG_MACRO_SUBSTITUTE
 #  include "debugging_on.h"
@@ -297,6 +298,8 @@ static LamCond *performCondSubstitutions(LamCond *cond, LamExpTable
 LamExp *lamPerformMacroSubstitutions(LamExp *exp,
                                 LamExpTable *substitutions) {
     ENTER(lamPerformMacroSubstitutions);
+    // ppLamExp(exp);
+    // eprintf("\n");
     if (exp != NULL) {
         switch (exp->type) {
             case LAMEXP_TYPE_BIGINTEGER:

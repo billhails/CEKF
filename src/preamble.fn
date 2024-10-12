@@ -40,6 +40,35 @@ typedef ftype_type {
     ftype_fifo
 }
 
+fn not {
+    (true) { false }
+    (false) { true }
+}
+prefix 40 "not" not;
+
+macro and(a, b) { if (a) { b } else { false } }
+infix left 30 "and" and;
+
+macro or(a, b) { if (a) { true } else { b } }
+infix left 30 "or" or;
+
+fn xor {
+    (true, true) { false }
+    (true, false) { true }
+    (false, true) { true }
+    (false, false) { false }
+}
+infix left 30 "xor" xor;
+
+macro nand(a, b) { not (a and b) }
+infix left 30 "nand" nand;
+
+macro nor(a, b) { not (a or b) }
+infix left 30 "nor" nor;
+
+macro xnor(a, b) { not (a xor b) }
+infix left 30 "xnor" xnor;
+
 infix right 90 "@" cons;
 
 fn assert_(line, file, condition) {

@@ -89,7 +89,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("1 <=> 2 <=> 3",                  "{ cmp$(cmp$(1, 2), 3); }", false);
     test("1 + 2 * 3",                      "{ add$(1, mul$(2, 3)); }", false);
     test("1 * 2 + 3",                      "{ add$(mul$(1, 2), 3); }", false);
-    test("an and android",                 "{ and(an, android); }", false);
     test("1 * 2 * 3",                      "{ mul$(mul$(1, 2), 3); }", false);
     test("a . b",                          "{ a<0>.b; }", true);
     test("--1 * 2",                        "{ neg$(neg$(mul$(1, 2))); }", false);

@@ -207,15 +207,6 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_THEN(),      NULL, 0,       infixRight, 20,  NULL, 0);
 
-    addRecord(table, TOK_AND(),       NULL, 0,       infixLeft, 30,   NULL, 0);
-    addRecord(table, TOK_OR(),        NULL, 0,       infixLeft, 30,   NULL, 0);
-    addRecord(table, TOK_XOR(),       NULL, 0,       infixLeft, 30,   NULL, 0);
-    addRecord(table, TOK_NAND(),      NULL, 0,       infixLeft, 30,   NULL, 0);
-    addRecord(table, TOK_NOR(),       NULL, 0,       infixLeft, 30,   NULL, 0);
-    addRecord(table, TOK_XNOR(),      NULL, 0,       infixLeft, 30,   NULL, 0);
-
-    addRecord(table, TOK_NOT(),       doPrefix, 40,  NULL, 0,         NULL, 0);
-
     addRecord(table, TOK_EQ(),        NULL, 0,       infixLeft, 50,   NULL, 0);
     addRecord(table, TOK_NE(),        NULL, 0,       infixLeft, 50,   NULL, 0);
     addRecord(table, TOK_GT(),        NULL, 0,       infixLeft, 50,   NULL, 0);
@@ -408,12 +399,12 @@ static AstProg *prattParseThing(PrattLexer *thing) {
         definitions = nest->definitions;
         PROTECT(definitions);
     }
-    parser = newPrattParser(parser);
-    REPLACE_PROTECT(save, parser);
-    parser->lexer = thing;
-    nest = top(parser);
-    if (parser->lexer->bufList != NULL) {
-        parserError(parser, "unconsumed tokens");
+    PrattParser *child = newPrattParser(parser);
+    PROTECT(child);
+    child->lexer = thing;
+    nest = top(child);
+    if (child->lexer->bufList != NULL) {
+        parserError(child, "unconsumed tokens");
     }
     PROTECT(nest);
     AstExpression *expression = newAstExpression_Nest(CPI(nest), nest);
@@ -443,7 +434,7 @@ AstProg *prattParseString(char *data, char *name) {
 }
 
 static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
-    parser = newPrattParser(parser);
+    parser = newPrattParser(parser->next); // linked files should not see the linking file's parse env
     int save = PROTECT(parser);
     parser->lexer = makePrattLexerFromFilename(file);
     AstDefinitions *definitions = NULL;
@@ -455,8 +446,14 @@ static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
     return definitions;
 }
 
+static bool findNamespace(PrattParser *parser, HashSymbol *symbol, int *result) {
+    if (parser == NULL) return false;
+    if (getPrattIntTable(parser->namespaces, symbol, result)) return true;
+    return findNamespace(parser->next, symbol, result);
+}
+
 static void storeNamespace(PrattParser *parser, AstNamespace *ns) {
-    if (getPrattIntTable(parser->namespaces, ns->symbol, NULL)) {
+    if (findNamespace(parser, ns->symbol, NULL)) {
         parserError(parser, "redefinition of namespace %s", ns->symbol->name);
     } else {
         setPrattIntTable(parser->namespaces, ns->symbol, ns->reference);
@@ -550,6 +547,12 @@ static AstExpression *makePrattUnary(ParserInfo I, HashSymbol *op, AstExpression
     return res;
 }
 
+static PrattParser *makeChildParser(PrattParser *parent) {
+    PrattParser *child = newPrattParser(parent);
+    child->lexer = parent->lexer;
+    return child;
+}
+
 static AstNest *top(PrattParser *parser) {
     ENTER(top);
     DEBUG("%s", parser->lexer->bufList->buffer->data);
@@ -564,7 +567,7 @@ static AstNest *top(PrattParser *parser) {
 static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
     ENTER(nest_body);
     AstNest *res = NULL;
-    int save = -1;
+    int save = PROTECT(parser);
     if (match(parser, TOK_LET())) {
         AstDefinitions *defs = definitions(parser, TOK_IN());
         save = PROTECT(defs);
@@ -1064,8 +1067,10 @@ static AstAltArgs *alt_args(PrattParser *parser) {
 static AstNest *nest(PrattParser *parser) {
     ENTER(nest);
     consume(parser, TOK_LCURLY());
-    AstNest *body = nest_body(parser, TOK_RCURLY());
-    int save = PROTECT(body);
+    PrattParser *child = makeChildParser(parser);
+    int save = PROTECT(child);
+    AstNest *body = nest_body(child, TOK_RCURLY());
+    PROTECT(body);
     consume(parser, TOK_RCURLY());
     LEAVE(nest);
     UNPROTECT(save);
@@ -1077,8 +1082,10 @@ static AstExpression *nestexpr(PrattRecord *record __attribute__((unused)),
                                AstExpression *lhs __attribute__((unused)),
                                PrattToken *tok __attribute__((unused))) {
     ENTER(nestexpr);
-    AstNest *body = nest_body(parser, TOK_RCURLY());
-    int save = PROTECT(body);
+    PrattParser *child = makeChildParser(parser);
+    int save = PROTECT(child);
+    AstNest *body = nest_body(child, TOK_RCURLY());
+    PROTECT(body);
     consume(parser, TOK_RCURLY());
     AstExpression *res = newAstExpression_Nest(CPI(body), body);
     LEAVE(nestexpr);
@@ -1095,7 +1102,7 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser) {
     if (match(parser, TOK_PERIOD())) {
         HashSymbol *sym2 = symbol(parser);
         int index = 0;
-        if (getPrattIntTable(parser->namespaces, sym1, &index)) {
+        if (findNamespace(parser, sym1, &index)) {
             AstLookupSymbol *lus = newAstLookupSymbol(TOKPI(tok), index, sym1, sym2);
             PROTECT(lus);
             AstLookupOrSymbol *res = newAstLookupOrSymbol_Lookup(CPI(lus), lus);
@@ -1973,7 +1980,7 @@ PrattToken *tok __attribute__((unused))) {
     int save = PROTECT(rhs);
     if (lhs->type == AST_EXPRESSION_TYPE_SYMBOL) {
         int index = 0;
-        if (!getPrattIntTable(parser->namespaces, lhs->val.symbol, &index)) {
+        if (!findNamespace(parser, lhs->val.symbol, &index)) {
             parserError(parser, "cannot resolve namespace %s", lhs->val.symbol->name);
         }
         AstLookup *lup = newAstLookup(LEXPI(parser->lexer), index, lhs->val.symbol, rhs);
