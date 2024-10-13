@@ -141,13 +141,13 @@ structs:
 
     LamLetRecBindings:
         var: HashSymbol
+        isGenSym: bool
         val: LamExp
         next: LamLetRecBindings
 
     LamContext:
         frame: LamInfoTable
         aliases: LamAliasTable
-        gensyms: LamGenSymTable
         macros: LamMacroTable
         parent: LamContext
 
@@ -240,6 +240,7 @@ unions:
         namespaces: LamNamespaceArray
         lam: LamLam
         var: HashSymbol
+        gensym: HashSymbol
         stdint: int
         biginteger: MaybeBigInt
         prim: LamPrimApp

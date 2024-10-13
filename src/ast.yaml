@@ -51,6 +51,10 @@ structs:
         symbol: HashSymbol
         expression: AstExpression
 
+    AstGensymDefine:
+        basename: HashSymbol
+        expression: AstExpression
+
     AstAlias:
         name: HashSymbol
         type: AstType
@@ -161,11 +165,6 @@ structs:
         consequent: AstNest
         alternative: AstNest
 
-    AstOperator:
-        name: HashSymbol
-        position: AstPosition
-        precedence: index
-
     AstPrint:
         exp: AstExpression
 
@@ -195,6 +194,7 @@ unions:
 
     AstDefinition:
         define: AstDefine
+        gensymDefine: AstGensymDefine
         typeDef: AstTypeDef
         macro: AstDefMacro
         alias: AstAlias
@@ -241,9 +241,6 @@ unions:
 hashes:
     AstIntTable:
         entries: int
-
-    AstOperatorTable:
-        entries: AstOperator
 
 arrays:
     AstCharArray:

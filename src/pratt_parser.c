@@ -92,6 +92,7 @@ static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstExpression *expression(PrattParser *);
 static AstDefinition *definition(PrattParser *);
 static AstDefinition *assignment(PrattParser *);
+static AstDefinition *gensym_assignment(PrattParser *);
 static AstDefinition *typedefinition(PrattParser *);
 static AstDefinition *defun(PrattParser *, bool, bool);
 static AstDefinition *defmacro(PrattParser *);
@@ -436,6 +437,7 @@ int initFileIdStack() {
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
 static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSymbol *symbol) {
+    // check the file exists
     AgnosticFileId *fileId = calculatePath(file, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
@@ -444,19 +446,23 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
         UNPROTECT(save);
         return ns;
     }
+    // see if we've already parsed it, if so return the existing namespace id
     int found = lookupNamespace(fileId);
     if (found != -1) {
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, found);
         UNPROTECT(save);
         return ns;
     }
+    // check for a recursive include
     if (fileIdInArray(fileId, fileIdStack)) {
         parserError(parser, "recursive include detected for %s", fileId->name);
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
     }
+    // protect against recursive include
     pushAstFileIdArray(fileIdStack, fileId);
+    // parse the file
     AstDefinitions *definitions = prattParseLink(parser, fileId->name);
     PROTECT(definitions);
     if (definitions == NULL) {
@@ -464,10 +470,13 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
         UNPROTECT(save);
         return ns;
     }
+    // save the new namespace
     AstNamespaceImpl *impl = newAstNamespaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
     found = pushAstNamespaceArray(namespaces, impl);
+    // un-protect against recursive include
     popAstFileIdArray(fileIdStack);
+    // return the id of the namespace
     AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, found);
     UNPROTECT(save);
     return ns;
@@ -825,6 +834,9 @@ static AstDefinition *definition(PrattParser *parser) {
     AstDefinition *res = NULL;
     if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
+    } else if (check(parser, TOK_DOLLAR())) {
+        next(parser);
+        res = gensym_assignment(parser);
     } else if (check(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
     } else if (check(parser, TOK_UNSAFE())) {
@@ -1393,6 +1405,22 @@ static HashSymbol *symbol(PrattParser *parser) {
     LEAVE(symbol);
     UNPROTECT(save);
     return s;
+}
+static AstDefinition *gensym_assignment(PrattParser *parser) {
+    ENTER(gensym_assignment);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
+    HashSymbol *s = symbol(parser);
+    consume(parser, TOK_ASSIGN());
+    AstExpression *expr = expression(parser);
+    PROTECT(expr);
+    consume(parser, TOK_SEMI());
+    AstGensymDefine *def = newAstGensymDefine(TOKPI(tok), s, expr);
+    PROTECT(def);
+    AstDefinition *res = newAstDefinition_GensymDefine(CPI(def), def);
+    LEAVE(gensym_assignment);
+    UNPROTECT(save);
+    return res;
 }
 
 static AstDefinition *assignment(PrattParser* parser) {
@@ -2161,7 +2189,7 @@ static AstExpression *expr_bp(PrattParser *parser, int min_bp) {
     int save = PROTECT(tok);
     PrattRecord *record = fetchRecord(parser, tok->type, true);
     if (record->prefixOp == NULL) {
-        parserError(parser, "not a prefix operator");
+        parserError(parser, "not a prefix operator: %s", tok->type->name);
         lhs = errorExpression(TOKPI(tok));
     } else {
         lhs = record->prefixOp(record, parser, NULL, tok);
