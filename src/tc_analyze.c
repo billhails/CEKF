@@ -95,7 +95,6 @@ static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) __attri
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
-static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid);
 static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
 static TcType *lookupConstructorType(HashSymbol *name, int namespace, TcEnv *env, TcNg *ng);
 static void addUserTypeToEnv(TcEnv *env, HashSymbol *symbol, TcUserType *type);
@@ -890,7 +889,7 @@ static TcUserTypeArgs *makeTcUserTypeArgs(LamTypeArgs *lamTypeArgs,
     return this;
 }
 
-static TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid) {
+TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid) {
     if (strcmp(name->name, "list") == 0 && nsid != -1) {
         cant_happen("list in ns %d", nsid);
     }

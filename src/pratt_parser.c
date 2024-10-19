@@ -616,6 +616,8 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
 static void validateOperator(PrattParser *parser, PrattUTF8 *operator) {
     if (strlen((char *) operator->entries) == 0) {
         parserError(parser, "operator cannot be empty string");
+    } else if (isdigit(operator->entries[0])) {
+        parserError(parser, "operator cannot start with a numeric digit");
     } else {
         for (Index i = 0; i < operator->size; i++) {
             if (isspace(operator->entries[i])) {

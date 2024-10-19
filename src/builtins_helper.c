@@ -27,6 +27,7 @@
 static void registerRand(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
+static void registerUnicodeCategory(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
@@ -124,6 +125,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerRand(res);
     registerAssert(res);
     registerOrd(res);
+    registerUnicodeCategory(res);
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
@@ -162,6 +164,16 @@ static void registerOrd(BuiltIns *registry) {
     PROTECT(integer);
     pushCharacterArg(args);
     pushNewBuiltIn(registry, "ord", integer, args, (void *)builtin_ord);
+    UNPROTECT(save);
+}
+
+static void registerUnicodeCategory(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *resultType = makeUserType(newSymbol("unicode_general_category_type"), NULL, -1);
+    PROTECT(resultType);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "unicode_category", resultType, args, (void *)builtin_unicode_category);
     UNPROTECT(save);
 }
 
