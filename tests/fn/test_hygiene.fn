@@ -1,0 +1,14 @@
+let
+    fn now() { 1 }
+
+    macro time(expression) {
+        let $start = now();
+        in {
+            let $result = expression;
+            in
+                print(now() - $start);
+                $result
+        }
+    }
+in
+    time(time(true))

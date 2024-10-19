@@ -32,6 +32,7 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env);
 TcType *lookupNsRef(int index, TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 TcType *makeBoolean(void);
+TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid);
 TcType *makeStringType(void);
 TcType *makeListType(TcType *content);
 TcType *makeMaybeType(TcType *content);

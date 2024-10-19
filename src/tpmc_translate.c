@@ -766,7 +766,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
         nbindings++;
-        bindings = newLamLetRecBindings(I, key, val, bindings);
+        bindings = newLamLetRecBindings(I, key, false, val, bindings);
         if (save == -1) {
             save = PROTECT(bindings);
         } else {

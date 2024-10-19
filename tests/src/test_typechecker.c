@@ -55,7 +55,7 @@ static TcType *makeVar(char *name) {
     return var;
 }
 
-static TcType *makeUserType(char *name, TcUserTypeArgs *args, int nsid) {
+static TcType *_makeUserType(char *name, TcUserTypeArgs *args, int nsid) {
     HashSymbol *sym = newSymbol(name);
     TcUserType *typeDef = newTcUserType(sym, args, nsid);
     int save = PROTECT(typeDef);
@@ -67,7 +67,7 @@ static TcType *makeUserType(char *name, TcUserTypeArgs *args, int nsid) {
 static TcType *listOf(TcType *type) {
     TcUserTypeArgs *args = newTcUserTypeArgs(type, NULL);
     int save = PROTECT(args);
-    TcType *td = makeUserType("list", args, NS_GLOBAL);
+    TcType *td = _makeUserType("list", args, NS_GLOBAL);
     UNPROTECT(save);
     return td;
 }
@@ -279,7 +279,7 @@ static void test_id() {
     int save = PROTECT(result);
     TcType *res = analyze(result);
     PROTECT(res);
-    TcType *expected = makeUserType("bool", NULL, NS_GLOBAL);
+    TcType *expected = _makeUserType("bool", NULL, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
@@ -299,7 +299,7 @@ static void test_either_1() {
     PROTECT(args);
     args = newTcUserTypeArgs(big, args);
     PROTECT(args);
-    TcType *expected = makeUserType("either", args, NS_GLOBAL);
+    TcType *expected = _makeUserType("either", args, NS_GLOBAL);
     PROTECT(expected);
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);

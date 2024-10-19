@@ -45,8 +45,8 @@ static LamSequence *convertSequence(AstExpressions *expressions,
 static LamLetRecBindings *prependDefinition(AstDefinition *definition,
                                             LamContext *env,
                                             LamLetRecBindings *next);
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env,
-                                        LamLetRecBindings *next);
+static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
+static LamLetRecBindings *prependGensymDefine(AstGensymDefine *define, LamContext *env, LamLetRecBindings *next);
 static LamExp *convertExpression(AstExpression *expression, LamContext *env);
 static bool typeHasFields(AstTypeBody *typeBody);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
@@ -564,6 +564,7 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
     }
     switch (definitions->definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_GENSYMDEFINE:
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_TYPEDEF:
         case AST_DEFINITION_TYPE_MACRO:
@@ -644,6 +645,7 @@ static void collectMacros(AstDefinitions *definitions, LamContext *env) {
     }
     switch (definitions->definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_GENSYMDEFINE:
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_TYPEDEF:
         case AST_DEFINITION_TYPE_ALIAS:
@@ -663,6 +665,7 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *
     }
     switch (definitions->definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
+        case AST_DEFINITION_TYPE_GENSYMDEFINE:
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_MACRO:
@@ -689,6 +692,9 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
     switch (definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
             result = prependDefine(definition->val.define, env, next);
+            break;
+        case AST_DEFINITION_TYPE_GENSYMDEFINE:
+            result = prependGensymDefine(definition->val.gensymDefine, env, next);
             break;
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_TYPEDEF:
@@ -733,9 +739,21 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol), exp, next);
+        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol), false, exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
+    return this;
+}
+
+static LamLetRecBindings *prependGensymDefine(AstGensymDefine * define, LamContext * env,
+                                        LamLetRecBindings * next) {
+    ENTER(prependGensymDefine);
+    LamExp *exp = convertExpression(define->expression, env);
+    int save = PROTECT(exp);
+    LamLetRecBindings *this =
+        newLamLetRecBindings(CPI(define), define->basename, true, exp, next);
+    UNPROTECT(save);
+    LEAVE(prependGensymDefine);
     return this;
 }
 
@@ -841,9 +859,11 @@ static LamExp *expandMacro(HashSymbol *name, LamMacro *macro, LamList *args) {
     LamExpTable *table = newLamExpTable();
     int save = PROTECT(table);
     bindMacroArgs(table, macro->args, args);
+    LamGenSymTable *gensyms = newLamGenSymTable();
+    PROTECT(gensyms);
     LamExp *res = copyLamExp(macro->exp);
     PROTECT(res);
-    res = lamPerformMacroSubstitutions(res, table);
+    res = lamPerformMacroSubstitutions(res, table, gensyms);
     UNPROTECT(save);
     return res;
 }
@@ -1341,29 +1361,13 @@ static LamExp *convertError(AstExpression *value, LamContext *env) {
     return res;
 }
 
-static HashSymbol *lookupGenSym(HashSymbol *symbol, LamContext *env) {
-    if (env == NULL) return NULL;
-    HashSymbol *result = NULL;
-    if (getLamGenSymTable(env->gensyms, symbol, &result)) return result;
-    return lookupGenSym(symbol, env->parent);
-}
-
-static LamExp *handleGensym(ParserInfo PI, HashSymbol *symbol, LamContext *env) {
-    HashSymbol *replacement = lookupGenSym(symbol, env);
-    if (!replacement) {
-        replacement = genSymDollar(symbol->name);
-        setLamGenSymTable(env->gensyms, symbol, replacement);
-    }
-    return convertSymbol(PI, replacement, env);
-}
-
 static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     ENTER(convertExpression);
     LamExp *result = NULL;
     switch (expression->type) {
         case AST_EXPRESSION_TYPE_GENSYM:
             DEBUG("gensym");
-            result = handleGensym(CPI(expression), expression->val.gensym, env);
+            result = newLamExp_Gensym(CPI(expression), expression->val.gensym);
             break;
         case AST_EXPRESSION_TYPE_BACK:
             DEBUG("back");

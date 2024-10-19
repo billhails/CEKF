@@ -19,6 +19,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include "cekfs.h"
 
 #define UTF8_ONE_BYTE_MASK         0b10000000
@@ -62,6 +63,22 @@ void unicode_to_utf8_string(unsigned char *dest, wchar_t *src);
 char *listToUtf8(Value v);
 Value utf8ToList(const char *utf8);
 wchar_t utf8Fgetc(FILE *fh);
+unsigned char *utf8Sgetc(unsigned char *string, wchar_t *dest);
 
+bool utf8_isalnum(unsigned char *s);
+bool utf8_isalpha(unsigned char *s);
+bool utf8_isascii(unsigned char *s);
+bool utf8_isblank(unsigned char *s);
+bool utf8_iscntrl(unsigned char *s);
+bool utf8_isdigit(unsigned char *s);
+bool utf8_isgraph(unsigned char *s);
+bool utf8_islower(unsigned char *s);
+bool utf8_isnumber(unsigned char *s);
+bool utf8_isprint(unsigned char *s);
+bool utf8_ispunct(unsigned char *s);
+bool utf8_isspace(unsigned char *s);
+bool utf8_isupper(unsigned char *s);
+bool utf8_isvalid(unsigned char *s);
+bool utf8_isxdigit(unsigned char *s);
 
 #endif

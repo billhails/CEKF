@@ -60,6 +60,16 @@ typedef ftype_type {
     ftype_fifo
 }
 
+typedef unicode_general_category_type {
+    GC_Ll | GC_Lm | GC_Lo | GC_Lt | GC_Lu |
+    GC_Mc | GC_Me | GC_Mn |
+    GC_Nd | GC_Nl | GC_No |
+    GC_Pc | GC_Pd | GC_Pe | GC_Pf | GC_Pi | GC_Po | GC_Ps |
+    GC_Sc | GC_Sk | GC_Sm | GC_So |
+    GC_Zl | GC_Zp | GC_Zs |
+    GC_Cc | GC_Cf | GC_Co | GC_Cs | GC_Cn 
+}
+
 fn not {
     (true) { false }
     (false) { true }
@@ -137,13 +147,11 @@ infix right 80 "@@" append;
 unsafe fn car {
     (h @ _) { h }
 }
-
 prefix 55 "<" car;
 
 unsafe fn cdr {
     (_ @ t) { t }
 }
-
 prefix 55 ">" cdr;
 
 fn print_list(helper, l) {

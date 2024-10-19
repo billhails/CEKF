@@ -18,6 +18,7 @@
 
 #include "common.h"
 #include "utf8.h"
+#include "unicode.h"
 #include "cekfs.h"
 #include "cekf.h"
 
@@ -79,6 +80,62 @@ int decodedLength(unsigned char *string) {
     return state == START ? len : -1;
 }
 
+// generic parse state transition function
+static ParseState transition(ParseState state, wchar_t *dest, Byte src) {
+    switch (state) {
+        case RECOVERY:
+        case START:
+            if (isFourByteUtf8(src)) {
+                *dest = src & UTF8_FOUR_BYTE_PAYLOAD;
+                state = FOUR_BYTE;
+            } else if (isThreeByteUtf8(src)) {
+                *dest = src & UTF8_THREE_BYTE_PAYLOAD;
+                state = THREE_BYTE;
+            } else if (isTwoByteUtf8(src)) {
+                *dest = src & UTF8_TWO_BYTE_PAYLOAD;
+                state = TWO_BYTE;
+            } else if (isOneByteUtf8(src)) {
+                *dest = src & UTF8_ONE_BYTE_PAYLOAD;
+                state = START;
+            } else if (isTrailingByteUtf8(src)) {
+                state = RECOVERY;
+            }
+            break;
+        case TWO_BYTE:
+            if (isTrailingByteUtf8(src)) {
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                state = START;
+            } else {
+                state = ERROR;
+            }
+            break;
+        case THREE_BYTE:
+            if (isTrailingByteUtf8(src)) {
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                state = TWO_BYTE;
+            } else {
+                state = ERROR;
+            }
+            break;
+        case FOUR_BYTE:
+            if (isTrailingByteUtf8(src)) {
+                *dest <<= UTF8_TRAILING_BYTE_SIZE;
+                *dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
+                state = THREE_BYTE;
+            } else {
+                state = ERROR;
+            }
+            break;
+        case ERROR:
+            *dest = 0xfffd;
+            state = START;
+            break;
+    }
+    return state;
+}
+
 // fetches the next whole unicode character from the argument file handle.
 // will skip any initial trailing bytes.
 // Will return '\0' on EOF.
@@ -90,58 +147,29 @@ wchar_t utf8Fgetc(FILE *fh) {
         int c = fgetc(fh);
         if (c == EOF) return 0;
         Byte src = (Byte) c;
-        switch (state) {
-            case RECOVERY:
-            case START:
-                if (isFourByteUtf8(src)) {
-                    dest = src & UTF8_FOUR_BYTE_PAYLOAD;
-                    state = FOUR_BYTE;
-                } else if (isThreeByteUtf8(src)) {
-                    dest = src & UTF8_THREE_BYTE_PAYLOAD;
-                    state = THREE_BYTE;
-                } else if (isTwoByteUtf8(src)) {
-                    dest = src & UTF8_TWO_BYTE_PAYLOAD;
-                    state = TWO_BYTE;
-                } else if (isOneByteUtf8(src)) {
-                    dest = src & UTF8_ONE_BYTE_PAYLOAD;
-                    state = START;
-                } else if (isTrailingByteUtf8(src)) {
-                    state = RECOVERY;
-                }
-                break;
-            case TWO_BYTE:
-                if (isTrailingByteUtf8(src)) {
-                    dest <<= UTF8_TRAILING_BYTE_SIZE;
-                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
-                    state = START;
-                } else {
-                    state = ERROR;
-                }
-                break;
-            case THREE_BYTE:
-                if (isTrailingByteUtf8(src)) {
-                    dest <<= UTF8_TRAILING_BYTE_SIZE;
-                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
-                    state = TWO_BYTE;
-                } else {
-                    state = ERROR;
-                }
-                break;
-            case FOUR_BYTE:
-                if (isTrailingByteUtf8(src)) {
-                    dest <<= UTF8_TRAILING_BYTE_SIZE;
-                    dest |= (src & UTF8_TRAILING_BYTE_PAYLOAD);
-                    state = THREE_BYTE;
-                } else {
-                    state = ERROR;
-                }
-                break;
-            case ERROR:
-                return 0xfffd;
-                
-        }
+        state = transition(state, &dest, src);
     } while (state != START);
     return dest;
+}
+
+// fetches the next whole unicode character from the argument string,
+// assigning it to the argument *dest pointer.
+// will skip any initial trailing bytes.
+// Returns the pointer to the start of the next character.
+// will assign 0xfffd (unicode replacement character) on error.
+unsigned char *utf8Sgetc(unsigned char *string, wchar_t *dest) {
+    ParseState state = START;
+    *dest = 0;
+    do {
+        Byte src = *string;
+        if (src == 0) {
+            *dest = 0;
+            return string;
+        }
+        state = transition(state, dest, src);
+        string++;
+    } while (state != START);
+    return string;
 }
 
 // translates a utf8-encoded character to a wchar_t.
@@ -226,7 +254,7 @@ int encodedLength(wchar_t *s) {
     return size;
 }
 
-// writes the wchar_t to the string, returns the pointer
+// writes the wchar_t to the string as a utf8 byte sequence, returns the pointer
 // past the end of the char written, assumes there is enough space in
 // the string, does not append a trailing NULL
 unsigned char *writeChar(unsigned char *utf8, wchar_t unicode) {
@@ -300,3 +328,94 @@ Value utf8ToList(const char *utf8) {
     UNPROTECT(save);
     return v;
 }
+
+bool utf8_isalnum(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isalnum(c);
+}
+
+bool utf8_isalpha(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isalpha(c);
+}
+
+bool utf8_isascii(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isascii(c);
+}
+
+bool utf8_isblank(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isblank(c);
+}
+
+bool utf8_iscntrl(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_iscntrl(c);
+}
+
+bool utf8_isdigit(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isdigit(c);
+}
+
+bool utf8_isgraph(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isgraph(c);
+}
+
+bool utf8_islower(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_islower(c);
+}
+
+bool utf8_isnumber(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isnumber(c);
+}
+
+bool utf8_isprint(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isprint(c);
+}
+
+bool utf8_ispunct(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_ispunct(c);
+}
+
+bool utf8_isspace(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isspace(c);
+}
+
+bool utf8_isupper(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isupper(c);
+}
+
+bool utf8_isvalid(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isvalid(c);
+}
+
+bool utf8_isxdigit(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isxdigit(c);
+}
+

@@ -20,6 +20,5 @@
 
 #  include "lambda.h"
 
-LamExp *lamPerformMacroSubstitutions(LamExp *exp,
-                                LamExpTable *substitutions);
+LamExp *lamPerformMacroSubstitutions(LamExp *, LamExpTable *, LamGenSymTable *);
 #endif

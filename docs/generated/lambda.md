@@ -74,11 +74,11 @@ LamLetRec --nbindings--> int
 LamLetRec --bindings--> LamLetRecBindings
 LamLetRec --body--> LamExp
 LamLetRecBindings --var--> HashSymbol
+LamLetRecBindings --isGenSym--> bool
 LamLetRecBindings --val--> LamExp
 LamLetRecBindings --next--> LamLetRecBindings
 LamContext --frame--> LamInfoTable
 LamContext --aliases--> LamAliasTable
-LamContext --gensyms--> LamGenSymTable
 LamContext --macros--> LamMacroTable
 LamContext --parent--> LamContext
 LamAmb --left--> LamExp
@@ -117,6 +117,7 @@ LamTypeConstructorInfo --index--> int
 LamExp --namespaces--> LamNamespaceArray
 LamExp --lam--> LamLam
 LamExp --var--> HashSymbol
+LamExp --gensym--> HashSymbol
 LamExp --stdint--> int
 LamExp --biginteger--> MaybeBigInt
 LamExp --prim--> LamPrimApp

@@ -30,7 +30,6 @@ PrattParser --rules--> PrattTable
 PrattParser --namespaces--> PrattIntTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
-PrattParser --replacements--> PrattSymbolTable
 PrattParser --panicMode--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol

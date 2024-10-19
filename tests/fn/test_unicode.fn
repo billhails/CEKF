@@ -4,6 +4,8 @@ let
     Ψ = "abcαβγ";
     α = '\u03b1;';
     F♮ = "cool";
+    alpha = 'α';
+    α = '\u03b1;';
 in
     assert(list.length(Σ) == 6);
     assert(list.length(Ψ) == 6);
@@ -14,3 +16,4 @@ in
     assert(chr(0x3b1) == α);
     assert("F\u266e;" == "F♮");
     assert(F♮ == "cool");
+    assert(unicode_category(alpha) == GC_Ll);

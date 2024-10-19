@@ -1005,7 +1005,6 @@ PrattToken *next(PrattParser *parser) {
                         return token;
                     }
                     parserError(parser, "unrecognised operator %c", buffer->start[0]);
-                    printPrattParser(parser, 0);
                     ++buffer->start;
                     return tokenERROR(lexer);
                 } else if (isTrailingByteUtf8((Byte) (buffer->start[0]))) {

@@ -529,7 +529,7 @@ static LamLetRecBindings *makePrintTypeFunction(ParserInfo I, LamTypeDef *typeDe
     PROTECT(lam);
     LamExp *val = newLamExp_Lam(I, lam);
     PROTECT(val);
-    LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
+    LamLetRecBindings *res = newLamLetRecBindings(I, name, false, val, next);
     UNPROTECT(save);
     return res;
 }

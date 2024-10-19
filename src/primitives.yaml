@@ -68,7 +68,7 @@ bool:
 
 char:
     cname: Character
-    printf: "%c"
+    printf: "%lc"
     valued: true
 
 uchar:
