@@ -1037,27 +1037,6 @@ static void step() {
                 }
                 break;
 
-            case BYTECODES_TYPE_TRUE:{
-                    // push true
-                    DEBUGPRINTF("TRUE\n");
-                    push(vTrue);
-                }
-                break;
-
-            case BYTECODES_TYPE_FALSE:{
-                    // push false
-                    DEBUGPRINTF("FALSE\n");
-                    push(vFalse);
-                }
-                break;
-
-            case BYTECODES_TYPE_VOID:{
-                    // push void
-                    DEBUGPRINTF("VOID\n");
-                    push(vVoid);
-                }
-                break;
-
             case BYTECODES_TYPE_IRRATIONAL:{
                     // push literal Double
                     Double f = readCurrentIrrational();

@@ -136,9 +136,6 @@ enums:
     - BACK
     - LET
     - CALLCC
-    - "TRUE"
-    - "FALSE"
-    - VOID
     - STDINT
     - BIGINT
     - IRRATIONAL

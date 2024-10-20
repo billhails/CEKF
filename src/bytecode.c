@@ -619,18 +619,6 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
                 writeAexpAnnotatedVar(x->val.annotatedVar, b);
             }
             break;
-        case AEXP_TYPE_T:{
-                addByte(b, BYTECODES_TYPE_TRUE);
-            }
-            break;
-        case AEXP_TYPE_F:{
-                addByte(b, BYTECODES_TYPE_FALSE);
-            }
-            break;
-        case AEXP_TYPE_V:{
-                addByte(b, BYTECODES_TYPE_VOID);
-            }
-            break;
         case AEXP_TYPE_LITTLEINTEGER:{
                 addByte(b, BYTECODES_TYPE_STDINT);
                 addInteger(b, x->val.littleinteger);

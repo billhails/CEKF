@@ -378,15 +378,6 @@ void ppAexp(Aexp *x) {
         case AEXP_TYPE_ANNOTATEDVAR:
             ppAexpAnnotatedVar(x->val.annotatedVar);
             break;
-        case AEXP_TYPE_T:
-            eprintf("#t");
-            break;
-        case AEXP_TYPE_F:
-            eprintf("#f");
-            break;
-        case AEXP_TYPE_V:
-            eprintf("nil");
-            break;
         case AEXP_TYPE_BIGINTEGER:
             fprintMaybeBigInt(errout, x->val.biginteger);
             break;
