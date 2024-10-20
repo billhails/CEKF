@@ -69,6 +69,7 @@ bool utf8_isalnum(unsigned char *s);
 bool utf8_isalpha(unsigned char *s);
 bool utf8_isascii(unsigned char *s);
 bool utf8_isblank(unsigned char *s);
+bool utf8_isclose(unsigned char *s);
 bool utf8_iscntrl(unsigned char *s);
 bool utf8_isdigit(unsigned char *s);
 bool utf8_isgraph(unsigned char *s);

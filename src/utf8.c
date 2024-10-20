@@ -431,3 +431,9 @@ bool utf8_isopen(unsigned char *s) {
     return unicode_isopen(c);
 }
 
+bool utf8_isclose(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isclose(c);
+}
+

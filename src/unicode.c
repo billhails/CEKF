@@ -72,6 +72,10 @@ bool unicode_isopen(Character c) {
     return unicode_isvalid(c) && (category[c] == GC_Ps);
 }
 
+bool unicode_isclose(Character c) {
+    return unicode_isvalid(c) && (category[c] == GC_Pe);
+}
+
 bool unicode_issymbol(Character c) {
     return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_S);
 }

@@ -620,6 +620,8 @@ static void validateOperator(PrattParser *parser, PrattUTF8 *operator) {
         parserError(parser, "operator cannot start with a numeric digit");
     } else if (utf8_isopen(operator->entries)) {
         parserError(parser, "operator cannot start with an opening bracket");
+    } else if (utf8_isclose(operator->entries)) {
+        parserError(parser, "operator cannot start with a closing bracket");
     } else {
         for (Index i = 0; i < operator->size; i++) {
             if (isspace(operator->entries[i])) {

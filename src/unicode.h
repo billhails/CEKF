@@ -74,6 +74,7 @@ bool unicode_isalnum(Character c);
 bool unicode_isalpha(Character c);
 bool unicode_isascii(Character c);
 bool unicode_isblank(Character c);
+bool unicode_isclose(Character c);
 bool unicode_iscntrl(Character c);
 bool unicode_isdigit(Character c);
 bool unicode_isgraph(Character c);
