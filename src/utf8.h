@@ -74,6 +74,7 @@ bool utf8_isdigit(unsigned char *s);
 bool utf8_isgraph(unsigned char *s);
 bool utf8_islower(unsigned char *s);
 bool utf8_isnumber(unsigned char *s);
+bool utf8_isopen(unsigned char *s);
 bool utf8_isprint(unsigned char *s);
 bool utf8_ispunct(unsigned char *s);
 bool utf8_isspace(unsigned char *s);

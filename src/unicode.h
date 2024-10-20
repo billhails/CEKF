@@ -79,6 +79,7 @@ bool unicode_isdigit(Character c);
 bool unicode_isgraph(Character c);
 bool unicode_islower(Character c);
 bool unicode_isnumber(Character c); // includes digits, roman numerals, vulgar fractions etc.
+bool unicode_isopen(Character c);
 bool unicode_isprint(Character c);
 bool unicode_ispunct(Character c);
 bool unicode_isspace(Character c);

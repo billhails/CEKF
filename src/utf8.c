@@ -425,3 +425,9 @@ bool utf8_isxdigit(unsigned char *s) {
     return unicode_isxdigit(c);
 }
 
+bool utf8_isopen(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_isopen(c);
+}
+

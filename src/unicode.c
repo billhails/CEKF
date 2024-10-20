@@ -68,6 +68,10 @@ bool unicode_isascii(Character c) {
     return c >= 0 && c < 0x80;
 }
 
+bool unicode_isopen(Character c) {
+    return unicode_isvalid(c) && (category[c] == GC_Ps);
+}
+
 bool unicode_issymbol(Character c) {
     return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_S);
 }
