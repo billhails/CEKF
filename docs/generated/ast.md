@@ -106,7 +106,7 @@ AstArg --named--> AstNamedArg
 AstArg --unpack--> AstUnpack
 AstArg --unpackStruct--> AstUnpackStruct
 AstArg --number--> MaybeBigInt
-AstArg --character--> char
+AstArg --character--> character
 AstArg --tuple--> AstArgList
 AstExpression --back--> void_ptr
 AstExpression --wildcard--> void_ptr
@@ -116,7 +116,7 @@ AstExpression --lookup--> AstLookup
 AstExpression --symbol--> HashSymbol
 AstExpression --gensym--> HashSymbol
 AstExpression --number--> MaybeBigInt
-AstExpression --character--> char
+AstExpression --character--> character
 AstExpression --fun--> AstCompositeFunction
 AstExpression --nest--> AstNest
 AstExpression --iff--> AstIff
@@ -127,7 +127,6 @@ AstExpression --structure--> AstStruct
 AstExpression --assertion--> AstExpression
 AstExpression --error--> AstExpression
 AstPosition["enum AstPosition"]
-AstCharArray["AstCharArray[]"] --entries--> char
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
 AstStringArray["AstStringArray[]"] --entries--> string

@@ -55,7 +55,7 @@ LamCond --cases--> LamCondCases
 LamIntCondCases --constant--> MaybeBigInt
 LamIntCondCases --body--> LamExp
 LamIntCondCases --next--> LamIntCondCases
-LamCharCondCases --constant--> char
+LamCharCondCases --constant--> character
 LamCharCondCases --body--> LamExp
 LamCharCondCases --next--> LamCharCondCases
 LamMatch --index--> LamExp
@@ -141,7 +141,7 @@ LamExp --match--> LamMatch
 LamExp --cond--> LamCond
 LamExp --amb--> LamAmb
 LamExp --print--> LamPrint
-LamExp --character--> char
+LamExp --character--> character
 LamExp --back--> void_ptr
 LamExp --error--> void_ptr
 LamExp --cond_default--> void_ptr

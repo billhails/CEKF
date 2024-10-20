@@ -48,7 +48,7 @@ CexpCond --cases--> CexpCondCases
 CexpIntCondCases --option--> MaybeBigInt
 CexpIntCondCases --body--> Exp
 CexpIntCondCases --next--> CexpIntCondCases
-CexpCharCondCases --option--> char
+CexpCharCondCases --option--> character
 CexpCharCondCases --body--> Exp
 CexpCharCondCases --next--> CexpCharCondCases
 CexpMatch --condition--> Aexp
@@ -73,15 +73,12 @@ ExpLookup --annotatedVar--> AexpAnnotatedVar
 ExpLookup --body--> Exp
 CexpCondCases --charCases--> CexpCharCondCases
 CexpCondCases --intCases--> CexpIntCondCases
-Aexp --t--> void_ptr
-Aexp --f--> void_ptr
-Aexp --v--> void_ptr
 Aexp --lam--> AexpLam
 Aexp --var--> HashSymbol
 Aexp --annotatedVar--> AexpAnnotatedVar
 Aexp --biginteger--> MaybeBigInt
 Aexp --littleinteger--> int
-Aexp --character--> char
+Aexp --character--> character
 Aexp --prim--> AexpPrimApp
 Aexp --unary--> AexpUnaryApp
 Aexp --makeVec--> AexpMakeVec

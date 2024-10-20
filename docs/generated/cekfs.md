@@ -35,7 +35,7 @@ Value --stdint_imag--> int
 Value --bigint_imag--> BigInt
 Value --irrational_imag--> double
 Value --complex--> Vec
-Value --character--> char
+Value --character--> character
 Value --clo--> Clo
 Value --pclo--> Clo
 Value --kont--> Kont
@@ -46,7 +46,7 @@ Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value
 ByteCodes["enum ByteCodes"]
-CharArray["CharArray[]"] --entries--> char
+CharacterArray["CharacterArray[]"] --entries--> character
 ByteArray["ByteArray[]"] --entries--> byte
 Frame["Frame[]"] --entries--> Value
 ValueVal

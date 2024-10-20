@@ -388,25 +388,20 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
-    DEBUG("lookupTrieRecursive %p %x", trie, buffer->start[buffer->length]);
     if (trie == NULL || buffer->start[buffer->length] > trie->character) {
         buffer->length = last;
         return found;
     } else if (buffer->start[buffer->length] < trie->character) {
-        DEBUG("lookupTrieRecursive sibling");
         return lookupTrieRecursive(trie->siblings, buffer, last, found);
     }
     ++buffer->length;
     if (trie->terminal != NULL) {
-        DEBUG("lookupTrieRecursive found \"%s\"", trie->terminal->name);
         // avoid i.e. "orbit" false matching "or"
         if (!isALPHA(trie->character) || !isALPHA(buffer->start[buffer->length])) {
-            DEBUG("lookupTrieRecursive regognising \"%s\"", trie->terminal->name);
             found = trie->terminal;
             last = buffer->length;
         }
     }
-    DEBUG("lookupTrieRecursive child");
     return lookupTrieRecursive(trie->children, buffer, last, found);
 }
 
@@ -444,7 +439,6 @@ static void advance(PrattBuffer *buffer) {
 }
 
 static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
-    DEBUG("_lookupTrieSymbol");
     HashSymbol *symbol = lookupTrieRecursive(parser->trie, lexer->bufList->buffer, 0, NULL);
     if (symbol != NULL) {
         PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
@@ -458,7 +452,6 @@ static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
 }
 
 static PrattToken *lookupTrieSymbol(PrattParser *parser) {
-    DEBUG("lookupTrieSymbol");
     return _lookupTrieSymbol(parser, parser->lexer);
 }
 
@@ -982,7 +975,7 @@ PrattToken *next(PrattParser *parser) {
             }
             while (buffer->start[0]) {
                 // whitespace
-                if (utf8_isspace((unsigned char *) buffer->start)) {
+                if (utf8_isspace(buffer->start)) {
                     if (buffer->start[0] == '\n') {
                         ++lexer->bufList->lineno;
                     }
@@ -997,14 +990,14 @@ PrattToken *next(PrattParser *parser) {
                         ++lexer->bufList->lineno;
                     }
                 // alpha
-                } else if (utf8_isalpha((unsigned char *)buffer->start)) {
+                } else if (utf8_isalpha(buffer->start)) {
                     PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     } else {
                         return parseIdentifier(parser);
                     }
-                // digit
+                // digit (no unicode support yet)
                 } else if (isdigit(buffer->start[0])) {
                     return parseNumeric(lexer);
                 // string
@@ -1014,8 +1007,7 @@ PrattToken *next(PrattParser *parser) {
                 } else if (buffer->start[0] == '\'') {
                     return parseString(parser, true, '\'');
                 // punctuation and symbols
-                } else if (   utf8_ispunct((unsigned char *)buffer->start)
-                           || utf8_issymbol((unsigned char *)buffer->start)) {
+                } else if (utf8_ispunct(buffer->start) || utf8_issymbol(buffer->start)) {
                     PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
