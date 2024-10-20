@@ -82,6 +82,7 @@ bool unicode_isnumber(Character c); // includes digits, roman numerals, vulgar f
 bool unicode_isprint(Character c);
 bool unicode_ispunct(Character c);
 bool unicode_isspace(Character c);
+bool unicode_issymbol(Character c);
 bool unicode_isupper(Character c);
 bool unicode_isvalid(Character c);
 bool unicode_isxdigit(Character c);

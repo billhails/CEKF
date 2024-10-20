@@ -36,8 +36,8 @@ structs:
 
     # Both a parse buffer and a parse token data type (like yytext)
     PrattBuffer:
-        data: string
-        start: string=NULL
+        data: ustring
+        start: ustring=NULL
         length: int=0
 
     # Stack of buffers parsed in order

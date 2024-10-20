@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// This file contains a lookup table for the unicode general category
+// This file includes a lookup table for the unicode general category
 // values of every unicode character, plus a set of unicode equivalents
 // to the functions defined in ctype.h.
 // Where unicode and ctype.h disagree (for example unicode considers TAB
@@ -37,6 +37,10 @@ bool unicode_isvalid(Character c) {
 
 bool unicode_isascii(Character c) {
     return c >= 0 && c < 0x80;
+}
+
+bool unicode_issymbol(Character c) {
+    return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_S);
 }
 
 bool unicode_isalnum(Character c) {
@@ -72,7 +76,7 @@ bool unicode_isprint(Character c) {
 }
 
 bool unicode_ispunct(Character c) {
-    return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_P && category[c] != GC_Pc);
+    return unicode_isvalid(c) && ((unicode_isascii(c) && ispunct(c)) || ((category[c] & GC_MASK) == GC_P && category[c] != GC_Pc));
 }
 
 bool unicode_isspace(Character c) {

@@ -401,6 +401,12 @@ bool utf8_isspace(unsigned char *s) {
     return unicode_isspace(c);
 }
 
+bool utf8_issymbol(unsigned char *s) {
+    Character c = 0;
+    utf8Sgetc(s, &c);
+    return unicode_issymbol(c);
+}
+
 bool utf8_isupper(unsigned char *s) {
     Character c = 0;
     utf8Sgetc(s, &c);

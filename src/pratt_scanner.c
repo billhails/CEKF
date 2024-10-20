@@ -319,10 +319,6 @@ HashSymbol *TOK_PRINT(void) {
     return s;
 }
 
-static bool isLeadingUtf8(char c) {
-    return isTwoByteUtf8((Byte) c) || isThreeByteUtf8((Byte) c) || isFourByteUtf8((Byte) c);
-}
-
 static bool isALPHA(char c) {
     return isalpha(c) || c == '_';
 }
@@ -392,21 +388,25 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
-    // DEBUG("lookupTrieRecursive %p %c", trie, buffer->start[buffer->length]);
+    DEBUG("lookupTrieRecursive %p %x", trie, buffer->start[buffer->length]);
     if (trie == NULL || buffer->start[buffer->length] > trie->character) {
         buffer->length = last;
         return found;
     } else if (buffer->start[buffer->length] < trie->character) {
+        DEBUG("lookupTrieRecursive sibling");
         return lookupTrieRecursive(trie->siblings, buffer, last, found);
     }
     ++buffer->length;
     if (trie->terminal != NULL) {
+        DEBUG("lookupTrieRecursive found \"%s\"", trie->terminal->name);
         // avoid i.e. "orbit" false matching "or"
         if (!isALPHA(trie->character) || !isALPHA(buffer->start[buffer->length])) {
+            DEBUG("lookupTrieRecursive regognising \"%s\"", trie->terminal->name);
             found = trie->terminal;
             last = buffer->length;
         }
     }
+    DEBUG("lookupTrieRecursive child");
     return lookupTrieRecursive(trie->children, buffer, last, found);
 }
 
@@ -427,7 +427,7 @@ static PrattToken *tokenFromBigInt(PrattBufList *bufList, MaybeBigInt *bi, HashS
 }
 
 static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
-    return newSymbolLength(buffer->start, buffer->length);
+    return newSymbolLength((char *)buffer->start, buffer->length);
 }
 
 static PrattToken *tokenFromString(PrattBufList *bufList, PrattUTF8 *string, HashSymbol *tokenType) {
@@ -444,6 +444,7 @@ static void advance(PrattBuffer *buffer) {
 }
 
 static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
+    DEBUG("_lookupTrieSymbol");
     HashSymbol *symbol = lookupTrieRecursive(parser->trie, lexer->bufList->buffer, 0, NULL);
     if (symbol != NULL) {
         PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
@@ -457,6 +458,7 @@ static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
 }
 
 static PrattToken *lookupTrieSymbol(PrattParser *parser) {
+    DEBUG("lookupTrieSymbol");
     return _lookupTrieSymbol(parser, parser->lexer);
 }
 
@@ -715,9 +717,9 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
     }
     MaybeBigInt *bi = NULL;
     if (floating) {
-        bi = makeIrrational(buffer->start, buffer->length);
+        bi = makeIrrational((char *)buffer->start, buffer->length);
     } else {
-        bi = makeMaybeBigInt(buffer->start, buffer->length);
+        bi = makeMaybeBigInt((char *)buffer->start, buffer->length);
     }
     int save = PROTECT(bi);
     PrattToken *token = tokenFromBigInt(lexer->bufList, bi, type);
@@ -961,6 +963,12 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
     return token;
 }
 
+static Character nextCharacter(PrattBuffer *buffer) {
+    Character dest;
+    buffer->start = utf8Sgetc(buffer->start, &dest);
+    return dest;
+}
+
 PrattToken *next(PrattParser *parser) {
     PrattLexer *lexer = parser->lexer;
     PrattToken *lookahead = dequeueToken(lexer);
@@ -973,11 +981,13 @@ PrattToken *next(PrattParser *parser) {
                 buffer->start = buffer->data;
             }
             while (buffer->start[0]) {
-                if (isspace(buffer->start[0])) {
+                // whitespace
+                if (utf8_isspace((unsigned char *) buffer->start)) {
                     if (buffer->start[0] == '\n') {
                         ++lexer->bufList->lineno;
                     }
-                    ++(buffer->start);
+                    nextCharacter(buffer);
+                // comment
                 } else if (buffer->start[0] == '/' && buffer->start[1] == '/') {
                     while (buffer->start[0] && buffer->start[0] != '\n') {
                         ++buffer->start;
@@ -986,33 +996,42 @@ PrattToken *next(PrattParser *parser) {
                         ++buffer->start;
                         ++lexer->bufList->lineno;
                     }
-                } else if (isALPHA(buffer->start[0]) || isLeadingUtf8(buffer->start[0])) {
+                // alpha
+                } else if (utf8_isalpha((unsigned char *)buffer->start)) {
                     PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     } else {
                         return parseIdentifier(parser);
                     }
+                // digit
                 } else if (isdigit(buffer->start[0])) {
                     return parseNumeric(lexer);
+                // string
                 } else if (buffer->start[0] == '"') {
                     return parseString(parser, false, '"');
+                // char
                 } else if (buffer->start[0] == '\'') {
                     return parseString(parser, true, '\'');
-                } else if (ispunct(buffer->start[0])) {
+                // punctuation and symbols
+                } else if (   utf8_ispunct((unsigned char *)buffer->start)
+                           || utf8_issymbol((unsigned char *)buffer->start)) {
                     PrattToken *token = lookupTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     }
                     parserError(parser, "unrecognised operator %c", buffer->start[0]);
-                    ++buffer->start;
+                    cant_happen("abort");
+                    nextCharacter(buffer);
                     return tokenERROR(lexer);
+                // bad UTF8
                 } else if (isTrailingByteUtf8((Byte) (buffer->start[0]))) {
                     parserError(parser, "malformed utf8");
                     ++buffer->start;
                     return tokenERROR(lexer);
+                // unrecognised
                 } else {
-                    parserError(parser, "unexpected character '%c'", buffer->start[0]);
+                    parserError(parser, "unexpected character 0x%02x", buffer->start[0]);
                     ++buffer->start;
                     return tokenERROR(lexer);
                 }
@@ -1079,12 +1098,12 @@ PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol) {
 }
 
 static PrattBuffer *prattBufferFromString(char *string) {
-    return newPrattBuffer(string);
+    return newPrattBuffer((unsigned char *)string);
 }
 
 static PrattBuffer *prattBufferFromFileName(char *path) {
     char *content = readFile(path);
-    return newPrattBuffer(content);
+    return newPrattBuffer((unsigned char *)content);
 }
 
 PrattToken *peek(PrattParser *parser) {

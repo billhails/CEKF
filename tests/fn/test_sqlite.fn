@@ -4,13 +4,11 @@ let
 in
     sql.with_database("unicode/unicode.db",
         sql.with_statement("select * from unicode "
-                           "where int_code between ? and ?",
-            sql.with_bindings([basic_number(0x13420),
-                               basic_number(0x1342e)],
+                           "where int_code = ?",
+            sql.with_bindings([basic_number(0x13420)],
                 sql.with_results(fn (row) {
-                    unsafe switch (dict.lookup("int_code", row)) {
-                        (some(basic_number(n))) { putc(chr(n)) }
-                    };
-                    sql.print_row(row);
-                    putc('\n');
+                    let
+                        name = dict.lookup("name", row);
+                    in
+                        assert(name == some(basic_string("EGYPTIAN HIEROGLYPH AA018")));
                 }))));

@@ -77,6 +77,7 @@ bool utf8_isnumber(unsigned char *s);
 bool utf8_isprint(unsigned char *s);
 bool utf8_ispunct(unsigned char *s);
 bool utf8_isspace(unsigned char *s);
+bool utf8_issymbol(unsigned char *s);
 bool utf8_isupper(unsigned char *s);
 bool utf8_isvalid(unsigned char *s);
 bool utf8_isxdigit(unsigned char *s);

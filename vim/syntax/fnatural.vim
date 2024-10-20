@@ -19,6 +19,8 @@ highlight link FnStatement Statement
 
 syntax match fnOperator "\v\*\*"
 syntax match fnOperator "\v\*"
+syntax match fnOperator "\v×"
+syntax match fnOperator "\v÷"
 syntax match fnOperator "\v/"
 syntax match fnOperator "\v\+"
 syntax match fnOperator "\v-"
