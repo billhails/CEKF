@@ -100,7 +100,7 @@ structs:
         next: CexpIntCondCases
 
     CexpCharCondCases:
-        option: char
+        option: character
         body: Exp
         next: CexpCharCondCases
 
@@ -146,15 +146,12 @@ unions:
         intCases: CexpIntCondCases
 
     Aexp:
-        t: void_ptr
-        f: void_ptr
-        v: void_ptr
         lam: AexpLam
         var: HashSymbol
         annotatedVar: AexpAnnotatedVar
         biginteger: MaybeBigInt
         littleinteger: int
-        character: char
+        character: character
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec

@@ -51,7 +51,8 @@ EXTRA_TARGETS= \
     $(EXTRA_H_TARGETS) \
     $(EXTRA_OBJTYPES_H_TARGETS) \
     $(EXTRA_DEBUG_H_TARGETS) \
-    $(EXTRA_DEBUG_C_TARGETS)
+    $(EXTRA_DEBUG_C_TARGETS) \
+	generated/UnicodeData.inc
 
 MAIN=src/main.c
 PREAMBLE=generated/preamble.c
@@ -178,8 +179,10 @@ unicode/UnicodeData.csv: unicode/UnicodeData.txt ./tools/convertCsv.py
 	$(PYTHON) ./tools/convertCsv.py
 
 unicode/UnicodeData.txt: | unicode
-	wget https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
-	mv UnicodeData.txt $@
+	wget -P unicode https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
+
+generated/UnicodeData.inc: unicode/UnicodeData.txt tools/analyzeCsv.py | generated
+	$(PYTHON) ./tools/analyzeCsv.py > $@
 
 realclean: clean
 	rm -rf tags unicode

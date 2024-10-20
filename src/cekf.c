@@ -229,8 +229,8 @@ void restoreFail(Stack *s, Fail *source) {
     copyAllStackEntries(s, source->S);
 }
 
-CharArray *listToCharArray(Value list) {
-    CharArray *chars = newCharArray();
+CharacterArray *listToCharArray(Value list) {
+    CharacterArray *chars = newCharacterArray();
     int save = PROTECT(chars);
     while (list.val.vec) {
 #ifdef SAFETY_CHECKS
@@ -251,18 +251,18 @@ CharArray *listToCharArray(Value list) {
                 cant_happen("unexpected %s", valueTypeName(character.type));
             }
 #endif
-            pushCharArray(chars, character.val.character);
+            pushCharacterArray(chars, character.val.character);
             list = v->entries[2];
         } else {
             list.val.vec = NULL;
         }
     }
-    pushCharArray(chars, (Character) 0); // null terminated
+    pushCharacterArray(chars, (Character) 0); // null terminated
     UNPROTECT(save);
     return chars;
 }
 
-Value charArrayToList(CharArray *c) {
+Value charArrayToList(CharacterArray *c) {
     Vec *nullByte = newVec(1);
     nullByte->entries[0] = value_Stdint(0); // tag=null
     Value v = value_Vec(nullByte);

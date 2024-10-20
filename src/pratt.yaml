@@ -132,7 +132,7 @@ arrays:
         entries: uchar
 
     PrattUnicode:
-        entries: char
+        entries: character
 
 primitives: !include primitives.yaml
 

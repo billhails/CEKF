@@ -222,18 +222,6 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("CALLCC\n");
                 }
                 break;
-            case BYTECODES_TYPE_TRUE:{
-                    eprintf("TRUE\n");
-                }
-                break;
-            case BYTECODES_TYPE_FALSE:{
-                    eprintf("FALSE\n");
-                }
-                break;
-            case BYTECODES_TYPE_VOID:{
-                    eprintf("VOID\n");
-                }
-                break;
             case BYTECODES_TYPE_STDINT_IMAG:{
                     int val = readInteger(bca, &i);
                     eprintf("STDINT_IMAG [%d]\n", val);

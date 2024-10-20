@@ -380,12 +380,9 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_ANNOTATEDVAR:
             cant_happen("annotateAexp called on annotated var %s",
                         x->val.annotatedVar->var->name);
-        case AEXP_TYPE_T:
-        case AEXP_TYPE_F:
         case AEXP_TYPE_BIGINTEGER:
         case AEXP_TYPE_LITTLEINTEGER:
         case AEXP_TYPE_CHARACTER:
-        case AEXP_TYPE_V:
             return env;
         case AEXP_TYPE_PRIM:
             return annotateAexpPrimApp(x->val.prim, env);

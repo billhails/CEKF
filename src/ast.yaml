@@ -215,7 +215,7 @@ unions:
         unpack: AstUnpack
         unpackStruct: AstUnpackStruct
         number: MaybeBigInt
-        character: char
+        character: character
         tuple: AstArgList
 
     AstExpression:
@@ -227,7 +227,7 @@ unions:
         symbol: HashSymbol
         gensym: HashSymbol
         number: MaybeBigInt
-        character: char
+        character: character
         fun: AstCompositeFunction
         nest: AstNest
         iff: AstIff
@@ -243,10 +243,6 @@ hashes:
         entries: int
 
 arrays:
-    AstCharArray:
-        dimension: 1
-        entries: char
-
     AstNamespaceArray:
         dimension: 1
         entries: AstNamespaceImpl
