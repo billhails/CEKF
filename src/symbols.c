@@ -72,7 +72,7 @@ HashSymbol *putsSymbol() {
 HashSymbol *hereSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("here");
+        res = newSymbol("callcc");
     }
     return res;
 }
@@ -80,7 +80,7 @@ HashSymbol *hereSymbol() {
 HashSymbol *thenSymbol() {
     static HashSymbol *res = NULL;
     if (res == NULL) {
-        res = newSymbol("then");
+        res = newSymbol("amb");
     }
     return res;
 }

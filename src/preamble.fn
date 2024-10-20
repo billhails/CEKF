@@ -24,7 +24,7 @@ namespace
 
 macro identity_macro(x) { x }
 
-infix right 20 "then" then;
+infix right 20 "then" amb;
 infix left 50 "==" equal_to;
 infix left 50 "!=" not_equal_to;
 infix left 50 "≠" not_equal_to;
@@ -43,7 +43,7 @@ infix left 100 "/" division;
 infix left 100 "÷" division;
 infix left 100 "%" modulus;
 infix left 110 "**" exponential;
-prefix 120 "here" here;
+prefix 120 "here" callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
