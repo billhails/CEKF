@@ -100,7 +100,7 @@ structs:
         next: CexpIntCondCases
 
     CexpCharCondCases:
-        option: char
+        option: character
         body: Exp
         next: CexpCharCondCases
 
@@ -154,7 +154,7 @@ unions:
         annotatedVar: AexpAnnotatedVar
         biginteger: MaybeBigInt
         littleinteger: int
-        character: char
+        character: character
         prim: AexpPrimApp
         unary: AexpUnaryApp
         makeVec: AexpMakeVec

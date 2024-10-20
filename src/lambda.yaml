@@ -110,7 +110,7 @@ structs:
         next: LamIntCondCases
 
     LamCharCondCases:
-        constant: char
+        constant: character
         body: LamExp
         next: LamCharCondCases
 
@@ -264,7 +264,7 @@ unions:
         cond: LamCond
         amb: LamAmb
         print: LamPrint
-        character: char
+        character: character
         back: void_ptr
         error: void_ptr
         cond_default: void_ptr

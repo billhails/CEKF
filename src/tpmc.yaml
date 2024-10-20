@@ -94,7 +94,7 @@ unions:
         comparison: TpmcComparisonPattern
         assignment: TpmcAssignmentPattern
         wildcard: void_ptr
-        character: char
+        character: character
         biginteger: MaybeBigInt
         constructor: TpmcConstructorPattern
         tuple: TpmcPatternArray

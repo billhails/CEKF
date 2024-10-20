@@ -68,10 +68,12 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 flowchart TD
 classDef process fill:#aef;
 source(Source) -->
-parser([Parser]):::process -->
-ast(AST) -->
+parser([Parser]):::process
+parser <--> oi([Operator Inlining]):::process
+parser --> ast(AST) -->
 lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
 lc <---> pg([Print Function Generator]):::process
+lc <---> me([Macro Expansion]):::process
 tpmc --> vs([Variable Substitution]):::process
 vs --> lc
 lc <--> des([Desugaring]):::process

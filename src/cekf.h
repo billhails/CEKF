@@ -63,8 +63,8 @@ void markVec(Vec *x);
 void dumpStack(Stack *stack);
 void dumpFrame(Frame *frame);
 
-CharArray *listToCharArray(Value list);
-Value charArrayToList(CharArray *c);
+CharacterArray *listToCharArray(Value list);
+Value charArrayToList(CharacterArray *c);
 Value makeNull(void);
 Value makePair(Value car, Value cdr);
 

@@ -302,7 +302,7 @@ char *listToUtf8(Value v) {
         cant_happen("unexpected %s", valueTypeName(v.type));
     }
 #endif
-    CharArray *unicode = listToCharArray(v);
+    CharacterArray *unicode = listToCharArray(v);
     int save = PROTECT(unicode);
     int size = encodedLength(unicode->entries);
     unsigned char *buf = NEW_ARRAY(unsigned char, size + 1);
@@ -315,12 +315,12 @@ char *listToUtf8(Value v) {
 // returns the empty list if the string is invalid
 Value utf8ToList(const char *utf8) {
     int size = decodedLength((unsigned char *)utf8);
-    CharArray *unicode = newCharArray();
+    CharacterArray *unicode = newCharacterArray();
     int save = PROTECT(unicode);
     if (size == -1) {
-        pushCharArray(unicode, (Character) 0);
+        pushCharacterArray(unicode, (Character) 0);
     } else {
-        extendCharArray(unicode, (Index)(size + 1));
+        extendCharacterArray(unicode, (Index)(size + 1));
         utf8_to_unicode_string(unicode->entries, (unsigned char *)utf8);
         unicode->size = (Index)(size + 1);
     }

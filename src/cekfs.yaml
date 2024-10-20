@@ -72,7 +72,7 @@ inline:
             rational_imag: Vec
             irrational_imag: double
             complex: Vec
-            character: char
+            character: character
             clo: Clo
             pclo: Clo
             kont: Kont
@@ -86,8 +86,8 @@ inline:
             entries: byte
 
 arrays:
-    CharArray:
-        entries: char
+    CharacterArray:
+        entries: character
 
     ByteArray:
         entries: byte
