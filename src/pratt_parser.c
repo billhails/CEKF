@@ -51,93 +51,89 @@
 
 AstStringArray *include_paths = NULL;
 
-static AstExpression *expr_bp(PrattParser *parser, int min_bp);
-static AstExpression *errorExpression(ParserInfo);
-static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol, bool fatal);
-static PrattTrie *makePrattTrie(PrattParser *parser, PrattTrie *C);
-
-static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *tuple(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *unsafe(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *macro(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *gensym(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *call(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *switchExp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *print(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *nestexpr(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *error(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *passert(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *makeChar(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *makeAtom(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *makeNumber(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *makeString(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *wildcard(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *exprAlias(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *userPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *userInfixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *userInfixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *userPostfix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-
-static AstExpressions *expressions(PrattParser *parser);
-static AstDefinitions *definitions(PrattParser *, HashSymbol *);
-static AstExpressions *statements(PrattParser *, HashSymbol *);
-static AstExpression *expression(PrattParser *);
-static AstDefinition *definition(PrattParser *);
-static AstDefinition *assignment(PrattParser *);
-static AstDefinition *gensym_assignment(PrattParser *);
-static AstDefinition *typedefinition(PrattParser *);
-static AstDefinition *defun(PrattParser *, bool, bool);
-static AstDefinition *defmacro(PrattParser *);
-static AstDefinition *link(PrattParser *);
-static AstDefinition *alias(PrattParser *);
-static HashSymbol *symbol(PrattParser *);
-static AstTypeSymbols *type_variables(PrattParser *);
-static AstTypeBody *type_body(PrattParser *);
+static AstAltArgs           *alt_args(PrattParser *);
+static AstAltFunction       *alt_function(PrattParser *);
+static AstArg               *astCharacterToFarg(ParserInfo, Character);
+static AstArg               *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
+static AstArg               *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
+static AstArg               *astLookupToFarg(PrattParser *parser, AstLookup *lookup);
+static AstArg               *astNumberToFarg(ParserInfo, MaybeBigInt *);
+static AstArg               *astStructureToFarg(PrattParser *parser, AstStruct *structure);
+static AstArg               *astSymbolToFarg(ParserInfo, HashSymbol *);
+static AstArg               *astTupleToFarg(PrattParser *parser, AstExpressions *tuple);
+static AstArgList           *astExpressionsToArgList(PrattParser *parser, AstExpressions *exprs);
+static AstArgList           *fargs(PrattParser *);
 static AstCompositeFunction *composite_function(PrattParser *);
 static AstCompositeFunction *functions(PrattParser *);
-static PrattUTF8 *rawString(PrattParser *);
-static PrattUTF8 *str(PrattParser *);
-static AstNamespace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
-static void storeNamespace(PrattParser *, AstNamespace *);
-static AstType *type_type(PrattParser *);
-static AstTypeClause *type_clause(PrattParser *);
-static HashSymbol *type_variable(PrattParser *);
-static AstTypeConstructor *type_constructor(PrattParser *);
-static AstTypeList *type_list(PrattParser *);
-static AstTypeMap *type_map(PrattParser *);
-static AstAltFunction *alt_function(PrattParser *);
-static AstTypeFunction *type_function(PrattParser *);
-static AstTypeList *type_tuple(PrattParser *);
-static AstAltArgs *alt_args(PrattParser *);
-static AstNest *nest(PrattParser *);
-static AstNest *nest_body(PrattParser *, HashSymbol *);
-static AstLookupOrSymbol *scoped_symbol(PrattParser *);
-static AstArgList *fargs(PrattParser *);
-static AstFunCall *switchFC(PrattParser *parser);
-static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
-static void synchronize(PrattParser *parser);
-
-static AstArg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
-static AstArg *astLookupToFarg(PrattParser *parser, AstLookup *lookup);
-static AstArg *astSymbolToFarg(ParserInfo, HashSymbol *);
-static AstArg *astNumberToFarg(ParserInfo, MaybeBigInt *);
-static AstArg *astCharacterToFarg(ParserInfo, Character);
-static AstArg *astTupleToFarg(PrattParser *parser, AstExpressions *tuple);
-static AstArg *astStructureToFarg(PrattParser *parser, AstStruct *structure);
-static AstArg *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
-static AstArgList *astExpressionsToArgList(PrattParser *parser, AstExpressions *exprs);
-static AstDefinitions *prattParseLink(PrattParser *, char *);
-static AstNest *top(PrattParser *parser);
-
-static AstFileIdArray *fileIdStack = NULL;
+static AstDefinition        *alias(PrattParser *);
+static AstDefinition        *assignment(PrattParser *);
+static AstDefinition        *definition(PrattParser *);
+static AstDefinition        *defmacro(PrattParser *);
+static AstDefinition        *defun(PrattParser *, bool, bool);
+static AstDefinition        *gensym_assignment(PrattParser *);
+static AstDefinition        *link(PrattParser *);
+static AstDefinition        *typedefinition(PrattParser *);
+static AstDefinitions       *definitions(PrattParser *, HashSymbol *);
+static AstDefinitions       *prattParseLink(PrattParser *, char *);
+static AstExpression        *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *call(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *errorExpression(ParserInfo);
+static AstExpression        *error(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *exprAlias(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *expression(PrattParser *);
+static AstExpression        *expressionPrecedence(PrattParser *, int);
+static AstExpression        *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *gensym(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *macro(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *makeAtom(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *makeChar(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *makeNumber(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *makeString(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *nestexpr(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *passert(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *print(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *switchExp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *tuple(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *unsafe(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *userInfixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *userInfixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *userPostfix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *userPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *wildcard(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpressions       *expressions(PrattParser *);
+static AstExpressions       *statements(PrattParser *, HashSymbol *);
+static AstFileIdArray       *fileIdStack = NULL;
+static AstFunCall           *switchFC(PrattParser *parser);
+static AstLookupOrSymbol    *scoped_symbol(PrattParser *);
+static AstNamespace         *parseLink(PrattParser *, unsigned char *, HashSymbol *);
+static AstNest              *nest_body(PrattParser *, HashSymbol *);
+static AstNest              *nest(PrattParser *);
+static AstNest              *top(PrattParser *parser);
+static AstTypeBody          *type_body(PrattParser *);
+static AstTypeClause        *type_clause(PrattParser *);
+static AstTypeConstructor   *type_constructor(PrattParser *);
+static AstTypeFunction      *type_function(PrattParser *);
+static AstTypeList          *type_list(PrattParser *);
+static AstTypeList          *type_tuple(PrattParser *);
+static AstTypeMap           *type_map(PrattParser *);
+static AstTypeSymbols       *type_variables(PrattParser *);
+static AstType              *type_type(PrattParser *);
+static HashSymbol           *symbol(PrattParser *);
+static HashSymbol           *type_variable(PrattParser *);
+static PrattRecord          *fetchRecord(PrattParser *, HashSymbol *, bool);
+static PrattTrie            *makePrattTrie(PrattParser *, PrattTrie *);
+static PrattUnicode         *PrattUTF8ToUnicode(PrattUTF8 *);
+static PrattUTF8            *rawString(PrattParser *);
+static PrattUTF8            *str(PrattParser *);
+static void                  storeNamespace(PrattParser *, AstNamespace *);
+static void                  synchronize(PrattParser *parser);
 
 #ifdef DEBUG_PRATT_PARSER
 void disablePrattDebug(void) {
@@ -377,7 +373,7 @@ static AstProg *prattParseThing(PrattLexer *thing) {
     AstExpressions *exprs = newAstExpressions(CPI(expression), expression, NULL);
     PROTECT(exprs);
     nest = newAstNest(CPI(expression), definitions, exprs);
-    AstProg *prog = astNestToProg(nest);
+    AstProg *prog = astNestToProg(nest); // has direct access to namespaces
     UNPROTECT(save);
     return prog;
 }
@@ -586,7 +582,7 @@ static AstExpressions *statements(PrattParser *parser, HashSymbol *terminal) {
 }
 
 static AstExpression *expression(PrattParser *parser) {
-    AstExpression *res = expr_bp(parser, 0);
+    AstExpression *res = expressionPrecedence(parser, 0);
     int save = PROTECT(res);
     synchronize(parser);
     UNPROTECT(save);
@@ -1662,7 +1658,7 @@ static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol, bool fa
 static AstExpression *grouping(PrattRecord *record, PrattParser *parser, AstExpression *lhs __attribute__((unused)),
 PrattToken *tok __attribute__((unused))) {
     ENTER(grouping);
-    AstExpression *res = expr_bp(parser, record->prefixPrec);
+    AstExpression *res = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(res);
     consume(parser, TOK_CLOSE());
     LEAVE(grouping);
@@ -1716,7 +1712,7 @@ PrattToken *tok __attribute__((unused))) {
 static AstExpression *doPrefix(PrattRecord *record, PrattParser *parser, AstExpression *lhs __attribute__((unused)),
 PrattToken *tok __attribute__((unused))) {
     ENTER(doPrefix);
-    AstExpression *res = expr_bp(parser, record->prefixPrec + 1);
+    AstExpression *res = expressionPrecedence(parser, record->prefixPrec + 1);
     int save = PROTECT(res);
     res = makePrattUnary(CPI(res), record->symbol, res);
     LEAVE(doPrefix);
@@ -1726,7 +1722,7 @@ PrattToken *tok __attribute__((unused))) {
 
 static AstExpressions *collectArguments(PrattParser *parser) {
     ENTER(collectArguments);
-    AstExpression *arg = expr_bp(parser, 0);
+    AstExpression *arg = expressionPrecedence(parser, 0);
     int save = PROTECT(arg);
     AstExpressions *next = NULL;
     if (match(parser, TOK_COMMA())) {
@@ -1941,7 +1937,7 @@ static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
 static AstExpression *infixLeft(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixLeft);
-    AstExpression *rhs = expr_bp(parser, record->infixPrec + 1);
+    AstExpression *rhs = expressionPrecedence(parser, record->infixPrec + 1);
     int save = PROTECT(rhs);
     rhs = makePrattBinary(CPI(lhs), record->symbol, lhs, rhs);
     LEAVE(infixLeft);
@@ -1952,7 +1948,7 @@ PrattToken *tok __attribute__((unused))) {
 static AstExpression *lookup(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(lookup);
-    AstExpression *rhs = expr_bp(parser, record->infixPrec - 1);
+    AstExpression *rhs = expressionPrecedence(parser, record->infixPrec - 1);
     int save = PROTECT(rhs);
     if (lhs->type == AST_EXPRESSION_TYPE_SYMBOL) {
         int index = 0;
@@ -1973,7 +1969,7 @@ PrattToken *tok __attribute__((unused))) {
 static AstExpression *infixRight(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixRight);
-    AstExpression *rhs = expr_bp(parser, record->infixPrec - 1);
+    AstExpression *rhs = expressionPrecedence(parser, record->infixPrec - 1);
     int save = PROTECT(rhs);
     rhs = makePrattBinary(CPI(rhs), record->symbol, lhs, rhs);
     LEAVE(infixRight);
@@ -1986,7 +1982,7 @@ static AstExpression *exprAlias(PrattRecord *record,
                                 AstExpression *lhs,
                                 PrattToken *tok __attribute__((unused))) {
     ENTER(exprAlias);
-    AstExpression *rhs = expr_bp(parser, record->infixPrec - 1);
+    AstExpression *rhs = expressionPrecedence(parser, record->infixPrec - 1);
     int save = PROTECT(rhs);
     HashSymbol *alias = NULL;
     if (lhs->type == AST_EXPRESSION_TYPE_SYMBOL) {
@@ -2008,7 +2004,7 @@ static AstExpression *userPrefix(PrattRecord *record,
                                  AstExpression *lhs __attribute__((unused)),
                                  PrattToken *tok) {
     ENTER(userPrefix);
-    AstExpression *rhs = expr_bp(parser, record->prefixPrec);
+    AstExpression *rhs = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(rhs);
     AstExpressions *arguments = newAstExpressions(CPI(rhs), rhs, NULL);
     PROTECT(arguments);
@@ -2025,7 +2021,7 @@ static AstExpression *userInfix(PrattRecord *record,
                                 PrattToken *tok,
                                 int precShift) {
     ENTER(userInfix);
-    AstExpression *rhs = expr_bp(parser, record->infixPrec + precShift);
+    AstExpression *rhs = expressionPrecedence(parser, record->infixPrec + precShift);
     int save = PROTECT(rhs);
     AstExpressions *arguments = newAstExpressions(CPI(rhs), rhs, NULL);
     PROTECT(arguments);
@@ -2188,8 +2184,8 @@ static AstExpression *makeString(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
-static AstExpression *expr_bp(PrattParser *parser, int min_bp) {
-    ENTER(expr_bp);
+static AstExpression *expressionPrecedence(PrattParser *parser, int minimumPrecedence) {
+    ENTER(expressionPrecedence);
     AstExpression *lhs = NULL;
     PrattToken *tok = next(parser);
     int save = PROTECT(tok);
@@ -2211,16 +2207,16 @@ static AstExpression *expr_bp(PrattParser *parser, int min_bp) {
             DEBUG("PEEKED OP %s", op->type->name);
             PrattRecord *record = fetchRecord(parser, op->type, true);
             if(record->postfixOp != NULL) {
-                DEBUG("postfix %d %d", record->postfixPrec, min_bp);
-                if (record->postfixPrec < min_bp) {
+                DEBUG("postfix %d %d", record->postfixPrec, minimumPrecedence);
+                if (record->postfixPrec < minimumPrecedence) {
                     break;
                 }
                 next(parser);
                 lhs = record->postfixOp(record, parser, lhs, op);
                 REPLACE_PROTECT(save, lhs);
             } else if (record->infixOp != NULL) {
-                DEBUG("infix %d %d", record->infixPrec, min_bp);
-                if (record->infixPrec < min_bp) {
+                DEBUG("infix %d %d", record->infixPrec, minimumPrecedence);
+                if (record->infixPrec < minimumPrecedence) {
                     break;
                 }
                 next(parser);
@@ -2233,7 +2229,7 @@ static AstExpression *expr_bp(PrattParser *parser, int min_bp) {
             }
         }
     }
-    LEAVE(expr_bp);
+    LEAVE(expressionPrecedence);
     UNPROTECT(save);
     return lhs;
 }
