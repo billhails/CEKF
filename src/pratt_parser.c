@@ -351,11 +351,12 @@ static AstProg *prattParseThing(PrattLexer *thing) {
     PrattParser *parser = makePrattParser();
     int save = PROTECT(parser);
     parser->lexer = makePrattLexerFromString((char *) preamble, "preamble");
-    AstDefinitions *definitions = NULL;
+    parser->isPreamble = true;
     AstNest *nest = top(parser);
     if (parser->lexer->bufList != NULL) {
         parserError(parser, "unconsumed tokens");
     }
+    AstDefinitions *definitions = NULL;
     if (nest) {
         definitions = nest->definitions;
         PROTECT(definitions);
@@ -394,8 +395,21 @@ AstProg *prattParseString(char *data, char *name) {
     return prog;
 }
 
+static PrattParser *findPreambleParser(PrattParser *parser) {
+#ifdef SAFETY_CHECKS
+    if (parser == NULL) {
+        cant_happen("cannot find preamble parser");
+    }
+#endif
+    if (parser->isPreamble) {
+        return parser;
+    }
+    return findPreambleParser(parser->next);
+}
+
 static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
-    parser = newPrattParser(parser->next); // linked files should not see the linking file's parse env
+    parser = findPreambleParser(parser);
+    parser = newPrattParser(parser);
     int save = PROTECT(parser);
     parser->lexer = makePrattLexerFromFilename(file);
     AstDefinitions *definitions = NULL;

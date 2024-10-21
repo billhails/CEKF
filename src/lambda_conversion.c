@@ -54,7 +54,7 @@ static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
 static HashSymbol *dollarSubstitute(HashSymbol *);
 static LamExp *convertNest(AstNest *, LamContext *);
-static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
+static LamExp *lamConvert(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
 
 #ifdef DEBUG_LAMBDA_CONVERT
@@ -92,7 +92,7 @@ LamExp *lamConvertProg(AstProg *prog) {
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
     addCurrentNamespaceToContext(env, NS_GLOBAL);
-    LamExp *result = lamConvertDefsNsAndExprs(prog->preamble, prog->namespaces, prog->body, env);
+    LamExp *result = lamConvert(prog->preamble, prog->namespaces, prog->body, env);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
     return result;
@@ -102,7 +102,7 @@ static LamExp *convertNest(AstNest *nest, LamContext *env) {
     ENTER(convertNest);
     env = newLamContext(CPI(nest), env);
     int save = PROTECT(env);
-    LamExp *result = lamConvertDefsNsAndExprs(nest->definitions, NULL, nest->expressions, env);
+    LamExp *result = lamConvert(nest->definitions, NULL, nest->expressions, env);
     PROTECT(result);
     UNPROTECT(save);
     LEAVE(convertNest);
@@ -127,11 +127,11 @@ static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, 
     UNPROTECT(save);
 }
 
-static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
-                                        AstNamespaceArray *nsArray,
-                                        AstExpressions *expressions,
-                                        LamContext *env) {
-    ENTER(lamConvertDefsNsAndExprs);
+static LamExp *lamConvert(AstDefinitions *definitions,
+                          AstNamespaceArray *nsArray,
+                          AstExpressions *expressions,
+                          LamContext *env) {
+    ENTER(lamConvert);
     collectAliases(definitions, env);
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
@@ -154,7 +154,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
             PROTECT(envToken);
             AstExpressions *body = newAstExpressions(CPI(namespace), envToken, NULL);
             PROTECT(body);
-            LamExp *lamNamespace = lamConvertDefsNsAndExprs(namespace->definitions, NULL, body, nsEnv);
+            LamExp *lamNamespace = lamConvert(namespace->definitions, NULL, body, nsEnv);
             PROTECT(lamNamespace);
             pushLamNamespaceArray(namespaces, lamNamespace);
             addNamespaceInfoToLamContext(env, nsEnv, i);
@@ -189,7 +189,7 @@ static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
             newLamExp_Typedefs(CPI(typeDefs), typeDefs);
     }
     UNPROTECT(save);
-    LEAVE(lamConvertDefsNsAndExprs);
+    LEAVE(lamConvert);
     return result;
 }
 

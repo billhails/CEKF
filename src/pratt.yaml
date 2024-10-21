@@ -68,6 +68,7 @@ structs:
         lexer: PrattLexer=NULL
         trie: PrattTrie=NULL
         panicMode: bool=false
+        isPreamble: bool=false
         next: PrattParser
 
     # Pratt Parser table records
