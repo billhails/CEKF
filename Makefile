@@ -52,7 +52,8 @@ EXTRA_TARGETS= \
     $(EXTRA_OBJTYPES_H_TARGETS) \
     $(EXTRA_DEBUG_H_TARGETS) \
     $(EXTRA_DEBUG_C_TARGETS) \
-	generated/UnicodeData.inc
+	generated/UnicodeData.inc \
+	generated/UnicodeDigits.inc
 
 MAIN=src/main.c
 PREAMBLE=generated/preamble.c
@@ -183,6 +184,9 @@ unicode/UnicodeData.txt: | unicode
 
 generated/UnicodeData.inc: unicode/UnicodeData.txt tools/analyzeCsv.py | generated
 	$(PYTHON) ./tools/analyzeCsv.py > $@
+
+generated/UnicodeDigits.inc: unicode/UnicodeData.txt tools/makeUnicodeDigits.py | generated
+	$(PYTHON) ./tools/makeUnicodeDigits.py > $@
 
 realclean: clean
 	rm -rf tags unicode

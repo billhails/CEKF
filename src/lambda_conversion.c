@@ -36,42 +36,26 @@
 
 char *lambda_conversion_function = NULL; // set by --lambda-conversion flag
 
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions,
-                                          LamContext *env);
-static LamList *convertExpressions(AstExpressions *expressions,
-                                   LamContext *env);
-static LamSequence *convertSequence(AstExpressions *expressions,
-                                    LamContext *env);
-static LamLetRecBindings *prependDefinition(AstDefinition *definition,
-                                            LamContext *env,
-                                            LamLetRecBindings *next);
-static LamLetRecBindings *prependDefine(AstDefine *define, LamContext *env, LamLetRecBindings *next);
-static LamLetRecBindings *prependGensymDefine(AstGensymDefine *define, LamContext *env, LamLetRecBindings *next);
-static LamExp *convertExpression(AstExpression *expression, LamContext *env);
-static bool typeHasFields(AstTypeBody *typeBody);
-static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions,
-                                       LamContext *env);
-static void collectAliases(AstDefinitions *definitions, LamContext *env);
-static void collectMacros(AstDefinitions *definitions, LamContext *env);
-static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor
-                                                  *typeConstructor,
-                                                  LamType *type, int size,
-                                                  int index, bool needsVec,
-                                                  LamContext *env);
-static void collectTypeInfo(HashSymbol *symbol, AstTypeConstructorArgs *args,
-                            LamTypeConstructor *type,
-                            bool needsVec, int enumCount, int index,
-                            int arity, LamContext *env);
-static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *typeList, LamContext *env);
-static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *typeMap, LamContext *env);
-static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *args, LamContext *env);
-static HashSymbol *dollarSubstitute(HashSymbol *original);
-static LamExp *convertNest(AstNest *nest, LamContext *env);
-static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *definitions,
-                                        AstNamespaceArray *nsArray,
-                                        AstExpressions *expressions,
-                                        LamContext *env);
-static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env);
+static LamLetRecBindings *convertFuncDefs(AstDefinitions *, LamContext *);
+static LamList *convertExpressions(AstExpressions *, LamContext *);
+static LamSequence *convertSequence(AstExpressions *, LamContext *);
+static LamLetRecBindings *prependDefinition(AstDefinition *, LamContext *, LamLetRecBindings *);
+static LamLetRecBindings *prependDefine(AstDefine *, LamContext *, LamLetRecBindings *);
+static LamLetRecBindings *prependGensymDefine(AstGensymDefine *, LamContext *, LamLetRecBindings *);
+static LamExp *convertExpression(AstExpression *, LamContext *);
+static bool typeHasFields(AstTypeBody *);
+static LamTypeDefList *collectTypeDefs(AstDefinitions *, LamContext *);
+static void collectAliases(AstDefinitions *, LamContext *);
+static void collectMacros(AstDefinitions *, LamContext *);
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *, LamType *, int, int, bool, LamContext *);
+static void collectTypeInfo(HashSymbol *, AstTypeConstructorArgs *, LamTypeConstructor *, bool, int, int, int, LamContext *);
+static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *, LamContext *);
+static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
+static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
+static HashSymbol *dollarSubstitute(HashSymbol *);
+static LamExp *convertNest(AstNest *, LamContext *);
+static LamExp *lamConvertDefsNsAndExprs(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
+static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #  include "debugging_on.h"
@@ -89,6 +73,10 @@ static void conversionError(ParserInfo I, char *message, ...) {
     vfprintf(errout, message, args);
     va_end(args);
     can_happen(" at +%d %s", I.lineno, I.filename);
+}
+
+static LamExp *lamExpError(ParserInfo I) {
+    return newLamExp_Var(I, errorSymbol());
 }
 
 static void addCurrentNamespaceToContext(LamContext *context, int id) {
@@ -786,13 +774,13 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
 #define CHECK_ONE_ARG(name, args) do { \
     int count = countLamList(args); \
     if (count != 1) \
-        cant_happen("expected 1 arg in " #name ", got %d", count); \
+        conversionError(CPI(args), "expected 1 arg in " #name ", got %d", count); \
 } while(0)
 
 #define CHECK_TWO_ARGS(name, args) do { \
     int count = countLamList(args); \
     if (count != 2) \
-        cant_happen("expected 2 args in " #name ", got %d", count); \
+        conversionError(CPI(args), "expected 2 args in " #name ", got %d", count); \
 } while(0)
 
 static LamExp *makeCallCC(LamList *args) {
@@ -851,7 +839,7 @@ static void bindMacroArgs(LamExpTable *table, LamVarList *fargs, LamList *aargs)
 static LamExp *expandMacro(HashSymbol *name, LamMacro *macro, LamList *args) {
     if (countLamList(args) != countLamVarList(macro->args)) {
         conversionError(CPI(args), "wrong number of arguments to macro %s", name->name);
-        return newLamExp_Var(CPI(args), name);
+        return newLamExp_Error(CPI(args));
     }
     if (countLamList(args) == 0) {
         return macro->exp;
@@ -1009,7 +997,8 @@ static void checkNoUnrecognisedTags(LamTypeTags *lamTags, AstTaggedExpressions *
 static void checkTagNotDuplicate(HashSymbol *tag, AstTaggedExpressions *tags) {
     if (tags == NULL) return;
     if (tag == tags->tag) {
-        cant_happen("duplicate tag %s", tag->name);
+        conversionError(CPI(tags), "duplicate tag %s", tag->name);
+        return;
     }
     checkTagNotDuplicate(tag, tags->next);
 }
@@ -1078,7 +1067,8 @@ static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
 
 static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpressions *tags, LamContext *env) {
     if (constructor->val.constructor->tags == NULL) {
-        cant_happen("non-struct constructor applied to struct");
+        conversionError(CPI(constructor), "non-struct constructor applied to struct");
+        return lamExpError(CPI(tags));
     }
     checkAllTagsPresent(constructor->val.constructor->tags, tags);
     checkNoUnrecognisedTags(constructor->val.constructor->tags, tags);
@@ -1086,7 +1076,8 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
     int arity = findUnderlyingArity(constructor);
     int nargs = (int) countAstTaggedExpressions(tags);
     if (nargs != arity) {
-        cant_happen("wrong number of args in structure application");
+        conversionError(CPI(constructor), "wrong number of args in structure application");
+        return lamExpError(CPI(tags));
     }
     LamList *args = convertTagsToArgs(constructor->val.constructor->tags, tags, env);
     int save = PROTECT(args);
@@ -1117,7 +1108,8 @@ static LamTypeConstructorInfo *findConstructor(AstLookupOrSymbol *los, LamContex
 static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info == NULL) {
-        cant_happen("cannot find constructor");
+        conversionError(CPI(structure), "cannot find constructor");
+        return lamExpError(CPI(structure));
     }
     LamExp *constructor = newLamExp_Constructor(CPI(info), info);
     int save = PROTECT(constructor);
@@ -1210,7 +1202,8 @@ static AstArgList *rewriteAstTaggedArgList(LamTypeTags *allTags, AstTaggedArgLis
 static AstArg *rewriteAstUnpackStruct(AstUnpackStruct *structure, LamContext *env) {
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info->tags == NULL) {
-        cant_happen("constructor not a struct");
+        conversionError(CPI(structure), "constructor not a struct");
+        return newAstArg_Wildcard(CPI(structure));
     }
     AstArgList *args = rewriteAstTaggedArgList(info->tags, structure->argList, env);
     int save = PROTECT(args);
@@ -1290,10 +1283,12 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
     return result;
 }
 
-static LamExp *convertCompositeFun(AstCompositeFunction *fun, LamContext *env) {
+static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun, LamContext *env) {
     ENTER(convertCompositeFun);
-    if (fun == NULL)
-        cant_happen("composite function with no components");
+    if (fun == NULL) {
+        conversionError(PI, "composite function with no components");
+        return lamExpError(PI);
+    }
     int nargs = countAstArgList(fun->function->argList);
     LamLam *lambda = convertCompositeBodies(nargs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
@@ -1395,7 +1390,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_FUN:
             DEBUG("fun");
-            result = convertCompositeFun(expression->val.fun, env);
+            result = convertCompositeFun(CPI(expression), expression->val.fun, env);
             break;
         case AST_EXPRESSION_TYPE_NEST:
             DEBUG("nest");

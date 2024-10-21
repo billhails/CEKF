@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// This file contains a lookup table for the unicode general category
+// This file includes a lookup table for the unicode general category
 // values of every unicode character, plus a set of unicode equivalents
 // to the functions defined in ctype.h.
 // Where unicode and ctype.h disagree (for example unicode considers TAB
@@ -27,9 +27,38 @@
 #include "unicode.h"
 #include "common.h"
 
+struct UnicodeDigit {
+    int code;
+    int dec;
+};
+
+static struct UnicodeDigit digits[] = {
+#include "UnicodeDigits.inc"
+};
+
 static unsigned char category[] = {
 #include "UnicodeData.inc"
 };
+
+// untested brute-force binary search
+int unicode_getdec(Character c) {
+    int start = 0;
+    int end = NUM_UNICODE_DIGITS - 1;
+    for (;;) {
+        eprintf("getUnicodeDec %d - %d\n", start, end);
+        if (start == end) {
+            cant_happen("failed to find decimal digit %lc", c);
+        }
+        int middle = start + (end - start) / 2;
+        if (digits[middle].code == c) {
+            return digits[middle].dec;
+        } else if (digits[middle].code < c) {
+            start = middle;
+        } else {
+            end = middle;
+        }
+    }
+}
 
 bool unicode_isvalid(Character c) {
     return c >= 0 && c <= UNICODE_MAX;
@@ -37,6 +66,18 @@ bool unicode_isvalid(Character c) {
 
 bool unicode_isascii(Character c) {
     return c >= 0 && c < 0x80;
+}
+
+bool unicode_isopen(Character c) {
+    return unicode_isvalid(c) && (category[c] == GC_Ps);
+}
+
+bool unicode_isclose(Character c) {
+    return unicode_isvalid(c) && (category[c] == GC_Pe);
+}
+
+bool unicode_issymbol(Character c) {
+    return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_S);
 }
 
 bool unicode_isalnum(Character c) {
@@ -72,7 +113,7 @@ bool unicode_isprint(Character c) {
 }
 
 bool unicode_ispunct(Character c) {
-    return unicode_isvalid(c) && ((category[c] & GC_MASK) == GC_P && category[c] != GC_Pc);
+    return unicode_isvalid(c) && ((unicode_isascii(c) && ispunct(c)) || ((category[c] & GC_MASK) == GC_P && category[c] != GC_Pc));
 }
 
 bool unicode_isspace(Character c) {

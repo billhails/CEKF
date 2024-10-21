@@ -11,8 +11,8 @@ PrattTrie --character--> byte
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
 PrattTrie --children--> PrattTrie
-PrattBuffer --data--> string
-PrattBuffer --start--> string
+PrattBuffer --data--> ustring
+PrattBuffer --start--> ustring
 PrattBuffer --length--> int
 PrattBufList --lineno--> int
 PrattBufList --filename--> HashSymbol
@@ -50,7 +50,7 @@ PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
-PrattUnicode["PrattUnicode[]"] --entries--> char
+PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattValueVal
 PrattValueType
 ```

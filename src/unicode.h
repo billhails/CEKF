@@ -74,17 +74,21 @@ bool unicode_isalnum(Character c);
 bool unicode_isalpha(Character c);
 bool unicode_isascii(Character c);
 bool unicode_isblank(Character c);
+bool unicode_isclose(Character c);
 bool unicode_iscntrl(Character c);
 bool unicode_isdigit(Character c);
 bool unicode_isgraph(Character c);
 bool unicode_islower(Character c);
 bool unicode_isnumber(Character c); // includes digits, roman numerals, vulgar fractions etc.
+bool unicode_isopen(Character c);
 bool unicode_isprint(Character c);
 bool unicode_ispunct(Character c);
 bool unicode_isspace(Character c);
+bool unicode_issymbol(Character c);
 bool unicode_isupper(Character c);
 bool unicode_isvalid(Character c);
 bool unicode_isxdigit(Character c);
 int unicode_category(Character c);
+int unicode_getdec(Character c);
 
 #endif

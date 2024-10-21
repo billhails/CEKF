@@ -1770,7 +1770,7 @@ static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol) {
 
 static void addThenToEnv(TcEnv *env) {
     // a -> a -> a
-    TcType *freshType = makeFreshVar("then");
+    TcType *freshType = makeFreshVar(thenSymbol()->name);
     int save = PROTECT(freshType);
     addBinOpToEnv(env, thenSymbol(), freshType);
     UNPROTECT(save);
