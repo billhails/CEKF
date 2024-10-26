@@ -73,34 +73,34 @@ typedef unicode_general_category_type {
     GC_Cc | GC_Cf | GC_Co | GC_Cs | GC_Cn 
 }
 
-fn not {
+fn NOT {
     (true) { false }
     (false) { true }
 }
-prefix 40 "not" not;
+prefix 40 "not" NOT;
 
-macro and(a, b) { if (a) { b } else { false } }
-infix left 30 "and" and;
+macro AND(a, b) { if (a) { b } else { false } }
+infix left 30 "and" AND;
 
-macro or(a, b) { if (a) { true } else { b } }
-infix left 30 "or" or;
+macro OR(a, b) { if (a) { true } else { b } }
+infix left 30 "or" OR;
 
-fn xor {
+fn XOR {
     (true, true) { false }
     (true, false) { true }
     (false, true) { true }
     (false, false) { false }
 }
-infix left 30 "xor" xor;
+infix left 30 "xor" XOR;
 
-macro nand(a, b) { not (a and b) }
-infix left 30 "nand" nand;
+macro NAND(a, b) { not (a and b) }
+infix left 30 "nand" NAND;
 
-macro nor(a, b) { not (a or b) }
-infix left 30 "nor" nor;
+macro NOR(a, b) { not (a or b) }
+infix left 30 "nor" NOR;
 
-macro xnor(a, b) { not (a xor b) }
-infix left 30 "xnor" xnor;
+macro XNOR(a, b) { not (a xor b) }
+infix left 30 "xnor" XNOR;
 
 infix right 90 "@" cons;
 
@@ -117,6 +117,7 @@ fn assert_(line, file, condition) {
     }
 }
 
+// tail-recursive version
 fn factorial (n) {
     let
         fn h {
@@ -220,42 +221,42 @@ fn print_tuple_0(t) {
    t
 }
 
-unsafe fn print_tuple_1(p1, t=#(a)) {
+unsafe fn print_tuple_1(pa, t=#(a)) {
    puts("#(");
-   p1(a);
+   pa(a);
    puts(")");
    t
 }
 
-unsafe fn print_tuple_2(p1, p2, t=#(a, b)) {
+unsafe fn print_tuple_2(pa, pb, t=#(a, b)) {
    puts("#(");
-   p1(a);
+   pa(a);
    puts(", ");
-   p2(b);
+   pb(b);
    puts(")");
    t
 }
 
-unsafe fn print_tuple_3(p1, p2, p3, t=#(a, b, c)) {
+unsafe fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
    puts("#(");
-   p1(a);
+   pa(a);
    puts(", ");
-   p2(b);
+   pb(b);
    puts(", ");
-   p3(c);
+   pc(c);
    puts(")");
    t
 }
 
-unsafe fn print_tuple_4(p1, p2, p3, p4, t=#(a, b, c, d)) {
+unsafe fn print_tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
    puts("#(");
-   p1(a);
+   pa(a);
    puts(", ");
-   p2(b);
+   pb(b);
    puts(", ");
-   p3(c);
+   pc(c);
    puts(", ");
-   p4(d);
+   pd(d);
    puts(")");
    t
 }
