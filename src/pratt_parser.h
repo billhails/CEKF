@@ -28,6 +28,7 @@ void disablePrattDebug(void);
 void ppAstNest(PrattUTF8 *, AstNest *);
 void ppAstProg(PrattUTF8 *, AstProg *);
 int initFileIdStack(void);
+int initParserStack(void);
 AstNest *prattParseStandaloneString(char *, char *);
 AstProg *prattParseFile(char *);
 AstProg *prattParseString(char *, char *);

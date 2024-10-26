@@ -74,7 +74,7 @@ static AstDefinition        *gensym_assignment(PrattParser *);
 static AstDefinition        *link(PrattParser *);
 static AstDefinition        *typedefinition(PrattParser *);
 static AstDefinitions       *definitions(PrattParser *, HashSymbol *);
-static AstDefinitions       *prattParseLink(PrattParser *, char *);
+static AstDefinitions       *prattParseLink(PrattParser *, char *, PrattParser **);
 static AstExpression        *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *call(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -140,6 +140,8 @@ void disablePrattDebug(void) {
     DEBUGGING_OFF();
 }
 #endif
+
+static PrattParsers *parserStack = NULL;
 
 static AstExpression *errorExpression(ParserInfo I) {
     return newAstExpression_Symbol(I, TOK_ERROR());
@@ -407,7 +409,7 @@ static PrattParser *findPreambleParser(PrattParser *parser) {
     return findPreambleParser(parser->next);
 }
 
-static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
+static AstDefinitions *prattParseLink(PrattParser *parser, char *file, PrattParser **resultParser) {
     parser = findPreambleParser(parser);
     parser = newPrattParser(parser);
     int save = PROTECT(parser);
@@ -417,6 +419,7 @@ static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
     if (nest) {
         definitions = nest->definitions;
     }
+    *resultParser = parser;
     UNPROTECT(save);
     return definitions;
 }
@@ -442,16 +445,23 @@ int initFileIdStack() {
     return PROTECT(fileIdStack);
 }
 
+int initParserStack() {
+    if (parserStack == NULL) {
+        parserStack = newPrattParsers();
+    }
+    return PROTECT(parserStack);
+}
+
 // Careful. Somewhat accidentally this algorithm stores the namespaces
 // in the order that they need to be processed.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
-static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSymbol *symbol) {
+static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, HashSymbol *symbol) {
     // check the file exists
-    AgnosticFileId *fileId = calculatePath(file, parser);
+    AgnosticFileId *fileId = calculatePath(filename, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
-        parserError(parser, "cannot find file \"%s\"", file);
+        parserError(parser, "cannot find file \"%s\"", filename);
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
@@ -473,17 +483,24 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
     // protect against recursive include
     pushAstFileIdArray(fileIdStack, fileId);
     // parse the file
-    AstDefinitions *definitions = prattParseLink(parser, fileId->name);
-    PROTECT(definitions);
+    PrattParser *resultParser = NULL;
+    // careful, 2 pushes in a row could realloc the save stack on push 1
+    int save2 = PROTECT(fileId);
+    AstDefinitions *definitions = prattParseLink(parser, fileId->name, &resultParser);
+    REPLACE_PROTECT(save2, resultParser);
+    /*
     if (definitions == NULL) {
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
     }
-    // save the new namespace
+    */
+    PROTECT(definitions);
+    // save the new namespace and it's parser
     AstNamespaceImpl *impl = newAstNamespaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
     found = pushAstNamespaceArray(namespaces, impl);
+    pushPrattParsers(parserStack, resultParser);
     // un-protect against recursive include
     popAstFileIdArray(fileIdStack);
     // return the id of the namespace
@@ -730,6 +747,82 @@ static void addOperator(PrattParser *parser,
         setPrattTable(parser->rules, op, record);
     }
     UNPROTECT(save);
+}
+
+static void copyPrattTable(PrattTable *to, PrattTable *from) {
+    Index i = 0;
+    HashSymbol *symbol = NULL;
+    PrattRecord *record = NULL;
+    while ((symbol = iteratePrattTable(from, &i, &record)) != NULL) {
+        setPrattTable(to, symbol, record);
+    }
+}
+
+static void copyPrattIntTable(PrattIntTable *to, PrattIntTable *from) {
+    Index i = 0;
+    HashSymbol *symbol = NULL;
+    int record = 0;
+    while ((symbol = iteratePrattIntTable(from, &i, &record)) != NULL) {
+        setPrattIntTable(to, symbol, record);
+    }
+}
+
+static PrattParser *meldParsers(PrattParser *to, PrattParser *from) __attribute__((unused));
+
+static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
+    if (from->trie) {
+        PrattParser *result = newPrattParser(to->next);
+        int save = PROTECT(result);
+        copyPrattTable(result->rules, to->rules);
+        copyPrattIntTable(result->namespaces, to->namespaces);
+        result->lexer = to->lexer;
+        result->trie = to->trie;
+        Index i = 0;
+        HashSymbol *op = NULL;
+        PrattRecord *record = NULL;
+        while ((op = iteratePrattTable(from->rules, &i, &record)) != NULL) {
+            PrattRecord *target = NULL;
+            getPrattTable(to->rules, op, &target);
+            if (target == NULL) {
+                target = copyPrattRecord(record);
+                PROTECT(target);
+                setPrattTable(result->rules, op, target);
+                result->trie = insertPrattTrie(result->trie, op);
+            } else {
+                if (record->prefixImpl) {
+                    if (target->prefixImpl) {
+                        parserError(to, "import redefines prefix operator %s", op->name);
+                    } else {
+                        target->prefixImpl = record->prefixImpl;
+                        target->prefixPrec = record->prefixPrec;
+                        target->prefixOp = record->prefixOp;
+                    }
+                }
+                if (record->infixImpl) {
+                    if (target->infixImpl) {
+                        parserError(to, "import redefines infix operator %s", op->name);
+                    } else {
+                        target->infixImpl = record->infixImpl;
+                        target->infixPrec = record->infixPrec;
+                        target->infixOp = record->infixOp;
+                    }
+                }
+                if (record->postfixImpl) {
+                    if (target->infixImpl) {
+                        parserError(to, "import redefines postfix operator %s", op->name);
+                    } else {
+                        target->postfixImpl = record->postfixImpl;
+                        target->postfixPrec = record->postfixPrec;
+                        target->postfixOp = record->postfixOp;
+                    }
+                }
+            }
+        }
+        UNPROTECT(save);
+        return result;
+    } else {
+        return to;
+    }
 }
 
 static AstDefinition *postfix(PrattParser *parser) {

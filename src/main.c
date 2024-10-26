@@ -306,6 +306,7 @@ int main(int argc, char *argv[]) {
     include_paths = newAstStringArray();
     int save = PROTECT(include_paths);
     initFileIdStack();
+    initParserStack();
     int nextargc = processArgs(argc, argv);
     BuiltIns *builtIns = registerBuiltIns(argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);

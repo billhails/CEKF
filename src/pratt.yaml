@@ -132,6 +132,9 @@ arrays:
     PrattUTF8:
         entries: uchar
 
+    PrattParsers:
+        entries: PrattParser
+
     PrattUnicode:
         entries: character
 

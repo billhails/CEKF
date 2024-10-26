@@ -52,7 +52,7 @@ static void collectTypeInfo(HashSymbol *, AstTypeConstructorArgs *, LamTypeConst
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
-static HashSymbol *dollarSubstitute(HashSymbol *);
+static HashSymbol *dollarSubstitute(HashSymbol *, ParserInfo I);
 static LamExp *convertNest(AstNest *, LamContext *);
 static LamExp *lamConvert(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
@@ -727,7 +727,7 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol), false, exp, next);
+        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol, CPI(define)), false, exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
@@ -745,9 +745,11 @@ static LamLetRecBindings *prependGensymDefine(AstGensymDefine * define, LamConte
     return this;
 }
 
-static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
-    if (!inPreamble)
+static HashSymbol *dollarSubstitute(HashSymbol *symbol, ParserInfo I __attribute__((unused))) {
+    if (!inPreamble) {
+        // eprintf("dollarSubstitute %s not in preamble\n", symbol->name);
         return symbol;
+    }
     bool needs_substitution = false;
     for (char *s = symbol->name; *s != 0; s++) {
         if (*s == '_') {
@@ -765,6 +767,7 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
         }
         HashSymbol *replacement = newSymbol(buf);
         FREE_ARRAY(char, buf, strlen(buf) + 1);
+        // eprintf("dollarSubstitute +%d %s: %s => %s\n", I.lineno, I.filename, symbol->name, replacement->name);
         return replacement;
     } else {
         return symbol;
@@ -1304,7 +1307,7 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) 
     LamExp *result = makeConstructor(symbol, env);
     DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineno, symbol->name, result ? "constructor" : "variable");
     if (result == NULL) {
-        symbol = dollarSubstitute(symbol);
+        symbol = dollarSubstitute(symbol, I);
         result = newLamExp_Var(I, symbol);
     }
     LEAVE(convertSymbol);

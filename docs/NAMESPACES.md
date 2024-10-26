@@ -706,3 +706,32 @@ able to safely assume only the preamble as a basis.
 ## Trial and Error
 
 First attempt, thinking out loud.
+
+Exporting operators may be easier than exporting environments, so let's
+tackle that first.
+
+Currently the parser delegates actually parsing a `link` directive
+(parsing the linked file that is) to a `parseLink` procedure.  `parseLink`
+handles the detection of duplicate files and protection against recursive
+includes, and finally delegates to `prattParseLink` to do the actual
+parsing.
+
+`prattParseLink` unwinds its argument parser to the parser that was used
+to parse the preamble, then extends that with a new child set up with
+a lexer to parse the linked file. When done it discards the parser and
+returns the AstDefinitions from the file.
+
+It should be possible to meld the parser returned with the parser being
+used to parse the file doing the import, incorporating additional tries
+and parser records. Because of the way the parser "hoists" parser records
+only the top-level parser need be inspected, and the tries are similarily
+functional data structures.
+
+Hmm, of course this only works when we first parse the file, we're going
+to have to keep an additional ParseMNamespaceArray of parsers for when
+we're seeing the same file a second time.
+
+So initial steps are ok, there's now a PrattParsers array type and a
+parserStack of that congruent with the fileIdStack of namespaces and
+the parser captures each parser instance used to parse a namespace in
+that array.
