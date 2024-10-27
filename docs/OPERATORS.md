@@ -67,3 +67,48 @@ local scoping rules, since `AND` is now a normal function then free variables in
 body are evaluated in the context of the function definition, and variables in the
 argument expressions are evaluated in the calling context.
 
+Got that working, and we're also handling local shadowing of arguments so they don't
+get wrapped in an invocation unless they are the same lexical variable.
+
+One little unnecssary inefficiency needs to be addressed. If one macro calls another,
+for example
+
+```
+macro NAND(a, b) { NOT(AND(a, b)) }
+```
+
+This first gets rewritten, by `lambda_conversion.c` to
+
+```
+fn NAND(a, b) { NOT(AND(fn () {a}, fn () {b})) }
+```
+
+and then subsequently by `macro_substitution.c` to
+
+```
+fn NAND(a, b) { NOT(AND(fn () {a()}, fn () {b()})) }
+```
+
+While correct, the expression `fn () {a()}` is just `a` so we'll need
+a pass to optimise away this unnecessary wrapping and unwrapping,
+essentially restoring
+
+```
+fn NAND(a, b) { NOT(AND(a, b)) }
+```
+
+Two approaches:
+
+1. Macro specific, have a special type for macro argument application
+   and another for macro argument wrapping, and detect the explicit
+   combination of the two.
+2. Generic pass that would detect this wherever it occurs and optimize it.
+
+In either case we need to be a little bit careful that we allow the
+pattern if the argument is being modified, for example if a macro
+called another with it's argument modified in some way then the pattern
+i.e. `fn() { a() + 1 }` would be necessary.
+
+Got option 1 working, but no need for extra types, just inspect the
+thunk during macro conversion, if it has no arguments and just contains
+a symbol that would otherwise be invoked then return the symbol.

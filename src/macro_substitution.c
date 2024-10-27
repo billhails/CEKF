@@ -30,15 +30,21 @@
 #  include "debugging_off.h"
 #endif
 
-static LamLam *performLamSubstitutions(LamLam *lam, LamMacroArgsTable *symbols) {
-    ENTER(performLamSubstitutions);
-    lam->exp = lamPerformMacroSubstitutions(lam->exp, symbols);
-    LEAVE(performLamSubstitutions);
-    return lam;
-}
-
 static bool isReplacementSymbol(HashSymbol *var, LamMacroArgsTable *symbols) {
     return getLamMacroArgsTable(symbols, var, NULL);
+}
+
+static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsTable *symbols) {
+    ENTER(performLamSubstitutions);
+    // fn () { a() } == a
+    if (   lam->args == NULL
+        && lam->exp->type == LAMEXP_TYPE_VAR
+        && isReplacementSymbol(lam->exp->val.var, symbols)) {
+        return lam->exp;
+    }
+    lam->exp = lamPerformMacroSubstitutions(lam->exp, symbols);
+    LEAVE(performLamSubstitutions);
+    return newLamExp_Lam(CPI(lam), lam);
 }
 
 static bool containsReplacementSymbols(LamVarList *vars, LamMacroArgsTable *symbols) {
@@ -374,8 +380,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
             case LAMEXP_TYPE_CONSTRUCTOR:
                 break;
             case LAMEXP_TYPE_LAM:
-                exp->val.lam =
-                    performLamSubstitutions(exp->val.lam, symbols);
+                exp = performLamSubstitutions(exp->val.lam, symbols);
                 break;
             case LAMEXP_TYPE_VAR: {
                 LamExp *rep = performVarSubstitutions(CPI(exp), exp->val.var, symbols);
@@ -445,7 +450,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
                 exp->val.lookup = performLookupSubstitutions(exp->val.lookup, symbols);
                 break;
             default:
-                cant_happen("unrecognized LamExp type %s", lamExpTypeName(exp->type));
+                cant_happen("unrecognized %s", lamExpTypeName(exp->type));
         }
     }
     LEAVE(lamPerformMacroSubstitutions);
