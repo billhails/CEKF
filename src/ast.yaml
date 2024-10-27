@@ -51,10 +51,6 @@ structs:
         symbol: HashSymbol
         expression: AstExpression
 
-    AstGensymDefine:
-        basename: HashSymbol
-        expression: AstExpression
-
     AstAlias:
         name: HashSymbol
         type: AstType
@@ -194,7 +190,6 @@ unions:
 
     AstDefinition:
         define: AstDefine
-        gensymDefine: AstGensymDefine
         typeDef: AstTypeDef
         macro: AstDefMacro
         alias: AstAlias
@@ -225,7 +220,6 @@ unions:
         funCall: AstFunCall
         lookup: AstLookup
         symbol: HashSymbol
-        gensym: HashSymbol
         number: MaybeBigInt
         character: character
         fun: AstCompositeFunction

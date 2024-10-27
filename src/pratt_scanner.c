@@ -37,12 +37,6 @@ HashSymbol *TOK_MACRO(void) {
     return s;
 }
 
-HashSymbol *TOK_DOLLAR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("$");
-    return s;
-}
-
 HashSymbol *TOK_LEFT(void) {
     static HashSymbol *s = NULL;
     if (s == NULL) s = newSymbol("left");

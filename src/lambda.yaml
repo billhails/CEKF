@@ -31,11 +31,6 @@ structs:
         args: LamVarList
         exp: LamExp
 
-    LamMacro:
-        args: LamVarList
-        exp: LamExp
-        env: LamContext
-
     LamVarList:
         var: HashSymbol
         next: LamVarList
@@ -141,7 +136,6 @@ structs:
 
     LamLetRecBindings:
         var: HashSymbol
-        isGenSym: bool
         val: LamExp
         next: LamLetRecBindings
 
@@ -240,7 +234,6 @@ unions:
         namespaces: LamNamespaceArray
         lam: LamLam
         var: HashSymbol
-        gensym: HashSymbol
         stdint: int
         biginteger: MaybeBigInt
         prim: LamPrimApp
@@ -294,10 +287,10 @@ unions:
 
 hashes:
     LamMacroTable:
-        entries: LamMacro
+        entries: void_ptr
 
-    LamGenSymTable:
-        entries: HashSymbol
+    LamMacroArgsTable:
+        entries: void_ptr
 
     LamInfoTable:
         entries: LamInfo

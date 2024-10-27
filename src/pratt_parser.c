@@ -70,7 +70,6 @@ static AstDefinition        *assignment(PrattParser *);
 static AstDefinition        *definition(PrattParser *);
 static AstDefinition        *defmacro(PrattParser *);
 static AstDefinition        *defun(PrattParser *, bool, bool);
-static AstDefinition        *gensym_assignment(PrattParser *);
 static AstDefinition        *link(PrattParser *);
 static AstDefinition        *typedefinition(PrattParser *);
 static AstDefinitions       *definitions(PrattParser *, HashSymbol *);
@@ -84,7 +83,6 @@ static AstExpression        *exprAlias(PrattRecord *, PrattParser *, AstExpressi
 static AstExpression        *expression(PrattParser *);
 static AstExpression        *expressionPrecedence(PrattParser *, int);
 static AstExpression        *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression        *gensym(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -211,8 +209,6 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_OPEN(),      grouping, 0,   call, 130,       NULL, 0);
 
     addRecord(table, TOK_PERIOD(),    NULL, 0,       lookup, 140,     NULL, 0);
-
-    addRecord(table, TOK_DOLLAR(),    gensym, 0,     NULL, 150,       NULL, 0);
 
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
@@ -943,9 +939,6 @@ static AstDefinition *definition(PrattParser *parser) {
     AstDefinition *res = NULL;
     if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
-    } else if (check(parser, TOK_DOLLAR())) {
-        next(parser);
-        res = gensym_assignment(parser);
     } else if (check(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
     } else if (check(parser, TOK_UNSAFE())) {
@@ -1272,9 +1265,6 @@ static AstLookupOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *f
         case AST_EXPRESSION_TYPE_NEST:
             parserErrorAt(CPI(function), parser, "invalid use of nest as structure name");
             return makeLosError(CPI(function));
-        case AST_EXPRESSION_TYPE_GENSYM:
-            parserErrorAt(CPI(function), parser, "invalid use of macro symbol as structure name");
-            return makeLosError(CPI(function));
         case AST_EXPRESSION_TYPE_IFF:
             parserErrorAt(CPI(function), parser, "invalid use of conditional as structure name");
             return makeLosError(CPI(function));
@@ -1425,9 +1415,6 @@ static AstArg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
         case AST_EXPRESSION_TYPE_ASSERTION:
             parserErrorAt(CPI(expr), parser, "invalid use of \"assert\" as formal argument");
             return newAstArg_Wildcard(CPI(expr));
-        case AST_EXPRESSION_TYPE_GENSYM:
-            parserErrorAt(CPI(expr), parser, "invalid use of macro variable as formal argument");
-            return newAstArg_Wildcard(CPI(expr));
         case AST_EXPRESSION_TYPE_ALIAS:
             return astAliasToFarg(parser, expr->val.alias);
         case AST_EXPRESSION_TYPE_WILDCARD:
@@ -1514,22 +1501,6 @@ static HashSymbol *symbol(PrattParser *parser) {
     LEAVE(symbol);
     UNPROTECT(save);
     return s;
-}
-static AstDefinition *gensym_assignment(PrattParser *parser) {
-    ENTER(gensym_assignment);
-    PrattToken *tok = peek(parser);
-    int save = PROTECT(tok);
-    HashSymbol *s = symbol(parser);
-    consume(parser, TOK_ASSIGN());
-    AstExpression *expr = expression(parser);
-    PROTECT(expr);
-    consume(parser, TOK_SEMI());
-    AstGensymDefine *def = newAstGensymDefine(TOKPI(tok), s, expr);
-    PROTECT(def);
-    AstDefinition *res = newAstDefinition_GensymDefine(CPI(def), def);
-    LEAVE(gensym_assignment);
-    UNPROTECT(save);
-    return res;
 }
 
 static AstDefinition *assignment(PrattParser* parser) {
@@ -2000,17 +1971,6 @@ static AstExpression *macro(PrattRecord *record __attribute__((unused)),
                             PrattToken *tok) {
     parserErrorAt(TOKPI(tok), parser, "can't declare macros as expressions");
     return errorExpression(TOKPI(tok));
-}
-
-static AstExpression *gensym(PrattRecord *record __attribute__((unused)),
-                             PrattParser *parser,
-                             AstExpression *lhs __attribute__((unused)),
-                             PrattToken *tok) {
-    ENTER(gensym);
-    HashSymbol *s = symbol(parser);
-    AstExpression *gs = newAstExpression_Gensym(TOKPI(tok), s);
-    LEAVE(gensym);
-    return gs;
 }
 
 static AstExpression *fn(PrattRecord *record __attribute__((unused)),

@@ -2,12 +2,12 @@ let
     fn now() { 1 }
 
     macro time(expression) {
-        let $start = now();
+        let start = now();
         in {
-            let $result = expression;
+            let result = expression;
             in
-                print(now() - $start);
-                $result
+                print(now() - start);
+                result
         }
     }
 in
