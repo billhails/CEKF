@@ -76,6 +76,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     include_paths = newAstStringArray();
     int save = PROTECT(include_paths);
     initFileIdStack();
+    initParserStack();
     initNamespaces();
     pushAstStringArray(include_paths, strdup("fn"));
     test("1",                              "{ 1; }", false);

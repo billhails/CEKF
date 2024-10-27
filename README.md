@@ -68,8 +68,11 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 flowchart TD
 classDef process fill:#aef;
 source(Source) -->
+scanner([Scanner]):::process -->
+tokens(Tokens) -->
 parser([Parser]):::process
-parser <--> oi([Operator Inlining]):::process
+parser --> oi([Operator Inlining]):::process
+oi --> scanner
 parser --> ast(AST) -->
 lc([Lambda Conversion]):::process --> tpmc([Pattern Matching Compiler]):::process
 lc <---> pg([Print Function Generator]):::process
@@ -94,12 +97,14 @@ bc --> cekf([CEKF Runtime VM]):::process
 ```
 
 The various components named in the diagram above are linked to their implementation entry point here:
-* Parser [parser.y](src/parser.y)
+* Scanner [pratt_scanner.c](src/pratt_scanner.c)
+* Parser [pratt_parser.c](src/pratt_parser.c)
 * AST [ast.yaml](src/ast.yaml)
 * Lambda Conversion [lambda_conversion.c](src/lambda_conversion.c)
 * Tpmc [tpmc_logic.c](src/tpmc_logic.c)
 * Print Function Generator [print_generator.c](src/print_generator.c)
 * Variable Substitution [lambda_substitution.c](src/lambda_substitution.c)
+* Macro Expansion [macro_substitution.c](src/macro_substitution.c)
 * Plain Lambda Form [lambda.yaml](src/lambda.yaml)
 * Type Checking [tc_analyze.c](src/tc_analyze.c)
 * Print Compiler [print_compiler.c](src/print_compiler.c)

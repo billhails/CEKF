@@ -40,6 +40,8 @@ static HashSymbol *performVarSubstitutions(HashSymbol *var, TpmcSubstitutionTabl
 
 static void substError(ParserInfo PI, const char *message, ...) __attribute__((format(printf, 2, 3)));
 
+static void substError(ParserInfo PI, const char *message, ...) __attribute__((unused));
+
 static void substError(ParserInfo PI, const char *message, ...) {
     va_list args;
     va_start(args, message);
@@ -431,10 +433,6 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 break;
             case LAMEXP_TYPE_LOOKUP:
                 exp->val.lookup = performLookupSubstitutions(exp->val.lookup, substitutions);
-                break;
-            case LAMEXP_TYPE_GENSYM:
-                substError(CPI(exp), "cannot use dollar-qualified variable outside of a macro");
-                exp->type = LAMEXP_TYPE_VAR;
                 break;
             default:
                 cant_happen

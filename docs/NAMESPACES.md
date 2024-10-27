@@ -592,4 +592,146 @@ could use this id to find the namespace in which to lookup the
 
 Use of scoped types in pattern matching.
 
+# Postscript
 
+Now that namespaces are implemented this is a review of their
+implementation, and their shortcomings. Those shortcomings are crying
+out for an additional `import` operation, and hopefully the namespace
+implementation can be re-used.
+
+## Shortcomings
+
+* Operators defined in a namespace are not visible outside of it.
+* Aliases defined in a namespace are not visible outside of it.
+* Functions and types defined in a namespace *have* to be accessed
+  via the lookup operator (`.`) on the namespace id.
+
+## Intent of an `import` command
+
+I'm hoping I can get an `import <string>;` declaration to do 2 things:
+
+1. make the environment of the import the base environment for the
+   rest of the file.
+2. use the resulting extended parser (with potentially extra operators)
+   to parse the rest of the file.
+
+## Description of the Current Implementation
+
+### Lambda conversion etc.
+
+Namespaces are detected (recursively) during parsing of the main file.
+When a namespace is found, the referenced file is statted with `stat`
+and the resulting device id and inode (unix) numbers used to produce a
+unique identifier. If the namespace is deduced to be previously unseen,
+it is parsed and the result placed in a namespace array, otherwise the
+existing namespace is re-used.  The symbol of the `link` declaration is
+associated with the index of the namespace in that array.
+
+Namespaces are parsed as if they were a `let` declaration with no
+associated `in`. During lambda conversion they are converted to a true
+nest, where the `in` section is a single `env` directive (not available
+to the surface language) which instructs subsequent processing stages
+to return the current environment after processing the `let` declarations.
+
+The workhorse of lambda conversion in `lambda_conversion.c` is the static
+`lamConvert` procedure. When called from the top level it takes an AST
+of definitions, an array of namespaces, an AST of expressions and an
+environment. In the top level case the definitions are the preamble,
+the ns array is all the namespaces and the expressions are the main
+program. When called recursively on a namespace, the definitions are
+the body of the namespace, the nsarray is null and the expressions are
+the single `env` directive mentioned earlier.  When called recursively
+on a normal nest, the definitions are the nest definitions, the nsarray
+is null and the expressions are the nest expressions.
+
+| Argument        | Top          | Namespace       | Nest              |
+|-----------------|--------------|-----------------|-------------------|
+| **definitions** | preamble     | ns declarations | nest declarations |
+| **nsarray**     | namespaces   | NULL            | NULL              |
+| **expressions** | main program | "env"           | nest expressions  |
+| **env**         | empty        | preamble env    | parent env        |
+
+This means it can use the environment constructed from parsing the
+preamble as context for each of the namespaces and for the main file:
+
+```mermaid
+flowchart BT
+  pa(Preamble)
+  subgraph nsarray
+      ns1(Namespace 1)
+      ns2(Namespace 2)
+      ns3(Namespace 3)
+  end
+  pa --> ns1
+  pa --> ns2
+  pa --> ns3
+  pa --> main(Main Program)
+```
+
+Notice there is no nesting of namespaces even if they were recursively
+linked. This is as it should be, each namespace assumes only the preamble
+as a base environment.
+
+During subsequent processing steps (type checking, bytecode generation
+etc.) the components are processed in the same order: preamble then
+namespaces then main program. The order of namespaces in the
+array *is* significant, each must be processed before it is referred
+to. Luckily the parser, by parsing namespaces while parsing the file
+that links them, guarantees this property because namespaces are added
+to the ns array immediately after they are parsed.
+
+### Parsing
+
+Because of the extensibility of the parser with user-defined operators,
+the parser uses a similar environmental model to the other processing
+steps. A new parser "environment" is pushed on entry to a new scope
+and popped on exit. In order to capture the parser environment
+constructed while parsing a namespace, the parser will need to know
+that it is parsing a namespace and where to put the value. Since the
+parser is returning AST elements it can't simply return the environment.
+Maybe it can poke it into the AST as a new expression type?
+
+## Problems
+
+A single import is only slightly problematic, the bigger problem is
+multiple imports, name conflict resolution etc. A simple but inefficient
+solution would be to inline the contents of a namespace at the point it
+is imported. This is particularily inefficient for large and commonly
+used libraries like `listutils` and really isn't an option.
+
+But if we can't merely duplicate, how can we arrange environments so
+that one import does not disturb another? Each namespace must be
+able to safely assume only the preamble as a basis.
+
+## Trial and Error
+
+First attempt, thinking out loud.
+
+Exporting operators may be easier than exporting environments, so let's
+tackle that first.
+
+Currently the parser delegates actually parsing a `link` directive
+(parsing the linked file that is) to a `parseLink` procedure.  `parseLink`
+handles the detection of duplicate files and protection against recursive
+includes, and finally delegates to `prattParseLink` to do the actual
+parsing.
+
+`prattParseLink` unwinds its argument parser to the parser that was used
+to parse the preamble, then extends that with a new child set up with
+a lexer to parse the linked file. When done it discards the parser and
+returns the AstDefinitions from the file.
+
+It should be possible to meld the parser returned with the parser being
+used to parse the file doing the import, incorporating additional tries
+and parser records. Because of the way the parser "hoists" parser records
+only the top-level parser need be inspected, and the tries are similarily
+functional data structures.
+
+Hmm, of course this only works when we first parse the file, we're going
+to have to keep an additional ParseMNamespaceArray of parsers for when
+we're seeing the same file a second time.
+
+So initial steps are ok, there's now a PrattParsers array type and a
+parserStack of that congruent with the fileIdStack of namespaces and
+the parser captures each parser instance used to parse a namespace in
+that array.

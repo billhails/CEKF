@@ -68,6 +68,7 @@ structs:
         lexer: PrattLexer=NULL
         trie: PrattTrie=NULL
         panicMode: bool=false
+        isPreamble: bool=false
         next: PrattParser
 
     # Pratt Parser table records
@@ -130,6 +131,9 @@ hashes:
 arrays:
     PrattUTF8:
         entries: uchar
+
+    PrattParsers:
+        entries: PrattParser
 
     PrattUnicode:
         entries: character

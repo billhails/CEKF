@@ -70,11 +70,10 @@ static AstDefinition        *assignment(PrattParser *);
 static AstDefinition        *definition(PrattParser *);
 static AstDefinition        *defmacro(PrattParser *);
 static AstDefinition        *defun(PrattParser *, bool, bool);
-static AstDefinition        *gensym_assignment(PrattParser *);
 static AstDefinition        *link(PrattParser *);
 static AstDefinition        *typedefinition(PrattParser *);
 static AstDefinitions       *definitions(PrattParser *, HashSymbol *);
-static AstDefinitions       *prattParseLink(PrattParser *, char *);
+static AstDefinitions       *prattParseLink(PrattParser *, char *, PrattParser **);
 static AstExpression        *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *call(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -84,7 +83,6 @@ static AstExpression        *exprAlias(PrattRecord *, PrattParser *, AstExpressi
 static AstExpression        *expression(PrattParser *);
 static AstExpression        *expressionPrecedence(PrattParser *, int);
 static AstExpression        *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression        *gensym(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -140,6 +138,8 @@ void disablePrattDebug(void) {
     DEBUGGING_OFF();
 }
 #endif
+
+static PrattParsers *parserStack = NULL;
 
 static AstExpression *errorExpression(ParserInfo I) {
     return newAstExpression_Symbol(I, TOK_ERROR());
@@ -209,8 +209,6 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_OPEN(),      grouping, 0,   call, 130,       NULL, 0);
 
     addRecord(table, TOK_PERIOD(),    NULL, 0,       lookup, 140,     NULL, 0);
-
-    addRecord(table, TOK_DOLLAR(),    gensym, 0,     NULL, 150,       NULL, 0);
 
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
@@ -351,11 +349,12 @@ static AstProg *prattParseThing(PrattLexer *thing) {
     PrattParser *parser = makePrattParser();
     int save = PROTECT(parser);
     parser->lexer = makePrattLexerFromString((char *) preamble, "preamble");
-    AstDefinitions *definitions = NULL;
+    parser->isPreamble = true;
     AstNest *nest = top(parser);
     if (parser->lexer->bufList != NULL) {
         parserError(parser, "unconsumed tokens");
     }
+    AstDefinitions *definitions = NULL;
     if (nest) {
         definitions = nest->definitions;
         PROTECT(definitions);
@@ -394,8 +393,21 @@ AstProg *prattParseString(char *data, char *name) {
     return prog;
 }
 
-static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
-    parser = newPrattParser(parser->next); // linked files should not see the linking file's parse env
+static PrattParser *findPreambleParser(PrattParser *parser) {
+#ifdef SAFETY_CHECKS
+    if (parser == NULL) {
+        cant_happen("cannot find preamble parser");
+    }
+#endif
+    if (parser->isPreamble) {
+        return parser;
+    }
+    return findPreambleParser(parser->next);
+}
+
+static AstDefinitions *prattParseLink(PrattParser *parser, char *file, PrattParser **resultParser) {
+    parser = findPreambleParser(parser);
+    parser = newPrattParser(parser);
     int save = PROTECT(parser);
     parser->lexer = makePrattLexerFromFilename(file);
     AstDefinitions *definitions = NULL;
@@ -403,6 +415,7 @@ static AstDefinitions *prattParseLink(PrattParser *parser, char *file) {
     if (nest) {
         definitions = nest->definitions;
     }
+    *resultParser = parser;
     UNPROTECT(save);
     return definitions;
 }
@@ -428,16 +441,23 @@ int initFileIdStack() {
     return PROTECT(fileIdStack);
 }
 
+int initParserStack() {
+    if (parserStack == NULL) {
+        parserStack = newPrattParsers();
+    }
+    return PROTECT(parserStack);
+}
+
 // Careful. Somewhat accidentally this algorithm stores the namespaces
 // in the order that they need to be processed.
 // Specifically because a namespace is parsed before it is recorded,
 // all of its imports are recorded ahead of it.
-static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSymbol *symbol) {
+static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, HashSymbol *symbol) {
     // check the file exists
-    AgnosticFileId *fileId = calculatePath(file, parser);
+    AgnosticFileId *fileId = calculatePath(filename, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL) {
-        parserError(parser, "cannot find file \"%s\"", file);
+        parserError(parser, "cannot find file \"%s\"", filename);
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
@@ -459,17 +479,24 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *file, HashSym
     // protect against recursive include
     pushAstFileIdArray(fileIdStack, fileId);
     // parse the file
-    AstDefinitions *definitions = prattParseLink(parser, fileId->name);
-    PROTECT(definitions);
+    PrattParser *resultParser = NULL;
+    // careful, 2 pushes in a row could realloc the save stack on push 1
+    int save2 = PROTECT(fileId);
+    AstDefinitions *definitions = prattParseLink(parser, fileId->name, &resultParser);
+    REPLACE_PROTECT(save2, resultParser);
+    /*
     if (definitions == NULL) {
         AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
     }
-    // save the new namespace
+    */
+    PROTECT(definitions);
+    // save the new namespace and it's parser
     AstNamespaceImpl *impl = newAstNamespaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
     found = pushAstNamespaceArray(namespaces, impl);
+    pushPrattParsers(parserStack, resultParser);
     // un-protect against recursive include
     popAstFileIdArray(fileIdStack);
     // return the id of the namespace
@@ -718,6 +745,82 @@ static void addOperator(PrattParser *parser,
     UNPROTECT(save);
 }
 
+static void copyPrattTable(PrattTable *to, PrattTable *from) {
+    Index i = 0;
+    HashSymbol *symbol = NULL;
+    PrattRecord *record = NULL;
+    while ((symbol = iteratePrattTable(from, &i, &record)) != NULL) {
+        setPrattTable(to, symbol, record);
+    }
+}
+
+static void copyPrattIntTable(PrattIntTable *to, PrattIntTable *from) {
+    Index i = 0;
+    HashSymbol *symbol = NULL;
+    int record = 0;
+    while ((symbol = iteratePrattIntTable(from, &i, &record)) != NULL) {
+        setPrattIntTable(to, symbol, record);
+    }
+}
+
+static PrattParser *meldParsers(PrattParser *to, PrattParser *from) __attribute__((unused));
+
+static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
+    if (from->trie) {
+        PrattParser *result = newPrattParser(to->next);
+        int save = PROTECT(result);
+        copyPrattTable(result->rules, to->rules);
+        copyPrattIntTable(result->namespaces, to->namespaces);
+        result->lexer = to->lexer;
+        result->trie = to->trie;
+        Index i = 0;
+        HashSymbol *op = NULL;
+        PrattRecord *record = NULL;
+        while ((op = iteratePrattTable(from->rules, &i, &record)) != NULL) {
+            PrattRecord *target = NULL;
+            getPrattTable(to->rules, op, &target);
+            if (target == NULL) {
+                target = copyPrattRecord(record);
+                PROTECT(target);
+                setPrattTable(result->rules, op, target);
+                result->trie = insertPrattTrie(result->trie, op);
+            } else {
+                if (record->prefixImpl) {
+                    if (target->prefixImpl) {
+                        parserError(to, "import redefines prefix operator %s", op->name);
+                    } else {
+                        target->prefixImpl = record->prefixImpl;
+                        target->prefixPrec = record->prefixPrec;
+                        target->prefixOp = record->prefixOp;
+                    }
+                }
+                if (record->infixImpl) {
+                    if (target->infixImpl) {
+                        parserError(to, "import redefines infix operator %s", op->name);
+                    } else {
+                        target->infixImpl = record->infixImpl;
+                        target->infixPrec = record->infixPrec;
+                        target->infixOp = record->infixOp;
+                    }
+                }
+                if (record->postfixImpl) {
+                    if (target->infixImpl) {
+                        parserError(to, "import redefines postfix operator %s", op->name);
+                    } else {
+                        target->postfixImpl = record->postfixImpl;
+                        target->postfixPrec = record->postfixPrec;
+                        target->postfixOp = record->postfixOp;
+                    }
+                }
+            }
+        }
+        UNPROTECT(save);
+        return result;
+    } else {
+        return to;
+    }
+}
+
 static AstDefinition *postfix(PrattParser *parser) {
     ENTER(postfix);
     PrattToken *tok = peek(parser);
@@ -836,9 +939,6 @@ static AstDefinition *definition(PrattParser *parser) {
     AstDefinition *res = NULL;
     if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
-    } else if (check(parser, TOK_DOLLAR())) {
-        next(parser);
-        res = gensym_assignment(parser);
     } else if (check(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
     } else if (check(parser, TOK_UNSAFE())) {
@@ -1165,9 +1265,6 @@ static AstLookupOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *f
         case AST_EXPRESSION_TYPE_NEST:
             parserErrorAt(CPI(function), parser, "invalid use of nest as structure name");
             return makeLosError(CPI(function));
-        case AST_EXPRESSION_TYPE_GENSYM:
-            parserErrorAt(CPI(function), parser, "invalid use of macro symbol as structure name");
-            return makeLosError(CPI(function));
         case AST_EXPRESSION_TYPE_IFF:
             parserErrorAt(CPI(function), parser, "invalid use of conditional as structure name");
             return makeLosError(CPI(function));
@@ -1318,9 +1415,6 @@ static AstArg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
         case AST_EXPRESSION_TYPE_ASSERTION:
             parserErrorAt(CPI(expr), parser, "invalid use of \"assert\" as formal argument");
             return newAstArg_Wildcard(CPI(expr));
-        case AST_EXPRESSION_TYPE_GENSYM:
-            parserErrorAt(CPI(expr), parser, "invalid use of macro variable as formal argument");
-            return newAstArg_Wildcard(CPI(expr));
         case AST_EXPRESSION_TYPE_ALIAS:
             return astAliasToFarg(parser, expr->val.alias);
         case AST_EXPRESSION_TYPE_WILDCARD:
@@ -1407,22 +1501,6 @@ static HashSymbol *symbol(PrattParser *parser) {
     LEAVE(symbol);
     UNPROTECT(save);
     return s;
-}
-static AstDefinition *gensym_assignment(PrattParser *parser) {
-    ENTER(gensym_assignment);
-    PrattToken *tok = peek(parser);
-    int save = PROTECT(tok);
-    HashSymbol *s = symbol(parser);
-    consume(parser, TOK_ASSIGN());
-    AstExpression *expr = expression(parser);
-    PROTECT(expr);
-    consume(parser, TOK_SEMI());
-    AstGensymDefine *def = newAstGensymDefine(TOKPI(tok), s, expr);
-    PROTECT(def);
-    AstDefinition *res = newAstDefinition_GensymDefine(CPI(def), def);
-    LEAVE(gensym_assignment);
-    UNPROTECT(save);
-    return res;
 }
 
 static AstDefinition *assignment(PrattParser* parser) {
@@ -1893,17 +1971,6 @@ static AstExpression *macro(PrattRecord *record __attribute__((unused)),
                             PrattToken *tok) {
     parserErrorAt(TOKPI(tok), parser, "can't declare macros as expressions");
     return errorExpression(TOKPI(tok));
-}
-
-static AstExpression *gensym(PrattRecord *record __attribute__((unused)),
-                             PrattParser *parser,
-                             AstExpression *lhs __attribute__((unused)),
-                             PrattToken *tok) {
-    ENTER(gensym);
-    HashSymbol *s = symbol(parser);
-    AstExpression *gs = newAstExpression_Gensym(TOKPI(tok), s);
-    LEAVE(gensym);
-    return gs;
 }
 
 static AstExpression *fn(PrattRecord *record __attribute__((unused)),

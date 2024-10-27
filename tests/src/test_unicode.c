@@ -20,7 +20,6 @@
 #include "utf8.h"
 
 #define TEST(c, s) do { \
-    printf("%X %d\n", c, s); \
     character = c; \
     assert(byteSize(character) == s); \
     char *ptr = writeChar(bytes, character); \
