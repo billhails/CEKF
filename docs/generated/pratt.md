@@ -31,6 +31,7 @@ PrattParser --namespaces--> PrattIntTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
 PrattParser --panicMode--> bool
+PrattParser --isPreamble--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
 PrattRecord --prefixOp--> PrattOp
@@ -50,6 +51,7 @@ PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
+PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattValueVal
 PrattValueType

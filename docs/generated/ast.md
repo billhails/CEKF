@@ -18,8 +18,6 @@ AstDefinitions --definition--> AstDefinition
 AstDefinitions --next--> AstDefinitions
 AstDefine --symbol--> HashSymbol
 AstDefine --expression--> AstExpression
-AstGensymDefine --basename--> HashSymbol
-AstGensymDefine --expression--> AstExpression
 AstAlias --name--> HashSymbol
 AstAlias --type--> AstType
 AstExprAlias --name--> HashSymbol
@@ -89,7 +87,6 @@ AstTypeConstructorArgs --map--> AstTypeMap
 AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
-AstDefinition --gensymDefine--> AstGensymDefine
 AstDefinition --typeDef--> AstTypeDef
 AstDefinition --macro--> AstDefMacro
 AstDefinition --alias--> AstAlias
@@ -114,7 +111,6 @@ AstExpression --alias--> AstExprAlias
 AstExpression --funCall--> AstFunCall
 AstExpression --lookup--> AstLookup
 AstExpression --symbol--> HashSymbol
-AstExpression --gensym--> HashSymbol
 AstExpression --number--> MaybeBigInt
 AstExpression --character--> character
 AstExpression --fun--> AstCompositeFunction

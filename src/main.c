@@ -27,6 +27,7 @@
 #include "ast_debug.h"
 #include "lambda_debug.h"
 #include "lambda_conversion.h"
+#include "lambda_simplification.h"
 #include "annotate.h"
 #include "anf.h"
 #include "anf_normalize.h"
@@ -232,6 +233,8 @@ static LamExp *convertProg(AstProg *prog) {
     if (hadErrors()) {
         exit(1);
     }
+    exp = lamPerformSimplifications(exp);
+    REPLACE_PROTECT(save, exp);
     if (lambda_flag) {
         ppLamExp(exp);
         eprintf("\n");
