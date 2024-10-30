@@ -2,6 +2,8 @@
 
 More of a wish-list than a hard and fast plan.
 
+* Target LLVM
+* Proper namespace import support including user-defined operators.
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
 * Unpacking function return values (tuples only).
 * More numbers:

@@ -260,7 +260,6 @@ void printHashSymbol(HashSymbol *symbol) {
 }
 
 void printHashTable(HashTable *table, int depth) {
-    int count = 0;
     eprintf("%*s", depth * PAD_WIDTH, "");
     if (table == NULL) {
         eprintf("HashTable: (NULL)");
@@ -289,7 +288,6 @@ void printHashTable(HashTable *table, int depth) {
             } else {
                 eprintf("\n");
             }
-            count++;
         }
     }
     if (first)

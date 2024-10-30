@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "common.h"
@@ -37,8 +36,10 @@ static LamExp *performLamSimplifications(LamLam *lam) {
     lam->exp = lamPerformSimplifications(lam->exp);
     if (   lam->args == NULL
         && lam->exp->type == LAMEXP_TYPE_APPLY
-        && lam->exp->val.apply->args == NULL) {
+        && lam->exp->val.apply->args == NULL
+        && lam->exp->val.apply->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
         LEAVE(performLamSimplifications);
+        printLamLam(lam, 0);
         return lam->exp->val.apply->function;
     }
     LEAVE(performLamSimplifications);
@@ -64,17 +65,32 @@ static LamUnaryApp *performUnarySimplifications(LamUnaryApp *unary) {
     return unary;
 }
 
-static LamSequence *performSequenceSimplifications(LamSequence *sequence) {
-    ENTER(performSequenceSimplifications);
+static LamSequence *_performSequenceSimplifications(LamSequence *sequence) {
+    ENTER(_performSequenceSimplifications);
     if (sequence == NULL) {
-        LEAVE(performSequenceSimplifications);
+        LEAVE(_performSequenceSimplifications);
         return NULL;
     }
     sequence->next =
-        performSequenceSimplifications(sequence->next);
+        _performSequenceSimplifications(sequence->next);
     sequence->exp = lamPerformSimplifications(sequence->exp);
-    LEAVE(performSequenceSimplifications);
+    LEAVE(_performSequenceSimplifications);
     return sequence;
+}
+
+#define SIMPLIFY_SINGLE_SEQUENCE
+
+static LamExp *performSequenceSimplifications(ParserInfo I, LamSequence *sequence) {
+    sequence = _performSequenceSimplifications(sequence);
+#ifdef SIMPLIFY_SINGLE_SEQUENCE
+    if (countLamSequence(sequence) == 1) {
+        return sequence->exp;
+    }
+#endif
+    int save = PROTECT(sequence);
+    LamExp *res = newLamExp_List(I, sequence);
+    UNPROTECT(save);
+    return res;
 }
 
 static LamList *performListSimplifications(LamList *list) {
@@ -294,7 +310,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 exp->val.unary = performUnarySimplifications(exp->val.unary);
                 break;
             case LAMEXP_TYPE_LIST:
-                exp->val.list = performSequenceSimplifications(exp->val.list);
+                exp = performSequenceSimplifications(CPI(exp), exp->val.list);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSimplifications(exp->val.makeVec);

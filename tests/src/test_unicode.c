@@ -22,9 +22,9 @@
 #define TEST(c, s) do { \
     character = c; \
     assert(byteSize(character) == s); \
-    char *ptr = writeChar(bytes, character); \
+    unsigned char *ptr = writeChar(bytes, character); \
     *ptr = 0; \
-    assert(strlen(bytes) == s); \
+    assert(strlen((char *)bytes) == s); \
     assert(decodedLength(bytes) == 1); \
     character = 0; \
     utf8_to_unicode_char(&character, bytes); \

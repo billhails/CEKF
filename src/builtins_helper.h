@@ -1,5 +1,5 @@
 #ifndef cekf_builtins_helper_h
-#  define cekf_builtin_helper_h
+#  define cekf_builtins_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
