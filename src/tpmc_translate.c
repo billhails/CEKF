@@ -251,7 +251,7 @@ static LamExp *translateArcToCode(TpmcArc *arc, LamExpTable *lambdaCache) {
         }
         break;
         default:
-            // no-op
+            break;
     }
     LEAVE(translateArcToCode);
     return res;
@@ -715,12 +715,13 @@ static LamExp *translateState(TpmcState *dfa, LamExpTable *lambdaCache) {
 static void resetStateRefCountsToZero(TpmcState *dfa) {
     dfa->refcount = 0;
     switch (dfa->state->type) {
-        case TPMCSTATEVALUE_TYPE_TEST:
+        case TPMCSTATEVALUE_TYPE_TEST:{
             TpmcArcArray *arcs = dfa->state->val.test->arcs;
             for (Index i = 0; i < arcs->size; ++i) {
                 resetStateRefCountsToZero(arcs->entries[i]->state);
             }
-            break;
+        }
+        break;
         case TPMCSTATEVALUE_TYPE_FINAL:
         case TPMCSTATEVALUE_TYPE_ERROR:
             break;
@@ -734,12 +735,13 @@ static void incrementStateRefCounts(TpmcState *dfa) {
     dfa->refcount++;
     if (dfa->refcount == 1) {
         switch (dfa->state->type) {
-            case TPMCSTATEVALUE_TYPE_TEST:
+            case TPMCSTATEVALUE_TYPE_TEST:{
                 TpmcArcArray *arcs = dfa->state->val.test->arcs;
                 for (Index i = 0; i < arcs->size; ++i) {
                     incrementStateRefCounts(arcs->entries[i]->state);
                 }
-                break;
+            }
+            break;
             case TPMCSTATEVALUE_TYPE_FINAL:
             case TPMCSTATEVALUE_TYPE_ERROR:
                 break;

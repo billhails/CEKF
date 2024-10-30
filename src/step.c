@@ -92,10 +92,6 @@ static inline Value peek(int index) {
     return peeknStack(state.S, index);
 }
 
-static inline Value tos(void) {
-    return peekStack(state.S);
-}
-
 static inline void copyToVec(Vec *vec) {
     copyTosToVec(vec, state.S);
 }
@@ -502,7 +498,7 @@ static void applyProc(int naargs) {
         }
         break;
         default:
-            cant_happen("unexpected type %d in APPLY", callable.type);
+            cant_happen("unexpected type %s in APPLY", valueTypeName(callable.type));
     }
     UNPROTECT(save);
 }

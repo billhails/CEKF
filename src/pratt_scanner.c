@@ -589,11 +589,12 @@ static MaybeBigInt *makeIrrational(char *str, int length) {
             case '.':
                 frac = true;
                 continue;
-            default:
+            default: {
                 int n = convert_char(*p);
                 f *= 10.0;
                 f += n;
                 if (frac) div *= 10.0;
+            }
         }
     }
     return irrationalBigInt(f/div, imag);

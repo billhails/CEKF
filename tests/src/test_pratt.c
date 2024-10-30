@@ -44,7 +44,7 @@ static void test(char *expr, char *expected, bool expectError) {
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);
     ppAstNest(dest, result);
-    if (strcmp(dest->entries, expected) != 0) {
+    if (strcmp((char *)dest->entries, expected) != 0) {
         printf("%s - expected %s got %s\n", expr, expected, dest->entries);
         failed = true;
     }

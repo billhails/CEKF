@@ -28,8 +28,12 @@ endif
 endif
 endif
 
-CC:=cc -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)
-LAXCC:=cc -Werror $(CCMODE) $(EXTRA_DEFINES)
+ifndef CCC
+CCC:=clang
+endif
+
+CC:=$(CCC) -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)
+LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 
 PYTHON=python3
 MAKE_AST=$(PYTHON) ./tools/makeAST.py

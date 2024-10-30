@@ -226,11 +226,12 @@ static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
 
 static CTEnv *annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
     switch (x->type) {
-        case AEXP_TYPE_LAM:
+        case AEXP_TYPE_LAM: {
             AexpLam *lam = x->val.lam;
             annotateAexpLam(lam, env);
             lam->letRecOffset = letRecOffset;
-            break;
+        }
+        break;
         default:
             cant_happen("letrec bindings can only contain lambdas, got %s", aexpTypeName(x->type));
     }

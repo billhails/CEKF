@@ -1,0 +1,2 @@
+let a = if (true) { 3 } else { 4 };
+in assert(a == 3);
