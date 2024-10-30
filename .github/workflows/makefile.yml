@@ -18,7 +18,7 @@ jobs:
       run: make install-sqlite3
 
     - name: Build executable
-      run: make MODE=testing
+      run: make CCC=gcc MODE=testing
 
     - name: Run tests
-      run: make test MODE=testing
+      run: make test CCC=gcc MODE=testing
