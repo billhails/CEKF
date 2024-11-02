@@ -97,6 +97,7 @@ enums:
         - START
         - STR
         - ESC
+        - ESCS
         - UNI
         - CHR1
         - CHR2

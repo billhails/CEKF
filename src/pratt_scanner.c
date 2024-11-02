@@ -31,287 +31,62 @@
 #  include "debugging_off.h"
 #endif
 
-HashSymbol *TOK_MACRO(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("macro");
-    return s;
+#define TOKFN(name, string) \
+HashSymbol *TOK_ ## name(void) { \
+    static HashSymbol *s = NULL; \
+    if (s == NULL) s = newSymbol(string); \
+    return s; \
 }
 
-HashSymbol *TOK_LEFT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("left");
-    return s;
-}
+TOKFN(MACRO,"macro")
+TOKFN(LEFT,"left")
+TOKFN(RIGHT,"right")
+TOKFN(PREFIX,"prefix")
+TOKFN(INFIX,"infix")
+TOKFN(POSTFIX,"postfix")
+TOKFN(KW_NUMBER,"number")
+TOKFN(BACK,"back")
+TOKFN(SWITCH,"switch")
+TOKFN(ASSERT,"assert")
+TOKFN(KW_CHAR,"char")
+TOKFN(IF,"if")
+TOKFN(ELSE,"else")
+TOKFN(PIPE,"|")
+TOKFN(WILDCARD,"_")
+TOKFN(LCURLY,"{")
+TOKFN(RCURLY,"}")
+TOKFN(LSQUARE,"[")
+TOKFN(RSQUARE,"]")
+TOKFN(ATOM," ATOM") // tokens with leading spaces are internal to the parser
+TOKFN(NUMBER," NUMBER")
+TOKFN(EOF," EOF")
+TOKFN(STRING," STRING")
+TOKFN(ERROR," ERROR")
+TOKFN(CHAR," CHAR")
+TOKFN(TUPLE,"#(")
+TOKFN(OPEN,"(")
+TOKFN(CLOSE, ")")
+TOKFN(COMMA, ",")
+TOKFN(ARROW, "->")
+TOKFN(ASSIGN, "=")
+TOKFN(COLON, ":")
+TOKFN(HASH, "#")
+TOKFN(BANG, "!")
+TOKFN(PERIOD, ".")
+TOKFN(LET, "let")
+TOKFN(IN, "in")
+TOKFN(NAMESPACE, "namespace")
+TOKFN(KW_ERROR, "error")
+TOKFN(TYPEDEF, "typedef")
+TOKFN(UNSAFE, "unsafe")
+TOKFN(FN, "fn")
+TOKFN(LINK, "link")
+TOKFN(AS, "as")
+TOKFN(ALIAS, "alias")
+TOKFN(SEMI, ";");
+TOKFN(PRINT, "print")
 
-HashSymbol *TOK_RIGHT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("right");
-    return s;
-}
-
-HashSymbol *TOK_PREFIX(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("prefix");
-    return s;
-}
-
-HashSymbol *TOK_INFIX(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("infix");
-    return s;
-}
-
-HashSymbol *TOK_POSTFIX(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("postfix");
-    return s;
-}
-
-HashSymbol *TOK_KW_NUMBER(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("number");
-    return s;
-}
-
-HashSymbol *TOK_BACK(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("back");
-    return s;
-}
-
-HashSymbol *TOK_SWITCH(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("switch");
-    return s;
-}
-
-HashSymbol *TOK_ASSERT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("assert");
-    return s;
-}
-
-HashSymbol *TOK_KW_CHAR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("char");
-    return s;
-}
-
-HashSymbol *TOK_IF(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("if");
-    return s;
-}
-
-HashSymbol *TOK_ELSE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("else");
-    return s;
-}
-
-HashSymbol *TOK_PIPE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("|");
-    return s;
-}
-
-HashSymbol *TOK_WILDCARD(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("_");
-    return s;
-}
-
-HashSymbol *TOK_LCURLY(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("{");
-    return s;
-}
-
-HashSymbol *TOK_RCURLY(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("}");
-    return s;
-}
-
-HashSymbol *TOK_LSQUARE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("[");
-    return s;
-}
-
-HashSymbol *TOK_RSQUARE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("]");
-    return s;
-}
-
-HashSymbol *TOK_ATOM(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" ATOM"); // tokens with leading spaces are internal to the parser
-    return s;
-}
-
-HashSymbol *TOK_NUMBER(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" NUMBER");
-    return s;
-}
-
-HashSymbol *TOK_EOF(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" EOF");
-    return s;
-}
-
-HashSymbol *TOK_STRING(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" STRING");
-    return s;
-}
-
-HashSymbol *TOK_ERROR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" ERROR");
-    return s;
-}
-
-HashSymbol *TOK_CHAR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(" CHAR");
-    return s;
-}
-
-HashSymbol *TOK_TUPLE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("#(");
-    return s;
-}
-
-HashSymbol *TOK_OPEN(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("(");
-    return s;
-}
-
-HashSymbol *TOK_CLOSE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(")");
-    return s;
-}
-
-HashSymbol *TOK_COMMA(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(",");
-    return s;
-}
-
-HashSymbol *TOK_ARROW(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("->");
-    return s;
-}
-
-HashSymbol *TOK_ASSIGN(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("=");
-    return s;
-}
-
-HashSymbol *TOK_COLON(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(":");
-    return s;
-}
-
-HashSymbol *TOK_HASH(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("#");
-    return s;
-}
-
-HashSymbol *TOK_BANG(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("!");
-    return s;
-}
-
-HashSymbol *TOK_PERIOD(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(".");
-    return s;
-}
-
-HashSymbol *TOK_LET(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("let");
-    return s;
-}
-
-HashSymbol *TOK_IN(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("in");
-    return s;
-}
-
-HashSymbol *TOK_NAMESPACE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("namespace");
-    return s;
-}
-
-HashSymbol *TOK_KW_ERROR(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("error");
-    return s;
-}
-
-HashSymbol *TOK_TYPEDEF(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("typedef");
-    return s;
-}
-
-HashSymbol *TOK_UNSAFE(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("unsafe");
-    return s;
-}
-
-HashSymbol *TOK_FN(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("fn");
-    return s;
-}
-
-HashSymbol *TOK_LINK(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("link");
-    return s;
-}
-
-HashSymbol *TOK_AS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("as");
-    return s;
-}
-
-HashSymbol *TOK_ALIAS(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("alias");
-    return s;
-}
-
-HashSymbol *TOK_SEMI(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol(";");
-    return s;
-}
-
-HashSymbol *TOK_PRINT(void) {
-    static HashSymbol *s = NULL;
-    if (s == NULL) s = newSymbol("print");
-    return s;
-}
+#undef TOKFN
 
 static bool isALPHA(char c) {
     return isalpha(c) || c == '_';
@@ -769,6 +544,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 state = PRATTSTRINGSTATE_TYPE_STR;
                 break;
             case PRATTSTRINGSTATE_TYPE_STR:
+            case PRATTSTRINGSTATE_TYPE_ESCS:
                 DEBUG("parseString %s %d (sep %c) STR: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
                 if (isTwoByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
@@ -785,32 +561,53 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 } else if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     parserError(parser, "Malformed UTF8");
                     ++buffer->length;
-                } else if (buffer->start[buffer->length] == sep) {
-                    if (single) {
-                        parserError(parser, "empty char");
-                    }
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_END;
                 } else {
-                    switch (buffer->start[buffer->length]) {
-                        case '\\':
+                    if (state == PRATTSTRINGSTATE_TYPE_STR) {
+                        if (buffer->start[buffer->length] == sep) {
+                            if (single) {
+                                parserError(parser, "empty char");
+                            }
                             ++buffer->length;
-                            state = PRATTSTRINGSTATE_TYPE_ESC;
-                            break;
-                        case '\n':
-                            parserError(parser, "unexpected EOL");
-                            ++buffer->length;
-                            ++lexer->bufList->lineno;
-                            break;
-                        case '\0':
-                            parserError(parser, "unexpected EOF");
                             state = PRATTSTRINGSTATE_TYPE_END;
-                            break;
-                        default:
-                            pushPrattUTF8(string, buffer->start[buffer->length]);
-                            ++buffer->length;
-                            state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                            break;
+                        } else {
+                            switch (buffer->start[buffer->length]) {
+                                case '\\':
+                                    ++buffer->length;
+                                    state = PRATTSTRINGSTATE_TYPE_ESC;
+                                    break;
+                                case '\n':
+                                    parserError(parser, "unexpected EOL");
+                                    ++buffer->length;
+                                    ++lexer->bufList->lineno;
+                                    break;
+                                case '\0':
+                                    parserError(parser, "unexpected EOF");
+                                    state = PRATTSTRINGSTATE_TYPE_END;
+                                    break;
+                                default:
+                                    pushPrattUTF8(string, buffer->start[buffer->length]);
+                                    ++buffer->length;
+                                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                                    break;
+                            }
+                        }
+                    } else { // PRATTSTRINGSTATE_TYPE_ESCS
+                        switch (buffer->start[buffer->length]) {
+                                case '\n':
+                                    parserError(parser, "unexpected EOL");
+                                    ++buffer->length;
+                                    ++lexer->bufList->lineno;
+                                    break;
+                                case '\0':
+                                    parserError(parser, "unexpected EOF");
+                                    state = PRATTSTRINGSTATE_TYPE_END;
+                                    break;
+                                default:
+                                    pushPrattUTF8(string, buffer->start[buffer->length]);
+                                    ++buffer->length;
+                                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                                    break;
+                        }
                     }
                 }
                 break;
@@ -877,8 +674,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                         state = PRATTSTRINGSTATE_TYPE_END;
                         break;
                     default:
-                        ++buffer->length;
-                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                        state = PRATTSTRINGSTATE_TYPE_ESCS;
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_UNI:

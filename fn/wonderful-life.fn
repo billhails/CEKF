@@ -58,4 +58,4 @@ let
             puts("}\n");
     }
 in
-    printTree(generateTree(0.640))
+    printTree(generateTree(0.64046))
