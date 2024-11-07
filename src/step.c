@@ -40,9 +40,9 @@
 int dump_bytecode_flag = 0;
 
 #ifdef DEBUG_STEP
-#  define DEBUGPRINTF(...) printf(__VA_ARGS__)
+#  include "debugging_on.h"
 #else
-#  define DEBUGPRINTF(...)
+#  include "debugging_off.h"
 #endif
 
 /**
@@ -99,13 +99,11 @@ static inline void copyToVec(Vec *vec) {
 static Env *builtInsToEnv(BuiltIns *b)__attribute__((unused));
 
 static Env *builtInsToEnv(BuiltIns *b) {
-    // printBuiltIns(b, 0);
-    // eprintf("\n");
     Env *env = makeEnv(NULL);
     int save = PROTECT(env);
     for (Index i = 0; i < b->size; i++) {
         BuiltIn *builtIn = b->entries[i];
-        DEBUGPRINTF("adding builtin %s at %p\n", builtIn->name->name, builtIn->implementation);
+        DEBUG("adding builtin %s at %p", builtIn->name->name, builtIn->implementation);
         BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
         PROTECT(implementation);
         pushFrame(env->S, value_BuiltIn(implementation));
@@ -385,7 +383,7 @@ static void applyProc(int naargs) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
                 int ncaptured = clo->E->S->size;
-                DEBUGPRINTF("PCLO ncaptured = %d, naargs = %d, pending = %d\n", ncaptured, naargs, clo->pending);
+                DEBUG("PCLO ncaptured = %d, naargs = %d, pending = %d", ncaptured, naargs, clo->pending);
                 if (clo->pending == naargs) {
                     // move the new args to the right place on the stack, leaving just enough
                     // space for the captured args below them:
@@ -426,15 +424,13 @@ static void applyProc(int naargs) {
                     push(callable);
                     UNPROTECT(save);
                 } else {
-                    cant_happen
-                        ("too many arguments to partial closure, expected %d, got %d",
-                         clo->pending, naargs);
+                    cant_happen("over-application not supported yet, expected %d, got %d", clo->pending, naargs);
                 }
             }
             break;
         case VALUE_TYPE_CLO:{
                 Clo *clo = callable.val.clo;
-                DEBUGPRINTF("CLO pending = %d, naargs = %d\n", clo->pending, naargs);
+                DEBUG("CLO pending = %d, naargs = %d", clo->pending, naargs);
                 if (clo->pending == naargs) {
                     state.C = clo->C;
                     state.E = clo->E;
@@ -450,16 +446,14 @@ static void applyProc(int naargs) {
 #ifdef DEBUG_STEP
                     dumpFrame(env->S);
 #endif
-                    DEBUGPRINTF("CREATED PCLO ncaptured = %d, naargs = %d, pending = %d\n", pclo->E->S->size, naargs, pclo->pending);
+                    DEBUG("CREATED PCLO ncaptured = %d, naargs = %d, pending = %d", pclo->E->S->size, naargs, pclo->pending);
                     callable.type = VALUE_TYPE_PCLO;
                     callable.val.clo = pclo;
                     popn(naargs);
                     push(callable);
                     UNPROTECT(save);
                 } else {
-                    cant_happen
-                        ("too many arguments to closure, expected %d, got %d",
-                         clo->pending, naargs);
+                    cant_happen("over-application not supported yet, expected %d, got %d", clo->pending, naargs);
                 }
             }
             break;
@@ -479,24 +473,24 @@ static void applyProc(int naargs) {
             }
             break;
         case VALUE_TYPE_BUILTIN:{
-            BuiltInImplementation *impl = callable.val.builtIn;
-            if (naargs == impl->nargs) {
-                BuiltInFunction fn = (BuiltInFunction) impl->implementation;
-                Vec *v = newVec(impl->nargs);
-                int save = PROTECT(v);
-                copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nargs]), impl->nargs);
-                Value res = fn(v);
-                protectValue(res);
-                state.S->offset -= impl->nargs;
-                push(res);
-                UNPROTECT(save);
-            } else if (naargs == 0) {
-                push(callable);
-            } else {
-                cant_happen("curried built-ins not supported yet (%p, expected %d got %d)", impl->implementation, impl->nargs, naargs);
+                BuiltInImplementation *impl = callable.val.builtIn;
+                if (naargs == impl->nargs) {
+                    BuiltInFunction fn = (BuiltInFunction) impl->implementation;
+                    Vec *v = newVec(impl->nargs);
+                    int save = PROTECT(v);
+                    copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nargs]), impl->nargs);
+                    Value res = fn(v);
+                    protectValue(res);
+                    state.S->offset -= impl->nargs;
+                    push(res);
+                    UNPROTECT(save);
+                } else if (naargs == 0) {
+                    push(callable);
+                } else {
+                    cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nargs, naargs);
+                }
             }
-        }
-        break;
+            break;
         default:
             cant_happen("unexpected type %s in APPLY", valueTypeName(callable.type));
     }
@@ -535,7 +529,7 @@ static void step() {
                     int nargs = readCurrentByte();
                     int letRecOffset = readCurrentByte();
                     int end = readCurrentOffset();
-                    DEBUGPRINTF("LAM nargs:[%d] letrec:[%d] end:[%04x]\n",
+                    DEBUG("LAM nargs:[%d] letrec:[%d] end:[%04x]",
                                 nargs, letRecOffset, end);
                     Clo *clo = newClo(nargs, state.C, state.E);
                     int save = PROTECT(clo);
@@ -551,7 +545,7 @@ static void step() {
                     // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
-                    DEBUGPRINTF("VAR [%d:%d]\n", frame, offset);
+                    DEBUG("VAR [%d:%d]", frame, offset);
                     push(lookup(frame, offset));
                 }
                 break;
@@ -559,7 +553,7 @@ static void step() {
             case BYTECODES_TYPE_LVAR:{
                     // look up a stack variable and push it
                     int offset = readCurrentByte();
-                    DEBUGPRINTF("LVAR [%d]\n", offset);
+                    DEBUG("LVAR [%d]", offset);
                     push(peek(offset));
                 }
                 break;
@@ -567,14 +561,14 @@ static void step() {
             case BYTECODES_TYPE_PUSHN:{
                     // allocate space for n variables on the stack
                     int size = readCurrentByte();
-                    DEBUGPRINTF("PUSHN [%d]\n", size);
+                    DEBUG("PUSHN [%d]", size);
                     extend(size);
                 }
                 break;
 
             case BYTECODES_TYPE_PRIM_CMP:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("CMP\n");
+                    DEBUG("CMP");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -586,7 +580,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_ADD:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("ADD\n");
+                    DEBUG("ADD");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -600,7 +594,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_SUB:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("SUB\n");
+                    DEBUG("SUB");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -614,7 +608,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_MUL:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("MUL\n");
+                    DEBUG("MUL");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -628,7 +622,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_DIV:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("DIV\n");
+                    DEBUG("DIV");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -642,7 +636,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_POW:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("POW\n");
+                    DEBUG("POW");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -656,7 +650,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_MOD:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("MOD\n");
+                    DEBUG("MOD");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -670,7 +664,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_EQ:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("EQ\n");
+                    DEBUG("EQ");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -682,7 +676,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_NE:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("NE\n");
+                    DEBUG("NE");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -694,7 +688,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_GT:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("GT\n");
+                    DEBUG("GT");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -706,7 +700,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_LT:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("LT\n");
+                    DEBUG("LT");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -718,7 +712,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_GE:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("GE\n");
+                    DEBUG("GE");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -730,7 +724,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_LE:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("LE\n");
+                    DEBUG("LE");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -742,7 +736,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_XOR:{
                     // pop two values, perform the binop and push the result
-                    DEBUGPRINTF("XOR\n");
+                    DEBUG("XOR");
                     Value right = pop();
                     int save = protectValue(right);
                     Value left = pop();
@@ -754,7 +748,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_NOT:{
                     // pop value, perform the op and push the result
-                    DEBUGPRINTF("NOT\n");
+                    DEBUG("NOT");
                     Value a = pop();
                     int save = protectValue(a);
                     push(not(a));
@@ -763,7 +757,7 @@ static void step() {
                 break;
 
             case BYTECODES_TYPE_PRIM_VEC:{
-                    DEBUGPRINTF("VEC\n");
+                    DEBUG("VEC");
                     Value b = pop();
                     int save = protectValue(b);
                     Value a = pop();
@@ -777,7 +771,7 @@ static void step() {
 
             case BYTECODES_TYPE_PRIM_MAKEVEC:{
                     int size = readCurrentByte();
-                    DEBUGPRINTF("MAKEVEC [%d]\n", size);
+                    DEBUG("MAKEVEC [%d]", size);
                     // at this point there will be `size` arguments on the stack. Rather than
                     // popping then individually we can just memcpy them into a new struct Vec
                     Vec *v = newVec(size);
@@ -793,7 +787,7 @@ static void step() {
             case BYTECODES_TYPE_APPLY:{
                     // apply the callable at the top of the stack to the arguments beneath it
                     int nargs = readCurrentByte();
-                    DEBUGPRINTF("APPLY [%d]\n", nargs);
+                    DEBUG("APPLY [%d]", nargs);
                     applyProc(nargs);
                 }
                 break;
@@ -801,7 +795,7 @@ static void step() {
             case BYTECODES_TYPE_IF:{
                     // pop the test result and jump to the appropriate branch
                     int branch = readCurrentOffset();
-                    DEBUGPRINTF("IF [%04x]\n", branch);
+                    DEBUG("IF [%04x]", branch);
                     Value aexp = pop();
                     if (!truthy(aexp)) {
                         state.C = branch;
@@ -952,7 +946,7 @@ static void step() {
                     // patch each of the lambdas environments with the current stack frame
                     // i.e. all the definitions in the current letrec.
                     int nargs = readCurrentByte();
-                    DEBUGPRINTF("LETREC [%d] state.S->offset = %d\n", nargs, state.S->offset);
+                    DEBUG("LETREC [%d] state.S->offset = %d", nargs, state.S->offset);
                     for (Index i = state.S->offset - nargs; i < state.S->offset; i++) {
                         Value v = peek(i);
                         if (v.type == VALUE_TYPE_CLO) {
@@ -967,7 +961,7 @@ static void step() {
             case BYTECODES_TYPE_AMB:{
                     // create a new failure continuation to resume at the alternative
                     int branch = readCurrentOffset();
-                    DEBUGPRINTF("AMB [%04x]\n", branch);
+                    DEBUG("AMB [%04x]", branch);
                     state.F = makeFail(branch, state.E, state.K, state.F);
                     snapshotFail(state.F, state.S);
                 }
@@ -975,7 +969,7 @@ static void step() {
 
             case BYTECODES_TYPE_CUT:{
                     // discard the current failure continuation
-                    DEBUGPRINTF("CUT\n");
+                    DEBUG("CUT");
 #ifdef SAFETY_CHECKS
                     if (state.F == NULL) {
                         cant_happen
@@ -988,7 +982,7 @@ static void step() {
 
             case BYTECODES_TYPE_BACK:{
                     // restore the failure continuation or halt
-                    DEBUGPRINTF("BACK\n");
+                    DEBUG("BACK");
                     if (state.F == NULL) {
                         state.C = END_CONTROL;
                     } else {
@@ -1004,7 +998,7 @@ static void step() {
             case BYTECODES_TYPE_LET:{
                     // create a new continuation to resume the body, and transfer control to the expression
                     int offset = readCurrentOffset();
-                    DEBUGPRINTF("LET [%04x]\n", offset);
+                    DEBUG("LET [%04x]", offset);
                     letStackFrame(state.S);
                     state.K = makeKont(offset, state.E, false, state.K);
                     validateLastAlloc();
@@ -1014,14 +1008,14 @@ static void step() {
             case BYTECODES_TYPE_JMP:{
                     // jump forward a specified amount
                     int offset = readCurrentOffset();
-                    DEBUGPRINTF("JMP [%04x]\n", offset);
+                    DEBUG("JMP [%04x]", offset);
                     state.C = offset;
                 }
                 break;
 
             case BYTECODES_TYPE_CALLCC:{
                     // pop the callable, push the current continuation, push the callable and apply
-                    DEBUGPRINTF("CALLCC\n");
+                    DEBUG("CALLCC");
                     Value aexp = pop();
                     int save = protectValue(aexp);
                     Value cc = captureKont();
@@ -1036,25 +1030,25 @@ static void step() {
             case BYTECODES_TYPE_IRRATIONAL:{
                     // push literal Double
                     Double f = readCurrentIrrational();
-                    DEBUGPRINTF("IRRATIONAL [%f]\n", f);
+                    DEBUG("IRRATIONAL [%f]", f);
                     Value v = value_Irrational(f);
                     push(v);
-            }
-            break;
+                }
+                break;
 
             case BYTECODES_TYPE_IRRATIONAL_IMAG:{
                     // push literal Double
                     Double f = readCurrentIrrational();
-                    DEBUGPRINTF("IRRATIONAL_IMAG [%f]\n", f);
+                    DEBUG("IRRATIONAL_IMAG [%f]", f);
                     Value v = value_Irrational_imag(f);
                     push(v);
-            }
-            break;
+                }
+                break;
 
             case BYTECODES_TYPE_STDINT:{
                     // push literal int
                     Integer val = readCurrentInt();
-                    DEBUGPRINTF("STDINT [%d]\n", val);
+                    DEBUG("STDINT [%d]", val);
                     Value v = value_Stdint(val);
                     push(v);
                 }
@@ -1063,7 +1057,7 @@ static void step() {
             case BYTECODES_TYPE_STDINT_IMAG:{
                     // push literal int
                     Integer val = readCurrentInt();
-                    DEBUGPRINTF("STDINT_IMAG [%d]\n", val);
+                    DEBUG("STDINT_IMAG [%d]", val);
                     Value v = value_Stdint_imag(val);
                     push(v);
                 }
@@ -1072,7 +1066,7 @@ static void step() {
             case BYTECODES_TYPE_CHAR:{
                     // push literal char
                     Character c = readCurrentCharacter();
-                    DEBUGPRINTF("CHAR [%s]\n", charRep(c));
+                    DEBUG("CHAR [%s]", charRep(c));
                     Value v = value_Character(c);
                     push(v);
                 }
@@ -1108,7 +1102,7 @@ static void step() {
 
             case BYTECODES_TYPE_RETURN:{
                     // push the current continuation and apply
-                    DEBUGPRINTF("RETURN\n");
+                    DEBUG("RETURN");
                     Value kont = value_Kont(state.K);
                     push(kont);
                     applyProc(1);
@@ -1117,7 +1111,7 @@ static void step() {
 
             case BYTECODES_TYPE_NS_START:{
                     int num = readCurrentWord();
-                    DEBUGPRINTF("NS_START [%d]\n", num);
+                    DEBUG("NS_START [%d]", num);
                     extend(num);
                 }
                 break;
@@ -1125,7 +1119,7 @@ static void step() {
             case BYTECODES_TYPE_NS_END:{
                     int numLambdas = readCurrentWord();
                     int stackOffset = readCurrentWord();
-                    DEBUGPRINTF("NS_END [%d] [%d]\n", numLambdas, stackOffset);
+                    DEBUG("NS_END [%d] [%d]", numLambdas, stackOffset);
                     Vec *snapshot = snapshotNamespace(state.S);
                     int save = PROTECT(snapshot);
                     Value ns = value_Namespace(snapshot);
@@ -1137,7 +1131,7 @@ static void step() {
 
             case BYTECODES_TYPE_NS_FINISH:{
                     int num = readCurrentWord();
-                    DEBUGPRINTF("NS_FINISH [%d]\n", num);
+                    DEBUG("NS_FINISH [%d]", num);
                     // at this point we need to patch each of the namespaces with the
                     // final block of populated namespaces, size num, and at TOS
                     for (int i = 1; i <= num; i++) {
@@ -1154,7 +1148,7 @@ static void step() {
 
             case BYTECODES_TYPE_NS_PUSHSTACK:{
                     int offset = readCurrentWord();
-                    DEBUGPRINTF("NS_PUSHSTACK [%d]\n", offset);
+                    DEBUG("NS_PUSHSTACK [%d]", offset);
                     Value v = peek(offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
@@ -1170,7 +1164,7 @@ static void step() {
             case BYTECODES_TYPE_NS_PUSHENV:{
                     int frame = readCurrentWord();
                     int offset = readCurrentWord();
-                    DEBUGPRINTF("NS_PUSHENV [%d][%d]\n", frame, offset);
+                    DEBUG("NS_PUSHENV [%d][%d]", frame, offset);
                     Value v = lookup(frame, offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
@@ -1184,7 +1178,7 @@ static void step() {
                 break;
 
             case BYTECODES_TYPE_NS_POP:{
-                    DEBUGPRINTF("NS_POP\n");
+                    DEBUG("NS_POP");
                     Value result = pop();
                     int save = protectValue(result);
                     Kont *kont = state.K;
@@ -1198,13 +1192,13 @@ static void step() {
 
             case BYTECODES_TYPE_DONE:{
                     // can't happen, probably
-                    DEBUGPRINTF("DONE\n");
+                    DEBUG("DONE");
                     state.C = END_CONTROL;
                 }
                 break;
 
             case BYTECODES_TYPE_ERROR:{
-                    DEBUGPRINTF("ERROR\n");
+                    DEBUG("ERROR");
                     state.C = END_CONTROL;
                     eprintf("pattern match exhausted in step\n");
                 }
