@@ -797,6 +797,9 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
                 if (record->infixImpl) {
                     if (target->infixImpl) {
                         parserError(to, "import redefines infix operator %s", op->name);
+                    } else if (target->postfixImpl) {
+                        parserError(to, "import defines infix operator %s"
+                                        " over existing postfix operator", op->name);
                     } else {
                         target->infixImpl = record->infixImpl;
                         target->infixPrec = record->infixPrec;
@@ -804,8 +807,11 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
                     }
                 }
                 if (record->postfixImpl) {
-                    if (target->infixImpl) {
+                    if (target->postfixImpl) {
                         parserError(to, "import redefines postfix operator %s", op->name);
+                    } else if (target->postfixImpl) {
+                        parserError(to, "import defines postfix operator %s"
+                                        " over existing infix operator", op->name);
                     } else {
                         target->postfixImpl = record->postfixImpl;
                         target->postfixPrec = record->postfixPrec;

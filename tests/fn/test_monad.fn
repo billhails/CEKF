@@ -1,0 +1,16 @@
+let
+    fn andThen {
+        (nothing, _) { nothing }
+        (some(a), f) { f(a) }
+    }
+
+    infix right 100 ">>=" andThen;
+
+    fn maybePlus(ma, mb) {
+        ma >>= fn(a) { mb >>= fn(b) { some(a + b) } }
+    }
+in
+    assert(maybePlus(some(5), some(10)) == some(15));
+    assert(maybePlus(some(5), nothing) == nothing);
+    assert(maybePlus(nothing, some(10)) == nothing);
+    assert(maybePlus(nothing, nothing) == nothing);

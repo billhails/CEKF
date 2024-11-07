@@ -31,11 +31,11 @@
 #  include "debugging_off.h"
 #endif
 
-#define TOKFN(name, string) \
-HashSymbol *TOK_ ## name(void) { \
-    static HashSymbol *s = NULL; \
+#define TOKFN(name, string)               \
+HashSymbol *TOK_ ## name(void) {          \
+    static HashSymbol *s = NULL;          \
     if (s == NULL) s = newSymbol(string); \
-    return s; \
+    return s;                             \
 }
 
 TOKFN(MACRO,"macro")
