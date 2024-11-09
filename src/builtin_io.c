@@ -442,8 +442,11 @@ static Value private_fgets(FILE *fh) {
         if (buf->buffer == NULL) {
             cant_happen("fgets on null memstream");
         }
-        char *b = buf->buffer;
-        do { pushByteArray(bytes, (Byte) *b); } while (*(b++));
+        if (buf->ptr == NULL) {
+            buf->ptr = buf->buffer;
+        }
+        do { pushByteArray(bytes, (Byte) *(buf->ptr)); } while (*(buf->ptr++));
+        buf->ptr--; // point back at '\0' for next time
     } else {
         int c;
         while ((c = fgetc(fh)) != EOF) {
@@ -463,6 +466,10 @@ static Value builtin_gets() {
 }
 
 static Value private_fgetc(FILE *fh) {
+    HashSymbol *key = fileHandleToKey(fh);
+    if (getBuiltInMemBufHash(getMemBufs(), key, NULL)) {
+        cant_happen("getc on memory buffers not supported yet");
+    }
     Character c = utf8Fgetc(fh);
     return value_Character(c);
 }
