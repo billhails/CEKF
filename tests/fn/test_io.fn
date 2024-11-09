@@ -16,3 +16,16 @@ in
         let data = fgetc(fh);
         in assert(data == '\ua1;');
     });
+
+    io.with_buffer(fn (fh) {
+        fputn(fh, 1234);
+        fputn(fh, 5678);
+        assert(fgets(fh) == "12345678");
+    });
+
+    io.with_buffer(fn (fh) {
+        fputn(fh, 1234);
+        assert(fgets(fh) == "1234");
+        fputn(fh, 5678);
+        assert(fgets(fh) == "5678");
+    })

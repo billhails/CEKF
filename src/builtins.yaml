@@ -38,6 +38,7 @@ structs:
 
     BuiltInMemBuf:
         buffer: string=NULL
+        ptr: string=NULL
         size: size=0
 
 hashes:
