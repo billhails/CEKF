@@ -29,3 +29,27 @@ fn with_input_from(filename, handler) {
         }
     }
 }
+
+fn with_buffer(handler) {
+    switch (openmem()) {
+        (success(filehandle)) {
+            let data = some(handler(filehandle));
+            in
+                close(filehandle);
+                data;
+        }
+        (failure(errmsg)) {
+            print(errmsg);
+            nothing;
+        }
+    }
+}
+
+fn to_string(data) {
+    unsafe switch (with_buffer(fn (buf) {
+        fputv(buf, data);
+        fgets(buf);
+    })) {
+        (some(result)) { result }
+    }
+}

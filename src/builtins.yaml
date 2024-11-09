@@ -36,6 +36,14 @@ structs:
         implementation: void_ptr
         nargs: int
 
+    BuiltInMemBuf:
+        buffer: string=NULL
+        size: size=0
+
+hashes:
+    BuiltInMemBufHash:
+        entries: BuiltInMemBuf
+
 arrays:
     BuiltInArgs:
         dimension: 1

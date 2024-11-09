@@ -1,0 +1,4 @@
+let
+    link "ioutils.fn" as io;
+in
+    assert(io.to_string(1234 + 5i) == "(1234+5i)")

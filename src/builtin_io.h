@@ -21,6 +21,7 @@
 #  include <stdio.h>
 #  include "builtins.h"
 
+void markMemBufs(void);
 void registerIO(BuiltIns *registry);
 void putValue(Value x);
 void fputValue(FILE *fh, Value x);
