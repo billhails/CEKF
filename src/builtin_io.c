@@ -54,6 +54,7 @@ static void registerGets(BuiltIns *registry);
 static void registerFGets(BuiltIns *registry);
 
 static void registerOpen(BuiltIns *registry);
+static void registerOpenMemstream(BuiltIns *registry);
 static void registerClose(BuiltIns *registry);
 
 static void registerOpenDir(BuiltIns *registry);
@@ -61,6 +62,21 @@ static void registerReadDir(BuiltIns *registry);
 static void registerCloseDir(BuiltIns *registry);
 
 static void registerFType(BuiltIns *registry);
+
+static BuiltInMemBufHash *memBufs = NULL;
+
+void markMemBufs() {
+    if (memBufs != NULL) {
+        markHashTable((HashTable *) memBufs);
+    }
+}
+
+static BuiltInMemBufHash *getMemBufs(void) {
+    if (memBufs == NULL) {
+        memBufs = newBuiltInMemBufHash();
+    }
+    return memBufs;
+}
 
 void registerIO(BuiltIns *registry) {
     registerPutc(registry);
@@ -76,6 +92,7 @@ void registerIO(BuiltIns *registry) {
     registerGets(registry);
     registerFGets(registry);
     registerOpen(registry);
+    registerOpenMemstream(registry);
     registerClose(registry);
     registerOpenDir(registry);
     registerReadDir(registry);
@@ -157,12 +174,25 @@ static Value builtin_puts(Vec *args) {
 #define IO_MODE_WRITE 1
 #define IO_MODE_APPEND 2
 
+static HashSymbol *fileHandleToKey(FILE *file) {
+    static char buf[128];
+    sprintf(buf, "%p", file);
+    return newSymbol(buf);
+}
 
 static void opaque_io_close(Opaque *data) {
     if (data == NULL) return;
     if (data->data == NULL) return;
     DEBUG("closing io %p", data->data);
     fclose(data->data);
+    HashSymbol *key = fileHandleToKey(data->data);
+    BuiltInMemBuf *memBuf = NULL;
+    if (getBuiltInMemBufHash(getMemBufs(), key, &memBuf)) {
+        if (memBuf->buffer != NULL) {
+            free(memBuf->buffer);
+            memBuf->buffer = NULL;
+        }
+    }
     data->data = NULL;
 }
 
@@ -199,6 +229,21 @@ static Value builtin_open(Vec *args) {
     Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
     Value opaque = value_Opaque(wrapper);
     int save = protectValue(opaque);
+    Value result = makeTryResult(1, opaque);
+    UNPROTECT(save);
+    return result;
+}
+
+static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
+    BuiltInMemBuf *memBuf = newBuiltInMemBuf();
+    int save = PROTECT(memBuf);
+    FILE *file = open_memstream(&memBuf->buffer, &memBuf->size);
+    BuiltInMemBufHash *memBufs = getMemBufs();
+    HashSymbol *key = fileHandleToKey(file);
+    setBuiltInMemBufHash(memBufs, key, memBuf);
+    Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
+    Value opaque = value_Opaque(wrapper);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -364,7 +409,7 @@ void fputValue(FILE *fh, Value x) {
             fputVec(fh, x.val.vec);
             break;
         default:
-            cant_happen("unrecognised value type in fputValue");
+            cant_happen("unrecognised value type %s", valueTypeName(x.type));
     }
 }
 
@@ -390,13 +435,24 @@ void putVec(Vec *x) {
 static Value private_fgets(FILE *fh) {
     ByteArray *bytes = newByteArray();
     int save = PROTECT(bytes);
-    int c;
-    while ((c = fgetc(fh)) != EOF) {
-        if (c == '\n') break;
-        if (c == 0) break;
-        pushByteArray(bytes, (Byte) c);
+    HashSymbol *key = fileHandleToKey(fh);
+    BuiltInMemBuf *buf = NULL;
+    if (getBuiltInMemBufHash(getMemBufs(), key, &buf)) {
+        fflush(fh);
+        if (buf->buffer == NULL) {
+            cant_happen("fgets on null memstream");
+        }
+        char *b = buf->buffer;
+        do { pushByteArray(bytes, (Byte) *b); } while (*(b++));
+    } else {
+        int c;
+        while ((c = fgetc(fh)) != EOF) {
+            if (c == '\n') break;
+            if (c == 0) break;
+            pushByteArray(bytes, (Byte) c);
+        }
+        pushByteArray(bytes, 0);
     }
-    pushByteArray(bytes, 0);
     Value string = utf8ToList((char *) bytes->entries);
     UNPROTECT(save);
     return string;
@@ -441,8 +497,8 @@ static Value builtin_fputv(Vec *args) {
     if (data == NULL || data->data == NULL) {
         cant_happen("fput on closed file handle");
     }
-    fputValue((FILE *) data->data, args->entries[0]);
-    return args->entries[0];
+    fputValue((FILE *) data->data, args->entries[1]);
+    return args->entries[1];
 }
 
 static TcType *pushFileArg(BuiltInArgs *args) {
@@ -569,6 +625,18 @@ static void registerOpen(BuiltIns *registry) {
     TcType *tryFileType = makeTryFileType(stringType);
     PROTECT(tryFileType);
     pushNewBuiltIn(registry, "open", tryFileType, args, (void *)builtin_open);
+    UNPROTECT(save);
+}
+
+// try(string, opaque(file))
+static void registerOpenMemstream(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *stringType = makeStringType();
+    PROTECT(stringType);
+    TcType *tryFileType = makeTryFileType(stringType);
+    PROTECT(tryFileType);
+    pushNewBuiltIn(registry, "openmem", tryFileType, args, (void *)builtin_open_memstream);
     UNPROTECT(save);
 }
 

@@ -32,6 +32,7 @@
 #include "symbol.h"
 #include "arithmetic.h"
 #include "opaque.h"
+#include "builtin_io.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -381,6 +382,7 @@ static void mark() {
     markProtected();
     markArithmetic();
     markNamespaces();
+    markMemBufs();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTable\n");
 #endif
