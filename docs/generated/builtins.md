@@ -12,6 +12,7 @@ BuiltIn --implementation--> void_ptr
 BuiltInImplementation --implementation--> void_ptr
 BuiltInImplementation --nargs--> int
 BuiltInMemBuf --buffer--> string
+BuiltInMemBuf --index--> index
 BuiltInMemBuf --size--> size
 BuiltInArgs["BuiltInArgs[]"] --entries--> TcType
 BuiltIns["BuiltIns[]"] --entries--> BuiltIn

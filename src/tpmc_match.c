@@ -319,7 +319,7 @@ static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
     if (arity != pattern->pattern->val.constructor->components->size) {
         ppTpmcPattern(pattern);
         cant_happen
-            ("arity %d does not match constructor arity %d",
+            ("\narity %d does not match constructor arity %d",
              arity, pattern->pattern->val.constructor->components->size);
     }
     for (Index i = 0; i < arity; i++) {
@@ -462,16 +462,25 @@ static bool arcsAreExhaustive(int size, TpmcArcArray *arcs, ParserInfo I) {
     for (Index i = 0; i < arcs->size; ++i) {
         TpmcArc *arc = arcs->entries[i];
         TpmcPattern *pattern = arc->test;
-        if (pattern->pattern->type != TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
-            cant_happen("arcsAreExhaustive given non-constructor arc while parsing %s, line %d", I.filename, I.lineno);
+        switch (pattern->pattern->type) {
+            case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
+                LamTypeConstructorInfo *info =
+                    pattern->pattern->val.constructor->info;
+                if (info->index >= size) {
+                    cant_happen("arcsAreExhaustive given constructor %s with out-of-range index (%d >= %d) while parsing %s, line %d", info->name->name, info->index, size, I.filename, I.lineno);
+                }
+                flags->entries[info->index] = 1;
+            }
+            break;
+            case TPMCPATTERNVALUE_TYPE_TUPLE: {
+                // tuples are exhaustive
+                UNPROTECT(save);
+                return true;
+            }
+            break;
+            default:
+                cant_happen("arcsAreExhaustive given non-constructor arc while parsing %s, line %d", I.filename, I.lineno);
         }
-        LamTypeConstructorInfo *info =
-            pattern->pattern->val.constructor->info;
-        if (info->index >= size) {
-            cant_happen
-                ("arcsAreExhaustive given constructor %s with out-of-range index (%d >= %d) while parsing %s, line %d", info->name->name, info->index, size, I.filename, I.lineno);
-        }
-        flags->entries[info->index] = 1;
     }
     bool res = true;
     for (int i = 0; i < size; i++) {
@@ -496,6 +505,9 @@ static bool constructorsAreExhaustive(TpmcState *state, ParserInfo I) {
             ("constructorsAreExhaustive() passed a test state with wildcards while parsing %s, line %d", I.filename, I.lineno);
     } else if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
         int size = pattern->pattern->val.constructor->info->size;
+        return arcsAreExhaustive(size, testState->arcs, I);
+    } else if (pattern->pattern->type == TPMCPATTERNVALUE_TYPE_TUPLE) {
+        int size = pattern->pattern->val.tuple->size;
         return arcsAreExhaustive(size, testState->arcs, I);
     } else {
         return false;

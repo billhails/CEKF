@@ -82,22 +82,73 @@ fn scanl (func, acc, lst) {
     in scan([acc], lst)
 }
 
-// filter: (#a -> bool) list(#a) -> list(#a)
-// TCO, but does not preserve order
-fn filter(func, lst) {
+// filter: (#a -> bool) -> list(#a) -> list(#a)
+fn filter {
+    (f, []) { [] }
+    (f, h @ t) {
+        if (f(h)) {
+            h @ filter(f, t)
+        } else {
+            filter(f, t)
+        }
+    }
+}
+
+// filter_out: (#a -> bool) -> list(#a) -> list(#a)
+fn filter_not (f, l) {
+    filter(fn (x) { not f(x) }, l)
+}
+
+// indices: (#a -> bool) -> list(#a) -> list(number)
+// like filter but returns the indices of the matching elements
+fn indices(f, lst) {
     let
         fn helper {
-            ([], res) { res }
-            (h @ t, res) {
-                if (func(h)) {
-                    helper(t, h @ res)
+            ([], _) { [] }
+            (h @ t, n) {
+                if (f(h)) {
+                    n @ helper(t, n + 1)
                 } else {
-                    helper(t, res)
+                    helper(t, n + 1)
                 }
             }
         }
     in
-        helper(lst, [])
+        helper(lst, 0)
+}
+
+// nths: list(number) -> list(#a) -> list(#a)
+fn nths (indices, lst) {
+    let
+        fn helper {
+            ([], _) { [] }
+            (h @ t, n) {
+                if (member(n, indices)) {
+                    h @ helper(t, n + 1)
+                } else {
+                    helper(t, n + 1)
+                }
+            }
+        }
+    in
+        helper(lst, 0)
+}
+
+// except_nth: number -> list(#a) -> list(#a)
+fn except_nth (index, lst) {
+    let
+        fn helper {
+            ([], _) { [] }
+            (h @ t, n) {
+                if (n == index) {
+                    helper(t, n + 1)
+                } else {
+                    h @ helper(t, n + 1)
+                }
+            }
+        }
+    in
+        helper(lst, 0)
 }
 
 // concat: list(list(#a)) -> list(#a)
@@ -173,6 +224,16 @@ fn zip(a, b) {
 fn zipWith {
     (f, h1 @ t1, h2 @ t2) { f(h1, h2) @ zipWith(f, t1, t2) }
     (_, _, _) { [] }
+}
+
+// unzip: list(#(#a, #b)) -> #(list(#a), list(#b))
+fn unzip {
+    ([]) { #([], []) }
+    (#(x, y) @ rest) {
+        switch (unzip(rest)) {
+            (#(xs, ys)) { #(x @ xs, y @ ys) }
+        }
+    }
 }
 
 // last: list(#a) -> #a

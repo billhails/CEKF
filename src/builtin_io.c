@@ -442,11 +442,8 @@ static Value private_fgets(FILE *fh) {
         if (buf->buffer == NULL) {
             cant_happen("fgets on null memstream");
         }
-        if (buf->ptr == NULL) {
-            buf->ptr = buf->buffer;
-        }
-        do { pushByteArray(bytes, (Byte) *(buf->ptr)); } while (*(buf->ptr++));
-        buf->ptr--; // point back at '\0' for next time
+        do { pushByteArray(bytes, (Byte) buf->buffer[buf->index]); } while (buf->buffer[buf->index++]);
+        buf->index--; // point back at '\0' for next time
     } else {
         int c;
         while ((c = fgetc(fh)) != EOF) {

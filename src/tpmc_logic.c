@@ -162,7 +162,7 @@ static char *getLookupName(AstLookupOrSymbol *los) {
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     LamTypeConstructorInfo *info = lookupScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor %s", getLookupName(unpack->symbol));
+        cant_happen("makeConstructorPattern() passed invalid constructor: '%s'", getLookupName(unpack->symbol));
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);

@@ -1,0 +1,412 @@
+let
+    ////////////////////////////////
+    // PRELIMINARIES
+    ////////////////////////////////
+    link "ioutils.fn" as io;
+    link "dictionary.fn" as dict;
+    link "listutils.fn" as lst;
+
+    infix left 100 "==>" fn (arg, fun) { fun(arg) };
+    infix left 80 "?" fn (l, n) { lst.nth(n, l) };
+    infix left 80 "??" fn (l, n) { lst.nths(n, l) };
+    prefix 80 "$" io.to_string;
+
+    typedef pattern {
+        wildcard |
+        var(string) |
+        const(number) |
+        ctor(string, list(pattern)) |
+        tagged(string, pattern)
+    }
+    print pattern(p) {
+        let fn h {
+            (wildcard) { puts("_") }
+            (var(name)) { puts('$' @ name) }
+            (const(n)) { puts($n) }
+            (ctor(tag, pats)) {
+                puts(tag);
+                if (lst.length(pats) > 0) {
+                    let fn i {
+                        ([]) { "" }
+                        (p @ []) {
+                            h(p)
+                        }
+                        (p @ t) {
+                            h(p);
+                            puts(", ");
+                            i(t)
+                        }
+                    }
+                    in
+                        puts("(");
+                        i(pats);
+                        puts(")")
+                } else { "" }
+            }
+            (tagged(tag, p)) {
+                puts(tag);
+                putc('=');
+                h(p)
+            }
+        }
+        in h(p); p
+    }
+
+    alias substs = dict.Dict(string, string);
+
+    typedef tpmc { 
+        final(string, number, list(string), substs) |
+        test(string, number, list(string), list(#(pattern, tpmc)))
+    }
+    print tpmc(state) {
+        let fn h {
+            (final(label, _, _, substs)) {
+                puts("FINAL ");
+                puts(label);
+                puts(" ");
+                print(substs);
+                ""
+            }
+            (test(varr, _, _, arcs)) {
+                let unsafe fn a {
+                    (#(pat=tagged(_, _), s=final(_, _, _, _)) @ t) |
+                    (#(pat=tagged(_, _), s=test(_, _, _, _)) @ t) {
+                        print(pat);
+                        puts(" => ");
+                        h(s);
+                        puts(";\n");
+                        a(t)
+                    }
+                    ([]) { "" }
+                } in
+                    puts("TEST ");
+                    puts(varr);
+                    puts(" [\n");
+                    a(arcs);
+                    puts("]\n");
+            }
+        }
+        in h(state);
+        state;
+    }
+
+    //////////////////////////////////////
+    // STAGE 1 RENAMING
+    //////////////////////////////////////
+
+    // rename: list(#(list(pattern), string)) ->
+    //                  list(#(list(pattern), tpmc))
+    fn rename(rows) { lst.map(renameRow, rows) }
+
+    // renameRow: #(list(pattern), string) -> #(list(pattern), tpmc)
+    fn renameRow (#(row, target)) {
+        mapTag("x", 0, dict.E, row) ==> fn(#(pats, substs)) {
+            #(pats, final(target, 0, [], substs))
+        }
+    }
+
+    // tag: string -> pattern -> substs -> #(pattern, substs)
+    fn tag {
+        (base, wildcard, d) { #(tagged(base, wildcard), d) }
+        (base, var(name), d) {
+            #(tagged(base, wildcard), dict.insert(name, base, d))
+        }
+        (base, c = const(_), d) { #(tagged(base, c), d) }
+        (base, ctor(name, pats), d) {
+            mapTag(base, 0, d, pats) ==> fn (#(pats, d)) {
+                #(tagged(base, ctor(name, pats)), d)
+            }
+        }
+        (_, tagged(t, _), _) { error("already tagged: " @@ t) }
+    }
+
+    // mapTag: string -> number -> substs ->
+    //                  list(pattern) -> #(list(pattern), substs)
+    fn mapTag {
+        (_, _, d, []) { #([], d) }
+        (base, n, d, pat @ pats) {
+            tag(makeTag(base, n), pat, d) ==> fn (#(pat, d)) {
+                mapTag(base, n + 1, d, pats) ==> fn (#(pats, d)) {
+                    #(pat @ pats, d)
+                }
+            }
+        }
+    }
+
+    // makeTag: string -> number -> string
+    fn makeTag (tag, n) { tag @@ "$" @@ $n }
+
+    //////////////////////////////////////
+    // STAGE 1b CONVERT TO MATRIX
+    //////////////////////////////////////
+
+    // convertToMatrix: list(#(list(pattern), tpmc)) ->
+    //                      #(list(list(pattern)), list(tpmc))
+    fn convertToMatrix {
+        ([]) { #([], []) }
+        (#(row, state) @ t) {
+            convertToMatrix(t) ==> fn (#(rows, states)) {
+                #(row @ rows, state @ states)
+            }
+        }
+    }
+
+    //////////////////////////////////////
+    // STAGE 2 Generate the DFA
+    //////////////////////////////////////
+
+    // match: list(#(list(pattern), tpmc)) -> tpmc
+    fn match (#(M, S)) {
+        if (lst.all(simple, M?0)) {
+            variableRule(S)
+        } else {
+            patternRule(M, S)
+        }
+    }
+
+    // variableRule: list(tpmc) -> tpmc
+    fn variableRule(S) {
+        switch (S?0) {
+            (final(stamp, refCount, freeVars, pats)) {
+                final(stamp, refCount + 1, freeVars, pats)
+            }
+            (test(stamp, refCount, freeVars, arcs)) {
+                test(stamp, refCount + 1, freeVars, arcs)
+            }
+        }
+    }
+
+    // patternRule: list(list(pattern)) -> list(tpmc) -> tpmc
+    fn patternRule (M, S) {
+    let
+        // find the first index of a column in M that has a
+        // constructor in its top position
+        index = lst.indices(fn (x) { not simple(x) }, M ? 0) ? 0;
+        // let N be that column in M
+        N = lst.map(lst.nth(index), M);
+        // let M-N be a matrix of all the columns in M except N
+        M_N = lst.map(lst.except_nth(index), M);
+        // for each constructor c in N
+        arcs = lst.filter_not(simple, N) ==> lst.map(fn (c) {
+        let
+            // let {i_1 .. i_j} be the row-indices of the patterns
+            // in N that match c
+            i1_ij = rowsThatMatch(c, N);
+            // let {pat_1 .. pat_j} be the patterns in the column
+            // corresponding to those indices 
+            pat1_patj = N ?? i1_ij;
+            // let n be the arity of the constructor c
+            n = arity(c);
+            // For each pat_i, its n sub-patterns are extracted;
+            // if pat_i is a wildcard, n wildcards are produced
+            // instead, each tagged with the right path variable.
+            // This results in a pattern matrix A with n columns
+            // and j rows.
+            A = pat1_patj ==> lst.map(unsafe fn {
+                (tagged(_, ctor(_, pats))) { pats }
+                (tagged(tag, _)) {
+                    makeTags(tag, n)
+                }
+            });
+            // This matrix A is then appended to the result of
+            // selecting, from each column in the rest of the
+            // original matrix, those rows whose indices are in
+            // {i_1 .. i_j}.
+            B = M_N ?? i1_ij;
+            C = lst.zipWith(append, B, A);
+            // Finally the indices are used to select the
+            // corresponding final states X that go with these
+            // rows.
+            X = S ?? i1_ij;
+        in
+            // The arc for the constructor c is now defined as
+            // (c’,state), where c’ is c with any immediate
+            // sub-patterns replaced by their path variables
+            // (thus c’ is a simple pattern), and state is the
+            // result of recursively applying match to the new
+            // matrix and the new sequence of final states.
+            #(simplify(c, n), match(#(C, X)))
+        });
+    in 
+        // Finally, the possibility for matching failure is considered.
+        if (arcsAreExhaustive(arcs)) {
+            // If the set of constructors is exhaustive, then no more
+            // arcs are computed.
+            test(varName(N?0), 1, [], arcs)
+        } else {
+            // Otherwise, a default arc (_,state) is the last arc.
+            test(varName(N?0), 1, [], arcs @@ [makeDefaultArc(N, M_N, S)])
+        }
+    }
+
+    // varName: pattern -> string
+    fn varName {
+        (tagged(x, _)) { x }
+        (err) { error("varName" @@ $err) }
+    }
+
+    // makeErrorArc: list(pattern) => #(pattern, tpmc)
+    fn makeErrorArc {
+        (tagged(x, _) @ _) {
+            #(tagged(x, wildcard), final("error", 1, [], dict.E))
+        }
+        (_) { error("makeErrorArc") }
+    }
+
+    // makeDefaultArc: list(pattern) -> list(list(pattern)) -> list(tpmc)
+    //      -> #(pattern, tpmc)
+    fn makeDefaultArc (N, M_N, S) {
+        // If there are any wildcard patterns in the selected column, then
+        // their rows are selected from the rest of the matrix and the final
+        // states, and the state is the result of applying match to the new
+        // matrix and states. Otherwise, the error state is used after its
+        // reference count has been incremented.
+        switch (lst.indices(patternIsWildcard, N)) {
+            ([]) { makeErrorArc(N) }
+            (wildcards) {
+                let M_Ns = lst.nths(wildcards, M_N);
+                    Ss = lst.nths(wildcards, S);
+                in
+                    #(tagged(varName(N?0), wildcard), match(#(M_Ns, Ss)))
+            }
+        }
+    }
+
+    // patternIsWildcard: pattern -> bool
+    fn patternIsWildcard {
+        (tagged(_, wildcard)) { true }
+        (_) { false }
+    }
+
+    // arcsAreExhaustive: list(#(pattern, tpmc)) -> bool
+    fn arcsAreExhaustive {
+        ([]) { false }
+        (arcs = #(tagged(_, ctor(c, _)), _) @ _) {
+            ctorsAreExhaustive(arcs)
+        }
+        (#(tagged(_, const(_)), _) @ _) { false }
+        (_) { true }
+    }
+
+    // ctorsAreExhaustive: list(#(pattern, tpmc)) -> bool
+    fn ctorsAreExhaustive {
+        (#(tagged(_, ctor("cons", _)), _) @ arcs) {
+            lst.any(fn {
+                (#(tagged(_, ctor("nil", _)), _)) { true }
+                (_) { false }
+            },
+            arcs)
+        }
+        (#(tagged(_, ctor("nil", _)), _) @ arcs) {
+            lst.any(fn {
+                (#(tagged(_, ctor("cons", _)), _)) { true }
+                (_) { false }
+            },
+            arcs)
+        }
+        (_) { false }
+    }
+
+    // simplify: pattern -> pattern
+    fn simplify {
+        (tagged(tag, ctor(name, _)), n) {
+            tagged(tag, ctor(name, makeTags(tag, n)))
+        }
+        (x, _) { x }
+    }
+
+    // makeTags: string -> number -> list(pattern)
+    fn makeTags(tag, n) {
+        lst.map(fn (t) {
+            tagged(t, wildcard)
+        }, lst.map(makeTag(tag), lst.range(0, n - 1)))
+    }
+
+    // arity: pattern -> number
+    fn arity {
+        (tagged(_, ctor(_, l))) { lst.length(l) }
+        (tagged(_, const(_))) { 0 }
+        (x) { error("arity failed on " @@ $x) }
+    }
+
+    // rowsThatMatch: pattern -> list(pattern) -> list(pattern)
+    fn rowsThatMatch(c, N) {
+        let
+            fn ctorMatches {
+                (tagged(_, const(n)), tagged(_, const(n))) { true }
+                (tagged(_, ctor(s, _)), tagged(_, ctor(s, _))) { true }
+                (_, tagged(_, wildcard)) { true }
+                (_, _) { false }
+            }
+            fn helper {
+                (_, []) { [] }
+                (n, pat @ pats) {
+                    if (ctorMatches(c, pat)) {
+                        n @ helper(n + 1, pats)
+                    } else {
+                        helper(n + 1, pats)
+                    }
+                }
+            }
+        in
+            helper(0, N)
+    }
+
+    // simple: pattern -> bool
+    fn simple {
+        (tagged(_, ctor(_, _))) { false }
+        (tagged(_, const(_))) { false }
+        (_) { true }
+    }
+
+    //////////////////////////////////////
+    // STAGE 3 Optimize the DFA
+    //////////////////////////////////////
+
+    //////////////////////////////////////
+    // Input
+    //////////////////////////////////////
+
+    input = [
+        #(
+            [
+                var("base"),
+                const(1),
+                var("d"),
+                ctor("cons", [var("pat"), var("pats")])
+            ],
+            "E1"
+        ),
+        #(
+            [
+                wildcard,
+                wildcard,
+                var("d"),
+                ctor("nil", [])
+            ],
+            "E2"
+        )
+    ];
+in
+    print input ==> rename ==> convertToMatrix ==> match
+
+// TEST x$1 [
+//     x$1=1 => TEST x$3 [
+//         x$3=cons(x$3$0=_, x$3$1=_) => FINAL E1 {
+//             "base": "x$0"
+//             "d": "x$2"
+//             "pat": "x$3$0"
+//             "pats": "x$3$1"
+//         };
+//         x$3=nil => FINAL E2 {
+//             "d": "x$2"
+//         };
+//     ];
+//     x$1=_ => TEST x$3 [
+//         x$3=nil => FINAL E2 {
+//             "d": "x$2"
+//         };
+//         x$3=_ => FINAL error {};
+//     ];
+// ]
+

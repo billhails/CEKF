@@ -275,7 +275,7 @@ static void ppAstTypeClause(PrattUTF8 *dest, AstTypeClause *typeClause) {
             ppAstTypeFunction(dest, typeClause->val.typeFunction);
             break;
         case AST_TYPECLAUSE_TYPE_TYPETUPLE:
-            psprintf(dest, "#(");
+            psprintf(dest, "<tuple>(");
             ppAstTypeList(dest, typeClause->val.typeTuple);
             psprintf(dest, ")");
             break;
@@ -381,7 +381,7 @@ static void ppAstArg(PrattUTF8 *dest, AstArg *arg) {
             ppUnicodeChar(dest, arg->val.character);
             break;
         case AST_ARG_TYPE_TUPLE:
-            psprintf(dest, "#(");
+            psprintf(dest, "<tuple>(");
             ppAstArgList(dest, arg->val.tuple);
             psprintf(dest, ")");
             break;
@@ -462,7 +462,7 @@ void ppAstCharacter(PrattUTF8 *dest, Character c) {
 }
 
 void ppAstTuple(PrattUTF8 *dest, AstExpressions *expressions) {
-    psprintf(dest, "#(");
+    psprintf(dest, "<tuple>(");
     while (expressions) {
         ppAstExpression(dest, expressions->expression);
         if (expressions->next)

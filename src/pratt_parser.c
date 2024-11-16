@@ -1760,11 +1760,19 @@ static AstFunCall *conslist(PrattParser *parser) {
         AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
         PROTECT(nil);
         res = newAstFunCall(PI, nil, NULL);
+    } else if (check(parser, TOK_EOF())) {
+        parserError(parser, "unexpected EOF");
+        UNPROTECT(save);
+        return NULL;
     } else {
         AstExpression *expr = expression(parser);
         PROTECT(expr);
         match(parser, TOK_COMMA());
         AstFunCall *rest = conslist(parser);
+        if (rest == NULL) {
+            UNPROTECT(save);
+            return NULL;
+        }
         PROTECT(rest);
         AstExpression *fc = newAstExpression_FunCall(CPI(rest), rest);
         PROTECT(fc);

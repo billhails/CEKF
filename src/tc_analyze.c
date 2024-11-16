@@ -864,6 +864,15 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             }
         }
     }
+    // HACK! third pass through fixes up even more forward references
+    if (!hadErrors()) {
+        for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
+             bindings = bindings->next) {
+            if (isLambdaBinding(bindings)) {
+                processLetRecBinding(bindings, env, ng);
+            }
+        }
+    }
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
     // LEAVE(analyzeLetRec);
@@ -1812,7 +1821,7 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
 
 static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
-        can_happen("unification failed [usertype name mismatch]");
+        can_happen("\nunification failed [usertype name mismatch %s vs %s]", a->name->name, b->name->name);
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1820,7 +1829,7 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         return false;
     }
     if (a->ns != b->ns) {
-        can_happen("unification failed [usertype namespace mismatch]");
+        can_happen("\nunification failed [usertype namespace mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1838,7 +1847,7 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         bArgs = bArgs->next;
     }
     if (aArgs != NULL || bArgs != NULL) {
-        can_happen("unification failed [usertype arg count mismatch]");
+        can_happen("\nunification failed [usertype arg count mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1871,7 +1880,7 @@ static bool _unify(TcType *a, TcType *b) {
         return unify(b, a, "unify");
     } else {
         if (a->type != b->type) {
-            can_happen("unification failed [type mismatch]");
+            can_happen("\nunification failed [type mismatch]");
             ppTcType(a);
             eprintf(" vs ");
             ppTcType(b);
