@@ -18,32 +18,43 @@ let
         variable(string) |
         const(number) |
         ctor(string, list(pattern)) |
+        tuple(list(pattern)) |
         tagged(string, pattern)
     }
 
+    typedef code {
+        expression(string) |
+        case(string, list(code)) |
+        rule(pattern, code)
+    }
+
     print pattern(p) {
-        let fn h {
-            (wildcard) { puts("_") }
-            (variable(name)) { puts('$' @ name) }
-            (const(n)) { puts($n) }
-            (ctor(tag, pats)) {
-                puts(tag);
-                if (lst.length(pats) > 0) {
-                    let fn i {
-                        ([]) { "" }
-                        (p @ []) { h(p) }
-                        (p @ t) { h(p); puts(", "); i(t) }
-                    }
-                    in
-                        puts("("); i(pats); puts(")")
-                } else { "" }
+        let
+            fn i {
+                ([]) { "" }
+                (p @ []) { h(p) }
+                (p @ t) { h(p); puts(", "); i(t) }
             }
-            (tagged(tag, p)) { puts(tag); putc('='); h(p) }
-        }
+            fn h {
+                (wildcard) { puts("_") }
+                (variable(name)) { puts('$' @ name) }
+                (const(n)) { puts($n) }
+                (ctor(tag, pats)) {
+                    puts(tag);
+                    if (lst.length(pats) > 0) {
+                        puts("("); i(pats); puts(")")
+                    } else { "" }
+                }
+                (tuple(pats)) {
+                    puts("#("); i(pats); puts(")")
+                }
+                (tagged(tag, p)) { puts(tag); putc('='); h(p) }
+            }
         in h(p); p
     }
 
     alias substs = dict.Dict(string, string);
+    alias refcounts = dict.Dict(string, number);
 
     typedef Arc { arc(pattern, list(string), tpmc) }
 
@@ -132,6 +143,11 @@ let
                             #(tagged(base, ctor(name, pats)), d)
                         }
                     }
+                    (base, tuple(pats), d) {
+                        mapTag(base, 0, d, pats) ==> fn (#(pats, d)) {
+                            #(tagged(base, tuple(pats)), d)
+                        }
+                    }
                     (_, tagged(t, _), _) { error("already tagged: " @@ t) }
                 }
             in
@@ -201,7 +217,8 @@ let
             // This results in a pattern matrix A with n columns
             // and j rows.
             A = pat1_patj |=> unsafe fn {
-                (tagged(_, ctor(_, pats))) { pats }
+                (tagged(_, ctor(_, pats))) |
+                (tagged(_, tuple(pats))) { pats }
                 (tagged(tag, _)) {
                     makeTags(tag, n)
                 }
@@ -312,6 +329,9 @@ let
         (tagged(tag, ctor(name, _)), n) {
             tagged(tag, ctor(name, makeTags(tag, n)))
         }
+        (tagged(tag, tuple(_)), n) {
+            tagged(tag, tuple(makeTags(tag, n)))
+        }
         (x, _) { x }
     }
 
@@ -323,6 +343,7 @@ let
     // arity: pattern -> number
     fn arity {
         (tagged(_, ctor(_, l))) { lst.length(l) }
+        (tagged(_, tuple(l))) { lst.length(l) }
         (tagged(_, const(_))) { 0 }
         (x) { error("arity failed on " @@ $x) }
     }
@@ -333,6 +354,7 @@ let
             fn ctorMatches {
                 (tagged(_, const(n)), tagged(_, const(n))) { true }
                 (tagged(_, ctor(s, _)), tagged(_, ctor(s, _))) { true }
+                (tagged(_, tuple(_)), tagged(_, tuple(_))) { true }
                 (_, tagged(_, wildcard)) { true }
                 (_, _) { false }
             }
@@ -352,6 +374,7 @@ let
     // simple: pattern -> bool
     fn simple {
         (tagged(_, ctor(_, _))) { false }
+        (tagged(_, tuple(_))) { false }
         (tagged(_, const(_))) { false }
         (_) { true }
     }
@@ -360,7 +383,7 @@ let
     // STAGE 3 Optimize the DFA
     //////////////////////////////////////
 
-    // countStates: tpmc -> #(tpmc, dict.Dict(string, number))
+    // countStates: tpmc -> #(tpmc, refcounts)
     fn countStates (dfa) {
         let
             fn makeLabel {
@@ -376,8 +399,7 @@ let
                             "]";
                 }
             }
-            // collectStates: tpmc -> dict.Dict(string, number) ->
-            //                               dict.Dict(string, number)
+            // collectStates: tpmc -> refcounts -> refcounts
             fn collectStates {
                 (s = final(_, _, _), d) {
                     let label = makeLabel(s);
@@ -412,8 +434,8 @@ let
     //////////////////////////////////////
 
     // step 4.1 calculate free variables
-    // generate: #(tpmc, dict.Dict(string, number)) -> code
-    fn generate (#(dfa, refcounts)) {
+    // calculateFreeVariables: #(tpmc, refcounts) -> #(tpmc, refcounts)
+    fn calculateFreeVariables (#(dfa, refcounts)) {
         let
             // calculateFree: dfa -> dfa
             fn calculateFree {
@@ -439,6 +461,10 @@ let
                                     x @ ((args |=> varsInPat) ==>
                                             lst.concat)
                                 }
+                                (tagged(x, tuple(args))) {
+                                    x @ ((args |=> varsInPat) ==>
+                                            lst.concat)
+                                }
                                 (tagged(x, _)) { [x] }
                             }
                             // freeVarsInState: tpmc -> list(string)
@@ -454,6 +480,24 @@ let
         in #(calculateFree(dfa), refcounts)
     }
 
+    // Stage 4.2 Translate the DFA to intermediate code
+    // translate: #(tpmc, refcounts) -> code
+    fn translate (#(tpmc, counts)) {
+        let
+            fn translateState {
+                (final(stamp, _, _)) {
+                    expression(stamp);
+                }
+                (test(var, _, arcs)) {
+                    case(var, arcs |=> translateArc)
+                }
+            }
+            fn translateArc(arc(pat, _, state)) {
+                rule(pat, translateState(state))
+            }
+        in translateState(tpmc)
+    }
+
     //////////////////////////////////////
     // Input
     //////////////////////////////////////
@@ -463,7 +507,7 @@ let
             [
                 variable("base"),
                 const(1),
-                variable("d"),
+                tuple([variable("d"), const(3)]),
                 ctor("cons", [variable("pat"), variable("pats")])
             ],
             "Exp.1"
@@ -472,7 +516,7 @@ let
             [
                 wildcard,
                 wildcard,
-                variable("d"),
+                tuple([variable("d"), wildcard]),
                 ctor("nil", [])
             ],
             "Exp.2"
@@ -482,31 +526,44 @@ in
     //////////////////////////////////////
     // Test
     //////////////////////////////////////
-    print input ==> rename ==> convertToMatrix ==>
-          match ==> countStates ==> generate
+    print input ==> rename ==> convertToMatrix ==> match ==>
+          countStates ==> calculateFreeVariables ==> translate
 
-// TEST x$1 free:["x$1", "x$0", "x$3", "x$2"] [
-//     x$1=1 free:["x$3", "x$0", "x$2"] =>
-//         TEST x$3 free:["x$3", "x$0", "x$2"] [
-//             x$3=cons(x$3$0=_, x$3$1=_) free:["x$0", "x$2"] =>
-//                 FINAL Exp.1 free:["x$0", "x$2", "x$3$0", "x$3$1"] {
-//                   "base": "x$0"
-//                   "d": "x$2"
-//                   "pat": "x$3$0"
-//                   "pats": "x$3$1"
-//                 };
-//             x$3=nil free:["x$2"] =>
-//                 FINAL Exp.2 free:["x$2"] {
-//                   "d": "x$2"
-//                 };
-//         ];
-//     x$1=_ free:["x$3", "x$2"] =>
-//         TEST x$3 free:["x$3", "x$2"] [
-//             x$3=nil free:["x$2"] =>
-//                 FINAL Exp.2 free:["x$2"] {
-//                   "d": "x$2"
-//                 };
-//             x$3=_ free:[] => FINAL error free:[] {};
-//         ];
-// ]
-
+// case("x$1", [
+//     rule(x$1=1,
+//          case("x$2", [
+//               rule(x$2=#(x$2$0=_, x$2$1=_),
+//                    case("x$3", [
+//                        rule(x$3=cons(x$3$0=_, x$3$1=_),
+//                             case("x$2$1", [
+//                                 rule(x$2$1=3, expression("Exp.1")),
+//                                 rule(x$2$1=_, expression("error"))
+//                             ])
+//                        ),
+//                        rule(x$3=nil, expression("Exp.2"))
+//                    ])
+//               ),
+//               rule(x$2=#(x$2$0=_, x$2$1=_),
+//                    case("x$3", [
+//                         rule(x$3=cons(x$3$0=_, x$3$1=_),
+//                              case("x$2$1", [
+//                                   rule(x$2$1=3, expression("Exp.1")),
+//                                   rule(x$2$1=_, expression("error"))
+//                              ])
+//                          ),
+//                          rule(x$3=nil, expression("Exp.2"))
+//                    ])
+//               )
+//          ])
+//     ),
+//     rule(x$1=_,
+//          case("x$2", [
+//              rule(x$2=#(x$2$0=_, x$2$1=_),
+//                   case("x$3", [
+//                       rule(x$3=nil, expression("Exp.2")),
+//                       rule(x$3=_, expression("error"))
+//                   ])
+//              )
+//          ])
+//     )
+// ])
