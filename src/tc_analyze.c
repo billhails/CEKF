@@ -823,8 +823,12 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
     TcType *type = analyzeExp(bindings->val, env, ng2);
     PROTECT(type);
     if (!unify(existingType, type, "letrec")) {
-        eprintf("while unifying %s with ", bindings->var->name);
+        eprintf("while unifying letrec %s with ", bindings->var->name);
         ppLamExp(bindings->val);
+        eprintf("\nExisting Type: ");
+        ppTcType(existingType);
+        eprintf("\nNew Type: ");
+        ppTcType(type);
         eprintf("\n");
         REPORT_PARSER_INFO(bindings->val);
     }

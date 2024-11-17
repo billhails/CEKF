@@ -42,6 +42,26 @@ fn foreach {
     }
 }
 
+fn keys (d) {
+    let fn h {
+        (E, lst) | (EE, lst) { lst }
+        (D(_, l, #(k, _), r), lst) {
+            h(l, k @ h(r, lst))
+        }
+    }
+    in h(d, [])
+}
+
+fn values (d) {
+    let fn h {
+        (E, lst) | (EE, lst) { lst }
+        (D(_, l, #(_, v), r), lst) {
+            h(l, v @ h(r, lst))
+        }
+    }
+    in h(d, [])
+}
+
 fn balance {
     (B, D(R, D(R, a, x, b), y, c), z, d)  |
     (B, D(R, a, x, D(R, b, y, c)), z, d)  |

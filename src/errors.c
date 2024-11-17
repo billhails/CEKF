@@ -33,7 +33,7 @@ void _cant_happen(char *file, int line, const char *message, ...) {
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    eprintf(" at %s line %d\n", file, line);
+    eprintf(" at +%d %s\n", line, file);
 #ifdef DEBUG_DUMP_CORE
     abort();
 #else

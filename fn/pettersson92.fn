@@ -9,69 +9,68 @@ let
     infix left 100 "==>" fn (arg, fun) { fun(arg) };
     infix left 80 "?" fn (l, n) { lst.nth(n, l) };
     infix left 80 "??" fn (l, n) { lst.nths(n, l) };
-    prefix 80 "$" io.to_string;
+    infix left 80 "|=>" fn (l, f) { lst.map(f, l) };
+    infix left 80 ".." lst.range;
+    prefix 90 "$" io.to_string;
 
     typedef pattern {
         wildcard |
-        var(string) |
+        variable(string) |
         const(number) |
         ctor(string, list(pattern)) |
         tagged(string, pattern)
     }
+
     print pattern(p) {
         let fn h {
             (wildcard) { puts("_") }
-            (var(name)) { puts('$' @ name) }
+            (variable(name)) { puts('$' @ name) }
             (const(n)) { puts($n) }
             (ctor(tag, pats)) {
                 puts(tag);
                 if (lst.length(pats) > 0) {
                     let fn i {
                         ([]) { "" }
-                        (p @ []) {
-                            h(p)
-                        }
-                        (p @ t) {
-                            h(p);
-                            puts(", ");
-                            i(t)
-                        }
+                        (p @ []) { h(p) }
+                        (p @ t) { h(p); puts(", "); i(t) }
                     }
                     in
-                        puts("(");
-                        i(pats);
-                        puts(")")
+                        puts("("); i(pats); puts(")")
                 } else { "" }
             }
-            (tagged(tag, p)) {
-                puts(tag);
-                putc('=');
-                h(p)
-            }
+            (tagged(tag, p)) { puts(tag); putc('='); h(p) }
         }
         in h(p); p
     }
 
     alias substs = dict.Dict(string, string);
 
+    typedef Arc { arc(pattern, list(string), tpmc) }
+
     typedef tpmc { 
-        final(string, number, list(string), substs) |
-        test(string, number, list(string), list(#(pattern, tpmc)))
+        final(string, list(string), substs) |
+        test(string, list(string), list(Arc))
     }
+
+    // typedef Check { check(pattern -> list(string)) }
+
     print tpmc(state) {
         let fn h {
-            (final(label, _, _, substs)) {
-                puts("FINAL ");
-                puts(label);
+            (final(label, free, substs)) {
+                puts("FINAL");
                 puts(" ");
+                puts(label);
+                puts(" free:");
+                print(free);
                 print(substs);
                 ""
             }
-            (test(varr, _, _, arcs)) {
-                let unsafe fn a {
-                    (#(pat=tagged(_, _), s=final(_, _, _, _)) @ t) |
-                    (#(pat=tagged(_, _), s=test(_, _, _, _)) @ t) {
+            (test(var, free, arcs)) {
+                let fn a {
+                    (arc(pat, free, s) @ t) {
                         print(pat);
+                        puts("free:");
+                        print(free);
                         puts(" => ");
                         h(s);
                         puts(";\n");
@@ -80,8 +79,10 @@ let
                     ([]) { "" }
                 } in
                     puts("TEST ");
-                    puts(varr);
-                    puts(" [\n");
+                    puts(var);
+                    puts("\nfree:");
+                    print(free);
+                    puts("[\n");
                     a(arcs);
                     puts("]\n");
             }
@@ -90,34 +91,25 @@ let
         state;
     }
 
+    // makeTag: string -> number -> string
+    fn makeTag (base, n) { base @@ "$" @@ $n }
+
     //////////////////////////////////////
     // STAGE 1 RENAMING
     //////////////////////////////////////
 
     // rename: list(#(list(pattern), string)) ->
     //                  list(#(list(pattern), tpmc))
-    fn rename(rows) { lst.map(renameRow, rows) }
-
-    // renameRow: #(list(pattern), string) -> #(list(pattern), tpmc)
-    fn renameRow (#(row, target)) {
-        mapTag("x", 0, dict.E, row) ==> fn(#(pats, substs)) {
-            #(pats, final(target, 0, [], substs))
-        }
-    }
-
-    // tag: string -> pattern -> substs -> #(pattern, substs)
-    fn tag {
-        (base, wildcard, d) { #(tagged(base, wildcard), d) }
-        (base, var(name), d) {
-            #(tagged(base, wildcard), dict.insert(name, base, d))
-        }
-        (base, c = const(_), d) { #(tagged(base, c), d) }
-        (base, ctor(name, pats), d) {
-            mapTag(base, 0, d, pats) ==> fn (#(pats, d)) {
-                #(tagged(base, ctor(name, pats)), d)
+    fn rename(rows) {
+        let
+            // renameRow: #(list(pattern), string) -> #(list(pattern), tpmc)
+            fn renameRow (#(row, target)) {
+                mapTag("x", 0, dict.E, row) ==> fn(#(pats, substs)) {
+                    #(pats, final(target, [], substs))
+                }
             }
-        }
-        (_, tagged(t, _), _) { error("already tagged: " @@ t) }
+        in
+            rows |=> renameRow
     }
 
     // mapTag: string -> number -> substs ->
@@ -125,16 +117,29 @@ let
     fn mapTag {
         (_, _, d, []) { #([], d) }
         (base, n, d, pat @ pats) {
-            tag(makeTag(base, n), pat, d) ==> fn (#(pat, d)) {
-                mapTag(base, n + 1, d, pats) ==> fn (#(pats, d)) {
-                    #(pat @ pats, d)
+            let
+                // tag: string -> pattern -> substs -> #(pattern, substs)
+                fn tag {
+                    (base, wildcard, d) { #(tagged(base, wildcard), d) }
+                    (base, variable(name), d) {
+                        #(tagged(base, wildcard), dict.insert(name, base, d))
+                    }
+                    (base, c = const(_), d) { #(tagged(base, c), d) }
+                    (base, ctor(name, pats), d) {
+                        mapTag(base, 0, d, pats) ==> fn (#(pats, d)) {
+                            #(tagged(base, ctor(name, pats)), d)
+                        }
+                    }
+                    (_, tagged(t, _), _) { error("already tagged: " @@ t) }
                 }
-            }
+            in
+                tag(makeTag(base, n), pat, d) ==> fn (#(pat, d)) {
+                    mapTag(base, n + 1, d, pats) ==> fn (#(pats, d)) {
+                        #(pat @ pats, d)
+                    }
+                }
         }
     }
-
-    // makeTag: string -> number -> string
-    fn makeTag (tag, n) { tag @@ "$" @@ $n }
 
     //////////////////////////////////////
     // STAGE 1b CONVERT TO MATRIX
@@ -165,16 +170,7 @@ let
     }
 
     // variableRule: list(tpmc) -> tpmc
-    fn variableRule(S) {
-        switch (S?0) {
-            (final(stamp, refCount, freeVars, pats)) {
-                final(stamp, refCount + 1, freeVars, pats)
-            }
-            (test(stamp, refCount, freeVars, arcs)) {
-                test(stamp, refCount + 1, freeVars, arcs)
-            }
-        }
-    }
+    fn variableRule(S) { S?0 }
 
     // patternRule: list(list(pattern)) -> list(tpmc) -> tpmc
     fn patternRule (M, S) {
@@ -183,11 +179,11 @@ let
         // constructor in its top position
         index = lst.indices(fn (x) { not simple(x) }, M ? 0) ? 0;
         // let N be that column in M
-        N = lst.map(lst.nth(index), M);
+        N = M |=> lst.nth(index);
         // let M-N be a matrix of all the columns in M except N
         M_N = lst.map(lst.except_nth(index), M);
         // for each constructor c in N
-        arcs = lst.filter_not(simple, N) ==> lst.map(fn (c) {
+        arcs = lst.filter_not(simple, N) |=> fn (c) {
         let
             // let {i_1 .. i_j} be the row-indices of the patterns
             // in N that match c
@@ -202,12 +198,12 @@ let
             // instead, each tagged with the right path variable.
             // This results in a pattern matrix A with n columns
             // and j rows.
-            A = pat1_patj ==> lst.map(unsafe fn {
+            A = pat1_patj |=> unsafe fn {
                 (tagged(_, ctor(_, pats))) { pats }
                 (tagged(tag, _)) {
                     makeTags(tag, n)
                 }
-            });
+            };
             // This matrix A is then appended to the result of
             // selecting, from each column in the rest of the
             // original matrix, those rows whose indices are in
@@ -225,17 +221,17 @@ let
             // (thus c’ is a simple pattern), and state is the
             // result of recursively applying match to the new
             // matrix and the new sequence of final states.
-            #(simplify(c, n), match(#(C, X)))
-        });
+            arc(simplify(c, n), [], match(#(C, X)))
+        };
     in 
         // Finally, the possibility for matching failure is considered.
         if (arcsAreExhaustive(arcs)) {
             // If the set of constructors is exhaustive, then no more
             // arcs are computed.
-            test(varName(N?0), 1, [], arcs)
+            test(varName(N?0), [], arcs)
         } else {
             // Otherwise, a default arc (_,state) is the last arc.
-            test(varName(N?0), 1, [], arcs @@ [makeDefaultArc(N, M_N, S)])
+            test(varName(N?0), [], arcs @@ [makeDefaultArc(N, M_N, S)])
         }
     }
 
@@ -248,13 +244,12 @@ let
     // makeErrorArc: list(pattern) => #(pattern, tpmc)
     fn makeErrorArc {
         (tagged(x, _) @ _) {
-            #(tagged(x, wildcard), final("error", 1, [], dict.E))
+            arc(tagged(x, wildcard), [], final("error", [], dict.E))
         }
         (_) { error("makeErrorArc") }
     }
 
-    // makeDefaultArc: list(pattern) -> list(list(pattern)) -> list(tpmc)
-    //      -> #(pattern, tpmc)
+    // makeDefaultArc: list(pattern) -> list(list(pattern)) -> list(tpmc) -> Arc
     fn makeDefaultArc (N, M_N, S) {
         // If there are any wildcard patterns in the selected column, then
         // their rows are selected from the rest of the matrix and the final
@@ -267,7 +262,7 @@ let
                 let M_Ns = lst.nths(wildcards, M_N);
                     Ss = lst.nths(wildcards, S);
                 in
-                    #(tagged(varName(N?0), wildcard), match(#(M_Ns, Ss)))
+                    arc(tagged(varName(N?0), wildcard), [], match(#(M_Ns, Ss)))
             }
         }
     }
@@ -281,25 +276,25 @@ let
     // arcsAreExhaustive: list(#(pattern, tpmc)) -> bool
     fn arcsAreExhaustive {
         ([]) { false }
-        (arcs = #(tagged(_, ctor(c, _)), _) @ _) {
+        (arcs = arc(tagged(_, ctor(c, _)), _, _) @ _) {
             ctorsAreExhaustive(arcs)
         }
-        (#(tagged(_, const(_)), _) @ _) { false }
+        (arc(tagged(_, const(_)), _, _) @ _) { false }
         (_) { true }
     }
 
     // ctorsAreExhaustive: list(#(pattern, tpmc)) -> bool
     fn ctorsAreExhaustive {
-        (#(tagged(_, ctor("cons", _)), _) @ arcs) {
+        (arc(tagged(_, ctor("cons", _)), _, _) @ arcs) {
             lst.any(fn {
-                (#(tagged(_, ctor("nil", _)), _)) { true }
+                (arc(tagged(_, ctor("nil", _)), _, _)) { true }
                 (_) { false }
             },
             arcs)
         }
-        (#(tagged(_, ctor("nil", _)), _) @ arcs) {
+        (arc(tagged(_, ctor("nil", _)), _, _) @ arcs) {
             lst.any(fn {
-                (#(tagged(_, ctor("cons", _)), _)) { true }
+                (arc(tagged(_, ctor("cons", _)), _, _)) { true }
                 (_) { false }
             },
             arcs)
@@ -317,9 +312,7 @@ let
 
     // makeTags: string -> number -> list(pattern)
     fn makeTags(tag, n) {
-        lst.map(fn (t) {
-            tagged(t, wildcard)
-        }, lst.map(makeTag(tag), lst.range(0, n - 1)))
+        0 .. n - 1 |=> makeTag(tag) |=> fn (t) { tagged(t, wildcard) }
     }
 
     // arity: pattern -> number
@@ -348,8 +341,7 @@ let
                     }
                 }
             }
-        in
-            helper(0, N)
+        in helper(0, N)
     }
 
     // simple: pattern -> bool
@@ -363,6 +355,88 @@ let
     // STAGE 3 Optimize the DFA
     //////////////////////////////////////
 
+    // countStates: tpmc -> #(tpmc, dict.Dict(string, number))
+    fn countStates (dfa) {
+        let
+            fn makeLabel {
+                (final(stamp, _, _)) { stamp }
+                (test(var, _, arcs)) {
+                    let fn arcLabel (arc(pat, _, s)) {
+                            $pat @@ "=>" @@ makeLabel(s)
+                        }
+                    in var @@ "[" @@ lst.join(",", arcs |=> arcLabel) @@ "]";
+                }
+            }
+            // collectStates: tpmc -> dict.Dict(string, number) -> dict.Dict(string, number)
+            fn collectStates {
+                (s = final(_, _, _), d) {
+                    let label = makeLabel(s);
+                    in switch (dict.lookup(label, d)) {
+                            (some(rc)) { dict.insert(label, rc + 1, d) }
+                            (nothing) { dict.insert(label, 1, d) }
+                        }
+                }
+                (s = test(var, free, arcs), d) {
+                    let fn collectArcs {
+                            ([], d) { d }
+                            (arc(_, _, s) @ arcs, d) {
+                                collectArcs(arcs, d) ==> fn (d) { collectStates(s, d) }
+                            }
+                        }
+                    in collectArcs(arcs, d) ==> fn (d) {
+                            let label = makeLabel(s);
+                            in switch (dict.lookup(label, d)) {
+                                    (some(rc)) { dict.insert(label, rc + 1, d); }
+                                    (nothing) { dict.insert(label, 1, d); }
+                                }
+                        }
+                }
+            }
+        in #(dfa, collectStates(dfa, dict.E))
+    }
+
+    //////////////////////////////////////
+    // STAGE 4 Generate Intermediate Code
+    //////////////////////////////////////
+
+    // step 4.1 calculate free variables
+    // generate: #(tpmc, dict.Dict(string, number)) -> code
+    fn generate (#(dfa, refcounts)) {
+        let
+            // calculateFree: dfa -> dfa
+            fn calculateFree {
+                (final(stamp, _, substs)) {
+                    final(stamp, dict.values(substs), substs)
+                }
+                (test(var, _, arcs)) {
+                    let freeArcs = arcs |=> calculateFreeArc;
+                        freeVars = (var @ ((freeArcs |=> fn (arc(_, f, _)) { f }) ==> lst.concat))
+                                    ==> lst.unique;
+                    in test(var, freeVars, freeArcs)
+                }
+            }
+            // calculateFreeArc: Arc -> Arc
+            fn calculateFreeArc (arc(pat, _, s)) {
+                let s2 = calculateFree(s);
+                    fn arcFree (pat, s3) {
+                        // varsInPat: pattern -> list(string)
+                        let
+                            unsafe fn varsInPat {
+                                (tagged(x, ctor(_, args))) { x @ ((args |=> varsInPat) ==> lst.concat) }
+                                (tagged(x, _)) { [x] }
+                            }
+                            // freeVarsInState: tpmc -> list(string)
+                            fn freeVarsInState {
+                                (final(_, f, _)) |
+                                (test(_, f, _)) { f }
+                            }
+                        in lst.exclude(varsInPat(pat), freeVarsInState(s3))
+                    }
+                in arc(pat, arcFree(pat, s2), s2)
+            }
+        in #(calculateFree(dfa), refcounts)
+    }
+
     //////////////////////////////////////
     // Input
     //////////////////////////////////////
@@ -370,43 +444,51 @@ let
     input = [
         #(
             [
-                var("base"),
+                variable("base"),
                 const(1),
-                var("d"),
-                ctor("cons", [var("pat"), var("pats")])
+                variable("d"),
+                ctor("cons", [variable("pat"), variable("pats")])
             ],
-            "E1"
+            "Exp.1"
         ),
         #(
             [
                 wildcard,
                 wildcard,
-                var("d"),
+                variable("d"),
                 ctor("nil", [])
             ],
-            "E2"
+            "Exp.2"
         )
     ];
 in
-    print input ==> rename ==> convertToMatrix ==> match
+    //////////////////////////////////////
+    // Test
+    //////////////////////////////////////
+    print input ==> rename ==> convertToMatrix ==> match ==> countStates ==> generate
 
-// TEST x$1 [
-//     x$1=1 => TEST x$3 [
-//         x$3=cons(x$3$0=_, x$3$1=_) => FINAL E1 {
-//             "base": "x$0"
-//             "d": "x$2"
-//             "pat": "x$3$0"
-//             "pats": "x$3$1"
-//         };
-//         x$3=nil => FINAL E2 {
-//             "d": "x$2"
-//         };
-//     ];
-//     x$1=_ => TEST x$3 [
-//         x$3=nil => FINAL E2 {
-//             "d": "x$2"
-//         };
-//         x$3=_ => FINAL error {};
-//     ];
+// TEST x$1 free:["x$1", "x$0", "x$3", "x$2"] [
+//     x$1=1 free:["x$3", "x$0", "x$2"] =>
+//         TEST x$3 free:["x$3", "x$0", "x$2"] [
+//             x$3=cons(x$3$0=_, x$3$1=_) free:["x$0", "x$2"] =>
+//                 FINAL Exp.1 free:["x$0", "x$2", "x$3$0", "x$3$1"] {
+//                   "base": "x$0"
+//                   "d": "x$2"
+//                   "pat": "x$3$0"
+//                   "pats": "x$3$1"
+//                 };
+//             x$3=nil free:["x$2"] =>
+//                 FINAL Exp.2 free:["x$2"] {
+//                   "d": "x$2"
+//                 };
+//         ];
+//     x$1=_ free:["x$3", "x$2"] =>
+//         TEST x$3 free:["x$3", "x$2"] [
+//             x$3=nil free:["x$2"] =>
+//                 FINAL Exp.2 free:["x$2"] {
+//                   "d": "x$2"
+//                 };
+//             x$3=_ free:[] => FINAL error free:[] {};
+//         ];
 // ]
 

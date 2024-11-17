@@ -7,6 +7,18 @@ fn member {
     (x, _ @ t) { member(x, t) }
 }
 
+// unique: list(#a) -> list(#a)
+fn unique {
+    ([]) { [] }
+    (h @ t) {
+        if (member(h, t)) {
+            unique(t)
+        } else {
+            h @ unique(t)
+        }
+    }
+}
+
 // exclude: list(#t) -> list(#t) -> list(#t)
 fn exclude {
     (items, []) { [] }

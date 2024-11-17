@@ -66,7 +66,7 @@ void ppTcType(TcType *type) {
 }
 
 void ppTcFunction(TcFunction *function) {
-    eprintf("(");
+    eprintf("<function>(");
     ppTcType(function->arg);
     eprintf(") -> ");
     ppTcType(function->result);
@@ -81,7 +81,7 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcVar(TcVar *var) {
-    eprintf("%s", var->name->name);
+    eprintf("<var>%s", var->name->name);
     if (var->instance != NULL) {
         eprintf(" [");
         ppTcType(var->instance);

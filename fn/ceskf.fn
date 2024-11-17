@@ -142,11 +142,11 @@ let
         (Σ(cexp(letrec(bindings, body)), ρ, σ, κ, ς)) {
             let
                 inds = indices(bindings, σ);
-                ks = list.map(unsafe fn (#(k, _)) { k }, bindings);
+                ks = list.map(fn (#(k, _)) { k }, bindings);
                 e = zipEnv(ks, inds, ρ);
                 tempStore = list.repeat_prefix(list.length(inds), f, σ);
                 s = list.map_prefix(A(e, tempStore),
-                                    list.map(unsafe fn (#(_, v)) { v }, bindings),
+                                    list.map(fn (#(_, v)) { v }, bindings),
                                     σ);
             in
                 Σ(body, e, s, κ, ς)

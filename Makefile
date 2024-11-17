@@ -23,7 +23,7 @@ ifeq ($(MODE),production)
 	CCMODE:= -O2
 	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=2
 else
-$(error invalid MODE $(MODE))
+$(error invalid MODE=$(MODE), allowed values: debugging, testing or production)
 endif
 endif
 endif

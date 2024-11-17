@@ -12,8 +12,8 @@ let
                     if (depth > 50 or s0 < 0.5) {
                         #(s0, leaf)
                     } else {
-                        unsafe fn (#(s1, t1)) {
-                            unsafe fn (#(s2, t2)) {
+                        fn (#(s1, t1)) {
+                            fn (#(s2, t2)) {
                                 #(s2, node(t1, t2))
                             } (helper(s1, depth + 1))
                         } (helper(s0, depth + 1))
@@ -23,7 +23,7 @@ let
             helper(seed, 0)
     }
 
-    unsafe fn printTree(#(_, t)) {
+    fn printTree(#(_, t)) {
         let
             fn inner {
                 (id, leaf) {
