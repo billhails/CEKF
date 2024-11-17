@@ -102,7 +102,8 @@ let
     //                  list(#(list(pattern), tpmc))
     fn rename(rows) {
         let
-            // renameRow: #(list(pattern), string) -> #(list(pattern), tpmc)
+            // renameRow: #(list(pattern), string) ->
+            //                     #(list(pattern), tpmc)
             fn renameRow (#(row, target)) {
                 mapTag("x", 0, dict.E, row) ==> fn(#(pats, substs)) {
                     #(pats, final(target, [], substs))
@@ -122,7 +123,8 @@ let
                 fn tag {
                     (base, wildcard, d) { #(tagged(base, wildcard), d) }
                     (base, variable(name), d) {
-                        #(tagged(base, wildcard), dict.insert(name, base, d))
+                        #(tagged(base, wildcard),
+                          dict.insert(name, base, d))
                     }
                     (base, c = const(_), d) { #(tagged(base, c), d) }
                     (base, ctor(name, pats), d) {
@@ -249,20 +251,23 @@ let
         (_) { error("makeErrorArc") }
     }
 
-    // makeDefaultArc: list(pattern) -> list(list(pattern)) -> list(tpmc) -> Arc
+    // makeDefaultArc: list(pattern) -> list(list(pattern)) ->
+    //                                        list(tpmc) -> Arc
     fn makeDefaultArc (N, M_N, S) {
-        // If there are any wildcard patterns in the selected column, then
-        // their rows are selected from the rest of the matrix and the final
-        // states, and the state is the result of applying match to the new
-        // matrix and states. Otherwise, the error state is used after its
-        // reference count has been incremented.
+        // If there are any wildcard patterns in the selected
+        // column, then their rows are selected from the rest
+        // of the matrix and the final states, and the state
+        // is the result of applying match to the new matrix
+        // and states. Otherwise, the error state is used
+        // after its reference count has been incremented.
         switch (lst.indices(patternIsWildcard, N)) {
             ([]) { makeErrorArc(N) }
             (wildcards) {
                 let M_Ns = lst.nths(wildcards, M_N);
                     Ss = lst.nths(wildcards, S);
                 in
-                    arc(tagged(varName(N?0), wildcard), [], match(#(M_Ns, Ss)))
+                    arc(tagged(varName(N?0), wildcard),
+                        [], match(#(M_Ns, Ss)))
             }
         }
     }
@@ -364,10 +369,15 @@ let
                     let fn arcLabel (arc(pat, _, s)) {
                             $pat @@ "=>" @@ makeLabel(s)
                         }
-                    in var @@ "[" @@ lst.join(",", arcs |=> arcLabel) @@ "]";
+                    in
+                        var @@
+                            "[" @@
+                            lst.join(",", arcs |=> arcLabel) @@
+                            "]";
                 }
             }
-            // collectStates: tpmc -> dict.Dict(string, number) -> dict.Dict(string, number)
+            // collectStates: tpmc -> dict.Dict(string, number) ->
+            //                               dict.Dict(string, number)
             fn collectStates {
                 (s = final(_, _, _), d) {
                     let label = makeLabel(s);
@@ -380,16 +390,18 @@ let
                     let fn collectArcs {
                             ([], d) { d }
                             (arc(_, _, s) @ arcs, d) {
-                                collectArcs(arcs, d) ==> fn (d) { collectStates(s, d) }
+                                collectArcs(arcs, d) ==> fn (d) {
+                                    collectStates(s, d)
+                                }
                             }
                         }
                     in collectArcs(arcs, d) ==> fn (d) {
-                            let label = makeLabel(s);
-                            in switch (dict.lookup(label, d)) {
-                                    (some(rc)) { dict.insert(label, rc + 1, d); }
-                                    (nothing) { dict.insert(label, 1, d); }
-                                }
+                        let label = makeLabel(s);
+                        in switch (dict.lookup(label, d)) {
+                            (some(rc)) { dict.insert(label, rc + 1, d); }
+                            (nothing) { dict.insert(label, 1, d); }
                         }
+                    }
                 }
             }
         in #(dfa, collectStates(dfa, dict.E))
@@ -410,8 +422,9 @@ let
                 }
                 (test(var, _, arcs)) {
                     let freeArcs = arcs |=> calculateFreeArc;
-                        freeVars = (var @ ((freeArcs |=> fn (arc(_, f, _)) { f }) ==> lst.concat))
-                                    ==> lst.unique;
+                        freeVars = (var @
+                            ((freeArcs |=> fn (arc(_, f, _)) { f }) ==>
+                                lst.concat)) ==> lst.unique;
                     in test(var, freeVars, freeArcs)
                 }
             }
@@ -422,7 +435,10 @@ let
                         // varsInPat: pattern -> list(string)
                         let
                             unsafe fn varsInPat {
-                                (tagged(x, ctor(_, args))) { x @ ((args |=> varsInPat) ==> lst.concat) }
+                                (tagged(x, ctor(_, args))) {
+                                    x @ ((args |=> varsInPat) ==>
+                                            lst.concat)
+                                }
                                 (tagged(x, _)) { [x] }
                             }
                             // freeVarsInState: tpmc -> list(string)
@@ -430,7 +446,8 @@ let
                                 (final(_, f, _)) |
                                 (test(_, f, _)) { f }
                             }
-                        in lst.exclude(varsInPat(pat), freeVarsInState(s3))
+                        in lst.exclude(varsInPat(pat),
+                                       freeVarsInState(s3))
                     }
                 in arc(pat, arcFree(pat, s2), s2)
             }
@@ -465,7 +482,8 @@ in
     //////////////////////////////////////
     // Test
     //////////////////////////////////////
-    print input ==> rename ==> convertToMatrix ==> match ==> countStates ==> generate
+    print input ==> rename ==> convertToMatrix ==>
+          match ==> countStates ==> generate
 
 // TEST x$1 free:["x$1", "x$0", "x$3", "x$2"] [
 //     x$1=1 free:["x$3", "x$0", "x$2"] =>
