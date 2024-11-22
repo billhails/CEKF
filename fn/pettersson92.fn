@@ -13,6 +13,7 @@ let
     infix left 80 ".." lst.range;
     prefix 85 "$" io.to_string;
 
+    // input data structures
     typedef pattern {
         wildcard |
         variable(string) |
@@ -47,22 +48,14 @@ let
         in h(p); p
     }
 
-    typedef code {
-        expression(string) |
-        case(string, list(code)) |
-        rule(pattern, code) |
-        letrec(list(#(string, code)), code) |
-        lambda(list(string), code) |
-        apply(string, list(string))
-    }
-
+    // DAG components (state table)
     alias substs = dict.Dict(string, string);
     alias refcounts = dict.Dict(string, number);
 
     typedef Arc { arc(pattern, list(string), tpmc) }
 
     typedef tpmc { 
-        final(string, list(string), number, substs) |
+        final(string, list(string), number, substs, code) |
         test(string, string, list(string), number, list(Arc))
     }
 
@@ -70,7 +63,7 @@ let
 
     print tpmc(state) {
         let fn h {
-            (final(stamp, free, refcount, substs)) {
+            (final(stamp, free, refcount, substs, code)) {
                 puts("FINAL stamp:");
                 puts(stamp);
                 puts(" refcount:");
@@ -79,6 +72,8 @@ let
                 print(free);
                 puts(" substs:");
                 print(substs);
+                puts(" code:");
+                print(code);
                 ""
             }
             (test(stamp, var, free, refcount, arcs)) {
@@ -112,12 +107,22 @@ let
         state;
     }
 
+    // Intermediate Representation (output)
+    typedef code {
+        symbol(string) |
+        case(code, list(code)) |
+        rule(pattern, code) |
+        letrec(list(#(code, code)), code) |
+        lambda(list(code), code) |
+        apply(code, list(code))
+    }
+
     // makeTag: string -> number -> string
     fn makeTag (base, n) { base @@ "$" @@ $n }
 
     // makeLabel: tpmc -> string
     fn makeLabel {
-        (final(stamp, _, _, _)) { stamp }
+        (final(stamp, _, _, _, _)) { stamp }
         (test(_, var, _, _, arcs)) {
             let fn arcLabel (arc(pat, _, s)) {
                     $pat @@ "=>" @@ makeLabel(s)
@@ -134,54 +139,82 @@ let
 // STAGE 1 RENAMING
 ///////////////////////////////////////////////////////////////////////////
 
-    // rename: list(#(list(pattern), string)) ->
+    // rename: list(#(list(pattern), code)) ->
     //                  #(list(list(pattern)), list(tpmc))
     fn rename(rows) {
         let
-            // renameRow: #(list(pattern), string) ->
-            //                     #(list(pattern), tpmc)
-            fn renameRow (#(row, target)) {
-                mapTag("x", 0, dict.E, row) => fn(#(pats, substs)) {
-                    #(pats, final(target, [], 1, substs))
+            // mapTag: string -> number -> substs ->
+            //                  list(pattern) -> #(list(pattern), substs)
+            fn mapTag {
+                (_, _, d, []) { #([], d) }
+                (base, n, d, pat @ pats) {
+                    let
+                        // tag: string -> pattern -> substs -> #(pattern, substs)
+                        fn tag {
+                            (base, wildcard, d) { #(tagged(base, wildcard), d) }
+                            (base, variable(name), d) {
+                                #(tagged(base, wildcard),
+                                  dict.insert(name, base, d))
+                            }
+                            (base, c = const(_), d) { #(tagged(base, c), d) }
+                            (base, ctor(name, pats), d) {
+                                mapTag(base, 0, d, pats) => fn (#(pats, d)) {
+                                    #(tagged(base, ctor(name, pats)), d)
+                                }
+                            }
+                            (base, tuple(pats), d) {
+                                mapTag(base, 0, d, pats) => fn (#(pats, d)) {
+                                    #(tagged(base, tuple(pats)), d)
+                                }
+                            }
+                            (_, tagged(t, _), _) { error("already tagged: " @@ t) }
+                        }
+                    in
+                        tag(makeTag(base, n), pat, d) => fn (#(pat, d)) {
+                            mapTag(base, n + 1, d, pats) => fn (#(pats, d)) {
+                                #(pat @ pats, d)
+                            }
+                        }
                 }
             }
+            // applySubsts: substs -> code -> code
+            fn applySubsts (substs, target) {
+                let fn h {
+                    (symbol(s)) {
+                        switch (dict.lookup(s, substs)) {
+                            (some(v)) { symbol(v) }
+                            (nothing) { symbol(s) }
+                        }
+                    }
+                    (case(cond, rules)) { case(h(cond), rules |> h) }
+                    (rule(pattern, action)) { rule(pattern, h(action)) }
+                    (letrec(defs, body)) {
+                        letrec(defs |> fn {
+                            (#(name, value)) { #(h(name), h(value)) }
+                        }, h(body))
+                    }
+                    (lambda(args, code)) { lambda(args |> h, h(code)) }
+                    (apply(code, args)) { apply(h(code), args |> h) }
+                }
+                in h(target)
+            }
+            // renameRow: #(list(pattern), code) -> #(list(pattern), tpmc)
+            fn renameRow (#(row, target, label)) {
+                mapTag("x", 0, dict.E, row) => fn(#(pats, substs)) {
+                    #(pats, final(label, [], 1, substs, applySubsts(substs, target)))
+                }
+            }
+            // labelRows: list(#(list(pattern), code)) ->
+            //                list(#(list(pattern), code, string))
+            fn labelRows (rows) {
+                let fn h {
+                    ([], _) { [] }
+                    (#(pats, body) @ rest, n) { #(pats, body, "Q$" @@ $n) @ h(rest, n + 1) }
+                }
+                in h(rows, 0)
+            }
         in
-            rows |> renameRow => lst.unzip
-    }
-
-    // mapTag: string -> number -> substs ->
-    //                  list(pattern) -> #(list(pattern), substs)
-    fn mapTag {
-        (_, _, d, []) { #([], d) }
-        (base, n, d, pat @ pats) {
-            let
-                // tag: string -> pattern -> substs -> #(pattern, substs)
-                fn tag {
-                    (base, wildcard, d) { #(tagged(base, wildcard), d) }
-                    (base, variable(name), d) {
-                        #(tagged(base, wildcard),
-                          dict.insert(name, base, d))
-                    }
-                    (base, c = const(_), d) { #(tagged(base, c), d) }
-                    (base, ctor(name, pats), d) {
-                        mapTag(base, 0, d, pats) => fn (#(pats, d)) {
-                            #(tagged(base, ctor(name, pats)), d)
-                        }
-                    }
-                    (base, tuple(pats), d) {
-                        mapTag(base, 0, d, pats) => fn (#(pats, d)) {
-                            #(tagged(base, tuple(pats)), d)
-                        }
-                    }
-                    (_, tagged(t, _), _) { error("already tagged: " @@ t) }
-                }
-            in
-                tag(makeTag(base, n), pat, d) => fn (#(pat, d)) {
-                    mapTag(base, n + 1, d, pats) => fn (#(pats, d)) {
-                        #(pat @ pats, d)
-                    }
-                }
-        }
+            rows => labelRows |> renameRow => lst.unzip
     }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -277,7 +310,7 @@ let
     // makeErrorArc: list(pattern) => Arc
     fn makeErrorArc {
         (tagged(x, _) @ _) {
-            arc(tagged(x, wildcard), [], final("error", [], 1, dict.E))
+            arc(tagged(x, wildcard), [], final("error", [], 1, dict.E, symbol("error")))
         }
         (_) { error("makeErrorArc") }
     }
@@ -402,7 +435,7 @@ let
         let
             // collectStates: tpmc -> refcounts -> refcounts
             fn collectStates {
-                (s = final(_, _, _, _), d) {
+                (s = final(_, _, _, _, _), d) {
                     let label = makeLabel(s);
                     in switch (dict.lookup(label, d)) {
                             (some(rc)) { dict.insert(label, rc + 1, d) }
@@ -438,8 +471,8 @@ let
                 };
             }
             fn h {
-                (s = final(stamp, free, _, substs)) {
-                    final(stamp, free, getRc(s), substs)
+                (s = final(stamp, free, _, substs, code)) {
+                    final(stamp, free, getRc(s), substs, code)
                 }
                 (s = test(stamp, var, free, _, st)) {
                     test(stamp, var, free, getRc(s), st |> i)
@@ -461,8 +494,8 @@ let
         let
             // calculateFree: dfa -> dfa
             fn calculateFree {
-                (final(stamp, _, rc, substs)) {
-                    final(stamp, dict.values(substs), rc, substs)
+                (final(stamp, _, rc, substs, code)) {
+                    final(stamp, dict.values(substs), rc, substs, code)
                 }
                 (test(stamp, var, _, rc, arcs)) {
                     let freeArcs = arcs |> calculateFreeArc;
@@ -491,7 +524,7 @@ let
                             }
                             // freeVarsInState: tpmc -> list(string)
                             fn freeVarsInState {
-                                (final(_, f, _, _)) |
+                                (final(_, f, _, _, _)) |
                                 (test(_, _, f, _, _)) { f }
                             }
                         in lst.exclude(varsInPat(pat),
@@ -513,7 +546,7 @@ let
                 }
             }
             fn collectLambdas {
-                (s = final(_, free, rc, _), d) {
+                (s = final(_, free, rc, _, _), d) {
                     if (rc > 1) {
                         dict.insert(makeLabel(s), s, d)
                     } else {
@@ -531,18 +564,18 @@ let
                 }
             }
             fn translateState {
-                (final(stamp, free, rc, _)) {
+                (final(stamp, free, rc, _, code)) {
                     if (rc > 1) {
-                        apply(stamp, free)
+                        apply(symbol(stamp), free |> fn(s){symbol(s)})
                     } else {
-                        expression(stamp);
+                        code
                     }
                 }
                 (test(stamp, var, free, rc, arcs)) {
                     if (rc > 1) {
-                        apply(stamp, free)
+                        apply(symbol(stamp), free |> fn(s){symbol(s)})
                     } else {
-                        case(var, arcs |> translateArc)
+                        case(symbol(var), arcs |> translateArc)
                     }
                 }
             }
@@ -551,11 +584,13 @@ let
             }
             fn translateLambdas(lambdas) {
                 dict.values(lambdas) |> fn {
-                    (final(stamp, free, _, _)) {
-                        #(stamp, lambda(free, expression(stamp)))
+                    (final(stamp, free, _, _, code)) {
+                        #(symbol(stamp), lambda(free |> fn(s){symbol(s)}, code))
                     }
                     (test(stamp, var, free, _, arcs)) {
-                        #(stamp, lambda(free, case(var, arcs |> translateArc)))
+                        #(symbol(stamp), lambda(free |> fn (s) {
+                            symbol(s)
+                        }, case(symbol(var), arcs |> translateArc)))
                     }
                 }
             }
@@ -564,6 +599,10 @@ let
             }
         in collectLambdas(tpmc, dict.E) => wrapLetRec(translateState(tpmc))
     }
+
+///////////////////////////////////////////////////////////////////////////
+// TODO: Wrap resulting letrec in a top-level lambda
+///////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////
 // Input
@@ -577,7 +616,7 @@ let
                 tuple([variable("d"), const(3)]),
                 ctor("cons", [variable("pat"), variable("pats")])
             ],
-            "Exp.1"
+            apply(symbol("cons"), [symbol("pat"), symbol("pats")])
         ),
         #(
             [
@@ -586,108 +625,15 @@ let
                 tuple([variable("d"), wildcard]),
                 ctor("nil", [])
             ],
-            "Exp.2"
+            symbol("d")
         )
     ];
-in
+
 ///////////////////////////////////////////////////////////////////////////
 // Test
 ///////////////////////////////////////////////////////////////////////////
+
+in
+
     print input => rename => match => countStates =>
           transferRefCountsToStates => calculateFreeVariables => translate
-
-// letrec(
-//     [
-//         #("Exp.2", lambda(["x$2$0"], expression("Exp.2"))),
-//         #("error", lambda([], expression("error")))
-//     ],
-//     case("x$1", [
-//         rule(x$1=1,
-//             case("x$2", [
-//                 rule(x$2=#(x$2$0=_, x$2$1=_),
-//                     case("x$3", [
-//                         rule(x$3=cons(x$3$0=_, x$3$1=_),
-//                             case("x$2$1", [
-//                                 rule(x$2$1=3, expression("Exp.1")),
-//                                 rule(x$2$1=_, apply("error", []))
-//                             ])
-//                         ),
-//                         rule(x$3=nil, apply("Exp.2", ["x$2$0"]))
-//                     ])
-//                 )
-//             ])
-//         ),
-//         rule(x$1=_,
-//             case("x$2", [
-//                 rule(x$2=#(x$2$0=_, x$2$1=_),
-//                     case("x$3", [
-//                         rule(x$3=nil, apply("Exp.2", ["x$2$0"])),
-//                         rule(x$3=_, apply("error", []))
-//                     ])
-//                 )
-//             ])
-//         )
-//     ])
-// )
-
-// TEST stamp:LD_x$1 var:x$1 free:["x$1", "x$0", "x$2", "x$3"] refcount:1
-//   arcs:[
-//     ARC pat:x$1=1 free:["x$2", "x$3", "x$0"]
-//       => state:TEST stamp:L_x$2 var:x$2 free:["x$2", "x$3", "x$0"] refcount:1
-//         arcs:[
-//           ARC pat::x$2=#(x$2$0=_, x$2$1=_) free:["x$3", "x$0"]
-//             => state:TEST stamp:L_x$3 var:x$3 free:["x$3", "x$2$1", "x$0", "x$2$0"] refcount:2
-//               arcs:[
-//                 ARC pat::x$3=cons(x$3$0=_, x$3$1=_) free:["x$2$1", "x$0", "x$2$0"]
-//                   => state:TEST stamp:LD_x$2$1 var:x$2$1 free:["x$2$1", "x$0", "x$2$0", "x$3$0", "x$3$1"] refcount:2
-//                     arcs:[
-//                       ARC pat::x$2$1=3 free:["x$0", "x$2$0", "x$3$0", "x$3$1"]
-//                         => state:FINAL stamp:Exp.1 refcount:2 free:["x$0", "x$2$0", "x$3$0", "x$3$1"] substs:{
-//                           "base": "x$0"
-//                           "d": "x$2$0"
-//                           "pat": "x$3$0"
-//                           "pats": "x$3$1"
-//                         };
-//                       ARC pat::x$2$1=_ free:[]
-//                         => state:FINAL stamp:error refcount:3 free:[] substs:{};
-//                     ];
-//                 ARC pat::x$3=nil free:["x$2$0"]
-//                   => state:FINAL stamp:Exp.2 refcount:3 free:["x$2$0"] substs:{
-//                     "d": "x$2$0"
-//                   };
-//               ];
-//           ARC pat::x$2=#(x$2$0=_, x$2$1=_) free:["x$3", "x$0"]
-//             => state:TEST stamp:L_x$3 var:x$3 free:["x$3", "x$2$1", "x$0", "x$2$0"] refcount:2
-//               arcs:[
-//                 ARC pat::x$3=cons(x$3$0=_, x$3$1=_) free:["x$2$1", "x$0", "x$2$0"]
-//                   => state:TEST stamp:LD_x$2$1 var:x$2$1 free:["x$2$1", "x$0", "x$2$0", "x$3$0", "x$3$1"] refcount:2
-//                     arcs:[
-//                       ARC pat::x$2$1=3 free:["x$0", "x$2$0", "x$3$0", "x$3$1"]
-//                         => state:FINAL stamp:Exp.1 refcount:2 free:["x$0", "x$2$0", "x$3$0", "x$3$1"] substs:{
-//                           "base": "x$0"
-//                           "d": "x$2$0"
-//                           "pat": "x$3$0"
-//                           "pats": "x$3$1"
-//                         };
-//                     ARC pat::x$2$1=_ free:[]
-//                       => state:FINAL stamp:error refcount:3 free:[] substs:{};
-//                  ];
-//                ARC pat::x$3=nil free:["x$2$0"]
-//                  => state:FINAL stamp:Exp.2 refcount:3 free:["x$2$0"] substs:{
-//                   "d": "x$2$0"
-//                 };
-//              ];
-//         ];
-//     ARC pat::x$1=_ free:["x$2", "x$3"]
-//       => state:TEST stamp:L_x$2 var:x$2 free:["x$2", "x$3"] refcount:1
-//         arcs:[
-//           ARC pat::x$2=#(x$2$0=_, x$2$1=_) free:["x$3"]
-//             => state:TEST stamp:LD_x$3 var:x$3 free:["x$3", "x$2$0"] refount:3
-//               arcs:[
-//                 ARC pat::x$3=nil free:["x$2$0"]
-//                   => state:FINAL stamp:Exp.2 free:["x$2$0"] substs:{
-//                     "d": "x$2$0"
-//                   };
-//                 ARC pat::x$3=_ free:[]
-//                   => state:FINAL stamp:error free:[] substs:{};
-//              ];];]
