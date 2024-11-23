@@ -7,9 +7,9 @@ let
     link "listutils.fn" as lst;
 
     infix left 80 "=>" fn (arg, fun) { fun(arg) };
-    infix left 80 "?" fn (l, n) { lst.nth(n, l) };
-    infix left 80 "??" fn (l, n) { lst.nths(n, l) };
     infix left 80 "|>" fn (l, f) { lst.map(f, l) };
+    infix left 80 "?" fn (l, n) { lst.nth(n, l) };
+    infix left 80 "??" fn (l, ns) { lst.nths(ns, l) };
     infix left 80 ".." lst.range;
     prefix 85 "$" io.to_string;
 
@@ -58,8 +58,6 @@ let
         final(string, list(string), number, substs, code) |
         test(string, string, list(string), number, list(Arc))
     }
-
-    // typedef Check { check(pattern -> list(string)) }
 
     print tpmc(state) {
         let fn h {
@@ -111,7 +109,7 @@ let
     typedef code {
         symbol(string) |
         case(code, list(code)) |
-        rule(pattern, code) |
+        of(pattern, code) |
         letrec(list(#(code, code)), code) |
         lambda(list(code), code) |
         apply(code, list(code))
@@ -149,29 +147,39 @@ let
                 (_, _, d, []) { #([], d) }
                 (base, n, d, pat @ pats) {
                     let
-                        // tag: string -> pattern -> substs -> #(pattern, substs)
+                        // tag: string -> pattern -> substs ->
+                        //                     #(pattern, substs)
                         fn tag {
-                            (base, wildcard, d) { #(tagged(base, wildcard), d) }
+                            (base, wildcard, d) {
+                                #(tagged(base, wildcard), d)
+                            }
                             (base, variable(name), d) {
                                 #(tagged(base, wildcard),
                                   dict.insert(name, base, d))
                             }
-                            (base, c = const(_), d) { #(tagged(base, c), d) }
+                            (base, c = const(_), d) {
+                                #(tagged(base, c), d)
+                            }
                             (base, ctor(name, pats), d) {
-                                mapTag(base, 0, d, pats) => fn (#(pats, d)) {
+                                mapTag(base, 0, d, pats) =>
+                                fn (#(pats, d)) {
                                     #(tagged(base, ctor(name, pats)), d)
                                 }
                             }
                             (base, tuple(pats), d) {
-                                mapTag(base, 0, d, pats) => fn (#(pats, d)) {
+                                mapTag(base, 0, d, pats) =>
+                                fn (#(pats, d)) {
                                     #(tagged(base, tuple(pats)), d)
                                 }
                             }
-                            (_, tagged(t, _), _) { error("already tagged: " @@ t) }
+                            (_, tagged(t, _), _) {
+                                error("already tagged: " @@ t)
+                            }
                         }
                     in
                         tag(makeTag(base, n), pat, d) => fn (#(pat, d)) {
-                            mapTag(base, n + 1, d, pats) => fn (#(pats, d)) {
+                            mapTag(base, n + 1, d, pats) =>
+                            fn (#(pats, d)) {
                                 #(pat @ pats, d)
                             }
                         }
@@ -187,7 +195,7 @@ let
                         }
                     }
                     (case(cond, rules)) { case(h(cond), rules |> h) }
-                    (rule(pattern, action)) { rule(pattern, h(action)) }
+                    (of(pattern, action)) { of(pattern, h(action)) }
                     (letrec(defs, body)) {
                         letrec(defs |> fn {
                             (#(name, value)) { #(h(name), h(value)) }
@@ -201,7 +209,12 @@ let
             // renameRow: #(list(pattern), code) -> #(list(pattern), tpmc)
             fn renameRow (#(row, target, label)) {
                 mapTag("x", 0, dict.E, row) => fn(#(pats, substs)) {
-                    #(pats, final(label, [], 1, substs, applySubsts(substs, target)))
+                    #(pats,
+                      final(label,
+                            [],
+                            1,
+                            substs,
+                            applySubsts(substs, target)))
                 }
             }
             // labelRows: list(#(list(pattern), code)) ->
@@ -209,7 +222,9 @@ let
             fn labelRows (rows) {
                 let fn h {
                     ([], _) { [] }
-                    (#(pats, body) @ rest, n) { #(pats, body, "Q$" @@ $n) @ h(rest, n + 1) }
+                    (#(pats, body) @ rest, n) {
+                        #(pats, body, "Q$" @@ $n) @ h(rest, n + 1)
+                    }
                 }
                 in h(rows, 0)
             }
@@ -297,7 +312,11 @@ let
         } else {
             // Otherwise, a default arc (_,state) is the last arc.
             let var = varName(N?0);
-            in test("LD_" @@ var, var, [], 1, uarcs @@ [makeDefaultArc(N, M_N, S)])
+            in test("LD_" @@ var,
+                    var,
+                    [],
+                    1,
+                    uarcs @@ [makeDefaultArc(N, M_N, S)])
         }
     }
 
@@ -310,7 +329,9 @@ let
     // makeErrorArc: list(pattern) => Arc
     fn makeErrorArc {
         (tagged(x, _) @ _) {
-            arc(tagged(x, wildcard), [], final("error", [], 1, dict.E, symbol("error")))
+            arc(tagged(x, wildcard),
+                [],
+                final("error", [], 1, dict.E, symbol("error")))
         }
         (_) { error("makeErrorArc") }
     }
@@ -537,7 +558,7 @@ let
 
     // Stage 4.2 Translate the DFA to intermediate code
     // translate: tpmc -> code
-    fn translate (tpmc) {
+    fn translate (original, tpmc) {
         let
             fn collectArcs {
                 ([], d) { d }
@@ -580,12 +601,13 @@ let
                 }
             }
             fn translateArc(arc(pat, _, state)) {
-                rule(pat, translateState(state))
+                of(pat, translateState(state))
             }
             fn translateLambdas(lambdas) {
                 dict.values(lambdas) |> fn {
                     (final(stamp, free, _, _, code)) {
-                        #(symbol(stamp), lambda(free |> fn(s){symbol(s)}, code))
+                        #(symbol(stamp),
+                          lambda(free |> fn (s) { symbol(s) }, code))
                     }
                     (test(stamp, var, free, _, arcs)) {
                         #(symbol(stamp), lambda(free |> fn (s) {
@@ -597,12 +619,20 @@ let
             fn wrapLetRec(body, lambdas) {
                 letrec(translateLambdas(lambdas), body)
             }
-        in collectLambdas(tpmc, dict.E) => wrapLetRec(translateState(tpmc))
+            fn wrapLambda(code) {
+                let fn h {
+                    ([], _) { [] }
+                    (_ @ args, n) {
+                        symbol("x$" @@ $n) @ h(args, n + 1)
+                    }
+                }
+                unsafe fn getargs(#(args, _) @ _) { args }
+                in lambda(h(getargs(original), 0), code)
+            }
+        in collectLambdas(tpmc, dict.E) =>
+            wrapLetRec(translateState(tpmc)) =>
+            wrapLambda
     }
-
-///////////////////////////////////////////////////////////////////////////
-// TODO: Wrap resulting letrec in a top-level lambda
-///////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////
 // Input
@@ -634,6 +664,39 @@ let
 ///////////////////////////////////////////////////////////////////////////
 
 in
-
     print input => rename => match => countStates =>
-          transferRefCountsToStates => calculateFreeVariables => translate
+          transferRefCountsToStates => calculateFreeVariables =>
+          translate(input)
+
+// lambda(
+//     [ symbol("x$0"), symbol("x$1"), symbol("x$2"), symbol("x$3") ],
+//     letrec([
+//         #(symbol("Q$1"), lambda([symbol("x$2$0")], symbol("x$2$0"))),
+//         #(symbol("error"), lambda([], symbol("error")))],
+//         case(symbol("x$1"), [
+//             of(x$1=1,
+//                 case(symbol("x$2"), [
+//                     of(x$2=#(x$2$0=_, x$2$1=_),
+//                         case(symbol("x$3"), [
+//                             of(x$3=cons(x$3$0=_, x$3$1=_),
+//                                 case(symbol("x$2$1"), [
+//                                     of(x$2$1=3,
+//                                         apply(symbol("cons"), [
+//                                             symbol("x$3$0"),
+//                                             symbol("x$3$1")])),
+//                                     of(x$2$1=_,
+//                                         apply(symbol("error"),
+//                                             []))])),
+//                             of(x$3=nil,
+//                                 apply(symbol("Q$1"),
+//                                     [symbol("x$2$0")]))]))])),
+//             of(x$1=_,
+//                 case(symbol("x$2"), [
+//                     of(x$2=#(x$2$0=_, x$2$1=_),
+//                         case(symbol("x$3"), [
+//                             of(x$3=nil,
+//                                 apply(symbol("Q$1"),
+//                                     [symbol("x$2$0")])),
+//                             of(x$3=_,
+//                                 apply(symbol("error"),
+//                                     []))]))]))])))

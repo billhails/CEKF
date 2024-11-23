@@ -145,6 +145,9 @@ $(EXTRA_DOCS): docs/generated/%.md: src/%.yaml tools/makeAST.py src/primitives.y
 tags: src/* $(EXTRA_TARGETS)
 	ctags src/* $(EXTRA_TARGETS)
 
+xref: src/* $(EXTRA_TARGETS)
+	ctags -x src/* $(EXTRA_TARGETS) > $@
+
 $(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
@@ -193,7 +196,7 @@ generated/UnicodeDigits.inc: unicode/UnicodeData.txt tools/makeUnicodeDigits.py 
 	$(PYTHON) ./tools/makeUnicodeDigits.py > $@
 
 realclean: clean
-	rm -rf tags unicode
+	rm -rf tags xref unicode
 
 clean: deps
 	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc core.*

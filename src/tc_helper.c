@@ -37,7 +37,7 @@ void ppTcType(TcType *type) {
             ppTcVar(type->val.var);
             break;
         case TCTYPE_TYPE_BIGINTEGER:
-            eprintf("bigint");
+            eprintf("number");
             break;
         case TCTYPE_TYPE_SMALLINTEGER:
             eprintf("smallint");
@@ -66,7 +66,7 @@ void ppTcType(TcType *type) {
 }
 
 void ppTcFunction(TcFunction *function) {
-    eprintf("<function>(");
+    eprintf("(");
     ppTcType(function->arg);
     eprintf(") -> ");
     ppTcType(function->result);
@@ -110,9 +110,12 @@ static void ppUserTypeArgs(TcUserTypeArgs *args) {
 }
 
 void ppTcUserType(TcUserType *userType) {
-    eprintf("%s:%d(", userType->name->name, userType->ns);
-    ppUserTypeArgs(userType->args);
-    eprintf(")");
+    eprintf("%s", userType->name->name);
+    if (userType->args != NULL) {
+        eprintf("(");
+        ppUserTypeArgs(userType->args);
+        eprintf(")");
+    }
 }
 
 bool eqTcVar(struct TcVar *a, struct TcVar *b, HashTable *map) {

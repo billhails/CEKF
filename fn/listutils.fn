@@ -131,19 +131,7 @@ fn indices(f, lst) {
 
 // nths: list(number) -> list(#a) -> list(#a)
 fn nths (indices, lst) {
-    let
-        fn helper {
-            ([], _) { [] }
-            (h @ t, n) {
-                if (member(n, indices)) {
-                    h @ helper(t, n + 1)
-                } else {
-                    helper(t, n + 1)
-                }
-            }
-        }
-    in
-        helper(lst, 0)
+    map(fn (n) { nth(n, lst) }, indices)
 }
 
 // except_nth: number -> list(#a) -> list(#a)
