@@ -109,7 +109,7 @@ let
     typedef code {
         symbol(string) |
         case(code, list(code)) |
-        of(pattern, code) |
+        when(pattern, code) |
         letrec(list(#(code, code)), code) |
         lambda(list(code), code) |
         apply(code, list(code))
@@ -195,7 +195,7 @@ let
                         }
                     }
                     (case(cond, rules)) { case(h(cond), rules |> h) }
-                    (of(pattern, action)) { of(pattern, h(action)) }
+                    (when(pattern, action)) { when(pattern, h(action)) }
                     (letrec(defs, body)) {
                         letrec(defs |> fn {
                             (#(name, value)) { #(h(name), h(value)) }
@@ -601,7 +601,7 @@ let
                 }
             }
             fn translateArc(arc(pat, _, state)) {
-                of(pat, translateState(state))
+                when(pat, translateState(state))
             }
             fn translateLambdas(lambdas) {
                 dict.values(lambdas) |> fn {
@@ -674,29 +674,29 @@ in
 //         #(symbol("Q$1"), lambda([symbol("x$2$0")], symbol("x$2$0"))),
 //         #(symbol("error"), lambda([], symbol("error")))],
 //         case(symbol("x$1"), [
-//             of(x$1=1,
+//             when(x$1=1,
 //                 case(symbol("x$2"), [
-//                     of(x$2=#(x$2$0=_, x$2$1=_),
+//                     when(x$2=#(x$2$0=_, x$2$1=_),
 //                         case(symbol("x$3"), [
-//                             of(x$3=cons(x$3$0=_, x$3$1=_),
+//                             when(x$3=cons(x$3$0=_, x$3$1=_),
 //                                 case(symbol("x$2$1"), [
-//                                     of(x$2$1=3,
+//                                     when(x$2$1=3,
 //                                         apply(symbol("cons"), [
 //                                             symbol("x$3$0"),
 //                                             symbol("x$3$1")])),
-//                                     of(x$2$1=_,
+//                                     when(x$2$1=_,
 //                                         apply(symbol("error"),
 //                                             []))])),
-//                             of(x$3=nil,
+//                             when(x$3=nil,
 //                                 apply(symbol("Q$1"),
 //                                     [symbol("x$2$0")]))]))])),
-//             of(x$1=_,
+//             when(x$1=_,
 //                 case(symbol("x$2"), [
-//                     of(x$2=#(x$2$0=_, x$2$1=_),
+//                     when(x$2=#(x$2$0=_, x$2$1=_),
 //                         case(symbol("x$3"), [
-//                             of(x$3=nil,
+//                             when(x$3=nil,
 //                                 apply(symbol("Q$1"),
 //                                     [symbol("x$2$0")])),
-//                             of(x$3=_,
+//                             when(x$3=_,
 //                                 apply(symbol("error"),
 //                                     []))]))]))])))

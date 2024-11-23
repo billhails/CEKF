@@ -1,0 +1,1 @@
+print (car of cdr of cdr)([[], [], ['a']]);

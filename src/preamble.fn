@@ -141,6 +141,8 @@ fn error_(line, file, message) {
     exit(1);
 }
 
+infix right 120 "of" fn (f, g, x) { f(g(x)) };
+
 fn append {
     ([], b) { b }
     (h @ t, b) { h @ append(t, b) }
