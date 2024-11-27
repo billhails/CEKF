@@ -71,8 +71,11 @@ fn foldr(func, acc, lst) {
 }
 
 // foldl1 (#a -> #a -> #a) -> list(#a) -> #a
-unsafe fn foldl1(func, h @ t) {
-    foldl(func, h, t)
+fn foldl1 {
+    (func, h @ t) {
+        foldl(func, h, t)
+    }
+    (_, _) { error("foldl1") }
 }
 
 // foldr1 (#a -> #a -> #a) -> list(#a) -> #a
@@ -200,9 +203,10 @@ fn repeat_prefix(n, v, tail) {
 }
 
 // nth: number -> list(#a) -> #a
-unsafe fn nth {
+fn nth {
     (0, h @ _) { h }
     (n, _ @ t) { nth(n - 1, t) }
+    (_, _) { error("nth") }
 }
 
 // sum: list(number) -> number
@@ -237,7 +241,8 @@ fn unzip {
 }
 
 // last: list(#a) -> #a
-unsafe fn last {
+fn last {
+    ([]) { error("last") }
     ([a]) { a }
     (_ @ t) { last(t) }
 }
