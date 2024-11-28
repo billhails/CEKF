@@ -119,6 +119,67 @@ let
         apply(code, list(code))
     }
 
+    print code(c) {
+    let
+        fn pargs {
+            ([]) { "" }
+            ([a]) { h(0, false, a) }
+            (a @ b) { h(0, false, a); puts(", "); pargs(b) }
+        }
+        fn h {
+            (n, dp, symbol(name)) { pad(n, dp); puts(name) }
+            (n, dp, case(c, cases)) {
+                pad(n, dp);
+                puts("consider(");
+                h(n, false, c);
+                puts(") {\n");
+                cases |> fn (c) { h(n + 1, true, c); puts("\n"); };
+                pad(n, true); puts("}");
+            }
+            (n, dp, when(p, c)) {
+                pad(n, dp);
+                puts("when ");
+                print(p);
+                h(n + 1, true, c);
+            }
+            (n, dp, letrec(defs, body)) {
+                pad(n, dp);
+                puts("let\n");
+                defs |> fn (#(sym, val)) {
+                    h(n + 1, true, sym);
+                    puts(" = ");
+                    h(n + 1, false, val);
+                    puts("\n");
+                };
+                pad(n, true);
+                puts("in\n");
+                h(n + 1, true, body);
+            }
+            (n, dp, lambda(args, body)) {
+                pad(n, dp);
+                puts("fn (");
+                pargs(args);
+                puts(") {\n");
+                h(n + 1, true, body);
+                puts("\n");
+                pad(n, true);
+                puts("}");
+            }
+            (n, dp, apply(exp, args)) {
+                h(n, dp, exp);
+                puts("(");
+                pargs(args);
+                puts(")");
+            }
+        }
+        fn pad(n, dp) {
+            puts(lst.repeat(if(dp){n * 2} else {0}, ' '))
+        }
+    in
+        h(0, true, c);
+        c;
+    }
+
     // makeTag: string -> number -> string
     fn makeTag (base, n) { base @@ "$" @@ $n }
 
