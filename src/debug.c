@@ -107,14 +107,6 @@ void dumpByteCode(ByteCodeArray *bca) {
                     eprintf("CMP\n");
                 }
                 break;
-            case BYTECODES_TYPE_PRIM_XOR:{
-                    eprintf("XOR\n");
-                }
-                break;
-            case BYTECODES_TYPE_PRIM_NOT:{
-                    eprintf("NOT\n");
-                }
-                break;
             case BYTECODES_TYPE_PRIM_MAKEVEC:{
                     int size = readByte(bca, &i);
                     eprintf("MAKEVEC [%d]\n", size);

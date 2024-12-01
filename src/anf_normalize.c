@@ -42,7 +42,6 @@ static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
 static Exp *normalizeCharacter(Character character, Exp *tail);
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAmb(LamAmb *app, Exp *tail);
 static Exp *normalizeSequence(LamSequence *sequence, Exp *tail);
 static Exp *normalizePrim(LamPrimApp *app, Exp *tail);
@@ -52,7 +51,6 @@ static Exp *normalizeError(Exp *tail);
 static HashSymbol *freshSymbol();
 static LamExpTable *makeLamExpHashTable();
 static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements);
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op);
 static Exp *letBind(Exp *body, LamExpTable *replacements);
 static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
@@ -62,11 +60,9 @@ static Aexp *aexpNormalizeCharacter(Character character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpNamespaceArray *aexpNormalizeNamespaces(LamNamespaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
-static AexpList *replaceLamList(LamList *list, LamExpTable *replacements);
+static AexpList *replaceLamArgs(LamArgs *, LamExpTable *);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
                             LamExpTable *replacements);
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp,
-                             LamExpTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec,
                                LamExpTable *replacements);
 static Aexp *replaceLamConstruct(LamConstruct *construct,
@@ -88,7 +84,7 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
                                      LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
-static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail);
+static Exp *normalizeMakeTuple(LamArgs *, Exp *);
 static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
@@ -113,12 +109,10 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeMaybeBigInteger(lamExp->val.biginteger, tail);
         case LAMEXP_TYPE_PRIM:
             return normalizePrim(lamExp->val.prim, tail);
-        case LAMEXP_TYPE_UNARY:
-            return normalizeUnary(lamExp->val.unary, tail);
         case LAMEXP_TYPE_AMB:
             return normalizeAmb(lamExp->val.amb, tail);
-        case LAMEXP_TYPE_LIST:
-            return normalizeSequence(lamExp->val.list, tail);
+        case LAMEXP_TYPE_SEQUENCE:
+            return normalizeSequence(lamExp->val.sequence, tail);
         case LAMEXP_TYPE_MAKEVEC:
             return normalizeMakeVec(lamExp->val.makeVec, tail);
         case LAMEXP_TYPE_TYPEDEFS:
@@ -382,7 +376,7 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
 }
 
 static LamApply *printToApply(LamPrint *lamPrint) {
-    LamList *args = newLamList(CPI(lamPrint), lamPrint->exp, NULL);
+    LamArgs *args = newLamArgs(CPI(lamPrint), lamPrint->exp, NULL);
     int save = PROTECT(args);
     LamApply *lamApply = newLamApply(CPI(lamPrint), lamPrint->printer, args);
     UNPROTECT(save);
@@ -428,8 +422,8 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
     ENTER(normalizeMakeVec);
     LamExpTable *replacements = makeLamExpHashTable();
     int save = PROTECT(replacements);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamMakeVec->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *args = replaceLamArgs(lamMakeVec->args, replacements);
     int save2 = PROTECT(args);
     AexpMakeVec *aexpMakeVec = newAexpMakeVec(countAexpList(args), args);
     REPLACE_PROTECT(save2, aexpMakeVec);
@@ -446,19 +440,19 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
 }
 
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nargs = countLamList(construct->args);
+    int nargs = countLamArgs(construct->args);
     LamExp *newArg =
         newLamExp_Stdint(CPI(construct), construct->tag);
     int save = PROTECT(newArg);
-    LamList *extraItem = newLamList(CPI(construct), newArg, construct->args);
+    LamArgs *extraItem = newLamArgs(CPI(construct), newArg, construct->args);
     PROTECT(extraItem);
     LamMakeVec *res = newLamMakeVec(CPI(construct), nargs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
-static LamMakeVec *tupleToMakeVec(LamList *tuple) {
-    int nargs = countLamList(tuple);
+static LamMakeVec *tupleToMakeVec(LamArgs *tuple) {
+    int nargs = countLamArgs(tuple);
     LamMakeVec *res = newLamMakeVec(CPI(tuple), nargs, tuple);
     return res;
 }
@@ -473,7 +467,7 @@ static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
     return res;
 }
 
-static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail) {
+static Exp *normalizeMakeTuple(LamArgs *tuple, Exp *tail) {
     LamMakeVec *makeVec = tupleToMakeVec(tuple);
     int save = PROTECT(makeVec);
     Exp *res = normalizeMakeVec(makeVec, tail);
@@ -535,27 +529,6 @@ static Exp *wrapTail(Exp *exp, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail) {
-    ENTER(normalizeUnary);
-    LamExpTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(app->exp, replacements);
-    int save2 = PROTECT(aexp);
-    AexpUnaryApp *aexpUnaryApp = newAexpUnaryApp(mapUnaryOp(app->type), aexp);
-    UNPROTECT(save2);
-    save2 = PROTECT(aexpUnaryApp);
-    Aexp *aexp2 = newAexp_Unary(aexpUnaryApp);
-    REPLACE_PROTECT(save2, aexp2);
-    Exp *exp = wrapAexp(aexp2);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeUnary);
-    return res;
-}
-
 static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
     ENTER(normalizePrim);
     LamExpTable *replacements = makeLamExpHashTable();
@@ -564,8 +537,7 @@ static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
     int save2 = PROTECT(exp1);
     Aexp *exp2 = replaceLamExp(app->exp2, replacements);
     PROTECT(exp2);
-    AexpPrimApp *aexpPrimApp =
-        newAexpPrimApp(mapPrimOp(app->type), exp1, exp2);
+    AexpPrimApp *aexpPrimApp = newAexpPrimApp(mapPrimOp(app->type), exp1, exp2);
     UNPROTECT(save2);
     save2 = PROTECT(aexpPrimApp);
     Aexp *aexp = newAexp_Prim(aexpPrimApp);
@@ -771,10 +743,10 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
     int save = PROTECT(replacements);
     Aexp *function = replaceLamExp(lamApply->function, replacements);
     int save2 = PROTECT(function);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamApply->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *args = replaceLamArgs(lamApply->args, replacements);
     PROTECT(args);
-    DEBUG("back from replaceLamList");
+    DEBUG("back from replaceLamArgs");
     IFDEBUG(printLamExpTable(replacements, 0));
     CexpApply *cexpApply = newCexpApply(function, countAexpList(args), args);
     UNPROTECT(save2);
@@ -930,9 +902,6 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_PRIM:
             res = replaceLamPrim(lamExp->val.prim, replacements);
             break;
-        case LAMEXP_TYPE_UNARY:
-            res = replaceLamUnary(lamExp->val.unary, replacements);
-            break;
         case LAMEXP_TYPE_PRINT:
             res = replaceLamPrint(lamExp->val.print, replacements);
             break;
@@ -959,7 +928,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
             res = aexpNormalizeCharacter(lamExp->val.character);
             break;
         case LAMEXP_TYPE_LOOKUP:
-        case LAMEXP_TYPE_LIST:
+        case LAMEXP_TYPE_SEQUENCE:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
         case LAMEXP_TYPE_CALLCC:
@@ -995,8 +964,7 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_AMB:
         case LAMEXP_TYPE_PRIM:
-        case LAMEXP_TYPE_UNARY:
-        case LAMEXP_TYPE_LIST:
+        case LAMEXP_TYPE_SEQUENCE:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
         case LAMEXP_TYPE_CALLCC:
@@ -1064,8 +1032,8 @@ static Aexp *replaceLamConstruct(LamConstruct *construct,
 
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, LamExpTable *replacements) {
     ENTER(replaceLamMakeVec);
-    DEBUG("calling replaceLamList");
-    AexpList *aexpList = replaceLamList(makeVec->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *aexpList = replaceLamArgs(makeVec->args, replacements);
     int save = PROTECT(aexpList);
     AexpMakeVec *aexpMakeVec =
         newAexpMakeVec(countAexpList(aexpList), aexpList);
@@ -1088,20 +1056,20 @@ static Aexp *replaceLamPrint(LamPrint *print, LamExpTable *replacements) {
     return res;
 }
 
-static AexpList *replaceLamList(LamList *list, LamExpTable *replacements) {
-    ENTER(replaceLamList);
+static AexpList *replaceLamArgs(LamArgs *list, LamExpTable *replacements) {
+    ENTER(replaceLamArgs);
     if (list == NULL) {
-        LEAVE(replaceLamList);
+        LEAVE(replaceLamArgs);
         return NULL;
     }
-    DEBUG("calling replaceLamList");
-    AexpList *next = replaceLamList(list->next, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *next = replaceLamArgs(list->next, replacements);
     int save = PROTECT(next);
     Aexp *val = replaceLamExp(list->exp, replacements);
     PROTECT(val);
     AexpList *res = newAexpList(val, next);
     UNPROTECT(save);
-    LEAVE(replaceLamList);
+    LEAVE(replaceLamArgs);
     return res;
 }
 
@@ -1118,28 +1086,6 @@ static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, LamExpTable *replacements) {
     UNPROTECT(save);
     LEAVE(replaceLamPrim);
     return res;
-}
-
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp,
-                             LamExpTable *replacements) {
-    ENTER(replaceLamUnary);
-    Aexp *exp = replaceLamExp(lamUnaryApp->exp, replacements);
-    int save = PROTECT(exp);
-    AexpUnaryApp *unary = newAexpUnaryApp(mapUnaryOp(lamUnaryApp->type), exp);
-    PROTECT(unary);
-    Aexp *res = newAexp_Unary(unary);
-    UNPROTECT(save);
-    LEAVE(replaceLamUnary);
-    return res;
-}
-
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
-    switch (op) {
-        case LAMUNARYOP_TYPE_NOT:
-            return AEXPUNARYOP_TYPE_NOT;
-        default:
-            cant_happen("unrecognised type %d in mapUnaryOp", op);
-    }
 }
 
 static AexpPrimOp mapPrimOp(LamPrimOp op) {
@@ -1168,8 +1114,6 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
             return AEXPPRIMOP_TYPE_LE;
         case LAMPRIMOP_TYPE_VEC:
             return AEXPPRIMOP_TYPE_VEC;
-        case LAMPRIMOP_TYPE_XOR:
-            return AEXPPRIMOP_TYPE_XOR;
         case LAMPRIMOP_TYPE_MOD:
             return AEXPPRIMOP_TYPE_MOD;
         case LAMPRIMOP_TYPE_CMP:

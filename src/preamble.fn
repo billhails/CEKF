@@ -141,6 +141,8 @@ fn error_(line, file, message) {
     exit(1);
 }
 
+infix right 120 "of" fn (f, g, x) { f(g(x)) };
+
 fn append {
     ([], b) { b }
     (h @ t, b) { h @ append(t, b) }
@@ -221,14 +223,14 @@ fn print_tuple_0(t) {
    t
 }
 
-unsafe fn print_tuple_1(pa, t=#(a)) {
+fn print_tuple_1(pa, t=#(a)) {
    puts("#(");
    pa(a);
    puts(")");
    t
 }
 
-unsafe fn print_tuple_2(pa, pb, t=#(a, b)) {
+fn print_tuple_2(pa, pb, t=#(a, b)) {
    puts("#(");
    pa(a);
    puts(", ");
@@ -237,7 +239,7 @@ unsafe fn print_tuple_2(pa, pb, t=#(a, b)) {
    t
 }
 
-unsafe fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
+fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
    puts("#(");
    pa(a);
    puts(", ");
@@ -248,7 +250,7 @@ unsafe fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
    t
 }
 
-unsafe fn print_tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
+fn print_tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
    puts("#(");
    pa(a);
    puts(", ");

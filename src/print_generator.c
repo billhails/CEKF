@@ -119,9 +119,9 @@ static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     LamExp *character =
         newLamExp_Character(I, c);
     int save = PROTECT(character);
-    LamList *args = newLamList(I, tail, NULL);
+    LamArgs *args = newLamArgs(I, tail, NULL);
     PROTECT(args);
-    args = newLamList(I, character, args);
+    args = newLamArgs(I, character, args);
     PROTECT(args);
     LamConstruct *cons = newLamConstruct(I, consSymbol(), 1, args);
     PROTECT(cons);
@@ -131,11 +131,11 @@ static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     return res;
 }
 
-LamExp *stringToLamList(ParserInfo I, char *name) {
+LamExp *stringToLamArgs(ParserInfo I, char *name) {
     if (*name == 0) {
         return makeNullList(I);
     }
-    LamExp *next = stringToLamList(I, name + 1);
+    LamExp *next = stringToLamArgs(I, name + 1);
     int save = PROTECT(next);
     LamExp *this = makeCharList(I, *name, next);
     UNPROTECT(save);
@@ -146,7 +146,7 @@ static LamExp *putsExp(ParserInfo I, LamExp *string) {
     HashSymbol *sym = putsSymbol();
     LamExp *puts = newLamExp_Var(I, sym);
     int save = PROTECT(puts);
-    LamList *args = newLamList(I, string, NULL);
+    LamArgs *args = newLamArgs(I, string, NULL);
     PROTECT(args);
     LamApply *apply = newLamApply(I, puts, args);
     PROTECT(apply);
@@ -156,7 +156,7 @@ static LamExp *putsExp(ParserInfo I, LamExp *string) {
 }
 
 static LamExp *makePutsString(ParserInfo I, char *str) {
-    LamExp *string = stringToLamList(I, str);
+    LamExp *string = stringToLamArgs(I, str);
     int save = PROTECT(string);
     LamExp *res = putsExp(I, string);
     UNPROTECT(save);
@@ -164,7 +164,7 @@ static LamExp *makePutsString(ParserInfo I, char *str) {
 }
 
 static LamExp *makePlainMatchBody(ParserInfo I, LamTypeConstructor *constructor) {
-    LamExp *string = stringToLamList(I, constructor->name->name);
+    LamExp *string = stringToLamArgs(I, constructor->name->name);
     int save = PROTECT(string);
     LamExp *puts = putsExp(I, string);
     UNPROTECT(save);
@@ -205,14 +205,14 @@ static LamExp *makePrintVar(ParserInfo I, HashSymbol *var) {
 
 static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg);
 
-static LamList *makePrintArgs(ParserInfo I, LamTypeConstructorArgs *args) {
+static LamArgs *makePrintArgs(ParserInfo I, LamTypeConstructorArgs *args) {
     if (args == NULL)
         return NULL;
-    LamList *next = makePrintArgs(I, args->next);
+    LamArgs *next = makePrintArgs(I, args->next);
     int save = PROTECT(next);
     LamExp *printer = makePrinter(I, args->arg);
     PROTECT(printer);
-    LamList *this = newLamList(I, printer, next);
+    LamArgs *this = newLamArgs(I, printer, next);
     UNPROTECT(save);
     return this;
 }
@@ -264,9 +264,9 @@ static LamExp *makePrintType(ParserInfo I, LamTypeFunction *function) {
     int save = PROTECT(exp);
     exp = wrapTypeFunction(I, exp, function->name);
     REPLACE_PROTECT(save, exp);
-    LamList *args = makePrintArgs(I, function->args);
+    LamArgs *args = makePrintArgs(I, function->args);
     PROTECT(args);
-    int nargs = countLamList(args);
+    int nargs = countLamArgs(args);
     if (nargs == 0) {
         UNPROTECT(save);
         return exp;
@@ -292,7 +292,7 @@ static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    LamList *args = makePrintArgs(I, tuple);
+    LamArgs *args = makePrintArgs(I, tuple);
     PROTECT(args);
     LamApply *apply = newLamApply(I, exp, args);
     PROTECT(apply);
@@ -332,7 +332,7 @@ static LamExp *makePrintConstructorArg(ParserInfo I, LamTypeConstructorType *arg
     int save = PROTECT(accessor);
     LamExp *printer = makePrinter(I, arg);
     PROTECT(printer);
-    LamList *args = newLamList(I, accessor, NULL);
+    LamArgs *args = newLamArgs(I, accessor, NULL);
     PROTECT(args);
     LamApply *apply = newLamApply(I, printer, args);
     PROTECT(apply);
@@ -400,7 +400,7 @@ static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     PROTECT(seq);
     seq = newLamSequence(I, header, seq);
     PROTECT(seq);
-    LamExp *res = newLamExp_List(I, seq);
+    LamExp *res = newLamExp_Sequence(I, seq);
     UNPROTECT(save);
     return res;
 }
@@ -503,7 +503,7 @@ static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructo
     PROTECT(seq);
     seq = newLamSequence(I, res, seq);
     PROTECT(seq);
-    res = newLamExp_List(I, seq);
+    res = newLamExp_Sequence(I, seq);
     UNPROTECT(save);
     return res;
 }

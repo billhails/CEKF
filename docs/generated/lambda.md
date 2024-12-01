@@ -16,8 +16,6 @@ LamVarList --next--> LamVarList
 LamPrimApp --type--> LamPrimOp
 LamPrimApp --exp1--> LamExp
 LamPrimApp --exp2--> LamExp
-LamUnaryApp --type--> LamUnaryOp
-LamUnaryApp --exp--> LamExp
 LamSequence --exp--> LamExp
 LamSequence --next--> LamSequence
 LamList --exp--> LamExp
@@ -116,7 +114,6 @@ LamExp --var--> HashSymbol
 LamExp --stdint--> int
 LamExp --biginteger--> MaybeBigInt
 LamExp --prim--> LamPrimApp
-LamExp --unary--> LamUnaryApp
 LamExp --list--> LamSequence
 LamExp --makeVec--> LamMakeVec
 LamExp --construct--> LamConstruct
@@ -156,7 +153,6 @@ LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
 LamInfo --namespaceInfo--> LamContext
 LamInfo --nsid--> int
 LamPrimOp["enum LamPrimOp"]
-LamUnaryOp["enum LamUnaryOp"]
 LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp
 LamExpVal
 LamExpType

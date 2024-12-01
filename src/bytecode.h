@@ -40,7 +40,6 @@ void resetByteCodeArray(ByteCodeArray *b);
 void writeAexpLam(AexpLam *x, ByteCodeArray *b);
 void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b);
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
-void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b);
 void writeAexpList(AexpList *x, ByteCodeArray *b);
 void writeCexpApply(CexpApply *x, ByteCodeArray *b);
 void writeCexpIf(CexpIf *x, ByteCodeArray *b);

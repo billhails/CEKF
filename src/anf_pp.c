@@ -122,9 +122,6 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         case AEXPPRIMOP_TYPE_LE:
             eprintf("le ");
             break;
-        case AEXPPRIMOP_TYPE_XOR:
-            eprintf("xor ");
-            break;
         case AEXPPRIMOP_TYPE_VEC:
             eprintf("vec ");
             break;
@@ -145,19 +142,6 @@ void ppAexpPrimApp(AexpPrimApp *x) {
         eprintf(" ");
         ppAexp(x->exp2);
     }
-    eprintf(")");
-}
-
-void ppAexpUnaryApp(AexpUnaryApp *x) {
-    eprintf("(");
-    switch (x->type) {
-        case AEXPUNARYOP_TYPE_NOT:
-            eprintf("not ");
-            break;
-        default:
-            cant_happen("unrecognized op in ppAexpUnaryApp (%d)", x->type);
-    }
-    ppAexp(x->exp);
     eprintf(")");
 }
 
@@ -389,9 +373,6 @@ void ppAexp(Aexp *x) {
             break;
         case AEXP_TYPE_PRIM:
             ppAexpPrimApp(x->val.prim);
-            break;
-        case AEXP_TYPE_UNARY:
-            ppAexpUnaryApp(x->val.unary);
             break;
         case AEXP_TYPE_MAKEVEC:
             ppAexpMakeVec(x->val.makeVec);

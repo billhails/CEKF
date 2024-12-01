@@ -43,7 +43,6 @@ static CTEnv *annotateExp(Exp *x, CTEnv *env);
 static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env);
 static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env);
 static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
-static CTEnv *annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env);
 static CTEnv *annotateAexpList(AexpList *x, CTEnv *env);
 static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env);
 static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env);
@@ -116,18 +115,6 @@ static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
 #endif
     annotateAexp(x->exp1, env);
     annotateAexp(x->exp2, env);
-    return env;
-}
-
-static CTEnv *annotateAexpUnaryApp(AexpUnaryApp *x, CTEnv *env) {
-#ifdef DEBUG_ANNOTATE2
-    eprintf("annotateAexpPrimApp ");
-    ppAexpUnaryApp(x);
-    eprintf("  ");
-    ppCTEnv(env);
-    eprintf("\n");
-#endif
-    annotateAexp(x->exp, env);
     return env;
 }
 
@@ -387,8 +374,6 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
             return env;
         case AEXP_TYPE_PRIM:
             return annotateAexpPrimApp(x->val.prim, env);
-        case AEXP_TYPE_UNARY:
-            return annotateAexpUnaryApp(x->val.unary, env);
         case AEXP_TYPE_MAKEVEC:
             return annotateAexpMakeVec(x->val.makeVec, env);
         case AEXP_TYPE_NAMESPACES:

@@ -32,7 +32,6 @@ void ppAexpVarList(AexpVarList *x);
 void ppAexpVar(HashSymbol *x);
 void ppAexpAnnotatedVar(AexpAnnotatedVar *x);
 void ppAexpPrimApp(AexpPrimApp *x);
-void ppAexpUnaryApp(AexpUnaryApp *x);
 void ppAexpList(AexpList *x);
 void ppAexpIntList(AexpIntList *x);
 void ppAexpMakeList(AexpList *x);

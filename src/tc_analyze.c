@@ -62,7 +62,6 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
-static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng);
 static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng);
 static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env, TcNg *ng);
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng);
@@ -79,7 +78,7 @@ static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng);
 static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
 static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
-static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
+static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng);
 static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
@@ -229,10 +228,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeBigInteger());
         case LAMEXP_TYPE_PRIM:
             return prune(analyzePrim(exp->val.prim, env, ng));
-        case LAMEXP_TYPE_UNARY:
-            return prune(analyzeUnary(exp->val.unary, env, ng));
-        case LAMEXP_TYPE_LIST:
-            return prune(analyzeSequence(exp->val.list, env, ng));
+        case LAMEXP_TYPE_SEQUENCE:
+            return prune(analyzeSequence(exp->val.sequence, env, ng));
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered make-vec in analyzeExp");
         case LAMEXP_TYPE_CONSTRUCT:
@@ -408,22 +405,6 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     return res;
 }
 
-static TcType *analyzeBinaryBool(LamExp *exp1, LamExp *exp2, TcEnv *env,
-                                 TcNg *ng) {
-    // ENTER(analyzeBinaryBool);
-    (void) analyzeBooleanExp(exp1, env, ng);
-    TcType *res = analyzeBooleanExp(exp2, env, ng);
-    // LEAVE(analyzeBinaryBool);
-    return res;
-}
-
-static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeUnaryBool);
-    TcType *res = analyzeBooleanExp(exp, env, ng);
-    // LEAVE(analyzeUnaryBool);
-    return res;
-}
-
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrim);
     TcType *res = NULL;
@@ -450,27 +431,10 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
         case LAMPRIMOP_TYPE_VEC:
             cant_happen("encountered VEC in analyzePrim");
             break;
-        case LAMPRIMOP_TYPE_XOR:
-            res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
-            break;
         default:
             cant_happen("unrecognised type %d in analyzePrim", app->type);
     }
     // LEAVE(analyzePrim);
-    return res;
-}
-
-static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeUnary);
-    TcType *res = NULL;
-    switch (app->type) {
-        case LAMUNARYOP_TYPE_NOT:
-            res = analyzeUnaryBool(app->exp, env, ng);
-            break;
-        default:
-            cant_happen("unrecognized type %d in analyzeUnary", app->type);
-    }
-    // LEAVE(analyzeUnary);
     return res;
 }
 
@@ -583,7 +547,7 @@ static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
     return template->val.tuple->entries[index->vec];
 }
 
-static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
+static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng) {
     TcTypeArray *values = newTcTypeArray();
     int save = PROTECT(values);
     while (tuple != NULL) {
@@ -670,12 +634,12 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 // apply(fn) => fn
 // apply(fn, arg_1, arg_2, arg_3) => apply(apply(apply(fn, arg1), arg_2), arg_3)
 static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
-                                     LamList *args) {
+                                     LamArgs *args) {
     if (nargs == 1) {
         LamApply *res = newLamApply(CPI(function), function, args);
         return res;
     }
-    LamList *singleArg = newLamList(CPI(args), args->exp, NULL);
+    LamArgs *singleArg = newLamArgs(CPI(args), args->exp, NULL);
     int save = PROTECT(singleArg);
     LamApply *new = newLamApply(CPI(function), function, singleArg);
     PROTECT(new);
@@ -688,12 +652,12 @@ static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
 }
 
 static LamApply *curryLamApply(LamApply *apply) {
-    return curryLamApplyHelper(countLamList(apply->args), apply->function, apply->args);
+    return curryLamApplyHelper(countLamArgs(apply->args), apply->function, apply->args);
 }
 
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeApply);
-    switch (countLamList(apply->args)) {
+    switch (countLamArgs(apply->args)) {
         case 0:{
                 TcType *res = analyzeExp(apply->function, env, ng);
                 // LEAVE(analyzeApply);
@@ -823,8 +787,12 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
     TcType *type = analyzeExp(bindings->val, env, ng2);
     PROTECT(type);
     if (!unify(existingType, type, "letrec")) {
-        eprintf("while unifying %s with ", bindings->var->name);
+        eprintf("while unifying letrec %s with ", bindings->var->name);
         ppLamExp(bindings->val);
+        eprintf("\nExisting Type: ");
+        ppTcType(existingType);
+        eprintf("\nNew Type: ");
+        ppTcType(type);
         eprintf("\n");
         REPORT_PARSER_INFO(bindings->val);
     }
@@ -856,6 +824,15 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         processLetRecBinding(bindings, env, ng);
     }
     // HACK! second pass through fixes up forward references
+    if (!hadErrors()) {
+        for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
+             bindings = bindings->next) {
+            if (isLambdaBinding(bindings)) {
+                processLetRecBinding(bindings, env, ng);
+            }
+        }
+    }
+    // HACK! third pass through fixes up even more forward references
     if (!hadErrors()) {
         for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
              bindings = bindings->next) {
@@ -1812,7 +1789,7 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
 
 static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     if (a->name != b->name) {
-        can_happen("unification failed [usertype name mismatch]");
+        can_happen("\nunification failed [usertype name mismatch %s vs %s]", a->name->name, b->name->name);
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1820,7 +1797,7 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         return false;
     }
     if (a->ns != b->ns) {
-        can_happen("unification failed [usertype namespace mismatch]");
+        can_happen("\nunification failed [usertype namespace mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1838,7 +1815,7 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
         bArgs = bArgs->next;
     }
     if (aArgs != NULL || bArgs != NULL) {
-        can_happen("unification failed [usertype arg count mismatch]");
+        can_happen("\nunification failed [usertype arg count mismatch]");
         ppTcUserType(a);
         eprintf(" vs ");
         ppTcUserType(b);
@@ -1871,7 +1848,7 @@ static bool _unify(TcType *a, TcType *b) {
         return unify(b, a, "unify");
     } else {
         if (a->type != b->type) {
-            can_happen("unification failed [type mismatch]");
+            can_happen("\nunification failed [type mismatch]");
             ppTcType(a);
             eprintf(" vs ");
             ppTcType(b);

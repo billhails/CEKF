@@ -7,6 +7,18 @@ fn member {
     (x, _ @ t) { member(x, t) }
 }
 
+// unique: list(#a) -> list(#a)
+fn unique {
+    ([]) { [] }
+    (h @ t) {
+        if (member(h, t)) {
+            unique(t)
+        } else {
+            h @ unique(t)
+        }
+    }
+}
+
 // exclude: list(#t) -> list(#t) -> list(#t)
 fn exclude {
     (items, []) { [] }
@@ -59,8 +71,11 @@ fn foldr(func, acc, lst) {
 }
 
 // foldl1 (#a -> #a -> #a) -> list(#a) -> #a
-unsafe fn foldl1(func, h @ t) {
-    foldl(func, h, t)
+fn foldl1 {
+    (func, h @ t) {
+        foldl(func, h, t)
+    }
+    (_, _) { error("foldl1") }
 }
 
 // foldr1 (#a -> #a -> #a) -> list(#a) -> #a
@@ -82,22 +97,61 @@ fn scanl (func, acc, lst) {
     in scan([acc], lst)
 }
 
-// filter: (#a -> bool) list(#a) -> list(#a)
-// TCO, but does not preserve order
-fn filter(func, lst) {
+// filter: (#a -> bool) -> list(#a) -> list(#a)
+fn filter {
+    (f, []) { [] }
+    (f, h @ t) {
+        if (f(h)) {
+            h @ filter(f, t)
+        } else {
+            filter(f, t)
+        }
+    }
+}
+
+// filter_out: (#a -> bool) -> list(#a) -> list(#a)
+fn filter_not (f, l) {
+    filter(fn (x) { not f(x) }, l)
+}
+
+// indices: (#a -> bool) -> list(#a) -> list(number)
+// like filter but returns the indices of the matching elements
+fn indices(f, lst) {
     let
         fn helper {
-            ([], res) { res }
-            (h @ t, res) {
-                if (func(h)) {
-                    helper(t, h @ res)
+            ([], _) { [] }
+            (h @ t, n) {
+                if (f(h)) {
+                    n @ helper(t, n + 1)
                 } else {
-                    helper(t, res)
+                    helper(t, n + 1)
                 }
             }
         }
     in
-        helper(lst, [])
+        helper(lst, 0)
+}
+
+// nths: list(number) -> list(#a) -> list(#a)
+fn nths (indices, lst) {
+    map(fn (n) { nth(n, lst) }, indices)
+}
+
+// except_nth: number -> list(#a) -> list(#a)
+fn except_nth (index, lst) {
+    let
+        fn helper {
+            ([], _) { [] }
+            (h @ t, n) {
+                if (n == index) {
+                    helper(t, n + 1)
+                } else {
+                    h @ helper(t, n + 1)
+                }
+            }
+        }
+    in
+        helper(lst, 0)
 }
 
 // concat: list(list(#a)) -> list(#a)
@@ -149,9 +203,10 @@ fn repeat_prefix(n, v, tail) {
 }
 
 // nth: number -> list(#a) -> #a
-unsafe fn nth {
+fn nth {
     (0, h @ _) { h }
     (n, _ @ t) { nth(n - 1, t) }
+    (_, _) { error("nth") }
 }
 
 // sum: list(number) -> number
@@ -175,8 +230,19 @@ fn zipWith {
     (_, _, _) { [] }
 }
 
+// unzip: list(#(#a, #b)) -> #(list(#a), list(#b))
+fn unzip {
+    ([]) { #([], []) }
+    (#(x, y) @ rest) {
+        switch (unzip(rest)) {
+            (#(xs, ys)) { #(x @ xs, y @ ys) }
+        }
+    }
+}
+
 // last: list(#a) -> #a
-unsafe fn last {
+fn last {
+    ([]) { error("last") }
     ([a]) { a }
     (_ @ t) { last(t) }
 }

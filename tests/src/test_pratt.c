@@ -89,8 +89,8 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("(a -> b) -> c",                  "{ ->(->(a, b), c); }", false);
     test("a(b)",                           "{ a(b); }", false);
     test("a(b, c)",                        "{ a(b, c); }", false);
-    test("#(b)",                           "{ #(b); }", false);
-    test("#(b, c)",                        "{ #(b, c); }", false);
+    test("#(b)",                           "{ <tuple>(b); }", false);
+    test("#(b, c)",                        "{ <tuple>(b, c); }", false);
     test("a #b",                           "{ a; }", true);
     test("0x100",                          "{ 256; }", false);
     test("0X100i",                         "{ 256i; }", false);

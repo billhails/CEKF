@@ -1,0 +1,22 @@
+let
+    macro TEST(lhs, rhs) { fn { (true) { lhs } (false) { rhs } } }
+    infix right 20 "?" fn (tst, swtch) { swtch(tst) };
+    infix left 20 ":" TEST;
+in
+    //      +------+-------------+
+    //      |      |             |
+    //      |      +-----+---+   |
+    //      |      |     |   |   |
+    print true ? false ? 1 : 2 : 3
+
+// left 20; left 25
+// left 20; right 25
+// right 20; left 20
+//                +-------+
+//                |       |
+//                +---+   |
+//                |   |   |
+// true ? false ? 1 : 2 : 3
+// right 20; right 20
+//                    |   |
+// true ? false ? 1 : 2 : 3

@@ -94,11 +94,8 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_PRIM:
             ppLamPrimApp(exp->val.prim);
             break;
-        case LAMEXP_TYPE_UNARY:
-            ppLamUnary(exp->val.unary);
-            break;
-        case LAMEXP_TYPE_LIST:
-            ppLamSequence(exp->val.list);
+        case LAMEXP_TYPE_SEQUENCE:
+            ppLamSequence(exp->val.sequence);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             ppLamMakeVec(exp->val.makeVec);
@@ -253,9 +250,6 @@ void ppLamPrimOp(LamPrimOp type) {
         case LAMPRIMOP_TYPE_VEC:
             eprintf("vec");
             break;
-        case LAMPRIMOP_TYPE_XOR:
-            eprintf("xor");
-            break;
         case LAMPRIMOP_TYPE_MOD:
             eprintf("mod");
             break;
@@ -270,28 +264,6 @@ void ppLamPrimOp(LamPrimOp type) {
     }
 }
 
-void ppLamUnary(LamUnaryApp *unaryApp) {
-    if (unaryApp == NULL) {
-        eprintf("<NULL unaryApp>");
-        return;
-    }
-    eprintf("(");
-    ppLamUnaryOp(unaryApp->type);
-    eprintf(" ");
-    ppLamExp(unaryApp->exp);
-    eprintf(")");
-}
-
-void ppLamUnaryOp(LamUnaryOp type) {
-    switch (type) {
-        case LAMUNARYOP_TYPE_NOT:
-            eprintf("not");
-            break;
-        default:
-            cant_happen("unrecognised type %s in ppLamUnaryOp", lamUnaryOpName(type));
-    }
-}
-
 static void _ppLamSequence(LamSequence *sequence) {
     if (sequence == NULL)
         return;
@@ -302,17 +274,17 @@ static void _ppLamSequence(LamSequence *sequence) {
     }
 }
 
-static void _ppLamList(LamList *list) {
+static void _ppLamArgs(LamArgs *list) {
     if (list == NULL)
         return;
     eprintf(" ");
     ppLamExp(list->exp);
-    _ppLamList(list->next);
+    _ppLamArgs(list->next);
 }
 
-void ppLamMakeTuple(LamList *args) {
+void ppLamMakeTuple(LamArgs *args) {
     eprintf("(make-tuple");
-    _ppLamList(args);
+    _ppLamArgs(args);
     eprintf(")");
 }
 
@@ -328,7 +300,7 @@ void ppLamMakeVec(LamMakeVec *makeVec) {
         return;
     }
     eprintf("(make-vec");
-    _ppLamList(makeVec->args);
+    _ppLamArgs(makeVec->args);
     eprintf(")");
 }
 
@@ -339,7 +311,7 @@ void ppLamApply(LamApply *apply) {
     }
     eprintf("(");
     ppLamExp(apply->function);
-    _ppLamList(apply->args);
+    _ppLamArgs(apply->args);
     eprintf(")");
 }
 
@@ -677,7 +649,7 @@ void ppLamConstruct(LamConstruct *construct) {
     eprintf("(construct ");
     ppHashSymbol(construct->name);
     eprintf(":%d", construct->tag);
-    _ppLamList(construct->args);
+    _ppLamArgs(construct->args);
     eprintf(")");
 }
 

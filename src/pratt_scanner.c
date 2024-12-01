@@ -734,6 +734,8 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                     state = PRATTSTRINGSTATE_TYPE_END;
                 } else {
                     parserError(parser, "expected terminator");
+                    ++buffer->length;
+                    state = PRATTSTRINGSTATE_TYPE_END;
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_END:

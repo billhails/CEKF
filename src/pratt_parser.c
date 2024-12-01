@@ -85,7 +85,7 @@ static AstExpression        *expressionPrecedence(PrattParser *, int);
 static AstExpression        *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+// static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -202,7 +202,7 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0);
 
-    addRecord(table, TOK_COLON(),     NULL, 0,       infixLeft, 70,   NULL, 0);
+    addRecord(table, TOK_COLON(),     NULL, 0,       NULL, 0,         NULL, 0);
 
     addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 0,         NULL, 0);
 
@@ -1760,11 +1760,19 @@ static AstFunCall *conslist(PrattParser *parser) {
         AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
         PROTECT(nil);
         res = newAstFunCall(PI, nil, NULL);
+    } else if (check(parser, TOK_EOF())) {
+        parserError(parser, "unexpected EOF");
+        UNPROTECT(save);
+        return NULL;
     } else {
         AstExpression *expr = expression(parser);
         PROTECT(expr);
         match(parser, TOK_COMMA());
         AstFunCall *rest = conslist(parser);
+        if (rest == NULL) {
+            UNPROTECT(save);
+            return NULL;
+        }
         PROTECT(rest);
         AstExpression *fc = newAstExpression_FunCall(CPI(rest), rest);
         PROTECT(fc);
@@ -2007,6 +2015,7 @@ static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
+/*
 static AstExpression *infixLeft(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixLeft);
@@ -2017,6 +2026,7 @@ PrattToken *tok __attribute__((unused))) {
     UNPROTECT(save);
     return rhs;
 }
+*/
 
 static AstExpression *lookup(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {

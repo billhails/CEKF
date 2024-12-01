@@ -8,6 +8,7 @@ tmp_scm/
 cekf
 pratt_test
 tags
+xref
 .generated
 .*.swp
 .$*.drawio.*

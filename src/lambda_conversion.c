@@ -37,7 +37,7 @@
 char *lambda_conversion_function = NULL; // set by --lambda-conversion flag
 
 static LamLetRecBindings *convertFuncDefs(AstDefinitions *, LamContext *);
-static LamList *convertExpressions(AstExpressions *, LamContext *);
+static LamArgs *convertExpressions(AstExpressions *, LamContext *);
 static LamSequence *convertSequence(AstExpressions *, LamContext *);
 static LamLetRecBindings *prependDefinition(AstDefinition *, LamContext *, LamLetRecBindings *);
 static LamLetRecBindings *prependDefine(AstDefine *, LamContext *, LamLetRecBindings *);
@@ -166,7 +166,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
         body = newLamSequence(CPI(env), lamNamespaces, body);
         PROTECT(body);
     }
-    LamExp *letRecBody = newLamExp_List(CPI(body), body);
+    LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
@@ -176,7 +176,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
         PROTECT(letRec);
         result = newLamExp_Letrec(CPI(letRec), letRec);
     } else {
-        result = newLamExp_List(CPI(body), body);
+        result = newLamExp_Sequence(CPI(body), body);
     }
     PROTECT(result);
     if (typeDefList != NULL) {
@@ -219,7 +219,7 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
 }
 
 static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
-    LamList *expressions = convertExpressions(tuple, env);
+    LamArgs *expressions = convertExpressions(tuple, env);
     int save = PROTECT(expressions);
     LamExp *res = newLamExp_Make_tuple(CPI(expressions), expressions);
     UNPROTECT(save);
@@ -763,23 +763,23 @@ static HashSymbol *dollarSubstitute(HashSymbol *symbol, ParserInfo I __attribute
 }
 
 #define CHECK_ONE_ARG(name, args) do { \
-    int count = countLamList(args); \
+    int count = countLamArgs(args); \
     if (count != 1) \
         conversionError(CPI(args), "expected 1 arg in " #name ", got %d", count); \
 } while(0)
 
 #define CHECK_TWO_ARGS(name, args) do { \
-    int count = countLamList(args); \
+    int count = countLamArgs(args); \
     if (count != 2) \
         conversionError(CPI(args), "expected 2 args in " #name ", got %d", count); \
 } while(0)
 
-static LamExp *makeCallCC(LamList *args) {
+static LamExp *makeCallCC(LamArgs *args) {
     CHECK_ONE_ARG(makeCallCC, args);
     return newLamExp_Callcc(CPI(args), args->exp);
 }
 
-static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
+static LamExp *makeBinOp(LamPrimOp opCode, LamArgs *args) {
     CHECK_TWO_ARGS(makeBinOp, args);
     LamPrimApp *app = newLamPrimApp(CPI(args), opCode, args->exp, args->next->exp);
     int save = PROTECT(app);
@@ -788,7 +788,7 @@ static LamExp *makeBinOp(LamPrimOp opCode, LamList *args) {
     return exp;
 }
 
-static LamExp *makeLamAmb(LamList *args) {
+static LamExp *makeLamAmb(LamArgs *args) {
     CHECK_TWO_ARGS(makeLamAmb, args);
     LamAmb *lamAmb = newLamAmb(CPI(args), args->exp, args->next->exp);
     int save = PROTECT(lamAmb);
@@ -797,13 +797,13 @@ static LamExp *makeLamAmb(LamList *args) {
     return res;
 }
 
-static LamExp *makeUnaryNeg(LamList *args) {
+static LamExp *makeUnaryNeg(LamArgs *args) {
     CHECK_ONE_ARG(makeUnaryNeg, args);
     MaybeBigInt *num = fakeBigInt(0, false);
     int save = PROTECT(num);
     LamExp *zero = newLamExp_Biginteger(CPI(args), num);
     PROTECT(zero);
-    args = newLamList(CPI(args), zero, args);
+    args = newLamArgs(CPI(args), zero, args);
     PROTECT(args);
     LamExp *result = makeBinOp(LAMPRIMOP_TYPE_SUB, args);
     UNPROTECT(save);
@@ -830,21 +830,21 @@ static LamExp *thunkMacroArg(LamExp *arg) {
     return res;
 }
 
-static LamList *wrapMacroArgs(LamList *args) {
+static LamArgs *wrapMacroArgs(LamArgs *args) {
     if (args == NULL) {
         return NULL;
     }
-    LamList *next = wrapMacroArgs(args->next);
+    LamArgs *next = wrapMacroArgs(args->next);
     int save = PROTECT(next);
     LamExp *arg = thunkMacroArg(args->exp);
     PROTECT(arg);
-    LamList *this = newLamList(CPI(arg), arg, next);
+    LamArgs *this = newLamArgs(CPI(arg), arg, next);
     UNPROTECT(save);
     return this;
 }
 
 // wrap each argument to the macro in a thunk, the macro will invoke
-static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamList *args) {
+static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
     args = wrapMacroArgs(args);
     int save = PROTECT(args);
     LamExp *macro = newLamExp_Var(PI, symbol);
@@ -856,7 +856,7 @@ static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamList *args) {
     return res;
 }
 
-static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamList *args, LamContext *env) {
+static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args, LamContext *env) {
     if (isMacro(PI, symbol, env)) {
         return wrapMacro(PI, symbol, args);
     }
@@ -903,7 +903,7 @@ static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
     return NULL;
 }
 
-static LamExp *makeApplication(LamExp *fun, LamList *args) {
+static LamExp *makeApplication(LamExp *fun, LamArgs *args) {
     LamApply *apply = newLamApply(CPI(fun), fun, args);
     int save = PROTECT(apply);
     LamExp *result = newLamExp_Apply(CPI(apply), apply);
@@ -911,13 +911,13 @@ static LamExp *makeApplication(LamExp *fun, LamList *args) {
     return result;
 }
 
-static LamList *varListToList(LamVarList *list) {
+static LamArgs *varListToList(LamVarList *list) {
     if (list == NULL) return NULL;
-    LamList *next = varListToList(list->next);
+    LamArgs *next = varListToList(list->next);
     int save = PROTECT(next);
     LamExp *var = newLamExp_Var(CPI(list), list->var);
     PROTECT(var);
-    LamList *this = newLamList(CPI(var), var, next);
+    LamArgs *this = newLamArgs(CPI(var), var, next);
     UNPROTECT(save);
     return this;
 }
@@ -1018,15 +1018,15 @@ static AstExpression *findTaggedExpression(HashSymbol *tag, AstTaggedExpressions
     return findTaggedExpression(tag, tags->next);
 }
 
-static LamList *convertTagsToArgs(LamTypeTags *lamTags, AstTaggedExpressions *astTags, LamContext *env) {
+static LamArgs *convertTagsToArgs(LamTypeTags *lamTags, AstTaggedExpressions *astTags, LamContext *env) {
     // lamTags are in canonical order
     if (lamTags == NULL) return NULL;
-    LamList *rest = convertTagsToArgs(lamTags->next, astTags, env);
+    LamArgs *rest = convertTagsToArgs(lamTags->next, astTags, env);
     int save = PROTECT(rest);
     AstExpression *expression = findTaggedExpression(lamTags->tag, astTags);
     LamExp *lamExp = convertExpression(expression, env);
     PROTECT(lamExp);
-    LamList *this = newLamList(CPI(lamExp), lamExp, rest);
+    LamArgs *this = newLamArgs(CPI(lamExp), lamExp, rest);
     UNPROTECT(save);
     return this;
 }
@@ -1034,14 +1034,14 @@ static LamList *convertTagsToArgs(LamTypeTags *lamTags, AstTaggedExpressions *as
 // (costructor4 arg1 arg2) =>
 // ((lambda (x1 x2 x3 x4) (constructor4 x1 x2 x3 x4)) arg1 arg2)
 
-static LamExp *makeConstructorApplication(LamExp *constructor, LamList *args) {
-    int nargs = (int) countLamList(args);
+static LamExp *makeConstructorApplication(LamExp *constructor, LamArgs *args) {
+    int nargs = (int) countLamArgs(args);
     LamExp *result;
     int arity = findUnderlyingArity(constructor);
     if (nargs < arity) {
         LamVarList *fargs = genSymVarList(CPI(constructor), arity);
         int save = PROTECT(fargs);
-        LamList *aargs = varListToList(fargs);
+        LamArgs *aargs = varListToList(fargs);
         PROTECT(aargs);
         LamApply *innerApply = newLamApply(CPI(constructor), constructor, aargs);
         PROTECT(innerApply);
@@ -1078,7 +1078,7 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
         conversionError(CPI(constructor), "wrong number of args in structure application");
         return lamExpError(CPI(tags));
     }
-    LamList *args = convertTagsToArgs(constructor->val.constructor->tags, tags, env);
+    LamArgs *args = convertTagsToArgs(constructor->val.constructor->tags, tags, env);
     int save = PROTECT(args);
     LamApply *apply = newLamApply(CPI(constructor), constructor, args);
     PROTECT(apply);
@@ -1124,7 +1124,7 @@ static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
 }
 
 static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
-    LamList *args = convertExpressions(funCall->arguments, env);
+    LamArgs *args = convertExpressions(funCall->arguments, env);
     int save = PROTECT(args);
     LamExp *function = convertExpression(funCall->function, env);
     PROTECT(function);
@@ -1314,17 +1314,17 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) 
 static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     LamExp *exp = convertExpression(value, env);
     int save = PROTECT(exp);
-    LamList *args = newLamList(CPI(exp), exp, NULL);
+    LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = stringToLamList(CPI(exp), exp->_yy_parser_info.filename);
+    LamExp *fileName = stringToLamArgs(CPI(exp), exp->_yy_parser_info.filename);
     PROTECT(fileName);
-    args = newLamList(CPI(exp), fileName, args);
+    args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
     MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineno, false);
     PROTECT(num);
     LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
     PROTECT(lineNo);
-    args = newLamList(CPI(lineNo), lineNo, args);
+    args = newLamArgs(CPI(lineNo), lineNo, args);
     PROTECT(args);
     LamExp *function = newLamExp_Var(CPI(value), assertSymbol());
     PROTECT(function);
@@ -1336,17 +1336,17 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
 static LamExp *convertError(AstExpression *value, LamContext *env) {
     LamExp *exp = convertExpression(value, env);
     int save = PROTECT(exp);
-    LamList *args = newLamList(CPI(exp), exp, NULL);
+    LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = stringToLamList(CPI(value), value->_yy_parser_info.filename);
+    LamExp *fileName = stringToLamArgs(CPI(value), value->_yy_parser_info.filename);
     PROTECT(fileName);
-    args = newLamList(CPI(exp), fileName, args);
+    args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
     MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineno, false);
     PROTECT(num);
     LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
     PROTECT(lineNo);
-    args = newLamList(CPI(lineNo), lineNo, args);
+    args = newLamArgs(CPI(lineNo), lineNo, args);
     PROTECT(args);
     LamExp *function = newLamExp_Var(CPI(value), fnErrorSymbol());
     PROTECT(function);
@@ -1426,15 +1426,15 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
     return result;
 }
 
-static LamList *convertExpressions(AstExpressions *expressions,
+static LamArgs *convertExpressions(AstExpressions *expressions,
                                    LamContext *env) {
     if (expressions == NULL)
         return NULL;
-    LamList *next = convertExpressions(expressions->next, env);
+    LamArgs *next = convertExpressions(expressions->next, env);
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
     (void) PROTECT(exp);
-    LamList *this = newLamList(CPI(exp), exp, next);
+    LamArgs *this = newLamArgs(CPI(exp), exp, next);
     UNPROTECT(save);
     return this;
 }

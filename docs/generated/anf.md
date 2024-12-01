@@ -25,8 +25,6 @@ AexpAnnotatedVar --var--> HashSymbol
 AexpPrimApp --type--> AexpPrimOp
 AexpPrimApp --exp1--> Aexp
 AexpPrimApp --exp2--> Aexp
-AexpUnaryApp --type--> AexpUnaryOp
-AexpUnaryApp --exp--> Aexp
 AexpList --exp--> Aexp
 AexpList --next--> AexpList
 AexpIntList --integer--> int
@@ -80,7 +78,6 @@ Aexp --biginteger--> MaybeBigInt
 Aexp --littleinteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp
-Aexp --unary--> AexpUnaryApp
 Aexp --makeVec--> AexpMakeVec
 Aexp --namespaces--> AexpNamespaces
 Cexp --back--> void_ptr
@@ -101,7 +98,6 @@ Exp --let--> ExpLet
 Exp --lookup--> ExpLookup
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
-AexpUnaryOp["enum AexpUnaryOp"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
 CTEnvArray["CTEnvArray[]"] --entries--> CTEnv
 CexpCondCasesVal

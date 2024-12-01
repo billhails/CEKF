@@ -92,14 +92,6 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, TpmcSubstitutionTa
     return prim;
 }
 
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, TpmcSubstitutionTable
-                                              *substitutions) {
-    ENTER(performUnarySubstitutions);
-    unary->exp = lamPerformSubstitutions(unary->exp, substitutions);
-    LEAVE(performUnarySubstitutions);
-    return unary;
-}
-
 static LamSequence *performSequenceSubstitutions(LamSequence *sequence, TpmcSubstitutionTable
                                                  *substitutions) {
     ENTER(performSequenceSubstitutions);
@@ -114,16 +106,16 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence, TpmcSubs
     return sequence;
 }
 
-static LamList *performListSubstitutions(LamList *list, TpmcSubstitutionTable
+static LamArgs *performArgsSubstitutions(LamArgs *list, TpmcSubstitutionTable
                                          *substitutions) {
-    ENTER(performListSubstitutions);
+    ENTER(performArgsSubstitutions);
     if (list == NULL) {
-        LEAVE(performListSubstitutions);
+        LEAVE(performArgsSubstitutions);
         return NULL;
     }
-    list->next = performListSubstitutions(list->next, substitutions);
+    list->next = performArgsSubstitutions(list->next, substitutions);
     list->exp = lamPerformSubstitutions(list->exp, substitutions);
-    LEAVE(performListSubstitutions);
+    LEAVE(performArgsSubstitutions);
     return list;
 }
 
@@ -147,7 +139,7 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, TpmcSubstitution
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
                                                *substitutions) {
     ENTER(performMakeVecSubstitutions);
-    makeVec->args = performListSubstitutions(makeVec->args, substitutions);
+    makeVec->args = performArgsSubstitutions(makeVec->args, substitutions);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
@@ -166,7 +158,7 @@ static LamConstruct *performConstructSubstitutions(LamConstruct *construct, Tpmc
                                                    *substitutions) {
     ENTER(performConstructSubstitutions);
     construct->args =
-        performListSubstitutions(construct->args, substitutions);
+        performArgsSubstitutions(construct->args, substitutions);
     LEAVE(performConstructSubstitutions);
     return construct;
 }
@@ -175,7 +167,7 @@ static LamApply *performApplySubstitutions(LamApply *apply, TpmcSubstitutionTabl
                                            *substitutions) {
     ENTER(performApplySubstitutions);
     apply->function = lamPerformSubstitutions(apply->function, substitutions);
-    apply->args = performListSubstitutions(apply->args, substitutions);
+    apply->args = performArgsSubstitutions(apply->args, substitutions);
     LEAVE(performApplySubstitutions);
     return apply;
 }
@@ -357,13 +349,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 exp->val.prim =
                     performPrimSubstitutions(exp->val.prim, substitutions);
                 break;
-            case LAMEXP_TYPE_UNARY:
-                exp->val.unary =
-                    performUnarySubstitutions(exp->val.unary, substitutions);
-                break;
-            case LAMEXP_TYPE_LIST:
-                exp->val.list =
-                    performSequenceSubstitutions(exp->val.list, substitutions);
+            case LAMEXP_TYPE_SEQUENCE:
+                exp->val.sequence =
+                    performSequenceSubstitutions(exp->val.sequence, substitutions);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec =
@@ -422,7 +410,7 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 break;
             case LAMEXP_TYPE_MAKE_TUPLE:
                 exp->val.make_tuple =
-                    performListSubstitutions(exp->val.make_tuple, substitutions);
+                    performArgsSubstitutions(exp->val.make_tuple, substitutions);
                 break;
             case LAMEXP_TYPE_TUPLE_INDEX:
                 exp->val.tuple_index =

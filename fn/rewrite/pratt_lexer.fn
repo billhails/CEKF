@@ -1,0 +1,34 @@
+namespace
+
+link "../listutils.fn" as lst;
+infix left 80 "|>" fn (l, f) { lst.map(f, l) };
+infix left 80 "|?" fn (l, f) { lst.filter(f, l) };
+
+typedef Token {
+    Atom(char) |
+    Op(char) |
+    Eof
+}
+
+typedef Lexer { Lexer(list(Token)) }
+
+fn new (str) {
+    Lexer(str |?
+        fn { (' ') | ('\n') | ('\t') { false } (_) { true } } |>
+        fn (c) { if ((c >= '0' and c <= '9') or
+                     (c >= 'a' and c <= 'z') or
+                     (c >= 'A' and c <= 'Z')) { Atom(c) }
+                 else { Op(c) }
+        }
+    )
+}
+
+fn next {
+    (Lexer(h @ t)) { some(#(h, Lexer(t))) }
+    (Lexer([])) { nothing }
+}
+
+fn peek {
+    (Lexer(h @ _)) { some(h) }
+    (Lexer([])) { nothing }
+}

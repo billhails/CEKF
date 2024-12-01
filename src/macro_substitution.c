@@ -129,13 +129,6 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, LamMacroArgsTable 
     return prim;
 }
 
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, LamMacroArgsTable *symbols) {
-    ENTER(performUnarySubstitutions);
-    unary->exp = lamPerformMacroSubstitutions(unary->exp, symbols);
-    LEAVE(performUnarySubstitutions);
-    return unary;
-}
-
 static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacroArgsTable *symbols) {
     ENTER(performSequenceSubstitutions);
     if (sequence == NULL) {
@@ -149,15 +142,15 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacro
     return sequence;
 }
 
-static LamList *performListSubstitutions(LamList *list, LamMacroArgsTable *symbols) {
-    ENTER(performListSubstitutions);
+static LamArgs *performArgsSubstitutions(LamArgs *list, LamMacroArgsTable *symbols) {
+    ENTER(performArgsSubstitutions);
     if (list == NULL) {
-        LEAVE(performListSubstitutions);
+        LEAVE(performArgsSubstitutions);
         return NULL;
     }
-    list->next = performListSubstitutions(list->next, symbols);
+    list->next = performArgsSubstitutions(list->next, symbols);
     list->exp = lamPerformMacroSubstitutions(list->exp, symbols);
-    LEAVE(performListSubstitutions);
+    LEAVE(performArgsSubstitutions);
     return list;
 }
 
@@ -179,7 +172,7 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsTabl
 
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, LamMacroArgsTable *symbols) {
     ENTER(performMakeVecSubstitutions);
-    makeVec->args = performListSubstitutions(makeVec->args, symbols);
+    makeVec->args = performArgsSubstitutions(makeVec->args, symbols);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
@@ -195,7 +188,7 @@ static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstru
 static LamConstruct *performConstructSubstitutions(LamConstruct *construct, LamMacroArgsTable *symbols) {
     ENTER(performConstructSubstitutions);
     construct->args =
-        performListSubstitutions(construct->args, symbols);
+        performArgsSubstitutions(construct->args, symbols);
     LEAVE(performConstructSubstitutions);
     return construct;
 }
@@ -203,7 +196,7 @@ static LamConstruct *performConstructSubstitutions(LamConstruct *construct, LamM
 static LamApply *performApplySubstitutions(LamApply *apply, LamMacroArgsTable *symbols) {
     ENTER(performApplySubstitutions);
     apply->function = lamPerformMacroSubstitutions(apply->function, symbols);
-    apply->args = performListSubstitutions(apply->args, symbols);
+    apply->args = performArgsSubstitutions(apply->args, symbols);
     LEAVE(performApplySubstitutions);
     return apply;
 }
@@ -392,11 +385,8 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSubstitutions(exp->val.prim, symbols);
                 break;
-            case LAMEXP_TYPE_UNARY:
-                exp->val.unary = performUnarySubstitutions(exp->val.unary, symbols);
-                break;
-            case LAMEXP_TYPE_LIST:
-                exp->val.list = performSequenceSubstitutions(exp->val.list, symbols);
+            case LAMEXP_TYPE_SEQUENCE:
+                exp->val.sequence = performSequenceSubstitutions(exp->val.sequence, symbols);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, symbols);
@@ -438,7 +428,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
                 exp->val.amb = performAmbSubstitutions(exp->val.amb, symbols);
                 break;
             case LAMEXP_TYPE_MAKE_TUPLE:
-                exp->val.make_tuple = performListSubstitutions(exp->val.make_tuple, symbols);
+                exp->val.make_tuple = performArgsSubstitutions(exp->val.make_tuple, symbols);
                 break;
             case LAMEXP_TYPE_TUPLE_INDEX:
                 exp->val.tuple_index = performTupleIndexSubstitutions(exp->val.tuple_index, symbols);

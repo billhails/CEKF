@@ -1,0 +1,12 @@
+let
+    link "dictionary.fn" as dictionary;
+    foreach = dictionary.foreach;
+    lookup = dictionary.lookup;
+    insert = dictionary.insert;
+    delete = dictionary.delete;
+    make = dictionary.make;
+    fn lu (dict, key) { lookup(key, dict) }
+    infix left 100 "?" lu;
+
+in
+    print(make("abc", [1, 2, 3]) ? 'b');

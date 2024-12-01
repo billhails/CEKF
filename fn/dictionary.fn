@@ -32,7 +32,7 @@ print Dict(pt, pu, d) {
         d;
 }
 
-unsafe fn foreach {
+fn foreach {
     (_, E) | (_, EE) { nothing }
     (f, D(_, l, #(t, u), r)) {
         foreach(f, l);
@@ -40,6 +40,26 @@ unsafe fn foreach {
         foreach(f, r);
         nothing;
     }
+}
+
+fn keys (d) {
+    let fn h {
+        (E, lst) | (EE, lst) { lst }
+        (D(_, l, #(k, _), r), lst) {
+            h(l, k @ h(r, lst))
+        }
+    }
+    in h(d, [])
+}
+
+fn values (d) {
+    let fn h {
+        (E, lst) | (EE, lst) { lst }
+        (D(_, l, #(_, v), r), lst) {
+            h(l, v @ h(r, lst))
+        }
+    }
+    in h(d, [])
 }
 
 fn balance {
@@ -53,7 +73,7 @@ fn balance {
 }
 
 // #t -> Dict(#t, #u) -> Maybe(#u)
-unsafe fn lookup {
+fn lookup {
     (_, E) | (_, EE) { nothing }
     (x, D(_, _, #(x, y), _)) { some(y) }
     (x, D(_, a, #(y, _), b)) {
@@ -72,7 +92,7 @@ fn insert(x, v, s) {
             (D(R, a, x, t=D(R, _, _, _))) { D(B, a, x, t) }
             (t) { t }
         }
-        unsafe fn ins {
+        fn ins {
             (x, EE) | (x, E) { D(R, E, #(x, v), E) }
             (x, D(c, a, #(x, _), b)) { D(c, a, #(x, v), b) }
             (x, D(color, a, s=#(y, _), b)) {
@@ -89,7 +109,7 @@ fn insert(x, v, s) {
 
 fn delete(x, s) {
     let
-        unsafe fn del {
+        fn del {
             (_, EE, throw) | (_, E, throw) { throw(s) }
             (x, D(R, E, #(x, _), E), _) { E }
             (x, D(B, E, #(x, _), E), _) { EE }
@@ -152,5 +172,5 @@ fn delete(x, s) {
 }
 
 fn make (keys, values) {
-    list.foldl(unsafe fn (#(k, v), d) { insert(k, v, d) }, E, list.zip(keys, values))
+    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, E, list.zip(keys, values))
 }
