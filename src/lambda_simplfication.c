@@ -86,15 +86,15 @@ static LamExp *performSequenceSimplifications(ParserInfo I, LamSequence *sequenc
     return res;
 }
 
-static LamList *performListSimplifications(LamList *list) {
-    ENTER(performListSimplifications);
+static LamArgs *performArgsSimplifications(LamArgs *list) {
+    ENTER(performArgsSimplifications);
     if (list == NULL) {
-        LEAVE(performListSimplifications);
+        LEAVE(performArgsSimplifications);
         return NULL;
     }
-    list->next = performListSimplifications(list->next);
+    list->next = performArgsSimplifications(list->next);
     list->exp = lamPerformSimplifications(list->exp);
-    LEAVE(performListSimplifications);
+    LEAVE(performArgsSimplifications);
     return list;
 }
 
@@ -116,7 +116,7 @@ static LamLookup *performLookupSimplifications(LamLookup *lookup) {
 
 static LamMakeVec *performMakeVecSimplifications(LamMakeVec *makeVec) {
     ENTER(performMakeVecSimplifications);
-    makeVec->args = performListSimplifications(makeVec->args);
+    makeVec->args = performArgsSimplifications(makeVec->args);
     LEAVE(performMakeVecSimplifications);
     return makeVec;
 }
@@ -130,7 +130,7 @@ static LamDeconstruct *performDeconstructSimplifications(LamDeconstruct *deconst
 
 static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
     ENTER(performConstructSimplifications);
-    construct->args = performListSimplifications(construct->args);
+    construct->args = performArgsSimplifications(construct->args);
     LEAVE(performConstructSimplifications);
     return construct;
 }
@@ -138,7 +138,7 @@ static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
 static LamApply *performApplySimplifications(LamApply *apply) {
     ENTER(performApplySimplifications);
     apply->function = lamPerformSimplifications(apply->function);
-    apply->args = performListSimplifications(apply->args);
+    apply->args = performArgsSimplifications(apply->args);
     LEAVE(performApplySimplifications);
     return apply;
 }
@@ -342,7 +342,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 exp->val.amb = performAmbSimplifications(exp->val.amb);
                 break;
             case LAMEXP_TYPE_MAKE_TUPLE:
-                exp->val.make_tuple = performListSimplifications(exp->val.make_tuple);
+                exp->val.make_tuple = performArgsSimplifications(exp->val.make_tuple);
                 break;
             case LAMEXP_TYPE_TUPLE_INDEX:
                 exp->val.tuple_index = performTupleIndexSimplifications(exp->val.tuple_index);

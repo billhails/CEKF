@@ -26,7 +26,7 @@ static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x);
 static LamLam *inlineLam(LamLam *x);
 static LamPrimApp *inlinePrim(LamPrimApp *x);
 static LamSequence *inlineSequence(LamSequence *x);
-static LamList *inlineList(LamList *x);
+static LamArgs *inlineArgs(LamArgs *x);
 static LamExp *inlineApply(LamApply *x);
 static LamExp *inlineConstant(LamTypeConstructorInfo *x);
 static LamIff *inlineIff(LamIff *x);
@@ -42,7 +42,7 @@ static LamCond *inlineCond(LamCond *x);
 static LamCondCases *inlineCondCases(LamCondCases *x);
 static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x);
 static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x);
-static LamExp *makeConstruct(ParserInfo, HashSymbol *name, int tag, LamList *args);
+static LamExp *makeConstruct(ParserInfo, HashSymbol *name, int tag, LamArgs *args);
 static LamExp *makeConstant(ParserInfo, HashSymbol *name, int tag);
 static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x);
 
@@ -91,15 +91,15 @@ static LamSequence *inlineSequence(LamSequence *x) {
     return x;
 }
 
-static LamList *inlineList(LamList *x) {
+static LamArgs *inlineArgs(LamArgs *x) {
     if (x != NULL) {
-        x->next = inlineList(x->next);
+        x->next = inlineArgs(x->next);
         x->exp = inlineExp(x->exp);
     }
     return x;
 }
 
-static LamExp *makeConstruct(ParserInfo I, HashSymbol *name, int tag, LamList *args) {
+static LamExp *makeConstruct(ParserInfo I, HashSymbol *name, int tag, LamArgs *args) {
     LamConstruct *construct = newLamConstruct(I, name, tag, args);
     int save = PROTECT(construct);
     LamExp *res =
@@ -140,12 +140,12 @@ static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x) {
 }
 
 static LamExp *inlineApply(LamApply *x) {
-    x->args = inlineList(x->args);
+    x->args = inlineArgs(x->args);
     LamTypeConstructorInfo *info = resolveTypeConstructor(x->function);
     if (info == NULL) {
         x->function = inlineExp(x->function);
     } else {
-        int nargs = countLamList(x->args);
+        int nargs = countLamArgs(x->args);
         if (info->needsVec) {
             if (nargs == info->arity) {
                 return makeConstruct(CPI(x), info->name, info->index, x->args);
@@ -278,7 +278,7 @@ static LamExp *inlineExp(LamExp *x) {
             x->val.sequence = inlineSequence(x->val.sequence);
             break;
         case LAMEXP_TYPE_MAKE_TUPLE:
-            x->val.make_tuple = inlineList(x->val.make_tuple);
+            x->val.make_tuple = inlineArgs(x->val.make_tuple);
             break;
         case LAMEXP_TYPE_APPLY:
             x = inlineApply(x->val.apply);
@@ -320,12 +320,11 @@ static LamExp *inlineExp(LamExp *x) {
             x = inlineConstant(x->val.constructor);
             break;
         case LAMEXP_TYPE_CONSTRUCT:
-            x->val.construct->args = inlineList(x->val.construct->args);
+            x->val.construct->args = inlineArgs(x->val.construct->args);
             break;
         case LAMEXP_TYPE_COND:
             x->val.cond = inlineCond(x->val.cond);
             break;
-        case LAMEXP_TYPE_TUPLE:
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered %s", lamExpTypeName(x->type));
         default:

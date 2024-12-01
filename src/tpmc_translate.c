@@ -82,17 +82,17 @@ static LamVarList *makeCanonicalArgs(TpmcVariableTable *freeVariables) {
     return res;
 }
 
-static LamList *convertVarListToList(LamVarList *vars) {
+static LamArgs *convertVarListToList(LamVarList *vars) {
     ENTER(convertVarListToList);
     if (vars == NULL) {
         LEAVE(convertVarListToList);
         return NULL;
     }
-    LamList *next = convertVarListToList(vars->next);
+    LamArgs *next = convertVarListToList(vars->next);
     int save = PROTECT(next);
     LamExp *exp = newLamExp_Var(I, vars->var);
     PROTECT(exp);
-    LamList *this = newLamList(I, exp, next);
+    LamArgs *this = newLamArgs(I, exp, next);
     UNPROTECT(save);
     LEAVE(convertVarListToList);
     return this;
@@ -104,7 +104,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     int save = PROTECT(function);
     LamVarList *cargs = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(cargs);
-    LamList *args = convertVarListToList(cargs);
+    LamArgs *args = convertVarListToList(cargs);
     PROTECT(args);
     LamApply *apply = newLamApply(I, function, args);
     PROTECT(apply);

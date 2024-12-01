@@ -44,13 +44,13 @@ structs:
         exp: LamExp
         next: LamSequence
 
-    LamList:
+    LamArgs:
         exp: LamExp
-        next: LamList
+        next: LamArgs
 
     LamApply:
         function: LamExp
-        args: LamList
+        args: LamArgs
 
     LamLookup:
         nsid: int
@@ -69,7 +69,7 @@ structs:
     LamConstruct:
         name: HashSymbol # the name of the constructor
         tag: int         # the tag of the constructor
-        args: LamList    # the remaining arguments to make-vec
+        args: LamArgs    # the remaining arguments to make-vec
 
     LamDeconstruct:
         name: HashSymbol # name of the constructor being deconstructed
@@ -84,7 +84,7 @@ structs:
 
     LamMakeVec:
         nargs: int
-        args: LamList
+        args: LamArgs
 
     LamIff:
         condition: LamExp
@@ -234,8 +234,7 @@ unions:
         construct: LamConstruct
         deconstruct: LamDeconstruct
         tuple_index: LamTupleIndex
-        tuple: LamList
-        make_tuple: LamList
+        make_tuple: LamArgs
         tag: LamExp
         constant: LamConstant
         apply: LamApply

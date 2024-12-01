@@ -60,7 +60,7 @@ static Aexp *aexpNormalizeCharacter(Character character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
 static AexpNamespaceArray *aexpNormalizeNamespaces(LamNamespaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
-static AexpList *replaceLamList(LamList *list, LamExpTable *replacements);
+static AexpList *replaceLamArgs(LamArgs *, LamExpTable *);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
                             LamExpTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec,
@@ -84,7 +84,7 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
                                      LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
-static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail);
+static Exp *normalizeMakeTuple(LamArgs *, Exp *);
 static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
@@ -376,7 +376,7 @@ static Exp *normalizeCallCc(LamExp *lamExp, Exp *tail) {
 }
 
 static LamApply *printToApply(LamPrint *lamPrint) {
-    LamList *args = newLamList(CPI(lamPrint), lamPrint->exp, NULL);
+    LamArgs *args = newLamArgs(CPI(lamPrint), lamPrint->exp, NULL);
     int save = PROTECT(args);
     LamApply *lamApply = newLamApply(CPI(lamPrint), lamPrint->printer, args);
     UNPROTECT(save);
@@ -422,8 +422,8 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
     ENTER(normalizeMakeVec);
     LamExpTable *replacements = makeLamExpHashTable();
     int save = PROTECT(replacements);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamMakeVec->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *args = replaceLamArgs(lamMakeVec->args, replacements);
     int save2 = PROTECT(args);
     AexpMakeVec *aexpMakeVec = newAexpMakeVec(countAexpList(args), args);
     REPLACE_PROTECT(save2, aexpMakeVec);
@@ -440,19 +440,19 @@ static Exp *normalizeMakeVec(LamMakeVec *lamMakeVec, Exp *tail) {
 }
 
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nargs = countLamList(construct->args);
+    int nargs = countLamArgs(construct->args);
     LamExp *newArg =
         newLamExp_Stdint(CPI(construct), construct->tag);
     int save = PROTECT(newArg);
-    LamList *extraItem = newLamList(CPI(construct), newArg, construct->args);
+    LamArgs *extraItem = newLamArgs(CPI(construct), newArg, construct->args);
     PROTECT(extraItem);
     LamMakeVec *res = newLamMakeVec(CPI(construct), nargs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
-static LamMakeVec *tupleToMakeVec(LamList *tuple) {
-    int nargs = countLamList(tuple);
+static LamMakeVec *tupleToMakeVec(LamArgs *tuple) {
+    int nargs = countLamArgs(tuple);
     LamMakeVec *res = newLamMakeVec(CPI(tuple), nargs, tuple);
     return res;
 }
@@ -467,7 +467,7 @@ static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
     return res;
 }
 
-static Exp *normalizeMakeTuple(LamList *tuple, Exp *tail) {
+static Exp *normalizeMakeTuple(LamArgs *tuple, Exp *tail) {
     LamMakeVec *makeVec = tupleToMakeVec(tuple);
     int save = PROTECT(makeVec);
     Exp *res = normalizeMakeVec(makeVec, tail);
@@ -743,10 +743,10 @@ static Exp *normalizeApply(LamApply *lamApply, Exp *tail) {
     int save = PROTECT(replacements);
     Aexp *function = replaceLamExp(lamApply->function, replacements);
     int save2 = PROTECT(function);
-    DEBUG("calling replaceLamList");
-    AexpList *args = replaceLamList(lamApply->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *args = replaceLamArgs(lamApply->args, replacements);
     PROTECT(args);
-    DEBUG("back from replaceLamList");
+    DEBUG("back from replaceLamArgs");
     IFDEBUG(printLamExpTable(replacements, 0));
     CexpApply *cexpApply = newCexpApply(function, countAexpList(args), args);
     UNPROTECT(save2);
@@ -1032,8 +1032,8 @@ static Aexp *replaceLamConstruct(LamConstruct *construct,
 
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec, LamExpTable *replacements) {
     ENTER(replaceLamMakeVec);
-    DEBUG("calling replaceLamList");
-    AexpList *aexpList = replaceLamList(makeVec->args, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *aexpList = replaceLamArgs(makeVec->args, replacements);
     int save = PROTECT(aexpList);
     AexpMakeVec *aexpMakeVec =
         newAexpMakeVec(countAexpList(aexpList), aexpList);
@@ -1056,20 +1056,20 @@ static Aexp *replaceLamPrint(LamPrint *print, LamExpTable *replacements) {
     return res;
 }
 
-static AexpList *replaceLamList(LamList *list, LamExpTable *replacements) {
-    ENTER(replaceLamList);
+static AexpList *replaceLamArgs(LamArgs *list, LamExpTable *replacements) {
+    ENTER(replaceLamArgs);
     if (list == NULL) {
-        LEAVE(replaceLamList);
+        LEAVE(replaceLamArgs);
         return NULL;
     }
-    DEBUG("calling replaceLamList");
-    AexpList *next = replaceLamList(list->next, replacements);
+    DEBUG("calling replaceLamArgs");
+    AexpList *next = replaceLamArgs(list->next, replacements);
     int save = PROTECT(next);
     Aexp *val = replaceLamExp(list->exp, replacements);
     PROTECT(val);
     AexpList *res = newAexpList(val, next);
     UNPROTECT(save);
-    LEAVE(replaceLamList);
+    LEAVE(replaceLamArgs);
     return res;
 }
 

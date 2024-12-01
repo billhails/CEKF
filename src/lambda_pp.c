@@ -274,17 +274,17 @@ static void _ppLamSequence(LamSequence *sequence) {
     }
 }
 
-static void _ppLamList(LamList *list) {
+static void _ppLamArgs(LamArgs *list) {
     if (list == NULL)
         return;
     eprintf(" ");
     ppLamExp(list->exp);
-    _ppLamList(list->next);
+    _ppLamArgs(list->next);
 }
 
-void ppLamMakeTuple(LamList *args) {
+void ppLamMakeTuple(LamArgs *args) {
     eprintf("(make-tuple");
-    _ppLamList(args);
+    _ppLamArgs(args);
     eprintf(")");
 }
 
@@ -300,7 +300,7 @@ void ppLamMakeVec(LamMakeVec *makeVec) {
         return;
     }
     eprintf("(make-vec");
-    _ppLamList(makeVec->args);
+    _ppLamArgs(makeVec->args);
     eprintf(")");
 }
 
@@ -311,7 +311,7 @@ void ppLamApply(LamApply *apply) {
     }
     eprintf("(");
     ppLamExp(apply->function);
-    _ppLamList(apply->args);
+    _ppLamArgs(apply->args);
     eprintf(")");
 }
 
@@ -649,7 +649,7 @@ void ppLamConstruct(LamConstruct *construct) {
     eprintf("(construct ");
     ppHashSymbol(construct->name);
     eprintf(":%d", construct->tag);
-    _ppLamList(construct->args);
+    _ppLamArgs(construct->args);
     eprintf(")");
 }
 

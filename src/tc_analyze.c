@@ -78,7 +78,7 @@ static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng);
 static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
 static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
-static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng);
+static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng);
 static TcType *analyzeNamespaces(LamNamespaceArray *nsArray, TcEnv *env, TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
@@ -547,7 +547,7 @@ static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
     return template->val.tuple->entries[index->vec];
 }
 
-static TcType *analyzeMakeTuple(LamList *tuple, TcEnv *env, TcNg *ng) {
+static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng) {
     TcTypeArray *values = newTcTypeArray();
     int save = PROTECT(values);
     while (tuple != NULL) {
@@ -634,12 +634,12 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 // apply(fn) => fn
 // apply(fn, arg_1, arg_2, arg_3) => apply(apply(apply(fn, arg1), arg_2), arg_3)
 static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
-                                     LamList *args) {
+                                     LamArgs *args) {
     if (nargs == 1) {
         LamApply *res = newLamApply(CPI(function), function, args);
         return res;
     }
-    LamList *singleArg = newLamList(CPI(args), args->exp, NULL);
+    LamArgs *singleArg = newLamArgs(CPI(args), args->exp, NULL);
     int save = PROTECT(singleArg);
     LamApply *new = newLamApply(CPI(function), function, singleArg);
     PROTECT(new);
@@ -652,12 +652,12 @@ static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
 }
 
 static LamApply *curryLamApply(LamApply *apply) {
-    return curryLamApplyHelper(countLamList(apply->args), apply->function, apply->args);
+    return curryLamApplyHelper(countLamArgs(apply->args), apply->function, apply->args);
 }
 
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeApply);
-    switch (countLamList(apply->args)) {
+    switch (countLamArgs(apply->args)) {
         case 0:{
                 TcType *res = analyzeExp(apply->function, env, ng);
                 // LEAVE(analyzeApply);

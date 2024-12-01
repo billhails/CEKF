@@ -50,7 +50,7 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env);
 static LamExp *makePutcExp(ParserInfo I, char c) {
     LamExp *character = newLamExp_Character(I, c);
     int save = PROTECT(character);
-    LamList *putcArgs = newLamList(I, character, NULL);
+    LamArgs *putcArgs = newLamArgs(I, character, NULL);
     PROTECT(putcArgs);
     LamExp *putc = newLamExp_Var(I, newSymbol("putc"));
     PROTECT(putc);
@@ -79,7 +79,7 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
     PROTECT(seq);
 
     // (printer x) (putc '\n') x)
-    LamList *args = newLamList(I, var, NULL);
+    LamArgs *args = newLamArgs(I, var, NULL);
     PROTECT(args);
     LamApply *apply = newLamApply(I, printer, args);
     PROTECT(apply);
@@ -164,31 +164,31 @@ static LamExp *compilePrinterForChar(ParserInfo I) {
     return makePrintChar(I);
 }
 
-static LamList *compilePrinterForUserTypeArgs(ParserInfo I, TcUserTypeArgs *args,
+static LamArgs *compilePrinterForUserTypeArgs(ParserInfo I, TcUserTypeArgs *args,
                                               TcEnv *env) {
     ENTER(compilePrinterForUserTypeArgs);
     if (args == NULL) {
         LEAVE(compilePrinterForUserTypeArgs);
         return NULL;
     }
-    LamList *next = compilePrinterForUserTypeArgs(I, args->next, env);
+    LamArgs *next = compilePrinterForUserTypeArgs(I, args->next, env);
     int save = PROTECT(next);
     LamExp *this = compilePrinter(I, args->type, env);
     PROTECT(this);
-    LamList *res = newLamList(I, this, next);
+    LamArgs *res = newLamArgs(I, this, next);
     UNPROTECT(save);
     LEAVE(compilePrinterForUserTypeArgs);
     return res;
 }
 
-static LamList *compilePrinterForTupleArgs(ParserInfo I, TcTypeArray *tuple, TcEnv *env) {
-    LamList *res = NULL;
+static LamArgs *compilePrinterForTupleArgs(ParserInfo I, TcTypeArray *tuple, TcEnv *env) {
+    LamArgs *res = NULL;
     int save = PROTECT(res);
     for (int i = tuple->size; i > 0; i--) {
         int index = i - 1;
         LamExp *this = compilePrinter(I, tuple->entries[index], env);
         PROTECT(this);
-        res = newLamList(I, this, res);
+        res = newLamArgs(I, this, res);
         PROTECT(res);
     }
     UNPROTECT(save);
@@ -239,9 +239,9 @@ static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcE
         exp = newLamExp_Lookup(I, lookup);
         PROTECT(exp);
     }
-    LamList *args = compilePrinterForUserTypeArgs(I, userType->args, env);
+    LamArgs *args = compilePrinterForUserTypeArgs(I, userType->args, env);
     PROTECT(args);
-    int nargs = countLamList(args);
+    int nargs = countLamArgs(args);
     if (nargs == 0) {
         UNPROTECT(save);
         return exp;
@@ -264,7 +264,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
             return exp;
         }
         int save = PROTECT(exp);
-        LamList *args = compilePrinterForTupleArgs(I, tuple, env);
+        LamArgs *args = compilePrinterForTupleArgs(I, tuple, env);
         PROTECT(args);
         LamApply *apply = newLamApply(I, exp, args);
         PROTECT(apply);
