@@ -129,13 +129,6 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, LamMacroArgsTable 
     return prim;
 }
 
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, LamMacroArgsTable *symbols) {
-    ENTER(performUnarySubstitutions);
-    unary->exp = lamPerformMacroSubstitutions(unary->exp, symbols);
-    LEAVE(performUnarySubstitutions);
-    return unary;
-}
-
 static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacroArgsTable *symbols) {
     ENTER(performSequenceSubstitutions);
     if (sequence == NULL) {
@@ -391,9 +384,6 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
             break;
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSubstitutions(exp->val.prim, symbols);
-                break;
-            case LAMEXP_TYPE_UNARY:
-                exp->val.unary = performUnarySubstitutions(exp->val.unary, symbols);
                 break;
             case LAMEXP_TYPE_LIST:
                 exp->val.list = performSequenceSubstitutions(exp->val.list, symbols);

@@ -42,7 +42,6 @@ static Exp *normalizeVar(HashSymbol *var, Exp *tail);
 static Exp *normalizeMaybeBigInteger(MaybeBigInt *integer, Exp *tail);
 static Exp *normalizeStdInteger(int integer, Exp *tail);
 static Exp *normalizeCharacter(Character character, Exp *tail);
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail);
 static Exp *normalizeAmb(LamAmb *app, Exp *tail);
 static Exp *normalizeSequence(LamSequence *sequence, Exp *tail);
 static Exp *normalizePrim(LamPrimApp *app, Exp *tail);
@@ -52,7 +51,6 @@ static Exp *normalizeError(Exp *tail);
 static HashSymbol *freshSymbol();
 static LamExpTable *makeLamExpHashTable();
 static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements);
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op);
 static Exp *letBind(Exp *body, LamExpTable *replacements);
 static AexpPrimOp mapPrimOp(LamPrimOp op);
 static Aexp *aexpNormalizeVar(HashSymbol *var);
@@ -65,8 +63,6 @@ static AexpVarList *convertVarList(LamVarList *args);
 static AexpList *replaceLamList(LamList *list, LamExpTable *replacements);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
                             LamExpTable *replacements);
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp,
-                             LamExpTable *replacements);
 static Aexp *replaceLamMakeVec(LamMakeVec *makeVec,
                                LamExpTable *replacements);
 static Aexp *replaceLamConstruct(LamConstruct *construct,
@@ -113,8 +109,6 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeMaybeBigInteger(lamExp->val.biginteger, tail);
         case LAMEXP_TYPE_PRIM:
             return normalizePrim(lamExp->val.prim, tail);
-        case LAMEXP_TYPE_UNARY:
-            return normalizeUnary(lamExp->val.unary, tail);
         case LAMEXP_TYPE_AMB:
             return normalizeAmb(lamExp->val.amb, tail);
         case LAMEXP_TYPE_LIST:
@@ -535,27 +529,6 @@ static Exp *wrapTail(Exp *exp, Exp *tail) {
     return exp;
 }
 
-static Exp *normalizeUnary(LamUnaryApp *app, Exp *tail) {
-    ENTER(normalizeUnary);
-    LamExpTable *replacements = makeLamExpHashTable();
-    int save = PROTECT(replacements);
-    Aexp *aexp = replaceLamExp(app->exp, replacements);
-    int save2 = PROTECT(aexp);
-    AexpUnaryApp *aexpUnaryApp = newAexpUnaryApp(mapUnaryOp(app->type), aexp);
-    UNPROTECT(save2);
-    save2 = PROTECT(aexpUnaryApp);
-    Aexp *aexp2 = newAexp_Unary(aexpUnaryApp);
-    REPLACE_PROTECT(save2, aexp2);
-    Exp *exp = wrapAexp(aexp2);
-    REPLACE_PROTECT(save2, exp);
-    exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
-    Exp *res = letBind(exp, replacements);
-    UNPROTECT(save);
-    LEAVE(normalizeUnary);
-    return res;
-}
-
 static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
     ENTER(normalizePrim);
     LamExpTable *replacements = makeLamExpHashTable();
@@ -930,9 +903,6 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_PRIM:
             res = replaceLamPrim(lamExp->val.prim, replacements);
             break;
-        case LAMEXP_TYPE_UNARY:
-            res = replaceLamUnary(lamExp->val.unary, replacements);
-            break;
         case LAMEXP_TYPE_PRINT:
             res = replaceLamPrint(lamExp->val.print, replacements);
             break;
@@ -995,7 +965,6 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_AMB:
         case LAMEXP_TYPE_PRIM:
-        case LAMEXP_TYPE_UNARY:
         case LAMEXP_TYPE_LIST:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
@@ -1120,28 +1089,6 @@ static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp, LamExpTable *replacements) {
     return res;
 }
 
-static Aexp *replaceLamUnary(LamUnaryApp *lamUnaryApp,
-                             LamExpTable *replacements) {
-    ENTER(replaceLamUnary);
-    Aexp *exp = replaceLamExp(lamUnaryApp->exp, replacements);
-    int save = PROTECT(exp);
-    AexpUnaryApp *unary = newAexpUnaryApp(mapUnaryOp(lamUnaryApp->type), exp);
-    PROTECT(unary);
-    Aexp *res = newAexp_Unary(unary);
-    UNPROTECT(save);
-    LEAVE(replaceLamUnary);
-    return res;
-}
-
-static AexpUnaryOp mapUnaryOp(LamUnaryOp op) {
-    switch (op) {
-        case LAMUNARYOP_TYPE_NOT:
-            return AEXPUNARYOP_TYPE_NOT;
-        default:
-            cant_happen("unrecognised type %d in mapUnaryOp", op);
-    }
-}
-
 static AexpPrimOp mapPrimOp(LamPrimOp op) {
     switch (op) {
         case LAMPRIMOP_TYPE_ADD:
@@ -1168,8 +1115,6 @@ static AexpPrimOp mapPrimOp(LamPrimOp op) {
             return AEXPPRIMOP_TYPE_LE;
         case LAMPRIMOP_TYPE_VEC:
             return AEXPPRIMOP_TYPE_VEC;
-        case LAMPRIMOP_TYPE_XOR:
-            return AEXPPRIMOP_TYPE_XOR;
         case LAMPRIMOP_TYPE_MOD:
             return AEXPPRIMOP_TYPE_MOD;
         case LAMPRIMOP_TYPE_CMP:

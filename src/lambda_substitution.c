@@ -92,14 +92,6 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, TpmcSubstitutionTa
     return prim;
 }
 
-static LamUnaryApp *performUnarySubstitutions(LamUnaryApp *unary, TpmcSubstitutionTable
-                                              *substitutions) {
-    ENTER(performUnarySubstitutions);
-    unary->exp = lamPerformSubstitutions(unary->exp, substitutions);
-    LEAVE(performUnarySubstitutions);
-    return unary;
-}
-
 static LamSequence *performSequenceSubstitutions(LamSequence *sequence, TpmcSubstitutionTable
                                                  *substitutions) {
     ENTER(performSequenceSubstitutions);
@@ -356,10 +348,6 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim =
                     performPrimSubstitutions(exp->val.prim, substitutions);
-                break;
-            case LAMEXP_TYPE_UNARY:
-                exp->val.unary =
-                    performUnarySubstitutions(exp->val.unary, substitutions);
                 break;
             case LAMEXP_TYPE_LIST:
                 exp->val.list =

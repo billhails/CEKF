@@ -196,23 +196,6 @@ void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b) {
     LEAVE(writeAexpAnnotatedVar);
 }
 
-void writeAexpUnaryApp(AexpUnaryApp *x, ByteCodeArray *b) {
-    ENTER(writeAexpUnaryApp);
-    if (x == NULL)
-        return;
-    writeAexp(x->exp, b);
-    Byte prim;
-    switch (x->type) {
-        case AEXPUNARYOP_TYPE_NOT:
-            prim = BYTECODES_TYPE_PRIM_NOT;
-            break;
-        default:
-            cant_happen("unrecognised AexpUnaryOp in writeAexpUnaryApp");
-    }
-    addByte(b, prim);
-    LEAVE(writeAexpUnaryApp);
-}
-
 void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
     ENTER(writeAexpPrimApp);
     if (x == NULL)
@@ -256,9 +239,6 @@ void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b) {
             break;
         case AEXPPRIMOP_TYPE_LE:
             prim = BYTECODES_TYPE_PRIM_LE;
-            break;
-        case AEXPPRIMOP_TYPE_XOR:
-            prim = BYTECODES_TYPE_PRIM_XOR;
             break;
         case AEXPPRIMOP_TYPE_VEC:
             prim = BYTECODES_TYPE_PRIM_VEC;
@@ -650,10 +630,6 @@ void writeAexp(Aexp *x, ByteCodeArray *b) {
             break;
         case AEXP_TYPE_PRIM:{
                 writeAexpPrimApp(x->val.prim, b);
-            }
-            break;
-        case AEXP_TYPE_UNARY:{
-                writeAexpUnaryApp(x->val.unary, b);
             }
             break;
         case AEXP_TYPE_MAKEVEC:{

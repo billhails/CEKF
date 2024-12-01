@@ -94,9 +94,6 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_PRIM:
             ppLamPrimApp(exp->val.prim);
             break;
-        case LAMEXP_TYPE_UNARY:
-            ppLamUnary(exp->val.unary);
-            break;
         case LAMEXP_TYPE_LIST:
             ppLamSequence(exp->val.list);
             break;
@@ -253,9 +250,6 @@ void ppLamPrimOp(LamPrimOp type) {
         case LAMPRIMOP_TYPE_VEC:
             eprintf("vec");
             break;
-        case LAMPRIMOP_TYPE_XOR:
-            eprintf("xor");
-            break;
         case LAMPRIMOP_TYPE_MOD:
             eprintf("mod");
             break;
@@ -267,28 +261,6 @@ void ppLamPrimOp(LamPrimOp type) {
             break;
         default:
             cant_happen("unrecognised type %d in ppLamPrimOp", type);
-    }
-}
-
-void ppLamUnary(LamUnaryApp *unaryApp) {
-    if (unaryApp == NULL) {
-        eprintf("<NULL unaryApp>");
-        return;
-    }
-    eprintf("(");
-    ppLamUnaryOp(unaryApp->type);
-    eprintf(" ");
-    ppLamExp(unaryApp->exp);
-    eprintf(")");
-}
-
-void ppLamUnaryOp(LamUnaryOp type) {
-    switch (type) {
-        case LAMUNARYOP_TYPE_NOT:
-            eprintf("not");
-            break;
-        default:
-            cant_happen("unrecognised type %s in ppLamUnaryOp", lamUnaryOpName(type));
     }
 }
 

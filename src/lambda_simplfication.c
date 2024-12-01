@@ -58,13 +58,6 @@ static LamPrimApp *performPrimSimplifications(LamPrimApp *prim) {
     return prim;
 }
 
-static LamUnaryApp *performUnarySimplifications(LamUnaryApp *unary) {
-    ENTER(performUnarySimplifications);
-    unary->exp = lamPerformSimplifications(unary->exp);
-    LEAVE(performUnarySimplifications);
-    return unary;
-}
-
 static LamSequence *_performSequenceSimplifications(LamSequence *sequence) {
     ENTER(_performSequenceSimplifications);
     if (sequence == NULL) {
@@ -305,9 +298,6 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 break;
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSimplifications(exp->val.prim);
-                break;
-            case LAMEXP_TYPE_UNARY:
-                exp->val.unary = performUnarySimplifications(exp->val.unary);
                 break;
             case LAMEXP_TYPE_LIST:
                 exp = performSequenceSimplifications(CPI(exp), exp->val.list);

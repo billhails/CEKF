@@ -62,7 +62,6 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
-static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng);
 static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng);
 static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env, TcNg *ng);
 static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env, TcNg *ng);
@@ -229,8 +228,6 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeBigInteger());
         case LAMEXP_TYPE_PRIM:
             return prune(analyzePrim(exp->val.prim, env, ng));
-        case LAMEXP_TYPE_UNARY:
-            return prune(analyzeUnary(exp->val.unary, env, ng));
         case LAMEXP_TYPE_LIST:
             return prune(analyzeSequence(exp->val.list, env, ng));
         case LAMEXP_TYPE_MAKEVEC:
@@ -408,22 +405,6 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     return res;
 }
 
-static TcType *analyzeBinaryBool(LamExp *exp1, LamExp *exp2, TcEnv *env,
-                                 TcNg *ng) {
-    // ENTER(analyzeBinaryBool);
-    (void) analyzeBooleanExp(exp1, env, ng);
-    TcType *res = analyzeBooleanExp(exp2, env, ng);
-    // LEAVE(analyzeBinaryBool);
-    return res;
-}
-
-static TcType *analyzeUnaryBool(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeUnaryBool);
-    TcType *res = analyzeBooleanExp(exp, env, ng);
-    // LEAVE(analyzeUnaryBool);
-    return res;
-}
-
 static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrim);
     TcType *res = NULL;
@@ -450,27 +431,10 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
         case LAMPRIMOP_TYPE_VEC:
             cant_happen("encountered VEC in analyzePrim");
             break;
-        case LAMPRIMOP_TYPE_XOR:
-            res = analyzeBinaryBool(app->exp1, app->exp2, env, ng);
-            break;
         default:
             cant_happen("unrecognised type %d in analyzePrim", app->type);
     }
     // LEAVE(analyzePrim);
-    return res;
-}
-
-static TcType *analyzeUnary(LamUnaryApp *app, TcEnv *env, TcNg *ng) {
-    // ENTER(analyzeUnary);
-    TcType *res = NULL;
-    switch (app->type) {
-        case LAMUNARYOP_TYPE_NOT:
-            res = analyzeUnaryBool(app->exp, env, ng);
-            break;
-        default:
-            cant_happen("unrecognized type %d in analyzeUnary", app->type);
-    }
-    // LEAVE(analyzeUnary);
     return res;
 }
 

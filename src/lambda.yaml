@@ -40,10 +40,6 @@ structs:
         exp1: LamExp
         exp2: LamExp
 
-    LamUnaryApp:
-        type: LamUnaryOp
-        exp: LamExp
-
     LamSequence:
         exp: LamExp
         next: LamSequence
@@ -222,12 +218,8 @@ enums:
         - LT
         - GE
         - LE
-        - XOR
         - CMP
         - VEC
-
-    LamUnaryOp:
-        - NOT
 
 unions:
     LamExp:
@@ -237,7 +229,6 @@ unions:
         stdint: int
         biginteger: MaybeBigInt
         prim: LamPrimApp
-        unary: LamUnaryApp
         list: LamSequence
         makeVec: LamMakeVec
         construct: LamConstruct

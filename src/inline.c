@@ -25,7 +25,6 @@ static LamTypeDefs *inlineTypeDefs(LamTypeDefs *x);
 static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x);
 static LamLam *inlineLam(LamLam *x);
 static LamPrimApp *inlinePrim(LamPrimApp *x);
-static LamUnaryApp *inlineUnary(LamUnaryApp *x);
 static LamSequence *inlineSequence(LamSequence *x);
 static LamList *inlineList(LamList *x);
 static LamExp *inlineApply(LamApply *x);
@@ -81,11 +80,6 @@ static LamLam *inlineLam(LamLam *x) {
 static LamPrimApp *inlinePrim(LamPrimApp *x) {
     x->exp1 = inlineExp(x->exp1);
     x->exp2 = inlineExp(x->exp2);
-    return x;
-}
-
-static LamUnaryApp *inlineUnary(LamUnaryApp *x) {
-    x->exp = inlineExp(x->exp);
     return x;
 }
 
@@ -279,9 +273,6 @@ static LamExp *inlineExp(LamExp *x) {
             break;
         case LAMEXP_TYPE_PRIM:
             x->val.prim = inlinePrim(x->val.prim);
-            break;
-        case LAMEXP_TYPE_UNARY:
-            x->val.unary = inlineUnary(x->val.unary);
             break;
         case LAMEXP_TYPE_LIST:
             x->val.list = inlineSequence(x->val.list);

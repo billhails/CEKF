@@ -30,8 +30,6 @@ void ppLamExp(LamExp *exp);
 void ppHashSymbol(HashSymbol *symbol);
 void ppLamPrimApp(LamPrimApp *primApp);
 void ppLamPrimOp(LamPrimOp type);
-void ppLamUnary(LamUnaryApp *unaryApp);
-void ppLamUnaryOp(LamUnaryOp type);
 void ppLamSequence(LamSequence *sequence);
 void ppLamMakeVec(LamMakeVec *makeVec);
 void ppLamApply(LamApply *apply);

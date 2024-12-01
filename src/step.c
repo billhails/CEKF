@@ -286,10 +286,6 @@ static bool _lt(Value left, Value right) {
     return _cmp(left, right) == CMP_LT;
 }
 
-static bool _xor(Value left, Value right) {
-    return truthy(left) ? !truthy(right) : truthy(right);
-}
-
 static Value eq(Value left, Value right) {
     bool result = _eq(left, right);
     return result ? vTrue : vFalse;
@@ -315,17 +311,9 @@ static Value ge(Value left, Value right) {
     return result ? vFalse : vTrue;
 }
 
-static Value xor(Value left, Value right) {
-    return _xor(left, right) ? vTrue : vFalse;
-}
-
 static Value le(Value left, Value right) {
     bool result = _gt(left, right);
     return result ? vFalse : vTrue;
-}
-
-static Value not(Value left) {
-    return truthy(left) ? vFalse : vTrue;
 }
 
 static Value vec(Value index, Value vector) {
@@ -730,28 +718,6 @@ static void step() {
                     Value left = pop();
                     protectValue(left);
                     push(le(left, right));
-                    UNPROTECT(save);
-                }
-                break;
-
-            case BYTECODES_TYPE_PRIM_XOR:{
-                    // pop two values, perform the binop and push the result
-                    DEBUG("XOR");
-                    Value right = pop();
-                    int save = protectValue(right);
-                    Value left = pop();
-                    protectValue(left);
-                    push(xor(left, right));
-                    UNPROTECT(save);
-                }
-                break;
-
-            case BYTECODES_TYPE_PRIM_NOT:{
-                    // pop value, perform the op and push the result
-                    DEBUG("NOT");
-                    Value a = pop();
-                    int save = protectValue(a);
-                    push(not(a));
                     UNPROTECT(save);
                 }
                 break;
