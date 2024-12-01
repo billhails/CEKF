@@ -22,7 +22,7 @@
 // in a purely functional language. It does include the Fail register though,
 // making this technically a CESKF machine
 let
-    link "listutils.fn" as list;
+    link "../listutils.fn" as list;
 
     typedef prim { add | sub | mul | div }
 

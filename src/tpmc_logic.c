@@ -337,22 +337,20 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
     }
 }
 
-static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables) {
+static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables, ParserInfo I) {
     if (rule->patterns->size != rootVariables->size) {
-        printTpmcMatchRule(rule, 0);
-        eprintf("\n");
-        printTpmcVariableArray(rootVariables, 0);
-        eprintf("\n");
-        cant_happen("size mismatch in renameRule");
+        can_happen("inconsistent number of arguments (%d vs %d) in +%d %s", rule->patterns->size, rootVariables->size, I.lineno, I.filename);
+        // will crash otherwise.
+        exit(1);
     }
-    for (Index i = 0; i < rootVariables->size; i++) {
+    for (Index i = 0; i < rule->patterns->size; i++) {
         renamePattern(rule->patterns->entries[i], rootVariables->entries[i]);
     }
 }
 
-static void renameRules(TpmcMatchRules *input) {
+static void renameRules(TpmcMatchRules *input, ParserInfo I) {
     for (Index i = 0; i < input->rules->size; i++) {
-        renameRule(input->rules->entries[i], input->rootVariables);
+        renameRule(input->rules->entries[i], input->rootVariables, I);
     }
 }
 
@@ -643,7 +641,7 @@ LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs,
     TpmcMatchRules *input = newTpmcMatchRules(rules, rootVariables);
     REPLACE_PROTECT(save, input);
     replaceComparisonRules(input);
-    renameRules(input);
+    renameRules(input, I);
     performRulesSubstitutions(input);
     // DEBUG("*** RULES ***");
     // IFDEBUG(printTpmcMatchRules(input, 0));

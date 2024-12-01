@@ -83,6 +83,7 @@ static bool topRowOnlyVariables(TpmcMatrix *matrix) {
     }
     return true;
 }
+
 static bool columnHasComparisons(int x, TpmcMatrix *matrix) {
     for (Index y = 0; y < matrix->height; y++) {
         if (patternIsComparison(getTpmcMatrixIndex(matrix, x, y))) {

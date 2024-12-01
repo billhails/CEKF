@@ -85,7 +85,7 @@ static AstExpression        *expressionPrecedence(PrattParser *, int);
 static AstExpression        *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+// static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -202,7 +202,7 @@ static PrattParser *makePrattParser(void) {
 
     addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0);
 
-    addRecord(table, TOK_COLON(),     NULL, 0,       infixLeft, 70,   NULL, 0);
+    addRecord(table, TOK_COLON(),     NULL, 0,       NULL, 0,         NULL, 0);
 
     addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 0,         NULL, 0);
 
@@ -2015,6 +2015,7 @@ static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
+/*
 static AstExpression *infixLeft(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixLeft);
@@ -2025,6 +2026,7 @@ PrattToken *tok __attribute__((unused))) {
     UNPROTECT(save);
     return rhs;
 }
+*/
 
 static AstExpression *lookup(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {

@@ -2,9 +2,9 @@ let
 ///////////////////////////////////////////////////////////////////////////
 // PRELIMINARIES
 ///////////////////////////////////////////////////////////////////////////
-    link "ioutils.fn" as io;
-    link "dictionary.fn" as dict;
-    link "listutils.fn" as lst;
+    link "../ioutils.fn" as io;
+    link "../dictionary.fn" as dict;
+    link "../listutils.fn" as lst;
 
     infix left 80 "=>" fn (arg, fun) { fun(arg) };
     infix left 80 "|>" fn (l, f) { lst.map(f, l) };
