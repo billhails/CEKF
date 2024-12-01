@@ -111,8 +111,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizePrim(lamExp->val.prim, tail);
         case LAMEXP_TYPE_AMB:
             return normalizeAmb(lamExp->val.amb, tail);
-        case LAMEXP_TYPE_LIST:
-            return normalizeSequence(lamExp->val.list, tail);
+        case LAMEXP_TYPE_SEQUENCE:
+            return normalizeSequence(lamExp->val.sequence, tail);
         case LAMEXP_TYPE_MAKEVEC:
             return normalizeMakeVec(lamExp->val.makeVec, tail);
         case LAMEXP_TYPE_TYPEDEFS:
@@ -537,8 +537,7 @@ static Exp *normalizePrim(LamPrimApp *app, Exp *tail) {
     int save2 = PROTECT(exp1);
     Aexp *exp2 = replaceLamExp(app->exp2, replacements);
     PROTECT(exp2);
-    AexpPrimApp *aexpPrimApp =
-        newAexpPrimApp(mapPrimOp(app->type), exp1, exp2);
+    AexpPrimApp *aexpPrimApp = newAexpPrimApp(mapPrimOp(app->type), exp1, exp2);
     UNPROTECT(save2);
     save2 = PROTECT(aexpPrimApp);
     Aexp *aexp = newAexp_Prim(aexpPrimApp);
@@ -929,7 +928,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
             res = aexpNormalizeCharacter(lamExp->val.character);
             break;
         case LAMEXP_TYPE_LOOKUP:
-        case LAMEXP_TYPE_LIST:
+        case LAMEXP_TYPE_SEQUENCE:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
         case LAMEXP_TYPE_CALLCC:
@@ -965,7 +964,7 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_AMB:
         case LAMEXP_TYPE_PRIM:
-        case LAMEXP_TYPE_LIST:
+        case LAMEXP_TYPE_SEQUENCE:
         case LAMEXP_TYPE_APPLY:
         case LAMEXP_TYPE_IFF:
         case LAMEXP_TYPE_CALLCC:

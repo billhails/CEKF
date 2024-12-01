@@ -94,8 +94,8 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_PRIM:
             ppLamPrimApp(exp->val.prim);
             break;
-        case LAMEXP_TYPE_LIST:
-            ppLamSequence(exp->val.list);
+        case LAMEXP_TYPE_SEQUENCE:
+            ppLamSequence(exp->val.sequence);
             break;
         case LAMEXP_TYPE_MAKEVEC:
             ppLamMakeVec(exp->val.makeVec);

@@ -400,7 +400,7 @@ static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     PROTECT(seq);
     seq = newLamSequence(I, header, seq);
     PROTECT(seq);
-    LamExp *res = newLamExp_List(I, seq);
+    LamExp *res = newLamExp_Sequence(I, seq);
     UNPROTECT(save);
     return res;
 }
@@ -503,7 +503,7 @@ static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructo
     PROTECT(seq);
     seq = newLamSequence(I, res, seq);
     PROTECT(seq);
-    res = newLamExp_List(I, seq);
+    res = newLamExp_Sequence(I, seq);
     UNPROTECT(save);
     return res;
 }

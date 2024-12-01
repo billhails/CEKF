@@ -385,8 +385,8 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSubstitutions(exp->val.prim, symbols);
                 break;
-            case LAMEXP_TYPE_LIST:
-                exp->val.list = performSequenceSubstitutions(exp->val.list, symbols);
+            case LAMEXP_TYPE_SEQUENCE:
+                exp->val.sequence = performSequenceSubstitutions(exp->val.sequence, symbols);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, symbols);

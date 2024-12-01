@@ -81,7 +81,7 @@ static LamExp *performSequenceSimplifications(ParserInfo I, LamSequence *sequenc
     }
 #endif
     int save = PROTECT(sequence);
-    LamExp *res = newLamExp_List(I, sequence);
+    LamExp *res = newLamExp_Sequence(I, sequence);
     UNPROTECT(save);
     return res;
 }
@@ -299,8 +299,8 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSimplifications(exp->val.prim);
                 break;
-            case LAMEXP_TYPE_LIST:
-                exp = performSequenceSimplifications(CPI(exp), exp->val.list);
+            case LAMEXP_TYPE_SEQUENCE:
+                exp = performSequenceSimplifications(CPI(exp), exp->val.sequence);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSimplifications(exp->val.makeVec);

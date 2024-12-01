@@ -229,7 +229,7 @@ unions:
         stdint: int
         biginteger: MaybeBigInt
         prim: LamPrimApp
-        list: LamSequence
+        sequence: LamSequence
         makeVec: LamMakeVec
         construct: LamConstruct
         deconstruct: LamDeconstruct

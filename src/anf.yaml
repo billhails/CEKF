@@ -64,11 +64,6 @@ structs:
         integer: int
         next: AexpIntList
 
-    CexpApply:
-        function: Aexp
-        nargs: int
-        args: AexpList
-
     AexpMakeVec:
         nargs: int
         args: AexpList
@@ -80,6 +75,11 @@ structs:
     AexpNamespaces:
         namespaces: AexpNamespaceArray
         body: Exp
+
+    CexpApply:
+        function: Aexp
+        nargs: int
+        args: AexpList
 
     CexpIf:
         condition: Aexp
@@ -104,20 +104,10 @@ structs:
         condition: Aexp
         clauses: MatchList
 
-    MatchList:
-        matches: AexpIntList
-        body: Exp
-        next: MatchList
-
     CexpLetRec:
         nbindings: int
         bindings: LetRecBindings
         body: Exp
-
-    LetRecBindings:
-        var: HashSymbol
-        val: Aexp
-        next: LetRecBindings
 
     CexpAmb:
         exp1: Exp
@@ -135,6 +125,16 @@ structs:
         namespace: index
         annotatedVar: AexpAnnotatedVar = NULL
         body: Exp
+
+    MatchList:
+        matches: AexpIntList
+        body: Exp
+        next: MatchList
+
+    LetRecBindings:
+        var: HashSymbol
+        val: Aexp
+        next: LetRecBindings
 
 unions:
     CexpCondCases:

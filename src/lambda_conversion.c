@@ -166,7 +166,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
         body = newLamSequence(CPI(env), lamNamespaces, body);
         PROTECT(body);
     }
-    LamExp *letRecBody = newLamExp_List(CPI(body), body);
+    LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
@@ -176,7 +176,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
         PROTECT(letRec);
         result = newLamExp_Letrec(CPI(letRec), letRec);
     } else {
-        result = newLamExp_List(CPI(body), body);
+        result = newLamExp_Sequence(CPI(body), body);
     }
     PROTECT(result);
     if (typeDefList != NULL) {

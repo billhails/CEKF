@@ -228,8 +228,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeBigInteger());
         case LAMEXP_TYPE_PRIM:
             return prune(analyzePrim(exp->val.prim, env, ng));
-        case LAMEXP_TYPE_LIST:
-            return prune(analyzeSequence(exp->val.list, env, ng));
+        case LAMEXP_TYPE_SEQUENCE:
+            return prune(analyzeSequence(exp->val.sequence, env, ng));
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered make-vec in analyzeExp");
         case LAMEXP_TYPE_CONSTRUCT:

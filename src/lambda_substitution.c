@@ -349,9 +349,9 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 exp->val.prim =
                     performPrimSubstitutions(exp->val.prim, substitutions);
                 break;
-            case LAMEXP_TYPE_LIST:
-                exp->val.list =
-                    performSequenceSubstitutions(exp->val.list, substitutions);
+            case LAMEXP_TYPE_SEQUENCE:
+                exp->val.sequence =
+                    performSequenceSubstitutions(exp->val.sequence, substitutions);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec =

@@ -274,8 +274,8 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_PRIM:
             x->val.prim = inlinePrim(x->val.prim);
             break;
-        case LAMEXP_TYPE_LIST:
-            x->val.list = inlineSequence(x->val.list);
+        case LAMEXP_TYPE_SEQUENCE:
+            x->val.sequence = inlineSequence(x->val.sequence);
             break;
         case LAMEXP_TYPE_MAKE_TUPLE:
             x->val.make_tuple = inlineList(x->val.make_tuple);
