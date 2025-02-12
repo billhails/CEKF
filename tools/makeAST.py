@@ -3731,6 +3731,12 @@ class SimpleEnum(Base):
     def comment(self, method):
         return f'// SimpleEnum.{method}'
 
+    def getDefineValue(self):
+        return 'x'
+
+    def getDefineArg(self):
+        return 'x'
+
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
         self.noteTypedef()

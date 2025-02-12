@@ -18,10 +18,10 @@ LamPrimApp --exp1--> LamExp
 LamPrimApp --exp2--> LamExp
 LamSequence --exp--> LamExp
 LamSequence --next--> LamSequence
-LamList --exp--> LamExp
-LamList --next--> LamList
+LamArgs --exp--> LamExp
+LamArgs --next--> LamArgs
 LamApply --function--> LamExp
-LamApply --args--> LamList
+LamApply --args--> LamArgs
 LamLookup --nsid--> int
 LamLookup --nsSymbol--> HashSymbol
 LamLookup --exp--> LamExp
@@ -32,7 +32,7 @@ LamConstant --name--> HashSymbol
 LamConstant --tag--> int
 LamConstruct --name--> HashSymbol
 LamConstruct --tag--> int
-LamConstruct --args--> LamList
+LamConstruct --args--> LamArgs
 LamDeconstruct --name--> HashSymbol
 LamDeconstruct --nsid--> int
 LamDeconstruct --vec--> int
@@ -41,7 +41,7 @@ LamTupleIndex --vec--> int
 LamTupleIndex --size--> int
 LamTupleIndex --exp--> LamExp
 LamMakeVec --nargs--> int
-LamMakeVec --args--> LamList
+LamMakeVec --args--> LamArgs
 LamIff --condition--> LamExp
 LamIff --consequent--> LamExp
 LamIff --alternative--> LamExp
@@ -114,13 +114,12 @@ LamExp --var--> HashSymbol
 LamExp --stdint--> int
 LamExp --biginteger--> MaybeBigInt
 LamExp --prim--> LamPrimApp
-LamExp --list--> LamSequence
+LamExp --sequence--> LamSequence
 LamExp --makeVec--> LamMakeVec
 LamExp --construct--> LamConstruct
 LamExp --deconstruct--> LamDeconstruct
 LamExp --tuple_index--> LamTupleIndex
-LamExp --tuple--> LamList
-LamExp --make_tuple--> LamList
+LamExp --make_tuple--> LamArgs
 LamExp --tag--> LamExp
 LamExp --constant--> LamConstant
 LamExp --apply--> LamApply

@@ -29,6 +29,7 @@
 #  ifndef PRODUCTION_BUILD
 // #    define DEBUG_ALLOC
 // #    define DEBUG_ANF
+// #    define DEBUG_ANF_NORMALIZE
 // #    define DEBUG_ANNOTATE
 // #    define DEBUG_ARITHMETIC
 // #    define DEBUG_BIGINT
