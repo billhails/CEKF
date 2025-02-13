@@ -112,7 +112,7 @@ static Env *builtInsToEnv(BuiltIns *b) {
     return env;
 }
 
-static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) {
+static void inject(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns __attribute__((unused))) {
     static bool first = true;
     state.C = 0;
     state.E = builtInsToEnv(builtIns);
@@ -124,11 +124,12 @@ static void inject(ByteCodeArray B, BuiltIns *builtIns __attribute__((unused))) 
         clearStackFrames(state.S);
     }
     state.B = B;
+    state.L = L;
     first = false;
 }
 
-void run(ByteCodeArray B, BuiltIns *builtIns) {
-    inject(B, builtIns);
+void run(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns) {
+    inject(B, L, builtIns);
     step();
     state.E = NULL;
     state.K = NULL;
@@ -497,7 +498,8 @@ void reportSteps(void) {
 
 static void step() {
     if (dump_bytecode_flag)
-        dumpByteCode(&state.B);
+        dumpByteCode(&state.B, state.L);
+    state.L = NULL;
     state.C = 0;
     while (state.C != END_CONTROL) {
         ++count;

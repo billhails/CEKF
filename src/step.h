@@ -22,7 +22,7 @@
 #  include "value.h"
 #  include "builtins.h"
 
-void run(ByteCodeArray B, BuiltIns *builtIns);
+void run(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns);
 
 void markState(void);
 

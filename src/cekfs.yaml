@@ -26,7 +26,6 @@ config:
         - types.h
         - opaque.h
 
-
 structs:
     CEKF:
         C: control
@@ -35,6 +34,7 @@ structs:
         F: Fail
         S: Stack
         B: ByteCodeArray
+        L: LocationArray
 
     Env:
         S: Frame
@@ -57,6 +57,11 @@ structs:
         K: Kont
         S: Stack
         F: Fail
+
+    Location:
+        loc: index
+        lineno: int
+        filename: string
 
 inline:
     unions:
@@ -94,6 +99,9 @@ arrays:
 
     Frame:
         entries: Value
+
+    LocationArray:
+        entries: Location
 
 vectors:
     Vec:

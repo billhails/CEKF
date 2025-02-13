@@ -41,7 +41,7 @@ static void populateCTEnv(CTEnv *env, HashSymbol *var);
 
 static CTEnv *annotateExp(Exp *x, CTEnv *env);
 static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env);
-static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env);
+static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env);
 static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
 static CTEnv *annotateAexpList(AexpList *x, CTEnv *env);
 static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env);
@@ -70,7 +70,7 @@ static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env) {
     eprintf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(false, env);
+    env = newCTEnv(CPI(x), false, env);
     UNPROTECT(save);
     save = PROTECT(env);
     AexpVarList *args = x->args;
@@ -83,7 +83,7 @@ static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env) {
     return env;
 }
 
-static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env) {
+static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpVar ");
     ppAexpVar(x);
@@ -95,10 +95,10 @@ static AexpAnnotatedVar *annotateAexpVar(HashSymbol *x, CTEnv *env) {
     int offset;
     if (locate(x, env, &frame, &offset)) {
         if (frame == 0) {
-            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_STACK, frame,
+            return newAexpAnnotatedVar(I, AEXPANNOTATEDVARTYPE_TYPE_STACK, frame,
                                        offset, x);
         } else {
-            return newAexpAnnotatedVar(AEXPANNOTATEDVARTYPE_TYPE_ENV,
+            return newAexpAnnotatedVar(I, AEXPANNOTATEDVARTYPE_TYPE_ENV,
                                        frame - 1, offset, x);
         }
     }
@@ -234,7 +234,7 @@ static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
     eprintf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(true, env);
+    env = newCTEnv(CPI(x), true, env);
     UNPROTECT(save);
     save = PROTECT(env);
     LetRecBindings *bindings = x->bindings;
@@ -286,7 +286,7 @@ static CTEnv *annotateExpLet(ExpLet *x, CTEnv *env) {
 #endif
     annotateExp(x->val, env);
     int save = PROTECT(env);
-    env = newCTEnv(true, env);
+    env = newCTEnv(CPI(x), true, env);
     UNPROTECT(save);
     save = PROTECT(env);
     populateCTEnv(env, x->var);
@@ -320,7 +320,7 @@ static CTEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, CTEnv *env) {
         populateCTEnv(env, nsName);
     }
     for (Index i = 0; i < x->size; ++i) {
-        CTEnv *env2 = newCTEnv(true, env);
+        CTEnv *env2 = newCTEnv(CPI(x->entries[i]->body), true, env);
         int save = PROTECT(env2);
         env2->isNamespace = true;
         CTEnv *env3 = annotateExp(x->entries[i]->body, env2);
@@ -362,7 +362,7 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
         case AEXP_TYPE_LAM:
             return annotateAexpLam(x->val.lam, env);
         case AEXP_TYPE_VAR:
-            x->val.annotatedVar = annotateAexpVar(x->val.var, env);
+            x->val.annotatedVar = annotateAexpVar(CPI(x), x->val.var, env);
             x->type = AEXP_TYPE_ANNOTATEDVAR;
             return env;
         case AEXP_TYPE_ANNOTATEDVAR:
@@ -458,9 +458,9 @@ static CTEnv *annotateExpEnv(CTEnv *env) {
     cant_happen("failed to find namespace env");
 }
 
-static AexpAnnotatedVar *lookupNamespaceInEnv(Index index, CTEnv *env) {
+static AexpAnnotatedVar *lookupNamespaceInEnv(ParserInfo I, Index index, CTEnv *env) {
     HashSymbol *name = makeNsName(index);
-    return annotateAexpVar(name, env);
+    return annotateAexpVar(I, name, env);
 }
 
 static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
@@ -470,7 +470,7 @@ static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
         cant_happen("namespace index %u out of range", lookup->namespace);
     }
 #endif
-    lookup->annotatedVar = lookupNamespaceInEnv(lookup->namespace, env);
+    lookup->annotatedVar = lookupNamespaceInEnv(CPI(lookup), lookup->namespace, env);
     return annotateExp(lookup->body, envs->entries[lookup->namespace]);
 }
 
@@ -507,11 +507,11 @@ static void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
 }
 
 void annotateAnf(Exp *x, BuiltIns *b) {
-    CTEnv *env = newCTEnv(false, NULL);
+    CTEnv *env = newCTEnv(CPI(x), false, NULL);
     int save = PROTECT(env);
     env->nsEnvs = newCTEnvArray();
     addBuiltInsToCTEnv(env, b);
-    env = newCTEnv(false, env);
+    env = newCTEnv(CPI(x), false, env);
     REPLACE_PROTECT(save, env);
     annotateExp(x, env);
     UNPROTECT(save);

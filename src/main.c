@@ -274,10 +274,10 @@ static void annotate(Exp *anfExp, BuiltIns *builtIns) {
 #endif
 }
 
-static ByteCodeArray generateByteCodes(Exp *anfExp) {
+static ByteCodeArray generateByteCodes(Exp *anfExp, LocationArray *L) {
     ByteCodeArray byteCodes;
     initByteCodeArray(&byteCodes, 8);
-    writeExp(anfExp, &byteCodes);
+    writeExp(anfExp, &byteCodes, L);
     writeEnd(&byteCodes);
     return byteCodes;
 }
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
                 cant_happen("unrecognised status from bytecode reader");
         }
         clock_t compiled = clock();
-        run(byteCodes, builtIns);
+        run(byteCodes, NULL, builtIns);
         UNPROTECT(save);
         clock_t end = clock();
         report(argv[0], begin, compiled, end);
@@ -360,7 +360,9 @@ int main(int argc, char *argv[]) {
             eprintf("\n");
         }
 
-        ByteCodeArray byteCodes = generateByteCodes(anfExp);
+        LocationArray *L = newLocationArray();
+        PROTECT(L);
+        ByteCodeArray byteCodes = generateByteCodes(anfExp, L);
         if (binary_output_file != NULL) {
             if (!writeBinaryOutputFile(&byteCodes, binary_output_file)) {
                 fprintf(stderr, "%s: %s\n", binary_output_file, strerror(errno));
@@ -370,8 +372,9 @@ int main(int argc, char *argv[]) {
         }
 
         UNPROTECT(save2);
+        PROTECT(L);
         clock_t compiled = clock();
-        run(byteCodes, builtIns);
+        run(byteCodes, L, builtIns);
         UNPROTECT(save);
         clock_t end = clock();
         report(argv[0], begin, compiled, end);

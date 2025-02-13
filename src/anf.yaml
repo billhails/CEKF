@@ -19,6 +19,7 @@
 config:
     name: anf
     description: ANF structures to be converted to bytecode.
+    parserInfo: true
     limited_includes:
     - bigint.h
     - ast_helper.h
