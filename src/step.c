@@ -725,6 +725,7 @@ static void step() {
                 break;
 
             case BYTECODES_TYPE_PRIM_VEC:{
+                    // index, vector => value at index
                     DEBUG("VEC");
                     Value b = pop();
                     int save = protectValue(b);
@@ -1123,8 +1124,9 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
+                    // duplicate the top stack frame
                     letStackFrame(state.S);
-                    state.K = makeKont(offset, state.E, false, state.K);
+                    // copy the namespace contents to the top of the stack
                     restoreNamespace(state.S, v.val.namespace);
                 }
                 break;
@@ -1139,8 +1141,9 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
+                    // duplicate the top stack frame
                     letStackFrame(state.S);
-                    state.K = makeKont(offset, state.E, false, state.K);
+                    // copy the namespace contents to the top of the stack
                     restoreNamespace(state.S, v.val.namespace);
                 }
                 break;
@@ -1149,10 +1152,8 @@ static void step() {
                     DEBUG("NS_POP");
                     Value result = pop();
                     int save = protectValue(result);
-                    Kont *kont = state.K;
-                    PROTECT(kont);
-                    state.K = kont->K;
-                    restoreKont(state.S, kont);
+                    // remove the top stack frame
+                    popStackFrame(state.S);
                     push(result);
                     UNPROTECT(save);
                 }
