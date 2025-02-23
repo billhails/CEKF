@@ -14,9 +14,9 @@ let
         (Cons(c, args)) {
             putc('(');
             putc(c);
-            args |> fn (a) {
+            args |> fn (arg) {
                 putc(' ');
-                h(a);
+                h(arg);
             };
             putc(')');
         }

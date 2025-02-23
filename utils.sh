@@ -34,12 +34,17 @@ watch_make () {
     done
 }
 
+error () {
+    echo 1>&2 "$*"
+    exit 1
+}
+
 new_h () {
     file="src/$1.h"
     if [ -e $file ] ; then
-        echo $file already exists
+        error $file already exists
     else
-        define="cekf_${1}_h"
+        define=`echo "cekf_${1}_h" | sed -e 's#/#_#g'`
         echo "#ifndef $define" > $file
         echo "#  define $define" >> $file
         echo_gpl >> $file
@@ -51,7 +56,7 @@ new_h () {
 new_c () {
     file="src/$1.c"
     if [ -e $file ] ; then
-        echo $file already exists
+        error $file already exists
     else
         echo_gpl > $file
         echo "" >> $file
@@ -61,11 +66,16 @@ new_c () {
 new_ch () {
     cfile="src/$1.c"
     if [ -e $cfile ] ; then
-        echo $cfile already exists
+        error $cfile already exists
     else
         new_c $1
         new_h $1
         echo "#include \"$1.h\"" >> $cfile
         echo "" >> $cfile
     fi
+}
+
+new_test () {
+    new_ch tests/$1
+    echo "#include \"tests/$1.h\"" >> src/alltests.h
 }

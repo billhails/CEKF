@@ -61,4 +61,5 @@ let
             }
     }
 in
-    print(expr("1 + - 2 + f . g . h * 3 * 4"))
+    print(expr("1 + - 2 + f . g . h * 3 * 4"));
+    // Cons(Atom('+'), [Cons(Atom('+'), [Atom('-'), Atom('2')]), Cons(Atom('*'), [Cons(Atom('*'), [Cons(Atom('.'), 

@@ -49,6 +49,9 @@
 #include "pratt.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
+#ifdef UNIT_TESTS
+#include "tests.h"
+#endif
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -56,6 +59,9 @@ static int anf_flag = 0;
 static int ast_flag = 0;
 static int lambda_flag = 0;
 static int inline_flag = 0;
+#ifdef UNIT_TESTS
+static int test_flag = 0;
+#endif
 extern bool assertions_failed;
 extern int assertions_accumulate;
 static char *binary_output_file = NULL;
@@ -110,6 +116,9 @@ static void usage(char *prog, int status) {
            "    -l\n"
            "    --report                 Report statistics.\n"
            "    -m <function>\n"
+#ifdef UNIT_TESTS
+           "    --test                   Run unit tests.\n"
+#endif
     );
     exit(status);
 }
@@ -119,6 +128,9 @@ static int processArgs(int argc, char *argv[]) {
 
     while (1) {
         static struct option long_options[] = {
+#ifdef UNIT_TESTS
+            { "test", no_argument, &test_flag, 1 },
+#endif
             { "report", no_argument, &report_flag, 1 },
             { "dump-anf", no_argument, &anf_flag, 1 },
             { "dump-ast", no_argument, &ast_flag, 1 },
@@ -183,9 +195,13 @@ static int processArgs(int argc, char *argv[]) {
         usage(argv[0], 1);
     }
 
-    if (optind >= argc && !binary_input_file && !snippet) {
-        eprintf("need filename or --binary-in or --e argument\n");
-        exit(1);
+    if (optind >= argc && !binary_input_file && !snippet
+#ifdef UNIT_TESTS
+    && !test_flag
+#endif
+    ) {
+        eprintf("missing argument\n");
+        usage(argv[0], 1);
     }
 
     return optind;
@@ -310,6 +326,15 @@ int main(int argc, char *argv[]) {
     BuiltIns *builtIns = registerBuiltIns(argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);
 
+#ifdef UNIT_TESTS
+    if (test_flag) {
+        if(run_unit_tests()) {
+            exit(0);
+        } else {
+            exit(1);
+        }
+    } else
+#endif
     if (binary_input_file) {
         ByteCodeArray byteCodes;
         initByteCodeArray(&byteCodes, 8);

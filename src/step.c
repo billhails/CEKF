@@ -37,6 +37,10 @@
 #include "utf8.h"
 #include "builtin_io.h"
 
+#ifdef UNIT_TESTS
+#include "tests/step.h"
+#endif
+
 int dump_bytecode_flag = 0;
 
 #ifdef DEBUG_STEP
@@ -374,25 +378,30 @@ static void applyProc(int naargs) {
                 int ncaptured = clo->E->S->size;
                 DEBUG("PCLO ncaptured = %d, naargs = %d, pending = %d", ncaptured, naargs, clo->pending);
                 if (clo->pending == naargs) {
-                    // move the new args to the right place on the stack, leaving just enough
-                    // space for the captured args below them:
+                    // move the new args to the right place on the stack,
+                    // leaving just enough space for the captured args
+                    // below them:
                     // | ..captured.. | ..aargs.. |
                     //                  ^^^^^^^^^ ^
                     //                    moved   SP
                     moveStack(state.S, ncaptured, naargs);
-                    // then copy the already captured args to the base of the stack
+                    // then copy the already captured args to the base
+                    // of the stack
                     copyValues(&state.S->entries[state.S->frame], clo->E->S->entries, ncaptured);
                     // set the stack pointer to the last arg
                     state.S->offset = ncaptured + naargs;
-                    // and set up the machine for the next step into the body of the closure
+                    // and set up the machine for the next step into the
+                    // body of the closure
                     state.E = clo->E->E;
                     state.C = clo->C;
                 } else if (naargs == 0) {
                     // args expected, no args passed, no-op
                     push(callable);
                 } else if (naargs < clo->pending) {
-                    // create a new partial closure capturing the additional arguments so far
-                    // create a new env which is a sibling of the partial closure's env.
+                    // create a new partial closure capturing the
+                    // additional arguments so far
+                    // create a new env which is a sibling of the
+                    // partial closure's env.
                     Env *env = makeEnv(clo->E->E);
                     int save = PROTECT(env);
                     // make sure that the new env has enough space
@@ -404,7 +413,8 @@ static void applyProc(int naargs) {
                                &(state.S->entries[totalSizeStack(state.S) - naargs]), naargs);
                     // set the size of the new env
                     env->S->size = ncaptured + naargs;
-                    // create a new closure with correct pending, C and the new env
+                    // create a new closure with correct pending, C and
+                    // the new env
                     Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
                     PROTECT(pclo);
                     callable.val.clo = pclo;
@@ -505,8 +515,9 @@ static void step() {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        dumpStack(state.S);
-        printf("%4ld) %04lx ### ", count, state.C);
+        // dumpStack(state.S);
+        // printf("%4ld) %04lx ### ", count, state.C);
+        printf("%04lx ### ", state.C);
 #endif
         switch (bytecode = readCurrentByte()) {
             case BYTECODES_TYPE_NONE:{
@@ -535,16 +546,18 @@ static void step() {
                     // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
-                    DEBUG("VAR [%d:%d]", frame, offset);
-                    push(lookup(frame, offset));
+                    Value v = lookup(frame, offset);
+                    DEBUG("VAR [%d:%d] == %s", frame, offset, valueTypeName(v.type));
+                    push(v);
                 }
                 break;
 
             case BYTECODES_TYPE_LVAR:{
                     // look up a stack variable and push it
                     int offset = readCurrentByte();
-                    DEBUG("LVAR [%d]", offset);
-                    push(peek(offset));
+                    Value v = peek(offset);
+                    DEBUG("LVAR [%d] == %s", offset, valueTypeName(v.type));
+                    push(v);
                 }
                 break;
 
@@ -1124,8 +1137,8 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
-                    // duplicate the top stack frame
-                    letStackFrame(state.S);
+                    // new empty stack frame
+                    pushStackFrame(state.S);
                     // copy the namespace contents to the top of the stack
                     restoreNamespace(state.S, v.val.namespace);
                 }
@@ -1141,8 +1154,8 @@ static void step() {
                         cant_happen("expected namespace, got type %d", v.type);
                     }
 #endif
-                    // duplicate the top stack frame
-                    letStackFrame(state.S);
+                    // new empty stack frame 
+                    pushStackFrame(state.S);
                     // copy the namespace contents to the top of the stack
                     restoreNamespace(state.S, v.val.namespace);
                 }
@@ -1191,3 +1204,7 @@ void putCharacter(Character c) {
     *ptr = 0;
     printf("%s", buf);
 }
+
+#ifdef UNIT_TESTS
+#include "tests/step.c"
+#endif
