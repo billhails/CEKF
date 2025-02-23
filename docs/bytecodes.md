@@ -1,7 +1,7 @@
 # Byte Code Documentation
 
 * `ADD` - Binop.
-* `AMB [jmp]` - Creates failure that resumes at jmp.
+* `AMB [jmp]` - Creates failure that resumes at `jmp`.
 * `APPLY [nargs]` - Expects `nargs` arguments on the stack with a callable on top, invokes the callable with those args, leaving the result on the stack.
 * `BACK` - Pops current failure continuation and resumes it.
 * `BIGINT [bigint]` - Pushes the literal bigint.
