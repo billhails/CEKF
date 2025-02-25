@@ -84,9 +84,9 @@ void ppAexpVar(HashSymbol *x) {
 void ppAexpAnnotatedVar(AexpAnnotatedVar *x) {
     // ppAexpVar(x->var);
     if (x->type == AEXPANNOTATEDVARTYPE_TYPE_STACK)
-        eprintf("LVAR:%d", x->offset);
+        eprintf("LVAR:%s:%d", x->var->name, x->offset);
     else
-        eprintf("VAR:%d:%d", x->frame, x->offset);
+        eprintf("VAR:%s:%d:%d", x->var->name, x->frame, x->offset);
 }
 
 void ppAexpPrimApp(AexpPrimApp *x) {
