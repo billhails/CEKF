@@ -28,7 +28,7 @@ Fail --F--> Fail
 Location --loc--> index
 Location --lineno--> int
 Location --filename--> string
-Vec["Vec[]"] --entries--> Value
+Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
 Value --bigint--> BigInt
@@ -54,8 +54,6 @@ CharacterArray["CharacterArray[]"] --entries--> character
 ByteArray["ByteArray[]"] --entries--> byte
 Frame["Frame[]"] --entries--> Value
 LocationArray["LocationArray[]"] --entries--> Location
-ValueVal
-ValueType
 ```
 
 > Generated from src/cekfs.yaml by tools/makeAST.py

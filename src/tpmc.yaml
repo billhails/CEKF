@@ -27,26 +27,51 @@ config:
 
 structs:
     TpmcMatchRules:
+        meta:
+            brief: TPMC match rules
+            description: >-
+                A collection of match rules, each of which is a set of patterns
+                that can be matched against a term. The rules are applied in order,
+                and the first matching rule determines the action to be taken.
         data:
             rules: TpmcMatchRuleArray
             rootVariables: TpmcVariableArray
 
     TpmcMatchRule:
+        meta:
+            brief: TPMC match rule
+            description: >-
+                A single match rule consisting of a set of patterns and the action
+                to be taken if the patterns match.
         data:
             action: TpmcState
             patterns: TpmcPatternArray
 
     TpmcComparisonPattern:
+        meta:
+            brief: TPMC comparison pattern
+            description: >-
+                A pattern that compares a term against a variable or a constant.
         data:
             previous: TpmcPattern
             current: TpmcPattern
 
     TpmcAssignmentPattern:
+        meta:
+            brief: TPMC assignment pattern
+            description: >-
+                A pattern that assigns a term to a variable, allowing the variable
+                to be used in subsequent patterns.
         data:
             name: HashSymbol
             value: TpmcPattern
 
     TpmcConstructorPattern:
+        meta:
+            brief: TPMC constructor pattern
+            description: >-
+                A pattern that matches a term against a constructor, allowing the
+                components of the term to be extracted and used in subsequent patterns.
         data:
             tag: HashSymbol
             namespace: int
@@ -54,20 +79,43 @@ structs:
             components: TpmcPatternArray
 
     TpmcPattern:
+        meta:
+            brief: TPMC pattern
+            description: >-
+                A pattern that can be used to match a term. It can be a variable,
+                a comparison, an assignment, a wildcard, a character, a big integer,
+                a constructor, or a tuple of patterns.
         data:
             path: HashSymbol=NULL
             pattern: TpmcPatternValue
 
     TpmcTestState:
+        meta:
+            brief: TPMC test state
+            description: >-
+                A state that represents a test condition in the term pattern matching
+                process. It contains a set of arcs that can be followed based on the
+                outcome of the test.
         data:
             path: HashSymbol
             arcs: TpmcArcArray
 
     TpmcFinalState:
+        meta:
+            brief: TPMC final state
+            description: >-
+                A state that represents the final outcome of the term pattern matching
+                process. It contains the action to be taken when this state is reached.
         data:
             action: LamExp
 
     TpmcState:
+        meta:
+            brief: TPMC state
+            description: >-
+                A state in the term pattern matching process. It can be a test state,
+                a final state, or an error state. States are linked together to form
+                a state machine.
         data:
             refcount: int=0
             stamp: int
@@ -75,35 +123,70 @@ structs:
             state: TpmcStateValue
 
     TpmcArc:
+        meta:
+            brief: TPMC arc
+            description: >-
+                An arc in the term pattern matching state machine. It connects two states
+                and can have a condition that must be met for the transition to occur.
         data:
             state: TpmcState
             test: TpmcPattern
             freeVariables: TpmcVariableTable
 
     TpmcArcList:
+        meta:
+            brief: TPMC arc list
+            description: >-
+                A linked list of arcs in the term pattern matching state machine.
+                Each arc can lead to another state based on the outcome of the test.
         data:
             arc: TpmcArc
             next: TpmcArcList
 
     TpmcIntList:
+        meta:
+            brief: TPMC integer list
+            description: >-
+                A linked list of integers used in the term pattern matching process.
+                This can be used for various purposes, such as storing indices or counts.
         data:
             integer: int
             next: TpmcIntList
 
 hashes:
     TpmcVariableTable:
+        meta:
+            brief: TPMC variable table
+            description: >-
+                A set of variables.
         data: {}
 
     TpmcSubstitutionTable:
+        meta:
+            brief: TPMC substitution table
+            description: >-
+                A set of substitutions, mapping variables to their corresponding
+                patterns or values.
         data:
             entries: HashSymbol
 
     TpmcPatternTable:
+        meta:
+            brief: TPMC pattern table
+            description: >-
+                A set of patterns used in the term pattern matching process.
+                This allows for efficient lookup and management of patterns.
         data:
             entries: TpmcPattern
 
 unions:
     TpmcPatternValue:
+        meta:
+            brief: TPMC pattern value
+            description: >-
+                A union type that can hold different types of patterns used in the
+                term pattern matching process. This allows for flexibility in the
+                types of patterns that can be matched.
         data:
             var: HashSymbol
             comparison: TpmcComparisonPattern
@@ -115,6 +198,12 @@ unions:
             tuple: TpmcPatternArray
 
     TpmcStateValue:
+        meta:
+            brief: TPMC state value
+            description: >-
+                A union type that can hold different types of states in the term
+                pattern matching process. This allows for different types of states
+                to be represented, such as test states, final states, or error states.
         data:
             test: TpmcTestState
             final: TpmcFinalState
@@ -126,30 +215,69 @@ tags:
 
 arrays:
     TpmcMatchRuleArray:
+        meta:
+            brief: TPMC match rule array
+            description: >-
+                An array of match rules used in the term pattern matching process.
+                Each rule consists of a set of patterns and the action to be taken
+                if the patterns match.
         data:
             entries: TpmcMatchRule
 
     TpmcVariableArray:
+        meta:
+            brief: TPMC variable array
+            description: >-
+                An array of variables used in the term pattern matching process.
+                Variables can be used in patterns to match against terms.
         data:
             entries: HashSymbol
 
     TpmcPatternArray:
+        meta:
+            brief: TPMC pattern array
+            description: >-
+                An array of patterns used in the term pattern matching process.
+                Patterns can be variables, comparisons, assignments, wildcards,
+                characters, big integers, constructors, or tuples of patterns.
         data:
             entries: TpmcPattern
 
     TpmcStateArray:
+        meta:
+            brief: TPMC state array
+            description: >-
+                An array of states in the term pattern matching process. Each state
+                can be a test state, a final state, or an error state. States are
+                linked together to form a state machine.
         data:
             entries: TpmcState
 
     TpmcArcArray:
+        meta:
+            brief: TPMC arc array
+            description: >-
+                An array of arcs in the term pattern matching state machine. Each arc
+                connects two states and can have a condition that must be met for the
+                transition to occur.
         data:
             entries: TpmcArc
 
     TpmcIntArray:
+        meta:
+            brief: TPMC integer array
+            description: >-
+                An array of integers used in the term pattern matching process.
+                This can be used for various purposes, such as storing indices or counts.
         data:
             entries: int
 
     TpmcMatrix:
+        meta:
+            brief: TPMC matrix
+            description: >-
+                A two-dimensional array used in the term pattern matching process.
+                This can be used for storing patterns or states in a structured way.
         data:
             dimension: 2
             entries: TpmcPattern

@@ -4,8 +4,8 @@ Pratt Parser support
 
 ```mermaid
 flowchart TD
-PrattRecordTable --entries--> entries
-PrattNsIdTable --entries--> entries
+PrattRecordTable --entries--> PrattRecord
+PrattNsIdTable --entries--> int
 PrattTrie --character--> byte
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
@@ -52,8 +52,6 @@ PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattUnicode["PrattUnicode[]"] --entries--> character
-PrattValueVal
-PrattValueType
 ```
 
 > Generated from src/pratt.yaml by tools/makeAST.py

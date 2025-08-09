@@ -856,9 +856,9 @@ class SimpleHash(Base):
     def printMermaid(self, catalog):
         myName = self.getName()
         if self.entries is None:
-            print(myName)
+            print(f'{myName} --entries--> NULL')
         else:
-            print(f"{myName} --entries--> {self.entries.getName()}")
+            print(f'{myName} --entries--> {self.entries.getObjName(catalog)}')
 
     def isSelfInitializing(self):
         return True # other constructors will call this automatically
@@ -2776,7 +2776,7 @@ class SimpleVector(Base):
 
     def printMermaid(self, catalog):
         myName = self.getName()
-        print(f'{myName}["{myName}[]"] --entries--> {self.entries.getObjName(catalog)}')
+        print(f'{myName}["({myName})"] --entries--> {self.entries.getObjName(catalog)}')
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
@@ -3777,9 +3777,6 @@ class DiscriminatedUnionUnion(Base):
     def getName(self):
         return self.name + "Val"
 
-    def printMermaid(self, catalog):
-        print(self.getName())
-
     def getTypeDeclaration(self, catalog):
         return "union {name} ".format(name=self.getName())
 
@@ -3789,6 +3786,9 @@ class DiscriminatedUnionUnion(Base):
     def isUnion(self):
         return True
 
+    def printMermaid(self, catalog):
+        pass
+    
     def getSignature(self, catalog):
         return "{type} val".format(type=self.getTypeDeclaration(catalog))
 
@@ -3927,7 +3927,7 @@ class DiscriminatedUnionEnum(Base):
         return self.name + "Type"
 
     def printMermaid(self, catalog):
-        print(self.getName())
+        pass
 
     def getFieldName(self):
         return 'type'

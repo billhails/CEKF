@@ -4,8 +4,8 @@ Structures to support type inference
 
 ```mermaid
 flowchart TD
-TcTypeTable --entries--> entries
-TcTypeSigTable --entries--> entries
+TcTypeTable --entries--> TcType
+TcTypeSigTable --entries--> TcTypeSig
 TcEnv --table--> TcTypeTable
 TcEnv --typeSigs--> TcTypeSigTable
 TcEnv --next--> TcEnv
@@ -38,8 +38,6 @@ TcType --env--> TcEnv
 TcType --nsid--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
-TcTypeVal
-TcTypeType
 ```
 
 > Generated from src/tc.yaml by tools/makeAST.py

@@ -4,8 +4,8 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
 flowchart TD
-AnfSymbolTable
-CTIntTable --entries--> entries
+AnfSymbolTable --entries--> NULL
+CTIntTable --entries--> int
 CTEnv --isLocal--> bool
 CTEnv --isNamespace--> bool
 CTEnv --nbindings--> int
@@ -100,14 +100,6 @@ AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
 CTEnvArray["CTEnvArray[]"] --entries--> CTEnv
-CexpCondCasesVal
-CexpCondCasesType
-AexpVal
-AexpType
-CexpVal
-CexpType
-ExpVal
-ExpType
 ```
 
 > Generated from src/anf.yaml by tools/makeAST.py
