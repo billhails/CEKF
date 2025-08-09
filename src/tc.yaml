@@ -29,38 +29,75 @@ cmp:
 
 structs:
     TcEnv:
+        meta:
+            brief: Type-checker Environment
+            description: >-
+                The environment contains a table of types, a table of type signatures,
+                and a reference to the next environment in the chain.
         data:
             table: TcTypeTable
             typeSigs: TcTypeSigTable
             next: TcEnv
 
     TcNg:
+        meta:
+            brief: Non-generic variables
+            description: >-
+                Variables bound as function arguments while in the body of
+                a function definition. These are not generic variables.
         data:
             table: TcTypeTable
             next: TcNg
 
     TcFunction:
+        meta:
+            brief: Function type
+            description: >-
+                Represents a function type `a -> b` with an argument type and
+                a result type.
         data:
             arg: TcType
             result: TcType
 
     TcPair:
+        meta:
+            brief: Pair type
+            description: >-
+                Represents a pair of types, used for tuples and other
+                pair-like structures.
         data:
             first: TcType
             second: TcType
 
     TcTypeSig:
+        meta:
+            brief: Type signature
+            description: >-
+                Represents a type signature with a name, arguments,
+                and a namespace.  It is used to define types in the
+                type-checker.
         data:
             name: HashSymbol
             args: TcTypeSigArgs
             ns: int
 
     TcTypeSigArgs:
+        meta:
+            brief: Type signature arguments
+            description: >-
+                Represents the arguments of a type signature, which can be
+                any length.
         data:
             type: TcType
             next: TcTypeSigArgs
 
     TcVar:
+        meta:
+            brief: Type variable
+            description: >-
+                Represents a type variable, which can be used in type signatures
+                and type inference. It has a name, an ID, and an optional instance
+                if it is bound to a type.
         data:
             name: HashSymbol
             id: int
@@ -68,26 +105,48 @@ structs:
 
 hashes:
     TcTypeTable:
+        meta:
+            brief: Type table
+            description: >-
+                A hash table mapping type names to their definitions.
         data:
             entries: TcType
 
     TcTypeSigTable:
+        meta:
+            brief: Type signature table
+            description: >-
+                A hash table mapping type signature names to their definitions.
         data:
             entries: TcTypeSig
 
 arrays:
     TcTypeArray:
+        meta:
+            brief: Array of types
+            description: >-
+                An array of types used in type signatures and type inference.
         data:
             dimension: 1
             entries: TcType
 
     TcNamespaceArray:
+        meta:
+            brief: Array of namespaces
+            description: >-
+                An array of namespaces used in type inference.
         data:
             dimension: 1
             entries: TcType
 
 unions:
     TcType:
+        meta:
+            brief: Type union
+            description: >-
+                Represents a type in the type-checker, which can be a function,
+                pair, variable, small integer, big integer, character, unknown,
+                opaque type, type signature, tuple, or an array of namespaces.
         data:
             function: TcFunction
             pair: TcPair
