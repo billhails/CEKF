@@ -170,7 +170,7 @@ static void registerOrd(BuiltIns *registry) {
 static void registerUnicodeCategory(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *resultType = makeUserType(newSymbol("unicode_general_category_type"), NULL, -1);
+    TcType *resultType = makeTypeSig(newSymbol("unicode_general_category_type"), NULL, -1);
     PROTECT(resultType);
     pushCharacterArg(args);
     pushNewBuiltIn(registry, "unicode_category", resultType, args, (void *)builtin_unicode_category);

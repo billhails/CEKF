@@ -59,7 +59,7 @@ LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
     return next;
 }
 
-static bool isListType(LamType *type) {
+static bool isListType(LamTypeSig *type) {
     return type->name == listSymbol();
 }
 
@@ -96,7 +96,7 @@ static LamVarList *makeLastArg(ParserInfo I) {
     return newLamVarList(I, name, NULL);
 }
 
-static LamVarList *makePrintTypeFunctionArgs(ParserInfo I, LamTypeArgs *args) {
+static LamVarList *makePrintTypeFunctionArgs(ParserInfo I, LamTypeSigArgs *args) {
     if (args == NULL)
         return makeLastArg(I);
     LamVarList *next = makePrintTypeFunctionArgs(I, args->next);

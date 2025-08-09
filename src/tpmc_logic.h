@@ -22,6 +22,6 @@
 #  include "lambda.h"
 #include "parser_info.h"
 
-LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs, int nbodies, AstArgList **argList,
+LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs, int nbodies, AstFargList **argList,
                     LamExp **actions, LamContext *env);
 #endif

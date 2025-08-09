@@ -379,7 +379,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
     AstDefinitions *definitions;
     AstExpression *expression;
     AstExpressions *expressions;
-    AstUserType *userType;
+    AstTypeSig *typeSig;
     AstFunCall *funCall;
     AstNamedArg *namedArg;
     AstNest *nest;
@@ -420,7 +420,7 @@ static AstArg *makeAstLookupArg(PmModule *mod, HashSymbol *nsName, HashSymbol *s
 %type <definitions> let_in definitions namespace_definitions
 %type <expression> expression assertion fnerror
 %type <expressions> expressions statements tuple
-%type <userType> user_type
+%type <typeSig> user_type
 %type <funCall> fun_call binop conslist unop switch string
 %type <namedArg> named_farg
 %type <nest> top nest nest_body iff_nest
@@ -561,8 +561,8 @@ typedef : TYPEDEF user_type '{' type_body '}'   { $$ = newAstTypeDef(PIM(mod), $
         ;
 
 /* a type function being defined */
-user_type : symbol                        { $$ = newAstUserType(PIM(mod), $1, NULL); }
-          | symbol '(' type_variables ')' { $$ = newAstUserType(PIM(mod), $1, $3); }
+user_type : symbol                        { $$ = newAstTypeSig(PIM(mod), $1, NULL); }
+          | symbol '(' type_variables ')' { $$ = newAstTypeSig(PIM(mod), $1, $3); }
           ;
 
 type_variables : type_variable                    { $$ = newAstTypeSymbols(PIM(mod), $1, NULL); }

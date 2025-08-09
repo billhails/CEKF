@@ -4,9 +4,8 @@ Pratt Parser support
 
 ```mermaid
 flowchart TD
-PrattTable --entries--> entries
-PrattIntTable --entries--> entries
-PrattSymbolTable --entries--> entries
+PrattRecordTable --entries--> entries
+PrattNsIdTable --entries--> entries
 PrattTrie --character--> byte
 PrattTrie --terminal--> HashSymbol
 PrattTrie --siblings--> PrattTrie
@@ -26,8 +25,8 @@ PrattToken --next--> PrattToken
 PrattLexer --bufList--> PrattBufList
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
-PrattParser --rules--> PrattTable
-PrattParser --namespaces--> PrattIntTable
+PrattParser --rules--> PrattRecordTable
+PrattParser --namespaces--> PrattNsIdTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
 PrattParser --panicMode--> bool

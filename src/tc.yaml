@@ -29,66 +29,78 @@ cmp:
 
 structs:
     TcEnv:
-        table: TcTypeTable
-        userTypes: TcUserTypeTable
-        next: TcEnv
+        data:
+            table: TcTypeTable
+            typeSigs: TcTypeSigTable
+            next: TcEnv
 
     TcNg:
-        table: TcTypeTable
-        next: TcNg
+        data:
+            table: TcTypeTable
+            next: TcNg
 
     TcFunction:
-        arg: TcType
-        result: TcType
+        data:
+            arg: TcType
+            result: TcType
 
     TcPair:
-        first: TcType
-        second: TcType
+        data:
+            first: TcType
+            second: TcType
 
-    TcUserType:
-        name: HashSymbol
-        args: TcUserTypeArgs
-        ns: int
+    TcTypeSig:
+        data:
+            name: HashSymbol
+            args: TcTypeSigArgs
+            ns: int
 
-    TcUserTypeArgs:
-        type: TcType
-        next: TcUserTypeArgs
+    TcTypeSigArgs:
+        data:
+            type: TcType
+            next: TcTypeSigArgs
 
     TcVar:
-        name: HashSymbol
-        id: int
-        instance: TcType=NULL
+        data:
+            name: HashSymbol
+            id: int
+            instance: TcType=NULL
 
 hashes:
     TcTypeTable:
-        entries: TcType
+        data:
+            entries: TcType
 
-    TcUserTypeTable:
-        entries: TcUserType
+    TcTypeSigTable:
+        data:
+            entries: TcTypeSig
 
 arrays:
     TcTypeArray:
-        dimension: 1
-        entries: TcType
+        data:
+            dimension: 1
+            entries: TcType
 
     TcNamespaceArray:
-        dimension: 1
-        entries: TcType
+        data:
+            dimension: 1
+            entries: TcType
 
 unions:
     TcType:
-        function: TcFunction
-        pair: TcPair
-        var: TcVar
-        smallinteger: void_ptr
-        biginteger: void_ptr
-        character: void_ptr
-        unknown: HashSymbol
-        opaque: HashSymbol
-        userType: TcUserType
-        tuple: TcTypeArray
-        namespaces: TcNamespaceArray
-        env: TcEnv
-        nsid: int
+        data:
+            function: TcFunction
+            pair: TcPair
+            var: TcVar
+            smallinteger: void_ptr
+            biginteger: void_ptr
+            character: void_ptr
+            unknown: HashSymbol
+            opaque: HashSymbol
+            typeSig: TcTypeSig
+            tuple: TcTypeArray
+            namespaces: TcNamespaceArray
+            env: TcEnv
+            nsid: int
 
 primitives: !include primitives.yaml

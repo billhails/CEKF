@@ -18,7 +18,7 @@
 
 config:
     name: anf
-    description: ANF structures to be converted to bytecode.
+    description: A-Normal Form (ANF) structures to be converted to bytecode.
     parserInfo: true
     limited_includes:
     - bigint.h
@@ -29,156 +29,272 @@ config:
 
 structs:
     CTEnv:
-        isLocal: bool
-        isNamespace: bool = false
-        nbindings: int = 0
-        nsEnvs: CTEnvArray = NULL
-        table: CTIntTable
-        next: CTEnv
+        meta:
+            brief: ANF Compile Time Environment
+            description: lookup for the run-time locations of variables.
+        data:
+            isLocal: bool
+            isNamespace: bool = false
+            nbindings: int = 0
+            nsEnvs: CTEnvArray = NULL
+            table: CTIntTable
+            next: CTEnv
 
     AexpLam:
-        nargs: int
-        letRecOffset: int
-        args: AexpVarList
-        exp: Exp
+        meta:
+            brief: ANF Aexp Lambda
+            description: A lambda expression in ANF.
+        data:
+            nargs: int
+            letRecOffset: int
+            args: AexpVarList
+            exp: Exp
 
     AexpVarList:
-        var: HashSymbol
-        next: AexpVarList
+        meta:
+            brief: ANF Aexp Variable List
+            description: A list of argument variables for a lambda.
+        data:
+            var: HashSymbol
+            next: AexpVarList
 
     AexpAnnotatedVar:
-        type: AexpAnnotatedVarType
-        frame: int
-        offset: int
-        var: HashSymbol
+        meta:
+            brief: ANF Annotated Variable
+            description: >-
+                A variable annotated with its location in the environment.
+        data:
+            type: AexpAnnotatedVarType
+            frame: int
+            offset: int
+            var: HashSymbol
 
     AexpPrimApp:
-        type: AexpPrimOp
-        exp1: Aexp
-        exp2: Aexp
+        meta:
+            brief: ANF Aexp Primitive Application
+            description: A primitive operation applied to two A-expressions.
+        data:
+            type: AexpPrimOp
+            exp1: Aexp
+            exp2: Aexp
 
     AexpList:
-        exp: Aexp
-        next: AexpList
+        meta:
+            brief: ANF Aexp List
+            description: A list of A-expressions.
+        data:
+            exp: Aexp
+            next: AexpList
 
     AexpIntList:
-        integer: int
-        next: AexpIntList
+        meta:
+            brief: ANF Aexp Integer List
+            description: A list of integers used in ANF.
+        data:
+            integer: int
+            next: AexpIntList
 
     AexpMakeVec:
-        nargs: int
-        args: AexpList
+        meta:
+            brief: ANF Aexp Make Vector
+            description: A vector construction operation in ANF.
+        data:
+            nargs: int
+            args: AexpList
 
     AexpNamespace:
-        nbindings: int = 0
-        body: Exp
+        meta:
+            brief: ANF Aexp Namespace
+            description: >-
+                A namespace in ANF, containing the body of the namespace.
+        data:
+            nbindings: int = 0
+            body: Exp
 
     AexpNamespaces:
-        namespaces: AexpNamespaceArray
-        body: Exp
+        meta:
+            brief: ANF Aexp Namespaces
+            description: An array of namespaces in ANF.
+        data:
+            namespaces: AexpNamespaceArray
+            body: Exp
 
     CexpApply:
-        function: Aexp
-        nargs: int
-        args: AexpList
+        meta:
+            brief: ANF Cexp Apply
+            description: A application of a function in ANF.
+        data:
+            function: Aexp
+            nargs: int
+            args: AexpList
 
     CexpIf:
-        condition: Aexp
-        consequent: Exp
-        alternative: Exp
+        meta:
+            brief: ANF Cexp If
+            description: A conditional expression in ANF.
+        data:
+            condition: Aexp
+            consequent: Exp
+            alternative: Exp
 
     CexpCond:
-        condition: Aexp
-        cases: CexpCondCases
+        meta:
+            brief: ANF Cexp Conditional
+            description: A conditional expression with multiple cases in ANF.
+        data:
+            condition: Aexp
+            cases: CexpCondCases
 
     CexpIntCondCases:
-        option: MaybeBigInt
-        body: Exp
-        next: CexpIntCondCases
+        meta:
+            brief: ANF Cexp Integer Conditional Cases
+            description: >-
+                Sub-class of CexpCondCases for big integer
+                dispatch tables in ANF.
+        data:
+            option: MaybeBigInt
+            body: Exp
+            next: CexpIntCondCases
 
     CexpCharCondCases:
-        option: character
-        body: Exp
-        next: CexpCharCondCases
+        meta:
+            brief: ANF Cexp Character Conditional Cases
+            description: >-
+                Sub-class of CexpCondCases for UTF-32 character
+                dispatch tables in ANF.
+        data:
+            option: character
+            body: Exp
+            next: CexpCharCondCases
 
     CexpMatch:
-        condition: Aexp
-        clauses: MatchList
+        meta:
+            brief: ANF Cexp Match
+            description: A match expression derived from a TPMC switch in ANF.
+        data:
+            condition: Aexp
+            clauses: MatchList
 
     CexpLetRec:
-        nbindings: int
-        bindings: LetRecBindings
-        body: Exp
+        meta:
+            brief: ANF Cexp Let Rec
+            description: A let-rec (recursive let) expression in ANF.
+        data:
+            nbindings: int
+            bindings: LetRecBindings
+            body: Exp
 
     CexpAmb:
-        exp1: Exp
-        exp2: Exp
+        meta:
+            brief: ANF Cexp Amb
+            description: An amb operation in ANF.
+        data:
+            exp1: Exp
+            exp2: Exp
 
     CexpCut:
-        exp: Exp
+        meta:
+            brief: ANF Cexp Cut
+            description: A cut operation in ANF.
+        data:
+            exp: Exp
 
     ExpLet:
-        var: HashSymbol
-        val: Exp
-        body: Exp
+        data:
+            var: HashSymbol
+            val: Exp
+            body: Exp
 
     ExpLookup:
-        namespace: index
-        annotatedVar: AexpAnnotatedVar = NULL
-        body: Exp
+        data:
+            namespace: index
+            annotatedVar: AexpAnnotatedVar = NULL
+            body: Exp
 
     MatchList:
-        matches: AexpIntList
-        body: Exp
-        next: MatchList
+        meta:
+            brief: ANF Match List
+            description: A list of expressions each with multiple match cases
+        data:
+            matches: AexpIntList
+            body: Exp
+            next: MatchList
 
     LetRecBindings:
-        var: HashSymbol
-        val: Aexp
-        next: LetRecBindings
+        meta:
+            brief: ANF Let Rec Bindings
+            description: A list of let-rec (recursive let) bindings in ANF.
+        data:
+            var: HashSymbol
+            val: Aexp
+            next: LetRecBindings
 
 unions:
     CexpCondCases:
-        charCases: CexpCharCondCases
-        intCases: CexpIntCondCases
+        meta:
+            brief: ANF Cexp Conditional Cases
+            description: A union of conditional cases for CexpCond, either character or integer.
+        data:
+            charCases: CexpCharCondCases
+            intCases: CexpIntCondCases
 
     Aexp:
-        lam: AexpLam
-        var: HashSymbol
-        annotatedVar: AexpAnnotatedVar
-        biginteger: MaybeBigInt
-        littleinteger: int
-        character: character
-        prim: AexpPrimApp
-        makeVec: AexpMakeVec
-        namespaces: AexpNamespaces
+        meta:
+            brief: ANF Aexp
+            description: A union of all A-expressions (atomic expressions) in ANF.
+        data:
+            lam: AexpLam
+            var: HashSymbol
+            annotatedVar: AexpAnnotatedVar
+            biginteger: MaybeBigInt
+            littleinteger: int
+            character: character
+            prim: AexpPrimApp
+            makeVec: AexpMakeVec
+            namespaces: AexpNamespaces
 
     Cexp:
-        back: void_ptr
-        error: void_ptr
-        apply: CexpApply
-        iff: CexpIf
-        cond: CexpCond
-        callCC: Aexp
-        letRec: CexpLetRec
-        amb: CexpAmb
-        cut: CexpCut
-        match: CexpMatch
+        meta:
+            brief: ANF Cexp
+            description: A union of all C-expressions (complex expressions) in ANF.
+        data:
+            back: void_ptr
+            error: void_ptr
+            apply: CexpApply
+            iff: CexpIf
+            cond: CexpCond
+            callCC: Aexp
+            letRec: CexpLetRec
+            amb: CexpAmb
+            cut: CexpCut
+            match: CexpMatch
 
     Exp:
-        env: void_ptr
-        done: void_ptr
-        aexp: Aexp
-        cexp: Cexp
-        let: ExpLet
-        lookup: ExpLookup
+        meta:
+            brief: ANF Exp
+            description: A union of all expression types (atomic or complex) in ANF.
+        data:
+            env: void_ptr
+            done: void_ptr
+            aexp: Aexp
+            cexp: Cexp
+            let: ExpLet
+            lookup: ExpLookup
 
 enums:
     AexpAnnotatedVarType:
+        meta:
+            brief: ANF Aexp Annotated Variable Type
+            description: The type (i.e. location) of an annotated variable in ANF.
+        data:
         - STACK
         - ENV
 
     AexpPrimOp:
+        meta:
+            brief: ANF Aexp Primitive Operation types.
+            description: The type of all primitive operations in ANF.
+        data:
         - ADD
         - SUB
         - MUL
@@ -195,23 +311,43 @@ enums:
         - CMP
 
 hashes:
-    AnfSymbolTable: {}
+    AnfSymbolTable:
+        meta:
+            brief: ANF Symbol Table
+            description: A hash table set of symbols used in ANF.
+        data: {}
 
     CTIntTable:
-        entries: int
+        meta:
+            brief: ANF Compile Time Integer Table
+            description: A hash table of integers used in ANF.
+        data:
+            entries: int
 
 arrays:
     AexpNamespaceArray:
-        entries: AexpNamespace
+        meta:
+            brief: ANF Aexp Namespace Array
+            description: An array of namespaces in ANF. 
+        data:
+            entries: AexpNamespace
 
     CTEnvArray:
-        entries: CTEnv
+        meta:
+            brief: ANF Compile Time Environment Array
+            description: An array of compile time environments in ANF.
+        data:
+            entries: CTEnv
 
 primitives: !include primitives.yaml
 
 external:
     TcType:
-        cname: "struct TcType *"
-        printFn: printTcType
-        markFn: markTcType
-        valued: true
+        meta:
+            brief: external type from the type-checker
+            description: A type-checker type referenced by the ANF code.
+        data:
+            cname: "struct TcType *"
+            printFn: printTcType
+            markFn: markTcType
+            valued: true

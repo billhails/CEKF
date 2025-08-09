@@ -96,8 +96,8 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
 static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
 static TcType *lookupConstructorType(HashSymbol *name, int namespace, TcEnv *env, TcNg *ng);
-static void addUserTypeToEnv(TcEnv *env, HashSymbol *symbol, TcUserType *type);
-bool getUserTypeFromTcEnv(TcEnv *env, HashSymbol *symbol, TcUserType **type);
+static void addTypeSigToEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig *type);
+bool getTypeSigFromTcEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig **type);
 
 static int id_counter = 0;
 
@@ -140,21 +140,21 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env) {
 }
 
 TcType *makeListType(TcType *content) {
-    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcUserType *userType = newTcUserType(newSymbol("list"), args, -1);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("list"), args, -1);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
 
 TcType *makeMaybeType(TcType *content) {
-    TcUserTypeArgs *args = newTcUserTypeArgs(content, NULL);
+    TcTypeSigArgs *args = newTcTypeSigArgs(content, NULL);
     int save = PROTECT(args);
-    TcUserType *userType = newTcUserType(newSymbol("maybe"), args, -1);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("maybe"), args, -1);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
@@ -168,13 +168,13 @@ TcType *makeMaybeStringType() {
 }
 
 TcType *makeTryType(TcType *failure, TcType *success) {
-    TcUserTypeArgs *args = newTcUserTypeArgs(success, NULL);
+    TcTypeSigArgs *args = newTcTypeSigArgs(success, NULL);
     int save = PROTECT(args);
-    args = newTcUserTypeArgs(failure, args);
+    args = newTcTypeSigArgs(failure, args);
     PROTECT(args);
-    TcUserType *userType = newTcUserType(newSymbol("try"), args, -1);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("try"), args, -1);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
@@ -188,28 +188,28 @@ TcType *makeStringType(void) {
 }
 
 TcType *makeBasicType(void) {
-    TcUserType *userType = newTcUserType(newSymbol("basic_type"), NULL, -1);
-    int save = PROTECT(userType);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("basic_type"), NULL, -1);
+    int save = PROTECT(typeSig);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
 
 TcType *makeIOType(void) {
-    TcUserType *userType = newTcUserType(newSymbol("io_mode"), NULL, -1);
-    int save = PROTECT(userType);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("io_mode"), NULL, -1);
+    int save = PROTECT(typeSig);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
 
 TcType *makeFTypeType(void) {
-    TcUserType *userType = newTcUserType(newSymbol("ftype_type"), NULL, -1);
-    int save = PROTECT(userType);
-    PROTECT(userType);
-    TcType *res = newTcType_UserType(userType);
+    TcTypeSig *typeSig = newTcTypeSig(newSymbol("ftype_type"), NULL, -1);
+    int save = PROTECT(typeSig);
+    PROTECT(typeSig);
+    TcType *res = newTcType_TypeSig(typeSig);
     UNPROTECT(save);
     return res;
 }
@@ -847,12 +847,12 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static TcUserTypeArgs *makeTcUserTypeArgs(LamTypeArgs *lamTypeArgs,
+static TcTypeSigArgs *makeTcTypeSigArgs(LamTypeSigArgs *lamTypeArgs,
                                           TcTypeTable *map) {
     if (lamTypeArgs == NULL) {
         return NULL;
     }
-    TcUserTypeArgs *next = makeTcUserTypeArgs(lamTypeArgs->next, map);
+    TcTypeSigArgs *next = makeTcTypeSigArgs(lamTypeArgs->next, map);
     int save = PROTECT(next);
     TcType *name = NULL;
     if (!getTcTypeTable(map, lamTypeArgs->name, &name)) {
@@ -861,27 +861,27 @@ static TcUserTypeArgs *makeTcUserTypeArgs(LamTypeArgs *lamTypeArgs,
         setTcTypeTable(map, lamTypeArgs->name, name);
         UNPROTECT(save2);
     }
-    TcUserTypeArgs *this = newTcUserTypeArgs(name, next);
+    TcTypeSigArgs *this = newTcTypeSigArgs(name, next);
     UNPROTECT(save);
     return this;
 }
 
-TcType *makeUserType(HashSymbol *name, TcUserTypeArgs *args, int nsid) {
+TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsid) {
     if (strcmp(name->name, "list") == 0 && nsid != -1) {
         cant_happen("list in ns %d", nsid);
     }
-    TcUserType *tcUserType = newTcUserType(name, args, nsid);
-    int save = PROTECT(tcUserType);
+    TcTypeSig *tcTypeSig = newTcTypeSig(name, args, nsid);
+    int save = PROTECT(tcTypeSig);
     TcType *res =
-        newTcType_UserType(tcUserType);
+        newTcType_TypeSig(tcTypeSig);
     UNPROTECT(save);
     return res;
 }
 
-static TcType *makeTcUserType(LamType *lamType, TcTypeTable *map, int nsid) {
-    TcUserTypeArgs *args = makeTcUserTypeArgs(lamType->args, map);
+static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map, int nsid) {
+    TcTypeSigArgs *args = makeTcTypeSigArgs(lamType->args, map);
     int save = PROTECT(args);
-    TcType *res = makeUserType(lamType->name, args, nsid);
+    TcType *res = makeTypeSig(lamType->name, args, nsid);
     UNPROTECT(save);
     return res;
 }
@@ -917,16 +917,16 @@ static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args, TcTypeTable *ma
     return array;
 }
 
-static TcUserTypeArgs *makeUserTypeArgs(LamTypeConstructorArgs *args,
+static TcTypeSigArgs *makeTypeSigArgs(LamTypeConstructorArgs *args,
                                         TcTypeTable *map, TcEnv *env) {
     if (args == NULL) {
         return NULL;
     }
-    TcUserTypeArgs *next = makeUserTypeArgs(args->next, map, env);
+    TcTypeSigArgs *next = makeTypeSigArgs(args->next, map, env);
     int save = PROTECT(next);
     TcType *arg = makeTypeConstructorArg(args->arg, map, env);
     PROTECT(arg);
-    TcUserTypeArgs *this = newTcUserTypeArgs(arg, next);
+    TcTypeSigArgs *this = newTcTypeSigArgs(arg, next);
     UNPROTECT(save);
     return this;
 }
@@ -938,9 +938,9 @@ static int findNamespace(LamLookupOrSymbol *los, TcEnv *env) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:{
             // eprintf("looking for %s in ", los->val.symbol->name);
             // ppTcEnv(env);
-            TcUserType *userType;
-            if (getUserTypeFromTcEnv(env, los->val.symbol, &userType)) {
-                return userType->ns;
+            TcTypeSig *typeSig;
+            if (getTypeSigFromTcEnv(env, los->val.symbol, &typeSig)) {
+                return typeSig->ns;
             }
             TcType *ns = NULL;
             getFromTcEnv(env, namespaceSymbol(), &ns);
@@ -972,10 +972,10 @@ static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
                                               TcEnv *env) {
     // this code is building the inner application of a type, i.e.
     // list(t) in the context of t -> list(t) -> list(t)
-    TcUserTypeArgs *args = makeUserTypeArgs(func->args, map, env);
+    TcTypeSigArgs *args = makeTypeSigArgs(func->args, map, env);
     int save = PROTECT(args);
     int ns = findNamespace(func->name, env);
-    TcType *res = makeUserType(getUnderlyingFunction(func->name), args, ns);
+    TcType *res = makeTypeSig(getUnderlyingFunction(func->name), args, ns);
     UNPROTECT(save);
     return res;
 }
@@ -1048,7 +1048,7 @@ static void collectTypeDefConstructor(LamTypeConstructor *constructor,
 static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
     TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
-    LamType *lamType = lamTypeDef->type;
+    LamTypeSig *lamType = lamTypeDef->type;
     TcType *ns = NULL;
     getFromTcEnv(env, namespaceSymbol(), &ns);
 #ifdef SAFETY_CHECKS
@@ -1059,9 +1059,9 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
         cant_happen("namespace corrupted");
     }
 #endif
-    TcType *tcType = makeTcUserType(lamType, map, ns->val.nsid);
+    TcType *tcType = makeTcTypeSig(lamType, map, ns->val.nsid);
     PROTECT(tcType);
-    addUserTypeToEnv(env, tcType->val.userType->name, tcType->val.userType);
+    addTypeSigToEnv(env, tcType->val.typeSig->name, tcType->val.typeSig);
     for (LamTypeConstructorList *list = lamTypeDef->constructors;
          list != NULL; list = list->next) {
         collectTypeDefConstructor(list->constructor, tcType, env, map);
@@ -1374,8 +1374,8 @@ static void addToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
     setTcTypeTable(env->table, symbol, type);
 }
 
-static void addUserTypeToEnv(TcEnv *env, HashSymbol *symbol, TcUserType *type) {
-    setTcUserTypeTable(env->userTypes, symbol, type);
+static void addTypeSigToEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig *type) {
+    setTcTypeSigTable(env->typeSigs, symbol, type);
 }
 
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
@@ -1388,14 +1388,14 @@ bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type) {
     return getFromTcEnv(env->next, symbol, type);
 }
 
-bool getUserTypeFromTcEnv(TcEnv *env, HashSymbol *symbol, TcUserType **type) {
+bool getTypeSigFromTcEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig **type) {
     if (env == NULL) {
         return false;
     }
-    if (getTcUserTypeTable(env->userTypes, symbol, type)) {
+    if (getTcTypeSigTable(env->typeSigs, symbol, type)) {
         return true;
     }
-    return getUserTypeFromTcEnv(env->next, symbol, type);
+    return getTypeSigFromTcEnv(env->next, symbol, type);
 }
 
 static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
@@ -1426,23 +1426,23 @@ static TcType *freshPair(TcPair *pair, TcNg *ng, TcTypeTable *map) {
     return res;
 }
 
-static TcUserTypeArgs *freshUserTypeArgs(TcUserTypeArgs *args, TcNg *ng,
+static TcTypeSigArgs *freshTypeSigArgs(TcTypeSigArgs *args, TcNg *ng,
                                          TcTypeTable *map) {
     if (args == NULL)
         return NULL;
-    TcUserTypeArgs *next = freshUserTypeArgs(args->next, ng, map);
+    TcTypeSigArgs *next = freshTypeSigArgs(args->next, ng, map);
     int save = PROTECT(next);
     TcType *type = freshRec(args->type, ng, map);
     PROTECT(type);
-    TcUserTypeArgs *this = newTcUserTypeArgs(type, next);
+    TcTypeSigArgs *this = newTcTypeSigArgs(type, next);
     UNPROTECT(save);
     return this;
 }
 
-static TcType *freshUserType(TcUserType *userType, TcNg *ng, TcTypeTable *map) {
-    TcUserTypeArgs *args = freshUserTypeArgs(userType->args, ng, map);
+static TcType *freshTypeSig(TcTypeSig *typeSig, TcNg *ng, TcTypeTable *map) {
+    TcTypeSigArgs *args = freshTypeSigArgs(typeSig->args, ng, map);
     int save = PROTECT(args);
-    TcType *res = makeUserType(userType->name, args, userType->ns);
+    TcType *res = makeTypeSig(typeSig->name, args, typeSig->ns);
     UNPROTECT(save);
     return res;
 }
@@ -1513,8 +1513,8 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
         case TCTYPE_TYPE_UNKNOWN:
         case TCTYPE_TYPE_OPAQUE:
             return type;
-        case TCTYPE_TYPE_USERTYPE:{
-                TcType *res = freshUserType(type->val.userType, ng, map);
+        case TCTYPE_TYPE_TYPESIG:{
+                TcType *res = freshTypeSig(type->val.typeSig, ng, map);
                 return res;
             }
         case TCTYPE_TYPE_TUPLE:
@@ -1561,12 +1561,12 @@ static void addToNg(TcNg *ng, TcType *type) {
 }
 
 TcType *makeBoolean() {
-    TcType *res = makeUserType(boolSymbol(), NULL, NS_GLOBAL);
+    TcType *res = makeTypeSig(boolSymbol(), NULL, NS_GLOBAL);
     return res;
 }
 
 static TcType *makeSpaceship() {
-    TcType *res = makeUserType(spaceshipSymbol(), NULL, NS_GLOBAL);
+    TcType *res = makeTypeSig(spaceshipSymbol(), NULL, NS_GLOBAL);
     return res;
 }
 
@@ -1787,26 +1787,26 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
     return true;
 }
 
-static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
+static bool unifyTypeSigs(TcTypeSig *a, TcTypeSig *b) {
     if (a->name != b->name) {
         can_happen("\nunification failed [usertype name mismatch %s vs %s]", a->name->name, b->name->name);
-        ppTcUserType(a);
+        ppTcTypeSig(a);
         eprintf(" vs ");
-        ppTcUserType(b);
+        ppTcTypeSig(b);
         eprintf("\n");
         return false;
     }
     if (a->ns != b->ns) {
         can_happen("\nunification failed [usertype namespace mismatch]");
-        ppTcUserType(a);
+        ppTcTypeSig(a);
         eprintf(" vs ");
-        ppTcUserType(b);
+        ppTcTypeSig(b);
         eprintf("\n");
         return false;
     }
 
-    TcUserTypeArgs *aArgs = a->args;
-    TcUserTypeArgs *bArgs = b->args;
+    TcTypeSigArgs *aArgs = a->args;
+    TcTypeSigArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {
         if (!unify(aArgs->type, bArgs->type, "user types")) {
             return false;
@@ -1816,9 +1816,9 @@ static bool unifyUserTypes(TcUserType *a, TcUserType *b) {
     }
     if (aArgs != NULL || bArgs != NULL) {
         can_happen("\nunification failed [usertype arg count mismatch]");
-        ppTcUserType(a);
+        ppTcTypeSig(a);
         eprintf(" vs ");
-        ppTcUserType(b);
+        ppTcTypeSig(b);
         eprintf("\n");
         return false;
     }
@@ -1868,8 +1868,8 @@ static bool _unify(TcType *a, TcType *b) {
                 return true;
             case TCTYPE_TYPE_UNKNOWN:
                 return false;
-            case TCTYPE_TYPE_USERTYPE:
-                return unifyUserTypes(a->val.userType, b->val.userType);
+            case TCTYPE_TYPE_TYPESIG:
+                return unifyTypeSigs(a->val.typeSig, b->val.typeSig);
             case TCTYPE_TYPE_OPAQUE:
                 return unifyOpaque(a->val.opaque, b->val.opaque);
             case TCTYPE_TYPE_TUPLE:
@@ -1890,7 +1890,7 @@ static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
     // *INDENT-ON*
 }
 
-static void pruneUserTypeArgs(TcUserTypeArgs *args) {
+static void pruneTypeSigArgs(TcTypeSigArgs *args) {
     while (args != NULL) {
         args->type = prune(args->type);
         args = args->next;
@@ -1905,8 +1905,8 @@ static TcType *prune(TcType *t) {
             t->val.var->instance = prune(t->val.var->instance);
             return t->val.var->instance;
         }
-    } else if (t->type == TCTYPE_TYPE_USERTYPE) {
-        pruneUserTypeArgs(t->val.userType->args);
+    } else if (t->type == TCTYPE_TYPE_TYPESIG) {
+        pruneTypeSigArgs(t->val.typeSig->args);
     } else if (t->type == TCTYPE_TYPE_FUNCTION) {
         t->val.function->arg = prune(t->val.function->arg);
         t->val.function->result = prune(t->val.function->result);
@@ -1922,12 +1922,12 @@ static bool samePairType(TcPair *a, TcPair *b) {
     return sameType(a->first, b->first) && sameType(a->second, b->second);
 }
 
-static bool sameUserType(TcUserType *a, TcUserType *b) {
+static bool sameTypeSig(TcTypeSig *a, TcTypeSig *b) {
     if (a->name != b->name) {
         return false;
     }
-    TcUserTypeArgs *aArgs = a->args;
-    TcUserTypeArgs *bArgs = b->args;
+    TcTypeSigArgs *aArgs = a->args;
+    TcTypeSigArgs *bArgs = b->args;
     while (aArgs != NULL && bArgs != NULL) {
         if (!sameType(aArgs->type, bArgs->type))
             return false;
@@ -1962,8 +1962,8 @@ static bool sameType(TcType *a, TcType *b) {
             return true;
         case TCTYPE_TYPE_UNKNOWN:
             return false;
-        case TCTYPE_TYPE_USERTYPE:
-            return sameUserType(a->val.userType, b->val.userType);
+        case TCTYPE_TYPE_TYPESIG:
+            return sameTypeSig(a->val.typeSig, b->val.typeSig);
         default:
             cant_happen("unrecognised type %d in sameType", a->type);
     }
@@ -1987,8 +1987,8 @@ static bool occursInPair(TcType *var, TcPair *pair) {
     return occursInType(var, pair->first) || occursInType(var, pair->second);
 }
 
-static bool occursInUserType(TcType *var, TcUserType *userType) {
-    for (TcUserTypeArgs *args = userType->args; args != NULL;
+static bool occursInTypeSig(TcType *var, TcTypeSig *typeSig) {
+    for (TcTypeSigArgs *args = typeSig->args; args != NULL;
          args = args->next) {
         if (occursInType(var, args->type))
             return true;
@@ -2020,8 +2020,8 @@ static bool occursIn(TcType *a, TcType *b) {
         case TCTYPE_TYPE_ENV:
         case TCTYPE_TYPE_OPAQUE:
             return false;
-        case TCTYPE_TYPE_USERTYPE:
-            return occursInUserType(a, b->val.userType);
+        case TCTYPE_TYPE_TYPESIG:
+            return occursInTypeSig(a, b->val.typeSig);
         case TCTYPE_TYPE_TUPLE:
             return occursInTuple(a, b->val.tuple);
         default:

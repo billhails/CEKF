@@ -1,6 +1,6 @@
 # anf
 
-ANF structures to be converted to bytecode.
+A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
 flowchart TD

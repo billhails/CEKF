@@ -28,145 +28,206 @@ config:
 
 structs:
     CEKF:
-        C: control
-        E: Env
-        K: Kont
-        F: Fail
-        S: Stack
-        B: ByteCodeArray
-        L: LocationArray
+        meta:
+            brief: Control Environment Kontinuation Fail Stack
+            description: The top-level CEKFs state machine
+        data:
+            C: control
+            E: Env
+            K: Kont
+            F: Fail
+            S: Stack
+            B: ByteCodeArray
+            L: LocationArray
 
     Env:
-        S: Frame
-        E: Env
+        meta:
+            brief: Environment
+            description: The environment for the CEKFs machine
+        data:
+            S: Frame
+            E: Env
 
     Kont:
-        C: control
-        E: Env
-        S: Stack
-        K: Kont
+        meta:
+            brief: Kontinuation
+            description: The continuation for the CEKFs machine
+        data:
+            C: control
+            E: Env
+            S: Stack
+            K: Kont
 
     Clo:
-        pending: int
-        C: control
-        E: Env
+        meta:
+            brief: Closure
+            description: A closure in the CEKFs machine
+        data:
+            pending: int
+            C: control
+            E: Env
 
     Fail:
-        C: control
-        E: Env
-        K: Kont
-        S: Stack
-        F: Fail
+        meta:
+            brief: Fail
+            description: The failure continuation for the CEKFs machine
+        data:
+            C: control
+            E: Env
+            K: Kont
+            S: Stack
+            F: Fail
 
     Location:
-        loc: index
-        lineno: int
-        filename: string
+        meta:
+            brief: Location
+            description: A location in source code for reporting run-time errors
+        data:
+            loc: index
+            lineno: int
+            filename: string
 
 inline:
     unions:
         Value:
-            none: void_ptr
-            stdint: int
-            bigint: BigInt
-            rational: Vec
-            rational_imag: Vec
-            irrational: double
-            stdint_imag: int
-            bigint_imag: BigInt
-            rational_imag: Vec
-            irrational_imag: double
-            complex: Vec
-            character: character
-            clo: Clo
-            pclo: Clo
-            kont: Kont
-            vec: Vec
-            builtIn: BuiltInImplementation
-            namespace: Vec
-            opaque: opaque
+            meta:
+                brief: Value
+                description: A flat value in the CEKFs machine (not a structure)
+            data:
+                none: void_ptr
+                stdint: int
+                bigint: BigInt
+                rational: Vec
+                rational_imag: Vec
+                irrational: double
+                stdint_imag: int
+                bigint_imag: BigInt
+                rational_imag: Vec
+                irrational_imag: double
+                complex: Vec
+                character: character
+                clo: Clo
+                pclo: Clo
+                kont: Kont
+                vec: Vec
+                builtIn: BuiltInImplementation
+                namespace: Vec
+                opaque: opaque
 
     arrays:
         ByteCodeArray:
-            entries: byte
+            meta:
+                brief: ByteCodeArray
+                description: The bytecodes to be exeecuted.
+            data:
+                entries: byte
 
 arrays:
     CharacterArray:
-        entries: character
+        meta:
+            brief: CharacterArray
+            description: An array of UTF-32, used for strings.
+        data:
+            entries: character
 
     ByteArray:
-        entries: byte
+        meta:
+            brief: ByteArray
+            description: An array of bytes, used for i/o
+        data:
+            entries: byte
 
     Frame:
-        entries: Value
+        meta:
+            brief: Frame
+            description: A frame for capturing closures
+        data:
+            entries: Value
 
     LocationArray:
-        entries: Location
+        meta:
+            brief: LocationArray
+            description: An array of locations for reporting run-time errors.
+        data:
+            entries: Location
 
 vectors:
     Vec:
-        entries: Value
+        meta:
+            brief: Vec
+            description: A vector of values representing complex arguments.
+        data:
+            entries: Value
 
 stacks:
     Stack:
-        entries: Value
+        meta:
+            brief: Stack
+            description: A simple stack
+        data:
+            entries: Value
 
 enums:
     ByteCodes:
-    - NONE
-    - LAM
-    - VAR
-    - LVAR
-    - PRIM_ADD
-    - PRIM_SUB
-    - PRIM_MUL
-    - PRIM_DIV
-    - PRIM_POW
-    - PRIM_MOD
-    - PRIM_EQ
-    - PRIM_NE
-    - PRIM_GT
-    - PRIM_LT
-    - PRIM_GE
-    - PRIM_LE
-    - PRIM_MAKEVEC
-    - PRIM_VEC
-    - MATCH
-    - APPLY
-    - IF
-    - CHARCOND
-    - INTCOND
-    - LETREC
-    - AMB
-    - CUT
-    - BACK
-    - LET
-    - CALLCC
-    - STDINT
-    - BIGINT
-    - IRRATIONAL
-    - CHAR
-    - RETURN
-    - JMP
-    - PUSHN
-    - DONE
-    - ERROR
-    - PRIM_CMP
-    - STDINT_IMAG
-    - BIGINT_IMAG
-    - IRRATIONAL_IMAG
-    - NS_START
-    - NS_END
-    - NS_FINISH
-    - NS_PUSHSTACK
-    - NS_PUSHENV
-    - NS_POP
+        meta:
+            brief: ByteCodes
+            description: The bytecode operations for the CEKFs machine
+        data:
+            - NONE
+            - LAM
+            - VAR
+            - LVAR
+            - PRIM_ADD
+            - PRIM_SUB
+            - PRIM_MUL
+            - PRIM_DIV
+            - PRIM_POW
+            - PRIM_MOD
+            - PRIM_EQ
+            - PRIM_NE
+            - PRIM_GT
+            - PRIM_LT
+            - PRIM_GE
+            - PRIM_LE
+            - PRIM_MAKEVEC
+            - PRIM_VEC
+            - MATCH
+            - APPLY
+            - IF
+            - CHARCOND
+            - INTCOND
+            - LETREC
+            - AMB
+            - CUT
+            - BACK
+            - LET
+            - CALLCC
+            - STDINT
+            - BIGINT
+            - IRRATIONAL
+            - CHAR
+            - RETURN
+            - JMP
+            - PUSHN
+            - DONE
+            - ERROR
+            - PRIM_CMP
+            - STDINT_IMAG
+            - BIGINT_IMAG
+            - IRRATIONAL_IMAG
+            - NS_START
+            - NS_END
+            - NS_FINISH
+            - NS_PUSHSTACK
+            - NS_PUSHENV
+            - NS_POP
 
 primitives: !include primitives.yaml
 
 external:
     BuiltInImplementation:
-        cname: "struct BuiltInImplementation *"
-        printFn: printBuiltInImplementation
-        markFn: markBuiltInImplementation
-        valued: true
+        data:
+            cname: "struct BuiltInImplementation *"
+            printFn: printBuiltInImplementation
+            markFn: markBuiltInImplementation
+            valued: true

@@ -25,84 +25,100 @@ config:
     - lambda_pp.h
     - bigint.h
 
-
 structs:
     TpmcMatchRules:
-        rules: TpmcMatchRuleArray
-        rootVariables: TpmcVariableArray
+        data:
+            rules: TpmcMatchRuleArray
+            rootVariables: TpmcVariableArray
 
     TpmcMatchRule:
-        action: TpmcState
-        patterns: TpmcPatternArray
+        data:
+            action: TpmcState
+            patterns: TpmcPatternArray
 
     TpmcComparisonPattern:
-        previous: TpmcPattern
-        current: TpmcPattern
+        data:
+            previous: TpmcPattern
+            current: TpmcPattern
 
     TpmcAssignmentPattern:
-        name: HashSymbol
-        value: TpmcPattern
+        data:
+            name: HashSymbol
+            value: TpmcPattern
 
     TpmcConstructorPattern:
-        tag: HashSymbol
-        namespace: int
-        info: LamTypeConstructorInfo
-        components: TpmcPatternArray
+        data:
+            tag: HashSymbol
+            namespace: int
+            info: LamTypeConstructorInfo
+            components: TpmcPatternArray
 
     TpmcPattern:
-        path: HashSymbol=NULL
-        pattern: TpmcPatternValue
+        data:
+            path: HashSymbol=NULL
+            pattern: TpmcPatternValue
 
     TpmcTestState:
-        path: HashSymbol
-        arcs: TpmcArcArray
+        data:
+            path: HashSymbol
+            arcs: TpmcArcArray
 
     TpmcFinalState:
-        action: LamExp
+        data:
+            action: LamExp
 
     TpmcState:
-        refcount: int=0
-        stamp: int
-        freeVariables: TpmcVariableTable=NULL
-        state: TpmcStateValue
+        data:
+            refcount: int=0
+            stamp: int
+            freeVariables: TpmcVariableTable=NULL
+            state: TpmcStateValue
 
     TpmcArc:
-        state: TpmcState
-        test: TpmcPattern
-        freeVariables: TpmcVariableTable
+        data:
+            state: TpmcState
+            test: TpmcPattern
+            freeVariables: TpmcVariableTable
 
     TpmcArcList:
-        arc: TpmcArc
-        next: TpmcArcList
+        data:
+            arc: TpmcArc
+            next: TpmcArcList
 
     TpmcIntList:
-        integer: int
-        next: TpmcIntList
+        data:
+            integer: int
+            next: TpmcIntList
 
 hashes:
-    TpmcVariableTable: {}
+    TpmcVariableTable:
+        data: {}
 
     TpmcSubstitutionTable:
-        entries: HashSymbol
+        data:
+            entries: HashSymbol
 
     TpmcPatternTable:
-        entries: TpmcPattern
+        data:
+            entries: TpmcPattern
 
 unions:
     TpmcPatternValue:
-        var: HashSymbol
-        comparison: TpmcComparisonPattern
-        assignment: TpmcAssignmentPattern
-        wildcard: void_ptr
-        character: character
-        biginteger: MaybeBigInt
-        constructor: TpmcConstructorPattern
-        tuple: TpmcPatternArray
+        data:
+            var: HashSymbol
+            comparison: TpmcComparisonPattern
+            assignment: TpmcAssignmentPattern
+            wildcard: void_ptr
+            character: character
+            biginteger: MaybeBigInt
+            constructor: TpmcConstructorPattern
+            tuple: TpmcPatternArray
 
     TpmcStateValue:
-        test: TpmcTestState
-        final: TpmcFinalState
-        error: void_ptr
+        data:
+            test: TpmcTestState
+            final: TpmcFinalState
+            error: void_ptr
 
 tags:
     - TpmcStateArray
@@ -110,47 +126,56 @@ tags:
 
 arrays:
     TpmcMatchRuleArray:
-        dimension: 1
-        entries: TpmcMatchRule
+        data:
+            dimension: 1
+            entries: TpmcMatchRule
 
     TpmcVariableArray:
-        dimension: 1
-        entries: HashSymbol
+        data:
+            dimension: 1
+            entries: HashSymbol
 
     TpmcPatternArray:
-        dimension: 1
-        entries: TpmcPattern
+        data:
+            dimension: 1
+            entries: TpmcPattern
 
     TpmcStateArray:
-        dimension: 1
-        entries: TpmcState
+        data:
+            dimension: 1
+            entries: TpmcState
 
     TpmcArcArray:
-        dimension: 1
-        entries: TpmcArc
+        data:
+            dimension: 1
+            entries: TpmcArc
 
     TpmcIntArray:
-        dimension: 1
-        entries: int
+        data:
+            dimension: 1
+            entries: int
 
     TpmcMatrix:
-        dimension: 2
-        entries: TpmcPattern
+        data:
+            dimension: 2
+            entries: TpmcPattern
 
 primitives: !include primitives.yaml
 
 external:
     LamExp:
-        cname: "LamExp *"
-        printFn: ppLamExpD
-        markFn: markLamExp
-        copyFn: copyLamExp
-        valued: true
+        data:
+            cname: "LamExp *"
+            printFn: ppLamExpD
+            markFn: markLamExp
+            copyFn: copyLamExp
+            valued: true
 
     LamTypeConstructorInfo:
-        cname: "LamTypeConstructorInfo *"
-        printFn: printLamTypeConstructorInfo
-        markFn: markLamTypeConstructorInfo
-        copyFn: copyLamTypeConstructorInfo
-        valued: true
+        data:
+            cname: "LamTypeConstructorInfo *"
+            printFn: printLamTypeConstructorInfo
+            markFn: markLamTypeConstructorInfo
+            copyFn: copyLamTypeConstructorInfo
+            valued: true
 

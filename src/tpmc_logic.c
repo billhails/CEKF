@@ -40,7 +40,7 @@
 #  include "debugging_off.h"
 #endif
 
-static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
+static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env);
 
 static TpmcVariableArray *createRootVariables(int nargs) {
     ENTER(createRootVariables);
@@ -56,7 +56,7 @@ static TpmcVariableArray *createRootVariables(int nargs) {
     return rootVariables;
 }
 
-static TpmcPatternArray *convertArgList(AstArgList *argList, LamContext *env) {
+static TpmcPatternArray *convertArgList(AstFargList *argList, LamContext *env) {
     TpmcPatternArray *patterns = newTpmcPatternArray("convertArgList");
     int save = PROTECT(patterns);
     while (argList != NULL) {
@@ -179,7 +179,7 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     return pattern;
 }
 
-static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
+static TpmcPattern *makeTuplePattern(AstFargList *args, LamContext *env) {
     TpmcPatternArray *tuple = convertArgList(args, env);
     int save = PROTECT(tuple);
     TpmcPatternValue *val = newTpmcPatternValue_Tuple(tuple);
@@ -205,31 +205,31 @@ static TpmcPattern *makeCharacterPattern(char character) {
     return pattern;
 }
 
-static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
+static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
     switch (arg->type) {
-        case AST_ARG_TYPE_WILDCARD:
+        case AST_FARG_TYPE_WILDCARD:
             return makeWildcardPattern();
-        case AST_ARG_TYPE_SYMBOL:
+        case AST_FARG_TYPE_SYMBOL:
             return makeVarPattern(arg->val.symbol, env);
-        case AST_ARG_TYPE_NAMED:
+        case AST_FARG_TYPE_NAMED:
             return makeAssignmentPattern(arg->val.named, env);
-        case AST_ARG_TYPE_UNPACK:
+        case AST_FARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
-        case AST_ARG_TYPE_TUPLE:
+        case AST_FARG_TYPE_TUPLE:
             return makeTuplePattern(arg->val.tuple, env);
-        case AST_ARG_TYPE_NUMBER:
+        case AST_FARG_TYPE_NUMBER:
             return makeMaybeBigIntegerPattern(arg->val.number);
-        case AST_ARG_TYPE_CHARACTER:
+        case AST_FARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
-        case AST_ARG_TYPE_LOOKUP:
+        case AST_FARG_TYPE_LOOKUP:
             return makeLookupPattern(arg->val.lookup, env);
         default:
             cant_happen("unrecognized arg type %s in convertPattern",
-                        astArgTypeName(arg->type));
+                        astFargTypeName(arg->type));
     }
 }
 
-static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action,
+static TpmcMatchRule *convertSingle(AstFargList *argList, LamExp *action,
                                     LamContext *env) {
     TpmcPatternArray *patterns = convertArgList(argList, env);
     int save = PROTECT(patterns);
@@ -245,7 +245,7 @@ static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action,
 }
 
 static TpmcMatchRuleArray *convertComposite(int nbodies,
-                                            AstArgList **argLists,
+                                            AstFargList **argLists,
                                             LamExp **actions,
                                             LamContext *env) {
     TpmcMatchRuleArray *result = newTpmcMatchRuleArray();
@@ -631,7 +631,7 @@ static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
 }
 
 LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs,
-                    int nbodies, AstArgList **argLists,
+                    int nbodies, AstFargList **argLists,
                     LamExp **actions, LamContext *env) {
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);

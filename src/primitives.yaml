@@ -19,108 +19,128 @@
 # common primitive types not defined by the schemas
 
 HashSymbol:
-    cname: "struct HashSymbol *"
-    printFn: printAstSymbol
-    valued: true
+    data:
+        cname: "struct HashSymbol *"
+        printFn: printAstSymbol
+        valued: true
 
 int:
-    cname: Integer
-    printf: "%d"
-    valued: true
+    data:
+        cname: Integer
+        printf: "%d"
+        valued: true
 
 control:
-    cname: Control
-    printf: "%08lux"
-    valued: true
+    data:
+        cname: Control
+        printf: "%08lux"
+        valued: true
 
 index:
-    cname: Index
-    printf: "%u"
-    valued: true
+    data:
+        cname: Index
+        printf: "%u"
+        valued: true
 
 byte:
-    cname: Byte
-    printf: "%02ux"
-    valued: true
+    data:
+        cname: Byte
+        printf: "%02ux"
+        valued: true
 
 file_id:
-    cname: "struct AgnosticFileId *"
-    printFn: printAgnosticFileId
-    compareFn: cmpAgnosticFileId
-    markFn: markAgnosticFileId
-    valued: true
+    data:
+        cname: "struct AgnosticFileId *"
+        printFn: printAgnosticFileId
+        compareFn: cmpAgnosticFileId
+        markFn: markAgnosticFileId
+        valued: true
 
 opaque:
-    cname: "struct Opaque *"
-    printFn: printOpaque
-    markFn: markOpaque
-    valued: true
+    data:
+        cname: "struct Opaque *"
+        printFn: printOpaque
+        markFn: markOpaque
+        valued: true
 
 void_ptr:
-    cname: "void *"
-    printf: "%p"
-    valued: false
+    data:
+        cname: "void *"
+        printf: "%p"
+        valued: false
 
 bool:
-    cname: "bool"
-    printf: "%d"
-    valued: true
+    data:
+        cname: "bool"
+        printf: "%d"
+        valued: true
 
 character:
-    cname: Character
-    printf: "%lc"
-    valued: true
+    data:
+        cname: Character
+        printf: "%lc"
+        valued: true
 
 uchar:
-    cname: unsigned char
-    printf: "%c"
-    valued: true
+    data:
+        cname: unsigned char
+        printf: "%c"
+        valued: true
 
 schar:
-    cname: char
-    printf: "%c"
-    valued: true
+    data:
+        cname: char
+        printf: "%c"
+        valued: true
 
 BigInt:
-    cname: "struct BigInt *"
-    printFn: "printBigInt"
-    markFn: "markBigInt"
-    compareFn: "cmpBigInt"
-    valued: true
+    data:
+        cname: "struct BigInt *"
+        printFn: "printBigInt"
+        markFn: "markBigInt"
+        compareFn: "cmpBigInt"
+        valued: true
 
 MaybeBigInt:
-    cname: "struct MaybeBigInt *"
-    printFn: "printMaybeBigInt"
-    markFn: "markMaybeBigInt"
-    compareFn: "cmpMaybeBigInt"
-    valued: true
+    data:
+        cname: "struct MaybeBigInt *"
+        printFn: "printMaybeBigInt"
+        markFn: "markMaybeBigInt"
+        compareFn: "cmpMaybeBigInt"
+        valued: true
 
 string:
-    cname: "char *"
-    printf: "%s"
-    valued: true
+    data:
+        cname: "char *"
+        printf: "%s"
+        valued: true
 
 ustring:
-    cname: "unsigned char *"
-    printf: "%s"
-    valued: true
+    data:
+        cname: "unsigned char *"
+        printf: "%s"
+        valued: true
 
 PrattOp:
-    cname: PrattOp
-    printf: "%p"
-    valued: true
+    data:
+        cname: PrattOp
+        printf: "%p"
+        valued: true
 
 double:
-    cname: Double
-    printf: "%f"
-    valued: true
+    data:
+        cname: Double
+        printf: "%f"
+        valued: true
 
 file:
-    cname: "FILE *"
-    printf: "%p"
-    valued: true
+    data:
+        cname: "FILE *"
+        printf: "%p"
+        valued: true
 
 size:
-    cname: size_t
-    printf: "%zu"
-    valued: true
+    data:
+        cname: size_t
+        printf: "%zu"
+        valued: true

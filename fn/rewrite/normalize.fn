@@ -1,5 +1,5 @@
 let
-    link "listutils.fn" as list;
+    link "../listutils.fn" as list;
 
     typedef expr {
         lambda(list(expr), expr) |

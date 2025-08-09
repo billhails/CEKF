@@ -367,11 +367,51 @@ class Base:
     Contains default no-op behavior
     All classes contained directly by the catalog should use this base class
     """
-    def __init__(self, name):
+    def __init__(self, name, body):
         self.name = name
         self.tagged = False
         self.bespokeCmpImplementation = False
         self.extraCmpArgs = {}
+        self.hasDocs = False
+        self.brief = None
+        self.description = None
+        if "meta" in body:
+            meta = body["meta"]
+            if "brief" in meta:
+                self.hasDocs = True
+                self.brief = meta["brief"]
+            if "description" in meta:
+                self.hasDocs = True
+                self.description = meta["description"]
+
+    def printBaseDocumentation(self):
+        if self.hasDocs:
+            print("/**")
+            if self.brief is not None:
+                print(f" * @brief: {self.brief}")
+            for line in self.formatDescription():
+                print(f" * {line}")
+            print(" */")
+
+    def formatDescription(self):
+        """
+        Format the description for documentation.
+        Splits the description into lines of a maximum length of 70 characters.
+        """
+        if self.description is None:
+            return []
+        words = self.description.split()
+        lines = []
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 > 70:
+                lines.append(current_line.strip())
+                current_line = word + " "
+            else:
+                current_line += word + " "
+        if current_line:
+            lines.append(current_line.strip())
+        return lines
 
     def isInline(self, catalog):
         return False
@@ -798,12 +838,17 @@ class SimpleHash(Base):
     """
     Hash tables
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        if "entries" in data:
-            self.entries = SimpleField(self.name, "entries", data["entries"])
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            if "entries" in data:
+                self.entries = SimpleField(self.name, "entries", data["entries"])
+            else:
+                self.entries = None
         else:
-            self.entries = None
+            raise Exception(f"SimpleHash {name} must have 'data' field")
 
     def isHash(self):
         return True
@@ -927,6 +972,7 @@ class SimpleHash(Base):
         c = self.comment('printTypedef')
         self.noteTypedef()
         myName = self.getName()
+        self.printBaseDocumentation()
         print(f'typedef struct {myName} {{ {c}')
         print(f'    struct HashTable wrapped; {c}')
         print(f'}} {myName}; {c}')
@@ -998,6 +1044,12 @@ class SimpleHash(Base):
             self.entries.printPrintHashLine(catalog, 1)
             print(f'}} {c}')
             print('')
+        print(f"""/**
+  * @brief Create a new {myName}.
+  * This generated function initializes a new {myName} structure,
+  * which is a wrapper around a HashTable.
+  */
+""")
         print(f'{decl} {{ {c}')
         print(f'    return ({myName} *)newHashTable({size}, {markFn}, {printFn}); {c}')
         print(f'}} {c}')
@@ -1020,15 +1072,20 @@ class SimpleArray(Base):
     """
     Array structures declared in the yaml
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        self.dimension = data["dimension"] if "dimension" in data else 1
-        if self.dimension > 2:
-            raise Exception("only 1 or 2 dimensional arrays supported for now")
-        if self.dimension == 2:
-            self.width = SimpleField(self.name, "width", "int")
-            self.height = SimpleField(self.name, "height", "int")
-        self.entries = SimpleField(self.name,"entries", data["entries"])
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            self.dimension = data["dimension"] if "dimension" in data else 1
+            if self.dimension > 2:
+                raise Exception("only 1 or 2 dimensional arrays supported for now")
+            if self.dimension == 2:
+                self.width = SimpleField(self.name, "width", "int")
+                self.height = SimpleField(self.name, "height", "int")
+            self.entries = SimpleField(self.name,"entries", data["entries"])
+        else:
+            raise Exception(f"SimpleArray {name} must have 'data' field")
 
     def printMermaid(self, catalog):
         myName = self.getName()
@@ -1118,6 +1175,7 @@ class SimpleArray(Base):
         c = self.comment('printTypedef')
         self.noteTypedef()
         name = self.getName()
+        self.printBaseDocumentation()
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
@@ -2691,9 +2749,14 @@ class SimpleVector(Base):
     Vectors are fixed-size arrays with a simpler
     and more efficient flat implementation
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        self.entries = SimpleField(self.name, "entries", data["entries"])
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            self.entries = SimpleField(self.name, "entries", data["entries"])
+        else:
+            raise ValueError(f"SimpleVector {name} must have 'data' field with 'entries'")
 
     def isVector(self):
         return True
@@ -2702,6 +2765,7 @@ class SimpleVector(Base):
         self.noteTypedef()
         c = self.comment('printTypedef')
         name = self.getName()
+        self.printBaseDocumentation()
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
@@ -3000,9 +3064,14 @@ class SimpleStruct(Base):
     """
     Simple structs declared directly in the yaml
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        self.fields = [self.makeField(x, data[x]) for x in data.keys()]
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            self.fields = [self.makeField(x, data[x]) for x in data.keys()]
+        else:
+            raise ValueError(f"SimpleStruct {name} must have 'data' field")
 
     def hasParserInfo(self, catalog):
         return catalog.parserInfo
@@ -3011,6 +3080,7 @@ class SimpleStruct(Base):
         c = self.comment('printTypedef')
         self.noteTypedef()
         name = self.getName()
+        self.printBaseDocumentation()
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
@@ -3535,10 +3605,10 @@ class DiscriminatedUnion(SimpleStruct):
     Contains the data from a union specification in the yaml.
     Prints as the struct { type, val }
     """
-    def __init__(self, name, data):
-        super().__init__(name, data)
-        self.union = DiscriminatedUnionUnion(self.name, self.fields)
-        self.enum = DiscriminatedUnionEnum(self.name, self.fields)
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        self.union = DiscriminatedUnionUnion(self.name, self.fields, body)
+        self.enum = DiscriminatedUnionEnum(self.name, self.fields, body)
 
     def build(self, catalog):
         catalog.add(self.union)
@@ -3558,6 +3628,7 @@ class DiscriminatedUnion(SimpleStruct):
         efield=self.enum.getFieldName()
         union=self.union.getTypeDeclaration(catalog)
         ufield=self.union.getFieldName()
+        self.printBaseDocumentation()
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
@@ -3696,8 +3767,8 @@ class DiscriminatedUnionUnion(Base):
     Built and added to the catalog by DiscriminatedUnion.build()
     contains DiscriminatedUnionField objects
     """
-    def __init__(self, name, fields):
-        super().__init__(name)
+    def __init__(self, name, fields, body):
+        super().__init__(name, body)
         self.fields = fields
 
     def comment(self, method):
@@ -3725,6 +3796,7 @@ class DiscriminatedUnionUnion(Base):
         c = self.comment('printTypedef')
         name=self.getName()
         self.noteTypedef()
+        self.printBaseDocumentation()
         print(f"typedef union {name} {{ {c}")
         for field in self.fields:
             field.printStructTypedefLine(catalog)
@@ -3735,9 +3807,14 @@ class SimpleEnum(Base):
     """
     Contains enums declared directly by the yaml
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        self.fields = [EnumField(name, x) for x in data]
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            self.fields = [EnumField(name, x) for x in data]
+        else:
+            raise ValueError(f"SimpleEnum {name} must have 'data' field")
 
     def getTypeDeclaration(self, catalog):
         return "enum {name} ".format(name=self.getName())
@@ -3758,6 +3835,7 @@ class SimpleEnum(Base):
         c = self.comment('printTypedef')
         self.noteTypedef()
         name = self.getName()
+        self.printBaseDocumentation()
         print(f"typedef enum {name} {{ {c}")
         count = 0
         for  field in self.fields:
@@ -3838,8 +3916,8 @@ class DiscriminatedUnionEnum(Base):
     Built and added to the catalog by DiscriminatedUnion.build()
     contains DiscriminatedUnionField objects
     """
-    def __init__(self, name, fields):
-        super().__init__(name)
+    def __init__(self, name, fields, body):
+        super().__init__(name, body)
         self.fields = fields
 
     def comment(self, method):
@@ -3887,6 +3965,7 @@ class DiscriminatedUnionEnum(Base):
         c = self.comment('printTypedef')
         self.noteTypedef()
         name=self.getName()
+        self.printBaseDocumentation()
         print(f"typedef enum {name} {{ {c}")
         count = 0
         for  field in self.fields:
@@ -3905,27 +3984,32 @@ class Primitive(Base):
     """
     Primitive types declared by the yaml and added to the catalog
     """
-    def __init__(self, name, data):
-        super().__init__(name)
-        self.cname = data['cname']
-        if 'markFn' in data:
-            self.markFn = data['markFn']
+    def __init__(self, name, body):
+        super().__init__(name, body)
+        # HASENTRIES
+        if "data" in body:
+            data = body["data"]
+            self.cname = data['cname']
+            if 'markFn' in data:
+                self.markFn = data['markFn']
+            else:
+                self.markFn = None
+            if 'printf' in data:
+                self.printFn = 'printf'
+                self.printf = data['printf']
+            else:
+                self.printFn = data['printFn']
+            self.valued = data['valued']
+            if 'compareFn' in data:
+                self.compareFn = data['compareFn']
+            else:
+                self.compareFn = None
+            if 'copyFn' in data:
+                self.copyFn = data['copyFn']
+            else:
+                self.copyFn = None
         else:
-            self.markFn = None
-        if 'printf' in data:
-            self.printFn = 'printf'
-            self.printf = data['printf']
-        else:
-            self.printFn = data['printFn']
-        self.valued = data['valued']
-        if 'compareFn' in data:
-            self.compareFn = data['compareFn']
-        else:
-            self.compareFn = None
-        if 'copyFn' in data:
-            self.copyFn = data['copyFn']
-        else:
-            self.copyFn = None
+            raise ValueError(f"Primitive {name} must have 'data' field")
 
     def printMermaid(self, catalog):
         pass

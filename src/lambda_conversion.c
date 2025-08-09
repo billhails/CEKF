@@ -45,7 +45,7 @@ static LamExp *convertExpression(AstExpression *, LamContext *);
 static bool typeHasFields(AstTypeBody *);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *, LamContext *);
 static void collectAliases(AstDefinitions *, LamContext *);
-static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *, LamType *, int, int, bool, LamContext *);
+static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *, LamTypeSig *, int, int, bool, LamContext *);
 static void collectTypeInfo(HashSymbol *, AstTypeConstructorArgs *, LamTypeConstructor *, bool, int, int, int, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
@@ -259,20 +259,20 @@ static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContex
     return this;
 }
 
-static LamTypeArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
+static LamTypeSigArgs *convertTypeSymbols(AstTypeSymbols *symbols) {
     if (symbols == NULL)
         return NULL;
-    LamTypeArgs *next = convertTypeSymbols(symbols->next);
+    LamTypeSigArgs *next = convertTypeSymbols(symbols->next);
     int save = PROTECT(next);
-    LamTypeArgs *this = newLamTypeArgs(CPI(symbols), symbols->typeSymbol, next);
+    LamTypeSigArgs *this = newLamTypeSigArgs(CPI(symbols), symbols->typeSymbol, next);
     UNPROTECT(save);
     return this;
 }
 
-static LamType *convertUserType(AstUserType *userType) {
-    LamTypeArgs *args = convertTypeSymbols(userType->typeSymbols);
+static LamTypeSig *convertTypeSig(AstTypeSig *typeSig) {
+    LamTypeSigArgs *args = convertTypeSymbols(typeSig->typeSymbols);
     int save = PROTECT(args);
-    LamType *res = newLamType(CPI(userType), userType->symbol, args);
+    LamTypeSig *res = newLamTypeSig(CPI(typeSig), typeSig->symbol, args);
     UNPROTECT(save);
     return res;
 }
@@ -494,7 +494,7 @@ static Index countAstTypeConstructorArgs(AstTypeConstructorArgs *args) {
 }
 
 static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstructor,
-                                                  LamType *type,
+                                                  LamTypeSig *type,
                                                   int enumCount, int index,
                                                   bool needsVec,
                                                   LamContext *env) {
@@ -512,7 +512,7 @@ static LamTypeConstructor *collectTypeConstructor(AstTypeConstructor *typeConstr
 }
 
 static LamTypeDef *collectTypeDef(AstTypeDef *typeDef, LamContext *env) {
-    LamType *type = convertUserType(typeDef->userType);
+    LamTypeSig *type = convertTypeSig(typeDef->typeSig);
     int save = PROTECT(type);
     AstTypeBody *typeBody = typeDef->typeBody;
     bool needsVec = typeHasFields(typeBody);
@@ -568,22 +568,22 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
     collectAliases(definitions->next, env);
 }
 
-static HashSymbol *convertMacroArg(AstArg *arg) {
+static HashSymbol *convertMacroArg(AstFarg *arg) {
     switch (arg->type) {
-        case AST_ARG_TYPE_SYMBOL:
+        case AST_FARG_TYPE_SYMBOL:
             return arg->val.symbol;
-        case AST_ARG_TYPE_WILDCARD:
-        case AST_ARG_TYPE_LOOKUP:
-        case AST_ARG_TYPE_NAMED:
-        case AST_ARG_TYPE_UNPACK:
-        case AST_ARG_TYPE_UNPACKSTRUCT:
-        case AST_ARG_TYPE_NUMBER:
-        case AST_ARG_TYPE_CHARACTER:
-        case AST_ARG_TYPE_TUPLE:
+        case AST_FARG_TYPE_WILDCARD:
+        case AST_FARG_TYPE_LOOKUP:
+        case AST_FARG_TYPE_NAMED:
+        case AST_FARG_TYPE_UNPACK:
+        case AST_FARG_TYPE_UNPACKSTRUCT:
+        case AST_FARG_TYPE_NUMBER:
+        case AST_FARG_TYPE_CHARACTER:
+        case AST_FARG_TYPE_TUPLE:
             // should have been caught in the parser
-            cant_happen("unexpected %s", astArgTypeName(arg->type));
+            cant_happen("unexpected %s", astFargTypeName(arg->type));
         default:
-            cant_happen("unrecognized %s", astArgTypeName(arg->type));
+            cant_happen("unrecognized %s", astFargTypeName(arg->type));
     }
 }
 
@@ -596,7 +596,7 @@ static void checkDuplicateMacroArg(HashSymbol *arg, LamVarList *args) {
     checkDuplicateMacroArg(arg, args->next);
 }
 
-static LamVarList *collectMacroArgs(AstArgList *argList) {
+static LamVarList *collectMacroArgs(AstFargList *argList) {
     if (argList == NULL) return NULL;
     LamVarList *next = collectMacroArgs(argList->next);
     int save = PROTECT(next);
@@ -1154,101 +1154,101 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     }
 }
 
-static AstArgList *rewriteAstArgList(AstArgList *args, LamContext *env);
-static AstArg *rewriteAstArg(AstArg *arg, LamContext *env);
+static AstFargList *rewriteAstFargList(AstFargList *args, LamContext *env);
+static AstFarg *rewriteAstFarg(AstFarg *arg, LamContext *env);
 
-static AstArg *rewriteAstNamed(AstNamedArg *namedArg, LamContext *env) {
-    AstArg *arg = rewriteAstArg(namedArg->arg, env);
+static AstFarg *rewriteAstNamed(AstNamedArg *namedArg, LamContext *env) {
+    AstFarg *arg = rewriteAstFarg(namedArg->arg, env);
     int save = PROTECT(arg);
     AstNamedArg *this = newAstNamedArg(CPI(namedArg), namedArg->name, arg);
     PROTECT(this);
-    AstArg *res = newAstArg_Named(CPI(this), this);
+    AstFarg *res = newAstFarg_Named(CPI(this), this);
     UNPROTECT(save);
     return res;
 }
 
-static AstArg *rewriteAstUnpack(AstUnpack *unpack, LamContext *env) {
-    AstArgList *args = rewriteAstArgList(unpack->argList, env);
+static AstFarg *rewriteAstUnpack(AstUnpack *unpack, LamContext *env) {
+    AstFargList *args = rewriteAstFargList(unpack->argList, env);
     int save = PROTECT(args);
     AstUnpack *this = newAstUnpack(CPI(unpack), unpack->symbol, args);
     PROTECT(this);
-    AstArg *res = newAstArg_Unpack(CPI(this), this);
+    AstFarg *res = newAstFarg_Unpack(CPI(this), this);
     UNPROTECT(save);
     return res;
 }
 
-static AstArg *getAstArgFromTaggedArgList(HashSymbol *tag, AstTaggedArgList *list, LamContext *env, ParserInfo I) {
+static AstFarg *getAstFargFromTaggedArgList(HashSymbol *tag, AstTaggedArgList *list, LamContext *env, ParserInfo I) {
     if (list == NULL) {
-        return newAstArg_Wildcard(I);
+        return newAstFarg_Wildcard(I);
     }
     if (tag == list->tag) {
-        return rewriteAstArg(list->arg, env);
+        return rewriteAstFarg(list->arg, env);
     }
-    return getAstArgFromTaggedArgList(tag, list->next, env, I);
+    return getAstFargFromTaggedArgList(tag, list->next, env, I);
 }
 
-static AstArgList *rewriteAstTaggedArgList(LamTypeTags *allTags, AstTaggedArgList *argTags, LamContext *env) {
+static AstFargList *rewriteAstTaggedArgList(LamTypeTags *allTags, AstTaggedArgList *argTags, LamContext *env) {
     if (allTags == NULL) return NULL;
-    AstArgList *next = rewriteAstTaggedArgList(allTags->next, argTags, env);
+    AstFargList *next = rewriteAstTaggedArgList(allTags->next, argTags, env);
     int save = PROTECT(next);
-    AstArg *arg = getAstArgFromTaggedArgList(allTags->tag, argTags, env, CPI(argTags));
+    AstFarg *arg = getAstFargFromTaggedArgList(allTags->tag, argTags, env, CPI(argTags));
     PROTECT(arg);
-    AstArgList *this = newAstArgList(CPI(argTags), arg, next);
+    AstFargList *this = newAstFargList(CPI(argTags), arg, next);
     UNPROTECT(save);
     return this;
 }
 
-static AstArg *rewriteAstUnpackStruct(AstUnpackStruct *structure, LamContext *env) {
+static AstFarg *rewriteAstUnpackStruct(AstUnpackStruct *structure, LamContext *env) {
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info->tags == NULL) {
         conversionError(CPI(structure), "constructor not a struct");
-        return newAstArg_Wildcard(CPI(structure));
+        return newAstFarg_Wildcard(CPI(structure));
     }
-    AstArgList *args = rewriteAstTaggedArgList(info->tags, structure->argList, env);
+    AstFargList *args = rewriteAstTaggedArgList(info->tags, structure->argList, env);
     int save = PROTECT(args);
     AstUnpack *unpack = newAstUnpack(CPI(structure), structure->symbol, args);
     PROTECT(unpack);
-    AstArg *res = newAstArg_Unpack(CPI(unpack), unpack);
+    AstFarg *res = newAstFarg_Unpack(CPI(unpack), unpack);
     UNPROTECT(save);
     return res;
 }
 
-static AstArg *rewriteAstTuple(AstArgList *tuple, LamContext *env) {
-    AstArgList *new = rewriteAstArgList(tuple, env);
+static AstFarg *rewriteAstTuple(AstFargList *tuple, LamContext *env) {
+    AstFargList *new = rewriteAstFargList(tuple, env);
     int save = PROTECT(new);
-    AstArg *res = newAstArg_Tuple(CPI(tuple), new);
+    AstFarg *res = newAstFarg_Tuple(CPI(tuple), new);
     UNPROTECT(save);
     return res;
 }
 
-static AstArg *rewriteAstArg(AstArg *arg, LamContext *env) {
+static AstFarg *rewriteAstFarg(AstFarg *arg, LamContext *env) {
     switch (arg->type) {
-        case AST_ARG_TYPE_WILDCARD:
-        case AST_ARG_TYPE_SYMBOL:
-        case AST_ARG_TYPE_NUMBER:
-        case AST_ARG_TYPE_CHARACTER:
-        case AST_ARG_TYPE_LOOKUP:
+        case AST_FARG_TYPE_WILDCARD:
+        case AST_FARG_TYPE_SYMBOL:
+        case AST_FARG_TYPE_NUMBER:
+        case AST_FARG_TYPE_CHARACTER:
+        case AST_FARG_TYPE_LOOKUP:
             return arg;
-        case AST_ARG_TYPE_NAMED:
+        case AST_FARG_TYPE_NAMED:
             return rewriteAstNamed(arg->val.named, env);
-        case AST_ARG_TYPE_UNPACK:
+        case AST_FARG_TYPE_UNPACK:
             return rewriteAstUnpack(arg->val.unpack, env);
-        case AST_ARG_TYPE_UNPACKSTRUCT:
+        case AST_FARG_TYPE_UNPACKSTRUCT:
             return rewriteAstUnpackStruct(arg->val.unpackStruct, env);
-        case AST_ARG_TYPE_TUPLE:
+        case AST_FARG_TYPE_TUPLE:
             return rewriteAstTuple(arg->val.tuple, env);
         default:
-            cant_happen("unrecognized %s", astArgTypeName(arg->type));
+            cant_happen("unrecognized %s", astFargTypeName(arg->type));
     }
 }
 
-static AstArgList *rewriteAstArgList(AstArgList *args, LamContext *env) {
+static AstFargList *rewriteAstFargList(AstFargList *args, LamContext *env) {
     if (args == NULL) return NULL;
-    AstArgList *next = rewriteAstArgList(args->next, env);
+    AstFargList *next = rewriteAstFargList(args->next, env);
     int save = PROTECT(next);
-    AstArg *arg = rewriteAstArg(args->arg, env);
+    AstFarg *arg = rewriteAstFarg(args->arg, env);
     PROTECT(arg);
-    AstArgList *this = newAstArgList(CPI(args), arg, next);
+    AstFargList *this = newAstFargList(CPI(args), arg, next);
     UNPROTECT(save);
     return this;
 }
@@ -1263,20 +1263,20 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
         return NULL;
     }
     LamExp **actions = NEW_ARRAY(LamExp *, nBodies);
-    AstArgList **argLists = NEW_ARRAY(AstArgList *, nBodies);
+    AstFargList **argLists = NEW_ARRAY(AstFargList *, nBodies);
     int p = PROTECT(NULL);
     AstCompositeFunction *f = fun;
     for (int i = 0; i < nBodies; i++, f = f->next) {
         AstFunction *func = f->function;
         actions[i] = convertNest(func->nest, env);
         PROTECT(actions[i]);
-        argLists[i] = rewriteAstArgList(func->argList, env);
+        argLists[i] = rewriteAstFargList(func->argList, env);
         PROTECT(argLists[i]);
     }
     LamLam *result = tpmcConvert(fun->unsafe, CPI(fun), nargs, nBodies, argLists, actions, env);
     PROTECT(result);
     FREE_ARRAY(LamExp *, actions, nBodies);
-    FREE_ARRAY(AstArgList *, argLists, nBodies);
+    FREE_ARRAY(AstFargList *, argLists, nBodies);
     UNPROTECT(p);
     LEAVE(convertCompositeBodies);
     return result;
@@ -1288,7 +1288,7 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun, Lam
         conversionError(PI, "composite function with no components");
         return lamExpError(PI);
     }
-    int nargs = countAstArgList(fun->function->argList);
+    int nargs = countAstFargList(fun->function->argList);
     LamLam *lambda = convertCompositeBodies(nargs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
     int save = PROTECT(lambda);

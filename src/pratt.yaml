@@ -29,121 +29,225 @@ config:
 structs:
     # Scanner token parsing
     PrattTrie:
-        character: byte
-        terminal: HashSymbol
-        siblings: PrattTrie
-        children: PrattTrie
+        meta:
+            brief: A tree of tokens indexed by character.
+            description: >-
+                A Trie is a tree of tokens indexed by character. It is used to
+                parse the input stream and build a parse tree. The root node
+                has the first character, and the children are indexed by subsequent
+                characters of the token.
+        data:
+            character: byte
+            terminal: HashSymbol
+            siblings: PrattTrie
+            children: PrattTrie
 
-    # Both a parse buffer and a parse token data type (like yytext)
     PrattBuffer:
-        data: ustring
-        start: ustring=NULL
-        length: int=0
+        meta:
+            brief: A buffer of UTF-8 characters.
+            description: >-
+                A buffer of UTF-8 characters that is both used during parsing
+                and returned by the token parser (like yytext).
+        data:
+            data: ustring
+            start: ustring=NULL
+            length: int=0
 
-    # Stack of buffers parsed in order
     PrattBufList:
-        lineno: int
-        filename: HashSymbol
-        buffer: PrattBuffer
-        next: PrattBufList
+        meta:
+            brief: A list of buffers.
+            description: >-
+                A list of buffers that are parsed in order. The first buffer
+                is the most recent, and the last buffer is the oldest.
+        data:
+            lineno: int
+            filename: HashSymbol
+            buffer: PrattBuffer
+            next: PrattBufList
 
-    # Token after parsing
     PrattToken:
-        type: HashSymbol
-        filename: HashSymbol
-        lineno: int
-        value: PrattValue
-        next: PrattToken
+        meta:
+            brief: A token after parsing.
+            description: >-
+                A token after parsing. It contains the token type, the value,
+                and the position in the input stream.
+        data:
+            type: HashSymbol
+            filename: HashSymbol
+            lineno: int
+            value: PrattValue
+            next: PrattToken
 
-    # current state of the scanner
     PrattLexer:
-        bufList: PrattBufList
-        tokenHead: PrattToken=NULL
-        tokenTail: PrattToken=NULL
+        meta:
+            brief: The current state of the scanner.
+            description: >-
+                The current state of the token scanner. It contains the current
+                buffer, the current token, and the current position in the
+                input stream.
+        data:
+            bufList: PrattBufList
+            tokenHead: PrattToken=NULL
+            tokenTail: PrattToken=NULL
 
-    # Scoped Parser
     PrattParser:
-        rules: PrattTable
-        namespaces: PrattIntTable
-        lexer: PrattLexer=NULL
-        trie: PrattTrie=NULL
-        panicMode: bool=false
-        isPreamble: bool=false
-        next: PrattParser
+        meta:
+            brief: A parser for a specific scope.
+            description: >-
+                A parser for a specific scope. It contains the rules for parsing
+                the input stream, the namespaces, and the lexer. It is intended
+                to keep information about user defined operators imported from
+                other namespaces.
+        data:
+            rules: PrattRecordTable
+            namespaces: PrattNsIdTable
+            lexer: PrattLexer=NULL
+            trie: PrattTrie=NULL
+            panicMode: bool=false
+            isPreamble: bool=false
+            next: PrattParser
 
-    # Pratt Parser table records
     PrattRecord:
-        symbol: HashSymbol
-        prefixOp: PrattOp
-        prefixPrec: int
-        prefixImpl: AstExpression=NULL
-        infixOp: PrattOp
-        infixPrec: int
-        infixImpl: AstExpression=NULL
-        postfixOp: PrattOp
-        postfixPrec: int
-        postfixImpl: AstExpression=NULL
+        meta:
+            brief: A record in the Pratt parser table.
+            description: >-
+                A record in the Pratt parser table. It contains the operator
+                information, precedence, and the implementation of the operator
+                parser.
+        data:
+            symbol: HashSymbol
+            prefixOp: PrattOp
+            prefixPrec: int
+            prefixImpl: AstExpression=NULL
+            infixOp: PrattOp
+            infixPrec: int
+            infixImpl: AstExpression=NULL
+            postfixOp: PrattOp
+            postfixPrec: int
+            postfixImpl: AstExpression=NULL
 
 enums:
     PrattNumberState:
-        - START
-        - ZERO
-        - HEX
-        - DEC
-        - FLOAT
-        - END
+        meta:
+            brief: The set of states for the number parser.
+            description: >-
+                The state of the number parser. It is used to parse numbers
+                with a given radix. The parser can handle decimal, hexadecimal,
+                and floating point numbers.
+        data:
+            - START
+            - ZERO
+            - HEX
+            - DEC
+            - FLOAT
+            - END
 
     PrattStringState:
-        - START
-        - STR
-        - ESC
-        - ESCS
-        - UNI
-        - CHR1
-        - CHR2
-        - CHR3
-        - CHR4
-        - END
+        meta:
+            brief: The set of states for the string parser.
+            description: >-
+                The state of the string parser. It is used to parse strings
+                with escape sequences, Unicode characters, and other special
+                characters. It handles both single quoted characters and
+                double quoted strings.
+        data:
+            - START
+            - STR
+            - ESC
+            - ESCS
+            - UNI
+            - CHR1
+            - CHR2
+            - CHR3
+            - CHR4
+            - END
 
     PrattFixity:
-        - PREFIX
-        - INFIX
-        - POSTFIX
+        meta:
+            brief: The set of fixity types for operators.
+            description: >-
+                The fixity of an operator determines how it is parsed in relation
+                to its operands. It can be prefix, infix, or postfix. This is
+                used to determine the precedence and associativity of operators
+                during parsing.
+        data:
+            - PREFIX
+            - INFIX
+            - POSTFIX
 
 unions:
     PrattValue:
-        string: PrattUTF8
-        number: MaybeBigInt
-        character: PrattUTF8
-        atom: HashSymbol
-        
+        meta:
+            brief: The value of a token after parsing.
+            description: >-
+                The value of a token after parsing. It can be a string, number,
+                character, or atom. This is used to represent the value of
+                the token in the parse tree.
+        data:
+            string: PrattUTF8
+            number: MaybeBigInt
+            character: PrattUTF8
+            atom: HashSymbol
+
 hashes:
-    # Pratt parser table
-    PrattTable:
-        entries: PrattRecord
+    PrattRecordTable:
+        meta:
+            brief: The Pratt parser table.
+            description: >-
+                The Pratt parser table is a hash table that maps tokens
+                to their parsing rules. It is used to look up the
+                parsing rules for operators during parsing. Each entry in the
+                table contains the operator symbol, its precedence, and the
+                implementations of the token parser for each fixity.
+        data:
+            entries: PrattRecord
 
-    # namespace ids
-    PrattIntTable:
-        entries: int
-
-    PrattSymbolTable:
-        entries: HashSymbol
+    PrattNsIdTable:
+        meta:
+            brief: A hash table of namespace ids indexed by HashSymbol.
+            description: >-
+                A hash table that maps HashSymbol to integer values. It is used
+                to store namespace ids.
+        data:
+            entries: int
 
 arrays:
     PrattUTF8:
-        entries: uchar
+        meta:
+            brief: A UTF-8 encoded string.
+            description: >-
+                A UTF-8 encoded string that is used to represent the value of
+                a token in the parse tree. It is used for string literals,
+                character literals, and other text-based tokens.
+        data:
+            entries: uchar
 
     PrattParsers:
-        entries: PrattParser
+        meta:
+            brief: A stack of Pratt parsers.
+            description: >-
+                A stack of Pratt parsers that are used to parse the input stream.
+                Each parser is associated with a specific scope and contains
+                the rules for parsing tokens in that scope, which can change due
+                to user-defined operators or imported namespaces.
+        data:
+            entries: PrattParser
 
     PrattUnicode:
-        entries: character
+        meta:
+            brief: An array of UTF-32 encoded Unicode characters.
+            description: >-
+                A UTF-32 encoded array that is used to hold
+                Unicode strings after parsing.
+        data:
+            entries: character
 
 primitives: !include primitives.yaml
 
 external:
     AstExpression:
-        cname: "struct AstExpression *"
-        printFn: printAstExpression
-        markFn: markAstExpression
-        valued: true
+        data:
+            cname: "struct AstExpression *"
+            printFn: printAstExpression
+            markFn: markAstExpression
+            valued: true
