@@ -531,7 +531,6 @@ arrays:
                 An array of namespace implementations in the AST.
                 Used to store the namespaces defined in the program.
         data:
-            dimension: 1
             entries: AstNamespaceImpl
 
     AstFileIdArray:
@@ -541,7 +540,6 @@ arrays:
                 An array of file IDs used in the AST, which identify
                 namespace files that have already been read.
         data:
-            dimension: 1
             entries: file_id
 
     AstStringArray:
@@ -550,7 +548,6 @@ arrays:
             description: >-
                 A simple array of strings.
         data:
-            dimension: 1
             entries: string
 
 primitives: !include primitives.yaml

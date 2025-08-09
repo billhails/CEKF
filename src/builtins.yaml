@@ -67,7 +67,6 @@ arrays:
             brief: Built In Arguments
             description: An array of built-in function arguments
         data:
-            dimension: 1
             entries: TcType
 
     BuiltIns:
@@ -75,7 +74,6 @@ arrays:
             brief: Built Ins
             description: An array of registered built-in functions
         data:
-            dimension: 1
             entries: BuiltIn
 
 primitives: !include primitives.yaml

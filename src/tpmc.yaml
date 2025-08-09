@@ -127,32 +127,26 @@ tags:
 arrays:
     TpmcMatchRuleArray:
         data:
-            dimension: 1
             entries: TpmcMatchRule
 
     TpmcVariableArray:
         data:
-            dimension: 1
             entries: HashSymbol
 
     TpmcPatternArray:
         data:
-            dimension: 1
             entries: TpmcPattern
 
     TpmcStateArray:
         data:
-            dimension: 1
             entries: TpmcState
 
     TpmcArcArray:
         data:
-            dimension: 1
             entries: TpmcArc
 
     TpmcIntArray:
         data:
-            dimension: 1
             entries: int
 
     TpmcMatrix:

@@ -127,7 +127,6 @@ arrays:
             description: >-
                 An array of types used in type signatures and type inference.
         data:
-            dimension: 1
             entries: TcType
 
     TcNamespaceArray:
@@ -136,7 +135,6 @@ arrays:
             description: >-
                 An array of namespaces used in type inference.
         data:
-            dimension: 1
             entries: TcType
 
 unions:

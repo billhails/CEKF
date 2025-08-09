@@ -630,7 +630,6 @@ arrays:
                 This array holds the bodies of namespaces that are currently
                 in scope.  The ubiquitous `ns_id` is an index into this array.
         data:
-            dimension: 1
             entries: LamExp
 
 primitives: !include primitives.yaml
