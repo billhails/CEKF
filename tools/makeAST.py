@@ -389,6 +389,8 @@ class Base:
             print("/**")
             if self.brief is not None:
                 print(f" * @brief: {self.brief}")
+                if self.description is not None:
+                    print(" *")
             for line in self.formatDescription():
                 print(f" * {line}")
             print(" */")
@@ -929,6 +931,17 @@ class SimpleHash(Base):
     def printIteratorFunction(self, catalog):
         c = self.comment('printIteratorFunction')
         decl = self.getIteratorDeclaration(catalog)
+        print(f"/**")
+        print(f" * @brief Iterate over the entries in a {self.getName()}.")
+        print(f" *")
+        print(f" * The pointer to an Index *i is used to keep state between calls")
+        print(f" * and should be initialised to zero before first calling this function.")
+        if self.entries is not None:
+            entry = self.entries.getTypeDeclaration(catalog)
+            print(f" * If {entry}* value is not NULL then the {entry} associated with the key is placed in the pointer.")
+        print(f" *")
+        print(f" * @return the next key in the hash table, or NULL if there are no more keys.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         if self.entries is None:
             print('    return iterateHashTable((HashTable *)table, i, NULL);')
@@ -940,6 +953,13 @@ class SimpleHash(Base):
     def printSetFunction(self, catalog):
         c = self.comment('printSetFunction')
         decl = self.getSetDeclaration(catalog)
+        print(f"/**")
+        print(f" * @brief Set a key in the {self.getName()}.")
+        if self.entries is None:
+            print(f" * This sets the key in the underlying HashTable with a null value.")
+        else:
+            print(f" * This sets the key in a HashTable of {self.entries.getTypeDeclaration(catalog)}.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         if self.entries is None:
             print(f'    hashSet((HashTable *)table, key, NULL); {c}')
@@ -951,6 +971,16 @@ class SimpleHash(Base):
     def printGetFunction(self, catalog):
         c = self.comment('printGetFunction')
         decl = self.getGetDeclaration(catalog)
+        print(f"/**")
+        print(f" * @brief Get a key from the {self.getName()}.")
+        print(f" *")
+        print(f" * This checks if the key is present in the underlying HashTable.")
+        if self.entries is not None:
+            entry = self.entries.getTypeDeclaration(catalog)
+            print(f" * If {entry}* value is not NULL then the {entry} associated with the key is placed in the pointer.")
+        print(f" *")
+        print(f" * @return true if the key is present, false otherwise.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         if self.entries is None:
             print(f'    return hashGet((HashTable *)table, key, NULL); {c}')
@@ -963,6 +993,9 @@ class SimpleHash(Base):
         c = self.comment('printCountDeclaration')
         myName = self.getName()
         myType = self.getTypeDeclaration(catalog)
+        print(f"/**")
+        print(f" * @brief Get the number of entries in the {myName}.")
+        print(f" */")
         print(f'static inline Index count{myName}({myType} table) {{ {c}')
         print(f'    return ((HashTable *)table)->count; {c}')
         print(f'}} {c}')
@@ -991,6 +1024,9 @@ class SimpleHash(Base):
     def printPrintFunction(self, catalog):
         decl = self.getPrintSignature(catalog)
         c = self.comment('printPrintFunction')
+        print(f"/**")
+        print(f" * @brief Print the contents of a {self.getName()} for debugging.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    printHashTable(&(x->wrapped), depth); {c}")
         print(f"}} {c}")
@@ -1044,12 +1080,14 @@ class SimpleHash(Base):
             self.entries.printPrintHashLine(catalog, 1)
             print(f'}} {c}')
             print('')
-        print(f"""/**
-  * @brief Create a new {myName}.
-  * This generated function initializes a new {myName} structure,
-  * which is a wrapper around a HashTable.
-  */
-""")
+        print(f"/**")
+        print(f" * @brief Create a new {myName}.")
+        print(f" * This function initializes a new {myName} structure,")
+        if self.entries is None:
+            print(f" * which is a wrapper around a HashTable with no values (a set of symbols).")
+        else:
+            print(f" * which is a wrapper around a HashTable of {self.entries.getTypeDeclaration(catalog)}.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         print(f'    return ({myName} *)newHashTable({size}, {markFn}, {printFn}); {c}')
         print(f'}} {c}')
@@ -1209,6 +1247,11 @@ class SimpleArray(Base):
         decl = decl=self.getFreeSignature(catalog)
         entryType = self.entries.getTypeDeclaration(catalog)
         c = self.comment('printFreeFunction')
+        print(f"/**")
+        print(f" * @brief Free a {myName}.")
+        print(f" *")
+        print(f" * This function frees the memory allocated for the {myName} structure")
+        print(f" */")
         print(f"{decl} {{ {c}")
         if self.dimension == 1:
             print(f"    FREE_ARRAY({entryType}, x->entries, x->capacity); {c}")
@@ -1273,6 +1316,11 @@ class SimpleArray(Base):
         myName = self.getName()
         decl = self.getNewSignature(catalog)
         c = self.comment('printNewFunction')
+        print("/**")
+        print(f" * @brief Create a new {myName}.")
+        print(f" * This generated function initializes a new {myName} structure,")
+        print(f" * which is an array of {self.entries.getTypeDeclaration(catalog)}.")
+        print(" */")
         print(f"{decl} {{ {c}")
         print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
         print(f'    DEBUG("new {myName} %p", x); {c}')
@@ -1441,7 +1489,7 @@ class SimpleArray(Base):
             c = self.comment('printExtendFunction')
             a = '*' if self.isInline(catalog) else ''
             print(f"/**")
-            print(f" * Ensures that `x` has at least a capacity of `size`.")
+            print(f" * Ensures that the {myType} `x` has at least a capacity of `size`.")
             print(f" */")
             print(f"void extend{name}({myType} {a}x, Index size) {{ {c}")
             print(f'    DEBUG("extend{name}(%p, %u)", x, size);')
@@ -1704,6 +1752,11 @@ class SimpleArray(Base):
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
         c = self.comment('printMarkFunction')
+        print(f"/**")
+        print(f" * @brief Mark a {self.getName()} to protect it from garbage collection.")
+        print(f" *")
+        print(f" * This function recursively marks the {self.getName()} structure `x` to protect it from garbage collection.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
             print(f"    if (x == NULL) return; {c}")
@@ -1797,6 +1850,9 @@ class SimpleArray(Base):
         myName = self.getName()
         decl = self.getCompareSignature(catalog)
         a = '.' if self.isInline(catalog) else '->'
+        print(f"/**")
+        print(f" * @brief Deep compare two {myName} objects for equality.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
             print(f"    if (a == b) return true; {c}")
@@ -1820,6 +1876,9 @@ class SimpleArray(Base):
         myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
+        print(f"/**")
+        print(f" * @brief Creates a deep copy of the {myName} object `o`.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
         print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
@@ -1876,6 +1935,9 @@ class SimpleArray(Base):
         decl = self.getPrintSignature(catalog)
         a = '.' if self.isInline(catalog) else '->'
         c = self.comment('printPrintFunction')
+        print(f"/**")
+        print(f" * @brief Prints the {myName} object `x` for debugging.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
         if not self.isInline(catalog):
@@ -2011,6 +2073,17 @@ class SimpleArray(Base):
         c = self.comment('printIterator1DFunction')
         decl = self.getIterator1DDeclaration(catalog)
         a = '.' if self.isInline(catalog) else '->'
+        print(f"/**")
+        print(f" * @brief Iterates over the entries in the 1D {self.getName()} object `table`.")
+        print(f" *")
+        print(f" * The pointer to an Index *i is used to keep state between calls")
+        print(f" * and should be initialised to zero before first calling this function.")
+        if self.entries is not None:
+            entry = self.entries.getTypeDeclaration(catalog)
+            print(f" * If {entry}* value is not NULL then the {entry} associated with the key is placed in the pointer.")
+        print(f" *")
+        print(f" * @return the next key in the hash table, or NULL if there are no more keys.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         print(f'    if (*i >= table{a}size) {{ {c}')
         print(f'        if (more != NULL) {{ {c}')
@@ -2034,6 +2107,9 @@ class SimpleArray(Base):
         c = self.comment('printIterator2DFunction')
         decl = self.getIterator2DDeclaration(catalog)
         a = '.' if self.isInline(catalog) else '->'
+        print(f"/**")
+        print(f" * @brief Iterates over the entries in the 2D {self.getName()} object `table`.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         print(f'    if (*x >= table{a}width) {{ {c}')
         print(f'        if (more_x != NULL) {{ {c}')
@@ -2114,6 +2190,9 @@ class SimpleStack(SimpleArray):
         decl = decl=self.getFreeSignature(catalog)
         entryType = self.entries.getTypeDeclaration(catalog)
         c = self.comment('printFreeFunction')
+        print(f"/**")
+        print(f" * @brief Frees the {myName} object `x`.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    FREE_ARRAY({entryType}, x->entries, x->entries_capacity); {c}")
         print(f"    FREE_ARRAY(StackFrame, x->frames, x->frames_capacity); {c}")
@@ -2594,6 +2673,9 @@ class SimpleStack(SimpleArray):
             print("")
             return
         myName = self.getName()
+        print(f"/**")
+        print(f" * Compares two {myName} objects for deep equality.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (a == b) return true; {c}")
         print(f"    if (a == NULL || b == NULL) return false; {c}")
@@ -2636,6 +2718,9 @@ class SimpleStack(SimpleArray):
         myName = self.getName()
         decl = self.getPrintSignature(catalog)
         c = self.comment('printPrintFunction')
+        print(f"/**")
+        print(f" * Prints the contents of a {myName} object for debugging.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
         print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
@@ -2659,6 +2744,13 @@ class SimpleStack(SimpleArray):
     def printIterator1DFunction(self, catalog):
         c = self.comment('printIterator1DFunction')
         decl = self.getIterator1DDeclaration(catalog)
+        print(f"/**")
+        print(f" * Iterates over the entries in a {self.getName()} object.")
+        print(f" * The pointer to an Index `i` is used to track the current position in the array")
+        print(f" * and should be initialised to zero before first calling this function.")
+        print(f" * If `res` is not NULL, it will be set to the next entry.")
+        print(f" * If `more` is not NULL, it will be set to true if there are more entries to iterate over.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         print(f'    if (*i >= table->offset) {{ {c}')
         print(f'        if (more != NULL) {{ {c}')
@@ -2729,6 +2821,9 @@ class InlineArray(SimpleArray):
         typeName = self.getTypeDeclaration(catalog)
         myName = self.getName()
         c = self.comment('printInitFunction')
+        print(f"/**")
+        print(f" * Initializes an inline (not directly memory-managed) {myName} with the given size.")
+        print(" */")
         print(f'void init{myName}({typeName} *x, Index size) {{ {c}')
         print(f"    x->size = 0; {c}")
         print(f"    x->capacity = 0; {c}")
@@ -2798,6 +2893,10 @@ class SimpleVector(Base):
         fieldType = self.entries.getTypeDeclaration(catalog)
         decl = self.getNewSignature(catalog)
         c = self.comment('printNewFunction')
+        print("/**")
+        print(f" * Creates a new {myName} with the given size.")
+        print(f" * {myName} is a vector of {self.entries.getObjName(catalog)}.")
+        print(" */")
         print(f"{decl} {{ {c}")
         print(f"    {myType} x = NEW_VECTOR(size, {myName}, {fieldType}, {myObjType}); {c}")
         print(f'    DEBUG("new {myName} %p", x); {c}')
@@ -2875,6 +2974,9 @@ class SimpleVector(Base):
         fieldType = self.entries.getTypeDeclaration(catalog)
         myName = self.getName()
         decl = self.getCopySignature(catalog)
+        print(f"/**")
+        print(f" * Creates a deep copy of a {myName} object.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
         print(f"    {myType} x = NEW_VECTOR(o->size, {myName}, {fieldType}, {myObjType}); {c}")
@@ -2922,6 +3024,10 @@ class SimpleVector(Base):
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
         c = self.comment('printMarkFunction')
+        print(f"/**")
+        print(f" * Marks a {self.getName()} object to protect it from garbage collection.")
+        print(f" * will recursively mark the vector's entries.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (x == NULL) return; {c}")
         print(f"    if (MARKED(x)) return; {c}")
@@ -2941,6 +3047,9 @@ class SimpleVector(Base):
             return
         myName = self.getName()
         c = self.comment('printCompareFunction')
+        print(f"/**")
+        print(f" * Compares two {myName} vectors for deep equality.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (a == b) return true; {c}")
         print(f"    if (a == NULL || b == NULL) return false; {c}")
@@ -2965,6 +3074,9 @@ class SimpleVector(Base):
         myName = self.getName()
         decl = self.getPrintSignature(catalog)
         c = self.comment('printPrintFunction')
+        print(f"/**")
+        print(f" * Prints the contents of a {myName} object for debugging.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
         print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
@@ -3002,6 +3114,9 @@ class SimpleVector(Base):
         fieldType = self.entries.getTypeDeclaration(catalog)
         decl = self.getFreeSignature(catalog)
         c = self.comment('printFreeFunction')
+        print(f"/**")
+        print(f" * Frees a {myName} object.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    FREE_VECTOR(x, {myName}, {fieldType}, x->size); {c}")
         print(f"}} {c}")
@@ -3135,15 +3250,19 @@ class SimpleStruct(Base):
         return f'// SimpleStruct.{method}'
 
     def printCountDeclaration(self, catalog):
-        c = self.comment('printCountDeclaration')
         if self.isSinglySelfReferential(catalog):
+            c = self.comment('printCountDeclaration')
             print(f'{self.getCountSignature()}; {c}')
 
     def printCountFunction(self, catalog):
         if self.isSinglySelfReferential(catalog):
             c = self.comment('printCountFunction')
-            print(f'{self.getCountSignature()} {{ {c}')
             selfRefField = self.getSelfReferentialField(catalog)
+            print(f'/**')
+            print(f' * Counts the number of entries in the {self.getName()} linked list,')
+            print(f' * by following the self-referential field `{selfRefField}`.')
+            print(f' */')
+            print(f'{self.getCountSignature()} {{ {c}')
             print(f'    Index count = 0; {c}')
             print(f'    while (x != NULL) {{ {c}')
             print(f'        x = x->{selfRefField}; {c}')
@@ -3248,6 +3367,9 @@ class SimpleStruct(Base):
     def printNewFunction(self, catalog):
         c = self.comment('printNewFunction')
         decl = self.getNewSignature(catalog)
+        print("/**")
+        print(f" * Creates a new {self.getName()} struct with the given arguments.")
+        print(" */")
         print(f"{decl} {{ {c}")
         hasInternalConstructors = False
         for field in self.getDefaultArgs(catalog):
@@ -3350,6 +3472,10 @@ class SimpleStruct(Base):
     def printMarkFunction(self, catalog):
         c = self.comment('printMarkFunction')
         decl = self.getMarkSignature(catalog)
+        print(f"/**")
+        print(f" * Marks the {self.getName()} object to protect it from garbage collection.")
+        print(f" * It will recursively mark all the fields of the object.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
             print(f"    if (x == NULL) return; {c}")
@@ -3361,6 +3487,12 @@ class SimpleStruct(Base):
     def printFreeFunction(self, catalog):
         c = self.comment('printFreeFunction')
         decl = self.getFreeSignature(catalog)
+        print(f"/**")
+        print(f" * Frees the {self.getName()} object.")
+        print(f" * It will only free the object itself,")
+        print(f" * not the fields of the object which")
+        print(f" * should only be freed by the sweep phase directly.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    FREE(x, {self.getName()}); {c}")
         print(f"}} {c}\n")
@@ -3408,6 +3540,10 @@ class SimpleStruct(Base):
         myName = self.getName()
         c = self.comment('printCompareFunction')
         decl=self.getCompareSignature(catalog)
+        print(f"/**")
+        print(f" * Compares two {myName} objects for equality.")
+        print(f" * It will recursively compare all the fields of the object.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
             print(f"    if (a == b) return true; {c}")
@@ -3419,10 +3555,13 @@ class SimpleStruct(Base):
     def printCopyFunction(self, catalog):
         c = self.comment('printCopyFunction')
         decl = self.getCopySignature(catalog)
-        print(f"{decl} {{ {c}")
         myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
+        print(f"/**")
+        print(f" * Creates a deep copy of the {myName} object.")
+        print(f" */")
+        print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
         print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
         print(f'    DEBUG("copy {myName} %p", x); {c}')
@@ -3441,6 +3580,10 @@ class SimpleStruct(Base):
     def printPrintFunction(self, catalog):
         c = self.comment('printPrintFunction')
         myName = self.getName()
+        print(f"/**")
+        print(f" * Prints a representation of the {myName} object for debugging.")
+        print(f" * It will recursively print all the fields of the object.")
+        print(f" */")
         decl=self.getPrintSignature(catalog)
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
@@ -3740,6 +3883,10 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         decl = self.getProtectDeclaration(catalog)
         a = '.' if self.isInline(catalog) else '->'
         c = self.comment('printProtectFunction')
+        print(f"/**")
+        print(f" * Protects the {self.getName()} union from garbage collection.")
+        print(f" * It will recursively protect the appropriate type of the contained object.")
+        print(f" */")
         print(f'{decl} {{ {c}')
         print(f'    switch(x{a}type) {{ {c}')
         for field in self.fields:
@@ -3897,6 +4044,10 @@ class SimpleEnum(Base):
     def printNameFunctionBody(self):
         decl = self.getNameFunctionDeclaration()
         c = self.comment('printNameFunctionDeclaration')
+        print(f"/**")
+        print(f" * Returns the name of the enum value as a string.")
+        print(f" * This is used for debugging and error messages.")
+        print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    switch(type) {{ {c}")
         for  field in self.fields:
@@ -3940,6 +4091,10 @@ class DiscriminatedUnionEnum(Base):
     def printNameFunctionDeclaration(self):
         c = self.comment('printNameFunctionDeclaration')
         decl = self.getNameFunctionDeclaration()
+        print(f"/**")
+        print(f" * Returns the name of the discriminating enum value as a string.")
+        print(f" * This is used for debugging and error messages.")
+        print(f" */")
         print(f"{decl}; {c}")
 
     def printNameFunctionBody(self):
