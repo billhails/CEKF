@@ -33,13 +33,13 @@ PrattParser --panicMode--> bool
 PrattParser --isPreamble--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
-PrattRecord --prefixOp--> PrattOp
+PrattRecord --prefixOp--> PrattParselet
 PrattRecord --prefixPrec--> int
 PrattRecord --prefixImpl--> AstExpression
-PrattRecord --infixOp--> PrattOp
+PrattRecord --infixOp--> PrattParselet
 PrattRecord --infixPrec--> int
 PrattRecord --infixImpl--> AstExpression
-PrattRecord --postfixOp--> PrattOp
+PrattRecord --postfixOp--> PrattParselet
 PrattRecord --postfixPrec--> int
 PrattRecord --postfixImpl--> AstExpression
 PrattValue --string--> PrattUTF8

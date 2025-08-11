@@ -121,9 +121,9 @@ ustring:
         printf: "%s"
         valued: true
 
-PrattOp:
+PrattParselet:
     data:
-        cname: PrattOp
+        cname: PrattParselet
         printf: "%p"
         valued: true
 

@@ -116,13 +116,13 @@ structs:
                 parser.
         data:
             symbol: HashSymbol
-            prefixOp: PrattOp
+            prefixOp: PrattParselet
             prefixPrec: int
             prefixImpl: AstExpression=NULL
-            infixOp: PrattOp
+            infixOp: PrattParselet
             infixPrec: int
             infixImpl: AstExpression=NULL
-            postfixOp: PrattOp
+            postfixOp: PrattParselet
             postfixPrec: int
             postfixImpl: AstExpression=NULL
 

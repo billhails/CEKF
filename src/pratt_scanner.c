@@ -1220,8 +1220,7 @@ PrattLexer *makePrattLexerFromString(char *input, char *origin) {
 /**
  * @brief Creates a new PrattLexer from a file name.
  * 
- * This function reads the contents of the file specified by the filename,
- * creates a new PrattBufList with that content, and initializes a new
+ * This function creates a new PrattBufList from the argument file, and initializes a new
  * PrattLexer using that buffer list.
  * 
  * @param filename The name of the file to read.
