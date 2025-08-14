@@ -929,7 +929,7 @@ static void populateArgsTable(LamMacroArgsTable *symbols, LamVarList *args) {
  *
  * This function converts the macro definition into a lambda expression.
  * Macros evaluate their arguments on-demand, so the generated macro
- * must wrap each of it's arguments in a promise.
+ * must wrap each of its arguments in a promise.
  *
  * @param astMacro The AST Macro Definition to convert.
  * @param env The lambda context to use.
@@ -937,8 +937,6 @@ static void populateArgsTable(LamMacroArgsTable *symbols, LamVarList *args) {
  */
 static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
     ENTER(convertAstMacro);
-    // ParserInfo PI = CPI(astMacro);
-    // eprintf("convert macro %s +%d %s\n", astMacro->name->name, PI.lineno, PI.filename);
     LamVarList *args = collectMacroArgs(astMacro->definition->altArgs->argList);
     int save = PROTECT(args);
     LamExp *body = convertNest(astMacro->definition->nest, env);

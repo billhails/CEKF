@@ -357,6 +357,16 @@ static LamCond *performCondSubstitutions(LamCond *cond, LamMacroArgsTable *symbo
     return cond;
 }
 
+/**
+ * @brief Performs macro substitutions on a lambda expression.
+ *
+ * When called externally, the `exp` is the body of the macro
+ * and the `symbols` table contains the arguments to the macro.
+ * 
+ * @param exp The lambda expression to modify.
+ * @param symbols The set of macro arguments.
+ * @return The modified lambda expression.
+ */
 LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
     ENTER(lamPerformMacroSubstitutions);
     // ppLamExp(exp);
