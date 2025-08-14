@@ -313,7 +313,7 @@ structs:
         data:
             frame: LamInfoTable
             aliases: LamAliasTable
-            macros: LamMacroTable
+            macros: LamMacroSet
             parent: LamContext
 
     LamAmb:
@@ -576,7 +576,7 @@ unions:
             nsid: int
 
 hashes:
-    LamMacroTable:
+    LamMacroSet:
         meta:
             brief: the set of symbols that are currently defined as macros
             description: >-

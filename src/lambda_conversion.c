@@ -357,7 +357,7 @@ static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
  */
 static void checkMacro(AstDefinition *definition, LamContext *env) {
     if (definition->type == AST_DEFINITION_TYPE_MACRO) {
-        setLamMacroTable(env->macros, definition->val.macro->name);
+        setLamMacroSet(env->macros, definition->val.macro->name);
     }
 }
 
@@ -950,7 +950,7 @@ static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
     PROTECT(lam);
     LamExp *res = newLamExp_Lam(CPI(lam), lam);
     PROTECT(res);
-    setLamMacroTable(env->macros, astMacro->name);
+    setLamMacroSet(env->macros, astMacro->name);
     LEAVE(convertAstMacro);
     UNPROTECT(save);
     return res;
@@ -1221,7 +1221,7 @@ static bool isMacro(HashSymbol *symbol, LamContext *env) {
     if (env == NULL) {
         return false;
     }
-    if (getLamMacroTable(env->macros, symbol)) {
+    if (getLamMacroSet(env->macros, symbol)) {
         return true;
     }
     return isMacro(symbol, env->parent);
