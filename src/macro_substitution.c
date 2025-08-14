@@ -30,11 +30,11 @@
 #  include "debugging_off.h"
 #endif
 
-static bool isReplacementSymbol(HashSymbol *var, LamMacroArgsTable *symbols) {
-    return getLamMacroArgsTable(symbols, var);
+static bool isReplacementSymbol(HashSymbol *var, LamMacroArgsSet *symbols) {
+    return getLamMacroArgsSet(symbols, var);
 }
 
-static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsTable *symbols) {
+static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsSet *symbols) {
     ENTER(performLamSubstitutions);
     // fn () { a() } == a
     if (   lam->args == NULL
@@ -47,7 +47,7 @@ static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsTable *symbols) 
     return newLamExp_Lam(CPI(lam), lam);
 }
 
-static bool containsReplacementSymbols(LamVarList *vars, LamMacroArgsTable *symbols) {
+static bool containsReplacementSymbols(LamVarList *vars, LamMacroArgsSet *symbols) {
     while (vars != NULL) {
         if (isReplacementSymbol(vars->var, symbols)) {
             return true;
@@ -57,14 +57,14 @@ static bool containsReplacementSymbols(LamVarList *vars, LamMacroArgsTable *symb
     return false;
 }
 
-static LamMacroArgsTable *excludeSymbol(HashSymbol *var, LamMacroArgsTable *symbols) {
-    LamMacroArgsTable *new = newLamMacroArgsTable();
+static LamMacroArgsSet *excludeSymbol(HashSymbol *var, LamMacroArgsSet *symbols) {
+    LamMacroArgsSet *new = newLamMacroArgsSet();
     int save = PROTECT(new);
     Index i = 0;
     HashSymbol *current;
-    while ((current = iterateLamMacroArgsTable(symbols, &i)) != NULL) {
+    while ((current = iterateLamMacroArgsSet(symbols, &i)) != NULL) {
         if (current != var) {
-            setLamMacroArgsTable(new, current);
+            setLamMacroArgsSet(new, current);
         }
     }
     UNPROTECT(save);
@@ -81,14 +81,14 @@ static bool varInVarList(HashSymbol *var, LamVarList *vars) {
     return false;
 }
 
-static LamMacroArgsTable *excludeSymbols(LamVarList *vars, LamMacroArgsTable *symbols) {
-    LamMacroArgsTable *new = newLamMacroArgsTable();
+static LamMacroArgsSet *excludeSymbols(LamVarList *vars, LamMacroArgsSet *symbols) {
+    LamMacroArgsSet *new = newLamMacroArgsSet();
     int save = PROTECT(new);
     Index i = 0;
     HashSymbol *current;
-    while ((current = iterateLamMacroArgsTable(symbols, &i)) != NULL) {
+    while ((current = iterateLamMacroArgsSet(symbols, &i)) != NULL) {
         if (!varInVarList(current, vars)) {
-            setLamMacroArgsTable(new, current);
+            setLamMacroArgsSet(new, current);
         }
     }
     UNPROTECT(save);
@@ -106,7 +106,7 @@ static LamVarList *collectLetRecNames(LamLetRecBindings *bindings) {
     return this;
 }
 
-static LamExp *performVarSubstitutions(ParserInfo PI, HashSymbol *var, LamMacroArgsTable *symbols) {
+static LamExp *performVarSubstitutions(ParserInfo PI, HashSymbol *var, LamMacroArgsSet *symbols) {
     ENTER(performVarSubstitutions);
     LamExp *replacement = NULL;
     if (isReplacementSymbol(var, symbols)) {
@@ -121,7 +121,7 @@ static LamExp *performVarSubstitutions(ParserInfo PI, HashSymbol *var, LamMacroA
     return replacement;
 }
 
-static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, LamMacroArgsTable *symbols) {
+static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, LamMacroArgsSet *symbols) {
     ENTER(performPrimSubstitutions);
     prim->exp1 = lamPerformMacroSubstitutions(prim->exp1, symbols);
     prim->exp2 = lamPerformMacroSubstitutions(prim->exp2, symbols);
@@ -129,7 +129,7 @@ static LamPrimApp *performPrimSubstitutions(LamPrimApp *prim, LamMacroArgsTable 
     return prim;
 }
 
-static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacroArgsTable *symbols) {
+static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacroArgsSet *symbols) {
     ENTER(performSequenceSubstitutions);
     if (sequence == NULL) {
         LEAVE(performSequenceSubstitutions);
@@ -142,7 +142,7 @@ static LamSequence *performSequenceSubstitutions(LamSequence *sequence, LamMacro
     return sequence;
 }
 
-static LamArgs *performArgsSubstitutions(LamArgs *list, LamMacroArgsTable *symbols) {
+static LamArgs *performArgsSubstitutions(LamArgs *list, LamMacroArgsSet *symbols) {
     ENTER(performArgsSubstitutions);
     if (list == NULL) {
         LEAVE(performArgsSubstitutions);
@@ -154,30 +154,30 @@ static LamArgs *performArgsSubstitutions(LamArgs *list, LamMacroArgsTable *symbo
     return list;
 }
 
-static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex, LamMacroArgsTable *symbols) {
+static LamTupleIndex *performTupleIndexSubstitutions(LamTupleIndex *tupleIndex, LamMacroArgsSet *symbols) {
     tupleIndex->exp = lamPerformMacroSubstitutions(tupleIndex->exp, symbols);
     return tupleIndex;
 }
 
-static LamPrint *performPrintSubstitutions(LamPrint *print, LamMacroArgsTable *symbols) {
+static LamPrint *performPrintSubstitutions(LamPrint *print, LamMacroArgsSet *symbols) {
     print->exp = lamPerformMacroSubstitutions(print->exp, symbols);
     print->printer = lamPerformMacroSubstitutions(print->printer, symbols);
     return print;
 }
 
-static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsTable *symbols) {
+static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsSet *symbols) {
     lookup->exp = lamPerformMacroSubstitutions(lookup->exp, symbols);
     return lookup;
 }
 
-static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, LamMacroArgsTable *symbols) {
+static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, LamMacroArgsSet *symbols) {
     ENTER(performMakeVecSubstitutions);
     makeVec->args = performArgsSubstitutions(makeVec->args, symbols);
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
 
-static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, LamMacroArgsTable *symbols) {
+static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstruct, LamMacroArgsSet *symbols) {
     ENTER(performDeconstructSubstitutions);
     deconstruct->exp =
         lamPerformMacroSubstitutions(deconstruct->exp, symbols);
@@ -185,7 +185,7 @@ static LamDeconstruct *performDeconstructSubstitutions(LamDeconstruct *deconstru
     return deconstruct;
 }
 
-static LamConstruct *performConstructSubstitutions(LamConstruct *construct, LamMacroArgsTable *symbols) {
+static LamConstruct *performConstructSubstitutions(LamConstruct *construct, LamMacroArgsSet *symbols) {
     ENTER(performConstructSubstitutions);
     construct->args =
         performArgsSubstitutions(construct->args, symbols);
@@ -193,7 +193,7 @@ static LamConstruct *performConstructSubstitutions(LamConstruct *construct, LamM
     return construct;
 }
 
-static LamApply *performApplySubstitutions(LamApply *apply, LamMacroArgsTable *symbols) {
+static LamApply *performApplySubstitutions(LamApply *apply, LamMacroArgsSet *symbols) {
     ENTER(performApplySubstitutions);
     apply->function = lamPerformMacroSubstitutions(apply->function, symbols);
     apply->args = performArgsSubstitutions(apply->args, symbols);
@@ -201,7 +201,7 @@ static LamApply *performApplySubstitutions(LamApply *apply, LamMacroArgsTable *s
     return apply;
 }
 
-static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsTable *symbols) {
+static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsSet *symbols) {
     ENTER(performIffSubstitutions);
     iff->condition = lamPerformMacroSubstitutions(iff->condition, symbols);
     iff->consequent = lamPerformMacroSubstitutions(iff->consequent, symbols);
@@ -211,7 +211,7 @@ static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsTable *symbols) 
     return iff;
 }
 
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, LamMacroArgsTable *symbols) {
+static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, LamMacroArgsSet *symbols) {
     ENTER(performBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performBindingsSubstitutions);
@@ -225,15 +225,15 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
 
 static LamExp *performMacroSubstitutionsMinusReplacement(HashSymbol *replacement,
                                                          LamExp *exp,
-                                                         LamMacroArgsTable *symbols) {
-    LamMacroArgsTable *remaining = excludeSymbol(replacement, symbols);
+                                                         LamMacroArgsSet *symbols) {
+    LamMacroArgsSet *remaining = excludeSymbol(replacement, symbols);
     int save = PROTECT(remaining);
     LamExp *res = lamPerformMacroSubstitutions(exp, remaining);
     UNPROTECT(save);
     return res;
 }
 
-static LamLet *performLetSubstitutions(LamLet *let, LamMacroArgsTable *symbols) {
+static LamLet *performLetSubstitutions(LamLet *let, LamMacroArgsSet *symbols) {
     ENTER(performLetSubstitutions);
     let->value = lamPerformMacroSubstitutions(let->value, symbols);
     if (isReplacementSymbol(let->var, symbols)) {
@@ -245,12 +245,12 @@ static LamLet *performLetSubstitutions(LamLet *let, LamMacroArgsTable *symbols) 
     return let;
 }
 
-static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsTable *symbols) {
+static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsSet *symbols) {
     ENTER(performLetRecSubstitutions);
     LamVarList *names = collectLetRecNames(letrec->bindings);
     int save = PROTECT(names);
     if (containsReplacementSymbols(names, symbols)) {
-        LamMacroArgsTable *reduced = excludeSymbols(names, symbols);
+        LamMacroArgsSet *reduced = excludeSymbols(names, symbols);
         PROTECT(reduced);
         letrec->bindings = performBindingsSubstitutions(letrec->bindings, reduced);
         letrec->body = lamPerformMacroSubstitutions(letrec->body, reduced);
@@ -263,14 +263,14 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsTabl
     return letrec;
 }
 
-static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, LamMacroArgsTable *symbols) {
+static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, LamMacroArgsSet *symbols) {
     ENTER(performTypeDefsSubstitutions);
     typedefs->body = lamPerformMacroSubstitutions(typedefs->body, symbols);
     LEAVE(performTypeDefsSubstitutions);
     return typedefs;
 }
 
-static LamMatchList *performCaseSubstitutions(LamMatchList *cases, LamMacroArgsTable *symbols) {
+static LamMatchList *performCaseSubstitutions(LamMatchList *cases, LamMacroArgsSet *symbols) {
     ENTER(performCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCaseSubstitutions);
@@ -282,7 +282,7 @@ static LamMatchList *performCaseSubstitutions(LamMatchList *cases, LamMacroArgsT
     return cases;
 }
 
-static LamMatch *performMatchSubstitutions(LamMatch *match, LamMacroArgsTable *symbols) {
+static LamMatch *performMatchSubstitutions(LamMatch *match, LamMacroArgsSet *symbols) {
     ENTER(performMatchSubstitutions);
     match->index = lamPerformMacroSubstitutions(match->index, symbols);
     match->cases = performCaseSubstitutions(match->cases, symbols);
@@ -290,7 +290,7 @@ static LamMatch *performMatchSubstitutions(LamMatch *match, LamMacroArgsTable *s
     return match;
 }
 
-static LamAmb *performAmbSubstitutions(LamAmb *amb, LamMacroArgsTable *symbols) {
+static LamAmb *performAmbSubstitutions(LamAmb *amb, LamMacroArgsSet *symbols) {
     ENTER(performAmbSubstitutions);
     amb->left = lamPerformMacroSubstitutions(amb->left, symbols);
     amb->right = lamPerformMacroSubstitutions(amb->right, symbols);
@@ -298,7 +298,7 @@ static LamAmb *performAmbSubstitutions(LamAmb *amb, LamMacroArgsTable *symbols) 
     return amb;
 }
 
-static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, LamMacroArgsTable *symbols) {
+static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, LamMacroArgsSet *symbols) {
     ENTER(performIntCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performIntCondCaseSubstitutions);
@@ -310,7 +310,7 @@ static LamIntCondCases *performIntCondCaseSubstitutions(LamIntCondCases *cases, 
     return cases;
 }
 
-static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, LamMacroArgsTable *symbols) {
+static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *cases, LamMacroArgsSet *symbols) {
     ENTER(performCharCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCharCondCaseSubstitutions);
@@ -323,7 +323,7 @@ static LamCharCondCases *performCharCondCaseSubstitutions(LamCharCondCases *case
     return cases;
 }
 
-static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, LamMacroArgsTable *symbols) {
+static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, LamMacroArgsSet *symbols) {
     ENTER(performCondCaseSubstitutions);
     if (cases == NULL) {
         LEAVE(performCondCaseSubstitutions);
@@ -349,7 +349,7 @@ static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, LamMacroA
     return cases;
 }
 
-static LamCond *performCondSubstitutions(LamCond *cond, LamMacroArgsTable *symbols) {
+static LamCond *performCondSubstitutions(LamCond *cond, LamMacroArgsSet *symbols) {
     ENTER(performCondSubstitutions);
     cond->value = lamPerformMacroSubstitutions(cond->value, symbols);
     cond->cases = performCondCaseSubstitutions(cond->cases, symbols);
@@ -367,7 +367,7 @@ static LamCond *performCondSubstitutions(LamCond *cond, LamMacroArgsTable *symbo
  * @param symbols The set of macro arguments.
  * @return The modified lambda expression.
  */
-LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsTable *symbols) {
+LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
     ENTER(lamPerformMacroSubstitutions);
     // ppLamExp(exp);
     // eprintf("\n");

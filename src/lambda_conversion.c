@@ -918,9 +918,9 @@ static LamVarList *collectMacroArgs(AstFargList *argList) {
  * @param args The list of lambda variable arguments.
  * @return void
  */
-static void populateArgsTable(LamMacroArgsTable *symbols, LamVarList *args) {
+static void populateArgsTable(LamMacroArgsSet *symbols, LamVarList *args) {
     if (args == NULL) return;
-    setLamMacroArgsTable(symbols, args->var);
+    setLamMacroArgsSet(symbols, args->var);
     populateArgsTable(symbols, args->next);
 }
 
@@ -941,7 +941,7 @@ static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
     int save = PROTECT(args);
     LamExp *body = convertNest(astMacro->definition->nest, env);
     PROTECT(body);
-    LamMacroArgsTable *symbolTable = newLamMacroArgsTable();
+    LamMacroArgsSet *symbolTable = newLamMacroArgsSet();
     PROTECT(symbolTable);
     populateArgsTable(symbolTable, args);
     body = lamPerformMacroSubstitutions(body, symbolTable);

@@ -584,7 +584,7 @@ hashes:
                 current context.
         data: {}
 
-    LamMacroArgsTable:
+    LamMacroArgsSet:
         meta:
             brief: the set of symbols that are currently defined as macro arguments
             description: >-
