@@ -31,7 +31,7 @@
 #endif
 
 static bool isReplacementSymbol(HashSymbol *var, LamMacroArgsTable *symbols) {
-    return getLamMacroArgsTable(symbols, var, NULL);
+    return getLamMacroArgsTable(symbols, var);
 }
 
 static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsTable *symbols) {
@@ -62,9 +62,9 @@ static LamMacroArgsTable *excludeSymbol(HashSymbol *var, LamMacroArgsTable *symb
     int save = PROTECT(new);
     Index i = 0;
     HashSymbol *current;
-    while ((current = iterateLamMacroArgsTable(symbols, &i, NULL)) != NULL) {
+    while ((current = iterateLamMacroArgsTable(symbols, &i)) != NULL) {
         if (current != var) {
-            setLamMacroArgsTable(new, current, NULL);
+            setLamMacroArgsTable(new, current);
         }
     }
     UNPROTECT(save);
@@ -86,9 +86,9 @@ static LamMacroArgsTable *excludeSymbols(LamVarList *vars, LamMacroArgsTable *sy
     int save = PROTECT(new);
     Index i = 0;
     HashSymbol *current;
-    while ((current = iterateLamMacroArgsTable(symbols, &i, NULL)) != NULL) {
+    while ((current = iterateLamMacroArgsTable(symbols, &i)) != NULL) {
         if (!varInVarList(current, vars)) {
-            setLamMacroArgsTable(new, current, NULL);
+            setLamMacroArgsTable(new, current);
         }
     }
     UNPROTECT(save);

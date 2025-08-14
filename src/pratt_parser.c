@@ -136,6 +136,8 @@ static PrattUTF8            *rawString(PrattParser *);
 static PrattUTF8            *str(PrattParser *);
 static void                  storeNamespace(PrattParser *, AstNamespace *);
 static void                  synchronize(PrattParser *parser);
+// if you're wondering where the arithmetic primitives are, they're
+// defined in the preamble.
 
 #ifdef DEBUG_PRATT_PARSER
 void disablePrattDebug(void) {

@@ -381,8 +381,6 @@ structs:
             constructor: LamTypeConstructor
             next: LamTypeConstructorList
 
-    # the following LamTypeSig* structs hold type information
-    # used by lambda conversion and the TPMC
     LamTypeSig:
         meta:
             brief: A type signature in lambda expressions
@@ -584,8 +582,7 @@ hashes:
             description: >-
                 This table holds the symbols that are bound to macros in the
                 current context.
-        data:
-            entries: void_ptr
+        data: {}
 
     LamMacroArgsTable:
         meta:
@@ -593,8 +590,7 @@ hashes:
             description: >-
                 This table holds the symbols that are bound to macro arguments
                 in the current context (body of the macro).
-        data:
-            entries: void_ptr
+        data: {}
 
     LamInfoTable:
         meta:
