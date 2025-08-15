@@ -313,7 +313,7 @@ enums:
 hashes:
     AnfSymbolTable:
         meta:
-            brief: ANF Symbol Table
+            brief: A set of ANF Symbols
             description: A hash table set of symbols used in ANF.
         data: {}
 
