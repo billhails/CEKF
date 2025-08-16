@@ -101,7 +101,7 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
 }
 
 static LamExp *compilePrinterForOpaque(ParserInfo I) {
-    return makeSymbolExpr(I, "print$opaque");
+    return makeVarExpr(I, "print$opaque");
 }
 
 static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
@@ -142,7 +142,7 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
 
 static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function
                                          __attribute__((unused))) {
-    return makeSymbolExpr(I, "print$fn");
+    return makeVarExpr(I, "print$fn");
 }
 
 static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPair *pair __attribute__((unused))) {
@@ -151,7 +151,7 @@ static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPai
 
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env) {
     if (var->instance == NULL) {
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
     return compilePrinter(I, var->instance, env);
 }
@@ -229,7 +229,7 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv 
     HashSymbol *name = makePrintName("print$", typeSig->name->name);
     TcEnv *nsEnv = getNsEnv(typeSig->ns, env);
     if (!getFromTcEnv(nsEnv, name, NULL)) {
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
@@ -258,7 +258,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
     if (tuple->size < 5) {
         char buf[64];
         sprintf(buf, "print$tuple$%d", tuple->size);
-        LamExp *exp = makeSymbolExpr(I, buf);
+        LamExp *exp = makeVarExpr(I, buf);
         if (tuple->size == 0) {
             LEAVE(compilePrinterForTuple);
             return exp;
@@ -275,6 +275,6 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
         return res;
     } else {
         LEAVE(compilePrinterForTuple);
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
 }

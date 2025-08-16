@@ -20,7 +20,45 @@
  * generates a print function for each typedef
  */
 
-// print function generator, compiler and run-time code
+/**
+ * @file print_generator.c
+ * @brief Print function generator, invoked during lambda conversion.
+ *        Generates a print function for each typedef.
+ * @details How print functions work:
+ *          Print functions are generated for all user defined types, unless the
+ *          user has explicityly defined a print function for the type.
+ *          If the type has no type variables, then the generated print function simply
+ *          takes the single value as argument. If the type has type variables however,
+ *          then at the time of generating the print function it cannot know how to print
+ *          those argument types and so it takes extra arguments, one per type variable,
+ *          that are themselves print functions for the corresponding type variables,
+ *          followed by the value to print.
+ *          For example given
+ *          ```
+ *          typedef list(#t) { null | pair(#t, list(#t)) }
+ *          ```
+ *          the generated print function would look something like
+ *          ```
+ *          fn print_list {
+ *              (print_t, pair(x, y)) {
+ *                  puts("pair(");
+ *                  print_t(x);
+ *                  puts(", ");
+ *                  print_list(print_t, y);
+ *                  puts(")");
+ *              }
+ *              (_, null) {
+ *                  puts("null");
+ *              }
+ *          }
+ *          ```
+ *          This is nice because all generated print functions have a consistent
+ *          structure and can easily be composed together.
+ * 
+ *          The print compiler in `src/print_compiler.c` is responsible for
+ *          generating the actual applications of these print functions when the
+ *          types are known. It runs as part of the type-checking phase of the compiler.
+ */
 
 #include <stdio.h>
 #include "print_generator.h"
@@ -37,32 +75,44 @@
 #  include "debugging_off.h"
 #endif
 
-static LamLetRecBindings *makePrintFunction(ParserInfo I, LamTypeDef *typeDef,
-                                            LamLetRecBindings *next,
-                                            LamContext *env, bool inPreamble);
+static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+                                              LamTypeDef *typeDef,
+                                              LamContext *env,
+                                              LamLetRecBindings *next);
 
+/**
+ * @brief Creates print functions for all type definitions in the list.
+ * @param typeDefs The list of type definitions to create print functions for.
+ * @param next The current set of letrec bindings.
+ * @param env The current lambda context.
+ * @param inPreamble Whether the print functions are being created in the preamble.
+ * @return The updated set of letrec bindings with the new print functions.
+ */
 LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
                                       LamLetRecBindings *next,
-                                      LamContext *env, bool inPreamble) {
+                                      LamContext *env) {
     ENTER(makePrintFunctions);
     if (typeDefs == NULL) {
         LEAVE(makePrintFunctions);
         return next;
     }
-    next = makePrintFunctions(typeDefs->next, next, env, inPreamble);
+    next = makePrintFunctions(typeDefs->next, next, env);
     int save = PROTECT(next);
 
-    next = makePrintFunction(CPI(typeDefs->typeDef), typeDefs->typeDef, next, env, inPreamble);
+    next = makePrintTypeLetrec(CPI(typeDefs->typeDef), typeDefs->typeDef, env, next);
 
     UNPROTECT(save);
     LEAVE(makePrintFunctions);
     return next;
 }
 
-static bool isListType(LamTypeSig *type) {
-    return type->name == listSymbol();
-}
-
+/**
+ * @brief Constructs a name from a prefix and a base name.
+ * 
+ * @param prefix The prefix to prepend to the base name.
+ * @param name The base name to modify.
+ * @return A new symbol containing the combined name. 
+ */
 HashSymbol *makePrintName(char *prefix, char *name) {
     HashSymbol *res = NULL;
     int size = strlen(name) + strlen(prefix) + 1;
@@ -79,6 +129,10 @@ HashSymbol *makePrintName(char *prefix, char *name) {
     return res;
 }
 
+/**
+ * @brief Creates a symbol for the print argument.
+ * @return The symbol: "thing"
+ */
 static HashSymbol *printArgSymbol(void) {
     static HashSymbol *res = NULL;
     if (res == NULL)
@@ -86,16 +140,36 @@ static HashSymbol *printArgSymbol(void) {
     return res;
 }
 
-static LamExp *printArgVar(ParserInfo I) {
+/**
+ * @brief Returns the symbol "thing" as a lambda expression.
+ * @param I Parser information.
+ * @return A new LamExp representing the print argument variable.
+ */
+static LamExp *thingName(ParserInfo I) {
     HashSymbol *name = printArgSymbol();
     return newLamExp_Var(I, name);
 }
 
+/**
+ * Generates the last argument to the print function, which is the "thing" to be printed.
+ * @param I Parser information.
+ * @return A new LamVarList representing the last argument.
+ */
 static LamVarList *makeLastArg(ParserInfo I) {
     HashSymbol *name = printArgSymbol();
     return newLamVarList(I, name, NULL);
 }
 
+/**
+ * @brief Creates the formal argument list for a print function.
+ * 
+ * @details Each print function takes one argument for each type variable in the type signature,
+ *          (another print function) followed by the thing being printed.
+ *
+ * @param I Parser information.
+ * @param args The type signature arguments.
+ * @return A new LamVarList representing the arguments. 
+ */
 static LamVarList *makePrintTypeFunctionArgs(ParserInfo I, LamTypeSigArgs *args) {
     if (args == NULL)
         return makeLastArg(I);
@@ -107,14 +181,18 @@ static LamVarList *makePrintTypeFunctionArgs(ParserInfo I, LamTypeSigArgs *args)
     return res;
 }
 
-static LamExp *makeNullList(ParserInfo I) {
-    LamConstruct *nil = newLamConstruct(I, nilSymbol(), 0, NULL);
-    int save = PROTECT(nil);
-    LamExp *res = newLamExp_Construct(I, nil);
-    UNPROTECT(save);
-    return res;
-}
-
+/**
+ * @brief Returns a cons of a lambda expression containing the character,
+ *        and the growing cons list.
+ * @details The list being constructed is not a simple lambda list, it is a sequence
+ *          of vector constructors representing pairs of a character expression and
+ *          the tail of the list. Note that because the plain lambda code is not yet
+ *          typechecked, the cons structure includes the type constructor symbol "cons".
+ * @param I Parser information.
+ * @param c The character to add to the cons list.
+ * @param tail The tail of the cons list.
+ * @return A new LamExp representing the cons list.
+ */
 static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     LamExp *character =
         newLamExp_Character(I, c);
@@ -131,20 +209,35 @@ static LamExp *makeCharList(ParserInfo I, char c, LamExp *tail) {
     return res;
 }
 
-LamExp *stringToLamArgs(ParserInfo I, char *name) {
-    if (*name == 0) {
-        return makeNullList(I);
+/**
+ * @brief Converts a string to a cons chain.
+ * @param I Parser information.
+ * @param string The string to convert.
+ * @return A new LamExp representing the list of arguments.
+ */
+LamExp *stringToLamArgs(ParserInfo I, char *string) {
+    if (*string == 0) {
+        LamConstruct *nil = newLamConstruct(I, nilSymbol(), 0, NULL);
+        int save = PROTECT(nil);
+        LamExp *res = newLamExp_Construct(I, nil);
+        UNPROTECT(save);
+        return res;
     }
-    LamExp *next = stringToLamArgs(I, name + 1);
+    LamExp *next = stringToLamArgs(I, string + 1);
     int save = PROTECT(next);
-    LamExp *this = makeCharList(I, *name, next);
+    LamExp *this = makeCharList(I, *string, next);
     UNPROTECT(save);
     return this;
 }
 
+/**
+ * @brief takes a cons string and return a puts expression that will print that string.
+ * @param I Parser information.
+ * @param string The string to print.
+ * @return A new LamExp representing the puts expression.
+ */
 static LamExp *putsExp(ParserInfo I, LamExp *string) {
-    HashSymbol *sym = putsSymbol();
-    LamExp *puts = newLamExp_Var(I, sym);
+    LamExp *puts = newLamExp_Var(I, putsSymbol());
     int save = PROTECT(puts);
     LamArgs *args = newLamArgs(I, string, NULL);
     PROTECT(args);
@@ -155,6 +248,13 @@ static LamExp *putsExp(ParserInfo I, LamExp *string) {
     return res;
 }
 
+/**
+ * @brief Converts a C string to a cons-list of characters,
+ *        then returns a puts expression that wil print it.
+ * @param I Parser information.
+ * @param string The string to print.
+ * @return A new LamExp representing the puts expression.
+ */
 static LamExp *makePutsString(ParserInfo I, char *str) {
     LamExp *string = stringToLamArgs(I, str);
     int save = PROTECT(string);
@@ -163,7 +263,13 @@ static LamExp *makePutsString(ParserInfo I, char *str) {
     return res;
 }
 
-static LamExp *makePlainMatchBody(ParserInfo I, LamTypeConstructor *constructor) {
+/**
+ * @brief Creates a puts expression for the name of a type constructor.
+ * @param I Parser information.
+ * @param constructor The type constructor to print.
+ * @return A new LamExp representing the puts expression.
+ */
+static LamExp *makePutsConstructorName(ParserInfo I, LamTypeConstructor *constructor) {
     LamExp *string = stringToLamArgs(I, constructor->name->name);
     int save = PROTECT(string);
     LamExp *puts = putsExp(I, string);
@@ -171,8 +277,15 @@ static LamExp *makePlainMatchBody(ParserInfo I, LamTypeConstructor *constructor)
     return puts;
 }
 
-static LamExp *makePrintAccessor(ParserInfo I, int index, LamTypeConstructorInfo *info) {
-    LamExp *printArg = printArgVar(I);
+/**
+ * @brief Creates an accessor expression for a type constructor and an index.
+ * @param I Parser information.
+ * @param index The index of the argument in the type constructor.
+ * @param info The type constructor information.
+ * @return A new LamExp representing the accessor expression.
+ */
+static LamExp *makeIndexedDeconstruct(ParserInfo I, int index, LamTypeConstructorInfo *info) {
+    LamExp *printArg = thingName(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
         newLamDeconstruct(I, info->type->name, info->nsid, index, printArg);
@@ -183,40 +296,75 @@ static LamExp *makePrintAccessor(ParserInfo I, int index, LamTypeConstructorInfo
     return res;
 }
 
-LamExp *makeSymbolExpr(ParserInfo I, char *name) {
+/**
+ * @brief Creates a variable from a C string.
+ * @param I Parser information.
+ * @param name The name of the symbol.
+ * @return A new LamExp representing the symbol expression.
+ */
+LamExp *makeVarExpr(ParserInfo I, char *name) {
     HashSymbol *symbol = newSymbol(name);
     LamExp *exp = newLamExp_Var(I, symbol);
     return exp;
 }
 
+/**
+ * @brief Returns the name of the integer printer function as a lambda variable.
+ * @param I Parser information.
+ * @return A new LamExp representing the function name.
+ */
 LamExp *makePrintInt(ParserInfo I) {
-    return makeSymbolExpr(I, "print$int");
+    return makeVarExpr(I, "print$int");
 }
 
+/**
+ * @brief Returns the name of the character printer function as a lambda variable.
+ * @param I Parser information.
+ * @return A new LamExp representing the function name.
+ */
 LamExp *makePrintChar(ParserInfo I) {
-    return makeSymbolExpr(I, "print$char");
+    return makeVarExpr(I, "print$char");
 }
 
-static LamExp *makePrintVar(ParserInfo I, HashSymbol *var) {
+/**
+ * @brief Creates a formal name for a printer function argument to another print function.
+ * i.e.
+ * name => printname
+ * @param I Parser information.
+ * @param var The variable to create the name for.
+ * @return A new LamExp representing the printer function argument name.
+ */
+static LamExp *makeFarg(ParserInfo I, HashSymbol *var) {
     HashSymbol *name = makePrintName("print", var->name);
     LamExp *exp = newLamExp_Var(I, name);
     return exp;
 }
 
-static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg);
+static LamExp *makeAarg(ParserInfo I, LamTypeConstructorType *arg);
 
-static LamArgs *makePrintArgs(ParserInfo I, LamTypeConstructorArgs *args) {
+/**
+ * @brief Creates the actual arguments for an internal print function application.
+ * @param I Parser information.
+ * @param args The type constructor arguments to transform.
+ * @return A new LamArgs representing the actual arguments.
+ */
+static LamArgs *makeAargs(ParserInfo I, LamTypeConstructorArgs *args) {
     if (args == NULL)
         return NULL;
-    LamArgs *next = makePrintArgs(I, args->next);
+    LamArgs *next = makeAargs(I, args->next);
     int save = PROTECT(next);
-    LamExp *printer = makePrinter(I, args->arg);
+    LamExp *printer = makeAarg(I, args->arg);
     PROTECT(printer);
     LamArgs *this = newLamArgs(I, printer, next);
     UNPROTECT(save);
     return this;
 }
 
+/**
+ * @brief Checks if a function is a list constructor.
+ * @param los The lookup or symbol to check.
+ * @return True if the function is a list constructor, false otherwise.
+ */
 static bool functionIsList(LamLookupOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
@@ -228,6 +376,11 @@ static bool functionIsList(LamLookupOrSymbol *los) {
     }
 }
 
+/**
+ * @brief Gets the underlying function name from a lookup or symbol.
+ * @param los The lookup or symbol to get the name from.
+ * @return The underlying function name.
+ */
 static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
@@ -239,18 +392,34 @@ static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
     }
 }
 
-static LamExp *wrapTypeFunction(ParserInfo I, LamExp *res, LamLookupOrSymbol *los) {
-    if (los->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
-        LamLookupSymbol *ls = los->val.lookup;
-        LamLookup *llu = newLamLookup(I, ls->nsid, ls->nsSymbol, res);
+/**
+ * @brief Wraps a print function in a lookup expression if necessary.
+ * @details The argument toPrint is the lookup or symbol of the thing being printed.
+ *          The argument printer is the print function.
+ *          If the toPrint is just a symbol, then the printer is assumed to be in the current scope and returned unchanged.
+ *          If the toPrint is a lookup, then the printer is assumed to be in that scope and is wrapped in the same lookup expression.
+ * @param I Parser information.
+ * @param printer The print function to wrap.
+ * @param los The lookup or symbol of the thing being printed.
+ */
+static LamExp *lookupPrintFunction(ParserInfo I, LamExp *printer, LamLookupOrSymbol *toPrint) {
+    if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
+        LamLookupSymbol *ls = toPrint->val.lookup;
+        LamLookup *llu = newLamLookup(I, ls->nsid, ls->nsSymbol, printer);
         int save = PROTECT(llu);
-        res = newLamExp_Lookup(I, llu);
+        printer = newLamExp_Lookup(I, llu);
         UNPROTECT(save);
     }
-    return res;
+    return printer;
 }
 
-static LamExp *makePrintType(ParserInfo I, LamTypeFunction *function) {
+/**
+ * @brief Creates an expression to print a type function.
+ * @param I Parser information.
+ * @param function The type function to print.
+ * @return A new LamExp representing the print expression.
+ */
+static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
     if (functionIsList(function->name)) {
         if (function->args
             && function->args->arg->type ==
@@ -262,9 +431,9 @@ static LamExp *makePrintType(ParserInfo I, LamTypeFunction *function) {
     HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    exp = wrapTypeFunction(I, exp, function->name);
+    exp = lookupPrintFunction(I, exp, function->name);
     REPLACE_PROTECT(save, exp);
-    LamArgs *args = makePrintArgs(I, function->args);
+    LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);
     int nargs = countLamArgs(args);
     if (nargs == 0) {
@@ -278,6 +447,10 @@ static LamExp *makePrintType(ParserInfo I, LamTypeFunction *function) {
     return res;
 }
 
+/**
+ * @brief creates an actual argument to a print function.such that the argument,
+ *        when applied to a tuple, will print it.
+ */
 static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     int size = countLamTypeConstructorArgs(tuple);
     HashSymbol *name = NULL;
@@ -292,7 +465,7 @@ static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    LamArgs *args = makePrintArgs(I, tuple);
+    LamArgs *args = makeAargs(I, tuple);
     PROTECT(args);
     LamApply *apply = newLamApply(I, exp, args);
     PROTECT(apply);
@@ -301,7 +474,20 @@ static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     return res;
 }
 
-static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg) {
+/**
+ * @brief Creates the actual argument for a print function passed to another print function.
+ * @details This function generates the appropriate printer expression for a given type
+ *          of type constructor argument (so without the final "thing" argument):
+ *          - integer: `print$int`.
+ *          - character: `print$char`.
+ *          - type variable `var`: `printvar` where `printvar` is expected to be in scope.
+ *          - type function: `print$function(print$arg1, ...)`
+ *          - tuple: `print$tuple$(print$arg1, print$arg2, ...)`
+ * @param I Parser information.
+ * @param arg The type constructor argument to create the printer for.
+ * @return A new LamExp representing the printer expression.
+ */
+static LamExp *makeAarg(ParserInfo I, LamTypeConstructorType *arg) {
     LamExp *printer = NULL;
     switch (arg->type) {
         case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
@@ -311,26 +497,36 @@ static LamExp *makePrinter(ParserInfo I, LamTypeConstructorType *arg) {
             printer = makePrintChar(I);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
-            printer = makePrintVar(I, arg->val.var);
+            printer = makeFarg(I, arg->val.var);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            printer = makePrintType(I, arg->val.function);
+            printer = makePrintTypeFunction(I, arg->val.function);
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
             printer = makePrintTuple(I, arg->val.tuple);
             break;
         default:
-            cant_happen("unrecognised type %s in makePrinter", lamTypeConstructorTypeTypeName(arg->type));
+            cant_happen("unrecognised type %s in makeAarg", lamTypeConstructorTypeTypeName(arg->type));
     }
     return printer;
 }
 
-static LamExp *makePrintConstructorArg(ParserInfo I, LamTypeConstructorType *arg,
-                                       LamTypeConstructorInfo *info,
-                                       int index) {
-    LamExp *accessor = makePrintAccessor(I, index, info);
+/**
+ * @brief Builds the application of a printer for the given componentType to the componentIndex-th
+ *        component of the structure described by the constructorInfo
+ * @param I Parser information.
+ * @param componentType The type of the component to print.
+ * @param constructorInfo The constructor information to build the accessor.
+ * @param componentIndex The index of the component to print.
+ * @return A new LamExp representing the print application.
+ */
+static LamExp *makeIndexedApplication(ParserInfo I,
+                                      LamTypeConstructorType *componentType,
+                                      LamTypeConstructorInfo *constructorInfo,
+                                      int componentIndex) {
+    LamExp *accessor = makeIndexedDeconstruct(I, componentIndex, constructorInfo);
     int save = PROTECT(accessor);
-    LamExp *printer = makePrinter(I, arg);
+    LamExp *printer = makeAarg(I, componentType);
     PROTECT(printer);
     LamArgs *args = newLamArgs(I, accessor, NULL);
     PROTECT(args);
@@ -341,6 +537,12 @@ static LamExp *makePrintConstructorArg(ParserInfo I, LamTypeConstructorType *arg
     return res;
 }
 
+/**
+ * @brief extracts the n-th tag from a list of tags.
+ * @param index The index of the tag to extract.
+ * @param tags The list of tags to extract from.
+ * @return the tag, or a fatal error if the list is exhausted.
+ */
 static HashSymbol *findNthTag(int index, LamTypeTags *tags) {
     if (tags == NULL) {
         cant_happen("reached end of tags");
@@ -351,14 +553,26 @@ static HashSymbol *findNthTag(int index, LamTypeTags *tags) {
     return findNthTag(index - 1, tags->next);
 }
 
-static LamSequence *makeVecMatchParts(ParserInfo I, int index, LamTypeConstructorArgs *args,
-                                      LamTypeConstructorInfo *info,
-                                      LamSequence *tail) {
+/**
+ * @brief builds the individual parts of the body of a vector match case
+ *        which print each component of the type constructor.
+ * @details called by `makeVectorMatchBody`.
+ * @param I Parser information.
+ * @param index The index of the component to print.
+ * @param args The constructor arguments.
+ * @param info The constructor information.
+ * @return A new LamSequence representing the match parts.
+ */
+static LamSequence *makeVectorMatchParts(ParserInfo I,
+                                         int index,
+                                         LamTypeConstructorArgs *args,
+                                         LamTypeConstructorInfo *info,
+                                         LamSequence *tail) {
     if (args == NULL)
         return tail;
-    LamSequence *next = makeVecMatchParts(I, index + 1, args->next, info, tail);
+    LamSequence *next = makeVectorMatchParts(I, index + 1, args->next, info, tail);
     int save = PROTECT(next);
-    LamExp *exp = makePrintConstructorArg(I, args->arg, info, index + 1);
+    LamExp *exp = makeIndexedApplication(I, args->arg, info, index + 1);
     PROTECT(exp);
     if (next != tail) {
         LamExp *comma = makePutsString(I, ", ");
@@ -383,19 +597,29 @@ static LamSequence *makeVecMatchParts(ParserInfo I, int index, LamTypeConstructo
     return res;
 }
 
-static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
+/**
+ * @brief Builds the body of a match expression for a type constructor with arity greater than 0.
+ * @details This function creates the body of the match expression for a vector-based type,
+ *          which includes printing the constructor name, opening the structure, printing
+ *          each component, and closing the structure.
+ * @param I Parser information.
+ * @param info The type constructor information.
+ * @return A new LamExp representing the match body.
+ */
+static LamExp *makeVectorMatchBody(ParserInfo I,
+                                   LamTypeConstructorInfo *info) {
     LamTypeConstructor *constructor = info->type;
-    LamExp *header = makePlainMatchBody(I, constructor);
+    LamExp *header = makePutsConstructorName(I, constructor);
     int save = PROTECT(header);
     bool isStruct = info->tags != NULL;
-    LamExp *open = makePutsString(I, isStruct ? "{ " : "(");
-    PROTECT(open);
     LamExp *close = makePutsString(I, isStruct ? " }" : ")");
     PROTECT(close);
     LamSequence *seq = newLamSequence(I, close, NULL);
     PROTECT(seq);
-    seq = makeVecMatchParts(I, 0, constructor->args, info, seq);
+    seq = makeVectorMatchParts(I, 0, constructor->args, info, seq);
     PROTECT(seq);
+    LamExp *open = makePutsString(I, isStruct ? "{ " : "(");
+    PROTECT(open);
     seq = newLamSequence(I, open, seq);
     PROTECT(seq);
     seq = newLamSequence(I, header, seq);
@@ -405,71 +629,116 @@ static LamExp *makeVecMatchBody(ParserInfo I, LamTypeConstructorInfo *info) {
     return res;
 }
 
-static LamMatchList *makePlainMatchList(ParserInfo I, LamTypeConstructorList *constructors,
-                                        LamContext *env) {
+/**
+ * @brief Builds the individual match cases for a type whose constructors create scalars.
+ * @details If none of the constructors have arity greater than 0, they can be represented as
+ *          simple scalars, for example `typedef colours { red, green, blue }`.
+ *          This function is called to recursively create the match cases for those scalar-based types.
+ * @param I Parser information.
+ * @param constructors The list of type constructors for the type being matched.
+ * @param env The current lambda context.
+ * @return The match expression.
+ */
+static LamMatchList *makeScalarMatchList(ParserInfo I,
+                                         LamTypeConstructorList *constructors,
+                                         LamContext *env) {
     if (constructors == NULL)
         return NULL;
-    LamMatchList *next = makePlainMatchList(I, constructors->next, env);
+    LamMatchList *next = makeScalarMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
         lookupConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
-            ("cannot find info for type constructor %s in makePlainMatchList",
+            ("cannot find info for type constructor %s in makeScalarMatchList",
              constructors->constructor->name->name);
     }
     LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
     PROTECT(matches);
-    LamExp *body = makePlainMatchBody(I, constructors->constructor);
+    LamExp *body = makePutsConstructorName(I, constructors->constructor);
     PROTECT(body);
     LamMatchList *res = newLamMatchList(I, matches, body, next);
     UNPROTECT(save);
     return res;
 }
 
-static LamMatchList *makeTagMatchList(ParserInfo I, LamTypeConstructorList *constructors,
-                                      LamContext *env) {
-    if (constructors == NULL)
-        return NULL;
-    LamMatchList *next = makeTagMatchList(I, constructors->next, env);
-    int save = PROTECT(next);
-    LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
-    if (info == NULL) {
-        cant_happen
-            ("cannot find info for type constructor %s in makeTagMatchList",
-             constructors->constructor->name->name);
-    }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
-    PROTECT(matches);
-    LamExp *body = NULL;
-    if (info->arity > 0) {
-        body = makeVecMatchBody(I, info);
-    } else {
-        body = makePlainMatchBody(I, constructors->constructor);
-    }
-    PROTECT(body);
-    LamMatchList *res = newLamMatchList(I, matches, body, next);
-    UNPROTECT(save);
-    return res;
-}
-
-static LamMatch *makePlainMatch(ParserInfo I, LamTypeConstructorList *constructors,
-                                LamContext *env) {
-    LamMatchList *cases = makePlainMatchList(I, constructors, env);
+/**
+ * @brief Builds a match expression for a type whose constructors create only scalars.
+ * @details If none of the constructors have arity greater than 0, they can be represented as
+ *          simple scalars, for example `typedef colours { red, green, blue }`.
+ *          This function is called to create a match expression for those scalar-based types.
+ * @param I Parser information.
+ * @param constructors The list of type constructors for the type being matched.
+ * @param env The current lambda context.
+ * @return The match expression.
+ */
+static LamMatch *makeScalarMatch(ParserInfo I,
+                                 LamTypeConstructorList *constructors,
+                                 LamContext *env) {
+    LamMatchList *cases = makeScalarMatchList(I, constructors, env);
     int save = PROTECT(cases);
-    LamExp *var = printArgVar(I);
+    LamExp *var = thingName(I);
     PROTECT(var);
     LamMatch *res = newLamMatch(I, var, cases);
     UNPROTECT(save);
     return res;
 }
 
-static LamMatch *makeTagMatch(ParserInfo I, LamTypeConstructorList *constructors,
-                              LamContext *env) {
-    LamMatchList *cases = makeTagMatchList(I, constructors, env);
+/**
+ * @brief Builds the individual match cases for a type whose constructors create vectors.
+ * @details If any of the constructors have arity greater than 0, they all need to create
+ *          vectors (so that the match does not need to distinguish between their structures).
+ *          This function is called to recursively create the match cases for those
+ *          vector-based types.
+ * @param I Parser information.
+ * @param constructors The list of type constructors for the type being matched.
+ * @param env The current lambda context.
+ * @return The match expression.
+ */
+static LamMatchList *makeVectorMatchList(ParserInfo I,
+                                      LamTypeConstructorList *constructors,
+                                      LamContext *env) {
+    if (constructors == NULL)
+        return NULL;
+    LamMatchList *next = makeVectorMatchList(I, constructors->next, env);
+    int save = PROTECT(next);
+    LamTypeConstructorInfo *info =
+        lookupConstructorInLamContext(env, constructors->constructor->name);
+    if (info == NULL) {
+        cant_happen
+            ("cannot find info for type constructor %s in makeVectorMatchList",
+             constructors->constructor->name->name);
+    }
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+    PROTECT(matches);
+    LamExp *body = NULL;
+    if (info->arity > 0) {
+        body = makeVectorMatchBody(I, info);
+    } else {
+        body = makePutsConstructorName(I, constructors->constructor);
+    }
+    PROTECT(body);
+    LamMatchList *res = newLamMatchList(I, matches, body, next);
+    UNPROTECT(save);
+    return res;
+}
+
+/**
+ * @brief Builds a match expression for a type whose constructors create vectors.
+ * @details If any of the constructors have arity greater than 0, they all need to create
+ *          vectors (so that the match does not need to distinguish between their structures).
+ *          This function is called to create a match expression for those vector-based types.
+ * @param I Parser information.
+ * @param constructors The list of type constructors for the type being matched.
+ * @param env The current lambda context.
+ * @return The match expression.
+ */
+static LamMatch *makeVectorMatch(ParserInfo I,
+                                 LamTypeConstructorList *constructors,
+                                 LamContext *env) {
+    LamMatchList *cases = makeVectorMatchList(I, constructors, env);
     int save = PROTECT(cases);
-    LamExp *var = printArgVar(I);
+    LamExp *var = thingName(I);
     PROTECT(var);
     LamExp *prim = newLamExp_Tag(I, var);
     PROTECT(prim);
@@ -478,7 +747,15 @@ static LamMatch *makeTagMatch(ParserInfo I, LamTypeConstructorList *constructors
     return res;
 }
 
-static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructors,
+/**
+ * @brief create the function body for a toplevel print function.
+ * @param I Parser information.
+ * @param constructors The list of type constructors for the type being printed.
+ * @param env The current lambda context.
+ * @return The function body expression.
+ */
+static LamExp *makeFunctionBody(ParserInfo I,
+                                LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
         lookupConstructorInLamContext(env, constructors->constructor->name);
@@ -489,15 +766,15 @@ static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructo
     }
     LamMatch *match = NULL;
     if (info->needsVec) {
-        match = makeTagMatch(I, constructors, env);
+        match = makeVectorMatch(I, constructors, env);
     } else {
-        match = makePlainMatch(I, constructors, env);
+        match = makeScalarMatch(I, constructors, env);
     }
     int save = PROTECT(match);
     LamExp *res = newLamExp_Match(I, match);
     PROTECT(res);
     // print functions should all return their argument
-    LamExp *ret = printArgVar(I);
+    LamExp *ret = thingName(I);
     PROTECT(ret);
     LamSequence *seq = newLamSequence(I, ret, NULL);
     PROTECT(seq);
@@ -508,15 +785,30 @@ static LamExp *makeFunctionBody(ParserInfo I, LamTypeConstructorList *constructo
     return res;
 }
 
+/**
+ * @brief Checks to see if there is already a print function defined.
+ * @param printName The name of the print function to look for.
+ * @param bindings The list of bindings to search.
+ * @return True if the print function is already defined, false otherwise.
+ */
 static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
     if (bindings == NULL) return false;
     if (bindings->var == printName) return true;
     return userDefined(printName, bindings->next);
 }
 
-static LamLetRecBindings *makePrintTypeFunction(ParserInfo I, LamTypeDef *typeDef,
-                                                LamContext *env,
-                                                LamLetRecBindings *next) {
+/**
+ * @brief Creates a letrec binding for a print function.
+ * @param I The parser information.
+ * @param typeDef The type definition for the type being printed.
+ * @param env The current lambda context.
+ * @param next The next letrec binding in the chain.
+ * @return The new letrec binding for the print function.
+ */
+static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+                                              LamTypeDef *typeDef,
+                                              LamContext *env,
+                                              LamLetRecBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
     if (userDefined(name, next)) {
         return next;
@@ -532,15 +824,4 @@ static LamLetRecBindings *makePrintTypeFunction(ParserInfo I, LamTypeDef *typeDe
     LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
     UNPROTECT(save);
     return res;
-}
-
-static LamLetRecBindings *makePrintFunction(ParserInfo I, LamTypeDef *typeDef,
-                                            LamLetRecBindings *next,
-                                            LamContext *env,
-                                            bool inPreamble) {
-    if (inPreamble && isListType(typeDef->type)) {
-        // print$list is hand-coded in the preamble
-        return next;
-    }
-    return makePrintTypeFunction(I, typeDef, env, next);
 }

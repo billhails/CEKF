@@ -229,7 +229,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     int save = PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
-    funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env, inPreamble);
+    funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env);
     PROTECT(funcDefsList);
     LamNamespaceArray *namespaces = NULL;
     if (nsArray != NULL) {
