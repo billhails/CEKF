@@ -57,16 +57,16 @@ AstStringArray *include_paths = NULL;
 
 static AstAltArgs           *alt_args(PrattParser *);
 static AstAltFunction       *alt_function(PrattParser *);
-static AstFarg               *astCharacterToFarg(ParserInfo, Character);
-static AstFarg               *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
-static AstFarg               *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
-static AstFarg               *astLookupToFarg(PrattParser *parser, AstLookup *lookup);
-static AstFarg               *astNumberToFarg(ParserInfo, MaybeBigInt *);
-static AstFarg               *astStructureToFarg(PrattParser *parser, AstStruct *structure);
-static AstFarg               *astSymbolToFarg(ParserInfo, HashSymbol *);
-static AstFarg               *astTupleToFarg(PrattParser *parser, AstExpressions *tuple);
-static AstFargList           *astExpressionsToFargList(PrattParser *parser, AstExpressions *exprs);
-static AstFargList           *fargs(PrattParser *);
+static AstFarg              *astCharacterToFarg(ParserInfo, Character);
+static AstFarg              *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
+static AstFarg              *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
+static AstFarg              *astLookupToFarg(PrattParser *parser, AstLookup *lookup);
+static AstFarg              *astNumberToFarg(ParserInfo, MaybeBigInt *);
+static AstFarg              *astStructureToFarg(PrattParser *parser, AstStruct *structure);
+static AstFarg              *astSymbolToFarg(ParserInfo, HashSymbol *);
+static AstFarg              *astTupleToFarg(PrattParser *parser, AstExpressions *tuple);
+static AstFargList          *astExpressionsToFargList(PrattParser *parser, AstExpressions *exprs);
+static AstFargList          *fargs(PrattParser *);
 static AstCompositeFunction *composite_function(PrattParser *);
 static AstCompositeFunction *functions(PrattParser *);
 static AstDefinition        *alias(PrattParser *);
@@ -2019,7 +2019,7 @@ static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition) {
 }
 
 /**
- * @brief parser a macro definition.
+ * @brief parse a macro definition.
  * 
  * the `macro` token has already been consumed when this parselet triggers.
  */

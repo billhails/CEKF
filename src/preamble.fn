@@ -73,6 +73,9 @@ typedef unicode_general_category_type {
     GC_Cc | GC_Cf | GC_Co | GC_Cs | GC_Cn 
 }
 
+// syntax if (test) {consequent} else {alternative} =
+//     { {(true) { consequent } (false) { alternative }}(test) }
+
 fn NOT {
     (true) { false }
     (false) { true }
