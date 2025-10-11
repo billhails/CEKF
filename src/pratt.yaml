@@ -125,8 +125,22 @@ structs:
             postfixOp: PrattParselet
             postfixPrec: int
             postfixImpl: AstExpression=NULL
+            associativity: PrattAssoc
 
 enums:
+    PrattAssoc:
+        meta:
+            brief: The set of associativity types for operators.
+            description: >-
+                The associativity of an operator determines how it is parsed
+                in relation to other operators of the same precedence. It can
+                be left associative, right associative, or non-associative.
+                This is used to determine the order of operations during parsing.
+        data:
+            - LEFT
+            - RIGHT
+            - NONE
+
     PrattNumberState:
         meta:
             brief: The set of states for the number parser.

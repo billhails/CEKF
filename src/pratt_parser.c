@@ -106,6 +106,7 @@ static AstExpression        *tuple(PrattRecord *, PrattParser *, AstExpression *
 static AstExpression        *unsafe(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *userInfixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *userInfixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression        *userInfixNone(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *userPostfix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *userPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression        *wildcard(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -170,11 +171,16 @@ static AstExpression *errorExpression(ParserInfo I) {
  * @param postfix The postfix operator function.
  * @param postfixPrec The precedence for the postfix operator.
  */
-static void addRecord(PrattRecordTable *table, HashSymbol *tok,
-                      PrattParselet prefix, int prefixPrec,
-                      PrattParselet infix, int infixPrec,
-                      PrattParselet postfix, int postfixPrec) {
-    PrattRecord *record = newPrattRecord(tok, prefix, prefixPrec, infix, infixPrec, postfix, postfixPrec);
+static void addRecord(PrattRecordTable *table,
+                      HashSymbol *tok,
+                      PrattParselet prefix,
+                      int prefixPrec,
+                      PrattParselet infix,
+                      int infixPrec,
+                      PrattParselet postfix,
+                      int postfixPrec,
+                      PrattAssoc associativity) {
+    PrattRecord *record = newPrattRecord(tok, prefix, prefixPrec, infix, infixPrec, postfix, postfixPrec, associativity);
     int save = PROTECT(record);
     setPrattRecordTable(table, record->symbol, record);
     UNPROTECT(save);
@@ -187,50 +193,50 @@ static PrattParser *makePrattParser(void) {
     PrattParser *parser = newPrattParser(NULL);
     int save = PROTECT(parser);
     PrattRecordTable *table = parser->rules;
-    addRecord(table, TOK_SEMI(),      NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_PREFIX(),    NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_INFIX(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_POSTFIX(),   NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ATOM(),      makeAtom, 0,   NULL, 0,         NULL, 0);
-    addRecord(table, TOK_CHAR(),      makeChar, 0,   NULL, 0,         NULL, 0);
-    addRecord(table, TOK_NUMBER(),    makeNumber, 0, NULL, 0,         NULL, 0);
-    addRecord(table, TOK_STRING(),    makeString, 0, NULL, 0,         NULL, 0);
-    addRecord(table, TOK_TYPEDEF(),   NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_PRINT(),     print, 0,      NULL, 0,         NULL, 0);
-    addRecord(table, TOK_BACK(),      back, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ASSERT(),    passert, 0,    NULL, 0,         NULL, 0);
-    addRecord(table, TOK_UNSAFE(),    unsafe, 0,     NULL, 0,         NULL, 0);
-    addRecord(table, TOK_FN(),        fn, 0,         NULL, 0,         NULL, 0);
-    addRecord(table, TOK_MACRO(),     macro, 0,      NULL, 0,         NULL, 0);
-    addRecord(table, TOK_LINK(),      NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_SWITCH(),    switchExp, 0,  NULL, 0,         NULL, 0);
-    addRecord(table, TOK_AS(),        NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ALIAS(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_KW_ERROR(),  error, 0,      NULL, 0,         NULL, 0);
-    addRecord(table, TOK_NAMESPACE(), NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_LET(),       NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_IN(),        NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_TUPLE(),     tuple, 0,      NULL, 0,         NULL, 0);
-    addRecord(table, TOK_CLOSE(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_IF(),        iff, 0,        NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ELSE(),      NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_LSQUARE(),   list, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_RSQUARE(),   NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_COMMA(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_LCURLY(),    nestexpr, 0,   NULL, 0,         NULL, 0);
-    addRecord(table, TOK_RCURLY(),    NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_PIPE(),      NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_WILDCARD(),  wildcard, 0,   NULL, 0,         NULL, 0);
-    addRecord(table, TOK_KW_NUMBER(), NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_KW_CHAR(),   NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_EOF(),       NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ERROR(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_ARROW(),     NULL, 0,       infixRight, 10,  NULL, 0);
-    addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0);
-    addRecord(table, TOK_COLON(),     NULL, 0,       NULL, 0,         NULL, 0);
-    addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 0,         NULL, 0);
-    addRecord(table, TOK_OPEN(),      grouping, 0,   call, 130,       NULL, 0);
-    addRecord(table, TOK_PERIOD(),    NULL, 0,       lookup, 140,     NULL, 0);
+    addRecord(table, TOK_SEMI(),      NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_PREFIX(),    NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_INFIX(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_POSTFIX(),   NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ATOM(),      makeAtom, 0,   NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_CHAR(),      makeChar, 0,   NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_NUMBER(),    makeNumber, 0, NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_STRING(),    makeString, 0, NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_TYPEDEF(),   NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_PRINT(),     print, 0,      NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_BACK(),      back, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ASSERT(),    passert, 0,    NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_UNSAFE(),    unsafe, 0,     NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_FN(),        fn, 0,         NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_MACRO(),     macro, 0,      NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_LINK(),      NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_SWITCH(),    switchExp, 0,  NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_AS(),        NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ALIAS(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_KW_ERROR(),  error, 0,      NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_NAMESPACE(), NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_LET(),       NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_IN(),        NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_TUPLE(),     tuple, 0,      NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_CLOSE(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_IF(),        iff, 0,        NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ELSE(),      NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_LSQUARE(),   list, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_RSQUARE(),   NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_COMMA(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_LCURLY(),    nestexpr, 0,   NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_RCURLY(),    NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_PIPE(),      NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_WILDCARD(),  wildcard, 0,   NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_KW_NUMBER(), NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_KW_CHAR(),   NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_EOF(),       NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ERROR(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ARROW(),     NULL, 0,       infixRight, 10,  NULL, 0, PRATTASSOC_TYPE_RIGHT);
+    addRecord(table, TOK_ASSIGN(),    NULL, 0,       exprAlias, 60,   NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_COLON(),     NULL, 0,       NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_HASH(),      doPrefix, 120, NULL, 0,         NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_OPEN(),      grouping, 0,   call, 130,       NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_PERIOD(),    NULL, 0,       lookup, 140,     NULL, 0, PRATTASSOC_TYPE_NONE);
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
     return parser;
@@ -936,14 +942,14 @@ static void validateOperator(PrattParser *parser, PrattUTF8 *operator) {
  * 
  * @param parser The PrattParser to add the operator to.
  * @param fixity The fixity type of the operator (prefix, infix, postfix).
- * @param left Whether the operator is left associative (for infix operators).
+ * @param associativity The associativity type of the operator (left, right, none).
  * @param precedence The precedence level of the operator.
  * @param operator The PrattUTF8 representation of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
 static void addOperator(PrattParser *parser,
                         PrattFixity fixity,
-                        bool left,
+                        PrattAssoc associativity,
                         int precedence,
                         PrattUTF8 *operator,
                         AstExpression *impl) {
@@ -978,7 +984,7 @@ static void addOperator(PrattParser *parser,
                                   "attempt to define existing postfix operator \"%s\" as infix",
                                   operator->entries);
                 }
-                record->infixOp = left ? userInfixLeft : userInfixRight;
+                record->infixOp = associativity == PRATTASSOC_TYPE_LEFT ? userInfixLeft : associativity == PRATTASSOC_TYPE_RIGHT ? userInfixRight : userInfixNone;
                 record->infixPrec = precedence;
                 record->infixImpl = impl;
             }
@@ -1004,19 +1010,23 @@ static void addOperator(PrattParser *parser,
     } else {
         switch (fixity) {
             case PRATTFIXITY_TYPE_PREFIX: {
-                record = newPrattRecord(op, userPrefix, precedence, NULL, 0, NULL, 0);
+                record = newPrattRecord(op, userPrefix, precedence, NULL, 0, NULL, 0, associativity);
                 PROTECT(record);
                 record->prefixImpl = impl;
             }
             break;
             case PRATTFIXITY_TYPE_INFIX: {
-                record = newPrattRecord(op, NULL, 0, left ? userInfixLeft : userInfixRight, precedence, NULL, 0);
+                record = newPrattRecord(op, NULL, 0,
+                    associativity == PRATTASSOC_TYPE_LEFT
+                    ? userInfixLeft
+                    : associativity == PRATTASSOC_TYPE_RIGHT
+                    ? userInfixRight : userInfixNone, precedence, NULL, 0, associativity);
                 PROTECT(record);
                 record->infixImpl = impl;
             }
             break;
             case PRATTFIXITY_TYPE_POSTFIX: {
-                record = newPrattRecord(op, NULL, 0, NULL, 0, userPostfix, precedence);
+                record = newPrattRecord(op, NULL, 0, NULL, 0, userPostfix, precedence, associativity);
                 PROTECT(record);
                 record->postfixImpl = impl;
             }
@@ -1248,13 +1258,15 @@ static AstDefinition *infix(PrattParser *parser) {
             cant_happen("unexpected %s", prattValueTypeName(atom->value->type));
         }
 #endif
-        bool leftassoc = true;
+        PrattAssoc associativity;
         if (atom->value->val.atom == TOK_LEFT()) {
-            leftassoc = true;
+            associativity = PRATTASSOC_TYPE_LEFT;
         } else if (atom->value->val.atom == TOK_RIGHT()) {
-            leftassoc = false;
+            associativity = PRATTASSOC_TYPE_RIGHT;
+        } else if (atom->value->val.atom == TOK_NONE()) {
+            associativity = PRATTASSOC_TYPE_NONE;
         } else {
-            parserErrorAt(TOKPI(atom), parser, "expected \"left\" or \"right\" after infix keyword");
+            parserErrorAt(TOKPI(atom), parser, "expected \"left\", \"right\" or \"none\" after infix keyword");
         }
         if (check(parser, TOK_NUMBER())) {
             PrattToken *prec = next(parser);
@@ -1273,7 +1285,7 @@ static AstDefinition *infix(PrattParser *parser) {
                 AstExpression *impl = expression(parser);
                 PROTECT(impl);
                 consume(parser, TOK_SEMI());
-                addOperator(parser, PRATTFIXITY_TYPE_INFIX, leftassoc, precedence, str, impl);
+                addOperator(parser, PRATTFIXITY_TYPE_INFIX, associativity, precedence, str, impl);
             } else {
                 parserErrorAt(TOKPI(prec), parser, "expected small integer");
             }
@@ -2801,14 +2813,15 @@ static AstExpression *userPrefix(PrattRecord *record,
 }
 
 /**
- * @brief common handler for user defined left and right infix operators.
+ * @brief common handler for user defined left, right and nonassoc infix operators.
  */
-static AstExpression *userInfix(PrattRecord *record,
-                                PrattParser *parser,
-                                AstExpression *lhs,
-                                PrattToken *tok,
-                                int precShift) {
-    ENTER(userInfix);
+static AstExpression *userInfixCommon(PrattRecord *record,
+                                      PrattParser *parser,
+                                      AstExpression *lhs,
+                                      PrattToken *tok,
+                                      int precShift,
+                                      bool nonassoc) {
+    ENTER(userInfixCommon);
     AstExpression *rhs = expressionPrecedence(parser, record->infixPrec + precShift);
     int save = PROTECT(rhs);
     AstExpressions *arguments = newAstExpressions(CPI(rhs), rhs, NULL);
@@ -2818,9 +2831,32 @@ static AstExpression *userInfix(PrattRecord *record,
     AstFunCall *funCall = newAstFunCall(TOKPI(tok), record->infixImpl, arguments);
     PROTECT(funCall);
     rhs = newAstExpression_FunCall(CPI(funCall), funCall);
-    LEAVE(userInfix);
+    if (nonassoc) {
+        PrattToken *next = peek(parser);
+        PROTECT(next);
+        if (next != NULL) {
+            PrattRecord *nextRecord = fetchRecord(parser, next->type, false);
+            if (nextRecord != NULL &&
+                nextRecord->infixPrec == record->infixPrec &&
+                nextRecord->associativity == PRATTASSOC_TYPE_NONE &&
+                next->type == tok->type) {
+                parserErrorAt(TOKPI(next), parser, "non-associative operator used in succession");
+            }
+        }
+    }
+    LEAVE(userInfixCommon);
     UNPROTECT(save);
     return rhs;
+}
+
+/**
+ * @brief parselet installed at parser run time to handle a user-defined infix nonassoc operator.
+ */
+static AstExpression *userInfixNone(PrattRecord *record,
+                                    PrattParser *parser,
+                                    AstExpression *lhs,
+                                    PrattToken *token) {
+    return userInfixCommon(record, parser, lhs, token, +1, true);
 }
 
 /**
@@ -2830,7 +2866,7 @@ static AstExpression *userInfixLeft(PrattRecord *record,
                                     PrattParser *parser,
                                     AstExpression *lhs,
                                     PrattToken *tok) {
-    return userInfix(record, parser, lhs, tok, +1);
+    return userInfixCommon(record, parser, lhs, tok, +1, false);
 }
 
 /**
@@ -2840,7 +2876,7 @@ static AstExpression *userInfixRight(PrattRecord *record,
                                      PrattParser *parser,
                                      AstExpression *lhs,
                                      PrattToken *tok) {
-    return userInfix(record, parser, lhs, tok, -1);
+    return userInfixCommon(record, parser, lhs, tok, -1, false);
 }
 
 /**

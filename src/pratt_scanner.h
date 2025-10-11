@@ -78,6 +78,7 @@ HashSymbol *TOK_LINK(void);
 HashSymbol *TOK_LSQUARE(void);
 HashSymbol *TOK_MACRO(void);
 HashSymbol *TOK_NAMESPACE(void);
+HashSymbol *TOK_NONE(void);
 HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_OPEN(void);
 HashSymbol *TOK_PERIOD(void);

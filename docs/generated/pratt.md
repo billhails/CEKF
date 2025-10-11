@@ -42,10 +42,12 @@ PrattRecord --infixImpl--> AstExpression
 PrattRecord --postfixOp--> PrattParselet
 PrattRecord --postfixPrec--> int
 PrattRecord --postfixImpl--> AstExpression
+PrattRecord --associativity--> PrattAssoc
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8
 PrattValue --atom--> HashSymbol
+PrattAssoc["enum PrattAssoc"]
 PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]

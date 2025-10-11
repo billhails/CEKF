@@ -49,6 +49,7 @@ HashSymbol *TOK_ ## name(void) {          \
 TOKFN(MACRO,"macro")
 TOKFN(LEFT,"left")
 TOKFN(RIGHT,"right")
+TOKFN(NONE,"none")
 TOKFN(PREFIX,"prefix")
 TOKFN(INFIX,"infix")
 TOKFN(POSTFIX,"postfix")
