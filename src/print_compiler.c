@@ -43,7 +43,7 @@ static LamExp *compilePrinterForPair(ParserInfo I, TcPair *pair);
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env);
 static LamExp *compilePrinterForInt(ParserInfo I);
 static LamExp *compilePrinterForChar(ParserInfo I);
-static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcEnv *env);
+static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv *env);
 static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *env);
 static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env);
 
@@ -101,7 +101,7 @@ LamExp *compilePrinterForType(ParserInfo I, TcType *type, TcEnv *env) {
 }
 
 static LamExp *compilePrinterForOpaque(ParserInfo I) {
-    return makeSymbolExpr(I, "print$opaque");
+    return makeVarExpr(I, "print$opaque");
 }
 
 static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
@@ -127,8 +127,8 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
         case TCTYPE_TYPE_OPAQUE:
             res = compilePrinterForOpaque(I);
             break;
-        case TCTYPE_TYPE_USERTYPE:
-            res = compilePrinterForUserType(I, type->val.userType, env);
+        case TCTYPE_TYPE_TYPESIG:
+            res = compilePrinterForTypeSig(I, type->val.typeSig, env);
             break;
         case TCTYPE_TYPE_TUPLE:
             res = compilePrinterForTuple(I, type->val.tuple, env);
@@ -142,7 +142,7 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
 
 static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function
                                          __attribute__((unused))) {
-    return makeSymbolExpr(I, "print$fn");
+    return makeVarExpr(I, "print$fn");
 }
 
 static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPair *pair __attribute__((unused))) {
@@ -151,7 +151,7 @@ static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPai
 
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env) {
     if (var->instance == NULL) {
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
     return compilePrinter(I, var->instance, env);
 }
@@ -164,20 +164,20 @@ static LamExp *compilePrinterForChar(ParserInfo I) {
     return makePrintChar(I);
 }
 
-static LamArgs *compilePrinterForUserTypeArgs(ParserInfo I, TcUserTypeArgs *args,
+static LamArgs *compilePrinterForTypeSigArgs(ParserInfo I, TcTypeSigArgs *args,
                                               TcEnv *env) {
-    ENTER(compilePrinterForUserTypeArgs);
+    ENTER(compilePrinterForTypeSigArgs);
     if (args == NULL) {
-        LEAVE(compilePrinterForUserTypeArgs);
+        LEAVE(compilePrinterForTypeSigArgs);
         return NULL;
     }
-    LamArgs *next = compilePrinterForUserTypeArgs(I, args->next, env);
+    LamArgs *next = compilePrinterForTypeSigArgs(I, args->next, env);
     int save = PROTECT(next);
     LamExp *this = compilePrinter(I, args->type, env);
     PROTECT(this);
     LamArgs *res = newLamArgs(I, this, next);
     UNPROTECT(save);
-    LEAVE(compilePrinterForUserTypeArgs);
+    LEAVE(compilePrinterForTypeSigArgs);
     return res;
 }
 
@@ -218,28 +218,28 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
     return res->val.env;
 }
 
-static LamExp *compilePrinterForUserType(ParserInfo I, TcUserType *userType, TcEnv *env) {
-    IFDEBUG(printTcUserType(userType, 0));
-    if (userType->name == listSymbol()) {
-        if (userType->args
-            && userType->args->type->type == TCTYPE_TYPE_CHARACTER) {
+static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv *env) {
+    IFDEBUG(printTcTypeSig(typeSig, 0));
+    if (typeSig->name == listSymbol()) {
+        if (typeSig->args
+            && typeSig->args->type->type == TCTYPE_TYPE_CHARACTER) {
             return compilePrinterForString(I);
         }
     }
-    HashSymbol *name = makePrintName("print$", userType->name->name);
-    TcEnv *nsEnv = getNsEnv(userType->ns, env);
+    HashSymbol *name = makePrintName("print$", typeSig->name->name);
+    TcEnv *nsEnv = getNsEnv(typeSig->ns, env);
     if (!getFromTcEnv(nsEnv, name, NULL)) {
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
     if (env != nsEnv) {
-        LamLookup *lookup = newLamLookup(I, userType->ns, NULL, exp);
+        LamLookup *lookup = newLamLookup(I, typeSig->ns, NULL, exp);
         PROTECT(lookup);
         exp = newLamExp_Lookup(I, lookup);
         PROTECT(exp);
     }
-    LamArgs *args = compilePrinterForUserTypeArgs(I, userType->args, env);
+    LamArgs *args = compilePrinterForTypeSigArgs(I, typeSig->args, env);
     PROTECT(args);
     int nargs = countLamArgs(args);
     if (nargs == 0) {
@@ -258,7 +258,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
     if (tuple->size < 5) {
         char buf[64];
         sprintf(buf, "print$tuple$%d", tuple->size);
-        LamExp *exp = makeSymbolExpr(I, buf);
+        LamExp *exp = makeVarExpr(I, buf);
         if (tuple->size == 0) {
             LEAVE(compilePrinterForTuple);
             return exp;
@@ -275,6 +275,6 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
         return res;
     } else {
         LEAVE(compilePrinterForTuple);
-        return makeSymbolExpr(I, "print$");
+        return makeVarExpr(I, "print$");
     }
 }

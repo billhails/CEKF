@@ -48,8 +48,8 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_UNKNOWN:
             eprintf("unknown:%s", type->val.unknown->name);
             break;
-        case TCTYPE_TYPE_USERTYPE:
-            ppTcUserType(type->val.userType);
+        case TCTYPE_TYPE_TYPESIG:
+            ppTcTypeSig(type->val.typeSig);
             break;
         case TCTYPE_TYPE_TUPLE:
             ppTcTuple(type->val.tuple);
@@ -100,7 +100,7 @@ void ppTcTuple(TcTypeArray *tuple) {
     eprintf(")");
 }
 
-static void ppUserTypeArgs(TcUserTypeArgs *args) {
+static void ppTypeSigArgs(TcTypeSigArgs *args) {
     while (args != NULL) {
         ppTcType(args->type);
         if (args->next)
@@ -109,11 +109,11 @@ static void ppUserTypeArgs(TcUserTypeArgs *args) {
     }
 }
 
-void ppTcUserType(TcUserType *userType) {
-    eprintf("%s", userType->name->name);
-    if (userType->args != NULL) {
+void ppTcTypeSig(TcTypeSig *typeSig) {
+    eprintf("%s", typeSig->name->name);
+    if (typeSig->args != NULL) {
         eprintf("(");
-        ppUserTypeArgs(userType->args);
+        ppTypeSigArgs(typeSig->args);
         eprintf(")");
     }
 }

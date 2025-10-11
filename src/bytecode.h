@@ -37,21 +37,21 @@ char *charRep(Character c);
 
 void resetByteCodeArray(ByteCodeArray *b);
 
-void writeAexpLam(AexpLam *x, ByteCodeArray *b);
-void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b);
-void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b);
-void writeAexpList(AexpList *x, ByteCodeArray *b);
-void writeCexpApply(CexpApply *x, ByteCodeArray *b);
-void writeCexpIf(CexpIf *x, ByteCodeArray *b);
-void writeCexpMatch(CexpMatch *x, ByteCodeArray *b);
-void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b);
-void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b);
-void writeCexpAmb(CexpAmb *x, ByteCodeArray *b);
-void writeCexpCut(CexpCut *x, ByteCodeArray *b);
-void writeExpLet(ExpLet *x, ByteCodeArray *b);
-void writeAexp(Aexp *x, ByteCodeArray *b);
-void writeCexp(Cexp *x, ByteCodeArray *b);
-void writeExp(Exp *x, ByteCodeArray *b);
+void writeAexpLam(AexpLam *x, ByteCodeArray *b, LocationArray *L);
+void writeAexpAnnotatedVar(AexpAnnotatedVar *x, ByteCodeArray *b, LocationArray *L);
+void writeAexpPrimApp(AexpPrimApp *x, ByteCodeArray *b, LocationArray *L);
+void writeAexpList(AexpList *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpIf(CexpIf *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L);
+void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpAmb(CexpAmb *x, ByteCodeArray *b, LocationArray *L);
+void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L);
+void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L);
+void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L);
+void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L);
+void writeExp(Exp *x, ByteCodeArray *b, LocationArray *L);
 
 bool writeBinaryOutputFile(ByteCodeArray *b, char *filename);
 enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename);

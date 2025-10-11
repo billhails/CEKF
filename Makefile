@@ -4,6 +4,7 @@
 #
 # debugging:  -g, and turns on DEBUG_STRESS_GC which forces a garbage collection on every malloc
 # testing:    -g, but no DEBUG_STRESS_GC
+# unit:       like debugging but compiles with -DUNIT_TESTS
 # production: -O2, no DEBUG_STRESS_GC and disables all safety checks
 ifndef MODE
 MODE:=debugging
@@ -19,11 +20,16 @@ ifeq ($(MODE),testing)
 	CCMODE:= -g
 	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC -DBUILD_MODE=1
 else
+ifeq ($(MODE),unit)
+	CCMODE:= -g
+	EXTRA_DEFINES:= -DUNIT_TESTS -DBUILD_MODE=0
+else
 ifeq ($(MODE),production)
 	CCMODE:= -O2
 	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=2
 else
-$(error invalid MODE=$(MODE), allowed values: debugging, testing or production)
+$(error invalid MODE=$(MODE), allowed values: debugging, testing, unit or production)
+endif
 endif
 endif
 endif

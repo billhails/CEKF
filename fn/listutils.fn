@@ -34,7 +34,17 @@ fn exclude {
 // map: (#a -> #b) -> list(#a) -> list(#b)
 fn map {
     (_, []) { [] }
-    (func, h @ t) { func(h) @ map(func, t) }
+    (f, h @ t) { f(h) @ map(f, t) }
+}
+
+// for_each: (#a -> #b) -> list(#a) -> list(#b)
+// like map but guarantees l-r application of f (for side effects)
+fn for_each {
+    (_, []) { [] }
+    (f, h @ t) {
+        let fh = f(h);
+        in fh @ for_each(f, t)
+    }
 }
 
 // map_prefix: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)

@@ -4,7 +4,7 @@ Support for declaring builtins
 
 ```mermaid
 flowchart TD
-BuiltInMemBufHash --entries--> entries
+BuiltInMemBufHash --entries--> BuiltInMemBuf
 BuiltIn --name--> HashSymbol
 BuiltIn --result--> TcType
 BuiltIn --args--> BuiltInArgs

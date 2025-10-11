@@ -40,23 +40,28 @@
 #  include "debugging_off.h"
 #endif
 
-static TpmcPattern *convertPattern(AstArg *arg, LamContext *env);
+static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env);
 
+/**
+ * @brief Creates an array of root variables, one per top-level argument.
+ * @param nargs The number of arguments.
+ * @return A new TpmcVariableArray representing the root variables.
+ */
 static TpmcVariableArray *createRootVariables(int nargs) {
     ENTER(createRootVariables);
     TpmcVariableArray *rootVariables = newTpmcVariableArray();
-    int p = PROTECT(rootVariables);
+    int save = PROTECT(rootVariables);
     for (int i = 0; i < nargs; i++) {
         HashSymbol *s = genSym("p$");
         IFDEBUG(eprintf("%s", s->name));
         pushTpmcVariableArray(rootVariables, s);
     }
-    UNPROTECT(p);
+    UNPROTECT(save);
     LEAVE(createRootVariables);
     return rootVariables;
 }
 
-static TpmcPatternArray *convertArgList(AstArgList *argList, LamContext *env) {
+static TpmcPatternArray *convertArgList(AstFargList *argList, LamContext *env) {
     TpmcPatternArray *patterns = newTpmcPatternArray("convertArgList");
     int save = PROTECT(patterns);
     while (argList != NULL) {
@@ -179,7 +184,7 @@ static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
     return pattern;
 }
 
-static TpmcPattern *makeTuplePattern(AstArgList *args, LamContext *env) {
+static TpmcPattern *makeTuplePattern(AstFargList *args, LamContext *env) {
     TpmcPatternArray *tuple = convertArgList(args, env);
     int save = PROTECT(tuple);
     TpmcPatternValue *val = newTpmcPatternValue_Tuple(tuple);
@@ -205,35 +210,43 @@ static TpmcPattern *makeCharacterPattern(char character) {
     return pattern;
 }
 
-static TpmcPattern *convertPattern(AstArg *arg, LamContext *env) {
+static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
     switch (arg->type) {
-        case AST_ARG_TYPE_WILDCARD:
+        case AST_FARG_TYPE_WILDCARD:
             return makeWildcardPattern();
-        case AST_ARG_TYPE_SYMBOL:
+        case AST_FARG_TYPE_SYMBOL:
             return makeVarPattern(arg->val.symbol, env);
-        case AST_ARG_TYPE_NAMED:
+        case AST_FARG_TYPE_NAMED:
             return makeAssignmentPattern(arg->val.named, env);
-        case AST_ARG_TYPE_UNPACK:
+        case AST_FARG_TYPE_UNPACK:
             return makeConstructorPattern(arg->val.unpack, env);
-        case AST_ARG_TYPE_TUPLE:
+        case AST_FARG_TYPE_TUPLE:
             return makeTuplePattern(arg->val.tuple, env);
-        case AST_ARG_TYPE_NUMBER:
+        case AST_FARG_TYPE_NUMBER:
             return makeMaybeBigIntegerPattern(arg->val.number);
-        case AST_ARG_TYPE_CHARACTER:
+        case AST_FARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
-        case AST_ARG_TYPE_LOOKUP:
+        case AST_FARG_TYPE_LOOKUP:
             return makeLookupPattern(arg->val.lookup, env);
         default:
             cant_happen("unrecognized arg type %s in convertPattern",
-                        astArgTypeName(arg->type));
+                        astFargTypeName(arg->type));
     }
 }
 
-static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action,
+/**
+ * @brief Converts a single argument list and action into a match rule.
+ * @param argList The argument list.
+ * @param body The function body.
+ * @param env The lambda context.
+ * @return A new match rule representing the converted function.
+ */
+static TpmcMatchRule *convertSingle(AstFargList *argList,
+                                    LamExp *body,
                                     LamContext *env) {
     TpmcPatternArray *patterns = convertArgList(argList, env);
     int save = PROTECT(patterns);
-    TpmcFinalState *finalState = newTpmcFinalState(action);
+    TpmcFinalState *finalState = newTpmcFinalState(body);
     PROTECT(finalState);
     TpmcStateValue *stateVal = newTpmcStateValue_Final(finalState);
     PROTECT(stateVal);
@@ -244,14 +257,24 @@ static TpmcMatchRule *convertSingle(AstArgList *argList, LamExp *action,
     return result;
 }
 
+/**
+ * @brief Converts a composite function into an array of match rules.
+ * @details Iterates over the bodies of the composite function and calls
+ * `convertSingle` to create a match rule for each one.
+ * @param nbodies The number of bodies in the composite function.
+ * @param argLists The argument lists.
+ * @param bodies The function bodies.
+ * @param env The lambda context.
+ * @return A new array of match rules representing the converted function.
+ */
 static TpmcMatchRuleArray *convertComposite(int nbodies,
-                                            AstArgList **argLists,
-                                            LamExp **actions,
+                                            AstFargList **argLists,
+                                            LamExp **bodies,
                                             LamContext *env) {
     TpmcMatchRuleArray *result = newTpmcMatchRuleArray();
     int save = PROTECT(result);
     for (int i = 0; i < nbodies; i++) {
-        TpmcMatchRule *rule = convertSingle(argLists[i], actions[i], env);
+        TpmcMatchRule *rule = convertSingle(argLists[i], bodies[i], env);
         int save2 = PROTECT(rule);
         pushTpmcMatchRuleArray(result, rule);
         UNPROTECT(save2);
@@ -577,12 +600,23 @@ static void performRuleSubstitutions(TpmcMatchRule *rule) {
     UNPROTECT(save);
 }
 
+/**
+ * @brief Iterates `performRuleSubstitutions` over all rules in a TpmcMatchRules.
+ * @param input The match rules to process.
+ */
 static void performRulesSubstitutions(TpmcMatchRules *input) {
     for (Index i = 0; i < input->rules->size; i++) {
         performRuleSubstitutions(input->rules->entries[i]);
     }
 }
 
+/**
+ * @brief Populates a single matrix row with pattern entries from a match rule.
+ * @note Used by `convertToMatrix`.
+ * @param rule The match rule to extract patterns from.
+ * @param matrix The matrix to populate.
+ * @param row The row index to populate.
+ */
 static void populateMatrixRow(TpmcMatchRule *rule, TpmcMatrix *matrix,
                               int row) {
     for (Index col = 0; col < rule->patterns->size; col++) {
@@ -590,6 +624,11 @@ static void populateMatrixRow(TpmcMatchRule *rule, TpmcMatrix *matrix,
     }
 }
 
+/**
+ * @brief Extracts the final states from the match rules.
+ * @param input The match rules to extract final states from.
+ * @return A new array of final states.
+ */
 static TpmcStateArray *extractFinalStates(TpmcMatchRules *input) {
     TpmcStateArray *res = newTpmcStateArray("extractFinalStates");
     int save = PROTECT(res);
@@ -600,6 +639,11 @@ static TpmcStateArray *extractFinalStates(TpmcMatchRules *input) {
     return res;
 }
 
+/**
+ * @brief Converts the match rules into a matrix representation.
+ * @param input The match rules to convert.
+ * @return A new matrix representation of the match rules.
+ */
 static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
     int height = input->rules->size;
     if (height == 0) {
@@ -615,6 +659,9 @@ static TpmcMatrix *convertToMatrix(TpmcMatchRules *input) {
     return matrix;
 }
 
+/**
+ * Helper for `arrayToVarList`.
+ */
 static LamVarList *_arrayToVarList(ParserInfo I, TpmcVariableArray *array, Index count) {
     if (count == array->size) {
         return NULL;
@@ -626,28 +673,46 @@ static LamVarList *_arrayToVarList(ParserInfo I, TpmcVariableArray *array, Index
     return this;
 }
 
+/**
+ * @brief Converts a TpmcVariableArray into a LamVarList, preserving the order.
+ * @param I Parser information.
+ * @param array The TpmcVariableArray to convert.
+ * @return A new LamVarList representing the variables in the array.
+ */
 static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
     return _arrayToVarList(I, array, 0);
 }
 
-LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs,
-                    int nbodies, AstArgList **argLists,
-                    LamExp **actions, LamContext *env) {
+/**
+ * @brief Converts the AST formal argument lists and bodies of a composite function
+ *        into a single lambda that switches on its arguments.
+ * @context This function is the entry point to the Term Pattern Matching Compiler (TPMC)
+ * @param allow_unsafe whether to allow a non-exhaustive pattern match.
+ * @param I Parser information.
+ * @param nargs The number of arguments (each component function must have the same number of arguments).
+ * @param nbodies The number of bodies (component functions).
+ * @param argLists The argument lists.
+ * @param bodies The function bodies.
+ * @return A new lambda representing the converted function.
+ */
+LamLam *tpmcConvert(bool allow_unsafe,
+                    ParserInfo I,
+                    int nargs,
+                    int nbodies,
+                    AstFargList **argLists,
+                    LamExp **bodies,
+                    LamContext *env) {
     TpmcVariableArray *rootVariables = createRootVariables(nargs);
     int save = PROTECT(rootVariables);
-    TpmcMatchRuleArray *rules =
-        convertComposite(nbodies, argLists, actions, env);
+    TpmcMatchRuleArray *rules = convertComposite(nbodies, argLists, bodies, env);
     PROTECT(rules);
     TpmcMatchRules *input = newTpmcMatchRules(rules, rootVariables);
     REPLACE_PROTECT(save, input);
     replaceComparisonRules(input);
     renameRules(input, I);
     performRulesSubstitutions(input);
-    // DEBUG("*** RULES ***");
-    // IFDEBUG(printTpmcMatchRules(input, 0));
     TpmcMatrix *matrix = convertToMatrix(input);
     PROTECT(matrix);
-    DEBUG("*** MATRIX ***");
     IFDEBUG(ppTpmcMatrix(matrix));
     TpmcStateArray *finalStates = extractFinalStates(input);
     PROTECT(finalStates);
@@ -660,23 +725,13 @@ LamLam *tpmcConvert(bool allow_unsafe, ParserInfo I, int nargs,
     PROTECT(errorState);
     TpmcState *dfa = tpmcMatch(matrix, finalStates, errorState, knownStates, allow_unsafe, I);
     PROTECT(dfa);
-    // DEBUG("*** DFA ***");
-    // IFDEBUG(printTpmcState(dfa, 0));
     tpmcMermaid(dfa);
     LamExp *body = tpmcTranslate(I, dfa);
     PROTECT(body);
-    // DEBUG("tpmcTranslate returned %p", body);
     LamVarList *args = arrayToVarList(I, rootVariables);
     PROTECT(args);
     LamLam *res = newLamLam(I, args, body);
     PROTECT(res);
-#ifdef DEBUG_TPMC_LOGIC
-    LamExp *tmp = newLamExp_Lam(I, res);
-    PROTECT(tmp);
-#endif
-    DEBUG("*** BODY ***");
-    IFDEBUG(ppLamExp(tmp));
-    IFDEBUG(validateLastAlloc());
     UNPROTECT(save);
     return res;
 }

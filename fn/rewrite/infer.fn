@@ -1,17 +1,40 @@
+// CEKF - VM supporting amb
+// Copyright (C) 2022-2024  Bill Hails
+// 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// This is an implementation of type inference.
+
 let
+    infix left 90 "=>" fn (arg, fun) { fun(arg) };
+
     typedef typeExp {
           varType(typeExp)
         | operType(list(char), list(typeExp))
         | nullType
     }
+
     typedef copyEnv {
           cpEnv(typeExp, typeExp, copyEnv)
         | nullCpEnv
     }
+
     typedef typeCheckEnv {
           tcEnv(list(char), typeExp, typeCheckEnv)
         | nullTcEnv
     }
+
     typedef ExpClass {
           ideClass(list(char))
         | condClass(ExpClass, ExpClass, ExpClass)
@@ -19,17 +42,21 @@ let
         | appClass(ExpClass, ExpClass)
         | blockClass(DeclClass, ExpClass)
     }
+
     typedef DeclClass {
           defClass(list(char), ExpClass)
         | seqClass(DeclClass, DeclClass)
         | recClass(Decl)
     }
+
     fn newTypeVar() { varType(nullType) }
+
     fn prune {
         (x = varType(nullType)) { x }
         (varType(x)) { prune(x) }
         (x) { x }
     }
+
     fn occursInType {
         (var, type) {
             switch(prune(type)) {
@@ -38,10 +65,12 @@ let
             }
         }
     }
+
     fn occursInTypeList {
         (_, []) { false }
         (var, h @ t) { occursInType(var, h) or occursInTypeList(var, t) }
     }
+
     fn unifyType(exp1, exp2) {
         switch (prune(exp1), prune(exp2)) {
             (exp1=varType(_), exp2) {
@@ -63,12 +92,15 @@ let
             }
         }
     }
+
     fn unifyArgs {
         ([], []) { true }
         (h1 @ t1, h2 @ t2) { unifyType(h1, h2) and unifyArgs(t1, t2) }
         (_, _) { false }
     }
+
     fn isGeneric(var, ng) { not occursInTypeList(var, ng) }
+
     fn freshVar {
         (typeVar, nullCpEnv, envt) {
             fn (fresh) {
@@ -77,12 +109,13 @@ let
         }
         (typeVar, cpEnv(old, new, parent), topEnv) {
             if (typeVar == old) {
-                (new, topEnv)
+                #(new, topEnv)
             } else {
                 freshVar(typeVar, parent, topEnv)
             }
         }
     }
+
     fn fresh(typeExp, ng, envt) {
         switch(prune(typeExp)) {
             (x = varType(_)) {
@@ -95,21 +128,26 @@ let
             }
         }
     }
+
     fn freshList {
         ([], _, _) { [] }
         (h @ t, ng, envt) {
             fresh(h, ng, envt) @ freshList(t, ng, envt)
         }
     }
+
     fn freshType(typeExp, ng) {
         fresh(typeExp, ng, nullCpEnv)
     }
+
     fn retrieve {
         (ide, tcEnv(ide, exp, _), ng) { freshType(exp, ng) }
         (_, nullTcEnv, _) { error("unbound ide") }
         (ide, tcEnv(_, _, tail), ng) { retrieve(ide, tail, ng) }
     }
+
     fn funType(dom, cod) { operType("->", [dom, cod]) }
+
     fn analyzeExp {
         (expClass(ide), envt, ng) { retrieve(ide, envt, ng) }
         (condClass(test, cons, alt), envt, ng) {
@@ -136,6 +174,7 @@ let
             analyzeExp(scope, analyzeDecl(decl, envt, ng), ng)
         }
     }
+
     fn analyzeDecl {
         (defClass(binder, def), envt, ng) {
             tcEnv(binder, analyzeExp(def, envt, ng), envt)
@@ -144,13 +183,13 @@ let
             analyzeDecl(second, anayzeDecl(first, envt, ng), ng);
         }
         (recClass(rec), envt, ng) {
-            let
-                #(env2, ng2) = analyzeRecDeclBind(rec, envt, ng);
-            in
+            analyzeRecDeclBind(rec, envt, ng) => fn (#(env2, ng2)) {
                 analyzeRecDecl(rec, env2, ng2);
                 env2
+            }
         }
     }
+
     fn analyzeRecDeclBind {
         (defClass(binder, _), envt, ng) {
             fn (fresh) {
@@ -158,12 +197,12 @@ let
             } (newTypeVar())
         }
         (seqClass(first, second), envt, ng) {
-            let
-                #(env1, ng1) = analyzeRecDeclBind(first, envt, ng);
-            in
+            analyzeRecDeclBind(first, envt, ng) => fn (#(env1, ng1)) {
                 analyzeRecDeclBind(second, env1, ng1);
+            }
         }
     }
+
     fn analyzeRecDecl {
         (defClass(binder, def), envt, ng) {
             unifyType(retrieve(binder, envt, ng),

@@ -1,11 +1,11 @@
 # anf
 
-ANF structures to be converted to bytecode.
+A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
 flowchart TD
-AnfSymbolTable
-CTIntTable --entries--> entries
+AnfSymbolTable --entries--> NULL
+CTIntTable --entries--> int
 CTEnv --isLocal--> bool
 CTEnv --isNamespace--> bool
 CTEnv --nbindings--> int
@@ -29,15 +29,15 @@ AexpList --exp--> Aexp
 AexpList --next--> AexpList
 AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
-CexpApply --function--> Aexp
-CexpApply --nargs--> int
-CexpApply --args--> AexpList
 AexpMakeVec --nargs--> int
 AexpMakeVec --args--> AexpList
 AexpNamespace --nbindings--> int
 AexpNamespace --body--> Exp
 AexpNamespaces --namespaces--> AexpNamespaceArray
 AexpNamespaces --body--> Exp
+CexpApply --function--> Aexp
+CexpApply --nargs--> int
+CexpApply --args--> AexpList
 CexpIf --condition--> Aexp
 CexpIf --consequent--> Exp
 CexpIf --alternative--> Exp
@@ -51,15 +51,9 @@ CexpCharCondCases --body--> Exp
 CexpCharCondCases --next--> CexpCharCondCases
 CexpMatch --condition--> Aexp
 CexpMatch --clauses--> MatchList
-MatchList --matches--> AexpIntList
-MatchList --body--> Exp
-MatchList --next--> MatchList
 CexpLetRec --nbindings--> int
 CexpLetRec --bindings--> LetRecBindings
 CexpLetRec --body--> Exp
-LetRecBindings --var--> HashSymbol
-LetRecBindings --val--> Aexp
-LetRecBindings --next--> LetRecBindings
 CexpAmb --exp1--> Exp
 CexpAmb --exp2--> Exp
 CexpCut --exp--> Exp
@@ -69,6 +63,12 @@ ExpLet --body--> Exp
 ExpLookup --namespace--> index
 ExpLookup --annotatedVar--> AexpAnnotatedVar
 ExpLookup --body--> Exp
+MatchList --matches--> AexpIntList
+MatchList --body--> Exp
+MatchList --next--> MatchList
+LetRecBindings --var--> HashSymbol
+LetRecBindings --val--> Aexp
+LetRecBindings --next--> LetRecBindings
 CexpCondCases --charCases--> CexpCharCondCases
 CexpCondCases --intCases--> CexpIntCondCases
 Aexp --lam--> AexpLam
@@ -100,14 +100,6 @@ AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
 CTEnvArray["CTEnvArray[]"] --entries--> CTEnv
-CexpCondCasesVal
-CexpCondCasesType
-AexpVal
-AexpType
-CexpVal
-CexpType
-ExpVal
-ExpType
 ```
 
 > Generated from src/anf.yaml by tools/makeAST.py

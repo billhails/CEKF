@@ -51,7 +51,6 @@ let
                 }
                 (some(#(lex.Op(it), lexer))) {
                     expr_bp(lexer, prefix_bp(it)) => fn (#(rhs, lexer)) {
-                        // [];
                         loop(exp.Cons(it, [rhs]), lex.peek(lexer), lexer)
                     }
                 }
@@ -61,4 +60,4 @@ let
             }
     }
 in
-    print(expr("1 + - 2 + f . g . h * 3 * 4"))
+    print(expr("1 + - 2 + f . g . h * 3 * 4"));

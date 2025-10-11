@@ -4,10 +4,10 @@ Structures to support type inference
 
 ```mermaid
 flowchart TD
-TcTypeTable --entries--> entries
-TcUserTypeTable --entries--> entries
+TcTypeTable --entries--> TcType
+TcTypeSigTable --entries--> TcTypeSig
 TcEnv --table--> TcTypeTable
-TcEnv --userTypes--> TcUserTypeTable
+TcEnv --typeSigs--> TcTypeSigTable
 TcEnv --next--> TcEnv
 TcNg --table--> TcTypeTable
 TcNg --next--> TcNg
@@ -15,11 +15,11 @@ TcFunction --arg--> TcType
 TcFunction --result--> TcType
 TcPair --first--> TcType
 TcPair --second--> TcType
-TcUserType --name--> HashSymbol
-TcUserType --args--> TcUserTypeArgs
-TcUserType --ns--> int
-TcUserTypeArgs --type--> TcType
-TcUserTypeArgs --next--> TcUserTypeArgs
+TcTypeSig --name--> HashSymbol
+TcTypeSig --args--> TcTypeSigArgs
+TcTypeSig --ns--> int
+TcTypeSigArgs --type--> TcType
+TcTypeSigArgs --next--> TcTypeSigArgs
 TcVar --name--> HashSymbol
 TcVar --id--> int
 TcVar --instance--> TcType
@@ -31,15 +31,13 @@ TcType --biginteger--> void_ptr
 TcType --character--> void_ptr
 TcType --unknown--> HashSymbol
 TcType --opaque--> HashSymbol
-TcType --userType--> TcUserType
+TcType --typeSig--> TcTypeSig
 TcType --tuple--> TcTypeArray
 TcType --namespaces--> TcNamespaceArray
 TcType --env--> TcEnv
 TcType --nsid--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
-TcTypeVal
-TcTypeType
 ```
 
 > Generated from src/tc.yaml by tools/makeAST.py

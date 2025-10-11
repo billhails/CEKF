@@ -10,6 +10,7 @@ CEKF --K--> Kont
 CEKF --F--> Fail
 CEKF --S--> Stack
 CEKF --B--> ByteCodeArray
+CEKF --L--> LocationArray
 Env --S--> Frame
 Env --E--> Env
 Kont --C--> control
@@ -24,7 +25,10 @@ Fail --E--> Env
 Fail --K--> Kont
 Fail --S--> Stack
 Fail --F--> Fail
-Vec["Vec[]"] --entries--> Value
+Location --loc--> index
+Location --lineno--> int
+Location --filename--> string
+Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
 Value --bigint--> BigInt
@@ -49,8 +53,7 @@ ByteCodes["enum ByteCodes"]
 CharacterArray["CharacterArray[]"] --entries--> character
 ByteArray["ByteArray[]"] --entries--> byte
 Frame["Frame[]"] --entries--> Value
-ValueVal
-ValueType
+LocationArray["LocationArray[]"] --entries--> Location
 ```
 
 > Generated from src/cekfs.yaml by tools/makeAST.py

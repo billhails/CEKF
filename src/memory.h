@@ -102,10 +102,34 @@ void collectGarbage();
 #  define MOVE_ARRAY(type, dest, src, amount) (memmove((dest), (src), sizeof(type) * (amount)))
 #  define COPY_ARRAY(type, dest, src, amount) (memcpy((dest), (src), sizeof(type) * (amount)))
 
-#  define STARTPROTECT() protect(NULL);
+/**
+ * VERY IMPORTANT macros:
+ */
+/**
+ * PROTECT pushes its argument onto a stack
+ * which is marked by the mark stage of a mark-and-sweep algorithm
+ * so that it will not be accidentally collected. PROTECT returns the
+ * stack pointer index of the pushed object, which can be used
+ * to unprotect the object later.
+ */
 #  define PROTECT(x) protect((Header *)(x))
+/**
+ * UNPROTECT restores the protection stack to its argument index,
+ * effectively removing all objects at and above that index from the
+ * protection stack.
+ */
 #  define UNPROTECT(i) unProtect(i)
+/**
+ * REPLACE_PROTECT replaces the object at the
+ * given index on the stack with the given replacement.
+ */
 #  define REPLACE_PROTECT(i, x) replaceProtect(i, (Header *)(x))
+/**
+ * STARTPROTECT just returns the current stack pointer, a later
+ * UNPROTECT will restore the stack to this point, having no effect
+ * if nothing has been pushed onto the stack since.
+ */
+#  define STARTPROTECT() protect(NULL);
 
 #  define MARK(obj) (((Header *)(obj))->keep = true)
 #  define MARKED(obj) (((Header *)(obj))->keep == true)

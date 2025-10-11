@@ -205,7 +205,7 @@
         <mxCell id="66Aq9e9d5VJEvt0azm1k-53" value="args" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
           <mxGeometry x="240" y="480" width="160" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="66Aq9e9d5VJEvt0azm1k-54" value="LamType" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+        <mxCell id="66Aq9e9d5VJEvt0azm1k-54" value="LamTypeSig" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
           <mxGeometry x="40" y="460" width="120" height="20" as="geometry" />
         </mxCell>
         <mxCell id="66Aq9e9d5VJEvt0azm1k-55" value="name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">

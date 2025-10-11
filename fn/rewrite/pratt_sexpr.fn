@@ -1,7 +1,7 @@
 namespace
 
 link "../listutils.fn" as lst;
-infix left 80 "|>" fn (l, f) { lst.map(f, l) };
+infix left 80 "|>" fn (l, f) { lst.for_each(f, l) };
 
 typedef S {
     Atom(char) | Cons(char, list(S))
@@ -14,13 +14,14 @@ let
         (Cons(c, args)) {
             putc('(');
             putc(c);
-            args |> fn (a) {
+            args |> fn (arg) {
                 putc(' ');
-                h(a);
+                h(arg);
             };
             putc(')');
         }
     }
 in
-    h(s)
+    h(s);
+    s
 }

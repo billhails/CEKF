@@ -19,7 +19,7 @@
 // these are typedefs and functions that the compiler requires to be
 // pre-defined, for example the infix `@` is mapped to `cons`, `@@` to `append`,
 // prefix `<` to `car` etc.
-// `puts` is required for the print system, and `cmp` for the `<=>` operator.
+// `puts` is required for the print system, and the type `cmp` for the `<=>` operator.
 namespace
 
 
@@ -31,7 +31,7 @@ infix left 50 ">" GREATERTHAN;
 infix left 50 "<" LESSTHAN;
 infix left 50 "<=" LESSTHANOREQUALTO;
 infix left 50 ">=" GREATERTHANOREQUALTO;
-infix left 50 "<=>" COMPARISON;
+infix none 50 "<=>" COMPARISON;
 infix left 90 "+" ADDITION;
 infix left 90 "-" SUBTRACTION;
 prefix 100 "-" NEGATION;
@@ -72,6 +72,9 @@ typedef unicode_general_category_type {
     GC_Zl | GC_Zp | GC_Zs |
     GC_Cc | GC_Cf | GC_Co | GC_Cs | GC_Cn 
 }
+
+// syntax if (test) {consequent} else {alternative} =
+//     { {(true) { consequent } (false) { alternative }}(test) }
 
 fn NOT {
     (true) { false }

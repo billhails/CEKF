@@ -37,7 +37,7 @@ static void ppAstDefinition(PrattUTF8 *, AstDefinition *);
 static void ppAstDefine(PrattUTF8 *, AstDefine *);
 static void ppAstTypeDef(PrattUTF8 *, AstTypeDef *);
 static void ppAstAlias(PrattUTF8 *, AstAlias *);
-static void ppAstUserType(PrattUTF8 *, AstUserType *);
+static void ppAstTypeSig(PrattUTF8 *, AstTypeSig *);
 static void ppAstType(PrattUTF8 *, AstType *);
 static void ppAstTypeBody(PrattUTF8 *, AstTypeBody *);
 static void ppAstTypeConstructor(PrattUTF8 *, AstTypeConstructor *);
@@ -52,9 +52,9 @@ static void ppAstLookupOrSymbol(PrattUTF8 *, AstLookupOrSymbol *);
 static void ppAstLookupSymbol(PrattUTF8 *, AstLookupSymbol *);
 static void ppAstCompositeFunction(PrattUTF8 *, AstCompositeFunction *);
 static void ppAstFunction(PrattUTF8 *, AstFunction *);
-static void ppAstArgList(PrattUTF8 *, AstArgList *);
+static void ppAstFargList(PrattUTF8 *, AstFargList *);
 static void ppAstTaggedArgList(PrattUTF8 *, AstTaggedArgList *);
-static void ppAstArg(PrattUTF8 *, AstArg *);
+static void ppastFarg(PrattUTF8 *, AstFarg *);
 static void ppAstNamedArg(PrattUTF8 *, AstNamedArg *);
 static void ppAstUnpack(PrattUTF8 *, AstUnpack *);
 static void ppAstUnpackStruct(PrattUTF8 *, AstUnpackStruct *);
@@ -139,7 +139,7 @@ static void ppAstDefMacro(PrattUTF8 *dest, AstDefMacro *defMacro) {
     psprintf(dest, "macro ");
     ppHashSymbol(dest, defMacro->name);
     psprintf(dest, "(");
-    ppAstArgList(dest, defMacro->definition->altArgs->argList);
+    ppAstFargList(dest, defMacro->definition->altArgs->argList);
     psprintf(dest, ") ");
     ppAstNest(dest, defMacro->definition->nest);
 }
@@ -152,7 +152,7 @@ static void ppAstDefine(PrattUTF8 *dest, AstDefine *define) {
 
 static void ppAstTypeDef(PrattUTF8 *dest, AstTypeDef *typeDef) {
     psprintf(dest, "typedef ");
-    ppAstUserType(dest, typeDef->userType);
+    ppAstTypeSig(dest, typeDef->typeSig);
     psprintf(dest, " {");
     ppAstTypeBody(dest, typeDef->typeBody);
     psprintf(dest, "}");
@@ -165,11 +165,11 @@ static void ppAstAlias(PrattUTF8 *dest, AstAlias *alias) {
     ppAstType(dest, alias->type);
 }
 
-static void ppAstUserType(PrattUTF8 *dest, AstUserType *userType) {
-    ppHashSymbol(dest, userType->symbol);
-    if (userType->typeSymbols != NULL) {
+static void ppAstTypeSig(PrattUTF8 *dest, AstTypeSig *typeSig) {
+    ppHashSymbol(dest, typeSig->symbol);
+    if (typeSig->typeSymbols != NULL) {
         psprintf(dest, "(");
-        ppAstTypeSymbols(dest, userType->typeSymbols);
+        ppAstTypeSymbols(dest, typeSig->typeSymbols);
         psprintf(dest, ")");
     }
 }
@@ -338,51 +338,51 @@ static void ppAstCompositeFunction(PrattUTF8 *dest, AstCompositeFunction *compos
 
 static void ppAstFunction(PrattUTF8 *dest, AstFunction *function) {
     psprintf(dest, "(");
-    ppAstArgList(dest, function->argList);
+    ppAstFargList(dest, function->argList);
     psprintf(dest, ") ");
     ppAstNest(dest, function->nest);
     
 }
 
-static void ppAstArgList(PrattUTF8 *dest, AstArgList *argList) {
+static void ppAstFargList(PrattUTF8 *dest, AstFargList *argList) {
     if (argList) {
-        ppAstArg(dest, argList->arg);
+        ppastFarg(dest, argList->arg);
         if (argList->next) {
             psprintf(dest, ", ");
-            ppAstArgList(dest, argList->next);
+            ppAstFargList(dest, argList->next);
         }
     }
 }
 
-static void ppAstArg(PrattUTF8 *dest, AstArg *arg) {
+static void ppastFarg(PrattUTF8 *dest, AstFarg *arg) {
     switch (arg->type) {
-        case AST_ARG_TYPE_WILDCARD:
+        case AST_FARG_TYPE_WILDCARD:
             psprintf(dest, "_");
             break;
-        case AST_ARG_TYPE_SYMBOL:
+        case AST_FARG_TYPE_SYMBOL:
             ppHashSymbol(dest, arg->val.symbol);
             break;
-        case AST_ARG_TYPE_LOOKUP:
+        case AST_FARG_TYPE_LOOKUP:
             ppAstLookupSymbol(dest, arg->val.lookup);
             break;
-        case AST_ARG_TYPE_NAMED:
+        case AST_FARG_TYPE_NAMED:
             ppAstNamedArg(dest, arg->val.named);
             break;
-        case AST_ARG_TYPE_UNPACK:
+        case AST_FARG_TYPE_UNPACK:
             ppAstUnpack(dest, arg->val.unpack);
             break;
-        case AST_ARG_TYPE_UNPACKSTRUCT:
+        case AST_FARG_TYPE_UNPACKSTRUCT:
             ppAstUnpackStruct(dest, arg->val.unpackStruct);
             break;
-        case AST_ARG_TYPE_NUMBER:
+        case AST_FARG_TYPE_NUMBER:
             ppMaybeBigInt(dest, arg->val.number);
             break;
-        case AST_ARG_TYPE_CHARACTER:
+        case AST_FARG_TYPE_CHARACTER:
             ppUnicodeChar(dest, arg->val.character);
             break;
-        case AST_ARG_TYPE_TUPLE:
+        case AST_FARG_TYPE_TUPLE:
             psprintf(dest, "<tuple>(");
-            ppAstArgList(dest, arg->val.tuple);
+            ppAstFargList(dest, arg->val.tuple);
             psprintf(dest, ")");
             break;
         default:
@@ -393,13 +393,13 @@ static void ppAstArg(PrattUTF8 *dest, AstArg *arg) {
 static void ppAstNamedArg(PrattUTF8 *dest, AstNamedArg *namedArg) {
     ppHashSymbol(dest, namedArg->name);
     psprintf(dest, " = ");
-    ppAstArg(dest, namedArg->arg);
+    ppastFarg(dest, namedArg->arg);
 }
 
 static void ppAstUnpack(PrattUTF8 *dest, AstUnpack *unpack) {
     ppAstLookupOrSymbol(dest, unpack->symbol);
     psprintf(dest, "(");
-    ppAstArgList(dest, unpack->argList);
+    ppAstFargList(dest, unpack->argList);
     psprintf(dest, ")");
 }
 
@@ -414,7 +414,7 @@ static void ppAstTaggedArgList(PrattUTF8 *dest, AstTaggedArgList *taggedArgList)
     if (taggedArgList) {
         ppHashSymbol(dest, taggedArgList->tag);
         psprintf(dest, ": ");
-        ppAstArg(dest, taggedArgList->arg);
+        ppastFarg(dest, taggedArgList->arg);
         if (taggedArgList->next) {
             psprintf(dest, ", ");
             ppAstTaggedArgList(dest, taggedArgList->next);

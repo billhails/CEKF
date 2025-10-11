@@ -28,6 +28,6 @@ void printCEKF(CEKF * x);
 void printContainedValue(Value x, int depth);
 void printValue(Value x, int depth);
 
-void dumpByteCode(ByteCodeArray *b);
+void dumpByteCode(ByteCodeArray *b, LocationArray *l);
 
 #endif

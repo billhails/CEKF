@@ -27,39 +27,62 @@ config:
 
 structs:
     BuiltIn:
-        name: HashSymbol
-        result: TcType
-        args: BuiltInArgs
-        implementation: void_ptr
+        meta:
+            brief: Built In
+            description: A built-in function
+        data:
+            name: HashSymbol
+            result: TcType
+            args: BuiltInArgs
+            implementation: void_ptr
 
     BuiltInImplementation:
-        implementation: void_ptr
-        nargs: int
+        meta:
+            brief: Built In Implementation
+            description: A built-in function implementation
+        data:
+            implementation: void_ptr
+            nargs: int
 
     BuiltInMemBuf:
-        buffer: string=NULL
-        index: index=0
-        size: size=0
+        meta:
+            brief: Built In Memory Buffer
+            description: A memory buffer for built-in i/o functions
+        data:
+            buffer: string=NULL
+            index: index=0
+            size: size=0
 
 hashes:
     BuiltInMemBufHash:
-        entries: BuiltInMemBuf
+        meta:
+            brief: Built In Memory Buffer Hash
+            description: A hash table for built-in memory buffers
+        data:
+            entries: BuiltInMemBuf
 
 arrays:
     BuiltInArgs:
-        dimension: 1
-        entries: TcType
+        meta:
+            brief: Built In Arguments
+            description: An array of built-in function arguments
+        data:
+            entries: TcType
 
     BuiltIns:
-        dimension: 1
-        entries: BuiltIn
+        meta:
+            brief: Built Ins
+            description: An array of registered built-in functions
+        data:
+            entries: BuiltIn
 
 primitives: !include primitives.yaml
 
 external:
     TcType:
-        cname: "struct TcType *"
-        printFn: printTcType
-        markFn: markTcType
-        valued: true
+        data:
+            cname: "struct TcType *"
+            printFn: printTcType
+            markFn: markTcType
+            valued: true
 

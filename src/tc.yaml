@@ -29,66 +29,135 @@ cmp:
 
 structs:
     TcEnv:
-        table: TcTypeTable
-        userTypes: TcUserTypeTable
-        next: TcEnv
+        meta:
+            brief: Type-checker Environment
+            description: >-
+                The environment contains a table of types, a table of type signatures,
+                and a reference to the next environment in the chain.
+        data:
+            table: TcTypeTable
+            typeSigs: TcTypeSigTable
+            next: TcEnv
 
     TcNg:
-        table: TcTypeTable
-        next: TcNg
+        meta:
+            brief: Non-generic variables
+            description: >-
+                Variables bound as function arguments while in the body of
+                a function definition. These are not generic variables.
+        data:
+            table: TcTypeTable
+            next: TcNg
 
     TcFunction:
-        arg: TcType
-        result: TcType
+        meta:
+            brief: Function type
+            description: >-
+                Represents a function type `a -> b` with an argument type and
+                a result type.
+        data:
+            arg: TcType
+            result: TcType
 
     TcPair:
-        first: TcType
-        second: TcType
+        meta:
+            brief: Pair type
+            description: >-
+                Represents a pair of types, used for tuples and other
+                pair-like structures.
+        data:
+            first: TcType
+            second: TcType
 
-    TcUserType:
-        name: HashSymbol
-        args: TcUserTypeArgs
-        ns: int
+    TcTypeSig:
+        meta:
+            brief: Type signature
+            description: >-
+                Represents a type signature with a name, arguments,
+                and a namespace.  It is used to define types in the
+                type-checker.
+        data:
+            name: HashSymbol
+            args: TcTypeSigArgs
+            ns: int
 
-    TcUserTypeArgs:
-        type: TcType
-        next: TcUserTypeArgs
+    TcTypeSigArgs:
+        meta:
+            brief: Type signature arguments
+            description: >-
+                Represents the arguments of a type signature, which can be
+                any length.
+        data:
+            type: TcType
+            next: TcTypeSigArgs
 
     TcVar:
-        name: HashSymbol
-        id: int
-        instance: TcType=NULL
+        meta:
+            brief: Type variable
+            description: >-
+                Represents a type variable, which can be used in type signatures
+                and type inference. It has a name, an ID, and an optional instance
+                if it is bound to a type.
+        data:
+            name: HashSymbol
+            id: int
+            instance: TcType=NULL
 
 hashes:
     TcTypeTable:
-        entries: TcType
+        meta:
+            brief: Type table
+            description: >-
+                A hash table mapping type names to their definitions.
+        data:
+            entries: TcType
 
-    TcUserTypeTable:
-        entries: TcUserType
+    TcTypeSigTable:
+        meta:
+            brief: Type signature table
+            description: >-
+                A hash table mapping type signature names to their definitions.
+        data:
+            entries: TcTypeSig
 
 arrays:
     TcTypeArray:
-        dimension: 1
-        entries: TcType
+        meta:
+            brief: Array of types
+            description: >-
+                An array of types used in type signatures and type inference.
+        data:
+            entries: TcType
 
     TcNamespaceArray:
-        dimension: 1
-        entries: TcType
+        meta:
+            brief: Array of namespaces
+            description: >-
+                An array of namespaces used in type inference.
+        data:
+            entries: TcType
 
 unions:
     TcType:
-        function: TcFunction
-        pair: TcPair
-        var: TcVar
-        smallinteger: void_ptr
-        biginteger: void_ptr
-        character: void_ptr
-        unknown: HashSymbol
-        opaque: HashSymbol
-        userType: TcUserType
-        tuple: TcTypeArray
-        namespaces: TcNamespaceArray
-        env: TcEnv
-        nsid: int
+        meta:
+            brief: Type union
+            description: >-
+                Represents a type in the type-checker, which can be a function,
+                pair, variable, small integer, big integer, character, unknown,
+                opaque type, type signature, tuple, or an array of namespaces.
+        data:
+            function: TcFunction
+            pair: TcPair
+            var: TcVar
+            smallinteger: void_ptr
+            biginteger: void_ptr
+            character: void_ptr
+            unknown: HashSymbol
+            opaque: HashSymbol
+            typeSig: TcTypeSig
+            tuple: TcTypeArray
+            namespaces: TcNamespaceArray
+            env: TcEnv
+            nsid: int
 
 primitives: !include primitives.yaml

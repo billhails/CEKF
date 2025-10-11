@@ -504,22 +504,22 @@ void ppLamLetRecBindings(LamLetRecBindings *bindings) {
     eprintf(")");
 }
 
-static void _ppLamTypeArgs(LamTypeArgs *args) {
+static void _ppLamTypeSigArgs(LamTypeSigArgs *args) {
     if (args == NULL)
         return;
     eprintf(" ");
     ppHashSymbol(args->name);
-    _ppLamTypeArgs(args->next);
+    _ppLamTypeSigArgs(args->next);
 }
 
-static void _ppLamType(LamType *type) {
+static void _ppLamTypeSig(LamTypeSig *type) {
     if (type->args == NULL) {
         ppHashSymbol(type->name);
         return;
     }
     eprintf("(");
     ppHashSymbol(type->name);
-    _ppLamTypeArgs(type->args);
+    _ppLamTypeSigArgs(type->args);
     eprintf(")");
 }
 
@@ -608,7 +608,7 @@ static void _ppLamTypeConstructorList(LamTypeConstructorList *list) {
 
 void ppLamTypeDef(LamTypeDef *typeDef) {
     eprintf("(");
-    _ppLamType(typeDef->type);
+    _ppLamTypeSig(typeDef->type);
     _ppLamTypeConstructorList(typeDef->constructors);
     eprintf(")");
 }

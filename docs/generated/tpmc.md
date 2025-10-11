@@ -4,9 +4,9 @@ Term Pattern Matching Compiler types
 
 ```mermaid
 flowchart TD
-TpmcVariableTable
-TpmcSubstitutionTable --entries--> entries
-TpmcPatternTable --entries--> entries
+TpmcVariableTable --entries--> NULL
+TpmcSubstitutionTable --entries--> HashSymbol
+TpmcPatternTable --entries--> TpmcPattern
 TpmcMatchRules --rules--> TpmcMatchRuleArray
 TpmcMatchRules --rootVariables--> TpmcVariableArray
 TpmcMatchRule --action--> TpmcState
@@ -53,10 +53,6 @@ TpmcStateArray["TpmcStateArray[]"] --entries--> TpmcState
 TpmcArcArray["TpmcArcArray[]"] --entries--> TpmcArc
 TpmcIntArray["TpmcIntArray[]"] --entries--> int
 TpmcMatrix["TpmcMatrix[][]"] --entries--> TpmcPattern
-TpmcPatternValueVal
-TpmcPatternValueType
-TpmcStateValueVal
-TpmcStateValueType
 ```
 
 > Generated from src/tpmc.yaml by tools/makeAST.py
