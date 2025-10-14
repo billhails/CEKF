@@ -34,8 +34,9 @@ structs:
             description: >-
                 A Trie is a tree of tokens indexed by character. It is used to
                 parse the input stream and build a parse tree. The root node
-                has the first character, and the children are indexed by subsequent
-                characters of the token.
+                has the first character, siblings are alternatives at the current level,
+                and the children are indexed by subsequent characters of the token.
+                Ordering of siblings ensures efficient search and insertion.
         data:
             character: byte
             terminal: HashSymbol

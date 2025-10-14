@@ -73,8 +73,9 @@ typedef unicode_general_category_type {
     GC_Cc | GC_Cf | GC_Co | GC_Cs | GC_Cn 
 }
 
+// it would be nice if we could do something like this:
 // syntax if (test) {consequent} else {alternative} =
-//     { {(true) { consequent } (false) { alternative }}(test) }
+//     { fn {(true) { consequent } (false) { alternative }}(test) }
 
 fn NOT {
     (true) { false }
@@ -82,6 +83,8 @@ fn NOT {
 }
 prefix 40 "not" NOT;
 
+// macros aren't really macros, they're just lazy functions but that gets
+// us most of the same behaviour.
 macro AND(a, b) { if (a) { b } else { false } }
 infix left 30 "and" AND;
 

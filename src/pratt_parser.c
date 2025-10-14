@@ -1155,19 +1155,20 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
 }
 
 /**
- * @brief Parse a postfix operator definition.
+ * @brief Parse a prefix or postfix operator definition.
  * 
- * This function checks for a postfix operator definition, validates the precedence,
+ * This function checks for a prefix or postfix operator definition, validates the precedence,
  * and adds it to the parser's operator table.
  * 
  * @param parser The PrattParser to use for parsing.
- * @return An AstDefinition representing the postfix operator definition.
+ * @param isPostfix A boolean indicating whether to parse a postfix or prefix operator.
+ * @return An AstDefinition representing the prefix or postfix operator definition.
  */
-static AstDefinition *postfix(PrattParser *parser) {
-    ENTER(postfix);
+static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix) {
+    ENTER(preOrPostfix);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    consume(parser, TOK_POSTFIX());
+    consume(parser, isPostfix ? TOK_POSTFIX() : TOK_PREFIX());
     if (check(parser, TOK_NUMBER())) {
         PrattToken *prec = next(parser);
         PROTECT(prec);
@@ -1185,14 +1186,28 @@ static AstDefinition *postfix(PrattParser *parser) {
             AstExpression *impl = expression(parser);
             PROTECT(impl);
             consume(parser, TOK_SEMI());
-            addOperator(parser, PRATTFIXITY_TYPE_POSTFIX, false, precedence, str, impl);
+            addOperator(parser, isPostfix ? PRATTFIXITY_TYPE_POSTFIX : PRATTFIXITY_TYPE_PREFIX,
+                        false, precedence, str, impl);
         } else {
             parserErrorAt(TOKPI(prec), parser, "expected small integer");
         }
     }
-    LEAVE(postfix);
+    LEAVE(preOrPostfix);
     UNPROTECT(save);
     return newAstDefinition_Blank(TOKPI(tok));
+}
+
+/**
+ * @brief Parse a postfix operator definition.
+ * 
+ * This function checks for a postfix operator definition, validates the precedence,
+ * and adds it to the parser's operator table.
+ * 
+ * @param parser The PrattParser to use for parsing.
+ * @return An AstDefinition representing the postfix operator definition.
+ */
+static AstDefinition *postfix(PrattParser *parser) {
+    return preOrPostfix(parser, true);
 }
 
 /**
@@ -1205,35 +1220,7 @@ static AstDefinition *postfix(PrattParser *parser) {
  * @return An AstDefinition representing the prefix operator definition.
  */
 static AstDefinition *prefix(PrattParser *parser) {
-    ENTER(prefix);
-    PrattToken *tok = peek(parser);
-    int save = PROTECT(tok);
-    consume(parser, TOK_PREFIX());
-    if (check(parser, TOK_NUMBER())) {
-        PrattToken *prec = next(parser);
-        PROTECT(prec);
-#ifdef SAFETY_CHECKS
-        if (prec->value->type != PRATTVALUE_TYPE_NUMBER) {
-            cant_happen("unexpected %s", prattValueTypeName(prec->value->type));
-        }
-#endif
-        MaybeBigInt *bi = prec->value->val.number;
-        if (bi->type == BI_SMALL && !bi->imag) {
-            int precedence = bi->small;
-            PrattUTF8 *str = rawString(parser);
-            PROTECT(str);
-            validateOperator(parser, str);
-            AstExpression *impl = expression(parser);
-            PROTECT(impl);
-            consume(parser, TOK_SEMI());
-            addOperator(parser, PRATTFIXITY_TYPE_PREFIX, false, precedence, str, impl);
-        } else {
-            parserErrorAt(TOKPI(prec), parser, "expected small integer");
-        }
-    }
-    LEAVE(prefix);
-    UNPROTECT(save);
-    return newAstDefinition_Blank(TOKPI(tok));
+    return preOrPostfix(parser, false);
 }
 
 /**
