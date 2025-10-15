@@ -1,0 +1,25 @@
+{
+  "name": "fn",
+  "displayName": "F Natural",
+  "description": "F Natural Programming Language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "fn",
+      "aliases": ["F Natural", "fn"],
+      "extensions": [".fn"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "fn",
+      "scopeName": "source.fn",
+      "path": "./syntaxes/fn.tmLanguage.json"
+    }]
+  }
+}
