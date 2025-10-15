@@ -1,0 +1,95 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "F Natural",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#character"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#constants"
+		},
+		{
+			"include": "#types"
+		}
+	],
+	"repository": {
+		"comments": {
+			"name": "comment.line.double-slash.fn",
+			"begin": "//",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.comment.fn"
+				}
+			},
+			"end": "$\\n?",
+			"patterns": []
+		},
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.fn",
+				"match": "\\b(namespace|switch|if|else|back|here|error|typedef|alias|macro|unsafe|let|in|print|assert|prefix|infix|postfix|link|as)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.fn",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.fn",
+					"match": "\\\\."
+				}
+			]
+		},
+		"character": {
+			"name": "string.quoted.single.fn",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "constant.character.escape.fn",
+					"match": "\\\\."
+				}
+			]
+		},
+		"numbers": {
+			"name": "constant.numeric.fn",
+			"match": "\\b(0x)?\\d(_|\\d)*(\\.\\d(_|\\d)*)?i?\\b"
+		},
+		"constants": {
+			"patterns": [{
+				"name": "constant.language.fn",
+				"match": "\\b(true|false|nil|left|right|none|_|lt|eq|gt|nothing|some|argv)\\b"
+			}]
+		},
+		"operators": {
+			"patterns": [
+				{
+					"name": "keyword.operator.fn",
+					"match": "\\b(and|or|not|xor|nor|xnor|nand|of|then)\\b"
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.fn",
+					"match": "\\b(list|fn|string|char|number|maybe|cmp|bool|try)\\b"
+				}
+			]
+		}
+	},
+	"scopeName": "source.fn"
+}
