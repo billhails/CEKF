@@ -3214,9 +3214,9 @@ static AstExpression *userInfixCommon(PrattRecord *record,
 static AstExpression *userInfixNone(PrattRecord *record,
                                     PrattParser *parser,
                                     AstExpression *lhs,
-                                    PrattToken *token)
+                                    PrattToken *tok)
 {
-    return userInfixCommon(record, parser, lhs, token, +1, true);
+    return userInfixCommon(record, parser, lhs, tok, +1, true);
 }
 
 /**

@@ -74,7 +74,7 @@
 		"constants": {
 			"patterns": [{
 				"name": "constant.language.fn",
-				"match": "\\b(true|false|nil|left|right|none|_|lt|eq|gt|nothing|some|argv)\\b"
+				"match": "\\b(true|false|nil|left|right|none|_|lt|eq|gt|nothing|some|argv|failure|success)\\b"
 			}]
 		},
 		"operators": {

@@ -14,7 +14,11 @@
       "id": "fn",
       "aliases": ["F Natural", "fn"],
       "extensions": [".fn"],
-      "configuration": "./language-configuration.json"
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "light": "./images/fn-light.png",
+        "dark": "./images/fn-dark.png"
+      }
     }],
     "grammars": [{
       "language": "fn",
