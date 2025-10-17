@@ -16,8 +16,8 @@
       "extensions": [".fn"],
       "configuration": "./language-configuration.json",
       "icon": {
-        "light": "./images/fn-light.png",
-        "dark": "./images/fn-dark.png"
+        "light": "./images/fn-light.svg",
+        "dark": "./images/fn-dark.svg"
       }
     }],
     "grammars": [{
