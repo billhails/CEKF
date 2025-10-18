@@ -696,7 +696,7 @@ int initParserStack()
  * @brief Parse a link to a file and return its namespace.
  *
  * This function checks if the file exists, looks for an existing namespace,
- * and handles recursive includes. If the file is not found it returns a with an error.
+ * and handles recursive includes. If the file is not found it returns with an error.
  * If the file is already parsed it returns the already existing namespace.
  *
  * Careful. Somewhat accidentally this algorithm stores the namespaces
@@ -1229,10 +1229,8 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) __attribute_
  * @param from The second PrattParser to merge.
  * @return A new PrattParser that contains the merged rules and namespaces.
  */
-static PrattParser *meldParsers(PrattParser *to, PrattParser *from)
-{
-    if (from->trie)
-    {
+static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
+    if (from->trie) {
         PrattParser *result = newPrattParser(to->next);
         int save = PROTECT(result);
         copyPrattRecordTable(result->rules, to->rules);
@@ -1242,65 +1240,45 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from)
         Index i = 0;
         HashSymbol *op = NULL;
         PrattRecord *record = NULL;
-        while ((op = iteratePrattRecordTable(from->rules, &i, &record)) != NULL)
-        {
+        while ((op = iteratePrattRecordTable(from->rules, &i, &record)) != NULL) {
             PrattRecord *target = NULL;
             getPrattRecordTable(to->rules, op, &target);
-            if (target == NULL)
-            {
+            if (target == NULL) {
                 target = copyPrattRecord(record);
                 PROTECT(target);
                 setPrattRecordTable(result->rules, op, target);
                 result->trie = insertPrattTrie(result->trie, op);
-            }
-            else
-            {
-                if (record->prefixImpl)
-                {
-                    if (target->prefixImpl)
-                    {
+            } else {
+                if (record->prefixImpl) {
+                    if (target->prefixImpl) {
                         parserError(to, "import redefines prefix operator %s", op->name);
-                    }
-                    else
-                    {
+                    } else {
                         target->prefixImpl = record->prefixImpl;
                         target->prefixPrec = record->prefixPrec;
                         target->prefixOp = record->prefixOp;
                     }
                 }
-                if (record->infixImpl)
-                {
-                    if (target->infixImpl)
-                    {
+                if (record->infixImpl) {
+                    if (target->infixImpl) {
                         parserError(to, "import redefines infix operator %s", op->name);
-                    }
-                    else if (target->postfixImpl)
-                    {
+                    } else if (target->postfixImpl) {
                         parserError(to, "import defines infix operator %s"
                                         " over existing postfix operator",
                                     op->name);
-                    }
-                    else
-                    {
+                    } else {
                         target->infixImpl = record->infixImpl;
                         target->infixPrec = record->infixPrec;
                         target->infixOp = record->infixOp;
                     }
                 }
-                if (record->postfixImpl)
-                {
-                    if (target->postfixImpl)
-                    {
+                if (record->postfixImpl) {
+                    if (target->postfixImpl) {
                         parserError(to, "import redefines postfix operator %s", op->name);
-                    }
-                    else if (target->postfixImpl)
-                    {
+                    } else if (target->infixImpl) {
                         parserError(to, "import defines postfix operator %s"
                                         " over existing infix operator",
                                     op->name);
-                    }
-                    else
-                    {
+                    } else {
                         target->postfixImpl = record->postfixImpl;
                         target->postfixPrec = record->postfixPrec;
                         target->postfixOp = record->postfixOp;
@@ -1310,9 +1288,7 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from)
         }
         UNPROTECT(save);
         return result;
-    }
-    else
-    {
+    } else {
         return to;
     }
 }
@@ -1332,7 +1308,6 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
     ENTER(preOrPostfix);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    consume(parser, isPostfix ? TOK_POSTFIX() : TOK_PREFIX());
     if (check(parser, TOK_NUMBER()))
     {
         PrattToken *prec = next(parser);
@@ -1408,47 +1383,34 @@ static AstDefinition *infix(PrattParser *parser)
     ENTER(infix);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    consume(parser, TOK_INFIX());
-    if (check(parser, TOK_ATOM()))
-    {
+    if (check(parser, TOK_ATOM())) {
         PrattToken *atom = next(parser);
         PROTECT(atom);
 #ifdef SAFETY_CHECKS
-        if (atom->value->type != PRATTVALUE_TYPE_ATOM)
-        {
+        if (atom->value->type != PRATTVALUE_TYPE_ATOM) {
             cant_happen("unexpected %s", prattValueTypeName(atom->value->type));
         }
 #endif
         PrattAssoc associativity;
-        if (atom->value->val.atom == TOK_LEFT())
-        {
+        if (atom->value->val.atom == TOK_LEFT()) {
             associativity = PRATTASSOC_TYPE_LEFT;
-        }
-        else if (atom->value->val.atom == TOK_RIGHT())
-        {
+        } else if (atom->value->val.atom == TOK_RIGHT()) {
             associativity = PRATTASSOC_TYPE_RIGHT;
-        }
-        else if (atom->value->val.atom == TOK_NONE())
-        {
+        } else if (atom->value->val.atom == TOK_NONE()) {
             associativity = PRATTASSOC_TYPE_NONE;
-        }
-        else
-        {
+        } else {
             parserErrorAt(TOKPI(atom), parser, "expected \"left\", \"right\" or \"none\" after infix keyword");
         }
-        if (check(parser, TOK_NUMBER()))
-        {
+        if (check(parser, TOK_NUMBER())) {
             PrattToken *prec = next(parser);
             PROTECT(prec);
 #ifdef SAFETY_CHECKS
-            if (prec->value->type != PRATTVALUE_TYPE_NUMBER)
-            {
+            if (prec->value->type != PRATTVALUE_TYPE_NUMBER) {
                 cant_happen("unexpected %s", prattValueTypeName(prec->value->type));
             }
 #endif
             MaybeBigInt *bi = prec->value->val.number;
-            if (bi->type == BI_SMALL && !bi->imag)
-            {
+            if (bi->type == BI_SMALL && !bi->imag) {
                 int precedence = bi->small;
                 PrattUTF8 *str = rawString(parser);
                 PROTECT(str);
@@ -1457,9 +1419,7 @@ static AstDefinition *infix(PrattParser *parser)
                 PROTECT(impl);
                 consume(parser, TOK_SEMI());
                 addOperator(parser, PRATTFIXITY_TYPE_INFIX, associativity, precedence, str, impl);
-            }
-            else
-            {
+            } else {
                 parserErrorAt(TOKPI(prec), parser, "expected small integer");
             }
         }
@@ -1483,60 +1443,30 @@ static AstDefinition *definition(PrattParser *parser)
 {
     ENTER(definition);
     AstDefinition *res = NULL;
-    if (check(parser, TOK_ATOM()))
-    {
+    if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
-    }
-    else if (check(parser, TOK_TYPEDEF()))
-    {
+    } else if (match(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
-    }
-    else if (check(parser, TOK_UNSAFE()))
-    {
-        next(parser);
-        validateLastAlloc();
+    } else if (match(parser, TOK_UNSAFE())) {
         consume(parser, TOK_FN());
         res = defun(parser, true, false);
-    }
-    else if (check(parser, TOK_FN()))
-    {
-        next(parser);
-        validateLastAlloc();
+    } else if (match(parser, TOK_FN())) {
         res = defun(parser, false, false);
-    }
-    else if (check(parser, TOK_PRINT()))
-    {
-        next(parser);
-        validateLastAlloc();
+    } else if (match(parser, TOK_PRINT())) {
         res = defun(parser, false, true);
-    }
-    else if (check(parser, TOK_MACRO()))
-    {
-        next(parser);
+    } else if (match(parser, TOK_MACRO())) {
         res = defmacro(parser);
-    }
-    else if (check(parser, TOK_LINK()))
-    {
+    } else if (match(parser, TOK_LINK())) {
         res = link(parser);
-    }
-    else if (check(parser, TOK_ALIAS()))
-    {
+    } else if (match(parser, TOK_ALIAS())) {
         res = alias(parser);
-    }
-    else if (check(parser, TOK_PREFIX()))
-    {
+    } else if (match(parser, TOK_PREFIX())) {
         res = prefix(parser);
-    }
-    else if (check(parser, TOK_INFIX()))
-    {
+    } else if (match(parser, TOK_INFIX())) {
         res = infix(parser);
-    }
-    else if (check(parser, TOK_POSTFIX()))
-    {
+    } else if (match(parser, TOK_POSTFIX())) {
         res = postfix(parser);
-    }
-    else
-    {
+    } else {
         PrattToken *tok = next(parser);
         validateLastAlloc();
         parserError(parser, "expecting definition");
@@ -1562,7 +1492,6 @@ static AstDefinition *definition(PrattParser *parser)
 static AstDefinition *alias(PrattParser *parser)
 {
     ENTER(alias);
-    consume(parser, TOK_ALIAS());
     HashSymbol *s = symbol(parser);
     consume(parser, TOK_ASSIGN());
     AstType *t = type_type(parser);
@@ -2293,7 +2222,7 @@ static void validateMacroArgs(PrattParser *parser, AstAltFunction *definition)
 /**
  * @brief parse a macro definition.
  *
- * the `macro` token has already been consumed when this parselet triggers.
+ * the `macro` token has already been consumed when this function triggers.
  */
 static AstDefinition *defmacro(PrattParser *parser)
 {
@@ -2315,7 +2244,7 @@ static AstDefinition *defmacro(PrattParser *parser)
 /**
  * @brief parse a function definition
  *
- * The `fn` token has already been consumed when this parselet is triggered.
+ * The `fn` token has already been consumed when this function is triggered.
  */
 static AstDefinition *defun(PrattParser *parser, bool unsafe, bool isPrinter)
 {
@@ -2396,7 +2325,6 @@ static AstDefinition *assignment(PrattParser *parser)
 static AstDefinition *typedefinition(PrattParser *parser)
 {
     ENTER(typedefinition);
-    consume(parser, TOK_TYPEDEF());
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
     HashSymbol *s = symbol(parser);
@@ -2432,7 +2360,7 @@ static AstDefinition *typedefinition(PrattParser *parser)
  */
 static AstTypeBody *type_body(PrattParser *parser)
 {
-    ENTER(typedefinition);
+    ENTER(type_body);
     AstTypeConstructor *tc = type_constructor(parser);
     int save = PROTECT(tc);
     AstTypeBody *this = NULL;
@@ -2446,7 +2374,7 @@ static AstTypeBody *type_body(PrattParser *parser)
     {
         this = newAstTypeBody(CPI(tc), tc, NULL);
     }
-    LEAVE(typedefinition);
+    LEAVE(type_body);
     UNPROTECT(save);
     return this;
 }
@@ -2515,18 +2443,12 @@ static AstTypeSymbols *type_variables(PrattParser *parser)
 static AstDefinition *link(PrattParser *parser)
 {
     ENTER(link);
-    PrattToken *tok = peek(parser);
-    int save = PROTECT(tok);
-    consume(parser, TOK_LINK());
     PrattUTF8 *path = rawString(parser);
-    PROTECT(path);
+    int save = PROTECT(path);
     AstDefinition *res = NULL;
-    if (path == NULL)
-    {
-        res = newAstDefinition_Blank(TOKPI(tok));
-    }
-    else
-    {
+    if (path == NULL) {
+        res = newAstDefinition_Blank(LEXPI(parser->lexer));
+    } else {
         consume(parser, TOK_AS());
         HashSymbol *name = symbol(parser);
         consume(parser, TOK_SEMI());
@@ -3181,12 +3103,13 @@ static AstExpression *userInfixCommon(PrattRecord *record,
     AstExpression *rhs = expressionPrecedence(parser, record->infixPrec + precShift);
     int save = PROTECT(rhs);
     AstExpressions *arguments = newAstExpressions(CPI(rhs), rhs, NULL);
-    PROTECT(arguments);
+    REPLACE_PROTECT(save, arguments);
     arguments = newAstExpressions(CPI(lhs), lhs, arguments);
-    PROTECT(arguments);
+    REPLACE_PROTECT(save, arguments);
     AstFunCall *funCall = newAstFunCall(TOKPI(tok), record->infixImpl, arguments);
-    PROTECT(funCall);
+    REPLACE_PROTECT(save, funCall);
     rhs = newAstExpression_FunCall(CPI(funCall), funCall);
+    REPLACE_PROTECT(save, rhs);
     if (nonassoc)
     {
         PrattToken *next = peek(parser);

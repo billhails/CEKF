@@ -10,7 +10,16 @@ ifndef MODE
 MODE:=debugging
 endif
 
-TARGET=cekf
+BINDIR=bin
+DEPDIR=dep
+DOCDIR=docs/generated
+GENDIR=generated
+OBJDIR=obj
+SRCDIR=src
+TSTDIR=tests
+UNIDIR=unicode
+
+TARGET=$(BINDIR)/fn
 
 ifeq ($(MODE),debugging)
 	CCMODE:= -g
@@ -46,15 +55,15 @@ MAKE_AST=$(PYTHON) ./tools/makeAST.py
 
 LIBS=-lm -lsqlite3
 
-PREAMBLE_SRC=src/preamble.fn
-EXTRA_YAML=$(filter-out src/primitives.yaml, $(wildcard src/*.yaml))
-EXTRA_C_TARGETS=$(patsubst src/%.yaml,generated/%.c,$(EXTRA_YAML))
-EXTRA_H_TARGETS=$(patsubst src/%.yaml,generated/%.h,$(EXTRA_YAML))
-EXTRA_OBJTYPES_H_TARGETS=$(patsubst src/%.yaml,generated/%_objtypes.h,$(EXTRA_YAML))
-EXTRA_DEBUG_H_TARGETS=$(patsubst src/%.yaml,generated/%_debug.h,$(EXTRA_YAML))
-EXTRA_DEBUG_C_TARGETS=$(patsubst src/%.yaml,generated/%_debug.c,$(EXTRA_YAML))
+PREAMBLE_SRC=$(SRCDIR)/preamble.fn
+EXTRA_YAML=$(filter-out $(SRCDIR)/primitives.yaml, $(wildcard $(SRCDIR)/*.yaml))
+EXTRA_C_TARGETS=$(patsubst $(SRCDIR)/%.yaml,$(GENDIR)/%.c,$(EXTRA_YAML))
+EXTRA_H_TARGETS=$(patsubst $(SRCDIR)/%.yaml,$(GENDIR)/%.h,$(EXTRA_YAML))
+EXTRA_OBJTYPES_H_TARGETS=$(patsubst $(SRCDIR)/%.yaml,$(GENDIR)/%_objtypes.h,$(EXTRA_YAML))
+EXTRA_DEBUG_H_TARGETS=$(patsubst $(SRCDIR)/%.yaml,$(GENDIR)/%_debug.h,$(EXTRA_YAML))
+EXTRA_DEBUG_C_TARGETS=$(patsubst $(SRCDIR)/%.yaml,$(GENDIR)/%_debug.c,$(EXTRA_YAML))
 
-EXTRA_DOCS=$(patsubst src/%.yaml,docs/generated/%.md,$(EXTRA_YAML))
+EXTRA_DOCS=$(patsubst $(SRCDIR)/%.yaml,$(DOCDIR)/%.md,$(EXTRA_YAML))
 
 EXTRA_TARGETS= \
     $(EXTRA_C_TARGETS) \
@@ -62,40 +71,40 @@ EXTRA_TARGETS= \
     $(EXTRA_OBJTYPES_H_TARGETS) \
     $(EXTRA_DEBUG_H_TARGETS) \
     $(EXTRA_DEBUG_C_TARGETS) \
-	generated/UnicodeData.inc \
-	generated/UnicodeDigits.inc
+	$(GENDIR)/UnicodeData.inc \
+	$(GENDIR)/UnicodeDigits.inc
 
-MAIN=src/main.c
-PREAMBLE=generated/preamble.c
-CFILES=$(filter-out $(MAIN), $(wildcard src/*.c))
+MAIN=$(SRCDIR)/main.c
+PREAMBLE=$(GENDIR)/preamble.c
+CFILES=$(filter-out $(MAIN), $(wildcard $(SRCDIR)/*.c))
 EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
-TEST_CFILES=$(wildcard tests/src/*.c)
+TEST_CFILES=$(wildcard $(TSTDIR)/src/*.c)
 
-TEST_TARGETS=$(patsubst tests/src/%.c,tests/%,$(TEST_CFILES))
+TEST_TARGETS=$(patsubst $(TSTDIR)/src/%.c,$(TSTDIR)/%,$(TEST_CFILES))
 
-TEST_SUCCESSES=$(patsubst tests/%,tests/.%-success,$(TEST_TARGETS))
+TEST_SUCCESSES=$(patsubst $(TSTDIR)/%,$(TSTDIR)/.%-success,$(TEST_TARGETS))
 
-MAIN_OBJ=obj/main.o
-PREAMBLE_OBJ=obj/preamble.o
-OBJ=$(patsubst src/%,obj/%,$(patsubst %.c,%.o,$(CFILES)))
-TEST_OBJ=$(patsubst tests/src/%,obj/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
+MAIN_OBJ=$(OBJDIR)/main.o
+PREAMBLE_OBJ=$(OBJDIR)/preamble.o
+OBJ=$(patsubst $(SRCDIR)/%,$(OBJDIR)/%,$(patsubst %.c,%.o,$(CFILES)))
+TEST_OBJ=$(patsubst $(TSTDIR)/src/%,$(OBJDIR)/%,$(patsubst %.c,%.o,$(TEST_CFILES)))
 
-MAIN_DEP=dep/main.d
-PREAMBLE_DEP=dep/preamble.d
-DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(OBJ)))
-TEST_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
+MAIN_DEP=$(DEPDIR)/main.d
+PREAMBLE_DEP=$(DEPDIR)/preamble.d
+DEP=$(patsubst $(OBJDIR)/%,$(DEPDIR)/%,$(patsubst %.o,%.d,$(OBJ)))
+TEST_DEP=$(patsubst $(OBJDIR)/%,$(DEPDIR)/%,$(patsubst %.o,%.d,$(TEST_OBJ)))
 
-EXTRA_OBJ=$(patsubst generated/%,obj/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
-EXTRA_DEP=$(patsubst obj/%,dep/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
+EXTRA_OBJ=$(patsubst $(GENDIR)/%,$(OBJDIR)/%,$(patsubst %.c,%.o,$(EXTRA_CFILES)))
+EXTRA_DEP=$(patsubst $(OBJDIR)/%,$(DEPDIR)/%,$(patsubst %.o,%.d,$(EXTRA_OBJ)))
 
 ALL_OBJ=$(OBJ) $(EXTRA_OBJ) $(PREAMBLE_OBJ)
 ALL_DEP=$(DEP) $(EXTRA_DEP) $(TEST_DEP) $(MAIN_DEP) $(PREAMBLE_DEP)
 
-INCLUDE_PATHS=-I generated/ -I src/
+INCLUDE_PATHS=-I $(GENDIR)/ -I $(SRCDIR)/
 
 all: $(TARGET) docs
 
-$(TARGET): $(MAIN_OBJ) $(ALL_OBJ)
+$(TARGET): $(MAIN_OBJ) $(ALL_OBJ) | $(BINDIR)
 	$(CC) -o $@ $(MAIN_OBJ) $(ALL_OBJ) $(LIBS)
 
 docs: $(EXTRA_DOCS)
@@ -124,91 +133,91 @@ EXTRA_INDENT_ARGS=$(patsubst %,-T %,$(EXTRA_TYPES))
 
 include $(ALL_DEP)
 
-$(PREAMBLE): $(PREAMBLE_SRC) | generated
+$(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
 
-$(EXTRA_C_TARGETS): generated/%.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+$(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_H_TARGETS): generated/%.h: src/%.yaml tools/makeAST.py | generated
+$(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml tools/makeAST.py | $(GENDIR)
 	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_OBJTYPES_H_TARGETS): generated/%_objtypes.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+$(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_H_TARGETS): generated/%_debug.h: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+$(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_C_TARGETS): generated/%_debug.c: src/%.yaml tools/makeAST.py src/primitives.yaml | generated
+$(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DOCS): docs/generated/%.md: src/%.yaml tools/makeAST.py src/primitives.yaml | docs/generated
+$(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS)
 	touch $@
 
-tags: src/* $(EXTRA_TARGETS)
-	ctags src/* $(EXTRA_TARGETS)
+tags: $(SRCDIR)/* $(EXTRA_TARGETS)
+	ctags $(SRCDIR)/* $(EXTRA_TARGETS)
 
-xref: src/* $(EXTRA_TARGETS)
-	ctags -x src/* $(EXTRA_TARGETS) > $@
+xref: $(SRCDIR)/* $(EXTRA_TARGETS)
+	ctags -x $(SRCDIR)/* $(EXTRA_TARGETS) > $@
 
-$(MAIN_OBJ) $(OBJ): obj/%.o: src/%.c | obj
+$(MAIN_OBJ) $(OBJ): $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(EXTRA_OBJ) $(PREAMBLE_OBJ): obj/%.o: generated/%.c | obj
+$(EXTRA_OBJ) $(PREAMBLE_OBJ): $(OBJDIR)/%.o: $(GENDIR)/%.c | $(OBJDIR)
 	$(CC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(TEST_OBJ): obj/%.o: tests/src/%.c | obj
+$(TEST_OBJ): $(OBJDIR)/%.o: $(TSTDIR)/src/%.c | $(OBJDIR)
 	$(LAXCC) $(INCLUDE_PATHS) -c $< -o $@
 
-$(MAIN_DEP) $(DEP): dep/%.d: src/%.c .generated | dep
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(MAIN_DEP) $(DEP): $(DEPDIR)/%.d: $(SRCDIR)/%.c .generated | $(DEPDIR)
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(EXTRA_DEP) $(PREAMBLE_DEP): dep/%.d: generated/%.c .generated | dep
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(EXTRA_DEP) $(PREAMBLE_DEP): $(DEPDIR)/%.d: $(GENDIR)/%.c .generated | $(DEPDIR)
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-$(TEST_DEP): dep/%.d: tests/src/%.c .generated | dep
-	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst dep/%,obj/%,$(patsubst %.d,%.o,$@)) -o $@ $<
+$(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
+	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
-test: $(TEST_TARGETS) $(TARGET) unicode/unicode.db
+test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
-	for t in tests/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
-$(TEST_TARGETS): tests/%: obj/%.o $(ALL_OBJ)
+$(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
 
-dep obj generated docs/generated unicode:
-	mkdir $@
+$(DEPDIR) $(OBJDIR) $(BINDIR) $(GENDIR) $(DOCDIR) $(UNIDIR):
+	mkdir -p $@
 
 install-sqlite3:
 	sudo apt-get --yes install sqlite3 libsqlite3-dev
 
-unicode/unicode.db: unicode/UnicodeData.csv ./tools/create_table.sql
+$(UNIDIR)/unicode.db: $(UNIDIR)/UnicodeData.csv ./tools/create_table.sql
 	rm -f $@
 	sqlite3 $@ < ./tools/create_table.sql
 
-unicode/UnicodeData.csv: unicode/UnicodeData.txt ./tools/convertCsv.py
+$(UNIDIR)/UnicodeData.csv: $(UNIDIR)/UnicodeData.txt ./tools/convertCsv.py
 	$(PYTHON) ./tools/convertCsv.py
 
-unicode/UnicodeData.txt: | unicode
-	wget -P unicode https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
+$(UNIDIR)/UnicodeData.txt: | $(UNIDIR)
+	wget -P $(UNIDIR) https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
 
-generated/UnicodeData.inc: unicode/UnicodeData.txt tools/analyzeCsv.py | generated
+$(GENDIR)/UnicodeData.inc: $(UNIDIR)/UnicodeData.txt tools/analyzeCsv.py | $(GENDIR)
 	$(PYTHON) ./tools/analyzeCsv.py > $@
 
-generated/UnicodeDigits.inc: unicode/UnicodeData.txt tools/makeUnicodeDigits.py | generated
+$(GENDIR)/UnicodeDigits.inc: $(UNIDIR)/UnicodeData.txt tools/makeUnicodeDigits.py | $(GENDIR)
 	$(PYTHON) ./tools/makeUnicodeDigits.py > $@
 
 realclean: clean
-	rm -rf tags xref unicode
+	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(TARGET) obj callgrind.out.* generated $(TEST_TARGETS) .typedefs src/*~ .generated gmon.out *.fnc core.*
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.*
 
 deps:
-	rm -rf dep
+	rm -rf $(DEPDIR)
 
 PROF_SRC=fib20
 
@@ -223,12 +232,12 @@ leak-check: all
 indent: indent-src indent-generated
 
 indent-src: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) src/*.[ch]
-	rm -f src/*~
+	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(SRCDIR)/*.[ch]
+	rm -f $(SRCDIR)/*~
 
 indent-generated: .typedefs .indent.pro
-	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) generated/*.[ch]
-	rm -f generated/*~
+	indent `cat .typedefs | sort -u | xargs` $(EXTRA_INDENT_ARGS) $(GENDIR)/*.[ch]
+	rm -f $(GENDIR)/*~
 
 .typedefs: .generated
 
