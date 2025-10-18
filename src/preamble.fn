@@ -23,27 +23,28 @@
 namespace
 
 
-infix right 20 "then" amb;
-infix left 50 "==" EQUALTO;
-infix left 50 "!=" NOTEQUALTO;
-infix left 50 "≠" NOTEQUALTO;
-infix left 50 ">" GREATERTHAN;
-infix left 50 "<" LESSTHAN;
-infix left 50 "<=" LESSTHANOREQUALTO;
-infix left 50 ">=" GREATERTHANOREQUALTO;
-infix none 50 "<=>" COMPARISON;
-infix left 90 "+" ADDITION;
-infix left 90 "-" SUBTRACTION;
-prefix 100 "-" NEGATION;
+infix right 2 "then" amb;
+infix left 5 "==" EQUALTO;
+infix left 5 "!=" NOTEQUALTO;
+infix left 5 "≠" NOTEQUALTO;
+infix left 5 ">" GREATERTHAN;
+infix left 5 "<" LESSTHAN;
+infix left 5 "<=" LESSTHANOREQUALTO;
+infix left 5 ">=" GREATERTHANOREQUALTO;
+infix none 5 "<=>" COMPARISON;
+infix none 5 "⪌" COMPARISON;
+infix left 10 "+" ADDITION;
+infix left 10 "-" SUBTRACTION;
+prefix 11 "-" NEGATION;
 macro NUMERICIDENTITY(x) { x + 0 }
-prefix 100 "+" NUMERICIDENTITY;
-infix left 100 "*" MULTIPLICATION;
-infix left 100 "×" MULTIPLICATION;
-infix left 100 "/" DIVISION;
-infix left 100 "÷" DIVISION;
-infix left 100 "%" MODULUS;
-infix left 110 "**" EXPONENTIAL;
-prefix 120 "here" callcc;
+prefix 11 "+" NUMERICIDENTITY;
+infix left 11 "*" MULTIPLICATION;
+infix left 11 "×" MULTIPLICATION;
+infix left 11 "/" DIVISION;
+infix left 11 "÷" DIVISION;
+infix left 11 "%" MODULUS;
+infix left 12 "**" EXPONENTIAL;
+prefix 13 "here" callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
@@ -81,15 +82,15 @@ fn NOT {
     (true) { false }
     (false) { true }
 }
-prefix 40 "not" NOT;
+prefix 4 "not" NOT;
 
 // macros aren't really macros, they're just lazy functions but that gets
 // us most of the same behaviour.
 macro AND(a, b) { if (a) { b } else { false } }
-infix left 30 "and" AND;
+infix left 3 "and" AND;
 
 macro OR(a, b) { if (a) { true } else { b } }
-infix left 30 "or" OR;
+infix left 3 "or" OR;
 
 fn XOR {
     (true, true) { false }
@@ -97,18 +98,18 @@ fn XOR {
     (false, true) { true }
     (false, false) { false }
 }
-infix left 30 "xor" XOR;
+infix left 3 "xor" XOR;
 
 macro NAND(a, b) { not (a and b) }
-infix left 30 "nand" NAND;
+infix left 3 "nand" NAND;
 
 macro NOR(a, b) { not (a or b) }
-infix left 30 "nor" NOR;
+infix left 3 "nor" NOR;
 
 macro XNOR(a, b) { not (a xor b) }
-infix left 30 "xnor" XNOR;
+infix left 3 "xnor" XNOR;
 
-infix right 90 "@" cons;
+infix right 10 "@" cons;
 
 fn assert_(line, file, condition) {
     if (condition) {
@@ -134,7 +135,7 @@ fn factorial (n) {
         h(n, 1)
 }
 
-postfix 120 "!" factorial;
+postfix 13 "!" factorial;
 
 fn error_(line, file, message) {
     puts("error: ");
@@ -147,24 +148,24 @@ fn error_(line, file, message) {
     exit(1);
 }
 
-infix right 120 "of" fn (f, g, x) { f(g(x)) };
+infix right 13 "of" fn (f, g, x) { f(g(x)) };
 
 fn append {
     ([], b) { b }
     (h @ t, b) { h @ append(t, b) }
 }
 
-infix right 80 "@@" append;
+infix right 9 "@@" append;
 
 unsafe fn car {
     (h @ _) { h }
 }
-prefix 55 "<" car;
+prefix 6 "<" car;
 
 unsafe fn cdr {
     (_ @ t) { t }
 }
-prefix 55 ">" cdr;
+prefix 6 ">" cdr;
 
 fn print_list(helper, l) {
     let
