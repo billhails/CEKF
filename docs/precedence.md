@@ -10,7 +10,7 @@ Subject to change, but this is collated from the built-in operators in
 | 2 | infix `then` |
 | 3 | infix `and`, `or`, `xor`, `nand`, `nor`, `xnor` |
 | 4 | prefix `not` |
-| 5 | infix `!=`, `>`, `<`, `>=`, `<=`, `<=>`|
+| 5 | infix `!=`, `>`, `<`, `>=`, `<=`, `<=>` |
 | 6 | prefix `<`, `>` |
 | 7 | infix `=` (alias)|
 | 8 | |
