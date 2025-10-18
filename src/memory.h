@@ -33,6 +33,7 @@ struct Header;
 #  include "pratt_objtypes.h"
 #  include "types.h"
 
+// Definition of all object types for garbage collection
 typedef enum {
 
     // opaque type
@@ -41,11 +42,17 @@ typedef enum {
     // hash table types
     OBJTYPE_HASHTABLE,
 
+    // protection stack type
     OBJTYPE_PROTECTION,
+
+    // arithmetic types
     OBJTYPE_BIGINT,
     OBJTYPE_MAYBEBIGINT,
+    
+    // file id type used to track linked namespaces
     OBJTYPE_AGNOSTICFILEID,
 
+    // various generated object types
     ANF_OBJTYPES(),
     AST_OBJTYPES(),
     LAMBDA_OBJTYPES(),
@@ -106,7 +113,7 @@ void collectGarbage();
  * VERY IMPORTANT macros:
  */
 /**
- * PROTECT pushes its argument onto a stack
+ * PROTECT pushes its argument onto a ProtectionStack
  * which is marked by the mark stage of a mark-and-sweep algorithm
  * so that it will not be accidentally collected. PROTECT returns the
  * stack pointer index of the pushed object, which can be used
@@ -114,14 +121,17 @@ void collectGarbage();
  */
 #  define PROTECT(x) protect((Header *)(x))
 /**
- * UNPROTECT restores the protection stack to its argument index,
+ * UNPROTECT restores the ProtectionStack to its argument index,
  * effectively removing all objects at and above that index from the
- * protection stack.
+ * ProtectionStack.
  */
 #  define UNPROTECT(i) unProtect(i)
 /**
  * REPLACE_PROTECT replaces the object at the
- * given index on the stack with the given replacement.
+ * given index on the ProtectionStack with the given replacement.
+ * This is useful when an object being replaced is contained within
+ * the object that replaces it, since mark and sweep will automatically
+ * protect the contained object.
  */
 #  define REPLACE_PROTECT(i, x) replaceProtect(i, (Header *)(x))
 /**

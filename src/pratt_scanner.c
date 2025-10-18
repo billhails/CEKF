@@ -247,7 +247,7 @@ static PrattToken *tokenFromBigInt(PrattBufList *bufList, MaybeBigInt *bi, HashS
  * @brief Converts a PrattBuffer to a HashSymbol.
  */
 static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
-    return newSymbolLength((char *)buffer->start, buffer->length);
+    return newSymbolFromLength((char *)buffer->start, buffer->length);
 }
 
 /**

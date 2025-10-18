@@ -206,6 +206,15 @@ void markHashTableObj(Header *h) {
     markHashTable((HashTable *) h);
 }
 
+/**
+ * Part of the mark phase of the mark-sweep garbage collection,
+ * marks the given hash table and its contents.
+ * 
+ * Note that the keys (HashSymbol objects) are not themselves
+ * memory-managed. It is assumed that symbols are permanent.
+ *
+ * @param table pointer to the HashTable to be marked
+ */
 void markHashTable(HashTable *table) {
     if (table == NULL)
         return;
@@ -243,16 +252,16 @@ void freeHashTableObj(Header *h) {
 }
 
 HashSymbol *uniqueHashSymbol(HashTable *table, char *name, void *src) {
-    HashSymbol *x;
-    x = hashGetVar(table, name);
-    if (x != NULL) {
-        return x;
+    HashSymbol *symbol;
+    symbol = hashGetVar(table, name);
+    if (symbol != NULL) {
+        return symbol;
     }
-    x = ALLOCATE(HashSymbol);
-    x->name = safeStrdup(name);
-    x->hash = hashString(name);
-    hashSet(table, x, src);
-    return x;
+    symbol = ALLOCATE(HashSymbol);
+    symbol->name = safeStrdup(name);
+    symbol->hash = hashString(name);
+    hashSet(table, symbol, src);
+    return symbol;
 }
 
 void printHashSymbol(HashSymbol *symbol) {
