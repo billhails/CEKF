@@ -219,6 +219,8 @@ void unProtect(Index index) {
 /**
  * Allocates, frees and reallocates memory, tracking the total bytes allocated.
  * If increasing allocation size, may trigger garbage collection.
+ * It does not assume the pointer is to a memory-managed Header object, so
+ * it can be used for any memory allocation.
  */
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
@@ -277,7 +279,8 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 }
 
 /**
- * Wrapper around reallocate for simple allocation.
+ * Wrapper around reallocate for memory-managed objects.
+ * Initializes the Header component of the allocated object.
  */
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC

@@ -29,7 +29,6 @@
 typedef uint32_t hash_t;
 
 typedef struct HashSymbol {
-    struct Header header;
     hash_t hash;
     char *name;
 } HashSymbol;
