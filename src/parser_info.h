@@ -35,23 +35,18 @@ typedef struct ParserInfo {
     char *filename;
 } ParserInfo;
 
-typedef struct HeaderAndInfo {
-    struct Header header;
-    struct ParserInfo info;
-} HeaderAndInfo;
-
 #  define CPI(from) ((from)->_yy_parser_info)
 
-static inline void _reportParserInfo(HeaderAndInfo *I) {
-    eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);
+static inline void _reportParserInfo(ParserInfo I) {
+    eprintf("in %s, line %d\n", I.filename, I.lineno);
 }
 
-static inline int _eqParserInfo(HeaderAndInfo *I, HeaderAndInfo *J) {
-    return I->info.filename == J->info.filename &&
-           I->info.lineno == J->info.lineno;
+static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
+    return I.filename == J.filename &&
+           I.lineno == J.lineno;
 }
 
-#  define REPORT_PARSER_INFO(x) _reportParserInfo((HeaderAndInfo *)(x))
-#  define EQ_PARSER_INFO(x, y) _eqParserInfo((HeaderAndInfo *)(x), (HeaderAndInfo *)(y))
+#  define REPORT_PARSER_INFO(x) _reportParserInfo((x)->_yy_parser_info)
+#  define EQ_PARSER_INFO(x, y) _eqParserInfo((x)->_yy_parser_info, (y)->_yy_parser_info)
 
 #endif
