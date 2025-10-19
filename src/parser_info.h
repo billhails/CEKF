@@ -35,8 +35,6 @@ typedef struct ParserInfo {
     char *filename;
 } ParserInfo;
 
-#  define CPI(from) ((from)->_yy_parser_info)
-
 static inline void _reportParserInfo(ParserInfo I) {
     eprintf("in %s, line %d\n", I.filename, I.lineno);
 }
@@ -46,6 +44,8 @@ static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
            I.lineno == J.lineno;
 }
 
+// generated structs all name the parser info field _yy_parser_info
+#  define CPI(from) ((from)->_yy_parser_info)
 #  define REPORT_PARSER_INFO(x) _reportParserInfo(CPI(x))
 #  define EQ_PARSER_INFO(x, y) _eqParserInfo(CPI(x), CPI(y))
 
