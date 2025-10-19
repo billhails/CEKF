@@ -46,7 +46,7 @@ static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
            I.lineno == J.lineno;
 }
 
-#  define REPORT_PARSER_INFO(x) _reportParserInfo((x)->_yy_parser_info)
-#  define EQ_PARSER_INFO(x, y) _eqParserInfo((x)->_yy_parser_info, (y)->_yy_parser_info)
+#  define REPORT_PARSER_INFO(x) _reportParserInfo(CPI(x))
+#  define EQ_PARSER_INFO(x, y) _eqParserInfo(CPI(x), CPI(y))
 
 #endif
