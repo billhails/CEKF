@@ -16,9 +16,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * ParserInfo is a common sub-structure of almost all structures in the interpreter,
+ * immediately following the memory-management Header. It contains the filename and line
+ * number in the source code that resulted in the creation of the structure.
+ * The same information is copied from one stage to the next during translation/compilation
+ * by the CPI macro.
+ *
+ * Note however that it is **not** part of the HashSymbol structure, as the same symbol
+ * may occur in multiple places in the source code.
  */
 
 #  include "common.h"
+#  include "memory.h"
 
 typedef struct ParserInfo {
     int lineno;
@@ -30,8 +40,7 @@ typedef struct HeaderAndInfo {
     struct ParserInfo info;
 } HeaderAndInfo;
 
-#  define COPY_PARSER_INFO(from) ((from)->_yy_parser_info)
-#  define CPI(x) COPY_PARSER_INFO(x)
+#  define CPI(from) ((from)->_yy_parser_info)
 
 static inline void _reportParserInfo(HeaderAndInfo *I) {
     eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);
