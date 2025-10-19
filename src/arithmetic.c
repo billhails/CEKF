@@ -1545,6 +1545,16 @@ static Cmp ratCmp(Value left, Value right) {
     return res;
 }
 
+/**
+ * Apply a binary operation to two values, promoting to rational as needed.
+ * 
+ * @param left the left value
+ * @param right the right value
+ * @param op the parameterized binary operation to apply
+ * @param intOp the integer binary operation to apply if both values are integers
+ * @param simplify whether to attempt to simplify to integer if possible
+ * @return the result value
+ */
 static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp intOp, bool simplify) {
     ENTER(ratOp);
     IFDEBUG(ppNumber(left));
@@ -1559,6 +1569,7 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
             protectValue(res);
         } else {
             // only left rational
+            // convert right to rational and try again
             right = int_to_rational(right);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
@@ -1566,12 +1577,14 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         // only right rational
+        // convert left to rational and try again
         left = int_to_rational(left);
         protectValue(left);
         res = ratOp(left, right, op, intOp, false);
         protectValue(res);
     } else {
         // neither rational
+        // either simplify to int or convert both to rational and try again
         if (simplify) {
             res = intOp(left, right);
             protectValue(res);
@@ -1590,6 +1603,15 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
     return res;
 }
 
+/**
+ * Simplify a rational value by dividing numerator and denominator
+ * by their greatest common divisor.
+ * Ensures the denominator is positive.
+ * 
+ * @param numerator the numerator value
+ * @param denominator the denominator value
+ * @return the simplified rational value
+ */
 static Value ratSimplify(Value numerator, Value denominator) {
     ENTER(ratSimplify);
     IFDEBUG(ppNumber(numerator));
@@ -1619,9 +1641,18 @@ static Value ratSimplify(Value numerator, Value denominator) {
     return res;
 }
 
-// a/b o c/d = (ad o bc) / bd
-static Value rat_ad_bc_bd(IntegerBinOp base_op, Value left, Value right) {
-    ENTER(rat_ad_bc_bd);
+/**
+ * Applies an addition, subtraction, or modulus operation to two rational values,
+ * by cross-multiplying the numerators and denominators:
+ * \f( \frac{a}{b} \text{ op } \frac{c}{d} = \frac{(ad) \text{ op } (bc)}{bd} \f)
+ * 
+ * @param base_op the integer operation to apply to the cross-multiplied numerators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
+static Value ratAddSubOrMod(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(ratAddSubOrMod);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     ASSERT_RATIONAL(left);
@@ -1640,13 +1671,22 @@ static Value rat_ad_bc_bd(IntegerBinOp base_op, Value left, Value right) {
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     protectValue(res);
-    LEAVE(rat_ad_bc_bd);
+    LEAVE(ratAddSubOrMod);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
-// a/b o c/d = ac o bd
+/**
+ * Applies a multiplication operation on two rational values,
+ * by multiplying the numerators and denominators:
+ * \f( \frac{a}{b} \times \frac{c}{d} = \frac{ac}{bd} \f)
+ * 
+ * @param base_op the integer operation to apply to the numerators and denominators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
     ENTER(rat_ac_bd);
     IFDEBUG(ppNumber(left));
@@ -1667,6 +1707,17 @@ static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
+/**
+ * Applies a division operation on two rational values,
+ * by flipping the numerator and denominator of the right operand and
+ * multiplying:
+ * \f( \frac{a}{b} \div \frac{c}{d} = \frac{a}{b} \times \frac{d}{c} = \frac{ ad }{ bc} \f)
+ * 
+ * @param base_op the integer operation to apply to the cross-multiplied numerators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratDiv3(IntegerBinOp base_op, Value left, Value right) {
     ENTER(ratDiv3);
     IFDEBUG(ppNumber(left));
@@ -1683,6 +1734,13 @@ static Value ratDiv3(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
+/**
+ * Divide two rational values
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratDiv(Value left, Value right) {
     ENTER(ratDiv);
     IFDEBUG(ppNumber(left));
@@ -1694,6 +1752,13 @@ static Value ratDiv(Value left, Value right) {
     return res;
 }
 
+/**
+ * Raise a rational value to an integer or rational power.
+ * 
+ * @param left the base rational value
+ * @param right the exponent integer or rational value
+ * @return the result value
+ */
 static Value ratPow(Value left, Value right) {
     ENTER(ratPow);
     IFDEBUG(ppNumber(left));
@@ -1714,13 +1779,21 @@ static Value ratPow(Value left, Value right) {
     return res;
 }
 
+/**
+ * Modulus of two rational values:
+ * \f( \frac{a}{b} \mod \frac{c}{d} = \frac{(ad) \mod (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratMod(Value left, Value right) {
     ENTER(ratMod);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
-    Value res = ratOp(left, right, rat_ad_bc_bd, intMod, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intMod, true);
     int save = protectValue(res);
     LEAVE(ratMod);
     IFDEBUG(ppNumber(res));
@@ -1728,6 +1801,14 @@ static Value ratMod(Value left, Value right) {
     return res;
 }
 
+/**
+ * Multiplication of two rational values:
+ * \f( \frac{a}{b} \times \frac{c}{d} = \frac{ac}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratMul(Value left, Value right) {
     ENTER(ratMul);
     IFDEBUG(ppNumber(left));
@@ -1740,6 +1821,13 @@ static Value ratMul(Value left, Value right) {
     return res;
 }
 
+/**
+ * Division of two rational or integer values
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result rational value
+ */
 static Value intDiv(Value left, Value right) {
     ENTER(intDiv);
     IFDEBUG(ppNumber(left));
@@ -1752,11 +1840,19 @@ static Value intDiv(Value left, Value right) {
     return res;
 }
 
+/**
+ * Subtraction of two rational values:
+ * \f( \frac{a}{b} - \frac{c}{d} = \frac{(ad) - (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratSub(Value left, Value right) {
     ENTER(ratSub);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ad_bc_bd, intSub, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intSub, true);
     int save = protectValue(res);
     LEAVE(ratSub);
     IFDEBUG(ppNumber(res));
@@ -1764,11 +1860,19 @@ static Value ratSub(Value left, Value right) {
     return res;
 }
 
+/**
+ * Addition of two rational values:
+ * \f( \frac{a}{b} + \frac{c}{d} = \frac{(ad) + (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratAdd(Value left, Value right) {
     ENTER(ratAdd);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ad_bc_bd, intAdd, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intAdd, true);
     int save = protectValue(res);
     LEAVE(ratAdd);
     IFDEBUG(ppNumber(res));
@@ -1817,7 +1921,14 @@ static Value irrAdd(Value left, Value right) {
     return value_Irrational(left.val.irrational + right.val.irrational);
 }
 
-// c^(a + bi) = c^a [cos(b ln c) + i sin(b ln c)]
+/**
+ * Raise an irrational number to a complex power.
+ * \f( c^(a + bi) = c^a [\cos(b \ln c) + i \sin(b \ln c)] \f)
+ * 
+ * @param c the base irrational value
+ * @param right the exponent complex value
+ * @return the result value
+ */
 static Value irrPowCom(Value c, Value right) {
     ASSERT_IRRATIONAL(c);
     right = to_complex(right);
