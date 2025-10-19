@@ -16,6 +16,10 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Opaque data type for wrapping arbitrary data structures.
+ * Used by built-in functions to contain things like file handles that have no
+ * intrinsic representation in the language.
  */
 
 #  include "memory.h"
