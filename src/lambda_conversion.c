@@ -38,7 +38,7 @@
 #include "ast_debug.h"
 #include "print_generator.h"
 
-char *lambda_conversion_function = NULL; // set by --lambda-conversion flag
+char *lambda_conversion_function = NULL; // set by --dump-lambda flag
 
 static LamLetRecBindings *convertFuncDefs(AstDefinitions *, LamContext *);
 static LamArgs *convertExpressions(AstExpressions *, LamContext *);
