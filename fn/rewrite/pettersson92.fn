@@ -6,12 +6,12 @@ let
     link "../dictionary.fn" as dict;
     link "../listutils.fn" as lst;
 
-    infix left 80 "=>" fn (arg, fun) { fun(arg) };
-    infix left 80 "|>" fn (l, f) { lst.map(f, l) };
-    infix left 80 "?" fn (l, n) { lst.nth(n, l) };
-    infix left 80 "??" fn (l, ns) { lst.nths(ns, l) };
-    infix left 80 ".." lst.range;
-    prefix 85 "$" io.to_string;
+    infix left 8 "=>" fn (arg, fun) { fun(arg) };
+    infix left 8 "|>" fn (l, f) { lst.map(f, l) };
+    infix left 8 "?" fn (l, n) { lst.nth(n, l) };
+    infix left 8 "??" fn (l, ns) { lst.nths(ns, l) };
+    infix left 8 ".." lst.range;
+    prefix 14 "$" io.to_string;
 
     // input data structures
     typedef pattern {
