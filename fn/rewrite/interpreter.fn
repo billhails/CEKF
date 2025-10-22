@@ -49,7 +49,7 @@ let
     }
 
 in
-    // try it out: ((λ (x) (if x (+ x 2) x)) a) = 3 | a: 1
+    // try it out: ((λ (x) (if x (+ x 2) x)) a) = 6 | a: 4
     print(eval(
         application(
             λ(

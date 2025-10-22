@@ -364,7 +364,7 @@ let
             // original matrix, those rows whose indices are in
             // {i_1 .. i_j}.
             B = M_N ?? i1_ij;
-            C = lst.zipWith(append, B, A);
+            C = lst.zip_with(append, B, A);
             // Finally the indices are used to select the
             // corresponding final states X that go with these
             // rows.
