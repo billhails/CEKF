@@ -9,36 +9,32 @@ fn member {
 
 // unique: list(#a) -> list(#a)
 fn unique(lst) {
-    let
-        fn helper {
-            ([], acc) { reverse(acc) }
-            (h @ t, acc) {
-                if (member(h, acc)) {
-                    helper(t, acc)
-                } else {
-                    helper(t, h @ acc)
-                }
+    let fn helper {
+        ([], acc) { reverse(acc) }
+        (h @ t, acc) {
+            if (member(h, acc)) {
+                helper(t, acc)
+            } else {
+                helper(t, h @ acc)
             }
         }
-    in
-        helper(lst, [])
+    }
+    in helper(lst, [])
 }
 
 // exclude: list(#t) -> list(#t) -> list(#t)
 fn exclude(items, lst) {
-    let
-        fn helper {
-            ([], acc) { reverse(acc) }
-            (h @ t, acc) {
-                if (member(h, items)) {
-                    helper(t, acc)
-                } else {
-                    helper(t, h @ acc)
-                }
+    let fn helper {
+        ([], acc) { reverse(acc) }
+        (h @ t, acc) {
+            if (member(h, items)) {
+                helper(t, acc)
+            } else {
+                helper(t, h @ acc)
             }
         }
-    in
-        helper(lst, [])
+    }
+    in helper(lst, [])
 }
 
 // map: (#a -> #b) -> list(#a) -> list(#b)
@@ -49,27 +45,23 @@ fn map (f, lst) {
 // for_each: (#a -> #b) -> list(#a) -> list(#b)
 // like map but guarantees l-r application of f (for side effects)
 fn for_each(f, lst) {
-    let
-        fn helper {
-            ([], acc) { reverse(acc) }
-            (h @ t, acc) {
-                let fh = f(h);
-                in helper(t, fh @ acc)
-            }
+    let fn helper {
+        ([], acc) { reverse(acc) }
+        (h @ t, acc) {
+            let fh = f(h);
+            in helper(t, fh @ acc)
         }
-    in
-        helper(lst, [])
+    }
+    in helper(lst, [])
 }
 
 // map_prefix: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)
 fn map_prefix (f, lst, tail) {
-    let
-        fn helper {
-            ([], acc) { reverse(acc) }
-            (h @ t, acc) { helper(t, f(h) @ acc) }
-        }
-    in
-        helper(lst, tail)
+    let fn helper {
+        ([], acc) { reverse(acc) }
+        (h @ t, acc) { helper(t, f(h) @ acc) }
+    }
+    in helper(lst, tail)
 }
 
 // length: list(#s) -> number
@@ -118,19 +110,17 @@ fn scanl (func, acc, lst) {
 
 // filter: (#a -> bool) -> list(#a) -> list(#a)
 fn filter(f, lst) {
-    let
-        fn helper {
-            ([], acc) { reverse(acc) }
-            (h @ t, acc) {
-                if (f(h)) {
-                    helper(t, h @ acc)
-                } else {
-                    helper(t, acc)
-                }
+    let fn helper {
+        ([], acc) { reverse(acc) }
+        (h @ t, acc) {
+            if (f(h)) {
+                helper(t, h @ acc)
+            } else {
+                helper(t, acc)
             }
         }
-    in
-        helper(lst, [])
+    }
+    in helper(lst, [])
 }
 
 // filter_not: (#a -> bool) -> list(#a) -> list(#a)
@@ -244,15 +234,13 @@ fn zip(a, b) {
 
 // zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
 fn zip_with(f, a, b) {
-    let
-        fn helper {
-            (h1 @ t1, h2 @ t2, acc) {
-                helper(t1, t2, f(h1, h2) @ acc)
-            }
-            (_, _, acc) { reverse(acc) }
+    let fn helper {
+        (h1 @ t1, h2 @ t2, acc) {
+            helper(t1, t2, f(h1, h2) @ acc)
         }
-    in
-        helper(a, b, [])
+        (_, _, acc) { reverse(acc) }
+    }
+    in helper(a, b, [])
 }
 
 // unzip: list(#(#a, #b)) -> #(list(#a), list(#b))
@@ -279,14 +267,12 @@ fn empty {
 
 // take: number -> list(#a) -> list(#a)
 fn take(n, lst) {
-    let
-        fn helper {
-            (0, _, acc) { reverse(acc) }
-            (n, [], acc) { reverse(acc) }
-            (n, h @ t, acc) { helper(n - 1, t, h @ acc) }
-        }
-    in
-        helper(n, lst, [])
+    let fn helper {
+        (0, _, acc) { reverse(acc) }
+        (n, [], acc) { reverse(acc) }
+        (n, h @ t, acc) { helper(n - 1, t, h @ acc) }
+    }
+    in helper(n, lst, [])
 }
 
 // drop: number -> list(#a) -> list(#a)
@@ -308,16 +294,14 @@ fn maximum(lst) {
 
 // range: number -> number -> list(number)
 fn range(low, high) {
-    let
-        fn helper(h, acc) {
-            if (h < low) {
-                acc
-            } else {
-                helper(h - 1, h @ acc)
-            }
+    let fn helper(h, acc) {
+        if (h < low) {
+            acc
+        } else {
+            helper(h - 1, h @ acc)
         }
-    in
-        helper(high, [])
+    }
+    in helper(high, [])
 }
 
 // dedup: list(#a) -> list(#a)
