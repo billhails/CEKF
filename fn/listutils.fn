@@ -62,14 +62,14 @@ fn for_each(f, lst) {
 }
 
 // map_prefix: (#a -> #b) -> list(#a) -> list(#b) -> list(#b)
-fn map_prefix (f, lst, pfx) {
+fn map_prefix (f, lst, tail) {
     let
         fn helper {
             ([], acc) { reverse(acc) }
             (h @ t, acc) { helper(t, f(h) @ acc) }
         }
     in
-        helper(lst, pfx)
+        helper(lst, tail)
 }
 
 // length: list(#s) -> number
