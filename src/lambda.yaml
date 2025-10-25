@@ -338,6 +338,16 @@ structs:
             exp: LamExp
             printer: LamExp=NULL
 
+    LamTypeof:
+        meta:
+            brief: A typeof expression
+            description: >-
+                This structure represents a typeof expression that returns
+                a string representation of the type of an expression.
+        data:
+            exp: LamExp
+            typestring: LamExp=NULL
+
     LamTypeDefs:
         meta:
             brief: Type definitions in a lambda expression
@@ -521,6 +531,7 @@ unions:
             cond: LamCond
             amb: LamAmb
             print: LamPrint
+            typeOf: LamTypeof
             character: character
             back: void_ptr
             error: void_ptr

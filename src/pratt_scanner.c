@@ -94,6 +94,7 @@ TOKFN(AS, "as")
 TOKFN(ALIAS, "alias")
 TOKFN(SEMI, ";");
 TOKFN(PRINT, "print")
+TOKFN(TYPEOF, "typeof")
 
 #undef TOKFN
 

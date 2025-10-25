@@ -74,6 +74,7 @@ static Exp *wrapTail(Exp *exp, Exp *tail);
 static Exp *normalizeIff(LamIff *lamIff, Exp *tail);
 static Exp *normalizeCallCc(LamExp *callcc, Exp *tail);
 static Exp *normalizePrint(LamPrint *print, Exp *tail);
+static Exp *normalizeTypeof(LamTypeof *typeOf, Exp *tail);
 static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail);
 static Exp *normalizeLet(LamLet *lamLet, Exp *tail);
 static Exp *normalizeMatch(LamMatch *match, Exp *tail);
@@ -125,6 +126,8 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
             return normalizeCallCc(lamExp->val.callcc, tail);
         case LAMEXP_TYPE_PRINT:
             return normalizePrint(lamExp->val.print, tail);
+        case LAMEXP_TYPE_TYPEOF:
+            return normalizeTypeof(lamExp->val.typeOf, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
         case LAMEXP_TYPE_TUPLE_INDEX:
@@ -391,6 +394,19 @@ static Exp *normalizePrint(LamPrint *lamPrint, Exp *tail) {
     UNPROTECT(save);
     LEAVE(normalizePrint);
     return res;
+}
+
+static Exp *normalizeTypeof(LamTypeof *typeOf, Exp *tail) {
+    ENTER(normalizeTypeof);
+    // For now, if typestring is set, use it, otherwise use a placeholder
+    if (typeOf->typestring != NULL) {
+        Exp *res = normalize(typeOf->typestring, tail);
+        LEAVE(normalizeTypeof);
+        return res;
+    } else {
+        // Return a placeholder string for now
+        cant_happen("typeof typestring not set");
+    }
 }
 
 static Exp *normalizeIff(LamIff *lamIff, Exp *tail) {

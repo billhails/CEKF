@@ -94,6 +94,7 @@ HashSymbol *TOK_STRING(void);
 HashSymbol *TOK_SWITCH(void);
 HashSymbol *TOK_TUPLE(void);
 HashSymbol *TOK_TYPEDEF(void);
+HashSymbol *TOK_TYPEOF(void);
 HashSymbol *TOK_UNSAFE(void);
 HashSymbol *TOK_WILDCARD(void);
 

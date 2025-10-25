@@ -79,6 +79,8 @@ LamAmb --left--> LamExp
 LamAmb --right--> LamExp
 LamPrint --exp--> LamExp
 LamPrint --printer--> LamExp
+LamTypeof --exp--> LamExp
+LamTypeof --typestring--> LamExp
 LamTypeDefs --typeDefs--> LamTypeDefList
 LamTypeDefs --body--> LamExp
 LamTypeDefList --typeDef--> LamTypeDef
@@ -132,6 +134,7 @@ LamExp --match--> LamMatch
 LamExp --cond--> LamCond
 LamExp --amb--> LamAmb
 LamExp --print--> LamPrint
+LamExp --typeOf--> LamTypeof
 LamExp --character--> character
 LamExp --back--> void_ptr
 LamExp --error--> void_ptr

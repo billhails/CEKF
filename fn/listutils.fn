@@ -330,7 +330,9 @@ fn sortBy(predicate, lst) {
         }
         fn partition(key, lst, kont) {
             let fn helper {
-                ([], lesser, greater) { kont(lesser, greater) }
+                ([], lesser, greater) {
+                    kont(lesser, greater)
+                }
                 (first @ rest, lesser, greater) {
                     if (predicate(key, first) == lt) {
                         helper(rest, lesser, first @ greater)

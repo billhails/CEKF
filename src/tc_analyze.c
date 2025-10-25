@@ -26,6 +26,7 @@
 #include "tc_debug.h"
 #include "tc_helper.h"
 #include "print_compiler.h"
+#include "print_generator.h"
 #include "lambda_pp.h"
 #include "types.h"
 
@@ -248,6 +249,27 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeCallCC(exp->val.callcc, env, ng));
         case LAMEXP_TYPE_PRINT:
             return prune(analyzePrint(exp->val.print, env, ng));
+        case LAMEXP_TYPE_TYPEOF: {
+            // Analyze the inner expression to get its type
+            TcType *type = analyzeExp(exp->val.typeOf->exp, env, ng);
+            int save = PROTECT(type);
+            // TODO: Convert type to string representation
+            // For now, use a placeholder string
+            LamExp *stringExp = stringToLamArgs(CPI(exp), "<typeof>");
+            PROTECT(stringExp);
+            // Replace just the type discriminator and union value, preserving header
+            exp->type = stringExp->type;
+            exp->val = stringExp->val;
+            // Also copy the parser info
+            exp->_yy_parser_info = stringExp->_yy_parser_info;
+            // Create the return type before unprotecting
+            TcType *charType = makeCharacter();
+            PROTECT(charType);
+            TcType *listCharType = makeListType(charType);
+            PROTECT(listCharType);
+            UNPROTECT(save);
+            return prune(listCharType);
+        }
         case LAMEXP_TYPE_LETREC:
             return prune(analyzeLetRec(exp->val.letrec, env, ng));
         case LAMEXP_TYPE_TYPEDEFS:
@@ -823,6 +845,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
         processLetRecBinding(bindings, env, ng);
     }
+    /*
     // HACK! second pass through fixes up forward references
     if (!hadErrors()) {
         for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
@@ -841,6 +864,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             }
         }
     }
+        */
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
     // LEAVE(analyzeLetRec);

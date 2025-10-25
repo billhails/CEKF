@@ -316,6 +316,25 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
 }
 
 /**
+ * @brief Converts an AST Typeof Expression to a lambda expression that returns the type as a string.
+ *
+ * @param typeofExp The AST Typeof Expression to convert.
+ * @param context The lambda context to use.
+ * @return The resulting lambda expression.
+ */
+static LamExp *lamConvertTypeof(AstTypeof *typeofExp, LamContext *context) {
+    ENTER(lamConvertTypeof);
+    LamExp *exp = convertExpression(typeofExp->exp, context);
+    int save = PROTECT(exp);
+    LamTypeof *lamTypeof = newLamTypeof(CPI(exp), exp);
+    PROTECT(lamTypeof);
+    LamExp *result = newLamExp_TypeOf(CPI(lamTypeof), lamTypeof);
+    UNPROTECT(save);
+    LEAVE(lamConvertTypeof);
+    return result;
+}
+
+/**
  * @brief Converts an AST Tuple Expression to a lambda expression that constructs a tuple.
  *
  * @param tuple The Tuple Expression to convert.
@@ -2091,6 +2110,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_PRINT:
             DEBUG("print");
             result = lamConvertPrint(expression->val.print, env);
+            break;
+        case AST_EXPRESSION_TYPE_TYPEOF:
+            DEBUG("typeof");
+            result = lamConvertTypeof(expression->val.typeOf, env);
             break;
         case AST_EXPRESSION_TYPE_TUPLE:
             DEBUG("tuple");

@@ -149,7 +149,7 @@ let
     fn funType(dom, cod) { operType("->", [dom, cod]) }
 
     fn analyzeExp {
-        (expClass(ide), envt, ng) { retrieve(ide, envt, ng) }
+        (ExpClass(ide), envt, ng) { retrieve(ide, envt, ng) }
         (condClass(test, cons, alt), envt, ng) {
             unifyType(test, boolType) and
             unifyType(analyzeExp(cons, envt, ng), analyzeExp(alt, envt, ng))
@@ -190,7 +190,7 @@ let
         }
     }
 
-    fn analyzeRecDeclBind {
+    unsafe fn analyzeRecDeclBind {
         (defClass(binder, _), envt, ng) {
             fn (fresh) {
                 #(tcEnv(binder, fresh, envt), fresh @ ng)
@@ -216,3 +216,6 @@ let
             analyzeRec(rec, envt, ng)
         }
     }
+
+in
+    1;
