@@ -221,7 +221,7 @@ static PrattParser *makePrattParser(void)
     addRecord(table, TOK_STRING(), makeString, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_TYPEDEF(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_TYPEOF(), typeofExp, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_TYPEOF(), typeofExp, 11, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_BACK(), back, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_ASSERT(), passert, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_UNSAFE(), unsafe, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
@@ -2875,13 +2875,13 @@ static AstExpression *print(PrattRecord *record __attribute__((unused)),
 /**
  * @brief parselet triggered by a prefix `typeof` token.
  */
-static AstExpression *typeofExp(PrattRecord *record __attribute__((unused)),
+static AstExpression *typeofExp(PrattRecord *record,
                                 PrattParser *parser,
                                 AstExpression *lhs __attribute__((unused)),
                                 PrattToken *tok __attribute__((unused)))
 {
     ENTER(typeofExp);
-    AstExpression *exp = expression(parser);
+    AstExpression *exp = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(exp);
     AstTypeof *typeofNode = newAstTypeof(CPI(exp), exp);
     PROTECT(typeofNode);

@@ -253,9 +253,11 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             // Analyze the inner expression to get its type
             TcType *type = analyzeExp(exp->val.typeOf->exp, env, ng);
             int save = PROTECT(type);
-            // TODO: Convert type to string representation
-            // For now, use a placeholder string
-            LamExp *stringExp = stringToLamArgs(CPI(exp), "<typeof>");
+            // Convert the type to a string representation
+            char *typeString = tcTypeToString(prune(type));
+            // Convert the C string to a lambda list of chars
+            LamExp *stringExp = stringToLamArgs(CPI(exp), typeString);
+            free(typeString);  // Free the temporary C string
             PROTECT(stringExp);
             // Replace just the type discriminator and union value, preserving header
             exp->type = stringExp->type;

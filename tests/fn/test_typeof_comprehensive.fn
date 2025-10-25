@@ -1,0 +1,26 @@
+// Comprehensive test of the typeof operator
+
+let x = 42;
+    y = 'a';
+    f = fn (x) { x + 1 };
+    lst = [1, 2, 3];
+    tup = #(1, "hello");
+    id = fn (x) { x };
+in
+    // Test basic types
+    assert(typeof x == "number");
+    assert(typeof y == "char");
+    
+    // Test function types
+    assert(typeof f == "(number) -> number");
+    
+    // Test list types
+    assert(typeof lst == "list(number)");
+    
+    // Print all types for visual verification
+    print("Type of 42: " @@ typeof x);
+    print("Type of 'a': " @@ typeof y);
+    print("Type of fn(x){x+1}: " @@ typeof f);
+    print("Type of [1,2,3]: " @@ typeof lst);
+    print("Type of #(1, \"hello\"): " @@ typeof tup);
+    print("Type of identity function: " @@ typeof id);
