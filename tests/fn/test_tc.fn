@@ -1,0 +1,173 @@
+// Test cases for type checker, especially mutual recursion and forward references
+
+{
+// Test 1: Simple mutual recursion
+let isEven = fn (n) {
+        if (n == 0) {
+            true
+        } else {
+            isOdd(n - 1)
+        }
+    };
+    isOdd = fn (n) {
+        if (n == 0) {
+            false
+        } else {
+            isEven(n - 1)
+        }
+    };
+in
+    // These should all have correct types
+    assert(typeof isEven == "(number) -> bool");
+    assert(typeof isOdd == "(number) -> bool");
+    print("Test 1 passed: Simple mutual recursion");
+};
+{
+// Test 2: Mutual recursion with type propagation
+let foo = fn (x) {
+        if (x == 0) {
+            42
+        } else {
+            bar(x - 1) + 1
+        }
+    };
+    bar = fn (y) {
+        if (y == 0) {
+            17
+        } else {
+            foo(y - 1) * 2
+        }
+    };
+in
+    assert(typeof foo == "(number) -> number");
+    assert(typeof bar == "(number) -> number");
+    print("Test 2 passed: Mutual recursion with arithmetic");
+};
+{
+// Test 3: Three-way mutual recursion
+let a = fn (n) {
+        if (n == 0) {
+            0
+        } else {
+            b(n - 1) + 1
+        }
+    };
+    b = fn (n) {
+        if (n == 0) {
+            1
+        } else {
+            c(n - 1) + 2
+        }
+    };
+    c = fn (n) {
+        if (n == 0) {
+            2
+        } else {
+            a(n - 1) + 3
+        }
+    };
+in
+    assert(typeof a == "(number) -> number");
+    assert(typeof b == "(number) -> number");
+    assert(typeof c == "(number) -> number");
+    print("Test 3 passed: Three-way mutual recursion");
+};
+{
+// Test 4: Mutual recursion with lists
+let mapEven = fn (lst) {
+        switch (lst) {
+            (h @ t) { if (h % 2 == 0) { h @ mapOdd(t) } else { mapOdd(t) } }
+            ([]) { [] }
+        }
+    };
+    mapOdd = fn (lst) {
+        switch (lst) {
+            (h @ t) { if (h % 2 != 0) { h @ mapEven(t) } else { mapEven(t) } }
+            ([]) { [] }
+        }
+    };
+in
+    assert(typeof mapEven == "(list(number)) -> list(number)");
+    assert(typeof mapOdd == "(list(number)) -> list(number)");
+    print("Test 4 passed: Mutual recursion with lists");
+};
+{
+// Test 5: Zero-argument functions (thunks) in forward references
+let makeAdder = fn (x) {
+        fn (y) { x + useMultiplier(y) }
+    };
+    useMultiplier = fn (n) {
+        multiplier * n  // No () needed - multiplier is a thunk
+    };
+    multiplier = fn () { 10 };
+in
+    print("makeAdder type: " @@ typeof makeAdder);
+    print("useMultiplier type: " @@ typeof useMultiplier);
+    print("multiplier type: " @@ typeof multiplier);
+    assert(typeof makeAdder == "(number) -> (number) -> number");
+    assert(typeof multiplier == "number");  // Thunk has type of its return value
+    assert(typeof useMultiplier == "(number) -> number");
+    print("Test 5 passed: Higher-order functions with thunks");
+};
+{
+// Test 6: Polymorphic mutual recursion
+let polyA = fn (x, pred) {
+        if (pred(x)) {
+            x
+        } else {
+            polyB(x, pred)
+        }
+    };
+    polyB = fn (y, check) {
+        if (check(y)) {
+            y
+        } else {
+            polyA(y, check)
+        }
+    };
+in
+    // Both should have the same polymorphic type
+    print("polyA type: " @@ typeof polyA);
+    print("polyB type: " @@ typeof polyB);
+    // Check they work with numbers
+    assert(polyA(5, fn(n){n > 3}) == 5);
+    print("Test 6 passed: Polymorphic mutual recursion");
+};
+{
+// Test 7: Self-reference with complex type
+let factorial = fn (n) {
+        if (n == 0) {
+            1
+        } else {
+            n * factorial(n - 1)
+        }
+    };
+in
+    assert(typeof factorial == "(number) -> number");
+    assert(factorial(5) == 120);
+    print("Test 7 passed: Self-recursive function");
+};
+{
+// Test 8: Zero-argument functions as thunks
+let multiplier = fn () { 10 };
+    getDefault = fn () { 0 };
+in
+    print("multiplier type: " @@ typeof multiplier);
+    print("getDefault type: " @@ typeof getDefault);
+    // Zero-argument functions are typed as their return type (thunks)
+    assert(typeof multiplier == "number");
+    assert(typeof getDefault == "number");
+    assert(multiplier() == 10);
+    assert(getDefault() == 0);
+    print("Test 8 passed: Zero-argument functions work as thunks");
+};
+print("");
+print("Type checker test summary:");
+print("- Tests 1-4: PASSED (mutual recursion works)");
+print("- Test 5: PASSED (zero-arg functions work as thunks)");
+print("- Test 6: PASSED (polymorphic mutual recursion works)");  
+print("- Test 7: PASSED (self-recursion works)");
+print("- Test 8: PASSED (zero-arg functions as thunks)");
+print("");
+print("All type checker tests PASSED!");
+

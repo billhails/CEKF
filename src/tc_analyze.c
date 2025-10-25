@@ -847,7 +847,6 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
         processLetRecBinding(bindings, env, ng);
     }
-    /*
     // HACK! second pass through fixes up forward references
     if (!hadErrors()) {
         for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
@@ -866,7 +865,6 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
             }
         }
     }
-        */
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
     // LEAVE(analyzeLetRec);
