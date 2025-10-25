@@ -825,6 +825,47 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
     UNPROTECT(save);
 }
 
+// Helper to capture a snapshot of all binding types as a single string
+// Used to detect convergence in iterative type checking
+static char *snapshotBindingTypes(LamLetRecBindings *bindings, TcEnv *env) {
+    int capacity = 256;
+    int size = 0;
+    char *snapshot = malloc(capacity);
+    
+    for (LamLetRecBindings *b = bindings; b != NULL; b = b->next) {
+        if (isLambdaBinding(b)) {
+            TcType *type = NULL;
+            if (getFromTcEnv(env, b->var, &type)) {
+                TcType *pruned = prune(type);
+                char *typeStr = tcTypeToString(pruned);
+                int nameLen = strlen(b->var->name);
+                int typeLen = strlen(typeStr);
+                int needed = size + nameLen + typeLen + 3; // "::" + ";"
+                
+                if (needed >= capacity) {
+                    capacity = needed * 2;
+                    char *newSnapshot = malloc(capacity);
+                    memcpy(newSnapshot, snapshot, size);
+                    free(snapshot);
+                    snapshot = newSnapshot;
+                }
+                
+                memcpy(snapshot + size, b->var->name, nameLen);
+                size += nameLen;
+                snapshot[size++] = ':';
+                snapshot[size++] = ':';
+                memcpy(snapshot + size, typeStr, typeLen);
+                size += typeLen;
+                snapshot[size++] = ';';
+                
+                free(typeStr);  // tcTypeToString uses malloc, so we use free
+            }
+        }
+    }
+    snapshot[size] = '\0';
+    return snapshot;
+}
+
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeLetRec);
     env = newTcEnv(env);
@@ -847,24 +888,45 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
         processLetRecBinding(bindings, env, ng);
     }
-    // HACK! second pass through fixes up forward references
-    if (!hadErrors()) {
+    // Iterate additional passes to allow type constraints to propagate through
+    // forward references. Stop early when types converge (no changes between passes).
+    // In practice, most code needs 2-3 passes, complex mutual recursion might need more.
+    const int MAX_PASSES = 10;
+    int passCount __attribute__((unused)) = 1;
+    char *prevSnapshot = NULL;
+    
+    for (int pass = 2; pass <= MAX_PASSES && !hadErrors(); pass++) {
+        passCount = pass;
+        
         for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
              bindings = bindings->next) {
             if (isLambdaBinding(bindings)) {
                 processLetRecBinding(bindings, env, ng);
             }
         }
-    }
-    // HACK! third pass through fixes up even more forward references
-    if (!hadErrors()) {
-        for (LamLetRecBindings *bindings = letRec->bindings; bindings != NULL;
-             bindings = bindings->next) {
-            if (isLambdaBinding(bindings)) {
-                processLetRecBinding(bindings, env, ng);
-            }
+        
+        // Check if types have converged
+        char *currentSnapshot = snapshotBindingTypes(letRec->bindings, env);
+        if (prevSnapshot != NULL && strcmp(prevSnapshot, currentSnapshot) == 0) {
+            // No changes this pass - we've converged!
+            DEBUGN("analyzeLetRec converged after %d passes\n", passCount);
+            free(currentSnapshot);
+            free(prevSnapshot);
+            prevSnapshot = NULL;
+            break;
         }
+        
+        if (prevSnapshot != NULL) {
+            free(prevSnapshot);
+        }
+        prevSnapshot = currentSnapshot;
     }
+    
+    if (prevSnapshot != NULL) {
+        DEBUGN("analyzeLetRec completed after %d passes\n", passCount);
+        free(prevSnapshot);
+    }
+    
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
     // LEAVE(analyzeLetRec);
