@@ -16,7 +16,7 @@ Subject to change, but this is collated from the built-in operators in
 | 8 | |
 | 9 | infix `@@` |
 | 10 | infix `+`, `-`, `@` |
-| 11 | prefix `#`, infix `*`, `/` |
+| 11 | prefix `#`, `typeof`; infix `*`, `/` |
 | 12 | infix `**` |
 | 13 | prefix `here`, `of` |
 | 14 | |
