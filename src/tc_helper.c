@@ -206,6 +206,10 @@ static void appendToBuffer(char **buffer, int *size, int *capacity, const char *
     while (*size + len >= *capacity) {
         *capacity *= 2;
         *buffer = realloc(*buffer, *capacity);
+        if (buffer == NULL) {
+            eprintf("Out of memory in appendToBuffer\n");
+            exit(1);
+        }
     }
     strcpy(*buffer + *size, str);
     *size += len;
