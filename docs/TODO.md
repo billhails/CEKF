@@ -8,6 +8,8 @@ More of a wish-list than a hard and fast plan.
 * Unpacking function return values (tuples only).
 * More numbers:
    * NaN.
+   * Matrices.
+   * Quaternions.
 * Improve arithmetic.
    * General overhaul.
    * move to [libgmp](https://gmplib.org/)?
