@@ -1,0 +1,45 @@
+// Test to observe how many passes are needed for type convergence
+
+print("Testing convergence in various scenarios:");
+print("");
+
+{
+// Simple case - should converge quickly
+let f = fn(x) { x + 1 };
+    g = fn(y) { f(y) * 2 };
+in
+    print("Simple forward ref: " @@ typeof f @@ ", " @@ typeof g);
+};
+
+{
+// Mutual recursion - more passes needed
+let isEven = fn(n) { if (n == 0) { true } else { isOdd(n - 1) } };
+    isOdd = fn(n) { if (n == 0) { false } else { isEven(n - 1) } };
+in
+    print("Mutual recursion: " @@ typeof isEven @@ ", " @@ typeof isOdd);
+};
+
+{
+// Complex case from test_tc.fn
+let makeAdder = fn (x) {
+        fn (y) { x + useMultiplier(y) }
+    };
+    useMultiplier = fn (n) {
+        multiplier * n
+    };
+    multiplier = fn () { 10 };
+in
+    print("Complex forward refs: " @@ typeof makeAdder);
+};
+
+{
+// Three-way mutual recursion
+let a = fn (n) { if (n == 0) { 0 } else { b(n - 1) + 1 } };
+    b = fn (n) { if (n == 0) { 1 } else { c(n - 1) + 2 } };
+    c = fn (n) { if (n == 0) { 2 } else { a(n - 1) + 3 } };
+in
+    print("Three-way recursion: " @@ typeof a @@ ", " @@ typeof b @@ ", " @@ typeof c);
+};
+
+print("");
+print("All convergence tests completed.");

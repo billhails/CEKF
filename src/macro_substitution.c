@@ -160,12 +160,12 @@ static LamVarList *collectLetRecNames(LamLetRecBindings *bindings) {
  * i.e `a` becomes `a()`
  * 
  * This is the second half of the lazy evaluation of macros.
- * The first part, done elsewhere, is to wrap all the unevaluated
+ * The first part, `thunkMacroArg` in `lambda_conversion.c`, wrap all the unevaluated
  * arguments to macros in thunks.
  * So in the example above, `a` is already a thunk at this point.
  *
  * @param PI The parser information.
- * @param var The variable to substitute.
+ * @param var The variable to consider for substitution.
  * @param symbols The current set of macro arguments.
  * @return The expression with the variable substituted, or just the variable if it is not a macro argument.
  */

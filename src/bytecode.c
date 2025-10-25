@@ -78,12 +78,8 @@ char *charRep(Character c) {
             return "\\0";
         default: {
             static unsigned char buf[8];
-#ifdef CHARACTER_IS_CHAR
-            sprintf(buf, "%c", c);
-#else
             unsigned char *ptr = writeChar(buf, c);
             *ptr = 0;
-#endif
             return (char *) buf;
         }
     }

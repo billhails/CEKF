@@ -16,33 +16,37 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * ParserInfo is a common sub-structure of almost all structures in the interpreter,
+ * immediately following the memory-management Header. It contains the filename and line
+ * number in the source code that resulted in the creation of the structure.
+ * The same information is copied from one stage to the next during translation/compilation
+ * by the CPI macro.
+ *
+ * Note however that it is **not** part of the HashSymbol structure, as the same symbol
+ * may occur in multiple places in the source code.
  */
 
 #  include "common.h"
+#  include "memory.h"
 
 typedef struct ParserInfo {
     int lineno;
     char *filename;
 } ParserInfo;
 
-typedef struct HeaderAndInfo {
-    struct Header header;
-    struct ParserInfo info;
-} HeaderAndInfo;
-
-#  define COPY_PARSER_INFO(from) ((from)->_yy_parser_info)
-#  define CPI(x) COPY_PARSER_INFO(x)
-
-static inline void _reportParserInfo(HeaderAndInfo *I) {
-    eprintf("in %s, line %d\n", I->info.filename, I->info.lineno);
+static inline void _reportParserInfo(ParserInfo I) {
+    eprintf("in %s, line %d\n", I.filename, I.lineno);
 }
 
-static inline int _eqParserInfo(HeaderAndInfo *I, HeaderAndInfo *J) {
-    return I->info.filename == J->info.filename &&
-           I->info.lineno == J->info.lineno;
+static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
+    return I.filename == J.filename &&
+           I.lineno == J.lineno;
 }
 
-#  define REPORT_PARSER_INFO(x) _reportParserInfo((HeaderAndInfo *)(x))
-#  define EQ_PARSER_INFO(x, y) _eqParserInfo((HeaderAndInfo *)(x), (HeaderAndInfo *)(y))
+// generated structs all name the parser info field _yy_parser_info
+#  define CPI(from) ((from)->_yy_parser_info)
+#  define REPORT_PARSER_INFO(x) _reportParserInfo(CPI(x))
+#  define EQ_PARSER_INFO(x, y) _eqParserInfo(CPI(x), CPI(y))
 
 #endif

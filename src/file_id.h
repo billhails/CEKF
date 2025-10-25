@@ -16,11 +16,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * An attempt at an operating-system agnostic file id, at least in the sense
+ * that it can be redefined for different operating systems without having
+ * to change usage throughout the code, though the implementation here is
+ * POSIX-specific.
  */
 
-// attempt at an operating-system agnostic file id, at least in the sense
-// that it can be redefined for different operating systems without having
-// to change usage throughout the code
 
 #include <sys/stat.h>
 

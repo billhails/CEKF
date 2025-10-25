@@ -98,6 +98,9 @@ static Value imag_to_real(Value v);
 // so make sure everything is protected before calling.
 static void ppNumber(Value number)__attribute__((unused));
 
+/**
+ * Pretty print a number for debugging
+ */
 static void ppNumber(Value number) {
     switch (number.type) {
         case VALUE_TYPE_STDINT:
@@ -144,33 +147,81 @@ static void ppNumber(Value number) {
     }
 }
 
+/**
+ * Get the real part of a complex number
+ * 
+ * @param v the complex value
+ * @return the real part
+ */
 static inline Value realPart(Value v) {
     return v.val.vec->entries[REAL];
 }
 
+/**
+ * Get the imaginary part of a complex number
+ * 
+ * @param v the complex value
+ * @return the imaginary part
+ */
 static inline Value imagPart(Value v) {
     return v.val.vec->entries[IMAG];
 }
 
+/**
+ * Extract real and imaginary parts from a complex argument
+ * 
+ * @param a pointer to store real part
+ * @param b pointer to store imaginary part
+ * @param v the complex value to extract from
+ */
 static inline void extractFromComplexArg(Value *a, Value *b, Value v) {
     ASSERT_COMPLEX(v);
     *a = realPart(v);
     *b = imag_to_real(imagPart(v));
 }
 
+/**
+ * Extract real and imaginary parts from two complex arguments
+ * 
+ * @param a pointer to store real part of left
+ * @param b pointer to store imaginary part of left
+ * @param c pointer to store real part of right
+ * @param d pointer to store imaginary part of right
+ * @param left the left complex value
+ * @param right the right complex value
+ */
 static inline void extractFromComplexArgs(Value *a, Value *b, Value *c, Value *d, Value left, Value right) {
     extractFromComplexArg(a, b, left);
     extractFromComplexArg(c, d, right);
 }
 
+/**
+ * Get the denominator part of a rational number
+ * 
+ * @param v the rational value
+ * @return the denominator part
+ */
 static inline Value denominatorPart(Value v) {
     return v.val.vec->entries[DENOMINATOR];
 }
 
+/**
+ * Get the numerator part of a rational number
+ * 
+ * @param v the rational value
+ * @return the numerator part
+ */
 static inline Value numeratorPart(Value v) {
     return v.val.vec->entries[NUMERATOR];
 }
 
+/**
+ * Create a rational value from numerator and denominator
+ * 
+ * @param numerator the numerator value
+ * @param denominator the denominator value
+ * @return the rational value
+ */
 static Value ratValue(Value numerator, Value denominator) {
     Vec *vec = newVec(2);
     // PROTECT(vec);
@@ -180,6 +231,13 @@ static Value ratValue(Value numerator, Value denominator) {
     return res;
 }
 
+/**
+ * Create a complex value from real and imaginary parts
+ * 
+ * @param real the real part
+ * @param imag the imaginary part
+ * @return the complex value
+ */
 static Value comValue(Value real, Value imag) {
     Vec *vec = newVec(2);
     // PROTECT(vec);
@@ -189,6 +247,12 @@ static Value comValue(Value real, Value imag) {
     return res;
 }
 
+/**
+ * Convert an integer value to an irrational value
+ * 
+ * @param integer the integer value
+ * @return the irrational value
+ */
 static Value int_to_irrational(Value integer) {
     ASSERT_INT(integer);
     if (integer.type == VALUE_TYPE_BIGINT) {
@@ -198,6 +262,12 @@ static Value int_to_irrational(Value integer) {
     }
 }
 
+/**
+ * Convert a rational value to an irrational value
+ * 
+ * @param rational the rational value
+ * @return the irrational value
+ */
 static Value rational_to_irrational(Value rational) {
     ASSERT_RATIONAL(rational);
     Value num = numeratorPart(rational);
@@ -207,6 +277,12 @@ static Value rational_to_irrational(Value rational) {
     return value_Irrational(numerator.val.irrational / denominator.val.irrational);
 }
 
+/**
+ * Convert a value to an irrational value
+ *
+ * @param v the value to convert, must be INT, BIGINT, RATIONAL or IRRATIONAL
+ * @return the irrational value
+ */
 static Value to_irrational(Value v) {
     switch (v.type) {
         case VALUE_TYPE_STDINT:
@@ -222,32 +298,68 @@ static Value to_irrational(Value v) {
     return v;
 }
 
+/**
+ * Convert an integer value to a rational value (x/1)
+ *
+ * @param integer the integer value
+ * @return the rational value
+ */
 static Value int_to_rational(Value integer) {
     ASSERT_INT(integer);
     Value one = value_Stdint(1);
     return ratValue(integer, one);
 }
 
+/**
+ * Convert a bigint value to an irrational value
+ * 
+ * @param v the bigint value
+ * @return the irrational value
+ */
 static Value bigint_to_irrational(Value v) {
     ASSERT_BIGINT(v);
     return value_Irrational(bigIntToDouble(v.val.bigint));
 }
 
+/**
+ * Convert a standard integer value to a bigint value
+ * 
+ * @param v the standard integer value
+ * @return the bigint value
+ */
 static Value int_to_bigint(Value v) {
     ASSERT_STDINT(v);
     return value_Bigint(bigIntFromInt(v.val.stdint));
 }
 
+/**
+ * Convert a real value to a complex value (x + 0i)
+ * 
+ * @param real the real value
+ * @return the complex value
+ */
 static Value real_to_complex(Value real) {
     Value imag = value_Stdint_imag(0);
     return comValue(real, imag);
 }
 
+/**
+ * Convert an imaginary value to a complex value (0 + xi)
+ * 
+ * @param imag the imaginary value
+ * @return the complex value
+ */
 static Value imag_to_complex(Value imag) {
     Value real = value_Stdint(0);
     return comValue(real, imag);
 }
 
+/**
+ * Convert a value to a complex value
+ * 
+ * @param v the value to convert
+ * @return the complex value
+ */
 static Value to_complex(Value v) {
     switch (v.type) {
         case VALUE_TYPE_STDINT:
@@ -267,7 +379,13 @@ static Value to_complex(Value v) {
     }
 }
 
-// cast imaginary to real for basic arithmetic
+/**
+ * Destructively cast imaginary to real for basic arithmetic.
+ * It is the responsiblity of the caller to ensure that the imaginary part is zero.
+ * 
+ * @param v the imaginary value
+ * @return the real value
+ */
 static Value imag_to_real(Value v) {
     switch (v.type) {
         case VALUE_TYPE_STDINT_IMAG:
@@ -288,6 +406,13 @@ static Value imag_to_real(Value v) {
     return v;
 }
 
+/**
+ * Destructively cast real to imaginary for basic arithmetic.
+ * It is the responsiblity of the caller to ensure that the imaginary part is already zero.
+ * 
+ * @param v the real value
+ * @return the imaginary value
+ */
 static Value real_to_imag(Value v) {
     switch (v.type) {
         case VALUE_TYPE_STDINT:
@@ -308,6 +433,14 @@ static Value real_to_imag(Value v) {
     return v;
 }
 
+/**
+ * Convert a complex value to polar coordinates
+ *
+ * @param com the complex value
+ * @param r the radius value
+ * @param theta the angle value
+ * @return the protectionStack pointer for the saved values
+ */
 static Integer rec_to_polar(Value com, Value *r, Value *theta) {
     ASSERT_COMPLEX(com);
     *r = comMag(com);
@@ -317,6 +450,12 @@ static Integer rec_to_polar(Value com, Value *r, Value *theta) {
     return save;
 }
 
+/**
+ * Determine if an integer value is negative
+ * 
+ * @param v the integer value
+ * @return true if negative, false otherwise
+ */
 static bool intIsNeg(Value v) {
     ASSERT_INT(v);
     if (IS_BIGINT(v)) {
@@ -326,16 +465,34 @@ static bool intIsNeg(Value v) {
     }
 }
 
+/**
+ * Determine if a rational value is negative
+ * 
+ * @param v the rational value
+ * @return true if negative, false otherwise
+ */
 static bool ratIsNeg(Value v) {
     ASSERT_RATIONAL(v);
     return intIsNeg(numeratorPart(v));
 }
 
+/**
+ * Determine if an irrational value is negative
+ * 
+ * @param v the irrational value
+ * @return true if negative, false otherwise
+ */
 static bool irratIsNeg(Value v) {
     ASSERT_IRRATIONAL(v);
     return v.val.irrational < 0.0;
 }
 
+/**
+ * Determine if any non-complex value is negative
+ * 
+ * @param v the value
+ * @return true if negative, false otherwise
+ */
 static bool isNeg(Value v) {
     switch (v.type) {
         case VALUE_TYPE_STDINT:
@@ -350,6 +507,12 @@ static bool isNeg(Value v) {
     }
 }
 
+/**
+ * Determine if an integer value is even
+ * 
+ * @param v the integer value
+ * @return true if even, false otherwise
+ */
 static bool intIsEven(Value v) {
     ASSERT_INT(v);
     if (IS_BIGINT(v)) {
@@ -359,9 +522,13 @@ static bool intIsEven(Value v) {
     }
 }
 
-// RULE: rationals contain only plain integers, big or little.
-// rationals can NOT contain imaginary numbers even imaginary integers.
-// instead rationals can BE imaginary.
+/**
+ * Coerce two number values to compatible types for arithmetic
+ * RULES -
+ * Rationals contain only plain integers, big or little.
+ * Rationals can NOT contain imaginary numbers even imaginary integers.
+ * Instead imaginary numbers can contain rationals.
+ */
 
 static Integer coerce(Value *left, Value *right, int *save) {
     *save = PROTECT(NULL);
@@ -547,50 +714,120 @@ static Integer coerce(Value *left, Value *right, int *save) {
     }
 }
 
+/**
+ * Compare two bigints
+ * 
+ * @param left the left bigint value
+ * @param right the right bigint value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_bb(Value left, Value right) {
     return cmpBigInt(left.val.bigint, right.val.bigint);
 }
 
+/**
+ * Compare a big int and a standard integer
+ * 
+ * @param left the bigint value
+ * @param right the standard integer value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_bi(Value left, Value right) {
     return cmpBigIntInt(left.val.bigint, right.val.stdint);
 }
 
+/**
+ * Compare a bigint and an irrational
+ * 
+ * @param left the bigint value
+ * @param right the irrational value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_bf(Value left, Value right) {
     return cmpBigIntDouble(left.val.bigint, right.val.irrational);
 }
 
+/**
+ * Compare a standard integer and a bigint
+ * 
+ * @param left the standard integer value
+ * @param right the bigint value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_ib(Value left, Value right) {
     return cmpIntBigInt(left.val.stdint, right.val.bigint);
 }
 
+/**
+ * Compare two standard integers
+ * 
+ * @param left the left standard integer value
+ * @param right the right standard integer value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_ii(Value left, Value right) {
     return left.val.stdint < right.val.stdint ? CMP_LT :
         left.val.stdint == right.val.stdint ? CMP_EQ :
         CMP_GT;
 }
 
+/**
+ * Compare a standard integer and an irrational
+ * 
+ * @param left the standard integer value
+ * @param right the irrational value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_if(Value left, Value right) {
     return left.val.stdint < right.val.irrational ? CMP_LT :
         left.val.stdint == right.val.irrational ? CMP_EQ :
         CMP_GT;
 }
 
+/**
+ * Compare an irrational and a bigint
+ * 
+ * @param left the irrational value
+ * @param right the bigint value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_fb(Value left, Value right) {
-    return cmpDoubleBigInt(left.val.stdint, right.val.bigint);
+    return cmpDoubleBigInt(left.val.irrational, right.val.bigint);
 }
 
+/**
+ * Compare an irrational and a standard integer
+ * 
+ * @param left the irrational value
+ * @param right the standard integer value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_fi(Value left, Value right) {
     return left.val.irrational < right.val.stdint ? CMP_LT :
         left.val.irrational == right.val.stdint ? CMP_EQ :
         CMP_GT;
 }
 
+/**
+ * Compare two irrationals
+ * 
+ * @param left the left irrational value
+ * @param right the right irrational value
+ * @return comparison result
+ */
 static inline Cmp int_cmp_ff(Value left, Value right) {
     return left.val.irrational < right.val.irrational ? CMP_LT :
         left.val.irrational == right.val.irrational ? CMP_EQ :
         CMP_GT;
 }
 
+/**
+ * Compare two number values
+ * 
+ * @param left the left value
+ * @param right the right value
+ * @return comparison result
+ */
 static Cmp numCmp(Value left, Value right) {
     ENTER(numCmp);
     Cmp res;
@@ -648,6 +885,13 @@ static Cmp numCmp(Value left, Value right) {
     return res;
 }
 
+/**
+ * Perform safe addition of two integers, promoting to bigint on overflow
+ * 
+ * @param a the left integer
+ * @param b the right integer
+ * @return the result value
+ */
 static Value safe_add(Integer a, Integer b) {
     Integer c;
     if (__builtin_add_overflow(a, b, &c)) {
@@ -661,6 +905,13 @@ static Value safe_add(Integer a, Integer b) {
     }
 }
 
+/**
+ * Add two integer values, standard or bigint, using safe_add to handle overflow
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the result value
+ */
 static Value intAdd(Value left, Value right) {
     ENTER(intAdd);
     IFDEBUG(ppNumber(left));
@@ -696,6 +947,13 @@ static Value intAdd(Value left, Value right) {
     return res;
 }
 
+/**
+ * Perform safe multiplication of two integers, promoting to bigint on overflow
+ * 
+ * @param a the left integer
+ * @param b the right integer
+ * @return the result value
+ */
 static Value safe_mul(Integer a, Integer b) {
     Integer c;
     if (__builtin_mul_overflow(a, b, &c)) {
@@ -709,6 +967,13 @@ static Value safe_mul(Integer a, Integer b) {
     }
 }
 
+/**
+ * Multiply two integer values, standard or bigint, using safe_mul to handle overflow
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the result value
+ */
 static Value intMul(Value left, Value right) {
     ENTER(intMul);
     IFDEBUG(ppNumber(left));
@@ -744,6 +1009,13 @@ static Value intMul(Value left, Value right) {
     return res;
 }
 
+/**
+ * Perform safe subtraction of two integers, promoting to bigint on overflow
+ * 
+ * @param a the left integer
+ * @param b the right integer
+ * @return the result value
+ */
 static Value safe_sub(Integer a, Integer b) {
     Integer c;
     if (__builtin_sub_overflow(a, b, &c)) {
@@ -760,6 +1032,13 @@ static Value safe_sub(Integer a, Integer b) {
     }
 }
 
+/**
+ * Subtract two integer values, standard or bigint, using safe_sub to handle overflow
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the result value
+ */
 static Value intSub(Value left, Value right) {
     ENTER(intSub);
     IFDEBUG(ppNumber(left));
@@ -795,6 +1074,13 @@ static Value intSub(Value left, Value right) {
     return res;
 }
 
+/**
+ * Divide two integer values, standard or bigint
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the result value
+ */
 static Value basicIntDiv(Value left, Value right) {
     ENTER(basicIntDiv);
     IFDEBUG(ppNumber(left));
@@ -843,6 +1129,13 @@ static Value basicIntDiv(Value left, Value right) {
     return res;
 }
 
+/**
+ * Perform safe exponentiation of two integers, promoting to bigint on overflow
+ * 
+ * @param a the base integer
+ * @param b the exponent integer
+ * @return the result value
+ */
 static Value safe_powf(Integer a, Integer b) {
     float f = powf((float) a, (float) b);
     if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
@@ -857,27 +1150,39 @@ static Value safe_powf(Integer a, Integer b) {
     }
 }
 
-static Value irratSimplify(Double result) {
+/**
+ * Attempts to simplify a double into an integer if possible
+ * 
+ * @param d the double result
+ * @return the simplified value
+ */
+static Value irratSimplify(Double d) {
     Value res;
     int save = PROTECT(NULL);
-    if(fmod(result, 1.0) == 0.0) {
-        if (result > (Double)INT_MAX || result < (Double)INT_MIN) {
+    if(fmod(d, 1.0) == 0.0) {
+        if (d > (Double)INT_MAX || d < (Double)INT_MIN) {
             // FIXME need doubleToBigInt
-            res = value_Irrational(result);
+            res = value_Irrational(d);
             protectValue(res);
         } else {
-            res = value_Stdint((Integer) result);
+            res = value_Stdint((Integer) d);
             protectValue(res);
         }
     } else {
-        res = value_Irrational(result);
+        res = value_Irrational(d);
         protectValue(res);
     }
     UNPROTECT(save);
     return res;
 }
 
-// raise a real number to a rational power
+/**
+ * Raise a real number to a rational power.
+ * 
+ * @param base the base value
+ * @param exponent the exponent value
+ * @return the result value
+ */
 static Value realPowRat(Value base, Value exponent) {
     ENTER(realPowRat);
     IFDEBUG(ppNumber(base));
@@ -939,6 +1244,13 @@ static Value realPowRat(Value base, Value exponent) {
     return res;
 }
 
+/**
+ * Raise an integer value to an integer or rational power.
+ * 
+ * @param left the base value
+ * @param right the exponent value
+ * @return the result value
+ */
 static Value intPow(Value left, Value right) {
     ENTER(intPow);
     IFDEBUG(ppNumber(left));
@@ -1003,6 +1315,13 @@ static Value intPow(Value left, Value right) {
     return res;
 }
 
+/**
+ * Modulus of two integer values, standard or bigint
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the result value
+ */
 static Value intMod(Value left, Value right) {
     ENTER(intMod);
     IFDEBUG(ppNumber(left));
@@ -1053,6 +1372,13 @@ static Value intMod(Value left, Value right) {
     return res;
 }
 
+/**
+ * Compute the greatest common divisor of two standard integers
+ * 
+ * @param a the left integer
+ * @param b the right integer
+ * @return the gcd
+ */
 static Integer gcd (Integer a, Integer b) {
 	Integer i = 0, min_num = a, gcd = 1;
 	if (a > b) {
@@ -1066,6 +1392,13 @@ static Integer gcd (Integer a, Integer b) {
 	return gcd;
 }
 
+/**
+ * Compute the greatest common divisor of two integer values, standard or bigint
+ * 
+ * @param left the left integer value
+ * @param right the right integer value
+ * @return the gcd value
+ */
 static Value intGcd(Value left, Value right) {
     ENTER(intGcd);
     IFDEBUG(ppNumber(left));
@@ -1101,6 +1434,11 @@ static Value intGcd(Value left, Value right) {
     return res;
 }
 
+/**
+ * Negate an integer value in place.
+ * 
+ * @param v the integer value to negate
+ */
 static void intNegInPlace(Value *v) {
     if (IS_BIGINT(*v)) {
         negateBigInt(v->val.bigint);
@@ -1109,6 +1447,12 @@ static void intNegInPlace(Value *v) {
     }
 }
 
+/**
+ * Negate an integer value, returning a new value.
+ * 
+ * @param v the integer value to negate
+ * @return the negated value
+ */
 static Value intNeg(Value v) {
     int save = PROTECT(NULL);
     if (IS_BIGINT(v)) {
@@ -1123,6 +1467,12 @@ static Value intNeg(Value v) {
     return v;
 }
 
+/**
+ * Negate a number value, returning a new value.
+ * 
+ * @param v the number value to negate
+ * @return the negated value
+ */
 static Value numNeg(Value v) {
     if (IS_IRRATIONAL(v)) {
         v.val.irrational = -v.val.irrational;
@@ -1136,6 +1486,13 @@ static Value numNeg(Value v) {
 // bigint operations
 ////////////////////////
 
+/**
+ * Compare two bigint values
+ * 
+ * @param left the left bigint value
+ * @param right the right bigint value
+ * @return comparison result
+ */
 static inline Cmp bigCmp(Value left, Value right) {
     ASSERT_BIGINT(left);
     ASSERT_BIGINT(right);
@@ -1146,6 +1503,13 @@ static inline Cmp bigCmp(Value left, Value right) {
 // stdint operations
 ////////////////////////
 
+/**
+ * Compare two standard integer values
+ * 
+ * @param left the left standard integer value
+ * @param right the right standard integer value
+ * @return comparison result
+ */
 static inline Cmp stdCmp(Value left, Value right) {
     ASSERT_STDINT(left);
     ASSERT_STDINT(right);
@@ -1158,6 +1522,13 @@ static inline Cmp stdCmp(Value left, Value right) {
 // rational operations
 ////////////////////////
 
+/**
+ * Compare two rational values
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return comparison result
+ */
 static Cmp ratCmp(Value left, Value right) {
     ENTER(ratCmp);
     IFDEBUG(ppNumber(left));
@@ -1174,6 +1545,16 @@ static Cmp ratCmp(Value left, Value right) {
     return res;
 }
 
+/**
+ * Apply a binary operation to two values, promoting to rational as needed.
+ * 
+ * @param left the left value
+ * @param right the right value
+ * @param op the parameterized binary operation to apply
+ * @param intOp the integer binary operation to apply if both values are integers
+ * @param simplify whether to attempt to simplify to integer if possible
+ * @return the result value
+ */
 static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp intOp, bool simplify) {
     ENTER(ratOp);
     IFDEBUG(ppNumber(left));
@@ -1188,6 +1569,7 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
             protectValue(res);
         } else {
             // only left rational
+            // convert right to rational and try again
             right = int_to_rational(right);
             protectValue(right);
             res = ratOp(left, right, op, intOp, false);
@@ -1195,12 +1577,14 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         // only right rational
+        // convert left to rational and try again
         left = int_to_rational(left);
         protectValue(left);
         res = ratOp(left, right, op, intOp, false);
         protectValue(res);
     } else {
         // neither rational
+        // either simplify to int or convert both to rational and try again
         if (simplify) {
             res = intOp(left, right);
             protectValue(res);
@@ -1219,6 +1603,15 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
     return res;
 }
 
+/**
+ * Simplify a rational value by dividing numerator and denominator
+ * by their greatest common divisor.
+ * Ensures the denominator is positive.
+ * 
+ * @param numerator the numerator value
+ * @param denominator the denominator value
+ * @return the simplified rational value
+ */
 static Value ratSimplify(Value numerator, Value denominator) {
     ENTER(ratSimplify);
     IFDEBUG(ppNumber(numerator));
@@ -1248,9 +1641,18 @@ static Value ratSimplify(Value numerator, Value denominator) {
     return res;
 }
 
-// a/b o c/d = (ad o bc) / bd
-static Value rat_ad_bc_bd(IntegerBinOp base_op, Value left, Value right) {
-    ENTER(rat_ad_bc_bd);
+/**
+ * Applies an addition, subtraction, or modulus operation to two rational values,
+ * by cross-multiplying the numerators and denominators:
+ * \f( \frac{a}{b} \text{ op } \frac{c}{d} = \frac{(ad) \text{ op } (bc)}{bd} \f)
+ * 
+ * @param base_op the integer operation to apply to the cross-multiplied numerators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
+static Value ratAddSubOrMod(IntegerBinOp base_op, Value left, Value right) {
+    ENTER(ratAddSubOrMod);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     ASSERT_RATIONAL(left);
@@ -1269,13 +1671,22 @@ static Value rat_ad_bc_bd(IntegerBinOp base_op, Value left, Value right) {
     protectValue(denominator);
     Value res = ratSimplify(numerator, denominator);
     protectValue(res);
-    LEAVE(rat_ad_bc_bd);
+    LEAVE(ratAddSubOrMod);
     IFDEBUG(ppNumber(res));
     UNPROTECT(save);
     return res;
 }
 
-// a/b o c/d = ac o bd
+/**
+ * Applies a multiplication operation on two rational values,
+ * by multiplying the numerators and denominators:
+ * \f( \frac{a}{b} \times \frac{c}{d} = \frac{ac}{bd} \f)
+ * 
+ * @param base_op the integer operation to apply to the numerators and denominators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
     ENTER(rat_ac_bd);
     IFDEBUG(ppNumber(left));
@@ -1296,6 +1707,17 @@ static Value rat_ac_bd(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
+/**
+ * Applies a division operation on two rational values,
+ * by flipping the numerator and denominator of the right operand and
+ * multiplying:
+ * \f( \frac{a}{b} \div \frac{c}{d} = \frac{a}{b} \times \frac{d}{c} = \frac{ ad }{ bc} \f)
+ * 
+ * @param base_op the integer operation to apply to the cross-multiplied numerators
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratDiv3(IntegerBinOp base_op, Value left, Value right) {
     ENTER(ratDiv3);
     IFDEBUG(ppNumber(left));
@@ -1312,6 +1734,13 @@ static Value ratDiv3(IntegerBinOp base_op, Value left, Value right) {
     return res;
 }
 
+/**
+ * Divide two rational values
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratDiv(Value left, Value right) {
     ENTER(ratDiv);
     IFDEBUG(ppNumber(left));
@@ -1323,6 +1752,13 @@ static Value ratDiv(Value left, Value right) {
     return res;
 }
 
+/**
+ * Raise a rational value to an integer or rational power.
+ * 
+ * @param left the base rational value
+ * @param right the exponent integer or rational value
+ * @return the result value
+ */
 static Value ratPow(Value left, Value right) {
     ENTER(ratPow);
     IFDEBUG(ppNumber(left));
@@ -1343,13 +1779,21 @@ static Value ratPow(Value left, Value right) {
     return res;
 }
 
+/**
+ * Modulus of two rational values:
+ * \f( \frac{a}{b} \mod \frac{c}{d} = \frac{(ad) \mod (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratMod(Value left, Value right) {
     ENTER(ratMod);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
     ASSERT_RATIONAL(left);
     ASSERT_RATIONAL(right);
-    Value res = ratOp(left, right, rat_ad_bc_bd, intMod, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intMod, true);
     int save = protectValue(res);
     LEAVE(ratMod);
     IFDEBUG(ppNumber(res));
@@ -1357,6 +1801,14 @@ static Value ratMod(Value left, Value right) {
     return res;
 }
 
+/**
+ * Multiplication of two rational values:
+ * \f( \frac{a}{b} \times \frac{c}{d} = \frac{ac}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratMul(Value left, Value right) {
     ENTER(ratMul);
     IFDEBUG(ppNumber(left));
@@ -1369,6 +1821,13 @@ static Value ratMul(Value left, Value right) {
     return res;
 }
 
+/**
+ * Division of two rational or integer values
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result rational value
+ */
 static Value intDiv(Value left, Value right) {
     ENTER(intDiv);
     IFDEBUG(ppNumber(left));
@@ -1381,11 +1840,19 @@ static Value intDiv(Value left, Value right) {
     return res;
 }
 
+/**
+ * Subtraction of two rational values:
+ * \f( \frac{a}{b} - \frac{c}{d} = \frac{(ad) - (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratSub(Value left, Value right) {
     ENTER(ratSub);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ad_bc_bd, intSub, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intSub, true);
     int save = protectValue(res);
     LEAVE(ratSub);
     IFDEBUG(ppNumber(res));
@@ -1393,11 +1860,19 @@ static Value ratSub(Value left, Value right) {
     return res;
 }
 
+/**
+ * Addition of two rational values:
+ * \f( \frac{a}{b} + \frac{c}{d} = \frac{(ad) + (bc)}{bd} \f)
+ * 
+ * @param left the left rational value
+ * @param right the right rational value
+ * @return the result value
+ */
 static Value ratAdd(Value left, Value right) {
     ENTER(ratAdd);
     IFDEBUG(ppNumber(left));
     IFDEBUG(ppNumber(right));
-    Value res = ratOp(left, right, rat_ad_bc_bd, intAdd, true);
+    Value res = ratOp(left, right, ratAddSubOrMod, intAdd, true);
     int save = protectValue(res);
     LEAVE(ratAdd);
     IFDEBUG(ppNumber(res));
@@ -1446,7 +1921,14 @@ static Value irrAdd(Value left, Value right) {
     return value_Irrational(left.val.irrational + right.val.irrational);
 }
 
-// c^(a + bi) = c^a [cos(b ln c) + i sin(b ln c)]
+/**
+ * Raise an irrational number to a complex power.
+ * \f( c^(a + bi) = c^a [\cos(b \ln c) + i \sin(b \ln c)] \f)
+ * 
+ * @param c the base irrational value
+ * @param right the exponent complex value
+ * @return the result value
+ */
 static Value irrPowCom(Value c, Value right) {
     ASSERT_IRRATIONAL(c);
     right = to_complex(right);

@@ -4,6 +4,10 @@ An exploratory sub-project to investigate re-writing F♯ in F♯. For
 this to be practical we would need to target LLVM rather than a bytecode
 interpreter.
 
+Even if it doesn't pan out, this is still useful as it provides concise
+reference implementations of some of the core algorithms which can inform
+the C implementation.
+
 * [ceskf.fn](ceskf.fn) - The core CESKF machine.
 * [infer.fn](infer.fn) - Type inference.
 * [interpreter.fn](interpreter.fn) - A naïve lambda interpreter demo.

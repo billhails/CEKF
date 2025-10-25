@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
+#include <stdlib.h>
 #include "tc_helper.h"
 #include "tc_analyze.h"
 #include "symbol.h"
@@ -196,4 +198,142 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
 
 void ppTcEnv(TcEnv *env) {
     _ppTcEnv(env, 0, false);
+}
+
+// Helper function to append to a dynamically growing buffer
+static void appendToBuffer(char **buffer, int *size, int *capacity, const char *str) {
+    int len = strlen(str);
+    while (*size + len >= *capacity) {
+        *capacity *= 2;
+        *buffer = realloc(*buffer, *capacity);
+        if (buffer == NULL) {
+            eprintf("Out of memory in appendToBuffer\n");
+            exit(1);
+        }
+    }
+    strcpy(*buffer + *size, str);
+    *size += len;
+}
+
+// Forward declarations for string conversion
+static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *capacity);
+static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity);
+static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity);
+static void tcVarToString(TcVar *var, char **buffer, int *size, int *capacity);
+static void tcTupleToString(TcTypeArray *tuple, char **buffer, int *size, int *capacity);
+static void tcTypeSigToString(TcTypeSig *typeSig, char **buffer, int *size, int *capacity);
+static void tcTypeSigArgsToString(TcTypeSigArgs *args, char **buffer, int *size, int *capacity);
+
+static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *capacity) {
+    if (type == NULL) {
+        appendToBuffer(buffer, size, capacity, "<null>");
+        return;
+    }
+    switch (type->type) {
+        case TCTYPE_TYPE_FUNCTION:
+            tcFunctionToString(type->val.function, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_PAIR:
+            tcPairToString(type->val.pair, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_VAR:
+            tcVarToString(type->val.var, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_BIGINTEGER:
+            appendToBuffer(buffer, size, capacity, "number");
+            break;
+        case TCTYPE_TYPE_SMALLINTEGER:
+            appendToBuffer(buffer, size, capacity, "smallint");
+            break;
+        case TCTYPE_TYPE_CHARACTER:
+            appendToBuffer(buffer, size, capacity, "char");
+            break;
+        case TCTYPE_TYPE_UNKNOWN:
+            appendToBuffer(buffer, size, capacity, "unknown:");
+            appendToBuffer(buffer, size, capacity, type->val.unknown->name);
+            break;
+        case TCTYPE_TYPE_TYPESIG:
+            tcTypeSigToString(type->val.typeSig, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_TUPLE:
+            tcTupleToString(type->val.tuple, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_ENV:
+            appendToBuffer(buffer, size, capacity, "<env>");
+            break;
+        case TCTYPE_TYPE_OPAQUE:
+            appendToBuffer(buffer, size, capacity, "opaque:");
+            appendToBuffer(buffer, size, capacity, type->val.opaque->name);
+            break;
+        default:
+            appendToBuffer(buffer, size, capacity, "<unknown type>");
+    }
+}
+
+static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity) {
+    appendToBuffer(buffer, size, capacity, "(");
+    tcTypeToStringHelper(function->arg, buffer, size, capacity);
+    appendToBuffer(buffer, size, capacity, ") -> ");
+    tcTypeToStringHelper(function->result, buffer, size, capacity);
+}
+
+static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity) {
+    appendToBuffer(buffer, size, capacity, "#(");
+    tcTypeToStringHelper(pair->first, buffer, size, capacity);
+    appendToBuffer(buffer, size, capacity, ", ");
+    tcTypeToStringHelper(pair->second, buffer, size, capacity);
+    appendToBuffer(buffer, size, capacity, ")");
+}
+
+static void tcVarToString(TcVar *var, char **buffer, int *size, int *capacity) {
+    if (var->instance != NULL) {
+        // If the var is bound to a concrete type, show that instead
+        tcTypeToStringHelper(var->instance, buffer, size, capacity);
+    } else {
+        // Show as a type variable
+        appendToBuffer(buffer, size, capacity, "#");
+        appendToBuffer(buffer, size, capacity, var->name->name);
+    }
+}
+
+static void tcTupleToString(TcTypeArray *tuple, char **buffer, int *size, int *capacity) {
+    appendToBuffer(buffer, size, capacity, "#(");
+    for (Index i = 0; i < tuple->size; i++) {
+        tcTypeToStringHelper(tuple->entries[i], buffer, size, capacity);
+        if (i + 1 < tuple->size) {
+            appendToBuffer(buffer, size, capacity, ", ");
+        }
+    }
+    appendToBuffer(buffer, size, capacity, ")");
+}
+
+static void tcTypeSigArgsToString(TcTypeSigArgs *args, char **buffer, int *size, int *capacity) {
+    while (args != NULL) {
+        tcTypeToStringHelper(args->type, buffer, size, capacity);
+        if (args->next) {
+            appendToBuffer(buffer, size, capacity, ", ");
+        }
+        args = args->next;
+    }
+}
+
+static void tcTypeSigToString(TcTypeSig *typeSig, char **buffer, int *size, int *capacity) {
+    appendToBuffer(buffer, size, capacity, typeSig->name->name);
+    if (typeSig->args != NULL) {
+        appendToBuffer(buffer, size, capacity, "(");
+        tcTypeSigArgsToString(typeSig->args, buffer, size, capacity);
+        appendToBuffer(buffer, size, capacity, ")");
+    }
+}
+
+// Public function to convert TcType to string
+char *tcTypeToString(TcType *type) {
+    int capacity = 256;
+    int size = 0;
+    char *buffer = malloc(capacity);
+    buffer[0] = '\0';
+    
+    tcTypeToStringHelper(type, &buffer, &size, &capacity);
+    
+    return buffer;
 }

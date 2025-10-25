@@ -1,7 +1,7 @@
 namespace
 
 link "../listutils.fn" as lst;
-infix left 80 "|>" fn (l, f) { lst.for_each(f, l) };
+infix left 8 "|>" fn (l, f) { lst.for_each(f, l) };
 
 typedef S {
     Atom(char) | Cons(char, list(S))

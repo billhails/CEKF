@@ -24,53 +24,90 @@ typedef enum GenSymFmt {
     ALPHABETIC
 } GenSymFmt;
 
-// application-wide global symbol store
+/**
+ * Application-wide global symbol store.
+ */
+static HashTable *globalSymbolTable = NULL;
 
-static HashTable *symbolTable = NULL;
+/**
+ * Symbol generator table (maps base symbols to counters).
+ * 
+ * We use a separate counter per base symbol purely for
+ * cosmetic reasons, it makes the resulting symbols easier to read.
+ */
 static HashTable *genSymTable = NULL;
 
-void markVarTable() {
-    markHashTableObj((Header *) symbolTable);
+/**
+ * Mark the variable tables for garbage collection.
+ */
+void markVarTables() {
+    markHashTableObj((Header *) globalSymbolTable);
     markHashTableObj((Header *) genSymTable);
 }
 
-static void initSymbolTable() {
-    if (symbolTable == NULL) {
-        symbolTable = newHashTable(0, NULL, NULL);
+/**
+ * Initialize the global symbol table if not already done.
+ */
+static void initGlobalSymbolTable() {
+    if (globalSymbolTable == NULL) {
+        globalSymbolTable = newHashTable(0, NULL, NULL);
     }
 }
 
+/**
+ * Initialize the gensym table if not already done.
+ */
 static void initGenSymTable() {
     if (genSymTable == NULL) {
         genSymTable = newHashTable(sizeof(int), NULL, NULL);
     }
 }
 
+/**
+ * Check if a symbol with the given name already exists in the global symbol table.
+ */
+static bool symbolExists(char *name) {
+    initGlobalSymbolTable();
+    return hashGetVar(globalSymbolTable, name) != NULL;
+}
+
+/**
+ * Create a new symbol with the given name, or return the existing one if it already exists.
+ */
 HashSymbol *newSymbol(char *name) {
-    initSymbolTable();
-    HashSymbol *res = uniqueHashSymbol(symbolTable, name, NULL);
+    initGlobalSymbolTable();
+    HashSymbol *res = uniqueHashSymbol(globalSymbolTable, name, NULL);
     validateLastAlloc();
     return res;
 }
 
-HashSymbol *newSymbolLength(char *name, int length) {
-    if (length < 80) {
+/**
+ * Create a new symbol using the given number of characters from the character array.
+ * 
+ * Needed by the pratt parser which works with strings that are not null terminated.
+ */
+HashSymbol *newSymbolFromLength(char *charArray, int count) {
+    if (count < 80) {
         static char buf[80];
-        memcpy(buf, name, length);
-        buf[length] = '\0';
+        memcpy(buf, charArray, count);
+        buf[count] = '\0';
         HashSymbol *res = newSymbol(buf);
         return res;
     } else {
-        char *buf = (char *) safeMalloc(length + 1);
-        memcpy(buf, name, length);
-        buf[length] = '\0';
+        char *buf = (char *) safeMalloc(count + 1);
+        memcpy(buf, charArray, count);
+        buf[count] = '\0';
         HashSymbol *res = newSymbol(buf);
-        reallocate(buf, length + 1, 0);
+        reallocate(buf, count + 1, 0);
         return res;
     }
 }
 
-HashSymbol *newSymbolCounter(char *baseName) {
+/**
+ * Get the base symbol with the given name from the gensym table,
+ * creating and initializing its counter to 0 it if it does not already exist.
+ */
+static HashSymbol *getCounterSymbol(char *baseName) {
     initGenSymTable();
     HashSymbol *base = newSymbol(baseName);
     if (!hashGet(genSymTable, base, NULL)) {
@@ -80,55 +117,90 @@ HashSymbol *newSymbolCounter(char *baseName) {
     return base;
 }
 
+/**
+ * Get the current counter value for the given base symbol.
+ */
+static int getCounter(HashSymbol *base) {
+    int counter;
+    hashGet(genSymTable, base, &counter);
+    return counter;
+}
+
+/**
+ * Sets the counter value for the given base symbol.
+ */
+static void setCounter(HashSymbol *base, int counter) {
+    hashSet(genSymTable, base, &counter);
+}
+
+/**
+ * Generate a base-26 alphabetic suffix for the given integer value.
+ */
+static char *_alphaSuffix(int value) {
+    static char buffer[128];
+    char *alphabet = "abcdefghijklmnopqrstuvwxyz";
+    char *b = buffer;
+    int index = 0;
+    do {
+        b[index++] = alphabet[value % 26];
+        b[index] = '\0';
+        value = value / 26;
+    } while (value > 0);
+    return buffer;
+}
+
+/**
+ * Generate a unique symbol with the given prefix, format, and separator.
+ */
 static HashSymbol *_genSym(char *prefix, GenSymFmt fmt, char *sep) {
     int symbolCounter = 0;
     static char buffer[128];
-    char *b = buffer;
+    char *newName = buffer;
     int size = strlen(prefix) + 28;
     if (size > 128) {
-        b = NEW_ARRAY(char, size);
+        newName = NEW_ARRAY(char, size);
     }
-    initSymbolTable();
-    HashSymbol *base = newSymbolCounter(prefix);
-    hashGet(genSymTable, base, &symbolCounter);
+    HashSymbol *base = getCounterSymbol(prefix);
+    symbolCounter = getCounter(base);
+    // ensure symbol is unique by retrying if necessary
     for (;;) {
         switch (fmt) {
             case DECIMAL:
-                sprintf(buffer, "%s%s%d", prefix, sep, symbolCounter++);
+                sprintf(newName, "%s%s%d", prefix, sep, symbolCounter++);
                 break;
             case ALPHABETIC:{
-                    char *alphabet = "abcdefghijklmnopqrstuvwxyz";
-                    char suffix[128];
-                    int index = 0;
-                    int value = symbolCounter++;
-                    do {
-                        suffix[index++] = alphabet[value % 26];
-                        suffix[index] = '\0';
-                        value = value / 26;
-                    } while (value > 0);
-                    sprintf(buffer, "%s%s%s", prefix, sep, suffix);
+                    sprintf(newName, "%s%s%s", prefix, sep, _alphaSuffix(symbolCounter++));
                 }
                 break;
         }
-        if (hashGetVar(symbolTable, buffer) == NULL) {
-            HashSymbol *x = uniqueHashSymbol(symbolTable, buffer, NULL);
-            hashSet(genSymTable, base, &symbolCounter);
-            if (b != buffer) {
-                FREE_ARRAY(char, b, size);
+        if (!symbolExists(newName)) {
+            HashSymbol *x = newSymbol(newName);
+            setCounter(base, symbolCounter);
+            if (newName != buffer) {
+                FREE_ARRAY(char, newName, size);
             }
             return x;
         }
     }
 }
 
+/**
+ * Generate a unique symbol with the given prefix, a dollar sign separator and a numeric suffix.
+ */
 HashSymbol *genSymDollar(char *prefix) {
     return _genSym(prefix, DECIMAL, "$");
 }
 
+/**
+ * Generate a unique symbol with the given prefix, no separator and numeric suffix.
+ */
 HashSymbol *genSym(char *prefix) {
     return _genSym(prefix, DECIMAL, "");
 }
 
+/**
+ * Generate a unique symbol with the given prefix, no separator and alphabetic suffix.
+ */
 HashSymbol *genAlphaSym(char *prefix) {
     return _genSym(prefix, ALPHABETIC, "");
 }

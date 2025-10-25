@@ -14,6 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * An attempt at an operating-system agnostic file id, at least in the sense
+ * that it can be redefined for different operating systems without having
+ * to change usage throughout the code, though the implementation here is
+ * POSIX-specific.
  */
 
 #include <sys/sysmacros.h>
@@ -21,6 +26,12 @@
 #include "common.h"
 #include "file_id.h"
 
+/**
+ * Print an agnostic file id for debugging.
+ * 
+ * @param id the agnostic file id
+ * @param depth the depth for pretty-printing
+ */
 void printAgnosticFileId(AgnosticFileId *id, int depth) {
     if (id == NULL) {
         eprintf("%*sFileId(<NULL>)", depth * PAD_WIDTH, "");
@@ -30,16 +41,33 @@ void printAgnosticFileId(AgnosticFileId *id, int depth) {
     }
 }
 
+/**
+ * Mark an agnostic file id for gc protection.
+ * 
+ * @param id the agnostic file id
+ */
 void markAgnosticFileId(AgnosticFileId *id) {
     if (id == NULL) return;
     if (MARKED(id)) return;
     MARK(id);
 }
 
+/**
+ * Free an agnostic file id.
+ * 
+ * @param id the agnostic file id
+ */
 void freeAgnosticFileId(AgnosticFileId *id) {
     FREE(id, AgnosticFileId);
 }
 
+/**
+ * Compare two agnostic file ids.
+ * 
+ * @param a the first agnostic file id
+ * @param b the second agnostic file id
+ * @return the comparison result
+ */
 Cmp cmpAgnosticFileId(AgnosticFileId *a, AgnosticFileId *b) {
     if (major(a->st_dev) == major(b->st_dev)) {
         if (minor(a->st_dev) == minor(b->st_dev)) {
@@ -62,6 +90,12 @@ Cmp cmpAgnosticFileId(AgnosticFileId *a, AgnosticFileId *b) {
     }
 }
 
+/**
+ * Create an agnostic file id from a filename.
+ * 
+ * @param filename the filename
+ * @return the agnostic file id, or NULL if the file does not exist
+ */
 AgnosticFileId *makeAgnosticFileId(char *filename) {
     struct stat stats;
     if (stat(filename, &stats) == 0) {

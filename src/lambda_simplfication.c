@@ -109,6 +109,14 @@ static LamPrint *performPrintSimplifications(LamPrint *print) {
     return print;
 }
 
+static LamTypeof *performTypeofSimplifications(LamTypeof *typeOf) {
+    typeOf->exp = lamPerformSimplifications(typeOf->exp);
+    if (typeOf->typestring != NULL) {
+        typeOf->typestring = lamPerformSimplifications(typeOf->typestring);
+    }
+    return typeOf;
+}
+
 static LamLookup *performLookupSimplifications(LamLookup *lookup) {
     lookup->exp = lamPerformSimplifications(lookup->exp);
     return lookup;
@@ -349,6 +357,9 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 break;
             case LAMEXP_TYPE_PRINT:
                 exp->val.print = performPrintSimplifications(exp->val.print);
+                break;
+            case LAMEXP_TYPE_TYPEOF:
+                exp->val.typeOf = performTypeofSimplifications(exp->val.typeOf);
                 break;
             case LAMEXP_TYPE_LOOKUP:
                 exp->val.lookup = performLookupSimplifications(exp->val.lookup);

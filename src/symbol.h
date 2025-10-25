@@ -25,8 +25,8 @@ HashSymbol *genSymDollar(char *prefix);
 HashSymbol *genAlphaSym(char *prefix);
 
 HashSymbol *newSymbol(char *name);
-HashSymbol *newSymbolLength(char *buf, int length); // tokens are not null terminated strings
+HashSymbol *newSymbolFromLength(char *, int); // tokens are not null terminated strings
 
-void markVarTable(void);
+void markVarTables(void);
 
 #endif

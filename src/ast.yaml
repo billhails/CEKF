@@ -393,6 +393,15 @@ structs:
         data:
             exp: AstExpression
 
+    AstTypeof:
+        meta:
+            brief: AST Typeof Expression
+            description: >-
+                A typeof expression in the AST, which returns a string
+                representation of the type of an expression.
+        data:
+            exp: AstExpression
+
     AstStruct:
         meta:
             brief: AST Struct
@@ -508,6 +517,7 @@ unions:
             nest: AstNest
             iff: AstIff
             print: AstPrint
+            typeOf: AstTypeof
             tuple: AstExpressions
             env: void_ptr
             structure: AstStruct

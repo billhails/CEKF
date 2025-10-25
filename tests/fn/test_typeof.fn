@@ -1,0 +1,11 @@
+// Test the typeof operator
+
+let x = 42;
+    y = 'a';
+    f = fn (x) { x + 1 };
+    lst = [1, 2, 3];
+in
+    print(typeof x);
+    print(typeof y);
+    print(typeof f);
+    print(typeof lst);

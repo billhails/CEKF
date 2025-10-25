@@ -43,6 +43,12 @@ static int numGc = 0;
 
 static Header *lastAlloc = NULL;
 
+/**
+ * The ProtectionStack structure is used to ensure objects that are in the process
+ * of being constructed are not collected by the garbage collector. It is the structure
+ * that is operated on by the PROTECT, REPLACE_PROTECT and UNPROTECT macros, which
+ * push and pop objects to be protected from collection.
+ */
 typedef struct ProtectionStack {
     Header header;
     Index capacity;
@@ -66,6 +72,20 @@ void validateLastAlloc() {
     lastAlloc = NULL;
 }
 
+/**
+ * Returns a string representation of the given ObjType.
+ * Used for debugging output.
+ * 
+ * It defers to the generated typenameXXXObj functions
+ * for the various groups of generated object types, but
+ * handles the primitive object types itself.
+ * 
+ * It will produce a fatal error if the ObjType is unrecognised.
+ * 
+ * @param type the ObjType to be named
+ * @param p pointer to the object being named (for error reporting)
+ * @return string representation of the ObjType
+ */
 const char *typeName(ObjType type, void *p) {
     switch (type) {
         case OBJTYPE_OPAQUE:
@@ -135,10 +155,24 @@ void initProtection(void) {
     protected->sp = 0;
 }
 
+/**
+ * invoked by the REPLACE_PROTECT macro
+ */
 void replaceProtect(Index i, Header *obj) {
     protected->stack[i] = obj;
 }
 
+/**
+ * Invoked by the PROTECT macro.
+ * Pushes the given object onto the ProtectionStack
+ * and returns the stack pointer index of the pushed object.
+ * 
+ * This function ensures that it will never attempt a memory allocation
+ * (which might trigger a garbage collection) before the object to be protected
+ * is safely on the ProtectionStack.
+ * It does this by reallocating the stack to a larger size if the stack is at capacity
+ * **after** pushing the object onto the stack.
+ */
 Index protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(errout, "PROTECT(%p:%s) -> %d (%d)\n", obj,
@@ -169,6 +203,12 @@ Index protect(Header *obj) {
     return protected->sp - 1;
 }
 
+/**
+ * Invoked by the UNPROTECT macro.
+ * Restores the ProtectionStack to its argument index,
+ * effectively removing all objects at and above that index from the
+ * ProtectionStack.
+ */
 void unProtect(Index index) {
 #ifdef DEBUG_LOG_GC
     eprintf("UNPROTECT(%d)\n", index);
@@ -176,6 +216,12 @@ void unProtect(Index index) {
     protected->sp = index;
 }
 
+/**
+ * Allocates, frees and reallocates memory, tracking the total bytes allocated.
+ * If increasing allocation size, may trigger garbage collection.
+ * It does not assume the pointer is to a memory-managed Header object, so
+ * it can be used for any memory allocation.
+ */
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_LOG_GC
     eprintf
@@ -187,7 +233,6 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
         numAlloc--;
     if (numAlloc < 0)
         cant_happen("more frees than mallocs!");
-
 #endif
     bytesAllocated += (newSize - oldSize);
     if (bytesAllocated < 0)
@@ -233,6 +278,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     return result;
 }
 
+/**
+ * Wrapper around reallocate for memory-managed objects.
+ * Initializes the Header component of the allocated object.
+ */
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
     eprintf("allocate type %s %d %lu [%d]\n", typeName(type, 0),
@@ -251,6 +300,10 @@ void *allocate(size_t size, ObjType type) {
     return (void *) newObj;
 }
 
+/**
+ * Part of the mark phase of the mark-sweep garbage collection,
+ * marks the ProtectionStack and recursively marks all the objects it protects.
+ */
 static void markProtectionObj(Header *h) {
 #ifdef DEBUG_LOG_GC
     eprintf("markProtectionObj\n");
@@ -265,6 +318,14 @@ static void markProtectionObj(Header *h) {
 #endif
 }
 
+/**
+ * Part of the mark phase of the mark-sweep garbage collection,
+ * marks the given object by dispatching to the appropriate
+ * type-specific marking function.
+ * 
+ * @param h pointer to the Header of the object to be marked
+ * @param i index on the ProtectionStack, for debugging output
+ */
 void markObj(Header *h, Index i) {
 #ifdef DEBUG_LOG_GC
     // eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
@@ -318,10 +379,19 @@ void markObj(Header *h, Index i) {
     }
 }
 
+/**
+ * Frees the given ProtectionStack object.
+ */
 static void freeProtectionObj(Header *h) {
     FREE_PROTECT(h);
 }
 
+/**
+ * Frees the given object by dispatching to the appropriate
+ * type-specific free function.
+ * 
+ * @param h pointer to the Header of the object to be freed
+ */
 void freeObj(Header *h) {
     switch (h->type) {
         case OBJTYPE_OPAQUE:
@@ -372,11 +442,22 @@ void freeObj(Header *h) {
     }
 }
 
+/**
+ * Part of the mark phase of the mark-sweep garbage collection,
+ * marks all objects on the ProtectionStack.
+ */
 static void markProtected() {
     if (protected != NULL)
         markProtectionObj((Header *) protected);
 }
 
+/**
+ * The mark phase of the mark-sweep garbage collection.
+ * Marks all reachable objects starting from the roots:
+ * the ProtectionStack, the interpreter state,
+ * arithmetic objects, namespaces, memory buffers
+ * and the variable table (symbol tables).
+ */
 static void mark() {
     markState();
     markProtected();
@@ -384,14 +465,25 @@ static void mark() {
     markNamespaces();
     markMemBufs();
 #ifdef DEBUG_LOG_GC
-    eprintf("starting markVarTable\n");
+    eprintf("starting markVarTables\n");
 #endif
-    markVarTable();
+    markVarTables();
 #ifdef DEBUG_LOG_GC
-    eprintf("markVarTable done\n");
+    eprintf("markVarTables done\n");
 #endif
 }
 
+/**
+ * The sweep phase of the mark-sweep garbage collection.
+ * Frees all unmarked objects and clears the marks on the marked objects.
+ * 
+ * The Header component structure common to all memory-managed structures
+ * contains a 'keep' field which is used as the mark bit,
+ * and a 'next' field which is used to link all allocated objects into a single list.
+ * Any object whose 'keep' field is false is simply snipped from the list and freed.
+ * Any object whose 'keep' field is true has its 'keep' field cleared for the
+ * next garbage collection cycle.
+ */
 static void sweep() {
     Header *current = allocated;
     Header **previous = &allocated;
@@ -412,6 +504,13 @@ static void sweep() {
     }
 }
 
+/**
+ * Performs a garbage collection cycle if garbage collection is enabled.
+ * 
+ * The cycle consists of a mark phase and a sweep phase.
+ * After the collection, the threshold for the next collection
+ * is set to double the current bytes allocated.
+ */
 void collectGarbage() {
     if (!gcEnabled)
         return;
