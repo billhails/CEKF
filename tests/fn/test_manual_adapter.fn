@@ -1,0 +1,39 @@
+//Test manual adapter for passing macros to higher-order functions
+
+let
+macro lazy_or(a, b) {
+    puts("evaluating lazy_or\n");
+    a or b
+}
+
+// Manual adapter: converts strict arguments to thunks
+fn strict_lazy_or(x, y) {
+    lazy_or(fn() { x }, fn() { y })
+}
+
+fn apply_binary(f, x, y) {
+    puts("apply_binary calling f\n");
+    f(x, y)
+}
+
+fn main() {
+    // Direct macro call - works
+    puts("Direct call: ");
+    {
+        let
+            result1 = lazy_or(true, false);
+        in
+            print(result1);
+    };
+    
+    // Pass ADAPTER to HOF - works!
+    {
+        let
+            result2 = apply_binary(strict_lazy_or, true, false);
+        in
+        puts("Through HOF with adapter: ");
+        print(result2);
+    }
+}
+in
+    main();

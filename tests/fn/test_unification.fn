@@ -1,0 +1,27 @@
+// Test: Do lazy and strict functions unify?
+let
+macro lazy_or(a, b) { a or b }
+
+fn strict_or(x, y) { x or y }
+
+// This compiles because lazy and strict types currently unify
+fn polymorphic_test(f) {
+    f  // Just return the function
+}
+in
+// Both of these type check successfully
+{
+    let x = polymorphic_test(lazy_or);
+    y = polymorphic_test(strict_or);
+    in
+    
+    puts("Both lazy and strict functions type check!\n");
+    puts("lazy_or type:   ");
+    print(typeof lazy_or);
+    puts("strict_or type: ");
+    print(typeof strict_or);
+    puts("x (lazy) type:  ");
+    print(typeof x);
+    puts("y (strict) type:");
+    print(typeof y);
+}

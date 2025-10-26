@@ -26,14 +26,14 @@ in
     assert(lazy_or(true, false) == true);
     assert(strict_or(true, false) == true);
     
-    print("Direct calls work!");
+    print("Direct calls work");
     print("");
     print("Lazy type has (#()) markers: " @@ lazy_type);
     print("Strict type is normal: " @@ strict_type);
     // They should be different
     assert(lazy_type != strict_type);
-    print("Types are correctly different!");
+    print("Types are correctly different");
 };
 
 print("");
-print("Lazy type tracking tests passed!");
+print("Lazy type tracking tests passed");

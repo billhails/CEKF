@@ -1,0 +1,13 @@
+// Test to see the types of lazy and adapter functions
+
+let
+    macro lazy_or(a, b) {
+        a or b
+    }
+
+    fn strict_lazy_or(x, y) {
+        lazy_or(fn() { x }, fn() { y })
+    }
+in
+    print(typeof lazy_or);
+    print(typeof strict_lazy_or);

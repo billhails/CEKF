@@ -1,0 +1,34 @@
+// Test automatic adapter generation for passing macros to higher-order functions
+
+let
+macro lazy_or(a, b) {
+    puts("evaluating lazy_or\n");
+    a or b
+}
+
+fn apply_binary(f, x, y) {
+    puts("apply_binary calling f\n");
+    f(fn () {x}, fn () {y})
+}
+
+fn main() {
+    // Direct macro call - should work (already does)
+    puts("Direct call: ");
+    {
+        let
+            result1 = lazy_or(true, false);
+        in
+            print(result1);
+    };
+    
+    // Pass macro to HOF - needs adapter
+    {
+        let
+            result2 = apply_binary(lazy_or, true, false);
+        in
+        puts("Through HOF (needs adapter): ");
+        print(result2);
+    }
+}
+in
+    main();
