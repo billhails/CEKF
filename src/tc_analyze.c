@@ -111,6 +111,9 @@ static TcType *lookupConstructorType(HashSymbol * name, int namespace,
                                      TcEnv * env, TcNg * ng);
 static void addTypeSigToEnv(TcEnv * env, HashSymbol * symbol,
                             TcTypeSig * type);
+static bool failUnify(TcType *a, TcType *b, char *reason);
+static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason);
+static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) __attribute__((unused));
 bool getTypeSigFromTcEnv(TcEnv * env, HashSymbol * symbol, TcTypeSig ** type);
 
 static int id_counter = 0;
@@ -1878,9 +1881,33 @@ static void addThenToEnv(TcEnv *env) {
     UNPROTECT(save);
 }
 
+static bool failUnify(TcType *a, TcType *b, char *reason) {
+    // can_happen sets a flag that will prevent later stages
+    can_happen("\nunification failed [%s]", reason);
+    ppTcType(a);
+    eprintf(" vs ");
+    ppTcType(b);
+    eprintf("\n");
+    return false;
+}
+
+static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
+    // can_happen sets a flag that will prevent later stages
+    can_happen("\nunification failed [%s]", reason);
+    ppTcFunction(a);
+    eprintf(" vs ");
+    ppTcFunction(b);
+    eprintf("\n");
+    return false;
+}
+
 static bool unifyFunctions(TcFunction *a, TcFunction *b) {
 // For now, allow lazy/strict mismatch - we'll handle it with adapters later
 // TODO: Phase 3 - detect and generate adapters for lazy/strict mismatch
+    if (a->isLazy != b->isLazy) {
+        // return failUnifyFunctions(a, b, "lazy/strict mismatch");
+        DEBUG("warning: lazy/strict mismatch in unifyFunctions");
+    }
     bool res = unify(a->arg, b->arg, "functions[arg]")
         && unify(a->result, b->result, "functions[result]");
     return res;
@@ -1914,23 +1941,21 @@ static bool unifyOpaque(HashSymbol *a, HashSymbol *b) {
     return true;
 }
 
+static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason) {
+    can_happen("\nunification failed [%s]", reason);
+    ppTcTypeSig(a);
+    eprintf(" vs ");
+    ppTcTypeSig(b);
+    eprintf("\n");
+    return false;
+}
+
 static bool unifyTypeSigs(TcTypeSig *a, TcTypeSig *b) {
     if (a->name != b->name) {
-        can_happen("\nunification failed [usertype name mismatch %s vs %s]",
-                   a->name->name, b->name->name);
-        ppTcTypeSig(a);
-        eprintf(" vs ");
-        ppTcTypeSig(b);
-        eprintf("\n");
-        return false;
+        return failUnifyTypeSigs(a, b, "usertype name mismatch");
     }
     if (a->ns != b->ns) {
-        can_happen("\nunification failed [usertype namespace mismatch]");
-        ppTcTypeSig(a);
-        eprintf(" vs ");
-        ppTcTypeSig(b);
-        eprintf("\n");
-        return false;
+        return failUnifyTypeSigs(a, b, "usertype namespace mismatch");
     }
 
     TcTypeSigArgs *aArgs = a->args;
@@ -1943,12 +1968,7 @@ static bool unifyTypeSigs(TcTypeSig *a, TcTypeSig *b) {
         bArgs = bArgs->next;
     }
     if (aArgs != NULL || bArgs != NULL) {
-        can_happen("\nunification failed [usertype arg count mismatch]");
-        ppTcTypeSig(a);
-        eprintf(" vs ");
-        ppTcTypeSig(b);
-        eprintf("\n");
-        return false;
+        return failUnifyTypeSigs(a, b, "usertype arg count mismatch");
     }
     return true;
 }
@@ -1962,8 +1982,7 @@ static bool _unify(TcType *a, TcType *b) {
     if (a->type == TCTYPE_TYPE_VAR) {
         if (b->type != TCTYPE_TYPE_VAR) {
             if (occursInType(a, b)) {
-                can_happen("occurs-in check failed");
-                return false;
+                return failUnify(a, b, "occurs-in check failed");
             }
             a->val.var->instance = b;
             return true;
@@ -1976,12 +1995,7 @@ static bool _unify(TcType *a, TcType *b) {
         return unify(b, a, "unify");
     } else {
         if (a->type != b->type) {
-            can_happen("\nunification failed [type mismatch]");
-            ppTcType(a);
-            eprintf(" vs ");
-            ppTcType(b);
-            eprintf("\n");
-            return false;
+            return failUnify(a, b, "type mismatch");
         }
         switch (a->type) {
             case TCTYPE_TYPE_FUNCTION:

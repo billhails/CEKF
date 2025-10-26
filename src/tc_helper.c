@@ -69,6 +69,10 @@ void ppTcType(TcType *type) {
 
 void ppTcFunction(TcFunction *function) {
     eprintf("(");
+    if (function->isLazy) {
+        // Show lazy argument as a thunk type: (#()) -> ArgType
+        eprintf("#() -> ");
+    }
     ppTcType(function->arg);
     eprintf(") -> ");
     ppTcType(function->result);
