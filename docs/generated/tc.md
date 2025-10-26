@@ -13,6 +13,7 @@ TcNg --table--> TcTypeTable
 TcNg --next--> TcNg
 TcFunction --arg--> TcType
 TcFunction --result--> TcType
+TcFunction --isLazy--> bool
 TcPair --first--> TcType
 TcPair --second--> TcType
 TcTypeSig --name--> HashSymbol

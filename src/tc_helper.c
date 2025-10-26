@@ -272,6 +272,10 @@ static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *ca
 
 static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity) {
     appendToBuffer(buffer, size, capacity, "(");
+    if (function->isLazy) {
+        // Show lazy argument as a thunk type: (#()) -> ArgType
+        appendToBuffer(buffer, size, capacity, "#() -> ");
+    }
     tcTypeToStringHelper(function->arg, buffer, size, capacity);
     appendToBuffer(buffer, size, capacity, ") -> ");
     tcTypeToStringHelper(function->result, buffer, size, capacity);

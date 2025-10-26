@@ -966,6 +966,7 @@ static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
     body = lamPerformMacroSubstitutions(body, symbolTable);
     PROTECT(body);
     LamLam *lam = newLamLam(CPI(astMacro), args, body);
+    lam->isMacro = true;  // Mark this lambda as a macro (lazy arguments)
     PROTECT(lam);
     LamExp *res = newLamExp_Lam(CPI(lam), lam);
     PROTECT(res);

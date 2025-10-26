@@ -50,6 +50,7 @@ static TcType *makeCharacter(void);
 static TcType *makeUnknown(HashSymbol *var);
 static TcType *makeVar(HashSymbol *t);
 static TcType *makeFn(TcType *arg, TcType *result);
+static TcType *makeLazyFn(TcType *arg, TcType *result, bool isLazy);
 static TcType *makeTuple(int size);
 static void addHereToEnv(TcEnv *env);
 static void addIfToEnv(TcEnv *env);
@@ -310,19 +311,19 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *makeFunctionType(LamVarList *args, TcEnv *env,
-                                TcType *returnType) {
+                                TcType *returnType, bool isLazy) {
     // ENTER(makeFunctionType);
     if (args == NULL) {
         // LEAVE(makeFunctionType);
         return returnType;
     }
-    TcType *next = makeFunctionType(args->next, env, returnType);
+    TcType *next = makeFunctionType(args->next, env, returnType, isLazy);
     int save = PROTECT(next);
     TcType *this = NULL;
     if (!getFromTcEnv(env, args->var, &this)) {
         cant_happen("cannot find var in env in makeFunctionType");
     }
-    TcType *ret = makeFn(this, next);
+    TcType *ret = makeLazyFn(this, next, isLazy);
     UNPROTECT(save);
     // LEAVE(makeFunctionType);
     return ret;
@@ -343,7 +344,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     }
     TcType *returnType = analyzeExp(lam->exp, env, ng);
     PROTECT(returnType);
-    TcType *functionType = makeFunctionType(lam->args, env, returnType);
+    TcType *functionType = makeFunctionType(lam->args, env, returnType, lam->isMacro);
     UNPROTECT(save);
     // LEAVE(analyzeLam);
     return functionType;
@@ -1489,7 +1490,8 @@ static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
     int save = PROTECT(arg);
     TcType *result = freshRec(fn->result, ng, map);
     PROTECT(result);
-    TcType *res = makeFn(arg, result);
+    // Preserve the isLazy flag when creating fresh instance
+    TcType *res = makeLazyFn(arg, result, fn->isLazy);
     UNPROTECT(save);
     return res;
 }
@@ -1656,15 +1658,20 @@ static TcType *makeSpaceship() {
     return res;
 }
 
-static TcType *makeFn(TcType *arg, TcType *result) {
+static TcType *makeLazyFn(TcType *arg, TcType *result, bool isLazy) {
     arg = prune(arg);
     result = prune(result);
     TcFunction *fn = newTcFunction(arg, result);
+    fn->isLazy = isLazy;  // Set the laziness flag
     int save = PROTECT(fn);
     assert(fn != NULL);
     TcType *type = newTcType_Function(fn);
     UNPROTECT(save);
     return type;
+}
+
+static TcType *makeFn(TcType *arg, TcType *result) {
+    return makeLazyFn(arg, result, false);
 }
 
 static TcType *makeVar(HashSymbol *t) {
