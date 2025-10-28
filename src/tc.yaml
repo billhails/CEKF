@@ -71,6 +71,17 @@ structs:
             first: TcType
             second: TcType
 
+    TcThunk:
+        meta:
+            brief: Thunk type
+            description: >-
+                Represents a thunk (delayed computation) type `thunk(a)`, which
+                is equivalent to `() -> a`. Used for lazy evaluation where
+                computation is deferred until explicitly forced. Displays as
+                `(#() => a)` in type signatures.
+        data:
+            type: TcType
+
     TcTypeSig:
         meta:
             brief: Type signature
@@ -145,11 +156,12 @@ unions:
             brief: Type union
             description: >-
                 Represents a type in the type-checker, which can be a function,
-                pair, variable, small integer, big integer, character, unknown,
+                pair, thunk, variable, small integer, big integer, character, unknown,
                 opaque type, type signature, tuple, or an array of namespaces.
         data:
             function: TcFunction
             pair: TcPair
+            thunk: TcThunk
             var: TcVar
             smallinteger: void_ptr
             biginteger: void_ptr

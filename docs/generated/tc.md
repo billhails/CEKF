@@ -16,6 +16,7 @@ TcFunction --result--> TcType
 TcFunction --isLazy--> bool
 TcPair --first--> TcType
 TcPair --second--> TcType
+TcThunk --type--> TcType
 TcTypeSig --name--> HashSymbol
 TcTypeSig --args--> TcTypeSigArgs
 TcTypeSig --ns--> int
@@ -26,6 +27,7 @@ TcVar --id--> int
 TcVar --instance--> TcType
 TcType --function--> TcFunction
 TcType --pair--> TcPair
+TcType --thunk--> TcThunk
 TcType --var--> TcVar
 TcType --smallinteger--> void_ptr
 TcType --biginteger--> void_ptr

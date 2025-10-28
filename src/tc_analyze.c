@@ -51,6 +51,7 @@ static TcType *makeUnknown(HashSymbol * var);
 static TcType *makeVar(HashSymbol * t);
 static TcType *makeFn(TcType * arg, TcType * result);
 static TcType *makeLazyFn(TcType * arg, TcType * result, bool isLazy);
+static TcType *makeThunk(TcType * type);
 static TcType *makeTuple(int size);
 static void addHereToEnv(TcEnv * env);
 static void addIfToEnv(TcEnv * env);
@@ -1547,6 +1548,14 @@ static TcType *freshPair(TcPair *pair, TcNg *ng, TcTypeTable *map) {
     return res;
 }
 
+static TcType *freshThunk(TcThunk *thunk, TcNg *ng, TcTypeTable *map) {
+    TcType *type = freshRec(thunk->type, ng, map);
+    int save = PROTECT(type);
+    TcType *res = makeThunk(type);
+    UNPROTECT(save);
+    return res;
+}
+
 static TcTypeSigArgs *freshTypeSigArgs(TcTypeSigArgs *args, TcNg *ng,
                                        TcTypeTable *map) {
     if (args == NULL)
@@ -1619,6 +1628,11 @@ static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
         case TCTYPE_TYPE_PAIR:
             {
                 TcType *res = freshPair(type->val.pair, ng, map);
+                return res;
+            }
+        case TCTYPE_TYPE_THUNK:
+            {
+                TcType *res = freshThunk(type->val.thunk, ng, map);
                 return res;
             }
         case TCTYPE_TYPE_VAR:
@@ -1707,6 +1721,15 @@ static TcType *makeLazyFn(TcType *arg, TcType *result, bool isLazy) {
 
 static TcType *makeFn(TcType *arg, TcType *result) {
     return makeLazyFn(arg, result, false);
+}
+
+static TcType *makeThunk(TcType *type) {
+    type = prune(type);
+    TcThunk *thunk = newTcThunk(type);
+    int save = PROTECT(thunk);
+    TcType *res = newTcType_Thunk(thunk);
+    UNPROTECT(save);
+    return res;
 }
 
 static TcType *makeVar(HashSymbol *t) {
@@ -1919,6 +1942,10 @@ static bool unifyPairs(TcPair *a, TcPair *b) {
     return res;
 }
 
+static bool unifyThunks(TcThunk *a, TcThunk *b) {
+    return unify(a->type, b->type, "thunks");
+}
+
 static bool unifyTuples(TcTypeArray *a, TcTypeArray *b) {
     if (a->size != b->size) {
         can_happen("tuple sizes differ: %d vs %d", a->size, b->size);
@@ -2002,6 +2029,8 @@ static bool _unify(TcType *a, TcType *b) {
                 return unifyFunctions(a->val.function, b->val.function);
             case TCTYPE_TYPE_PAIR:
                 return unifyPairs(a->val.pair, b->val.pair);
+            case TCTYPE_TYPE_THUNK:
+                return unifyThunks(a->val.thunk, b->val.thunk);
             case TCTYPE_TYPE_VAR:
                 cant_happen("encountered var in unify");
             case TCTYPE_TYPE_SMALLINTEGER:
@@ -2096,6 +2125,8 @@ static bool sameType(TcType *a, TcType *b) {
             return sameFunctionType(a->val.function, b->val.function);
         case TCTYPE_TYPE_PAIR:
             return samePairType(a->val.pair, b->val.pair);
+        case TCTYPE_TYPE_THUNK:
+            return sameType(a->val.thunk->type, b->val.thunk->type);
         case TCTYPE_TYPE_VAR:
             return a->val.var->id == b->val.var->id;
         case TCTYPE_TYPE_BIGINTEGER:
@@ -2129,6 +2160,10 @@ static bool occursInPair(TcType *var, TcPair *pair) {
     return occursInType(var, pair->first) || occursInType(var, pair->second);
 }
 
+static bool occursInThunk(TcType *var, TcThunk *thunk) {
+    return occursInType(var, thunk->type);
+}
+
 static bool occursInTypeSig(TcType *var, TcTypeSig *typeSig) {
     for (TcTypeSigArgs * args = typeSig->args; args != NULL;
          args = args->next) {
@@ -2153,6 +2188,8 @@ static bool occursIn(TcType *a, TcType *b) {
             return occursInFunction(a, b->val.function);
         case TCTYPE_TYPE_PAIR:
             return occursInPair(a, b->val.pair);
+        case TCTYPE_TYPE_THUNK:
+            return occursInThunk(a, b->val.thunk);
         case TCTYPE_TYPE_VAR:
             cant_happen("occursIn 2nd arg should not be a var");
         case TCTYPE_TYPE_SMALLINTEGER:

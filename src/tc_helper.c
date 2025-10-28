@@ -35,6 +35,9 @@ void ppTcType(TcType *type) {
         case TCTYPE_TYPE_PAIR:
             ppTcPair(type->val.pair);
             break;
+        case TCTYPE_TYPE_THUNK:
+            ppTcThunk(type->val.thunk);
+            break;
         case TCTYPE_TYPE_VAR:
             ppTcVar(type->val.var);
             break;
@@ -83,6 +86,12 @@ void ppTcPair(TcPair *pair) {
     ppTcType(pair->first);
     eprintf(", ");
     ppTcType(pair->second);
+    eprintf(")");
+}
+
+void ppTcThunk(TcThunk *thunk) {
+    eprintf("(#() => ");
+    ppTcType(thunk->type);
     eprintf(")");
 }
 
@@ -223,6 +232,7 @@ static void appendToBuffer(char **buffer, int *size, int *capacity, const char *
 static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *capacity);
 static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity);
 static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity);
+static void tcThunkToString(TcThunk *thunk, char **buffer, int *size, int *capacity);
 static void tcVarToString(TcVar *var, char **buffer, int *size, int *capacity);
 static void tcTupleToString(TcTypeArray *tuple, char **buffer, int *size, int *capacity);
 static void tcTypeSigToString(TcTypeSig *typeSig, char **buffer, int *size, int *capacity);
@@ -239,6 +249,9 @@ static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *ca
             break;
         case TCTYPE_TYPE_PAIR:
             tcPairToString(type->val.pair, buffer, size, capacity);
+            break;
+        case TCTYPE_TYPE_THUNK:
+            tcThunkToString(type->val.thunk, buffer, size, capacity);
             break;
         case TCTYPE_TYPE_VAR:
             tcVarToString(type->val.var, buffer, size, capacity);
@@ -290,6 +303,12 @@ static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity
     tcTypeToStringHelper(pair->first, buffer, size, capacity);
     appendToBuffer(buffer, size, capacity, ", ");
     tcTypeToStringHelper(pair->second, buffer, size, capacity);
+    appendToBuffer(buffer, size, capacity, ")");
+}
+
+static void tcThunkToString(TcThunk *thunk, char **buffer, int *size, int *capacity) {
+    appendToBuffer(buffer, size, capacity, "(#() => ");
+    tcTypeToStringHelper(thunk->type, buffer, size, capacity);
     appendToBuffer(buffer, size, capacity, ")");
 }
 

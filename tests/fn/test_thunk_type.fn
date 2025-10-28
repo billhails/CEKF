@@ -1,0 +1,11 @@
+// Test the new thunk type
+
+// For now, we'll create a simple function that we can test with
+{
+let
+fn identity(x) { x }
+
+in
+// Test that basic types still work
+print(typeof identity);
+};

@@ -24,6 +24,7 @@
 void ppTcType(TcType *type);
 void ppTcFunction(TcFunction *function);
 void ppTcPair(TcPair *pair);
+void ppTcThunk(TcThunk *thunk);
 void ppTcVar(TcVar *var);
 void ppTcTypeSig(TcTypeSig *typeSig);
 void ppTcTuple(TcTypeArray *tuple);
