@@ -367,6 +367,11 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_NAMESPACES:
                 exp->val.namespaces = performNamespacesSimplifications(exp->val.namespaces);
                 break;
+            case LAMEXP_TYPE_FORCE:
+                // Keep Force nodes until after type checking
+                // They will be converted to applications during inlining
+                exp->val.force = lamPerformSimplifications(exp->val.force);
+                break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));
         }

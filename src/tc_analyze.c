@@ -86,6 +86,7 @@ static TcType *analyzeLet(LamLet * let, TcEnv * env, TcNg * ng);
 static TcType *analyzeMatch(LamMatch * match, TcEnv * env, TcNg * ng);
 static TcType *analyzeCond(LamCond * cond, TcEnv * env, TcNg * ng);
 static TcType *analyzeAmb(LamAmb * amb, TcEnv * env, TcNg * ng);
+static TcType *analyzeForce(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *analyzeTupleIndex(LamTupleIndex * index, TcEnv * env,
                                  TcNg * ng);
 static TcType *analyzeMakeTuple(LamArgs * tuple, TcEnv * env, TcNg * ng);
@@ -295,6 +296,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeMatch(exp->val.match, env, ng));
         case LAMEXP_TYPE_COND:
             return prune(analyzeCond(exp->val.cond, env, ng));
+        case LAMEXP_TYPE_FORCE:
+            return prune(analyzeForce(exp->val.force, env, ng));
         case LAMEXP_TYPE_AMB:
             return prune(analyzeAmb(exp->val.amb, env, ng));
         case LAMEXP_TYPE_CHARACTER:
@@ -358,8 +361,16 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     }
     TcType *returnType = analyzeExp(lam->exp, env, ng);
     PROTECT(returnType);
-    TcType *functionType =
-        makeFunctionType(lam->args, env, returnType, lam->isMacro);
+    
+    // Zero-argument lambda creates a thunk type, not a function type
+    TcType *functionType;
+    if (lam->args == NULL) {
+        // fn() { expr } produces thunk(T) where T is the type of expr
+        functionType = makeThunk(returnType);
+    } else {
+        // Regular function with arguments
+        functionType = makeFunctionType(lam->args, env, returnType, lam->isMacro);
+    }
     UNPROTECT(save);
     // LEAVE(analyzeLam);
     return functionType;
@@ -408,9 +419,13 @@ static TcType *analyzeComparison(LamExp *exp1, LamExp *exp2, TcEnv *env,
     if (!unify(type1, type2, "comparison")) {
         eprintf("while unifying comparison:\n");
         ppLamExp(exp1);
-        eprintf("\nwith\n");
+        eprintf(" (type: ");
+        ppTcType(prune(type1));
+        eprintf(")\nwith\n");
         ppLamExp(exp2);
-        eprintf("\n");
+        eprintf(" (type: ");
+        ppTcType(prune(type2));
+        eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
             REPORT_PARSER_INFO(exp2);
@@ -432,9 +447,13 @@ static TcType *analyzeSpaceship(LamExp *exp1, LamExp *exp2, TcEnv *env,
     if (!unify(type1, type2, "<=>")) {
         eprintf("while unifying <=>:\n");
         ppLamExp(exp1);
-        eprintf("\nwith\n");
-        ppLamExp(exp1);
-        eprintf("\n");
+        eprintf(" (type: ");
+        ppTcType(prune(type1));
+        eprintf(")\nwith\n");
+        ppLamExp(exp2);
+        eprintf(" (type: ");
+        ppTcType(prune(type2));
+        eprintf(")\n");
         REPORT_PARSER_INFO(exp1);
         if (!EQ_PARSER_INFO(exp1, exp2)) {
             REPORT_PARSER_INFO(exp2);
@@ -564,8 +583,9 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     PROTECT(expType);
     if (!unify(expType, resultType, "deconstruct")) {
         eprintf("while unifying deconstruct:\n");
-        REPORT_PARSER_INFO(deconstruct);
         ppLamDeconstruct(deconstruct);
+        eprintf("\n");
+        REPORT_PARSER_INFO(deconstruct);
         eprintf("\n");
     }
     UNPROTECT(save);
@@ -582,6 +602,9 @@ static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng) {
         eprintf("while analyzing tuple ");
         REPORT_PARSER_INFO(index->exp);
         ppTcType(tuple);
+        eprintf("\n");
+        ppLamTupleIndex(index);
+        eprintf("\n");
         HashSymbol *name = newSymbol("tuple");
         UNPROTECT(save);
         return makeUnknown(name);
@@ -705,9 +728,23 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
     switch (countLamArgs(apply->args)) {
         case 0:
             {
-                TcType *res = analyzeExp(apply->function, env, ng);
+                TcType *fnType = analyzeExp(apply->function, env, ng);
+                int save = PROTECT(fnType);
+                fnType = prune(fnType);
+                
+                // Check if this is a thunk being forced
+                if (fnType->type == TCTYPE_TYPE_THUNK) {
+                    // Forcing a thunk extracts its underlying type
+                    TcType *res = fnType->val.thunk->type;
+                    UNPROTECT(save);
+                    return res;
+                }
+                
+                // Otherwise, return the function type as-is
+                // (for zero-arg functions that return function types)
+                UNPROTECT(save);
                 // LEAVE(analyzeApply);
-                return res;
+                return fnType;
             }
         case 1:
             {
@@ -727,9 +764,13 @@ static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
                 if (!unify(fn, functionType, "apply")) {
                     eprintf("while analyzing apply ");
                     ppLamExp(apply->function);
-                    eprintf(" to ");
+                    eprintf(" (type: ");
+                    ppTcType(prune(fn));
+                    eprintf(") to ");
                     ppLamExp(apply->args->exp);
-                    eprintf("\n");
+                    eprintf(" (type: ");
+                    ppTcType(prune(arg));
+                    eprintf(")\n");
                     REPORT_PARSER_INFO(apply->function);
                     if (!EQ_PARSER_INFO(apply->function, apply->args)) {
                         REPORT_PARSER_INFO(apply->args);
@@ -763,9 +804,13 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
     if (!unify(consequent, alternative, "iff")) {
         eprintf("while unifying consequent:\n");
         ppLamExp(iff->consequent);
-        eprintf("\nwith alternative:\n");
+        eprintf(" (type: ");
+        ppTcType(prune(consequent));
+        eprintf(")\nwith alternative:\n");
         ppLamExp(iff->alternative);
-        eprintf("\n");
+        eprintf(" (type: ");
+        ppTcType(prune(alternative));
+        eprintf(")\n");
         REPORT_PARSER_INFO(iff->consequent);
         if (!EQ_PARSER_INFO(iff->consequent, iff->alternative)) {
             REPORT_PARSER_INFO(iff->alternative);
@@ -1446,6 +1491,31 @@ static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
     UNPROTECT(save);
 // LEAVE(analyzeCond);
     return result;
+}
+
+static TcType *analyzeForce(LamExp *exp, TcEnv *env, TcNg *ng) {
+    // Analyze the expression being forced
+    TcType *thunkType = analyzeExp(exp, env, ng);
+    int save = PROTECT(thunkType);
+    
+    // Create a fresh type variable for the result
+    TcType *resultType = makeFreshVar("forced");
+    PROTECT(resultType);
+    
+    // Create a thunk type that should match the expression type
+    TcType *expectedThunk = makeThunk(resultType);
+    PROTECT(expectedThunk);
+    
+    // Unify to ensure we're forcing a thunk
+    if (!unify(thunkType, expectedThunk, "force")) {
+        eprintf("attempted to force a non-thunk expression:\n");
+        ppLamExp(exp);
+        eprintf("\n");
+        REPORT_PARSER_INFO(exp);
+    }
+    
+    UNPROTECT(save);
+    return resultType;
 }
 
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {

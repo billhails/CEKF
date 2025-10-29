@@ -8,7 +8,7 @@ macro lazy_or(a, b) {
 
 // Manual adapter: converts strict arguments to thunks
 fn strict_lazy_or(x, y) {
-    lazy_or(fn() { x }, fn() { y })
+    lazy_or(x, y)  // Macro will automatically thunk the arguments
 }
 
 fn apply_binary(f, x, y) {

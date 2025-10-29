@@ -40,6 +40,7 @@
 
 static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function);
 static LamExp *compilePrinterForPair(ParserInfo I, TcPair *pair);
+static LamExp *compilePrinterForThunk(ParserInfo I, TcThunk *thunk);
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env);
 static LamExp *compilePrinterForInt(ParserInfo I);
 static LamExp *compilePrinterForChar(ParserInfo I);
@@ -114,6 +115,9 @@ static LamExp *compilePrinter(ParserInfo I, TcType *type, TcEnv *env) {
         case TCTYPE_TYPE_PAIR:
             res = compilePrinterForPair(I, type->val.pair);
             break;
+        case TCTYPE_TYPE_THUNK:
+            res = compilePrinterForThunk(I, type->val.thunk);
+            break;
         case TCTYPE_TYPE_VAR:
             res = compilePrinterForVar(I, type->val.var, env);
             break;
@@ -147,6 +151,11 @@ static LamExp *compilePrinterForFunction(ParserInfo I, TcFunction *function
 
 static LamExp *compilePrinterForPair(ParserInfo I __attribute__((unused)), TcPair *pair __attribute__((unused))) {
     cant_happen("compilePrinterForPair not implemented yet");
+}
+
+static LamExp *compilePrinterForThunk(ParserInfo I, TcThunk *thunk __attribute__((unused))) {
+    // Thunks are functions, so use the function printer
+    return makeVarExpr(I, "print$fn");
 }
 
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env) {

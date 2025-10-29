@@ -31,11 +31,11 @@ fn strict_or(x, y) {
 // === Manual adapters (convert lazy -> strict interface) ===
 
 fn adapt_lazy_and(x, y) {
-    lazy_and(fn() { x }, fn() { y })
+    lazy_and(x, y)  // Macro will automatically thunk the arguments
 }
 
 fn adapt_lazy_or(x, y) {
-    lazy_or(fn() { x }, fn() { y })
+    lazy_or(x, y)  // Macro will automatically thunk the arguments
 }
 
 // === Higher-order function ===

@@ -6,7 +6,7 @@ let
     }
 
     fn strict_lazy_or(x, y) {
-        lazy_or(fn() { x }, fn() { y })
+        lazy_or(x, y)
     }
 in
     print(typeof lazy_or);

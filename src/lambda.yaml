@@ -528,6 +528,7 @@ unions:
             callcc: LamExp
             letrec: LamLetRec
             typedefs: LamTypeDefs
+            force: LamExp
             let: LamLet
             match: LamMatch
             cond: LamCond

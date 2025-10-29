@@ -325,6 +325,18 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_COND:
             x->val.cond = inlineCond(x->val.cond);
             break;
+        case LAMEXP_TYPE_FORCE:
+            // Convert Force to Apply after type checking
+            // force(thunk) => thunk()
+            {
+                LamExp *thunk = inlineExp(x->val.force);
+                int save = PROTECT(thunk);
+                LamApply *apply = newLamApply(CPI(x), thunk, NULL);
+                PROTECT(apply);
+                x = newLamExp_Apply(CPI(apply), apply);
+                UNPROTECT(save);
+            }
+            break;
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered %s", lamExpTypeName(x->type));
         default:
