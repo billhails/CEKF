@@ -105,7 +105,7 @@ in
     print("useMultiplier type: " @@ typeof useMultiplier);
     print("multiplier type: " @@ typeof multiplier);
     assert(typeof makeAdder == "(number) -> (number) -> number");
-    assert(typeof multiplier == "#() => number");  // Thunk type
+    assert(typeof multiplier == "#() -> number");  // Thunk type
     assert(typeof useMultiplier == "(number) -> number");
     print("Test 5 passed: Higher-order functions with thunks");
 };
@@ -155,8 +155,8 @@ in
     print("multiplier type: " @@ typeof multiplier);
     print("getDefault type: " @@ typeof getDefault);
     // Zero-argument functions are typed as thunks
-    assert(typeof multiplier == "#() => number");
-    assert(typeof getDefault == "#() => number");
+    assert(typeof multiplier == "#() -> number");
+    assert(typeof getDefault == "#() -> number");
     assert(multiplier() == 10);
     assert(getDefault() == 0);
     print("Test 8 passed: Zero-argument functions work as thunks");

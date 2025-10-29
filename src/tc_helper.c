@@ -86,7 +86,7 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcThunk(TcThunk *thunk) {
-    eprintf("#() => ");
+    eprintf("#() -> ");
     ppTcType(thunk->type);
 }
 
@@ -298,7 +298,7 @@ static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity
 }
 
 static void tcThunkToString(TcThunk *thunk, char **buffer, int *size, int *capacity) {
-    appendToBuffer(buffer, size, capacity, "#() => ");
+    appendToBuffer(buffer, size, capacity, "#() -> ");
     tcTypeToStringHelper(thunk->type, buffer, size, capacity);
 }
 
