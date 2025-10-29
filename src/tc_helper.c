@@ -86,9 +86,8 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcThunk(TcThunk *thunk) {
-    eprintf("(#() => ");
+    eprintf("#() => ");
     ppTcType(thunk->type);
-    eprintf(")");
 }
 
 void ppTcVar(TcVar *var) {
