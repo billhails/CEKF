@@ -50,7 +50,6 @@ static TcType *makeCharacter(void);
 static TcType *makeUnknown(HashSymbol * var);
 static TcType *makeVar(HashSymbol * t);
 static TcType *makeFn(TcType * arg, TcType * result);
-static TcType *makeLazyFn(TcType * arg, TcType * result, bool isLazy);
 static TcType *makeThunk(TcType * type);
 static TcType *makeTuple(int size);
 static void addHereToEnv(TcEnv * env);
@@ -325,19 +324,19 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *makeFunctionType(LamVarList *args, TcEnv *env,
-                                TcType *returnType, bool isLazy) {
+                                TcType *returnType) {
     // ENTER(makeFunctionType);
     if (args == NULL) {
         // LEAVE(makeFunctionType);
         return returnType;
     }
-    TcType *next = makeFunctionType(args->next, env, returnType, isLazy);
+    TcType *next = makeFunctionType(args->next, env, returnType);
     int save = PROTECT(next);
     TcType *this = NULL;
     if (!getFromTcEnv(env, args->var, &this)) {
         cant_happen("cannot find var in env in makeFunctionType");
     }
-    TcType *ret = makeLazyFn(this, next, isLazy);
+    TcType *ret = makeFn(this, next);
     UNPROTECT(save);
     // LEAVE(makeFunctionType);
     return ret;
@@ -366,7 +365,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
         functionType = makeThunk(returnType);
     } else {
         // Regular function with arguments
-        functionType = makeFunctionType(lam->args, env, returnType, lam->isMacro);
+        functionType = makeFunctionType(lam->args, env, returnType);
     }
     UNPROTECT(save);
     // LEAVE(analyzeLam);
@@ -1585,8 +1584,7 @@ static TcType *freshFunction(TcFunction *fn, TcNg *ng, TcTypeTable *map) {
     int save = PROTECT(arg);
     TcType *result = freshRec(fn->result, ng, map);
     PROTECT(result);
-// Preserve the isLazy flag when creating fresh instance
-    TcType *res = makeLazyFn(arg, result, fn->isLazy);
+    TcType *res = makeFn(arg, result);
     UNPROTECT(save);
     return res;
 }
@@ -1769,19 +1767,14 @@ static TcType *makeSpaceship() {
     return res;
 }
 
-static TcType *makeLazyFn(TcType *arg, TcType *result, bool isLazy) {
+static TcType *makeFn(TcType *arg, TcType *result) {
     arg = prune(arg);
     result = prune(result);
     TcFunction *fn = newTcFunction(arg, result);
-    fn->isLazy = isLazy;        // Set the laziness flag
     int save = PROTECT(fn);
     TcType *type = newTcType_Function(fn);
     UNPROTECT(save);
     return type;
-}
-
-static TcType *makeFn(TcType *arg, TcType *result) {
-    return makeLazyFn(arg, result, false);
 }
 
 static TcType *makeThunk(TcType *type) {
@@ -1986,12 +1979,6 @@ static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
 }
 
 static bool unifyFunctions(TcFunction *a, TcFunction *b) {
-// For now, allow lazy/strict mismatch - we'll handle it with adapters later
-// TODO: Phase 3 - detect and generate adapters for lazy/strict mismatch
-    if (a->isLazy != b->isLazy) {
-        // return failUnifyFunctions(a, b, "lazy/strict mismatch");
-        DEBUG("warning: lazy/strict mismatch in unifyFunctions");
-    }
     bool res = unify(a->arg, b->arg, "functions[arg]")
         && unify(a->result, b->result, "functions[result]");
     return res;
