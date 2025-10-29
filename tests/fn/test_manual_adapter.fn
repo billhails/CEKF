@@ -1,4 +1,4 @@
-//Test manual adapter for passing macros to higher-order functions
+// Test manual adapter for passing macros to higher-order functions
 
 let
 macro lazy_or(a, b) {
