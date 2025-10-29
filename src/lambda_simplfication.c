@@ -39,7 +39,7 @@ static LamExp *performLamSimplifications(LamLam *lam) {
         && lam->exp->val.apply->args == NULL
         && lam->exp->val.apply->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
         LEAVE(performLamSimplifications);
-        printLamLam(lam, 0);
+        IFDEBUG(printLamLam(lam, 0));
         return lam->exp->val.apply->function;
     }
     LEAVE(performLamSimplifications);
@@ -366,11 +366,6 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 break;
             case LAMEXP_TYPE_NAMESPACES:
                 exp->val.namespaces = performNamespacesSimplifications(exp->val.namespaces);
-                break;
-            case LAMEXP_TYPE_FORCE:
-                // Keep Force nodes until after type checking
-                // They will be converted to applications during inlining
-                exp->val.force = lamPerformSimplifications(exp->val.force);
                 break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));

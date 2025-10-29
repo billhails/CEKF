@@ -130,7 +130,6 @@ LamExp --iff--> LamIff
 LamExp --callcc--> LamExp
 LamExp --letrec--> LamLetRec
 LamExp --typedefs--> LamTypeDefs
-LamExp --force--> LamExp
 LamExp --let--> LamLet
 LamExp --match--> LamMatch
 LamExp --cond--> LamCond

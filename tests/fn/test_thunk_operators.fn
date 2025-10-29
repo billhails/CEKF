@@ -1,0 +1,32 @@
+// Test the & (thunk) and * (force) prefix operators
+
+let
+    link "../../fn/ioutils.fn" as io;
+
+    prefix 14 "$" io.to_string;
+
+    // Create a thunk using &
+    x = &(1 + 2);
+    
+    // Force the thunk using *
+    y = *x;
+    
+    // Nested thunking
+    double_thunk = &(&42);
+    
+    // Force twice
+    value = *(*double_thunk);
+in
+    print("Type of x (thunk): " @@ typeof x);
+    print("Type of y (forced): " @@ typeof y);
+    print("Value of y: " @@ $y);
+    
+    print("Type of double_thunk: " @@ typeof double_thunk);
+    print("Type of double forced double_thunk: " @@ typeof value);
+    print("Value after double force: " @@ $value);
+    
+    assert(y == 3);
+    assert(value == 42);
+    
+    print("Thunk operator tests passed!");
+
