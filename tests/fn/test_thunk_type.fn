@@ -4,8 +4,10 @@
 {
 let
 fn identity(x) { x }
+macro midentity(x) { x }
 
 in
 // Test that basic types still work
 print(typeof identity);
+print(typeof midentity);
 };

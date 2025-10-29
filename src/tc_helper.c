@@ -72,10 +72,6 @@ void ppTcType(TcType *type) {
 
 void ppTcFunction(TcFunction *function) {
     eprintf("(");
-    if (function->isLazy) {
-        // Show lazy argument as a thunk type: (#()) -> ArgType
-        eprintf("#() -> ");
-    }
     ppTcType(function->arg);
     eprintf(") -> ");
     ppTcType(function->result);
@@ -90,9 +86,8 @@ void ppTcPair(TcPair *pair) {
 }
 
 void ppTcThunk(TcThunk *thunk) {
-    eprintf("(#() => ");
+    eprintf("#() -> ");
     ppTcType(thunk->type);
-    eprintf(")");
 }
 
 void ppTcVar(TcVar *var) {
@@ -289,10 +284,6 @@ static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *ca
 
 static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity) {
     appendToBuffer(buffer, size, capacity, "(");
-    if (function->isLazy) {
-        // Show lazy argument as a thunk type: (#()) -> ArgType
-        appendToBuffer(buffer, size, capacity, "#() -> ");
-    }
     tcTypeToStringHelper(function->arg, buffer, size, capacity);
     appendToBuffer(buffer, size, capacity, ") -> ");
     tcTypeToStringHelper(function->result, buffer, size, capacity);
@@ -307,9 +298,8 @@ static void tcPairToString(TcPair *pair, char **buffer, int *size, int *capacity
 }
 
 static void tcThunkToString(TcThunk *thunk, char **buffer, int *size, int *capacity) {
-    appendToBuffer(buffer, size, capacity, "(#() => ");
+    appendToBuffer(buffer, size, capacity, "#() -> ");
     tcTypeToStringHelper(thunk->type, buffer, size, capacity);
-    appendToBuffer(buffer, size, capacity, ")");
 }
 
 static void tcVarToString(TcVar *var, char **buffer, int *size, int *capacity) {

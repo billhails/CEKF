@@ -53,13 +53,12 @@ structs:
         meta:
             brief: Function type
             description: >-
-                Represents a function type `a -> b` with an argument type,
-                a result type, and a laziness flag indicating if the argument
-                should be thunked (wrapped in a zero-argument lambda).
+                Represents a function type `a -> b` with an argument type
+                and a result type. Laziness is now expressed via explicit
+                thunk types in the argument.
         data:
             arg: TcType
             result: TcType
-            isLazy: bool=false
 
     TcPair:
         meta:
