@@ -1,6 +1,6 @@
 # Thoughts about lazy functions and typing
 
-Review [LAZY_FUNCTION_PROPOSAL.md](LAZY FUNCTION PROPOSAL) for background.
+Review [LAZY_FUNCTION_PROPOSAL.md](LAZY_FUNCTION_PROPOSAL.md) for background.
 
 I'm not totally happy with the `isLazy` flag on the `TcFunction` type, I think it might be better to have an explicit thunk type `thunk(#t)` with a deconstructor `force:: thunk(#t) -> #t` which is really just invoking the thunk as a function with no arguments. Then the `isLazy` flag would go and instead the macro arguments would be explicitly thunks. The main reason I'm not happy with it is that there can be run-time type errors and that really shouldn't be possible in a strictly typed language. By keeping the types real rather than special-casing lazy functions this should be feasible?
 
