@@ -34,10 +34,12 @@ structs:
                 A lambda expression is a function definition,
                 which can be applied to arguments.
                 It contains a list of variables and an expression
-                that forms the body of the function.
+                that forms the body of the function. If isMacro is true,
+                all arguments are expected to be thunked (lazy).
         data:
             args: LamVarList
             exp: LamExp
+            isMacro: bool=false
 
     LamVarList:
         meta:

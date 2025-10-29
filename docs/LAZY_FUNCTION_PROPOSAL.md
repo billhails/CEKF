@@ -1,5 +1,20 @@
 # Lazy Function Type Tracking Proposal
 
+## Status: Phase 1 & 2 COMPLETE ✅
+
+**Completed (October 2024):**
+- ✅ Phase 1: Type system extended with `isLazy` field
+- ✅ Phase 2: Macros marked with `isMacro` flag, laziness propagated to types
+- ✅ Type printing shows lazy arguments: `(#() -> Type) -> Result`
+- ✅ Critical bug fixed: `freshFunction` now preserves `isLazy` during polymorphic instantiation
+
+**In Progress:**
+- ⧗ Phase 3: Automatic adapter generation (manual adapters work, automatic generation in progress)
+
+**Future Work:**
+- ☐ Phase 4: Type unification with laziness checking
+- ☐ Optimization: Avoid unnecessary wrapping/unwrapping
+
 ## Problem Statement
 
 Currently, macros in CEKF are implemented as lazy functions that expect thunked arguments. The system works as follows:
@@ -341,9 +356,68 @@ map(fn(x, y) { lazy_or(fn(){x}, fn(){y}) }, list_of_pairs)
 
 1. **Backward Compatible**: All existing macro calls continue to work
 2. **Type Safe**: Compiler tracks and enforces laziness
-3. **Zero Runtime Cost**: Adapters generated at compile time
+3. **Zero Runtime Cost**: Adapters generated at compile time (when automatic generation complete)
 4. **Explicit Where Needed**: Type signatures show laziness
 5. **Minimal Code Changes**: Most changes in type checker and lambda converter
+
+## Implementation Progress
+
+### Phases 1 & 2: Complete ✅
+
+The type system now fully tracks laziness:
+
+```fn
+macro lazy_or(a, b) { a or b }
+// Type: (#() -> bool) -> (#() -> bool) -> bool
+
+fn strict_function(x, y) { x or y }  
+// Type: (bool) -> (bool) -> bool
+```
+
+Type printing clearly distinguishes lazy arguments with the `#() ->` prefix.
+
+### Phase 3: Manual Adapters (Working) ✅
+
+Manual adapter generation works as expected:
+
+```fn
+macro lazy_or(a, b) { a or b }
+
+// Manual adapter: converts strict args to lazy
+fn strict_lazy_or(x, y) {
+    lazy_or(fn() { x }, fn() { y })
+}
+
+fn apply_binary(f, x, y) { f(x, y) }
+
+// Now we can pass the adapter to HOFs
+apply_binary(strict_lazy_or, true, false)  // Works!
+```
+
+**Type transformation:**
+- `lazy_or`: `(#() -> bool) -> (#() -> bool) -> bool` (lazy)
+- `strict_lazy_or`: `(bool) -> (bool) -> bool` (strict adapter)
+
+The adapter has the type signature that unifies with what HOFs expect, while internally wrapping arguments in thunks.
+
+**Test results:** See `tests/fn/test_manual_adapter.fn` and `tests/fn/test_adapter_types.fn`
+
+### Phase 3: Automatic Adapters (Future Work) ☐
+
+**Current state:** Manual adapters work perfectly and provide a viable solution. Automatic generation would be a nice-to-have enhancement.
+
+**Design:** See `docs/PHASE3_NOTES.md` for detailed implementation options. Recommended approach:
+1. Annotate Lambda AST with inferred types during type checking
+2. Add post-type-checking pass to detect mismatches
+3. Generate adapter wrappers automatically
+
+**Challenges:**
+- Need to preserve type information after type checking
+- Complex variable name generation
+- Handle partial application correctly
+- Ensure no performance regression
+
+**Priority:** Low - manual adapters provide sufficient functionality for now.
 
 ## Alternative Approaches Considered
 

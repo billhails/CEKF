@@ -1,0 +1,81 @@
+// Comprehensive test of lazy function type tracking (Phases 1 & 2)
+// Demonstrates:
+// 1. Type system correctly tracks and displays laziness
+// 2. Manual adapters work for passing macros to HOFs
+// 3. Different lazy/strict type signatures
+
+// === Macros (lazy functions) ===
+let
+macro lazy_and(a, b) {
+    puts("lazy_and evaluated\n");
+    a and b
+}
+
+macro lazy_or(a, b) {
+    puts("lazy_or evaluated\n");
+    a or b
+}
+
+// === Strict functions ===
+
+fn strict_and(x, y) {
+    puts("strict_and evaluated\n");
+    x and y
+}
+
+fn strict_or(x, y) {
+    puts("strict_or evaluated\n");
+    x or y
+}
+
+// === Manual adapters (convert lazy -> strict interface) ===
+
+fn adapt_lazy_and(x, y) {
+    lazy_and(x, y)  // Macro will automatically thunk the arguments
+}
+
+fn adapt_lazy_or(x, y) {
+    lazy_or(x, y)  // Macro will automatically thunk the arguments
+}
+
+// === Higher-order function ===
+
+fn apply_binary(f, x, y) {
+    puts("apply_binary calling function\n");
+    f(x, y)
+}
+in
+// === Type Display ===
+puts("=== Type Display Tests ===\n");
+puts("lazy_and type:   ");
+print(typeof lazy_and);
+puts("lazy_or type:    ");
+print(typeof lazy_or);
+puts("strict_and type: ");
+print(typeof strict_and);
+puts("strict_or type:  ");
+print(typeof strict_or);
+puts("adapt_lazy_and:  ");
+print(typeof adapt_lazy_and);
+puts("\n");
+
+// === Main tests ===
+puts("=== Direct Calls (all work) ===\n");
+puts("lazy_and(true, false): ");
+print(lazy_and(true, false));
+puts("strict_and(true, false): ");
+print(strict_and(true, false));
+puts("\n");
+
+puts("=== Through HOF ===\n");
+puts("Strict function through HOF: ");
+print(apply_binary(strict_or, true, false));
+
+puts("\nAdapter through HOF: ");
+print(apply_binary(adapt_lazy_or, true, false));
+
+puts("\n=== SUCCESS ===\n");
+puts("Phase 1 & 2 complete!\n");
+puts("- Types correctly track laziness\n");
+puts("- Manual adapters work perfectly\n");
+

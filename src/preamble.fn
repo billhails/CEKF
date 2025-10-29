@@ -150,6 +150,12 @@ fn error_(line, file, message) {
 
 infix right 13 "of" fn (f, g, x) { f(g(x)) };
 
+prefix 14 "&" THUNK;
+macro THUNK(x) { fn () {x} }
+
+prefix 14 "*" FORCE;
+fn FORCE(thunk) { thunk() }
+
 fn append {
     ([], b) { b }
     (h @ t, b) { h @ append(t, b) }

@@ -39,7 +39,7 @@ static LamExp *performLamSimplifications(LamLam *lam) {
         && lam->exp->val.apply->args == NULL
         && lam->exp->val.apply->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
         LEAVE(performLamSimplifications);
-        printLamLam(lam, 0);
+        IFDEBUG(printLamLam(lam, 0));
         return lam->exp->val.apply->function;
     }
     LEAVE(performLamSimplifications);

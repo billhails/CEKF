@@ -25,7 +25,7 @@ let makeAdder = fn (x) {
         fn (y) { x + useMultiplier(y) }
     };
     useMultiplier = fn (n) {
-        multiplier * n
+        multiplier() * n
     };
     multiplier = fn () { 10 };
 in

@@ -7,7 +7,7 @@ fnd_all () {
 }
 
 run_gdb () {
-    gdb -q ./cekf core
+    gdb -q ./bin/fn core
 }
 
 cores_on () {
@@ -73,9 +73,4 @@ new_ch () {
         echo "#include \"$1.h\"" >> $cfile
         echo "" >> $cfile
     fi
-}
-
-new_test () {
-    new_ch tests/$1
-    echo "#include \"tests/$1.h\"" >> src/alltests.h
 }

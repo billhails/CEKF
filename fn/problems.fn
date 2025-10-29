@@ -1,0 +1,12 @@
+let
+    fn one() {
+        1
+    }
+    fn abc() {
+        "abc"
+    }
+in
+    // various run time errors of the form: "unexpected VALUE_TYPE_CLO"
+    // because functions of no arguments are typed as their result values.
+    // print(1 + one);
+    print('x' @ abc);

@@ -173,6 +173,8 @@ static LamExp *performVarSubstitution(ParserInfo PI, HashSymbol *var, LamMacroAr
     ENTER(performVarSubstitution);
     LamExp *replacement = NULL;
     if (isMacroArgument(var, symbols)) {
+        // Macro arguments are thunks that need to be forced
+        // Call the thunk with no arguments: var()
         LamExp *name = newLamExp_Var(PI, var);
         int save = PROTECT(name);
         LamApply *apply = newLamApply(PI, name, NULL);

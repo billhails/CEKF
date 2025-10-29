@@ -95,7 +95,7 @@ static AstExpression *expressionPrecedence(PrattParser *, int);
 static AstExpression *fn(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *grouping(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *iff(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-// static AstExpression        *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *) __attribute__((unused));
 static AstExpression *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -523,11 +523,11 @@ static AstProg *prattParseThing(PrattLexer *thing)
         parserError(child, "unconsumed tokens");
     }
     PROTECT(nest);
-    AstExpression *expression = newAstExpression_Nest(CPI(nest), nest);
-    PROTECT(expression);
-    AstExpressions *exprs = newAstExpressions(CPI(expression), expression, NULL);
+    AstExpression *expr = newAstExpression_Nest(CPI(nest), nest);
+    PROTECT(expr);
+    AstExpressions *exprs = newAstExpressions(CPI(expr), expr, NULL);
     PROTECT(exprs);
-    nest = newAstNest(CPI(expression), definitions, exprs);
+    nest = newAstNest(CPI(expr), definitions, exprs);
     AstProg *prog = astNestToProg(nest); // has direct access to namespaces
     UNPROTECT(save);
     return prog;
@@ -2691,7 +2691,8 @@ static AstExpression *list(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief parses the argument to a prefix operator returning an expression that calls the operator on it.
+ * @brief parselet that parses the expressiomn following a prefix operator
+ * and creates a unary operation node.
  */
 static AstExpression *doPrefix(PrattRecord *record,
                                PrattParser *parser,
@@ -2839,13 +2840,13 @@ static AstExpression *wildcard(PrattRecord *record __attribute__((unused)),
 /**
  * @brief parselet triggered by a prefix `error` token.
  */
-static AstExpression *error(PrattRecord *record __attribute__((unused)),
+static AstExpression *error(PrattRecord *record,
                             PrattParser *parser,
                             AstExpression *lhs __attribute__((unused)),
                             PrattToken *tok __attribute__((unused)))
 {
     ENTER(error);
-    AstExpression *toError = expression(parser);
+    AstExpression *toError = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(toError);
     AstExpression *res = newAstExpression_Error(CPI(toError), toError);
     LEAVE(error);
@@ -2856,13 +2857,13 @@ static AstExpression *error(PrattRecord *record __attribute__((unused)),
 /**
  * @brief parselet triggered by a prefix `print` token.
  */
-static AstExpression *print(PrattRecord *record __attribute__((unused)),
+static AstExpression *print(PrattRecord *record,
                             PrattParser *parser,
                             AstExpression *lhs __attribute__((unused)),
                             PrattToken *tok __attribute__((unused)))
 {
     ENTER(print);
-    AstExpression *toPrint = expression(parser);
+    AstExpression *toPrint = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(toPrint);
     AstPrint *printer = newAstPrint(CPI(toPrint), toPrint);
     PROTECT(printer);
@@ -2894,13 +2895,13 @@ static AstExpression *typeofExp(PrattRecord *record,
 /**
  * @brief parselet triggered by a prefix `assert` token.
  */
-static AstExpression *passert(PrattRecord *record __attribute__((unused)),
+static AstExpression *passert(PrattRecord *record,
                               PrattParser *parser,
                               AstExpression *lhs __attribute__((unused)),
                               PrattToken *tok __attribute__((unused)))
 {
     ENTER(passert);
-    AstExpression *toAssert = expression(parser);
+    AstExpression *toAssert = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(toAssert);
     AstExpression *res = newAstExpression_Assertion(CPI(toAssert), toAssert);
     LEAVE(passert);
@@ -3000,7 +3001,6 @@ static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
-/*
 static AstExpression *infixLeft(PrattRecord *record, PrattParser *parser, AstExpression *lhs,
 PrattToken *tok __attribute__((unused))) {
     ENTER(infixLeft);
@@ -3011,7 +3011,6 @@ PrattToken *tok __attribute__((unused))) {
     UNPROTECT(save);
     return rhs;
 }
-*/
 
 /**
  * @brief parselet triggered by an infix period.
