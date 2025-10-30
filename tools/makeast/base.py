@@ -312,6 +312,9 @@ class Base:
     def hasMarkFn(self):
         return True
 
+    def printMermaid(self, catalog):
+        pass
+
 
 class EnumField:
     """

@@ -20,32 +20,25 @@
 """
 makeAST - Code generator for C structures from YAML schemas
 
-This is the new entry point that uses the refactored makeast package.
-For now, it imports from the old makeAST_legacy.py to maintain compatibility.
-Classes will be gradually moved from makeAST_legacy.py into the makeast/ package.
+This script uses the refactored makeast package to generate C code from YAML schemas.
+All classes have been migrated into focused modules under tools/makeast/.
 """
 
 import sys
 import os
 import argparse
 
-# Add the tools directory to Python path to import makeAST_legacy
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Import from the makeast package
 
-# TODO: Gradually move these imports from makeAST_legacy to makeast package
-from makeAST_legacy import (
-    Catalog,
-    SimpleHash,
-    SimpleStruct,
-    SimpleVector,
-    InlineDiscriminatedUnion,
-    InlineArray,
-    DiscriminatedUnion,
-    SimpleStack,
-    SimpleEnum,
-    Primitive,
-    SimpleArray,
-)
+# Import from the new makeast package
+from makeast.catalog import Catalog
+from makeast.primitives import Primitive
+from makeast.hashes import SimpleHash
+from makeast.enums import SimpleEnum
+from makeast.arrays import SimpleArray, SimpleStack, InlineArray
+from makeast.vectors import SimpleVector
+from makeast.structs import SimpleStruct
+from makeast.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
 
 from makeast.loader import Loader
 from makeast.utils import printGpl, printSection

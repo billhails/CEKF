@@ -17,20 +17,40 @@
 #
 
 """
-makeAST package - Code generation from YAML schemas
-
-This package is being gradually refactored from the monolithic makeAST_legacy.py.
-Currently only loader and utils modules are implemented.
+makeast package - Modular code generator for C structures from YAML schemas.
 """
 
-# Only import what actually exists
 from .loader import Loader
 from .utils import debug, pad, printGpl, printSection
+from .catalog import Catalog
+from .base import Base, EnumField
+from .primitives import Primitive
+from .fields import SimpleField, DiscriminatedUnionField
+from .hashes import SimpleHash
+from .enums import SimpleEnum, DiscriminatedUnionEnum
+from .arrays import SimpleArray, SimpleStack, InlineArray
+from .vectors import SimpleVector
+from .structs import SimpleStruct
+from .unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
 
 __all__ = [
     'Loader',
-    'debug',
-    'pad',
-    'printGpl',
-    'printSection',
+    'utils',
+    'Catalog',
+    'Base',
+    'EnumField',
+    'Primitive',
+    'SimpleField',
+    'DiscriminatedUnionField',
+    'SimpleHash',
+    'SimpleEnum',
+    'DiscriminatedUnionEnum',
+    'SimpleArray',
+    'SimpleStack',
+    'InlineArray',
+    'SimpleVector',
+    'SimpleStruct',
+    'DiscriminatedUnion',
+    'InlineDiscriminatedUnion',
+    'DiscriminatedUnionUnion',
 ]
