@@ -22,3 +22,7 @@ src/*~
 .typedefs
 unicode
 *.fnc
+tools/__pycache__/
+tools/*.pyc
+tools/makeast/__pycache__/
+tools/makeast/*.pyc
