@@ -1,5 +1,11 @@
 # CEKF Project - AI Coding Assistant Instructions
 
+> **Note**: This file is duplicated in two locations:
+> - `.github/copilot-instructions.md` (this file - used by GitHub Copilot)
+> - `docs/AI-ASSISTANT-GUIDE.md` (for human readers browsing the repository)
+> 
+> When updating, please keep both files in sync.
+
 ## Project Overview
 
 CEKF is a **bytecode-based functional programming language VM** implementing a CEK machine (Control, Environment, Kontinuation) plus "F" for failure continuation supporting `amb` non-deterministic programming. Written in C with Python code generation tools.
