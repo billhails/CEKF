@@ -26,6 +26,11 @@ then maybe [the math](docs/MATH.md)
 and comparing that with its implementation in [`step.c`](src/step.c), or
 start at [`main.c`](src/main.c) and work your way through.
 
+**For AI coding assistants or developers wanting a comprehensive overview**,
+see the [AI Assistant Guide](docs/AI-ASSISTANT-GUIDE.md) which covers
+architecture, build system, known complexity areas (TPMC, ANF), and the
+code generation system.
+
 ### An aside on `amb`
 
 I should probably give at least a brief explaination of `amb` here, for
