@@ -90,6 +90,7 @@ For each struct/union, `makeAST.py` generates:
 
 **Memory Management:**
 - `new<Type>()` - Allocator with GC header, takes all fields as args
+- `new<Union>_<Component>()` - Creates discriminated union variant in type-safe way
 - `copy<Type>()` - Deep copy
 - `mark<Type>()` - Recursive GC marking
 - `free<Type>()` - Cleanup (called by GC)
@@ -210,7 +211,7 @@ make indent            # Formats code with GNU indent
 - Example: `fn one_of { ([]) { back } (h @ t) { h then one_of(t) } }`
 
 ### Print System
-- **Auto-generated**: Print functions created automatically for typedefs
+- **Auto-generated**: Print functions created automatically for typedefs (only if no user-defined printer is specified for that type)
 - **User-defined**: `print typename(pt, pu, obj)` - takes printer functions for generic types
 - **Built-ins**: `puts(string)`, `putc(char)`, `putn(number)`, `putv(value)`
 - **Implementation**: Uses currying to specialize generic printers at call sites
@@ -226,7 +227,7 @@ make indent            # Formats code with GNU indent
 **Mark-and-sweep GC with protection stack**:
 
 - Use `PROTECT(var)` macro to shield objects during construction
-- Must `UNPROTECT(save)` to avoid leaks
+- `UNPROTECT(save)` restores the protection stack to a previously saved position
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
 - All allocated structures have `Header` with GC metadata
 - Generated `mark*()` functions handle recursive marking
@@ -690,4 +691,5 @@ Exp (anf.yaml)
 - Generated `*_debug.c` files are essential for understanding structure relationships
 - `docs/MATH.md` formalizes the CEKF machine mathematics
 - `docs/lambda-conversion.md` has extensive TPMC algorithm walkthrough with examples
+- `docs/pettersson92.pdf` - The original Pettersson 1992 paper on pattern matching compilation
 - Pratt parsing is unusual - see `src/pratt_parser.c` for infix operator handling
