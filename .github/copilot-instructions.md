@@ -57,7 +57,7 @@ structs:
             description: "Detailed description"
         data:
             fieldName: fieldType
-            optionalField: type=defaultValue
+            autoInitField: type=initValue    # Constructor auto-initializes, not a parameter
             
 unions:
     UnionName:
@@ -140,7 +140,7 @@ For each struct/union, `makeAST.py` generates:
 #### Important Notes
 
 - **ParserInfo**: If `parserInfo: true`, all structs get `ParserInfo I` field for error reporting
-- **Default values**: Use `field: type=value` syntax in YAML
+- **Auto-initialized fields**: Use `field: type=value` syntax in YAML to have constructor initialize the field automatically rather than requiring it as a parameter
 - **GC Integration**: All generated `new*()` functions automatically register with GC
 - **Type safety**: Generated code includes type checking in mark/free dispatchers
 - **Documentation**: YAML `meta` blocks generate doxygen-style comments
@@ -184,6 +184,11 @@ make indent            # Formats code with GNU indent
 
 ### Core Syntax
 - **Functions**: `fn name { (args) { body } }` or `let name = fn(args) { body }`
+- **Let/In blocks**: `let` declarations `in` expressions
+  - `let` introduces mutually recursive definitions (letrec semantics)
+  - `in` begins the body that uses those definitions
+  - Can appear at file top-level or inside any `{ }` block
+  - Without `let`/`in`, blocks are just sequences of expressions
 - **Pattern Matching**: Functions can have multiple cases, switch on arguments
   - Wildcards: `_` matches anything without binding
   - Named structures: `x = h @ t` binds both components and whole
@@ -194,12 +199,14 @@ make indent            # Formats code with GNU indent
   - Built-in types: `int`, `char`, `bool`, `string` (alias for `list(char)`)
   - Named fields: `constructor{ fieldName: type }`
 - **Operators**: Defined in `src/preamble.fn` (e.g., `@` = cons, `@@` = append)
-- **Namespaces**: Files start with `namespace` keyword; import via `"path.fn"`
+- **Namespaces**: Files start with `namespace` keyword (like `let` without `in` - mutually recursive declarations)
+  - Import via `link "<path>.fn" as <name>`
+  - Reference imported components as `name.component`
 
 ### Non-Deterministic Programming (amb)
 - **`then`**: Right-associative binary operator - evaluates LHS, but if backtracked returns RHS
 - **`back`**: Triggers backtracking to most recent `then`
-- Not just try/catch - can backtrack to any chronological `then` in the call stack
+- Not just try/catch - can backtrack to any chronologically previous `then` in the history of the process
 - Example: `fn one_of { ([]) { back } (h @ t) { h then one_of(t) } }`
 
 ### Print System
@@ -228,6 +235,7 @@ make indent            # Formats code with GNU indent
 
 **Conditional compilation flags** (define in source to enable):
 - `DEBUG_STEP`, `DEBUG_BYTECODE`, `DEBUG_TC`, `DEBUG_LAMBDA_CONVERT`, etc.
+- Defined in `src/common.h`
 - Each stage has `#include "debugging_on.h"` or `"debugging_off.h"` pattern
 - Command-line: `--dump-ast`, `--dump-lambda`, `--dump-anf`, `--dump-bytecode`
 
@@ -243,6 +251,204 @@ make indent            # Formats code with GNU indent
 - **C Unit Tests**: `tests/src/*.c` (enabled with `MODE=unit`)
 - **Language Tests**: `tests/fn/test_*.fn` run with `--assertions-accumulate`
 - Tests automatically run via `make test`
+
+## Pratt Parser & Syntactic Extension
+
+**Table-driven parser enabling runtime operator definitions** - The Pratt parser allows F♮ to be syntactically extensible, supporting user-defined operators with custom precedence and associativity.
+
+**Note**: The Pratt parser implementation (and much of the early memory management and hash table code) is based on Bob Nystrom's excellent book [Crafting Interpreters](https://craftinginterpreters.com/).
+
+### Why Pratt Parsing?
+
+Traditional parser generators (Flex/Bison) compile to fixed runtime parsers, making syntactic extension impossible. F♮ uses a **hand-written Pratt parser** that is:
+- **Table-driven**: All precedence/associativity handled by runtime tables (`PrattRecordTable`)
+- **Re-entrant**: Can pause parsing, load linked files, resume (required for `link` directive)
+- **Scoped**: Operator definitions are scoped to `let/in` blocks and `{ }` nests
+- **UTF-8 aware**: Token scanner uses tree structures called "tries" to efficiently recognize Unicode operators (a trie is a tree where each path from root to leaf represents a token, indexed by successive characters)
+
+### Architecture Overview
+
+**Three main components**:
+
+1. **Scanner** (`src/pratt_scanner.c`):
+   - Trie-based token recognition (`PrattTrie`)
+   - Handles keywords, operators, strings, numbers, characters
+   - Maintains input stack (`PrattBufList`) for nested file parsing
+   - Produces token stream (`PrattToken`)
+
+2. **Parser** (`src/pratt_parser.c`):
+   - Core function: `expressionPrecedence(parser, precedence)`
+   - Looks up operators in `PrattRecordTable` by symbol
+   - Each `PrattRecord` contains prefix/infix/postfix implementations
+   - Parselets are function pointers: `typedef AstExpression *(*PrattParselet)(PrattRecord *, PrattParser *, AstExpression *, PrattToken *)`
+
+3. **Parser State** (`PrattParser`):
+   - `rules`: Hash table of operator parsing rules
+   - `trie`: Token recognition trie
+   - `lexer`: Scanner state
+   - `next`: Pointer to parent parser (for scope nesting)
+
+### Precedence & Associativity
+
+**Precedence scaling** (`PRECEDENCE_SCALE = 3`):
+- User declares precedence (e.g., `100`)
+- Internal precedence: `user_prec * 3`
+- Allows +1/-1 adjustments without overlapping: `(1*3+1) < (2*3-1)`
+
+**Associativity** (stored in `PrattRecord`):
+- **Left**: RHS parsed with `prec + 1` (tighter binding right)
+- **Right**: RHS parsed with `prec - 1` (allows right recursion)
+- **None**: RHS parsed with `prec` (disallows chaining)
+
+Example from `src/preamble.fn`:
+```fn
+infix left 10 "+" ADDITION;      // left associative: a + b + c = (a + b) + c
+infix right 90 "@" cons;         // right associative: a @ b @ c = a @ (b @ c)
+infix none 5 "<=>" COMPARISON;   // non-associative: can't chain a <=> b <=> c
+```
+
+### Operator Definition Syntax
+
+**Syntax**: `{infix|prefix|postfix} [associativity] precedence "operator" implementation`
+
+**Examples**:
+```fn
+prefix 13 "!" factorial;                  // prefix unary
+infix left 100 "+" addition;              // infix binary left-assoc
+infix right 2 "then" amb;                 // infix binary right-assoc
+postfix 120 "?" optional;                 // postfix unary (hypothetical)
+```
+
+**Macros as operators**:
+```fn
+macro AND(a, b) { if (a) { b } else { false } }
+infix left 3 "and" AND;
+```
+Macro arguments are wrapped in thunks (`fn() { arg }`) and lazily evaluated, providing proper scoping.
+
+### Parser Table (`PrattRecord`)
+
+Each operator symbol maps to a `PrattRecord` containing:
+
+```c
+struct PrattRecord {
+    HashSymbol *symbol;           // Operator symbol
+    PrattParselet prefixOp;      // Prefix parser function (or NULL)
+    int prefixPrec;               // Prefix precedence
+    AstExpression *prefixImpl;    // User implementation (or NULL for built-ins)
+    PrattParselet infixOp;       // Infix parser function (or NULL)
+    int infixPrec;                // Infix precedence
+    AstExpression *infixImpl;     // User implementation
+    PrattParselet postfixOp;     // Postfix parser function (or NULL)
+    int postfixPrec;              // Postfix precedence
+    AstExpression *postfixImpl;   // User implementation
+    PrattAssoc associativity;     // LEFT, RIGHT, or NONE
+};
+```
+
+**Key parselets**:
+- `userPrefix()` - Handles user-defined prefix operators
+- `userInfixLeft()`, `userInfixRight()`, `userInfixNone()` - Handle infix with associativity
+- `userPostfix()` - Handles user-defined postfix operators
+- Built-in parselets: `grouping()`, `list()`, `fn()`, `iff()`, `switchExp()`, etc.
+
+### Scoping Mechanism
+
+**Parser nesting**: Each `PrattParser` has a `next` pointer to parent parser. When entering a new scope:
+1. Create new `PrattParser` with `next` pointing to parent
+2. Copy parent's `rules` table (copy-on-write semantics)
+3. Parse scope body
+4. Discard child parser when exiting scope
+
+**Scope entry points**:
+- `let ... in ...` blocks
+- `{ }` nests
+- File boundaries (via `link` directive)
+- Namespace imports
+
+**Operator shadowing**: Inner scopes can redefine operators; definitions are forgotten when scope exits.
+
+### Known Limitations & Improvement Areas
+
+1. **Restriction: Operator can't be both infix and postfix**
+   - Comment in code: "operators can't be both infix and postfix"
+   - Reason: `PrattRecord` allows all three fixities but parser may have conflicts
+   - Could be relaxed with better disambiguation
+
+2. **Fixity conflicts**: Same symbol with multiple fixities must be disambiguated
+   - Current: Simply disallowed
+   - Improvement: Context-sensitive parsing based on preceding token
+
+3. **Operator definition scope export**: Operators cannot currently be exported as part of a namespace
+   - Current: Operators are scoped locally but not exportable
+   - Improvement: Need mechanism to export operator definitions with namespaces
+   - See `PrattNsIdTable` for namespace tracking infrastructure
+
+4. **Precedence granularity**: `PRECEDENCE_SCALE = 3` limits how many operators can fit between declared levels
+   - Could be increased if needed
+
+5. **Macro hygiene**: Currently solved by wrapping args in thunks
+   - See `docs/OPERATORS.md` for evolution of approach
+   - Works but adds runtime overhead (though optimized in simple cases)
+
+6. **Copy-on-write for rules tables**: Not currently implemented
+   - Each scope creates full copy of parent's rules
+   - Could be optimized with COW semantics
+
+### Integration with Lambda Conversion
+
+After parsing, operator applications are transformed:
+- Infix: `a + b` → `addition(a, b)` (function application)
+- Prefix: `!a` → `NOT(a)`
+- Postfix: `a!` → `factorial(a)`
+
+Macro operators are handled specially:
+1. Arguments wrapped in thunks during lambda conversion: `AND(a, b)` → `AND(fn(){a}, fn(){b})`
+2. Macro substitution unwraps if thunk just invokes arg: `fn(){a()}` → `a`
+3. Free variables in macro body resolved in definition scope (lexical scoping)
+
+See `src/macro_substitution.c` for implementation details.
+
+### Debugging Parser Issues
+
+```bash
+# Enable parser debug output
+# Uncomment DEBUG_PRATT_PARSER in src/common.h
+
+# Dump AST to see how operators parsed
+./bin/fn --dump-ast path/to/file.fn
+```
+
+**Watch for**:
+- Precedence conflicts (operators binding wrong way)
+- Associativity bugs (wrong grouping in chains)
+- Scope leakage (operators visible outside their scope)
+- Macro expansion issues (arguments evaluated too early/late)
+
+### Key Files
+
+- `src/pratt_parser.c` - Main parser implementation (3400+ lines)
+- `src/pratt_scanner.c` - Token scanner with trie-based recognition
+- `src/pratt.yaml` - Parser data structures
+- `src/preamble.fn` - Required operator definitions (compiler depends on these)
+- `docs/PARSING.md` - Original design notes and requirements
+- `docs/OPERATORS.md` - Evolution of operator and macro system
+
+### Testing
+
+Operator tests in `tests/fn/`:
+- Precedence and associativity combinations
+- Scope behavior (shadowing, export)
+- Macro hygiene and lazy evaluation
+
+### Future Work
+
+Potential improvements for operator system:
+- Allow infix/postfix ambiguity (context-sensitive parsing)
+- Copy-on-write for parser rule tables (performance)
+- Better precedence conflict detection at definition time
+- Mixfix operators (e.g., `if _ then _ else _`)
+- Export control for operator definitions
 
 ## Common Patterns
 
@@ -353,7 +559,7 @@ Into optimized decision trees (DFA-like state machines) that efficiently dispatc
 ./bin/fn --dump-tpmc=functionName path/to/file.fn > diagram.md
 
 # Enable debug output during compilation
-# Edit src/tpmc_match.c and define DEBUG_TPMC_MATCH
+# Uncomment DEBUG_TPMC_MATCH in src/common.h
 ```
 
 **Watch for**:
@@ -449,7 +655,7 @@ Exp (anf.yaml)
 
 ```bash
 # Enable debug output
-# Edit src/anf_normalize.c and define DEBUG_ANF
+# Uncomment DEBUG_ANF in src/common.h
 
 # Dump ANF for inspection
 ./bin/fn --dump-anf path/to/file.fn
