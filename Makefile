@@ -51,7 +51,7 @@ CC:=$(CCC) -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)
 LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 
 PYTHON=python3
-MAKE_AST=$(PYTHON) ./tools/makeAST.py
+MAKE_AST=$(PYTHON) ./tools/generate.py
 
 LIBS=-lm -lsqlite3
 
@@ -136,22 +136,22 @@ include $(ALL_DEP)
 $(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
 
-$(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml tools/generate.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml tools/makeAST.py | $(GENDIR)
+$(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml tools/generate.py | $(GENDIR)
 	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml tools/generate.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml tools/generate.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml tools/generate.py $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml tools/makeAST.py $(SRCDIR)/primitives.yaml | $(DOCDIR)
+$(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml tools/generate.py $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS)
