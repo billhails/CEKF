@@ -31,12 +31,12 @@ Source flows through these stages (see README.md flowchart):
 
 ## Critical Build System Knowledge
 
-### Code Generation (`tools/makeAST.py`)
+### Code Generation (`tools/generate.py` and `tools/makeast/`)
 
 **The build depends heavily on Python code generation**. DO NOT manually edit files in `generated/`!
 
 #### Overview
-The `tools/makeAST.py` script (4500+ lines) reads YAML schema files and generates complete C implementations including memory management, debugging, and data structure operations. Originally for AST generation, now handles all compiler stage data structures.
+The code generator is now modular: the main entry point is `tools/generate.py`, which orchestrates the `makeast` Python package (in `tools/makeast/`). This package contains all logic for parsing YAML schemas and generating C code for all compiler stages. The old monolithic `makeAST.py` has been fully refactored into modules such as `catalog.py`, `primitives.py`, `fields.py`, `structs.py`, `unions.py`, `arrays.py`, `vectors.py`, `hashes.py`, and more. All code generation is now managed through this modular structure.
 
 #### YAML Schema Structure
 
@@ -86,7 +86,7 @@ Common types shared across all stages - referenced via `!include primitives.yaml
 
 #### Generated Functions
 
-For each struct/union, `makeAST.py` generates:
+For each struct/union, the code generator (via `tools/generate.py` and the `makeast` package) generates:
 
 **Memory Management:**
 - `new<Type>()` - Allocator with GC header, takes all fields as args
@@ -120,20 +120,14 @@ For each struct/union, `makeAST.py` generates:
 
 #### Key Classes in `makeAST.py`
 
+The main classes are now in the `makeast` package:
 - `Catalog` - Manages all entities in a YAML file, orchestrates generation
-- `SimpleStruct` - Regular C struct
-- `DiscriminatedUnion` - Tagged union (type field + union of alternatives)
-- `SimpleArray` - Dynamic array with push/pop
-- `SimpleStack` - Stack operations (extends SimpleArray)
-- `SimpleHash` - Hash table for symbol→value mappings
-- `SimpleVector` - Fixed-size arrays
-- `SimpleEnum` - C enum
-- `Primitive` - Built-in types from `primitives.yaml`
+- `SimpleStruct`, `DiscriminatedUnion`, `SimpleArray`, `SimpleStack`, `SimpleHash`, `SimpleVector`, `SimpleEnum`, `Primitive`, and more, each in their own module.
 
 #### Usage Pattern
 
 1. **Define structures** in `src/<stage>.yaml`
-2. **Run make** - triggers `makeAST.py` for each YAML
+2. **Run make** - triggers `generate.py` for each YAML (via Makefile)
 3. **Generated files** appear in `generated/`
 4. **Include headers** in your C code: `#include "<stage>.h"`
 5. **Use generated functions** - no manual memory management code needed
@@ -160,7 +154,7 @@ If generated code looks wrong:
 - Check YAML syntax (especially indentation)
 - Verify types are defined (either in same YAML or `primitives.yaml`)
 - Look at similar existing definitions as templates
-- Run `python3 tools/makeAST.py src/<file>.yaml h` manually to see errors
+- Run `python3 tools/generate.py src/<file>.yaml h` manually to see errors
 
 ### Build Modes (via `MODE=` variable)
 
