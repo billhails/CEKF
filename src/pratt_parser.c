@@ -1059,7 +1059,106 @@ static void validateOperator(PrattParser *parser, PrattUTF8 *operator)
  * @param operator The PrattUTF8 representation of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
-static void addOperator(PrattParser *parser,
+// Generate a hygienic unary operator function definition (prefix or postfix)
+// Creates: fn symbol { (x) { impl(x) } }
+static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
+                                                   HashSymbol *symbol,
+                                                   AstExpression *impl) {
+    int save = PROTECT(NULL);
+    HashSymbol *argSym = newSymbol("x");
+    PROTECT(argSym);
+    AstFarg *arg = newAstFarg_Symbol(PI, argSym);
+    PROTECT(arg);
+    AstFargList *argList = newAstFargList(PI, arg, NULL);
+    PROTECT(argList);
+    AstAltArgs *altArgs = newAstAltArgs(PI, argList, NULL);
+    PROTECT(altArgs);
+    
+    // Always apply impl to the argument x
+    // This creates: impl(x)
+    AstExpression *argExpr = newAstExpression_Symbol(PI, argSym);
+    PROTECT(argExpr);
+    AstExpressions *callArgs = newAstExpressions(PI, argExpr, NULL);
+    PROTECT(callArgs);
+    AstFunCall *funCall = newAstFunCall(PI, impl, callArgs);
+    PROTECT(funCall);
+    AstExpression *bodyExpr = newAstExpression_FunCall(PI, funCall);
+    PROTECT(bodyExpr);
+    
+    AstExpressions *exprs = newAstExpressions(PI, bodyExpr, NULL);
+    PROTECT(exprs);
+    AstNest *body = newAstNest(PI, NULL, exprs);
+    PROTECT(body);
+    AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
+    PROTECT(altFun);
+    AstCompositeFunction *compFun = makeAstCompositeFunction(altFun, NULL);
+    PROTECT(compFun);
+    AstExpression *funExpr = newAstExpression_Fun(PI, compFun);
+    PROTECT(funExpr);
+    AstDefine *def = newAstDefine(PI, symbol, funExpr);
+    PROTECT(def);
+    AstDefinition *res = newAstDefinition_Define(PI, def);
+    // Unprotect all in one go
+    UNPROTECT(save);
+    return res;
+}
+
+// Generate a hygienic binary operator function definition (infix)
+// Creates: fn symbol { (x, y) { impl(x, y) } }
+static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
+                                                    HashSymbol *symbol,
+                                                    AstExpression *impl) {
+    int save = PROTECT(NULL);
+    HashSymbol *xSym = newSymbol("x");
+    PROTECT(xSym);
+    HashSymbol *ySym = newSymbol("y");
+    PROTECT(ySym);
+    
+    // Create argument list: (x, y)
+    AstFarg *xArg = newAstFarg_Symbol(PI, xSym);
+    PROTECT(xArg);
+    AstFarg *yArg = newAstFarg_Symbol(PI, ySym);
+    PROTECT(yArg);
+    AstFargList *yArgList = newAstFargList(PI, yArg, NULL);
+    PROTECT(yArgList);
+    AstFargList *argList = newAstFargList(PI, xArg, yArgList);
+    PROTECT(argList);
+    AstAltArgs *altArgs = newAstAltArgs(PI, argList, NULL);
+    PROTECT(altArgs);
+    
+    // Create function body: impl(x, y)
+    AstExpression *xExpr = newAstExpression_Symbol(PI, xSym);
+    PROTECT(xExpr);
+    AstExpression *yExpr = newAstExpression_Symbol(PI, ySym);
+    PROTECT(yExpr);
+    AstExpressions *yCallArgs = newAstExpressions(PI, yExpr, NULL);
+    PROTECT(yCallArgs);
+    AstExpressions *callArgs = newAstExpressions(PI, xExpr, yCallArgs);
+    PROTECT(callArgs);
+    AstFunCall *funCall = newAstFunCall(PI, impl, callArgs);
+    PROTECT(funCall);
+    AstExpression *bodyExpr = newAstExpression_FunCall(PI, funCall);
+    PROTECT(bodyExpr);
+    
+    AstExpressions *exprs = newAstExpressions(PI, bodyExpr, NULL);
+    PROTECT(exprs);
+    AstNest *body = newAstNest(PI, NULL, exprs);
+    PROTECT(body);
+    AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
+    PROTECT(altFun);
+    AstCompositeFunction *compFun = makeAstCompositeFunction(altFun, NULL);
+    PROTECT(compFun);
+    AstExpression *funExpr = newAstExpression_Fun(PI, compFun);
+    PROTECT(funExpr);
+    AstDefine *def = newAstDefine(PI, symbol, funExpr);
+    PROTECT(def);
+    AstDefinition *res = newAstDefinition_Define(PI, def);
+    // Unprotect all in one go
+    UNPROTECT(save);
+    return res;
+}
+
+static AstDefinition *addOperator(PrattParser *parser,
                         PrattFixity fixity,
                         PrattAssoc associativity,
                         int precedence,
@@ -1087,6 +1186,21 @@ static void addOperator(PrattParser *parser,
             record->prefixOp = userPrefix;
             record->prefixPrec = precedence * PRECEDENCE_SCALE;
             record->prefixImpl = impl;
+            record->prefix_original_impl = impl;
+            // Generate a unique function name for the hygienic binding
+            record->prefix_hygienic_func = genSymDollar("__op");
+            // Check if impl is a bare symbol (AstExpression_Symbol)
+            if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
+                record->prefix_is_bare_symbol = true;
+            } else {
+                record->prefix_is_bare_symbol = false;
+            }
+            // Add record to parser table before returning
+            setPrattRecordTable(parser->rules, op, record);
+            // Generate and return the function definition AST for the hygienic binding
+            AstDefinition *def = makeHygienicUnaryOperatorDef(CPI(impl), record->prefix_hygienic_func, impl);
+            UNPROTECT(save);
+            return def;
         }
         break;
         case PRATTFIXITY_TYPE_INFIX:
@@ -1105,10 +1219,22 @@ static void addOperator(PrattParser *parser,
                               "attempt to define existing postfix operator \"%s\" as infix",
                               operator->entries);
             }
-            record->infixOp = associativity == PRATTASSOC_TYPE_LEFT ? userInfixLeft : associativity == PRATTASSOC_TYPE_RIGHT ? userInfixRight
-                                                                                                                             : userInfixNone;
+            record->infixOp = associativity == PRATTASSOC_TYPE_LEFT ? userInfixLeft : associativity == PRATTASSOC_TYPE_RIGHT ? userInfixRight : userInfixNone;
             record->infixPrec = precedence * PRECEDENCE_SCALE;
             record->infixImpl = impl;
+            record->infix_original_impl = impl;
+            record->infix_hygienic_func = genSymDollar("__op");
+            if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
+                record->infix_is_bare_symbol = true;
+            } else {
+                record->infix_is_bare_symbol = false;
+            }
+            // Add record to parser table before returning
+            setPrattRecordTable(parser->rules, op, record);
+            // Generate and return the function definition AST for the hygienic binding
+            AstDefinition *def = makeHygienicBinaryOperatorDef(CPI(impl), record->infix_hygienic_func, impl);
+            UNPROTECT(save);
+            return def;
         }
         break;
         case PRATTFIXITY_TYPE_POSTFIX:
@@ -1130,6 +1256,19 @@ static void addOperator(PrattParser *parser,
             record->postfixOp = userPostfix;
             record->postfixPrec = precedence * PRECEDENCE_SCALE;
             record->postfixImpl = impl;
+            record->postfix_original_impl = impl;
+            record->postfix_hygienic_func = genSymDollar("__op");
+            if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
+                record->postfix_is_bare_symbol = true;
+            } else {
+                record->postfix_is_bare_symbol = false;
+            }
+            // Add record to parser table before returning
+            setPrattRecordTable(parser->rules, op, record);
+            // Generate and return the function definition AST for the hygienic binding
+            AstDefinition *def = makeHygienicUnaryOperatorDef(CPI(impl), record->postfix_hygienic_func, impl);
+            UNPROTECT(save);
+            return def;
         }
         break;
         }
@@ -1174,6 +1313,7 @@ static void addOperator(PrattParser *parser,
         setPrattRecordTable(parser->rules, op, record);
     }
     UNPROTECT(save);
+    return NULL;
 }
 
 /**
@@ -1310,6 +1450,7 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
     ENTER(preOrPostfix);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
+    AstDefinition *def = NULL;
     if (check(parser, TOK_NUMBER()))
     {
         PrattToken *prec = next(parser);
@@ -1330,7 +1471,7 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
             AstExpression *impl = expression(parser);
             PROTECT(impl);
             consume(parser, TOK_SEMI());
-            addOperator(parser, isPostfix ? PRATTFIXITY_TYPE_POSTFIX : PRATTFIXITY_TYPE_PREFIX,
+            def = addOperator(parser, isPostfix ? PRATTFIXITY_TYPE_POSTFIX : PRATTFIXITY_TYPE_PREFIX,
                         false, precedence, str, impl);
         }
         else
@@ -1340,7 +1481,7 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
     }
     LEAVE(preOrPostfix);
     UNPROTECT(save);
-    return newAstDefinition_Blank(TOKPI(tok));
+    return def ? def : newAstDefinition_Blank(TOKPI(tok));
 }
 
 /**
