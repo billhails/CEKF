@@ -114,6 +114,19 @@ structs:
             name: HashSymbol
             value: AstExpression
 
+    AstAnnotatedSymbol:
+        meta:
+            brief: AST Annotated Symbol
+            description: >-
+                A symbol annotated with additional metadata. Used for
+                hygienic operators where we need to track both the
+                hygienic wrapper symbol and the original implementation
+                to enable inlining of type constructors during lambda
+                conversion.
+        data:
+            symbol: HashSymbol
+            originalImpl: AstExpression
+
     AstDefMacro:
         meta:
             brief: AST Macro Definition
@@ -508,6 +521,7 @@ unions:
             back: void_ptr
             wildcard: void_ptr
             alias: AstExprAlias
+            annotatedSymbol: AstAnnotatedSymbol
             funCall: AstFunCall
             lookup: AstLookup
             symbol: HashSymbol

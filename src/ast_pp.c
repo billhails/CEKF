@@ -515,6 +515,12 @@ void ppAstExpression(PrattUTF8 *dest, AstExpression *expr) {
         case AST_EXPRESSION_TYPE_SYMBOL:
             psprintf(dest, "%s", expr->val.symbol->name);
             break;
+        case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+            psprintf(dest, "%s", expr->val.annotatedSymbol->symbol->name);
+            psprintf(dest, "/*orig:");
+            ppAstExpression(dest, expr->val.annotatedSymbol->originalImpl);
+            psprintf(dest, "*/");
+            break;
         case AST_EXPRESSION_TYPE_FUNCALL:
             ppAstFunCall(dest, expr->val.funCall);
             break;

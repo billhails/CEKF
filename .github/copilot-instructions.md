@@ -226,6 +226,13 @@ make indent            # Formats code with GNU indent
 - All allocated structures have `Header` with GC metadata
 - Generated `mark*()` functions handle recursive marking
 
+**CRITICAL: HashSymbol objects must NEVER be PROTECT'ed**:
+- `HashSymbol` objects are **not** GC-managed (no `Header`)
+- Symbols are automatically interned in a global symbol table and never freed
+- Calling `PROTECT(hashSymbol)` will corrupt the protection stack and cause GC errors
+- This includes symbols returned by: `newSymbol()`, `genSym()`, `genSymDollar()`, token types, etc.
+- Only protect structures with a `Header` (AST nodes, arrays, hashes, etc.)
+
 ## Debugging
 
 **Conditional compilation flags** (define in source to enable):

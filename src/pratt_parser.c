@@ -1066,7 +1066,6 @@ static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
                                                    AstExpression *impl) {
     int save = PROTECT(NULL);
     HashSymbol *argSym = newSymbol("x");
-    PROTECT(argSym);
     AstFarg *arg = newAstFarg_Symbol(PI, argSym);
     PROTECT(arg);
     AstFargList *argList = newAstFargList(PI, arg, NULL);
@@ -1110,9 +1109,7 @@ static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
                                                     AstExpression *impl) {
     int save = PROTECT(NULL);
     HashSymbol *xSym = newSymbol("x");
-    PROTECT(xSym);
     HashSymbol *ySym = newSymbol("y");
-    PROTECT(ySym);
     
     // Create argument list: (x, y)
     AstFarg *xArg = newAstFarg_Symbol(PI, xSym);
@@ -1188,7 +1185,8 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->prefixImpl = impl;
             record->prefix_original_impl = impl;
             // Generate a unique function name for the hygienic binding
-            record->prefix_hygienic_func = genSymDollar("__op");
+            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
+            record->prefix_hygienic_func = genSym("$op");
             // Check if impl is a bare symbol (AstExpression_Symbol)
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->prefix_is_bare_symbol = true;
@@ -1223,7 +1221,7 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->infixPrec = precedence * PRECEDENCE_SCALE;
             record->infixImpl = impl;
             record->infix_original_impl = impl;
-            record->infix_hygienic_func = genSymDollar("__op");
+            record->infix_hygienic_func = genSym("$op");
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->infix_is_bare_symbol = true;
             } else {
@@ -1257,7 +1255,7 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->postfixPrec = precedence * PRECEDENCE_SCALE;
             record->postfixImpl = impl;
             record->postfix_original_impl = impl;
-            record->postfix_hygienic_func = genSymDollar("__op");
+            record->postfix_hygienic_func = genSym("$op");
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->postfix_is_bare_symbol = true;
             } else {
@@ -1275,17 +1273,30 @@ static AstDefinition *addOperator(PrattParser *parser,
     }
     else
     {
+        // New operator - create record and hygienic function
+        HashSymbol *hygienicFunc = NULL;
+        AstDefinition *hygienicDef = NULL;
+        
         switch (fixity)
         {
         case PRATTFIXITY_TYPE_PREFIX:
         {
+            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
+            hygienicFunc = genSym("$op");
             record = newPrattRecord(op, userPrefix, precedence * PRECEDENCE_SCALE, NULL, 0, NULL, 0, associativity);
             PROTECT(record);
             record->prefixImpl = impl;
+            record->prefix_original_impl = impl;
+            record->prefix_hygienic_func = hygienicFunc;
+            record->prefix_is_bare_symbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
+            hygienicDef = makeHygienicUnaryOperatorDef(CPI(impl), hygienicFunc, impl);
+            PROTECT(hygienicDef);
         }
         break;
         case PRATTFIXITY_TYPE_INFIX:
         {
+            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
+            hygienicFunc = genSym("$op");
             record = newPrattRecord(op, NULL, 0,
                                     associativity == PRATTASSOC_TYPE_LEFT
                                         ? userInfixLeft
@@ -1295,23 +1306,34 @@ static AstDefinition *addOperator(PrattParser *parser,
                                     precedence * PRECEDENCE_SCALE, NULL, 0, associativity);
             PROTECT(record);
             record->infixImpl = impl;
+            record->infix_original_impl = impl;
+            record->infix_hygienic_func = hygienicFunc;
+            record->infix_is_bare_symbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
+            hygienicDef = makeHygienicBinaryOperatorDef(CPI(impl), hygienicFunc, impl);
+            PROTECT(hygienicDef);
         }
         break;
         case PRATTFIXITY_TYPE_POSTFIX:
         {
+            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
+            hygienicFunc = genSym("$op");
             record = newPrattRecord(op, NULL, 0, NULL, 0, userPostfix, precedence * PRECEDENCE_SCALE, associativity);
             PROTECT(record);
             record->postfixImpl = impl;
+            record->postfix_original_impl = impl;
+            record->postfix_hygienic_func = hygienicFunc;
+            record->postfix_is_bare_symbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
+            hygienicDef = makeHygienicUnaryOperatorDef(CPI(impl), hygienicFunc, impl);
+            PROTECT(hygienicDef);
         }
         break;
         }
         parser->trie = insertPrattTrie(parser->trie, op);
-    }
-    if (record)
-    {
-        // hoist - might have come from parent env
         setPrattRecordTable(parser->rules, op, record);
+        UNPROTECT(save);
+        return hygienicDef;
     }
+    // Should not reach here
     UNPROTECT(save);
     return NULL;
 }
@@ -1471,6 +1493,7 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
             AstExpression *impl = expression(parser);
             PROTECT(impl);
             consume(parser, TOK_SEMI());
+            // addOperator returns the hygienic function definition which IS the definition we want
             def = addOperator(parser, isPostfix ? PRATTFIXITY_TYPE_POSTFIX : PRATTFIXITY_TYPE_PREFIX,
                         false, precedence, str, impl);
         }
@@ -1481,6 +1504,7 @@ static AstDefinition *preOrPostfix(PrattParser *parser, bool isPostfix)
     }
     LEAVE(preOrPostfix);
     UNPROTECT(save);
+    // Return the hygienic function definition, or blank if there was an error
     return def ? def : newAstDefinition_Blank(TOKPI(tok));
 }
 
@@ -1526,6 +1550,7 @@ static AstDefinition *infix(PrattParser *parser)
     ENTER(infix);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
+    AstDefinition *def = NULL;
     if (check(parser, TOK_ATOM())) {
         PrattToken *atom = next(parser);
         PROTECT(atom);
@@ -1561,7 +1586,7 @@ static AstDefinition *infix(PrattParser *parser)
                 AstExpression *impl = expression(parser);
                 PROTECT(impl);
                 consume(parser, TOK_SEMI());
-                addOperator(parser, PRATTFIXITY_TYPE_INFIX, associativity, precedence, str, impl);
+                def = addOperator(parser, PRATTFIXITY_TYPE_INFIX, associativity, precedence, str, impl);
             } else {
                 parserErrorAt(TOKPI(prec), parser, "expected small integer");
             }
@@ -1569,7 +1594,7 @@ static AstDefinition *infix(PrattParser *parser)
     }
     LEAVE(infix);
     UNPROTECT(save);
-    return newAstDefinition_Blank(TOKPI(tok));
+    return def ? def : newAstDefinition_Blank(TOKPI(tok));
 }
 
 /**
@@ -2028,6 +2053,10 @@ static AstLookupSymbol *astLookupToLus(PrattParser *parser, AstLookup *lookup)
     case AST_EXPRESSION_TYPE_SYMBOL:
         lus->symbol = lookup->expression->val.symbol;
         break;
+    case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+        parserErrorAt(CPI(lookup), parser, "invalid use of operator in lookup");
+        lus->symbol = lookup->nsSymbol;
+        break;
     default:
         parserErrorAt(CPI(lookup), parser, "invalid lookup in formal arguments");
         lus->symbol = lookup->nsSymbol;
@@ -2098,6 +2127,15 @@ static AstLookupOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *f
         return astLookupToLos(parser, function->val.lookup);
     case AST_EXPRESSION_TYPE_SYMBOL:
         return astSymbolToLos(CPI(function), function->val.symbol);
+    case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+        // For annotated symbols (hygienic operators), extract the original implementation
+        // This allows operators like @ (cons) to be used in patterns
+        if (function->val.annotatedSymbol->originalImpl->type == AST_EXPRESSION_TYPE_SYMBOL) {
+            return astSymbolToLos(CPI(function), function->val.annotatedSymbol->originalImpl->val.symbol);
+        } else {
+            parserErrorAt(CPI(function), parser, "invalid use of operator as structure name");
+            return makeLosError(CPI(function));
+        }
     case AST_EXPRESSION_TYPE_BACK:
         parserErrorAt(CPI(function), parser, "invalid use of \"back\" as structure name");
         return makeLosError(CPI(function));
@@ -2300,6 +2338,9 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr)
         return astLookupToFarg(parser, expr->val.lookup);
     case AST_EXPRESSION_TYPE_SYMBOL:
         return astSymbolToFarg(CPI(expr), expr->val.symbol);
+    case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+        parserErrorAt(CPI(expr), parser, "invalid use of operator as formal argument");
+        return newAstFarg_Wildcard(CPI(expr));
     case AST_EXPRESSION_TYPE_NUMBER:
         return astNumberToFarg(CPI(expr), expr->val.number);
     case AST_EXPRESSION_TYPE_CHARACTER:
@@ -3243,7 +3284,20 @@ static AstExpression *userPrefix(PrattRecord *record,
     int save = PROTECT(rhs);
     AstExpressions *arguments = newAstExpressions(CPI(rhs), rhs, NULL);
     PROTECT(arguments);
-    AstFunCall *funCall = newAstFunCall(TOKPI(tok), record->prefixImpl, arguments);
+    AstExpression *func;
+    if (record->prefix_hygienic_func != NULL) {
+        // Create annotated symbol with both hygienic wrapper and original implementation
+        AstAnnotatedSymbol *annotated = newAstAnnotatedSymbol(TOKPI(tok), 
+                                                               record->prefix_hygienic_func,
+                                                               record->prefix_original_impl);
+        PROTECT(annotated);
+        func = newAstExpression_AnnotatedSymbol(TOKPI(tok), annotated);
+    } else {
+        // No hygienic wrapper, use original implementation directly
+        func = record->prefixImpl;
+    }
+    PROTECT(func);
+    AstFunCall *funCall = newAstFunCall(TOKPI(tok), func, arguments);
     PROTECT(funCall);
     rhs = newAstExpression_FunCall(CPI(funCall), funCall);
     UNPROTECT(save);
@@ -3267,7 +3321,20 @@ static AstExpression *userInfixCommon(PrattRecord *record,
     REPLACE_PROTECT(save, arguments);
     arguments = newAstExpressions(CPI(lhs), lhs, arguments);
     REPLACE_PROTECT(save, arguments);
-    AstFunCall *funCall = newAstFunCall(TOKPI(tok), record->infixImpl, arguments);
+    AstExpression *func;
+    if (record->infix_hygienic_func != NULL) {
+        // Create annotated symbol with both hygienic wrapper and original implementation
+        AstAnnotatedSymbol *annotated = newAstAnnotatedSymbol(TOKPI(tok),
+                                                               record->infix_hygienic_func,
+                                                               record->infix_original_impl);
+        PROTECT(annotated);
+        func = newAstExpression_AnnotatedSymbol(TOKPI(tok), annotated);
+    } else {
+        // No hygienic wrapper, use original implementation directly
+        func = record->infixImpl;
+    }
+    PROTECT(func);
+    AstFunCall *funCall = newAstFunCall(TOKPI(tok), func, arguments);
     REPLACE_PROTECT(save, funCall);
     rhs = newAstExpression_FunCall(CPI(funCall), funCall);
     REPLACE_PROTECT(save, rhs);
@@ -3335,7 +3402,20 @@ static AstExpression *userPostfix(PrattRecord *record,
 {
     AstExpressions *arguments = newAstExpressions(CPI(lhs), lhs, NULL);
     int save = PROTECT(arguments);
-    AstFunCall *funCall = newAstFunCall(TOKPI(tok), record->postfixImpl, arguments);
+    AstExpression *func;
+    if (record->postfix_hygienic_func != NULL) {
+        // Create annotated symbol with both hygienic wrapper and original implementation
+        AstAnnotatedSymbol *annotated = newAstAnnotatedSymbol(TOKPI(tok),
+                                                               record->postfix_hygienic_func,
+                                                               record->postfix_original_impl);
+        PROTECT(annotated);
+        func = newAstExpression_AnnotatedSymbol(TOKPI(tok), annotated);
+    } else {
+        // No hygienic wrapper, use original implementation directly
+        func = record->postfixImpl;
+    }
+    PROTECT(func);
+    AstFunCall *funCall = newAstFunCall(TOKPI(tok), func, arguments);
     REPLACE_PROTECT(save, funCall);
     AstExpression *res = newAstExpression_FunCall(CPI(funCall), funCall);
     UNPROTECT(save);
