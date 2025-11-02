@@ -1,0 +1,12 @@
+let
+    fn should_run() {
+        true
+    }
+    fn should_not_run() {
+        assert(false);
+        true
+    }
+in
+// === Lazy Operators Tests ===
+    // `or` should short-circuimacrot
+    should_run() or should_not_run();

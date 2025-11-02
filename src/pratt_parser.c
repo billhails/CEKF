@@ -1090,20 +1090,18 @@ static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
     PROTECT(body);
     AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
     PROTECT(altFun);
-    AstCompositeFunction *compFun = makeAstCompositeFunction(altFun, NULL);
-    PROTECT(compFun);
-    AstExpression *funExpr = newAstExpression_Fun(PI, compFun);
-    PROTECT(funExpr);
-    AstDefine *def = newAstDefine(PI, symbol, funExpr);
-    PROTECT(def);
-    AstDefinition *res = newAstDefinition_Define(PI, def);
+    // Generate a macro instead of a function
+    // This creates: macro symbol(x) { impl(x) }
+    AstDefMacro *defMacro = newAstDefMacro(PI, symbol, altFun);
+    PROTECT(defMacro);
+    AstDefinition *res = newAstDefinition_Macro(PI, defMacro);
     // Unprotect all in one go
     UNPROTECT(save);
     return res;
 }
 
-// Generate a hygienic binary operator function definition (infix)
-// Creates: fn symbol { (x, y) { impl(x, y) } }
+// Generate a hygienic binary operator macro definition (infix)
+// Creates: macro symbol(x, y) { impl(x, y) }
 static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
                                                     HashSymbol *symbol,
                                                     AstExpression *impl) {
@@ -1143,13 +1141,11 @@ static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
     PROTECT(body);
     AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
     PROTECT(altFun);
-    AstCompositeFunction *compFun = makeAstCompositeFunction(altFun, NULL);
-    PROTECT(compFun);
-    AstExpression *funExpr = newAstExpression_Fun(PI, compFun);
-    PROTECT(funExpr);
-    AstDefine *def = newAstDefine(PI, symbol, funExpr);
-    PROTECT(def);
-    AstDefinition *res = newAstDefinition_Define(PI, def);
+    // Generate a macro instead of a function
+    // This creates: macro symbol(x, y) { impl(x, y) }
+    AstDefMacro *defMacro = newAstDefMacro(PI, symbol, altFun);
+    PROTECT(defMacro);
+    AstDefinition *res = newAstDefinition_Macro(PI, defMacro);
     // Unprotect all in one go
     UNPROTECT(save);
     return res;
