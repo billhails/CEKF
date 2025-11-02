@@ -20,28 +20,26 @@
 """
 makeAST - Code generator for C structures from YAML schemas
 
-This script uses the refactored makeast package to generate C code from YAML schemas.
-All classes have been migrated into focused modules under tools/makeast/.
+This script uses the refactored generate package to generate C code from YAML schemas.
+All classes have been migrated into focused modules under tools/generate/.
 """
 
 import sys
 import os
 import argparse
 
-# Import from the makeast package
+# Import from the new generate package
+from generate.catalog import Catalog
+from generate.primitives import Primitive
+from generate.hashes import SimpleHash
+from generate.enums import SimpleEnum
+from generate.arrays import SimpleArray, SimpleStack, InlineArray
+from generate.vectors import SimpleVector
+from generate.structs import SimpleStruct
+from generate.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
 
-# Import from the new makeast package
-from makeast.catalog import Catalog
-from makeast.primitives import Primitive
-from makeast.hashes import SimpleHash
-from makeast.enums import SimpleEnum
-from makeast.arrays import SimpleArray, SimpleStack, InlineArray
-from makeast.vectors import SimpleVector
-from makeast.structs import SimpleStruct
-from makeast.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
-
-from makeast.loader import Loader
-from makeast.utils import printGpl, printSection
+from generate.loader import Loader
+from generate.utils import printGpl, printSection
 
 
 def main():
