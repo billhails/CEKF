@@ -1045,95 +1045,55 @@ static void validateOperator(PrattParser *parser, PrattUTF8 *operator)
 }
 
 /**
- * @brief Add a new user-defined operator to the parser's operator table.
+ * @brief Create an AstFargList from a name and the next argument list.
  *
- * This function adds a new operator with its fixity, precedence, and implementation
- * to the parser's operator table.
+ * This function creates a new AstFargList node with the given name
+ * and links it to the provided next argument list.
  *
- * It is an error to redefine an operator of the same fixity type.
- *
- * @param parser The PrattParser to add the operator to.
- * @param fixity The fixity type of the operator (prefix, infix, postfix).
- * @param associativity The associativity type of the operator (left, right, none).
- * @param precedence The precedence level of the operator.
- * @param operator The PrattUTF8 representation of the operator.
- * @param impl The AstExpression implementation of the operator.
+ * @param PI The ParserInfo containing context information.
+ * @param name The name of the argument.
+ * @param next The next AstFargList in the sequence.
+ * @return A new AstFargList containing the argument.
  */
-// Generate a hygienic unary operator function definition (prefix or postfix)
-// Creates: fn symbol { (x) { impl(x) } }
-static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
-                                                   HashSymbol *symbol,
-                                                   AstExpression *impl) {
-    int save = PROTECT(NULL);
-    HashSymbol *argSym = newSymbol("x");
-    AstFarg *arg = newAstFarg_Symbol(PI, argSym);
-    PROTECT(arg);
-    AstFargList *argList = newAstFargList(PI, arg, NULL);
-    PROTECT(argList);
-    AstAltArgs *altArgs = newAstAltArgs(PI, argList, NULL);
-    PROTECT(altArgs);
-    
-    // Always apply impl to the argument x
-    // This creates: impl(x)
-    AstExpression *argExpr = newAstExpression_Symbol(PI, argSym);
-    PROTECT(argExpr);
-    AstExpressions *callArgs = newAstExpressions(PI, argExpr, NULL);
-    PROTECT(callArgs);
-    AstFunCall *funCall = newAstFunCall(PI, impl, callArgs);
-    PROTECT(funCall);
-    AstExpression *bodyExpr = newAstExpression_FunCall(PI, funCall);
-    PROTECT(bodyExpr);
-    
-    AstExpressions *exprs = newAstExpressions(PI, bodyExpr, NULL);
-    PROTECT(exprs);
-    AstNest *body = newAstNest(PI, NULL, exprs);
-    PROTECT(body);
-    AstAltFunction *altFun = newAstAltFunction(PI, altArgs, body);
-    PROTECT(altFun);
-    // Generate a macro instead of a function
-    // This creates: macro symbol(x) { impl(x) }
-    AstDefMacro *defMacro = newAstDefMacro(PI, symbol, altFun);
-    PROTECT(defMacro);
-    AstDefinition *res = newAstDefinition_Macro(PI, defMacro);
-    // Unprotect all in one go
+static AstFargList *makeAstFargList(ParserInfo PI, char *name, AstFargList *next) {
+    HashSymbol *sym = newSymbol(name);
+    AstFarg *arg = newAstFarg_Symbol(PI, sym);
+    int save = PROTECT(arg);
+    AstFargList *res = newAstFargList(PI, arg, next);
     UNPROTECT(save);
     return res;
 }
 
-// Generate a hygienic binary operator macro definition (infix)
-// Creates: macro symbol(x, y) { impl(x, y) }
-static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
-                                                    HashSymbol *symbol,
-                                                    AstExpression *impl) {
-    int save = PROTECT(NULL);
-    HashSymbol *xSym = newSymbol("x");
-    HashSymbol *ySym = newSymbol("y");
-    
-    // Create argument list: (x, y)
-    AstFarg *xArg = newAstFarg_Symbol(PI, xSym);
-    PROTECT(xArg);
-    AstFarg *yArg = newAstFarg_Symbol(PI, ySym);
-    PROTECT(yArg);
-    AstFargList *yArgList = newAstFargList(PI, yArg, NULL);
-    PROTECT(yArgList);
-    AstFargList *argList = newAstFargList(PI, xArg, yArgList);
-    PROTECT(argList);
-    AstAltArgs *altArgs = newAstAltArgs(PI, argList, NULL);
-    PROTECT(altArgs);
-    
-    // Create function body: impl(x, y)
-    AstExpression *xExpr = newAstExpression_Symbol(PI, xSym);
-    PROTECT(xExpr);
-    AstExpression *yExpr = newAstExpression_Symbol(PI, ySym);
-    PROTECT(yExpr);
-    AstExpressions *yCallArgs = newAstExpressions(PI, yExpr, NULL);
-    PROTECT(yCallArgs);
-    AstExpressions *callArgs = newAstExpressions(PI, xExpr, yCallArgs);
-    PROTECT(callArgs);
-    AstFunCall *funCall = newAstFunCall(PI, impl, callArgs);
-    PROTECT(funCall);
+/**
+ * @brief Create an AstExpressions list from a name and the next expression list.
+ *
+ * This function creates a new AstExpressions node with the given name
+ * and links it to the provided next expression list.
+ *
+ * @param PI The ParserInfo containing context information.
+ * @param name The name of the argument.
+ * @param next The next AstExpressions in the sequence.
+ * @return A new AstExpressions containing the argument.
+ */
+static AstExpressions *makeAstAarglist(ParserInfo PI, char *name, AstExpressions *next) {
+    HashSymbol *sym = newSymbol(name);
+    AstExpression *expr = newAstExpression_Symbol(PI, sym);
+    int save = PROTECT(expr);
+    AstExpressions *res = newAstExpressions(PI, expr, next);
+    UNPROTECT(save);
+    return res;
+}
+
+/**
+ * @brief Generate a hygienic operator macro body.
+ */
+static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol, AstFargList *fargs, AstExpressions *aargs, AstExpression *impl) {
+    AstFunCall *funCall = newAstFunCall(PI, impl, aargs);
+    int save = PROTECT(funCall);
     AstExpression *bodyExpr = newAstExpression_FunCall(PI, funCall);
     PROTECT(bodyExpr);
+    AstAltArgs *altArgs = newAstAltArgs(PI, fargs, NULL);
+    PROTECT(altArgs);
     
     AstExpressions *exprs = newAstExpressions(PI, bodyExpr, NULL);
     PROTECT(exprs);
@@ -1151,6 +1111,59 @@ static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
     return res;
 }
 
+// Generate a hygienic unary operator macro definition (prefix or postfix)
+// Creates: macro macroName(x) { impl(x) }
+static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
+                                                   HashSymbol *macroName,
+                                                   AstExpression *impl) {
+    // make the formal argument list (x)
+    AstFargList *argList = makeAstFargList(PI, "x", NULL);
+    int save = PROTECT(argList);
+    // make the actual argument list (x)
+    AstExpressions *callArgs = makeAstAarglist(PI, "x", NULL);
+    PROTECT(callArgs);
+    // make the macro definition
+    AstDefinition *res = makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
+    UNPROTECT(save);
+    return res;
+}
+
+// Generate a hygienic binary operator macro definition (infix)
+// Creates: macro macroName(x, y) { impl(x, y) }
+static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
+                                                    HashSymbol *macroName,
+                                                    AstExpression *impl) {
+    // make the formal argument list (x, y)
+    AstFargList *argList = makeAstFargList(PI, "y", NULL);
+    int save = PROTECT(argList);
+    argList = makeAstFargList(PI, "x", argList);
+    REPLACE_PROTECT(save, argList);
+    // make the actual argument list (x, y)
+    AstExpressions *callArgs = makeAstAarglist(PI, "y", NULL);
+    PROTECT(callArgs);
+    callArgs = makeAstAarglist(PI, "x", callArgs);
+    PROTECT(callArgs);
+    // make the macro definition
+    AstDefinition *res = makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
+    UNPROTECT(save);
+    return res;
+}
+
+/**
+ * @brief Add a new user-defined operator to the parser's operator table.
+ *
+ * This function adds a new operator with its fixity, precedence, and implementation
+ * to the parser's operator table.
+ *
+ * It is an error to redefine an operator of the same fixity type.
+ *
+ * @param parser The PrattParser to add the operator to.
+ * @param fixity The fixity type of the operator (prefix, infix, postfix).
+ * @param associativity The associativity type of the operator (left, right, none).
+ * @param precedence The precedence level of the operator.
+ * @param operator The PrattUTF8 representation of the operator.
+ * @param impl The AstExpression implementation of the operator.
+ */
 static AstDefinition *addOperator(PrattParser *parser,
                         PrattFixity fixity,
                         PrattAssoc associativity,
