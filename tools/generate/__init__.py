@@ -17,7 +17,7 @@
 #
 
 """
-makeast package - Modular code generator for C structures from YAML schemas.
+generate package - Modular code generator for C structures from YAML schemas.
 """
 
 from .loader import Loader

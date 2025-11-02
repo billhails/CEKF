@@ -119,22 +119,19 @@ structs:
             symbol: HashSymbol
             prefixOp: PrattParselet
             prefixPrec: int
-            prefixImpl: AstExpression=NULL
-            prefix_original_impl: AstExpression=NULL
-            prefix_hygienic_func: HashSymbol=NULL
-            prefix_is_bare_symbol: bool=false
+            prefixOriginalImpl: AstExpression=NULL
+            prefixHygienicFunc: HashSymbol=NULL
+            prefixIsBareSymbol: bool=false
             infixOp: PrattParselet
             infixPrec: int
-            infixImpl: AstExpression=NULL
-            infix_original_impl: AstExpression=NULL
-            infix_hygienic_func: HashSymbol=NULL
-            infix_is_bare_symbol: bool=false
+            infixOriginalImpl: AstExpression=NULL
+            infixHygienicFunc: HashSymbol=NULL
+            infixIsBareSymbol: bool=false
             postfixOp: PrattParselet
             postfixPrec: int
-            postfixImpl: AstExpression=NULL
-            postfix_original_impl: AstExpression=NULL
-            postfix_hygienic_func: HashSymbol=NULL
-            postfix_is_bare_symbol: bool=false
+            postfixOriginalImpl: AstExpression=NULL
+            postfixHygienicFunc: HashSymbol=NULL
+            postfixIsBareSymbol: bool=false
             associativity: PrattAssoc
 
 enums:

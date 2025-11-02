@@ -31,12 +31,12 @@ Source flows through these stages (see README.md flowchart):
 
 ## Critical Build System Knowledge
 
-### Code Generation (`tools/generate.py` and `tools/makeast/`)
+### Code Generation (`tools/generate.py` and `tools/generate/`)
 
 **The build depends heavily on Python code generation**. DO NOT manually edit files in `generated/`!
 
 #### Overview
-The code generator is now modular: the main entry point is `tools/generate.py`, which orchestrates the `makeast` Python package (in `tools/makeast/`). This package contains all logic for parsing YAML schemas and generating C code for all compiler stages. The old monolithic `makeAST.py` has been fully refactored into modules such as `catalog.py`, `primitives.py`, `fields.py`, `structs.py`, `unions.py`, `arrays.py`, `vectors.py`, `hashes.py`, and more. All code generation is now managed through this modular structure.
+The code generator is now modular: the main entry point is `tools/generate.py`, which orchestrates the `generate` Python package (in `tools/generate/`). This package contains all logic for parsing YAML schemas and generating C code for all compiler stages. The old monolithic `makeAST.py` has been fully refactored into modules such as `catalog.py`, `primitives.py`, `fields.py`, `structs.py`, `unions.py`, `arrays.py`, `vectors.py`, `hashes.py`, and more. All code generation is now managed through this modular structure.
 
 #### YAML Schema Structure
 
@@ -86,7 +86,7 @@ Common types shared across all stages - referenced via `!include primitives.yaml
 
 #### Generated Functions
 
-For each struct/union, the code generator (via `tools/generate.py` and the `makeast` package) generates:
+For each struct/union, the code generator (via `tools/generate.py` and the `generate` package) generates:
 
 **Memory Management:**
 - `new<Type>()` - Allocator with GC header, takes all fields as args
@@ -120,7 +120,7 @@ For each struct/union, the code generator (via `tools/generate.py` and the `make
 
 #### Key Classes in `makeAST.py`
 
-The main classes are now in the `makeast` package:
+The main classes are now in the `generate` package:
 - `Catalog` - Manages all entities in a YAML file, orchestrates generation
 - `SimpleStruct`, `DiscriminatedUnion`, `SimpleArray`, `SimpleStack`, `SimpleHash`, `SimpleVector`, `SimpleEnum`, `Primitive`, and more, each in their own module.
 
