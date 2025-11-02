@@ -58,6 +58,7 @@ static HashSymbol *dollarSubstitute(HashSymbol *);
 static LamExp *convertNest(AstNest *, LamContext *);
 static LamExp *lamConvert(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
+static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
 
 #ifdef DEBUG_LAMBDA_CONVERT
 #  include "debugging_on.h"
@@ -2003,6 +2004,45 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) 
 }
 
 /**
+ * @brief Converts an annotated symbol (hygienic operator wrapper) into a lambda expression.
+ * 
+ * This handles the case where a hygienic operator wrapper ($opN) wraps a type constructor.
+ * If the original implementation is a type constructor, we return a reference to that constructor
+ * directly, allowing it to be used in patterns. Otherwise, we return a reference to the hygienic
+ * wrapper function.
+ * 
+ * @param annotated The annotated symbol containing both wrapper and original implementation.
+ * @param env The lambda context to use for conversion.
+ * @return The resulting lambda expression (either constructor or variable reference).
+ */
+static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *annotated, LamContext *env) {
+    ENTER(convertAnnotatedSymbol);
+    LamExp *result = NULL;
+    
+    // Check if the original implementation is a bare symbol that's a type constructor
+    if (annotated->originalImpl->type == AST_EXPRESSION_TYPE_SYMBOL) {
+        HashSymbol *originalSym = annotated->originalImpl->val.symbol;
+        LamExp *constructor = makeConstructor(originalSym, env);
+        if (constructor != NULL) {
+            // Original is a type constructor - return it directly for pattern matching
+            DEBUG("convertAnnotatedSymbol: %s wraps constructor %s, using constructor directly",
+                  annotated->symbol->name, originalSym->name);
+            result = constructor;
+            LEAVE(convertAnnotatedSymbol);
+            return result;
+        }
+    }
+    
+    // Not a constructor - use the hygienic wrapper symbol
+    DEBUG("convertAnnotatedSymbol: %s is not a constructor wrapper, using hygienic function",
+          annotated->symbol->name);
+    HashSymbol *symbol = dollarSubstitute(annotated->symbol);
+    result = newLamExp_Var(CPI(annotated), symbol);
+    LEAVE(convertAnnotatedSymbol);
+    return result;
+}
+
+/**
  * @brief Converts an assertion expression into a lambda expression.
  * @param value The assertion expression to convert.
  * @param env The lambda context to use for conversion.
@@ -2079,6 +2119,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_FUNCALL:
             DEBUG("funcall");
             result = convertFunCall(expression->val.funCall, env);
+            break;
+        case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
+            DEBUG("annotatedSymbol");
+            result = convertAnnotatedSymbol(expression->val.annotatedSymbol, env);
             break;
         case AST_EXPRESSION_TYPE_SYMBOL:
             DEBUG("symbol");

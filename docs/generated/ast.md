@@ -22,6 +22,8 @@ AstAlias --name--> HashSymbol
 AstAlias --type--> AstType
 AstExprAlias --name--> HashSymbol
 AstExprAlias --value--> AstExpression
+AstAnnotatedSymbol --symbol--> HashSymbol
+AstAnnotatedSymbol --originalImpl--> AstExpression
 AstDefMacro --name--> HashSymbol
 AstDefMacro --definition--> AstAltFunction
 AstTypeDef --typeSig--> AstTypeSig
@@ -109,6 +111,7 @@ AstFarg --tuple--> AstFargList
 AstExpression --back--> void_ptr
 AstExpression --wildcard--> void_ptr
 AstExpression --alias--> AstExprAlias
+AstExpression --annotatedSymbol--> AstAnnotatedSymbol
 AstExpression --funCall--> AstFunCall
 AstExpression --lookup--> AstLookup
 AstExpression --symbol--> HashSymbol
