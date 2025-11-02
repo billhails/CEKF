@@ -20,6 +20,7 @@
 #include "cekf.h"
 #include "test.h"
 #include "memory.h"
+#include "init.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -46,7 +47,7 @@ bool isInteger(Value v, int i) {
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     Value v;
-    initProtection();
+    initAll();
     S = newStack();
 
     assert(S->entries_capacity == 8);

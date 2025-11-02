@@ -22,6 +22,7 @@
 #include "tc_analyze.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
+#include "init.h"
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
@@ -378,7 +379,7 @@ static void test_map() {
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     disableGC();
-    initProtection();
+    initAll();
     test_car();
     test_cdr();
     test_car_of();

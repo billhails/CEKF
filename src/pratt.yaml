@@ -122,17 +122,32 @@ structs:
             prefixOriginalImpl: AstExpression=NULL
             prefixHygienicFunc: HashSymbol=NULL
             prefixIsBareSymbol: bool=false
+            prefixExport: bool=false
             infixOp: PrattParselet
             infixPrec: int
             infixOriginalImpl: AstExpression=NULL
             infixHygienicFunc: HashSymbol=NULL
             infixIsBareSymbol: bool=false
+            infixExport: bool=false
             postfixOp: PrattParselet
             postfixPrec: int
             postfixOriginalImpl: AstExpression=NULL
             postfixHygienicFunc: HashSymbol=NULL
             postfixIsBareSymbol: bool=false
+            postfixExport: bool=false
+            importNsRef: int=-1
+            importNsSymbol: HashSymbol=NULL
             associativity: PrattAssoc
+
+    PrattExportedOps:
+        meta:
+            brief: Exported operators for a namespace.
+            description: >-
+                Snapshot of exported operator records captured after a namespace is
+                parsed for the first time. Intended to be cached and indexed by the
+                namespace reference (nsRef) to support later imports without reparsing.
+        data:
+            exportedRules: PrattRecordTable
 
 enums:
     PrattAssoc:
@@ -262,6 +277,16 @@ arrays:
                 Unicode strings after parsing.
         data:
             entries: character
+
+    PrattNsOpsArray:
+        meta:
+            brief: Array of exported operator sets indexed by namespace reference.
+            description: >-
+                Cache of exported operators per namespace. Each entry corresponds
+                to a namespace reference (nsRef) and contains the set of operators
+                that were explicitly exported by that namespace.
+        data:
+            entries: PrattExportedOps
 
 primitives: !include primitives.yaml
 

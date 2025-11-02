@@ -92,9 +92,12 @@ TOKFN(FN, "fn")
 TOKFN(LINK, "link")
 TOKFN(AS, "as")
 TOKFN(ALIAS, "alias")
-TOKFN(SEMI, ";");
+TOKFN(SEMI, ";")
 TOKFN(PRINT, "print")
 TOKFN(TYPEOF, "typeof")
+TOKFN(EXPORT, "export")
+TOKFN(OPERATORS, "operators")
+TOKFN(IMPORT, "import")
 
 #undef TOKFN
 

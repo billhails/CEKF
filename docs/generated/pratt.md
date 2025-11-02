@@ -38,17 +38,23 @@ PrattRecord --prefixPrec--> int
 PrattRecord --prefixOriginalImpl--> AstExpression
 PrattRecord --prefixHygienicFunc--> HashSymbol
 PrattRecord --prefixIsBareSymbol--> bool
+PrattRecord --prefixExport--> bool
 PrattRecord --infixOp--> PrattParselet
 PrattRecord --infixPrec--> int
 PrattRecord --infixOriginalImpl--> AstExpression
 PrattRecord --infixHygienicFunc--> HashSymbol
 PrattRecord --infixIsBareSymbol--> bool
+PrattRecord --infixExport--> bool
 PrattRecord --postfixOp--> PrattParselet
 PrattRecord --postfixPrec--> int
 PrattRecord --postfixOriginalImpl--> AstExpression
 PrattRecord --postfixHygienicFunc--> HashSymbol
 PrattRecord --postfixIsBareSymbol--> bool
+PrattRecord --postfixExport--> bool
+PrattRecord --importNsRef--> int
+PrattRecord --importNsSymbol--> HashSymbol
 PrattRecord --associativity--> PrattAssoc
+PrattExportedOps --exportedRules--> PrattRecordTable
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8
@@ -60,6 +66,7 @@ PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattUnicode["PrattUnicode[]"] --entries--> character
+PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 ```
 
 > Generated from src/pratt.yaml by tools/makeAST.py
