@@ -888,15 +888,23 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal)
     int save = PROTECT(parser);
     if (match(parser, TOK_LET()))
     {
-        AstDefinitions *defs = definitions(parser, TOK_IN());
-        save = PROTECT(defs);
+        // Create a child parser so operator/type/macro definitions are scoped
+        // to the body of this let/in block and do not leak outward.
+        PrattParser *child = makeChildParser(parser);
+        save = PROTECT(child);
+        AstDefinitions *defs = definitions(child, TOK_IN());
+        PROTECT(defs);
+        // The child shares the same lexer, so consuming with the parent is fine
         consume(parser, TOK_IN());
-        AstExpressions *stats = statements(parser, terminal);
+        AstExpressions *stats = statements(child, terminal);
         PROTECT(stats);
         res = newAstNest(CPI(defs), defs, stats);
     }
     else if (match(parser, TOK_NAMESPACE()))
     {
+        // Keep namespace definitions in the current parser so preamble- and
+        // file-level operator definitions remain visible globally. Operator
+        // export control for namespaces can be added later.
         AstDefinitions *defs = definitions(parser, terminal);
         save = PROTECT(defs);
         res = newAstNest(CPI(defs), defs, NULL);
@@ -1176,7 +1184,11 @@ static AstDefinition *addOperator(PrattParser *parser,
                         AstExpression *impl)
 {
     HashSymbol *op = newSymbol((char *)operator->entries);
-    PrattRecord *record = fetchRecord(parser, op, false);
+    // Only look for an existing operator in the current (local) parser scope.
+    // This allows inner scopes to shadow operators defined in outer scopes
+    // without triggering a redefinition error.
+    PrattRecord *record = NULL;
+    getPrattRecordTable(parser->rules, op, &record);
     int save = PROTECT(record);
     if (record)
     {
