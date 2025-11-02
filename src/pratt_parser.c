@@ -1149,6 +1149,10 @@ static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
     return res;
 }
 
+static inline HashSymbol *makeMacroName() {
+    return genSymDollar("op");
+}
+
 /**
  * @brief Add a new user-defined operator to the parser's operator table.
  *
@@ -1194,8 +1198,7 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->prefixImpl = impl;
             record->prefix_original_impl = impl;
             // Generate a unique function name for the hygienic binding
-            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
-            record->prefix_hygienic_func = genSym("$op");
+            record->prefix_hygienic_func = makeMacroName();
             // Check if impl is a bare symbol (AstExpression_Symbol)
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->prefix_is_bare_symbol = true;
@@ -1230,7 +1233,7 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->infixPrec = precedence * PRECEDENCE_SCALE;
             record->infixImpl = impl;
             record->infix_original_impl = impl;
-            record->infix_hygienic_func = genSym("$op");
+            record->infix_hygienic_func = makeMacroName();
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->infix_is_bare_symbol = true;
             } else {
@@ -1264,7 +1267,7 @@ static AstDefinition *addOperator(PrattParser *parser,
             record->postfixPrec = precedence * PRECEDENCE_SCALE;
             record->postfixImpl = impl;
             record->postfix_original_impl = impl;
-            record->postfix_hygienic_func = genSym("$op");
+            record->postfix_hygienic_func = makeMacroName();
             if (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL) {
                 record->postfix_is_bare_symbol = true;
             } else {
@@ -1290,8 +1293,7 @@ static AstDefinition *addOperator(PrattParser *parser,
         {
         case PRATTFIXITY_TYPE_PREFIX:
         {
-            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
-            hygienicFunc = genSym("$op");
+            hygienicFunc = makeMacroName();
             record = newPrattRecord(op, userPrefix, precedence * PRECEDENCE_SCALE, NULL, 0, NULL, 0, associativity);
             PROTECT(record);
             record->prefixImpl = impl;
@@ -1304,8 +1306,7 @@ static AstDefinition *addOperator(PrattParser *parser,
         break;
         case PRATTFIXITY_TYPE_INFIX:
         {
-            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
-            hygienicFunc = genSym("$op");
+            hygienicFunc = makeMacroName();
             record = newPrattRecord(op, NULL, 0,
                                     associativity == PRATTASSOC_TYPE_LEFT
                                         ? userInfixLeft
@@ -1324,8 +1325,7 @@ static AstDefinition *addOperator(PrattParser *parser,
         break;
         case PRATTFIXITY_TYPE_POSTFIX:
         {
-            // Use genSym (not genSymDollar) to avoid underscore-to-dollar conversion in preamble
-            hygienicFunc = genSym("$op");
+            hygienicFunc = makeMacroName();
             record = newPrattRecord(op, NULL, 0, NULL, 0, userPostfix, precedence * PRECEDENCE_SCALE, associativity);
             PROTECT(record);
             record->postfixImpl = impl;
