@@ -196,72 +196,84 @@ fn run() {
 - The precedence scale remains the same (`PRECEDENCE_SCALE = 3`).
 - Constraint unchanged: the same symbol cannot be both infix and postfix.
 
-## Exporting operators from namespaces (design sketch)
+## Exporting and importing operators from namespaces
 
-Currently, operator definitions inside `namespace` blocks are not exported. The
-plan below introduces explicit export/import semantics while preserving the
-"parse each file once" invariant.
+Operator export/import is implemented to make namespace-defined operators reusable,
+while keeping parsing single-pass and preserving hygiene.
 
-1) Export in the namespace (explicit, fixity required)
-    - Syntax:
-       - `export infix "⊕";`
-       - `export prefix "¬";`
-       - `export postfix "!";`
-       - `export operators;`  // export all operators defined in this namespace
-    - Notes:
-       - Exporting a symbol without specifying fixity is not supported (avoids ambiguity).
-       - Export marks only the operators defined in the current namespace scope (not parents).
+### Export in the defining namespace
 
-2) Import in the client (by namespace reference from `link`)
-    - Keep `link "<path>" as <ns>;` exactly as-is. The `<ns>` identifier refers to
-       a namespace reference (an index) recorded during the first parse of that file.
-    - Syntax:
-       - `import <ns> operators;`              // import all exported operators from <ns>
-       - `import <ns> infix "⊕", prefix "!";` // fine-grained import; fixity required
-    - Notes:
-       - Importing a symbol without specifying fixity is not supported.
-       - Imports merge operator records into the current parser’s rules and trie.
+- Syntax:
+  - `export operators;`                // export all operators defined in this namespace
+  - `export prefix "~";`
+  - `export infix "plus";`
+  - `export postfix "squared";`
+- Rules:
+  - Only operators defined in the current namespace scope may be exported.
+  - Export marks fixities on the local operator records; parents are not affected.
 
-3) Single-parse invariant and caching
-    - Files are parsed only once. Subsequent `link` to the same file returns the
-       namespace reference (array offset) without reparsing.
-    - To support imports after the fact, the first parse will capture the set of
-       exported operators for that namespace into an internal cache keyed by the
-       namespace reference (e.g., `PrattNsOpsTable[nsRef]`).
-    - Later imports consult this cache and merge the exported operators into the
-       current parser environment.
+### Import in the client (after link)
 
-4) Merge mechanics and conflicts
-    - Import inserts each operator symbol into the current parser’s rules and trie.
-    - Conflicts:
-       - Same symbol with different fixity (e.g., importing postfix "⊕" over an
-          existing infix "⊕") is an error.
-       - Redefinition of the same symbol+fixity in the same scope is an error.
-       - Shadowing is allowed by importing in an inner `let` (local to that scope).
+- Link the file in the usual way to get a namespace handle:
+  - `link "path/to/file.fn" as ops;`
+- Import exported operators by namespace:
+  - `import ops operators;`            // import all exported operators
+  - `import ops prefix "~";`          // import a specific fixity
+  - `import ops infix "plus";`
+  - `import ops postfix "squared";`
+- Conflicts and shadowing:
+  - Redefining the same symbol+fixity in the same scope is an error.
+  - Importing a different fixity for an existing symbol is an error.
+  - Shadowing is allowed by importing (or redefining) in an inner `let`.
 
-### Qualification of hygienic wrappers for imported operators
+### Hygiene when importing
 
-When an imported operator is applied at the call site, its expansion targets the
-operator’s hygienic wrapper function (the gensym) that lives in the defining
-namespace. To resolve it correctly without polluting the importing scope, the
-generated call must be namespace-qualified:
+Imported operators expand to call their hygienic wrapper function in the defining
+namespace. Internally, the call is namespace-qualified, so free variables in the
+operator implementation resolve to the definition site, not the use site. Local
+bindings in the importing scope will not capture imported operator bodies.
+
+### Examples
+
+In `ops.fn`:
 
 ```
-// Conceptual expansion when using an imported operator from namespace <ns>
-<ns>.op$123(args...)
+namespace
+
+fn negate(x) { 0 - x }
+prefix 13 "~" negate;
+
+fn plus(a, b) { a + b }
+infix left 100 "plus" plus;
+
+fn squared(x) { x * x }
+postfix 120 "squared" squared;
+
+export operators;
 ```
 
-Implementation notes:
-- The exported-ops cache should record both the hygienic function symbol and the
-   namespace reference (nsRef) where it resides.
-- On import, the PrattRecord created/updated in the importing parser should
-   retain the nsRef. During operator application, the parser should generate a
-   qualified function reference (e.g., an AST lookup of `<nsRef>.<gensym>`) rather
-   than an unqualified symbol.
-- Token recognition remains unchanged; only the expansion target is qualified.
+In a client file:
 
-Incremental plan (non-destructive first):
-1. Add parser support for `export …` (flags only; no changes to visibility yet).
-2. Add a per-namespace exported-ops cache captured on first parse.
-3. Add parser support for `import <ns> …` and merge into the current parser.
-4. Add tests for export-all/import-all, selective import, and conflicts.
+```
+let
+  link "ops.fn" as ops;
+  import ops operators;
+  fn negate(x) { 999 };  // local function with same name as ops.negate
+in
+  assert(~5 == -5);        // prefix imported
+  assert(3 plus 4 == 7);   // infix imported
+  assert(5 squared == 25); // postfix imported
+  assert(~1 == -1);        // hygiene: uses ops.negate, not local negate
+```
+
+Selective import:
+
+```
+let
+  link "ops.fn" as ops;
+  import ops prefix "~";
+  import ops infix "plus";
+
+  assert(~5 == -5);
+  assert(3 plus 4 == 7)
+```

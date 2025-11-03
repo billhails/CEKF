@@ -1,0 +1,19 @@
+// Import all exported operators from a linked namespace and use them
+
+let
+    link "import_ops_lib.fn" as ops;
+    // bring all exported operators from ops into scope
+    import ops operators;
+
+    // local function named like the one used inside the namespace to verify hygiene
+    fn negate(x) { 999 };
+in
+    // Prefix imported
+    assert(~5 == -5);
+    // Infix imported
+    assert(3 plus 4 == 7);
+    // Postfix imported
+    assert(5 squared == 25);
+
+    // Hygiene check: imported operator should call ops.negate, not local negate
+    assert(~1 == -1)

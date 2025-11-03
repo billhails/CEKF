@@ -1,0 +1,13 @@
+namespace
+
+fn negate(x) { 0 - x }
+prefix 13 "~" negate;
+
+fn plus(a, b) { a + b }
+infix left 100 "plus" plus;
+
+fn squared(x) { x * x }
+postfix 120 "squared" squared;
+
+// Export all operators defined in this namespace
+export operators;

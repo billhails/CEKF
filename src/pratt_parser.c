@@ -146,7 +146,7 @@ static PrattUTF8 *rawString(PrattParser *);
 static PrattUTF8 *str(PrattParser *);
 static void storeNamespace(PrattParser *, AstNamespace *);
 static void synchronize(PrattParser *parser);
-static void captureNamespaceOperatorExports(PrattParser *parser, int nsRef);
+static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRecord *source,
                               int nsRef, HashSymbol *nsSymbol,
@@ -714,10 +714,10 @@ int initNsOpsCache()
     return PROTECT(nsOpsCache);
 }
 
-static void captureNamespaceOperatorExports(PrattParser *parser, int nsRef)
+static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser)
 {
-    if (parser == NULL || nsRef < 0)
-        return;
+    if (parser == NULL)
+        return NULL;
     PrattExportedOps *ops = newPrattExportedOps();
     int save = PROTECT(ops);
     // Iterate local rules; copy only fixities marked for export
@@ -758,8 +758,8 @@ static void captureNamespaceOperatorExports(PrattParser *parser, int nsRef)
         }
         setPrattRecordTable(ops->exportedRules, sym, copy);
     }
-    pushPrattNsOpsArray(nsOpsCache, ops);
     UNPROTECT(save);
+    return ops;
 }
 
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op)
@@ -887,7 +887,18 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, Has
     found = pushAstNamespaceArray(namespaces, impl);
     pushPrattParsers(parserStack, resultParser);
     // Capture exported operators for this namespace id (non-destructive cache for later import)
-    captureNamespaceOperatorExports(resultParser, found);
+    PrattExportedOps *ops = captureNamespaceOperatorExports(resultParser);
+    PROTECT(ops);
+#ifdef SAFETY_CHECKS
+    int found2 =
+#endif
+    pushPrattNsOpsArray(nsOpsCache, ops);
+#ifdef SAFETY_CHECKS
+    if (found != found2)
+    {
+        cant_happen("namespace ops cache index mismatch");
+    }
+#endif
     // un-protect against recursive include
     popAstFileIdArray(fileIdStack);
     // return the id of the namespace
@@ -981,7 +992,14 @@ static AstExpression *makePrattUnary(ParserInfo I, HashSymbol *op, AstExpression
 static PrattParser *makeChildParser(PrattParser *parent)
 {
     PrattParser *child = newPrattParser(parent);
+    // Share the same lexer so we read the same token stream
     child->lexer = parent->lexer;
+    // Start with the parent's trie so keywords/operators are recognized;
+    // child-specific additions will persistently extend this trie without
+    // mutating the parent's structure.
+    child->trie = parent->trie;
+    // Namespaces and rules resolve through the parent via parser->next;
+    // child will add its own bindings locally as needed.
     return child;
 }
 
@@ -1767,40 +1785,75 @@ static AstDefinition *definition(PrattParser *parser)
 {
     ENTER(definition);
     AstDefinition *res = NULL;
+    int save;
+    save = PROTECT(res);
     if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_UNSAFE())) {
         consume(parser, TOK_FN());
         res = defun(parser, true, false);
+        save = PROTECT(res);
+        // Functions may optionally be terminated by a semicolon in definition context
+        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_FN())) {
         res = defun(parser, false, false);
+        save = PROTECT(res);
+        // Accept optional trailing semicolon after function definitions
+        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_PRINT())) {
         res = defun(parser, false, true);
+        save = PROTECT(res);
+        // Printers follow the same rule as functions
+        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_MACRO())) {
         res = defmacro(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_LINK())) {
         res = link(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_ALIAS())) {
         res = alias(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_IMPORT())) {
         res = importop(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_EXPORT())) {
         res = exportop(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_PREFIX())) {
         res = prefix(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_INFIX())) {
         res = infix(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_POSTFIX())) {
         res = postfix(parser);
+        save = PROTECT(res);
     } else {
         PrattToken *tok = next(parser);
         validateLastAlloc();
-        parserError(parser, "expecting definition");
+        // Provide a more informative error message that includes the
+        // unexpected token kind and, where possible, its lexeme.
+        if (tok->type == TOK_ATOM() && tok->value && tok->value->type == PRATTVALUE_TYPE_ATOM && tok->value->val.atom) {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found atom '%s'", tok->value->val.atom->name);
+        } else if (tok->type == TOK_STRING() && tok->value && tok->value->type == PRATTVALUE_TYPE_STRING && tok->value->val.string) {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found string \"%s\"", tok->value->val.string->entries);
+        } else if (tok->type == TOK_NUMBER() && tok->value && tok->value->type == PRATTVALUE_TYPE_NUMBER && tok->value->val.number) {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found number");
+        } else if (tok->type == TOK_CHAR() && tok->value && tok->value->type == PRATTVALUE_TYPE_STRING && tok->value->val.string) {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found character '%s'", tok->value->val.string->entries);
+        } else if (tok->type && tok->type->name) {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found token %s", tok->type->name);
+        } else {
+            parserErrorAt(TOKPI(tok), parser, "expecting definition; found unexpected token");
+        }
         res = newAstDefinition_Blank(TOKPI(tok));
+        save = PROTECT(res);
     }
-    int save = PROTECT(res);
     synchronize(parser);
     LEAVE(definition);
     UNPROTECT(save);
@@ -1928,22 +1981,29 @@ static AstDefinition *importop(PrattParser *parser) {
         UNPROTECT(save);
         return res;
     }
-    if (check(parser, TOK_OPERATORS())) {
-        consume(parser, TOK_OPERATORS());
-        consume(parser, TOK_SEMI());
-        // Import all exported operators
-        Index i = 0;
-        HashSymbol *op = NULL;
-        PrattRecord *source = NULL;
-        while ((op = iteratePrattRecordTable(ops->exportedRules, &i, &source)) != NULL) {
-            PrattRecord *target = ensureTargetRecord(parser, op);
-            mergeFixityImport(parser, target, source, nsRef, nsSymbol,
-                              source->prefixOriginalImpl != NULL,
-                              source->infixOriginalImpl != NULL,
-                              source->postfixOriginalImpl != NULL,
-                              op);
+    if (check(parser, TOK_ATOM())) {
+        // Support: import <ns> operators;  (operators is an atom)
+        PrattToken *atom = next(parser);
+        PROTECT(atom);
+        if (atom->value->type == PRATTVALUE_TYPE_ATOM && atom->value->val.atom == TOK_OPERATORS()) {
+            consume(parser, TOK_SEMI());
+            // Import all exported operators
+            Index i = 0;
+            HashSymbol *op = NULL;
+            PrattRecord *source = NULL;
+            while ((op = iteratePrattRecordTable(ops->exportedRules, &i, &source)) != NULL) {
+                PrattRecord *target = ensureTargetRecord(parser, op);
+                mergeFixityImport(parser, target, source, nsRef, nsSymbol,
+                                  source->prefixOriginalImpl != NULL,
+                                  source->infixOriginalImpl != NULL,
+                                  source->postfixOriginalImpl != NULL,
+                                  op);
+            }
+            res = newAstDefinition_Blank(TOKPI(tok));
+        } else {
+            parserErrorAt(TOKPI(atom), parser, "expected 'operators' or fixity after import <ns>");
+            res = newAstDefinition_Blank(TOKPI(atom));
         }
-        res = newAstDefinition_Blank(TOKPI(tok));
     } else if (match(parser, TOK_PREFIX())) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
