@@ -1,0 +1,8 @@
+namespace
+
+typedef test_type(#t) { test_a(#t) | test_b(#t) }
+
+prefix 13 "test_A" test_a;
+prefix 13 "test_B" test_b;
+
+export operators;

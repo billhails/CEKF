@@ -1,0 +1,5 @@
+let
+  link "import_ops_types.fn" as ops;
+  import ops prefix "test_A";
+in
+  assert((test_A 42) == ops.test_a(42));
