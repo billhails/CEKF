@@ -33,6 +33,7 @@
 #include "utf8.h"
 #include "print_generator.h"
 #include "file_id.h"
+#include "memory.h"
 #include "preamble.h"
 
 #ifdef DEBUG_PRATT_PARSER
@@ -398,7 +399,9 @@ static char *currentPrattFile(PrattParser *parser)
 static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser)
 {
     if (*file == '/') {
-        return makeAgnosticFileId((char *)file);
+        // Take ownership of the filename by duplicating it so the
+        // AgnosticFileId can free it during GC finalization.
+        return makeAgnosticFileId(safeStrdup((char *)file));
     }
     char *currentFile = currentPrattFile(parser);
     if (currentFile == NULL) {
@@ -1839,17 +1842,17 @@ static AstDefinition *definition(PrattParser *parser)
         // Provide a more informative error message that includes the
         // unexpected token kind and, where possible, its lexeme.
         if (tok->type == TOK_ATOM() && tok->value && tok->value->type == PRATTVALUE_TYPE_ATOM && tok->value->val.atom) {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found atom '%s'", tok->value->val.atom->name);
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found atom '%s'", tok->value->val.atom->name);
         } else if (tok->type == TOK_STRING() && tok->value && tok->value->type == PRATTVALUE_TYPE_STRING && tok->value->val.string) {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found string \"%s\"", tok->value->val.string->entries);
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found string \"%s\"", tok->value->val.string->entries);
         } else if (tok->type == TOK_NUMBER() && tok->value && tok->value->type == PRATTVALUE_TYPE_NUMBER && tok->value->val.number) {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found number");
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found number");
         } else if (tok->type == TOK_CHAR() && tok->value && tok->value->type == PRATTVALUE_TYPE_STRING && tok->value->val.string) {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found character '%s'", tok->value->val.string->entries);
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found character '%s'", tok->value->val.string->entries);
         } else if (tok->type && tok->type->name) {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found token %s", tok->type->name);
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found token %s", tok->type->name);
         } else {
-            parserErrorAt(TOKPI(tok), parser, "expecting definition; found unexpected token");
+            parserErrorAt(TOKPI(tok), parser, "expected definition; found unexpected token");
         }
         res = newAstDefinition_Blank(TOKPI(tok));
         save = PROTECT(res);

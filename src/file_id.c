@@ -58,6 +58,10 @@ void markAgnosticFileId(AgnosticFileId *id) {
  * @param id the agnostic file id
  */
 void freeAgnosticFileId(AgnosticFileId *id) {
+    if (id == NULL) return;
+    // 'name' is owned by this object (allocated via malloc/strdup in callers),
+    // so free it here before freeing the object itself.
+    if (id->name) free(id->name);
     FREE(id, AgnosticFileId);
 }
 

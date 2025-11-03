@@ -370,6 +370,21 @@ struct PrattRecord {
 
 **Operator shadowing**: Inner scopes can redefine operators; definitions are forgotten when scope exits.
 
+### Exporting and importing operators
+
+F♮ supports exporting operators from a namespace and importing them into other scopes, while preserving hygiene and lexical scoping.
+
+- Export operators in a namespace:
+   - `export operators;` to export all operators defined in that namespace
+   - Or export per-fixity: `export prefix "~";`, `export infix "plus";`, `export postfix "squared";`
+- Import exported operators (after `link "file.fn" as ns;`):
+   - `import ns operators;` to import all exported operators
+   - Or per-fixity: `import ns prefix "~";`, `import ns infix "plus";`, `import ns postfix "squared";`
+
+Conflicts: redefining the same symbol+fixity in the same scope is an error; importing a different fixity for an existing symbol is an error. Shadowing is allowed by redefining/importing in an inner `let`.
+
+Hygiene: imported operator applications call a hygienic wrapper qualified to the defining namespace, so free variables resolve to the definition site and cannot be captured by local bindings in the importing scope.
+
 ### Known Limitations & Improvement Areas
 
 1. **Restriction: Operator can't be both infix and postfix**
@@ -381,10 +396,7 @@ struct PrattRecord {
    - Current: Simply disallowed
    - Improvement: Context-sensitive parsing based on preceding token
 
-3. **Operator definition scope export**: Operators cannot currently be exported as part of a namespace
-   - Current: Operators are scoped locally but not exportable
-   - Improvement: Need mechanism to export operator definitions with namespaces
-   - See `PrattNsIdTable` for namespace tracking infrastructure
+3. (Addressed) Operator export/import from namespaces is implemented as described above. Future improvements: richer conflict diagnostics, and optional re-export controls in aggregate modules.
 
 4. **Precedence granularity**: `PRECEDENCE_SCALE = 3` limits how many operators can fit between declared levels
    - Could be increased if needed

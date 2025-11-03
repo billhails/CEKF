@@ -1,0 +1,19 @@
+// Hygiene: local names colliding with imported operator callees must not be captured
+
+let
+    link "import_ops_lib.fn" as ops;
+    import ops prefix "~";
+    import ops infix "plus";
+
+    // We cannot define a local function named "plus" here because once imported as an operator,
+    // the scanner tokenizes "plus" as an operator symbol, not an identifier. That's fine: to
+    // test hygiene, it's sufficient to collide with the callee of the prefix operator (~), which
+    // is the plain identifier 'negate'. If hygiene is correct, ~ should still call the imported
+    // namespace-qualified implementation, not this local one.
+    fn negate(x) { 999 };
+in
+    // Operators should resolve to hygienic namespace-qualified wrappers
+    assert(2 plus 3 == 5);
+    assert(~5 == -5);
+
+    puts("Hygiene with collisions OK\n")
