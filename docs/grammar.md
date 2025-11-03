@@ -128,8 +128,20 @@ load : LOAD package [AS symbol]
 package : symbol
         | package '.' symbol
 
+import_def : IMPORT symbol OPERATORS ';'
+        | IMPORT symbol PREFIX string ';'
+        | IMPORT symbol INFIX  string ';'
+        | IMPORT symbol POSTFIX string ';'
+
+export_def : EXPORT OPERATORS ';'
+        | EXPORT PREFIX string ';'
+        | EXPORT INFIX  string ';'
+        | EXPORT POSTFIX string ';'
+
 definition : define
            | load
+           | import_def
+           | export_def
 
 define : symbol '=' expression
 

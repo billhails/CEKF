@@ -18,6 +18,7 @@
 
 #include "test.h"
 #include "utf8.h"
+#include "init.h"
 
 #define TEST(c, s) do { \
     character = c; \

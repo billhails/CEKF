@@ -1,0 +1,11 @@
+// Negative test: importing a fixity that conflicts with an existing different fixity must fail
+let
+    // Define a local postfix operator with the symbol "plus"
+    fn keep(x) { x };
+    postfix 120 "plus" keep;
+
+    // Library exports infix "plus"; importing it over existing postfix should fail
+    link "import_ops_lib.fn" as ops;
+    import ops infix "plus";  // should fail: fixity mismatch conflict
+in
+    puts("This line should not be reached due to fixity mismatch\n");

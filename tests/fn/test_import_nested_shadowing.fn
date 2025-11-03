@@ -1,0 +1,25 @@
+// Nested scopes and shadowing for imported operators
+
+let
+    link "import_ops_lib.fn" as ops;
+    // Import only infix plus at outer scope
+    import ops infix "plus";
+in
+    // Outer scope uses imported plus
+    assert(2 plus 3 == 5);
+
+    // Inner scope: shadow plus with a local definition; also import a different fixity locally
+    {
+        let
+            fn times(a, b) { a * b };
+            infix left 100 "plus" times;   // shadow imported plus
+            import ops prefix "~";         // import prefix only in inner scope
+        in
+            assert(2 plus 3 == 6);   // uses shadowed local plus
+            assert(~5 == -5);        // prefix imported only here
+    };
+
+    // After inner scope, shadowing is gone; outer imported plus remains; prefix ~ is not visible here
+    assert(2 plus 3 == 5);
+
+    puts("Nested import/shadowing OK\n")

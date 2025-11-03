@@ -92,9 +92,12 @@ TOKFN(FN, "fn")
 TOKFN(LINK, "link")
 TOKFN(AS, "as")
 TOKFN(ALIAS, "alias")
-TOKFN(SEMI, ";");
+TOKFN(SEMI, ";")
 TOKFN(PRINT, "print")
 TOKFN(TYPEOF, "typeof")
+TOKFN(EXPORT, "export")
+TOKFN(OPERATORS, "operators")
+TOKFN(IMPORT, "import")
 
 #undef TOKFN
 
@@ -1153,13 +1156,34 @@ bool match(PrattParser *parser, HashSymbol *type) {
  * If the match is successful, it consumes the token and returns true.
  * If the match fails, it consumes the token, raises an error, and returns false.
  */
+static const char *friendlyExpectedName(HashSymbol *type) {
+    if (type == TOK_ATOM()) return "identifier";
+    return type->name;
+}
+
 bool consume(PrattParser *parser, HashSymbol *type) {
     PrattToken *token = next(parser);
     validateLastAlloc();
     if (token->type == type) {
         return true;
     }
-    parserError(parser, "expected \"%s\" got \"%s\"", type->name, token->type->name);
+    const char *expectedName = friendlyExpectedName(type);
+    const char *foundKind = NULL;
+    const char *foundLexeme = NULL;
+    if (token->type == TOK_ATOM()) {
+        foundKind = "identifier";
+        foundLexeme = token->value->val.atom->name;
+    } else {
+        // For operators and keywords the token type name is the lexeme
+        foundKind = "token";
+        foundLexeme = token->type->name;
+    }
+    if (type == TOK_ATOM() && token->type != TOK_ATOM()) {
+        // Helpful hint: common case is trying to name a function with an operator symbol
+        parserError(parser, "expected %s; found operator '%s'", expectedName, foundLexeme);
+    } else {
+        parserError(parser, "expected %s; found %s '%s'", expectedName, foundKind, foundLexeme);
+    }
     return false;
 }
 

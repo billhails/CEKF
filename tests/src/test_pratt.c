@@ -30,7 +30,7 @@
 #include "bigint.h"
 #include "utf8.h"
 #include "print_generator.h"
-#include "file_id.h"
+#include "init.h"
 
 extern AstStringArray *include_paths;
 
@@ -72,12 +72,9 @@ static void testFile(char *filename) {
 }
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
-    initProtection();
+    initAll();
     include_paths = newAstStringArray();
     int save = PROTECT(include_paths);
-    initFileIdStack();
-    initParserStack();
-    initNamespaces();
     pushAstStringArray(include_paths, strdup("fn"));
     test("1",                              "{ 1; }", false);
     test("1i",                             "{ 1i; }", false);

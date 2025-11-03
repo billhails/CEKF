@@ -49,6 +49,7 @@
 #include "pratt.h"
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
+#include "init.h"
 #ifdef UNIT_TESTS
 #include "tests.h"
 #endif
@@ -391,13 +392,9 @@ static void report(char *prog, clock_t begin, clock_t compiled, clock_t end) {
  */
 int main(int argc, char *argv[]) {
     clock_t begin = clock();
-    initProtection();
-    init_arithmetic();
-    initNamespaces();
+    initAll();
     include_paths = newAstStringArray();
     int save = PROTECT(include_paths);
-    initFileIdStack();
-    initParserStack();
     int nextargc = processArgs(argc, argv);
     BuiltIns *builtIns = registerBuiltIns(argc, binary_input_file ? nextargc : nextargc + 1, argv);
     PROTECT(builtIns);

@@ -49,6 +49,9 @@ void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((
 PrattToken *peek(PrattParser *);
 
 HashSymbol *TOK_ALIAS(void);
+HashSymbol *TOK_EXPORT(void);
+HashSymbol *TOK_OPERATORS(void);
+HashSymbol *TOK_IMPORT(void);
 HashSymbol *TOK_ARROW(void);
 HashSymbol *TOK_ASSERT(void);
 HashSymbol *TOK_ASSIGN(void);

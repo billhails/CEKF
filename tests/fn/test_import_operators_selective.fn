@@ -1,0 +1,13 @@
+// Selective import of fixities from a linked namespace
+
+let
+    link "import_ops_selective_lib.fn" as ops;
+    import ops prefix "~";
+    import ops infix "plus";
+in
+    // Imported prefix and infix should work
+    assert(~5 == -5);
+    assert(3 plus 4 == 7);
+
+    // We did not import the postfix; don't use it here (negative tests handled elsewhere)
+    puts("Selective operator import OK\n")

@@ -1304,6 +1304,24 @@ static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
 }
 
 /**
+ * @brief Converts a macro application where the callee is an arbitrary expression
+ *    (e.g., a namespaced lookup), wrapping the arguments in thunks.
+ * @param PI The parser information.
+ * @param callee The callee expression (can be a Lookup or Var).
+ * @param args The arguments to the macro.
+ * @return The resulting lambda expression.
+ */
+static LamExp *wrapMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
+    args = wrapMacroArgs(args);
+    int save = PROTECT(args);
+    LamApply *apply = newLamApply(PI, callee, args);
+    PROTECT(apply);
+    LamExp *res = newLamExp_Apply(PI, apply);
+    UNPROTECT(save);
+    return res;
+}
+
+/**
  * @brief Creates a lambda primitive application based on the symbol and arguments.
  * @param PI The parser information.
  * @param symbol The macro or operator name.
@@ -1722,6 +1740,16 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     LamExp *function = convertExpression(funCall->function, env);
     PROTECT(function);
     LamExp *result = NULL;
+    // If the callee is a namespaced lookup, check macro-ness in that namespace env
+    if (function->type == LAMEXP_TYPE_LOOKUP) {
+        LamContext *nsEnv = lookupNamespaceInLamContext(env, function->val.lookup->nsid);
+        LamExp *under = findUnderlyingValue(function);
+        if (under->type == LAMEXP_TYPE_VAR && isMacro(under->val.var, nsEnv)) {
+            result = wrapMacroExp(CPI(funCall), function, args);
+            UNPROTECT(save);
+            return result;
+        }
+    }
     switch (findUnderlyingType(function)) {
         case LAMEXP_TYPE_VAR:{
             LamExp *symbol = findUnderlyingValue(function);
