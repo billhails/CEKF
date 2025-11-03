@@ -42,7 +42,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.fn",
-				"match": "\\b(namespace|switch|if|else|back|here|error|typedef|alias|macro|unsafe|let|in|print|assert|prefix|infix|postfix|link|as)\\b"
+				"match": "\\b(namespace|switch|if|else|back|here|error|typedef|alias|macro|unsafe|let|in|print|assert|prefix|infix|postfix|link|import|export|as)\\b"
 			}]
 		},
 		"strings": {
@@ -74,7 +74,7 @@
 		"constants": {
 			"patterns": [{
 				"name": "constant.language.fn",
-				"match": "\\b(true|false|nil|left|right|none|_|lt|eq|gt|nothing|some|argv|failure|success)\\b"
+				"match": "\\b(true|false|nil|left|right|none|operators|_|lt|eq|gt|nothing|some|argv|failure|success)\\b"
 			}]
 		},
 		"operators": {

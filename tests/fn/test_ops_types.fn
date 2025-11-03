@@ -3,3 +3,4 @@ let
   import ops prefix "test_A";
 in
   assert((test_A 42) == ops.test_a(42));
+  assert(ops.test_fn(test_A 100) == 100);
