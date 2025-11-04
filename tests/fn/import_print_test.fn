@@ -1,0 +1,11 @@
+namespace
+typedef typeA { valA1 | valA2 }
+typedef typeB { valB1 | valB2 }
+
+// Custom print function for typeA
+print typeA {
+    (valA1) { puts("*typeA: valA1*"); valA1 }
+    (valA2) { puts("*typeA: valA2*"); valA2 }
+}
+
+// we allow typeB to have a default printer generated for it

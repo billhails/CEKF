@@ -278,15 +278,16 @@ static void advance(PrattBuffer *buffer) {
  * @brief Looks up a symbol in the trie and returns a PrattToken if found.
  * Helper for lookupTrieSymbol.
  */
-static PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
-    HashSymbol *symbol = lookupTrieRecursive(parser->trie, lexer->bufList->buffer, 0, NULL);
-    if (symbol != NULL) {
-        PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
-        advance(lexer->bufList->buffer);
-        return res;
-    }
-    if (parser->next) {
-        return _lookupTrieSymbol(parser->next, lexer);
+static inline PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
+    PrattParser *p = parser;
+    while (p) {
+        HashSymbol *symbol = lookupTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
+        if (symbol != NULL) {
+            PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
+            advance(lexer->bufList->buffer);
+            return res;
+        }
+        p = p->next;
     }
     return NULL;
 }

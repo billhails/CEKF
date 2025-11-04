@@ -185,7 +185,7 @@ $(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
 test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
-	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '(expect to see an error) ***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
@@ -227,6 +227,20 @@ profile: all
 	rm -f callgrind.out.*
 	./$(TARGET) --binary-out=$(PROF_SRC).fnc fn/$(PROF_SRC).fn
 	valgrind --tool=callgrind ./$(TARGET) --binary-in=$(PROF_SRC).fnc
+
+# Profile the compiler pipeline (scanner/parser → typechecker → bytecode), no VM run
+profile-compile: all
+	rm -f callgrind.out.*
+	valgrind --tool=callgrind ./$(TARGET) --binary-out=/dev/null fn/$(PROF_SRC).fn
+
+# Convenience: annotate the most recent callgrind output
+profile-annotate:
+	callgrind_annotate --auto=yes callgrind.out.* | head -n 120
+
+# Profile parser-only (stop after AST parse)
+profile-parse: all
+	rm -f callgrind.out.*
+	valgrind --tool=callgrind ./$(TARGET) --parse-only fn/$(PROF_SRC).fn
 
 leak-check: all
 	valgrind --leak-check=full ./$(TARGET) fn/$(PROF_SRC).fn
