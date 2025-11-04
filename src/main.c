@@ -60,6 +60,7 @@ static int anf_flag = 0;
 static int ast_flag = 0;
 static int lambda_flag = 0;
 static int inline_flag = 0;
+static int parse_only_flag = 0;
 #ifdef UNIT_TESTS
 static int test_flag = 0;
 #endif
@@ -127,6 +128,7 @@ static void usage(char *prog, int status) {
            "    --exec=<snippet>         Execute the snippet of code directly\n"
            "    -i<dir>\n"
            "    --include=<dir>          Add dir to the list of directories to be searched.\n"
+           "    --parse-only             Stop after parsing to enable parser-only profiling.\n"
            "    --report                 Report statistics.\n"
 #ifdef UNIT_TESTS
            "    --test                   Run unit tests.\n"
@@ -151,6 +153,7 @@ static int processArgs(int argc, char *argv[]) {
             { "test", no_argument, &test_flag, 1 },
 #endif
             { "report", no_argument, &report_flag, 1 },
+            { "parse-only", no_argument, &parse_only_flag, 1 },
             { "dump-anf", no_argument, &anf_flag, 1 },
             { "dump-ast", no_argument, &ast_flag, 1 },
             { "dump-bytecode", no_argument, &dump_bytecode_flag, 1 },
@@ -439,6 +442,11 @@ int main(int argc, char *argv[]) {
             prog = parseFile(argv[nextargc++]);
         }
         int save2 = PROTECT(prog);
+
+        if (parse_only_flag) {
+            // Stop after parsing to enable parser-only profiling
+            exit(0);
+        }
 
         LamExp *exp = convertProg(prog);
         REPLACE_PROTECT(save2, exp);

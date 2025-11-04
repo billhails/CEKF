@@ -173,6 +173,8 @@ unsafe fn cdr {
 }
 prefix 6 ">" cdr;
 
+fn identity(x) { x }
+
 fn print_list(helper, l) {
     let
         fn h1 {

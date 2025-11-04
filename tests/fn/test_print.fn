@@ -1,0 +1,5 @@
+let
+    link "import_print_test.fn" as ipt;
+in
+    print(ipt.valA1);
+    print(ipt.valB1);

@@ -1,6 +1,0 @@
-// the Canadian operator
-
-let
-    postfix 15 "eh" fn(x) { x };
-in
-    assert(3 == 3 eh)
