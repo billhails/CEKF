@@ -59,17 +59,42 @@ void putCharacter(Character x);
 
 static CEKF state;
 
-// --- Runtime over-application staging ---
-typedef struct PendingOverApply {
-    bool active;        // staging active
+// --- Runtime over-application staging (supports nesting) ---
+typedef struct OverApplyFrame {
     int count;          // total extra args to apply
-    int index;          // number of extras already applied
-    Vec *extras;        // vector holding extra arguments (entries[0] == first extra arg)
-    int protectId;      // GC protection id for extras vector
-    bool ready;         // set true after a RETURN completes so we can apply next extra
-} PendingOverApply;
+    int index;          // number already applied
+    Vec *extras;        // vector of extra args (entries[0] is first extra)
+    int protectId;      // GC protection id of extras vector
+    bool ready;         // ready to apply next extra (after a RETURN)
+} OverApplyFrame;
 
-static PendingOverApply pendingOA = { false, 0, 0, NULL, -1, false };
+#define OVER_APPLY_MAX_DEPTH 32
+static OverApplyFrame overApplyStack[OVER_APPLY_MAX_DEPTH];
+static int overApplyDepth = 0;
+
+static unsigned long apply_over_nested_frames = 0; // instrumentation
+
+static inline void pushOverApplyFrame(int extra, Vec *vec, int protectId) {
+#ifdef SAFETY_CHECKS
+    if (overApplyDepth >= OVER_APPLY_MAX_DEPTH) cant_happen("too many nested over-applications");
+#endif
+    OverApplyFrame *f = &overApplyStack[overApplyDepth++];
+    f->count = extra;
+    f->index = 0;
+    f->extras = vec;
+    f->protectId = protectId;
+    f->ready = false;
+    apply_over_nested_frames++;
+}
+
+static inline void popOverApplyFrame(void) {
+#ifdef SAFETY_CHECKS
+    if (overApplyDepth <= 0) cant_happen("popOverApplyFrame underflow");
+#endif
+    OverApplyFrame *f = &overApplyStack[overApplyDepth-1];
+    if (f->protectId >= 0) UNPROTECT(f->protectId);
+    overApplyDepth--;
+}
 
 void markState() {
     state.header.keep = false;
@@ -476,7 +501,6 @@ static void applyProc(int naargs) {
                     int extra = naargs - pending;
 #ifdef SAFETY_CHECKS
                     if (extra <= 0) cant_happen("PCLO staging invariant");
-                    if (pendingOA.active) cant_happen("nested over-application (PCLO)");
 #endif
                     Vec *vec = newVec(extra);
                     int saveExtras = PROTECT(vec);
@@ -485,12 +509,7 @@ static void applyProc(int naargs) {
                         Value v = pop();
                         vec->entries[extra - 1 - i] = v;
                     }
-                    pendingOA.active = true;
-                    pendingOA.count = extra;
-                    pendingOA.index = 0;
-                    pendingOA.extras = vec;
-                    pendingOA.protectId = saveExtras;
-                    pendingOA.ready = false;
+                    pushOverApplyFrame(extra, vec, saveExtras);
                     exactCallFromPclo(clo, pending);
                     // Do NOT apply extras now; resume after body completes.
                 }
@@ -511,7 +530,6 @@ static void applyProc(int naargs) {
                     int extra = naargs - pending;
 #ifdef SAFETY_CHECKS
                     if (extra <= 0) cant_happen("CLO staging invariant");
-                    if (pendingOA.active) cant_happen("nested over-application (CLO)");
 #endif
                     Vec *vec = newVec(extra);
                     int saveExtras = PROTECT(vec);
@@ -519,12 +537,7 @@ static void applyProc(int naargs) {
                         Value v = pop();
                         vec->entries[extra - 1 - i] = v;
                     }
-                    pendingOA.active = true;
-                    pendingOA.count = extra;
-                    pendingOA.index = 0;
-                    pendingOA.extras = vec;
-                    pendingOA.protectId = saveExtras;
-                    pendingOA.ready = false;
+                    pushOverApplyFrame(extra, vec, saveExtras);
                     exactCallFromClo(clo);
                 }
             }
@@ -579,6 +592,7 @@ void reportSteps(void) {
     printf("apply partial creations: %lu\n", apply_partial_creations);
     printf("apply over attempts: %lu\n", apply_over_attempts);
     printf("apply staged steps: %lu\n", apply_staged_steps);
+    printf("apply over nested frames: %lu\n", apply_over_nested_frames);
 #endif
 #ifdef SAFETY_CHECKS
     reportKonts();
@@ -1174,7 +1188,7 @@ static void step() {
                     push(kont);
                     applyProc(1);
             // a RETURN just completed; it's now safe to attempt staged over-application
-            if (pendingOA.active) pendingOA.ready = true;
+            if (overApplyDepth > 0) overApplyStack[overApplyDepth-1].ready = true;
                 }
                 break;
 
@@ -1277,35 +1291,38 @@ static void step() {
                 cant_happen("unrecognised bytecode %d in step()", bytecode);
         }
         // Resume staged over-application if active and a callable result is on stack
-        if (pendingOA.active && pendingOA.ready && pendingOA.index < pendingOA.count) {
-            Value top = peek(-1);
-            if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
-                Value callable = pop();
-                int saveCallable = protectValue(callable);
-                Value arg = pendingOA.extras->entries[pendingOA.index];
-                push(arg);
-                push(callable);
-                applyProc(1);
-                pendingOA.index++;
-                pendingOA.ready = false; // wait for next RETURN before applying more
-                apply_staged_steps++;
-                UNPROTECT(saveCallable);
-                if (pendingOA.index == pendingOA.count) {
-                    // Finished: release extras vector protection
-                    if (pendingOA.protectId >= 0) {
-                        UNPROTECT(pendingOA.protectId);
-                    }
-                    pendingOA.active = false;
-                    pendingOA.extras = NULL;
-                    pendingOA.protectId = -1;
+    // (old single-frame logic removed)
+    if (overApplyDepth > 0) {
+            OverApplyFrame *f = &overApplyStack[overApplyDepth-1];
+            while (f->ready && f->index < f->count) {
+                Value top = peek(-1);
+                if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
+                    Value callable = pop();
+                    int saveCallable = protectValue(callable);
+                    Value arg = f->extras->entries[f->index];
+                    push(arg);
+                    push(callable);
+                    applyProc(1);
+                    f->index++;
+                    apply_staged_steps++;
+                    UNPROTECT(saveCallable);
+                    // For chaining: need another RETURN before applying next
+                    f->ready = false;
+                } else if (top.type == VALUE_TYPE_KONT) {
+                    // Still unwinding continuation; break and wait
+                    break;
+                } else {
+                    arity_error("over-application result", /*expected fn*/ 1, /*got*/ 0);
+                    break;
                 }
-            } else if (top.type == VALUE_TYPE_KONT) {
-                // continuation still being processed; defer
-            } else {
-                // Attempting to apply an extra argument to a non-callable value
-                arity_error("over-application result", /*expected fn*/ 1, /*got*/ 0);
+                if (f->index == f->count) {
+                    popOverApplyFrame();
+                    if (overApplyDepth == 0) break;
+                    f = &overApplyStack[overApplyDepth-1];
+                }
             }
-        }
+    }
+    // end instruction loop iteration
 #ifdef DEBUG_STEP
 #  ifdef DEBUG_SLOW_STEP
         sleep(1);
