@@ -40,6 +40,16 @@ structs:
             B: ByteCodeArray
             L: LocationArray
 
+    OverApplyFrame:
+        meta:
+            brief: OverApplyFrame
+            description: An over-application frame for the CEKFs machine
+        data:
+            count: int
+            index: int
+            extras: Vec
+            ready: bool
+
     Env:
         meta:
             brief: Environment
@@ -150,6 +160,13 @@ arrays:
             description: An array of locations for reporting run-time errors.
         data:
             entries: Location
+
+    OverApplyStack:
+        meta:
+            brief: OverApplyStack
+            description: A stack of over-application frames
+        data:
+            entries: OverApplyFrame
 
 vectors:
     Vec:

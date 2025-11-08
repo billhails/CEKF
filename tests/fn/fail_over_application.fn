@@ -1,0 +1,4 @@
+let
+    h = fn (x, y) { x + y };
+in
+    h(1, 2, 3)  // error: tried to apply an extra argument to a non-function

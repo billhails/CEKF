@@ -59,46 +59,26 @@ void putCharacter(Character x);
 
 static CEKF state;
 
-// --- Runtime over-application staging (supports nesting) ---
-typedef struct OverApplyFrame {
-    int count;          // total extra args to apply
-    int index;          // number already applied
-    Vec *extras;        // vector of extra args (entries[0] is first extra)
-    int protectId;      // GC protection id of extras vector
-    bool ready;         // ready to apply next extra (after a RETURN)
-} OverApplyFrame;
-
-#define OVER_APPLY_MAX_DEPTH 32
-static OverApplyFrame overApplyStack[OVER_APPLY_MAX_DEPTH];
-static int overApplyDepth = 0;
+static OverApplyStack *overApplyStack;
 
 static unsigned long apply_over_nested_frames = 0; // instrumentation
 
-static inline void pushOverApplyFrame(int extra, Vec *vec, int protectId) {
-#ifdef SAFETY_CHECKS
-    if (overApplyDepth >= OVER_APPLY_MAX_DEPTH) cant_happen("too many nested over-applications");
-#endif
-    OverApplyFrame *f = &overApplyStack[overApplyDepth++];
-    f->count = extra;
-    f->index = 0;
-    f->extras = vec;
-    f->protectId = protectId;
-    f->ready = false;
+static inline void pushOverApplyFrame(int extra, Vec *vec) {
+    OverApplyFrame *f = newOverApplyFrame(extra, 0, vec, false);
+    int save = PROTECT(f);
+    pushOverApplyStack(overApplyStack, f);
+    UNPROTECT(save);
     apply_over_nested_frames++;
 }
 
 static inline void popOverApplyFrame(void) {
-#ifdef SAFETY_CHECKS
-    if (overApplyDepth <= 0) cant_happen("popOverApplyFrame underflow");
-#endif
-    OverApplyFrame *f = &overApplyStack[overApplyDepth-1];
-    if (f->protectId >= 0) UNPROTECT(f->protectId);
-    overApplyDepth--;
+    (void) popOverApplyStack(overApplyStack);
 }
 
 void markState() {
     state.header.keep = false;
     markCEKF(&state);
+    markOverApplyStack(overApplyStack);
 }
 
 // --- APPLY instrumentation (optional, for debugging/analysis) ---
@@ -230,8 +210,10 @@ static void inject(ByteCodeArray B, LocationArray *L, BuiltIns *builtIns __attri
     state.F = NULL;
     if (first) {
         state.S = newStack();
+        overApplyStack = newOverApplyStack();
     } else {
         clearStackFrames(state.S);
+        clearOverApplyStack(overApplyStack);
     }
     state.B = B;
     state.L = L;
@@ -509,7 +491,8 @@ static void applyProc(int naargs) {
                         Value v = pop();
                         vec->entries[extra - 1 - i] = v;
                     }
-                    pushOverApplyFrame(extra, vec, saveExtras);
+                    pushOverApplyFrame(extra, vec);
+                    UNPROTECT(saveExtras);
                     exactCallFromPclo(clo, pending);
                     // Do NOT apply extras now; resume after body completes.
                 }
@@ -537,7 +520,8 @@ static void applyProc(int naargs) {
                         Value v = pop();
                         vec->entries[extra - 1 - i] = v;
                     }
-                    pushOverApplyFrame(extra, vec, saveExtras);
+                    pushOverApplyFrame(extra, vec);
+                    UNPROTECT(saveExtras);
                     exactCallFromClo(clo);
                 }
             }
@@ -1187,8 +1171,10 @@ static void step() {
                     Value kont = value_Kont(state.K);
                     push(kont);
                     applyProc(1);
-            // a RETURN just completed; it's now safe to attempt staged over-application
-            if (overApplyDepth > 0) overApplyStack[overApplyDepth-1].ready = true;
+                    // a RETURN just completed; it's now safe to attempt staged over-application
+                    if (overApplyStack->size > 0) {
+                        peekOverApplyStack(overApplyStack)->ready = true;
+                    }
                 }
                 break;
 
@@ -1292,8 +1278,8 @@ static void step() {
         }
         // Resume staged over-application if active and a callable result is on stack
     // (old single-frame logic removed)
-    if (overApplyDepth > 0) {
-            OverApplyFrame *f = &overApplyStack[overApplyDepth-1];
+    if (overApplyStack->size > 0) {
+            OverApplyFrame *f = peekOverApplyStack(overApplyStack);
             while (f->ready && f->index < f->count) {
                 Value top = peek(-1);
                 if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
@@ -1317,8 +1303,8 @@ static void step() {
                 }
                 if (f->index == f->count) {
                     popOverApplyFrame();
-                    if (overApplyDepth == 0) break;
-                    f = &overApplyStack[overApplyDepth-1];
+                    if (overApplyStack->size == 0) break;
+                    f = peekOverApplyStack(overApplyStack);
                 }
             }
     }
