@@ -6,8 +6,9 @@ More of a wish-list than a hard and fast plan.
 * Proper namespace import support including user-defined operators.
 * Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
 * Unpacking function return values (tuples only).
+* `syntax` construct that allows large-scale syntactic structures to be defined by the user.
 * More numbers:
-   * NaN.
+   * NaN for division by Zero etc.
    * Matrices.
    * Quaternions.
 * Improve arithmetic.
@@ -25,8 +26,7 @@ More of a wish-list than a hard and fast plan.
         can't uniquely determine `a` and `b`, and `a ** 2` would require `a`
         to be bound to the square root of the actual argument.
    * allow unpacking of the real and imaginary parts of a complex number in patterns.
-      * another special case: `a + b`, `b` would be bound to `0i` if the actual
-        argument is not complex.
+      * another special case: `a + b`, `b` would be bound to `0i` if the actual argument is not complex.
 * Curried binary operators `(2+)` etc.
 * (internal) have a NEWZ variant of NEW that bzero's its result.
 * Builtins

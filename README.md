@@ -126,6 +126,11 @@ All stages basically complete, but it needs a lot of testing now.
 The desugaring step is now rolled into thae lambda conversion phase as eary
 as possible to simplify downstream processing.
 
+### Function Over-Application
+
+Implemented per RFC-001 (hybrid compile-time split + runtime staging). For details see:
+`docs/RFC-001-over-application.md`.
+
 ## CEKF Formal Description
 
 A formal mathematical description of the CEKF machine can be found [here](docs/MATH.md).

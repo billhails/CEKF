@@ -11,6 +11,10 @@ CEKF --F--> Fail
 CEKF --S--> Stack
 CEKF --B--> ByteCodeArray
 CEKF --L--> LocationArray
+OverApplyFrame --count--> int
+OverApplyFrame --index--> int
+OverApplyFrame --extras--> Vec
+OverApplyFrame --ready--> bool
 Env --S--> Frame
 Env --E--> Env
 Kont --C--> control
@@ -54,6 +58,7 @@ CharacterArray["CharacterArray[]"] --entries--> character
 ByteArray["ByteArray[]"] --entries--> byte
 Frame["Frame[]"] --entries--> Value
 LocationArray["LocationArray[]"] --entries--> Location
+OverApplyStack["OverApplyStack[]"] --entries--> OverApplyFrame
 ```
 
 > Generated from src/cekfs.yaml by tools/makeAST.py

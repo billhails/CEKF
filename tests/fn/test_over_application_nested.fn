@@ -1,0 +1,20 @@
+// Nested over-application tests
+
+{
+  // f takes 2, returns g takes 2, returns h takes 1
+  // We call with 5 args at once, exercising nested staged over-application.
+  let f = fn (a, b) { fn (c, d) { fn (e) { a + b + c + d + e } } };
+      r = f(1, 2, 3, 4, 5);
+  in
+  assert(r == 15);
+  print("OA nested 1 passed: f(1,2,3,4,5) => 15");
+};
+{
+  // deeper: outer returns a function that itself over-applies into another return
+  let outer = fn (x) { fn (y, z) { fn (w) { x * y + z + w } } };
+      g = outer(2);           // g expects 2 more, then 1 more
+      r2 = g(3, 4, 5);        // supply 3 at once (over-app by 1 at the intermediate)
+  in
+  assert(r2 == 2*3 + 4 + 5);
+  print("OA nested 2 passed: g(3,4,5) => 15");
+};
