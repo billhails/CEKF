@@ -303,11 +303,59 @@ void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b, LocationArray *L) 
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeCexpApply);
+    // Preserve existing evaluation order: evaluate args left-to-right, then the function
+    Index n = countAexpList(x->args);
+    // We'll conditionally emit args in a custom order; defer function emission below.
+
+    // Hybrid approach: if the callee is a direct lambda with known arity m
+    // and there are extra arguments (n > m), emit an exact APPLY m followed
+    // by (n - m) chained APPLY 1 instructions. This avoids VM over-application
+    // while keeping the original evaluation order and stack discipline.
+    bool directLam = (x->function != NULL && x->function->type == AEXP_TYPE_LAM);
+    if (directLam) {
+        int m = x->function->val.lam != NULL ? x->function->val.lam->nargs : 0;
+        if ((int)n > m && m > 0) {
+            // Collect args into an array to control emission order
+            AexpList *cur = x->args;
+            Aexp **argv = NEW_ARRAY(Aexp*, n);
+            Index i = 0;
+            while (cur != NULL && i < n) {
+                argv[i++] = cur->exp;
+                cur = cur->next;
+            }
+            // Emit extra args (a_{m+1}..a_n) in reverse so that a_{m+1} is nearest to TOS after APPLY m
+            for (Index k = n; k > (Index)m; k--) {
+                writeAexp(argv[k - 1], b, L);
+            }
+            // Emit the first m args in order a1..am
+            for (Index k = 0; k < (Index)m; k++) {
+                writeAexp(argv[k], b, L);
+            }
+            // Emit function last (callable on TOS)
+            writeAexp(x->function, b, L);
+            // Apply exactly m args
+            writeLocation(CPI(x), b, L);
+            addByte(b, BYTECODES_TYPE_APPLY);
+            addByte(b, m);
+            // Chain the remaining (n - m) arguments one-by-one; they are already on the stack
+            for (Index r = 0; r < (Index)((int)n - m); r++) {
+                writeLocation(CPI(x), b, L);
+                addByte(b, BYTECODES_TYPE_APPLY);
+                addByte(b, 1);
+            }
+            FREE_ARRAY(Aexp*, argv, n);
+            LEAVE(writeCexpApply);
+            return;
+        }
+    }
+
+    // Default: single APPLY with all args
+    // Evaluate args left-to-right, then function
     writeAexpList(x->args, b, L);
     writeAexp(x->function, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_APPLY);
-    addByte(b, countAexpList(x->args));
+    addByte(b, n);
     LEAVE(writeCexpApply);
 }
 

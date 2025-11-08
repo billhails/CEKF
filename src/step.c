@@ -59,46 +59,127 @@ void putCharacter(Character x);
 
 static CEKF state;
 
+// --- Runtime over-application staging ---
+typedef struct PendingOverApply {
+    bool active;        // staging active
+    int count;          // total extra args to apply
+    int index;          // number of extras already applied
+    Vec *extras;        // vector holding extra arguments (entries[0] == first extra arg)
+    int protectId;      // GC protection id for extras vector
+    bool ready;         // set true after a RETURN completes so we can apply next extra
+} PendingOverApply;
+
+static PendingOverApply pendingOA = { false, 0, 0, NULL, -1, false };
+
 void markState() {
     state.header.keep = false;
     markCEKF(&state);
 }
 
-static inline void patch(Value v, int num) {
-    patchVec(v.val.namespace, state.S, num);
+// --- APPLY instrumentation (optional, for debugging/analysis) ---
+static unsigned long apply_exact_calls = 0;
+static unsigned long apply_partial_creations = 0;
+// Count legacy over-attempts (still reported if any unreachable path triggers)
+static unsigned long apply_over_attempts __attribute__((unused)) = 0;
+static unsigned long apply_staged_steps = 0; // number of staged extra arg applications
+
+// Centralized arity error reporting for APPLY paths
+static inline void arity_error(const char *kind, int expected, int got) __attribute__((unused));
+static inline void arity_error(const char *kind, int expected, int got) {
+#ifdef SAFETY_CHECKS
+    cant_happen("arity error (%s): expected %d, got %d at %04lx", kind, expected, got, state.C);
+#else
+    eprintf("arity error (%s): expected %d, got %d at %04lx\n", kind, expected, got, state.C);
+    state.C = END_CONTROL;
+#endif
 }
 
-static inline void poke(int offset, Value v) {
-    pokeStack(state.S, offset, v);
+// Preconditions (in debug builds) to guard stack invariants before APPLY
+static inline void assert_stack_has_args(int naargs) {
+#ifdef SAFETY_CHECKS
+    Index available = totalSizeStack(state.S);
+    if (naargs < 0 || available < (Index) naargs) {
+        cant_happen("APPLY with insufficient arguments on stack: need %d, have %u", naargs, available);
+    }
+#endif
 }
 
-static inline void push(Value v) {
-    pushStackEntry(state.S, v);
+// --- Basic stack convenience wrappers (moved earlier so helpers can use them) ---
+static inline void patch(Value v, int num) { patchVec(v.val.namespace, state.S, num); }
+static inline void poke(int offset, Value v) { pokeStack(state.S, offset, v); }
+static inline void push(Value v) { pushStackEntry(state.S, v); }
+static inline void extend(int i) { pushnStack(state.S, i, vVoid); }
+static inline void discard(int num) { popnStack(state.S, num); }
+static inline Value pop() { return popStackEntry(state.S); }
+static inline void popn(int n) { popnStack(state.S, n); }
+static inline Value peek(int index) { return peeknStack(state.S, index); }
+static inline void copyToVec(Vec *vec) { copyTosToVec(vec, state.S); }
+
+// Helper: perform exact call for a partial closure (PCLO)
+static inline void exactCallFromPclo(Clo *clo, int naargs) {
+    int ncaptured = clo->E->S->size;
+    // move the new args to the right place on the stack,
+    // leaving space for the captured args below them
+    moveStack(state.S, ncaptured, naargs);
+    // copy captured args to base of the stack
+    copyValues(&state.S->entries[state.S->frame], clo->E->S->entries, ncaptured);
+    // set stack pointer to the last arg
+    state.S->offset = ncaptured + naargs;
+    // step into body of closure
+    state.E = clo->E->E;
+    state.C = clo->C;
+    apply_exact_calls++;
 }
 
-static inline void extend(int i) {
-    pushnStack(state.S, i, vVoid);
+// Helper: perform exact call for a direct closure (CLO)
+static inline void exactCallFromClo(Clo *clo) {
+    state.C = clo->C;
+    state.E = clo->E;
+    moveStack(state.S, 0, clo->pending);
+    apply_exact_calls++;
 }
 
-static inline void discard(int num) {
-    popnStack(state.S, num);
+// Helper: create a new partial closure from an existing PCLO given additional args
+static inline void makePartialFromPclo(Value *callable, Clo *clo, int naargs) {
+    int ncaptured = clo->E->S->size;
+    // create a new env which is a sibling of the partial closure's env.
+    Env *env = makeEnv(clo->E->E);
+    int save = PROTECT(env);
+    extendFrame(env->S, ncaptured + naargs);
+    // copy already captured arguments
+    copyValues(env->S->entries, clo->E->S->entries, ncaptured);
+    // copy the additional arguments after them (from TOS area)
+    copyValues(&(env->S->entries[clo->E->S->size]),
+               &(state.S->entries[totalSizeStack(state.S) - naargs]), naargs);
+    env->S->size = ncaptured + naargs;
+    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
+    PROTECT(pclo);
+    callable->val.clo = pclo;
+    // push as result: replace args with the updated partial closure value
+    popn(naargs);
+    push(*callable);
+    UNPROTECT(save);
+    apply_partial_creations++;
 }
 
-static inline Value pop() {
-    return popStackEntry(state.S);
+// Helper: create a new partial closure from a CLO given additional args
+static inline void makePartialFromClo(Value *callable, Clo *clo, int naargs) {
+    Env *env = makeEnv(clo->E);
+    int save = PROTECT(env);
+    copyTosToEnv(env, state.S, naargs);
+    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
+    PROTECT(pclo);
+#ifdef DEBUG_STEP
+    dumpFrame(env->S);
+#endif
+    callable->type = VALUE_TYPE_PCLO;
+    callable->val.clo = pclo;
+    popn(naargs);
+    push(*callable);
+    UNPROTECT(save);
+    apply_partial_creations++;
 }
 
-static inline void popn(int n) {
-    popnStack(state.S, n);
-}
-
-static inline Value peek(int index) {
-    return peeknStack(state.S, index);
-}
-
-static inline void copyToVec(Vec *vec) {
-    copyTosToVec(vec, state.S);
-}
 
 static Env *builtInsToEnv(BuiltIns *b)__attribute__((unused));
 
@@ -231,11 +312,15 @@ static Cmp _cmp(Value left, Value right) {
                     case VALUE_TYPE_COMPLEX:
                         break;
                     default:
-                        cant_happen("different types in _cmp");
+                        cant_happen("different types in _cmp %s vs %s",
+                                    valueTypeName(left.type),
+                                    valueTypeName(right.type));
                 }
                 break;
             default:
-                cant_happen("different types in _cmp");
+                cant_happen("different types in _cmp %s vs %s",
+                            valueTypeName(left.type),
+                            valueTypeName(right.type));
         }
     }
 #endif
@@ -262,7 +347,7 @@ static Cmp _cmp(Value left, Value right) {
         case VALUE_TYPE_VEC:
             return _vecCmp(left.val.vec, right.val.vec);
         default:
-            cant_happen("unexpected type for _cmp (%d)", left.type);
+            cant_happen("unexpected type for _cmp (%s)", valueTypeName(left.type));
     }
 }
 
@@ -370,60 +455,44 @@ static Value captureKont(void) {
  * arguments on the stack
  */
 static void applyProc(int naargs) {
+    assert_stack_has_args(naargs);
     Value callable = pop();
     int save = protectValue(callable);
     switch (callable.type) {
         case VALUE_TYPE_PCLO:{
                 Clo *clo = callable.val.clo;
-                int ncaptured = clo->E->S->size;
+                int ncaptured __attribute__((unused)) = clo->E->S->size;
                 DEBUG("PCLO ncaptured = %d, naargs = %d, pending = %d", ncaptured, naargs, clo->pending);
                 if (clo->pending == naargs) {
-                    // move the new args to the right place on the stack,
-                    // leaving just enough space for the captured args
-                    // below them:
-                    // | ..captured.. | ..aargs.. |
-                    //                  ^^^^^^^^^ ^
-                    //                    moved   SP
-                    moveStack(state.S, ncaptured, naargs);
-                    // then copy the already captured args to the base
-                    // of the stack
-                    copyValues(&state.S->entries[state.S->frame], clo->E->S->entries, ncaptured);
-                    // set the stack pointer to the last arg
-                    state.S->offset = ncaptured + naargs;
-                    // and set up the machine for the next step into the
-                    // body of the closure
-                    state.E = clo->E->E;
-                    state.C = clo->C;
+                    exactCallFromPclo(clo, naargs);
                 } else if (naargs == 0) {
                     // args expected, no args passed, no-op
                     push(callable);
                 } else if (naargs < clo->pending) {
-                    // create a new partial closure capturing the
-                    // additional arguments so far
-                    // create a new env which is a sibling of the
-                    // partial closure's env.
-                    Env *env = makeEnv(clo->E->E);
-                    int save = PROTECT(env);
-                    // make sure that the new env has enough space
-                    extendFrame(env->S, ncaptured + naargs);
-                    // copy already captured arguments into the new env
-                    copyValues(env->S->entries, clo->E->S->entries, ncaptured);
-                    // copy the additional arguments after them
-                    copyValues(&(env->S->entries[clo->E->S->size]),
-                               &(state.S->entries[totalSizeStack(state.S) - naargs]), naargs);
-                    // set the size of the new env
-                    env->S->size = ncaptured + naargs;
-                    // create a new closure with correct pending, C and
-                    // the new env
-                    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
-                    PROTECT(pclo);
-                    callable.val.clo = pclo;
-                    // and push it as the result
-                    popn(naargs);
-                    push(callable);
-                    UNPROTECT(save);
+                    makePartialFromPclo(&callable, clo, naargs);
                 } else {
-                    cant_happen("over-application not supported yet, expected %d, got %d", clo->pending, naargs);
+                    // Stage over-application: store extra args, perform exact call now, apply extras later.
+                    int pending = clo->pending;
+                    int extra = naargs - pending;
+#ifdef SAFETY_CHECKS
+                    if (extra <= 0) cant_happen("PCLO staging invariant");
+                    if (pendingOA.active) cant_happen("nested over-application (PCLO)");
+#endif
+                    Vec *vec = newVec(extra);
+                    int saveExtras = PROTECT(vec);
+                    // pop a_n..a_{pending+1} storing so that entries[0] is first extra arg
+                    for (int i = 0; i < extra; i++) {
+                        Value v = pop();
+                        vec->entries[extra - 1 - i] = v;
+                    }
+                    pendingOA.active = true;
+                    pendingOA.count = extra;
+                    pendingOA.index = 0;
+                    pendingOA.extras = vec;
+                    pendingOA.protectId = saveExtras;
+                    pendingOA.ready = false;
+                    exactCallFromPclo(clo, pending);
+                    // Do NOT apply extras now; resume after body completes.
                 }
             }
             break;
@@ -431,28 +500,32 @@ static void applyProc(int naargs) {
                 Clo *clo = callable.val.clo;
                 DEBUG("CLO pending = %d, naargs = %d", clo->pending, naargs);
                 if (clo->pending == naargs) {
-                    state.C = clo->C;
-                    state.E = clo->E;
-                    moveStack(state.S, 0, clo->pending);
+                    exactCallFromClo(clo);
                 } else if (naargs == 0) {
                     push(callable);
                 } else if (naargs < clo->pending) {
-                    Env *env = makeEnv(clo->E);
-                    int save = PROTECT(env);
-                    copyTosToEnv(env, state.S, naargs);
-                    Clo *pclo = newClo(clo->pending - naargs, clo->C, env);
-                    PROTECT(pclo);
-#ifdef DEBUG_STEP
-                    dumpFrame(env->S);
-#endif
-                    DEBUG("CREATED PCLO ncaptured = %d, naargs = %d, pending = %d", pclo->E->S->size, naargs, pclo->pending);
-                    callable.type = VALUE_TYPE_PCLO;
-                    callable.val.clo = pclo;
-                    popn(naargs);
-                    push(callable);
-                    UNPROTECT(save);
+                    makePartialFromClo(&callable, clo, naargs);
                 } else {
-                    cant_happen("over-application not supported yet, expected %d, got %d", clo->pending, naargs);
+                    // Stage over-application for CLO
+                    int pending = clo->pending;
+                    int extra = naargs - pending;
+#ifdef SAFETY_CHECKS
+                    if (extra <= 0) cant_happen("CLO staging invariant");
+                    if (pendingOA.active) cant_happen("nested over-application (CLO)");
+#endif
+                    Vec *vec = newVec(extra);
+                    int saveExtras = PROTECT(vec);
+                    for (int i = 0; i < extra; i++) {
+                        Value v = pop();
+                        vec->entries[extra - 1 - i] = v;
+                    }
+                    pendingOA.active = true;
+                    pendingOA.count = extra;
+                    pendingOA.index = 0;
+                    pendingOA.extras = vec;
+                    pendingOA.protectId = saveExtras;
+                    pendingOA.ready = false;
+                    exactCallFromClo(clo);
                 }
             }
             break;
@@ -501,10 +574,22 @@ static unsigned long int count = 0;
 void reportSteps(void) {
     printf("instructions executed: %lu\n", count);
     printf("max stack capacity: %d\n", state.S->entries_capacity);
+#ifdef DEBUG_STEP
+    printf("apply exact calls: %lu\n", apply_exact_calls);
+    printf("apply partial creations: %lu\n", apply_partial_creations);
+    printf("apply over attempts: %lu\n", apply_over_attempts);
+    printf("apply staged steps: %lu\n", apply_staged_steps);
+#endif
 #ifdef SAFETY_CHECKS
     reportKonts();
 #endif
 }
+
+#ifdef DEBUG_STEP
+static void dumpApplyStats(void) {
+    eprintf("APPLY stats => exact:%lu partial:%lu over:%lu\n", apply_exact_calls, apply_partial_creations, apply_over_attempts);
+}
+#endif
 
 static void step() {
     if (dump_bytecode_flag)
@@ -1088,6 +1173,8 @@ static void step() {
                     Value kont = value_Kont(state.K);
                     push(kont);
                     applyProc(1);
+            // a RETURN just completed; it's now safe to attempt staged over-application
+            if (pendingOA.active) pendingOA.ready = true;
                 }
                 break;
 
@@ -1188,6 +1275,36 @@ static void step() {
 
             default:
                 cant_happen("unrecognised bytecode %d in step()", bytecode);
+        }
+        // Resume staged over-application if active and a callable result is on stack
+        if (pendingOA.active && pendingOA.ready && pendingOA.index < pendingOA.count) {
+            Value top = peek(-1);
+            if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
+                Value callable = pop();
+                int saveCallable = protectValue(callable);
+                Value arg = pendingOA.extras->entries[pendingOA.index];
+                push(arg);
+                push(callable);
+                applyProc(1);
+                pendingOA.index++;
+                pendingOA.ready = false; // wait for next RETURN before applying more
+                apply_staged_steps++;
+                UNPROTECT(saveCallable);
+                if (pendingOA.index == pendingOA.count) {
+                    // Finished: release extras vector protection
+                    if (pendingOA.protectId >= 0) {
+                        UNPROTECT(pendingOA.protectId);
+                    }
+                    pendingOA.active = false;
+                    pendingOA.extras = NULL;
+                    pendingOA.protectId = -1;
+                }
+            } else if (top.type == VALUE_TYPE_KONT) {
+                // continuation still being processed; defer
+            } else {
+                // Attempting to apply an extra argument to a non-callable value
+                arity_error("over-application result", /*expected fn*/ 1, /*got*/ 0);
+            }
         }
 #ifdef DEBUG_STEP
 #  ifdef DEBUG_SLOW_STEP
