@@ -323,7 +323,7 @@ LamExp *makePrintInt(ParserInfo I) {
  * @return A new LamExp representing the function name.
  */
 LamExp *makePrintChar(ParserInfo I) {
-    return makeVarExpr(I, "print$char");
+    return makeVarExpr(I, "print$character");
 }
 
 /**
@@ -457,7 +457,7 @@ static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
     if (size <= 4) {
         char buf[64];
         sprintf(buf, "%d", size);
-        name = makePrintName("print$tuple$", buf);
+        name = makePrintName("print$tuple_", buf);
     } else {
         name = newSymbol("print$");
         LamExp *exp = newLamExp_Var(I, name);
@@ -479,10 +479,10 @@ static LamExp *makePrintTuple(ParserInfo I, LamTypeConstructorArgs *tuple) {
  * @details This function generates the appropriate printer expression for a given type
  *          of type constructor argument (so without the final "thing" argument):
  *          - integer: `print$int`.
- *          - character: `print$char`.
+ *          - character: `print$character`.
  *          - type variable `var`: `printvar` where `printvar` is expected to be in scope.
  *          - type function: `print$function(print$arg1, ...)`
- *          - tuple: `print$tuple$(print$arg1, print$arg2, ...)`
+ *          - tuple: `print$tuple_<arity>(print$arg1, print$arg2, ...)`
  * @param I Parser information.
  * @param arg The type constructor argument to create the printer for.
  * @return A new LamExp representing the printer expression.

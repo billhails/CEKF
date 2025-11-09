@@ -54,7 +54,6 @@ static void collectTypeInfo(HashSymbol *, AstTypeConstructorArgs *, LamTypeConst
 static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
-static HashSymbol *dollarSubstitute(HashSymbol *);
 static LamExp *convertNest(AstNest *, LamContext *);
 static LamExp *lamConvert(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
@@ -1024,7 +1023,7 @@ static LamLetRecBindings *prependMacro(AstDefMacro * macro, LamContext * env,
     LamExp *exp = convertAstMacro(macro, env);
     int save = PROTECT(exp);
     LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(macro), dollarSubstitute(macro->name), exp, next);
+        newLamLetRecBindings(CPI(macro), macro->name, exp, next);
     UNPROTECT(save);
     LEAVE(prependMacro);
     return this;
@@ -1123,42 +1122,10 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
     LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(define), dollarSubstitute(define->symbol), exp, next);
+        newLamLetRecBindings(CPI(define), define->symbol, exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
-}
-
-/**
- * @brief Performs dollar substitution on a symbol, replacing underscores with dollar signs, but only in the preamble.
- * @param symbol The symbol to substitute.
- * @return The substituted symbol.
- */
-static HashSymbol *dollarSubstitute(HashSymbol *symbol) {
-    if (!inPreamble) {
-        return symbol;
-    }
-    bool needs_substitution = false;
-    for (char *s = symbol->name; *s != 0; s++) {
-        if (*s == '_') {
-            needs_substitution = true;
-            break;
-        }
-    }
-    if (needs_substitution) {
-        char *buf = NEW_ARRAY(char, strlen(symbol->name) + 1);
-        strcpy(buf, symbol->name);
-        for (int i = 0; buf[i] != 0; i++) {
-            if (buf[i] == '_') {
-                buf[i] = '$';
-            }
-        }
-        HashSymbol *replacement = newSymbol(buf);
-        FREE_ARRAY(char, buf, strlen(buf) + 1);
-        return replacement;
-    } else {
-        return symbol;
-    }
 }
 
 #define CHECK_ONE_ARG(name, args) do { \
@@ -2024,7 +1991,6 @@ static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) 
     LamExp *result = makeConstructor(symbol, env);
     DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineno, symbol->name, result ? "constructor" : "variable");
     if (result == NULL) {
-        symbol = dollarSubstitute(symbol);
         result = newLamExp_Var(I, symbol);
     }
     LEAVE(convertSymbol);
@@ -2064,7 +2030,7 @@ static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *annotated, LamContext 
     // Not a constructor - use the hygienic wrapper symbol
     DEBUG("convertAnnotatedSymbol: %s is not a constructor wrapper, using hygienic function",
           annotated->symbol->name);
-    HashSymbol *symbol = dollarSubstitute(annotated->symbol);
+    HashSymbol *symbol = annotated->symbol;
     result = newLamExp_Var(CPI(annotated), symbol);
     LEAVE(convertAnnotatedSymbol);
     return result;

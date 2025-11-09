@@ -2875,7 +2875,7 @@ static HashSymbol *symbol(PrattParser *parser)
     int save = PROTECT(tok);
     if (tok->type != TOK_ATOM())
     {
-        parserError(parser, "expected ATOM");
+        parserError(parser, "expected ATOM, got %s", tok->type->name);
         LEAVE(symbol);
         UNPROTECT(save);
         return TOK_ERROR();
