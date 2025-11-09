@@ -29,8 +29,8 @@ HashSymbol * NAME ## Symbol() {            \
 // are accessible from the language.
 
 MAKE_SYMBOL(neg, "NEGATION")
-MAKE_SYMBOL(assert, "assert$")
-MAKE_SYMBOL(fnError, "error$")
+MAKE_SYMBOL(assert, "__assert__")
+MAKE_SYMBOL(fnError, "__error__")
 MAKE_SYMBOL(namespaces, "$namespaces")
 MAKE_SYMBOL(namespace, "$namespace")
 MAKE_SYMBOL(puts, "puts")

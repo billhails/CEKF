@@ -111,7 +111,7 @@ infix left 3 "xnor" XNOR;
 
 infix right 10 "@" cons;
 
-fn assert_(line, file, condition) {
+fn __assert__(line, file, condition) {
     if (condition) {
         true
     } else {
@@ -137,7 +137,7 @@ fn factorial (n) {
 
 postfix 13 "!" factorial;
 
-fn error_(line, file, message) {
+fn __error__(line, file, message) {
     puts("error: ");
     puts(message);
     puts(" at ");
@@ -173,9 +173,9 @@ unsafe fn cdr {
 }
 prefix 6 ">" cdr;
 
-fn identity(x) { x }
+fn identity(x) { x };
 
-fn print_list(helper, l) {
+print list(helper, l) {
     let
         fn h1 {
             ([]) { true }
@@ -199,53 +199,53 @@ fn print_list(helper, l) {
         l
 }
 
-fn print_fn(f) {
+print function(f) {
     puts("<function>");
     f
 }
 
-fn print_opaque(f) {
+print opaque(f) {
     puts("<opaque>");
     f
 }
 
-fn print_int(n) {
+print int(n) {
     putn(n);
     n
 }
 
-fn print_char(c) {
+print character(c) {
     putc('\'');
     putc(c);
     putc('\'');
     c
 }
 
-fn print_(v) {
+fn __print__(v) {
     putv(v);
     v
 }
 
-fn print_string(s) {
+print string(s) {
     putc('"');
     puts(s);
     putc('"');
     s
 }
 
-fn print_tuple_0(t) {
+print tuple_0(t) {
    puts("#()");
    t
 }
 
-fn print_tuple_1(pa, t=#(a)) {
+print tuple_1(pa, t=#(a)) {
    puts("#(");
    pa(a);
    puts(")");
    t
 }
 
-fn print_tuple_2(pa, pb, t=#(a, b)) {
+print tuple_2(pa, pb, t=#(a, b)) {
    puts("#(");
    pa(a);
    puts(", ");
@@ -254,7 +254,7 @@ fn print_tuple_2(pa, pb, t=#(a, b)) {
    t
 }
 
-fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
+print tuple_3(pa, pb, pc, t=#(a, b, c)) {
    puts("#(");
    pa(a);
    puts(", ");
@@ -265,7 +265,7 @@ fn print_tuple_3(pa, pb, pc, t=#(a, b, c)) {
    t
 }
 
-fn print_tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
+print tuple_4(pa, pb, pc, pd, t=#(a, b, c, d)) {
    puts("#(");
    pa(a);
    puts(", ");

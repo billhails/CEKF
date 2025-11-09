@@ -160,7 +160,7 @@ static LamExp *compilePrinterForThunk(ParserInfo I, TcThunk *thunk __attribute__
 
 static LamExp *compilePrinterForVar(ParserInfo I, TcVar *var, TcEnv *env) {
     if (var->instance == NULL) {
-        return makeVarExpr(I, "print$");
+        return makeVarExpr(I, "__print__");
     }
     return compilePrinter(I, var->instance, env);
 }
@@ -238,7 +238,7 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv 
     HashSymbol *name = makePrintName("print$", typeSig->name->name);
     TcEnv *nsEnv = getNsEnv(typeSig->ns, env);
     if (!getFromTcEnv(nsEnv, name, NULL)) {
-        return makeVarExpr(I, "print$");
+        return makeVarExpr(I, "__print__");
     }
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
@@ -266,7 +266,7 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
     ENTER(compilePrinterForTuple);
     if (tuple->size < 5) {
         char buf[64];
-        sprintf(buf, "print$tuple$%d", tuple->size);
+        sprintf(buf, "print$tuple_%d", tuple->size);
         LamExp *exp = makeVarExpr(I, buf);
         if (tuple->size == 0) {
             LEAVE(compilePrinterForTuple);
@@ -284,6 +284,6 @@ static LamExp *compilePrinterForTuple(ParserInfo I, TcTypeArray *tuple, TcEnv *e
         return res;
     } else {
         LEAVE(compilePrinterForTuple);
-        return makeVarExpr(I, "print$");
+        return makeVarExpr(I, "__print__");
     }
 }
