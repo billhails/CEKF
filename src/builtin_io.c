@@ -183,7 +183,6 @@ static HashSymbol *fileHandleToKey(FILE *file) {
 static void opaque_io_close(Opaque *data) {
     if (data == NULL) return;
     if (data->data == NULL) return;
-    DEBUG("closing io %p", data->data);
     fclose(data->data);
     HashSymbol *key = fileHandleToKey(data->data);
     BuiltInMemBuf *memBuf = NULL;
@@ -200,7 +199,7 @@ static void opaque_io_closedir(Opaque *data) {
     if (data == NULL) return;
     if (data->data == NULL) return;
     DEBUG("closing dir %p", data->data);
-    closedir(data->data);
+    closedir((DIR *)data->data);
     data->data = NULL;
 }
 
@@ -320,7 +319,7 @@ static Value builtin_closedir(Vec *args) {
     }
 #endif
     Opaque *data = args->entries[0].val.opaque;
-    opaque_io_closedir(data);
+    opaque_io_closedir(data->data);
     args->entries[0].val.opaque = NULL;
     return value_Stdint(1);
 }

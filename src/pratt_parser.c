@@ -35,6 +35,7 @@
 #include "file_id.h"
 #include "memory.h"
 #include "preamble.h"
+#include "wrapper_synthesis.h"
 
 #ifdef DEBUG_PRATT_PARSER
 #include "debugging_on.h"
@@ -221,6 +222,7 @@ static PrattParser *makePrattParser(void)
     PrattParser *parser = newPrattParser(NULL);
     int save = PROTECT(parser);
     PrattRecordTable *table = parser->rules;
+    addRecord(table, TOK_BUILTINS(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_SEMI(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_PREFIX(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
     addRecord(table, TOK_INFIX(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
@@ -1135,6 +1137,16 @@ static AstExpression *expression(PrattParser *parser)
     return res;
 }
 
+static AstDefinitions *prependBuiltinWrappers(ParserInfo PI, AstDefinitions *next) {
+    int save = PROTECT(generatedBuiltins);
+    for (AstDefinitions *wrapper = generatedBuiltins; wrapper != NULL; wrapper = wrapper->next) {
+        next = newAstDefinitions(PI, wrapper->definition, next);
+        REPLACE_PROTECT(save, next);
+    }
+    UNPROTECT(save);
+    return next;
+}
+
 /**
  * @brief Parse a sequence of definitions.
  *
@@ -1159,7 +1171,12 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal)
     int save = PROTECT(def);
     AstDefinitions *next = definitions(parser, terminal);
     PROTECT(next);
-    AstDefinitions *this = newAstDefinitions(CPI(def), def, next);
+    AstDefinitions *this = NULL;
+    if (def->type == AST_DEFINITION_TYPE_BUILTINSSLOT) {
+        this = prependBuiltinWrappers(CPI(def), next);
+    } else {
+        this = newAstDefinitions(CPI(def), def, next);
+    }
     LEAVE(definitions);
     UNPROTECT(save);
     return this;
@@ -1790,7 +1807,10 @@ static AstDefinition *definition(PrattParser *parser)
     AstDefinition *res = NULL;
     int save;
     save = PROTECT(res);
-    if (check(parser, TOK_ATOM())) {
+    if (match(parser, TOK_BUILTINS())) {
+        res = newAstDefinition_BuiltinsSlot(TOKPI(peek(parser)));
+        save = PROTECT(res);
+    } else if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
         save = PROTECT(res);
     } else if (match(parser, TOK_TYPEDEF())) {

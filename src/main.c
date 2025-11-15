@@ -50,6 +50,7 @@
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
 #include "init.h"
+#include "wrapper_synthesis.h"
 #ifdef UNIT_TESTS
 #include "tests.h"
 #endif
@@ -435,6 +436,10 @@ int main(int argc, char *argv[]) {
         clock_t end = clock();
         report(argv[0], begin, compiled, end);
     } else {
+        // Generate wrappers for builtins before parsing
+        // they will be insterted into the preamble on
+        // encountering the __builtins__ directive
+        generateBuiltinWrappers(builtIns);
         AstProg *prog = NULL;
         if (snippet) {
             prog = parseString(snippet);
@@ -459,12 +464,12 @@ int main(int argc, char *argv[]) {
         Exp *anfExp = anfNormalize(exp);
         REPLACE_PROTECT(save2, anfExp);
 
-        annotate(anfExp, builtIns);
-
         if (anf_flag) {
             ppExp(anfExp);
             eprintf("\n");
         }
+
+        annotate(anfExp, builtIns);
 
         LocationArray *L = newLocationArray();
         PROTECT(L);

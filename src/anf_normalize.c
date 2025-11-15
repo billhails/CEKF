@@ -81,8 +81,8 @@ static MatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpIntList *convertIntList(LamIntList *list);
 static Exp *normalizeCond(LamCond *cond, Exp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
-static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
-                                     LamLetRecBindings *lamLetRecBindings);
+static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
+                                           LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
 static Exp *normalizeMakeTuple(LamArgs *, Exp *);
 static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
@@ -317,7 +317,7 @@ static Exp *normalizeLetRec(LamLetRec *lamLetRec, Exp *tail) {
     int save = PROTECT(body);
     CexpLetRec *cexpLetRec = newCexpLetRec(CPI(body), 0, NULL, body);
     PROTECT(cexpLetRec);
-    cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRec->bindings);
+    cexpLetRec = normalizeLetRecBindings(cexpLetRec, lamLetRec->bindings);
     PROTECT(cexpLetRec);
     if (cexpLetRec->bindings == NULL) {
         UNPROTECT(save);
@@ -985,12 +985,12 @@ static bool lamExpIsLambda(LamExp *val) {
     }
 }
 
-static CexpLetRec *replaceCexpLetRec(CexpLetRec *cexpLetRec,
-                                     LamLetRecBindings *lamLetRecBindings) {
+static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
+                                           LamLetRecBindings *lamLetRecBindings) {
     if (lamLetRecBindings == NULL) {
         return cexpLetRec;
     }
-    cexpLetRec = replaceCexpLetRec(cexpLetRec, lamLetRecBindings->next);
+    cexpLetRec = normalizeLetRecBindings(cexpLetRec, lamLetRecBindings->next);
     int save = PROTECT(cexpLetRec);
     if (lamExpIsLambda(lamLetRecBindings->val)) {
         Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);

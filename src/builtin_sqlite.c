@@ -377,9 +377,7 @@ static void registerSQLiteOpen(BuiltIns *registry) {
     TcType *trySqliteType = makeTryType(stringType, sqliteType);
     PROTECT(trySqliteType);
     pushBuiltInArgs(args, stringType);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_open"), trySqliteType, args, (void *)builtin_sqlite3_open);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_open", trySqliteType, args, (void *)builtin_sqlite3_open);
     UNPROTECT(save);
 }
 
@@ -391,9 +389,7 @@ static void registerSQLiteClose(BuiltIns *registry) {
     TcType *b = makeBoolean();
     PROTECT(b);
     pushBuiltInArgs(args, ppDb);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_close"), b, args, (void *)builtin_sqlite3_close);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_close", b, args, (void *)builtin_sqlite3_close);
     UNPROTECT(save);
 }
 
@@ -412,9 +408,7 @@ static void registerSQLitePrepare(BuiltIns *registry) {
     PROTECT(tryStatementType);
     pushBuiltInArgs(args, sqlite);
     pushBuiltInArgs(args, string);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_prepare"), tryStatementType, args, (void *)builtin_sqlite3_prepare);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_prepare", tryStatementType, args, (void *)builtin_sqlite3_prepare);
     UNPROTECT(save);
 }
 
@@ -426,9 +420,7 @@ static void registerSQLiteFinalize(BuiltIns *registry) {
     TcType *b = makeBoolean();
     PROTECT(b);
     pushBuiltInArgs(args, statementType);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_finalize"), b, args, (void *)builtin_sqlite3_finalize);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_finalize", b, args, (void *)builtin_sqlite3_finalize);
     UNPROTECT(save);
 }
 
@@ -459,9 +451,7 @@ static void registerSQLiteBind(BuiltIns *registry) {
     PROTECT(bigIntType);
     pushBuiltInArgs(args, statementType);
     pushBuiltInArgs(args, basicListType);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_bind"), bigIntType, args, (void *)builtin_sqlite3_bind);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_bind", bigIntType, args, (void *)builtin_sqlite3_bind);
     UNPROTECT(save);
 }
 
@@ -473,9 +463,7 @@ static void registerSQLiteFetch(BuiltIns *registry) {
     pushBuiltInArgs(args, statementType);
     TcType *maybeListBasicType = makeMaybeListBasicType();
     PROTECT(maybeListBasicType);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_fetch"), maybeListBasicType, args, (void *)builtin_sqlite3_fetch);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_fetch", maybeListBasicType, args, (void *)builtin_sqlite3_fetch);
     UNPROTECT(save);
 }
 
@@ -489,9 +477,7 @@ static void registerSQLiteNames(BuiltIns *registry) {
     PROTECT(stringType);
     TcType *listStringType = makeListType(stringType);
     PROTECT(listStringType);
-    BuiltIn *decl = newBuiltIn(newSymbol("sqlite3_names"), listStringType, args, (void *)builtin_sqlite3_names);
-    PROTECT(decl);
-    pushBuiltIns(registry, decl);
+    pushNewBuiltIn(registry, "sqlite3_names", listStringType, args, (void *)builtin_sqlite3_names);
     UNPROTECT(save);
 }
 

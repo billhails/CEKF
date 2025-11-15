@@ -23,6 +23,8 @@
 #include "pratt_parser.h"
 #include "pratt_scanner.h"
 #include "init.h"
+#include "wrapper_synthesis.h"
+static BuiltIns *builtIns = NULL;
 
 static bool compareTcTypes(TcType *a, TcType *b) {
     HashTable *map = newHashTable(sizeof(HashSymbol *), NULL, NULL);
@@ -98,10 +100,9 @@ static TcType *makeCharacter() {
 }
 
 static TcType *analyze(AstProg *prog) {
+    int save = PROTECT(prog);
     LamExp *exp = lamConvertProg(prog);
-    int save = PROTECT(exp);
-    BuiltIns *builtIns = registerBuiltIns(0, 0, NULL);
-    PROTECT(builtIns);
+    PROTECT(exp);
     TcEnv *env = tc_init(builtIns);
     PROTECT(env);
     TcType *res = tc_analyze(exp, env);
@@ -380,6 +381,9 @@ static void test_map() {
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     disableGC();
     initAll();
+    builtIns = registerBuiltIns(0, 0, NULL);
+    // Synthesize wrappers so external builtin names are ordinary curriable functions
+    generateBuiltinWrappers(builtIns);
     test_car();
     test_cdr();
     test_car_of();

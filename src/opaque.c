@@ -55,7 +55,7 @@ void markOpaque(Opaque *x) {
  * @param x the opaque data structure
  */
 void freeOpaque(Opaque *x) {
-    if (x->clean != NULL) x->clean(x->data);
+    if (x->clean != NULL) x->clean(x);
     FREE(x, Opaque);
 }
 

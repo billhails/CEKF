@@ -22,6 +22,8 @@
 // `puts` is required for the print system, and the type `cmp` for the `<=>` operator.
 namespace
 
+__builtins__
+
 
 infix right 2 "then" amb;
 infix left 5 "==" EQUALTO;

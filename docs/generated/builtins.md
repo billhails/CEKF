@@ -5,10 +5,12 @@ Support for declaring builtins
 ```mermaid
 flowchart TD
 BuiltInMemBufHash --entries--> BuiltInMemBuf
-BuiltIn --name--> HashSymbol
+BuiltIn --externalName--> HashSymbol
+BuiltIn --internalName--> HashSymbol
 BuiltIn --result--> TcType
 BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr
+BuiltInImplementation --name--> HashSymbol
 BuiltInImplementation --implementation--> void_ptr
 BuiltInImplementation --nargs--> int
 BuiltInMemBuf --buffer--> string

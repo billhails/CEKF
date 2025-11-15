@@ -33,6 +33,7 @@
 #include "arithmetic.h"
 #include "opaque.h"
 #include "builtin_io.h"
+#include "wrapper_synthesis.h"
 
 static int bytesAllocated = 0;
 static int nextGC = 0;
@@ -471,6 +472,7 @@ static void mark() {
 #ifdef DEBUG_LOG_GC
     eprintf("markVarTables done\n");
 #endif
+    markGeneratedBuiltins();
 }
 
 /**
