@@ -10,7 +10,7 @@ let
     fn makeWriter() {
         switch(openmem()) {
             (success(fh)) {
-                success(fputs(fh));
+                success(#(fputs(fh), fn() { fgets(fh) }));
             }
             (failure(err)) { failure(err) }
         }
@@ -19,10 +19,15 @@ let
 in
     assert(test_curry(2, add(3)) == 5);
     unsafe switch(makeWriter()) {
-        (success(fp)) {
+        (success(#(fp, fg))) {
             puts("Testing curried fput:\n");
             fp("Hello, ");
-            fp("world!");
+            fp("world!\n");
+            puts(typeof fp);
+            puts("\n");
+            puts(typeof fg);
+            puts("\n");
+            puts(fg());
             puts("Testing curried fput done\n");
             assert(true)
         }
