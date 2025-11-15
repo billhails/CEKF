@@ -237,15 +237,29 @@ static MatchList *normalizeMatchList(LamMatchList *matchList) {
     return this;
 }
 
-static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
-    ENTER(normalizeLet);
-    Exp *value = normalize(lamLet->value, NULL);
-    int save = PROTECT(value);
-    Exp *body = normalize(lamLet->body, tail);
-    PROTECT(body);
-    ExpLet *expLet = newExpLet(CPI(lamLet), lamLet->var, value, body);
+static Exp *normalizeLamLetBindings(LamLetBindings *bindings, Exp *body) {
+    ENTER(normalizeLamLetBindings);
+    if (bindings == NULL) {
+        LEAVE(normalizeLamLetBindings);
+        return body;
+    }
+    Exp *tail = normalizeLamLetBindings(bindings->next, body);
+    int save = PROTECT(tail);
+    Exp *value = normalize(bindings->val, NULL);
+    PROTECT(value);
+    ExpLet *expLet = newExpLet(CPI(bindings), bindings->var, value, tail);
     PROTECT(expLet);
     Exp *exp = newExp_Let(CPI(expLet), expLet);
+    UNPROTECT(save);
+    LEAVE(normalizeLamLetBindings);
+    return exp;
+}
+
+static Exp *normalizeLet(LamLet *lamLet, Exp *tail) {
+    ENTER(normalizeLet);
+    Exp *body = normalize(lamLet->body, tail);
+    int save = PROTECT(body);
+    Exp *exp = normalizeLamLetBindings(lamLet->bindings, body);
     UNPROTECT(save);
     LEAVE(normalizeLet);
     return exp;

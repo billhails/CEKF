@@ -197,7 +197,9 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(deconstruct);
                     LamExp *deconstructExp = newLamExp_Deconstruct(I, deconstruct);
                     PROTECT(deconstructExp);
-                    LamLet *let = newLamLet(I, path, deconstructExp, body);
+                    LamLetBindings *bindings = newLamLetBindings(I, path, deconstructExp, NULL);
+                    PROTECT(bindings);
+                    LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
                     body = newLamExp_Let(I, let);
                     REPLACE_PROTECT(save, body);
@@ -221,7 +223,10 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(index);
                     LamExp *tupleIndex = newLamExp_Tuple_index(I, index);
                     PROTECT(tupleIndex);
-                    LamLet *let = newLamLet(I, path, tupleIndex, body);
+                    LamLetBindings *bindings =
+                        newLamLetBindings(I, path, tupleIndex, NULL);
+                    PROTECT(bindings);
+                    LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
                     body = newLamExp_Let(I, let);
                     REPLACE_PROTECT(save, body);

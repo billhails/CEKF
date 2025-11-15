@@ -175,9 +175,21 @@ static LamLetRecBindings *performBindingsSimplifications(LamLetRecBindings *bind
     return bindings;
 }
 
+static LamLetBindings *performLetBindingsSimplifications(LamLetBindings *bindings) {
+    ENTER(performLetBindingsSimplifications);
+    if (bindings == NULL) {
+        LEAVE(performLetBindingsSimplifications);
+        return NULL;
+    }
+    bindings->next = performLetBindingsSimplifications(bindings->next);
+    bindings->val = lamPerformSimplifications(bindings->val);
+    LEAVE(performLetBindingsSimplifications);
+    return bindings;
+}
+
 static LamLet *performLetSimplifications(LamLet *let) {
     ENTER(performLetSimplifications);
-    let->value = lamPerformSimplifications(let->value);
+    let->bindings = performLetBindingsSimplifications(let->bindings);
     let->body = lamPerformSimplifications(let->body);
     LEAVE(performLetSimplifications);
     return let;

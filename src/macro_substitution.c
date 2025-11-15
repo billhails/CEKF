@@ -100,6 +100,24 @@ static LamMacroArgsSet *excludeSymbol(HashSymbol *var, LamMacroArgsSet *symbols)
 }
 
 /**
+ * @brief Copy a set of macro arguments.
+ * 
+ * @param symbols The current set of macro arguments.
+ * @return A new set of macro arguments.
+ */
+static LamMacroArgsSet *copyLamMacroArgsSet(LamMacroArgsSet *symbols) {
+    LamMacroArgsSet *new = newLamMacroArgsSet();
+    int save = PROTECT(new);
+    Index i = 0;
+    HashSymbol *current;
+    while ((current = iterateLamMacroArgsSet(symbols, &i)) != NULL) {
+        setLamMacroArgsSet(new, current);
+    }
+    UNPROTECT(save);
+    return new;
+}
+
+/**
  * @brief Check if a variable is in a list of variables.
  * 
  * @param var The variable to check.
@@ -363,6 +381,29 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
 }
 
 /**
+ * @brief Performs macro substitutions on a list of let bindings.
+ * @param bindings The let bindings to modify.
+ * @param symbols The current set of macro arguments.
+ * @return The modified let bindings.
+ */
+static LamLetBindings *performLetBindingsSubstitutions(LamLetBindings *bindings, LamMacroArgsSet **symbols) {
+    ENTER(performLetBindingsSubstitutions);
+    if (bindings == NULL) {
+        LEAVE(performLetBindingsSubstitutions);
+        return NULL;
+    }
+    if (isMacroArgument(bindings->var, *symbols)) {
+        *symbols = excludeSymbol(bindings->var, *symbols);
+        PROTECT(symbols); // caller will UNPROTECT
+    }
+    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
+    bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);
+    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
+    LEAVE(performLetBindingsSubstitutions);
+    return bindings;
+}
+
+/**
  * @brief Performs macro substitutions on a let expression.
  * @param let The let expression to modify.
  * @param symbols The current set of macro arguments.
@@ -370,15 +411,11 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
  */
 static LamLet *performLetSubstitutions(LamLet *let, LamMacroArgsSet *symbols) {
     ENTER(performLetSubstitutions);
-    let->value = lamPerformMacroSubstitutions(let->value, symbols);
-    if (isMacroArgument(let->var, symbols)) {
-        LamMacroArgsSet *remaining = excludeSymbol(let->var, symbols);
-        int save = PROTECT(remaining);
-        let->body = lamPerformMacroSubstitutions(let->body, remaining);
-        UNPROTECT(save);
-    } else {
-        let->body = lamPerformMacroSubstitutions(let->body, symbols);
-    }
+    LamMacroArgsSet *remaining = copyLamMacroArgsSet(symbols);
+    int save = PROTECT(remaining);
+    let->bindings = performLetBindingsSubstitutions(let->bindings, &remaining);
+    let->body = lamPerformMacroSubstitutions(let->body, remaining);
+    UNPROTECT(save);
     LEAVE(performLetSubstitutions);
     return let;
 }

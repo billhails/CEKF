@@ -429,15 +429,27 @@ void ppLamTypeDefs(LamTypeDefs *typeDefs) {
     eprintf(")");
 }
 
+void ppLamLetBindings(LamLetBindings *bindings) {
+    if (bindings == NULL)
+        return;
+    eprintf("(");
+    ppHashSymbol(bindings->var);
+    eprintf(" ");
+    ppLamExp(bindings->val);
+    eprintf(")");
+    if (bindings->next) {
+        eprintf(" ");
+        ppLamLetBindings(bindings->next);
+    }
+}
+
 void ppLamLet(LamLet *let) {
     if (let == NULL) {
         eprintf("<NULL let>");
         return;
     }
     eprintf("(let (");
-    ppHashSymbol(let->var);
-    eprintf(" ");
-    ppLamExp(let->value);
+    ppLamLetBindings(let->bindings);
     eprintf(") ");
     ppLamExp(let->body);
     eprintf(")");
