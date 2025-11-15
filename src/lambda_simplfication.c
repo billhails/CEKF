@@ -146,12 +146,42 @@ static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
     return construct;
 }
 
-static LamApply *performApplySimplifications(LamApply *apply) {
+static LamLetBindings *makeLetBindings(ParserInfo I, LamArgs *aargs, LamVarList *fargs) {
+    ENTER(makeLetBindings);
+    if (aargs == NULL || fargs == NULL) {
+        LEAVE(makeLetBindings);
+        return NULL;
+    }
+    LamLetBindings *next = makeLetBindings(I, aargs->next, fargs->next);
+    int save = PROTECT(next);
+    LamLetBindings *this = newLamLetBindings(I, fargs->var, aargs->exp, next);
+    UNPROTECT(save);
+    LEAVE(makeLetBindings);
+    return this;
+}
+
+static LamExp *performApplySimplifications(LamApply *apply) {
     ENTER(performApplySimplifications);
     apply->function = lamPerformSimplifications(apply->function);
     apply->args = performArgsSimplifications(apply->args);
+    if (apply->function->type == LAMEXP_TYPE_LAM) {
+        // Convert inline lambdas to let expressions
+        LamLam *lam = apply->function->val.lam;
+        LamArgs *aargs = apply->args;
+        LamVarList *fargs = lam->args;
+        if (countLamArgs(aargs) == countLamVarList(fargs)) {
+            LamLetBindings *bindings = makeLetBindings(CPI(apply), aargs, fargs);
+            int save = PROTECT(bindings);
+            LamLet *let = newLamLet(CPI(apply), bindings, lam->exp);
+            PROTECT(let);
+            LamExp *exp = newLamExp_Let(CPI(apply), let);
+            UNPROTECT(save);
+            LEAVE(performApplySimplifications);
+            return exp;
+        }
+    }
     LEAVE(performApplySimplifications);
-    return apply;
+    return newLamExp_Apply(CPI(apply), apply);
 }
 
 static LamIff *performIffSimplifications(LamIff *iff) {
@@ -175,9 +205,21 @@ static LamLetRecBindings *performBindingsSimplifications(LamLetRecBindings *bind
     return bindings;
 }
 
+static LamLetBindings *performLetBindingsSimplifications(LamLetBindings *bindings) {
+    ENTER(performLetBindingsSimplifications);
+    if (bindings == NULL) {
+        LEAVE(performLetBindingsSimplifications);
+        return NULL;
+    }
+    bindings->next = performLetBindingsSimplifications(bindings->next);
+    bindings->val = lamPerformSimplifications(bindings->val);
+    LEAVE(performLetBindingsSimplifications);
+    return bindings;
+}
+
 static LamLet *performLetSimplifications(LamLet *let) {
     ENTER(performLetSimplifications);
-    let->value = lamPerformSimplifications(let->value);
+    let->bindings = performLetBindingsSimplifications(let->bindings);
     let->body = lamPerformSimplifications(let->body);
     LEAVE(performLetSimplifications);
     return let;
@@ -304,6 +346,9 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_LAM:
                 exp = performLamSimplifications(exp->val.lam);
                 break;
+            case LAMEXP_TYPE_APPLY:
+                exp = performApplySimplifications(exp->val.apply);
+                break;
             case LAMEXP_TYPE_VAR:
                 exp->val.var = performVarSimplifications(exp->val.var);
                 break;
@@ -324,9 +369,6 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 break;
             case LAMEXP_TYPE_TAG:
                 exp->val.tag = lamPerformSimplifications(exp->val.tag);
-                break;
-            case LAMEXP_TYPE_APPLY:
-                exp->val.apply = performApplySimplifications(exp->val.apply);
                 break;
             case LAMEXP_TYPE_IFF:
                 exp->val.iff = performIffSimplifications(exp->val.iff);

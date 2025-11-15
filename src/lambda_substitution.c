@@ -205,11 +205,25 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings
     return bindings;
 }
 
+static LamLetBindings *performLetBindingsSubstitutions(LamLetBindings *bindings,
+                                                       TpmcSubstitutionTable *substitutions) {
+    ENTER(performLetBindingsSubstitutions);
+    if (bindings == NULL) {
+        LEAVE(performLetBindingsSubstitutions);
+        return NULL;
+    }
+    bindings->next =
+        performLetBindingsSubstitutions(bindings->next, substitutions);
+    bindings->var = performVarSubstitutions(bindings->var, substitutions);
+    bindings->val = lamPerformSubstitutions(bindings->val, substitutions);
+    LEAVE(performLetBindingsSubstitutions);
+    return bindings;
+}
+
 static LamLet *performLetSubstitutions(LamLet *let,
                                        TpmcSubstitutionTable *substitutions) {
     ENTER(performLetSubstitutions);
-    let->var = performVarSubstitutions(let->var, substitutions);
-    let->value = lamPerformSubstitutions(let->value, substitutions);
+    let->bindings = performLetBindingsSubstitutions(let->bindings, substitutions);
     let->body = lamPerformSubstitutions(let->body, substitutions);
     LEAVE(performLetSubstitutions);
     return let;

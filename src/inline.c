@@ -185,8 +185,16 @@ static LamLetRecBindings *inlineLetRecBindings(LamLetRecBindings *x) {
     return x;
 }
 
+static LamLetBindings *inlineLetBindings(LamLetBindings *x) {
+    if (x != NULL) {
+        x->next = inlineLetBindings(x->next);
+        x->val = inlineExp(x->val);
+    }
+    return x;
+}
+
 static LamLet *inlineLet(LamLet *x) {
-    x->value = inlineExp(x->value);
+    x->bindings = inlineLetBindings(x->bindings);
     x->body = inlineExp(x->body);
     return x;
 }

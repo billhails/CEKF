@@ -273,13 +273,24 @@ structs:
         meta:
             brief: A let expression
             description: >-
-                This structure represents a let expression that binds a variable
-                to an expression and then evaluates a body expression using that
-                binding. It is used to introduce local variables.
+                This structure represents a let expression that binds variables
+                to expressions and then evaluates a body expression using those
+                bindings. It is used to introduce local variables.
+        data:
+            bindings: LamLetBindings
+            body: LamExp
+
+    LamLetBindings:
+        meta:
+            brief: Bindings in a let expression
+            description: >-
+                This structure holds the bindings in a let expression.
+                Each binding consists of a variable and an associated expression
+                that is evaluated in the context of the let.
         data:
             var: HashSymbol
-            value: LamExp
-            body: LamExp
+            val: LamExp
+            next: LamLetBindings
 
     LamLetRec:
         meta:
@@ -290,7 +301,6 @@ structs:
                 corresponding expressions and evaluates a body expression using
                 those bindings.
         data:
-            nbindings: int
             bindings: LamLetRecBindings
             body: LamExp
 

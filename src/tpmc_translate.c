@@ -197,7 +197,9 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(deconstruct);
                     LamExp *deconstructExp = newLamExp_Deconstruct(I, deconstruct);
                     PROTECT(deconstructExp);
-                    LamLet *let = newLamLet(I, path, deconstructExp, body);
+                    LamLetBindings *bindings = newLamLetBindings(I, path, deconstructExp, NULL);
+                    PROTECT(bindings);
+                    LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
                     body = newLamExp_Let(I, let);
                     REPLACE_PROTECT(save, body);
@@ -221,7 +223,10 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(index);
                     LamExp *tupleIndex = newLamExp_Tuple_index(I, index);
                     PROTECT(tupleIndex);
-                    LamLet *let = newLamLet(I, path, tupleIndex, body);
+                    LamLetBindings *bindings =
+                        newLamLetBindings(I, path, tupleIndex, NULL);
+                    PROTECT(bindings);
+                    LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
                     body = newLamExp_Let(I, let);
                     REPLACE_PROTECT(save, body);
@@ -760,14 +765,12 @@ static void recalculateRefCounts(TpmcState *dfa) {
 
 static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     ENTER(prependLetRec);
-    int nbindings = 0;
     LamLetRecBindings *bindings = NULL;
     int save = -1;
     HashSymbol *key;
     Index i = 0;
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
-        nbindings++;
         bindings = newLamLetRecBindings(I, key, val, bindings);
         if (save == -1) {
             save = PROTECT(bindings);
@@ -775,7 +778,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
             REPLACE_PROTECT(save, bindings);
         }
     }
-    LamLetRec *letrec = newLamLetRec(I, nbindings, bindings, body);
+    LamLetRec *letrec = newLamLetRec(I, bindings, body);
     PROTECT(letrec);
     LamExp *res = newLamExp_Letrec(I, letrec);
     UNPROTECT(save);

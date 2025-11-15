@@ -1257,14 +1257,22 @@ static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
     return res;
 }
 
+static void analyzeLetBindings(LamLetBindings *bindings, TcEnv *env,
+                                TcNg *ng) {
+    for (LamLetBindings * b = bindings; b != NULL; b = b->next) {
+        TcType *type = analyzeExp(b->val, env, ng);
+        int save = PROTECT(type);
+        addToEnv(env, b->var, type);
+        UNPROTECT(save);
+    }
+}
+
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng) {
 // ENTER(analyzeLet);
 // let expression is evaluated in the current environment
-    TcType *valType = analyzeExp(let->value, env, ng);
-    int save = PROTECT(valType);
     env = newTcEnv(env);
-    PROTECT(env);
-    addToEnv(env, let->var, valType);
+    int save = PROTECT(env);
+    analyzeLetBindings(let->bindings, env, ng);
     TcType *res = analyzeExp(let->body, env, ng);
     UNPROTECT(save);
 // LEAVE(analyzeLet);
