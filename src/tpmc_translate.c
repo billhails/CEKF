@@ -760,14 +760,12 @@ static void recalculateRefCounts(TpmcState *dfa) {
 
 static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     ENTER(prependLetRec);
-    int nbindings = 0;
     LamLetRecBindings *bindings = NULL;
     int save = -1;
     HashSymbol *key;
     Index i = 0;
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
-        nbindings++;
         bindings = newLamLetRecBindings(I, key, val, bindings);
         if (save == -1) {
             save = PROTECT(bindings);
@@ -775,7 +773,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
             REPLACE_PROTECT(save, bindings);
         }
     }
-    LamLetRec *letrec = newLamLetRec(I, nbindings, bindings, body);
+    LamLetRec *letrec = newLamLetRec(I, bindings, body);
     PROTECT(letrec);
     LamExp *res = newLamExp_Letrec(I, letrec);
     UNPROTECT(save);

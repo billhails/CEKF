@@ -290,7 +290,6 @@ structs:
                 corresponding expressions and evaluates a body expression using
                 those bindings.
         data:
-            nbindings: int
             bindings: LamLetRecBindings
             body: LamExp
 

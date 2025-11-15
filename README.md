@@ -85,7 +85,9 @@ lc <---> me([Macro Expansion]):::process
 tpmc --> vs([Variable Substitution]):::process
 vs --> lc
 lc <--> des([Desugaring]):::process
-lc --> lambda1(Plain Lambda Form)
+lc --> lambda0(Plain Lambda Form)
+lambda0 --> sim([Simplification]):::process
+sim --> lambda1(Plain Lamnda Form)
 lambda1 --> tc([Type Checking]):::process
 tc <--> pc([Print Compiler]):::process
 tc --> lambda2(Plain Lambda Form)
@@ -111,6 +113,7 @@ The various components named in the diagram above are linked to their implementa
 * Variable Substitution [lambda_substitution.c](src/lambda_substitution.c)
 * Macro Expansion [macro_substitution.c](src/macro_substitution.c)
 * Plain Lambda Form [lambda.yaml](src/lambda.yaml)
+* Simplification [lambda_simplify.c](src/lambda_simplify.c)
 * Type Checking [tc_analyze.c](src/tc_analyze.c)
 * Print Compiler [print_compiler.c](src/print_compiler.c)
 * Constructor Inlining [inline.c](src/inline.c)

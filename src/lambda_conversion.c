@@ -253,8 +253,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
         LamLetRec *letRec =
-            newLamLetRec(CPI(letRecBody), countLamLetRecBindings(funcDefsList), funcDefsList,
-                         letRecBody);
+            newLamLetRec(CPI(letRecBody), funcDefsList, letRecBody);
         PROTECT(letRec);
         result = newLamExp_Letrec(CPI(letRec), letRec);
     } else {
