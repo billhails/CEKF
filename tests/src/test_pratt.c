@@ -31,6 +31,7 @@
 #include "utf8.h"
 #include "print_generator.h"
 #include "init.h"
+#include "wrapper_synthesis.h"
 
 extern AstStringArray *include_paths;
 

@@ -480,6 +480,7 @@ unions:
             macro: AstDefMacro
             alias: AstAlias
             blank: void_ptr
+            builtinsSlot: void_ptr  # Placeholder for builtins slot
 
     AstTypeClause:
         meta:

@@ -98,6 +98,7 @@ TOKFN(TYPEOF, "typeof")
 TOKFN(EXPORT, "export")
 TOKFN(OPERATORS, "operators")
 TOKFN(IMPORT, "import")
+TOKFN(BUILTINS, "__builtins__")
 
 #undef TOKFN
 
@@ -674,7 +675,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
         switch (state) {
             case PRATTSTRINGSTATE_TYPE_START:
                 DEBUG("parseString %s %d (sep %c) START: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
-#ifdef SAFETCY_CHECKS
+#ifdef SAFETY_CHECKS
                 if (buffer->start[buffer->length] != sep) {
                     cant_happen("expected '%c' got '%c'", sep, buffer->start[buffer->length]);
                 }
@@ -1181,9 +1182,9 @@ bool consume(PrattParser *parser, HashSymbol *type) {
     }
     if (type == TOK_ATOM() && token->type != TOK_ATOM()) {
         // Helpful hint: common case is trying to name a function with an operator symbol
-        parserError(parser, "expected %s; found operator '%s'", expectedName, foundLexeme);
+        parserError(parser, "expected '%s' found operator '%s'", expectedName, foundLexeme);
     } else {
-        parserError(parser, "expected %s; found %s '%s'", expectedName, foundKind, foundLexeme);
+        parserError(parser, "expected '%s' found %s '%s'", expectedName, foundKind, foundLexeme);
     }
     return false;
 }

@@ -136,6 +136,12 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, TpmcSubstitution
     return lookup;
 }
 
+static LamTypeof *performTypeofSubstitutions(LamTypeof *typeOf, TpmcSubstitutionTable
+                                             *substitutions) {
+    typeOf->exp = lamPerformSubstitutions(typeOf->exp, substitutions);
+    return typeOf;
+}
+
 static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, TpmcSubstitutionTable
                                                *substitutions) {
     ENTER(performMakeVecSubstitutions);
@@ -421,6 +427,10 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 break;
             case LAMEXP_TYPE_LOOKUP:
                 exp->val.lookup = performLookupSubstitutions(exp->val.lookup, substitutions);
+                break;
+            case LAMEXP_TYPE_TYPEOF:
+                exp->val.typeOf =
+                    performTypeofSubstitutions(exp->val.typeOf, substitutions);
                 break;
             default:
                 cant_happen

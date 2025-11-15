@@ -224,7 +224,7 @@ TcType *makeFTypeType(void) {
     return makeNamedType("ftype_type");
 }
 
-TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
+static TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
     // Analyze the inner expression to get its type
     TcType *type = analyzeExp(exp->val.typeOf->exp, env, ng);
     int save = PROTECT(type);
@@ -238,14 +238,11 @@ TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
     exp->type = stringExp->type;
     exp->val = stringExp->val;
     // Also copy the parser info
-    exp->_yy_parser_info = stringExp->_yy_parser_info;
+    exp->_yy_parser_info = CPI(stringExp);
     // Create the return type before unprotecting
-    TcType *charType = makeCharacter();
-    PROTECT(charType);
-    TcType *listCharType = makeListType(charType);
-    PROTECT(listCharType);
+    TcType *stringType = makeStringType();
     UNPROTECT(save);
-    return prune(listCharType);
+    return stringType;
 }
 
 static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
@@ -975,7 +972,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
 // Iterate additional passes to allow type constraints to propagate through
 // forward references. Stop early when types converge (no changes between passes).
 // In practice, most code needs 2-3 passes, complex mutual recursion might need more.
-    const int MAX_PASSES = 10;
+    const int MAX_PASSES = 3;
     int passCount __attribute__((unused)) = 1;
     char *prevSnapshot = NULL;
 
@@ -1002,13 +999,14 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
 
         if (prevSnapshot != NULL) {
+            // eprintf("snapshot %s != %s\n", prevSnapshot, currentSnapshot);
             free(prevSnapshot);
         }
         prevSnapshot = currentSnapshot;
     }
 
     if (prevSnapshot != NULL) {
-        DEBUGN("analyzeLetRec completed after %d passes\n", passCount);
+        // eprintf("analyzeLetRec completed after %d passes\n", passCount);
         free(prevSnapshot);
     }
 
@@ -1875,7 +1873,8 @@ static TcType *constructBuiltInType(BuiltIn *builtIn) {
 static void addBuiltInToEnv(TcEnv *env, BuiltIn *builtIn) {
     TcType *type = constructBuiltInType(builtIn);
     int save = PROTECT(type);
-    addToEnv(env, builtIn->name, type);
+    // Bind only internal name; external name supplied by wrapper definitions.
+    addToEnv(env, builtIn->internalName, type);
     UNPROTECT(save);
 }
 

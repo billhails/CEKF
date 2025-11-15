@@ -219,6 +219,11 @@ static CTEnv *annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
             lam->letRecOffset = letRecOffset;
         }
         break;
+        case AEXP_TYPE_VAR: {
+            x->type = AEXP_TYPE_ANNOTATEDVAR;
+            x->val.annotatedVar = annotateAexpVar(CPI(x), x->val.var, env);
+        }
+        break;
         default:
             cant_happen("letrec bindings can only contain lambdas, got %s", aexpTypeName(x->type));
     }
@@ -502,7 +507,8 @@ static CTEnv * annotateExp(Exp *x, CTEnv *env) {
 
 static void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
     for (Index i = 0; i < b->size; i++) {
-        populateCTEnv(env, b->entries[i]->name);
+        // Bind only internal names; external names are provided by wrappers.
+        populateCTEnv(env, b->entries[i]->internalName);
     }
 }
 

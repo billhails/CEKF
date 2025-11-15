@@ -94,6 +94,7 @@ AstDefinition --typeDef--> AstTypeDef
 AstDefinition --macro--> AstDefMacro
 AstDefinition --alias--> AstAlias
 AstDefinition --blank--> void_ptr
+AstDefinition --builtinsSlot--> void_ptr
 AstTypeClause --integer--> void_ptr
 AstTypeClause --character--> void_ptr
 AstTypeClause --var--> HashSymbol

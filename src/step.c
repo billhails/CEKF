@@ -193,10 +193,10 @@ static Env *builtInsToEnv(BuiltIns *b) {
     int save = PROTECT(env);
     for (Index i = 0; i < b->size; i++) {
         BuiltIn *builtIn = b->entries[i];
-        DEBUG("adding builtin %s at %p", builtIn->name->name, builtIn->implementation);
-        BuiltInImplementation *implementation = newBuiltInImplementation(builtIn->implementation, builtIn->args->size);
-        PROTECT(implementation);
-        pushFrame(env->S, value_BuiltIn(implementation));
+        DEBUG("adding builtin %s/%s at %p", builtIn->internalName->name, builtIn->externalName->name, builtIn->implementation);
+        BuiltInImplementation *implInternal = newBuiltInImplementation(builtIn->internalName, builtIn->implementation, builtIn->args->size);
+        PROTECT(implInternal);
+        pushFrame(env->S, value_BuiltIn(implInternal));
     }
     UNPROTECT(save);
     return env;

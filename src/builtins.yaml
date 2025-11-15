@@ -31,7 +31,8 @@ structs:
             brief: Built In
             description: A built-in function
         data:
-            name: HashSymbol
+            externalName: HashSymbol
+            internalName: HashSymbol
             result: TcType
             args: BuiltInArgs
             implementation: void_ptr
@@ -41,6 +42,7 @@ structs:
             brief: Built In Implementation
             description: A built-in function implementation
         data:
+            name: HashSymbol
             implementation: void_ptr
             nargs: int
 

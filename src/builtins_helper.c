@@ -17,6 +17,8 @@
  */
 
 #include "builtins_helper.h"
+#include <string.h>
+#include <stdio.h>
 #include "builtins_impl.h"
 #include "memory.h"
 #include "symbol.h"
@@ -112,8 +114,21 @@ TcType *pushStringArg(BuiltInArgs *args) {
     return string;
 }
 
+static char *makeInternalName(char *external) {
+    // allocate buffer for "builtin$" + external + NUL
+    size_t n = strlen(external);
+    size_t len = n + 8 + 1; // 8 = strlen("builtin$")
+    char *buf = (char *) safeMalloc(len);
+    sprintf(buf, "builtin$%s", external);
+    return buf;
+}
+
 void pushNewBuiltIn(BuiltIns *registry, char *name, TcType *ret, BuiltInArgs *args, void *impl) {
-    BuiltIn *decl = newBuiltIn(newSymbol(name), ret, args, impl);
+    HashSymbol *external = newSymbol(name);
+    char *internalC = makeInternalName(name);
+    HashSymbol *internal = newSymbol(internalC);
+    FREE_ARRAY(char, internalC, strlen(internalC) + 1);
+    BuiltIn *decl = newBuiltIn(external, internal, ret, args, impl);
     int save = PROTECT(decl);
     pushBuiltIns(registry, decl);
     UNPROTECT(save);

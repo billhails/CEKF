@@ -7,5 +7,23 @@ let
         a + b
     }
 
+    fn makeWriter() {
+        switch(openmem()) {
+            (success(fh)) {
+                success(fputs(fh));
+            }
+            (failure(err)) { failure(err) }
+        }
+    }
+
 in
-    assert(test_curry(2, add(3)) == 5)
+    assert(test_curry(2, add(3)) == 5);
+    unsafe switch(makeWriter()) {
+        (success(fp)) {
+            puts("Testing curried fput:\n");
+            fp("Hello, ");
+            fp("world!");
+            puts("Testing curried fput done\n");
+            assert(true)
+        }
+    }

@@ -30,10 +30,12 @@
 #  include "debugging_off.h"
 #endif
 
-// fn () { a() } == a
 static LamExp *performLamSimplifications(LamLam *lam) {
     ENTER(performLamSimplifications);
     lam->exp = lamPerformSimplifications(lam->exp);
+#ifdef OVERSIMPLIFICATION
+    // fn () { a() } == a
+    // A thunk that just calls another thunk can be simplified to the second thunk
     if (   lam->args == NULL
         && lam->exp->type == LAMEXP_TYPE_APPLY
         && lam->exp->val.apply->args == NULL
@@ -42,6 +44,7 @@ static LamExp *performLamSimplifications(LamLam *lam) {
         IFDEBUG(printLamLam(lam, 0));
         return lam->exp->val.apply->function;
     }
+#endif
     LEAVE(performLamSimplifications);
     return newLamExp_Lam(CPI(lam), lam);
 }
