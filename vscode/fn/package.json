@@ -2,6 +2,7 @@
   "name": "fn",
   "displayName": "F Natural",
   "description": "F Natural Programming Language",
+  "icon": "images/fn.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.105.0"

@@ -34,10 +34,13 @@ fn test_prefix_complex () {
 fn test_prefix_capture () {
     let
         offset = 10;
-        add_offset = fn(x) { x + offset };
-        prefix 13 "incr" add_offset;
-    in
-        assert(incr 5 == 15)
+        in {
+            let
+                add_offset = fn(x) { x + offset };
+                prefix 13 "incr" add_offset;
+            in
+                assert(incr 5 == 15)
+        }
 }
 
 // Test 5: Infix operators with bare symbols
@@ -71,10 +74,13 @@ fn test_infix_complex () {
 fn test_infix_capture () {
     let
         base = 100;
-        add_base = fn(x, y) { x + y + base };
-        infix left 100 "plusbase" add_base;
-    in
-        assert(3 plusbase 4 == 107)
+        in {
+            let
+                add_base = fn(x, y) { x + y + base };
+                infix left 100 "plusbase" add_base;
+            in
+                assert(3 plusbase 4 == 107)
+        }
 }
 
 // Test 9: Infix associativity (left)
@@ -123,10 +129,13 @@ fn test_postfix_complex () {
 fn test_postfix_capture () {
     let
         multiplier = 4;
-        mult_by_var = fn(x) { x * multiplier };
-        postfix 120 "quad" mult_by_var;
-    in
-        assert(5 quad == 20)
+        in {
+            let
+                mult_by_var = fn(x) { x * multiplier };
+                postfix 120 "quad" mult_by_var;
+            in
+                assert(5 quad == 20)
+        }
 }
 
 // Test 15: Nested scopes (operators shadow in inner scope)

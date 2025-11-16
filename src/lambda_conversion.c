@@ -65,8 +65,6 @@ static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
 #  include "debugging_off.h"
 #endif
 
-static bool inPreamble;  // preamble is treated specially
-
 static void conversionError(ParserInfo, char *, ...) __attribute__((format(printf, 2, 3)));
 
 /**
@@ -115,7 +113,6 @@ static void addCurrentNamespaceToContext(LamContext *context, int namespaceId) {
  */
 LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
-    inPreamble = true;
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
     addCurrentNamespaceToContext(env, NS_GLOBAL);
@@ -210,6 +207,50 @@ static void convertNamespace(AstNamespaceArray *nsArray,
     UNPROTECT(save2);
 }
 
+static void separateLambdas(LamLetRecBindings *funcDefs,
+                             LamLetRecBindings **lambdas,
+                             LamLetRecBindings **other) 
+{
+    if (funcDefs != NULL) {
+        separateLambdas(funcDefs->next, lambdas, other);
+        if (funcDefs->val->type == LAMEXP_TYPE_LAM) {
+            *lambdas = newLamLetRecBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *lambdas);
+            PROTECT(*lambdas);
+        } else {
+            *other = newLamLetRecBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *other);
+            PROTECT(*other);
+        }
+    }
+}
+
+static void appendLamLetRecBindings(LamLetRecBindings **lambdas, LamLetRecBindings **other) {
+    if (*lambdas == NULL) {
+        *lambdas = *other;
+    } else if (*other != NULL) {
+        LamLetRecBindings *walker = *lambdas;
+        while (walker->next != NULL) {
+            walker = walker->next;
+        }
+        walker->next = *other;
+    }
+}
+
+/**
+ * @brief Hoists function definitions to the front of the letrec bindings.
+ *
+ * @param funcDefs The letrec bindings to hoist.
+ * @return The resulting letrec bindings with functions hoisted to the front.
+ */
+static LamLetRecBindings *hoistFunctionDefinitions(LamLetRecBindings *funcDefs) {
+    int save = PROTECT(funcDefs);
+    LamLetRecBindings *lambdas = NULL;
+    LamLetRecBindings *other = NULL;
+    separateLambdas(funcDefs, &lambdas, &other);
+    appendLamLetRecBindings(&lambdas, &other);
+    UNPROTECT(save);
+    return lambdas;
+}
+
 /**
  * @brief Workhorse routine that converts various nest-like scenarios to a common LamExp
  *
@@ -229,11 +270,12 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     int save = PROTECT(typeDefList);
     LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
+    funcDefsList = hoistFunctionDefinitions(funcDefsList);
+    PROTECT(funcDefsList);
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env);
     PROTECT(funcDefsList);
     LamNamespaceArray *namespaces = NULL;
     if (nsArray != NULL) {
-        inPreamble = false; // dodgy, we must be in the preamble because we're being called with namespaces
         namespaces = newLamNamespaceArray();
         PROTECT(namespaces);
         for (Index i = 0; i < nsArray->size; ++i) {
