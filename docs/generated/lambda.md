@@ -63,10 +63,11 @@ LamIntList --item--> int
 LamIntList --name--> HashSymbol
 LamIntList --nsid--> int
 LamIntList --next--> LamIntList
-LamLet --var--> HashSymbol
-LamLet --value--> LamExp
+LamLet --bindings--> LamLetBindings
 LamLet --body--> LamExp
-LamLetRec --nbindings--> int
+LamLetBindings --var--> HashSymbol
+LamLetBindings --val--> LamExp
+LamLetBindings --next--> LamLetBindings
 LamLetRec --bindings--> LamLetRecBindings
 LamLetRec --body--> LamExp
 LamLetRecBindings --var--> HashSymbol

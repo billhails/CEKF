@@ -86,6 +86,7 @@ static AstDefinition *importop(PrattParser *);
 static AstDefinition *exportop(PrattParser *);
 static AstDefinition *link(PrattParser *);
 static AstDefinition *typedefinition(PrattParser *);
+static AstDefinition *multidefinition(PrattParser *);
 static AstDefinitions *definitions(PrattParser *, HashSymbol *);
 static AstDefinitions *prattParseLink(PrattParser *, char *, PrattParser **);
 static AstExpression *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -1813,6 +1814,9 @@ static AstDefinition *definition(PrattParser *parser)
     } else if (check(parser, TOK_ATOM())) {
         res = assignment(parser);
         save = PROTECT(res);
+    } else if (match(parser, TOK_TUPLE())) {
+        res = multidefinition(parser);
+        save = PROTECT(res);
     } else if (match(parser, TOK_TYPEDEF())) {
         res = typedefinition(parser);
         save = PROTECT(res);
@@ -2934,6 +2938,57 @@ static AstDefinition *assignment(PrattParser *parser)
     return res;
 }
 
+static AstSymbolList *symbol_list(PrattParser *parser)
+{
+    ENTER(symbol_list);
+    if (match(parser, TOK_CLOSE())) {
+        LEAVE(symbol_list);
+        return NULL;
+    }
+    PrattToken *symbol = next(parser);
+    int save = PROTECT(symbol);
+    HashSymbol *s = NULL;
+    if (symbol->type == TOK_ATOM()) {
+        s = symbol->value->val.atom;
+    } else {
+        parserError(parser, "expected ATOM, got %s", symbol->type->name);
+        s = TOK_ERROR();
+    }
+    AstSymbolList *this = NULL;
+    if (match(parser, TOK_COMMA())) {
+        AstSymbolList *rest = symbol_list(parser);
+        PROTECT(rest);
+        this = newAstSymbolList(TOKPI(symbol), s, rest);
+    } else {
+        consume(parser, TOK_CLOSE());
+        this = newAstSymbolList(TOKPI(symbol), s, NULL);
+    }
+    LEAVE(symbol_list);
+    UNPROTECT(save);
+    return this;
+}
+
+/**
+ * @brief parses a multi-definition
+ */
+static AstDefinition *multidefinition(PrattParser *parser) {
+    ENTER(multidefinition);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
+    AstSymbolList *symbols = symbol_list(parser);
+    PROTECT(symbols);
+    consume(parser, TOK_ASSIGN());
+    AstExpression *expr = expression(parser);
+    PROTECT(expr);
+    consume(parser, TOK_SEMI());
+    AstMultiDefine *multidef = newAstMultiDefine(TOKPI(tok), symbols, expr);
+    PROTECT(multidef);
+    AstDefinition *res = newAstDefinition_Multi(CPI(multidef), multidef);
+    LEAVE(multidefinition);
+    UNPROTECT(save);
+    return res;
+}
+
 /**
  * @brief parses a typedef
  */
@@ -3602,13 +3657,13 @@ static AstExpression *fn(PrattRecord *record __attribute__((unused)),
 static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
                             PrattParser *parser,
                             AstExpression *lhs __attribute__((unused)),
-                            PrattToken *tok __attribute__((unused)))
+                            PrattToken *tok)
 {
     ENTER(tuple);
     AstExpressions *args = expressions(parser);
     int save = PROTECT(args);
     consume(parser, TOK_CLOSE());
-    AstExpression *res = newAstExpression_Tuple(CPI(args), args);
+    AstExpression *res = newAstExpression_Tuple(TOKPI(tok), args);
     LEAVE(tuple);
     UNPROTECT(save);
     return res;

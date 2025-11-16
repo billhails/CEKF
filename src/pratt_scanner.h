@@ -39,14 +39,15 @@ static inline ParserInfo TOKPI(PrattToken *token) {
 PrattLexer *makePrattLexerFromFilename(char *filename);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
 PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *next);
+
 bool consume(PrattParser *, HashSymbol *);
 bool check(PrattParser *, HashSymbol *);
 bool match(PrattParser *, HashSymbol *);
+PrattToken *peek(PrattParser *);
 PrattToken *next(PrattParser *);
 
 void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
 void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
-PrattToken *peek(PrattParser *);
 
 HashSymbol *TOK_ALIAS(void);
 HashSymbol *TOK_ARROW(void);

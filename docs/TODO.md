@@ -3,8 +3,7 @@
 More of a wish-list than a hard and fast plan.
 
 * Target LLVM
-* Proper namespace import support including user-defined operators.
-* Over-application i.e. `fn (a) { fn (b) { a + b } }(2, 3)`.
+* Hoist lambdas above other definitions in a letrec.
 * Unpacking function return values (tuples only).
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
 * More numbers:

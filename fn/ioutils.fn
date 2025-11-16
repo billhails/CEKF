@@ -53,3 +53,7 @@ fn to_string(data) {
         (some(result)) { result }
     }
 }
+
+prefix 12 "$" to_string;
+
+export prefix "$";

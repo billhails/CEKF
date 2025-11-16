@@ -1,0 +1,50 @@
+typedef expr { val(number) | div(expr, expr) }
+
+fn eval1 {
+    (val(n)) { n }
+    (div(x, y)) { eval1(x) / eval1(y) }
+}
+
+fn safe_div {
+    (_ , 0) {
+        nothing
+    }
+    (x, y) {
+        some(x / y)
+    }
+}
+
+fn eval2 {
+    (val(n)) { some(n) }
+    (div(x, y)) {
+        switch (eval2(x)) {
+            (none) { none }
+            (some(vx)) {
+                switch (eval2(y)) {
+                    (none) { none }
+                    (some(vy)) { safe_div(vx, vy) }
+                }
+            }
+        }
+    }
+}
+
+infix left 12 ">>=" fn (m, f) {
+    switch (m) {
+        (none) { none }
+        (some(v)) { f(v) }
+    }
+};
+
+fn return {
+    (v) { some(v) }
+}
+
+fn eval {
+    (val(n)) { return(n) }
+    (div(x, y)) {
+        eval(x) >>= fn (vx) {
+        eval(y) >>= fn (vy) {
+        safe_div(vx, vy) }}
+    }
+}

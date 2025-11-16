@@ -84,7 +84,7 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
                                            LamLetRecBindings *lamLetRecBindings);
 static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail);
-static Exp *normalizeMakeTuple(LamArgs *, Exp *);
+static Exp *normalizeMakeTuple(ParserInfo, LamArgs *, Exp *);
 static Exp *normalizeTupleIndex(LamTupleIndex *construct, Exp *tail);
 static Exp *normalizeDeconstruct(LamDeconstruct *deconstruct, Exp *tail);
 static Exp *normalizeTag(LamExp *tag, Exp *tail);
@@ -150,7 +150,7 @@ static Exp *normalize(LamExp *lamExp, Exp *tail) {
         case LAMEXP_TYPE_ERROR:
             return normalizeError(CPI(lamExp), tail);
         case LAMEXP_TYPE_MAKE_TUPLE:
-            return normalizeMakeTuple(lamExp->val.make_tuple, tail);
+            return normalizeMakeTuple(CPI(lamExp), lamExp->val.make_tuple, tail);
         case LAMEXP_TYPE_NAMESPACES:
             return normalizeNamespaces(CPI(lamExp), lamExp->val.namespaces, tail);
         case LAMEXP_TYPE_ENV:
@@ -465,9 +465,9 @@ static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
     return res;
 }
 
-static LamMakeVec *tupleToMakeVec(LamArgs *tuple) {
+static LamMakeVec *tupleToMakeVec(ParserInfo PI, LamArgs *tuple) {
     int nargs = countLamArgs(tuple);
-    LamMakeVec *res = newLamMakeVec(CPI(tuple), nargs, tuple);
+    LamMakeVec *res = newLamMakeVec(PI, nargs, tuple);
     return res;
 }
 
@@ -481,8 +481,8 @@ static Exp *normalizeConstruct(LamConstruct *construct, Exp *tail) {
     return res;
 }
 
-static Exp *normalizeMakeTuple(LamArgs *tuple, Exp *tail) {
-    LamMakeVec *makeVec = tupleToMakeVec(tuple);
+static Exp *normalizeMakeTuple(ParserInfo PI, LamArgs *tuple, Exp *tail) {
+    LamMakeVec *makeVec = tupleToMakeVec(PI, tuple);
     int save = PROTECT(makeVec);
     Exp *res = normalizeMakeVec(makeVec, tail);
     UNPROTECT(save);
@@ -990,6 +990,7 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_MAKEVEC:
         case LAMEXP_TYPE_LOOKUP:
         case LAMEXP_TYPE_MAKE_TUPLE:
+        case LAMEXP_TYPE_TUPLE_INDEX:
             return false;
         case LAMEXP_TYPE_COND_DEFAULT:
             cant_happen("lamExpIsLambda encountered cond default");

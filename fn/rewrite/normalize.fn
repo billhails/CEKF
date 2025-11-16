@@ -1,5 +1,8 @@
 let
     link "../listutils.fn" as list;
+    link "../ioutils.fn" as io;
+
+    import io prefix "$";
 
     typedef expr {
         lambda(list(expr), expr) |
@@ -68,7 +71,7 @@ let
         }
     }
 
-    fn gensym() { debug("gensym"); var_expr("gen") }
+    fn gensym(counter) { debug("gensym"); #(var_expr("gen$" @@ $counter), counter + 1) }
 
     fn normalize_term (M) { debug("normalize_term"); normalize(M, fn (x) { x }) }
 
@@ -105,7 +108,7 @@ let
         }
     }
 
-    fn normalize_name(M, k) {
+    fn normalize_name(M, k, c) {
         debug("normalize_name");
         normalize(M, fn {
             (N=value(_)) {
@@ -113,9 +116,9 @@ let
             }
             (N) {
                 let
-                    t = gensym();
+                    #(t, c) = gensym(c);
                 in
-                    let_expr(t, N, k(t)) // !
+                    let_expr(t, N, k(t), c) // !
             }
         })
     }
