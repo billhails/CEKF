@@ -42,6 +42,9 @@ fn map (f, lst) {
     map_prefix(f, lst, [])
 }
 
+infix left 9 "|>" fn (lst, f) { map(f, lst) };
+export infix "|>";
+
 // for_each: (#a -> #b) -> list(#a) -> list(#b)
 // like map but guarantees l-r application of f (for side effects)
 fn for_each(f, lst) {

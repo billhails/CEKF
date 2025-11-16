@@ -93,6 +93,26 @@ structs:
             symbol: HashSymbol
             expression: AstExpression
 
+    AstMultiDefine:
+        meta:
+            brief: AST Multi Definition
+            description: >-
+                A definition employing a tuple of symbols
+                allowing multiple definitions to be made in
+                a single assignment.
+        data:
+            symbols: AstSymbolList
+            expression: AstExpression
+
+    AstSymbolList:
+        meta:
+            brief: AST Symbol List
+            description: >-
+                A list of symbols used in a multi-definition.
+        data:
+            symbol: HashSymbol
+            next: AstSymbolList
+
     AstAlias:
         meta:
             brief: AST Alias
@@ -476,6 +496,7 @@ unions:
                 type definition, alias, or macro.
         data:
             define: AstDefine
+            multi: AstMultiDefine
             typeDef: AstTypeDef
             macro: AstDefMacro
             alias: AstAlias
