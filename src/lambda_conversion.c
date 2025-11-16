@@ -2269,6 +2269,10 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
         case AST_EXPRESSION_TYPE_ERROR:
             result = convertError(expression->val.error, env);
             break;
+        case AST_EXPRESSION_TYPE_WILDCARD:
+            conversionError(CPI(expression), "cannot use wildcard '_' as a variable name");
+            result = convertSymbol(CPI(expression), errorSymbol(), env);
+            break;
         default:
             cant_happen
                 ("unrecognised expression type %s",
