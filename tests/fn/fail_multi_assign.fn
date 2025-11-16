@@ -1,0 +1,10 @@
+let
+    fn multiValue() {
+        #(1, 2, 3)
+    }
+in {
+    let
+        #(a, b) = multiValue();
+    in
+        assert(true);
+}

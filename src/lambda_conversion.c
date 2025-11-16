@@ -340,10 +340,10 @@ static LamExp *lamConvertTypeof(AstTypeof *typeofExp, LamContext *context) {
  * @param env The lambda context to use.
  * @return The resulting lambda expression.
  */
-static LamExp *lamConvertTuple(AstExpressions *tuple, LamContext *env) {
+static LamExp *lamConvertTuple(ParserInfo PI, AstExpressions *tuple, LamContext *env) {
     LamArgs *expressions = convertExpressions(tuple, env);
     int save = PROTECT(expressions);
-    LamExp *res = newLamExp_Make_tuple(CPI(expressions), expressions);
+    LamExp *res = newLamExp_Make_tuple(PI, expressions);
     UNPROTECT(save);
     return res;
 }
@@ -853,6 +853,7 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_TYPEDEF:
         case AST_DEFINITION_TYPE_MACRO:
+        case AST_DEFINITION_TYPE_MULTI:
             break;
         case AST_DEFINITION_TYPE_ALIAS:
             collectAlias(definitions->definition->val.alias, env);
@@ -994,6 +995,7 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_BLANK:
         case AST_DEFINITION_TYPE_MACRO:
+        case AST_DEFINITION_TYPE_MULTI:
             return collectTypeDefs(definitions->next, env);
         case AST_DEFINITION_TYPE_TYPEDEF:{
                 LamTypeDef *lamTypeDef = convertTypeDef(definitions->definition->val.typeDef, env);
@@ -1028,6 +1030,57 @@ static LamLetRecBindings *prependMacro(AstDefMacro * macro, LamContext * env,
     return this;
 }
 
+LamExp *makeUnpackTuple(ParserInfo PI, LamExp *temp, int index, int size) {
+    LamTupleIndex *tupleIndex =
+        newLamTupleIndex(PI, index, size, temp);
+    int save = PROTECT(tupleIndex);
+    LamExp *exp = newLamExp_Tuple_index(PI, tupleIndex);
+    UNPROTECT(save);
+    return exp;
+}
+
+static LamLetRecBindings *prependMultiSymbols(AstSymbolList *symbols,
+                                              int index,
+                                              int size,
+                                              LamExp * temp,
+                                              LamLetRecBindings * next) {
+    if (symbols == NULL) {
+        return next;
+    }
+    LamLetRecBindings *rest = prependMultiSymbols(symbols->next,
+                                                  index + 1,
+                                                  size,
+                                                  temp,
+                                                  next);
+    int save = PROTECT(rest);
+    LamExp *rhs = makeUnpackTuple(CPI(symbols), temp, index, size);
+    PROTECT(rhs);
+    LamLetRecBindings *this =
+        newLamLetRecBindings(CPI(symbols), symbols->symbol, rhs, rest);
+    UNPROTECT(save);
+    return this;
+}
+
+static LamLetRecBindings *prependMulti(AstMultiDefine * multi, LamContext * env,
+                                        LamLetRecBindings * next) {
+    ENTER(prependMulti);
+    LamExp *exp = convertExpression(multi->expression, env);
+    int save = PROTECT(exp);
+    HashSymbol *temp = genSymDollar("multi");
+    LamExp *tempExp = newLamExp_Var(CPI(multi), temp);
+    PROTECT(tempExp);
+    LamLetRecBindings *parts = prependMultiSymbols(multi->symbols,
+                                                   0,
+                                                   countAstSymbolList(multi->symbols),
+                                                   tempExp,
+                                                   next);
+    PROTECT(parts);
+    LamLetRecBindings *this = newLamLetRecBindings(CPI(multi), temp, exp, parts);
+    UNPROTECT(save);
+    LEAVE(prependMulti);
+    return this;
+}
+
 /**
  * @brief Prepends a definition to the list of letRec bindings.
  *
@@ -1050,6 +1103,9 @@ static LamLetRecBindings *prependDefinition(AstDefinition *definition,
             break;
         case AST_DEFINITION_TYPE_MACRO:
             result = prependMacro(definition->val.macro, env, next);
+            break;
+        case AST_DEFINITION_TYPE_MULTI:
+            result = prependMulti(definition->val.multi, env, next);
             break;
         case AST_DEFINITION_TYPE_ALIAS:
         case AST_DEFINITION_TYPE_TYPEDEF:
@@ -2155,7 +2211,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_TUPLE:
             DEBUG("tuple");
-            result = lamConvertTuple(expression->val.tuple, env);
+            result = lamConvertTuple(CPI(expression), expression->val.tuple, env);
             break;
         case AST_EXPRESSION_TYPE_LOOKUP:
             DEBUG("lookup");

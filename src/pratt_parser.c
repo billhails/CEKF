@@ -2973,13 +2973,15 @@ static AstSymbolList *symbol_list(PrattParser *parser)
  */
 static AstDefinition *multidefinition(PrattParser *parser) {
     ENTER(multidefinition);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
     AstSymbolList *symbols = symbol_list(parser);
-    int save = PROTECT(symbols);
+    PROTECT(symbols);
     consume(parser, TOK_ASSIGN());
     AstExpression *expr = expression(parser);
     PROTECT(expr);
     consume(parser, TOK_SEMI());
-    AstMultiDefine *multidef = newAstMultiDefine(CPI(symbols), symbols, expr);
+    AstMultiDefine *multidef = newAstMultiDefine(TOKPI(tok), symbols, expr);
     PROTECT(multidef);
     AstDefinition *res = newAstDefinition_Multi(CPI(multidef), multidef);
     LEAVE(multidefinition);
@@ -3655,13 +3657,13 @@ static AstExpression *fn(PrattRecord *record __attribute__((unused)),
 static AstExpression *tuple(PrattRecord *record __attribute__((unused)),
                             PrattParser *parser,
                             AstExpression *lhs __attribute__((unused)),
-                            PrattToken *tok __attribute__((unused)))
+                            PrattToken *tok)
 {
     ENTER(tuple);
     AstExpressions *args = expressions(parser);
     int save = PROTECT(args);
     consume(parser, TOK_CLOSE());
-    AstExpression *res = newAstExpression_Tuple(CPI(args), args);
+    AstExpression *res = newAstExpression_Tuple(TOKPI(tok), args);
     LEAVE(tuple);
     UNPROTECT(save);
     return res;

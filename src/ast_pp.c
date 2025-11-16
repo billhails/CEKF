@@ -32,6 +32,7 @@
 #include "ast_pp.h"
 
 static void ppAstDefMacro(PrattUTF8 *, AstDefMacro *);
+static void ppAstDefMulti(PrattUTF8 *, AstMultiDefine *);
 static void ppAstDefinitions(PrattUTF8 *, AstDefinitions *);
 static void ppAstDefinition(PrattUTF8 *, AstDefinition *);
 static void ppAstDefine(PrattUTF8 *, AstDefine *);
@@ -130,6 +131,9 @@ static void ppAstDefinition(PrattUTF8 *dest, AstDefinition *definition) {
         case AST_DEFINITION_TYPE_MACRO:
             ppAstDefMacro(dest, definition->val.macro);
             break;
+        case AST_DEFINITION_TYPE_MULTI:
+            ppAstDefMulti(dest, definition->val.multi);
+            break;
         default:
             cant_happen("unrecognised %s", astDefinitionTypeName(definition->type));
     }
@@ -142,6 +146,24 @@ static void ppAstDefMacro(PrattUTF8 *dest, AstDefMacro *defMacro) {
     ppAstFargList(dest, defMacro->definition->altArgs->argList);
     psprintf(dest, ") ");
     ppAstNest(dest, defMacro->definition->nest);
+}
+
+static void ppAstSymbolList(PrattUTF8 *dest, AstSymbolList *symbolList) {
+    if (symbolList) {
+        ppHashSymbol(dest, symbolList->symbol);
+        if (symbolList->next) {
+            psprintf(dest, ", ");
+            ppAstSymbolList(dest, symbolList->next);
+        }
+    }
+}
+
+static void ppAstDefMulti(PrattUTF8 *dest, AstMultiDefine *define) {
+    psprintf(dest, "#(");
+    ppAstSymbolList(dest, define->symbols);
+    psprintf(dest, ") = ");
+    ppAstExpression(dest, define->expression);
+    psprintf(dest, "; ");
 }
 
 static void ppAstDefine(PrattUTF8 *dest, AstDefine *define) {
@@ -562,6 +584,11 @@ void ppAstExpression(PrattUTF8 *dest, AstExpression *expr) {
         case AST_EXPRESSION_TYPE_ERROR:
             psprintf(dest, "error(");
             ppAstExpression(dest, expr->val.error);
+            psprintf(dest, ")");
+            break;
+        case AST_EXPRESSION_TYPE_TYPEOF:
+            psprintf(dest, "(typeof ");
+            ppAstExpression(dest, expr->val.typeOf->exp);
             psprintf(dest, ")");
             break;
         default:

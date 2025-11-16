@@ -18,6 +18,10 @@ AstDefinitions --definition--> AstDefinition
 AstDefinitions --next--> AstDefinitions
 AstDefine --symbol--> HashSymbol
 AstDefine --expression--> AstExpression
+AstMultiDefine --symbols--> AstSymbolList
+AstMultiDefine --expression--> AstExpression
+AstSymbolList --symbol--> HashSymbol
+AstSymbolList --next--> AstSymbolList
 AstAlias --name--> HashSymbol
 AstAlias --type--> AstType
 AstExprAlias --name--> HashSymbol
@@ -90,6 +94,7 @@ AstTypeConstructorArgs --map--> AstTypeMap
 AstLookupOrSymbol --symbol--> HashSymbol
 AstLookupOrSymbol --lookup--> AstLookupSymbol
 AstDefinition --define--> AstDefine
+AstDefinition --multi--> AstMultiDefine
 AstDefinition --typeDef--> AstTypeDef
 AstDefinition --macro--> AstDefMacro
 AstDefinition --alias--> AstAlias
