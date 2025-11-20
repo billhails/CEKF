@@ -85,6 +85,7 @@ HashSymbol *TOK_NAMESPACE(void);
 HashSymbol *TOK_NONE(void);
 HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_OPEN(void);
+HashSymbol *TOK_OPERATOR(void);
 HashSymbol *TOK_OPERATORS(void);
 HashSymbol *TOK_PERIOD(void);
 HashSymbol *TOK_PIPE(void);

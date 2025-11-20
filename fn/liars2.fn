@@ -1,6 +1,13 @@
 let
     link "ambutils.fn" as amb;
+    import amb prefix "from";
+    import amb prefix "!:"; // require
     link "listutils.fn" as list;
+    import list infix "except";
+    import list infix "zip";
+    import list infix "|>"; // map
+    import list infix "<>"; // sortBy
+    import list infix "::"; // range
 
     // Five schoolgirls sat for an examination. Their parents—so they
     // thought—showed an undue degree of interest in the result.
@@ -22,31 +29,23 @@ let
     // What in fact was the order in which the five girls were placed? 
     fn liars() {
         let
-            ranks = [1, 2, 3, 4, 5];
-            betty = amb.one_of(ranks);
-            ethel = amb.one_of(list.exclude([betty], ranks));
-            joan = amb.one_of(list.exclude([betty, ethel], ranks));
-            kitty = amb.one_of(list.exclude([betty, ethel, joan], ranks));
-            mary = amb.one_of(list.exclude([betty, ethel, joan, kitty], ranks));
+            ranks = 1::5;
+            betty = from ranks;
+            ethel = from ranks except [betty];
+            joan  = from ranks except [betty, ethel];
+            kitty = from ranks except [betty, ethel, joan];
+            mary  = from ranks except [betty, ethel, joan, kitty];
         in
-            amb.require((kitty == 2) xor (betty == 3));
-            amb.require((ethel == 1) xor (joan == 2));
-            amb.require((joan == 3) xor (ethel == 5));
-            amb.require((kitty == 2) xor (mary == 4));
-            amb.require((mary == 4) xor (betty == 1));
-            list.map(
-                fn (#(x, _)) { x },
-                list.sortBy(
-                    fn (#(_, a), #(_, b)) { a <=> b },
-                    [
-                        #("Betty", betty),
-                        #("Ethel", ethel),
-                        #("Joan", joan),
-                        #("Kitty", kitty),
-                        #("Mary", mary)
-                    ]
-                )
-            )
+            !: (kitty == 2) xor (betty == 3);
+            !: (ethel == 1) xor (joan  == 2);
+            !: (joan  == 3) xor (ethel == 5);
+            !: (kitty == 2) xor (mary  == 4);
+            !: (mary  == 4) xor (betty == 1);
+
+            ["Betty", "Ethel", "Joan", "Kitty", "Mary"] zip
+            [ betty,   ethel,   joan,   kitty,   mary ] <>
+            fn (#(_, a), #(_, b)) { a <=> b } |>
+            fn (#(x, _)) { x };
     }
 in
-    print(liars())
+    print liars()

@@ -4,6 +4,9 @@ fn require(condition) {
     condition or back
 }
 
+prefix 1 "!:" require;
+export prefix "!:";
+
 fn one_of {
     ([]) { back }
     (h @ t) {
@@ -11,10 +14,16 @@ fn one_of {
     }
 }
 
+prefix 8 "from" one_of;
+export prefix "from";
+
 fn some_of {
     ([]) { back }
     (h @ t) { [h] then some_of(t) then h @ some_of(t) }
 }
+
+prefix 8 "some" some_of;
+export prefix "some";
 
 fn integers_from(n) {
    n then integers_from(n + 1)

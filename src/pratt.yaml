@@ -117,27 +117,32 @@ structs:
                 parser.
         data:
             symbol: HashSymbol
+
             prefixOp: PrattParselet
             prefixPrec: int
             prefixOriginalImpl: AstExpression=NULL
             prefixHygienicFunc: HashSymbol=NULL
             prefixIsBareSymbol: bool=false
             prefixExport: bool=false
+
             infixOp: PrattParselet
             infixPrec: int
             infixOriginalImpl: AstExpression=NULL
             infixHygienicFunc: HashSymbol=NULL
             infixIsBareSymbol: bool=false
             infixExport: bool=false
+
             postfixOp: PrattParselet
             postfixPrec: int
             postfixOriginalImpl: AstExpression=NULL
             postfixHygienicFunc: HashSymbol=NULL
             postfixIsBareSymbol: bool=false
             postfixExport: bool=false
+
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
             associativity: PrattAssoc
+            mixfixPattern: PrattMixfixPattern=NULL
 
     PrattExportedOps:
         meta:
@@ -148,6 +153,19 @@ structs:
                 namespace reference (nsRef) to support later imports without reparsing.
         data:
             exportedRules: PrattRecordTable
+
+    PrattMixfixPattern:
+        meta:
+            brief: A mixfix operator pattern.
+            description: >-
+                A mixfix operator pattern that defines the structure of a mixfix
+                operator. It contains the parts of the operator and their types
+                and results from parsing a mixfix operator definition.
+        data:
+            keywords: PrattStrings
+            arity: int
+            starts_with_hole: bool
+            ends_with_hole: bool
 
 enums:
     PrattAssoc:
@@ -257,6 +275,15 @@ arrays:
                 character literals, and other text-based tokens.
         data:
             entries: uchar
+
+    PrattStrings:
+        meta:
+            brief: An array of UTF-8 encoded strings.
+            description: >-
+                An array of UTF-8 encoded strings that is used to hold
+                multiple keywords for the PrattMixfixPattern structure.
+        data:
+            entries: PrattUTF8
 
     PrattParsers:
         meta:

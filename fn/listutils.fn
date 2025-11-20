@@ -37,12 +37,15 @@ fn exclude(items, lst) {
     in helper(lst, [])
 }
 
+infix left 12 "except" fn (l, i) { exclude(i, l) };
+export infix "except";
+
 // map: (#a -> #b) -> list(#a) -> list(#b)
 fn map (f, lst) {
     map_prefix(f, lst, [])
 }
 
-infix left 9 "|>" fn (lst, f) { map(f, lst) };
+infix left 8 "|>" fn (lst, f) { map(f, lst) };
 export infix "|>";
 
 // for_each: (#a -> #b) -> list(#a) -> list(#b)
@@ -235,6 +238,9 @@ fn zip(a, b) {
     zip_with(fn (x, y) { #(x, y) }, a, b)
 }
 
+infix left 8 "zip" zip;
+export infix "zip";
+
 // zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
 fn zip_with(f, a, b) {
     let fn helper {
@@ -307,6 +313,9 @@ fn range(low, high) {
     in helper(high, [])
 }
 
+infix none 8 "::" range;
+export infix "::";
+
 // dedup: list(#a) -> list(#a)
 fn dedup(lst) {
     unique(lst)
@@ -349,6 +358,9 @@ fn sortBy(predicate, lst) {
     in
         full_sort(lst)
 }
+
+infix left 8 "<>" fn (l, f) { sortBy(f, l) };
+export infix "<>";
 
 // sort: list(#a) -> list(#a)
 fn sort(l) { sortBy(fn (a, b) { a <=> b }, l) }

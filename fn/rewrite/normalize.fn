@@ -71,7 +71,7 @@ let
         }
     }
 
-    fn gensym(counter) { debug("gensym"); #(var_expr("gen$" @@ $counter), counter + 1) }
+    fn gensym() { debug("gensym"); var_expr("gen$") }
 
     fn normalize_term (M) { debug("normalize_term"); normalize(M, fn (x) { x }) }
 
@@ -108,7 +108,7 @@ let
         }
     }
 
-    fn normalize_name(M, k, c) {
+    fn normalize_name(M, k) {
         debug("normalize_name");
         normalize(M, fn {
             (N=value(_)) {
@@ -116,9 +116,9 @@ let
             }
             (N) {
                 let
-                    #(t, c) = gensym(c);
+                    t = gensym();
                 in
-                    let_expr(t, N, k(t), c) // !
+                    let_expr(t, N, k(t)) // !
             }
         })
     }
