@@ -596,4 +596,12 @@ arrays:
         data:
             entries: string
 
+    AstExpressionArray:
+        meta:
+            brief: AST Expression Array
+            description: >-
+                A simple array of AST expressions, used by the Pratt parser.
+        data:
+            entries: AstExpression
+
 primitives: !include primitives.yaml

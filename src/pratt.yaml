@@ -141,7 +141,6 @@ structs:
 
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
-            associativity: PrattAssoc
             mixfixPattern: PrattMixfixPattern=NULL
 
     PrattExportedOps:
@@ -164,6 +163,7 @@ structs:
         data:
             keywords: PrattStrings
             arity: int
+            associativity: PrattAssoc=PRATTASSOC_TYPE_NONE
             starts_with_hole: bool
             ends_with_hole: bool
 

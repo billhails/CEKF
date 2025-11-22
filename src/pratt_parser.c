@@ -168,6 +168,13 @@ void disablePrattDebug(void)
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
+static inline PrattFixity getFixityFromPattern(PrattMixfixPattern *pattern)
+{
+    return pattern->starts_with_hole ?
+        (pattern->ends_with_hole ? PRATTFIXITY_TYPE_INFIX : PRATTFIXITY_TYPE_POSTFIX) :
+        (pattern->ends_with_hole ? PRATTFIXITY_TYPE_PREFIX : PRATTFIXITY_TYPE_INFIX);
+}
+
 /**
  * @brief Create a new AstExpression representing an error.
  *
@@ -199,8 +206,7 @@ static void addRecord(PrattRecordTable *table,
                       PrattParselet infix,
                       int infixPrec,
                       PrattParselet postfix,
-                      int postfixPrec,
-                      PrattAssoc associativity)
+                      int postfixPrec)
 {
     PrattRecord *record = newPrattRecord(tok,
                                          prefix,
@@ -208,8 +214,7 @@ static void addRecord(PrattRecordTable *table,
                                          infix,
                                          infixPrec * PRECEDENCE_SCALE,
                                          postfix,
-                                         postfixPrec * PRECEDENCE_SCALE,
-                                         associativity);
+                                         postfixPrec * PRECEDENCE_SCALE);
     int save = PROTECT(record);
     setPrattRecordTable(table, record->symbol, record);
     UNPROTECT(save);
@@ -223,55 +228,55 @@ static PrattParser *makePrattParser(void)
     PrattParser *parser = newPrattParser(NULL);
     int save = PROTECT(parser);
     PrattRecordTable *table = parser->rules;
-    addRecord(table, TOK_ALIAS(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ARROW(), NULL, 0, infixRight, 1, NULL, 0, PRATTASSOC_TYPE_RIGHT);
-    addRecord(table, TOK_AS(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ASSERT(), passert, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ASSIGN(), NULL, 0, exprAlias, 7, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ATOM(), makeAtom, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_BACK(), back, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_BUILTINS(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_CHAR(), makeChar, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_CLOSE(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_COLON(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_COMMA(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ELSE(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_EOF(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_ERROR(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_EXPORT(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_FN(), fn, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_HASH(), doPrefix, 13, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_IF(), iff, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_IMPORT(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_INFIX(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_IN(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_KW_CHAR(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_KW_ERROR(), error, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_KW_NUMBER(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_LCURLY(), nestexpr, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_MACRO(), macro, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_OPERATOR(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_PERIOD(), NULL, 0, lookup, 15, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_PIPE(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_POSTFIX(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_PREFIX(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_RCURLY(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_RSQUARE(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_SEMI(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_STRING(), makeString, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_SWITCH(), switchExp, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_TUPLE(), tuple, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_TYPEDEF(), NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_TYPEOF(), typeofExp, 11, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_UNSAFE(), unsafe, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
-    addRecord(table, TOK_WILDCARD(), wildcard, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
+    addRecord(table, TOK_ALIAS(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ARROW(), NULL, 0, infixRight, 1, NULL, 0);
+    addRecord(table, TOK_AS(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ASSERT(), passert, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ASSIGN(), NULL, 0, exprAlias, 7, NULL, 0);
+    addRecord(table, TOK_ATOM(), makeAtom, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_BACK(), back, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_BUILTINS(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_CHAR(), makeChar, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_CLOSE(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_COLON(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_COMMA(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ELSE(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_EOF(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ERROR(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_EXPORT(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_FN(), fn, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_HASH(), doPrefix, 13, NULL, 0, NULL, 0);
+    addRecord(table, TOK_IF(), iff, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_IMPORT(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_INFIX(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_IN(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_KW_CHAR(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_KW_ERROR(), error, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_KW_NUMBER(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LCURLY(), nestexpr, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_MACRO(), macro, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_NAMESPACE(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
+    addRecord(table, TOK_OPERATOR(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_PERIOD(), NULL, 0, lookup, 15, NULL, 0);
+    addRecord(table, TOK_PIPE(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_POSTFIX(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_PREFIX(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_RCURLY(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_RSQUARE(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_SEMI(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_STRING(), makeString, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_SWITCH(), switchExp, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_TUPLE(), tuple, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_TYPEDEF(), NULL, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_TYPEOF(), typeofExp, 11, NULL, 0, NULL, 0);
+    addRecord(table, TOK_UNSAFE(), unsafe, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_WILDCARD(), wildcard, 0, NULL, 0, NULL, 0);
 
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
@@ -743,8 +748,7 @@ static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser)
                                            rec->infixExport ? rec->infixOp : NULL,
                                            rec->infixExport ? rec->infixPrec : 0,
                                            rec->postfixExport ? rec->postfixOp : NULL,
-                                           rec->postfixExport ? rec->postfixPrec : 0,
-                                           rec->associativity);
+                                           rec->postfixExport ? rec->postfixPrec : 0);
         PROTECT(copy);
         if (rec->prefixExport)
         {
@@ -776,7 +780,7 @@ static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op)
     if (!getPrattRecordTable(parser->rules, op, &target) || target == NULL)
     {
         // Create a blank record so we can import individual fixities
-        target = newPrattRecord(op, NULL, 0, NULL, 0, NULL, 0, PRATTASSOC_TYPE_NONE);
+        target = newPrattRecord(op, NULL, 0, NULL, 0, NULL, 0);
         int save = PROTECT(target);
         setPrattRecordTable(parser->rules, op, target);
         parser->trie = insertPrattTrie(parser->trie, op);
@@ -813,7 +817,6 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRec
             target->infixIsBareSymbol = source->infixIsBareSymbol;
             target->infixPrec = source->infixPrec;
             target->infixOp = source->infixOp;
-            target->associativity = source->associativity;
             target->importNsRef = nsRef;
             target->importNsSymbol = nsSymbol;
         }
@@ -1300,46 +1303,36 @@ static AstDefinition *makeHygenicOperatorBody(ParserInfo PI, HashSymbol *symbol,
     return res;
 }
 
-// Generate a hygienic unary operator macro definition (prefix or postfix)
-// Creates: macro macroName(x) { impl(x) }
-static AstDefinition *makeHygienicUnaryOperatorDef(ParserInfo PI,
-                                                   HashSymbol *macroName,
-                                                   AstExpression *impl) {
-    // make the formal argument list (x)
-    AstFargList *argList = makeAstFargList(PI, "x", NULL);
-    int save = PROTECT(argList);
-    // make the actual argument list (x)
-    AstExpressions *callArgs = makeAstAarglist(PI, "x", NULL);
-    PROTECT(callArgs);
-    // make the macro definition
-    AstDefinition *res = makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
-    UNPROTECT(save);
-    return res;
-}
-
-// Generate a hygienic binary operator macro definition (infix)
-// Creates: macro macroName(x, y) { impl(x, y) }
-static AstDefinition *makeHygienicBinaryOperatorDef(ParserInfo PI,
-                                                    HashSymbol *macroName,
-                                                    AstExpression *impl) {
-    // make the formal argument list (x, y)
-    AstFargList *argList = makeAstFargList(PI, "y", NULL);
-    int save = PROTECT(argList);
-    argList = makeAstFargList(PI, "x", argList);
-    REPLACE_PROTECT(save, argList);
-    // make the actual argument list (x, y)
-    AstExpressions *callArgs = makeAstAarglist(PI, "y", NULL);
-    PROTECT(callArgs);
-    callArgs = makeAstAarglist(PI, "x", callArgs);
-    PROTECT(callArgs);
-    // make the macro definition
-    AstDefinition *res = makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
-    UNPROTECT(save);
-    return res;
-}
-
 static inline HashSymbol *makeMacroName() {
     return genSymDollar("op");
+}
+
+static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI,
+                                                  int arity,
+                                                  HashSymbol *macroName,
+                                                  AstExpression *impl) {
+    char buffer[32];
+    // make the formal argument list ()
+    AstFargList *argList = NULL;
+    int save = PROTECT(argList);
+    // make the actual argument list ()
+    AstExpressions *callArgs = NULL;
+    while (arity > 0) {
+        snprintf(buffer, sizeof(buffer), "x%d", arity);
+        argList = makeAstFargList(PI, buffer, argList);
+        PROTECT(argList);
+        callArgs = makeAstAarglist(PI, buffer, callArgs);
+        PROTECT(callArgs);
+        arity--;
+    }
+    // make the macro definition
+    AstDefinition *res = makeHygenicOperatorBody(PI, macroName, argList, callArgs, impl);
+    UNPROTECT(save);
+    return res;
+}
+
+static inline HashSymbol *utf8ToSymbol(PrattUTF8 *utf8) {
+    return newSymbol((char *)utf8->entries);
 }
 
 /**
@@ -1358,141 +1351,220 @@ static inline HashSymbol *makeMacroName() {
  * @param impl The AstExpression implementation of the operator.
  */
 static AstDefinition *addOperator(PrattParser *parser,
-                        PrattFixity fixity,
-                        PrattAssoc associativity,
-                        int precedence,
-                        PrattUTF8 *operator,
-                        AstExpression *impl)
+                                  PrattFixity fixity,
+                                  PrattAssoc associativity,
+                                  int precedence,
+                                  PrattUTF8 *operator,
+                                  AstExpression *impl)
 {
-    HashSymbol *op = newSymbol((char *)operator->entries);
+    HashSymbol *op = utf8ToSymbol(operator);
     // Only look for an existing operator in the current (local) parser scope.
     // This allows inner scopes to shadow operators defined in outer scopes.
     PrattRecord *record = NULL;
     getPrattRecordTable(parser->rules, op, &record);
     int save = PROTECT(record);
+    bool isNewOperator = (record == NULL);
     if (record) {
         record = copyPrattRecord(record);
         PROTECT(record);
-        switch (fixity) {
-            case PRATTFIXITY_TYPE_PREFIX: {
-                if (record->prefixOp) {
-                    parserErrorAt(CPI(impl),
-                                parser,
-                                "attempt to redefine prefix operator \"%s\"",
-                                operator->entries);
-                }
-                record->prefixOp = userPrefix;
-                record->prefixPrec = precedence * PRECEDENCE_SCALE;
-                record->prefixOriginalImpl = impl;
-                record->prefixHygienicFunc = makeMacroName();
-                record->prefixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                setPrattRecordTable(parser->rules, op, record);
-                AstDefinition *def = makeHygienicUnaryOperatorDef(CPI(impl), record->prefixHygienicFunc, impl);
-                UNPROTECT(save);
-                return def;
-            }
-            break;
-            case PRATTFIXITY_TYPE_INFIX: {
-                if (record->infixOp) {
-                    parserErrorAt(CPI(impl),
-                                parser,
-                                "attempt to redefine infix operator \"%s\"",
-                                operator->entries);
-                } else if (record->postfixOp) {
-                    parserErrorAt(CPI(impl),
-                                parser,
-                                "attempt to define existing postfix operator \"%s\" as infix",
-                                operator->entries);
-                }
-                record->infixOp = associativity == PRATTASSOC_TYPE_LEFT ? userInfixLeft : associativity == PRATTASSOC_TYPE_RIGHT ? userInfixRight : userInfixNone;
-                record->infixPrec = precedence * PRECEDENCE_SCALE;
-                record->infixOriginalImpl = impl;
-                record->infixHygienicFunc = makeMacroName();
-                record->infixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                setPrattRecordTable(parser->rules, op, record);
-                AstDefinition *def = makeHygienicBinaryOperatorDef(CPI(impl), record->infixHygienicFunc, impl);
-                UNPROTECT(save);
-                return def;
-            }
-            break;
-            case PRATTFIXITY_TYPE_POSTFIX: {
-                if (record->postfixOp) {
-                    parserErrorAt(CPI(impl),
-                                parser,
-                                "attempt to redefine postfix operator \"%s\"",
-                                operator->entries);
-                } else if (record->infixOp) {
-                    parserErrorAt(CPI(impl),
-                                parser,
-                                "attempt to define existing infix operator \"%s\" as postfix",
-                                operator->entries);
-                }
-                record->postfixOp = userPostfix;
-                record->postfixPrec = precedence * PRECEDENCE_SCALE;
-                record->postfixOriginalImpl = impl;
-                record->postfixHygienicFunc = makeMacroName();
-                record->postfixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                setPrattRecordTable(parser->rules, op, record);
-                AstDefinition *def = makeHygienicUnaryOperatorDef(CPI(impl), record->postfixHygienicFunc, impl);
-                UNPROTECT(save);
-                return def;
-            }
-            break;
-        }
-    } else {
-        // New operator - create record and hygienic function
-        HashSymbol *hygienicFunc = NULL;
-        AstDefinition *hygienicDef = NULL;
-        
-        switch (fixity) {
-            case PRATTFIXITY_TYPE_PREFIX: {
-                hygienicFunc = makeMacroName();
-                record = newPrattRecord(op, userPrefix, precedence * PRECEDENCE_SCALE, NULL, 0, NULL, 0, associativity);
-                PROTECT(record);
-                record->prefixOriginalImpl = impl;
-                record->prefixHygienicFunc = hygienicFunc;
-                record->prefixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                hygienicDef = makeHygienicUnaryOperatorDef(CPI(impl), hygienicFunc, impl);
-                PROTECT(hygienicDef);
-            }
-            break;
-            case PRATTFIXITY_TYPE_INFIX: {
-                hygienicFunc = makeMacroName();
-                record = newPrattRecord(op, NULL, 0,
-                                        associativity == PRATTASSOC_TYPE_LEFT
-                                            ? userInfixLeft
-                                        : associativity == PRATTASSOC_TYPE_RIGHT
-                                            ? userInfixRight
-                                            : userInfixNone,
-                                        precedence * PRECEDENCE_SCALE, NULL, 0, associativity);
-                PROTECT(record);
-                record->infixOriginalImpl = impl;
-                record->infixHygienicFunc = hygienicFunc;
-                record->infixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                hygienicDef = makeHygienicBinaryOperatorDef(CPI(impl), hygienicFunc, impl);
-                PROTECT(hygienicDef);
-            }
-            break;
-            case PRATTFIXITY_TYPE_POSTFIX: {
-                hygienicFunc = makeMacroName();
-                record = newPrattRecord(op, NULL, 0, NULL, 0, userPostfix, precedence * PRECEDENCE_SCALE, associativity);
-                PROTECT(record);
-                record->postfixOriginalImpl = impl;
-                record->postfixHygienicFunc = hygienicFunc;
-                record->postfixIsBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
-                hygienicDef = makeHygienicUnaryOperatorDef(CPI(impl), hygienicFunc, impl);
-                PROTECT(hygienicDef);
-            }
-            break;
-        }
-        parser->trie = insertPrattTrie(parser->trie, op);
-        setPrattRecordTable(parser->rules, op, record);
-        UNPROTECT(save);
-        return hygienicDef;
     }
-    // Should not reach here
+    HashSymbol *hygienicFunc = makeMacroName();
+    bool isBareSymbol = (impl && impl->type == AST_EXPRESSION_TYPE_SYMBOL);
+    int scaledPrec = precedence * PRECEDENCE_SCALE;
+    AstDefinition *def = NULL;
+    switch (fixity) {
+        case PRATTFIXITY_TYPE_PREFIX: {
+            if (record) {
+                if (record->prefixOp) {
+                    parserErrorAt(CPI(impl), parser, "attempt to redefine prefix operator \"%s\"", operator->entries);
+                }
+            } else {
+                record = newPrattRecord(op, NULL, 0, NULL, 0, NULL, 0);
+                PROTECT(record);
+            }
+            record->prefixOp = userPrefix;
+            record->prefixPrec = scaledPrec;
+            record->prefixOriginalImpl = impl;
+            record->prefixHygienicFunc = hygienicFunc;
+            record->prefixIsBareSymbol = isBareSymbol;
+            def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        }
+        break;
+        case PRATTFIXITY_TYPE_INFIX: {
+            if (record) {
+                if (record->infixOp) {
+                    parserErrorAt(CPI(impl), parser, "attempt to redefine infix operator \"%s\"", operator->entries);
+                } else if (record->postfixOp) {
+                    parserErrorAt(CPI(impl), parser, "attempt to define existing postfix operator \"%s\" as infix", operator->entries);
+                }
+            } else {
+                record = newPrattRecord(op, NULL, 0, NULL, 0, NULL, 0);
+                PROTECT(record);
+            }
+            record->infixOp = (associativity == PRATTASSOC_TYPE_LEFT) ? userInfixLeft
+                            : (associativity == PRATTASSOC_TYPE_RIGHT) ? userInfixRight
+                            : userInfixNone;
+            record->infixPrec = scaledPrec;
+            record->infixOriginalImpl = impl;
+            record->infixHygienicFunc = hygienicFunc;
+            record->infixIsBareSymbol = isBareSymbol;
+            def = makeHygienicNaryOperatorDef(CPI(impl), 2, hygienicFunc, impl);
+        }
+        break;
+        case PRATTFIXITY_TYPE_POSTFIX: {
+            if (record) {
+                if (record->postfixOp) {
+                    parserErrorAt(CPI(impl), parser, "attempt to redefine postfix operator \"%s\"", operator->entries);
+                } else if (record->infixOp) {
+                    parserErrorAt(CPI(impl), parser, "attempt to define existing infix operator \"%s\" as postfix", operator->entries);
+                }
+            } else {
+                record = newPrattRecord(op, NULL, 0, NULL, 0, NULL, 0);
+                PROTECT(record);
+            }
+            record->postfixOp = userPostfix;
+            record->postfixPrec = scaledPrec;
+            record->postfixOriginalImpl = impl;
+            record->postfixHygienicFunc = hygienicFunc;
+            record->postfixIsBareSymbol = isBareSymbol;
+            def = makeHygienicNaryOperatorDef(CPI(impl), 1, hygienicFunc, impl);
+        }
+        break;
+    }
+    PROTECT(def);
+    // Common finalization: update parser state
+    if (isNewOperator) {
+        parser->trie = insertPrattTrie(parser->trie, op);
+    }
+    setPrattRecordTable(parser->rules, op, record);
     UNPROTECT(save);
-    return NULL;
+    return def;
+}
+
+AstExpression *userMixFix(PrattRecord *record,
+                          PrattParser *parser,
+                          AstExpression *lhs,
+                          PrattToken *tok __attribute__((unused))) {
+    // Mixfix operators are implemented via their stored pattern
+    PrattMixfixPattern *pattern = record->mixfixPattern;
+    
+    AstExpressionArray *args = newAstExpressionArray();
+    int save = PROTECT(args);
+
+    PrattFixity fixity = getFixityFromPattern(pattern);
+    PrattStrings *keywords = copyPrattStrings(pattern->keywords);
+    PROTECT(keywords);
+    int arity = pattern->arity;
+    
+    // Collect the left-hand side expression if applicable
+    if (fixity == PRATTFIXITY_TYPE_INFIX || fixity == PRATTFIXITY_TYPE_POSTFIX) {
+        pushAstExpressionArray(args, lhs);
+        arity--;
+    }
+    int precedence = fixity == PRATTFIXITY_TYPE_PREFIX ? record->prefixPrec
+                   : fixity == PRATTFIXITY_TYPE_INFIX ? record->infixPrec
+                   : record->postfixPrec;
+    int precShift = pattern->associativity == PRATTASSOC_TYPE_LEFT ? 1
+                  : pattern->associativity == PRATTASSOC_TYPE_RIGHT ? -1
+                  : 0;
+    precedence += precShift;
+    Index kwIndex = 1;
+    // Parse and collect the arguments interleaved by the operator tokens
+    while (arity > 0) {
+        lhs = expressionPrecedence(parser, precedence);
+        int save2 = PROTECT(lhs);
+        pushAstExpressionArray(args, lhs);
+        UNPROTECT(save2);
+        arity--;
+        if (arity > 0 || !(pattern->ends_with_hole)) {
+            // Consume the next keyword
+            PrattUTF8 *kw = keywords->entries[kwIndex++];
+            PrattToken *nextTok = peek(parser);
+            HashSymbol *nextSym = utf8ToSymbol(kw);
+            if (nextTok->type != nextSym) {
+                parserErrorAt(CPI(lhs), parser, "expected mixfix operator keyword \"%s\"", kw->entries);
+                printPrattToken(nextTok, 0);
+            }
+            next(parser);
+        }
+    }
+    // Build the argument list from the collected array of expressions
+    AstExpressions *argList = NULL;
+    for (Index i = args->size; i > 0; i--) {
+        AstExpression *arg = args->entries[i - 1];
+        argList = newAstExpressions(CPI(arg), arg, argList);
+        PROTECT(argList);
+    }
+    // Create annotated symbol with both hygienic wrapper and original implementation
+    HashSymbol *hygienicFunc = fixity == PRATTFIXITY_TYPE_PREFIX ? record->prefixHygienicFunc
+                             : fixity == PRATTFIXITY_TYPE_INFIX ? record->infixHygienicFunc
+                             : record->postfixHygienicFunc;
+    AstExpression *originalImpl = fixity == PRATTFIXITY_TYPE_PREFIX ? record->prefixOriginalImpl
+                                : fixity == PRATTFIXITY_TYPE_INFIX ? record->infixOriginalImpl
+                                : record->postfixOriginalImpl;
+    AstAnnotatedSymbol *annotated = newAstAnnotatedSymbol(TOKPI(tok), hygienicFunc, originalImpl);
+    PROTECT(annotated);
+    AstExpression *func = newAstExpression_AnnotatedSymbol(TOKPI(tok), annotated);
+    PROTECT(func);
+    if (record->importNsRef >= 0)
+    {
+        AstLookup *lup = newAstLookup(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
+        PROTECT(lup);
+        func = newAstExpression_Lookup(TOKPI(tok), lup);
+        PROTECT(func);
+    }
+    AstFunCall *funCall = newAstFunCall(TOKPI(tok), func, argList);
+    PROTECT(funCall);
+    AstExpression *res = newAstExpression_FunCall(CPI(funCall), funCall);
+    PROTECT(res);
+    if (pattern->associativity == PRATTASSOC_TYPE_NONE) {
+        PrattToken *next = peek(parser);
+        PROTECT(next);
+        if (next != NULL)
+        {
+            PrattRecord *nextRecord = fetchRecord(parser, next->type, false);
+            if (nextRecord != NULL &&
+                nextRecord->infixPrec == record->infixPrec &&
+                next->type == tok->type)
+            {
+                parserErrorAt(TOKPI(next), parser, "non-associative operator used in succession");
+            }
+        }
+    }
+    UNPROTECT(save);
+    return res;
+}
+
+static AstDefinition *addMixFixOperator(PrattParser *parser,
+                                  PrattMixfixPattern *pattern,
+                                  PrattAssoc associativity,
+                                  int precedence,
+                                  AstExpression *impl)
+{
+    PrattFixity fixity = getFixityFromPattern(pattern);
+    PrattUTF8 *operator = pattern->keywords->entries[0];
+    (void) addOperator(parser, fixity, associativity, precedence, operator, impl);
+    HashSymbol *op = utf8ToSymbol(operator);
+    // Store the mixfix pattern in the PrattRecord for later parsing
+    PrattRecord *record = NULL;
+    getPrattRecordTable(parser->rules, op, &record);
+    record->mixfixPattern = pattern;
+    AstDefinition *def = NULL;
+    switch (fixity) {
+        case PRATTFIXITY_TYPE_PREFIX:
+            record->prefixOp = userMixFix;
+            def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity, record->prefixHygienicFunc, impl);
+            break;
+        case PRATTFIXITY_TYPE_INFIX:
+            record->infixOp = userMixFix;
+            def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity, record->infixHygienicFunc, impl);
+            break;
+        case PRATTFIXITY_TYPE_POSTFIX:
+            record->postfixOp = userMixFix;
+            def = makeHygienicNaryOperatorDef(CPI(impl), pattern->arity, record->postfixHygienicFunc, impl);
+            break;
+    }
+    return def;
 }
 
 /**
@@ -1774,18 +1846,18 @@ static PrattUTF8 *prattUTF8Substr(PrattUTF8 *str, Index start, Index end) {
 }
 
 typedef enum PatternStates {
-    PATTERN_STATE_S,
-    PATTERN_STATE_C,
-    PATTERN_STATE_CU,
-    PATTERN_STATE_CUC,
-    PATTERN_STATE_U,
-    PATTERN_STATE_UC,
-    PATTERN_STATE_UCU,
-    PATTERN_STATE_ERR,
-    PATTERN_STATE_FIN_CU,
-    PATTERN_STATE_FIN_CUC,
-    PATTERN_STATE_FIN_UC,
-    PATTERN_STATE_FIN_UCU,
+    PATTERN_STATE_S, // Start
+    PATTERN_STATE_C, // Initial Characters
+    PATTERN_STATE_CU, // Underscore after Characters
+    PATTERN_STATE_CUC, // Characters after Underscore, starts with characters
+    PATTERN_STATE_U, // Initial Underscore
+    PATTERN_STATE_UC, // Characters after initial underscore
+    PATTERN_STATE_UCU, // Underscore after characters starting with underscore
+    PATTERN_STATE_ERR, // Error state
+    PATTERN_STATE_CUF, // End of string initial characters final underscore
+    PATTERN_STATE_CCF, // End of String starting and ending with characters
+    PATTERN_STATE_UCF, // End of String starting with underscore, ending with characters
+    PATTERN_STATE_UUF, // End of String starting and ending with underscore
 } PatternStates;
 
 typedef enum PatternEvents {
@@ -1799,11 +1871,11 @@ static int patternStateTable[11][3] = {
     // CHAR               UNDERSCORE          END
     {PATTERN_STATE_C,   PATTERN_STATE_U,   PATTERN_STATE_ERR}, // S
     {PATTERN_STATE_C,   PATTERN_STATE_CU,  PATTERN_STATE_ERR}, // C
-    {PATTERN_STATE_CUC, PATTERN_STATE_ERR, PATTERN_STATE_FIN_CU}, // CU
-    {PATTERN_STATE_CUC, PATTERN_STATE_CU,  PATTERN_STATE_FIN_CUC}, // CUC
+    {PATTERN_STATE_CUC, PATTERN_STATE_ERR, PATTERN_STATE_CUF}, // CU
+    {PATTERN_STATE_CUC, PATTERN_STATE_CU,  PATTERN_STATE_CCF}, // CUC
     {PATTERN_STATE_UC,  PATTERN_STATE_ERR, PATTERN_STATE_ERR}, // U
-    {PATTERN_STATE_UC,  PATTERN_STATE_UCU, PATTERN_STATE_FIN_UC}, // UC
-    {PATTERN_STATE_UC,  PATTERN_STATE_ERR, PATTERN_STATE_FIN_UCU}, // UCU
+    {PATTERN_STATE_UC,  PATTERN_STATE_UCU, PATTERN_STATE_UCF}, // UC
+    {PATTERN_STATE_UC,  PATTERN_STATE_ERR, PATTERN_STATE_UUF}, // UCU
     {PATTERN_STATE_ERR, PATTERN_STATE_ERR, PATTERN_STATE_ERR}, // ERR
     {PATTERN_STATE_ERR, PATTERN_STATE_ERR, PATTERN_STATE_ERR}, // FIN_CU
     {PATTERN_STATE_ERR, PATTERN_STATE_ERR, PATTERN_STATE_ERR}, // FIN_UC
@@ -1818,12 +1890,13 @@ static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser
     PrattStrings *strings = newPrattStrings();
     PROTECT(strings);
     Index i = 0;
+    Index len = str->size - 1; // size includes the null
     Index start = 0;
     int state = PATTERN_STATE_S;
     int arity = 0;
     int event;
     while (state < PATTERN_STATE_ERR) {
-        if (i >= str->size) {
+        if (i >= len) {
             event = PATTERN_EVENT_END;
         } else if (str->entries[i] == '_') {
             event = PATTERN_EVENT_UNDERSCORE;
@@ -1831,18 +1904,57 @@ static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser
         } else {
             event = PATTERN_EVENT_CHAR;
         }
+
         state = patternStateTable[state][event];
         switch (state) {
+            case PATTERN_STATE_C:
+                break;
             case PATTERN_STATE_CU:
-            case PATTERN_STATE_UCU:
-            case PATTERN_STATE_FIN_UC:
-            case PATTERN_STATE_FIN_CUC: {
-                PrattUTF8 *kw = prattUTF8Substr(str, start, i);
-                int save = PROTECT(kw);
-                pushPrattStrings(strings, kw);
-                UNPROTECT(save);
+                {
+                    PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+                    int save = PROTECT(kw);
+                    pushPrattStrings(strings, kw);
+                    UNPROTECT(save);
+                    start = i + 1;
+                }
+                break;
+            case PATTERN_STATE_CUC:
+                break;
+            case PATTERN_STATE_U:
                 start = i + 1;
-            }
+                break;
+            case PATTERN_STATE_UC:
+                break;
+            case PATTERN_STATE_UCU:
+                {
+                    PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+                    int save = PROTECT(kw);
+                    pushPrattStrings(strings, kw);
+                    UNPROTECT(save);
+                    start = i + 1;
+                }
+                break;
+            case PATTERN_STATE_CUF:
+                break;
+            case PATTERN_STATE_CCF:
+                {
+                    PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+                    int save = PROTECT(kw);
+                    pushPrattStrings(strings, kw);
+                    UNPROTECT(save);
+                }
+                break;
+            case PATTERN_STATE_UCF:
+                {
+                    PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+                    int save = PROTECT(kw);
+                    pushPrattStrings(strings, kw);
+                    UNPROTECT(save);
+                    start = i + 1;
+                }
+                break;
+            case PATTERN_STATE_UUF:
+                break;
         }
         i++;
     }
@@ -1860,8 +1972,8 @@ static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser
     PrattMixfixPattern *pattern = NULL;
     if (isValid) {
         pattern = newPrattMixfixPattern(strings, arity,
-        state == PATTERN_STATE_FIN_UC || state == PATTERN_STATE_FIN_UCU,
-        state == PATTERN_STATE_FIN_CU || state == PATTERN_STATE_FIN_UCU);
+        state == PATTERN_STATE_UCF || state == PATTERN_STATE_UUF,
+        state == PATTERN_STATE_CUF || state == PATTERN_STATE_UUF);
     }
     UNPROTECT(save);
     return pattern;
@@ -1900,11 +2012,9 @@ static AstDefinition *operator(PrattParser *parser)
         return newAstDefinition_Blank(TOKPI(tok));
     }
     PROTECT(pattern);
-    PrattFixity fixity = pattern->starts_with_hole ?
-        (pattern->ends_with_hole ? PRATTFIXITY_TYPE_INFIX : PRATTFIXITY_TYPE_POSTFIX) :
-        (pattern->ends_with_hole ? PRATTFIXITY_TYPE_PREFIX : PRATTFIXITY_TYPE_INFIX);
 
     PrattAssoc assoc = parseOptionalAssociativity(parser);
+    pattern->associativity = assoc;
 
     if (!check(parser, TOK_NUMBER())) {
         parserErrorAt(TOKPI(tok), parser, "expected integer precedence after operator pattern");
@@ -1925,8 +2035,7 @@ static AstDefinition *operator(PrattParser *parser)
     AstExpression *impl = expression(parser);
     PROTECT(impl);
     consume(parser, TOK_SEMI());
-    AstDefinition *def = addOperator(parser, fixity, assoc, precedence, pattern->keywords->entries[0], impl);
-    // TODO store the pattern in the parser record for this operator
+    AstDefinition *def = addMixFixOperator(parser, pattern, assoc, precedence, impl);
     LEAVE(operator);
     UNPROTECT(save);
     return def;
@@ -2073,7 +2182,7 @@ static AstDefinition *exportop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *rec = NULL;
         if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
             parserError(parser, "cannot export non-local prefix operator '%s'", op->name);
@@ -2086,7 +2195,7 @@ static AstDefinition *exportop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *rec = NULL;
         if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
             parserError(parser, "cannot export non-local infix operator '%s'", op->name);
@@ -2099,7 +2208,7 @@ static AstDefinition *exportop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *rec = NULL;
         if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
             parserError(parser, "cannot export non-local postfix operator '%s'", op->name);
@@ -2179,7 +2288,7 @@ static AstDefinition *importop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *source = NULL;
         if (!getPrattRecordTable(ops->exportedRules, op, &source) || source == NULL || source->prefixOriginalImpl == NULL) {
             parserErrorAt(TOKPI(tok), parser, "namespace %s did not export prefix '%s'", nsSymbol->name, op->name);
@@ -2193,7 +2302,7 @@ static AstDefinition *importop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *source = NULL;
         if (!getPrattRecordTable(ops->exportedRules, op, &source) || source == NULL || source->infixOriginalImpl == NULL) {
             parserErrorAt(TOKPI(tok), parser, "namespace %s did not export infix '%s'", nsSymbol->name, op->name);
@@ -2207,7 +2316,7 @@ static AstDefinition *importop(PrattParser *parser) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
         validateOperator(parser, str);
-        HashSymbol *op = newSymbol((char *)str->entries);
+        HashSymbol *op = utf8ToSymbol(str);
         PrattRecord *source = NULL;
         if (!getPrattRecordTable(ops->exportedRules, op, &source) || source == NULL || source->postfixOriginalImpl == NULL) {
             parserErrorAt(TOKPI(tok), parser, "namespace %s did not export postfix '%s'", nsSymbol->name, op->name);
@@ -3988,7 +4097,6 @@ static AstExpression *userInfixCommon(PrattRecord *record,
             PrattRecord *nextRecord = fetchRecord(parser, next->type, false);
             if (nextRecord != NULL &&
                 nextRecord->infixPrec == record->infixPrec &&
-                nextRecord->associativity == PRATTASSOC_TYPE_NONE &&
                 next->type == tok->type)
             {
                 parserErrorAt(TOKPI(next), parser, "non-associative operator used in succession");
