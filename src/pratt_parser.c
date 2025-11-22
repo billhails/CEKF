@@ -168,6 +168,10 @@ void disablePrattDebug(void)
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
+static inline HashSymbol *utf8ToSymbol(PrattUTF8 *utf8) {
+    return newSymbol((char *)utf8->entries);
+}
+
 static inline PrattFixity getFixityFromPattern(PrattMixfixPattern *pattern)
 {
     return pattern->starts_with_hole ?
@@ -845,6 +849,15 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRec
         if (target->mixfixPattern != NULL) {
             parserError(parser, "import redefines mixfix operator %s", op->name);
         }
+        // Check for conflicts with existing keywords, except the first
+        for (Index i = 1; i < source->mixfixPattern->keywords->size; ++i) {
+            HashSymbol *inner = utf8ToSymbol(source->mixfixPattern->keywords->entries[i]);
+            if (getPrattRecordTable(parser->rules, inner, NULL)) {
+                parserError(parser, "import mixfix operator %s conflicts with existing operator %s",
+                            op->name,
+                            inner->name);
+            }
+        }
         target->mixfixPattern = source->mixfixPattern;
     }
 }
@@ -1342,10 +1355,6 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI,
     return res;
 }
 
-static inline HashSymbol *utf8ToSymbol(PrattUTF8 *utf8) {
-    return newSymbol((char *)utf8->entries);
-}
-
 /**
  * @brief Add a new user-defined operator to the parser's operator table.
  *
@@ -1494,7 +1503,6 @@ AstExpression *userMixFix(PrattRecord *record,
             HashSymbol *nextSym = utf8ToSymbol(kw);
             if (!isAtomSymbol(nextTok, nextSym)) {
                 parserErrorAt(CPI(lhs), parser, "expected mixfix operator keyword \"%s\"", kw->entries);
-                printPrattToken(nextTok, 0);
             }
             next(parser);
         }
@@ -1552,6 +1560,14 @@ static AstDefinition *addMixFixOperator(PrattParser *parser,
                                   int precedence,
                                   AstExpression *impl)
 {
+    for (Index i = 1; i < pattern->keywords->size; ++i) {
+        HashSymbol *inner = utf8ToSymbol(pattern->keywords->entries[i]);
+        if (getPrattRecordTable(parser->rules, inner, NULL)) {
+            parserError(parser, "mixfix operator keyword %s conflicts with existing operator %s",
+                        pattern->keywords->entries[0]->entries,
+                        inner->name);
+        }
+    }
     PrattFixity fixity = getFixityFromPattern(pattern);
     PrattUTF8 *operator = pattern->keywords->entries[0];
     (void) addOperator(parser, fixity, associativity, precedence, operator, impl);
