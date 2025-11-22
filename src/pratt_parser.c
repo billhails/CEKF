@@ -2363,6 +2363,31 @@ static AstDefinition *importop(PrattParser *parser) {
             parserErrorAt(TOKPI(atom), parser, "expected 'operators' or fixity after import <ns>");
             res = newAstDefinition_Blank(TOKPI(atom));
         }
+    } else if (match(parser, TOK_OPERATOR())) {
+        // import <ns> operator <pattern>;
+        PrattUTF8 *str = rawString(parser);
+        PROTECT(str);
+        PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser, str);
+        PROTECT(pattern);
+        if (pattern == NULL) {
+            res = newAstDefinition_Blank(TOKPI(tok));
+        } else {
+            HashSymbol *op = utf8ToSymbol(pattern->keywords->entries[0]);
+            PrattRecord *source = NULL;
+            if (!getPrattRecordTable(ops->exportedRules, op, &source) || source == NULL || source->mixfixPattern == NULL ||
+                !eqPrattStrings(pattern->keywords, source->mixfixPattern->keywords)) {
+                parserErrorAt(TOKPI(tok), parser, "namespace %s did not export operator with pattern", nsSymbol->name);
+            } else {
+                PrattRecord *target = ensureTargetRecord(parser, op);
+                mergeFixityImport(parser, target, source, nsRef, nsSymbol,
+                                  source->prefixOriginalImpl != NULL,
+                                  source->infixOriginalImpl != NULL,
+                                  source->postfixOriginalImpl != NULL,
+                                  op);
+            }
+            consume(parser, TOK_SEMI());
+            res = newAstDefinition_Blank(TOKPI(tok));
+        }
     } else if (match(parser, TOK_PREFIX())) {
         PrattUTF8 *str = rawString(parser);
         PROTECT(str);
