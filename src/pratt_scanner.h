@@ -44,10 +44,15 @@ bool consume(PrattParser *, HashSymbol *);
 bool check(PrattParser *, HashSymbol *);
 bool match(PrattParser *, HashSymbol *);
 PrattToken *peek(PrattParser *);
+void poke(PrattParser *, PrattToken *);
 PrattToken *next(PrattParser *);
 
 void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
 void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
+
+static inline bool isAtomSymbol(PrattToken *token, HashSymbol *symbol) {
+    return (token->value->type == PRATTVALUE_TYPE_ATOM && token->value->val.atom == symbol);
+}
 
 HashSymbol *TOK_ALIAS(void);
 HashSymbol *TOK_ARROW(void);

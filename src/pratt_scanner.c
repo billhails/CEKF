@@ -1099,6 +1099,19 @@ static PrattBuffer *prattBufferFromFileName(char *path) {
 }
 
 /**
+ * @brief Re-enqueues a token back into the lexer.
+ * 
+ * This function adds the given token back to the front of the lexer's token queue,
+ * allowing it to be reprocessed later.
+ * 
+ * @param parser The PrattParser instance containing the lexer.
+ * @param token The PrattToken to re-enqueue.
+ */
+void poke(PrattParser *parser, PrattToken *token) {
+    enqueueToken(parser->lexer, token);
+}
+
+/**
  * @brief Peeks at the next token without consuming it.
  * 
  * This function retrieves the next token from the lexer without advancing the
@@ -1109,7 +1122,7 @@ PrattToken *peek(PrattParser *parser) {
     // DEBUG("peek");
     PrattToken *token = next(parser);
     int save = PROTECT(token);
-    enqueueToken(parser->lexer, token);
+    poke(parser, token);
     UNPROTECT(save);
     return token;
 }
@@ -1148,7 +1161,7 @@ bool match(PrattParser *parser, HashSymbol *type) {
         return true;
     }
     int save = PROTECT(token);
-    enqueueToken(parser->lexer, token);
+    poke(parser, token);
     UNPROTECT(save);
     return false;
 }

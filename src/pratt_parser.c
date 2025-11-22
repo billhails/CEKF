@@ -768,6 +768,11 @@ static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser)
             copy->postfixHygienicFunc = rec->postfixHygienicFunc;
             copy->postfixIsBareSymbol = rec->postfixIsBareSymbol;
         }
+        // Copy the mixfix pattern if present (needed for mixfix operators)
+        if (rec->mixfixPattern != NULL)
+        {
+            copy->mixfixPattern = rec->mixfixPattern;
+        }
         setPrattRecordTable(ops->exportedRules, sym, copy);
     }
     UNPROTECT(save);
@@ -835,6 +840,12 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRec
             target->importNsRef = nsRef;
             target->importNsSymbol = nsSymbol;
         }
+    }
+    if (source->mixfixPattern != NULL) {
+        if (target->mixfixPattern != NULL) {
+            parserError(parser, "import redefines mixfix operator %s", op->name);
+        }
+        target->mixfixPattern = source->mixfixPattern;
     }
 }
 
@@ -1481,7 +1492,7 @@ AstExpression *userMixFix(PrattRecord *record,
             PrattUTF8 *kw = keywords->entries[kwIndex++];
             PrattToken *nextTok = peek(parser);
             HashSymbol *nextSym = utf8ToSymbol(kw);
-            if (nextTok->type != nextSym) {
+            if (!isAtomSymbol(nextTok, nextSym)) {
                 parserErrorAt(CPI(lhs), parser, "expected mixfix operator keyword \"%s\"", kw->entries);
                 printPrattToken(nextTok, 0);
             }
@@ -1882,11 +1893,9 @@ static int patternStateTable[11][3] = {
     {PATTERN_STATE_ERR, PATTERN_STATE_ERR, PATTERN_STATE_ERR}, // FIN_UCU
 };
 
-static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser) {
+static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
     // A mixfix pattern is a sequence of keywords and holes.
     // A hole is represented by an underscore character '_'.
-    PrattUTF8 *str = rawString(parser);
-    int save = PROTECT(str);
     PrattStrings *strings = newPrattStrings();
     PROTECT(strings);
     Index i = 0;
@@ -1960,7 +1969,6 @@ static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser
     }
     if (state == PATTERN_STATE_ERR) {
         parserErrorAt(PI, parser, "invalid operator pattern \"%s\"", str->entries);
-        UNPROTECT(save);
         return NULL;
     }
     bool isValid = true;
@@ -1975,7 +1983,6 @@ static PrattMixfixPattern *parseMixfixPattern(ParserInfo PI, PrattParser *parser
         state == PATTERN_STATE_UCF || state == PATTERN_STATE_UUF,
         state == PATTERN_STATE_CUF || state == PATTERN_STATE_UUF);
     }
-    UNPROTECT(save);
     return pattern;
 }
 
@@ -1999,26 +2006,26 @@ static PrattAssoc parseOptionalAssociativity(PrattParser *parser) {
 
 /**
  * Parse `operator <pattern> [<associativity>] <precedence> <implementation>;`
+ * Helper function that parses the operator definition given a pattern and token for error reporting.
  */
-static AstDefinition *operator(PrattParser *parser)
+static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok, PrattMixfixPattern *pattern)
 {
-    ENTER(operator);
-    PrattToken *tok = peek(parser);
+    ENTER(operatorWithPattern);
     int save = PROTECT(tok);
-    PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser);
+    PROTECT(pattern);
+    
     if (pattern == NULL) {
-        LEAVE(operator);
+        LEAVE(operatorWithPattern);
         UNPROTECT(save);
         return newAstDefinition_Blank(TOKPI(tok));
     }
-    PROTECT(pattern);
 
     PrattAssoc assoc = parseOptionalAssociativity(parser);
     pattern->associativity = assoc;
 
     if (!check(parser, TOK_NUMBER())) {
         parserErrorAt(TOKPI(tok), parser, "expected integer precedence after operator pattern");
-        LEAVE(operator);
+        LEAVE(operatorWithPattern);
         UNPROTECT(save);
         return newAstDefinition_Blank(TOKPI(tok));
     }
@@ -2027,7 +2034,7 @@ static AstDefinition *operator(PrattParser *parser)
     MaybeBigInt *bi = prec->value->val.number;
     if (bi->type != BI_SMALL || bi->imag) {
         parserErrorAt(TOKPI(tok), parser, "expected integer precedence after operator pattern");
-        LEAVE(operator);
+        LEAVE(operatorWithPattern);
         UNPROTECT(save);
         return newAstDefinition_Blank(TOKPI(tok));
     }
@@ -2036,6 +2043,24 @@ static AstDefinition *operator(PrattParser *parser)
     PROTECT(impl);
     consume(parser, TOK_SEMI());
     AstDefinition *def = addMixFixOperator(parser, pattern, assoc, precedence, impl);
+    LEAVE(operatorWithPattern);
+    UNPROTECT(save);
+    return def;
+}
+
+/**
+ * Parse `operator <pattern> [<associativity>] <precedence> <implementation>;`
+ */
+static AstDefinition *operator(PrattParser *parser)
+{
+    ENTER(operator);
+    PrattToken *tok = peek(parser);
+    int save = PROTECT(tok);
+    PrattUTF8 *str = rawString(parser);
+    PROTECT(str);
+    PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser, str);
+    PROTECT(pattern);
+    AstDefinition *def = operatorWithPattern(parser, tok, pattern);
     LEAVE(operator);
     UNPROTECT(save);
     return def;
@@ -2161,8 +2186,7 @@ static AstDefinition *exportop(PrattParser *parser) {
         PrattToken *atom = next(parser);
         PROTECT(atom);
         // Compare atom symbol to the interned "operators" symbol
-        if (atom->value->type == PRATTVALUE_TYPE_ATOM &&
-            atom->value->val.atom == TOK_OPERATORS()) {
+        if (isAtomSymbol(atom, TOK_OPERATORS())) {
             consume(parser, TOK_SEMI());
             // Mark all local operator records as exported for each defined fixity
             Index i = 0;
@@ -2217,9 +2241,48 @@ static AstDefinition *exportop(PrattParser *parser) {
         }
         consume(parser, TOK_SEMI());
         res = newAstDefinition_Blank(TOKPI(tok));
-        // TODO: add TOK_OPERATOR() for mixfix export per-operator
+    } else if (match(parser, TOK_OPERATOR())) {
+        // export operator is different, the syntax includes the definition of the operator:
+        // export operator <pattern> [<associativity>] <precedence> <implementation>;
+        // Parse the pattern string first
+        PrattToken *opTok = peek(parser);
+        PROTECT(opTok);
+        PrattUTF8 *str = rawString(parser);
+        PROTECT(str);
+        PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(opTok), parser, str);
+        PROTECT(pattern);
+        
+        // Now parse the operator definition using the already-parsed pattern
+        res = operatorWithPattern(parser, opTok, pattern);
+        PROTECT(res);
+        
+        // Mark the operator as exported
+        if (pattern != NULL) {
+            HashSymbol *op = utf8ToSymbol(pattern->keywords->entries[0]);
+            PrattRecord *rec = NULL;
+            if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
+                parserError(parser, "cannot export non-local operator '%s' in pattern", op->name);
+            } else {
+                if (rec->mixfixPattern == NULL || !eqPrattStrings(pattern->keywords, rec->mixfixPattern->keywords)) {
+                    parserError(parser, "cannot export non-local operator '%s' with different pattern", op->name);
+                }
+                // Determine which fixity to export based on the pattern
+                PrattFixity fixity = getFixityFromPattern(pattern);
+                switch (fixity) {
+                    case PRATTFIXITY_TYPE_PREFIX:
+                        rec->prefixExport = true;
+                        break;
+                    case PRATTFIXITY_TYPE_INFIX:
+                        rec->infixExport = true;
+                        break;
+                    case PRATTFIXITY_TYPE_POSTFIX:
+                        rec->postfixExport = true;
+                        break;
+                }
+            }
+        }
     } else {
-        parserError(parser, "expected 'operators' or fixity after export");
+        parserError(parser, "expected 'operator', 'operators' or fixity after export");
         res = newAstDefinition_Blank(TOKPI(tok));
     }
     LEAVE(exportop);
@@ -2265,7 +2328,7 @@ static AstDefinition *importop(PrattParser *parser) {
         // Support: import <ns> operators;  (operators is an atom)
         PrattToken *atom = next(parser);
         PROTECT(atom);
-        if (atom->value->type == PRATTVALUE_TYPE_ATOM && atom->value->val.atom == TOK_OPERATORS()) {
+        if (isAtomSymbol(atom, TOK_OPERATORS())) {
             consume(parser, TOK_SEMI());
             // Import all exported operators
             Index i = 0;

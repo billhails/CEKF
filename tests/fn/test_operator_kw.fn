@@ -1,5 +1,12 @@
 let
+    link "import_operator_kw.fn" as ops;
+
     macro CONDITIONAL(test, consequent, alternative) { fn { (true) { consequent } (false) { alternative } }(test) }
     operator "_?_:_" right 3 CONDITIONAL;
+    operator "_--" 10 fn (x) { x - 1 };
+
+    import ops operators;
 in
     assert((5 == 5 ? "yes" : "no") == "yes");
+    assert(5-- == 4);
+    assert(5++ == 6)
