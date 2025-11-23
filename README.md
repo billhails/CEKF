@@ -5,6 +5,9 @@
 Low level, hopefully fast C implementation of a CEK machine with an
 additional "F" failure continuation supporting amb (and a stack).
 
+CEKF is the rather unfortunate name of the repo and the implementation.
+The language itself I'm calling F♮ (F-Natural).
+
 This is heavily based on a blog post by Matt Might [Writing an
 interpreter, CESK-style](https://matt.might.net/articles/cesk-machines/),
 but using a bytecode interpreter rather than a tree-walking interpreter,
