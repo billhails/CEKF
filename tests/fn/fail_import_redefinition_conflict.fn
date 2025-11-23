@@ -1,11 +1,11 @@
 // Negative test: importing a fixity that already exists locally must fail
 let
-    // Local prefix operator ~
+    // Local operator ~_
     fn negate(x) { 0 - x };
-    prefix 13 "~" negate;
+    operator "~_" 13 negate;
 
-    // Library also exports prefix "~"
+    // Library also exports operator "~_"
     link "import_ops_lib.fn" as ops;
-    import ops prefix "~";  // should fail: redefinition conflict
+    import ops operator "~_";  // should fail: redefinition conflict
 in
     puts("This line should not be reached due to import conflict\n");

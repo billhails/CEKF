@@ -1,8 +1,8 @@
-// test files with the prefix 'fail_' are expected to produce compile errors
+// test files starting with 'fail_' are expected to produce compile errors
 // This test checks that importing conflicting operator definitions results in an error
 let
     link "import_ops_lib.fn" as ops;
-    infix left 100 "plus" fn (a, b) { a + b };
-    import ops infix "plus";  // This should cause a conflict error
+    operator "_plus_" left 100 fn (a, b) { a + b };
+    import ops operator "_plus_";  // This should cause a conflict error
 in
     puts("This line should not be reached due to import conflict\n");

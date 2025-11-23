@@ -54,7 +54,12 @@ PrattRecord --postfixExport--> bool
 PrattRecord --importNsRef--> int
 PrattRecord --importNsSymbol--> HashSymbol
 PrattRecord --associativity--> PrattAssoc
+PrattRecord --mixfixPattern--> PrattMixfixPattern
 PrattExportedOps --exportedRules--> PrattRecordTable
+PrattMixfixPattern --keywords--> PrattStrings
+PrattMixfixPattern --arity--> int
+PrattMixfixPattern --starts_with_hole--> bool
+PrattMixfixPattern --ends_with_hole--> bool
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8
@@ -64,6 +69,7 @@ PrattNumberState["enum PrattNumberState"]
 PrattStringState["enum PrattStringState"]
 PrattFixity["enum PrattFixity"]
 PrattUTF8["PrattUTF8[]"] --entries--> uchar
+PrattStrings["PrattStrings[]"] --entries--> PrattUTF8
 PrattParsers["PrattParsers[]"] --entries--> PrattParser
 PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps

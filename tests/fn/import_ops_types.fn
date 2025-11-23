@@ -2,12 +2,10 @@ namespace
 
 typedef test_type(#t) { test_a(#t) | test_b(#t) }
 
-prefix 13 "test_A" test_a;
-prefix 13 "test_B" test_b;
+export operator "testA_" 13 test_a;
+export operator "testB_" 13 test_b;
 
 fn test_fn {
-    (test_A x) { x }
-    (test_B x) { x }
+    (testA x) { x }
+    (testB x) { x }
 }
-
-export operators;

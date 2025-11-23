@@ -46,59 +46,57 @@ HashSymbol *TOK_ ## name(void) {          \
     return s;                             \
 }
 
-TOKFN(MACRO,"macro")
-TOKFN(LEFT,"left")
-TOKFN(RIGHT,"right")
-TOKFN(NONE,"none")
-TOKFN(PREFIX,"prefix")
-TOKFN(INFIX,"infix")
-TOKFN(POSTFIX,"postfix")
-TOKFN(KW_NUMBER,"number")
-TOKFN(BACK,"back")
-TOKFN(SWITCH,"switch")
-TOKFN(ASSERT,"assert")
-TOKFN(KW_CHAR,"char")
-TOKFN(IF,"if")
-TOKFN(ELSE,"else")
-TOKFN(PIPE,"|")
-TOKFN(WILDCARD,"_")
-TOKFN(LCURLY,"{")
-TOKFN(RCURLY,"}")
-TOKFN(LSQUARE,"[")
-TOKFN(RSQUARE,"]")
-TOKFN(ATOM," ATOM") // tokens with leading spaces are internal to the parser
-TOKFN(NUMBER," NUMBER")
-TOKFN(EOF," EOF")
-TOKFN(STRING," STRING")
-TOKFN(ERROR," ERROR")
-TOKFN(CHAR," CHAR")
-TOKFN(TUPLE,"#(")
-TOKFN(OPEN,"(")
-TOKFN(CLOSE, ")")
-TOKFN(COMMA, ",")
-TOKFN(ARROW, "->")
-TOKFN(ASSIGN, "=")
-TOKFN(COLON, ":")
-TOKFN(HASH, "#")
-TOKFN(BANG, "!")
-TOKFN(PERIOD, ".")
-TOKFN(LET, "let")
-TOKFN(IN, "in")
-TOKFN(NAMESPACE, "namespace")
-TOKFN(KW_ERROR, "error")
-TOKFN(TYPEDEF, "typedef")
-TOKFN(UNSAFE, "unsafe")
-TOKFN(FN, "fn")
-TOKFN(LINK, "link")
-TOKFN(AS, "as")
 TOKFN(ALIAS, "alias")
-TOKFN(SEMI, ";")
-TOKFN(PRINT, "print")
-TOKFN(TYPEOF, "typeof")
-TOKFN(EXPORT, "export")
-TOKFN(OPERATORS, "operators")
-TOKFN(IMPORT, "import")
+TOKFN(ARROW, "->")
+TOKFN(AS, "as")
+TOKFN(ASSERT,"assert")
+TOKFN(ASSIGN, "=")
+TOKFN(ATOM," ATOM") // tokens with leading spaces are internal to the parser
+TOKFN(BACK,"back")
+TOKFN(BANG, "!")
 TOKFN(BUILTINS, "__builtins__")
+TOKFN(CHAR," CHAR")
+TOKFN(CLOSE, ")")
+TOKFN(COLON, ":")
+TOKFN(COMMA, ",")
+TOKFN(ELSE,"else")
+TOKFN(EOF," EOF")
+TOKFN(ERROR," ERROR")
+TOKFN(EXPORT, "export")
+TOKFN(FN, "fn")
+TOKFN(HASH, "#")
+TOKFN(IF,"if")
+TOKFN(IMPORT, "import")
+TOKFN(IN, "in")
+TOKFN(KW_CHAR,"char")
+TOKFN(KW_ERROR, "error")
+TOKFN(KW_NUMBER,"number")
+TOKFN(LCURLY,"{")
+TOKFN(LEFT,"left")
+TOKFN(LET, "let")
+TOKFN(LINK, "link")
+TOKFN(LSQUARE,"[")
+TOKFN(MACRO,"macro")
+TOKFN(NAMESPACE, "namespace")
+TOKFN(NONE,"none")
+TOKFN(NUMBER," NUMBER")
+TOKFN(OPEN,"(")
+TOKFN(OPERATOR, "operator")
+TOKFN(OPERATORS, "operators")
+TOKFN(PERIOD, ".")
+TOKFN(PIPE,"|")
+TOKFN(PRINT, "print")
+TOKFN(RCURLY,"}")
+TOKFN(RIGHT,"right")
+TOKFN(RSQUARE,"]")
+TOKFN(SEMI, ";")
+TOKFN(STRING," STRING")
+TOKFN(SWITCH,"switch")
+TOKFN(TUPLE,"#(")
+TOKFN(TYPEDEF, "typedef")
+TOKFN(TYPEOF, "typeof")
+TOKFN(UNSAFE, "unsafe")
+TOKFN(WILDCARD,"_")
 
 #undef TOKFN
 
@@ -1098,6 +1096,19 @@ static PrattBuffer *prattBufferFromFileName(char *path) {
 }
 
 /**
+ * @brief Re-enqueues a token back into the lexer.
+ * 
+ * This function adds the given token back to the front of the lexer's token queue,
+ * allowing it to be reprocessed later.
+ * 
+ * @param parser The PrattParser instance containing the lexer.
+ * @param token The PrattToken to re-enqueue.
+ */
+void poke(PrattParser *parser, PrattToken *token) {
+    enqueueToken(parser->lexer, token);
+}
+
+/**
  * @brief Peeks at the next token without consuming it.
  * 
  * This function retrieves the next token from the lexer without advancing the
@@ -1108,7 +1119,7 @@ PrattToken *peek(PrattParser *parser) {
     // DEBUG("peek");
     PrattToken *token = next(parser);
     int save = PROTECT(token);
-    enqueueToken(parser->lexer, token);
+    poke(parser, token);
     UNPROTECT(save);
     return token;
 }
@@ -1147,7 +1158,7 @@ bool match(PrattParser *parser, HashSymbol *type) {
         return true;
     }
     int save = PROTECT(token);
-    enqueueToken(parser->lexer, token);
+    poke(parser, token);
     UNPROTECT(save);
     return false;
 }

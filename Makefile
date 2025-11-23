@@ -183,9 +183,9 @@ $(TEST_DEP): $(DEPDIR)/%.d: $(TSTDIR)/src/%.c .generated | $(DEPDIR)
 	$(CC) $(INCLUDE_PATHS) -MM -MT $(patsubst $(DEPDIR)/%,$(OBJDIR)/%,$(patsubst %.d,%.o,$@)) -o $@ $<
 
 test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
-	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '(expect to see an error) ***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
+	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)

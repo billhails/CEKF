@@ -167,6 +167,10 @@ static void test_adder() {
     PROTECT(bigInt);
     TcType *expected = makeFunction3(bigInt, bigInt, bigInt);
     PROTECT(expected);
+    ppTcType(expected);
+    eprintf(" -- expected\n");
+    ppTcType(res);
+    eprintf(" -- res\n");
     assert(compareTcTypes(res, expected));
 	UNPROTECT(save);
 }

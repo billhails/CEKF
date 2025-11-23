@@ -2,7 +2,7 @@
 
 let
     link "../../fn/ioutils.fn" as io;
-    prefix 15 "$" io.to_string;
+    operator "$_" 15 io.to_string;
 in
 {
     // Direct lambda application (not via let-binding) to exercise compiler split

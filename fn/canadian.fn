@@ -1,6 +1,6 @@
 // the Canadian operator
 
 let
-    postfix 15 "eh" identity;
+    operator "_eh" 15 identity;
 in
     print(3 == 3 eh);

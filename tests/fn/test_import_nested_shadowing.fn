@@ -2,8 +2,8 @@
 
 let
     link "import_ops_lib.fn" as ops;
-    // Import only infix plus at outer scope
-    import ops infix "plus";
+    // Import only Infix plus at outer scope
+    import ops operator "_plus_";
 in
     // Outer scope uses imported plus
     assert(2 plus 3 == 5);
@@ -12,14 +12,14 @@ in
     {
         let
             fn times(a, b) { a * b };
-            infix left 100 "plus" times;   // shadow imported plus
-            import ops prefix "~";         // import prefix only in inner scope
+            operator "_plus_" left 100 times;   // shadow imported plus
+            import ops operator "~_";      // import only in inner scope
         in
             assert(2 plus 3 == 6);   // uses shadowed local plus
-            assert(~5 == -5);        // prefix imported only here
+            assert(~5 == -5);        // operator imported only here
     };
 
-    // After inner scope, shadowing is gone; outer imported plus remains; prefix ~ is not visible here
+    // After inner scope, shadowing is gone; outer imported plus remains; operator ~_ is not visible here
     assert(2 plus 3 == 5);
 
     puts("Nested import/shadowing OK\n")

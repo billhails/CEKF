@@ -44,10 +44,15 @@ bool consume(PrattParser *, HashSymbol *);
 bool check(PrattParser *, HashSymbol *);
 bool match(PrattParser *, HashSymbol *);
 PrattToken *peek(PrattParser *);
+void poke(PrattParser *, PrattToken *);
 PrattToken *next(PrattParser *);
 
 void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
 void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
+
+static inline bool isAtomSymbol(PrattToken *token, HashSymbol *symbol) {
+    return (token->value->type == PRATTVALUE_TYPE_ATOM && token->value->val.atom == symbol);
+}
 
 HashSymbol *TOK_ALIAS(void);
 HashSymbol *TOK_ARROW(void);
@@ -70,7 +75,6 @@ HashSymbol *TOK_FN(void);
 HashSymbol *TOK_HASH(void);
 HashSymbol *TOK_IF(void);
 HashSymbol *TOK_IMPORT(void);
-HashSymbol *TOK_INFIX(void);
 HashSymbol *TOK_IN(void);
 HashSymbol *TOK_KW_CHAR(void);
 HashSymbol *TOK_KW_ERROR(void);
@@ -85,11 +89,10 @@ HashSymbol *TOK_NAMESPACE(void);
 HashSymbol *TOK_NONE(void);
 HashSymbol *TOK_NUMBER(void);
 HashSymbol *TOK_OPEN(void);
+HashSymbol *TOK_OPERATOR(void);
 HashSymbol *TOK_OPERATORS(void);
 HashSymbol *TOK_PERIOD(void);
 HashSymbol *TOK_PIPE(void);
-HashSymbol *TOK_POSTFIX(void);
-HashSymbol *TOK_PREFIX(void);
 HashSymbol *TOK_PRINT(void);
 HashSymbol *TOK_RCURLY(void);
 HashSymbol *TOK_RIGHT(void);
