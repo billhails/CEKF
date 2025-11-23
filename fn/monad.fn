@@ -29,7 +29,7 @@ fn eval2 {
     }
 }
 
-infix left 12 ">>=" fn (m, f) {
+operator "_>>=_" left 12 fn (m, f) {
     switch (m) {
         (none) { none }
         (some(v)) { f(v) }

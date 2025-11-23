@@ -1,13 +1,13 @@
 let
     link "ambutils.fn" as amb;
-    import amb prefix "from";
-    import amb prefix "!:"; // require
+    import amb operator "from_";
+    import amb operator "!:_"; // require
     link "listutils.fn" as list;
-    import list infix "except";
-    import list infix "zip";
-    import list infix "|>"; // map
-    import list infix "<>"; // sortBy
-    import list infix "::"; // range
+    import list operator "_except_";
+    import list operator "_zip_";
+    import list operator "_|>_"; // map
+    import list operator "_<>_"; // sortBy
+    import list operator "_::_"; // range
 
     // Five schoolgirls sat for an examination. Their parents—so they
     // thought—showed an undue degree of interest in the result.

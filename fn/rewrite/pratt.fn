@@ -2,8 +2,8 @@ let
     link "pratt_lexer.fn" as lex;
     link "pratt_sexpr.fn" as exp;
     link "../ioutils.fn" as io;
-    infix left 9 "=>" fn (arg, fun) { fun(arg) };
-    prefix 8 "$" io.to_string;
+    operator "_=>_" left 9 fn (arg, fun) { fun(arg) };
+    import io operator "$_";
 
     fn expr(str) {
         expr_bp(lex.new(str), 0)

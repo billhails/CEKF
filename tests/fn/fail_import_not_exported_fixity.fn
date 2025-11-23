@@ -1,7 +1,7 @@
 // Negative test: importing a fixity that the namespace did not export must fail
 let
-    // Library exports only prefix "~" and infix "plus" (not postfix "squared")
+    // Library exports only "~_" and "_plus_" (not "_squared")
     link "import_ops_selective_lib.fn" as ops;
-    import ops postfix "squared";  // should fail: not exported
+    import ops operator "_squared";  // should fail: not exported
 in
     puts("This line should not be reached due to missing export\n");

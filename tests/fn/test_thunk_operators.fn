@@ -1,9 +1,9 @@
-// Test the & (thunk) and * (force) prefix operators
+// Test the & (thunk) and * (force) Prefix operators
 
 let
     link "../../fn/ioutils.fn" as io;
 
-    prefix 14 "$" io.to_string;
+    operator "$_" 14 io.to_string;
 
     // Create a thunk using &
     x = &(1 + 2);

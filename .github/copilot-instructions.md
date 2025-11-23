@@ -211,8 +211,8 @@ make indent            # Formats code with GNU indent
 - **Implementation**: Uses currying to specialize generic printers at call sites
 
 ### User-Defined Operators
-- **Syntax**: `infix|prefix|postfix precedence "op" function`
-- **Example**: `infix right 90 "@" cons` or `postfix 120 "!" factorial`
+- **Syntax**: `operator "pattern" [optional <associativity>] <precedence> <implementation>`
+- **Example**: `operator "_@_" right 90 cons` or `operator "!" 120 factorial`
 - **Restrictions**: Can't redefine with same fixity, can't have same op as both infix and postfix
 - Defined in `src/preamble.fn` or user code
 
@@ -311,14 +311,14 @@ infix none 5 "<=>" COMPARISON;   // non-associative: can't chain a <=> b <=> c
 
 ### Operator Definition Syntax
 
-**Syntax**: `{infix|prefix|postfix} [associativity] precedence "operator" implementation`
+**Syntax**: `operator "pattern" [associativity] precedence implementation`
 
 **Examples**:
 ```fn
-prefix 13 "!" factorial;                  // prefix unary
-infix left 100 "+" addition;              // infix binary left-assoc
-infix right 2 "then" amb;                 // infix binary right-assoc
-postfix 120 "?" optional;                 // postfix unary (hypothetical)
+operator "-_" 13 negate;                  // prefix unary
+operator "_+_" left 100 addition;         // infix binary left-assoc
+operator "_then_" right 2 amb;            // infix binary right-assoc
+operator "_?" 120 optional;               // postfix unary (hypothetical)
 ```
 
 **Macros as operators**:
@@ -376,10 +376,11 @@ F♮ supports exporting operators from a namespace and importing them into other
 
 - Export operators in a namespace:
    - `export operators;` to export all operators defined in that namespace
-   - Or export per-fixity: `export prefix "~";`, `export infix "plus";`, `export postfix "squared";`
+   - Or export during definition by prepending the keyword `export` to the operator definition:
+     - `export operator "_+_" left 100 addition;`
 - Import exported operators (after `link "file.fn" as ns;`):
    - `import ns operators;` to import all exported operators
-   - Or per-fixity: `import ns prefix "~";`, `import ns infix "plus";`, `import ns postfix "squared";`
+   - Or per-operator: `import ns operator "~_";`, `import ns operator "_plus_";`, `import ns operator "_squared";`
 
 Conflicts: redefining the same symbol+fixity in the same scope is an error; importing a different fixity for an existing symbol is an error. Shadowing is allowed by redefining/importing in an inner `let`.
 

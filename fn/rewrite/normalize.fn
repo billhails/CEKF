@@ -2,7 +2,7 @@ let
     link "../listutils.fn" as list;
     link "../ioutils.fn" as io;
 
-    import io prefix "$";
+    import io operator "$_";
 
     typedef expr {
         lambda(list(expr), expr) |

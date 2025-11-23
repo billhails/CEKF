@@ -37,16 +37,14 @@ fn exclude(items, lst) {
     in helper(lst, [])
 }
 
-infix left 12 "except" fn (l, i) { exclude(i, l) };
-export infix "except";
+export operator "_except_" left 12 fn (l, i) { exclude(i, l) };
 
 // map: (#a -> #b) -> list(#a) -> list(#b)
 fn map (f, lst) {
     map_prefix(f, lst, [])
 }
 
-infix left 8 "|>" fn (lst, f) { map(f, lst) };
-export infix "|>";
+export operator "_|>_" left 8 fn (lst, f) { map(f, lst) };
 
 // for_each: (#a -> #b) -> list(#a) -> list(#b)
 // like map but guarantees l-r application of f (for side effects)
@@ -238,8 +236,7 @@ fn zip(a, b) {
     zip_with(fn (x, y) { #(x, y) }, a, b)
 }
 
-infix left 8 "zip" zip;
-export infix "zip";
+export operator "_zip_" left 8 zip;
 
 // zipwith: (#a -> #b -> #c) -> list(#a) -> list(#b) -> list(#c)
 fn zip_with(f, a, b) {
@@ -313,8 +310,7 @@ fn range(low, high) {
     in helper(high, [])
 }
 
-infix none 8 "::" range;
-export infix "::";
+export operator "_::_" none 8 range;
 
 // dedup: list(#a) -> list(#a)
 fn dedup(lst) {
@@ -359,8 +355,7 @@ fn sortBy(predicate, lst) {
         full_sort(lst)
 }
 
-infix left 8 "<>" fn (l, f) { sortBy(f, l) };
-export infix "<>";
+export operator "_<>_" left 8 fn (l, f) { sortBy(f, l) };
 
 // sort: list(#a) -> list(#a)
 fn sort(l) { sortBy(fn (a, b) { a <=> b }, l) }

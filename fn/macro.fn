@@ -3,13 +3,13 @@ let
         (true) { false }
         (false) { true }
     }
-    prefix 4 "NOT" NOT;
+    operator "not_" 4 NOT;
 
     macro AND(a, b) { if (a) { b } else { false } }
-    infix left 3 "AND" AND;
+    operator "_AND_" left 3 AND;
 
     macro OR(a, b) { if (a) { true } else { b } }
-    infix left 3 "OR" OR;
+    operator "_OR_" left 3 OR;
 
     fn XOR {
         (true, true) { false }
@@ -17,16 +17,16 @@ let
         (false, true) { true }
         (false, false) { false }
     }
-    infix left 3 "XOR" XOR;
+    operator "_XOR_" left 3 XOR;
 
     macro NAND(a, b) { NOT (a AND b) }
-    infix left 3 "NAND" NAND;
+    operator "_NAND_" left 3 NAND;
 
     macro NOR(a, b) { NOT (a OR b) }
-    infix left 3 "NOR" NOR;
+    operator "_NOR_" left 3 NOR;
 
     macro XNOR(a, b) { NOT (a XOR b) }
-    infix left 3 "XNOR" XNOR;
+    operator "_XNOR_" left 3 XNOR;
 
     fn a() { print("a called"); false }
     fn b() { print("b called"); false }

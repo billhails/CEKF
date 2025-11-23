@@ -3,26 +3,26 @@
 //
 
 let
-    // Test 1: Simple prefix operator with bare symbol
+    // Test 1: Simple Prefix operator with bare symbol
     fn double(x) { x * 2 }
-    prefix 10 "~" double;
+    operator "~_" 10 double;
     
     // Test 2: Prefix operator with inline function
-    prefix 10 "!" fn(x) { x + 1 };
+    operator "!_" 10 fn(x) { x + 1 };
     
     // Test 3: Prefix operator with complex expression
     fn add_three(x) { x + 3 }
-    prefix 10 "%" fn(y) { add_three(y * 2) };
+    operator "%_" 10 fn(y) { add_three(y * 2) };
     
     // Test 4: Operator with captured variable (hygiene test)
     fn make_adder(n) {
         fn(x) { x + n }
     }
-    prefix 10 "incr" make_adder(100);
+    operator "incr_" 10 make_adder(100);
     
     // Test 5: Word operators
     fn negate(x) { 0 - x }
-    prefix 10 "neg" negate;
+    operator "neg_" 10 negate;
 in
     assert(~5 == 10);
     assert(~10 == 20);
@@ -43,7 +43,7 @@ in
     {
         let
             fn triple(x) { x * 3 }
-            prefix 10 "triple" triple;
+            operator "triple_" 10 triple;
         in
             assert(triple 5 == 15);
             assert(triple 10 == 30);
@@ -52,7 +52,7 @@ in
             {
                 let
                     fn quadruple(x) { x * 4 }
-                    prefix 10 "quad" quadruple;
+                    operator "quad_" 10 quadruple;
                 in
                     assert(quad 5 == 20);
                     assert(quad 10 == 40)

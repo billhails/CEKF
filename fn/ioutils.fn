@@ -54,6 +54,4 @@ fn to_string(data) {
     }
 }
 
-prefix 12 "$" to_string;
-
-export prefix "$";
+export operator "$_" 12 to_string;

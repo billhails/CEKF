@@ -4,7 +4,7 @@ let
         (some(a), f) { f(a) }
     }
 
-    infix right 100 ">>=" andThen;
+    operator "_>>=_" right 100 andThen;
 
     fn maybePlus(ma, mb) {
         ma >>= fn(a) { mb >>= fn(b) { some(a + b) } }

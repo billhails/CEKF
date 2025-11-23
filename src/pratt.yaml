@@ -124,6 +124,7 @@ structs:
             prefixHygienicFunc: HashSymbol=NULL
             prefixIsBareSymbol: bool=false
             prefixExport: bool=false
+            prefixPattern: PrattMixfixPattern=NULL
 
             infixOp: PrattParselet
             infixPrec: int
@@ -131,6 +132,7 @@ structs:
             infixHygienicFunc: HashSymbol=NULL
             infixIsBareSymbol: bool=false
             infixExport: bool=false
+            infixPattern: PrattMixfixPattern=NULL
 
             postfixOp: PrattParselet
             postfixPrec: int
@@ -138,10 +140,10 @@ structs:
             postfixHygienicFunc: HashSymbol=NULL
             postfixIsBareSymbol: bool=false
             postfixExport: bool=false
+            postfixPattern: PrattMixfixPattern=NULL
 
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
-            mixfixPattern: PrattMixfixPattern=NULL
 
     PrattExportedOps:
         meta:

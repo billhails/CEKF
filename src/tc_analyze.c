@@ -972,7 +972,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
 // Iterate additional passes to allow type constraints to propagate through
 // forward references. Stop early when types converge (no changes between passes).
 // In practice, most code needs 2-3 passes, complex mutual recursion might need more.
-    const int MAX_PASSES = 3;
+    const int MAX_PASSES = 10;
     int passCount __attribute__((unused)) = 1;
     char *prevSnapshot = NULL;
 

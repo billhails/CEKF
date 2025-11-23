@@ -2,12 +2,12 @@
 
 let
     link "import_ops_selective_lib.fn" as ops;
-    import ops prefix "~";
-    import ops infix "plus";
+    import ops operator "~_";
+    import ops operator "_plus_";
 in
-    // Imported prefix and infix should work
+    // Imported Prefix and Infix should work
     assert(~5 == -5);
     assert(3 plus 4 == 7);
 
-    // We did not import the postfix; don't use it here (negative tests handled elsewhere)
+    // We did not import the Postfix; don't use it here (negative tests handled elsewhere)
     puts("Selective operator import OK\n")

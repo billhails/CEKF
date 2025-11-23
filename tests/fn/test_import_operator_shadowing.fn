@@ -4,9 +4,9 @@ let
     link "import_ops_lib.fn" as ops;
     import ops operators;
 in {
-    // Define a local infix operator with the same symbol in a nested let to shadow the import
+    // Define a local Infix operator with the same symbol in a nested let to shadow the import
     let
-        infix left 100 "plus" fn(x, y) { x - y };
+        operator "_plus_" left 100 fn(x, y) { x - y };
     in
         // Local shadowing should take effect for plus
         assert(7 plus 3 == 4);

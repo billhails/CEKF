@@ -17,7 +17,7 @@
 // This is an implementation of type inference.
 
 let
-    infix left 9 "=>" fn (arg, fun) { fun(arg) };
+    operator "_=>_" left 9 fn (arg, fun) { fun(arg) };
 
     typedef typeExp {
           varType(typeExp)

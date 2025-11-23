@@ -17,7 +17,7 @@
 //
 
 // these are typedefs and functions that the compiler requires to be
-// pre-defined, for example the infix `@` is mapped to `cons`, `@@` to `append`,
+// pre-defined, for example the Infix `@` is mapped to `cons`, `@@` to `append`,
 // prefix `<` to `car` etc.
 // `puts` is required for the print system, and the type `cmp` for the `<=>` operator.
 namespace
@@ -25,28 +25,28 @@ namespace
 __builtins__
 
 
-infix right 2 "then" amb;
-infix left 5 "==" EQUALTO;
-infix left 5 "!=" NOTEQUALTO;
-infix left 5 "≠" NOTEQUALTO;
-infix left 5 ">" GREATERTHAN;
-infix left 5 "<" LESSTHAN;
-infix left 5 "<=" LESSTHANOREQUALTO;
-infix left 5 ">=" GREATERTHANOREQUALTO;
-infix none 5 "<=>" COMPARISON;
-infix none 5 "⪌" COMPARISON;
-infix left 10 "+" ADDITION;
-infix left 10 "-" SUBTRACTION;
-prefix 11 "-" NEGATION;
+operator "_then_" right 2 amb;
+operator "_==_" left 5 EQUALTO;
+operator "_!=_" left 5 NOTEQUALTO;
+operator "_≠_" left 5 NOTEQUALTO;
+operator "_>_" left 5 GREATERTHAN;
+operator "_<_" left 5 LESSTHAN;
+operator "_<=_" left 5 LESSTHANOREQUALTO;
+operator "_>=_" left 5 GREATERTHANOREQUALTO;
+operator "_<=>_" none 5 COMPARISON;
+operator "_⪌_" none 5 COMPARISON;
+operator "_+_" left 10 ADDITION;
+operator "_-_" left 10 SUBTRACTION;
+operator "-_" 11 NEGATION;
 macro NUMERICIDENTITY(x) { x + 0 }
-prefix 11 "+" NUMERICIDENTITY;
-infix left 11 "*" MULTIPLICATION;
-infix left 11 "×" MULTIPLICATION;
-infix left 11 "/" DIVISION;
-infix left 11 "÷" DIVISION;
-infix left 11 "%" MODULUS;
-infix left 12 "**" EXPONENTIAL;
-prefix 13 "here" callcc;
+operator "+_" 11 NUMERICIDENTITY;
+operator "_*_" left 11 MULTIPLICATION;
+operator "_×_" left 11 MULTIPLICATION;
+operator "_/_" left 11 DIVISION;
+operator "_÷_" left 11 DIVISION;
+operator "_%_" left 11 MODULUS;
+operator "_**_" left 12 EXPONENTIAL;
+operator "here_" 13 callcc;
 
 typedef cmp { lt | eq | gt }
 typedef bool { false | true }
@@ -84,15 +84,15 @@ fn NOT {
     (true) { false }
     (false) { true }
 }
-prefix 4 "not" NOT;
+operator "not_" 4 NOT;
 
 // macros aren't really macros, they're just lazy functions but that gets
 // us most of the same behaviour.
 macro AND(a, b) { if (a) { b } else { false } }
-infix left 3 "and" AND;
+operator "_and_" left 3 AND;
 
 macro OR(a, b) { if (a) { true } else { b } }
-infix left 3 "or" OR;
+operator "_or_" left 3 OR;
 
 fn XOR {
     (true, true) { false }
@@ -100,18 +100,18 @@ fn XOR {
     (false, true) { true }
     (false, false) { false }
 }
-infix left 3 "xor" XOR;
+operator "_xor_" left 3 XOR;
 
 macro NAND(a, b) { not (a and b) }
-infix left 3 "nand" NAND;
+operator "_nand_" left 3 NAND;
 
 macro NOR(a, b) { not (a or b) }
-infix left 3 "nor" NOR;
+operator "_nor_" left 3 NOR;
 
 macro XNOR(a, b) { not (a xor b) }
-infix left 3 "xnor" XNOR;
+operator "_xnor_" left 3 XNOR;
 
-infix right 10 "@" cons;
+operator "_@_" right 10 cons;
 
 fn __assert__(line, file, condition) {
     if (condition) {
@@ -137,7 +137,7 @@ fn factorial (n) {
         h(n, 1)
 }
 
-postfix 13 "!" factorial;
+operator "_!" 13 factorial;
 
 fn __error__(line, file, message) {
     puts("error: ");
@@ -150,12 +150,12 @@ fn __error__(line, file, message) {
     exit(1);
 }
 
-infix right 13 "of" fn (f, g, x) { f(g(x)) };
+operator "_of_" right 13 fn (f, g, x) { f(g(x)) };
 
-prefix 14 "&" THUNK;
+operator "&_" 14 THUNK;
 macro THUNK(x) { fn () {x} }
 
-prefix 14 "*" FORCE;
+operator "*_" 14 FORCE;
 fn FORCE(thunk) { thunk() }
 
 fn append {
@@ -163,17 +163,17 @@ fn append {
     (h @ t, b) { h @ append(t, b) }
 }
 
-infix right 9 "@@" append;
+operator "_@@_" right 9 append;
 
 unsafe fn car {
     (h @ _) { h }
 }
-prefix 6 "<" car;
+operator "<_" 6 car;
 
 unsafe fn cdr {
     (_ @ t) { t }
 }
-prefix 6 ">" cdr;
+operator ">_" 6 cdr;
 
 fn identity(x) { x };
 

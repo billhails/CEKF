@@ -42,7 +42,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.fn",
-				"match": "\\b(namespace|switch|if|else|back|here|error|typedef|alias|macro|unsafe|let|in|print|assert|prefix|infix|postfix|link|import|export|as)\\b"
+				"match": "\\b(namespace|switch|if|else|back|here|error|typedef|alias|macro|unsafe|let|in|print|assert|link|import|export|as)\\b"
 			}]
 		},
 		"strings": {

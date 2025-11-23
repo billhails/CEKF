@@ -1,7 +1,7 @@
 let
     macro TEST(lhs, rhs) { fn { (true) { lhs } (false) { rhs } } }
-    infix right 2 "?" fn (tst, swtch) { swtch(tst) };
-    infix left 2 ":" TEST;
+    operator "_?_" right 2 fn (tst, swtch) { swtch(tst) };
+    operator "_:_" left 2 TEST;
 in
     //      +------+-------------+
     //      |      |             |
