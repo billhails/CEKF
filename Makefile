@@ -221,7 +221,7 @@ clean: deps
 deps:
 	rm -rf $(DEPDIR)
 
-PROF_SRC=barrels2
+PROF_SRC=fib20
 
 profile: all
 	rm -f callgrind.out.*

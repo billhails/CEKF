@@ -137,6 +137,7 @@ AstPosition["enum AstPosition"]
 AstNamespaceArray["AstNamespaceArray[]"] --entries--> AstNamespaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
 AstStringArray["AstStringArray[]"] --entries--> string
+AstExpressionArray["AstExpressionArray[]"] --entries--> AstExpression
 ```
 
 > Generated from src/ast.yaml by tools/makeAST.py
