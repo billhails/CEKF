@@ -1,11 +1,5 @@
 # CEKF Project - AI Coding Assistant Instructions
 
-> **Note**: This file is duplicated in two locations:
-> - `.github/copilot-instructions.md` (this file - used by GitHub Copilot)
-> - `docs/AI-ASSISTANT-GUIDE.md` (for human readers browsing the repository)
-> 
-> When updating, please keep both files in sync.
-
 ## Project Overview
 
 CEKF is a **bytecode-based functional programming language VM** implementing a CEK machine (Control, Environment, Kontinuation) plus "F" for failure continuation supporting `amb` non-deterministic programming. Written in C with Python code generation tools.
@@ -212,7 +206,11 @@ make indent            # Formats code with GNU indent
 
 ### User-Defined Operators
 - **Syntax**: `operator "pattern" [optional <associativity>] <precedence> <implementation>`
-- **Example**: `operator "_@_" right 90 cons` or `operator "!" 120 factorial`
+- **Example**: `operator "_@_" right 90 cons` or `operator "_!" 120 factorial`
+- **Patterns**: Use `_` as placeholder for operands in the pattern string
+  - Prefix: `"-_"` (underscore after operator)
+  - Infix: `"_+_"` (underscores on both sides)
+  - Postfix: `"_!"` (underscore before operator)
 - **Restrictions**: Can't redefine with same fixity, can't have same op as both infix and postfix
 - Defined in `src/preamble.fn` or user code
 
@@ -256,7 +254,7 @@ make indent            # Formats code with GNU indent
 
 ## Pratt Parser & Syntactic Extension
 
-**Table-driven parser enabling runtime operator definitions** - The Pratt parser allows F♮ to be syntactically extensible, supporting user-defined operators with custom precedence and associativity.
+**Table-driven parser enabling runtime operator definitions** - The Pratt parser allows F♮ to be syntactically extensible, supporting user-defined operators with custom precedence and associativity. Operators are defined using a unified `operator` keyword with mixfix patterns (e.g., `"_+_"` for infix, `"-_"` for prefix, `"_!"` for postfix) rather than separate `prefix`/`infix`/`postfix` keywords.
 
 **Note**: The Pratt parser implementation (and much of the early memory management and hash table code) is based on Bob Nystrom's excellent book [Crafting Interpreters](https://craftinginterpreters.com/).
 
@@ -304,9 +302,9 @@ Traditional parser generators (Flex/Bison) compile to fixed runtime parsers, mak
 
 Example from `src/preamble.fn`:
 ```fn
-infix left 10 "+" ADDITION;      // left associative: a + b + c = (a + b) + c
-infix right 90 "@" cons;         // right associative: a @ b @ c = a @ (b @ c)
-infix none 5 "<=>" COMPARISON;   // non-associative: can't chain a <=> b <=> c
+operator "_+_" left 10 ADDITION;      // left associative: a + b + c = (a + b) + c
+operator "_@_" right 90 cons;         // right associative: a @ b @ c = a @ (b @ c)
+operator "_<=>_" none 5 COMPARISON;   // non-associative: can't chain a <=> b <=> c
 ```
 
 ### Operator Definition Syntax
@@ -324,7 +322,7 @@ operator "_?" 120 optional;               // postfix unary (hypothetical)
 **Macros as operators**:
 ```fn
 macro AND(a, b) { if (a) { b } else { false } }
-infix left 3 "and" AND;
+operator "_and_" left 3 AND;
 ```
 Macro arguments are wrapped in thunks (`fn() { arg }`) and lazily evaluated, providing proper scoping.
 
@@ -442,7 +440,7 @@ See `src/macro_substitution.c` for implementation details.
 
 ### Key Files
 
-- `src/pratt_parser.c` - Main parser implementation (3400+ lines)
+- `src/pratt_parser.c` - Main parser implementation (4300+ lines)
 - `src/pratt_scanner.c` - Token scanner with trie-based recognition
 - `src/pratt.yaml` - Parser data structures
 - `src/preamble.fn` - Required operator definitions (compiler depends on these)
@@ -462,8 +460,6 @@ Potential improvements for operator system:
 - Allow infix/postfix ambiguity (context-sensitive parsing)
 - Copy-on-write for parser rule tables (performance)
 - Better precedence conflict detection at definition time
-- Mixfix operators (e.g., `if _ then _ else _`)
-- Export control for operator definitions
 
 ## Common Patterns
 
