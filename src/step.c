@@ -100,14 +100,14 @@ static inline void arity_error(const char *kind, int expected, int got) {
 }
 
 // Preconditions (in debug builds) to guard stack invariants before APPLY
-static inline void assert_stack_has_args(int naargs) {
 #ifdef SAFETY_CHECKS
+static inline void assert_stack_has_args(int naargs) {
     Index available = totalSizeStack(state.S);
     if (naargs < 0 || available < (Index) naargs) {
         cant_happen("APPLY with insufficient arguments on stack: need %d, have %u", naargs, available);
     }
-#endif
 }
+#endif
 
 // --- Basic stack convenience wrappers (moved earlier so helpers can use them) ---
 static inline void patch(Value v, int num) { patchVec(v.val.namespace, state.S, num); }
@@ -462,7 +462,9 @@ static Value captureKont(void) {
  * arguments on the stack
  */
 static void applyProc(int naargs) {
+#ifdef SAFETY_CHECKS
     assert_stack_has_args(naargs);
+#endif
     Value callable = pop();
     int save = protectValue(callable);
     switch (callable.type) {

@@ -1,0 +1,176 @@
+# LLVM Backend Prototype
+
+This directory contains a proof-of-concept demonstration of compiling CEKF's ANF (A-Normal Form) representation to LLVM IR.
+
+## What This Demonstrates
+
+The prototype shows:
+
+1. **ANF → LLVM Translation**: How A-Normal Form expressions map naturally to LLVM's SSA (Static Single Assignment) form
+2. **Runtime Integration**: How LLVM-generated code calls existing CEKF runtime functions (from `step.c`, `arithmetic.c`, etc.)
+3. **Control Flow**: How conditionals and branches work in LLVM
+4. **Value Passing**: How the CEKF `Value` type (discriminated union) is passed between LLVM and C
+5. **Code Generation**: Complete examples of generating valid LLVM IR programmatically
+
+## Files
+
+- **llvm_prototype.c**: Main prototype code with two examples
+  - Simple arithmetic: `(5 + 3) * 2`
+  - Conditional: `if (10 > 5) then 10 * 2 else 10 + 1`
+  
+- **llvm_design_notes.md**: Comprehensive design document covering:
+  - Architecture overview
+  - ANF → LLVM mapping
+  - Runtime interface specification
+  - Handling closures, continuations, backtracking
+  - Implementation roadmap
+  - Open questions and design decisions
+
+- **Makefile.llvm**: Standalone build system for the prototype
+  - Detects LLVM installation
+  - Handles LLVM linking
+  - Doesn't modify main CEKF build
+
+## Building
+
+### Prerequisites
+
+Install LLVM development libraries:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install llvm-dev clang
+
+# Fedora
+sudo dnf install llvm-devel clang
+
+# macOS
+brew install llvm
+```
+
+### Build and Run
+
+```bash
+cd prototyping
+make -f Makefile.llvm run
+```
+
+This will:
+1. Check for LLVM installation
+2. Compile the prototype
+3. Run it and display generated LLVM IR
+
+## Output
+
+The prototype generates LLVM IR (Intermediate Representation) for the example expressions and prints it to stdout. You'll see something like:
+
+```llvm
+define %struct.Value @compute() {
+entry:
+  %x = call %struct.Value @value_Stdint(i32 5)
+  %three_val = call %struct.Value @value_Stdint(i32 3)
+  %y = call %struct.Value @nadd(%struct.Value %x, %struct.Value %three_val)
+  %two_val = call %struct.Value @value_Stdint(i32 2)
+  %result = call %struct.Value @nmul(%struct.Value %y, %struct.Value %two_val)
+  ret %struct.Value %result
+}
+```
+
+## Key Observations
+
+### Why ANF Maps Well to LLVM
+
+ANF (A-Normal Form) is already in a form similar to SSA:
+- Every intermediate computation is named (let-binding)
+- No nested expressions (all arguments are atomic)
+- Control flow is explicit
+
+This makes translation to LLVM straightforward - each let-binding becomes an LLVM value.
+
+### Runtime Calls vs Native Code
+
+The prototype uses **external function calls** to the CEKF runtime for all operations:
+- `value_Stdint(int)` - Create integer Value
+- `nadd(Value, Value)` - Add two Values  
+- `nmul(Value, Value)` - Multiply two Values
+- `truthy(Value)` - Test for truthiness
+- etc.
+
+This keeps the runtime code (GC, arithmetic, etc.) completely unchanged.
+
+### What LLVM Can Optimize
+
+Even with runtime calls, LLVM can:
+1. **Register allocation**: Better than interpreter
+2. **Dead code elimination**: Remove unused let-bindings
+3. **Inlining**: If runtime functions are marked inline
+4. **Control flow**: Branch prediction, block reordering
+5. **Common subexpression elimination**: Reuse computation results
+
+### What LLVM Cannot Optimize (Yet)
+
+Without type specialization:
+- Arithmetic stays as opaque function calls
+- No constant folding through runtime functions
+- No strength reduction
+
+These would require static type analysis and generating specialized code for known-integer operations.
+
+## Next Steps
+
+To turn this prototype into a full implementation:
+
+1. **Create `src/llvm_compiler.c`**: 
+   - Walk ANF structures (`Exp`, `Cexp`, `Aexp`)
+   - Generate LLVM IR for each construct
+   - Handle all expression types (not just arithmetic)
+
+2. **Handle Closures**:
+   - Generate separate LLVM functions for lambda bodies
+   - Create `Clo` structures via runtime
+   - Implement `applyProc` dispatch
+
+3. **Handle Continuations**:
+   - Keep as runtime calls initially
+   - Research CPS transformation or LLVM coroutines later
+
+4. **Handle Backtracking**:
+   - Keep `AMB`/`BACK` as runtime calls
+   - Failure continuations managed in C
+
+5. **Integrate with Build System**:
+   - Add `--use-llvm` flag to main compiler
+   - Link LLVM libraries
+   - Allow choosing backend at runtime
+
+6. **Testing**:
+   - Run all existing tests with both backends
+   - Compare outputs for correctness
+   - Benchmark performance differences
+
+## Design Philosophy
+
+The key insight is: **Don't rewrite the runtime, rewrite the dispatch.**
+
+The bytecode VM's `step()` function is essentially a big switch statement that dispatches operations. LLVM replaces that dispatch with direct code, but still calls the same underlying functions.
+
+This minimizes risk and effort while still gaining LLVM's optimization benefits.
+
+## Questions?
+
+See `llvm_design_notes.md` for much more detail on:
+- Architecture decisions
+- Handling complex features
+- Open design questions
+- Implementation roadmap
+- Performance expectations
+
+## Non-Goals (For Now)
+
+This prototype does NOT:
+- Execute the generated code (JIT compilation would be next step)
+- Handle all CEKF features (just demonstrates core concepts)
+- Optimize for performance (focuses on correctness)
+- Generate production-ready code (proof of concept only)
+
+It's purely to validate the approach and show that ANF → LLVM is feasible and practical.
