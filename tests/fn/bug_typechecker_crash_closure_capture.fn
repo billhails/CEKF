@@ -1,0 +1,32 @@
+// BUG: Type checker crashes when closure tries to capture outer variable
+//
+// The type checker crashes with "Aborted (core dumped)" at tc_analyze.c:377
+// when a closure tries to reference a variable from an outer scope.
+//
+// This appears to be the same root cause as bug_typechecker_crash_undefined_var.fn
+// but triggered in a different context (closure variable capture).
+//
+// Expected: Either proper closure capture OR clear error message about unsupported feature
+// Actual: Compiler crashes with abort()
+//
+// Reproduction:
+
+let
+    fn test() {
+        let
+            x = 10;
+            fn make_adder() {
+                fn(y) { x + y }
+            }
+        in
+            make_adder()
+    }
+in
+    test()
+
+// The variable 'x' is defined in the outer scope but referenced inside
+// the nested anonymous function fn(y) { x + y }.
+//
+// If closures don't capture outer variables, this should give a clean error.
+// If they do, this should work.
+// Either way, it should NOT crash the compiler.

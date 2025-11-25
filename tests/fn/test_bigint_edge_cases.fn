@@ -1,0 +1,255 @@
+// Test big integer edge cases and arithmetic
+// Tests Tier 3: Arbitrary precision integers, large number operations
+
+let
+
+    // Test: Basic big integer operations
+    fn test_basic_bigint() {
+        let
+            a = 123456789;
+            b = 987654321;
+            sum = a + b;
+            diff = b - a;
+            prod = a * b;
+        in
+            assert(sum == 1111111110);
+            assert(diff == 864197532);
+            assert(prod == 121932631112635269);
+            puts("Basic bigint test passed")
+    }
+    
+    // Test: Very large numbers
+    fn test_large_numbers() {
+        let
+            big1 = 999999999999999999;
+            big2 = 888888888888888888;
+            sum = big1 + big2;
+            prod = big1 * 2;
+        in
+            assert(sum == 1888888888888888887);
+            assert(prod == 1999999999999999998);
+            puts("Large numbers test passed")
+    }
+    
+    // Test: Negative big integers
+    fn test_negative_bigint() {
+        let
+            pos = 123456789;
+            neg = 0 - 123456789;
+            sum = pos + neg;
+            prod = pos * neg;
+        in
+            assert(neg < 0);
+            assert(sum == 0);
+            assert(prod < 0);
+            puts("Negative bigint test passed")
+    }
+    
+    // Test: Big integer division returns rationals
+    fn test_bigint_division() {
+        let
+            a = 100;
+            b = 10;
+        in
+            // Division returns rationals, not integers
+            // 1000000000 / 3 returns "1000000000/3" not 333333333
+            // Only test exact divisions that result in integers
+            assert(a / b == 10);
+            puts("Bigint division test passed")
+    }
+    
+    // Test: Big integer modulo
+    fn test_bigint_modulo() {
+        let
+            a = 1000000000;
+            b = 7;
+            c = 13;
+        in
+            assert(a % b == 6);
+            assert(a % c == 12);
+            assert(100 % 3 == 1);
+            puts("Bigint modulo test passed")
+    }
+    
+    // Test: Big integer power
+    fn test_bigint_power() {
+        let
+            a = 10 ** 5;
+            b = 2 ** 10;
+            c = 3 ** 8;
+        in
+            assert(a == 100000);
+            assert(b == 1024);
+            assert(c == 6561);
+            puts("Bigint power test passed")
+    }
+    
+    // Test: Big integer comparisons
+    fn test_bigint_comparisons() {
+        let
+            a = 999999999999;
+            b = 888888888888;
+            c = 999999999999;
+        in
+            assert(a > b);
+            assert(b < a);
+            assert(a == c);
+            assert(a >= c);
+            assert(a <= c);
+            assert(a != b);
+            puts("Bigint comparisons test passed")
+    }
+    
+    // Test: Factorial with big integers
+    fn test_factorial_bigint() {
+        let
+            fn factorial {
+                (0) { 1 }
+                (1) { 1 }
+                (n) { n * factorial(n - 1) }
+            }
+            
+            fact5 = factorial(5);
+            fact10 = factorial(10);
+            fact15 = factorial(15);
+        in
+            assert(fact5 == 120);
+            assert(fact10 == 3628800);
+            assert(fact15 == 1307674368000);
+            puts("Factorial bigint test passed")
+    }
+    
+    // Test: Fibonacci with big integers
+    fn test_fibonacci_bigint() {
+        let
+            fn fib {
+                (0) { 0 }
+                (1) { 1 }
+                (n) { fib(n - 1) + fib(n - 2) }
+            }
+            
+            f10 = fib(10);
+            f15 = fib(15);
+            f20 = fib(20);
+        in
+            assert(f10 == 55);
+            assert(f15 == 610);
+            assert(f20 == 6765);
+            puts("Fibonacci bigint test passed")
+    }
+    
+    // Test: Sum of list with big integers
+    fn test_list_sum_bigint() {
+        let
+            fn sum {
+                ([]) { 0 }
+                (h @ t) { h + sum(t) }
+            }
+            
+            list1 = [1000000, 2000000, 3000000];
+            list2 = [123456789, 987654321, 555555555];
+            
+            sum1 = sum(list1);
+            sum2 = sum(list2);
+        in
+            assert(sum1 == 6000000);
+            assert(sum2 == 1666666665);
+            puts("List sum bigint test passed")
+    }
+    
+    // Test: GCD with big integers
+    fn test_gcd_bigint() {
+        let
+            fn gcd {
+                (a, 0) { a }
+                (a, b) { gcd(b, a % b) }
+            }
+            
+            result1 = gcd(1000000, 50000);
+            result2 = gcd(123456789, 987654321);
+        in
+            assert(result1 == 50000);
+            assert(result2 == 9);
+            puts("GCD bigint test passed")
+    }
+    
+    // Test: Powers of 2
+    fn test_powers_of_two() {
+        let
+            p10 = 2 ** 10;
+            p20 = 2 ** 20;
+            p30 = 2 ** 30;
+        in
+            assert(p10 == 1024);
+            assert(p20 == 1048576);
+            assert(p30 == 1073741824);
+            puts("Powers of two test passed")
+    }
+    
+    // Test: Powers of 10
+    fn test_powers_of_ten() {
+        let
+            p3 = 10 ** 3;
+            p6 = 10 ** 6;
+            p9 = 10 ** 9;
+            p12 = 10 ** 12;
+        in
+            assert(p3 == 1000);
+            assert(p6 == 1000000);
+            assert(p9 == 1000000000);
+            assert(p12 == 1000000000000);
+            puts("Powers of ten test passed")
+    }
+    
+    // Test: Mixed operations
+    fn test_mixed_operations() {
+        let
+            a = 100;
+            b = 50;
+            c = 25;
+            
+            result1 = (a + b) * c;
+            result2 = a * b + c;
+            result3 = (a - b) ** 2;
+        in
+            assert(result1 == 3750);
+            assert(result2 == 5025);
+            assert(result3 == 2500);
+            puts("Mixed operations test passed")
+    }
+    
+    // Test: Zero operations
+    fn test_zero_operations() {
+        let
+            a = 0;
+            b = 1000000;
+        in
+            assert(a + b == b);
+            assert(b - a == b);
+            assert(a * b == 0);
+            assert(a ** 10 == 0);
+            puts("Zero operations test passed")
+    }
+
+    // Main test runner
+    fn main() {
+        test_basic_bigint();
+        test_large_numbers();
+        test_negative_bigint();
+        test_bigint_division();
+        test_bigint_modulo();
+        test_bigint_power();
+        test_bigint_comparisons();
+        test_factorial_bigint();
+        test_fibonacci_bigint();
+        test_list_sum_bigint();
+        test_gcd_bigint();
+        test_powers_of_two();
+        test_powers_of_ten();
+        test_mixed_operations();
+        test_zero_operations();
+        puts("All bigint tests completed successfully!")
+    }
+
+in
+    main()

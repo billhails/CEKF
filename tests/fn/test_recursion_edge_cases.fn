@@ -1,0 +1,225 @@
+// Test recursion edge cases and mutual recursion
+// Tests Tier 2: Recursion depth, mutual recursion, tail recursion
+
+let
+
+    // Test: Deep recursion with accumulator (tail recursive)
+    fn test_tail_recursion() {
+        let
+            fn factorial_tail {
+                (0, acc) { acc }
+                (n, acc) { factorial_tail(n - 1, n * acc) }
+            };
+            in {
+            let
+                result1 = factorial_tail(5, 1);
+                result2 = factorial_tail(10, 1);
+                result3 = factorial_tail(0, 1);
+            in
+                assert(result1 == 120);
+                assert(result2 == 3628800);
+                assert(result3 == 1);
+                puts("Tail recursion tests passed")
+            }
+    }
+    
+    // Test: Non-tail recursion
+    fn test_non_tail_recursion() {
+        let
+            fn factorial {
+                (0) { 1 }
+                (n) { n * factorial(n - 1) }
+            };
+        in {
+            let
+                result1 = factorial(5);
+                result2 = factorial(10);
+                result3 = factorial(1);
+            in
+                assert(result1 == 120);
+                assert(result2 == 3628800);
+                assert(result3 == 1);
+                puts("Non-tail recursion tests passed")
+            }
+    }
+    
+    // Test: Mutual recursion (even/odd)
+    fn test_mutual_recursion() {
+        let
+            fn is_even {
+                (0) { true }
+                (n) { is_odd(n - 1) }
+            };
+            
+            fn is_odd {
+                (0) { false }
+                (n) { is_even(n - 1) }
+            };
+        in
+            assert(is_even(0));
+            assert(not is_odd(0));
+            assert(is_even(4));
+            assert(not is_odd(4));
+            assert(is_odd(5));
+            assert(not is_even(5));
+            assert(is_even(100));
+            assert(is_odd(99));
+            puts("Mutual recursion tests passed")
+    }
+    
+    // Test: Nested recursion
+    fn test_nested_recursion() {
+        let
+            fn ackermann {
+                (0, n) { n + 1 }
+                (m, 0) { ackermann(m - 1, 1) }
+                (m, n) { ackermann(m - 1, ackermann(m, n - 1)) }
+            };
+            
+            result1 = ackermann(0, 0);
+            result2 = ackermann(1, 2);
+            result3 = ackermann(2, 2);
+            result4 = ackermann(3, 2);
+        in
+            assert(result1 == 1);
+            assert(result2 == 4);
+            assert(result3 == 7);
+            assert(result4 == 29);
+            puts("Nested recursion (Ackermann) tests passed")
+    }
+    
+    // Test: Recursion with list processing
+    fn test_list_recursion() {
+        let
+            fn sum_list {
+                ([]) { 0 }
+                (h @ t) { h + sum_list(t) }
+            };
+            
+            fn product_list {
+                ([]) { 1 }
+                (h @ t) { h * product_list(t) }
+            };
+            
+            fn reverse_list {
+                ([], acc) { acc }
+                (h @ t, acc) { reverse_list(t, h @ acc) }
+            };
+            
+            test_list = [1, 2, 3, 4, 5];
+            sum = sum_list(test_list);
+            product = product_list(test_list);
+            reversed = reverse_list(test_list, []);
+            empty_sum = sum_list([]);
+            empty_product = product_list([]);
+        in
+            assert(sum == 15);
+            assert(product == 120);
+            assert(reversed == [5, 4, 3, 2, 1]);
+            assert(empty_sum == 0);
+            assert(empty_product == 1);
+            puts("List recursion tests passed")
+    }
+    
+    // Test: Recursion with multiple arguments
+    fn test_multi_arg_recursion() {
+        let
+            fn gcd {
+                (a, 0) { a }
+                (a, b) { gcd(b, a % b) }
+            };
+            
+            result1 = gcd(48, 18);
+            result2 = gcd(100, 25);
+            result3 = gcd(17, 13);
+            result4 = gcd(0, 5);
+        in
+            assert(result1 == 6);
+            assert(result2 == 25);
+            assert(result3 == 1);
+            assert(result4 == 5);
+            puts("Multi-argument recursion tests passed")
+    }
+    
+    // Test: Deep recursion stress test (Fibonacci)
+    fn test_fibonacci() {
+        let
+            fn fib_tail {
+                (0, a, dummy) { a }
+                (n, a, b) { fib_tail(n - 1, b, a + b) }
+            };
+            
+            fn fib {
+                (n) { fib_tail(n, 0, 1) }
+            };
+        in
+            assert(fib(0) == 0);
+            assert(fib(1) == 1);
+            assert(fib(2) == 1);
+            assert(fib(5) == 5);
+            assert(fib(10) == 55);
+            assert(fib(15) == 610);
+            assert(fib(20) == 6765);
+            puts("Fibonacci recursion tests passed")
+    }
+    
+    // Test: Recursion with pattern matching complexity
+    fn test_recursive_patterns() {
+        let
+            typedef tree(#t) {
+                leaf |
+                node(#t, tree(#t), tree(#t))
+            }
+            
+            fn tree_sum {
+                (leaf) { 0 }
+                (node(v, left, right)) { v + tree_sum(left) + tree_sum(right) }
+            };
+            
+            fn tree_depth {
+                (leaf) { 0 }
+                (node(dummy, left, right)) {
+                    let
+                        left_depth = tree_depth(left);
+                        right_depth = tree_depth(right);
+                        max_depth = if (left_depth > right_depth) { left_depth } else { right_depth };
+                    in
+                        1 + max_depth
+                }
+            };
+            
+            test_tree = node(5, 
+                node(3, leaf, leaf),
+                node(7, leaf, leaf)
+            );
+            sum = tree_sum(test_tree);
+            depth = tree_depth(test_tree);
+            single = node(10, leaf, leaf);
+            single_sum = tree_sum(single);
+            single_depth = tree_depth(single);
+            empty_sum = tree_sum(leaf);
+            empty_depth = tree_depth(leaf);
+        in
+            assert(sum == 15);
+            assert(depth == 2);
+            assert(single_sum == 10);
+            assert(single_depth == 1);
+            assert(empty_sum == 0);
+            assert(empty_depth == 0);
+            puts("Recursive pattern matching tests passed")
+    }
+    
+    // Main test runner
+    fn main() {
+        test_tail_recursion();
+        test_non_tail_recursion();
+        test_mutual_recursion();
+        test_nested_recursion();
+        test_list_recursion();
+        test_multi_arg_recursion();
+        test_fibonacci();
+        test_recursive_patterns();
+        puts("All recursion tests completed successfully!")
+    }
+in
+    main();

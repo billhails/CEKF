@@ -1,0 +1,253 @@
+// Test macros and lazy evaluation edge cases
+// Tests Tier 3: Macro expansion, lazy evaluation, scoping
+
+let
+
+    // Test: Basic macro definition and use
+    fn test_basic_macro() {
+        let
+            macro DOUBLE(x) { x + x }
+            result = DOUBLE(5);
+        in
+            assert(result == 10);
+            puts("Basic macro test passed")
+    }
+    
+    // Test: Macro with multiple arguments
+    fn test_multi_arg_macro() {
+        let
+            macro ADD(a, b) { a + b }
+            macro MULT(a, b) { a * b }
+            
+            sum = ADD(3, 4);
+            product = MULT(5, 6);
+        in
+            assert(sum == 7);
+            assert(product == 30);
+            puts("Multi-argument macro test passed")
+    }
+    
+    // Test: Macro argument evaluation (should be lazy)
+    fn test_macro_lazy_eval() {
+        let
+            macro FIRST(a, b) { a }
+            
+            fn explode() { back }
+            
+            result = FIRST(42, explode()) then 999;
+        in
+            assert(result == 42);
+            puts("Macro lazy evaluation test passed")
+    }
+    
+    // Test: Nested macro calls
+    fn test_nested_macros() {
+        let
+            macro DOUBLE(x) { x + x }
+            macro QUAD(x) { DOUBLE(DOUBLE(x)) }
+            
+            result = QUAD(3);
+        in
+            assert(result == 12);
+            puts("Nested macro test passed")
+    }
+    
+    // Test: Macro with conditional
+    fn test_macro_conditional() {
+        let
+            macro MAX(a, b) {
+                if (a > b) { a } else { b }
+            }
+            
+            result1 = MAX(10, 5);
+            result2 = MAX(3, 8);
+        in
+            assert(result1 == 10);
+            assert(result2 == 8);
+            puts("Macro conditional test passed")
+    }
+    
+    // Test: Macro with explicit parameters (not variable capture)
+    fn test_macro_parameters() {
+        let
+            macro ADD_TEN(y) { 10 + y }
+            
+            result1 = ADD_TEN(5);
+            result2 = ADD_TEN(15);
+        in
+            assert(result1 == 15);
+            assert(result2 == 25);
+            puts("Macro parameters test passed")
+    }
+    
+    // Test: Macro with pattern matching
+    fn test_macro_pattern() {
+        let
+            macro HEAD(lst) {
+                switch (lst) {
+                    ([]) { back }
+                    (h @ dummy) { h }
+                }
+            }
+            
+            result = HEAD([1, 2, 3]);
+        in
+            assert(result == 1);
+            puts("Macro pattern matching test passed")
+    }
+    
+    // Test: Macro with function calls
+    fn test_macro_function_calls() {
+        let
+            fn double { (x) { x * 2 } }
+            fn triple { (x) { x * 3 } }
+            
+            macro APPLY_BOTH(f, g, x) {
+                f(x) + g(x)
+            }
+            
+            result = APPLY_BOTH(double, triple, 5);
+        in
+            assert(result == 25);
+            puts("Macro function calls test passed")
+    }
+    
+    // Test: Macro with list operations
+    fn test_macro_list_ops() {
+        let
+            macro CONS_TWICE(x, lst) {
+                x @ x @ lst
+            }
+            
+            result = CONS_TWICE(5, [1, 2, 3]);
+        in
+            assert(result == [5, 5, 1, 2, 3]);
+            puts("Macro list operations test passed")
+    }
+    
+    // Test: Short-circuit AND macro
+    fn test_short_circuit_and() {
+        let
+            macro AND(a, b) {
+                if (a) { b } else { false }
+            }
+            
+            fn explode() { back }
+            
+            result1 = AND(false, explode()) then true;
+            result2 = AND(true, true);
+        in
+            assert(result1 == false);
+            assert(result2 == true);
+            puts("Short-circuit AND test passed")
+    }
+    
+    // Test: Short-circuit OR macro
+    fn test_short_circuit_or() {
+        let
+            macro OR(a, b) {
+                if (a) { true } else { b }
+            }
+            
+            fn explode() { back }
+            
+            result1 = OR(true, explode()) then false;
+            result2 = OR(false, true);
+        in
+            assert(result1 == true);
+            assert(result2 == true);
+            puts("Short-circuit OR test passed")
+    }
+    
+    // Test: Macro with recursion
+    fn test_macro_recursion() {
+        let
+            macro APPLY_TWICE(f, x) {
+                f(f(x))
+            }
+            
+            fn inc { (x) { x + 1 } }
+            
+            result = APPLY_TWICE(inc, 5);
+        in
+            assert(result == 7);
+            puts("Macro recursion test passed")
+    }
+    
+    // Test: Complex macro expression
+    fn test_complex_macro() {
+        let
+            macro COMPUTE(a, b, c) {
+                let
+                    sum = a + b;
+                    prod = sum * c;
+                in
+                    prod
+            }
+            
+            result = COMPUTE(2, 3, 4);
+        in
+            assert(result == 20);
+            puts("Complex macro test passed")
+    }
+    
+    // Test: Macro with tuple
+    fn test_macro_tuple() {
+        let
+            macro MAKE_PAIR(a, b) {
+                #(a, b)
+            }
+            
+            macro SWAP_PAIR(p) {
+                switch (p) {
+                    (#(x, y)) { #(y, x) }
+                }
+            }
+            
+            pair = MAKE_PAIR(1, 2);
+            swapped = SWAP_PAIR(pair);
+        in
+            assert(pair == #(1, 2));
+            assert(swapped == #(2, 1));
+            puts("Macro tuple test passed")
+    }
+    
+    // Test: Macro argument used multiple times
+    fn test_macro_multi_use() {
+        let
+            fn counter() {
+                let x = 1 then 2 then 3; in x
+            }
+            
+            macro USE_TWICE(x) {
+                #(x, x)
+            }
+            
+            result = USE_TWICE(counter());
+        in
+            assert(result == #(1, 1));
+            puts("Macro multi-use test passed")
+    }
+
+    // Main test runner
+    fn main() {
+        test_basic_macro();
+        test_multi_arg_macro();
+        test_macro_lazy_eval();
+        test_nested_macros();
+        test_macro_conditional();
+        test_macro_parameters();
+        test_macro_pattern();
+        test_macro_function_calls();
+        test_macro_list_ops();
+        test_short_circuit_and();
+        test_short_circuit_or();
+        test_macro_recursion();
+        test_complex_macro();
+        test_macro_tuple();
+        test_macro_multi_use();
+        puts("All macro tests completed successfully!")
+    }
+
+in
+    main()

@@ -1,0 +1,310 @@
+// Test amb/then/back backtracking edge cases
+// Tests Tier 2: Non-deterministic programming, complex backtracking scenarios
+
+let
+
+    link "ambutils.fn" as amb;
+    import amb operators;
+
+    // Test: Basic then/back
+    fn test_basic_then_back() {
+        let
+            result = 1 then 2 then 3;
+        in
+            assert(result == 1);
+            puts("Basic then test passed")
+    }
+    
+    // Test: Backtracking with back
+    fn test_simple_backtrack() {
+        let
+            fn try_values() {
+                let
+                    x = 1 then 2 then 3;
+                in
+                    if (x > 1) { x } else { back }
+            };
+            result = try_values();
+        in
+            assert(result == 2);
+            puts("Simple backtrack test passed")
+    }
+    
+    // Test: Multiple backtracking points
+    fn test_multiple_backtrack() {
+        let
+            fn find_pair() {
+                let
+                    x = 1 then 2 then 3;
+                    y = 10 then 20 then 30;
+                in
+                    if (x + y == 22) {
+                        #(x, y)
+                    } else {
+                        back
+                    }
+            };
+            result = find_pair();
+        in
+            assert(result == #(2, 20));
+            puts("Multiple backtrack test passed")
+    }
+    
+    // Test: Nested backtracking
+    fn test_nested_backtrack() {
+        let
+            fn outer() {
+                let
+                    x = 1 then 2;
+                    y = inner(x);
+                in
+                    #(x, y)
+            };
+            
+            unsafe fn inner {
+                (1) { 10 then 20 }
+                (2) { 30 then 40 }
+            };
+            
+            result = outer();
+        in
+            assert(result == #(1, 10));
+            puts("Nested backtrack test passed")
+    }
+    
+    // Test: Backtracking with lists
+    fn test_list_backtrack() {
+        let
+            fn find_in_list() {
+                let
+                    x = amb.one_of([1, 2, 3, 4, 5]);
+                in
+                    if (x % 2 == 0) {
+                        x
+                    } else {
+                        back
+                    }
+            };
+            result = find_in_list();
+        in
+            assert(result == 2);
+            puts("List backtrack test passed")
+    }
+    
+    // Test: amb with require
+    fn test_amb_require() {
+        let
+            fn find_valid() {
+                let
+                    x = amb.one_of([1, 2, 3, 4, 5]);
+                    dummy = amb.require(x > 2);
+                    dummy2 = amb.require(x % 2 == 1);
+                in
+                    x
+            };
+            result = find_valid();
+        in
+            assert(result == 3);
+            puts("Amb require test passed")
+    }
+    
+    // Test: Backtracking exhaustion
+    fn test_backtrack_exhaustion() {
+        let
+            fn try_impossible() {
+                let
+                    x = 1 then 2 then 3;
+                in
+                    if (x > 10) { x } else { back }
+            };
+            
+            fn safe_try() {
+                try_impossible() then 999
+            };
+            
+            result = safe_try();
+        in
+            assert(result == 999);
+            puts("Backtrack exhaustion test passed")
+    }
+    
+    // Test: amb.integers_from
+    fn test_integers_from() {
+        let
+            fn find_square() {
+                let
+                    n = amb.integers_from(1);
+                    dummy = amb.require(n * n > 100);
+                    dummy2 = amb.require(n * n < 150);
+                in
+                    n
+            };
+            result = find_square();
+        in
+            assert(result == 11);
+            puts("Integers from test passed")
+    }
+    
+    // Test: amb.integers_between
+    fn test_integers_between() {
+        let
+            fn find_in_range() {
+                let
+                    n = amb.integers_between(10, 20);
+                    dummy = amb.require(n % 3 == 0);
+                in
+                    n
+            };
+            result = find_in_range();
+        in
+            assert(result == 12);
+            puts("Integers between test passed")
+    }
+    
+    // Test: Complex constraint satisfaction
+    fn test_complex_constraints() {
+        let
+            fn find_triple() {
+                let
+                    a = amb.integers_between(1, 10);
+                    b = amb.integers_between(1, 10);
+                    c = amb.integers_between(1, 10);
+                    dummy = amb.require(a * a + b * b == c * c);
+                    dummy2 = amb.require(a < b);
+                in
+                    #(a, #(b, c))
+            };
+            result = find_triple();
+        in
+            assert(result == #(3, #(4, 5)));
+            puts("Complex constraints test passed")
+    }
+    
+    // Test: Backtracking with pattern matching
+    fn test_pattern_match_backtrack() {
+        let
+            fn find_valid_pair() {
+                let
+                    pair = #(1, 2) then #(3, 4) then #(5, 6);
+                in
+                    switch (pair) {
+                        (#(a, b)) {
+                            if (a + b > 5) {
+                                pair
+                            } else {
+                                back
+                            }
+                        }
+                    }
+            };
+            result = find_valid_pair();
+        in
+            assert(result == #(3, 4));
+            puts("Pattern match backtrack test passed")
+    }
+    
+    // Test: Backtracking preserves state
+    fn test_state_preservation() {
+        let
+            fn compute() {
+                let
+                    x = 1 then 2 then 3;
+                    y = x * 10;
+                in
+                    if (y == 20) { y } else { back }
+            };
+            result = compute();
+        in
+            assert(result == 20);
+            puts("State preservation test passed")
+    }
+    
+    // Test: Deep backtracking chain
+    fn test_deep_backtrack() {
+        let
+            fn level1() {
+                let x = 1 then 2; in level2(x)
+            }
+            
+            unsafe fn level2 {
+                (1) { let y = 10 then 20; in level3(1, y) }
+                (2) { let y = 30 then 40; in level3(2, y) }
+            }
+            
+            unsafe fn level3 {
+                (1, 10) { back }
+                (1, 20) { 120 }
+                (2, 30) { 230 }
+                (2, 40) { back }
+            }
+            
+            result = level1();
+        in
+            assert(result == 120);
+            puts("Deep backtrack test passed")
+    }
+    
+    // Test: Backtracking with recursion
+    fn test_recursive_backtrack() {
+        let
+            fn find_sum {
+                (target, []) { back }
+                (target, h @ t) {
+                    if (h == target) {
+                        h
+                    } else {
+                        h then find_sum(target, t)
+                    }
+                }
+            };
+            
+            result = find_sum(30, [10, 20, 30, 40]);
+        in
+            assert(result == 10);
+            puts("Recursive backtrack test passed")
+    }
+    
+    // Test: amb choice with functions
+    fn test_amb_functions() {
+        let
+            fn double { (x) { x * 2 } }
+            fn triple { (x) { x * 3 } }
+            fn quadruple { (x) { x * 4 } }
+            
+            fn find_transform() {
+                let
+                    f = double then triple then quadruple;
+                    x = 5;
+                    result = f(x);
+                in
+                    if (result == 15) { result } else { back }
+            };
+            
+            result = find_transform();
+        in
+            assert(result == 15);
+            puts("Amb functions test passed")
+    }
+
+    // Main test runner
+    fn main() {
+        test_basic_then_back();
+        test_simple_backtrack();
+        test_multiple_backtrack();
+        test_nested_backtrack();
+        test_list_backtrack();
+        test_amb_require();
+        test_backtrack_exhaustion();
+        test_integers_from();
+        test_integers_between();
+        test_complex_constraints();
+        test_pattern_match_backtrack();
+        test_state_preservation();
+        test_deep_backtrack();
+        test_recursive_backtrack();
+        test_amb_functions();
+        puts("All amb/backtracking tests completed successfully!")
+    }
+
+in
+    main()

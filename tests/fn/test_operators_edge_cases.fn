@@ -1,0 +1,204 @@
+// Test custom operators and operator edge cases
+// Tests user-defined operators, precedence, and associativity
+
+let
+
+    // Define some custom operators
+    operator "_plus_" left 100 fn(a, b) { a + b };
+    operator "_times_" left 110 fn(a, b) { a * b };
+    operator "_squared" 120 fn(x) { x * x };
+    
+    // Test: Basic custom operators
+    fn test_basic_custom_ops() {
+        let
+            a = 3 plus 4;
+            b = 5 times 6;
+            c = 7 squared;
+        in
+            assert(a == 7);
+            assert(b == 30);
+            assert(c == 49);
+            puts("Basic custom operators test passed")
+    }
+    
+    // Test: Operator precedence
+    fn test_operator_precedence() {
+        let
+            result1 = 2 plus 3 times 4;
+            result2 = 2 times 3 plus 4;
+        in
+            // times has higher precedence (110) than plus (100)
+            assert(result1 == 2 plus (3 times 4));
+            assert(result1 == 14);
+            assert(result2 == (2 times 3) plus 4);
+            assert(result2 == 10);
+            puts("Operator precedence test passed")
+    }
+    
+    // Test: Postfix operators
+    fn test_postfix_operators() {
+        let
+            a = 5 squared;
+            b = (3 plus 2) squared;
+        in
+            assert(a == 25);
+            assert(b == 25);
+            puts("Postfix operators test passed")
+    }
+    
+    // Test: Left associativity
+    fn test_left_associativity() {
+        let
+            operator "_minus_" left 100 fn(a, b) { a - b };
+            
+            result = 10 minus 3 minus 2;
+        in
+            // Left assoc: (10 - 3) - 2 = 5
+            assert(result == 5);
+            puts("Left associativity test passed")
+    }
+    
+    // Test: Right associativity
+    fn test_right_associativity() {
+        let
+            operator "_power_" right 115 fn(a, b) { a ** b };
+            
+            result = 2 power 3 power 2;
+        in
+            // Right assoc: 2 ** (3 ** 2) = 2 ** 9 = 512
+            assert(result == 512);
+            puts("Right associativity test passed")
+    }
+    
+    // Test: Operator shadowing in nested scopes
+    fn test_operator_shadowing() {
+        let
+            operator "_foo_" left 100 fn(a, b) { a + b };
+            outer = 3 foo 4;
+        in
+            assert(outer == 7);
+            
+            {
+            let
+                operator "_foo_" left 100 fn(a, b) { a * b };
+                inner = 3 foo 4;
+            in
+                assert(inner == 12);
+                puts("Operator shadowing test passed")
+            }
+    }
+    
+    
+    // Test: Operators with complex expressions
+    fn test_operators_with_expressions() {
+        let
+            operator "_max_" left 100 fn(a, b) { if (a > b) { a } else { b } };
+            
+            result1 = 5 max 3;
+            result2 = 2 max 8;
+            result3 = 5 max 3 max 8;
+        in
+            assert(result1 == 5);
+            assert(result2 == 8);
+            assert(result3 == 8);
+            puts("Operators with expressions test passed")
+    }
+    
+    // Test: Operators with lists
+    fn test_operators_with_lists() {
+        let
+            operator "_concat_" left 90 fn(a, b) { a @@ b };
+            
+            list1 = [1, 2] concat [3, 4];
+            list2 = [1] concat [2] concat [3];
+        in
+            assert(list1 == [1, 2, 3, 4]);
+            assert(list2 == [1, 2, 3]);
+            puts("Operators with lists test passed")
+    }
+    
+    // Test: Built-in operator precedence
+    fn test_builtin_precedence() {
+        let
+            result1 = 2 + 3 * 4;
+            result2 = 10 - 2 * 3;
+            result3 = 2 ** 3 + 1;
+        in
+            assert(result1 == 14);
+            assert(result2 == 4);
+            assert(result3 == 9);
+            puts("Built-in precedence test passed")
+    }
+    
+    // Test: Comparison operators
+    fn test_comparison_operators() {
+        let
+            a = 5;
+            b = 3;
+        in
+            assert(a > b);
+            assert(b < a);
+            assert(a >= 5);
+            assert(a <= 5);
+            assert(a == 5);
+            assert(a != b);
+            puts("Comparison operators test passed")
+    }
+    
+    // Test: Logical operators (from preamble)
+    fn test_logical_operators() {
+        let
+            t = true;
+            f = false;
+        in
+            assert(t and t);
+            assert(not (t and f));
+            assert(t or f);
+            assert(not (f or f));
+            puts("Logical operators test passed")
+    }
+    
+    // Test: Cons operator
+    fn test_cons_operator() {
+        let
+            list1 = 1 @ [2, 3];
+            list2 = 1 @ 2 @ [3];
+            list3 = 1 @ 2 @ 3 @ [];
+        in
+            assert(list1 == [1, 2, 3]);
+            assert(list2 == [1, 2, 3]);
+            assert(list3 == [1, 2, 3]);
+            puts("Cons operator test passed")
+    }
+    
+    // Test: Append operator
+    fn test_append_operator() {
+        let
+            list1 = [1, 2] @@ [3, 4];
+            list2 = [1] @@ [2] @@ [3];
+        in
+            assert(list1 == [1, 2, 3, 4]);
+            assert(list2 == [1, 2, 3]);
+            puts("Append operator test passed")
+    }
+
+    // Main test runner
+    fn main() {
+        test_basic_custom_ops();
+        test_operator_precedence();
+        test_postfix_operators();
+        test_left_associativity();
+        test_right_associativity();
+        test_operator_shadowing();
+        test_operators_with_expressions();
+        test_operators_with_lists();
+        test_builtin_precedence();
+        test_comparison_operators();
+        test_logical_operators();
+        test_cons_operator();
+        test_append_operator();
+        puts("All operator tests completed successfully!")
+    }
+
+in
+    main()

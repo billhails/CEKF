@@ -1,0 +1,33 @@
+// Bug: Type checker crashes on undefined variable in macro
+// Expected: Should give proper error message "undefined variable x"
+// Actual: Crashes with "Aborted (core dumped)" at src/tc_analyze.c line 377
+//
+// This test demonstrates the crash. The code is intentionally invalid.
+// DO NOT RUN THIS TEST - it will crash the compiler!
+//
+// To reproduce:
+// ./bin/fn --include=fn tests/fn/bug_typechecker_crash_undefined_var.fn
+//
+// Expected output: 
+//   "undefined variable x in tests/fn/bug_typechecker_crash_undefined_var.fn, line X"
+//
+// Actual output:
+//   "undefined variable x in tests/fn/bug_typechecker_crash_undefined_var.fn, line 74 at +377 src/tc_analyze.c"
+//   "Aborted (core dumped)"
+
+let
+
+    fn test_undefined_var_in_macro() {
+        let
+            x = 10;
+            macro USE_X(y) { x + y }
+            
+            // This causes crash because macro expands x in caller's scope
+            // where x from outer let is not visible (different scope)
+            result1 = USE_X(5);
+        in
+            result1
+    }
+
+in
+    test_undefined_var_in_macro()

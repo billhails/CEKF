@@ -1,0 +1,159 @@
+// Test arithmetic edge cases and boundary conditions
+// Tests large numbers, mixed operations, and edge cases
+
+let
+    // Test very large numbers
+    fn test_large_numbers() {
+        let big = 999999999999999999;
+            bigger = big * 2;
+        in
+        assert(bigger > big);
+        assert(bigger / 2 == big);
+        true
+    }
+    
+    // Test negative numbers
+    fn test_negative_numbers() {
+        let neg5 = -5;
+            neg3 = -3;
+        in
+        assert(-5 + 3 == -2);
+        assert(-5 - 3 == -8);
+        assert(-5 * 3 == -15);
+        assert(-15 / 3 == -5);
+        assert(neg5 * neg3 == 15);
+        true
+    }
+    
+    // Test zero edge cases
+    fn test_zero_operations() {
+        let dummy = 0;
+        in
+        assert(0 + 5 == 5);
+        assert(5 + 0 == 5);
+        assert(0 * 5 == 0);
+        assert(5 * 0 == 0);
+        assert(0 - 5 == -5);
+        assert(5 - 0 == 5);
+        true
+    }
+    
+    // Test modulo operations
+    fn test_modulo() {
+        let dummy = 0;
+        in
+        assert(10 % 3 == 1);
+        assert(15 % 5 == 0);
+        assert(7 % 2 == 1);
+        assert(100 % 7 == 2);
+        assert(-10 % 3 == -1 or -10 % 3 == 2);
+        true
+    }
+    
+    // Test power operations
+    fn test_power() {
+        let dummy = 0;
+        in
+        assert(2 ** 3 == 8);
+        assert(10 ** 2 == 100);
+        assert(5 ** 0 == 1);
+        assert(1 ** 100 == 1);
+        assert(0 ** 5 == 0);
+        true
+    }
+    
+    // Test mixed operations precedence
+    fn test_precedence() {
+        let dummy = 0;
+        in
+        assert(2 + 3 * 4 == 14);
+        assert((2 + 3) * 4 == 20);
+        assert(10 - 2 * 3 == 4);
+        assert(20 / 4 + 3 == 8);
+        assert(2 ** 3 * 2 == 16);
+        true
+    }
+    
+    // Test integer overflow behavior with very large numbers
+    fn test_very_large_numbers() {
+        let n1 = 12345678901234567890;
+            n2 = 98765432109876543210;
+            sum = n1 + n2;
+        in
+        assert(sum > n1);
+        assert(sum > n2);
+        true
+    }
+    
+    // Test subtraction edge cases
+    fn test_subtraction_edges() {
+        let minus5 = -5;
+        in
+        assert(5 - 5 == 0);
+        assert(0 - 5 == -5);
+        assert(minus5 - minus5 == 0);
+        assert(100 - 1 == 99);
+        true
+    }
+    
+    // Test division edge cases
+    fn test_division_edges() {
+        let dummy = 0;
+        in
+        assert(10 / 2 == 5);
+        // 10 / 3 returns the unevaluated expression 10/3, not 3
+        // assert(10 / 3 == 3);
+        assert(1 / 1 == 1);
+        assert(100 / 10 == 10);
+        true
+    }
+    
+    // Test multiplication edge cases
+    fn test_multiplication_edges() {
+        let dummy = 0;
+        in
+        assert(1 * 1 == 1);
+        assert(1 * 100 == 100);
+        assert(100 * 1 == 100);
+        assert((-1) * 5 == -5);
+        assert((-1) * (-1) == 1);
+        true
+    }
+    
+    // Test comparison with arithmetic
+    fn test_arithmetic_comparisons() {
+        let dummy = 0;
+        in
+        assert(5 + 3 > 7);
+        assert(10 - 2 < 10);
+        assert(3 * 4 == 12);
+        assert(20 / 4 <= 5);
+        assert(2 ** 4 >= 16);
+        true
+    }
+    
+    // Test chained operations
+    fn test_chained_operations() {
+        let dummy = 0;
+        in
+        assert(1 + 2 + 3 + 4 == 10);
+        assert(100 - 10 - 5 - 5 == 80);
+        assert(2 * 3 * 4 == 24);
+        assert(1000 / 10 / 10 == 10);
+        true
+    }
+
+in
+    test_large_numbers();
+    test_negative_numbers();
+    test_zero_operations();
+    test_modulo();
+    test_power();
+    test_precedence();
+    test_very_large_numbers();
+    test_subtraction_edges();
+    test_division_edges();
+    test_multiplication_edges();
+    test_arithmetic_comparisons();
+    test_chained_operations();
+    puts("All arithmetic edge case tests completed successfully!")

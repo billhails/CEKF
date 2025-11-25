@@ -1,0 +1,270 @@
+// Test type system edge cases
+// Tests polymorphic types, type inference, and type constraints
+
+let
+
+    // Test: Polymorphic identity function
+    fn test_polymorphic_identity() {
+        let
+            fn id(x) { x }
+            
+            int_result = id(42);
+            char_result = id('a');
+            list_result = id([1, 2, 3]);
+        in
+            assert(int_result == 42);
+            assert(char_result == 'a');
+            assert(list_result == [1, 2, 3]);
+            puts("Polymorphic identity test passed")
+    }
+    
+    // Test: Polymorphic list operations
+    fn test_polymorphic_lists() {
+        let
+            fn length {
+                ([]) { 0 }
+                (_ @ t) { 1 + length(t) }
+            }
+            
+            int_list_len = length([1, 2, 3]);
+            char_list_len = length(['a', 'b', 'c']);
+            nested_list_len = length([[1], [2], [3]]);
+        in
+            assert(int_list_len == 3);
+            assert(char_list_len == 3);
+            assert(nested_list_len == 3);
+            puts("Polymorphic lists test passed")
+    }
+    
+    // Test: Type inference with arithmetic
+    fn test_type_inference_arithmetic() {
+        let
+            a = 5 + 3;
+            b = 10 * 2;
+            c = a + b;
+        in
+            assert(a == 8);
+            assert(b == 20);
+            assert(c == 28);
+            puts("Type inference arithmetic test passed")
+    }
+    
+    // Test: Type inference with conditionals
+    fn test_type_inference_conditionals() {
+        let
+            fn abs(x) {
+                if (x < 0) { 0 - x } else { x }
+            }
+            
+            r1 = abs(5);
+            r2 = abs(0 - 5);
+        in
+            assert(r1 == 5);
+            assert(r2 == 5);
+            puts("Type inference conditionals test passed")
+    }
+    
+    // Test: Polymorphic option type
+    fn test_polymorphic_option() {
+        let
+            typedef option(#t) { some(#t) | none }
+            
+            fn unwrap_or {
+                (some(x), _) { x }
+                (none, default) { default }
+            }
+            
+            opt1 = some(42);
+            opt2 = none;
+            
+            r1 = unwrap_or(opt1, 0);
+            r2 = unwrap_or(opt2, 99);
+        in
+            assert(r1 == 42);
+            assert(r2 == 99);
+            puts("Polymorphic option test passed")
+    }
+    
+    // Test: Polymorphic either type
+    fn test_polymorphic_either() {
+        let
+            typedef either(#a, #b) { left(#a) | right(#b) }
+            
+            fn from_left {
+                (left(x), _) { x }
+                (right(_), default) { default }
+            }
+            
+            fn from_right {
+                (right(x), _) { x }
+                (left(_), default) { default }
+            }
+            
+            e1 = left(10);
+            e2 = right(20);
+            
+            l1 = from_left(e1, 0);
+            l2 = from_left(e2, 0);
+            r1 = from_right(e1, 0);
+            r2 = from_right(e2, 0);
+        in
+            assert(l1 == 10);
+            assert(l2 == 0);
+            assert(r1 == 0);
+            assert(r2 == 20);
+            puts("Polymorphic either test passed")
+    }
+    
+    // Test: Nested polymorphic types
+    fn test_nested_polymorphic() {
+        let
+            typedef option(#t) { some(#t) | none }
+            
+            fn map_option {
+                (none, _) { none }
+                (some(x), f) { some(f(x)) }
+            }
+            
+            opt = some(5);
+            doubled = map_option(opt, fn(x) { x * 2 });
+        in
+            assert(doubled == some(10));
+            puts("Nested polymorphic test passed")
+    }
+    
+    // Test: Polymorphic tree type
+    fn test_polymorphic_tree() {
+        let
+            typedef tree(#t) { leaf | node(#t, tree(#t), tree(#t)) }
+            
+            fn tree_size {
+                (leaf) { 0 }
+                (node(_, l, r)) { 1 + tree_size(l) + tree_size(r) }
+            }
+            
+            t = node(5, node(3, leaf, leaf), node(7, leaf, leaf));
+            size = tree_size(t);
+        in
+            assert(size == 3);
+            puts("Polymorphic tree test passed")
+    }
+    
+    // Test: Type with multiple parameters
+    fn test_multi_param_type() {
+        let
+            typedef pair(#a, #b) { pair(#a, #b) }
+            
+            fn fst {
+                (pair(a, _)) { a }
+            }
+            
+            fn snd {
+                (pair(_, b)) { b }
+            }
+            
+            p = pair(10, 'x');
+            first = fst(p);
+            second = snd(p);
+        in
+            assert(first == 10);
+            assert(second == 'x');
+            puts("Multi-param type test passed")
+    }
+    
+    // Test: List of polymorphic types
+    fn test_list_of_options() {
+        let
+            typedef option(#t) { some(#t) | none }
+            
+            fn count_somes {
+                ([]) { 0 }
+                (some(_) @ t) { 1 + count_somes(t) }
+                (none @ t) { count_somes(t) }
+            }
+            
+            opts = [some(1), none, some(2), some(3), none];
+            count = count_somes(opts);
+        in
+            assert(count == 3);
+            puts("List of options test passed")
+    }
+    
+    // Test: Recursive polymorphic function
+    fn test_recursive_polymorphic() {
+        let
+            fn reverse {
+                ([]) { [] }
+                (h @ t) { reverse(t) @@ [h] }
+            }
+            
+            r1 = reverse([1, 2, 3]);
+            r2 = reverse(['a', 'b', 'c']);
+        in
+            assert(r1 == [3, 2, 1]);
+            assert(r2 == ['c', 'b', 'a']);
+            puts("Recursive polymorphic test passed")
+    }
+    
+    // Test: Higher-order polymorphic function
+    fn test_higher_order_polymorphic() {
+        let
+            fn apply_twice(f, x) {
+                f(f(x))
+            }
+            
+            inc = fn(x) { x + 1 };
+            double = fn(x) { x * 2 };
+            
+            r1 = apply_twice(inc, 5);
+            r2 = apply_twice(double, 3);
+        in
+            assert(r1 == 7);
+            assert(r2 == 12);
+            puts("Higher-order polymorphic test passed")
+    }
+    
+    // Test: Polymorphic result type
+    fn test_polymorphic_result() {
+        let
+            typedef result(#t, #e) { ok(#t) | err(#e) }
+            
+            fn is_ok {
+                (ok(_)) { true }
+                (err(_)) { false }
+            }
+            
+            fn is_err {
+                (ok(_)) { false }
+                (err(_)) { true }
+            }
+            
+            r1 = ok(42);
+            r2 = err('e');
+        in
+            assert(is_ok(r1));
+            assert(not is_ok(r2));
+            assert(not is_err(r1));
+            assert(is_err(r2));
+            puts("Polymorphic result test passed")
+    }
+
+    // Main test runner
+    fn main() {
+        test_polymorphic_identity();
+        test_polymorphic_lists();
+        test_type_inference_arithmetic();
+        test_type_inference_conditionals();
+        test_polymorphic_option();
+        test_polymorphic_either();
+        test_nested_polymorphic();
+        test_polymorphic_tree();
+        test_multi_param_type();
+        test_list_of_options();
+        test_recursive_polymorphic();
+        test_higher_order_polymorphic();
+        test_polymorphic_result();
+        puts("All type system tests completed successfully!")
+    }
+
+in
+    main()

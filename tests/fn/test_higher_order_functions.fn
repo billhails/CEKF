@@ -1,0 +1,274 @@
+// Test higher-order functions, closures, and function composition
+// Tests Tier 2: Advanced functional programming features
+
+let
+
+    // Test: Basic higher-order functions
+    fn test_map_filter_fold() {
+        let
+            fn map {
+                (f, []) { [] }
+                (f, h @ t) { f(h) @ map(f, t) }
+            };
+            
+            fn filter {
+                (pred, []) { [] }
+                (pred, h @ t) {
+                    if (pred(h)) {
+                        h @ filter(pred, t)
+                    } else {
+                        filter(pred, t)
+                    }
+                }
+            };
+            
+            fn foldl {
+                (f, acc, []) { acc }
+                (f, acc, h @ t) { foldl(f, f(acc, h), t) }
+            };
+            
+            fn double { (x) { x * 2 } };
+            fn is_even { (x) { x % 2 == 0 } };
+            fn add { (a, b) { a + b } };
+            
+            test_list = [1, 2, 3, 4, 5];
+            doubled = map(double, test_list);
+            evens = filter(is_even, test_list);
+            sum = foldl(add, 0, test_list);
+        in
+            assert(doubled == [2, 4, 6, 8, 10]);
+            assert(evens == [2, 4]);
+            assert(sum == 15);
+            puts("Map/Filter/Fold tests passed")
+    }
+    
+    // Test: Closures capturing variables
+    fn test_closures() {
+        let
+            fn make_adder {
+                (n) {
+                    fn { (x) { x + n } }
+                }
+            };
+            
+            fn make_counter {
+                (start) {
+                    fn { (inc) { start + inc } }
+                }
+            };
+            
+            add5 = make_adder(5);
+            add10 = make_adder(10);
+            counter = make_counter(100);
+        in
+            assert(add5(3) == 8);
+            assert(add5(7) == 12);
+            assert(add10(3) == 13);
+            assert(add10(7) == 17);
+            assert(counter(1) == 101);
+            assert(counter(5) == 105);
+            puts("Closure tests passed")
+    }
+    
+    // Test: Nested closures
+    fn test_nested_closures() {
+        let
+            fn make_multiplier {
+                (m) {
+                    fn {
+                        (n) {
+                            fn {
+                                (x) { x * m * n }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            mult2 = make_multiplier(2);
+            mult2_3 = mult2(3);
+            mult2_5 = mult2(5);
+        in
+            assert(mult2_3(4) == 24);
+            assert(mult2_5(4) == 40);
+            puts("Nested closure tests passed")
+    }
+    
+    // Test: Function composition
+    fn test_composition() {
+        let
+            fn compose {
+                (f, g) {
+                    fn { (x) { f(g(x)) } }
+                }
+            };
+            
+            fn double { (x) { x * 2 } };
+            fn square { (x) { x * x } };
+            fn inc { (x) { x + 1 } };
+            
+            double_then_square = compose(square, double);
+            square_then_double = compose(double, square);
+            inc_then_double = compose(double, inc);
+        in
+            assert(double_then_square(3) == 36);
+            assert(square_then_double(3) == 18);
+            assert(inc_then_double(5) == 12);
+            puts("Function composition tests passed")
+    }
+    
+    // Test: Currying
+    fn test_currying() {
+        let
+            fn curry2 {
+                (f) {
+                    fn {
+                        (a) {
+                            fn {
+                                (b) { f(a, b) }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            fn add { (x, y) { x + y } };
+            fn mult { (x, y) { x * y } };
+            
+            curried_add = curry2(add);
+            add5 = curried_add(5);
+            curried_mult = curry2(mult);
+            mult3 = curried_mult(3);
+        in
+            assert(add5(10) == 15);
+            assert(add5(7) == 12);
+            assert(mult3(4) == 12);
+            assert(mult3(10) == 30);
+            puts("Currying tests passed")
+    }
+    
+    // Test: Partial application
+    fn test_partial_application() {
+        let
+            fn partial {
+                (f, a) {
+                    fn { (b) { f(a, b) } }
+                }
+            };
+            
+            fn sub { (x, y) { x - y } };
+            fn div { (x, y) { x / y } };
+            
+            sub10 = partial(sub, 10);
+            div100 = partial(div, 100);
+        in
+            assert(sub10(3) == 7);
+            assert(sub10(7) == 3);
+            assert(div100(10) == 10);
+            assert(div100(5) == 20);
+            puts("Partial application tests passed")
+    }
+    
+    // Test: Functions returning functions
+    fn test_function_factories() {
+        let
+            fn make_range_checker {
+                (min, max) {
+                    fn {
+                        (x) {
+                            if (x < min) {
+                                false
+                            } else {
+                                if (x > max) {
+                                    false
+                                } else {
+                                    true
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            is_digit = make_range_checker(0, 9);
+            is_percentage = make_range_checker(0, 100);
+        in
+            assert(is_digit(5));
+            assert(not is_digit(10));
+            assert(not is_digit(-1));
+            assert(is_percentage(50));
+            assert(is_percentage(0));
+            assert(is_percentage(100));
+            assert(not is_percentage(101));
+            puts("Function factory tests passed")
+    }
+    
+    // Test: Higher-order functions with multiple parameters
+    fn test_complex_higher_order() {
+        let
+            fn twice {
+                (f, x) { f(f(x)) }
+            };
+            
+            fn apply_n {
+                (f, n, x) {
+                    if (n == 0) {
+                        x
+                    } else {
+                        apply_n(f, n - 1, f(x))
+                    }
+                }
+            };
+            
+            fn inc { (x) { x + 1 } };
+            fn double { (x) { x * 2 } };
+        in
+            assert(twice(inc, 5) == 7);
+            assert(twice(double, 3) == 12);
+            assert(apply_n(inc, 5, 0) == 5);
+            assert(apply_n(double, 3, 2) == 16);
+            puts("Complex higher-order function tests passed")
+    }
+    
+    // Test: Closure variable capture edge cases
+    fn test_closure_capture() {
+        let
+            fn make_funcs {
+                (a, b) {
+                    let
+                        add_both = fn { (x) { x + a + b } };
+                        mult_both = fn { (x) { x * a * b } };
+                    in
+                        #(add_both, mult_both)
+                }
+            };
+            
+            funcs = make_funcs(2, 3);
+            add_func = switch (funcs) {
+                (#(a, m)) { a }
+            };
+            mult_func = switch (funcs) {
+                (#(a, m)) { m }
+            };
+        in
+            assert(add_func(10) == 15);
+            assert(mult_func(10) == 60);
+            puts("Closure capture tests passed")
+    }
+    
+    // Main test runner
+    fn main() {
+        test_map_filter_fold();
+        test_closures();
+        test_nested_closures();
+        test_composition();
+        test_currying();
+        test_partial_application();
+        test_function_factories();
+        test_complex_higher_order();
+        test_closure_capture();
+        puts("All higher-order function tests completed successfully!")
+    }
+
+in
+    main()

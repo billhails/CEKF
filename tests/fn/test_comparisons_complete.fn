@@ -1,0 +1,189 @@
+// Test comparison operators comprehensively
+// Tests all comparison types and edge cases
+
+let
+    // Test integer equality
+    fn test_int_equality() {
+        let dummy = 0;
+        in
+        assert(5 == 5);
+        assert(0 == 0);
+        assert(-5 == -5);
+        assert(not (5 == 6));
+        assert(5 != 6);
+        assert(not (5 != 5));
+        true
+    }
+    
+    // Test integer ordering
+    fn test_int_ordering() {
+        let dummy = 0;
+        in
+        assert(5 < 10);
+        assert(10 > 5);
+        assert(5 <= 5);
+        assert(5 <= 10);
+        assert(10 >= 10);
+        assert(10 >= 5);
+        assert(not (10 < 5));
+        assert(not (5 > 10));
+        true
+    }
+    
+    // Test spaceship operator <=>
+    fn test_spaceship() {
+        let dummy = 0;
+        in
+        assert((5 <=> 10) == lt);
+        assert((10 <=> 5) == gt);
+        assert((5 <=> 5) == eq);
+        assert((0 <=> 0) == eq);
+        assert(((-5) <=> 5) == lt);
+        true
+    }
+    
+    // Test character comparisons
+    fn test_char_comparisons() {
+        let dummy = 0;
+        in
+        assert('a' == 'a');
+        assert('a' != 'b');
+        assert('a' < 'b');
+        assert('z' > 'a');
+        assert('a' <= 'a');
+        assert('a' >= 'a');
+        true
+    }
+    
+    // Test string comparisons
+    fn test_string_comparisons() {
+        let dummy = 0;
+        in
+        assert("abc" == "abc");
+        assert("abc" != "def");
+        assert("" == "");
+        assert("a" < "b");
+        assert("abc" < "abd");
+        true
+    }
+    
+    // Test list comparisons
+    fn test_list_comparisons() {
+        let dummy = 0;
+        in
+        assert([1,2,3] == [1,2,3]);
+        assert([1,2,3] != [1,2,4]);
+        assert([] == []);
+        assert([1] != []);
+        true
+    }
+    
+    // Test boolean comparisons
+    fn test_bool_comparisons() {
+        let dummy = 0;
+        in
+        assert(true == true);
+        assert(false == false);
+        assert(true != false);
+        assert(false != true);
+        true
+    }
+    
+    // Test negative number comparisons
+    fn test_negative_comparisons() {
+        let dummy = 0;
+        in
+        assert((-5) < 0);
+        assert(0 > (-5));
+        assert((-5) < 5);
+        assert((-10) < (-5));
+        assert((-5) > (-10));
+        true
+    }
+    
+    // Test zero comparisons
+    fn test_zero_comparisons() {
+        let dummy = 0;
+        in
+        assert(0 == 0);
+        assert(0 < 1);
+        assert(0 > (-1));
+        assert(0 <= 0);
+        assert(0 >= 0);
+        true
+    }
+    
+    // Test chained comparisons
+    fn test_chained_comparisons() {
+        let dummy = 0;
+        in
+        assert(1 < 2 and 2 < 3);
+        assert(5 > 4 and 4 > 3);
+        assert(5 == 5 or 5 == 6);
+        assert(not (5 < 4 or 5 > 6));
+        true
+    }
+    
+    // Test comparison with expressions
+    fn test_expression_comparisons() {
+        let dummy = 0;
+        in
+        assert(2 + 3 == 5);
+        assert(10 - 5 > 4);
+        assert(3 * 4 < 13);
+        assert(20 / 4 <= 5);
+        assert(2 ** 3 >= 8);
+        true
+    }
+    
+    // Test comparison in conditionals
+    fn test_comparison_conditionals() {
+        let result = if (5 > 3) { "greater" } else { "not" };
+            result2 = if (5 == 5) { true } else { false };
+        in
+        assert(result == "greater");
+        assert(result2);
+        true
+    }
+    
+    // Test tuple comparisons
+    fn test_tuple_comparisons() {
+        let dummy = 0;
+        in
+        assert(#(1, 2) == #(1, 2));
+        assert(#(1, 2) != #(1, 3));
+        assert(#(1, 2) != #(2, 1));
+        true
+    }
+    
+    // Test mixed type patterns (not direct comparison, but pattern matching)
+    fn test_pattern_equality() {
+        switch (5) {
+            (5) { assert(true) }
+            (_) { assert(false) }
+        };
+        
+        switch ('a') {
+            ('a') { assert(true) }
+            (_) { assert(false) }
+        };
+        
+        true
+    }
+
+in
+    test_int_equality();
+    test_int_ordering();
+    test_spaceship();
+    test_char_comparisons();
+    test_string_comparisons();
+    test_list_comparisons();
+    test_bool_comparisons();
+    test_negative_comparisons();
+    test_zero_comparisons();
+    test_chained_comparisons();
+    test_expression_comparisons();
+    test_comparison_conditionals();
+    test_tuple_comparisons();
+    test_pattern_equality();
+    puts("All comparison tests completed successfully!")
