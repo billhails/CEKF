@@ -44,7 +44,6 @@ static void addCmpToEnv(TcEnv * env, HashSymbol * key);
 static void addBuiltinsToEnv(TcEnv * env, BuiltIns * builtIns);
 static void addNamespacesToEnv(TcEnv * env);
 static TcType *makeSpaceship(void);
-static TcType *makeSmallInteger(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
 static TcType *makeUnknown(HashSymbol * var);
@@ -1804,7 +1803,7 @@ TcType *makeFreshVar(char *name __attribute__((unused))) {
     return makeVar(genAlphaSym("#"));
 }
 
-static TcType *makeSmallInteger() {
+TcType *makeSmallInteger() {
     TcType *res = newTcType_Smallinteger();
     return res;
 }
