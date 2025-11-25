@@ -27,6 +27,7 @@
 #include "builtin_io.h"
 
 static void registerRand(BuiltIns *registry);
+static void registerIncr(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerUnicodeCategory(BuiltIns *registry);
@@ -139,6 +140,7 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     int save = PROTECT(res);
     registerRand(res);
     registerAssert(res);
+    registerIncr(res);
     registerOrd(res);
     registerUnicodeCategory(res);
     registerChr(res);
@@ -160,6 +162,14 @@ static void registerRand(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *integer = pushIntegerArg(args);
     pushNewBuiltIn(registry, "rand", integer, args, (void *)builtin_rand);
+    UNPROTECT(save);
+}
+
+static void registerIncr(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *integer = newTcType_Biginteger();
+    pushNewBuiltIn(registry, "incr", integer, args, (void *)builtin_incr);
     UNPROTECT(save);
 }
 

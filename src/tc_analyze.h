@@ -32,6 +32,8 @@ TcType *tc_analyze(LamExp *exp, TcEnv *env);
 TcType *lookupNsRef(int index, TcEnv *env);
 bool getFromTcEnv(TcEnv *env, HashSymbol *symbol, TcType **type);
 TcType *makeBoolean(void);
+TcType *makeSmallInteger(void);
+TcType *makeNumber(void);
 TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsid);
 TcType *makeStringType(void);
 TcType *makeListType(TcType *content);

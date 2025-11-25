@@ -1,0 +1,9 @@
+let
+    a = incr();
+    b = incr();
+    c = incr();
+in
+    print typeof incr;
+    assert(a == 1);
+    assert(b == 2);
+    assert(c == 3);

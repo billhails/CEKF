@@ -25,6 +25,7 @@ typedef Value (*BuiltInFunction)(Vec *);
 
 Value builtin_assert(Vec *args __attribute__((unused)));
 Value builtin_rand(Vec *args);
+Value builtin_incr(Vec *args);
 Value builtin_ord(Vec *args);
 Value builtin_chr(Vec *args);
 Value builtin_args(Vec *args);

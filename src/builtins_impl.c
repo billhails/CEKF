@@ -27,6 +27,7 @@ int assertions_accumulate = 0;
 int builtin_args_argc = 0;
 int builtin_args_cargc = 0;
 char **builtin_args_argv;
+static int incr_counter = 0;
 
 Value builtin_rand(Vec *args) {
     return nrand(args->entries[0]);
@@ -38,6 +39,11 @@ Value builtin_assert(Vec *args __attribute__((unused))) {
         return vFalse;
     }
     exit(1);
+}
+
+Value builtin_incr(Vec *args __attribute__((unused))) {
+    incr_counter++;
+    return value_Stdint(incr_counter);
 }
 
 Value builtin_real_part(Vec *args) {

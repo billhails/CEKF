@@ -17,7 +17,7 @@ let
     print expr {
         (x=lambda(args, expr)) {
             puts("(lambda (");
-            list.map (fn(e) { print(e) }, args);
+            list.for_each (fn(e) { print(e) }, args);
             puts(") ");
             print(expr);
             puts(")");
@@ -71,7 +71,7 @@ let
         }
     }
 
-    fn gensym() { debug("gensym"); var_expr("gen$") }
+    fn gensym() { debug("gensym"); var_expr("gen$" @@ $incr()) }
 
     fn normalize_term (M) { debug("normalize_term"); normalize(M, fn (x) { x }) }
 
