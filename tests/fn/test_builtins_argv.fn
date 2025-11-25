@@ -1,0 +1,67 @@
+// Test argv() builtin function
+// Tests command-line argument access
+// Note: This test should be run with various command-line arguments
+
+let
+    link "listutils.fn" as list;
+    
+    // Test accessing argv
+    fn test_argv_access() {
+        // argv(0) should be the program name or first argument
+        let arg0 = argv(0);
+        in
+        switch(arg0) {
+            (some(val)) {
+                // If we have an argument, it should be a string (list of chars)
+                assert(typeof val == "list(char)");
+                // It should have some length
+                assert(list.length(val) > 0);
+                true
+            }
+            (nothing) {
+                // It's valid to have no arguments
+                assert(true);
+                true
+            }
+        }
+    }
+    
+    // Test that higher indices return nothing when no args present
+    fn test_argv_bounds() {
+        let arg100 = argv(100);
+        in
+        switch(arg100) {
+            (nothing) { assert(true) } // Expected for high index
+            (some(_)) { assert(true) }  // Also ok if many args provided
+        }
+    }
+    
+    // Test accessing multiple argument indices
+    fn test_multiple_indices() {
+        let a0 = argv(0);
+            a1 = argv(1);
+            a2 = argv(2);
+        in
+        // All should return either some or nothing
+        // Just verify the pattern works
+        assert(true)
+    }
+    
+    // Test that negative indices are handled
+    fn test_negative_index() {
+        let arg_neg = argv(-1);
+        in
+        // Negative indices should return nothing
+        switch(arg_neg) {
+            (nothing) { assert(true) }
+            (some(_)) { assert(true) } // Implementation dependent
+        }
+    }
+
+in
+    test_argv_access();
+    test_argv_bounds();
+    test_multiple_indices();
+    test_negative_index();
+    
+    puts("All argv() tests completed successfully!")

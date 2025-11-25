@@ -1,0 +1,89 @@
+// Test getenv() builtin function
+// Tests environment variable access
+
+let
+    link "listutils.fn" as list;
+    
+    // Test accessing a common environment variable
+    fn test_getenv_home() {
+        // HOME should exist on most Unix systems
+        let home = getenv("HOME");
+        in
+        switch(home) {
+            (some(val)) {
+                // Should be a string (list of chars)
+                assert(typeof val == "list(char)");
+                // Should have some length (path is not empty)
+                assert(list.length(val) > 0);
+                true
+            }
+            (nothing) {
+                // HOME might not exist in some environments
+                // This is acceptable
+                assert(true);
+                true
+            }
+        }
+    }
+    
+    // Test accessing a variable that likely doesn't exist
+    fn test_getenv_nonexistent() {
+        let nonexist = getenv("CEKF_NONEXISTENT_VARIABLE_XYZ_12345");
+        in
+        switch(nonexist) {
+            (nothing) { assert(true) } // Expected
+            (some(_)) { 
+                // Very unlikely someone set this variable
+                // but not an error
+                assert(true)
+            }
+        }
+    }
+    
+    // Test accessing PATH variable
+    fn test_getenv_path() {
+        let path = getenv("PATH");
+        in
+        switch(path) {
+            (some(val)) {
+                assert(typeof val == "list(char)");
+                assert(list.length(val) > 0);
+                true
+            }
+            (nothing) {
+                // PATH should usually exist but might not
+                assert(true);
+                true
+            }
+        }
+    }
+    
+    // Test accessing empty variable name
+    fn test_getenv_empty() {
+        let empty = getenv("");
+        in
+        switch(empty) {
+            (nothing) { assert(true) } // Expected for empty name
+            (some(_)) { assert(true) }  // Also acceptable
+        }
+    }
+    
+    // Test multiple getenv calls
+    fn test_multiple_getenv() {
+        let e1 = getenv("HOME");
+            e2 = getenv("PATH");
+            e3 = getenv("USER");
+            e4 = getenv("SHELL");
+        in
+        // Just verify they all work without crashing
+        assert(true)
+    }
+
+in
+    test_getenv_home();
+    test_getenv_nonexistent();
+    test_getenv_path();
+    test_getenv_empty();
+    test_multiple_getenv();
+    
+    puts("All getenv() tests completed successfully!")

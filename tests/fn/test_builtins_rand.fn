@@ -1,0 +1,119 @@
+// Test rand() builtin function
+// Tests pseudo-random number generation
+// rand(seed) takes a seed (must be float/irrational) and returns a random number
+// The same seed always produces the same result (deterministic)
+
+let
+    // Test basic random number generation with initial seed
+    seed0 = 0.42;
+    r1 = rand(seed0);
+    r2 = rand(r1);
+    r3 = rand(r2);
+    
+    // Test that rand() returns values in valid range [0.0, 1.0]
+    fn test_range() {
+        let r = rand(0.12345);
+        in assert(r >= 0.0 and r <= 1.0)
+    }
+    
+    // Test that same seed produces same result (deterministic)
+    fn test_deterministic() {
+        let seed = 0.999;
+            a = rand(seed);
+            b = rand(seed);
+        in
+        // Same seed should give same result
+        assert(a == b)
+    }
+    
+    // Test that different seeds produce different values
+    fn test_different_seeds() {
+        let a = rand(0.1);
+            b = rand(0.2);
+            c = rand(0.3);
+        in
+        // Different seeds should (usually) give different results
+        // Not guaranteed but extremely likely
+        assert(not (a == b and b == c))
+    }
+    
+    // Test chaining random numbers
+    fn test_chaining() {
+        let seed = 0.100;
+            r1 = rand(seed);
+            r2 = rand(r1);
+            r3 = rand(r2);
+            r4 = rand(r3);
+            r5 = rand(r4);
+        in
+        // All should be in valid range
+        assert(r1 >= 0.0 and r1 <= 1.0);
+        assert(r2 >= 0.0 and r2 <= 1.0);
+        assert(r3 >= 0.0 and r3 <= 1.0);
+        assert(r4 >= 0.0 and r4 <= 1.0);
+        assert(r5 >= 0.0 and r5 <= 1.0);
+        true
+    }
+    
+    // Test that chained values are different
+    fn test_chained_different() {
+        let seed = 0.777;
+            r1 = rand(seed);
+            r2 = rand(r1);
+            r3 = rand(r2);
+        in
+        // Chained values should be different
+        assert(r1 != r2);
+        assert(r2 != r3);
+        assert(r1 != r3);
+        true
+    }
+    
+    // Test reproducibility - same sequence from same initial seed
+    fn test_reproducibility() {
+        let seed = 0.555;
+            seq1_r1 = rand(seed);
+            seq1_r2 = rand(seq1_r1);
+            seq1_r3 = rand(seq1_r2);
+            
+            seq2_r1 = rand(seed);
+            seq2_r2 = rand(seq2_r1);
+            seq2_r3 = rand(seq2_r2);
+        in
+        // Same initial seed should produce same sequence
+        assert(seq1_r1 == seq2_r1);
+        assert(seq1_r2 == seq2_r2);
+        assert(seq1_r3 == seq2_r3);
+        true
+    }
+    
+    // Test with various seed values
+    fn test_various_seeds() {
+        let r_zero = rand(0.0);
+            r_small = rand(0.001);
+            r_large = rand(0.999999);
+            r_half = rand(0.5);
+        in
+        assert(r_zero >= 0.0 and r_zero <= 1.0);
+        assert(r_small >= 0.0 and r_small <= 1.0);
+        assert(r_large >= 0.0 and r_large <= 1.0);
+        assert(r_half >= 0.0 and r_half <= 1.0);
+        true
+    }
+
+in
+    // Basic range tests
+    assert(r1 >= 0.0 and r1 <= 1.0);
+    assert(r2 >= 0.0 and r2 <= 1.0);
+    assert(r3 >= 0.0 and r3 <= 1.0);
+    
+    // Run test functions
+    test_range();
+    test_deterministic();
+    test_different_seeds();
+    test_chaining();
+    test_chained_different();
+    test_reproducibility();
+    test_various_seeds();
+    
+    puts("All rand() tests completed successfully!")

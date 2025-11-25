@@ -871,7 +871,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 } else {
-                    parserError(parser, "expected terminator");
+                    parserError(parser, "expected \"'\" terminator");
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 }

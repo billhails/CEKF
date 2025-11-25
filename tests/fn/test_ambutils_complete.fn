@@ -1,0 +1,104 @@
+// Test ambutils library functions
+// Tests backtracking amb utilities that were previously untested
+
+let
+    link "ambutils.fn" as amb;
+    link "listutils.fn" as list;
+    import amb operators;
+    
+    // Test some_of - generates non-empty subsets
+    fn test_some_of_basic() {
+        let result = amb.some_of([1, 2]);
+        in
+        // some_of generates subsets, so result should be a list
+        assert(typeof result == "list(number)")
+    }
+    
+    // Test some_of with backtracking to get multiple solutions
+    fn test_some_of_multiple() {
+        let subset = amb.some_of([1, 2, 3]);
+        in
+        // Require a specific subset
+        amb.require(list.length(subset) == 2);
+        // Should find a subset of length 2
+        assert(list.length(subset) == 2)
+    }
+    
+    // Test integers_from with backtracking
+    fn test_integers_from() {
+        let n = amb.integers_from(10);
+        in
+        // Get a number >= 10 and < 15
+        amb.require(n < 15);
+        assert(n >= 10 and n < 15)
+    }
+    
+    // Test integers_from with multiple constraints
+    fn test_integers_from_constrained() {
+        let n = amb.integers_from(100);
+        in
+        amb.require(n > 105);
+        amb.require(n < 110);
+        assert(n >= 106 and n <= 109)
+    }
+    
+    // Test integers_between
+    fn test_integers_between() {
+        let n = amb.integers_between(5, 10);
+        in
+        assert(n >= 5 and n <= 10)
+    }
+    
+    // Test integers_between with constraint
+    fn test_integers_between_constrained() {
+        let n = amb.integers_between(20, 30);
+        in
+        amb.require(n % 5 == 0);
+        // Should find 20, 25, or 30
+        assert(n == 20 or n == 25 or n == 30)
+    }
+    
+    // Test operator syntax for require (!:_)
+    fn test_require_operator() {
+        !: true;
+        assert(true)
+    }
+    
+    // Test operator syntax for one_of (from_)
+    fn test_one_of_operator() {
+        let x = from [10, 20, 30];
+        in
+        amb.require(x > 15);
+        assert(x == 20 or x == 30)
+    }
+    
+    // Test operator syntax for some_of (some_)
+    fn test_some_of_operator() {
+        let subset = some [1, 2, 3];
+        in
+        amb.require(list.length(subset) == 1);
+        assert(list.length(subset) == 1)
+    }
+    
+    // Test combining amb operations
+    fn test_combined_amb() {
+        let a = from [1, 2, 3];
+            b = from [4, 5, 6];
+        in
+        amb.require(a + b == 7);
+        assert(a + b == 7)
+    }
+
+in
+    test_some_of_basic();
+    test_some_of_multiple();
+    test_integers_from();
+    test_integers_from_constrained();
+    test_integers_between();
+    test_integers_between_constrained();
+    test_require_operator();
+    test_one_of_operator();
+    test_some_of_operator();
+    test_combined_amb();
+    
+    puts("All ambutils tests completed successfully!")

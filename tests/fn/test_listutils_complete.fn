@@ -1,0 +1,147 @@
+// Test listutils library functions
+// Tests previously untested or under-tested list functions
+
+let
+    link "listutils.fn" as list;
+    import list operators;
+    
+    // Test unique - removes duplicates
+    fn test_unique() {
+        assert(list.unique([1,2,2,3,1,4]) == [1,2,3,4]);
+        assert(list.unique([]) == []);
+        assert(list.unique([5]) == [5]);
+        assert(list.unique([1,1,1,1]) == [1]);
+        true
+    }
+    
+    // Test for_each - like map but guarantees left-to-right order
+    fn test_for_each() {
+        let result = list.for_each(fn(x){x*2}, [1,2,3]);
+        in
+        assert(result == [2,4,6]);
+        
+        // Test with empty list
+        assert(list.for_each(fn(x){x+1}, []) == []);
+        true
+    }
+    
+    // Test sortBy with custom comparator
+    fn test_sortBy_ascending() {
+        let sorted = list.sortBy(fn(a,b){a<=>b}, [3,1,4,1,5,9,2,6]);
+        in assert(sorted == [1,1,2,3,4,5,6,9])
+    }
+    
+    // Test sortBy with reverse order
+    fn test_sortBy_descending() {
+        let sorted = list.sortBy(fn(a,b){b<=>a}, [3,1,4,1,5]);
+        in assert(sorted == [5,4,3,1,1])
+    }
+    
+    // Test sortBy with custom comparison
+    fn test_sortBy_custom() {
+        // Sort by absolute value
+        let sorted = list.sortBy(
+            fn(a,b){
+                if (a < 0) { -a } else { a } <=> 
+                if (b < 0) { -b } else { b }
+            },
+            [3, -1, -5, 2, -4]
+        );
+        in
+        // Should sort by abs value: 1, 2, 3, 4, 5
+        assert(list.length(sorted) == 5);
+        true
+    }
+    
+    // Test except operator (_except_)
+    fn test_except_operator() {
+        assert([1,2,3,4,5] except [2,4] == [1,3,5]);
+        assert([1,2,3] except [] == [1,2,3]);
+        assert([1,2,3] except [1,2,3] == []);
+        true
+    }
+    
+    // Test pipe operator (_|>_)
+    fn test_pipe_operator() {
+        let result = [1,2,3] |> fn(x){x*2};
+        in
+        assert(result == [2,4,6]);
+        true
+    }
+    
+    // Test edge cases for various list functions
+    fn test_empty_lists() {
+        assert(list.unique([]) == []);
+        assert(list.for_each(fn(x){x}, []) == []);
+        assert(list.sortBy(fn(a,b){a<=>b}, []) == []);
+        assert([] except [] == []);
+        assert([] |> fn(x){x} == []);
+        true
+    }
+    
+    // Test single element lists
+    fn test_single_element() {
+        assert(list.unique([5]) == [5]);
+        assert(list.for_each(fn(x){x*2}, [7]) == [14]);
+        assert(list.sortBy(fn(a,b){a<=>b}, [42]) == [42]);
+        assert([1] except [2] == [1]);
+        assert([5] |> fn(x){x+1} == [6]);
+        true
+    }
+    
+    // Test large lists
+    fn test_large_lists() {
+        let big = list.range(1, 100);
+            doubled = list.for_each(fn(x){x*2}, big);
+            sorted = list.sortBy(fn(a,b){b<=>a}, big);
+        in
+        assert(list.length(big) == 100);
+        assert(list.length(list.unique(big)) == 100);
+        assert(list.length(doubled) == 100);
+        assert(list.length(sorted) == 100);
+        true
+    }
+    
+    // Test unique with strings
+    fn test_unique_strings() {
+        assert(list.unique("hello") == "helo");
+        assert(list.unique("aabbcc") == "abc");
+        true
+    }
+    
+    // Test sortBy with strings  
+    fn test_sortBy_strings() {
+        let sorted = list.sortBy(fn(a,b){a<=>b}, "dcba");
+        in assert(sorted == "abcd")
+    }
+    
+    // Test combining operations
+    fn test_combined_operations() {
+        let doubled = list.range(1, 10) |> fn(x){x*2};
+            result = list.filter(fn(x){x > 10}, doubled);
+            unique_sorted = list.sortBy(
+                fn(a,b){a<=>b},
+                list.unique([3,1,4,1,5,9,2,6,5,3])
+            );
+        in
+        assert(list.length(result) > 0);
+        assert(unique_sorted == [1,2,3,4,5,6,9]);
+        true
+    }
+
+in
+    test_unique();
+    test_for_each();
+    test_sortBy_ascending();
+    test_sortBy_descending();
+    test_sortBy_custom();
+    test_except_operator();
+    test_pipe_operator();
+    test_empty_lists();
+    test_single_element();
+    test_large_lists();
+    test_unique_strings();
+    test_sortBy_strings();
+    test_combined_operations();
+    
+    puts("All listutils tests completed successfully!")

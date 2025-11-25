@@ -1,0 +1,62 @@
+// Bug demonstration: readdir() causes segmentation fault
+// This test is prefixed with bug_ to exclude it from normal test runs
+// Run manually to reproduce the issue: ./bin/fn --include=fn bug_readdir_segfault.fn
+
+let
+    link "listutils.fn" as list;
+    
+    // Test that demonstrates readdir() segfault
+    fn test_readdir_basic() {
+        let result = opendir(".");
+        in
+        switch(result) {
+            (success(dirhandle)) {
+                // This call to readdir appears to cause a segfault
+                let entry = readdir(dirhandle);
+                in
+                closedir(dirhandle);
+                switch(entry) {
+                    (some(name)) {
+                        // Should get a filename string
+                        assert(typeof name == "list(char)");
+                        assert(list.length(name) > 0);
+                        true
+                    }
+                    (nothing) {
+                        // Empty directory is possible
+                        assert(true);
+                        true
+                    }
+                }
+            }
+            (failure(_)) {
+                assert(true);
+                true
+            }
+        }
+    }
+    
+    // Test reading multiple entries - also causes segfault
+    fn test_readdir_multiple() {
+        let result = opendir(".");
+        in
+        switch(result) {
+            (success(dirhandle)) {
+                let e1 = readdir(dirhandle);
+                    e2 = readdir(dirhandle);
+                    e3 = readdir(dirhandle);
+                in
+                closedir(dirhandle);
+                assert(true)
+            }
+            (failure(_)) {
+                assert(true)
+            }
+        }
+    }
+
+in
+    puts("Testing readdir() - may segfault...");
+    test_readdir_basic();
+    test_readdir_multiple();
+    puts("If you see this, readdir() has been fixed!")

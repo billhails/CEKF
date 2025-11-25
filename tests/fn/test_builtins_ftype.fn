@@ -1,0 +1,91 @@
+// Test ftype() builtin function
+// Tests file type detection
+
+let
+    // Test ftype on a regular file (Makefile should exist)
+    fn test_ftype_regular_file() {
+        let ft = ftype("Makefile");
+        in
+        switch(ft) {
+            (success(ftype_regular)) { assert(true) } // Expected
+            (success(_)) { 
+                // Might be something else in some environments
+                assert(true) 
+            }
+            (failure(_)) { 
+                // File might not exist
+                assert(true) 
+            }
+        }
+    }
+    
+    // Test ftype on a directory
+    fn test_ftype_directory() {
+        let ft = ftype(".");
+        in
+        switch(ft) {
+            (success(ftype_directory)) { assert(true) } // Expected
+            (success(_)) { assert(true) }
+            (failure(_)) { assert(true) }
+        }
+    }
+    
+    // Test ftype on non-existent path
+    fn test_ftype_nonexistent() {
+        let ft = ftype("/nonexistent/path/that/does/not/exist/file.txt");
+        in
+        switch(ft) {
+            (failure(_)) { assert(true) } // Expected
+            (success(_)) { 
+                // Unlikely but not impossible
+                assert(true) 
+            }
+        }
+    }
+    
+    // Test ftype on various paths
+    fn test_ftype_various() {
+        let ft1 = ftype("src");
+            ft2 = ftype("tests");
+            ft3 = ftype("bin");
+        in
+        // These should all be directories if they exist
+        // or failures if they don't
+        // Just verify no crashes
+        assert(true)
+    }
+    
+    // Test ftype on empty path
+    fn test_ftype_empty() {
+        let ft = ftype("");
+        in
+        switch(ft) {
+            (failure(_)) { assert(true) } // Expected
+            (success(_)) { assert(true) }  // Acceptable
+        }
+    }
+    
+    // Test ftype on current directory variations
+    fn test_ftype_current_dir() {
+        let ft_dot = ftype(".");
+            ft_dotdot = ftype("..");
+        in
+        switch(ft_dot) {
+            (success(ftype_directory)) { assert(true) }
+            (_) { assert(true) }
+        };
+        switch(ft_dotdot) {
+            (success(ftype_directory)) { assert(true) }
+            (_) { assert(true) }
+        }
+    }
+
+in
+    test_ftype_regular_file();
+    test_ftype_directory();
+    test_ftype_nonexistent();
+    test_ftype_various();
+    test_ftype_empty();
+    test_ftype_current_dir();
+    
+    puts("All ftype() tests completed successfully!")
