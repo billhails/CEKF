@@ -1,0 +1,51 @@
+assert(unicode_category('A') == GC_Lu);
+assert(unicode_category('z') == GC_Ll);
+assert(unicode_category('ǅ') == GC_Lt);
+assert(unicode_category('ʼ') == GC_Lm);
+assert(unicode_category('´') == GC_Sk);
+assert(unicode_category('\u2002;') == GC_Zs);
+assert(unicode_category('0') == GC_Nd);
+assert(unicode_category('½') == GC_No);
+assert(unicode_category(' ') == GC_Zs);
+assert(unicode_category('\n') == GC_Cc);
+assert(unicode_category('_') == GC_Pc);
+assert(unicode_category('-') == GC_Pd);
+assert(unicode_category('©') == GC_So);
+assert(unicode_category('€') == GC_Sc);
+assert(unicode_category('¶') == GC_Po);
+assert(unicode_category('あ') == GC_Lo);
+// Additional tests
+assert(unicode_category('Б') == GC_Lu);
+assert(unicode_category('я') == GC_Ll);
+assert(unicode_category('ǈ') == GC_Lt);
+assert(unicode_category('ʾ') == GC_Lm);
+assert(unicode_category('^') == GC_Sk);
+assert(unicode_category('\u2003;') == GC_Zs);
+assert(unicode_category('9') == GC_Nd);
+assert(unicode_category('¼') == GC_No);
+assert(unicode_category('\t') == GC_Cc);
+assert(unicode_category('~') == GC_Sm);
+assert(unicode_category('–') == GC_Pd);
+assert(unicode_category('™') == GC_So);
+assert(unicode_category('£') == GC_Sc);
+assert(unicode_category('!') == GC_Po);
+assert(unicode_category('م') == GC_Lo);
+assert(unicode_category('\u093E;') == GC_Mc); // Devanagari Vowel Sign AA
+assert(unicode_category('\u0301;') == GC_Mn); // Combining Acute Accent
+assert(unicode_category('\u2160;') == GC_Nl); // Roman Numeral One
+assert(unicode_category(')') == GC_Pe); // Right Parenthesis
+assert(unicode_category('«') == GC_Pi); // Left-Pointing Double Angle Quotation Mark
+assert(unicode_category('»') == GC_Pf); // Right-Pointing Double Angle Quotation Mark
+assert(unicode_category('[') == GC_Ps); // Left Square Bracket
+assert(unicode_category('\u2028;') == GC_Zl); // Line Separator
+assert(unicode_category('\u2029;') == GC_Zp); // Paragraph Separator
+// tests for GC_Me, GC_Cf, GC_Co, GC_Cs and GC_Cn
+assert(unicode_category('\u0488;') == GC_Me); // Combining Cyrillic Hundred Thousands Sign
+assert(unicode_category('\u200E;') == GC_Cf); // Left-To-Right Mark
+// Note: GC_Co (Private Use) characters are not assigned in Unicode,
+// so we use a code point from the Private Use Area
+assert(unicode_category('\uE000;') == GC_Co); // Private Use Area
+assert(unicode_category('\uD800;') == GC_Cs); // High Surrogate
+// GC_Cn (Unassigned) test - using a code point that is currently unassigned
+assert(unicode_category('\u0378;') == GC_Cn); // Unassigned code point
+puts("Unicode category tests passed\n")

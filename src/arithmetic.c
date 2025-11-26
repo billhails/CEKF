@@ -1138,15 +1138,37 @@ static Value basicIntDiv(Value left, Value right) {
  */
 static Value safe_powf(Integer a, Integer b) {
     float f = powf((float) a, (float) b);
-    if (f == HUGE_VALF || f > (float)INT_MAX || f < (float)INT_MIN) {
-        BigInt *big = bigIntFromPower(a, b);
-        int save = PROTECT(big);
-        Value res = value_Bigint(big);
-        protectValue(res);
-        UNPROTECT(save);
-        return res;
+    if (f == HUGE_VALF || f > (float)INT_MAX) {
+        if (b >= 0) {
+            BigInt *big = bigIntFromPower(a, b);
+            int save = PROTECT(big);
+            Value res = value_Bigint(big);
+            protectValue(res);
+            UNPROTECT(save);
+            return res;
+        } else {
+            BigInt *big = bigIntFromPower(a, -b);
+            int save = PROTECT(big);
+            Value denom = value_Bigint(big);
+            protectValue(denom);
+            UNPROTECT(save);
+            return ratValue(value_Stdint(1), denom);
+        }
     } else {
-        return value_Stdint((Integer) f);
+        if (b >= 0) {
+            Integer res = 1;
+            for (Integer i = 0; i < b; i++) {
+                res *= a;
+            }
+            return value_Stdint(res);
+        } else {
+            b = -b;
+            Integer res = 1;
+            for (Integer i = 0; i < b; i++) {
+                res *= a;
+            }
+            return ratValue(value_Stdint(1), value_Stdint(res));
+        }
     }
 }
 
@@ -1261,17 +1283,38 @@ static Value intPow(Value left, Value right) {
         case VALUE_TYPE_BIGINT:
             switch (right.type) {
                 case VALUE_TYPE_BIGINT: {
-                    BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
-                    PROTECT(bi);
-                    res = value_Bigint(bi);
-                    protectValue(res);
+                    if (intIsNeg(right)) {
+                        BigInt *pos = copyBigInt(right.val.bigint);
+                        PROTECT(pos);
+                        negateBigInt(pos);
+                        BigInt *bi = powBigInt(left.val.bigint, pos);
+                        PROTECT(bi);
+                        Value denom = value_Bigint(bi);
+                        protectValue(denom);
+                        res = ratValue(value_Stdint(1), denom);
+                        protectValue(res);
+                    } else {
+                        BigInt *bi = powBigInt(left.val.bigint, right.val.bigint);
+                        PROTECT(bi);
+                        res = value_Bigint(bi);
+                        protectValue(res);
+                    }
                 }
                 break;
                 case VALUE_TYPE_STDINT: {
-                    BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
-                    PROTECT(bi);
-                    res = value_Bigint(bi);
-                    protectValue(res);
+                    if (right.val.stdint < 0) {
+                        BigInt *bi = powBigIntInt(left.val.bigint, -right.val.stdint);
+                        PROTECT(bi);
+                        Value denom = value_Bigint(bi);
+                        protectValue(denom);
+                        res = ratValue(value_Stdint(1), denom);
+                        protectValue(res);
+                    } else {   
+                        BigInt *bi = powBigIntInt(left.val.bigint, right.val.stdint);
+                        PROTECT(bi);
+                        res = value_Bigint(bi);
+                        protectValue(res);
+                    }
                 }
                 break;
                 case VALUE_TYPE_RATIONAL: {

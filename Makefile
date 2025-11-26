@@ -1,4 +1,6 @@
-.PHONY: all clean realclean deps profile leak-check check-grammar list-cores test indent indent-src indent-generated docs install-sqlite3 coverage
+.PHONY: all clean realclean deps profile leak-check check-grammar \
+list-cores test indent indent-src indent-generated docs \
+install-sqlite3 coverage view-coverage
 
 # pass on the command line, i.e. `make test MODE=testing`
 #
@@ -269,5 +271,8 @@ list-cores:
 
 coverage:
 	./tools/coverage.sh
+
+view-coverage:
+	firefox --new-tab coverage_html/index.html
 
 # vim: set noet sw=4:
