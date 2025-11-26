@@ -268,6 +268,6 @@ list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1
 
 coverage:
-	@./tools/coverage.sh
+	./tools/coverage.sh
 
 # vim: set noet sw=4:
