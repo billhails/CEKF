@@ -1,11 +1,11 @@
 // Tests for arithmetic operations with mixed numeric types
-// Testing: bigint+float, complex operations, cross-type comparisons, 
+// Testing: bigint+float, complex operations, cross-type comparisons,
 // subtraction of different types, power operations with all numeric types
 
 let
     // Helper to create complex numbers (real + imaginary*i)
     fn complex(r, i) { r + (i * 1i) }
-    
+
     // Test bigint + float = float
     fn test_bigint_plus_float() {
         let
@@ -18,7 +18,7 @@ let
             assert(result < 100004.0);
             true
     }
-    
+
     fn test_float_plus_bigint() {
         let
             flt = 2.718;
@@ -30,7 +30,7 @@ let
             assert(result < 50003.0);
             true
     }
-    
+
     fn test_rational_plus_float() {
         let
             rat = 1 / 3;  // Rational 1/3
@@ -42,7 +42,7 @@ let
             assert(result < 0.9);
             true
     }
-    
+
     fn test_float_plus_rational() {
         let
             flt = 1.5;
@@ -54,7 +54,7 @@ let
             assert(result < 1.8);
             true
     }
-    
+
     // Test complex number magnitude and angle
     fn test_com_mag_simple() {
         let
@@ -65,7 +65,7 @@ let
             assert(mag == 5);
             true
     }
-    
+
     fn test_com_mag_zero() {
         let
             c = complex(0, 0);
@@ -74,7 +74,7 @@ let
             assert(mag == 0);
             true
     }
-    
+
     fn test_com_mag_real() {
         let
             c = complex(5, 0);  // Real number
@@ -83,7 +83,7 @@ let
             assert(mag == 5);
             true
     }
-    
+
     fn test_com_mag_imaginary() {
         let
             c = complex(0, 12);  // Pure imaginary
@@ -92,7 +92,7 @@ let
             assert(mag == 12);
             true
     }
-    
+
     fn test_com_theta_zero() {
         let
             c = complex(1, 0);  // Positive real axis
@@ -103,7 +103,7 @@ let
             assert(theta > (0 - 0.01));
             true
     }
-    
+
     fn test_com_theta_pi_over_2() {
         let
             c = complex(0, 1);  // Positive imaginary axis
@@ -114,7 +114,7 @@ let
             assert(theta < 1.6);
             true
     }
-    
+
     fn test_com_theta_pi() {
         let
             c = complex(0 - 1, 0);  // Negative real axis
@@ -125,7 +125,7 @@ let
             assert(theta > 3.0 or theta < (0 - 3.0));
             true
     }
-    
+
             // Test comparisons of different numeric types
     fn test_compare_int_rational() {
         let
@@ -137,7 +137,7 @@ let
             assert(not (i == r));
             true
     }
-    
+
     fn test_compare_int_float() {
         let
             i = 3;
@@ -148,7 +148,7 @@ let
             assert(i <= f);
             true
     }
-    
+
     fn test_compare_rational_float() {
         let
             r = 1 / 2;  // 0.5
@@ -158,7 +158,7 @@ let
             assert(f > r);
             true
     }
-    
+
     fn test_compare_bigint_int() {
         let
             big = 10000000000000000000;
@@ -168,7 +168,7 @@ let
             assert(small < big);
             true
     }
-    
+
     fn test_compare_bigint_rational() {
         let
             big = 1000000000000;
@@ -178,7 +178,7 @@ let
             assert(r < big);
             true
     }
-    
+
     fn test_compare_bigint_float() {
         let
             big = 999999999999999;
@@ -188,7 +188,7 @@ let
             assert(f < big);
             true
     }
-    
+
             // Test subtraction of different types
     fn test_subtract_int_rational() {
         let
@@ -201,7 +201,7 @@ let
             assert(result < 5);
             true
     }
-    
+
     fn test_subtract_rational_int() {
         let
             r = 7 / 2;  // 3.5
@@ -213,7 +213,7 @@ let
             assert(result < 2);
             true
     }
-    
+
     fn test_subtract_float_int() {
         let
             f = 10.5;
@@ -224,7 +224,7 @@ let
             assert(result < 7.6);
             true
     }
-    
+
     fn test_subtract_int_float() {
         let
             i = 20;
@@ -235,7 +235,7 @@ let
             assert(result < 16.8);
             true
     }
-    
+
     fn test_subtract_rational_float() {
         let
             r = 3 / 4;  // 0.75
@@ -246,7 +246,7 @@ let
             assert(result < 0.6);
             true
     }
-    
+
     fn test_subtract_bigint_int() {
         let
             big = 10000000000;
@@ -257,7 +257,7 @@ let
             assert(result < 10000000000);
             true
     }
-    
+
     fn test_subtract_bigint_float() {
         let
             big = 1000000000000;
@@ -268,7 +268,7 @@ let
             assert(result < 1000000000000.0);
             true
     }
-    
+
             // Test power operations (x ** y) with various type combinations
     fn test_power_int_int() {
         assert(2 ** 3 == 8);
@@ -276,7 +276,7 @@ let
         assert(10 ** 2 == 100);
         true
     }
-    
+
     fn test_power_int_negative() {
         let
             result = 2 ** -3;
@@ -284,7 +284,7 @@ let
             assert(result == 1/8);
             true
     }
-    
+
     fn test_power_bigint_int() {
         let
             big = 100000000000;
@@ -294,7 +294,7 @@ let
             assert(result == 10000000000000000000000);
             true
     }
-    
+
     fn test_power_int_bigint() {
         let
             base = 2;
@@ -305,7 +305,7 @@ let
             assert(result > 1000000000000000000000000000000);
             true
     }
-    
+
     fn test_power_float_int() {
         let
             result = 2.0 ** 3;
@@ -314,7 +314,7 @@ let
             assert(result < 8.1);
             true
     }
-    
+
     fn test_power_int_float() {
         let
             result = 4 ** 0.5;
@@ -324,7 +324,7 @@ let
             assert(result < 2.1);
             true
     }
-    
+
     fn test_power_float_float() {
         let
             result = 2.5 ** 2.0;
@@ -334,28 +334,33 @@ let
             assert(result < 6.3);
             true
     }
-    
+
+    fn test_power_float_imaginary_float() {
+        let
+            result = 2.5 ** 2.0i;
+        in
+            assert(result > 0);
+            assert(result < 6.3);
+            true
+    }
+
     fn test_power_rational_int() {
         let
             r = 3 / 2;  // 1.5
             result = r ** 2;
         in
             // (3/2)^2 = 9/4 = 2.25
-            assert(result > 2.2);
-            assert(result < 2.3);
-            true
+            assert(result == 9/4);
     }
-    
+
     fn test_power_int_rational() {
         let
             result = 8 ** (1 / 3);
         in
             // 8^(1/3) = cube root of 8 = 2
-            assert(result > 1.9);
-            assert(result < 2.1);
-            true
+            assert(result == 2);
     }
-    
+
     fn test_power_rational_rational() {
         let
             base = 4 / 1;
@@ -363,11 +368,10 @@ let
             result = base ** exp;
         in
             // 4^(1/2) = 2
-            assert(result > 1.9);
-            assert(result < 2.1);
+            assert(result == 2);
             true
     }
-    
+
     fn test_power_rational_float() {
         let
             r = 9 / 4;  // 2.25
@@ -376,9 +380,8 @@ let
             // 2.25^2 ≈ 5.0625
             assert(result > 5.0);
             assert(result < 5.1);
-            true
     }
-    
+
     fn test_power_float_rational() {
         let
             result = 16.0 ** (1 / 4);
@@ -386,19 +389,17 @@ let
             // 16^(1/4) = fourth root of 16 = 2
             assert(result > 1.9);
             assert(result < 2.1);
-            true
     }
-    
+
     fn test_power_complex_int() {
         let
             c = complex(0, 1);  // i
             result = c ** 2;
         in
             // i^2 = -1
-            // Result should be complex with real part ≈ -1
-            true  // Just test it doesn't crash
+            assert(result == -1);
     }
-    
+
     fn test_power_complex_float() {
         let
             c = complex(1, 1);  // 1+i
@@ -407,16 +408,16 @@ let
             // (1+i)^2 = 1 + 2i - 1 = 2i
             true  // Just test it doesn't crash
     }
-    
+
     fn test_power_int_complex() {
         let
             c = complex(0, 1);  // i
             result = 2 ** c;
         in
             // 2^i = cos(ln(2)) + i*sin(ln(2))
-            true  // Just test it doesn't crash
+            assert(true);
     }
-    
+
     fn test_power_bigint_float() {
         let
             big = 1000000000;
@@ -427,7 +428,7 @@ let
             assert(result < 35000000000000.0);
             true
     }
-    
+
     fn test_power_float_bigint() {
         let
             result = 1.5 ** 100;
@@ -436,7 +437,7 @@ let
             assert(result > 1000000.0);
             true
     }
-    
+
             // Edge cases
     fn test_power_zero_zero() {
         let
@@ -446,7 +447,7 @@ let
             assert(result == 1);
             true
     }
-    
+
     fn test_power_negative_fractional() {
         let
             result = (0 - 8) ** (1 / 3);
@@ -461,23 +462,23 @@ in
     test_float_plus_bigint();
     test_rational_plus_float();
     test_float_plus_rational();
-    
+
     test_com_mag_simple();
     test_com_mag_zero();
     test_com_mag_real();
     test_com_mag_imaginary();
-    
+
     test_com_theta_zero();
     test_com_theta_pi_over_2();
     test_com_theta_pi();
-    
+
     test_compare_int_rational();
     test_compare_int_float();
     test_compare_rational_float();
     test_compare_bigint_int();
     test_compare_bigint_rational();
     test_compare_bigint_float();
-    
+
     test_subtract_int_rational();
     test_subtract_rational_int();
     test_subtract_float_int();
@@ -485,7 +486,7 @@ in
     test_subtract_rational_float();
     test_subtract_bigint_int();
     test_subtract_bigint_float();
-    
+
     test_power_int_int();
     test_power_int_negative();
     test_power_bigint_int();
@@ -503,8 +504,15 @@ in
     test_power_int_complex();
     test_power_bigint_float();
     test_power_float_bigint();
-    
+
     test_power_zero_zero();
     test_power_negative_fractional();
-    
+
+    assert(0/2 == 0);
+    assert(0/200000000000000000000000 == 0);
+    assert(200_000_000_000_000_000_000/200_000_000_000_000_000_000 == 1);
+    assert(200_000_000_000_000_000_000 > 1.0);
+
+     test_power_float_imaginary_float();
+
     puts("All mixed-type arithmetic tests passed!\n")

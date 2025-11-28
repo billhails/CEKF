@@ -1,0 +1,93 @@
+let
+    link "listutils.fn" as lst;
+    import lst operators;
+    operator "_|?_" left 8 fn (lst, f) { lst.filter(f, lst) };   
+
+    fn genInts() {
+        [4, 0, -4, 123456789012345678901234567890, -123456789012345678901234567890]
+    }
+
+    fn genFloats() {
+        [0.0, 1.5, -2.5]
+    }
+
+    fn nonzero(n) {
+        com_real(n) != 0 and com_real(n) != 0.0
+    }
+
+    fn genRationals() {
+        lst.concat(
+            genInts() |? nonzero |> fn (numerator) {
+                genInts() |? nonzero |> fn (denominator) {
+                    numerator / denominator
+                }
+            }
+        )
+    }
+
+    fn genReals() {
+        genInts() @@ genFloats() @@ genRationals()
+    }
+
+    fn genComplex() {
+        lst.concat(
+            genReals() |> fn (real) {
+                genReals() |> fn (imag) {
+                    real + imag * 1i
+                }
+            }
+        )
+    }
+
+    fn genNumbers() {
+        genInts() @@ genFloats() @@ genRationals() @@ genComplex()
+    }
+
+    fn opAdd(n1, n2) {
+        n1 + n2
+    }
+    fn opSub(n1, n2) {
+        n1 - n2
+    }
+    fn opMul(n1, n2) {
+        n1 * n2
+    }
+    fn opDiv(n1, n2) {
+        n1 / n2
+    }
+    fn opMod(n1, n2) {
+        if (nonzero(n2)) {
+            if (com_imag(n1) != 0 and com_imag(n2) == 0) {
+                0 // mod not defined for complex numbers
+            } else {
+                n1 % n2
+            }
+        } else {
+            0
+        }
+    }
+    fn opPow(n1, n2) {
+        if (n2 > 100 or n2 < -100) {
+            0 // avoid huge computations
+        } else {
+            n1 ** n2
+        }
+    }
+
+    fn genOps() {
+        [#(opAdd, "+"), #(opSub, "-"), #(opMul, "*"), #(opDiv, "/"), #(opMod, "%"), #(opPow, "**")]
+    }
+in
+    genNumbers() |> fn (n1) {
+        genNumbers() |> fn (n2) {
+            genOps() |> fn (#(op, opName)) {
+                putn(n1);
+                puts(" " @@ opName @@ " ");
+                putn(n2);
+                puts(" = ");
+                putn(op(n1, n2));
+                puts("\n");
+                true
+            }
+        }
+    }

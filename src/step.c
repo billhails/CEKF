@@ -308,6 +308,7 @@ static Cmp _cmp(Value left, Value right) {
             case VALUE_TYPE_BIGINT_IMAG:
             case VALUE_TYPE_STDINT_IMAG:
             case VALUE_TYPE_IRRATIONAL_IMAG:
+            case VALUE_TYPE_RATIONAL_IMAG:
             case VALUE_TYPE_COMPLEX:
                 switch (right.type) {
                     case VALUE_TYPE_BIGINT:
@@ -317,6 +318,7 @@ static Cmp _cmp(Value left, Value right) {
                     case VALUE_TYPE_BIGINT_IMAG:
                     case VALUE_TYPE_STDINT_IMAG:
                     case VALUE_TYPE_IRRATIONAL_IMAG:
+                    case VALUE_TYPE_RATIONAL_IMAG:
                     case VALUE_TYPE_COMPLEX:
                         break;
                     default:

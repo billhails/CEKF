@@ -1423,6 +1423,12 @@ static Value intMod(Value left, Value right) {
  * @return the gcd
  */
 static Integer gcd (Integer a, Integer b) {
+    if (a < 0) {
+        a = -a;
+    }
+    if (b < 0) {
+        b = -b;
+    }
 	Integer i = 0, min_num = a, gcd = 1;
 	if (a > b) {
 		min_num = b;
@@ -1620,15 +1626,25 @@ static Value ratOp(Value left, Value right, ParameterizedBinOp op, IntegerBinOp 
         }
     } else if (right.type == VALUE_TYPE_RATIONAL) {
         // only right rational
-        // convert left to rational and try again
-        left = int_to_rational(left);
-        protectValue(left);
-        res = ratOp(left, right, op, intOp, false);
-        protectValue(res);
+        if (numCmp(left, Zero) == CMP_EQ) {
+            // shortcut zero
+            res = Zero;
+            protectValue(res);
+        } else {
+            // convert left to rational and try again
+            left = int_to_rational(left);
+            protectValue(left);
+            res = ratOp(left, right, op, intOp, false);
+            protectValue(res);
+        }
     } else {
         // neither rational
         // either simplify to int or convert both to rational and try again
-        if (simplify) {
+        if (numCmp(left, Zero) == CMP_EQ) {
+            // shortcut zero
+            res = Zero;
+            protectValue(res);
+        } else if (simplify) {
             res = intOp(left, right);
             protectValue(res);
         } else {
