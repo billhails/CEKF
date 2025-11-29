@@ -1,0 +1,307 @@
+// Advanced continuation tests (here operator)
+// Testing: multiple captures, first-class values, nested continuations
+
+let
+    // Test basic continuation capture
+    fn test_basic_here() {
+        let
+            result = here fn (k) {
+                k(42)
+            };
+        in
+            assert(result == 42);
+            true
+    }
+    
+    // Test continuation with computation
+    fn test_here_with_computation() {
+        let
+            result = here fn (k) {
+                let x = 10;
+                in k(x * 2 + 5)
+            };
+        in
+            assert(result == 25);
+            true
+    }
+    
+    // Test continuation not called
+    fn test_here_normal_return() {
+        let
+            result = here fn (k) {
+                42
+            };
+        in
+            assert(result == 42);
+            true
+    }
+    
+    // Test continuation called multiple times
+    fn test_here_multiple_calls() {
+        let
+            result = here fn (k) {
+                k(10);
+                k(20);
+                30
+            };
+        in
+            assert(result == 10);
+            true
+    }
+    
+    // Test continuation in conditional
+    fn test_here_in_conditional() {
+        let
+            test_value = fn(x) {
+                here fn (k) {
+                    if (x > 10) {
+                        k(100)
+                    } else {
+                        k(200)
+                    }
+                }
+            };
+        in {
+            assert(test_value(15) == 100);
+            assert(test_value(5) == 200);
+            true
+        }
+    }
+    
+    // Test continuation with pattern matching
+    fn test_here_with_patterns() {
+        let
+            process = fn(lst) {
+                here fn (k) {
+                    switch (lst) {
+                        ([]) { k(0) }
+                        (h @ _) { k(h) }
+                    }
+                }
+            };
+        in {
+            assert(process([5, 10, 15]) == 5);
+            assert(process([]) == 0);
+            true
+        }
+    }
+    
+    // Test nested here
+    fn test_nested_here() {
+        let
+            result = here fn (outer) {
+                let inner_result = here fn (inner) {
+                    inner(10)
+                };
+                in outer(inner_result * 2)
+            };
+        in
+            assert(result == 20);
+            true
+    }
+    
+    // Test continuation as first-class value
+    fn test_continuation_first_class() {
+        let
+            result = here fn (k) {
+                let f = fn(x) { k(x) };
+                in f(42)
+            };
+        in {
+            assert(result == 42);
+            true
+        }
+    }
+    
+    // Test continuation in list
+    fn test_continuation_in_list() {
+        let
+            result = here fn (k) {
+                let conts = [k, k, k];
+                in
+                    switch (conts) {
+                        (first @ _) { first(99) }
+                        (_) { 0 }
+                    }
+            };
+        in
+            assert(result == 99);
+            true
+    }
+    
+    // Test continuation with closure
+    fn test_continuation_with_closure() {
+        let
+            make_returner = fn(x) {
+                fn(k) { k(x) }
+            };
+            result = here fn (k) {
+                let returner = make_returner(55);
+                in returner(k)
+            };
+        in
+            assert(result == 55);
+            true
+    }
+    
+    // Test early exit from recursion
+    fn test_here_early_exit() {
+        let
+            find = fn(lst, target) {
+                here fn (return) {
+                    let
+                        search = fn(l) {
+                            switch (l) {
+                                ([]) { false }
+                                (h @ t) {
+                                    if (h == target) {
+                                        return(true)
+                                    } else {
+                                        search(t)
+                                    }
+                                }
+                            }
+                        };
+                    in
+                        search(lst)
+                }
+            };
+        in {
+            assert(find([1, 2, 3, 4, 5], 3) == true);
+            assert(find([1, 2, 3, 4, 5], 9) == false);
+            true
+        }
+    }
+    
+    // Test continuation escaping scope
+    fn test_continuation_escape() {
+        let
+            use_continuation = fn(cont) {
+                cont(77)
+            };
+            result = here fn (k) {
+                use_continuation(k)
+            };
+        in {
+            assert(result == 77);
+            true
+        }
+    }
+    
+    // Test continuation with complex return value
+    fn test_continuation_complex_return() {
+        let
+            result = here fn (k) {
+                k([1, 2, 3])
+            };
+        in
+            switch (result) {
+                ([a, b, c]) {
+                    assert(a == 1);
+                    assert(b == 2);
+                    assert(c == 3);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    // Test continuation in loop-like recursion
+    fn test_continuation_in_loop() {
+        let
+            sum_until = fn(n, limit) {
+                here fn (done) {
+                    let
+                        loop = fn(i, acc) {
+                            if (i > limit) {
+                                done(acc)
+                            } else {
+                                loop(i + 1, acc + i)
+                            }
+                        };
+                    in
+                        loop(1, 0)
+                }
+            };
+        in {
+            assert(sum_until(0, 5) == 15);
+            assert(sum_until(0, 10) == 55);
+            true
+        }
+    }
+    
+    // Test continuation with tuple return
+    fn test_continuation_tuple_return() {
+        let
+            result = here fn (k) {
+                k(#(10, 20, 30))
+            };
+        in
+            switch (result) {
+                (#(a, b, c)) {
+                    assert(a + b + c == 60);
+                    true
+                }
+            }
+    }
+    
+    // Test multiple nested here
+    fn test_multiple_nested_here() {
+        let
+            result = here fn (k1) {
+                here fn (k2) {
+                    here fn (k3) {
+                        k1(100)
+                    };
+                    k2(200)
+                };
+                300
+            };
+        in
+            assert(result == 100);
+            true
+    }
+    
+    // Test continuation not used
+    fn test_continuation_unused() {
+        let
+            result = here fn (k) {
+                10 + 20
+            };
+        in
+            assert(result == 30);
+            true
+    }
+    
+    // Test continuation with string
+    fn test_continuation_string() {
+        let
+            result = here fn (k) {
+                k("hello")
+            };
+        in
+            assert(result == "hello");
+            true
+    }
+
+in
+    test_basic_here();
+    test_here_with_computation();
+    test_here_normal_return();
+    test_here_multiple_calls();
+    test_here_in_conditional();
+    test_here_with_patterns();
+    test_nested_here();
+    test_continuation_first_class();
+    test_continuation_in_list();
+    test_continuation_with_closure();
+    test_here_early_exit();
+    test_continuation_escape();
+    test_continuation_complex_return();
+    test_continuation_in_loop();
+    test_continuation_tuple_return();
+    test_multiple_nested_here();
+    test_continuation_unused();
+    test_continuation_string();
+    
+    puts("All advanced continuation tests passed!\n")

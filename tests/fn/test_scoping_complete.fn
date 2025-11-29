@@ -1,0 +1,354 @@
+// Comprehensive scoping tests
+// Testing: shadowing, scope lifetime, mutual recursion, letrec behavior
+
+let
+    // Test basic shadowing
+    fn test_basic_shadowing() {
+        let
+            x = 10;
+        in {
+            let
+                x = 20;
+            in {
+                assert(x == 20);
+                true
+            }
+        }
+    }
+    
+    // Test outer scope accessible
+    fn test_outer_scope() {
+        let
+            x = 10;
+        in {
+            let
+                y = x + 5;
+            in {
+                assert(y == 15);
+                assert(x == 10);
+                true
+            }
+        }
+    }
+    
+    // Test multi-level shadowing
+    fn test_multi_level_shadow() {
+        let
+            x = 1;
+        in {
+            let
+                x = 2;
+            in {
+                let
+                    x = 3;
+                in {
+                    let
+                        x = 4;
+                    in {
+                        assert(x == 4);
+                        true
+                    }
+                }
+            }
+        }
+    }
+    
+    // Test type change through shadowing
+    fn test_type_change_shadow() {
+        let
+            x = 42;
+        in {
+            let
+                x = "hello";
+            in {
+                assert(x == "hello");
+                true
+            }
+        }
+    }
+    
+    // Test function parameter shadowing
+    fn test_param_shadow() {
+        let
+            x = 100;
+            func = fn(x) { x + 10 };
+        in {
+            assert(func(5) == 15);
+            assert(x == 100);
+            true
+        }
+    }
+    
+    // Test mutual recursion in let block
+    fn test_mutual_recursion() {
+        let
+            is_even = fn(n) {
+                if (n == 0) {
+                    true
+                } else {
+                    is_odd(n - 1)
+                }
+            };
+            is_odd = fn(n) {
+                if (n == 0) {
+                    false
+                } else {
+                    is_even(n - 1)
+                }
+            };
+        in {
+            assert(is_even(4) == true);
+            assert(is_odd(4) == false);
+            assert(is_even(7) == false);
+            assert(is_odd(7) == true);
+            true
+        }
+    }
+    
+    // Test letrec - all functions can see each other
+    fn test_letrec_semantics() {
+        let
+            func_a = fn() { func_b() + 1 };
+            func_b = fn() { 10 };
+        in {
+            assert(func_a() == 11);
+            true
+        }
+    }
+    
+    // Test nested function scopes
+    fn test_nested_functions() {
+        let
+            outer = fn(x) {
+                fn(y) {
+                    fn(z) {
+                        x + y + z
+                    }
+                }
+            };
+        in {
+            assert(outer(1)(2)(3) == 6);
+            true
+        }
+    }
+    
+    // Test variable captured in closure
+    fn test_closure_capture() {
+        let
+            x = 10;
+        in {
+            let
+                make_adder = fn(y) {
+                    fn(z) { x + y + z }
+                };
+                add_with_5 = make_adder(5);
+            in {
+                assert(add_with_5(3) == 18);
+                true
+            }
+        }
+    }
+    
+    // Test shadowing in pattern match
+    fn test_pattern_shadow() {
+        let
+            x = 100;
+            result = switch ([1, 2, 3]) {
+                ([]) { 0 }
+                (x @ rest) { x + <rest }
+            };
+        in {
+            assert(result == 3);
+            assert(x == 100);
+            true
+        }
+    }
+    
+    // Test scope isolation
+    fn test_scope_isolation() {
+        let
+            result1 = {
+                let x = 10;
+                in x + 5
+            };
+            result2 = {
+                let x = 20;
+                in x + 5
+            };
+        in {
+            assert(result1 == 15);
+            assert(result2 == 25);
+            true
+        }
+    }
+    
+    // Test function-local variables don't leak
+    fn test_no_leakage() {
+        let
+            func = fn() {
+                let local = 42;
+                in local
+            };
+            result = func();
+        in {
+            assert(result == 42);
+            true
+        }
+    }
+    
+    // Test multiple bindings same scope
+    fn test_multiple_bindings() {
+        let
+            a = 1;
+            b = 2;
+            c = 3;
+            d = a + b + c;
+        in {
+            assert(d == 6);
+            true
+        }
+    }
+    
+    // Test shadowing with same type
+    fn test_same_type_shadow() {
+        let
+            x = 10;
+        in {
+            let
+                x = x + 5;
+            in {
+                let
+                    x = x * 2;
+                in {
+                    assert(x == 30);
+                    true
+                }
+            }
+        }
+    }
+    
+    // Test recursive function scope
+    fn test_recursive_scope() {
+        let
+            factorial = fn(n) {
+                if (n <= 1) {
+                    1
+                } else {
+                    n * factorial(n - 1)
+                }
+            };
+        in {
+            assert(factorial(5) == 120);
+            true
+        }
+    }
+    
+    // Test mutually recursive with consistent types
+    fn test_mutual_consistent_types() {
+        let
+            count_a = fn(n) {
+                if (n <= 0) {
+                    0
+                } else {
+                    1 + count_b(n - 1)
+                }
+            };
+            count_b = fn(n) {
+                if (n <= 0) {
+                    0
+                } else {
+                    1 + count_a(n - 1)
+                }
+            };
+        in {
+            assert(count_a(10) == 10);
+            assert(count_b(5) == 5);
+            true
+        }
+    }
+    
+    // Test nested let blocks
+    fn test_nested_lets() {
+        let
+            a = 1;
+        in {
+            let
+                b = a + 1;
+            in {
+                let
+                    c = b + 1;
+                in {
+                    assert(a == 1);
+                    assert(b == 2);
+                    assert(c == 3);
+                    true
+                }
+            }
+        }
+    }
+    
+    // Test shadowing list variable
+    fn test_shadow_list() {
+        let
+            xs = [1, 2, 3];
+        in {
+            let
+                xs = [4, 5, 6];
+            in {
+                assert(xs == [4, 5, 6]);
+                true
+            }
+        }
+    }
+    
+    // Test shadowing tuple variable
+    fn test_shadow_tuple() {
+        let
+            pair = #(1, 2);
+        in {
+            let
+                pair = #(3, 4);
+            in {
+                assert(pair == #(3, 4));
+                true
+            }
+        }
+    }
+    
+    // Test function shadowing
+    fn test_function_shadow() {
+        let
+            func = fn(x) { x + 1 };
+        in {
+            let
+                func = fn(x) { x * 2 };
+            in {
+                assert(func(5) == 10);
+                true
+            }
+        }
+    }
+
+in
+    test_basic_shadowing();
+    test_outer_scope();
+    test_multi_level_shadow();
+    test_type_change_shadow();
+    test_param_shadow();
+    test_mutual_recursion();
+    test_letrec_semantics();
+    test_nested_functions();
+    test_closure_capture();
+    test_pattern_shadow();
+    test_scope_isolation();
+    test_no_leakage();
+    test_multiple_bindings();
+    test_same_type_shadow();
+    test_recursive_scope();
+    test_mutual_consistent_types();
+    test_nested_lets();
+    test_shadow_list();
+    test_shadow_tuple();
+    test_function_shadow();
+    
+    puts("All scoping tests passed!\n")

@@ -1,0 +1,499 @@
+// Deep pattern matching tests
+// Testing: nested patterns, complex destructuring, pattern guards, multiple pattern variables
+
+let
+    // Test deeply nested list patterns
+    fn test_nested_list_3_deep() {
+        let
+            get_deep = fn(lst) {
+                switch (lst) {
+                    ([[[x]]]) { x }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_deep([[[42]]]) == 42);
+            assert(get_deep([[[99]]]) == 99);
+            true
+    }
+    
+    fn test_nested_list_4_deep() {
+        let
+            get_deeper = fn(lst) {
+                switch (lst) {
+                    ([[[[x]]]]) { x }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_deeper([[[[99]]]]) == 99);
+            assert(get_deeper([[[[7]]]]) == 7);
+            true
+    }
+    
+    fn test_nested_list_mixed() {
+        let
+            extract_sum = fn(lst) {
+                switch (lst) {
+                    ([[a, b], [c, d]]) { a + b + c + d }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(extract_sum([[1, 2], [3, 4]]) == 10);
+            assert(extract_sum([[5, 10], [15, 20]]) == 50);
+            true
+    }
+    
+    // Test nested tuple patterns
+    fn test_nested_tuple_2_deep() {
+        let
+            get_inner = fn(t) {
+                switch (t) {
+                    (#(#(x, _), _)) { x }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_inner(#(#(42, 1), 2)) == 42);
+            true
+    }
+    
+    fn test_nested_tuple_3_deep() {
+        let
+            get_deepest = fn(t) {
+                switch (t) {
+                    (#(#(#(x, _), _), _)) { x }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_deepest(#(#(#(99, 1), 2), 3)) == 99);
+            true
+    }
+    
+    fn test_mixed_tuple_list() {
+        let
+            extract = fn(data) {
+                switch (data) {
+                    (#([x, y], z)) { x + y + z }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(extract(#([10, 20], 30)) == 60);
+            true
+    }
+    
+    fn test_list_of_tuples() {
+        let
+            sum_pairs = fn(lst) {
+                switch (lst) {
+                    ([]) { 0 }
+                    (#(a, b) @ rest) { a + b + sum_pairs(rest) }
+                }
+            };
+        in
+            assert(sum_pairs([]) == 0);
+            assert(sum_pairs([#(1, 2)]) == 3);
+            assert(sum_pairs([#(1, 2), #(3, 4), #(5, 6)]) == 21);
+            true
+    }
+    
+    // Test pattern variable reuse (pseudo-unification)
+    fn test_same_variable_twice() {
+        let
+            has_duplicate = fn(lst) {
+                switch (lst) {
+                    ([x, x]) { true }
+                    (_) { false }
+                }
+            };
+        in
+            assert(has_duplicate([5, 5]) == true);
+            assert(has_duplicate([5, 6]) == false);
+            assert(has_duplicate([]) == false);
+            true
+    }
+    
+    fn test_same_variable_in_tuple() {
+        let
+            tuple_equal = fn(t) {
+                switch (t) {
+                    (#(x, x)) { true }
+                    (_) { false }
+                }
+            };
+        in
+            assert(tuple_equal(#(7, 7)) == true);
+            assert(tuple_equal(#(7, 8)) == false);
+            true
+    }
+    
+    fn test_same_variable_nested() {
+        let
+            nested_equal = fn(lst) {
+                switch (lst) {
+                    ([[x], [x]]) { true }
+                    (_) { false }
+                }
+            };
+        in
+            assert(nested_equal([[3], [3]]) == true);
+            assert(nested_equal([[3], [4]]) == false);
+            true
+    }
+    
+    fn test_same_variable_three_times() {
+        let
+            all_equal = fn(lst) {
+                switch (lst) {
+                    ([x, x, x]) { true }
+                    (_) { false }
+                }
+            };
+        in
+            assert(all_equal([2, 2, 2]) == true);
+            assert(all_equal([2, 2, 3]) == false);
+            true
+    }
+    
+    // Test complex destructuring with cons patterns
+    fn test_cons_pattern_simple() {
+        let
+            get_first = fn(lst) {
+                switch (lst) {
+                    (h @ _) { h }
+                    ([]) { 0 }
+                }
+            };
+        in
+            assert(get_first([1, 2, 3]) == 1);
+            assert(get_first([99]) == 99);
+            true
+    }
+    
+    fn test_cons_pattern_nested() {
+        let
+            get_second = fn(lst) {
+                switch (lst) {
+                    (_ @ h2 @ _) { h2 }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_second([1, 2, 3]) == 2);
+            assert(get_second([10, 20]) == 20);
+            assert(get_second([5]) == 0);
+            true
+    }
+    
+    fn test_cons_pattern_deep() {
+        let
+            get_third = fn(lst) {
+                switch (lst) {
+                    (_ @ _ @ h3 @ _) { h3 }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_third([1, 2, 3, 4]) == 3);
+            assert(get_third([10, 20, 30]) == 30);
+            assert(get_third([1, 2]) == 0);
+            true
+    }
+    
+    fn test_cons_with_binding() {
+        let
+            describe = fn(lst) {
+                switch (lst) {
+                    (whole = h @ t) { #(h, t, whole) }
+                    ([]) { #(0, [], []) }
+                }
+            };
+        in {
+            let result = describe([1, 2, 3]);
+            in assert(result == #(1, [2, 3], [1, 2, 3]));
+            true
+        }
+    }
+    
+    // Test patterns with multiple variables
+    fn test_extract_all_three() {
+        let
+            extract = fn(lst) {
+                switch (lst) {
+                    ([a, b, c]) { a * 100 + b * 10 + c }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(extract([1, 2, 3]) == 123);
+            assert(extract([5, 6, 7]) == 567);
+            true
+    }
+    
+    fn test_extract_from_tuple() {
+        let
+            extract = fn(t) {
+                switch (t) {
+                    (#(a, b, c)) { a + b + c }
+                }
+            };
+        in
+            assert(extract(#(10, 20, 30)) == 60);
+            true
+    }
+    
+    fn test_mixed_pattern_variables() {
+        let
+            process = fn(data) {
+                switch (data) {
+                    (#([a, b], [c, d])) { (a + b) * (c + d) }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(process(#([1, 2], [3, 4])) == 21);
+            assert(process(#([5, 5], [10, 10])) == 200);
+            true
+    }
+    
+    // Test complex recursive patterns
+    fn test_tree_depth() {
+        let
+            typedef tree {
+                leaf(number) |
+                node(tree, tree)
+            }
+            depth = fn(t) {
+                switch (t) {
+                    (leaf(_)) { 1 }
+                    (node(l, r)) {
+                        let
+                            dl = depth(l);
+                            dr = depth(r);
+                        in
+                            if (dl > dr) { dl + 1 } else { dr + 1 }
+                    }
+                }
+            };
+        in {
+            assert(depth(leaf(5)) == 1);
+            assert(depth(node(leaf(1), leaf(2))) == 2);
+            assert(depth(node(node(leaf(1), leaf(2)), leaf(3))) == 3);
+            true
+        }
+    }
+    
+    fn test_tree_sum() {
+        let
+            typedef tree {
+                leaf(number) |
+                node(tree, tree)
+            }
+            sum_tree = fn(t) {
+                switch (t) {
+                    (leaf(n)) { n }
+                    (node(l, r)) { sum_tree(l) + sum_tree(r) }
+                }
+            };
+        in {
+            assert(sum_tree(leaf(10)) == 10);
+            assert(sum_tree(node(leaf(5), leaf(7))) == 12);
+            assert(sum_tree(node(node(leaf(1), leaf(2)), node(leaf(3), leaf(4)))) == 10);
+            true
+        }
+    }
+    
+    // Test pattern matching with constants
+    fn test_constant_patterns_int() {
+        let
+            describe = fn(n) {
+                switch (n) {
+                    (0) { "zero" }
+                    (1) { "one" }
+                    (42) { "answer" }
+                    (_) { "other" }
+                }
+            };
+        in
+            assert(describe(0) == "zero");
+            assert(describe(1) == "one");
+            assert(describe(42) == "answer");
+            assert(describe(99) == "other");
+            true
+    }
+    
+    fn test_constant_patterns_bool() {
+        let
+            negate = fn(b) {
+                switch (b) {
+                    (true) { false }
+                    (false) { true }
+                }
+            };
+        in
+            assert(negate(true) == false);
+            assert(negate(false) == true);
+            true
+    }
+    
+    fn test_constant_in_list() {
+        let
+            check_first = fn(lst) {
+                switch (lst) {
+                    ([0, _, _]) { "starts with zero" }
+                    ([1, _, _]) { "starts with one" }
+                    (_) { "other" }
+                }
+            };
+        in
+            assert(check_first([0, 5, 6]) == "starts with zero");
+            assert(check_first([1, 5, 6]) == "starts with one");
+            assert(check_first([2, 5, 6]) == "other");
+            true
+    }
+    
+    // Test wildcard patterns
+    fn test_wildcard_in_list() {
+        let
+            get_middle = fn(lst) {
+                switch (lst) {
+                    ([_, x, _]) { x }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_middle([1, 2, 3]) == 2);
+            assert(get_middle([10, 20, 30]) == 20);
+            true
+    }
+    
+    fn test_wildcard_in_tuple() {
+        let
+            get_second_of_three = fn(t) {
+                switch (t) {
+                    (#(_, x, _)) { x }
+                }
+            };
+        in
+            assert(get_second_of_three(#(1, 2, 3)) == 2);
+            true
+    }
+    
+    fn test_multiple_wildcards() {
+        let
+            get_edges = fn(lst) {
+                switch (lst) {
+                    ([a, _, _, b]) { a + b }
+                    (_) { 0 }
+                }
+            };
+        in
+            assert(get_edges([1, 2, 3, 4]) == 5);
+            assert(get_edges([10, 0, 0, 20]) == 30);
+            true
+    }
+    
+    // Test pattern ordering (first match wins)
+    fn test_pattern_order_specific_first() {
+        let
+            classify = fn(lst) {
+                switch (lst) {
+                    ([1, 2, 3]) { "exact" }
+                    ([1, _, _]) { "starts with 1" }
+                    (_) { "other" }
+                }
+            };
+        in
+            assert(classify([1, 2, 3]) == "exact");
+            assert(classify([1, 5, 6]) == "starts with 1");
+            assert(classify([2, 3, 4]) == "other");
+            true
+    }
+    
+    fn test_pattern_order_general_first() {
+        let
+            classify = fn(lst) {
+                unsafe switch (lst) {
+                    ([_, _, _]) { "any three" }
+                    ([1, 2, 3]) { "exact" }
+                }
+            };
+        in
+            assert(classify([1, 2, 3]) == "any three");
+            assert(classify([5, 6, 7]) == "any three");
+            true
+    }
+    
+    // Test patterns with character constants
+    fn test_char_pattern() {
+        let
+            is_vowel = fn(c) {
+                switch (c) {
+                    ('a') { true }
+                    ('e') { true }
+                    ('i') { true }
+                    ('o') { true }
+                    ('u') { true }
+                    (_) { false }
+                }
+            };
+        in
+            assert(is_vowel('a') == true);
+            assert(is_vowel('e') == true);
+            assert(is_vowel('b') == false);
+            assert(is_vowel('z') == false);
+            true
+    }
+    
+    fn test_string_pattern() {
+        let
+            greet = fn(name) {
+                switch (name) {
+                    ("Alice") { "Hello Alice!" }
+                    ("Bob") { "Hi Bob!" }
+                    (_) { "Hello stranger!" }
+                }
+            };
+        in
+            assert(greet("Alice") == "Hello Alice!");
+            assert(greet("Bob") == "Hi Bob!");
+            assert(greet("Charlie") == "Hello stranger!");
+            true
+    }
+
+in
+    test_nested_list_3_deep();
+    test_nested_list_4_deep();
+    test_nested_list_mixed();
+    test_nested_tuple_2_deep();
+    test_nested_tuple_3_deep();
+    test_mixed_tuple_list();
+    test_list_of_tuples();
+    test_same_variable_twice();
+    test_same_variable_in_tuple();
+    test_same_variable_nested();
+    test_same_variable_three_times();
+    test_cons_pattern_simple();
+    test_cons_pattern_nested();
+    test_cons_pattern_deep();
+    test_cons_with_binding();
+    test_extract_all_three();
+    test_extract_from_tuple();
+    test_mixed_pattern_variables();
+    test_tree_depth();
+    test_tree_sum();
+    test_constant_patterns_int();
+    test_constant_patterns_bool();
+    test_constant_in_list();
+    test_wildcard_in_list();
+    test_wildcard_in_tuple();
+    test_multiple_wildcards();
+    test_pattern_order_specific_first();
+    test_pattern_order_general_first();
+    test_char_pattern();
+    test_string_pattern();
+    
+    puts("All deep pattern matching tests passed!\n")

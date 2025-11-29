@@ -1,0 +1,366 @@
+// Comprehensive tuple tests
+// Testing: large tuples, deep nesting, pattern matching, edge cases
+
+let
+    // Test 2-tuple (pair)
+    fn test_pair() {
+        let
+            p = #(1, 2);
+        in
+            switch (p) {
+                (#(a, b)) {
+                    assert(a == 1);
+                    assert(b == 2);
+                    true
+                }
+            }
+    }
+    
+    // Test 3-tuple (triple)
+    fn test_triple() {
+        let
+            t = #(1, 2, 3);
+        in
+            switch (t) {
+                (#(a, b, c)) {
+                    assert(a + b + c == 6);
+                    true
+                }
+            }
+    }
+    
+    // Test 4-tuple
+    fn test_quad() {
+        let
+            q = #(10, 20, 30, 40);
+        in
+            switch (q) {
+                (#(a, b, c, d)) {
+                    assert(a + b + c + d == 100);
+                    true
+                }
+            }
+    }
+    
+    // Test 5-tuple
+    fn test_quintuple() {
+        let
+            q = #(1, 2, 3, 4, 5);
+        in
+            switch (q) {
+                (#(a, b, c, d, e)) {
+                    assert(a + b + c + d + e == 15);
+                    true
+                }
+            }
+    }
+    
+    // Test 6-tuple
+    fn test_sextuple() {
+        let
+            s = #(1, 1, 1, 1, 1, 1);
+        in
+            switch (s) {
+                (#(a, b, c, d, e, f)) {
+                    assert(a + b + c + d + e + f == 6);
+                    true
+                }
+            }
+    }
+    
+    // Test 7-tuple
+    fn test_septuple() {
+        let
+            s = #(2, 2, 2, 2, 2, 2, 2);
+        in
+            switch (s) {
+                (#(a, b, c, d, e, f, g)) {
+                    assert(a + b + c + d + e + f + g == 14);
+                    true
+                }
+            }
+    }
+    
+    // Test 8-tuple
+    fn test_octuple() {
+        let
+            o = #(1, 2, 3, 4, 5, 6, 7, 8);
+        in
+            switch (o) {
+                (#(a, b, c, d, e, f, g, h)) {
+                    assert(a + b + c + d + e + f + g + h == 36);
+                    true
+                }
+            }
+    }
+    
+    // Test 10-tuple
+    fn test_ten_tuple() {
+        let
+            t = #(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        in
+            switch (t) {
+                (#(a, b, c, d, e, f, g, h, i, j)) {
+                    assert(a + b + c + d + e + f + g + h + i + j == 55);
+                    true
+                }
+            }
+    }
+    
+    // Test nested tuples - 2 levels
+    fn test_nested_2() {
+        let
+            t = #(#(1, 2), #(3, 4));
+        in
+            switch (t) {
+                (#(#(a, b), #(c, d))) {
+                    assert(a + b + c + d == 10);
+                    true
+                }
+            }
+    }
+    
+    // Test nested tuples - 3 levels
+    fn test_nested_3() {
+        let
+            t = #(#(#(1, 2), 3), 4);
+        in
+            switch (t) {
+                (#(#(#(a, b), c), d)) {
+                    assert(a + b + c + d == 10);
+                    true
+                }
+            }
+    }
+    
+    // Test nested tuples - 4 levels
+    fn test_nested_4() {
+        let
+            t = #(#(#(#(1, 2), 3), 4), 5);
+        in
+            switch (t) {
+                (#(#(#(#(a, b), c), d), e)) {
+                    assert(a + b + c + d + e == 15);
+                    true
+                }
+            }
+    }
+    
+    // Test tuples with different types
+    fn test_mixed_types() {
+        let
+            t = #(42, "hello", true, [1, 2, 3]);
+        in
+            switch (t) {
+                (#(n, s, b, lst)) {
+                    assert(n == 42);
+                    assert(s == "hello");
+                    assert(b == true);
+                    assert(lst == [1, 2, 3]);
+                    true
+                }
+            }
+    }
+    
+    // Test tuple equality
+    fn test_tuple_equality() {
+        let
+            t1 = #(1, 2, 3);
+            t2 = #(1, 2, 3);
+            t3 = #(1, 2, 4);
+        in {
+            assert(t1 == t2);
+            assert(t1 != t3);
+            true
+        }
+    }
+    
+    // Test tuple comparison
+    fn test_tuple_comparison() {
+        let
+            t1 = #(1, 2, 3);
+            t2 = #(1, 2, 4);
+            t3 = #(1, 3, 1);
+        in {
+            assert(t1 < t2);
+            assert(t1 < t3);
+            assert(t2 < t3);
+            true
+        }
+    }
+    
+    // Test tuple in list
+    fn test_tuple_in_list() {
+        let
+            lst = [#(1, 2), #(3, 4), #(5, 6)];
+        in
+            switch (lst) {
+                ([#(a, b), #(c, d), #(e, f)]) {
+                    assert(a + b + c + d + e + f == 21);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    // Test list in tuple
+    fn test_list_in_tuple() {
+        let
+            t = #([1, 2], [3, 4], [5, 6]);
+        in
+            switch (t) {
+                (#([a, b], [c, d], [e, f])) {
+                    assert(a + b + c + d + e + f == 21);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    // Test tuple with wildcards
+    fn test_tuple_wildcards() {
+        let
+            t = #(1, 2, 3, 4, 5);
+        in
+            switch (t) {
+                (#(_, b, _, d, _)) {
+                    assert(b + d == 6);
+                    true
+                }
+            }
+    }
+    
+    // Test partial tuple matching
+    fn test_partial_match() {
+        let
+            t = #(10, 20, 30);
+        in
+            switch (t) {
+                (#(a, _, c)) {
+                    assert(a + c == 40);
+                    true
+                }
+            }
+    }
+    
+    // Test tuple with functions
+    fn test_tuple_functions() {
+        let
+            add = fn(a, b) { a + b };
+            mul = fn(a, b) { a * b };
+            t = #(add, mul);
+        in
+            switch (t) {
+                (#(f1, f2)) {
+                    assert(f1(3, 4) == 7);
+                    assert(f2(3, 4) == 12);
+                    true
+                }
+            }
+    }
+    
+    // Test tuple construction in expression
+    fn test_tuple_expression() {
+        let
+            make_pair = fn(a, b) { #(a, b) };
+            result = make_pair(5, 10);
+        in {
+            assert(result == #(5, 10));
+            true
+        }
+    }
+    
+    // Test nested tuple equality
+    fn test_nested_equality() {
+        let
+            t1 = #(#(1, 2), #(3, 4));
+            t2 = #(#(1, 2), #(3, 4));
+        in {
+            assert(t1 == t2);
+            true
+        }
+    }
+    
+    // Test tuple with empty structures
+    fn test_empty_structures() {
+        let
+            t = #([], "", 0);
+        in
+            switch (t) {
+                (#(lst, str, n)) {
+                    assert(lst == []);
+                    assert(str == "");
+                    assert(n == 0);
+                    true
+                }
+            }
+    }
+    
+    // Test tuple as function return
+    fn test_tuple_return() {
+        let
+            make_coords = fn(x, y) { #(x * 2, y * 3) };
+            result = make_coords(5, 7);
+        in
+            switch (result) {
+                (#(a, b)) {
+                    assert(a == 10);
+                    assert(b == 21);
+                    true
+                }
+            }
+    }
+    
+    // Test tuple as function parameter
+    fn test_tuple_parameter() {
+        let
+            sum_pair = fn(p) {
+                switch (p) {
+                    (#(a, b)) { a + b }
+                }
+            };
+        in {
+            assert(sum_pair(#(10, 20)) == 30);
+            true
+        }
+    }
+    
+    // Test tuple pattern in function definition
+    fn test_pattern_function() {
+        let
+            swap = fn(#(a, b)) { #(b, a) };
+            result = swap(#(1, 2));
+        in {
+            assert(result == #(2, 1));
+            true
+        }
+    }
+
+in
+    test_pair();
+    test_triple();
+    test_quad();
+    test_quintuple();
+    test_sextuple();
+    test_septuple();
+    test_octuple();
+    test_ten_tuple();
+    test_nested_2();
+    test_nested_3();
+    test_nested_4();
+    test_mixed_types();
+    test_tuple_equality();
+    test_tuple_comparison();
+    test_tuple_in_list();
+    test_list_in_tuple();
+    test_tuple_wildcards();
+    test_partial_match();
+    test_tuple_functions();
+    test_tuple_expression();
+    test_nested_equality();
+    test_empty_structures();
+    test_tuple_return();
+    test_tuple_parameter();
+    test_pattern_function();
+    
+    puts("All tuple tests passed!\n")

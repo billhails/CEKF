@@ -1,0 +1,362 @@
+// Comprehensive list tests
+// Testing: large lists, deep nesting, operations, edge cases
+
+let
+    link "listutils.fn" as lst;
+    // Test empty list
+    fn test_empty_list() {
+        let
+            empty = [];
+        in {
+            assert(empty == []);
+            assert(lst.length(empty) == 0);
+            true
+        }
+    }
+    
+    // Test single element
+    fn test_single_element() {
+        let
+            single = [42];
+        in {
+            assert(lst.length(single) == 1);
+            assert(<single == 42);
+            assert(>single == []);
+            true
+        }
+    }
+    
+    // Test list construction with cons
+    fn test_cons_construction() {
+        let
+            lst1 = 1 @ 2 @ 3 @ [];
+        in {
+            assert(lst1 == [1, 2, 3]);
+            assert(<lst1 == 1);
+            assert(>lst1 == [2, 3]);
+            true
+        }
+    }
+    
+    // Test list append
+    fn test_append() {
+        let
+            a = [1, 2, 3];
+            b = [4, 5, 6];
+            result = a @@ b;
+        in {
+            assert(result == [1, 2, 3, 4, 5, 6]);
+            assert(lst.length(result) == 6);
+            true
+        }
+    }
+    
+    // Test large list - 100 elements
+    fn test_large_list_100() {
+        let
+            generate = fn(n, acc) {
+                if (n == 0) {
+                    acc
+                } else {
+                    generate(n - 1, n @ acc)
+                }
+            };
+            big = generate(100, []);
+        in {
+            assert(lst.length(big) == 100);
+            assert(<big == 1);
+            true
+        }
+    }
+    
+    // Test large list - 1000 elements
+    fn test_large_list_1000() {
+        let
+            generate = fn(n, acc) {
+                if (n == 0) {
+                    acc
+                } else {
+                    generate(n - 1, n @ acc)
+                }
+            };
+            big = generate(1000, []);
+        in {
+            assert(lst.length(big) == 1000);
+            assert(<big == 1);
+            true
+        }
+    }
+    
+    // Test nested lists - 2 levels
+    fn test_nested_2() {
+        let
+            nested = [[1, 2], [3, 4], [5, 6]];
+        in {
+            assert(lst.length(nested) == 3);
+            assert(<nested == [1, 2]);
+            true
+        }
+    }
+    
+    // Test nested lists - 3 levels
+    fn test_nested_3() {
+        let
+            nested = [[[1, 2]], [[3, 4]], [[5, 6]]];
+        in {
+            assert(lst.length(nested) == 3);
+            assert(<<nested == [1, 2]);
+            true
+        }
+    }
+    
+    // Test nested lists - 4 levels
+    fn test_nested_4() {
+        let
+            nested = [[[[1]]], [[[2]]], [[[3]]]];
+        in {
+            assert(lst.length(nested) == 3);
+            assert(<<<<nested == 1);
+            true
+        }
+    }
+    
+    // Test deep single-path nesting
+    fn test_deep_single_path() {
+        let
+            deep = [[[[[42]]]]];
+        in {
+            assert(<<<<<deep == 42);
+            true
+        }
+    }
+    
+    // Test list equality
+    fn test_list_equality() {
+        let
+            a = [1, 2, 3];
+            b = [1, 2, 3];
+            c = [1, 2, 4];
+        in {
+            assert(a == b);
+            assert(a != c);
+            true
+        }
+    }
+    
+    // Test list comparison - lexicographic
+    fn test_list_comparison() {
+        let
+            a = [1, 2, 3];
+            b = [1, 2, 4];
+            c = [1, 3];
+        in {
+            assert(a < b);
+            assert(a < c);
+            assert(b < c);
+            true
+        }
+    }
+    
+    // Test empty list comparisons
+    fn test_empty_comparisons() {
+        {
+            assert([] < [1]);
+            assert(not ([] > [1]));
+            assert([] == []);
+            true
+        }
+    }
+    
+    // Test list pattern matching
+    fn test_pattern_matching() {
+        let
+            process = fn(lst) {
+                switch (lst) {
+                    ([]) { 0 }
+                    ([x]) { x }
+                    ([x, y]) { x + y }
+                    ([x, y, z]) { x + y + z }
+                    (_) { 99 }
+                }
+            };
+        in {
+            assert(process([]) == 0);
+            assert(process([5]) == 5);
+            assert(process([3, 4]) == 7);
+            assert(process([1, 2, 3]) == 6);
+            assert(process([1, 2, 3, 4]) == 99);
+            true
+        }
+    }
+    
+    // Test cons pattern extraction
+    fn test_cons_pattern() {
+        let
+            lst1 = [1, 2, 3, 4, 5];
+        in
+            switch (lst1) {
+                (a @ b @ c @ rest) {
+                    assert(a == 1);
+                    assert(b == 2);
+                    assert(c == 3);
+                    assert(rest == [4, 5]);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    // Test list with different types
+    fn test_mixed_element_types() {
+        let
+            numbers = [1, 2, 3];
+            strings = ["a", "b", "c"];
+            bools = [true, false, true];
+        in {
+            assert(lst.length(numbers) == 3);
+            assert(lst.length(strings) == 3);
+            assert(lst.length(bools) == 3);
+            true
+        }
+    }
+    
+    // Test list of tuples
+    fn test_list_of_tuples() {
+        let
+            pairs = [#(1, 2), #(3, 4), #(5, 6)];
+        in {
+            assert(lst.length(pairs) == 3);
+            assert(<pairs == #(1, 2));
+            true
+        }
+    }
+    
+    // Test list of lists flattening
+    fn test_flatten() {
+        let
+            nested = [[1, 2], [3, 4], [5, 6]];
+            flatten = fn(lsts) {
+                switch (lsts) {
+                    ([]) { [] }
+                    (h @ t) { h @@ flatten(t) }
+                }
+            };
+            result = flatten(nested);
+        in {
+            assert(result == [1, 2, 3, 4, 5, 6]);
+            true
+        }
+    }
+    
+    // Test list reversal
+    fn test_reverse() {
+        let
+            original = [1, 2, 3, 4, 5];
+            reversed = lst.reverse(original);
+        in {
+            assert(reversed == [5, 4, 3, 2, 1]);
+            true
+        }
+    }
+    
+    // Test list map
+    fn test_map() {
+        let
+            numbers = [1, 2, 3, 4, 5];
+            doubled = lst.map(fn(x) { x * 2 }, numbers);
+        in {
+            assert(doubled == [2, 4, 6, 8, 10]);
+            true
+        }
+    }
+    
+    // Test list filter
+    fn test_filter() {
+        let
+            numbers = [1, 2, 3, 4, 5, 6];
+            evens = lst.filter(fn(x) { x % 2 == 0 }, numbers);
+        in {
+            assert(evens == [2, 4, 6]);
+            true
+        }
+    }
+    
+    // Test list fold
+    fn test_fold() {
+        let
+            numbers = [1, 2, 3, 4, 5];
+            sum = lst.foldl(fn(acc, x) { acc + x }, 0, numbers);
+            product = lst.foldl(fn(acc, x) { acc * x }, 1, numbers);
+        in {
+            assert(sum == 15);
+            assert(product == 120);
+            true
+        }
+    }
+    
+    // Test operator precedence - @ vs @@
+    fn test_operator_precedence() {
+        let
+            lst1 = 1 @ 2 @ 3 @ [];
+            lst2 = [4, 5];
+            combined = lst1 @@ lst2;
+        in {
+            assert(combined == [1, 2, 3, 4, 5]);
+            true
+        }
+    }
+    
+    // Test list equality with nested structures
+    fn test_nested_equality() {
+        let
+            a = [[1, 2], [3, 4]];
+            b = [[1, 2], [3, 4]];
+            c = [[1, 2], [3, 5]];
+        in {
+            assert(a == b);
+            assert(a != c);
+            true
+        }
+    }
+    
+    // Test list concatenation chains
+    fn test_concat_chains() {
+        let
+            a = [1];
+            b = [2];
+            c = [3];
+            result = a @@ b @@ c;
+        in {
+            assert(result == [1, 2, 3]);
+            true
+        }
+    }
+
+in
+    test_empty_list();
+    test_single_element();
+    test_cons_construction();
+    test_append();
+    test_large_list_100();
+    test_large_list_1000();
+    test_nested_2();
+    test_nested_3();
+    test_nested_4();
+    test_deep_single_path();
+    test_list_equality();
+    test_list_comparison();
+    test_empty_comparisons();
+    test_pattern_matching();
+    test_cons_pattern();
+    test_mixed_element_types();
+    test_list_of_tuples();
+    test_flatten();
+    test_reverse();
+    test_map();
+    test_filter();
+    test_fold();
+    test_operator_precedence();
+    test_nested_equality();
+    test_concat_chains();
+    
+    puts("All list tests passed!\n")

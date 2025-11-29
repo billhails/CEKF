@@ -957,7 +957,6 @@ PrattToken *next(PrattParser *parser) {
                         return token;
                     }
                     parserError(parser, "unrecognised operator %c", buffer->start[0]);
-                    cant_happen("abort");
                     nextCharacter(buffer);
                     return tokenERROR(lexer);
                 // bad UTF8

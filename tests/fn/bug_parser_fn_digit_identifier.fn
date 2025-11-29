@@ -1,0 +1,13 @@
+// Bug: Parser rejects variable names starting with 'fn' followed by digit
+// The parser incorrectly treats identifiers like fn3, fn4, fn10 as syntax errors
+// These should be valid variable names
+
+let
+    // This should work but causes parser error:
+    // expected ATOM, got NUMBER at line X
+    fn3 = fn(a, b, c) { a + b + c };
+    
+    result = fn3(1, 2, 3);
+in
+    assert(result == 6);
+    puts("Bug: fn followed by digit should be valid identifier\n")

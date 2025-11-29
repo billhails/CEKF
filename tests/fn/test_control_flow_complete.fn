@@ -1,0 +1,438 @@
+// Comprehensive control flow tests
+// Testing: else-if chains, deep nesting, type agreement, switch with complex patterns
+
+let
+    // Test else-if chains
+    fn test_simple_else_if() {
+        let
+            grade = fn(score) {
+                if (score >= 90) {
+                    "A"
+                } else if (score >= 80) {
+                    "B"
+                } else if (score >= 70) {
+                    "C"
+                } else if (score >= 60) {
+                    "D"
+                } else {
+                    "F"
+                }
+            };
+        in
+            assert(grade(95) == "A");
+            assert(grade(85) == "B");
+            assert(grade(75) == "C");
+            assert(grade(65) == "D");
+            assert(grade(55) == "F");
+            true
+    }
+    
+    fn test_long_else_if_chain() {
+        let
+            classify = fn(n) {
+                if (n < 0) {
+                    "negative"
+                } else if (n == 0) {
+                    "zero"
+                } else if (n < 10) {
+                    "small"
+                } else if (n < 100) {
+                    "medium"
+                } else if (n < 1000) {
+                    "large"
+                } else if (n < 10000) {
+                    "very large"
+                } else {
+                    "huge"
+                }
+            };
+        in
+            assert(classify(0 - 5) == "negative");
+            assert(classify(0) == "zero");
+            assert(classify(5) == "small");
+            assert(classify(50) == "medium");
+            assert(classify(500) == "large");
+            assert(classify(5000) == "very large");
+            assert(classify(50000) == "huge");
+            true
+    }
+    
+    // Test type agreement in conditional branches
+    fn test_type_agreement_int() {
+        let
+            result = if (true) { 42 } else { 24 };
+        in
+            assert(result == 42);
+            true
+    }
+    
+    fn test_type_agreement_string() {
+        let
+            result = if (false) { "yes" } else { "no" };
+        in
+            assert(result == "no");
+            true
+    }
+    
+    fn test_type_agreement_list() {
+        let
+            result = if (true) { [1, 2, 3] } else { [4, 5, 6] };
+        in
+            assert(result == [1, 2, 3]);
+            true
+    }
+    
+    fn test_type_agreement_in_else_if() {
+        let
+            result = if (false) {
+                1
+            } else if (false) {
+                2
+            } else if (true) {
+                3
+            } else {
+                4
+            };
+        in
+            assert(result == 3);
+            true
+    }
+    
+    // Test deeply nested conditionals
+    fn test_nested_if_2_levels() {
+        let
+            max3 = fn(a, b, c) {
+                if (a > b) {
+                    if (a > c) { a } else { c }
+                } else {
+                    if (b > c) { b } else { c }
+                }
+            };
+        in
+            assert(max3(5, 3, 7) == 7);
+            assert(max3(9, 2, 4) == 9);
+            assert(max3(1, 8, 3) == 8);
+            true
+    }
+    
+    fn test_nested_if_3_levels() {
+        let
+            categorize = fn(x, y, z) {
+                if (x > 0) {
+                    if (y > 0) {
+                        if (z > 0) {
+                            "all positive"
+                        } else {
+                            "x and y positive"
+                        }
+                    } else {
+                        if (z > 0) {
+                            "x and z positive"
+                        } else {
+                            "only x positive"
+                        }
+                    }
+                } else {
+                    if (y > 0) {
+                        if (z > 0) {
+                            "y and z positive"
+                        } else {
+                            "only y positive"
+                        }
+                    } else {
+                        if (z > 0) {
+                            "only z positive"
+                        } else {
+                            "none positive"
+                        }
+                    }
+                }
+            };
+        in
+            assert(categorize(1, 1, 1) == "all positive");
+            assert(categorize(1, 1, 0 - 1) == "x and y positive");
+            assert(categorize(1, 0 - 1, 1) == "x and z positive");
+            assert(categorize(1, 0 - 1, 0 - 1) == "only x positive");
+            assert(categorize(0 - 1, 1, 1) == "y and z positive");
+            assert(categorize(0 - 1, 1, 0 - 1) == "only y positive");
+            assert(categorize(0 - 1, 0 - 1, 1) == "only z positive");
+            assert(categorize(0 - 1, 0 - 1, 0 - 1) == "none positive");
+            true
+    }
+    
+    fn test_nested_if_4_levels() {
+        let
+            deep = fn(a, b, c, d) {
+                if (a) {
+                    if (b) {
+                        if (c) {
+                            if (d) { 1 } else { 2 }
+                        } else {
+                            if (d) { 3 } else { 4 }
+                        }
+                    } else {
+                        if (c) {
+                            if (d) { 5 } else { 6 }
+                        } else {
+                            if (d) { 7 } else { 8 }
+                        }
+                    }
+                } else {
+                    if (b) {
+                        if (c) {
+                            if (d) { 9 } else { 10 }
+                        } else {
+                            if (d) { 11 } else { 12 }
+                        }
+                    } else {
+                        if (c) {
+                            if (d) { 13 } else { 14 }
+                        } else {
+                            if (d) { 15 } else { 16 }
+                        }
+                    }
+                }
+            };
+        in
+            assert(deep(true, true, true, true) == 1);
+            assert(deep(true, true, true, false) == 2);
+            assert(deep(false, false, false, false) == 16);
+            assert(deep(false, true, false, true) == 11);
+            true
+    }
+    
+    // Test switch with simple patterns
+    fn test_switch_int_patterns() {
+        let
+            describe = fn(n) {
+                switch (n) {
+                    (0) { "zero" }
+                    (1) { "one" }
+                    (2) { "two" }
+                    (_) { "other" }
+                }
+            };
+        in
+            assert(describe(0) == "zero");
+            assert(describe(1) == "one");
+            assert(describe(2) == "two");
+            assert(describe(99) == "other");
+            true
+    }
+    
+    // Test switch with list patterns
+    fn test_switch_list_patterns() {
+        let
+            describe_list = fn(lst) {
+                switch (lst) {
+                    ([]) { "empty" }
+                    ([_]) { "single" }
+                    ([_, _]) { "pair" }
+                    (_) { "multiple" }
+                }
+            };
+        in
+            assert(describe_list([]) == "empty");
+            assert(describe_list([1]) == "single");
+            assert(describe_list([1, 2]) == "pair");
+            assert(describe_list([1, 2, 3]) == "multiple");
+            true
+    }
+    
+    // Test switch with tuple patterns
+    fn test_switch_tuple_patterns() {
+        let
+            describe_pair = fn(p) {
+                switch (p) {
+                    (#(0, 0)) { "origin" }
+                    (#(0, _)) { "y-axis" }
+                    (#(_, 0)) { "x-axis" }
+                    (#(x, y)) { "quadrant" }
+                }
+            };
+        in
+            assert(describe_pair(#(0, 0)) == "origin");
+            assert(describe_pair(#(0, 5)) == "y-axis");
+            assert(describe_pair(#(3, 0)) == "x-axis");
+            assert(describe_pair(#(2, 3)) == "quadrant");
+            true
+    }
+    
+    // Test switch with nested patterns
+    fn test_switch_nested_patterns() {
+        let
+            describe_nested = fn(lst) {
+                switch (lst) {
+                    ([]) { "empty" }
+                    ([[]]) { "list with empty" }
+                    ([[_]]) { "list with single" }
+                    ([_ @ _]) { "list with multiple" }
+                    (_ @ _ @ _) { "three or more" }
+                }
+            };
+        in
+            assert(describe_nested([]) == "empty");
+            assert(describe_nested([[]]) == "list with empty");
+            assert(describe_nested([[1]]) == "list with single");
+            assert(describe_nested([[1, 2]]) == "list with multiple");
+            assert(describe_nested([[1], [2], [3]]) == "three or more");
+            true
+    }
+    
+    // Test switch with variable binding
+    fn test_switch_with_binding() {
+        let
+            get_head = fn(lst) {
+                switch (lst) {
+                    ([]) { 0 }
+                    (h @ _) { h }
+                }
+            };
+        in
+            assert(get_head([]) == 0);
+            assert(get_head([5, 6, 7]) == 5);
+            true
+    }
+    
+    // Test switch exhaustiveness
+    fn test_switch_exhaustive() {
+        let
+            bool_to_int = fn(b) {
+                switch (b) {
+                    (true) { 1 }
+                    (false) { 0 }
+                }
+            };
+        in
+            assert(bool_to_int(true) == 1);
+            assert(bool_to_int(false) == 0);
+            true
+    }
+    
+    // Test conditional with complex expressions
+    fn test_if_complex_condition() {
+        let
+            result = if (5 > 3 and 10 < 20) {
+                "both true"
+            } else {
+                "not both"
+            };
+        in
+            assert(result == "both true");
+            true
+    }
+    
+    fn test_if_with_or_condition() {
+        let
+            result = if (false or true) {
+                "at least one true"
+            } else {
+                "both false"
+            };
+        in
+            assert(result == "at least one true");
+            true
+    }
+    
+    fn test_if_with_not_condition() {
+        let
+            result = if (not false) {
+                "negated"
+            } else {
+                "not negated"
+            };
+        in
+            assert(result == "negated");
+            true
+    }
+    
+    // Test nested switch statements
+    fn test_nested_switch() {
+        let
+            classify = fn(x, y) {
+                switch (x) {
+                    (0) {
+                        switch (y) {
+                            (0) { "both zero" }
+                            (_) { "x zero" }
+                        }
+                    }
+                    (_) {
+                        switch (y) {
+                            (0) { "y zero" }
+                            (_) { "neither zero" }
+                        }
+                    }
+                }
+            };
+        in
+            assert(classify(0, 0) == "both zero");
+            assert(classify(0, 5) == "x zero");
+            assert(classify(5, 0) == "y zero");
+            assert(classify(3, 4) == "neither zero");
+            true
+    }
+    
+    // Test if-then-else in expressions
+    fn test_conditional_in_expression() {
+        let
+            result = 10 + (if (true) { 5 } else { 3 });
+        in
+            assert(result == 15);
+            true
+    }
+    
+    fn test_conditional_in_function_arg() {
+        let
+            add = fn(x, y) { x + y };
+            result = add(if (true) { 10 } else { 5 }, if (false) { 3 } else { 7 });
+        in
+            assert(result == 17);
+            true
+    }
+    
+    // Test short-circuit evaluation
+    fn test_and_short_circuit() {
+        let
+            // Second part should not be evaluated if first is false
+            result = false and (1 / 0 == 0);  // Would fail if evaluated
+        in
+            assert(result == false);
+            true
+    }
+    
+    fn test_or_short_circuit() {
+        let
+            // Second part should not be evaluated if first is true  
+            result = true or (1 / 0 == 0);  // Would fail if evaluated
+        in
+            assert(result == true);
+            true
+    }
+
+in
+    test_simple_else_if();
+    test_long_else_if_chain();
+    test_type_agreement_int();
+    test_type_agreement_string();
+    test_type_agreement_list();
+    test_type_agreement_in_else_if();
+    test_nested_if_2_levels();
+    test_nested_if_3_levels();
+    test_nested_if_4_levels();
+    test_switch_int_patterns();
+    test_switch_list_patterns();
+    test_switch_tuple_patterns();
+    test_switch_nested_patterns();
+    test_switch_with_binding();
+    test_switch_exhaustive();
+    test_if_complex_condition();
+    test_if_with_or_condition();
+    test_if_with_not_condition();
+    test_nested_switch();
+    test_conditional_in_expression();
+    test_conditional_in_function_arg();
+    test_and_short_circuit();
+    test_or_short_circuit();
+    
+    puts("All control flow tests passed!\n")

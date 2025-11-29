@@ -1,0 +1,361 @@
+// Advanced closure tests
+// Testing: deep nesting, captured state, function composition, closure lifetime
+
+let
+    // Test simple closure
+    fn test_simple_closure() {
+        let
+            make_adder = fn(x) {
+                fn(y) { x + y }
+            };
+            add5 = make_adder(5);
+        in {
+            assert(add5(10) == 15);
+            assert(add5(20) == 25);
+            true
+        }
+    }
+    
+    // Test 2-level closure nesting
+    fn test_closure_2_levels() {
+        let
+            make_multiplier = fn(a) {
+                fn(b) {
+                    fn(c) { a * b * c }
+                }
+            };
+            mult2 = make_multiplier(2);
+            mult2_3 = mult2(3);
+        in {
+            assert(mult2_3(4) == 24);
+            assert(mult2_3(5) == 30);
+            true
+        }
+    }
+    
+    // Test 3-level closure nesting
+    fn test_closure_3_levels() {
+        let
+            deep = fn(a) {
+                fn(b) {
+                    fn(c) {
+                        fn(d) { a + b + c + d }
+                    }
+                }
+            };
+            f1 = deep(1);
+            f2 = f1(2);
+            f3 = f2(3);
+        in {
+            assert(f3(4) == 10);
+            assert(f3(5) == 11);
+            true
+        }
+    }
+    
+    // Test 4-level closure nesting
+    fn test_closure_4_levels() {
+        let
+            very_deep = fn(a) {
+                fn(b) {
+                    fn(c) {
+                        fn(d) {
+                            fn(e) { a * b + c * d + e }
+                        }
+                    }
+                }
+            };
+        in
+            assert(very_deep(2)(3)(4)(5)(10) == 36);
+            true
+    }
+    
+    // Test closure with multiple captured variables
+    fn test_multiple_captures() {
+        let
+            make_range_checker = fn(low, high) {
+                fn(x) { x >= low and x <= high }
+            };
+            in_range = make_range_checker(10, 20);
+        in {
+            assert(in_range(15) == true);
+            assert(in_range(5) == false);
+            assert(in_range(25) == false);
+            true
+        }
+    }
+    
+    // Test closure capturing from multiple scopes
+    fn test_multi_scope_capture() {
+        let
+            outer = fn(a) {
+                fn(b) {
+                    fn(d) { a + b + d }
+                }
+            };
+        in {
+            assert(outer(10)(20)(30) == 60);
+            true
+        }
+    }
+    
+    // Test closure returning closure
+    fn test_closure_returning_closure() {
+        let
+            make_counter = fn(start) {
+                fn(increment) {
+                    fn(n) { start + increment * n }
+                }
+            };
+            counter = make_counter(100);
+            by_tens = counter(10);
+            by_fives = counter(5);
+        in {
+            assert(by_tens(0) == 100);
+            assert(by_tens(1) == 110);
+            assert(by_tens(5) == 150);
+            assert(by_fives(2) == 110);
+            true
+        }
+    }
+    
+    // Test closure with list captured
+    fn test_closure_capturing_list() {
+        let
+            make_contains = fn(lst) {
+                fn(item) {
+                    switch (lst) {
+                        ([]) { false }
+                        (h @ t) {
+                            if (h == item) {
+                                true
+                            } else {
+                                make_contains(t)(item)
+                            }
+                        }
+                    }
+                }
+            };
+            has = make_contains([1, 2, 3, 4, 5]);
+        in {
+            assert(has(3) == true);
+            assert(has(7) == false);
+            true
+        }
+    }
+    
+    // Test closure shadowing captured variable
+    fn test_closure_shadowing() {
+        let
+            x = 10;
+            f = fn(y) {
+                let x = 20;
+                in fn(z) { x + y + z }
+            };
+        in
+            assert(f(5)(3) == 28);
+            true
+    }
+    
+    // Test closure with pattern matching
+    fn test_closure_with_patterns() {
+        let
+            make_list_processor = fn(op) {
+                fn(lst) {
+                    switch (lst) {
+                        ([]) { 0 }
+                        (h @ t) { op(h, make_list_processor(op)(t)) }
+                    }
+                }
+            };
+            sum = make_list_processor(fn(x, acc) { x + acc });
+            product = make_list_processor(fn(x, acc) { if (acc == 0) { x } else { x * acc } });
+        in {
+            assert(sum([1, 2, 3, 4]) == 10);
+            assert(product([2, 3, 4]) == 24);
+            true
+        }
+    }
+    
+    // Test function composition
+    fn test_function_composition() {
+        let
+            compose = fn(f, g) {
+                fn(x) { f(g(x)) }
+            };
+            double = fn(x) { x * 2 };
+            add_one = fn(x) { x + 1 };
+            double_then_add = compose(add_one, double);
+            add_then_double = compose(double, add_one);
+        in {
+            assert(double_then_add(5) == 11);
+            assert(add_then_double(5) == 12);
+            true
+        }
+    }
+    
+    // Test partial application
+    fn test_partial_application() {
+        let
+            add3 = fn(a, b, c) { a + b + c };
+            add_5_and = add3(5);
+            add_5_10_and = add_5_and(10);
+        in {
+            assert(add_5_10_and(20) == 35);
+            assert(add_5_10_and(7) == 22);
+            true
+        }
+    }
+    
+    // Test closure in data structure
+    fn test_closures_in_list() {
+        let
+            make_adder = fn(n) { fn(x) { x + n } };
+            funcs = [make_adder(1), make_adder(10), make_adder(100)];
+        in {
+            switch (funcs) {
+                ([f1, f2, f3]) {
+                    assert(f1(5) == 6);
+                    assert(f2(5) == 15);
+                    assert(f3(5) == 105);
+                    true
+                }
+                (_) { false }
+            }
+        }
+    }
+    
+    // Test closure in tuple
+    fn test_closures_in_tuple() {
+        let
+            make_ops = fn(x) {
+                #(fn(y) { x + y }, fn(y) { x * y }, fn(y) { x - y })
+            };
+        in {
+            switch (make_ops(10)) {
+                (#(add, mul, sub)) {
+                    assert(add(5) == 15);
+                    assert(mul(5) == 50);
+                    assert(sub(5) == 5);
+                    true
+                }
+            }
+        }
+    }
+    
+    // Test recursive closure
+    fn test_recursive_closure() {
+        let
+            factorial = fn(n) {
+                if (n <= 1) {
+                    1
+                } else {
+                    n * factorial(n - 1)
+                }
+            };
+        in {
+            assert(factorial(5) == 120);
+            assert(factorial(0) == 1);
+            true
+        }
+    }
+    
+    // Test closure capturing closure
+    fn test_closure_capturing_closure() {
+        let
+            make_wrapper = fn(f) {
+                fn(x) { f(f(x)) }
+            };
+            add_one = fn(x) { x + 1 };
+            add_two = make_wrapper(add_one);
+        in {
+            assert(add_two(10) == 12);
+            assert(add_two(0) == 2);
+            true
+        }
+    }
+    
+    // Test Y combinator (fixed-point combinator)
+    fn test_y_combinator() {
+        let
+            fix = fn(f) {
+                fn(n) { f(fix(f))(n) }
+            };
+            make_factorial = fn(fact) {
+                fn(n) {
+                    if (n == 0) {
+                        1
+                    } else {
+                        n * fact(n - 1)
+                    }
+                }
+            };
+            factorial = fix(make_factorial);
+        in {
+            assert(factorial(5) == 120);
+            assert(factorial(6) == 720);
+            true
+        }
+    }
+    
+    // Test closure with conditional
+    fn test_closure_with_conditional() {
+        let
+            make_comparator = fn(threshold) {
+                fn(x) {
+                    if (x > threshold) {
+                        "high"
+                    } else if (x < threshold) {
+                        "low"
+                    } else {
+                        "equal"
+                    }
+                }
+            };
+            compare_to_10 = make_comparator(10);
+        in {
+            assert(compare_to_10(15) == "high");
+            assert(compare_to_10(5) == "low");
+            assert(compare_to_10(10) == "equal");
+            true
+        }
+    }
+    
+    // Test closure lifetime
+    fn test_closure_lifetime() {
+        let
+            make_getter = fn(x) {
+                fn() { x }
+            };
+            get1 = make_getter(42);
+            get2 = make_getter(99);
+        in {
+            assert(get1() == 42);
+            assert(get2() == 99);
+            assert(get1() == 42);
+            true
+        }
+    }
+
+in
+    test_simple_closure();
+    test_closure_2_levels();
+    test_closure_3_levels();
+    test_closure_4_levels();
+    test_multiple_captures();
+    test_multi_scope_capture();
+    test_closure_returning_closure();
+    test_closure_capturing_list();
+    test_closure_shadowing();
+    test_closure_with_patterns();
+    test_function_composition();
+    test_partial_application();
+    test_closures_in_list();
+    test_closures_in_tuple();
+    test_recursive_closure();
+    test_closure_capturing_closure();
+    test_y_combinator();
+    test_closure_with_conditional();
+    test_closure_lifetime();
+    
+    puts("All advanced closure tests passed!\n")

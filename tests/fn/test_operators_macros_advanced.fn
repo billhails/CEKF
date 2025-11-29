@@ -1,0 +1,240 @@
+// Advanced operator and macro tests
+// Testing: custom operators, precedence, associativity, macro hygiene
+
+let
+    // Test basic custom infix operator
+    operator "_plus_" left 100 fn(a, b) { a + b };
+    
+    fn test_custom_infix() {
+        let
+            result = 5 plus 10;
+        in {
+            assert(result == 15);
+            true
+        }
+    }
+    
+    // Test right associative operator
+    operator "_cons_" right 90 fn(h, t) { h @ t };
+    
+    fn test_right_assoc() {
+        let
+            result = 1 cons 2 cons 3 cons [];
+        in {
+            assert(result == [1, 2, 3]);
+            true
+        }
+    }
+    
+    // Test precedence interaction
+    operator "_times_" left 110 fn(a, b) { a * b };
+    
+    fn test_precedence() {
+        let
+            result = 2 plus 3 times 4;
+        in {
+            assert(result == 14);
+            true
+        }
+    }
+    
+    // Test prefix operator
+    operator "neg_" 120 fn(x) { 0 - x };
+    
+    fn test_prefix_op() {
+        let
+            result = neg 5;
+        in {
+            assert(result == 0 - 5);
+            true
+        }
+    }
+    
+    // Test postfix operator
+    operator "_squared" 120 fn(x) { x * x };
+    
+    fn test_postfix_op() {
+        let
+            result = 5 squared;
+        in {
+            assert(result == 25);
+            true
+        }
+    }
+    
+    // Test operator with complex expression
+    operator "_choose_" left 50 fn(a, b) { if (a == 0) { b } else { a } };
+    
+    fn test_operator_conditional() {
+        let
+            result = 0 choose 42;
+        in {
+            assert(result == 42);
+            true
+        }
+    }
+    
+    // Test basic macro
+    macro DOUBLE(x) { x + x }
+    
+    fn test_basic_macro() {
+        let
+            result = DOUBLE(5);
+        in {
+            assert(result == 10);
+            true
+        }
+    }
+    
+    // Test macro with multiple arguments
+    macro MAX(a, b) { if (a > b) { a } else { b } }
+    
+    fn test_macro_multiple_args() {
+        let
+            result = MAX(10, 20);
+        in {
+            assert(result == 20);
+            true
+        }
+    }
+    
+    // Test macro with conditional
+    macro IF_THEN(cond, val) { if (cond) { val } else { 0 } }
+    
+    fn test_macro_conditional() {
+        let
+            result = IF_THEN(true, 42);
+        in {
+            assert(result == 42);
+            true
+        }
+    }
+    
+    // Test macro with operator
+    macro AND(a, b) { if (a) { b } else { false } }
+    operator "_and_" left 30 AND;
+    
+    fn test_macro_operator() {
+        let
+            result = true and false;
+        in {
+            assert(result == false);
+            true
+        }
+    }
+    
+    // Test operator shadowing in nested scope
+    fn test_operator_shadowing() {
+        let
+            operator "_add_" left 100 fn(a, b) { a + b };
+            result1 = 5 add 10;
+        in {
+            let
+                operator "_add_" left 100 fn(a, b) { a * b };
+                result2 = 5 add 10;
+            in {
+                assert(result1 == 15);
+                assert(result2 == 50);
+                true
+            }
+        }
+    }
+    
+    // Test operator with list
+    operator "_append_" left 85 fn(a, b) { a @@ b };
+    
+    fn test_operator_list() {
+        let
+            result = [1, 2] append [3, 4];
+        in {
+            assert(result == [1, 2, 3, 4]);
+            true
+        }
+    }
+    
+    // Test operator with tuple
+    operator "_pair_" left 95 fn(a, b) { #(a, b) };
+    
+    fn test_operator_tuple() {
+        let
+            result = 10 pair 20;
+        in {
+            assert(result == #(10, 20));
+            true
+        }
+    }
+    
+    // Test chained operators same precedence
+    operator "_minus_" left 100 fn(a, b) { a - b };
+    
+    fn test_chained_operators() {
+        let
+            result = 10 minus 3 minus 2;
+        in {
+            assert(result == 5);
+            true
+        }
+    }
+    
+    // Test operator with pattern matching
+    operator "_at_" right 90 fn(h, t) { h @ t };
+    
+    fn test_operator_patterns() {
+        let
+            result = 1 at 2 at 3 at [];
+        in
+            switch (result) {
+                (a @ b @ c @ []) {
+                    assert(a == 1);
+                    assert(b == 2);
+                    assert(c == 3);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    // Test macro with recursion
+    macro FACT(n) { if (n <= 1) { 1 } else { n * FACT(n - 1) } }
+    
+    fn test_macro_recursion() {
+        let
+            result = FACT(5);
+        in {
+            assert(result == 120);
+            true
+        }
+    }
+    
+    // Test operator with string
+    operator "_concat_" left 85 fn(a, b) { a @@ b };
+    
+    fn test_operator_string() {
+        let
+            result = "hello" concat " " concat "world";
+        in {
+            assert(result == "hello world");
+            true
+        }
+    }
+
+in
+    test_custom_infix();
+    test_right_assoc();
+    test_precedence();
+    test_prefix_op();
+    test_postfix_op();
+    test_operator_conditional();
+    test_basic_macro();
+    test_macro_multiple_args();
+    test_macro_conditional();
+    test_macro_operator();
+    test_operator_shadowing();
+    test_operator_list();
+    test_operator_tuple();
+    test_chained_operators();
+    test_operator_patterns();
+    test_macro_recursion();
+    test_operator_string();
+    
+    puts("All advanced operator and macro tests passed!\n")

@@ -1,0 +1,266 @@
+// Comprehensive currying tests
+// Testing: large arity functions, partial application, over-application, edge cases
+
+let
+    // Test basic currying - 2 arguments
+    fn test_curry_2() {
+        let
+            add = fn(a, b) { a + b };
+            add5 = add(5);
+        in {
+            assert(add5(10) == 15);
+            assert(add5(3) == 8);
+            true
+        }
+    }
+    
+    // Test 3 argument currying
+    fn test_curry_3() {
+        let
+            add3 = fn(a, b, c) { a + b + c };
+            partial1 = add3(1);
+            partial2 = partial1(2);
+        in {
+            assert(partial2(3) == 6);
+            assert(add3(10)(20)(30) == 60);
+            true
+        }
+    }
+    
+    // Test 4 argument function
+    fn test_curry_4() {
+        let
+            sum4 = fn(a, b, c, d) { a + b + c + d };
+        in {
+            assert(sum4(1)(2)(3)(4) == 10);
+            assert(sum4(5, 5, 5, 5) == 20);
+            true
+        }
+    }
+    
+    // Test 5 argument function
+    fn test_curry_5() {
+        let
+            sum5 = fn(a, b, c, d, e) { a + b + c + d + e };
+            p1 = sum5(1);
+            p2 = p1(2);
+            p3 = p2(3);
+            p4 = p3(4);
+        in {
+            assert(p4(5) == 15);
+            assert(sum5(2, 2, 2, 2, 2) == 10);
+            true
+        }
+    }
+    
+    // Test 6 argument function
+    fn test_curry_6() {
+        let
+            sum6 = fn(a, b, c, d, e, f) { a + b + c + d + e + f };
+        in {
+            assert(sum6(1)(2)(3)(4)(5)(6) == 21);
+            assert(sum6(1, 1, 1, 1, 1, 1) == 6);
+            true
+        }
+    }
+    
+    // Test 7 argument function
+    fn test_curry_7() {
+        let
+            sum7 = fn(a, b, c, d, e, f, g) { a + b + c + d + e + f + g };
+        in {
+            assert(sum7(1)(2)(3)(4)(5)(6)(7) == 28);
+            true
+        }
+    }
+    
+    // Test 8 argument function
+    fn test_curry_8() {
+        let
+            sum8 = fn(a, b, c, d, e, f, g, h) { a + b + c + d + e + f + g + h };
+        in {
+            assert(sum8(1, 2, 3, 4, 5, 6, 7, 8) == 36);
+            true
+        }
+    }
+    
+    // Test mixed partial application - some args at once
+    fn test_mixed_partial() {
+        let
+            func4 = fn(a, b, c, d) { a * b + c * d };
+            p1 = func4(2, 3);
+            p2 = func4(2);
+        in {
+            assert(p1(4, 5) == 26);
+            assert(p2(3, 4, 5) == 26);
+            assert(p2(3)(4)(5) == 26);
+            true
+        }
+    }
+    
+    // Test partial application at different stages
+    fn test_partial_stages() {
+        let
+            func3 = fn(a, b, c) { a + b * c };
+            stage1 = func3(10);
+            stage2a = stage1(5);
+            stage2b = func3(10, 5);
+        in {
+            assert(stage2a(3) == 25);
+            assert(stage2b(3) == 25);
+            assert(func3(10)(5)(3) == 25);
+            true
+        }
+    }
+    
+    // Test currying with different types
+    fn test_curry_types() {
+        let
+            combine = fn(n, s, b) { 
+                if (b) { n } else { 0 }
+            };
+        in {
+            assert(combine(42)("ignored")(true) == 42);
+            assert(combine(42, "ignored", false) == 0);
+            true
+        }
+    }
+    
+    // Test currying with lists
+    fn test_curry_lists() {
+        let
+            append3 = fn(a, b, c) { a @@ b @@ c };
+        in {
+            assert(append3([1])([2])([3]) == [1, 2, 3]);
+            assert(append3([1], [2], [3]) == [1, 2, 3]);
+            true
+        }
+    }
+    
+    // Test currying with tuples
+    fn test_curry_tuples() {
+        let
+            make_triple = fn(a, b, c) { #(a, b, c) };
+        in {
+            assert(make_triple(1)(2)(3) == #(1, 2, 3));
+            assert(make_triple(5, 10, 15) == #(5, 10, 15));
+            true
+        }
+    }
+    
+    // Test higher-order currying
+    fn test_higher_order_curry() {
+        let
+            apply_twice = fn(f, x) { f(f(x)) };
+            add2 = fn(x) { x + 2 };
+            partial = apply_twice(add2);
+        in {
+            assert(partial(10) == 14);
+            true
+        }
+    }
+    
+    // Test currying with pattern matching
+    fn test_curry_patterns() {
+        let
+            process = fn(lst, default, op) {
+                switch (lst) {
+                    ([]) { default }
+                    (h @ t) { op(h) }
+                }
+            };
+            with_default = process([1, 2, 3], 0);
+            double = fn(x) { x * 2 };
+        in {
+            assert(with_default(double) == 2);
+            true
+        }
+    }
+    
+    // Test zero-argument functions (thunks)
+    fn test_zero_args() {
+        let
+            get_value = fn() { 42 };
+        in {
+            assert(get_value() == 42);
+            true
+        }
+    }
+    
+    // Test one-argument identity
+    fn test_one_arg() {
+        let
+            identity = fn(x) { x };
+        in {
+            assert(identity(5) == 5);
+            assert(identity([1, 2]) == [1, 2]);
+            true
+        }
+    }
+    
+    // Test currying with conditionals
+    fn test_curry_conditionals() {
+        let
+            choose = fn(cond, a, b) {
+                if (cond) { a } else { b }
+            };
+            choose_true = choose(true);
+        in {
+            assert(choose_true(10, 20) == 10);
+            assert(choose(false)(10, 20) == 20);
+            true
+        }
+    }
+    
+    // Test partial application chain
+    fn test_chain_partial() {
+        let
+            func5 = fn(a, b, c, d, e) { a + b + c + d + e };
+            p1 = func5(1);
+            p2 = p1(2);
+            p3 = p2(3);
+            p4 = p3(4);
+            p5 = p4(5);
+        in {
+            assert(p5 == 15);
+            true
+        }
+    }
+    
+    // Test multiple partial applications from same base
+    fn test_multiple_branches() {
+        let
+            multiply = fn(a, b) { a * b };
+            times2 = multiply(2);
+            times3 = multiply(3);
+            times10 = multiply(10);
+        in {
+            assert(times2(5) == 10);
+            assert(times3(5) == 15);
+            assert(times10(5) == 50);
+            true
+        }
+    }
+
+in
+    test_curry_2();
+    test_curry_3();
+    test_curry_4();
+    test_curry_5();
+    test_curry_6();
+    test_curry_7();
+    test_curry_8();
+    test_mixed_partial();
+    test_partial_stages();
+    test_curry_types();
+    test_curry_lists();
+    test_curry_tuples();
+    test_higher_order_curry();
+    test_curry_patterns();
+    test_zero_args();
+    test_one_arg();
+    test_curry_conditionals();
+    test_chain_partial();
+    test_multiple_branches();
+    
+    puts("All currying tests passed!\n")

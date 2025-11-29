@@ -9,6 +9,7 @@ More of a wish-list than a hard and fast plan.
    * Matrices.
    * Quaternions.
 * Improve arithmetic.
+   * ceil, floor and round operations.
    * General overhaul.
    * move to [libgmp](https://gmplib.org/)?
    * trig and log functions.

@@ -373,7 +373,7 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     TcType *res = lookup(env, var, ng);
     if (res == NULL) {
         // ppTcEnv(env);
-        cant_happen("undefined variable %s in %s, line %d", var->name,
+        can_happen("undefined variable %s in %s, line %d", var->name,
                     I.filename, I.lineno);
         return makeUnknown(var);
     }
