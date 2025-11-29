@@ -1,0 +1,311 @@
+// Comprehensive logic and boolean operation tests
+// Testing: boolean operators, short-circuit evaluation, truth tables, De Morgan's laws
+
+let
+    // Test basic AND
+    fn test_and_basic() {
+        assert((true and true) == true);
+        assert((true and false) == false);
+        assert((false and true) == false);
+        assert((false and false) == false);
+        true
+    }
+    
+    // Test basic OR
+    fn test_or_basic() {
+        assert((true or true) == true);
+        assert((true or false) == true);
+        assert((false or true) == true);
+        assert((false or false) == false);
+        true
+    }
+    
+    // Test basic NOT
+    fn test_not_basic() {
+        assert(not(true) == false);
+        assert(not(false) == true);
+        assert(not(not(true)) == true);
+        assert(not(not(false)) == false);
+        true
+    }
+    
+    // Test XOR (using and/or/not)
+    fn test_xor() {
+        let
+            myXor = fn(a, b) { (a or b) and not(a and b) };
+        in {
+            assert(myXor(true, true) == false);
+            assert(myXor(true, false) == true);
+            assert(myXor(false, true) == true);
+            assert(myXor(false, false) == false);
+            true
+        }
+    }
+    
+    // Test short-circuit AND (second expression shouldn't evaluate)
+    fn test_and_short_circuit() {
+        let
+            side_effect = fn() { back };  // Would fail if evaluated
+            result = false and side_effect();
+        in {
+            assert(result == false);
+            true
+        }
+    }
+    
+    // Test short-circuit OR (second expression shouldn't evaluate)
+    fn test_or_short_circuit() {
+        let
+            side_effect = fn() { back };  // Would fail if evaluated
+            result = true or side_effect();
+        in {
+            assert(result == true);
+            true
+        }
+    }
+    
+    // Test De Morgan's law: not(A and B) = not(A) or not(B)
+    fn test_demorgan_and() {
+        let
+            test_case = fn(a, b) {
+                not(a and b) == (not(a) or not(b))
+            };
+        in {
+            assert(test_case(true, true));
+            assert(test_case(true, false));
+            assert(test_case(false, true));
+            assert(test_case(false, false));
+            true
+        }
+    }
+    
+    // Test De Morgan's law: not(A or B) = not(A) and not(B)
+    fn test_demorgan_or() {
+        let
+            test_case = fn(a, b) {
+                not(a or b) == (not(a) and not(b))
+            };
+        in {
+            assert(test_case(true, true));
+            assert(test_case(true, false));
+            assert(test_case(false, true));
+            assert(test_case(false, false));
+            true
+        }
+    }
+    
+    // Test associativity of AND
+    fn test_and_associative() {
+        assert((true and (true and true)) == ((true and true) and true));
+        assert((true and (true and false)) == ((true and true) and false));
+        assert((false and (true and true)) == ((false and true) and true));
+        true
+    }
+    
+    // Test associativity of OR
+    fn test_or_associative() {
+        assert((true or (true or false)) == ((true or true) or false));
+        assert((false or (false or true)) == ((false or false) or true));
+        assert((false or (false or false)) == ((false or false) or false));
+        true
+    }
+    
+    // Test commutativity of AND
+    fn test_and_commutative() {
+        assert((true and false) == (false and true));
+        assert((true and true) == (true and true));
+        assert((false and false) == (false and false));
+        true
+    }
+    
+    // Test commutativity of OR
+    fn test_or_commutative() {
+        assert((true or false) == (false or true));
+        assert((true or true) == (true or true));
+        assert((false or false) == (false or false));
+        true
+    }
+    
+    // Test distributivity: A and (B or C) = (A and B) or (A and C)
+    fn test_distributive_and_over_or() {
+        let
+            test_case = fn(a, b, c) {
+                (a and (b or c)) == ((a and b) or (a and c))
+            };
+        in {
+            assert(test_case(true, true, true));
+            assert(test_case(true, true, false));
+            assert(test_case(true, false, true));
+            assert(test_case(true, false, false));
+            assert(test_case(false, true, true));
+            assert(test_case(false, false, false));
+            true
+        }
+    }
+    
+    // Test distributivity: A or (B and C) = (A or B) and (A or C)
+    fn test_distributive_or_over_and() {
+        let
+            test_case = fn(a, b, c) {
+                (a or (b and c)) == ((a or b) and (a or c))
+            };
+        in {
+            assert(test_case(true, true, true));
+            assert(test_case(true, true, false));
+            assert(test_case(true, false, true));
+            assert(test_case(true, false, false));
+            assert(test_case(false, true, true));
+            assert(test_case(false, false, false));
+            true
+        }
+    }
+    
+    // Test idempotence: A and A = A
+    fn test_and_idempotent() {
+        assert((true and true) == true);
+        assert((false and false) == false);
+        true
+    }
+    
+    // Test idempotence: A or A = A
+    fn test_or_idempotent() {
+        assert((true or true) == true);
+        assert((false or false) == false);
+        true
+    }
+    
+    // Test identity: A and true = A
+    fn test_and_identity() {
+        assert((true and true) == true);
+        assert((false and true) == false);
+        true
+    }
+    
+    // Test identity: A or false = A
+    fn test_or_identity() {
+        assert((true or false) == true);
+        assert((false or false) == false);
+        true
+    }
+    
+    // Test annihilator: A and false = false
+    fn test_and_annihilator() {
+        assert((true and false) == false);
+        assert((false and false) == false);
+        true
+    }
+    
+    // Test annihilator: A or true = true
+    fn test_or_annihilator() {
+        assert((true or true) == true);
+        assert((false or true) == true);
+        true
+    }
+    
+    // Test absorption: A and (A or B) = A
+    fn test_absorption_and() {
+        let
+            test_case = fn(a, b) {
+                (a and (a or b)) == a
+            };
+        in {
+            assert(test_case(true, true));
+            assert(test_case(true, false));
+            assert(test_case(false, true));
+            assert(test_case(false, false));
+            true
+        }
+    }
+    
+    // Test absorption: A or (A and B) = A
+    fn test_absorption_or() {
+        let
+            test_case = fn(a, b) {
+                (a or (a and b)) == a
+            };
+        in {
+            assert(test_case(true, true));
+            assert(test_case(true, false));
+            assert(test_case(false, true));
+            assert(test_case(false, false));
+            true
+        }
+    }
+    
+    // Test complex expression
+    fn test_complex_expression() {
+        let
+            a = true;
+            b = false;
+            c = true;
+            result = (a or b) and (not(b) or c) and (a and c);
+        in {
+            assert(result == true);
+            true
+        }
+    }
+    
+    // Test chained AND
+    fn test_chained_and() {
+        assert((true and true and true and true) == true);
+        assert((true and true and false and true) == false);
+        assert((false and false and false and false) == false);
+        true
+    }
+    
+    // Test chained OR
+    fn test_chained_or() {
+        assert((false or false or false or false) == false);
+        assert((false or false or true or false) == true);
+        assert((true or true or true or true) == true);
+        true
+    }
+    
+    // Test mixed chaining (same precedence, left-to-right)
+    fn test_mixed_chaining() {
+        // AND and OR have same precedence (3), so they associate left-to-right
+        assert((true or false and false) == false);  // (true or false) and false = true and false = false
+        assert((false and true or true) == true);    // (false and true) or true = false or true = true
+        assert((true and false or true) == true);    // (true and false) or true = false or true = true
+        true
+    }
+    
+    // Test with comparison operators
+    fn test_with_comparisons() {
+        assert((5 > 3) and (10 < 20));
+        assert((5 > 10) or (3 < 7));
+        assert(not(5 == 10));
+        assert((5 != 10) and (5 == 5));
+        true
+    }
+
+in
+    test_and_basic();
+    test_or_basic();
+    test_not_basic();
+    test_xor();
+    test_and_short_circuit();
+    test_or_short_circuit();
+    test_demorgan_and();
+    test_demorgan_or();
+    test_and_associative();
+    test_or_associative();
+    test_and_commutative();
+    test_or_commutative();
+    test_distributive_and_over_or();
+    test_distributive_or_over_and();
+    test_and_idempotent();
+    test_or_idempotent();
+    test_and_identity();
+    test_or_identity();
+    test_and_annihilator();
+    test_or_annihilator();
+    test_absorption_and();
+    test_absorption_or();
+    test_complex_expression();
+    test_chained_and();
+    test_chained_or();
+    test_mixed_chaining();
+    test_with_comparisons();
+    
+    puts("All logic tests passed!\n")

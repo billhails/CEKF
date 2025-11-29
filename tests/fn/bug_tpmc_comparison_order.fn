@@ -1,0 +1,213 @@
+// Bug demonstration: TPMC comparison pattern variable binding order
+// The bug occurs when the same variable appears multiple times in a pattern
+// and TPMC doesn't ensure the variable is bound before comparison
+
+let
+// This simple case works (from listutils.fn)
+fn member {
+    (_, []) { false }
+    (a, a @ _) { true }  // a is bound in first arg, compared in second
+    (a, _ @ t) { member(a, t) }
+}
+
+// Test 1: Simple comparison - likely works
+fn test_simple_comparison() {
+    let
+        result1 = member(2, [1, 2, 3]);
+        result2 = member(5, [1, 2, 3]);
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_simple_comparison passed\n");
+        true
+    }
+}
+
+// Test 2: Reverse argument order - does this work?
+fn reverse_member {
+    ([], _) { false }
+    (a @ _, a) { true }  // a is bound in second arg, compared in first?
+    (h @ t, a) { reverse_member(t, a) }
+}
+
+fn test_reverse_order() {
+    let
+        result1 = reverse_member([1, 2, 3], 2);
+        result2 = reverse_member([1, 2, 3], 5);
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_reverse_order passed\n");
+        true
+    }
+}
+
+// Test 3: Multiple pattern variables with comparison
+fn has_adjacent_pair {
+    ([]) { false }
+    ([_]) { false }
+    (x @ x @ _) { true }  // Two adjacent equal elements
+    (_ @ rest) { has_adjacent_pair(rest) }
+}
+
+fn test_adjacent_pairs() {
+    let
+        result1 = has_adjacent_pair([1, 2, 2, 3]);
+        result2 = has_adjacent_pair([1, 2, 3, 4]);
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_adjacent_pairs passed\n");
+        true
+    }
+}
+
+// Test 4: Nested pattern with comparison
+fn nested_comparison {
+    (#(x, _), #(x, _)) { true }  // x must match in both tuples
+    (#(_, _), #(_, _)) { false }
+}
+
+fn test_nested_comparison() {
+    let
+        result1 = nested_comparison(#(5, 10), #(5, 20));
+        result2 = nested_comparison(#(5, 10), #(6, 20));
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_nested_comparison passed\n");
+        true
+    }
+}
+
+// Test 5: Triple comparison - x appears three times
+fn triple_match {
+    (#(x, x, x)) { true }
+    (#(_, _, _)) { false }
+}
+
+fn test_triple_match() {
+    let
+        result1 = triple_match(#(7, 7, 7));
+        result2 = triple_match(#(7, 7, 8));
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_triple_match passed\n");
+        true
+    }
+}
+
+// Test 6: Comparison in deeply nested structure
+fn deep_nested {
+    (#(#(x, _), #(_, x))) { true }
+    (#(#(_, _), #(_, _))) { false }
+}
+
+fn test_deep_nested() {
+    let
+        result1 = deep_nested(#(#(5, 10), #(20, 5)));
+        result2 = deep_nested(#(#(5, 10), #(20, 6)));
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_deep_nested passed\n");
+        true
+    }
+}
+
+// Test 7: List pattern with multiple comparisons
+fn list_comparison {
+    ([x, x]) { true }  // Two-element list with same values
+    ([_, _]) { false }
+    (_) { false }
+}
+
+fn test_list_comparison() {
+    let
+        result1 = list_comparison([5, 5]);
+        result2 = list_comparison([5, 6]);
+        result3 = list_comparison([1]);
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        assert(result3 == false);
+        puts("test_list_comparison passed\n");
+        true
+    }
+}
+
+// Test 8: Complex pattern - x in first and third position
+fn first_and_third {
+    (#(x, _, x)) { true }
+    (#(_, _, _)) { false }
+}
+
+fn test_first_and_third() {
+    let
+        result1 = first_and_third(#(5, 99, 5));
+        result2 = first_and_third(#(5, 99, 6));
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        puts("test_first_and_third passed\n");
+        true
+    }
+}
+
+// Test 9: Comparison with cons pattern - x appears in head and nested
+fn cons_comparison {
+    (#(x, _) @ #(x, _) @ _) { true }  // first element of first tuple equals first element of second
+    (_ @ _ @ _) { false }
+    (_) { false }
+}
+
+fn test_cons_comparison() {
+    let
+        result1 = cons_comparison([#(5, 10), #(5, 20), #(99, 99)]);
+        result2 = cons_comparison([#(5, 10), #(6, 20), #(99, 99)]);
+        result3 = cons_comparison([]);
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        assert(result3 == false);
+        puts("test_cons_comparison passed\n");
+        true
+    }
+}
+
+// Test 10: Multiple variables with cross-comparisons
+// *** BUG: This triggers TPMC comparison ordering bug ***
+// Error: occurs-in check failed - x and y binding order incorrect
+fn cross_comparison {
+    (#(x, y), #(y, x)) { true }  // Swapped positions - FAILS
+    (#(_, _), #(_, _)) { false }
+}
+
+fn test_cross_comparison() {
+    let
+        result1 = cross_comparison(#(3, 7), #(7, 3));
+        result2 = cross_comparison(#(3, 7), #(3, 7));
+        result3 = cross_comparison(#(3, 7), #(5, 9));
+    in {
+        assert(result1 == true);
+        assert(result2 == false);
+        assert(result3 == false);
+        puts("test_cross_comparison passed\n");
+        true
+    }
+}
+
+in
+    test_simple_comparison();
+    test_reverse_order();
+    test_adjacent_pairs();
+    test_nested_comparison();
+    test_triple_match();
+    test_deep_nested();
+    test_list_comparison();
+    test_first_and_third();
+    test_cons_comparison();
+    test_cross_comparison();
+    
+    puts("TPMC comparison tests completed!\n");
