@@ -89,6 +89,8 @@ bool unicode_isupper(Character c);
 bool unicode_isvalid(Character c);
 bool unicode_isxdigit(Character c);
 int unicode_category(Character c);
+#ifdef EXTRA_UNICODE_FUNCTIONS
 int unicode_getdec(Character c);
+#endif
 
 #endif
