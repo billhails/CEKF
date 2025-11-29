@@ -1,0 +1,244 @@
+// Comprehensive print system tests
+// Testing: auto-generated printers, user-defined printers, polymorphic printing
+
+let
+    // Custom typedef for testing auto-generated print
+    typedef tree(#a) {
+        leaf(#a) |
+        node{ left: tree(#a), value: #a, right: tree(#a) }
+    }
+    
+    // Custom typedef with multiple constructors
+    typedef result(#t, #e) {
+        ok(#t) |
+        err(#e)
+    }
+    
+    // Custom typedef with user-defined printer
+    typedef color {
+        red | green | blue
+    }
+    
+    // User-defined printer for color
+    print color {
+        (red) { puts("RED"); red }
+        (green) { puts("GREEN"); green }
+        (blue) { puts("BLUE"); blue }
+    }
+
+    // Test printing numbers
+    fn test_print_numbers() {
+        print(42);
+        print(-17);
+        print(0);
+        true
+    }
+    
+    // Test printing characters
+    fn test_print_chars() {
+        print('A');
+        print('z');
+        print('0');
+        true
+    }
+    
+    // Test printing strings
+    fn test_print_strings() {
+        print("hello");
+        print("\n");
+        print("");
+        print("world\n");
+        true
+    }
+    
+    // Test printing booleans
+    fn test_print_bools() {
+        print(true);
+        print(false);
+        true
+    }
+    
+    // Test printing lists
+    fn test_print_lists() {
+        print([]);
+        print([1, 2, 3]);
+        print(["a", "b", "c"]);
+        print([[1, 2], [3, 4]]);
+        true
+    }
+    
+    // Test printing tuples
+    fn test_print_tuples() {
+        print(#(1, 2));
+        print(#("x", 5, true));
+        print(#(#(1, 2), #(3, 4)));
+        true
+    }
+    
+    // Test auto-generated tree printer with numbers
+    fn test_print_tree_numbers() {
+        let
+            t1 = leaf(42);
+            t2 = node{ left: leaf(1), value: 5, right: leaf(9) };
+        in {
+            print(t1);
+            print(t2);
+            true
+        }
+    }
+    
+    // Test auto-generated tree printer with strings
+    fn test_print_tree_strings() {
+        let
+            t = node{ left: leaf("a"), value: "b", right: leaf("c") };
+        in {
+            print(t);
+            true
+        }
+    }
+    
+    // Test auto-generated result printer
+    fn test_print_result() {
+        let
+            r1 = ok(42);
+            r2 = err("something went wrong");
+            r3 = ok([1, 2, 3]);
+        in {
+            print(r1);
+            print(r2);
+            print(r3);
+            true
+        }
+    }
+    
+    // Test user-defined color printer
+    fn test_print_color() {
+        print(red);
+        print(green);
+        print(blue);
+        true
+    }
+    
+    // Test nested generics - tree of lists
+    fn test_print_tree_of_lists() {
+        let
+            t = node{
+                left: leaf([1, 2]),
+                value: [3, 4, 5],
+                right: leaf([6, 7])
+            };
+        in {
+            print(t);
+            true
+        }
+    }
+    
+    // Test nested generics - list of trees
+    fn test_print_list_of_trees() {
+        let
+            trees = [leaf(1), leaf(2), node{ left: leaf(3), value: 4, right: leaf(5) }];
+        in {
+            print(trees);
+            true
+        }
+    }
+    
+    // Test result of trees
+    fn test_print_result_of_tree() {
+        let
+            r = ok(node{ left: leaf(1), value: 2, right: leaf(3) });
+        in {
+            print(r);
+            true
+        }
+    }
+    
+    // Test tree of results
+    fn test_print_tree_of_results() {
+        let
+            t = node{
+                left: leaf(ok(1)),
+                value: err("middle"),
+                right: leaf(ok(3))
+            };
+        in {
+            print(t);
+            true
+        }
+    }
+    
+    // Test list of colors
+    fn test_print_list_of_colors() {
+        let
+            colors = [red, green, blue, red];
+        in {
+            print(colors);
+            true
+        }
+    }
+    
+    // Test tuple of mixed types
+    fn test_print_tuple_mixed() {
+        let
+            mixed = #(leaf(42), ok("success"), red, [1, 2, 3]);
+        in {
+            print(mixed);
+            true
+        }
+    }
+    
+    // Test deeply nested tree
+    fn test_print_deep_tree() {
+        let
+            deep = node{
+                left: node{ left: leaf(1), value: 2, right: leaf(3) },
+                value: 4,
+                right: node{ left: leaf(5), value: 6, right: leaf(7) }
+            };
+        in {
+            print(deep);
+            true
+        }
+    }
+    
+    // Test empty list vs single element
+    fn test_print_list_edge_cases() {
+        print([]);
+        print([42]);
+        print([[]]);
+        print([[[]]]);
+        true
+    }
+    
+    // Test character list (string)
+    fn test_print_char_list() {
+        let
+            str = ['h', 'e', 'l', 'l', 'o'];
+        in {
+            print(str);
+            true
+        }
+    }
+
+in
+    test_print_numbers();
+    test_print_chars();
+    test_print_strings();
+    test_print_bools();
+    test_print_lists();
+    test_print_tuples();
+    test_print_tree_numbers();
+    test_print_tree_strings();
+    test_print_result();
+    test_print_color();
+    test_print_tree_of_lists();
+    test_print_list_of_trees();
+    test_print_result_of_tree();
+    test_print_tree_of_results();
+    test_print_list_of_colors();
+    test_print_tuple_mixed();
+    test_print_deep_tree();
+    test_print_list_edge_cases();
+    test_print_char_list();
+    
+    puts("All print system tests passed!\n")

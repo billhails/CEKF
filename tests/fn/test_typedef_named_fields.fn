@@ -1,0 +1,342 @@
+// Typedef with named fields tests
+// Testing: named field syntax, field access, pattern matching with named fields
+
+let
+    // Test basic named fields
+    fn test_simple_named_fields() {
+        let
+            typedef person {
+                make_person{ name: list(char), age: number }
+            }
+        in {
+            let p = make_person{ name: "Alice", age: 30 };
+            in
+                switch (p) {
+                    (make_person{ name: n, age: a }) {
+                        assert(n == "Alice");
+                        assert(a == 30);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_order_independence() {
+        let
+            typedef point {
+                pt{ x: number, y: number }
+            }
+        in {
+            let
+                p1 = pt{ x: 10, y: 20 };
+                p2 = pt{ y: 20, x: 10 };
+            in {
+                switch (p1) {
+                    (pt{ x: x1, y: y1 }) {
+                        switch (p2) {
+                            (pt{ x: x2, y: y2 }) {
+                                assert(x1 == x2);
+                                assert(y1 == y2);
+                                true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    fn test_named_fields_pattern_match() {
+        let
+            typedef rect {
+                rectangle{ width: number, height: number }
+            }
+        in {
+            let r = rectangle{ width: 100, height: 50 };
+            in
+                switch (r) {
+                    (rectangle{ width: w, height: h }) {
+                        assert(w == 100);
+                        assert(h == 50);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_with_wildcards() {
+        let
+            typedef data {
+                info{ id: number, name: list(char), value: number }
+            }
+        in {
+            let d = info{ id: 1, name: "test", value: 42 };
+            in
+                switch (d) {
+                    (info{ id: _, name: n, value: _ }) {
+                        assert(n == "test");
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_nested_named_fields() {
+        let
+            typedef inner {
+                inn{ x: number }
+            }
+            typedef outer {
+                out{ data: inner, label: list(char) }
+            }
+        in {
+            let obj = out{ data: inn{ x: 99 }, label: "outer" };
+            in
+                switch (obj) {
+                    (out{ data: d, label: l }) {
+                        switch (d) {
+                            (inn{ x: val }) {
+                                assert(val == 99);
+                                assert(l == "outer");
+                                true
+                            }
+                        }
+                    }
+                }
+        }
+    }
+    
+    fn test_multiple_constructors_with_named_fields() {
+        let
+            typedef shape {
+                circle{ radius: number } |
+                rectangle{ width: number, height: number }
+            }
+        in {
+            let
+                c = circle{ radius: 5 };
+                r = rectangle{ width: 10, height: 20 };
+                test_c = switch (c) {
+                    (circle{ radius: rad }) { rad == 5 }
+                    (_) { false }
+                };
+                test_r = switch (r) {
+                    (rectangle{ width: w, height: h }) { w == 10 and h == 20 }
+                    (_) { false }
+                };
+            in {
+                assert(test_c);
+                assert(test_r);
+                true
+            }
+        }
+    }
+    
+    fn test_named_fields_same_names_different_types() {
+        let
+            typedef config_a {
+                conf_a{ value: number }
+            }
+            typedef config_b {
+                conf_b{ value: list(char) }
+            }
+        in {
+            let
+                a = conf_a{ value: 42 };
+                b = conf_b{ value: "test" };
+            in {
+                switch (a) {
+                    (conf_a{ value: v1 }) {
+                        switch (b) {
+                            (conf_b{ value: v2 }) {
+                                assert(v1 == 42);
+                                assert(v2 == "test");
+                                true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    fn test_named_fields_with_lists() {
+        let
+            typedef container {
+                box{ items: list(number) }
+            }
+        in {
+            let b = box{ items: [1, 2, 3] };
+            in
+                switch (b) {
+                    (box{ items: lst }) {
+                        assert(lst == [1, 2, 3]);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_with_tuples() {
+        let
+            typedef pair_holder {
+                holder{ pair: #(number, number) }
+            }
+        in {
+            let h = holder{ pair: #(10, 20) };
+            in
+                switch (h) {
+                    (holder{ pair: p }) {
+                        assert(p == #(10, 20));
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_destructure_nested() {
+        let
+            typedef point {
+                pt{ x: number, y: number }
+            }
+            typedef line {
+                ln{ start: point, end: point }
+            }
+        in {
+            let l = ln{ start: pt{ x: 0, y: 0 }, end: pt{ x: 10, y: 10 } };
+            in
+                switch (l) {
+                    (ln{ start: pt{ x: x1, y: y1 }, end: pt{ x: x2, y: y2 } }) {
+                        assert(x1 == 0);
+                        assert(y1 == 0);
+                        assert(x2 == 10);
+                        assert(y2 == 10);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_single_field() {
+        let
+            typedef wrapper {
+                wrap{ value: number }
+            }
+        in {
+            let w = wrap{ value: 123 };
+            in
+                switch (w) {
+                    (wrap{ value: v }) {
+                        assert(v == 123);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_many_fields() {
+        let
+            typedef record {
+                rec{ a: number, b: number, c: number, d: number, e: number }
+            }
+        in {
+            let r = rec{ a: 1, b: 2, c: 3, d: 4, e: 5 };
+            in
+                switch (r) {
+                    (rec{ a: a, b: b, c: c, d: d, e: e }) {
+                        assert(a + b + c + d + e == 15);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_partial_match() {
+        let
+            typedef data {
+                info{ id: number, name: list(char), extra: number }
+            }
+        in {
+            let d = info{ id: 42, name: "test", extra: 99 };
+            in
+                switch (d) {
+                    (info{ id: i, name: _, extra: _ }) {
+                        assert(i == 42);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_with_bool() {
+        let
+            typedef flag {
+                setting{ enabled: bool, label: list(char) }
+            }
+        in {
+            let f = setting{ enabled: true, label: "feature" };
+            in
+                switch (f) {
+                    (setting{ enabled: e, label: l }) {
+                        assert(e == true);
+                        assert(l == "feature");
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_named_fields_recursive() {
+        let
+            typedef tree {
+                leaf{ value: number } |
+                node{ left: tree, right: tree, value: number }
+            }
+        in {
+            let t = node{
+                left: leaf{ value: 1 },
+                right: leaf{ value: 2 },
+                value: 3
+            };
+            in
+                switch (t) {
+                    (node{ left: l, right: r, value: v }) {
+                        let
+                            lv = switch (l) {
+                                (leaf{ value: x }) { x }
+                                (_) { 0 }
+                            };
+                            rv = switch (r) {
+                                (leaf{ value: x }) { x }
+                                (_) { 0 }
+                            };
+                        in {
+                            assert(lv == 1);
+                            assert(rv == 2);
+                            assert(v == 3);
+                            true
+                        }
+                    }
+                    (_) { false }
+                }
+        }
+    }
+
+in
+    test_simple_named_fields();
+    test_named_fields_order_independence();
+    test_named_fields_pattern_match();
+    test_named_fields_with_wildcards();
+    test_nested_named_fields();
+    test_multiple_constructors_with_named_fields();
+    test_named_fields_same_names_different_types();
+    test_named_fields_with_lists();
+    test_named_fields_with_tuples();
+    test_named_fields_destructure_nested();
+    test_single_field();
+    test_many_fields();
+    test_named_fields_partial_match();
+    test_named_fields_with_bool();
+    test_named_fields_recursive();
+    
+    puts("All named fields tests passed!\n")

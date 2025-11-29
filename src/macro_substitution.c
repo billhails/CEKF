@@ -291,6 +291,7 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsSet 
     return lookup;
 }
 
+#ifdef NOTDEF
 /**
  * @brief Performs macro substitutions on a make vector expression.
  * @param makeVec The make vector expression to modify.
@@ -303,6 +304,7 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, LamMacroArgs
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
+#endif
 
 /**
  * @brief Performs macro substitutions on a deconstruct expression.
@@ -368,14 +370,22 @@ static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsSet *symbols) {
  * @param symbols The current set of macro arguments.
  * @return The modified letrec bindings.
  */
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings, LamMacroArgsSet *symbols) {
+static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings,
+                                                       LamMacroArgsSet *reducedSymbols,
+                                                       LamMacroArgsSet *originalSymbols) {
     ENTER(performBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performBindingsSubstitutions);
         return NULL;
     }
-    bindings->next = performBindingsSubstitutions(bindings->next, symbols);
-    bindings->val = lamPerformMacroSubstitutions(bindings->val, symbols);
+    bindings->next = performBindingsSubstitutions(bindings->next, reducedSymbols, originalSymbols);
+    switch (bindings->val->type) {
+        case LAMEXP_TYPE_LAM:
+            bindings->val = lamPerformMacroSubstitutions(bindings->val, reducedSymbols);
+            break;
+        default:
+            bindings->val = lamPerformMacroSubstitutions(bindings->val, originalSymbols);
+    }
     LEAVE(performBindingsSubstitutions);
     return bindings;
 }
@@ -437,10 +447,10 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsSet 
     if (containsMacroArguments(names, symbols)) {
         LamMacroArgsSet *reduced = excludeSymbols(names, symbols);
         PROTECT(reduced);
-        letrec->bindings = performBindingsSubstitutions(letrec->bindings, reduced);
+        letrec->bindings = performBindingsSubstitutions(letrec->bindings, reduced, symbols);
         letrec->body = lamPerformMacroSubstitutions(letrec->body, reduced);
     } else {
-        letrec->bindings = performBindingsSubstitutions(letrec->bindings, symbols);
+        letrec->bindings = performBindingsSubstitutions(letrec->bindings, symbols, symbols);
         letrec->body = lamPerformMacroSubstitutions(letrec->body, symbols);
     }
     LEAVE(performLetRecSubstitutions);
@@ -635,9 +645,11 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
             case LAMEXP_TYPE_SEQUENCE:
                 exp->val.sequence = performSequenceSubstitutions(exp->val.sequence, symbols);
                 break;
+#ifdef NOTDEF
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, symbols);
                 break;
+#endif
             case LAMEXP_TYPE_DECONSTRUCT:
                 exp->val.deconstruct = performDeconstructSubstitutions(exp->val.deconstruct, symbols);
                 break;

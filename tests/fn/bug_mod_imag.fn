@@ -1,0 +1,4 @@
+// this is a bug because the code calls cant_happen instead
+// of reporting the line number in the source that caused
+// the error.
+print 4%4i;

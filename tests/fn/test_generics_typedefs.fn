@@ -1,0 +1,282 @@
+// Test generics, typedefs, and type system edge cases
+// Tests Tier 2: Generic types, nested types, complex pattern matching
+
+let
+
+    // Test: Basic generic typedef
+    fn test_basic_generics() {
+        let
+            typedef maybe(#t) {
+                nothing |
+                just(#t)
+            }
+            
+            fn unwrap_or {
+                (nothing, default) { default }
+                (just(x), dummy) { x }
+            };
+            
+            int_maybe = just(42);
+            str_maybe = just("hello");
+            none = nothing;
+        in
+            assert(unwrap_or(int_maybe, 0) == 42);
+            assert(unwrap_or(str_maybe, "default") == "hello");
+            assert(unwrap_or(none, 99) == 99);
+            puts("Basic generics tests passed")
+    }
+    
+    // Test: Nested generic types
+    fn test_nested_generics() {
+        let
+            typedef maybe(#t) {
+                nothing |
+                just(#t)
+            }
+            
+            typedef result(#ok, #err) {
+                ok(#ok) |
+                err(#err)
+            }
+            
+            fn map_maybe {
+                (f, nothing) { nothing }
+                (f, just(x)) { just(f(x)) }
+            };
+            
+            fn double { (x) { x * 2 } };
+            
+            nested = just(just(5));
+            mapped = map_maybe(fn { (inner) { map_maybe(double, inner) } }, nested);
+        in
+            assert(mapped == just(just(10)));
+            puts("Nested generics tests passed")
+    }
+    
+    // Test: Generic list operations
+    fn test_generic_lists() {
+        let
+            fn length {
+                ([]) { 0 }
+                (dummy @ t) { 1 + length(t) }
+            };
+            
+            fn append {
+                ([], ys) { ys }
+                (h @ t, ys) { h @ append(t, ys) }
+            };
+            
+            fn reverse_helper {
+                ([], acc) { acc }
+                (h @ t, acc) { reverse_helper(t, h @ acc) }
+            };
+            
+            fn reverse {
+                (xs) { reverse_helper(xs, []) }
+            };
+            
+            int_list = [1, 2, 3];
+            char_list = ['a', 'b', 'c'];
+            list_of_lists = [[1, 2], [3, 4], [5]];
+        in
+            assert(length(int_list) == 3);
+            assert(length(char_list) == 3);
+            assert(length(list_of_lists) == 3);
+            assert(append([1, 2], [3, 4]) == [1, 2, 3, 4]);
+            assert(reverse([1, 2, 3]) == [3, 2, 1]);
+            puts("Generic list tests passed")
+    }
+    
+    // Test: Multiple type parameters
+    fn test_multiple_type_params() {
+        let
+            typedef pair(#a, #b) {
+                pair(#a, #b)
+            }
+            
+            fn fst {
+                (pair(a, dummy)) { a }
+            };
+            
+            fn snd {
+                (pair(dummy, b)) { b }
+            };
+            
+            fn swap {
+                (pair(a, b)) { pair(b, a) }
+            };
+            
+            p1 = pair(42, "hello");
+            p2 = pair(true, 99);
+            swapped = swap(p1);
+        in
+            assert(fst(p1) == 42);
+            assert(snd(p1) == "hello");
+            assert(fst(p2) == true);
+            assert(snd(p2) == 99);
+            assert(fst(swapped) == "hello");
+            assert(snd(swapped) == 42);
+            puts("Multiple type parameter tests passed")
+    }
+    
+    // Test: Generic tree structure
+    fn test_generic_tree() {
+        let
+            typedef tree(#t) {
+                leaf |
+                node(#t, tree(#t), tree(#t))
+            }
+            
+            fn tree_map {
+                (f, leaf) { leaf }
+                (f, node(v, left, right)) {
+                    node(f(v), tree_map(f, left), tree_map(f, right))
+                }
+            };
+            
+            fn tree_fold {
+                (f, acc, leaf) { acc }
+                (f, acc, node(v, left, right)) {
+                    let
+                        left_result = tree_fold(f, acc, left);
+                        right_result = tree_fold(f, left_result, right);
+                    in
+                        f(right_result, v)
+                }
+            };
+            
+            fn double { (x) { x * 2 } };
+            fn add { (a, b) { a + b } };
+            
+            tree = node(5, node(3, leaf, leaf), node(7, leaf, leaf));
+            doubled_tree = tree_map(double, tree);
+            sum = tree_fold(add, 0, tree);
+        in
+            assert(sum == 15);
+            assert(tree_fold(add, 0, doubled_tree) == 30);
+            puts("Generic tree tests passed")
+    }
+    
+    // Test: Either type (like result)
+    fn test_either_type() {
+        let
+            typedef either(#left, #right) {
+                left(#left) |
+                right(#right)
+            }
+            
+            fn map_right {
+                (f, left(x)) { left(x) }
+                (f, right(x)) { right(f(x)) }
+            };
+            
+            fn unwrap_right {
+                (right(x)) { x }
+                (left(dummy)) { back }
+            };
+            
+            fn double { (x) { x * 2 } };
+            
+            r = right(10);
+            l = left("error");
+            mapped_r = map_right(double, r);
+            mapped_l = map_right(double, l);
+        in
+            assert(unwrap_right(mapped_r) == 20);
+            assert(mapped_l == left("error"));
+            puts("Either type tests passed")
+    }
+    
+    // Test: Recursive generic types
+    fn test_recursive_generics() {
+        let
+            typedef mylist(#t) {
+                mynil |
+                mycons(#t, mylist(#t))
+            }
+            
+            fn mylist_length {
+                (mynil) { 0 }
+                (mycons(dummy, rest)) { 1 + mylist_length(rest) }
+            };
+            
+            fn mylist_map {
+                (f, mynil) { mynil }
+                (f, mycons(x, rest)) { mycons(f(x), mylist_map(f, rest)) }
+            };
+            
+            fn double { (x) { x * 2 } };
+            
+            list = mycons(1, mycons(2, mycons(3, mynil)));
+            doubled = mylist_map(double, list);
+        in
+            assert(mylist_length(list) == 3);
+            assert(mylist_length(doubled) == 3);
+            putv(mylist_length(list));
+            putv(mylist_length(doubled));
+            puts("done")
+    }
+    
+    // Test: Polymorphic identity and const
+    fn test_polymorphic_functions() {
+        let
+            fn id { (x) { x } };
+            fn const { (x, dummy) { x } };
+            fn apply { (f, x) { f(x) } };
+        in
+            assert(id(42) == 42);
+            assert(id("hello") == "hello");
+            assert(id(true) == true);
+            assert(const(5, 10) == 5);
+            assert(const("a", "b") == "a");
+            assert(apply(id, 100) == 100);
+            puts("Polymorphic function tests passed")
+    }
+    
+    // Test: Complex nested pattern matching
+    fn test_complex_patterns() {
+        let
+            typedef tree(#t) {
+                leaf |
+                node(#t, tree(#t), tree(#t))
+            }
+            
+            fn find_leftmost {
+                (leaf) { back }
+                (node(v, leaf, dummy)) { v }
+                (node(dummy, left, dummy2)) { find_leftmost(left) }
+            };
+            
+            fn count_leaves {
+                (leaf) { 1 }
+                (node(dummy, left, right)) {
+                    count_leaves(left) + count_leaves(right)
+                }
+            };
+            
+            tree1 = node(5, node(3, leaf, leaf), node(7, leaf, leaf));
+            tree2 = node(10, leaf, node(20, leaf, leaf));
+        in
+            assert(find_leftmost(tree1) == 3);
+            assert(find_leftmost(tree2) == 10);
+            assert(count_leaves(tree1) == 4);
+            assert(count_leaves(tree2) == 3);
+            puts("Complex pattern matching tests passed")
+    }
+    
+    // Main test runner
+    fn main() {
+        test_basic_generics();
+        test_nested_generics();
+        test_generic_lists();
+        test_multiple_type_params();
+        test_generic_tree();
+        test_either_type();
+        test_recursive_generics();
+        test_polymorphic_functions();
+        test_complex_patterns();
+        puts("All generic/typedef tests completed successfully!")
+    }
+
+in
+    main()

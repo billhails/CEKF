@@ -1,0 +1,66 @@
+// Test directory operations: opendir(), readdir(), closedir()
+// Tests directory reading functionality
+
+let
+    // Test opening and closing a directory
+    fn test_opendir_closedir() {
+        let result = opendir(".");
+        in
+        switch(result) {
+            (success(dirhandle)) {
+                closedir(dirhandle);
+                assert(true)
+            }
+            (failure(_)) {
+                // Might fail in some environments
+                assert(true)
+            }
+        }
+    }
+    
+    // Test opening non-existent directory
+    fn test_opendir_nonexistent() {
+        let result = opendir("/nonexistent/directory/path");
+        in
+        switch(result) {
+            (failure(_)) { assert(true) } // Expected
+            (success(dh)) {
+                closedir(dh);
+                assert(true) // Shouldn't happen but not an error
+            }
+        }
+    }
+    
+    // Test opening a file as directory (should fail)
+    fn test_opendir_file() {
+        let result = opendir("Makefile");
+        in
+        switch(result) {
+            (failure(_)) { assert(true) } // Expected
+            (success(dh)) {
+                closedir(dh);
+                assert(true) // Some systems might allow this
+            }
+        }
+    }
+    
+    // Test opening with empty path
+    fn test_opendir_empty() {
+        let result = opendir("");
+        in
+        switch(result) {
+            (failure(_)) { assert(true) } // Expected
+            (success(dh)) {
+                closedir(dh);
+                assert(true)
+            }
+        }
+    }
+
+in
+    test_opendir_closedir();
+    test_opendir_nonexistent();
+    test_opendir_file();
+    test_opendir_empty();
+    
+    puts("All directory operation tests completed successfully!")

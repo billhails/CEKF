@@ -91,6 +91,7 @@ static AstDefinitions *definitions(PrattParser *, HashSymbol *);
 static AstDefinitions *prattParseLink(PrattParser *, char *, PrattParser **);
 static AstExpression *back(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *call(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression *makeStruct(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *doPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *errorExpression(ParserInfo);
 static AstExpression *error(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -262,7 +263,7 @@ static PrattParser *makePrattParser(void)
     addRecord(table, TOK_KW_CHAR(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_ERROR(), error, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_NUMBER(), NULL, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_LCURLY(), nestexpr, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_LCURLY(), nestexpr, 0, makeStruct, 0, NULL, 0);
     addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
@@ -3672,6 +3673,90 @@ static AstExpression *call(PrattRecord *record __attribute__((unused)),
     return res;
 }
 
+static AstTaggedExpressions *taggedExpressions(PrattParser *parser)
+{
+    ENTER(taggedExpressions);
+    PrattToken *tag = peek(parser);
+    int save = PROTECT(tag);
+    HashSymbol *tagSymbol = symbol(parser);
+    consume(parser, TOK_COLON());
+    AstExpression *expr = expressionPrecedence(parser, 0);
+    PROTECT(expr);
+    AstTaggedExpressions *next = NULL;
+    if (match(parser, TOK_COMMA()))
+    {
+        next = taggedExpressions(parser);
+        PROTECT(next);
+    }
+    AstTaggedExpressions *this = newAstTaggedExpressions(CPI(expr), tagSymbol, expr, next);
+    LEAVE(taggedExpressions);
+    UNPROTECT(save);
+    return this;
+}
+
+static AstLookupSymbol *astStructLookupToLus(PrattParser *parser, AstLookup *lookup)
+{
+    if (lookup->expression->type != AST_EXPRESSION_TYPE_SYMBOL) {
+        parserErrorAt(CPI(lookup->expression), parser,
+                      "expected symbol as lookup expression, got %s",
+                      astExpressionTypeName(lookup->expression->type));
+        return newAstLookupSymbol(CPI(lookup), -1, TOK_ERROR(), TOK_ERROR());
+    }
+    int index = 0;
+    if (findNamespace(parser, lookup->nsSymbol, &index)) {
+        AstLookupSymbol *lus = newAstLookupSymbol(CPI(lookup),
+                index, lookup->nsSymbol, lookup->expression->val.symbol);
+        return lus;
+    } else {
+        parserErrorAt(CPI(lookup), parser,
+                      "unknown namespace '%s' in lookup",
+                      lookup->nsSymbol->name);
+        return newAstLookupSymbol(CPI(lookup), -1, lookup->nsSymbol, TOK_ERROR());
+    }
+}
+
+static AstLookupOrSymbol *astExpressionToLosOrSymbol(PrattParser *parser, AstExpression *expr)
+{
+    switch (expr->type) {
+        case AST_EXPRESSION_TYPE_LOOKUP: {
+            AstLookupSymbol *lus = astStructLookupToLus(parser, expr->val.lookup);
+            int save = PROTECT(lus);
+            AstLookupOrSymbol *res = newAstLookupOrSymbol_Lookup(CPI(expr), lus);
+            UNPROTECT(save);
+            return res;
+        }
+        case AST_EXPRESSION_TYPE_SYMBOL:
+            return newAstLookupOrSymbol_Symbol(CPI(expr), expr->val.symbol);
+        default:
+            parserErrorAt(CPI(expr), parser,
+                        "expected structure name (symbol or lookup) on lhs of infix '{', got %s",
+                        astExpressionTypeName(expr->type));
+            return newAstLookupOrSymbol_Symbol(CPI(expr), TOK_ERROR());
+    }
+}
+
+/**
+ * @brief parselet triggered by an infix `{` token, parses a structure expression.
+ */
+static AstExpression *makeStruct(PrattRecord *record __attribute__((unused)),
+                                 PrattParser *parser,
+                                 AstExpression *lhs,
+                                 PrattToken *tok __attribute__((unused)))
+{
+    ENTER(makeStruct);
+    AstLookupOrSymbol *los = astExpressionToLosOrSymbol(parser, lhs);
+    int save = PROTECT(los);
+    AstTaggedExpressions *fields = taggedExpressions(parser);
+    PROTECT(fields);;
+    consume(parser, TOK_RCURLY());
+    AstStruct *structure = newAstStruct(CPI(lhs), los, fields);
+    PROTECT(structure);
+    AstExpression *res = newAstExpression_Structure(CPI(structure), structure);
+    LEAVE(makeStruct);
+    UNPROTECT(save);
+    return res;
+}
+
 /**
  * @brief parses a switch statement into an anonymous function definition and application
  *
@@ -4180,7 +4265,9 @@ static AstExpression *iff(PrattRecord *record __attribute__((unused)),
     AstNest *alternative = NULL;
     if (match(parser, TOK_IF()))
     {
-        AstExpression *iff_nest = iff(NULL, parser, NULL, NULL);
+        PrattToken *tok2 = peek(parser);
+        PROTECT(tok2);
+        AstExpression *iff_nest = iff(NULL, parser, NULL, tok2);
         PROTECT(iff_nest);
         AstExpressions *nest_body = newAstExpressions(CPI(iff_nest), iff_nest, NULL);
         PROTECT(nest_body);

@@ -26,3 +26,11 @@ tools/__pycache__/
 tools/*.pyc
 tools/generate/__pycache__/
 tools/generate/*.pyc
+coverage_html/
+coverage_report.txt
+gcov_output/
+*.gcda
+*.gcno
+coverage.info
+coverage_filtered.info
+test_output.log

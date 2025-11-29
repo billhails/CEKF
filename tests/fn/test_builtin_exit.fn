@@ -1,0 +1,8 @@
+let
+    fn test_exit() {
+        exit(0);
+        // This line should never be reached
+        assert(false);
+    }
+in
+    test_exit();

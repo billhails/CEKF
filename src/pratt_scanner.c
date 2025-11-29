@@ -216,7 +216,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
     ++buffer->length;
     if (trie->terminal != NULL) {
         // avoid i.e. "orbit" false matching "or"
-        if (!isALPHA(trie->character) || !isALPHA(buffer->start[buffer->length])) {
+        if (!isALNUM(trie->character) || !isALNUM(buffer->start[buffer->length])) {
             found = trie->terminal;
             last = buffer->length;
         }
@@ -871,7 +871,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 } else {
-                    parserError(parser, "expected terminator");
+                    parserError(parser, "expected \"'\" terminator");
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 }
@@ -957,7 +957,6 @@ PrattToken *next(PrattParser *parser) {
                         return token;
                     }
                     parserError(parser, "unrecognised operator %c", buffer->start[0]);
-                    cant_happen("abort");
                     nextCharacter(buffer);
                     return tokenERROR(lexer);
                 // bad UTF8

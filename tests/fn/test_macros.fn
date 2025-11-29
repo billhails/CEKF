@@ -1,0 +1,651 @@
+// Test macros and lazy evaluation edge cases
+// Tests Tier 3: Macro expansion, lazy evaluation, scoping
+
+let
+
+    // Test: Basic macro definition and use
+    fn test_basic_macro() {
+        let
+            macro DOUBLE(x) { x + x }
+            result = DOUBLE(5);
+        in
+            assert(result == 10);
+            puts("Basic macro test passed\n")
+    }
+
+    // Test: Macro with multiple arguments
+    fn test_multi_arg_macro() {
+        let
+            macro ADD(a, b) { a + b }
+            macro MULT(a, b) { a * b }
+
+            sum = ADD(3, 4);
+            product = MULT(5, 6);
+        in
+            assert(sum == 7);
+            assert(product == 30);
+            puts("Multi-argument macro test passed\n")
+    }
+
+    // Test: Macro argument evaluation (should be lazy)
+    fn test_macro_lazy_eval() {
+        let
+            macro FIRST(a, b) { a }
+
+            fn explode() { back }
+
+            result = FIRST(42, explode()) then 999;
+        in
+            assert(result == 42);
+            puts("Macro lazy evaluation test passed\n")
+    }
+
+    // Test: Nested macro calls
+    fn test_nested_macros() {
+        let
+            macro DOUBLE(x) { x + x }
+            macro QUAD(x) { DOUBLE(DOUBLE(x)) }
+
+            result = QUAD(3);
+        in
+            assert(result == 12);
+            puts("Nested macro test passed\n")
+    }
+
+    // Test: Macro with conditional
+    fn test_macro_conditional() {
+        let
+            macro MAX(a, b) {
+                if (a > b) { a } else { b }
+            }
+
+            result1 = MAX(10, 5);
+            result2 = MAX(3, 8);
+        in
+            assert(result1 == 10);
+            assert(result2 == 8);
+            puts("Macro conditional test passed\n")
+    }
+
+    // Test: Macro with explicit parameters (not variable capture)
+    fn test_macro_parameters() {
+        let
+            macro ADD_TEN(y) { 10 + y }
+
+            result1 = ADD_TEN(5);
+            result2 = ADD_TEN(15);
+        in
+            assert(result1 == 15);
+            assert(result2 == 25);
+            puts("Macro parameters test passed\n")
+    }
+
+    // Test: Macro with pattern matching
+    fn test_macro_pattern() {
+        let
+            macro HEAD(lst) {
+                switch (lst) {
+                    ([]) { back }
+                    (h @ dummy) { h }
+                }
+            }
+
+            result = HEAD([1, 2, 3]);
+        in
+            assert(result == 1);
+            puts("Macro pattern matching test passed\n")
+    }
+
+    // Test: Macro with function calls
+    fn test_macro_function_calls() {
+        let
+            fn double { (x) { x * 2 } }
+            fn triple { (x) { x * 3 } }
+
+            macro APPLY_BOTH(f, g, x) {
+                f(x) + g(x)
+            }
+
+            result = APPLY_BOTH(double, triple, 5);
+        in
+            assert(result == 25);
+            puts("Macro function calls test passed\n")
+    }
+
+    // Test: Macro with list operations
+    fn test_macro_list_ops() {
+        let
+            macro CONS_TWICE(x, lst) {
+                x @ x @ lst
+            }
+
+            result = CONS_TWICE(5, [1, 2, 3]);
+        in
+            assert(result == [5, 5, 1, 2, 3]);
+            puts("Macro list operations test passed\n")
+    }
+
+    // Test: Short-circuit AND macro
+    fn test_short_circuit_and() {
+        let
+            macro AND(a, b) {
+                if (a) { b } else { false }
+            }
+
+            fn explode() { back }
+
+            result1 = AND(false, explode()) then true;
+            result2 = AND(true, true);
+        in
+            assert(result1 == false);
+            assert(result2 == true);
+            puts("Short-circuit AND test passed\n")
+    }
+
+    // Test: Short-circuit OR macro
+    fn test_short_circuit_or() {
+        let
+            macro OR(a, b) {
+                if (a) { true } else { b }
+            }
+
+            fn explode() { back }
+
+            result1 = OR(true, explode()) then false;
+            result2 = OR(false, true);
+        in
+            assert(result1 == true);
+            assert(result2 == true);
+            puts("Short-circuit OR test passed\n")
+    }
+
+    // Test: Macro with recursion
+    fn test_macro_recursion() {
+        let
+            macro APPLY_TWICE(f, x) {
+                f(f(x))
+            }
+
+            fn inc { (x) { x + 1 } }
+
+            result = APPLY_TWICE(inc, 5);
+        in
+            assert(result == 7);
+            puts("Macro recursion test passed\n")
+    }
+
+    // Test: Complex macro expression
+    fn test_complex_macro() {
+        let
+            macro COMPUTE(a, b, c) {
+                let
+                    sum = a + b;
+                    prod = sum * c;
+                in
+                    prod
+            }
+
+            result = COMPUTE(2, 3, 4);
+        in
+            assert(result == 20);
+            puts("Complex macro test passed\n")
+    }
+
+    // Test: Macro with tuple
+    fn test_macro_tuple() {
+        let
+            macro MAKE_PAIR(a, b) {
+                #(a, b)
+            }
+
+            macro SWAP_PAIR(p) {
+                switch (p) {
+                    (#(x, y)) { #(y, x) }
+                }
+            }
+
+            pair = MAKE_PAIR(1, 2);
+            swapped = SWAP_PAIR(pair);
+        in
+            assert(pair == #(1, 2));
+            assert(swapped == #(2, 1));
+            puts("Macro tuple test passed\n")
+    }
+
+    // Test: Macro argument used multiple times
+    fn test_macro_multi_use() {
+        let
+            fn counter() {
+                let x = 1 then 2 then 3; in x
+            }
+
+            macro USE_TWICE(x) {
+                #(x, x)
+            }
+
+            result = USE_TWICE(counter());
+        in
+            assert(result == #(1, 1));
+            puts("Macro multi-use test passed\n")
+    }
+
+    // Test: Macro with let binding shadowing argument
+    fn test_macro_arg_shadowing() {
+        let
+            macro SHADOW_ARG(x) {
+                let x = 100; in x + 1
+            }
+
+            result = SHADOW_ARG(42);
+        in
+            assert(result == 101);  // Should use shadowed x=100, not argument
+            puts("Macro argument shadowing test passed\n")
+    }
+
+    // Test: Macro with nested let shadowing
+    fn test_macro_nested_shadow() {
+        let
+            macro NESTED_SHADOW(a, b) {
+                let
+                    a = 10;
+                in {
+                    let
+                        b = 20;
+                    in
+                        a + b
+                }
+            }
+
+            result = NESTED_SHADOW(1, 2);
+        in
+            assert(result == 30);  // Should use shadowed values 10 and 20
+            puts("Macro nested shadowing test passed\n")
+    }
+
+    // Test: Macro argument partially shadowed
+    fn test_macro_partial_shadow() {
+        let
+            macro PARTIAL_SHADOW(x, y) {
+                let
+                    x = 5;
+                in
+                    x + y  // x shadowed, y not shadowed
+            }
+
+            result = PARTIAL_SHADOW(100, 200);
+        in
+            assert(result == 205);  // 5 (shadowed x) + 200 (original y)
+            puts("Macro partial shadowing test passed\n")
+    }
+
+    // Test: Macro with let binding using argument
+    fn test_macro_let_using_arg() {
+        let
+            macro LET_WITH_ARG(x) {
+                let
+                    y = x;  // Simple assignment to force evaluation
+                    z = y + 10;
+                in
+                    z * 2
+            }
+
+            result = LET_WITH_ARG(5);
+        in
+            assert(result == 30);  // (5 + 10) * 2
+            puts("Macro let using argument test passed\n")
+    }
+
+    // Test: Macro with multiple let bindings and shadowing
+    // Tests that macro parameter 'a' can be shadowed in let binding
+    fn test_macro_multiple_lets() {
+        let
+            macro MULTI_LET(a) {
+                let
+                    val_a = a;  // Use original 'a'
+                    b = val_a + 1;
+                    a = b + 1;  // Shadow 'a' - this should work
+                in
+                    a + b  // Uses shadowed 'a', not macro parameter
+            }
+            result = MULTI_LET(10);
+        in
+            assert(result == 23);  // a=12, b=11, sum=23
+            puts("Macro multiple lets test passed\n")
+    }
+
+    // Test: Macro with deeply nested let and argument access
+    fn test_macro_deep_let_nesting() {
+        let
+            macro DEEP_NEST(x) {
+                let
+                    a = x;
+                in {
+                    let
+                        b = a + 1;
+                    in {
+                        let
+                            c = b + 1;
+                        in {
+                            let
+                                d = c + 1;
+                            in
+                                d + x  // x still accessible
+                        }
+                    }
+                }
+            }
+
+            result = DEEP_NEST(5);
+        in
+            assert(result == 13);  // d=8 (5+1+1+1), d+x = 8+5
+            puts("Macro deep let nesting test passed\n")
+    }
+
+    // Test: Macro with function definition shadowing argument
+    fn test_macro_fn_shadow() {
+        let
+            macro FN_SHADOW(x) {
+                let
+                    fn x() { 999 }
+                in
+                    x()
+            }
+
+            result = FN_SHADOW(42);
+        in
+            assert(result == 999);  // Function x shadows argument x
+            puts("Macro function shadowing test passed\n")
+    }
+
+    // Test: Macro with pattern match shadowing
+    fn test_macro_pattern_shadow() {
+        let
+            macro PATTERN_SHADOW(x) {
+                unsafe switch ([1, 2, 3]) {
+                    (x @ rest) { x + <rest }  // x in pattern shadows argument
+                }
+            }
+
+            result = PATTERN_SHADOW(100);
+        in
+            assert(result == 3);  // Pattern x=1, rest has 2 elements
+            puts("Macro pattern shadowing test passed\n")
+    }
+    
+    // Test: Macro with print statements
+    fn test_macro_with_print() {
+        let
+            macro DEBUG_PRINT(x) {
+                puts("Debug: ");
+                putv(x);
+                puts("\n");
+                x
+            }
+            
+            result = DEBUG_PRINT(42);
+        in
+            assert(result == 42);
+            puts("Macro with print test passed\n")
+    }
+    
+    // Test: Macro with type constructor
+    fn test_macro_with_constructor() {
+        let
+            typedef option(#t) {
+                none |
+                some(#t)
+            }
+            
+            macro MAKE_SOME(x) {
+                some(x)
+            }
+            
+            macro GET_OR_DEFAULT(opt, def) {
+                switch (opt) {
+                    (none) { def }
+                    (some(v)) { v }
+                }
+            }
+            
+            result1 = MAKE_SOME(42);
+            result2 = GET_OR_DEFAULT(result1, 0);
+            result3 = GET_OR_DEFAULT(none, 99);
+        in
+            assert(result2 == 42);
+            assert(result3 == 99);
+            puts("Macro with constructor test passed\n")
+    }
+    
+    // Test: Macro with typedef and switch
+    fn test_macro_with_typedef() {
+        let
+            typedef result(#t, #e) {
+                ok(#t) |
+                err(#e)
+            }
+            
+            macro TRY(r, default) {
+                switch (r) {
+                    (ok(val)) { val }
+                    (err(_)) { default }
+                }
+            }
+            
+            macro UNWRAP_OR_ZERO(r) {
+                TRY(r, 0)
+            }
+            
+            val1 = UNWRAP_OR_ZERO(ok(123));
+            val2 = UNWRAP_OR_ZERO(err("failed"));
+        in
+            assert(val1 == 123);
+            assert(val2 == 0);
+            puts("Macro with typedef test passed\n")
+    }
+    
+    // Test: Macro with switch on multiple types
+    fn test_macro_switch_types() {
+        let
+            typedef tree(#a) {
+                leaf(#a) |
+                node{ left: tree(#a), value: #a, right: tree(#a) }
+            }
+            
+            macro COUNT_LEAVES(t) {
+                switch (t) {
+                    (leaf(_)) { 1 }
+                    (node{ left: l, right: r }) { COUNT_LEAVES(l) + COUNT_LEAVES(r) }
+                }
+            }
+            
+            tree1 = leaf(5);
+            tree2 = node{ left: leaf(1), value: 2, right: leaf(3) };
+            tree3 = node{
+                left: node{ left: leaf(1), value: 2, right: leaf(3) },
+                value: 4,
+                right: leaf(5)
+            };
+            
+            count1 = COUNT_LEAVES(tree1);
+            count2 = COUNT_LEAVES(tree2);
+            count3 = COUNT_LEAVES(tree3);
+        in
+            assert(count1 == 1);
+            assert(count2 == 2);
+            assert(count3 == 3);
+            puts("Macro switch types test passed\n")
+    }
+    
+    // Test: Macro that constructs and prints custom type
+    fn test_macro_construct_and_print() {
+        let
+            typedef color {
+                red | green | blue
+            }
+            
+            macro SHOW_COLOR(c) {
+                puts("Color: ");
+                print(c);
+            }
+            
+            result = SHOW_COLOR(red);
+        in
+            assert(result == red);
+            puts("Macro construct and print test passed\n")
+    }
+    
+    // Test: Macro with nested switch on constructors
+    fn test_macro_nested_switch() {
+        let
+            typedef maybe(#t) {
+                nothing |
+                just(#t)
+            }
+            
+            typedef either(#l, #r) {
+                left(#l) |
+                right(#r)
+            }
+            
+            macro UNWRAP_EITHER(e) {
+                switch (e) {
+                    (left(just(v))) { v }
+                    (left(nothing)) { 0 }
+                    (right(x)) { x }
+                }
+            }
+            
+            val1 = UNWRAP_EITHER(left(just(42)));
+            val2 = UNWRAP_EITHER(left(nothing));
+            val3 = UNWRAP_EITHER(right(99));
+        in
+            assert(val1 == 42);
+            assert(val2 == 0);
+            assert(val3 == 99);
+            puts("Macro nested switch test passed\n")
+    }
+    
+    // Test: Macro with print of complex type
+    fn test_macro_print_complex() {
+        let
+            typedef pair(#a, #b) {
+                mk_pair{ fst: #a, snd: #b }
+            }
+            
+            macro PRINT_PAIR(p) {
+                switch (p) {
+                    (mk_pair{ fst: a, snd: b }) {
+                        puts("(");
+                        putv(a);
+                        puts(", ");
+                        putv(b);
+                        puts(")\n");
+                        p
+                    }
+                }
+            }
+            
+            pair1 = mk_pair{ fst: 10, snd: 20 };
+            result = PRINT_PAIR(pair1);
+        in
+            assert(result == pair1);
+            puts("Macro print complex test passed\n")
+    }
+    
+    // Test: Macro with typedef in body
+    fn test_macro_typedef_in_body() {
+        let
+            macro MAKE_WRAPPER(val) {
+                let
+                    typedef wrapper(#t) {
+                        wrap(#t)
+                    }
+                    
+                    result = wrap(val);
+                in
+                    result
+            }
+            
+            wrapped = MAKE_WRAPPER(42);
+        in
+            putv(wrapped);
+            puts("\n");
+            puts("Macro typedef in body test passed\n")
+    }
+
+    fn test_macro_string_recognition() {
+        let
+            macro IS_HELLO_OR_GOODBYE(s) {
+                switch (s) {
+                    ("hello") { s }
+                    ("goodbye") { s }
+                    (_) { "?" }
+                }
+            }
+            result1 = IS_HELLO_OR_GOODBYE("hello");
+            result2 = IS_HELLO_OR_GOODBYE("goodbye");
+            result3 = IS_HELLO_OR_GOODBYE("world");
+        in
+            assert(result1 == "hello");
+            assert(result2 == "goodbye");
+            assert(result3 == "?");
+            puts("Macro string recognition test passed\n")
+    }
+
+    fn test_macro_number_recognition() {
+        let
+            macro IS_ONE_OR_TWO(n) {
+                switch (n) {
+                    (1) { n }
+                    (2) { n }
+                    (_) { 0 }
+                }
+            }
+            result1 = IS_ONE_OR_TWO(1);
+            result2 = IS_ONE_OR_TWO(2);
+            result3 = IS_ONE_OR_TWO(3);
+        in
+            assert(result1 == 1);
+            assert(result2 == 2);
+            assert(result3 == 0);
+            puts("Macro number recognition test passed\n")
+    }
+
+    // Main test runner
+    fn main() {
+        test_basic_macro();
+        test_multi_arg_macro();
+        test_macro_lazy_eval();
+        test_nested_macros();
+        test_macro_conditional();
+        test_macro_parameters();
+        test_macro_pattern();
+        test_macro_function_calls();
+        test_macro_list_ops();
+        test_short_circuit_and();
+        test_short_circuit_or();
+        test_macro_recursion();
+        test_complex_macro();
+        test_macro_tuple();
+        test_macro_multi_use();
+        test_macro_arg_shadowing();
+        test_macro_nested_shadow();
+        test_macro_partial_shadow();
+        test_macro_let_using_arg();
+        test_macro_multiple_lets();
+        test_macro_deep_let_nesting();
+        test_macro_fn_shadow();
+        test_macro_pattern_shadow();
+        test_macro_with_print();
+        test_macro_with_constructor();
+        test_macro_with_typedef();
+        test_macro_switch_types();
+        test_macro_construct_and_print();
+        test_macro_nested_switch();
+        test_macro_print_complex();
+        test_macro_typedef_in_body();
+        puts("All macro tests completed successfully!\n")
+    }
+
+in
+    main()

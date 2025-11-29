@@ -93,6 +93,7 @@ Fail *makeFail(Control offset, Env *env, Kont *k, Fail *next) {
     return f;
 }
 
+#ifdef DEBUG_STEP
 void dumpStack(Stack *s) {
     for (Index i = 0; i < s->frames_index; i++) {
         for (Index j = 0; j < s->frames[i].offset; j++) {
@@ -109,7 +110,9 @@ void dumpStack(Stack *s) {
             eprintf("            [%03d] %s\n", i, valueTypeName(s->entries[s->frame + i].type));
     }
 }
+#endif
 
+#ifdef DEBUG_STEP
 void dumpFrame(Frame *s) {
     eprintf("=================================\n");
     eprintf("FRAME DUMP sp = %d, capacity = %d\n", s->size, s->capacity);
@@ -118,6 +121,7 @@ void dumpFrame(Frame *s) {
     }
     eprintf("=================================\n");
 }
+#endif
 
 void copyValues(Value *to, Value *from, int size) {
     COPY_ARRAY(Value, to, from, size);

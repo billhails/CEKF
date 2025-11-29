@@ -1,0 +1,189 @@
+// Test pattern matching depth and complexity
+// Tests nested patterns, multiple constructors, guards
+
+let
+    // Define test types
+    typedef tree(#t) { leaf | node(#t, tree(#t), tree(#t)) }
+    
+    typedef option(#t) { none | some(#t) }
+    
+    typedef result(#ok, #err) { ok(#ok) | err(#err) }
+    
+    // Test simple pattern matching
+    fn test_simple_patterns() {
+        switch (5) {
+            (5) { assert(true) }
+            (_) { assert(false) }
+        };
+        true
+    }
+    
+    // Test list pattern matching
+    fn test_list_patterns() {
+        switch ([1,2,3]) {
+            ([]) { assert(false) }
+            ([x]) { assert(false) }
+            ([x,y]) { assert(false) }
+            ([x,y,z]) { 
+                assert(x == 1);
+                assert(y == 2);
+                assert(z == 3)
+            }
+            (_) { assert(false) }
+        };
+        true
+    }
+    
+    // Test cons pattern
+    fn test_cons_pattern() {
+        switch ([1,2,3]) {
+            ([]) { assert(false) }
+            (h @ t) {
+                assert(h == 1);
+                assert(t == [2,3])
+            }
+        };
+        true
+    }
+    
+    // Test nested list patterns
+    fn test_nested_lists() {
+        switch ([[1,2],[3,4]]) {
+            ([]) { assert(false) }
+            ([x,y]) {
+                switch (x) {
+                    ([a,b]) {
+                        assert(a == 1);
+                        assert(b == 2)
+                    }
+                    (_) { assert(false) }
+                }
+            }
+            (_) { assert(false) }
+        };
+        true
+    }
+    
+    // Test option type patterns
+    fn test_option_patterns() {
+        let opt1 = some(42);
+            opt2 = none;
+        in
+        switch (opt1) {
+            (none) { assert(false) }
+            (some(x)) { assert(x == 42) }
+        };
+        
+        switch (opt2) {
+            (none) { assert(true) }
+            (some(_)) { assert(false) }
+        };
+        true
+    }
+    
+    // Test result type patterns
+    fn test_result_patterns() {
+        let res1 = ok(100);
+            res2 = err("fail");
+        in
+        switch (res1) {
+            (ok(val)) { assert(val == 100) }
+            (err(_)) { assert(false) }
+        };
+        
+        switch (res2) {
+            (ok(_)) { assert(false) }
+            (err(msg)) { assert(msg == "fail") }
+        };
+        true
+    }
+    
+    // Test tree patterns (simple)
+    fn test_tree_simple() {
+        let tree1 = leaf;
+        in
+        switch (tree1) {
+            (leaf) { assert(true) }
+            (_) { assert(false) }
+        };
+        true
+    }
+    
+    // Test tree patterns (complex)
+    fn test_tree_complex() {
+        let tree1 = node(5, leaf, leaf);
+        in
+        switch (tree1) {
+            (leaf) { assert(false) }
+            (node(v, _, _)) { 
+                assert(v == 5)
+            }
+        };
+        true
+    }
+    
+    // Test tuple patterns
+    fn test_tuple_patterns() {
+        let tup = #(1, 2, 3);
+        in
+        switch (tup) {
+            (#(a, b, c)) {
+                assert(a == 1);
+                assert(b == 2);
+                assert(c == 3)
+            }
+        };
+        true
+    }
+    
+    // Test string patterns
+    fn test_string_patterns() {
+        switch ("hello") {
+            ([]) { assert(false) }
+            (h @ t) {
+                assert(h == 'h');
+                assert(t == "ello")
+            }
+        };
+        true
+    }
+    
+    // Test wildcard in various positions
+    fn test_wildcards() {
+        switch ([1,2,3,4]) {
+            ([_, x, _, y]) {
+                assert(x == 2);
+                assert(y == 4)
+            }
+            (_) { assert(false) }
+        };
+        true
+    }
+    
+    // Test pattern with assignment
+    fn test_pattern_assignment() {
+        switch ([1,2,3]) {
+            ([]) { assert(false) }
+            (lst = h @ t) {
+                assert(lst == [1,2,3]);
+                assert(h == 1);
+                assert(t == [2,3])
+            }
+        };
+        true
+    }
+
+in
+    test_simple_patterns();
+    test_list_patterns();
+    test_cons_pattern();
+    test_nested_lists();
+    test_option_patterns();
+    test_result_patterns();
+    test_tree_simple();
+    test_tree_complex();
+    test_tuple_patterns();
+    test_string_patterns();
+    test_wildcards();
+    test_pattern_assignment();
+    puts("All pattern matching tests completed successfully!")

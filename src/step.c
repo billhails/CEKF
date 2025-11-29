@@ -308,14 +308,17 @@ static Cmp _cmp(Value left, Value right) {
             case VALUE_TYPE_BIGINT_IMAG:
             case VALUE_TYPE_STDINT_IMAG:
             case VALUE_TYPE_IRRATIONAL_IMAG:
+            case VALUE_TYPE_RATIONAL_IMAG:
             case VALUE_TYPE_COMPLEX:
                 switch (right.type) {
                     case VALUE_TYPE_BIGINT:
                     case VALUE_TYPE_STDINT:
                     case VALUE_TYPE_RATIONAL:
+                    case VALUE_TYPE_IRRATIONAL:
                     case VALUE_TYPE_BIGINT_IMAG:
                     case VALUE_TYPE_STDINT_IMAG:
                     case VALUE_TYPE_IRRATIONAL_IMAG:
+                    case VALUE_TYPE_RATIONAL_IMAG:
                     case VALUE_TYPE_COMPLEX:
                         break;
                     default:
@@ -600,7 +603,7 @@ static void step() {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        // dumpStack(state.S);
+        dumpStack(state.S);
         // printf("%4ld) %04lx ### ", count, state.C);
         printf("%04lx ### ", state.C);
 #endif

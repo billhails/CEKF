@@ -6,6 +6,7 @@ let
     F♮ = "cool";
     alpha = 'α';
     α = '\u03b1;';
+    smile = '😀';
 in
     assert(list.length(Σ) == 6);
     assert(list.length(Ψ) == 6);
@@ -17,3 +18,5 @@ in
     assert("F\u266e;" == "F♮");
     assert(F♮ == "cool");
     assert(unicode_category(alpha) == GC_Ll);
+    assert(ord(smile) == 0x1F600);
+    puts("Unicode tests passed\n")

@@ -246,7 +246,7 @@ int bigint_raw_cmp(const bigint_word *a, int na, int a_neg,
     if (!a_neg && !b_neg)
         return bigint_raw_cmp_abs(a, na, b, nb);
     if (a_neg && b_neg)
-        return bigint_raw_cmp_abs(b, na, a, nb);
+        return -bigint_raw_cmp_abs(b, na, a, nb);
 
     return (!a_neg && b_neg) ? +1 : -1;
 }

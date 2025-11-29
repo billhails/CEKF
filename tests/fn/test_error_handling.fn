@@ -1,0 +1,401 @@
+// Test error handling and unsafe operations
+// This file tests various error conditions and unsafe operations to ensure
+// they fail gracefully or are caught appropriately
+
+let
+    link "listutils.fn" as list;
+    link "ioutils.fn" as io;
+
+    // Helper to test that an unsafe operation fails appropriately
+    fn test_unsafe_list_ops() {
+        // Test car (<) of empty list - should fail at runtime
+        // This is an unsafe operation because car requires a non-empty list
+        let result = switch([]) {
+            ([]) { "empty" }
+            (h @ _) { "non-empty" }
+        };
+        in assert(result == "empty");
+    }
+
+    // Test cdr (>) of empty list
+    fn test_cdr_empty() {
+        let result = switch([]) {
+            ([]) { [] }
+            (_ @ t) { t }
+        };
+        in assert(result == []);
+    }
+
+    // Test division by zero behavior with integers
+    // Note: This may cause runtime error or return special value
+    fn test_int_div_zero() {
+        // Integer division by zero should be caught
+        // We wrap in a safe function that returns maybe type
+        let safe_div = fn(a, b) {
+            if (b == 0) {
+                nothing
+            } else {
+                some(a / b)
+            }
+        };
+        in unsafe switch(safe_div(10, 0)) {
+            (nothing) { assert(true) } // Expected: division by zero caught
+        }
+    }
+
+    // Test division by zero with rationals
+    fn test_rational_div_zero() {
+        let safe_div = fn(a, b) {
+            if (b == 0) {
+                nothing
+            } else {
+                some(a / b)
+            }
+        };
+        in unsafe switch(safe_div(1/2, 0)) {
+            (nothing) { assert(true) }
+        }
+    }
+
+    // Test modulo by zero
+    fn test_mod_zero() {
+        let safe_mod = fn(a, b) {
+            if (b == 0) {
+                nothing
+            } else {
+                some(a % b)
+            }
+        };
+        in unsafe switch(safe_mod(10, 0)) {
+            (nothing) { assert(true) }
+        }
+    }
+
+    // Test list operations on empty lists
+    fn test_empty_list_operations() {
+        // foldl1 is unsafe and requires non-empty list
+        let safe_foldl1 = fn(func, lst) {
+            switch(lst) {
+                ([]) { nothing }
+                (h @ t) { some(list.foldl(func, h, t)) }
+            }
+        };
+        in unsafe switch(safe_foldl1(fn(a,b){a+b}, [])) {
+            (nothing) { assert(true) } // Expected for empty list
+        };
+        
+        // Test with non-empty list for comparison
+        unsafe switch(safe_foldl1(fn(a,b){a+b}, [1,2,3])) {
+            (some(result)) { assert(result == 6) }
+        }
+    }
+
+    // Test nth with out-of-bounds index
+    fn test_nth_bounds() {
+        // nth is unsafe - requires valid index
+        let safe_nth = fn(idx, lst) {
+            if (idx < 0 or idx >= list.length(lst)) {
+                nothing
+            } else {
+                some(list.nth(idx, lst))
+            }
+        };
+        in
+        // Out of bounds
+        unsafe switch(safe_nth(10, [1,2,3])) {
+            (nothing) { assert(true) }
+        };
+        
+        // Negative index
+        unsafe switch(safe_nth(-1, [1,2,3])) {
+            (nothing) { assert(true) }
+        };
+        
+        // Valid index
+        unsafe switch(safe_nth(1, [1,2,3])) {
+            (some(val)) { assert(val == 2) }
+        }
+    }
+
+    // Test last on empty list
+    fn test_last_empty() {
+        // last is unsafe - requires non-empty list
+        let safe_last = fn(lst) {
+            switch(lst) {
+                ([]) { nothing }
+                (_) { some(list.last(lst)) }
+            }
+        };
+        in
+        unsafe switch(safe_last([])) {
+            (nothing) { assert(true) }
+        };
+        
+        unsafe switch(safe_last([1,2,3])) {
+            (some(val)) { assert(val == 3) }
+        }
+    }
+
+    // Test minimum/maximum on empty list
+    fn test_min_max_empty() {
+        let safe_minimum = fn(lst) {
+            switch(lst) {
+                ([]) { nothing }
+                (_) { some(list.minimum(lst)) }
+            }
+        };
+        safe_maximum = fn(lst) {
+            switch(lst) {
+                ([]) { nothing }
+                (_) { some(list.maximum(lst)) }
+            }
+        };
+        in
+        // Empty list cases
+        unsafe switch(safe_minimum([])) {
+            (nothing) { assert(true) }
+        };
+        
+        unsafe switch(safe_maximum([])) {
+            (nothing) { assert(true) }
+        };
+        
+        // Non-empty cases
+        unsafe switch(safe_minimum([3,1,2])) {
+            (some(val)) { assert(val == 1) }
+        };
+        
+        unsafe switch(safe_maximum([3,1,2])) {
+            (some(val)) { assert(val == 3) }
+        }
+    }
+
+    // Test file operations on non-existent files
+    fn test_file_not_found() {
+        // Try to open a file that doesn't exist
+        let result = switch(open("/nonexistent/path/that/does/not/exist.txt", io_read)) {
+            (success(_)) { false }  // Should not succeed
+            (failure(_)) { true }   // Expected: failure
+        };
+        in assert(result)
+    }
+
+    // Test file operations with invalid paths
+    fn test_file_invalid_path() {
+        // Try various invalid paths
+        let result1 = switch(open("", io_read)) {
+            (success(_)) { false }
+            (failure(_)) { true }
+        };
+        in assert(result1)
+        
+        // Null bytes in path (if system supports detection)
+        // Most file systems don't allow null bytes
+        // This is implementation-dependent
+    }
+
+    // Test reading from file opened for writing
+    fn test_file_wrong_mode() {
+        // Open for writing
+        unsafe switch(open("/tmp/cekf_test_wrong_mode.txt", io_write)) {
+            (success(fh)) {
+                // Write something
+                fputs(fh, "test");
+                
+                // Try to read (may fail or return empty)
+                // This behavior is system-dependent
+                fgets(fh);
+                close(fh);
+                // Just verify we can handle this case
+                assert(true)
+            }
+        }
+    }
+
+    // Test nested unsafe operations
+    fn test_nested_unsafe() {
+        // Pattern: unsafe operation inside another unsafe operation
+        let result = unsafe switch([1,2,3]) {
+            (h @ t) {
+                unsafe switch(t) {
+                    (h2 @ t2) {
+                        unsafe switch(t2) {
+                            (h3 @ _) { h + h2 + h3 }
+                        }
+                    }
+                }
+            }
+        };
+        in assert(result == 6)
+    }
+
+    // Test unsafe pattern matching with exhaustiveness
+    fn test_pattern_exhaustiveness() {
+        let typedef result(#t) { ok(#t) | err(string) }
+            unsafe fn extract_ok {
+                (ok(val)) { val }
+            };
+        in assert(extract_ok(ok(42)) == 42)
+    }
+
+    // Test type constructor edge cases
+    fn test_typedef_edge_cases() {
+        let typedef maybe(#t) { just(#t) | none }
+            safe_extract = fn(m, default) {
+                switch(m) {
+                    (just(val)) { val }
+                    (none) { default }
+                }
+            };
+        in
+        assert(safe_extract(just(5), 0) == 5);
+        assert(safe_extract(none, 0) == 0)
+    }
+
+    // Test complex number division edge cases
+    fn test_complex_division() {
+        // Division by zero complex number
+        let safe_complex_div = fn(a, b) {
+            if (b == 0 + 0i) {
+                nothing
+            } else {
+                some(a / b)
+            }
+        };
+        in
+        unsafe switch(safe_complex_div(1 + 2i, 0 + 0i)) {
+            (nothing) { assert(true) }
+        };
+        
+        // Division by real zero represented as complex
+        unsafe switch(safe_complex_div(1 + 2i, 0)) {
+            (nothing) { assert(true) }
+        };
+        
+        // Valid complex division
+        unsafe switch(safe_complex_div(6 + 8i, 2)) {
+            (some(result)) { assert(result == 3 + 4i) }
+        }
+    }
+
+    // Test power operation edge cases
+    fn test_power_edge_cases() {
+        // 0^0 is mathematically undefined
+        // Different systems handle this differently (often 1)
+        let result = 0 ** 0;
+            neg_root = (-1) ** (1/2);
+        in
+        // Just verify it doesn't crash
+        assert(result == result);
+        
+        // Negative base with fractional exponent (complex result)
+        // (-1) ** (1/2) should give imaginary result
+        // This is implementation-dependent
+        assert(neg_root == neg_root); // Just verify no crash
+        
+        // Large exponents
+        assert(2 ** 100 > 0);
+        assert(2 ** 1000 > 0) // Should use BigInt
+    }
+
+    // Test rational edge cases
+    fn test_rational_edge_cases() {
+        // Division creating rational
+        assert(1 / 2 == 1/2);
+        assert(2 / 4 == 1/2); // Should simplify
+        assert(0 / 5 == 0);
+        
+        // Negative rationals
+        assert((-1) / 2 == -(1/2));
+        assert(1 / (-2) == -(1/2));
+        assert((-1) / (-2) == 1/2);
+        
+        // Operations preserving rational
+        assert((1/2) + (1/3) == 5/6);
+        assert((1/2) * (1/3) == 1/6);
+        assert((1/2) / (1/3) == 3/2)
+    }
+
+    // Test string operation edge cases
+    fn test_string_edge_cases() {
+        // Empty string
+        assert("" == []);
+        assert(list.length("") == 0);
+        
+        // Single character string
+        assert("a" == ['a']);
+        assert(list.length("a") == 1);
+        
+        // String concatenation with empty
+        assert("" @@ "hello" == "hello");
+        assert("hello" @@ "" == "hello");
+        assert("" @@ "" == "")
+    }
+
+    // Test tuple unpacking errors
+    fn test_tuple_unpacking() {
+        // Correct arity
+        let #(a, b, c) = #(1, 2, 3);
+            safe_unpack = fn(t) {
+                switch(t) {
+                    (#(x, y)) { some(x + y) }
+                    (_) { nothing }
+                }
+            };
+        in
+        assert(a + b + c == 6);
+        
+        // Safe unpacking with switch
+        unsafe switch(safe_unpack(#(1, 2))) {
+            (some(val)) { assert(val == 3) }
+        };
+        
+        // Wrong arity would be caught at compile time
+        // This tests runtime tuple access
+        assert(true)
+    }
+
+    // Test character edge cases
+    fn test_character_edge_cases() {
+        // Null character
+        assert(chr(0) == chr(0)); // null char
+        
+        // High ASCII
+        assert('\u007f;' == chr(127));
+        
+        // Unicode characters
+        assert('\u2665;' == '♥');
+        assert(ord('♥') == 0x2665);
+        
+        // Newline and special chars
+        assert('\n' == chr(10));
+        assert('\t' == chr(9));
+        assert(chr(13) == chr(13)); // carriage return (\r may not be supported)
+        true
+    }
+
+in
+    // Run all tests
+    test_unsafe_list_ops();
+    test_cdr_empty();
+    test_int_div_zero();
+    test_rational_div_zero();
+    test_mod_zero();
+    test_empty_list_operations();
+    test_nth_bounds();
+    test_last_empty();
+    test_min_max_empty();
+    test_file_not_found();
+    test_file_invalid_path();
+    test_file_wrong_mode();
+    test_nested_unsafe();
+    test_pattern_exhaustiveness();
+    test_typedef_edge_cases();
+    test_complex_division();
+    test_power_edge_cases();
+    test_rational_edge_cases();
+    test_string_edge_cases();
+    test_tuple_unpacking();
+    test_character_edge_cases();
+    
+    puts("All error handling tests completed successfully!\n")

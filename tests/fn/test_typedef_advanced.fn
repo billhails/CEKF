@@ -1,0 +1,371 @@
+// Advanced typedef tests
+// Testing: generic types, multiple type parameters, complex recursive structures, polymorphism
+
+let
+    // Test simple generic typedef
+    fn test_generic_box() {
+        let
+            typedef box(#t) {
+                container(#t)
+            }
+        in {
+            let
+                int_box = container(42);
+                str_box = container("hello");
+            in {
+                switch (int_box) {
+                    (container(x)) { assert(x == 42); true }
+                };
+                switch (str_box) {
+                    (container(s)) { assert(s == "hello"); true }
+                };
+                true
+            }
+        }
+    }
+    
+    fn test_generic_pair() {
+        let
+            typedef pair(#a, #b) {
+                make_pair(#a, #b)
+            }
+        in {
+            let p = make_pair(10, "test");
+            in
+                switch (p) {
+                    (make_pair(x, y)) {
+                        assert(x == 10);
+                        assert(y == "test");
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_generic_list_typedef() {
+        let
+            typedef mylist(#t) {
+                empty |
+                item(#t, mylist(#t))
+            }
+            lst = item(1, item(2, item(3, empty)));
+            sum = fn(l) {
+                switch (l) {
+                    (empty) { 0 }
+                    (item(h, t)) { h + sum(t) }
+                }
+            };
+        in
+            assert(sum(lst) == 6);
+            true
+    }
+    
+    fn test_generic_tree() {
+        let
+            typedef tree(#t) {
+                leaf(#t) |
+                node(tree(#t), tree(#t))
+            }
+            t = node(leaf(1), node(leaf(2), leaf(3)));
+            count = fn(tr) {
+                switch (tr) {
+                    (leaf(_)) { 1 }
+                    (node(l, r)) { count(l) + count(r) }
+                }
+            };
+        in {
+            assert(count(t) == 3);
+            true
+        }
+    }
+    
+    fn test_nested_generics() {
+        let
+            typedef box(#t) {
+                wrap(#t)
+            }
+        in {
+            let nested = wrap(wrap(wrap(42)));
+            in
+                switch (nested) {
+                    (wrap(wrap(wrap(x)))) {
+                        assert(x == 42);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_generic_option() {
+        let
+            typedef option(#t) {
+                some(#t) |
+                none
+            }
+        in {
+            let
+                x = some(42);
+                y = none;
+            in {
+                let get_or_default = fn(opt, def) {
+                    switch (opt) {
+                        (some(v)) { v }
+                        (none) { def }
+                    }
+                };
+                in {
+                    assert(get_or_default(x, 0) == 42);
+                    assert(get_or_default(y, 99) == 99);
+                    true
+                }
+            }
+        }
+    }
+    
+    fn test_generic_either() {
+        let
+            typedef either(#l, #r) {
+                left(#l) |
+                right(#r)
+            }
+        in {
+            let
+                e1 = left(42);
+                e2 = right("error");
+            in {
+                switch (e1) {
+                    (left(x)) { assert(x == 42); true }
+                    (right(_)) { false }
+                };
+                switch (e2) {
+                    (left(_)) { false }
+                    (right(s)) { assert(s == "error"); true }
+                };
+                true
+            }
+        }
+    }
+    
+    fn test_multiple_type_params() {
+        let
+            typedef triple(#a, #b, #c) {
+                mk_triple(#a, #b, #c)
+            }
+        in {
+            let t = mk_triple(1, "two", true);
+            in
+                switch (t) {
+                    (mk_triple(x, y, z)) {
+                        assert(x == 1);
+                        assert(y == "two");
+                        assert(z == true);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_recursive_with_generics() {
+        let
+            typedef rose(#t) {
+                rose_node(#t, list(rose(#t)))
+            }
+        in {
+            let r = rose_node(1, [
+                rose_node(2, []),
+                rose_node(3, [rose_node(4, [])])
+            ]);
+            in {
+                let sum_rose = fn(tree) {
+                    switch (tree) {
+                        (rose_node(val, children)) {
+                            let sum_list = fn(lst) {
+                                switch (lst) {
+                                    ([]) { 0 }
+                                    (h @ t) { sum_rose(h) + sum_list(t) }
+                                }
+                            };
+                            in
+                                val + sum_list(children)
+                        }
+                    }
+                };
+                in
+                    assert(sum_rose(r) == 10);
+                    true
+            }
+        }
+    }
+    
+    fn test_mutually_recursive_types() {
+        let
+            typedef expr {
+                lit(number) |
+                add(expr, expr) |
+                let_expr(list(binding), expr)
+            }
+            typedef binding {
+                bind(list(char), expr)
+            }
+        in {
+            let e = let_expr(
+                [bind("x", lit(5))],
+                add(lit(10), lit(20))
+            );
+            in
+                switch (e) {
+                    (let_expr(bindings, body)) {
+                        switch (bindings) {
+                            ([bind(name, val)]) {
+                                assert(name == "x");
+                                switch (val) {
+                                    (lit(n)) { assert(n == 5); true }
+                                    (_) { false }
+                                };
+                                true
+                            }
+                            (_) { false }
+                        }
+                    }
+                    (_) { false }
+                }
+        }
+    }
+    
+    fn test_complex_nesting() {
+        let
+            typedef boxed(#t) {
+                value(#t) |
+                boxed_value(boxed(#t))
+            }
+            x = boxed_value(boxed_value(value(42)));
+        in
+            switch (x) {
+                (boxed_value(boxed_value(value(n)))) {
+                    assert(n == 42);
+                    true
+                }
+                (_) { false }
+            }
+    }
+    
+    fn test_generic_with_multiple_constructors() {
+        let
+            typedef result(#t, #e) {
+                ok(#t) |
+                err(#e)
+            }
+            r1 = ok(42);
+            r2 = err("failed");
+            is_ok = fn(res) {
+                switch (res) {
+                    (ok(_)) { true }
+                    (err(_)) { false }
+                }
+            };
+        in {
+            assert(is_ok(r1) == true);
+            assert(is_ok(r2) == false);
+            true
+        }
+    }
+    
+    fn test_polymorphic_function() {
+        let
+            typedef box(#t) {
+                wrap(#t)
+            }
+            map_box = fn(f, b) {
+                switch (b) {
+                    (wrap(x)) { wrap(f(x)) }
+                }
+            };
+        in {
+            let
+                b1 = wrap(5);
+                b2 = map_box(fn(x) { x * 2 }, b1);
+            in
+                switch (b2) {
+                    (wrap(x)) {
+                        assert(x == 10);
+                        true
+                    }
+                }
+        }
+    }
+    
+    fn test_generic_fold() {
+        let
+            typedef list(#t) {
+                empty |
+                item(#t, list(#t))
+            }
+            fold = fn(f, acc, lst) {
+                switch (lst) {
+                    (empty) { acc }
+                    (item(h, t)) { fold(f, f(acc, h), t) }
+                }
+            };
+        in {
+            let
+                nums = item(1, item(2, item(3, empty)));
+                sum = fold(fn(a, b) { a + b }, 0, nums);
+            in
+                assert(sum == 6);
+                true
+        }
+    }
+    
+    fn test_binary_tree_operations() {
+        let
+            typedef btree(#t) {
+                empty |
+                node(#t, btree(#t), btree(#t))
+            }
+            size = fn(tree) {
+                switch (tree) {
+                    (empty) { 0 }
+                    (node(_, l, r)) { 1 + size(l) + size(r) }
+                }
+            };
+            height = fn(tree) {
+                switch (tree) {
+                    (empty) { 0 }
+                    (node(_, l, r)) {
+                        let
+                            hl = height(l);
+                            hr = height(r);
+                        in
+                            if (hl > hr) { hl + 1 } else { hr + 1 }
+                    }
+                }
+            };
+            t = node(5, 
+                node(3, empty, empty),
+                node(7, node(6, empty, empty), empty)
+            );
+        in {
+            assert(size(t) == 4);
+            assert(height(t) == 3);
+            true
+        }
+    }
+
+in
+    test_generic_box();
+    test_generic_pair();
+    test_generic_list_typedef();
+    test_generic_tree();
+    test_nested_generics();
+    test_generic_option();
+    test_generic_either();
+    test_multiple_type_params();
+    test_recursive_with_generics();
+    test_mutually_recursive_types();
+    test_complex_nesting();
+    test_generic_with_multiple_constructors();
+    test_polymorphic_function();
+    test_generic_fold();
+    test_binary_tree_operations();
+    
+    puts("All advanced typedef tests passed!\n")

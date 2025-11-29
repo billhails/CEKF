@@ -1,4 +1,6 @@
-.PHONY: all clean realclean deps profile leak-check check-grammar list-cores test indent indent-src indent-generated docs install-sqlite3
+.PHONY: all clean realclean deps profile leak-check check-grammar \
+list-cores test indent indent-src indent-generated docs \
+install-sqlite3 coverage extracov view-coverage
 
 # pass on the command line, i.e. `make test MODE=testing`
 #
@@ -6,6 +8,7 @@
 # testing:    -g, but no DEBUG_STRESS_GC
 # unit:       like debugging but compiles with -DUNIT_TESTS
 # production: -O2, no DEBUG_STRESS_GC and disables all safety checks
+# coverage:   -g with --coverage flags for gcov/lcov analysis
 ifndef MODE
 MODE:=debugging
 endif
@@ -33,11 +36,17 @@ ifeq ($(MODE),unit)
 	CCMODE:= -g
 	EXTRA_DEFINES:= -DUNIT_TESTS -DBUILD_MODE=0
 else
+ifeq ($(MODE),coverage)
+	CCMODE:= -g --coverage
+	EXTRA_DEFINES:= -DNO_DEBUG_STRESS_GC -DBUILD_MODE=3
+	LIBS+= -lgcov
+else
 ifeq ($(MODE),production)
 	CCMODE:= -O2
 	EXTRA_DEFINES:= -DPRODUCTION_BUILD -DBUILD_MODE=2
 else
-$(error invalid MODE=$(MODE), allowed values: debugging, testing, unit or production)
+$(error invalid MODE=$(MODE), allowed values: debugging, testing, unit, coverage or production)
+endif
 endif
 endif
 endif
@@ -216,7 +225,7 @@ realclean: clean
 	rm -rf tags xref $(UNIDIR)
 
 clean: deps
-	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.*
+	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log
 
 deps:
 	rm -rf $(DEPDIR)
@@ -259,5 +268,14 @@ indent-generated: .typedefs .indent.pro
 
 list-cores:
 	@ls -rt1 /var/lib/apport/coredump/* | tail -1
+
+coverage:
+	./tools/coverage.sh
+
+extracov: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
+	./$(TARGET) --include=fn --dump-anf --dump-ast --dump-bytecode --dump-inline --dump-lambda --dump-tpmc=NOT tests/fn/test_macros.fn 2>&1 > /dev/null
+
+view-coverage:
+	firefox --new-tab coverage_html/index.html
 
 # vim: set noet sw=4:

@@ -91,6 +91,9 @@ static void report_build_mode(char *prog) {
         case 2:
             printf("production build\n");
             break;
+        case 3:
+            printf("coverage build\n");
+            break;
         default:
             printf("unrecognised build\n");
             break;

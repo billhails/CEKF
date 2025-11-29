@@ -1,0 +1,174 @@
+// Test control flow constructs
+// Tests if/else, switch, nested conditionals
+
+let
+    // Test basic if/else
+    fn test_if_else_basic() {
+        let result1 = if (true) { "yes" } else { "no" };
+            result2 = if (false) { "yes" } else { "no" };
+        in
+        assert(result1 == "yes");
+        assert(result2 == "no");
+        true
+    }
+    
+    // Test if without else
+    fn test_if_only() {
+        let result = if (5 > 3) { 42 } else { 0 };
+        in
+        assert(result == 42);
+        true
+    }
+    
+    // Test nested if/else
+    fn test_nested_if() {
+        let x = 10;
+            result = if (x > 5) {
+                if (x > 15) { "large" } else { "medium" }
+            } else {
+                "small"
+            };
+        in
+        assert(result == "medium");
+        true
+    }
+    
+    // Test if with complex conditions
+    fn test_complex_conditions() {
+        let a = 5;
+            b = 10;
+            result = if (a < b and b < 20) { "both true" } else { "not both" };
+        in
+        assert(result == "both true");
+        true
+    }
+    
+    // Test switch with numbers
+    fn test_switch_numbers() {
+        let result = switch (5) {
+            (0) { "zero" }
+            (5) { "five" }
+            (10) { "ten" }
+            (_) { "other" }
+        };
+        in
+        assert(result == "five");
+        true
+    }
+    
+    // Test switch with wildcard
+    fn test_switch_wildcard() {
+        let result = switch (99) {
+            (0) { "zero" }
+            (5) { "five" }
+            (_) { "other" }
+        };
+        in
+        assert(result == "other");
+        true
+    }
+    
+    // Test switch with lists
+    fn test_switch_lists() {
+        let result = switch ([1,2,3]) {
+            ([]) { "empty" }
+            ([x]) { "single" }
+            (_) { "multiple" }
+        };
+        in
+        assert(result == "multiple");
+        true
+    }
+    
+    // Test switch with pattern binding
+    fn test_switch_binding() {
+        let result = switch ([1,2,3]) {
+            ([]) { 0 }
+            (h @ _) { h }
+        };
+        in
+        assert(result == 1);
+        true
+    }
+    
+    // Test nested switch
+    fn test_nested_switch() {
+        let outer = 1;
+            result = switch (outer) {
+                (1) {
+                    switch ("a") {
+                        ("a") { "1a" }
+                        (_) { "1other" }
+                    }
+                }
+                (_) { "other" }
+            };
+        in
+        assert(result == "1a");
+        true
+    }
+    
+    // Test if/else with side effects (sequential evaluation)
+    fn test_sequential_if() {
+        let x = 5;
+            y = 10;
+            result1 = if (x < y) { x + 1 } else { y + 1 };
+            result2 = if (x > y) { x + 1 } else { y + 1 };
+        in
+        assert(result1 == 6);
+        assert(result2 == 11);
+        true
+    }
+    
+    // Test boolean expressions in conditions
+    fn test_boolean_expressions() {
+        let result1 = if (true and true) { 1 } else { 0 };
+            result2 = if (true or false) { 1 } else { 0 };
+            result3 = if (not false) { 1 } else { 0 };
+        in
+        assert(result1 == 1);
+        assert(result2 == 1);
+        assert(result3 == 1);
+        true
+    }
+    
+    // Test comparison operators in conditions
+    fn test_comparison_conditions() {
+        let x = 10;
+            result1 = if (x == 10) { "eq" } else { "ne" };
+            result2 = if (x > 5) { "gt" } else { "le" };
+            result3 = if (x < 20) { "lt" } else { "ge" };
+        in
+        assert(result1 == "eq");
+        assert(result2 == "gt");
+        assert(result3 == "lt");
+        true
+    }
+    
+    // Test switch with characters
+    fn test_switch_chars() {
+        let result = switch ('a') {
+            ('a') { "letter a" }
+            ('b') { "letter b" }
+            (_) { "other letter" }
+        };
+        in
+        assert(result == "letter a");
+        true
+    }
+
+in
+    test_if_else_basic();
+    test_if_only();
+    test_nested_if();
+    test_complex_conditions();
+    test_switch_numbers();
+    test_switch_wildcard();
+    test_switch_lists();
+    test_switch_binding();
+    test_nested_switch();
+    test_sequential_if();
+    test_boolean_expressions();
+    test_comparison_conditions();
+    test_switch_chars();
+    puts("All control flow tests completed successfully!")

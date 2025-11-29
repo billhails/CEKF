@@ -32,14 +32,6 @@ void printLambdaSymbol(HashSymbol *x, int depth) {
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
-void markLamExpFn(void *ptr) {
-    markLamExp(*((LamExp **) ptr));
-}
-
-void printLamExpFn(void *ptr, int depth) {
-    ppLamExpD(*((LamExp **) ptr), depth);
-}
-
 LamTypeConstructorType *lookupConstructorTypeInLamContext(LamContext *context, HashSymbol *var) {
     if (context == NULL)
         return NULL; // not an error

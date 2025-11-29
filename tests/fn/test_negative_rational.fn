@@ -1,0 +1,5 @@
+let
+    lhs = 2;
+    rhs = -4/4;
+in
+    print lhs ** rhs;

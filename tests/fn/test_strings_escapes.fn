@@ -1,0 +1,330 @@
+// String escape sequences and edge cases tests
+// Testing: escape sequences, special characters, string operations
+
+
+let
+    link "listutils.fn" as lst;
+    // Test basic escape sequences
+    fn test_newline_escape() {
+        let s = "hello\nworld";
+        in
+            assert(s == "hello\nworld");
+            true
+    }
+    
+    fn test_tab_escape() {
+        let s = "hello\tworld";
+        in
+            assert(s == "hello\tworld");
+            true
+    }
+    
+    fn test_backslash_escape() {
+        let s = "path\\to\\file";
+        in
+            assert(s == "path\\to\\file");
+            true
+    }
+    
+    fn test_quote_escape() {
+        let s = "say \"hello\"";
+        in
+            assert(s == "say \"hello\"");
+            true
+    }
+    
+    fn test_carriage_return() {
+        let s = "line1\rline2";
+        in
+            assert(s == "line1\rline2");
+            true
+    }
+    
+    // Test empty strings
+    fn test_empty_string() {
+        let s = "";
+        in
+            assert(s == "");
+            true
+    }
+    
+    fn test_empty_string_length() {
+        let s = "";
+        in
+            assert(lst.length(s) == 0);
+            true
+    }
+    
+    fn test_empty_string_concat() {
+        let
+            s1 = "";
+            s2 = "hello";
+        in {
+            assert(s1 @@ s2 == "hello");
+            assert(s2 @@ s1 == "hello");
+            true
+        }
+    }
+    
+    // Test single character strings
+    fn test_single_char_string() {
+        let s = "a";
+        in
+            assert(lst.length(s) == 1);
+            true
+    }
+    
+    fn test_space_string() {
+        let s = " ";
+        in
+            assert(lst.length(s) == 1);
+            assert(s == " ");
+            true
+    }
+    
+    // Test string concatenation
+    fn test_concat_simple() {
+        let
+            s1 = "hello";
+            s2 = "world";
+        in
+            assert(s1 @@ s2 == "helloworld");
+            true
+    }
+    
+    fn test_concat_with_space() {
+        let
+            s1 = "hello";
+            s2 = " ";
+            s3 = "world";
+        in
+            assert(s1 @@ s2 @@ s3 == "hello world");
+            true
+    }
+    
+    fn test_concat_multiple() {
+        let result = "a" @@ "b" @@ "c" @@ "d";
+        in
+            assert(result == "abcd");
+            true
+    }
+    
+    // Test string length
+    fn test_length_simple() {
+        assert(lst.length("hello") == 5);
+        assert(lst.length("world") == 5);
+        true
+    }
+    
+    fn test_length_with_spaces() {
+        assert(lst.length("hello world") == 11);
+        true
+    }
+    
+    fn test_length_with_escapes() {
+        assert(lst.length("a\nb\tc") == 5);
+        true
+    }
+    
+    // Test string comparison
+    fn test_string_equality() {
+        assert("hello" == "hello");
+        assert(not ("hello" == "world"));
+        true
+    }
+    
+    fn test_string_inequality() {
+        assert("abc" != "xyz");
+        assert(not ("test" != "test"));
+        true
+    }
+    
+    fn test_string_order() {
+        assert("abc" < "def");
+        assert("apple" < "banana");
+        assert("aaa" < "aab");
+        true
+    }
+    
+    fn test_string_greater() {
+        assert("xyz" > "abc");
+        assert("banana" > "apple");
+        true
+    }
+    
+    // Test strings as character lists
+    fn test_string_is_list() {
+        let s = "abc";
+        in
+            assert(s == ['a', 'b', 'c']);
+            true
+    }
+    
+    fn test_string_head() {
+        let s = "hello";
+        in
+            switch (s) {
+                (h @ _) { assert(h == 'h'); true }
+                ([]) { false }
+            }
+    }
+    
+    fn test_string_tail() {
+        let s = "hello";
+        in
+            switch (s) {
+                (_ @ t) { assert(t == "ello"); true }
+                ([]) { false }
+            }
+    }
+    
+    fn test_string_pattern_match() {
+        let s = "test";
+        in
+            switch (s) {
+                (['t', 'e', 's', 't']) { true }
+                (_) { false }
+            }
+    }
+    
+    // Test special characters
+    fn test_digits_in_string() {
+        let s = "123";
+        in
+            assert(s == "123");
+            assert(lst.length(s) == 3);
+            true
+    }
+    
+    fn test_mixed_alphanumeric() {
+        let s = "abc123xyz";
+        in
+            assert(lst.length(s) == 9);
+            true
+    }
+    
+    fn test_punctuation() {
+        let s = "hello, world!";
+        in
+            assert(s == "hello, world!");
+            true
+    }
+    
+    // Test string construction from chars
+    fn test_build_string_from_chars() {
+        let s = 'h' @ 'e' @ 'l' @ 'l' @ 'o' @ [];
+        in
+            assert(s == "hello");
+            true
+    }
+    
+    fn test_char_list_concat() {
+        let
+            s1 = ['a', 'b'];
+            s2 = ['c', 'd'];
+        in
+            assert(s1 @@ s2 == "abcd");
+            true
+    }
+    
+    // Test Unicode/extended ASCII (if supported)
+    fn test_basic_ascii() {
+        let s = "ABC";
+        in
+            assert(lst.length(s) == 3);
+            true
+    }
+    
+    // Test string with numbers
+    fn test_string_with_numbers() {
+        let s = "value: 42";
+        in
+            assert(lst.length(s) == 9);
+            true
+    }
+    
+    // Test multi-line strings (if they work with escapes)
+    fn test_multiline_with_newlines() {
+        let s = "line1\nline2\nline3";
+        in
+            assert(lst.length(s) == 17);
+            true
+    }
+    
+    // Test edge cases
+    fn test_string_with_only_spaces() {
+        let s = "   ";
+        in
+            assert(lst.length(s) == 3);
+            true
+    }
+    
+    fn test_consecutive_escapes() {
+        let s = "a\n\t\rb";
+        in
+            assert(lst.length(s) == 5);
+            true
+    }
+    
+    // Test string in data structures
+    fn test_string_in_list() {
+        let lst = ["hello", "world"];
+        in
+            assert(lst == ["hello", "world"]);
+            true
+    }
+    
+    fn test_string_in_tuple() {
+        let t = #("hello", "world");
+        in
+            assert(t == #("hello", "world"));
+            true
+    }
+    
+    // Test case sensitivity
+    fn test_case_sensitivity() {
+        assert("Hello" != "hello");
+        assert("HELLO" != "hello");
+        true
+    }
+
+in
+    test_newline_escape();
+    test_tab_escape();
+    test_backslash_escape();
+    test_quote_escape();
+    test_carriage_return();
+    test_empty_string();
+    test_empty_string_length();
+    test_empty_string_concat();
+    test_single_char_string();
+    test_space_string();
+    test_concat_simple();
+    test_concat_with_space();
+    test_concat_multiple();
+    test_length_simple();
+    test_length_with_spaces();
+    test_length_with_escapes();
+    test_string_equality();
+    test_string_inequality();
+    test_string_order();
+    test_string_greater();
+    test_string_is_list();
+    test_string_head();
+    test_string_tail();
+    test_string_pattern_match();
+    test_digits_in_string();
+    test_mixed_alphanumeric();
+    test_punctuation();
+    test_build_string_from_chars();
+    test_char_list_concat();
+    test_basic_ascii();
+    test_string_with_numbers();
+    test_multiline_with_newlines();
+    test_string_with_only_spaces();
+    test_consecutive_escapes();
+    test_string_in_list();
+    test_string_in_tuple();
+    test_case_sensitivity();
+    
+    puts("All string escape and edge case tests passed!\n")

@@ -1,0 +1,166 @@
+// Test comprehensive string operations
+// Tests escape sequences, Unicode, concatenation, and edge cases
+
+let
+    link "listutils.fn" as list;
+    
+    // Test basic string literals
+    fn test_string_literals() {
+        assert("hello" == "hello");
+        assert("" == "");
+        assert("a" == "a");
+        true
+    }
+    
+    // Test escape sequences
+    fn test_escape_sequences() {
+        let newline = "\n";
+            tab = "\t";
+        in
+        assert(newline == [chr(10)]);
+        assert(tab == [chr(9)]);
+        true
+    }
+    
+    // Test Unicode characters
+    fn test_unicode() {
+        let euro = "\u20AC;";
+            smiley = "\u263A;";
+        in
+        assert(list.length(euro) == 1);
+        assert(list.length(smiley) == 1);
+        true
+    }
+    
+    // Test string concatenation with @@
+    fn test_string_concat() {
+        assert("hello" @@ " " @@ "world" == "hello world");
+        assert("" @@ "test" == "test");
+        assert("test" @@ "" == "test");
+        assert("a" @@ "b" @@ "c" == "abc");
+        true
+    }
+    
+    // Test string comparison
+    fn test_string_comparison() {
+        assert("abc" == "abc");
+        assert("abc" != "def");
+        assert("a" < "b");
+        assert("z" > "a");
+        assert("abc" <= "abc");
+        assert("abc" >= "abc");
+        true
+    }
+    
+    // Test empty strings
+    fn test_empty_strings() {
+        assert("" == []);
+        assert(list.length("") == 0);
+        assert("" @@ "test" == "test");
+        true
+    }
+    
+    // Test single character strings
+    fn test_single_chars() {
+        assert("a" == ['a']);
+        assert(list.length("a") == 1);
+        switch ("a") {
+            ([]) { assert(false) }
+            (h @ _) { assert(h == 'a') }
+        };
+        true
+    }
+    
+    // Test string as list operations
+    fn test_string_as_list() {
+        assert(list.length("hello") == 5);
+        switch ("hello") {
+            ([]) { assert(false) }
+            (h @ t) { 
+                assert(h == 'h');
+                assert(t == "ello")
+            }
+        };
+        assert('h' @ "ello" == "hello");
+        true
+    }
+    
+    // Test character operations
+    fn test_char_operations() {
+        assert('a' == 'a');
+        assert('a' != 'b');
+        assert('a' < 'b');
+        assert('z' > 'a');
+        true
+    }
+    
+    // Test special characters
+    fn test_special_chars() {
+        let space = ' ';
+            exclaim = '!';
+            question = '?';
+        in
+        assert([space] == " ");
+        assert([exclaim] == "!");
+        assert([question] == "?");
+        true
+    }
+    
+    // Test mixed operations
+    fn test_mixed_operations() {
+        let str = "test";
+            reversed = list.reverse(str);
+        in
+        assert(reversed == "tset");
+        assert(list.length(str) == 4);
+        true
+    }
+    
+    // Test string pattern matching
+    fn test_string_patterns() {
+        switch ("hello") {
+            ([]) { assert(false) }
+            (h @ t) { 
+                assert(h == 'h');
+                assert(t == "ello");
+                true
+            }
+        }
+    }
+    
+    // Test long strings
+    fn test_long_strings() {
+        let long = "The quick brown fox jumps over the lazy dog";
+        in
+        assert(list.length(long) == 43);
+        switch (long) {
+            ([]) { assert(false) }
+            (h @ _) { assert(h == 'T') }
+        };
+        true
+    }
+    
+    // Test string with numbers and symbols
+    fn test_mixed_content() {
+        let mixed = "abc123!@#";
+        in
+        assert(list.length(mixed) == 9);
+        true
+    }
+
+in
+    test_string_literals();
+    test_escape_sequences();
+    test_unicode();
+    test_string_concat();
+    test_string_comparison();
+    test_empty_strings();
+    test_single_chars();
+    test_string_as_list();
+    test_char_operations();
+    test_special_chars();
+    test_mixed_operations();
+    test_string_patterns();
+    test_long_strings();
+    test_mixed_content();
+    puts("All string tests completed successfully!")

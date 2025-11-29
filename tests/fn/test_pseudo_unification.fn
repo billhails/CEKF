@@ -1,0 +1,10 @@
+let
+    fn contains {
+        (_, [], _) { false }
+        (_, x @ t, x) { true }
+        (n, _ @ t, x) { contains(n, t, x) }
+    }
+in
+    assert(contains("dummy", [1, 2, 3, 4], 3) == true);
+    assert(contains("dummy", [1, 2, 3, 4], 5) == false);
+    puts("Bug pseudo-unification test passed")
