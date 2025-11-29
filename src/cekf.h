@@ -60,8 +60,10 @@ Vec *newVec(int size);
 void markValue(Value x);
 void markEnv(Env *x);
 void markVec(Vec *x);
+#ifdef DEBUG_STEP
 void dumpStack(Stack *stack);
 void dumpFrame(Frame *frame);
+#endif
 
 CharacterArray *listToCharArray(Value list);
 Value charArrayToList(CharacterArray *c);

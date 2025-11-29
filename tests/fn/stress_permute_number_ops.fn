@@ -1,10 +1,25 @@
+// Stress test for permutations of number operations
+// Generates a list of all possible number types (positive.
+// negative, zero, int, float, rational, complex) and applies
+// all possible operations (+, -, *, /, %, **, <=>) between them,
+// printing the results. This is mainly to test that no crashes
+// or infinite loops occur when combining different number types.
 let
     link "listutils.fn" as lst;
     import lst operators;
     operator "_|?_" left 8 fn (lst, f) { lst.filter(f, lst) };   
 
+    fn genStdInts() {
+        [4, 0, -4]
+    }
+
+    fn genBigInts() {
+        [123456789012345678901234567890,
+        -123456789012345678901234567890]
+    }
+
     fn genInts() {
-        [4, 0, -4, 123456789012345678901234567890, -123456789012345678901234567890]
+        genStdInts() @@ genBigInts()
     }
 
     fn genFloats() {
@@ -73,9 +88,22 @@ let
             n1 ** n2
         }
     }
+    fn opCmp(n1, n2) {
+        switch(n1 <=> n2) {
+            (lt) { -1 }
+            (eq) { 0 }
+            (gt) { 1 }
+        }
+    }
 
     fn genOps() {
-        [#(opAdd, "+"), #(opSub, "-"), #(opMul, "*"), #(opDiv, "/"), #(opMod, "%"), #(opPow, "**")]
+        [#(opAdd, "+"),
+         #(opSub, "-"),
+         #(opMul, "*"),
+         #(opDiv, "/"),
+         #(opMod, "%"),
+         #(opPow, "**"),
+         #(opCmp, "<=>")]
     }
 in
     genNumbers() |> fn (n1) {

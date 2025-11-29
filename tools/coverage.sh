@@ -21,6 +21,7 @@ make MODE=coverage
 # Run all tests
 echo "Running test suite..."
 make test MODE=coverage 2>&1 | tee test_output.log || true
+make extracov MODE=coverage 2>&1 | tee -a test_output.log || true
 
 # Create output directories
 mkdir -p gcov_output coverage_html

@@ -603,7 +603,7 @@ static void step() {
         ++count;
         int bytecode;
 #ifdef DEBUG_STEP
-        // dumpStack(state.S);
+        dumpStack(state.S);
         // printf("%4ld) %04lx ### ", count, state.C);
         printf("%04lx ### ", state.C);
 #endif

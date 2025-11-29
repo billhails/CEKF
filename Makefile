@@ -1,6 +1,6 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
-install-sqlite3 coverage view-coverage
+install-sqlite3 coverage extracov view-coverage
 
 # pass on the command line, i.e. `make test MODE=testing`
 #
@@ -271,6 +271,9 @@ list-cores:
 
 coverage:
 	./tools/coverage.sh
+
+extracov: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
+	./$(TARGET) --include=fn --dump-anf --dump-ast --dump-bytecode --dump-inline --dump-lambda --dump-tpmc=NOT tests/fn/test_macros.fn 2>&1 > /dev/null
 
 view-coverage:
 	firefox --new-tab coverage_html/index.html

@@ -211,23 +211,6 @@ void hashSet(HashTable *table, HashSymbol *key, void *value) {
 }
 
 /**
- * Checks if the given symbol is present in the hash table.
- * 
- * @param table pointer to the HashTable
- * @param var pointer to the HashSymbol variable
- * @return true if the variable is present, false otherwise
- */
-bool hashContains(HashTable *table, HashSymbol *var) {
-    DEBUG("hashContains(%s) [%d]", var->name, table->id);
-    if (table->count == 0)
-        return false;
-    hash_t index = findEntry(table->keys, table->capacity, var);
-    if (table->keys[index] == NULL)
-        return false;
-    return true;
-}
-
-/**
  * Gets the value associated with the given variable in the hash table.
  * 
  * @param table pointer to the HashTable

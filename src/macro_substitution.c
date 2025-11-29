@@ -291,6 +291,7 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsSet 
     return lookup;
 }
 
+#ifdef NOTDEF
 /**
  * @brief Performs macro substitutions on a make vector expression.
  * @param makeVec The make vector expression to modify.
@@ -303,6 +304,7 @@ static LamMakeVec *performMakeVecSubstitutions(LamMakeVec *makeVec, LamMacroArgs
     LEAVE(performMakeVecSubstitutions);
     return makeVec;
 }
+#endif
 
 /**
  * @brief Performs macro substitutions on a deconstruct expression.
@@ -643,9 +645,11 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
             case LAMEXP_TYPE_SEQUENCE:
                 exp->val.sequence = performSequenceSubstitutions(exp->val.sequence, symbols);
                 break;
+#ifdef NOTDEF
             case LAMEXP_TYPE_MAKEVEC:
                 exp->val.makeVec = performMakeVecSubstitutions(exp->val.makeVec, symbols);
                 break;
+#endif
             case LAMEXP_TYPE_DECONSTRUCT:
                 exp->val.deconstruct = performDeconstructSubstitutions(exp->val.deconstruct, symbols);
                 break;

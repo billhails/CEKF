@@ -371,6 +371,245 @@ let
             assert(result == 3);  // Pattern x=1, rest has 2 elements
             puts("Macro pattern shadowing test passed\n")
     }
+    
+    // Test: Macro with print statements
+    fn test_macro_with_print() {
+        let
+            macro DEBUG_PRINT(x) {
+                puts("Debug: ");
+                putv(x);
+                puts("\n");
+                x
+            }
+            
+            result = DEBUG_PRINT(42);
+        in
+            assert(result == 42);
+            puts("Macro with print test passed\n")
+    }
+    
+    // Test: Macro with type constructor
+    fn test_macro_with_constructor() {
+        let
+            typedef option(#t) {
+                none |
+                some(#t)
+            }
+            
+            macro MAKE_SOME(x) {
+                some(x)
+            }
+            
+            macro GET_OR_DEFAULT(opt, def) {
+                switch (opt) {
+                    (none) { def }
+                    (some(v)) { v }
+                }
+            }
+            
+            result1 = MAKE_SOME(42);
+            result2 = GET_OR_DEFAULT(result1, 0);
+            result3 = GET_OR_DEFAULT(none, 99);
+        in
+            assert(result2 == 42);
+            assert(result3 == 99);
+            puts("Macro with constructor test passed\n")
+    }
+    
+    // Test: Macro with typedef and switch
+    fn test_macro_with_typedef() {
+        let
+            typedef result(#t, #e) {
+                ok(#t) |
+                err(#e)
+            }
+            
+            macro TRY(r, default) {
+                switch (r) {
+                    (ok(val)) { val }
+                    (err(_)) { default }
+                }
+            }
+            
+            macro UNWRAP_OR_ZERO(r) {
+                TRY(r, 0)
+            }
+            
+            val1 = UNWRAP_OR_ZERO(ok(123));
+            val2 = UNWRAP_OR_ZERO(err("failed"));
+        in
+            assert(val1 == 123);
+            assert(val2 == 0);
+            puts("Macro with typedef test passed\n")
+    }
+    
+    // Test: Macro with switch on multiple types
+    fn test_macro_switch_types() {
+        let
+            typedef tree(#a) {
+                leaf(#a) |
+                node{ left: tree(#a), value: #a, right: tree(#a) }
+            }
+            
+            macro COUNT_LEAVES(t) {
+                switch (t) {
+                    (leaf(_)) { 1 }
+                    (node{ left: l, right: r }) { COUNT_LEAVES(l) + COUNT_LEAVES(r) }
+                }
+            }
+            
+            tree1 = leaf(5);
+            tree2 = node{ left: leaf(1), value: 2, right: leaf(3) };
+            tree3 = node{
+                left: node{ left: leaf(1), value: 2, right: leaf(3) },
+                value: 4,
+                right: leaf(5)
+            };
+            
+            count1 = COUNT_LEAVES(tree1);
+            count2 = COUNT_LEAVES(tree2);
+            count3 = COUNT_LEAVES(tree3);
+        in
+            assert(count1 == 1);
+            assert(count2 == 2);
+            assert(count3 == 3);
+            puts("Macro switch types test passed\n")
+    }
+    
+    // Test: Macro that constructs and prints custom type
+    fn test_macro_construct_and_print() {
+        let
+            typedef color {
+                red | green | blue
+            }
+            
+            macro SHOW_COLOR(c) {
+                puts("Color: ");
+                print(c);
+            }
+            
+            result = SHOW_COLOR(red);
+        in
+            assert(result == red);
+            puts("Macro construct and print test passed\n")
+    }
+    
+    // Test: Macro with nested switch on constructors
+    fn test_macro_nested_switch() {
+        let
+            typedef maybe(#t) {
+                nothing |
+                just(#t)
+            }
+            
+            typedef either(#l, #r) {
+                left(#l) |
+                right(#r)
+            }
+            
+            macro UNWRAP_EITHER(e) {
+                switch (e) {
+                    (left(just(v))) { v }
+                    (left(nothing)) { 0 }
+                    (right(x)) { x }
+                }
+            }
+            
+            val1 = UNWRAP_EITHER(left(just(42)));
+            val2 = UNWRAP_EITHER(left(nothing));
+            val3 = UNWRAP_EITHER(right(99));
+        in
+            assert(val1 == 42);
+            assert(val2 == 0);
+            assert(val3 == 99);
+            puts("Macro nested switch test passed\n")
+    }
+    
+    // Test: Macro with print of complex type
+    fn test_macro_print_complex() {
+        let
+            typedef pair(#a, #b) {
+                mk_pair{ fst: #a, snd: #b }
+            }
+            
+            macro PRINT_PAIR(p) {
+                switch (p) {
+                    (mk_pair{ fst: a, snd: b }) {
+                        puts("(");
+                        putv(a);
+                        puts(", ");
+                        putv(b);
+                        puts(")\n");
+                        p
+                    }
+                }
+            }
+            
+            pair1 = mk_pair{ fst: 10, snd: 20 };
+            result = PRINT_PAIR(pair1);
+        in
+            assert(result == pair1);
+            puts("Macro print complex test passed\n")
+    }
+    
+    // Test: Macro with typedef in body
+    fn test_macro_typedef_in_body() {
+        let
+            macro MAKE_WRAPPER(val) {
+                let
+                    typedef wrapper(#t) {
+                        wrap(#t)
+                    }
+                    
+                    result = wrap(val);
+                in
+                    result
+            }
+            
+            wrapped = MAKE_WRAPPER(42);
+        in
+            putv(wrapped);
+            puts("\n");
+            puts("Macro typedef in body test passed\n")
+    }
+
+    fn test_macro_string_recognition() {
+        let
+            macro IS_HELLO_OR_GOODBYE(s) {
+                switch (s) {
+                    ("hello") { s }
+                    ("goodbye") { s }
+                    (_) { "?" }
+                }
+            }
+            result1 = IS_HELLO_OR_GOODBYE("hello");
+            result2 = IS_HELLO_OR_GOODBYE("goodbye");
+            result3 = IS_HELLO_OR_GOODBYE("world");
+        in
+            assert(result1 == "hello");
+            assert(result2 == "goodbye");
+            assert(result3 == "?");
+            puts("Macro string recognition test passed\n")
+    }
+
+    fn test_macro_number_recognition() {
+        let
+            macro IS_ONE_OR_TWO(n) {
+                switch (n) {
+                    (1) { n }
+                    (2) { n }
+                    (_) { 0 }
+                }
+            }
+            result1 = IS_ONE_OR_TWO(1);
+            result2 = IS_ONE_OR_TWO(2);
+            result3 = IS_ONE_OR_TWO(3);
+        in
+            assert(result1 == 1);
+            assert(result2 == 2);
+            assert(result3 == 0);
+            puts("Macro number recognition test passed\n")
+    }
 
     // Main test runner
     fn main() {
@@ -397,6 +636,14 @@ let
         test_macro_deep_let_nesting();
         test_macro_fn_shadow();
         test_macro_pattern_shadow();
+        test_macro_with_print();
+        test_macro_with_constructor();
+        test_macro_with_typedef();
+        test_macro_switch_types();
+        test_macro_construct_and_print();
+        test_macro_nested_switch();
+        test_macro_print_complex();
+        test_macro_typedef_in_body();
         puts("All macro tests completed successfully!\n")
     }
 
