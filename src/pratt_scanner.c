@@ -216,7 +216,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
     ++buffer->length;
     if (trie->terminal != NULL) {
         // avoid i.e. "orbit" false matching "or"
-        if (!isALPHA(trie->character) || !isALPHA(buffer->start[buffer->length])) {
+        if (!isALNUM(trie->character) || !isALNUM(buffer->start[buffer->length])) {
             found = trie->terminal;
             last = buffer->length;
         }

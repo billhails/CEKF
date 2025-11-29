@@ -10,4 +10,4 @@ let
     result = fn3(1, 2, 3);
 in
     assert(result == 6);
-    puts("Bug: fn followed by digit should be valid identifier\n")
+    puts("Fixed: fn followed by digit should be valid identifier\n")
