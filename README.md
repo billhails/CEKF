@@ -29,7 +29,7 @@ then maybe [the math](docs/MATH.md)
 and comparing that with its implementation in [`step.c`](src/step.c), or
 start at [`main.c`](src/main.c) and work your way through.
 
-**For AI coding assistants or developers wanting a comprehensive overview**,
+For AI coding assistants or developers wanting a comprehensive overview,
 see the [AI Assistant Guide](docs/AI-ASSISTANT-GUIDE.md) which covers
 architecture, build system, known complexity areas (TPMC, ANF), and the
 code generation system.
@@ -126,8 +126,6 @@ The various components named in the diagram above are linked to their implementa
 * Byte Code Compiler [bytecode.c](src/bytecode.c)
 * Byte Code [cekfs.yaml](src/cekfs.yaml)
 * CEKF Runtime [step.c](src/step.c)
-
-All stages basically complete, but it needs a lot of testing now.
 
 The desugaring step is now rolled into thae lambda conversion phase as eary
 as possible to simplify downstream processing.
