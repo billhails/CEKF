@@ -30,6 +30,7 @@ the `ast.yaml` example, from that file will be generated:
 
 * `generated/ast.c` a number of different functions for each structure:
    * `new<struct>()` functions that allocate memory and poulate the allocated structs with argument values.
+   * `new<union>_<field>()` type-safe functions that create a discriminated union with the correct tag and value.
    * `copy<struct>()` functions that will make a deep copy of the struct.
    * `push<struct>()` functions that will push data onto any declared 1-dimensional arrays.
    * `mark<struct>()` functions that will recursively mark the structures as part of garbage collection.
