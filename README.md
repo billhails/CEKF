@@ -171,7 +171,7 @@ play nice with the CEKF memory management and garbage collection.
 
 There is basic support for Unicode, both in strings and in
 identifiers. The base `Character` type is now a `wchar_t` which stores
-raw Unicode code points (UTF-32). The only supported inpu/output encoding is UTF8, which is
+raw Unicode code points (UTF-32). The only supported input/output encoding is UTF8, which is
 used internally for C strings in the interpreter, to read source files
 and and to output characters to the terminal.
 
