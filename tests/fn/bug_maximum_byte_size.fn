@@ -1,0 +1,136 @@
+let
+    link "listutils.fn" as list;
+    Σ = "abc\u03b1;\u03b2;\u03b3;";
+    Ψ = "abcαβγ";
+    α = '\u03b1;';
+    F♮ = "cool";
+    alpha = 'α';
+    α = '\u03b1;';
+    smile = '😀';
+in
+    assert(list.length(Σ) == 6);
+    assert(list.length(Ψ) == 6);
+    assert(Σ == Ψ);
+    assert(α == 'α');
+    assert(ord(α) == 945);
+    assert(chr(945) == α);
+    assert(chr(0x3b1) == α);
+    assert("F\u266e;" == "F♮");
+    assert(F♮ == "cool");
+    assert(unicode_category(alpha) == GC_Ll);
+    assert(ord(smile) == 0x1F600);
+    // isalnum tests
+    assert(isalnum('a'));
+    assert(not isalnum('!'));
+    // isalpha tests
+    assert(isalpha('z'));
+    assert(not isalpha('5'));
+    // isascii tests
+    assert(isascii('A'));
+    assert(not isascii(smile));
+    // isblank tests
+    assert(isblank(' '));
+    assert(not isblank('x'));
+    // isclose tests
+    assert(isclose(')'));
+    assert(not isclose('('));
+    // iscntrl tests
+    assert(iscntrl('\n'));
+    assert(not iscntrl('a'));
+    // isdigit tests
+    assert(isdigit('7'));
+    assert(not isdigit('a'));
+    // isgraph tests
+    assert(isgraph('!'));
+    assert(not isgraph(' '));
+    // islower tests
+    assert(islower('g'));
+    assert(not islower('G'));
+    // isnumber tests
+    assert(isnumber('3'));
+    assert(not isnumber('x'));
+    // isopen tests
+    assert(isopen('('));
+    assert(not isopen(')'));
+    // isprint tests
+    assert(isprint('q'));
+    assert(not isprint('\u0001;'));
+    // ispunct tests
+    assert(ispunct('.'));
+    assert(not ispunct('w'));
+    // isspace tests
+    assert(isspace(' '));
+    assert(not isspace('m'));
+    // issymbol tests
+    assert(issymbol('$'));
+    assert(not issymbol('e'));
+    // isupper tests
+    assert(isupper('Z'));
+    assert(not isupper('z'));
+    // isvalid tests
+    assert(isvalid('a'));
+    assert(isvalid(smile));
+    // isxdigit tests
+    assert(isxdigit('F'));
+    assert(not isxdigit('G'));
+    // Additional Unicode tests beyond ASCII
+    // Greek letters
+    assert(isalpha('α'));
+    assert(isalpha('Ω'));
+    assert(islower('α'));
+    assert(isupper('Ω'));
+    assert(not isdigit('α'));
+    // Cyrillic letters
+    assert(isalpha('Я'));
+    assert(isalpha('ж'));
+    assert(isupper('Я'));
+    assert(islower('ж'));
+    // Arabic digits
+    assert(isdigit('٥')); // Arabic-Indic digit five
+    assert(isnumber('٥'));
+    assert(not isalpha('٥'));
+    // Chinese/Japanese characters
+    assert(isalpha('中'));
+    assert(not isdigit('中'));
+    assert(not ispunct('中'));
+    // Mathematical symbols
+    assert(issymbol('∑')); // summation symbol
+    assert(issymbol('∞')); // infinity
+    assert(not isalpha('∑'));
+    // Punctuation from other scripts
+    assert(ispunct('。')); // CJK full stop
+    assert(ispunct('；')); // CJK semicolon
+    // Various brackets
+    assert(isopen('「')); // CJK opening bracket
+    assert(isclose('」')); // CJK closing bracket
+    assert(isopen('《'));
+    assert(isclose('》'));
+    // Currency symbols
+    assert(issymbol('€'));
+    assert(issymbol('¥'));
+    assert(issymbol('£'));
+    assert(not isalpha('€'));
+    // Emoji tests
+    assert(not isascii('😀'));
+    assert(not isalpha('😀'));
+    assert(not isdigit('😀'));
+    assert(issymbol('😀'));
+    // Roman numerals
+    assert(isnumber('Ⅶ')); // Roman numeral seven
+    assert(isnumber('ⅷ')); // small Roman numeral eight
+    // Vulgar fractions
+    assert(isnumber('½')); // fraction one half
+    assert(isnumber('¾')); // fraction three quarters
+    // Superscripts and subscripts
+    assert(isnumber('²')); // superscript two
+    assert(isnumber('₃')); // subscript three
+    // Spaces of various widths
+    assert(isspace('\u00a0;')); // non-breaking space
+    assert(isspace('\u3000;')); // ideographic space
+    assert(isblank('\u00a0;'));
+    // Control characters
+    assert(iscntrl('\u001b;')); // escape character
+    assert(not isprint('\u001b;'));
+    // Combining characters
+    assert(not isalpha('\u0301;')); // combining acute accent (mark, not letter)
+    puts("Unicode tests passed\n")

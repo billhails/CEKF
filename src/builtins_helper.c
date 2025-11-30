@@ -31,6 +31,24 @@ static void registerIncr(BuiltIns *registry);
 static void registerAssert(BuiltIns *registry);
 static void registerOrd(BuiltIns *registry);
 static void registerUnicodeCategory(BuiltIns *registry);
+static void registerIsAlnum(BuiltIns *registry);
+static void registerIsAlpha(BuiltIns *registry);
+static void registerIsAscii(BuiltIns *registry);
+static void registerIsBlank(BuiltIns *registry);
+static void registerIsClose(BuiltIns *registry);
+static void registerIsCntrl(BuiltIns *registry);
+static void registerIsDigit(BuiltIns *registry);
+static void registerIsGraph(BuiltIns *registry);
+static void registerIsLower(BuiltIns *registry);
+static void registerIsNumber(BuiltIns *registry);
+static void registerIsOpen(BuiltIns *registry);
+static void registerIsPrint(BuiltIns *registry);
+static void registerIsPunct(BuiltIns *registry);
+static void registerIsSpace(BuiltIns *registry);
+static void registerIsSymbol(BuiltIns *registry);
+static void registerIsUpper(BuiltIns *registry);
+static void registerIsValid(BuiltIns *registry);
+static void registerIsXdigit(BuiltIns *registry);
 static void registerChr(BuiltIns *registry);
 static void registerArgv(BuiltIns *registry, int argc, int cargc, char *argv[]);
 static void registerGetEnv(BuiltIns *registry);
@@ -143,6 +161,24 @@ BuiltIns *registerBuiltIns(int argc, int cargc, char *argv[]) {
     registerIncr(res);
     registerOrd(res);
     registerUnicodeCategory(res);
+    registerIsAlnum(res);
+    registerIsAlpha(res);
+    registerIsAscii(res);
+    registerIsBlank(res);
+    registerIsClose(res);
+    registerIsCntrl(res);
+    registerIsDigit(res);
+    registerIsGraph(res);
+    registerIsLower(res);
+    registerIsNumber(res);
+    registerIsOpen(res);
+    registerIsPrint(res);
+    registerIsPunct(res);
+    registerIsSpace(res);
+    registerIsSymbol(res);
+    registerIsUpper(res);
+    registerIsValid(res);
+    registerIsXdigit(res);
     registerChr(res);
     registerIO(res);
     registerSQLite(res);
@@ -274,5 +310,185 @@ static void registerExit(BuiltIns *registry) {
     TcType *anyType = makeAnyType();
     PROTECT(anyType);
     pushNewBuiltIn(registry, "exit", anyType, args, (void *)builtin_exit);
+    UNPROTECT(save);
+}
+
+static void registerIsAlnum(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isalnum", boolean, args, (void *)builtin_isalnum);
+    UNPROTECT(save);
+}
+
+static void registerIsAlpha(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isalpha", boolean, args, (void *)builtin_isalpha);
+    UNPROTECT(save);
+}
+
+static void registerIsAscii(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isascii", boolean, args, (void *)builtin_isascii);
+    UNPROTECT(save);
+}
+
+static void registerIsBlank(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isblank", boolean, args, (void *)builtin_isblank);
+    UNPROTECT(save);
+}
+
+static void registerIsClose(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isclose", boolean, args, (void *)builtin_isclose);
+    UNPROTECT(save);
+}
+
+static void registerIsCntrl(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "iscntrl", boolean, args, (void *)builtin_iscntrl);
+    UNPROTECT(save);
+}
+
+static void registerIsDigit(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isdigit", boolean, args, (void *)builtin_isdigit);
+    UNPROTECT(save);
+}
+
+static void registerIsGraph(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isgraph", boolean, args, (void *)builtin_isgraph);
+    UNPROTECT(save);
+}
+
+static void registerIsLower(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "islower", boolean, args, (void *)builtin_islower);
+    UNPROTECT(save);
+}
+
+static void registerIsNumber(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isnumber", boolean, args, (void *)builtin_isnumber);
+    UNPROTECT(save);
+}
+
+static void registerIsOpen(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isopen", boolean, args, (void *)builtin_isopen);
+    UNPROTECT(save);
+}
+
+static void registerIsPrint(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isprint", boolean, args, (void *)builtin_isprint);
+    UNPROTECT(save);
+}
+
+static void registerIsPunct(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "ispunct", boolean, args, (void *)builtin_ispunct);
+    UNPROTECT(save);
+}
+
+static void registerIsSpace(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isspace", boolean, args, (void *)builtin_isspace);
+    UNPROTECT(save);
+}
+
+static void registerIsSymbol(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "issymbol", boolean, args, (void *)builtin_issymbol);
+    UNPROTECT(save);
+}
+
+static void registerIsUpper(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isupper", boolean, args, (void *)builtin_isupper);
+    UNPROTECT(save);
+}
+
+static void registerIsValid(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isvalid", boolean, args, (void *)builtin_isvalid);
+    UNPROTECT(save);
+}
+
+static void registerIsXdigit(BuiltIns *registry) {
+    BuiltInArgs *args = newBuiltInArgs();
+    int save = PROTECT(args);
+    TcType *boolean = makeBoolean();
+    PROTECT(boolean);
+    pushCharacterArg(args);
+    pushNewBuiltIn(registry, "isxdigit", boolean, args, (void *)builtin_isxdigit);
     UNPROTECT(save);
 }

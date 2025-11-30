@@ -178,6 +178,7 @@ make indent            # Formats code with GNU indent
   - `in` begins the body that uses those definitions
   - Can appear at file top-level or inside any `{ }` block
   - Without `let`/`in`, blocks are just sequences of expressions
+  - **IMPORTANT**: Nested `let/in` blocks must be enclosed in curly braces: `let x = 1; in { let y = 2; in y + x }`
 - **Pattern Matching**: Functions can have multiple cases, switch on arguments
   - Wildcards: `_` matches anything without binding
   - Named structures: `x = h @ t` binds both components and whole
@@ -187,10 +188,29 @@ make indent            # Formats code with GNU indent
   - Generic types use `#` prefix: `#t`, `#a`, `#b`
   - Built-in types: `int`, `char`, `bool`, `string` (alias for `list(char)`)
   - Named fields: `constructor{ fieldName: type }`
+  - **IMPORTANT**: Typedefs at file level are global; typedefs inside `let` blocks are scoped to that block
 - **Operators**: Defined in `src/preamble.fn` (e.g., `@` = cons, `@@` = append)
 - **Namespaces**: Files start with `namespace` keyword (like `let` without `in` - mutually recursive declarations)
-  - Import via `link "<path>.fn" as <name>`
+  - **IMPORTANT**: `link` directives must appear inside a `let` block, not at top level
+  - Import via `link "<path>.fn" as <name>` (inside `let`)
   - Reference imported components as `name.component`
+  - Example:
+    ```fn
+    let
+        link "listutils.fn" as lst;
+        result = lst.length([1, 2, 3]);
+    in
+        result
+    ```
+
+### Common Syntax Gotchas
+- **Link placement**: `link` statements MUST be inside a `let` block, not standalone
+- **Nested blocks**: Nested `let/in` require `{ }` around the `let/in` expression
+- **Semicolons in let**: Multiple bindings in `let` are separated by semicolons: `let a = 1; b = 2; in a + b`
+- **Variable naming**: Identifiers starting with `fn` followed by a digit (like `fn3`, `fn10`) are rejected by the parser - use different names like `func3`, `f3`
+- **Division operator**: `/` will produce rationals, not integer quotient.
+- **Print declarations**: `print typename { ... }` is a declaration, not a function call - defines custom printer for a type
+- **Exhaustive patterns**: Pattern matches must be exhaustive unless function or switch is declared `unsafe`
 
 ### Non-Deterministic Programming (amb)
 - **`then`**: Right-associative binary operator - evaluates LHS, but if backtracked returns RHS
