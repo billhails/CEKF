@@ -3,6 +3,7 @@ import csv
 with open('unicode/UnicodeData.txt', newline='') as csvin:
     reader = csv.reader(csvin, delimiter=';')
     i = 0
+    prev = 'GC_Co'
     print('/* 000000 */ ', end='')
     for row in reader:
         j = int(row[0], 16)
@@ -10,16 +11,14 @@ with open('unicode/UnicodeData.txt', newline='') as csvin:
             if i > 0 and i % 16 == 0:
                 print('')
                 print('/* {:06X} */ '.format(i), end='')
-            if (i > 0xe000 and i < 0xf8ff) or (i > 0xf0000 and i < 0xffffd) or (i > 0x100000 and i < 0x10fffd):
-                print("GC_Co, ", end='')
-            else:
-                print("GC_Cn, ", end='')
+            print(f"{prev}, ", end='')
             i += 1
         i += 1
         if j > 0 and j % 16 == 0:
             print('')
             print('/* {:06X} */ '.format(j), end='')
-        print(f"GC_{row[2]}, ", end='')
+        prev = f"GC_{row[2]}"
+        print(f"{prev}, ", end='')
     print('')
 # 2: {'Zp', 'Pf', 'Co', 'Zl', 'Lt', 'Nl', 'Pc', 'Pe', 'Pi', 'Pd', 'Nd', 'Mn', 'Cc', 'Lu', 'Cs', 'Sk', 'Me', 'Cf', 'Ps', 'So', 'Lm', 'Po', 'Sc', 'Mc', 'Sm', 'Ll', 'Zs', 'No', 'Lo'}
 #

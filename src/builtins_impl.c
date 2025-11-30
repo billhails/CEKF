@@ -135,6 +135,78 @@ Value builtin_unicode_category(Vec *args) {
     }
 }
 
+Value builtin_isalnum(Vec *args) {
+    return unicode_isalnum(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isalpha(Vec *args) {
+    return unicode_isalpha(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isascii(Vec *args) {
+    return unicode_isascii(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isblank(Vec *args) {
+    return unicode_isblank(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isclose(Vec *args) {
+    return unicode_isclose(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_iscntrl(Vec *args) {
+    return unicode_iscntrl(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isdigit(Vec *args) {
+    return unicode_isdigit(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isgraph(Vec *args) {
+    return unicode_isgraph(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_islower(Vec *args) {
+    return unicode_islower(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isnumber(Vec *args) {
+    return unicode_isnumber(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isopen(Vec *args) {
+    return unicode_isopen(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isprint(Vec *args) {
+    return unicode_isprint(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_ispunct(Vec *args) {
+    return unicode_ispunct(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isspace(Vec *args) {
+    return unicode_isspace(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_issymbol(Vec *args) {
+    return unicode_issymbol(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isupper(Vec *args) {
+    return unicode_isupper(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isvalid(Vec *args) {
+    return unicode_isvalid(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
+Value builtin_isxdigit(Vec *args) {
+    return unicode_isxdigit(args->entries[0].val.character) ? vTrue : vFalse;
+}
+
 Value builtin_chr(Vec *args) {
 #ifdef SAFETY_CHECKS
     if (args->entries[0].type != VALUE_TYPE_STDINT) {

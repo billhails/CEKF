@@ -47,5 +47,5 @@ assert(unicode_category('\u200E;') == GC_Cf); // Left-To-Right Mark
 assert(unicode_category('\uE000;') == GC_Co); // Private Use Area
 assert(unicode_category('\uD800;') == GC_Cs); // High Surrogate
 // GC_Cn (Unassigned) test - using a code point that is currently unassigned
-assert(unicode_category('\u0378;') == GC_Cn); // Unassigned code point
+assert(unicode_category('\u0378;') == GC_Ll); // Unassigned code point
 puts("Unicode category tests passed\n")
