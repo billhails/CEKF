@@ -33,6 +33,7 @@ HashSymbol *cmpSymbol(void);
 HashSymbol *colonSymbol(void);
 HashSymbol *consSymbol(void);
 HashSymbol *currentFileSymbol(void);
+HashSymbol *currentLineSymbol(void);
 HashSymbol *divSymbol(void);
 HashSymbol *envSymbol(void);
 HashSymbol *eqSymbol(void);
