@@ -4301,6 +4301,16 @@ static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
     }
 #endif
     HashSymbol *name = tok->value->val.atom;
+    
+    // Special handling for currentLine - replace with line number
+    if (name == currentLineSymbol()) {
+        MaybeBigInt *lineNum = fakeBigInt(TOKPI(tok).lineno, false);
+        int save = PROTECT(lineNum);
+        AstExpression *result = newAstExpression_Number(TOKPI(tok), lineNum);
+        UNPROTECT(save);
+        return result;
+    }
+    
     return newAstExpression_Symbol(TOKPI(tok), name);
 }
 

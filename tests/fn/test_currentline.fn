@@ -1,0 +1,18 @@
+// Test that currentLine special token works correctly
+
+let
+    
+    // currentLine should be replaced with the line number where it appears
+    lineHere = currentLine;  // This is line 6
+    
+    anotherLine = currentLine;  // This is line 8
+    
+in {
+    assert(lineHere == 6);
+    assert(anotherLine == 8);
+    
+    // Test that currentLine works in expressions
+    assert(currentLine == 15);
+    
+    puts("currentLine tests passed!\n");
+}

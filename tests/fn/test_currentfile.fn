@@ -1,0 +1,15 @@
+// Test that currentFile variable is available and has correct value
+
+let
+    // Test that currentFile is accessible
+    fileIsAccessible = currentFile;
+    
+    // Test that it has the expected filename
+    expectedFile = "tests/fn/test_currentfile.fn";
+    
+in {
+    assert(currentFile == expectedFile);
+    puts("currentFile is: ");
+    puts(currentFile);
+    puts("\n");
+}
