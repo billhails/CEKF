@@ -103,6 +103,56 @@ static void addCurrentNamespaceToContext(LamContext *context, int namespaceId) {
 }
 
 /**
+ * @brief Creates an AstDefinitions node for currentFile with the given filename.
+ *
+ * This creates a definition: let currentFile = "filename"; ...
+ * as an AST node that can be prepended to the preamble.
+ *
+ * @param filename The filename string to assign to currentFile.
+ * @param PI Parser information for the created node.
+ * @param next The next AstDefinitions in the list.
+ * @return An AstDefinitions node containing the currentFile definition.
+ */
+static AstDefinitions *makeCurrentFileDefinition(const char *filename, ParserInfo PI, AstDefinitions *next) {
+    // Build a string as nested cons applications, starting with nil
+    AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
+    int save = PROTECT(nil);
+    AstFunCall *strList = newAstFunCall(PI, nil, NULL);
+    PROTECT(strList);
+    
+    // Build the string from right to left (reverse order)
+    for (int i = strlen(filename) - 1; i >= 0; i--) {
+        AstExpression *character = newAstExpression_Character(PI, filename[i]);
+        int save2 = PROTECT(character);
+        AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
+        PROTECT(cons);
+        AstExpression *tail = newAstExpression_FunCall(PI, strList);
+        PROTECT(tail);
+        AstExpressions *rhs = newAstExpressions(PI, tail, NULL);
+        PROTECT(rhs);
+        AstExpressions *args = newAstExpressions(PI, character, rhs);
+        PROTECT(args);
+        strList = newAstFunCall(PI, cons, args);
+        REPLACE_PROTECT(save, strList);
+        UNPROTECT(save2);
+    }
+    
+    AstExpression *stringExpr = newAstExpression_FunCall(PI, strList);
+    PROTECT(stringExpr);
+    
+    // Create the definition: currentFile = "..."
+    AstDefine *define = newAstDefine(PI, currentFileSymbol(), stringExpr);
+    PROTECT(define);
+    
+    AstDefinition *definition = newAstDefinition_Define(PI, define);
+    PROTECT(definition);
+    
+    AstDefinitions *result = newAstDefinitions(PI, definition, next);
+    UNPROTECT(save);
+    return result;
+}
+
+/**
  * @brief Converts an AST program to a lambda expression.
  *
  * This is the top-level public entry point to the lambda conversion
@@ -116,7 +166,13 @@ LamExp *lamConvertProg(AstProg *prog) {
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
     addCurrentNamespaceToContext(env, NS_GLOBAL);
-    LamExp *result = lamConvert(prog->preamble, prog->namespaces, prog->body, env);
+    
+    // Prepend currentFile definition to preamble
+    AstDefinitions *preambleWithCurrentFile = 
+        makeCurrentFileDefinition(prog->_yy_parser_info.filename, CPI(prog), prog->preamble);
+    PROTECT(preambleWithCurrentFile);
+    
+    LamExp *result = lamConvert(preambleWithCurrentFile, prog->namespaces, prog->body, env);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
     return result;
@@ -2144,7 +2200,7 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     int save = PROTECT(exp);
     LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = stringToLamArgs(CPI(exp), exp->_yy_parser_info.filename);
+    LamExp *fileName = newLamExp_Var(CPI(exp), currentFileSymbol());
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
@@ -2176,7 +2232,7 @@ static LamExp *convertError(AstExpression *value, LamContext *env) {
     int save = PROTECT(exp);
     LamArgs *args = newLamArgs(CPI(exp), exp, NULL);
     PROTECT(args);
-    LamExp *fileName = stringToLamArgs(CPI(value), value->_yy_parser_info.filename);
+    LamExp *fileName = newLamExp_Var(CPI(value), currentFileSymbol());
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
