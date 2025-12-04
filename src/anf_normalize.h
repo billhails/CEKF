@@ -21,6 +21,6 @@
 #  include "lambda.h"
 #  include "anf.h"
 
-Exp *anfNormalize(LamExp *exp);
+AnfExp *anfNormalize(LamExp *exp);
 
 #endif

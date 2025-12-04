@@ -39,7 +39,7 @@
 static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
 static void populateCTEnv(CTEnv *env, HashSymbol *var);
 
-static CTEnv *annotateExp(Exp *x, CTEnv *env);
+static CTEnv *annotateExp(AnfExp *x, CTEnv *env);
 static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env);
 static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env);
 static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
@@ -479,7 +479,7 @@ static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
     return annotateExp(lookup->body, envs->entries[lookup->namespace]);
 }
 
-static CTEnv * annotateExp(Exp *x, CTEnv *env) {
+static CTEnv * annotateExp(AnfExp *x, CTEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateExp ");
     ppExp(x);
@@ -488,20 +488,20 @@ static CTEnv * annotateExp(Exp *x, CTEnv *env) {
     eprintf("\n");
 #endif
     switch (x->type) {
-        case EXP_TYPE_AEXP:
+        case ANFEXP_TYPE_AEXP:
             return annotateAexp(x->val.aexp, env);
-        case EXP_TYPE_CEXP:
+        case ANFEXP_TYPE_CEXP:
             return annotateCexp(x->val.cexp, env);
-        case EXP_TYPE_LET:
+        case ANFEXP_TYPE_LET:
             return annotateExpLet(x->val.let, env);
-        case EXP_TYPE_ENV:
+        case ANFEXP_TYPE_ENV:
             return annotateExpEnv(env);
-        case EXP_TYPE_DONE:
+        case ANFEXP_TYPE_DONE:
             return env;
-        case EXP_TYPE_LOOKUP:
+        case ANFEXP_TYPE_LOOKUP:
             return annotateExpLookup(x->val.lookup, env);
         default:
-            cant_happen("unrecognized type %s", expTypeName(x->type));
+            cant_happen("unrecognized type %s", anfExpTypeName(x->type));
     }
 }
 
@@ -512,7 +512,7 @@ static void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
     }
 }
 
-void annotateAnf(Exp *x, BuiltIns *b) {
+void annotateAnf(AnfExp *x, BuiltIns *b) {
     CTEnv *env = newCTEnv(CPI(x), false, NULL);
     int save = PROTECT(env);
     env->nsEnvs = newCTEnvArray();

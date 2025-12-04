@@ -48,7 +48,7 @@ structs:
             nargs: int
             letRecOffset: int
             args: AexpVarList
-            exp: Exp
+            exp: AnfExp
 
     AexpVarList:
         meta:
@@ -109,7 +109,7 @@ structs:
                 A namespace in ANF, containing the body of the namespace.
         data:
             nbindings: int = 0
-            body: Exp
+            body: AnfExp
 
     AexpNamespaces:
         meta:
@@ -117,7 +117,7 @@ structs:
             description: An array of namespaces in ANF.
         data:
             namespaces: AexpNamespaceArray
-            body: Exp
+            body: AnfExp
 
     CexpApply:
         meta:
@@ -134,8 +134,8 @@ structs:
             description: A conditional expression in ANF.
         data:
             condition: Aexp
-            consequent: Exp
-            alternative: Exp
+            consequent: AnfExp
+            alternative: AnfExp
 
     CexpCond:
         meta:
@@ -153,7 +153,7 @@ structs:
                 dispatch tables in ANF.
         data:
             option: MaybeBigInt
-            body: Exp
+            body: AnfExp
             next: CexpIntCondCases
 
     CexpCharCondCases:
@@ -164,7 +164,7 @@ structs:
                 dispatch tables in ANF.
         data:
             option: character
-            body: Exp
+            body: AnfExp
             next: CexpCharCondCases
 
     CexpMatch:
@@ -182,34 +182,34 @@ structs:
         data:
             nbindings: int
             bindings: LetRecBindings
-            body: Exp
+            body: AnfExp
 
     CexpAmb:
         meta:
             brief: ANF Cexp Amb
             description: An amb operation in ANF.
         data:
-            exp1: Exp
-            exp2: Exp
+            exp1: AnfExp
+            exp2: AnfExp
 
     CexpCut:
         meta:
             brief: ANF Cexp Cut
             description: A cut operation in ANF.
         data:
-            exp: Exp
+            exp: AnfExp
 
     ExpLet:
         data:
             var: HashSymbol
-            val: Exp
-            body: Exp
+            val: AnfExp
+            body: AnfExp
 
     ExpLookup:
         data:
             namespace: index
             annotatedVar: AexpAnnotatedVar = NULL
-            body: Exp
+            body: AnfExp
 
     MatchList:
         meta:
@@ -217,7 +217,7 @@ structs:
             description: A list of expressions each with multiple match cases
         data:
             matches: AexpIntList
-            body: Exp
+            body: AnfExp
             next: MatchList
 
     LetRecBindings:
@@ -269,7 +269,7 @@ unions:
             cut: CexpCut
             match: CexpMatch
 
-    Exp:
+    AnfExp:
         meta:
             brief: ANF Exp
             description: A union of all expression types (atomic or complex) in ANF.

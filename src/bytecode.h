@@ -51,7 +51,7 @@ void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L);
 void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L);
 void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L);
 void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L);
-void writeExp(Exp *x, ByteCodeArray *b, LocationArray *L);
+void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L);
 
 bool writeBinaryOutputFile(ByteCodeArray *b, char *filename);
 enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename);
