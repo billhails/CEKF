@@ -173,7 +173,7 @@ structs:
             description: A match expression derived from a TPMC switch in ANF.
         data:
             condition: Aexp
-            clauses: MatchList
+            clauses: AnfMatchList
 
     CexpLetRec:
         meta:
@@ -211,14 +211,14 @@ structs:
             annotatedVar: AexpAnnotatedVar = NULL
             body: AnfExp
 
-    MatchList:
+    AnfMatchList:
         meta:
             brief: ANF Match List
             description: A list of expressions each with multiple match cases
         data:
             matches: AexpIntList
             body: AnfExp
-            next: MatchList
+            next: AnfMatchList
 
     LetRecBindings:
         meta:

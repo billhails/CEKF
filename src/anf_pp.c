@@ -323,7 +323,7 @@ void ppCexpCut(CexpCut *x) {
     eprintf(")");
 }
 
-void ppMatchList(MatchList *x) {
+void ppAnfMatchList(AnfMatchList *x) {
     if (x == NULL)
         return;
     eprintf("(");
@@ -333,7 +333,7 @@ void ppMatchList(MatchList *x) {
     eprintf(")");
     if (x->next != NULL) {
         eprintf(" ");
-        ppMatchList(x->next);
+        ppAnfMatchList(x->next);
     }
 }
 
@@ -341,7 +341,7 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf("(match ");
     ppAexp(x->condition);
     eprintf(" ");
-    ppMatchList(x->clauses);
+    ppAnfMatchList(x->clauses);
     eprintf(")");
 }
 

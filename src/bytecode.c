@@ -532,7 +532,7 @@ static int validateCexpMatch(CexpMatch *x) {
     for (int i = 0; i < 256; ++i) {
         seen[i] = false;
     }
-    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+    for (AnfMatchList *m = x->clauses; m != NULL; m = m->next) {
         for (AexpIntList *matches = m->matches; matches != NULL;
              matches = matches->next) {
             int index = matches->integer;
@@ -574,7 +574,7 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L) {
         patches[i] = reserveWord(b);
     }
     int jumpCounter = 0;
-    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+    for (AnfMatchList *m = x->clauses; m != NULL; m = m->next) {
         for (AexpIntList *l = m->matches; l != NULL; l = l->next) {
             int i = l->integer;
             writeCurrentAddressAt(patches[i], b);

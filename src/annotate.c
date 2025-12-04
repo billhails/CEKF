@@ -388,10 +388,10 @@ static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env) {
     }
 }
 
-static AnfEnv *annotateMatchList(MatchList *x, AnfEnv *env) {
+static AnfEnv *annotateAnfMatchList(AnfMatchList *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
-    eprintf("annotateMatchList ");
-    ppMatchList(x);
+    eprintf("annotateAnfMatchList ");
+    ppAnfMatchList(x);
     eprintf("  ");
     ppAnfEnv(env);
     eprintf("\n");
@@ -399,7 +399,7 @@ static AnfEnv *annotateMatchList(MatchList *x, AnfEnv *env) {
     if (x == NULL)
         return env;
     annotateExp(x->body, env);
-    annotateMatchList(x->next, env);
+    annotateAnfMatchList(x->next, env);
     return env;
 }
 
@@ -412,7 +412,7 @@ static AnfEnv *annotateCexpMatch(CexpMatch *x, AnfEnv *env) {
     eprintf("\n");
 #endif
     annotateAexp(x->condition, env);
-    annotateMatchList(x->clauses, env);
+    annotateAnfMatchList(x->clauses, env);
     return env;
 }
 

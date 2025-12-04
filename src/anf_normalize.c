@@ -77,7 +77,7 @@ static AnfExp *normalizePrint(LamPrint *print, AnfExp *tail);
 static AnfExp *normalizeLetRec(LamLetRec *lamLetRec, AnfExp *tail);
 static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail);
 static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail);
-static MatchList *normalizeMatchList(LamMatchList *matchList);
+static AnfMatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpIntList *convertIntList(LamIntList *list);
 static AnfExp *normalizeCond(LamCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
@@ -202,7 +202,7 @@ static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail) {
     int save = PROTECT(replacements);
     Aexp *index = replaceLamExp(match->index, replacements);
     int save2 = PROTECT(index);
-    MatchList *matchList = normalizeMatchList(match->cases);
+    AnfMatchList *matchList = normalizeMatchList(match->cases);
     PROTECT(matchList);
     CexpMatch *cexpMatch = newCexpMatch(CPI(index), index, matchList);
     UNPROTECT(save2);
@@ -219,19 +219,19 @@ static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail) {
     return res;
 }
 
-static MatchList *normalizeMatchList(LamMatchList *matchList) {
+static AnfMatchList *normalizeMatchList(LamMatchList *matchList) {
     ENTER(normalizeMatchList);
     if (matchList == NULL) {
         LEAVE(normalizeMatchList);
         return NULL;
     }
-    MatchList *next = normalizeMatchList(matchList->next);
+    AnfMatchList *next = normalizeMatchList(matchList->next);
     int save = PROTECT(next);
     AexpIntList *matches = convertIntList(matchList->matches);
     PROTECT(matches);
     AnfExp *body = normalize(matchList->body, NULL);
     PROTECT(body);
-    MatchList *this = newMatchList(CPI(matches), matches, body, next);
+    AnfMatchList *this = newAnfMatchList(CPI(matches), matches, body, next);
     UNPROTECT(save);
     LEAVE(normalizeMatchList);
     return this;
