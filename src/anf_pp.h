@@ -52,6 +52,6 @@ void ppCexpMatch(CexpMatch *x);
 void ppAexp(Aexp *x);
 void ppCexp(Cexp *x);
 void ppAnfExp(AnfExp *x);
-void ppExpLet(ExpLet *x);
+void ppAnfExpLet(AnfExpLet *x);
 
 #endif

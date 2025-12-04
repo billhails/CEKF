@@ -621,8 +621,8 @@ void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeCexpCut);
 }
 
-void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L) {
-    ENTER(writeExpLet);
+void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
+    ENTER(writeAnfExpLet);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LET);
     Control patch = reserveWord(b);
@@ -631,7 +631,7 @@ void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L) {
     addByte(b, BYTECODES_TYPE_RETURN);
     writeCurrentAddressAt(patch, b);
     writeAnfExp(x->body, b, L);
-    LEAVE(writeExpLet);
+    LEAVE(writeAnfExpLet);
 }
 
 void writeLookup(ExpLookup *x, ByteCodeArray *b, LocationArray *L) {
@@ -788,7 +788,7 @@ void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case ANFEXP_TYPE_LET:{
-                writeExpLet(x->val.let, b, L);
+                writeAnfExpLet(x->val.let, b, L);
             }
             break;
         case ANFEXP_TYPE_DONE:{

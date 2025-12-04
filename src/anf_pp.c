@@ -433,7 +433,7 @@ void ppAnfExp(AnfExp *x) {
             ppCexp(x->val.cexp);
             break;
         case ANFEXP_TYPE_LET:
-            ppExpLet(x->val.let);
+            ppAnfExpLet(x->val.let);
             break;
         case ANFEXP_TYPE_DONE:
             eprintf("<DONE>");
@@ -450,7 +450,7 @@ void ppAnfExp(AnfExp *x) {
     }
 }
 
-void ppExpLet(ExpLet *x) {
+void ppAnfExpLet(AnfExpLet *x) {
     eprintf("(let (");
     ppAexpVar(x->var);
     eprintf(" ");

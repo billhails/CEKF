@@ -51,7 +51,7 @@ static AnfEnv *annotateCexpCondCases(CexpCondCases *x, AnfEnv *env);
 static AnfEnv *annotateCexpLetRec(CexpLetRec *x, AnfEnv *env);
 static AnfEnv *annotateCexpAmb(CexpAmb *x, AnfEnv *env);
 static AnfEnv *annotateCexpCut(CexpCut *x, AnfEnv *env);
-static AnfEnv *annotateExpLet(ExpLet *x, AnfEnv *env);
+static AnfEnv *annotateAnfExpLet(AnfExpLet *x, AnfEnv *env);
 static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env);
 static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env);
 static AnfEnvArray *getNsEnvs(AnfEnv *env);
@@ -281,10 +281,10 @@ static AnfEnv *annotateCexpCut(CexpCut *x, AnfEnv *env) {
     return env;
 }
 
-static AnfEnv *annotateExpLet(ExpLet *x, AnfEnv *env) {
+static AnfEnv *annotateAnfExpLet(AnfExpLet *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
-    eprintf("annotateExpLet ");
-    ppExpLet(x);
+    eprintf("annotateAnfExpLet ");
+    ppAnfExpLet(x);
     eprintf("  ");
     ppAnfEnv(env);
     eprintf("\n");
@@ -493,7 +493,7 @@ static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
         case ANFEXP_TYPE_CEXP:
             return annotateCexp(x->val.cexp, env);
         case ANFEXP_TYPE_LET:
-            return annotateExpLet(x->val.let, env);
+            return annotateAnfExpLet(x->val.let, env);
         case ANFEXP_TYPE_ENV:
             return annotateExpEnv(env);
         case ANFEXP_TYPE_DONE:

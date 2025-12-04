@@ -199,7 +199,7 @@ structs:
         data:
             exp: AnfExp
 
-    ExpLet:
+    AnfExpLet:
         data:
             var: HashSymbol
             val: AnfExp
@@ -278,7 +278,7 @@ unions:
             done: void_ptr
             aexp: Aexp
             cexp: Cexp
-            let: ExpLet
+            let: AnfExpLet
             lookup: ExpLookup
 
 enums:

@@ -247,7 +247,7 @@ static AnfExp *normalizeLamLetBindings(LamLetBindings *bindings, AnfExp *body) {
     int save = PROTECT(tail);
     AnfExp *value = normalize(bindings->val, NULL);
     PROTECT(value);
-    ExpLet *expLet = newExpLet(CPI(bindings), bindings->var, value, tail);
+    AnfExpLet *expLet = newAnfExpLet(CPI(bindings), bindings->var, value, tail);
     PROTECT(expLet);
     AnfExp *exp = newAnfExp_Let(CPI(expLet), expLet);
     UNPROTECT(save);
@@ -535,7 +535,7 @@ static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail) {
         return exp;
     }
     HashSymbol *s = freshSymbol();
-    ExpLet *let = newExpLet(CPI(exp), s, exp, tail);
+    AnfExpLet *let = newAnfExpLet(CPI(exp), s, exp, tail);
     int save = PROTECT(let);
     exp = newAnfExp_Let(CPI(let), let);
     UNPROTECT(save);
@@ -795,7 +795,7 @@ static AnfExp *letBind(AnfExp *body, LamExpTable *replacements) {
         DEBUG("letBind iteration %d", i);
         AnfExp *exp = normalize(lamExpVal, NULL);
         int save2 = PROTECT(exp);
-        ExpLet *let = newExpLet(CPI(exp), key, exp, body);
+        AnfExpLet *let = newAnfExpLet(CPI(exp), key, exp, body);
         PROTECT(let);
         body = newAnfExp_Let(CPI(let), let);
         UNPROTECT(save2);
@@ -1026,7 +1026,7 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
         } else {
             exp = cexpLetRec->body;
         }
-        ExpLet *expLet = newExpLet(CPI(lamLetRecBindings), lamLetRecBindings->var, val, exp);
+        AnfExpLet *expLet = newAnfExpLet(CPI(lamLetRecBindings), lamLetRecBindings->var, val, exp);
         PROTECT(expLet);
         exp = newAnfExp_Let(CPI(expLet), expLet);
         PROTECT(exp);
