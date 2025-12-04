@@ -34,7 +34,7 @@ void ppAnfEnv(AnfEnv *env) {
     Index i = 0;
     HashSymbol *key;
     int value;
-    while ((key = iterateCTIntTable(env->table, &i, &value)) != NULL) {
+    while ((key = iterateAnfIntTable(env->table, &i, &value)) != NULL) {
         eprintf("%s: %d\n", key->name, value);
     }
     ppAnfEnv(env->next);

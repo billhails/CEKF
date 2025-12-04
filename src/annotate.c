@@ -56,9 +56,9 @@ static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env);
 static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env);
 static AnfEnvArray *getNsEnvs(AnfEnv *env);
 
-static void hashAddCTVar(CTIntTable *table, HashSymbol *var) {
-    int count = countCTIntTable(table);
-    setCTIntTable(table, var, count);
+static void hashAddCTVar(AnfIntTable *table, HashSymbol *var) {
+    int count = countAnfIntTable(table);
+    setAnfIntTable(table, var, count);
 }
 
 static AnfEnv *annotateAexpLam(AexpLam *x, AnfEnv *env) {
@@ -453,7 +453,7 @@ static AnfEnv *annotateExpEnv(AnfEnv *env) {
     int nbindings = 0;
     AnfEnv *orig = env;
     while (env != NULL) {
-        nbindings += countCTIntTable(env->table);
+        nbindings += countAnfIntTable(env->table);
         if (env->isNamespace) {
             env->nbindings = nbindings;
             return orig;
@@ -532,7 +532,7 @@ static int calculateAdjustment(AnfEnv *env) {
     while (env != NULL) {
         if (env->isLocal) {
             if (env->next) {
-                adjustment += countCTIntTable(env->next->table);
+                adjustment += countAnfIntTable(env->next->table);
             }
             env = env->next;
         } else {
@@ -551,7 +551,7 @@ static bool locate(HashSymbol *var, AnfEnv *env, int *frame, int *offset) {
 #endif
     *frame = 0;
     while (env != NULL) {
-        if (getCTIntTable(env->table, var, offset)) {
+        if (getAnfIntTable(env->table, var, offset)) {
 #ifdef DEBUG_ANNOTATE
             eprintf(" -> [%d:%d]\n", *frame, *offset);
 #endif

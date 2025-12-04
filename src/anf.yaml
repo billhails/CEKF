@@ -37,7 +37,7 @@ structs:
             isNamespace: bool = false
             nbindings: int = 0
             nsEnvs: AnfEnvArray = NULL
-            table: CTIntTable
+            table: AnfIntTable
             next: AnfEnv
 
     AexpLam:
@@ -317,7 +317,7 @@ hashes:
             description: A hash table set of symbols used in ANF.
         data: {}
 
-    CTIntTable:
+    AnfIntTable:
         meta:
             brief: ANF Compile Time Integer Table
             description: A hash table of integers used in ANF.
