@@ -589,7 +589,7 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeCexpMatch);
 }
 
-void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b, LocationArray *L) {
+void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeLetRecBindings);
     while (x != NULL) {
         writeAexp(x->val, b, L);

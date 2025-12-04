@@ -287,13 +287,13 @@ void ppCexpCondCases(CexpCondCases *x) {
 
 void ppCexpLetRec(CexpLetRec *x) {
     eprintf("(letrec ");
-    ppLetRecBindings(x->bindings);
+    ppAnfLetRecBindings(x->bindings);
     eprintf(" ");
     ppAnfExp(x->body);
     eprintf(")");
 }
 
-void ppLetRecBindings(LetRecBindings *x) {
+void ppAnfLetRecBindings(AnfLetRecBindings *x) {
     eprintf("(");
     while (x != NULL) {
         eprintf("(");

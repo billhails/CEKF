@@ -44,7 +44,7 @@ void ppCexpIntCondCases(CexpIntCondCases *x);
 void ppCexpCharCondCases(CexpCharCondCases *x);
 void ppCexpCondCases(CexpCondCases *x);
 void ppCexpLetRec(CexpLetRec *x);
-void ppLetRecBindings(LetRecBindings *x);
+void ppAnfLetRecBindings(AnfLetRecBindings *x);
 void ppCexpAmb(CexpAmb *x);
 void ppCexpCut(CexpCut *x);
 void ppAnfMatchList(AnfMatchList *x);

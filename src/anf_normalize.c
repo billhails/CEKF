@@ -1011,7 +1011,7 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
         Aexp *val = replaceLamExp(lamLetRecBindings->val, NULL);
         PROTECT(val);
         cexpLetRec->bindings =
-            newLetRecBindings(CPI(lamLetRecBindings), lamLetRecBindings->var, val,
+            newAnfLetRecBindings(CPI(lamLetRecBindings), lamLetRecBindings->var, val,
                               cexpLetRec->bindings);
         cexpLetRec->nbindings++;
     } else {

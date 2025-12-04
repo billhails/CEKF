@@ -45,7 +45,7 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpIf(CexpIf *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L);
-void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b, LocationArray *L);
+void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L);
 void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L);

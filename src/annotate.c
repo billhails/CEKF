@@ -242,7 +242,7 @@ static AnfEnv *annotateCexpLetRec(CexpLetRec *x, AnfEnv *env) {
     env = newAnfEnv(CPI(x), true, env);
     UNPROTECT(save);
     save = PROTECT(env);
-    LetRecBindings *bindings = x->bindings;
+    AnfLetRecBindings *bindings = x->bindings;
     while (bindings != NULL) {
         populateAnfEnv(env, bindings->var);
         bindings = bindings->next;
