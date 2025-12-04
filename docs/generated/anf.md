@@ -6,12 +6,12 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 flowchart TD
 AnfSymbolTable --entries--> NULL
 CTIntTable --entries--> int
-CTEnv --isLocal--> bool
-CTEnv --isNamespace--> bool
-CTEnv --nbindings--> int
-CTEnv --nsEnvs--> CTEnvArray
-CTEnv --table--> CTIntTable
-CTEnv --next--> CTEnv
+AnfEnv --isLocal--> bool
+AnfEnv --isNamespace--> bool
+AnfEnv --nbindings--> int
+AnfEnv --nsEnvs--> AnfEnvArray
+AnfEnv --table--> CTIntTable
+AnfEnv --next--> AnfEnv
 AexpLam --nargs--> int
 AexpLam --letRecOffset--> int
 AexpLam --args--> AexpVarList
@@ -99,7 +99,7 @@ AnfExp --lookup--> ExpLookup
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
-CTEnvArray["CTEnvArray[]"] --entries--> CTEnv
+AnfEnvArray["AnfEnvArray[]"] --entries--> AnfEnv
 ```
 
 > Generated from src/anf.yaml by tools/makeAST.py

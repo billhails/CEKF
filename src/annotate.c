@@ -36,46 +36,46 @@
 #  include "anf_pp.h"
 #endif
 
-static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset);
-static void populateCTEnv(CTEnv *env, HashSymbol *var);
+static bool locate(HashSymbol *var, AnfEnv *env, int *frame, int *offset);
+static void populateAnfEnv(AnfEnv *env, HashSymbol *var);
 
-static CTEnv *annotateExp(AnfExp *x, CTEnv *env);
-static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env);
-static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env);
-static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env);
-static CTEnv *annotateAexpList(AexpList *x, CTEnv *env);
-static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env);
-static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env);
-static CTEnv *annotateCexpCond(CexpCond *x, CTEnv *env);
-static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env);
-static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env);
-static CTEnv *annotateCexpAmb(CexpAmb *x, CTEnv *env);
-static CTEnv *annotateCexpCut(CexpCut *x, CTEnv *env);
-static CTEnv *annotateExpLet(ExpLet *x, CTEnv *env);
-static CTEnv *annotateAexp(Aexp *x, CTEnv *env);
-static CTEnv *annotateCexp(Cexp *x, CTEnv *env);
-static CTEnvArray *getNsEnvs(CTEnv *env);
+static AnfEnv *annotateExp(AnfExp *x, AnfEnv *env);
+static AnfEnv *annotateAexpLam(AexpLam *x, AnfEnv *env);
+static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, AnfEnv *env);
+static AnfEnv *annotateAexpPrimApp(AexpPrimApp *x, AnfEnv *env);
+static AnfEnv *annotateAexpList(AexpList *x, AnfEnv *env);
+static AnfEnv *annotateCexpApply(CexpApply *x, AnfEnv *env);
+static AnfEnv *annotateCexpIf(CexpIf *x, AnfEnv *env);
+static AnfEnv *annotateCexpCond(CexpCond *x, AnfEnv *env);
+static AnfEnv *annotateCexpCondCases(CexpCondCases *x, AnfEnv *env);
+static AnfEnv *annotateCexpLetRec(CexpLetRec *x, AnfEnv *env);
+static AnfEnv *annotateCexpAmb(CexpAmb *x, AnfEnv *env);
+static AnfEnv *annotateCexpCut(CexpCut *x, AnfEnv *env);
+static AnfEnv *annotateExpLet(ExpLet *x, AnfEnv *env);
+static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env);
+static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env);
+static AnfEnvArray *getNsEnvs(AnfEnv *env);
 
 static void hashAddCTVar(CTIntTable *table, HashSymbol *var) {
     int count = countCTIntTable(table);
     setCTIntTable(table, var, count);
 }
 
-static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env) {
+static AnfEnv *annotateAexpLam(AexpLam *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpLam ");
     ppAexpLam(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(CPI(x), false, env);
+    env = newAnfEnv(CPI(x), false, env);
     UNPROTECT(save);
     save = PROTECT(env);
     AexpVarList *args = x->args;
     while (args != NULL) {
-        populateCTEnv(env, args->var);
+        populateAnfEnv(env, args->var);
         args = args->next;
     }
     annotateExp(x->exp, env);
@@ -83,12 +83,12 @@ static CTEnv *annotateAexpLam(AexpLam *x, CTEnv *env) {
     return env;
 }
 
-static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env) {
+static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpVar ");
     ppAexpVar(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     int frame;
@@ -105,12 +105,12 @@ static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, CTEnv *env
     cant_happen("no binding for var '%s' in annotateAexpVar", x->name);
 }
 
-static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
+static AnfEnv *annotateAexpPrimApp(AexpPrimApp *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpPrimApp ");
     ppAexpPrimApp(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexp(x->exp1, env);
@@ -118,15 +118,15 @@ static CTEnv *annotateAexpPrimApp(AexpPrimApp *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateAexpList(AexpList *x, CTEnv *env) {
+static AnfEnv *annotateAexpList(AexpList *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpList ");
     ppAexpList(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
-    CTEnv *res;
+    AnfEnv *res;
     while (x != NULL) {
         res = annotateAexp(x->exp, env);
         x = x->next;
@@ -134,12 +134,12 @@ static CTEnv *annotateAexpList(AexpList *x, CTEnv *env) {
     return res;
 }
 
-static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env) {
+static AnfEnv *annotateCexpApply(CexpApply *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpApply ");
     ppCexpApply(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexp(x->function, env);
@@ -147,12 +147,12 @@ static CTEnv *annotateCexpApply(CexpApply *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env) {
+static AnfEnv *annotateCexpIf(CexpIf *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpIf ");
     ppCexpIf(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexp(x->condition, env);
@@ -161,12 +161,12 @@ static CTEnv *annotateCexpIf(CexpIf *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpCond(CexpCond *x, CTEnv *env) {
+static AnfEnv *annotateCexpCond(CexpCond *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpCond ");
     ppCexpCond(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexp(x->condition, env);
@@ -174,7 +174,7 @@ static CTEnv *annotateCexpCond(CexpCond *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
+static AnfEnv *annotateCexpIntCondCases(CexpIntCondCases *x, AnfEnv *env) {
     if (x == NULL)
         return env;
     annotateExp(x->body, env);
@@ -182,7 +182,7 @@ static CTEnv *annotateCexpIntCondCases(CexpIntCondCases *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
+static AnfEnv *annotateCexpCharCondCases(CexpCharCondCases *x, AnfEnv *env) {
     if (x == NULL)
         return env;
     annotateExp(x->body, env);
@@ -190,14 +190,14 @@ static CTEnv *annotateCexpCharCondCases(CexpCharCondCases *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
+static AnfEnv *annotateCexpCondCases(CexpCondCases *x, AnfEnv *env) {
     if (x == NULL)
         return env;
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpCondCases ");
     ppCexpCondCases(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     switch (x->type) {
@@ -211,7 +211,7 @@ static CTEnv *annotateCexpCondCases(CexpCondCases *x, CTEnv *env) {
     }
 }
 
-static CTEnv *annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
+static AnfEnv *annotateLetRecLam(Aexp *x, AnfEnv *env, int letRecOffset) {
     switch (x->type) {
         case AEXP_TYPE_LAM: {
             AexpLam *lam = x->val.lam;
@@ -230,21 +230,21 @@ static CTEnv *annotateLetRecLam(Aexp *x, CTEnv *env, int letRecOffset) {
     return env;
 }
 
-static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
+static AnfEnv *annotateCexpLetRec(CexpLetRec *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpLetRec ");
     ppCexpLetRec(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     int save = PROTECT(env);
-    env = newCTEnv(CPI(x), true, env);
+    env = newAnfEnv(CPI(x), true, env);
     UNPROTECT(save);
     save = PROTECT(env);
     LetRecBindings *bindings = x->bindings;
     while (bindings != NULL) {
-        populateCTEnv(env, bindings->var);
+        populateAnfEnv(env, bindings->var);
         bindings = bindings->next;
     }
     bindings = x->bindings;
@@ -256,12 +256,12 @@ static CTEnv *annotateCexpLetRec(CexpLetRec *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpAmb(CexpAmb *x, CTEnv *env) {
+static AnfEnv *annotateCexpAmb(CexpAmb *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpAmb ");
     ppCexpAmb(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateExp(x->exp1, env);
@@ -269,38 +269,38 @@ static CTEnv *annotateCexpAmb(CexpAmb *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpCut(CexpCut *x, CTEnv *env) {
+static AnfEnv *annotateCexpCut(CexpCut *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpCut ");
     ppCexpCut(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateExp(x->exp, env);
     return env;
 }
 
-static CTEnv *annotateExpLet(ExpLet *x, CTEnv *env) {
+static AnfEnv *annotateExpLet(ExpLet *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateExpLet ");
     ppExpLet(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateExp(x->val, env);
     int save = PROTECT(env);
-    env = newCTEnv(CPI(x), true, env);
+    env = newAnfEnv(CPI(x), true, env);
     UNPROTECT(save);
     save = PROTECT(env);
-    populateCTEnv(env, x->var);
+    populateAnfEnv(env, x->var);
     annotateExp(x->body, env);
     UNPROTECT(save);
     return env;
 }
 
-static CTEnvArray *getNsEnvs(CTEnv *env) {
+static AnfEnvArray *getNsEnvs(AnfEnv *env) {
     while (env->next != NULL) {
         env = env->next; // should be at the root
     }
@@ -318,49 +318,49 @@ static HashSymbol *makeNsName(Index index) {
     return newSymbol(buf);
 }
 
-static CTEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, CTEnv *env) {
-    CTEnvArray *nsEnvs = getNsEnvs(env);
+static AnfEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, AnfEnv *env) {
+    AnfEnvArray *nsEnvs = getNsEnvs(env);
     for (Index i = 0; i < x->size; ++i) {
         HashSymbol *nsName = makeNsName(i);
-        populateCTEnv(env, nsName);
+        populateAnfEnv(env, nsName);
     }
     for (Index i = 0; i < x->size; ++i) {
-        CTEnv *env2 = newCTEnv(CPI(x->entries[i]->body), true, env);
+        AnfEnv *env2 = newAnfEnv(CPI(x->entries[i]->body), true, env);
         int save = PROTECT(env2);
         env2->isNamespace = true;
-        CTEnv *env3 = annotateExp(x->entries[i]->body, env2);
+        AnfEnv *env3 = annotateExp(x->entries[i]->body, env2);
         PROTECT(env3);
         x->entries[i]->nbindings = env2->nbindings;
-        pushCTEnvArray(nsEnvs, env3);
+        pushAnfEnvArray(nsEnvs, env3);
         UNPROTECT(save);
     }
     return env;
 }
 
-static CTEnv *annotateAexpNamespaces(AexpNamespaces *x, CTEnv *env) {
+static AnfEnv *annotateAexpNamespaces(AexpNamespaces *x, AnfEnv *env) {
     annotateAexpNamespaceArray(x->namespaces, env);
     annotateExp(x->body, env);
     return env;
 }
 
-static CTEnv *annotateAexpMakeVec(AexpMakeVec *x, CTEnv *env) {
+static AnfEnv *annotateAexpMakeVec(AexpMakeVec *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexpMakeVec ");
     ppAexpMakeVec(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexpList(x->args, env);
     return env;
 }
 
-static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
+static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateAexp ");
     ppAexp(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     switch (x->type) {
@@ -388,12 +388,12 @@ static CTEnv *annotateAexp(Aexp *x, CTEnv *env) {
     }
 }
 
-static CTEnv *annotateMatchList(MatchList *x, CTEnv *env) {
+static AnfEnv *annotateMatchList(MatchList *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateMatchList ");
     ppMatchList(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     if (x == NULL)
@@ -403,12 +403,12 @@ static CTEnv *annotateMatchList(MatchList *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexpMatch(CexpMatch *x, CTEnv *env) {
+static AnfEnv *annotateCexpMatch(CexpMatch *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexpMatch ");
     ppCexpMatch(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     annotateAexp(x->condition, env);
@@ -416,12 +416,12 @@ static CTEnv *annotateCexpMatch(CexpMatch *x, CTEnv *env) {
     return env;
 }
 
-static CTEnv *annotateCexp(Cexp *x, CTEnv *env) {
+static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateCexp ");
     ppCexp(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     switch (x->type) {
@@ -449,9 +449,9 @@ static CTEnv *annotateCexp(Cexp *x, CTEnv *env) {
     }
 }
 
-static CTEnv *annotateExpEnv(CTEnv *env) {
+static AnfEnv *annotateExpEnv(AnfEnv *env) {
     int nbindings = 0;
-    CTEnv *orig = env;
+    AnfEnv *orig = env;
     while (env != NULL) {
         nbindings += countCTIntTable(env->table);
         if (env->isNamespace) {
@@ -463,13 +463,13 @@ static CTEnv *annotateExpEnv(CTEnv *env) {
     cant_happen("failed to find namespace env");
 }
 
-static AexpAnnotatedVar *lookupNamespaceInEnv(ParserInfo I, Index index, CTEnv *env) {
+static AexpAnnotatedVar *lookupNamespaceInEnv(ParserInfo I, Index index, AnfEnv *env) {
     HashSymbol *name = makeNsName(index);
     return annotateAexpVar(I, name, env);
 }
 
-static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
-    CTEnvArray *envs = getNsEnvs(env);
+static AnfEnv *annotateExpLookup(ExpLookup *lookup, AnfEnv *env) {
+    AnfEnvArray *envs = getNsEnvs(env);
 #ifdef SAFETY_chECKS
     if (lookup->namespace >= envs->size) {
         cant_happen("namespace index %u out of range", lookup->namespace);
@@ -479,12 +479,12 @@ static CTEnv *annotateExpLookup(ExpLookup *lookup, CTEnv *env) {
     return annotateExp(lookup->body, envs->entries[lookup->namespace]);
 }
 
-static CTEnv * annotateExp(AnfExp *x, CTEnv *env) {
+static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateExp ");
     ppExp(x);
     eprintf("  ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
     eprintf("\n");
 #endif
     switch (x->type) {
@@ -505,29 +505,29 @@ static CTEnv * annotateExp(AnfExp *x, CTEnv *env) {
     }
 }
 
-static void addBuiltInsToCTEnv(CTEnv *env, BuiltIns *b) {
+static void addBuiltInsToAnfEnv(AnfEnv *env, BuiltIns *b) {
     for (Index i = 0; i < b->size; i++) {
         // Bind only internal names; external names are provided by wrappers.
-        populateCTEnv(env, b->entries[i]->internalName);
+        populateAnfEnv(env, b->entries[i]->internalName);
     }
 }
 
 void annotateAnf(AnfExp *x, BuiltIns *b) {
-    CTEnv *env = newCTEnv(CPI(x), false, NULL);
+    AnfEnv *env = newAnfEnv(CPI(x), false, NULL);
     int save = PROTECT(env);
-    env->nsEnvs = newCTEnvArray();
-    addBuiltInsToCTEnv(env, b);
-    env = newCTEnv(CPI(x), false, env);
+    env->nsEnvs = newAnfEnvArray();
+    addBuiltInsToAnfEnv(env, b);
+    env = newAnfEnv(CPI(x), false, env);
     REPLACE_PROTECT(save, env);
     annotateExp(x, env);
     UNPROTECT(save);
 }
 
-static void populateCTEnv(CTEnv *env, HashSymbol *var) {
+static void populateAnfEnv(AnfEnv *env, HashSymbol *var) {
     hashAddCTVar(env->table, var);
 }
 
-static int calculateAdjustment(CTEnv *env) {
+static int calculateAdjustment(AnfEnv *env) {
     int adjustment = 0;
     while (env != NULL) {
         if (env->isLocal) {
@@ -542,12 +542,12 @@ static int calculateAdjustment(CTEnv *env) {
     return adjustment;
 }
 
-static bool locate(HashSymbol *var, CTEnv *env, int *frame, int *offset) {
+static bool locate(HashSymbol *var, AnfEnv *env, int *frame, int *offset) {
 #ifdef DEBUG_ANNOTATE
     eprintf("********************* locate ");
     ppAexpVar(var);
     eprintf(" in ");
-    ppCTEnv(env);
+    ppAnfEnv(env);
 #endif
     *frame = 0;
     while (env != NULL) {

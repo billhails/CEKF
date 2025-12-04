@@ -28,7 +28,7 @@ config:
 
 
 structs:
-    CTEnv:
+    AnfEnv:
         meta:
             brief: ANF Compile Time Environment
             description: lookup for the run-time locations of variables.
@@ -36,9 +36,9 @@ structs:
             isLocal: bool
             isNamespace: bool = false
             nbindings: int = 0
-            nsEnvs: CTEnvArray = NULL
+            nsEnvs: AnfEnvArray = NULL
             table: CTIntTable
-            next: CTEnv
+            next: AnfEnv
 
     AexpLam:
         meta:
@@ -332,12 +332,12 @@ arrays:
         data:
             entries: AexpNamespace
 
-    CTEnvArray:
+    AnfEnvArray:
         meta:
             brief: ANF Compile Time Environment Array
             description: An array of compile time environments in ANF.
         data:
-            entries: CTEnv
+            entries: AnfEnv
 
 primitives: !include primitives.yaml
 

@@ -25,7 +25,7 @@
 #include "anf_pp.h"
 #include "hash.h"
 
-void ppCTEnv(CTEnv *env) {
+void ppAnfEnv(AnfEnv *env) {
     eprintf("[\n");
     if (env == NULL) {
         eprintf("]\n");
@@ -37,7 +37,7 @@ void ppCTEnv(CTEnv *env) {
     while ((key = iterateCTIntTable(env->table, &i, &value)) != NULL) {
         eprintf("%s: %d\n", key->name, value);
     }
-    ppCTEnv(env->next);
+    ppAnfEnv(env->next);
     eprintf("]\n");
 }
 

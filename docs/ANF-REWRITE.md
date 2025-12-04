@@ -1,14 +1,14 @@
 # ANF Rewrite Proposal
 
-The current ANF conversion stage in `anf_normalize.c` and `anf.yaml` is clumsy, inelegant and verbose. The main reason for that was the decision that since C does not have native support for closures, the continuation-passing of the classic ANF-conversion algorithm was not available and instead the code must jump through hoops passing pre-computed "tail" structures to represent continuation results.
+The current ANF conversion stage in `anf_normalize.c` and `anf.yaml` is clumsy, inelegant, verbose and probably incorrect. The main reason for that was the decision that since C does not have native support for closures, the continuation passing style of the classic ANF-conversion algorithm was not an option. Instead the code must jump through hoops passing pre-computed "tail" structures to represent continuation results.
 
-However it's not really difficult to imitate closures and continuations in C. All we need is a pair of a C procedure and a map  containing its free variables. This can be a new structure that gets passed as the `k` argument to those C procedures that require it. We can imagine a very simple `INVOKE(k, arg)` C macro or inline procedure to call the contained procedure in `k` passing it `arg` and the map from `k`. At the point the continuation (closure) is constructed, the required free variables are added to a new map and the map plus the static procedure are bound in a new `AnfKont` struct.
+However it's not really that difficult to imitate closures and continuations in C. All we need is a pair of a C procedure and a map  containing its free variables. This pair can be a new structure that gets passed as the `k` argument to those C procedures that require it. We can imagine a very simple `INVOKE(k, arg)` C macro or inline procedure to call the contained procedure in `k` passing it `arg` and the map from `k`. At the point the continuation (closure) is constructed, the required free variables are added to a new map and the map plus the static procedure are bound in this new struct.
 
 ## Implementation Steps
 
 ### Renaming
 
-As a preliminary I'd like to rename all of the entities in `anf.yaml` to have an `Anf` prefix (`AnfExp`, `AnfCexp` etc.) This just brings the code in line with other stages that have their own prefix namespace and makes the pairing of i.e. `LamExp` with `AnfExp` easier to follow.
+As a preliminary I'd like to rename all of the entities in `anf.yaml` to have an `Anf` prefix (`AnfExp`, `AnfCexp` etc.) This just brings the code in line with other stages that have their own prefix namespace and makes the concordance of i.e. `LamExp` with `AnfExp` easier to follow.
 
 ### Typedef
 
@@ -21,7 +21,9 @@ struct AnfExp; // forward declaration
 typedef struct AnfExp *(*AnfContProc)(struct AnfExp *, struct AnfMap *);
 ```
 
-### New AnfKont struct and AnfMap map
+There is precedence for this in the `PrattParselet` type used by the parser.
+
+### New AnfKont struct and AnfMap Hash
 
 ```yaml
 structs:
@@ -42,22 +44,22 @@ hashes:
 ### Inline Function to Invoke a Continuation
 
 ```C
-static inline AnfExp *invoke(AnfKont *k, AnfExp *arg) {
+static inline AnfExp *INVOKE(AnfKont *k, AnfExp *arg) {
     return k->proc(arg, k->map);
 }
 ```
 
 ### Translate the Existing Algorithm to C
 
-This is the payoff. Let's break down the algorithm to get to the details. I'm particularily interested in identifying where all the closures are created and invoked.
+This is the payoff. Let's break down the algorithm to get to the details. I'm particularily interested in identifying where all the continuations are created and invoked, so I'm delimiting the continuations themselves in square brackets.
 
-#### noramalize-term
+#### 1. noramalize-term
 
 ```scheme
 (define (normalize-term e) (normalize e [λ (x) x]))
 ```
 
-For clarity, the continuation is delimited by square brackets. In this case it is trivial, the continuation is the identity function:
+In this case the translation is trivial, the continuation is the identity function:
 
 ```C
 static AnfExp *identity(AnfExp *x,
@@ -74,7 +76,7 @@ static AnfExp *normalizeTerm(LamExp *lam) {
 }
 ```
 
-#### normalize-name
+#### 2. normalize-name
 
 ```scheme
 (define (normalize-name e k)
@@ -94,10 +96,10 @@ AnfExp normalizeNameKont(AnfExp *x, AnfMap *map) {
     AnfKont *k;
     getAnfMap(map, TOK_K(), &k);
     if (IS_VALUE(x)) {
-        return invoke(k, x);
+        return INVOKE(k, x);
     }
     HashSymbol *y = genSymDollar("y");
-    AnfExp *body = invoke(k, y); // pseudocode, need to make y an AnfExp
+    AnfExp *body = INVOKE(k, y); // pseudocode, need to make y an AnfExp
     int save = PROTECT(body);
     AnfExp *anfLet = makAnfLet(y, x, body); // more pseudocode
     UNPROTECT(save);
@@ -116,7 +118,7 @@ AnfExp *normalizeName(LamExp *e, AnfKont *k) {
 }
 ```
 
-#### normalize
+#### 3. normalize
 
 Big dispatch function
 
@@ -148,7 +150,13 @@ Big dispatch function
                         [λ (t*) (k `(,t . ,t*))])]))))
 ```
 
-Decidedly non-trivial, but let's do it one case at a time.
+Decidedly non-trivial, but let's do it one case at a time,
+and lets assume all of the dispatches look like this:
+
+```C
+case LAMEXP_TYPE_THING:
+    return normalizeThing(lamExp->val.thing, k);
+```
 
 First a lambda expression:
 
@@ -157,14 +165,8 @@ First a lambda expression:
     (k `(λ ,params ,(normalize-term body))))
 ```
 
-There's no continuation being created here, so lets assume all of the dispatches look like this:
-
-```C
-case LAMEXP_TYPE_LAM:
-    return normalizeLam(lamExp->val.lam, k);
-```
-
-and then for lambdas it's:
+There's no continuation being created here (the λ is the result).
+I'm handwaving some of the details, `<convert>` is some unspecified process.
 
 ```C
 static AnfExp *normalizeLam(LamLam *lam, AnfKont *k) {
@@ -174,7 +176,7 @@ static AnfExp *normalizeLam(LamLam *lam, AnfKont *k) {
     PROTECT(varlist);
     AnfAexpLam *anfLam = newAnfAexpLam(varlist, body);
     PROTECT(body);
-    AnfExp *result = invoke(k, anfLam);
+    AnfExp *result = INVOKE(k, anfLam);
     UNPROTECT(save);
     return result;
 }
@@ -191,7 +193,7 @@ Next simple atomic values (symbols and constants):
 static AnfExp *normalizeValue(LamValue *val, AnfKont *k) {
     AnfAexpValue *v = <convert>(val);
     int save = PROTECT(v);
-    AnfExp *result = invoke(k, v);
+    AnfExp *result = INVOKE(k, v);
     UNPROTECT(save);
     return result;
 }
@@ -215,7 +217,7 @@ However that requires the map to also deal with `LamExp` types, which might resu
     (let ((neb (normalize e-body k)))
         (normalize eb
             [λ (e-r)
-                `(let ((,x ,e-r)) ,neb)]))
+                `(let ((,x ,e-r)) ,neb)])))
 ```
 
 Now the continuation only has free variables `x` and `neb`.
@@ -281,7 +283,7 @@ static AnfExp *normalizeIfKont(AnfAexp *cond, AnfMap *map) {
     getAnfMap(map, TOK_ALT(), &alt);
     AnfCexpIf *iff = newAnfCexpIf(cond, cons, alt);
     PROTECT(iff);
-    AnfExp *result = invoke(k, iff);
+    AnfExp *result = INVOKE(k, iff);
     UNPROTECT(save);
     return result;
 }
@@ -325,7 +327,7 @@ static AnfExp *normalizeCallInnerKont(AnfExpr *ts, AnfMap *map) {
     getAnfMap(map, TOK_K(), &k);
     AnfExp *apply = newAnfApply(t, ts);
     int save = PROTECT(apply);
-    AnfExp *result = invoke(k, apply);
+    AnfExp *result = INVOKE(k, apply);
     UNPROTECT(save);
     return result;
 }
@@ -354,7 +356,7 @@ static AnfExp *normalizeCall(LamApply *apply, AnfKont *k) {
 }
 ```
 
-#### normalize-names
+#### normalize-name*
 
 ```scheme
 (define (normalize-name* M* k)
@@ -375,7 +377,7 @@ static AnfExp *normalizeNamesInnerKont(AnfExp *ts, AnfMap *map) {
     getAnfMap(map, TOK_T(), &t);
     AnfCexpApply *apply = newAnfApply(t, ts);
     int save = PROTECT(apply);
-    AnfExp *result = invoke(k, apply);
+    AnfExp *result = INVOKE(k, apply);
     UNPROTECT(save);
     return result;
 }
@@ -401,7 +403,7 @@ Lastly the procedure itself:
 ```C
 static AnfExp *normalizeNames(LamList *Ms, AnfKont *k) {
     if (Ms == NULL) {
-        return invoke(k, NULL);
+        return INVOKE(k, NULL);
     } else {
         AnfMap *map = newAnfMap();
         int save = PROTECT(map);

@@ -26,7 +26,7 @@
 #  include "common.h"
 #  include "anf.h"
 
-void ppCTEnv(CTEnv *x);
+void ppAnfEnv(AnfEnv *x);
 void ppAexpLam(AexpLam *x);
 void ppAexpVarList(AexpVarList *x);
 void ppAexpVar(HashSymbol *x);
