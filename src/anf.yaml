@@ -205,7 +205,7 @@ structs:
             val: AnfExp
             body: AnfExp
 
-    ExpLookup:
+    AnfExpLookup:
         data:
             namespace: index
             annotatedVar: AexpAnnotatedVar = NULL
@@ -279,7 +279,7 @@ unions:
             aexp: Aexp
             cexp: Cexp
             let: AnfExpLet
-            lookup: ExpLookup
+            lookup: AnfExpLookup
 
 enums:
     AexpAnnotatedVarType:

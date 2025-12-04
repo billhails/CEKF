@@ -468,7 +468,7 @@ static AexpAnnotatedVar *lookupNamespaceInEnv(ParserInfo I, Index index, AnfEnv 
     return annotateAexpVar(I, name, env);
 }
 
-static AnfEnv *annotateExpLookup(ExpLookup *lookup, AnfEnv *env) {
+static AnfEnv *annotateAnfExpLookup(AnfExpLookup *lookup, AnfEnv *env) {
     AnfEnvArray *envs = getNsEnvs(env);
 #ifdef SAFETY_chECKS
     if (lookup->namespace >= envs->size) {
@@ -499,7 +499,7 @@ static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
         case ANFEXP_TYPE_DONE:
             return env;
         case ANFEXP_TYPE_LOOKUP:
-            return annotateExpLookup(x->val.lookup, env);
+            return annotateAnfExpLookup(x->val.lookup, env);
         default:
             cant_happen("unrecognized type %s", anfExpTypeName(x->type));
     }

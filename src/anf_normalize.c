@@ -683,7 +683,7 @@ static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail) {
 static AnfExp *normalizeLamLookup(LamLookup *lookup, AnfExp *tail) {
     AnfExp *rest = normalize(lookup->exp, tail);
     int save = PROTECT(rest);
-    ExpLookup *exp = newExpLookup(CPI(lookup), lookup->nsid, rest);
+    AnfExpLookup *exp = newAnfExpLookup(CPI(lookup), lookup->nsid, rest);
     PROTECT(exp);
     AnfExp *res = newAnfExp_Lookup(CPI(exp), exp);
     UNPROTECT(save);

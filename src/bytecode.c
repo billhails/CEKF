@@ -634,7 +634,7 @@ void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAnfExpLet);
 }
 
-void writeLookup(ExpLookup *x, ByteCodeArray *b, LocationArray *L) {
+void writeLookup(AnfExpLookup *x, ByteCodeArray *b, LocationArray *L) {
 #ifdef SAFETY_CHECKS
     if (x->annotatedVar == NULL) {
         cant_happen("annotated var missing from lookup");
