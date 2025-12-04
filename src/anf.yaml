@@ -181,7 +181,7 @@ structs:
             description: A let-rec (recursive let) expression in ANF.
         data:
             nbindings: int
-            bindings: LetRecBindings
+            bindings: AnfLetRecBindings
             body: AnfExp
 
     CexpAmb:
@@ -220,14 +220,14 @@ structs:
             body: AnfExp
             next: AnfMatchList
 
-    LetRecBindings:
+    AnfLetRecBindings:
         meta:
             brief: ANF Let Rec Bindings
             description: A list of let-rec (recursive let) bindings in ANF.
         data:
             var: HashSymbol
             val: Aexp
-            next: LetRecBindings
+            next: AnfLetRecBindings
 
 unions:
     CexpCondCases:
