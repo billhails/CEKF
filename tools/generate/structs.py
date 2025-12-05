@@ -10,6 +10,7 @@ from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
 
 class SimpleStruct(Base):
     """
@@ -106,15 +107,15 @@ class SimpleStruct(Base):
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.mark_signature(self.getName(), myType)
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.free_signature(self.getName(), myType)
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.print_signature(self.getName(), myType)
 
     def getCtype(self, astType, catalog):
         return f"{astType} *"
@@ -140,7 +141,7 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def getNewArgs(self, catalog):
         return [x for x in self.fields if x.default is None and not x.isSelfInitializing(catalog)]
@@ -159,12 +160,12 @@ class SimpleStruct(Base):
         if catalog.parserInfo:
             args = ['ParserInfo _PI'] + args
 
-        return f"{myType} new{myName}({', '.join(args)})"
+        return SignatureHelper.new_signature(myName, myType, args)
 
     def getCopySignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} copy{myName}({myType} o)"
+        return SignatureHelper.copy_signature(myName, myType)
 
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')

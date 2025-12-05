@@ -12,6 +12,7 @@ from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
 
 
 class SimpleArray(Base):
@@ -141,7 +142,7 @@ class SimpleArray(Base):
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.mark_signature(self.getName(), myType)
 
     def printFreeDeclaration(self, catalog):
         c = self.comment('printFreeDeclaration')
@@ -169,7 +170,7 @@ class SimpleArray(Base):
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.free_signature(self.getName(), myType)
 
     def getObjType(self):
         return ('objtype_' + self.getName()).upper()
@@ -195,12 +196,12 @@ class SimpleArray(Base):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
-        return "{myType} new{myName}({args})".format(myType=myType, myName=self.getName(), args=', '.join(args))
+        return SignatureHelper.new_signature(self.getName(), myType, args)
 
     def getCopySignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} copy{myName}({myType} o)"
+        return SignatureHelper.copy_signature(myName, myType)
 
     def printNullEntries(self):
         c = self.comment('printNullEntries')
@@ -707,7 +708,7 @@ class SimpleArray(Base):
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.print_signature(self.getName(), myType)
 
     def getCtype(self, astType, catalog):
         return f"{astType} *"
@@ -746,7 +747,7 @@ class SimpleArray(Base):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def printCompareFunction(self, catalog):
         c = self.comment('printCompareFunction')

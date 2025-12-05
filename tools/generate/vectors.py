@@ -10,6 +10,7 @@ from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
 
 
 class SimpleVector(Base):
@@ -50,7 +51,7 @@ class SimpleVector(Base):
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} new{myName}(int size)"
+        return SignatureHelper.new_signature(myName, myType, ["int size"])
 
     def comment(self, method):
         return CommentGen.method_comment('SimpleVector', method)
@@ -173,11 +174,11 @@ class SimpleVector(Base):
     def getCopySignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} copy{myName}({myType} o)"
+        return SignatureHelper.copy_signature(myName, myType)
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.print_signature(self.getName(), myType)
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
@@ -193,7 +194,7 @@ class SimpleVector(Base):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
@@ -271,7 +272,7 @@ class SimpleVector(Base):
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.mark_signature(self.getName(), myType)
 
     def printFreeDeclaration(self, catalog):
         c = self.comment('printFreeDeclaration')
@@ -280,7 +281,7 @@ class SimpleVector(Base):
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.free_signature(self.getName(), myType)
 
     def printFreeFunction(self, catalog):
         myType = self.getTypeDeclaration(catalog)

@@ -25,6 +25,7 @@ from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
 
 
 class SimpleHash(Base):
@@ -74,6 +75,7 @@ class SimpleHash(Base):
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myConstructor = self.getConstructorName()
+        # Hash uses full constructor name (already has 'new' prefix)
         return f"{myType}{myConstructor}(void)"
 
     def getSetDeclaration(self, catalog):

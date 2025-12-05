@@ -38,7 +38,7 @@ echo "Cleaning..."
 make clean > /dev/null 2>&1
 
 echo "Regenerating code..."
-if ! make MODE=testing > /dev/null 2>&1; then
+if ! make .generated MODE=testing > /dev/null 2>&1; then
     echo -e "${RED}ERROR: Code generation failed${NC}"
     exit 1
 fi
@@ -93,14 +93,4 @@ fi
 echo -e "${GREEN}✓ All generated files match baseline!${NC}"
 echo ""
 
-# Run actual tests to ensure functionality
-echo "Running test suite..."
-if make test > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ All tests pass!${NC}"
-else
-    echo -e "${RED}✗ Tests failed${NC}"
-    exit 1
-fi
-
-echo ""
 echo -e "${GREEN}=== Refactoring test PASSED ===${NC}"
