@@ -13,6 +13,7 @@ from .structs import SimpleStruct
 from .enums import DiscriminatedUnionEnum
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class DiscriminatedUnion(SimpleStruct):
@@ -197,7 +198,7 @@ class DiscriminatedUnionUnion(Base):
         return self.name + "Val"
 
     def getTypeDeclaration(self, catalog):
-        return "union {name} ".format(name=self.getName())
+        return TypeHelper.union_type(self.getName())
 
     def getFieldName(self):
         return 'val'

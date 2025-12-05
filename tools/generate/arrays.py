@@ -11,6 +11,7 @@ from .base import Base
 from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class SimpleArray(Base):
@@ -48,9 +49,7 @@ class SimpleArray(Base):
         self.tagField = SimpleField(self.name, "_tag", "string")
 
     def getTypeDeclaration(self, catalog):
-        a = '' if self.isInline(catalog) else '*'
-        name = self.getName()
-        return f"struct {name} {a}"
+        return TypeHelper.struct_type(self.getName(), self.isInline(catalog))
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         myName=self.getName()

@@ -9,6 +9,7 @@ from .base import Base, EnumField
 from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 class SimpleStruct(Base):
     """
@@ -51,11 +52,7 @@ class SimpleStruct(Base):
         return SimpleField(self.name, fieldName, fieldType)
 
     def getTypeDeclaration(self, catalog):
-        name=self.getName()
-        if self.isInline(catalog):
-            return f"struct {name} "
-        else:
-            return f"struct {name} *"
+        return TypeHelper.struct_type(self.getName(), self.isInline(catalog))
 
     def getObjType(self):
         return ('objtype_' + self.getName()).upper()

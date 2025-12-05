@@ -24,6 +24,7 @@ from .base import Base
 from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class SimpleHash(Base):
@@ -60,8 +61,7 @@ class SimpleHash(Base):
         return f"new{myName}"
 
     def getTypeDeclaration(self, catalog):
-        myName = self.getName()
-        return f"struct {myName} *"
+        return TypeHelper.struct_type(self.getName(), is_inline=False)
 
     def comment(self, method):
         return CommentGen.method_comment('SimpleHash', method)

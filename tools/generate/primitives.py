@@ -23,6 +23,7 @@ Primitive types - built-in types defined in primitives.yaml
 from .base import Base
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class Primitive(Base):
@@ -101,7 +102,7 @@ class Primitive(Base):
             print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def getTypeDeclaration(self, catalog):
-        return self.cname
+        return TypeHelper.primitive_type(self.cname)
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')

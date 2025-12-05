@@ -23,6 +23,7 @@ Enum structures
 from .base import Base, EnumField
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class SimpleEnum(Base):
@@ -189,7 +190,7 @@ class DiscriminatedUnionEnum(Base):
         print("")
 
     def getTypeDeclaration(self, catalog):
-        return "enum {name} ".format(name=self.getName())
+        return TypeHelper.enum_type(self.getName())
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')

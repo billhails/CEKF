@@ -34,3 +34,6 @@ gcov_output/
 coverage.info
 coverage_filtered.info
 test_output.log
+
+# Refactoring testing baseline (optional: remove this line to track in git)
+test_baseline/

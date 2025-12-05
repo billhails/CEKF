@@ -9,6 +9,7 @@ from .base import Base
 from .fields import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class SimpleVector(Base):
@@ -89,7 +90,7 @@ class SimpleVector(Base):
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def getTypeDeclaration(self, catalog):
-        return "struct {name} *".format(name=self.getName())
+        return TypeHelper.struct_type(self.getName(), is_inline=False)
 
     def getDefineValue(self):
         return 'x'
