@@ -22,6 +22,7 @@ Enum structures
 
 from .base import Base, EnumField
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class SimpleEnum(Base):
@@ -44,7 +45,7 @@ class SimpleEnum(Base):
         print(f'{self.getName()}["enum {self.getName()}"]')
 
     def comment(self, method):
-        return f'// SimpleEnum.{method}'
+        return CommentGen.method_comment('SimpleEnum', method)
 
     def getDefineValue(self):
         return 'x'
@@ -146,7 +147,7 @@ class DiscriminatedUnionEnum(Base):
         self.fields = fields
 
     def comment(self, method):
-        return f'// DiscriminatedUnionEnum.{method}'
+        return CommentGen.method_comment('DiscriminatedUnionEnum', method)
 
     def getName(self):
         return self.name + "Type"

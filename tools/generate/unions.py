@@ -12,6 +12,7 @@ from .fields import SimpleField, DiscriminatedUnionField
 from .structs import SimpleStruct
 from .enums import DiscriminatedUnionEnum
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class DiscriminatedUnion(SimpleStruct):
@@ -32,7 +33,7 @@ class DiscriminatedUnion(SimpleStruct):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)
 
     def comment(self, method):
-        return f'// DiscriminatedUnion.{method}'
+        return CommentGen.method_comment('DiscriminatedUnion', method)
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
@@ -172,7 +173,7 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         return []
 
     def comment(self, method):
-        return f'// InlineDiscriminatedUnion.{method}'
+        return CommentGen.method_comment('InlineDiscriminatedUnion', method)
 
     def printCopyDeclaration(self, catalog):
         pass
@@ -190,7 +191,7 @@ class DiscriminatedUnionUnion(Base):
         self.fields = fields
 
     def comment(self, method):
-        return f'// DiscriminatedUnionUnion.{method}'
+        return CommentGen.method_comment('DiscriminatedUnionUnion', method)
 
     def getName(self):
         return self.name + "Val"

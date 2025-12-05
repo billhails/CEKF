@@ -23,6 +23,7 @@ Hash table structures
 from .base import Base
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class SimpleHash(Base):
@@ -63,7 +64,7 @@ class SimpleHash(Base):
         return f"struct {myName} *"
 
     def comment(self, method):
-        return f'// SimpleHash.{method}'
+        return CommentGen.method_comment('SimpleHash', method)
 
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')

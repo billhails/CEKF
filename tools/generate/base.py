@@ -21,6 +21,7 @@ Base classes for all AST entity types
 """
 
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class Base:
@@ -341,7 +342,7 @@ class EnumField:
         print(f"    {field}, // {count}")
 
     def comment(self, method):
-        return f'// EnumField.{method}'
+        return CommentGen.method_comment('EnumField', method)
 
     def printNameFunctionLine(self):
         c = self.comment('printNameFunctionLine')

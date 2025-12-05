@@ -23,6 +23,8 @@ The Catalog manages the collection of structures, unions, enums, arrays, etc.
 that are defined in a YAML schema file, and orchestrates their code generation.
 """
 
+from .comment_gen import CommentGen
+
 
 class Catalog:
     """Central registry managing all entities in a schema."""
@@ -312,7 +314,7 @@ class Catalog:
             entity.printMermaid(self)
 
     def comment(self, method):
-        return f'// Catalog.{method}'
+        return CommentGen.method_comment('Catalog', method)
 
     def printMarkObjFunction(self):
         c = self.comment('printMarkObjFunction')

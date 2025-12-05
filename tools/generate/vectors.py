@@ -8,6 +8,7 @@ This module contains:
 from .base import Base
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class SimpleVector(Base):
@@ -51,7 +52,7 @@ class SimpleVector(Base):
         return f"{myType} new{myName}(int size)"
 
     def comment(self, method):
-        return f'// SimpleVector.{method}'
+        return CommentGen.method_comment('SimpleVector', method)
 
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')

@@ -16,12 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""
-Field classes for structs and unions
-"""
+"""Field classes for struct and union members."""
 
 import re
 from .base import EnumField
+from .comment_gen import CommentGen
 
 
 class SimpleField:
@@ -132,7 +131,7 @@ class SimpleField:
         obj.printCompareField(catalog, isInline, f"{self.name}[{key}]", depth)
 
     def comment(self, method):
-        return f'// SimpleField.{method}'
+        return CommentGen.method_comment('SimpleField', method)
 
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
@@ -166,7 +165,7 @@ class DiscriminatedUnionField(EnumField):
         return self.typeName
 
     def comment(self, method):
-        return f'// DiscriminatedUnionField.{method}'
+        return CommentGen.method_comment('DiscriminatedUnionField', method)
 
     def printHelperNewDeclaration(self, catalog, isInline):
         ucfirst = self.getName()[0].upper() + self.getName()[1:]

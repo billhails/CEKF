@@ -10,6 +10,7 @@ This module contains:
 from .base import Base
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class SimpleArray(Base):
@@ -60,7 +61,7 @@ class SimpleArray(Base):
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
     def comment(self, method):
-        return f'// SimpleArray.{method}'
+        return CommentGen.method_comment('SimpleArray', method)
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
@@ -1069,7 +1070,7 @@ class SimpleStack(SimpleArray):
             raise Exception("stacks must have dimension 1")
 
     def comment(self, method):
-        return f'// SimpleStack.{method}'
+        return CommentGen.method_comment('SimpleStack', method)
 
     def printIndexFields(self):
         c = self.comment('printIndexFields')
@@ -1715,7 +1716,7 @@ class InlineArray(SimpleArray):
         return []
 
     def comment(self, method):
-        return f'// InlineArray.{method}'
+        return CommentGen.method_comment('InlineArray', method)
 
     def printCopyDeclaration(self, catalog):
         c = self.comment('printCopyDeclaration')
