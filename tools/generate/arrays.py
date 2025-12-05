@@ -714,7 +714,7 @@ class SimpleArray(Base):
         return SignatureHelper.print_signature(self.getName(), myType)
 
     def getCtype(self, astType, catalog):
-        return f"{astType} *"
+        return TypeHelper.pointer_type(astType)
 
     def printCountDeclaration(self, catalog):
         myName = self.getName()

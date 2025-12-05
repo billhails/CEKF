@@ -88,3 +88,18 @@ class TypeHelper:
             The C type name as-is
         """
         return cname
+    
+    @staticmethod
+    def pointer_type(type_name):
+        """
+        Generate C pointer type declaration.
+        
+        Used for extra comparison arguments and similar cases.
+        
+        Args:
+            type_name: Base type name (e.g., "AstExpression")
+            
+        Returns:
+            String like "AstExpression *"
+        """
+        return f"{type_name} *"

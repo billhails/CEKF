@@ -121,7 +121,7 @@ class SimpleStruct(Base):
         return SignatureHelper.print_signature(self.getName(), myType)
 
     def getCtype(self, astType, catalog):
-        return f"{astType} *"
+        return TypeHelper.pointer_type(astType)
 
     def getExtraCmpFargs(self, catalog):
         return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
