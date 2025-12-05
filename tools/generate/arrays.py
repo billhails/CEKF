@@ -14,6 +14,7 @@ from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
+from .compare_helper import CompareHelper
 
 
 class SimpleArray(Base):
@@ -728,21 +729,10 @@ class SimpleArray(Base):
         print('')
 
     def getExtraCmpFargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
-            extra += [f"{ctype}{name}"]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
 
     def getExtraCmpAargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            extra += [name]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
 
     def getCompareSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)

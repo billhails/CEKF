@@ -11,6 +11,8 @@ from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
+from .accessor_helper import AccessorHelper
+from .compare_helper import CompareHelper
 
 
 class SimpleVector(Base):
@@ -115,21 +117,10 @@ class SimpleVector(Base):
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
     def getExtraCmpFargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
-            extra += [f"{ctype}{name}"]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
 
     def getExtraCmpAargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            extra += [name]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
 
     def objTypeArray(self):
         return [ self.getObjType() ]
