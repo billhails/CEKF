@@ -15,6 +15,7 @@ from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
 from .compare_helper import CompareHelper
+from .objtype_helper import ObjectTypeHelper
 
 
 class SimpleArray(Base):
@@ -175,10 +176,10 @@ class SimpleArray(Base):
         return SignatureHelper.free_signature(self.getName(), myType)
 
     def getObjType(self):
-        return ('objtype_' + self.getName()).upper()
+        return ObjectTypeHelper.obj_type_name(self.getName())
 
     def objTypeArray(self):
-        return [ self.getObjType() ]
+        return ObjectTypeHelper.obj_type_array(self.getName())
 
     def getNewArgs(self, catalog):
         if self.tagged:

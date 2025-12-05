@@ -13,6 +13,7 @@ from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
 from .compare_helper import CompareHelper
+from .objtype_helper import ObjectTypeHelper
 
 
 class SimpleVector(Base):
@@ -123,10 +124,10 @@ class SimpleVector(Base):
         return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
 
     def objTypeArray(self):
-        return [ self.getObjType() ]
+        return ObjectTypeHelper.obj_type_array(self.getName())
 
     def getObjType(self):
-        return ('objtype_' + self.getName()).upper()
+        return ObjectTypeHelper.obj_type_name(self.getName())
 
     def printCopyDeclaration(self, catalog):
         decl = self.getCopySignature(catalog)

@@ -13,6 +13,7 @@ from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
 from .accessor_helper import AccessorHelper
 from .compare_helper import CompareHelper
+from .objtype_helper import ObjectTypeHelper
 
 class SimpleStruct(Base):
     """
@@ -58,7 +59,7 @@ class SimpleStruct(Base):
         return TypeHelper.struct_type(self.getName(), self.isInline(catalog))
 
     def getObjType(self):
-        return ('objtype_' + self.getName()).upper()
+        return ObjectTypeHelper.obj_type_name(self.getName())
 
     def isSinglySelfReferential(self, catalog):
         count = 0
@@ -74,7 +75,7 @@ class SimpleStruct(Base):
         raise Exception(f'cannot find self-referential field name for {self.getName()}')
 
     def objTypeArray(self):
-        return [ self.getObjType() ]
+        return ObjectTypeHelper.obj_type_array(self.getName())
 
     def getCountSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
