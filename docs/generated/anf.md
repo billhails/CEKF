@@ -5,12 +5,12 @@ A-Normal Form (ANF) structures to be converted to bytecode.
 ```mermaid
 flowchart TD
 AnfSymbolTable --entries--> NULL
-CTIntTable --entries--> int
+AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool
 AnfEnv --isNamespace--> bool
 AnfEnv --nbindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
-AnfEnv --table--> CTIntTable
+AnfEnv --table--> AnfIntTable
 AnfEnv --next--> AnfEnv
 AexpLam --nargs--> int
 AexpLam --letRecOffset--> int
@@ -50,25 +50,25 @@ CexpCharCondCases --option--> character
 CexpCharCondCases --body--> AnfExp
 CexpCharCondCases --next--> CexpCharCondCases
 CexpMatch --condition--> Aexp
-CexpMatch --clauses--> MatchList
+CexpMatch --clauses--> AnfMatchList
 CexpLetRec --nbindings--> int
-CexpLetRec --bindings--> LetRecBindings
+CexpLetRec --bindings--> AnfLetRecBindings
 CexpLetRec --body--> AnfExp
 CexpAmb --exp1--> AnfExp
 CexpAmb --exp2--> AnfExp
 CexpCut --exp--> AnfExp
-ExpLet --var--> HashSymbol
-ExpLet --val--> AnfExp
-ExpLet --body--> AnfExp
-ExpLookup --namespace--> index
-ExpLookup --annotatedVar--> AexpAnnotatedVar
-ExpLookup --body--> AnfExp
-MatchList --matches--> AexpIntList
-MatchList --body--> AnfExp
-MatchList --next--> MatchList
-LetRecBindings --var--> HashSymbol
-LetRecBindings --val--> Aexp
-LetRecBindings --next--> LetRecBindings
+AnfExpLet --var--> HashSymbol
+AnfExpLet --val--> AnfExp
+AnfExpLet --body--> AnfExp
+AnfExpLookup --namespace--> index
+AnfExpLookup --annotatedVar--> AexpAnnotatedVar
+AnfExpLookup --body--> AnfExp
+AnfMatchList --matches--> AexpIntList
+AnfMatchList --body--> AnfExp
+AnfMatchList --next--> AnfMatchList
+AnfLetRecBindings --var--> HashSymbol
+AnfLetRecBindings --val--> Aexp
+AnfLetRecBindings --next--> AnfLetRecBindings
 CexpCondCases --charCases--> CexpCharCondCases
 CexpCondCases --intCases--> CexpIntCondCases
 Aexp --lam--> AexpLam
@@ -94,8 +94,8 @@ AnfExp --env--> void_ptr
 AnfExp --done--> void_ptr
 AnfExp --aexp--> Aexp
 AnfExp --cexp--> Cexp
-AnfExp --let--> ExpLet
-AnfExp --lookup--> ExpLookup
+AnfExp --let--> AnfExpLet
+AnfExp --lookup--> AnfExpLookup
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
