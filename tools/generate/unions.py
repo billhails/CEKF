@@ -14,6 +14,7 @@ from .enums import DiscriminatedUnionEnum
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
+from .accessor_helper import AccessorHelper
 
 
 class DiscriminatedUnion(SimpleStruct):
@@ -71,7 +72,7 @@ class DiscriminatedUnion(SimpleStruct):
     def printMarkFunctionBody(self, catalog):
         c = self.comment('printMarkFunctionBody')
         myName=self.getName()
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
             field.printMarkCase(self.isInline(catalog), catalog)
@@ -82,7 +83,7 @@ class DiscriminatedUnion(SimpleStruct):
     def printCompareFunctionBody(self, catalog):
         c = self.comment('printCompareFunctionBody')
         myName=self.getName()
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    if (a{a}type != b{a}type) return false; {c}")
         print(f"    switch(a{a}type) {{ {c}")
         for field in self.fields:
@@ -94,7 +95,7 @@ class DiscriminatedUnion(SimpleStruct):
     def printCopyFunctionBody(self, catalog):
         c = self.comment('printCopyFunctionBody')
         myName=self.getName()
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    switch(o{a}type) {{ {c}")
         for field in self.fields:
             field.printCopyCase(catalog, self.isInline(catalog))
@@ -106,7 +107,7 @@ class DiscriminatedUnion(SimpleStruct):
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         myName=self.getName()
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    switch(x{a}type) {{ {c}")
         for field in self.fields:
             field.printPrintCase(catalog, self.isInline(catalog))
@@ -154,7 +155,7 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
 
     def printProtectFunction(self, catalog):
         decl = self.getProtectDeclaration(catalog)
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         c = self.comment('printProtectFunction')
         print(f"/**")
         print(f" * Protects the {self.getName()} union from garbage collection.")

@@ -13,6 +13,7 @@ from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
+from .accessor_helper import AccessorHelper
 
 
 class SimpleArray(Base):
@@ -55,7 +56,7 @@ class SimpleArray(Base):
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         myName=self.getName()
         extraCmpArgs = self.getExtraCmpAargs(catalog)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         c = self.comment('printCompareField')
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
@@ -67,7 +68,7 @@ class SimpleArray(Base):
         myName=self.getName()
         c = self.comment('printCopyField')
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printPrintHashField(self, depth):
@@ -79,7 +80,7 @@ class SimpleArray(Base):
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
@@ -683,14 +684,14 @@ class SimpleArray(Base):
 
     def printMark1dFunctionBody(self, catalog):
         c = self.comment('print1dFunctionBody')
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < x{a}size; i++) {{ {c}")
         self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f"    }} {c}")
 
     def printMark2dFunctionBody(self, catalog):
         c = self.comment('print2dFunctionBody')
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    Index size = x{a}width * x{a}height; {c}")
         print(f"    for (Index i = 0; i < size; i++) {{ {c}")
         self.entries.printMarkArrayLine(self.isInline(catalog), catalog, "i", 2)
@@ -717,7 +718,7 @@ class SimpleArray(Base):
         myName = self.getName()
         myType = self.getTypeDeclaration(catalog)
         c = self.comment('printCountDeclaration')
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f'static inline Index count{myName}({myType} x) {{ {c}')
         if self.dimension == 1:
             print(f'    return x{a}size; {c}')
@@ -758,7 +759,7 @@ class SimpleArray(Base):
             return
         myName = self.getName()
         decl = self.getCompareSignature(catalog)
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"/**")
         print(f" * @brief Deep compare two {myName} objects for equality.")
         print(f" */")
@@ -842,7 +843,7 @@ class SimpleArray(Base):
     def printPrintFunction(self, catalog):
         myName = self.getName()
         decl = self.getPrintSignature(catalog)
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         c = self.comment('printPrintFunction')
         print(f"/**")
         print(f" * @brief Prints the {myName} object `x` for debugging.")
@@ -871,7 +872,7 @@ class SimpleArray(Base):
 
     def print1dPrintFunctionBody(self, catalog):
         c = self.comment('print1dPrintFunctionBody')
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < x{a}size; i++) {{ {c}")
         self.entries.printPrintArrayLine(self.isInline(catalog), catalog, "i", 2)
         print(f'        eprintf("\\n"); {c}')
@@ -879,7 +880,7 @@ class SimpleArray(Base):
 
     def print2dPrintFunctionBody(self, catalog):
         c = self.comment('print2dPrintFunctionBody')
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"    for (Index i = 0; i < x{a}height; i++) {{ {c}")
         print(f"        pad(depth); {c}")
         print(f'        eprintf("[\\n"); {c}')
@@ -935,13 +936,13 @@ class SimpleArray(Base):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def getIterator1DDeclaration(self, catalog):
@@ -981,7 +982,7 @@ class SimpleArray(Base):
     def printIterator1DFunction(self, catalog):
         c = self.comment('printIterator1DFunction')
         decl = self.getIterator1DDeclaration(catalog)
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"/**")
         print(f" * @brief Iterates over the entries in the 1D {self.getName()} object `table`.")
         print(f" *")
@@ -1015,7 +1016,7 @@ class SimpleArray(Base):
     def printIterator2DFunction(self, catalog):
         c = self.comment('printIterator2DFunction')
         decl = self.getIterator2DDeclaration(catalog)
-        a = '.' if self.isInline(catalog) else '->'
+        a = AccessorHelper.accessor(self.isInline(catalog))
         print(f"/**")
         print(f" * @brief Iterates over the entries in the 2D {self.getName()} object `table`.")
         print(f" */")

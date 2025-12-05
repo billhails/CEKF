@@ -11,6 +11,7 @@ from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
 from .signature_helper import SignatureHelper
+from .accessor_helper import AccessorHelper
 
 class SimpleStruct(Base):
     """
@@ -264,21 +265,21 @@ class SimpleStruct(Base):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         myName=self.getName()
         extraArgs = self.getExtraCmpAargs({})
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
 
@@ -291,7 +292,7 @@ class SimpleStruct(Base):
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
@@ -299,7 +300,7 @@ class SimpleStruct(Base):
         c = self.comment('printCopyField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printMarkFunction(self, catalog):
