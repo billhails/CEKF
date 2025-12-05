@@ -22,6 +22,7 @@ Primitive types - built-in types defined in primitives.yaml
 
 from .base import Base
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class Primitive(Base):
@@ -62,7 +63,7 @@ class Primitive(Base):
         return True
 
     def comment(self, method):
-        return f'// Primitive.{method}'
+        return CommentGen.method_comment('Primitive', method)
 
     def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
