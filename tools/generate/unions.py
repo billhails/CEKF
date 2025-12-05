@@ -34,9 +34,6 @@ class DiscriminatedUnion(SimpleStruct):
     def makeField(self, fieldName, fieldData):
         return DiscriminatedUnionField(self.name, fieldName, fieldData)
 
-    def comment(self, method):
-        return CommentGen.method_comment('DiscriminatedUnion', method)
-
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
         name=self.getName()
@@ -174,9 +171,6 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
     def objTypeArray(self):
         return []
 
-    def comment(self, method):
-        return CommentGen.method_comment('InlineDiscriminatedUnion', method)
-
     def printCopyDeclaration(self, catalog):
         pass
 
@@ -191,9 +185,6 @@ class DiscriminatedUnionUnion(Base):
     def __init__(self, name, fields, body):
         super().__init__(name, body)
         self.fields = fields
-
-    def comment(self, method):
-        return CommentGen.method_comment('DiscriminatedUnionUnion', method)
 
     def getName(self):
         return self.name + "Val"

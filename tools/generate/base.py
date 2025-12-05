@@ -100,6 +100,10 @@ class Base:
     def getName(self):
         return self.name
 
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        return CommentGen.method_comment(self.__class__.__name__, method)
+
     def hasParserInfo(self, catalog):
         return False
 
@@ -331,6 +335,10 @@ class EnumField:
     def getName(self):
         return self.name
 
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        return CommentGen.method_comment(self.__class__.__name__, method)
+
     def isSimpleField(self):
         return False
 
@@ -340,9 +348,6 @@ class EnumField:
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
         print(f"    {field}, // {count}")
-
-    def comment(self, method):
-        return CommentGen.method_comment('EnumField', method)
 
     def printNameFunctionLine(self):
         c = self.comment('printNameFunctionLine')

@@ -63,9 +63,6 @@ class Primitive(Base):
     def isInline(self, catalog):
         return True
 
-    def comment(self, method):
-        return CommentGen.method_comment('Primitive', method)
-
     def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
         if self.markFn is not None:

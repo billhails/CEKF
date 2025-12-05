@@ -63,9 +63,6 @@ class SimpleArray(Base):
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleArray', method)
-
     def printCopyField(self, isInline, field, depth, prefix=''):
         myName=self.getName()
         c = self.comment('printCopyField')
@@ -1061,9 +1058,6 @@ class SimpleStack(SimpleArray):
         if self.dimension != 1:
             raise Exception("stacks must have dimension 1")
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleStack', method)
-
     def printIndexFields(self):
         c = self.comment('printIndexFields')
         print(f"    Index frame; {c}")
@@ -1706,9 +1700,6 @@ class InlineArray(SimpleArray):
 
     def objTypeArray(self):
         return []
-
-    def comment(self, method):
-        return CommentGen.method_comment('InlineArray', method)
 
     def printCopyDeclaration(self, catalog):
         c = self.comment('printCopyDeclaration')

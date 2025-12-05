@@ -45,9 +45,6 @@ class SimpleEnum(Base):
     def printMermaid(self, catalog):
         print(f'{self.getName()}["enum {self.getName()}"]')
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleEnum', method)
-
     def getDefineValue(self):
         return 'x'
 
@@ -146,9 +143,6 @@ class DiscriminatedUnionEnum(Base):
     def __init__(self, name, fields, body):
         super().__init__(name, body)
         self.fields = fields
-
-    def comment(self, method):
-        return CommentGen.method_comment('DiscriminatedUnionEnum', method)
 
     def getName(self):
         return self.name + "Type"

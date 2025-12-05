@@ -65,9 +65,6 @@ class SimpleHash(Base):
     def getTypeDeclaration(self, catalog):
         return TypeHelper.struct_type(self.getName(), is_inline=False)
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleHash', method)
-
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')
         decl=self.getNewSignature(catalog)

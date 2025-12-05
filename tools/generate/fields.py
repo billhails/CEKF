@@ -44,6 +44,11 @@ class SimpleField:
     def getName(self):
         return self.name
 
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        from .comment_gen import CommentGen
+        return CommentGen.method_comment(self.__class__.__name__, method)
+
     def getObj(self, catalog):
         return catalog.get(self.typeName)
 
@@ -130,9 +135,6 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printCompareField(catalog, isInline, f"{self.name}[{key}]", depth)
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleField', method)
-
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         decl=self.getSignature(catalog)
@@ -163,9 +165,6 @@ class DiscriminatedUnionField(EnumField):
 
     def getObjName(self, catalog):
         return self.typeName
-
-    def comment(self, method):
-        return CommentGen.method_comment('DiscriminatedUnionField', method)
 
     def printHelperNewDeclaration(self, catalog, isInline):
         ucfirst = self.getName()[0].upper() + self.getName()[1:]

@@ -56,9 +56,6 @@ class SimpleVector(Base):
         myName = self.getName()
         return SignatureHelper.new_signature(myName, myType, ["int size"])
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleVector', method)
-
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')
         decl=self.getNewSignature(catalog)

@@ -82,9 +82,6 @@ class SimpleStruct(Base):
         myName = self.getName()
         return f'Index count{myName}({myType} x)'
 
-    def comment(self, method):
-        return CommentGen.method_comment('SimpleStruct', method)
-
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
             c = self.comment('printCountDeclaration')

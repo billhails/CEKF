@@ -270,9 +270,6 @@ class Catalog:
     def printMermaid(self):
         self._dispatch('printMermaid', self)
 
-    def comment(self, method):
-        return CommentGen.method_comment('Catalog', method)
-
     def printMarkObjFunction(self):
         SwitchHelper.print_switch_function(
             self, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
