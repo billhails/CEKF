@@ -24,6 +24,7 @@ that are defined in a YAML schema file, and orchestrates their code generation.
 """
 
 from .comment_gen import CommentGen
+from .switch_helper import SwitchHelper
 
 
 class Catalog:
@@ -273,37 +274,26 @@ class Catalog:
         return CommentGen.method_comment('Catalog', method)
 
     def printMarkObjFunction(self):
-        c = self.comment('printMarkObjFunction')
-        print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{ {c}')
-        print(f'    switch(h->type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printMarkObjCase(self)
-        print(f'        default: {c}')
-        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type); {c}')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
+            'printMarkObjCase',
+            f'cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);'
+        )
 
     def printFreeObjFunction(self):
-        c = self.comment('printFreeObjFunction')
-        print(f'void free{self.typeName.capitalize()}Obj(struct Header *h) {{ {c}')
-        print(f'    switch(h->type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printFreeObjCase(self)
-        print(f'        default: {c}')
-        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type); {c}')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
+            'printFreeObjCase',
+            f'cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);'
+        )
 
     def printTypeObjFunction(self):
-        c = self.comment('printTypeObjFunction')
-        print(f'char *typename{self.typeName.capitalize()}Obj(int type) {{ {c}')
-        print(f'    switch(type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printTypeObjCase(self)
-        print(f'        default: {c}')
-        print(f'            return "???"; {c} no error, can be used during error reporting')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
+            'printTypeObjCase',
+            'return "???"; // no error, can be used during error reporting',
+            'char *'
+        )
 
     def printObjTypeDefine(self):
         objTypeArray = []
