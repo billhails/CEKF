@@ -8,6 +8,7 @@ This module contains:
 from .base import Base, EnumField
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
 
 class SimpleStruct(Base):
     """
@@ -81,7 +82,7 @@ class SimpleStruct(Base):
         return f'Index count{myName}({myType} x)'
 
     def comment(self, method):
-        return f'// SimpleStruct.{method}'
+        return CommentGen.method_comment('SimpleStruct', method)
 
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
@@ -452,7 +453,7 @@ class DiscriminatedUnionField(EnumField):
         return self.typeName
 
     def comment(self, method):
-        return f'// DiscriminatedUnionField.{method}'
+        return CommentGen.method_comment('DiscriminatedUnionField', method)
 
     def printHelperNewDeclaration(self, catalog, isInline):
         ucfirst = self.getName()[0].upper() + self.getName()[1:]
