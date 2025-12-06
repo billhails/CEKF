@@ -63,6 +63,13 @@ class Primitive(Base):
     def isInline(self, catalog):
         return True
 
+    def needsProtection(self, catalog):
+        """
+        Primitives don't need protection if they are valued (pass-by-value types).
+        HashSymbol is a special case - it's a pointer but doesn't need protection.
+        """
+        return False  # Primitives are never GC-allocated
+
     def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
         if self.markFn is not None:

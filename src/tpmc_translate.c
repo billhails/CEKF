@@ -106,9 +106,7 @@ static LamExp *translateToApply(HashSymbol *name, TpmcState *dfa) {
     PROTECT(cargs);
     LamArgs *args = convertVarListToList(cargs);
     PROTECT(args);
-    LamApply *apply = newLamApply(I, function, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(I, apply);
+    LamExp *res = makeLamExp_Apply(I, function, args);
     UNPROTECT(save);
     LEAVE(translateToApply);
     return res;
@@ -272,9 +270,7 @@ static LamExp *translateComparisonArcAndAlternativeToIf(TpmcArc *arc, LamExpTabl
     LamExp *consequent = translateArcToCode(arc, lambdaCache);
     DEBUG("translateArcToCode returned %p", consequent);
     PROTECT(consequent);
-    LamIff *iff = newLamIff(I, test, consequent, alternative);
-    PROTECT(iff);
-    LamExp *res = newLamExp_Iff(I, iff);
+    LamExp *res = makeLamExp_Iff(I, test, consequent, alternative);
     UNPROTECT(save);
     LEAVE(translateComparisonArcAndAlternativeToIf);
     return res;

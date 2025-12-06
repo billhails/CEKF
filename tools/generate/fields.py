@@ -198,6 +198,25 @@ class DiscriminatedUnionField(EnumField):
         print(f'}} {c}')
         print('')
 
+    def printMakeHelperDeclaration(self, catalog, owner, isInline):
+        """
+        Generate make<Union>_<Field> helper that combines struct construction
+        with GC protection and union wrapping.
+        """
+        from .make_helper import MakeHelperGenerator
+        
+        obj = catalog.get(self.typeName)
+        has_parser_info = owner.hasParserInfo(catalog)
+        
+        MakeHelperGenerator.print_make_helper(
+            self.owner,
+            self.getName(),
+            obj,
+            catalog,
+            has_parser_info,
+            isInline
+        )
+
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         obj = catalog.get(self.typeName)

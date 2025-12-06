@@ -81,6 +81,14 @@ class Base:
     def isInline(self, catalog):
         return False
 
+    def needsProtection(self, catalog):
+        """
+        Returns True if values of this type need GC protection.
+        By default, non-inline (pointer) types need protection.
+        Override in subclasses for special cases (e.g., primitives).
+        """
+        return not self.isInline(catalog)
+
     def noteTypedef(self):
         with open(".typedefs", "a") as f:
             print(f'-T {self.name}', file=f)

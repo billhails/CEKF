@@ -55,6 +55,8 @@ class DiscriminatedUnion(SimpleStruct):
     def printHelperNewDeclarations(self, catalog):
         for field in self.fields:
             field.printHelperNewDeclaration(catalog, self.isInline(catalog))
+        for field in self.fields:
+            field.printMakeHelperDeclaration(catalog, self, self.isInline(catalog))
 
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
@@ -127,6 +129,12 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
 
     def isInline(self, catalog):
         return True
+
+    def printHelperNewDeclarations(self, catalog):
+        # Inline unions don't need make helpers - they're stack-allocated
+        # and don't require GC protection
+        for field in self.fields:
+            field.printHelperNewDeclaration(catalog, self.isInline(catalog))
 
     def printNewFunction(self, catalog):
         pass
