@@ -95,8 +95,13 @@ class Catalog:
         for entity in self.contents.values():
             if entity.isUnion():
                 entity.printTypedef(self)
+        # Print inline structs first (no dependencies, can be used by other structs)
         for entity in self.contents.values():
-            if entity.isStruct():
+            if entity.isStruct() and entity.isInline(self):
+                entity.printTypedef(self)
+        # Then print regular structs
+        for entity in self.contents.values():
+            if entity.isStruct() and not entity.isInline(self):
                 entity.printTypedef(self)
         for entity in self.contents.values():
             if entity.isHash():

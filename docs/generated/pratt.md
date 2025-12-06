@@ -3,7 +3,7 @@
 Pratt Parser support
 
 ```mermaid
-flowchart TD
+flowchart LR
 PrattRecordTable --entries--> PrattRecord
 PrattNsIdTable --entries--> int
 PrattTrie --character--> byte
@@ -33,27 +33,9 @@ PrattParser --panicMode--> bool
 PrattParser --isPreamble--> bool
 PrattParser --next--> PrattParser
 PrattRecord --symbol--> HashSymbol
-PrattRecord --prefixOp--> PrattParselet
-PrattRecord --prefixPrec--> int
-PrattRecord --prefixOriginalImpl--> AstExpression
-PrattRecord --prefixHygienicFunc--> HashSymbol
-PrattRecord --prefixIsBareSymbol--> bool
-PrattRecord --prefixExport--> bool
-PrattRecord --prefixPattern--> PrattMixfixPattern
-PrattRecord --infixOp--> PrattParselet
-PrattRecord --infixPrec--> int
-PrattRecord --infixOriginalImpl--> AstExpression
-PrattRecord --infixHygienicFunc--> HashSymbol
-PrattRecord --infixIsBareSymbol--> bool
-PrattRecord --infixExport--> bool
-PrattRecord --infixPattern--> PrattMixfixPattern
-PrattRecord --postfixOp--> PrattParselet
-PrattRecord --postfixPrec--> int
-PrattRecord --postfixOriginalImpl--> AstExpression
-PrattRecord --postfixHygienicFunc--> HashSymbol
-PrattRecord --postfixIsBareSymbol--> bool
-PrattRecord --postfixExport--> bool
-PrattRecord --postfixPattern--> PrattMixfixPattern
+PrattRecord --prefix--> PrattFixityConfig
+PrattRecord --infix--> PrattFixityConfig
+PrattRecord --postfix--> PrattFixityConfig
 PrattRecord --importNsRef--> int
 PrattRecord --importNsSymbol--> HashSymbol
 PrattExportedOps --exportedRules--> PrattRecordTable
@@ -62,6 +44,13 @@ PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
 PrattMixfixPattern --starts_with_hole--> bool
 PrattMixfixPattern --ends_with_hole--> bool
+PrattFixityConfig --op--> PrattParselet
+PrattFixityConfig --prec--> int
+PrattFixityConfig --originalImpl--> AstExpression
+PrattFixityConfig --hygienicFunc--> HashSymbol
+PrattFixityConfig --isBareSymbol--> bool
+PrattFixityConfig --export--> bool
+PrattFixityConfig --pattern--> PrattMixfixPattern
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8

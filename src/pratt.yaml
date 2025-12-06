@@ -117,31 +117,9 @@ structs:
                 parser.
         data:
             symbol: HashSymbol
-
-            prefixOp: PrattParselet
-            prefixPrec: int
-            prefixOriginalImpl: AstExpression=NULL
-            prefixHygienicFunc: HashSymbol=NULL
-            prefixIsBareSymbol: bool=false
-            prefixExport: bool=false
-            prefixPattern: PrattMixfixPattern=NULL
-
-            infixOp: PrattParselet
-            infixPrec: int
-            infixOriginalImpl: AstExpression=NULL
-            infixHygienicFunc: HashSymbol=NULL
-            infixIsBareSymbol: bool=false
-            infixExport: bool=false
-            infixPattern: PrattMixfixPattern=NULL
-
-            postfixOp: PrattParselet
-            postfixPrec: int
-            postfixOriginalImpl: AstExpression=NULL
-            postfixHygienicFunc: HashSymbol=NULL
-            postfixIsBareSymbol: bool=false
-            postfixExport: bool=false
-            postfixPattern: PrattMixfixPattern=NULL
-
+            prefix: PrattFixityConfig
+            infix: PrattFixityConfig
+            postfix: PrattFixityConfig
             importNsRef: int=-1
             importNsSymbol: HashSymbol=NULL
 
@@ -230,6 +208,24 @@ enums:
             - PREFIX
             - INFIX
             - POSTFIX
+
+inline:
+    structs:
+        PrattFixityConfig:
+            meta:
+                brief: Configuration for one fixity (prefix/infix/postfix) of an operator.
+                description: >-
+                    Holds the parselet, precedence, implementation, and metadata for
+                    one fixity of an operator. Three of these are embedded in each
+                    PrattRecord for prefix, infix, and postfix configurations.
+            data:
+                op: PrattParselet
+                prec: int
+                originalImpl: AstExpression=NULL
+                hygienicFunc: HashSymbol=NULL
+                isBareSymbol: bool=false
+                export: bool=false
+                pattern: PrattMixfixPattern=NULL
 
 unions:
     PrattValue:
