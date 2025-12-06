@@ -85,6 +85,9 @@ class Catalog:
     def printHelperNewDeclarations(self):
         self._dispatch('printHelperNewDeclarations', self)
 
+    def printGetterDeclarations(self):
+        self._dispatch('printGetterDeclarations', self)
+
     def printTypedefs(self):
         for entity in self.contents.values():
             if entity.isEnum():

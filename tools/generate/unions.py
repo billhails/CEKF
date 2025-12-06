@@ -58,6 +58,10 @@ class DiscriminatedUnion(SimpleStruct):
         for field in self.fields:
             field.printMakeHelperDeclaration(catalog, self, self.isInline(catalog))
 
+    def printGetterDeclarations(self, catalog):
+        for field in self.fields:
+            field.printGetterDeclaration(catalog, self, self.isInline(catalog))
+
     def getNewArgs(self, catalog):
         return [self.enum, self.union]
 

@@ -217,6 +217,39 @@ class DiscriminatedUnionField(EnumField):
             isInline
         )
 
+    def printGetterDeclaration(self, catalog, owner, isInline):
+        """
+        Generate get<Union>_<Field> inline function that validates the variant type
+        and returns the field value, calling cant_happen if incorrect.
+        
+        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *x)
+        """
+        c = self.comment('printGetterDeclaration')
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        typeName = self.makeTypeName()
+        obj = catalog.get(self.typeName)
+        returnType = obj.getTypeDeclaration(catalog)
+        ownerType = owner.getTypeDeclaration(catalog)
+        accessor = '.' if isInline else '->'
+        
+        # Get the typename function for better error messages
+        # Convert "LamExp" -> "lamExpTypeName"
+        typeNameFunc = self.owner[0].lower() + self.owner[1:] + 'TypeName'
+        
+        # ownerType already includes '*' for non-inline or ' ' for inline
+        # returnType may not have trailing space for primitives, so add one
+        if not returnType.endswith(' '):
+            returnType = returnType + ' '
+        
+        # Generate the inline getter function
+        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}x) {{ {c}')
+        print(f'    if (x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(x{accessor}type)); {c}')
+        print(f'    }} {c}')
+        print(f'    return x{accessor}val.{self.name}; {c}')
+        print(f'}} {c}')
+        print('')
+
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         obj = catalog.get(self.typeName)

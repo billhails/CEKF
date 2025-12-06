@@ -208,6 +208,8 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     catalog.printCountDeclarations()
     printSection("name declarations")
     catalog.printNameFunctionDeclarations()
+    printSection("discriminated union getter declarations")
+    catalog.printGetterDeclarations()
     print("")
     print("#endif")
 

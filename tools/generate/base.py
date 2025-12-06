@@ -124,6 +124,9 @@ class Base:
     def printHelperNewDeclarations(self, catalog):
         pass
 
+    def printGetterDeclarations(self, catalog):
+        pass
+
     def printNameFunctionDeclaration(self):
         pass
 
