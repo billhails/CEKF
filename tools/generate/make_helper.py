@@ -38,12 +38,6 @@ class MakeHelperGenerator:
         if not field_obj.needsProtection(catalog):
             return
         
-        # Only generate helpers for struct types
-        # Arrays, vectors, hashes, etc. have different construction patterns
-        type_name = type(field_obj).__name__
-        if type_name not in ['SimpleStruct', 'DiscriminatedUnion']:
-            return
-        
         # Get the field type name
         field_type_name = field_obj.getName()
         
@@ -52,6 +46,9 @@ class MakeHelperGenerator:
         
         # Get constructor arguments for the field struct
         field_args = MakeHelperGenerator._get_constructor_args(field_obj, catalog, has_parser_info)
+        
+        # Check if field constructor takes ParserInfo
+        field_takes_parser_info = MakeHelperGenerator._field_takes_parser_info(field_obj, catalog)
         
         # Build the function signature
         c = CommentGen.method_comment('MakeHelperGenerator', 'print_make_helper')
@@ -80,16 +77,16 @@ class MakeHelperGenerator:
         
         # Build argument list for newFieldType call
         new_args = []
-        if has_parser_info:
+        if field_takes_parser_info:
             new_args.append('I')
         
         # Extract just the parameter names (strip types)
         for arg in field_args:
-            # arg is like "LamExp *test" - extract just "test"
+            # arg is like "LamExp *test" or "int size" - extract just "test" or "size"
             arg_name = arg.split()[-1].lstrip('*')
             new_args.append(arg_name)
         
-        new_args_str = ', '.join(new_args)
+        new_args_str = ', '.join(new_args) if new_args else ''
         
         # Generate the function body
         field_type = field_obj.getTypeDeclaration(catalog)
@@ -114,20 +111,42 @@ class MakeHelperGenerator:
         print('')
 
     @staticmethod
+    def _field_takes_parser_info(field_obj, catalog):
+        """
+        Check if the field type's constructor takes a ParserInfo parameter.
+        
+        Returns:
+            bool: True if constructor includes ParserInfo parameter
+        """
+        if hasattr(field_obj, 'getNewSignature'):
+            sig = field_obj.getNewSignature(catalog)
+            return 'ParserInfo' in sig
+        return False
+
+    @staticmethod
     def _get_constructor_args(field_obj, catalog, has_parser_info):
         """
         Get the list of constructor arguments for a field type.
         
         Returns:
-            List of argument strings like "LamExp *test", "LamExp *consequent"
+            List of argument strings like "LamExp *test", "int size", etc.
         """
         args = []
         
-        # Get the fields that are constructor arguments
-        if hasattr(field_obj, 'getNewArgs'):
-            new_args = field_obj.getNewArgs(catalog)
-            for field in new_args:
-                if hasattr(field, 'getSignature'):
-                    args.append(field.getSignature(catalog))
+        # Use getNewSignature to extract constructor args
+        # This works for all types: structs, arrays, vectors, hashes
+        if hasattr(field_obj, 'getNewSignature'):
+            sig = field_obj.getNewSignature(catalog)
+            # Signature format: "TypeName * newTypeName(arg1, arg2, ...)"
+            # Extract the part between ( and )
+            start = sig.find('(')
+            end = sig.find(')')
+            if start != -1 and end != -1:
+                args_str = sig[start+1:end].strip()
+                if args_str and args_str != 'void':
+                    # Split by comma and strip whitespace
+                    args = [arg.strip() for arg in args_str.split(',')]
+                    # Filter out ParserInfo if present (we handle that separately)
+                    args = [arg for arg in args if 'ParserInfo' not in arg]
         
         return args
