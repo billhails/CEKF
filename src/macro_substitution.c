@@ -195,9 +195,7 @@ static LamExp *performVarSubstitution(ParserInfo PI, HashSymbol *var, LamMacroAr
         // Call the thunk with no arguments: var()
         LamExp *name = newLamExp_Var(PI, var);
         int save = PROTECT(name);
-        LamApply *apply = newLamApply(PI, name, NULL);
-        PROTECT(apply);
-        replacement = newLamExp_Apply(PI, apply);
+        replacement = makeLamExp_Apply(PI, name, NULL);
         UNPROTECT(save);
     }
     LEAVE(performVarSubstitution);

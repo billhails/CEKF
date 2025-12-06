@@ -42,8 +42,6 @@ static LamCond *inlineCond(LamCond *x);
 static LamCondCases *inlineCondCases(LamCondCases *x);
 static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x);
 static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x);
-static LamExp *makeConstruct(ParserInfo, HashSymbol *name, int tag, LamArgs *args);
-static LamExp *makeConstant(ParserInfo, HashSymbol *name, int tag);
 static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x);
 
 static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x) {
@@ -99,32 +97,14 @@ static LamArgs *inlineArgs(LamArgs *x) {
     return x;
 }
 
-static LamExp *makeConstruct(ParserInfo I, HashSymbol *name, int tag, LamArgs *args) {
-    LamConstruct *construct = newLamConstruct(I, name, tag, args);
-    int save = PROTECT(construct);
-    LamExp *res =
-        newLamExp_Construct(I, construct);
-    UNPROTECT(save);
-    return res;
-}
-
-static LamExp *makeConstant(ParserInfo I, HashSymbol *name, int tag) {
-    LamConstant *constant = newLamConstant(I, name, tag);
-    int save = PROTECT(constant);
-    LamExp *res =
-        newLamExp_Constant(I, constant);
-    UNPROTECT(save);
-    return res;
-}
-
 static LamExp *inlineConstant(LamTypeConstructorInfo *x) {
     if (x-> arity != 0) {
         cant_happen("missing arguments to constructor %s", x->name->name);
     }
     if (x->needsVec) {
-        return makeConstruct(CPI(x), x->name, x->index, NULL);
+        return makeLamExp_Construct(CPI(x), x->name, x->index, NULL);
     } else {
-        return makeConstant(CPI(x), x->name, x->index);
+        return makeLamExp_Constant(CPI(x), x->name, x->index);
     }
 }
 
@@ -148,7 +128,7 @@ static LamExp *inlineApply(LamApply *x) {
         int nargs = countLamArgs(x->args);
         if (info->needsVec) {
             if (nargs == info->arity) {
-                return makeConstruct(CPI(x), info->name, info->index, x->args);
+                return makeLamExp_Construct(CPI(x), info->name, info->index, x->args);
             } else {
                 cant_happen("wrong number of arguments to constructor %s, got %d, expected %d",
                             info->name->name, nargs, info->arity);
@@ -158,7 +138,7 @@ static LamExp *inlineApply(LamApply *x) {
                 cant_happen("arguments to constant constructor %s",
                             info->name->name);
             }
-            return makeConstant(CPI(x), info->name, info->index);
+            return makeLamExp_Constant(CPI(x), info->name, info->index);
         }
     }
     return newLamExp_Apply(CPI(x), x);

@@ -118,10 +118,7 @@ static LamExp *translateToLambda(TpmcState *dfa, LamExpTable *lambdaCache) {
     int save = PROTECT(exp);
     LamVarList *args = makeCanonicalArgs(dfa->freeVariables);
     PROTECT(args);
-    LamLam *lambda =
-        newLamLam(I, args, exp);
-    PROTECT(lambda);
-    LamExp *res = newLamExp_Lam(I, lambda);
+    LamExp *res = makeLamExp_Lam(I, args, exp);
     UNPROTECT(save);
     LEAVE(translateToLambda);
     return res;
@@ -417,9 +414,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                 int save = PROTECT(charCases);
                 LamCondCases *cases = newLamCondCases_Characters(I, charCases);
                 PROTECT(cases);
-                LamCond *cond = newLamCond(I, testVar, cases);
-                PROTECT(cond);
-                res = newLamExp_Cond(I, cond);
+                res = makeLamExp_Cond(I, testVar, cases);
                 UNPROTECT(save);
                 break;
             }
@@ -430,9 +425,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
                 int save = PROTECT(intCases);
                 LamCondCases *cases = newLamCondCases_Integers(I, intCases);
                 PROTECT(cases);
-                LamCond *cond = newLamCond(I, testVar, cases);
-                PROTECT(cond);
-                res = newLamExp_Cond(I, cond);
+                res = makeLamExp_Cond(I, testVar, cases);
                 UNPROTECT(save);
                 break;
             }
@@ -774,9 +767,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
             REPLACE_PROTECT(save, bindings);
         }
     }
-    LamLetRec *letrec = newLamLetRec(I, bindings, body);
-    PROTECT(letrec);
-    LamExp *res = newLamExp_Letrec(I, letrec);
+    LamExp *res = makeLamExp_Letrec(I, bindings, body);
     UNPROTECT(save);
     LEAVE(prependLetRec);
     return res;

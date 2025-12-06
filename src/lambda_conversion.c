@@ -350,10 +350,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
-        LamLetRec *letRec =
-            newLamLetRec(CPI(letRecBody), funcDefsList, letRecBody);
-        PROTECT(letRec);
-        result = newLamExp_Letrec(CPI(letRec), letRec);
+        result = makeLamExp_Letrec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
         result = newLamExp_Sequence(CPI(body), body);
     }
@@ -402,9 +399,7 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     ENTER(lamConvertPrint);
     LamExp *exp = convertExpression(print->exp, context);
     int save = PROTECT(exp);
-    LamPrint *lamPrint = newLamPrint(CPI(exp), exp);
-    PROTECT(lamPrint);
-    LamExp *result = newLamExp_Print(CPI(lamPrint), lamPrint);
+    LamExp *result = makeLamExp_Print(CPI(exp), exp);
     UNPROTECT(save);
     LEAVE(lamConvertPrint);
     return result;
@@ -1377,10 +1372,7 @@ static bool isMacro(HashSymbol *symbol, LamContext *env) {
  * @return The resulting thunked argument.
  */
 static LamExp *thunkMacroArg(LamExp *arg) {
-    LamLam *lambda = newLamLam(CPI(arg), NULL, arg);
-    int save = PROTECT(lambda);
-    LamExp *res = newLamExp_Lam(CPI(lambda), lambda);
-    UNPROTECT(save);
+    LamExp *res = makeLamExp_Lam(CPI(arg), NULL, arg);
     return res;
 }
 

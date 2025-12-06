@@ -417,10 +417,7 @@ static AnfExp *normalizeIff(LamIff *lamIff, AnfExp *tail) {
     PROTECT(consequent);
     AnfExp *alternative = normalize(lamIff->alternative, NULL);
     PROTECT(alternative);
-    CexpIf *cexpIf = newCexpIf(CPI(lamIff), condition, consequent, alternative);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpIf);
-    Cexp *cexp = newCexp_Iff(CPI(cexpIf), cexpIf);
+    Cexp *cexp = makeCexp_Iff(CPI(lamIff), condition, consequent, alternative);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);
@@ -710,10 +707,7 @@ static Aexp *aexpNormalizeLam(LamLam *lamLam) {
     int save = PROTECT(varList);
     AnfExp *body = normalize(lamLam->exp, NULL);
     PROTECT(body);
-    AexpLam *aexpLam =
-        newAexpLam(CPI(lamLam), countAexpVarList(varList), 0, varList, body);
-    PROTECT(aexpLam);
-    Aexp *aexp = newAexp_Lam(CPI(aexpLam), aexpLam);
+    Aexp *aexp = makeAexp_Lam(CPI(lamLam), countAexpVarList(varList), 0, varList, body);
     UNPROTECT(save);
     LEAVE(aexpNormalizeLam);
     return aexp;
@@ -762,10 +756,7 @@ static AnfExp *normalizeApply(LamApply *lamApply, AnfExp *tail) {
     PROTECT(args);
     DEBUG("back from replaceLamArgs");
     IFDEBUG(printLamExpTable(replacements, 0));
-    CexpApply *cexpApply = newCexpApply(CPI(lamApply), function, countAexpList(args), args);
-    UNPROTECT(save2);
-    save2 = PROTECT(cexpApply);
-    Cexp *cexp = newCexp_Apply(CPI(cexpApply), cexpApply);
+    Cexp *cexp = makeCexp_Apply(CPI(lamApply), function, countAexpList(args), args);
     REPLACE_PROTECT(save2, cexp);
     AnfExp *exp = wrapCexp(cexp);
     REPLACE_PROTECT(save2, exp);

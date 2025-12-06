@@ -1046,9 +1046,7 @@ static AstExpression *makePrattUnary(ParserInfo I, HashSymbol *op, AstExpression
     int save = PROTECT(arguments);
     AstExpression *symbol = newAstExpression_Symbol(I, op);
     PROTECT(symbol);
-    AstFunCall *funCall = newAstFunCall(I, symbol, arguments);
-    REPLACE_PROTECT(save, funCall);
-    AstExpression *res = newAstExpression_FunCall(I, funCall);
+    AstExpression *res = makeAstExpression_FunCall(I, symbol, arguments);
     UNPROTECT(save);
     return res;
 }
@@ -1585,9 +1583,7 @@ AstExpression *userMixFix(PrattRecord *record,
         func = newAstExpression_Lookup(TOKPI(tok), lup);
         PROTECT(func);
     }
-    AstFunCall *funCall = newAstFunCall(TOKPI(tok), func, argList);
-    PROTECT(funCall);
-    AstExpression *res = newAstExpression_FunCall(CPI(funCall), funCall);
+    AstExpression *res = makeAstExpression_FunCall(TOKPI(tok), func, argList);
     PROTECT(res);
     if (pattern->associativity == PRATTASSOC_TYPE_NONE) {
         PrattToken *next = peek(parser);
@@ -3854,9 +3850,7 @@ static AstExpression *print(PrattRecord *record,
     ENTER(print);
     AstExpression *toPrint = expressionPrecedence(parser, record->prefixPrec);
     int save = PROTECT(toPrint);
-    AstPrint *printer = newAstPrint(CPI(toPrint), toPrint);
-    PROTECT(printer);
-    AstExpression *res = newAstExpression_Print(CPI(printer), printer);
+    AstExpression *res = makeAstExpression_Print(CPI(toPrint), toPrint);
     LEAVE(print);
     UNPROTECT(save);
     return res;
@@ -4278,9 +4272,7 @@ static AstExpression *iff(PrattRecord *record __attribute__((unused)),
         alternative = nest(parser);
     }
     PROTECT(alternative);
-    AstIff *body = newAstIff(TOKPI(tok), condition, consequent, alternative);
-    PROTECT(body);
-    AstExpression *res = newAstExpression_Iff(CPI(body), body);
+    AstExpression *res = makeAstExpression_Iff(TOKPI(tok), condition, consequent, alternative);
     LEAVE(iff);
     UNPROTECT(save);
     return res;
