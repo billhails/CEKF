@@ -243,9 +243,11 @@ class DiscriminatedUnionField(EnumField):
         
         # Generate the inline getter function
         print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}x) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
         print(f'    if (x{accessor}type != {typeName}) {{ {c}')
         print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(x{accessor}type)); {c}')
         print(f'    }} {c}')
+        print(f'#endif {c}')
         print(f'    return x{accessor}val.{self.name}; {c}')
         print(f'}} {c}')
         print('')
