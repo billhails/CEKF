@@ -494,7 +494,7 @@ in
     [
         lambda(
             [var_expr("x"), var_expr("y")],
-            apply(var_expr("f"), [var_expr("x"), var_expr("y")])
+            apply(var_expr("f"), [var_expr("x"), apply(var_expr("f"), [var_expr("y")])])
         ),
 
         biginteger(42),
@@ -605,7 +605,7 @@ in
     ]);
 
 // Output:
-// (λ (x y) (f x y)) ==> (λ (x y) (f x y))
+// (λ (x y) (f x (f y))) ==> (λ (x y) (let ($1 (f y)) (f x $1)))
 // 42 ==> 42
 // z ==> z
 // (let (a (compute (value 10))) (use a)) ==> (let ($1 (value 10)) (let (a (compute $1)) (use a)))
