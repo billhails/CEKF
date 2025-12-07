@@ -8,6 +8,12 @@ This module contains:
 from .base import Base
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
+from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
+from .accessor_helper import AccessorHelper
+from .compare_helper import CompareHelper
+from .objtype_helper import ObjectTypeHelper
 
 
 class SimpleVector(Base):
@@ -48,10 +54,7 @@ class SimpleVector(Base):
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} new{myName}(int size)"
-
-    def comment(self, method):
-        return f'// SimpleVector.{method}'
+        return SignatureHelper.new_signature(myName, myType, ["int size"])
 
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')
@@ -88,7 +91,7 @@ class SimpleVector(Base):
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def getTypeDeclaration(self, catalog):
-        return "struct {name} *".format(name=self.getName())
+        return TypeHelper.struct_type(self.getName(), is_inline=False)
 
     def getDefineValue(self):
         return 'x'
@@ -112,27 +115,16 @@ class SimpleVector(Base):
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraCmpArgs})) return false; {c}")
 
     def getExtraCmpFargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
-            extra += [f"{ctype}{name}"]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
 
     def getExtraCmpAargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            extra += [name]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
 
     def objTypeArray(self):
-        return [ self.getObjType() ]
+        return ObjectTypeHelper.obj_type_array(self.getName())
 
     def getObjType(self):
-        return ('objtype_' + self.getName()).upper()
+        return ObjectTypeHelper.obj_type_name(self.getName())
 
     def printCopyDeclaration(self, catalog):
         decl = self.getCopySignature(catalog)
@@ -171,11 +163,11 @@ class SimpleVector(Base):
     def getCopySignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} copy{myName}({myType} o)"
+        return SignatureHelper.copy_signature(myName, myType)
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.print_signature(self.getName(), myType)
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
@@ -191,7 +183,7 @@ class SimpleVector(Base):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def printMarkFunction(self, catalog):
         decl = self.getMarkSignature(catalog)
@@ -269,7 +261,7 @@ class SimpleVector(Base):
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.mark_signature(self.getName(), myType)
 
     def printFreeDeclaration(self, catalog):
         c = self.comment('printFreeDeclaration')
@@ -278,7 +270,7 @@ class SimpleVector(Base):
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.free_signature(self.getName(), myType)
 
     def printFreeFunction(self, catalog):
         myType = self.getTypeDeclaration(catalog)

@@ -3,11 +3,18 @@ Struct structure classes for makeAST code generation.
 
 This module contains:
 - SimpleStruct: Regular C structs with fields
+- InlineStruct: Inline (call-by-value) structs
 """
 
 from .base import Base, EnumField
 from .fields import SimpleField
 from .utils import pad
+from .comment_gen import CommentGen
+from .type_helper import TypeHelper
+from .signature_helper import SignatureHelper
+from .accessor_helper import AccessorHelper
+from .compare_helper import CompareHelper
+from .objtype_helper import ObjectTypeHelper
 
 class SimpleStruct(Base):
     """
@@ -50,14 +57,10 @@ class SimpleStruct(Base):
         return SimpleField(self.name, fieldName, fieldType)
 
     def getTypeDeclaration(self, catalog):
-        name=self.getName()
-        if self.isInline(catalog):
-            return f"struct {name} "
-        else:
-            return f"struct {name} *"
+        return TypeHelper.struct_type(self.getName(), self.isInline(catalog))
 
     def getObjType(self):
-        return ('objtype_' + self.getName()).upper()
+        return ObjectTypeHelper.obj_type_name(self.getName())
 
     def isSinglySelfReferential(self, catalog):
         count = 0
@@ -73,15 +76,12 @@ class SimpleStruct(Base):
         raise Exception(f'cannot find self-referential field name for {self.getName()}')
 
     def objTypeArray(self):
-        return [ self.getObjType() ]
+        return ObjectTypeHelper.obj_type_array(self.getName())
 
     def getCountSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         return f'Index count{myName}({myType} x)'
-
-    def comment(self, method):
-        return f'// SimpleStruct.{method}'
 
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
@@ -108,41 +108,30 @@ class SimpleStruct(Base):
 
     def getMarkSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void mark{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.mark_signature(self.getName(), myType)
 
     def getFreeSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void free{myName}({myType} x)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.free_signature(self.getName(), myType)
 
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
-        return "void print{myName}({myType} x, int depth)".format(myName=self.getName(), myType=myType)
+        return SignatureHelper.print_signature(self.getName(), myType)
 
     def getCtype(self, astType, catalog):
-        return f"{astType} *"
+        return TypeHelper.pointer_type(astType)
 
     def getExtraCmpFargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            ctype = self.getCtype(self.extraCmpArgs[name], catalog)
-            extra += [f"{ctype}{name}"]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_formal_args(self.extraCmpArgs, lambda t: self.getCtype(t, catalog))
 
     def getExtraCmpAargs(self, catalog):
-        extra = []
-        for name in self.extraCmpArgs:
-            extra += [name]
-        if len(extra) > 0:
-            return ", " + ", ".join(extra)
-        return ""
+        return CompareHelper.get_extra_actual_args(self.extraCmpArgs)
 
     def getCompareSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
         extraCmpArgs = self.getExtraCmpFargs(catalog)
-        return f"bool eq{myName}({myType} a, {myType} b{extraCmpArgs})"
+        return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def getNewArgs(self, catalog):
         return [x for x in self.fields if x.default is None and not x.isSelfInitializing(catalog)]
@@ -161,12 +150,12 @@ class SimpleStruct(Base):
         if catalog.parserInfo:
             args = ['ParserInfo _PI'] + args
 
-        return f"{myType} new{myName}({', '.join(args)})"
+        return SignatureHelper.new_signature(myName, myType, args)
 
     def getCopySignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"{myType} copy{myName}({myType} o)"
+        return SignatureHelper.copy_signature(myName, myType)
 
     def printNewDeclaration(self, catalog):
         c = self.comment('printNewDeclaration')
@@ -265,21 +254,21 @@ class SimpleStruct(Base):
         c = self.comment('printMarkField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"mark{myName}(x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
         myName=self.getName()
         extraArgs = self.getExtraCmpAargs({})
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         pad(depth)
         print(f"if (!eq{myName}(a{a}{prefix}{field}, b{a}{prefix}{field}{extraArgs})) return false; {c}")
 
@@ -292,7 +281,7 @@ class SimpleStruct(Base):
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         pad(depth)
         print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
 
@@ -300,7 +289,7 @@ class SimpleStruct(Base):
         c = self.comment('printCopyField')
         myName=self.getName()
         pad(depth)
-        a = '.' if isInline else '->'
+        a = AccessorHelper.accessor(isInline)
         print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printMarkFunction(self, catalog):
@@ -436,144 +425,96 @@ class SimpleStruct(Base):
         return 'x'
 
 
-class DiscriminatedUnionField(EnumField):
+class InlineStruct(SimpleStruct):
     """
-    Contains all the information from a field in a discriminated union.
-    Shared between DiscriminatedUnionEnum, Union and DiscriminatedUnion objects
+    Inline (call by value) structs live on the stack not the heap, they are
+    used for small data structures that don't need GC. They have no Header
+    field and are passed by value rather than by pointer.
+    
+    These are useful for nested configurations or small value types that
+    are always part of a larger structure.
     """
-    def __init__(self, owner, name, typeName):
-        if name is True:
-            raise Exception("DiscriminatedUnionField passed a boolean")
-        super().__init__(owner, name)
-        self.typeName = typeName
-        self.default = None
-
-    def getObjName(self, catalog):
-        return self.typeName
-
-    def comment(self, method):
-        return f'// DiscriminatedUnionField.{method}'
-
-    def printHelperNewDeclaration(self, catalog, isInline):
-        ucfirst = self.getName()[0].upper() + self.getName()[1:]
-        c = self.comment('printHelperNewDeclaration')
-        arg = self.getDefineArg(catalog)
-        macroArg = arg
-        typeName = self.makeTypeName()
-        argMacro = self.getDefineMacro(catalog, self.getName())
-        obj = catalog.get(self.typeName)
-        owner = catalog.get(self.owner)
-        argType = ''
-        if arg != '':
-            argType = obj.getTypeDeclaration(catalog) + ' '
-        parserInfoFarg = ''
-        parserInfoAarg = ''
-        if owner.hasParserInfo(catalog):
-            parserInfoFarg = 'struct ParserInfo I'
-            parserInfoAarg = 'I, '
-            if argType != '':
-                argType = ', ' + argType
-        else:
-            if arg == '':
-                arg = 'void'
-        if isInline:
-            consPrefix = self.owner[0].lower() + self.owner[1:]
-            print(f'static inline {self.owner} {consPrefix}_{ucfirst}({parserInfoFarg}{argType}{arg}) {{ {c}')
-            print(f'    return ({self.owner}) {{ .type = {parserInfoAarg}{typeName}, .val = {argMacro}({macroArg}) }}; {c}')
-        else:
-            print(f'static inline {self.owner} *new{self.owner}_{ucfirst}({parserInfoFarg}{argType}{arg}) {{ {c}')
-            print(f'    return new{self.owner}({parserInfoAarg}{typeName}, {argMacro}({macroArg})); {c}')
-        print(f'}} {c}')
-        print('')
-
-    def printStructTypedefLine(self, catalog):
-        c = self.comment('printStructTypedefLine')
-        obj = catalog.get(self.typeName)
-        otype=obj.getTypeDeclaration(catalog)
-        name=self.name
-        print(f"    {otype} {name}; {c}")
-
-    def getSignature(self, catalog):
-        obj = catalog.get(self.typeName)
-        return "{type} {name}".format(type=obj.getTypeDeclaration(catalog), name=self.name)
-
-    def getCopyCall(self, arg, catalog):
-        return f'DiscriminatedUnionField_getCopyCall({arg})'
-
-    def getFieldName(self):
-        return 'DiscriminatedUnionField_getFieldName'
-
-    def getDefineMacro(self, catalog, user):
-        v = self.owner + '_val_' + user
-        v = v.upper().replace('AST', 'AST_')
-        return v
-
-    def getDefineArg(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.getDefineArg()
-
-    def getDefineType(self, catalog):
-        return catalog.get(self.owner).getUnion().getTypeDeclaration(catalog)
-
-    def getDefineField(self, catalog):
-        return self.name
-
-    def getDefineValue(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.getDefineValue()
-
-    def printDefine(self, catalog, user, value):
-        keys = {
-            "macro": self.getDefineMacro(catalog, user),
-            "arg": self.getDefineArg(catalog),
-            "type": self.getDefineType(catalog),
-            "field": self.getDefineField(catalog),
-            "value": value
-        }
-        print("#define {macro}({arg}) (({type}){{.{field} = ({value})}})".format_map(keys))
-
-    def printDefines(self, catalog):
-        self.printDefine(catalog, self.name, self.getDefineValue(catalog))
-
-    def printMarkCase(self, isInline, catalog):
-        c = self.comment('printMarkCase')
-        typeName = self.makeTypeName()
-        print(f"        case {typeName}: {c}")
-        obj = catalog.get(self.typeName)
-        obj.printMarkField(isInline, self.name, 3, 'val.')
-        print(f"            break; {c}")
-
-    def printProtectCase(self, isInline, catalog):
-        c = self.comment('printProtectCase')
-        typeName = self.makeTypeName()
-        print(f"        case {typeName}: {c}")
-        obj = catalog.get(self.typeName)
-        obj.printProtectField(isInline, self.name, 3, 'val.')
-
-    def printCompareCase(self, isInline, catalog):
-        c = self.comment('printCompareCase')
-        typeName = self.makeTypeName()
-        print(f"        case {typeName}: {c}")
-        obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, self.name, 3, 'val.')
-        print(f"            break; {c}")
-
-    def printPrintCase(self, catalog, isInline):
-        c = self.comment('printPrintCase')
-        typeName = self.makeTypeName()
-        print(f"        case {typeName}: {c}")
-        print(f'            pad(depth + 1); {c}')
-        print(f'            eprintf("{typeName}\\n"); {c}')
-        obj = catalog.get(self.typeName)
-        obj.printPrintField(isInline, self.name, 3, 'val.')
-        print(f"            break; {c}")
-
-    def printCopyCase(self, catalog, isInline):
-        c = self.comment('printCopyCase')
-        typeName = self.makeTypeName()
-        print(f"        case {typeName}: {c}")
-        obj = catalog.get(self.typeName)
-        obj.printCopyField(isInline, self.name, 3, 'val.')
-        print(f"            break; {c}")
-
+    
+    def isInline(self, catalog):
+        return True
+    
+    def printNewFunction(self, catalog):
+        # Inline structs don't have a heap allocator - they're initialized inline
+        # Generate a simple constructor that returns by value
+        c = self.comment('printNewFunction')
+        myName = self.getName()
+        sig = self.getNewSignature(catalog)
+        print(f"/**")
+        print(f" * Creates a new {myName} struct with the given arguments.")
+        print(f" */")
+        print(f"{sig} {{ {c}")
+        print(f"    {self.getTypeDeclaration(catalog)} x; {c}")
+        for field in self.fields:
+            fname = field.getName()
+            if field.default is not None:
+                print(f"    x.{fname} = {field.default}; {c}")
+            else:
+                print(f"    x.{fname} = {fname}; {c}")
+        print(f"    return x; {c}")
+        print(f"}} {c}\n")
+    
+    def printNewDeclaration(self, catalog):
+        # Inline structs do need a constructor declaration
+        c = self.comment('printNewDeclaration')
+        sig = self.getNewSignature(catalog)
+        print(f"{sig}; {c}")
+    
+    def printMarkDeclaration(self, catalog):
+        # Inline structs need mark declarations for their fields
+        c = self.comment('printMarkDeclaration')
+        decl = self.getMarkSignature(catalog)
+        print(f"{decl}; {c}")
+    
+    def printMarkFunction(self, catalog):
+        # Mark function for inline struct - marks any pointer fields
+        c = self.comment('printMarkFunction')
+        decl = self.getMarkSignature(catalog)
+        myName = self.getName()
+        print(f"/**")
+        print(f" * Marks all pointer fields in a {myName} struct for GC.")
+        print(f" */")
+        print(f"{decl} {{ {c}")
+        # Mark all fields using their printMarkLine method
+        for field in self.fields:
+            field.printMarkLine(True, catalog, 1)  # True = isInline
+        print(f"}} {c}\n")
+    
+    def printFreeDeclaration(self, catalog):
+        # Inline structs don't need free functions
+        pass
+    
+    def printFreeFunction(self, catalog):
+        # No free function needed
+        pass
+    
+    def printCopyDeclaration(self, catalog):
+        # Inline structs are copied by value, but we still provide a copy function
+        c = self.comment('printCopyDeclaration')
+        decl = self.getCopySignature(catalog)
+        print(f"{decl}; {c}")
+    
+    def printCopyFunction(self, catalog):
+        # Inline struct copy just returns the value
+        c = self.comment('printCopyFunction')
+        decl = self.getCopySignature(catalog)
+        myName = self.getName()
+        print(f"/**")
+        print(f" * Copies a {myName} struct (returns by value).")
+        print(f" */")
+        print(f"{decl} {{ {c}")
+        print(f"    return o; {c}")
+        print(f"}} {c}\n")
+    
+    def objTypeArray(self):
+        # Inline structs don't participate in object type dispatch
+        return []
+    
+    def getObjType(self):
+        # Inline structs don't have object types
+        return None
 

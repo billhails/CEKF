@@ -817,9 +817,7 @@ static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
     int save = PROTECT(args);
     LamExp *body = makeFunctionBody(I, typeDef->constructors, env);
     PROTECT(body);
-    LamLam *lam = newLamLam(I, args, body);
-    PROTECT(lam);
-    LamExp *val = newLamExp_Lam(I, lam);
+    LamExp *val = makeLamExp_Lam(I, args, body);
     PROTECT(val);
     LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
     UNPROTECT(save);

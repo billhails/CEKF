@@ -1,6 +1,7 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
-install-sqlite3 coverage extracov view-coverage
+install-sqlite3 coverage extracov view-coverage \
+establish-baseline test-refactoring update-baseline clean-baseline
 
 # pass on the command line, i.e. `make test MODE=testing`
 #
@@ -195,6 +196,7 @@ test: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 	for t in $(TSTDIR)/fn/test_*.fn ; do echo '***' $$t '***' ; ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 	for t in $(TSTDIR)/fn/fail_*.fn ; do echo '***' $$t '(expect to see an error) ***' ; ! ./$(TARGET) --include=fn --assertions-accumulate $$t || exit 1 ; done
 	for t in $(TEST_TARGETS) ; do echo '***' $$t '***' ; $$t || exit 1 ; done
+	@echo "All tests passed."
 
 $(TEST_TARGETS): $(TSTDIR)/%: $(OBJDIR)/%.o $(ALL_OBJ)
 	$(CC) -o $@ $< $(ALL_OBJ) $(LIBS)
@@ -277,5 +279,53 @@ extracov: $(TEST_TARGETS) $(TARGET) $(UNIDIR)/unicode.db
 
 view-coverage:
 	firefox --new-tab coverage_html/index.html
+
+# Code generation refactoring test targets
+BASELINE_DIR=test_baseline
+
+establish-baseline:
+	@echo "Establishing baseline for code generation testing..."
+	@echo "WARNING: This will regenerate all code and create a snapshot."
+	@echo "Press Ctrl-C to cancel, or Enter to continue..."
+	@read dummy
+	$(MAKE) clean
+	$(MAKE) MODE=testing
+	mkdir -p $(BASELINE_DIR)/generated
+	mkdir -p $(BASELINE_DIR)/src
+	cp -r $(GENDIR)/* $(BASELINE_DIR)/generated/
+	cp $(SRCDIR)/*.yaml $(BASELINE_DIR)/src/
+	find $(BASELINE_DIR)/generated -type f \( -name "*.h" -o -name "*.c" \) | \
+		sort | xargs md5sum > $(BASELINE_DIR)/checksums.txt
+	git rev-parse HEAD > $(BASELINE_DIR)/commit.txt
+	date -u > $(BASELINE_DIR)/timestamp.txt
+	@echo ""
+	@echo "Baseline established in $(BASELINE_DIR)/"
+	@echo "Commit: $$(cat $(BASELINE_DIR)/commit.txt)"
+	@echo "Files: $$(find $(BASELINE_DIR)/generated -type f | wc -l)"
+	@echo ""
+	@echo "Add to .gitignore if not tracking baselines in git"
+
+test-refactoring:
+	@./tools/test_refactoring.sh
+
+update-baseline:
+	@echo "Updating baseline with current generated code..."
+	@echo "WARNING: This will replace the baseline. Only do this if you've"
+	@echo "verified the new output is correct!"
+	@echo "Press Ctrl-C to cancel, or Enter to continue..."
+	@read dummy
+	rm -rf $(BASELINE_DIR)/generated
+	mkdir -p $(BASELINE_DIR)/generated
+	cp -r $(GENDIR)/* $(BASELINE_DIR)/generated/
+	find $(BASELINE_DIR)/generated -type f \( -name "*.h" -o -name "*.c" \) | \
+		sort | xargs md5sum > $(BASELINE_DIR)/checksums.txt
+	git rev-parse HEAD > $(BASELINE_DIR)/commit.txt
+	date -u > $(BASELINE_DIR)/timestamp.txt
+	@echo "Baseline updated."
+
+clean-baseline:
+	@echo "Removing baseline directory..."
+	rm -rf $(BASELINE_DIR)
+	@echo "Baseline removed."
 
 # vim: set noet sw=4:

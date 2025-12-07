@@ -45,13 +45,13 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpIf(CexpIf *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L);
-void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b, LocationArray *L);
+void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpAmb(CexpAmb *x, ByteCodeArray *b, LocationArray *L);
 void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L);
-void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L);
+void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L);
 void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L);
 void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L);
-void writeExp(Exp *x, ByteCodeArray *b, LocationArray *L);
+void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L);
 
 bool writeBinaryOutputFile(ByteCodeArray *b, char *filename);
 enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename);

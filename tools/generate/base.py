@@ -21,6 +21,7 @@ Base classes for all AST entity types
 """
 
 from .utils import pad
+from .comment_gen import CommentGen
 
 
 class Base:
@@ -80,6 +81,14 @@ class Base:
     def isInline(self, catalog):
         return False
 
+    def needsProtection(self, catalog):
+        """
+        Returns True if values of this type need GC protection.
+        By default, non-inline (pointer) types need protection.
+        Override in subclasses for special cases (e.g., primitives).
+        """
+        return not self.isInline(catalog)
+
     def noteTypedef(self):
         with open(".typedefs", "a") as f:
             print(f'-T {self.name}', file=f)
@@ -99,6 +108,10 @@ class Base:
     def getName(self):
         return self.name
 
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        return CommentGen.method_comment(self.__class__.__name__, method)
+
     def hasParserInfo(self, catalog):
         return False
 
@@ -109,6 +122,9 @@ class Base:
         pass
 
     def printHelperNewDeclarations(self, catalog):
+        pass
+
+    def printGetterDeclarations(self, catalog):
         pass
 
     def printNameFunctionDeclaration(self):
@@ -330,6 +346,10 @@ class EnumField:
     def getName(self):
         return self.name
 
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        return CommentGen.method_comment(self.__class__.__name__, method)
+
     def isSimpleField(self):
         return False
 
@@ -339,9 +359,6 @@ class EnumField:
     def printEnumTypedefLine(self, count):
         field = self.makeTypeName()
         print(f"    {field}, // {count}")
-
-    def comment(self, method):
-        return f'// EnumField.{method}'
 
     def printNameFunctionLine(self):
         c = self.comment('printNameFunctionLine')

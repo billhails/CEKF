@@ -22,6 +22,8 @@ Enum structures
 
 from .base import Base, EnumField
 from .utils import pad
+from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class SimpleEnum(Base):
@@ -42,9 +44,6 @@ class SimpleEnum(Base):
 
     def printMermaid(self, catalog):
         print(f'{self.getName()}["enum {self.getName()}"]')
-
-    def comment(self, method):
-        return f'// SimpleEnum.{method}'
 
     def getDefineValue(self):
         return 'x'
@@ -145,9 +144,6 @@ class DiscriminatedUnionEnum(Base):
         super().__init__(name, body)
         self.fields = fields
 
-    def comment(self, method):
-        return f'// DiscriminatedUnionEnum.{method}'
-
     def getName(self):
         return self.name + "Type"
 
@@ -188,7 +184,7 @@ class DiscriminatedUnionEnum(Base):
         print("")
 
     def getTypeDeclaration(self, catalog):
-        return "enum {name} ".format(name=self.getName())
+        return TypeHelper.enum_type(self.getName())
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')

@@ -35,7 +35,7 @@ from generate.hashes import SimpleHash
 from generate.enums import SimpleEnum
 from generate.arrays import SimpleArray, SimpleStack, InlineArray
 from generate.vectors import SimpleVector
-from generate.structs import SimpleStruct
+from generate.structs import SimpleStruct, InlineStruct
 from generate.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
 
 from generate.loader import Loader
@@ -80,6 +80,9 @@ def main():
             catalog.add(SimpleVector(name, document["vectors"][name]))
 
     if "inline" in document:
+        if "structs" in document["inline"]:
+            for name in document["inline"]["structs"]:
+                catalog.add(InlineStruct(name, document["inline"]["structs"][name]))
         if "unions" in document["inline"]:
             for name in document["inline"]["unions"]:
                 catalog.add(InlineDiscriminatedUnion(name, document["inline"]["unions"][name]))
@@ -205,6 +208,8 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     catalog.printCountDeclarations()
     printSection("name declarations")
     catalog.printNameFunctionDeclarations()
+    printSection("discriminated union getter declarations")
+    catalog.printGetterDeclarations()
     print("")
     print("#endif")
 

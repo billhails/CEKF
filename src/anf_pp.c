@@ -25,7 +25,7 @@
 #include "anf_pp.h"
 #include "hash.h"
 
-void ppCTEnv(CTEnv *env) {
+void ppAnfEnv(AnfEnv *env) {
     eprintf("[\n");
     if (env == NULL) {
         eprintf("]\n");
@@ -34,10 +34,10 @@ void ppCTEnv(CTEnv *env) {
     Index i = 0;
     HashSymbol *key;
     int value;
-    while ((key = iterateCTIntTable(env->table, &i, &value)) != NULL) {
+    while ((key = iterateAnfIntTable(env->table, &i, &value)) != NULL) {
         eprintf("%s: %d\n", key->name, value);
     }
-    ppCTEnv(env->next);
+    ppAnfEnv(env->next);
     eprintf("]\n");
 }
 
@@ -45,7 +45,7 @@ void ppAexpLam(AexpLam *x) {
     eprintf("(lambda ");
     ppAexpVarList(x->args);
     eprintf(" ");
-    ppExp(x->exp);
+    ppAnfExp(x->exp);
     eprintf(")");
 }
 
@@ -192,7 +192,7 @@ void ppAexpMakeVec(AexpMakeVec *x) {
 void ppAexpNamespaceArray(AexpNamespaceArray *x) {
     for (Index i = 0; i < x->size; i++) {
         eprintf("[");
-        ppExp(x->entries[i]->body);
+        ppAnfExp(x->entries[i]->body);
         eprintf("]");
         if (i + 1 < x->size) {
             eprintf(" ");
@@ -204,7 +204,7 @@ void ppAexpNamespaces(AexpNamespaces *x) {
     eprintf("(namespaces ");
     ppAexpNamespaceArray(x->namespaces);
     eprintf(" ");
-    ppExp(x->body);
+    ppAnfExp(x->body);
     eprintf(")");
 }
 
@@ -230,9 +230,9 @@ void ppCexpIf(CexpIf *x) {
     eprintf("(if ");
     ppAexp(x->condition);
     eprintf(" ");
-    ppExp(x->consequent);
+    ppAnfExp(x->consequent);
     eprintf(" ");
-    ppExp(x->alternative);
+    ppAnfExp(x->alternative);
     eprintf(")");
 }
 
@@ -249,7 +249,7 @@ void ppCexpIntCondCases(CexpIntCondCases *x) {
         eprintf("(");
         fprintMaybeBigInt(errout, x->option);
         eprintf(" ");
-        ppExp(x->body);
+        ppAnfExp(x->body);
         eprintf(")");
         if (x->next) {
             eprintf(" ");
@@ -263,7 +263,7 @@ void ppCexpCharCondCases(CexpCharCondCases *x) {
         eprintf("(");
         ppChar(x->option);
         eprintf(" ");
-        ppExp(x->body);
+        ppAnfExp(x->body);
         eprintf(")");
         if (x->next) {
             eprintf(" ");
@@ -287,13 +287,13 @@ void ppCexpCondCases(CexpCondCases *x) {
 
 void ppCexpLetRec(CexpLetRec *x) {
     eprintf("(letrec ");
-    ppLetRecBindings(x->bindings);
+    ppAnfLetRecBindings(x->bindings);
     eprintf(" ");
-    ppExp(x->body);
+    ppAnfExp(x->body);
     eprintf(")");
 }
 
-void ppLetRecBindings(LetRecBindings *x) {
+void ppAnfLetRecBindings(AnfLetRecBindings *x) {
     eprintf("(");
     while (x != NULL) {
         eprintf("(");
@@ -311,29 +311,29 @@ void ppLetRecBindings(LetRecBindings *x) {
 
 void ppCexpAmb(CexpAmb *x) {
     eprintf("(amb ");
-    ppExp(x->exp1);
+    ppAnfExp(x->exp1);
     eprintf(" ");
-    ppExp(x->exp2);
+    ppAnfExp(x->exp2);
     eprintf(")");
 }
 
 void ppCexpCut(CexpCut *x) {
     eprintf("(cut ");
-    ppExp(x->exp);
+    ppAnfExp(x->exp);
     eprintf(")");
 }
 
-void ppMatchList(MatchList *x) {
+void ppAnfMatchList(AnfMatchList *x) {
     if (x == NULL)
         return;
     eprintf("(");
     ppAexpIntList(x->matches);
     eprintf(" ");
-    ppExp(x->body);
+    ppAnfExp(x->body);
     eprintf(")");
     if (x->next != NULL) {
         eprintf(" ");
-        ppMatchList(x->next);
+        ppAnfMatchList(x->next);
     }
 }
 
@@ -341,13 +341,13 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf("(match ");
     ppAexp(x->condition);
     eprintf(" ");
-    ppMatchList(x->clauses);
+    ppAnfMatchList(x->clauses);
     eprintf(")");
 }
 
-void ppExpLookup(ExpLookup *x) {
+void ppAnfExpLookup(AnfExpLookup *x) {
     eprintf("(lookup %d ", x->namespace);
-    ppExp(x->body);
+    ppAnfExp(x->body);
     eprintf(")");
 }
 
@@ -424,38 +424,38 @@ void ppCexp(Cexp *x) {
     }
 }
 
-void ppExp(Exp *x) {
+void ppAnfExp(AnfExp *x) {
     switch (x->type) {
-        case EXP_TYPE_AEXP:
+        case ANFEXP_TYPE_AEXP:
             ppAexp(x->val.aexp);
             break;
-        case EXP_TYPE_CEXP:
+        case ANFEXP_TYPE_CEXP:
             ppCexp(x->val.cexp);
             break;
-        case EXP_TYPE_LET:
-            ppExpLet(x->val.let);
+        case ANFEXP_TYPE_LET:
+            ppAnfExpLet(x->val.let);
             break;
-        case EXP_TYPE_DONE:
+        case ANFEXP_TYPE_DONE:
             eprintf("<DONE>");
             break;
-        case EXP_TYPE_ENV:
+        case ANFEXP_TYPE_ENV:
             eprintf("ENV");
             break;
-        case EXP_TYPE_LOOKUP:
-            ppExpLookup(x->val.lookup);
+        case ANFEXP_TYPE_LOOKUP:
+            ppAnfExpLookup(x->val.lookup);
             break;
         default:
-            eprintf("<unrecognised exp %s>", expTypeName(x->type));
+            eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));
             exit(1);
     }
 }
 
-void ppExpLet(ExpLet *x) {
+void ppAnfExpLet(AnfExpLet *x) {
     eprintf("(let (");
     ppAexpVar(x->var);
     eprintf(" ");
-    ppExp(x->val);
+    ppAnfExp(x->val);
     eprintf(") ");
-    ppExp(x->body);
+    ppAnfExp(x->body);
     eprintf(")");
 }

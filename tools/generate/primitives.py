@@ -22,6 +22,8 @@ Primitive types - built-in types defined in primitives.yaml
 
 from .base import Base
 from .utils import pad
+from .comment_gen import CommentGen
+from .type_helper import TypeHelper
 
 
 class Primitive(Base):
@@ -61,8 +63,12 @@ class Primitive(Base):
     def isInline(self, catalog):
         return True
 
-    def comment(self, method):
-        return f'// Primitive.{method}'
+    def needsProtection(self, catalog):
+        """
+        Primitives don't need protection if they are valued (pass-by-value types).
+        HashSymbol is a special case - it's a pointer but doesn't need protection.
+        """
+        return False  # Primitives are never GC-allocated
 
     def printMarkCase(self, isInline, catalog):
         c = self.comment('printMarkCase')
@@ -100,7 +106,7 @@ class Primitive(Base):
             print(f"return PROTECT(x{a}{prefix}{field}); {c}")
 
     def getTypeDeclaration(self, catalog):
-        return self.cname
+        return TypeHelper.primitive_type(self.cname)
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')

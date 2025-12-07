@@ -350,10 +350,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     PROTECT(letRecBody);
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
-        LamLetRec *letRec =
-            newLamLetRec(CPI(letRecBody), funcDefsList, letRecBody);
-        PROTECT(letRec);
-        result = newLamExp_Letrec(CPI(letRec), letRec);
+        result = makeLamExp_Letrec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
         result = newLamExp_Sequence(CPI(body), body);
     }
@@ -385,9 +382,7 @@ static LamExp *lamConvertIff(AstIff *iff, LamContext *context) {
     PROTECT(consequent);
     LamExp *alternative = convertNest(iff->alternative, context);
     PROTECT(alternative);
-    LamIff *lamIff = newLamIff(CPI(test), test, consequent, alternative);
-    PROTECT(lamIff);
-    LamExp *result = newLamExp_Iff(CPI(test), lamIff);
+    LamExp *result = makeLamExp_Iff(CPI(test), test, consequent, alternative);
     UNPROTECT(save);
     LEAVE(lamConvertIff);
     return result;
@@ -404,9 +399,7 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
     ENTER(lamConvertPrint);
     LamExp *exp = convertExpression(print->exp, context);
     int save = PROTECT(exp);
-    LamPrint *lamPrint = newLamPrint(CPI(exp), exp);
-    PROTECT(lamPrint);
-    LamExp *result = newLamExp_Print(CPI(lamPrint), lamPrint);
+    LamExp *result = makeLamExp_Print(CPI(exp), exp);
     UNPROTECT(save);
     LEAVE(lamConvertPrint);
     return result;
@@ -1379,10 +1372,7 @@ static bool isMacro(HashSymbol *symbol, LamContext *env) {
  * @return The resulting thunked argument.
  */
 static LamExp *thunkMacroArg(LamExp *arg) {
-    LamLam *lambda = newLamLam(CPI(arg), NULL, arg);
-    int save = PROTECT(lambda);
-    LamExp *res = newLamExp_Lam(CPI(lambda), lambda);
-    UNPROTECT(save);
+    LamExp *res = makeLamExp_Lam(CPI(arg), NULL, arg);
     return res;
 }
 
@@ -1416,9 +1406,7 @@ static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
     int save = PROTECT(args);
     LamExp *macro = newLamExp_Var(PI, symbol);
     PROTECT(macro);
-    LamApply *apply = newLamApply(PI, macro, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(PI, apply);
+    LamExp *res = makeLamExp_Apply(PI, macro, args);
     UNPROTECT(save);
     return res;
 }
@@ -1434,9 +1422,7 @@ static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
 static LamExp *wrapMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
     args = wrapMacroArgs(args);
     int save = PROTECT(args);
-    LamApply *apply = newLamApply(PI, callee, args);
-    PROTECT(apply);
-    LamExp *res = newLamExp_Apply(PI, apply);
+    LamExp *res = makeLamExp_Apply(PI, callee, args);
     UNPROTECT(save);
     return res;
 }
@@ -1508,10 +1494,7 @@ static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
  * @return The resulting lambda application expression.
  */
 static LamExp *makeApplication(LamExp *fun, LamArgs *args) {
-    LamApply *apply = newLamApply(CPI(fun), fun, args);
-    int save = PROTECT(apply);
-    LamExp *result = newLamExp_Apply(CPI(apply), apply);
-    UNPROTECT(save);
+    LamExp *result = makeLamExp_Apply(CPI(fun), fun, args);
     return result;
 }
 
@@ -1738,19 +1721,12 @@ static LamExp *makeConstructorApplication(LamExp *constructor, LamArgs *args) {
         PROTECT(innerApply);
         LamExp *applyExp = newLamExp_Apply(CPI(innerApply), innerApply);
         PROTECT(applyExp);
-        LamLam *lambda = newLamLam(CPI(fargs), fargs, applyExp);
-        PROTECT(lambda);
-        LamExp *lamExp = newLamExp_Lam(CPI(lambda), lambda);
+        LamExp *lamExp = makeLamExp_Lam(CPI(fargs), fargs, applyExp);
         PROTECT(lamExp);
-        LamApply *apply = newLamApply(CPI(lamExp), lamExp, args);
-        PROTECT(apply);
-        result = newLamExp_Apply(CPI(apply), apply);
+        result = makeLamExp_Apply(CPI(lamExp), lamExp, args);
         UNPROTECT(save);
     } else {
-        LamApply *apply = newLamApply(CPI(constructor), constructor, args);
-        int save = PROTECT(apply);
-        result = newLamExp_Apply(CPI(apply), apply);
-        UNPROTECT(save);
+        result = makeLamExp_Apply(CPI(constructor), constructor, args);
     }
     return result;
 }

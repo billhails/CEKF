@@ -26,6 +26,6 @@
 #  include "memory.h"
 #  include "builtins.h"
 
-void annotateAnf(Exp *x, BuiltIns *builtIns);
+void annotateAnf(AnfExp *x, BuiltIns *builtIns);
 
 #endif

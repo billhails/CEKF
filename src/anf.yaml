@@ -28,7 +28,7 @@ config:
 
 
 structs:
-    CTEnv:
+    AnfEnv:
         meta:
             brief: ANF Compile Time Environment
             description: lookup for the run-time locations of variables.
@@ -36,9 +36,9 @@ structs:
             isLocal: bool
             isNamespace: bool = false
             nbindings: int = 0
-            nsEnvs: CTEnvArray = NULL
-            table: CTIntTable
-            next: CTEnv
+            nsEnvs: AnfEnvArray = NULL
+            table: AnfIntTable
+            next: AnfEnv
 
     AexpLam:
         meta:
@@ -48,7 +48,7 @@ structs:
             nargs: int
             letRecOffset: int
             args: AexpVarList
-            exp: Exp
+            exp: AnfExp
 
     AexpVarList:
         meta:
@@ -109,7 +109,7 @@ structs:
                 A namespace in ANF, containing the body of the namespace.
         data:
             nbindings: int = 0
-            body: Exp
+            body: AnfExp
 
     AexpNamespaces:
         meta:
@@ -117,7 +117,7 @@ structs:
             description: An array of namespaces in ANF.
         data:
             namespaces: AexpNamespaceArray
-            body: Exp
+            body: AnfExp
 
     CexpApply:
         meta:
@@ -134,8 +134,8 @@ structs:
             description: A conditional expression in ANF.
         data:
             condition: Aexp
-            consequent: Exp
-            alternative: Exp
+            consequent: AnfExp
+            alternative: AnfExp
 
     CexpCond:
         meta:
@@ -153,7 +153,7 @@ structs:
                 dispatch tables in ANF.
         data:
             option: MaybeBigInt
-            body: Exp
+            body: AnfExp
             next: CexpIntCondCases
 
     CexpCharCondCases:
@@ -164,7 +164,7 @@ structs:
                 dispatch tables in ANF.
         data:
             option: character
-            body: Exp
+            body: AnfExp
             next: CexpCharCondCases
 
     CexpMatch:
@@ -173,7 +173,7 @@ structs:
             description: A match expression derived from a TPMC switch in ANF.
         data:
             condition: Aexp
-            clauses: MatchList
+            clauses: AnfMatchList
 
     CexpLetRec:
         meta:
@@ -181,53 +181,53 @@ structs:
             description: A let-rec (recursive let) expression in ANF.
         data:
             nbindings: int
-            bindings: LetRecBindings
-            body: Exp
+            bindings: AnfLetRecBindings
+            body: AnfExp
 
     CexpAmb:
         meta:
             brief: ANF Cexp Amb
             description: An amb operation in ANF.
         data:
-            exp1: Exp
-            exp2: Exp
+            exp1: AnfExp
+            exp2: AnfExp
 
     CexpCut:
         meta:
             brief: ANF Cexp Cut
             description: A cut operation in ANF.
         data:
-            exp: Exp
+            exp: AnfExp
 
-    ExpLet:
+    AnfExpLet:
         data:
             var: HashSymbol
-            val: Exp
-            body: Exp
+            val: AnfExp
+            body: AnfExp
 
-    ExpLookup:
+    AnfExpLookup:
         data:
             namespace: index
             annotatedVar: AexpAnnotatedVar = NULL
-            body: Exp
+            body: AnfExp
 
-    MatchList:
+    AnfMatchList:
         meta:
             brief: ANF Match List
             description: A list of expressions each with multiple match cases
         data:
             matches: AexpIntList
-            body: Exp
-            next: MatchList
+            body: AnfExp
+            next: AnfMatchList
 
-    LetRecBindings:
+    AnfLetRecBindings:
         meta:
             brief: ANF Let Rec Bindings
             description: A list of let-rec (recursive let) bindings in ANF.
         data:
             var: HashSymbol
             val: Aexp
-            next: LetRecBindings
+            next: AnfLetRecBindings
 
 unions:
     CexpCondCases:
@@ -269,7 +269,7 @@ unions:
             cut: CexpCut
             match: CexpMatch
 
-    Exp:
+    AnfExp:
         meta:
             brief: ANF Exp
             description: A union of all expression types (atomic or complex) in ANF.
@@ -278,8 +278,8 @@ unions:
             done: void_ptr
             aexp: Aexp
             cexp: Cexp
-            let: ExpLet
-            lookup: ExpLookup
+            let: AnfExpLet
+            lookup: AnfExpLookup
 
 enums:
     AexpAnnotatedVarType:
@@ -317,7 +317,7 @@ hashes:
             description: A hash table set of symbols used in ANF.
         data: {}
 
-    CTIntTable:
+    AnfIntTable:
         meta:
             brief: ANF Compile Time Integer Table
             description: A hash table of integers used in ANF.
@@ -332,12 +332,12 @@ arrays:
         data:
             entries: AexpNamespace
 
-    CTEnvArray:
+    AnfEnvArray:
         meta:
             brief: ANF Compile Time Environment Array
             description: An array of compile time environments in ANF.
         data:
-            entries: CTEnv
+            entries: AnfEnv
 
 primitives: !include primitives.yaml
 

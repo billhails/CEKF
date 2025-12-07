@@ -23,6 +23,9 @@ The Catalog manages the collection of structures, unions, enums, arrays, etc.
 that are defined in a YAML schema file, and orchestrates their code generation.
 """
 
+from .comment_gen import CommentGen
+from .switch_helper import SwitchHelper
+
 
 class Catalog:
     """Central registry managing all entities in a schema."""
@@ -66,10 +69,24 @@ class Catalog:
         values = []
         for entity in list(self.contents.values()):
             entity.build(self)
+    
+    def _dispatch(self, method_name, *args):
+        """
+        Generic dispatcher - calls method_name on all entities.
+        
+        Args:
+            method_name: Name of method to call on each entity
+            *args: Arguments to pass to the method (usually self for catalog)
+        """
+        for entity in self.contents.values():
+            method = getattr(entity, method_name)
+            method(*args)
 
     def printHelperNewDeclarations(self):
-        for entity in self.contents.values():
-            entity.printHelperNewDeclarations(self)
+        self._dispatch('printHelperNewDeclarations', self)
+
+    def printGetterDeclarations(self):
+        self._dispatch('printGetterDeclarations', self)
 
     def printTypedefs(self):
         for entity in self.contents.values():
@@ -81,8 +98,13 @@ class Catalog:
         for entity in self.contents.values():
             if entity.isUnion():
                 entity.printTypedef(self)
+        # Print inline structs first (no dependencies, can be used by other structs)
         for entity in self.contents.values():
-            if entity.isStruct():
+            if entity.isStruct() and entity.isInline(self):
+                entity.printTypedef(self)
+        # Then print regular structs
+        for entity in self.contents.values():
+            if entity.isStruct() and not entity.isInline(self):
                 entity.printTypedef(self)
         for entity in self.contents.values():
             if entity.isHash():
@@ -92,260 +114,191 @@ class Catalog:
                 entity.printTypedef(self)
 
     def printInitDeclarations(self):
-        for entity in self.contents.values():
-            entity.printInitDeclaration(self)
+        self._dispatch('printInitDeclaration', self)
 
     def printInitFunctions(self):
-        for entity in self.contents.values():
-            entity.printInitFunction(self)
+        self._dispatch('printInitFunction', self)
 
     def printMarkDeclarations(self):
-        for entity in self.contents.values():
-            entity.printMarkDeclaration(self)
+        self._dispatch('printMarkDeclaration', self)
 
     def printCountDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCountDeclaration(self)
+        self._dispatch('printCountDeclaration', self)
 
     def printCountFunctions(self):
-        for entity in self.contents.values():
-            entity.printCountFunction(self)
+        self._dispatch('printCountFunction', self)
 
     def printAccessDeclarations(self):
-        for entity in self.contents.values():
-            entity.printAccessDeclarations(self)
+        self._dispatch('printAccessDeclarations', self)
 
     def printPushDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPushDeclaration(self)
+        self._dispatch('printPushDeclaration', self)
 
     def printPushFunctions(self):
-        for entity in self.contents.values():
-            entity.printPushFunction(self)
+        self._dispatch('printPushFunction', self)
 
     def printPopDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPopDeclaration(self)
+        self._dispatch('printPopDeclaration', self)
 
     def printPopnDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPopnDeclaration(self)
+        self._dispatch('printPopnDeclaration', self)
 
     def printMoveDeclarations(self):
-        for entity in self.contents.values():
-            entity.printMoveDeclaration(self)
+        self._dispatch('printMoveDeclaration', self)
 
     def printPushnDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPushnDeclaration(self)
+        self._dispatch('printPushnDeclaration', self)
 
     def printCopyTopDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCopyTopDeclaration(self)
+        self._dispatch('printCopyTopDeclaration', self)
 
     def printCopyExceptTopDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCopyExceptTopDeclaration(self)
+        self._dispatch('printCopyExceptTopDeclaration', self)
 
     def printCopyEntriesDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCopyEntriesDeclaration(self)
+        self._dispatch('printCopyEntriesDeclaration', self)
 
     def printClearDeclarations(self):
-        for entity in self.contents.values():
-            entity.printClearDeclaration(self)
+        self._dispatch('printClearDeclaration', self)
 
     def printPeekDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPeekDeclaration(self)
+        self._dispatch('printPeekDeclaration', self)
 
     def printPeeknDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPeeknDeclaration(self)
+        self._dispatch('printPeeknDeclaration', self)
 
     def printPokeDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPokeDeclaration(self)
+        self._dispatch('printPokeDeclaration', self)
 
     def printExtendDeclarations(self):
-        for entity in self.contents.values():
-            entity.printExtendDeclaration(self)
+        self._dispatch('printExtendDeclaration', self)
 
     def printSizeDeclarations(self):
-        for entity in self.contents.values():
-            entity.printSizeDeclaration(self)
+        self._dispatch('printSizeDeclaration', self)
 
     def printPopFunctions(self):
-        for entity in self.contents.values():
-            entity.printPopFunction(self)
+        self._dispatch('printPopFunction', self)
 
     def printPopnFunctions(self):
-        for entity in self.contents.values():
-            entity.printPopnFunction(self)
+        self._dispatch('printPopnFunction', self)
 
     def printMoveFunctions(self):
-        for entity in self.contents.values():
-            entity.printMoveFunction(self)
+        self._dispatch('printMoveFunction', self)
 
     def printPushnFunctions(self):
-        for entity in self.contents.values():
-            entity.printPushnFunction(self)
+        self._dispatch('printPushnFunction', self)
 
     def printCopyTopFunctions(self):
-        for entity in self.contents.values():
-            entity.printCopyTopFunction(self)
+        self._dispatch('printCopyTopFunction', self)
 
     def printCopyExceptTopFunctions(self):
-        for entity in self.contents.values():
-            entity.printCopyExceptTopFunction(self)
+        self._dispatch('printCopyExceptTopFunction', self)
 
     def printCopyEntriesFunctions(self):
-        for entity in self.contents.values():
-            entity.printCopyEntriesFunction(self)
+        self._dispatch('printCopyEntriesFunction', self)
 
     def printPeekFunctions(self):
-        for entity in self.contents.values():
-            entity.printPeekFunction(self)
+        self._dispatch('printPeekFunction', self)
 
     def printPeeknFunctions(self):
-        for entity in self.contents.values():
-            entity.printPeeknFunction(self)
+        self._dispatch('printPeeknFunction', self)
 
     def printPokeFunctions(self):
-        for entity in self.contents.values():
-            entity.printPokeFunction(self)
+        self._dispatch('printPokeFunction', self)
 
     def printExtendFunctions(self):
-        for entity in self.contents.values():
-            entity.printExtendFunction(self)
+        self._dispatch('printExtendFunction', self)
 
     def printSetDeclarations(self):
-        for entity in self.contents.values():
-            entity.printSetDeclaration(self)
+        self._dispatch('printSetDeclaration', self)
 
     def printGetDeclarations(self):
-        for entity in self.contents.values():
-            entity.printGetDeclaration(self)
+        self._dispatch('printGetDeclaration', self)
 
     def printSetFunctions(self):
-        for entity in self.contents.values():
-            entity.printSetFunction(self)
+        self._dispatch('printSetFunction', self)
 
     def printGetFunctions(self):
-        for entity in self.contents.values():
-            entity.printGetFunction(self)
+        self._dispatch('printGetFunction', self)
 
     def printIteratorDeclarations(self):
-        for entity in self.contents.values():
-            entity.printIteratorDeclaration(self)
+        self._dispatch('printIteratorDeclaration', self)
 
     def printIteratorFunctions(self):
-        for entity in self.contents.values():
-            entity.printIteratorFunction(self)
+        self._dispatch('printIteratorFunction', self)
 
     def printFreeDeclarations(self):
-        for entity in self.contents.values():
-            entity.printFreeDeclaration(self)
+        self._dispatch('printFreeDeclaration', self)
 
     def printProtectDeclarations(self):
-        for entity in self.contents.values():
-            entity.printProtectDeclaration(self)
+        self._dispatch('printProtectDeclaration', self)
 
     def printProtectFunctions(self):
-        for entity in self.contents.values():
-            entity.printProtectFunction(self)
+        self._dispatch('printProtectFunction', self)
 
     def printNewDeclarations(self):
-        for entity in self.contents.values():
-            entity.printNewDeclaration(self)
+        self._dispatch('printNewDeclaration', self)
 
     def printCopyDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCopyDeclaration(self)
+        self._dispatch('printCopyDeclaration', self)
 
     def printNameFunctionDeclarations(self):
-        for entity in self.contents.values():
-            entity.printNameFunctionDeclaration()
+        self._dispatch('printNameFunctionDeclaration')
 
     def printNameFunctionBodies(self):
-        for entity in self.contents.values():
-            entity.printNameFunctionBody()
+        self._dispatch('printNameFunctionBody')
 
     def printPrintFunctions(self):
-        for entity in self.contents.values():
-            entity.printPrintFunction(self)
+        self._dispatch('printPrintFunction', self)
 
     def printCompareFunctions(self):
-        for entity in self.contents.values():
-            entity.printCompareFunction(self)
+        self._dispatch('printCompareFunction', self)
 
     def printPrintDeclarations(self):
-        for entity in self.contents.values():
-            entity.printPrintDeclaration(self)
+        self._dispatch('printPrintDeclaration', self)
 
     def printCompareDeclarations(self):
-        for entity in self.contents.values():
-            entity.printCompareDeclaration(self)
+        self._dispatch('printCompareDeclaration', self)
 
     def printDefines(self):
-        for entity in self.contents.values():
-            entity.printDefines(self)
+        self._dispatch('printDefines', self)
 
     def printNewFunctions(self):
-        for entity in self.contents.values():
-            entity.printNewFunction(self)
+        self._dispatch('printNewFunction', self)
 
     def printCopyFunctions(self):
-        for entity in self.contents.values():
-            entity.printCopyFunction(self)
+        self._dispatch('printCopyFunction', self)
 
     def printMarkFunctions(self):
-        for entity in self.contents.values():
-            entity.printMarkFunction(self)
+        self._dispatch('printMarkFunction', self)
 
     def printFreeFunctions(self):
-        for entity in self.contents.values():
-            entity.printFreeFunction(self)
+        self._dispatch('printFreeFunction', self)
 
     def printMermaid(self):
-        for entity in self.contents.values():
-            entity.printMermaid(self)
-
-    def comment(self, method):
-        return f'// Catalog.{method}'
+        self._dispatch('printMermaid', self)
 
     def printMarkObjFunction(self):
-        c = self.comment('printMarkObjFunction')
-        print(f'void mark{self.typeName.capitalize()}Obj(struct Header *h) {{ {c}')
-        print(f'    switch(h->type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printMarkObjCase(self)
-        print(f'        default: {c}')
-        print(f'            cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type); {c}')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printMarkObjFunction', 'mark{Type}Obj', 'struct Header *h',
+            'printMarkObjCase',
+            f'cant_happen("unrecognised type %d in mark{self.typeName.capitalize()}Obj\\n", h->type);'
+        )
 
     def printFreeObjFunction(self):
-        c = self.comment('printFreeObjFunction')
-        print(f'void free{self.typeName.capitalize()}Obj(struct Header *h) {{ {c}')
-        print(f'    switch(h->type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printFreeObjCase(self)
-        print(f'        default: {c}')
-        print(f'            cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type); {c}')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printFreeObjFunction', 'free{Type}Obj', 'struct Header *h',
+            'printFreeObjCase',
+            f'cant_happen("unrecognised type %d in free{self.typeName.capitalize()}Obj\\n", h->type);'
+        )
 
     def printTypeObjFunction(self):
-        c = self.comment('printTypeObjFunction')
-        print(f'char *typename{self.typeName.capitalize()}Obj(int type) {{ {c}')
-        print(f'    switch(type) {{ {c}')
-        for entity in self.contents.values():
-            entity.printTypeObjCase(self)
-        print(f'        default: {c}')
-        print(f'            return "???"; {c} no error, can be used during error reporting')
-        print(f'    }} {c}')
-        print(f'}} {c}')
+        SwitchHelper.print_switch_function(
+            self, 'printTypeObjFunction', 'typename{Type}Obj', 'int type',
+            'printTypeObjCase',
+            'return "???"; // no error, can be used during error reporting',
+            'char *'
+        )
 
     def printObjTypeDefine(self):
         objTypeArray = []

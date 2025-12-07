@@ -16,12 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""
-Field classes for structs and unions
-"""
+"""Field classes for struct and union members."""
 
 import re
 from .base import EnumField
+from .comment_gen import CommentGen
 
 
 class SimpleField:
@@ -44,6 +43,11 @@ class SimpleField:
 
     def getName(self):
         return self.name
+
+    def comment(self, method):
+        """Generate method comment using class name automatically."""
+        from .comment_gen import CommentGen
+        return CommentGen.method_comment(self.__class__.__name__, method)
 
     def getObj(self, catalog):
         return catalog.get(self.typeName)
@@ -131,9 +135,6 @@ class SimpleField:
         obj = catalog.get(self.typeName)
         obj.printCompareField(catalog, isInline, f"{self.name}[{key}]", depth)
 
-    def comment(self, method):
-        return f'// SimpleField.{method}'
-
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         decl=self.getSignature(catalog)
@@ -165,9 +166,6 @@ class DiscriminatedUnionField(EnumField):
     def getObjName(self, catalog):
         return self.typeName
 
-    def comment(self, method):
-        return f'// DiscriminatedUnionField.{method}'
-
     def printHelperNewDeclaration(self, catalog, isInline):
         ucfirst = self.getName()[0].upper() + self.getName()[1:]
         c = self.comment('printHelperNewDeclaration')
@@ -197,6 +195,60 @@ class DiscriminatedUnionField(EnumField):
         else:
             print(f'static inline {self.owner} *new{self.owner}_{ucfirst}({parserInfoFarg}{argType}{arg}) {{ {c}')
             print(f'    return new{self.owner}({parserInfoAarg}{typeName}, {argMacro}({macroArg})); {c}')
+        print(f'}} {c}')
+        print('')
+
+    def printMakeHelperDeclaration(self, catalog, owner, isInline):
+        """
+        Generate make<Union>_<Field> helper that combines struct construction
+        with GC protection and union wrapping.
+        """
+        from .make_helper import MakeHelperGenerator
+        
+        obj = catalog.get(self.typeName)
+        has_parser_info = owner.hasParserInfo(catalog)
+        
+        MakeHelperGenerator.print_make_helper(
+            self.owner,
+            self.getName(),
+            obj,
+            catalog,
+            has_parser_info,
+            isInline
+        )
+
+    def printGetterDeclaration(self, catalog, owner, isInline):
+        """
+        Generate get<Union>_<Field> inline function that validates the variant type
+        and returns the field value, calling cant_happen if incorrect.
+        
+        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *x)
+        """
+        c = self.comment('printGetterDeclaration')
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        typeName = self.makeTypeName()
+        obj = catalog.get(self.typeName)
+        returnType = obj.getTypeDeclaration(catalog)
+        ownerType = owner.getTypeDeclaration(catalog)
+        accessor = '.' if isInline else '->'
+        
+        # Get the typename function for better error messages
+        # Convert "LamExp" -> "lamExpTypeName"
+        typeNameFunc = self.owner[0].lower() + self.owner[1:] + 'TypeName'
+        
+        # ownerType already includes '*' for non-inline or ' ' for inline
+        # returnType may not have trailing space for primitives, so add one
+        if not returnType.endswith(' '):
+            returnType = returnType + ' '
+        
+        # Generate the inline getter function
+        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}x) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
+        print(f'    if (x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(x{accessor}type)); {c}')
+        print(f'    }} {c}')
+        print(f'#endif {c}')
+        print(f'    return x{accessor}val.{self.name}; {c}')
         print(f'}} {c}')
         print('')
 

@@ -172,7 +172,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b , LocationArray *L) {
     addByte(b, x->nargs);
     addByte(b, x->letRecOffset);
     Control patch = reserveWord(b);
-    writeExp(x->exp, b, L);
+    writeAnfExp(x->exp, b, L);
     addByte(b, BYTECODES_TYPE_RETURN);
     writeCurrentAddressAt(patch, b);
     LEAVE(writeAexpLam);
@@ -282,7 +282,7 @@ void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationAr
         addByte(b, BYTECODES_TYPE_NS_START);
         addWord(b, x->size);
         for (Index i = 0; i < x->size; i++) {
-            writeExp(x->entries[i]->body, b, L);
+            writeAnfExp(x->entries[i]->body, b, L);
             writeLocation(CPI(x->entries[i]->body), b, L);
             addByte(b, BYTECODES_TYPE_NS_END);
             addWord(b, x->entries[i]->nbindings);
@@ -297,7 +297,7 @@ void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationAr
 void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeAexpNamespaces);
     writeAexpNamespaceArray(x->namespaces, b, L);
-    writeExp(x->body, b, L);
+    writeAnfExp(x->body, b, L);
     LEAVE(writeAexpNamespaces);
 }
 
@@ -365,12 +365,12 @@ void writeCexpIf(CexpIf *x, ByteCodeArray *b, LocationArray *L) {
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_IF);
     Control patch = reserveWord(b);
-    writeExp(x->consequent, b, L);
+    writeAnfExp(x->consequent, b, L);
     writeLocation(CPI(x->consequent), b, L);
     addByte(b, BYTECODES_TYPE_JMP);
     Control patch2 = reserveWord(b);
     writeCurrentAddressAt(patch, b);
-    writeExp(x->alternative, b, L);
+    writeAnfExp(x->alternative, b, L);
     writeCurrentAddressAt(patch2, b);
     LEAVE(writeCexpIf);
 }
@@ -384,11 +384,11 @@ void writeCexpCharCondCases(int depth, Control *values, Control *addresses,
     }
     writeCexpCharCondCases(depth + 1, values, addresses, jumps, x->next, b, L);
     if (x->next == NULL) {      // default
-        writeExp(x->body, b, L);
+        writeAnfExp(x->body, b, L);
     } else {
         writeIntegerAt(values[depth], b, x->option);
         writeCurrentAddressAt(addresses[depth], b);
-        writeExp(x->body, b, L);
+        writeAnfExp(x->body, b, L);
     }
     if (depth > 0) {
         writeLocation(CPI(x->body), b, L);
@@ -440,7 +440,7 @@ void writeCexpIntCondCases(CexpIntCondCases *x, ByteCodeArray *b,
     if (x->next != NULL) {      // last case is default, first one written, no dispatch as it follows the jmp table
         writeCurrentAddressAt(dispatches[index + 1], b);
     }
-    writeExp(x->body, b, L);
+    writeAnfExp(x->body, b, L);
     if (index != -1) {          // -1 is first case. last one written out, doesn't need a JMP to end as the end immediately follows
         writeLocation(CPI(x), b, L);
         addByte(b, BYTECODES_TYPE_JMP);
@@ -523,7 +523,7 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L) {
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LETREC);
     addByte(b, x->nbindings);
-    writeExp(x->body, b, L);
+    writeAnfExp(x->body, b, L);
     LEAVE(writeCexpLetRec);
 }
 
@@ -532,7 +532,7 @@ static int validateCexpMatch(CexpMatch *x) {
     for (int i = 0; i < 256; ++i) {
         seen[i] = false;
     }
-    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+    for (AnfMatchList *m = x->clauses; m != NULL; m = m->next) {
         for (AexpIntList *matches = m->matches; matches != NULL;
              matches = matches->next) {
             int index = matches->integer;
@@ -574,12 +574,12 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L) {
         patches[i] = reserveWord(b);
     }
     int jumpCounter = 0;
-    for (MatchList *m = x->clauses; m != NULL; m = m->next) {
+    for (AnfMatchList *m = x->clauses; m != NULL; m = m->next) {
         for (AexpIntList *l = m->matches; l != NULL; l = l->next) {
             int i = l->integer;
             writeCurrentAddressAt(patches[i], b);
         }
-        writeExp(m->body, b, L);
+        writeAnfExp(m->body, b, L);
         writeLocation(CPI(m->body), b, L);
         addByte(b, BYTECODES_TYPE_JMP);
         jumps[jumpCounter++] = reserveWord(b);
@@ -589,7 +589,7 @@ void writeCexpMatch(CexpMatch *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeCexpMatch);
 }
 
-void writeLetRecBindings(LetRecBindings *x, ByteCodeArray *b, LocationArray *L) {
+void writeLetRecBindings(AnfLetRecBindings *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeLetRecBindings);
     while (x != NULL) {
         writeAexp(x->val, b, L);
@@ -604,11 +604,11 @@ void writeCexpAmb(CexpAmb *x, ByteCodeArray *b, LocationArray *L) {
     addByte(b, BYTECODES_TYPE_AMB);
     Control patch = reserveWord(b);
     writeLocation(CPI(x->exp1), b, L);
-    writeExp(x->exp1, b, L);
+    writeAnfExp(x->exp1, b, L);
     addByte(b, BYTECODES_TYPE_JMP);
     Control patch2 = reserveWord(b);
     writeCurrentAddressAt(patch, b);
-    writeExp(x->exp2, b, L);
+    writeAnfExp(x->exp2, b, L);
     writeCurrentAddressAt(patch2, b);
     LEAVE(writeCexpAmb);
 }
@@ -617,24 +617,24 @@ void writeCexpCut(CexpCut *x, ByteCodeArray *b, LocationArray *L) {
     ENTER(writeCexpCut);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_CUT);
-    writeExp(x->exp, b, L);
+    writeAnfExp(x->exp, b, L);
     LEAVE(writeCexpCut);
 }
 
-void writeExpLet(ExpLet *x, ByteCodeArray *b, LocationArray *L) {
-    ENTER(writeExpLet);
+void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
+    ENTER(writeAnfExpLet);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LET);
     Control patch = reserveWord(b);
-    writeExp(x->val, b, L);
+    writeAnfExp(x->val, b, L);
     writeLocation(CPI(x->val), b, L);
     addByte(b, BYTECODES_TYPE_RETURN);
     writeCurrentAddressAt(patch, b);
-    writeExp(x->body, b, L);
-    LEAVE(writeExpLet);
+    writeAnfExp(x->body, b, L);
+    LEAVE(writeAnfExpLet);
 }
 
-void writeLookup(ExpLookup *x, ByteCodeArray *b, LocationArray *L) {
+void writeLookup(AnfExpLookup *x, ByteCodeArray *b, LocationArray *L) {
 #ifdef SAFETY_CHECKS
     if (x->annotatedVar == NULL) {
         cant_happen("annotated var missing from lookup");
@@ -654,7 +654,7 @@ void writeLookup(ExpLookup *x, ByteCodeArray *b, LocationArray *L) {
         default:
             cant_happen("unrecognised annotation type %d", x->annotatedVar->type);
     }
-    writeExp(x->body, b, L);
+    writeAnfExp(x->body, b, L);
     writeLocation(CPI(x->body), b, L);
     addByte(b, BYTECODES_TYPE_NS_POP);
 }
@@ -776,36 +776,36 @@ void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeCexp);
 }
 
-void writeExp(Exp *x, ByteCodeArray *b, LocationArray *L) {
-    ENTER(writeExp);
+void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
+    ENTER(writeAnfExp);
     switch (x->type) {
-        case EXP_TYPE_AEXP:{
+        case ANFEXP_TYPE_AEXP:{
                 writeAexp(x->val.aexp, b, L);
             }
             break;
-        case EXP_TYPE_CEXP:{
+        case ANFEXP_TYPE_CEXP:{
                 writeCexp(x->val.cexp, b, L);
             }
             break;
-        case EXP_TYPE_LET:{
-                writeExpLet(x->val.let, b, L);
+        case ANFEXP_TYPE_LET:{
+                writeAnfExpLet(x->val.let, b, L);
             }
             break;
-        case EXP_TYPE_DONE:{
+        case ANFEXP_TYPE_DONE:{
                 writeLocation(CPI(x), b, L);
                 addByte(b, BYTECODES_TYPE_DONE);
             }
             break;
-        case EXP_TYPE_LOOKUP:{
+        case ANFEXP_TYPE_LOOKUP:{
                 writeLookup(x->val.lookup, b, L);
             }
             break;
-        case EXP_TYPE_ENV:
+        case ANFEXP_TYPE_ENV:
             break;
         default:
-            cant_happen("unrecognized Exp type %s", expTypeName(x->type));
+            cant_happen("unrecognized Exp type %s", anfExpTypeName(x->type));
     }
-    LEAVE(writeExp);
+    LEAVE(writeAnfExp);
 }
 
 void writeEnd(ByteCodeArray *b) {

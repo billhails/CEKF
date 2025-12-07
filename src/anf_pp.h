@@ -26,7 +26,7 @@
 #  include "common.h"
 #  include "anf.h"
 
-void ppCTEnv(CTEnv *x);
+void ppAnfEnv(AnfEnv *x);
 void ppAexpLam(AexpLam *x);
 void ppAexpVarList(AexpVarList *x);
 void ppAexpVar(HashSymbol *x);
@@ -44,14 +44,14 @@ void ppCexpIntCondCases(CexpIntCondCases *x);
 void ppCexpCharCondCases(CexpCharCondCases *x);
 void ppCexpCondCases(CexpCondCases *x);
 void ppCexpLetRec(CexpLetRec *x);
-void ppLetRecBindings(LetRecBindings *x);
+void ppAnfLetRecBindings(AnfLetRecBindings *x);
 void ppCexpAmb(CexpAmb *x);
 void ppCexpCut(CexpCut *x);
-void ppMatchList(MatchList *x);
+void ppAnfMatchList(AnfMatchList *x);
 void ppCexpMatch(CexpMatch *x);
 void ppAexp(Aexp *x);
 void ppCexp(Cexp *x);
-void ppExp(Exp *x);
-void ppExpLet(ExpLet *x);
+void ppAnfExp(AnfExp *x);
+void ppAnfExpLet(AnfExpLet *x);
 
 #endif
