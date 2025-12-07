@@ -60,13 +60,12 @@ unions:
 
 arrays:
     ArrayName:
-        data: ElementType
+        entries: ElementType
 
 hashes:
     HashName:
         data:
-            key: KeyType
-            value: ValueType
+            entries: ValueType
 ```
 
 #### Primitives (`src/primitives.yaml`)
@@ -85,6 +84,7 @@ For each struct/union, the code generator (via `tools/generate.py` and the `gene
 **Memory Management:**
 - `new<Type>()` - Allocator with GC header, takes all fields as args
 - `new<Union>_<Component>()` - Creates discriminated union variant in type-safe way
+- `make<Union>_<Component>()` - Creates the Component and wraps in union
 - `copy<Type>()` - Deep copy
 - `mark<Type>()` - Recursive GC marking
 - `free<Type>()` - Cleanup (called by GC)

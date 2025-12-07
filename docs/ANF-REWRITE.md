@@ -4,11 +4,9 @@ The current ANF conversion stage in `anf_normalize.c` is inelegant, verbose and 
 
 However it's not really that difficult to imitate closures in C. All we need is a pair of a C procedure and a data structure containing the proceedure's free variables. This pair can then get passed as the `k` argument to those C procedures that require it. We can imagine a very simple `INVOKE(k, arg)` C macro or inline procedure to call the contained procedure in `k` passing it `arg` and the free variables needed by `k`.
 
-It remains to be decided whether we use a hash table to store the free variables, necessitating wrapping everything in `LamExp`, or just have a slot in `LamKont` for every free we need. There will not be that many as types can be re-used.
-
 ## Other Pain Points
 
-Another cause of the complexity of the ANF conversion is that the input (domain) of the function is different fron the output (range). It would be cleaner to perform the ANF conversion entirely in the `lambda.yaml` domain, then a very naïve transformation to the domain of `anf.yaml` could follow as a separate step. This is based on the observation that the classic ANF algorithm's domain and range are the same.
+Another cause of the complexity of the ANF conversion is that the input (domain) of the function is different from the output (range). It would be cleaner to perform the ANF conversion entirely in the `lambda.yaml` domain, then a very naïve transformation to the domain of `anf.yaml` could follow as a separate step. This is based on the observation that the classic ANF algorithm's domain and range are the same.
 
 ## The Algorithm
 
@@ -61,11 +59,15 @@ The entire algorithm is given here without comment. Later discussions will elabo
 
 ## Implementation Steps
 
+Please note that the following C code is untested and almost certainly contains bugs. It is just to provide concrete examples to make the ideas clear.
+
 ### Typedef
 
 We need a typedef for the closure procedure that we can use as a primitive in `lambda.yaml` when declaring the `LamKont`:
 
 ```C
+// lambda_functions.h
+
 struct LamMap; // forward declaration
 struct LamData; // forward declaration
 
@@ -103,6 +105,8 @@ hashes:
             entries: LamData
 ```
 
+Note the use of yaml anchors and references to copy all of the `LamExp` types to `LamData`.
+
 ### Inline Function to Invoke a Continuation
 
 ```C
@@ -113,7 +117,7 @@ static inline LamData *INVOKE(LamKont *k, LamData *arg) {
 
 ### Translate the Existing Algorithm to C
 
-This is the payoff. Let's break down the algorithm to get to the details. I'm particularily interested in identifying where all the continuations are created and invoked, so I'm delimiting the continuations themselves in square brackets.
+This is the payoff. Let's break down the algorithm to get to the details. I'm particularily interested in identifying where all the continuations are created and invoked, so I'm delimiting the continuations themselves in square brackets within the following scheme examples.
 
 #### Utilities
 
@@ -164,13 +168,13 @@ static LamData *normalizeTerm(LamData *e) {
              `(let (,y ,x) ,(k y))))]))
 ```
 
-Not quite so trivial, but manageable. The constructed continuation here has a free variable `k`. This means our `LamExp` will need `LamKont` as an honorary member, so we can pass it via the map.
+Not quite so trivial, but manageable. The constructed continuation here has a free variable `k`. This means our `LamData` will need `LamKont` as a member, so we can pass it via the map.
 
 
 ```C
 static LamData *normalizeNameKont(LamData *x, LamMap *map) {
     LamKont *k = getLamMap_Kont(map, TOK_K());
-    if (IS_VALUE(x)) { // constant (incl. lambda) or symbol
+    if (IS_VALUE(x)) { // constant or symbol
         return INVOKE(k, x);
     }
     LamData *y = genExpSymDollar("y");
@@ -520,11 +524,11 @@ So the hard work is left to `normalize-bindings`.
                 [λ (anfrest)
                     (k `((,x ,anfval) . ,anfrest))])]))))
 ```
-
+♮
 What's the chances that'll work? Rather than going straight to C, why not write it in F♮?
 
-```
-typedef Lambda {
+```fn
+typedef expr {
     ...
     letrec(list(#(string, expr)), expr)
     ...
