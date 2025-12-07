@@ -157,8 +157,6 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
             return normalizeEnv(CPI(lamExp), tail);
         case LAMEXP_TYPE_LOOKUP:
             return normalizeLamLookup(lamExp->val.lookup, tail);
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("normalize encountered cond default");
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
     }
@@ -545,18 +543,15 @@ static AnfExp *normalizePrim(LamPrimApp *app, AnfExp *tail) {
     LamExpTable *replacements = makeLamExpHashTable();
     int save = PROTECT(replacements);
     Aexp *exp1 = replaceLamExp(app->exp1, replacements);
-    int save2 = PROTECT(exp1);
+    PROTECT(exp1);
     Aexp *exp2 = replaceLamExp(app->exp2, replacements);
     PROTECT(exp2);
-    AexpPrimApp *aexpPrimApp = newAexpPrimApp(CPI(app), mapPrimOp(app->type), exp1, exp2);
-    UNPROTECT(save2);
-    save2 = PROTECT(aexpPrimApp);
-    Aexp *aexp = newAexp_Prim(CPI(aexpPrimApp), aexpPrimApp);
-    REPLACE_PROTECT(save2, aexp);
+    Aexp *aexp = makeAexp_Prim(CPI(app), mapPrimOp(app->type), exp1, exp2);
+    PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
-    REPLACE_PROTECT(save2, exp);
+    PROTECT(exp);
     exp = wrapTail(exp, tail);
-    REPLACE_PROTECT(save2, exp);
+    PROTECT(exp);
     AnfExp *res = letBind(exp, replacements);
     UNPROTECT(save);
     LEAVE(normalizePrim);
@@ -947,8 +942,6 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_MAKE_TUPLE:
             res = replaceLamCexp(lamExp, replacements);
             break;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("replaceLamExp encountered cond default");
         default:
             cant_happen("unrecognised type %s", lamExpTypeName(lamExp->type));
     }
@@ -983,8 +976,6 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_MAKE_TUPLE:
         case LAMEXP_TYPE_TUPLE_INDEX:
             return false;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("lamExpIsLambda encountered cond default");
         default:
             cant_happen("unrecognised LamExp type %s in lamExpIsLambda",
                         lamExpTypeName(val->type));

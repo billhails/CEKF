@@ -151,9 +151,6 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_AMB:
             ppLamAmb(exp->val.amb);
             break;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            eprintf("default");
-            break;
         case LAMEXP_TYPE_TUPLE_INDEX:
             ppLamTupleIndex(exp->val.tuple_index);
             break;

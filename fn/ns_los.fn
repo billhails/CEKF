@@ -1,0 +1,4 @@
+namespace
+
+fn a() { 10 }
+fn b() { 20 }

@@ -24,6 +24,7 @@ config:
     - bigint.h
     - tc.h
     - tc_debug.h
+    - lambda_functions.h
 
 
 structs:
@@ -162,9 +163,6 @@ structs:
     LamTupleIndex:
         meta:
             brief: An index into a tuple
-            description: >-
-                This structure represents an index into a tuple. It is used
-                to access a specific element of a tuple by its index.
         data:
             vec: int         # offset of the field in the untagged tuple vector
             size: int        # size of the tuple
@@ -175,9 +173,7 @@ structs:
             brief: A vector constructor
             description: >-
                 This structure represents the internal construction of a
-                type instance represented as a vector from
-                a list of arguments. It is used to create instances of types in the
-                lambda expression.
+                type instance (represented as a vector) from a list of arguments.
         data:
             nargs: int
             args: LamArgs
@@ -185,10 +181,6 @@ structs:
     LamIff:
         meta:
             brief: An if-then-else expression
-            description: >-
-                This structure represents a conditional expression that evaluates
-                to one of two branches based on a condition. It is used to
-                implement branching logic in the lambda expressions.
         data:
             condition: LamExp
             consequent: LamExp
@@ -486,14 +478,17 @@ structs:
             size: int # number of alternatives
             index: int # index into list of alternatives
 
+    LamKont:
+        meta:
+            brief: A C continuation used by ANF conversion
+        data:
+            proc: LamContProc
+            map: LamMap
+
 enums:
     LamPrimOp:
         meta:
             brief: Primitive operations in lambda expressions
-            description: >-
-                This enumeration defines the primitive operations that can be
-                applied in lambda expressions. These operations include arithmetic,
-                comparison, and vector operations.
         data:
             - ADD
             - SUB
@@ -518,39 +513,47 @@ unions:
                 This union represents the different types of expressions that can
                 be evaluated in the lambda expressions. It includes function
                 applications, variable lookups, constants, and various operations.
-        data:
-            namespaces: LamNamespaceArray
-            lam: LamLam
-            var: HashSymbol
-            stdint: int
-            biginteger: MaybeBigInt
-            prim: LamPrimApp
-            sequence: LamSequence
-            makeVec: LamMakeVec
-            construct: LamConstruct
-            deconstruct: LamDeconstruct
-            tuple_index: LamTupleIndex
-            make_tuple: LamArgs
-            tag: LamExp
-            constant: LamConstant
-            apply: LamApply
-            iff: LamIff
-            callcc: LamExp
-            letrec: LamLetRec
-            typedefs: LamTypeDefs
-            let: LamLet
-            match: LamMatch
-            cond: LamCond
+        data: &lamexp-types
             amb: LamAmb
-            print: LamPrint
-            typeOf: LamTypeof
-            character: character
+            apply: LamApply
             back: void_ptr
-            error: void_ptr
-            cond_default: void_ptr
-            env: void_ptr
-            lookup: LamLookup
+            biginteger: MaybeBigInt
+            callcc: LamExp
+            character: character
+            cond: LamCond
+            constant: LamConstant
+            construct: LamConstruct
             constructor: LamTypeConstructorInfo
+            deconstruct: LamDeconstruct
+            env: void_ptr
+            error: void_ptr
+            iff: LamIff
+            lam: LamLam
+            let: LamLet
+            letrec: LamLetRec
+            lookup: LamLookup
+            make_tuple: LamArgs
+            makeVec: LamMakeVec
+            match: LamMatch
+            namespaces: LamNamespaceArray
+            prim: LamPrimApp
+            print: LamPrint
+            sequence: LamSequence
+            stdint: int
+            tag: LamExp
+            tuple_index: LamTupleIndex
+            typedefs: LamTypeDefs
+            typeOf: LamTypeof
+            var: HashSymbol
+
+    LamData:
+        meta:
+            brief: Any data in a LamMap
+        data:
+            <<: *lamexp-types
+            args: LamArgs
+            kont: LamKont
+            exp: LamExp
 
     LamLookupOrSymbol:
         meta:
@@ -599,6 +602,12 @@ unions:
             nsid: int
 
 hashes:
+    LamMap:
+        meta:
+            brief: Free variables for a LamKont
+        data:
+            entries: LamData
+
     LamMacroSet:
         meta:
             brief: the set of symbols that are currently defined as macros

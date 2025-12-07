@@ -312,8 +312,6 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return
                 prune(analyzeVar
                       (CPI(exp), exp->val.constructor->name, env, ng));
-        case LAMEXP_TYPE_COND_DEFAULT:
-            cant_happen("encountered cond default in analyzeExp");
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }

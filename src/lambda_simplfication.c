@@ -337,7 +337,6 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_STDINT:
             case LAMEXP_TYPE_CHARACTER:
             case LAMEXP_TYPE_BACK:
-            case LAMEXP_TYPE_COND_DEFAULT:
             case LAMEXP_TYPE_ERROR:
             case LAMEXP_TYPE_CONSTANT:
             case LAMEXP_TYPE_CONSTRUCTOR:

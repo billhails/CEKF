@@ -3,7 +3,7 @@
 Pratt Parser support
 
 ```mermaid
-flowchart LR
+flowchart TD
 PrattRecordTable --entries--> PrattRecord
 PrattNsIdTable --entries--> int
 PrattTrie --character--> byte

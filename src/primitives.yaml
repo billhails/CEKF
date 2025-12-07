@@ -127,6 +127,12 @@ PrattParselet:
         printf: "%p"
         valued: true
 
+LamContProc:
+    data:
+        cname: "LamContProc"
+        printf: "%p"
+        valued: true
+
 double:
     data:
         cname: Double
@@ -144,3 +150,4 @@ size:
         cname: size_t
         printf: "%zu"
         valued: true
+

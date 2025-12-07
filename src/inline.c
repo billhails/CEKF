@@ -244,7 +244,6 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_STDINT:
         case LAMEXP_TYPE_BIGINTEGER:
         case LAMEXP_TYPE_CONSTANT:
-        case LAMEXP_TYPE_COND_DEFAULT:
         case LAMEXP_TYPE_ENV:
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_BACK:
