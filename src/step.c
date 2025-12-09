@@ -1176,9 +1176,12 @@ static void step() {
                     Value kont = value_Kont(state.K);
                     push(kont);
                     applyProc(1);
-                    // a RETURN just completed; it's now safe to attempt staged over-application
+                    // a RETURN just completed; mark ready for staged over-application only if result is callable
                     if (overApplyStack->size > 0) {
-                        peekOverApplyStack(overApplyStack)->ready = true;
+                        Value top = peek(-1);
+                        if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
+                            peekOverApplyStack(overApplyStack)->ready = true;
+                        }
                     }
                 }
                 break;
@@ -1303,7 +1306,7 @@ static void step() {
                     // Still unwinding continuation; break and wait
                     break;
                 } else {
-                    arity_error("over-application result", /*expected fn*/ 1, /*got*/ 0);
+                    cant_happen("expected VALUE_TYPE_CLO or VALUE_TYPE_PCLO, got %s", valueTypeName(top.type));
                     break;
                 }
                 if (f->index == f->count) {

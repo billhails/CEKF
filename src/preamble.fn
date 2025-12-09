@@ -34,16 +34,14 @@ operator "_<_" left 5 LESSTHAN;
 operator "_<=_" left 5 LESSTHANOREQUALTO;
 operator "_>=_" left 5 GREATERTHANOREQUALTO;
 operator "_<=>_" none 5 COMPARISON;
-operator "_⪌_" none 5 COMPARISON;
 operator "_+_" left 10 ADDITION;
 operator "_-_" left 10 SUBTRACTION;
 operator "-_" left 11 NEGATION;
 macro NUMERICIDENTITY(x) { x + 0 }
 operator "+_" left 11 NUMERICIDENTITY;
 operator "_*_" left 11 MULTIPLICATION;
-operator "_×_" left 11 MULTIPLICATION;
 operator "_/_" left 11 DIVISION;
-operator "_÷_" left 11 DIVISION;
+// operator "_÷_" left 11 DIVISION;
 operator "_%_" left 11 MODULUS;
 operator "_**_" left 12 EXPONENTIAL;
 operator "here_" 13 callcc;

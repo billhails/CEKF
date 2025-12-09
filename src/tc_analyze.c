@@ -55,7 +55,6 @@ static void addHereToEnv(TcEnv * env);
 static void addIfToEnv(TcEnv * env);
 static void addIntBinOpToEnv(TcEnv * env, HashSymbol * symbol);
 static void addNegToEnv(TcEnv * env);
-static void addNotToEnv(TcEnv * env);
 static void addThenToEnv(TcEnv * env);
 static TcType *analyzeExp(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *analyzeLam(LamLam * lam, TcEnv * env, TcNg * ng);
@@ -136,7 +135,6 @@ TcEnv *tc_init(BuiltIns *builtIns) {
     addIntBinOpToEnv(env, powSymbol());
     addIntBinOpToEnv(env, subSymbol());
     addNegToEnv(env);
-    addNotToEnv(env);
     addThenToEnv(env);
     addBuiltinsToEnv(env, builtIns);
     addNamespacesToEnv(env);
@@ -1832,13 +1830,6 @@ static void addNegToEnv(TcEnv *env) {
     TcType *integer = makeBigInteger();
     int save = PROTECT(integer);
     addUnOpToEnv(env, negSymbol(), integer);
-    UNPROTECT(save);
-}
-
-static void addNotToEnv(TcEnv *env) {
-    TcType *boolean = makeBoolean();
-    int save = PROTECT(boolean);
-    addUnOpToEnv(env, negSymbol(), boolean);
     UNPROTECT(save);
 }
 
