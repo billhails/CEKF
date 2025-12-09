@@ -3,7 +3,7 @@
 Structures to support type inference
 
 ```mermaid
-flowchart TD
+flowchart LR
 TcTypeTable --entries--> TcType
 TcTypeSigTable --entries--> TcTypeSig
 TcEnv --table--> TcTypeTable

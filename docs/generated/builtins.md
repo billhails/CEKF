@@ -3,7 +3,7 @@
 Support for declaring builtins
 
 ```mermaid
-flowchart TD
+flowchart LR
 BuiltInMemBufHash --entries--> BuiltInMemBuf
 BuiltIn --externalName--> HashSymbol
 BuiltIn --internalName--> HashSymbol

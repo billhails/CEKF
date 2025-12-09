@@ -3,7 +3,7 @@
 Term Pattern Matching Compiler types
 
 ```mermaid
-flowchart TD
+flowchart LR
 TpmcVariableTable --entries--> NULL
 TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern

@@ -329,7 +329,7 @@ def generate_documentation(args, catalog, typeName, description):
     print(description)
     print("")
     print("```mermaid")
-    print("flowchart TD")
+    print("flowchart LR")
     catalog.printMermaid()
     print("```")
     print("")

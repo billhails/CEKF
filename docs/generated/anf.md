@@ -3,7 +3,7 @@
 A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
-flowchart TD
+flowchart LR
 AnfSymbolTable --entries--> NULL
 AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool

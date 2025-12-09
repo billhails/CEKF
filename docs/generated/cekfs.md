@@ -3,7 +3,7 @@
 The structures of the CEKFs machine
 
 ```mermaid
-flowchart TD
+flowchart LR
 CEKF --C--> control
 CEKF --E--> Env
 CEKF --K--> Kont
