@@ -383,14 +383,9 @@ let
         }
 
         (letrec_expr(bindings, body), k) {
-            let
-                anfBody = normalize(body, k);
-            in
-                normalizeBindings(bindings,
-                    fn (anfBindings) {
-                        letrec_expr(anfBindings, anfBody)
-                    }
-                )
+            normalizeBindings(bindings, fn (anfBindings) {
+                letrec_expr(anfBindings, normalize(body, k))
+            })
         }
 
         (amb_expr(e1, e2), k) {
@@ -485,153 +480,173 @@ let
         }
     }
 in
-    list.for_each (fn (expr) {
-        print_expr(expr);
-        puts(" ==> ");
-        print_expr(normalize_term(expr));
-        puts("\n")
-    },
-    [
-        lambda(
-            [var_expr("x"), var_expr("y")],
-            apply(var_expr("f"), [var_expr("x"), apply(var_expr("f"), [var_expr("y")])])
-        ),
-
-        biginteger(42),
-
-        var_expr("z"),
-
-        let_expr(
-            var_expr("a"),
-            apply(var_expr("compute"), [apply(var_expr("value"), [biginteger(10)])]),
-            apply(var_expr("use"), [var_expr("a")])
-        ),
-
-        if_expr(
-            apply(var_expr("is_zero"), [biginteger(0)]),
-            apply(var_expr("f"), [biginteger(1)]),
-            apply(var_expr("g"), [biginteger(2)])
-        ),
-
-        apply(
-            lambda(
-                [var_expr("x")],
-                apply(var_expr("h"), [var_expr("x"), biginteger(3)])
-            ),
-            [apply(var_expr("g"), [biginteger(4)])]
-        ),
-
-        letrec_expr(
-            [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
-            var_expr("f")
-        ),
-
-        amb_expr(
-            apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(1)])]),
-            apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(2)])])
-        ),
-
-        back_expr,
-
-        character('a'),
-
-        cond_expr(
-            apply(var_expr("test_cond"), [biginteger(5)]),
-            [
-                #(biginteger(1), apply(var_expr("result1"), [biginteger(10)])),
-                #(biginteger(2), apply(var_expr("result2"), [biginteger(20)]))
-            ]
-        ),
-
-        match_cases(
-            apply(var_expr("test_case"), [biginteger(5)]),
-            [
-                #([1], apply(var_expr("result1"), [biginteger(10)])),
-                #([2, 3], apply(var_expr("result2"), [biginteger(20)]))
-            ]
-        ),
-
-        constant("nil"),
-
-        construct("pair", [biginteger(1), construct("pair", [biginteger(2), constant("nil")])]),
-
-        constructor_info("MyConstructor"),
-
-        deconstruct("pair", 0, construct("pair", [biginteger(1), constant("nil")])),
-
-        env_expr,
-
-        error_expr,
-
-        lookup("ns", 0, apply(var_expr("f"), [apply(var_expr("g"), [biginteger(10)])])),
-
-        make_tuple([biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
-
-        make_vec(3, [biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
-
-        namespaces([
-            let_expr(
+    {
+        let
+            // test data
+            lamexp = lambda(
+                [var_expr("x"), var_expr("y")],
+                apply(var_expr("f"), [var_expr("x"), apply(var_expr("f"), [var_expr("y")])])
+            );
+        
+            // (let (a (compute (value 10))) (use (f a)))
+            letexp = let_expr(
                 var_expr("a"),
-                biginteger(10),
-                apply(var_expr("use_a"), [var_expr("a")])
-            ),
-            if_expr(
-                apply(var_expr("check"), [var_expr("a")]),
-                apply(var_expr("true_branch"), []),
-                apply(var_expr("false_branch"), [])
-            )
-        ]),
+                apply(var_expr("compute"), [apply(var_expr("value"), [biginteger(10)])]),
+                apply(var_expr("use"), [apply(var_expr("f"), [var_expr("a")])])
+            );
+        
+            // (let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))
+            letexp2 = let_expr(
+                var_expr("a"),
+                apply(var_expr("compute"),
+                        [apply(var_expr("value"),
+                                [biginteger(10)])]),
+                let_expr(
+                    var_expr("b"),
+                    apply(var_expr("compute"),
+                            [apply(var_expr("value"),
+                                    [var_expr("a")])]),
+                    apply(var_expr("use"), [apply(var_expr("f"), [var_expr("b")])])
+                )
+            );
+        
+            ifexp = if_expr(
+                apply(var_expr("is_zero"), [biginteger(0)]),
+                lamexp,
+                letexp2
+            );
+        
+            primexp = primapp("+", biginteger(5),
+                                primapp("*", biginteger(10),
+                                                biginteger(2)));
+        
+        in
+            list.for_each (fn (expr) {
+                print_expr(expr);
+                puts(" ==>\n    ");
+                print_expr(normalize_term(expr));
+                puts("\n")
+            },
+            [
+                lamexp
 
-        primapp("+", biginteger(5), primapp("*", biginteger(10), biginteger(2))),
+                biginteger(42),
 
-        print_exp(apply(var_expr("display"), [biginteger(7)])),
+                var_expr("z"),
 
-        sequence([biginteger(1), var_expr("x"), apply(var_expr("f"), [apply(var_expr("h"), [biginteger(3)])])]),
+                letexp,
 
-        stdint(10),
+                letexp2,
 
-        tag(apply(var_expr("sometype"), [biginteger(7)])),
+                ifexp,
 
-        tuple_index(1, 0, apply(var_expr("sometuple"), [biginteger(7)])),
+                apply(
+                    var_expr("f"),
+                    [primexp, primexp, primexp]
+                ),
 
-        typedefs(0,
-            letrec_expr(
-                [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
-                env_expr
-            )
-        ),
+                apply(
+                    lambda(
+                        [var_expr("x")],
+                        apply(var_expr("h"), [var_expr("x"), biginteger(3)])
+                    ),
+                    [apply(var_expr("g"), [biginteger(4)])]
+                ),
 
-        typeof_expr(apply(var_expr("somevalue"), [biginteger(99)])),
-    ]);
+                apply(
+                    lambda(
+                        [var_expr("x")],
+                        apply(var_expr("h"), [var_expr("x"), apply(var_expr("y"), [biginteger(3)])])
+                    ),
+                    [apply(var_expr("g"), [biginteger(4)])]
+                ),
 
-// Output:
-// (λ (x y) (f x (f y))) ==> (λ (x y) (let ($1 (f y)) (f x $1)))
-// 42 ==> 42
-// z ==> z
-// (let (a (compute (value 10))) (use a)) ==> (let ($1 (value 10)) (let (a (compute $1)) (use a)))
-// (if (is_zero 0) (f 1) (g 2)) ==> (let ($2 (is_zero 0)) (if $2 (f 1) (g 2)))
-// ((λ (x) (h x 3)) (g 4)) ==> (let ($3 (λ (x) (h x 3))) (let ($4 (g 4)) ($3 $4)))
-// (letrec ((f (g 42 (h 7)))) f) ==> (let ($5 (h 7)) (letrec ((f (g 42 $5))) f))
-// (amb (choose (value 1)) (choose (value 2))) ==> (amb (let ($6 (value 1)) (choose $6)) (let ($7 (value 2)) (choose $7)))
-// (back) ==> (back)
-// 'a' ==> 'a'
-// (cond (test_cond 5) (1 (result1 10)) (2 (result2 20))) ==> (let ($8 (test_cond 5)) (cond $8 (1 (result1 10)) (2 (result2 20))))
-// (match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 20))) ==> (let ($9 (test_case 5)) (match_cases $9 ((1) (result1 10)) ((2 3) (result2 20))))
-// (constant nil) ==> (constant nil)
-// (construct pair 1 (construct pair 2 (constant nil))) ==> (let ($10 (construct pair 2 (constant nil))) (construct pair 1 $10))
-// (constructor_info MyConstructor) ==> (constructor_info MyConstructor)
-// (deconstruct pair 0 (construct pair 1 (constant nil))) ==> (let ($11 (construct pair 1 (constant nil))) (deconstruct pair 0 $11))
-// (env) ==> (env)
-// (error) ==> (error)
-// (lookup ns 0 (f (g 10))) ==> (lookup ns 0 (let ($12 (g 10)) (f $12)))
-// (make_tuple 1 x (h 3)) ==> (let ($13 (h 3)) (make_tuple 1 x $13))
-// (make_vec 3 1 x (h 3)) ==> (let ($14 (h 3)) (make_vec 3 1 x $14))
-// (namespaces (let (a 10) (use_a a)) (if (check a) (true_branch) (false_branch))) ==> (namespaces (let (a 10) (use_a a)) (let ($15 (check a)) (if $15 (true_branch) (false_branch))))
-// (+ 5 (* 10 2)) ==> (let ($16 (* 10 2)) (+ 5 $16))
-// (print (display 7)) ==> (let ($17 (display 7)) (print $17))
-// (begin 1 x (f (h 3))) ==> (begin 1 x (let ($18 (h 3)) (f $18)))
-// 10 ==> 10
-// (tag (sometype 7)) ==> (let ($19 (sometype 7)) (tag $19))
-// (tuple_index 1 0 (sometuple 7)) ==> (let ($20 (sometuple 7)) (tuple_index 1 0 $20))
-// (typedefs 0 (letrec ((f (g 42 (h 7)))) (env))) ==> (typedefs 0 (let ($21 (h 7)) (letrec ((f (g 42 $21))) (env))))
-// (typeof (somevalue 99)) ==> (let ($22 (somevalue 99)) (typeof $22))
+                letrec_expr(
+                    [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
+                    var_expr("f")
+                ),
+
+                amb_expr(
+                    apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(1)])]),
+                    apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(2)])])
+                ),
+
+                back_expr,
+
+                character('a'),
+
+                cond_expr(
+                    apply(var_expr("test_cond"), [biginteger(5)]),
+                    [
+                        #(biginteger(1), apply(var_expr("result1"), [biginteger(10)])),
+                        #(biginteger(2), apply(var_expr("result2"), [apply(var_expr("f"), [biginteger(20)])]))
+                    ]
+                ),
+
+                match_cases(
+                    apply(var_expr("test_case"), [biginteger(5)]),
+                    [
+                        #([1], apply(var_expr("result1"), [biginteger(10)])),
+                        #([2, 3], apply(var_expr("result2"), [apply(var_expr("f"), [biginteger(20)])]))
+                    ]
+                ),
+
+                constant("nil"),
+
+                construct("pair", [biginteger(1), construct("pair", [biginteger(2), constant("nil")])]),
+
+                constructor_info("MyConstructor"),
+
+                deconstruct("pair", 0, construct("pair", [biginteger(1), constant("nil")])),
+
+                env_expr,
+
+                error_expr,
+
+                lookup("ns", 0, apply(var_expr("f"), [apply(var_expr("g"), [biginteger(10)])])),
+
+                make_tuple([biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
+
+                make_vec(3, [biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
+
+                namespaces([
+                    let_expr(
+                        var_expr("a"),
+                        biginteger(10),
+                        apply(var_expr("use_a"), [var_expr("a")])
+                    ),
+                    if_expr(
+                        apply(var_expr("check"), [var_expr("a")]),
+                        apply(var_expr("true_branch"), []),
+                        apply(var_expr("false_branch"), [])
+                    )
+                ]),
+
+                primapp("+", biginteger(5),
+                            primapp("*", biginteger(10),
+                                        apply(var_expr("f"), [biginteger(2)]))),
+
+                primapp("+", biginteger(5),
+                            primapp("*", biginteger(10),
+                                        apply(var_expr("f"), [apply(var_expr("g"), [biginteger(2)])]))),
+
+                print_exp(apply(var_expr("display"), [biginteger(7)])),
+
+                sequence([biginteger(1), var_expr("x"), apply(var_expr("f"), [apply(var_expr("h"), [biginteger(3)])])]),
+
+                stdint(10),
+
+                tag(apply(var_expr("sometype"), [biginteger(7)])),
+
+                tuple_index(1, 0, apply(var_expr("sometuple"), [biginteger(7)])),
+
+                typedefs(0,
+                    letrec_expr(
+                        [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
+                        env_expr
+                    )
+                ),
+
+                typeof_expr(apply(var_expr("somevalue"), [biginteger(99)])),
+            ]);
+    }

@@ -121,7 +121,6 @@ LamExp --back--> void_ptr
 LamExp --biginteger--> MaybeBigInt
 LamExp --callcc--> LamExp
 LamExp --character--> character
-LamExp --cond_default--> void_ptr
 LamExp --cond--> LamCond
 LamExp --constant--> LamConstant
 LamExp --construct--> LamConstruct
@@ -153,7 +152,6 @@ LamData --back--> void_ptr
 LamData --biginteger--> MaybeBigInt
 LamData --callcc--> LamExp
 LamData --character--> character
-LamData --cond_default--> void_ptr
 LamData --cond--> LamCond
 LamData --constant--> LamConstant
 LamData --construct--> LamConstruct
