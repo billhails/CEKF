@@ -112,6 +112,12 @@ For each struct/union, the code generator (via `tools/generate.py` and the `gene
 - Switch case macros for dispatch
 - Generic `mark*Obj()`, `free*Obj()`, `typename*Obj()` dispatchers
 
+#### Extended Features for Generated Unions
+
+- `new<union>_<variant>(variant)` creates a union from an existing variant with the correct discriminating tag.
+- `make<union>_<variant>(fields...)` creates the variant and wraps it in the union in one step.
+- `get<Union>_<variant>(unionPtr)` extracts the variant from the union, throwing an error if the type does not match.
+
 #### Key Classes in `makeAST.py`
 
 The main classes are now in the `generate` package:

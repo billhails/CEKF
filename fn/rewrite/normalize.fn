@@ -7,6 +7,7 @@ let
     typedef expr {
         lambda(list(expr), expr) |
         let_expr(expr, expr, expr) |
+        let2_expr(expr, expr, expr) |
         if_expr(expr, expr, expr) |
         apply(expr, list(expr)) |
         biginteger(number) |
@@ -239,6 +240,16 @@ let
             puts(")");
             x;
         }
+        (x=let2_expr(e1, e2, e3)) {
+            puts("(let2 (");
+            print_expr(e1);
+            puts(" ");
+            print_expr(e2);
+            puts(") ");
+            print_expr(e3);
+            puts(")");
+            x;
+        }
         (x=if_expr(e1, e2, e3)) {
             puts("(if ");
             print_expr(e1);
@@ -326,6 +337,7 @@ let
     }
 
     fn normalize {
+
         (lambda(params, body), k) {
             k(lambda(params, normalize_term(body)))
         }
@@ -343,9 +355,17 @@ let
         }
 
         (let_expr(x, val, body), k) {
-            normalize(val, fn (anfVal) { let_expr(x, anfVal, normalize(body, k)) })
+            normalize(val, fn (v) { let_expr(x, v, normalize(body, k)) })
         }
 
+        // Not a real part of the language spec, just a way of
+        // investigating an alternative normalization strategy.
+        // Turns out that `let` is better (see test below).
+        (let2_expr(x, val, body), k) {
+            normalize(val, fn (v) { k(let2_expr(x, v, normalize_term(body))) })
+        }
+
+        // the branches of the if must be contained
         (if_expr(e0, e1, e2), k) {
             normalize_name(e0, fn (test) {
                 k(if_expr(test, normalize_term(e1), normalize_term(e2)))
@@ -361,43 +381,46 @@ let
         }
 
         (construct(name, args), k) {
-            normalize_names(args, fn (normArgs) {
-                k(construct(name, normArgs))
+            normalize_names(args, fn (ts) {
+                k(construct(name, ts))
             })
         }
 
-        (make_tuple(elements), k) {
-            normalize_names(elements, fn (normElements) {
-                k(make_tuple(normElements))
+        (make_tuple(Ms), k) {
+            normalize_names(Ms, fn (ts) {
+                k(make_tuple(ts))
             })
         }
 
-        (sequence(elements), k) {
-            k(sequence(normalize_terms(elements)))
+        (sequence(Ms), k) {
+            k(sequence(normalize_terms(Ms)))
         }
 
-        (make_vec(size, elements), k) {
-            normalize_names(elements, fn (normElements) {
-                k(make_vec(size, normElements))
+        (make_vec(size, Ms), k) {
+            normalize_names(Ms, fn (ts) {
+                k(make_vec(size, ts))
             })
         }
 
-        (letrec_expr(bindings, body), k) {
-            normalizeBindings(bindings, fn (anfBindings) {
-                letrec_expr(anfBindings, normalize(body, k))
+        (letrec_expr(Bs, body), k) {
+            normalizeBindings(Bs, fn (bs) {
+                letrec_expr(bs, normalize(body, k))
             })
         }
 
+        // amb expression evaluation must be contained
         (amb_expr(e1, e2), k) {
             k(amb_expr(normalize_term(e1), normalize_term(e2)))
         }
 
+        // branches of a cond must be individually contained
         (cond_expr(e0, branches), k) {
             normalize_name(e0, fn (t) {
                 k(cond_expr(t, normalize_cases(branches)))
             })
         }
 
+        // same for match_cases
         (match_cases(e0, branches), k) {
             normalize_name(e0, fn (t) {
                 k(match_cases(t, normalize_cases(branches)))
@@ -410,14 +433,18 @@ let
             })
         }
 
+        // we have to treat e0 as a Cexp because it is
+        // inside the scope of a namespace
         (lookup(name, index, e0), k) {
             k(lookup(name, index, (normalize_term(e0))))
         }
 
+        // each namespace must be individually contained
         (namespaces(exprs), k) {
             k(namespaces(normalize_terms(exprs)))
         }
 
+        // the typedefs themselves are discarded after normalization
         (typedefs(ignored, expr), k) {
             k(typedefs(ignored, normalize_term(expr)))
         }
@@ -648,5 +675,36 @@ in
                 ),
 
                 typeof_expr(apply(var_expr("somevalue"), [biginteger(99)])),
+
+                // (if (let (x (f 1))
+                //          (g x)) 10 20) ==>
+                // (let (x (f 1))
+                //      (let ($1 (g x))
+                //           (if $1 10 20)))
+                if_expr(
+                    let_expr(
+                        var_expr("x"),
+                        apply(var_expr("f"), [biginteger(1)]),
+                        apply(var_expr("g"), [var_expr("x")])
+                    ),
+                    biginteger(10),
+                    biginteger(20)
+                )
+
+                // (if (let2 (x (f 1))
+                //           (g x)) 10 20) ==>
+                // (let ($1 (let2 (x (f 1))
+                //                (g x)))
+                //      (if $1 10 20))
+                if_expr(
+                    let2_expr(
+                        var_expr("x"),
+                        apply(var_expr("f"), [biginteger(1)]),
+                        apply(var_expr("g"), [var_expr("x")])
+                    ),
+                    biginteger(10),
+                    biginteger(20)
+                )
+
             ]);
-    }
+}
