@@ -192,7 +192,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(deconstruct);
                     LamExp *deconstructExp = newLamExp_Deconstruct(I, deconstruct);
                     PROTECT(deconstructExp);
-                    LamLetBindings *bindings = newLamLetBindings(I, path, deconstructExp, NULL);
+                    LamBindings *bindings = newLamBindings(I, path, deconstructExp, NULL);
                     PROTECT(bindings);
                     LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
@@ -218,8 +218,8 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     PROTECT(index);
                     LamExp *tupleIndex = newLamExp_Tuple_index(I, index);
                     PROTECT(tupleIndex);
-                    LamLetBindings *bindings =
-                        newLamLetBindings(I, path, tupleIndex, NULL);
+                    LamBindings *bindings =
+                        newLamBindings(I, path, tupleIndex, NULL);
                     PROTECT(bindings);
                     LamLet *let = newLamLet(I, bindings, body);
                     PROTECT(let);
@@ -754,13 +754,13 @@ static void recalculateRefCounts(TpmcState *dfa) {
 
 static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
     ENTER(prependLetRec);
-    LamLetRecBindings *bindings = NULL;
+    LamBindings *bindings = NULL;
     int save = -1;
     HashSymbol *key;
     Index i = 0;
     LamExp *val = NULL;
     while ((key = iterateLamExpTable(lambdaCache, &i, &val)) != NULL) {
-        bindings = newLamLetRecBindings(I, key, val, bindings);
+        bindings = newLamBindings(I, key, val, bindings);
         if (save == -1) {
             save = PROTECT(bindings);
         } else {

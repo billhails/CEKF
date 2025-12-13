@@ -405,7 +405,7 @@ void ppLamLetRec(LamLetRec *letRec) {
         return;
     }
     eprintf("(letrec ");
-    ppLamLetRecBindings(letRec->bindings);
+    ppLamBindings(letRec->bindings);
     if (letRec->body != NULL) {
         eprintf(" ");
         ppLamExp(letRec->body);
@@ -429,27 +429,13 @@ void ppLamTypeDefs(LamTypeDefs *typeDefs) {
     eprintf(")");
 }
 
-void ppLamLetBindings(LamLetBindings *bindings) {
-    if (bindings == NULL)
-        return;
-    eprintf("(");
-    ppHashSymbol(bindings->var);
-    eprintf(" ");
-    ppLamExp(bindings->val);
-    eprintf(")");
-    if (bindings->next) {
-        eprintf(" ");
-        ppLamLetBindings(bindings->next);
-    }
-}
-
 void ppLamLet(LamLet *let) {
     if (let == NULL) {
         eprintf("<NULL let>");
         return;
     }
     eprintf("(let (");
-    ppLamLetBindings(let->bindings);
+    ppLamBindings(let->bindings);
     eprintf(") ");
     ppLamExp(let->body);
     eprintf(")");
@@ -496,7 +482,7 @@ void ppLamTupleIndex(LamTupleIndex *index) {
     eprintf(")");
 }
 
-static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
+static void _ppLamBindings(LamBindings *bindings) {
     if (bindings == NULL)
         return;
     eprintf("(");
@@ -506,13 +492,13 @@ static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
     eprintf(")");
     if (bindings->next) {
         eprintf(" ");
-        _ppLamLetRecBindings(bindings->next);
+        _ppLamBindings(bindings->next);
     }
 }
 
-void ppLamLetRecBindings(LamLetRecBindings *bindings) {
+void ppLamBindings(LamBindings *bindings) {
     eprintf("(");
-    _ppLamLetRecBindings(bindings);
+    _ppLamBindings(bindings);
     eprintf(")");
 }
 

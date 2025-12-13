@@ -161,7 +161,7 @@ static LamMacroArgsSet *excludeSymbols(LamVarList *vars, LamMacroArgsSet *symbol
  * @param bindings The letrec bindings to collect names from.
  * @return A list of variable names for the letrec bindings.
  */
-static LamVarList *collectLetRecNames(LamLetRecBindings *bindings) {
+static LamVarList *collectLetRecNames(LamBindings *bindings) {
     if (bindings == NULL) {
         return NULL;
     }
@@ -368,7 +368,7 @@ static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsSet *symbols) {
  * @param symbols The current set of macro arguments.
  * @return The modified letrec bindings.
  */
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindings,
+static LamBindings *performBindingsSubstitutions(LamBindings *bindings,
                                                        LamMacroArgsSet *reducedSymbols,
                                                        LamMacroArgsSet *originalSymbols) {
     ENTER(performBindingsSubstitutions);
@@ -394,7 +394,7 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings *bindin
  * @param symbols The current set of macro arguments.
  * @return The modified let bindings.
  */
-static LamLetBindings *performLetBindingsSubstitutions(LamLetBindings *bindings, LamMacroArgsSet **symbols) {
+static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings, LamMacroArgsSet **symbols) {
     ENTER(performLetBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performLetBindingsSubstitutions);

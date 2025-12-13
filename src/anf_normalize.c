@@ -81,8 +81,7 @@ static AnfMatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpIntList *convertIntList(LamIntList *list);
 static AnfExp *normalizeCond(LamCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(LamCondCases *cases);
-static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
-                                           LamLetRecBindings *lamLetRecBindings);
+static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, LamBindings *);
 static AnfExp *normalizeConstruct(LamConstruct *construct, AnfExp *tail);
 static AnfExp *normalizeMakeTuple(ParserInfo, LamArgs *, AnfExp *);
 static AnfExp *normalizeTupleIndex(LamTupleIndex *construct, AnfExp *tail);
@@ -237,13 +236,13 @@ static AnfMatchList *normalizeMatchList(LamMatchList *matchList) {
     return this;
 }
 
-static AnfExp *normalizeLamLetBindings(LamLetBindings *bindings, AnfExp *body) {
-    ENTER(normalizeLamLetBindings);
+static AnfExp *normalizeLetBindings(LamBindings *bindings, AnfExp *body) {
+    ENTER(normalizeLetBindings);
     if (bindings == NULL) {
-        LEAVE(normalizeLamLetBindings);
+        LEAVE(normalizeLetBindings);
         return body;
     }
-    AnfExp *tail = normalizeLamLetBindings(bindings->next, body);
+    AnfExp *tail = normalizeLetBindings(bindings->next, body);
     int save = PROTECT(tail);
     AnfExp *value = normalize(bindings->val, NULL);
     PROTECT(value);
@@ -251,7 +250,7 @@ static AnfExp *normalizeLamLetBindings(LamLetBindings *bindings, AnfExp *body) {
     PROTECT(expLet);
     AnfExp *exp = newAnfExp_Let(CPI(expLet), expLet);
     UNPROTECT(save);
-    LEAVE(normalizeLamLetBindings);
+    LEAVE(normalizeLetBindings);
     return exp;
 }
 
@@ -259,7 +258,7 @@ static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail) {
     ENTER(normalizeLet);
     AnfExp *body = normalize(lamLet->body, tail);
     int save = PROTECT(body);
-    AnfExp *exp = normalizeLamLetBindings(lamLet->bindings, body);
+    AnfExp *exp = normalizeLetBindings(lamLet->bindings, body);
     UNPROTECT(save);
     LEAVE(normalizeLet);
     return exp;
@@ -992,7 +991,7 @@ static bool lamExpIsLambda(LamExp *val) {
 }
 
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
-                                           LamLetRecBindings *lamLetRecBindings) {
+                                           LamBindings *lamLetRecBindings) {
     if (lamLetRecBindings == NULL) {
         return cexpLetRec;
     }

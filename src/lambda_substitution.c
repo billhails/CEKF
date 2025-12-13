@@ -189,9 +189,7 @@ static LamIff *performIffSubstitutions(LamIff *iff,
     return iff;
 }
 
-static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings
-                                                       *bindings, TpmcSubstitutionTable
-                                                       *substitutions) {
+static LamBindings *performBindingsSubstitutions(LamBindings *bindings, TpmcSubstitutionTable *substitutions) {
     ENTER(performBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performBindingsSubstitutions);
@@ -205,7 +203,7 @@ static LamLetRecBindings *performBindingsSubstitutions(LamLetRecBindings
     return bindings;
 }
 
-static LamLetBindings *performLetBindingsSubstitutions(LamLetBindings *bindings,
+static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings,
                                                        TpmcSubstitutionTable *substitutions) {
     ENTER(performLetBindingsSubstitutions);
     if (bindings == NULL) {

@@ -22,8 +22,8 @@
 #  include "value.h"
 #  include "tc.h"
 
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
-                                      LamLetRecBindings *rest,
+LamBindings *makePrintFunctions(LamTypeDefList *typeDefs,
+                                      LamBindings *rest,
                                       LamContext *env);
 LamExp *makeVarExpr(ParserInfo I, char *name);
 LamExp *makePrintInt(ParserInfo);

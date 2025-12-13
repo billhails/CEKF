@@ -75,10 +75,10 @@
 #  include "debugging_off.h"
 #endif
 
-static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+static LamBindings *makePrintTypeLetrec(ParserInfo I,
                                               LamTypeDef *typeDef,
                                               LamContext *env,
-                                              LamLetRecBindings *next);
+                                              LamBindings *next);
 
 /**
  * @brief Creates print functions for all type definitions in the list.
@@ -88,8 +88,8 @@ static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
  * @param inPreamble Whether the print functions are being created in the preamble.
  * @return The updated set of letrec bindings with the new print functions.
  */
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
-                                      LamLetRecBindings *next,
+LamBindings *makePrintFunctions(LamTypeDefList *typeDefs,
+                                      LamBindings *next,
                                       LamContext *env) {
     ENTER(makePrintFunctions);
     if (typeDefs == NULL) {
@@ -791,7 +791,7 @@ static LamExp *makeFunctionBody(ParserInfo I,
  * @param bindings The list of bindings to search.
  * @return True if the print function is already defined, false otherwise.
  */
-static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
+static bool userDefined(HashSymbol *printName, LamBindings *bindings) {
     if (bindings == NULL) return false;
     if (bindings->var == printName) return true;
     return userDefined(printName, bindings->next);
@@ -805,10 +805,10 @@ static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
  * @param next The next letrec binding in the chain.
  * @return The new letrec binding for the print function.
  */
-static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+static LamBindings *makePrintTypeLetrec(ParserInfo I,
                                               LamTypeDef *typeDef,
                                               LamContext *env,
-                                              LamLetRecBindings *next) {
+                                              LamBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
     if (userDefined(name, next)) {
         return next;
@@ -819,7 +819,7 @@ static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
     PROTECT(body);
     LamExp *val = makeLamExp_Lam(I, args, body);
     PROTECT(val);
-    LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
+    LamBindings *res = newLamBindings(I, name, val, next);
     UNPROTECT(save);
     return res;
 }
