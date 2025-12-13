@@ -462,7 +462,7 @@ LamData* normalizeCallOuterKont(LamData *t, NormalizeCallOuterKont_Env *env);
         int save = PROTECT(env); \
         env->k = k_val; \
         LamKont *kont = newLamKont( \
-            (LamContProc)normalizeNameKont, env); \
+            (AnfKontProcWrapper)normalizeNameKont, env); \
         REPLACE_PROTECT(save, kont); \
         kont; \
     })
@@ -475,7 +475,7 @@ LamData* normalizeCallOuterKont(LamData *t, NormalizeCallOuterKont_Env *env);
         env->body = body_val; \
         env->k = k_val; \
         LamKont *kont = newLamKont( \
-            (LamContProc)normalizeLetKont, env); \
+            (AnfKontProcWrapper)normalizeLetKont, env); \
         REPLACE_PROTECT(save, kont); \
         kont; \
     })

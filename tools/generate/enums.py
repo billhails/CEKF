@@ -35,7 +35,7 @@ class SimpleEnum(Base):
         # HASENTRIES
         if "data" in body:
             data = body["data"]
-            self.fields = [EnumField(name, x) for x in data]
+            self.fields = [EnumField(name, _x) for _x in data]
         else:
             raise ValueError(f"SimpleEnum {name} must have 'data' field")
 
@@ -46,10 +46,10 @@ class SimpleEnum(Base):
         print(f'{self.getName()}["enum {self.getName()}"]')
 
     def getDefineValue(self):
-        return 'x'
+        return '_x'
 
     def getDefineArg(self):
-        return 'x'
+        return '_x'
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
@@ -92,7 +92,7 @@ class SimpleEnum(Base):
         pad(depth)
         c = self.comment('printPrintField')
         a = '.' if isInline else '->'
-        print(f'switch (x{a}{prefix}{field}) {{ {c}')
+        print(f'switch (_x{a}{prefix}{field}) {{ {c}')
         for field in self.fields:
             field.printPrintCase(depth + 1)
         pad(depth)
@@ -102,7 +102,7 @@ class SimpleEnum(Base):
         c = self.comment('printCopyField')
         pad(depth)
         a = '.' if isInline else '->'
-        print(f'x{a}{field} = o{a}{field}; {c}')
+        print(f'_x{a}{field} = o{a}{field}; {c}')
 
     def getNameFunctionDeclaration(self):
         name = self.getName()

@@ -63,6 +63,7 @@ LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 PYTHON=python3
 GENERATE=./tools/generate.py
 MAKE_AST=$(PYTHON) $(GENERATE)
+GENDEPS=$(GENERATE) $(wildcard ./tools/generate/*.py)
 
 LIBS=-lm -lsqlite3
 
@@ -83,12 +84,19 @@ EXTRA_TARGETS= \
     $(EXTRA_DEBUG_H_TARGETS) \
     $(EXTRA_DEBUG_C_TARGETS) \
 	$(GENDIR)/UnicodeData.inc \
-	$(GENDIR)/UnicodeDigits.inc
+	$(GENDIR)/UnicodeDigits.inc \
+	$(GENDIR)/anf_kont.h \
+	$(GENDIR)/anf_kont.c \
+	$(GENDIR)/anf_kont_objtypes.h \
+	$(GENDIR)/anf_kont_debug.h \
+	$(GENDIR)/anf_kont_debug.c \
+	$(GENDIR)/anf_kont_impl.inc
 
 MAIN=$(SRCDIR)/main.c
 PREAMBLE=$(GENDIR)/preamble.c
 CFILES=$(filter-out $(MAIN), $(wildcard $(SRCDIR)/*.c))
-EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS)
+EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS) $(GENDIR)/anf_kont.c $(GENDIR)/anf_kont_debug.c
+
 TEST_CFILES=$(wildcard $(TSTDIR)/src/*.c)
 
 TEST_TARGETS=$(patsubst $(TSTDIR)/src/%.c,$(TSTDIR)/%,$(TEST_CFILES))
@@ -147,22 +155,41 @@ include $(ALL_DEP)
 $(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
 
-$(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml $(GENERATE) $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml $(GENERATE) | $(GENDIR)
+$(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml $(GENDEPS) | $(GENDIR)
 	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml $(GENERATE) $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml $(GENERATE) $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml $(GENERATE) $(SRCDIR)/primitives.yaml | $(GENDIR)
+$(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
 
-$(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENERATE) $(SRCDIR)/primitives.yaml | $(DOCDIR)
+# ANF continuation scaffolding generation (from tools/anf_continuations.yaml)
+$(GENDIR)/anf_kont.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/anf_kont.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/anf_kont_objtypes.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/anf_kont_debug.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/anf_kont_debug.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/anf_kont_impl.inc: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< kont_impl_inc > $@ || (rm -f $@ ; exit 1)
+
+$(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
 
 .generated: $(EXTRA_TARGETS)

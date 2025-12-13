@@ -47,7 +47,7 @@ def main():
     parser.add_argument("yaml", help="input yaml file")
     parser.add_argument("type",
                         type=str,
-                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md"],
+                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "kont_impl_inc"],
                         help="the type of output to produce")
     args = parser.parse_args()
 
@@ -125,6 +125,12 @@ def main():
             for bespoke in document["cmp"]["bespokeImplementation"]:
                 catalog.noteBespokeCmpImplementation(bespoke)
 
+    # For continuation YAML, add generated structs/unions to catalog
+    if "continuations" in document:
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.populate_catalog(catalog)
+
     catalog.build()
 
     # Generate output based on type
@@ -146,6 +152,11 @@ def generate_output(args, catalog, document, typeName, description, includes, li
         generate_debug_implementation(args, catalog, document, typeName, limited_includes)
     elif args.type == 'md':
         generate_documentation(args, catalog, typeName, description)
+    elif args.type == 'kont_impl_inc':
+        # For continuation scaffolding, generate .inc (catalog already populated)
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_inc(sys.stdout, includes)
 
 
 def generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo):

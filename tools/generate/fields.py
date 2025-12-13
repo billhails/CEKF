@@ -222,7 +222,7 @@ class DiscriminatedUnionField(EnumField):
         Generate get<Union>_<Field> inline function that validates the variant type
         and returns the field value, calling cant_happen if incorrect.
         
-        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *x)
+        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *_x)
         """
         c = self.comment('printGetterDeclaration')
         ucfirst = self.getName()[0].upper() + self.getName()[1:]
@@ -242,13 +242,13 @@ class DiscriminatedUnionField(EnumField):
             returnType = returnType + ' '
         
         # Generate the inline getter function
-        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}x) {{ {c}')
+        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}_x) {{ {c}')
         print(f'#ifdef SAFETY_CHECKS {c}')
-        print(f'    if (x{accessor}type != {typeName}) {{ {c}')
-        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(x{accessor}type)); {c}')
+        print(f'    if (_x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(_x{accessor}type)); {c}')
         print(f'    }} {c}')
         print(f'#endif {c}')
-        print(f'    return x{accessor}val.{self.name}; {c}')
+        print(f'    return _x{accessor}val.{self.name}; {c}')
         print(f'}} {c}')
         print('')
 

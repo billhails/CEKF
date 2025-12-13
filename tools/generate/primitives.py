@@ -94,7 +94,7 @@ class Primitive(Base):
             markFn=self.markFn
             pad(depth)
             a = '.' if isInline else '->'
-            print(f"{markFn}(x{a}{prefix}{field}); {c}")
+            print(f"{markFn}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
@@ -103,7 +103,7 @@ class Primitive(Base):
             print(f"return PROTECT(NULL); {c}")
         else:
             a = '.' if isInline else '->'
-            print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+            print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
     def getTypeDeclaration(self, catalog):
         return TypeHelper.primitive_type(self.cname)
@@ -135,22 +135,22 @@ class Primitive(Base):
             pad(depth)
             print(f'pad(depth + 1); {c}')
             pad(depth)
-            print(f'eprintf("{self.cname} {self.printf}", x{a}{prefix}{field}); {c}')
+            print(f'eprintf("{self.cname} {self.printf}", _x{a}{prefix}{field}); {c}')
         else:
             pad(depth)
-            print(f'{self.printFn}(x{a}{prefix}{field}, depth + 1); {c}')
+            print(f'{self.printFn}(_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         pad(depth)
         a = '.' if isInline else '->'
         if self.copyFn is None:
-            print(f"x{a}{prefix}{field} = o{a}{prefix}{field}; {c}")
+            print(f"_x{a}{prefix}{field} = o{a}{prefix}{field}; {c}")
         else:
-            print(f"x{a}{prefix}{field} = {self.copyFn}(o{a}{prefix}{field}); {c}")
+            print(f"_x{a}{prefix}{field} = {self.copyFn}(o{a}{prefix}{field}); {c}")
 
     def getDefineValue(self):
-        return 'x' if self.valued else 'NULL'
+        return '_x' if self.valued else 'NULL'
 
     def getDefineArg(self):
-        return 'x' if self.valued else ''
+        return '_x' if self.valued else ''

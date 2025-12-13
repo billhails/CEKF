@@ -76,11 +76,11 @@ class DiscriminatedUnion(SimpleStruct):
         c = self.comment('printMarkFunctionBody')
         myName=self.getName()
         a = AccessorHelper.accessor(self.isInline(catalog))
-        print(f"    switch(x{a}type) {{ {c}")
+        print(f"    switch(_x{a}type) {{ {c}")
         for field in self.fields:
             field.printMarkCase(self.isInline(catalog), catalog)
         print(f"        default: {c}")
-        print(f'            cant_happen("unrecognised type %d in mark{myName}", x{a}type); {c}')
+        print(f'            cant_happen("unrecognised type %d in mark{myName}", _x{a}type); {c}')
         print(f"    }} {c}")
 
     def printCompareFunctionBody(self, catalog):
@@ -105,17 +105,17 @@ class DiscriminatedUnion(SimpleStruct):
         print(f"        default: {c}")
         print(f'            cant_happen("unrecognised type %d in copy{myName}", o{a}type); {c}')
         print(f"    }} {c}")
-        print(f'    x{a}type = o{a}type; {c}')
+        print(f'    _x{a}type = o{a}type; {c}')
 
     def printPrintFunctionBody(self, catalog):
         c = self.comment('printPrintFunctionBody')
         myName=self.getName()
         a = AccessorHelper.accessor(self.isInline(catalog))
-        print(f"    switch(x{a}type) {{ {c}")
+        print(f"    switch(_x{a}type) {{ {c}")
         for field in self.fields:
             field.printPrintCase(catalog, self.isInline(catalog))
         print(f"        default: {c}")
-        print(f'            cant_happen("unrecognised type %d in print{myName}", x{a}type); {c}')
+        print(f'            cant_happen("unrecognised type %d in print{myName}", _x{a}type); {c}')
         print(f"    }} {c}")
         print(f'    eprintf("\\n"); {c}')
 
@@ -155,7 +155,7 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
     def getProtectDeclaration(self, catalog):
         myName = self.getName()
         myType = self.getTypeDeclaration(catalog)
-        return f'int protect{myName}({myType} x)'
+        return f'int protect{myName}({myType} _x)'
 
     def printProtectDeclaration(self, catalog):
         decl = self.getProtectDeclaration(catalog)
@@ -171,11 +171,11 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         print(f" * It will recursively protect the appropriate type of the contained object.")
         print(f" */")
         print(f'{decl} {{ {c}')
-        print(f'    switch(x{a}type) {{ {c}')
+        print(f'    switch(_x{a}type) {{ {c}')
         for field in self.fields:
             field.printProtectCase(self.isInline(catalog), catalog)
         print(f"        default: {c}")
-        print(f'            cant_happen("unrecognised type %d", x{a}type); {c}')
+        print(f'            cant_happen("unrecognised type %d", _x{a}type); {c}')
         print(f'    }} {c}')
         print(f'}} {c}')
         print('')

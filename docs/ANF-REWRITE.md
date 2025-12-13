@@ -57,6 +57,8 @@ The entire algorithm is given here without comment. Later discussions will elabo
                 (k `(,t . ,ts))))))))
 ```
 
+However that `let` is inadequate: it supports only a single binding. See `letrec` below for a solution.
+
 ## Implementation Steps
 
 Please note that the following C code is untested and almost certainly contains bugs. It is just to provide concrete examples to make the ideas clear.
@@ -71,7 +73,7 @@ We need a typedef for the closure procedure that we can use as a primitive in `l
 struct LamMap; // forward declaration
 struct LamData; // forward declaration
 
-typedef struct LamData *(*LamContProc)(struct LamData *, struct LamMap *);
+typedef struct LamData *(*AnfKontProcWrapper)(struct LamData *, struct LamMap *);
 ```
 
 There is precedence for this in the `PrattParselet` type used by the parser.
@@ -84,7 +86,7 @@ structs:
         meta:
             brief: structure representing a C continuation
         data:
-            proc: LamContProc
+            proc: AnfKontProcWrapper
             map: LamMap
 unions:
     LamExp:
@@ -516,7 +518,7 @@ So the hard work is left to `normalize-bindings`.
 (define (normalize-bindings bindings k)
   (match bindings
     ('()
-       (k '()))
+        (k '()))
     (`((,x ,val) . ,rest)
         (normalize val
             [λ (anfval)
@@ -524,7 +526,9 @@ So the hard work is left to `normalize-bindings`.
                 [λ (anfrest)
                     (k `((,x ,anfval) . ,anfrest))])]))))
 ```
-♮
+
+And we can duplicate exactly that for our inadequate `let`, just replace `letrec` with `let`.
+
 What's the chances that'll work? Rather than going straight to C, why not write it in F♮?
 
 ```fn

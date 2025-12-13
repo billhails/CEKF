@@ -73,13 +73,13 @@ class SimpleVector(Base):
         print(f" * {myName} is a vector of {self.entries.getObjName(catalog)}.")
         print(" */")
         print(f"{decl} {{ {c}")
-        print(f"    {myType} x = NEW_VECTOR(size, {myName}, {fieldType}, {myObjType}); {c}")
-        print(f'    DEBUG("new {myName} %p", x); {c}')
-        print(f"    Header _h = x->header; {c}")
-        print(f"    bzero(x, sizeof(struct {myName}) + size * sizeof({fieldType})); {c}")
-        print(f"    x->header = _h; {c}")
-        print(f"    x->size = size; {c}")
-        print(f"    return x; {c}")
+        print(f"    {myType} _x = NEW_VECTOR(size, {myName}, {fieldType}, {myObjType}); {c}")
+        print(f'    DEBUG("new {myName} %p", _x); {c}')
+        print(f"    Header _h = _x->header; {c}")
+        print(f"    bzero(_x, sizeof(struct {myName}) + size * sizeof({fieldType})); {c}")
+        print(f"    _x->header = _h; {c}")
+        print(f"    _x->size = size; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -88,23 +88,23 @@ class SimpleVector(Base):
         c = self.comment('printCopyField')
         pad(depth)
         a = '.' if isInline else '->'
-        print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
+        print(f'_x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def getTypeDeclaration(self, catalog):
         return TypeHelper.struct_type(self.getName(), is_inline=False)
 
     def getDefineValue(self):
-        return 'x'
+        return '_x'
 
     def getDefineArg(self):
-        return 'x'
+        return '_x'
 
     def printPrintField(self, isInline, field, depth, prefix=''):
         c = self.comment('printPrintField')
         myName=self.getName()
         a = '.' if isInline else '->'
         pad(depth)
-        print(f'print{myName}(x{a}{prefix}{field}, depth+1); {c}')
+        print(f'print{myName}(_x{a}{prefix}{field}, depth+1); {c}')
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
@@ -143,20 +143,20 @@ class SimpleVector(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
-        print(f"    {myType} x = NEW_VECTOR(o->size, {myName}, {fieldType}, {myObjType}); {c}")
-        print(f'    DEBUG("copy {myName} %p", x); {c}')
-        print(f"    Header _h = x->header; {c}")
-        print(f"    bzero(x, sizeof(struct {myName})); {c}")
-        print(f"    x->header = _h; {c}")
-        print(f"    int save = PROTECT(x); {c}")
+        print(f"    {myType} _x = NEW_VECTOR(o->size, {myName}, {fieldType}, {myObjType}); {c}")
+        print(f'    DEBUG("copy {myName} %p", _x); {c}')
+        print(f"    Header _h = _x->header; {c}")
+        print(f"    bzero(_x, sizeof(struct {myName})); {c}")
+        print(f"    _x->header = _h; {c}")
+        print(f"    int save = PROTECT(_x); {c}")
         if self.entries.isInline(catalog):
-            print(f"    COPY_ARRAY({fieldType}, x->entries, o->entries, o->size); {c}")
+            print(f"    COPY_ARRAY({fieldType}, _x->entries, o->entries, o->size); {c}")
         else:
             print(f"    for (Index i = 0; i < o->size; ++i) {{ {c}")
             self.entries.printCopyArrayLine(catalog, "i", 3)
             print(f"    }} {c}")
         print(f"    UNPROTECT(save); {c}")
-        print(f"    return x; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -193,10 +193,10 @@ class SimpleVector(Base):
         print(f" * will recursively mark the vector's entries.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    if (x == NULL) return; {c}")
-        print(f"    if (MARKED(x)) return; {c}")
-        print(f"    MARK(x); {c}")
-        print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
+        print(f"    if (_x == NULL) return; {c}")
+        print(f"    if (MARKED(_x)) return; {c}")
+        print(f"    MARK(_x); {c}")
+        print(f"    for (Index i = 0; i < _x->size; i++) {{ {c}")
         self.entries.printMarkArrayLine(False, catalog, "i", 2)
         print(f"    }} {c}")
         print(f"}} {c}")
@@ -229,8 +229,8 @@ class SimpleVector(Base):
         myName = self.getName()
         myType = self.getTypeDeclaration(catalog)
         c = self.comment('printCountDeclaration')
-        print(f'static inline Index count{myName}({myType} x) {{ {c}')
-        print(f'    return x->size; {c}')
+        print(f'static inline Index count{myName}({myType} _x) {{ {c}')
+        print(f'    return _x->size; {c}')
         print(f'}} {c}')
         print('')
 
@@ -243,9 +243,9 @@ class SimpleVector(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
-        print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
-        print(f'    eprintf("{myName}(%d)[\\n", x->size); {c}')
-        print(f"    for (Index i = 0; i < x->size; i++) {{ {c}")
+        print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+        print(f'    eprintf("{myName}(%d)[\\n", _x->size); {c}')
+        print(f"    for (Index i = 0; i < _x->size; i++) {{ {c}")
         self.entries.printPrintArrayLine(False, catalog, "i", 2)
         print(f'        eprintf("\\n"); {c}')
         print(f"    }} {c}")
@@ -282,7 +282,7 @@ class SimpleVector(Base):
         print(f" * Frees a {myName} object.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    FREE_VECTOR(x, {myName}, {fieldType}, x->size); {c}")
+        print(f"    FREE_VECTOR(_x, {myName}, {fieldType}, _x->size); {c}")
         print(f"}} {c}")
         print("")
 
@@ -317,14 +317,14 @@ class SimpleVector(Base):
         myName=self.getName()
         pad(depth)
         a = '.' if isInline else '->'
-        print(f"mark{myName}(x{a}{prefix}{field}); {c}")
+        print(f"mark{myName}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         myName=self.getName()
         pad(depth)
         a = '.' if isInline else '->'
-        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+        print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
     def printFreeObjCase(self, catalog):
         if self.isInline(catalog):

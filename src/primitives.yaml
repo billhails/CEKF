@@ -18,6 +18,12 @@
 
 # common primitive types not defined by the schemas
 
+AnfKontProcWrapper:
+    data:
+        cname: AnfKontProcWrapper
+        printf: "%p"
+        valued: true
+
 HashSymbol:
     data:
         cname: "struct HashSymbol *"
@@ -124,12 +130,6 @@ ustring:
 PrattParselet:
     data:
         cname: PrattParselet
-        printf: "%p"
-        valued: true
-
-LamContProc:
-    data:
-        cname: "LamContProc"
         printf: "%p"
         valued: true
 

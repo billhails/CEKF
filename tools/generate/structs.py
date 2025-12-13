@@ -25,7 +25,7 @@ class SimpleStruct(Base):
         # HASENTRIES
         if "data" in body:
             data = body["data"]
-            self.fields = [self.makeField(x, data[x]) for x in data.keys()]
+            self.fields = [self.makeField(_x, data[_x]) for _x in data.keys()]
         else:
             raise ValueError(f"SimpleStruct {name} must have 'data' field")
 
@@ -81,7 +81,7 @@ class SimpleStruct(Base):
     def getCountSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f'Index count{myName}({myType} x)'
+        return f'Index count{myName}({myType} _x)'
 
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
@@ -98,8 +98,8 @@ class SimpleStruct(Base):
             print(f' */')
             print(f'{self.getCountSignature(catalog)} {{ {c}')
             print(f'    Index count = 0; {c}')
-            print(f'    while (x != NULL) {{ {c}')
-            print(f'        x = x->{selfRefField}; {c}')
+            print(f'    while (_x != NULL) {{ {c}')
+            print(f'        _x = _x->{selfRefField}; {c}')
             print(f'        count++; {c}')
             print(f'    }} {c}')
             print(f'    return count; {c}')
@@ -134,10 +134,10 @@ class SimpleStruct(Base):
         return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def getNewArgs(self, catalog):
-        return [x for x in self.fields if x.default is None and not x.isSelfInitializing(catalog)]
+        return [_x for _x in self.fields if _x.default is None and not _x.isSelfInitializing(catalog)]
 
     def getDefaultArgs(self, catalog):
-        return [x for x in self.fields if x.default is not None or x.isSelfInitializing(catalog)]
+        return [_x for _x in self.fields if _x.default is not None or _x.isSelfInitializing(catalog)]
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
@@ -201,28 +201,28 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
-        print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
+        print(f"    {myType} _x = NEW({myName}, {myObjType}); {c}")
         if hasInternalConstructors:
-            print(f"    Header _h = x->header; {c}")
-            print(f"    bzero(x, sizeof(struct {myName})); {c}")
-            print(f"    x->header = _h; {c}")
-            print(f"    int save = PROTECT(x); {c}")
-        print(f'    DEBUG("new {myName} %p", x); {c}')
+            print(f"    Header _h = _x->header; {c}")
+            print(f"    bzero(_x, sizeof(struct {myName})); {c}")
+            print(f"    _x->header = _h; {c}")
+            print(f"    int save = PROTECT(_x); {c}")
+        print(f'    DEBUG("new {myName} %p", _x); {c}')
         if catalog.parserInfo:
-            print(f"    x->_yy_parser_info = _PI; {c}")
+            print(f"    _x->_yy_parser_info = _PI; {c}")
         for field in self.getNewArgs(catalog):
             f = field.getFieldName()
-            print(f"    x->{f} = {f}; {c}")
+            print(f"    _x->{f} = {f}; {c}")
         for field in self.getDefaultArgs(catalog):
             f = field.getFieldName()
             if field.isSelfInitializing(catalog) and field.default is None:
                 d = f'{field.getConstructorName(catalog)}()'
             else:
                 d = field.default
-            print(f"    x->{f} = {d}; {c}")
+            print(f"    _x->{f} = {d}; {c}")
         if hasInternalConstructors:
             print(f"    UNPROTECT(save); {c}")
-        print(f"    return x; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -255,14 +255,14 @@ class SimpleStruct(Base):
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"mark{myName}(x{a}{prefix}{field}); {c}")
+        print(f"mark{myName}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+        print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
@@ -283,14 +283,14 @@ class SimpleStruct(Base):
         myName=self.getName()
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'print{myName}(_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
+        print(f'_x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printMarkFunction(self, catalog):
         c = self.comment('printMarkFunction')
@@ -301,9 +301,9 @@ class SimpleStruct(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
-            print(f"    if (x == NULL) return; {c}")
-            print(f"    if (MARKED(x)) return; {c}")
-            print(f"    MARK(x); {c}")
+            print(f"    if (_x == NULL) return; {c}")
+            print(f"    if (MARKED(_x)) return; {c}")
+            print(f"    MARK(_x); {c}")
         self.printMarkFunctionBody(catalog)
         print(f"}} {c}\n")
 
@@ -317,7 +317,7 @@ class SimpleStruct(Base):
         print(f" * should only be freed by the sweep phase directly.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    FREE(x, {self.getName()}); {c}")
+        print(f"    FREE(_x, {self.getName()}); {c}")
         print(f"}} {c}\n")
 
     def printMarkObjCase(self, catalog):
@@ -386,17 +386,17 @@ class SimpleStruct(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
-        print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
-        print(f'    DEBUG("copy {myName} %p", x); {c}')
-        print(f"    Header _h = x->header; {c}")
-        print(f"    bzero(x, sizeof(struct {myName})); {c}")
-        print(f"    x->header = _h; {c}")
-        print(f"    int save = PROTECT(x); {c}")
+        print(f"    {myType} _x = NEW({myName}, {myObjType}); {c}")
+        print(f'    DEBUG("copy {myName} %p", _x); {c}')
+        print(f"    Header _h = _x->header; {c}")
+        print(f"    bzero(_x, sizeof(struct {myName})); {c}")
+        print(f"    _x->header = _h; {c}")
+        print(f"    int save = PROTECT(_x); {c}")
         if catalog.parserInfo:
-            print(f"    x->_yy_parser_info = o->_yy_parser_info; {c}")
+            print(f"    _x->_yy_parser_info = o->_yy_parser_info; {c}")
         self.printCopyFunctionBody(catalog)
         print(f"    UNPROTECT(save); {c}")
-        print(f"    return x; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -411,7 +411,7 @@ class SimpleStruct(Base):
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
         if not self.isInline(catalog):
-            print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+            print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         print(f'    eprintf("{myName}[\\n"); {c}')
         self.printPrintFunctionBody(catalog)
         print(f"    pad(depth); {c}")
@@ -419,10 +419,10 @@ class SimpleStruct(Base):
         print(f"}} {c}\n")
 
     def getDefineValue(self):
-        return 'x'
+        return '_x'
 
     def getDefineArg(self):
-        return 'x'
+        return '_x'
 
 
 class InlineStruct(SimpleStruct):
@@ -448,14 +448,14 @@ class InlineStruct(SimpleStruct):
         print(f" * Creates a new {myName} struct with the given arguments.")
         print(f" */")
         print(f"{sig} {{ {c}")
-        print(f"    {self.getTypeDeclaration(catalog)} x; {c}")
+        print(f"    {self.getTypeDeclaration(catalog)} _x; {c}")
         for field in self.fields:
             fname = field.getName()
             if field.default is not None:
-                print(f"    x.{fname} = {field.default}; {c}")
+                print(f"    _x.{fname} = {field.default}; {c}")
             else:
-                print(f"    x.{fname} = {fname}; {c}")
-        print(f"    return x; {c}")
+                print(f"    _x.{fname} = {fname}; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}\n")
     
     def printNewDeclaration(self, catalog):

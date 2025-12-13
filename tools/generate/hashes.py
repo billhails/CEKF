@@ -204,7 +204,7 @@ class SimpleHash(Base):
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"void print{myName}({myType} x, int depth)"
+        return f"void print{myName}({myType} _x, int depth)"
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
@@ -218,7 +218,7 @@ class SimpleHash(Base):
         print(f" * @brief Print the contents of a {self.getName()} for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    printHashTable(&(x->wrapped), depth); {c}")
+        print(f"    printHashTable(&(_x->wrapped), depth); {c}")
         print(f"}} {c}")
         print("")
 
@@ -226,8 +226,8 @@ class SimpleHash(Base):
         c = self.comment('printCopyField')
         myConstructor = self.getConstructorName()
         a = AccessorHelper.accessor(isInline)
-        print(f'    x{a}{prefix}{field} = {myConstructor}(); {c}')
-        print(f'    copyHashTable((HashTable *)x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
+        print(f'    _x{a}{prefix}{field} = {myConstructor}(); {c}')
+        print(f'    copyHashTable((HashTable *)_x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
@@ -238,7 +238,7 @@ class SimpleHash(Base):
         c = self.comment('printPrintField')
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'printHashTable((HashTable *)x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'printHashTable((HashTable *)_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
@@ -287,10 +287,10 @@ class SimpleHash(Base):
         c = self.comment('printMarkField')
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"markHashTable((HashTable *)x{a}{prefix}{field}); {c}")
+        print(f"markHashTable((HashTable *)_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"return PROTECT((HashTable *)x{a}{prefix}{field}); {c}")
+        print(f"return PROTECT((HashTable *)_x{a}{prefix}{field}); {c}")
