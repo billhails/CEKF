@@ -862,18 +862,18 @@ static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
     return type;
 }
 
-static bool isLambdaBinding(LamLetRecBindings *bindings) {
+static bool isLambdaBinding(LamBindings *bindings) {
     return bindings->val->type == LAMEXP_TYPE_LAM;
 }
 
-static void prepareLetRecEnv(LamLetRecBindings *bindings, TcEnv *env) {
+static void prepareLetRecEnv(LamBindings *bindings, TcEnv *env) {
     TcType *freshType = makeFreshVar(bindings->var->name);
     int save = PROTECT(freshType);
     addToEnv(env, bindings->var, freshType);
     UNPROTECT(save);
 }
 
-static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
+static void processLetRecBinding(LamBindings *bindings, TcEnv *env,
                                  TcNg *ng) {
     TcType *existingType = NULL;
     if (!getFromTcEnv(env, bindings->var, &existingType)) {
@@ -903,12 +903,12 @@ static void processLetRecBinding(LamLetRecBindings *bindings, TcEnv *env,
 
 // Helper to capture a snapshot of all binding types as a single string
 // Used to detect convergence in iterative type checking
-static char *snapshotBindingTypes(LamLetRecBindings *bindings, TcEnv *env) {
+static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
     int capacity = 256;
     int size = 0;
     char *snapshot = malloc(capacity);
 
-    for (LamLetRecBindings * b = bindings; b != NULL; b = b->next) {
+    for (LamBindings * b = bindings; b != NULL; b = b->next) {
         if (isLambdaBinding(b)) {
             TcType *type = NULL;
             if (getFromTcEnv(env, b->var, &type)) {
@@ -949,13 +949,13 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     ng = newTcNg(ng);
     PROTECT(ng);
 // bind lambdas early
-    for (LamLetRecBindings * bindings = letRec->bindings; bindings != NULL;
+    for (LamBindings * bindings = letRec->bindings; bindings != NULL;
          bindings = bindings->next) {
         if (isLambdaBinding(bindings)) {
             prepareLetRecEnv(bindings, env);
         }
     }
-    for (LamLetRecBindings * bindings = letRec->bindings; bindings != NULL;
+    for (LamBindings * bindings = letRec->bindings; bindings != NULL;
          bindings = bindings->next) {
         DEBUGN("analyzeLetRec %s => ", bindings->var->name);
         IFDEBUGN(ppLamExp(bindings->val));
@@ -974,7 +974,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     for (int pass = 2; pass <= MAX_PASSES && !hadErrors(); pass++) {
         passCount = pass;
 
-        for (LamLetRecBindings * bindings = letRec->bindings;
+        for (LamBindings * bindings = letRec->bindings;
              bindings != NULL; bindings = bindings->next) {
             if (isLambdaBinding(bindings)) {
                 processLetRecBinding(bindings, env, ng);
@@ -1252,9 +1252,9 @@ static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-static void analyzeLetBindings(LamLetBindings *bindings, TcEnv *env,
+static void analyzeLetBindings(LamBindings *bindings, TcEnv *env,
                                 TcNg *ng) {
-    for (LamLetBindings * b = bindings; b != NULL; b = b->next) {
+    for (LamBindings * b = bindings; b != NULL; b = b->next) {
         TcType *type = analyzeExp(b->val, env, ng);
         int save = PROTECT(type);
         addToEnv(env, b->var, type);

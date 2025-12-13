@@ -31,7 +31,7 @@ static LamExp *inlineApply(LamApply *x);
 static LamExp *inlineConstant(LamTypeConstructorInfo *x);
 static LamIff *inlineIff(LamIff *x);
 static LamLetRec *inlineLetRec(LamLetRec *x);
-static LamLetRecBindings *inlineLetRecBindings(LamLetRecBindings *x);
+static LamBindings *inlineBindings(LamBindings *x);
 static LamLet *inlineLet(LamLet *x);
 static LamAmb *inlineAmb(LamAmb *x);
 static LamPrint *inlinePrint(LamPrint *x);
@@ -152,29 +152,21 @@ static LamIff *inlineIff(LamIff *x) {
 }
 
 static LamLetRec *inlineLetRec(LamLetRec *x) {
-    x->bindings = inlineLetRecBindings(x->bindings);
+    x->bindings = inlineBindings(x->bindings);
     x->body = inlineExp(x->body);
     return x;
 }
 
-static LamLetRecBindings *inlineLetRecBindings(LamLetRecBindings *x) {
+static LamBindings *inlineBindings(LamBindings *x) {
     if (x != NULL) {
-        x->next = inlineLetRecBindings(x->next);
-        x->val = inlineExp(x->val);
-    }
-    return x;
-}
-
-static LamLetBindings *inlineLetBindings(LamLetBindings *x) {
-    if (x != NULL) {
-        x->next = inlineLetBindings(x->next);
+        x->next = inlineBindings(x->next);
         x->val = inlineExp(x->val);
     }
     return x;
 }
 
 static LamLet *inlineLet(LamLet *x) {
-    x->bindings = inlineLetBindings(x->bindings);
+    x->bindings = inlineBindings(x->bindings);
     x->body = inlineExp(x->body);
     return x;
 }

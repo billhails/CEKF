@@ -146,15 +146,15 @@ static LamConstruct *performConstructSimplifications(LamConstruct *construct) {
     return construct;
 }
 
-static LamLetBindings *makeLetBindings(ParserInfo I, LamArgs *aargs, LamVarList *fargs) {
+static LamBindings *makeLetBindings(ParserInfo I, LamArgs *aargs, LamVarList *fargs) {
     ENTER(makeLetBindings);
     if (aargs == NULL || fargs == NULL) {
         LEAVE(makeLetBindings);
         return NULL;
     }
-    LamLetBindings *next = makeLetBindings(I, aargs->next, fargs->next);
+    LamBindings *next = makeLetBindings(I, aargs->next, fargs->next);
     int save = PROTECT(next);
-    LamLetBindings *this = newLamLetBindings(I, fargs->var, aargs->exp, next);
+    LamBindings *this = newLamBindings(I, fargs->var, aargs->exp, next);
     UNPROTECT(save);
     LEAVE(makeLetBindings);
     return this;
@@ -170,7 +170,7 @@ static LamExp *performApplySimplifications(LamApply *apply) {
         LamArgs *aargs = apply->args;
         LamVarList *fargs = lam->args;
         if (countLamArgs(aargs) == countLamVarList(fargs)) {
-            LamLetBindings *bindings = makeLetBindings(CPI(apply), aargs, fargs);
+            LamBindings *bindings = makeLetBindings(CPI(apply), aargs, fargs);
             int save = PROTECT(bindings);
             LamLet *let = newLamLet(CPI(apply), bindings, lam->exp);
             PROTECT(let);
@@ -193,7 +193,7 @@ static LamIff *performIffSimplifications(LamIff *iff) {
     return iff;
 }
 
-static LamLetRecBindings *performBindingsSimplifications(LamLetRecBindings *bindings) {
+static LamBindings *performBindingsSimplifications(LamBindings *bindings) {
     ENTER(performBindingsSimplifications);
     if (bindings == NULL) {
         LEAVE(performBindingsSimplifications);
@@ -205,7 +205,7 @@ static LamLetRecBindings *performBindingsSimplifications(LamLetRecBindings *bind
     return bindings;
 }
 
-static LamLetBindings *performLetBindingsSimplifications(LamLetBindings *bindings) {
+static LamBindings *performLetBindingsSimplifications(LamBindings *bindings) {
     ENTER(performLetBindingsSimplifications);
     if (bindings == NULL) {
         LEAVE(performLetBindingsSimplifications);

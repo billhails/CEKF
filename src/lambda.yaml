@@ -269,12 +269,12 @@ structs:
                 to expressions and then evaluates a body expression using those
                 bindings. It is used to introduce local variables.
         data:
-            bindings: LamLetBindings
+            bindings: LamBindings
             body: LamExp
 
-    LamLetBindings:
+    LamBindings:
         meta:
-            brief: Bindings in a let expression
+            brief: Bindings in a let or letrec expression
             description: >-
                 This structure holds the bindings in a let expression.
                 Each binding consists of a variable and an associated expression
@@ -282,7 +282,7 @@ structs:
         data:
             var: HashSymbol
             val: LamExp
-            next: LamLetBindings
+            next: LamBindings
 
     LamLetRec:
         meta:
@@ -293,20 +293,8 @@ structs:
                 corresponding expressions and evaluates a body expression using
                 those bindings.
         data:
-            bindings: LamLetRecBindings
+            bindings: LamBindings
             body: LamExp
-
-    LamLetRecBindings:
-        meta:
-            brief: Bindings in a letrec expression
-            description: >-
-                This structure holds the bindings in a letrec expression.
-                Each binding consists of a variable and an associated expression
-                that is evaluated in the context of the letrec.
-        data:
-            var: HashSymbol
-            val: LamExp
-            next: LamLetRecBindings
 
     LamContext:
         meta:

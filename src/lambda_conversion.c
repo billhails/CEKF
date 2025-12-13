@@ -40,11 +40,11 @@
 
 char *lambda_conversion_function = NULL; // set by --dump-lambda flag
 
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *, LamContext *);
+static LamBindings *convertFuncDefs(AstDefinitions *, LamContext *);
 static LamArgs *convertExpressions(AstExpressions *, LamContext *);
 static LamSequence *convertSequence(AstExpressions *, LamContext *);
-static LamLetRecBindings *prependDefinition(AstDefinition *, LamContext *, LamLetRecBindings *);
-static LamLetRecBindings *prependDefine(AstDefine *, LamContext *, LamLetRecBindings *);
+static LamBindings *prependDefinition(AstDefinition *, LamContext *, LamBindings *);
+static LamBindings *prependDefine(AstDefine *, LamContext *, LamBindings *);
 static LamExp *convertExpression(AstExpression *, LamContext *);
 static bool typeHasFields(AstTypeBody *);
 static LamTypeDefList *collectTypeDefs(AstDefinitions *, LamContext *);
@@ -263,27 +263,27 @@ static void convertNamespace(AstNamespaceArray *nsArray,
     UNPROTECT(save2);
 }
 
-static void separateLambdas(LamLetRecBindings *funcDefs,
-                             LamLetRecBindings **lambdas,
-                             LamLetRecBindings **other) 
+static void separateLambdas(LamBindings *funcDefs,
+                             LamBindings **lambdas,
+                             LamBindings **other) 
 {
     if (funcDefs != NULL) {
         separateLambdas(funcDefs->next, lambdas, other);
         if (funcDefs->val->type == LAMEXP_TYPE_LAM) {
-            *lambdas = newLamLetRecBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *lambdas);
+            *lambdas = newLamBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *lambdas);
             PROTECT(*lambdas);
         } else {
-            *other = newLamLetRecBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *other);
+            *other = newLamBindings(CPI(funcDefs), funcDefs->var, funcDefs->val, *other);
             PROTECT(*other);
         }
     }
 }
 
-static void appendLamLetRecBindings(LamLetRecBindings **lambdas, LamLetRecBindings **other) {
+static void appendLamBindings(LamBindings **lambdas, LamBindings **other) {
     if (*lambdas == NULL) {
         *lambdas = *other;
     } else if (*other != NULL) {
-        LamLetRecBindings *walker = *lambdas;
+        LamBindings *walker = *lambdas;
         while (walker->next != NULL) {
             walker = walker->next;
         }
@@ -297,12 +297,12 @@ static void appendLamLetRecBindings(LamLetRecBindings **lambdas, LamLetRecBindin
  * @param funcDefs The letrec bindings to hoist.
  * @return The resulting letrec bindings with functions hoisted to the front.
  */
-static LamLetRecBindings *hoistFunctionDefinitions(LamLetRecBindings *funcDefs) {
+static LamBindings *hoistFunctionDefinitions(LamBindings *funcDefs) {
     int save = PROTECT(funcDefs);
-    LamLetRecBindings *lambdas = NULL;
-    LamLetRecBindings *other = NULL;
+    LamBindings *lambdas = NULL;
+    LamBindings *other = NULL;
     separateLambdas(funcDefs, &lambdas, &other);
-    appendLamLetRecBindings(&lambdas, &other);
+    appendLamBindings(&lambdas, &other);
     UNPROTECT(save);
     return lambdas;
 }
@@ -324,7 +324,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     collectAliases(definitions, env);
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
-    LamLetRecBindings *funcDefsList = convertFuncDefs(definitions, env);
+    LamBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
     funcDefsList = hoistFunctionDefinitions(funcDefsList);
     PROTECT(funcDefsList);
@@ -477,16 +477,16 @@ static void checkMacro(AstDefinition *definition, LamContext *env) {
  * @param env The lambda context to use.
  * @return The resulting list of letrec bindings.
  */
-static LamLetRecBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env) {
+static LamBindings *convertFuncDefs(AstDefinitions *definitions, LamContext *env) {
     ENTER(convertFuncDefs);
     if (definitions == NULL) {
         LEAVE(convertFuncDefs);
         return NULL;
     }
     checkMacro(definitions->definition, env);
-    LamLetRecBindings *next = convertFuncDefs(definitions->next, env);
+    LamBindings *next = convertFuncDefs(definitions->next, env);
     int save = PROTECT(next);
-    LamLetRecBindings *this =
+    LamBindings *this =
         prependDefinition(definitions->definition, env, next);
     UNPROTECT(save);
     LEAVE(convertFuncDefs);
@@ -1109,13 +1109,13 @@ static LamTypeDefList *collectTypeDefs(AstDefinitions *definitions, LamContext *
  * @param next The letRec list to prepend to.
  * @return The new letRec bindings with the macro prepended.
  */
-static LamLetRecBindings *prependMacro(AstDefMacro * macro, LamContext * env,
-                                        LamLetRecBindings * next) {
+static LamBindings *prependMacro(AstDefMacro * macro, LamContext * env,
+                                        LamBindings * next) {
     ENTER(prependMacro);
     LamExp *exp = convertAstMacro(macro, env);
     int save = PROTECT(exp);
-    LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(macro), macro->name, exp, next);
+    LamBindings *this =
+        newLamBindings(CPI(macro), macro->name, exp, next);
     UNPROTECT(save);
     LEAVE(prependMacro);
     return this;
@@ -1130,15 +1130,15 @@ LamExp *makeUnpackTuple(ParserInfo PI, LamExp *temp, int index, int size) {
     return exp;
 }
 
-static LamLetRecBindings *prependMultiSymbols(AstSymbolList *symbols,
+static LamBindings *prependMultiSymbols(AstSymbolList *symbols,
                                               int index,
                                               int size,
                                               LamExp * temp,
-                                              LamLetRecBindings * next) {
+                                              LamBindings * next) {
     if (symbols == NULL) {
         return next;
     }
-    LamLetRecBindings *rest = prependMultiSymbols(symbols->next,
+    LamBindings *rest = prependMultiSymbols(symbols->next,
                                                   index + 1,
                                                   size,
                                                   temp,
@@ -1146,27 +1146,27 @@ static LamLetRecBindings *prependMultiSymbols(AstSymbolList *symbols,
     int save = PROTECT(rest);
     LamExp *rhs = makeUnpackTuple(CPI(symbols), temp, index, size);
     PROTECT(rhs);
-    LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(symbols), symbols->symbol, rhs, rest);
+    LamBindings *this =
+        newLamBindings(CPI(symbols), symbols->symbol, rhs, rest);
     UNPROTECT(save);
     return this;
 }
 
-static LamLetRecBindings *prependMulti(AstMultiDefine * multi, LamContext * env,
-                                        LamLetRecBindings * next) {
+static LamBindings *prependMulti(AstMultiDefine * multi, LamContext * env,
+                                        LamBindings * next) {
     ENTER(prependMulti);
     LamExp *exp = convertExpression(multi->expression, env);
     int save = PROTECT(exp);
     HashSymbol *temp = genSymDollar("multi");
     LamExp *tempExp = newLamExp_Var(CPI(multi), temp);
     PROTECT(tempExp);
-    LamLetRecBindings *parts = prependMultiSymbols(multi->symbols,
+    LamBindings *parts = prependMultiSymbols(multi->symbols,
                                                    0,
                                                    countAstSymbolList(multi->symbols),
                                                    tempExp,
                                                    next);
     PROTECT(parts);
-    LamLetRecBindings *this = newLamLetRecBindings(CPI(multi), temp, exp, parts);
+    LamBindings *this = newLamBindings(CPI(multi), temp, exp, parts);
     UNPROTECT(save);
     LEAVE(prependMulti);
     return this;
@@ -1183,11 +1183,11 @@ static LamLetRecBindings *prependMulti(AstMultiDefine * multi, LamContext * env,
  * @param next The next letRec binding in the list.
  * @return The new letRec bindings with the definition prepended.
  */
-static LamLetRecBindings *prependDefinition(AstDefinition *definition,
+static LamBindings *prependDefinition(AstDefinition *definition,
                                             LamContext *env,
-                                            LamLetRecBindings *next) {
+                                            LamBindings *next) {
     ENTER(prependDefinition);
-    LamLetRecBindings *result = NULL;
+    LamBindings *result = NULL;
     switch (definition->type) {
         case AST_DEFINITION_TYPE_DEFINE:
             result = prependDefine(definition->val.define, env, next);
@@ -1251,8 +1251,8 @@ static bool typeHasFields(AstTypeBody *typeBody) {
  * @param next The current letrec bindings.
  * @return The new letRec bindings with the definition prepended.
  */
-static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
-                                        LamLetRecBindings * next) {
+static LamBindings *prependDefine(AstDefine * define, LamContext * env,
+                                        LamBindings * next) {
     ENTER(prependDefine);
     bool doMermaid = (tpmc_mermaid_function != NULL
                       && strcmp(tpmc_mermaid_function,
@@ -1267,8 +1267,8 @@ static LamLetRecBindings *prependDefine(AstDefine * define, LamContext * env,
     if (doMermaid)
         tpmc_mermaid_flag = 0;
     int save = PROTECT(exp);
-    LamLetRecBindings *this =
-        newLamLetRecBindings(CPI(define), define->symbol, exp, next);
+    LamBindings *this =
+        newLamBindings(CPI(define), define->symbol, exp, next);
     UNPROTECT(save);
     LEAVE(prependDefine);
     return this;
