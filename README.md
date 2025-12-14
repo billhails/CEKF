@@ -90,7 +90,7 @@ vs --> lc
 lc <--> des([Desugaring]):::process
 lc --> lambda0(Plain Lambda Form)
 lambda0 --> sim([Simplification]):::process
-sim --> lambda1(Plain Lamnda Form)
+sim --> lambda1(Plain Lambda Form)
 lambda1 --> tc([Type Checking]):::process
 tc <--> pc([Print Compiler]):::process
 tc --> lambda2(Plain Lambda Form)
