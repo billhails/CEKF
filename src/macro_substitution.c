@@ -683,11 +683,11 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
             case LAMEXP_TYPE_AMB:
                 exp->val.amb = performAmbSubstitutions(exp->val.amb, symbols);
                 break;
-            case LAMEXP_TYPE_MAKE_TUPLE:
-                exp->val.make_tuple = performArgsSubstitutions(exp->val.make_tuple, symbols);
+            case LAMEXP_TYPE_MAKETUPLE:
+                exp->val.makeTuple = performArgsSubstitutions(exp->val.makeTuple, symbols);
                 break;
-            case LAMEXP_TYPE_TUPLE_INDEX:
-                exp->val.tuple_index = performTupleIndexSubstitutions(exp->val.tuple_index, symbols);
+            case LAMEXP_TYPE_TUPLEINDEX:
+                exp->val.tupleIndex = performTupleIndexSubstitutions(exp->val.tupleIndex, symbols);
                 break;
             case LAMEXP_TYPE_PRINT:
                 exp->val.print = performPrintSubstitutions(exp->val.print, symbols);

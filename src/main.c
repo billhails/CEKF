@@ -57,7 +57,9 @@
 
 // temporary test
 LamExp *anfNormalize2(LamExp *exp);
-extern bool forceGcFlag;
+#ifdef DEBUG_STRESS_GC
+extern int forceGcFlag;
+#endif
 
 int report_flag = 0;
 static int help_flag = 0;
@@ -138,6 +140,9 @@ static void usage(char *prog, int status) {
            "    --include=<dir>          Add dir to the list of directories to be searched.\n"
            "    --parse-only             Stop after parsing to enable parser-only profiling.\n"
            "    --report                 Report statistics.\n"
+#ifdef DEBUG_STRESS_GC
+           "    --stress-gc              Stress the garbage collector.\n"
+#endif
 #ifdef UNIT_TESTS
            "    --test                   Run unit tests.\n"
 #endif
@@ -161,6 +166,9 @@ static int processArgs(int argc, char *argv[]) {
             { "test", no_argument, &test_flag, 1 },
 #endif
             { "report", no_argument, &report_flag, 1 },
+#ifdef DEBUG_STRESS_GC
+            { "stress-gc", no_argument, &forceGcFlag, 1 },
+#endif
             { "parse-only", no_argument, &parse_only_flag, 1 },
             { "dump-anf", no_argument, &anf_flag, 1 },
             { "dump-ast", no_argument, &ast_flag, 1 },
@@ -468,7 +476,7 @@ int main(int argc, char *argv[]) {
         exp = inlineExp(exp);
         REPLACE_PROTECT(save2, exp);
 
-#if 1
+#if 0
         // forceGcFlag = true;
         LamExp *anfLam = anfNormalize2(exp);
         REPLACE_PROTECT(save2, anfLam);

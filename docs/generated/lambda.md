@@ -129,7 +129,7 @@ LamExp --lam--> LamLam
 LamExp --let--> LamLet
 LamExp --letrec--> LamLetRec
 LamExp --lookup--> LamLookup
-LamExp --make_tuple--> LamArgs
+LamExp --makeTuple--> LamArgs
 LamExp --makeVec--> LamMakeVec
 LamExp --match--> LamMatch
 LamExp --namespaces--> LamNamespaceArray
@@ -138,7 +138,7 @@ LamExp --print--> LamPrint
 LamExp --sequence--> LamSequence
 LamExp --stdint--> int
 LamExp --tag--> LamExp
-LamExp --tuple_index--> LamTupleIndex
+LamExp --tupleIndex--> LamTupleIndex
 LamExp --typedefs--> LamTypeDefs
 LamExp --typeOf--> LamTypeof
 LamExp --var--> HashSymbol

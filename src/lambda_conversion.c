@@ -434,7 +434,7 @@ static LamExp *lamConvertTypeof(AstTypeof *typeofExp, LamContext *context) {
 static LamExp *lamConvertTuple(ParserInfo PI, AstExpressions *tuple, LamContext *env) {
     LamArgs *expressions = convertExpressions(tuple, env);
     int save = PROTECT(expressions);
-    LamExp *res = newLamExp_Make_tuple(PI, expressions);
+    LamExp *res = newLamExp_MakeTuple(PI, expressions);
     UNPROTECT(save);
     return res;
 }
@@ -1125,7 +1125,7 @@ LamExp *makeUnpackTuple(ParserInfo PI, LamExp *temp, int index, int size) {
     LamTupleIndex *tupleIndex =
         newLamTupleIndex(PI, index, size, temp);
     int save = PROTECT(tupleIndex);
-    LamExp *exp = newLamExp_Tuple_index(PI, tupleIndex);
+    LamExp *exp = newLamExp_TupleIndex(PI, tupleIndex);
     UNPROTECT(save);
     return exp;
 }

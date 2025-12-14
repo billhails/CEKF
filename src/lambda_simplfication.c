@@ -393,11 +393,11 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_AMB:
                 exp->val.amb = performAmbSimplifications(exp->val.amb);
                 break;
-            case LAMEXP_TYPE_MAKE_TUPLE:
-                exp->val.make_tuple = performArgsSimplifications(exp->val.make_tuple);
+            case LAMEXP_TYPE_MAKETUPLE:
+                exp->val.makeTuple = performArgsSimplifications(exp->val.makeTuple);
                 break;
-            case LAMEXP_TYPE_TUPLE_INDEX:
-                exp->val.tuple_index = performTupleIndexSimplifications(exp->val.tuple_index);
+            case LAMEXP_TYPE_TUPLEINDEX:
+                exp->val.tupleIndex = performTupleIndexSimplifications(exp->val.tupleIndex);
                 break;
             case LAMEXP_TYPE_PRINT:
                 exp->val.print = performPrintSimplifications(exp->val.print);

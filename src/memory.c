@@ -44,7 +44,9 @@ static int numGc = 0;
 
 static Header *lastAlloc = NULL;
 
-bool forceGcFlag = false;
+#ifdef DEBUG_STRESS_GC
+int forceGcFlag = 0;
+#endif
 
 /**
  * The ProtectionStack structure is used to ensure objects that are in the process
@@ -248,7 +250,7 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
-if (forceGcFlag) {
+if (forceGcFlag || bytesAllocated > nextGC) {
         collectGarbage();
 }
 #else

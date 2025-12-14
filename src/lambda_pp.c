@@ -160,11 +160,11 @@ void ppLamExp(LamExp *exp) {
         case LAMEXP_TYPE_AMB:
             ppLamAmb(exp->val.amb);
             break;
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            ppLamTupleIndex(exp->val.tuple_index);
+        case LAMEXP_TYPE_TUPLEINDEX:
+            ppLamTupleIndex(exp->val.tupleIndex);
             break;
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            ppLamMakeTuple(exp->val.make_tuple);
+        case LAMEXP_TYPE_MAKETUPLE:
+            ppLamMakeTuple(exp->val.makeTuple);
             break;
         case LAMEXP_TYPE_NAMESPACES:
             ppLamNamespaces(exp->val.namespaces);
@@ -650,9 +650,8 @@ void ppLamIntList(LamIntList *list) {
 }
 
 void ppLamConstruct(LamConstruct *construct) {
-    eprintf("(construct ");
+    eprintf("(");
     ppHashSymbol(construct->name);
-    eprintf(":%d", construct->tag);
     _ppLamArgs(construct->args);
     eprintf(")");
 }
@@ -664,9 +663,7 @@ void ppLamTag(LamExp *tag) {
 }
 
 void ppLamConstant(LamConstant *constant) {
-    eprintf("(constant ");
     ppHashSymbol(constant->name);
-    eprintf(" %d)", constant->tag);
 }
 
 void ppLamDeconstruct(LamDeconstruct *deconstruct) {

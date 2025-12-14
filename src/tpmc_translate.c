@@ -216,7 +216,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                     int save2 = PROTECT(base);
                     LamTupleIndex *index = newLamTupleIndex(I, i, size, base);
                     PROTECT(index);
-                    LamExp *tupleIndex = newLamExp_Tuple_index(I, index);
+                    LamExp *tupleIndex = newLamExp_TupleIndex(I, index);
                     PROTECT(tupleIndex);
                     LamBindings *bindings =
                         newLamBindings(I, path, tupleIndex, NULL);

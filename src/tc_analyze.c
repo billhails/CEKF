@@ -296,10 +296,10 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeBack());
         case LAMEXP_TYPE_ERROR:
             return prune(analyzeError());
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            return prune(analyzeTupleIndex(exp->val.tuple_index, env, ng));
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            return prune(analyzeMakeTuple(exp->val.make_tuple, env, ng));
+        case LAMEXP_TYPE_TUPLEINDEX:
+            return prune(analyzeTupleIndex(exp->val.tupleIndex, env, ng));
+        case LAMEXP_TYPE_MAKETUPLE:
+            return prune(analyzeMakeTuple(exp->val.makeTuple, env, ng));
         case LAMEXP_TYPE_NAMESPACES:
             return prune(analyzeNamespaces(exp->val.namespaces, env, ng));
         case LAMEXP_TYPE_ENV:

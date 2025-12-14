@@ -515,7 +515,7 @@ unions:
             let: LamLet
             letrec: LamLetRec
             lookup: LamLookup
-            make_tuple: LamArgs
+            makeTuple: LamArgs
             makeVec: LamMakeVec
             match: LamMatch
             namespaces: LamNamespaceArray
@@ -524,7 +524,7 @@ unions:
             sequence: LamSequence
             stdint: int
             tag: LamExp
-            tuple_index: LamTupleIndex
+            tupleIndex: LamTupleIndex
             typedefs: LamTypeDefs
             typeOf: LamTypeof
             var: HashSymbol

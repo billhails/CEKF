@@ -256,8 +256,8 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_SEQUENCE:
             x->val.sequence = inlineSequence(x->val.sequence);
             break;
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            x->val.make_tuple = inlineArgs(x->val.make_tuple);
+        case LAMEXP_TYPE_MAKETUPLE:
+            x->val.makeTuple = inlineArgs(x->val.makeTuple);
             break;
         case LAMEXP_TYPE_APPLY:
             x = inlineApply(x->val.apply);
@@ -283,8 +283,8 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_LOOKUP:
             x->val.lookup = inlineLookup(x->val.lookup);
             break;
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            x->val.tuple_index = inlineTupleIndex(x->val.tuple_index);
+        case LAMEXP_TYPE_TUPLEINDEX:
+            x->val.tupleIndex = inlineTupleIndex(x->val.tupleIndex);
             break;
         case LAMEXP_TYPE_MATCH:
             x->val.match = inlineMatch(x->val.match);

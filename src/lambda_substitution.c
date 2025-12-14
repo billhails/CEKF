@@ -425,13 +425,13 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 exp->val.amb =
                     performAmbSubstitutions(exp->val.amb, substitutions);
                 break;
-            case LAMEXP_TYPE_MAKE_TUPLE:
-                exp->val.make_tuple =
-                    performArgsSubstitutions(exp->val.make_tuple, substitutions);
+            case LAMEXP_TYPE_MAKETUPLE:
+                exp->val.makeTuple =
+                    performArgsSubstitutions(exp->val.makeTuple, substitutions);
                 break;
-            case LAMEXP_TYPE_TUPLE_INDEX:
-                exp->val.tuple_index =
-                    performTupleIndexSubstitutions(exp->val.tuple_index, substitutions);
+            case LAMEXP_TYPE_TUPLEINDEX:
+                exp->val.tupleIndex =
+                    performTupleIndexSubstitutions(exp->val.tupleIndex, substitutions);
                 break;
             case LAMEXP_TYPE_PRINT:
                 exp->val.print = performPrintSubstitutions(exp->val.print, substitutions);

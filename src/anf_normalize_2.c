@@ -356,7 +356,7 @@ static LamExp *normalizeConstructKont(LamExp *ets, NormalizeConstructKontEnv *en
 
 static LamExp *normalize_MakeTuple(LamExp *exp, AnfKont *k) {
     ENTER(normalize_MakeTuple);
-    LamArgs *lamArgs = getLamExp_Make_tuple(exp);
+    LamArgs *lamArgs = getLamExp_MakeTuple(exp);
     AnfKont *k2 = makeKont_normalizeMakeTuple(k);
     int save = PROTECT(k2);
     LamExp *result = normalize_names(lamArgs, k2);
@@ -367,7 +367,7 @@ static LamExp *normalize_MakeTuple(LamExp *exp, AnfKont *k) {
 
 static LamExp *normalizeMakeTupleKont(LamExp *ts, NormalizeMakeTupleKontEnv *env) {
     LamArgs *tts = getLamExp_Args(ts);
-    LamExp *newMakeTuple = newLamExp_Make_tuple(CPI(ts), tts);
+    LamExp *newMakeTuple = newLamExp_MakeTuple(CPI(ts), tts);
     int save = PROTECT(newMakeTuple);
     LamExp *result = INVOKE(env->k, newMakeTuple);
     UNPROTECT(save);
@@ -622,7 +622,7 @@ static LamExp *normalizeTypeofKont(LamExp *anfE0, NormalizeTypeofKontEnv *env) {
 
 static LamExp *normalize_TupleIndex(LamExp *exp, AnfKont *k) {
     ENTER(normalize_TupleIndex);
-    LamTupleIndex *tupleIndexExp = getLamExp_Tuple_index(exp);
+    LamTupleIndex *tupleIndexExp = getLamExp_TupleIndex(exp);
     AnfKont *k2 = makeKont_normalizeTupleIndex(tupleIndexExp->vec, tupleIndexExp->size, k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(tupleIndexExp->exp, k2);
@@ -632,7 +632,7 @@ static LamExp *normalize_TupleIndex(LamExp *exp, AnfKont *k) {
 }
 
 static LamExp *normalizeTupleIndexKont(LamExp *t0, NormalizeTupleIndexKontEnv *env) {
-    LamExp *newTupleIndex = makeLamExp_Tuple_index(CPI(t0), env->vec, env->size, t0);
+    LamExp *newTupleIndex = makeLamExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
     int save = PROTECT(newTupleIndex);
     LamExp *result = INVOKE(env->k, newTupleIndex);
     UNPROTECT(save);
@@ -855,7 +855,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
             case LAMEXP_TYPE_LOOKUP:
                 res = normalize_Lookup(exp, k);
                 break;
-            case LAMEXP_TYPE_MAKE_TUPLE:
+            case LAMEXP_TYPE_MAKETUPLE:
                 res = normalize_MakeTuple(exp, k);
                 break;
             case LAMEXP_TYPE_MAKEVEC:
@@ -879,7 +879,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
             case LAMEXP_TYPE_TAG:
                 res = normalize_Tag(exp, k);
                 break;
-            case LAMEXP_TYPE_TUPLE_INDEX:
+            case LAMEXP_TYPE_TUPLEINDEX:
                 res = normalize_TupleIndex(exp, k);
                 break;
             case LAMEXP_TYPE_TYPEDEFS:

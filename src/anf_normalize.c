@@ -126,8 +126,8 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
             return normalizePrint(lamExp->val.print, tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(lamExp->val.letrec, tail);
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            return normalizeTupleIndex(lamExp->val.tuple_index, tail);
+        case LAMEXP_TYPE_TUPLEINDEX:
+            return normalizeTupleIndex(lamExp->val.tupleIndex, tail);
         case LAMEXP_TYPE_DECONSTRUCT:
             return normalizeDeconstruct(lamExp->val.deconstruct, tail);
         case LAMEXP_TYPE_CONSTRUCT:
@@ -148,8 +148,8 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
             return normalizeBack(CPI(lamExp), tail);
         case LAMEXP_TYPE_ERROR:
             return normalizeError(CPI(lamExp), tail);
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            return normalizeMakeTuple(CPI(lamExp), lamExp->val.make_tuple, tail);
+        case LAMEXP_TYPE_MAKETUPLE:
+            return normalizeMakeTuple(CPI(lamExp), lamExp->val.makeTuple, tail);
         case LAMEXP_TYPE_NAMESPACES:
             return normalizeNamespaces(CPI(lamExp), lamExp->val.namespaces, tail);
         case LAMEXP_TYPE_ENV:
@@ -938,7 +938,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
         case LAMEXP_TYPE_BACK:
         case LAMEXP_TYPE_ERROR:
         case LAMEXP_TYPE_AMB:
-        case LAMEXP_TYPE_MAKE_TUPLE:
+        case LAMEXP_TYPE_MAKETUPLE:
             res = replaceLamCexp(lamExp, replacements);
             break;
         default:
@@ -972,8 +972,8 @@ static bool lamExpIsLambda(LamExp *val) {
         case LAMEXP_TYPE_COND:
         case LAMEXP_TYPE_MAKEVEC:
         case LAMEXP_TYPE_LOOKUP:
-        case LAMEXP_TYPE_MAKE_TUPLE:
-        case LAMEXP_TYPE_TUPLE_INDEX:
+        case LAMEXP_TYPE_MAKETUPLE:
+        case LAMEXP_TYPE_TUPLEINDEX:
             return false;
         default:
             cant_happen("unrecognised LamExp type %s in lamExpIsLambda",
