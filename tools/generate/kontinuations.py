@@ -60,11 +60,11 @@ class KontinuationGenerator:
             }
         }))
         
-    def generate_kont_impl_inc(self, output: TextIO, includes) -> None:
+    def generate_kont_impl_inc(self, output: TextIO, catalog: Catalog, includes) -> None:
         self._write_header(output, includes)
         self._write_forward_decls(output)
         self._write_wrappers(output)
-        self._write_constructors(output)
+        self._write_constructors(output, catalog)
         self._write_trailer(output)
     
     def _write_header(self, output: TextIO, includes) -> None:
@@ -113,7 +113,11 @@ class KontinuationGenerator:
             output.write(f"    return {name}Kont(exp, getKontEnv_{key[0].upper() + key[1:]}(env));\n")
             output.write("}\n\n")
     
-    def _write_constructors(self, output: TextIO) -> None:
+    def _getTypeDeclaration(self, typeName, catalog):
+        obj = catalog.get(typeName)
+        return obj.getTypeDeclaration(catalog)
+
+    def _write_constructors(self, output: TextIO, catalog: Catalog) -> None:
         output.write("// Constructor functions - create continuation environments\n\n")
         
         for name, spec in self.continuations.items():
@@ -127,7 +131,7 @@ class KontinuationGenerator:
             output.write(f"static struct AnfKont *makeKont_{name}(\n")
             
             # Parameters from free_vars
-            params = [f"    struct {var_type} *{var_name}" 
+            params = [f"    {self._getTypeDeclaration(var_type, catalog)} {var_name}" 
                      for var_name, var_type in free_vars.items()]
             output.write(",\n".join(params))
             if params:

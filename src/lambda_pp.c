@@ -37,7 +37,7 @@ void ppLamLam(LamLam *lam) {
         eprintf("<NULL lambda>");
         return;
     }
-    eprintf("(lambda ");
+    eprintf("(λ ");
     ppLamVarList(lam->args);
     eprintf(" ");
     ppLamExp(lam->exp);
@@ -137,7 +137,16 @@ void ppLamExp(LamExp *exp) {
             ppLamMatch(exp->val.match);
             break;
         case LAMEXP_TYPE_CHARACTER:
-            eprintf("\"%c\"", exp->val.character);
+            if (exp->val.character == L'\n')
+                eprintf("\"\\n\"");
+            else if (exp->val.character == L'\t')
+                eprintf("\"\\t\"");
+            else if (exp->val.character == L'\"')
+                eprintf("\"\\\"\"");
+            else if (exp->val.character == L'\\')
+                eprintf("\"\\\\\"");
+            else
+                eprintf("\"%lc\"", exp->val.character);
             break;
         case LAMEXP_TYPE_BACK:
             eprintf("(back)");

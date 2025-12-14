@@ -55,6 +55,10 @@
 #include "tests.h"
 #endif
 
+// temporary test
+LamExp *anfNormalize2(LamExp *exp);
+extern bool forceGcFlag;
+
 int report_flag = 0;
 static int help_flag = 0;
 static int anf_flag = 0;
@@ -463,6 +467,15 @@ int main(int argc, char *argv[]) {
 
         exp = inlineExp(exp);
         REPLACE_PROTECT(save2, exp);
+
+#if 1
+        // forceGcFlag = true;
+        LamExp *anfLam = anfNormalize2(exp);
+        REPLACE_PROTECT(save2, anfLam);
+        ppLamExp(anfLam);
+        eprintf("\n");
+        exit(0);
+#endif
 
         AnfExp *anfExp = anfNormalize(exp);
         REPLACE_PROTECT(save2, anfExp);

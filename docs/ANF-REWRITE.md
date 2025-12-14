@@ -15,6 +15,10 @@ The entire algorithm is given here without comment. Later discussions will elabo
 ```scheme
 (define (normalize-term e) (normalize e (λ (x) x)))
 
+;; normalize the expression, and if it is complex, wrap it
+;; in a variable and pass only the variable to the continuation,
+;; wrapping the result of the continuation with the binding of
+;; that variable.
 (define (normalize-name e k)
   (normalize e (λ (x)
     (if (value? x)
@@ -917,286 +921,143 @@ Variable, done already.
 ## Working Code
 [normalize.fn](../fn/rewrite/normalize.fn) now has working examples of all of the above, written in F♮.
 
-## DSL? - Critical Analysis
+## Summary
 
-Having written the working code examples, I think I can start to see a pattern that might allow a DSL to describe the transformations at an even higher level (declaratively or maybe by example).
+The entire specification, in scheme, extended to cover all of the `LamExp` types in F♮.
 
-### The Observation
-
-There seems to be only two transformations:
-
-1. **`normal`**: A component has its temporary variables hoisted out of the entire expression into `let` bindings at the same level as the expression (the normal case). Uses `normalize-name`.
-2. **`special`**: A component has its temporary variables hoisted out only so far as the outside of the component, becoming the entire replaced component (the special case, where nothing in the component should be evaluated early). Uses `normalize-term`.
-
-For example the expression `(if e0 e1 e2)` becomes:
 
 ```scheme
-(let* (<extracted e0 bindings>)
-      (if <anf e0>
-          (let* (<extracted e1 bindings>) <anf e1>)
-          (let* (<extracted e2 bindings>) <anf e2>)))
+(define (normalize-term e)
+    (normalize e (λ (x) x)))
+
+(define (normalize-terms Ms)
+  (map normalize-term Ms))
+
+(define (normalize-name e k)
+ (normalize e (λ (x)
+   (if (value? x)
+       (k x)
+       (let ((y (gensym)))
+            `(let (,y ,x) ,(k y)))))))
+
+(define (normalize-names Ms k)
+    (if (null? Ms)
+        (k '())
+        (normalize-name (car Ms) (λ (t)
+            (normalize-names (cdr Ms) (λ (ts)
+                (k `(,t . ,ts))))))))
+
+(define (normalize-bindings bindings k)
+  (match bindings
+    ('()
+       (k '()))
+    (`((,x ,val) . ,rest)
+        (normalize val
+            (λ (anfval)
+              (normalize-bindings rest
+                (λ (anfrest)
+                    (k `((,x ,anfval) . ,anfrest)))))))))
+
+(define (normalize e k)
+   (if (value? e)
+       (k e)
+       (match e
+
+            (`(amb ,e0, e1)
+            (k `(amb ,(normalize-term e0)
+                        ,(normalize-term e1))))
+
+            (`(,Fn . ,Ms)
+            (normalize-name Fn
+                    (λ (t)
+                    (normalize-names Ms
+                            (λ (ts) (k `(,t . ,ts)))))))
+
+            (`(callcc ,e0)
+                (normalize-name e0
+                    (λ (t0) (k `(callcc ,t0)))))
+
+            (`(cond ,e0 ,cases)
+                (normalize-name e0
+                    (λ (t)
+                    (k `(cond ,t ,(normalize-cases cases))))))
+
+            (`(construct ,name ,tag . ,Ms)
+                (normalize-names Ms
+                    (λ (ts) (k `(construct ,name ,tag . ,ts)))))
+
+            (`(deconstruct ,name ,nsid ,vec ,e0)
+                (normalize-name e0
+                    (λ (t) (k `(deconstruct ,name ,nsid ,vec ,t)))))
+
+            (`(if ,e0 ,e1 ,e2)
+                (normalize-name e0
+                    (λ (test)
+                        (k `(if ,test
+                                ,(normalize-term e1)
+                                ,(normalize-term e2))))))
+
+            (`(λ ,params ,body)
+                (k `(λ ,params ,(normalize-term body))))
+
+            (`(letrec ,bindings ,body)
+                (normalize-bindings bindings
+                    (λ (anfbindings)
+                        `(letrec ,anfbindings
+                                ,(normalize body k)))))
+
+            (`(let ,bindings ,body)
+                (normalize-bindings bindings
+                    (λ (anfbindings)
+                        `(let ,anfbindings
+                            ,(normalize body k)))))
+
+            (`(lookup ,name ,id ,expr)
+                (k `(lookup ,name ,id ,(normalize-term expr))))
+
+            (`(make-tuple . ,Ms)
+                (normalize-names Ms
+                    (λ (ts) (k `(make-tuple . ,ts)))))
+
+            (`(make-vec ,nargs . ,Ms)
+                (normalize-names Ms
+                    (λ (ts) (k `(make-vec ,nargs . ,ts)))))
+
+            (`(match-expr ,e0 ,cases)
+                (normalize-name e0
+                    (λ (t)
+                        (k `(match-expr ,t
+                                        ,(normalize-match-cases cases))))))
+
+            (`(namespaces , ,Ms)
+                (k `(namespaces . ,(normalize-terms Ms))))
+
+            (`(primitive-apply ,type ,e1 ,e2)
+                (normalize-name e1
+                    (λ (anfE1)
+                        (normalize-name e2
+                            (λ (anfE2)
+                                (k `(primitive-apply ,type ,anfE1 ,anfE2)))))))
+
+            (`(print ,e0)
+                (normalize-name e0
+                    (λ (anfE0) (k `(print ,anfE0)))))
+
+            (`(sequence . ,Ms)
+                (k `(sequence . ,(normalize-terms Ms))))
+
+            (`(tag ,e0)
+                (normalize-name e0
+                    (λ (t0) (k `(tag ,t0)))))
+
+            (`(typeof ,e0)
+                (normalize-name e0
+                    (λ (anfE0) (k `(typeof ,anfE0)))))
+
+            (`(tuple-index ,vec ,size ,e0)
+                (normalize-name e0
+                    (λ (t0) (k `(tuple-index ,vec ,size ,t0)))))
+
+            (`(typedefs ,defs ,body)
+            (k `(typedefs ,defs ,(normalize-term body)))))))
 ```
-
-It's ok to evaluate subexpressions of the test `e0` before the `if` proper, because they were always going to be evaluated, but we can't start evaluating either `e1` or `e2` until the test has decided which branch to execute.
-
-As a reminder, the actual `if` normalization algorithm is:
-
-```scheme
-(`(if ,e0 ,e1 ,e2)
-    (normalize-name e0
-        [λ (t0)
-            (k `(if ,t0
-                    ,(normalize-term e1)
-                    ,(normalize-term e2)))]))
-```
-
-### Proposed DSL Approach 1: Simple Annotations
-
-Annotate the components of the expression to be converted:
-
-```scheme
-(if [normal e0] [special e1] [special e2])
-```
-
-On seeing `(... [normal e0] ...)` we generate:
-
-```c
-normalize-name e0 [λ (anfE0) (k `(... ,anfE0 ...))]
-```
-
-**YAML version**:
-```yaml
-if:
-- normal: e0
-- special: e1
-- special: e2
-
-primitive-apply:
-- literal: op
-- normal: e0
-- normal: e1
-```
-
-**Problems**:
-1. ❌ No connection to actual struct definitions in `lambda.yaml`
-2. ❌ What about field names? (`test`, `consequent`, `alternative`)
-3. ❌ Must be kept in sync manually with `lambda.yaml`
-4. ❌ Doesn't handle nested continuations (like `normalize-names`)
-5. ❌ What about literals/constants that aren't even expressions?
-
-### Proposed DSL Approach 2: Annotate Existing YAML
-
-```yaml
-LamIff:
-    test:
-        type: LamExp
-        anf: 
-          mode: normal
-    consequent:
-        type: LamExp
-        anf:
-          mode: special
-    alternative:
-        type: LamExp
-        anf:
-          mode: special
-```
-
-The YAML processor recognizes objects with `type` field and uses the old value.
-
-**Advantages**:
-- ✓ Definitions and annotations in same place
-- ✓ Can't get out of sync
-- ✓ Field names are explicit
-
-**Problems**:
-1. ❌ **Code generation is non-trivial**. Consider `normalize-names`:
-   ```scheme
-   (define (normalize-names Ms k)
-     (if (null? Ms)
-         (k '())
-         (normalize-name (car Ms) [λ (t)
-             (normalize-names (cdr Ms) [λ (ts)
-                 (k `(,t . ,ts))])])))
-   ```
-   This has **nested continuations** and **recursion**. How do you specify that declaratively?
-
-2. ❌ **Different types need different patterns**. Compare:
-   - Single field: `(print e0)` → one continuation
-   - Two fields: `(prim op e0 e1)` → two nested continuations
-   - Variable fields: `(apply f . args)` → recursive `normalize-names`
-   - Parallel bindings: `(letrec bindings body)` → `normalize-bindings` recursion
-   
-   Each requires different continuation nesting structure!
-
-3. ❌ **What about special cases?** Consider:
-   - `(λ params body)` - wraps body in `normalize-term` but doesn't use continuation
-   - `(letrec bindings body)` - normalizes body with `k`, bindings separately
-   - `(cond value cases)` - needs `map` over cases
-   
-   These don't fit the `normal`/`special` dichotomy at all.
-
-4. ❌ **Continuation closure structure varies**. Look at free variables:
-   - `normalizeIfKont`: needs `k`, `e1`, `e2`
-   - `normalizeLetKont`: needs `k`, `x`, `body`
-   - `normalizeCallInnerKont`: needs `k`, `t`
-   - `normalizeCallOuterKont`: needs `k`, `Ms`
-   
-   Each has different closure environment. How to specify?
-
-### The Real Complexity: Continuation Choreography
-
-The DSL idea assumes normalization is compositional:
-- Mark fields as `normal` or `special`
-- Generate corresponding continuation code
-
-**But the actual algorithm isn't that simple!** Consider `normalize-call`:
-
-```scheme
-(`(,Fn . ,Ms)
-    (normalize-name Fn
-        [λ (t)                           ; Outer continuation
-            (normalize-names Ms
-                [λ (ts)                  ; Inner continuation  
-                    (k `(,t . ,ts))])]))
-```
-
-Two **nested** continuations with **different** free variable requirements:
-- Outer: closes over `Ms`, `k`; receives `t`
-- Inner: closes over `t`, `k`; receives `ts`
-
-How would you specify this declaratively? Something like:
-
-```yaml
-LamApply:
-  function:
-    type: LamExp
-    anf:
-      mode: normal
-      continuation:
-        receives: t
-        closes: [Ms, k]
-        body:
-          recurse: normalize-names
-          arg: Ms
-          continuation:
-            receives: ts
-            closes: [t, k]
-            body:
-              invoke: k
-              arg: (apply t ts)
-```
-
-**This is just writing the algorithm in YAML instead of Scheme!** No abstraction gained.
-
-### The Visitor Pattern Problem (Again!)
-
-This DSL idea suffers from the same issue as the visitor pattern:
-
-**You can't separate traversal strategy from the operation.**
-
-ANF normalization requires:
-1. Specific order of evaluation (which child first?)
-2. Specific continuation nesting (which receives which closure?)
-3. Specific free variable management (what gets closed over?)
-4. Specific result construction (how to combine anfE0, anfE1, anfE2?)
-
-All of these are **semantically significant** - they define the ANF algorithm. A DSL that specifies all of this is just... the algorithm in different syntax.
-
-### What COULD Work: Continuation Scaffolding Only
-
-Instead of trying to generate the entire algorithm, generate just the **boilerplate**:
-
-```yaml
-# anf_continuations.yaml
-continuations:
-  normalizeIfKont:
-    free_vars:
-      k: LamKont*
-      e1: LamData*
-      e2: LamData*
-    param:
-      name: anfE0
-      type: LamData*
-    # Body still written manually in C
-```
-
-Generates:
-```c
-// Env struct (type-safe, replaces LamMap)
-typedef struct {
-    LamKont *k;
-    LamData *e1;
-    LamData *e2;
-} NormalizeIfKont_Env;
-
-// Wrapper (handles env extraction)
-LamData* normalizeIfKont(LamData *anfE0, NormalizeIfKont_Env *env);
-
-// Constructor macro (handles PROTECT boilerplate)
-#define MAKE_KONT_normalizeIfKont(k_val, e1_val, e2_val) ...
-```
-
-**This is Phase 2 from VISITOR.md** - and it's actually implementable!
-
-**User still writes**:
-```c
-LamData* normalizeIfKont(LamData *anfE0, NormalizeIfKont_Env *env) {
-    LamData *anfE1 = normalizeTerm(env->e1);
-    int save = PROTECT(anfE1);
-    LamData *anfE2 = normalizeTerm(env->e2);
-    PROTECT(anfE2);
-    LamData *iff = makeLamData_Iff(...);
-    PROTECT(iff);
-    LamData *result = INVOKE(env->k, iff);
-    UNPROTECT(save);
-    return result;
-}
-```
-
-But **doesn't write**:
-- Env struct definition (generated)
-- LamMap hash table setup (generated)
-- Free variable extraction (generated)  
-- PROTECT boilerplate for continuation construction (macro-ized)
-
-**Savings**: ~10 lines per continuation × 70 continuations = ~700 lines
-
-### Verdict on Full DSL
-
-**The full DSL idea doesn't work** because:
-
-1. **Continuation structure is algorithm-specific** - can't be inferred from field annotations
-2. **Nesting patterns vary** - single, nested, recursive, parallel
-3. **Special cases abound** - lambda, letrec, cond all violate simple patterns
-4. **Declarative specification is as complex as imperative** - just different syntax
-5. **Maintenance burden** - another language to learn, debug, and keep in sync
-
-**The pattern you observed** (`normal` vs `special`) is real but **insufficient**:
-- It describes **what** to normalize
-- It doesn't describe **how** to sequence continuations
-- It doesn't describe **what** to close over
-- It doesn't describe **how** to construct results
-
-Those "hows" **are the algorithm** - they can't be abstracted away.
-
-### Alternative: Keep Scheme→C Pattern
-
-The **current approach is actually good**:
-
-1. Write algorithm in Scheme (or F♮) first
-2. Validate it works
-3. Translate mechanically to C
-4. Use continuation scaffolding generator for boilerplate
-
-**Benefits**:
-- Scheme/F♮ code is executable specification
-- Can test algorithm before C implementation
-- Translation is mechanical (could even be automated with simple codegen)
-- Continuation scaffolding saves most of the boilerplate anyway
-
-**Recommendation**: 
-- ❌ **Don't** pursue full DSL - too complex, too brittle
-- ✓ **Do** implement continuation scaffolding generator (Phase 2 from VISITOR.md)
-- ✓ **Do** keep Scheme→C translation pattern for algorithm implementation
-- ✓ **Maybe** write simple Scheme→C translator for continuation bodies (but manual is fine too)

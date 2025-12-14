@@ -5,24 +5,24 @@ let
     import io operator "$_";
 
     typedef expr {
-        lambda(list(expr), expr) |
-        let_expr(expr, expr, expr) |
-        let2_expr(expr, expr, expr) |
-        if_expr(expr, expr, expr) |
-        apply(expr, list(expr)) |
-        biginteger(number) |
-        character(char) |
-        var_expr(string) |
-        letrec_expr(list(#(string, expr)), expr) |
         amb_expr(expr, expr) |
+        apply(expr, list(expr)) |
         back_expr |
+        biginteger(number) |
+        callcc_expr(expr) |
+        character(char) |
         cond_expr(expr, list(#(expr, expr))) |
         constant(string) |
-        construct(string, list(expr)) |
         constructor_info(string) |
+        construct(string, list(expr)) |
         deconstruct(string, number, expr) |
         env_expr |
         error_expr |
+        if_expr(expr, expr, expr) |
+        lambda(list(expr), expr) |
+        let2_expr(expr, expr, expr) | // investigationg alternative rewrite rule
+        let_expr(expr, expr, expr) |
+        letrec_expr(list(#(string, expr)), expr) |
         lookup(string, number, expr) |
         make_tuple(list(expr)) |
         make_vec(number, list(expr)) |
@@ -35,10 +35,19 @@ let
         tag(expr) |
         tuple_index(number, number, expr) |
         typedefs(number, expr) |
-        typeof_expr(expr)
+        typeof_expr(expr) |
+        var_expr(string)
     }
 
+    ///// Printer for expressions
+
     fn print_expr {
+        (x=callcc_expr(e)) {
+            puts("(call/cc ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
         (x=typeof_expr(e)) {
             puts("(typeof ");
             print_expr(e);
@@ -295,6 +304,8 @@ let
         }
     }
 
+    // Normalization algorithm
+
     fn gensym() { var_expr("$" @@ $incr()) }
 
     fn normalize_term (e) { normalize(e, fn (x) { x }) }
@@ -352,6 +363,12 @@ let
         (x=error_expr, k) |
         (x=character(_), k) {
             k(x)
+        }
+
+        (callcc_expr(e), k) {
+            normalize_name(e, fn (t) {
+                k(callcc_expr(t))
+            })
         }
 
         (let_expr(x, val, body), k) {
@@ -555,7 +572,13 @@ in
                 puts("\n")
             },
             [
-                lamexp
+                lamexp,
+
+                callcc_expr(var_expr("k")),
+
+                callcc_expr(
+                    apply(var_expr("f"), [biginteger(10)])
+                ),
 
                 biginteger(42),
 

@@ -156,7 +156,7 @@ def generate_output(args, catalog, document, typeName, description, includes, li
         # For continuation scaffolding, generate .inc (catalog already populated)
         from generate.kontinuations import KontinuationGenerator
         generator = KontinuationGenerator(document)
-        generator.generate_kont_impl_inc(sys.stdout, includes)
+        generator.generate_kont_impl_inc(sys.stdout, catalog, includes)
 
 
 def generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo):

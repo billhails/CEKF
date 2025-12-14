@@ -44,6 +44,8 @@ static int numGc = 0;
 
 static Header *lastAlloc = NULL;
 
+bool forceGcFlag = false;
+
 /**
  * The ProtectionStack structure is used to ensure objects that are in the process
  * of being constructed are not collected by the garbage collector. It is the structure
@@ -246,7 +248,9 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
 
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
+if (forceGcFlag) {
         collectGarbage();
+}
 #else
         if (bytesAllocated > nextGC) {
             collectGarbage();
@@ -374,6 +378,9 @@ void markObj(Header *h, Index i) {
         BUILTINS_OBJTYPE_CASES()
             markBuiltinsObj(h);
             break;
+        ANF_KONT_OBJTYPE_CASES()
+            markAnf_kontObj(h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
                         i);
@@ -436,6 +443,9 @@ void freeObj(Header *h) {
             break;
             BUILTINS_OBJTYPE_CASES()
                 freeBuiltinsObj(h);
+            break;
+            ANF_KONT_OBJTYPE_CASES()
+                freeAnf_kontObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
