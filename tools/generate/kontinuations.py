@@ -11,6 +11,10 @@ from .structs import SimpleStruct
 from .unions import DiscriminatedUnion
 from .primitives import Primitive
 
+def ucFirst(s: str) -> str:
+    if not s:
+        return s
+    return s[0].upper() + s[1:]
 
 class KontinuationGenerator:
     def __init__(self, yaml_data: Dict[str, Any]):
@@ -27,9 +31,8 @@ class KontinuationGenerator:
             if not isinstance(spec, dict):
                 continue
                 
-            # Capitalize first letter for struct name
-            struct_name = name[0].upper() + name[1:] + "KontEnv"
-            key = spec.get('key', name)
+            struct_name = ucFirst(name) + "KontEnv"
+            key = spec.get('key')
             
             # Build struct fields from free_vars
             free_vars = spec.get('free_vars', {})
@@ -40,7 +43,7 @@ class KontinuationGenerator:
                 },
                 'data': free_vars
             }
-            
+
             # Add struct to catalog
             catalog.add(SimpleStruct(struct_name, struct_yaml))
             
@@ -89,7 +92,7 @@ class KontinuationGenerator:
         for name, spec in self.continuations.items():
             if spec.get('notimplemented', False):
                 continue
-            struct_name = name[0].upper() + name[1:] + "KontEnv"
+            struct_name = ucFirst(name) + "KontEnv"
             output.write(f"static LamExp *{name}Kont(LamExp*, {struct_name}*);\n")
         output.write("\n")
     
@@ -100,17 +103,13 @@ class KontinuationGenerator:
             if spec.get('notimplemented', False):
                 continue
             key = spec.get('key')
-            struct_name = name[0].upper() + name[1:] + "KontEnv"
-            param = spec.get('param', {})
-            param_name = param.get('name')
-            param_type = param.get('type')
             
             # Generate wrapper function
             output.write(f"static struct LamExp *{name}Wrapper(")
             output.write(f"struct LamExp *exp, ")
             output.write(f"struct KontEnv *env")
             output.write(") {\n")
-            output.write(f"    return {name}Kont(exp, getKontEnv_{key[0].upper() + key[1:]}(env));\n")
+            output.write(f"    return {name}Kont(exp, getKontEnv_{ucFirst(key)}(env));\n")
             output.write("}\n\n")
     
     def _getTypeDeclaration(self, typeName, catalog):
@@ -124,7 +123,6 @@ class KontinuationGenerator:
             if spec.get('notimplemented', False):
                 continue
             key = spec.get('key', name)
-            struct_name = name[0].upper() + name[1:] + "KontEnv"
             free_vars = spec.get('free_vars', {})
             
             # Generate constructor function
@@ -139,7 +137,7 @@ class KontinuationGenerator:
             output.write(") {\n")
             
             # Create environment struct
-            output.write(f"    KontEnv *__env = makeKontEnv_{key[0].upper() + key[1:]}(")
+            output.write(f"    KontEnv *__env = makeKontEnv_{ucFirst(key)}(")
             output.write(", ".join(free_vars.keys()))
             output.write(");\n")
             output.write("    int __save = PROTECT(__env);\n")

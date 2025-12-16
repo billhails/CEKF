@@ -1,0 +1,37 @@
+let
+    link "listutils.fn" as list;
+
+    typedef sexpr {
+        atom(string) |
+        sexp(list(sexpr))
+    }
+
+    fn to_expr {
+        (atom("back")) { 1 }
+        (atom(['\'', c, '\''])) { 1 }
+        (atom("env")) { 1 }
+        (atom("error")) { 1 }
+        (atom(s)) { var(s) }
+        (sexp([atom("amb"), a, b])) { 1 }
+        (sexp([atom("call/cc"), e])) { 1 }
+        (sexp([atom("if"), e1, e2, e3])) { 1 }
+        (sexp([atom("lambda"), sexp(args), body])) { 1 }
+        (sexp(atom("begin") @ exprs)) { 1 }
+        (sexp([atom("let"), sexp([e1, e2]), e3])) { 1 }
+        (sexp([atom("+"), e1, e2])) { 1 }
+        (sexp([atom("-"), e1, e2])) { 1 }
+        (sexp([atom("*"), e1, e2])) { 1 }
+        (sexp([atom("/"), e1, e2])) { 1 }
+        (sexp([atom("**"), e1, e2])) { 1 }
+        (sexp([atom("=="), e1, e2])) { 1 }
+        (sexp([atom("<"), e1, e2])) { 1 }
+        (sexp([atom(">"), e1, e2])) { 1 }
+        (sexp([atom("<="), e1, e2])) { 1 }
+        (sexp([atom(">="), e1, e2])) { 1 }
+        (sexp([atom("print"), e])) { 1 }
+        (sexp(func @ args)) { 1 }
+        (x) { 1 }
+    }
+
+in
+    1;

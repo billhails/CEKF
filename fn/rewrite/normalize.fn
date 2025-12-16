@@ -1,312 +1,13 @@
 let
     link "../listutils.fn" as list;
     link "../ioutils.fn" as io;
+    link "expr.fn" as E;
 
     import io operator "$_";
 
-    typedef expr {
-        amb_expr(expr, expr) |
-        apply(expr, list(expr)) |
-        back_expr |
-        biginteger(number) |
-        callcc_expr(expr) |
-        character(char) |
-        cond_expr(expr, list(#(expr, expr))) |
-        constant(string) |
-        constructor_info(string) |
-        construct(string, list(expr)) |
-        deconstruct(string, number, expr) |
-        env_expr |
-        error_expr |
-        if_expr(expr, expr, expr) |
-        lambda(list(expr), expr) |
-        let2_expr(expr, expr, expr) | // investigationg alternative rewrite rule
-        let_expr(expr, expr, expr) |
-        letrec_expr(list(#(string, expr)), expr) |
-        lookup(string, number, expr) |
-        make_tuple(list(expr)) |
-        make_vec(number, list(expr)) |
-        match_cases(expr, list(#(list(number), expr))) |
-        namespaces(list(expr)) |
-        primapp(string, expr, expr) |
-        print_exp(expr) |
-        sequence(list(expr)) |
-        stdint(number) |
-        tag(expr) |
-        tuple_index(number, number, expr) |
-        typedefs(number, expr) |
-        typeof_expr(expr) |
-        var_expr(string)
-    }
-
-    ///// Printer for expressions
-
-    fn print_expr {
-        (x=callcc_expr(e)) {
-            puts("(call/cc ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=typeof_expr(e)) {
-            puts("(typeof ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=typedefs(defs, expr)) {
-            puts("(typedefs ");
-            putn(defs);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=tuple_index(size, index, expr)) {
-            puts("(tuple_index ");
-            putn(size);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=tag(e)) {
-            puts("(tag ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=stdint(i)) {
-            putn(i);
-            x;
-        }
-        (x=sequence(exprs)) {
-            puts("(begin");
-            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
-            puts(")");
-            x;
-        }
-        (x=print_exp(e)) {
-            puts("(print ");
-            print_expr(e);
-            puts(")");
-            x;
-        }
-        (x=primapp(name, e1, e2)) {
-            puts("(");
-            puts(name);
-            puts(" ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(")");
-            x;
-        }
-        (x=namespaces(exprs)) {
-            puts("(namespaces");
-            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
-            puts(")");
-            x;
-        }
-        (x=match_cases(exp, cases)) {
-            puts("(match_cases ");
-            print_expr(exp);
-            list.for_each (fn {
-                (#(indices, caseExpr)) {
-                    puts(" ((");
-                    switch (indices) {
-                        ([]) { "" }
-                        (h @ t) {
-                            putn(h);
-                            list.for_each (fn(i) { puts(" "); putn(i) }, t);
-                            ""
-                        }
-                    };
-                    puts(") ");
-                    print_expr(caseExpr);
-                    puts(")");
-                }
-            }, cases);
-            puts(")");
-            x;
-        }
-        (x=make_vec(size, elements)) {
-            puts("(make_vec ");
-            putn(size);
-            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
-            puts(")");
-            x;
-        }
-        (x=make_tuple(elements)) {
-            puts("(make_tuple");
-            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
-            puts(")");
-            x;
-        }
-        (x=lookup(name, index, expr)) {
-            puts("(lookup ");
-            puts(name);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=env_expr) {
-            puts("(env)");
-            x;
-        }
-        (x=error_expr) {
-            puts("(error)");
-            x;
-        }
-        (x=deconstruct(name, index, expr)) {
-            puts("(deconstruct ");
-            puts(name);
-            puts(" ");
-            putn(index);
-            puts(" ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=constructor_info(name)) {
-            puts("(constructor_info ");
-            puts(name);
-            puts(")");
-            x;
-        }
-        (x=construct(name, args)) {
-            puts("(construct ");
-            puts(name);
-            list.map (fn(e) { puts(" "); print_expr(e) }, args);
-            puts(")");
-            x;
-        }
-        (x=constant(name)) {
-            puts("(constant ");
-            puts(name);
-            puts(")");
-            x;
-        }
-        (x=cond_expr(test, branches)) {
-            puts("(cond ");
-            print_expr(test);
-            list.for_each (fn {
-                (#(e1, e2)) {
-                    puts(" ");
-                    putc('(');
-                    print_expr(e1);
-                    puts(" ");
-                    print_expr(e2);
-                    putc(')');
-                }
-            }, branches);
-            puts(")");
-            x;
-        }
-        (x=letrec_expr(bindings, body)) {
-            puts("(letrec (");
-            list.for_each (fn {
-                (#(name, expr)) {
-                    putc('(');
-                    puts(name);
-                    putc(' ');
-                    print_expr(expr);
-                    putc(')');
-                }
-            }, bindings);
-            puts(") ");
-            print_expr(body);
-            puts(")");
-            x;
-        }
-        (x=lambda(args, expr)) {
-            puts("(λ (");
-            switch (args) {
-                ([]) { "" }
-                (h @ t) {
-                    print_expr(h);
-                    list.for_each (fn(e) { putc(' '); print_expr(e) }, t);
-                    ""
-                }
-            };
-            puts(") ");
-            print_expr(expr);
-            puts(")");
-            x;
-        }
-        (x=let_expr(e1, e2, e3)) {
-            puts("(let (");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(") ");
-            print_expr(e3);
-            puts(")");
-            x;
-        }
-        (x=let2_expr(e1, e2, e3)) {
-            puts("(let2 (");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(") ");
-            print_expr(e3);
-            puts(")");
-            x;
-        }
-        (x=if_expr(e1, e2, e3)) {
-            puts("(if ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(" ");
-            print_expr(e3);
-            puts(")");
-            x;
-        }
-        (x=apply(e1, args)) {
-            puts("(");
-            print_expr(e1);
-            list.map (fn(e) { puts(" "); print_expr(e) }, args);
-            puts(")");
-            x;
-        }
-        (x=biginteger(i)) {
-            putn(i);
-            x;
-        }
-        (x=var_expr(chars)) {
-            puts(chars);
-            x;
-        }
-        (x=amb_expr(e1, e2)) {
-            puts("(amb ");
-            print_expr(e1);
-            puts(" ");
-            print_expr(e2);
-            puts(")");
-            x;
-        }
-        (x=back_expr) {
-            puts("(back)");
-            x;
-        }
-        (x=character(c)) {
-            putc('\'');
-            putc(c);
-            putc('\'');
-            x;
-        }
-    }
-
     // Normalization algorithm
 
-    fn gensym() { var_expr("$" @@ $incr()) }
+    fn gensym() { E.var("$" @@ $incr()) }
 
     fn normalize_term (e) { normalize(e, fn (x) { x }) }
 
@@ -327,174 +28,167 @@ let
 
     fn normalize_name(e, k) {
         normalize(e, fn {
-            (x=biginteger(_)) |
-            (x=var_expr(_)) |
-            (x=back_expr) |
-            (x=constant(_)) |
-            (x=constructor_info(_)) |
-            (x=stdint(_)) |
-            (x=env_expr) |
-            (x=error_expr) |
-            (x=character(_)) {
+            (x=E.bigint(_)) |
+            (x=E.var(_)) |
+            (x=E.back_expr) |
+            (x=E.constant(_)) |
+            (x=E.constructor_info(_)) |
+            (x=E.stdint(_)) |
+            (x=E.env_expr) |
+            (x=E.error_expr) |
+            (x=E.character(_)) {
                 k(x)
             }
             (x) {
                 let
                     y = gensym();
                 in
-                    let_expr(y, x, k(y))
+                    E.let_expr(y, x, k(y))
             }
         })
     }
 
     fn normalize {
 
-        (lambda(params, body), k) {
-            k(lambda(params, normalize_term(body)))
+        (E.lambda(params, body), k) {
+            k(E.lambda(params, normalize_term(body)))
         }
 
-        (x=biginteger(_), k) |
-        (x=var_expr(_), k) |
-        (x=back_expr, k) |
-        (x=constant(_), k) |
-        (x=stdint(_), k) |
-        (x=constructor_info(_), k) |
-        (x=env_expr, k) |
-        (x=error_expr, k) |
-        (x=character(_), k) {
+        (x=E.bigint(_), k) |
+        (x=E.var(_), k) |
+        (x=E.back_expr, k) |
+        (x=E.constant(_), k) |
+        (x=E.stdint(_), k) |
+        (x=E.constructor_info(_), k) |
+        (x=E.env_expr, k) |
+        (x=E.error_expr, k) |
+        (x=E.character(_), k) {
             k(x)
         }
 
-        (callcc_expr(e), k) {
+        (E.callcc_expr(e), k) {
             normalize_name(e, fn (t) {
-                k(callcc_expr(t))
+                k(E.callcc_expr(t))
             })
         }
 
-        (let_expr(x, val, body), k) {
-            normalize(val, fn (v) { let_expr(x, v, normalize(body, k)) })
-        }
-
-        // Not a real part of the language spec, just a way of
-        // investigating an alternative normalization strategy.
-        // Turns out that `let` is better (see test below).
-        (let2_expr(x, val, body), k) {
-            normalize(val, fn (v) { k(let2_expr(x, v, normalize_term(body))) })
+        (E.let_expr(x, val, body), k) {
+            normalize(val, fn (v) { E.let_expr(x, v, normalize(body, k)) })
         }
 
         // the branches of the if must be contained
-        (if_expr(e0, e1, e2), k) {
+        (E.if_expr(e0, e1, e2), k) {
             normalize_name(e0, fn (test) {
-                k(if_expr(test, normalize_term(e1), normalize_term(e2)))
+                k(E.if_expr(test, normalize_term(e1), normalize_term(e2)))
             })
         }
 
-        (apply(Fn, Ms), k) {
+        (E.apply(Fn, Ms), k) {
             normalize_name(Fn, fn (t) {
                 normalize_names(Ms, fn (ts) {
-                    k(apply(t, ts))
+                    k(E.apply(t, ts))
                 })
             })
         }
 
-        (construct(name, args), k) {
+        (E.construct(name, args), k) {
             normalize_names(args, fn (ts) {
-                k(construct(name, ts))
+                k(E.construct(name, ts))
             })
         }
 
-        (make_tuple(Ms), k) {
+        (E.make_tuple(Ms), k) {
             normalize_names(Ms, fn (ts) {
-                k(make_tuple(ts))
+                k(E.make_tuple(ts))
             })
         }
 
-        (sequence(Ms), k) {
-            k(sequence(normalize_terms(Ms)))
+        (E.sequence(Ms), k) {
+            k(E.sequence(normalize_terms(Ms)))
         }
 
-        (make_vec(size, Ms), k) {
+        (E.make_vec(size, Ms), k) {
             normalize_names(Ms, fn (ts) {
-                k(make_vec(size, ts))
+                k(E.make_vec(size, ts))
             })
         }
 
-        (letrec_expr(Bs, body), k) {
+        (E.letrec_expr(Bs, body), k) {
             normalizeBindings(Bs, fn (bs) {
-                letrec_expr(bs, normalize(body, k))
+                E.letrec_expr(bs, normalize(body, k))
             })
         }
 
         // amb expression evaluation must be contained
-        (amb_expr(e1, e2), k) {
-            k(amb_expr(normalize_term(e1), normalize_term(e2)))
+        (E.amb_expr(e1, e2), k) {
+            k(E.amb_expr(normalize_term(e1), normalize_term(e2)))
         }
 
         // branches of a cond must be individually contained
-        (cond_expr(e0, branches), k) {
+        (E.cond_expr(e0, branches), k) {
             normalize_name(e0, fn (t) {
-                k(cond_expr(t, normalize_cases(branches)))
+                k(E.cond_expr(t, normalize_cases(branches)))
             })
         }
 
-        // same for match_cases
-        (match_cases(e0, branches), k) {
+        // same for E.match_cases
+        (E.match_cases(e0, branches), k) {
             normalize_name(e0, fn (t) {
-                k(match_cases(t, normalize_cases(branches)))
+                k(E.match_cases(t, normalize_cases(branches)))
             })
         }
 
-        (deconstruct(name, index, e0), k) {
+        (E.deconstruct(name, index, e0), k) {
             normalize_name(e0, fn (t) {
-                k(deconstruct(name, index, t))
+                k(E.deconstruct(name, index, t))
             })
         }
 
         // we have to treat e0 as a Cexp because it is
         // inside the scope of a namespace
-        (lookup(name, index, e0), k) {
-            k(lookup(name, index, (normalize_term(e0))))
+        (E.lookup(name, index, e0), k) {
+            k(E.lookup(name, index, (normalize_term(e0))))
         }
 
         // each namespace must be individually contained
-        (namespaces(exprs), k) {
-            k(namespaces(normalize_terms(exprs)))
+        (E.namespaces(exprs), k) {
+            k(E.namespaces(normalize_terms(exprs)))
         }
 
         // the typedefs themselves are discarded after normalization
-        (typedefs(ignored, expr), k) {
-            k(typedefs(ignored, normalize_term(expr)))
+        (E.typedefs(ignored, expr), k) {
+            k(E.typedefs(ignored, normalize_term(expr)))
         }
 
-        (primapp(name, e1, e2), k) {
+        (E.primapp(name, e1, e2), k) {
             normalize_name(e1, fn (t1) {
                 normalize_name(e2, fn (t2) {
-                    k(primapp(name, t1, t2))
+                    k(E.primapp(name, t1, t2))
                 })
             })
         }
 
-        (print_exp(e0), k) {
+        (E.print_exp(e0), k) {
             normalize_name(e0, fn (t) {
-                k(print_exp(t))
+                k(E.print_exp(t))
             })
         }
 
-        (typeof_expr(e0), k) {
+        (E.typeof_expr(e0), k) {
             normalize_name(e0, fn (t) {
-                k(typeof_expr(t))
+                k(E.typeof_expr(t))
             })
         }
 
-        (tuple_index(size, index, e0), k) {
+        (E.tuple_index(size, index, e0), k) {
             normalize_name(e0, fn (t) {
-                k(tuple_index(size, index, t))
+                k(E.tuple_index(size, index, t))
             })
         }
 
-        (tag(e0), k) {
+        (E.tag(e0), k) {
             normalize_name(e0, fn (t) {
-                k(tag(t))
+                k(E.tag(t))
             })
         }
     }
@@ -527,62 +221,62 @@ in
     {
         let
             // test data
-            lamexp = lambda(
-                [var_expr("x"), var_expr("y")],
-                apply(var_expr("f"), [var_expr("x"), apply(var_expr("f"), [var_expr("y")])])
+            lamexp = E.lambda(
+                [E.var("x"), E.var("y")],
+                E.apply(E.var("f"), [E.var("x"), E.apply(E.var("f"), [E.var("y")])])
             );
         
             // (let (a (compute (value 10))) (use (f a)))
-            letexp = let_expr(
-                var_expr("a"),
-                apply(var_expr("compute"), [apply(var_expr("value"), [biginteger(10)])]),
-                apply(var_expr("use"), [apply(var_expr("f"), [var_expr("a")])])
+            letexp = E.let_expr(
+                E.var("a"),
+                E.apply(E.var("compute"), [E.apply(E.var("value"), [E.bigint(10)])]),
+                E.apply(E.var("use"), [E.apply(E.var("f"), [E.var("a")])])
             );
         
             // (let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))
-            letexp2 = let_expr(
-                var_expr("a"),
-                apply(var_expr("compute"),
-                        [apply(var_expr("value"),
-                                [biginteger(10)])]),
-                let_expr(
-                    var_expr("b"),
-                    apply(var_expr("compute"),
-                            [apply(var_expr("value"),
-                                    [var_expr("a")])]),
-                    apply(var_expr("use"), [apply(var_expr("f"), [var_expr("b")])])
+            letexp2 = E.let_expr(
+                E.var("a"),
+                E.apply(E.var("compute"),
+                        [E.apply(E.var("value"),
+                                [E.bigint(10)])]),
+                E.let_expr(
+                    E.var("b"),
+                    E.apply(E.var("compute"),
+                            [E.apply(E.var("value"),
+                                    [E.var("a")])]),
+                    E.apply(E.var("use"), [E.apply(E.var("f"), [E.var("b")])])
                 )
             );
         
-            ifexp = if_expr(
-                apply(var_expr("is_zero"), [biginteger(0)]),
+            ifexp = E.if_expr(
+                E.apply(E.var("is_zero"), [E.bigint(0)]),
                 lamexp,
                 letexp2
             );
         
-            primexp = primapp("+", biginteger(5),
-                                primapp("*", biginteger(10),
-                                                biginteger(2)));
+            primexp = E.primapp("+", E.bigint(5),
+                                E.primapp("*", E.bigint(10),
+                                                E.bigint(2)));
         
         in
             list.for_each (fn (expr) {
-                print_expr(expr);
+                E.print_expr(expr);
                 puts(" ==>\n    ");
-                print_expr(normalize_term(expr));
+                E.print_expr(normalize_term(expr));
                 puts("\n")
             },
             [
                 lamexp,
 
-                callcc_expr(var_expr("k")),
+                E.callcc_expr(E.var("k")),
 
-                callcc_expr(
-                    apply(var_expr("f"), [biginteger(10)])
+                E.callcc_expr(
+                    E.apply(E.var("f"), [E.bigint(10)])
                 ),
 
-                biginteger(42),
+                E.bigint(42),
 
-                var_expr("z"),
+                E.var("z"),
 
                 letexp,
 
@@ -590,144 +284,128 @@ in
 
                 ifexp,
 
-                apply(
-                    var_expr("f"),
+                E.apply(
+                    E.var("f"),
                     [primexp, primexp, primexp]
                 ),
 
-                apply(
-                    lambda(
-                        [var_expr("x")],
-                        apply(var_expr("h"), [var_expr("x"), biginteger(3)])
+                E.apply(
+                    E.lambda(
+                        [E.var("x")],
+                        E.apply(E.var("h"), [E.var("x"), E.bigint(3)])
                     ),
-                    [apply(var_expr("g"), [biginteger(4)])]
+                    [E.apply(E.var("g"), [E.bigint(4)])]
                 ),
 
-                apply(
-                    lambda(
-                        [var_expr("x")],
-                        apply(var_expr("h"), [var_expr("x"), apply(var_expr("y"), [biginteger(3)])])
+                E.apply(
+                    E.lambda(
+                        [E.var("x")],
+                        E.apply(E.var("h"), [E.var("x"), E.apply(E.var("y"), [E.bigint(3)])])
                     ),
-                    [apply(var_expr("g"), [biginteger(4)])]
+                    [E.apply(E.var("g"), [E.bigint(4)])]
                 ),
 
-                letrec_expr(
-                    [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
-                    var_expr("f")
+                E.letrec_expr(
+                    [#("f", E.apply(E.var("g"), [E.bigint(42), E.apply(E.var("h"), [E.bigint(7)])]))],
+                    E.var("f")
                 ),
 
-                amb_expr(
-                    apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(1)])]),
-                    apply(var_expr("choose"), [apply(var_expr("value"), [biginteger(2)])])
+                E.amb_expr(
+                    E.apply(E.var("choose"), [E.apply(E.var("value"), [E.bigint(1)])]),
+                    E.apply(E.var("choose"), [E.apply(E.var("value"), [E.bigint(2)])])
                 ),
 
-                back_expr,
+                E.back_expr,
 
-                character('a'),
+                E.character('a'),
 
-                cond_expr(
-                    apply(var_expr("test_cond"), [biginteger(5)]),
+                E.cond_expr(
+                    E.apply(E.var("test_cond"), [E.bigint(5)]),
                     [
-                        #(biginteger(1), apply(var_expr("result1"), [biginteger(10)])),
-                        #(biginteger(2), apply(var_expr("result2"), [apply(var_expr("f"), [biginteger(20)])]))
+                        #(E.bigint(1), E.apply(E.var("result1"), [E.bigint(10)])),
+                        #(E.bigint(2), E.apply(E.var("result2"), [E.apply(E.var("f"), [E.bigint(20)])]))
                     ]
                 ),
 
-                match_cases(
-                    apply(var_expr("test_case"), [biginteger(5)]),
+                E.match_cases(
+                    E.apply(E.var("test_case"), [E.bigint(5)]),
                     [
-                        #([1], apply(var_expr("result1"), [biginteger(10)])),
-                        #([2, 3], apply(var_expr("result2"), [apply(var_expr("f"), [biginteger(20)])]))
+                        #([1], E.apply(E.var("result1"), [E.bigint(10)])),
+                        #([2, 3], E.apply(E.var("result2"), [E.apply(E.var("f"), [E.bigint(20)])]))
                     ]
                 ),
 
-                constant("nil"),
+                E.constant("nil"),
 
-                construct("pair", [biginteger(1), construct("pair", [biginteger(2), constant("nil")])]),
+                E.construct("pair", [E.bigint(1), E.construct("pair", [E.bigint(2), E.constant("nil")])]),
 
-                constructor_info("MyConstructor"),
+                E.constructor_info("MyConstructor"),
 
-                deconstruct("pair", 0, construct("pair", [biginteger(1), constant("nil")])),
+                E.deconstruct("pair", 0, E.construct("pair", [E.bigint(1), E.constant("nil")])),
 
-                env_expr,
+                E.env_expr,
 
-                error_expr,
+                E.error_expr,
 
-                lookup("ns", 0, apply(var_expr("f"), [apply(var_expr("g"), [biginteger(10)])])),
+                E.lookup("ns", 0, E.apply(E.var("f"), [E.apply(E.var("g"), [E.bigint(10)])])),
 
-                make_tuple([biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
+                E.make_tuple([E.bigint(1), E.var("x"), E.apply(E.var("h"), [E.bigint(3)])]),
 
-                make_vec(3, [biginteger(1), var_expr("x"), apply(var_expr("h"), [biginteger(3)])]),
+                E.make_vec(3, [E.bigint(1), E.var("x"), E.apply(E.var("h"), [E.bigint(3)])]),
 
-                namespaces([
-                    let_expr(
-                        var_expr("a"),
-                        biginteger(10),
-                        apply(var_expr("use_a"), [var_expr("a")])
+                E.namespaces([
+                    E.let_expr(
+                        E.var("a"),
+                        E.bigint(10),
+                        E.apply(E.var("use_a"), [E.var("a")])
                     ),
-                    if_expr(
-                        apply(var_expr("check"), [var_expr("a")]),
-                        apply(var_expr("true_branch"), []),
-                        apply(var_expr("false_branch"), [])
+                    E.if_expr(
+                        E.apply(E.var("check"), [E.var("a")]),
+                        E.apply(E.var("true_branch"), []),
+                        E.apply(E.var("false_branch"), [])
                     )
                 ]),
 
-                primapp("+", biginteger(5),
-                            primapp("*", biginteger(10),
-                                        apply(var_expr("f"), [biginteger(2)]))),
+                E.primapp("+", E.bigint(5),
+                            E.primapp("*", E.bigint(10),
+                                        E.apply(E.var("f"), [E.bigint(2)]))),
 
-                primapp("+", biginteger(5),
-                            primapp("*", biginteger(10),
-                                        apply(var_expr("f"), [apply(var_expr("g"), [biginteger(2)])]))),
+                E.primapp("+", E.bigint(5),
+                            E.primapp("*", E.bigint(10),
+                                        E.apply(E.var("f"), [E.apply(E.var("g"), [E.bigint(2)])]))),
 
-                print_exp(apply(var_expr("display"), [biginteger(7)])),
+                E.print_exp(E.apply(E.var("display"), [E.bigint(7)])),
 
-                sequence([biginteger(1), var_expr("x"), apply(var_expr("f"), [apply(var_expr("h"), [biginteger(3)])])]),
+                E.sequence([E.bigint(1), E.var("x"), E.apply(E.var("f"), [E.apply(E.var("h"), [E.bigint(3)])])]),
 
-                stdint(10),
+                E.stdint(10),
 
-                tag(apply(var_expr("sometype"), [biginteger(7)])),
+                E.tag(E.apply(E.var("sometype"), [E.bigint(7)])),
 
-                tuple_index(1, 0, apply(var_expr("sometuple"), [biginteger(7)])),
+                E.tuple_index(1, 0, E.apply(E.var("sometuple"), [E.bigint(7)])),
 
-                typedefs(0,
-                    letrec_expr(
-                        [#("f", apply(var_expr("g"), [biginteger(42), apply(var_expr("h"), [biginteger(7)])]))],
-                        env_expr
+                E.typedefs(0,
+                    E.letrec_expr(
+                        [#("f", E.apply(E.var("g"), [E.bigint(42), E.apply(E.var("h"), [E.bigint(7)])]))],
+                        E.env_expr
                     )
                 ),
 
-                typeof_expr(apply(var_expr("somevalue"), [biginteger(99)])),
+                E.typeof_expr(E.apply(E.var("somevalue"), [E.bigint(99)])),
 
                 // (if (let (x (f 1))
                 //          (g x)) 10 20) ==>
                 // (let (x (f 1))
                 //      (let ($1 (g x))
                 //           (if $1 10 20)))
-                if_expr(
-                    let_expr(
-                        var_expr("x"),
-                        apply(var_expr("f"), [biginteger(1)]),
-                        apply(var_expr("g"), [var_expr("x")])
+                E.if_expr(
+                    E.let_expr(
+                        E.var("x"),
+                        E.apply(E.var("f"), [E.bigint(1)]),
+                        E.apply(E.var("g"), [E.var("x")])
                     ),
-                    biginteger(10),
-                    biginteger(20)
+                    E.bigint(10),
+                    E.bigint(20)
                 )
-
-                // (if (let2 (x (f 1))
-                //           (g x)) 10 20) ==>
-                // (let ($1 (let2 (x (f 1))
-                //                (g x)))
-                //      (if $1 10 20))
-                if_expr(
-                    let2_expr(
-                        var_expr("x"),
-                        apply(var_expr("f"), [biginteger(1)]),
-                        apply(var_expr("g"), [var_expr("x")])
-                    ),
-                    biginteger(10),
-                    biginteger(20)
-                )
-
             ]);
 }

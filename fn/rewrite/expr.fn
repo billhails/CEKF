@@ -1,0 +1,380 @@
+namespace
+    link "../listutils.fn" as list;
+
+    typedef expr {
+        amb_expr(expr, expr) |
+        apply(expr, list(expr)) |
+        back_expr |
+        bigint(number) |
+        callcc_expr(expr) |
+        character(char) |
+        cond_expr(expr, list(#(expr, expr))) |
+        constant(string) |
+        constructor_info(string) |
+        construct(string, list(expr)) |
+        deconstruct(string, number, expr) |
+        env_expr |
+        error_expr |
+        if_expr(expr, expr, expr) |
+        lambda(list(expr), expr) |
+        let_expr(expr, expr, expr) |
+        letrec_expr(list(#(string, expr)), expr) |
+        lookup(string, number, expr) |
+        make_tuple(list(expr)) |
+        make_vec(number, list(expr)) |
+        match_cases(expr, list(#(list(number), expr))) |
+        namespaces(list(expr)) |
+        primapp(string, expr, expr) |
+        print_exp(expr) |
+        sequence(list(expr)) |
+        stdint(number) |
+        tag(expr) |
+        tuple_index(number, number, expr) |
+        typedefs(number, expr) |
+        typeof_expr(expr) |
+        var(string)
+    }
+
+    ///// Printer for expressions
+
+    fn print_expr {
+        (x=callcc_expr(e)) {
+            puts("(call/cc ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=typeof_expr(e)) {
+            puts("(typeof ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=typedefs(defs, expr)) {
+            puts("(typedefs ");
+            putn(defs);
+            puts(" ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=tuple_index(size, index, expr)) {
+            puts("(tuple_index ");
+            putn(size);
+            puts(" ");
+            putn(index);
+            puts(" ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=tag(e)) {
+            puts("(tag ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=stdint(i)) {
+            putn(i);
+            x;
+        }
+        (x=sequence(exprs)) {
+            puts("(begin");
+            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
+            puts(")");
+            x;
+        }
+        (x=print_exp(e)) {
+            puts("(print ");
+            print_expr(e);
+            puts(")");
+            x;
+        }
+        (x=primapp(name, e1, e2)) {
+            puts("(");
+            puts(name);
+            puts(" ");
+            print_expr(e1);
+            puts(" ");
+            print_expr(e2);
+            puts(")");
+            x;
+        }
+        (x=namespaces(exprs)) {
+            puts("(namespaces");
+            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
+            puts(")");
+            x;
+        }
+        (x=match_cases(exp, cases)) {
+            puts("(match_cases ");
+            print_expr(exp);
+            list.for_each (fn {
+                (#(indices, caseExpr)) {
+                    puts(" ((");
+                    switch (indices) {
+                        ([]) { "" }
+                        (h @ t) {
+                            putn(h);
+                            list.for_each (fn(i) { puts(" "); putn(i) }, t);
+                            ""
+                        }
+                    };
+                    puts(") ");
+                    print_expr(caseExpr);
+                    puts(")");
+                }
+            }, cases);
+            puts(")");
+            x;
+        }
+        (x=make_vec(size, elements)) {
+            puts("(make_vec ");
+            putn(size);
+            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
+            puts(")");
+            x;
+        }
+        (x=make_tuple(elements)) {
+            puts("(make_tuple");
+            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
+            puts(")");
+            x;
+        }
+        (x=lookup(name, index, expr)) {
+            puts("(lookup ");
+            puts(name);
+            puts(" ");
+            putn(index);
+            puts(" ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=env_expr) {
+            puts("(env)");
+            x;
+        }
+        (x=error_expr) {
+            puts("(error)");
+            x;
+        }
+        (x=deconstruct(name, index, expr)) {
+            puts("(deconstruct ");
+            puts(name);
+            puts(" ");
+            putn(index);
+            puts(" ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=constructor_info(name)) {
+            puts("(constructor_info ");
+            puts(name);
+            puts(")");
+            x;
+        }
+        (x=construct(name, args)) {
+            puts("(construct ");
+            puts(name);
+            list.map (fn(e) { puts(" "); print_expr(e) }, args);
+            puts(")");
+            x;
+        }
+        (x=constant(name)) {
+            puts("(constant ");
+            puts(name);
+            puts(")");
+            x;
+        }
+        (x=cond_expr(test, branches)) {
+            puts("(cond ");
+            print_expr(test);
+            list.for_each (fn {
+                (#(e1, e2)) {
+                    puts(" ");
+                    putc('(');
+                    print_expr(e1);
+                    puts(" ");
+                    print_expr(e2);
+                    putc(')');
+                }
+            }, branches);
+            puts(")");
+            x;
+        }
+        (x=letrec_expr(bindings, body)) {
+            puts("(letrec (");
+            list.for_each (fn {
+                (#(name, expr)) {
+                    putc('(');
+                    puts(name);
+                    putc(' ');
+                    print_expr(expr);
+                    putc(')');
+                }
+            }, bindings);
+            puts(") ");
+            print_expr(body);
+            puts(")");
+            x;
+        }
+        (x=lambda(args, expr)) {
+            puts("(λ (");
+            switch (args) {
+                ([]) { "" }
+                (h @ t) {
+                    print_expr(h);
+                    list.for_each (fn(e) { putc(' '); print_expr(e) }, t);
+                    ""
+                }
+            };
+            puts(") ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=let_expr(e1, e2, e3)) {
+            puts("(let (");
+            print_expr(e1);
+            puts(" ");
+            print_expr(e2);
+            puts(") ");
+            print_expr(e3);
+            puts(")");
+            x;
+        }
+        (x=if_expr(e1, e2, e3)) {
+            puts("(if ");
+            print_expr(e1);
+            puts(" ");
+            print_expr(e2);
+            puts(" ");
+            print_expr(e3);
+            puts(")");
+            x;
+        }
+        (x=apply(e1, args)) {
+            puts("(");
+            print_expr(e1);
+            list.map (fn(e) { puts(" "); print_expr(e) }, args);
+            puts(")");
+            x;
+        }
+        (x=bigint(i)) {
+            putn(i);
+            x;
+        }
+        (x=var(chars)) {
+            puts(chars);
+            x;
+        }
+        (x=amb_expr(e1, e2)) {
+            puts("(amb ");
+            print_expr(e1);
+            puts(" ");
+            print_expr(e2);
+            puts(")");
+            x;
+        }
+        (x=back_expr) {
+            puts("(back)");
+            x;
+        }
+        (x=character(c)) {
+            putc('\'');
+            putc(c);
+            putc('\'');
+            x;
+        }
+    }
+
+    // A *very* dumb parser for basic s-expressions
+
+    // IR for the parser "tokenization"
+    typedef sexpr {
+        atom(string) |
+        sexp(list(sexpr))
+    }
+
+    fn to_expr {
+        // (atom("back")) { back_expr }
+        // (atom(['\'', c, '\''])) { character(c) }
+        // (atom("env")) { env_expr }
+        // (atom("error")) { error_expr }
+        // (atom(s)) { var(s) }
+        // (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
+        // (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
+        // (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
+        // (sexp([atom("lambda"), sexp(args), body])) { lambda(list.map(to_expr, args), to_expr(body)) }
+        // (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
+        // (sexp([atom("let"), sexp([e1, e2]), e3])) { let_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
+        // (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
+        // (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
+        // (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
+        // (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
+        (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
+        (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
+        (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
+        (x) { error("Cannot parse expression"); }
+    }
+
+    fn print_sexpr {
+        (x=atom(s)) {
+            puts(s);
+            x;
+        }
+        (x=sexp(elements)) {
+            putc('(');
+            switch (elements) {
+                ([]) { "" }
+                (x=h @ t) {
+                    print_sexpr(h);
+                    list.for_each (fn(e) { putc(' '); print_sexpr(e) }, t);
+                    ""
+                }
+            };
+            putc(')');
+            x;
+        }
+    }   
+
+    fn parse(s) {
+        let #(sexpr, rest) = parse_sexpr(s);
+        in
+            puts("parsed\n");
+            to_expr(sexpr);
+    }
+
+    fn parse_atom {
+        ([], acc) { #(atom(list.reverse(acc)), []) }
+        (' ' @ rest, acc) { #(atom(list.reverse(acc)), rest) }
+        (')' @ rest, acc) { #(atom(list.reverse(acc)), ')' @ rest) }
+        (c @ rest, acc) { parse_atom(rest, c @ acc) }
+    }
+
+    fn parse_list {
+        ([], _) { error("Unexpected end of input") }
+        (')' @ rest, acc) { #(sexp(list.reverse(acc)), rest) }
+        (' ' @ rest, acc) { parse_list(rest, acc) }
+        (input, acc) {
+            let
+                #(sexpr, rest) = parse_sexpr(input);
+            in
+                parse_list(rest, sexpr @ acc)
+        }
+    }
+
+    fn parse_sexpr {
+        ([]) { error("Unexpected end of input") }
+        ('(' @ rest) { parse_list(rest, []) }
+        (' ' @ rest) { parse_sexpr(rest) }
+        (')' @ rest) { error("Unexpected )") }
+        (c @ rest) { parse_atom(rest, [c]) }
+    }
