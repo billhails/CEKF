@@ -316,12 +316,14 @@ static void populateSubPatternMatrixRowWithWildcards(TpmcMatrix *matrix,
 
 static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
                                                       int y, Index arity,
-                                                      TpmcPattern *pattern) {
+                                                      TpmcPattern *pattern,
+                                                      ParserInfo I) {
     if (arity != pattern->pattern->val.constructor->components->size) {
         ppTpmcPattern(pattern);
-        cant_happen
-            ("\narity %d does not match constructor arity %d",
-             arity, pattern->pattern->val.constructor->components->size);
+        can_happen
+            ("\narity %d does not match constructor arity %d at %s line %d",
+             arity, pattern->pattern->val.constructor->components->size, I.filename, I.lineno);
+        exit(1);
     }
     for (Index i = 0; i < arity; i++) {
         TpmcPattern *entry =
@@ -332,12 +334,14 @@ static void populateSubPatternMatrixRowWithConstructor(TpmcMatrix *matrix,
 
 static void populateSubPatternMatrixRowWithTuple(TpmcMatrix *matrix,
                                                  int y, Index arity,
-                                                 TpmcPattern *pattern) {
+                                                 TpmcPattern *pattern,
+                                                 ParserInfo I) {
     if (arity != countTpmcPatternArray(pattern->pattern->val.tuple)) {
         ppTpmcPattern(pattern);
-        cant_happen
-            ("arity %d does not match tuple arity %d",
-             arity, countTpmcPatternArray(pattern->pattern->val.tuple));
+        can_happen
+            ("arity %d does not match tuple arity %d at %s line %d",
+             arity, countTpmcPatternArray(pattern->pattern->val.tuple), I.filename, I.lineno);
+             exit(1);
     }
     for (Index i = 0; i < arity; i++) {
         TpmcPattern *entry = pattern->pattern->val.tuple->entries[i];
@@ -345,7 +349,7 @@ static void populateSubPatternMatrixRowWithTuple(TpmcMatrix *matrix,
     }
 }
 
-static TpmcMatrix *makeSubPatternMatrix(TpmcPatternArray *patterns, int arity) {
+static TpmcMatrix *makeSubPatternMatrix(TpmcPatternArray *patterns, int arity, ParserInfo I) {
     TpmcMatrix *matrix = newTpmcMatrix(arity, patterns->size);
     if (arity == 0) {
         return matrix;
@@ -364,10 +368,10 @@ static TpmcMatrix *makeSubPatternMatrix(TpmcPatternArray *patterns, int arity) {
                 break;
             case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
                 populateSubPatternMatrixRowWithConstructor(matrix, i, arity,
-                                                          pattern);
+                                                          pattern, I);
                 break;
             case TPMCPATTERNVALUE_TYPE_TUPLE:
-                populateSubPatternMatrixRowWithTuple(matrix, i, arity, pattern);
+                populateSubPatternMatrixRowWithTuple(matrix, i, arity, pattern, I);
                 break;
             case TPMCPATTERNVALUE_TYPE_ASSIGNMENT:
                 cant_happen("encountered pattern type assignment");
@@ -714,7 +718,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             int n = arityOf(c);
             // For each pati, its n sub-patterns are extracted;
             // if pati is a wildcard, n wildcards are produced instead, each tagged with the right path variable.
-            TpmcMatrix *subPatternsMatchingC = makeSubPatternMatrix(patternsMatchingC, n);
+            TpmcMatrix *subPatternsMatchingC = makeSubPatternMatrix(patternsMatchingC, n, I);
             PROTECT(subPatternsMatchingC);
             // This matrix is then appended to the result of selecting, from each column in MN,
             // those rows whose indices are in {i1 , ... , ij}. 
