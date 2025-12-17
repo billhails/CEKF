@@ -7,6 +7,7 @@ flowchart LR
 TpmcVariableTable --entries--> NULL
 TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern
+TpmcStateTable --entries--> TpmcState
 TpmcMatchRules --rules--> TpmcMatchRuleArray
 TpmcMatchRules --rootVariables--> TpmcVariableArray
 TpmcMatchRule --action--> TpmcState

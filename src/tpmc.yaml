@@ -179,6 +179,15 @@ hashes:
         data:
             entries: TpmcPattern
 
+    TpmcStateTable:
+        meta:
+            brief: TPMC state table
+            description: >-
+                A hash table for fast lookup of states by their stamp value.
+                This is used for efficient state deduplication during pattern matching compilation.
+        data:
+            entries: TpmcState
+
 unions:
     TpmcPatternValue:
         meta:

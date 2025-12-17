@@ -11,7 +11,7 @@ let
         (atom(['\'', c, '\''])) { 1 }
         (atom("env")) { 1 }
         (atom("error")) { 1 }
-        (atom(s)) { var(s) }
+        (atom(s)) { 1 }
         (sexp([atom("amb"), a, b])) { 1 }
         (sexp([atom("call/cc"), e])) { 1 }
         (sexp([atom("if"), e1, e2, e3])) { 1 }

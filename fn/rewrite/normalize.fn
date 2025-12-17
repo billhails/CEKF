@@ -221,42 +221,18 @@ in
     {
         let
             // test data
-            lamexp = E.lambda(
-                [E.var("x"), E.var("y")],
-                E.apply(E.var("f"), [E.var("x"), E.apply(E.var("f"), [E.var("y")])])
-            );
+            lamexp = E.parse("(lambda (x y) (f x (f y)))");
         
-            // (let (a (compute (value 10))) (use (f a)))
-            letexp = E.let_expr(
-                E.var("a"),
-                E.apply(E.var("compute"), [E.apply(E.var("value"), [E.bigint(10)])]),
-                E.apply(E.var("use"), [E.apply(E.var("f"), [E.var("a")])])
-            );
+            letexp = E.parse("(let (a (compute (value 10))) (use (f a)))");
         
             // (let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))
-            letexp2 = E.let_expr(
-                E.var("a"),
-                E.apply(E.var("compute"),
-                        [E.apply(E.var("value"),
-                                [E.bigint(10)])]),
-                E.let_expr(
-                    E.var("b"),
-                    E.apply(E.var("compute"),
-                            [E.apply(E.var("value"),
-                                    [E.var("a")])]),
-                    E.apply(E.var("use"), [E.apply(E.var("f"), [E.var("b")])])
-                )
-            );
+            letexp2 = E.parse("(let (a (compute (value 10))) "
+                                    "(let (b (compute (value a))) "
+                                        "(use (f b))))");
         
-            ifexp = E.if_expr(
-                E.apply(E.var("is_zero"), [E.bigint(0)]),
-                lamexp,
-                letexp2
-            );
+            ifexp = E.parse("(if (is_zero 0) (lambda (x) (f x)) (let (y 42) (f y)))");
         
-            primexp = E.primapp("+", E.bigint(5),
-                                E.primapp("*", E.bigint(10),
-                                                E.bigint(2)));
+            primexp = E.parse("(+ 5 (* 10 2))");
         
         in
             list.for_each (fn (expr) {
@@ -267,21 +243,12 @@ in
             },
             [
                 lamexp,
-
-                E.callcc_expr(E.var("k")),
-
-                E.callcc_expr(
-                    E.apply(E.var("f"), [E.bigint(10)])
-                ),
-
-                E.bigint(42),
-
-                E.var("z"),
-
+                E.parse("(call/cc k)"),
+                E.parse("(call/cc (f 10))"),
+                E.parse("42"),
+                E.parse("z"),
                 letexp,
-
                 letexp2,
-
                 ifexp,
 
                 E.apply(
@@ -289,54 +256,17 @@ in
                     [primexp, primexp, primexp]
                 ),
 
-                E.apply(
-                    E.lambda(
-                        [E.var("x")],
-                        E.apply(E.var("h"), [E.var("x"), E.bigint(3)])
-                    ),
-                    [E.apply(E.var("g"), [E.bigint(4)])]
-                ),
+                E.parse("((lambda (x) (h x 3)) (g 4))"),
+                E.parse("((lambda (x) (h x (y 3))) (g 4))"),
+                E.parse("(letrec ((f (g 42 (h 7)))) f)"),
+                E.parse("(amb (choose (value 1)) (choose (value 2)))"),
+                E.parse("back"),
+                E.parse("'a'"),
+                E.parse("(cond (test_cond 5) ((1) (result1 10)) ((2) (result2 (f 20))))"),
+                E.parse("(match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 (f 20))) )"),
+                E.parse("(constant nil)"),
 
-                E.apply(
-                    E.lambda(
-                        [E.var("x")],
-                        E.apply(E.var("h"), [E.var("x"), E.apply(E.var("y"), [E.bigint(3)])])
-                    ),
-                    [E.apply(E.var("g"), [E.bigint(4)])]
-                ),
-
-                E.letrec_expr(
-                    [#("f", E.apply(E.var("g"), [E.bigint(42), E.apply(E.var("h"), [E.bigint(7)])]))],
-                    E.var("f")
-                ),
-
-                E.amb_expr(
-                    E.apply(E.var("choose"), [E.apply(E.var("value"), [E.bigint(1)])]),
-                    E.apply(E.var("choose"), [E.apply(E.var("value"), [E.bigint(2)])])
-                ),
-
-                E.back_expr,
-
-                E.character('a'),
-
-                E.cond_expr(
-                    E.apply(E.var("test_cond"), [E.bigint(5)]),
-                    [
-                        #(E.bigint(1), E.apply(E.var("result1"), [E.bigint(10)])),
-                        #(E.bigint(2), E.apply(E.var("result2"), [E.apply(E.var("f"), [E.bigint(20)])]))
-                    ]
-                ),
-
-                E.match_cases(
-                    E.apply(E.var("test_case"), [E.bigint(5)]),
-                    [
-                        #([1], E.apply(E.var("result1"), [E.bigint(10)])),
-                        #([2, 3], E.apply(E.var("result2"), [E.apply(E.var("f"), [E.bigint(20)])]))
-                    ]
-                ),
-
-                E.constant("nil"),
-
+                E.parse("(construct pair 1 (construct pair 2 (constant nil)))"),
                 E.construct("pair", [E.bigint(1), E.construct("pair", [E.bigint(2), E.constant("nil")])]),
 
                 E.constructor_info("MyConstructor"),

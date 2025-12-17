@@ -40,7 +40,13 @@
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool *unsafe, ParserInfo I);
+                        TpmcStateTable *stateTable, bool *unsafe, ParserInfo I);
+
+static HashSymbol *stampToSymbol(int stamp) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "#state%d", stamp);
+    return newSymbol(buf);
+}
 
 TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                      TpmcState *errorState, TpmcStateArray *knownStates,
@@ -48,8 +54,11 @@ TpmcState *tpmcMatch(TpmcMatrix *matrix, TpmcStateArray *finalStates,
 #ifdef DEBUG_TPMC_MATCH
     // system("clear");
 #endif
+    TpmcStateTable *stateTable = newTpmcStateTable();
+    int save = PROTECT(stateTable);
     bool unsafe = false;
-    TpmcState *result = match(matrix, finalStates, errorState, knownStates, &unsafe, I);
+    TpmcState *result = match(matrix, finalStates, errorState, knownStates, stateTable, &unsafe, I);
+    UNPROTECT(save);
     if (unsafe) {
         if (!allow_unsafe) {
             can_happen("unsafe function must be declared unsafe at %s line %d", I.filename, I.lineno);
@@ -529,14 +538,32 @@ static TpmcPattern *makeNamedWildcardPattern(HashSymbol *path) {
 }
 
 static TpmcState *deduplicateState(TpmcState *state,
-                                   TpmcStateArray *knownStates) {
+                                   TpmcStateArray *knownStates,
+                                   TpmcStateTable *stateTable) {
+    // First check the hash table for fast lookup
+    HashSymbol *key = stampToSymbol(state->stamp);
+    TpmcState *existing = NULL;
+    if (getTpmcStateTable(stateTable, key, &existing)) {
+        // Found in hash table, verify with deep equality
+        if (tpmcStateEq(state, existing)) {
+            validateLastAlloc();
+            return existing;
+        }
+    }
+    
+    // Not in hash table, do full linear search (for states with different stamps but same structure)
     for (Index i = 0; i < knownStates->size; i++) {
         if (tpmcStateEq(state, knownStates->entries[i])) {
             validateLastAlloc();
+            // Also add to hash table for future lookups
+            setTpmcStateTable(stateTable, key, knownStates->entries[i]);
             return knownStates->entries[i];
         }
     }
+    
+    // New state, add to both array and hash table
     pushTpmcStateArray(knownStates, state);
+    setTpmcStateTable(stateTable, key, state);
     return state;
 }
 
@@ -687,7 +714,7 @@ static TpmcIntArray *findWcIndices(TpmcPatternArray *N) {
 
 static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                           TpmcState *errorState, TpmcStateArray *knownStates,
-                          bool *unsafe, ParserInfo I) {
+                          TpmcStateTable *stateTable, bool *unsafe, ParserInfo I) {
     ENTER(mixture);
     // there is some column N whose topmost pattern is a constructor
     int firstConstructorColumn = findFirstConstructorColumn(M);
@@ -708,6 +735,44 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
         TpmcPattern *c = N->entries[row];
         // For each constructor c in the selected column, its arc is defined as follows:
         if (!patternIsWildcard(c)) {
+            // Skip if we've already added an arc for this exact constructor pattern
+            // This prevents redundant recursive match() calls for duplicate constructors
+            bool alreadyProcessed = false;
+            for (Index i = 0; i < testState->state->val.test->arcs->size; i++) {
+                TpmcArc *existingArc = testState->state->val.test->arcs->entries[i];
+                // Check if the constructor pattern matches (not the full arc, just the pattern)
+                if (c->pattern->type == existingArc->test->pattern->type) {
+                    if (c->pattern->type == TPMCPATTERNVALUE_TYPE_CONSTRUCTOR) {
+                        if (c->pattern->val.constructor->tag == existingArc->test->pattern->val.constructor->tag) {
+                            alreadyProcessed = true;
+                            break;
+                        }
+                    } else if (c->pattern->type == TPMCPATTERNVALUE_TYPE_CHARACTER) {
+                        if (c->pattern->val.character == existingArc->test->pattern->val.character) {
+                            alreadyProcessed = true;
+                            break;
+                        }
+                    } else if (c->pattern->type == TPMCPATTERNVALUE_TYPE_BIGINTEGER) {
+                        if (cmpMaybeBigInt(c->pattern->val.biginteger, existingArc->test->pattern->val.biginteger) == 0) {
+                            alreadyProcessed = true;
+                            break;
+                        }
+                    } else if (c->pattern->type == TPMCPATTERNVALUE_TYPE_TUPLE) {
+                        // All tuples of same arity are considered the same constructor
+                        alreadyProcessed = true;
+                        break;
+                    } else if (c->pattern->type == TPMCPATTERNVALUE_TYPE_COMPARISON) {
+                        // Comparisons might be unique, check deeper
+                        if (tpmcPatternEq(c, existingArc->test)) {
+                            alreadyProcessed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (alreadyProcessed) {
+                continue;
+            }
             // Let {i1 , ... , ij} be the row-indices of the patterns in N that match c.
             TpmcIntArray *indicesMatchingC = findPatternsMatching(c, N);
             int save2 = PROTECT(indicesMatchingC);
@@ -734,16 +799,12 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcPattern *cPrime = replacePatternComponentsWithWildcards(c);
             PROTECT(cPrime);
             // and state is the result of recursively applying match to the new matrix and the new sequence of final states
-            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, unsafe, I);
+            TpmcState *newState = match(newMatrix, newFinalStates, errorState, knownStates, stateTable, unsafe, I);
             PROTECT(newState);
             TpmcArc *arc = makeTpmcArc(cPrime, newState);
             PROTECT(arc);
-            if (tpmcArcInArray(arc, testState->state->val.test->arcs)) {
-                arc->state->refcount--;
-                validateLastAlloc();
-            } else {
-                pushTpmcArcArray(testState->state->val.test->arcs, arc);
-            }
+            // Add the arc (duplicate constructors are now filtered earlier in the loop)
+            pushTpmcArcArray(testState->state->val.test->arcs, arc);
             UNPROTECT(save2);
         }
     }
@@ -761,7 +822,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             TpmcStateArray *wcFinalStates = extractStateArraySubset(wcIndices, finalStates);
             PROTECT(wcFinalStates);
             // and the state is the result of applying match to the new matrix and states
-            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, unsafe, I);
+            TpmcState *wcState = match(wcMatrix, wcFinalStates, errorState, knownStates, stateTable, unsafe, I);
             PROTECT(wcState);
             TpmcPattern *wcPattern = makeNamedWildcardPattern(N->entries[0]->path);
             PROTECT(wcPattern);
@@ -779,7 +840,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
             pushTpmcArcArray(testState->state->val.test->arcs, errorArc);
         }
     }
-    TpmcState *res = deduplicateState(testState, knownStates);
+    TpmcState *res = deduplicateState(testState, knownStates, stateTable);
     UNPROTECT(save);
     LEAVE(mixture);
     return res;
@@ -787,7 +848,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
 
 static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
                         TpmcState *errorState, TpmcStateArray *knownStates,
-                        bool *unsafe, ParserInfo I) {
+                        TpmcStateTable *stateTable, bool *unsafe, ParserInfo I) {
     ENTER(match);
     // IFDEBUG(ppTpmcMatrix(matrix));
     // IFDEBUG(ppTpmcStateArray(finalStates));
@@ -798,7 +859,7 @@ static TpmcState *match(TpmcMatrix *matrix, TpmcStateArray *finalStates,
     if (topRowOnlyVariables(matrix)) {
         res = finalStates->entries[0];
     } else {
-        res = mixture(matrix, finalStates, errorState, knownStates, unsafe, I);
+        res = mixture(matrix, finalStates, errorState, knownStates, stateTable, unsafe, I);
     }
     IFDEBUG(ppTpmcState(res));
     LEAVE(match);

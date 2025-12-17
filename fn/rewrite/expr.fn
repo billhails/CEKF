@@ -298,22 +298,91 @@ namespace
         sexp(list(sexpr))
     }
 
+    fn to_number(s) {
+        let
+            fn to_digit {
+                ('0') { 0 }
+                ('1') { 1 }
+                ('2') { 2 }
+                ('3') { 3 }
+                ('4') { 4 }
+                ('5') { 5 }
+                ('6') { 6 }
+                ('7') { 7 }
+                ('8') { 8 }
+                ('9') { 9 }
+                (_) { error("Invalid digit") }
+            }
+            fn helper {
+                ([], acc) { acc }
+                (c @ rest, acc) {
+                    let
+                        digit = to_digit(c);
+                    in
+                        helper(rest, acc * 10 + digit);
+                }
+            }
+        in
+            helper(s, 0)
+    }
+
     fn to_expr {
-        // (atom("back")) { back_expr }
-        // (atom(['\'', c, '\''])) { character(c) }
-        // (atom("env")) { env_expr }
-        // (atom("error")) { error_expr }
-        // (atom(s)) { var(s) }
-        // (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
-        // (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
-        // (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
-        // (sexp([atom("lambda"), sexp(args), body])) { lambda(list.map(to_expr, args), to_expr(body)) }
-        // (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
-        // (sexp([atom("let"), sexp([e1, e2]), e3])) { let_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
-        // (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
-        // (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
-        // (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
-        // (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
+        (atom("back")) { back_expr }
+        (atom(['\'', c, '\''])) { character(c) }
+        (atom("env")) { env_expr }
+        (atom("error")) { error_expr }
+        (atom(x = '0' @ rest)) |
+        (atom(x = '1' @ rest)) |
+        (atom(x = '2' @ rest)) |
+        (atom(x = '3' @ rest)) |
+        (atom(x = '4' @ rest)) |
+        (atom(x = '5' @ rest)) |
+        (atom(x = '6' @ rest)) |
+        (atom(x = '7' @ rest)) |
+        (atom(x = '8' @ rest)) |
+        (atom(x = '9' @ rest)) { bigint(to_number(x))}
+        (atom(s)) { var(s) }
+        (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
+        (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
+        (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
+        (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), list.map (fn {
+            (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
+            (_) { error("Invalid cond branch") }
+        }, branches)) }
+        (sexp([atom("constant"), atom(name)])) { constant(name) }
+        (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
+        (sexp(atom("construct") @ atom(name) @ args)) { construct(name, list.map(to_expr, args)) }
+        (sexp([atom("deconstruct"), atom(name), atom(index), e])) { deconstruct(name, to_number(index), to_expr(e)) }
+        (sexp([atom("lambda"), sexp(args), body])) { lambda(list.map(to_expr, args), to_expr(body)) }
+        (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
+        (sexp([atom("let"), sexp([e1, e2]), e3])) { let_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
+        (sexp([atom("letrec"), sexp(bindings), body])) {
+            let bindingsList = list.map (fn {
+                (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
+                (_) { error("Invalid letrec binding") }
+            }, bindings);
+            in
+                letrec_expr(bindingsList, to_expr(body))
+        }
+        (sexp([atom("lookup"), atom(name), atom(index), e])) { lookup(name, to_number(index), to_expr(e)) }
+        (sexp(atom("make_tuple") @ elements)) { make_tuple(list.map(to_expr, elements)) }
+        (sexp(atom("make_vec") @ atom(size) @ elements)) { make_vec(to_number(size), list.map(to_expr, elements)) }
+        (sexp(atom("match_cases") @ exp @ cases)) { match_cases(to_expr(exp), list.map (fn {
+            (sexp([sexp(indices), caseExpr])) {
+                let indexList = list.map (fn {
+                    (atom(i)) { to_number(i) }
+                    (_) { error("Invalid match_cases index") }
+                }, indices);
+                in
+                    #(indexList, to_expr(caseExpr))
+            }
+            (_) { error("Invalid match_cases case") }
+        }, cases)) }
+        (sexp(atom("namespaces") @ exprs)) { namespaces(list.map(to_expr, exprs)) }
+        (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
+        (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
         (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
         (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
         (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
@@ -321,6 +390,10 @@ namespace
         (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
         (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
         (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
+        (sexp([atom("tag"), e])) { tag(to_expr(e)) }
+        (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
+        (sexp([atom("typedefs"), atom(defs), e])) { typedefs(1, to_expr(e)) }
+        (sexp([atom("typeof"), e])) { typeof_expr(to_expr(e)) }
         (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
         (x) { error("Cannot parse expression"); }
     }
