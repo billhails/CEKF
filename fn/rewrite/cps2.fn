@@ -1,0 +1,30 @@
+let
+    link "expr.fn" as E;
+    link "../ioutils.fn" as io;
+    import io operator "$_";
+
+    fn gensym(p) { E.var(p @@ $incr()) }
+
+    unsafe fn M {
+        (E.lambda([var], expr)) {
+            let k = gensym("$k");
+            in E.lambda([var, k], T(expr, fn (rv) { E.apply(k, [rv]) }))
+        }
+        (symbol = E.var(_)) { symbol }
+    }
+
+    unsafe fn T {
+        (e = E.lambda(_, _), k) |
+        (e = E.var(_), k) { k(M(e)) }
+        (E.apply(f, [e]), k) {
+            let
+                srv = gensym("$rv");
+                cont = E.lambda([srv], k(srv));
+            in
+                T(f, fn (sf) { T(e, fn (se) { E.apply(sf, [se, cont]) }) })
+        }
+    }
+in
+    E.print_expr(T(E.parse("(g a)"), fn (ans) { E.apply(E.var("halt"), [ans]) }));
+    // ==> (g a (λ ($rv1) (halt $rv1)))
+    puts("\n");

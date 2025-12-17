@@ -26,4 +26,5 @@ let
     }
 in
     E.print_expr(T(E.parse("(g a)"), E.var("halt")));
+    // ==> ((λ ($f1) ((λ ($e2) ($f1 $e2 halt)) a)) g)
     puts("\n");
