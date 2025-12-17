@@ -329,8 +329,8 @@ namespace
     fn to_expr {
         (atom("back")) { back_expr }
         (atom(['\'', c, '\''])) { character(c) }
-        (atom("env")) { env_expr }
-        (atom("error")) { error_expr }
+        (sexp([atom("env")])) { env_expr }
+        (sexp([atom("error")])) { error_expr }
         (atom(x = '0' @ rest)) |
         (atom(x = '1' @ rest)) |
         (atom(x = '2' @ rest)) |
@@ -398,32 +398,12 @@ namespace
         (x) { error("Cannot parse expression"); }
     }
 
-    fn print_sexpr {
-        (x=atom(s)) {
-            puts(s);
-            x;
-        }
-        (x=sexp(elements)) {
-            putc('(');
-            switch (elements) {
-                ([]) { "" }
-                (x=h @ t) {
-                    print_sexpr(h);
-                    list.for_each (fn(e) { putc(' '); print_sexpr(e) }, t);
-                    ""
-                }
-            };
-            putc(')');
-            x;
-        }
-    }   
-
     fn parse(s) {
         let #(sexpr, rest) = parse_sexpr(s);
-        in
-            puts("parsed\n");
-            to_expr(sexpr);
+        in to_expr(sexpr);
     }
+
+    // "Tokenizer" functions
 
     fn parse_atom {
         ([], acc) { #(atom(list.reverse(acc)), []) }

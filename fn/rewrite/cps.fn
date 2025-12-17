@@ -1,7 +1,0 @@
-let
-    link "expr.fn" as E;
-
-in
-    puts("anybody here?\n");
-    E.print_expr(E.parse("(let (factorial (lambda n) (if (<= n 1) 1 (* n (factorial (- n 1))))) factorial)"));
-    puts("\n");

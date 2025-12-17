@@ -235,107 +235,51 @@ in
             primexp = E.parse("(+ 5 (* 10 2))");
         
         in
-            list.for_each (fn (expr) {
+            list.for_each (fn (str) {
+                let expr = E.parse(str);
+                in
                 E.print_expr(expr);
                 puts(" ==>\n    ");
                 E.print_expr(normalize_term(expr));
                 puts("\n")
             },
             [
-                lamexp,
-                E.parse("(call/cc k)"),
-                E.parse("(call/cc (f 10))"),
-                E.parse("42"),
-                E.parse("z"),
-                letexp,
-                letexp2,
-                ifexp,
-
-                E.apply(
-                    E.var("f"),
-                    [primexp, primexp, primexp]
-                ),
-
-                E.parse("((lambda (x) (h x 3)) (g 4))"),
-                E.parse("((lambda (x) (h x (y 3))) (g 4))"),
-                E.parse("(letrec ((f (g 42 (h 7)))) f)"),
-                E.parse("(amb (choose (value 1)) (choose (value 2)))"),
-                E.parse("back"),
-                E.parse("'a'"),
-                E.parse("(cond (test_cond 5) ((1) (result1 10)) ((2) (result2 (f 20))))"),
-                E.parse("(match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 (f 20))) )"),
-                E.parse("(constant nil)"),
-
-                E.parse("(construct pair 1 (construct pair 2 (constant nil)))"),
-                E.construct("pair", [E.bigint(1), E.construct("pair", [E.bigint(2), E.constant("nil")])]),
-
-                E.constructor_info("MyConstructor"),
-
-                E.deconstruct("pair", 0, E.construct("pair", [E.bigint(1), E.constant("nil")])),
-
-                E.env_expr,
-
-                E.error_expr,
-
-                E.lookup("ns", 0, E.apply(E.var("f"), [E.apply(E.var("g"), [E.bigint(10)])])),
-
-                E.make_tuple([E.bigint(1), E.var("x"), E.apply(E.var("h"), [E.bigint(3)])]),
-
-                E.make_vec(3, [E.bigint(1), E.var("x"), E.apply(E.var("h"), [E.bigint(3)])]),
-
-                E.namespaces([
-                    E.let_expr(
-                        E.var("a"),
-                        E.bigint(10),
-                        E.apply(E.var("use_a"), [E.var("a")])
-                    ),
-                    E.if_expr(
-                        E.apply(E.var("check"), [E.var("a")]),
-                        E.apply(E.var("true_branch"), []),
-                        E.apply(E.var("false_branch"), [])
-                    )
-                ]),
-
-                E.primapp("+", E.bigint(5),
-                            E.primapp("*", E.bigint(10),
-                                        E.apply(E.var("f"), [E.bigint(2)]))),
-
-                E.primapp("+", E.bigint(5),
-                            E.primapp("*", E.bigint(10),
-                                        E.apply(E.var("f"), [E.apply(E.var("g"), [E.bigint(2)])]))),
-
-                E.print_exp(E.apply(E.var("display"), [E.bigint(7)])),
-
-                E.sequence([E.bigint(1), E.var("x"), E.apply(E.var("f"), [E.apply(E.var("h"), [E.bigint(3)])])]),
-
-                E.stdint(10),
-
-                E.tag(E.apply(E.var("sometype"), [E.bigint(7)])),
-
-                E.tuple_index(1, 0, E.apply(E.var("sometuple"), [E.bigint(7)])),
-
-                E.typedefs(0,
-                    E.letrec_expr(
-                        [#("f", E.apply(E.var("g"), [E.bigint(42), E.apply(E.var("h"), [E.bigint(7)])]))],
-                        E.env_expr
-                    )
-                ),
-
-                E.typeof_expr(E.apply(E.var("somevalue"), [E.bigint(99)])),
-
-                // (if (let (x (f 1))
-                //          (g x)) 10 20) ==>
-                // (let (x (f 1))
-                //      (let ($1 (g x))
-                //           (if $1 10 20)))
-                E.if_expr(
-                    E.let_expr(
-                        E.var("x"),
-                        E.apply(E.var("f"), [E.bigint(1)]),
-                        E.apply(E.var("g"), [E.var("x")])
-                    ),
-                    E.bigint(10),
-                    E.bigint(20)
-                )
+                "(lambda (x y) (f x (f y)))",
+                "(call/cc k)",
+                "(call/cc (f 10))",
+                "42",
+                "z",
+                "(let (a (compute (value 10))) (use (f a)))",
+                "(let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))",
+                "(if (is_zero 0) (lambda (x) (f x)) (let (y 42) (f y)))",
+                "(f (+ 5 (* 10 2)) (+ 5 (* 10 2)) (+ 5 (* 10 2)))",
+                "((lambda (x) (h x 3)) (g 4))",
+                "((lambda (x) (h x (y 3))) (g 4))",
+                "(letrec ((f (g 42 (h 7)))) f)",
+                "(amb (choose (value 1)) (choose (value 2)))",
+                "back",
+                "'a'",
+                "(cond (test_cond 5) ((1) (result1 10)) ((2) (result2 (f 20))))",
+                "(match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 (f 20))) )",
+                "(constant nil)",
+                "(construct pair 1 (construct pair 2 (constant nil)))",
+                "(constructor_info MyConstructor)",
+                "(deconstruct pair 0 (construct pair 1 (constant nil)))",
+                "(env)",
+                "(error)",
+                "(lookup ns 0 (f (g 10)))",
+                "(make_tuple 1 x (h 3))",
+                "(make_vec 3 1 x (h 3))",
+                "(namespaces (let (a 10) (use_a a)) (if (check a) (true_branch) (false_branch())))",
+                "(+ 5 (* 10 (f 2)))",
+                "(+ 5 (* 10 (f (g 2))))",
+                "(print (display 7))",
+                "(sequence 1 x (f (h 3)))",
+                "10",
+                "(tag (sometype 7))",
+                "(tuple_index 1 0 (sometuple 7))",
+                "(typedefs 0 (letrec ((f (g 42 (h 7)))) f))",
+                "(type_of (somevalue 99))",
+                "(if (let (x (f 1)) (g x)) 10 20)",
             ]);
 }
