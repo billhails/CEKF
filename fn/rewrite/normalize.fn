@@ -218,68 +218,50 @@ let
         }
     }
 in
-    {
-        let
-            // test data
-            lamexp = E.parse("(lambda (x y) (f x (f y)))");
-        
-            letexp = E.parse("(let (a (compute (value 10))) (use (f a)))");
-        
-            // (let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))
-            letexp2 = E.parse("(let (a (compute (value 10))) "
-                                    "(let (b (compute (value a))) "
-                                        "(use (f b))))");
-        
-            ifexp = E.parse("(if (is_zero 0) (lambda (x) (f x)) (let (y 42) (f y)))");
-        
-            primexp = E.parse("(+ 5 (* 10 2))");
-        
+    list.for_each (fn (str) {
+        let expr = E.parse(str);
         in
-            list.for_each (fn (str) {
-                let expr = E.parse(str);
-                in
-                E.print_expr(expr);
-                puts(" ==>\n    ");
-                E.print_expr(normalize_term(expr));
-                puts("\n")
-            },
-            [
-                "(lambda (x y) (f x (f y)))",
-                "(call/cc k)",
-                "(call/cc (f 10))",
-                "42",
-                "z",
-                "(let (a (compute (value 10))) (use (f a)))",
-                "(let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))",
-                "(if (is_zero 0) (lambda (x) (f x)) (let (y 42) (f y)))",
-                "(f (+ 5 (* 10 2)) (+ 5 (* 10 2)) (+ 5 (* 10 2)))",
-                "((lambda (x) (h x 3)) (g 4))",
-                "((lambda (x) (h x (y 3))) (g 4))",
-                "(letrec ((f (g 42 (h 7)))) f)",
-                "(amb (choose (value 1)) (choose (value 2)))",
-                "back",
-                "'a'",
-                "(cond (test_cond 5) ((1) (result1 10)) ((2) (result2 (f 20))))",
-                "(match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 (f 20))) )",
-                "(constant nil)",
-                "(construct pair 1 (construct pair 2 (constant nil)))",
-                "(constructor_info MyConstructor)",
-                "(deconstruct pair 0 (construct pair 1 (constant nil)))",
-                "(env)",
-                "(error)",
-                "(lookup ns 0 (f (g 10)))",
-                "(make_tuple 1 x (h 3))",
-                "(make_vec 3 1 x (h 3))",
-                "(namespaces (let (a 10) (use_a a)) (if (check a) (true_branch) (false_branch())))",
-                "(+ 5 (* 10 (f 2)))",
-                "(+ 5 (* 10 (f (g 2))))",
-                "(print (display 7))",
-                "(sequence 1 x (f (h 3)))",
-                "10",
-                "(tag (sometype 7))",
-                "(tuple_index 1 0 (sometuple 7))",
-                "(typedefs 0 (letrec ((f (g 42 (h 7)))) f))",
-                "(type_of (somevalue 99))",
-                "(if (let (x (f 1)) (g x)) 10 20)",
-            ]);
-}
+        E.print_expr(expr);
+        puts(" ==>\n    ");
+        E.print_expr(normalize_term(expr));
+        puts("\n")
+    },
+    [
+        "(lambda (x y) (f x (f y)))",
+        "(call/cc k)",
+        "(call/cc (f 10))",
+        "42",
+        "z",
+        "(let (a (compute (value 10))) (use (f a)))",
+        "(let (a (compute (value 10))) (let (b (compute (value a))) (use (f b))))",
+        "(if (is_zero 0) (lambda (x) (f x)) (let (y 42) (f y)))",
+        "(f (+ 5 (* 10 2)) (+ 5 (* 10 2)) (+ 5 (* 10 2)))",
+        "((lambda (x) (h x 3)) (g 4))",
+        "((lambda (x) (h x (y 3))) (g 4))",
+        "(letrec ((f (g 42 (h 7)))) f)",
+        "(amb (choose (value 1)) (choose (value 2)))",
+        "back",
+        "'a'",
+        "(cond (test_cond 5) ((1) (result1 10)) ((2) (result2 (f 20))))",
+        "(match_cases (test_case 5) ((1) (result1 10)) ((2 3) (result2 (f 20))) )",
+        "(constant nil)",
+        "(construct pair 1 (construct pair 2 (constant nil)))",
+        "(constructor_info MyConstructor)",
+        "(deconstruct pair 0 (construct pair 1 (constant nil)))",
+        "(env)",
+        "(error)",
+        "(lookup ns 0 (f (g 10)))",
+        "(make_tuple 1 x (h 3))",
+        "(make_vec 3 1 x (h 3))",
+        "(namespaces (let (a 10) (use_a a)) (if (check a) (true_branch) (false_branch())))",
+        "(+ 5 (* 10 (f 2)))",
+        "(+ 5 (* 10 (f (g 2))))",
+        "(print (display 7))",
+        "(sequence 1 x (f (h 3)))",
+        "10",
+        "(tag (sometype 7))",
+        "(tuple_index 1 0 (sometuple 7))",
+        "(typedefs 0 (letrec ((f (g 42 (h 7)))) f))",
+        "(type_of (somevalue 99))",
+        "(if (let (x (f 1)) (g x)) 10 20)",
+    ]);

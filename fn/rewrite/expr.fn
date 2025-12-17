@@ -353,7 +353,8 @@ namespace
         (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
         (sexp(atom("construct") @ atom(name) @ args)) { construct(name, list.map(to_expr, args)) }
         (sexp([atom("deconstruct"), atom(name), atom(index), e])) { deconstruct(name, to_number(index), to_expr(e)) }
-        (sexp([atom("lambda"), sexp(args), body])) { lambda(list.map(to_expr, args), to_expr(body)) }
+        (sexp([atom("lambda"), sexp(args), body])) |
+        (sexp([atom("λ"), sexp(args), body])) { lambda(list.map(to_expr, args), to_expr(body)) }
         (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
         (sexp([atom("let"), sexp([e1, e2]), e3])) { let_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
         (sexp([atom("letrec"), sexp(bindings), body])) {

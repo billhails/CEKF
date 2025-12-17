@@ -1,0 +1,44 @@
+let
+    link "expr.fn" as E;
+    link "../ioutils.fn" as io;
+    import io operator "$_";
+
+    fn gensym(p) { E.var(p @@ $incr()) }
+
+    unsafe fn M {
+        (E.lambda([var], expr)) {
+            let k = gensym("$k");
+            in E.lambda([var, k], T_c(expr, k))
+        }
+        (x = E.var(_)) |
+        (x = E.bigint(_)) { x }
+    }
+
+    unsafe fn T_k {
+        (e = E.lambda(_, _), k) |
+        (e = E.bigint(_), k) |
+        (e = E.var(_), k) { k(M(e)) }
+        (E.apply(f, [e]), k) {
+            let
+                srv = gensym("$rv");
+                cont = E.lambda([srv], k(srv));
+            in
+                T_k(f, fn (sf) { T_k(e, fn (se) { E.apply(sf, [se, cont]) }) })
+        }
+    }
+
+    unsafe fn T_c {
+        (e = E.lambda(_, _), cont) |
+        (e = E.bigint(_), cont) |
+        (e = E.var(_), cont) { E.apply(cont, [M(e)]) }
+        (E.apply(f, [e]), cont) {
+            T_k(f, fn (sf) { T_k(e, fn (se) { E.apply(sf, [se, cont]) }) })
+        }
+    }
+in
+    E.print_expr(T_c(E.parse("(g a)"), E.var("halt")));
+    // ==> (g a halt)
+    puts("\n");
+    E.print_expr(T_c(E.parse("((lambda (x) (h x)) (g 4))"), E.var("halt")));
+    // ==> (g 4 (λ ($rv2) ((λ (x $k1) (h x $k1)) $rv2 halt)))
+    puts("\n");
