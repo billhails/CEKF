@@ -1,0 +1,129 @@
+let
+    link "expr.fn" as E;
+    link "../listutils.fn" as lst;
+    link "../ioutils.fn" as io;
+    import io operator "$_";
+
+    fn gensym(p) { E.var(p @@ $incr()) }
+
+    fn isAexpr {
+        (E.var(_)) |
+        (E.back_expr) |
+        (E.character(_)) |
+        (E.constant(_)) |
+        (E.constructor_info(_)) |
+        (E.env_expr) |
+        (E.error_expr) |
+        (E.lambda(_, _)) |
+        (E.stdint(_)) |
+        (E.bigint(_)) { true }
+        (_) { false }
+    }
+
+    fn M {
+        (E.lambda(vars, body)) {
+            let k = gensym("$k");
+            in E.lambda(vars @@ [k], T_c(body, k))
+        }
+        (E.callcc_expr(expr)) {
+            E.apply(E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"), [M(expr)])
+        }
+        (x) { x }
+    }
+
+    fn T_k(e, k) {
+        if (isAexpr(e)) {
+            k(M(e))
+        } else {
+            unsafe switch (e)  {
+                (E.sequence([expr])) { T_k(expr, k) }
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_k(E.sequence(exprs), k)
+                    })
+                }
+                (E.if_expr(exprc, exprt, exprf)) {
+                    let
+                        rv = gensym("$rv");
+                        cont = E.lambda([rv], k(rv));
+                    in 
+                        T_k(exprc, fn(aexp) {
+                            E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
+                        })
+                }
+                (E.letrec_expr(bindings, expr)) {
+                    let
+                        #(vars, aexps) = lst.unzip(bindings);
+                    in
+                        E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_k(expr, k))
+                }
+                (E.apply(f, [e])) {
+                    let
+                        srv = gensym("$rv");
+                        cont = E.lambda([srv], k(srv));
+                    in
+                        T_c(e, cont)
+                }
+            }
+        }
+    }
+
+    fn T_c(expr, c) {
+        if (isAexpr(expr)) {
+            E.apply(c, [M(expr)])
+        } else {
+            unsafe switch(expr) {
+                (E.sequence([expr])) { T_c(expr, c) }
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_c(E.sequence(exprs), c)
+                    })
+                }
+                (E.if_expr(exprc, exprt, exprf)) {
+                    let
+                        sk = gensym("$k");
+                    in 
+                        E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
+                            E.if_expr(aexp, T_c(exprt,sk), T_c(exprf,sk))
+                        })), [c])
+                }
+                (E.letrec_expr(bindings, expr)) {
+                    let
+                        #(vars, aexps) = lst.unzip(bindings);
+                    in
+                        E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_c(expr, c))
+                }
+                (E.primapp(p, e1, e2)) {
+                    T_k(e1, fn (s1) {
+                        T_k(e2, fn (s2) {
+                            E.apply(c, [E.primapp(p, s1, s2)])
+                        })
+                    })
+                }
+                (E.apply(f, es)) {
+                    T_k(f, fn(sf) {
+                        Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                    })
+                }
+            }
+        }
+    }
+
+    fn Ts_k {
+        ([], k) { k([]) }
+        (h @ t, k) {
+            T_k(h, fn (hd) {
+                Ts_k(t, fn (tl) {
+                    k(hd @ tl)
+                })
+            })
+        }
+    }
+
+in
+    E.print_expr(T_c(E.parse("(g a)"), E.var("halt")));
+    // ==> (g a halt)
+    puts("\n");
+    E.print_expr(T_c(E.parse("((lambda (x) (h x)) (g 4))"), E.var("halt")));
+    // ==> (g 4 (λ ($rv2) ((λ (x $k1) (h x $k1)) $rv2 halt)))
+    puts("\n");
