@@ -166,6 +166,22 @@ let
                     })
                 }
 
+                (E.tuple_index(size, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.tuple_index(size, index, sexpr))
+                    })
+                }
+
+                (E.typedefs(defs, expr)) {
+                    E.typedefs(defs, T_k(expr, k))
+                }
+
+                (E.typeof_expr(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.typeof_expr(sexpr))
+                    })
+                }
+
                 (x) {
                     E.print_expr(x);
                     puts("\n");
@@ -306,6 +322,22 @@ let
                 (E.tag(expr)) {
                     T_k(expr, fn (sexpr) {
                         E.apply(c, [E.tag(sexpr)])
+                    })
+                }
+
+                (E.tuple_index(size, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.tuple_index(size, index, sexpr)])
+                    })
+                }
+
+                (E.typedefs(defs, expr)) {
+                    E.typedefs(defs, T_c(expr, c))
+                }
+
+                (E.typeof_expr(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.typeof_expr(sexpr)])
                     })
                 }
 
@@ -526,5 +558,35 @@ in
         "(tag (f x))",
         
         // tag in cond test
-        "(cond (tag (f x)) (1 (result1)) (2 (result2)))"
+        "(cond (tag (f x)) (1 (result1)) (2 (result2)))",
+        
+        // tuple_index with atomic tuple
+        "(tuple_index 3 0 t)",
+        
+        // tuple_index with complex tuple
+        "(tuple_index 2 1 (f x))",
+        
+        // nested tuple_index
+        "(tuple_index 2 0 (tuple_index 3 1 (f x)))",
+        
+        // typedefs with simple expression
+        "(typedefs 0 x)",
+        
+        // typedefs with letrec body
+        "(typedefs 0 (letrec ((f (lambda (x) (g x)))) (f 42)))",
+        
+        // typedefs with complex body
+        "(typedefs 0 (f (g x)))",
+        
+        // typedefs wrapping letrec with env body
+        "(typedefs 0 (letrec ((x 1) (y 2)) (env)))",
+        
+        // typeof_expr with atomic argument
+        "(typeof x)",
+        
+        // typeof_expr with complex argument
+        "(typeof (f x))",
+        
+        // typeof_expr in conditional
+        "(if (typeof (f x)) (g 1) (h 2))"
     ]);
