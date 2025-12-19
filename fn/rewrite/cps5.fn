@@ -16,7 +16,6 @@ let
         (E.error_expr) |
         (E.lambda(_, _)) |
         (E.stdint(_)) |
-        (E.callcc_expr(_)) |
         (E.bigint(_)) { true }
         (_) { false }
     }
@@ -26,9 +25,6 @@ let
             let k = gensym("$k");
             in E.lambda(vars @@ [k], T_c(body, k))
         }
-        (E.callcc_expr(expr)) {
-            E.apply(E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"), [M(expr)])
-        }
         (x) { x }
     }
 
@@ -37,12 +33,30 @@ let
             k(M(e))
         } else {
             switch (e)  {
-                (E.sequence([expr])) { T_k(expr, k) }
-                (E.sequence(expr @ exprs)) {
-                    T_k(expr, fn (ignored) {
-                        T_k(E.sequence(exprs), k)
-                    })
+                (E.amb_expr(expr1, expr2)) {
+                    let
+                        rv = gensym("$rv");
+                        cont = E.lambda([rv], k(rv));
+                    in 
+                        E.amb_expr(T_c(expr1, cont), T_c(expr2, cont))
                 }
+
+                (E.apply(_, _)) {
+                    let
+                        srv = gensym("$rv");
+                        cont = E.lambda([srv], k(srv));
+                    in
+                        T_c(e, cont)
+                }
+
+                (E.callcc_expr(e)) {
+                    let
+                        rv = gensym("$rv");
+                        cont = E.lambda([rv], k(rv));
+                    in
+                        T_c(E.callcc_expr(e), cont)
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         rv = gensym("$rv");
@@ -52,26 +66,14 @@ let
                             E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
                         })
                 }
-                (E.amb_expr(expr1, expr2)) {
-                    let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
-                    in 
-                        E.amb_expr(T_c(expr1, cont), T_c(expr2, cont))
-                }
+
                 (E.letrec_expr(bindings, expr)) {
                     let
                         #(vars, aexps) = lst.unzip(bindings);
                     in
                         E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_k(expr, k))
                 }
-                (E.apply(_, _)) {
-                    let
-                        srv = gensym("$rv");
-                        cont = E.lambda([srv], k(srv));
-                    in
-                        T_c(e, cont)
-                }
+
                 (E.primapp(p, e1, e2)) {
                     T_k(e1, fn (s1) {
                         T_k(e2, fn (s2) {
@@ -79,6 +81,15 @@ let
                         })
                     })
                 }
+
+                (E.sequence([expr])) { T_k(expr, k) }
+
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_k(E.sequence(exprs), k)
+                    })
+                }
+
                 (x) {
                     E.print_expr(x);
                     puts("\n");
@@ -93,12 +104,29 @@ let
             E.apply(c, [M(expr)])
         } else {
             switch(expr) {
-                (E.sequence([expr])) { T_c(expr, c) }
-                (E.sequence(expr @ exprs)) {
-                    T_k(expr, fn (ignored) {
-                        T_c(E.sequence(exprs), c)
+                (E.amb_expr(expr1, expr2)) {
+                    let
+                        sk = gensym("$k");
+                    in 
+                        E.apply(E.lambda([sk], E.amb_expr(T_c(expr1, sk), T_c(expr2, sk))), [c])
+                }
+
+                (E.apply(f, es)) {
+                    T_k(f, fn(sf) {
+                        Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
                     })
                 }
+
+                (E.callcc_expr(e)) {
+                    // Transform the function e, then apply call/cc wrapper with function and continuation
+                    T_k(e, fn (sf) {
+                        E.apply(
+                            E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                            [sf, c]
+                        )
+                    })
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         sk = gensym("$k");
@@ -107,18 +135,14 @@ let
                             E.if_expr(aexp, T_c(exprt,sk), T_c(exprf,sk))
                         })), [c])
                 }
-                (E.amb_expr(expr1, expr2)) {
-                    let
-                        sk = gensym("$k");
-                    in 
-                        E.apply(E.lambda([sk], E.amb_expr(T_c(expr1, sk), T_c(expr2, sk))), [c])
-                }
+
                 (E.letrec_expr(bindings, expr)) {
                     let
                         #(vars, aexps) = lst.unzip(bindings);
                     in
                         E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_c(expr, c))
                 }
+
                 (E.primapp(p, e1, e2)) {
                     T_k(e1, fn (s1) {
                         T_k(e2, fn (s2) {
@@ -126,16 +150,15 @@ let
                         })
                     })
                 }
-                (E.apply(f, es)) {
-                    T_k(f, fn(sf) {
-                        Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+
+                (E.sequence([expr])) { T_c(expr, c) }
+
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_c(E.sequence(exprs), c)
                     })
                 }
-                (E.callcc_expr(e)) {
-                    T_k(E.callcc_expr(e), fn (sc) {
-                        E.apply(c, [sc])
-                    })
-                }
+
                 (x) {
                     E.print_expr(x);
                     puts("\n");
@@ -160,17 +183,99 @@ in
     lst.for_each(fn (str) {
         let expr = E.parse(str);
         in
-        E.print_expr(expr);
-        puts(" ==>\n    ");
-        E.print_expr(T_c(expr, E.var("halt")));
-        puts("\n")
+            E.print_expr(expr);
+            puts(" ==>\n    ");
+            E.print_expr(T_c(expr, E.var("halt")));
+            puts("\n\n")
     },
     [
+        // Basic application
         "(g a)",
+        
+        // Simple lambda application
         "((lambda (x) (h x)) (g 4))",
+        
+        // Lambda definition with primitives
         "(lambda (a b) (+ a (* b 2)))",
+        
+        // Lambda application with primitives - nested
         "((lambda (a b) (+ a (* b 2))) 3 4)",
+        
+        // Lambda application with function call in primitive
         "((lambda (a b) (+ a (* (f b) 2))) 3 4)",
+        
+        // Amb operator (non-determinism)
         "(amb 1 2)",
-        "(call/cc (lambda (k) (k 5)))"
+        
+        // Simple call/cc - immediate escape
+        "(call/cc (lambda (k) (k 5)))",
+        
+        // call/cc that doesn't escape
+        "(call/cc (lambda (k) 42))",
+        
+        // call/cc with computation before escape
+        "(call/cc (lambda (k) (+ 10 (k 5))))",
+        
+        // Nested call/cc
+        "(call/cc (lambda (k1) (call/cc (lambda (k2) (k1 (k2 7))))))",
+        
+        // call/cc with amb
+        "(call/cc (lambda (k) (amb (k 1) (k 2))))",
+        
+        // Factorial with letrec
+        "(letrec ((fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))",
+        
+        // Multiple argument function
+        "((lambda (x y z) (+ x (+ y z))) 1 2 3)",
+        
+        // Nested lambdas (currying)
+        "((lambda (x) (lambda (y) (+ x y))) 5)",
+        
+        // Application of curried function
+        "(((lambda (x) (lambda (y) (+ x y))) 5) 3)",
+        
+        // If expression with complex branches
+        "(if (= x 0) (f 1) (g 2))",
+        
+        // If with nested if
+        "(if (= x 0) (if (= y 0) 1 2) 3)",
+        
+        // Sequence (begin in Racket)
+        "(sequence (f 1) (g 2) (h 3))",
+        
+        // Letrec with mutual recursion
+        "(letrec ((even (lambda (n) (if (= n 0) true (odd (- n 1))))) (odd (lambda (n) (if (= n 0) false (even (- n 1)))))) (even 5))",
+        
+        // Complex amb with computation
+        "(+ (amb 1 2) (amb 3 4))",
+        
+        // Nested application
+        "(f (g (h x)))",
+        
+        // Multiple primitives in sequence
+        "(+ (* 2 3) (- 5 1))",
+        
+        // call/cc capturing continuation in letrec
+        "(letrec ((k null)) (call/cc (lambda (cont) (sequence (k = cont) 42))))",
+        
+        // Lambda with no arguments
+        "((lambda () 42))",
+        
+        // call/cc with primitive operations
+        "(call/cc (lambda (k) (if (= 1 1) (k 10) 20)))",
+        
+        // Deeply nested primitives
+        "(+ 1 (+ 2 (+ 3 (+ 4 5))))",
+        
+        // Application with multiple complex arguments
+        "(f (g a) (h b) (i c))",
+        
+        // If where branches have applications
+        "(if test (f (g x)) (h (i y)))",
+        
+        // Sequence with amb
+        "(sequence (amb 1 2) (amb 3 4))",
+        
+        // call/cc that passes continuation to another function
+        "(call/cc (lambda (k) (f k)))"
     ]);

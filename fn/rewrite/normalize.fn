@@ -1,4 +1,4 @@
-let
+♮let
     link "../listutils.fn" as list;
     link "../ioutils.fn" as io;
     link "expr.fn" as E;
