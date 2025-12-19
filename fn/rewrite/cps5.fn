@@ -146,11 +146,23 @@ let
                     })
                 }
 
+                (E.print_exp(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.print_exp(sexpr))
+                    })
+                }
+
                 (E.sequence([expr])) { T_k(expr, k) }
 
                 (E.sequence(expr @ exprs)) {
                     T_k(expr, fn (ignored) {
                         T_k(E.sequence(exprs), k)
+                    })
+                }
+
+                (E.tag(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.tag(sexpr))
                     })
                 }
 
@@ -277,11 +289,23 @@ let
                     })
                 }
 
+                (E.print_exp(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.print_exp(sexpr)])
+                    })
+                }
+
                 (E.sequence([expr])) { T_c(expr, c) }
 
                 (E.sequence(expr @ exprs)) {
                     T_k(expr, fn (ignored) {
                         T_c(E.sequence(exprs), c)
+                    })
+                }
+
+                (E.tag(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.tag(sexpr)])
                     })
                 }
 
@@ -484,5 +508,23 @@ in
         "(namespaces x (f y) z)",
         
         // namespaces with letrec bodies returning env
-        "(namespaces (letrec ((x 1) (y 2)) (env)) (letrec ((a 3) (b 4)) (env)))"
+        "(namespaces (letrec ((x 1) (y 2)) (env)) (letrec ((a 3) (b 4)) (env)))",
+        
+        // print_exp with atomic argument
+        "(print x)",
+        
+        // print_exp with complex argument
+        "(print (f x))",
+        
+        // print_exp nested in computation
+        "(+ (print (f x)) 10)",
+        
+        // tag with atomic argument
+        "(tag x)",
+        
+        // tag with complex argument
+        "(tag (f x))",
+        
+        // tag in cond test
+        "(cond (tag (f x)) (1 (result1)) (2 (result2)))"
     ]);
