@@ -104,6 +104,22 @@ let
                         E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_k(expr, k))
                 }
 
+                (E.lookup(name, index, expr)) {
+                    E.lookup(name, index, T_k(expr, k))
+                }
+
+                (E.make_tuple(args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.make_tuple(sargs))
+                    })
+                }
+
+                (E.make_vec(size, args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.make_vec(size, sargs))
+                    })
+                }
+
                 (E.primapp(p, e1, e2)) {
                     T_k(e1, fn (s1) {
                         T_k(e2, fn (s2) {
@@ -200,6 +216,22 @@ let
                         #(vars, aexps) = lst.unzip(bindings);
                     in
                         E.letrec_expr(lst.zip(vars, lst.map(M, aexps)), T_c(expr, c))
+                }
+
+                (E.lookup(name, index, expr)) {
+                    E.lookup(name, index, T_c(expr, c))
+                }
+
+                (E.make_tuple(args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.make_tuple(sargs)])
+                    })
+                }
+
+                (E.make_vec(size, args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.make_vec(size, sargs)])
+                    })
                 }
 
                 (E.primapp(p, e1, e2)) {
@@ -369,5 +401,32 @@ in
         "(let (x (f 10)) (g x))",
         
         // nested let
-        "(let (x (f 1)) (let (y (g x)) (h x y)))"
+        "(let (x (f 1)) (let (y (g x)) (h x y)))",
+        
+        // lookup with simple variable
+        "(lookup ns 0 x)",
+        
+        // lookup with function call
+        "(lookup ns 0 (f x))",
+        
+        // nested lookup
+        "(f (lookup ns 0 (g x)))",
+        
+        // make_tuple with atomic args
+        "(make_tuple 1 2 3)",
+        
+        // make_tuple with complex args
+        "(make_tuple (f 1) (g 2))",
+        
+        // make_tuple with mixed args
+        "(make_tuple x (f y) 42)",
+        
+        // make_vec with atomic args
+        "(make_vec 3 1 2 3)",
+        
+        // make_vec with complex args
+        "(make_vec 2 (f 1) (g 2))",
+        
+        // make_vec with mixed args
+        "(make_vec 3 x (f y) 42)"
     ]);
