@@ -69,6 +69,12 @@ let
                         })
                 }
 
+                (E.construct(name, args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.construct(name, sargs))
+                    })
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         rv = gensym("$rv");
@@ -148,6 +154,12 @@ let
                                 #(val, T_c(result, sk))
                             }}, branches))
                         })), [c])
+                }
+
+                (E.construct(name, args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.construct(name, sargs)])
+                    })
                 }
 
                 (E.if_expr(exprc, exprt, exprf)) {
@@ -306,5 +318,14 @@ in
         "(cond x (1 (result1)) (2 (result2)) (3 (result3)))",
         
         // cond with complex test and results
-        "(cond (f x) (1 (g 1)) (2 (h 2)))"
+        "(cond (f x) (1 (g 1)) (2 (h 2)))",
+        
+        // construct with atomic arguments
+        "(construct pair 1 2)",
+        
+        // construct with complex arguments
+        "(construct pair (f 1) (g 2))",
+        
+        // nested construct
+        "(construct cons (f x) (construct cons (g y) (constant nil)))"
     ]);
