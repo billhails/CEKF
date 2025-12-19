@@ -75,6 +75,12 @@ let
                     })
                 }
 
+                (E.deconstruct(name, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.deconstruct(name, index, sexpr))
+                    })
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         rv = gensym("$rv");
@@ -83,6 +89,12 @@ let
                         T_k(exprc, fn(aexp) {
                             E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
                         })
+                }
+
+                (E.let_expr(var, val, body)) {
+                    T_k(val, fn (sval) {
+                        E.let_expr(var, sval, T_k(body, k))
+                    })
                 }
 
                 (E.letrec_expr(bindings, expr)) {
@@ -162,6 +174,12 @@ let
                     })
                 }
 
+                (E.deconstruct(name, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.deconstruct(name, index, sexpr)])
+                    })
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         sk = gensym("$k");
@@ -169,6 +187,12 @@ let
                         E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
                             E.if_expr(aexp, T_c(exprt,sk), T_c(exprf,sk))
                         })), [c])
+                }
+
+                (E.let_expr(var, val, body)) {
+                    T_k(val, fn (sval) {
+                        E.let_expr(var, sval, T_c(body, c))
+                    })
                 }
 
                 (E.letrec_expr(bindings, expr)) {
@@ -327,5 +351,23 @@ in
         "(construct pair (f 1) (g 2))",
         
         // nested construct
-        "(construct cons (f x) (construct cons (g y) (constant nil)))"
+        "(construct cons (f x) (construct cons (g y) (constant nil)))",
+        
+        // deconstruct with atomic argument
+        "(deconstruct pair 0 p)",
+        
+        // deconstruct with complex argument
+        "(deconstruct pair 1 (f x))",
+        
+        // nested deconstruct
+        "(deconstruct pair 0 (deconstruct pair 1 (f x)))",
+        
+        // let with atomic value
+        "(let (x 42) (f x))",
+        
+        // let with complex value
+        "(let (x (f 10)) (g x))",
+        
+        // nested let
+        "(let (x (f 1)) (let (y (g x)) (h x y)))"
     ]);
