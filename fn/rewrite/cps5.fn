@@ -57,6 +57,18 @@ let
                         T_c(E.callcc_expr(e), cont)
                 }
 
+                (E.cond_expr(test, branches)) {
+                    let
+                        rv = gensym("$rv");
+                        cont = E.lambda([rv], k(rv));
+                    in
+                        T_k(test, fn (atest) {
+                            E.cond_expr(atest, lst.map(fn {(#(val, result)) {
+                                #(val, T_c(result, cont))
+                            }}, branches))
+                        })
+                }
+
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
                         rv = gensym("$rv");
@@ -125,6 +137,17 @@ let
                             [sf, c]
                         )
                     })
+                }
+
+                (E.cond_expr(test, branches)) {
+                    let
+                        sk = gensym("$k");
+                    in
+                        E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                            E.cond_expr(atest, lst.map(fn {(#(val, result)) {
+                                #(val, T_c(result, sk))
+                            }}, branches))
+                        })), [c])
                 }
 
                 (E.if_expr(exprc, exprt, exprf)) {
@@ -277,5 +300,11 @@ in
         "(sequence (amb 1 2) (amb 3 4))",
         
         // call/cc that passes continuation to another function
-        "(call/cc (lambda (k) (f k)))"
+        "(call/cc (lambda (k) (f k)))",
+        
+        // cond expression - like switch/case
+        "(cond x (1 (result1)) (2 (result2)) (3 (result3)))",
+        
+        // cond with complex test and results
+        "(cond (f x) (1 (g 1)) (2 (h 2)))"
     ]);
