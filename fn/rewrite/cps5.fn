@@ -132,6 +132,12 @@ let
                         })
                 }
 
+                (E.namespaces(exprs)) {
+                    Ts_k(exprs, fn (sexprs) {
+                        k(E.namespaces(sexprs))
+                    })
+                }
+
                 (E.primapp(p, e1, e2)) {
                     T_k(e1, fn (s1) {
                         T_k(e2, fn (s2) {
@@ -255,6 +261,12 @@ let
                                 #(indices, T_c(result, sk))
                             }}, cases))
                         })), [c])
+                }
+
+                (E.namespaces(exprs)) {
+                    Ts_k(exprs, fn (sexprs) {
+                        E.apply(c, [E.namespaces(sexprs)])
+                    })
                 }
 
                 (E.primapp(p, e1, e2)) {
@@ -460,5 +472,17 @@ in
         "(match_cases (f x) ((1) (g 1)) ((2) (h 2)))",
         
         // match_cases with complex results
-        "(match_cases x ((1) (f 1)) ((2) (g 2)))"
+        "(match_cases x ((1) (f 1)) ((2) (g 2)))",
+        
+        // namespaces with atomic expressions
+        "(namespaces x y z)",
+        
+        // namespaces with complex expressions
+        "(namespaces (f 1) (g 2))",
+        
+        // namespaces with mixed expressions
+        "(namespaces x (f y) z)",
+        
+        // namespaces with letrec bodies returning env
+        "(namespaces (letrec ((x 1) (y 2)) (env)) (letrec ((a 3) (b 4)) (env)))"
     ]);
