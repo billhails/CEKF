@@ -120,6 +120,18 @@ let
                     })
                 }
 
+                (E.match_cases(test, cases)) {
+                    let
+                        rv = gensym("$rv");
+                        cont = E.lambda([rv], k(rv));
+                    in
+                        T_k(test, fn (atest) {
+                            E.match_cases(atest, lst.map(fn {(#(indices, result)) {
+                                #(indices, T_c(result, cont))
+                            }}, cases))
+                        })
+                }
+
                 (E.primapp(p, e1, e2)) {
                     T_k(e1, fn (s1) {
                         T_k(e2, fn (s2) {
@@ -232,6 +244,17 @@ let
                     Ts_k(args, fn (sargs) {
                         E.apply(c, [E.make_vec(size, sargs)])
                     })
+                }
+
+                (E.match_cases(test, cases)) {
+                    let
+                        sk = gensym("$k");
+                    in
+                        E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                            E.match_cases(atest, lst.map(fn {(#(indices, result)) {
+                                #(indices, T_c(result, sk))
+                            }}, cases))
+                        })), [c])
                 }
 
                 (E.primapp(p, e1, e2)) {
@@ -428,5 +451,14 @@ in
         "(make_vec 2 (f 1) (g 2))",
         
         // make_vec with mixed args
-        "(make_vec 3 x (f y) 42)"
+        "(make_vec 3 x (f y) 42)",
+        
+        // match_cases with atomic test
+        "(match_cases x ((1 2) (result1)) ((3 4 5) (result2)))",
+        
+        // match_cases with complex test
+        "(match_cases (f x) ((1) (g 1)) ((2) (h 2)))",
+        
+        // match_cases with complex results
+        "(match_cases x ((1) (f 1)) ((2) (g 2)))"
     ]);
