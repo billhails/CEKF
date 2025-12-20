@@ -54,6 +54,11 @@ def main():
                         type=str,
                         choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "visitor", "kont_impl_inc"],
                         help="the type of output to produce")
+    parser.add_argument("--suffix",
+                        type=str,
+                        default="",
+                        required=False,
+                        help="suffix (visitor only)")
     args = parser.parse_args()
 
     import yaml
@@ -158,9 +163,12 @@ def generate_output(args, catalog, document, typeName, description, includes, li
     elif args.type == 'md':
         generate_documentation(args, catalog, typeName, description)
     elif args.type == 'visitor':
+        if args.suffix == "":
+            print(f"Error: visitor type requires a suffix argument", file=sys.stderr)
+            sys.exit(1)
         printGpl(args.yaml, document)
         print("")
-        print(catalog.generateVisitor())
+        print(catalog.generateVisitor(args.suffix))
     elif args.type == 'kont_impl_inc':
         # For continuation scaffolding, generate .inc (catalog already populated)
         from generate.kontinuations import KontinuationGenerator

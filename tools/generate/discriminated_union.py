@@ -40,7 +40,7 @@ class DiscriminatedUnion(SimpleStruct):
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             print(f"    ParserInfo _yy_parser_info; {c}")
         print(f"    {enum} {efield}; {c}")
         print(f"    {union} {ufield}; {c}")
@@ -123,7 +123,6 @@ class DiscriminatedUnion(SimpleStruct):
         myName = self.getName()
         output = []
         
-        output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
         output.append(f"    if (node == NULL) return NULL;\n")
         output.append(f"\n")
@@ -160,8 +159,8 @@ class DiscriminatedUnion(SimpleStruct):
                 output.append(f"            if (new_variant != variant) {{\n")
                 output.append(f"                PROTECT(new_variant);\n")
                 
-                # Determine constructor call based on parserInfo
-                if catalog.parserInfo:
+                # Determine constructor call based on parser info
+                if catalog.getParserInfo(self.name):
                     output.append(f"                result = new{myName}_{variantNameCap}(CPI(node), new_variant);\n")
                 else:
                     output.append(f"                result = new{myName}_{variantNameCap}(new_variant);\n")

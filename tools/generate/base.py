@@ -38,6 +38,10 @@ class Base:
         self.hasDocs = False
         self.brief = None
         self.description = None
+        if "parserInfo" in body:
+            self.parserInfo = body["parserInfo"]
+        else:
+            self.parserInfo = None
         if "meta" in body:
             meta = body["meta"]
             if "brief" in meta:
@@ -57,6 +61,11 @@ class Base:
             for line in self.formatDescription():
                 print(f" * {line}")
             print(" */")
+
+    def getParserInfo(self, default):
+        if self.parserInfo is not None:
+            return self.parserInfo
+        return default
 
     def formatDescription(self):
         """

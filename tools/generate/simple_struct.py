@@ -27,7 +27,7 @@ class SimpleStruct(Base):
             raise ValueError(f"SimpleStruct {name} must have 'data' field")
 
     def hasParserInfo(self, catalog):
-        return catalog.parserInfo
+        return catalog.getParserInfo(self.name)
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
@@ -37,7 +37,7 @@ class SimpleStruct(Base):
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             print(f"    ParserInfo _yy_parser_info; {c}")
         for field in self.fields:
             field.printStructTypedefLine(catalog)
@@ -144,7 +144,7 @@ class SimpleStruct(Base):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             args = ['ParserInfo _PI'] + args
 
         return SignatureHelper.new_signature(myName, myType, args)
@@ -205,7 +205,7 @@ class SimpleStruct(Base):
             print(f"    _x->header = _h; {c}")
             print(f"    int save = PROTECT(_x); {c}")
         print(f'    DEBUG("new {myName} %p", _x); {c}')
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             print(f"    _x->_yy_parser_info = _PI; {c}")
         for field in self.getNewArgs(catalog):
             f = field.getFieldName()
@@ -389,7 +389,7 @@ class SimpleStruct(Base):
         print(f"    bzero(_x, sizeof(struct {myName})); {c}")
         print(f"    _x->header = _h; {c}")
         print(f"    int save = PROTECT(_x); {c}")
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             print(f"    _x->_yy_parser_info = o->_yy_parser_info; {c}")
         self.printCopyFunctionBody(catalog)
         print(f"    UNPROTECT(save); {c}")
@@ -431,7 +431,6 @@ class SimpleStruct(Base):
         myName = self.getName()
         output = []
         
-        output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
         output.append(f"    if (node == NULL) return NULL;\n")
         output.append(f"\n")
@@ -518,7 +517,7 @@ class SimpleStruct(Base):
                 else:
                     constructorArgs.append(f"node->{fieldName}")
             
-            if catalog.parserInfo:
+            if catalog.getParserInfo(self.name):
                 constructorArgs.insert(0, "CPI(node)")
                 
             args_str = ", ".join(constructorArgs) if constructorArgs else ""

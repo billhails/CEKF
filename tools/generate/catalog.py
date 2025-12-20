@@ -70,6 +70,13 @@ class Catalog:
         for entity in list(self.contents.values()):
             entity.build(self)
     
+    def getParserInfo(self, key):
+        key = key.strip()
+        if key in self.contents:
+            return self.contents[key].getParserInfo(self.parserInfo)
+        else:
+            return self.parserInfo
+
     def _dispatch(self, method_name, *args):
         """
         Generic dispatcher - calls method_name on all entities.
@@ -88,13 +95,14 @@ class Catalog:
     def printGetterDeclarations(self):
         self._dispatch('printGetterDeclarations', self)
 
-    def generateVisitor(self):
+    def generateVisitor(self, suffix):
         """Generate complete visitor boilerplate"""
         output = []
         
         # Includes
         output.append(f'#include "{self.typeName}.h"\n')
         output.append('#include "memory.h"\n\n')
+        output.append(f'#include "{self.typeName}_{suffix}.h"\n\n')
         
         # Context struct skeleton
         output.append("typedef struct VisitorContext {\n")

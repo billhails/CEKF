@@ -348,7 +348,6 @@ class SimpleVector(Base):
         myName = self.getName()
         output = []
         
-        output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
         output.append(f"    if (node == NULL) return NULL;\n")
         output.append(f"\n")
