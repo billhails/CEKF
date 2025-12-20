@@ -142,7 +142,7 @@ Each field type needs appropriate visitor call:
 - **Structs**: `visitStructName(field, context)`
 - **Unions**: `visitUnionName(field, context)` (uses dispatcher)
 - **Arrays**: Create replacement array up front, loop over elements visiting each and populating the replacement, only return replacement if any element changed
-- **Hashes**: Same as arrays, begerate the replacement up front, Iterate entries, visit values, return replacement if different.
+- **Hashes**: Same as arrays, generate the replacement up front, Iterate entries, visit values, return replacement if different.
 - **Primitives** (int, char, bool): Pass through (but generate call for customization)
 - **HashSymbol**: Pass through unchanged (never transform symbols)
 - **AutoInit fields**: Visit but don't include in constructor parameters, will need to manually assign to a replacement if changed.
