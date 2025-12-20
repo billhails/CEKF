@@ -123,6 +123,7 @@ class DiscriminatedUnion(SimpleStruct):
         myName = self.getName()
         output = []
         
+        output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
         output.append(f"    if (node == NULL) return NULL;\n")
         output.append(f"\n")
@@ -161,9 +162,9 @@ class DiscriminatedUnion(SimpleStruct):
                 
                 # Determine constructor call based on parserInfo
                 if catalog.parserInfo:
-                    output.append(f"                result = new{myName}_{variantName}(CPI(node), new_variant);\n")
+                    output.append(f"                result = new{myName}_{variantNameCap}(CPI(node), new_variant);\n")
                 else:
-                    output.append(f"                result = new{myName}_{variantName}(new_variant);\n")
+                    output.append(f"                result = new{myName}_{variantNameCap}(new_variant);\n")
                 
                 output.append(f"            }}\n")
                 output.append(f"            break;\n")

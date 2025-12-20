@@ -67,6 +67,14 @@ class SimpleEnum(Base):
     def isEnum(self):
         return True
 
+    def isInline(self, catalog):
+        """Enums are value types, not pointers"""
+        return True
+
+    def needsProtection(self, catalog):
+        """Enums don't need GC protection"""
+        return False
+
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         pad(depth)
         c = self.comment('printCompareField')

@@ -294,3 +294,19 @@ class SimpleHash(Base):
         pad(depth)
         a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT((HashTable *)_x{a}{prefix}{field}); {c}")
+
+    def generateVisitorDecl(self):
+        """Generate forward declaration for visitor function"""
+        myName = self.getName()
+        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
+
+    def generateVisitor(self, catalog):
+        """Generate stub visitor function - TODO: implement hash table traversal"""
+        myName = self.getName()
+        output = []
+        output.append(f"__attribute__((unused))\n")
+        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    (void)context;  // TODO: implement hash table visitor\n")
+        output.append(f"    return node;  // TODO: traverse and rebuild hash table if values change\n")
+        output.append(f"}}\n\n")
+        return ''.join(output)

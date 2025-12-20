@@ -431,6 +431,7 @@ class SimpleStruct(Base):
         myName = self.getName()
         output = []
         
+        output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
         output.append(f"    if (node == NULL) return NULL;\n")
         output.append(f"\n")
@@ -443,16 +444,34 @@ class SimpleStruct(Base):
         
         if not visitableFields:
             # No fields to visit, just return the node
+            output.append(f"    (void)context;  // Unused parameter\n")
             output.append(f"    return node;\n")
             output.append(f"}}\n\n")
             return ''.join(output)
         
-        # Visit each field and track changes
-        output.append(f"    bool changed = false;\n")
-        
-        # Track whether we've done the initial PROTECT yet
+        # Track whether we've done the initial PROTECT yet and whether we have visitable fields
         saved = False
         visitedFields = []  # Fields that were actually visited (have new_ variables)
+        hasMemoryManagedFields = False
+        
+        # First pass: determine if we have any memory-managed fields
+        for field in visitableFields:
+            fieldType = field.typeName
+            try:
+                fieldObj = catalog.get(fieldType)
+                if fieldObj.needsProtection(catalog):
+                    hasMemoryManagedFields = True
+                    break
+            except:
+                # Field type not in catalog - assume it needs protection
+                hasMemoryManagedFields = True
+                break
+        
+        # Only declare changed if we have memory-managed fields
+        if hasMemoryManagedFields:
+            output.append(f"    bool changed = false;\n")
+        
+        # Visit each field and track changes
         
         for field in visitableFields:
             fieldName = field.getName()
@@ -477,15 +496,11 @@ class SimpleStruct(Base):
                     output.append(f"    // Pass through {fieldName} (type: {fieldType}, not memory-managed)\n")
                     
             except Exception as e:
-                # Field type not in catalog - assume it needs protection to be safe
-                output.append(f"    {fieldType} *new_{fieldName} = visit{fieldType}(node->{fieldName}, context);\n")
-                if not saved:
-                    output.append(f"    int save = PROTECT(new_{fieldName});\n")
-                    saved = True
-                else:
-                    output.append(f"    PROTECT(new_{fieldName});\n")
-                output.append(f"    changed = changed || (new_{fieldName} != node->{fieldName});\n")
-                visitedFields.append(field)
+                # Field type not in catalog - this should be rare, log for debugging
+                import sys
+                print(f"Warning: Field {fieldName} has type {fieldType} not in catalog", file=sys.stderr)
+                # Assume it's a primitive/external type that doesn't need visiting
+                output.append(f"    // Pass through {fieldName} (type: {fieldType}, not in catalog)\n")
         
         output.append(f"\n")
         
@@ -513,6 +528,9 @@ class SimpleStruct(Base):
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
+        else:
+            # No fields were actually visited (all pass-through)
+            output.append(f"    (void)context;  // Unused parameter - all fields are pass-through\n")
         
         if saved:
             output.append(f"    UNPROTECT(save);\n")
