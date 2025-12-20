@@ -448,9 +448,10 @@ class SimpleStruct(Base):
             return ''.join(output)
         
         # Visit each field and track changes
+        output.append(f"    bool changed = false;\n")
+        
         # Track whether we've done the initial PROTECT yet
         saved = False
-        changedChecks = []
         visitedFields = []  # Fields that were actually visited (have new_ variables)
         
         for field in visitableFields:
@@ -459,11 +460,9 @@ class SimpleStruct(Base):
             
             try:
                 fieldObj = catalog.get(fieldType)
-                fieldTypeName = type(fieldObj).__name__
                 
-                # Determine if this field type needs visiting
-                if fieldObj.isStruct() or fieldObj.isUnion():
-                    # Visit struct or union and immediately protect result
+                if fieldObj.needsProtection(catalog):
+                    # Memory-managed type - visit and protect result
                     output.append(f"    {fieldType} *new_{fieldName} = visit{fieldType}(node->{fieldName}, context);\n")
                     # On first visitable field, capture the PROTECT result in save
                     if not saved:
@@ -471,26 +470,28 @@ class SimpleStruct(Base):
                         saved = True
                     else:
                         output.append(f"    PROTECT(new_{fieldName});\n")
-                    changedChecks.append(f"new_{fieldName} != node->{fieldName}")
-                    visitedFields.append(field)
-                elif fieldObj.isArray() or fieldObj.isVector() or fieldObj.isHash():
-                    # Arrays, vectors, and hashes need special handling - TODO for now
-                    output.append(f"    // TODO: visit {fieldName} (type: {fieldType}, kind: {fieldTypeName})\n")
-                    output.append(f"    {fieldType} *new_{fieldName} = node->{fieldName};\n")
+                    output.append(f"    changed = changed || (new_{fieldName} != node->{fieldName});\n")
                     visitedFields.append(field)
                 else:
-                    # Primitive or other type - pass through unchanged
-                    output.append(f"    // Pass through {fieldName} (type: {fieldType}, kind: {fieldTypeName})\n")
+                    # Non-memory-managed type - pass through unchanged
+                    output.append(f"    // Pass through {fieldName} (type: {fieldType}, not memory-managed)\n")
                     
             except Exception as e:
-                # Field type not in catalog - might be external or primitive
-                output.append(f"    // Pass through {fieldName} (type: {fieldType}, not in catalog)\n")
+                # Field type not in catalog - assume it needs protection to be safe
+                output.append(f"    {fieldType} *new_{fieldName} = visit{fieldType}(node->{fieldName}, context);\n")
+                if not saved:
+                    output.append(f"    int save = PROTECT(new_{fieldName});\n")
+                    saved = True
+                else:
+                    output.append(f"    PROTECT(new_{fieldName});\n")
+                output.append(f"    changed = changed || (new_{fieldName} != node->{fieldName});\n")
+                visitedFields.append(field)
         
         output.append(f"\n")
         
         # Check if anything changed
-        if changedChecks:
-            output.append(f"    if ({' || '.join(changedChecks)}) {{\n")
+        if visitedFields:
+            output.append(f"    if (changed) {{\n")
             output.append(f"        // Create new node with modified fields\n")
             
             # Build constructor call
@@ -503,7 +504,7 @@ class SimpleStruct(Base):
                     constructorArgs.append(f"node->{fieldName}")
             
             if catalog.parserInfo:
-                constructorArgs.insert(0, "node->_yy_parser_info")
+                constructorArgs.insert(0, "CPI(node)")
                 
             args_str = ", ".join(constructorArgs) if constructorArgs else ""
             output.append(f"        {myName} *result = new{myName}({args_str});\n")

@@ -257,6 +257,36 @@ make indent            # Formats code with GNU indent
 - This includes symbols returned by: `newSymbol()`, `genSym()`, `genSymDollar()`, token types, etc.
 - Only protect structures with a `Header` (AST nodes, arrays, hashes, etc.)
 
+## C Coding Conventions
+
+**Generated union constructor functions**:
+- `new<Union>_<Variant>(parserInfo, variant)` - Wraps an existing variant in a union
+  - Use when you already have the variant object and just need to create the union wrapper
+  - Example: `newLamExp_Amb(parserInfo, ambNode)`
+- `make<Union>_<Variant>(parserInfo, field1, field2, ...)` - Constructs variant then wraps in union
+  - Use when you have the raw field values and need to construct both variant and union
+  - Example: `makeLamExp_Amb(parserInfo, exp1, exp2)`
+- **Important**: Visitor patterns should use `new*` functions since they already have visited variants
+
+**Type-safe union accessors**:
+- `get<Union>_<Variant>(union*)` - Safely extracts variant from union with type checking
+  - Example: `LamAmb *amb = getLamExp_Amb(node)`
+  - In production builds: compiles to direct field access `node->val.amb`
+  - In debug builds: validates the union type matches expected variant
+  - **Prefer this over direct field access** (`node->val.amb`) for safety
+
+**ParserInfo access**:
+- `CPI(node)` - Macro to access node's parser info
+  - Expands to `node->_yy_parser_info`
+  - **Always use this macro** instead of direct field access
+  - Provides indirection in case the field name or access pattern changes
+
+**Pointer comparisons**:
+- **Always use explicit NULL comparisons**: `if (ptr != NULL)` or `if (ptr == NULL)`
+- **Never test pointer "truthiness"**: Don't use `if (ptr)` or `if (!ptr)`
+- Makes intent clearer and avoids potential confusion with boolean expressions
+- Example: Write `if (node->next != NULL)` not `if (node->next)`
+
 ## Debugging
 
 **Conditional compilation flags** (define in source to enable):

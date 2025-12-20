@@ -114,11 +114,68 @@ class DiscriminatedUnion(SimpleStruct):
         print(f'    eprintf("\\n"); {c}')
     
     def generateVisitorDecl(self):
-        """Generate forward declaration for union visitor (dispatcher + variants)"""
-        # TODO: Implement union visitor declarations
-        return ""
+        """Generate forward declaration for union visitor (dispatcher)"""
+        myName = self.getName()
+        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
 
     def generateVisitor(self, catalog):
-        """Generate union visitor dispatcher and variant visitors"""
-        # TODO: Implement union visitor generation
-        return ""
+        """Generate union visitor dispatcher that switches on type and calls variant visitors"""
+        myName = self.getName()
+        output = []
+        
+        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"\n")
+        output.append(f"    int save = PROTECT(NULL);\n")
+        output.append(f"    {myName} *result = node;\n")
+        output.append(f"\n")
+        output.append(f"    switch (node->type) {{\n")
+        
+        # Generate a case for each variant
+        for field in self.fields:
+            variantName = field.getName()
+            variantType = field.typeName
+            enumVal = field.makeTypeName()
+            
+            output.append(f"        case {enumVal}: {{\n")
+            output.append(f"            // {variantType}\n")
+            
+            # Check if this type needs protection (i.e., is it memory-managed?)
+            try:
+                entity = catalog.get(variantType)
+                needsProtection = entity.needsProtection(catalog)
+            except:
+                # If type not found in catalog, assume it needs protection
+                needsProtection = True
+            
+            if not needsProtection:
+                # Primitive or non-GC type - leave empty case for user to fill
+                output.append(f"            break;\n")
+            else:
+                # Use generated getter for type-safe variant extraction
+                variantNameCap = variantName[0].upper() + variantName[1:] if variantName else variantName
+                output.append(f"            {variantType} *variant = get{myName}_{variantNameCap}(node);\n")
+                output.append(f"            {variantType} *new_variant = visit{variantType}(variant, context);\n")
+                output.append(f"            if (new_variant != variant) {{\n")
+                output.append(f"                PROTECT(new_variant);\n")
+                
+                # Determine constructor call based on parserInfo
+                if catalog.parserInfo:
+                    output.append(f"                result = new{myName}_{variantName}(CPI(node), new_variant);\n")
+                else:
+                    output.append(f"                result = new{myName}_{variantName}(new_variant);\n")
+                
+                output.append(f"            }}\n")
+                output.append(f"            break;\n")
+            
+            output.append(f"        }}\n")
+        
+        output.append(f"        default:\n")
+        output.append(f'            cant_happen("unrecognized {myName} type %d", node->type);\n')
+        output.append(f"    }}\n")
+        output.append(f"\n")
+        output.append(f"    UNPROTECT(save);\n")
+        output.append(f"    return result;\n")
+        output.append(f"}}\n\n")
+        
+        return ''.join(output)
