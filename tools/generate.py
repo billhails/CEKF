@@ -32,11 +32,16 @@ import argparse
 from generate.catalog import Catalog
 from generate.primitives import Primitive
 from generate.hashes import SimpleHash
-from generate.enums import SimpleEnum
-from generate.arrays import SimpleArray, SimpleStack, InlineArray
+from generate.simple_enum import SimpleEnum
+from generate.simple_array import SimpleArray
+from generate.simple_stack import SimpleStack
+from generate.inline_array import InlineArray
 from generate.vectors import SimpleVector
-from generate.structs import SimpleStruct, InlineStruct
-from generate.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
+from generate.simple_struct import SimpleStruct
+from generate.inline_struct import InlineStruct
+from generate.discriminated_union import DiscriminatedUnion
+from generate.inline_discriminated_union import InlineDiscriminatedUnion
+from generate.discriminated_union_union import DiscriminatedUnionUnion
 
 from generate.loader import Loader
 from generate.utils import printGpl, printSection

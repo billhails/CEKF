@@ -6,7 +6,7 @@ This module contains:
 """
 
 from .base import Base
-from .fields import SimpleField
+from .simple_field import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper

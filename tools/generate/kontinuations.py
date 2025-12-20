@@ -7,8 +7,8 @@ scaffolding for continuation-passing style ANF conversion.
 
 from typing import Dict, List, Any, TextIO
 from .catalog import Catalog
-from .structs import SimpleStruct
-from .unions import DiscriminatedUnion
+from .simple_struct import SimpleStruct
+from .discriminated_union import DiscriminatedUnion
 from .primitives import Primitive
 
 def ucFirst(s: str) -> str:

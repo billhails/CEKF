@@ -1,22 +1,14 @@
 """
-Union structure classes for makeAST code generation.
-
-This module contains:
-- DiscriminatedUnion: Tagged unions with type field and alternatives
-- InlineDiscriminatedUnion: Inline (call-by-value) discriminated unions
-- DiscriminatedUnionUnion: Union of union alternatives
+DiscriminatedUnion class for tagged unions with type field.
 """
 
-from .base import Base, EnumField
-from .fields import SimpleField, DiscriminatedUnionField
-from .structs import SimpleStruct
-from .enums import DiscriminatedUnionEnum
-from .utils import pad
-from .comment_gen import CommentGen
-from .type_helper import TypeHelper
+from .simple_struct import SimpleStruct
+from .discriminated_union_field import DiscriminatedUnionField
+from .discriminated_union_enum import DiscriminatedUnionEnum
 from .accessor_helper import AccessorHelper
 
-
+# Forward reference - DiscriminatedUnionUnion will be imported from discriminated_union_union.py
+# but we can't import it yet due to circular dependency
 class DiscriminatedUnion(SimpleStruct):
     """
     Contains the data from a union specification in the yaml.
@@ -24,6 +16,8 @@ class DiscriminatedUnion(SimpleStruct):
     """
     def __init__(self, name, body):
         super().__init__(name, body)
+        # Import here to avoid circular dependency at module load time
+        from .discriminated_union_union import DiscriminatedUnionUnion
         self.union = DiscriminatedUnionUnion(self.name, self.fields, body)
         self.enum = DiscriminatedUnionEnum(self.name, self.fields, body)
 
@@ -118,77 +112,7 @@ class DiscriminatedUnion(SimpleStruct):
         print(f'            cant_happen("unrecognised type %d in print{myName}", _x{a}type); {c}')
         print(f"    }} {c}")
         print(f'    eprintf("\\n"); {c}')
-
-
-class InlineDiscriminatedUnion(DiscriminatedUnion):
-    """
-    Inline (call by value) structs live on the stack not the heap, they are
-    passed by value not by reference, and they are not directly memory-maneged
-    (though their components may be, so they still need mark functions,
-    just not new and free functions.
-    """
-
-    def __init__(self, name, data):
-        super().__init__(name, data)
-
-    def isInline(self, catalog):
-        return True
-
-    def printHelperNewDeclarations(self, catalog):
-        # Inline unions don't need make helpers - they're stack-allocated
-        # and don't require GC protection
-        for field in self.fields:
-            field.printHelperNewDeclaration(catalog, self.isInline(catalog))
-
-    def printNewFunction(self, catalog):
-        pass
-
-    def printNewDeclaration(self, catalog):
-        pass
-
-    def printFreeFunction(self, catalog):
-        pass
-
-    def printFreeDeclaration(self, catalog):
-        pass
-
-    def getProtectDeclaration(self, catalog):
-        myName = self.getName()
-        myType = self.getTypeDeclaration(catalog)
-        return f'int protect{myName}({myType} _x)'
-
-    def printProtectDeclaration(self, catalog):
-        decl = self.getProtectDeclaration(catalog)
-        c = self.comment('printProtectDeclaration')
-        print(f'{decl}; {c}')
-
-    def printProtectFunction(self, catalog):
-        decl = self.getProtectDeclaration(catalog)
-        a = AccessorHelper.accessor(self.isInline(catalog))
-        c = self.comment('printProtectFunction')
-        print(f"/**")
-        print(f" * Protects the {self.getName()} union from garbage collection.")
-        print(f" * It will recursively protect the appropriate type of the contained object.")
-        print(f" */")
-        print(f'{decl} {{ {c}')
-        print(f'    switch(_x{a}type) {{ {c}')
-        for field in self.fields:
-            field.printProtectCase(self.isInline(catalog), catalog)
-        print(f"        default: {c}")
-        print(f'            cant_happen("unrecognised type %d", _x{a}type); {c}')
-        print(f'    }} {c}')
-        print(f'}} {c}')
-        print('')
-
-    def objTypeArray(self):
-        return []
-
-    def printCopyDeclaration(self, catalog):
-        pass
-
-    def printCopyFunction(self, catalog):
-        pass
-
+    
     def generateVisitorDecl(self):
         """Generate forward declaration for union visitor (dispatcher + variants)"""
         # TODO: Implement union visitor declarations
@@ -198,41 +122,3 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         """Generate union visitor dispatcher and variant visitors"""
         # TODO: Implement union visitor generation
         return ""
-
-class DiscriminatedUnionUnion(Base):
-    """
-    Built and added to the catalog by DiscriminatedUnion.build()
-    contains DiscriminatedUnionField objects
-    """
-    def __init__(self, name, fields, body):
-        super().__init__(name, body)
-        self.fields = fields
-
-    def getName(self):
-        return self.name + "Val"
-
-    def getTypeDeclaration(self, catalog):
-        return TypeHelper.union_type(self.getName())
-
-    def getFieldName(self):
-        return 'val'
-
-    def isUnion(self):
-        return True
-
-    def printMermaid(self, catalog):
-        pass
-    
-    def getSignature(self, catalog):
-        return "{type} val".format(type=self.getTypeDeclaration(catalog))
-
-    def printTypedef(self, catalog):
-        c = self.comment('printTypedef')
-        name=self.getName()
-        self.noteTypedef()
-        self.printBaseDocumentation()
-        print(f"typedef union {name} {{ {c}")
-        for field in self.fields:
-            field.printStructTypedefLine(catalog)
-        print(f"}} {name}; {c}\n")
-
