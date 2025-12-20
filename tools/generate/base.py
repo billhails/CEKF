@@ -82,7 +82,7 @@ class Base:
         """Generate forward declaration for visitor function - default stub"""
         pass
 
-    def generateVisitor(self):
+    def generateVisitor(self, catalog):
         """Generate visitor function - default stub"""
         pass
 

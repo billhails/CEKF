@@ -112,7 +112,7 @@ class Catalog:
         # Implementations
         output.append("// Visitor implementations\n")
         for entity in self.contents.values():
-            impl = entity.generateVisitor()
+            impl = entity.generateVisitor(self)
             if impl:
                 output.append(impl)
         

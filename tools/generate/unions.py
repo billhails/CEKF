@@ -189,6 +189,16 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
     def printCopyFunction(self, catalog):
         pass
 
+    def generateVisitorDecl(self):
+        """Generate forward declaration for union visitor (dispatcher + variants)"""
+        # TODO: Implement union visitor declarations
+        return ""
+
+    def generateVisitor(self, catalog):
+        """Generate union visitor dispatcher and variant visitors"""
+        # TODO: Implement union visitor generation
+        return ""
+
 class DiscriminatedUnionUnion(Base):
     """
     Built and added to the catalog by DiscriminatedUnion.build()

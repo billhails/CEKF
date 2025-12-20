@@ -429,6 +429,100 @@ class SimpleStruct(Base):
         myName = self.getName()
         return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
 
+    def generateVisitor(self, catalog):
+        """Generate visitor function implementation"""
+        myName = self.getName()
+        output = []
+        
+        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"\n")
+        
+        # Track which fields need visiting
+        visitableFields = []
+        for field in self.fields:
+            if field.default is None:  # Skip auto-init fields
+                visitableFields.append(field)
+        
+        if not visitableFields:
+            # No fields to visit, just return the node
+            output.append(f"    return node;\n")
+            output.append(f"}}\n\n")
+            return ''.join(output)
+        
+        # Visit each field and track changes
+        # Track whether we've done the initial PROTECT yet
+        saved = False
+        changedChecks = []
+        visitedFields = []  # Fields that were actually visited (have new_ variables)
+        
+        for field in visitableFields:
+            fieldName = field.getName()
+            fieldType = field.typeName
+            
+            try:
+                fieldObj = catalog.get(fieldType)
+                fieldTypeName = type(fieldObj).__name__
+                
+                # Determine if this field type needs visiting
+                if fieldObj.isStruct() or fieldObj.isUnion():
+                    # Visit struct or union and immediately protect result
+                    output.append(f"    {fieldType} *new_{fieldName} = visit{fieldType}(node->{fieldName}, context);\n")
+                    # On first visitable field, capture the PROTECT result in save
+                    if not saved:
+                        output.append(f"    int save = PROTECT(new_{fieldName});\n")
+                        saved = True
+                    else:
+                        output.append(f"    PROTECT(new_{fieldName});\n")
+                    changedChecks.append(f"new_{fieldName} != node->{fieldName}")
+                    visitedFields.append(field)
+                elif fieldObj.isArray() or fieldObj.isVector() or fieldObj.isHash():
+                    # Arrays, vectors, and hashes need special handling - TODO for now
+                    output.append(f"    // TODO: visit {fieldName} (type: {fieldType}, kind: {fieldTypeName})\n")
+                    output.append(f"    {fieldType} *new_{fieldName} = node->{fieldName};\n")
+                    visitedFields.append(field)
+                else:
+                    # Primitive or other type - pass through unchanged
+                    output.append(f"    // Pass through {fieldName} (type: {fieldType}, kind: {fieldTypeName})\n")
+                    
+            except Exception as e:
+                # Field type not in catalog - might be external or primitive
+                output.append(f"    // Pass through {fieldName} (type: {fieldType}, not in catalog)\n")
+        
+        output.append(f"\n")
+        
+        # Check if anything changed
+        if changedChecks:
+            output.append(f"    if ({' || '.join(changedChecks)}) {{\n")
+            output.append(f"        // Create new node with modified fields\n")
+            
+            # Build constructor call
+            constructorArgs = []
+            for field in self.getNewArgs(catalog):
+                fieldName = field.getName()
+                if field in visitedFields:
+                    constructorArgs.append(f"new_{fieldName}")
+                else:
+                    constructorArgs.append(f"node->{fieldName}")
+            
+            if catalog.parserInfo:
+                constructorArgs.insert(0, "node->_yy_parser_info")
+                
+            args_str = ", ".join(constructorArgs) if constructorArgs else ""
+            output.append(f"        {myName} *result = new{myName}({args_str});\n")
+            if saved:
+                output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        return result;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+        
+        if saved:
+            output.append(f"    UNPROTECT(save);\n")
+        output.append(f"    return node;\n")
+        output.append(f"}}\n\n")
+        
+        return ''.join(output)
+
 
 class InlineStruct(SimpleStruct):
     """
