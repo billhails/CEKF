@@ -88,6 +88,36 @@ class Catalog:
     def printGetterDeclarations(self):
         self._dispatch('printGetterDeclarations', self)
 
+    def generateVisitor(self):
+        """Generate complete visitor boilerplate"""
+        output = []
+        
+        # Includes
+        output.append(f'#include "{self.typeName}.h"\n')
+        output.append('#include "memory.h"\n\n')
+        
+        # Context struct skeleton
+        output.append("typedef struct VisitorContext {\n")
+        output.append("    // Add your context fields here\n")
+        output.append("} VisitorContext;\n\n")
+        
+        # Forward declarations
+        output.append("// Forward declarations\n")
+        for entity in self.contents.values():
+            decl = entity.generateVisitorDecl()
+            if decl:
+                output.append(decl)
+        output.append("\n")
+        
+        # Implementations
+        output.append("// Visitor implementations\n")
+        for entity in self.contents.values():
+            impl = entity.generateVisitor()
+            if impl:
+                output.append(impl)
+        
+        return ''.join(output)
+
     def printTypedefs(self):
         for entity in self.contents.values():
             if entity.isEnum():

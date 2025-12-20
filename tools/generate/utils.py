@@ -46,7 +46,7 @@ def printGpl(file, document):
             line = gpl.readline()
     print(" *")
     print(f" * {document['config']['description']}")
-    print(f" * Generated from {file} by tools/makeAST.py")
+    print(f" * Generated from {file} by tools/generate.py")
     print(" */")
 
 

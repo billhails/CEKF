@@ -78,6 +78,14 @@ class Base:
             lines.append(current_line.strip())
         return lines
 
+    def generateVisitorDecl(self):
+        """Generate forward declaration for visitor function - default stub"""
+        pass
+
+    def generateVisitor(self):
+        """Generate visitor function - default stub"""
+        pass
+
     def isInline(self, catalog):
         return False
 

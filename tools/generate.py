@@ -47,7 +47,7 @@ def main():
     parser.add_argument("yaml", help="input yaml file")
     parser.add_argument("type",
                         type=str,
-                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "kont_impl_inc"],
+                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "visitor", "kont_impl_inc"],
                         help="the type of output to produce")
     args = parser.parse_args()
 
@@ -152,6 +152,10 @@ def generate_output(args, catalog, document, typeName, description, includes, li
         generate_debug_implementation(args, catalog, document, typeName, limited_includes)
     elif args.type == 'md':
         generate_documentation(args, catalog, typeName, description)
+    elif args.type == 'visitor':
+        printGpl(args.yaml, document)
+        print("")
+        print(catalog.generateVisitor())
     elif args.type == 'kont_impl_inc':
         # For continuation scaffolding, generate .inc (catalog already populated)
         from generate.kontinuations import KontinuationGenerator
@@ -344,7 +348,7 @@ def generate_documentation(args, catalog, typeName, description):
     catalog.printMermaid()
     print("```")
     print("")
-    print(f"> Generated from {args.yaml} by tools/makeAST.py")
+    print(f"> Generated from {args.yaml} by tools/generate.py")
 
 
 if __name__ == "__main__":
