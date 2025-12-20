@@ -301,12 +301,64 @@ class SimpleHash(Base):
         return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
 
     def generateVisitor(self, catalog):
-        """Generate stub visitor function - TODO: implement hash table traversal"""
+        """Generate hash table visitor that iterates and rebuilds if values change"""
         myName = self.getName()
         output = []
+        
         output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    (void)context;  // TODO: implement hash table visitor\n")
-        output.append(f"    return node;  // TODO: traverse and rebuild hash table if values change\n")
+        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"\n")
+        
+        if self.entries is None:
+            # Hash set (no values, just keys) - iterate for inspection/logging
+            output.append(f"    (void)context;  // Hash set has no values to visit\n")
+            output.append(f"    // Iterate over keys (uncomment if you need to inspect/log them)\n")
+            output.append(f"    // Index i = 0;\n")
+            output.append(f"    // HashSymbol *key;\n")
+            output.append(f"    // while ((key = iterate{myName}(node, &i)) != NULL) {{\n")
+            output.append(f"    //     // Inspect/log key here\n")
+            output.append(f"    // }}\n")
+            output.append(f"    return node;\n")
+        else:
+            # Hash table with values that need visiting
+            entryType = self.entries.getTypeDeclaration(catalog)
+            
+            # Check if entry type needs visiting
+            try:
+                entryObj = catalog.get(self.entries.typeName)
+                needsVisit = entryObj.needsProtection(catalog)
+            except:
+                needsVisit = False
+            
+            if not needsVisit:
+                # Values don't need visiting (primitives, enums, etc)
+                output.append(f"    (void)context;  // Values are {self.entries.typeName} (not memory-managed)\n")
+                output.append(f"    return node;\n")
+            else:
+                # Values need visiting - iterate and rebuild if changed
+                output.append(f"    bool changed = false;\n")
+                output.append(f"    {myName} *result = new{myName}();\n")
+                output.append(f"    int save = PROTECT(result);\n")
+                output.append(f"\n")
+                output.append(f"    // Iterate over all entries\n")
+                output.append(f"    Index i = 0;\n")
+                output.append(f"    {entryType} value;\n")
+                output.append(f"    HashSymbol *key;\n")
+                output.append(f"    while ((key = iterate{myName}(node, &i, &value)) != NULL) {{\n")
+                output.append(f"        {entryType} new_value = visit{self.entries.typeName}(value, context);\n")
+                output.append(f"        PROTECT(new_value);\n")
+                output.append(f"        changed = changed || (new_value != value);\n")
+                output.append(f"        set{myName}(result, key, new_value);\n")
+                output.append(f"    }}\n")
+                output.append(f"\n")
+                output.append(f"    if (changed) {{\n")
+                output.append(f"        UNPROTECT(save);\n")
+                output.append(f"        return result;\n")
+                output.append(f"    }}\n")
+                output.append(f"\n")
+                output.append(f"    UNPROTECT(save);\n")
+                output.append(f"    return node;\n")
+        
         output.append(f"}}\n\n")
         return ''.join(output)

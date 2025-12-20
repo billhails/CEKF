@@ -939,13 +939,81 @@ class SimpleArray(Base):
         return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
 
     def generateVisitor(self, catalog):
-        """Generate stub visitor function - TODO: implement array traversal"""
+        """Generate array visitor that iterates and rebuilds if elements change"""
         myName = self.getName()
         output = []
+        
         output.append(f"__attribute__((unused))\n")
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    (void)context;  // TODO: implement array visitor\n")
-        output.append(f"    return node;  // TODO: traverse and rebuild array if elements change\n")
+        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"\n")
+        
+        entryType = self.entries.getTypeDeclaration(catalog)
+        
+        # Check if entry type needs visiting
+        try:
+            entryObj = catalog.get(self.entries.typeName)
+            needsVisit = entryObj.needsProtection(catalog)
+        except:
+            needsVisit = False
+        
+        if not needsVisit:
+            # Elements don't need visiting (primitives, enums, etc)
+            output.append(f"    (void)context;  // Elements are {self.entries.typeName} (not memory-managed)\n")
+            output.append(f"    return node;\n")
+        elif self.dimension == 2:
+            # 2D array - iterate over width and height
+            output.append(f"    bool changed = false;\n")
+            if hasattr(self, 'tagField') and self.tagField:
+                output.append(f"    {myName} *result = new{myName}(node->width, node->height, \"visit{myName}\");\n")
+            else:
+                output.append(f"    {myName} *result = new{myName}(node->width, node->height);\n")
+            output.append(f"    int save = PROTECT(result);\n")
+            output.append(f"\n")
+            output.append(f"    // Iterate over all elements (2D matrix)\n")
+            output.append(f"    for (Index y = 0; y < node->height; y++) {{\n")
+            output.append(f"        for (Index x = 0; x < node->width; x++) {{\n")
+            output.append(f"            {entryType} element = get{myName}Index(node, x, y);\n")
+            output.append(f"            {entryType} new_element = visit{self.entries.typeName}(element, context);\n")
+            output.append(f"            PROTECT(new_element);\n")
+            output.append(f"            changed = changed || (new_element != element);\n")
+            output.append(f"            set{myName}Index(result, x, y, new_element);\n")
+            output.append(f"        }}\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    if (changed) {{\n")
+            output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        return result;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    return node;\n")
+        else:
+            # 1D array - iterate over size
+            output.append(f"    bool changed = false;\n")
+            if hasattr(self, 'tagField') and self.tagField:
+                output.append(f"    {myName} *result = new{myName}(\"visit{myName}\");\n")
+            else:
+                output.append(f"    {myName} *result = new{myName}();\n")
+            output.append(f"    int save = PROTECT(result);\n")
+            output.append(f"\n")
+            output.append(f"    // Iterate over all elements\n")
+            output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
+            output.append(f"        {entryType} element = peekn{myName}(node, i);\n")
+            output.append(f"        {entryType} new_element = visit{self.entries.typeName}(element, context);\n")
+            output.append(f"        PROTECT(new_element);\n")
+            output.append(f"        changed = changed || (new_element != element);\n")
+            output.append(f"        push{myName}(result, new_element);\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    if (changed) {{\n")
+            output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        return result;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    return node;\n")
+        
         output.append(f"}}\n\n")
         return ''.join(output)
 
