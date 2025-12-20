@@ -338,3 +338,68 @@ class SimpleVector(Base):
         pad(3)
         print(f'break; {c}')
 
+    def generateVisitorDecl(self):
+        """Generate forward declaration for visitor function"""
+        myName = self.getName()
+        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
+
+    def generateVisitor(self, catalog):
+        """Generate vector visitor that iterates and rebuilds if elements change"""
+        myName = self.getName()
+        output = []
+        
+        output.append(f"__attribute__((unused))\n")
+        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"\n")
+        
+        entryType = self.entries.getTypeDeclaration(catalog)
+        
+        # Check if entry type needs visiting
+        try:
+            entryObj = catalog.get(self.entries.typeName)
+            needsVisit = entryObj.needsProtection(catalog)
+        except:
+            needsVisit = False
+        
+        if not needsVisit:
+            # Elements don't need visiting - provide iteration template in #ifdef NOTDEF
+            output.append(f"#ifdef NOTDEF  // Elements are {self.entries.typeName} (not memory-managed)\n")
+            output.append(f"    // Template for iteration if needed:\n")
+            output.append(f"    {myName} *result = new{myName}(node->size);\n")
+            output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
+            output.append(f"        {entryType} element = node->entries[i];\n")
+            output.append(f"        // Process element here\n")
+            output.append(f"        result->entries[i] = element;\n")
+            output.append(f"    }}\n")
+            output.append(f"    return result;\n")
+            output.append(f"#else\n")
+            output.append(f"    (void)context;\n")
+            output.append(f"    return node;\n")
+            output.append(f"#endif\n")
+        else:
+            # Elements need visiting - iterate and rebuild if changed
+            output.append(f"    bool changed = false;\n")
+            output.append(f"    {myName} *result = new{myName}(node->size);\n")
+            output.append(f"    int save = PROTECT(result);\n")
+            output.append(f"\n")
+            output.append(f"    // Iterate over all elements\n")
+            output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
+            output.append(f"        {entryType} element = node->entries[i];\n")
+            output.append(f"        {entryType} new_element = visit{self.entries.typeName}(element, context);\n")
+            output.append(f"        PROTECT(new_element);\n")
+            output.append(f"        changed = changed || (new_element != element);\n")
+            output.append(f"        result->entries[i] = new_element;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    if (changed) {{\n")
+            output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        return result;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+            output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    return node;\n")
+        
+        output.append(f"}}\n\n")
+        return ''.join(output)
+

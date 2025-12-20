@@ -333,7 +333,17 @@ class SimpleHash(Base):
             
             if not needsVisit:
                 # Values don't need visiting (primitives, enums, etc)
+                # But still generate iteration code for inspection/logging
                 output.append(f"    (void)context;  // Values are {self.entries.typeName} (not memory-managed)\n")
+                output.append(f"#ifdef NOTDEF\n")
+                output.append(f"    // Iterate over all entries for inspection/logging\n")
+                output.append(f"    Index i = 0;\n")
+                output.append(f"    {entryType} value;\n")
+                output.append(f"    HashSymbol *key;\n")
+                output.append(f"    while ((key = iterate{myName}(node, &i, &value)) != NULL) {{\n")
+                output.append(f"        // Inspect/log key and value here\n")
+                output.append(f"    }}\n")
+                output.append(f"#endif\n")
                 output.append(f"    return node;\n")
             else:
                 # Values need visiting - iterate and rebuild if changed
