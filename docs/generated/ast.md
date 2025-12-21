@@ -140,4 +140,4 @@ AstStringArray["AstStringArray[]"] --entries--> string
 AstExpressionArray["AstExpressionArray[]"] --entries--> AstExpression
 ```
 
-> Generated from src/ast.yaml by tools/makeAST.py
+> Generated from src/ast.yaml by tools/generate.py

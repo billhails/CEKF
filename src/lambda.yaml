@@ -338,7 +338,7 @@ structs:
                 a string representation of the type of an expression.
         data:
             exp: LamExp
-            typestring: LamExp=NULL
+            typestring: LamExp=NULL # assgned by the type checker
 
     LamTypeDefs:
         meta:
@@ -385,7 +385,7 @@ structs:
 
     LamTypeSig:
         meta:
-            brief: A type signature in lambda expressions
+            brief: A type signature
             description: >-
                 This structure represents a type signature that includes the
                 name of the type and its arguments. It is used to define the
@@ -417,7 +417,7 @@ structs:
 
     LamTypeConstructor:
         meta:
-            brief: A type constructor in lambda expressions
+            brief: A type constructor
             description: >-
                 This structure represents a type constructor that includes
                 the name, type, and arguments of the constructor. It is used
@@ -440,7 +440,7 @@ structs:
 
     LamTypeFunction:
         meta:
-            brief: A type function in lambda expressions
+            brief: A type function
             description: >-
                 This structure represents a type function that includes the
                 name and arguments of the function. It is used as arguments
@@ -466,10 +466,23 @@ structs:
             size: int # number of alternatives
             index: int # index into list of alternatives
 
+    LamAlphaEnv:
+        meta:
+            brief: An environment for alpha conversion
+            description: >-
+                This structure holds the environment needed for alpha
+                conversion of lambda expressions. It includes an alpha
+                table for tracking variable substitutions and a parent
+                environment for nested scopes.
+        parserInfo: false
+        data:
+            alphaTable: LamAlphaTable
+            next: LamAlphaEnv
+            namespaces: LamAlphaEnvArray=NULL
 enums:
     LamPrimOp:
         meta:
-            brief: Primitive operations in lambda expressions
+            brief: Primitive operations
         data:
             - ADD
             - SUB
@@ -552,7 +565,7 @@ unions:
 
     LamTypeConstructorType:
         meta:
-            brief: A type constructor type in lambda expressions
+            brief: A type constructor type
             description: >-
                 This union represents the different types of arguments that can
                 be passed to a type constructor. It includes integers, characters,
@@ -618,6 +631,15 @@ hashes:
         data:
             entries: LamExp
 
+    LamAlphaTable:
+        meta:
+            brief: Map from symbols to their substitutes
+            description: >-
+                Table for alpha conversion, mapping from original symbols
+                to their substituted symbols.
+        data:
+            entries: HashSymbol
+
 arrays:
     LamNamespaceArray:
         meta:
@@ -627,6 +649,14 @@ arrays:
                 in scope.  The ubiquitous `ns_id` is an index into this array.
         data:
             entries: LamExp
+
+    LamAlphaEnvArray:
+        meta:
+            brief: An array of alpha conversion environments
+            description: >-
+                This array holds the alpha conversion environments per-namespace.
+        data:
+            entries: LamAlphaEnv
 
 primitives: !include primitives.yaml
 

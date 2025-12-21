@@ -102,4 +102,4 @@ AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
 AnfEnvArray["AnfEnvArray[]"] --entries--> AnfEnv
 ```
 
-> Generated from src/anf.yaml by tools/makeAST.py
+> Generated from src/anf.yaml by tools/generate.py

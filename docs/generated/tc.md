@@ -42,4 +42,4 @@ TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
 ```
 
-> Generated from src/tc.yaml by tools/makeAST.py
+> Generated from src/tc.yaml by tools/generate.py

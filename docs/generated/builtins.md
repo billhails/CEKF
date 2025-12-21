@@ -20,4 +20,4 @@ BuiltInArgs["BuiltInArgs[]"] --entries--> TcType
 BuiltIns["BuiltIns[]"] --entries--> BuiltIn
 ```
 
-> Generated from src/builtins.yaml by tools/makeAST.py
+> Generated from src/builtins.yaml by tools/generate.py

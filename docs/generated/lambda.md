@@ -9,6 +9,7 @@ LamMacroArgsSet --entries--> NULL
 LamInfoTable --entries--> LamInfo
 LamAliasTable --entries--> LamTypeConstructorType
 LamExpTable --entries--> LamExp
+LamAlphaTable --entries--> HashSymbol
 LamLam --args--> LamVarList
 LamLam --exp--> LamExp
 LamLam --isMacro--> bool
@@ -109,6 +110,9 @@ LamTypeConstructorInfo --needsVec--> bool
 LamTypeConstructorInfo --arity--> int
 LamTypeConstructorInfo --size--> int
 LamTypeConstructorInfo --index--> int
+LamAlphaEnv --alphaTable--> LamAlphaTable
+LamAlphaEnv --next--> LamAlphaEnv
+LamAlphaEnv --namespaces--> LamAlphaEnvArray
 LamExp --amb--> LamAmb
 LamExp --apply--> LamApply
 LamExp --args--> LamArgs
@@ -156,6 +160,7 @@ LamInfo --namespaceInfo--> LamContext
 LamInfo --nsid--> int
 LamPrimOp["enum LamPrimOp"]
 LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp
+LamAlphaEnvArray["LamAlphaEnvArray[]"] --entries--> LamAlphaEnv
 ```
 
-> Generated from src/lambda.yaml by tools/makeAST.py
+> Generated from src/lambda.yaml by tools/generate.py

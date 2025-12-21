@@ -436,10 +436,8 @@ class SimpleStruct(Base):
         output.append(f"\n")
         
         # Track which fields need visiting
-        visitableFields = []
-        for field in self.fields:
-            if field.default is None:  # Skip auto-init fields
-                visitableFields.append(field)
+        # All fields should be visited, including auto-initialized ones (they can be modified later)
+        visitableFields = list(self.fields)
         
         if not visitableFields:
             # No fields to visit, just return the node
@@ -522,6 +520,15 @@ class SimpleStruct(Base):
                 
             args_str = ", ".join(constructorArgs) if constructorArgs else ""
             output.append(f"        {myName} *result = new{myName}({args_str});\n")
+            
+            # Set any auto-initialized fields that were visited
+            constructorFields = set(self.getNewArgs(catalog))
+            for field in visitedFields:
+                if field not in constructorFields:
+                    # This is an auto-initialized field that was visited - set it manually
+                    fieldName = field.getName()
+                    output.append(f"        result->{fieldName} = new_{fieldName};\n")
+            
             if saved:
                 output.append(f"        UNPROTECT(save);\n")
             output.append(f"        return result;\n")

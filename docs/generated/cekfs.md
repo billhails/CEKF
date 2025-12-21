@@ -61,4 +61,4 @@ LocationArray["LocationArray[]"] --entries--> Location
 OverApplyStack["OverApplyStack[]"] --entries--> OverApplyFrame
 ```
 
-> Generated from src/cekfs.yaml by tools/makeAST.py
+> Generated from src/cekfs.yaml by tools/generate.py

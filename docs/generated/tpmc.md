@@ -56,4 +56,4 @@ TpmcIntArray["TpmcIntArray[]"] --entries--> int
 TpmcMatrix["TpmcMatrix[][]"] --entries--> TpmcPattern
 ```
 
-> Generated from src/tpmc.yaml by tools/makeAST.py
+> Generated from src/tpmc.yaml by tools/generate.py

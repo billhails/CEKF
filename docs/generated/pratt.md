@@ -66,4 +66,4 @@ PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 ```
 
-> Generated from src/pratt.yaml by tools/makeAST.py
+> Generated from src/pratt.yaml by tools/generate.py

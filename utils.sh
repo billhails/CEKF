@@ -100,5 +100,5 @@ new_visitor () {
         return 1
     fi
     new_h "$1_$2" &&
-    python3 tools/generate.py src/$1.yaml visitor > $cfile
+    python3 tools/generate.py --suffix "$2" src/$1.yaml visitor > $cfile
 }
