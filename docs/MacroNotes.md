@@ -8,7 +8,7 @@ lamConvert
     +---prependDefinition(def, env, next)
         +---prependMacro(macro, env, next)
             +---convertAstMacro(macro, env)
-                +---lamPerformMacroSubstitutions(body, args)
+                +---lamerformMacroSubstitutions(body, args)
                 +---setLamMacroSet(env->macros, name) // redundant?
 
 +---+---convertExpression
@@ -21,4 +21,26 @@ lamConvert
                 +---isMacro(symbol, env)
                 +---thunkMacroSymbol(symbol, args)
                     +---thunkMacroExp(args)
+```
+
+lamPerformMacroSubstitutions commented out:
+```
+(λ ()
+    (letrec ((COMPUTE (λ (a b c)
+                (let (((sum (opMacro$9 (λ () a) (λ () b)))
+                       (prod (opMacro$13 (λ () sum) (λ () c)))))
+                      (begin prod)))))
+            (let (((result (COMPUTE (λ () 2) (λ () 3) (λ () 4)))))
+                 ...)))
+```
+
+lamPerformMacroSubstitutions uncommented:
+```
+(λ ()
+    (letrec ((COMPUTE (λ (a b c)
+                (let (((sum (opMacro$9 (λ () ((a))) (λ () ((b)))))
+                       (prod (opMacro$13 (λ () sum) (λ () ((c)))))))
+                     (begin prod)))))
+            (let (((result (COMPUTE (λ () 2) (λ () 3) (λ () 4)))))
+                 ...)))
 ```

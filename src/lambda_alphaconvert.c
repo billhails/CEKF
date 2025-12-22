@@ -54,7 +54,7 @@ static LamMatch *visitLamMatch(LamMatch *node, LamAlphaEnv *context);
 static LamMatchList *visitLamMatchList(LamMatchList *node, LamAlphaEnv *context);
 static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context);
 static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context);
-static LamBindings *visitLamBindings(LamBindings *node, LamAlphaEnv *context);
+static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context);
 static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context);
 static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context);
 static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context);
@@ -91,7 +91,7 @@ static void addNameToContext(HashSymbol *name, LamAlphaEnv *context) {
     setLamAlphaTable(context->alphaTable, name, newName);
 }
 
-static HashSymbol *getNameFromContext(HashSymbol *name, LamAlphaEnv *context) {
+static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name, LamAlphaEnv *context) {
     struct HashSymbol *mappedName = NULL;
     while (context != NULL) {
         if (getLamAlphaTable(context->alphaTable, name, &mappedName)) {
@@ -99,7 +99,7 @@ static HashSymbol *getNameFromContext(HashSymbol *name, LamAlphaEnv *context) {
         }
         context = context->next;
     }
-    cant_happen("undefined variable %s", name->name);
+    cant_happen("undefined variable %s [%s +%d]", name->name, PI.filename, PI.lineno);
 }
 
 static void pushNamespaceEnv(LamAlphaEnv *context) {
@@ -269,7 +269,7 @@ static LamVarList *visitLamVarList(LamVarList *node, LamAlphaEnv *context) {
 
     addNameToContext(node->var, context);
 
-    LamVarList *result = newLamVarList(CPI(node), getNameFromContext(node->var, context), new_next);
+    LamVarList *result = newLamVarList(CPI(node), getNameFromContext(CPI(node), node->var, context), new_next);
     UNPROTECT(save);
     return result;
 }
@@ -661,7 +661,7 @@ static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
     context = newLamAlphaEnv(context);
     int save = PROTECT(context);
     bool changed = false;
-    LamBindings *new_bindings = visitLamBindings(node->bindings, context);
+    LamBindings *new_bindings = visitLetBindings(node->bindings, context);
     PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
     LamExp *new_body = visitLamExp(node->body, context);
@@ -679,15 +679,15 @@ static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamBindings *visitLamBindings(LamBindings *node, LamAlphaEnv *context) {
+static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
     LamExp *new_val = visitLamExp(node->val, context);
     int save = PROTECT(new_val);
-    LamBindings *new_next = visitLamBindings(node->next, context);
-    PROTECT(new_next);
     addNameToContext(node->var, context);
+    LamBindings *new_next = visitLetBindings(node->next, context);
+    PROTECT(new_next);
     // Create new node with modified fields
-    LamBindings *result = newLamBindings(CPI(node), getNameFromContext(node->var, context), new_val, new_next);
+    LamBindings *result = newLamBindings(CPI(node), getNameFromContext(CPI(node), node->var, context), new_val, new_next);
     UNPROTECT(save);
     return result;
 }
@@ -703,7 +703,7 @@ static LamBindings *visitLetRecValues(LamBindings *node, LamAlphaEnv *context) {
     }
     LamBindings *new_next = visitLetRecValues(node->next, context);
     PROTECT(new_next);
-    LamBindings *result = newLamBindings(CPI(node), getNameFromContext(node->var, context), new_val, new_next);
+    LamBindings *result = newLamBindings(CPI(node), getNameFromContext(CPI(node), node->var, context), new_val, new_next);
     UNPROTECT(save);
     return result;
 }
@@ -1371,7 +1371,7 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         }
         case LAMEXP_TYPE_VAR: {
             // HashSymbol
-            result = newLamExp_Var(CPI(node), getNameFromContext(getLamExp_Var(node), context));
+            result = newLamExp_Var(CPI(node), getNameFromContext(CPI(node), getLamExp_Var(node), context));
             break;
         }
         default:

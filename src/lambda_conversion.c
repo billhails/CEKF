@@ -299,6 +299,7 @@ static void appendLamBindings(LamBindings **lambdas, LamBindings **other) {
  * @param funcDefs The letrec bindings to hoist.
  * @return The resulting letrec bindings with functions hoisted to the front.
  */
+__attribute__((unused))
 static LamBindings *hoistFunctionDefinitions(LamBindings *funcDefs) {
     int save = PROTECT(funcDefs);
     LamBindings *lambdas = NULL;
@@ -331,18 +332,23 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
 
-    // convert and collect all the function definitions:
+    // convert and collect all the definitions:
     // [funcs and vars]
-    LamBindings *funcDefsList = convertFuncDefs(definitions, env);
-    PROTECT(funcDefsList);
+    LamBindings *defsList = convertFuncDefs(definitions, env);
+    PROTECT(defsList);
 
     // hoist function definitions to the front:
-    // [funcs] [vars]
-    funcDefsList = hoistFunctionDefinitions(funcDefsList);
-    PROTECT(funcDefsList);
+    // [funcs]
+    // [vars]
+    LamBindings *funcDefsList = NULL;
+    LamBindings *varDefsList = NULL;
+    separateLambdas(defsList, &funcDefsList, &varDefsList); // PROTECTS them
+    // defsList = hoistFunctionDefinitions(defsList);
+    // PROTECT(defsList);
 
     // prepend print functions:
-    // [printers] [funcs] [vars]
+    // [printers] [funcs]
+    // [vars]
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env);
     PROTECT(funcDefsList);
 
@@ -376,13 +382,19 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
 
-    // if there are functions, create a letrec, else just use the body
     LamExp *result = NULL;
+    if (varDefsList != NULL) {
+        // prepend variable definitions to the letrec body
+        // [vars] [[namespaces] [body]]
+        letRecBody = makeLamExp_Let(CPI(varDefsList), varDefsList, letRecBody);
+        PROTECT(letRecBody);
+    }
+    // if there are functions, create a letrec, else just use the body
     if (funcDefsList != NULL) {
         // [[printers] [funcs] [vars] [[namespaces] [body]]]
         result = makeLamExp_Letrec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
-        // [[namespaces] [body]]
+        // [vars] [[namespaces] [body]]
         result = letRecBody;
     }
     PROTECT(result);

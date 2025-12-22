@@ -30,6 +30,8 @@
 #  include "debugging_off.h"
 #endif
 
+static LamMacroArgsSet *excludeSymbols(LamVarList *, LamMacroArgsSet *);
+
 /**
  * @brief True if the variable is an argument to the macro being converted.
  * 
@@ -50,13 +52,18 @@ static bool isMacroArgument(HashSymbol *var, LamMacroArgsSet *symbols) {
  */
 static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsSet *symbols) {
     ENTER(performLamSubstitutions);
+#if 0
     // fn () { a() } == a
     if (   lam->args == NULL
         && lam->exp->type == LAMEXP_TYPE_VAR
         && isMacroArgument(lam->exp->val.var, symbols)) {
         return lam->exp;
     }
-    lam->exp = lamPerformMacroSubstitutions(lam->exp, symbols);
+#endif
+    LamMacroArgsSet *newSymbols = excludeSymbols(lam->args, symbols);
+    int save = PROTECT(newSymbols);
+    lam->exp = lamPerformMacroSubstitutions(lam->exp, newSymbols);
+    UNPROTECT(save);
     LEAVE(performLamSubstitutions);
     return newLamExp_Lam(CPI(lam), lam);
 }
@@ -183,23 +190,17 @@ static LamVarList *collectLetRecNames(LamBindings *bindings) {
  * So in the example above, `a` is already a thunk at this point.
  *
  * @param PI The parser information.
- * @param var The variable to consider for substitution.
+ * @param exp The variable expression to consider for substitution.
  * @param symbols The current set of macro arguments.
- * @return The expression with the variable substituted, or just the variable if it is not a macro argument.
+ * @return The modified or original expression.
  */
-static LamExp *performVarSubstitution(ParserInfo PI, HashSymbol *var, LamMacroArgsSet *symbols) {
+static LamExp *performVarSubstitution(ParserInfo PI, LamExp *exp, LamMacroArgsSet *symbols) {
     ENTER(performVarSubstitution);
-    LamExp *replacement = NULL;
-    if (isMacroArgument(var, symbols)) {
-        // Macro arguments are thunks that need to be forced
-        // Call the thunk with no arguments: var()
-        LamExp *name = newLamExp_Var(PI, var);
-        int save = PROTECT(name);
-        replacement = makeLamExp_Apply(PI, name, NULL);
-        UNPROTECT(save);
+    if (isMacroArgument(getLamExp_Var(exp), symbols)) {
+        exp = makeLamExp_Apply(PI, exp, NULL);
     }
     LEAVE(performVarSubstitution);
-    return replacement;
+    return exp;
 }
 
 /**
@@ -369,21 +370,14 @@ static LamIff *performIffSubstitutions(LamIff *iff, LamMacroArgsSet *symbols) {
  * @return The modified letrec bindings.
  */
 static LamBindings *performBindingsSubstitutions(LamBindings *bindings,
-                                                       LamMacroArgsSet *reducedSymbols,
-                                                       LamMacroArgsSet *originalSymbols) {
+                                                 LamMacroArgsSet *symbols) {
     ENTER(performBindingsSubstitutions);
     if (bindings == NULL) {
         LEAVE(performBindingsSubstitutions);
         return NULL;
     }
-    bindings->next = performBindingsSubstitutions(bindings->next, reducedSymbols, originalSymbols);
-    switch (bindings->val->type) {
-        case LAMEXP_TYPE_LAM:
-            bindings->val = lamPerformMacroSubstitutions(bindings->val, reducedSymbols);
-            break;
-        default:
-            bindings->val = lamPerformMacroSubstitutions(bindings->val, originalSymbols);
-    }
+    bindings->next = performBindingsSubstitutions(bindings->next, symbols);
+    bindings->val = lamPerformMacroSubstitutions(bindings->val, symbols);
     LEAVE(performBindingsSubstitutions);
     return bindings;
 }
@@ -406,7 +400,6 @@ static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings, LamMa
     }
     bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
     bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);
-    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
     LEAVE(performLetBindingsSubstitutions);
     return bindings;
 }
@@ -443,14 +436,11 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsSet 
     LamVarList *names = collectLetRecNames(letrec->bindings);
     int save = PROTECT(names);
     if (containsMacroArguments(names, symbols)) {
-        LamMacroArgsSet *reduced = excludeSymbols(names, symbols);
-        PROTECT(reduced);
-        letrec->bindings = performBindingsSubstitutions(letrec->bindings, reduced, symbols);
-        letrec->body = lamPerformMacroSubstitutions(letrec->body, reduced);
-    } else {
-        letrec->bindings = performBindingsSubstitutions(letrec->bindings, symbols, symbols);
-        letrec->body = lamPerformMacroSubstitutions(letrec->body, symbols);
+        symbols = excludeSymbols(names, symbols);
+        PROTECT(symbols);
     }
+    letrec->bindings = performBindingsSubstitutions(letrec->bindings, symbols);
+    letrec->body = lamPerformMacroSubstitutions(letrec->body, symbols);
     LEAVE(performLetRecSubstitutions);
     UNPROTECT(save);
     return letrec;
@@ -629,13 +619,9 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
             case LAMEXP_TYPE_LAM:
                 exp = performLamSubstitutions(exp->val.lam, symbols);
                 break;
-            case LAMEXP_TYPE_VAR: {
-                LamExp *rep = performVarSubstitution(CPI(exp), exp->val.var, symbols);
-                if (rep) {
-                    exp = rep;
-                }
-            }
-            break;
+            case LAMEXP_TYPE_VAR:
+                exp = performVarSubstitution(CPI(exp), exp, symbols);
+                break;
             case LAMEXP_TYPE_PRIM:
                 exp->val.prim = performPrimSubstitutions(exp->val.prim, symbols);
                 break;
