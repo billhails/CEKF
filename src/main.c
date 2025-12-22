@@ -482,6 +482,7 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
+        // forceGcFlag = true;
         LamExp *exp = convertProg(prog);
         REPLACE_PROTECT(save2, exp);
 

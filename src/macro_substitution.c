@@ -52,11 +52,11 @@ static bool isMacroArgument(HashSymbol *var, LamMacroArgsSet *symbols) {
  */
 static LamExp *performLamSubstitutions(LamLam *lam, LamMacroArgsSet *symbols) {
     ENTER(performLamSubstitutions);
-#if 0
+#if 1
     // fn () { a() } == a
     if (   lam->args == NULL
         && lam->exp->type == LAMEXP_TYPE_VAR
-        && isMacroArgument(lam->exp->val.var, symbols)) {
+        && isMacroArgument(getLamExp_Var(lam->exp), symbols)) {
         return lam->exp;
     }
 #endif
@@ -396,7 +396,7 @@ static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings, LamMa
     }
     if (isMacroArgument(bindings->var, *symbols)) {
         *symbols = excludeSymbol(bindings->var, *symbols);
-        PROTECT(symbols); // caller will UNPROTECT
+        PROTECT(*symbols); // caller will UNPROTECT
     }
     bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
     bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);

@@ -32,18 +32,20 @@
 
 static LamExp *performLamSimplifications(LamLam *lam) {
     ENTER(performLamSimplifications);
-    lam->exp = lamPerformSimplifications(lam->exp);
-#ifdef OVERSIMPLIFICATION
+#if 0
+    LamExp *exp = lam->exp = lamPerformSimplifications(lam->exp);
     // fn () { a() } == a
     // A thunk that just calls another thunk can be simplified to the second thunk
     if (   lam->args == NULL
-        && lam->exp->type == LAMEXP_TYPE_APPLY
-        && lam->exp->val.apply->args == NULL
-        && lam->exp->val.apply->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
+        && exp->type == LAMEXP_TYPE_APPLY
+        && getLamExp_Apply(exp)->args == NULL
+        && getLamExp_Apply(exp)->function->type != LAMEXP_TYPE_CONSTRUCTOR) {
         LEAVE(performLamSimplifications);
         IFDEBUG(printLamLam(lam, 0));
-        return lam->exp->val.apply->function;
+        return getLamExp_Apply(exp)->function;
     }
+#else
+    lam->exp = lamPerformSimplifications(lam->exp);
 #endif
     LEAVE(performLamSimplifications);
     return newLamExp_Lam(CPI(lam), lam);
