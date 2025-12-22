@@ -120,7 +120,7 @@ class Catalog:
         # Forward declarations
         output.append("// Forward declarations\n")
         for entity in self.contents.values():
-            decl = entity.generateVisitorDecl()
+            decl = entity.generateVisitorDecl(suffix)
             if decl:
                 output.append(decl)
         output.append("\n")
@@ -128,7 +128,7 @@ class Catalog:
         # Implementations
         output.append("// Visitor implementations\n")
         for entity in self.contents.values():
-            impl = entity.generateVisitor(self)
+            impl = entity.generateVisitor(self, suffix)
             if impl:
                 output.append(impl)
         

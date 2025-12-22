@@ -79,7 +79,7 @@ class InlineDiscriminatedUnion(DiscriminatedUnion):
         # TODO: Implement union visitor declarations
         return ""
 
-    def generateVisitor(self, catalog):
+    def generateVisitor(self, catalog, suffix):
         """Generate union visitor dispatcher and variant visitors"""
         # TODO: Implement union visitor generation
         return ""

@@ -338,20 +338,20 @@ class SimpleVector(Base):
         pad(3)
         print(f'break; {c}')
 
-    def generateVisitorDecl(self):
-        """Generate forward declaration for visitor function"""
+    def generateVisitorDecl(self, suffix):
+        """Generate forward declaration for vector visitor"""
         myName = self.getName()
-        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
 
-    def generateVisitor(self, catalog):
+    def generateVisitor(self, catalog, suffix):
         """Generate vector visitor that iterates and rebuilds if elements change"""
         myName = self.getName()
         output = []
         
-        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({suffix}{myName});\n")
         output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        LEAVE({suffix}{myName});\n")
         output.append(f"        return NULL;\n")
         output.append(f"    }}\n")
         output.append(f"\n")
@@ -375,11 +375,11 @@ class SimpleVector(Base):
             output.append(f"        // Process element here\n")
             output.append(f"        result->entries[i] = element;\n")
             output.append(f"    }}\n")
-            output.append(f"    LEAVE(visit{myName});\n")
+            output.append(f"    LEAVE({suffix}{myName});\n")
             output.append(f"    return result;\n")
             output.append(f"#else\n")
             output.append(f"    (void)context;\n")
-            output.append(f"    LEAVE(visit{myName});\n")
+            output.append(f"    LEAVE({suffix}{myName});\n")
             output.append(f"    return node;\n")
             output.append(f"#endif\n")
         else:
@@ -391,7 +391,7 @@ class SimpleVector(Base):
             output.append(f"    // Iterate over all elements\n")
             output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
             output.append(f"        {entryType} element = node->entries[i];\n")
-            output.append(f"        {entryType} new_element = visit{self.entries.typeName}(element, context);\n")
+            output.append(f"        {entryType} new_element = {suffix}{self.entries.typeName}(element, context);\n")
             output.append(f"        PROTECT(new_element);\n")
             output.append(f"        changed = changed || (new_element != element);\n")
             output.append(f"        result->entries[i] = new_element;\n")
@@ -399,12 +399,12 @@ class SimpleVector(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
-            output.append(f"        LEAVE(visit{myName});\n")
+            output.append(f"        LEAVE({suffix}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
-            output.append(f"    LEAVE(visit{myName});\n")
+            output.append(f"    LEAVE({suffix}{myName});\n")
             output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

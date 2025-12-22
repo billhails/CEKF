@@ -295,20 +295,20 @@ class SimpleHash(Base):
         a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT((HashTable *)_x{a}{prefix}{field}); {c}")
 
-    def generateVisitorDecl(self):
+    def generateVisitorDecl(self, suffix):
         """Generate forward declaration for visitor function"""
         myName = self.getName()
-        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
 
-    def generateVisitor(self, catalog):
+    def generateVisitor(self, catalog, suffix):
         """Generate hash table visitor that iterates and rebuilds if values change"""
         myName = self.getName()
         output = []
         
-        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({suffix}{myName});\n")
         output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        LEAVE({suffix}{myName});\n")
         output.append(f"        return NULL;\n")
         output.append(f"    }}\n")
         output.append(f"\n")
@@ -322,7 +322,7 @@ class SimpleHash(Base):
             output.append(f"    // while ((key = iterate{myName}(node, &i)) != NULL) {{\n")
             output.append(f"    //     // Inspect/log key here\n")
             output.append(f"    // }}\n")
-            output.append(f"    LEAVE(visit{myName});\n")
+            output.append(f"    LEAVE({suffix}{myName});\n")
             output.append(f"    return node;\n")
         else:
             # Hash table with values that need visiting
@@ -348,7 +348,7 @@ class SimpleHash(Base):
                 output.append(f"        // Inspect/log key and value here\n")
                 output.append(f"    }}\n")
                 output.append(f"#endif\n")
-                output.append(f"    LEAVE(visit{myName});\n")
+                output.append(f"    LEAVE({suffix}{myName});\n")
                 output.append(f"    return node;\n")
             else:
                 # Values need visiting - iterate and rebuild if changed
@@ -361,7 +361,7 @@ class SimpleHash(Base):
                 output.append(f"    {entryType} value;\n")
                 output.append(f"    HashSymbol *key;\n")
                 output.append(f"    while ((key = iterate{myName}(node, &i, &value)) != NULL) {{\n")
-                output.append(f"        {entryType} new_value = visit{self.entries.typeName}(value, context);\n")
+                output.append(f"        {entryType} new_value = {suffix}{self.entries.typeName}(value, context);\n")
                 output.append(f"        PROTECT(new_value);\n")
                 output.append(f"        changed = changed || (new_value != value);\n")
                 output.append(f"        set{myName}(result, key, new_value);\n")
@@ -369,12 +369,12 @@ class SimpleHash(Base):
                 output.append(f"\n")
                 output.append(f"    if (changed) {{\n")
                 output.append(f"        UNPROTECT(save);\n")
-                output.append(f"        LEAVE(visit{myName});\n")
+                output.append(f"        LEAVE({suffix}{myName});\n")
                 output.append(f"        return result;\n")
                 output.append(f"    }}\n")
                 output.append(f"\n")
                 output.append(f"    UNPROTECT(save);\n")
-                output.append(f"    LEAVE(visit{myName});\n")
+                output.append(f"    LEAVE({suffix}{myName});\n")
                 output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

@@ -421,20 +421,20 @@ class SimpleStruct(Base):
     def getDefineArg(self):
         return '_x'
 
-    def generateVisitorDecl(self):
+    def generateVisitorDecl(self, suffix):
         """Generate forward declaration for visitor function"""
         myName = self.getName()
-        return f"static {myName} *visit{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
 
-    def generateVisitor(self, catalog):
+    def generateVisitor(self, catalog, suffix):
         """Generate visitor function implementation"""
         myName = self.getName()
         output = []
         
-        output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({suffix}{myName});\n")
         output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        LEAVE({suffix}{myName});\n")
         output.append(f"        return NULL;\n")
         output.append(f"    }}\n")
         output.append(f"\n")
@@ -446,7 +446,7 @@ class SimpleStruct(Base):
         if not visitableFields:
             # No fields to visit, just return the node
             output.append(f"    (void)context;  // Unused parameter\n")
-            output.append(f"    LEAVE(visit{myName});\n")
+            output.append(f"    LEAVE({suffix}{myName});\n")
             output.append(f"    return node;\n")
             output.append(f"}}\n\n")
             return ''.join(output)
@@ -484,7 +484,7 @@ class SimpleStruct(Base):
                 
                 if fieldObj.needsProtection(catalog):
                     # Memory-managed type - visit and protect result
-                    output.append(f"    {fieldType} *new_{fieldName} = visit{fieldType}(node->{fieldName}, context);\n")
+                    output.append(f"    {fieldType} *new_{fieldName} = {suffix}{fieldType}(node->{fieldName}, context);\n")
                     # On first visitable field, capture the PROTECT result in save
                     if not saved:
                         output.append(f"    int save = PROTECT(new_{fieldName});\n")
@@ -536,7 +536,7 @@ class SimpleStruct(Base):
             
             if saved:
                 output.append(f"        UNPROTECT(save);\n")
-            output.append(f"        LEAVE(visit{myName});\n")
+            output.append(f"        LEAVE({suffix}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
@@ -546,7 +546,7 @@ class SimpleStruct(Base):
         
         if saved:
             output.append(f"    UNPROTECT(save);\n")
-        output.append(f"    LEAVE(visit{myName});\n")
+        output.append(f"    LEAVE({suffix}{myName});\n")
         output.append(f"    return node;\n")
         output.append(f"}}\n\n")
         

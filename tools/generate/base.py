@@ -87,11 +87,11 @@ class Base:
             lines.append(current_line.strip())
         return lines
 
-    def generateVisitorDecl(self):
+    def generateVisitorDecl(self, suffix):
         """Generate forward declaration for visitor function - default stub"""
         pass
 
-    def generateVisitor(self, catalog):
+    def generateVisitor(self, catalog, suffix):
         """Generate visitor function - default stub"""
         pass
 
