@@ -944,7 +944,11 @@ class SimpleArray(Base):
         output = []
         
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
         output.append(f"\n")
         
         entryType = self.entries.getTypeDeclaration(catalog)
@@ -959,6 +963,7 @@ class SimpleArray(Base):
         if not needsVisit:
             # Elements don't need visiting (primitives, enums, etc)
             output.append(f"    (void)context;  // Elements are {self.entries.typeName} (not memory-managed)\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
         elif self.dimension == 2:
             # 2D array - iterate over width and height
@@ -982,10 +987,12 @@ class SimpleArray(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        LEAVE(visit{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
         else:
             # 1D array - iterate over size
@@ -1007,10 +1014,12 @@ class SimpleArray(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        LEAVE(visit{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

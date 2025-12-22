@@ -306,7 +306,11 @@ class SimpleHash(Base):
         output = []
         
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
         output.append(f"\n")
         
         if self.entries is None:
@@ -318,6 +322,7 @@ class SimpleHash(Base):
             output.append(f"    // while ((key = iterate{myName}(node, &i)) != NULL) {{\n")
             output.append(f"    //     // Inspect/log key here\n")
             output.append(f"    // }}\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
         else:
             # Hash table with values that need visiting
@@ -343,6 +348,7 @@ class SimpleHash(Base):
                 output.append(f"        // Inspect/log key and value here\n")
                 output.append(f"    }}\n")
                 output.append(f"#endif\n")
+                output.append(f"    LEAVE(visit{myName});\n")
                 output.append(f"    return node;\n")
             else:
                 # Values need visiting - iterate and rebuild if changed
@@ -363,10 +369,12 @@ class SimpleHash(Base):
                 output.append(f"\n")
                 output.append(f"    if (changed) {{\n")
                 output.append(f"        UNPROTECT(save);\n")
+                output.append(f"        LEAVE(visit{myName});\n")
                 output.append(f"        return result;\n")
                 output.append(f"    }}\n")
                 output.append(f"\n")
                 output.append(f"    UNPROTECT(save);\n")
+                output.append(f"    LEAVE(visit{myName});\n")
                 output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

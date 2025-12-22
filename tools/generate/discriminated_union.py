@@ -124,7 +124,11 @@ class DiscriminatedUnion(SimpleStruct):
         output = []
         
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
         output.append(f"\n")
         output.append(f"    int save = PROTECT(NULL);\n")
         output.append(f"    {myName} *result = node;\n")
@@ -175,6 +179,7 @@ class DiscriminatedUnion(SimpleStruct):
         output.append(f"    }}\n")
         output.append(f"\n")
         output.append(f"    UNPROTECT(save);\n")
+        output.append(f"    LEAVE(visit{myName});\n")
         output.append(f"    return result;\n")
         output.append(f"}}\n\n")
         

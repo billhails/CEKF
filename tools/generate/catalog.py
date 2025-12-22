@@ -104,6 +104,14 @@ class Catalog:
         output.append('#include "memory.h"\n\n')
         output.append(f'#include "{self.typeName}_{suffix}.h"\n\n')
         
+        # Conditional debugging include
+        debug_macro = f"DEBUG_{self.typeName.upper()}_{suffix.upper()}"
+        output.append(f'#ifdef {debug_macro}\n')
+        output.append('#  include "debugging_on.h"\n')
+        output.append('#else\n')
+        output.append('#  include "debugging_off.h"\n')
+        output.append('#endif\n\n')
+        
         # Context struct skeleton
         output.append("typedef struct VisitorContext {\n")
         output.append("    // Add your context fields here\n")

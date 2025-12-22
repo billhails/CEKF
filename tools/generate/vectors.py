@@ -349,7 +349,11 @@ class SimpleVector(Base):
         output = []
         
         output.append(f"static {myName} *visit{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    if (node == NULL) return NULL;\n")
+        output.append(f"    ENTER(visit{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE(visit{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
         output.append(f"\n")
         
         entryType = self.entries.getTypeDeclaration(catalog)
@@ -371,9 +375,11 @@ class SimpleVector(Base):
             output.append(f"        // Process element here\n")
             output.append(f"        result->entries[i] = element;\n")
             output.append(f"    }}\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return result;\n")
             output.append(f"#else\n")
             output.append(f"    (void)context;\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
             output.append(f"#endif\n")
         else:
@@ -393,10 +399,12 @@ class SimpleVector(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        LEAVE(visit{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
+            output.append(f"    LEAVE(visit{myName});\n")
             output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

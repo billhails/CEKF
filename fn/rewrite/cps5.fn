@@ -210,7 +210,8 @@ let
                 }
 
                 (E.callcc_expr(e)) {
-                    // Transform the function e, then apply call/cc wrapper with function and continuation
+                    // Transform the function e, then apply call/cc wrapper with
+                    // function and continuation
                     T_k(e, fn (sf) {
                         E.apply(
                             E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
