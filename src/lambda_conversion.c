@@ -237,6 +237,8 @@ static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, 
 
 /**
  * @brief converts a namespace and pushes it on to the growing lambda namespace array.
+ * 
+ * IMPORTANT: this function also adds the namespace info to the parent context.
  *
  * @param nsArray The AST namespace array to retrieve the namespace from.
  * @param i The index of the namespace in the array.
@@ -321,15 +323,30 @@ static LamExp *lamConvert(AstDefinitions *definitions,
                           AstExpressions *expressions,
                           LamContext *env) {
     ENTER(lamConvert);
+
+    // record aliases in env
     collectAliases(definitions, env);
+
+    // convert and collect all the typedefs (also adds them to env)
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
+
+    // convert and collect all the function definitions:
+    // [funcs and vars]
     LamBindings *funcDefsList = convertFuncDefs(definitions, env);
     PROTECT(funcDefsList);
+
+    // hoist function definitions to the front:
+    // [funcs] [vars]
     funcDefsList = hoistFunctionDefinitions(funcDefsList);
     PROTECT(funcDefsList);
+
+    // prepend print functions:
+    // [printers] [funcs] [vars]
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env);
     PROTECT(funcDefsList);
+
+    // convert namespaces
     LamNamespaceArray *namespaces = NULL;
     if (nsArray != NULL) {
         namespaces = newLamNamespaceArray();
@@ -338,29 +355,45 @@ static LamExp *lamConvert(AstDefinitions *definitions,
             convertNamespace(nsArray, i, env, namespaces);
         }
     }
+
+    // convert the body sequence
+    // MUST be done *after* converting the namespaces so they are available in env
+    // [body expressions]
     LamSequence *body = convertSequence(expressions, env);
     PROTECT(body);
+
+    // prepend any namespaces to the body sequence
+    // [namespaces] [body]
     if (namespaces != NULL && namespaces->size > 0) {
         LamExp *lamNamespaces = newLamExp_Namespaces(CPI(env), namespaces);
         PROTECT(lamNamespaces);
         body = newLamSequence(CPI(env), lamNamespaces, body);
         PROTECT(body);
     }
+    
+    // promote the body sequence to a LamExp
+    // [[namespaces] [body]]
     LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
+
+    // if there are functions, create a letrec, else just use the body
     LamExp *result = NULL;
     if (funcDefsList != NULL) {
+        // [[printers] [funcs] [vars] [[namespaces] [body]]]
         result = makeLamExp_Letrec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
-        result = newLamExp_Sequence(CPI(body), body);
+        // [[namespaces] [body]]
+        result = letRecBody;
     }
     PROTECT(result);
+
+    // prepend typedefs if any
     if (typeDefList != NULL) {
-        LamTypeDefs *typeDefs = newLamTypeDefs(CPI(typeDefList), typeDefList, result);
-        PROTECT(typeDefs);
-        result =
-            newLamExp_Typedefs(CPI(typeDefs), typeDefs);
+        // [typedefs] [[printers] [funcs] [vars] [[namespaces] [body]]]
+        result = makeLamExp_Typedefs(CPI(typeDefList), typeDefList, result);
     }
+
+    // cleanup and return
     UNPROTECT(save);
     LEAVE(lamConvert);
     return result;
@@ -956,33 +989,6 @@ static void collectAliases(AstDefinitions *definitions, LamContext *env) {
 }
 
 /**
- * @brief extracts the hash symbol from a macro argument (which must be a symbol).
- *
- * calls cant_happen if the argument is not a symbol, which is a fatal error.
- * 
- * @param arg The AST macro argument to convert.
- * @return The contained hash symbol.
- */
-static HashSymbol *convertMacroArg(AstFarg *arg) {
-    switch (arg->type) {
-        case AST_FARG_TYPE_SYMBOL:
-            return arg->val.symbol;
-        case AST_FARG_TYPE_WILDCARD:
-        case AST_FARG_TYPE_LOOKUP:
-        case AST_FARG_TYPE_NAMED:
-        case AST_FARG_TYPE_UNPACK:
-        case AST_FARG_TYPE_UNPACKSTRUCT:
-        case AST_FARG_TYPE_NUMBER:
-        case AST_FARG_TYPE_CHARACTER:
-        case AST_FARG_TYPE_TUPLE:
-            // should have been caught in the parser
-            cant_happen("unexpected %s", astFargTypeName(arg->type));
-        default:
-            cant_happen("unrecognized %s", astFargTypeName(arg->type));
-    }
-}
-
-/**
  * @brief Checks against duplicate macro arguments in a list.
  *
  * @param arg The macro argument to check.
@@ -1011,7 +1017,7 @@ static LamVarList *collectMacroArgs(AstFargList *argList) {
     if (argList == NULL) return NULL;
     LamVarList *next = collectMacroArgs(argList->next);
     int save = PROTECT(next);
-    HashSymbol *arg = convertMacroArg(argList->arg);
+    HashSymbol *arg = getAstFarg_Symbol(argList->arg);
     checkDuplicateMacroArg(arg, next);
     LamVarList *this = newLamVarList(CPI(argList), arg, next);
     UNPROTECT(save);
@@ -1047,20 +1053,24 @@ static void populateArgsTable(LamMacroArgsSet *symbols, LamVarList *args) {
  */
 static LamExp *convertAstMacro(AstDefMacro *astMacro, LamContext *env) {
     ENTER(convertAstMacro);
+    // get the list of argument symbols
     LamVarList *args = collectMacroArgs(astMacro->definition->altArgs->argList);
     int save = PROTECT(args);
+    // do a standard conversion of the macro body
     LamExp *body = convertNest(astMacro->definition->nest, env);
     PROTECT(body);
+    // create a random-access set of the macro argument symbols
     LamMacroArgsSet *symbolTable = newLamMacroArgsSet();
     PROTECT(symbolTable);
     populateArgsTable(symbolTable, args);
+    // force all the argument thunks in the body of the macro
     body = lamPerformMacroSubstitutions(body, symbolTable);
     PROTECT(body);
-    LamLam *lam = newLamLam(CPI(astMacro), args, body);
-    lam->isMacro = true;  // Mark this lambda as a macro (lazy arguments)
-    PROTECT(lam);
-    LamExp *res = newLamExp_Lam(CPI(lam), lam);
+    // prepare the resulting lambda expression
+    LamExp *res = makeLamExp_Lam(CPI(astMacro), args, body);
     PROTECT(res);
+    getLamExp_Lam(res)->isMacro = true;
+    // remember it's a macro
     setLamMacroSet(env->macros, astMacro->name);
     LEAVE(convertAstMacro);
     UNPROTECT(save);
@@ -1381,34 +1391,17 @@ static LamExp *thunkMacroArg(LamExp *arg) {
  * @param args The arguments to wrap.
  * @return The resulting wrapped arguments.
  */
-static LamArgs *wrapMacroArgs(LamArgs *args) {
+static LamArgs *thunkMacroArgs(LamArgs *args) {
     if (args == NULL) {
         return NULL;
     }
-    LamArgs *next = wrapMacroArgs(args->next);
+    LamArgs *next = thunkMacroArgs(args->next);
     int save = PROTECT(next);
     LamExp *arg = thunkMacroArg(args->exp);
     PROTECT(arg);
     LamArgs *this = newLamArgs(CPI(arg), arg, next);
     UNPROTECT(save);
     return this;
-}
-
-/**
- * @brief Converts a macro application into a lambda expression, wrapping the arguments in thunks.
- * @param PI The parser information.
- * @param symbol The macro name.
- * @param args The arguments to the macro.
- * @return The resulting lambda expression.
- */
-static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
-    args = wrapMacroArgs(args);
-    int save = PROTECT(args);
-    LamExp *macro = newLamExp_Var(PI, symbol);
-    PROTECT(macro);
-    LamExp *res = makeLamExp_Apply(PI, macro, args);
-    UNPROTECT(save);
-    return res;
 }
 
 /**
@@ -1419,10 +1412,25 @@ static LamExp *wrapMacro(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
  * @param args The arguments to the macro.
  * @return The resulting lambda expression.
  */
-static LamExp *wrapMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
-    args = wrapMacroArgs(args);
+static LamExp *thunkMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
+    args = thunkMacroArgs(args);
     int save = PROTECT(args);
     LamExp *res = makeLamExp_Apply(PI, callee, args);
+    UNPROTECT(save);
+    return res;
+}
+
+/**
+ * @brief Converts a macro application into a lambda expression, wrapping the arguments in thunks.
+ * @param PI The parser information.
+ * @param symbol The macro name.
+ * @param args The arguments to the macro.
+ * @return The resulting lambda expression.
+ */
+static LamExp *thunkMacroSymbol(ParserInfo PI, HashSymbol *symbol, LamArgs *args) {
+    LamExp *exp = newLamExp_Var(PI, symbol);
+    int save = PROTECT(exp);
+    LamExp *res = thunkMacroExp(PI, exp, args);
     UNPROTECT(save);
     return res;
 }
@@ -1436,7 +1444,7 @@ static LamExp *wrapMacroExp(ParserInfo PI, LamExp *callee, LamArgs *args) {
  */
 static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args, LamContext *env) {
     if (isMacro(symbol, env)) {
-        return wrapMacro(PI, symbol, args);
+        return thunkMacroSymbol(PI, symbol, args);
     }
     if (symbol == negSymbol())
         return makeUnaryNeg(args);
@@ -1841,7 +1849,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
         LamContext *nsEnv = lookupNamespaceInLamContext(env, function->val.lookup->nsid);
         LamExp *under = findUnderlyingValue(function);
         if (under->type == LAMEXP_TYPE_VAR && isMacro(under->val.var, nsEnv)) {
-            result = wrapMacroExp(CPI(funCall), function, args);
+            result = thunkMacroExp(CPI(funCall), function, args);
             UNPROTECT(save);
             return result;
         }
