@@ -32,6 +32,7 @@ struct Header;
 #  include "builtins_objtypes.h"
 #  include "pratt_objtypes.h"
 #  include "anf_kont_objtypes.h"
+#  include "cps_kont_objtypes.h"
 #  include "types.h"
 
 // Definition of all object types for garbage collection
@@ -63,6 +64,7 @@ typedef enum {
     CEKFS_OBJTYPES(),
     PRATT_OBJTYPES(),
     ANF_KONT_OBJTYPES(),
+    CPS_KONT_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

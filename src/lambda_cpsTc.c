@@ -23,6 +23,9 @@
 #include "memory.h"
 
 #include "lambda_cpsTc.h"
+#include "lambda_cpsTk.h"
+#include "lambda_functions.h"
+#include "cps_kont.h"
 
 #ifdef DEBUG_LAMBDA_CPSTC
 #  include "debugging_on.h"
@@ -36,10 +39,8 @@ typedef struct VisitorContext {
 
 // Forward declarations
 static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, VisitorContext *context);
-static LamMacroArgsSet *cpsTcLamMacroArgsSet(LamMacroArgsSet *node, VisitorContext *context);
 static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *context);
 static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *context);
-static LamExpTable *cpsTcLamExpTable(LamExpTable *node, VisitorContext *context);
 static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, VisitorContext *context);
 static LamLam *cpsTcLamLam(LamLam *node, VisitorContext *context);
 static LamVarList *cpsTcLamVarList(LamVarList *node, VisitorContext *context);
@@ -107,24 +108,6 @@ static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, VisitorContext *context)
     return node;
 }
 
-static LamMacroArgsSet *cpsTcLamMacroArgsSet(LamMacroArgsSet *node, VisitorContext *context) {
-    ENTER(cpsTcLamMacroArgsSet);
-    if (node == NULL) {
-        LEAVE(cpsTcLamMacroArgsSet);
-        return NULL;
-    }
-
-    (void)context;  // Hash set has no values to visit
-    // Iterate over keys (uncomment if you need to inspect/log them)
-    // Index i = 0;
-    // HashSymbol *key;
-    // while ((key = iterateLamMacroArgsSet(node, &i)) != NULL) {
-    //     // Inspect/log key here
-    // }
-    LEAVE(cpsTcLamMacroArgsSet);
-    return node;
-}
-
 static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *context) {
     ENTER(cpsTcLamInfoTable);
     if (node == NULL) {
@@ -188,39 +171,6 @@ static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *co
 
     UNPROTECT(save);
     LEAVE(cpsTcLamAliasTable);
-    return node;
-}
-
-static LamExpTable *cpsTcLamExpTable(LamExpTable *node, VisitorContext *context) {
-    ENTER(cpsTcLamExpTable);
-    if (node == NULL) {
-        LEAVE(cpsTcLamExpTable);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamExpTable *result = newLamExpTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct LamExp * value;
-    HashSymbol *key;
-    while ((key = iterateLamExpTable(node, &i, &value)) != NULL) {
-        struct LamExp * new_value = cpsTcLamExp(value, context);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setLamExpTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(cpsTcLamExpTable);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamExpTable);
     return node;
 }
 

@@ -1,0 +1,152 @@
+# CPS Continuation Specifications
+# Generated from analysis of fn/rewrite/cps5.fn
+#
+# Each continuation represents a point where the CPS transform algorithm
+# needs to create a closure to capture the continuation of a computation.
+#
+# Note: Only T_k transformations need continuation scaffolding.
+# T_c transformations pass LamExp* as regular function parameters.
+
+config:
+  name: cps_kont
+  description: "Continuation scaffolding for CPS transform"
+  parserInfo: false
+  includes:
+    - lambda.h
+  limited_includes:
+    - lambda_debug.h
+
+primitives: !include ../src/primitives.yaml
+
+external:
+  LamExp:
+    meta:
+      brief: Lambda expressions
+    data:
+      cname: "struct LamExp *"
+      printFn: printLamExp
+      markFn: markLamExp
+      valued: true
+  LamArgs:
+    meta:
+      brief: List of LamExp
+    data:
+      cname: "struct LamArgs *"
+      printFn: printLamArgs
+      markFn: markLamArgs
+      valued: true
+  LamBindings:
+    meta:
+      brief: List of LamBindings
+    data:
+      cname: "struct LamBindings *"
+      printFn: printLamBindings
+      markFn: markLamBindings
+      valued: true
+  LamCondCases:
+    meta:
+      brief: List of LamCondCases
+    data:
+      cname: "struct LamCondCases *"
+      printFn: printLamCondCases
+      markFn: markLamCondCases
+      valued: true
+  LamMatchList:
+    data:
+      cname: "struct LamMatchList *"
+      printFn: printLamMatchList
+      markFn: markLamMatchList
+      valued: true
+
+continuations:
+  T_k_if:
+    transformer: T_k
+    key: k_if
+    brief: "T_k continuation for if-expression after test is evaluated"
+    context: |
+      fn T_k(e, k) {
+          ...
+          switch (e) {
+              (E.if_expr(exprc, exprt, exprf)) {
+                  let
+                      rv = gensym("$rv");
+                      cont = E.lambda([rv], k(rv));
+                  in 
+                      T_k(exprc, fn(aexp) {
+                          E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
+                      })
+              }
+          }
+      }
+    free_vars:
+      k: CpsKont
+      exprt: LamExp
+      exprf: LamExp
+
+  T_k_apply:
+    transformer: T_k
+    key: k_apply
+    brief: "T_k continuation for function application - inner continuation for arguments"
+    context: |
+      fn T_c(expr, c) {
+          ...
+          switch(expr) {
+              (E.apply(f, es)) {
+                  T_k(f, fn(sf) {
+                      Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                  })
+              }
+          }
+      }
+    free_vars:
+      sf: LamExp
+      c: LamExp
+
+  T_k_cond:
+    transformer: T_k
+    key: k_cond
+    brief: "T_k continuation for cond-expression after test is evaluated"
+    context: |
+      fn T_k(e, k) {
+          ...
+          switch (e) {
+              (E.cond_expr(test, branches)) {
+                  let
+                      rv = gensym("$rv");
+                      cont = E.lambda([rv], k(rv));
+                  in
+                      T_k(test, fn (atest) {
+                          E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                              #(val, T_c(result, cont))
+                          }}, branches))
+                      })
+              }
+          }
+      }
+    free_vars:
+      cont: LamExp
+      branches: LamCondCases
+
+  T_k_cond_from_T_c:
+    transformer: T_k
+    key: k_cond_c
+    brief: "T_k continuation for cond-expression test when called from T_c"
+    context: |
+      fn T_c(expr, c) {
+          ...
+          switch(expr) {
+              (E.cond_expr(test, branches)) {
+                  let
+                      sk = gensym("$k");
+                  in
+                      E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                          E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                              #(val, T_c(result, sk))
+                          }}, branches))
+                      })), [c])
+              }
+          }
+      }
+    free_vars:
+      sk: LamExp
+      branches: LamCondCases

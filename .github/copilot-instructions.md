@@ -147,6 +147,10 @@ The main classes are now in the `generate` package:
 3. Add `meta` documentation (optional but recommended)
 4. Run `make` - regeneration is automatic
 5. Include generated header in C files that use the new types
+6. **For GC-managed types**: If the YAML generates `*_objtypes.h`:
+   - Include the generated `*_objtypes.h` file in `src/memory.h`
+   - Add the `*_OBJTYPES()` macro to the `ObjType` enum at the bottom of `memory.h`
+   - This registers the types with the garbage collector
 
 #### Debugging Generation
 

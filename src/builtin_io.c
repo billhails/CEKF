@@ -28,6 +28,7 @@
 #include "cekfs.h"
 #include "utf8.h"
 #include "symbol.h"
+#include "builtins_helper.h"
 #include "builtin_io.h"
 #include "tc_analyze.h"
 

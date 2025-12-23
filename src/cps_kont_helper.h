@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_functions_h
-#  define cekf_lambda_functions_h
+#ifndef cekf_cps_kont_helper_h
+#  define cekf_cps_kont_helper_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2025  Bill Hails
@@ -18,11 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-struct LamExp;
-struct AnfKontEnv;
-struct CpsKontEnv;
-
-typedef struct LamExp *(*AnfKontProcWrapper)(struct LamExp *, struct AnfKontEnv *);
-typedef struct LamExp *(*CpsKontProcWrapper)(struct LamExp *, struct CpsKontEnv *);
+#include "cps_kont.h"
 
 #endif

@@ -24,6 +24,12 @@ AnfKontProcWrapper:
         printf: "%p"
         valued: true
 
+CpsKontProcWrapper:
+    data:
+        cname: CpsKontProcWrapper
+        printf: "%p"
+        valued: true
+
 HashSymbol:
     data:
         cname: "struct HashSymbol *"

@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include "builtins_impl.h"
+#include "builtins_helper.h"
 #include "arithmetic.h"
 #include "utf8.h"
 #include "unicode.h"

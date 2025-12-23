@@ -90,12 +90,19 @@ EXTRA_TARGETS= \
 	$(GENDIR)/anf_kont_objtypes.h \
 	$(GENDIR)/anf_kont_debug.h \
 	$(GENDIR)/anf_kont_debug.c \
-	$(GENDIR)/anf_kont_impl.inc
+	$(GENDIR)/anf_kont_impl.inc \
+	$(GENDIR)/cps_kont.h \
+	$(GENDIR)/cps_kont.c \
+	$(GENDIR)/cps_kont_objtypes.h \
+	$(GENDIR)/cps_kont_debug.h \
+	$(GENDIR)/cps_kont_debug.c \
+	$(GENDIR)/cps_kont_impl.h \
+	$(GENDIR)/cps_kont_impl.c
 
 MAIN=$(SRCDIR)/main.c
 PREAMBLE=$(GENDIR)/preamble.c
 CFILES=$(filter-out $(MAIN), $(wildcard $(SRCDIR)/*.c))
-EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS) $(GENDIR)/anf_kont.c $(GENDIR)/anf_kont_debug.c
+EXTRA_CFILES=$(EXTRA_C_TARGETS) $(EXTRA_DEBUG_C_TARGETS) $(GENDIR)/anf_kont.c $(GENDIR)/anf_kont_debug.c $(GENDIR)/cps_kont.c $(GENDIR)/cps_kont_debug.c $(GENDIR)/cps_kont_impl.c
 
 TEST_CFILES=$(wildcard $(TSTDIR)/src/*.c)
 
@@ -188,6 +195,28 @@ $(GENDIR)/anf_kont_debug.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/pr
 
 $(GENDIR)/anf_kont_impl.inc: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
 	$(MAKE_AST) $< kont_impl_inc > $@ || (rm -f $@ ; exit 1)
+
+# CPS continuation scaffolding generation (from tools/cps_continuations.yaml)
+$(GENDIR)/cps_kont.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont_objtypes.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont_debug.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont_debug.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont_impl.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< kont_impl_h > $@ || (rm -f $@ ; exit 1)
+
+$(GENDIR)/cps_kont_impl.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
+	$(MAKE_AST) $< kont_impl_c > $@ || (rm -f $@ ; exit 1)
 
 $(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
 	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
