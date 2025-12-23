@@ -8,6 +8,7 @@ config:
   name: anf_kont
   description: "Continuation scaffolding for ANF normalization"
   parserInfo: false
+  currency: LamExp
   includes:
     - lambda.h
   limited_includes:

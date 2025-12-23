@@ -11,6 +11,7 @@ config:
   name: cps_kont
   description: "Continuation scaffolding for CPS transform"
   parserInfo: false
+  currency: LamExp
   includes:
     - lambda.h
   limited_includes:

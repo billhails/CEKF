@@ -125,16 +125,18 @@ class KontinuationGenerator:
     
     def _write_forward_decls(self, output: TextIO, static=False) -> None:
         modifier = "static " if static else ""
+        currency = self._get_currency_type()
         output.write("// Continuation function declarations\n")
         for name, spec in self.continuations.items():
             if spec.get('notimplemented', False):
                 continue
             struct_name = ucFirst(name) + "KontEnv"
-            output.write(f"{modifier}LamExp *{name}Kont(LamExp*, {struct_name}*);\n")
+            output.write(f"{modifier}{currency} *{name}Kont({currency}*, {struct_name}*);\n")
         output.write("\n")
     
     def _write_wrappers(self, output: TextIO, static=False) -> None:
         modifier = "static " if static else ""
+        currency = self._get_currency_type()
         output.write("// Wrapper functions - invoke continuation with result\n\n")
         
         for name, spec in self.continuations.items():
@@ -144,8 +146,8 @@ class KontinuationGenerator:
             
             # Generate wrapper function
             kont_env_union = self._get_kont_env_union_name()
-            output.write(f"{modifier}struct LamExp *{name}Wrapper(")
-            output.write(f"struct LamExp *exp, ")
+            output.write(f"{modifier}struct {currency} *{name}Wrapper(")
+            output.write(f"struct {currency} *exp, ")
             output.write(f"struct {kont_env_union} *env")
             output.write(") {\n")
             output.write(f"    return {name}Kont(exp, get{kont_env_union}_{ucFirst(key)}(env));\n")
@@ -164,6 +166,12 @@ class KontinuationGenerator:
         name = self.config.get('name', 'anf_kont')
         parts = name.split('_')
         return ''.join(ucFirst(part) for part in parts if part != 'kont') + 'KontEnv'
+    
+    def _get_currency_type(self) -> str:
+        """Get the currency type (the type passed through continuations) from config"""
+        if 'currency' not in self.config:
+            raise ValueError("currency type must be specified in config section of continuation YAML")
+        return self.config['currency']
     
     def _getTypeDeclaration(self, typeName, catalog):
         obj = catalog.get(typeName)
@@ -215,13 +223,14 @@ class KontinuationGenerator:
         self._write_forward_decls(output, static=False)
         
         # Wrapper declarations
+        currency = self._get_currency_type()
         kont_env_union = self._get_kont_env_union_name()
         output.write("// Wrapper function declarations\n")
         for cont_name, spec in self.continuations.items():
             if spec.get('notimplemented', False):
                 continue
-            output.write(f"struct LamExp *{cont_name}Wrapper(")
-            output.write(f"struct LamExp *exp, ")
+            output.write(f"struct {currency} *{cont_name}Wrapper(")
+            output.write(f"struct {currency} *exp, ")
             output.write(f"struct {kont_env_union} *env);\n")
         output.write("\n")
         
