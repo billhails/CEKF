@@ -933,20 +933,20 @@ class SimpleArray(Base):
         a = AccessorHelper.accessor(isInline)
         print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
-    def generateVisitorDecl(self, suffix):
+    def generateVisitorDecl(self, target):
         """Generate forward declaration for visitor function"""
         myName = self.getName()
-        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context);\n"
 
-    def generateVisitor(self, catalog, suffix):
+    def generateVisitor(self, catalog, target):
         """Generate array visitor that iterates and rebuilds if elements change"""
         myName = self.getName()
         output = []
         
-        output.append(f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER({suffix}{myName});\n")
+        output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({target}{myName});\n")
         output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE({suffix}{myName});\n")
+        output.append(f"        LEAVE({target}{myName});\n")
         output.append(f"        return NULL;\n")
         output.append(f"    }}\n")
         output.append(f"\n")
@@ -963,7 +963,7 @@ class SimpleArray(Base):
         if not needsVisit:
             # Elements don't need visiting (primitives, enums, etc)
             output.append(f"    (void)context;  // Elements are {self.entries.typeName} (not memory-managed)\n")
-            output.append(f"    LEAVE({suffix}{myName});\n")
+            output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")
         elif self.dimension == 2:
             # 2D array - iterate over width and height
@@ -978,7 +978,7 @@ class SimpleArray(Base):
             output.append(f"    for (Index y = 0; y < node->height; y++) {{\n")
             output.append(f"        for (Index x = 0; x < node->width; x++) {{\n")
             output.append(f"            {entryType} element = get{myName}Index(node, x, y);\n")
-            output.append(f"            {entryType} new_element = {suffix}{self.entries.typeName}(element, context);\n")
+            output.append(f"            {entryType} new_element = {target}{self.entries.typeName}(element, context);\n")
             output.append(f"            PROTECT(new_element);\n")
             output.append(f"            changed = changed || (new_element != element);\n")
             output.append(f"            set{myName}Index(result, x, y, new_element);\n")
@@ -987,12 +987,12 @@ class SimpleArray(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
-            output.append(f"        LEAVE({suffix}{myName});\n")
+            output.append(f"        LEAVE({target}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
-            output.append(f"    LEAVE({suffix}{myName});\n")
+            output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")
         else:
             # 1D array - iterate over size
@@ -1006,7 +1006,7 @@ class SimpleArray(Base):
             output.append(f"    // Iterate over all elements\n")
             output.append(f"    for (Index i = 0; i < node->size; i++) {{\n")
             output.append(f"        {entryType} element = peekn{myName}(node, i);\n")
-            output.append(f"        {entryType} new_element = {suffix}{self.entries.typeName}(element, context);\n")
+            output.append(f"        {entryType} new_element = {target}{self.entries.typeName}(element, context);\n")
             output.append(f"        PROTECT(new_element);\n")
             output.append(f"        changed = changed || (new_element != element);\n")
             output.append(f"        push{myName}(result, new_element);\n")
@@ -1014,12 +1014,12 @@ class SimpleArray(Base):
             output.append(f"\n")
             output.append(f"    if (changed) {{\n")
             output.append(f"        UNPROTECT(save);\n")
-            output.append(f"        LEAVE({suffix}{myName});\n")
+            output.append(f"        LEAVE({target}{myName});\n")
             output.append(f"        return result;\n")
             output.append(f"    }}\n")
             output.append(f"\n")
             output.append(f"    UNPROTECT(save);\n")
-            output.append(f"    LEAVE({suffix}{myName});\n")
+            output.append(f"    LEAVE({target}{myName});\n")
             output.append(f"    return node;\n")
         
         output.append(f"}}\n\n")

@@ -95,17 +95,17 @@ class Catalog:
     def printGetterDeclarations(self):
         self._dispatch('printGetterDeclarations', self)
 
-    def generateVisitor(self, suffix):
+    def generateVisitor(self, target):
         """Generate complete visitor boilerplate"""
         output = []
         
         # Includes
         output.append(f'#include "{self.typeName}.h"\n')
         output.append('#include "memory.h"\n\n')
-        output.append(f'#include "{self.typeName}_{suffix}.h"\n\n')
+        output.append(f'#include "{self.typeName}_{target}.h"\n\n')
         
         # Conditional debugging include
-        debug_macro = f"DEBUG_{self.typeName.upper()}_{suffix.upper()}"
+        debug_macro = f"DEBUG_{self.typeName.upper()}_{target.upper()}"
         output.append(f'#ifdef {debug_macro}\n')
         output.append('#  include "debugging_on.h"\n')
         output.append('#else\n')
@@ -120,7 +120,7 @@ class Catalog:
         # Forward declarations
         output.append("// Forward declarations\n")
         for entity in self.contents.values():
-            decl = entity.generateVisitorDecl(suffix)
+            decl = entity.generateVisitorDecl(target)
             if decl:
                 output.append(decl)
         output.append("\n")
@@ -128,7 +128,7 @@ class Catalog:
         # Implementations
         output.append("// Visitor implementations\n")
         for entity in self.contents.values():
-            impl = entity.generateVisitor(self, suffix)
+            impl = entity.generateVisitor(self, target)
             if impl:
                 output.append(impl)
         

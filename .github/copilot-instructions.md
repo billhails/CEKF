@@ -287,6 +287,23 @@ make indent            # Formats code with GNU indent
 - Makes intent clearer and avoids potential confusion with boolean expressions
 - Example: Write `if (node->next != NULL)` not `if (node->next)`
 
+## Documentation Style
+
+**Avoid hyperbole and excessive emphasis**:
+- Use simple periods instead of exclamation points in technical documentation
+- Avoid phrases like "HUGE WIN", "Amazing", "Incredible" - use "significant", "notable", "substantial"
+- Avoid emphatic modifiers like "Critical", "Key", "Major" in headings - use plain descriptive headings
+- Avoid verdict-style declarations like "Verdict:", "Key insight:", "Key advantage:" - state facts directly
+- Remove emoji decorations from section headings (🎉, 💡, ✅, etc.)
+- Avoid unnecessary all-caps emphasis (IMPORTANT, MUST, NEVER) except in actual code constants or where technically required
+- Minimize bold emphasis on routine statements - reserve for truly important concepts
+- Keep tone professional and measured
+- State facts directly without emphatic language
+- Example: Write "This improves performance." not "This improves performance!"
+- Example: Write "Significant code reduction." not "HUGE code reduction!"
+- Example: Write "## Generated Visitor Pattern" not "## Critical Discovery: Generated Visitor Pattern"
+- Example: Write "Problem/Mitigation" not "Risk/Mitigation" for straightforward issue discussion
+
 ## Debugging
 
 **Conditional compilation flags** (define in source to enable):

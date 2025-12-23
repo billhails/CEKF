@@ -52,13 +52,13 @@ def main():
     parser.add_argument("yaml", help="input yaml file")
     parser.add_argument("type",
                         type=str,
-                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "visitor", "kont_impl_inc"],
+                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "visitor", "kont_impl_inc", "kont_impl_h", "kont_impl_c"],
                         help="the type of output to produce")
-    parser.add_argument("--suffix",
+    parser.add_argument("--target",
                         type=str,
                         default="",
                         required=False,
-                        help="suffix (visitor only)")
+                        help="target (visitor only)")
     args = parser.parse_args()
 
     import yaml
@@ -163,17 +163,27 @@ def generate_output(args, catalog, document, typeName, description, includes, li
     elif args.type == 'md':
         generate_documentation(args, catalog, typeName, description)
     elif args.type == 'visitor':
-        if args.suffix == "":
-            print(f"Error: visitor type requires a suffix argument", file=sys.stderr)
+        if args.target == "":
+            print(f"Error: visitor type requires a target argument", file=sys.stderr)
             sys.exit(1)
         printGpl(args.yaml, document)
         print("")
-        print(catalog.generateVisitor(args.suffix))
+        print(catalog.generateVisitor(args.target))
     elif args.type == 'kont_impl_inc':
         # For continuation scaffolding, generate .inc (catalog already populated)
         from generate.kontinuations import KontinuationGenerator
         generator = KontinuationGenerator(document)
         generator.generate_kont_impl_inc(sys.stdout, catalog, includes)
+    elif args.type == 'kont_impl_h':
+        # Generate public header for continuation scaffolding
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_h(sys.stdout, catalog, includes)
+    elif args.type == 'kont_impl_c':
+        # Generate public API implementation for continuation scaffolding
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_c(sys.stdout, catalog, includes)
 
 
 def generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo):

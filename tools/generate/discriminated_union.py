@@ -113,20 +113,20 @@ class DiscriminatedUnion(SimpleStruct):
         print(f"    }} {c}")
         print(f'    eprintf("\\n"); {c}')
     
-    def generateVisitorDecl(self, suffix):
+    def generateVisitorDecl(self, target):
         """Generate forward declaration for union visitor (dispatcher)"""
         myName = self.getName()
-        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context);\n"
 
-    def generateVisitor(self, catalog, suffix):
+    def generateVisitor(self, catalog, target):
         """Generate union visitor dispatcher that switches on type and calls variant visitors"""
         myName = self.getName()
         output = []
         
-        output.append(f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context) {{\n")
-        output.append(f"    ENTER({suffix}{myName});\n")
+        output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({target}{myName});\n")
         output.append(f"    if (node == NULL) {{\n")
-        output.append(f"        LEAVE({suffix}{myName});\n")
+        output.append(f"        LEAVE({target}{myName});\n")
         output.append(f"        return NULL;\n")
         output.append(f"    }}\n")
         output.append(f"\n")
@@ -159,7 +159,7 @@ class DiscriminatedUnion(SimpleStruct):
                 # Use generated getter for type-safe variant extraction
                 variantNameCap = variantName[0].upper() + variantName[1:] if variantName else variantName
                 output.append(f"            {variantType} *variant = get{myName}_{variantNameCap}(node);\n")
-                output.append(f"            {variantType} *new_variant = {suffix}{variantType}(variant, context);\n")
+                output.append(f"            {variantType} *new_variant = {target}{variantType}(variant, context);\n")
                 output.append(f"            if (new_variant != variant) {{\n")
                 output.append(f"                PROTECT(new_variant);\n")
                 
@@ -179,7 +179,7 @@ class DiscriminatedUnion(SimpleStruct):
         output.append(f"    }}\n")
         output.append(f"\n")
         output.append(f"    UNPROTECT(save);\n")
-        output.append(f"    LEAVE({suffix}{myName});\n")
+        output.append(f"    LEAVE({target}{myName});\n")
         output.append(f"    return result;\n")
         output.append(f"}}\n\n")
         

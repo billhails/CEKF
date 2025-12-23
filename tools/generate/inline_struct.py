@@ -89,10 +89,10 @@ class InlineStruct(SimpleStruct):
         print(f"    return o; {c}")
         print(f"}} {c}\n")
     
-    def generateVisitorDecl(self, suffix):
+    def generateVisitorDecl(self, target):
         """Generate forward declaration for visitor function"""
         myName = self.getName()
-        return f"static {myName} *{suffix}{myName}({myName} *node, VisitorContext *context);\n"
+        return f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context);\n"
     
     def objTypeArray(self):
         # Inline structs don't participate in object type dispatch
