@@ -220,3 +220,61 @@ continuations:
       }
     free_vars:
       c: LamExp
+
+  TkConstruct:
+    transformer: T_k
+    key: k_construct
+    context: |
+      (E.construct(name, tag, args)) {
+          Ts_k(args, fn (sargs) {
+              k(E.construct(name, tag, sargs))
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      tag: int
+      k: CpsKont
+
+  TcConstruct:
+    transformer: T_k
+    key: c_construct
+    context: |
+      (E.construct(name, tag, args)) {
+          Ts_k(args, fn (sargs) {
+              E.apply(c, [E.construct(name, tag, sargs)])
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      tag: int
+      c: LamExp
+
+  TkDeconstruct:
+    transformer: T_k
+    key: k_deconstruct
+    context: |
+      (E.deconstruct(name, nsid, vec, expr)) {
+          T_k(expr, fn (sexpr) {
+              k(E.deconstruct(name, nsid, vec, sexpr))
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      nsid: int
+      vec: int
+      k: CpsKont
+
+  TcDeconstruct:
+    transformer: T_k
+    key: c_deconstruct
+    context: |
+      (E.deconstruct(name, nsid, vec, expr)) {
+          T_k(expr, fn (sexpr) {
+              E.apply(c, [E.deconstruct(name, nsid, vec, sexpr)])
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      nsid: int
+      vec: int
+      c: LamExp
