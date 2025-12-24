@@ -22,10 +22,10 @@
 #include "lambda.h"
 #include "memory.h"
 
-#include "lambda_cpsTc.h"
-#include "lambda_cpsTk.h"
+#include "lambda_cps.h"
 #include "lambda_functions.h"
 #include "cps_kont.h"
+#include "cps_kont_impl.h"
 
 #ifdef DEBUG_LAMBDA_CPSTC
 #  include "debugging_on.h"
@@ -33,71 +33,98 @@
 #  include "debugging_off.h"
 #endif
 
-typedef struct VisitorContext {
-    // Add your context fields here
-} VisitorContext;
-
 // Forward declarations
-static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, VisitorContext *context);
-static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *context);
-static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *context);
-static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, VisitorContext *context);
-static LamLam *cpsTcLamLam(LamLam *node, VisitorContext *context);
-static LamVarList *cpsTcLamVarList(LamVarList *node, VisitorContext *context);
-static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, VisitorContext *context);
-static LamSequence *cpsTcLamSequence(LamSequence *node, VisitorContext *context);
-static LamArgs *cpsTcLamArgs(LamArgs *node, VisitorContext *context);
-static LamApply *cpsTcLamApply(LamApply *node, VisitorContext *context);
-static LamLookup *cpsTcLamLookup(LamLookup *node, VisitorContext *context);
-static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, VisitorContext *context);
-static LamConstant *cpsTcLamConstant(LamConstant *node, VisitorContext *context);
-static LamConstruct *cpsTcLamConstruct(LamConstruct *node, VisitorContext *context);
-static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, VisitorContext *context);
-static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, VisitorContext *context);
-static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, VisitorContext *context);
-static LamIff *cpsTcLamIff(LamIff *node, VisitorContext *context);
-static LamCond *cpsTcLamCond(LamCond *node, VisitorContext *context);
-static LamIntCondCases *cpsTcLamIntCondCases(LamIntCondCases *node, VisitorContext *context);
-static LamCharCondCases *cpsTcLamCharCondCases(LamCharCondCases *node, VisitorContext *context);
-static LamMatch *cpsTcLamMatch(LamMatch *node, VisitorContext *context);
-static LamMatchList *cpsTcLamMatchList(LamMatchList *node, VisitorContext *context);
-static LamIntList *cpsTcLamIntList(LamIntList *node, VisitorContext *context);
-static LamLet *cpsTcLamLet(LamLet *node, VisitorContext *context);
-static LamBindings *cpsTcLamBindings(LamBindings *node, VisitorContext *context);
-static LamLetRec *cpsTcLamLetRec(LamLetRec *node, VisitorContext *context);
-static LamContext *cpsTcLamContext(LamContext *node, VisitorContext *context);
-static LamAmb *cpsTcLamAmb(LamAmb *node, VisitorContext *context);
-static LamPrint *cpsTcLamPrint(LamPrint *node, VisitorContext *context);
-static LamTypeof *cpsTcLamTypeof(LamTypeof *node, VisitorContext *context);
-static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, VisitorContext *context);
-static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, VisitorContext *context);
-static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, VisitorContext *context);
-static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorList *node, VisitorContext *context);
-static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, VisitorContext *context);
-static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, VisitorContext *context);
-static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, VisitorContext *context);
-static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, VisitorContext *context);
-static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, VisitorContext *context);
-static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, VisitorContext *context);
-static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, VisitorContext *context);
-static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, VisitorContext *context);
-static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context);
-static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, VisitorContext *context);
-static LamCondCases *cpsTcLamCondCases(LamCondCases *node, VisitorContext *context);
-static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, VisitorContext *context);
-static LamInfo *cpsTcLamInfo(LamInfo *node, VisitorContext *context);
-static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, VisitorContext *context);
-static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, VisitorContext *context);
+static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, LamExp *c);
+static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, LamExp *c);
+static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, LamExp *c);
+static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, LamExp *c);
+static LamLam *cpsTcLamLam(LamLam *node, LamExp *c);
+static LamVarList *cpsTcLamVarList(LamVarList *node, LamExp *c);
+static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c);
+static LamSequence *cpsTcLamSequence(LamSequence *node, LamExp *c);
+static LamArgs *cpsTcLamArgs(LamArgs *node, LamExp *c);
+static LamExp *cpsTcLamApply(LamApply *node, LamExp *c);
+static LamLookup *cpsTcLamLookup(LamLookup *node, LamExp *c);
+static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, LamExp *c);
+static LamConstant *cpsTcLamConstant(LamConstant *node, LamExp *c);
+static LamConstruct *cpsTcLamConstruct(LamConstruct *node, LamExp *c);
+static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c);
+static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
+static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, LamExp *c);
+static LamIff *cpsTcLamIff(LamIff *node, LamExp *c);
+static LamExp *cpsTcLamCond(LamCond *node, LamExp *c);
+static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c);
+static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c);
+static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c);
+static LamLet *cpsTcLamLet(LamLet *node, LamExp *c);
+static LamBindings *cpsTcLamBindings(LamBindings *node, LamExp *c);
+static LamLetRec *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
+static LamContext *cpsTcLamContext(LamContext *node, LamExp *c);
+static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
+static LamPrint *cpsTcLamPrint(LamPrint *node, LamExp *c);
+static LamTypeof *cpsTcLamTypeof(LamTypeof *node, LamExp *c);
+static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c);
+static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, LamExp *c);
+static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, LamExp *c);
+static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorList *node, LamExp *c);
+static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, LamExp *c);
+static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, LamExp *c);
+static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, LamExp *c);
+static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, LamExp *c);
+static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, LamExp *c);
+static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, LamExp *c);
+static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, LamExp *c);
+static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, LamExp *c);
+static LamExp *cpsTcLamExp(LamExp *node, LamExp *c);
+static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, LamExp *c);
+static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, LamExp *c);
+static LamInfo *cpsTcLamInfo(LamInfo *node, LamExp *c);
+static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, LamExp *c);
+static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, LamExp *c);
 
+/*
+    fn M {
+        (E.lambda(vars, body)) {
+            let c = gensym("$k");
+            in E.lambda(vars @@ [c], T_c(body, c))
+        }
+        (x) { x }
+    }
+*/
+LamExp *cpsM(LamExp *node) {
+    ENTER(cpsM);
+    if (node == NULL) {
+        LEAVE(cpsM);
+        return NULL;
+    }
+
+    switch (node->type) {
+        case LAMEXP_TYPE_LAM: {
+            LamExp *c = makeVar(CPI(node), "k");
+            int save = PROTECT(c);
+            LamVarList *args = appendLamVar(CPI(node), getLamExp_Lam(node)->args, getLamExp_Var(c));
+            PROTECT(args);
+            LamExp *body = cpsTc(getLamExp_Lam(node)->exp, c);
+            PROTECT(body);
+            LamExp *result = makeLamExp_Lam(CPI(node), args, body);
+            UNPROTECT(save);
+            LEAVE(cpsM);
+            return result;
+        }
+        default:
+            LEAVE(cpsM);
+            return node;
+    }
+}
 // Visitor implementations
-static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, VisitorContext *context) {
+static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, LamExp *c) {
     ENTER(cpsTcLamMacroSet);
     if (node == NULL) {
         LEAVE(cpsTcLamMacroSet);
         return NULL;
     }
 
-    (void)context;  // Hash set has no values to visit
+    (void)c;  // Hash set has no values to visit
     // Iterate over keys (uncomment if you need to inspect/log them)
     // Index i = 0;
     // HashSymbol *key;
@@ -108,7 +135,7 @@ static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, VisitorContext *context)
     return node;
 }
 
-static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *context) {
+static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, LamExp *c) {
     ENTER(cpsTcLamInfoTable);
     if (node == NULL) {
         LEAVE(cpsTcLamInfoTable);
@@ -124,7 +151,7 @@ static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *conte
     struct LamInfo * value;
     HashSymbol *key;
     while ((key = iterateLamInfoTable(node, &i, &value)) != NULL) {
-        struct LamInfo * new_value = cpsTcLamInfo(value, context);
+        struct LamInfo * new_value = cpsTcLamInfo(value, c);
         PROTECT(new_value);
         changed = changed || (new_value != value);
         setLamInfoTable(result, key, new_value);
@@ -141,7 +168,7 @@ static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, VisitorContext *conte
     return node;
 }
 
-static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *context) {
+static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, LamExp *c) {
     ENTER(cpsTcLamAliasTable);
     if (node == NULL) {
         LEAVE(cpsTcLamAliasTable);
@@ -157,7 +184,7 @@ static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *co
     struct LamTypeConstructorType * value;
     HashSymbol *key;
     while ((key = iterateLamAliasTable(node, &i, &value)) != NULL) {
-        struct LamTypeConstructorType * new_value = cpsTcLamTypeConstructorType(value, context);
+        struct LamTypeConstructorType * new_value = cpsTcLamTypeConstructorType(value, c);
         PROTECT(new_value);
         changed = changed || (new_value != value);
         setLamAliasTable(result, key, new_value);
@@ -174,14 +201,14 @@ static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, VisitorContext *co
     return node;
 }
 
-static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, VisitorContext *context) {
+static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, LamExp *c) {
     ENTER(cpsTcLamAlphaTable);
     if (node == NULL) {
         LEAVE(cpsTcLamAlphaTable);
         return NULL;
     }
 
-    (void)context;  // Values are HashSymbol (not memory-managed)
+    (void)c;  // Values are HashSymbol (not memory-managed)
 #ifdef NOTDEF
     // Iterate over all entries for inspection/logging
     Index i = 0;
@@ -195,7 +222,7 @@ static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, VisitorContext *co
     return node;
 }
 
-static LamLam *cpsTcLamLam(LamLam *node, VisitorContext *context) {
+static LamLam *cpsTcLamLam(LamLam *node, LamExp *c) {
     ENTER(cpsTcLamLam);
     if (node == NULL) {
         LEAVE(cpsTcLamLam);
@@ -203,10 +230,10 @@ static LamLam *cpsTcLamLam(LamLam *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamVarList *new_args = cpsTcLamVarList(node->args, context);
+    LamVarList *new_args = cpsTcLamVarList(node->args, c);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
     // Pass through isMacro (type: bool, not memory-managed)
@@ -224,7 +251,7 @@ static LamLam *cpsTcLamLam(LamLam *node, VisitorContext *context) {
     return node;
 }
 
-static LamVarList *cpsTcLamVarList(LamVarList *node, VisitorContext *context) {
+static LamVarList *cpsTcLamVarList(LamVarList *node, LamExp *c) {
     ENTER(cpsTcLamVarList);
     if (node == NULL) {
         LEAVE(cpsTcLamVarList);
@@ -233,7 +260,7 @@ static LamVarList *cpsTcLamVarList(LamVarList *node, VisitorContext *context) {
 
     bool changed = false;
     // Pass through var (type: HashSymbol, not memory-managed)
-    LamVarList *new_next = cpsTcLamVarList(node->next, context);
+    LamVarList *new_next = cpsTcLamVarList(node->next, c);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -250,7 +277,7 @@ static LamVarList *cpsTcLamVarList(LamVarList *node, VisitorContext *context) {
     return node;
 }
 
-static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, VisitorContext *context) {
+static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c) {
     ENTER(cpsTcLamPrimApp);
     if (node == NULL) {
         LEAVE(cpsTcLamPrimApp);
@@ -259,10 +286,10 @@ static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, VisitorContext *context) {
 
     bool changed = false;
     // Pass through type (type: LamPrimOp, not memory-managed)
-    LamExp *new_exp1 = cpsTcLamExp(node->exp1, context);
+    LamExp *new_exp1 = cpsTcLamExp(node->exp1, c);
     int save = PROTECT(new_exp1);
     changed = changed || (new_exp1 != node->exp1);
-    LamExp *new_exp2 = cpsTcLamExp(node->exp2, context);
+    LamExp *new_exp2 = cpsTcLamExp(node->exp2, c);
     PROTECT(new_exp2);
     changed = changed || (new_exp2 != node->exp2);
 
@@ -279,7 +306,7 @@ static LamPrimApp *cpsTcLamPrimApp(LamPrimApp *node, VisitorContext *context) {
     return node;
 }
 
-static LamSequence *cpsTcLamSequence(LamSequence *node, VisitorContext *context) {
+static LamSequence *cpsTcLamSequence(LamSequence *node, LamExp *c) {
     ENTER(cpsTcLamSequence);
     if (node == NULL) {
         LEAVE(cpsTcLamSequence);
@@ -287,10 +314,10 @@ static LamSequence *cpsTcLamSequence(LamSequence *node, VisitorContext *context)
     }
 
     bool changed = false;
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamSequence *new_next = cpsTcLamSequence(node->next, context);
+    LamSequence *new_next = cpsTcLamSequence(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -307,7 +334,7 @@ static LamSequence *cpsTcLamSequence(LamSequence *node, VisitorContext *context)
     return node;
 }
 
-static LamArgs *cpsTcLamArgs(LamArgs *node, VisitorContext *context) {
+static LamArgs *cpsTcLamArgs(LamArgs *node, LamExp *c) {
     ENTER(cpsTcLamArgs);
     if (node == NULL) {
         LEAVE(cpsTcLamArgs);
@@ -315,10 +342,10 @@ static LamArgs *cpsTcLamArgs(LamArgs *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamArgs *new_next = cpsTcLamArgs(node->next, context);
+    LamArgs *new_next = cpsTcLamArgs(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -335,35 +362,50 @@ static LamArgs *cpsTcLamArgs(LamArgs *node, VisitorContext *context) {
     return node;
 }
 
-static LamApply *cpsTcLamApply(LamApply *node, VisitorContext *context) {
+/*
+    (E.apply(f, es)) {
+        T_k(f, fn(sf) {
+            Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+        })
+    }
+*/
+static LamExp *cpsTcLamApply(LamApply *node, LamExp *c) {
     ENTER(cpsTcLamApply);
     if (node == NULL) {
         LEAVE(cpsTcLamApply);
         return NULL;
     }
-
-    bool changed = false;
-    LamExp *new_function = cpsTcLamExp(node->function, context);
-    int save = PROTECT(new_function);
-    changed = changed || (new_function != node->function);
-    LamArgs *new_args = cpsTcLamArgs(node->args, context);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamApply *result = newLamApply(CPI(node), new_function, new_args);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamApply);
-        return result;
-    }
-
-    UNPROTECT(save);
+    CpsKont *kont1 = makeKont_TcApply1(node->args, c);
+    PROTECT(kont1);
+    LamExp *result = cpsTk(node->function, kont1);
+    UNPROTECT(1);
     LEAVE(cpsTcLamApply);
-    return node;
+    return result;
 }
 
-static LamLookup *cpsTcLamLookup(LamLookup *node, VisitorContext *context) {
+LamExp *TcApply1Kont(LamExp *sf, TcApply1KontEnv *env) {
+    ENTER(T_c_apply_1Kont);
+    CpsKont *kont2 = makeKont_TcApply2(sf, env->c);
+    int save =PROTECT(kont2);
+    LamExp *args = newLamExp_Args(CPI(env->es), env->es);
+    PROTECT(args);
+    LamExp *result = cpsTk(args, kont2);
+    UNPROTECT(save);
+    LEAVE(T_c_apply_1Kont);
+    return result;
+}
+
+LamExp *TcApply2Kont(LamExp *ses, TcApply2KontEnv *env) {
+    ENTER(TcApply2Kont);
+    LamArgs *args = appendLamArg(getLamExp_Args(ses), env->c);
+    int save = PROTECT(args);
+    LamExp *result = makeLamExp_Apply(CPI(env->sf), env->sf, args);
+    UNPROTECT(save);
+    LEAVE(TcApply2Kont);
+    return result;
+}
+
+static LamLookup *cpsTcLamLookup(LamLookup *node, LamExp *c) {
     ENTER(cpsTcLamLookup);
     if (node == NULL) {
         LEAVE(cpsTcLamLookup);
@@ -373,7 +415,7 @@ static LamLookup *cpsTcLamLookup(LamLookup *node, VisitorContext *context) {
     bool changed = false;
     // Pass through nsid (type: int, not memory-managed)
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
@@ -390,7 +432,7 @@ static LamLookup *cpsTcLamLookup(LamLookup *node, VisitorContext *context) {
     return node;
 }
 
-static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, VisitorContext *context) {
+static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, LamExp *c) {
     ENTER(cpsTcLamLookupSymbol);
     if (node == NULL) {
         LEAVE(cpsTcLamLookupSymbol);
@@ -401,12 +443,12 @@ static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, VisitorConte
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
     // Pass through symbol (type: HashSymbol, not memory-managed)
 
-    (void)context;  // Unused parameter - all fields are pass-through
+    (void)c;  // Unused parameter - all fields are pass-through
     LEAVE(cpsTcLamLookupSymbol);
     return node;
 }
 
-static LamConstant *cpsTcLamConstant(LamConstant *node, VisitorContext *context) {
+static LamConstant *cpsTcLamConstant(LamConstant *node, LamExp *c) {
     ENTER(cpsTcLamConstant);
     if (node == NULL) {
         LEAVE(cpsTcLamConstant);
@@ -416,12 +458,12 @@ static LamConstant *cpsTcLamConstant(LamConstant *node, VisitorContext *context)
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through tag (type: int, not memory-managed)
 
-    (void)context;  // Unused parameter - all fields are pass-through
+    (void)c;  // Unused parameter - all fields are pass-through
     LEAVE(cpsTcLamConstant);
     return node;
 }
 
-static LamConstruct *cpsTcLamConstruct(LamConstruct *node, VisitorContext *context) {
+static LamConstruct *cpsTcLamConstruct(LamConstruct *node, LamExp *c) {
     ENTER(cpsTcLamConstruct);
     if (node == NULL) {
         LEAVE(cpsTcLamConstruct);
@@ -431,7 +473,7 @@ static LamConstruct *cpsTcLamConstruct(LamConstruct *node, VisitorContext *conte
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through tag (type: int, not memory-managed)
-    LamArgs *new_args = cpsTcLamArgs(node->args, context);
+    LamArgs *new_args = cpsTcLamArgs(node->args, c);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -448,7 +490,7 @@ static LamConstruct *cpsTcLamConstruct(LamConstruct *node, VisitorContext *conte
     return node;
 }
 
-static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, VisitorContext *context) {
+static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c) {
     ENTER(cpsTcLamDeconstruct);
     if (node == NULL) {
         LEAVE(cpsTcLamDeconstruct);
@@ -459,7 +501,7 @@ static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, VisitorContext 
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsid (type: int, not memory-managed)
     // Pass through vec (type: int, not memory-managed)
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
@@ -476,7 +518,7 @@ static LamDeconstruct *cpsTcLamDeconstruct(LamDeconstruct *node, VisitorContext 
     return node;
 }
 
-static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, VisitorContext *context) {
+static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c) {
     ENTER(cpsTcLamTupleIndex);
     if (node == NULL) {
         LEAVE(cpsTcLamTupleIndex);
@@ -486,7 +528,7 @@ static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, VisitorContext *co
     bool changed = false;
     // Pass through vec (type: int, not memory-managed)
     // Pass through size (type: int, not memory-managed)
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
@@ -503,7 +545,7 @@ static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, VisitorContext *co
     return node;
 }
 
-static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, VisitorContext *context) {
+static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, LamExp *c) {
     ENTER(cpsTcLamMakeVec);
     if (node == NULL) {
         LEAVE(cpsTcLamMakeVec);
@@ -512,7 +554,7 @@ static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, VisitorContext *context) {
 
     bool changed = false;
     // Pass through nargs (type: int, not memory-managed)
-    LamArgs *new_args = cpsTcLamArgs(node->args, context);
+    LamArgs *new_args = cpsTcLamArgs(node->args, c);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -529,7 +571,7 @@ static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, VisitorContext *context) {
     return node;
 }
 
-static LamIff *cpsTcLamIff(LamIff *node, VisitorContext *context) {
+static LamIff *cpsTcLamIff(LamIff *node, LamExp *c) {
     ENTER(cpsTcLamIff);
     if (node == NULL) {
         LEAVE(cpsTcLamIff);
@@ -537,13 +579,13 @@ static LamIff *cpsTcLamIff(LamIff *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamExp *new_condition = cpsTcLamExp(node->condition, context);
+    LamExp *new_condition = cpsTcLamExp(node->condition, c);
     int save = PROTECT(new_condition);
     changed = changed || (new_condition != node->condition);
-    LamExp *new_consequent = cpsTcLamExp(node->consequent, context);
+    LamExp *new_consequent = cpsTcLamExp(node->consequent, c);
     PROTECT(new_consequent);
     changed = changed || (new_consequent != node->consequent);
-    LamExp *new_alternative = cpsTcLamExp(node->alternative, context);
+    LamExp *new_alternative = cpsTcLamExp(node->alternative, c);
     PROTECT(new_alternative);
     changed = changed || (new_alternative != node->alternative);
 
@@ -560,93 +602,88 @@ static LamIff *cpsTcLamIff(LamIff *node, VisitorContext *context) {
     return node;
 }
 
-static LamCond *cpsTcLamCond(LamCond *node, VisitorContext *context) {
+static LamIntCondCases *mapIntCondCases(LamIntCondCases *cases, LamExp *c) {
+    if (cases == NULL) return NULL;
+    LamIntCondCases *next = mapIntCondCases(cases->next, c);
+    int save = PROTECT(next);
+    LamExp *body = cpsTc(cases->body, c);
+    PROTECT(body);
+    LamIntCondCases *result = newLamIntCondCases(CPI(cases), cases->constant, body, next);
+    UNPROTECT(save);
+    return result;
+}
+
+static LamCharCondCases *mapCharCondCases(LamCharCondCases *cases, LamExp *c) {
+    if (cases == NULL) return NULL;
+    LamCharCondCases *next = mapCharCondCases(cases->next, c);
+    int save = PROTECT(next);
+    LamExp *body = cpsTc(cases->body, c);
+    PROTECT(body);
+    LamCharCondCases *result = newLamCharCondCases(CPI(cases), cases->constant, body, next);
+    UNPROTECT(save);
+    return result;
+}
+
+/*
+    (E.cond_expr(test, branches)) {
+        let
+            sk = gensym("$k");
+        in
+            E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                    #(val, T_c(result, sk))
+                }}, branches))
+            })), [c])
+    }
+*/
+static LamExp *cpsTcLamCond(LamCond *node, LamExp *c) {
     ENTER(cpsTcLamCond);
-    if (node == NULL) {
-        LEAVE(cpsTcLamCond);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamExp *new_value = cpsTcLamExp(node->value, context);
-    int save = PROTECT(new_value);
-    changed = changed || (new_value != node->value);
-    LamCondCases *new_cases = cpsTcLamCondCases(node->cases, context);
-    PROTECT(new_cases);
-    changed = changed || (new_cases != node->cases);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamCond *result = newLamCond(CPI(node), new_value, new_cases);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamCond);
-        return result;
-    }
-
+    LamExp *sk = makeVar(CPI(node), "k");
+    int save = PROTECT(sk);
+    CpsKont *k = makeKont_TcCond(sk, node->cases);
+    PROTECT(k);
+    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    PROTECT(args);
+    LamExp *body = cpsTk(node->value, k);
+    PROTECT(body);
+    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    PROTECT(lambda);
+    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    PROTECT(arglist);
+    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
     LEAVE(cpsTcLamCond);
-    return node;
+    return result;
 }
 
-static LamIntCondCases *cpsTcLamIntCondCases(LamIntCondCases *node, VisitorContext *context) {
-    ENTER(cpsTcLamIntCondCases);
-    if (node == NULL) {
-        LEAVE(cpsTcLamIntCondCases);
-        return NULL;
+LamExp *TcCondKont(LamExp *atest, TcCondKontEnv *env) {
+    ENTER(TcCondKont);
+    LamExp *result = NULL;
+    LamCondCases *cases = NULL;
+    int save = PROTECT(NULL);
+    switch (env->branches->type) {
+        case LAMCONDCASES_TYPE_INTEGERS: {
+            LamIntCondCases *int_cases = mapIntCondCases(getLamCondCases_Integers(env->branches), env->sk);
+            PROTECT(int_cases);
+            cases = newLamCondCases_Integers(CPI(env->branches), int_cases);
+            PROTECT(cases);
+        }
+        break;
+        case LAMCONDCASES_TYPE_CHARACTERS: {
+            LamCharCondCases *char_cases = mapCharCondCases(getLamCondCases_Characters(env->branches), env->sk);
+            PROTECT(char_cases);
+            cases = newLamCondCases_Characters(CPI(env->branches), char_cases);
+            PROTECT(cases);
+        }
+        break;
     }
-
-    bool changed = false;
-    // Pass through constant (type: MaybeBigInt, not memory-managed)
-    LamExp *new_body = cpsTcLamExp(node->body, context);
-    int save = PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-    LamIntCondCases *new_next = cpsTcLamIntCondCases(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamIntCondCases *result = newLamIntCondCases(CPI(node), node->constant, new_body, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamIntCondCases);
-        return result;
-    }
-
+    result = makeLamExp_Cond(CPI(env->branches), atest, cases);
     UNPROTECT(save);
-    LEAVE(cpsTcLamIntCondCases);
-    return node;
+    LEAVE(TcCondKont);
+    return result;
 }
 
-static LamCharCondCases *cpsTcLamCharCondCases(LamCharCondCases *node, VisitorContext *context) {
-    ENTER(cpsTcLamCharCondCases);
-    if (node == NULL) {
-        LEAVE(cpsTcLamCharCondCases);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through constant (type: character, not memory-managed)
-    LamExp *new_body = cpsTcLamExp(node->body, context);
-    int save = PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-    LamCharCondCases *new_next = cpsTcLamCharCondCases(node->next, context);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamCharCondCases *result = newLamCharCondCases(CPI(node), node->constant, new_body, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamCharCondCases);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamCharCondCases);
-    return node;
-}
-
-static LamMatch *cpsTcLamMatch(LamMatch *node, VisitorContext *context) {
+static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c) {
     ENTER(cpsTcLamMatch);
     if (node == NULL) {
         LEAVE(cpsTcLamMatch);
@@ -654,10 +691,10 @@ static LamMatch *cpsTcLamMatch(LamMatch *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamExp *new_index = cpsTcLamExp(node->index, context);
+    LamExp *new_index = cpsTcLamExp(node->index, c);
     int save = PROTECT(new_index);
     changed = changed || (new_index != node->index);
-    LamMatchList *new_cases = cpsTcLamMatchList(node->cases, context);
+    LamMatchList *new_cases = cpsTcLamMatchList(node->cases, c);
     PROTECT(new_cases);
     changed = changed || (new_cases != node->cases);
 
@@ -674,7 +711,7 @@ static LamMatch *cpsTcLamMatch(LamMatch *node, VisitorContext *context) {
     return node;
 }
 
-static LamMatchList *cpsTcLamMatchList(LamMatchList *node, VisitorContext *context) {
+static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c) {
     ENTER(cpsTcLamMatchList);
     if (node == NULL) {
         LEAVE(cpsTcLamMatchList);
@@ -682,13 +719,13 @@ static LamMatchList *cpsTcLamMatchList(LamMatchList *node, VisitorContext *conte
     }
 
     bool changed = false;
-    LamIntList *new_matches = cpsTcLamIntList(node->matches, context);
+    LamIntList *new_matches = cpsTcLamIntList(node->matches, c);
     int save = PROTECT(new_matches);
     changed = changed || (new_matches != node->matches);
-    LamExp *new_body = cpsTcLamExp(node->body, context);
+    LamExp *new_body = cpsTcLamExp(node->body, c);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
-    LamMatchList *new_next = cpsTcLamMatchList(node->next, context);
+    LamMatchList *new_next = cpsTcLamMatchList(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -705,7 +742,7 @@ static LamMatchList *cpsTcLamMatchList(LamMatchList *node, VisitorContext *conte
     return node;
 }
 
-static LamIntList *cpsTcLamIntList(LamIntList *node, VisitorContext *context) {
+static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c) {
     ENTER(cpsTcLamIntList);
     if (node == NULL) {
         LEAVE(cpsTcLamIntList);
@@ -716,7 +753,7 @@ static LamIntList *cpsTcLamIntList(LamIntList *node, VisitorContext *context) {
     // Pass through item (type: int, not memory-managed)
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsid (type: int, not memory-managed)
-    LamIntList *new_next = cpsTcLamIntList(node->next, context);
+    LamIntList *new_next = cpsTcLamIntList(node->next, c);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -733,7 +770,7 @@ static LamIntList *cpsTcLamIntList(LamIntList *node, VisitorContext *context) {
     return node;
 }
 
-static LamLet *cpsTcLamLet(LamLet *node, VisitorContext *context) {
+static LamLet *cpsTcLamLet(LamLet *node, LamExp *c) {
     ENTER(cpsTcLamLet);
     if (node == NULL) {
         LEAVE(cpsTcLamLet);
@@ -741,10 +778,10 @@ static LamLet *cpsTcLamLet(LamLet *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamBindings *new_bindings = cpsTcLamBindings(node->bindings, context);
+    LamBindings *new_bindings = cpsTcLamBindings(node->bindings, c);
     int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    LamExp *new_body = cpsTcLamExp(node->body, context);
+    LamExp *new_body = cpsTcLamExp(node->body, c);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
 
@@ -761,7 +798,7 @@ static LamLet *cpsTcLamLet(LamLet *node, VisitorContext *context) {
     return node;
 }
 
-static LamBindings *cpsTcLamBindings(LamBindings *node, VisitorContext *context) {
+static LamBindings *cpsTcLamBindings(LamBindings *node, LamExp *c) {
     ENTER(cpsTcLamBindings);
     if (node == NULL) {
         LEAVE(cpsTcLamBindings);
@@ -770,10 +807,10 @@ static LamBindings *cpsTcLamBindings(LamBindings *node, VisitorContext *context)
 
     bool changed = false;
     // Pass through var (type: HashSymbol, not memory-managed)
-    LamExp *new_val = cpsTcLamExp(node->val, context);
+    LamExp *new_val = cpsTcLamExp(node->val, c);
     int save = PROTECT(new_val);
     changed = changed || (new_val != node->val);
-    LamBindings *new_next = cpsTcLamBindings(node->next, context);
+    LamBindings *new_next = cpsTcLamBindings(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -790,7 +827,7 @@ static LamBindings *cpsTcLamBindings(LamBindings *node, VisitorContext *context)
     return node;
 }
 
-static LamLetRec *cpsTcLamLetRec(LamLetRec *node, VisitorContext *context) {
+static LamLetRec *cpsTcLamLetRec(LamLetRec *node, LamExp *c) {
     ENTER(cpsTcLamLetRec);
     if (node == NULL) {
         LEAVE(cpsTcLamLetRec);
@@ -798,10 +835,10 @@ static LamLetRec *cpsTcLamLetRec(LamLetRec *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamBindings *new_bindings = cpsTcLamBindings(node->bindings, context);
+    LamBindings *new_bindings = cpsTcLamBindings(node->bindings, c);
     int save = PROTECT(new_bindings);
     changed = changed || (new_bindings != node->bindings);
-    LamExp *new_body = cpsTcLamExp(node->body, context);
+    LamExp *new_body = cpsTcLamExp(node->body, c);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
 
@@ -818,7 +855,7 @@ static LamLetRec *cpsTcLamLetRec(LamLetRec *node, VisitorContext *context) {
     return node;
 }
 
-static LamContext *cpsTcLamContext(LamContext *node, VisitorContext *context) {
+static LamContext *cpsTcLamContext(LamContext *node, LamExp *c) {
     ENTER(cpsTcLamContext);
     if (node == NULL) {
         LEAVE(cpsTcLamContext);
@@ -826,16 +863,16 @@ static LamContext *cpsTcLamContext(LamContext *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamInfoTable *new_frame = cpsTcLamInfoTable(node->frame, context);
+    LamInfoTable *new_frame = cpsTcLamInfoTable(node->frame, c);
     int save = PROTECT(new_frame);
     changed = changed || (new_frame != node->frame);
-    LamAliasTable *new_aliases = cpsTcLamAliasTable(node->aliases, context);
+    LamAliasTable *new_aliases = cpsTcLamAliasTable(node->aliases, c);
     PROTECT(new_aliases);
     changed = changed || (new_aliases != node->aliases);
-    LamMacroSet *new_macros = cpsTcLamMacroSet(node->macros, context);
+    LamMacroSet *new_macros = cpsTcLamMacroSet(node->macros, c);
     PROTECT(new_macros);
     changed = changed || (new_macros != node->macros);
-    LamContext *new_parent = cpsTcLamContext(node->parent, context);
+    LamContext *new_parent = cpsTcLamContext(node->parent, c);
     PROTECT(new_parent);
     changed = changed || (new_parent != node->parent);
 
@@ -855,35 +892,42 @@ static LamContext *cpsTcLamContext(LamContext *node, VisitorContext *context) {
     return node;
 }
 
-static LamAmb *cpsTcLamAmb(LamAmb *node, VisitorContext *context) {
+/*
+    (E.amb_expr(expr1, expr2)) {
+        let
+            k = gensym("$k");
+        in 
+            E.apply(E.lambda([k], E.amb_expr(T_c(expr1, k), T_c(expr2, k))), [c])
+    }
+*/
+static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c) {
     ENTER(cpsTcLamAmb);
     if (node == NULL) {
         LEAVE(cpsTcLamAmb);
         return NULL;
     }
 
-    bool changed = false;
-    LamExp *new_left = cpsTcLamExp(node->left, context);
-    int save = PROTECT(new_left);
-    changed = changed || (new_left != node->left);
-    LamExp *new_right = cpsTcLamExp(node->right, context);
-    PROTECT(new_right);
-    changed = changed || (new_right != node->right);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamAmb *result = newLamAmb(CPI(node), new_left, new_right);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamAmb);
-        return result;
-    }
-
-    UNPROTECT(save);
+    LamExp *k = makeVar(CPI(node), "k");
+    int save = PROTECT(k);
+    LamExp *e1 = cpsTc(node->left, k);
+    PROTECT(e1);
+    LamExp *e2 = cpsTc(node->right, k);
+    PROTECT(e2);
+    LamExp *lamAmb = makeLamExp_Amb(CPI(node), e1, e2);
+    PROTECT(lamAmb);
+    LamVarList *fargs = newLamVarList(CPI(node), getLamExp_Var(k), NULL);
+    PROTECT(fargs);
+    LamExp *lambda = makeLamExp_Lam(CPI(node), fargs, lamAmb);
+    PROTECT(lambda);
+    LamArgs *aargs = newLamArgs(CPI(node), c, NULL);
+    PROTECT(aargs);
+    LamExp *result = makeLamExp_Apply(CPI(node), lambda, aargs);
     LEAVE(cpsTcLamAmb);
-    return node;
+    UNPROTECT(save);
+    return result;  
 }
 
-static LamPrint *cpsTcLamPrint(LamPrint *node, VisitorContext *context) {
+static LamPrint *cpsTcLamPrint(LamPrint *node, LamExp *c) {
     ENTER(cpsTcLamPrint);
     if (node == NULL) {
         LEAVE(cpsTcLamPrint);
@@ -891,10 +935,10 @@ static LamPrint *cpsTcLamPrint(LamPrint *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamExp *new_printer = cpsTcLamExp(node->printer, context);
+    LamExp *new_printer = cpsTcLamExp(node->printer, c);
     PROTECT(new_printer);
     changed = changed || (new_printer != node->printer);
 
@@ -912,7 +956,7 @@ static LamPrint *cpsTcLamPrint(LamPrint *node, VisitorContext *context) {
     return node;
 }
 
-static LamTypeof *cpsTcLamTypeof(LamTypeof *node, VisitorContext *context) {
+static LamTypeof *cpsTcLamTypeof(LamTypeof *node, LamExp *c) {
     ENTER(cpsTcLamTypeof);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeof);
@@ -920,10 +964,10 @@ static LamTypeof *cpsTcLamTypeof(LamTypeof *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamExp *new_exp = cpsTcLamExp(node->exp, context);
+    LamExp *new_exp = cpsTcLamExp(node->exp, c);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamExp *new_typestring = cpsTcLamExp(node->typestring, context);
+    LamExp *new_typestring = cpsTcLamExp(node->typestring, c);
     PROTECT(new_typestring);
     changed = changed || (new_typestring != node->typestring);
 
@@ -941,7 +985,7 @@ static LamTypeof *cpsTcLamTypeof(LamTypeof *node, VisitorContext *context) {
     return node;
 }
 
-static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, VisitorContext *context) {
+static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c) {
     ENTER(cpsTcLamTypeDefs);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeDefs);
@@ -949,10 +993,10 @@ static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, VisitorContext *context)
     }
 
     bool changed = false;
-    LamTypeDefList *new_typeDefs = cpsTcLamTypeDefList(node->typeDefs, context);
+    LamTypeDefList *new_typeDefs = cpsTcLamTypeDefList(node->typeDefs, c);
     int save = PROTECT(new_typeDefs);
     changed = changed || (new_typeDefs != node->typeDefs);
-    LamExp *new_body = cpsTcLamExp(node->body, context);
+    LamExp *new_body = cpsTcLamExp(node->body, c);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
 
@@ -969,7 +1013,7 @@ static LamTypeDefs *cpsTcLamTypeDefs(LamTypeDefs *node, VisitorContext *context)
     return node;
 }
 
-static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, VisitorContext *context) {
+static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, LamExp *c) {
     ENTER(cpsTcLamTypeDefList);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeDefList);
@@ -977,10 +1021,10 @@ static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, VisitorContext 
     }
 
     bool changed = false;
-    LamTypeDef *new_typeDef = cpsTcLamTypeDef(node->typeDef, context);
+    LamTypeDef *new_typeDef = cpsTcLamTypeDef(node->typeDef, c);
     int save = PROTECT(new_typeDef);
     changed = changed || (new_typeDef != node->typeDef);
-    LamTypeDefList *new_next = cpsTcLamTypeDefList(node->next, context);
+    LamTypeDefList *new_next = cpsTcLamTypeDefList(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -997,7 +1041,7 @@ static LamTypeDefList *cpsTcLamTypeDefList(LamTypeDefList *node, VisitorContext 
     return node;
 }
 
-static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, VisitorContext *context) {
+static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, LamExp *c) {
     ENTER(cpsTcLamTypeDef);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeDef);
@@ -1005,10 +1049,10 @@ static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, VisitorContext *context) {
     }
 
     bool changed = false;
-    LamTypeSig *new_type = cpsTcLamTypeSig(node->type, context);
+    LamTypeSig *new_type = cpsTcLamTypeSig(node->type, c);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeConstructorList *new_constructors = cpsTcLamTypeConstructorList(node->constructors, context);
+    LamTypeConstructorList *new_constructors = cpsTcLamTypeConstructorList(node->constructors, c);
     PROTECT(new_constructors);
     changed = changed || (new_constructors != node->constructors);
 
@@ -1025,7 +1069,7 @@ static LamTypeDef *cpsTcLamTypeDef(LamTypeDef *node, VisitorContext *context) {
     return node;
 }
 
-static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorList *node, VisitorContext *context) {
+static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorList *node, LamExp *c) {
     ENTER(cpsTcLamTypeConstructorList);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeConstructorList);
@@ -1033,10 +1077,10 @@ static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorLis
     }
 
     bool changed = false;
-    LamTypeConstructor *new_constructor = cpsTcLamTypeConstructor(node->constructor, context);
+    LamTypeConstructor *new_constructor = cpsTcLamTypeConstructor(node->constructor, c);
     int save = PROTECT(new_constructor);
     changed = changed || (new_constructor != node->constructor);
-    LamTypeConstructorList *new_next = cpsTcLamTypeConstructorList(node->next, context);
+    LamTypeConstructorList *new_next = cpsTcLamTypeConstructorList(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -1053,7 +1097,7 @@ static LamTypeConstructorList *cpsTcLamTypeConstructorList(LamTypeConstructorLis
     return node;
 }
 
-static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, VisitorContext *context) {
+static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, LamExp *c) {
     ENTER(cpsTcLamTypeSig);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeSig);
@@ -1062,7 +1106,7 @@ static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, VisitorContext *context) {
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_args = cpsTcLamTypeSigArgs(node->args, context);
+    LamTypeSigArgs *new_args = cpsTcLamTypeSigArgs(node->args, c);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -1079,7 +1123,7 @@ static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, VisitorContext *context) {
     return node;
 }
 
-static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, VisitorContext *context) {
+static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, LamExp *c) {
     ENTER(cpsTcLamTypeTags);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeTags);
@@ -1088,7 +1132,7 @@ static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, VisitorContext *context)
 
     bool changed = false;
     // Pass through tag (type: HashSymbol, not memory-managed)
-    LamTypeTags *new_next = cpsTcLamTypeTags(node->next, context);
+    LamTypeTags *new_next = cpsTcLamTypeTags(node->next, c);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -1105,7 +1149,7 @@ static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, VisitorContext *context)
     return node;
 }
 
-static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, VisitorContext *context) {
+static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, LamExp *c) {
     ENTER(cpsTcLamTypeSigArgs);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeSigArgs);
@@ -1114,7 +1158,7 @@ static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, VisitorContext 
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_next = cpsTcLamTypeSigArgs(node->next, context);
+    LamTypeSigArgs *new_next = cpsTcLamTypeSigArgs(node->next, c);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -1131,7 +1175,7 @@ static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, VisitorContext 
     return node;
 }
 
-static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, VisitorContext *context) {
+static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, LamExp *c) {
     ENTER(cpsTcLamTypeConstructor);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeConstructor);
@@ -1140,10 +1184,10 @@ static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, Vis
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSig *new_type = cpsTcLamTypeSig(node->type, context);
+    LamTypeSig *new_type = cpsTcLamTypeSig(node->type, c);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, context);
+    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, c);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -1160,7 +1204,7 @@ static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, Vis
     return node;
 }
 
-static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, VisitorContext *context) {
+static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, LamExp *c) {
     ENTER(cpsTcLamTypeConstructorArgs);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeConstructorArgs);
@@ -1168,10 +1212,10 @@ static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArg
     }
 
     bool changed = false;
-    LamTypeConstructorType *new_arg = cpsTcLamTypeConstructorType(node->arg, context);
+    LamTypeConstructorType *new_arg = cpsTcLamTypeConstructorType(node->arg, c);
     int save = PROTECT(new_arg);
     changed = changed || (new_arg != node->arg);
-    LamTypeConstructorArgs *new_next = cpsTcLamTypeConstructorArgs(node->next, context);
+    LamTypeConstructorArgs *new_next = cpsTcLamTypeConstructorArgs(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
@@ -1188,7 +1232,7 @@ static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArg
     return node;
 }
 
-static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, VisitorContext *context) {
+static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, LamExp *c) {
     ENTER(cpsTcLamTypeFunction);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeFunction);
@@ -1196,10 +1240,10 @@ static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, VisitorConte
     }
 
     bool changed = false;
-    LamLookupOrSymbol *new_name = cpsTcLamLookupOrSymbol(node->name, context);
+    LamLookupOrSymbol *new_name = cpsTcLamLookupOrSymbol(node->name, c);
     int save = PROTECT(new_name);
     changed = changed || (new_name != node->name);
-    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, context);
+    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, c);
     PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
@@ -1216,7 +1260,7 @@ static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, VisitorConte
     return node;
 }
 
-static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, VisitorContext *context) {
+static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, LamExp *c) {
     ENTER(cpsTcLamTypeConstructorInfo);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeConstructorInfo);
@@ -1226,10 +1270,10 @@ static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInf
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
     // Pass through nsid (type: int, not memory-managed)
-    LamTypeConstructor *new_type = cpsTcLamTypeConstructor(node->type, context);
+    LamTypeConstructor *new_type = cpsTcLamTypeConstructor(node->type, c);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
-    LamTypeTags *new_tags = cpsTcLamTypeTags(node->tags, context);
+    LamTypeTags *new_tags = cpsTcLamTypeTags(node->tags, c);
     PROTECT(new_tags);
     changed = changed || (new_tags != node->tags);
     // Pass through needsVec (type: bool, not memory-managed)
@@ -1250,7 +1294,7 @@ static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInf
     return node;
 }
 
-static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, VisitorContext *context) {
+static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, LamExp *c) {
     ENTER(cpsTcLamAlphaEnv);
     if (node == NULL) {
         LEAVE(cpsTcLamAlphaEnv);
@@ -1258,13 +1302,13 @@ static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, VisitorContext *context)
     }
 
     bool changed = false;
-    LamAlphaTable *new_alphaTable = cpsTcLamAlphaTable(node->alphaTable, context);
+    LamAlphaTable *new_alphaTable = cpsTcLamAlphaTable(node->alphaTable, c);
     int save = PROTECT(new_alphaTable);
     changed = changed || (new_alphaTable != node->alphaTable);
-    LamAlphaEnv *new_next = cpsTcLamAlphaEnv(node->next, context);
+    LamAlphaEnv *new_next = cpsTcLamAlphaEnv(node->next, c);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-    LamAlphaEnvArray *new_namespaces = cpsTcLamAlphaEnvArray(node->namespaces, context);
+    LamAlphaEnvArray *new_namespaces = cpsTcLamAlphaEnvArray(node->namespaces, c);
     PROTECT(new_namespaces);
     changed = changed || (new_namespaces != node->namespaces);
 
@@ -1283,11 +1327,22 @@ static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, VisitorContext *context)
     return node;
 }
 
-static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
+static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
     ENTER(cpsTcLamExp);
     if (node == NULL) {
         LEAVE(cpsTcLamExp);
         return NULL;
+    }
+
+    if (isAexpr(node)) {
+        LamExp *exp = cpsM(node);
+        int save = PROTECT(exp);
+        LamArgs *arglist = newLamArgs(CPI(node), exp, NULL);
+        PROTECT(arglist);
+        LamExp *result = makeLamExp_Apply(CPI(node), c, arglist);
+        LEAVE(cpsTcLamExp);
+        UNPROTECT(save);
+        return result;
     }
 
     int save = PROTECT(NULL);
@@ -1296,28 +1351,18 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
     switch (node->type) {
         case LAMEXP_TYPE_AMB: {
             // LamAmb
-            LamAmb *variant = getLamExp_Amb(node);
-            LamAmb *new_variant = cpsTcLamAmb(variant, context);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Amb(CPI(node), new_variant);
-            }
+            result = cpsTcLamAmb(getLamExp_Amb(node), c);
             break;
         }
         case LAMEXP_TYPE_APPLY: {
             // LamApply
-            LamApply *variant = getLamExp_Apply(node);
-            LamApply *new_variant = cpsTcLamApply(variant, context);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Apply(CPI(node), new_variant);
-            }
+            result = cpsTcLamApply(getLamExp_Apply(node), c);
             break;
         }
         case LAMEXP_TYPE_ARGS: {
             // LamArgs
             LamArgs *variant = getLamExp_Args(node);
-            LamArgs *new_variant = cpsTcLamArgs(variant, context);
+            LamArgs *new_variant = cpsTcLamArgs(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Args(CPI(node), new_variant);
@@ -1335,7 +1380,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_BINDINGS: {
             // LamBindings
             LamBindings *variant = getLamExp_Bindings(node);
-            LamBindings *new_variant = cpsTcLamBindings(variant, context);
+            LamBindings *new_variant = cpsTcLamBindings(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Bindings(CPI(node), new_variant);
@@ -1345,7 +1390,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_CALLCC: {
             // LamExp
             LamExp *variant = getLamExp_Callcc(node);
-            LamExp *new_variant = cpsTcLamExp(variant, context);
+            LamExp *new_variant = cpsTcLamExp(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Callcc(CPI(node), new_variant);
@@ -1358,18 +1403,13 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         }
         case LAMEXP_TYPE_COND: {
             // LamCond
-            LamCond *variant = getLamExp_Cond(node);
-            LamCond *new_variant = cpsTcLamCond(variant, context);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Cond(CPI(node), new_variant);
-            }
+            result = cpsTcLamCond(getLamExp_Cond(node), c);
             break;
         }
         case LAMEXP_TYPE_CONSTANT: {
             // LamConstant
             LamConstant *variant = getLamExp_Constant(node);
-            LamConstant *new_variant = cpsTcLamConstant(variant, context);
+            LamConstant *new_variant = cpsTcLamConstant(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Constant(CPI(node), new_variant);
@@ -1379,7 +1419,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_CONSTRUCT: {
             // LamConstruct
             LamConstruct *variant = getLamExp_Construct(node);
-            LamConstruct *new_variant = cpsTcLamConstruct(variant, context);
+            LamConstruct *new_variant = cpsTcLamConstruct(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Construct(CPI(node), new_variant);
@@ -1389,7 +1429,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_CONSTRUCTOR: {
             // LamTypeConstructorInfo
             LamTypeConstructorInfo *variant = getLamExp_Constructor(node);
-            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, context);
+            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Constructor(CPI(node), new_variant);
@@ -1399,7 +1439,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_DECONSTRUCT: {
             // LamDeconstruct
             LamDeconstruct *variant = getLamExp_Deconstruct(node);
-            LamDeconstruct *new_variant = cpsTcLamDeconstruct(variant, context);
+            LamDeconstruct *new_variant = cpsTcLamDeconstruct(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Deconstruct(CPI(node), new_variant);
@@ -1417,7 +1457,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_IFF: {
             // LamIff
             LamIff *variant = getLamExp_Iff(node);
-            LamIff *new_variant = cpsTcLamIff(variant, context);
+            LamIff *new_variant = cpsTcLamIff(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Iff(CPI(node), new_variant);
@@ -1427,7 +1467,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_LAM: {
             // LamLam
             LamLam *variant = getLamExp_Lam(node);
-            LamLam *new_variant = cpsTcLamLam(variant, context);
+            LamLam *new_variant = cpsTcLamLam(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Lam(CPI(node), new_variant);
@@ -1437,7 +1477,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_LET: {
             // LamLet
             LamLet *variant = getLamExp_Let(node);
-            LamLet *new_variant = cpsTcLamLet(variant, context);
+            LamLet *new_variant = cpsTcLamLet(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Let(CPI(node), new_variant);
@@ -1447,7 +1487,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_LETREC: {
             // LamLetRec
             LamLetRec *variant = getLamExp_Letrec(node);
-            LamLetRec *new_variant = cpsTcLamLetRec(variant, context);
+            LamLetRec *new_variant = cpsTcLamLetRec(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Letrec(CPI(node), new_variant);
@@ -1457,7 +1497,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_LOOKUP: {
             // LamLookup
             LamLookup *variant = getLamExp_Lookup(node);
-            LamLookup *new_variant = cpsTcLamLookup(variant, context);
+            LamLookup *new_variant = cpsTcLamLookup(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Lookup(CPI(node), new_variant);
@@ -1467,7 +1507,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_MAKETUPLE: {
             // LamArgs
             LamArgs *variant = getLamExp_MakeTuple(node);
-            LamArgs *new_variant = cpsTcLamArgs(variant, context);
+            LamArgs *new_variant = cpsTcLamArgs(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_MakeTuple(CPI(node), new_variant);
@@ -1477,7 +1517,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_MAKEVEC: {
             // LamMakeVec
             LamMakeVec *variant = getLamExp_MakeVec(node);
-            LamMakeVec *new_variant = cpsTcLamMakeVec(variant, context);
+            LamMakeVec *new_variant = cpsTcLamMakeVec(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_MakeVec(CPI(node), new_variant);
@@ -1487,7 +1527,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_MATCH: {
             // LamMatch
             LamMatch *variant = getLamExp_Match(node);
-            LamMatch *new_variant = cpsTcLamMatch(variant, context);
+            LamMatch *new_variant = cpsTcLamMatch(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Match(CPI(node), new_variant);
@@ -1497,7 +1537,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_NAMESPACES: {
             // LamNamespaceArray
             LamNamespaceArray *variant = getLamExp_Namespaces(node);
-            LamNamespaceArray *new_variant = cpsTcLamNamespaceArray(variant, context);
+            LamNamespaceArray *new_variant = cpsTcLamNamespaceArray(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Namespaces(CPI(node), new_variant);
@@ -1507,7 +1547,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_PRIM: {
             // LamPrimApp
             LamPrimApp *variant = getLamExp_Prim(node);
-            LamPrimApp *new_variant = cpsTcLamPrimApp(variant, context);
+            LamPrimApp *new_variant = cpsTcLamPrimApp(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Prim(CPI(node), new_variant);
@@ -1517,7 +1557,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_PRINT: {
             // LamPrint
             LamPrint *variant = getLamExp_Print(node);
-            LamPrint *new_variant = cpsTcLamPrint(variant, context);
+            LamPrint *new_variant = cpsTcLamPrint(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Print(CPI(node), new_variant);
@@ -1527,7 +1567,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_SEQUENCE: {
             // LamSequence
             LamSequence *variant = getLamExp_Sequence(node);
-            LamSequence *new_variant = cpsTcLamSequence(variant, context);
+            LamSequence *new_variant = cpsTcLamSequence(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Sequence(CPI(node), new_variant);
@@ -1541,7 +1581,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_TAG: {
             // LamExp
             LamExp *variant = getLamExp_Tag(node);
-            LamExp *new_variant = cpsTcLamExp(variant, context);
+            LamExp *new_variant = cpsTcLamExp(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Tag(CPI(node), new_variant);
@@ -1551,7 +1591,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_TUPLEINDEX: {
             // LamTupleIndex
             LamTupleIndex *variant = getLamExp_TupleIndex(node);
-            LamTupleIndex *new_variant = cpsTcLamTupleIndex(variant, context);
+            LamTupleIndex *new_variant = cpsTcLamTupleIndex(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_TupleIndex(CPI(node), new_variant);
@@ -1561,7 +1601,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_TYPEDEFS: {
             // LamTypeDefs
             LamTypeDefs *variant = getLamExp_Typedefs(node);
-            LamTypeDefs *new_variant = cpsTcLamTypeDefs(variant, context);
+            LamTypeDefs *new_variant = cpsTcLamTypeDefs(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_Typedefs(CPI(node), new_variant);
@@ -1571,7 +1611,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
         case LAMEXP_TYPE_TYPEOF: {
             // LamTypeof
             LamTypeof *variant = getLamExp_TypeOf(node);
-            LamTypeof *new_variant = cpsTcLamTypeof(variant, context);
+            LamTypeof *new_variant = cpsTcLamTypeof(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_TypeOf(CPI(node), new_variant);
@@ -1591,7 +1631,7 @@ static LamExp *cpsTcLamExp(LamExp *node, VisitorContext *context) {
     return result;
 }
 
-static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, VisitorContext *context) {
+static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, LamExp *c) {
     ENTER(cpsTcLamLookupOrSymbol);
     if (node == NULL) {
         LEAVE(cpsTcLamLookupOrSymbol);
@@ -1609,7 +1649,7 @@ static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, Visito
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP: {
             // LamLookupSymbol
             LamLookupSymbol *variant = getLamLookupOrSymbol_Lookup(node);
-            LamLookupSymbol *new_variant = cpsTcLamLookupSymbol(variant, context);
+            LamLookupSymbol *new_variant = cpsTcLamLookupSymbol(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamLookupOrSymbol_Lookup(CPI(node), new_variant);
@@ -1625,47 +1665,7 @@ static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, Visito
     return result;
 }
 
-static LamCondCases *cpsTcLamCondCases(LamCondCases *node, VisitorContext *context) {
-    ENTER(cpsTcLamCondCases);
-    if (node == NULL) {
-        LEAVE(cpsTcLamCondCases);
-        return NULL;
-    }
-
-    int save = PROTECT(NULL);
-    LamCondCases *result = node;
-
-    switch (node->type) {
-        case LAMCONDCASES_TYPE_INTEGERS: {
-            // LamIntCondCases
-            LamIntCondCases *variant = getLamCondCases_Integers(node);
-            LamIntCondCases *new_variant = cpsTcLamIntCondCases(variant, context);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamCondCases_Integers(CPI(node), new_variant);
-            }
-            break;
-        }
-        case LAMCONDCASES_TYPE_CHARACTERS: {
-            // LamCharCondCases
-            LamCharCondCases *variant = getLamCondCases_Characters(node);
-            LamCharCondCases *new_variant = cpsTcLamCharCondCases(variant, context);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamCondCases_Characters(CPI(node), new_variant);
-            }
-            break;
-        }
-        default:
-            cant_happen("unrecognized LamCondCases type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamCondCases);
-    return result;
-}
-
-static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, VisitorContext *context) {
+static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, LamExp *c) {
     ENTER(cpsTcLamTypeConstructorType);
     if (node == NULL) {
         LEAVE(cpsTcLamTypeConstructorType);
@@ -1691,7 +1691,7 @@ static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorTyp
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION: {
             // LamTypeFunction
             LamTypeFunction *variant = getLamTypeConstructorType_Function(node);
-            LamTypeFunction *new_variant = cpsTcLamTypeFunction(variant, context);
+            LamTypeFunction *new_variant = cpsTcLamTypeFunction(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamTypeConstructorType_Function(CPI(node), new_variant);
@@ -1701,7 +1701,7 @@ static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorTyp
         case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE: {
             // LamTypeConstructorArgs
             LamTypeConstructorArgs *variant = getLamTypeConstructorType_Tuple(node);
-            LamTypeConstructorArgs *new_variant = cpsTcLamTypeConstructorArgs(variant, context);
+            LamTypeConstructorArgs *new_variant = cpsTcLamTypeConstructorArgs(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamTypeConstructorType_Tuple(CPI(node), new_variant);
@@ -1717,7 +1717,7 @@ static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorTyp
     return result;
 }
 
-static LamInfo *cpsTcLamInfo(LamInfo *node, VisitorContext *context) {
+static LamInfo *cpsTcLamInfo(LamInfo *node, LamExp *c) {
     ENTER(cpsTcLamInfo);
     if (node == NULL) {
         LEAVE(cpsTcLamInfo);
@@ -1731,7 +1731,7 @@ static LamInfo *cpsTcLamInfo(LamInfo *node, VisitorContext *context) {
         case LAMINFO_TYPE_TYPECONSTRUCTORINFO: {
             // LamTypeConstructorInfo
             LamTypeConstructorInfo *variant = getLamInfo_TypeConstructorInfo(node);
-            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, context);
+            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamInfo_TypeConstructorInfo(CPI(node), new_variant);
@@ -1741,7 +1741,7 @@ static LamInfo *cpsTcLamInfo(LamInfo *node, VisitorContext *context) {
         case LAMINFO_TYPE_NAMESPACEINFO: {
             // LamContext
             LamContext *variant = getLamInfo_NamespaceInfo(node);
-            LamContext *new_variant = cpsTcLamContext(variant, context);
+            LamContext *new_variant = cpsTcLamContext(variant, c);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamInfo_NamespaceInfo(CPI(node), new_variant);
@@ -1761,7 +1761,7 @@ static LamInfo *cpsTcLamInfo(LamInfo *node, VisitorContext *context) {
     return result;
 }
 
-static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, VisitorContext *context) {
+static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, LamExp *c) {
     ENTER(cpsTcLamNamespaceArray);
     if (node == NULL) {
         LEAVE(cpsTcLamNamespaceArray);
@@ -1775,7 +1775,7 @@ static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, Visito
     // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
         struct LamExp * element = peeknLamNamespaceArray(node, i);
-        struct LamExp * new_element = cpsTcLamExp(element, context);
+        struct LamExp * new_element = cpsTcLamExp(element, c);
         PROTECT(new_element);
         changed = changed || (new_element != element);
         pushLamNamespaceArray(result, new_element);
@@ -1792,7 +1792,7 @@ static LamNamespaceArray *cpsTcLamNamespaceArray(LamNamespaceArray *node, Visito
     return node;
 }
 
-static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, VisitorContext *context) {
+static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, LamExp *c) {
     ENTER(cpsTcLamAlphaEnvArray);
     if (node == NULL) {
         LEAVE(cpsTcLamAlphaEnvArray);
@@ -1806,7 +1806,7 @@ static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, VisitorCo
     // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
         struct LamAlphaEnv * element = peeknLamAlphaEnvArray(node, i);
-        struct LamAlphaEnv * new_element = cpsTcLamAlphaEnv(element, context);
+        struct LamAlphaEnv * new_element = cpsTcLamAlphaEnv(element, c);
         PROTECT(new_element);
         changed = changed || (new_element != element);
         pushLamAlphaEnvArray(result, new_element);
@@ -1824,3 +1824,9 @@ static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, VisitorCo
 }
 
 
+LamExp *cpsTc(LamExp *node, LamExp *c) {
+    ENTER(cpsTc);
+    LamExp *result = cpsTcLamExp(node, c);
+    LEAVE(cpsTc);
+    return result;
+}

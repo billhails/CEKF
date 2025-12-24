@@ -291,6 +291,11 @@ make indent            # Formats code with GNU indent
 - Makes intent clearer and avoids potential confusion with boolean expressions
 - Example: Write `if (node->next != NULL)` not `if (node->next)`
 
+**Naming Conventions**:
+- Types: `MixedCase` (e.g., `LamExp`, `AstExpression`)
+- Functions and Variables: `camelCase` (e.g., `cpsTcLamExp`, `newLamExp_Amb`)
+- Avoid snake case, underscores are reseved for special uses (e.g. union discriminators)
+
 ## Documentation Style
 
 **Avoid hyperbole and excessive emphasis**:

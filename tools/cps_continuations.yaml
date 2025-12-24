@@ -59,39 +59,60 @@ external:
       markFn: markLamMatchList
       valued: true
 
+# Naming convention, since each kont is argument to T_k and never
+# to T_c, we use Tk for continuations constructed by T_k, and
+# Tc for continuations constructed by T_c.
+# If there are multiple continuations constructed in a case, we
+# suffix them 1, 2 ecc. in the order they appear textually in
+# the source.
 continuations:
-  T_k_if:
+  TkIf:
     transformer: T_k
     key: k_if
-    brief: "T_k continuation for if-expression after test is evaluated"
     context: |
       fn T_k(e, k) {
           ...
           switch (e) {
               (E.if_expr(exprc, exprt, exprf)) {
                   let
-                      rv = gensym("$rv");
-                      cont = E.lambda([rv], k(rv));
+                      c = kToC(k);
                   in 
                       T_k(exprc, fn(aexp) {
-                          E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
+                          E.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
                       })
               }
           }
       }
     free_vars:
-      k: CpsKont
+      c: LamExp
       exprt: LamExp
       exprf: LamExp
 
-  T_k_apply:
+  TcApply1:
     transformer: T_k
-    key: k_apply
-    brief: "T_k continuation for function application - inner continuation for arguments"
+    key: c_apply_1
     context: |
-      fn T_c(expr, c) {
+      fn T_c(e, c) {
           ...
-          switch(expr) {
+          switch(e) {
+              (E.apply(f, es)) {
+                  T_k(f, fn(sf) {
+                      Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                  })
+              }
+          }
+      }
+    free_vars:
+      es: LamArgs
+      c: LamExp
+
+  TcApply2:
+    transformer: T_k
+    key: c_apply_2
+    context: |
+      fn T_c(e, c) {
+          ...
+          switch(e) {
               (E.apply(f, es)) {
                   T_k(f, fn(sf) {
                       Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
@@ -103,35 +124,32 @@ continuations:
       sf: LamExp
       c: LamExp
 
-  T_k_cond:
+  TkCond:
     transformer: T_k
     key: k_cond
-    brief: "T_k continuation for cond-expression after test is evaluated"
     context: |
       fn T_k(e, k) {
           ...
           switch (e) {
               (E.cond_expr(test, branches)) {
                   let
-                      rv = gensym("$rv");
-                      cont = E.lambda([rv], k(rv));
+                      c = kToC(k);
                   in
                       T_k(test, fn (atest) {
                           E.cond_expr(atest, list.map(fn {(#(val, result)) {
-                              #(val, T_c(result, cont))
+                              #(val, T_c(result, c))
                           }}, branches))
                       })
               }
           }
       }
     free_vars:
-      cont: LamExp
+      c: LamExp
       branches: LamCondCases
 
-  T_k_cond_from_T_c:
+  TcCond:
     transformer: T_k
-    key: k_cond_c
-    brief: "T_k continuation for cond-expression test when called from T_c"
+    key: c_cond
     context: |
       fn T_c(expr, c) {
           ...
@@ -151,3 +169,39 @@ continuations:
     free_vars:
       sk: LamExp
       branches: LamCondCases
+
+  TkS1:
+    transformer: T_k
+    key: k_s1
+    context: |
+      fn Ts_k {
+          ([], k) { k([]) }
+          (h @ t, k) {
+              T_k(h, fn (hd) {
+                  Ts_k(t, fn (tl) {
+                      k(hd @ tl)
+                  })
+              })
+          }
+      }
+    free_vars:
+      t: LamArgs
+      k: CpsKont
+
+  TkS2:
+    transformer: T_k
+    key: k_s2
+    context: |
+      fn Ts_k {
+          ([], k) { k([]) }
+          (h @ t, k) {
+              T_k(h, fn (hd) {
+                  Ts_k(t, fn (tl) {
+                      k(hd @ tl)
+                  })
+              })
+          }
+      }
+    free_vars:
+      k: CpsKont
+      hd: LamExp

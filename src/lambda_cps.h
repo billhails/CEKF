@@ -1,5 +1,5 @@
-#ifndef cekf_lambda_cpsTc_h
-#  define cekf_lambda_cpsTc_h
+#ifndef cekf_lambda_cps_h
+#  define cekf_lambda_cps_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2025  Bill Hails
@@ -17,5 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+#include "lambda.h"
+#include "cps_kont.h"
+
+LamExp *cpsTk(LamExp *, CpsKont *);
+LamArgs *appendLamArg(LamArgs *, LamExp *);
+LamExp *makeVar(ParserInfo, char *);
+LamVarList *appendLamVar(ParserInfo, LamVarList *, HashSymbol *);
+LamExp *cpsTs_k(LamExp *, CpsKont *);
+bool isAexpr(LamExp *exp);
+LamExp *cpsTc(LamExp *node, LamExp  *c);
+LamExp *cpsM(LamExp *node);
 
 #endif

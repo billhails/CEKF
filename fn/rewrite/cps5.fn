@@ -28,6 +28,11 @@ let
         (x) { x }
     }
 
+    fn kToC(k) {
+        let rv = gensym("$rv");
+        in E.lambda([rv], k(rv))
+    }
+
     fn T_k(e, k) {
         if (isAexpr(e)) {
             k(M(e))
@@ -35,36 +40,32 @@ let
             switch (e)  {
                 (E.amb_expr(expr1, expr2)) {
                     let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
+                        c = kToC(k);
                     in 
-                        E.amb_expr(T_c(expr1, cont), T_c(expr2, cont))
+                        E.amb_expr(T_c(expr1, c), T_c(expr2, c))
                 }
 
                 (E.apply(_, _)) {
                     let
-                        srv = gensym("$rv");
-                        cont = E.lambda([srv], k(srv));
+                        c = kToC(k);
                     in
-                        T_c(e, cont)
+                        T_c(e, c)
                 }
 
                 (E.callcc_expr(e)) {
                     let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
+                        c = kToC(k);
                     in
-                        T_c(E.callcc_expr(e), cont)
+                        T_c(E.callcc_expr(e), c)
                 }
 
                 (E.cond_expr(test, branches)) {
                     let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
+                        c = kToC(k);
                     in
                         T_k(test, fn (atest) {
                             E.cond_expr(atest, list.map(fn {(#(val, result)) {
-                                #(val, T_c(result, cont))
+                                #(val, T_c(result, c))
                             }}, branches))
                         })
                 }
@@ -83,11 +84,10 @@ let
 
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
+                        c = kToC(k);
                     in 
                         T_k(exprc, fn(aexp) {
-                            E.if_expr(aexp, T_c(exprt, cont), T_c(exprf, cont))
+                            E.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
                         })
                 }
 
@@ -122,12 +122,11 @@ let
 
                 (E.match_cases(test, cases)) {
                     let
-                        rv = gensym("$rv");
-                        cont = E.lambda([rv], k(rv));
+                        c = kToC(k);
                     in
                         T_k(test, fn (atest) {
                             E.match_cases(atest, list.map(fn {(#(indices, result)) {
-                                #(indices, T_c(result, cont))
+                                #(indices, T_c(result, c))
                             }}, cases))
                         })
                 }
