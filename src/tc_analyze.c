@@ -273,7 +273,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_IFF:
             return prune(analyzeIff(exp->val.iff, env, ng));
         case LAMEXP_TYPE_CALLCC:
-            return prune(analyzeCallCC(exp->val.callcc, env, ng));
+            return prune(analyzeCallCC(exp->val.callCC, env, ng));
         case LAMEXP_TYPE_PRINT:
             return prune(analyzePrint(exp->val.print, env, ng));
         case LAMEXP_TYPE_TYPEOF:
@@ -830,9 +830,9 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
 
 static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
 // 'call/cc' is ((a -> b) -> a) -> a
-    TcType *a = makeFreshVar("callccA");
+    TcType *a = makeFreshVar("callCCA");
     int save = PROTECT(a);
-    TcType *b = makeFreshVar("callccB");
+    TcType *b = makeFreshVar("callCCB");
     PROTECT(b);
     TcType *ab = makeFn(a, b);
     PROTECT(ab);

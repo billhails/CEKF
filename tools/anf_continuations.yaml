@@ -388,14 +388,14 @@ continuations:
     free_vars:
       k: AnfKont
 
-  normalizeCallcc:
-    key: callcc
-    brief: "Continuation for callcc expression"
+  normalizeCallCC:
+    key: callCC
+    brief: "Continuation for callCC expression"
     context: |
       (match e
           ...
-          (`(callcc ,e0)
+          (`(callCC ,e0)
               (normalize-name e0
-                  [λ (t0) (k `(callcc ,t0))])))
+                  [λ (t0) (k `(callCC ,t0))])))
     free_vars:
       k: AnfKont

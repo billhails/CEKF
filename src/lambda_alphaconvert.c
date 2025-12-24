@@ -1126,11 +1126,11 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         }
         case LAMEXP_TYPE_CALLCC: {
             // LamExp
-            LamExp *variant = getLamExp_Callcc(node);
+            LamExp *variant = getLamExp_CallCC(node);
             LamExp *new_variant = visitLamExp(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamExp_Callcc(CPI(node), new_variant);
+                result = newLamExp_CallCC(CPI(node), new_variant);
             }
             break;
         }

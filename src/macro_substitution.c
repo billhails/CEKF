@@ -652,7 +652,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
                 exp->val.cond = performCondSubstitutions(exp->val.cond, symbols);
                 break;
             case LAMEXP_TYPE_CALLCC:
-                exp->val.callcc = lamPerformMacroSubstitutions(exp->val.callcc, symbols);
+                exp->val.callCC = lamPerformMacroSubstitutions(exp->val.callCC, symbols);
                 break;
             case LAMEXP_TYPE_LET:
                 exp->val.let = performLetSubstitutions(exp->val.let, symbols);

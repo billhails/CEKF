@@ -205,3 +205,18 @@ continuations:
     free_vars:
       k: CpsKont
       hd: LamExp
+
+  TcCallCC:
+    transformer: T_k
+    key: c_callCC
+    context: |
+      (E.callCC_expr(e)) {
+          T_k(e, fn (sf) {
+              E.apply(
+                  E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                  [sf, c]
+              )
+          })
+      }
+    free_vars:
+      c: LamExp

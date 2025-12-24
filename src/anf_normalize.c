@@ -72,7 +72,7 @@ static Aexp *replaceLamCexp(LamExp *apply, LamExpTable *replacements);
 static AnfExp *normalizeMakeVec(LamMakeVec *makeVec, AnfExp *tail);
 static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
 static AnfExp *normalizeIff(LamIff *lamIff, AnfExp *tail);
-static AnfExp *normalizeCallCc(LamExp *callcc, AnfExp *tail);
+static AnfExp *normalizeCallCc(LamExp *callCC, AnfExp *tail);
 static AnfExp *normalizePrint(LamPrint *print, AnfExp *tail);
 static AnfExp *normalizeLetRec(LamLetRec *lamLetRec, AnfExp *tail);
 static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail);
@@ -121,7 +121,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
         case LAMEXP_TYPE_IFF:
             return normalizeIff(lamExp->val.iff, tail);
         case LAMEXP_TYPE_CALLCC:
-            return normalizeCallCc(lamExp->val.callcc, tail);
+            return normalizeCallCc(lamExp->val.callCC, tail);
         case LAMEXP_TYPE_PRINT:
             return normalizePrint(lamExp->val.print, tail);
         case LAMEXP_TYPE_LETREC:

@@ -1316,7 +1316,7 @@ static LamBindings *prependDefine(AstDefine * define, LamContext * env,
  */
 static LamExp *makeCallCC(LamArgs *args) {
     CHECK_ONE_ARG(makeCallCC, args);
-    return newLamExp_Callcc(CPI(args), args->exp);
+    return newLamExp_CallCC(CPI(args), args->exp);
 }
 
 /**

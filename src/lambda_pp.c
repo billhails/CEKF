@@ -119,7 +119,7 @@ void ppLamExp(LamExp *exp) {
             ppLamIff(exp->val.iff);
             break;
         case LAMEXP_TYPE_CALLCC:
-            ppLamCallCC(exp->val.callcc);       // LamExp
+            ppLamCallCC(exp->val.callCC);       // LamExp
             break;
         case LAMEXP_TYPE_PRINT:
             ppLamPrint(exp->val.print);

@@ -21,6 +21,7 @@
 
 #include "lambda.h"
 #include "memory.h"
+#include "symbol.h"
 
 #include "lambda_cps.h"
 #include "lambda_functions.h"
@@ -1327,6 +1328,79 @@ static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, LamExp *c) {
     return node;
 }
 
+/*
+    (lambda (f cc)
+        (f (lambda (x i) (cc x))
+           cc))
+*/
+static LamExp *makeCallCC(ParserInfo PI) {
+    LamExp *f = makeVar(PI, "f");
+    int save = PROTECT(f);
+    LamExp *cc = makeVar(PI, "cc");
+    PROTECT(cc);
+    LamExp *x = makeVar(PI, "x");
+    PROTECT(x);
+    LamExp *i = makeVar(PI, "i");
+    PROTECT(i);
+    LamArgs *args = newLamArgs(PI, x, NULL); // (x)
+    PROTECT(args);
+    LamExp *apply = makeLamExp_Apply(PI, cc, args); // (cc x)
+    PROTECT(apply);
+    LamVarList *vars = newLamVarList(PI, getLamExp_Var(i), NULL); // (i)
+    PROTECT(vars);
+    vars = newLamVarList(PI, getLamExp_Var(x), vars); // (x i)
+    PROTECT(vars);
+    LamExp *lambda = makeLamExp_Lam(PI, vars, apply); // (lambda (x i) (cc x))
+    PROTECT(lambda);
+    args = newLamArgs(PI, lambda, NULL); // ((lambda (x i) (cc x)))
+    PROTECT(args);
+    args = newLamArgs(PI, cc, args); // ((lambda (x i) (cc x)) cc)
+    PROTECT(args);
+    apply = makeLamExp_Apply(PI, f, args); // (f (lambda (x i) (cc x)) cc)
+    PROTECT(apply);
+    vars = newLamVarList(PI, getLamExp_Var(cc), NULL); // (cc)
+    PROTECT(vars);
+    vars = newLamVarList(PI, getLamExp_Var(f), vars); // (f cc)
+    PROTECT(vars);
+    lambda = makeLamExp_Lam(PI, vars, apply); // (lambda (f cc) (f (lambda (x i) (cc x)) cc))
+    UNPROTECT(save);
+    return lambda;
+}
+
+/*
+    (E.callCC_expr(e)) {
+        T_k(e, fn (sf) {
+            E.apply(
+                E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                [sf, c]
+            )
+        })
+    }
+*/
+static LamExp *cpsTcCallCC(LamExp *e, LamExp *c) {
+    ENTER(cpsTcCallCC);
+    CpsKont *k = makeKont_TcCallCC(c);
+    int save = PROTECT(k);
+    LamExp *result = cpsTk(e, k);
+    UNPROTECT(save);
+    LEAVE(cpsTcCallCC);
+    return result;
+}
+
+LamExp *TcCallCCKont(LamExp *sf, TcCallCCKontEnv *env) {
+    ENTER(TcCallCCKont);
+    LamExp *callCC = makeCallCC(CPI(sf));
+    int save = PROTECT(callCC);
+    LamArgs * args = newLamArgs(CPI(env->c), env->c, NULL);
+    PROTECT(args);
+    args = newLamArgs(CPI(env->c), sf, args);
+    PROTECT(args);
+    LamExp *result = makeLamExp_Apply(CPI(env->c), callCC, args);
+    UNPROTECT(save);
+    LEAVE(TcCallCCKont);
+    return result;
+}
+
 static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
     ENTER(cpsTcLamExp);
     if (node == NULL) {
@@ -1389,12 +1463,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         }
         case LAMEXP_TYPE_CALLCC: {
             // LamExp
-            LamExp *variant = getLamExp_Callcc(node);
-            LamExp *new_variant = cpsTcLamExp(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Callcc(CPI(node), new_variant);
-            }
+            result = cpsTcCallCC(getLamExp_CallCC(node), c);
             break;
         }
         case LAMEXP_TYPE_CHARACTER: {

@@ -1373,6 +1373,16 @@ static LamAlphaEnv *cpsTkLamAlphaEnv(LamAlphaEnv *node, CpsKont *k) {
     return node;
 }
 
+static LamExp *cpsTkCallCC(LamExp *node, CpsKont *k) {
+    ENTER(cpsTkCallCC);
+    LamExp *c = kToC(CPI(node), k);
+    int save = PROTECT(c);
+    LamExp *result = cpsTc(node, c);
+    UNPROTECT(save);
+    LEAVE(cpsTkCallCC);
+    return result;
+}
+
 static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
     ENTER(cpsTkLamExp);
     if (node == NULL) {
@@ -1433,12 +1443,7 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         }
         case LAMEXP_TYPE_CALLCC: {
             // LamExp
-            LamExp *variant = getLamExp_Callcc(node);
-            LamExp *new_variant = cpsTkLamExp(variant, k);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Callcc(CPI(node), new_variant);
-            }
+            result = cpsTkCallCC(getLamExp_CallCC(node), k);
             break;
         }
         case LAMEXP_TYPE_CHARACTER: {

@@ -266,7 +266,7 @@ static LamExp *inlineExp(LamExp *x) {
             x->val.iff = inlineIff(x->val.iff);
             break;
         case LAMEXP_TYPE_CALLCC:
-            x->val.callcc = inlineExp(x->val.callcc);
+            x->val.callCC = inlineExp(x->val.callCC);
             break;
         case LAMEXP_TYPE_LETREC:
             x->val.letrec = inlineLetRec(x->val.letrec);

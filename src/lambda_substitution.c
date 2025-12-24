@@ -401,8 +401,8 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                     performCondSubstitutions(exp->val.cond, substitutions);
                 break;
             case LAMEXP_TYPE_CALLCC:
-                exp->val.callcc =
-                    lamPerformSubstitutions(exp->val.callcc, substitutions);
+                exp->val.callCC =
+                    lamPerformSubstitutions(exp->val.callCC, substitutions);
                 break;
             case LAMEXP_TYPE_LET:
                 exp->val.let =

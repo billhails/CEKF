@@ -514,7 +514,7 @@ unions:
             back: void_ptr
             biginteger: MaybeBigInt
             bindings: LamBindings # so that ANF normalize can be uniformly typed
-            callcc: LamExp
+            callCC: LamExp
             character: character
             cond: LamCond
             constant: LamConstant

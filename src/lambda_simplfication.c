@@ -378,7 +378,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 exp->val.cond = performCondSimplifications(exp->val.cond);
                 break;
             case LAMEXP_TYPE_CALLCC:
-                exp->val.callcc = lamPerformSimplifications(exp->val.callcc);
+                exp->val.callCC = lamPerformSimplifications(exp->val.callCC);
                 break;
             case LAMEXP_TYPE_LET:
                 exp->val.let = performLetSimplifications(exp->val.let);

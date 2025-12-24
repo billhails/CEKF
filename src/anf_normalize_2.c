@@ -746,21 +746,21 @@ static LamExp *normalize_Namespaces(LamExp *exp, AnfKont *k) {
 //     (normalize-name e0
 //         [λ (t0) (k `(callcc ,t0))]))
 
-static LamExp *normalize_Callcc(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Callcc);
-    LamExp *e0 = getLamExp_Callcc(exp);
-    AnfKont *k2 = makeKont_normalizeCallcc(k);
+static LamExp *normalize_CallCC(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_CallCC);
+    LamExp *e0 = getLamExp_CallCC(exp);
+    AnfKont *k2 = makeKont_normalizeCallCC(k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(e0, k2);
     UNPROTECT(save);
-    LEAVE(normalize_Callcc);
+    LEAVE(normalize_CallCC);
     return result;
 }
 
-static LamExp *normalizeCallccKont(LamExp *t0, NormalizeCallccKontEnv *env) {
-    LamExp *newCallcc = newLamExp_Callcc(CPI(t0), t0);
-    int save = PROTECT(newCallcc);
-    LamExp *result = INVOKE(env->k, newCallcc);
+static LamExp *normalizeCallCCKont(LamExp *t0, NormalizeCallCCKontEnv *env) {
+    LamExp *newCallCC = newLamExp_CallCC(CPI(t0), t0);
+    int save = PROTECT(newCallCC);
+    LamExp *result = INVOKE(env->k, newCallCC);
     UNPROTECT(save);
     return result;
 }
@@ -829,7 +829,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_Apply(exp, k);
                 break;
             case LAMEXP_TYPE_CALLCC:
-                res = normalize_Callcc(exp, k);
+                res = normalize_CallCC(exp, k);
                 break;
             case LAMEXP_TYPE_COND:
                 res = normalize_Cond(exp, k);
