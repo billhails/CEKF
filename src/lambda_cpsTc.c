@@ -51,9 +51,7 @@ static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
 static LamExp *cpsTcMakeVec(LamMakeVec *node, LamExp *c);
 static LamExp *cpsTcLamIff(LamIff *node, LamExp *c);
 static LamExp *cpsTcLamCond(LamCond *node, LamExp *c);
-static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c);
-static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c);
-static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c);
+static LamExp *cpsTcLamMatch(LamMatch *node, LamExp *c);
 static LamExp *cpsTcLamLet(LamLet *node, LamExp *c);
 static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
 static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
@@ -624,91 +622,47 @@ LamExp *TcCondKont(LamExp *atest, TcCondKontEnv *env) {
     return result;
 }
 
-static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c) {
+/*
+    (E.match_cases(test, cases)) {
+        let
+            sk = gensym("$k");
+        in
+            E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                E.match_cases(atest, list.map(fn {(#(indices, result)) {
+                    #(indices, T_c(result, sk))
+                }}, cases))
+            })), [c])
+    }
+*/
+static LamExp *cpsTcLamMatch(LamMatch *node, LamExp *c) {
     ENTER(cpsTcLamMatch);
-    if (node == NULL) {
-        LEAVE(cpsTcLamMatch);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamExp *new_index = cpsTcLamExp(node->index, c);
-    int save = PROTECT(new_index);
-    changed = changed || (new_index != node->index);
-    LamMatchList *new_cases = cpsTcLamMatchList(node->cases, c);
-    PROTECT(new_cases);
-    changed = changed || (new_cases != node->cases);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamMatch *result = newLamMatch(CPI(node), new_index, new_cases);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamMatch);
-        return result;
-    }
-
+    LamExp *sk = makeVar(CPI(node), "k");
+    int save = PROTECT(sk);
+    CpsKont *k = makeKont_TcMatch(sk, node->cases);
+    PROTECT(k);
+    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    PROTECT(args);
+    LamExp *body = cpsTk(node->index, k);
+    PROTECT(body);
+    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    PROTECT(lambda);
+    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    PROTECT(arglist);
+    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
     LEAVE(cpsTcLamMatch);
-    return node;
+    return result;
 }
 
-static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c) {
-    ENTER(cpsTcLamMatchList);
-    if (node == NULL) {
-        LEAVE(cpsTcLamMatchList);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamIntList *new_matches = cpsTcLamIntList(node->matches, c);
-    int save = PROTECT(new_matches);
-    changed = changed || (new_matches != node->matches);
-    LamExp *new_body = cpsTcLamExp(node->body, c);
-    PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-    LamMatchList *new_next = cpsTcLamMatchList(node->next, c);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamMatchList *result = newLamMatchList(CPI(node), new_matches, new_body, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamMatchList);
-        return result;
-    }
-
+LamExp *TcMatchKont(LamExp *atest, TcMatchKontEnv *env) {
+    ENTER(TcMatchKont);
+    LamMatchList *cases = mapTcOverMatchCases(env->cases, env->sk);
+    int save = PROTECT(cases);
+    PROTECT(cases);
+    LamExp *result = makeLamExp_Match(CPI(env->cases), atest, cases);
     UNPROTECT(save);
-    LEAVE(cpsTcLamMatchList);
-    return node;
-}
-
-static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c) {
-    ENTER(cpsTcLamIntList);
-    if (node == NULL) {
-        LEAVE(cpsTcLamIntList);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through item (type: int, not memory-managed)
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsid (type: int, not memory-managed)
-    LamIntList *new_next = cpsTcLamIntList(node->next, c);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamIntList *result = newLamIntList(CPI(node), node->item, node->name, node->nsid, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamIntList);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamIntList);
-    return node;
+    LEAVE(TcMatchKont);
+    return result;
 }
 
 /*
@@ -1398,13 +1352,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
             break;
         }
         case LAMEXP_TYPE_MATCH: {
-            // LamMatch
-            LamMatch *variant = getLamExp_Match(node);
-            LamMatch *new_variant = cpsTcLamMatch(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Match(CPI(node), new_variant);
-            }
+            result = cpsTcLamMatch(getLamExp_Match(node), c);
             break;
         }
         case LAMEXP_TYPE_NAMESPACES: {

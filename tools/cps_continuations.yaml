@@ -350,3 +350,39 @@ continuations:
     free_vars:
       size: int
       c: LamExp
+
+  TkMatch:
+    transformer: T_k
+    key: k_match
+    context: |
+      (E.match_cases(test, cases)) {
+        let
+          c = kToC(k);
+        in
+          T_k(test, fn (atest) {
+            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+              #(indices, T_c(result, c))
+            }}, cases))
+          })
+        }
+    free_vars:
+      c: LamExp
+      cases: LamMatchList
+
+  TcMatch:
+    transformer: T_k
+    key: c_match
+    context: |
+      (E.match_cases(test, cases)) {
+        let
+          sk = gensym("$k");
+        in
+          E.apply(E.lambda([sk], T_k(test, fn (atest) {
+            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+              #(indices, T_c(result, sk))
+            }}, cases))
+          })), [c])
+      }
+    free_vars:
+      sk: LamExp
+      cases: LamMatchList
