@@ -26,11 +26,11 @@ LamArgs *appendLamArg(LamArgs *, LamExp *);
 LamExp *makeVar(ParserInfo, char *);
 LamVarList *appendLamVar(ParserInfo, LamVarList *, HashSymbol *);
 LamExp *cpsTs_k(LamExp *, CpsKont *);
-bool isAexpr(LamExp *exp);
-LamExp *cpsTc(LamExp *node, LamExp  *c);
-LamExp *cpsM(LamExp *node);
-LamBindings *mapMOverBindings(LamBindings *bindings);
-void cpsUnzipLamBindings(LamBindings *bindings, LamVarList **vars, LamArgs **exps);
-LamExp *cpsNestLets(LamBindings *bindings, LamExp *body);
+bool isAexpr(LamExp *);
+LamExp *cpsTc(LamExp *, LamExp *);
+LamExp *cpsM(LamExp *);
+LamBindings *mapMOverBindings(LamBindings *);
+void cpsUnzipLamBindings(LamBindings *, LamVarList **, LamArgs **);
+LamExp *cpsNestLets(LamBindings *, LamExp *);
 
 #endif
