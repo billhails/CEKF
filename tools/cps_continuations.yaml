@@ -324,3 +324,29 @@ continuations:
       }
     free_vars:
       c: LamExp
+
+  TkMakeVec:
+    transformer: T_k
+    key: k_makevec
+    context: |
+      (E.make_vec(size, args)) {
+        Ts_k(args, fn (sargs) {
+          k(E.make_vec(size, sargs))
+        })
+      }
+    free_vars:
+      size: int
+      k: CpsKont
+
+  TcMakeVec:
+    transformer: T_k
+    key: c_makevec
+    context: |
+      (E.make_vec(size, args)) {
+        Ts_k(args, fn (sargs) {
+          E.apply(c, [E.make_vec(size, sargs)])
+        })
+      }
+    free_vars:
+      size: int
+      c: LamExp

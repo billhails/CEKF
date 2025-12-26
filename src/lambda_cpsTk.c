@@ -41,7 +41,6 @@ static LamAliasTable *cpsTkLamAliasTable(LamAliasTable *node, CpsKont *k);
 static LamAlphaTable *cpsTkLamAlphaTable(LamAlphaTable *node, CpsKont *k);
 static LamPrimApp *cpsTkLamPrimApp(LamPrimApp *node, CpsKont *k);
 static LamSequence *cpsTkLamSequence(LamSequence *node, CpsKont *k);
-static LamArgs *cpsTkLamArgs(LamArgs *node, CpsKont *k);
 static LamExp *cpsTkMakeTuple(LamArgs *node, CpsKont *k);
 static LamExp *cpsTkLamApply(LamExp *node, CpsKont *k);
 static LamExp *cpsTkLamLookup(LamLookup *node, CpsKont *k);
@@ -49,7 +48,7 @@ static LamLookupSymbol *cpsTkLamLookupSymbol(LamLookupSymbol *node, CpsKont *k);
 static LamExp *cpsTkLamConstruct(LamConstruct *node, CpsKont *k);
 static LamExp *cpsTkLamDeconstruct(LamDeconstruct *node, CpsKont *k);
 static LamTupleIndex *cpsTkLamTupleIndex(LamTupleIndex *node, CpsKont *k);
-static LamMakeVec *cpsTkLamMakeVec(LamMakeVec *node, CpsKont *k);
+static LamExp *cpsTkMakeVec(LamMakeVec *node, CpsKont *k);
 static LamExp *cpsTkLamIff(LamIff *node, CpsKont *k);
 static LamExp *cpsTkLamCond(LamCond *node, CpsKont *k);
 static LamMatch *cpsTkLamMatch(LamMatch *node, CpsKont *k);
@@ -355,34 +354,6 @@ static LamSequence *cpsTkLamSequence(LamSequence *node, CpsKont *k) {
     return node;
 }
 
-static LamArgs *cpsTkLamArgs(LamArgs *node, CpsKont *k) {
-    ENTER(cpsTkLamArgs);
-    if (node == NULL) {
-        LEAVE(cpsTkLamArgs);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamExp *new_exp = cpsTkLamExp(node->exp, k);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-    LamArgs *new_next = cpsTkLamArgs(node->next, k);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamArgs *result = newLamArgs(CPI(node), new_exp, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTkLamArgs);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTkLamArgs);
-    return node;
-}
-
 /*
     (E.make_tuple(args)) {
         Ts_k(args, fn (sargs) {
@@ -549,30 +520,33 @@ static LamTupleIndex *cpsTkLamTupleIndex(LamTupleIndex *node, CpsKont *k) {
     return node;
 }
 
-static LamMakeVec *cpsTkLamMakeVec(LamMakeVec *node, CpsKont *k) {
-    ENTER(cpsTkLamMakeVec);
-    if (node == NULL) {
-        LEAVE(cpsTkLamMakeVec);
-        return NULL;
+/*
+    (E.make_vec(size, args)) {
+        Ts_k(args, fn (sargs) {
+            k(E.make_vec(size, sargs))
+        })
     }
-
-    bool changed = false;
-    // Pass through nargs (type: int, not memory-managed)
-    LamArgs *new_args = cpsTkLamArgs(node->args, k);
-    int save = PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamMakeVec *result = newLamMakeVec(CPI(node), node->nargs, new_args);
-        UNPROTECT(save);
-        LEAVE(cpsTkLamMakeVec);
-        return result;
-    }
-
+*/
+static LamExp *cpsTkMakeVec(LamMakeVec *node, CpsKont *k) {
+    ENTER(cpsTkMakeVec);
+    CpsKont *k1 = makeKont_TkMakeVec(node->nargs, k);
+    int save = PROTECT(k1);
+    LamExp *args = newLamExp_Args(CPI(node), node->args);
+    PROTECT(args);
+    LamExp *result = cpsTs_k(args, k1);
     UNPROTECT(save);
-    LEAVE(cpsTkLamMakeVec);
-    return node;
+    LEAVE(cpsTkMakeVec);
+    return result;
+}
+
+LamExp *TkMakeVecKont(LamExp *sargs, TkMakeVecKontEnv *env) {
+    ENTER(TkMakeVecKont);
+    LamExp *make_vec = makeLamExp_MakeVec(CPI(sargs), env->size, getLamExp_Args(sargs));
+    int save = PROTECT(make_vec);
+    LamExp *result = INVOKE(env->k, make_vec);
+    UNPROTECT(save);
+    LEAVE(TkMakeVecKont);
+    return result;
 }
 
 /*
@@ -1420,18 +1394,11 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
             break;
         }
         case LAMEXP_TYPE_MAKETUPLE: {
-            // LamArgs
             result = cpsTkMakeTuple(getLamExp_MakeTuple(node), k);
             break;
         }
         case LAMEXP_TYPE_MAKEVEC: {
-            // LamMakeVec
-            LamMakeVec *variant = getLamExp_MakeVec(node);
-            LamMakeVec *new_variant = cpsTkLamMakeVec(variant, k);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_MakeVec(CPI(node), new_variant);
-            }
+            result = cpsTkMakeVec(getLamExp_MakeVec(node), k);
             break;
         }
         case LAMEXP_TYPE_MATCH: {
