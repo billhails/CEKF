@@ -237,6 +237,16 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, TpmcSubstitution
     return letrec;
 }
 
+static LamLetStar *performLetStarSubstitutions(LamLetStar *letStar, TpmcSubstitutionTable
+                                             *substitutions) {
+    ENTER(performLetStarSubstitutions);
+    letStar->bindings =
+        performBindingsSubstitutions(letStar->bindings, substitutions);
+    letStar->body = lamPerformSubstitutions(letStar->body, substitutions);
+    LEAVE(performLetStarSubstitutions);
+    return letStar;
+}
+
 static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, TpmcSubstitutionTable
                                                  *substitutions) {
     ENTER(performTypeDefsSubstitutions);
@@ -411,6 +421,10 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
             case LAMEXP_TYPE_LETREC:
                 exp->val.letRec =
                     performLetRecSubstitutions(getLamExp_LetRec(exp), substitutions);
+                break;
+            case LAMEXP_TYPE_LETSTAR:
+                exp->val.letStar =
+                    performLetStarSubstitutions(getLamExp_LetStar(exp), substitutions);
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
                 exp->val.typedefs =

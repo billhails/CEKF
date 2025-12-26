@@ -58,57 +58,46 @@ static void addNegToEnv(TcEnv * env);
 static void addThenToEnv(TcEnv * env);
 static TcType *analyzeExp(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *analyzeLam(LamLam * lam, TcEnv * env, TcNg * ng);
-static TcType *analyzeVar(ParserInfo I, HashSymbol * var, TcEnv * env,
-                          TcNg * ng);
+static TcType *analyzeVar(ParserInfo I, HashSymbol * var, TcEnv * env, TcNg * ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
 static TcType *analyzePrim(LamPrimApp * app, TcEnv * env, TcNg * ng);
-static TcType *analyzeSequence(LamSequence * sequence, TcEnv * env,
-                               TcNg * ng);
-static TcType *analyzeConstruct(LamConstruct * construct, TcEnv * env,
-                                TcNg * ng);
-static TcType *analyzeDeconstruct(LamDeconstruct * deconstruct, TcEnv * env,
-                                  TcNg * ng);
+static TcType *analyzeSequence(LamSequence * sequence, TcEnv * env, TcNg * ng);
+static TcType *analyzeConstruct(LamConstruct * construct, TcEnv * env, TcNg * ng);
+static TcType *analyzeDeconstruct(LamDeconstruct * deconstruct, TcEnv * env, TcNg * ng);
 static TcType *analyzeTag(LamExp * tag, TcEnv * env, TcNg * ng);
-static TcType *analyzeConstant(LamConstant * constant, TcEnv * env,
-                               TcNg * ng);
+static TcType *analyzeConstant(LamConstant * constant, TcEnv * env, TcNg * ng);
 static TcType *analyzeApply(LamApply * apply, TcEnv * env, TcNg * ng);
 static TcType *analyzeIff(LamIff * iff, TcEnv * env, TcNg * ng);
 static TcType *analyzeCallCC(LamExp * called, TcEnv * env, TcNg * ng);
 static TcType *analyzePrint(LamPrint * print, TcEnv * env, TcNg * ng);
-static TcType *analyzeLetRec(LamLetRec * letRec, TcEnv * env, TcNg * ng);
-static TcType *analyzeTypeDefs(LamTypeDefs * typeDefs, TcEnv * env,
-                               TcNg * ng);
+static TcType *analyzeTypeDefs(LamTypeDefs * typeDefs, TcEnv * env, TcNg * ng);
 static TcType *analyzeLet(LamLet * let, TcEnv * env, TcNg * ng);
+static TcType *analyzeLetRec(LamLetRec * letRec, TcEnv * env, TcNg * ng);
+static TcType *analyzeLetStar(LamLetStar *letStar, TcEnv *env, TcNg *ng);
 static TcType *analyzeMatch(LamMatch * match, TcEnv * env, TcNg * ng);
 static TcType *analyzeCond(LamCond * cond, TcEnv * env, TcNg * ng);
 static TcType *analyzeAmb(LamAmb * amb, TcEnv * env, TcNg * ng);
-static TcType *analyzeTupleIndex(LamTupleIndex * index, TcEnv * env,
-                                 TcNg * ng);
+static TcType *analyzeTupleIndex(LamTupleIndex * index, TcEnv * env, TcNg * ng);
 static TcType *analyzeMakeTuple(LamArgs * tuple, TcEnv * env, TcNg * ng);
-static TcType *analyzeNamespaces(LamNamespaceArray * nsArray, TcEnv * env,
-                                 TcNg * ng);
+static TcType *analyzeNamespaces(LamNamespaceArray * nsArray, TcEnv * env, TcNg * ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
 static TcType *analyzeEnv(TcEnv * env);
-static bool unify(TcType * a, TcType * b, char *trace
-                  __attribute__((unused)));
+static bool unify(TcType * a, TcType * b, char *trace __attribute__((unused)));
 static TcType *prune(TcType * t);
 static bool occursInType(TcType * a, TcType * b);
 static bool occursIn(TcType * a, TcType * b);
 static bool sameType(TcType * a, TcType * b);
 static TcType *analyzeBigIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng);
-static TcType *analyzeSmallIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng)
-    __attribute__((unused));
+static TcType *analyzeSmallIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *freshRec(TcType * type, TcNg * ng, TcTypeTable * map);
 static TcType *lookup(TcEnv * env, HashSymbol * symbol, TcNg * ng);
 static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
-static TcType *lookupConstructorType(HashSymbol * name, int namespace,
-                                     TcEnv * env, TcNg * ng);
-static void addTypeSigToEnv(TcEnv * env, HashSymbol * symbol,
-                            TcTypeSig * type);
+static TcType *lookupConstructorType(HashSymbol * name, int namespace, TcEnv * env, TcNg * ng);
+static void addTypeSigToEnv(TcEnv * env, HashSymbol * symbol, TcTypeSig * type);
 static bool failUnify(TcType *a, TcType *b, char *reason);
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason);
 static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) __attribute__((unused));
@@ -284,6 +273,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
             return prune(analyzeTypeDefs(getLamExp_Typedefs(exp), env, ng));
         case LAMEXP_TYPE_LET:
             return prune(analyzeLet(getLamExp_Let(exp), env, ng));
+        case LAMEXP_TYPE_LETSTAR:
+            return prune(analyzeLetStar(getLamExp_LetStar(exp), env, ng));
         case LAMEXP_TYPE_MATCH:
             return prune(analyzeMatch(getLamExp_Match(exp), env, ng));
         case LAMEXP_TYPE_COND:
@@ -1254,6 +1245,18 @@ static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
 
 static void analyzeLetBindings(LamBindings *bindings, TcEnv *env,
                                 TcNg *ng) {
+    // FIXME: types of let bindings should be inferred in parallel
+    // but we don't currently make use of `let`
+    for (LamBindings * b = bindings; b != NULL; b = b->next) {
+        TcType *type = analyzeExp(b->val, env, ng);
+        int save = PROTECT(type);
+        addToEnv(env, b->var, type);
+        UNPROTECT(save);
+    }
+}
+
+static void analyzeLetStarBindings(LamBindings *bindings, TcEnv *env,
+                                TcNg *ng) {
     for (LamBindings * b = bindings; b != NULL; b = b->next) {
         TcType *type = analyzeExp(b->val, env, ng);
         int save = PROTECT(type);
@@ -1264,11 +1267,22 @@ static void analyzeLetBindings(LamBindings *bindings, TcEnv *env,
 
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng) {
 // ENTER(analyzeLet);
-// let expression is evaluated in the current environment
     env = newTcEnv(env);
     int save = PROTECT(env);
     analyzeLetBindings(let->bindings, env, ng);
     TcType *res = analyzeExp(let->body, env, ng);
+    UNPROTECT(save);
+// LEAVE(analyzeLet);
+    return res;
+}
+
+static TcType *analyzeLetStar(LamLetStar *letStar, TcEnv *env, TcNg *ng) {
+// ENTER(analyzeLetStar);
+// let* expression is evaluated in the current environment
+    env = newTcEnv(env);
+    int save = PROTECT(env);
+    analyzeLetStarBindings(letStar->bindings, env, ng);
+    TcType *res = analyzeExp(letStar->body, env, ng);
     UNPROTECT(save);
 // LEAVE(analyzeLet);
     return res;

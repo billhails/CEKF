@@ -53,8 +53,10 @@ static LamCharCondCases *visitLamCharCondCases(LamCharCondCases *node, LamAlphaE
 static LamMatch *visitLamMatch(LamMatch *node, LamAlphaEnv *context);
 static LamMatchList *visitLamMatchList(LamMatchList *node, LamAlphaEnv *context);
 static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context);
+static LamLetStar *visitLamLetStar(LamLetStar *node, LamAlphaEnv *context);
 static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context);
 static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context);
+static LamBindings *visitLetStarBindings(LamBindings *node, LamAlphaEnv *context);
 static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context);
 static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context);
 static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context);
@@ -657,7 +659,6 @@ static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context) {
 
 static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
-
     context = newLamAlphaEnv(context);
     int save = PROTECT(context);
     bool changed = false;
@@ -667,14 +668,12 @@ static LamLet *visitLamLet(LamLet *node, LamAlphaEnv *context) {
     LamExp *new_body = visitLamExp(node->body, context);
     PROTECT(new_body);
     changed = changed || (new_body != node->body);
-
     if (changed) {
         // Create new node with modified fields
         LamLet *result = newLamLet(CPI(node), new_bindings, new_body);
         UNPROTECT(save);
         return result;
     }
-
     UNPROTECT(save);
     return node;
 }
@@ -683,8 +682,42 @@ static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
     LamExp *new_val = visitLamExp(node->val, context);
     int save = PROTECT(new_val);
-    addNameToContext(node->var, context);
     LamBindings *new_next = visitLetBindings(node->next, context);
+    PROTECT(new_next);
+    addNameToContext(node->var, context);
+    // Create new node with modified fields
+    LamBindings *result = newLamBindings(CPI(node), getNameFromContext(CPI(node), node->var, context), new_val, new_next);
+    UNPROTECT(save);
+    return result;
+}
+
+static LamLetStar *visitLamLetStar(LamLetStar *node, LamAlphaEnv *context) {
+    if (node == NULL) return NULL;
+    context = newLamAlphaEnv(context);
+    int save = PROTECT(context);
+    bool changed = false;
+    LamBindings *new_bindings = visitLetStarBindings(node->bindings, context);
+    PROTECT(new_bindings);
+    changed = changed || (new_bindings != node->bindings);
+    LamExp *new_body = visitLamExp(node->body, context);
+    PROTECT(new_body);
+    changed = changed || (new_body != node->body);
+    if (changed) {
+        // Create new node with modified fields
+        LamLetStar *result = newLamLetStar(CPI(node), new_bindings, new_body);
+        UNPROTECT(save);
+        return result;
+    }
+    UNPROTECT(save);
+    return node;
+}
+
+static LamBindings *visitLetStarBindings(LamBindings *node, LamAlphaEnv *context) {
+    if (node == NULL) return NULL;
+    LamExp *new_val = visitLamExp(node->val, context);
+    int save = PROTECT(new_val);
+    addNameToContext(node->var, context);
+    LamBindings *new_next = visitLetStarBindings(node->next, context);
     PROTECT(new_next);
     // Create new node with modified fields
     LamBindings *result = newLamBindings(CPI(node), getNameFromContext(CPI(node), node->var, context), new_val, new_next);
@@ -1235,6 +1268,16 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
             }
             break;
         }
+        case LAMEXP_TYPE_LETSTAR: {
+            // LamLetStar
+            LamLetStar *variant = getLamExp_LetStar(node);
+            LamLetStar *new_variant = visitLamLetStar(variant, context);
+            if (new_variant != variant) {
+                PROTECT(new_variant);
+                result = newLamExp_LetStar(CPI(node), new_variant);
+            }
+            break;
+        }
         case LAMEXP_TYPE_LETREC: {
             // LamLetRec
             LamLetRec *variant = getLamExp_LetRec(node);
@@ -1375,7 +1418,7 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
             break;
         }
         default:
-            cant_happen("unrecognized LamExp type %d", node->type);
+            cant_happen("unrecognized LamExp type %s", lamExpTypeName(node->type));
     }
 
     UNPROTECT(save);

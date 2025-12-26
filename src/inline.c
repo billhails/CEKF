@@ -33,6 +33,7 @@ static LamIff *inlineIff(LamIff *x);
 static LamLetRec *inlineLetRec(LamLetRec *x);
 static LamBindings *inlineBindings(LamBindings *x);
 static LamLet *inlineLet(LamLet *x);
+static LamLetStar *inlineLetStar(LamLetStar *x);
 static LamAmb *inlineAmb(LamAmb *x);
 static LamPrint *inlinePrint(LamPrint *x);
 static LamLookup *inlineLookup(LamLookup *x);
@@ -171,6 +172,12 @@ static LamLet *inlineLet(LamLet *x) {
     return x;
 }
 
+static LamLetStar *inlineLetStar(LamLetStar *x) {
+    x->bindings = inlineBindings(x->bindings);
+    x->body = inlineExp(x->body);
+    return x;
+}
+
 static LamAmb *inlineAmb(LamAmb *x) {
     x->left = inlineExp(x->left);
     x->right = inlineExp(x->right);
@@ -273,6 +280,9 @@ static LamExp *inlineExp(LamExp *x) {
             break;
         case LAMEXP_TYPE_LET:
             x->val.let = inlineLet(getLamExp_Let(x));
+            break;
+        case LAMEXP_TYPE_LETSTAR:
+            x->val.letStar = inlineLetStar(getLamExp_LetStar(x));
             break;
         case LAMEXP_TYPE_AMB:
             x->val.amb = inlineAmb(getLamExp_Amb(x));

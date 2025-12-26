@@ -386,7 +386,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     if (varDefsList != NULL) {
         // prepend variable definitions to the letrec body
         // [vars] [[namespaces] [body]]
-        letRecBody = makeLamExp_Let(CPI(varDefsList), varDefsList, letRecBody);
+        letRecBody = makeLamExp_LetStar(CPI(varDefsList), varDefsList, letRecBody);
         PROTECT(letRecBody);
     }
     // if there are functions, create a letrec, else just use the body

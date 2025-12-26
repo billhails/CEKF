@@ -76,6 +76,7 @@ static AnfExp *normalizeCallCc(LamExp *callCC, AnfExp *tail);
 static AnfExp *normalizePrint(LamPrint *print, AnfExp *tail);
 static AnfExp *normalizeLetRec(LamLetRec *lamLetRec, AnfExp *tail);
 static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail);
+static AnfExp *normalizeLetStar(LamLetStar *, AnfExp *);
 static AnfExp *normalizeMatch(LamMatch *match, AnfExp *tail);
 static AnfMatchList *normalizeMatchList(LamMatchList *matchList);
 static AexpIntList *convertIntList(LamIntList *list);
@@ -124,6 +125,10 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
             return normalizeCallCc(getLamExp_CallCC(lamExp), tail);
         case LAMEXP_TYPE_PRINT:
             return normalizePrint(getLamExp_Print(lamExp), tail);
+        case LAMEXP_TYPE_LET:
+            return normalizeLet(getLamExp_Let(lamExp), tail);
+        case LAMEXP_TYPE_LETSTAR:
+            return normalizeLetStar(getLamExp_LetStar(lamExp), tail);
         case LAMEXP_TYPE_LETREC:
             return normalizeLetRec(getLamExp_LetRec(lamExp), tail);
         case LAMEXP_TYPE_TUPLEINDEX:
@@ -136,8 +141,6 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
             return normalizeTag(getLamExp_Tag(lamExp), tail);
         case LAMEXP_TYPE_CONSTANT:
             return normalizeStdInteger(CPI(lamExp), getLamExp_Constant(lamExp)->tag, tail);
-        case LAMEXP_TYPE_LET:
-            return normalizeLet(getLamExp_Let(lamExp), tail);
         case LAMEXP_TYPE_MATCH:
             return normalizeMatch(getLamExp_Match(lamExp), tail);
         case LAMEXP_TYPE_COND:
@@ -252,6 +255,22 @@ static AnfExp *normalizeLetBindings(LamBindings *bindings, AnfExp *body) {
     return exp;
 }
 
+static AnfExp *normalizeLetStarBindings(LamBindings *bindings, AnfExp *body) {
+    ENTER(normalizeLetStarBindings);
+    if (bindings == NULL) {
+        LEAVE(normalizeLetStarBindings);
+        return body;
+    }
+    AnfExp *tail = normalizeLetStarBindings(bindings->next, body);
+    int save = PROTECT(tail);
+    AnfExp *value = normalize(bindings->val, NULL);
+    PROTECT(value);
+    AnfExp *exp = makeAnfExp_Let(CPI(bindings), bindings->var, value, tail);
+    UNPROTECT(save);
+    LEAVE(normalizeLetStarBindings);
+    return exp;
+}
+
 static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail) {
     ENTER(normalizeLet);
     AnfExp *body = normalize(lamLet->body, tail);
@@ -259,6 +278,16 @@ static AnfExp *normalizeLet(LamLet *lamLet, AnfExp *tail) {
     AnfExp *exp = normalizeLetBindings(lamLet->bindings, body);
     UNPROTECT(save);
     LEAVE(normalizeLet);
+    return exp;
+}
+
+static AnfExp *normalizeLetStar(LamLetStar *lamLetStar, AnfExp *tail) {
+    ENTER(normalizeLetStar);
+    AnfExp *body = normalize(lamLetStar->body, tail);
+    int save = PROTECT(body);
+    AnfExp *exp = normalizeLetStarBindings(lamLetStar->bindings, body);
+    UNPROTECT(save);
+    LEAVE(normalizeLetStar);
     return exp;
 }
 

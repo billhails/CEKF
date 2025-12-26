@@ -235,6 +235,14 @@ static LamLetRec *performLetRecSimplifications(LamLetRec *letrec) {
     return letrec;
 }
 
+static LamLetStar *performLetStarSimplifications(LamLetStar *letStar) {
+    ENTER(performLetStarSimplifications);
+    letStar->bindings = performBindingsSimplifications(letStar->bindings);
+    letStar->body = lamPerformSimplifications(letStar->body);
+    LEAVE(performLetStarSimplifications);
+    return letStar;
+}
+
 static LamTypeDefs *performTypeDefsSimplifications(LamTypeDefs *typedefs) {
     ENTER(performTypeDefsSimplifications);
     typedefs->body = lamPerformSimplifications(typedefs->body);
@@ -385,6 +393,9 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 break;
             case LAMEXP_TYPE_LETREC:
                 exp->val.letRec = performLetRecSimplifications(getLamExp_LetRec(exp));
+                break;
+            case LAMEXP_TYPE_LETSTAR:
+                exp->val.letStar = performLetStarSimplifications(getLamExp_LetStar(exp));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
                 exp->val.typedefs = performTypeDefsSimplifications(getLamExp_Typedefs(exp));

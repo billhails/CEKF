@@ -394,13 +394,36 @@ static LamBindings *performLetBindingsSubstitutions(LamBindings *bindings, LamMa
         LEAVE(performLetBindingsSubstitutions);
         return NULL;
     }
+    bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
+    bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);
+    // exclude *after* performing the other substitutions
+    if (isMacroArgument(bindings->var, *symbols)) {
+        *symbols = excludeSymbol(bindings->var, *symbols);
+        PROTECT(*symbols); // caller will UNPROTECT
+    }
+    LEAVE(performLetBindingsSubstitutions);
+    return bindings;
+}
+
+/**
+ * @brief Performs macro substitutions on a list of let* bindings.
+ * @param bindings The let bindings to modify.
+ * @param symbols The current set of macro arguments.
+ * @return The modified let bindings.
+ */
+static LamBindings *performLetStarBindingsSubstitutions(LamBindings *bindings, LamMacroArgsSet **symbols) {
+    ENTER(performLetStarBindingsSubstitutions);
+    if (bindings == NULL) {
+        LEAVE(performLetStarBindingsSubstitutions);
+        return NULL;
+    }
     if (isMacroArgument(bindings->var, *symbols)) {
         *symbols = excludeSymbol(bindings->var, *symbols);
         PROTECT(*symbols); // caller will UNPROTECT
     }
     bindings->val = lamPerformMacroSubstitutions(bindings->val, *symbols);
-    bindings->next = performLetBindingsSubstitutions(bindings->next, symbols);
-    LEAVE(performLetBindingsSubstitutions);
+    bindings->next = performLetStarBindingsSubstitutions(bindings->next, symbols);
+    LEAVE(performLetStarBindingsSubstitutions);
     return bindings;
 }
 
@@ -418,6 +441,23 @@ static LamLet *performLetSubstitutions(LamLet *let, LamMacroArgsSet *symbols) {
     let->body = lamPerformMacroSubstitutions(let->body, remaining);
     UNPROTECT(save);
     LEAVE(performLetSubstitutions);
+    return let;
+}
+
+/**
+ * @brief Performs macro substitutions on a let* expression.
+ * @param let The let expression to modify.
+ * @param symbols The current set of macro arguments.
+ * @return The modified let expression.
+ */
+static LamLetStar *performLetStarSubstitutions(LamLetStar *let, LamMacroArgsSet *symbols) {
+    ENTER(performLetStarSubstitutions);
+    LamMacroArgsSet *remaining = copyLamMacroArgsSet(symbols);
+    int save = PROTECT(remaining);
+    let->bindings = performLetStarBindingsSubstitutions(let->bindings, &remaining);
+    let->body = lamPerformMacroSubstitutions(let->body, remaining);
+    UNPROTECT(save);
+    LEAVE(performLetStarSubstitutions);
     return let;
 }
 
@@ -659,6 +699,9 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
                 break;
             case LAMEXP_TYPE_LETREC:
                 exp->val.letRec = performLetRecSubstitutions(getLamExp_LetRec(exp), symbols);
+                break;
+            case LAMEXP_TYPE_LETSTAR:
+                exp->val.letStar = performLetStarSubstitutions(getLamExp_LetStar(exp), symbols);
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
                 exp->val.typedefs = performTypeDefsSubstitutions(getLamExp_Typedefs(exp), symbols);
