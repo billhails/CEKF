@@ -35,10 +35,10 @@ structs:
             brief: AST Program
             description: >-
                 The root structure of the AST, containing the
-                program's definitions, namespaces and expressions.
+                program's definitions, nameSpaces and expressions.
         data:
             preamble: AstDefinitions
-            namespaces: AstNamespaceArray
+            nameSpaces: AstNameSpaceArray
             body: AstExpressions
 
     AstNest:
@@ -52,22 +52,22 @@ structs:
             definitions: AstDefinitions
             expressions: AstExpressions
 
-    AstNamespaceImpl:
+    AstNameSpaceImpl:
         meta:
-            brief: AST Namespace Implementation
+            brief: AST NameSpace Implementation
             description: >-
-                An implementation of a namespace in the AST,
+                An implementation of a nameSpace in the AST,
                 containing its unique file ID and definitions.
         data:
             id: file_id
             definitions: AstDefinitions
 
-    AstNamespace:
+    AstNameSpace:
         meta:
-            brief: AST Namespace
+            brief: AST NameSpace
             description: >-
-                A flyweight reference to namespace in the AST,
-                containing its index into an array of namespace
+                A flyweight reference to nameSpace in the AST,
+                containing its index into an array of nameSpace
                 implementations.
         data:
             symbol: HashSymbol
@@ -389,7 +389,7 @@ structs:
             description: >-
                 A symbol that is looked up in the AST, which can be a
                 variable or a function. Used to refer to variables or
-                functions defined in other namespaces.
+                functions defined in other nameSpaces.
         data:
             nsid: int
             nsSymbol: HashSymbol
@@ -400,7 +400,7 @@ structs:
             brief: AST Lookup
             description: >-
                 A lookup operation in the AST, which evaluates an expression
-                in another namespace.
+                in another nameSpace.
         data:
             nsid: int
             nsSymbol: HashSymbol
@@ -483,7 +483,7 @@ unions:
             brief: AST Lookup or Symbol
             description: >-
                 A reference to a symbol in the AST, which can be a
-                direct symbol or a lookup in another namespace.
+                direct symbol or a lookup in another nameSpace.
         data:
             symbol: HashSymbol
             lookup: AstLookupSymbol
@@ -570,21 +570,21 @@ hashes:
             entries: int
 
 arrays:
-    AstNamespaceArray:
+    AstNameSpaceArray:
         meta:
-            brief: AST Namespace Array
+            brief: AST NameSpace Array
             description: >-
-                An array of namespace implementations in the AST.
-                Used to store the namespaces defined in the program.
+                An array of nameSpace implementations in the AST.
+                Used to store the nameSpaces defined in the program.
         data:
-            entries: AstNamespaceImpl
+            entries: AstNameSpaceImpl
 
     AstFileIdArray:
         meta:
             brief: AST File ID Array
             description: >-
                 An array of file IDs used in the AST, which identify
-                namespace files that have already been read.
+                nameSpace files that have already been read.
         data:
             entries: file_id
 

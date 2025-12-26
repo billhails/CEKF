@@ -33,8 +33,8 @@
 #  include "types.h"
 #  include "cekfs.h"
 
-Vec *snapshotNamespace(Stack *s);
-void restoreNamespace(Stack *s, Vec *vl);
+Vec *snapshotNameSpace(Stack *s);
+void restoreNameSpace(Stack *s, Vec *vl);
 void snapshotClo(struct Clo *target, Stack *stack, int letRecOffset);
 void patchClo(struct Clo *target, Stack *stack);
 void snapshotKont(struct Kont *target, Stack *stack);

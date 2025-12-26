@@ -20,7 +20,7 @@
 #include "ast_helper.h"
 #include "symbol.h"
 
-AstNamespaceArray *namespaces = NULL;
+AstNameSpaceArray *nameSpaces = NULL;
 
 void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("%*s", depth * PAD_WIDTH, "");
@@ -31,29 +31,29 @@ void printAstSymbol(struct HashSymbol *x, int depth) {
     eprintf("AstSymbol[\"%s\"]", x->name);
 }
 
-void markNamespaces() {
-    markAstNamespaceArray(namespaces);
+void markNameSpaces() {
+    markAstNameSpaceArray(nameSpaces);
 }
 
-void initNamespaces() {
-    if (namespaces == NULL) {
-        namespaces = newAstNamespaceArray();
+void initNameSpaces() {
+    if (nameSpaces == NULL) {
+        nameSpaces = newAstNameSpaceArray();
     }
 }
 
 // for tests
-void forceInitNamespaces() {
-    namespaces = newAstNamespaceArray();
+void forceInitNameSpaces() {
+    nameSpaces = newAstNameSpaceArray();
 }
 
-int lookupNamespace(AgnosticFileId *id) {
+int lookupNameSpace(AgnosticFileId *id) {
 #ifdef SAFETY_CHECKS
-    if (namespaces == NULL) {
-        cant_happen("null namespace");
+    if (nameSpaces == NULL) {
+        cant_happen("null nameSpace");
     }
 #endif
-    for (Index i = 0; i < namespaces->size; i++) {
-        if (cmpAgnosticFileId(id, namespaces->entries[i]->id) == CMP_EQ) {
+    for (Index i = 0; i < nameSpaces->size; i++) {
+        if (cmpAgnosticFileId(id, nameSpaces->entries[i]->id) == CMP_EQ) {
             return (int) i;
         }
     }
@@ -62,9 +62,9 @@ int lookupNamespace(AgnosticFileId *id) {
 
 AstProg *astNestToProg(AstNest *nest) {
 #ifdef SAFETY_CHECKS
-    if (namespaces == NULL) {
-        cant_happen("null namespace");
+    if (nameSpaces == NULL) {
+        cant_happen("null nameSpace");
     }
 #endif
-    return newAstProg(CPI(nest), nest->definitions, namespaces, nest->expressions);
+    return newAstProg(CPI(nest), nest->definitions, nameSpaces, nest->expressions);
 }

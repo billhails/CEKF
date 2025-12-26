@@ -34,7 +34,7 @@ structs:
             description: lookup for the run-time locations of variables.
         data:
             isLocal: bool
-            isNamespace: bool = false
+            isNameSpace: bool = false
             nbindings: int = 0
             nsEnvs: AnfEnvArray = NULL
             table: AnfIntTable
@@ -102,21 +102,21 @@ structs:
             nargs: int
             args: AexpList
 
-    AexpNamespace:
+    AexpNameSpace:
         meta:
-            brief: ANF Aexp Namespace
+            brief: ANF Aexp NameSpace
             description: >-
-                A namespace in ANF, containing the body of the namespace.
+                A nameSpace in ANF, containing the body of the nameSpace.
         data:
             nbindings: int = 0
             body: AnfExp
 
-    AexpNamespaces:
+    AexpNameSpaces:
         meta:
-            brief: ANF Aexp Namespaces
-            description: An array of namespaces in ANF.
+            brief: ANF Aexp NameSpaces
+            description: An array of nameSpaces in ANF.
         data:
-            namespaces: AexpNamespaceArray
+            nameSpaces: AexpNameSpaceArray
             body: AnfExp
 
     CexpApply:
@@ -207,7 +207,7 @@ structs:
 
     AnfExpLookup:
         data:
-            namespace: index
+            nameSpace: index
             annotatedVar: AexpAnnotatedVar = NULL
             body: AnfExp
 
@@ -251,7 +251,7 @@ unions:
             character: character
             prim: AexpPrimApp
             makeVec: AexpMakeVec
-            namespaces: AexpNamespaces
+            nameSpaces: AexpNameSpaces
 
     Cexp:
         meta:
@@ -325,12 +325,12 @@ hashes:
             entries: int
 
 arrays:
-    AexpNamespaceArray:
+    AexpNameSpaceArray:
         meta:
-            brief: ANF Aexp Namespace Array
-            description: An array of namespaces in ANF. 
+            brief: ANF Aexp NameSpace Array
+            description: An array of nameSpaces in ANF. 
         data:
-            entries: AexpNamespace
+            entries: AexpNameSpace
 
     AnfEnvArray:
         meta:

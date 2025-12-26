@@ -75,7 +75,7 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k);
 static LamLookupOrSymbol *cpsTkLamLookupOrSymbol(LamLookupOrSymbol *node, CpsKont *k);
 static LamTypeConstructorType *cpsTkLamTypeConstructorType(LamTypeConstructorType *node, CpsKont *k);
 static LamInfo *cpsTkLamInfo(LamInfo *node, CpsKont *k);
-static LamNamespaceArray *cpsTkLamNamespaceArray(LamNamespaceArray *node, CpsKont *k);
+static LamNameSpaceArray *cpsTkLamNameSpaceArray(LamNameSpaceArray *node, CpsKont *k);
 static LamAlphaEnvArray *cpsTkLamAlphaEnvArray(LamAlphaEnvArray *node, CpsKont *k);
 
 // utilities
@@ -1248,15 +1248,15 @@ static LamAlphaEnv *cpsTkLamAlphaEnv(LamAlphaEnv *node, CpsKont *k) {
     LamAlphaEnv *new_next = cpsTkLamAlphaEnv(node->next, k);
     PROTECT(new_next);
     changed = changed || (new_next != node->next);
-    LamAlphaEnvArray *new_namespaces = cpsTkLamAlphaEnvArray(node->namespaces, k);
-    PROTECT(new_namespaces);
-    changed = changed || (new_namespaces != node->namespaces);
+    LamAlphaEnvArray *new_nameSpaces = cpsTkLamAlphaEnvArray(node->nameSpaces, k);
+    PROTECT(new_nameSpaces);
+    changed = changed || (new_nameSpaces != node->nameSpaces);
 
     if (changed) {
         // Create new node with modified fields
         LamAlphaEnv *result = newLamAlphaEnv(new_next);
         result->alphaTable = new_alphaTable;
-        result->namespaces = new_namespaces;
+        result->nameSpaces = new_nameSpaces;
         UNPROTECT(save);
         LEAVE(cpsTkLamAlphaEnv);
         return result;
@@ -1362,12 +1362,12 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
             break;
         }
         case LAMEXP_TYPE_NAMESPACES: {
-            // LamNamespaceArray
-            LamNamespaceArray *variant = getLamExp_Namespaces(node);
-            LamNamespaceArray *new_variant = cpsTkLamNamespaceArray(variant, k);
+            // LamNameSpaceArray
+            LamNameSpaceArray *variant = getLamExp_NameSpaces(node);
+            LamNameSpaceArray *new_variant = cpsTkLamNameSpaceArray(variant, k);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamExp_Namespaces(CPI(node), new_variant);
+                result = newLamExp_NameSpaces(CPI(node), new_variant);
             }
             break;
         }
@@ -1567,11 +1567,11 @@ static LamInfo *cpsTkLamInfo(LamInfo *node, CpsKont *k) {
         }
         case LAMINFO_TYPE_NAMESPACEINFO: {
             // LamContext
-            LamContext *variant = getLamInfo_NamespaceInfo(node);
+            LamContext *variant = getLamInfo_NameSpaceInfo(node);
             LamContext *new_variant = cpsTkLamContext(variant, k);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamInfo_NamespaceInfo(CPI(node), new_variant);
+                result = newLamInfo_NameSpaceInfo(CPI(node), new_variant);
             }
             break;
         }
@@ -1588,34 +1588,34 @@ static LamInfo *cpsTkLamInfo(LamInfo *node, CpsKont *k) {
     return result;
 }
 
-static LamNamespaceArray *cpsTkLamNamespaceArray(LamNamespaceArray *node, CpsKont *k) {
-    ENTER(cpsTkLamNamespaceArray);
+static LamNameSpaceArray *cpsTkLamNameSpaceArray(LamNameSpaceArray *node, CpsKont *k) {
+    ENTER(cpsTkLamNameSpaceArray);
     if (node == NULL) {
-        LEAVE(cpsTkLamNamespaceArray);
+        LEAVE(cpsTkLamNameSpaceArray);
         return NULL;
     }
 
     bool changed = false;
-    LamNamespaceArray *result = newLamNamespaceArray();
+    LamNameSpaceArray *result = newLamNameSpaceArray();
     int save = PROTECT(result);
 
     // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
-        struct LamExp * element = peeknLamNamespaceArray(node, i);
+        struct LamExp * element = peeknLamNameSpaceArray(node, i);
         struct LamExp * new_element = cpsTkLamExp(element, k);
         PROTECT(new_element);
         changed = changed || (new_element != element);
-        pushLamNamespaceArray(result, new_element);
+        pushLamNameSpaceArray(result, new_element);
     }
 
     if (changed) {
         UNPROTECT(save);
-        LEAVE(cpsTkLamNamespaceArray);
+        LEAVE(cpsTkLamNameSpaceArray);
         return result;
     }
 
     UNPROTECT(save);
-    LEAVE(cpsTkLamNamespaceArray);
+    LEAVE(cpsTkLamNameSpaceArray);
     return node;
 }
 

@@ -55,7 +55,7 @@ static LamTypeConstructorArgs *convertAstTypeList(AstTypeList *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeMap(AstTypeMap *, LamContext *);
 static LamTypeConstructorArgs *convertAstTypeConstructorArgs(AstTypeConstructorArgs *, LamContext *);
 static LamExp *convertNest(AstNest *, LamContext *);
-static LamExp *lamConvert(AstDefinitions *, AstNamespaceArray *, AstExpressions *, LamContext *);
+static LamExp *lamConvert(AstDefinitions *, AstNameSpaceArray *, AstExpressions *, LamContext *);
 static LamExp *convertSymbol(ParserInfo, HashSymbol *, LamContext *);
 static LamExp *convertAnnotatedSymbol(AstAnnotatedSymbol *, LamContext *);
 
@@ -86,19 +86,19 @@ static LamExp *lamExpError(ParserInfo I) {
 }
 
 /**
- * @brief Adds the current namespace to the lambda context.
+ * @brief Adds the current nameSpace to the lambda context.
  * 
- * Adds the `$namespace` symbol to the current context, bound to the
- * current namespace id.
+ * Adds the `$nameSpace` symbol to the current context, bound to the
+ * current nameSpace id.
  *
  * @param context The lambda context to modify.
- * @param namespaceId The ID of the current namespace.
+ * @param nameSpaceId The ID of the current nameSpace.
  * @return void
  */
-static void addCurrentNamespaceToContext(LamContext *context, int namespaceId) {
-    LamInfo *lamInfo = newLamInfo_Nsid(CPI(context), namespaceId);
+static void addCurrentNameSpaceToContext(LamContext *context, int nameSpaceId) {
+    LamInfo *lamInfo = newLamInfo_Nsid(CPI(context), nameSpaceId);
     int save = PROTECT(lamInfo);
-    setLamInfoTable(context->frame, namespaceSymbol(), lamInfo);
+    setLamInfoTable(context->frame, nameSpaceSymbol(), lamInfo);
     UNPROTECT(save);
 }
 
@@ -165,14 +165,14 @@ LamExp *lamConvertProg(AstProg *prog) {
     ENTER(lamConvertProg);
     LamContext *env = newLamContext(CPI(prog), NULL);
     int save = PROTECT(env);
-    addCurrentNamespaceToContext(env, NS_GLOBAL);
+    addCurrentNameSpaceToContext(env, NS_GLOBAL);
     
     // Prepend currentFile definition to preamble
     AstDefinitions *preambleWithCurrentFile = 
         makeCurrentFileDefinition(prog->_yy_parser_info.filename, CPI(prog), prog->preamble);
     PROTECT(preambleWithCurrentFile);
     
-    LamExp *result = lamConvert(preambleWithCurrentFile, prog->namespaces, prog->body, env);
+    LamExp *result = lamConvert(preambleWithCurrentFile, prog->nameSpaces, prog->body, env);
     UNPROTECT(save);
     LEAVE(lamConvertProg);
     return result;
@@ -214,54 +214,54 @@ static void addConstructorInfoToLamContext(LamContext *context,
 }
 
 /**
- * @brief Adds namespace information to the lambda context.
+ * @brief Adds nameSpace information to the lambda context.
  *
- * The information stored is the context resulting from converting the AST namespace.
- * That context is stored against a key generated from the namespace id (so it is recoverable).
+ * The information stored is the context resulting from converting the AST nameSpace.
+ * That context is stored against a key generated from the nameSpace id (so it is recoverable).
  * The key contains non-alphanumeric characters so it cannot conflict with identifiers in the AST.
  *
  * @param context The lambda context to modify.
- * @param info The lambda context of the namespace.
- * @param namespace The ID of the namespace.
+ * @param info The lambda context of the nameSpace.
+ * @param nameSpace The ID of the nameSpace.
  * @return void
  */
-static void addNamespaceInfoToLamContext(LamContext *context, LamContext *info, Index namespace) {
+static void addNameSpaceInfoToLamContext(LamContext *context, LamContext *info, Index nameSpace) {
     char buf[80];
-    sprintf(buf, NS_FORMAT, namespace); // ns$%u
+    sprintf(buf, NS_FORMAT, nameSpace); // ns$%u
     HashSymbol *symbol = newSymbol(buf);
-    LamInfo *lamInfo = newLamInfo_NamespaceInfo(CPI(context), info);
+    LamInfo *lamInfo = newLamInfo_NameSpaceInfo(CPI(context), info);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, symbol, lamInfo);
     UNPROTECT(save);
 }
 
 /**
- * @brief converts a namespace and pushes it on to the growing lambda namespace array.
+ * @brief converts a nameSpace and pushes it on to the growing lambda nameSpace array.
  * 
- * IMPORTANT: this function also adds the namespace info to the parent context.
+ * IMPORTANT: this function also adds the nameSpace info to the parent context.
  *
- * @param nsArray The AST namespace array to retrieve the namespace from.
- * @param i The index of the namespace in the array.
+ * @param nsArray The AST nameSpace array to retrieve the nameSpace from.
+ * @param i The index of the nameSpace in the array.
  * @param env The lambda context to use.
- * @param namespaces The lambda namespace array to push the converted namespace into.
+ * @param nameSpaces The lambda nameSpace array to push the converted nameSpace into.
  * @return void
  */
-static void convertNamespace(AstNamespaceArray *nsArray,
+static void convertNameSpace(AstNameSpaceArray *nsArray,
                              Index i,
                              LamContext *env,
-                             LamNamespaceArray *namespaces) {
-    AstNamespaceImpl *namespace = nsArray->entries[i];
+                             LamNameSpaceArray *nameSpaces) {
+    AstNameSpaceImpl *nameSpace = nsArray->entries[i];
     LamContext *nsEnv = newLamContext(CPI(env), env);
     int save2 = PROTECT(nsEnv);
-    addCurrentNamespaceToContext(nsEnv, (int)i);
-    AstExpression *envToken = newAstExpression_Env(CPI(namespace));
+    addCurrentNameSpaceToContext(nsEnv, (int)i);
+    AstExpression *envToken = newAstExpression_Env(CPI(nameSpace));
     PROTECT(envToken);
-    AstExpressions *body = newAstExpressions(CPI(namespace), envToken, NULL);
+    AstExpressions *body = newAstExpressions(CPI(nameSpace), envToken, NULL);
     PROTECT(body);
-    LamExp *lamNamespace = lamConvert(namespace->definitions, NULL, body, nsEnv);
-    PROTECT(lamNamespace);
-    pushLamNamespaceArray(namespaces, lamNamespace);
-    addNamespaceInfoToLamContext(env, nsEnv, i);
+    LamExp *lamNameSpace = lamConvert(nameSpace->definitions, NULL, body, nsEnv);
+    PROTECT(lamNameSpace);
+    pushLamNameSpaceArray(nameSpaces, lamNameSpace);
+    addNameSpaceInfoToLamContext(env, nsEnv, i);
     UNPROTECT(save2);
 }
 
@@ -314,13 +314,13 @@ static LamBindings *hoistFunctionDefinitions(LamBindings *funcDefs) {
  * @brief Workhorse routine that converts various nest-like scenarios to a common LamExp
  *
  * @param definitions If there were definitions.
- * @param nsArray namespaces collected during parsing to be converted and attached
+ * @param nsArray nameSpaces collected during parsing to be converted and attached
  * @param expressions The AST expressions to convert.
  * @param env The lambda context to use.
  * @return The resulting lambda expression.
  */
 static LamExp *lamConvert(AstDefinitions *definitions,
-                          AstNamespaceArray *nsArray,
+                          AstNameSpaceArray *nsArray,
                           AstExpressions *expressions,
                           LamContext *env) {
     ENTER(lamConvert);
@@ -352,56 +352,56 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     funcDefsList = makePrintFunctions(typeDefList, funcDefsList, env);
     PROTECT(funcDefsList);
 
-    // convert namespaces
-    LamNamespaceArray *namespaces = NULL;
+    // convert nameSpaces
+    LamNameSpaceArray *nameSpaces = NULL;
     if (nsArray != NULL) {
-        namespaces = newLamNamespaceArray();
-        PROTECT(namespaces);
+        nameSpaces = newLamNameSpaceArray();
+        PROTECT(nameSpaces);
         for (Index i = 0; i < nsArray->size; ++i) {
-            convertNamespace(nsArray, i, env, namespaces);
+            convertNameSpace(nsArray, i, env, nameSpaces);
         }
     }
 
     // convert the body sequence
-    // MUST be done *after* converting the namespaces so they are available in env
+    // MUST be done *after* converting the nameSpaces so they are available in env
     // [body expressions]
     LamSequence *body = convertSequence(expressions, env);
     PROTECT(body);
 
-    // prepend any namespaces to the body sequence
-    // [namespaces] [body]
-    if (namespaces != NULL && namespaces->size > 0) {
-        LamExp *lamNamespaces = newLamExp_Namespaces(CPI(env), namespaces);
-        PROTECT(lamNamespaces);
-        body = newLamSequence(CPI(env), lamNamespaces, body);
+    // prepend any nameSpaces to the body sequence
+    // [nameSpaces] [body]
+    if (nameSpaces != NULL && nameSpaces->size > 0) {
+        LamExp *lamNameSpaces = newLamExp_NameSpaces(CPI(env), nameSpaces);
+        PROTECT(lamNameSpaces);
+        body = newLamSequence(CPI(env), lamNameSpaces, body);
         PROTECT(body);
     }
     
     // promote the body sequence to a LamExp
-    // [[namespaces] [body]]
+    // [[nameSpaces] [body]]
     LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
 
     LamExp *result = NULL;
     if (varDefsList != NULL) {
         // prepend variable definitions to the letrec body
-        // [vars] [[namespaces] [body]]
+        // [vars] [[nameSpaces] [body]]
         letRecBody = makeLamExp_LetStar(CPI(varDefsList), varDefsList, letRecBody);
         PROTECT(letRecBody);
     }
     // if there are functions, create a letrec, else just use the body
     if (funcDefsList != NULL) {
-        // [[printers] [funcs] [vars] [[namespaces] [body]]]
+        // [[printers] [funcs] [vars] [[nameSpaces] [body]]]
         result = makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
-        // [vars] [[namespaces] [body]]
+        // [vars] [[nameSpaces] [body]]
         result = letRecBody;
     }
     PROTECT(result);
 
     // prepend typedefs if any
     if (typeDefList != NULL) {
-        // [typedefs] [[printers] [funcs] [vars] [[namespaces] [body]]]
+        // [typedefs] [[printers] [funcs] [vars] [[nameSpaces] [body]]]
         result = makeLamExp_Typedefs(CPI(typeDefList), typeDefList, result);
     }
 
@@ -485,14 +485,14 @@ static LamExp *lamConvertTuple(ParserInfo PI, AstExpressions *tuple, LamContext 
 }
 
 /**
- * @brief Converts an AST Lookup Expression (namespace dereference) to a lambda expression.
+ * @brief Converts an AST Lookup Expression (nameSpace dereference) to a lambda expression.
  *
  * @param lookup The Lookup Expression to convert.
  * @param env The lambda context to use.
  * @return The resulting lambda expression.
  */
 static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
-    LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->nsid);
+    LamContext *nsEnv = lookupNameSpaceInLamContext(env, lookup->nsid);
     LamExp *expression = convertExpression(lookup->expression, nsEnv);
     int save = PROTECT(expression);
     LamLookup *llu = newLamLookup(CPI(lookup), lookup->nsid, lookup->nsSymbol, expression);
@@ -860,11 +860,11 @@ static void collectTypeInfo(HashSymbol *symbol,
                             int arity,
                             LamContext *env) {
     ENTER(collectTypeInfo);
-    int namespace = lookupCurrentNamespaceInLamContext(env);
+    int nameSpace = lookupCurrentNameSpaceInLamContext(env);
     LamTypeTags *tags = makeLamTypeTags(args);
     int save = PROTECT(tags);
     LamTypeConstructorInfo *info =
-        newLamTypeConstructorInfo(CPI(type), symbol, namespace, type, tags, needsVec,
+        newLamTypeConstructorInfo(CPI(type), symbol, nameSpace, type, tags, needsVec,
                                   arity, enumCount, index);
     PROTECT(info);
     addConstructorInfoToLamContext(env, symbol, info);
@@ -1418,7 +1418,7 @@ static LamArgs *thunkMacroArgs(LamArgs *args) {
 
 /**
  * @brief Converts a macro application where the callee is an arbitrary expression
- *    (e.g., a namespaced lookup), wrapping the arguments in thunks.
+ *    (e.g., a nameSpaced lookup), wrapping the arguments in thunks.
  * @param PI The parser information.
  * @param callee The callee expression (can be a Lookup or Var).
  * @param args The arguments to the macro.
@@ -1789,7 +1789,7 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
  * @brief Finds a constructor in the lambda context.
  *
  * This function looks up a constructor by its name in the given lambda context.
- * If the constructor is a lookup, find the constructor in the referenced namespace.
+ * If the constructor is a lookup, find the constructor in the referenced nameSpace.
  *
  * @param los The lookup or symbol to find.
  * @param env The lambda context.
@@ -1803,7 +1803,7 @@ static LamTypeConstructorInfo *findConstructor(AstLookupOrSymbol *los, LamContex
         break;
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
             AstLookupSymbol *lookup = getAstLookupOrSymbol_Lookup(los);
-            LamContext *nsEnv = lookupNamespaceInLamContext(env, lookup->nsid);
+            LamContext *nsEnv = lookupNameSpaceInLamContext(env, lookup->nsid);
             return lookupConstructorInLamContext(nsEnv, lookup->symbol);
         }
         break;
@@ -1856,9 +1856,9 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     LamExp *function = convertExpression(funCall->function, env);
     PROTECT(function);
     LamExp *result = NULL;
-    // If the callee is a namespaced lookup, check macro-ness in that namespace env
+    // If the callee is a nameSpaced lookup, check macro-ness in that nameSpace env
     if (function->type == LAMEXP_TYPE_LOOKUP) {
-        LamContext *nsEnv = lookupNamespaceInLamContext(env, getLamExp_Lookup(function)->nsid);
+        LamContext *nsEnv = lookupNameSpaceInLamContext(env, getLamExp_Lookup(function)->nsid);
         LamExp *under = findUnderlyingValue(function);
         if (under->type == LAMEXP_TYPE_VAR && isMacro(getLamExp_Var(under), nsEnv)) {
             result = thunkMacroExp(CPI(funCall), function, args);

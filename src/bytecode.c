@@ -276,7 +276,7 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAexpMakeVec);
 }
 
-void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationArray *L) {
+void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b, LocationArray *L) {
     if (x->size > 0) {
         writeLocation(CPI(x->entries[0]->body), b, L);
         addByte(b, BYTECODES_TYPE_NS_START);
@@ -294,11 +294,11 @@ void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationAr
     }
 }
 
-void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b, LocationArray *L) {
-    ENTER(writeAexpNamespaces);
-    writeAexpNamespaceArray(x->namespaces, b, L);
+void writeAexpNameSpaces(AexpNameSpaces *x, ByteCodeArray *b, LocationArray *L) {
+    ENTER(writeAexpNameSpaces);
+    writeAexpNameSpaceArray(x->nameSpaces, b, L);
     writeAnfExp(x->body, b, L);
-    LEAVE(writeAexpNamespaces);
+    LEAVE(writeAexpNameSpaces);
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
@@ -714,7 +714,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case AEXP_TYPE_NAMESPACES:{
-                writeAexpNamespaces(x->val.namespaces, b, L);
+                writeAexpNameSpaces(x->val.nameSpaces, b, L);
             }
             break;
         default:

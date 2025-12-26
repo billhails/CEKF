@@ -110,7 +110,7 @@ static inline void assert_stack_has_args(int naargs) {
 #endif
 
 // --- Basic stack convenience wrappers (moved earlier so helpers can use them) ---
-static inline void patch(Value v, int num) { patchVec(v.val.namespace, state.S, num); }
+static inline void patch(Value v, int num) { patchVec(v.val.nameSpace, state.S, num); }
 static inline void poke(int offset, Value v) { pokeStack(state.S, offset, v); }
 static inline void push(Value v) { pushStackEntry(state.S, v); }
 static inline void extend(int i) { pushnStack(state.S, i, vVoid); }
@@ -1197,9 +1197,9 @@ static void step() {
                     int numLambdas = readCurrentWord();
                     int stackOffset = readCurrentWord();
                     DEBUG("NS_END [%d] [%d]", numLambdas, stackOffset);
-                    Vec *snapshot = snapshotNamespace(state.S);
+                    Vec *snapshot = snapshotNameSpace(state.S);
                     int save = PROTECT(snapshot);
-                    Value ns = value_Namespace(snapshot);
+                    Value ns = value_NameSpace(snapshot);
                     poke(0 - (numLambdas + stackOffset), ns);
                     discard(numLambdas);
                     UNPROTECT(save);
@@ -1209,13 +1209,13 @@ static void step() {
             case BYTECODES_TYPE_NS_FINISH:{
                     int num = readCurrentWord();
                     DEBUG("NS_FINISH [%d]", num);
-                    // at this point we need to patch each of the namespaces with the
-                    // final block of populated namespaces, size num, and at TOS
+                    // at this point we need to patch each of the nameSpaces with the
+                    // final block of populated nameSpaces, size num, and at TOS
                     for (int i = 1; i <= num; i++) {
                         Value ns = peek(-i);
 #ifdef SAFETY_CHECKS
                         if (ns.type != VALUE_TYPE_NAMESPACE) {
-                            cant_happen("expected namespace, got %d", ns.type);
+                            cant_happen("expected nameSpace, got %d", ns.type);
                         }
 #endif
                         patch(ns, num);
@@ -1229,13 +1229,13 @@ static void step() {
                     Value v = peek(offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
-                        cant_happen("expected namespace, got type %d", v.type);
+                        cant_happen("expected nameSpace, got type %d", v.type);
                     }
 #endif
                     // new empty stack frame
                     pushStackFrame(state.S);
-                    // copy the namespace contents to the top of the stack
-                    restoreNamespace(state.S, v.val.namespace);
+                    // copy the nameSpace contents to the top of the stack
+                    restoreNameSpace(state.S, v.val.nameSpace);
                 }
                 break;
 
@@ -1246,13 +1246,13 @@ static void step() {
                     Value v = lookup(frame, offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
-                        cant_happen("expected namespace, got type %d", v.type);
+                        cant_happen("expected nameSpace, got type %d", v.type);
                     }
 #endif
                     // new empty stack frame 
                     pushStackFrame(state.S);
-                    // copy the namespace contents to the top of the stack
-                    restoreNamespace(state.S, v.val.namespace);
+                    // copy the nameSpace contents to the top of the stack
+                    restoreNameSpace(state.S, v.val.nameSpace);
                 }
                 break;
 

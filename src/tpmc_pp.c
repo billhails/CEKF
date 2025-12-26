@@ -32,7 +32,7 @@ void ppTpmcAssignmentPattern(TpmcAssignmentPattern *assignmentPattern) {
 
 void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern) {
     ppTpmcSymbol(constructorPattern->tag);
-    eprintf(":%d", constructorPattern->namespace);
+    eprintf(":%d", constructorPattern->nameSpace);
     ppTpmcPatternArray(constructorPattern->components);
 }
 

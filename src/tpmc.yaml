@@ -74,7 +74,7 @@ structs:
                 components of the term to be extracted and used in subsequent patterns.
         data:
             tag: HashSymbol
-            namespace: int
+            nameSpace: int
             info: LamTypeConstructorInfo
             components: TpmcPatternArray
 

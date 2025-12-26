@@ -37,7 +37,7 @@
 
 static AnfExp *normalize(LamExp *lamExp, AnfExp *tail);
 static AnfExp *normalizeLam(LamLam *lamLam, AnfExp *tail);
-static AnfExp *normalizeNamespaces(ParserInfo I, LamNamespaceArray *nsArray, AnfExp *tail);
+static AnfExp *normalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray, AnfExp *tail);
 static AnfExp *normalizeVar(ParserInfo I, HashSymbol *var, AnfExp *tail);
 static AnfExp *normalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer, AnfExp *tail);
 static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail);
@@ -58,7 +58,7 @@ static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer);
 static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character);
 static Aexp *aexpNormalizeLam(LamLam *lamLam);
-static AexpNamespaceArray *aexpNormalizeNamespaces(ParserInfo I, LamNamespaceArray *nsArray);
+static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray);
 static AexpVarList *convertVarList(LamVarList *args);
 static AexpList *replaceLamArgs(LamArgs *, LamExpTable *);
 static Aexp *replaceLamPrim(LamPrimApp *lamPrimApp,
@@ -154,7 +154,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
         case LAMEXP_TYPE_MAKETUPLE:
             return normalizeMakeTuple(CPI(lamExp), getLamExp_MakeTuple(lamExp), tail);
         case LAMEXP_TYPE_NAMESPACES:
-            return normalizeNamespaces(CPI(lamExp), getLamExp_Namespaces(lamExp), tail);
+            return normalizeNameSpaces(CPI(lamExp), getLamExp_NameSpaces(lamExp), tail);
         case LAMEXP_TYPE_ENV:
             return normalizeEnv(CPI(lamExp), tail);
         case LAMEXP_TYPE_LOOKUP:
@@ -658,34 +658,34 @@ static AnfExp *normalizeStdInteger(ParserInfo I, int integer, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeNamespaces(ParserInfo I, LamNamespaceArray *nsArray, AnfExp *tail) {
-    ENTER(normalizeNamespaces);
-    AexpNamespaceArray *nsa = aexpNormalizeNamespaces(I, nsArray);
+static AnfExp *normalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray, AnfExp *tail) {
+    ENTER(normalizeNameSpaces);
+    AexpNameSpaceArray *nsa = aexpNormalizeNameSpaces(I, nsArray);
     int save = PROTECT(nsa);
-    AexpNamespaces *nso = newAexpNamespaces(I, nsa, tail);
+    AexpNameSpaces *nso = newAexpNameSpaces(I, nsa, tail);
     PROTECT(nso);
-    Aexp *aexp = newAexp_Namespaces(I, nso);
+    Aexp *aexp = newAexp_NameSpaces(I, nso);
     PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
     UNPROTECT(save);
-    LEAVE(normalizeNamespaces);
+    LEAVE(normalizeNameSpaces);
     return exp;
 }
 
-static AexpNamespaceArray *aexpNormalizeNamespaces(ParserInfo I, LamNamespaceArray *nsArray) {
-    ENTER(aexpNormalizeNamespaces);
-    AexpNamespaceArray *res = newAexpNamespaceArray();
+static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I, LamNameSpaceArray *nsArray) {
+    ENTER(aexpNormalizeNameSpaces);
+    AexpNameSpaceArray *res = newAexpNameSpaceArray();
     int save = PROTECT(res);
     for (Index i = 0; i < nsArray->size; i++) {
         AnfExp *nsExp = normalize(nsArray->entries[i], NULL);
         int save2 = PROTECT(nsExp);
-        AexpNamespace *ns = newAexpNamespace(I, nsExp);
+        AexpNameSpace *ns = newAexpNameSpace(I, nsExp);
         PROTECT(ns);
-        pushAexpNamespaceArray(res, ns);
+        pushAexpNameSpaceArray(res, ns);
         UNPROTECT(save2);
     }
     UNPROTECT(save);
-    LEAVE(aexpNormalizeNamespaces);
+    LEAVE(aexpNormalizeNameSpaces);
     return res;
 }
 

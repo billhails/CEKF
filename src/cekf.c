@@ -178,7 +178,7 @@ void patchVec(Vec *v, Stack *s, int num) {
     copyValues(&v->entries[base], &s->entries[s->frame + base], num);
 }
 
-void restoreNamespace(Stack *s, Vec *vl) {
+void restoreNameSpace(Stack *s, Vec *vl) {
     extendStackEntries(s, s->frame + vl->size);
 #ifdef SAFETY_CHECKS
     if (vl->size > (s->entries_capacity - s->frame)) {
@@ -189,7 +189,7 @@ void restoreNamespace(Stack *s, Vec *vl) {
     s->offset = vl->size;
 }
 
-Vec *snapshotNamespace(Stack *s) {
+Vec *snapshotNameSpace(Stack *s) {
     Vec *vl = newVec(s->offset);
     copyValues(vl->entries, &s->entries[s->frame], s->offset);
     return vl;

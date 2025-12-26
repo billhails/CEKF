@@ -27,11 +27,11 @@
 
 void printLambdaSymbol(HashSymbol *x, int depth);
 LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var);
-LamContext *lookupNamespaceInLamContext(LamContext *context, Index index);
+LamContext *lookupNameSpaceInLamContext(LamContext *context, Index index);
 LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *context, AstLookupOrSymbol *scoped);
 LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped);
 LamTypeConstructorInfo *lookupScopedLamSymbolInLamContext(LamContext *context, LamLookupSymbol *lookup);
 LamTypeConstructorInfo *lookupScopedAstSymbolInLamContext(LamContext *context, AstLookupSymbol *lookup);
-int lookupCurrentNamespaceInLamContext(LamContext *context);
+int lookupCurrentNameSpaceInLamContext(LamContext *context);
 LamTypeConstructorType *lookupConstructorTypeInLamContext(LamContext *context, HashSymbol *var);
 #endif

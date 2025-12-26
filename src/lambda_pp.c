@@ -167,7 +167,7 @@ void ppLamExp(LamExp *exp) {
             ppLamMakeTuple(getLamExp_MakeTuple(exp));
             break;
         case LAMEXP_TYPE_NAMESPACES:
-            ppLamNamespaces(getLamExp_Namespaces(exp));
+            ppLamNameSpaces(getLamExp_NameSpaces(exp));
             break;
         case LAMEXP_TYPE_ENV:
             eprintf("env");
@@ -189,8 +189,8 @@ void ppLamLookup(LamLookup *lookup) {
     eprintf(")");
 }
 
-void ppLamNamespaces(LamNamespaceArray *arr) {
-    eprintf("(namespaces");
+void ppLamNameSpaces(LamNameSpaceArray *arr) {
+    eprintf("(nameSpaces");
     for (Index i = 0; i < arr->size; ++i) {
         eprintf(" [");
         ppLamExp(arr->entries[i]);
@@ -678,7 +678,7 @@ static inline void pad(int depth) {
     eprintf("%*s", depth, "");
 }
 
-static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
+static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
     if (env == NULL) {
         pad(depth);
         eprintf("<NULL> env\n");
@@ -692,11 +692,11 @@ static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
     while ((name = iterateLamInfoTable(env->frame, &i, &value)) != NULL) {
         pad(depth);
         if (value->type == LAMINFO_TYPE_NAMESPACEINFO) {
-            if (done_namespaces) {
+            if (done_nameSpaces) {
                 eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
             } else {
                 eprintf(" %s => %s [\n", name->name, lamInfoTypeName(value->type));
-                _ppLamContext(getLamInfo_NamespaceInfo(value), depth + 1, true);
+                _ppLamContext(getLamInfo_NameSpaceInfo(value), depth + 1, true);
                 pad(depth);
                 eprintf(" ]\n");
             }
@@ -706,7 +706,7 @@ static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
             eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
         }
     }
-    _ppLamContext(env->parent, depth + 1, done_namespaces);
+    _ppLamContext(env->parent, depth + 1, done_nameSpaces);
     pad(depth);
     eprintf("}\n");
 }

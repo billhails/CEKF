@@ -468,14 +468,14 @@ static void markProtected() {
  * The mark phase of the mark-sweep garbage collection.
  * Marks all reachable objects starting from the roots:
  * the ProtectionStack, the interpreter state,
- * arithmetic objects, namespaces, memory buffers
+ * arithmetic objects, nameSpaces, memory buffers
  * and the variable table (symbol tables).
  */
 static void mark() {
     markState();
     markProtected();
     markArithmetic();
-    markNamespaces();
+    markNameSpaces();
     markMemBufs();
 #ifdef DEBUG_LOG_GC
     eprintf("starting markVarTables\n");

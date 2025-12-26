@@ -214,10 +214,10 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
         return env;
     }
     TcType *currentNs = NULL;
-    getFromTcEnv(env, namespaceSymbol(), &currentNs);
+    getFromTcEnv(env, nameSpaceSymbol(), &currentNs);
 #ifdef SAFETY_CHECKS
     if (currentNs == NULL) {
-        cant_happen("cannot find current namespace");
+        cant_happen("cannot find current nameSpace");
     }
 #endif
     if (currentNs->val.nsid == index) {

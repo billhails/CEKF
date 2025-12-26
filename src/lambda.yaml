@@ -101,10 +101,10 @@ structs:
 
     LamLookup:
         meta:
-            brief: A lookup in a namespace
+            brief: A lookup in a nameSpace
             description: >-
                 This structure represents the evaluation of an expression
-                in a different namespace.
+                in a different nameSpace.
         data:
             nsid: int
             nsSymbol: HashSymbol
@@ -112,11 +112,11 @@ structs:
 
     LamLookupSymbol:
         meta:
-            brief: A lookup symbol in a namespace
+            brief: A lookup symbol in a nameSpace
             description: >-
                 This structure represents a symbol that is looked up
-                in a namespace. It is used to resolve symbols to their
-                definitions in the context of the given namespace.
+                in a nameSpace. It is used to resolve symbols to their
+                definitions in the context of the given nameSpace.
         data:
             nsid: int
             nsSymbol: HashSymbol
@@ -156,7 +156,7 @@ structs:
                 that was constructed using a specific constructor.
         data:
             name: HashSymbol # name of the constructor being deconstructed
-            nsid: int        # namespace of the constructor being deconstructed
+            nsid: int        # nameSpace of the constructor being deconstructed
             vec: int         # offset of the field in the vector
             exp: LamExp      # expression being deconstructed
 
@@ -458,7 +458,7 @@ structs:
             brief: Information about a type constructor
             description: >-
                 This utility structure collects information about a type
-                constructor, including its name, namespace, type, tags,
+                constructor, including its name, nameSpace, type, tags,
                 and arity.
         data:
             name: HashSymbol
@@ -482,7 +482,7 @@ structs:
         data:
             alphaTable: LamAlphaTable
             next: LamAlphaEnv
-            namespaces: LamAlphaEnvArray=NULL
+            nameSpaces: LamAlphaEnvArray=NULL
 enums:
     LamPrimOp:
         meta:
@@ -536,7 +536,7 @@ unions:
             makeTuple: LamArgs
             makeVec: LamMakeVec
             match: LamMatch
-            namespaces: LamNamespaceArray
+            nameSpaces: LamNameSpaceArray
             prim: LamPrimApp
             print: LamPrint
             sequence: LamSequence
@@ -549,10 +549,10 @@ unions:
 
     LamLookupOrSymbol:
         meta:
-            brief: A lookup or symbol in a namespace
+            brief: A lookup or symbol in a nameSpace
             description: >-
                 This union represents either a lookup of a symbol in a
-                namespace or a symbol in the current namespace.
+                nameSpace or a symbol in the current nameSpace.
         data:
             symbol: HashSymbol
             lookup: LamLookupSymbol
@@ -590,7 +590,7 @@ unions:
                 depending on its type.
         data:
             typeConstructorInfo: LamTypeConstructorInfo
-            namespaceInfo: LamContext
+            nameSpaceInfo: LamContext
             nsid: int
 
 hashes:
@@ -646,11 +646,11 @@ hashes:
             entries: HashSymbol
 
 arrays:
-    LamNamespaceArray:
+    LamNameSpaceArray:
         meta:
-            brief: A list of namespaces
+            brief: A list of nameSpaces
             description: >-
-                This array holds the bodies of namespaces that are currently
+                This array holds the bodies of nameSpaces that are currently
                 in scope.  The ubiquitous `ns_id` is an index into this array.
         data:
             entries: LamExp
@@ -659,7 +659,7 @@ arrays:
         meta:
             brief: An array of alpha conversion environments
             description: >-
-                This array holds the alpha conversion environments per-namespace.
+                This array holds the alpha conversion environments per-nameSpace.
         data:
             entries: LamAlphaEnv
 

@@ -78,7 +78,7 @@ static LamLookupOrSymbol *visitLamLookupOrSymbol(LamLookupOrSymbol *node, LamAlp
 static LamCondCases *visitLamCondCases(LamCondCases *node, LamAlphaEnv *context);
 static LamTypeConstructorType *visitLamTypeConstructorType(LamTypeConstructorType *node, LamAlphaEnv *context);
 static LamInfo *visitLamInfo(LamInfo *node, LamAlphaEnv *context);
-static LamNamespaceArray *visitLamNamespaceArray(LamNamespaceArray *node, LamAlphaEnv *context);
+static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node, LamAlphaEnv *context);
 
 int alpha_flag = 0;
 char *alpha_conversion_function = NULL;
@@ -104,27 +104,27 @@ static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name, LamAlphaE
     cant_happen("undefined variable %s [%s +%d]", name->name, PI.filename, PI.lineno);
 }
 
-static void pushNamespaceEnv(LamAlphaEnv *context) {
+static void pushNameSpaceEnv(LamAlphaEnv *context) {
     for (LamAlphaEnv *current = context; current != NULL; current = current->next) {
-        if (current->namespaces != NULL) {
-            pushLamAlphaEnvArray(current->namespaces, context);
+        if (current->nameSpaces != NULL) {
+            pushLamAlphaEnvArray(current->nameSpaces, context);
             return;
         }
     }
-    cant_happen("pushNamespaceEnv called but no namespace array found in context");
+    cant_happen("pushNameSpaceEnv called but no nameSpace array found in context");
 }
 
-static LamAlphaEnv *findAlphaNamespaceEnv(LamAlphaEnv *context, Index index) {
+static LamAlphaEnv *findAlphaNameSpaceEnv(LamAlphaEnv *context, Index index) {
     for (LamAlphaEnv *current = context; current != NULL; current = current->next) {
-        if (current->namespaces != NULL) {
-            if (index < current->namespaces->size) {
-                return current->namespaces->entries[index];
+        if (current->nameSpaces != NULL) {
+            if (index < current->nameSpaces->size) {
+                return current->nameSpaces->entries[index];
             } else {
-                cant_happen("findAlphaNamespaceEnv: index %u out of bounds (size %u)", index, current->namespaces->size);
+                cant_happen("findAlphaNameSpaceEnv: index %u out of bounds (size %u)", index, current->nameSpaces->size);
             }
         }
     }
-    cant_happen("findAlphaNamespaceEnv called but no namespace array found in context");
+    cant_happen("findAlphaNameSpaceEnv called but no nameSpace array found in context");
 }
 
 // Visitor implementations
@@ -374,7 +374,7 @@ static LamLookup *visitLamLookup(LamLookup *node, LamAlphaEnv *context) {
     bool changed = false;
     // Pass through nsid (type: int, not memory-managed)
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
-    LamAlphaEnv *nsContext = findAlphaNamespaceEnv(context, node->nsid);
+    LamAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsid);
     LamExp *new_exp = visitLamExp(node->exp, nsContext);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
@@ -1224,14 +1224,14 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         case LAMEXP_TYPE_ENV: {
             // void_ptr
             // the `(env)` directive is a way of capturing the current
-            // environment from the "body" of a namespace.
+            // environment from the "body" of a nameSpace.
             // It is a generated instruction and cannot be written
             // directly in source code.
-            // It must be the only expression in the namespace body and
+            // It must be the only expression in the nameSpace body and
             // it can only appear there. It is an instruction
             // that the current environment should be
-            // associated with the current namespace at this point.
-            pushNamespaceEnv(context);
+            // associated with the current nameSpace at this point.
+            pushNameSpaceEnv(context);
             break;
         }
         case LAMEXP_TYPE_ERROR: {
@@ -1329,12 +1329,12 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
             break;
         }
         case LAMEXP_TYPE_NAMESPACES: {
-            // LamNamespaceArray
-            LamNamespaceArray *variant = getLamExp_Namespaces(node);
-            LamNamespaceArray *new_variant = visitLamNamespaceArray(variant, context);
+            // LamNameSpaceArray
+            LamNameSpaceArray *variant = getLamExp_NameSpaces(node);
+            LamNameSpaceArray *new_variant = visitLamNameSpaceArray(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamExp_Namespaces(CPI(node), new_variant);
+                result = newLamExp_NameSpaces(CPI(node), new_variant);
             }
             break;
         }
@@ -1555,11 +1555,11 @@ static LamInfo *visitLamInfo(LamInfo *node, LamAlphaEnv *context) {
         }
         case LAMINFO_TYPE_NAMESPACEINFO: {
             // LamContext
-            LamContext *variant = getLamInfo_NamespaceInfo(node);
+            LamContext *variant = getLamInfo_NameSpaceInfo(node);
             LamContext *new_variant = visitLamContext(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamInfo_NamespaceInfo(CPI(node), new_variant);
+                result = newLamInfo_NameSpaceInfo(CPI(node), new_variant);
             }
             break;
         }
@@ -1575,21 +1575,21 @@ static LamInfo *visitLamInfo(LamInfo *node, LamAlphaEnv *context) {
     return result;
 }
 
-static LamNamespaceArray *visitLamNamespaceArray(LamNamespaceArray *node, LamAlphaEnv *context) {
+static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
     bool changed = false;
-    LamNamespaceArray *result = newLamNamespaceArray();
+    LamNameSpaceArray *result = newLamNameSpaceArray();
     int save = PROTECT(result);
-    context->namespaces = newLamAlphaEnvArray();
+    context->nameSpaces = newLamAlphaEnvArray();
 
     // Iterate over all elements
     for (Index i = 0; i < node->size; i++) {
-        struct LamExp * element = peeknLamNamespaceArray(node, i);
+        struct LamExp * element = peeknLamNameSpaceArray(node, i);
         struct LamExp * new_element = visitLamExp(element, context);
         PROTECT(new_element);
         changed = changed || (new_element != element);
-        pushLamNamespaceArray(result, new_element);
+        pushLamNameSpaceArray(result, new_element);
     }
 
     if (changed) {

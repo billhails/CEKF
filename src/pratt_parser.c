@@ -128,7 +128,7 @@ static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstFileIdArray *fileIdStack = NULL;
 static AstFunCall *switchFC(PrattParser *parser);
 static AstLookupOrSymbol *scoped_symbol(PrattParser *);
-static AstNamespace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
+static AstNameSpace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
 static AstNest *nest_body(PrattParser *, HashSymbol *);
 static AstNest *nest(PrattParser *);
 static AstNest *top(PrattParser *parser);
@@ -148,9 +148,9 @@ static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
 static PrattUTF8 *rawString(PrattParser *);
 static PrattUTF8 *str(PrattParser *);
-static void storeNamespace(PrattParser *, AstNamespace *);
+static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
-static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser);
+static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
 static PrattRecord *ensureTargetRecord(PrattParser *parser, HashSymbol *op);
 static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRecord *source,
                               int nsRef, HashSymbol *nsSymbol,
@@ -521,7 +521,7 @@ AstNest *prattParseStandaloneString(char *data, char *name)
  * create a child parser
  * give it the lexer for the main data
  * parse the main data
- * collect namespaces etc.
+ * collect nameSpaces etc.
  *
  * @param thing The PrattLexer to parse.
  * @return An AstProg containing the parsed data.
@@ -557,7 +557,7 @@ static AstProg *prattParseThing(PrattLexer *thing)
     AstExpressions *exprs = newAstExpressions(CPI(expr), expr, NULL);
     PROTECT(exprs);
     nest = newAstNest(CPI(expr), definitions, exprs);
-    AstProg *prog = astNestToProg(nest); // has direct access to namespaces
+    AstProg *prog = astNestToProg(nest); // has direct access to nameSpaces
     UNPROTECT(save);
     return prog;
 }
@@ -648,44 +648,44 @@ static AstDefinitions *prattParseLink(PrattParser *parser, char *file, PrattPars
 }
 
 /**
- * @brief Find a namespace in the parser's namespace table or in the next parser.
+ * @brief Find a nameSpace in the parser's nameSpace table or in the next parser.
  *
- * This function checks if a namespace with the given symbol exists in the current parser's
- * namespace table. If not found, it recursively checks the next parser in the linked list.
+ * This function checks if a nameSpace with the given symbol exists in the current parser's
+ * nameSpace table. If not found, it recursively checks the next parser in the linked list.
  *
  * @param parser The PrattParser to search in.
- * @param symbol The HashSymbol representing the namespace to find.
+ * @param symbol The HashSymbol representing the nameSpace to find.
  * @param result Pointer to store the result if found (can be NULL).
- * @return true if the namespace is found, false otherwise.
+ * @return true if the nameSpace is found, false otherwise.
  */
-static bool findNamespace(PrattParser *parser, HashSymbol *symbol, int *result)
+static bool findNameSpace(PrattParser *parser, HashSymbol *symbol, int *result)
 {
     if (parser == NULL)
         return false;
-    if (getPrattNsIdTable(parser->namespaces, symbol, result))
+    if (getPrattNsIdTable(parser->nameSpaces, symbol, result))
         return true;
-    return findNamespace(parser->next, symbol, result);
+    return findNameSpace(parser->next, symbol, result);
 }
 
 /**
- * @brief Store a namespace in the parser's namespace table.
+ * @brief Store a nameSpace in the parser's nameSpace table.
  *
- * This function checks if a namespace with the given symbol already exists.
+ * This function checks if a nameSpace with the given symbol already exists.
  * If it does, it raises a parser error for redefinition. Otherwise, it stores
- * the namespace in the parser's namespace table.
+ * the nameSpace in the parser's nameSpace table.
  *
- * @param parser The PrattParser to store the namespace in.
- * @param ns The AstNamespace to store.
+ * @param parser The PrattParser to store the nameSpace in.
+ * @param ns The AstNameSpace to store.
  */
-static void storeNamespace(PrattParser *parser, AstNamespace *ns)
+static void storeNameSpace(PrattParser *parser, AstNameSpace *ns)
 {
-    if (findNamespace(parser, ns->symbol, NULL))
+    if (findNameSpace(parser, ns->symbol, NULL))
     {
-        parserError(parser, "redefinition of namespace %s", ns->symbol->name);
+        parserError(parser, "redefinition of nameSpace %s", ns->symbol->name);
     }
     else
     {
-        setPrattNsIdTable(parser->namespaces, ns->symbol, ns->reference);
+        setPrattNsIdTable(parser->nameSpaces, ns->symbol, ns->reference);
     }
 }
 
@@ -732,7 +732,7 @@ int initNsOpsCache()
     return PROTECT(nsOpsCache);
 }
 
-static PrattExportedOps *captureNamespaceOperatorExports(PrattParser *parser)
+static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser)
 {
     if (parser == NULL)
         return NULL;
@@ -897,23 +897,23 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRec
 }
 
 /**
- * @brief Parse a link to a file and return its namespace.
+ * @brief Parse a link to a file and return its nameSpace.
  *
- * This function checks if the file exists, looks for an existing namespace,
+ * This function checks if the file exists, looks for an existing nameSpace,
  * and handles recursive includes. If the file is not found it returns with an error.
- * If the file is already parsed it returns the already existing namespace.
+ * If the file is already parsed it returns the already existing nameSpace.
  *
- * Careful. Somewhat accidentally this algorithm stores the namespaces
+ * Careful. Somewhat accidentally this algorithm stores the nameSpaces
  * in the order that they need to be processed.
- * Specifically because a namespace is parsed before it is recorded,
+ * Specifically because a nameSpace is parsed before it is recorded,
  * all of its imports are recorded ahead of it.
  *
  * @param parser The PrattParser to use for parsing.
  * @param filename The name of the file to link.
- * @param symbol The HashSymbol representing the namespace symbol.
- * @return An AstNamespace containing the parsed namespace or an error.
+ * @param symbol The HashSymbol representing the nameSpace symbol.
+ * @return An AstNameSpace containing the parsed nameSpace or an error.
  */
-static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, HashSymbol *symbol)
+static AstNameSpace *parseLink(PrattParser *parser, unsigned char *filename, HashSymbol *symbol)
 {
     // check the file exists
     AgnosticFileId *fileId = calculatePath(filename, parser);
@@ -921,15 +921,15 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, Has
     if (fileId == NULL)
     {
         parserError(parser, "cannot find file \"%s\"", filename);
-        AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
+        AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
     }
-    // see if we've already parsed it, if so return the existing namespace id
-    int found = lookupNamespace(fileId);
+    // see if we've already parsed it, if so return the existing nameSpace id
+    int found = lookupNameSpace(fileId);
     if (found != -1)
     {
-        AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, found);
+        AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, found);
         UNPROTECT(save);
         return ns;
     }
@@ -937,7 +937,7 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, Has
     if (fileIdInArray(fileId, fileIdStack))
     {
         parserError(parser, "recursive include detected for %s", fileId->name);
-        AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, -1);
+        AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
     }
@@ -950,13 +950,13 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, Has
     AstDefinitions *definitions = prattParseLink(parser, fileId->name, &resultParser);
     REPLACE_PROTECT(save2, resultParser);
     PROTECT(definitions);
-    // save the new namespace and it's parser
-    AstNamespaceImpl *impl = newAstNamespaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
+    // save the new nameSpace and it's parser
+    AstNameSpaceImpl *impl = newAstNameSpaceImpl(BUFPI(parser->lexer->bufList), fileId, definitions);
     PROTECT(impl);
-    found = pushAstNamespaceArray(namespaces, impl);
+    found = pushAstNameSpaceArray(nameSpaces, impl);
     pushPrattParsers(parserStack, resultParser);
-    // Capture exported operators for this namespace id (non-destructive cache for later import)
-    PrattExportedOps *ops = captureNamespaceOperatorExports(resultParser);
+    // Capture exported operators for this nameSpace id (non-destructive cache for later import)
+    PrattExportedOps *ops = captureNameSpaceOperatorExports(resultParser);
     PROTECT(ops);
 #ifdef SAFETY_CHECKS
     int found2 =
@@ -965,13 +965,13 @@ static AstNamespace *parseLink(PrattParser *parser, unsigned char *filename, Has
 #ifdef SAFETY_CHECKS
     if (found != found2)
     {
-        cant_happen("namespace ops cache index mismatch");
+        cant_happen("nameSpace ops cache index mismatch");
     }
 #endif
     // un-protect against recursive include
     popAstFileIdArray(fileIdStack);
-    // return the id of the namespace
-    AstNamespace *ns = newAstNamespace(BUFPI(parser->lexer->bufList), symbol, found);
+    // return the id of the nameSpace
+    AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, found);
     UNPROTECT(save);
     return ns;
 }
@@ -1063,7 +1063,7 @@ static PrattParser *makeChildParser(PrattParser *parent)
     // child-specific additions will persistently extend this trie without
     // mutating the parent's structure.
     child->trie = parent->trie;
-    // Namespaces and rules resolve through the parent via parser->next;
+    // NameSpaces and rules resolve through the parent via parser->next;
     // child will add its own bindings locally as needed.
     return child;
 }
@@ -1090,9 +1090,9 @@ static AstNest *top(PrattParser *parser)
 }
 
 /**
- * @brief Parse the body of a nest, which can be a let block, a namespace, or just statements.
+ * @brief Parse the body of a nest, which can be a let block, a nameSpace, or just statements.
  *
- * This function checks for a let block, a namespace declaration, or just statements,
+ * This function checks for a let block, a nameSpace declaration, or just statements,
  * and constructs an AstNest accordingly.
  *
  * @param parser The PrattParser to use for parsing.
@@ -1120,9 +1120,9 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal)
     }
     else if (match(parser, TOK_NAMESPACE()))
     {
-        // Keep namespace definitions in the current parser so preamble- and
+        // Keep nameSpace definitions in the current parser so preamble- and
         // file-level operator definitions remain visible globally. Operator
-        // export control for namespaces can be added later.
+        // export control for nameSpaces can be added later.
         AstDefinitions *defs = definitions(parser, terminal);
         save = PROTECT(defs);
         res = newAstNest(CPI(defs), defs, NULL);
@@ -1684,7 +1684,7 @@ static void copyPrattRecordTable(PrattRecordTable *to, PrattRecordTable *from)
 /**
  * @brief Shallow copy a PrattNsIdTable.
  *
- * This function iterates through the source PrattNsIdTable and copies each namespace
+ * This function iterates through the source PrattNsIdTable and copies each nameSpace
  * symbol and its associated record to the destination PrattNsIdTable.
  *
  * @param to The destination PrattNsIdTable to copy to.
@@ -1704,9 +1704,9 @@ static void copyPrattNsIdTable(PrattNsIdTable *to, PrattNsIdTable *from)
 static PrattParser *meldParsers(PrattParser *to, PrattParser *from) __attribute__((unused));
 
 /**
- * @brief Merge two PrattParsers, combining their operator definitions and namespaces.
+ * @brief Merge two PrattParsers, combining their operator definitions and nameSpaces.
  *
- * This function creates a new PrattParser that combines the rules and namespaces
+ * This function creates a new PrattParser that combines the rules and nameSpaces
  * of the two given PrattParsers. It ensures that no operator is redefined and
  * merges the trie structures.
  *
@@ -1714,14 +1714,14 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) __attribute_
  *
  * @param to The first PrattParser to merge.
  * @param from The second PrattParser to merge.
- * @return A new PrattParser that contains the merged rules and namespaces.
+ * @return A new PrattParser that contains the merged rules and nameSpaces.
  */
 static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
     if (from->trie) {
         PrattParser *result = newPrattParser(to->next);
         int save = PROTECT(result);
         copyPrattRecordTable(result->rules, to->rules);
-        copyPrattNsIdTable(result->namespaces, to->namespaces);
+        copyPrattNsIdTable(result->nameSpaces, to->nameSpaces);
         result->lexer = to->lexer;
         result->trie = to->trie;
         Index i = 0;
@@ -2190,7 +2190,7 @@ static AstDefinition *exportop(PrattParser *parser) {
 }
 
 /**
- * @brief Parse an import directive to import exported operators from a namespace.
+ * @brief Parse an import directive to import exported operators from a nameSpace.
  *
  * Syntax:
  *   import <ns> operators;
@@ -2205,8 +2205,8 @@ static AstDefinition *importop(PrattParser *parser) {
     AstDefinition *res = NULL;
     HashSymbol *nsSymbol = symbol(parser);
     int nsRef = -1;
-    if (!findNamespace(parser, nsSymbol, &nsRef)) {
-        parserErrorAt(TOKPI(tok), parser, "unknown namespace %s", nsSymbol->name);
+    if (!findNameSpace(parser, nsSymbol, &nsRef)) {
+        parserErrorAt(TOKPI(tok), parser, "unknown nameSpace %s", nsSymbol->name);
         res = newAstDefinition_Blank(TOKPI(tok));
         LEAVE(importop);
         UNPROTECT(save);
@@ -2217,7 +2217,7 @@ static AstDefinition *importop(PrattParser *parser) {
         ops = nsOpsCache->entries[nsRef];
     }
     if (ops == NULL || ops->exportedRules == NULL) {
-        parserErrorAt(TOKPI(tok), parser, "namespace %s has no exported operators", nsSymbol->name);
+        parserErrorAt(TOKPI(tok), parser, "nameSpace %s has no exported operators", nsSymbol->name);
         res = newAstDefinition_Blank(TOKPI(tok));
         LEAVE(importop);
         UNPROTECT(save);
@@ -2258,14 +2258,14 @@ static AstDefinition *importop(PrattParser *parser) {
             HashSymbol *op = utf8ToSymbol(pattern->keywords->entries[0]);
             PrattRecord *source = NULL;
             if (!getPrattRecordTable(ops->exportedRules, op, &source) || source == NULL) {
-                parserErrorAt(TOKPI(tok), parser, "namespace %s did not export operator with pattern", nsSymbol->name);
+                parserErrorAt(TOKPI(tok), parser, "nameSpace %s did not export operator with pattern", nsSymbol->name);
             } else {
                 PrattFixity fixity = getFixityFromPattern(pattern);
                 PrattMixfixPattern *sourcePattern = fixity == PRATTFIXITY_TYPE_PREFIX ? source->prefix.pattern :
                                                   fixity == PRATTFIXITY_TYPE_INFIX ? source->infix.pattern :
                                                   source->postfix.pattern;
                 if (sourcePattern == NULL || !eqPrattStrings(pattern->keywords, sourcePattern->keywords)) {
-                    parserErrorAt(TOKPI(tok), parser, "namespace %s did not export operator with matching pattern", nsSymbol->name);
+                    parserErrorAt(TOKPI(tok), parser, "nameSpace %s did not export operator with matching pattern", nsSymbol->name);
                 } else {
                     PrattRecord *target = ensureTargetRecord(parser, op);
                     mergeFixityImport(parser, target, source, nsRef, nsSymbol,
@@ -2618,7 +2618,7 @@ static AstExpression *nestexpr(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief Parse a scoped symbol, that is a symbol optionally prefixed by a namespace and a period.
+ * @brief Parse a scoped symbol, that is a symbol optionally prefixed by a nameSpace and a period.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstLookupOrSymbol representing the parsed scoped symbol.
@@ -2633,7 +2633,7 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser)
     {
         HashSymbol *sym2 = symbol(parser);
         int index = 0;
-        if (findNamespace(parser, sym1, &index))
+        if (findNameSpace(parser, sym1, &index))
         {
             AstLookupOrSymbol *res = makeAstLookupOrSymbol_Lookup(TOKPI(tok), index, sym1, sym2);
             LEAVE(scoped_symbol);
@@ -2642,7 +2642,7 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser)
         }
         else
         {
-            parserError(parser, "cannot resolve namespace %s", sym1->name);
+            parserError(parser, "cannot resolve nameSpace %s", sym1->name);
         }
     }
     AstLookupOrSymbol *res = newAstLookupOrSymbol_Symbol(TOKPI(tok), sym1);
@@ -3293,7 +3293,7 @@ static AstTypeSymbols *type_variables(PrattParser *parser)
 }
 
 /**
- * @brief parses a link (namespace import) directive.
+ * @brief parses a link (nameSpace import) directive.
  */
 static AstDefinition *link(PrattParser *parser)
 {
@@ -3307,9 +3307,9 @@ static AstDefinition *link(PrattParser *parser)
         consume(parser, TOK_AS());
         HashSymbol *name = symbol(parser);
         consume(parser, TOK_SEMI());
-        AstNamespace *ns = parseLink(parser, path->entries, name);
+        AstNameSpace *ns = parseLink(parser, path->entries, name);
         PROTECT(ns);
-        storeNamespace(parser, ns);
+        storeNameSpace(parser, ns);
         res = newAstDefinition_Blank(CPI(ns));
     }
     LEAVE(link);
@@ -3649,13 +3649,13 @@ static AstLookupSymbol *astStructLookupToLus(PrattParser *parser, AstLookup *loo
         return newAstLookupSymbol(CPI(lookup), -1, TOK_ERROR(), TOK_ERROR());
     }
     int index = 0;
-    if (findNamespace(parser, lookup->nsSymbol, &index)) {
+    if (findNameSpace(parser, lookup->nsSymbol, &index)) {
         AstLookupSymbol *lus = newAstLookupSymbol(CPI(lookup),
                 index, lookup->nsSymbol, lookup->expression->val.symbol);
         return lus;
     } else {
         parserErrorAt(CPI(lookup), parser,
-                      "unknown namespace '%s' in lookup",
+                      "unknown nameSpace '%s' in lookup",
                       lookup->nsSymbol->name);
         return newAstLookupSymbol(CPI(lookup), -1, lookup->nsSymbol, TOK_ERROR());
     }
@@ -3955,15 +3955,15 @@ static AstExpression *lookup(PrattRecord *record,
     if (lhs->type == AST_EXPRESSION_TYPE_SYMBOL)
     {
         int index = 0;
-        if (!findNamespace(parser, lhs->val.symbol, &index))
+        if (!findNameSpace(parser, lhs->val.symbol, &index))
         {
-            parserError(parser, "cannot resolve namespace %s", lhs->val.symbol->name);
+            parserError(parser, "cannot resolve nameSpace %s", lhs->val.symbol->name);
         }
         rhs = makeAstExpression_Lookup(LEXPI(parser->lexer), index, lhs->val.symbol, rhs);
     }
     else
     {
-        parserError(parser, "expected namespace on lhs of '.', got %s", astExpressionTypeName(lhs->type));
+        parserError(parser, "expected nameSpace on lhs of '.', got %s", astExpressionTypeName(lhs->type));
     }
     LEAVE(lookup);
     UNPROTECT(save);

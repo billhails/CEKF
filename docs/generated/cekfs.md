@@ -49,7 +49,7 @@ Value --pclo--> Clo
 Value --kont--> Kont
 Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
-Value --namespace--> Vec
+Value --nameSpace--> Vec
 Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value

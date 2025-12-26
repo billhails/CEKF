@@ -121,7 +121,7 @@ inline:
                 kont: Kont
                 vec: Vec
                 builtIn: BuiltInImplementation
-                namespace: Vec
+                nameSpace: Vec
                 opaque: opaque
 
     arrays:

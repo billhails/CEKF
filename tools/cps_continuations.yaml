@@ -386,3 +386,15 @@ continuations:
     free_vars:
       sk: LamExp
       cases: LamMatchList
+
+# TkNameSpaces:
+#   transformer: T_k
+#   key: k_nameSpaces
+#   context: |
+#     (E.nameSpaces(exprs)) {
+#       Ts_k(exprs, fn (sexprs) {
+#         k(E.nameSpaces(sexprs))
+#       })
+#     }
+#   free_vars:
+#     k: CpsKont

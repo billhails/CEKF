@@ -714,31 +714,31 @@ static LamExp *normalize_Lookup(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-// (`(namespaces . ,Ms)
-//     (k `(namespaces . ,(normalize-terms Ms))))
+// (`(nameSpaces . ,Ms)
+//     (k `(nameSpaces . ,(normalize-terms Ms))))
 
-static LamNamespaceArray *normalize_array(LamNamespaceArray *nsArray) {
-    LamNamespaceArray *newNsArray = newLamNamespaceArray();
+static LamNameSpaceArray *normalize_array(LamNameSpaceArray *nsArray) {
+    LamNameSpaceArray *newNsArray = newLamNameSpaceArray();
     int save = PROTECT(newNsArray);
     for (Index i = 0; i < nsArray->size; i++) {
         LamExp *normNs = normalize_term(nsArray->entries[i]);
         int save = PROTECT(normNs);
-        pushLamNamespaceArray(newNsArray, normNs);
+        pushLamNameSpaceArray(newNsArray, normNs);
         UNPROTECT(save);
     }
     UNPROTECT(save);
     return newNsArray;
 }
 
-static LamExp *normalize_Namespaces(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Namespaces);
-    LamNamespaceArray *nsExp = normalize_array(getLamExp_Namespaces(exp));
+static LamExp *normalize_NameSpaces(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_NameSpaces);
+    LamNameSpaceArray *nsExp = normalize_array(getLamExp_NameSpaces(exp));
     int save = PROTECT(nsExp);
-    LamExp *newNsExp = newLamExp_Namespaces(CPI(exp), nsExp);
+    LamExp *newNsExp = newLamExp_NameSpaces(CPI(exp), nsExp);
     PROTECT(newNsExp);
     LamExp *result = INVOKE(k, newNsExp);;
     UNPROTECT(save);
-    LEAVE(normalize_Namespaces);
+    LEAVE(normalize_NameSpaces);
     return result;
 }
 
@@ -865,7 +865,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_Match(exp, k);
                 break;
             case LAMEXP_TYPE_NAMESPACES:
-                res = normalize_Namespaces(exp, k);
+                res = normalize_NameSpaces(exp, k);
                 break;
             case LAMEXP_TYPE_PRIM:
                 res = normalize_PrimApp(exp, k);

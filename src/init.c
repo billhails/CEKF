@@ -25,7 +25,7 @@
 void initAll(void) {
     initProtection();
     init_arithmetic();
-    initNamespaces();
+    initNameSpaces();
     initFileIdStack();
     initParserStack();
     initNsOpsCache();

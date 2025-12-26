@@ -26,7 +26,7 @@ PrattLexer --bufList--> PrattBufList
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattRecordTable
-PrattParser --namespaces--> PrattNsIdTable
+PrattParser --nameSpaces--> PrattNsIdTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
 PrattParser --panicMode--> bool

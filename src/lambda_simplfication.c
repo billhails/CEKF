@@ -330,11 +330,11 @@ static LamCond *performCondSimplifications(LamCond *cond) {
     return cond;
 }
 
-static LamNamespaceArray *performNamespacesSimplifications(LamNamespaceArray *namespaces) {
-    for (Index i = 0; i < namespaces->size; i++) {
-        namespaces->entries[i] = lamPerformSimplifications(namespaces->entries[i]);
+static LamNameSpaceArray *performNameSpacesSimplifications(LamNameSpaceArray *nameSpaces) {
+    for (Index i = 0; i < nameSpaces->size; i++) {
+        nameSpaces->entries[i] = lamPerformSimplifications(nameSpaces->entries[i]);
     }
-    return namespaces;
+    return nameSpaces;
 }
 
 LamExp *lamPerformSimplifications(LamExp *exp) {
@@ -422,7 +422,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 setLamExp_Lookup(exp, performLookupSimplifications(getLamExp_Lookup(exp)));
                 break;
             case LAMEXP_TYPE_NAMESPACES:
-                setLamExp_Namespaces(exp, performNamespacesSimplifications(getLamExp_Namespaces(exp)));
+                setLamExp_NameSpaces(exp, performNameSpacesSimplifications(getLamExp_NameSpaces(exp)));
                 break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));

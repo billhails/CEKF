@@ -79,7 +79,7 @@ void ppAstNest(PrattUTF8 *dest, AstNest *nest) {
                 psprintf(dest, "in ");
                 ppAstExpressions(dest, nest->expressions);
             } else {
-                psprintf(dest, "namespace ");
+                psprintf(dest, "nameSpace ");
                 ppAstDefinitions(dest, nest->definitions);
             }
         } else {
@@ -89,7 +89,7 @@ void ppAstNest(PrattUTF8 *dest, AstNest *nest) {
     psprintf(dest, "}");
 }
 
-void ppAstNamespaceImpl(PrattUTF8 *dest, AstNamespaceImpl *impl) {
+void ppAstNameSpaceImpl(PrattUTF8 *dest, AstNameSpaceImpl *impl) {
     psprintf(dest, "\"%s\": {", impl->id->name);
     ppAstDefinitions(dest, impl->definitions);
     psprintf(dest, "}");
@@ -98,9 +98,9 @@ void ppAstNamespaceImpl(PrattUTF8 *dest, AstNamespaceImpl *impl) {
 void ppAstProg(PrattUTF8 *dest, AstProg *prog) {
     psprintf(dest, "preamble: {");
     ppAstDefinitions(dest, prog->preamble);
-    psprintf(dest, "} namespaces: [");
-    for (Index i = 0; i < prog->namespaces->size; ++i) {
-        ppAstNamespaceImpl(dest, prog->namespaces->entries[i]);
+    psprintf(dest, "} nameSpaces: [");
+    for (Index i = 0; i < prog->nameSpaces->size; ++i) {
+        ppAstNameSpaceImpl(dest, prog->nameSpaces->entries[i]);
     }
     psprintf(dest, "] body: {");
     ppAstExpressions(dest, prog->body);

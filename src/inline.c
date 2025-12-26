@@ -22,7 +22,7 @@
 
 static LamExp *inlineExp(LamExp *x);
 static LamTypeDefs *inlineTypeDefs(LamTypeDefs *x);
-static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x);
+static LamNameSpaceArray *inlineNameSpaces(LamNameSpaceArray *x);
 static LamLam *inlineLam(LamLam *x);
 static LamPrimApp *inlinePrim(LamPrimApp *x);
 static LamSequence *inlineSequence(LamSequence *x);
@@ -45,7 +45,7 @@ static LamCharCondCases *inlineCharCondCases(LamCharCondCases *x);
 static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x);
 static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x);
 
-static LamNamespaceArray *inlineNamespaces(LamNamespaceArray *x) {
+static LamNameSpaceArray *inlineNameSpaces(LamNameSpaceArray *x) {
     for (Index i = 0; i < x->size; ++i) {
         x->entries[i] = inlineExp(x->entries[i]);
     }
@@ -252,7 +252,7 @@ static LamExp *inlineExp(LamExp *x) {
             setLamExp_Typedefs(x, inlineTypeDefs(getLamExp_Typedefs(x)));
             break;
         case LAMEXP_TYPE_NAMESPACES:
-            setLamExp_Namespaces(x, inlineNamespaces(getLamExp_Namespaces(x)));
+            setLamExp_NameSpaces(x, inlineNameSpaces(getLamExp_NameSpaces(x)));
             break;
         case LAMEXP_TYPE_LAM:
             setLamExp_Lam(x, inlineLam(getLamExp_Lam(x)));

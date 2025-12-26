@@ -7,7 +7,7 @@ flowchart LR
 AnfSymbolTable --entries--> NULL
 AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool
-AnfEnv --isNamespace--> bool
+AnfEnv --isNameSpace--> bool
 AnfEnv --nbindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> AnfIntTable
@@ -31,10 +31,10 @@ AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
 AexpMakeVec --nargs--> int
 AexpMakeVec --args--> AexpList
-AexpNamespace --nbindings--> int
-AexpNamespace --body--> AnfExp
-AexpNamespaces --namespaces--> AexpNamespaceArray
-AexpNamespaces --body--> AnfExp
+AexpNameSpace --nbindings--> int
+AexpNameSpace --body--> AnfExp
+AexpNameSpaces --nameSpaces--> AexpNameSpaceArray
+AexpNameSpaces --body--> AnfExp
 CexpApply --function--> Aexp
 CexpApply --nargs--> int
 CexpApply --args--> AexpList
@@ -60,7 +60,7 @@ CexpCut --exp--> AnfExp
 AnfExpLet --var--> HashSymbol
 AnfExpLet --val--> AnfExp
 AnfExpLet --body--> AnfExp
-AnfExpLookup --namespace--> index
+AnfExpLookup --nameSpace--> index
 AnfExpLookup --annotatedVar--> AexpAnnotatedVar
 AnfExpLookup --body--> AnfExp
 AnfMatchList --matches--> AexpIntList
@@ -79,7 +79,7 @@ Aexp --littleinteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp
 Aexp --makeVec--> AexpMakeVec
-Aexp --namespaces--> AexpNamespaces
+Aexp --nameSpaces--> AexpNameSpaces
 Cexp --back--> void_ptr
 Cexp --error--> void_ptr
 Cexp --apply--> CexpApply
@@ -98,7 +98,7 @@ AnfExp --let--> AnfExpLet
 AnfExp --lookup--> AnfExpLookup
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
-AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
+AexpNameSpaceArray["AexpNameSpaceArray[]"] --entries--> AexpNameSpace
 AnfEnvArray["AnfEnvArray[]"] --entries--> AnfEnv
 ```
 

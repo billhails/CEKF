@@ -35,11 +35,11 @@ TcType --unknown--> HashSymbol
 TcType --opaque--> HashSymbol
 TcType --typeSig--> TcTypeSig
 TcType --tuple--> TcTypeArray
-TcType --namespaces--> TcNamespaceArray
+TcType --nameSpaces--> TcNameSpaceArray
 TcType --env--> TcEnv
 TcType --nsid--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
-TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
+TcNameSpaceArray["TcNameSpaceArray[]"] --entries--> TcType
 ```
 
 > Generated from src/tc.yaml by tools/generate.py

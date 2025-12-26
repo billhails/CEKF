@@ -114,7 +114,7 @@ LamTypeConstructorInfo --size--> int
 LamTypeConstructorInfo --index--> int
 LamAlphaEnv --alphaTable--> LamAlphaTable
 LamAlphaEnv --next--> LamAlphaEnv
-LamAlphaEnv --namespaces--> LamAlphaEnvArray
+LamAlphaEnv --nameSpaces--> LamAlphaEnvArray
 LamExp --amb--> LamAmb
 LamExp --apply--> LamApply
 LamExp --args--> LamArgs
@@ -139,7 +139,7 @@ LamExp --lookup--> LamLookup
 LamExp --makeTuple--> LamArgs
 LamExp --makeVec--> LamMakeVec
 LamExp --match--> LamMatch
-LamExp --namespaces--> LamNamespaceArray
+LamExp --nameSpaces--> LamNameSpaceArray
 LamExp --prim--> LamPrimApp
 LamExp --print--> LamPrint
 LamExp --sequence--> LamSequence
@@ -159,10 +159,10 @@ LamTypeConstructorType --var--> HashSymbol
 LamTypeConstructorType --function--> LamTypeFunction
 LamTypeConstructorType --tuple--> LamTypeConstructorArgs
 LamInfo --typeConstructorInfo--> LamTypeConstructorInfo
-LamInfo --namespaceInfo--> LamContext
+LamInfo --nameSpaceInfo--> LamContext
 LamInfo --nsid--> int
 LamPrimOp["enum LamPrimOp"]
-LamNamespaceArray["LamNamespaceArray[]"] --entries--> LamExp
+LamNameSpaceArray["LamNameSpaceArray[]"] --entries--> LamExp
 LamAlphaEnvArray["LamAlphaEnvArray[]"] --entries--> LamAlphaEnv
 ```
 
