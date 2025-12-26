@@ -620,7 +620,7 @@ static LamExp *cpsTkLamIff(LamIff *node, CpsKont *k) {
     }
     LamExp *c = kToC(CPI(node), k);
     int save = PROTECT(c);
-    CpsKont *k2 = makeKont_TkIf(c, node->consequent, node->alternative);
+    CpsKont *k2 = makeKont_TkIff(c, node->consequent, node->alternative);
     PROTECT(k2);
     LamExp *result = cpsTk(node->condition, k2);
     UNPROTECT(save);
@@ -628,15 +628,15 @@ static LamExp *cpsTkLamIff(LamIff *node, CpsKont *k) {
     return result;
 }
 
-LamExp *TkIfKont(LamExp *aexp, TkIfKontEnv *env) {
-    ENTER(TkIfKont);
+LamExp *TkIffKont(LamExp *aexp, TkIffKontEnv *env) {
+    ENTER(TkIffKont);
     LamExp *consequent = cpsTc(env->exprt, env->c);
     int save = PROTECT(consequent);
     LamExp *alternative = cpsTc(env->exprf, env->c);
     PROTECT(alternative);
     LamExp *result = makeLamExp_Iff(CPI(aexp), aexp, consequent, alternative);
     UNPROTECT(save);
-    LEAVE(TkIfKont);
+    LEAVE(TkIffKont);
     return result;
 }
 
@@ -1425,16 +1425,6 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         case LAMEXP_TYPE_CONSTRUCT: {
             // LamConstruct
             result = cpsTkLamConstruct(getLamExp_Construct(node), k);
-            break;
-        }
-        case LAMEXP_TYPE_CONSTRUCTOR: {
-            // LamTypeConstructorInfo
-            LamTypeConstructorInfo *variant = getLamExp_Constructor(node);
-            LamTypeConstructorInfo *new_variant = cpsTkLamTypeConstructorInfo(variant, k);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Constructor(CPI(node), new_variant);
-            }
             break;
         }
         case LAMEXP_TYPE_DECONSTRUCT: {

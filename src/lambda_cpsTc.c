@@ -51,7 +51,7 @@ static LamExp *cpsTcLamConstruct(LamConstruct *node, LamExp *c);
 static LamExp *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c);
 static LamTupleIndex *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
 static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, LamExp *c);
-static LamIff *cpsTcLamIff(LamIff *node, LamExp *c);
+static LamExp *cpsTcLamIff(LamIff *node, LamExp *c);
 static LamExp *cpsTcLamCond(LamCond *node, LamExp *c);
 static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c);
 static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c);
@@ -549,35 +549,47 @@ static LamMakeVec *cpsTcLamMakeVec(LamMakeVec *node, LamExp *c) {
     return node;
 }
 
-static LamIff *cpsTcLamIff(LamIff *node, LamExp *c) {
+/*
+    (E.if_expr(exprc, exprt, exprf)) {
+        let
+            sk = genstring("$k");
+            vsk = E.var(sk);
+        in
+            E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
+                E.if_expr(aexp, T_c(exprt,vsk), T_c(exprf,vsk))
+            })), [c])
+    }
+*/
+static LamExp *cpsTcLamIff(LamIff *node, LamExp *c) {
     ENTER(cpsTcLamIff);
-    if (node == NULL) {
-        LEAVE(cpsTcLamIff);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamExp *new_condition = cpsTcLamExp(node->condition, c);
-    int save = PROTECT(new_condition);
-    changed = changed || (new_condition != node->condition);
-    LamExp *new_consequent = cpsTcLamExp(node->consequent, c);
-    PROTECT(new_consequent);
-    changed = changed || (new_consequent != node->consequent);
-    LamExp *new_alternative = cpsTcLamExp(node->alternative, c);
-    PROTECT(new_alternative);
-    changed = changed || (new_alternative != node->alternative);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamIff *result = newLamIff(CPI(node), new_condition, new_consequent, new_alternative);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamIff);
-        return result;
-    }
-
+    LamExp *sk = makeVar(CPI(node), "k");
+    int save = PROTECT(sk);
+    CpsKont *k = makeKont_TcIff(sk, node->consequent, node->alternative);
+    PROTECT(k);
+    LamExp *body = cpsTk(node->condition, k);
+    PROTECT(body);
+    LamVarList *args = newLamVarList(CPI(node), getLamExp_Var(sk), NULL);
+    PROTECT(args);
+    LamExp *lambda = makeLamExp_Lam(CPI(node), args, body);
+    PROTECT(lambda);
+    LamArgs *arglist = newLamArgs(CPI(node), c, NULL);
+    PROTECT(arglist);
+    LamExp *result = makeLamExp_Apply(CPI(node), lambda, arglist);
     UNPROTECT(save);
     LEAVE(cpsTcLamIff);
-    return node;
+    return result;
+}
+
+LamExp *TcIffKont(LamExp *aexp, TcIffKontEnv *env) {
+    ENTER(TcIffKont);
+    LamExp *then_exp = cpsTc(env->exprt, env->sk);
+    int save = PROTECT(then_exp);
+    LamExp *else_exp = cpsTc(env->exprf, env->sk);
+    PROTECT(else_exp);
+    LamExp *result = makeLamExp_Iff(CPI(aexp), aexp, then_exp, else_exp);
+    UNPROTECT(save);
+    LEAVE(TcIffKont);
+    return result;
 }
 
 static LamIntCondCases *mapIntCondCases(LamIntCondCases *cases, LamExp *c) {
@@ -1407,16 +1419,6 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
             result = cpsTcLamConstruct(getLamExp_Construct(node), c);
             break;
         }
-        case LAMEXP_TYPE_CONSTRUCTOR: {
-            // LamTypeConstructorInfo
-            LamTypeConstructorInfo *variant = getLamExp_Constructor(node);
-            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Constructor(CPI(node), new_variant);
-            }
-            break;
-        }
         case LAMEXP_TYPE_DECONSTRUCT: {
             // LamDeconstruct
             result = cpsTcLamDeconstruct(getLamExp_Deconstruct(node), c);
@@ -1432,12 +1434,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         }
         case LAMEXP_TYPE_IFF: {
             // LamIff
-            LamIff *variant = getLamExp_Iff(node);
-            LamIff *new_variant = cpsTcLamIff(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamExp_Iff(CPI(node), new_variant);
-            }
+            result = cpsTcLamIff(getLamExp_Iff(node), c);
             break;
         }
         case LAMEXP_TYPE_LAM: {
