@@ -767,7 +767,7 @@ static LamExp *prependLetRec(LamExpTable *lambdaCache, LamExp *body) {
             REPLACE_PROTECT(save, bindings);
         }
     }
-    LamExp *res = makeLamExp_Letrec(I, bindings, body);
+    LamExp *res = makeLamExp_LetRec(I, bindings, body);
     UNPROTECT(save);
     LEAVE(prependLetRec);
     return res;

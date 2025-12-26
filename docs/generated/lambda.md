@@ -66,11 +66,13 @@ LamIntList --nsid--> int
 LamIntList --next--> LamIntList
 LamLet --bindings--> LamBindings
 LamLet --body--> LamExp
+LamLetRec --bindings--> LamBindings
+LamLetRec --body--> LamExp
+LamLetStar --bindings--> LamBindings
+LamLetStar --body--> LamExp
 LamBindings --var--> HashSymbol
 LamBindings --val--> LamExp
 LamBindings --next--> LamBindings
-LamLetRec --bindings--> LamBindings
-LamLetRec --body--> LamExp
 LamContext --frame--> LamInfoTable
 LamContext --aliases--> LamAliasTable
 LamContext --macros--> LamMacroSet
@@ -131,7 +133,8 @@ LamExp --error--> void_ptr
 LamExp --iff--> LamIff
 LamExp --lam--> LamLam
 LamExp --let--> LamLet
-LamExp --letrec--> LamLetRec
+LamExp --letRec--> LamLetRec
+LamExp --letStar--> LamLetStar
 LamExp --lookup--> LamLookup
 LamExp --makeTuple--> LamArgs
 LamExp --makeVec--> LamMakeVec

@@ -111,9 +111,9 @@ static LamExp *inlineConstant(LamTypeConstructorInfo *x) {
 static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x) {
     switch (x->type) {
         case LAMEXP_TYPE_CONSTRUCTOR:
-            return x->val.constructor;
+            return getLamExp_Constructor(x);
         case LAMEXP_TYPE_LOOKUP:
-            return resolveTypeConstructor(x->val.lookup->exp);
+            return resolveTypeConstructor(getLamExp_Lookup(x)->exp);
         default:
             return NULL;
     }
@@ -202,10 +202,10 @@ static LamCondCases *inlineCondCases(LamCondCases *x) {
     if (x != NULL) {
         switch (x->type) {
             case LAMCONDCASES_TYPE_INTEGERS:
-                x->val.integers = inlineIntCondCases(x->val.integers);
+                x->val.integers = inlineIntCondCases(getLamCondCases_Integers(x));
                 break;
             case LAMCONDCASES_TYPE_CHARACTERS:
-                x->val.characters = inlineCharCondCases(x->val.characters);
+                x->val.characters = inlineCharCondCases(getLamCondCases_Characters(x));
                 break;
             default:
                 cant_happen("unrecognized %s", lamCondCasesTypeName(x->type));
@@ -242,67 +242,67 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_CHARACTER:
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            x->val.typedefs = inlineTypeDefs(x->val.typedefs);
+            x->val.typedefs = inlineTypeDefs(getLamExp_Typedefs(x));
             break;
         case LAMEXP_TYPE_NAMESPACES:
-            x->val.namespaces = inlineNamespaces(x->val.namespaces);
+            x->val.namespaces = inlineNamespaces(getLamExp_Namespaces(x));
             break;
         case LAMEXP_TYPE_LAM:
-            x->val.lam = inlineLam(x->val.lam);
+            x->val.lam = inlineLam(getLamExp_Lam(x));
             break;
         case LAMEXP_TYPE_PRIM:
-            x->val.prim = inlinePrim(x->val.prim);
+            x->val.prim = inlinePrim(getLamExp_Prim(x));
             break;
         case LAMEXP_TYPE_SEQUENCE:
-            x->val.sequence = inlineSequence(x->val.sequence);
+            x->val.sequence = inlineSequence(getLamExp_Sequence(x));
             break;
         case LAMEXP_TYPE_MAKETUPLE:
-            x->val.makeTuple = inlineArgs(x->val.makeTuple);
+            x->val.makeTuple = inlineArgs(getLamExp_MakeTuple(x));
             break;
         case LAMEXP_TYPE_APPLY:
-            x = inlineApply(x->val.apply);
+            x = inlineApply(getLamExp_Apply(x));
             break;
         case LAMEXP_TYPE_IFF:
-            x->val.iff = inlineIff(x->val.iff);
+            x->val.iff = inlineIff(getLamExp_Iff(x));
             break;
         case LAMEXP_TYPE_CALLCC:
-            x->val.callCC = inlineExp(x->val.callCC);
+            x->val.callCC = inlineExp(getLamExp_CallCC(x));
             break;
         case LAMEXP_TYPE_LETREC:
-            x->val.letrec = inlineLetRec(x->val.letrec);
+            x->val.letRec = inlineLetRec(getLamExp_LetRec(x));
             break;
         case LAMEXP_TYPE_LET:
-            x->val.let = inlineLet(x->val.let);
+            x->val.let = inlineLet(getLamExp_Let(x));
             break;
         case LAMEXP_TYPE_AMB:
-            x->val.amb = inlineAmb(x->val.amb);
+            x->val.amb = inlineAmb(getLamExp_Amb(x));
             break;
         case LAMEXP_TYPE_PRINT:
-            x->val.print = inlinePrint(x->val.print);
+            x->val.print = inlinePrint(getLamExp_Print(x));
             break;
         case LAMEXP_TYPE_LOOKUP:
-            x->val.lookup = inlineLookup(x->val.lookup);
+            x->val.lookup = inlineLookup(getLamExp_Lookup(x));
             break;
         case LAMEXP_TYPE_TUPLEINDEX:
-            x->val.tupleIndex = inlineTupleIndex(x->val.tupleIndex);
+            x->val.tupleIndex = inlineTupleIndex(getLamExp_TupleIndex(x));
             break;
         case LAMEXP_TYPE_MATCH:
-            x->val.match = inlineMatch(x->val.match);
+            x->val.match = inlineMatch(getLamExp_Match(x));
             break;
         case LAMEXP_TYPE_TAG:
-            x->val.tag = inlineExp(x->val.tag);
+            x->val.tag = inlineExp(getLamExp_Tag(x));
             break;
         case LAMEXP_TYPE_DECONSTRUCT:
-            x->val.deconstruct->exp = inlineExp(x->val.deconstruct->exp);
+            getLamExp_Deconstruct(x)->exp = inlineExp(getLamExp_Deconstruct(x)->exp);
             break;
         case LAMEXP_TYPE_CONSTRUCTOR:
-            x = inlineConstant(x->val.constructor);
+            x = inlineConstant(getLamExp_Constructor(x));
             break;
         case LAMEXP_TYPE_CONSTRUCT:
-            x->val.construct->args = inlineArgs(x->val.construct->args);
+            getLamExp_Construct(x)->args = inlineArgs(getLamExp_Construct(x)->args);
             break;
         case LAMEXP_TYPE_COND:
-            x->val.cond = inlineCond(x->val.cond);
+            x->val.cond = inlineCond(getLamExp_Cond(x));
             break;
         case LAMEXP_TYPE_MAKEVEC:
             cant_happen("encountered %s", lamExpTypeName(x->type));

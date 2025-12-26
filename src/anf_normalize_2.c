@@ -283,21 +283,21 @@ static LamExp *normalizeBindingsInnerKont(LamExp *anfrest, NormalizeBindingsInne
 //             `(letrec ,anfbindings
 //                      ,(normalize body k))])))
 
-static LamExp *normalize_Letrec(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Letrec);
-    LamLetRec *letrec = getLamExp_Letrec(exp);
+static LamExp *normalize_LetRec(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_LetRec);
+    LamLetRec *letrec = getLamExp_LetRec(exp);
     AnfKont *k1 = makeKont_normalizeLetRec(letrec->body, k);
     int save = PROTECT(k1);
     LamExp *result = normalize_bindings(letrec->bindings, k1);
     UNPROTECT(save);
-    LEAVE(normalize_Letrec);
+    LEAVE(normalize_LetRec);
     return result;
 }
 
 static LamExp *normalizeLetRecKont(LamExp *anfbindings, NormalizeLetRecKontEnv *env) {
     LamExp *body = normalize(env->body, env->k);
     int save = PROTECT(body);
-    LamExp *result = makeLamExp_Letrec(CPI(env->body), getLamExp_Bindings(anfbindings), body);
+    LamExp *result = makeLamExp_LetRec(CPI(env->body), getLamExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -847,7 +847,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_Lam(exp, k);
                 break;
             case LAMEXP_TYPE_LETREC:
-                res = normalize_Letrec(exp, k);
+                res = normalize_LetRec(exp, k);
                 break;
             case LAMEXP_TYPE_LET:
                 res = normalize_Let(exp, k);

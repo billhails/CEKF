@@ -168,7 +168,7 @@ static LamExp *performApplySimplifications(LamApply *apply) {
     apply->args = performArgsSimplifications(apply->args);
     if (apply->function->type == LAMEXP_TYPE_LAM) {
         // Convert inline lambdas to let expressions
-        LamLam *lam = apply->function->val.lam;
+        LamLam *lam = getLamExp_Lam(apply->function);
         LamArgs *aargs = apply->args;
         LamVarList *fargs = lam->args;
         if (countLamArgs(aargs) == countLamVarList(fargs)) {
@@ -302,10 +302,10 @@ static LamCondCases *performCondCaseSimplifications(LamCondCases *cases) {
     }
     switch (cases->type) {
         case LAMCONDCASES_TYPE_INTEGERS:
-            cases->val.integers = performIntCondCaseSimplifications(cases->val.integers);
+            cases->val.integers = performIntCondCaseSimplifications(getLamCondCases_Integers(cases));
             break;
         case LAMCONDCASES_TYPE_CHARACTERS:
-            cases->val.characters = performCharCondCaseSimplifications(cases->val.characters);
+            cases->val.characters = performCharCondCaseSimplifications(getLamCondCases_Characters(cases));
             break;
         default:
             cant_happen("unrecognised %s", lamCondCasesTypeName(cases->type));
@@ -345,73 +345,73 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
             case LAMEXP_TYPE_ENV:
                 break;
             case LAMEXP_TYPE_LAM:
-                exp = performLamSimplifications(exp->val.lam);
+                exp = performLamSimplifications(getLamExp_Lam(exp));
                 break;
             case LAMEXP_TYPE_APPLY:
-                exp = performApplySimplifications(exp->val.apply);
+                exp = performApplySimplifications(getLamExp_Apply(exp));
                 break;
             case LAMEXP_TYPE_VAR:
-                exp->val.var = performVarSimplifications(exp->val.var);
+                exp->val.var = performVarSimplifications(getLamExp_Var(exp));
                 break;
             case LAMEXP_TYPE_PRIM:
-                exp->val.prim = performPrimSimplifications(exp->val.prim);
+                exp->val.prim = performPrimSimplifications(getLamExp_Prim(exp));
                 break;
             case LAMEXP_TYPE_SEQUENCE:
-                exp = performSequenceSimplifications(CPI(exp), exp->val.sequence);
+                exp = performSequenceSimplifications(CPI(exp), getLamExp_Sequence(exp));
                 break;
             case LAMEXP_TYPE_MAKEVEC:
-                exp->val.makeVec = performMakeVecSimplifications(exp->val.makeVec);
+                exp->val.makeVec = performMakeVecSimplifications(getLamExp_MakeVec(exp));
                 break;
             case LAMEXP_TYPE_DECONSTRUCT:
-                exp->val.deconstruct = performDeconstructSimplifications(exp->val.deconstruct);
+                exp->val.deconstruct = performDeconstructSimplifications(getLamExp_Deconstruct(exp));
                 break;
             case LAMEXP_TYPE_CONSTRUCT:
-                exp->val.construct = performConstructSimplifications(exp->val.construct);
+                exp->val.construct = performConstructSimplifications(getLamExp_Construct(exp));
                 break;
             case LAMEXP_TYPE_TAG:
-                exp->val.tag = lamPerformSimplifications(exp->val.tag);
+                exp->val.tag = lamPerformSimplifications(getLamExp_Tag(exp));
                 break;
             case LAMEXP_TYPE_IFF:
-                exp->val.iff = performIffSimplifications(exp->val.iff);
+                exp->val.iff = performIffSimplifications(getLamExp_Iff(exp));
                 break;
             case LAMEXP_TYPE_COND:
-                exp->val.cond = performCondSimplifications(exp->val.cond);
+                exp->val.cond = performCondSimplifications(getLamExp_Cond(exp));
                 break;
             case LAMEXP_TYPE_CALLCC:
-                exp->val.callCC = lamPerformSimplifications(exp->val.callCC);
+                exp->val.callCC = lamPerformSimplifications(getLamExp_CallCC(exp));
                 break;
             case LAMEXP_TYPE_LET:
-                exp->val.let = performLetSimplifications(exp->val.let);
+                exp->val.let = performLetSimplifications(getLamExp_Let(exp));
                 break;
             case LAMEXP_TYPE_LETREC:
-                exp->val.letrec = performLetRecSimplifications(exp->val.letrec);
+                exp->val.letRec = performLetRecSimplifications(getLamExp_LetRec(exp));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                exp->val.typedefs = performTypeDefsSimplifications(exp->val.typedefs);
+                exp->val.typedefs = performTypeDefsSimplifications(getLamExp_Typedefs(exp));
                 break;
             case LAMEXP_TYPE_MATCH:
-                exp->val.match = performMatchSimplifications(exp->val.match);
+                exp->val.match = performMatchSimplifications(getLamExp_Match(exp));
                 break;
             case LAMEXP_TYPE_AMB:
-                exp->val.amb = performAmbSimplifications(exp->val.amb);
+                exp->val.amb = performAmbSimplifications(getLamExp_Amb(exp));
                 break;
             case LAMEXP_TYPE_MAKETUPLE:
-                exp->val.makeTuple = performArgsSimplifications(exp->val.makeTuple);
+                exp->val.makeTuple = performArgsSimplifications(getLamExp_MakeTuple(exp));
                 break;
             case LAMEXP_TYPE_TUPLEINDEX:
-                exp->val.tupleIndex = performTupleIndexSimplifications(exp->val.tupleIndex);
+                exp->val.tupleIndex = performTupleIndexSimplifications(getLamExp_TupleIndex(exp));
                 break;
             case LAMEXP_TYPE_PRINT:
-                exp->val.print = performPrintSimplifications(exp->val.print);
+                exp->val.print = performPrintSimplifications(getLamExp_Print(exp));
                 break;
             case LAMEXP_TYPE_TYPEOF:
-                exp->val.typeOf = performTypeofSimplifications(exp->val.typeOf);
+                exp->val.typeOf = performTypeofSimplifications(getLamExp_TypeOf(exp));
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                exp->val.lookup = performLookupSimplifications(exp->val.lookup);
+                exp->val.lookup = performLookupSimplifications(getLamExp_Lookup(exp));
                 break;
             case LAMEXP_TYPE_NAMESPACES:
-                exp->val.namespaces = performNamespacesSimplifications(exp->val.namespaces);
+                exp->val.namespaces = performNamespacesSimplifications(getLamExp_Namespaces(exp));
                 break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));

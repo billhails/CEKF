@@ -773,7 +773,7 @@ static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c) {
     int save = PROTECT(bindings);
     LamExp *body = cpsTc(node->body, c);
     PROTECT(body);
-    LamExp *result = makeLamExp_Letrec(CPI(node), bindings, body);
+    LamExp *result = makeLamExp_LetRec(CPI(node), bindings, body);
     UNPROTECT(save);
     LEAVE(cpsTcLamLetRec);
     return result;
@@ -1421,7 +1421,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         }
         case LAMEXP_TYPE_LETREC: {
             // LamLetRec
-            result = cpsTcLamLetRec(getLamExp_Letrec(node), c);
+            result = cpsTcLamLetRec(getLamExp_LetRec(node), c);
             break;
         }
         case LAMEXP_TYPE_LOOKUP: {

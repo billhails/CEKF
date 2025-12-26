@@ -392,7 +392,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     // if there are functions, create a letrec, else just use the body
     if (funcDefsList != NULL) {
         // [[printers] [funcs] [vars] [[namespaces] [body]]]
-        result = makeLamExp_Letrec(CPI(letRecBody), funcDefsList, letRecBody);
+        result = makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
         // [vars] [[namespaces] [body]]
         result = letRecBody;

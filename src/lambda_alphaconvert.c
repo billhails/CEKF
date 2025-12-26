@@ -1237,11 +1237,11 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         }
         case LAMEXP_TYPE_LETREC: {
             // LamLetRec
-            LamLetRec *variant = getLamExp_Letrec(node);
+            LamLetRec *variant = getLamExp_LetRec(node);
             LamLetRec *new_variant = visitLamLetRec(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamExp_Letrec(CPI(node), new_variant);
+                result = newLamExp_LetRec(CPI(node), new_variant);
             }
             break;
         }

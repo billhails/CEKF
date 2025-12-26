@@ -265,9 +265,25 @@ structs:
         meta:
             brief: A let expression
             description: >-
-                This structure represents a let expression that binds variables
-                to expressions and then evaluates a body expression using those
-                bindings. It is used to introduce local variables.
+                A let expression allows for parallel bindings.
+        data:
+            bindings: LamBindings
+            body: LamExp
+
+    LamLetRec:
+        meta:
+            brief: A letrec expression
+            description: >-
+                A letrec expression allows for recursive bindings.
+        data:
+            bindings: LamBindings
+            body: LamExp
+
+    LamLetStar:
+        meta:
+            brief: A let* expression
+            description: >-
+                A let* expression allows for sequential bindings.
         data:
             bindings: LamBindings
             body: LamExp
@@ -283,18 +299,6 @@ structs:
             var: HashSymbol
             val: LamExp
             next: LamBindings
-
-    LamLetRec:
-        meta:
-            brief: A letrec expression
-            description: >-
-                This structure represents a letrec expression that allows for
-                recursive bindings. It binds multiple variables to their
-                corresponding expressions and evaluates a body expression using
-                those bindings.
-        data:
-            bindings: LamBindings
-            body: LamExp
 
     LamContext:
         meta:
@@ -526,7 +530,8 @@ unions:
             iff: LamIff
             lam: LamLam
             let: LamLet
-            letrec: LamLetRec
+            letRec: LamLetRec
+            letStar: LamLetStar
             lookup: LamLookup
             makeTuple: LamArgs
             makeVec: LamMakeVec

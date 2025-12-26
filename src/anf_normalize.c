@@ -99,63 +99,63 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
     IFDEBUG(ppLamExp(lamExp));
     switch (lamExp->type) {
         case LAMEXP_TYPE_LAM:
-            return normalizeLam(lamExp->val.lam, tail);
+            return normalizeLam(getLamExp_Lam(lamExp), tail);
         case LAMEXP_TYPE_VAR:
-            return normalizeVar(CPI(lamExp), lamExp->val.var, tail);
+            return normalizeVar(CPI(lamExp), getLamExp_Var(lamExp), tail);
         case LAMEXP_TYPE_STDINT:
-            return normalizeStdInteger(CPI(lamExp), lamExp->val.stdint, tail);
+            return normalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp), tail);
         case LAMEXP_TYPE_BIGINTEGER:
-            return normalizeMaybeBigInteger(CPI(lamExp), lamExp->val.biginteger, tail);
+            return normalizeMaybeBigInteger(CPI(lamExp), getLamExp_Biginteger(lamExp), tail);
         case LAMEXP_TYPE_PRIM:
-            return normalizePrim(lamExp->val.prim, tail);
+            return normalizePrim(getLamExp_Prim(lamExp), tail);
         case LAMEXP_TYPE_AMB:
-            return normalizeAmb(lamExp->val.amb, tail);
+            return normalizeAmb(getLamExp_Amb(lamExp), tail);
         case LAMEXP_TYPE_SEQUENCE:
-            return normalizeSequence(lamExp->val.sequence, tail);
+            return normalizeSequence(getLamExp_Sequence(lamExp), tail);
         case LAMEXP_TYPE_MAKEVEC:
-            return normalizeMakeVec(lamExp->val.makeVec, tail);
+            return normalizeMakeVec(getLamExp_MakeVec(lamExp), tail);
         case LAMEXP_TYPE_TYPEDEFS:
-            return normalize(lamExp->val.typedefs->body, tail);
+            return normalize(getLamExp_Typedefs(lamExp)->body, tail);
         case LAMEXP_TYPE_APPLY:
-            return normalizeApply(lamExp->val.apply, tail);
+            return normalizeApply(getLamExp_Apply(lamExp), tail);
         case LAMEXP_TYPE_IFF:
-            return normalizeIff(lamExp->val.iff, tail);
+            return normalizeIff(getLamExp_Iff(lamExp), tail);
         case LAMEXP_TYPE_CALLCC:
-            return normalizeCallCc(lamExp->val.callCC, tail);
+            return normalizeCallCc(getLamExp_CallCC(lamExp), tail);
         case LAMEXP_TYPE_PRINT:
-            return normalizePrint(lamExp->val.print, tail);
+            return normalizePrint(getLamExp_Print(lamExp), tail);
         case LAMEXP_TYPE_LETREC:
-            return normalizeLetRec(lamExp->val.letrec, tail);
+            return normalizeLetRec(getLamExp_LetRec(lamExp), tail);
         case LAMEXP_TYPE_TUPLEINDEX:
-            return normalizeTupleIndex(lamExp->val.tupleIndex, tail);
+            return normalizeTupleIndex(getLamExp_TupleIndex(lamExp), tail);
         case LAMEXP_TYPE_DECONSTRUCT:
-            return normalizeDeconstruct(lamExp->val.deconstruct, tail);
+            return normalizeDeconstruct(getLamExp_Deconstruct(lamExp), tail);
         case LAMEXP_TYPE_CONSTRUCT:
-            return normalizeConstruct(lamExp->val.construct, tail);
+            return normalizeConstruct(getLamExp_Construct(lamExp), tail);
         case LAMEXP_TYPE_TAG:
-            return normalizeTag(lamExp->val.tag, tail);
+            return normalizeTag(getLamExp_Tag(lamExp), tail);
         case LAMEXP_TYPE_CONSTANT:
-            return normalizeStdInteger(CPI(lamExp), lamExp->val.constant->tag, tail);
+            return normalizeStdInteger(CPI(lamExp), getLamExp_Constant(lamExp)->tag, tail);
         case LAMEXP_TYPE_LET:
-            return normalizeLet(lamExp->val.let, tail);
+            return normalizeLet(getLamExp_Let(lamExp), tail);
         case LAMEXP_TYPE_MATCH:
-            return normalizeMatch(lamExp->val.match, tail);
+            return normalizeMatch(getLamExp_Match(lamExp), tail);
         case LAMEXP_TYPE_COND:
-            return normalizeCond(lamExp->val.cond, tail);
+            return normalizeCond(getLamExp_Cond(lamExp), tail);
         case LAMEXP_TYPE_CHARACTER:
-            return normalizeCharacter(CPI(lamExp), lamExp->val.character, tail);
+            return normalizeCharacter(CPI(lamExp), getLamExp_Character(lamExp), tail);
         case LAMEXP_TYPE_BACK:
             return normalizeBack(CPI(lamExp), tail);
         case LAMEXP_TYPE_ERROR:
             return normalizeError(CPI(lamExp), tail);
         case LAMEXP_TYPE_MAKETUPLE:
-            return normalizeMakeTuple(CPI(lamExp), lamExp->val.makeTuple, tail);
+            return normalizeMakeTuple(CPI(lamExp), getLamExp_MakeTuple(lamExp), tail);
         case LAMEXP_TYPE_NAMESPACES:
-            return normalizeNamespaces(CPI(lamExp), lamExp->val.namespaces, tail);
+            return normalizeNamespaces(CPI(lamExp), getLamExp_Namespaces(lamExp), tail);
         case LAMEXP_TYPE_ENV:
             return normalizeEnv(CPI(lamExp), tail);
         case LAMEXP_TYPE_LOOKUP:
-            return normalizeLamLookup(lamExp->val.lookup, tail);
+            return normalizeLamLookup(getLamExp_Lookup(lamExp), tail);
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
     }
@@ -887,44 +887,44 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
     Aexp *res = NULL;
     switch (lamExp->type) {
         case LAMEXP_TYPE_LAM:
-            res = aexpNormalizeLam(lamExp->val.lam);
+            res = aexpNormalizeLam(getLamExp_Lam(lamExp));
             break;
         case LAMEXP_TYPE_VAR:
-            res = aexpNormalizeVar(CPI(lamExp), lamExp->val.var);
+            res = aexpNormalizeVar(CPI(lamExp), getLamExp_Var(lamExp));
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            res = aexpNormalizeMaybeBigInteger(CPI(lamExp), lamExp->val.biginteger);
+            res = aexpNormalizeMaybeBigInteger(CPI(lamExp), getLamExp_Biginteger(lamExp));
             break;
         case LAMEXP_TYPE_STDINT:
-            res = aexpNormalizeStdInteger(CPI(lamExp), lamExp->val.stdint);
+            res = aexpNormalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp));
             break;
         case LAMEXP_TYPE_PRIM:
-            res = replaceLamPrim(lamExp->val.prim, replacements);
+            res = replaceLamPrim(getLamExp_Prim(lamExp), replacements);
             break;
         case LAMEXP_TYPE_PRINT:
-            res = replaceLamPrint(lamExp->val.print, replacements);
+            res = replaceLamPrint(getLamExp_Print(lamExp), replacements);
             break;
         case LAMEXP_TYPE_MAKEVEC:
-            res = replaceLamMakeVec(lamExp->val.makeVec, replacements);
+            res = replaceLamMakeVec(getLamExp_MakeVec(lamExp), replacements);
             break;
         case LAMEXP_TYPE_CONSTRUCT:
-            res = replaceLamConstruct(lamExp->val.construct, replacements);
+            res = replaceLamConstruct(getLamExp_Construct(lamExp), replacements);
             break;
         case LAMEXP_TYPE_TAG:
-            res = replaceLamTag(lamExp->val.tag, replacements);
+            res = replaceLamTag(getLamExp_Tag(lamExp), replacements);
             break;
         case LAMEXP_TYPE_CONSTANT:
-            res = aexpNormalizeStdInteger(CPI(lamExp), lamExp->val.constant->tag);
+            res = aexpNormalizeStdInteger(CPI(lamExp), getLamExp_Constant(lamExp)->tag);
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            res = replaceLamCexp(lamExp->val.typedefs->body, replacements);
+            res = replaceLamCexp(getLamExp_Typedefs(lamExp)->body, replacements);
             break;
         case LAMEXP_TYPE_DECONSTRUCT:
             res =
-                replaceLamDeconstruct(lamExp->val.deconstruct, replacements);
+                replaceLamDeconstruct(getLamExp_Deconstruct(lamExp), replacements);
             break;
         case LAMEXP_TYPE_CHARACTER:
-            res = aexpNormalizeCharacter(CPI(lamExp), lamExp->val.character);
+            res = aexpNormalizeCharacter(CPI(lamExp), getLamExp_Character(lamExp));
             break;
         case LAMEXP_TYPE_LOOKUP:
         case LAMEXP_TYPE_SEQUENCE:
