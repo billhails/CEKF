@@ -57,6 +57,7 @@ static LamMatch *cpsTcLamMatch(LamMatch *node, LamExp *c);
 static LamMatchList *cpsTcLamMatchList(LamMatchList *node, LamExp *c);
 static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c);
 static LamExp *cpsTcLamLet(LamLet *node, LamExp *c);
+static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
 static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
 static LamContext *cpsTcLamContext(LamContext *node, LamExp *c);
 static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
@@ -747,15 +748,50 @@ static LamIntList *cpsTcLamIntList(LamIntList *node, LamExp *c) {
     return node;
 }
 
+/*
+    (E.let_expr(bindings, expr)) {
+        let
+            #(vars, exps) = list.unzip(bindings);
+        in
+            T_c(E.apply(E.lambda(vars, expr), exps), c)
+    }
+*/
 static LamExp *cpsTcLamLet(LamLet *node, LamExp *c) {
     ENTER(cpsTcLamLet);
-    LamBindings *bindings = mapMOverBindings(node->bindings);
-    int save = PROTECT(bindings);
-    LamExp *body = cpsTc(node->body, c);
-    PROTECT(body);
-    LamExp *result = makeLamExp_Let(CPI(node), bindings, body);
+    int save = PROTECT(NULL);
+    LamVarList *vars = NULL;
+    LamArgs *exps = NULL;
+    cpsUnzipLamBindings(node->bindings, &vars, &exps); // PROTECTED
+    LamExp *lambda = makeLamExp_Lam(CPI(node), vars, node->body);
+    PROTECT(lambda);
+    LamExp *apply = makeLamExp_Apply(CPI(node), lambda, exps);
+    PROTECT(apply);
+    LamExp *result = cpsTc(apply, c);
     UNPROTECT(save);
     LEAVE(cpsTcLamLet);
+    return result;
+}
+
+/*
+    (E.letstar_expr(bindings, expr)) {
+        let
+            fn nest_lets {
+                ([], body) { body }
+                (#(var, exp) @ rest, body) {
+                    E.let_expr([#(var, exp)], nest_lets(rest, body))
+                }
+            }
+        in
+            T_c(nest_lets(bindings, expr), c)
+    }
+*/
+static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c) {
+    ENTER(cpsTcLamLetStar);
+    LamExp *lets = cpsNestLets(node->bindings, node->body);
+    int save = PROTECT(lets);
+    LamExp *result = cpsTc(lets, c);
+    UNPROTECT(save);
+    LEAVE(cpsTcLamLetStar);
     return result;
 }
 
@@ -1417,6 +1453,11 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         case LAMEXP_TYPE_LET: {
             // LamLet
             result = cpsTcLamLet(getLamExp_Let(node), c);
+            break;
+        }
+        case LAMEXP_TYPE_LETSTAR: {
+            // LamLetStar
+            result = cpsTcLamLetStar(getLamExp_LetStar(node), c);
             break;
         }
         case LAMEXP_TYPE_LETREC: {

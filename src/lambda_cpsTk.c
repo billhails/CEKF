@@ -57,6 +57,7 @@ static LamMatch *cpsTkLamMatch(LamMatch *node, CpsKont *k);
 static LamMatchList *cpsTkLamMatchList(LamMatchList *node, CpsKont *k);
 static LamIntList *cpsTkLamIntList(LamIntList *node, CpsKont *k);
 static LamExp *cpsTkLamLet(LamLet *node, CpsKont *k);
+static LamExp *cpsTkLamLetStar(LamLetStar *node, CpsKont *k);
 static LamExp *cpsTkLamLetRec(LamLetRec *node, CpsKont *k);
 static LamContext *cpsTkLamContext(LamContext *node, CpsKont *k);
 static LamExp *cpsTkLamAmb(LamAmb *node, CpsKont *k);
@@ -803,15 +804,75 @@ static LamIntList *cpsTkLamIntList(LamIntList *node, CpsKont *k) {
     return node;
 }
 
+void cpsUnzipLamBindings(LamBindings *bindings, LamVarList **vars, LamArgs **exps) {
+    if (bindings == NULL) {
+        *vars = NULL;
+        *exps = NULL;
+        return;
+    }
+    cpsUnzipLamBindings(bindings->next, vars, exps);
+    *vars = newLamVarList(CPI(bindings), bindings->var, *vars);
+    PROTECT(*vars);
+    *exps = newLamArgs(CPI(bindings), bindings->val, *exps);
+    PROTECT(*exps);
+}
+
+/*
+    (E.let_expr(bindings, expr)) {
+        let
+            #(vars, exps) = list.unzip(bindings);
+        in
+            T_k(E.apply(E.lambda(vars, expr), exps), k)
+    }
+*/
 static LamExp *cpsTkLamLet(LamLet *node, CpsKont *k) {
     ENTER(cpsTkLamLet);
-    LamBindings *bindings = mapMOverBindings(node->bindings);
-    int save = PROTECT(bindings);
-    LamExp *body = cpsTkLamExp(node->body, k);
-    PROTECT(body);
-    LamExp *result = makeLamExp_Let(CPI(node), bindings, body);
+    int save = PROTECT(NULL);
+    LamVarList *vars = NULL;
+    LamArgs *exps = NULL;
+    cpsUnzipLamBindings(node->bindings, &vars, &exps); // PROTECTED
+    LamExp *lambda = makeLamExp_Lam(CPI(node), vars, node->body);
+    PROTECT(lambda);
+    LamExp *apply = makeLamExp_Apply(CPI(node), lambda, exps);
+    PROTECT(apply);
+    LamExp *result = cpsTk(apply, k);
     UNPROTECT(save);
     LEAVE(cpsTkLamLet);
+    return result;
+}
+
+LamExp *cpsNestLets(LamBindings *bindings, LamExp *body) {
+    if (bindings == NULL) {
+        return body;
+    }
+    LamExp *rest = cpsNestLets(bindings->next, body);
+    int save = PROTECT(rest);
+    LamBindings *binding = newLamBindings(CPI(bindings), bindings->var, bindings->val, NULL);
+    PROTECT(binding);
+    LamExp *this = makeLamExp_Let(CPI(bindings), binding, rest);
+    UNPROTECT(save);
+    return this;
+}
+/*
+    (E.letstar_expr(bindings, expr)) {
+        let
+            fn nest_lets {
+                ([], body) { body }
+                (#(var, exp) @ rest, body) {
+                    E.let_expr([#(var, exp)], nest_lets(rest, body))
+                }
+            }
+        in
+            T_k(nest_lets(bindings, expr), k)
+    }
+*/
+static LamExp *cpsTkLamLetStar(LamLetStar *node, CpsKont *k) {
+    ENTER(cpsTkLamLetStar);
+    LamExp *lets = cpsNestLets(node->bindings, node->body);
+    int save = PROTECT(lets);
+    LamExp *result = cpsTk(lets, k);
+    UNPROTECT(save);
+    LEAVE(cpsTkLamLetStar);
     return result;
 }
 
@@ -1406,6 +1467,11 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         case LAMEXP_TYPE_LET: {
             // LamLet
             result = cpsTkLamLet(getLamExp_Let(node), k);
+            break;
+        }
+        case LAMEXP_TYPE_LETSTAR: {
+            // LamLet
+            result = cpsTkLamLetStar(getLamExp_LetStar(node), k);
             break;
         }
         case LAMEXP_TYPE_LETREC: {

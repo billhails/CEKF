@@ -30,5 +30,7 @@ bool isAexpr(LamExp *exp);
 LamExp *cpsTc(LamExp *node, LamExp  *c);
 LamExp *cpsM(LamExp *node);
 LamBindings *mapMOverBindings(LamBindings *bindings);
+void cpsUnzipLamBindings(LamBindings *bindings, LamVarList **vars, LamArgs **exps);
+LamExp *cpsNestLets(LamBindings *bindings, LamExp *body);
 
 #endif
