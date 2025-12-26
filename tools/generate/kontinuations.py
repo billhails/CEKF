@@ -34,6 +34,7 @@ class KontinuationGenerator:
         
         # Build union data mapping keys to struct names
         union_data = {}
+        seen_keys = {}  # Track which continuation each key belongs to
         
         for cont_name, spec in self.continuations.items():
             if not isinstance(spec, dict):
@@ -41,6 +42,15 @@ class KontinuationGenerator:
                 
             struct_name = ucFirst(cont_name) + "KontEnv"
             key = spec.get('key')
+            
+            # Check for duplicate keys
+            if key in seen_keys:
+                raise ValueError(
+                    f"Duplicate continuation key '{key}' found in continuations. "
+                    f"Already used by '{seen_keys[key]}', now used by '{cont_name}'. "
+                    f"Each continuation must have a unique key."
+                )
+            seen_keys[key] = cont_name
             
             # Build struct fields from free_vars
             free_vars = spec.get('free_vars', {})
