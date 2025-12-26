@@ -29,5 +29,6 @@ LamExp *cpsTs_k(LamExp *, CpsKont *);
 bool isAexpr(LamExp *exp);
 LamExp *cpsTc(LamExp *node, LamExp  *c);
 LamExp *cpsM(LamExp *node);
+LamBindings *mapMOverBindings(LamBindings *bindings);
 
 #endif

@@ -96,6 +96,10 @@
       (T-k expr (λ (aexp)
                   `(set-then! ,var ,aexp
                               ,(k '(void)))))]
+
+    [`(let ([,vs ,es] ...) ,expr)
+      ; =>
+      (T-k `((λ ,vs ,expr) ,@es) k)]
    
     ; WARNING: This transformation is not hygienic 
     ; if the continuation k references any of the 
@@ -141,6 +145,10 @@
                   `(set-then! ,var ,aexp
                               (,c (void)))))]
    
+    [`(let ([,vs ,es] ...) ,expr)
+      ; =>
+      (T-c `((λ ,vs ,expr) ,@es) c)]
+
     ; WARNING: This transformation is not hygienic 
     ; if the continuation c references any of the 
     ; bound variables!  
