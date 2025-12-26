@@ -152,7 +152,7 @@ static LamExp *translateComparisonArcToTest(TpmcArc *arc) {
              arc->test->pattern->type);
     }
 #endif
-    TpmcComparisonPattern *pattern = arc->test->pattern->val.comparison;
+    TpmcComparisonPattern *pattern = getTpmcPatternValue_Comparison(arc->test->pattern);
     LamExp *a =
         newLamExp_Var(I, pattern->previous->path);
     int save = PROTECT(a);
@@ -174,7 +174,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
     int save = PROTECT(body);
     switch (test->pattern->type) {
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR: {
-            TpmcConstructorPattern *constructor = test->pattern->val.constructor;
+            TpmcConstructorPattern *constructor = getTpmcPatternValue_Constructor(test->pattern);
             TpmcPatternArray *components = constructor->components;
             HashSymbol *name = constructor->info->type->name;
             DEBUG("constructor %s has size %d", name->name, components->size);
@@ -206,7 +206,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
         }
         break;
         case TPMCPATTERNVALUE_TYPE_TUPLE: {
-            TpmcPatternArray *components = test->pattern->val.tuple;
+            TpmcPatternArray *components = getTpmcPatternValue_Tuple(test->pattern);
             int size = components->size;
             for (int i = 0; i < size; i++) {
                 HashSymbol *path = components->entries[i]->path;
@@ -436,7 +436,7 @@ static LamExp *translateArcList(TpmcArcList *arcList, LamExp *testVar,
             }
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:{
                 LamTypeConstructorInfo *info =
-                    arcList->arc->test->pattern->val.constructor->info;
+                    getTpmcPatternValue_Constructor(arcList->arc->test->pattern)->info;
                 LamIntList *unexhaustedIndices = makeUnexhaustedIndices(info);
                 int save = PROTECT(unexhaustedIndices);
                 LamMatchList *matches =
@@ -533,7 +533,7 @@ static LamIntCondCases *translateConstantIntArcList(TpmcArcList *arcList,
                     ("encountered character case when cinstructing an integer cond");
             }
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:{
-                MaybeBigInt *integer = arcList->arc->test->pattern->val.biginteger;
+                MaybeBigInt *integer = getTpmcPatternValue_Biginteger(arcList->arc->test->pattern);
                 res =
                     makeConstantIntCondCase(arcList, integer, testVar,
                                             lambdaCache);
@@ -578,7 +578,7 @@ static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList,
                 break;
             }
         case TPMCPATTERNVALUE_TYPE_CHARACTER:{
-                int character = arcList->arc->test->pattern->val.character;
+                int character = getTpmcPatternValue_Character(arcList->arc->test->pattern);
                 res =
                     makeConstantCharCondCase(arcList, character, testVar,
                                              lambdaCache);
@@ -645,7 +645,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:{
                 // remove this constructor's index from the list we pass downstream
                 LamTypeConstructorInfo *info =
-                    arcList->arc->test->pattern->val.constructor->info;
+                    getTpmcPatternValue_Constructor(arcList->arc->test->pattern)->info;
                 unexhaustedIndices =
                     removeIndex(info->index, unexhaustedIndices);
                 LamMatchList *next =
@@ -678,10 +678,10 @@ static LamExp *translateStateToInlineCode(TpmcState *dfa,
     LamExp *res = NULL;
     switch (dfa->state->type) {
         case TPMCSTATEVALUE_TYPE_TEST:
-            res = translateTestState(dfa->state->val.test, lambdaCache);
+            res = translateTestState(getTpmcStateValue_Test(dfa->state), lambdaCache);
             break;
         case TPMCSTATEVALUE_TYPE_FINAL:
-            res = dfa->state->val.final->action;
+            res = getTpmcStateValue_Final(dfa->state)->action;
             break;
         case TPMCSTATEVALUE_TYPE_ERROR:
             res = newLamExp_Error(I);
@@ -710,7 +710,7 @@ static void resetStateRefCountsToZero(TpmcState *dfa) {
     dfa->refcount = 0;
     switch (dfa->state->type) {
         case TPMCSTATEVALUE_TYPE_TEST:{
-            TpmcArcArray *arcs = dfa->state->val.test->arcs;
+            TpmcArcArray *arcs = getTpmcStateValue_Test(dfa->state)->arcs;
             for (Index i = 0; i < arcs->size; ++i) {
                 resetStateRefCountsToZero(arcs->entries[i]->state);
             }
@@ -730,7 +730,7 @@ static void incrementStateRefCounts(TpmcState *dfa) {
     if (dfa->refcount == 1) {
         switch (dfa->state->type) {
             case TPMCSTATEVALUE_TYPE_TEST:{
-                TpmcArcArray *arcs = dfa->state->val.test->arcs;
+                TpmcArcArray *arcs = getTpmcStateValue_Test(dfa->state)->arcs;
                 for (Index i = 0; i < arcs->size; ++i) {
                     incrementStateRefCounts(arcs->entries[i]->state);
                 }

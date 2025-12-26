@@ -124,6 +124,40 @@ class DiscriminatedUnionField(EnumField):
         print(f'}} {c}')
         print('')
 
+    def printSetterDeclaration(self, catalog, owner, isInline):
+        """
+        Generate set<Union>_<Field> inline function that validates the variant type
+        and sets the field value, calling cant_happen if incorrect.
+        
+        Example: static inline void setLamExp_Iff(struct LamExp *_x, struct LamIff *_val)
+        """
+        c = self.comment('printSetterDeclaration')
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        typeName = self.makeTypeName()
+        obj = catalog.get(self.typeName)
+        valueType = obj.getTypeDeclaration(catalog)
+        ownerType = owner.getTypeDeclaration(catalog)
+        accessor = '.' if isInline else '->'
+        
+        # Get the typename function for better error messages
+        # Convert "LamExp" -> "lamExpTypeName"
+        typeNameFunc = self.owner[0].lower() + self.owner[1:] + 'TypeName'
+        
+        # valueType may not have trailing space for primitives, so add one
+        if not valueType.endswith(' '):
+            valueType = valueType + ' '
+        
+        # Generate the inline setter function
+        print(f'static inline void set{self.owner}_{ucfirst}({ownerType}_x, {valueType}_val) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
+        print(f'    if (_x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in set{self.owner}_{ucfirst}", {typeNameFunc}(_x{accessor}type)); {c}')
+        print(f'    }} {c}')
+        print(f'#endif {c}')
+        print(f'    _x{accessor}val.{self.name} = _val; {c}')
+        print(f'}} {c}')
+        print('')
+
     def printStructTypedefLine(self, catalog):
         c = self.comment('printStructTypedefLine')
         obj = catalog.get(self.typeName)

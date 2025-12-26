@@ -873,14 +873,14 @@ static CexpCondCases *normalizeCondCases(LamCondCases *cases) {
     switch (cases->type) {
         case LAMCONDCASES_TYPE_INTEGERS:{
                 CexpIntCondCases *intCases =
-                    normalizeIntCondCases(cases->val.integers);
+                    normalizeIntCondCases(getLamCondCases_Integers(cases));
                 PROTECT(intCases);
                 res = newCexpCondCases_IntCases(CPI(cases), intCases);
             }
             break;
         case LAMCONDCASES_TYPE_CHARACTERS:{
                 CexpCharCondCases *charCases =
-                    normalizeCharCondCases(cases->val.characters);
+                    normalizeCharCondCases(getLamCondCases_Characters(cases));
                 PROTECT(charCases);
                 res = newCexpCondCases_CharCases(CPI(cases), charCases);
             }

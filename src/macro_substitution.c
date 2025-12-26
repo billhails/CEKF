@@ -600,14 +600,14 @@ static LamCondCases *performCondCaseSubstitutions(LamCondCases *cases, LamMacroA
     }
     switch (cases->type) {
         case LAMCONDCASES_TYPE_INTEGERS:
-            cases->val.integers =
+            setLamCondCases_Integers(cases,
                 performIntCondCaseSubstitutions(getLamCondCases_Integers(cases),
-                                                symbols);
+                                                symbols));
             break;
         case LAMCONDCASES_TYPE_CHARACTERS:
-            cases->val.characters =
+            setLamCondCases_Characters(cases,
                 performCharCondCaseSubstitutions(getLamCondCases_Characters(cases),
-                                                 symbols);
+                                                 symbols));
             break;
         default:
             cant_happen
@@ -663,66 +663,66 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
                 exp = performVarSubstitution(CPI(exp), exp, symbols);
                 break;
             case LAMEXP_TYPE_PRIM:
-                exp->val.prim = performPrimSubstitutions(getLamExp_Prim(exp), symbols);
+                setLamExp_Prim(exp, performPrimSubstitutions(getLamExp_Prim(exp), symbols));
                 break;
             case LAMEXP_TYPE_SEQUENCE:
-                exp->val.sequence = performSequenceSubstitutions(getLamExp_Sequence(exp), symbols);
+                setLamExp_Sequence(exp, performSequenceSubstitutions(getLamExp_Sequence(exp), symbols));
                 break;
 #ifdef NOTDEF
             case LAMEXP_TYPE_MAKEVEC:
-                exp->val.makeVec = performMakeVecSubstitutions(getLamExp_MakeVec(exp), symbols);
+                setLamExp_MakeVec(exp, performMakeVecSubstitutions(getLamExp_MakeVec(exp), symbols));
                 break;
 #endif
             case LAMEXP_TYPE_DECONSTRUCT:
-                exp->val.deconstruct = performDeconstructSubstitutions(getLamExp_Deconstruct(exp), symbols);
+                setLamExp_Deconstruct(exp, performDeconstructSubstitutions(getLamExp_Deconstruct(exp), symbols));
                 break;
             case LAMEXP_TYPE_CONSTRUCT:
-                exp->val.construct = performConstructSubstitutions(getLamExp_Construct(exp), symbols);
+                setLamExp_Construct(exp, performConstructSubstitutions(getLamExp_Construct(exp), symbols));
                 break;
             case LAMEXP_TYPE_TAG:
-                exp->val.tag = lamPerformMacroSubstitutions(getLamExp_Tag(exp), symbols);
+                setLamExp_Tag(exp, lamPerformMacroSubstitutions(getLamExp_Tag(exp), symbols));
                 break;
             case LAMEXP_TYPE_APPLY:
-                exp->val.apply = performApplySubstitutions(getLamExp_Apply(exp), symbols);
+                setLamExp_Apply(exp, performApplySubstitutions(getLamExp_Apply(exp), symbols));
                 break;
             case LAMEXP_TYPE_IFF:
-                exp->val.iff = performIffSubstitutions(getLamExp_Iff(exp), symbols);
+                setLamExp_Iff(exp, performIffSubstitutions(getLamExp_Iff(exp), symbols));
                 break;
             case LAMEXP_TYPE_COND:
-                exp->val.cond = performCondSubstitutions(getLamExp_Cond(exp), symbols);
+                setLamExp_Cond(exp, performCondSubstitutions(getLamExp_Cond(exp), symbols));
                 break;
             case LAMEXP_TYPE_CALLCC:
-                exp->val.callCC = lamPerformMacroSubstitutions(getLamExp_CallCC(exp), symbols);
+                setLamExp_CallCC(exp, lamPerformMacroSubstitutions(getLamExp_CallCC(exp), symbols));
                 break;
             case LAMEXP_TYPE_LET:
-                exp->val.let = performLetSubstitutions(getLamExp_Let(exp), symbols);
+                setLamExp_Let(exp, performLetSubstitutions(getLamExp_Let(exp), symbols));
                 break;
             case LAMEXP_TYPE_LETREC:
-                exp->val.letRec = performLetRecSubstitutions(getLamExp_LetRec(exp), symbols);
+                setLamExp_LetRec(exp, performLetRecSubstitutions(getLamExp_LetRec(exp), symbols));
                 break;
             case LAMEXP_TYPE_LETSTAR:
-                exp->val.letStar = performLetStarSubstitutions(getLamExp_LetStar(exp), symbols);
+                setLamExp_LetStar(exp, performLetStarSubstitutions(getLamExp_LetStar(exp), symbols));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                exp->val.typedefs = performTypeDefsSubstitutions(getLamExp_Typedefs(exp), symbols);
+                setLamExp_Typedefs(exp, performTypeDefsSubstitutions(getLamExp_Typedefs(exp), symbols));
                 break;
             case LAMEXP_TYPE_MATCH:
-                exp->val.match = performMatchSubstitutions(getLamExp_Match(exp), symbols);
+                setLamExp_Match(exp, performMatchSubstitutions(getLamExp_Match(exp), symbols));
                 break;
             case LAMEXP_TYPE_AMB:
-                exp->val.amb = performAmbSubstitutions(getLamExp_Amb(exp), symbols);
+                setLamExp_Amb(exp, performAmbSubstitutions(getLamExp_Amb(exp), symbols));
                 break;
             case LAMEXP_TYPE_MAKETUPLE:
-                exp->val.makeTuple = performArgsSubstitutions(getLamExp_MakeTuple(exp), symbols);
+                setLamExp_MakeTuple(exp, performArgsSubstitutions(getLamExp_MakeTuple(exp), symbols));
                 break;
             case LAMEXP_TYPE_TUPLEINDEX:
-                exp->val.tupleIndex = performTupleIndexSubstitutions(getLamExp_TupleIndex(exp), symbols);
+                setLamExp_TupleIndex(exp, performTupleIndexSubstitutions(getLamExp_TupleIndex(exp), symbols));
                 break;
             case LAMEXP_TYPE_PRINT:
-                exp->val.print = performPrintSubstitutions(getLamExp_Print(exp), symbols);
+                setLamExp_Print(exp, performPrintSubstitutions(getLamExp_Print(exp), symbols));
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                exp->val.lookup = performLookupSubstitutions(getLamExp_Lookup(exp), symbols);
+                setLamExp_Lookup(exp, performLookupSubstitutions(getLamExp_Lookup(exp), symbols));
                 break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));

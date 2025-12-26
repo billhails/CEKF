@@ -144,6 +144,9 @@ class Base:
     def printGetterDeclarations(self, catalog):
         pass
 
+    def printSetterDeclarations(self, catalog):
+        pass
+
     def printNameFunctionDeclaration(self):
         pass
 
