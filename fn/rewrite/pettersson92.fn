@@ -3,7 +3,7 @@ let
 // PRELIMINARIES
 ///////////////////////////////////////////////////////////////////////////
     link "../ioutils.fn" as io;
-    link "../dictionary.fn" as dict;
+    link "../dictutils.fn" as dict;
     link "../listutils.fn" as lst;
 
     operator "_=>_" left 8 fn (arg, fun) { fun(arg) };

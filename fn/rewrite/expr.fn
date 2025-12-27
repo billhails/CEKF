@@ -37,6 +37,40 @@ namespace
     }
 
     // Printer for expressions
+    fn print_list(indices, putter) {
+        switch (indices) {
+            ([]) { "" }
+            (h @ t) {
+                putter(h);
+                list.for_each (fn(i) { puts(" "); putter(i) }, t);
+                ""
+            }
+        };
+    }
+
+    fn print_bindings(bindings) {
+        print_list(bindings, fn(#(name, expr)) {
+            putc('(');
+            puts(name);
+            putc(' ');
+            print_expr(expr);
+            putc(')');
+        });
+    }
+
+    fn print_let(name, bindings, body) {
+        puts("(");
+        puts(name);
+        puts(" [");
+        print_bindings(bindings);
+        puts("] ");
+        print_expr(body);
+        puts(")");
+    }
+
+    fn print_sequence(exprs) {
+        list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
+    }
 
     fn print_expr {
         (x=callcc_expr(e)) {
@@ -81,7 +115,7 @@ namespace
         }
         (x=sequence(exprs)) {
             puts("(begin");
-            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
+            print_sequence(exprs);
             puts(")");
             x;
         }
@@ -103,7 +137,7 @@ namespace
         }
         (x=namespaces(exprs)) {
             puts("(namespaces");
-            list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
+            print_sequence(exprs);
             puts(")");
             x;
         }
@@ -113,14 +147,7 @@ namespace
             list.for_each (fn {
                 (#(indices, caseExpr)) {
                     puts(" ((");
-                    switch (indices) {
-                        ([]) { "" }
-                        (h @ t) {
-                            putn(h);
-                            list.for_each (fn(i) { puts(" "); putn(i) }, t);
-                            ""
-                        }
-                    };
+                    print_list(indices, fn(i) { putn(i) });
                     puts(") ");
                     print_expr(caseExpr);
                     puts(")");
@@ -132,13 +159,13 @@ namespace
         (x=make_vec(size, elements)) {
             puts("(make_vec ");
             putn(size);
-            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
+            print_sequence(elements);
             puts(")");
             x;
         }
         (x=make_tuple(elements)) {
             puts("(make_tuple");
-            list.map (fn(e) { puts(" "); print_expr(e) }, elements);
+            print_sequence(elements);
             puts(")");
             x;
         }
@@ -179,7 +206,7 @@ namespace
         (x=construct(name, args)) {
             puts("(construct ");
             puts(name);
-            list.map (fn(e) { puts(" "); print_expr(e) }, args);
+            print_sequence(args);
             puts(")");
             x;
         }
@@ -190,7 +217,7 @@ namespace
             x;
         }
         (x=cond_expr(test, branches)) {
-            puts("(cond ");
+            puts("(cond");
             print_expr(test);
             list.for_each (fn {
                 (#(e1, e2)) {
@@ -206,63 +233,20 @@ namespace
             x;
         }
         (x=letrec_expr(bindings, body)) {
-            puts("(letrec (");
-            list.for_each (fn {
-                (#(name, expr)) {
-                    putc('(');
-                    puts(name);
-                    putc(' ');
-                    print_expr(expr);
-                    putc(')');
-                }
-            }, bindings);
-            puts(") ");
-            print_expr(body);
-            puts(")");
+            print_let("letrec", bindings, body);
             x;
         }
         (x=let_expr(bindings, body)) {
-            puts("(let (");
-            list.for_each (fn {
-                (#(name, expr)) {
-                    putc('(');
-                    puts(name);
-                    putc(' ');
-                    print_expr(expr);
-                    putc(')');
-                }
-            }, bindings);
-            puts(") ");
-            print_expr(body);
-            puts(")");
+            print_let("let", bindings, body);
             x;
         }
         (x=letstar_expr(bindings, body)) {
-            puts("(let* (");
-            list.for_each (fn {
-                (#(name, expr)) {
-                    putc('(');
-                    puts(name);
-                    putc(' ');
-                    print_expr(expr);
-                    putc(')');
-                }
-            }, bindings);
-            puts(") ");
-            print_expr(body);
-            puts(")");
+            print_let("let*", bindings, body);
             x;
         }
         (x=lambda(args, expr)) {
             puts("(λ (");
-            switch (args) {
-                ([]) { "" }
-                (h @ t) {
-                    puts(h);
-                    list.for_each (fn(e) { putc(' '); puts(e) }, t);
-                    ""
-                }
-            };
+            print_list(args, fn(name) { puts(name) });
             puts(") ");
             print_expr(expr);
             puts(")");
@@ -281,7 +265,7 @@ namespace
         (x=apply(e1, args)) {
             puts("(");
             print_expr(e1);
-            list.map (fn(e) { puts(" "); print_expr(e) }, args);
+            print_sequence(args);
             puts(")");
             x;
         }

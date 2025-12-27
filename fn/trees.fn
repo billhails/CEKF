@@ -1,6 +1,6 @@
 // naive unbalanced tree example
 // see redBlack.fn for a balanced tree
-// and dictionary.fn for a red-black map
+// and dictutils.fn for a red-black map
 
 let
     typedef set(#t) { branch(set(#t), #t, set(#t)) | leaf }

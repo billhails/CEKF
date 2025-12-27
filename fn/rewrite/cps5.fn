@@ -166,7 +166,6 @@ let
                 }
 
                 (E.sequence([expr])) { T_k(expr, k) }
-
                 (E.sequence(expr @ exprs)) {
                     T_k(expr, fn (ignored) {
                         T_k(E.sequence(exprs), k)
@@ -341,7 +340,6 @@ let
                 }
 
                 (E.sequence([expr])) { T_c(expr, c) }
-
                 (E.sequence(expr @ exprs)) {
                     T_k(expr, fn (ignored) {
                         T_c(E.sequence(exprs), c)
@@ -396,7 +394,7 @@ in
         in
             E.print_expr(expr);
             puts(" ==>\n    ");
-            E.print_expr(T_c(expr, E.var("halt")));
+            E.print_expr(T_c(expr, E.var("□")));
             puts("\n\n")
     },
     [
@@ -452,7 +450,7 @@ in
         "(if (= x 0) (if (= y 0) 1 2) 3)",
 
         // Sequence (begin in Racket)
-        "(sequence (f 1) (g 2) (h 3))",
+        "(begin (f 1) (g 2) (h 3))",
 
         // Letrec with mutual recursion
         "(letrec ((even (lambda (n) (if (= n 0) true (odd (- n 1))))) (odd (lambda (n) (if (= n 0) false (even (- n 1)))))) (even 5))",
@@ -467,7 +465,7 @@ in
         "(+ (* 2 3) (- 5 1))",
 
         // call/cc capturing continuation in letrec
-        "(letrec ((k null)) (call/cc (lambda (cont) (sequence (k = cont) 42))))",
+        "(letrec ((k null)) (call/cc (lambda (cont) (begin (k = cont) 42))))",
 
         // Lambda with no arguments
         "((lambda () 42))",
@@ -485,7 +483,7 @@ in
         "(if test (f (g x)) (h (i y)))",
 
         // Sequence with amb
-        "(sequence (amb 1 2) (amb 3 4))",
+        "(begin (amb 1 2) (amb 3 4))",
 
         // call/cc that passes continuation to another function
         "(call/cc (lambda (k) (f k)))",
@@ -572,7 +570,7 @@ in
         "(namespaces x (f y) z)",
 
         // namespaces with letrec bodies returning env
-        "(namespaces (letrec ((x 1) (y 2)) (env)) (letrec ((a 3) (b 4)) (env)))",
+        "(namespaces (letrec ((x 1) (y 2)) (let* ((f 1) (g f)) (env))) (letrec ((a 3) (b 4)) (env)))",
 
         // print_exp with atomic argument
         "(print x)",
@@ -676,8 +674,8 @@ in
 // (if (= x 0) (if (= y 0) 1 2) 3) ==>
 //     ((λ ($k29) (= x 0 (λ ($rv30) (if $rv30 ((λ ($k31) (= y 0 (λ ($rv32) (if $rv32 ($k31 1) ($k31 2))))) $k29) ($k29 3))))) halt)
 //
-// (sequence (f 1) (g 2) (h 3)) ==>
-//     (f 1 (λ ($rv33) (g 2 (λ ($rv34) (h 3 (λ ($rv35) (sequence $rv33 $rv34 $rv35 halt)))))))
+// (begin (f 1) (g 2) (h 3)) ==>
+//     (f 1 (λ ($rv33) (g 2 (λ ($rv34) (h 3 (λ ($rv35) (begin $rv33 $rv34 $rv35 halt)))))))
 //
 // (letrec ((even (λ (n) (if (= n 0) true (odd (- n 1)))))(odd (λ (n) (if (= n 0) false (even (- n 1)))))) (even 5)) ==>
 //     (letrec ((even (λ (n $k36) ((λ ($k37) (= n 0 (λ ($rv38) (if $rv38 ($k37 true) (odd (- n 1) $k37))))) $k36)))(odd (λ (n $k39) ((λ ($k40) (= n 0 (λ ($rv41) (if $rv41 ($k40 false) (even (- n 1) $k40))))) $k39)))) (even 5 halt))
@@ -691,8 +689,8 @@ in
 // (+ (* 2 3) (- 5 1)) ==>
 //     (halt (+ (* 2 3) (- 5 1)))
 //
-// (letrec ((k null)) (call/cc (λ (cont) (sequence (k = cont) 42)))) ==>
-//     (letrec ((k null)) ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (cont $k46) (k = cont (λ ($rv47) (sequence $rv47 42 $k46)))) halt))
+// (letrec ((k null)) (call/cc (λ (cont) (begin (k = cont) 42)))) ==>
+//     (letrec ((k null)) ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (cont $k46) (k = cont (λ ($rv47) (begin $rv47 42 $k46)))) halt))
 //
 // ((λ () 42)) ==>
 //     ((λ ($k48) ($k48 42)) halt)
@@ -709,8 +707,8 @@ in
 // (if test (f (g x)) (h (i y))) ==>
 //     ((λ ($k55) (if test (g x (λ ($rv56) (f $rv56 $k55))) (i y (λ ($rv57) (h $rv57 $k55))))) halt)
 //
-// (sequence (amb 1 2) (amb 3 4)) ==>
-//     (amb ((λ ($rv58) (amb ((λ ($rv59) (sequence $rv58 $rv59 halt)) 3) ((λ ($rv59) (sequence $rv58 $rv59 halt)) 4))) 1) ((λ ($rv58) (amb ((λ ($rv59) (sequence $rv58 $rv59 halt)) 3) ((λ ($rv59) (sequence $rv58 $rv59 halt)) 4))) 2))
+// (begin (amb 1 2) (amb 3 4)) ==>
+//     (amb ((λ ($rv58) (amb ((λ ($rv59) (begin $rv58 $rv59 halt)) 3) ((λ ($rv59) (begin $rv58 $rv59 halt)) 4))) 1) ((λ ($rv58) (amb ((λ ($rv59) (begin $rv58 $rv59 halt)) 3) ((λ ($rv59) (begin $rv58 $rv59 halt)) 4))) 2))
 //
 // (call/cc (λ (k) (f k))) ==>
 //     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k60) (f k $k60)) halt)

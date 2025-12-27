@@ -1,6 +1,6 @@
 namespace
 
-link "dictionary.fn" as dic;
+link "dictutils.fn" as dic;
 
 typedef Array(#t) { array(number, number, dic.Dict(number, #t)) }
 

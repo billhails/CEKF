@@ -1,5 +1,5 @@
 let
-    link "dictionary.fn" as dict;
+    link "dictutils.fn" as dict;
     link "sqliteutils.fn" as sql;
 in
     sql.with_database("unicode/unicode.db",

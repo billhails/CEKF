@@ -33,5 +33,7 @@ LamBindings *mapMOverBindings(LamBindings *);
 LamMatchList *mapTcOverMatchCases(LamMatchList *, LamExp *);
 void cpsUnzipLamBindings(LamBindings *, LamVarList **, LamArgs **);
 LamExp *cpsNestLets(LamBindings *, LamExp *);
+LamExp *nsaToArgs(LamNameSpaceArray *nsa);
+LamNameSpaceArray *argsToNsa(LamExp *seq);
 
 #endif

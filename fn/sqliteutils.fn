@@ -1,6 +1,6 @@
 namespace
 
-link "dictionary.fn" as dict;
+link "dictutils.fn" as dict;
 
 fn with_database(name, handler) {
     switch (sqlite3_open(name)) {

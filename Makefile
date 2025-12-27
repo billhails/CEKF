@@ -163,63 +163,63 @@ $(PREAMBLE): $(PREAMBLE_SRC) | $(GENDIR)
 	tools/make-preamble.sh
 
 $(EXTRA_C_TARGETS): $(GENDIR)/%.c: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< c > $@~ && mv $@~ $@
 
 $(EXTRA_H_TARGETS): $(GENDIR)/%.h: $(SRCDIR)/%.yaml $(GENDEPS) | $(GENDIR)
-	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< h > $@~ && mv $@~ $@
 
 $(EXTRA_OBJTYPES_H_TARGETS): $(GENDIR)/%_objtypes.h: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< objtypes_h > $@~ && mv $@~ $@
 
 $(EXTRA_DEBUG_H_TARGETS): $(GENDIR)/%_debug.h: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_h > $@~ && mv $@~ $@
 
 $(EXTRA_DEBUG_C_TARGETS): $(GENDIR)/%_debug.c: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
 
 # ANF continuation scaffolding generation (from tools/anf_continuations.yaml)
 $(GENDIR)/anf_kont.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< h > $@~ && mv $@~ $@
 
 $(GENDIR)/anf_kont.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< c > $@~ && mv $@~ $@
 
 $(GENDIR)/anf_kont_objtypes.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< objtypes_h > $@~ && mv $@~ $@
 
 $(GENDIR)/anf_kont_debug.h: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_h > $@~ && mv $@~ $@
 
 $(GENDIR)/anf_kont_debug.c: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
 
 $(GENDIR)/anf_kont_impl.inc: tools/anf_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< kont_impl_inc > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< kont_impl_inc > $@~ && mv $@~ $@
 
 # CPS continuation scaffolding generation (from tools/cps_continuations.yaml)
 $(GENDIR)/cps_kont.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< h > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< c > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_objtypes.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< objtypes_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< objtypes_h > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_debug.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_h > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_debug.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< debug_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< debug_c > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_impl.h: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< kont_impl_h > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< kont_impl_h > $@~ && mv $@~ $@
 
 $(GENDIR)/cps_kont_impl.c: tools/cps_continuations.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(GENDIR)
-	$(MAKE_AST) $< kont_impl_c > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< kont_impl_c > $@~ && mv $@~ $@
 
 $(EXTRA_DOCS): $(DOCDIR)/%.md: $(SRCDIR)/%.yaml $(GENDEPS) $(SRCDIR)/primitives.yaml | $(DOCDIR)
-	$(MAKE_AST) $< md > $@ || (rm -f $@ ; exit 1)
+	$(MAKE_AST) $< md > $@~ && mv $@~ $@
 
 .generated: $(EXTRA_TARGETS)
 	touch $@

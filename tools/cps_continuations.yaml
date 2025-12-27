@@ -58,6 +58,17 @@ external:
       printFn: printLamMatchList
       markFn: markLamMatchList
       valued: true
+  LamPrimOp:
+    data:
+      cname: "enum LamPrimOp"
+      printf: "%d"
+      valued: true
+  LamSequence:
+    data:
+      cname: "struct LamSequence *"
+      printFn: printLamSequence
+      markFn: markLamSequence
+      valued: true
 
 # Naming convention, since each kont is argument to T_k and never
 # to T_c, we use Tk for continuations constructed by T_k, and
@@ -387,14 +398,142 @@ continuations:
       sk: LamExp
       cases: LamMatchList
 
-# TkNameSpaces:
-#   transformer: T_k
-#   key: k_nameSpaces
-#   context: |
-#     (E.nameSpaces(exprs)) {
-#       Ts_k(exprs, fn (sexprs) {
-#         k(E.nameSpaces(sexprs))
-#       })
-#     }
-#   free_vars:
-#     k: CpsKont
+  TkNameSpaces:
+    transformer: T_k
+    key: k_nameSpaces
+    context: |
+      (E.nameSpaces(exprs)) {
+        Ta_k(exprs, fn (sexprs) {
+          k(E.nameSpaces(sexprs))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcNameSpaces:
+    transformer: T_k
+    key: c_nameSpaces
+    context: |
+      (E.namespaces(exprs)) {
+        Ts_k(exprs, fn (sexprs) {
+          E.apply(c, [E.namespaces(sexprs)])
+        })
+      }
+    free_vars:
+      c: LamExp
+
+  TkPrimApp1:
+    transformer: T_k
+    key: k_primapp1
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) { //////////////////
+          T_k(e2, fn (s2) {
+            k(E.primapp(p, s1, s2))
+          })
+        }) /////////////////////////////////
+      }
+    free_vars:
+      k: CpsKont
+      e2: LamExp
+      p: LamPrimOp
+
+  TkPrimApp2:
+    transformer: T_k
+    key: k_primapp2
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) {
+          T_k(e2, fn (s2) { ////////////////
+            k(E.primapp(p, s1, s2))
+          }) ///////////////////////////////
+        })
+      }
+    free_vars:
+      k: CpsKont
+      s1: LamExp
+      p: LamPrimOp
+
+  TcPrimApp1:
+    transformer: T_k
+    key: c_primapp1
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) { ////////////////////////////
+          T_k(e2, fn (s2) {
+            E.apply(c, [E.primapp(p, s1, s2)])
+          })
+        }) ///////////////////////////////////////////
+      }
+    free_vars:
+      c: LamExp
+      e2: LamExp
+      p: LamPrimOp
+
+  TcPrimApp2:
+    transformer: T_k
+    key: c_primapp2
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) {
+          T_k(e2, fn (s2) { //////////////////////////
+            E.apply(c, [E.primapp(p, s1, s2)])
+          }) /////////////////////////////////////////
+        })
+      }
+    free_vars:
+      c: LamExp
+      s1: LamExp
+      p: LamPrimOp
+
+  TkPrint:
+    transformer: T_k
+    key: k_print
+    context: |
+      (E.print_exp(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.print_exp(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcPrint:
+    transformer: T_k
+    key: c_print
+    context: |
+      (E.print_exp(expr)) {
+          T_k(expr, fn (sexpr) {
+              E.apply(c, [E.print_exp(sexpr)])
+          })
+      }
+    free_vars:
+      c: LamExp
+
+  TkSequence:
+    transformer: T_k
+    key: k_sequence
+    context: |
+      (E.sequence([expr])) { T_k(expr, k) }
+      (E.sequence(expr @ exprs)) {
+        T_k(expr, fn (ignored) {
+          T_k(E.sequence(exprs), k)
+        })
+      }
+    free_vars:
+      k: CpsKont
+      exprs: LamSequence
+
+  TcSequence:
+    transformer: T_k
+    key: c_sequence
+    context: |
+      (E.sequence([expr])) { T_c(expr, c) }
+      (E.sequence(expr @ exprs)) {
+        T_k(expr, fn (ignored) {
+          T_c(E.sequence(exprs), c)
+        })
+      }
+    free_vars:
+      c: LamExp
+      exprs: LamSequence

@@ -15,7 +15,7 @@ let
             assert(sum == 1111111110);
             assert(diff == 864197532);
             assert(prod == 121932631112635269);
-            puts("Basic bigint test passed")
+            puts("Basic bigint test passed\n")
     }
     
     // Test: Very large numbers
@@ -28,7 +28,7 @@ let
         in
             assert(sum == 1888888888888888887);
             assert(prod == 1999999999999999998);
-            puts("Large numbers test passed")
+            puts("Large numbers test passed\n")
     }
     
     // Test: Negative big integers
@@ -42,7 +42,7 @@ let
             assert(neg < 0);
             assert(sum == 0);
             assert(prod < 0);
-            puts("Negative bigint test passed")
+            puts("Negative bigint test passed\n")
     }
     
     // Test: Big integer division returns rationals
@@ -55,7 +55,7 @@ let
             // 1000000000 / 3 returns "1000000000/3" not 333333333
             // Only test exact divisions that result in integers
             assert(a / b == 10);
-            puts("Bigint division test passed")
+            puts("Bigint division test passed\n")
     }
     
     // Test: Big integer modulo
@@ -68,7 +68,7 @@ let
             assert(a % b == 6);
             assert(a % c == 12);
             assert(100 % 3 == 1);
-            puts("Bigint modulo test passed")
+            puts("Bigint modulo test passed\n")
     }
     
     // Test: Big integer power
@@ -81,7 +81,7 @@ let
             assert(a == 100000);
             assert(b == 1024);
             assert(c == 6561);
-            puts("Bigint power test passed")
+            puts("Bigint power test passed\n")
     }
     
     // Test: Big integer comparisons
@@ -97,7 +97,7 @@ let
             assert(a >= c);
             assert(a <= c);
             assert(a != b);
-            puts("Bigint comparisons test passed")
+            puts("Bigint comparisons test passed\n")
     }
     
     // Test: Factorial with big integers
@@ -116,7 +116,7 @@ let
             assert(fact5 == 120);
             assert(fact10 == 3628800);
             assert(fact15 == 1307674368000);
-            puts("Factorial bigint test passed")
+            puts("Factorial bigint test passed\n")
     }
     
     // Test: Fibonacci with big integers
@@ -135,7 +135,7 @@ let
             assert(f10 == 55);
             assert(f15 == 610);
             assert(f20 == 6765);
-            puts("Fibonacci bigint test passed")
+            puts("Fibonacci bigint test passed\n")
     }
     
     // Test: Sum of list with big integers
@@ -154,7 +154,7 @@ let
         in
             assert(sum1 == 6000000);
             assert(sum2 == 1666666665);
-            puts("List sum bigint test passed")
+            puts("List sum bigint test passed\n")
     }
     
     // Test: GCD with big integers
@@ -170,7 +170,7 @@ let
         in
             assert(result1 == 50000);
             assert(result2 == 9);
-            puts("GCD bigint test passed")
+            puts("GCD bigint test passed\n")
     }
     
     // Test: Powers of 2
@@ -183,7 +183,7 @@ let
             assert(p10 == 1024);
             assert(p20 == 1048576);
             assert(p30 == 1073741824);
-            puts("Powers of two test passed")
+            puts("Powers of two test passed\n")
     }
     
     // Test: Powers of 10
@@ -198,7 +198,7 @@ let
             assert(p6 == 1000000);
             assert(p9 == 1000000000);
             assert(p12 == 1000000000000);
-            puts("Powers of ten test passed")
+            puts("Powers of ten test passed\n")
     }
     
     // Test: Mixed operations
@@ -215,7 +215,7 @@ let
             assert(result1 == 3750);
             assert(result2 == 5025);
             assert(result3 == 2500);
-            puts("Mixed operations test passed")
+            puts("Mixed operations test passed\n")
     }
     
     // Test: Zero operations
@@ -228,7 +228,7 @@ let
             assert(b - a == b);
             assert(a * b == 0);
             assert(a ** 10 == 0);
-            puts("Zero operations test passed")
+            puts("Zero operations test passed\n")
     }
 
     // Main test runner

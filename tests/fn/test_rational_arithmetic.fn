@@ -14,7 +14,7 @@ let
             assert(r1 == 10 / 3);
             assert(r2 == 7 / 2);
             assert(r3 == 25);  // Simplified to integer
-            puts("Basic rationals test passed")
+            puts("Basic rationals test passed\n")
     }
     
     // Test: Rational equality
@@ -28,7 +28,7 @@ let
             assert(r1 == r2);
             assert(r1 == r3);
             assert(r2 == r3);
-            puts("Rational equality test passed")
+            puts("Rational equality test passed\n")
     }
     
     // Test: Rational addition
@@ -40,7 +40,7 @@ let
             expected = 5 / 6;
         in
             assert(sum == expected);
-            puts("Rational addition test passed")
+            puts("Rational addition test passed\n")
     }
     
     // Test: Rational subtraction
@@ -51,7 +51,7 @@ let
             diff = r1 - r2;
         in
             assert(diff == 1 / 2);
-            puts("Rational subtraction test passed")
+            puts("Rational subtraction test passed\n")
     }
     
     // Test: Rational multiplication
@@ -62,7 +62,7 @@ let
             prod = r1 * r2;
         in
             assert(prod == 1 / 2);
-            puts("Rational multiplication test passed")
+            puts("Rational multiplication test passed\n")
     }
     
     // Test: Rational division
@@ -73,7 +73,7 @@ let
             quot = r1 / r2;
         in
             assert(quot == 2);
-            puts("Rational division test passed")
+            puts("Rational division test passed\n")
     }
     
     // Test: Mixed integer and rational arithmetic
@@ -86,7 +86,7 @@ let
         in
             assert(sum == 21 / 2);
             assert(prod == 5);
-            puts("Mixed arithmetic test passed")
+            puts("Mixed arithmetic test passed\n")
     }
     
     // Test: Negative rationals
@@ -99,7 +99,7 @@ let
             assert(r1 < 0);
             assert(r2 < 0);
             assert(sum == (0 - 5) / 4);
-            puts("Negative rationals test passed")
+            puts("Negative rationals test passed\n")
     }
     
     // Test: Rational comparisons
@@ -115,7 +115,7 @@ let
             assert(r1 >= r3);
             assert(r1 <= r3);
             assert(r1 != r2);
-            puts("Rational comparisons test passed")
+            puts("Rational comparisons test passed\n")
     }
     
     // Test: Large rational numbers
@@ -126,7 +126,7 @@ let
             diff = r1 - r2;
         in
             assert(diff == 1 / 3);
-            puts("Large rationals test passed")
+            puts("Large rationals test passed\n")
     }
     
     // Test: Rational powers
@@ -138,7 +138,7 @@ let
         in
             assert(r2 == 1 / 4);
             assert(r3 == 1 / 8);
-            puts("Rational powers test passed")
+            puts("Rational powers test passed\n")
     }
     
     // Test: Zero in rationals
@@ -150,7 +150,7 @@ let
             assert(zero_num == 0);
             assert(r + zero_num == r);
             assert(r * zero_num == 0);
-            puts("Zero rationals test passed")
+            puts("Zero rationals test passed\n")
     }
     
     // Test: Simplification
@@ -163,7 +163,7 @@ let
             assert(r1 == r3);
             assert(r2 == r3);
             assert(r1 == r2);
-            puts("Simplification test passed")
+            puts("Simplification test passed\n")
     }
     
     // Test: Rational to integer when whole
@@ -176,7 +176,7 @@ let
             assert(r1 == 5);
             assert(r2 == 25);
             assert(r3 == 7);
-            puts("Rational to integer test passed")
+            puts("Rational to integer test passed\n")
     }
 
     // Main test runner
