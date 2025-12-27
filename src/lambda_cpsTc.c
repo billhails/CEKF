@@ -35,17 +35,12 @@
 #endif
 
 // Forward declarations
-static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, LamExp *c);
-static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, LamExp *c);
-static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, LamExp *c);
-static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, LamExp *c);
 static LamExp *cpsTcTag(LamExp *node, LamExp *c);
 static LamExp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c);
 static LamExp *cpsTcLamSequence(LamSequence *node, LamExp *c);
 static LamExp *cpsTcMakeTuple(LamArgs *node, LamExp *c);
 static LamExp *cpsTcLamApply(LamApply *node, LamExp *c);
 static LamExp *cpsTcLamLookup(LamLookup *node, LamExp *c);
-static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, LamExp *c);
 static LamExp *cpsTcLamConstruct(LamConstruct *node, LamExp *c);
 static LamExp *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c);
 static LamExp *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
@@ -56,25 +51,12 @@ static LamExp *cpsTcLamMatch(LamMatch *node, LamExp *c);
 static LamExp *cpsTcLamLet(LamLet *node, LamExp *c);
 static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
 static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
-static LamContext *cpsTcLamContext(LamContext *node, LamExp *c);
 static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
 static LamExp *cpsTcLamPrint(LamPrint *node, LamExp *c);
 static LamExp *cpsTcLamTypeof(LamTypeof *node, LamExp *c);
 static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c);
-static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, LamExp *c);
-static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, LamExp *c);
-static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, LamExp *c);
-static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, LamExp *c);
-static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, LamExp *c);
-static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, LamExp *c);
-static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, LamExp *c);
-static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, LamExp *c);
 static LamExp *cpsTcLamExp(LamExp *node, LamExp *c);
-static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, LamExp *c);
-static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, LamExp *c);
-static LamInfo *cpsTcLamInfo(LamInfo *node, LamExp *c);
 static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c);
-static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, LamExp *c);
 
 /*
     fn M {
@@ -140,111 +122,6 @@ LamExp *TcTagKont(LamExp *sexpr, TcTagKontEnv *env) {
     UNPROTECT(save);
     LEAVE(TcTagKont);
     return result;
-}
-
-static LamMacroSet *cpsTcLamMacroSet(LamMacroSet *node, LamExp *c) {
-    ENTER(cpsTcLamMacroSet);
-    if (node == NULL) {
-        LEAVE(cpsTcLamMacroSet);
-        return NULL;
-    }
-
-    (void)c;  // Hash set has no values to visit
-    // Iterate over keys (uncomment if you need to inspect/log them)
-    // Index i = 0;
-    // HashSymbol *key;
-    // while ((key = iterateLamMacroSet(node, &i)) != NULL) {
-    //     // Inspect/log key here
-    // }
-    LEAVE(cpsTcLamMacroSet);
-    return node;
-}
-
-static LamInfoTable *cpsTcLamInfoTable(LamInfoTable *node, LamExp *c) {
-    ENTER(cpsTcLamInfoTable);
-    if (node == NULL) {
-        LEAVE(cpsTcLamInfoTable);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamInfoTable *result = newLamInfoTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct LamInfo * value;
-    HashSymbol *key;
-    while ((key = iterateLamInfoTable(node, &i, &value)) != NULL) {
-        struct LamInfo * new_value = cpsTcLamInfo(value, c);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setLamInfoTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(cpsTcLamInfoTable);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamInfoTable);
-    return node;
-}
-
-static LamAliasTable *cpsTcLamAliasTable(LamAliasTable *node, LamExp *c) {
-    ENTER(cpsTcLamAliasTable);
-    if (node == NULL) {
-        LEAVE(cpsTcLamAliasTable);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamAliasTable *result = newLamAliasTable();
-    int save = PROTECT(result);
-
-    // Iterate over all entries
-    Index i = 0;
-    struct LamTypeConstructorType * value;
-    HashSymbol *key;
-    while ((key = iterateLamAliasTable(node, &i, &value)) != NULL) {
-        struct LamTypeConstructorType * new_value = cpsTcLamTypeConstructorType(value, c);
-        PROTECT(new_value);
-        changed = changed || (new_value != value);
-        setLamAliasTable(result, key, new_value);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(cpsTcLamAliasTable);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamAliasTable);
-    return node;
-}
-
-static LamAlphaTable *cpsTcLamAlphaTable(LamAlphaTable *node, LamExp *c) {
-    ENTER(cpsTcLamAlphaTable);
-    if (node == NULL) {
-        LEAVE(cpsTcLamAlphaTable);
-        return NULL;
-    }
-
-    (void)c;  // Values are HashSymbol (not memory-managed)
-#ifdef NOTDEF
-    // Iterate over all entries for inspection/logging
-    Index i = 0;
-    struct HashSymbol * value;
-    HashSymbol *key;
-    while ((key = iterateLamAlphaTable(node, &i, &value)) != NULL) {
-        // Inspect/log key and value here
-    }
-#endif
-    LEAVE(cpsTcLamAlphaTable);
-    return node;
 }
 
 /*
@@ -409,22 +286,6 @@ static LamExp *cpsTcLamLookup(LamLookup *node, LamExp *c) {
     UNPROTECT(save);
     LEAVE(cpsTcLamLookup);
     return result;
-}
-
-static LamLookupSymbol *cpsTcLamLookupSymbol(LamLookupSymbol *node, LamExp *c) {
-    ENTER(cpsTcLamLookupSymbol);
-    if (node == NULL) {
-        LEAVE(cpsTcLamLookupSymbol);
-        return NULL;
-    }
-
-    // Pass through nsid (type: int, not memory-managed)
-    // Pass through nsSymbol (type: HashSymbol, not memory-managed)
-    // Pass through symbol (type: HashSymbol, not memory-managed)
-
-    (void)c;  // Unused parameter - all fields are pass-through
-    LEAVE(cpsTcLamLookupSymbol);
-    return node;
 }
 
 /*
@@ -781,43 +642,6 @@ static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c) {
     return result;
 }
 
-static LamContext *cpsTcLamContext(LamContext *node, LamExp *c) {
-    ENTER(cpsTcLamContext);
-    if (node == NULL) {
-        LEAVE(cpsTcLamContext);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamInfoTable *new_frame = cpsTcLamInfoTable(node->frame, c);
-    int save = PROTECT(new_frame);
-    changed = changed || (new_frame != node->frame);
-    LamAliasTable *new_aliases = cpsTcLamAliasTable(node->aliases, c);
-    PROTECT(new_aliases);
-    changed = changed || (new_aliases != node->aliases);
-    LamMacroSet *new_macros = cpsTcLamMacroSet(node->macros, c);
-    PROTECT(new_macros);
-    changed = changed || (new_macros != node->macros);
-    LamContext *new_parent = cpsTcLamContext(node->parent, c);
-    PROTECT(new_parent);
-    changed = changed || (new_parent != node->parent);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamContext *result = newLamContext(CPI(node), new_parent);
-        result->frame = new_frame;
-        result->aliases = new_aliases;
-        result->macros = new_macros;
-        UNPROTECT(save);
-        LEAVE(cpsTcLamContext);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamContext);
-    return node;
-}
-
 /*
     (E.amb_expr(expr1, expr2)) {
         let
@@ -924,236 +748,6 @@ static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c) {
     UNPROTECT(save);
     LEAVE(cpsTcLamTypeDefs);
     return result;
-}
-
-static LamTypeSig *cpsTcLamTypeSig(LamTypeSig *node, LamExp *c) {
-    ENTER(cpsTcLamTypeSig);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeSig);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_args = cpsTcLamTypeSigArgs(node->args, c);
-    int save = PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeSig *result = newLamTypeSig(CPI(node), node->name, new_args);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeSig);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeSig);
-    return node;
-}
-
-static LamTypeTags *cpsTcLamTypeTags(LamTypeTags *node, LamExp *c) {
-    ENTER(cpsTcLamTypeTags);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeTags);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through tag (type: HashSymbol, not memory-managed)
-    LamTypeTags *new_next = cpsTcLamTypeTags(node->next, c);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeTags *result = newLamTypeTags(CPI(node), node->tag, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeTags);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeTags);
-    return node;
-}
-
-static LamTypeSigArgs *cpsTcLamTypeSigArgs(LamTypeSigArgs *node, LamExp *c) {
-    ENTER(cpsTcLamTypeSigArgs);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeSigArgs);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSigArgs *new_next = cpsTcLamTypeSigArgs(node->next, c);
-    int save = PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeSigArgs *result = newLamTypeSigArgs(CPI(node), node->name, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeSigArgs);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeSigArgs);
-    return node;
-}
-
-static LamTypeConstructor *cpsTcLamTypeConstructor(LamTypeConstructor *node, LamExp *c) {
-    ENTER(cpsTcLamTypeConstructor);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeConstructor);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    LamTypeSig *new_type = cpsTcLamTypeSig(node->type, c);
-    int save = PROTECT(new_type);
-    changed = changed || (new_type != node->type);
-    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, c);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeConstructor *result = newLamTypeConstructor(CPI(node), node->name, new_type, new_args);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeConstructor);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeConstructor);
-    return node;
-}
-
-static LamTypeConstructorArgs *cpsTcLamTypeConstructorArgs(LamTypeConstructorArgs *node, LamExp *c) {
-    ENTER(cpsTcLamTypeConstructorArgs);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeConstructorArgs);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamTypeConstructorType *new_arg = cpsTcLamTypeConstructorType(node->arg, c);
-    int save = PROTECT(new_arg);
-    changed = changed || (new_arg != node->arg);
-    LamTypeConstructorArgs *new_next = cpsTcLamTypeConstructorArgs(node->next, c);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeConstructorArgs *result = newLamTypeConstructorArgs(CPI(node), new_arg, new_next);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeConstructorArgs);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeConstructorArgs);
-    return node;
-}
-
-static LamTypeFunction *cpsTcLamTypeFunction(LamTypeFunction *node, LamExp *c) {
-    ENTER(cpsTcLamTypeFunction);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeFunction);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamLookupOrSymbol *new_name = cpsTcLamLookupOrSymbol(node->name, c);
-    int save = PROTECT(new_name);
-    changed = changed || (new_name != node->name);
-    LamTypeConstructorArgs *new_args = cpsTcLamTypeConstructorArgs(node->args, c);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeFunction *result = newLamTypeFunction(CPI(node), new_name, new_args);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeFunction);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeFunction);
-    return node;
-}
-
-static LamTypeConstructorInfo *cpsTcLamTypeConstructorInfo(LamTypeConstructorInfo *node, LamExp *c) {
-    ENTER(cpsTcLamTypeConstructorInfo);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeConstructorInfo);
-        return NULL;
-    }
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsid (type: int, not memory-managed)
-    LamTypeConstructor *new_type = cpsTcLamTypeConstructor(node->type, c);
-    int save = PROTECT(new_type);
-    changed = changed || (new_type != node->type);
-    LamTypeTags *new_tags = cpsTcLamTypeTags(node->tags, c);
-    PROTECT(new_tags);
-    changed = changed || (new_tags != node->tags);
-    // Pass through needsVec (type: bool, not memory-managed)
-    // Pass through arity (type: int, not memory-managed)
-    // Pass through size (type: int, not memory-managed)
-    // Pass through index (type: int, not memory-managed)
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeConstructorInfo *result = newLamTypeConstructorInfo(CPI(node), node->name, node->nsid, new_type, new_tags, node->needsVec, node->arity, node->size, node->index);
-        UNPROTECT(save);
-        LEAVE(cpsTcLamTypeConstructorInfo);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeConstructorInfo);
-    return node;
-}
-
-static LamAlphaEnv *cpsTcLamAlphaEnv(LamAlphaEnv *node, LamExp *c) {
-    ENTER(cpsTcLamAlphaEnv);
-    if (node == NULL) {
-        LEAVE(cpsTcLamAlphaEnv);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamAlphaTable *new_alphaTable = cpsTcLamAlphaTable(node->alphaTable, c);
-    int save = PROTECT(new_alphaTable);
-    changed = changed || (new_alphaTable != node->alphaTable);
-    LamAlphaEnv *new_next = cpsTcLamAlphaEnv(node->next, c);
-    PROTECT(new_next);
-    changed = changed || (new_next != node->next);
-    LamAlphaEnvArray *new_nameSpaces = cpsTcLamAlphaEnvArray(node->nameSpaces, c);
-    PROTECT(new_nameSpaces);
-    changed = changed || (new_nameSpaces != node->nameSpaces);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamAlphaEnv *result = newLamAlphaEnv(new_next);
-        result->alphaTable = new_alphaTable;
-        result->nameSpaces = new_nameSpaces;
-        UNPROTECT(save);
-        LEAVE(cpsTcLamAlphaEnv);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamAlphaEnv);
-    return node;
 }
 
 /*
@@ -1352,136 +946,6 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
     return result;
 }
 
-static LamLookupOrSymbol *cpsTcLamLookupOrSymbol(LamLookupOrSymbol *node, LamExp *c) {
-    ENTER(cpsTcLamLookupOrSymbol);
-    if (node == NULL) {
-        LEAVE(cpsTcLamLookupOrSymbol);
-        return NULL;
-    }
-
-    int save = PROTECT(NULL);
-    LamLookupOrSymbol *result = node;
-
-    switch (node->type) {
-        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
-            // HashSymbol
-            break;
-        }
-        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP: {
-            // LamLookupSymbol
-            LamLookupSymbol *variant = getLamLookupOrSymbol_Lookup(node);
-            LamLookupSymbol *new_variant = cpsTcLamLookupSymbol(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamLookupOrSymbol_Lookup(CPI(node), new_variant);
-            }
-            break;
-        }
-        default:
-            cant_happen("unrecognized LamLookupOrSymbol type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamLookupOrSymbol);
-    return result;
-}
-
-static LamTypeConstructorType *cpsTcLamTypeConstructorType(LamTypeConstructorType *node, LamExp *c) {
-    ENTER(cpsTcLamTypeConstructorType);
-    if (node == NULL) {
-        LEAVE(cpsTcLamTypeConstructorType);
-        return NULL;
-    }
-
-    int save = PROTECT(NULL);
-    LamTypeConstructorType *result = node;
-
-    switch (node->type) {
-        case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER: {
-            // void_ptr
-            break;
-        }
-        case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER: {
-            // void_ptr
-            break;
-        }
-        case LAMTYPECONSTRUCTORTYPE_TYPE_VAR: {
-            // HashSymbol
-            break;
-        }
-        case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION: {
-            // LamTypeFunction
-            LamTypeFunction *variant = getLamTypeConstructorType_Function(node);
-            LamTypeFunction *new_variant = cpsTcLamTypeFunction(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamTypeConstructorType_Function(CPI(node), new_variant);
-            }
-            break;
-        }
-        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE: {
-            // LamTypeConstructorArgs
-            LamTypeConstructorArgs *variant = getLamTypeConstructorType_Tuple(node);
-            LamTypeConstructorArgs *new_variant = cpsTcLamTypeConstructorArgs(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamTypeConstructorType_Tuple(CPI(node), new_variant);
-            }
-            break;
-        }
-        default:
-            cant_happen("unrecognized LamTypeConstructorType type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeConstructorType);
-    return result;
-}
-
-static LamInfo *cpsTcLamInfo(LamInfo *node, LamExp *c) {
-    ENTER(cpsTcLamInfo);
-    if (node == NULL) {
-        LEAVE(cpsTcLamInfo);
-        return NULL;
-    }
-
-    int save = PROTECT(NULL);
-    LamInfo *result = node;
-
-    switch (node->type) {
-        case LAMINFO_TYPE_TYPECONSTRUCTORINFO: {
-            // LamTypeConstructorInfo
-            LamTypeConstructorInfo *variant = getLamInfo_TypeConstructorInfo(node);
-            LamTypeConstructorInfo *new_variant = cpsTcLamTypeConstructorInfo(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamInfo_TypeConstructorInfo(CPI(node), new_variant);
-            }
-            break;
-        }
-        case LAMINFO_TYPE_NAMESPACEINFO: {
-            // LamContext
-            LamContext *variant = getLamInfo_NameSpaceInfo(node);
-            LamContext *new_variant = cpsTcLamContext(variant, c);
-            if (new_variant != variant) {
-                PROTECT(new_variant);
-                result = newLamInfo_NameSpaceInfo(CPI(node), new_variant);
-            }
-            break;
-        }
-        case LAMINFO_TYPE_NSID: {
-            // int
-            break;
-        }
-        default:
-            cant_happen("unrecognized LamInfo type %d", node->type);
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamInfo);
-    return result;
-}
-
 /*
     (E.namespaces(exprs)) {
         Ts_k(exprs, fn (sexprs) {
@@ -1514,38 +978,6 @@ LamExp *TcNameSpacesKont(LamExp *sexprs, TcNameSpacesKontEnv *env) {
     LEAVE(TcNameSpacesKont);
     return result;
 }
-
-static LamAlphaEnvArray *cpsTcLamAlphaEnvArray(LamAlphaEnvArray *node, LamExp *c) {
-    ENTER(cpsTcLamAlphaEnvArray);
-    if (node == NULL) {
-        LEAVE(cpsTcLamAlphaEnvArray);
-        return NULL;
-    }
-
-    bool changed = false;
-    LamAlphaEnvArray *result = newLamAlphaEnvArray();
-    int save = PROTECT(result);
-
-    // Iterate over all elements
-    for (Index i = 0; i < node->size; i++) {
-        struct LamAlphaEnv * element = peeknLamAlphaEnvArray(node, i);
-        struct LamAlphaEnv * new_element = cpsTcLamAlphaEnv(element, c);
-        PROTECT(new_element);
-        changed = changed || (new_element != element);
-        pushLamAlphaEnvArray(result, new_element);
-    }
-
-    if (changed) {
-        UNPROTECT(save);
-        LEAVE(cpsTcLamAlphaEnvArray);
-        return result;
-    }
-
-    UNPROTECT(save);
-    LEAVE(cpsTcLamAlphaEnvArray);
-    return node;
-}
-
 
 LamExp *cpsTc(LamExp *node, LamExp *c) {
     ENTER(cpsTc);
