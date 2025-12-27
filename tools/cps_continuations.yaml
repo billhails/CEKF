@@ -537,3 +537,79 @@ continuations:
     free_vars:
       c: LamExp
       exprs: LamSequence
+
+  TkTag:
+    transformer: T_k
+    key: k_tag
+    context: |
+      (E.tag(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.tag(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcTag:
+    transformer: T_k
+    key: c_tag
+    context: |
+      (E.tag(expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.tag(sexpr)])
+        })
+      }
+    free_vars:
+      c: LamExp
+
+  TkTupleIndex:
+    transformer: T_k
+    key: k_tupleindex
+    context: |
+      (E.tuple_index(size, index, expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.tuple_index(size, index, sexpr))
+        })
+      }
+    free_vars:
+      size: int
+      index: int
+      k: CpsKont
+
+  TcTupleIndex:
+    transformer: T_k
+    key: c_tupleindex
+    context: |
+      (E.tuple_index(size, index, expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.tuple_index(size, index, sexpr)])
+        })
+      }
+    free_vars:
+      size: int
+      index: int
+      c: LamExp
+
+  TkTypeOf:
+    transformer: T_k
+    key: k_typeof
+    context: |
+      (E.typeof_expr(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.typeof_expr(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcTypeOf:
+    transformer: T_k
+    key: c_typeof
+    context: |
+      (E.typeof_expr(expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.typeof_expr(sexpr)])
+        })
+      }
+    free_vars:
+      c: LamExp
