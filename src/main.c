@@ -56,7 +56,7 @@
 #include "tests.h"
 #endif
 
-#define TEST_CPS
+// #define TEST_CPS
 
 #ifdef TEST_CPS
 #include "lambda_cps.h"
