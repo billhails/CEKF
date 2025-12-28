@@ -42,7 +42,7 @@ LamDeconstruct --exp--> LamExp
 LamTupleIndex --vec--> int
 LamTupleIndex --size--> int
 LamTupleIndex --exp--> LamExp
-LamMakeVec --nargs--> int
+LamMakeVec --nArgs--> int
 LamMakeVec --args--> LamArgs
 LamIff --condition--> LamExp
 LamIff --consequent--> LamExp

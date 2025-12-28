@@ -61,7 +61,7 @@ structs:
                 A list of buffers that are parsed in order. The first buffer
                 is the most recent, and the last buffer is the oldest.
         data:
-            lineno: int
+            lineNo: int
             filename: HashSymbol
             buffer: PrattBuffer
             next: PrattBufList
@@ -75,7 +75,7 @@ structs:
         data:
             type: HashSymbol
             filename: HashSymbol
-            lineno: int
+            lineNo: int
             value: PrattValue
             next: PrattToken
 

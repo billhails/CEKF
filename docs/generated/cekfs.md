@@ -30,7 +30,7 @@ Fail --K--> Kont
 Fail --S--> Stack
 Fail --F--> Fail
 Location --loc--> index
-Location --lineno--> int
+Location --lineNo--> int
 Location --filename--> string
 Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr

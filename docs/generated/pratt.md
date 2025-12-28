@@ -13,13 +13,13 @@ PrattTrie --children--> PrattTrie
 PrattBuffer --data--> ustring
 PrattBuffer --start--> ustring
 PrattBuffer --length--> int
-PrattBufList --lineno--> int
+PrattBufList --lineNo--> int
 PrattBufList --filename--> HashSymbol
 PrattBufList --buffer--> PrattBuffer
 PrattBufList --next--> PrattBufList
 PrattToken --type--> HashSymbol
 PrattToken --filename--> HashSymbol
-PrattToken --lineno--> int
+PrattToken --lineNo--> int
 PrattToken --value--> PrattValue
 PrattToken --next--> PrattToken
 PrattLexer --bufList--> PrattBufList

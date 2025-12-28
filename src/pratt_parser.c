@@ -3487,7 +3487,7 @@ static AstFunCall *conslist(PrattParser *parser)
     if (check(parser, TOK_RSQUARE()))
     {
         ParserInfo PI = LEXPI(parser->lexer);
-        DEBUG("conslist parser info %d %s", PI.lineno, PI.filename);
+        DEBUG("conslist parser info %d %s", PI.lineNo, PI.filename);
         AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
         PROTECT(nil);
         res = newAstFunCall(PI, nil, NULL);
@@ -4220,7 +4220,7 @@ static AstExpression *makeAtom(PrattRecord *record __attribute__((unused)),
     
     // Special handling for currentLine - replace with line number
     if (name == currentLineSymbol()) {
-        MaybeBigInt *lineNum = fakeBigInt(TOKPI(tok).lineno, false);
+        MaybeBigInt *lineNum = fakeBigInt(TOKPI(tok).lineNo, false);
         int save = PROTECT(lineNum);
         AstExpression *result = newAstExpression_Number(TOKPI(tok), lineNum);
         UNPROTECT(save);

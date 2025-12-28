@@ -29,11 +29,11 @@ void enqueueToken(PrattLexer *lexer, PrattToken *token);
 ParserInfo LEXPI(PrattLexer *);
 
 static inline ParserInfo BUFPI(PrattBufList *buf) {
-    return (ParserInfo) { .lineno = buf->lineno, .filename = buf->filename->name };
+    return (ParserInfo) { .lineNo = buf->lineNo, .filename = buf->filename->name };
 }
 
 static inline ParserInfo TOKPI(PrattToken *token) {
-    return (ParserInfo) { .lineno = token->lineno, .filename = token->filename->name };
+    return (ParserInfo) { .lineNo = token->lineNo, .filename = token->filename->name };
 }
 
 PrattLexer *makePrattLexerFromFilename(char *filename);

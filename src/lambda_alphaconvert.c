@@ -101,7 +101,7 @@ static HashSymbol *getNameFromContext(ParserInfo PI, HashSymbol *name, LamAlphaE
         }
         context = context->next;
     }
-    cant_happen("undefined variable %s [%s +%d]", name->name, PI.filename, PI.lineno);
+    cant_happen("undefined variable %s [%s +%d]", name->name, PI.filename, PI.lineNo);
 }
 
 static void pushNameSpaceEnv(LamAlphaEnv *context) {

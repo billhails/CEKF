@@ -31,17 +31,17 @@
 #  include "memory.h"
 
 typedef struct ParserInfo {
-    int lineno;
+    int lineNo;
     char *filename;
 } ParserInfo;
 
 static inline void _reportParserInfo(ParserInfo I) {
-    eprintf("in %s, line %d\n", I.filename, I.lineno);
+    eprintf("in %s, line %d\n", I.filename, I.lineNo);
 }
 
 static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
     return I.filename == J.filename &&
-           I.lineno == J.lineno;
+           I.lineNo == J.lineNo;
 }
 
 // generated structs all name the parser info field _yy_parser_info

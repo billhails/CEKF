@@ -34,8 +34,8 @@ static void loc(size_t ii, size_t *li, LocationArray *l) {
         }
         if (*li < l->size && ii == l->entries[*li]->loc) {
             Location *found = l->entries[*li];
-            if (prev.lineno != found->lineno || prev.filename != found->filename) {
-                eprintf("    # %s %d", found->filename, found->lineno);
+            if (prev.lineNo != found->lineNo || prev.filename != found->filename) {
+                eprintf("    # %s %d", found->filename, found->lineNo);
                 prev = *found;
             }
         }

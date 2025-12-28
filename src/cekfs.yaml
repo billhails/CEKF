@@ -94,7 +94,7 @@ structs:
             description: A location in source code for reporting run-time errors
         data:
             loc: index
-            lineno: int
+            lineNo: int
             filename: string
 
 inline:

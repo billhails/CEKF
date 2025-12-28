@@ -12,7 +12,7 @@ AnfEnv --nBindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> AnfIntTable
 AnfEnv --next--> AnfEnv
-AexpLam --nargs--> int
+AexpLam --nArgs--> int
 AexpLam --letRecOffset--> int
 AexpLam --args--> AexpVarList
 AexpLam --exp--> AnfExp
@@ -29,14 +29,14 @@ AexpList --exp--> Aexp
 AexpList --next--> AexpList
 AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
-AexpMakeVec --nargs--> int
+AexpMakeVec --nArgs--> int
 AexpMakeVec --args--> AexpList
 AexpNameSpace --nBindings--> int
 AexpNameSpace --body--> AnfExp
 AexpNameSpaces --nameSpaces--> AexpNameSpaceArray
 AexpNameSpaces --body--> AnfExp
 CexpApply --function--> Aexp
-CexpApply --nargs--> int
+CexpApply --nArgs--> int
 CexpApply --args--> AexpList
 CexpIf --condition--> Aexp
 CexpIf --consequent--> AnfExp

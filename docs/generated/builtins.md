@@ -12,7 +12,7 @@ BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr
 BuiltInImplementation --name--> HashSymbol
 BuiltInImplementation --implementation--> void_ptr
-BuiltInImplementation --nargs--> int
+BuiltInImplementation --nArgs--> int
 BuiltInMemBuf --buffer--> string
 BuiltInMemBuf --index--> index
 BuiltInMemBuf --size--> size

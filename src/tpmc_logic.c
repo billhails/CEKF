@@ -362,7 +362,7 @@ static void renamePattern(TpmcPattern *pattern, HashSymbol *variable) {
 
 static void renameRule(TpmcMatchRule *rule, TpmcVariableArray *rootVariables, ParserInfo I) {
     if (rule->patterns->size != rootVariables->size) {
-        can_happen("inconsistent number of arguments (%d vs %d) in +%d %s", rule->patterns->size, rootVariables->size, I.lineno, I.filename);
+        can_happen("inconsistent number of arguments (%d vs %d) in +%d %s", rule->patterns->size, rootVariables->size, I.lineNo, I.filename);
         // will crash otherwise.
         exit(1);
     }

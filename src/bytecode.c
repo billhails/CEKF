@@ -62,7 +62,7 @@ static void reserve(ByteCodeArray *b, size_t size) {
 }
 
 static void writeLocation(ParserInfo I, ByteCodeArray *b, LocationArray *L) {
-    Location *loc = newLocation(b->size, I.lineno, I.filename);
+    Location *loc = newLocation(b->size, I.lineNo, I.filename);
     int save = PROTECT(loc);
     pushLocationArray(L, loc);
     UNPROTECT(save);

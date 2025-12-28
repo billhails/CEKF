@@ -75,7 +75,7 @@ static void conversionError(ParserInfo I, char *message, ...) {
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", I.lineno, I.filename);
+    can_happen(" at +%d %s", I.lineNo, I.filename);
 }
 
 /**
@@ -2138,7 +2138,7 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun, Lam
 static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) {
     ENTER(convertSymbol);
     LamExp *result = makeConstructor(symbol, env);
-    DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineno, symbol->name, result ? "constructor" : "variable");
+    DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineNo, symbol->name, result ? "constructor" : "variable");
     if (result == NULL) {
         result = newLamExp_Var(I, symbol);
     }
@@ -2200,7 +2200,7 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
-    MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineno, false);
+    MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineNo, false);
     PROTECT(num);
     LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
     PROTECT(lineNo);
@@ -2232,7 +2232,7 @@ static LamExp *convertError(AstExpression *value, LamContext *env) {
     PROTECT(fileName);
     args = newLamArgs(CPI(exp), fileName, args);
     PROTECT(args);
-    MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineno, false);
+    MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineNo, false);
     PROTECT(num);
     LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
     PROTECT(lineNo);
