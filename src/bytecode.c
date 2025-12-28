@@ -62,7 +62,7 @@ static void reserve(ByteCodeArray *b, size_t size) {
 }
 
 static void writeLocation(ParserInfo I, ByteCodeArray *b, LocationArray *L) {
-    Location *loc = newLocation(b->size, I.lineNo, I.filename);
+    Location *loc = newLocation(b->size, I.lineNo, I.fileName);
     int save = PROTECT(loc);
     pushLocationArray(L, loc);
     UNPROTECT(save);
@@ -814,8 +814,8 @@ void writeEnd(ByteCodeArray *b) {
     LEAVE(writeEnd);
 }
 
-enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename) {
-    FILE *fh = fopen(filename, "r");
+enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *fileName) {
+    FILE *fh = fopen(fileName, "r");
     if (fh == NULL) {
         return BYTECODES_BADFILE; // errno will be set
     }
@@ -844,8 +844,8 @@ enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename) {
     return BYTECODES_OK;
 }
 
-bool writeBinaryOutputFile(ByteCodeArray *b, char *filename) {
-    FILE *fh = fopen(filename, "w");
+bool writeBinaryOutputFile(ByteCodeArray *b, char *fileName) {
+    FILE *fh = fopen(fileName, "w");
     if (fh == NULL) {
         return false; // errno will be set
     }

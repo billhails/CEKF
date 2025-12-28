@@ -18,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  * ParserInfo is a common sub-structure of almost all structures in the interpreter,
- * immediately following the memory-management Header. It contains the filename and line
+ * immediately following the memory-management Header. It contains the fileName and line
  * number in the source code that resulted in the creation of the structure.
  * The same information is copied from one stage to the next during translation/compilation
  * by the CPI macro.
@@ -32,15 +32,15 @@
 
 typedef struct ParserInfo {
     int lineNo;
-    char *filename;
+    char *fileName;
 } ParserInfo;
 
 static inline void _reportParserInfo(ParserInfo I) {
-    eprintf("in %s, line %d\n", I.filename, I.lineNo);
+    eprintf("in %s, line %d\n", I.fileName, I.lineNo);
 }
 
 static inline int _eqParserInfo(ParserInfo I, ParserInfo J) {
-    return I.filename == J.filename &&
+    return I.fileName == J.fileName &&
            I.lineNo == J.lineNo;
 }
 

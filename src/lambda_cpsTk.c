@@ -886,7 +886,7 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         default:
             cant_happen("unrecognized LamExp type %s [%s %d]",
                 lamExpTypeName(node->type),
-                CPI(node).filename,
+                CPI(node).fileName,
                 CPI(node).lineNo);
     }
 }

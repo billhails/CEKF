@@ -268,7 +268,7 @@ static int processArgs(int argc, char *argv[]) {
 /**
  * Parse a file from the command line into an AST program.
  * 
- * @param file the filename
+ * @param file the fileName
  * @return the AST program
  */
 static AstProg *parseFile(char *file) {

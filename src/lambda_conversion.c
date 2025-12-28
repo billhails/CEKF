@@ -75,7 +75,7 @@ static void conversionError(ParserInfo I, char *message, ...) {
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", I.lineNo, I.filename);
+    can_happen(" at +%d %s", I.lineNo, I.fileName);
 }
 
 /**
@@ -103,17 +103,17 @@ static void addCurrentNameSpaceToContext(LamContext *context, int nameSpaceId) {
 }
 
 /**
- * @brief Creates an AstDefinitions node for currentFile with the given filename.
+ * @brief Creates an AstDefinitions node for currentFile with the given fileName.
  *
- * This creates a definition: let currentFile = "filename"; ...
+ * This creates a definition: let currentFile = "fileName"; ...
  * as an AST node that can be prepended to the preamble.
  *
- * @param filename The filename string to assign to currentFile.
+ * @param fileName The fileName string to assign to currentFile.
  * @param PI Parser information for the created node.
  * @param next The next AstDefinitions in the list.
  * @return An AstDefinitions node containing the currentFile definition.
  */
-static AstDefinitions *makeCurrentFileDefinition(const char *filename, ParserInfo PI, AstDefinitions *next) {
+static AstDefinitions *makeCurrentFileDefinition(const char *fileName, ParserInfo PI, AstDefinitions *next) {
     // Build a string as nested cons applications, starting with nil
     AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
     int save = PROTECT(nil);
@@ -121,8 +121,8 @@ static AstDefinitions *makeCurrentFileDefinition(const char *filename, ParserInf
     PROTECT(strList);
     
     // Build the string from right to left (reverse order)
-    for (int i = strlen(filename) - 1; i >= 0; i--) {
-        AstExpression *character = newAstExpression_Character(PI, filename[i]);
+    for (int i = strlen(fileName) - 1; i >= 0; i--) {
+        AstExpression *character = newAstExpression_Character(PI, fileName[i]);
         int save2 = PROTECT(character);
         AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
         PROTECT(cons);
@@ -169,7 +169,7 @@ LamExp *lamConvertProg(AstProg *prog) {
     
     // Prepend currentFile definition to preamble
     AstDefinitions *preambleWithCurrentFile = 
-        makeCurrentFileDefinition(prog->_yy_parser_info.filename, CPI(prog), prog->preamble);
+        makeCurrentFileDefinition(prog->_yy_parser_info.fileName, CPI(prog), prog->preamble);
     PROTECT(preambleWithCurrentFile);
     
     LamExp *result = lamConvert(preambleWithCurrentFile, prog->nameSpaces, prog->body, env);
@@ -2138,7 +2138,7 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun, Lam
 static LamExp *convertSymbol(ParserInfo I, HashSymbol *symbol, LamContext *env) {
     ENTER(convertSymbol);
     LamExp *result = makeConstructor(symbol, env);
-    DEBUG("convertSymbol %s %d - %s: %s", I.filename, I.lineNo, symbol->name, result ? "constructor" : "variable");
+    DEBUG("convertSymbol %s %d - %s: %s", I.fileName, I.lineNo, symbol->name, result ? "constructor" : "variable");
     if (result == NULL) {
         result = newLamExp_Var(I, symbol);
     }

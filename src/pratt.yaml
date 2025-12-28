@@ -62,7 +62,7 @@ structs:
                 is the most recent, and the last buffer is the oldest.
         data:
             lineNo: int
-            filename: HashSymbol
+            fileName: HashSymbol
             buffer: PrattBuffer
             next: PrattBufList
 
@@ -74,7 +74,7 @@ structs:
                 and the position in the input stream.
         data:
             type: HashSymbol
-            filename: HashSymbol
+            fileName: HashSymbol
             lineNo: int
             value: PrattValue
             next: PrattToken

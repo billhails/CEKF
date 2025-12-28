@@ -32,8 +32,8 @@ class Loader(yaml.SafeLoader):
         super(Loader, self).__init__(stream)
 
     def include(self, node):
-        filename = os.path.join(self._root, self.construct_scalar(node))
-        with open(filename, 'r') as f:
+        fileName = os.path.join(self._root, self.construct_scalar(node))
+        with open(fileName, 'r') as f:
             return yaml.load(f, Loader)
 
 

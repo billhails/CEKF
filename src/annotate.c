@@ -102,7 +102,7 @@ static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, AnfEnv *en
                                        frame - 1, offset, x);
         }
     }
-    cant_happen("no binding for var '%s' in annotateAexpVar [%s +%d]", x->name, I.filename, I.lineNo);
+    cant_happen("no binding for var '%s' in annotateAexpVar [%s +%d]", x->name, I.fileName, I.lineNo);
 }
 
 static AnfEnv *annotateAexpPrimApp(AexpPrimApp *x, AnfEnv *env) {

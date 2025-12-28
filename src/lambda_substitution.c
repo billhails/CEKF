@@ -47,7 +47,7 @@ static void substError(ParserInfo PI, const char *message, ...) {
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", PI.lineNo, PI.filename);
+    can_happen(" at +%d %s", PI.lineNo, PI.fileName);
 }
 
 static LamVarList *performVarListSubstitutions(LamVarList *varList, TpmcSubstitutionTable

@@ -47,7 +47,7 @@
 #  include "debugging_off.h"
 #endif
 
-static ParserInfo NULLPI = (ParserInfo) {.lineNo = 0, .filename = ""};
+static ParserInfo NULLPI = (ParserInfo) {.lineNo = 0, .fileName = ""};
 
 static LamExp *normalize(LamExp *exp, AnfKont *k);
 

@@ -189,7 +189,7 @@ static inline PrattFixity getFixityFromPattern(PrattMixfixPattern *pattern)
 /**
  * @brief Create a new AstExpression representing an error.
  *
- * The new expression includes ParserInfo containing filename or string context, and line number.
+ * The new expression includes ParserInfo containing fileName or string context, and line number.
  */
 static AstExpression *errorExpression(ParserInfo I)
 {
@@ -405,7 +405,7 @@ static char *currentPrattFile(PrattParser *parser)
         return no_file;
     if (parser->lexer->bufList == NULL)
         return no_file;
-    return parser->lexer->bufList->filename->name;
+    return parser->lexer->bufList->fileName->name;
 }
 
 /**
@@ -414,7 +414,7 @@ static char *currentPrattFile(PrattParser *parser)
 static AgnosticFileId *calculatePath(unsigned char *file, PrattParser *parser)
 {
     if (*file == '/') {
-        // Take ownership of the filename by duplicating it so the
+        // Take ownership of the fileName by duplicating it so the
         // AgnosticFileId can free it during GC finalization.
         return makeAgnosticFileId(safeStrdup((char *)file));
     }
@@ -573,7 +573,7 @@ static AstProg *prattParseThing(PrattLexer *thing)
  */
 AstProg *prattParseFile(char *file)
 {
-    PrattLexer *lexer = makePrattLexerFromFilename(file);
+    PrattLexer *lexer = makePrattLexerFromFileName(file);
     int save = PROTECT(lexer);
     AstProg *prog = prattParseThing(lexer);
     UNPROTECT(save);
@@ -635,7 +635,7 @@ static AstDefinitions *prattParseLink(PrattParser *parser, char *file, PrattPars
     parser = findPreambleParser(parser);
     parser = newPrattParser(parser);
     int save = PROTECT(parser);
-    parser->lexer = makePrattLexerFromFilename(file);
+    parser->lexer = makePrattLexerFromFileName(file);
     AstDefinitions *definitions = NULL;
     AstNest *nest = top(parser);
     if (nest)
@@ -909,18 +909,18 @@ static void mergeFixityImport(PrattParser *parser, PrattRecord *target, PrattRec
  * all of its imports are recorded ahead of it.
  *
  * @param parser The PrattParser to use for parsing.
- * @param filename The name of the file to link.
+ * @param fileName The name of the file to link.
  * @param symbol The HashSymbol representing the nameSpace symbol.
  * @return An AstNameSpace containing the parsed nameSpace or an error.
  */
-static AstNameSpace *parseLink(PrattParser *parser, unsigned char *filename, HashSymbol *symbol)
+static AstNameSpace *parseLink(PrattParser *parser, unsigned char *fileName, HashSymbol *symbol)
 {
     // check the file exists
-    AgnosticFileId *fileId = calculatePath(filename, parser);
+    AgnosticFileId *fileId = calculatePath(fileName, parser);
     int save = PROTECT(fileId);
     if (fileId == NULL)
     {
-        parserError(parser, "cannot find file \"%s\"", filename);
+        parserError(parser, "cannot find file \"%s\"", fileName);
         AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, -1);
         UNPROTECT(save);
         return ns;
@@ -3487,7 +3487,7 @@ static AstFunCall *conslist(PrattParser *parser)
     if (check(parser, TOK_RSQUARE()))
     {
         ParserInfo PI = LEXPI(parser->lexer);
-        DEBUG("conslist parser info %d %s", PI.lineNo, PI.filename);
+        DEBUG("conslist parser info %d %s", PI.lineNo, PI.fileName);
         AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
         PROTECT(nil);
         res = newAstFunCall(PI, nil, NULL);

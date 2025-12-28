@@ -81,7 +81,7 @@ void generateBuiltinWrappers(BuiltIns *builtIns) {
     // Use a dummy ParserInfo referencing first preamble definition if available
     ParserInfo PI;
     // default values
-    PI.filename = "<builtin-wrapper>";
+    PI.fileName = "<builtin-wrapper>";
     PI.lineNo = 0;
     // Prepend wrappers so external names are resolved during type checking of
     // preamble functions/macros that reference them (e.g. assertion, puts, etc.)

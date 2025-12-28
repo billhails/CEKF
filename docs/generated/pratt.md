@@ -14,11 +14,11 @@ PrattBuffer --data--> ustring
 PrattBuffer --start--> ustring
 PrattBuffer --length--> int
 PrattBufList --lineNo--> int
-PrattBufList --filename--> HashSymbol
+PrattBufList --fileName--> HashSymbol
 PrattBufList --buffer--> PrattBuffer
 PrattBufList --next--> PrattBufList
 PrattToken --type--> HashSymbol
-PrattToken --filename--> HashSymbol
+PrattToken --fileName--> HashSymbol
 PrattToken --lineNo--> int
 PrattToken --value--> PrattValue
 PrattToken --next--> PrattToken

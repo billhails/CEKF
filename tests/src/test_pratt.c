@@ -57,10 +57,10 @@ static void test(char *expr, char *expected, bool expectError) {
     validateLastAlloc();
 }
 
-static void testFile(char *filename) {
+static void testFile(char *fileName) {
     clearErrors();
-    PrattLexer *lexer = makePrattLexerFromFilename(filename);
-    AstProg *result = prattParseFile(filename);
+    PrattLexer *lexer = makePrattLexerFromFileName(fileName);
+    AstProg *result = prattParseFile(fileName);
     int save = PROTECT(result);
     PrattUTF8 *dest = newPrattUTF8();
     PROTECT(dest);

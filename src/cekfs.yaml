@@ -95,7 +95,7 @@ structs:
         data:
             loc: index
             lineNo: int
-            filename: string
+            fileName: string
 
 inline:
     unions:

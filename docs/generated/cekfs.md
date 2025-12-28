@@ -31,7 +31,7 @@ Fail --S--> Stack
 Fail --F--> Fail
 Location --loc--> index
 Location --lineNo--> int
-Location --filename--> string
+Location --fileName--> string
 Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
