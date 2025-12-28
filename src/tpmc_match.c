@@ -540,7 +540,7 @@ static TpmcPattern *makeNamedWildcardPattern(HashSymbol *path) {
 static TpmcState *deduplicateState(TpmcState *state,
                                    TpmcStateArray *knownStates,
                                    TpmcStateTable *stateTable) {
-    // First check the hash table for fast lookup
+    // First check the hash table for fast lookUp
     HashSymbol *key = stampToSymbol(state->stamp);
     TpmcState *existing = NULL;
     if (getTpmcStateTable(stateTable, key, &existing)) {
@@ -555,7 +555,7 @@ static TpmcState *deduplicateState(TpmcState *state,
     for (Index i = 0; i < knownStates->size; i++) {
         if (tpmcStateEq(state, knownStates->entries[i])) {
             validateLastAlloc();
-            // Also add to hash table for future lookups
+            // Also add to hash table for future lookUps
             setTpmcStateTable(stateTable, key, knownStates->entries[i]);
             return knownStates->entries[i];
         }

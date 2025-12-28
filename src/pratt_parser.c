@@ -68,7 +68,7 @@ static AstAltFunction *alt_function(PrattParser *);
 static AstFarg *astCharacterToFarg(ParserInfo, Character);
 static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr);
 static AstFarg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall);
-static AstFarg *astLookupToFarg(PrattParser *parser, AstLookup *lookup);
+static AstFarg *astLookUpToFarg(PrattParser *parser, AstLookUp *lookUp);
 static AstFarg *astNumberToFarg(ParserInfo, MaybeBigInt *);
 static AstFarg *astStructureToFarg(PrattParser *parser, AstStruct *structure);
 static AstFarg *astSymbolToFarg(ParserInfo, HashSymbol *);
@@ -104,7 +104,7 @@ static AstExpression *iff(PrattRecord *, PrattParser *, AstExpression *, PrattTo
 static AstExpression *infixLeft(PrattRecord *, PrattParser *, AstExpression *, PrattToken *) __attribute__((unused));
 static AstExpression *infixRight(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *list(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *lookup(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression *lookUp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *macro(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *makeAtom(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *makeChar(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -127,7 +127,7 @@ static AstExpressions *expressions(PrattParser *);
 static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstFileIdArray *fileIdStack = NULL;
 static AstFunCall *switchFC(PrattParser *parser);
-static AstLookupOrSymbol *scoped_symbol(PrattParser *);
+static AstLookUpOrSymbol *scoped_symbol(PrattParser *);
 static AstNameSpace *parseLink(PrattParser *, unsigned char *, HashSymbol *);
 static AstNest *nest_body(PrattParser *, HashSymbol *);
 static AstNest *nest(PrattParser *);
@@ -269,7 +269,7 @@ static PrattParser *makePrattParser(void)
     addRecord(table, TOK_NUMBER(), makeNumber, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_OPEN(), grouping, 0, call, 14, NULL, 0);
     addRecord(table, TOK_OPERATOR(), NULL, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_PERIOD(), NULL, 0, lookup, 15, NULL, 0);
+    addRecord(table, TOK_PERIOD(), NULL, 0, lookUp, 15, NULL, 0);
     addRecord(table, TOK_PIPE(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_PRINT(), print, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_RCURLY(), NULL, 0, NULL, 0, NULL, 0);
@@ -926,7 +926,7 @@ static AstNameSpace *parseLink(PrattParser *parser, unsigned char *filename, Has
         return ns;
     }
     // see if we've already parsed it, if so return the existing nameSpace id
-    int found = lookupNameSpace(fileId);
+    int found = lookUpNameSpace(fileId);
     if (found != -1)
     {
         AstNameSpace *ns = newAstNameSpace(BUFPI(parser->lexer->bufList), symbol, found);
@@ -1552,7 +1552,7 @@ AstExpression *userMixFix(PrattRecord *record,
     PROTECT(func);
     if (record->importNsRef >= 0)
     {
-        func = makeAstExpression_Lookup(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
+        func = makeAstExpression_LookUp(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
         PROTECT(func);
     }
     AstExpression *res = makeAstExpression_FunCall(TOKPI(tok), func, argList);
@@ -2502,7 +2502,7 @@ static AstAltFunction *alt_function(PrattParser *parser)
 static AstTypeFunction *type_function(PrattParser *parser)
 {
     ENTER(type_function);
-    AstLookupOrSymbol *name = scoped_symbol(parser);
+    AstLookUpOrSymbol *name = scoped_symbol(parser);
     int save = PROTECT(name);
     AstTypeFunction *this = newAstTypeFunction(CPI(name), name, NULL);
     PROTECT(this);
@@ -2621,9 +2621,9 @@ static AstExpression *nestexpr(PrattRecord *record __attribute__((unused)),
  * @brief Parse a scoped symbol, that is a symbol optionally prefixed by a nameSpace and a period.
  *
  * @param parser The PrattParser to use for parsing.
- * @return An AstLookupOrSymbol representing the parsed scoped symbol.
+ * @return An AstLookUpOrSymbol representing the parsed scoped symbol.
  */
-static AstLookupOrSymbol *scoped_symbol(PrattParser *parser)
+static AstLookUpOrSymbol *scoped_symbol(PrattParser *parser)
 {
     ENTER(scoped_symbol);
     PrattToken *tok = peek(parser);
@@ -2635,7 +2635,7 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser)
         int index = 0;
         if (findNameSpace(parser, sym1, &index))
         {
-            AstLookupOrSymbol *res = makeAstLookupOrSymbol_Lookup(TOKPI(tok), index, sym1, sym2);
+            AstLookUpOrSymbol *res = makeAstLookUpOrSymbol_LookUp(TOKPI(tok), index, sym1, sym2);
             LEAVE(scoped_symbol);
             UNPROTECT(save);
             return res;
@@ -2645,7 +2645,7 @@ static AstLookupOrSymbol *scoped_symbol(PrattParser *parser)
             parserError(parser, "cannot resolve nameSpace %s", sym1->name);
         }
     }
-    AstLookupOrSymbol *res = newAstLookupOrSymbol_Symbol(TOKPI(tok), sym1);
+    AstLookUpOrSymbol *res = newAstLookUpOrSymbol_Symbol(TOKPI(tok), sym1);
     LEAVE(scoped_symbol);
     UNPROTECT(save);
     return res;
@@ -2674,28 +2674,28 @@ static AstFargList *fargs(PrattParser *parser)
 }
 
 /**
- * @brief Convert an AstLookup to an AstLookupSymbol.
+ * @brief Convert an AstLookUp to an AstLookUpSymbol.
  *
  * @param parser The PrattParser (used only for error reporting).
- * @param lookup The AstLookup to convert.
- * @return An AstLookupSymbol representing the converted lookup.
+ * @param lookUp The AstLookUp to convert.
+ * @return An AstLookUpSymbol representing the converted lookUp.
  */
-static AstLookupSymbol *astLookupToLus(PrattParser *parser, AstLookup *lookup)
+static AstLookUpSymbol *astLookUpToLus(PrattParser *parser, AstLookUp *lookUp)
 {
-    AstLookupSymbol *lus = newAstLookupSymbol(CPI(lookup), lookup->nsid, lookup->nsSymbol, NULL);
+    AstLookUpSymbol *lus = newAstLookUpSymbol(CPI(lookUp), lookUp->nsid, lookUp->nsSymbol, NULL);
     int save = PROTECT(lus);
-    switch (lookup->expression->type)
+    switch (lookUp->expression->type)
     {
     case AST_EXPRESSION_TYPE_SYMBOL:
-        lus->symbol = lookup->expression->val.symbol;
+        lus->symbol = lookUp->expression->val.symbol;
         break;
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
-        parserErrorAt(CPI(lookup), parser, "invalid use of operator in lookup");
-        lus->symbol = lookup->nsSymbol;
+        parserErrorAt(CPI(lookUp), parser, "invalid use of operator in lookUp");
+        lus->symbol = lookUp->nsSymbol;
         break;
     default:
-        parserErrorAt(CPI(lookup), parser, "invalid lookup in formal arguments");
-        lus->symbol = lookup->nsSymbol;
+        parserErrorAt(CPI(lookUp), parser, "invalid lookUp in formal arguments");
+        lus->symbol = lookUp->nsSymbol;
         break;
     }
     UNPROTECT(save);
@@ -2703,64 +2703,64 @@ static AstLookupSymbol *astLookupToLus(PrattParser *parser, AstLookup *lookup)
 }
 
 /**
- * @brief Wraps an AstLookup in an AstLookupSymbol and wraps that in an AstLookupOrSymbol.
+ * @brief Wraps an AstLookUp in an AstLookUpSymbol and wraps that in an AstLookUpOrSymbol.
  *
  * @param parser The PrattParser (used only for error reporting).
- * @param lookup The AstLookup to convert.
- * @return An AstLookupOrSymbol representing the converted lookup.
+ * @param lookUp The AstLookUp to convert.
+ * @return An AstLookUpOrSymbol representing the converted lookUp.
  */
-static AstLookupOrSymbol *astLookupToLos(PrattParser *parser, AstLookup *lookup)
+static AstLookUpOrSymbol *astLookUpToLos(PrattParser *parser, AstLookUp *lookUp)
 {
-    AstLookupSymbol *lus = astLookupToLus(parser, lookup);
+    AstLookUpSymbol *lus = astLookUpToLus(parser, lookUp);
     int save = PROTECT(lus);
-    AstLookupOrSymbol *res = newAstLookupOrSymbol_Lookup(CPI(lus), lus);
+    AstLookUpOrSymbol *res = newAstLookUpOrSymbol_LookUp(CPI(lus), lus);
     UNPROTECT(save);
     return res;
 }
 
 /**
- * @brief Create an AstLookupOrSymbol representing an error.
+ * @brief Create an AstLookUpOrSymbol representing an error.
  *
- * This function creates a new AstLookupOrSymbol with a TOK_ERROR() symbol,
+ * This function creates a new AstLookUpOrSymbol with a TOK_ERROR() symbol,
  * this is only so that the parser has something to return when it encounters an error.
  *
  * @param PI The ParserInfo for the context of the error.
- * @return An AstLookupOrSymbol representing the error.
+ * @return An AstLookUpOrSymbol representing the error.
  */
-static AstLookupOrSymbol *makeLosError(ParserInfo PI)
+static AstLookUpOrSymbol *makeLosError(ParserInfo PI)
 {
-    return newAstLookupOrSymbol_Symbol(PI, TOK_ERROR());
+    return newAstLookUpOrSymbol_Symbol(PI, TOK_ERROR());
 }
 
 /**
- * @brief Wrals a symbol in a new AstLookupOrSymbol.
+ * @brief Wrals a symbol in a new AstLookUpOrSymbol.
  *
  * @param PI The ParserInfo for the context of the symbol.
  * @param symbol The HashSymbol to wrap.
- * @return An AstLookupOrSymbol containing the symbol.
+ * @return An AstLookUpOrSymbol containing the symbol.
  */
-static AstLookupOrSymbol *astSymbolToLos(ParserInfo PI, HashSymbol *symbol)
+static AstLookUpOrSymbol *astSymbolToLos(ParserInfo PI, HashSymbol *symbol)
 {
-    return newAstLookupOrSymbol_Symbol(PI, symbol);
+    return newAstLookUpOrSymbol_Symbol(PI, symbol);
 }
 
 /**
- * @brief Convert an AstExpression representing a function to an AstLookupOrSymbol.
+ * @brief Convert an AstExpression representing a function to an AstLookUpOrSymbol.
  *
- * This function checks the type of the expression and converts it to an AstLookupOrSymbol
- * or returns an error if the expression is not a lookup or a symbol.
+ * This function checks the type of the expression and converts it to an AstLookUpOrSymbol
+ * or returns an error if the expression is not a lookUp or a symbol.
  * It is used to parse type constructor names in the formal arguments to functions.
  *
  * @param parser The PrattParser (used only for error reporting).
  * @param function The AstExpression representing the function.
- * @return An AstLookupOrSymbol representing the function, or an error.
+ * @return An AstLookUpOrSymbol representing the function, or an error.
  */
-static AstLookupOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *function)
+static AstLookUpOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *function)
 {
     switch (function->type)
     {
     case AST_EXPRESSION_TYPE_LOOKUP:
-        return astLookupToLos(parser, function->val.lookup);
+        return astLookUpToLos(parser, function->val.lookUp);
     case AST_EXPRESSION_TYPE_SYMBOL:
         return astSymbolToLos(CPI(function), function->val.symbol);
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
@@ -2831,7 +2831,7 @@ static AstLookupOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *f
 
 static AstFarg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall)
 {
-    AstLookupOrSymbol *los = astFunctionToLos(parser, funCall->function);
+    AstLookUpOrSymbol *los = astFunctionToLos(parser, funCall->function);
     int save = PROTECT(los);
     AstFargList *args = astExpressionsToFargList(parser, funCall->arguments);
     PROTECT(args);
@@ -2841,16 +2841,16 @@ static AstFarg *astFunCallToFarg(PrattParser *parser, AstFunCall *funCall)
 }
 
 /**
- * @brief wraps an AstLookup in an AstLookupSymbol and wraps that in an AstFarg
+ * @brief wraps an AstLookUp in an AstLookUpSymbol and wraps that in an AstFarg
  *
  * @param parser The parser for error reporting.
- * @param lookup the AstLookup to wrap.
+ * @param lookUp the AstLookUp to wrap.
  */
-static AstFarg *astLookupToFarg(PrattParser *parser, AstLookup *lookup)
+static AstFarg *astLookUpToFarg(PrattParser *parser, AstLookUp *lookUp)
 {
-    AstLookupSymbol *lus = astLookupToLus(parser, lookup);
+    AstLookUpSymbol *lus = astLookUpToLus(parser, lookUp);
     int save = PROTECT(lus);
-    AstFarg *res = newAstFarg_Lookup(CPI(lus), lus);
+    AstFarg *res = newAstFarg_LookUp(CPI(lus), lus);
     UNPROTECT(save);
     return res;
 }
@@ -2965,7 +2965,7 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr)
     case AST_EXPRESSION_TYPE_FUNCALL:
         return astFunCallToFarg(parser, expr->val.funCall);
     case AST_EXPRESSION_TYPE_LOOKUP:
-        return astLookupToFarg(parser, expr->val.lookup);
+        return astLookUpToFarg(parser, expr->val.lookUp);
     case AST_EXPRESSION_TYPE_SYMBOL:
         return astSymbolToFarg(CPI(expr), expr->val.symbol);
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
@@ -3640,44 +3640,44 @@ static AstTaggedExpressions *taggedExpressions(PrattParser *parser)
     return this;
 }
 
-static AstLookupSymbol *astStructLookupToLus(PrattParser *parser, AstLookup *lookup)
+static AstLookUpSymbol *astStructLookUpToLus(PrattParser *parser, AstLookUp *lookUp)
 {
-    if (lookup->expression->type != AST_EXPRESSION_TYPE_SYMBOL) {
-        parserErrorAt(CPI(lookup->expression), parser,
-                      "expected symbol as lookup expression, got %s",
-                      astExpressionTypeName(lookup->expression->type));
-        return newAstLookupSymbol(CPI(lookup), -1, TOK_ERROR(), TOK_ERROR());
+    if (lookUp->expression->type != AST_EXPRESSION_TYPE_SYMBOL) {
+        parserErrorAt(CPI(lookUp->expression), parser,
+                      "expected symbol as lookUp expression, got %s",
+                      astExpressionTypeName(lookUp->expression->type));
+        return newAstLookUpSymbol(CPI(lookUp), -1, TOK_ERROR(), TOK_ERROR());
     }
     int index = 0;
-    if (findNameSpace(parser, lookup->nsSymbol, &index)) {
-        AstLookupSymbol *lus = newAstLookupSymbol(CPI(lookup),
-                index, lookup->nsSymbol, lookup->expression->val.symbol);
+    if (findNameSpace(parser, lookUp->nsSymbol, &index)) {
+        AstLookUpSymbol *lus = newAstLookUpSymbol(CPI(lookUp),
+                index, lookUp->nsSymbol, lookUp->expression->val.symbol);
         return lus;
     } else {
-        parserErrorAt(CPI(lookup), parser,
-                      "unknown nameSpace '%s' in lookup",
-                      lookup->nsSymbol->name);
-        return newAstLookupSymbol(CPI(lookup), -1, lookup->nsSymbol, TOK_ERROR());
+        parserErrorAt(CPI(lookUp), parser,
+                      "unknown nameSpace '%s' in lookUp",
+                      lookUp->nsSymbol->name);
+        return newAstLookUpSymbol(CPI(lookUp), -1, lookUp->nsSymbol, TOK_ERROR());
     }
 }
 
-static AstLookupOrSymbol *astExpressionToLosOrSymbol(PrattParser *parser, AstExpression *expr)
+static AstLookUpOrSymbol *astExpressionToLosOrSymbol(PrattParser *parser, AstExpression *expr)
 {
     switch (expr->type) {
         case AST_EXPRESSION_TYPE_LOOKUP: {
-            AstLookupSymbol *lus = astStructLookupToLus(parser, expr->val.lookup);
+            AstLookUpSymbol *lus = astStructLookUpToLus(parser, expr->val.lookUp);
             int save = PROTECT(lus);
-            AstLookupOrSymbol *res = newAstLookupOrSymbol_Lookup(CPI(expr), lus);
+            AstLookUpOrSymbol *res = newAstLookUpOrSymbol_LookUp(CPI(expr), lus);
             UNPROTECT(save);
             return res;
         }
         case AST_EXPRESSION_TYPE_SYMBOL:
-            return newAstLookupOrSymbol_Symbol(CPI(expr), expr->val.symbol);
+            return newAstLookUpOrSymbol_Symbol(CPI(expr), expr->val.symbol);
         default:
             parserErrorAt(CPI(expr), parser,
-                        "expected structure name (symbol or lookup) on lhs of infix '{', got %s",
+                        "expected structure name (symbol or lookUp) on lhs of infix '{', got %s",
                         astExpressionTypeName(expr->type));
-            return newAstLookupOrSymbol_Symbol(CPI(expr), TOK_ERROR());
+            return newAstLookUpOrSymbol_Symbol(CPI(expr), TOK_ERROR());
     }
 }
 
@@ -3690,7 +3690,7 @@ static AstExpression *makeStruct(PrattRecord *record __attribute__((unused)),
                                  PrattToken *tok __attribute__((unused)))
 {
     ENTER(makeStruct);
-    AstLookupOrSymbol *los = astExpressionToLosOrSymbol(parser, lhs);
+    AstLookUpOrSymbol *los = astExpressionToLosOrSymbol(parser, lhs);
     int save = PROTECT(los);
     AstTaggedExpressions *fields = taggedExpressions(parser);
     PROTECT(fields);;
@@ -3944,12 +3944,12 @@ PrattToken *tok __attribute__((unused))) {
 /**
  * @brief parselet triggered by an infix period.
  */
-static AstExpression *lookup(PrattRecord *record,
+static AstExpression *lookUp(PrattRecord *record,
                              PrattParser *parser,
                              AstExpression *lhs,
                              PrattToken *tok __attribute__((unused)))
 {
-    ENTER(lookup);
+    ENTER(lookUp);
     AstExpression *rhs = expressionPrecedence(parser, record->infix.prec - 1);
     int save = PROTECT(rhs);
     if (lhs->type == AST_EXPRESSION_TYPE_SYMBOL)
@@ -3959,13 +3959,13 @@ static AstExpression *lookup(PrattRecord *record,
         {
             parserError(parser, "cannot resolve nameSpace %s", lhs->val.symbol->name);
         }
-        rhs = makeAstExpression_Lookup(LEXPI(parser->lexer), index, lhs->val.symbol, rhs);
+        rhs = makeAstExpression_LookUp(LEXPI(parser->lexer), index, lhs->val.symbol, rhs);
     }
     else
     {
         parserError(parser, "expected nameSpace on lhs of '.', got %s", astExpressionTypeName(lhs->type));
     }
-    LEAVE(lookup);
+    LEAVE(lookUp);
     UNPROTECT(save);
     return rhs;
 }
@@ -4037,7 +4037,7 @@ static AstExpression *userPrefix(PrattRecord *record,
                                                             record->prefix.originalImpl);
     PROTECT(func);
     if (record->importNsRef >= 0) {
-        func = makeAstExpression_Lookup(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
+        func = makeAstExpression_LookUp(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
         PROTECT(func);
     }
     rhs = makeAstExpression_FunCall(TOKPI(tok), func, arguments);
@@ -4075,7 +4075,7 @@ static AstExpression *userInfixCommon(PrattRecord *record,
     PROTECT(func);
     if (record->importNsRef >= 0)
     {
-        func = makeAstExpression_Lookup(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
+        func = makeAstExpression_LookUp(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
         PROTECT(func);
     }
     rhs = makeAstExpression_FunCall(TOKPI(tok), func, arguments);
@@ -4156,7 +4156,7 @@ static AstExpression *userPostfix(PrattRecord *record,
     PROTECT(func);
     if (record->importNsRef >= 0)
     {
-        func = makeAstExpression_Lookup(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
+        func = makeAstExpression_LookUp(TOKPI(tok), record->importNsRef, record->importNsSymbol, func);
         PROTECT(func);
     }
     AstExpression *res = makeAstExpression_FunCall(TOKPI(tok), func, arguments);

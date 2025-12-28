@@ -32,7 +32,7 @@ void initNameSpaces();
 
 void forceInitNameSpaces();
 
-int lookupNameSpace(AgnosticFileId *);
+int lookUpNameSpace(AgnosticFileId *);
 
 AstProg *astNestToProg(AstNest *nest);
 

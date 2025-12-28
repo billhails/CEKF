@@ -24,12 +24,12 @@ LamArgs --exp--> LamExp
 LamArgs --next--> LamArgs
 LamApply --function--> LamExp
 LamApply --args--> LamArgs
-LamLookup --nsid--> int
-LamLookup --nsSymbol--> HashSymbol
-LamLookup --exp--> LamExp
-LamLookupSymbol --nsid--> int
-LamLookupSymbol --nsSymbol--> HashSymbol
-LamLookupSymbol --symbol--> HashSymbol
+LamLookUp --nsid--> int
+LamLookUp --nsSymbol--> HashSymbol
+LamLookUp --exp--> LamExp
+LamLookUpSymbol --nsid--> int
+LamLookUpSymbol --nsSymbol--> HashSymbol
+LamLookUpSymbol --symbol--> HashSymbol
 LamConstant --name--> HashSymbol
 LamConstant --tag--> int
 LamConstruct --name--> HashSymbol
@@ -102,7 +102,7 @@ LamTypeConstructor --type--> LamTypeSig
 LamTypeConstructor --args--> LamTypeConstructorArgs
 LamTypeConstructorArgs --arg--> LamTypeConstructorType
 LamTypeConstructorArgs --next--> LamTypeConstructorArgs
-LamTypeFunction --name--> LamLookupOrSymbol
+LamTypeFunction --name--> LamLookUpOrSymbol
 LamTypeFunction --args--> LamTypeConstructorArgs
 LamTypeConstructorInfo --name--> HashSymbol
 LamTypeConstructorInfo --nsid--> int
@@ -135,7 +135,7 @@ LamExp --lam--> LamLam
 LamExp --let--> LamLet
 LamExp --letRec--> LamLetRec
 LamExp --letStar--> LamLetStar
-LamExp --lookup--> LamLookup
+LamExp --lookUp--> LamLookUp
 LamExp --makeTuple--> LamArgs
 LamExp --makeVec--> LamMakeVec
 LamExp --match--> LamMatch
@@ -149,8 +149,8 @@ LamExp --tupleIndex--> LamTupleIndex
 LamExp --typedefs--> LamTypeDefs
 LamExp --typeOf--> LamTypeOf
 LamExp --var--> HashSymbol
-LamLookupOrSymbol --symbol--> HashSymbol
-LamLookupOrSymbol --lookup--> LamLookupSymbol
+LamLookUpOrSymbol --symbol--> HashSymbol
+LamLookUpOrSymbol --lookUp--> LamLookUpSymbol
 LamCondCases --integers--> LamIntCondCases
 LamCondCases --characters--> LamCharCondCases
 LamTypeConstructorType --integer--> void_ptr

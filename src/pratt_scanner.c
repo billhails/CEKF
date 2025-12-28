@@ -203,7 +203,7 @@ static char *readFile(char *path) {
  * @param found The last found symbol, if any.
  * @return The found HashSymbol, or NULL if no match is found.
  */
-static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
+static HashSymbol *lookUpTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
@@ -211,7 +211,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
         buffer->length = last;
         return found;
     } else if (buffer->start[buffer->length] < trie->character) {
-        return lookupTrieRecursive(trie->siblings, buffer, last, found);
+        return lookUpTrieRecursive(trie->siblings, buffer, last, found);
     }
     ++buffer->length;
     if (trie->terminal != NULL) {
@@ -221,7 +221,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
             last = buffer->length;
         }
     }
-    return lookupTrieRecursive(trie->children, buffer, last, found);
+    return lookUpTrieRecursive(trie->children, buffer, last, found);
 }
 
 /**
@@ -275,12 +275,12 @@ static void advance(PrattBuffer *buffer) {
 
 /**
  * @brief Looks up a symbol in the trie and returns a PrattToken if found.
- * Helper for lookupTrieSymbol.
+ * Helper for lookUpTrieSymbol.
  */
-static inline PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
+static inline PrattToken *_lookUpTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
     PrattParser *p = parser;
     while (p) {
-        HashSymbol *symbol = lookupTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
+        HashSymbol *symbol = lookUpTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
         if (symbol != NULL) {
             PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
             advance(lexer->bufList->buffer);
@@ -294,8 +294,8 @@ static inline PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lex
 /**
  * @brief Parses and returns the next token.
  */
-static PrattToken *lookupTrieSymbol(PrattParser *parser) {
-    return _lookupTrieSymbol(parser, parser->lexer);
+static PrattToken *lookUpTrieSymbol(PrattParser *parser) {
+    return _lookUpTrieSymbol(parser, parser->lexer);
 }
 
 /**
@@ -935,7 +935,7 @@ PrattToken *next(PrattParser *parser) {
                     }
                 // alpha
                 } else if (utf8_isalpha(buffer->start)) {
-                    PrattToken *token = lookupTrieSymbol(parser);
+                    PrattToken *token = lookUpTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     } else {
@@ -952,7 +952,7 @@ PrattToken *next(PrattParser *parser) {
                     return parseString(parser, true, '\'');
                 // punctuation and symbols
                 } else if (utf8_ispunct(buffer->start) || utf8_issymbol(buffer->start)) {
-                    PrattToken *token = lookupTrieSymbol(parser);
+                    PrattToken *token = lookUpTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     }

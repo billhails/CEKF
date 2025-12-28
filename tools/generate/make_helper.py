@@ -30,7 +30,7 @@ class MakeHelperGenerator:
             union_name: Name of the union type (e.g., 'LamExp')
             field_name: Name of the field (e.g., 'iff')
             field_obj: The object representing the field's type
-            catalog: The catalog for type lookups
+            catalog: The catalog for type lookUps
             has_parser_info: Whether to include ParserInfo parameter
             is_inline: Whether the union is inline (call-by-value)
         """

@@ -698,19 +698,19 @@ static LamExp *normalize_Lam(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-// (`(lookup ,name ,id ,expr)
-//     (k `(lookup ,name ,id ,(normalize-term expr))))
+// (`(lookUp ,name ,id ,expr)
+//     (k `(lookUp ,name ,id ,(normalize-term expr))))
 
-static LamExp *normalize_Lookup(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Lookup);
-    LamLookup *lookupExp = getLamExp_Lookup(exp);
-    LamExp *newExpr = normalize_term(lookupExp->exp);
+static LamExp *normalize_LookUp(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_LookUp);
+    LamLookUp *lookUpExp = getLamExp_LookUp(exp);
+    LamExp *newExpr = normalize_term(lookUpExp->exp);
     int save = PROTECT(newExpr);
-    LamExp *newLookup = makeLamExp_Lookup(CPI(exp), lookupExp->nsid, lookupExp->nsSymbol, newExpr);
-    PROTECT(newLookup);
-    LamExp *result = INVOKE(k, newLookup);
+    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsid, lookUpExp->nsSymbol, newExpr);
+    PROTECT(newLookUp);
+    LamExp *result = INVOKE(k, newLookUp);
     UNPROTECT(save);
-    LEAVE(normalize_Lookup);
+    LEAVE(normalize_LookUp);
     return result;
 }
 
@@ -853,7 +853,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_Let(exp, k);
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                res = normalize_Lookup(exp, k);
+                res = normalize_LookUp(exp, k);
                 break;
             case LAMEXP_TYPE_MAKETUPLE:
                 res = normalize_MakeTuple(exp, k);

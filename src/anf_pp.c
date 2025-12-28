@@ -345,8 +345,8 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
-void ppAnfExpLookup(AnfExpLookup *x) {
-    eprintf("(lookup %d ", x->nameSpace);
+void ppAnfExpLookUp(AnfExpLookUp *x) {
+    eprintf("(lookUp %d ", x->nameSpace);
     ppAnfExp(x->body);
     eprintf(")");
 }
@@ -442,7 +442,7 @@ void ppAnfExp(AnfExp *x) {
             eprintf("ENV");
             break;
         case ANFEXP_TYPE_LOOKUP:
-            ppAnfExpLookup(x->val.lookup);
+            ppAnfExpLookUp(x->val.lookUp);
             break;
         default:
             eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));

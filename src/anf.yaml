@@ -31,7 +31,7 @@ structs:
     AnfEnv:
         meta:
             brief: ANF Compile Time Environment
-            description: lookup for the run-time locations of variables.
+            description: lookUp for the run-time locations of variables.
         data:
             isLocal: bool
             isNameSpace: bool = false
@@ -205,7 +205,7 @@ structs:
             val: AnfExp
             body: AnfExp
 
-    AnfExpLookup:
+    AnfExpLookUp:
         data:
             nameSpace: index
             annotatedVar: AexpAnnotatedVar = NULL
@@ -279,7 +279,7 @@ unions:
             aexp: Aexp
             cexp: Cexp
             let: AnfExpLet
-            lookup: AnfExpLookup
+            lookUp: AnfExpLookUp
 
 enums:
     AexpAnnotatedVarType:

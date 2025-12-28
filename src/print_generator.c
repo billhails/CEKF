@@ -362,52 +362,52 @@ static LamArgs *makeAargs(ParserInfo I, LamTypeConstructorArgs *args) {
 
 /**
  * @brief Checks if a function is a list constructor.
- * @param los The lookup or symbol to check.
+ * @param los The lookUp or symbol to check.
  * @return True if the function is a list constructor, false otherwise.
  */
-static bool functionIsList(LamLookupOrSymbol *los) {
+static bool functionIsList(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             return los->val.symbol == listSymbol();
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
             return false;
         default:
-            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 /**
- * @brief Gets the underlying function name from a lookup or symbol.
- * @param los The lookup or symbol to get the name from.
+ * @brief Gets the underlying function name from a lookUp or symbol.
+ * @param los The lookUp or symbol to get the name from.
  * @return The underlying function name.
  */
-static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
+static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             return los->val.symbol->name;
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return los->val.lookup->symbol->name;
+            return los->val.lookUp->symbol->name;
         default:
-            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 /**
- * @brief Wraps a print function in a lookup expression if necessary.
- * @details The argument toPrint is the lookup or symbol of the thing being printed.
+ * @brief Wraps a print function in a lookUp expression if necessary.
+ * @details The argument toPrint is the lookUp or symbol of the thing being printed.
  *          The argument printer is the print function.
  *          If the toPrint is just a symbol, then the printer is assumed to be in the current scope and returned unchanged.
- *          If the toPrint is a lookup, then the printer is assumed to be in that scope and is wrapped in the same lookup expression.
+ *          If the toPrint is a lookUp, then the printer is assumed to be in that scope and is wrapped in the same lookUp expression.
  * @param I Parser information.
  * @param printer The print function to wrap.
- * @param los The lookup or symbol of the thing being printed.
+ * @param los The lookUp or symbol of the thing being printed.
  */
-static LamExp *lookupPrintFunction(ParserInfo I, LamExp *printer, LamLookupOrSymbol *toPrint) {
+static LamExp *lookUpPrintFunction(ParserInfo I, LamExp *printer, LamLookUpOrSymbol *toPrint) {
     if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
-        LamLookupSymbol *ls = toPrint->val.lookup;
-        LamLookup *llu = newLamLookup(I, ls->nsid, ls->nsSymbol, printer);
+        LamLookUpSymbol *ls = toPrint->val.lookUp;
+        LamLookUp *llu = newLamLookUp(I, ls->nsid, ls->nsSymbol, printer);
         int save = PROTECT(llu);
-        printer = newLamExp_Lookup(I, llu);
+        printer = newLamExp_LookUp(I, llu);
         UNPROTECT(save);
     }
     return printer;
@@ -431,7 +431,7 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
     HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    exp = lookupPrintFunction(I, exp, function->name);
+    exp = lookUpPrintFunction(I, exp, function->name);
     REPLACE_PROTECT(save, exp);
     LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);
@@ -647,7 +647,7 @@ static LamMatchList *makeScalarMatchList(ParserInfo I,
     LamMatchList *next = makeScalarMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeScalarMatchList",
@@ -703,7 +703,7 @@ static LamMatchList *makeVectorMatchList(ParserInfo I,
     LamMatchList *next = makeVectorMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeVectorMatchList",
@@ -758,7 +758,7 @@ static LamExp *makeFunctionBody(ParserInfo I,
                                 LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeFunctionBody",

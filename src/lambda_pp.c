@@ -176,16 +176,16 @@ void ppLamExp(LamExp *exp) {
             eprintf("constructor:%s", getLamExp_Constructor(exp)->name->name);
             break;
         case LAMEXP_TYPE_LOOKUP:
-            ppLamLookup(getLamExp_Lookup(exp));
+            ppLamLookUp(getLamExp_LookUp(exp));
             break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
-void ppLamLookup(LamLookup *lookup) {
-    eprintf("(lookup %s:%d ", lookup->nsSymbol == NULL ? "" : lookup->nsSymbol->name, lookup->nsid);
-    ppLamExp(lookup->exp);
+void ppLamLookUp(LamLookUp *lookUp) {
+    eprintf("(lookUp %s:%d ", lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name, lookUp->nsid);
+    ppLamExp(lookUp->exp);
     eprintf(")");
 }
 
@@ -527,20 +527,20 @@ static void _ppLamTypeSig(LamTypeSig *type) {
     eprintf(")");
 }
 
-static void ppLookupSymbol(LamLookupSymbol *ls) {
-    eprintf("(lookup %s:%d %s)", ls->nsSymbol->name, ls->nsid, ls->symbol->name);
+static void ppLookUpSymbol(LamLookUpSymbol *ls) {
+    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsid, ls->symbol->name);
 }
 
-static void ppLookupOrSymbol(LamLookupOrSymbol *los) {
+static void ppLookUpOrSymbol(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            ppHashSymbol(getLamLookupOrSymbol_Symbol(los));
+            ppHashSymbol(getLamLookUpOrSymbol_Symbol(los));
             break;
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            ppLookupSymbol(getLamLookupOrSymbol_Lookup(los));
+            ppLookUpSymbol(getLamLookUpOrSymbol_LookUp(los));
             break;
         default:
-            cant_happen("unrecognised %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognised %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -548,7 +548,7 @@ static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args);
 
 static void _ppLamTypeFunction(LamTypeFunction *function) {
     eprintf("(");
-    ppLookupOrSymbol(function->name);
+    ppLookUpOrSymbol(function->name);
     _ppLamTypeConstructorArgs(function->args);
     eprintf(")");
 }

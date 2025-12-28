@@ -54,7 +54,7 @@ int dump_bytecode_flag = 0;
  */
 
 static void step();
-static Value lookup(int frame, int offset);
+static Value lookUp(int frame, int offset);
 void putCharacter(Character x);
 
 static CEKF state;
@@ -430,7 +430,7 @@ static Value vec(Value index, Value vector) {
     return vec->entries[i];
 }
 
-static Value lookup(int frame, int offset) {
+static Value lookUp(int frame, int offset) {
     Env *env = state.E;
     while (frame > 0) {
         env = env->E;
@@ -634,7 +634,7 @@ static void step() {
                     // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
-                    Value v = lookup(frame, offset);
+                    Value v = lookUp(frame, offset);
                     DEBUG("VAR [%d:%d] == %s", frame, offset, valueTypeName(v.type));
                     push(v);
                 }
@@ -1243,7 +1243,7 @@ static void step() {
                     int frame = readCurrentWord();
                     int offset = readCurrentWord();
                     DEBUG("NS_PUSHENV [%d][%d]", frame, offset);
-                    Value v = lookup(frame, offset);
+                    Value v = lookUp(frame, offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
                         cant_happen("expected nameSpace, got type %d", v.type);

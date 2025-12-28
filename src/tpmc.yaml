@@ -175,7 +175,7 @@ hashes:
             brief: TPMC pattern table
             description: >-
                 A set of patterns used in the term pattern matching process.
-                This allows for efficient lookup and management of patterns.
+                This allows for efficient lookUp and management of patterns.
         data:
             entries: TpmcPattern
 
@@ -183,7 +183,7 @@ hashes:
         meta:
             brief: TPMC state table
             description: >-
-                A hash table for fast lookup of states by their stamp value.
+                A hash table for fast lookUp of states by their stamp value.
                 This is used for efficient state deduplication during pattern matching compilation.
         data:
             entries: TpmcState

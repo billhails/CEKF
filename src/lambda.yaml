@@ -99,9 +99,9 @@ structs:
             function: LamExp
             args: LamArgs
 
-    LamLookup:
+    LamLookUp:
         meta:
-            brief: A lookup in a nameSpace
+            brief: A lookUp in a nameSpace
             description: >-
                 This structure represents the evaluation of an expression
                 in a different nameSpace.
@@ -110,9 +110,9 @@ structs:
             nsSymbol: HashSymbol
             exp: LamExp
 
-    LamLookupSymbol:
+    LamLookUpSymbol:
         meta:
-            brief: A lookup symbol in a nameSpace
+            brief: A lookUp symbol in a nameSpace
             description: >-
                 This structure represents a symbol that is looked up
                 in a nameSpace. It is used to resolve symbols to their
@@ -450,7 +450,7 @@ structs:
                 name and arguments of the function. It is used as arguments
                 to type constructors during their definition.
         data:
-            name: LamLookupOrSymbol
+            name: LamLookUpOrSymbol
             args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
@@ -510,7 +510,7 @@ unions:
             description: >-
                 This union represents the different types of expressions that can
                 be evaluated in the lambda expressions. It includes function
-                applications, variable lookups, constants, and various operations.
+                applications, variable lookUps, constants, and various operations.
         data:
             amb: LamAmb
             apply: LamApply
@@ -532,7 +532,7 @@ unions:
             let: LamLet
             letRec: LamLetRec
             letStar: LamLetStar
-            lookup: LamLookup
+            lookUp: LamLookUp
             makeTuple: LamArgs
             makeVec: LamMakeVec
             match: LamMatch
@@ -547,15 +547,15 @@ unions:
             typeOf: LamTypeOf
             var: HashSymbol
 
-    LamLookupOrSymbol:
+    LamLookUpOrSymbol:
         meta:
-            brief: A lookup or symbol in a nameSpace
+            brief: A lookUp or symbol in a nameSpace
             description: >-
-                This union represents either a lookup of a symbol in a
+                This union represents either a lookUp of a symbol in a
                 nameSpace or a symbol in the current nameSpace.
         data:
             symbol: HashSymbol
-            lookup: LamLookupSymbol
+            lookUp: LamLookUpSymbol
 
     LamCondCases:
         meta:

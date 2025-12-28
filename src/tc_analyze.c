@@ -94,9 +94,9 @@ static TcType *analyzeBigIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *analyzeSmallIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng) __attribute__((unused));
 static TcType *analyzeBooleanExp(LamExp * exp, TcEnv * env, TcNg * ng);
 static TcType *freshRec(TcType * type, TcNg * ng, TcTypeTable * map);
-static TcType *lookup(TcEnv * env, HashSymbol * symbol, TcNg * ng);
-static TcType *analyzeLookup(LamLookup *, TcEnv *, TcNg *);
-static TcType *lookupConstructorType(HashSymbol * name, int nameSpace, TcEnv * env, TcNg * ng);
+static TcType *lookUp(TcEnv * env, HashSymbol * symbol, TcNg * ng);
+static TcType *analyzeLookUp(LamLookUp *, TcEnv *, TcNg *);
+static TcType *lookUpConstructorType(HashSymbol * name, int nameSpace, TcEnv * env, TcNg * ng);
 static void addTypeSigToEnv(TcEnv * env, HashSymbol * symbol, TcTypeSig * type);
 static bool failUnify(TcType *a, TcType *b, char *reason);
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason);
@@ -296,7 +296,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_ENV:
             return prune(analyzeEnv(env));
         case LAMEXP_TYPE_LOOKUP:
-            return prune(analyzeLookup(getLamExp_Lookup(exp), env, ng));
+            return prune(analyzeLookUp(getLamExp_LookUp(exp), env, ng));
         case LAMEXP_TYPE_CONSTRUCTOR:
             return
                 prune(analyzeVar
@@ -357,7 +357,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
 
 static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     // ENTER(analyzeVar);
-    TcType *res = lookup(env, var, ng);
+    TcType *res = lookUp(env, var, ng);
     if (res == NULL) {
         // ppTcEnv(env);
         can_happen("undefined variable %s in %s, line %d", var->name,
@@ -545,7 +545,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
     // ppTcEnv(env);
     TcType *constructor =
-        lookupConstructorType(deconstruct->name, deconstruct->nsid, env, ng);
+        lookUpConstructorType(deconstruct->name, deconstruct->nsid, env, ng);
     int save = PROTECT(constructor);
     // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
@@ -607,10 +607,10 @@ static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng) {
     return res;
 }
 
-TcType *lookupNsRef(int index, TcEnv *env) {
+TcType *lookUpNsRef(int index, TcEnv *env) {
 #ifdef SAFETY_CHECKS
     if (index == NS_GLOBAL) {
-        cant_happen("lookupNsRef passed global nameSpace");
+        cant_happen("lookUpNsRef passed global nameSpace");
     }
 #endif
     Index i = index;
@@ -629,9 +629,9 @@ TcType *lookupNsRef(int index, TcEnv *env) {
     return getTcType_NameSpaces(nsType)->entries[i];
 }
 
-static TcType *analyzeLookup(LamLookup *lookup, TcEnv *env, TcNg *ng) {
-    TcType *nsType = lookupNsRef(lookup->nsid, env);
-    return analyzeExp(lookup->exp, getTcType_Env(nsType), ng);
+static TcType *analyzeLookUp(LamLookUp *lookUp, TcEnv *env, TcNg *ng) {
+    TcType *nsType = lookUpNsRef(lookUp->nsid, env);
+    return analyzeExp(lookUp->exp, getTcType_Env(nsType), ng);
 }
 
 static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env,
@@ -666,7 +666,7 @@ static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
 
 static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 // ENTER(analyzeConstant);
-    TcType *constType = lookup(env, constant->name, ng);
+    TcType *constType = lookUp(env, constant->name, ng);
     if (constType == NULL) {
         can_happen("undefined constant %s", constant->name->name);
         TcType *res = makeFreshVar("err");
@@ -1086,16 +1086,16 @@ static TcTypeSigArgs *makeTypeSigArgs(LamTypeConstructorArgs *args,
     return this;
 }
 
-static int findNameSpace(LamLookupOrSymbol *los, TcEnv *env) {
+static int findNameSpace(LamLookUpOrSymbol *los, TcEnv *env) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return getLamLookupOrSymbol_Lookup(los)->nsid;
+            return getLamLookUpOrSymbol_LookUp(los)->nsid;
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             {
-                // eprintf("looking for %s in ", getLamLookupOrSymbol_Symbol(los)->name);
+                // eprintf("looking for %s in ", getLamLookUpOrSymbol_Symbol(los)->name);
                 // ppTcEnv(env);
                 TcTypeSig *typeSig;
-                if (getTypeSigFromTcEnv(env, getLamLookupOrSymbol_Symbol(los), &typeSig)) {
+                if (getTypeSigFromTcEnv(env, getLamLookUpOrSymbol_Symbol(los), &typeSig)) {
                     return typeSig->ns;
                 }
                 TcType *ns = NULL;
@@ -1109,19 +1109,19 @@ static int findNameSpace(LamLookupOrSymbol *los, TcEnv *env) {
             }
         default:
             cant_happen("unrecognized %s",
-                        lamLookupOrSymbolTypeName(los->type));
+                        lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
-static HashSymbol *getUnderlyingFunction(LamLookupOrSymbol *los) {
+static HashSymbol *getUnderlyingFunction(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return getLamLookupOrSymbol_Lookup(los)->symbol;
+            return getLamLookUpOrSymbol_LookUp(los)->symbol;
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            return getLamLookupOrSymbol_Symbol(los);
+            return getLamLookUpOrSymbol_Symbol(los);
         default:
             cant_happen("unrecognized %s",
-                        lamLookupOrSymbolTypeName(los->type));
+                        lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -1361,7 +1361,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return boolean;
 }
 
-static TcType *lookupConstructorType(HashSymbol *name, int nsid, TcEnv *env,
+static TcType *lookUpConstructorType(HashSymbol *name, int nsid, TcEnv *env,
                                      TcNg *ng) {
     TcType *currentNameSpace = NULL;
     getFromTcEnv(env, nameSpaceSymbol(), &currentNameSpace);
@@ -1372,13 +1372,13 @@ static TcType *lookupConstructorType(HashSymbol *name, int nsid, TcEnv *env,
 #endif
     TcType *res = NULL;
     if (getTcType_Nsid(currentNameSpace) == nsid || nsid == NS_GLOBAL) {
-        res = lookup(env, name, ng);
+        res = lookUp(env, name, ng);
     } else {
-        TcType *nsType = lookupNsRef(nsid, env);
-        res = lookup(getTcType_Env(nsType), name, ng);
+        TcType *nsType = lookUpNsRef(nsid, env);
+        res = lookUp(getTcType_Env(nsType), name, ng);
     }
     if (res == NULL) {
-        cant_happen("lookupConstructorType %s failed (nsid %d)", name->name,
+        cant_happen("lookUpConstructorType %s failed (nsid %d)", name->name,
                     nsid);
     }
     return res;
@@ -1391,7 +1391,7 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
     TcType *next = analyzeIntList(intList->next, env, ng);
     int save = PROTECT(next);
     TcType *this =
-        lookupConstructorType(intList->name, intList->nsid, env, ng);
+        lookUpConstructorType(intList->name, intList->nsid, env, ng);
     PROTECT(this);
     this = findResultType(this);
     PROTECT(this);
@@ -1748,18 +1748,18 @@ static TcType *fresh(TcType *type, TcNg *ng) {
     return res;
 }
 
-static TcType *lookup(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
-// ENTER(lookup);
+static TcType *lookUp(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
+// ENTER(lookUp);
     TcType *type = NULL;
     if (getFromTcEnv(env, symbol, &type)) {
         TcType *res = fresh(type, ng);
-// LEAVE(lookup);
-        DEBUGN("lookup %s => ", symbol->name);
+// LEAVE(lookUp);
+        DEBUGN("lookUp %s => ", symbol->name);
         IFDEBUGN(ppTcType(res));
         return res;
     }
-// LEAVE(lookup);
-    DEBUG("lookup %s => NULL", symbol->name);
+// LEAVE(lookUp);
+    DEBUG("lookUp %s => NULL", symbol->name);
     return NULL;
 }
 

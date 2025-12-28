@@ -485,19 +485,19 @@ static LamExp *lamConvertTuple(ParserInfo PI, AstExpressions *tuple, LamContext 
 }
 
 /**
- * @brief Converts an AST Lookup Expression (nameSpace dereference) to a lambda expression.
+ * @brief Converts an AST LookUp Expression (nameSpace dereference) to a lambda expression.
  *
- * @param lookup The Lookup Expression to convert.
+ * @param lookUp The LookUp Expression to convert.
  * @param env The lambda context to use.
  * @return The resulting lambda expression.
  */
-static LamExp *lamConvertLookup(AstLookup *lookup, LamContext *env) {
-    LamContext *nsEnv = lookupNameSpaceInLamContext(env, lookup->nsid);
-    LamExp *expression = convertExpression(lookup->expression, nsEnv);
+static LamExp *lamConvertLookUp(AstLookUp *lookUp, LamContext *env) {
+    LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsid);
+    LamExp *expression = convertExpression(lookUp->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookup *llu = newLamLookup(CPI(lookup), lookup->nsid, lookup->nsSymbol, expression);
+    LamLookUp *llu = newLamLookUp(CPI(lookUp), lookUp->nsid, lookUp->nsSymbol, expression);
     PROTECT(llu);
-    LamExp *res = newLamExp_Lookup(CPI(lookup), llu);
+    LamExp *res = newLamExp_LookUp(CPI(lookUp), llu);
     UNPROTECT(save);
     return res;
 }
@@ -569,50 +569,50 @@ static LamTypeSig *convertTypeSig(AstTypeSig *typeSig) {
 }
 
 /**
- * @brief Converts an AST Lookup Symbol to a lambda lookup symbol.
+ * @brief Converts an AST LookUp Symbol to a lambda lookUp symbol.
  *
- * @param ls The AST Lookup Symbol to convert.
- * @return The resulting lambda lookup symbol.
+ * @param ls The AST LookUp Symbol to convert.
+ * @return The resulting lambda lookUp symbol.
  */
-static LamLookupSymbol *convertAstLookupSymbol(AstLookupSymbol *ls) {
-    return newLamLookupSymbol(CPI(ls), ls->nsid, ls->nsSymbol, ls->symbol);
+static LamLookUpSymbol *convertAstLookUpSymbol(AstLookUpSymbol *ls) {
+    return newLamLookUpSymbol(CPI(ls), ls->nsid, ls->nsSymbol, ls->symbol);
 }
 
 
 /**
- * @brief Converts an AST LookupOrSymbol to a lambda LookupOrSymbol.
+ * @brief Converts an AST LookUpOrSymbol to a lambda LookUpOrSymbol.
  *
- * @param los The AST LookupOrSymbol to convert.
- * @return The resulting lambda LookupOrSymbol.
+ * @param los The AST LookUpOrSymbol to convert.
+ * @return The resulting lambda LookUpOrSymbol.
  */
-static LamLookupOrSymbol *convertAstLookupOrSymbol(AstLookupOrSymbol *los) {
+static LamLookUpOrSymbol *convertAstLookUpOrSymbol(AstLookUpOrSymbol *los) {
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-            return newLamLookupOrSymbol_Symbol(CPI(los), getAstLookupOrSymbol_Symbol(los));
+            return newLamLookUpOrSymbol_Symbol(CPI(los), getAstLookUpOrSymbol_Symbol(los));
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
-            LamLookupSymbol *ls = convertAstLookupSymbol(getAstLookupOrSymbol_Lookup(los));
+            LamLookUpSymbol *ls = convertAstLookUpSymbol(getAstLookUpOrSymbol_LookUp(los));
             int save = PROTECT(ls);
-            LamLookupOrSymbol *llos = newLamLookupOrSymbol_Lookup(CPI(los), ls);
+            LamLookUpOrSymbol *llos = newLamLookUpOrSymbol_LookUp(CPI(los), ls);
             UNPROTECT(save);
             return llos;
         }
         default:
-            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
 /**
  * @brief Checks to see if a symbol is an alias for a type constructor invocation.
  *
- * @param los The AST LookupOrSymbol to check.
+ * @param los The AST LookUpOrSymbol to check.
  * @param env The lambda context to use.
  * @return The resulting lambda type constructor type, or NULL if not found.
  */
-static LamTypeConstructorType *expandSymbolAlias(AstLookupOrSymbol *los, LamContext *env) {
+static LamTypeConstructorType *expandSymbolAlias(AstLookUpOrSymbol *los, LamContext *env) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
                 LamTypeConstructorType *found =
-                    lookupConstructorTypeInLamContext(env, getAstLookupOrSymbol_Symbol(los));
+                    lookUpConstructorTypeInLamContext(env, getAstLookUpOrSymbol_Symbol(los));
                 if (found != NULL) {
                     return found;
                 }
@@ -621,7 +621,7 @@ static LamTypeConstructorType *expandSymbolAlias(AstLookupOrSymbol *los, LamCont
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
             return NULL;
         default:
-            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -650,7 +650,7 @@ static LamTypeFunction *convertAstTypeFunction(AstTypeFunction *astTypeFunction,
     LamTypeConstructorArgs *lamTypeConstructorArgs =
         convertAstTypeList(astTypeFunction->typeList, env);
     int save = PROTECT(lamTypeConstructorArgs);
-    LamLookupOrSymbol *los = convertAstLookupOrSymbol(astTypeFunction->symbol);
+    LamLookUpOrSymbol *los = convertAstLookUpOrSymbol(astTypeFunction->symbol);
     PROTECT(los);
     LamTypeFunction *this = newLamTypeFunction(CPI(los), los, lamTypeConstructorArgs);
     UNPROTECT(save);
@@ -714,7 +714,7 @@ static LamTypeFunction *makeArrow(LamTypeConstructorType *lhs,
     int save = PROTECT(rhsArg);
     LamTypeConstructorArgs *argss = newLamTypeConstructorArgs(CPI(lhs), lhs, rhsArg);
     PROTECT(argss);
-    LamLookupOrSymbol *los = newLamLookupOrSymbol_Symbol(CPI(lhs), arrowSymbol());
+    LamLookUpOrSymbol *los = newLamLookUpOrSymbol_Symbol(CPI(lhs), arrowSymbol());
     PROTECT(los);
     LamTypeFunction *res = newLamTypeFunction(CPI(lhs), los, argss);
     UNPROTECT(save);
@@ -860,7 +860,7 @@ static void collectTypeInfo(HashSymbol *symbol,
                             int arity,
                             LamContext *env) {
     ENTER(collectTypeInfo);
-    int nameSpace = lookupCurrentNameSpaceInLamContext(env);
+    int nameSpace = lookUpCurrentNameSpaceInLamContext(env);
     LamTypeTags *tags = makeLamTypeTags(args);
     int save = PROTECT(tags);
     LamTypeConstructorInfo *info =
@@ -1418,9 +1418,9 @@ static LamArgs *thunkMacroArgs(LamArgs *args) {
 
 /**
  * @brief Converts a macro application where the callee is an arbitrary expression
- *    (e.g., a nameSpaced lookup), wrapping the arguments in thunks.
+ *    (e.g., a nameSpaced lookUp), wrapping the arguments in thunks.
  * @param PI The parser information.
- * @param callee The callee expression (can be a Lookup or Var).
+ * @param callee The callee expression (can be a LookUp or Var).
  * @param args The arguments to the macro.
  * @return The resulting lambda expression.
  */
@@ -1500,7 +1500,7 @@ static LamExp *makePrimApp(ParserInfo PI, HashSymbol *symbol, LamArgs *args, Lam
  * @return The resulting lambda expression, or NULL.
  */
 static LamExp *makeConstructor(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
+    LamTypeConstructorInfo *info = lookUpConstructorInLamContext(env, symbol);
     if (info != NULL) {
         return newLamExp_Constructor(CPI(info), info);
     }
@@ -1555,9 +1555,9 @@ static LamVarList *genSymVarList(ParserInfo I, int nargs) {
 /**
  * @brief Finds the underlying arity of a lambda expression.
  * 
- * This function checks if the expression is a constructor or a lookup,
+ * This function checks if the expression is a constructor or a lookUp,
  * and returns the arity of the constructor or recursively finds the arity
- * of the underlying expression in case of a lookup.
+ * of the underlying expression in case of a lookUp.
  *
  * @param exp The lambda expression to check.
  * @return The arity of the underlying constructor.
@@ -1567,9 +1567,9 @@ static int findUnderlyingArity(LamExp *exp) {
         case LAMEXP_TYPE_CONSTRUCTOR:
             return getLamExp_Constructor(exp)->arity;
         case LAMEXP_TYPE_LOOKUP:
-            return findUnderlyingArity(getLamExp_Lookup(exp)->exp);
+            return findUnderlyingArity(getLamExp_LookUp(exp)->exp);
         default:
-            cant_happen("expected lookup or constructor");
+            cant_happen("expected lookUp or constructor");
     }
 }
 
@@ -1581,7 +1581,7 @@ static int findUnderlyingArity(LamExp *exp) {
 static int findUnderlyingType(LamExp *exp) {
     switch (exp->type) {
         case LAMEXP_TYPE_LOOKUP:
-            return findUnderlyingType(getLamExp_Lookup(exp)->exp);
+            return findUnderlyingType(getLamExp_LookUp(exp)->exp);
         default:
             return exp->type;
     }
@@ -1591,7 +1591,7 @@ static int findUnderlyingType(LamExp *exp) {
  * @brief Finds the underlying value of a lambda expression.
  * 
  * This function recursively finds the underlying value of a lambda expression,
- * particularly useful for lookups that may wrap other expressions.
+ * particularly useful for lookUps that may wrap other expressions.
  *
  * @param exp The lambda expression to check.
  * @return The underlying lambda expression.
@@ -1599,7 +1599,7 @@ static int findUnderlyingType(LamExp *exp) {
 static LamExp *findUnderlyingValue(LamExp *exp) {
     switch (exp->type) {
         case LAMEXP_TYPE_LOOKUP:
-            return findUnderlyingValue(getLamExp_Lookup(exp)->exp);
+            return findUnderlyingValue(getLamExp_LookUp(exp)->exp);
         default:
             return exp;
     }
@@ -1789,26 +1789,26 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
  * @brief Finds a constructor in the lambda context.
  *
  * This function looks up a constructor by its name in the given lambda context.
- * If the constructor is a lookup, find the constructor in the referenced nameSpace.
+ * If the constructor is a lookUp, find the constructor in the referenced nameSpace.
  *
- * @param los The lookup or symbol to find.
+ * @param los The lookUp or symbol to find.
  * @param env The lambda context.
  * @return The found constructor information, or NULL if not found.
  */
-static LamTypeConstructorInfo *findConstructor(AstLookupOrSymbol *los, LamContext *env) {
+static LamTypeConstructorInfo *findConstructor(AstLookUpOrSymbol *los, LamContext *env) {
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
-            return lookupConstructorInLamContext(env, getAstLookupOrSymbol_Symbol(los));
+            return lookUpConstructorInLamContext(env, getAstLookUpOrSymbol_Symbol(los));
         }
         break;
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
-            AstLookupSymbol *lookup = getAstLookupOrSymbol_Lookup(los);
-            LamContext *nsEnv = lookupNameSpaceInLamContext(env, lookup->nsid);
-            return lookupConstructorInLamContext(nsEnv, lookup->symbol);
+            AstLookUpSymbol *lookUp = getAstLookUpOrSymbol_LookUp(los);
+            LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsid);
+            return lookUpConstructorInLamContext(nsEnv, lookUp->symbol);
         }
         break;
         default:
-            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -1830,9 +1830,9 @@ static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
     LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
     if (structure->symbol->type == AST_LOOKUPORSYMBOL_TYPE_LOOKUP) {
         PROTECT(result);
-        LamLookup *lookup = newLamLookup(CPI(result), info->nsid, getAstLookupOrSymbol_Lookup(structure->symbol)->symbol, result);
-        PROTECT(lookup);
-        result = newLamExp_Lookup(CPI(lookup), lookup);
+        LamLookUp *lookUp = newLamLookUp(CPI(result), info->nsid, getAstLookUpOrSymbol_LookUp(structure->symbol)->symbol, result);
+        PROTECT(lookUp);
+        result = newLamExp_LookUp(CPI(lookUp), lookUp);
     }
     UNPROTECT(save);
     return result;
@@ -1856,9 +1856,9 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     LamExp *function = convertExpression(funCall->function, env);
     PROTECT(function);
     LamExp *result = NULL;
-    // If the callee is a nameSpaced lookup, check macro-ness in that nameSpace env
+    // If the callee is a nameSpaced lookUp, check macro-ness in that nameSpace env
     if (function->type == LAMEXP_TYPE_LOOKUP) {
-        LamContext *nsEnv = lookupNameSpaceInLamContext(env, getLamExp_Lookup(function)->nsid);
+        LamContext *nsEnv = lookUpNameSpaceInLamContext(env, getLamExp_LookUp(function)->nsid);
         LamExp *under = findUnderlyingValue(function);
         if (under->type == LAMEXP_TYPE_VAR && isMacro(getLamExp_Var(under), nsEnv)) {
             result = thunkMacroExp(CPI(funCall), function, args);
@@ -2308,8 +2308,8 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = lamConvertTuple(CPI(expression), getAstExpression_Tuple(expression), env);
             break;
         case AST_EXPRESSION_TYPE_LOOKUP:
-            DEBUG("lookup");
-            result = lamConvertLookup(getAstExpression_Lookup(expression), env);
+            DEBUG("lookUp");
+            result = lamConvertLookUp(getAstExpression_LookUp(expression), env);
             break;
         case AST_EXPRESSION_TYPE_STRUCTURE:
             DEBUG("structure");

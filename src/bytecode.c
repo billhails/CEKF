@@ -634,10 +634,10 @@ void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAnfExpLet);
 }
 
-void writeLookup(AnfExpLookup *x, ByteCodeArray *b, LocationArray *L) {
+void writeLookUp(AnfExpLookUp *x, ByteCodeArray *b, LocationArray *L) {
 #ifdef SAFETY_CHECKS
     if (x->annotatedVar == NULL) {
-        cant_happen("annotated var missing from lookup");
+        cant_happen("annotated var missing from lookUp");
     }
 #endif
     writeLocation(CPI(x), b, L);
@@ -797,7 +797,7 @@ void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case ANFEXP_TYPE_LOOKUP:{
-                writeLookup(x->val.lookup, b, L);
+                writeLookUp(x->val.lookUp, b, L);
             }
             break;
         case ANFEXP_TYPE_ENV:

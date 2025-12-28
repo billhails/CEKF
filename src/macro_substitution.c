@@ -280,14 +280,14 @@ static LamPrint *performPrintSubstitutions(LamPrint *print, LamMacroArgsSet *sym
 }
 
 /**
- * @brief Performs macro substitutions on a lookup expression.
- * @param lookup The lookup expression to modify.
+ * @brief Performs macro substitutions on a lookUp expression.
+ * @param lookUp The lookUp expression to modify.
  * @param symbols The current set of macro arguments.
- * @return The modified lookup expression.
+ * @return The modified lookUp expression.
  */
-static LamLookup *performLookupSubstitutions(LamLookup *lookup, LamMacroArgsSet *symbols) {
-    lookup->exp = lamPerformMacroSubstitutions(lookup->exp, symbols);
-    return lookup;
+static LamLookUp *performLookUpSubstitutions(LamLookUp *lookUp, LamMacroArgsSet *symbols) {
+    lookUp->exp = lamPerformMacroSubstitutions(lookUp->exp, symbols);
+    return lookUp;
 }
 
 #ifdef NOTDEF
@@ -722,7 +722,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
                 setLamExp_Print(exp, performPrintSubstitutions(getLamExp_Print(exp), symbols));
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                setLamExp_Lookup(exp, performLookupSubstitutions(getLamExp_Lookup(exp), symbols));
+                setLamExp_LookUp(exp, performLookUpSubstitutions(getLamExp_LookUp(exp), symbols));
                 break;
             default:
                 cant_happen("unrecognized %s", lamExpTypeName(exp->type));

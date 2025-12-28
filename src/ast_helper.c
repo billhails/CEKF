@@ -46,7 +46,7 @@ void forceInitNameSpaces() {
     nameSpaces = newAstNameSpaceArray();
 }
 
-int lookupNameSpace(AgnosticFileId *id) {
+int lookUpNameSpace(AgnosticFileId *id) {
 #ifdef SAFETY_CHECKS
     if (nameSpaces == NULL) {
         cant_happen("null nameSpace");

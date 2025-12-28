@@ -36,7 +36,7 @@ static LamLet *inlineLet(LamLet *x);
 static LamLetStar *inlineLetStar(LamLetStar *x);
 static LamAmb *inlineAmb(LamAmb *x);
 static LamPrint *inlinePrint(LamPrint *x);
-static LamLookup *inlineLookup(LamLookup *x);
+static LamLookUp *inlineLookUp(LamLookUp *x);
 static LamTupleIndex *inlineTupleIndex(LamTupleIndex *x);
 static LamMatch *inlineMatch(LamMatch *x);
 static LamCond *inlineCond(LamCond *x);
@@ -114,7 +114,7 @@ static LamTypeConstructorInfo *resolveTypeConstructor(LamExp *x) {
         case LAMEXP_TYPE_CONSTRUCTOR:
             return getLamExp_Constructor(x);
         case LAMEXP_TYPE_LOOKUP:
-            return resolveTypeConstructor(getLamExp_Lookup(x)->exp);
+            return resolveTypeConstructor(getLamExp_LookUp(x)->exp);
         default:
             return NULL;
     }
@@ -189,7 +189,7 @@ static LamPrint *inlinePrint(LamPrint *x) {
     return x;
 }
 
-static LamLookup *inlineLookup(LamLookup *x) {
+static LamLookUp *inlineLookUp(LamLookUp *x) {
     x->exp = inlineExp(x->exp);
     return x;
 }
@@ -291,7 +291,7 @@ static LamExp *inlineExp(LamExp *x) {
             setLamExp_Print(x, inlinePrint(getLamExp_Print(x)));
             break;
         case LAMEXP_TYPE_LOOKUP:
-            setLamExp_Lookup(x, inlineLookup(getLamExp_Lookup(x)));
+            setLamExp_LookUp(x, inlineLookUp(getLamExp_LookUp(x)));
             break;
         case LAMEXP_TYPE_TUPLEINDEX:
             setLamExp_TupleIndex(x, inlineTupleIndex(getLamExp_TupleIndex(x)));

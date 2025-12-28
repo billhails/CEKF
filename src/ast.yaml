@@ -226,7 +226,7 @@ structs:
                 Example:
                 `typedef list(#t) { cons(#t, <<list(#t)>>) | nil }`
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             typeList: AstTypeList
 
     AstTypeList:
@@ -337,7 +337,7 @@ structs:
                 An unpack operation in the AST, which is used to unpack
                 a tuple or a list into individual arguments.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             argList: AstFargList
 
     AstUnpackStruct:
@@ -347,7 +347,7 @@ structs:
                 An unpack operation for a struct in the AST, which unpacks
                 the named fields of a struct into individual arguments.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             argList: AstTaggedArgList
 
     AstNamedArg:
@@ -383,9 +383,9 @@ structs:
             expression: AstExpression
             next: AstExpressions
 
-    AstLookupSymbol:
+    AstLookUpSymbol:
         meta:
-            brief: AST Lookup Symbol
+            brief: AST LookUp Symbol
             description: >-
                 A symbol that is looked up in the AST, which can be a
                 variable or a function. Used to refer to variables or
@@ -395,11 +395,11 @@ structs:
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
-    AstLookup:
+    AstLookUp:
         meta:
-            brief: AST Lookup
+            brief: AST LookUp
             description: >-
-                A lookup operation in the AST, which evaluates an expression
+                A lookUp operation in the AST, which evaluates an expression
                 in another nameSpace.
         data:
             nsid: int
@@ -442,7 +442,7 @@ structs:
                 A structure in the AST with named fields, when used
                 as an actual argument to a function.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             expressions: AstTaggedExpressions
 
     AstTaggedExpressions:
@@ -478,15 +478,15 @@ unions:
             list: AstTypeList
             map: AstTypeMap
 
-    AstLookupOrSymbol:
+    AstLookUpOrSymbol:
         meta:
-            brief: AST Lookup or Symbol
+            brief: AST LookUp or Symbol
             description: >-
                 A reference to a symbol in the AST, which can be a
-                direct symbol or a lookup in another nameSpace.
+                direct symbol or a lookUp in another nameSpace.
         data:
             symbol: HashSymbol
-            lookup: AstLookupSymbol
+            lookUp: AstLookUpSymbol
 
     AstDefinition:
         meta:
@@ -526,7 +526,7 @@ unions:
         data:
             wildcard: void_ptr
             symbol: HashSymbol
-            lookup: AstLookupSymbol
+            lookUp: AstLookUpSymbol
             named: AstNamedArg
             unpack: AstUnpack
             unpackStruct: AstUnpackStruct
@@ -545,7 +545,7 @@ unions:
             alias: AstExprAlias
             annotatedSymbol: AstAnnotatedSymbol
             funCall: AstFunCall
-            lookup: AstLookup
+            lookUp: AstLookUp
             symbol: HashSymbol
             number: MaybeBigInt
             character: character

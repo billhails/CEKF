@@ -122,9 +122,9 @@ static LamTypeOf *performTypeOfSimplifications(LamTypeOf *typeOf) {
     return typeOf;
 }
 
-static LamLookup *performLookupSimplifications(LamLookup *lookup) {
-    lookup->exp = lamPerformSimplifications(lookup->exp);
-    return lookup;
+static LamLookUp *performLookUpSimplifications(LamLookUp *lookUp) {
+    lookUp->exp = lamPerformSimplifications(lookUp->exp);
+    return lookUp;
 }
 
 static LamMakeVec *performMakeVecSimplifications(LamMakeVec *makeVec) {
@@ -419,7 +419,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 setLamExp_TypeOf(exp, performTypeOfSimplifications(getLamExp_TypeOf(exp)));
                 break;
             case LAMEXP_TYPE_LOOKUP:
-                setLamExp_Lookup(exp, performLookupSimplifications(getLamExp_Lookup(exp)));
+                setLamExp_LookUp(exp, performLookUpSimplifications(getLamExp_LookUp(exp)));
                 break;
             case LAMEXP_TYPE_NAMESPACES:
                 setLamExp_NameSpaces(exp, performNameSpacesSimplifications(getLamExp_NameSpaces(exp)));

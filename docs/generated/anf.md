@@ -60,9 +60,9 @@ CexpCut --exp--> AnfExp
 AnfExpLet --var--> HashSymbol
 AnfExpLet --val--> AnfExp
 AnfExpLet --body--> AnfExp
-AnfExpLookup --nameSpace--> index
-AnfExpLookup --annotatedVar--> AexpAnnotatedVar
-AnfExpLookup --body--> AnfExp
+AnfExpLookUp --nameSpace--> index
+AnfExpLookUp --annotatedVar--> AexpAnnotatedVar
+AnfExpLookUp --body--> AnfExp
 AnfMatchList --matches--> AexpIntList
 AnfMatchList --body--> AnfExp
 AnfMatchList --next--> AnfMatchList
@@ -95,7 +95,7 @@ AnfExp --done--> void_ptr
 AnfExp --aexp--> Aexp
 AnfExp --cexp--> Cexp
 AnfExp --let--> AnfExpLet
-AnfExp --lookup--> AnfExpLookup
+AnfExp --lookUp--> AnfExpLookUp
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
 AexpNameSpaceArray["AexpNameSpaceArray[]"] --entries--> AexpNameSpace

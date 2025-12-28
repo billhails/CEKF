@@ -223,7 +223,7 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
     if (currentNs->val.nsid == index) {
         return env;
     }
-    TcType *res = lookupNsRef(index, env);
+    TcType *res = lookUpNsRef(index, env);
     return res->val.env;
 }
 
@@ -243,9 +243,9 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv 
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
     if (env != nsEnv) {
-        LamLookup *lookup = newLamLookup(I, typeSig->ns, NULL, exp);
-        PROTECT(lookup);
-        exp = newLamExp_Lookup(I, lookup);
+        LamLookUp *lookUp = newLamLookUp(I, typeSig->ns, NULL, exp);
+        PROTECT(lookUp);
+        exp = newLamExp_LookUp(I, lookUp);
         PROTECT(exp);
     }
     LamArgs *args = compilePrinterForTypeSigArgs(I, typeSig->args, env);

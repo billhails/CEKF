@@ -83,15 +83,15 @@ static TpmcPattern *makeWildcardPattern() {
     return pattern;
 }
 
-static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupScopedAstSymbolInLamContext(env, lookup);
+static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp, LamContext *env) {
+    LamTypeConstructorInfo *info = lookUpScopedAstSymbolInLamContext(env, lookUp);
     if (info == NULL) {
-        cant_happen("makeLookupPattern() passed invalid constructor");
+        cant_happen("makeLookUpPattern() passed invalid constructor");
     }
-    TpmcPatternArray *args = newTpmcPatternArray("makeLookupPattern");
+    TpmcPatternArray *args = newTpmcPatternArray("makeLookUpPattern");
     int save = PROTECT(args);
     TpmcConstructorPattern *constructor =
-        newTpmcConstructorPattern(lookup->symbol, lookup->nsid, info, args);
+        newTpmcConstructorPattern(lookUp->symbol, lookUp->nsid, info, args);
     PROTECT(constructor);
     TpmcPatternValue *val =
         newTpmcPatternValue_Constructor(constructor);
@@ -102,7 +102,7 @@ static TpmcPattern *makeLookupPattern(AstLookupSymbol *lookup, LamContext *env) 
 }
 
 static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupConstructorInLamContext(env, symbol);
+    LamTypeConstructorInfo *info = lookUpConstructorInLamContext(env, symbol);
     if (info == NULL) {
         TpmcPatternValue *val = newTpmcPatternValue_Var(symbol);
         int save = PROTECT(val);
@@ -112,7 +112,7 @@ static TpmcPattern *makeVarPattern(HashSymbol *symbol, LamContext *env) {
     } else {
         TpmcPatternArray *args = newTpmcPatternArray("makeVarPattern");
         int save = PROTECT(args);
-        int nameSpace = lookupCurrentNameSpaceInLamContext(env);
+        int nameSpace = lookUpCurrentNameSpaceInLamContext(env);
         TpmcConstructorPattern *constructor =
             newTpmcConstructorPattern(symbol, nameSpace, info, args);
         PROTECT(constructor);
@@ -137,37 +137,37 @@ static TpmcPattern *makeAssignmentPattern(AstNamedArg *named, LamContext *env) {
     return pattern;
 }
 
-static void getSymbolAndNameSpace(AstLookupOrSymbol *los, LamContext *env, HashSymbol **name, int *nameSpace) {
+static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env, HashSymbol **name, int *nameSpace) {
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-            *name = los->val.lookup->symbol;
-            *nameSpace = los->val.lookup->nsid;
+            *name = los->val.lookUp->symbol;
+            *nameSpace = los->val.lookUp->nsid;
             break;
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
-                *nameSpace = lookupCurrentNameSpaceInLamContext(env);
+                *nameSpace = lookUpCurrentNameSpaceInLamContext(env);
                 *name = los->val.symbol;
             }
             break;
         default:
-            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
-static char *getLookupName(AstLookupOrSymbol *los) {
+static char *getLookUpName(AstLookUpOrSymbol *los) {
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-            return los->val.lookup->symbol->name;
+            return los->val.lookUp->symbol->name;
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
             return los->val.symbol->name;
         default:
-            cant_happen("unrecognized %s", astLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", astLookUpOrSymbolTypeName(los->type));
     }
 }
 
 static TpmcPattern *makeConstructorPattern(AstUnpack *unpack, LamContext *env) {
-    LamTypeConstructorInfo *info = lookupScopedAstConstructorInLamContext(env, unpack->symbol);
+    LamTypeConstructorInfo *info = lookUpScopedAstConstructorInLamContext(env, unpack->symbol);
     if (info == NULL) {
-        cant_happen("makeConstructorPattern() passed invalid constructor: '%s'", getLookupName(unpack->symbol));
+        cant_happen("makeConstructorPattern() passed invalid constructor: '%s'", getLookUpName(unpack->symbol));
     }
     TpmcPatternArray *patterns = convertArgList(unpack->argList, env);
     int save = PROTECT(patterns);
@@ -227,7 +227,7 @@ static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
         case AST_FARG_TYPE_CHARACTER:
             return makeCharacterPattern(arg->val.character);
         case AST_FARG_TYPE_LOOKUP:
-            return makeLookupPattern(arg->val.lookup, env);
+            return makeLookUpPattern(arg->val.lookUp, env);
         default:
             cant_happen("unrecognized arg type %s in convertPattern",
                         astFargTypeName(arg->type));

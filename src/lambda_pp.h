@@ -49,7 +49,7 @@ void ppLamBindings(LamBindings *bindings);
 void ppLamIntList(LamIntList *list);
 void ppLamMakeTuple(LamArgs *args);
 void ppLamNameSpaces(LamNameSpaceArray *arr);
-void ppLamLookup(LamLookup *lookup);
+void ppLamLookUp(LamLookUp *lookUp);
 void ppLamContext(LamContext *env);
 
 #endif

@@ -41,7 +41,7 @@ static LamExp *cpsTcLamPrimApp(LamPrimApp *node, LamExp *c);
 static LamExp *cpsTcLamSequence(LamSequence *node, LamExp *c);
 static LamExp *cpsTcMakeTuple(LamArgs *node, LamExp *c);
 static LamExp *cpsTcLamApply(LamApply *node, LamExp *c);
-static LamExp *cpsTcLamLookup(LamLookup *node, LamExp *c);
+static LamExp *cpsTcLamLookUp(LamLookUp *node, LamExp *c);
 static LamExp *cpsTcLamConstruct(LamConstruct *node, LamExp *c);
 static LamExp *cpsTcLamDeconstruct(LamDeconstruct *node, LamExp *c);
 static LamExp *cpsTcLamTupleIndex(LamTupleIndex *node, LamExp *c);
@@ -280,17 +280,17 @@ LamExp *TcApply2Kont(LamExp *ses, TcApply2KontEnv *env) {
 }
 
 /*
-    (E.lookup(name, index, expr)) {
-        E.lookup(name, index, T_c(expr, c))
+    (E.lookUp(name, index, expr)) {
+        E.lookUp(name, index, T_c(expr, c))
     }
 */
-static LamExp *cpsTcLamLookup(LamLookup *node, LamExp *c) {
-    ENTER(cpsTcLamLookup);
+static LamExp *cpsTcLamLookUp(LamLookUp *node, LamExp *c) {
+    ENTER(cpsTcLamLookUp);
     LamExp *expr = cpsTcLamExp(node->exp, c);
     int save = PROTECT(expr);
-    LamExp *result = makeLamExp_Lookup(CPI(node), node->nsid, node->nsSymbol, expr);
+    LamExp *result = makeLamExp_LookUp(CPI(node), node->nsid, node->nsSymbol, expr);
     UNPROTECT(save);
-    LEAVE(cpsTcLamLookup);
+    LEAVE(cpsTcLamLookUp);
     return result;
 }
 
@@ -864,7 +864,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         case LAMEXP_TYPE_LETREC:
             return cpsTcLamLetRec(getLamExp_LetRec(node), c);
         case LAMEXP_TYPE_LOOKUP:
-            return cpsTcLamLookup(getLamExp_Lookup(node), c);
+            return cpsTcLamLookUp(getLamExp_LookUp(node), c);
         case LAMEXP_TYPE_MAKETUPLE:
             return cpsTcMakeTuple(getLamExp_MakeTuple(node), c);
         case LAMEXP_TYPE_MAKEVEC:

@@ -89,7 +89,7 @@ static AnfExp *normalizeTupleIndex(LamTupleIndex *construct, AnfExp *tail);
 static AnfExp *normalizeDeconstruct(LamDeconstruct *deconstruct, AnfExp *tail);
 static AnfExp *normalizeTag(LamExp *tag, AnfExp *tail);
 static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail);
-static AnfExp *normalizeLamLookup(LamLookup *, AnfExp *);
+static AnfExp *normalizeLamLookUp(LamLookUp *, AnfExp *);
 
 AnfExp *anfNormalize(LamExp *lamExp) {
     return normalize(lamExp, NULL);
@@ -158,7 +158,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
         case LAMEXP_TYPE_ENV:
             return normalizeEnv(CPI(lamExp), tail);
         case LAMEXP_TYPE_LOOKUP:
-            return normalizeLamLookup(getLamExp_Lookup(lamExp), tail);
+            return normalizeLamLookUp(getLamExp_LookUp(lamExp), tail);
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
     }
@@ -700,12 +700,12 @@ static AnfExp *normalizeEnv(ParserInfo I, AnfExp *tail) {
     return exp;
 }
 
-static AnfExp *normalizeLamLookup(LamLookup *lookup, AnfExp *tail) {
-    AnfExp *rest = normalize(lookup->exp, tail);
+static AnfExp *normalizeLamLookUp(LamLookUp *lookUp, AnfExp *tail) {
+    AnfExp *rest = normalize(lookUp->exp, tail);
     int save = PROTECT(rest);
-    AnfExpLookup *exp = newAnfExpLookup(CPI(lookup), lookup->nsid, rest);
+    AnfExpLookUp *exp = newAnfExpLookUp(CPI(lookUp), lookUp->nsid, rest);
     PROTECT(exp);
-    AnfExp *res = newAnfExp_Lookup(CPI(exp), exp);
+    AnfExp *res = newAnfExp_LookUp(CPI(exp), exp);
     UNPROTECT(save);
     return res;
 }
