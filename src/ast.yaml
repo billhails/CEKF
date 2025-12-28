@@ -522,9 +522,9 @@ unions:
             brief: AST Formal Argument
             description: >-
                 A formal argument in a function definition, which can be a
-                variable, a wildcard, or a destructured argument.
+                variable, a wildCard, or a destructured argument.
         data:
-            wildcard: void_ptr
+            wildCard: void_ptr
             symbol: HashSymbol
             lookUp: AstLookUpSymbol
             named: AstNamedArg
@@ -541,7 +541,7 @@ unions:
                 Any expression in the AST.
         data:
             back: void_ptr
-            wildcard: void_ptr
+            wildCard: void_ptr
             alias: AstExprAlias
             annotatedSymbol: AstAnnotatedSymbol
             funCall: AstFunCall

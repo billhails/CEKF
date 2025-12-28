@@ -292,13 +292,13 @@ static TpmcArcList *arcArrayToList(TpmcArcArray *arcArray) {
 //
 // The state consists of a variable to be tested, and an ordered list of arcs to other states.
 // Each arc has a pattern to match and a result state.
-// The pattern can be a comparison, a constant, a constructor or a wildcard.
+// The pattern can be a comparison, a constant, a constructor or a wildCard.
 // Any one state cannot have arcs with both constructor and constant patterns.
-// Only the last arc may have a wildcard pattern.
+// Only the last arc may have a wildCard pattern.
 //
 // So in the absence of comparisons, everything would be simple.
-// either a list of constants followed by a wildcard, or a list of constructors, optionally
-// followed by a wildcard if the list of constructors is not exhaustive.
+// either a list of constants followed by a wildCard, or a list of constructors, optionally
+// followed by a wildCard if the list of constructors is not exhaustive.
 // we would either construct a (cond ... (default ...)) test for constants, or a
 // (match ... ((n m) ...)) test for constructors, wher (n m) is the unexhausted constructor indices.
 //

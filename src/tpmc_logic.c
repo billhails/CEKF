@@ -75,8 +75,8 @@ static TpmcPatternArray *convertArgList(AstFargList *argList, LamContext *env) {
     return patterns;
 }
 
-static TpmcPattern *makeWildcardPattern() {
-    TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
+static TpmcPattern *makeWildCardPattern() {
+    TpmcPatternValue *wc = newTpmcPatternValue_WildCard();
     int save = PROTECT(wc);
     TpmcPattern *pattern = newTpmcPattern(wc);
     UNPROTECT(save);
@@ -213,7 +213,7 @@ static TpmcPattern *makeCharacterPattern(char character) {
 static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env) {
     switch (arg->type) {
         case AST_FARG_TYPE_WILDCARD:
-            return makeWildcardPattern();
+            return makeWildCardPattern();
         case AST_FARG_TYPE_SYMBOL:
             return makeVarPattern(arg->val.symbol, env);
         case AST_FARG_TYPE_NAMED:
@@ -489,7 +489,7 @@ static TpmcPattern *collectVarSubstitutions(TpmcPattern *pattern, TpmcSubstituti
                                             *substitutions) {
     setTpmcSubstitutionTable(substitutions, pattern->pattern->val.var,
                              pattern->path);
-    TpmcPatternValue *wc = newTpmcPatternValue_Wildcard();
+    TpmcPatternValue *wc = newTpmcPatternValue_WildCard();
     pattern->pattern = wc;
     return pattern;
 }

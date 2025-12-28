@@ -1933,18 +1933,18 @@ static AstFarg *rewriteAstUnpack(AstUnpack *unpack, LamContext *env) {
  * 
  * This function searches through the tagged argument list for a
  * matching tag and returns the corresponding AstFarg.
- * If no matching tag is found, a wildcard AstFarg is returned.
+ * If no matching tag is found, a wildCard AstFarg is returned.
  * This allows a struct formal argument to not have to name unwanted fields.
  *
  * @param tag The tag to search for.
  * @param list The AST tagged argument list to search.
  * @param env The lambda context to use for rewriting.
  * @param I The parser information.
- * @return The corresponding AstFarg, or a wildcard if not found.
+ * @return The corresponding AstFarg, or a wildCard if not found.
  */
 static AstFarg *getAstFargFromTaggedArgList(HashSymbol *tag, AstTaggedArgList *list, LamContext *env, ParserInfo I) {
     if (list == NULL) {
-        return newAstFarg_Wildcard(I);
+        return newAstFarg_WildCard(I);
     }
     if (tag == list->tag) {
         return rewriteAstFarg(list->arg, env);
@@ -1988,7 +1988,7 @@ static AstFarg *rewriteAstUnpackStruct(AstUnpackStruct *structure, LamContext *e
     LamTypeConstructorInfo *info = findConstructor(structure->symbol, env);
     if (info->tags == NULL) {
         conversionError(CPI(structure), "constructor not a struct");
-        return newAstFarg_Wildcard(CPI(structure));
+        return newAstFarg_WildCard(CPI(structure));
     }
     AstFargList *args = rewriteAstTaggedArgList(info->tags, structure->argList, env);
     int save = PROTECT(args);
@@ -2322,7 +2322,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = convertError(getAstExpression_Error(expression), env);
             break;
         case AST_EXPRESSION_TYPE_WILDCARD:
-            conversionError(CPI(expression), "cannot use wildcard '_' as a variable name");
+            conversionError(CPI(expression), "cannot use wildCard '_' as a variable name");
             result = convertSymbol(CPI(expression), errorSymbol(), env);
             break;
         default:

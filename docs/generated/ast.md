@@ -105,7 +105,7 @@ AstTypeClause --character--> void_ptr
 AstTypeClause --var--> HashSymbol
 AstTypeClause --typeFunction--> AstTypeFunction
 AstTypeClause --typeTuple--> AstTypeList
-AstFarg --wildcard--> void_ptr
+AstFarg --wildCard--> void_ptr
 AstFarg --symbol--> HashSymbol
 AstFarg --lookUp--> AstLookUpSymbol
 AstFarg --named--> AstNamedArg
@@ -115,7 +115,7 @@ AstFarg --number--> MaybeBigInt
 AstFarg --character--> character
 AstFarg --tuple--> AstFargList
 AstExpression --back--> void_ptr
-AstExpression --wildcard--> void_ptr
+AstExpression --wildCard--> void_ptr
 AstExpression --alias--> AstExprAlias
 AstExpression --annotatedSymbol--> AstAnnotatedSymbol
 AstExpression --funCall--> AstFunCall

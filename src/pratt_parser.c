@@ -122,7 +122,7 @@ static AstExpression *userInfixRight(PrattRecord *, PrattParser *, AstExpression
 static AstExpression *userInfixNone(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *userPostfix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *userPrefix(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *wildcard(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression *wildCard(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpressions *expressions(PrattParser *);
 static AstExpressions *statements(PrattParser *, HashSymbol *);
 static AstFileIdArray *fileIdStack = NULL;
@@ -281,7 +281,7 @@ static PrattParser *makePrattParser(void)
     addRecord(table, TOK_TYPEDEF(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_TYPEOF(), typeOfExp, 11, NULL, 0, NULL, 0);
     addRecord(table, TOK_UNSAFE(), unsafe, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_WILDCARD(), wildcard, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_WILDCARD(), wildCard, 0, NULL, 0, NULL, 0);
 
     parser->trie = makePrattTrie(parser, NULL);
     UNPROTECT(save);
@@ -2811,7 +2811,7 @@ static AstLookUpOrSymbol *astFunctionToLos(PrattParser *parser, AstExpression *f
         parserErrorAt(CPI(function), parser, "invalid use of alias as structure name");
         return makeLosError(CPI(function));
     case AST_EXPRESSION_TYPE_WILDCARD:
-        parserErrorAt(CPI(function), parser, "invalid use of wildcard as structure name");
+        parserErrorAt(CPI(function), parser, "invalid use of wildCard as structure name");
         return makeLosError(CPI(function));
     case AST_EXPRESSION_TYPE_ERROR:
         parserErrorAt(CPI(function), parser, "invalid use of \"error\" as structure name");
@@ -2961,7 +2961,7 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr)
     {
     case AST_EXPRESSION_TYPE_BACK:
         parserErrorAt(CPI(expr), parser, "invalid use of \"back\" as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_FUNCALL:
         return astFunCallToFarg(parser, expr->val.funCall);
     case AST_EXPRESSION_TYPE_LOOKUP:
@@ -2970,23 +2970,23 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr)
         return astSymbolToFarg(CPI(expr), expr->val.symbol);
     case AST_EXPRESSION_TYPE_ANNOTATEDSYMBOL:
         parserErrorAt(CPI(expr), parser, "invalid use of operator as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_NUMBER:
         return astNumberToFarg(CPI(expr), expr->val.number);
     case AST_EXPRESSION_TYPE_CHARACTER:
         return astCharacterToFarg(CPI(expr), expr->val.character);
     case AST_EXPRESSION_TYPE_FUN:
         parserErrorAt(CPI(expr), parser, "invalid use of function as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_NEST:
         parserErrorAt(CPI(expr), parser, "invalid use of nest as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_IFF:
         parserErrorAt(CPI(expr), parser, "invalid use of conditional as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_PRINT:
         parserErrorAt(CPI(expr), parser, "invalid use of \"print\" as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_TUPLE:
         return astTupleToFarg(parser, expr->val.tuple);
     case AST_EXPRESSION_TYPE_ENV:
@@ -2995,14 +2995,14 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr)
         return astStructureToFarg(parser, expr->val.structure);
     case AST_EXPRESSION_TYPE_ASSERTION:
         parserErrorAt(CPI(expr), parser, "invalid use of \"assert\" as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_ALIAS:
         return astAliasToFarg(parser, expr->val.alias);
     case AST_EXPRESSION_TYPE_WILDCARD:
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_ERROR:
         parserErrorAt(CPI(expr), parser, "invalid use of \"error\" as formal argument");
-        return newAstFarg_Wildcard(CPI(expr));
+        return newAstFarg_WildCard(CPI(expr));
     default:
         cant_happen("unrecognised %s", astExpressionTypeName(expr->type));
     }
@@ -3757,16 +3757,16 @@ static AstExpression *back(PrattRecord *record __attribute__((unused)),
 }
 
 /**
- * @brief parselet triggered by a prefix wildcard (`_`) token.
+ * @brief parselet triggered by a prefix wildCard (`_`) token.
  */
-static AstExpression *wildcard(PrattRecord *record __attribute__((unused)),
+static AstExpression *wildCard(PrattRecord *record __attribute__((unused)),
                                PrattParser *parser,
                                AstExpression *lhs __attribute__((unused)),
                                PrattToken *tok __attribute__((unused)))
 {
-    ENTER(wildcard);
-    AstExpression *res = newAstExpression_Wildcard(LEXPI(parser->lexer));
-    LEAVE(wildcard);
+    ENTER(wildCard);
+    AstExpression *res = newAstExpression_WildCard(LEXPI(parser->lexer));
+    LEAVE(wildCard);
     return res;
 }
 

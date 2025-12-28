@@ -39,7 +39,7 @@ TpmcIntList --next--> TpmcIntList
 TpmcPatternValue --var--> HashSymbol
 TpmcPatternValue --comparison--> TpmcComparisonPattern
 TpmcPatternValue --assignment--> TpmcAssignmentPattern
-TpmcPatternValue --wildcard--> void_ptr
+TpmcPatternValue --wildCard--> void_ptr
 TpmcPatternValue --character--> character
 TpmcPatternValue --bigInteger--> MaybeBigInt
 TpmcPatternValue --constructor--> TpmcConstructorPattern
