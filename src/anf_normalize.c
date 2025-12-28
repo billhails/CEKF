@@ -1023,7 +1023,7 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
         cexpLetRec->bindings =
             newAnfLetRecBindings(CPI(lamLetRecBindings), lamLetRecBindings->var, val,
                               cexpLetRec->bindings);
-        cexpLetRec->nbindings++;
+        cexpLetRec->nBindings++;
     } else {
         AnfExp *val = normalize(lamLetRecBindings->val, NULL);
         PROTECT(val);

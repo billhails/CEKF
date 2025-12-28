@@ -35,7 +35,7 @@ structs:
         data:
             isLocal: bool
             isNameSpace: bool = false
-            nbindings: int = 0
+            nBindings: int = 0
             nsEnvs: AnfEnvArray = NULL
             table: AnfIntTable
             next: AnfEnv
@@ -108,7 +108,7 @@ structs:
             description: >-
                 A nameSpace in ANF, containing the body of the nameSpace.
         data:
-            nbindings: int = 0
+            nBindings: int = 0
             body: AnfExp
 
     AexpNameSpaces:
@@ -180,7 +180,7 @@ structs:
             brief: ANF Cexp Let Rec
             description: A let-rec (recursive let) expression in ANF.
         data:
-            nbindings: int
+            nBindings: int
             bindings: AnfLetRecBindings
             body: AnfExp
 

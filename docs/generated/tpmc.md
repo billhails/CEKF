@@ -25,7 +25,7 @@ TpmcPattern --pattern--> TpmcPatternValue
 TpmcTestState --path--> HashSymbol
 TpmcTestState --arcs--> TpmcArcArray
 TpmcFinalState --action--> LamExp
-TpmcState --refcount--> int
+TpmcState --refCount--> int
 TpmcState --stamp--> int
 TpmcState --freeVariables--> TpmcVariableTable
 TpmcState --state--> TpmcStateValue

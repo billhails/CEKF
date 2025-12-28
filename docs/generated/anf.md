@@ -8,7 +8,7 @@ AnfSymbolTable --entries--> NULL
 AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool
 AnfEnv --isNameSpace--> bool
-AnfEnv --nbindings--> int
+AnfEnv --nBindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> AnfIntTable
 AnfEnv --next--> AnfEnv
@@ -31,7 +31,7 @@ AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
 AexpMakeVec --nargs--> int
 AexpMakeVec --args--> AexpList
-AexpNameSpace --nbindings--> int
+AexpNameSpace --nBindings--> int
 AexpNameSpace --body--> AnfExp
 AexpNameSpaces --nameSpaces--> AexpNameSpaceArray
 AexpNameSpaces --body--> AnfExp
@@ -51,7 +51,7 @@ CexpCharCondCases --body--> AnfExp
 CexpCharCondCases --next--> CexpCharCondCases
 CexpMatch --condition--> Aexp
 CexpMatch --clauses--> AnfMatchList
-CexpLetRec --nbindings--> int
+CexpLetRec --nBindings--> int
 CexpLetRec --bindings--> AnfLetRecBindings
 CexpLetRec --body--> AnfExp
 CexpAmb --exp1--> AnfExp

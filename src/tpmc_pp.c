@@ -138,7 +138,7 @@ static char getTpmcStateType(TpmcState *state) {
 
 void ppTpmcState(TpmcState *state) {
     eprintf("%c%d(%d) ", getTpmcStateType(state), state->stamp,
-            state->refcount);
+            state->refCount);
     ppTpmcVariableTable(state->freeVariables);
     eprintf(" ");
     ppTpmcStateValue(state->state);

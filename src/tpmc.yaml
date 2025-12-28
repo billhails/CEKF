@@ -117,7 +117,7 @@ structs:
                 a final state, or an error state. States are linked together to form
                 a state machine.
         data:
-            refcount: int=0
+            refCount: int=0
             stamp: int
             freeVariables: TpmcVariableTable=NULL
             state: TpmcStateValue

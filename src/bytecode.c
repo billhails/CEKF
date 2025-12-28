@@ -285,7 +285,7 @@ void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b, LocationAr
             writeAnfExp(x->entries[i]->body, b, L);
             writeLocation(CPI(x->entries[i]->body), b, L);
             addByte(b, BYTECODES_TYPE_NS_END);
-            addWord(b, x->entries[i]->nbindings);
+            addWord(b, x->entries[i]->nBindings);
             addWord(b, x->size - i);
         }
         writeLocation(CPI(x->entries[x->size - 1]->body), b, L);
@@ -522,7 +522,7 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L) {
     writeLetRecBindings(x->bindings, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LETREC);
-    addByte(b, x->nbindings);
+    addByte(b, x->nBindings);
     writeAnfExp(x->body, b, L);
     LEAVE(writeCexpLetRec);
 }

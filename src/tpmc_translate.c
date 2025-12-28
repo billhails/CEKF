@@ -697,7 +697,7 @@ static LamExp *translateStateToInlineCode(TpmcState *dfa,
 static LamExp *translateState(TpmcState *dfa, LamExpTable *lambdaCache) {
     ENTER(translateState);
     LamExp *res = NULL;
-    if (dfa->refcount > 1) {
+    if (dfa->refCount > 1) {
         res = storeLambdaAndTranslateToApply(dfa, lambdaCache);
     } else {
         res = translateStateToInlineCode(dfa, lambdaCache);
@@ -707,7 +707,7 @@ static LamExp *translateState(TpmcState *dfa, LamExpTable *lambdaCache) {
 }
 
 static void resetStateRefCountsToZero(TpmcState *dfa) {
-    dfa->refcount = 0;
+    dfa->refCount = 0;
     switch (dfa->state->type) {
         case TPMCSTATEVALUE_TYPE_TEST:{
             TpmcArcArray *arcs = getTpmcStateValue_Test(dfa->state)->arcs;
@@ -726,8 +726,8 @@ static void resetStateRefCountsToZero(TpmcState *dfa) {
 }
 
 static void incrementStateRefCounts(TpmcState *dfa) {
-    dfa->refcount++;
-    if (dfa->refcount == 1) {
+    dfa->refCount++;
+    if (dfa->refCount == 1) {
         switch (dfa->state->type) {
             case TPMCSTATEVALUE_TYPE_TEST:{
                 TpmcArcArray *arcs = getTpmcStateValue_Test(dfa->state)->arcs;

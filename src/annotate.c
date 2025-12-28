@@ -330,7 +330,7 @@ static AnfEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, AnfEnv *env) {
         env2->isNameSpace = true;
         AnfEnv *env3 = annotateExp(x->entries[i]->body, env2);
         PROTECT(env3);
-        x->entries[i]->nbindings = env2->nbindings;
+        x->entries[i]->nBindings = env2->nBindings;
         pushAnfEnvArray(nsEnvs, env3);
         UNPROTECT(save);
     }
@@ -450,12 +450,12 @@ static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env) {
 }
 
 static AnfEnv *annotateExpEnv(AnfEnv *env) {
-    int nbindings = 0;
+    int nBindings = 0;
     AnfEnv *orig = env;
     while (env != NULL) {
-        nbindings += countAnfIntTable(env->table);
+        nBindings += countAnfIntTable(env->table);
         if (env->isNameSpace) {
-            env->nbindings = nbindings;
+            env->nBindings = nBindings;
             return orig;
         }
         env = env->next;

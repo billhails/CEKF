@@ -692,7 +692,7 @@ static TpmcArc *makeTpmcArc(TpmcPattern *pattern, TpmcState *state) {
         }
     }
     addFreeVariablesRequiredByPattern(pattern, arc->freeVariables);
-    state->refcount++;
+    state->refCount++;
     LEAVE(makeTpmcArc);
     UNPROTECT(save);
     return arc;
