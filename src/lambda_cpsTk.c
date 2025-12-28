@@ -892,9 +892,9 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
 }
 
 /*
-    (E.namespaces(exprs)) {
+    (E.nameSpaces(exprs)) {
         Ts_k(exprs, fn (sexprs) {
-            k(E.namespaces(sexprs))
+            k(E.nameSpaces(sexprs))
         })
     }
 */
