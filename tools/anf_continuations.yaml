@@ -266,12 +266,12 @@ continuations:
     context: |
       (match e
           ...
-          (`(deconstruct ,name ,nsid ,vec ,e0)
+          (`(deconstruct ,name ,nsId ,vec ,e0)
               (normalize-name e0
-                  [λ (t) (k `(deconstruct ,name ,nsid ,vec ,t))])))
+                  [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))])))
     free_vars:
       name: HashSymbol
-      nsid: int
+      nsId: int
       vec: int
       k: AnfKont
 

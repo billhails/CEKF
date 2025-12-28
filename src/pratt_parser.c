@@ -2682,7 +2682,7 @@ static AstFargList *fargs(PrattParser *parser)
  */
 static AstLookUpSymbol *astLookUpToLus(PrattParser *parser, AstLookUp *lookUp)
 {
-    AstLookUpSymbol *lus = newAstLookUpSymbol(CPI(lookUp), lookUp->nsid, lookUp->nsSymbol, NULL);
+    AstLookUpSymbol *lus = newAstLookUpSymbol(CPI(lookUp), lookUp->nsId, lookUp->nsSymbol, NULL);
     int save = PROTECT(lus);
     switch (lookUp->expression->type)
     {

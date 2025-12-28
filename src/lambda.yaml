@@ -106,7 +106,7 @@ structs:
                 This structure represents the evaluation of an expression
                 in a different nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             exp: LamExp
 
@@ -118,7 +118,7 @@ structs:
                 in a nameSpace. It is used to resolve symbols to their
                 definitions in the context of the given nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
@@ -156,7 +156,7 @@ structs:
                 that was constructed using a specific constructor.
         data:
             name: HashSymbol # name of the constructor being deconstructed
-            nsid: int        # nameSpace of the constructor being deconstructed
+            nsId: int        # nameSpace of the constructor being deconstructed
             vec: int         # offset of the field in the vector
             exp: LamExp      # expression being deconstructed
 
@@ -258,7 +258,7 @@ structs:
         data:
             item: int
             name: HashSymbol
-            nsid: int
+            nsId: int
             next: LamIntList
 
     LamLet:
@@ -462,7 +462,7 @@ structs:
                 and arity.
         data:
             name: HashSymbol
-            nsid: int
+            nsId: int
             type: LamTypeConstructor
             tags: LamTypeTags
             needsVec: bool # does this need to be a vector?
@@ -591,7 +591,7 @@ unions:
         data:
             typeConstructorInfo: LamTypeConstructorInfo
             nameSpaceInfo: LamContext
-            nsid: int
+            nsId: int
 
 hashes:
     LamMacroSet:

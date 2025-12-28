@@ -134,7 +134,7 @@ TcEnv *tc_init(BuiltIns *builtIns) {
 TcType *tc_analyze(LamExp *exp, TcEnv *env) {
     TcNg *ng = newTcNg(NULL);
     int save = PROTECT(ng);
-    TcType *nsType = newTcType_Nsid(NS_GLOBAL); // global ns
+    TcType *nsType = newTcType_NsId(NS_GLOBAL); // global ns
     PROTECT(nsType);
     addToEnv(env, nameSpaceSymbol(), nsType);
     TcType *res = analyzeExp(exp, env, ng);
@@ -545,7 +545,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     // eprintf("analyze deconstruct %s\n", deconstruct->name->name);
     // ppTcEnv(env);
     TcType *constructor =
-        lookUpConstructorType(deconstruct->name, deconstruct->nsid, env, ng);
+        lookUpConstructorType(deconstruct->name, deconstruct->nsId, env, ng);
     int save = PROTECT(constructor);
     // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
@@ -630,7 +630,7 @@ TcType *lookUpNsRef(int index, TcEnv *env) {
 }
 
 static TcType *analyzeLookUp(LamLookUp *lookUp, TcEnv *env, TcNg *ng) {
-    TcType *nsType = lookUpNsRef(lookUp->nsid, env);
+    TcType *nsType = lookUpNsRef(lookUp->nsId, env);
     return analyzeExp(lookUp->exp, getTcType_Env(nsType), ng);
 }
 
@@ -645,7 +645,7 @@ static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env,
         int save = PROTECT(env2);
         TcNg *ng2 = newTcNg(ng);
         PROTECT(ng2);
-        TcType *nsId = newTcType_Nsid((int) i);
+        TcType *nsId = newTcType_NsId((int) i);
         PROTECT(nsId);
         addToEnv(env2, nameSpaceSymbol(), nsId);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
@@ -1021,21 +1021,21 @@ static TcTypeSigArgs *makeTcTypeSigArgs(LamTypeSigArgs *lamTypeArgs,
     return this;
 }
 
-TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsid) {
-    if (strcmp(name->name, "list") == 0 && nsid != -1) {
-        cant_happen("list in ns %d", nsid);
+TcType *makeTypeSig(HashSymbol *name, TcTypeSigArgs *args, int nsId) {
+    if (strcmp(name->name, "list") == 0 && nsId != -1) {
+        cant_happen("list in ns %d", nsId);
     }
-    TcTypeSig *tcTypeSig = newTcTypeSig(name, args, nsid);
+    TcTypeSig *tcTypeSig = newTcTypeSig(name, args, nsId);
     int save = PROTECT(tcTypeSig);
     TcType *res = newTcType_TypeSig(tcTypeSig);
     UNPROTECT(save);
     return res;
 }
 
-static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map, int nsid) {
+static TcType *makeTcTypeSig(LamTypeSig *lamType, TcTypeTable *map, int nsId) {
     TcTypeSigArgs *args = makeTcTypeSigArgs(lamType->args, map);
     int save = PROTECT(args);
-    TcType *res = makeTypeSig(lamType->name, args, nsid);
+    TcType *res = makeTypeSig(lamType->name, args, nsId);
     UNPROTECT(save);
     return res;
 }
@@ -1089,7 +1089,7 @@ static TcTypeSigArgs *makeTypeSigArgs(LamTypeConstructorArgs *args,
 static int findNameSpace(LamLookUpOrSymbol *los, TcEnv *env) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return getLamLookUpOrSymbol_LookUp(los)->nsid;
+            return getLamLookUpOrSymbol_LookUp(los)->nsId;
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             {
                 // eprintf("looking for %s in ", getLamLookUpOrSymbol_Symbol(los)->name);
@@ -1105,7 +1105,7 @@ static int findNameSpace(LamLookUpOrSymbol *los, TcEnv *env) {
                     cant_happen("cannot locate current nameSpace");
                 }
 #endif
-                return getTcType_Nsid(ns);
+                return getTcType_NsId(ns);
             }
         default:
             cant_happen("unrecognized %s",
@@ -1219,7 +1219,7 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
         cant_happen("nameSpace corrupted");
     }
 #endif
-    TcType *tcType = makeTcTypeSig(lamType, map, getTcType_Nsid(ns));
+    TcType *tcType = makeTcTypeSig(lamType, map, getTcType_NsId(ns));
     PROTECT(tcType);
     addTypeSigToEnv(env, getTcType_TypeSig(tcType)->name, getTcType_TypeSig(tcType));
     for (LamTypeConstructorList * list = lamTypeDef->constructors;
@@ -1361,7 +1361,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     return boolean;
 }
 
-static TcType *lookUpConstructorType(HashSymbol *name, int nsid, TcEnv *env,
+static TcType *lookUpConstructorType(HashSymbol *name, int nsId, TcEnv *env,
                                      TcNg *ng) {
     TcType *currentNameSpace = NULL;
     getFromTcEnv(env, nameSpaceSymbol(), &currentNameSpace);
@@ -1371,15 +1371,15 @@ static TcType *lookUpConstructorType(HashSymbol *name, int nsid, TcEnv *env,
     }
 #endif
     TcType *res = NULL;
-    if (getTcType_Nsid(currentNameSpace) == nsid || nsid == NS_GLOBAL) {
+    if (getTcType_NsId(currentNameSpace) == nsId || nsId == NS_GLOBAL) {
         res = lookUp(env, name, ng);
     } else {
-        TcType *nsType = lookUpNsRef(nsid, env);
+        TcType *nsType = lookUpNsRef(nsId, env);
         res = lookUp(getTcType_Env(nsType), name, ng);
     }
     if (res == NULL) {
-        cant_happen("lookUpConstructorType %s failed (nsid %d)", name->name,
-                    nsid);
+        cant_happen("lookUpConstructorType %s failed (nsId %d)", name->name,
+                    nsId);
     }
     return res;
 }
@@ -1391,7 +1391,7 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
     TcType *next = analyzeIntList(intList->next, env, ng);
     int save = PROTECT(next);
     TcType *this =
-        lookUpConstructorType(intList->name, intList->nsid, env, ng);
+        lookUpConstructorType(intList->name, intList->nsId, env, ng);
     PROTECT(this);
     this = findResultType(this);
     PROTECT(this);

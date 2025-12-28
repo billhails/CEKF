@@ -372,16 +372,16 @@ static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
     bool changed = false;
-    // Pass through nsid (type: int, not memory-managed)
+    // Pass through nsId (type: int, not memory-managed)
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
-    LamAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsid);
+    LamAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsId);
     LamExp *new_exp = visitLamExp(node->exp, nsContext);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
         // Create new node with modified fields
-        LamLookUp *result = newLamLookUp(CPI(node), node->nsid, node->nsSymbol, new_exp);
+        LamLookUp *result = newLamLookUp(CPI(node), node->nsId, node->nsSymbol, new_exp);
         UNPROTECT(save);
         return result;
     }
@@ -393,7 +393,7 @@ static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context) {
 static LamLookUpSymbol *visitLamLookUpSymbol(LamLookUpSymbol *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
-    // Pass through nsid (type: int, not memory-managed)
+    // Pass through nsId (type: int, not memory-managed)
     // Pass through nsSymbol (type: HashSymbol, not memory-managed)
     // Pass through symbol (type: HashSymbol, not memory-managed)
 
@@ -437,7 +437,7 @@ static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node, LamAlphaEnv *co
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsid (type: int, not memory-managed)
+    // Pass through nsId (type: int, not memory-managed)
     // Pass through vec (type: int, not memory-managed)
     LamExp *new_exp = visitLamExp(node->exp, context);
     int save = PROTECT(new_exp);
@@ -445,7 +445,7 @@ static LamDeconstruct *visitLamDeconstruct(LamDeconstruct *node, LamAlphaEnv *co
 
     if (changed) {
         // Create new node with modified fields
-        LamDeconstruct *result = newLamDeconstruct(CPI(node), node->name, node->nsid, node->vec, new_exp);
+        LamDeconstruct *result = newLamDeconstruct(CPI(node), node->name, node->nsId, node->vec, new_exp);
         UNPROTECT(save);
         return result;
     }
@@ -641,14 +641,14 @@ static LamIntList *visitLamIntList(LamIntList *node, LamAlphaEnv *context) {
     bool changed = false;
     // Pass through item (type: int, not memory-managed)
     // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsid (type: int, not memory-managed)
+    // Pass through nsId (type: int, not memory-managed)
     LamIntList *new_next = visitLamIntList(node->next, context);
     int save = PROTECT(new_next);
     changed = changed || (new_next != node->next);
 
     if (changed) {
         // Create new node with modified fields
-        LamIntList *result = newLamIntList(CPI(node), node->item, node->name, node->nsid, new_next);
+        LamIntList *result = newLamIntList(CPI(node), node->item, node->name, node->nsId, new_next);
         UNPROTECT(save);
         return result;
     }
@@ -1081,7 +1081,7 @@ static LamTypeConstructorInfo *visitLamTypeConstructorInfo(LamTypeConstructorInf
 
     bool changed = false;
     // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through nsid (type: int, not memory-managed)
+    // Pass through nsId (type: int, not memory-managed)
     LamTypeConstructor *new_type = visitLamTypeConstructor(node->type, context);
     int save = PROTECT(new_type);
     changed = changed || (new_type != node->type);
@@ -1095,7 +1095,7 @@ static LamTypeConstructorInfo *visitLamTypeConstructorInfo(LamTypeConstructorInf
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeConstructorInfo *result = newLamTypeConstructorInfo(CPI(node), node->name, node->nsid, new_type, new_tags, node->needsVec, node->arity, node->size, node->index);
+        LamTypeConstructorInfo *result = newLamTypeConstructorInfo(CPI(node), node->name, node->nsId, new_type, new_tags, node->needsVec, node->arity, node->size, node->index);
         UNPROTECT(save);
         return result;
     }

@@ -286,14 +286,14 @@ continuations:
     transformer: T_k
     key: k_deconstruct
     context: |
-      (E.deconstruct(name, nsid, vec, expr)) {
+      (E.deconstruct(name, nsId, vec, expr)) {
           T_k(expr, fn (sexpr) {
-              k(E.deconstruct(name, nsid, vec, sexpr))
+              k(E.deconstruct(name, nsId, vec, sexpr))
           })
       }
     free_vars:
       name: HashSymbol
-      nsid: int
+      nsId: int
       vec: int
       k: CpsKont
 
@@ -301,14 +301,14 @@ continuations:
     transformer: T_k
     key: c_deconstruct
     context: |
-      (E.deconstruct(name, nsid, vec, expr)) {
+      (E.deconstruct(name, nsId, vec, expr)) {
           T_k(expr, fn (sexpr) {
-              E.apply(c, [E.deconstruct(name, nsid, vec, sexpr)])
+              E.apply(c, [E.deconstruct(name, nsId, vec, sexpr)])
           })
       }
     free_vars:
       name: HashSymbol
-      nsid: int
+      nsId: int
       vec: int
       c: LamExp
 

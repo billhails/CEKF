@@ -288,7 +288,7 @@ static LamExp *makeIndexedDeconstruct(ParserInfo I, int index, LamTypeConstructo
     LamExp *printArg = thingName(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(I, info->type->name, info->nsid, index, printArg);
+        newLamDeconstruct(I, info->type->name, info->nsId, index, printArg);
     PROTECT(dec);
     LamExp *res =
         newLamExp_Deconstruct(I, dec);
@@ -405,7 +405,7 @@ static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
 static LamExp *lookUpPrintFunction(ParserInfo I, LamExp *printer, LamLookUpOrSymbol *toPrint) {
     if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
         LamLookUpSymbol *ls = toPrint->val.lookUp;
-        LamLookUp *llu = newLamLookUp(I, ls->nsid, ls->nsSymbol, printer);
+        LamLookUp *llu = newLamLookUp(I, ls->nsId, ls->nsSymbol, printer);
         int save = PROTECT(llu);
         printer = newLamExp_LookUp(I, llu);
         UNPROTECT(save);
@@ -653,7 +653,7 @@ static LamMatchList *makeScalarMatchList(ParserInfo I,
             ("cannot find info for type constructor %s in makeScalarMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
     PROTECT(matches);
     LamExp *body = makePutsConstructorName(I, constructors->constructor);
     PROTECT(body);
@@ -709,7 +709,7 @@ static LamMatchList *makeVectorMatchList(ParserInfo I,
             ("cannot find info for type constructor %s in makeVectorMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {

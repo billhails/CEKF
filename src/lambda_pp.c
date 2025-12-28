@@ -184,7 +184,7 @@ void ppLamExp(LamExp *exp) {
 }
 
 void ppLamLookUp(LamLookUp *lookUp) {
-    eprintf("(lookUp %s:%d ", lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name, lookUp->nsid);
+    eprintf("(lookUp %s:%d ", lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name, lookUp->nsId);
     ppLamExp(lookUp->exp);
     eprintf(")");
 }
@@ -528,7 +528,7 @@ static void _ppLamTypeSig(LamTypeSig *type) {
 }
 
 static void ppLookUpSymbol(LamLookUpSymbol *ls) {
-    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsid, ls->symbol->name);
+    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId, ls->symbol->name);
 }
 
 static void ppLookUpOrSymbol(LamLookUpOrSymbol *los) {
@@ -636,7 +636,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList) {
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL)
         return;
-    eprintf("%d:%s:%d", list->item, list->name->name, list->nsid);
+    eprintf("%d:%s:%d", list->item, list->name->name, list->nsId);
     if (list->next != NULL) {
         eprintf(" ");
         _ppLamIntList(list->next);
@@ -701,7 +701,7 @@ static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
                 eprintf(" ]\n");
             }
         } else if (value->type == LAMINFO_TYPE_NSID) {
-            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), getLamInfo_Nsid(value));
+            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), getLamInfo_NsId(value));
         } else {
             eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
         }

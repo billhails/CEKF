@@ -171,6 +171,6 @@ unions:
             tuple: TcTypeArray
             nameSpaces: TcNameSpaceArray
             env: TcEnv
-            nsid: int
+            nsId: int
 
 primitives: !include primitives.yaml

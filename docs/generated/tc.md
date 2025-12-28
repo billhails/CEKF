@@ -37,7 +37,7 @@ TcType --typeSig--> TcTypeSig
 TcType --tuple--> TcTypeArray
 TcType --nameSpaces--> TcNameSpaceArray
 TcType --env--> TcEnv
-TcType --nsid--> int
+TcType --nsId--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
 TcNameSpaceArray["TcNameSpaceArray[]"] --entries--> TcType
 ```

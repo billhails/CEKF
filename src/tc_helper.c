@@ -185,7 +185,7 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces) {
     while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
         pad(depth);
         if (value->type == TCTYPE_TYPE_NSID) {
-            eprintf("  %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.nsid);
+            eprintf("  %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.nsId);
         } else if (value->type == TCTYPE_TYPE_NAMESPACES) {
             if (done_nameSpaces) {
                 eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));

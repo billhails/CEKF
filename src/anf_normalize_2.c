@@ -398,14 +398,14 @@ static LamExp *normalizeMakeVecKont(LamExp *ts, NormalizeMakeVecKontEnv *env) {
     return result;
 }
 
-// (`(deconstruct ,name ,nsid ,vec ,e0)
+// (`(deconstruct ,name ,nsId ,vec ,e0)
 //     (normalize-name e0
-//         [λ (t) (k `(deconstruct ,name ,nsid ,vec ,t))]))
+//         [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))]))
 
 static LamExp *normalize_Deconstruct(LamExp *exp, AnfKont *k) {
     ENTER(normalize_Deconstruct);
     LamDeconstruct *deconstruct = getLamExp_Deconstruct(exp);
-    AnfKont *k2 = makeKont_normalizeDeconstruct(deconstruct->name, deconstruct->nsid, deconstruct->vec, k);
+    AnfKont *k2 = makeKont_normalizeDeconstruct(deconstruct->name, deconstruct->nsId, deconstruct->vec, k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(deconstruct->exp, k2);
     UNPROTECT(save);
@@ -414,7 +414,7 @@ static LamExp *normalize_Deconstruct(LamExp *exp, AnfKont *k) {
 }
 
 static LamExp *normalizeDeconstructKont(LamExp *t, NormalizeDeconstructKontEnv *env) {
-    LamExp *newDeconstruct = makeLamExp_Deconstruct(CPI(t), env->name, env->nsid, env->vec, t);
+    LamExp *newDeconstruct = makeLamExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
     int save = PROTECT(newDeconstruct);
     LamExp *result = INVOKE(env->k, newDeconstruct);
     UNPROTECT(save);
@@ -706,7 +706,7 @@ static LamExp *normalize_LookUp(LamExp *exp, AnfKont *k) {
     LamLookUp *lookUpExp = getLamExp_LookUp(exp);
     LamExp *newExpr = normalize_term(lookUpExp->exp);
     int save = PROTECT(newExpr);
-    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsid, lookUpExp->nsSymbol, newExpr);
+    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsId, lookUpExp->nsSymbol, newExpr);
     PROTECT(newLookUp);
     LamExp *result = INVOKE(k, newLookUp);
     UNPROTECT(save);

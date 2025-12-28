@@ -91,7 +91,7 @@ static TpmcPattern *makeLookUpPattern(AstLookUpSymbol *lookUp, LamContext *env) 
     TpmcPatternArray *args = newTpmcPatternArray("makeLookUpPattern");
     int save = PROTECT(args);
     TpmcConstructorPattern *constructor =
-        newTpmcConstructorPattern(lookUp->symbol, lookUp->nsid, info, args);
+        newTpmcConstructorPattern(lookUp->symbol, lookUp->nsId, info, args);
     PROTECT(constructor);
     TpmcPatternValue *val =
         newTpmcPatternValue_Constructor(constructor);
@@ -141,7 +141,7 @@ static void getSymbolAndNameSpace(AstLookUpOrSymbol *los, LamContext *env, HashS
     switch (los->type) {
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
             *name = los->val.lookUp->symbol;
-            *nameSpace = los->val.lookUp->nsid;
+            *nameSpace = los->val.lookUp->nsId;
             break;
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:{
                 *nameSpace = lookUpCurrentNameSpaceInLamContext(env);

@@ -96,7 +96,7 @@ static LamExp *lamExpError(ParserInfo I) {
  * @return void
  */
 static void addCurrentNameSpaceToContext(LamContext *context, int nameSpaceId) {
-    LamInfo *lamInfo = newLamInfo_Nsid(CPI(context), nameSpaceId);
+    LamInfo *lamInfo = newLamInfo_NsId(CPI(context), nameSpaceId);
     int save = PROTECT(lamInfo);
     setLamInfoTable(context->frame, nameSpaceSymbol(), lamInfo);
     UNPROTECT(save);
@@ -492,10 +492,10 @@ static LamExp *lamConvertTuple(ParserInfo PI, AstExpressions *tuple, LamContext 
  * @return The resulting lambda expression.
  */
 static LamExp *lamConvertLookUp(AstLookUp *lookUp, LamContext *env) {
-    LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsid);
+    LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsId);
     LamExp *expression = convertExpression(lookUp->expression, nsEnv);
     int save = PROTECT(expression);
-    LamLookUp *llu = newLamLookUp(CPI(lookUp), lookUp->nsid, lookUp->nsSymbol, expression);
+    LamLookUp *llu = newLamLookUp(CPI(lookUp), lookUp->nsId, lookUp->nsSymbol, expression);
     PROTECT(llu);
     LamExp *res = newLamExp_LookUp(CPI(lookUp), llu);
     UNPROTECT(save);
@@ -575,7 +575,7 @@ static LamTypeSig *convertTypeSig(AstTypeSig *typeSig) {
  * @return The resulting lambda lookUp symbol.
  */
 static LamLookUpSymbol *convertAstLookUpSymbol(AstLookUpSymbol *ls) {
-    return newLamLookUpSymbol(CPI(ls), ls->nsid, ls->nsSymbol, ls->symbol);
+    return newLamLookUpSymbol(CPI(ls), ls->nsId, ls->nsSymbol, ls->symbol);
 }
 
 
@@ -1803,7 +1803,7 @@ static LamTypeConstructorInfo *findConstructor(AstLookUpOrSymbol *los, LamContex
         break;
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:{
             AstLookUpSymbol *lookUp = getAstLookUpOrSymbol_LookUp(los);
-            LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsid);
+            LamContext *nsEnv = lookUpNameSpaceInLamContext(env, lookUp->nsId);
             return lookUpConstructorInLamContext(nsEnv, lookUp->symbol);
         }
         break;
@@ -1830,7 +1830,7 @@ static LamExp *convertStructure(AstStruct *structure, LamContext *env) {
     LamExp *result = makeStructureApplication(constructor, structure->expressions, env);
     if (structure->symbol->type == AST_LOOKUPORSYMBOL_TYPE_LOOKUP) {
         PROTECT(result);
-        LamLookUp *lookUp = newLamLookUp(CPI(result), info->nsid, getAstLookUpOrSymbol_LookUp(structure->symbol)->symbol, result);
+        LamLookUp *lookUp = newLamLookUp(CPI(result), info->nsId, getAstLookUpOrSymbol_LookUp(structure->symbol)->symbol, result);
         PROTECT(lookUp);
         result = newLamExp_LookUp(CPI(lookUp), lookUp);
     }
@@ -1858,7 +1858,7 @@ static LamExp *convertFunCall(AstFunCall *funCall, LamContext *env) {
     LamExp *result = NULL;
     // If the callee is a nameSpaced lookUp, check macro-ness in that nameSpace env
     if (function->type == LAMEXP_TYPE_LOOKUP) {
-        LamContext *nsEnv = lookUpNameSpaceInLamContext(env, getLamExp_LookUp(function)->nsid);
+        LamContext *nsEnv = lookUpNameSpaceInLamContext(env, getLamExp_LookUp(function)->nsId);
         LamExp *under = findUnderlyingValue(function);
         if (under->type == LAMEXP_TYPE_VAR && isMacro(getLamExp_Var(under), nsEnv)) {
             result = thunkMacroExp(CPI(funCall), function, args);

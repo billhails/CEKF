@@ -73,10 +73,10 @@ AstFunCall --function--> AstExpression
 AstFunCall --arguments--> AstExpressions
 AstExpressions --expression--> AstExpression
 AstExpressions --next--> AstExpressions
-AstLookUpSymbol --nsid--> int
+AstLookUpSymbol --nsId--> int
 AstLookUpSymbol --nsSymbol--> HashSymbol
 AstLookUpSymbol --symbol--> HashSymbol
-AstLookUp --nsid--> int
+AstLookUp --nsId--> int
 AstLookUp --nsSymbol--> HashSymbol
 AstLookUp --expression--> AstExpression
 AstIff --test--> AstExpression

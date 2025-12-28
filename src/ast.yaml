@@ -391,7 +391,7 @@ structs:
                 variable or a function. Used to refer to variables or
                 functions defined in other nameSpaces.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
@@ -402,7 +402,7 @@ structs:
                 A lookUp operation in the AST, which evaluates an expression
                 in another nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             expression: AstExpression
 

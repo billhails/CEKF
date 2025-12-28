@@ -220,7 +220,7 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
         cant_happen("cannot find current nameSpace");
     }
 #endif
-    if (currentNs->val.nsid == index) {
+    if (currentNs->val.nsId == index) {
         return env;
     }
     TcType *res = lookUpNsRef(index, env);

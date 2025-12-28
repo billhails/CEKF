@@ -337,7 +337,7 @@ static LamExp *cpsTkLamLookUp(LamLookUp *node, CpsKont *k) {
     ENTER(cpsTkLamLookUp);
     LamExp *expr = cpsTk(node->exp, k);
     int save = PROTECT(expr);
-    LamExp *result = makeLamExp_LookUp(CPI(node), node->nsid, node->nsSymbol, expr);
+    LamExp *result = makeLamExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTkLamLookUp);
     return result;
@@ -373,15 +373,15 @@ LamExp *TkConstructKont(LamExp *sargs, TkConstructKontEnv *env) {
 }
 
 /*
-    (E.deconstruct(name, nsid, vec, expr)) {
+    (E.deconstruct(name, nsId, vec, expr)) {
         T_k(expr, fn (sexpr) {
-            k(E.deconstruct(name, nsid, vec, sexpr))
+            k(E.deconstruct(name, nsId, vec, sexpr))
         })
     }
 */
 static LamExp *cpsTkLamDeconstruct(LamDeconstruct *node, CpsKont *k) {
     ENTER(cpsTkLamDeconstruct);
-    CpsKont *k1 = makeKont_TkDeconstruct(node->name, node->nsid, node->vec, k);
+    CpsKont *k1 = makeKont_TkDeconstruct(node->name, node->nsId, node->vec, k);
     int save = PROTECT(k1);
     LamExp *result = cpsTk(node->exp, k1);
     UNPROTECT(save);
@@ -391,7 +391,7 @@ static LamExp *cpsTkLamDeconstruct(LamDeconstruct *node, CpsKont *k) {
 
 LamExp *TkDeconstructKont(LamExp *sexpr, TkDeconstructKontEnv *env) {
     ENTER(TkDeconstructKont);
-    LamExp *deconstruct = makeLamExp_Deconstruct(CPI(sexpr), env->name, env->nsid, env->vec, sexpr);
+    LamExp *deconstruct = makeLamExp_Deconstruct(CPI(sexpr), env->name, env->nsId, env->vec, sexpr);
     int save = PROTECT(deconstruct);
     LamExp *result = INVOKE(env->k, deconstruct);
     UNPROTECT(save);

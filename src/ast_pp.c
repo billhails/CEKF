@@ -330,13 +330,13 @@ static void ppAstLookUpOrSymbol(PrattUTF8 *dest, AstLookUpOrSymbol *lookUpOrSymb
 
 static void ppAstLookUpSymbol(PrattUTF8 *dest, AstLookUpSymbol *lookUpSymbol) {
     ppHashSymbol(dest, lookUpSymbol->nsSymbol);
-    psprintf(dest, "<%d>.", lookUpSymbol->nsid);
+    psprintf(dest, "<%d>.", lookUpSymbol->nsId);
     ppHashSymbol(dest, lookUpSymbol->symbol);
 }
 
 static void ppAstLookUp(PrattUTF8 *dest, AstLookUp *lookUp) {
     ppHashSymbol(dest, lookUp->nsSymbol);
-    psprintf(dest, "<%d>.", lookUp->nsid);
+    psprintf(dest, "<%d>.", lookUp->nsId);
     ppAstExpression(dest, lookUp->expression);
 }
 

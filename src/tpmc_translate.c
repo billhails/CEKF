@@ -188,7 +188,7 @@ static LamExp *prependLetBindings(TpmcPattern *test,
                         newLamExp_Var(I, test->path);
                     int save2 = PROTECT(base);
                     LamDeconstruct *deconstruct =
-                        newLamDeconstruct(I, name, constructor->info->nsid, i + 1, base);
+                        newLamDeconstruct(I, name, constructor->info->nsId, i + 1, base);
                     PROTECT(deconstruct);
                     LamExp *deconstructExp = newLamExp_Deconstruct(I, deconstruct);
                     PROTECT(deconstructExp);
@@ -355,7 +355,7 @@ static LamIntList *makeUnexhaustedIndices(LamTypeConstructorInfo *info) {
     LamIntList *res = NULL;
     int save = PROTECT(res);
     for (int i = 0; i < info->size; ++i) {
-        res = newLamIntList(I, i, info->type->name, info->nsid, res);
+        res = newLamIntList(I, i, info->type->name, info->nsId, res);
         PROTECT(res);
     }
     UNPROTECT(save);
@@ -657,7 +657,7 @@ static LamMatchList *translateConstructorArcList(TpmcArcList *arcList,
                 DEBUG("translateArcToCode returned %p", body);
                 PROTECT(body);
                 LamIntList *index =
-                    newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+                    newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
                 PROTECT(index);
                 res = newLamMatchList(I, index, body, next);
                 UNPROTECT(save);
