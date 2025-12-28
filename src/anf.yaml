@@ -247,7 +247,7 @@ unions:
             var: HashSymbol
             annotatedVar: AexpAnnotatedVar
             bigInteger: MaybeBigInt
-            littleinteger: int
+            littleInteger: int
             character: character
             prim: AexpPrimApp
             makeVec: AexpMakeVec

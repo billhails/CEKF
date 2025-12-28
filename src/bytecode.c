@@ -678,7 +678,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
             break;
         case AEXP_TYPE_LITTLEINTEGER:{
                 addByte(b, BYTECODES_TYPE_STDINT);
-                addInteger(b, x->val.littleinteger);
+                addInteger(b, x->val.littleInteger);
             }
             break;
         case AEXP_TYPE_BIGINTEGER:{

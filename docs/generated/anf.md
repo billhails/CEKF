@@ -75,7 +75,7 @@ Aexp --lam--> AexpLam
 Aexp --var--> HashSymbol
 Aexp --annotatedVar--> AexpAnnotatedVar
 Aexp --bigInteger--> MaybeBigInt
-Aexp --littleinteger--> int
+Aexp --littleInteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp
 Aexp --makeVec--> AexpMakeVec

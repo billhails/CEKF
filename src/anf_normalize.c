@@ -830,7 +830,7 @@ static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer) {
 }
 
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer) {
-    return newAexp_Littleinteger(I, integer);
+    return newAexp_LittleInteger(I, integer);
 }
 
 static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character) {

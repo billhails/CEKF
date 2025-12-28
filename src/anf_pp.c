@@ -366,7 +366,7 @@ void ppAexp(Aexp *x) {
             fprintMaybeBigInt(errout, x->val.bigInteger);
             break;
         case AEXP_TYPE_LITTLEINTEGER:
-            eprintf("%d", x->val.littleinteger);
+            eprintf("%d", x->val.littleInteger);
             break;
         case AEXP_TYPE_CHARACTER:
             ppChar(x->val.character);
