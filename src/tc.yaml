@@ -162,7 +162,7 @@ unions:
             pair: TcPair
             thunk: TcThunk
             var: TcVar
-            smallinteger: void_ptr
+            smallInteger: void_ptr
             bigInteger: void_ptr
             character: void_ptr
             unknown: HashSymbol

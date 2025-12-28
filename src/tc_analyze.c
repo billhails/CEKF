@@ -1814,7 +1814,7 @@ TcType *makeFreshVar(char *name __attribute__((unused))) {
 }
 
 TcType *makeSmallInteger() {
-    TcType *res = newTcType_Smallinteger();
+    TcType *res = newTcType_SmallInteger();
     return res;
 }
 
