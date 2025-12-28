@@ -908,7 +908,7 @@ static LamTypeConstructor *convertTypeConstructor(AstTypeConstructor *typeConstr
                                                   int index,
                                                   bool needsVec,
                                                   LamContext *env) {
-    int nargs = countAstTypeConstructorArgs(typeConstructor->args);
+    int nArgs = countAstTypeConstructorArgs(typeConstructor->args);
     LamTypeConstructorArgs *args =
         convertAstTypeConstructorArgs(typeConstructor->args, env);
     int save = PROTECT(args);
@@ -916,7 +916,7 @@ static LamTypeConstructor *convertTypeConstructor(AstTypeConstructor *typeConstr
         newLamTypeConstructor(CPI(type), typeConstructor->symbol, type, args);
     PROTECT(lamTypeConstructor);
     collectTypeInfo(typeConstructor->symbol, typeConstructor->args, lamTypeConstructor, needsVec,
-                    enumCount, index, nargs, env);
+                    enumCount, index, nArgs, env);
     UNPROTECT(save);
     return lamTypeConstructor;
 }
@@ -1537,14 +1537,14 @@ static LamArgs *varListToList(LamVarList *list) {
 /**
  * @brief Generates a list of symbolic variables.
  * @param I The parser information.
- * @param nargs The number of arguments.
+ * @param nArgs The number of arguments.
  * @return The resulting list of symbolic variables.
  */
-static LamVarList *genSymVarList(ParserInfo I, int nargs) {
-    if (nargs == 0) {
+static LamVarList *genSymVarList(ParserInfo I, int nArgs) {
+    if (nArgs == 0) {
         return NULL;
     }
-    LamVarList *rest = genSymVarList(I, nargs - 1);
+    LamVarList *rest = genSymVarList(I, nArgs - 1);
     int save = PROTECT(rest);
     HashSymbol *s = genSym("$x");
     LamVarList *this = newLamVarList(I, s, rest);
@@ -1729,10 +1729,10 @@ static LamArgs *convertTagsToArgs(LamTypeTags *lamTags, AstTaggedExpressions *as
  * @return The curried constructor application.
  */
 static LamExp *makeConstructorApplication(LamExp *constructor, LamArgs *args) {
-    int nargs = (int) countLamArgs(args);
+    int nArgs = (int) countLamArgs(args);
     LamExp *result;
     int arity = findUnderlyingArity(constructor);
-    if (nargs < arity) {
+    if (nArgs < arity) {
         LamVarList *fargs = genSymVarList(CPI(constructor), arity);
         int save = PROTECT(fargs);
         LamArgs *aargs = varListToList(fargs);
@@ -1772,8 +1772,8 @@ static LamExp *makeStructureApplication(LamExp *constructor, AstTaggedExpression
     checkNoUnrecognisedTags(getLamExp_Constructor(constructor)->tags, tags);
     checkNoDuplicateTags(tags);
     int arity = findUnderlyingArity(constructor);
-    int nargs = (int) countAstTaggedExpressions(tags);
-    if (nargs != arity) {
+    int nArgs = (int) countAstTaggedExpressions(tags);
+    if (nArgs != arity) {
         conversionError(CPI(constructor), "wrong number of args in structure application");
         return lamExpError(CPI(tags));
     }
@@ -2071,12 +2071,12 @@ static AstFargList *rewriteAstFargList(AstFargList *args, LamContext *env) {
  * separate function bodies to a single pattern matcher dispatching to the
  * appropriate body.
  * 
- * @param nargs The number of arguments for the function.
+ * @param nArgs The number of arguments for the function.
  * @param fun The composite function to convert.
  * @param env The lambda context to use for conversion.
  * @return The converted composite function.
  */
-static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
+static LamLam *convertCompositeBodies(int nArgs, AstCompositeFunction *fun,
                                       LamContext *env) {
     ENTER(convertCompositeBodies);
     int nBodies = countAstCompositeFunction(fun);
@@ -2096,7 +2096,7 @@ static LamLam *convertCompositeBodies(int nargs, AstCompositeFunction *fun,
         argLists[i] = rewriteAstFargList(func->argList, env);
         PROTECT(argLists[i]);
     }
-    LamLam *result = tpmcConvert(fun->unsafe, CPI(fun), nargs, nBodies, argLists, actions, env);
+    LamLam *result = tpmcConvert(fun->unsafe, CPI(fun), nArgs, nBodies, argLists, actions, env);
     PROTECT(result);
     FREE_ARRAY(LamExp *, actions, nBodies);
     FREE_ARRAY(AstFargList *, argLists, nBodies);
@@ -2118,8 +2118,8 @@ static LamExp *convertCompositeFun(ParserInfo PI, AstCompositeFunction *fun, Lam
         conversionError(PI, "composite function with no components");
         return lamExpError(PI);
     }
-    int nargs = countAstFargList(fun->function->argList);
-    LamLam *lambda = convertCompositeBodies(nargs, fun, env);
+    int nArgs = countAstFargList(fun->function->argList);
+    LamLam *lambda = convertCompositeBodies(nArgs, fun, env);
     DEBUG("convertCompositeBodies returned %p", lambda);
     int save = PROTECT(lambda);
     LamExp *result = newLamExp_Lam(CPI(lambda), lambda);

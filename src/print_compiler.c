@@ -250,8 +250,8 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv 
     }
     LamArgs *args = compilePrinterForTypeSigArgs(I, typeSig->args, env);
     PROTECT(args);
-    int nargs = countLamArgs(args);
-    if (nargs == 0) {
+    int nArgs = countLamArgs(args);
+    if (nArgs == 0) {
         UNPROTECT(save);
         return exp;
     }

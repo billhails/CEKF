@@ -679,9 +679,9 @@ static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
 
 // apply(fn) => fn
 // apply(fn, arg_1, arg_2, arg_3) => apply(apply(apply(fn, arg1), arg_2), arg_3)
-static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
+static LamApply *curryLamApplyHelper(int nArgs, LamExp *function,
                                      LamArgs *args) {
-    if (nargs == 1) {
+    if (nArgs == 1) {
         LamApply *res = newLamApply(CPI(function), function, args);
         return res;
     }
@@ -692,7 +692,7 @@ static LamApply *curryLamApplyHelper(int nargs, LamExp *function,
     LamExp *newFunction = newLamExp_Apply(CPI(new), new);
     PROTECT(newFunction);
     LamApply *curried =
-        curryLamApplyHelper(nargs - 1, newFunction, args->next);
+        curryLamApplyHelper(nArgs - 1, newFunction, args->next);
     UNPROTECT(save);
     return curried;
 }

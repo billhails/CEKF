@@ -169,7 +169,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b , LocationArray *L) {
     if (x == NULL)
         return;
     addByte(b, BYTECODES_TYPE_LAM);
-    addByte(b, x->nargs);
+    addByte(b, x->nArgs);
     addByte(b, x->letRecOffset);
     Control patch = reserveWord(b);
     writeAnfExp(x->exp, b, L);
@@ -272,7 +272,7 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b, LocationArray *L) {
     writeAexpList(x->args, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_PRIM_MAKEVEC);
-    addByte(b, x->nargs);
+    addByte(b, x->nArgs);
     LEAVE(writeAexpMakeVec);
 }
 
@@ -313,7 +313,7 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
     // while keeping the original evaluation order and stack discipline.
     bool directLam = (x->function != NULL && x->function->type == AEXP_TYPE_LAM);
     if (directLam) {
-        int m = x->function->val.lam != NULL ? x->function->val.lam->nargs : 0;
+        int m = x->function->val.lam != NULL ? x->function->val.lam->nArgs : 0;
         if ((int)n > m && m > 0) {
             // Collect args into an array to control emission order
             AexpList *cur = x->args;

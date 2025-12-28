@@ -435,7 +435,7 @@ LamExp *TkTupleIndexKont(LamExp *sexpr, TkTupleIndexKontEnv *env) {
 */
 static LamExp *cpsTkMakeVec(LamMakeVec *node, CpsKont *k) {
     ENTER(cpsTkMakeVec);
-    CpsKont *k1 = makeKont_TkMakeVec(node->nargs, k);
+    CpsKont *k1 = makeKont_TkMakeVec(node->nArgs, k);
     int save = PROTECT(k1);
     LamExp *args = newLamExp_Args(CPI(node), node->args);
     PROTECT(args);

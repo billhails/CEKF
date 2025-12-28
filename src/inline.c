@@ -126,16 +126,16 @@ static LamExp *inlineApply(LamApply *x) {
     if (info == NULL) {
         x->function = inlineExp(x->function);
     } else {
-        int nargs = countLamArgs(x->args);
+        int nArgs = countLamArgs(x->args);
         if (info->needsVec) {
-            if (nargs == info->arity) {
+            if (nArgs == info->arity) {
                 return makeLamExp_Construct(CPI(x), info->name, info->index, x->args);
             } else {
                 cant_happen("wrong number of arguments to constructor %s, got %d, expected %d",
-                            info->name->name, nargs, info->arity);
+                            info->name->name, nArgs, info->arity);
             }
         } else {
-            if (nargs > 0) {
+            if (nArgs > 0) {
                 cant_happen("arguments to constant constructor %s",
                             info->name->name);
             }

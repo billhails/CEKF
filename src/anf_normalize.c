@@ -477,20 +477,20 @@ static AnfExp *normalizeMakeVec(LamMakeVec *lamMakeVec, AnfExp *tail) {
 }
 
 static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
-    int nargs = countLamArgs(construct->args);
+    int nArgs = countLamArgs(construct->args);
     LamExp *newArg =
         newLamExp_Stdint(CPI(construct), construct->tag);
     int save = PROTECT(newArg);
     LamArgs *extraItem = newLamArgs(CPI(construct), newArg, construct->args);
     PROTECT(extraItem);
-    LamMakeVec *res = newLamMakeVec(CPI(construct), nargs + 1, extraItem);
+    LamMakeVec *res = newLamMakeVec(CPI(construct), nArgs + 1, extraItem);
     UNPROTECT(save);
     return res;
 }
 
 static LamMakeVec *tupleToMakeVec(ParserInfo PI, LamArgs *tuple) {
-    int nargs = countLamArgs(tuple);
-    LamMakeVec *res = newLamMakeVec(PI, nargs, tuple);
+    int nArgs = countLamArgs(tuple);
+    LamMakeVec *res = newLamMakeVec(PI, nArgs, tuple);
     return res;
 }
 

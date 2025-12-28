@@ -548,20 +548,20 @@ static void applyProc(int naargs) {
             break;
         case VALUE_TYPE_BUILTIN:{
                 BuiltInImplementation *impl = callable.val.builtIn;
-                if (naargs == impl->nargs) {
+                if (naargs == impl->nArgs) {
                     BuiltInFunction fn = (BuiltInFunction) impl->implementation;
-                    Vec *v = newVec(impl->nargs);
+                    Vec *v = newVec(impl->nArgs);
                     int save = PROTECT(v);
-                    copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nargs]), impl->nargs);
+                    copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nArgs]), impl->nArgs);
                     Value res = fn(v);
                     protectValue(res);
-                    state.S->offset -= impl->nargs;
+                    state.S->offset -= impl->nArgs;
                     push(res);
                     UNPROTECT(save);
                 } else if (naargs == 0) {
                     push(callable);
                 } else {
-                    cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nargs, naargs);
+                    cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nArgs, naargs);
                 }
             }
             break;
@@ -615,12 +615,12 @@ static void step() {
 
             case BYTECODES_TYPE_LAM:{
                     // create a closure and push it
-                    int nargs = readCurrentByte();
+                    int nArgs = readCurrentByte();
                     int letRecOffset = readCurrentByte();
                     int end = readCurrentOffset();
-                    DEBUG("LAM nargs:[%d] letrec:[%d] end:[%04x]",
-                                nargs, letRecOffset, end);
-                    Clo *clo = newClo(nargs, state.C, state.E);
+                    DEBUG("LAM nArgs:[%d] letrec:[%d] end:[%04x]",
+                                nArgs, letRecOffset, end);
+                    Clo *clo = newClo(nArgs, state.C, state.E);
                     int save = PROTECT(clo);
                     snapshotClo(clo, state.S, letRecOffset);
                     Value v = value_Clo(clo);
@@ -856,9 +856,9 @@ static void step() {
 
             case BYTECODES_TYPE_APPLY:{
                     // apply the callable at the top of the stack to the arguments beneath it
-                    int nargs = readCurrentByte();
-                    DEBUG("APPLY [%d]", nargs);
-                    applyProc(nargs);
+                    int nArgs = readCurrentByte();
+                    DEBUG("APPLY [%d]", nArgs);
+                    applyProc(nArgs);
                 }
                 break;
 
@@ -1015,9 +1015,9 @@ static void step() {
             case BYTECODES_TYPE_LETREC:{
                     // patch each of the lambdas environments with the current stack frame
                     // i.e. all the definitions in the current letrec.
-                    int nargs = readCurrentByte();
-                    DEBUG("LETREC [%d] state.S->offset = %d", nargs, state.S->offset);
-                    for (Index i = state.S->offset - nargs; i < state.S->offset; i++) {
+                    int nArgs = readCurrentByte();
+                    DEBUG("LETREC [%d] state.S->offset = %d", nArgs, state.S->offset);
+                    for (Index i = state.S->offset - nArgs; i < state.S->offset; i++) {
                         Value v = peek(i);
                         if (v.type == VALUE_TYPE_CLO) {
                             patchClo(v.val.clo, state.S);

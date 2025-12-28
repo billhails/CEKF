@@ -175,7 +175,7 @@ structs:
                 This structure represents the internal construction of a
                 type instance (represented as a vector) from a list of arguments.
         data:
-            nargs: int
+            nArgs: int
             args: LamArgs
 
     LamIff:

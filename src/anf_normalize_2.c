@@ -374,14 +374,14 @@ static LamExp *normalizeMakeTupleKont(LamExp *ts, NormalizeMakeTupleKontEnv *env
     return result;
 }
 
-// (`(make-vec ,nargs . ,Ms)
+// (`(make-vec ,nArgs . ,Ms)
 //     (normalize-names Ms
-//         [λ (ts) (k `(make-vec ,nargs . ,ts))]))
+//         [λ (ts) (k `(make-vec ,nArgs . ,ts))]))
 
 static LamExp *normalize_MakeVec(LamExp *exp, AnfKont *k) {
     ENTER(normalize_MakeVec);
     LamMakeVec *makeVec = getLamExp_MakeVec(exp);
-    AnfKont *k2 = makeKont_normalizeMakeVec(makeVec->nargs, k);
+    AnfKont *k2 = makeKont_normalizeMakeVec(makeVec->nArgs, k);
     int save = PROTECT(k2);
     LamExp *result = normalize_names(makeVec->args, k2);
     UNPROTECT(save);
@@ -391,7 +391,7 @@ static LamExp *normalize_MakeVec(LamExp *exp, AnfKont *k) {
 
 static LamExp *normalizeMakeVecKont(LamExp *ts, NormalizeMakeVecKontEnv *env) {
     LamArgs *tts = getLamExp_Args(ts);
-    LamExp *newMakeVec = makeLamExp_MakeVec(CPI(ts), env->nargs, tts);
+    LamExp *newMakeVec = makeLamExp_MakeVec(CPI(ts), env->nArgs, tts);
     int save = PROTECT(newMakeVec);
     LamExp *result = INVOKE(env->k, newMakeVec);
     UNPROTECT(save);

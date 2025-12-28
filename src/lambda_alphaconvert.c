@@ -479,14 +479,14 @@ static LamMakeVec *visitLamMakeVec(LamMakeVec *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
     bool changed = false;
-    // Pass through nargs (type: int, not memory-managed)
+    // Pass through nArgs (type: int, not memory-managed)
     LamArgs *new_args = visitLamArgs(node->args, context);
     int save = PROTECT(new_args);
     changed = changed || (new_args != node->args);
 
     if (changed) {
         // Create new node with modified fields
-        LamMakeVec *result = newLamMakeVec(CPI(node), node->nargs, new_args);
+        LamMakeVec *result = newLamMakeVec(CPI(node), node->nArgs, new_args);
         UNPROTECT(save);
         return result;
     }

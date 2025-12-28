@@ -44,14 +44,14 @@ static TpmcPattern *convertPattern(AstFarg *arg, LamContext *env);
 
 /**
  * @brief Creates an array of root variables, one per top-level argument.
- * @param nargs The number of arguments.
+ * @param nArgs The number of arguments.
  * @return A new TpmcVariableArray representing the root variables.
  */
-static TpmcVariableArray *createRootVariables(int nargs) {
+static TpmcVariableArray *createRootVariables(int nArgs) {
     ENTER(createRootVariables);
     TpmcVariableArray *rootVariables = newTpmcVariableArray();
     int save = PROTECT(rootVariables);
-    for (int i = 0; i < nargs; i++) {
+    for (int i = 0; i < nArgs; i++) {
         HashSymbol *s = genSym("p$");
         IFDEBUG(eprintf("%s", s->name));
         pushTpmcVariableArray(rootVariables, s);
@@ -689,7 +689,7 @@ static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
  * @context This function is the entry point to the Term Pattern Matching Compiler (TPMC)
  * @param allow_unsafe whether to allow a non-exhaustive pattern match.
  * @param I Parser information.
- * @param nargs The number of arguments (each component function must have the same number of arguments).
+ * @param nArgs The number of arguments (each component function must have the same number of arguments).
  * @param nbodies The number of bodies (component functions).
  * @param argLists The argument lists.
  * @param bodies The function bodies.
@@ -697,12 +697,12 @@ static LamVarList *arrayToVarList(ParserInfo I, TpmcVariableArray *array) {
  */
 LamLam *tpmcConvert(bool allow_unsafe,
                     ParserInfo I,
-                    int nargs,
+                    int nArgs,
                     int nbodies,
                     AstFargList **argLists,
                     LamExp **bodies,
                     LamContext *env) {
-    TpmcVariableArray *rootVariables = createRootVariables(nargs);
+    TpmcVariableArray *rootVariables = createRootVariables(nArgs);
     int save = PROTECT(rootVariables);
     TpmcMatchRuleArray *rules = convertComposite(nbodies, argLists, bodies, env);
     PROTECT(rules);

@@ -45,7 +45,7 @@ structs:
             brief: ANF Aexp Lambda
             description: A lambda expression in ANF.
         data:
-            nargs: int
+            nArgs: int
             letRecOffset: int
             args: AexpVarList
             exp: AnfExp
@@ -99,7 +99,7 @@ structs:
             brief: ANF Aexp Make Vector
             description: A vector construction operation in ANF.
         data:
-            nargs: int
+            nArgs: int
             args: AexpList
 
     AexpNameSpace:
@@ -125,7 +125,7 @@ structs:
             description: A application of a function in ANF.
         data:
             function: Aexp
-            nargs: int
+            nArgs: int
             args: AexpList
 
     CexpIf:

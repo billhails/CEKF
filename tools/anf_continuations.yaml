@@ -253,11 +253,11 @@ continuations:
     context: |
       (match e
           ...
-          (`(make-vec ,nargs . ,Ms)
+          (`(make-vec ,nArgs . ,Ms)
               (normalize-names Ms
-                  [λ (ts) (k `(make-vec ,nargs . ,ts))])))
+                  [λ (ts) (k `(make-vec ,nArgs . ,ts))])))
     free_vars:
-      nargs: int
+      nArgs: int
       k: AnfKont
 
   normalizeDeconstruct:

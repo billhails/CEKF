@@ -44,7 +44,7 @@ structs:
         data:
             name: HashSymbol
             implementation: void_ptr
-            nargs: int
+            nArgs: int
 
     BuiltInMemBuf:
         meta:

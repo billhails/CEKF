@@ -435,8 +435,8 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
     REPLACE_PROTECT(save, exp);
     LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);
-    int nargs = countLamArgs(args);
-    if (nargs == 0) {
+    int nArgs = countLamArgs(args);
+    if (nArgs == 0) {
         UNPROTECT(save);
         return exp;
     }
