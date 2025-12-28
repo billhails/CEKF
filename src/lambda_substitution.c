@@ -247,12 +247,12 @@ static LamLetStar *performLetStarSubstitutions(LamLetStar *letStar, TpmcSubstitu
     return letStar;
 }
 
-static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, TpmcSubstitutionTable
+static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typeDefs, TpmcSubstitutionTable
                                                  *substitutions) {
     ENTER(performTypeDefsSubstitutions);
-    typedefs->body = lamPerformSubstitutions(typedefs->body, substitutions);
+    typeDefs->body = lamPerformSubstitutions(typeDefs->body, substitutions);
     LEAVE(performTypeDefsSubstitutions);
-    return typedefs;
+    return typeDefs;
 }
 
 static LamMatchList *performCaseSubstitutions(LamMatchList *cases, TpmcSubstitutionTable
@@ -427,8 +427,8 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                     performLetStarSubstitutions(getLamExp_LetStar(exp), substitutions));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                setLamExp_Typedefs(exp,
-                    performTypeDefsSubstitutions(getLamExp_Typedefs(exp),
+                setLamExp_TypeDefs(exp,
+                    performTypeDefsSubstitutions(getLamExp_TypeDefs(exp),
                                                  substitutions));
                 break;
             case LAMEXP_TYPE_MATCH:

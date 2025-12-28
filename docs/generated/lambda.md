@@ -146,7 +146,7 @@ LamExp --sequence--> LamSequence
 LamExp --stdint--> int
 LamExp --tag--> LamExp
 LamExp --tupleIndex--> LamTupleIndex
-LamExp --typedefs--> LamTypeDefs
+LamExp --typeDefs--> LamTypeDefs
 LamExp --typeOf--> LamTypeOf
 LamExp --var--> HashSymbol
 LamLookUpOrSymbol --symbol--> HashSymbol

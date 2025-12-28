@@ -116,7 +116,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
         case LAMEXP_TYPE_MAKEVEC:
             return normalizeMakeVec(getLamExp_MakeVec(lamExp), tail);
         case LAMEXP_TYPE_TYPEDEFS:
-            return normalize(getLamExp_Typedefs(lamExp)->body, tail);
+            return normalize(getLamExp_TypeDefs(lamExp)->body, tail);
         case LAMEXP_TYPE_APPLY:
             return normalizeApply(getLamExp_Apply(lamExp), tail);
         case LAMEXP_TYPE_IFF:
@@ -946,7 +946,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
             res = aexpNormalizeStdInteger(CPI(lamExp), getLamExp_Constant(lamExp)->tag);
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            res = replaceLamCexp(getLamExp_Typedefs(lamExp)->body, replacements);
+            res = replaceLamCexp(getLamExp_TypeDefs(lamExp)->body, replacements);
             break;
         case LAMEXP_TYPE_DECONSTRUCT:
             res =

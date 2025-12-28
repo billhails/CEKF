@@ -128,7 +128,7 @@ void ppLamExp(LamExp *exp) {
             ppLamLetRec(getLamExp_LetRec(exp));
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            ppLamTypeDefs(getLamExp_Typedefs(exp));
+            ppLamTypeDefs(getLamExp_TypeDefs(exp));
             break;
         case LAMEXP_TYPE_LET:
             ppLamLet(getLamExp_Let(exp));
@@ -423,7 +423,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList);
 
 void ppLamTypeDefs(LamTypeDefs *typeDefs) {
     if (typeDefs == NULL) {
-        eprintf("<NULL typedefs>");
+        eprintf("<NULL typeDefs>");
         return;
     }
     eprintf("(typedefs ");

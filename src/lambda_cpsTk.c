@@ -795,15 +795,15 @@ LamExp *TkTypeOfKont(LamExp *sexpr, TkTypeOfKontEnv *env) {
 }
 
 /*
-    (E.typedefs(defs, expr)) {
-        E.typedefs(defs, T_k(expr, k))
+    (E.typeDefs(defs, expr)) {
+        E.typeDefs(defs, T_k(expr, k))
     }
 */
 static LamExp *cpsTkLamTypeDefs(LamTypeDefs *node, CpsKont *k) {
     ENTER(cpsTkLamTypeDefs);
     LamExp *expr = cpsTk(node->body, k);
     int save = PROTECT(expr);
-    LamExp *result = makeLamExp_Typedefs(CPI(node), node->typeDefs, expr);
+    LamExp *result = makeLamExp_TypeDefs(CPI(node), node->typeDefs, expr);
     UNPROTECT(save);
     LEAVE(cpsTkLamTypeDefs);
     return result;
@@ -880,7 +880,7 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         case LAMEXP_TYPE_TUPLEINDEX:
             return cpsTkLamTupleIndex(getLamExp_TupleIndex(node), k);
         case LAMEXP_TYPE_TYPEDEFS:
-            return cpsTkLamTypeDefs(getLamExp_Typedefs(node), k);
+            return cpsTkLamTypeDefs(getLamExp_TypeDefs(node), k);
         case LAMEXP_TYPE_TYPEOF:
             return cpsTkLamTypeOf(getLamExp_TypeOf(node), k);
         default:

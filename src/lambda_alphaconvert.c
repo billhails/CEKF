@@ -1394,11 +1394,11 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         }
         case LAMEXP_TYPE_TYPEDEFS: {
             // LamTypeDefs
-            LamTypeDefs *variant = getLamExp_Typedefs(node);
+            LamTypeDefs *variant = getLamExp_TypeDefs(node);
             LamTypeDefs *new_variant = visitLamTypeDefs(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
-                result = newLamExp_Typedefs(CPI(node), new_variant);
+                result = newLamExp_TypeDefs(CPI(node), new_variant);
             }
             break;
         }

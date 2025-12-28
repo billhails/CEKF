@@ -243,11 +243,11 @@ static LamLetStar *performLetStarSimplifications(LamLetStar *letStar) {
     return letStar;
 }
 
-static LamTypeDefs *performTypeDefsSimplifications(LamTypeDefs *typedefs) {
+static LamTypeDefs *performTypeDefsSimplifications(LamTypeDefs *typeDefs) {
     ENTER(performTypeDefsSimplifications);
-    typedefs->body = lamPerformSimplifications(typedefs->body);
+    typeDefs->body = lamPerformSimplifications(typeDefs->body);
     LEAVE(performTypeDefsSimplifications);
-    return typedefs;
+    return typeDefs;
 }
 
 static LamMatchList *performCaseSimplifications(LamMatchList *cases) {
@@ -398,7 +398,7 @@ LamExp *lamPerformSimplifications(LamExp *exp) {
                 setLamExp_LetStar(exp, performLetStarSimplifications(getLamExp_LetStar(exp)));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                setLamExp_Typedefs(exp, performTypeDefsSimplifications(getLamExp_Typedefs(exp)));
+                setLamExp_TypeDefs(exp, performTypeDefsSimplifications(getLamExp_TypeDefs(exp)));
                 break;
             case LAMEXP_TYPE_MATCH:
                 setLamExp_Match(exp, performMatchSimplifications(getLamExp_Match(exp)));

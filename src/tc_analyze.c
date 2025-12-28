@@ -270,7 +270,7 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         case LAMEXP_TYPE_LETREC:
             return prune(analyzeLetRec(getLamExp_LetRec(exp), env, ng));
         case LAMEXP_TYPE_TYPEDEFS:
-            return prune(analyzeTypeDefs(getLamExp_Typedefs(exp), env, ng));
+            return prune(analyzeTypeDefs(getLamExp_TypeDefs(exp), env, ng));
         case LAMEXP_TYPE_LET:
             return prune(analyzeLet(getLamExp_Let(exp), env, ng));
         case LAMEXP_TYPE_LETSTAR:

@@ -350,7 +350,7 @@ structs:
             description: >-
                 This structure holds type definitions that are used in the
                 lambda expressions. It is prepended to Each letrec and any
-                typedefs in the AST are hoisted into this section.
+                typeDefs in the AST are hoisted into this section.
         data:
             typeDefs: LamTypeDefList
             body: LamExp
@@ -543,7 +543,7 @@ unions:
             stdint: int
             tag: LamExp
             tupleIndex: LamTupleIndex
-            typedefs: LamTypeDefs
+            typeDefs: LamTypeDefs
             typeOf: LamTypeOf
             var: HashSymbol
 

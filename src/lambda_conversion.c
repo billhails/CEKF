@@ -328,7 +328,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     // record aliases in env
     collectAliases(definitions, env);
 
-    // convert and collect all the typedefs (also adds them to env)
+    // convert and collect all the typeDefs (also adds them to env)
     LamTypeDefList *typeDefList = collectTypeDefs(definitions, env);
     int save = PROTECT(typeDefList);
 
@@ -399,10 +399,10 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     }
     PROTECT(result);
 
-    // prepend typedefs if any
+    // prepend typeDefs if any
     if (typeDefList != NULL) {
-        // [typedefs] [[printers] [funcs] [vars] [[nameSpaces] [body]]]
-        result = makeLamExp_Typedefs(CPI(typeDefList), typeDefList, result);
+        // [typeDefs] [[printers] [funcs] [vars] [[nameSpaces] [body]]]
+        result = makeLamExp_TypeDefs(CPI(typeDefList), typeDefList, result);
     }
 
     // cleanup and return

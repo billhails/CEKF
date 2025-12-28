@@ -249,7 +249,7 @@ static LamExp *inlineExp(LamExp *x) {
         case LAMEXP_TYPE_CHARACTER:
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            setLamExp_Typedefs(x, inlineTypeDefs(getLamExp_Typedefs(x)));
+            setLamExp_TypeDefs(x, inlineTypeDefs(getLamExp_TypeDefs(x)));
             break;
         case LAMEXP_TYPE_NAMESPACES:
             setLamExp_NameSpaces(x, inlineNameSpaces(getLamExp_NameSpaces(x)));

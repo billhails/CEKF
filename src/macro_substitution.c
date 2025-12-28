@@ -488,15 +488,15 @@ static LamLetRec *performLetRecSubstitutions(LamLetRec *letrec, LamMacroArgsSet 
 
 /**
  * @brief Performs macro substitutions on the body of a typedef.
- * @param typedefs The typedef to modify.
+ * @param typeDefs The typedef to modify.
  * @param symbols The current set of macro arguments.
  * @return The modified typedef.
  */
-static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typedefs, LamMacroArgsSet *symbols) {
+static LamTypeDefs *performTypeDefsSubstitutions(LamTypeDefs *typeDefs, LamMacroArgsSet *symbols) {
     ENTER(performTypeDefsSubstitutions);
-    typedefs->body = lamPerformMacroSubstitutions(typedefs->body, symbols);
+    typeDefs->body = lamPerformMacroSubstitutions(typeDefs->body, symbols);
     LEAVE(performTypeDefsSubstitutions);
-    return typedefs;
+    return typeDefs;
 }
 
 /**
@@ -704,7 +704,7 @@ LamExp *lamPerformMacroSubstitutions(LamExp *exp, LamMacroArgsSet *symbols) {
                 setLamExp_LetStar(exp, performLetStarSubstitutions(getLamExp_LetStar(exp), symbols));
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                setLamExp_Typedefs(exp, performTypeDefsSubstitutions(getLamExp_Typedefs(exp), symbols));
+                setLamExp_TypeDefs(exp, performTypeDefsSubstitutions(getLamExp_TypeDefs(exp), symbols));
                 break;
             case LAMEXP_TYPE_MATCH:
                 setLamExp_Match(exp, performMatchSubstitutions(getLamExp_Match(exp), symbols));

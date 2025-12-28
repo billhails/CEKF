@@ -793,19 +793,19 @@ static LamSequence *_normalizeSquence(LamSequence *seq) {
     return newSeq;
 }
 
-// (`(typedefs ,defs ,body)
-//   (k `(typedefs ,defs ,(normalize-term body))))
+// (`(typeDefs ,defs ,body)
+//   (k `(typeDefs ,defs ,(normalize-term body))))
 
-static LamExp *normalize_Typedefs(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Typedefs);
-    LamTypeDefs *typedefsExp = getLamExp_Typedefs(exp);
-    LamExp *newBody = normalize_term(typedefsExp->body);
+static LamExp *normalize_TypeDefs(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_TypeDefs);
+    LamTypeDefs *typeDefsExp = getLamExp_TypeDefs(exp);
+    LamExp *newBody = normalize_term(typeDefsExp->body);
     int save = PROTECT(newBody);
-    LamExp *newTypedefs = makeLamExp_Typedefs(CPI(exp), typedefsExp->typeDefs, newBody);
-    PROTECT(newTypedefs);
-    LamExp *result = INVOKE(k, newTypedefs);
+    LamExp *newTypeDefs = makeLamExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
+    PROTECT(newTypeDefs);
+    LamExp *result = INVOKE(k, newTypeDefs);
     UNPROTECT(save);
-    LEAVE(normalize_Typedefs);
+    LEAVE(normalize_TypeDefs);
     return result;
 }
 
@@ -883,7 +883,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_TupleIndex(exp, k);
                 break;
             case LAMEXP_TYPE_TYPEDEFS:
-                res = normalize_Typedefs(exp, k);
+                res = normalize_TypeDefs(exp, k);
                 break;
             case LAMEXP_TYPE_TYPEOF:
                 res = normalize_TypeOf(exp, k);
