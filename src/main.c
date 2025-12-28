@@ -56,6 +56,12 @@
 #include "tests.h"
 #endif
 
+#define TEST_CPS
+
+#ifdef TEST_CPS
+#include "lambda_cps.h"
+#endif
+
 // temporary test
 LamExp *anfNormalize2(LamExp *exp);
 #ifdef DEBUG_STRESS_GC
@@ -501,6 +507,16 @@ int main(int argc, char *argv[]) {
 #endif
         exp = alphaConvertLamExp(exp, builtIns);
         REPLACE_PROTECT(save2, exp);
+#ifdef TEST_CPS
+        LamExp *halt = newLamExp_Var(CPI(exp), newSymbol("halt"));
+        PROTECT(halt);
+        forceGcFlag = true;
+        exp = cpsTc(exp, halt);
+        REPLACE_PROTECT(save2, exp);
+        ppLamExp(exp);
+        eprintf("\n");
+        exit(0);
+#endif
 
         if (alpha_flag) {
             ppLamExp(exp);

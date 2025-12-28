@@ -85,13 +85,11 @@ void validateLastAlloc() {
  * for the various groups of generated object types, but
  * handles the primitive object types itself.
  * 
- * It will produce a fatal error if the ObjType is unrecognised.
- * 
  * @param type the ObjType to be named
- * @param p pointer to the object being named (for error reporting)
  * @return string representation of the ObjType
  */
-const char *typeName(ObjType type, void *p) {
+__attribute__((unused))
+static const char *typeName(ObjType type) {
     switch (type) {
         case OBJTYPE_OPAQUE:
             return "opaque";
@@ -121,8 +119,16 @@ const char *typeName(ObjType type, void *p) {
             return typenamePrattObj(type);
         CEKFS_OBJTYPE_CASES()
             return typenameCekfsObj(type);
-        default:
-            cant_happen("unrecognised ObjType %d in typeName at %p", type, p);
+        ANF_KONT_OBJTYPE_CASES()
+            return typenameAnf_kontObj(type);
+        CPS_KONT_OBJTYPE_CASES()
+            return typenameCps_kontObj(type);
+        default: {
+            static char buf[64];
+            snprintf(buf, sizeof(buf), "%d", type);
+            return buf;
+        }
+            
     }
 }
 
@@ -181,7 +187,7 @@ void replaceProtect(Index i, Header *obj) {
 Index protect(Header *obj) {
 #ifdef DEBUG_LOG_GC
     fprintf(errout, "PROTECT(%p:%s) -> %d (%d)\n", obj,
-            (obj == NULL ? "NULL" : typeName(obj->type, obj)), protected->sp,
+            (obj == NULL ? "NULL" : typeName(obj->type)), protected->sp,
             protected->capacity);
 #endif
     if (obj == NULL)
@@ -202,7 +208,7 @@ Index protect(Header *obj) {
 #endif
     }
 #ifdef DEBUG_LOG_GC
-    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type, obj),
+    eprintf("PROTECT(%s) done -> %d (%d)\n", typeName(obj->type),
             protected->sp, protected->capacity);
 #endif
     return protected->sp - 1;
@@ -262,9 +268,11 @@ if (forceGcFlag || bytesAllocated > nextGC) {
 
     if (newSize == 0) {
 #ifdef DEBUG_STRESS_GC
-        char *zerop = (char *) pointer;
-        for (size_t i = 0; i < oldSize; i++) {
-            zerop[i] = '\0';
+        if (forceGcFlag) {
+            char *zerop = (char *) pointer;
+            for (size_t i = 0; i < oldSize; i++) {
+                zerop[i] = '\0';
+            }
         }
 #endif
         free(pointer);
@@ -291,7 +299,7 @@ if (forceGcFlag || bytesAllocated > nextGC) {
  */
 void *allocate(size_t size, ObjType type) {
 #ifdef DEBUG_LOG_GC
-    eprintf("allocate type %s %d %lu [%d]\n", typeName(type, 0),
+    eprintf("allocate type %s %d %lu [%d]\n", typeName(type),
             bytesAllocated, size, numAlloc);
 #endif
     Header *newObj = (Header *) reallocate(NULL, (size_t) 0, size);
@@ -335,7 +343,7 @@ static void markProtectionObj(Header *h) {
  */
 void markObj(Header *h, Index i) {
 #ifdef DEBUG_LOG_GC
-    // eprintf("markObj [%d]%s %p\n", i, typeName(h->type, h), h);
+    // eprintf("markObj [%d]%s %p\n", i, typeName(h->type), h);
 #endif
     switch (h->type) {
         case OBJTYPE_OPAQUE:
@@ -383,6 +391,9 @@ void markObj(Header *h, Index i) {
         ANF_KONT_OBJTYPE_CASES()
             markAnf_kontObj(h);
             break;
+        CPS_KONT_OBJTYPE_CASES()
+            markCps_kontObj(h);
+            break;
         default:
             cant_happen("unrecognised ObjType %d in markObj at [%d]", h->type,
                         i);
@@ -422,32 +433,35 @@ void freeObj(Header *h) {
         case OBJTYPE_PROTECTION:
             freeProtectionObj(h);
             break;
-            CEKFS_OBJTYPE_CASES()
+        CEKFS_OBJTYPE_CASES()
             freeCekfsObj(h);
             break;
-            PRATT_OBJTYPE_CASES()
+        PRATT_OBJTYPE_CASES()
             freePrattObj(h);
             break;
-            ANF_OBJTYPE_CASES()
-                freeAnfObj(h);
+        ANF_OBJTYPE_CASES()
+            freeAnfObj(h);
             break;
-            AST_OBJTYPE_CASES()
-                freeAstObj(h);
+        AST_OBJTYPE_CASES()
+            freeAstObj(h);
             break;
-            LAMBDA_OBJTYPE_CASES()
-                freeLambdaObj(h);
+        LAMBDA_OBJTYPE_CASES()
+            freeLambdaObj(h);
             break;
-            TPMC_OBJTYPE_CASES()
-                freeTpmcObj(h);
+        TPMC_OBJTYPE_CASES()
+            freeTpmcObj(h);
             break;
-            TC_OBJTYPE_CASES()
-                freeTcObj(h);
+        TC_OBJTYPE_CASES()
+            freeTcObj(h);
             break;
-            BUILTINS_OBJTYPE_CASES()
-                freeBuiltinsObj(h);
+        BUILTINS_OBJTYPE_CASES()
+            freeBuiltinsObj(h);
             break;
-            ANF_KONT_OBJTYPE_CASES()
-                freeAnf_kontObj(h);
+        ANF_KONT_OBJTYPE_CASES()
+            freeAnf_kontObj(h);
+            break;
+        CPS_KONT_OBJTYPE_CASES()
+            freeCps_kontObj(h);
             break;
         default:
             cant_happen("unrecognised ObjType %d in freeObj at %p", h->type,
@@ -509,7 +523,7 @@ static void sweep() {
 #ifdef DEBUG_LOG_GC
             eprintf("sweep discard %p\n", (void *) current);
             eprintf("              type %s\n",
-                    typeName(current->type, current));
+                    typeName(current->type));
 #endif
             *previous = current->next;
             freeObj(current);
@@ -539,7 +553,7 @@ void collectGarbage() {
 #ifdef DEBUG_ALLOC
     if (lastAlloc && !MARKED(lastAlloc)) {
         cant_happen("alloc of %s (%p) immediately dropped",
-                    typeName(lastAlloc->type, lastAlloc), lastAlloc);
+                    typeName(lastAlloc->type), lastAlloc);
     }
 #endif
     sweep();

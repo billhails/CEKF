@@ -246,11 +246,14 @@ make indent            # Formats code with GNU indent
 
 ## Memory Management
 
-**Mark-and-sweep GC with protection stack**:
+**Mark-and-sweep GC with global protection stack**:
 
-- Use `PROTECT(var)` macro to shield objects during construction
-- `UNPROTECT(save)` restores the protection stack to a previously saved position
+- Use `PROTECT(obj)` macro to shield objects during construction.
+- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer.
+- `PROTECT(NULL)` just returns the current stack pointer.
+- `UNPROTECT(save)` restores the stack pointer to `save`.
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
+- **CRITICAL: Never use literal numbers with UNPROTECT** - The only valid argument to `UNPROTECT(save)` is a value returned by a previous call to `PROTECT()`. Never write `UNPROTECT(0)` or any other literal number.
 - All allocated structures have `Header` with GC metadata
 - Generated `mark*()` functions handle recursive marking
 
