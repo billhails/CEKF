@@ -42,8 +42,8 @@ PrattExportedOps --exportedRules--> PrattRecordTable
 PrattMixfixPattern --keywords--> PrattStrings
 PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
-PrattMixfixPattern --starts_with_hole--> bool
-PrattMixfixPattern --ends_with_hole--> bool
+PrattMixfixPattern --startsWithHole--> bool
+PrattMixfixPattern --endsWithHole--> bool
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression

@@ -175,7 +175,7 @@ static inline HashSymbol *utf8ToSymbol(PrattUTF8 *utf8) {
 
 static inline PrattFixity getFixityFromPattern(PrattMixfixPattern *pattern)
 {
-    if (pattern->starts_with_hole) {
+    if (pattern->startsWithHole) {
         if (pattern->arity == 1) {
             return PRATTFIXITY_TYPE_POSTFIX;
         } else {
@@ -1523,7 +1523,7 @@ AstExpression *userMixFix(PrattRecord *record,
         pushAstExpressionArray(args, lhs);
         UNPROTECT(save2);
         arity--;
-        if (arity > 0 || !(pattern->ends_with_hole)) {
+        if (arity > 0 || !(pattern->endsWithHole)) {
             // Consume the next keyword
             PrattUTF8 *kw = keywords->entries[kwIndex++];
             PrattToken *nextTok = peek(parser);

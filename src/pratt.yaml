@@ -144,8 +144,8 @@ structs:
             keywords: PrattStrings
             arity: int
             associativity: PrattAssoc=PRATTASSOC_TYPE_NONE
-            starts_with_hole: bool
-            ends_with_hole: bool
+            startsWithHole: bool
+            endsWithHole: bool
 
 enums:
     PrattAssoc:
