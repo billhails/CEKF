@@ -148,8 +148,8 @@ static bool patternMatches(TpmcPattern *constructor, TpmcPattern *pattern) {
                 bool res = isComparison
                     || (constructor->pattern->type ==
                         TPMCPATTERNVALUE_TYPE_BIGINTEGER
-                        && cmpMaybeBigInt(constructor->pattern->val.biginteger,
-                                     pattern->pattern->val.biginteger) == 0);
+                        && cmpMaybeBigInt(constructor->pattern->val.bigInteger,
+                                     pattern->pattern->val.bigInteger) == 0);
                 return res;
             }
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:{
@@ -753,7 +753,7 @@ static TpmcState *mixture(TpmcMatrix *M, TpmcStateArray *finalStates,
                             break;
                         }
                     } else if (c->pattern->type == TPMCPATTERNVALUE_TYPE_BIGINTEGER) {
-                        if (cmpMaybeBigInt(c->pattern->val.biginteger, existingArc->test->pattern->val.biginteger) == 0) {
+                        if (cmpMaybeBigInt(c->pattern->val.bigInteger, existingArc->test->pattern->val.bigInteger) == 0) {
                             alreadyProcessed = true;
                             break;
                         }

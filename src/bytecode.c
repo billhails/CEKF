@@ -682,21 +682,21 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case AEXP_TYPE_BIGINTEGER:{
-                switch (x->val.biginteger->type) {
+                switch (x->val.bigInteger->type) {
                     case BI_SMALL:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_STDINT_IMAG : BYTECODES_TYPE_STDINT);
-                        addInteger(b, x->val.biginteger->small);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_STDINT_IMAG : BYTECODES_TYPE_STDINT);
+                        addInteger(b, x->val.bigInteger->small);
                         break;
                     case BI_BIG:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_BIGINT_IMAG : BYTECODES_TYPE_BIGINT);
-                        addBig(b, x->val.biginteger->big);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_BIGINT_IMAG : BYTECODES_TYPE_BIGINT);
+                        addBig(b, x->val.bigInteger->big);
                         break;
                     case BI_IRRATIONAL:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_IRRATIONAL_IMAG : BYTECODES_TYPE_IRRATIONAL);
-                        addIrrational(b, x->val.biginteger->irrational);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_IRRATIONAL_IMAG : BYTECODES_TYPE_IRRATIONAL);
+                        addIrrational(b, x->val.bigInteger->irrational);
                         break;
                     default:
-                        cant_happen("unsupported MaybeBigInt type %d", x->val.biginteger->type);
+                        cant_happen("unsupported MaybeBigInt type %d", x->val.bigInteger->type);
                 }
             }
             break;

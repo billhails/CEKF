@@ -246,7 +246,7 @@ unions:
             lam: AexpLam
             var: HashSymbol
             annotatedVar: AexpAnnotatedVar
-            biginteger: MaybeBigInt
+            bigInteger: MaybeBigInt
             littleinteger: int
             character: character
             prim: AexpPrimApp

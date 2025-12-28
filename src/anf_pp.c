@@ -363,7 +363,7 @@ void ppAexp(Aexp *x) {
             ppAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, x->val.biginteger);
+            fprintMaybeBigInt(errout, x->val.bigInteger);
             break;
         case AEXP_TYPE_LITTLEINTEGER:
             eprintf("%d", x->val.littleinteger);

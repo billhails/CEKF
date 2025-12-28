@@ -74,7 +74,7 @@ CexpCondCases --intCases--> CexpIntCondCases
 Aexp --lam--> AexpLam
 Aexp --var--> HashSymbol
 Aexp --annotatedVar--> AexpAnnotatedVar
-Aexp --biginteger--> MaybeBigInt
+Aexp --bigInteger--> MaybeBigInt
 Aexp --littleinteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp

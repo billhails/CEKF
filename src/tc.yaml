@@ -163,7 +163,7 @@ unions:
             thunk: TcThunk
             var: TcVar
             smallinteger: void_ptr
-            biginteger: void_ptr
+            bigInteger: void_ptr
             character: void_ptr
             unknown: HashSymbol
             opaque: HashSymbol

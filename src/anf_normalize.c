@@ -106,7 +106,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
         case LAMEXP_TYPE_STDINT:
             return normalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp), tail);
         case LAMEXP_TYPE_BIGINTEGER:
-            return normalizeMaybeBigInteger(CPI(lamExp), getLamExp_Biginteger(lamExp), tail);
+            return normalizeMaybeBigInteger(CPI(lamExp), getLamExp_BigInteger(lamExp), tail);
         case LAMEXP_TYPE_PRIM:
             return normalizePrim(getLamExp_Prim(lamExp), tail);
         case LAMEXP_TYPE_AMB:
@@ -826,7 +826,7 @@ static Aexp *aexpNormalizeVar(ParserInfo I, HashSymbol *var) {
 }
 
 static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer) {
-    return newAexp_Biginteger(I, integer);
+    return newAexp_BigInteger(I, integer);
 }
 
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer) {
@@ -922,7 +922,7 @@ static Aexp *replaceLamExp(LamExp *lamExp, LamExpTable *replacements) {
             res = aexpNormalizeVar(CPI(lamExp), getLamExp_Var(lamExp));
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            res = aexpNormalizeMaybeBigInteger(CPI(lamExp), getLamExp_Biginteger(lamExp));
+            res = aexpNormalizeMaybeBigInteger(CPI(lamExp), getLamExp_BigInteger(lamExp));
             break;
         case LAMEXP_TYPE_STDINT:
             res = aexpNormalizeStdInteger(CPI(lamExp), getLamExp_Stdint(lamExp));

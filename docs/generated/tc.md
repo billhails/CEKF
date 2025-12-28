@@ -29,7 +29,7 @@ TcType --pair--> TcPair
 TcType --thunk--> TcThunk
 TcType --var--> TcVar
 TcType --smallinteger--> void_ptr
-TcType --biginteger--> void_ptr
+TcType --bigInteger--> void_ptr
 TcType --character--> void_ptr
 TcType --unknown--> HashSymbol
 TcType --opaque--> HashSymbol

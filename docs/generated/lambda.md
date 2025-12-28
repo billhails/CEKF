@@ -119,7 +119,7 @@ LamExp --amb--> LamAmb
 LamExp --apply--> LamApply
 LamExp --args--> LamArgs
 LamExp --back--> void_ptr
-LamExp --biginteger--> MaybeBigInt
+LamExp --bigInteger--> MaybeBigInt
 LamExp --bindings--> LamBindings
 LamExp --callCC--> LamExp
 LamExp --character--> character

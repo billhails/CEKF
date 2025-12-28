@@ -1358,7 +1358,7 @@ static LamExp *makeUnaryNeg(LamArgs *args) {
     CHECK_ONE_ARG(makeUnaryNeg, args);
     MaybeBigInt *num = fakeBigInt(0, false);
     int save = PROTECT(num);
-    LamExp *zero = newLamExp_Biginteger(CPI(args), num);
+    LamExp *zero = newLamExp_BigInteger(CPI(args), num);
     PROTECT(zero);
     args = newLamArgs(CPI(args), zero, args);
     PROTECT(args);
@@ -2202,7 +2202,7 @@ static LamExp *convertAssertion(AstExpression *value, LamContext *env) {
     PROTECT(args);
     MaybeBigInt *num = fakeBigInt(exp->_yy_parser_info.lineno, false);
     PROTECT(num);
-    LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
+    LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
     PROTECT(lineNo);
     args = newLamArgs(CPI(lineNo), lineNo, args);
     PROTECT(args);
@@ -2234,7 +2234,7 @@ static LamExp *convertError(AstExpression *value, LamContext *env) {
     PROTECT(args);
     MaybeBigInt *num = fakeBigInt(value->_yy_parser_info.lineno, false);
     PROTECT(num);
-    LamExp *lineNo = newLamExp_Biginteger(CPI(exp), num);
+    LamExp *lineNo = newLamExp_BigInteger(CPI(exp), num);
     PROTECT(lineNo);
     args = newLamArgs(CPI(lineNo), lineNo, args);
     PROTECT(args);
@@ -2273,7 +2273,7 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             break;
         case AST_EXPRESSION_TYPE_NUMBER:
             DEBUG("number");
-            result = newLamExp_Biginteger(CPI(expression), getAstExpression_Number(expression));
+            result = newLamExp_BigInteger(CPI(expression), getAstExpression_Number(expression));
             break;
         case AST_EXPRESSION_TYPE_CHARACTER:
             DEBUG("character");

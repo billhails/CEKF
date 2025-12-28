@@ -41,7 +41,7 @@ TpmcPatternValue --comparison--> TpmcComparisonPattern
 TpmcPatternValue --assignment--> TpmcAssignmentPattern
 TpmcPatternValue --wildcard--> void_ptr
 TpmcPatternValue --character--> character
-TpmcPatternValue --biginteger--> MaybeBigInt
+TpmcPatternValue --bigInteger--> MaybeBigInt
 TpmcPatternValue --constructor--> TpmcConstructorPattern
 TpmcPatternValue --tuple--> TpmcPatternArray
 TpmcStateValue --test--> TpmcTestState

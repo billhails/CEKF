@@ -1819,7 +1819,7 @@ TcType *makeSmallInteger() {
 }
 
 static TcType *makeBigInteger() {
-    TcType *res = newTcType_Biginteger();
+    TcType *res = newTcType_BigInteger();
     return res;
 }
 

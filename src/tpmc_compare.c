@@ -124,7 +124,7 @@ bool tpmcPatternValueEq(TpmcPatternValue *a, TpmcPatternValue *b) {
         case TPMCPATTERNVALUE_TYPE_CHARACTER:
             return a->val.character == b->val.character;
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-            return cmpMaybeBigInt(a->val.biginteger, b->val.biginteger) == 0;
+            return cmpMaybeBigInt(a->val.bigInteger, b->val.bigInteger) == 0;
         case TPMCPATTERNVALUE_TYPE_CONSTRUCTOR:
             return tpmcConstructorPatternEq(a->val.constructor,
                                             b->val.constructor);

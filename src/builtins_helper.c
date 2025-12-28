@@ -110,7 +110,7 @@ TcType *pushAnyArg(BuiltInArgs *args) {
 }
 
 TcType *pushIntegerArg(BuiltInArgs *args) {
-    TcType *integer = newTcType_Biginteger();
+    TcType *integer = newTcType_BigInteger();
     int save = PROTECT(integer);
     pushBuiltInArgs(args, integer);
     UNPROTECT(save);
@@ -204,7 +204,7 @@ static void registerRand(BuiltIns *registry) {
 static void registerIncr(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *integer = newTcType_Biginteger();
+    TcType *integer = newTcType_BigInteger();
     pushNewBuiltIn(registry, "incr", integer, args, (void *)builtin_incr);
     UNPROTECT(save);
 }
@@ -221,7 +221,7 @@ static void registerAssert(BuiltIns *registry) {
 static void registerOrd(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
-    TcType *integer = newTcType_Biginteger();
+    TcType *integer = newTcType_BigInteger();
     PROTECT(integer);
     pushCharacterArg(args);
     pushNewBuiltIn(registry, "ord", integer, args, (void *)builtin_ord);

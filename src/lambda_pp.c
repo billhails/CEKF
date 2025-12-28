@@ -86,7 +86,7 @@ void ppLamExp(LamExp *exp) {
             ppHashSymbol(getLamExp_Var(exp));
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, getLamExp_Biginteger(exp));
+            fprintMaybeBigInt(errout, getLamExp_BigInteger(exp));
             break;
         case LAMEXP_TYPE_STDINT:
             eprintf("%d", getLamExp_Stdint(exp));

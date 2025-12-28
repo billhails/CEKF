@@ -398,7 +398,7 @@ static void registerSQLitePrepare(BuiltIns *registry) {
     int save = PROTECT(args);
     TcType *sqlite = makeSqliteType();
     PROTECT(sqlite);
-    TcType *bigIntType = newTcType_Biginteger();
+    TcType *bigIntType = newTcType_BigInteger();
     PROTECT(bigIntType);
     TcType *string = makeStringType();
     PROTECT(string);
@@ -447,7 +447,7 @@ static void registerSQLiteBind(BuiltIns *registry) {
     PROTECT(statementType);
     TcType *basicListType = makeListBasicType();
     PROTECT(basicListType);
-    TcType *bigIntType = newTcType_Biginteger();
+    TcType *bigIntType = newTcType_BigInteger();
     PROTECT(bigIntType);
     pushBuiltInArgs(args, statementType);
     pushBuiltInArgs(args, basicListType);

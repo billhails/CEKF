@@ -195,7 +195,7 @@ static TpmcPattern *makeTuplePattern(AstFargList *args, LamContext *env) {
 }
 
 static TpmcPattern *makeMaybeBigIntegerPattern(MaybeBigInt *number) {
-    TpmcPatternValue *val = newTpmcPatternValue_Biginteger(number);
+    TpmcPatternValue *val = newTpmcPatternValue_BigInteger(number);
     int save = PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);
     UNPROTECT(save);
