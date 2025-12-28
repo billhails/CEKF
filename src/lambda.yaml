@@ -334,11 +334,11 @@ structs:
             exp: LamExp
             printer: LamExp=NULL
 
-    LamTypeof:
+    LamTypeOf:
         meta:
-            brief: A typeof expression
+            brief: A typeOf expression
             description: >-
-                This structure represents a typeof expression that returns
+                This structure represents a typeOf expression that returns
                 a string representation of the type of an expression.
         data:
             exp: LamExp
@@ -544,7 +544,7 @@ unions:
             tag: LamExp
             tupleIndex: LamTupleIndex
             typedefs: LamTypeDefs
-            typeOf: LamTypeof
+            typeOf: LamTypeOf
             var: HashSymbol
 
     LamLookupOrSymbol:

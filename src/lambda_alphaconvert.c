@@ -61,7 +61,7 @@ static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context);
 static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context);
 static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context);
 static LamPrint *visitLamPrint(LamPrint *node, LamAlphaEnv *context);
-static LamTypeof *visitLamTypeof(LamTypeof *node, LamAlphaEnv *context);
+static LamTypeOf *visitLamTypeOf(LamTypeOf *node, LamAlphaEnv *context);
 static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context);
 static LamTypeDefList *visitLamTypeDefList(LamTypeDefList *node, LamAlphaEnv *context);
 static LamTypeDef *visitLamTypeDef(LamTypeDef *node, LamAlphaEnv *context);
@@ -838,7 +838,7 @@ static LamPrint *visitLamPrint(LamPrint *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeof *visitLamTypeof(LamTypeof *node, LamAlphaEnv *context) {
+static LamTypeOf *visitLamTypeOf(LamTypeOf *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
     bool changed = false;
@@ -851,7 +851,7 @@ static LamTypeof *visitLamTypeof(LamTypeof *node, LamAlphaEnv *context) {
 
     if (changed) {
         // Create new node with modified fields
-        LamTypeof *result = newLamTypeof(CPI(node), new_exp);
+        LamTypeOf *result = newLamTypeOf(CPI(node), new_exp);
         result->typestring = new_typestring;
         UNPROTECT(save);
         return result;
@@ -1403,9 +1403,9 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
             break;
         }
         case LAMEXP_TYPE_TYPEOF: {
-            // LamTypeof
-            LamTypeof *variant = getLamExp_TypeOf(node);
-            LamTypeof *new_variant = visitLamTypeof(variant, context);
+            // LamTypeOf
+            LamTypeOf *variant = getLamExp_TypeOf(node);
+            LamTypeOf *new_variant = visitLamTypeOf(variant, context);
             if (new_variant != variant) {
                 PROTECT(new_variant);
                 result = newLamExp_TypeOf(CPI(node), new_variant);

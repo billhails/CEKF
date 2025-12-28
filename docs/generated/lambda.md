@@ -81,8 +81,8 @@ LamAmb --left--> LamExp
 LamAmb --right--> LamExp
 LamPrint --exp--> LamExp
 LamPrint --printer--> LamExp
-LamTypeof --exp--> LamExp
-LamTypeof --typestring--> LamExp
+LamTypeOf --exp--> LamExp
+LamTypeOf --typestring--> LamExp
 LamTypeDefs --typeDefs--> LamTypeDefList
 LamTypeDefs --body--> LamExp
 LamTypeDefList --typeDef--> LamTypeDef
@@ -147,7 +147,7 @@ LamExp --stdint--> int
 LamExp --tag--> LamExp
 LamExp --tupleIndex--> LamTupleIndex
 LamExp --typedefs--> LamTypeDefs
-LamExp --typeOf--> LamTypeof
+LamExp --typeOf--> LamTypeOf
 LamExp --var--> HashSymbol
 LamLookupOrSymbol --symbol--> HashSymbol
 LamLookupOrSymbol --lookup--> LamLookupSymbol

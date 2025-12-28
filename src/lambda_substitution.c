@@ -136,7 +136,7 @@ static LamLookup *performLookupSubstitutions(LamLookup *lookup, TpmcSubstitution
     return lookup;
 }
 
-static LamTypeof *performTypeofSubstitutions(LamTypeof *typeOf, TpmcSubstitutionTable
+static LamTypeOf *performTypeOfSubstitutions(LamTypeOf *typeOf, TpmcSubstitutionTable
                                              *substitutions) {
     typeOf->exp = lamPerformSubstitutions(typeOf->exp, substitutions);
     return typeOf;
@@ -455,7 +455,7 @@ LamExp *lamPerformSubstitutions(LamExp *exp,
                 break;
             case LAMEXP_TYPE_TYPEOF:
                 setLamExp_TypeOf(exp,
-                    performTypeofSubstitutions(getLamExp_TypeOf(exp), substitutions));
+                    performTypeOfSubstitutions(getLamExp_TypeOf(exp), substitutions));
                 break;
             default:
                 cant_happen

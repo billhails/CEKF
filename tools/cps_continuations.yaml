@@ -592,11 +592,11 @@ continuations:
 
   TkTypeOf:
     transformer: T_k
-    key: k_typeof
+    key: k_typeOf
     context: |
-      (E.typeof_expr(expr)) {
+      (E.typeOf_expr(expr)) {
         T_k(expr, fn (sexpr) {
-          k(E.typeof_expr(sexpr))
+          k(E.typeOf_expr(sexpr))
         })
       }
     free_vars:
@@ -604,11 +604,11 @@ continuations:
 
   TcTypeOf:
     transformer: T_k
-    key: c_typeof
+    key: c_typeOf
     context: |
-      (E.typeof_expr(expr)) {
+      (E.typeOf_expr(expr)) {
         T_k(expr, fn (sexpr) {
-          E.apply(c, [E.typeof_expr(sexpr)])
+          E.apply(c, [E.typeOf_expr(sexpr)])
         })
       }
     free_vars:

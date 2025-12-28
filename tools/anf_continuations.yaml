@@ -350,15 +350,15 @@ continuations:
     free_vars:
       k: AnfKont
 
-  normalizeTypeof:
+  normalizeTypeOf:
     key: typeOf
-    brief: "Continuation for typeof expression"
+    brief: "Continuation for typeOf expression"
     context: |
       (match e
           ...
-          (`(typeof ,e0)
+          (`(typeOf ,e0)
               (normalize-name e0
-                  [λ (anfE0) (k `(typeof ,anfE0))])))
+                  [λ (anfE0) (k `(typeOf ,anfE0))])))
     free_vars:
       k: AnfKont
 

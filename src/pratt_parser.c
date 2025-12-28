@@ -113,7 +113,7 @@ static AstExpression *makeString(PrattRecord *, PrattParser *, AstExpression *, 
 static AstExpression *nestexpr(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *passert(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *print(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
-static AstExpression *typeofExp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
+static AstExpression *typeOfExp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *switchExp(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *tuple(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
 static AstExpression *unsafe(PrattRecord *, PrattParser *, AstExpression *, PrattToken *);
@@ -279,7 +279,7 @@ static PrattParser *makePrattParser(void)
     addRecord(table, TOK_SWITCH(), switchExp, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_TUPLE(), tuple, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_TYPEDEF(), NULL, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_TYPEOF(), typeofExp, 11, NULL, 0, NULL, 0);
+    addRecord(table, TOK_TYPEOF(), typeOfExp, 11, NULL, 0, NULL, 0);
     addRecord(table, TOK_UNSAFE(), unsafe, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_WILDCARD(), wildcard, 0, NULL, 0, NULL, 0);
 
@@ -3807,16 +3807,16 @@ static AstExpression *print(PrattRecord *record,
 /**
  * @brief parselet triggered by a prefix `typeof` token.
  */
-static AstExpression *typeofExp(PrattRecord *record,
+static AstExpression *typeOfExp(PrattRecord *record,
                                 PrattParser *parser,
                                 AstExpression *lhs __attribute__((unused)),
                                 PrattToken *tok __attribute__((unused)))
 {
-    ENTER(typeofExp);
+    ENTER(typeOfExp);
     AstExpression *exp = expressionPrecedence(parser, record->prefix.prec);
     int save = PROTECT(exp);
     AstExpression *res = makeAstExpression_TypeOf(CPI(exp), exp);
-    LEAVE(typeofExp);
+    LEAVE(typeOfExp);
     UNPROTECT(save);
     return res;
 }

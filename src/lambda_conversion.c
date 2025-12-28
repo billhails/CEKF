@@ -451,21 +451,21 @@ static LamExp *lamConvertPrint(AstPrint *print, LamContext *context) {
 }
 
 /**
- * @brief Converts an AST Typeof Expression to a lambda expression that returns the type as a string.
+ * @brief Converts an AST TypeOf Expression to a lambda expression that returns the type as a string.
  *
- * @param typeofExp The AST Typeof Expression to convert.
+ * @param typeOfExp The AST TypeOf Expression to convert.
  * @param context The lambda context to use.
  * @return The resulting lambda expression.
  */
-static LamExp *lamConvertTypeof(AstTypeof *typeofExp, LamContext *context) {
-    ENTER(lamConvertTypeof);
-    LamExp *exp = convertExpression(typeofExp->exp, context);
+static LamExp *lamConvertTypeOf(AstTypeOf *typeOfExp, LamContext *context) {
+    ENTER(lamConvertTypeOf);
+    LamExp *exp = convertExpression(typeOfExp->exp, context);
     int save = PROTECT(exp);
-    LamTypeof *lamTypeof = newLamTypeof(CPI(exp), exp);
-    PROTECT(lamTypeof);
-    LamExp *result = newLamExp_TypeOf(CPI(lamTypeof), lamTypeof);
+    LamTypeOf *lamTypeOf = newLamTypeOf(CPI(exp), exp);
+    PROTECT(lamTypeOf);
+    LamExp *result = newLamExp_TypeOf(CPI(lamTypeOf), lamTypeOf);
     UNPROTECT(save);
-    LEAVE(lamConvertTypeof);
+    LEAVE(lamConvertTypeOf);
     return result;
 }
 
@@ -2300,8 +2300,8 @@ static LamExp *convertExpression(AstExpression *expression, LamContext *env) {
             result = lamConvertPrint(getAstExpression_Print(expression), env);
             break;
         case AST_EXPRESSION_TYPE_TYPEOF:
-            DEBUG("typeof");
-            result = lamConvertTypeof(getAstExpression_TypeOf(expression), env);
+            DEBUG("typeOf");
+            result = lamConvertTypeOf(getAstExpression_TypeOf(expression), env);
             break;
         case AST_EXPRESSION_TYPE_TUPLE:
             DEBUG("tuple");

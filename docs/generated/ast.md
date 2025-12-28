@@ -83,7 +83,7 @@ AstIff --test--> AstExpression
 AstIff --consequent--> AstNest
 AstIff --alternative--> AstNest
 AstPrint --exp--> AstExpression
-AstTypeof --exp--> AstExpression
+AstTypeOf --exp--> AstExpression
 AstStruct --symbol--> AstLookupOrSymbol
 AstStruct --expressions--> AstTaggedExpressions
 AstTaggedExpressions --tag--> HashSymbol
@@ -127,7 +127,7 @@ AstExpression --fun--> AstCompositeFunction
 AstExpression --nest--> AstNest
 AstExpression --iff--> AstIff
 AstExpression --print--> AstPrint
-AstExpression --typeOf--> AstTypeof
+AstExpression --typeOf--> AstTypeOf
 AstExpression --tuple--> AstExpressions
 AstExpression --env--> void_ptr
 AstExpression --structure--> AstStruct

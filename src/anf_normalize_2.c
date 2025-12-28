@@ -593,25 +593,25 @@ static LamExp *normalizePrintKont(LamExp *anfE0, NormalizePrintKontEnv *env) {
     return result;
 }
 
-// (`(typeof ,e0)
+// (`(typeOf ,e0)
 //     (normalize-name e0
-//         [λ (anfE0) (k `(typeof ,anfE0))]))
+//         [λ (anfE0) (k `(typeOf ,anfE0))]))
 
-static LamExp *normalize_Typeof(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Typeof);
-    LamTypeof *typeOfExp = getLamExp_TypeOf(exp);
-    AnfKont *k2 = makeKont_normalizeTypeof(k);
+static LamExp *normalize_TypeOf(LamExp *exp, AnfKont *k) {
+    ENTER(normalize_TypeOf);
+    LamTypeOf *typeOfExp = getLamExp_TypeOf(exp);
+    AnfKont *k2 = makeKont_normalizeTypeOf(k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(typeOfExp->exp, k2);
     UNPROTECT(save);
-    LEAVE(normalize_Typeof);
+    LEAVE(normalize_TypeOf);
     return result;
 }
 
-static LamExp *normalizeTypeofKont(LamExp *anfE0, NormalizeTypeofKontEnv *env) {
-    LamExp *newTypeof = makeLamExp_TypeOf(CPI(anfE0), anfE0);
-    int save = PROTECT(newTypeof);
-    LamExp *result = INVOKE(env->k, newTypeof);
+static LamExp *normalizeTypeOfKont(LamExp *anfE0, NormalizeTypeOfKontEnv *env) {
+    LamExp *newTypeOf = makeLamExp_TypeOf(CPI(anfE0), anfE0);
+    int save = PROTECT(newTypeOf);
+    LamExp *result = INVOKE(env->k, newTypeOf);
     UNPROTECT(save);
     return result;
 }
@@ -886,7 +886,7 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
                 res = normalize_Typedefs(exp, k);
                 break;
             case LAMEXP_TYPE_TYPEOF:
-                res = normalize_Typeof(exp, k);
+                res = normalize_TypeOf(exp, k);
                 break;
             default:
                 cant_happen("normalize: unhandled LamExp type %s", lamExpTypeName(exp->type));

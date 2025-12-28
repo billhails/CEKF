@@ -54,7 +54,7 @@ static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
 static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
 static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
 static LamExp *cpsTcLamPrint(LamPrint *node, LamExp *c);
-static LamExp *cpsTcLamTypeof(LamTypeof *node, LamExp *c);
+static LamExp *cpsTcLamTypeOf(LamTypeOf *node, LamExp *c);
 static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c);
 static LamExp *cpsTcLamExp(LamExp *node, LamExp *c);
 static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c);
@@ -713,27 +713,27 @@ LamExp *TcPrintKont(LamExp *sexpr, TcPrintKontEnv *env) {
 }
 
 /*
-    (E.typeof_expr(expr)) {
+    (E.typeOf_expr(expr)) {
         T_k(expr, fn (sexpr) {
-            E.apply(c, [E.typeof_expr(sexpr)])
+            E.apply(c, [E.typeOf_expr(sexpr)])
         })
     }
 */
-static LamExp *cpsTcLamTypeof(LamTypeof *node, LamExp *c) {
-    ENTER(cpsTcLamTypeof);
+static LamExp *cpsTcLamTypeOf(LamTypeOf *node, LamExp *c) {
+    ENTER(cpsTcLamTypeOf);
     CpsKont *k = makeKont_TcTypeOf(c);
     int save = PROTECT(k);
     LamExp *result = cpsTk(node->exp, k);
     UNPROTECT(save);
-    LEAVE(cpsTcLamTypeof);
+    LEAVE(cpsTcLamTypeOf);
     return result;
 }
 
 LamExp *TcTypeOfKont(LamExp *sexpr, TcTypeOfKontEnv *env) {
     ENTER(TcTypeOfKont);
-    LamExp *typeof_exp = makeLamExp_TypeOf(CPI(sexpr), sexpr);
-    int save = PROTECT(typeof_exp);
-    LamArgs *args = newLamArgs(CPI(sexpr), typeof_exp, NULL);
+    LamExp *typeOf_exp = makeLamExp_TypeOf(CPI(sexpr), sexpr);
+    int save = PROTECT(typeOf_exp);
+    LamArgs *args = newLamArgs(CPI(sexpr), typeOf_exp, NULL);
     PROTECT(args);
     LamExp *result = makeLamExp_Apply(CPI(sexpr), env->c, args);
     UNPROTECT(save);
@@ -886,7 +886,7 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         case LAMEXP_TYPE_TYPEDEFS:
             return cpsTcLamTypeDefs(getLamExp_Typedefs(node), c);
         case LAMEXP_TYPE_TYPEOF:
-            return cpsTcLamTypeof(getLamExp_TypeOf(node), c);
+            return cpsTcLamTypeOf(getLamExp_TypeOf(node), c);
         default:
             cant_happen("unrecognized LamExp type %s", lamExpTypeName(node->type));
     }
