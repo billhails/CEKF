@@ -116,8 +116,8 @@ static LamPrint *performPrintSimplifications(LamPrint *print) {
 
 static LamTypeOf *performTypeOfSimplifications(LamTypeOf *typeOf) {
     typeOf->exp = lamPerformSimplifications(typeOf->exp);
-    if (typeOf->typestring != NULL) {
-        typeOf->typestring = lamPerformSimplifications(typeOf->typestring);
+    if (typeOf->typeString != NULL) {
+        typeOf->typeString = lamPerformSimplifications(typeOf->typeString);
     }
     return typeOf;
 }

@@ -342,7 +342,7 @@ structs:
                 a string representation of the type of an expression.
         data:
             exp: LamExp
-            typestring: LamExp=NULL # assgned by the type checker
+            typeString: LamExp=NULL # assgned by the type checker
 
     LamTypeDefs:
         meta:

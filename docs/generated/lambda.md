@@ -82,7 +82,7 @@ LamAmb --right--> LamExp
 LamPrint --exp--> LamExp
 LamPrint --printer--> LamExp
 LamTypeOf --exp--> LamExp
-LamTypeOf --typestring--> LamExp
+LamTypeOf --typeString--> LamExp
 LamTypeDefs --typeDefs--> LamTypeDefList
 LamTypeDefs --body--> LamExp
 LamTypeDefList --typeDef--> LamTypeDef

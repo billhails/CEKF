@@ -845,14 +845,14 @@ static LamTypeOf *visitLamTypeOf(LamTypeOf *node, LamAlphaEnv *context) {
     LamExp *new_exp = visitLamExp(node->exp, context);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
-    LamExp *new_typestring = visitLamExp(node->typestring, context);
-    PROTECT(new_typestring);
-    changed = changed || (new_typestring != node->typestring);
+    LamExp *new_typeString = visitLamExp(node->typeString, context);
+    PROTECT(new_typeString);
+    changed = changed || (new_typeString != node->typeString);
 
     if (changed) {
         // Create new node with modified fields
         LamTypeOf *result = newLamTypeOf(CPI(node), new_exp);
-        result->typestring = new_typestring;
+        result->typeString = new_typeString;
         UNPROTECT(save);
         return result;
     }
