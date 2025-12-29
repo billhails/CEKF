@@ -172,5 +172,9 @@ fn delete(x, s) {
 }
 
 fn make (keys, values) {
-    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, E, list.zip(keys, values))
+    add_lists(keys, values, E)
+}
+
+fn add_lists (keys, values, dict) {
+    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, dict, list.zip(keys, values))
 }

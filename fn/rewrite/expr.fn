@@ -217,7 +217,7 @@ namespace
             x;
         }
         (x=cond_expr(test, branches)) {
-            puts("(cond");
+            puts("(cond ");
             print_expr(test);
             list.for_each (fn {
                 (#(e1, e2)) {
@@ -341,6 +341,9 @@ namespace
 
             fn to_expr {
                 (atom("back")) { back_expr }
+                (atom("true")) { constant("true") }
+                (atom("false")) { constant("false") }
+                (atom("null")) { constant("null") }
                 (atom(['\'', c, '\''])) { character(c) }
                 (sexp([atom("env")])) { env_expr }
                 (sexp([atom("error")])) { error_expr }
@@ -408,10 +411,12 @@ namespace
                 (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
+                (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
                 (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
                 (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
+                (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
                 (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
                 (sexp([atom("tag"), e])) { tag(to_expr(e)) }
                 (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
