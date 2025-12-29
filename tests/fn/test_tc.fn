@@ -18,8 +18,8 @@ let isEven = fn (n) {
     };
 in
     // These should all have correct types
-    assert(typeof isEven == "(number) -> bool");
-    assert(typeof isOdd == "(number) -> bool");
+    assert(typeof isEven == "number -> bool");
+    assert(typeof isOdd == "number -> bool");
     print("Test 1 passed: Simple mutual recursion");
 };
 {
@@ -39,8 +39,8 @@ let foo = fn (x) {
         }
     };
 in
-    assert(typeof foo == "(number) -> number");
-    assert(typeof bar == "(number) -> number");
+    assert(typeof foo == "number -> number");
+    assert(typeof bar == "number -> number");
     print("Test 2 passed: Mutual recursion with arithmetic");
 };
 {
@@ -67,9 +67,9 @@ let a = fn (n) {
         }
     };
 in
-    assert(typeof a == "(number) -> number");
-    assert(typeof b == "(number) -> number");
-    assert(typeof c == "(number) -> number");
+    assert(typeof a == "number -> number");
+    assert(typeof b == "number -> number");
+    assert(typeof c == "number -> number");
     print("Test 3 passed: Three-way mutual recursion");
 };
 {
@@ -87,8 +87,8 @@ let mapEven = fn (lst) {
         }
     };
 in
-    assert(typeof mapEven == "(list(number)) -> list(number)");
-    assert(typeof mapOdd == "(list(number)) -> list(number)");
+    assert(typeof mapEven == "list(number) -> list(number)");
+    assert(typeof mapOdd == "list(number) -> list(number)");
     print("Test 4 passed: Mutual recursion with lists");
 };
 {
@@ -104,9 +104,9 @@ in
     print("makeAdder type: " @@ typeof makeAdder);
     print("useMultiplier type: " @@ typeof useMultiplier);
     print("multiplier type: " @@ typeof multiplier);
-    assert(typeof makeAdder == "(number) -> (number) -> number");
+    assert(typeof makeAdder == "number -> number -> number");
     assert(typeof multiplier == "#() -> number");  // Thunk type
-    assert(typeof useMultiplier == "(number) -> number");
+    assert(typeof useMultiplier == "number -> number");
     print("Test 5 passed: Higher-order functions with thunks");
 };
 {
@@ -143,7 +143,7 @@ let factorial = fn (n) {
         }
     };
 in
-    assert(typeof factorial == "(number) -> number");
+    assert(typeof factorial == "number -> number");
     assert(factorial(5) == 120);
     print("Test 7 passed: Self-recursive function");
 };

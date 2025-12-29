@@ -71,9 +71,14 @@ void ppTcType(TcType *type) {
 }
 
 void ppTcFunction(TcFunction *function) {
-    eprintf("(");
-    ppTcType(function->arg);
-    eprintf(") -> ");
+    if (function->arg->type == TCTYPE_TYPE_FUNCTION) {
+        eprintf("(");
+        ppTcType(function->arg);
+        eprintf(")");
+    } else {
+        ppTcType(function->arg);
+    }
+    eprintf(" -> ");
     ppTcType(function->result);
 }
 
@@ -91,7 +96,7 @@ void ppTcThunk(TcThunk *thunk) {
 }
 
 void ppTcVar(TcVar *var) {
-    eprintf("<var>%s", var->name->name);
+    eprintf("%s", var->name->name);
     if (var->instance != NULL) {
         eprintf(" [");
         ppTcType(var->instance);
@@ -283,9 +288,14 @@ static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *ca
 }
 
 static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity) {
-    appendToBuffer(buffer, size, capacity, "(");
-    tcTypeToStringHelper(function->arg, buffer, size, capacity);
-    appendToBuffer(buffer, size, capacity, ") -> ");
+    if (function->arg->type == TCTYPE_TYPE_FUNCTION) {
+        appendToBuffer(buffer, size, capacity, "(");
+        tcTypeToStringHelper(function->arg, buffer, size, capacity);
+        appendToBuffer(buffer, size, capacity, ")");
+    } else {
+        tcTypeToStringHelper(function->arg, buffer, size, capacity);
+    }
+    appendToBuffer(buffer, size, capacity, " -> ");
     tcTypeToStringHelper(function->result, buffer, size, capacity);
 }
 

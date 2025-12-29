@@ -83,10 +83,10 @@ static LamNameSpaceArray *visitLamNameSpaceArray(LamNameSpaceArray *node, LamAlp
 int alpha_flag = 0;
 char *alpha_conversion_function = NULL;
 
-static void addNameToContext(HashSymbol *name, LamAlphaEnv *context) {
+static void addUniqueNameToContext(HashSymbol *name, LamAlphaEnv *context) {
 #ifdef SAFETY_CHECKS
     if (context == NULL) {
-        cant_happen("addNameToContext called with NULL context");
+        cant_happen("NULL context");
     }
 #endif
     HashSymbol *newName = genSymDollar(name->name);
@@ -111,7 +111,7 @@ static void pushNameSpaceEnv(LamAlphaEnv *context) {
             return;
         }
     }
-    cant_happen("pushNameSpaceEnv called but no nameSpace array found in context");
+    cant_happen("no nameSpace array found in context");
 }
 
 static LamAlphaEnv *findAlphaNameSpaceEnv(LamAlphaEnv *context, Index index) {
@@ -120,11 +120,11 @@ static LamAlphaEnv *findAlphaNameSpaceEnv(LamAlphaEnv *context, Index index) {
             if (index < current->nameSpaces->size) {
                 return current->nameSpaces->entries[index];
             } else {
-                cant_happen("findAlphaNameSpaceEnv: index %u out of bounds (size %u)", index, current->nameSpaces->size);
+                cant_happen("index %u out of bounds (size %u)", index, current->nameSpaces->size);
             }
         }
     }
-    cant_happen("findAlphaNameSpaceEnv called but no nameSpace array found in context");
+    cant_happen("no nameSpace array found in context");
 }
 
 // Visitor implementations
@@ -244,16 +244,16 @@ static LamLam *visitLamLam(LamLam *node, LamAlphaEnv *context) {
     int save = PROTECT(context);
 
     bool changed = false;
-    LamVarList *new_args = visitLamVarList(node->args, context);
-    PROTECT(new_args);
-    changed = changed || (new_args != node->args);
+    LamVarList *args = visitLamVarList(node->args, context);
+    PROTECT(args);
+    changed = changed || (args != node->args);
     LamExp *new_exp = visitLamExp(node->exp, context);
     PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
         // Create new node with modified fields
-        LamLam *result = newLamLam(CPI(node), new_args, new_exp);
+        LamLam *result = newLamLam(CPI(node), args, new_exp);
         result->isMacro = node->isMacro;
         UNPROTECT(save);
         return result;
@@ -266,12 +266,12 @@ static LamLam *visitLamLam(LamLam *node, LamAlphaEnv *context) {
 static LamVarList *visitLamVarList(LamVarList *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
-    LamVarList *new_next = visitLamVarList(node->next, context);
-    int save = PROTECT(new_next);
+    LamVarList *next = visitLamVarList(node->next, context);
+    int save = PROTECT(next);
 
-    addNameToContext(node->var, context);
+    addUniqueNameToContext(node->var, context);
 
-    LamVarList *result = newLamVarList(CPI(node), getNameFromContext(CPI(node), node->var, context), new_next);
+    LamVarList *result = newLamVarList(CPI(node), getNameFromContext(CPI(node), node->var, context), next);
     UNPROTECT(save);
     return result;
 }
@@ -372,15 +372,12 @@ static LamLookUp *visitLamLookUp(LamLookUp *node, LamAlphaEnv *context) {
     if (node == NULL) return NULL;
 
     bool changed = false;
-    // Pass through nsId (type: int, not memory-managed)
-    // Pass through nsSymbol (type: HashSymbol, not memory-managed)
     LamAlphaEnv *nsContext = findAlphaNameSpaceEnv(context, node->nsId);
     LamExp *new_exp = visitLamExp(node->exp, nsContext);
     int save = PROTECT(new_exp);
     changed = changed || (new_exp != node->exp);
 
     if (changed) {
-        // Create new node with modified fields
         LamLookUp *result = newLamLookUp(CPI(node), node->nsId, node->nsSymbol, new_exp);
         UNPROTECT(save);
         return result;
@@ -684,7 +681,7 @@ static LamBindings *visitLetBindings(LamBindings *node, LamAlphaEnv *context) {
     int save = PROTECT(new_val);
     LamBindings *new_next = visitLetBindings(node->next, context);
     PROTECT(new_next);
-    addNameToContext(node->var, context);
+    addUniqueNameToContext(node->var, context);
     // Create new node with modified fields
     LamBindings *result = newLamBindings(CPI(node), getNameFromContext(CPI(node), node->var, context), new_val, new_next);
     UNPROTECT(save);
@@ -716,7 +713,7 @@ static LamBindings *visitLetStarBindings(LamBindings *node, LamAlphaEnv *context
     if (node == NULL) return NULL;
     LamExp *new_val = visitLamExp(node->val, context);
     int save = PROTECT(new_val);
-    addNameToContext(node->var, context);
+    addUniqueNameToContext(node->var, context);
     LamBindings *new_next = visitLetStarBindings(node->next, context);
     PROTECT(new_next);
     // Create new node with modified fields
@@ -744,7 +741,7 @@ static LamBindings *visitLetRecValues(LamBindings *node, LamAlphaEnv *context) {
 static void visitLetRecVariables(LamBindings *node, LamAlphaEnv *context) {
     if (node == NULL) return;
     visitLetRecVariables(node->next, context);
-    addNameToContext(node->var, context);
+    addUniqueNameToContext(node->var, context);
 }
 
 static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context) {
