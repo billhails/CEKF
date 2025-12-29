@@ -431,225 +431,204 @@ in
         // typeof_expr in conditional
         "(let ((f 1) (x 2) (g 3) (h 4)) (if (typeof (f x)) (g 1) (h 2)))"
     ]);
-
+//
 // output:
 //
-// (g a) ==>
-//     (g a halt)
-//
-// ((λ (x) (h x)) (g 4)) ==>
-//     (g 4 (λ ($rv2) ((λ (x $k1) (h x $k1)) $rv2 halt)))
-//
+// (let [(g 3) (a 4)] (g a)) ==>
+//     (let [(g$1 3) (a$2 4)] (g$1 a$2))
+// 
+// (let [(h 1) (g 2)] ((λ (x) (h x)) (g 4))) ==>
+//     (let [(h$3 1) (g$4 2)] ((λ (x$5) (h$3 x$5)) (g$4 4)))
+// 
 // (λ (a b) (+ a (* b 2))) ==>
-//     (halt (λ (a b $k3) ($k3 (+ a (* b 2)))))
-//
+//     (λ (a$6 b$7) (+ a$6 (* b$7 2)))
+// 
 // ((λ (a b) (+ a (* b 2))) 3 4) ==>
-//     ((λ (a b $k4) ($k4 (+ a (* b 2)))) 3 4 halt)
-//
-// ((λ (a b) (+ a (* (f b) 2))) 3 4) ==>
-//     ((λ (a b $k5) (f b (λ ($rv6) ($k5 (+ a (* $rv6 2)))))) 3 4 halt)
-//
+//     ((λ (a$8 b$9) (+ a$8 (* b$9 2))) 3 4)
+// 
+// (let [(f 5)] ((λ (a b) (+ a (* (f b) 2))) 3 4)) ==>
+//     (let [(f$10 5)] ((λ (a$11 b$12) (+ a$11 (* (f$10 b$12) 2))) 3 4))
+// 
 // (amb 1 2) ==>
-//     ((λ ($k7) (amb ($k7 1) ($k7 2))) halt)
-//
+//     (amb 1 2)
+// 
 // (call/cc (λ (k) (k 5))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k8) (k 5 $k8)) halt)
-//
+//     (call/cc (λ (k$13) (k$13 5)))
+// 
 // (call/cc (λ (k) 42)) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k9) ($k9 42)) halt)
-//
+//     (call/cc (λ (k$14) 42))
+// 
 // (call/cc (λ (k) (+ 10 (k 5)))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k10) (k 5 (λ ($rv11) ($k10 (+ 10 $rv11))))) halt)
-//
+//     (call/cc (λ (k$15) (+ 10 (k$15 5))))
+// 
 // (call/cc (λ (k1) (call/cc (λ (k2) (k1 (k2 7)))))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k1 $k12) ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k2 $k13) (k2 7 (λ ($rv14) (k1 $rv14 $k13)))) $k12)) halt)
-//
+//     (call/cc (λ (k1$16) (call/cc (λ (k2$17) (k1$16 (k2$17 7))))))
+// 
 // (call/cc (λ (k) (amb (k 1) (k 2)))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k15) ((λ ($k16) (amb (k 1 $k16) (k 2 $k16))) $k15)) halt)
-//
-// (letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5)) ==>
-//     (letrec ((fact (λ (n $k17) ((λ ($k18) (= n 0 (λ ($rv19) (if $rv19 ($k18 1) (fact (- n 1) (λ ($rv20) ($k18 (* n $rv20)))))))) $k17)))) (fact 5 halt))
-//
+//     (call/cc (λ (k$18) (amb (k$18 1) (k$18 2))))
+// 
+// (letrec [(fact (λ (n) (if (== n 0) 1 (* n (fact (- n 1))))))] (fact 5)) ==>
+//     (letrec [(fact$19 (λ (n$20) (if (== n$20 0) 1 (* n$20 (fact$19 (- n$20 1))))))] (fact$19 5))
+// 
 // ((λ (x y z) (+ x (+ y z))) 1 2 3) ==>
-//     ((λ (x y z $k21) ($k21 (+ x (+ y z)))) 1 2 3 halt)
-//
+//     ((λ (x$21 y$22 z$23) (+ x$21 (+ y$22 z$23))) 1 2 3)
+// 
 // ((λ (x) (λ (y) (+ x y))) 5) ==>
-//     ((λ (x $k22) ($k22 (λ (y $k23) ($k23 (+ x y))))) 5 halt)
-//
+//     ((λ (x$24) (λ (y$25) (+ x$24 y$25))) 5)
+// 
 // (((λ (x) (λ (y) (+ x y))) 5) 3) ==>
-//     ((λ (x $k25) ($k25 (λ (y $k26) ($k26 (+ x y))))) 5 (λ ($rv24) ($rv24 3 halt)))
-//
-// (if (= x 0) (f 1) (g 2)) ==>
-//     ((λ ($k27) (= x 0 (λ ($rv28) (if $rv28 (f 1 $k27) (g 2 $k27))))) halt)
-//
-// (if (= x 0) (if (= y 0) 1 2) 3) ==>
-//     ((λ ($k29) (= x 0 (λ ($rv30) (if $rv30 ((λ ($k31) (= y 0 (λ ($rv32) (if $rv32 ($k31 1) ($k31 2))))) $k29) ($k29 3))))) halt)
-//
-// (begin (f 1) (g 2) (h 3)) ==>
-//     (f 1 (λ ($rv33) (g 2 (λ ($rv34) (h 3 (λ ($rv35) (begin $rv33 $rv34 $rv35 halt)))))))
-//
-// (letrec ((even (λ (n) (if (= n 0) true (odd (- n 1)))))(odd (λ (n) (if (= n 0) false (even (- n 1)))))) (even 5)) ==>
-//     (letrec ((even (λ (n $k36) ((λ ($k37) (= n 0 (λ ($rv38) (if $rv38 ($k37 true) (odd (- n 1) $k37))))) $k36)))(odd (λ (n $k39) ((λ ($k40) (= n 0 (λ ($rv41) (if $rv41 ($k40 false) (even (- n 1) $k40))))) $k39)))) (even 5 halt))
-//
+//     (((λ (x$26) (λ (y$27) (+ x$26 y$27))) 5) 3)
+// 
+// (let [(x 1) (f 2) (g 3)] (if (== x 0) (f 1) (g 2))) ==>
+//     (let [(x$28 1) (f$29 2) (g$30 3)] (if (== x$28 0) (f$29 1) (g$30 2)))
+// 
+// (let [(x 1) (y 2)] (if (== x 0) (if (== y 0) 1 2) 3)) ==>
+//     (let [(x$31 1) (y$32 2)] (if (== x$31 0) (if (== y$32 0) 1 2) 3))
+// 
+// (let [(f 1) (g 2) (h 3)] (begin (f 1) (g 2) (h 3))) ==>
+//     (let [(f$33 1) (g$34 2) (h$35 3)] (begin (f$33 1) (g$34 2) (h$35 3)))
+// 
+// (letrec [(even (λ (n) (if (= n 0) (constant true) (odd (- n 1))))) (odd (λ (n) (if (= n 0) (constant false) (even (- n 1)))))] (even 5)) ==>
+//     (letrec [(even$36 (λ (n$38) (if (= n$38 0) (constant true) (odd$37 (- n$38 1))))) (odd$37 (λ (n$39) (if (= n$39 0) (constant false) (even$36 (- n$39 1)))))] (even$36 5))
+// 
 // (+ (amb 1 2) (amb 3 4)) ==>
-//     (amb ((λ ($rv42) (amb ((λ ($rv43) (halt (+ $rv42 $rv43))) 3) ((λ ($rv43) (halt (+ $rv42 $rv43))) 4))) 1) ((λ ($rv42) (amb ((λ ($rv43) (halt (+ $rv42 $rv43))) 3) ((λ ($rv43) (halt (+ $rv42 $rv43))) 4))) 2))
-//
-// (f (g (h x))) ==>
-//     (h x (λ ($rv45) (g $rv45 (λ ($rv44) (f $rv44 halt)))))
-//
+//     (+ (amb 1 2) (amb 3 4))
+// 
+// (let [(f 1) (g 2) (h 3) (x 4)] (f (g (h x)))) ==>
+//     (let [(f$40 1) (g$41 2) (h$42 3) (x$43 4)] (f$40 (g$41 (h$42 x$43))))
+// 
 // (+ (* 2 3) (- 5 1)) ==>
-//     (halt (+ (* 2 3) (- 5 1)))
-//
-// (letrec ((k null)) (call/cc (λ (cont) (begin (k = cont) 42)))) ==>
-//     (letrec ((k null)) ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (cont $k46) (k = cont (λ ($rv47) (begin $rv47 42 $k46)))) halt))
-//
+//     (+ (* 2 3) (- 5 1))
+// 
+// (letrec [(k (constant null))] (call/cc (λ (cont) (begin (set! k cont) 42)))) ==>
+//     (letrec [(k$44 (constant null))] (call/cc (λ (cont$45) (begin (set! k$44 cont$45) 42))))
+// 
 // ((λ () 42)) ==>
-//     ((λ ($k48) ($k48 42)) halt)
-//
+//     ((λ () 42))
+// 
 // (call/cc (λ (k) (if (= 1 1) (k 10) 20))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k49) ((λ ($k50) (= 1 1 (λ ($rv51) (if $rv51 (k 10 $k50) ($k50 20))))) $k49)) halt)
-//
+//     (call/cc (λ (k$46) (if (= 1 1) (k$46 10) 20)))
+// 
 // (+ 1 (+ 2 (+ 3 (+ 4 5)))) ==>
-//     (halt (+ 1 (+ 2 (+ 3 (+ 4 5)))))
-//
-// (f (g a) (h b) (i c)) ==>
-//     (g a (λ ($rv52) (h b (λ ($rv53) (i c (λ ($rv54) (f $rv52 $rv53 $rv54 halt)))))))
-//
-// (if test (f (g x)) (h (i y))) ==>
-//     ((λ ($k55) (if test (g x (λ ($rv56) (f $rv56 $k55))) (i y (λ ($rv57) (h $rv57 $k55))))) halt)
-//
+//     (+ 1 (+ 2 (+ 3 (+ 4 5))))
+// 
+// (let [(f 1) (g 2) (h 3) (i 4) (a 5) (b 6) (c 7)] (f (g a) (h b) (i c))) ==>
+//     (let [(f$47 1) (g$48 2) (h$49 3) (i$50 4) (a$51 5) (b$52 6) (c$53 7)] (f$47 (g$48 a$51) (h$49 b$52) (i$50 c$53)))
+// 
+// (let [(test 1) (f 2) (g 3) (h 4) (i 5) (x 6) (y 7)] (if test (f (g x)) (h (i y)))) ==>
+//     (let [(test$54 1) (f$55 2) (g$56 3) (h$57 4) (i$58 5) (x$59 6) (y$60 7)] (if test$54 (f$55 (g$56 x$59)) (h$57 (i$58 y$60))))
+// 
 // (begin (amb 1 2) (amb 3 4)) ==>
-//     (amb ((λ ($rv58) (amb ((λ ($rv59) (begin $rv58 $rv59 halt)) 3) ((λ ($rv59) (begin $rv58 $rv59 halt)) 4))) 1) ((λ ($rv58) (amb ((λ ($rv59) (begin $rv58 $rv59 halt)) 3) ((λ ($rv59) (begin $rv58 $rv59 halt)) 4))) 2))
-//
-// (call/cc (λ (k) (f k))) ==>
-//     ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k60) (f k $k60)) halt)
-//
-// (cond x (1 (result1)) (2 (result2)) (3 (result3))) ==>
-//     ((λ ($k61) (cond x (1 (result1 $k61)) (2 (result2 $k61)) (3 (result3 $k61)))) halt)
-//
-// (cond (f x) (1 (g 1)) (2 (h 2))) ==>
-//     ((λ ($k62) (f x (λ ($rv63) (cond $rv63 (1 (g 1 $k62)) (2 (h 2 $k62)))))) halt)
-//
+//     (begin (amb 1 2) (amb 3 4))
+// 
+// (let [(f 1)] (call/cc (λ (k) (f k)))) ==>
+//     (let [(f$61 1)] (call/cc (λ (k$62) (f$61 k$62))))
+// 
+// (let [(result1 1) (result2 2) (result3 3)] (let [(x 1)] (cond x (1 (result1)) (2 (result2)) (3 (result3))))) ==>
+//     (let [(result1$63 1) (result2$64 2) (result3$65 3)] (let [(x$66 1)] (cond x$66 (1 (result1$63)) (2 (result2$64)) (3 (result3$65)))))
+// 
+// (let [(f 1) (x 2) (g 3) (h 4)] (cond (f x) (1 (g 1)) (2 (h 2)))) ==>
+//     (let [(f$67 1) (x$68 2) (g$69 3) (h$70 4)] (cond (f$67 x$68) (1 (g$69 1)) (2 (h$70 2))))
+// 
 // (construct pair 1 2) ==>
-//     (halt (construct pair 1 2))
-//
-// (construct pair (f 1) (g 2)) ==>
-//     (f 1 (λ ($rv64) (g 2 (λ ($rv65) (halt (construct pair $rv64 $rv65))))))
-//
-// (construct cons (f x) (construct cons (g y) (constant nil))) ==>
-//     (f x (λ ($rv66) (g y (λ ($rv67) (halt (construct cons $rv66 (construct cons $rv67 (constant nil))))))))
-//
-// (deconstruct pair 0 p) ==>
-//     (halt (deconstruct pair 0 p))
-//
-// (deconstruct pair 1 (f x)) ==>
-//     (f x (λ ($rv68) (halt (deconstruct pair 1 $rv68))))
-//
-// (deconstruct pair 0 (deconstruct pair 1 (f x))) ==>
-//     (f x (λ ($rv69) (halt (deconstruct pair 0 (deconstruct pair 1 $rv69)))))
-//
-// (let (x 42) (f x)) ==>
-//     (let (x 42) (f x halt))
-//
-// (let (x (f 10)) (g x)) ==>
-//     (f 10 (λ ($rv70) (let (x $rv70) (g x halt))))
-//
-// (let (x (f 1)) (let (y (g x)) (h x y))) ==>
-//     (f 1 (λ ($rv71) (let (x $rv71) (g x (λ ($rv72) (let (y $rv72) (h x y halt)))))))
-//
-// (lookup ns 0 x) ==>
-//     (lookup ns 0 (halt x))
-//
-// (lookup ns 0 (f x)) ==>
-//     (lookup ns 0 (f x halt))
-//
-// (f (lookup ns 0 (g x))) ==>
-//     (lookup ns 0 (g x (λ ($rv73) (f $rv73 halt))))
-//
+//     (construct pair 1 2)
+// 
+// (let [(f 1) (g 2)] (construct pair (f 1) (g 2))) ==>
+//     (let [(f$71 1) (g$72 2)] (construct pair (f$71 1) (g$72 2)))
+// 
+// (let [(f 1) (g 2) (x 3) (y 4)] (construct cons (f x) (construct cons (g y) (constant nil)))) ==>
+//     (let [(f$73 1) (g$74 2) (x$75 3) (y$76 4)] (construct cons (f$73 x$75) (construct cons (g$74 y$76) (constant nil))))
+// 
+// (let [(p 1)] (deconstruct pair 0 p)) ==>
+//     (let [(p$77 1)] (deconstruct pair 0 p$77))
+// 
+// (let [(f 1) (x 2)] (deconstruct pair 1 (f x))) ==>
+//     (let [(f$78 1) (x$79 2)] (deconstruct pair 1 (f$78 x$79)))
+// 
+// (let [(f 1) (x 2)] (deconstruct pair 0 (deconstruct pair 1 (f x)))) ==>
+//     (let [(f$80 1) (x$81 2)] (deconstruct pair 0 (deconstruct pair 1 (f$80 x$81))))
+// 
+// (let [(f 1)] (let [(x 42)] (f x))) ==>
+//     (let [(f$82 1)] (let [(x$83 42)] (f$82 x$83)))
+// 
+// (let [(f 1) (g 2)] (let [(x (f 10))] (g x))) ==>
+//     (let [(f$84 1) (g$85 2)] (let [(x$86 (f$84 10))] (g$85 x$86)))
+// 
+// (let [(f 1) (g 2) (h 3) (x 4)] (let [(x (f 1)) (y (g x))] (h x y))) ==>
+//     (let [(f$87 1) (g$88 2) (h$89 3) (x$90 4)] (let [(x$91 (f$87 1)) (y$92 (g$88 x$90))] (h$89 x$91 y$92)))
+// 
+// (let [(f 1) (g 2) (h 3) (x 4)] (let* [(x (f 1)) (y (g x))] (h x y))) ==>
+//     (let [(f$93 1) (g$94 2) (h$95 3) (x$96 4)] (let [(x$97 (f$93 1))] (let [(y$98 (g$94 x$97))] (h$95 x$97 y$98))))
+// 
 // (make_tuple 1 2 3) ==>
-//     (halt (make_tuple 1 2 3))
-//
-// (make_tuple (f 1) (g 2)) ==>
-//     (f 1 (λ ($rv74) (g 2 (λ ($rv75) (halt (make_tuple $rv74 $rv75))))))
-//
-// (make_tuple x (f y) 42) ==>
-//     (f y (λ ($rv76) (halt (make_tuple x $rv76 42))))
-//
+//     (make_tuple 1 2 3)
+// 
+// (let [(f 1) (g 2)] (make_tuple (f 1) (g 2))) ==>
+//     (let [(f$99 1) (g$100 2)] (make_tuple (f$99 1) (g$100 2)))
+// 
+// (let [(x 1) (y 2) (f 3)] (make_tuple x (f y) 42)) ==>
+//     (let [(x$101 1) (y$102 2) (f$103 3)] (make_tuple x$101 (f$103 y$102) 42))
+// 
 // (make_vec 3 1 2 3) ==>
-//     (halt (make_vec 3 1 2 3))
-//
-// (make_vec 2 (f 1) (g 2)) ==>
-//     (f 1 (λ ($rv77) (g 2 (λ ($rv78) (halt (make_vec 2 $rv77 $rv78))))))
-//
-// (make_vec 3 x (f y) 42) ==>
-//     (f y (λ ($rv79) (halt (make_vec 3 x $rv79 42))))
-//
-// (match_cases x ((1 2) (result1)) ((3 4 5) (result2))) ==>
-//     ((λ ($k80) (match_cases x ((1 2) (result1 $k80)) ((3 4 5) (result2 $k80)))) halt)
-//
-// (match_cases (f x) ((1) (g 1)) ((2) (h 2))) ==>
-//     ((λ ($k81) (f x (λ ($rv82) (match_cases $rv82 ((1) (g 1 $k81)) ((2) (h 2 $k81)))))) halt)
-//
-// (match_cases x ((1) (f 1)) ((2) (g 2))) ==>
-//     ((λ ($k83) (match_cases x ((1) (f 1 $k83)) ((2) (g 2 $k83)))) halt)
-//
-// (namespaces x y z) ==>
-//     (halt (namespaces x y z))
-//
-// (namespaces (f 1) (g 2)) ==>
-//     (f 1 (λ ($rv84) (g 2 (λ ($rv85) (halt (namespaces $rv84 $rv85))))))
-//
-// (namespaces x (f y) z) ==>
-//     (f y (λ ($rv86) (halt (namespaces x $rv86 z))))
-//
-// (namespaces (letrec ((x 1)(y 2)) (env)) (letrec ((a 3)(b 4)) (env))) ==>
-//     (letrec ((x 1)(y 2)) (letrec ((a 3)(b 4)) (halt (namespaces (env) (env)))))
-//
-// (print x) ==>
-//     (halt (print x))
-//
-// (print (f x)) ==>
-//     (f x (λ ($rv87) (halt (print $rv87))))
-//
-// (+ (print (f x)) 10) ==>
-//     (f x (λ ($rv88) (halt (+ (print $rv88) 10))))
-//
-// (tag x) ==>
-//     (halt (tag x))
-//
-// (tag (f x)) ==>
-//     (f x (λ ($rv89) (halt (tag $rv89))))
-//
-// (cond (tag (f x)) (1 (result1)) (2 (result2))) ==>
-//     ((λ ($k90) (f x (λ ($rv91) (cond (tag $rv91) (1 (result1 $k90)) (2 (result2 $k90)))))) halt)
-//
-// (tuple_index 1 1 t) ==>
-//     (halt (tuple_index 1 1 t))
-//
-// (tuple_index 1 1 (f x)) ==>
-//     (f x (λ ($rv92) (halt (tuple_index 1 1 $rv92))))
-//
-// (tuple_index 1 1 (tuple_index 1 1 (f x))) ==>
-//     (f x (λ ($rv93) (halt (tuple_index 1 1 (tuple_index 1 1 $rv93)))))
-//
-// (typedefs 1 x) ==>
-//     (typedefs 1 (halt x))
-//
-// (typedefs 1 (letrec ((f (λ (x) (g x)))) (f 42))) ==>
-//     (typedefs 1 (letrec ((f (λ (x $k94) (g x $k94)))) (f 42 halt)))
-//
-// (typedefs 1 (f (g x))) ==>
-//     (typedefs 1 (g x (λ ($rv95) (f $rv95 halt))))
-//
-// (typedefs 1 (letrec ((x 1)(y 2)) (env))) ==>
-//     (typedefs 1 (letrec ((x 1)(y 2)) (halt (env))))
-//
-// (typeof x) ==>
-//     (halt (typeof x))
-//
-// (typeof (f x)) ==>
-//     (f x (λ ($rv96) (halt (typeof $rv96))))
-//
-// (if (typeof (f x)) (g 1) (h 2)) ==>
-//     ((λ ($k97) (f x (λ ($rv98) (if (typeof $rv98) (g 1 $k97) (h 2 $k97))))) halt)
+//     (make_vec 3 1 2 3)
+// 
+// (let [(f 1) (g 2)] (make_vec 2 (f 1) (g 2))) ==>
+//     (let [(f$104 1) (g$105 2)] (make_vec 2 (f$104 1) (g$105 2)))
+// 
+// (let [(x 1) (y 2) (f 3)] (make_vec 3 x (f y) 42)) ==>
+//     (let [(x$106 1) (y$107 2) (f$108 3)] (make_vec 3 x$106 (f$108 y$107) 42))
+// 
+// (let [(x 1) (r1 2) (r2 3)] (match_cases x ((1 2) (r1)) ((3 4 5) (r2)))) ==>
+//     (let [(x$109 1) (r1$110 2) (r2$111 3)] (match_cases x$109 ((1 2) (r1$110)) ((3 4 5) (r2$111))))
+// 
+// (namespaces (letrec [(x 1) (y 2)] (let* [(f 1) (g f)] (env))) (letrec [(a 3) (b 4)] (env))) ==>
+//     (namespaces (letrec [(x$112 1) (y$113 2)] (let [(f$114 1)] (let [(g$115 f$114)] (env)))) (letrec [(a$116 3) (b$117 4)] (env)))
+// 
+// (let [(x 1)] (print x)) ==>
+//     (let [(x$118 1)] (print x$118))
+// 
+// (let [(f 1) (x 2)] (print (f x))) ==>
+//     (let [(f$119 1) (x$120 2)] (print (f$119 x$120)))
+// 
+// (let [(f 1) (x 2)] (+ (print (f x)) 10)) ==>
+//     (let [(f$121 1) (x$122 2)] (+ (print (f$121 x$122)) 10))
+// 
+// (let [(x 1)] (tag x)) ==>
+//     (let [(x$123 1)] (tag x$123))
+// 
+// (let [(f 1) (x 2)] (tag (f x))) ==>
+//     (let [(f$124 1) (x$125 2)] (tag (f$124 x$125)))
+// 
+// (let [(f 1) (x 2) (r1 3) (r2 4)] (cond (tag (f x)) (1 (r1)) (2 (r2)))) ==>
+//     (let [(f$126 1) (x$127 2) (r1$128 3) (r2$129 4)] (cond (tag (f$126 x$127)) (1 (r1$128)) (2 (r2$129))))
+// 
+// (let [(t 1)] (tuple_index 1 1 t)) ==>
+//     (let [(t$130 1)] (tuple_index 1 1 t$130))
+// 
+// (let [(f 1) (x 2)] (tuple_index 1 1 (f x))) ==>
+//     (let [(f$131 1) (x$132 2)] (tuple_index 1 1 (f$131 x$132)))
+// 
+// (let [(f 1) (x 2)] (tuple_index 1 1 (tuple_index 1 1 (f x)))) ==>
+//     (let [(f$133 1) (x$134 2)] (tuple_index 1 1 (tuple_index 1 1 (f$133 x$134))))
+// 
+// (let [(x 1)] (typedefs 1 x)) ==>
+//     (let [(x$135 1)] (typedefs 1 x$135))
+// 
+// (let [(g 1)] (typedefs 1 (letrec [(f (λ (x) (g x)))] (f 42)))) ==>
+//     (let [(g$136 1)] (typedefs 1 (letrec [(f$137 (λ (x$138) (g$136 x$138)))] (f$137 42))))
+// 
+// (let [(f 1) (g 2) (x 3)] (typedefs 1 (f (g x)))) ==>
+//     (let [(f$139 1) (g$140 2) (x$141 3)] (typedefs 1 (f$139 (g$140 x$141))))
+// 
+// (typedefs 1 (letrec [(x 1) (y 2)] (env))) ==>
+//     (typedefs 1 (letrec [(x$142 1) (y$143 2)] (env)))
+// 
+// (let [(x 1)] (typeof x)) ==>
+//     (let [(x$144 1)] (typeof x$144))
+// 
+// (let [(f 1) (x 2)] (typeof (f x))) ==>
+//     (let [(f$145 1) (x$146 2)] (typeof (f$145 x$146)))
+// 
+// (let [(f 1) (x 2) (g 3) (h 4)] (if (typeof (f x)) (g 1) (h 2))) ==>
+//     (let [(f$147 1) (x$148 2) (g$149 3) (h$150 4)] (if (typeof (f$147 x$148)) (g$149 1) (h$150 2)))
 //
