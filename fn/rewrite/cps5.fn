@@ -476,6 +476,9 @@ in
         // Deeply nested primitives
         "(+ 1 (+ 2 (+ 3 (+ 4 5))))",
 
+        // Deeply nested primitives with a function call
+        "(+ 1 (+ 2 (+ 3 (+ 4 (f 5)))))",
+
         // Application with multiple complex arguments
         "(f (g a) (h b) (i c))",
 
