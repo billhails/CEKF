@@ -1,0 +1,16 @@
+// A way of quickly testing various rewrite stages
+let
+    link "samples.fn" as Samples;
+    link "expr.fn" as E;
+    link "../listutils.fn" as list;
+    link "desugar.fn" as DS; // SUT
+in
+    list.for_each(fn (str) {
+        let
+            expr = E.parse(str);
+        in
+            E.print_expr(expr);
+            puts(" ==>\n    ");
+            E.print_expr(DS.desugar(expr)); // SUT
+            puts("\n\n")
+    }, Samples.data);

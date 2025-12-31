@@ -3,6 +3,8 @@ namespace
     link "../listutils.fn" as list;
 
     // desugar: E.expr -> E.expr
+    // currently this just rewrites let* to nested lets
+    // and let to an anonymous lambda application
     fn desugar(e) {
         let ds = desugar;
         in
