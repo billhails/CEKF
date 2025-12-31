@@ -146,7 +146,7 @@ fn substitute (sub, exp) {
 
         // make_env(list(#(string, expr)))
         (E.make_env(bindings)) {
-            E.make_env(list.map fn (#(v, e)) { #(v, subst(sub, e)) })
+            E.make_env(list.map fn (#(v, e)) { #(v, substitute(sub, e)) })
         }
 
         // env_ref(expr, string)

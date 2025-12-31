@@ -2,6 +2,11 @@ namespace
     link "../listutils.fn" as list;
 
     typedef expr {
+        lambdac(list(string), expr) |
+        make_closure(expr, expr) |
+        make_env(list(#(string, expr))) |
+        env_ref(expr, string) |
+        apply_closure(expr, list(expr)) |
         amb_expr(expr, expr) |
         apply(expr, list(expr)) |
         back_expr |
@@ -73,6 +78,43 @@ namespace
     }
 
     fn print_expr {
+        (x=lambdac(args, expr)) {
+            puts("(λ* (");
+            print_list(args, fn(name) { puts(name) });
+            puts(") ");
+            print_expr(expr);
+            puts(")");
+            x;
+        }
+        (x=make_closure(func, env)) {
+            puts("(make-closure ");
+            print_expr(func);
+            puts(" ");
+            print_expr(env);
+            puts(")");
+            x;
+        }
+        (x=make_env(bindings)) {
+            puts("(make-env [");
+            print_bindings(bindings);
+            puts("])");
+            x;
+        }
+        (x=env_ref(env, name)) {
+            puts("(env-ref ");
+            print_expr(env);
+            puts(" ");
+            puts(name);
+            puts(")");
+            x;
+        }
+        (x=apply_closure(closure, args)) {
+            puts("(apply-closure ");
+            print_expr(closure);
+            print_sequence(args);
+            puts(")");
+            x;
+        }
         (x=callcc_expr(e)) {
             puts("(call/cc ");
             print_expr(e);
@@ -94,7 +136,7 @@ namespace
             x;
         }
         (x=tuple_index(size, index, expr)) {
-            puts("(tuple_index ");
+            puts("(tuple-index ");
             putn(size);
             puts(" ");
             putn(index);
@@ -142,7 +184,7 @@ namespace
             x;
         }
         (x=match_cases(exp, cases)) {
-            puts("(match_cases ");
+            puts("(match-cases ");
             print_expr(exp);
             list.for_each (fn {
                 (#(indices, caseExpr)) {
@@ -157,14 +199,14 @@ namespace
             x;
         }
         (x=make_vec(size, elements)) {
-            puts("(make_vec ");
+            puts("(make-vec ");
             putn(size);
             print_sequence(elements);
             puts(")");
             x;
         }
         (x=make_tuple(elements)) {
-            puts("(make_tuple");
+            puts("(make-tuple");
             print_sequence(elements);
             puts(")");
             x;
@@ -198,7 +240,7 @@ namespace
             x;
         }
         (x=constructor_info(name)) {
-            puts("(constructor_info ");
+            puts("(constructor-info ");
             puts(name);
             puts(")");
             x;
