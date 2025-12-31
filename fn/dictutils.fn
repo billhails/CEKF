@@ -178,3 +178,7 @@ fn make (keys, values) {
 fn add_lists (keys, values, dict) {
     list.foldl(fn (#(k, v), d) { insert(k, v, d) }, dict, list.zip(keys, values))
 }
+
+fn delete_list (keys, dict) {
+    list.foldl(fn (k, d) { delete(k, d) }, dict, keys)
+}
