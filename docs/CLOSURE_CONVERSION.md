@@ -71,7 +71,7 @@ unsafe fn closure_convert {
             sparams = senv @ params;
             fv = free(exp);
             venv = list.map(fn (v) { #(v, var(v)) }, fv);
-            sub = DICT.make(fv, list.map(fn (v) { env_ref($env, v) }, fv));
+            sub = DICT.make(fv, list.map(fn (v) { env_ref(senv, v) }, fv));
             vbody = substitute(sub, body);
         in
             make_closure(lambdac(sparams, vbody), make_env(venv))
