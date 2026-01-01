@@ -63,12 +63,12 @@ fn values (d) {
 }
 
 fn balance {
-    (B, D(R, D(R, a, k, b), y, c), z, d)  |
-    (B, D(R, a, k, D(R, b, y, c)), z, d)  |
-    (B, a, k, D(R, D(R, b, y, c), z, d))  |
-    (B, a, k, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, k, b), y, D(B, c, z, d)) }
-    (BB, D(R, a, k, D(R, b, y, c)), z, d) |
-    (BB, D(R, a, k, D(R, b, y, c)), z, d) { D(B, D(B, a, k, b), y, D(B, c, z, d)) }
+    (B, D(R, D(R, a, x, b), y, c), z, d)  |
+    (B, D(R, a, x, D(R, b, y, c)), z, d)  |
+    (B, a, x, D(R, D(R, b, y, c), z, d))  |
+    (B, a, x, D(R, b, y, D(R, c, z, d)))  { D(R, D(B, a, x, b), y, D(B, c, z, d)) }
+    (BB, D(R, a, x, D(R, b, y, c)), z, d) |
+    (BB, D(R, a, x, D(R, b, y, c)), z, d) { D(B, D(B, a, x, b), y, D(B, c, z, d)) }
     (color, a, b, c)                      { D(color, a, b, c) }
 }
 
@@ -140,24 +140,24 @@ fn delete(k, s) {
         }
 
         fn rotate {
-            (R, D(BB, a, k, b), y, D(B, c, z, d)) { balance(B, D(R, D(B, a, k, b), y, c), z, d) }
+            (R, D(BB, a, x, b), y, D(B, c, z, d)) { balance(B, D(R, D(B, a, x, b), y, c), z, d) }
             (R, EE, y, D(B, c, z, d)) { balance(B, D(R, E, y, c), z, d) }
-            (R, D(B, a, k, b), y, D(BB, c, z, d)) { balance(B, a, k, D(R, b, y, D(B, c, z, d))) }
-            (R, D(B, a, k, b), y, EE) { balance(B, a, k, D(R, b, y, E)) }
-            (B, D(BB, a, k, b), y, D(B, c, z, d)) { balance(BB, D(R, D(B, a, k, b), y, c), z, d) }
+            (R, D(B, a, x, b), y, D(BB, c, z, d)) { balance(B, a, x, D(R, b, y, D(B, c, z, d))) }
+            (R, D(B, a, x, b), y, EE) { balance(B, a, x, D(R, b, y, E)) }
+            (B, D(BB, a, x, b), y, D(B, c, z, d)) { balance(BB, D(R, D(B, a, x, b), y, c), z, d) }
             (B, EE, y, D(B, c, z, d)) { balance(BB, D(R, E, y, c), z, d) }
-            (B, D(B, a, k, b), y, D(BB, c, z, d)) { balance(BB, a, k, D(R, b, y, D(B, c, z, d))) }
-            (B, D(B, a, k, b), y, EE) { balance(BB, a, k, D(R, b, y, E)) }
-            (B, D(BB, a, w, b), k, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, D(B, a, w, b), k, c), y, d), z, e) }
-            (B, EE, k, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, E, k, c), y, d), z, e) }
-            (B, D(R, a, w, D(B, b, k, c)), y, D(BB, d, z, e)) { D(B, a, w, balance(B, b, k, D(R, c, y, D(B, d, z, e)))) }
-            (B, D(R, a, w, D(B, b, k, c)), y, EE) { D(B, a, w, balance(B, b, k, D(R, c, y, E))) }
-            (color, a, k, b) { D(color, a, k, b) }
+            (B, D(B, a, x, b), y, D(BB, c, z, d)) { balance(BB, a, x, D(R, b, y, D(B, c, z, d))) }
+            (B, D(B, a, x, b), y, EE) { balance(BB, a, x, D(R, b, y, E)) }
+            (B, D(BB, a, w, b), x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, D(B, a, w, b), x, c), y, d), z, e) }
+            (B, EE, x, D(R, D(B, c, y, d), z, e)) { D(B, balance(B, D(R, E, x, c), y, d), z, e) }
+            (B, D(R, a, w, D(B, b, x, c)), y, D(BB, d, z, e)) { D(B, a, w, balance(B, b, x, D(R, c, y, D(B, d, z, e)))) }
+            (B, D(R, a, w, D(B, b, x, c)), y, EE) { D(B, a, w, balance(B, b, x, D(R, c, y, E))) }
+            (color, a, x, b) { D(color, a, x, b) }
         }
 
         unsafe fn leftmost_successor {
-            (D(_, E, k, E))             |
-            (D(B, E, k, D(R, E, _, E))) { k }
+            (D(_, E, x, E))             |
+            (D(B, E, x, D(R, E, _, E))) { x }
             (D(_, a, _, _))             { leftmost_successor(a) }
         }
 
@@ -165,7 +165,7 @@ fn delete(k, s) {
             (D(R, E, _, E))             { E }
             (D(B, E, _, E))             { EE }
             (D(B, E, _, D(R, E, y, E))) { D(B, E, y, E) }
-            (D(c, a, k, b))             { rotate(c, del_leftmost_successor(a), k, b) }
+            (D(c, a, x, b))             { rotate(c, del_leftmost_successor(a), x, b) }
         }
     in
         here fn (throw) { del(k, redden(s), throw) }
