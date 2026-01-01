@@ -1,0 +1,7 @@
+namespace
+link "../ioutils.fn" as io;
+link "expr.fn" as E;
+import io operator "$_";
+
+fn genstring(p) { p @@ $incr() }
+fn gensym(p) { E.var(genstring(p)) }

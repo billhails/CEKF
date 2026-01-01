@@ -3,11 +3,7 @@ let
     link "samples.fn" as Samples;
     link "desugar.fn" as DS;
     link "../listutils.fn" as list;
-    link "../ioutils.fn" as io;
-    import io operator "$_";
-
-    fn genstring(p) { p @@ $incr() }
-    fn gensym(p) { E.var(genstring(p)) }
+    link "gensym.fn" as GS;
 
     fn isAexpr {
         (E.var(_)) |
@@ -25,14 +21,14 @@ let
 
     fn M {
         (E.lambda(vars, body)) {
-            let c = genstring("$k");
+            let c = GS.genstring("$k");
             in E.lambda(vars @@ [c], T_c(body, E.var(c)))
         }
         (x) { x }
     }
 
     fn kToC(k) {
-        let rv = genstring("$rv");
+        let rv = GS.genstring("$rv");
         in E.lambda([rv], k(E.var(rv)))
     }
 
@@ -193,7 +189,7 @@ let
             switch(expr) {
                 (E.amb_expr(expr1, expr2)) {
                     let
-                        sk = genstring("$k");
+                        sk = GS.genstring("$k");
                         vsk = E.var(sk);
                     in
                         E.apply(E.lambda([sk], E.amb_expr(T_c(expr1, vsk), T_c(expr2, vsk))), [c])
@@ -216,7 +212,7 @@ let
 
                 (E.cond_expr(test, branches)) {
                     let
-                        sk = genstring("$k");
+                        sk = GS.genstring("$k");
                         vsk = E.var(sk);
                     in
                         E.apply(E.lambda([sk], T_k(test, fn (atest) {
@@ -240,7 +236,7 @@ let
 
                 (E.if_expr(exprc, exprt, exprf)) {
                     let
-                        sk = genstring("$k");
+                        sk = GS.genstring("$k");
                         vsk = E.var(sk);
                     in
                         E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
@@ -273,7 +269,7 @@ let
 
                 (E.match_cases(test, cases)) {
                     let
-                        sk = genstring("$k");
+                        sk = GS.genstring("$k");
                         vsk = E.var(sk);
                     in
                         E.apply(E.lambda([sk], T_k(test, fn (atest) {

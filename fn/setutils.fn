@@ -1,0 +1,26 @@
+namespace
+
+link "dictutils.fn" as DICT;
+
+fn make(keys) {
+    DICT.make(keys, keys)
+}
+
+fn add(dict, keys) {
+    DICT.add_lists(keys, keys, dict)
+}
+
+fn exclude(d1, d2) {
+    DICT.delete_list(to_list(d2), d1)
+}
+
+fn to_list(dict) {
+    DICT.keys(dict)
+}
+
+fn contains(key, dict) {
+    switch(DICT.lookup(key, dict)) {
+        (nothing) { false }
+        (_) { true }
+    }
+}
