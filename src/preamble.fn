@@ -41,7 +41,6 @@ macro NUMERICIDENTITY(x) { x + 0 }
 operator "+_" left 11 NUMERICIDENTITY;
 operator "_*_" left 11 MULTIPLICATION;
 operator "_/_" left 11 DIVISION;
-// operator "_÷_" left 11 DIVISION;
 operator "_%_" left 11 MODULUS;
 operator "_**_" left 12 EXPONENTIAL;
 operator "here_" 13 callcc;
