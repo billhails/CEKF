@@ -1,7 +1,5 @@
-let
+namespace
     link "expr.fn" as E;
-    link "samples.fn" as Samples;
-    link "desugar.fn" as DS;
     link "../listutils.fn" as list;
     link "gensym.fn" as GS;
 
@@ -347,13 +345,3 @@ let
             })
         }
     }
-
-in
-    list.for_each(fn (str) {
-        let expr = E.parse(str);
-        in
-            E.print_expr(expr);
-            puts(" ==>\n    ");
-            E.print_expr(T_c(DS.desugar(expr), E.var("□")));
-            puts("\n\n")
-    }, Samples.data);

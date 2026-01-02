@@ -32,6 +32,13 @@ print Dict(pt, pu, d) {
         d;
 }
 
+fn is_empty(d) {
+    switch (d) {
+        (E) | (EE) { true }
+        (_)        { false }
+    }
+}
+
 fn foreach {
     (_, E) | (_, EE) { nothing }
     (f, D(_, l, #(t, u), r)) {

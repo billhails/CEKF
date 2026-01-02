@@ -1,6 +1,7 @@
 let
     link "expr.fn" as E;
     link "env.fn" as Env;
+    link "subst.fn" as SUBST;
     link "../listutils.fn" as list;
     link "../ioutils.fn" as io;
     import io operator "$_";
@@ -8,60 +9,8 @@ let
     fn genstring(p) { p @@ "$" @@ $incr() }
     fn gensym(p) { E.var(genstring(p)) }
 
-    fn subst { // subst(expr, var, arg) : replace var with arg in expr
-        (b, b, a) { a }
-        (b=E.var(_), _, _) { b }
-        (b=E.lambda(params, body), v=E.var(vstr), a) {
-            if (list.member(vstr, params)) {
-                b
-            } else {
-                E.lambda(params, subst(body, v, a))
-            }
-        }
-        (E.apply(E.lambda(params, body), args), v, a) {
-            let 
-                sargs = list.map(fn (arg) { subst(arg, v, a) }, args);
-                substs = list.zip(params, sargs);
-            in
-                list.foldl(fn (#(p, arg), acc) { subst(acc, E.var(p), arg) }, body, substs)
-        }
-        (E.apply(fun, args), v, a) {
-            E.apply(subst(fun, v, a), list.map(fn (arg) { subst(arg, v, a) }, args))
-        }
-        (E.let_expr(bindings, expr), v, a) {
-            let #(vars, exprs) = list.unzip(bindings);
-                newexprs = list.map(fn (e) { subst(e, v, a) }, exprs);
-                newexpr = subst(expr, v, a);
-            in
-                E.let_expr(list.zip(vars, newexprs), newexpr)
-        }
-        (E.letstar_expr(bindings, expr), v, a) {
-            let #(vars, exprs) = list.unzip(bindings);
-                newexprs = list.map(fn (e) { subst(e, v, a) }, exprs);
-                newexpr = subst(expr, v, a);
-            in
-                E.letstar_expr(list.zip(vars, newexprs), newexpr)
-        }
-        (E.letrec_expr(bindings, expr), v, a) {
-            let #(vars, exprs) = list.unzip(bindings);
-                newexprs = list.map(fn (e) { subst(e, v, a) }, exprs);
-                newexpr = subst(expr, v, a);
-            in
-                E.letrec_expr(list.zip(vars, newexprs), newexpr)
-        }
-        (E.amb_expr(expr1, expr2), v, a) {
-            E.amb_expr(subst(expr1, v, a), subst(expr2, v, a))
-        }
-        (x = E.back_expr, _, _) |
-        (x = E.env_expr, _, _) |
-        (x = E.error_expr, _, _) |
-        (x = E.bigint(_), _, _) |
-        (x = E.character(_), _, _) |
-        (x = E.constructor_info(_), _, _) |
-        (x = E.stdint(_), _, _) |
-        (x = E.constant(_), _, _) {
-            x
-        }
+    fn subst (expr, var, arg) { // replace var with arg in expr
+        SUBST.substitute(DICT.make([var], [arg]), expr)
     }
 
     fn betareduce(c, e) {

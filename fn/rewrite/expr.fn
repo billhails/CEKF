@@ -41,13 +41,13 @@ namespace
         var(string)
     }
 
-    // Printer for expressions
-    fn print_list(indices, putter) {
+    // Helper printers
+    fn print_list(indices, putter, space) {
         switch (indices) {
             ([]) { "" }
             (h @ t) {
                 putter(h);
-                list.for_each (fn(i) { puts(" "); putter(i) }, t);
+                list.for_each (fn(i) { puts(space); putter(i) }, t);
                 ""
             }
         };
@@ -60,7 +60,7 @@ namespace
             putc(' ');
             print_expr(expr);
             putc(')');
-        });
+        }, " ");
     }
 
     fn print_let(name, bindings, body) {
@@ -77,17 +77,18 @@ namespace
         list.map (fn(e) { puts(" "); print_expr(e) }, exprs);
     }
 
+    // Printer for expressions
     fn print_expr {
         (x=lambdac(args, expr)) {
             puts("(λ* (");
-            print_list(args, fn(name) { puts(name) });
+            print_list(args, puts, " ");
             puts(") ");
             print_expr(expr);
             puts(")");
             x;
         }
         (x=make_closure(func, env)) {
-            puts("(make-closure ");
+            puts("(CLO ");
             print_expr(func);
             puts(" ");
             print_expr(env);
@@ -95,21 +96,37 @@ namespace
             x;
         }
         (x=make_env(bindings)) {
-            puts("(make-env [");
-            print_bindings(bindings);
-            puts("])");
+            puts("{ ");
+            print_list(bindings, fn(#(name, expr)) {
+                puts(name);
+                switch (expr) {
+                    (var(name2)) {
+                        if (name == name2) {
+                            ""
+                        } else {
+                            puts(": ");
+                            print_expr(expr);
+                            ""
+                        }
+                    }
+                    (_) {
+                        puts(": ");
+                        print_expr(expr);
+                        ""
+                    }
+                }
+            }, ", ");
+            puts(" }");
             x;
         }
         (x=env_ref(env, name)) {
-            puts("(env-ref ");
             print_expr(env);
-            puts(" ");
+            puts(".");
             puts(name);
-            puts(")");
             x;
         }
         (x=apply_closure(closure, args)) {
-            puts("(apply-closure ");
+            puts("(A/C ");
             print_expr(closure);
             print_sequence(args);
             puts(")");
@@ -189,7 +206,7 @@ namespace
             list.for_each (fn {
                 (#(indices, caseExpr)) {
                     puts(" ((");
-                    print_list(indices, fn(i) { putn(i) });
+                    print_list(indices, fn(i) { putn(i) }, " ");
                     puts(") ");
                     print_expr(caseExpr);
                     puts(")");
@@ -288,7 +305,7 @@ namespace
         }
         (x=lambda(args, expr)) {
             puts("(λ (");
-            print_list(args, fn(name) { puts(name) });
+            print_list(args, fn(name) { puts(name) }, " ");
             puts(") ");
             print_expr(expr);
             puts(")");
@@ -381,91 +398,102 @@ namespace
                 (_) { error("Expected atom") }
             }
 
-            fn to_expr {
-                (atom("back")) { back_expr }
-                (atom("true")) { constant("true") }
-                (atom("false")) { constant("false") }
-                (atom("null")) { constant("null") }
-                (atom(['\'', c, '\''])) { character(c) }
-                (sexp([atom("env")])) { env_expr }
-                (sexp([atom("error")])) { error_expr }
-                (atom(x = '0' @ rest)) | (atom(x = '1' @ rest)) | (atom(x = '2' @ rest)) |
-                (atom(x = '3' @ rest)) | (atom(x = '4' @ rest)) | (atom(x = '5' @ rest)) |
-                (atom(x = '6' @ rest)) | (atom(x = '7' @ rest)) | (atom(x = '8' @ rest)) |
-                (atom(x = '9' @ rest)) { bigint(to_number(x))}
-                (atom(s)) { var(s) }
-                (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
-                (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
-                (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
-                (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), list.map (fn {
-                    (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
-                    (_) { error("Invalid cond branch") }
-                }, branches)) }
-                (sexp([atom("constant"), atom(name)])) { constant(name) }
-                (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
-                (sexp(atom("construct") @ atom(name) @ args)) { construct(name, list.map(to_expr, args)) }
-                (sexp([atom("deconstruct"), atom(name), atom(index), e])) { deconstruct(name, to_number(index), to_expr(e)) }
-                (sexp([atom("lambda"), sexp(args), body])) |
-                (sexp([atom("λ"), sexp(args), body])) { lambda(list.map(atom_to_string, args), to_expr(body)) }
-                (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
-                (sexp([atom("let"), sexp(bindings), body])) {
-                    let bindingsList = list.map (fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
-                        (_) { error("Invalid let binding") }
-                    }, bindings);
-                    in
-                        let_expr(bindingsList, to_expr(body))
-                }
-                (sexp([atom("letrec"), sexp(bindings), body])) {
-                    let bindingsList = list.map (fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
-                        (_) { error("Invalid letrec binding") }
-                    }, bindings);
-                    in
-                        letrec_expr(bindingsList, to_expr(body))
-                }
-                (sexp([atom("let*"), sexp(bindings), body])) {
-                    let bindingsList = list.map (fn {
-                        (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
-                        (_) { error("Invalid let* binding") }
-                    }, bindings);
-                    in
-                        letstar_expr(bindingsList, to_expr(body))
-                }
-                (sexp([atom("lookup"), atom(name), atom(index), e])) { lookup(name, to_number(index), to_expr(e)) }
-                (sexp(atom("make_tuple") @ elements)) { make_tuple(list.map(to_expr, elements)) }
-                (sexp(atom("make_vec") @ atom(size) @ elements)) { make_vec(to_number(size), list.map(to_expr, elements)) }
-                (sexp(atom("match_cases") @ exp @ cases)) { match_cases(to_expr(exp), list.map (fn {
-                    (sexp([sexp(indices), caseExpr])) {
-                        let indexList = list.map (fn {
-                            (atom(i)) { to_number(i) }
-                            (_) { error("Invalid match_cases index") }
-                        }, indices);
+            fn to_expr(e) {
+                switch (e) {
+                    (sexp(_)) { true }
+                    (atom(_)) { false }
+                };
+                print e;
+                switch(e) {
+                    (atom("back")) { back_expr }
+                    (atom("true")) { constant("true") }
+                    (atom("false")) { constant("false") }
+                    (atom("null")) { constant("null") }
+                    (atom(['\'', c, '\''])) { character(c) }
+                    (sexp([atom("env")])) { env_expr }
+                    (sexp([atom("error")])) { error_expr }
+                    (atom(x = '0' @ rest)) | (atom(x = '1' @ rest)) | (atom(x = '2' @ rest)) |
+                    (atom(x = '3' @ rest)) | (atom(x = '4' @ rest)) | (atom(x = '5' @ rest)) |
+                    (atom(x = '6' @ rest)) | (atom(x = '7' @ rest)) | (atom(x = '8' @ rest)) |
+                    (atom(x = '9' @ rest)) { bigint(to_number(x))}
+                    (atom(s)) { var(s) }
+                    (sexp([atom("amb"), a, b])) { amb_expr(to_expr(a), to_expr(b)) }
+                    (sexp([atom("call/cc"), e])) { callcc_expr(to_expr(e)) }
+                    (sexp([atom("if"), e1, e2, e3])) { if_expr(to_expr(e1), to_expr(e2), to_expr(e3)) }
+                    (sexp(atom("cond") @ test @ branches)) { cond_expr(to_expr(test), list.map (fn {
+                        (sexp([e1, e2])) { #(to_expr(e1), to_expr(e2)) }
+                        (_) { error("Invalid cond branch") }
+                    }, branches)) }
+                    (sexp([atom("constant"), atom(name)])) { constant(name) }
+                    (sexp([atom("constructor_info"), atom(name)])) { constructor_info(name) }
+                    (sexp(atom("construct") @ atom(name) @ args)) { construct(name, list.map(to_expr, args)) }
+                    (sexp([atom("deconstruct"), atom(name), atom(index), e])) { deconstruct(name, to_number(index), to_expr(e)) }
+                    (sexp([atom("lambda"), sexp(args), body])) |
+                    (sexp([atom("\u03bb;"),      sexp(args), body])) { lambda(list.map(atom_to_string, args), to_expr(body)) }
+                    (sexp(atom("begin") @ exprs)) { sequence(list.map(to_expr, exprs)) }
+                    (sexp([atom("let"), sexp(bindings), body])) {
+                        let bindingsList = list.map (fn {
+                            (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
+                            (_) { error("Invalid let binding") }
+                        }, bindings);
                         in
-                            #(indexList, to_expr(caseExpr))
+                            let_expr(bindingsList, to_expr(body))
                     }
-                    (_) { error("Invalid match_cases case") }
-                }, cases)) }
-                (sexp(atom("namespaces") @ exprs)) { namespaces(list.map(to_expr, exprs)) }
-                (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
-                (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
-                (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
-                (sexp([atom("tag"), e])) { tag(to_expr(e)) }
-                (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
-                (sexp([atom("typedefs"), atom(defs), e])) { typedefs(1, to_expr(e)) }
-                (sexp([atom("typeof"), e])) { typeof_expr(to_expr(e)) }
-                (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
-                (x) { error("Cannot parse expression"); }
+                    (sexp([atom("letrec"), sexp(bindings), body])) {
+                        let bindingsList = list.map (fn {
+                            (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
+                            (_) { error("Invalid letrec binding") }
+                        }, bindings);
+                        in
+                            letrec_expr(bindingsList, to_expr(body))
+                    }
+                    (sexp([atom("let*"), sexp(bindings), body])) {
+                        let bindingsList = list.map (fn {
+                            (sexp([atom(name), expr])) { #(name, to_expr(expr)) }
+                            (_) { error("Invalid let* binding") }
+                        }, bindings);
+                        in
+                            letstar_expr(bindingsList, to_expr(body))
+                    }
+                    (sexp([atom("lookup"), atom(name), atom(index), e])) { lookup(name, to_number(index), to_expr(e)) }
+                    (sexp(atom("make_tuple") @ elements)) { make_tuple(list.map(to_expr, elements)) }
+                    (sexp(atom("make_vec") @ atom(size) @ elements)) { make_vec(to_number(size), list.map(to_expr, elements)) }
+                    (sexp(atom("match_cases") @ exp @ cases)) { match_cases(to_expr(exp), list.map (fn {
+                        (sexp([sexp(indices), caseExpr])) {
+                            let indexList = list.map (fn {
+                                (atom(i)) { to_number(i) }
+                                (_) { error("Invalid match_cases index") }
+                            }, indices);
+                            in
+                                #(indexList, to_expr(caseExpr))
+                        }
+                        (_) { error("Invalid match_cases case") }
+                    }, cases)) }
+                    (sexp(atom("namespaces") @ exprs)) { namespaces(list.map(to_expr, exprs)) }
+                    (sexp([atom("+"), e1, e2])) { primapp("+", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("-"), e1, e2])) { primapp("-", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("*"), e1, e2])) { primapp("*", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("/"), e1, e2])) { primapp("/", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("**"), e1, e2])) { primapp("**", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("=="), e1, e2])) { primapp("==", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("="), e1, e2])) { primapp("=", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("<"), e1, e2])) { primapp("<", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom(">"), e1, e2])) { primapp(">", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("<="), e1, e2])) { primapp("<=", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom(">="), e1, e2])) { primapp(">=", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("set!"), e1, e2])) { primapp("set!", to_expr(e1), to_expr(e2)) }
+                    (sexp([atom("print"), e])) { print_exp(to_expr(e)) }
+                    (sexp([atom("tag"), e])) { tag(to_expr(e)) }
+                    (sexp([atom("tuple_index"), atom(size), atom(index), e])) { tuple_index(1, 1, to_expr(e)) }
+                    (sexp([atom("typedefs"), atom(defs), e])) { typedefs(1, to_expr(e)) }
+                    (sexp([atom("typeof"), e])) { typeof_expr(to_expr(e)) }
+                    (sexp([])) { error("Empty expression") }
+                    (sexp(func @ args)) { apply(to_expr(func), list.map(to_expr, args)) }
+                    (x) {
+                        print x;
+                        error("Cannot parse expression");
+                    }
+                }
             }
 
             // "Tokenizer" function

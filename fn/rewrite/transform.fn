@@ -3,14 +3,17 @@ namespace
 link "expr.fn" as E;
 link "../listutils.fn" as list;
 
+// (E.expr -> E.expr) -> E.expr -> E.expr
 fn bottom_up(f, exp) {
     f(_transform(bottom_up(f), exp))
 }
 
+// (E.expr -> E.expr) -> E.expr -> E.expr
 fn top_down(f, exp) {
     _transform(top_down(f), f(exp))
 }
 
+// (E.expr -> E.expr) -> E.expr -> E.expr
 fn _transform(t, exp) {
     switch (exp) {
 
