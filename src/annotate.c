@@ -480,6 +480,9 @@ static AnfEnv *annotateAnfExpLookUp(AnfExpLookUp *lookUp, AnfEnv *env) {
 }
 
 static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
+    if (x == NULL) {
+        return env;
+    }
 #ifdef DEBUG_ANNOTATE2
     eprintf("annotateExp ");
     ppExp(x);

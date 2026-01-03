@@ -379,7 +379,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     
     // promote the body sequence to a LamExp
     // [[nameSpaces] [body]]
-    LamExp *letRecBody = newLamExp_Sequence(CPI(body), body);
+    LamExp *letRecBody = (body == NULL) ? NULL : newLamExp_Sequence(CPI(body), body);
     PROTECT(letRecBody);
 
     LamExp *result = NULL;
@@ -392,7 +392,7 @@ static LamExp *lamConvert(AstDefinitions *definitions,
     // if there are functions, create a letrec, else just use the body
     if (funcDefsList != NULL) {
         // [[printers] [funcs] [vars] [[nameSpaces] [body]]]
-        result = makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
+        result = (letRecBody == NULL) ? NULL : makeLamExp_LetRec(CPI(letRecBody), funcDefsList, letRecBody);
     } else {
         // [vars] [[nameSpaces] [body]]
         result = letRecBody;
@@ -2367,7 +2367,7 @@ static LamSequence *convertSequence(AstExpressions *expressions,
     int save = PROTECT(next);
     LamExp *exp = convertExpression(expressions->expression, env);
     (void) PROTECT(exp);
-    LamSequence *this = newLamSequence(CPI(exp), exp, next);
+    LamSequence *this = (exp == NULL) ? NULL : newLamSequence(CPI(exp), exp, next);
     UNPROTECT(save);
     return this;
 }

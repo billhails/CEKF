@@ -238,6 +238,7 @@ static LamIntCondCases *inlineIntCondCases(LamIntCondCases *x) {
 }
 
 static LamExp *inlineExp(LamExp *x) {
+    if (x == NULL) return NULL;
     switch (x->type) {
         case LAMEXP_TYPE_VAR:
         case LAMEXP_TYPE_STDINT:

@@ -1103,7 +1103,6 @@ static LamTypeConstructorInfo *visitLamTypeConstructorInfo(LamTypeConstructorInf
 
 static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
     if (node == NULL) {
-        cant_happen("visitLamExp called with NULL");
         return NULL;
     }
 

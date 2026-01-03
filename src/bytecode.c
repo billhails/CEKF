@@ -789,6 +789,8 @@ void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L) {
 }
 
 void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
+    if (x == NULL)
+        return;
     ENTER(writeAnfExp);
     switch (x->type) {
         case ANFEXP_TYPE_AEXP:{
