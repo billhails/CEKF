@@ -1141,8 +1141,9 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal)
 /**
  * @brief Parse a series of statements until a terminal token is reached.
  *
- * This function recursively parses expressions followed by semicolons,
+ * This function recursively parses expressions with optional semicolons between them,
  * and constructs an AstExpressions list until the terminal token is found.
+ * Semicolons are optional and multiple sequential semicolons are allowed.
  *
  * @param parser The PrattParser to use for parsing.
  * @param terminal The HashSymbol that indicates the end of the statements.
@@ -1153,26 +1154,15 @@ static AstExpressions *statements(PrattParser *parser, HashSymbol *terminal)
     ENTER(statements);
     AstExpression *expr = expression(parser);
     int save = PROTECT(expr);
-    AstExpressions *this = NULL;
-    if (check(parser, TOK_SEMI()))
+    // Centralized semicolon handling: allow optional semicolons (including multiple) after statements
+    while (match(parser, TOK_SEMI()));
+    AstExpressions *rest = NULL;
+    if (!check(parser, terminal))
     {
-        next(parser);
-        validateLastAlloc();
-        if (check(parser, terminal))
-        {
-            this = newAstExpressions(CPI(expr), expr, NULL);
-        }
-        else
-        {
-            AstExpressions *rest = statements(parser, terminal);
-            PROTECT(rest);
-            this = newAstExpressions(CPI(expr), expr, rest);
-        }
+        rest = statements(parser, terminal);
+        PROTECT(rest);
     }
-    else
-    {
-        this = newAstExpressions(CPI(expr), expr, NULL);
-    }
+    AstExpressions *this = newAstExpressions(CPI(expr), expr, rest);
     LEAVE(statements);
     UNPROTECT(save);
     return this;

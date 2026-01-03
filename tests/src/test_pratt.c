@@ -46,11 +46,11 @@ static void test(char *expr, char *expected, bool expectError) {
     PROTECT(dest);
     ppAstNest(dest, result);
     if (strcmp((char *)dest->entries, expected) != 0) {
-        printf("%s - expected %s got %s\n", expr, expected, dest->entries);
+        printf("\nTEST FAILED: \"%s\" - expected \"%s\" got \"%s\"\n\n", expr, expected, dest->entries);
         failed = true;
     }
     if (hadErrors() != expectError) {
-        printf("%s - %sexpected error\n", expr, expectError ? "" : "un");
+        printf("\nTEST FAILED: \"%s\" - %sexpected error\n\n", expr, expectError ? "" : "un");
         failed = true;
     }
     UNPROTECT(save);
@@ -89,7 +89,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("a(b, c)",                        "{ a(b, c); }", false);
     test("#(b)",                           "{ <tuple>(b); }", false);
     test("#(b, c)",                        "{ <tuple>(b, c); }", false);
-    test("a #b",                           "{ a; }", true);
+    test("a #b",                           "{ a; #(b); }", false);
     test("0x100",                          "{ 256; }", false);
     test("0X100i",                         "{ 256i; }", false);
     test("123456789012345678901234567_890","{ 123456789012345678901234567890; }", false);
@@ -100,7 +100,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     test("let typedef named_list(#t) { nl(str, list(#t)) } in nl",
                "{ let typedef named_list(t) {nl(str, list(t))}; in nl; }", false);
     test("let link \"bar\" as foo; in f",  "{ let ; in f; }", true);
-    test("switch (x) { (0) { 1 } } }",       "{ fn { (0) { 1; } }(x); }", true);
+    test("switch (x) { (0) { 1 } } }",       "{ fn { (0) { 1; } }(x);  ERROR; }", true);
     test("unsafe switch (x) { (0) { 1 } }",  "{ unsafe fn { (0) { 1; } }(x); }", false);
     test("let alias string = list(char); in foo;",
                "{ let alias string = list(char); in foo; }", false);
