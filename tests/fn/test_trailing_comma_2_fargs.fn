@@ -1,0 +1,5 @@
+// Test trailing comma in function formal arguments
+let
+    fn add3 { (a, b, c,) { a + b + c } }
+in
+    add3(1, 2, 3)

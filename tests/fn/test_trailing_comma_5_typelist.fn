@@ -1,0 +1,8 @@
+// Test trailing comma in type list
+let
+    typedef tree(#k, #v,) {
+        leaf
+        | node(tree(#k, #v,), #k, #v, tree(#k, #v),)
+    }
+in
+    leaf

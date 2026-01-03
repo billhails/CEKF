@@ -2413,7 +2413,11 @@ static AstTypeList *type_list(PrattParser *parser)
     PROTECT(this);
     if (match(parser, TOK_COMMA()))
     {
-        this->next = type_list(parser);
+        // Allow trailing comma: only continue if not at closing delimiter
+        if (!check(parser, TOK_CLOSE()) && !check(parser, TOK_RCURLY()))
+        {
+            this->next = type_list(parser);
+        }
     }
     LEAVE(type_list);
     UNPROTECT(save);
@@ -2442,7 +2446,11 @@ static AstTypeMap *type_map(PrattParser *parser)
     PROTECT(this);
     if (match(parser, TOK_COMMA()))
     {
-        this->next = type_map(parser);
+        // Allow trailing comma: only continue if not at closing curly
+        if (!check(parser, TOK_RCURLY()))
+        {
+            this->next = type_map(parser);
+        }
     }
     LEAVE(type_map);
     UNPROTECT(save);
@@ -3262,9 +3270,17 @@ static AstTypeSymbols *type_variables(PrattParser *parser)
     else
     {
         consume(parser, TOK_COMMA());
-        AstTypeSymbols *rest = type_variables(parser);
-        PROTECT(rest);
-        t = newAstTypeSymbols(TOKPI(tok), s, rest);
+        // Allow trailing comma: only continue if not at closing paren
+        if (!check(parser, TOK_CLOSE()))
+        {
+            AstTypeSymbols *rest = type_variables(parser);
+            PROTECT(rest);
+            t = newAstTypeSymbols(TOKPI(tok), s, rest);
+        }
+        else
+        {
+            t = newAstTypeSymbols(TOKPI(tok), s, NULL);
+        }
     }
     LEAVE(type_variables);
     UNPROTECT(save);
@@ -3552,8 +3568,12 @@ static AstExpressions *collectArguments(PrattParser *parser)
     AstExpressions *next = NULL;
     if (match(parser, TOK_COMMA()))
     {
-        next = collectArguments(parser);
-        PROTECT(next);
+        // Allow trailing comma: only continue if there's more content
+        if (!check(parser, TOK_CLOSE()))
+        {
+            next = collectArguments(parser);
+            PROTECT(next);
+        }
     }
     AstExpressions *this = newAstExpressions(CPI(arg), arg, next);
     LEAVE(collectArguments);
@@ -3609,8 +3629,12 @@ static AstTaggedExpressions *taggedExpressions(PrattParser *parser)
     AstTaggedExpressions *next = NULL;
     if (match(parser, TOK_COMMA()))
     {
-        next = taggedExpressions(parser);
-        PROTECT(next);
+        // Allow trailing comma: only continue if there's more content
+        if (!check(parser, TOK_RCURLY()))
+        {
+            next = taggedExpressions(parser);
+            PROTECT(next);
+        }
     }
     AstTaggedExpressions *this = newAstTaggedExpressions(CPI(expr), tagSymbol, expr, next);
     LEAVE(taggedExpressions);
