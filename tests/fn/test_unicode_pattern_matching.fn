@@ -1,0 +1,5 @@
+// regression test for bug fix
+switch("unicode λ") {
+    ("unicode λ") { true }
+    (_) { error("match failed") }
+}

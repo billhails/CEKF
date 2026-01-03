@@ -111,6 +111,11 @@ static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer word) {
     memcpy(&b->entries[loc], &word, sizeof(Integer));
 }
 
+static void writeCharacterAt(Control loc, ByteCodeArray *b, Character c) {
+    DEBUG("%04x writeChar %lc", loc, c);
+    memcpy(&b->entries[loc], &c, sizeof(Character));
+}
+
 static void writeDoubleAt(Control loc, ByteCodeArray *b, Double f) {
     DEBUG("%04x writeDouble %f", loc, f);
     memcpy(&b->entries[loc], &f, sizeof(Double));
@@ -145,9 +150,16 @@ static void addIrrational(ByteCodeArray *b, Double f) {
     b->size += sizeof(Double);
 }
 
+__attribute__((unused))
 static int reserveInteger(ByteCodeArray *b) {
     int address = b->size;
     addInteger(b, 0);
+    return address;
+}
+
+static int reserveCharacter(ByteCodeArray *b) {
+    int address = b->size;
+    addCharacter(b, 0);
     return address;
 }
 
@@ -386,7 +398,7 @@ void writeCexpCharCondCases(int depth, Control *values, Control *addresses,
     if (x->next == NULL) {      // default
         writeAnfExp(x->body, b, L);
     } else {
-        writeIntegerAt(values[depth], b, x->option);
+        writeCharacterAt(values[depth], b, x->option);
         writeCurrentAddressAt(addresses[depth], b);
         writeAnfExp(x->body, b, L);
     }
@@ -418,7 +430,7 @@ void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b, LocationArray *L)
     Control *addresses = NEW_ARRAY(Control, numCases);  // address in b for each addr(exp_i)
     Control *jumps = NEW_ARRAY(Control, numCases);      // address in b for the JMP patch address at the end of each expression
     for (Index i = 0; i < numCases; i++) {
-        values[i] = reserveInteger(b);      // TODO can change this to a char later, but then again, wchar_t...
+        values[i] = reserveCharacter(b);
         addresses[i] = reserveWord(b);
     }
     writeCexpCharCondCases(0, values, addresses, jumps, x, b, L);

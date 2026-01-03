@@ -202,7 +202,7 @@ static TpmcPattern *makeMaybeBigIntegerPattern(MaybeBigInt *number) {
     return pattern;
 }
 
-static TpmcPattern *makeCharacterPattern(char character) {
+static TpmcPattern *makeCharacterPattern(Character character) {
     TpmcPatternValue *val = newTpmcPatternValue_Character(character);
     int save = PROTECT(val);
     TpmcPattern *pattern = newTpmcPattern(val);

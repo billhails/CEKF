@@ -988,26 +988,31 @@ static void step() {
                     state.C = here;
 #endif
                     Value v = pop();
-                    int option = 0;
                     switch (v.type) {
                         case VALUE_TYPE_STDINT:
-                            option = v.val.stdint;
+                            for (int C = 0; C < size; C++) {
+                                Integer val = readCurrentInt();
+                                int offset = readCurrentOffset();
+                                if (v.val.stdint == val) {
+                                    state.C = offset;
+                                    break;
+                                }
+                            }
                             break;
                         case VALUE_TYPE_CHARACTER:
-                            option = (int) v.val.character;
+                            for (int C = 0; C < size; C++) {
+                                Character val = readCurrentCharacter();
+                                int offset = readCurrentOffset();
+                                if (v.val.character == val) {
+                                    state.C = offset;
+                                    break;
+                                }
+                            }
                             break;
                         default:
                             cant_happen
                                 ("unexpected type %d for CHARCOND value",
                                  v.type);
-                    }
-                    for (int C = 0; C < size; C++) {
-                        Integer val = readCurrentInt();
-                        int offset = readCurrentOffset();
-                        if (option == val) {
-                            state.C = offset;
-                            break;
-                        }
                     }
                 }
                 break;

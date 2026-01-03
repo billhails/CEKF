@@ -489,7 +489,7 @@ static LamIntCondCases *makeIntCondDefault(LamExp *action) {
 }
 
 static LamCharCondCases *makeConstantCharCondCase(TpmcArcList *arcList,
-                                                  int constant,
+                                                  Character constant,
                                                   LamExp *testVar,
                                                   LamExpTable *lambdaCache) {
     LamCharCondCases *next =
@@ -578,7 +578,7 @@ static LamCharCondCases *translateConstantCharArcList(TpmcArcList *arcList,
                 break;
             }
         case TPMCPATTERNVALUE_TYPE_CHARACTER:{
-                int character = getTpmcPatternValue_Character(arcList->arc->test->pattern);
+                Character character = getTpmcPatternValue_Character(arcList->arc->test->pattern);
                 res =
                     makeConstantCharCondCase(arcList, character, testVar,
                                              lambdaCache);

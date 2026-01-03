@@ -67,7 +67,7 @@ namespace
         ,"(+ (* 2 3) (- 5 1))"
 
         // call/cc capturing continuation in letrec
-        // ,"(letrec ((k (λ () null))) (call/cc (λ (cont) (begin (set! k cont) 42))))"
+        ,"(letrec ((k (λ () null))) (call/cc (λ (cont) (begin (set! k cont) 42))))"
 
         // Lambda with no arguments
         ,"((λ () 42))"
