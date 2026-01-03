@@ -55,9 +55,10 @@ endif
 
 ifndef CCC
 CCC:=clang
+WEXTRA=-Werror=implicit-fallthrough
 endif
 
-CC:=$(CCC) -Wall -Wextra -Werror $(CCMODE) $(EXTRA_DEFINES)
+CC:=$(CCC) -Wall -Wextra -Werror $(WEXTRA) $(CCMODE) $(EXTRA_DEFINES)
 LAXCC:=$(CCC) -Werror $(CCMODE) $(EXTRA_DEFINES)
 
 PYTHON=python3

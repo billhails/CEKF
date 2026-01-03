@@ -561,6 +561,7 @@ LamExp *TkCondKont(LamExp *atest, TkCondKontEnv *env) {
             cases = newLamCondCases_Characters(CPI(atest), char_cases);
             PROTECT(cases);
         }
+        break;
         default:
             cant_happen("Unknown LamCondCases type %s in TkCondKont", lamCondCasesTypeName(env->branches->type));
     }
