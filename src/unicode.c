@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// This file includes a lookup table for the unicode general category
+// This file includes a lookUp table for the unicode general category
 // values of every unicode character, plus a set of unicode equivalents
 // to the functions defined in ctype.h.
 // Where unicode and ctype.h disagree (for example unicode considers TAB

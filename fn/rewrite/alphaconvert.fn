@@ -1,0 +1,172 @@
+namespace
+link "expr.fn" as E;
+link "env.fn" as Env;
+link "../listutils.fn" as list;
+link "gensym.fn" as GS;
+
+fn alphaconvert(c, e) {
+    switch (e)  {
+        (E.amb_expr(expr1, expr2)) {
+            // amb_expr(expr, expr)
+            E.amb_expr(alphaconvert(c, expr1), alphaconvert(c, expr2))
+        }
+
+        (E.apply(fun, args)) {
+            // apply(expr, list(expr))
+            E.apply(alphaconvert(c, fun), list.map(fn (arg) { alphaconvert(c, arg) }, args))
+        }
+
+        (x = E.back_expr) |
+        (x = E.env_expr) |
+        (x = E.error_expr) |
+        (x = E.bigint(_)) |
+        (x = E.character(_)) |
+        (x = E.constructor_info(_)) |
+        (x = E.stdint(_)) |
+        (x = E.constant(_)) {
+            x
+        }
+
+        (E.callcc_expr(e)) {
+            // callcc_expr(expr)
+            E.callcc_expr(alphaconvert(c, e))
+        }
+
+        (E.cond_expr(test, branches)) {
+            // cond_expr(expr, list(#(expr, expr)))
+            let #(vals, results) = list.unzip(branches);
+            in
+                E.cond_expr(alphaconvert(c, test),
+                            list.zip(list.map(alphaconvert(c), vals),
+                                        list.map(alphaconvert(c), results)))
+        }
+
+        (E.construct(name, args)) {
+            // construct(string, list(expr))
+            E.construct(name, list.map(alphaconvert(c), args))
+        }
+
+        (E.deconstruct(name, index, expr)) {
+            // deconstruct(string, number, expr)
+            E.deconstruct(name, index, alphaconvert(c, expr))
+        }
+
+        (E.if_expr(exprc, exprt, exprf)) {
+            // if_expr(expr, expr, expr)
+            E.if_expr(alphaconvert(c, exprc),
+                        alphaconvert(c, exprt),
+                        alphaconvert(c, exprf))
+        }
+
+        (E.lambda(params, body)) {
+            // lambda(list(string), expr)
+            let #(en, nsa) = c;
+                newparams = list.map(GS.genstring, params);
+                ee = Env.add_lists(Env.extend(en), params, newparams);
+            in
+                E.lambda(newparams, alphaconvert(#(ee, nsa), body))
+        }
+
+        (E.letrec_expr(bindings, expr)) {
+            // letrec_expr(list(#(string, expr)), expr)
+            let #(en, nsa) = c;
+                #(vars, exprs) = list.unzip(bindings);
+                newvars = list.map(GS.genstring, vars);
+                ee = Env.add_lists(Env.extend(en), vars, newvars);
+                newvals = list.map(alphaconvert(#(ee, nsa)), exprs); // in new environment
+                newbindings = list.zip(newvars, newvals);
+            in
+                E.letrec_expr(newbindings, alphaconvert(#(ee, nsa), expr)) // new environment
+        }
+
+        (E.lookup(name, index, expr)) {
+            // lookup(string, number, expr)
+            let #(e, nsa) = c;
+                fn find {
+                    (0, h @ t) { h }
+                    (n, h @ t) { find(n - 1, t) }
+                    (_, []) { error("Namespace index out of bounds") }
+                }
+            in
+                E.lookup(name, index, alphaconvert(#(find(index, nsa), nsa), expr))
+        }
+
+        (E.make_tuple(args)) {
+            // make_tuple(list(expr))
+            E.make_tuple(list.map(alphaconvert(c), args))
+        }
+
+        (E.make_vec(size, args)) {
+            // make_vec(number, list(expr))
+            E.make_vec(size, list.map(alphaconvert(c), args))
+        }
+
+        (E.match_cases(test, cases)) {
+            // match_cases(expr, list(#(list(number), expr)))
+            let #(vals, results) = list.unzip(cases);
+            in
+                E.match_cases(alphaconvert(c, test),
+                                list.zip(vals, list.map(alphaconvert(c), results)))
+        }
+
+        (E.namespaces(exprs)) {
+            // namespaces(list(expr))
+            E.namespaces(list.map(alphaconvert(c), exprs))
+        }
+
+        (E.primapp(p, e1, e2)) {
+            // primapp(string, expr, expr)
+            E.primapp(p, alphaconvert(c, e1), alphaconvert(c, e2))
+        }
+
+        (E.print_exp(expr)) {
+            // print_exp(expr)
+            E.print_exp(alphaconvert(c, expr))
+        }
+
+        (E.sequence(exprs)) {
+            // sequence(list(expr))
+            E.sequence(list.map(alphaconvert(c), exprs))
+        }
+
+        (E.tag(expr)) {
+            // tag(expr)
+            E.tag(alphaconvert(c, expr))
+        }
+
+        (E.tuple_index(size, index, expr)) {
+            // tuple_index(number, number, expr)
+            E.tuple_index(size, index, alphaconvert(c, expr))
+        }
+
+        (E.typedefs(defs, expr)) {
+            // typedefs(list(def), expr)
+            E.typedefs(defs, alphaconvert(c, expr))
+        }
+
+        (E.typeof_expr(expr)) {
+            // typeof_expr(expr)
+            E.typeof_expr(alphaconvert(c, expr))
+        }
+        (E.var(name)) {
+            // var(string)
+            let #(e, nsa) = c;
+                v = Env.get(e, name);
+            in
+                switch (v) {
+                    (nothing) {
+                        error("Unbound variable: " @@ name)
+                    }
+                    (x=some(vname)) {
+                        E.var(vname)
+                    }
+                }
+        }
+
+        (x) {
+            E.print_expr(x);
+            puts("\n");
+            error("alphaconvert: unsupported expression")
+        }
+    }
+}

@@ -71,9 +71,14 @@ void ppTcType(TcType *type) {
 }
 
 void ppTcFunction(TcFunction *function) {
-    eprintf("(");
-    ppTcType(function->arg);
-    eprintf(") -> ");
+    if (function->arg->type == TCTYPE_TYPE_FUNCTION) {
+        eprintf("(");
+        ppTcType(function->arg);
+        eprintf(")");
+    } else {
+        ppTcType(function->arg);
+    }
+    eprintf(" -> ");
     ppTcType(function->result);
 }
 
@@ -91,7 +96,7 @@ void ppTcThunk(TcThunk *thunk) {
 }
 
 void ppTcVar(TcVar *var) {
-    eprintf("<var>%s", var->name->name);
+    eprintf("%s", var->name->name);
     if (var->instance != NULL) {
         eprintf(" [");
         ppTcType(var->instance);
@@ -156,22 +161,22 @@ static inline void pad(int depth) {
     eprintf("%*s", depth * 2, "");
 }
 
-static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces);
+static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces);
 
-static void _ppTcNamespaces(TcNamespaceArray *namespaces, int depth) {
-    if (namespaces == NULL) return;
-    for (Index i = 0; i < namespaces->size; i++) {
+static void _ppTcNameSpaces(TcNameSpaceArray *nameSpaces, int depth) {
+    if (nameSpaces == NULL) return;
+    for (Index i = 0; i < nameSpaces->size; i++) {
         pad(depth);
         eprintf("[%u]:\n", i);
-        if (namespaces->entries[i]->type == TCTYPE_TYPE_ENV) {
-            _ppTcEnv(namespaces->entries[i]->val.env, depth + 1, true);
+        if (nameSpaces->entries[i]->type == TCTYPE_TYPE_ENV) {
+            _ppTcEnv(nameSpaces->entries[i]->val.env, depth + 1, true);
         } else {
-            eprintf("%s\n", tcTypeTypeName(namespaces->entries[i]->type));
+            eprintf("%s\n", tcTypeTypeName(nameSpaces->entries[i]->type));
         }
     }
 }
 
-static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
+static void _ppTcEnv(TcEnv *env, int depth, bool done_nameSpaces) {
     if (env == NULL) {
         pad(depth);
         eprintf("<NULL> env\n");
@@ -185,13 +190,13 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
     while ((name = iterateTcTypeTable(env->table, &i, &value)) != NULL) {
         pad(depth);
         if (value->type == TCTYPE_TYPE_NSID) {
-            eprintf("  %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.nsid);
+            eprintf("  %s => %s [%d]\n", name->name, tcTypeTypeName(value->type), value->val.nsId);
         } else if (value->type == TCTYPE_TYPE_NAMESPACES) {
-            if (done_namespaces) {
+            if (done_nameSpaces) {
                 eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));
             } else {
                 eprintf("  %s => %s [\n", name->name, tcTypeTypeName(value->type));
-                _ppTcNamespaces(value->val.namespaces, depth + 1);
+                _ppTcNameSpaces(value->val.nameSpaces, depth + 1);
                 pad(depth);
                 eprintf("  ]\n");
             }
@@ -199,7 +204,7 @@ static void _ppTcEnv(TcEnv *env, int depth, bool done_namespaces) {
             eprintf("  %s => %s\n", name->name, tcTypeTypeName(value->type));
         }
     }
-    _ppTcEnv(env->next, depth + 1, done_namespaces);
+    _ppTcEnv(env->next, depth + 1, done_nameSpaces);
     pad(depth);
     eprintf("}\n");
 }
@@ -283,9 +288,14 @@ static void tcTypeToStringHelper(TcType *type, char **buffer, int *size, int *ca
 }
 
 static void tcFunctionToString(TcFunction *function, char **buffer, int *size, int *capacity) {
-    appendToBuffer(buffer, size, capacity, "(");
-    tcTypeToStringHelper(function->arg, buffer, size, capacity);
-    appendToBuffer(buffer, size, capacity, ") -> ");
+    if (function->arg->type == TCTYPE_TYPE_FUNCTION) {
+        appendToBuffer(buffer, size, capacity, "(");
+        tcTypeToStringHelper(function->arg, buffer, size, capacity);
+        appendToBuffer(buffer, size, capacity, ")");
+    } else {
+        tcTypeToStringHelper(function->arg, buffer, size, capacity);
+    }
+    appendToBuffer(buffer, size, capacity, " -> ");
     tcTypeToStringHelper(function->result, buffer, size, capacity);
 }
 

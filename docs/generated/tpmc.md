@@ -3,10 +3,11 @@
 Term Pattern Matching Compiler types
 
 ```mermaid
-flowchart TD
+flowchart LR
 TpmcVariableTable --entries--> NULL
 TpmcSubstitutionTable --entries--> HashSymbol
 TpmcPatternTable --entries--> TpmcPattern
+TpmcStateTable --entries--> TpmcState
 TpmcMatchRules --rules--> TpmcMatchRuleArray
 TpmcMatchRules --rootVariables--> TpmcVariableArray
 TpmcMatchRule --action--> TpmcState
@@ -16,7 +17,7 @@ TpmcComparisonPattern --current--> TpmcPattern
 TpmcAssignmentPattern --name--> HashSymbol
 TpmcAssignmentPattern --value--> TpmcPattern
 TpmcConstructorPattern --tag--> HashSymbol
-TpmcConstructorPattern --namespace--> int
+TpmcConstructorPattern --nameSpace--> int
 TpmcConstructorPattern --info--> LamTypeConstructorInfo
 TpmcConstructorPattern --components--> TpmcPatternArray
 TpmcPattern --path--> HashSymbol
@@ -24,7 +25,7 @@ TpmcPattern --pattern--> TpmcPatternValue
 TpmcTestState --path--> HashSymbol
 TpmcTestState --arcs--> TpmcArcArray
 TpmcFinalState --action--> LamExp
-TpmcState --refcount--> int
+TpmcState --refCount--> int
 TpmcState --stamp--> int
 TpmcState --freeVariables--> TpmcVariableTable
 TpmcState --state--> TpmcStateValue
@@ -38,9 +39,9 @@ TpmcIntList --next--> TpmcIntList
 TpmcPatternValue --var--> HashSymbol
 TpmcPatternValue --comparison--> TpmcComparisonPattern
 TpmcPatternValue --assignment--> TpmcAssignmentPattern
-TpmcPatternValue --wildcard--> void_ptr
+TpmcPatternValue --wildCard--> void_ptr
 TpmcPatternValue --character--> character
-TpmcPatternValue --biginteger--> MaybeBigInt
+TpmcPatternValue --bigInteger--> MaybeBigInt
 TpmcPatternValue --constructor--> TpmcConstructorPattern
 TpmcPatternValue --tuple--> TpmcPatternArray
 TpmcStateValue --test--> TpmcTestState
@@ -55,4 +56,4 @@ TpmcIntArray["TpmcIntArray[]"] --entries--> int
 TpmcMatrix["TpmcMatrix[][]"] --entries--> TpmcPattern
 ```
 
-> Generated from src/tpmc.yaml by tools/makeAST.py
+> Generated from src/tpmc.yaml by tools/generate.py

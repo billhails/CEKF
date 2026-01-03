@@ -35,10 +35,10 @@ structs:
             brief: AST Program
             description: >-
                 The root structure of the AST, containing the
-                program's definitions, namespaces and expressions.
+                program's definitions, nameSpaces and expressions.
         data:
             preamble: AstDefinitions
-            namespaces: AstNamespaceArray
+            nameSpaces: AstNameSpaceArray
             body: AstExpressions
 
     AstNest:
@@ -52,22 +52,22 @@ structs:
             definitions: AstDefinitions
             expressions: AstExpressions
 
-    AstNamespaceImpl:
+    AstNameSpaceImpl:
         meta:
-            brief: AST Namespace Implementation
+            brief: AST NameSpace Implementation
             description: >-
-                An implementation of a namespace in the AST,
+                An implementation of a nameSpace in the AST,
                 containing its unique file ID and definitions.
         data:
             id: file_id
             definitions: AstDefinitions
 
-    AstNamespace:
+    AstNameSpace:
         meta:
-            brief: AST Namespace
+            brief: AST NameSpace
             description: >-
-                A flyweight reference to namespace in the AST,
-                containing its index into an array of namespace
+                A flyweight reference to nameSpace in the AST,
+                containing its index into an array of nameSpace
                 implementations.
         data:
             symbol: HashSymbol
@@ -226,7 +226,7 @@ structs:
                 Example:
                 `typedef list(#t) { cons(#t, <<list(#t)>>) | nil }`
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             typeList: AstTypeList
 
     AstTypeList:
@@ -337,7 +337,7 @@ structs:
                 An unpack operation in the AST, which is used to unpack
                 a tuple or a list into individual arguments.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             argList: AstFargList
 
     AstUnpackStruct:
@@ -347,7 +347,7 @@ structs:
                 An unpack operation for a struct in the AST, which unpacks
                 the named fields of a struct into individual arguments.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             argList: AstTaggedArgList
 
     AstNamedArg:
@@ -383,26 +383,26 @@ structs:
             expression: AstExpression
             next: AstExpressions
 
-    AstLookupSymbol:
+    AstLookUpSymbol:
         meta:
-            brief: AST Lookup Symbol
+            brief: AST LookUp Symbol
             description: >-
                 A symbol that is looked up in the AST, which can be a
                 variable or a function. Used to refer to variables or
-                functions defined in other namespaces.
+                functions defined in other nameSpaces.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
-    AstLookup:
+    AstLookUp:
         meta:
-            brief: AST Lookup
+            brief: AST LookUp
             description: >-
-                A lookup operation in the AST, which evaluates an expression
-                in another namespace.
+                A lookUp operation in the AST, which evaluates an expression
+                in another nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             expression: AstExpression
 
@@ -426,11 +426,11 @@ structs:
         data:
             exp: AstExpression
 
-    AstTypeof:
+    AstTypeOf:
         meta:
-            brief: AST Typeof Expression
+            brief: AST TypeOf Expression
             description: >-
-                A typeof expression in the AST, which returns a string
+                A typeOf expression in the AST, which returns a string
                 representation of the type of an expression.
         data:
             exp: AstExpression
@@ -442,7 +442,7 @@ structs:
                 A structure in the AST with named fields, when used
                 as an actual argument to a function.
         data:
-            symbol: AstLookupOrSymbol
+            symbol: AstLookUpOrSymbol
             expressions: AstTaggedExpressions
 
     AstTaggedExpressions:
@@ -478,15 +478,15 @@ unions:
             list: AstTypeList
             map: AstTypeMap
 
-    AstLookupOrSymbol:
+    AstLookUpOrSymbol:
         meta:
-            brief: AST Lookup or Symbol
+            brief: AST LookUp or Symbol
             description: >-
                 A reference to a symbol in the AST, which can be a
-                direct symbol or a lookup in another namespace.
+                direct symbol or a lookUp in another nameSpace.
         data:
             symbol: HashSymbol
-            lookup: AstLookupSymbol
+            lookUp: AstLookUpSymbol
 
     AstDefinition:
         meta:
@@ -522,11 +522,11 @@ unions:
             brief: AST Formal Argument
             description: >-
                 A formal argument in a function definition, which can be a
-                variable, a wildcard, or a destructured argument.
+                variable, a wildCard, or a destructured argument.
         data:
-            wildcard: void_ptr
+            wildCard: void_ptr
             symbol: HashSymbol
-            lookup: AstLookupSymbol
+            lookUp: AstLookUpSymbol
             named: AstNamedArg
             unpack: AstUnpack
             unpackStruct: AstUnpackStruct
@@ -541,11 +541,11 @@ unions:
                 Any expression in the AST.
         data:
             back: void_ptr
-            wildcard: void_ptr
+            wildCard: void_ptr
             alias: AstExprAlias
             annotatedSymbol: AstAnnotatedSymbol
             funCall: AstFunCall
-            lookup: AstLookup
+            lookUp: AstLookUp
             symbol: HashSymbol
             number: MaybeBigInt
             character: character
@@ -553,7 +553,7 @@ unions:
             nest: AstNest
             iff: AstIff
             print: AstPrint
-            typeOf: AstTypeof
+            typeOf: AstTypeOf
             tuple: AstExpressions
             env: void_ptr
             structure: AstStruct
@@ -570,21 +570,21 @@ hashes:
             entries: int
 
 arrays:
-    AstNamespaceArray:
+    AstNameSpaceArray:
         meta:
-            brief: AST Namespace Array
+            brief: AST NameSpace Array
             description: >-
-                An array of namespace implementations in the AST.
-                Used to store the namespaces defined in the program.
+                An array of nameSpace implementations in the AST.
+                Used to store the nameSpaces defined in the program.
         data:
-            entries: AstNamespaceImpl
+            entries: AstNameSpaceImpl
 
     AstFileIdArray:
         meta:
             brief: AST File ID Array
             description: >-
                 An array of file IDs used in the AST, which identify
-                namespace files that have already been read.
+                nameSpace files that have already been read.
         data:
             entries: file_id
 

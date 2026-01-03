@@ -24,6 +24,7 @@ config:
     - bigint.h
     - tc.h
     - tc_debug.h
+    - lambda_functions.h
 
 
 structs:
@@ -98,26 +99,26 @@ structs:
             function: LamExp
             args: LamArgs
 
-    LamLookup:
+    LamLookUp:
         meta:
-            brief: A lookup in a namespace
+            brief: A lookUp in a nameSpace
             description: >-
                 This structure represents the evaluation of an expression
-                in a different namespace.
+                in a different nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             exp: LamExp
 
-    LamLookupSymbol:
+    LamLookUpSymbol:
         meta:
-            brief: A lookup symbol in a namespace
+            brief: A lookUp symbol in a nameSpace
             description: >-
                 This structure represents a symbol that is looked up
-                in a namespace. It is used to resolve symbols to their
-                definitions in the context of the given namespace.
+                in a nameSpace. It is used to resolve symbols to their
+                definitions in the context of the given nameSpace.
         data:
-            nsid: int
+            nsId: int
             nsSymbol: HashSymbol
             symbol: HashSymbol
 
@@ -155,16 +156,13 @@ structs:
                 that was constructed using a specific constructor.
         data:
             name: HashSymbol # name of the constructor being deconstructed
-            nsid: int        # namespace of the constructor being deconstructed
+            nsId: int        # nameSpace of the constructor being deconstructed
             vec: int         # offset of the field in the vector
             exp: LamExp      # expression being deconstructed
 
     LamTupleIndex:
         meta:
             brief: An index into a tuple
-            description: >-
-                This structure represents an index into a tuple. It is used
-                to access a specific element of a tuple by its index.
         data:
             vec: int         # offset of the field in the untagged tuple vector
             size: int        # size of the tuple
@@ -175,20 +173,14 @@ structs:
             brief: A vector constructor
             description: >-
                 This structure represents the internal construction of a
-                type instance represented as a vector from
-                a list of arguments. It is used to create instances of types in the
-                lambda expression.
+                type instance (represented as a vector) from a list of arguments.
         data:
-            nargs: int
+            nArgs: int
             args: LamArgs
 
     LamIff:
         meta:
             brief: An if-then-else expression
-            description: >-
-                This structure represents a conditional expression that evaluates
-                to one of two branches based on a condition. It is used to
-                implement branching logic in the lambda expressions.
         data:
             condition: LamExp
             consequent: LamExp
@@ -266,23 +258,39 @@ structs:
         data:
             item: int
             name: HashSymbol
-            nsid: int
+            nsId: int
             next: LamIntList
 
     LamLet:
         meta:
             brief: A let expression
             description: >-
-                This structure represents a let expression that binds variables
-                to expressions and then evaluates a body expression using those
-                bindings. It is used to introduce local variables.
+                A let expression allows for parallel bindings.
         data:
-            bindings: LamLetBindings
+            bindings: LamBindings
             body: LamExp
 
-    LamLetBindings:
+    LamLetRec:
         meta:
-            brief: Bindings in a let expression
+            brief: A letrec expression
+            description: >-
+                A letrec expression allows for recursive bindings.
+        data:
+            bindings: LamBindings
+            body: LamExp
+
+    LamLetStar:
+        meta:
+            brief: A let* expression
+            description: >-
+                A let* expression allows for sequential bindings.
+        data:
+            bindings: LamBindings
+            body: LamExp
+
+    LamBindings:
+        meta:
+            brief: Bindings in a let or letrec expression
             description: >-
                 This structure holds the bindings in a let expression.
                 Each binding consists of a variable and an associated expression
@@ -290,31 +298,7 @@ structs:
         data:
             var: HashSymbol
             val: LamExp
-            next: LamLetBindings
-
-    LamLetRec:
-        meta:
-            brief: A letrec expression
-            description: >-
-                This structure represents a letrec expression that allows for
-                recursive bindings. It binds multiple variables to their
-                corresponding expressions and evaluates a body expression using
-                those bindings.
-        data:
-            bindings: LamLetRecBindings
-            body: LamExp
-
-    LamLetRecBindings:
-        meta:
-            brief: Bindings in a letrec expression
-            description: >-
-                This structure holds the bindings in a letrec expression.
-                Each binding consists of a variable and an associated expression
-                that is evaluated in the context of the letrec.
-        data:
-            var: HashSymbol
-            val: LamExp
-            next: LamLetRecBindings
+            next: LamBindings
 
     LamContext:
         meta:
@@ -350,15 +334,15 @@ structs:
             exp: LamExp
             printer: LamExp=NULL
 
-    LamTypeof:
+    LamTypeOf:
         meta:
-            brief: A typeof expression
+            brief: A typeOf expression
             description: >-
-                This structure represents a typeof expression that returns
+                This structure represents a typeOf expression that returns
                 a string representation of the type of an expression.
         data:
             exp: LamExp
-            typestring: LamExp=NULL
+            typeString: LamExp=NULL # assgned by the type checker
 
     LamTypeDefs:
         meta:
@@ -366,7 +350,7 @@ structs:
             description: >-
                 This structure holds type definitions that are used in the
                 lambda expressions. It is prepended to Each letrec and any
-                typedefs in the AST are hoisted into this section.
+                typeDefs in the AST are hoisted into this section.
         data:
             typeDefs: LamTypeDefList
             body: LamExp
@@ -405,7 +389,7 @@ structs:
 
     LamTypeSig:
         meta:
-            brief: A type signature in lambda expressions
+            brief: A type signature
             description: >-
                 This structure represents a type signature that includes the
                 name of the type and its arguments. It is used to define the
@@ -437,7 +421,7 @@ structs:
 
     LamTypeConstructor:
         meta:
-            brief: A type constructor in lambda expressions
+            brief: A type constructor
             description: >-
                 This structure represents a type constructor that includes
                 the name, type, and arguments of the constructor. It is used
@@ -460,13 +444,13 @@ structs:
 
     LamTypeFunction:
         meta:
-            brief: A type function in lambda expressions
+            brief: A type function
             description: >-
                 This structure represents a type function that includes the
                 name and arguments of the function. It is used as arguments
                 to type constructors during their definition.
         data:
-            name: LamLookupOrSymbol
+            name: LamLookUpOrSymbol
             args: LamTypeConstructorArgs
 
     LamTypeConstructorInfo:
@@ -474,11 +458,11 @@ structs:
             brief: Information about a type constructor
             description: >-
                 This utility structure collects information about a type
-                constructor, including its name, namespace, type, tags,
+                constructor, including its name, nameSpace, type, tags,
                 and arity.
         data:
             name: HashSymbol
-            nsid: int
+            nsId: int
             type: LamTypeConstructor
             tags: LamTypeTags
             needsVec: bool # does this need to be a vector?
@@ -486,14 +470,23 @@ structs:
             size: int # number of alternatives
             index: int # index into list of alternatives
 
+    LamAlphaEnv:
+        meta:
+            brief: An environment for alpha conversion
+            description: >-
+                This structure holds the environment needed for alpha
+                conversion of lambda expressions. It includes an alpha
+                table for tracking variable substitutions and a parent
+                environment for nested scopes.
+        parserInfo: false
+        data:
+            alphaTable: LamAlphaTable
+            next: LamAlphaEnv
+            nameSpaces: LamAlphaEnvArray=NULL
 enums:
     LamPrimOp:
         meta:
-            brief: Primitive operations in lambda expressions
-            description: >-
-                This enumeration defines the primitive operations that can be
-                applied in lambda expressions. These operations include arithmetic,
-                comparison, and vector operations.
+            brief: Primitive operations
         data:
             - ADD
             - SUB
@@ -517,50 +510,52 @@ unions:
             description: >-
                 This union represents the different types of expressions that can
                 be evaluated in the lambda expressions. It includes function
-                applications, variable lookups, constants, and various operations.
+                applications, variable lookUps, constants, and various operations.
         data:
-            namespaces: LamNamespaceArray
-            lam: LamLam
-            var: HashSymbol
-            stdint: int
-            biginteger: MaybeBigInt
-            prim: LamPrimApp
-            sequence: LamSequence
-            makeVec: LamMakeVec
-            construct: LamConstruct
-            deconstruct: LamDeconstruct
-            tuple_index: LamTupleIndex
-            make_tuple: LamArgs
-            tag: LamExp
-            constant: LamConstant
-            apply: LamApply
-            iff: LamIff
-            callcc: LamExp
-            letrec: LamLetRec
-            typedefs: LamTypeDefs
-            let: LamLet
-            match: LamMatch
-            cond: LamCond
             amb: LamAmb
-            print: LamPrint
-            typeOf: LamTypeof
-            character: character
+            apply: LamApply
+            args: LamArgs # so that ANF normalize can be uniformly typed
             back: void_ptr
-            error: void_ptr
-            cond_default: void_ptr
-            env: void_ptr
-            lookup: LamLookup
+            bigInteger: MaybeBigInt
+            bindings: LamBindings # so that ANF normalize can be uniformly typed
+            callCC: LamExp
+            character: character
+            cond: LamCond
+            constant: LamConstant
+            construct: LamConstruct
             constructor: LamTypeConstructorInfo
+            deconstruct: LamDeconstruct
+            env: void_ptr
+            error: void_ptr
+            iff: LamIff
+            lam: LamLam
+            let: LamLet
+            letRec: LamLetRec
+            letStar: LamLetStar
+            lookUp: LamLookUp
+            makeTuple: LamArgs
+            makeVec: LamMakeVec
+            match: LamMatch
+            nameSpaces: LamNameSpaceArray
+            prim: LamPrimApp
+            print: LamPrint
+            sequence: LamSequence
+            stdint: int
+            tag: LamExp
+            tupleIndex: LamTupleIndex
+            typeDefs: LamTypeDefs
+            typeOf: LamTypeOf
+            var: HashSymbol
 
-    LamLookupOrSymbol:
+    LamLookUpOrSymbol:
         meta:
-            brief: A lookup or symbol in a namespace
+            brief: A lookUp or symbol in a nameSpace
             description: >-
-                This union represents either a lookup of a symbol in a
-                namespace or a symbol in the current namespace.
+                This union represents either a lookUp of a symbol in a
+                nameSpace or a symbol in the current nameSpace.
         data:
             symbol: HashSymbol
-            lookup: LamLookupSymbol
+            lookUp: LamLookUpSymbol
 
     LamCondCases:
         meta:
@@ -575,7 +570,7 @@ unions:
 
     LamTypeConstructorType:
         meta:
-            brief: A type constructor type in lambda expressions
+            brief: A type constructor type
             description: >-
                 This union represents the different types of arguments that can
                 be passed to a type constructor. It includes integers, characters,
@@ -595,8 +590,8 @@ unions:
                 depending on its type.
         data:
             typeConstructorInfo: LamTypeConstructorInfo
-            namespaceInfo: LamContext
-            nsid: int
+            nameSpaceInfo: LamContext
+            nsId: int
 
 hashes:
     LamMacroSet:
@@ -641,15 +636,32 @@ hashes:
         data:
             entries: LamExp
 
-arrays:
-    LamNamespaceArray:
+    LamAlphaTable:
         meta:
-            brief: A list of namespaces
+            brief: Map from symbols to their substitutes
             description: >-
-                This array holds the bodies of namespaces that are currently
+                Table for alpha conversion, mapping from original symbols
+                to their substituted symbols.
+        data:
+            entries: HashSymbol
+
+arrays:
+    LamNameSpaceArray:
+        meta:
+            brief: A list of nameSpaces
+            description: >-
+                This array holds the bodies of nameSpaces that are currently
                 in scope.  The ubiquitous `ns_id` is an index into this array.
         data:
             entries: LamExp
+
+    LamAlphaEnvArray:
+        meta:
+            brief: An array of alpha conversion environments
+            description: >-
+                This array holds the alpha conversion environments per-nameSpace.
+        data:
+            entries: LamAlphaEnv
 
 primitives: !include primitives.yaml
 

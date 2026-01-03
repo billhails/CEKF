@@ -49,8 +49,8 @@ static void ppAstExpressions(PrattUTF8 *, AstExpressions *);
 static void ppAstTypeSymbols(PrattUTF8 *, AstTypeSymbols *);
 static void ppAstTypeClause(PrattUTF8 *, AstTypeClause *);
 static void ppAstTypeFunction(PrattUTF8 *, AstTypeFunction *);
-static void ppAstLookupOrSymbol(PrattUTF8 *, AstLookupOrSymbol *);
-static void ppAstLookupSymbol(PrattUTF8 *, AstLookupSymbol *);
+static void ppAstLookUpOrSymbol(PrattUTF8 *, AstLookUpOrSymbol *);
+static void ppAstLookUpSymbol(PrattUTF8 *, AstLookUpSymbol *);
 static void ppAstCompositeFunction(PrattUTF8 *, AstCompositeFunction *);
 static void ppAstFunction(PrattUTF8 *, AstFunction *);
 static void ppAstFargList(PrattUTF8 *, AstFargList *);
@@ -60,7 +60,7 @@ static void ppAstNamedArg(PrattUTF8 *, AstNamedArg *);
 static void ppAstUnpack(PrattUTF8 *, AstUnpack *);
 static void ppAstUnpackStruct(PrattUTF8 *, AstUnpackStruct *);
 static void ppAstIff(PrattUTF8 *, AstIff *);
-static void ppAstLookup(PrattUTF8 *, AstLookup *);
+static void ppAstLookUp(PrattUTF8 *, AstLookUp *);
 static void ppAstPrint(PrattUTF8 *, AstPrint *);
 static void ppAstStruct(PrattUTF8 *, AstStruct *);
 static void ppAstTaggedExpressions(PrattUTF8 *, AstTaggedExpressions *);
@@ -79,7 +79,7 @@ void ppAstNest(PrattUTF8 *dest, AstNest *nest) {
                 psprintf(dest, "in ");
                 ppAstExpressions(dest, nest->expressions);
             } else {
-                psprintf(dest, "namespace ");
+                psprintf(dest, "nameSpace ");
                 ppAstDefinitions(dest, nest->definitions);
             }
         } else {
@@ -89,7 +89,7 @@ void ppAstNest(PrattUTF8 *dest, AstNest *nest) {
     psprintf(dest, "}");
 }
 
-void ppAstNamespaceImpl(PrattUTF8 *dest, AstNamespaceImpl *impl) {
+void ppAstNameSpaceImpl(PrattUTF8 *dest, AstNameSpaceImpl *impl) {
     psprintf(dest, "\"%s\": {", impl->id->name);
     ppAstDefinitions(dest, impl->definitions);
     psprintf(dest, "}");
@@ -98,9 +98,9 @@ void ppAstNamespaceImpl(PrattUTF8 *dest, AstNamespaceImpl *impl) {
 void ppAstProg(PrattUTF8 *dest, AstProg *prog) {
     psprintf(dest, "preamble: {");
     ppAstDefinitions(dest, prog->preamble);
-    psprintf(dest, "} namespaces: [");
-    for (Index i = 0; i < prog->namespaces->size; ++i) {
-        ppAstNamespaceImpl(dest, prog->namespaces->entries[i]);
+    psprintf(dest, "} nameSpaces: [");
+    for (Index i = 0; i < prog->nameSpaces->size; ++i) {
+        ppAstNameSpaceImpl(dest, prog->nameSpaces->entries[i]);
     }
     psprintf(dest, "] body: {");
     ppAstExpressions(dest, prog->body);
@@ -307,7 +307,7 @@ static void ppAstTypeClause(PrattUTF8 *dest, AstTypeClause *typeClause) {
 }
 
 static void ppAstTypeFunction(PrattUTF8 *dest, AstTypeFunction *typeFunction) {
-    ppAstLookupOrSymbol(dest, typeFunction->symbol);
+    ppAstLookUpOrSymbol(dest, typeFunction->symbol);
     if (typeFunction->typeList) {
         psprintf(dest, "(");
         ppAstTypeList(dest, typeFunction->typeList);
@@ -315,29 +315,29 @@ static void ppAstTypeFunction(PrattUTF8 *dest, AstTypeFunction *typeFunction) {
     }
 }
 
-static void ppAstLookupOrSymbol(PrattUTF8 *dest, AstLookupOrSymbol *lookupOrSymbol) {
-    switch (lookupOrSymbol->type) {
+static void ppAstLookUpOrSymbol(PrattUTF8 *dest, AstLookUpOrSymbol *lookUpOrSymbol) {
+    switch (lookUpOrSymbol->type) {
         case AST_LOOKUPORSYMBOL_TYPE_LOOKUP:
-            ppAstLookupSymbol(dest, lookupOrSymbol->val.lookup);
+            ppAstLookUpSymbol(dest, lookUpOrSymbol->val.lookUp);
             break;
         case AST_LOOKUPORSYMBOL_TYPE_SYMBOL:
-            ppHashSymbol(dest, lookupOrSymbol->val.symbol);
+            ppHashSymbol(dest, lookUpOrSymbol->val.symbol);
             break;
         default:
-            cant_happen("unrecognised %s", astLookupOrSymbolTypeName(lookupOrSymbol->type));
+            cant_happen("unrecognised %s", astLookUpOrSymbolTypeName(lookUpOrSymbol->type));
     }
 }
 
-static void ppAstLookupSymbol(PrattUTF8 *dest, AstLookupSymbol *lookupSymbol) {
-    ppHashSymbol(dest, lookupSymbol->nsSymbol);
-    psprintf(dest, "<%d>.", lookupSymbol->nsid);
-    ppHashSymbol(dest, lookupSymbol->symbol);
+static void ppAstLookUpSymbol(PrattUTF8 *dest, AstLookUpSymbol *lookUpSymbol) {
+    ppHashSymbol(dest, lookUpSymbol->nsSymbol);
+    psprintf(dest, "<%d>.", lookUpSymbol->nsId);
+    ppHashSymbol(dest, lookUpSymbol->symbol);
 }
 
-static void ppAstLookup(PrattUTF8 *dest, AstLookup *lookup) {
-    ppHashSymbol(dest, lookup->nsSymbol);
-    psprintf(dest, "<%d>.", lookup->nsid);
-    ppAstExpression(dest, lookup->expression);
+static void ppAstLookUp(PrattUTF8 *dest, AstLookUp *lookUp) {
+    ppHashSymbol(dest, lookUp->nsSymbol);
+    psprintf(dest, "<%d>.", lookUp->nsId);
+    ppAstExpression(dest, lookUp->expression);
 }
 
 static void ppFunctionComponents(PrattUTF8 *dest, AstCompositeFunction *compositeFunction) {
@@ -385,7 +385,7 @@ static void ppastFarg(PrattUTF8 *dest, AstFarg *arg) {
             ppHashSymbol(dest, arg->val.symbol);
             break;
         case AST_FARG_TYPE_LOOKUP:
-            ppAstLookupSymbol(dest, arg->val.lookup);
+            ppAstLookUpSymbol(dest, arg->val.lookUp);
             break;
         case AST_FARG_TYPE_NAMED:
             ppAstNamedArg(dest, arg->val.named);
@@ -419,14 +419,14 @@ static void ppAstNamedArg(PrattUTF8 *dest, AstNamedArg *namedArg) {
 }
 
 static void ppAstUnpack(PrattUTF8 *dest, AstUnpack *unpack) {
-    ppAstLookupOrSymbol(dest, unpack->symbol);
+    ppAstLookUpOrSymbol(dest, unpack->symbol);
     psprintf(dest, "(");
     ppAstFargList(dest, unpack->argList);
     psprintf(dest, ")");
 }
 
 static void ppAstUnpackStruct(PrattUTF8 *dest, AstUnpackStruct *unpackStruct) {
-    ppAstLookupOrSymbol(dest, unpackStruct->symbol);
+    ppAstLookUpOrSymbol(dest, unpackStruct->symbol);
     psprintf(dest, "{ ");
     ppAstTaggedArgList(dest, unpackStruct->argList);
     psprintf(dest, " }");
@@ -510,7 +510,7 @@ static void ppAstPrint(PrattUTF8 *dest, AstPrint *print) {
 }
 
 static void ppAstStruct(PrattUTF8 *dest, AstStruct *structure) {
-    ppAstLookupOrSymbol(dest, structure->symbol);
+    ppAstLookUpOrSymbol(dest, structure->symbol);
     psprintf(dest, "{ ");
     ppAstTaggedExpressions(dest, structure->expressions);
     psprintf(dest, " }");
@@ -568,7 +568,7 @@ void ppAstExpression(PrattUTF8 *dest, AstExpression *expr) {
             psprintf(dest, "env");
             break;
         case AST_EXPRESSION_TYPE_LOOKUP:
-            ppAstLookup(dest, expr->val.lookup);
+            ppAstLookUp(dest, expr->val.lookUp);
             break;
         case AST_EXPRESSION_TYPE_PRINT:
             ppAstPrint(dest, expr->val.print);

@@ -1,0 +1,4 @@
+let
+    link "ns_los.fn" as list;
+in
+    print list.(a() + b())

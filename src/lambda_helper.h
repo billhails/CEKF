@@ -26,12 +26,12 @@
 #define NS_FORMAT "ns$%u"
 
 void printLambdaSymbol(HashSymbol *x, int depth);
-LamTypeConstructorInfo *lookupConstructorInLamContext(LamContext *context, HashSymbol *var);
-LamContext *lookupNamespaceInLamContext(LamContext *context, Index index);
-LamTypeConstructorInfo *lookupScopedAstConstructorInLamContext(LamContext *context, AstLookupOrSymbol *scoped);
-LamTypeConstructorInfo *lookupScopedLamConstructorInLamContext(LamContext *context, LamLookupOrSymbol *scoped);
-LamTypeConstructorInfo *lookupScopedLamSymbolInLamContext(LamContext *context, LamLookupSymbol *lookup);
-LamTypeConstructorInfo *lookupScopedAstSymbolInLamContext(LamContext *context, AstLookupSymbol *lookup);
-int lookupCurrentNamespaceInLamContext(LamContext *context);
-LamTypeConstructorType *lookupConstructorTypeInLamContext(LamContext *context, HashSymbol *var);
+LamTypeConstructorInfo *lookUpConstructorInLamContext(LamContext *context, HashSymbol *var);
+LamContext *lookUpNameSpaceInLamContext(LamContext *context, Index index);
+LamTypeConstructorInfo *lookUpScopedAstConstructorInLamContext(LamContext *context, AstLookUpOrSymbol *scoped);
+LamTypeConstructorInfo *lookUpScopedLamConstructorInLamContext(LamContext *context, LamLookUpOrSymbol *scoped);
+LamTypeConstructorInfo *lookUpScopedLamSymbolInLamContext(LamContext *context, LamLookUpSymbol *lookUp);
+LamTypeConstructorInfo *lookUpScopedAstSymbolInLamContext(LamContext *context, AstLookUpSymbol *lookUp);
+int lookUpCurrentNameSpaceInLamContext(LamContext *context);
+LamTypeConstructorType *lookUpConstructorTypeInLamContext(LamContext *context, HashSymbol *var);
 #endif

@@ -38,6 +38,10 @@ class Base:
         self.hasDocs = False
         self.brief = None
         self.description = None
+        if "parserInfo" in body:
+            self.parserInfo = body["parserInfo"]
+        else:
+            self.parserInfo = None
         if "meta" in body:
             meta = body["meta"]
             if "brief" in meta:
@@ -58,6 +62,11 @@ class Base:
                 print(f" * {line}")
             print(" */")
 
+    def getParserInfo(self, default):
+        if self.parserInfo is not None:
+            return self.parserInfo
+        return default
+
     def formatDescription(self):
         """
         Format the description for documentation.
@@ -77,6 +86,14 @@ class Base:
         if current_line:
             lines.append(current_line.strip())
         return lines
+
+    def generateVisitorDecl(self, target):
+        """Generate forward declaration for visitor function - default stub"""
+        pass
+
+    def generateVisitor(self, catalog, target):
+        """Generate visitor function - default stub"""
+        pass
 
     def isInline(self, catalog):
         return False
@@ -125,6 +142,9 @@ class Base:
         pass
 
     def printGetterDeclarations(self, catalog):
+        pass
+
+    def printSetterDeclarations(self, catalog):
         pass
 
     def printNameFunctionDeclaration(self):
@@ -332,62 +352,3 @@ class Base:
         pass
 
 
-class EnumField:
-    """
-    Serves as the class for simple enumeration fields and as
-    the base class for discriminated union enum fields
-    """
-    def __init__(self, owner, name):
-        if name is True:
-            raise Exception("EnumField passed a boolean")
-        self.owner = owner
-        self.name = name
-
-    def getName(self):
-        return self.name
-
-    def comment(self, method):
-        """Generate method comment using class name automatically."""
-        return CommentGen.method_comment(self.__class__.__name__, method)
-
-    def isSimpleField(self):
-        return False
-
-    def isSelfInitializing(self, catalog):
-        return False
-
-    def printEnumTypedefLine(self, count):
-        field = self.makeTypeName()
-        print(f"    {field}, // {count}")
-
-    def printNameFunctionLine(self):
-        c = self.comment('printNameFunctionLine')
-        field = self.makeTypeName()
-        print(f'        case {field}: return "{field}"; {c}')
-
-    def makeTypeName(self):
-        v = self.owner + '_type_' + self.name
-        v = v.upper().replace('AST', 'AST_')
-        return v
-
-    def printCompareCase(self, depth):
-        c = self.comment('printCompareCase')
-        typeName = self.makeTypeName()
-        pad(depth)
-        print(f'case {typeName}: {c}')
-        pad(depth + 1)
-        print(f"if (a != b) return false; {c}")
-        pad(depth + 1)
-        print(f'break; {c}')
-
-    def printPrintCase(self, depth):
-        c = self.comment('printPrintCase')
-        typeName = self.makeTypeName()
-        pad(depth)
-        print(f'case {typeName}: {c}')
-        pad(depth + 1)
-        print(f'pad(depth + 1); {c}')
-        pad(depth + 1)
-        print(f'eprintf("{typeName}"); {c}')
-        pad(depth + 1)
-        print(f'break; {c}')

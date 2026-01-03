@@ -12,7 +12,7 @@ in
     assert(typeof y == "char");
     
     // Test function types
-    assert(typeof f == "(number) -> number");
+    assert(typeof f == "number -> number");
     
     // Test list types
     assert(typeof lst == "list(number)");

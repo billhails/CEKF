@@ -1,5 +1,5 @@
 let
-    link "dictionary.fn" as dictionary;
+    link "dictutils.fn" as dictionary;
     foreach = dictionary.foreach;
     lookup = dictionary.lookup;
     insert = dictionary.insert;

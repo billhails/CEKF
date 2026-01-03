@@ -28,6 +28,7 @@
 #include "cekfs.h"
 #include "utf8.h"
 #include "symbol.h"
+#include "builtins_helper.h"
 #include "builtin_io.h"
 #include "tc_analyze.h"
 
@@ -204,23 +205,23 @@ static void opaque_io_closedir(Opaque *data) {
 }
 
 static Value builtin_open(Vec *args) {
-    char *filename = listToUtf8(args->entries[0]);
+    char *fileName = listToUtf8(args->entries[0]);
     int mode = args->entries[1].val.stdint;
     FILE *file = NULL;
     switch (mode) {
         case IO_MODE_READ:
-            file = fopen(filename, "r");
+            file = fopen(fileName, "r");
             break;
         case IO_MODE_WRITE:
-            file = fopen(filename, "w");
+            file = fopen(fileName, "w");
             break;
         case IO_MODE_APPEND:
-            file = fopen(filename, "a");
+            file = fopen(fileName, "a");
             break;
         default:
             cant_happen("unexpected %d", mode);
     }
-    FREE_ARRAY(char, filename, strlen(filename) + 1);
+    FREE_ARRAY(char, fileName, strlen(fileName) + 1);
     if (file == NULL) {
         return errnoToTry();
     }

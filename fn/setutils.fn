@@ -1,0 +1,66 @@
+namespace
+
+link "dictutils.fn" as DICT;
+link "listutils.fn" as list;
+
+// list(#t) -> Set(#t)
+fn to_set(keys) {
+    DICT.make(keys, keys)
+}
+
+// Set(#t) -> list(#t) -> Set(#t)
+fn add_list(dict, keys) {
+    DICT.add_lists(keys, keys, dict)
+}
+
+// Set(#t) -> #t -> Set(#t)
+fn add(dict, key) {
+    DICT.insert(key, key, dict)
+}
+
+// Set(#t) -> #t -> Set(#t)
+fn remove(dict, key) {
+    DICT.delete(key, dict)
+}
+
+// Set(#t) -> Set(#t) -> Set(#t)
+fn exclude(d1, d2) {
+    DICT.delete_list(to_list(d2), d1)
+}
+
+// Set(#t) -> list(#t)
+fn to_list(dict) {
+    DICT.keys(dict)
+}
+
+// #t -> Set(#t) -> bool
+fn contains(key, dict) {
+    switch(DICT.lookup(key, dict)) {
+        (nothing) { false }
+        (_) { true }
+    }
+}
+
+export operator "_IN_" none 9 contains;
+
+// Set(#t) -> Set(#t) -> Set(#t)
+fn union(d1, d2) {
+    let ks = to_list(d2);
+    in add_list(d1, ks);
+}
+
+export operator "_U_" left 10 union;
+
+// Set(#t) -> Set(#t) -> Set(#t)
+fn intersection(d1, d2) {
+    list.foldl(fn (k, d) { if (k IN d1) { add(d, k) } else { d } }, DICT.E, to_list(d2))
+}
+
+export operator "_N_" left 11 intersection;
+
+// Set(#t) -> Set(#t) -> Set(#t)
+fn difference(d1, d2) {
+    list.foldl(fn (k, d) { remove(d, k) }, d1, to_list(d2))
+}
+
+export operator "_--_" left 11 difference;

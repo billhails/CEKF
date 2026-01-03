@@ -23,7 +23,7 @@ let
             assert(unwrap_or(int_maybe, 0) == 42);
             assert(unwrap_or(str_maybe, "default") == "hello");
             assert(unwrap_or(none, 99) == 99);
-            puts("Basic generics tests passed")
+            puts("Basic generics tests passed\n")
     }
     
     // Test: Nested generic types
@@ -50,7 +50,7 @@ let
             mapped = map_maybe(fn { (inner) { map_maybe(double, inner) } }, nested);
         in
             assert(mapped == just(just(10)));
-            puts("Nested generics tests passed")
+            puts("Nested generics tests passed\n")
     }
     
     // Test: Generic list operations
@@ -84,7 +84,7 @@ let
             assert(length(list_of_lists) == 3);
             assert(append([1, 2], [3, 4]) == [1, 2, 3, 4]);
             assert(reverse([1, 2, 3]) == [3, 2, 1]);
-            puts("Generic list tests passed")
+            puts("Generic list tests passed\n")
     }
     
     // Test: Multiple type parameters
@@ -116,7 +116,7 @@ let
             assert(snd(p2) == 99);
             assert(fst(swapped) == "hello");
             assert(snd(swapped) == 42);
-            puts("Multiple type parameter tests passed")
+            puts("Multiple type parameter tests passed\n")
     }
     
     // Test: Generic tree structure
@@ -154,7 +154,7 @@ let
         in
             assert(sum == 15);
             assert(tree_fold(add, 0, doubled_tree) == 30);
-            puts("Generic tree tests passed")
+            puts("Generic tree tests passed\n")
     }
     
     // Test: Either type (like result)
@@ -184,7 +184,7 @@ let
         in
             assert(unwrap_right(mapped_r) == 20);
             assert(mapped_l == left("error"));
-            puts("Either type tests passed")
+            puts("Either type tests passed\n")
     }
     
     // Test: Recursive generic types
@@ -230,7 +230,7 @@ let
             assert(const(5, 10) == 5);
             assert(const("a", "b") == "a");
             assert(apply(id, 100) == 100);
-            puts("Polymorphic function tests passed")
+            puts("Polymorphic function tests passed\n")
     }
     
     // Test: Complex nested pattern matching
@@ -261,7 +261,7 @@ let
             assert(find_leftmost(tree2) == 10);
             assert(count_leaves(tree1) == 4);
             assert(count_leaves(tree2) == 3);
-            puts("Complex pattern matching tests passed")
+            puts("Complex pattern matching tests passed\n")
     }
     
     // Main test runner

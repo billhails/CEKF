@@ -189,7 +189,7 @@ void ppAexpMakeVec(AexpMakeVec *x) {
     eprintf(")");
 }
 
-void ppAexpNamespaceArray(AexpNamespaceArray *x) {
+void ppAexpNameSpaceArray(AexpNameSpaceArray *x) {
     for (Index i = 0; i < x->size; i++) {
         eprintf("[");
         ppAnfExp(x->entries[i]->body);
@@ -200,9 +200,9 @@ void ppAexpNamespaceArray(AexpNamespaceArray *x) {
     }
 }
 
-void ppAexpNamespaces(AexpNamespaces *x) {
-    eprintf("(namespaces ");
-    ppAexpNamespaceArray(x->namespaces);
+void ppAexpNameSpaces(AexpNameSpaces *x) {
+    eprintf("(nameSpaces ");
+    ppAexpNameSpaceArray(x->nameSpaces);
     eprintf(" ");
     ppAnfExp(x->body);
     eprintf(")");
@@ -345,8 +345,8 @@ void ppCexpMatch(CexpMatch *x) {
     eprintf(")");
 }
 
-void ppAnfExpLookup(AnfExpLookup *x) {
-    eprintf("(lookup %d ", x->namespace);
+void ppAnfExpLookUp(AnfExpLookUp *x) {
+    eprintf("(lookUp %d ", x->nameSpace);
     ppAnfExp(x->body);
     eprintf(")");
 }
@@ -363,10 +363,10 @@ void ppAexp(Aexp *x) {
             ppAexpAnnotatedVar(x->val.annotatedVar);
             break;
         case AEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, x->val.biginteger);
+            fprintMaybeBigInt(errout, x->val.bigInteger);
             break;
         case AEXP_TYPE_LITTLEINTEGER:
-            eprintf("%d", x->val.littleinteger);
+            eprintf("%d", x->val.littleInteger);
             break;
         case AEXP_TYPE_CHARACTER:
             ppChar(x->val.character);
@@ -378,7 +378,7 @@ void ppAexp(Aexp *x) {
             ppAexpMakeVec(x->val.makeVec);
             break;
         case AEXP_TYPE_NAMESPACES:
-            ppAexpNamespaces(x->val.namespaces);
+            ppAexpNameSpaces(x->val.nameSpaces);
             break;
         default:
             cant_happen("unrecognised aexp %s", aexpTypeName(x->type));
@@ -442,7 +442,7 @@ void ppAnfExp(AnfExp *x) {
             eprintf("ENV");
             break;
         case ANFEXP_TYPE_LOOKUP:
-            ppAnfExpLookup(x->val.lookup);
+            ppAnfExpLookUp(x->val.lookUp);
             break;
         default:
             eprintf("<unrecognised exp %s>", anfExpTypeName(x->type));

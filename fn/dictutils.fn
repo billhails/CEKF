@@ -32,6 +32,13 @@ print Dict(pt, pu, d) {
         d;
 }
 
+fn is_empty(d) {
+    switch (d) {
+        (E) | (EE) { true }
+        (_)        { false }
+    }
+}
+
 fn foreach {
     (_, E) | (_, EE) { nothing }
     (f, D(_, l, #(t, u), r)) {
@@ -75,61 +82,61 @@ fn balance {
 // #t -> Dict(#t, #u) -> Maybe(#u)
 fn lookup {
     (_, E) | (_, EE) { nothing }
-    (x, D(_, _, #(x, y), _)) { some(y) }
-    (x, D(_, a, #(y, _), b)) {
-        if (x < y) {
-            lookup(x, a)
+    (k, D(_, _, #(k, y), _)) { some(y) }
+    (k, D(_, a, #(y, _), b)) {
+        if (k < y) {
+            lookup(k, a)
         } else {
-            lookup(x, b)
+            lookup(k, b)
         }
     }
 }
 
-fn insert(x, v, s) {
+fn insert(k, v, s) {
     let
         fn blacken {
             (D(R, t=D(R, _, _, _), y, c)) { D(B, t, y, c) }
-            (D(R, a, x, t=D(R, _, _, _))) { D(B, a, x, t) }
+            (D(R, a, k, t=D(R, _, _, _))) { D(B, a, k, t) }
             (t) { t }
         }
         fn ins {
-            (x, EE) | (x, E) { D(R, E, #(x, v), E) }
-            (x, D(c, a, #(x, _), b)) { D(c, a, #(x, v), b) }
-            (x, D(color, a, s=#(y, _), b)) {
-                if (x < y) {
-                    balance(color, ins(x, a), s, b)
+            (k, EE) | (k, E) { D(R, E, #(k, v), E) }
+            (k, D(c, a, #(k, _), b)) { D(c, a, #(k, v), b) }
+            (k, D(color, a, s=#(y, _), b)) {
+                if (k < y) {
+                    balance(color, ins(k, a), s, b)
                 } else {
-                    balance(color, a, s, ins(x, b))
+                    balance(color, a, s, ins(k, b))
                 }
             }
         }
     in
-        blacken(ins(x, s))
+        blacken(ins(k, s))
 }
 
-fn delete(x, s) {
+fn delete(k, s) {
     let
         fn del {
             (_, EE, throw) | (_, E, throw) { throw(s) }
-            (x, D(R, E, #(x, _), E), _) { E }
-            (x, D(B, E, #(x, _), E), _) { EE }
+            (k, D(R, E, #(k, _), E), _) { E }
+            (k, D(B, E, #(k, _), E), _) { EE }
             (_, D(B, E, _, E), throw) { throw(s) }
-            (x, D(B, D(R, E, y, E), #(x, _), E), _) { D(B, E, y, E) }
-            (x, D(B, D(R, E, y, E), #(z, zv), E), throw) {
-                if (x < z) {
-                    D(B, del(x, D(R, E, y, E), throw), #(z, zv), E)
+            (k, D(B, D(R, E, y, E), #(k, _), E), _) { D(B, E, y, E) }
+            (k, D(B, D(R, E, y, E), #(z, zv), E), throw) {
+                if (k < z) {
+                    D(B, del(k, D(R, E, y, E), throw), #(z, zv), E)
                 } else {
                     throw(s)
                 }
             }
-            (x, D(c, a, #(x, _), b), _) {
+            (k, D(c, a, #(k, _), b), _) {
                 rotate(c, a, leftmost_successor(b), del_leftmost_successor(b))
             }
-            (x, D(c, a, s=#(y, _), b), throw) {
-                if (x < y) {
-                    rotate(c, del(x, a, throw), s, b)
+            (k, D(c, a, s=#(y, _), b), throw) {
+                if (k < y) {
+                    rotate(c, del(k, a, throw), s, b)
                 } else {
-                    rotate(c, a, s, del(x, b, throw))
+                    rotate(c, a, s, del(k, b, throw))
                 }
             }
         }
@@ -168,9 +175,17 @@ fn delete(x, s) {
             (D(c, a, x, b))             { rotate(c, del_leftmost_successor(a), x, b) }
         }
     in
-        here fn (throw) { del(x, redden(s), throw) }
+        here fn (throw) { del(k, redden(s), throw) }
 }
 
 fn make (keys, values) {
-    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, E, list.zip(keys, values))
+    add_lists(keys, values, E)
+}
+
+fn add_lists (keys, values, dict) {
+    list.foldl(fn (#(k, v), d) { insert(k, v, d) }, dict, list.zip(keys, values))
+}
+
+fn delete_list (keys, dict) {
+    list.foldl(fn (k, d) { delete(k, d) }, dict, keys)
 }

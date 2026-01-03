@@ -214,16 +214,16 @@ static TcEnv *getNsEnv(int index, TcEnv *env) {
         return env;
     }
     TcType *currentNs = NULL;
-    getFromTcEnv(env, namespaceSymbol(), &currentNs);
+    getFromTcEnv(env, nameSpaceSymbol(), &currentNs);
 #ifdef SAFETY_CHECKS
     if (currentNs == NULL) {
-        cant_happen("cannot find current namespace");
+        cant_happen("cannot find current nameSpace");
     }
 #endif
-    if (currentNs->val.nsid == index) {
+    if (currentNs->val.nsId == index) {
         return env;
     }
-    TcType *res = lookupNsRef(index, env);
+    TcType *res = lookUpNsRef(index, env);
     return res->val.env;
 }
 
@@ -243,15 +243,15 @@ static LamExp *compilePrinterForTypeSig(ParserInfo I, TcTypeSig *typeSig, TcEnv 
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
     if (env != nsEnv) {
-        LamLookup *lookup = newLamLookup(I, typeSig->ns, NULL, exp);
-        PROTECT(lookup);
-        exp = newLamExp_Lookup(I, lookup);
+        LamLookUp *lookUp = newLamLookUp(I, typeSig->ns, NULL, exp);
+        PROTECT(lookUp);
+        exp = newLamExp_LookUp(I, lookUp);
         PROTECT(exp);
     }
     LamArgs *args = compilePrinterForTypeSigArgs(I, typeSig->args, env);
     PROTECT(args);
-    int nargs = countLamArgs(args);
-    if (nargs == 0) {
+    int nArgs = countLamArgs(args);
+    if (nArgs == 0) {
         UNPROTECT(save);
         return exp;
     }

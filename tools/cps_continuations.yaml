@@ -1,0 +1,615 @@
+# CPS Continuation Specifications
+# Generated from analysis of fn/rewrite/cps5.fn
+#
+# Each continuation represents a point where the CPS transform algorithm
+# needs to create a closure to capture the continuation of a computation.
+#
+# Note: Only T_k transformations need continuation scaffolding.
+# T_c transformations pass LamExp* as regular function parameters.
+
+config:
+  name: cps_kont
+  description: "Continuation scaffolding for CPS transform"
+  parserInfo: false
+  currency: LamExp
+  includes:
+    - lambda.h
+  limited_includes:
+    - lambda_debug.h
+
+primitives: !include ../src/primitives.yaml
+
+external:
+  LamExp:
+    meta:
+      brief: Lambda expressions
+    data:
+      cname: "struct LamExp *"
+      printFn: printLamExp
+      markFn: markLamExp
+      valued: true
+  LamArgs:
+    meta:
+      brief: List of LamExp
+    data:
+      cname: "struct LamArgs *"
+      printFn: printLamArgs
+      markFn: markLamArgs
+      valued: true
+  LamBindings:
+    meta:
+      brief: List of LamBindings
+    data:
+      cname: "struct LamBindings *"
+      printFn: printLamBindings
+      markFn: markLamBindings
+      valued: true
+  LamCondCases:
+    meta:
+      brief: List of LamCondCases
+    data:
+      cname: "struct LamCondCases *"
+      printFn: printLamCondCases
+      markFn: markLamCondCases
+      valued: true
+  LamMatchList:
+    data:
+      cname: "struct LamMatchList *"
+      printFn: printLamMatchList
+      markFn: markLamMatchList
+      valued: true
+  LamPrimOp:
+    data:
+      cname: "enum LamPrimOp"
+      printf: "%d"
+      valued: true
+  LamSequence:
+    data:
+      cname: "struct LamSequence *"
+      printFn: printLamSequence
+      markFn: markLamSequence
+      valued: true
+
+# Naming convention, since each kont is argument to T_k and never
+# to T_c, we use Tk for continuations constructed by T_k, and
+# Tc for continuations constructed by T_c.
+# If there are multiple continuations constructed in a case, we
+# suffix them 1, 2 ecc. in the order they appear textually in
+# the source.
+continuations:
+  TkIff:
+    transformer: T_k
+    key: k_if
+    context: |
+      fn T_k(e, k) {
+          ...
+          switch (e) {
+              (E.if_expr(exprc, exprt, exprf)) {
+                  let
+                      c = kToC(k);
+                  in 
+                      T_k(exprc, fn(aexp) {
+                          E.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
+                      })
+              }
+          }
+      }
+    free_vars:
+      c: LamExp
+      exprt: LamExp
+      exprf: LamExp
+
+  TcIff:
+    transformer: T_k
+    key: c_if
+    context: |
+      fn T_c(e, c) {
+        ...
+        switch (e) {
+          (E.if_expr(exprc, exprt, exprf)) {
+            let
+              sk = gensym("$k");
+            in
+              E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
+                E.if_expr(aexp, T_c(exprt,sk), T_c(exprf,sk))
+              })), [c])
+          }
+        }
+      }
+    free_vars:
+      sk: LamExp
+      exprt: LamExp
+      exprf: LamExp
+
+  TcApply1:
+    transformer: T_k
+    key: c_apply_1
+    context: |
+      fn T_c(e, c) {
+          ...
+          switch(e) {
+              (E.apply(f, es)) {
+                  T_k(f, fn(sf) {
+                      Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                  })
+              }
+          }
+      }
+    free_vars:
+      es: LamArgs
+      c: LamExp
+
+  TcApply2:
+    transformer: T_k
+    key: c_apply_2
+    context: |
+      fn T_c(e, c) {
+          ...
+          switch(e) {
+              (E.apply(f, es)) {
+                  T_k(f, fn(sf) {
+                      Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                  })
+              }
+          }
+      }
+    free_vars:
+      sf: LamExp
+      c: LamExp
+
+  TkCond:
+    transformer: T_k
+    key: k_cond
+    context: |
+      fn T_k(e, k) {
+          ...
+          switch (e) {
+              (E.cond_expr(test, branches)) {
+                  let
+                      c = kToC(k);
+                  in
+                      T_k(test, fn (atest) {
+                          E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                              #(val, T_c(result, c))
+                          }}, branches))
+                      })
+              }
+          }
+      }
+    free_vars:
+      c: LamExp
+      branches: LamCondCases
+
+  TcCond:
+    transformer: T_k
+    key: c_cond
+    context: |
+      fn T_c(expr, c) {
+          ...
+          switch(expr) {
+              (E.cond_expr(test, branches)) {
+                  let
+                      sk = gensym("$k");
+                  in
+                      E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                          E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                              #(val, T_c(result, sk))
+                          }}, branches))
+                      })), [c])
+              }
+          }
+      }
+    free_vars:
+      sk: LamExp
+      branches: LamCondCases
+
+  TkS1:
+    transformer: T_k
+    key: k_s1
+    context: |
+      fn Ts_k {
+          ([], k) { k([]) }
+          (h @ t, k) {
+              T_k(h, fn (hd) {
+                  Ts_k(t, fn (tl) {
+                      k(hd @ tl)
+                  })
+              })
+          }
+      }
+    free_vars:
+      t: LamArgs
+      k: CpsKont
+
+  TkS2:
+    transformer: T_k
+    key: k_s2
+    context: |
+      fn Ts_k {
+          ([], k) { k([]) }
+          (h @ t, k) {
+              T_k(h, fn (hd) {
+                  Ts_k(t, fn (tl) {
+                      k(hd @ tl)
+                  })
+              })
+          }
+      }
+    free_vars:
+      k: CpsKont
+      hd: LamExp
+
+  TcCallCC:
+    transformer: T_k
+    key: c_callCC
+    context: |
+      (E.callCC_expr(e)) {
+          T_k(e, fn (sf) {
+              E.apply(
+                  E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                  [sf, c]
+              )
+          })
+      }
+    free_vars:
+      c: LamExp
+
+  TkConstruct:
+    transformer: T_k
+    key: k_construct
+    context: |
+      (E.construct(name, tag, args)) {
+          Ts_k(args, fn (sargs) {
+              k(E.construct(name, tag, sargs))
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      tag: int
+      k: CpsKont
+
+  TcConstruct:
+    transformer: T_k
+    key: c_construct
+    context: |
+      (E.construct(name, tag, args)) {
+          Ts_k(args, fn (sargs) {
+              E.apply(c, [E.construct(name, tag, sargs)])
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      tag: int
+      c: LamExp
+
+  TkDeconstruct:
+    transformer: T_k
+    key: k_deconstruct
+    context: |
+      (E.deconstruct(name, nsId, vec, expr)) {
+          T_k(expr, fn (sexpr) {
+              k(E.deconstruct(name, nsId, vec, sexpr))
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      nsId: int
+      vec: int
+      k: CpsKont
+
+  TcDeconstruct:
+    transformer: T_k
+    key: c_deconstruct
+    context: |
+      (E.deconstruct(name, nsId, vec, expr)) {
+          T_k(expr, fn (sexpr) {
+              E.apply(c, [E.deconstruct(name, nsId, vec, sexpr)])
+          })
+      }
+    free_vars:
+      name: HashSymbol
+      nsId: int
+      vec: int
+      c: LamExp
+
+  TkMakeTuple:
+    transformer: T_k
+    key: k_maketuple
+    context: |
+      (E.make_tuple(args)) {
+        Ts_k(args, fn (sargs) {
+          k(E.make_tuple(sargs))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcMakeTuple:
+    transformer: T_k
+    key: c_maketuple
+    context: |
+      (E.make_tuple(args)) {
+        Ts_k(args, fn (sargs) {
+          E.apply(c, [E.make_tuple(sargs)])
+        })
+      }
+    free_vars:
+      c: LamExp
+
+  TkMakeVec:
+    transformer: T_k
+    key: k_makevec
+    context: |
+      (E.make_vec(size, args)) {
+        Ts_k(args, fn (sargs) {
+          k(E.make_vec(size, sargs))
+        })
+      }
+    free_vars:
+      size: int
+      k: CpsKont
+
+  TcMakeVec:
+    transformer: T_k
+    key: c_makevec
+    context: |
+      (E.make_vec(size, args)) {
+        Ts_k(args, fn (sargs) {
+          E.apply(c, [E.make_vec(size, sargs)])
+        })
+      }
+    free_vars:
+      size: int
+      c: LamExp
+
+  TkMatch:
+    transformer: T_k
+    key: k_match
+    context: |
+      (E.match_cases(test, cases)) {
+        let
+          c = kToC(k);
+        in
+          T_k(test, fn (atest) {
+            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+              #(indices, T_c(result, c))
+            }}, cases))
+          })
+        }
+    free_vars:
+      c: LamExp
+      cases: LamMatchList
+
+  TcMatch:
+    transformer: T_k
+    key: c_match
+    context: |
+      (E.match_cases(test, cases)) {
+        let
+          sk = gensym("$k");
+        in
+          E.apply(E.lambda([sk], T_k(test, fn (atest) {
+            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+              #(indices, T_c(result, sk))
+            }}, cases))
+          })), [c])
+      }
+    free_vars:
+      sk: LamExp
+      cases: LamMatchList
+
+  TkNameSpaces:
+    transformer: T_k
+    key: k_nameSpaces
+    context: |
+      (E.nameSpaces(exprs)) {
+        Ta_k(exprs, fn (sexprs) {
+          k(E.nameSpaces(sexprs))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcNameSpaces:
+    transformer: T_k
+    key: c_nameSpaces
+    context: |
+      (E.nameSpaces(exprs)) {
+        Ts_k(exprs, fn (sexprs) {
+          E.apply(c, [E.nameSpaces(sexprs)])
+        })
+      }
+    free_vars:
+      c: LamExp
+
+  TkPrimApp1:
+    transformer: T_k
+    key: k_primapp1
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) { //////////////////
+          T_k(e2, fn (s2) {
+            k(E.primapp(p, s1, s2))
+          })
+        }) /////////////////////////////////
+      }
+    free_vars:
+      k: CpsKont
+      e2: LamExp
+      p: LamPrimOp
+
+  TkPrimApp2:
+    transformer: T_k
+    key: k_primapp2
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) {
+          T_k(e2, fn (s2) { ////////////////
+            k(E.primapp(p, s1, s2))
+          }) ///////////////////////////////
+        })
+      }
+    free_vars:
+      k: CpsKont
+      s1: LamExp
+      p: LamPrimOp
+
+  TcPrimApp1:
+    transformer: T_k
+    key: c_primapp1
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) { ////////////////////////////
+          T_k(e2, fn (s2) {
+            E.apply(c, [E.primapp(p, s1, s2)])
+          })
+        }) ///////////////////////////////////////////
+      }
+    free_vars:
+      c: LamExp
+      e2: LamExp
+      p: LamPrimOp
+
+  TcPrimApp2:
+    transformer: T_k
+    key: c_primapp2
+    context: |
+      (E.primapp(p, e1, e2)) {
+        T_k(e1, fn (s1) {
+          T_k(e2, fn (s2) { //////////////////////////
+            E.apply(c, [E.primapp(p, s1, s2)])
+          }) /////////////////////////////////////////
+        })
+      }
+    free_vars:
+      c: LamExp
+      s1: LamExp
+      p: LamPrimOp
+
+  TkPrint:
+    transformer: T_k
+    key: k_print
+    context: |
+      (E.print_exp(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.print_exp(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcPrint:
+    transformer: T_k
+    key: c_print
+    context: |
+      (E.print_exp(expr)) {
+          T_k(expr, fn (sexpr) {
+              E.apply(c, [E.print_exp(sexpr)])
+          })
+      }
+    free_vars:
+      c: LamExp
+
+  TkSequence:
+    transformer: T_k
+    key: k_sequence
+    context: |
+      (E.sequence([expr])) { T_k(expr, k) }
+      (E.sequence(expr @ exprs)) {
+        T_k(expr, fn (ignored) {
+          T_k(E.sequence(exprs), k)
+        })
+      }
+    free_vars:
+      k: CpsKont
+      exprs: LamSequence
+
+  TcSequence:
+    transformer: T_k
+    key: c_sequence
+    context: |
+      (E.sequence([expr])) { T_c(expr, c) }
+      (E.sequence(expr @ exprs)) {
+        T_k(expr, fn (ignored) {
+          T_c(E.sequence(exprs), c)
+        })
+      }
+    free_vars:
+      c: LamExp
+      exprs: LamSequence
+
+  TkTag:
+    transformer: T_k
+    key: k_tag
+    context: |
+      (E.tag(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.tag(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcTag:
+    transformer: T_k
+    key: c_tag
+    context: |
+      (E.tag(expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.tag(sexpr)])
+        })
+      }
+    free_vars:
+      c: LamExp
+
+  TkTupleIndex:
+    transformer: T_k
+    key: k_tupleindex
+    context: |
+      (E.tuple_index(size, index, expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.tuple_index(size, index, sexpr))
+        })
+      }
+    free_vars:
+      size: int
+      index: int
+      k: CpsKont
+
+  TcTupleIndex:
+    transformer: T_k
+    key: c_tupleindex
+    context: |
+      (E.tuple_index(size, index, expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.tuple_index(size, index, sexpr)])
+        })
+      }
+    free_vars:
+      size: int
+      index: int
+      c: LamExp
+
+  TkTypeOf:
+    transformer: T_k
+    key: k_typeOf
+    context: |
+      (E.typeOf_expr(expr)) {
+        T_k(expr, fn (sexpr) {
+          k(E.typeOf_expr(sexpr))
+        })
+      }
+    free_vars:
+      k: CpsKont
+
+  TcTypeOf:
+    transformer: T_k
+    key: c_typeOf
+    context: |
+      (E.typeOf_expr(expr)) {
+        T_k(expr, fn (sexpr) {
+          E.apply(c, [E.typeOf_expr(sexpr)])
+        })
+      }
+    free_vars:
+      c: LamExp

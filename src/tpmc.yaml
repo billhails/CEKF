@@ -74,7 +74,7 @@ structs:
                 components of the term to be extracted and used in subsequent patterns.
         data:
             tag: HashSymbol
-            namespace: int
+            nameSpace: int
             info: LamTypeConstructorInfo
             components: TpmcPatternArray
 
@@ -83,7 +83,7 @@ structs:
             brief: TPMC pattern
             description: >-
                 A pattern that can be used to match a term. It can be a variable,
-                a comparison, an assignment, a wildcard, a character, a big integer,
+                a comparison, an assignment, a wildCard, a character, a big integer,
                 a constructor, or a tuple of patterns.
         data:
             path: HashSymbol=NULL
@@ -117,7 +117,7 @@ structs:
                 a final state, or an error state. States are linked together to form
                 a state machine.
         data:
-            refcount: int=0
+            refCount: int=0
             stamp: int
             freeVariables: TpmcVariableTable=NULL
             state: TpmcStateValue
@@ -175,9 +175,18 @@ hashes:
             brief: TPMC pattern table
             description: >-
                 A set of patterns used in the term pattern matching process.
-                This allows for efficient lookup and management of patterns.
+                This allows for efficient lookUp and management of patterns.
         data:
             entries: TpmcPattern
+
+    TpmcStateTable:
+        meta:
+            brief: TPMC state table
+            description: >-
+                A hash table for fast lookUp of states by their stamp value.
+                This is used for efficient state deduplication during pattern matching compilation.
+        data:
+            entries: TpmcState
 
 unions:
     TpmcPatternValue:
@@ -191,9 +200,9 @@ unions:
             var: HashSymbol
             comparison: TpmcComparisonPattern
             assignment: TpmcAssignmentPattern
-            wildcard: void_ptr
+            wildCard: void_ptr
             character: character
-            biginteger: MaybeBigInt
+            bigInteger: MaybeBigInt
             constructor: TpmcConstructorPattern
             tuple: TpmcPatternArray
 
@@ -238,7 +247,7 @@ arrays:
             brief: TPMC pattern array
             description: >-
                 An array of patterns used in the term pattern matching process.
-                Patterns can be variables, comparisons, assignments, wildcards,
+                Patterns can be variables, comparisons, assignments, wildCards,
                 characters, big integers, constructors, or tuples of patterns.
         data:
             entries: TpmcPattern

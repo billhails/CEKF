@@ -3,7 +3,7 @@
 Structures to support type inference
 
 ```mermaid
-flowchart TD
+flowchart LR
 TcTypeTable --entries--> TcType
 TcTypeSigTable --entries--> TcTypeSig
 TcEnv --table--> TcTypeTable
@@ -28,18 +28,18 @@ TcType --function--> TcFunction
 TcType --pair--> TcPair
 TcType --thunk--> TcThunk
 TcType --var--> TcVar
-TcType --smallinteger--> void_ptr
-TcType --biginteger--> void_ptr
+TcType --smallInteger--> void_ptr
+TcType --bigInteger--> void_ptr
 TcType --character--> void_ptr
 TcType --unknown--> HashSymbol
 TcType --opaque--> HashSymbol
 TcType --typeSig--> TcTypeSig
 TcType --tuple--> TcTypeArray
-TcType --namespaces--> TcNamespaceArray
+TcType --nameSpaces--> TcNameSpaceArray
 TcType --env--> TcEnv
-TcType --nsid--> int
+TcType --nsId--> int
 TcTypeArray["TcTypeArray[]"] --entries--> TcType
-TcNamespaceArray["TcNamespaceArray[]"] --entries--> TcType
+TcNameSpaceArray["TcNameSpaceArray[]"] --entries--> TcType
 ```
 
-> Generated from src/tc.yaml by tools/makeAST.py
+> Generated from src/tc.yaml by tools/generate.py

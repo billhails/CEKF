@@ -34,8 +34,8 @@ static void loc(size_t ii, size_t *li, LocationArray *l) {
         }
         if (*li < l->size && ii == l->entries[*li]->loc) {
             Location *found = l->entries[*li];
-            if (prev.lineno != found->lineno || prev.filename != found->filename) {
-                eprintf("    # %s %d", found->filename, found->lineno);
+            if (prev.lineNo != found->lineNo || prev.fileName != found->fileName) {
+                eprintf("    # %s %d", found->fileName, found->lineNo);
                 prev = *found;
             }
         }
@@ -57,10 +57,10 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
                 }
                 break;
             case BYTECODES_TYPE_LAM:{
-                    int nargs = readByte(b, &i);
+                    int nArgs = readByte(b, &i);
                     int letRecOffset = readByte(b, &i);
                     int offset = readOffset(b, &i);
-                    eprintf("LAM [%d][%d][%04x]", nargs, letRecOffset,
+                    eprintf("LAM [%d][%d][%04x]", nArgs, letRecOffset,
                             offset);
                     loc(ii, &li, l);
                 }
@@ -155,8 +155,8 @@ void dumpByteCode(ByteCodeArray *b, LocationArray *l) {
                 }
                 break;
             case BYTECODES_TYPE_APPLY:{
-                    int nargs = readByte(b, &i);
-                    eprintf("APPLY [%d]", nargs);
+                    int nArgs = readByte(b, &i);
+                    eprintf("APPLY [%d]", nArgs);
                     loc(ii, &li, l);
                 }
                 break;

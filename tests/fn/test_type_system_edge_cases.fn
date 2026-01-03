@@ -15,7 +15,7 @@ let
             assert(int_result == 42);
             assert(char_result == 'a');
             assert(list_result == [1, 2, 3]);
-            puts("Polymorphic identity test passed")
+            puts("Polymorphic identity test passed\n")
     }
     
     // Test: Polymorphic list operations
@@ -33,7 +33,7 @@ let
             assert(int_list_len == 3);
             assert(char_list_len == 3);
             assert(nested_list_len == 3);
-            puts("Polymorphic lists test passed")
+            puts("Polymorphic lists test passed\n")
     }
     
     // Test: Type inference with arithmetic
@@ -46,7 +46,7 @@ let
             assert(a == 8);
             assert(b == 20);
             assert(c == 28);
-            puts("Type inference arithmetic test passed")
+            puts("Type inference arithmetic test passed\n")
     }
     
     // Test: Type inference with conditionals
@@ -61,7 +61,7 @@ let
         in
             assert(r1 == 5);
             assert(r2 == 5);
-            puts("Type inference conditionals test passed")
+            puts("Type inference conditionals test passed\n")
     }
     
     // Test: Polymorphic option type
@@ -82,7 +82,7 @@ let
         in
             assert(r1 == 42);
             assert(r2 == 99);
-            puts("Polymorphic option test passed")
+            puts("Polymorphic option test passed\n")
     }
     
     // Test: Polymorphic either type
@@ -112,7 +112,7 @@ let
             assert(l2 == 0);
             assert(r1 == 0);
             assert(r2 == 20);
-            puts("Polymorphic either test passed")
+            puts("Polymorphic either test passed\n")
     }
     
     // Test: Nested polymorphic types
@@ -129,7 +129,7 @@ let
             doubled = map_option(opt, fn(x) { x * 2 });
         in
             assert(doubled == some(10));
-            puts("Nested polymorphic test passed")
+            puts("Nested polymorphic test passed\n")
     }
     
     // Test: Polymorphic tree type
@@ -146,7 +146,7 @@ let
             size = tree_size(t);
         in
             assert(size == 3);
-            puts("Polymorphic tree test passed")
+            puts("Polymorphic tree test passed\n")
     }
     
     // Test: Type with multiple parameters
@@ -168,7 +168,7 @@ let
         in
             assert(first == 10);
             assert(second == 'x');
-            puts("Multi-param type test passed")
+            puts("Multi-param type test passed\n")
     }
     
     // Test: List of polymorphic types
@@ -186,7 +186,7 @@ let
             count = count_somes(opts);
         in
             assert(count == 3);
-            puts("List of options test passed")
+            puts("List of options test passed\n")
     }
     
     // Test: Recursive polymorphic function
@@ -202,7 +202,7 @@ let
         in
             assert(r1 == [3, 2, 1]);
             assert(r2 == ['c', 'b', 'a']);
-            puts("Recursive polymorphic test passed")
+            puts("Recursive polymorphic test passed\n")
     }
     
     // Test: Higher-order polymorphic function
@@ -220,7 +220,7 @@ let
         in
             assert(r1 == 7);
             assert(r2 == 12);
-            puts("Higher-order polymorphic test passed")
+            puts("Higher-order polymorphic test passed\n")
     }
     
     // Test: Polymorphic result type
@@ -245,7 +245,7 @@ let
             assert(not is_ok(r2));
             assert(not is_err(r1));
             assert(is_err(r2));
-            puts("Polymorphic result test passed")
+            puts("Polymorphic result test passed\n")
     }
 
     // Main test runner

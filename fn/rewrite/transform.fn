@@ -1,0 +1,176 @@
+namespace
+
+link "expr.fn" as E;
+link "../listutils.fn" as list;
+
+// (E.expr -> E.expr) -> E.expr -> E.expr
+fn bottom_up(f, exp) {
+    f(_transform(bottom_up(f), exp))
+}
+
+// (E.expr -> E.expr) -> E.expr -> E.expr
+fn top_down(f, exp) {
+    _transform(top_down(f), f(exp))
+}
+
+// (E.expr -> E.expr) -> E.expr -> E.expr
+fn _transform(t, exp) {
+    switch (exp) {
+
+        // amb_expr(expr, expr)
+        (E.amb_expr(e1, e2)) {
+            E.amb_expr(t(e1), t(e2))
+        }
+
+        // back_expr
+        (E.back_expr) |
+        // character(char)
+        (E.character(_)) |
+        // constant(string)
+        (E.constant(_)) |
+        // constructor_info(string)
+        (E.constructor_info(_)) |
+        // env_expr
+        (E.env_expr) |
+        // error_expr
+        (E.error_expr) |
+        // stdint(number)
+        (E.stdint(_)) |
+        // var(string)
+        (E.var(_)) |
+        // bigint(number)
+        (E.bigint(_)) { exp }
+
+
+        // apply_closure(expr, list(expr))
+        (E.apply_closure(fun, args)) {
+            E.apply_closure(t(fun), list.map(t, args))
+        }
+
+        // apply(expr, list(expr))
+        (E.apply(fun, args)) {
+            E.apply(t(fun), list.map(t, args))
+        }
+
+        // callcc_expr(expr)
+        (E.callcc_expr(e)) {
+            E.callcc_expr(t(e))
+        }
+
+        // cond_expr(expr, list(#(expr, expr)))
+        (E.cond_expr(test, branches)) {
+            E.cond_expr(t(test), list.map(fn (#(cond, res)) { #(t(cond), t(res)) }, branches))
+        }
+
+        // construct(string, list(expr))
+        (E.construct(tag, fields)) {
+            E.construct(tag, list.map(t, fields))
+        }
+
+        // deconstruct(string, number, expr)
+        (E.deconstruct(tag, n, e)) {
+            E.deconstruct(tag, n, t(e))
+        }
+
+        // env_ref(expr, string)
+        (E.env_ref(e, s)) {
+            E.env_ref(t(e), s)
+        }
+
+        // if_expr(expr, expr, expr)
+        (E.if_expr(cond, then_branch, else_branch)) {
+            E.if_expr(t(cond), t(then_branch), t(else_branch))
+        }
+
+        // lambda(list(string), expr)
+        (E.lambda(params, body)) {
+            E.lambda(params, t(body))
+        }
+
+        // lambdac(list(string), expr)
+        (E.lambdac(params, body)) {
+            E.lambdac(params, t(body))
+        }
+
+        // letrec_expr(list(#(string, expr)), expr)
+        (E.letrec_expr(bindings, body)) {
+            E.letrec_expr(list.map(fn (#(v, e)) { #(v, t(e)) }, bindings), t(body))
+        }
+
+        // lookup(string, number, expr)
+        (E.lookup(s, n, e)) {
+            E.lookup(s, n, t(e))
+        }
+
+        // make_closure(expr, expr)
+        (E.make_closure(lam, env)) {
+            E.make_closure(t(lam), t(env))
+        }
+
+        // make_env(list(#(string, expr)))
+        (E.make_env(bindings)) {
+            E.make_env(list.map(fn (#(v, e)) { #(v, t(e)) }, bindings))
+        }
+
+        // make_tuple(list(expr))
+        (E.make_tuple(elements)) {
+            E.make_tuple(list.map(t, elements))
+        }
+
+        // make_vec(number, list(expr))
+        (E.make_vec(size, elements)) {
+            E.make_vec(size, list.map(t, elements))
+        }
+
+        // match_cases(expr, list(#(list(number), expr)))
+        (E.match_cases(e, cases)) {
+            E.match_cases(t(e), list.map(fn (#(indices, res)) { #(indices, t(res)) }, cases))
+        }
+
+        // namespaces(list(expr))
+        (E.namespaces(exprs)) {
+            E.namespaces(list.map(t, exprs))
+        }
+
+        // primapp(string, expr, expr)
+        (E.primapp(op, e1, e2)) {
+            E.primapp(op, t(e1), t(e2))
+        }
+
+        // print_exp(expr)
+        (E.print_exp(e)) {
+            E.print_exp(t(e))
+        }
+
+        // sequence(list(expr))
+        (E.sequence(exps)) {
+            E.sequence(list.map(t, exps))
+        }
+
+        // tag(expr)
+        (E.tag(e)) {
+            E.tag(t(e))
+        }
+
+        // tuple_index(number, number, expr)
+        (E.tuple_index(i, j, e)) {
+            E.tuple_index(i, j, t(e))
+        }
+
+        // typedefs(number, expr)
+        (E.typedefs(n, e)) {
+            E.typedefs(n, t(e))
+        }
+
+        // typeof_expr(expr)
+        (E.typeof_expr(e)) {
+            E.typeof_expr(t(e))
+        }
+
+        (_) {
+            E.print_expr(exp);
+            puts(": ");
+            error("Unhandled expression type in transform")
+        }
+    };
+}

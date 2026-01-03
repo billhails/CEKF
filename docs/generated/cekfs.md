@@ -3,7 +3,7 @@
 The structures of the CEKFs machine
 
 ```mermaid
-flowchart TD
+flowchart LR
 CEKF --C--> control
 CEKF --E--> Env
 CEKF --K--> Kont
@@ -30,8 +30,8 @@ Fail --K--> Kont
 Fail --S--> Stack
 Fail --F--> Fail
 Location --loc--> index
-Location --lineno--> int
-Location --filename--> string
+Location --lineNo--> int
+Location --fileName--> string
 Vec["(Vec)"] --entries--> Value
 Value --none--> void_ptr
 Value --stdint--> int
@@ -49,7 +49,7 @@ Value --pclo--> Clo
 Value --kont--> Kont
 Value --vec--> Vec
 Value --builtIn--> BuiltInImplementation
-Value --namespace--> Vec
+Value --nameSpace--> Vec
 Value --opaque--> opaque
 ByteCodeArray["ByteCodeArray[]"] --entries--> byte
 Stack["Stack[]"] --entries--> Value
@@ -61,4 +61,4 @@ LocationArray["LocationArray[]"] --entries--> Location
 OverApplyStack["OverApplyStack[]"] --entries--> OverApplyFrame
 ```
 
-> Generated from src/cekfs.yaml by tools/makeAST.py
+> Generated from src/cekfs.yaml by tools/generate.py

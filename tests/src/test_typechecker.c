@@ -35,13 +35,13 @@ static bool compareTcTypes(TcType *a, TcType *b) {
 }
 
 static AstProg *parseWrapped(char *string, char *origin) {
-    forceInitNamespaces();
+    forceInitNameSpaces();
     AstProg *prog = prattParseString(string, origin);
     return prog;
 }
 
 static AstProg *parseSolo(char *string, char *origin) {
-    forceInitNamespaces();
+    forceInitNameSpaces();
     AstNest *nest = prattParseStandaloneString(string, origin);
     int save = PROTECT(nest);
     AstProg *prog = astNestToProg(nest);
@@ -58,9 +58,9 @@ static TcType *makeVar(char *name) {
     return var;
 }
 
-static TcType *_makeTypeSig(char *name, TcTypeSigArgs *args, int nsid) {
+static TcType *_makeTypeSig(char *name, TcTypeSigArgs *args, int nsId) {
     HashSymbol *sym = newSymbol(name);
-    TcTypeSig *typeDef = newTcTypeSig(sym, args, nsid);
+    TcTypeSig *typeDef = newTcTypeSig(sym, args, nsId);
     int save = PROTECT(typeDef);
     TcType *td = newTcType(TCTYPE_TYPE_TYPESIG, TCTYPE_VAL_TYPESIG(typeDef));
     UNPROTECT(save);

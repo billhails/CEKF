@@ -18,6 +18,18 @@
 
 # common primitive types not defined by the schemas
 
+AnfKontProcWrapper:
+    data:
+        cname: AnfKontProcWrapper
+        printf: "%p"
+        valued: true
+
+CpsKontProcWrapper:
+    data:
+        cname: CpsKontProcWrapper
+        printf: "%p"
+        valued: true
+
 HashSymbol:
     data:
         cname: "struct HashSymbol *"
@@ -144,3 +156,4 @@ size:
         cname: size_t
         printf: "%zu"
         valued: true
+

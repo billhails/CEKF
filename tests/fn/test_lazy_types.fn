@@ -36,4 +36,4 @@ in
 };
 
 print("");
-print("Lazy type tracking tests passed");
+print("Lazy type tracking tests passed\n");

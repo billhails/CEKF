@@ -3,7 +3,7 @@
 Support for declaring builtins
 
 ```mermaid
-flowchart TD
+flowchart LR
 BuiltInMemBufHash --entries--> BuiltInMemBuf
 BuiltIn --externalName--> HashSymbol
 BuiltIn --internalName--> HashSymbol
@@ -12,7 +12,7 @@ BuiltIn --args--> BuiltInArgs
 BuiltIn --implementation--> void_ptr
 BuiltInImplementation --name--> HashSymbol
 BuiltInImplementation --implementation--> void_ptr
-BuiltInImplementation --nargs--> int
+BuiltInImplementation --nArgs--> int
 BuiltInMemBuf --buffer--> string
 BuiltInMemBuf --index--> index
 BuiltInMemBuf --size--> size
@@ -20,4 +20,4 @@ BuiltInArgs["BuiltInArgs[]"] --entries--> TcType
 BuiltIns["BuiltIns[]"] --entries--> BuiltIn
 ```
 
-> Generated from src/builtins.yaml by tools/makeAST.py
+> Generated from src/builtins.yaml by tools/generate.py

@@ -37,7 +37,7 @@ void ppLamLam(LamLam *lam) {
         eprintf("<NULL lambda>");
         return;
     }
-    eprintf("(lambda ");
+    eprintf("(λ ");
     ppLamVarList(lam->args);
     eprintf(" ");
     ppLamExp(lam->exp);
@@ -80,64 +80,73 @@ void ppLamExp(LamExp *exp) {
     }
     switch (exp->type) {
         case LAMEXP_TYPE_LAM:
-            ppLamLam(exp->val.lam);
+            ppLamLam(getLamExp_Lam(exp));
             break;
         case LAMEXP_TYPE_VAR:
-            ppHashSymbol(exp->val.var);
+            ppHashSymbol(getLamExp_Var(exp));
             break;
         case LAMEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, exp->val.biginteger);
+            fprintMaybeBigInt(errout, getLamExp_BigInteger(exp));
             break;
         case LAMEXP_TYPE_STDINT:
-            eprintf("%d", exp->val.stdint);
+            eprintf("%d", getLamExp_Stdint(exp));
             break;
         case LAMEXP_TYPE_PRIM:
-            ppLamPrimApp(exp->val.prim);
+            ppLamPrimApp(getLamExp_Prim(exp));
             break;
         case LAMEXP_TYPE_SEQUENCE:
-            ppLamSequence(exp->val.sequence);
+            ppLamSequence(getLamExp_Sequence(exp));
             break;
         case LAMEXP_TYPE_MAKEVEC:
-            ppLamMakeVec(exp->val.makeVec);
+            ppLamMakeVec(getLamExp_MakeVec(exp));
             break;
         case LAMEXP_TYPE_DECONSTRUCT:
-            ppLamDeconstruct(exp->val.deconstruct);
+            ppLamDeconstruct(getLamExp_Deconstruct(exp));
             break;
         case LAMEXP_TYPE_CONSTRUCT:
-            ppLamConstruct(exp->val.construct);
+            ppLamConstruct(getLamExp_Construct(exp));
             break;
         case LAMEXP_TYPE_TAG:
-            ppLamTag(exp->val.tag);
+            ppLamTag(getLamExp_Tag(exp));
             break;
         case LAMEXP_TYPE_CONSTANT:
-            ppLamConstant(exp->val.constant);
+            ppLamConstant(getLamExp_Constant(exp));
             break;
         case LAMEXP_TYPE_APPLY:
-            ppLamApply(exp->val.apply);
+            ppLamApply(getLamExp_Apply(exp));
             break;
         case LAMEXP_TYPE_IFF:
-            ppLamIff(exp->val.iff);
+            ppLamIff(getLamExp_Iff(exp));
             break;
         case LAMEXP_TYPE_CALLCC:
-            ppLamCallCC(exp->val.callcc);       // LamExp
+            ppLamCallCC(getLamExp_CallCC(exp));       // LamExp
             break;
         case LAMEXP_TYPE_PRINT:
-            ppLamPrint(exp->val.print);
+            ppLamPrint(getLamExp_Print(exp));
             break;
         case LAMEXP_TYPE_LETREC:
-            ppLamLetRec(exp->val.letrec);
+            ppLamLetRec(getLamExp_LetRec(exp));
             break;
         case LAMEXP_TYPE_TYPEDEFS:
-            ppLamTypeDefs(exp->val.typedefs);
+            ppLamTypeDefs(getLamExp_TypeDefs(exp));
             break;
         case LAMEXP_TYPE_LET:
-            ppLamLet(exp->val.let);
+            ppLamLet(getLamExp_Let(exp));
             break;
         case LAMEXP_TYPE_MATCH:
-            ppLamMatch(exp->val.match);
+            ppLamMatch(getLamExp_Match(exp));
             break;
         case LAMEXP_TYPE_CHARACTER:
-            eprintf("\"%c\"", exp->val.character);
+            if (getLamExp_Character(exp) == L'\n')
+                eprintf("\"\\n\"");
+            else if (getLamExp_Character(exp) == L'\t')
+                eprintf("\"\\t\"");
+            else if (getLamExp_Character(exp) == L'\"')
+                eprintf("\"\\\"\"");
+            else if (getLamExp_Character(exp) == L'\\')
+                eprintf("\"\\\\\"");
+            else
+                eprintf("\"%lc\"", getLamExp_Character(exp));
             break;
         case LAMEXP_TYPE_BACK:
             eprintf("(back)");
@@ -146,45 +155,42 @@ void ppLamExp(LamExp *exp) {
             eprintf("(error)");
             break;
         case LAMEXP_TYPE_COND:
-            ppLamCond(exp->val.cond);
+            ppLamCond(getLamExp_Cond(exp));
             break;
         case LAMEXP_TYPE_AMB:
-            ppLamAmb(exp->val.amb);
+            ppLamAmb(getLamExp_Amb(exp));
             break;
-        case LAMEXP_TYPE_COND_DEFAULT:
-            eprintf("default");
+        case LAMEXP_TYPE_TUPLEINDEX:
+            ppLamTupleIndex(getLamExp_TupleIndex(exp));
             break;
-        case LAMEXP_TYPE_TUPLE_INDEX:
-            ppLamTupleIndex(exp->val.tuple_index);
-            break;
-        case LAMEXP_TYPE_MAKE_TUPLE:
-            ppLamMakeTuple(exp->val.make_tuple);
+        case LAMEXP_TYPE_MAKETUPLE:
+            ppLamMakeTuple(getLamExp_MakeTuple(exp));
             break;
         case LAMEXP_TYPE_NAMESPACES:
-            ppLamNamespaces(exp->val.namespaces);
+            ppLamNameSpaces(getLamExp_NameSpaces(exp));
             break;
         case LAMEXP_TYPE_ENV:
             eprintf("env");
             break;
         case LAMEXP_TYPE_CONSTRUCTOR:
-            eprintf("constructor:%s", exp->val.constructor->name->name);
+            eprintf("constructor:%s", getLamExp_Constructor(exp)->name->name);
             break;
         case LAMEXP_TYPE_LOOKUP:
-            ppLamLookup(exp->val.lookup);
+            ppLamLookUp(getLamExp_LookUp(exp));
             break;
         default:
             cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
-void ppLamLookup(LamLookup *lookup) {
-    eprintf("(lookup %s:%d ", lookup->nsSymbol == NULL ? "" : lookup->nsSymbol->name, lookup->nsid);
-    ppLamExp(lookup->exp);
+void ppLamLookUp(LamLookUp *lookUp) {
+    eprintf("(lookUp %s:%d ", lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name, lookUp->nsId);
+    ppLamExp(lookUp->exp);
     eprintf(")");
 }
 
-void ppLamNamespaces(LamNamespaceArray *arr) {
-    eprintf("(namespaces");
+void ppLamNameSpaces(LamNameSpaceArray *arr) {
+    eprintf("(nameSpaces");
     for (Index i = 0; i < arr->size; ++i) {
         eprintf(" [");
         ppLamExp(arr->entries[i]);
@@ -354,10 +360,10 @@ static void _ppLamCharCondCases(LamCharCondCases *cases) {
 static void _ppLamCondCases(LamCondCases *cases) {
     switch (cases->type) {
         case LAMCONDCASES_TYPE_INTEGERS:
-            _ppLamIntCondCases(cases->val.integers);
+            _ppLamIntCondCases(getLamCondCases_Integers(cases));
             break;
         case LAMCONDCASES_TYPE_CHARACTERS:
-            _ppLamCharCondCases(cases->val.characters);
+            _ppLamCharCondCases(getLamCondCases_Characters(cases));
             break;
         default:
             cant_happen("unrecognised type %d in _ppLamCondCases",
@@ -405,7 +411,7 @@ void ppLamLetRec(LamLetRec *letRec) {
         return;
     }
     eprintf("(letrec ");
-    ppLamLetRecBindings(letRec->bindings);
+    ppLamBindings(letRec->bindings);
     if (letRec->body != NULL) {
         eprintf(" ");
         ppLamExp(letRec->body);
@@ -417,7 +423,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList);
 
 void ppLamTypeDefs(LamTypeDefs *typeDefs) {
     if (typeDefs == NULL) {
-        eprintf("<NULL typedefs>");
+        eprintf("<NULL typeDefs>");
         return;
     }
     eprintf("(typedefs ");
@@ -429,27 +435,13 @@ void ppLamTypeDefs(LamTypeDefs *typeDefs) {
     eprintf(")");
 }
 
-void ppLamLetBindings(LamLetBindings *bindings) {
-    if (bindings == NULL)
-        return;
-    eprintf("(");
-    ppHashSymbol(bindings->var);
-    eprintf(" ");
-    ppLamExp(bindings->val);
-    eprintf(")");
-    if (bindings->next) {
-        eprintf(" ");
-        ppLamLetBindings(bindings->next);
-    }
-}
-
 void ppLamLet(LamLet *let) {
     if (let == NULL) {
         eprintf("<NULL let>");
         return;
     }
     eprintf("(let (");
-    ppLamLetBindings(let->bindings);
+    ppLamBindings(let->bindings);
     eprintf(") ");
     ppLamExp(let->body);
     eprintf(")");
@@ -496,7 +488,7 @@ void ppLamTupleIndex(LamTupleIndex *index) {
     eprintf(")");
 }
 
-static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
+static void _ppLamBindings(LamBindings *bindings) {
     if (bindings == NULL)
         return;
     eprintf("(");
@@ -506,13 +498,13 @@ static void _ppLamLetRecBindings(LamLetRecBindings *bindings) {
     eprintf(")");
     if (bindings->next) {
         eprintf(" ");
-        _ppLamLetRecBindings(bindings->next);
+        _ppLamBindings(bindings->next);
     }
 }
 
-void ppLamLetRecBindings(LamLetRecBindings *bindings) {
+void ppLamBindings(LamBindings *bindings) {
     eprintf("(");
-    _ppLamLetRecBindings(bindings);
+    _ppLamBindings(bindings);
     eprintf(")");
 }
 
@@ -535,20 +527,20 @@ static void _ppLamTypeSig(LamTypeSig *type) {
     eprintf(")");
 }
 
-static void ppLookupSymbol(LamLookupSymbol *ls) {
-    eprintf("(lookup %s:%d %s)", ls->nsSymbol->name, ls->nsid, ls->symbol->name);
+static void ppLookUpSymbol(LamLookUpSymbol *ls) {
+    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId, ls->symbol->name);
 }
 
-static void ppLookupOrSymbol(LamLookupOrSymbol *los) {
+static void ppLookUpOrSymbol(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            ppHashSymbol(los->val.symbol);
+            ppHashSymbol(getLamLookUpOrSymbol_Symbol(los));
             break;
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            ppLookupSymbol(los->val.lookup);
+            ppLookUpSymbol(getLamLookUpOrSymbol_LookUp(los));
             break;
         default:
-            cant_happen("unrecognised %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognised %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -556,7 +548,7 @@ static void _ppLamTypeConstructorArgs(LamTypeConstructorArgs *args);
 
 static void _ppLamTypeFunction(LamTypeFunction *function) {
     eprintf("(");
-    ppLookupOrSymbol(function->name);
+    ppLookUpOrSymbol(function->name);
     _ppLamTypeConstructorArgs(function->args);
     eprintf(")");
 }
@@ -576,13 +568,13 @@ static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
             eprintf("char");
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
-            ppHashSymbol(type->val.var);
+            ppHashSymbol(getLamTypeConstructorType_Var(type));
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            _ppLamTypeFunction(type->val.function);
+            _ppLamTypeFunction(getLamTypeConstructorType_Function(type));
             break;
         case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-            _ppLamTypeTuple(type->val.tuple);
+            _ppLamTypeTuple(getLamTypeConstructorType_Tuple(type));
             break;
         default:
             cant_happen("unrecognised type %s in _ppLamTypeConstructorType",
@@ -644,7 +636,7 @@ void ppLamTypeDefList(LamTypeDefList *typeDefList) {
 static void _ppLamIntList(LamIntList *list) {
     if (list == NULL)
         return;
-    eprintf("%d:%s:%d", list->item, list->name->name, list->nsid);
+    eprintf("%d:%s:%d", list->item, list->name->name, list->nsId);
     if (list->next != NULL) {
         eprintf(" ");
         _ppLamIntList(list->next);
@@ -658,9 +650,8 @@ void ppLamIntList(LamIntList *list) {
 }
 
 void ppLamConstruct(LamConstruct *construct) {
-    eprintf("(construct ");
+    eprintf("(");
     ppHashSymbol(construct->name);
-    eprintf(":%d", construct->tag);
     _ppLamArgs(construct->args);
     eprintf(")");
 }
@@ -672,9 +663,7 @@ void ppLamTag(LamExp *tag) {
 }
 
 void ppLamConstant(LamConstant *constant) {
-    eprintf("(constant ");
     ppHashSymbol(constant->name);
-    eprintf(" %d)", constant->tag);
 }
 
 void ppLamDeconstruct(LamDeconstruct *deconstruct) {
@@ -689,7 +678,7 @@ static inline void pad(int depth) {
     eprintf("%*s", depth, "");
 }
 
-static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
+static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
     if (env == NULL) {
         pad(depth);
         eprintf("<NULL> env\n");
@@ -703,21 +692,21 @@ static void _ppLamContext(LamContext *env, int depth, bool done_namespaces) {
     while ((name = iterateLamInfoTable(env->frame, &i, &value)) != NULL) {
         pad(depth);
         if (value->type == LAMINFO_TYPE_NAMESPACEINFO) {
-            if (done_namespaces) {
+            if (done_nameSpaces) {
                 eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
             } else {
                 eprintf(" %s => %s [\n", name->name, lamInfoTypeName(value->type));
-                _ppLamContext(value->val.namespaceInfo, depth + 1, true);
+                _ppLamContext(getLamInfo_NameSpaceInfo(value), depth + 1, true);
                 pad(depth);
                 eprintf(" ]\n");
             }
         } else if (value->type == LAMINFO_TYPE_NSID) {
-            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), value->val.nsid);
+            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), getLamInfo_NsId(value));
         } else {
             eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
         }
     }
-    _ppLamContext(env->parent, depth + 1, done_namespaces);
+    _ppLamContext(env->parent, depth + 1, done_nameSpaces);
     pad(depth);
     eprintf("}\n");
 }

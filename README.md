@@ -74,7 +74,7 @@ the $step$ function: one to deal with `amb` and one to deal with `back`.
 
 ```mermaid
 flowchart TD
-classDef process fill:#aef;
+classDef process fill:#aef,color:#123;
 source(Source) -->
 scanner([Scanner]):::process -->
 tokens(Tokens) -->
@@ -96,7 +96,22 @@ tc <--> pc([Print Compiler]):::process
 tc --> lambda2(Plain Lambda Form)
 lambda2 --> ci([Constructor Inlining]):::process
 ci --> lambda3(Inlined Lambda)
-lambda3 --> anfc([A-Normal Form Conversion]):::process
+subgraph anf-rewrite-2
+   alpha(["ɑ-Conversion"]):::process
+   alpha --> lambda_a(alphatized lambda)
+   lambda_a --> anfr([ANF Rewrite]):::process
+   anfr --> lambda_b(New ANF)
+
+   lambda_a --> cps([CPS Transform]):::process
+   cps --> lambda_e("CPS λ")
+   lambda_e --> cloc([Closure Conversion WiP]):::process
+   cloc --> lambda_c(Explicit Closure)
+   lambda_c --> betar(["β-Reduction WiP"]):::process
+   betar --> lambda_d(simplified)
+end
+lambda3 --> alpha
+lambda3 --> anfc
+lambda_a --> anfc([A-Normal Form Conversion]):::process
 anfc --> anf(ANF)
 anf --> lexa([Lexical Analysis]):::process
 lexa --> ann(Annotated ANF)
@@ -105,6 +120,8 @@ bcc --> bc(Byte Code)
 bc <--> bcf(Bytecode Files)
 bc --> cekf([CEKF Runtime VM]):::process
 ```
+
+The "anf-rewrite-2" section is a WiP on the `anf-rewrite-2` branch. Although that branch started as a rewrite of the ANF transform, it became apparent that the CEK machine itself was blocking optimizations and so the intention is to target a more "traditional" register machine with an eye towards LLVM in the longer term. On that branch the ɑ-conversion is complete and incorporated (though it achieves nothing for the ANF path it is required for CPS.) The ANF rewrite is complete but abandoned, and the CPS transform is also complete.
 
 The various components named in the diagram above are linked to their implementation entry point here:
 * Scanner [pratt_scanner.c](src/pratt_scanner.c)

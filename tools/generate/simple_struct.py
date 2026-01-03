@@ -1,13 +1,10 @@
 """
-Struct structure classes for makeAST code generation.
-
-This module contains:
-- SimpleStruct: Regular C structs with fields
-- InlineStruct: Inline (call-by-value) structs
+SimpleStruct class for regular C structs with fields.
 """
 
-from .base import Base, EnumField
-from .fields import SimpleField
+from .base import Base
+from .enum_field import EnumField
+from .simple_field import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
@@ -25,12 +22,12 @@ class SimpleStruct(Base):
         # HASENTRIES
         if "data" in body:
             data = body["data"]
-            self.fields = [self.makeField(x, data[x]) for x in data.keys()]
+            self.fields = [self.makeField(_x, data[_x]) for _x in data.keys()]
         else:
             raise ValueError(f"SimpleStruct {name} must have 'data' field")
 
     def hasParserInfo(self, catalog):
-        return catalog.parserInfo
+        return catalog.getParserInfo(self.name)
 
     def printTypedef(self, catalog):
         c = self.comment('printTypedef')
@@ -40,7 +37,7 @@ class SimpleStruct(Base):
         print(f"typedef struct {name} {{ {c}")
         if not self.isInline(catalog):
             print(f"    Header header; {c}")
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             print(f"    ParserInfo _yy_parser_info; {c}")
         for field in self.fields:
             field.printStructTypedefLine(catalog)
@@ -81,7 +78,7 @@ class SimpleStruct(Base):
     def getCountSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f'Index count{myName}({myType} x)'
+        return f'Index count{myName}({myType} _x)'
 
     def printCountDeclaration(self, catalog):
         if self.isSinglySelfReferential(catalog):
@@ -98,8 +95,8 @@ class SimpleStruct(Base):
             print(f' */')
             print(f'{self.getCountSignature(catalog)} {{ {c}')
             print(f'    Index count = 0; {c}')
-            print(f'    while (x != NULL) {{ {c}')
-            print(f'        x = x->{selfRefField}; {c}')
+            print(f'    while (_x != NULL) {{ {c}')
+            print(f'        _x = _x->{selfRefField}; {c}')
             print(f'        count++; {c}')
             print(f'    }} {c}')
             print(f'    return count; {c}')
@@ -134,10 +131,10 @@ class SimpleStruct(Base):
         return SignatureHelper.compare_signature(myName, myType, extraCmpArgs)
 
     def getNewArgs(self, catalog):
-        return [x for x in self.fields if x.default is None and not x.isSelfInitializing(catalog)]
+        return [_x for _x in self.fields if _x.default is None and not _x.isSelfInitializing(catalog)]
 
     def getDefaultArgs(self, catalog):
-        return [x for x in self.fields if x.default is not None or x.isSelfInitializing(catalog)]
+        return [_x for _x in self.fields if _x.default is not None or _x.isSelfInitializing(catalog)]
 
     def getNewSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
@@ -147,7 +144,7 @@ class SimpleStruct(Base):
             args += [field.getSignature(catalog)]
         if len(args) == 0:
             args += ['void']
-        if catalog.parserInfo:
+        if catalog.getParserInfo(self.name):
             args = ['ParserInfo _PI'] + args
 
         return SignatureHelper.new_signature(myName, myType, args)
@@ -201,28 +198,28 @@ class SimpleStruct(Base):
         myType = self.getTypeDeclaration(catalog)
         myObjType = self.getObjType()
         myName = self.getName()
-        print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
+        print(f"    {myType} _x = NEW({myName}, {myObjType}); {c}")
         if hasInternalConstructors:
-            print(f"    Header _h = x->header; {c}")
-            print(f"    bzero(x, sizeof(struct {myName})); {c}")
-            print(f"    x->header = _h; {c}")
-            print(f"    int save = PROTECT(x); {c}")
-        print(f'    DEBUG("new {myName} %p", x); {c}')
-        if catalog.parserInfo:
-            print(f"    x->_yy_parser_info = _PI; {c}")
+            print(f"    Header _h = _x->header; {c}")
+            print(f"    bzero(_x, sizeof(struct {myName})); {c}")
+            print(f"    _x->header = _h; {c}")
+            print(f"    int save = PROTECT(_x); {c}")
+        print(f'    DEBUG("new {myName} %p", _x); {c}')
+        if catalog.getParserInfo(self.name):
+            print(f"    _x->_yy_parser_info = _PI; {c}")
         for field in self.getNewArgs(catalog):
             f = field.getFieldName()
-            print(f"    x->{f} = {f}; {c}")
+            print(f"    _x->{f} = {f}; {c}")
         for field in self.getDefaultArgs(catalog):
             f = field.getFieldName()
             if field.isSelfInitializing(catalog) and field.default is None:
                 d = f'{field.getConstructorName(catalog)}()'
             else:
                 d = field.default
-            print(f"    x->{f} = {d}; {c}")
+            print(f"    _x->{f} = {d}; {c}")
         if hasInternalConstructors:
             print(f"    UNPROTECT(save); {c}")
-        print(f"    return x; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -255,14 +252,14 @@ class SimpleStruct(Base):
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"mark{myName}(x{a}{prefix}{field}); {c}")
+        print(f"mark{myName}(_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"return PROTECT(x{a}{prefix}{field}); {c}")
+        print(f"return PROTECT(_x{a}{prefix}{field}); {c}")
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
@@ -283,14 +280,14 @@ class SimpleStruct(Base):
         myName=self.getName()
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'print{myName}(x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'print{myName}(_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCopyField(self, isInline, field, depth, prefix=''):
         c = self.comment('printCopyField')
         myName=self.getName()
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f'x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
+        print(f'_x{a}{prefix}{field} = copy{myName}(o{a}{prefix}{field}); {c}')
 
     def printMarkFunction(self, catalog):
         c = self.comment('printMarkFunction')
@@ -301,9 +298,9 @@ class SimpleStruct(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         if not self.isInline(catalog):
-            print(f"    if (x == NULL) return; {c}")
-            print(f"    if (MARKED(x)) return; {c}")
-            print(f"    MARK(x); {c}")
+            print(f"    if (_x == NULL) return; {c}")
+            print(f"    if (MARKED(_x)) return; {c}")
+            print(f"    MARK(_x); {c}")
         self.printMarkFunctionBody(catalog)
         print(f"}} {c}\n")
 
@@ -317,7 +314,7 @@ class SimpleStruct(Base):
         print(f" * should only be freed by the sweep phase directly.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    FREE(x, {self.getName()}); {c}")
+        print(f"    FREE(_x, {self.getName()}); {c}")
         print(f"}} {c}\n")
 
     def printMarkObjCase(self, catalog):
@@ -386,17 +383,17 @@ class SimpleStruct(Base):
         print(f" */")
         print(f"{decl} {{ {c}")
         print(f"    if (o == NULL) return NULL; {c}")
-        print(f"    {myType} x = NEW({myName}, {myObjType}); {c}")
-        print(f'    DEBUG("copy {myName} %p", x); {c}')
-        print(f"    Header _h = x->header; {c}")
-        print(f"    bzero(x, sizeof(struct {myName})); {c}")
-        print(f"    x->header = _h; {c}")
-        print(f"    int save = PROTECT(x); {c}")
-        if catalog.parserInfo:
-            print(f"    x->_yy_parser_info = o->_yy_parser_info; {c}")
+        print(f"    {myType} _x = NEW({myName}, {myObjType}); {c}")
+        print(f'    DEBUG("copy {myName} %p", _x); {c}')
+        print(f"    Header _h = _x->header; {c}")
+        print(f"    bzero(_x, sizeof(struct {myName})); {c}")
+        print(f"    _x->header = _h; {c}")
+        print(f"    int save = PROTECT(_x); {c}")
+        if catalog.getParserInfo(self.name):
+            print(f"    _x->_yy_parser_info = o->_yy_parser_info; {c}")
         self.printCopyFunctionBody(catalog)
         print(f"    UNPROTECT(save); {c}")
-        print(f"    return x; {c}")
+        print(f"    return _x; {c}")
         print(f"}} {c}")
         print("")
 
@@ -411,7 +408,7 @@ class SimpleStruct(Base):
         print(f"{decl} {{ {c}")
         print(f"    pad(depth); {c}")
         if not self.isInline(catalog):
-            print(f'    if (x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
+            print(f'    if (_x == NULL) {{ eprintf("{myName} (NULL)"); return; }} {c}')
         print(f'    eprintf("{myName}[\\n"); {c}')
         self.printPrintFunctionBody(catalog)
         print(f"    pad(depth); {c}")
@@ -419,102 +416,138 @@ class SimpleStruct(Base):
         print(f"}} {c}\n")
 
     def getDefineValue(self):
-        return 'x'
+        return '_x'
 
     def getDefineArg(self):
-        return 'x'
+        return '_x'
 
+    def generateVisitorDecl(self, target):
+        """Generate forward declaration for visitor function"""
+        myName = self.getName()
+        return f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context);\n"
 
-class InlineStruct(SimpleStruct):
-    """
-    Inline (call by value) structs live on the stack not the heap, they are
-    used for small data structures that don't need GC. They have no Header
-    field and are passed by value rather than by pointer.
-    
-    These are useful for nested configurations or small value types that
-    are always part of a larger structure.
-    """
-    
-    def isInline(self, catalog):
-        return True
-    
-    def printNewFunction(self, catalog):
-        # Inline structs don't have a heap allocator - they're initialized inline
-        # Generate a simple constructor that returns by value
-        c = self.comment('printNewFunction')
+    def generateVisitor(self, catalog, target):
+        """Generate visitor function implementation"""
         myName = self.getName()
-        sig = self.getNewSignature(catalog)
-        print(f"/**")
-        print(f" * Creates a new {myName} struct with the given arguments.")
-        print(f" */")
-        print(f"{sig} {{ {c}")
-        print(f"    {self.getTypeDeclaration(catalog)} x; {c}")
-        for field in self.fields:
-            fname = field.getName()
-            if field.default is not None:
-                print(f"    x.{fname} = {field.default}; {c}")
-            else:
-                print(f"    x.{fname} = {fname}; {c}")
-        print(f"    return x; {c}")
-        print(f"}} {c}\n")
-    
-    def printNewDeclaration(self, catalog):
-        # Inline structs do need a constructor declaration
-        c = self.comment('printNewDeclaration')
-        sig = self.getNewSignature(catalog)
-        print(f"{sig}; {c}")
-    
-    def printMarkDeclaration(self, catalog):
-        # Inline structs need mark declarations for their fields
-        c = self.comment('printMarkDeclaration')
-        decl = self.getMarkSignature(catalog)
-        print(f"{decl}; {c}")
-    
-    def printMarkFunction(self, catalog):
-        # Mark function for inline struct - marks any pointer fields
-        c = self.comment('printMarkFunction')
-        decl = self.getMarkSignature(catalog)
-        myName = self.getName()
-        print(f"/**")
-        print(f" * Marks all pointer fields in a {myName} struct for GC.")
-        print(f" */")
-        print(f"{decl} {{ {c}")
-        # Mark all fields using their printMarkLine method
-        for field in self.fields:
-            field.printMarkLine(True, catalog, 1)  # True = isInline
-        print(f"}} {c}\n")
-    
-    def printFreeDeclaration(self, catalog):
-        # Inline structs don't need free functions
-        pass
-    
-    def printFreeFunction(self, catalog):
-        # No free function needed
-        pass
-    
-    def printCopyDeclaration(self, catalog):
-        # Inline structs are copied by value, but we still provide a copy function
-        c = self.comment('printCopyDeclaration')
-        decl = self.getCopySignature(catalog)
-        print(f"{decl}; {c}")
-    
-    def printCopyFunction(self, catalog):
-        # Inline struct copy just returns the value
-        c = self.comment('printCopyFunction')
-        decl = self.getCopySignature(catalog)
-        myName = self.getName()
-        print(f"/**")
-        print(f" * Copies a {myName} struct (returns by value).")
-        print(f" */")
-        print(f"{decl} {{ {c}")
-        print(f"    return o; {c}")
-        print(f"}} {c}\n")
-    
-    def objTypeArray(self):
-        # Inline structs don't participate in object type dispatch
-        return []
-    
-    def getObjType(self):
-        # Inline structs don't have object types
-        return None
-
+        output = []
+        
+        output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({target}{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE({target}{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
+        output.append(f"\n")
+        
+        # Track which fields need visiting
+        # All fields should be visited, including auto-initialized ones (they can be modified later)
+        visitableFields = list(self.fields)
+        
+        if not visitableFields:
+            # No fields to visit, just return the node
+            output.append(f"    (void)context;  // Unused parameter\n")
+            output.append(f"    LEAVE({target}{myName});\n")
+            output.append(f"    return node;\n")
+            output.append(f"}}\n\n")
+            return ''.join(output)
+        
+        # Track whether we've done the initial PROTECT yet and whether we have visitable fields
+        saved = False
+        visitedFields = []  # Fields that were actually visited (have new_ variables)
+        hasMemoryManagedFields = False
+        
+        # First pass: determine if we have any memory-managed fields
+        for field in visitableFields:
+            fieldType = field.typeName
+            try:
+                fieldObj = catalog.get(fieldType)
+                if fieldObj.needsProtection(catalog):
+                    hasMemoryManagedFields = True
+                    break
+            except:
+                # Field type not in catalog - assume it needs protection
+                hasMemoryManagedFields = True
+                break
+        
+        # Only declare changed if we have memory-managed fields
+        if hasMemoryManagedFields:
+            output.append(f"    bool changed = false;\n")
+        
+        # Visit each field and track changes
+        
+        for field in visitableFields:
+            fieldName = field.getName()
+            fieldType = field.typeName
+            
+            try:
+                fieldObj = catalog.get(fieldType)
+                
+                if fieldObj.needsProtection(catalog):
+                    # Memory-managed type - visit and protect result
+                    output.append(f"    {fieldType} *new_{fieldName} = {target}{fieldType}(node->{fieldName}, context);\n")
+                    # On first visitable field, capture the PROTECT result in save
+                    if not saved:
+                        output.append(f"    int save = PROTECT(new_{fieldName});\n")
+                        saved = True
+                    else:
+                        output.append(f"    PROTECT(new_{fieldName});\n")
+                    output.append(f"    changed = changed || (new_{fieldName} != node->{fieldName});\n")
+                    visitedFields.append(field)
+                else:
+                    # Non-memory-managed type - pass through unchanged
+                    output.append(f"    // Pass through {fieldName} (type: {fieldType}, not memory-managed)\n")
+                    
+            except Exception as e:
+                # Field type not in catalog - this should be rare, log for debugging
+                import sys
+                print(f"Warning: Field {fieldName} has type {fieldType} not in catalog", file=sys.stderr)
+                # Assume it's a primitive/external type that doesn't need visiting
+                output.append(f"    // Pass through {fieldName} (type: {fieldType}, not in catalog)\n")
+        
+        output.append(f"\n")
+        
+        # Check if anything changed
+        if visitedFields:
+            output.append(f"    if (changed) {{\n")
+            output.append(f"        // Create new node with modified fields\n")
+            
+            # Build constructor call
+            constructorArgs = []
+            for field in self.getNewArgs(catalog):
+                fieldName = field.getName()
+                if field in visitedFields:
+                    constructorArgs.append(f"new_{fieldName}")
+                else:
+                    constructorArgs.append(f"node->{fieldName}")
+            
+            if catalog.getParserInfo(self.name):
+                constructorArgs.insert(0, "CPI(node)")
+                
+            args_str = ", ".join(constructorArgs) if constructorArgs else ""
+            output.append(f"        {myName} *result = new{myName}({args_str});\n")
+            
+            # Set any auto-initialized fields that were visited
+            constructorFields = set(self.getNewArgs(catalog))
+            for field in visitedFields:
+                if field not in constructorFields:
+                    # This is an auto-initialized field that was visited - set it manually
+                    fieldName = field.getName()
+                    output.append(f"        result->{fieldName} = new_{fieldName};\n")
+            
+            if saved:
+                output.append(f"        UNPROTECT(save);\n")
+            output.append(f"        LEAVE({target}{myName});\n")
+            output.append(f"        return result;\n")
+            output.append(f"    }}\n")
+            output.append(f"\n")
+        else:
+            # No fields were actually visited (all pass-through)
+            output.append(f"    (void)context;  // Unused parameter - all fields are pass-through\n")
+        
+        if saved:
+            output.append(f"    UNPROTECT(save);\n")
+        output.append(f"    LEAVE({target}{myName});\n")
+        output.append(f"    return node;\n")
+        output.append(f"}}\n\n")
+        
+        return ''.join(output)

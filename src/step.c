@@ -54,7 +54,7 @@ int dump_bytecode_flag = 0;
  */
 
 static void step();
-static Value lookup(int frame, int offset);
+static Value lookUp(int frame, int offset);
 void putCharacter(Character x);
 
 static CEKF state;
@@ -110,7 +110,7 @@ static inline void assert_stack_has_args(int naargs) {
 #endif
 
 // --- Basic stack convenience wrappers (moved earlier so helpers can use them) ---
-static inline void patch(Value v, int num) { patchVec(v.val.namespace, state.S, num); }
+static inline void patch(Value v, int num) { patchVec(v.val.nameSpace, state.S, num); }
 static inline void poke(int offset, Value v) { pokeStack(state.S, offset, v); }
 static inline void push(Value v) { pushStackEntry(state.S, v); }
 static inline void extend(int i) { pushnStack(state.S, i, vVoid); }
@@ -430,7 +430,7 @@ static Value vec(Value index, Value vector) {
     return vec->entries[i];
 }
 
-static Value lookup(int frame, int offset) {
+static Value lookUp(int frame, int offset) {
     Env *env = state.E;
     while (frame > 0) {
         env = env->E;
@@ -548,20 +548,20 @@ static void applyProc(int naargs) {
             break;
         case VALUE_TYPE_BUILTIN:{
                 BuiltInImplementation *impl = callable.val.builtIn;
-                if (naargs == impl->nargs) {
+                if (naargs == impl->nArgs) {
                     BuiltInFunction fn = (BuiltInFunction) impl->implementation;
-                    Vec *v = newVec(impl->nargs);
+                    Vec *v = newVec(impl->nArgs);
                     int save = PROTECT(v);
-                    copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nargs]), impl->nargs);
+                    copyValues(v->entries, &(state.S->entries[totalSizeStack(state.S) - impl->nArgs]), impl->nArgs);
                     Value res = fn(v);
                     protectValue(res);
-                    state.S->offset -= impl->nargs;
+                    state.S->offset -= impl->nArgs;
                     push(res);
                     UNPROTECT(save);
                 } else if (naargs == 0) {
                     push(callable);
                 } else {
-                    cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nargs, naargs);
+                    cant_happen("curried built-ins not supported yet (expected %d got %d)", impl->nArgs, naargs);
                 }
             }
             break;
@@ -615,12 +615,12 @@ static void step() {
 
             case BYTECODES_TYPE_LAM:{
                     // create a closure and push it
-                    int nargs = readCurrentByte();
+                    int nArgs = readCurrentByte();
                     int letRecOffset = readCurrentByte();
                     int end = readCurrentOffset();
-                    DEBUG("LAM nargs:[%d] letrec:[%d] end:[%04x]",
-                                nargs, letRecOffset, end);
-                    Clo *clo = newClo(nargs, state.C, state.E);
+                    DEBUG("LAM nArgs:[%d] letrec:[%d] end:[%04x]",
+                                nArgs, letRecOffset, end);
+                    Clo *clo = newClo(nArgs, state.C, state.E);
                     int save = PROTECT(clo);
                     snapshotClo(clo, state.S, letRecOffset);
                     Value v = value_Clo(clo);
@@ -634,7 +634,7 @@ static void step() {
                     // look up an environment variable and push it
                     int frame = readCurrentByte();
                     int offset = readCurrentByte();
-                    Value v = lookup(frame, offset);
+                    Value v = lookUp(frame, offset);
                     DEBUG("VAR [%d:%d] == %s", frame, offset, valueTypeName(v.type));
                     push(v);
                 }
@@ -856,9 +856,9 @@ static void step() {
 
             case BYTECODES_TYPE_APPLY:{
                     // apply the callable at the top of the stack to the arguments beneath it
-                    int nargs = readCurrentByte();
-                    DEBUG("APPLY [%d]", nargs);
-                    applyProc(nargs);
+                    int nArgs = readCurrentByte();
+                    DEBUG("APPLY [%d]", nArgs);
+                    applyProc(nArgs);
                 }
                 break;
 
@@ -988,26 +988,31 @@ static void step() {
                     state.C = here;
 #endif
                     Value v = pop();
-                    int option = 0;
                     switch (v.type) {
                         case VALUE_TYPE_STDINT:
-                            option = v.val.stdint;
+                            for (int C = 0; C < size; C++) {
+                                Integer val = readCurrentInt();
+                                int offset = readCurrentOffset();
+                                if (v.val.stdint == val) {
+                                    state.C = offset;
+                                    break;
+                                }
+                            }
                             break;
                         case VALUE_TYPE_CHARACTER:
-                            option = (int) v.val.character;
+                            for (int C = 0; C < size; C++) {
+                                Character val = readCurrentCharacter();
+                                int offset = readCurrentOffset();
+                                if (v.val.character == val) {
+                                    state.C = offset;
+                                    break;
+                                }
+                            }
                             break;
                         default:
                             cant_happen
                                 ("unexpected type %d for CHARCOND value",
                                  v.type);
-                    }
-                    for (int C = 0; C < size; C++) {
-                        Integer val = readCurrentInt();
-                        int offset = readCurrentOffset();
-                        if (option == val) {
-                            state.C = offset;
-                            break;
-                        }
                     }
                 }
                 break;
@@ -1015,9 +1020,9 @@ static void step() {
             case BYTECODES_TYPE_LETREC:{
                     // patch each of the lambdas environments with the current stack frame
                     // i.e. all the definitions in the current letrec.
-                    int nargs = readCurrentByte();
-                    DEBUG("LETREC [%d] state.S->offset = %d", nargs, state.S->offset);
-                    for (Index i = state.S->offset - nargs; i < state.S->offset; i++) {
+                    int nArgs = readCurrentByte();
+                    DEBUG("LETREC [%d] state.S->offset = %d", nArgs, state.S->offset);
+                    for (Index i = state.S->offset - nArgs; i < state.S->offset; i++) {
                         Value v = peek(i);
                         if (v.type == VALUE_TYPE_CLO) {
                             patchClo(v.val.clo, state.S);
@@ -1176,9 +1181,12 @@ static void step() {
                     Value kont = value_Kont(state.K);
                     push(kont);
                     applyProc(1);
-                    // a RETURN just completed; it's now safe to attempt staged over-application
+                    // a RETURN just completed; mark ready for staged over-application only if result is callable
                     if (overApplyStack->size > 0) {
-                        peekOverApplyStack(overApplyStack)->ready = true;
+                        Value top = peek(-1);
+                        if (top.type == VALUE_TYPE_CLO || top.type == VALUE_TYPE_PCLO) {
+                            peekOverApplyStack(overApplyStack)->ready = true;
+                        }
                     }
                 }
                 break;
@@ -1194,9 +1202,9 @@ static void step() {
                     int numLambdas = readCurrentWord();
                     int stackOffset = readCurrentWord();
                     DEBUG("NS_END [%d] [%d]", numLambdas, stackOffset);
-                    Vec *snapshot = snapshotNamespace(state.S);
+                    Vec *snapshot = snapshotNameSpace(state.S);
                     int save = PROTECT(snapshot);
-                    Value ns = value_Namespace(snapshot);
+                    Value ns = value_NameSpace(snapshot);
                     poke(0 - (numLambdas + stackOffset), ns);
                     discard(numLambdas);
                     UNPROTECT(save);
@@ -1206,13 +1214,13 @@ static void step() {
             case BYTECODES_TYPE_NS_FINISH:{
                     int num = readCurrentWord();
                     DEBUG("NS_FINISH [%d]", num);
-                    // at this point we need to patch each of the namespaces with the
-                    // final block of populated namespaces, size num, and at TOS
+                    // at this point we need to patch each of the nameSpaces with the
+                    // final block of populated nameSpaces, size num, and at TOS
                     for (int i = 1; i <= num; i++) {
                         Value ns = peek(-i);
 #ifdef SAFETY_CHECKS
                         if (ns.type != VALUE_TYPE_NAMESPACE) {
-                            cant_happen("expected namespace, got %d", ns.type);
+                            cant_happen("expected nameSpace, got %d", ns.type);
                         }
 #endif
                         patch(ns, num);
@@ -1226,13 +1234,13 @@ static void step() {
                     Value v = peek(offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
-                        cant_happen("expected namespace, got type %d", v.type);
+                        cant_happen("expected nameSpace, got type %d", v.type);
                     }
 #endif
                     // new empty stack frame
                     pushStackFrame(state.S);
-                    // copy the namespace contents to the top of the stack
-                    restoreNamespace(state.S, v.val.namespace);
+                    // copy the nameSpace contents to the top of the stack
+                    restoreNameSpace(state.S, v.val.nameSpace);
                 }
                 break;
 
@@ -1240,16 +1248,16 @@ static void step() {
                     int frame = readCurrentWord();
                     int offset = readCurrentWord();
                     DEBUG("NS_PUSHENV [%d][%d]", frame, offset);
-                    Value v = lookup(frame, offset);
+                    Value v = lookUp(frame, offset);
 #ifdef SAFETY_CHECKS
                     if (v.type != VALUE_TYPE_NAMESPACE) {
-                        cant_happen("expected namespace, got type %d", v.type);
+                        cant_happen("expected nameSpace, got type %d", v.type);
                     }
 #endif
                     // new empty stack frame 
                     pushStackFrame(state.S);
-                    // copy the namespace contents to the top of the stack
-                    restoreNamespace(state.S, v.val.namespace);
+                    // copy the nameSpace contents to the top of the stack
+                    restoreNameSpace(state.S, v.val.nameSpace);
                 }
                 break;
 
@@ -1303,7 +1311,7 @@ static void step() {
                     // Still unwinding continuation; break and wait
                     break;
                 } else {
-                    arity_error("over-application result", /*expected fn*/ 1, /*got*/ 0);
+                    cant_happen("expected VALUE_TYPE_CLO or VALUE_TYPE_PCLO, got %s", valueTypeName(top.type));
                     break;
                 }
                 if (f->index == f->count) {

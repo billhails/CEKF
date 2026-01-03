@@ -1,0 +1,347 @@
+namespace
+    link "expr.fn" as E;
+    link "../listutils.fn" as list;
+    link "gensym.fn" as GS;
+
+    fn isAexpr {
+        (E.var(_)) |
+        (E.back_expr) |
+        (E.character(_)) |
+        (E.constant(_)) |
+        (E.constructor_info(_)) |
+        (E.env_expr) |
+        (E.error_expr) |
+        (E.lambda(_, _)) |
+        (E.stdint(_)) |
+        (E.bigint(_)) { true }
+        (_) { false }
+    }
+
+    fn M {
+        (E.lambda(vars, body)) {
+            let c = GS.genstring("$k");
+            in E.lambda(vars @@ [c], T_c(body, E.var(c)))
+        }
+        (x) { x }
+    }
+
+    fn kToC(k) {
+        let rv = GS.genstring("$rv");
+        in E.lambda([rv], k(E.var(rv)))
+    }
+
+    fn T_k(e, k) {
+        if (isAexpr(e)) {
+            k(M(e))
+        } else {
+            switch (e)  {
+                (E.amb_expr(expr1, expr2)) {
+                    let
+                        c = kToC(k);
+                    in
+                        E.amb_expr(T_c(expr1, c), T_c(expr2, c))
+                }
+
+                (E.apply(_, _)) {
+                    let
+                        c = kToC(k);
+                    in
+                        T_c(e, c)
+                }
+
+                (E.callcc_expr(e)) {
+                    let
+                        c = kToC(k);
+                    in
+                        T_c(E.callcc_expr(e), c)
+                }
+
+                (E.cond_expr(test, branches)) {
+                    let
+                        c = kToC(k);
+                    in
+                        T_k(test, fn (atest) {
+                            E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                                #(val, T_c(result, c))
+                            }}, branches))
+                        })
+                }
+
+                (E.construct(name, args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.construct(name, sargs))
+                    })
+                }
+
+                (E.deconstruct(name, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.deconstruct(name, index, sexpr))
+                    })
+                }
+
+                (E.if_expr(exprc, exprt, exprf)) {
+                    let
+                        c = kToC(k);
+                    in
+                        T_k(exprc, fn(aexp) {
+                            E.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
+                        })
+                }
+
+                (E.letrec_expr(bindings, expr)) {
+                    let
+                        #(vars, aexps) = list.unzip(bindings);
+                    in
+                        E.letrec_expr(list.zip(vars, list.map(M, aexps)), T_k(expr, k))
+                }
+
+                (E.lookup(name, index, expr)) {
+                    E.lookup(name, index, T_k(expr, k))
+                }
+
+                (E.make_tuple(args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.make_tuple(sargs))
+                    })
+                }
+
+                (E.make_vec(size, args)) {
+                    Ts_k(args, fn (sargs) {
+                        k(E.make_vec(size, sargs))
+                    })
+                }
+
+                (E.match_cases(test, cases)) {
+                    let
+                        c = kToC(k);
+                    in
+                        T_k(test, fn (atest) {
+                            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+                                #(indices, T_c(result, c))
+                            }}, cases))
+                        })
+                }
+
+                (E.namespaces(exprs)) {
+                    Ts_k(exprs, fn (sexprs) {
+                        k(E.namespaces(sexprs))
+                    })
+                }
+
+                (E.primapp(p, e1, e2)) {
+                    T_k(e1, fn (s1) {
+                        T_k(e2, fn (s2) {
+                            k(E.primapp(p, s1, s2))
+                        })
+                    })
+                }
+
+                (E.print_exp(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.print_exp(sexpr))
+                    })
+                }
+
+                (E.sequence([expr])) { T_k(expr, k) }
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_k(E.sequence(exprs), k)
+                    })
+                }
+
+                (E.tag(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.tag(sexpr))
+                    })
+                }
+
+                (E.tuple_index(size, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.tuple_index(size, index, sexpr))
+                    })
+                }
+
+                (E.typedefs(defs, expr)) {
+                    E.typedefs(defs, T_k(expr, k))
+                }
+
+                (E.typeof_expr(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        k(E.typeof_expr(sexpr))
+                    })
+                }
+
+                (x) {
+                    E.print_expr(x);
+                    puts("\n");
+                    error("T_k: unsupported expression")
+                }
+            }
+        }
+    }
+
+    fn T_c(expr, c) {
+        if (isAexpr(expr)) {
+            E.apply(c, [M(expr)])
+        } else {
+            switch(expr) {
+                (E.amb_expr(expr1, expr2)) {
+                    let
+                        sk = GS.genstring("$k");
+                        vsk = E.var(sk);
+                    in
+                        E.apply(E.lambda([sk], E.amb_expr(T_c(expr1, vsk), T_c(expr2, vsk))), [c])
+                }
+
+                (E.apply(f, es)) {
+                    T_k(f, fn(sf) {
+                        Ts_k(es, fn (ses) {E.apply(sf, ses @@ [c])})
+                    })
+                }
+
+                (E.callcc_expr(e)) {
+                    T_k(e, fn (sf) {
+                        E.apply(
+                            E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"),
+                            [sf, c]
+                        )
+                    })
+                }
+
+                (E.cond_expr(test, branches)) {
+                    let
+                        sk = GS.genstring("$k");
+                        vsk = E.var(sk);
+                    in
+                        E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                            E.cond_expr(atest, list.map(fn {(#(val, result)) {
+                                #(val, T_c(result, vsk))
+                            }}, branches))
+                        })), [c])
+                }
+
+                (E.construct(name, args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.construct(name, sargs)])
+                    })
+                }
+
+                (E.deconstruct(name, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.deconstruct(name, index, sexpr)])
+                    })
+                }
+
+                (E.if_expr(exprc, exprt, exprf)) {
+                    let
+                        sk = GS.genstring("$k");
+                        vsk = E.var(sk);
+                    in
+                        E.apply(E.lambda([sk], T_k(exprc, fn (aexp) {
+                            E.if_expr(aexp, T_c(exprt,vsk), T_c(exprf,vsk))
+                        })), [c])
+                }
+
+                (E.letrec_expr(bindings, expr)) {
+                    let
+                        #(vars, aexps) = list.unzip(bindings);
+                    in
+                        E.letrec_expr(list.zip(vars, list.map(M, aexps)), T_c(expr, c))
+                }
+
+                (E.lookup(name, index, expr)) {
+                    E.lookup(name, index, T_c(expr, c))
+                }
+
+                (E.make_tuple(args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.make_tuple(sargs)])
+                    })
+                }
+
+                (E.make_vec(size, args)) {
+                    Ts_k(args, fn (sargs) {
+                        E.apply(c, [E.make_vec(size, sargs)])
+                    })
+                }
+
+                (E.match_cases(test, cases)) {
+                    let
+                        sk = GS.genstring("$k");
+                        vsk = E.var(sk);
+                    in
+                        E.apply(E.lambda([sk], T_k(test, fn (atest) {
+                            E.match_cases(atest, list.map(fn {(#(indices, result)) {
+                                #(indices, T_c(result, vsk))
+                            }}, cases))
+                        })), [c])
+                }
+
+                (E.namespaces(exprs)) {
+                    Ts_k(exprs, fn (sexprs) {
+                        E.apply(c, [E.namespaces(sexprs)])
+                    })
+                }
+
+                (E.primapp(p, e1, e2)) {
+                    T_k(e1, fn (s1) {
+                        T_k(e2, fn (s2) {
+                            E.apply(c, [E.primapp(p, s1, s2)])
+                        })
+                    })
+                }
+
+                (E.print_exp(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.print_exp(sexpr)])
+                    })
+                }
+
+                (E.sequence([expr])) { T_c(expr, c) }
+                (E.sequence(expr @ exprs)) {
+                    T_k(expr, fn (ignored) {
+                        T_c(E.sequence(exprs), c)
+                    })
+                }
+
+                (E.tag(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.tag(sexpr)])
+                    })
+                }
+
+                (E.tuple_index(size, index, expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.tuple_index(size, index, sexpr)])
+                    })
+                }
+
+                (E.typedefs(defs, expr)) {
+                    E.typedefs(defs, T_c(expr, c))
+                }
+
+                (E.typeof_expr(expr)) {
+                    T_k(expr, fn (sexpr) {
+                        E.apply(c, [E.typeof_expr(sexpr)])
+                    })
+                }
+
+                (x) {
+                    E.print_expr(x);
+                    puts("\n");
+                    error("T_c: unsupported expression")
+                }
+            }
+        }
+    }
+
+    fn Ts_k {
+        ([], k) { k([]) }
+        (h @ t, k) {
+            T_k(h, fn (hd) {
+                Ts_k(t, fn (tl) {
+                    k(hd @ tl)
+                })
+            })
+        }
+    }

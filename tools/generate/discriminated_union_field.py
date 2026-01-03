@@ -19,136 +19,8 @@
 """Field classes for struct and union members."""
 
 import re
-from .base import EnumField
+from .enum_field import EnumField
 from .comment_gen import CommentGen
-
-
-class SimpleField:
-    """
-    Represents a field in a SimpleStruct object
-    """
-    def __init__(self, owner, name, typeName):
-        self.owner = owner
-        parts = re.split(r"\s*=\s*", typeName, 1)
-        self.name = name
-        if len(parts) == 2:
-            self.typeName = parts[0]
-            self.default = parts[1]
-        else:
-            self.typeName = typeName
-            self.default = None
-
-    def isSimpleField(self):
-        return True
-
-    def getName(self):
-        return self.name
-
-    def comment(self, method):
-        """Generate method comment using class name automatically."""
-        from .comment_gen import CommentGen
-        return CommentGen.method_comment(self.__class__.__name__, method)
-
-    def getObj(self, catalog):
-        return catalog.get(self.typeName)
-
-    def getObjName(self, catalog):
-        return self.getObj(catalog).getName()
-
-    def isInline(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.isInline(catalog)
-
-    def isSelfInitializing(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.isSelfInitializing()
-
-    def getConstructorName(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.getConstructorName()
-
-    def printPrintDeclaration(self, catalog):
-        obj = catalog.get(self.typeName)
-        obj.printPrintDeclaration(catalog)
-
-    def getTypeDeclaration(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.getTypeDeclaration(catalog)
-
-    def getSignature(self, catalog):
-        return "{type} {name}".format(type=self.getTypeDeclaration(catalog), name=self.name)
-
-    def getArraySignature(self, catalog):
-        return "{type} *{name}".format(type=self.getTypeDeclaration(catalog), name=self.name)
-
-    def getVectorSignature(self, catalog):
-        return "{type} {name}[0]".format(type=self.getTypeDeclaration(catalog), name=self.name)
-
-    def getFieldName(self):
-        return self.name
-
-    def hasMarkFn(self, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.hasMarkFn()
-
-    def getCopyCall(self, arg, catalog):
-        obj = catalog.get(self.typeName)
-        return obj.makeCopyCommand(arg, catalog)
-
-    def printMarkLine(self, isInline, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printMarkField(isInline, self.name, depth)
-
-    def printMarkArrayLine(self, isInline, catalog, key, depth):
-        obj = catalog.get(self.typeName)
-        obj.printMarkField(isInline, f"{self.name}[{key}]", depth)
-
-    def printMarkHashLine(self, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printMarkHashField(depth)
-
-    def printPrintHashLine(self, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printPrintHashField(depth)
-
-    def printCompareLine(self, isInline, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, self.name, depth)
-
-    def printPrintLine(self, isInline, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printPrintField(isInline, self.name, depth)
-
-    def printCopyLine(self, isInline, catalog, depth):
-        obj = catalog.get(self.typeName)
-        obj.printCopyField(isInline, self.name, depth)
-
-    def printPrintArrayLine(self, isInline, catalog, key, depth):
-        obj = catalog.get(self.typeName)
-        obj.printPrintField(isInline, f"{self.name}[{key}]", depth)
-
-    def printCopyArrayLine(self, catalog, key, depth):
-        obj = catalog.get(self.typeName)
-        obj.printCopyField(obj.isInline(catalog), f"{self.name}[{key}]", depth)
-
-    def printCompareArrayLine(self, isInline, catalog, key, depth):
-        obj = catalog.get(self.typeName)
-        obj.printCompareField(catalog, isInline, f"{self.name}[{key}]", depth)
-
-    def printStructTypedefLine(self, catalog):
-        c = self.comment('printStructTypedefLine')
-        decl=self.getSignature(catalog)
-        print(f"    {decl}; {c}")
-
-    def printArrayTypedefLine(self, catalog):
-        c = self.comment('printArrayTypedefLine')
-        decl=self.getArraySignature(catalog)
-        print(f"    {decl}; {c}")
-
-    def printVectorTypedefLine(self, catalog):
-        c = self.comment('printVectorTypedefLine')
-        decl=self.getVectorSignature(catalog)
-        print(f"    {decl}; {c}")
 
 
 class DiscriminatedUnionField(EnumField):
@@ -222,7 +94,7 @@ class DiscriminatedUnionField(EnumField):
         Generate get<Union>_<Field> inline function that validates the variant type
         and returns the field value, calling cant_happen if incorrect.
         
-        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *x)
+        Example: static inline struct LamIff *getLamExp_Iff(struct LamExp *_x)
         """
         c = self.comment('printGetterDeclaration')
         ucfirst = self.getName()[0].upper() + self.getName()[1:]
@@ -242,13 +114,47 @@ class DiscriminatedUnionField(EnumField):
             returnType = returnType + ' '
         
         # Generate the inline getter function
-        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}x) {{ {c}')
+        print(f'static inline {returnType}get{self.owner}_{ucfirst}({ownerType}_x) {{ {c}')
         print(f'#ifdef SAFETY_CHECKS {c}')
-        print(f'    if (x{accessor}type != {typeName}) {{ {c}')
-        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(x{accessor}type)); {c}')
+        print(f'    if (_x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in get{self.owner}_{ucfirst}", {typeNameFunc}(_x{accessor}type)); {c}')
         print(f'    }} {c}')
         print(f'#endif {c}')
-        print(f'    return x{accessor}val.{self.name}; {c}')
+        print(f'    return _x{accessor}val.{self.name}; {c}')
+        print(f'}} {c}')
+        print('')
+
+    def printSetterDeclaration(self, catalog, owner, isInline):
+        """
+        Generate set<Union>_<Field> inline function that validates the variant type
+        and sets the field value, calling cant_happen if incorrect.
+        
+        Example: static inline void setLamExp_Iff(struct LamExp *_x, struct LamIff *_val)
+        """
+        c = self.comment('printSetterDeclaration')
+        ucfirst = self.getName()[0].upper() + self.getName()[1:]
+        typeName = self.makeTypeName()
+        obj = catalog.get(self.typeName)
+        valueType = obj.getTypeDeclaration(catalog)
+        ownerType = owner.getTypeDeclaration(catalog)
+        accessor = '.' if isInline else '->'
+        
+        # Get the typename function for better error messages
+        # Convert "LamExp" -> "lamExpTypeName"
+        typeNameFunc = self.owner[0].lower() + self.owner[1:] + 'TypeName'
+        
+        # valueType may not have trailing space for primitives, so add one
+        if not valueType.endswith(' '):
+            valueType = valueType + ' '
+        
+        # Generate the inline setter function
+        print(f'static inline void set{self.owner}_{ucfirst}({ownerType}_x, {valueType}_val) {{ {c}')
+        print(f'#ifdef SAFETY_CHECKS {c}')
+        print(f'    if (_x{accessor}type != {typeName}) {{ {c}')
+        print(f'        cant_happen("Expected {typeName}, got %s in set{self.owner}_{ucfirst}", {typeNameFunc}(_x{accessor}type)); {c}')
+        print(f'    }} {c}')
+        print(f'#endif {c}')
+        print(f'    _x{accessor}val.{self.name} = _val; {c}')
         print(f'}} {c}')
         print('')
 

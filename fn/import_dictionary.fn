@@ -1,6 +1,6 @@
 let
     link "maybe.fn" as maybe;
-    link "dictionary.fn" as dict;
+    link "dictutils.fn" as dict;
 
     dd = dict.insert(1, "hello", dict.insert(2, "goodbye", dict.E));
 in

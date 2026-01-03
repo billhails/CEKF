@@ -94,8 +94,8 @@ structs:
             description: A location in source code for reporting run-time errors
         data:
             loc: index
-            lineno: int
-            filename: string
+            lineNo: int
+            fileName: string
 
 inline:
     unions:
@@ -121,7 +121,7 @@ inline:
                 kont: Kont
                 vec: Vec
                 builtIn: BuiltInImplementation
-                namespace: Vec
+                nameSpace: Vec
                 opaque: opaque
 
     arrays:

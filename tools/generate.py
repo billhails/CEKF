@@ -32,11 +32,16 @@ import argparse
 from generate.catalog import Catalog
 from generate.primitives import Primitive
 from generate.hashes import SimpleHash
-from generate.enums import SimpleEnum
-from generate.arrays import SimpleArray, SimpleStack, InlineArray
+from generate.simple_enum import SimpleEnum
+from generate.simple_array import SimpleArray
+from generate.simple_stack import SimpleStack
+from generate.inline_array import InlineArray
 from generate.vectors import SimpleVector
-from generate.structs import SimpleStruct, InlineStruct
-from generate.unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
+from generate.simple_struct import SimpleStruct
+from generate.inline_struct import InlineStruct
+from generate.discriminated_union import DiscriminatedUnion
+from generate.inline_discriminated_union import InlineDiscriminatedUnion
+from generate.discriminated_union_union import DiscriminatedUnionUnion
 
 from generate.loader import Loader
 from generate.utils import printGpl, printSection
@@ -47,8 +52,13 @@ def main():
     parser.add_argument("yaml", help="input yaml file")
     parser.add_argument("type",
                         type=str,
-                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md"],
+                        choices=["h", "c", "objtypes_h", "debug_h", "debug_c", "md", "visitor", "kont_impl_inc", "kont_impl_h", "kont_impl_c"],
                         help="the type of output to produce")
+    parser.add_argument("--target",
+                        type=str,
+                        default="",
+                        required=False,
+                        help="target (visitor only)")
     args = parser.parse_args()
 
     import yaml
@@ -125,6 +135,12 @@ def main():
             for bespoke in document["cmp"]["bespokeImplementation"]:
                 catalog.noteBespokeCmpImplementation(bespoke)
 
+    # For continuation YAML, add generated structs/unions to catalog
+    if "continuations" in document:
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.populate_catalog(catalog)
+
     catalog.build()
 
     # Generate output based on type
@@ -146,6 +162,28 @@ def generate_output(args, catalog, document, typeName, description, includes, li
         generate_debug_implementation(args, catalog, document, typeName, limited_includes)
     elif args.type == 'md':
         generate_documentation(args, catalog, typeName, description)
+    elif args.type == 'visitor':
+        if args.target == "":
+            print(f"Error: visitor type requires a target argument", file=sys.stderr)
+            sys.exit(1)
+        printGpl(args.yaml, document)
+        print("")
+        print(catalog.generateVisitor(args.target))
+    elif args.type == 'kont_impl_inc':
+        # For continuation scaffolding, generate .inc (catalog already populated)
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_inc(sys.stdout, catalog, includes)
+    elif args.type == 'kont_impl_h':
+        # Generate public header for continuation scaffolding
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_h(sys.stdout, catalog, includes)
+    elif args.type == 'kont_impl_c':
+        # Generate public API implementation for continuation scaffolding
+        from generate.kontinuations import KontinuationGenerator
+        generator = KontinuationGenerator(document)
+        generator.generate_kont_impl_c(sys.stdout, catalog, includes)
 
 
 def generate_header(args, catalog, document, typeName, includes, limited_includes, parserInfo):
@@ -210,6 +248,8 @@ def generate_header(args, catalog, document, typeName, includes, limited_include
     catalog.printNameFunctionDeclarations()
     printSection("discriminated union getter declarations")
     catalog.printGetterDeclarations()
+    printSection("discriminated union setter declarations")
+    catalog.printSetterDeclarations()
     print("")
     print("#endif")
 
@@ -329,11 +369,11 @@ def generate_documentation(args, catalog, typeName, description):
     print(description)
     print("")
     print("```mermaid")
-    print("flowchart TD")
+    print("flowchart LR")
     catalog.printMermaid()
     print("```")
     print("")
-    print(f"> Generated from {args.yaml} by tools/makeAST.py")
+    print(f"> Generated from {args.yaml} by tools/generate.py")
 
 
 if __name__ == "__main__":

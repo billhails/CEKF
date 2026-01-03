@@ -102,7 +102,7 @@ static AexpAnnotatedVar *annotateAexpVar(ParserInfo I, HashSymbol *x, AnfEnv *en
                                        frame - 1, offset, x);
         }
     }
-    cant_happen("no binding for var '%s' in annotateAexpVar", x->name);
+    cant_happen("no binding for var '%s' in annotateAexpVar [%s +%d]", x->name, I.fileName, I.lineNo);
 }
 
 static AnfEnv *annotateAexpPrimApp(AexpPrimApp *x, AnfEnv *env) {
@@ -306,7 +306,7 @@ static AnfEnvArray *getNsEnvs(AnfEnv *env) {
     }
 #ifdef SAFETY_CHECKS
     if (env->nsEnvs == NULL) {
-        cant_happen("namespaces not registered");
+        cant_happen("nameSpaces not registered");
     }
 #endif
     return env->nsEnvs;
@@ -318,7 +318,7 @@ static HashSymbol *makeNsName(Index index) {
     return newSymbol(buf);
 }
 
-static AnfEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, AnfEnv *env) {
+static AnfEnv *annotateAexpNameSpaceArray(AexpNameSpaceArray *x, AnfEnv *env) {
     AnfEnvArray *nsEnvs = getNsEnvs(env);
     for (Index i = 0; i < x->size; ++i) {
         HashSymbol *nsName = makeNsName(i);
@@ -327,18 +327,18 @@ static AnfEnv *annotateAexpNamespaceArray(AexpNamespaceArray *x, AnfEnv *env) {
     for (Index i = 0; i < x->size; ++i) {
         AnfEnv *env2 = newAnfEnv(CPI(x->entries[i]->body), true, env);
         int save = PROTECT(env2);
-        env2->isNamespace = true;
+        env2->isNameSpace = true;
         AnfEnv *env3 = annotateExp(x->entries[i]->body, env2);
         PROTECT(env3);
-        x->entries[i]->nbindings = env2->nbindings;
+        x->entries[i]->nBindings = env2->nBindings;
         pushAnfEnvArray(nsEnvs, env3);
         UNPROTECT(save);
     }
     return env;
 }
 
-static AnfEnv *annotateAexpNamespaces(AexpNamespaces *x, AnfEnv *env) {
-    annotateAexpNamespaceArray(x->namespaces, env);
+static AnfEnv *annotateAexpNameSpaces(AexpNameSpaces *x, AnfEnv *env) {
+    annotateAexpNameSpaceArray(x->nameSpaces, env);
     annotateExp(x->body, env);
     return env;
 }
@@ -382,7 +382,7 @@ static AnfEnv *annotateAexp(Aexp *x, AnfEnv *env) {
         case AEXP_TYPE_MAKEVEC:
             return annotateAexpMakeVec(x->val.makeVec, env);
         case AEXP_TYPE_NAMESPACES:
-            return annotateAexpNamespaces(x->val.namespaces, env);
+            return annotateAexpNameSpaces(x->val.nameSpaces, env);
         default:
             cant_happen("unrecognized type %s in annotateAexp", aexpTypeName(x->type));
     }
@@ -450,33 +450,33 @@ static AnfEnv *annotateCexp(Cexp *x, AnfEnv *env) {
 }
 
 static AnfEnv *annotateExpEnv(AnfEnv *env) {
-    int nbindings = 0;
+    int nBindings = 0;
     AnfEnv *orig = env;
     while (env != NULL) {
-        nbindings += countAnfIntTable(env->table);
-        if (env->isNamespace) {
-            env->nbindings = nbindings;
+        nBindings += countAnfIntTable(env->table);
+        if (env->isNameSpace) {
+            env->nBindings = nBindings;
             return orig;
         }
         env = env->next;
     }
-    cant_happen("failed to find namespace env");
+    cant_happen("failed to find nameSpace env");
 }
 
-static AexpAnnotatedVar *lookupNamespaceInEnv(ParserInfo I, Index index, AnfEnv *env) {
+static AexpAnnotatedVar *lookUpNameSpaceInEnv(ParserInfo I, Index index, AnfEnv *env) {
     HashSymbol *name = makeNsName(index);
     return annotateAexpVar(I, name, env);
 }
 
-static AnfEnv *annotateAnfExpLookup(AnfExpLookup *lookup, AnfEnv *env) {
+static AnfEnv *annotateAnfExpLookUp(AnfExpLookUp *lookUp, AnfEnv *env) {
     AnfEnvArray *envs = getNsEnvs(env);
 #ifdef SAFETY_chECKS
-    if (lookup->namespace >= envs->size) {
-        cant_happen("namespace index %u out of range", lookup->namespace);
+    if (lookUp->nameSpace >= envs->size) {
+        cant_happen("nameSpace index %u out of range", lookUp->nameSpace);
     }
 #endif
-    lookup->annotatedVar = lookupNamespaceInEnv(CPI(lookup), lookup->namespace, env);
-    return annotateExp(lookup->body, envs->entries[lookup->namespace]);
+    lookUp->annotatedVar = lookUpNameSpaceInEnv(CPI(lookUp), lookUp->nameSpace, env);
+    return annotateExp(lookUp->body, envs->entries[lookUp->nameSpace]);
 }
 
 static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
@@ -499,7 +499,7 @@ static AnfEnv * annotateExp(AnfExp *x, AnfEnv *env) {
         case ANFEXP_TYPE_DONE:
             return env;
         case ANFEXP_TYPE_LOOKUP:
-            return annotateAnfExpLookup(x->val.lookup, env);
+            return annotateAnfExpLookUp(x->val.lookUp, env);
         default:
             cant_happen("unrecognized type %s", anfExpTypeName(x->type));
     }

@@ -1,0 +1,233 @@
+namespace
+    data = [
+        // Basic application
+        "(g a)"
+
+        // Simple λ application
+        ,"((λ (x) (h x)) (g 4))"
+
+        // Lambda definition with primitives
+        ,"(λ (a b) (+ a (* b 2)))"
+
+        // Lambda application with primitives - nested
+        ,"((λ (a b) (+ a (* b 2))) 3 4)"
+
+        // Lambda application with function call in primitive
+        ,"((λ (a b) (+ a (* (f b) 2))) 3 4)"
+
+        // Amb operator (non-determinism)
+        ,"(amb 1 2)"
+
+        // Simple call/cc - immediate escape
+        ,"(call/cc (λ (k) (k 5)))"
+
+        // call/cc that doesn't escape
+        ,"(call/cc (λ (k) 42))"
+
+        // call/cc with computation before escape
+        ,"(call/cc (λ (k) (+ 10 (k 5))))"
+
+        // Nested call/cc
+        ,"(call/cc (λ (k1) (call/cc (λ (k2) (k1 (k2 7))))))"
+
+        // call/cc with amb
+        ,"(call/cc (λ (k) (amb (k 1) (k 2))))"
+
+        // Factorial with letrec
+        ,"(letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))"
+
+        // Multiple argument function
+        ,"((λ (x y z) (+ x (+ y z))) 1 2 3)"
+
+        // Nested lambdas (currying)
+        ,"((λ (x) (λ (y) (+ x y))) 5)"
+
+        // Application of curried function
+        ,"(((λ (x) (λ (y) (+ x y))) 5) 3)"
+
+        // If expression with complex branches
+        ,"(if (= x 0) (f 1) (g 2))"
+
+        // If with nested if
+        ,"(if (= x 0) (if (= y 0) 1 2) 3)"
+
+        // Sequence (begin in Racket)
+        ,"(begin (f 1) (g 2) (h 3))"
+
+        // Letrec with mutual recursion
+        ,"(letrec ((even (λ (n) (if (= n 0) true (odd (- n 1))))) (odd (λ (n) (if (= n 0) false (even (- n 1)))))) (even 5))"
+
+        // Complex amb with computation
+        ,"(+ (amb 1 2) (amb 3 4))"
+
+        // Nested application
+        ,"(f (g (h x)))"
+
+        // Multiple primitives in sequence
+        ,"(+ (* 2 3) (- 5 1))"
+
+        // call/cc capturing continuation in letrec
+        ,"(letrec ((k (λ () null))) (call/cc (λ (cont) (begin (set! k cont) 42))))"
+
+        // Lambda with no arguments
+        ,"((λ () 42))"
+
+        // call/cc with primitive operations
+        ,"(call/cc (λ (k) (if (= 1 1) (k 10) 20)))"
+
+        // Deeply nested primitives
+        ,"(+ 1 (+ 2 (+ 3 (+ 4 5))))"
+
+        // Deeply nested primitives with a function call
+        ,"(+ 1 (+ 2 (+ 3 (+ 4 (f 5)))))"
+
+        // Application with multiple complex arguments
+        ,"(f (g a) (h b) (i c))"
+
+        // If where branches have applications
+        ,"(if test (f (g x)) (h (i y)))"
+
+        // Sequence with amb
+        ,"(begin (amb 1 2) (amb 3 4))"
+
+        // call/cc that passes continuation to another function
+        ,"(call/cc (λ (k) (f k)))"
+
+        // cond expression - like switch/case
+        ,"(cond x (1 (result1)) (2 (result2)) (3 (result3)))"
+
+        // cond with complex test and results
+        ,"(cond (f x) (1 (g 1)) (2 (h 2)))"
+
+        // construct with atomic arguments
+        ,"(construct pair 1 2)"
+
+        // construct with complex arguments
+        ,"(construct pair (f 1) (g 2))"
+
+        // nested construct
+        ,"(construct cons (f x) (construct cons (g y) (constant nil)))"
+
+        // deconstruct with atomic argument
+        ,"(deconstruct pair 0 p)"
+
+        // deconstruct with complex argument
+        ,"(deconstruct pair 1 (f x))"
+
+        // nested deconstruct
+        ,"(deconstruct pair 0 (deconstruct pair 1 (f x)))"
+
+        // let with atomic value
+        ,"(let ((x 42)) (f x))"
+
+        // let with complex value
+        ,"(let ((x (f 10))) (g x))"
+
+        // nested let
+        ,"(let ((x (f 1)) (y (g x))) (h x y))"
+
+        // nested let*
+        ,"(let* ((x (f 1)) (y (g x))) (h x y))"
+
+        // lookup with simple variable
+        ,"(lookup ns 0 x)"
+
+        // lookup with function call
+        ,"(lookup ns 0 (f x))"
+
+        // nested lookup
+        ,"(f (lookup ns 0 (g x)))"
+
+        // make_tuple with atomic args
+        ,"(make_tuple 1 2 3)"
+
+        // make_tuple with complex args
+        ,"(make_tuple (f 1) (g 2))"
+
+        // make_tuple with mixed args
+        ,"(make_tuple x (f y) 42)"
+
+        // make_vec with atomic args
+        ,"(make_vec 3 1 2 3)"
+
+        // make_vec with complex args
+        ,"(make_vec 2 (f 1) (g 2))"
+
+        // make_vec with mixed args
+        ,"(make_vec 3 x (f y) 42)"
+
+        // match_cases with atomic test
+        ,"(match_cases x ((1 2) (result1)) ((3 4 5) (result2)))"
+
+        // match_cases with complex test
+        ,"(match_cases (f x) ((1) (g 1)) ((2) (h 2)))"
+
+        // match_cases with complex results
+        ,"(match_cases x ((1) (f 1)) ((2) (g 2)))"
+
+        // namespaces with atomic expressions
+        ,"(namespaces x y z)"
+
+        // namespaces with complex expressions
+        ,"(namespaces (f 1) (g 2))"
+
+        // namespaces with mixed expressions
+        ,"(namespaces x (f y) z)"
+
+        // namespaces with letrec bodies returning env
+        ,"(namespaces (letrec ((x (λ () 1)) (y (λ () 2))) (let* ((f 1) (g f)) (env))) (letrec ((a (λ () 3)) (b (λ () 4))) (env)))"
+
+        // print_exp with atomic argument
+        ,"(print x)"
+
+        // print_exp with complex argument
+        ,"(print (f x))"
+
+        // print_exp nested in computation
+        ,"(+ (print (f x)) 10)"
+
+        // tag with atomic argument
+        ,"(tag x)"
+
+        // tag with complex argument
+        ,"(tag (f x))"
+
+        // tag in cond test
+        ,"(cond (tag (f x)) (1 (result1)) (2 (result2)))"
+
+        // tuple_index with atomic tuple
+        ,"(tuple_index 3 0 t)"
+
+        // tuple_index with complex tuple
+        ,"(tuple_index 2 1 (f x))"
+
+        // nested tuple_index
+        ,"(tuple_index 2 0 (tuple_index 3 1 (f x)))"
+
+        // typedefs with simple expression
+        ,"(typedefs 0 x)"
+
+        // typedefs with letrec body
+        ,"(typedefs 0 (letrec ((f (λ (x) (g x)))) (f 42)))"
+
+        // typedefs with complex body
+        ,"(typedefs 0 (f (g x)))"
+
+        // typedefs wrapping letrec with env body
+        ,"(typedefs 0 (letrec ((x (λ () 1)) (y (λ () 2))) (env)))"
+
+        // typeof_expr with atomic argument
+        ,"(typeof x)"
+
+        // typeof_expr with complex argument
+        ,"(typeof (f x))"
+
+        // typeof_expr in conditional
+        ,"(if (typeof (f x)) (g 1) (h 2))"
+
+        // curried function application
+        ,"(letrec ((add (λ (x y) (+ x y)))) ((add 2) 3))"
+
+        // more complex curried function application
+        ,"(letrec ((applyf (λ (f) (f 1))) (mul (λ (x y) (* x y)))) (applyf (mul 2)))"
+    ];

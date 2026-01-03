@@ -1,0 +1,745 @@
+# Visitor Pattern Code Generation for CEKF
+
+## Executive Summary
+
+This proposal outlines a **visitor pattern code generation system** for the CEKF compiler pipeline. The goal is to eliminate repetitive boilerplate in AST transformations while providing a foundation for cleaner continuation-passing style (CPS) implementations, particularly for ANF normalization.
+
+**Target**: Reduce ~1000 lines of switch-statement boilerplate across the compiler while making the ANF rewrite (see [ANF-REWRITE.md](ANF-REWRITE.md)) more maintainable.
+
+## The Problem: Repetitive Dispatch Code
+
+### Current State
+
+Every compiler stage manually implements the visitor pattern via large switch statements:
+
+```c
+// From anf_normalize.c (lines 100-157)
+static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
+    switch (lamExp->type) {
+        case LAMEXP_TYPE_LAM:
+            return normalizeLam(lamExp->val.lam, tail);
+        case LAMEXP_TYPE_VAR:
+            return normalizeVar(CPI(lamExp), lamExp->val.var, tail);
+        case LAMEXP_TYPE_STDINT:
+            return normalizeStdInteger(CPI(lamExp), lamExp->val.stdint, tail);
+        case LAMEXP_TYPE_BIGINTEGER:
+            return normalizeMaybeBigInteger(CPI(lamExp), lamExp->val.biginteger, tail);
+        case LAMEXP_TYPE_PRIM:
+            return normalizePrim(lamExp->val.prim, tail);
+        case LAMEXP_TYPE_AMB:
+            return normalizeAmb(lamExp->val.amb, tail);
+        // ... 30+ more cases
+        default:
+            cant_happen("unrecognized type %s", lamExpTypeName(lamExp->type));
+    }
+}
+```
+
+**Problems**:
+1. **Boilerplate duplication**: Similar switch statements appear in:
+   - `lambda_conversion.c` (AST → Lambda)
+   - `anf_normalize.c` (Lambda → ANF)
+   - `bytecode.c` (ANF → Bytecode)
+   - `tc_analyze.c` (Type checking)
+   - Pretty-printers (`*_pp.c`)
+   
+2. **Maintenance burden**: Adding a new expression type requires updating 5+ switch statements
+
+3. **Error-prone**: Easy to forget a case or mistype a variant name
+
+4. **No reusability**: Each transformation reinvents dispatch mechanism
+
+### ANF-Specific Problem: Continuation Complexity
+
+The ANF rewrite proposal (ANF-REWRITE.md) aims to replace the confusing "tail-threading" approach with explicit continuations:
+
+```c
+// Current approach - what does 'tail' mean?
+static AnfExp *normalize(LamExp *lamExp, AnfExp *tail);
+
+// Proposed approach - explicit continuation closures
+static LamData *normalize(LamData *e, LamKont *k);
+```
+
+**The challenge**: Every continuation needs:
+- A function implementing the continuation body
+- A `LamMap` hash table holding free variables
+- Boilerplate to extract free variables from the map
+- PROTECT/UNPROTECT for GC safety
+
+Example continuation (from ANF-REWRITE.md):
+
+```c
+static LamData *normalizeLetKont(LamData *anfval, LamMap *map) {
+    // Boilerplate: extract free variables
+    HashSymbol *x = getLamMap_Symbol(map, TOK_X());
+    LamData *body = getLamMap_Data(map, TOK_BODY());
+    LamKont *k = getLamMap_Kont(map, TOK_K());
+    
+    // Actual logic
+    LamExp *anfbody = normalize(body, k);
+    int save = PROTECT(anfbody);
+    LamData *let = makeLamData_Let(x, getLamData_Exp(anfval), getLamData_Exp(anfbody));
+    UNPROTECT(save);
+    return let;
+}
+
+static LamData *normalizeLet(LamLet *let, LamKont *k) {
+    // Boilerplate: setup continuation environment
+    LamMap *map = newLamMap();
+    int save = PROTECT(map);
+    setLamMap_Symbol(map, TOK_X(), let->var);
+    setLamMap_Exp(map, TOK_NBODY(), let->body);
+    setLamMap_Kont(map, TOK_K(), k);
+    LamKont *k2 = newLamKont(normalizeLetKont, map);
+    PROTECT(k2);
+    
+    // Actual logic
+    LamData *val = newLamData_Exp(let->val);
+    PROTECT(val);
+    LamData *result = normalize(val, k2);
+    UNPROTECT(save);
+    return result;
+}
+```
+
+**30+ expression types × 2-3 continuations each = ~70 functions with similar boilerplate.**
+
+## Solution: Generated Visitor Infrastructure
+
+### Core Idea
+
+Extend the existing Python code generator (`tools/generate/`) to automatically produce:
+1. **Visitor dispatch tables** - Eliminate switch statements
+2. **Recursive traversal helpers** - Common patterns like "visit all children"
+3. **Continuation scaffolding** (phase 2) - Boilerplate for CPS transforms
+
+### Why This Fits CEKF
+
+The project already uses extensive code generation:
+- `tools/generate.py` generates C code from YAML schemas
+- All data structures (`ast.yaml`, `lambda.yaml`, `anf.yaml`, etc.) are declarative
+- Pattern of schema → generated code is established and working
+
+**Visitor generation is a natural extension**: Instead of generating just structs/unions, also generate the traversal code.
+
+## Design: Phased Approach
+
+### Phase 1: Visitor Scaffolding (Immediate)
+
+**Goal**: Eliminate switch statement boilerplate with minimal disruption to existing code.
+
+#### YAML Extension
+
+Add visitor configuration to schema files:
+
+```yaml
+# src/lambda.yaml
+config:
+  name: lambda
+  description: Plain lambda structures generated by lambda conversion.
+  parserInfo: true
+  visitors:
+    - name: LamExpVisitor
+      return_type: void*       # Configurable by user
+      context_type: void*      # User-defined context
+      generate_recursive: true # Generate traversal helpers
+
+unions:
+  LamExp:
+    data:
+      lam: LamLam
+      var: HashSymbol
+      apply: LamApply
+      # ... rest of union
+```
+
+#### Generated Visitor Table
+
+```c
+// generated/lambda_visitor.h
+#ifndef lambda_visitor_h
+#define lambda_visitor_h
+
+#include "lambda.h"
+
+// Visitor function signature - same for all variants
+typedef void* (*LamExpVisitFn)(void *node, void *context);
+
+// Visitor table - one function pointer per variant
+typedef struct LamExpVisitorTable {
+    LamExpVisitFn visitLam;
+    LamExpVisitFn visitVar;
+    LamExpVisitFn visitStdint;
+    LamExpVisitFn visitBiginteger;
+    LamExpVisitFn visitPrim;
+    LamExpVisitFn visitAmb;
+    LamExpVisitFn visitSequence;
+    LamExpVisitFn visitMakeVec;
+    LamExpVisitFn visitTypedefs;
+    LamExpVisitFn visitApply;
+    LamExpVisitFn visitIff;
+    LamExpVisitFn visitCallcc;
+    LamExpVisitFn visitPrint;
+    LamExpVisitFn visitLetrec;
+    LamExpVisitFn visitLet;
+    LamExpVisitFn visitMatch;
+    LamExpVisitFn visitCond;
+    LamExpVisitFn visitCharacter;
+    LamExpVisitFn visitBack;
+    LamExpVisitFn visitError;
+    LamExpVisitFn visitConstruct;
+    LamExpVisitFn visitConstant;
+    LamExpVisitFn visitDeconstruct;
+    LamExpVisitFn visitTag;
+    LamExpVisitFn visitTupleIndex;
+    LamExpVisitFn visitMakeTuple;
+    LamExpVisitFn visitNamespaces;
+    LamExpVisitFn visitEnv;
+    LamExpVisitFn visitLookup;
+    LamExpVisitFn visitConstructor;
+    LamExpVisitFn visitTypeOf;
+} LamExpVisitorTable;
+
+// Main dispatch function - eliminates switch statements
+void* visitLamExp(LamExp *exp, LamExpVisitorTable *vtable, void *context);
+
+// Recursive traversal helpers
+// Post-order traversal: visits children before parent
+// This allows parent visitors to accumulate data from children in context
+void* visitLamExpRecursive(LamExp *exp, LamExpVisitorTable *vtable, void *ctx);
+void* visitLamArgsRecursive(LamArgs *args, LamExpVisitorTable *vtable, void *ctx);
+void* visitLamSequenceRecursive(LamSequence *seq, LamExpVisitorTable *vtable, void *ctx);
+
+// Pre-order traversal helpers (if needed): visits parent before children
+void* visitLamExpRecursivePreOrder(LamExp *exp, LamExpVisitorTable *vtable, void *ctx);
+
+#endif
+```
+
+#### Generated Dispatch Implementation
+
+```c
+// generated/lambda_visitor.c
+#include "lambda_visitor.h"
+
+void* visitLamExp(LamExp *exp, LamExpVisitorTable *vtable, void *context) {
+    if (exp == NULL) return NULL;
+    
+    switch (exp->type) {
+        case LAMEXP_TYPE_LAM:
+            if (vtable->visitLam)
+                return vtable->visitLam(exp->val.lam, context);
+            return NULL;
+            
+        case LAMEXP_TYPE_VAR:
+            if (vtable->visitVar)
+                return vtable->visitVar(exp->val.var, context);
+            return NULL;
+            
+        case LAMEXP_TYPE_STDINT:
+            if (vtable->visitStdint)
+                return vtable->visitStdint(&exp->val.stdint, context);
+            return NULL;
+            
+        // ... one case per variant
+        
+        default:
+            cant_happen("unrecognized LamExp type %d", exp->type);
+    }
+}
+
+void* visitLamExpRecursive(LamExp *exp, LamExpVisitorTable *vtable, void *ctx) {
+    // Helper that visits children first (post-order traversal)
+    // This allows parent visitors to use accumulated context from children
+    
+    // Recurse into children based on type
+    switch (exp->type) {
+        case LAMEXP_TYPE_LAM:
+            visitLamExpRecursive(exp->val.lam->exp, vtable, ctx);
+            break;
+        case LAMEXP_TYPE_APPLY:
+            visitLamExpRecursive(exp->val.apply->function, vtable, ctx);
+            visitLamArgsRecursive(exp->val.apply->args, vtable, ctx);
+            break;
+        case LAMEXP_TYPE_IFF:
+            visitLamExpRecursive(exp->val.iff->condition, vtable, ctx);
+            visitLamExpRecursive(exp->val.iff->consequent, vtable, ctx);
+            visitLamExpRecursive(exp->val.iff->alternative, vtable, ctx);
+            break;
+        // ... recursion for each variant with children
+    }
+    
+    // Visit this node after visiting children (post-order)
+    void *result = visitLamExp(exp, vtable, ctx);
+    return result;
+}
+
+void* visitLamArgsRecursive(LamArgs *args, LamExpVisitorTable *vtable, void *ctx) {
+    // Post-order: visit each child expression before moving to next arg
+    while (args != NULL) {
+        visitLamExpRecursive(args->exp, vtable, ctx);
+        args = args->next;
+    }
+    return NULL;
+}
+
+void* visitLamSequenceRecursive(LamSequence *seq, LamExpVisitorTable *vtable, void *ctx) {
+    // Post-order: visit each expression in sequence
+    while (seq != NULL) {
+        visitLamExpRecursive(seq->exp, vtable, ctx);
+        seq = seq->next;
+    }
+    return NULL;
+}
+
+// Pre-order traversal (if needed for certain use cases)
+void* visitLamExpRecursivePreOrder(LamExp *exp, LamExpVisitorTable *vtable, void *ctx) {
+    // Visit parent first, then children
+    void *result = visitLamExp(exp, vtable, ctx);
+    
+    switch (exp->type) {
+        case LAMEXP_TYPE_LAM:
+            visitLamExpRecursivePreOrder(exp->val.lam->exp, vtable, ctx);
+            break;
+        case LAMEXP_TYPE_APPLY:
+            visitLamExpRecursivePreOrder(exp->val.apply->function, vtable, ctx);
+            // ... etc
+        }
+    }
+    
+    return result;
+}
+```
+
+#### Usage: Refactored ANF Normalize
+
+```c
+// anf_normalize.c - BEFORE (current)
+static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
+    switch (lamExp->type) {
+        case LAMEXP_TYPE_LAM:
+            return normalizeLam(lamExp->val.lam, tail);
+        case LAMEXP_TYPE_VAR:
+            return normalizeVar(CPI(lamExp), lamExp->val.var, tail);
+        // ... 30+ cases
+    }
+}
+
+// anf_normalize.c - AFTER (with visitor)
+#include "lambda_visitor.h"
+
+static LamExpVisitorTable anfVisitorTable = {
+    .visitLam = (LamExpVisitFn)normalizeLam,
+    .visitVar = (LamExpVisitFn)normalizeVar,
+    .visitStdint = (LamExpVisitFn)normalizeStdInteger,
+    .visitBiginteger = (LamExpVisitFn)normalizeMaybeBigInteger,
+    .visitPrim = (LamExpVisitFn)normalizePrim,
+    .visitAmb = (LamExpVisitFn)normalizeAmb,
+    // ... etc
+};
+
+static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
+    return (AnfExp*)visitLamExp(lamExp, &anfVisitorTable, tail);
+}
+```
+
+**Benefits**:
+- Switch statement eliminated
+- Type-safe dispatch through visitor table
+- Individual `normalize*()` functions unchanged
+- Easy to see at a glance which visitors are implemented
+- Adding new expression type: add one line to vtable
+
+### Phase 2: Continuation Scaffolding (Solves ANF Rewrite)
+
+**Goal**: Generate boilerplate for continuation-passing style transformations.
+
+#### YAML Specification for Continuations
+
+```yaml
+# src/anf_continuations.yaml
+config:
+  name: anf_continuations
+  description: Continuation specifications for ANF normalization
+  
+continuations:
+  normalizeNameKont:
+    brief: "Continuation for normalize-name"
+    free_vars:
+      k: LamKont*
+    param:
+      name: x
+      type: LamData*
+    # Body is still manual - we just generate the scaffolding
+    
+  normalizeLetKont:
+    brief: "Continuation for let-expression normalization"
+    free_vars:
+      x: HashSymbol*
+      body: LamData*
+      k: LamKont*
+    param:
+      name: anfval
+      type: LamData*
+      
+  normalizeIfKont:
+    brief: "Continuation for if-expression normalization"
+    free_vars:
+      k: LamKont*
+      e1: LamData*
+      e2: LamData*
+    param:
+      name: anfE0
+      type: LamData*
+      
+  normalizeCallInnerKont:
+    brief: "Inner continuation for function application"
+    free_vars:
+      t: LamExp*
+      k: LamKont*
+    param:
+      name: ts
+      type: LamData*
+      
+  normalizeCallOuterKont:
+    brief: "Outer continuation for function application"
+    free_vars:
+      Ms: LamData*
+      k: LamKont*
+    param:
+      name: t
+      type: LamData*
+```
+
+#### Generated Continuation Code
+
+```c
+// generated/anf_continuations.h
+#ifndef anf_continuations_h
+#define anf_continuations_h
+
+#include "lambda.h"
+
+// Environment structs for each continuation (replaces LamMap hash table)
+typedef struct {
+    LamKont *k;
+} NormalizeNameKont_Env;
+
+typedef struct {
+    HashSymbol *x;
+    LamData *body;
+    LamKont *k;
+} NormalizeLetKont_Env;
+
+typedef struct {
+    LamKont *k;
+    LamData *e1;
+    LamData *e2;
+} NormalizeIfKont_Env;
+
+typedef struct {
+    LamExp *t;
+    LamKont *k;
+} NormalizeCallInnerKont_Env;
+
+typedef struct {
+    LamData *Ms;
+    LamKont *k;
+} NormalizeCallOuterKont_Env;
+
+// Forward declarations for continuation functions (user implements)
+LamData* normalizeNameKont(LamData *x, NormalizeNameKont_Env *env);
+LamData* normalizeLetKont(LamData *anfval, NormalizeLetKont_Env *env);
+LamData* normalizeIfKont(LamData *anfE0, NormalizeIfKont_Env *env);
+LamData* normalizeCallInnerKont(LamData *ts, NormalizeCallInnerKont_Env *env);
+LamData* normalizeCallOuterKont(LamData *t, NormalizeCallOuterKont_Env *env);
+
+// Helper macros for creating continuations
+#define MAKE_KONT_normalizeNameKont(k_val) \
+    ({ \
+        NormalizeNameKont_Env *env = NEW(NormalizeNameKont_Env); \
+        int save = PROTECT(env); \
+        env->k = k_val; \
+        LamKont *kont = newLamKont( \
+            (AnfKontProcWrapper)normalizeNameKont, env); \
+        REPLACE_PROTECT(save, kont); \
+        kont; \
+    })
+
+#define MAKE_KONT_normalizeLetKont(x_val, body_val, k_val) \
+    ({ \
+        NormalizeLetKont_Env *env = NEW(NormalizeLetKont_Env); \
+        int save = PROTECT(env); \
+        env->x = x_val; \
+        env->body = body_val; \
+        env->k = k_val; \
+        LamKont *kont = newLamKont( \
+            (AnfKontProcWrapper)normalizeLetKont, env); \
+        REPLACE_PROTECT(save, kont); \
+        kont; \
+    })
+
+// ... similar macros for other continuations
+
+#endif
+```
+
+#### Generated Continuation Implementation
+
+```c
+// generated/anf_continuations.c
+#include "anf_continuations.h"
+
+// Wrapper functions that extract env and call user implementation
+static LamData* normalizeNameKont_wrapper(LamData *x, LamMap *map) {
+    NormalizeNameKont_Env *env = (NormalizeNameKont_Env*)
+        getLamMap_Ptr(map, TOK_ENV());
+    return normalizeNameKont(x, env);
+}
+
+static LamData* normalizeLetKont_wrapper(LamData *anfval, LamMap *map) {
+    NormalizeLetKont_Env *env = (NormalizeLetKont_Env*)
+        getLamMap_Ptr(map, TOK_ENV());
+    return normalizeLetKont(anfval, env);
+}
+
+// ... similar wrappers for other continuations
+```
+
+#### Usage: Cleaner ANF Code
+
+```c
+// anf_normalize.c - WITH GENERATED SCAFFOLDING
+
+// User implements continuation body - env extraction is automatic
+LamData* normalizeLetKont(LamData *anfval, NormalizeLetKont_Env *env) {
+    // No manual getLamMap_* calls needed!
+    LamExp *anfbody = normalize(env->body, env->k);
+    int save = PROTECT(anfbody);
+    LamData *let = makeLamData_Let(
+        env->x, 
+        getLamData_Exp(anfval), 
+        getLamData_Exp(anfbody));
+    UNPROTECT(save);
+    return let;
+}
+
+// User calls continuation - macro handles boilerplate
+static LamData *normalizeLet(LamLet *let, LamKont *k) {
+    LamKont *k2 = MAKE_KONT_normalizeLetKont(let->var, let->body, k);
+    int save = PROTECT(k2);
+    LamData *val = newLamData_Exp(let->val);
+    PROTECT(val);
+    LamData *result = normalize(val, k2);
+    UNPROTECT(save);
+    return result;
+}
+```
+
+**Benefits over manual approach**:
+1. **No hash table overhead**: Fixed-size env structs instead of `LamMap`
+2. **Type safety**: Compiler catches wrong field types
+3. **Clear interfaces**: Env struct shows exactly what continuation needs
+4. **Less error-prone**: Can't misspell hash keys or forget to extract a var
+5. **Better debugging**: Stack traces show env struct fields
+6. **60% less boilerplate**: Scaffolding auto-generated from YAML
+
+### Phase 3: Rewrite Rule DSL (Future/Optional)
+
+**Goal**: Fully declarative transformations (if phases 1-2 are successful).
+
+This would allow specifications like:
+
+```yaml
+# anf_rewrite_rules.yaml
+rules:
+  - pattern: lam(args, body)
+    transform: |
+      k(lam(args, normalize_term(body)))
+      
+  - pattern: if(cond, cons, alt)
+    transform: |
+      normalize_name(cond, fn(test) {
+        k(if(test, normalize_term(cons), normalize_term(alt)))
+      })
+```
+
+**Deferred** until we validate phases 1-2 provide sufficient value.
+
+## Implementation Plan
+
+### Step 1: Extend Python Code Generator
+
+Create `tools/generate/visitors.py`:
+
+```python
+"""
+Visitor pattern code generation.
+
+Generates visitor tables and dispatch functions for discriminated unions.
+"""
+
+from .base import Base
+from .utils import pad
+
+class VisitorGenerator:
+    def __init__(self, catalog, union_name, config):
+        self.catalog = catalog
+        self.union_name = union_name
+        self.config = config
+        self.union = catalog.get(union_name)
+        
+    def generate_header(self):
+        """Generate visitor table typedef and dispatch declaration"""
+        
+    def generate_implementation(self):
+        """Generate dispatch switch and recursive helpers"""
+        
+    def generate_continuation_header(self, cont_specs):
+        """Generate env structs and macros for continuations"""
+        
+    def generate_continuation_impl(self, cont_specs):
+        """Generate wrapper functions for continuations"""
+```
+
+### Step 2: Extend YAML Schema
+
+Update schema files to include visitor configuration:
+
+```yaml
+# src/lambda.yaml - add visitor config
+config:
+  name: lambda
+  # ... existing config
+  visitors:
+    - name: LamExpVisitor
+      union: LamExp
+      return_type: void*
+      context_type: void*
+      generate_recursive: true
+```
+
+### Step 3: Integrate with Build System
+
+Update `Makefile` to generate visitor files:
+
+```makefile
+# generated/lambda_visitor.h: src/lambda.yaml tools/generate.py
+generated/lambda_visitor.h: src/lambda.yaml tools/generate/visitors.py
+	$(PYTHON) tools/generate.py $< visitor_h > $@
+
+generated/lambda_visitor.c: src/lambda.yaml tools/generate/visitors.py
+	$(PYTHON) tools/generate.py $< visitor_c > $@
+```
+
+### Step 4: Refactor One Transformation
+
+Start with simplest case (e.g., pretty-printing) to validate approach:
+
+1. Generate visitor for `LamExp`
+2. Refactor `lambda_pp.c` to use visitor table
+3. Verify output unchanged
+4. Measure code reduction
+
+### Step 5: Apply to ANF Normalization
+
+Once visitor pattern is validated:
+
+1. Generate continuation scaffolding from `anf_continuations.yaml`
+2. Refactor `anf_normalize.c` to use generated helpers
+3. Implement continuation bodies (still manual, but much cleaner)
+4. Test extensively against existing test suite
+
+### Step 6: Roll Out to Other Stages
+
+Apply to remaining transformations:
+- Lambda conversion (`lambda_conversion.c`)
+- Type checking (`tc_analyze.c`)
+- Bytecode compilation (`bytecode.c`)
+
+## Benefits Summary
+
+### Quantitative
+
+- **Eliminate ~10 switch statements** across codebase (100-200 lines each)
+- **Reduce continuation boilerplate by 60%** in ANF rewrite (500+ lines)
+- **One-time generation cost**: ~1000 lines of Python
+- **Ongoing maintenance**: Modify YAML specs instead of C code
+
+### Qualitative
+
+1. **Maintainability**: Adding expression types becomes mechanical
+2. **Type safety**: Visitor tables checked at compile time
+3. **Consistency**: All transformations follow same pattern
+4. **Debugging**: Better error messages, clearer stack traces
+5. **Documentation**: YAML specs serve as transformation documentation
+6. **Reusability**: Same visitor infrastructure across all stages
+
+### Risks and Mitigations
+
+**Risk**: Generated code harder to debug than hand-written
+- *Mitigation*: Generated code is straightforward C, not complex macros
+- *Mitigation*: Keep generated code readable with comments
+
+**Risk**: Performance overhead from function pointers
+- *Mitigation*: Likely negligible (compiler likely inlines)
+- *Mitigation*: Can benchmark and fallback if needed
+
+**Risk**: Continuation env structs use more memory than needed
+- *Mitigation*: Most envs are 2-4 pointers (16-32 bytes)
+- *Mitigation*: Still smaller than hash tables with overhead
+
+**Risk**: Implementation effort larger than expected
+- *Mitigation*: Phased approach allows early validation
+- *Mitigation*: Phase 1 alone provides value (switch elimination)
+
+## Comparison to Alternatives
+
+### Alternative 1: Manual CPS (Current ANF-REWRITE.md proposal)
+
+**Pros**: Full control, no new dependencies
+**Cons**: 70+ continuation functions, each with ~15 lines of boilerplate
+
+**Verdict**: Visitor generation provides 60% reduction in boilerplate
+
+### Alternative 2: External Scheme/Lisp Dependency
+
+**Pros**: Could write transformations in Scheme
+**Cons**: New language dependency, build complexity, impedance mismatch
+
+**Verdict**: Visitor generation stays in Python ecosystem
+
+### Alternative 3: Compile F♮ to C
+
+**Pros**: Single source of truth (normalize.fn already exists)
+**Cons**: Requires full C backend for F♮, chicken-and-egg problem
+
+**Verdict**: Interesting future direction, but too ambitious now
+
+### Alternative 4: Template Metaprogramming in C
+
+**Pros**: No Python needed
+**Cons**: C macros are limited and hard to debug
+
+**Verdict**: Python code generation is cleaner and more powerful
+
+## Conclusion
+
+Visitor pattern code generation is a **natural extension** of CEKF's existing code generation infrastructure that will:
+
+1. **Immediately** reduce boilerplate via switch statement elimination (Phase 1)
+2. **Significantly** improve the ANF rewrite by generating continuation scaffolding (Phase 2)
+3. **Potentially** enable fully declarative transformations (Phase 3 - future)
+
+The phased approach allows early validation with minimal risk. Phase 1 alone justifies the effort.
+
+**Recommendation**: Proceed with implementation, starting with Phase 1 visitor scaffolding.
+
+## References
+
+- [ANF-REWRITE.md](ANF-REWRITE.md) - Continuation-passing style ANF normalization proposal
+- `tools/generate.py` - Existing Python code generator
+- `src/*.yaml` - Current schema files
+- Classic visitor pattern: Gamma et al., *Design Patterns* (1994)
+- Functional programming visitors: "Typed Tagless Final Interpreters" (Carette et al., 2009)

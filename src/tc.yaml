@@ -86,7 +86,7 @@ structs:
             brief: Type signature
             description: >-
                 Represents a type signature with a name, arguments,
-                and a namespace.  It is used to define types in the
+                and a nameSpace.  It is used to define types in the
                 type-checker.
         data:
             name: HashSymbol
@@ -141,11 +141,11 @@ arrays:
         data:
             entries: TcType
 
-    TcNamespaceArray:
+    TcNameSpaceArray:
         meta:
-            brief: Array of namespaces
+            brief: Array of nameSpaces
             description: >-
-                An array of namespaces used in type inference.
+                An array of nameSpaces used in type inference.
         data:
             entries: TcType
 
@@ -156,21 +156,21 @@ unions:
             description: >-
                 Represents a type in the type-checker, which can be a function,
                 pair, thunk, variable, small integer, big integer, character, unknown,
-                opaque type, type signature, tuple, or an array of namespaces.
+                opaque type, type signature, tuple, or an array of nameSpaces.
         data:
             function: TcFunction
             pair: TcPair
             thunk: TcThunk
             var: TcVar
-            smallinteger: void_ptr
-            biginteger: void_ptr
+            smallInteger: void_ptr
+            bigInteger: void_ptr
             character: void_ptr
             unknown: HashSymbol
             opaque: HashSymbol
             typeSig: TcTypeSig
             tuple: TcTypeArray
-            namespaces: TcNamespaceArray
+            nameSpaces: TcNameSpaceArray
             env: TcEnv
-            nsid: int
+            nsId: int
 
 primitives: !include primitives.yaml

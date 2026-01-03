@@ -23,15 +23,25 @@ generate package - Modular code generator for C structures from YAML schemas.
 from .loader import Loader
 from .utils import debug, pad, printGpl, printSection
 from .catalog import Catalog
-from .base import Base, EnumField
+from .base import Base
+from .enum_field import EnumField
 from .primitives import Primitive
-from .fields import SimpleField, DiscriminatedUnionField
+from .simple_field import SimpleField
+from .discriminated_union_field import DiscriminatedUnionField
 from .hashes import SimpleHash
-from .enums import SimpleEnum, DiscriminatedUnionEnum
-from .arrays import SimpleArray, SimpleStack, InlineArray
+from .simple_enum import SimpleEnum
+from .discriminated_union_enum import DiscriminatedUnionEnum
+from .simple_array import SimpleArray
+from .simple_stack import SimpleStack
+from .inline_array import InlineArray
 from .vectors import SimpleVector
-from .structs import SimpleStruct
-from .unions import DiscriminatedUnion, InlineDiscriminatedUnion, DiscriminatedUnionUnion
+from .simple_struct import SimpleStruct
+from .inline_struct import InlineStruct
+from .discriminated_union import DiscriminatedUnion
+from .inline_discriminated_union import InlineDiscriminatedUnion
+from .discriminated_union_union import DiscriminatedUnionUnion
+from .inline_discriminated_union import InlineDiscriminatedUnion
+from .discriminated_union_union import DiscriminatedUnionUnion
 
 __all__ = [
     'Loader',

@@ -62,7 +62,7 @@ static void reserve(ByteCodeArray *b, size_t size) {
 }
 
 static void writeLocation(ParserInfo I, ByteCodeArray *b, LocationArray *L) {
-    Location *loc = newLocation(b->size, I.lineno, I.filename);
+    Location *loc = newLocation(b->size, I.lineNo, I.fileName);
     int save = PROTECT(loc);
     pushLocationArray(L, loc);
     UNPROTECT(save);
@@ -111,6 +111,11 @@ static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer word) {
     memcpy(&b->entries[loc], &word, sizeof(Integer));
 }
 
+static void writeCharacterAt(Control loc, ByteCodeArray *b, Character c) {
+    DEBUG("%04x writeChar %lc", loc, c);
+    memcpy(&b->entries[loc], &c, sizeof(Character));
+}
+
 static void writeDoubleAt(Control loc, ByteCodeArray *b, Double f) {
     DEBUG("%04x writeDouble %f", loc, f);
     memcpy(&b->entries[loc], &f, sizeof(Double));
@@ -145,9 +150,16 @@ static void addIrrational(ByteCodeArray *b, Double f) {
     b->size += sizeof(Double);
 }
 
+__attribute__((unused))
 static int reserveInteger(ByteCodeArray *b) {
     int address = b->size;
     addInteger(b, 0);
+    return address;
+}
+
+static int reserveCharacter(ByteCodeArray *b) {
+    int address = b->size;
+    addCharacter(b, 0);
     return address;
 }
 
@@ -169,7 +181,7 @@ void writeAexpLam(AexpLam *x, ByteCodeArray *b , LocationArray *L) {
     if (x == NULL)
         return;
     addByte(b, BYTECODES_TYPE_LAM);
-    addByte(b, x->nargs);
+    addByte(b, x->nArgs);
     addByte(b, x->letRecOffset);
     Control patch = reserveWord(b);
     writeAnfExp(x->exp, b, L);
@@ -272,11 +284,11 @@ void writeAexpMakeVec(AexpMakeVec *x, ByteCodeArray *b, LocationArray *L) {
     writeAexpList(x->args, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_PRIM_MAKEVEC);
-    addByte(b, x->nargs);
+    addByte(b, x->nArgs);
     LEAVE(writeAexpMakeVec);
 }
 
-void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationArray *L) {
+void writeAexpNameSpaceArray(AexpNameSpaceArray *x, ByteCodeArray *b, LocationArray *L) {
     if (x->size > 0) {
         writeLocation(CPI(x->entries[0]->body), b, L);
         addByte(b, BYTECODES_TYPE_NS_START);
@@ -285,7 +297,7 @@ void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationAr
             writeAnfExp(x->entries[i]->body, b, L);
             writeLocation(CPI(x->entries[i]->body), b, L);
             addByte(b, BYTECODES_TYPE_NS_END);
-            addWord(b, x->entries[i]->nbindings);
+            addWord(b, x->entries[i]->nBindings);
             addWord(b, x->size - i);
         }
         writeLocation(CPI(x->entries[x->size - 1]->body), b, L);
@@ -294,11 +306,11 @@ void writeAexpNamespaceArray(AexpNamespaceArray *x, ByteCodeArray *b, LocationAr
     }
 }
 
-void writeAexpNamespaces(AexpNamespaces *x, ByteCodeArray *b, LocationArray *L) {
-    ENTER(writeAexpNamespaces);
-    writeAexpNamespaceArray(x->namespaces, b, L);
+void writeAexpNameSpaces(AexpNameSpaces *x, ByteCodeArray *b, LocationArray *L) {
+    ENTER(writeAexpNameSpaces);
+    writeAexpNameSpaceArray(x->nameSpaces, b, L);
     writeAnfExp(x->body, b, L);
-    LEAVE(writeAexpNamespaces);
+    LEAVE(writeAexpNameSpaces);
 }
 
 void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
@@ -313,7 +325,7 @@ void writeCexpApply(CexpApply *x, ByteCodeArray *b, LocationArray *L) {
     // while keeping the original evaluation order and stack discipline.
     bool directLam = (x->function != NULL && x->function->type == AEXP_TYPE_LAM);
     if (directLam) {
-        int m = x->function->val.lam != NULL ? x->function->val.lam->nargs : 0;
+        int m = x->function->val.lam != NULL ? x->function->val.lam->nArgs : 0;
         if ((int)n > m && m > 0) {
             // Collect args into an array to control emission order
             AexpList *cur = x->args;
@@ -386,7 +398,7 @@ void writeCexpCharCondCases(int depth, Control *values, Control *addresses,
     if (x->next == NULL) {      // default
         writeAnfExp(x->body, b, L);
     } else {
-        writeIntegerAt(values[depth], b, x->option);
+        writeCharacterAt(values[depth], b, x->option);
         writeCurrentAddressAt(addresses[depth], b);
         writeAnfExp(x->body, b, L);
     }
@@ -418,7 +430,7 @@ void writeCexpCharCond(CexpCharCondCases *x, ByteCodeArray *b, LocationArray *L)
     Control *addresses = NEW_ARRAY(Control, numCases);  // address in b for each addr(exp_i)
     Control *jumps = NEW_ARRAY(Control, numCases);      // address in b for the JMP patch address at the end of each expression
     for (Index i = 0; i < numCases; i++) {
-        values[i] = reserveInteger(b);      // TODO can change this to a char later, but then again, wchar_t...
+        values[i] = reserveCharacter(b);
         addresses[i] = reserveWord(b);
     }
     writeCexpCharCondCases(0, values, addresses, jumps, x, b, L);
@@ -522,7 +534,7 @@ void writeCexpLetRec(CexpLetRec *x, ByteCodeArray *b, LocationArray *L) {
     writeLetRecBindings(x->bindings, b, L);
     writeLocation(CPI(x), b, L);
     addByte(b, BYTECODES_TYPE_LETREC);
-    addByte(b, x->nbindings);
+    addByte(b, x->nBindings);
     writeAnfExp(x->body, b, L);
     LEAVE(writeCexpLetRec);
 }
@@ -634,10 +646,10 @@ void writeAnfExpLet(AnfExpLet *x, ByteCodeArray *b, LocationArray *L) {
     LEAVE(writeAnfExpLet);
 }
 
-void writeLookup(AnfExpLookup *x, ByteCodeArray *b, LocationArray *L) {
+void writeLookUp(AnfExpLookUp *x, ByteCodeArray *b, LocationArray *L) {
 #ifdef SAFETY_CHECKS
     if (x->annotatedVar == NULL) {
-        cant_happen("annotated var missing from lookup");
+        cant_happen("annotated var missing from lookUp");
     }
 #endif
     writeLocation(CPI(x), b, L);
@@ -678,25 +690,25 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
             break;
         case AEXP_TYPE_LITTLEINTEGER:{
                 addByte(b, BYTECODES_TYPE_STDINT);
-                addInteger(b, x->val.littleinteger);
+                addInteger(b, x->val.littleInteger);
             }
             break;
         case AEXP_TYPE_BIGINTEGER:{
-                switch (x->val.biginteger->type) {
+                switch (x->val.bigInteger->type) {
                     case BI_SMALL:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_STDINT_IMAG : BYTECODES_TYPE_STDINT);
-                        addInteger(b, x->val.biginteger->small);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_STDINT_IMAG : BYTECODES_TYPE_STDINT);
+                        addInteger(b, x->val.bigInteger->small);
                         break;
                     case BI_BIG:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_BIGINT_IMAG : BYTECODES_TYPE_BIGINT);
-                        addBig(b, x->val.biginteger->big);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_BIGINT_IMAG : BYTECODES_TYPE_BIGINT);
+                        addBig(b, x->val.bigInteger->big);
                         break;
                     case BI_IRRATIONAL:
-                        addByte(b, x->val.biginteger->imag ? BYTECODES_TYPE_IRRATIONAL_IMAG : BYTECODES_TYPE_IRRATIONAL);
-                        addIrrational(b, x->val.biginteger->irrational);
+                        addByte(b, x->val.bigInteger->imag ? BYTECODES_TYPE_IRRATIONAL_IMAG : BYTECODES_TYPE_IRRATIONAL);
+                        addIrrational(b, x->val.bigInteger->irrational);
                         break;
                     default:
-                        cant_happen("unsupported MaybeBigInt type %d", x->val.biginteger->type);
+                        cant_happen("unsupported MaybeBigInt type %d", x->val.bigInteger->type);
                 }
             }
             break;
@@ -714,7 +726,7 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case AEXP_TYPE_NAMESPACES:{
-                writeAexpNamespaces(x->val.namespaces, b, L);
+                writeAexpNameSpaces(x->val.nameSpaces, b, L);
             }
             break;
         default:
@@ -797,7 +809,7 @@ void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L) {
             }
             break;
         case ANFEXP_TYPE_LOOKUP:{
-                writeLookup(x->val.lookup, b, L);
+                writeLookUp(x->val.lookUp, b, L);
             }
             break;
         case ANFEXP_TYPE_ENV:
@@ -814,8 +826,8 @@ void writeEnd(ByteCodeArray *b) {
     LEAVE(writeEnd);
 }
 
-enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename) {
-    FILE *fh = fopen(filename, "r");
+enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *fileName) {
+    FILE *fh = fopen(fileName, "r");
     if (fh == NULL) {
         return BYTECODES_BADFILE; // errno will be set
     }
@@ -844,8 +856,8 @@ enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename) {
     return BYTECODES_OK;
 }
 
-bool writeBinaryOutputFile(ByteCodeArray *b, char *filename) {
-    FILE *fh = fopen(filename, "w");
+bool writeBinaryOutputFile(ByteCodeArray *b, char *fileName) {
+    FILE *fh = fopen(fileName, "w");
     if (fh == NULL) {
         return false; // errno will be set
     }

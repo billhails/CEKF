@@ -126,15 +126,15 @@ static bool isALNUM(char c) {
  */
 ParserInfo LEXPI(PrattLexer *lexer) {
     ParserInfo res;
-    res.lineno = 0;
-    res.filename = "undefined";
+    res.lineNo = 0;
+    res.fileName = "undefined";
     if (lexer) {
         if (lexer->tokenHead) {
-            res.lineno = lexer->tokenHead->lineno;
-            res.filename = lexer->tokenHead->filename->name;
+            res.lineNo = lexer->tokenHead->lineNo;
+            res.fileName = lexer->tokenHead->fileName->name;
         } else if (lexer->bufList) {
-            res.lineno = lexer->bufList->lineno;
-            res.filename = lexer->bufList->filename->name;
+            res.lineNo = lexer->bufList->lineNo;
+            res.fileName = lexer->bufList->fileName->name;
         }
     }
     return res;
@@ -152,7 +152,7 @@ void parserError(PrattParser *parser, const char *message, ...) {
     va_end(args);
     PrattBufList *bufList = parser->lexer->bufList;
     if (bufList) {
-        can_happen(" at +%d %s", bufList->lineno, bufList->filename->name);
+        can_happen(" at +%d %s", bufList->lineNo, bufList->fileName->name);
     } else {
         can_happen(" at EOF");
     }
@@ -169,7 +169,7 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message, ...)
     va_start(args, message);
     vfprintf(errout, message, args);
     va_end(args);
-    can_happen(" at +%d %s", PI.lineno, PI.filename);
+    can_happen(" at +%d %s", PI.lineNo, PI.fileName);
 }
 
 /**
@@ -203,7 +203,7 @@ static char *readFile(char *path) {
  * @param found The last found symbol, if any.
  * @return The found HashSymbol, or NULL if no match is found.
  */
-static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
+static HashSymbol *lookUpTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
@@ -211,7 +211,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
         buffer->length = last;
         return found;
     } else if (buffer->start[buffer->length] < trie->character) {
-        return lookupTrieRecursive(trie->siblings, buffer, last, found);
+        return lookUpTrieRecursive(trie->siblings, buffer, last, found);
     }
     ++buffer->length;
     if (trie->terminal != NULL) {
@@ -221,7 +221,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
             last = buffer->length;
         }
     }
-    return lookupTrieRecursive(trie->children, buffer, last, found);
+    return lookUpTrieRecursive(trie->children, buffer, last, found);
 }
 
 /**
@@ -230,7 +230,7 @@ static HashSymbol *lookupTrieRecursive(PrattTrie *trie,
 static PrattToken *tokenFromSymbol(PrattBufList *bufList, HashSymbol *symbol, HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_Atom(symbol);
     int save = PROTECT(value);
-    PrattToken *token = newPrattToken(tokenType, bufList->filename, bufList->lineno, value, NULL);
+    PrattToken *token = newPrattToken(tokenType, bufList->fileName, bufList->lineNo, value, NULL);
     UNPROTECT(save);
     return token;
 }
@@ -241,7 +241,7 @@ static PrattToken *tokenFromSymbol(PrattBufList *bufList, HashSymbol *symbol, Ha
 static PrattToken *tokenFromBigInt(PrattBufList *bufList, MaybeBigInt *bi, HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_Number(bi);
     int save = PROTECT(value);
-    PrattToken *token = newPrattToken(tokenType, bufList->filename, bufList->lineno, value, NULL);
+    PrattToken *token = newPrattToken(tokenType, bufList->fileName, bufList->lineNo, value, NULL);
     UNPROTECT(save);
     return token;
 }
@@ -260,7 +260,7 @@ static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
 static PrattToken *tokenFromString(PrattBufList *bufList, PrattUTF8 *string, HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_String(string);
     int save = PROTECT(value);
-    PrattToken *token = newPrattToken(tokenType, bufList->filename, bufList->lineno, value, NULL);
+    PrattToken *token = newPrattToken(tokenType, bufList->fileName, bufList->lineNo, value, NULL);
     UNPROTECT(save);
     return token;
 }
@@ -275,12 +275,12 @@ static void advance(PrattBuffer *buffer) {
 
 /**
  * @brief Looks up a symbol in the trie and returns a PrattToken if found.
- * Helper for lookupTrieSymbol.
+ * Helper for lookUpTrieSymbol.
  */
-static inline PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
+static inline PrattToken *_lookUpTrieSymbol(PrattParser *parser, PrattLexer *lexer) {
     PrattParser *p = parser;
     while (p) {
-        HashSymbol *symbol = lookupTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
+        HashSymbol *symbol = lookUpTrieRecursive(p->trie, lexer->bufList->buffer, 0, NULL);
         if (symbol != NULL) {
             PrattToken *res = tokenFromSymbol(lexer->bufList, symbol, symbol);
             advance(lexer->bufList->buffer);
@@ -294,8 +294,8 @@ static inline PrattToken *_lookupTrieSymbol(PrattParser *parser, PrattLexer *lex
 /**
  * @brief Parses and returns the next token.
  */
-static PrattToken *lookupTrieSymbol(PrattParser *parser) {
-    return _lookupTrieSymbol(parser, parser->lexer);
+static PrattToken *lookUpTrieSymbol(PrattParser *parser) {
+    return _lookUpTrieSymbol(parser, parser->lexer);
 }
 
 /**
@@ -648,11 +648,11 @@ static PrattToken *tokenEOF() {
  * @brief Creates a new error token.
  * 
  * This token is used to indicate an error in the input stream and contains
- * the filename and line number from the lexer where the error occurred.
+ * the fileName and line number from the lexer where the error occurred.
  */
 static PrattToken *tokenERROR(PrattLexer *lexer) {
     ParserInfo PI = LEXPI(lexer);
-    return newPrattToken(TOK_ERROR(), newSymbol(PI.filename), PI.lineno, NULL, NULL);
+    return newPrattToken(TOK_ERROR(), newSymbol(PI.fileName), PI.lineNo, NULL, NULL);
 }
 
 /**
@@ -672,7 +672,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
     while (state != PRATTSTRINGSTATE_TYPE_END) {
         switch (state) {
             case PRATTSTRINGSTATE_TYPE_START:
-                DEBUG("parseString %s %d (sep %c) START: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) START: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
 #ifdef SAFETY_CHECKS
                 if (buffer->start[buffer->length] != sep) {
                     cant_happen("expected '%c' got '%c'", sep, buffer->start[buffer->length]);
@@ -683,7 +683,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 break;
             case PRATTSTRINGSTATE_TYPE_STR:
             case PRATTSTRINGSTATE_TYPE_ESCS:
-                DEBUG("parseString %s %d (sep %c) STR: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) STR: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 if (isTwoByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -716,7 +716,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                                 case '\n':
                                     parserError(parser, "unexpected EOL");
                                     ++buffer->length;
-                                    ++lexer->bufList->lineno;
+                                    ++lexer->bufList->lineNo;
                                     break;
                                 case '\0':
                                     parserError(parser, "unexpected EOF");
@@ -734,7 +734,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                                 case '\n':
                                     parserError(parser, "unexpected EOL");
                                     ++buffer->length;
-                                    ++lexer->bufList->lineno;
+                                    ++lexer->bufList->lineNo;
                                     break;
                                 case '\0':
                                     parserError(parser, "unexpected EOF");
@@ -750,7 +750,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR4:
-                DEBUG("parseString %s %d (sep %c) CHR4: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) CHR4: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -762,7 +762,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR3:
-                DEBUG("parseString %s %d (sep %c) CHR3: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) CHR3: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -774,7 +774,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR2:
-                DEBUG("parseString %s %d (sep %c) CHR2: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) CHR2: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 if (isTrailingByteUtf8(buffer->start[buffer->length])) {
                     pushPrattUTF8(string, buffer->start[buffer->length]);
                     ++buffer->length;
@@ -786,7 +786,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_ESC:
-                DEBUG("parseString %s %d (sep %c) ESC: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) ESC: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 switch (buffer->start[buffer->length]) {
                     case 'u': case 'U':
                         ++buffer->length;
@@ -816,7 +816,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_UNI:
-                DEBUG("parseString %s %d (sep %c) UNI: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) UNI: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 switch (buffer->start[buffer->length]) {
                     case '0': case '1': case '2': case '3': case '4': case '5':
                     case '6': case '7': case '8': case '9': {
@@ -866,7 +866,7 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_CHR1: // only get here if single == true
-                DEBUG("parseString %s %d (sep %c) CHR1: %c", lexer->bufList->filename->name, lexer->bufList->lineno, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %c) CHR1: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
                 if (buffer->start[buffer->length] == sep) {
                     ++buffer->length;
                     state = PRATTSTRINGSTATE_TYPE_END;
@@ -921,7 +921,7 @@ PrattToken *next(PrattParser *parser) {
                 // whitespace
                 if (utf8_isspace(buffer->start)) {
                     if (buffer->start[0] == '\n') {
-                        ++lexer->bufList->lineno;
+                        ++lexer->bufList->lineNo;
                     }
                     nextCharacter(buffer);
                 // comment
@@ -931,11 +931,11 @@ PrattToken *next(PrattParser *parser) {
                     }
                     if (buffer->start[0] == '\n') {
                         ++buffer->start;
-                        ++lexer->bufList->lineno;
+                        ++lexer->bufList->lineNo;
                     }
                 // alpha
                 } else if (utf8_isalpha(buffer->start)) {
-                    PrattToken *token = lookupTrieSymbol(parser);
+                    PrattToken *token = lookUpTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     } else {
@@ -952,7 +952,7 @@ PrattToken *next(PrattParser *parser) {
                     return parseString(parser, true, '\'');
                 // punctuation and symbols
                 } else if (utf8_ispunct(buffer->start) || utf8_issymbol(buffer->start)) {
-                    PrattToken *token = lookupTrieSymbol(parser);
+                    PrattToken *token = lookUpTrieSymbol(parser);
                     if (token != NULL) {
                         return token;
                     }
@@ -973,7 +973,7 @@ PrattToken *next(PrattParser *parser) {
             }
             lexer->bufList = lexer->bufList->next;
             if (lexer->bufList) {
-                DEBUG("next buffer %s", lexer->bufList->filename->name);
+                DEBUG("next buffer %s", lexer->bufList->fileName->name);
             }
         }
         return tokenEOF();
@@ -1261,11 +1261,11 @@ PrattLexer *makePrattLexerFromString(char *input, char *origin) {
  * This function creates a new PrattBufList from the argument file, and initializes a new
  * PrattLexer using that buffer list.
  * 
- * @param filename The name of the file to read.
+ * @param fileName The name of the file to read.
  * @return A pointer to the newly created PrattLexer.
  */
-PrattLexer *makePrattLexerFromFilename(char *filename) {
-    PrattBufList *bl = prattBufListFromFileName(filename, NULL);
+PrattLexer *makePrattLexerFromFileName(char *fileName) {
+    PrattBufList *bl = prattBufListFromFileName(fileName, NULL);
     int save = PROTECT(bl);
     PrattLexer *res = newPrattLexer(bl);
     UNPROTECT(save);

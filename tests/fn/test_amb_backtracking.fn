@@ -12,7 +12,7 @@ let
             result = 1 then 2 then 3;
         in
             assert(result == 1);
-            puts("Basic then test passed")
+            puts("Basic then test passed\n")
     }
     
     // Test: Backtracking with back
@@ -27,7 +27,7 @@ let
             result = try_values();
         in
             assert(result == 2);
-            puts("Simple backtrack test passed")
+            puts("Simple backtrack test passed\n")
     }
     
     // Test: Multiple backtracking points
@@ -47,7 +47,7 @@ let
             result = find_pair();
         in
             assert(result == #(2, 20));
-            puts("Multiple backtrack test passed")
+            puts("Multiple backtrack test passed\n")
     }
     
     // Test: Nested backtracking
@@ -69,7 +69,7 @@ let
             result = outer();
         in
             assert(result == #(1, 10));
-            puts("Nested backtrack test passed")
+            puts("Nested backtrack test passed\n")
     }
     
     // Test: Backtracking with lists
@@ -88,7 +88,7 @@ let
             result = find_in_list();
         in
             assert(result == 2);
-            puts("List backtrack test passed")
+            puts("List backtrack test passed\n")
     }
     
     // Test: amb with require
@@ -105,7 +105,7 @@ let
             result = find_valid();
         in
             assert(result == 3);
-            puts("Amb require test passed")
+            puts("Amb require test passed\n")
     }
     
     // Test: Backtracking exhaustion
@@ -125,7 +125,7 @@ let
             result = safe_try();
         in
             assert(result == 999);
-            puts("Backtrack exhaustion test passed")
+            puts("Backtrack exhaustion test passed\n")
     }
     
     // Test: amb.integers_from
@@ -142,7 +142,7 @@ let
             result = find_square();
         in
             assert(result == 11);
-            puts("Integers from test passed")
+            puts("Integers from test passed\n")
     }
     
     // Test: amb.integers_between
@@ -158,7 +158,7 @@ let
             result = find_in_range();
         in
             assert(result == 12);
-            puts("Integers between test passed")
+            puts("Integers between test passed\n")
     }
     
     // Test: Complex constraint satisfaction
@@ -177,7 +177,7 @@ let
             result = find_triple();
         in
             assert(result == #(3, #(4, 5)));
-            puts("Complex constraints test passed")
+            puts("Complex constraints test passed\n")
     }
     
     // Test: Backtracking with pattern matching
@@ -200,7 +200,7 @@ let
             result = find_valid_pair();
         in
             assert(result == #(3, 4));
-            puts("Pattern match backtrack test passed")
+            puts("Pattern match backtrack test passed\n")
     }
     
     // Test: Backtracking preserves state
@@ -216,7 +216,7 @@ let
             result = compute();
         in
             assert(result == 20);
-            puts("State preservation test passed")
+            puts("State preservation test passed\n")
     }
     
     // Test: Deep backtracking chain
@@ -241,7 +241,7 @@ let
             result = level1();
         in
             assert(result == 120);
-            puts("Deep backtrack test passed")
+            puts("Deep backtrack test passed\n")
     }
     
     // Test: Backtracking with recursion
@@ -261,7 +261,7 @@ let
             result = find_sum(30, [10, 20, 30, 40]);
         in
             assert(result == 10);
-            puts("Recursive backtrack test passed")
+            puts("Recursive backtrack test passed\n")
     }
     
     // Test: amb choice with functions
@@ -283,7 +283,7 @@ let
             result = find_transform();
         in
             assert(result == 15);
-            puts("Amb functions test passed")
+            puts("Amb functions test passed\n")
     }
 
     // Main test runner
@@ -303,7 +303,7 @@ let
         test_deep_backtrack();
         test_recursive_backtrack();
         test_amb_functions();
-        puts("All amb/backtracking tests completed successfully!")
+        puts("All amb/backtracking tests completed successfully\n")
     }
 
 in

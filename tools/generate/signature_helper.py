@@ -10,32 +10,32 @@ class SignatureHelper:
     Utilities for generating C function signatures.
     
     Standard patterns:
-    - mark: void markName(Type x)
-    - free: void freeName(Type x)
-    - print: void printName(Type x, int depth)
-    - copy: Type copyName(Type x)
+    - mark: void markName(Type _x)
+    - free: void freeName(Type _x)
+    - print: void printName(Type _x, int depth)
+    - copy: Type copyName(Type _x)
     - compare: bool eqName(Type a, Type b)
     - new: Type newName(...args)
     """
     
     @staticmethod
     def mark_signature(name, type_decl):
-        """Generate mark function signature: void markName(Type x)"""
-        return f"void mark{name}({type_decl} x)"
+        """Generate mark function signature: void markName(Type _x)"""
+        return f"void mark{name}({type_decl} _x)"
     
     @staticmethod
     def free_signature(name, type_decl):
-        """Generate free function signature: void freeName(Type x)"""
-        return f"void free{name}({type_decl} x)"
+        """Generate free function signature: void freeName(Type _x)"""
+        return f"void free{name}({type_decl} _x)"
     
     @staticmethod
     def print_signature(name, type_decl):
-        """Generate print function signature: void printName(Type x, int depth)"""
-        return f"void print{name}({type_decl} x, int depth)"
+        """Generate print function signature: void printName(Type _x, int depth)"""
+        return f"void print{name}({type_decl} _x, int depth)"
     
     @staticmethod
     def copy_signature(name, type_decl):
-        """Generate copy function signature: Type copyName(Type x)"""
+        """Generate copy function signature: Type copyName(Type _x)"""
         return f"{type_decl} copy{name}({type_decl} o)"
     
     @staticmethod

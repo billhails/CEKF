@@ -1,0 +1,401 @@
+# ANF Continuation Specifications
+# Generated from analysis of fn/rewrite/normalize.fn and docs/ANF-REWRITE.md
+#
+# Each continuation represents a point where the ANF normalization algorithm
+# needs to suspend and wait for a subexpression to be normalized.
+
+config:
+  name: anf_kont
+  description: "Continuation scaffolding for ANF normalization"
+  parserInfo: false
+  currency: LamExp
+  includes:
+    - lambda.h
+  limited_includes:
+    - lambda_debug.h
+
+primitives: !include ../src/primitives.yaml
+
+external:
+  LamExp:
+    meta:
+      brief: Lambda expressions
+    data:
+      cname: "struct LamExp *"
+      printFn: printLamExp
+      markFn: markLamExp
+      valued: true
+  LamArgs:
+    meta:
+      brief: List of LamExp
+    data:
+      cname: "struct LamArgs *"
+      printFn: printLamArgs
+      markFn: markLamArgs
+      valued: true
+  LamBindings:
+    meta:
+      brief: List of LamBindings
+    data:
+      cname: "struct LamBindings *"
+      printFn: printLamBindings
+      markFn: markLamBindings
+      valued: true
+  LamCondCases:
+    meta:
+      brief: List of LamCondCases
+    data:
+      cname: "struct LamCondCases *"
+      printFn: printLamCondCases
+      markFn: markLamCondCases
+      valued: true
+  LamMatchList:
+    data:
+      cname: "struct LamMatchList *"
+      printFn: printLamMatchList
+      markFn: markLamMatchList
+      valued: true
+
+continuations:
+  normalizeTerm:
+    key: term
+    brief: "Continuation for normalizing a term"
+    context: |
+      (define (normalize-term e)
+        (normalize e [λ (x) x]))
+    free_vars: {}
+
+  normalizeName:
+    key: name
+    brief: "Continuation for normalize-name"
+    context: |
+      (define (normalize-name e k)
+        (normalize e [λ (x)
+          (if (value? x)
+              (k x)
+              (let ((y (gensym)))
+                   `(let (,y ,x) ,(k y))))]))
+    free_vars:
+      k: AnfKont
+
+  normalizeLet:
+    key: let
+    brief: "Continuation for let-expression bindings"
+    context: |
+      (match e
+          ...
+          (`(let ,bindings ,body)
+              (normalize-bindings bindings
+                  [λ (anfbindings)
+                      `(let ,anfbindings
+                            ,(normalize body k))])))
+    free_vars:
+      body: LamExp
+      k: AnfKont
+
+  normalizeIff:
+    key: iff
+    brief: "Continuation for if-expression test"
+    context: |
+      (match e
+          ...
+          (`(if ,e0 ,e1 ,e2)
+              (normalize-name e0
+                  [λ (test)
+                      (k `(if ,test
+                              ,(normalize-term e1)
+                              ,(normalize-term e2)))])))
+    free_vars:
+      k: AnfKont
+      e1: LamExp
+      e2: LamExp
+
+  normalizeApplyOuter:
+    key: callOuter
+    brief: "Outer continuation for function application"
+    context: |
+      (match e
+          ...
+          (`(,Fn . ,Ms)
+              (normalize-name Fn
+                  [λ (t)
+                      (normalize-names Ms
+                          (λ (ts) (k `(,t . ,ts))))]))))
+    free_vars:
+      Ms: LamArgs
+      k: AnfKont
+
+  normalizeApplyInner:
+    key: callInner
+    brief: "Inner continuation for function application"
+    context: |
+      (match e
+          ...
+          (`(,Fn . ,Ms)
+              (normalize-name Fn
+                  (λ (t)
+                      (normalize-names Ms
+                          [λ (ts) (k `(,t . ,ts))])))))
+    free_vars:
+      t: LamExp
+      k: AnfKont
+
+  normalizeNamesOuter:
+    key: namesOuter
+    brief: "Outer continuation for normalizing argument list"
+    context: |
+      (define (normalize-names Ms k)
+          (if (null? Ms)
+              (k '())
+              (normalize-name (car Ms) [λ (t)
+                  (normalize-names (cdr Ms) (λ (ts)
+                      (k `(,t . ,ts))))]))))
+    free_vars:
+      Ms: LamArgs
+      k: AnfKont
+
+  normalizeNamesInner:
+    key: namesInner
+    brief: "Inner continuation for normalizing argument list"
+    context: |
+      (define (normalize-names Ms k)
+          (if (null? Ms)
+              (k '())
+              (normalize-name (car Ms) (λ (t)
+                  (normalize-names (cdr Ms) [λ (ts)
+                      (k `(,t . ,ts))])]))))
+    free_vars:
+      t: LamExp
+      k: AnfKont
+
+  normalizeLetRec:
+    key: letrec
+    brief: "Continuation for letrec-expression bindings"
+    context: |
+      (match e
+          ...
+          (`(letrec ,bindings ,body)
+              (normalize-bindings bindings
+                  [λ (anfbindings)
+                      `(letrec ,anfbindings
+                                ,(normalize body k))])))
+    free_vars:
+      body: LamExp
+      k: AnfKont
+
+  normalizeBindingsOuter:
+    key: bindingsOuter
+    brief: "Outer continuation for normalizing letrec bindings"
+    context: |
+      (define (normalize-bindings bindings k)
+        (match bindings
+          ('()
+             (k '()))
+          (`((,x ,val) . ,rest)
+              (normalize val
+                  [λ (anfval)
+                    (normalize-bindings rest
+                      (λ (anfrest)
+                          (k `((,x ,anfval) . ,anfrest))))]))))
+    free_vars:
+      x: HashSymbol
+      rest: LamBindings
+      k: AnfKont
+
+  normalizeBindingsInner:
+    key: bindingsInner
+    brief: "Inner continuation for normalizing letrec bindings"
+    context: |
+      (define (normalize-bindings bindings k)
+        (match bindings
+          ('()
+             (k '()))
+          (`((,x ,val) . ,rest)
+              (normalize val
+                  (λ (anfval)
+                    (normalize-bindings rest
+                      [λ (anfrest)
+                          (k `((,x ,anfval) . ,anfrest))])))))
+    free_vars:
+      x: HashSymbol
+      anfVal: LamExp
+      k: AnfKont
+
+  normalizeConstruct:
+    key: construct
+    brief: "Continuation for type constructor application"
+    context: |
+      (match e
+          ...
+          (`(construct ,name ,tag . ,Ms)
+              (normalize-names Ms
+                  [λ (ts) (k `(construct ,name ,tag . ,ts))])))
+    free_vars:
+      name: HashSymbol
+      tag: int
+      k: AnfKont
+
+  normalizeMakeTuple:
+    key: makeTuple
+    brief: "Continuation for tuple construction"
+    context: |
+      (match e
+          ...
+          (`(make-tuple . ,Ms)
+              (normalize-names Ms
+                  [λ (ts) (k `(make-tuple . ,ts))])))
+    free_vars:
+      k: AnfKont
+
+  normalizeMakeVec:
+    key: makeVec
+    brief: "Continuation for vector construction"
+    context: |
+      (match e
+          ...
+          (`(make-vec ,nArgs . ,Ms)
+              (normalize-names Ms
+                  [λ (ts) (k `(make-vec ,nArgs . ,ts))])))
+    free_vars:
+      nArgs: int
+      k: AnfKont
+
+  normalizeDeconstruct:
+    key: deconstruct
+    brief: "Continuation for deconstruct operation"
+    context: |
+      (match e
+          ...
+          (`(deconstruct ,name ,nsId ,vec ,e0)
+              (normalize-name e0
+                  [λ (t) (k `(deconstruct ,name ,nsId ,vec ,t))])))
+    free_vars:
+      name: HashSymbol
+      nsId: int
+      vec: int
+      k: AnfKont
+
+  normalizeCond:
+    key: cond
+    brief: "Continuation for cond expression"
+    context: |
+      (match e
+          ...
+          (`(cond ,e0 ,cases)
+              (normalize-name e0
+                  [λ (t)
+                    (k `(cond ,t ,(normalize-cases cases)))])))
+    free_vars:
+      cases: LamCondCases
+      k: AnfKont
+
+  normalizeMatch:
+    key: match
+    brief: "Continuation for match expression"
+    context: |
+      (match e
+          ...
+          (`(match-expr ,e0 ,cases)
+              (normalize-name e0
+                  [λ (t)
+                      (k `(match-expr ,t
+                                      ,(normalize-match-cases cases)))])))
+    free_vars:
+      cases: LamMatchList
+      k: AnfKont
+
+  normalizePrimappOuter:
+    key: primOuter
+    brief: "Outer continuation for primitive application"
+    context: |
+      (match e
+          ...
+          (`(primitive-apply ,type ,e1 ,e2)
+              (normalize-name e1
+                  [λ (anfE1)
+                      (normalize-name e2
+                          (λ (anfE2)
+                              (k `(primitive-apply ,type ,anfE1 ,anfE2))))])))
+    free_vars:
+      type: int
+      e2: LamExp
+      k: AnfKont
+
+  normalizePrimappInner:
+    key: primInner
+    brief: "Inner continuation for primitive application"
+    context: |
+      (match e
+          ...
+          (`(primitive-apply ,type ,e1 ,e2)
+              (normalize-name e1
+                  (λ (anfE1)
+                      (normalize-name e2
+                          [λ (anfE2)
+                              (k `(primitive-apply ,type ,anfE1 ,anfE2))])))))
+    free_vars:
+      type: int
+      anfE1: LamExp
+      k: AnfKont
+
+  normalizePrint:
+    key: print
+    brief: "Continuation for print expression"
+    context: |
+      (match e
+          ...
+          (`(print ,e0)
+              (normalize-name e0
+                  [λ (anfE0) (k `(print ,anfE0))])))
+    free_vars:
+      k: AnfKont
+
+  normalizeTypeOf:
+    key: typeOf
+    brief: "Continuation for typeOf expression"
+    context: |
+      (match e
+          ...
+          (`(typeOf ,e0)
+              (normalize-name e0
+                  [λ (anfE0) (k `(typeOf ,anfE0))])))
+    free_vars:
+      k: AnfKont
+
+  normalizeTupleIndex:
+    key: tupleIndex
+    brief: "Continuation for tuple access"
+    context: |
+      (match e
+          ...
+          (`(tuple-index ,vec ,size ,e0)
+              (normalize-name e0
+                  [λ (t0) (k `(tuple-index ,vec ,size ,t0))])))
+    free_vars:
+      vec: int
+      size: int
+      k: AnfKont
+
+  normalizeTag:
+    key: tag
+    brief: "Continuation for tag extraction"
+    context: |
+      (match e
+          ...
+          (`(tag ,e0)
+              (normalize-name e0
+                  [λ (t0) (k `(tag ,t0))])))
+    free_vars:
+      k: AnfKont
+
+  normalizeCallCC:
+    key: callCC
+    brief: "Continuation for callCC expression"
+    context: |
+      (match e
+          ...
+          (`(callCC ,e0)
+              (normalize-name e0
+                  [λ (t0) (k `(callCC ,t0))])))
+    free_vars:
+      k: AnfKont

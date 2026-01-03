@@ -53,8 +53,8 @@ void writeAexp(Aexp *x, ByteCodeArray *b, LocationArray *L);
 void writeCexp(Cexp *x, ByteCodeArray *b, LocationArray *L);
 void writeAnfExp(AnfExp *x, ByteCodeArray *b, LocationArray *L);
 
-bool writeBinaryOutputFile(ByteCodeArray *b, char *filename);
-enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *filename);
+bool writeBinaryOutputFile(ByteCodeArray *b, char *fileName);
+enum ReadByteCodeStatus readBinaryInputFile(ByteCodeArray *b, char *fileName);
 
 void writeEnd(ByteCodeArray *b);
 

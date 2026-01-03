@@ -75,10 +75,10 @@
 #  include "debugging_off.h"
 #endif
 
-static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+static LamBindings *makePrintTypeLetrec(ParserInfo I,
                                               LamTypeDef *typeDef,
                                               LamContext *env,
-                                              LamLetRecBindings *next);
+                                              LamBindings *next);
 
 /**
  * @brief Creates print functions for all type definitions in the list.
@@ -88,8 +88,8 @@ static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
  * @param inPreamble Whether the print functions are being created in the preamble.
  * @return The updated set of letrec bindings with the new print functions.
  */
-LamLetRecBindings *makePrintFunctions(LamTypeDefList *typeDefs,
-                                      LamLetRecBindings *next,
+LamBindings *makePrintFunctions(LamTypeDefList *typeDefs,
+                                      LamBindings *next,
                                       LamContext *env) {
     ENTER(makePrintFunctions);
     if (typeDefs == NULL) {
@@ -288,7 +288,7 @@ static LamExp *makeIndexedDeconstruct(ParserInfo I, int index, LamTypeConstructo
     LamExp *printArg = thingName(I);
     int save = PROTECT(printArg);
     LamDeconstruct *dec =
-        newLamDeconstruct(I, info->type->name, info->nsid, index, printArg);
+        newLamDeconstruct(I, info->type->name, info->nsId, index, printArg);
     PROTECT(dec);
     LamExp *res =
         newLamExp_Deconstruct(I, dec);
@@ -362,52 +362,52 @@ static LamArgs *makeAargs(ParserInfo I, LamTypeConstructorArgs *args) {
 
 /**
  * @brief Checks if a function is a list constructor.
- * @param los The lookup or symbol to check.
+ * @param los The lookUp or symbol to check.
  * @return True if the function is a list constructor, false otherwise.
  */
-static bool functionIsList(LamLookupOrSymbol *los) {
+static bool functionIsList(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             return los->val.symbol == listSymbol();
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
             return false;
         default:
-            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 /**
- * @brief Gets the underlying function name from a lookup or symbol.
- * @param los The lookup or symbol to get the name from.
+ * @brief Gets the underlying function name from a lookUp or symbol.
+ * @param los The lookUp or symbol to get the name from.
  * @return The underlying function name.
  */
-static char *getUnderlyingFunctionName(LamLookupOrSymbol *los) {
+static char *getUnderlyingFunctionName(LamLookUpOrSymbol *los) {
     switch (los->type) {
         case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
             return los->val.symbol->name;
         case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return los->val.lookup->symbol->name;
+            return los->val.lookUp->symbol->name;
         default:
-            cant_happen("unrecognized %s", lamLookupOrSymbolTypeName(los->type));
+            cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 /**
- * @brief Wraps a print function in a lookup expression if necessary.
- * @details The argument toPrint is the lookup or symbol of the thing being printed.
+ * @brief Wraps a print function in a lookUp expression if necessary.
+ * @details The argument toPrint is the lookUp or symbol of the thing being printed.
  *          The argument printer is the print function.
  *          If the toPrint is just a symbol, then the printer is assumed to be in the current scope and returned unchanged.
- *          If the toPrint is a lookup, then the printer is assumed to be in that scope and is wrapped in the same lookup expression.
+ *          If the toPrint is a lookUp, then the printer is assumed to be in that scope and is wrapped in the same lookUp expression.
  * @param I Parser information.
  * @param printer The print function to wrap.
- * @param los The lookup or symbol of the thing being printed.
+ * @param los The lookUp or symbol of the thing being printed.
  */
-static LamExp *lookupPrintFunction(ParserInfo I, LamExp *printer, LamLookupOrSymbol *toPrint) {
+static LamExp *lookUpPrintFunction(ParserInfo I, LamExp *printer, LamLookUpOrSymbol *toPrint) {
     if (toPrint->type == LAMLOOKUPORSYMBOL_TYPE_LOOKUP) {
-        LamLookupSymbol *ls = toPrint->val.lookup;
-        LamLookup *llu = newLamLookup(I, ls->nsid, ls->nsSymbol, printer);
+        LamLookUpSymbol *ls = toPrint->val.lookUp;
+        LamLookUp *llu = newLamLookUp(I, ls->nsId, ls->nsSymbol, printer);
         int save = PROTECT(llu);
-        printer = newLamExp_Lookup(I, llu);
+        printer = newLamExp_LookUp(I, llu);
         UNPROTECT(save);
     }
     return printer;
@@ -431,12 +431,12 @@ static LamExp *makePrintTypeFunction(ParserInfo I, LamTypeFunction *function) {
     HashSymbol *name = makePrintName("print$", getUnderlyingFunctionName(function->name));
     LamExp *exp = newLamExp_Var(I, name);
     int save = PROTECT(exp);
-    exp = lookupPrintFunction(I, exp, function->name);
+    exp = lookUpPrintFunction(I, exp, function->name);
     REPLACE_PROTECT(save, exp);
     LamArgs *args = makeAargs(I, function->args);
     PROTECT(args);
-    int nargs = countLamArgs(args);
-    if (nargs == 0) {
+    int nArgs = countLamArgs(args);
+    if (nArgs == 0) {
         UNPROTECT(save);
         return exp;
     }
@@ -647,13 +647,13 @@ static LamMatchList *makeScalarMatchList(ParserInfo I,
     LamMatchList *next = makeScalarMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeScalarMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
     PROTECT(matches);
     LamExp *body = makePutsConstructorName(I, constructors->constructor);
     PROTECT(body);
@@ -703,13 +703,13 @@ static LamMatchList *makeVectorMatchList(ParserInfo I,
     LamMatchList *next = makeVectorMatchList(I, constructors->next, env);
     int save = PROTECT(next);
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeVectorMatchList",
              constructors->constructor->name->name);
     }
-    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsid, NULL);
+    LamIntList *matches = newLamIntList(I, info->index, info->type->name, info->nsId, NULL);
     PROTECT(matches);
     LamExp *body = NULL;
     if (info->arity > 0) {
@@ -758,7 +758,7 @@ static LamExp *makeFunctionBody(ParserInfo I,
                                 LamTypeConstructorList *constructors,
                                 LamContext *env) {
     LamTypeConstructorInfo *info =
-        lookupConstructorInLamContext(env, constructors->constructor->name);
+        lookUpConstructorInLamContext(env, constructors->constructor->name);
     if (info == NULL) {
         cant_happen
             ("cannot find info for type constructor %s in makeFunctionBody",
@@ -791,7 +791,7 @@ static LamExp *makeFunctionBody(ParserInfo I,
  * @param bindings The list of bindings to search.
  * @return True if the print function is already defined, false otherwise.
  */
-static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
+static bool userDefined(HashSymbol *printName, LamBindings *bindings) {
     if (bindings == NULL) return false;
     if (bindings->var == printName) return true;
     return userDefined(printName, bindings->next);
@@ -805,10 +805,10 @@ static bool userDefined(HashSymbol *printName, LamLetRecBindings *bindings) {
  * @param next The next letrec binding in the chain.
  * @return The new letrec binding for the print function.
  */
-static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
+static LamBindings *makePrintTypeLetrec(ParserInfo I,
                                               LamTypeDef *typeDef,
                                               LamContext *env,
-                                              LamLetRecBindings *next) {
+                                              LamBindings *next) {
     HashSymbol *name = makePrintName("print$", typeDef->type->name->name);
     if (userDefined(name, next)) {
         return next;
@@ -819,7 +819,7 @@ static LamLetRecBindings *makePrintTypeLetrec(ParserInfo I,
     PROTECT(body);
     LamExp *val = makeLamExp_Lam(I, args, body);
     PROTECT(val);
-    LamLetRecBindings *res = newLamLetRecBindings(I, name, val, next);
+    LamBindings *res = newLamBindings(I, name, val, next);
     UNPROTECT(save);
     return res;
 }

@@ -31,6 +31,8 @@ struct Header;
 #  include "cekfs_objtypes.h"
 #  include "builtins_objtypes.h"
 #  include "pratt_objtypes.h"
+#  include "anf_kont_objtypes.h"
+#  include "cps_kont_objtypes.h"
 #  include "types.h"
 
 // Definition of all object types for garbage collection
@@ -49,7 +51,7 @@ typedef enum {
     OBJTYPE_BIGINT,
     OBJTYPE_MAYBEBIGINT,
     
-    // file id type used to track linked namespaces
+    // file id type used to track linked nameSpaces
     OBJTYPE_AGNOSTICFILEID,
 
     // various generated object types
@@ -61,6 +63,8 @@ typedef enum {
     BUILTINS_OBJTYPES(),
     CEKFS_OBJTYPES(),
     PRATT_OBJTYPES(),
+    ANF_KONT_OBJTYPES(),
+    CPS_KONT_OBJTYPES(),
 } ObjType;
 
 typedef struct Header {

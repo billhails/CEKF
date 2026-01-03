@@ -1,0 +1,23 @@
+let
+    link "samples.fn" as Samples;
+    link "expr.fn" as E;
+    link "../listutils.fn" as list;
+    link "desugar.fn" as DS;
+    link "cps.fn" as CPS;
+    link "closure-convert.fn" as CC;
+in
+    list.for_each(fn (str) {
+        let
+            expr = E.parse(str);
+            dexpr = DS.desugar(expr);
+            cexpr = CPS.T_c(dexpr, E.var("□"));
+            tab = "\n    ";
+        in
+            E.print_expr(expr);
+            puts(" ==>");
+            puts(tab);
+            E.print_expr(CC.shared_closure_convert(dexpr));
+            puts(tab);
+            E.print_expr(CC.flat_closure_convert(dexpr));
+            puts("\n\n")
+    }, Samples.data);

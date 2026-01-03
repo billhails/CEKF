@@ -70,6 +70,13 @@ class Catalog:
         for entity in list(self.contents.values()):
             entity.build(self)
     
+    def getParserInfo(self, key):
+        key = key.strip()
+        if key in self.contents:
+            return self.contents[key].getParserInfo(self.parserInfo)
+        else:
+            return self.parserInfo
+
     def _dispatch(self, method_name, *args):
         """
         Generic dispatcher - calls method_name on all entities.
@@ -87,6 +94,48 @@ class Catalog:
 
     def printGetterDeclarations(self):
         self._dispatch('printGetterDeclarations', self)
+
+    def printSetterDeclarations(self):
+        self._dispatch('printSetterDeclarations', self)
+
+    def generateVisitor(self, target):
+        """Generate complete visitor boilerplate"""
+        output = []
+        
+        # Includes
+        output.append(f'#include "{self.typeName}.h"\n')
+        output.append('#include "memory.h"\n\n')
+        output.append(f'#include "{self.typeName}_{target}.h"\n\n')
+        
+        # Conditional debugging include
+        debug_macro = f"DEBUG_{self.typeName.upper()}_{target.upper()}"
+        output.append(f'#ifdef {debug_macro}\n')
+        output.append('#  include "debugging_on.h"\n')
+        output.append('#else\n')
+        output.append('#  include "debugging_off.h"\n')
+        output.append('#endif\n\n')
+        
+        # Context struct skeleton
+        output.append("typedef struct VisitorContext {\n")
+        output.append("    // Add your context fields here\n")
+        output.append("} VisitorContext;\n\n")
+        
+        # Forward declarations
+        output.append("// Forward declarations\n")
+        for entity in self.contents.values():
+            decl = entity.generateVisitorDecl(target)
+            if decl:
+                output.append(decl)
+        output.append("\n")
+        
+        # Implementations
+        output.append("// Visitor implementations\n")
+        for entity in self.contents.values():
+            impl = entity.generateVisitor(self, target)
+            if impl:
+                output.append(impl)
+        
+        return ''.join(output)
 
     def printTypedefs(self):
         for entity in self.contents.values():

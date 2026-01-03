@@ -60,13 +60,12 @@ unions:
 
 arrays:
     ArrayName:
-        data: ElementType
+        entries: ElementType
 
 hashes:
     HashName:
         data:
-            key: KeyType
-            value: ValueType
+            entries: ValueType
 ```
 
 #### Primitives (`src/primitives.yaml`)
@@ -85,6 +84,7 @@ For each struct/union, the code generator (via `tools/generate.py` and the `gene
 **Memory Management:**
 - `new<Type>()` - Allocator with GC header, takes all fields as args
 - `new<Union>_<Component>()` - Creates discriminated union variant in type-safe way
+- `make<Union>_<Component>()` - Creates the Component and wraps in union
 - `copy<Type>()` - Deep copy
 - `mark<Type>()` - Recursive GC marking
 - `free<Type>()` - Cleanup (called by GC)
@@ -111,6 +111,12 @@ For each struct/union, the code generator (via `tools/generate.py` and the `gene
 - Enum of all object types for GC
 - Switch case macros for dispatch
 - Generic `mark*Obj()`, `free*Obj()`, `typename*Obj()` dispatchers
+
+#### Extended Features for Generated Unions
+
+- `new<union>_<variant>(variant)` creates a union from an existing variant with the correct discriminating tag.
+- `make<union>_<variant>(fields...)` creates the variant and wraps it in the union in one step.
+- `get<Union>_<variant>(unionPtr)` extracts the variant from the union, throwing an error if the type does not match.
 
 #### Key Classes in `makeAST.py`
 
@@ -141,6 +147,10 @@ The main classes are now in the `generate` package:
 3. Add `meta` documentation (optional but recommended)
 4. Run `make` - regeneration is automatic
 5. Include generated header in C files that use the new types
+6. **For GC-managed types**: If the YAML generates `*_objtypes.h`:
+   - Include the generated `*_objtypes.h` file in `src/memory.h`
+   - Add the `*_OBJTYPES()` macro to the `ObjType` enum at the bottom of `memory.h`
+   - This registers the types with the garbage collector
 
 #### Debugging Generation
 
@@ -236,11 +246,14 @@ make indent            # Formats code with GNU indent
 
 ## Memory Management
 
-**Mark-and-sweep GC with protection stack**:
+**Mark-and-sweep GC with global protection stack**:
 
-- Use `PROTECT(var)` macro to shield objects during construction
-- `UNPROTECT(save)` restores the protection stack to a previously saved position
+- Use `PROTECT(obj)` macro to shield objects during construction.
+- `PROTECT(obj)` pushes `obj` onto protection stack and returns the previous stack pointer.
+- `PROTECT(NULL)` just returns the current stack pointer.
+- `UNPROTECT(save)` restores the stack pointer to `save`.
 - Pattern: `int save = PROTECT(obj); /* allocating code */ UNPROTECT(save);`
+- **CRITICAL: Never use literal numbers with UNPROTECT** - The only valid argument to `UNPROTECT(save)` is a value returned by a previous call to `PROTECT()`. Never write `UNPROTECT(0)` or any other literal number.
 - All allocated structures have `Header` with GC metadata
 - Generated `mark*()` functions handle recursive marking
 
@@ -250,6 +263,58 @@ make indent            # Formats code with GNU indent
 - Calling `PROTECT(hashSymbol)` will corrupt the protection stack and cause GC errors
 - This includes symbols returned by: `newSymbol()`, `genSym()`, `genSymDollar()`, token types, etc.
 - Only protect structures with a `Header` (AST nodes, arrays, hashes, etc.)
+
+## C Coding Conventions
+
+**Generated union constructor functions**:
+- `new<Union>_<Variant>(parserInfo, variant)` - Wraps an existing variant in a union
+  - Use when you already have the variant object and just need to create the union wrapper
+  - Example: `newLamExp_Amb(parserInfo, ambNode)`
+- `make<Union>_<Variant>(parserInfo, field1, field2, ...)` - Constructs variant then wraps in union
+  - Use when you have the raw field values and need to construct both variant and union
+  - Example: `makeLamExp_Amb(parserInfo, exp1, exp2)`
+- **Important**: Visitor patterns should use `new*` functions since they already have visited variants
+
+**Type-safe union accessors**:
+- `get<Union>_<Variant>(union*)` - Safely extracts variant from union with type checking
+  - Example: `LamAmb *amb = getLamExp_Amb(node)`
+  - In production builds: compiles to direct field access `node->val.amb`
+  - In debug builds: validates the union type matches expected variant
+  - **Prefer this over direct field access** (`node->val.amb`) for safety
+
+**ParserInfo access**:
+- `CPI(node)` - Macro to access node's parser info
+  - Expands to `node->_yy_parser_info`
+  - **Always use this macro** instead of direct field access
+  - Provides indirection in case the field name or access pattern changes
+
+**Pointer comparisons**:
+- **Always use explicit NULL comparisons**: `if (ptr != NULL)` or `if (ptr == NULL)`
+- **Never test pointer "truthiness"**: Don't use `if (ptr)` or `if (!ptr)`
+- Makes intent clearer and avoids potential confusion with boolean expressions
+- Example: Write `if (node->next != NULL)` not `if (node->next)`
+
+**Naming Conventions**:
+- Types: `MixedCase` (e.g., `LamExp`, `AstExpression`)
+- Functions and Variables: `camelCase` (e.g., `cpsTcLamExp`, `newLamExp_Amb`)
+- Avoid snake case, underscores are reseved for special uses (e.g. union discriminators)
+
+## Documentation Style
+
+**Avoid hyperbole and excessive emphasis**:
+- Use simple periods instead of exclamation points in technical documentation
+- Avoid phrases like "HUGE WIN", "Amazing", "Incredible" - use "significant", "notable", "substantial"
+- Avoid emphatic modifiers like "Critical", "Key", "Major" in headings - use plain descriptive headings
+- Avoid verdict-style declarations like "Verdict:", "Key insight:", "Key advantage:" - state facts directly
+- Remove emoji decorations from section headings (🎉, 💡, ✅, etc.)
+- Avoid unnecessary all-caps emphasis (IMPORTANT, MUST, NEVER) except in actual code constants or where technically required
+- Minimize bold emphasis on routine statements - reserve for truly important concepts
+- Keep tone professional and measured
+- State facts directly without emphatic language
+- Example: Write "This improves performance." not "This improves performance!"
+- Example: Write "Significant code reduction." not "HUGE code reduction!"
+- Example: Write "## Generated Visitor Pattern" not "## Critical Discovery: Generated Visitor Pattern"
+- Example: Write "Problem/Mitigation" not "Risk/Mitigation" for straightforward issue discussion
 
 ## Debugging
 

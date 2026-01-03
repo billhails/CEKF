@@ -95,18 +95,18 @@ Cmp cmpAgnosticFileId(AgnosticFileId *a, AgnosticFileId *b) {
 }
 
 /**
- * Create an agnostic file id from a filename.
+ * Create an agnostic file id from a fileName.
  * 
- * @param filename the filename
+ * @param fileName the fileName
  * @return the agnostic file id, or NULL if the file does not exist
  */
-AgnosticFileId *makeAgnosticFileId(char *filename) {
+AgnosticFileId *makeAgnosticFileId(char *fileName) {
     struct stat stats;
-    if (stat(filename, &stats) == 0) {
+    if (stat(fileName, &stats) == 0) {
         AgnosticFileId *res = NEW(AgnosticFileId, OBJTYPE_AGNOSTICFILEID);
         res->st_dev = stats.st_dev;
         res->st_ino = stats.st_ino;
-        res->name = filename;
+        res->name = fileName;
         return res;
     } else {
         return NULL;

@@ -31,11 +31,11 @@ structs:
     AnfEnv:
         meta:
             brief: ANF Compile Time Environment
-            description: lookup for the run-time locations of variables.
+            description: lookUp for the run-time locations of variables.
         data:
             isLocal: bool
-            isNamespace: bool = false
-            nbindings: int = 0
+            isNameSpace: bool = false
+            nBindings: int = 0
             nsEnvs: AnfEnvArray = NULL
             table: AnfIntTable
             next: AnfEnv
@@ -45,7 +45,7 @@ structs:
             brief: ANF Aexp Lambda
             description: A lambda expression in ANF.
         data:
-            nargs: int
+            nArgs: int
             letRecOffset: int
             args: AexpVarList
             exp: AnfExp
@@ -99,24 +99,24 @@ structs:
             brief: ANF Aexp Make Vector
             description: A vector construction operation in ANF.
         data:
-            nargs: int
+            nArgs: int
             args: AexpList
 
-    AexpNamespace:
+    AexpNameSpace:
         meta:
-            brief: ANF Aexp Namespace
+            brief: ANF Aexp NameSpace
             description: >-
-                A namespace in ANF, containing the body of the namespace.
+                A nameSpace in ANF, containing the body of the nameSpace.
         data:
-            nbindings: int = 0
+            nBindings: int = 0
             body: AnfExp
 
-    AexpNamespaces:
+    AexpNameSpaces:
         meta:
-            brief: ANF Aexp Namespaces
-            description: An array of namespaces in ANF.
+            brief: ANF Aexp NameSpaces
+            description: An array of nameSpaces in ANF.
         data:
-            namespaces: AexpNamespaceArray
+            nameSpaces: AexpNameSpaceArray
             body: AnfExp
 
     CexpApply:
@@ -125,7 +125,7 @@ structs:
             description: A application of a function in ANF.
         data:
             function: Aexp
-            nargs: int
+            nArgs: int
             args: AexpList
 
     CexpIf:
@@ -180,7 +180,7 @@ structs:
             brief: ANF Cexp Let Rec
             description: A let-rec (recursive let) expression in ANF.
         data:
-            nbindings: int
+            nBindings: int
             bindings: AnfLetRecBindings
             body: AnfExp
 
@@ -205,9 +205,9 @@ structs:
             val: AnfExp
             body: AnfExp
 
-    AnfExpLookup:
+    AnfExpLookUp:
         data:
-            namespace: index
+            nameSpace: index
             annotatedVar: AexpAnnotatedVar = NULL
             body: AnfExp
 
@@ -246,12 +246,12 @@ unions:
             lam: AexpLam
             var: HashSymbol
             annotatedVar: AexpAnnotatedVar
-            biginteger: MaybeBigInt
-            littleinteger: int
+            bigInteger: MaybeBigInt
+            littleInteger: int
             character: character
             prim: AexpPrimApp
             makeVec: AexpMakeVec
-            namespaces: AexpNamespaces
+            nameSpaces: AexpNameSpaces
 
     Cexp:
         meta:
@@ -279,7 +279,7 @@ unions:
             aexp: Aexp
             cexp: Cexp
             let: AnfExpLet
-            lookup: AnfExpLookup
+            lookUp: AnfExpLookUp
 
 enums:
     AexpAnnotatedVarType:
@@ -325,12 +325,12 @@ hashes:
             entries: int
 
 arrays:
-    AexpNamespaceArray:
+    AexpNameSpaceArray:
         meta:
-            brief: ANF Aexp Namespace Array
-            description: An array of namespaces in ANF. 
+            brief: ANF Aexp NameSpace Array
+            description: An array of nameSpaces in ANF. 
         data:
-            entries: AexpNamespace
+            entries: AexpNameSpace
 
     AnfEnvArray:
         meta:

@@ -3,16 +3,16 @@
 A-Normal Form (ANF) structures to be converted to bytecode.
 
 ```mermaid
-flowchart TD
+flowchart LR
 AnfSymbolTable --entries--> NULL
 AnfIntTable --entries--> int
 AnfEnv --isLocal--> bool
-AnfEnv --isNamespace--> bool
-AnfEnv --nbindings--> int
+AnfEnv --isNameSpace--> bool
+AnfEnv --nBindings--> int
 AnfEnv --nsEnvs--> AnfEnvArray
 AnfEnv --table--> AnfIntTable
 AnfEnv --next--> AnfEnv
-AexpLam --nargs--> int
+AexpLam --nArgs--> int
 AexpLam --letRecOffset--> int
 AexpLam --args--> AexpVarList
 AexpLam --exp--> AnfExp
@@ -29,14 +29,14 @@ AexpList --exp--> Aexp
 AexpList --next--> AexpList
 AexpIntList --integer--> int
 AexpIntList --next--> AexpIntList
-AexpMakeVec --nargs--> int
+AexpMakeVec --nArgs--> int
 AexpMakeVec --args--> AexpList
-AexpNamespace --nbindings--> int
-AexpNamespace --body--> AnfExp
-AexpNamespaces --namespaces--> AexpNamespaceArray
-AexpNamespaces --body--> AnfExp
+AexpNameSpace --nBindings--> int
+AexpNameSpace --body--> AnfExp
+AexpNameSpaces --nameSpaces--> AexpNameSpaceArray
+AexpNameSpaces --body--> AnfExp
 CexpApply --function--> Aexp
-CexpApply --nargs--> int
+CexpApply --nArgs--> int
 CexpApply --args--> AexpList
 CexpIf --condition--> Aexp
 CexpIf --consequent--> AnfExp
@@ -51,7 +51,7 @@ CexpCharCondCases --body--> AnfExp
 CexpCharCondCases --next--> CexpCharCondCases
 CexpMatch --condition--> Aexp
 CexpMatch --clauses--> AnfMatchList
-CexpLetRec --nbindings--> int
+CexpLetRec --nBindings--> int
 CexpLetRec --bindings--> AnfLetRecBindings
 CexpLetRec --body--> AnfExp
 CexpAmb --exp1--> AnfExp
@@ -60,9 +60,9 @@ CexpCut --exp--> AnfExp
 AnfExpLet --var--> HashSymbol
 AnfExpLet --val--> AnfExp
 AnfExpLet --body--> AnfExp
-AnfExpLookup --namespace--> index
-AnfExpLookup --annotatedVar--> AexpAnnotatedVar
-AnfExpLookup --body--> AnfExp
+AnfExpLookUp --nameSpace--> index
+AnfExpLookUp --annotatedVar--> AexpAnnotatedVar
+AnfExpLookUp --body--> AnfExp
 AnfMatchList --matches--> AexpIntList
 AnfMatchList --body--> AnfExp
 AnfMatchList --next--> AnfMatchList
@@ -74,12 +74,12 @@ CexpCondCases --intCases--> CexpIntCondCases
 Aexp --lam--> AexpLam
 Aexp --var--> HashSymbol
 Aexp --annotatedVar--> AexpAnnotatedVar
-Aexp --biginteger--> MaybeBigInt
-Aexp --littleinteger--> int
+Aexp --bigInteger--> MaybeBigInt
+Aexp --littleInteger--> int
 Aexp --character--> character
 Aexp --prim--> AexpPrimApp
 Aexp --makeVec--> AexpMakeVec
-Aexp --namespaces--> AexpNamespaces
+Aexp --nameSpaces--> AexpNameSpaces
 Cexp --back--> void_ptr
 Cexp --error--> void_ptr
 Cexp --apply--> CexpApply
@@ -95,11 +95,11 @@ AnfExp --done--> void_ptr
 AnfExp --aexp--> Aexp
 AnfExp --cexp--> Cexp
 AnfExp --let--> AnfExpLet
-AnfExp --lookup--> AnfExpLookup
+AnfExp --lookUp--> AnfExpLookUp
 AexpAnnotatedVarType["enum AexpAnnotatedVarType"]
 AexpPrimOp["enum AexpPrimOp"]
-AexpNamespaceArray["AexpNamespaceArray[]"] --entries--> AexpNamespace
+AexpNameSpaceArray["AexpNameSpaceArray[]"] --entries--> AexpNameSpace
 AnfEnvArray["AnfEnvArray[]"] --entries--> AnfEnv
 ```
 
-> Generated from src/anf.yaml by tools/makeAST.py
+> Generated from src/anf.yaml by tools/generate.py

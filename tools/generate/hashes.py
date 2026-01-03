@@ -21,7 +21,7 @@ Hash table structures
 """
 
 from .base import Base
-from .fields import SimpleField
+from .simple_field import SimpleField
 from .utils import pad
 from .comment_gen import CommentGen
 from .type_helper import TypeHelper
@@ -204,7 +204,7 @@ class SimpleHash(Base):
     def getPrintSignature(self, catalog):
         myType = self.getTypeDeclaration(catalog)
         myName = self.getName()
-        return f"void print{myName}({myType} x, int depth)"
+        return f"void print{myName}({myType} _x, int depth)"
 
     def printPrintDeclaration(self, catalog):
         c = self.comment('printPrintDeclaration')
@@ -218,7 +218,7 @@ class SimpleHash(Base):
         print(f" * @brief Print the contents of a {self.getName()} for debugging.")
         print(f" */")
         print(f"{decl} {{ {c}")
-        print(f"    printHashTable(&(x->wrapped), depth); {c}")
+        print(f"    printHashTable(&(_x->wrapped), depth); {c}")
         print(f"}} {c}")
         print("")
 
@@ -226,8 +226,8 @@ class SimpleHash(Base):
         c = self.comment('printCopyField')
         myConstructor = self.getConstructorName()
         a = AccessorHelper.accessor(isInline)
-        print(f'    x{a}{prefix}{field} = {myConstructor}(); {c}')
-        print(f'    copyHashTable((HashTable *)x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
+        print(f'    _x{a}{prefix}{field} = {myConstructor}(); {c}')
+        print(f'    copyHashTable((HashTable *)_x{a}{prefix}{field}, (HashTable *)o{a}{prefix}{field}); {c}')
 
     def printPrintHashField(self, depth):
         c = self.comment('printPrintHashField')
@@ -238,7 +238,7 @@ class SimpleHash(Base):
         c = self.comment('printPrintField')
         a = AccessorHelper.accessor(isInline)
         pad(depth)
-        print(f'printHashTable((HashTable *)x{a}{prefix}{field}, depth + 1); {c}')
+        print(f'printHashTable((HashTable *)_x{a}{prefix}{field}, depth + 1); {c}')
 
     def printCompareField(self, catalog, isInline, field, depth, prefix=''):
         c = self.comment('printCompareField')
@@ -287,10 +287,95 @@ class SimpleHash(Base):
         c = self.comment('printMarkField')
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"markHashTable((HashTable *)x{a}{prefix}{field}); {c}")
+        print(f"markHashTable((HashTable *)_x{a}{prefix}{field}); {c}")
 
     def printProtectField(self, isInline, field, depth, prefix=''):
         c = self.comment('printProtectField')
         pad(depth)
         a = AccessorHelper.accessor(isInline)
-        print(f"return PROTECT((HashTable *)x{a}{prefix}{field}); {c}")
+        print(f"return PROTECT((HashTable *)_x{a}{prefix}{field}); {c}")
+
+    def generateVisitorDecl(self, target):
+        """Generate forward declaration for visitor function"""
+        myName = self.getName()
+        return f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context);\n"
+
+    def generateVisitor(self, catalog, target):
+        """Generate hash table visitor that iterates and rebuilds if values change"""
+        myName = self.getName()
+        output = []
+        
+        output.append(f"static {myName} *{target}{myName}({myName} *node, VisitorContext *context) {{\n")
+        output.append(f"    ENTER({target}{myName});\n")
+        output.append(f"    if (node == NULL) {{\n")
+        output.append(f"        LEAVE({target}{myName});\n")
+        output.append(f"        return NULL;\n")
+        output.append(f"    }}\n")
+        output.append(f"\n")
+        
+        if self.entries is None:
+            # Hash set (no values, just keys) - iterate for inspection/logging
+            output.append(f"    (void)context;  // Hash set has no values to visit\n")
+            output.append(f"    // Iterate over keys (uncomment if you need to inspect/log them)\n")
+            output.append(f"    // Index i = 0;\n")
+            output.append(f"    // HashSymbol *key;\n")
+            output.append(f"    // while ((key = iterate{myName}(node, &i)) != NULL) {{\n")
+            output.append(f"    //     // Inspect/log key here\n")
+            output.append(f"    // }}\n")
+            output.append(f"    LEAVE({target}{myName});\n")
+            output.append(f"    return node;\n")
+        else:
+            # Hash table with values that need visiting
+            entryType = self.entries.getTypeDeclaration(catalog)
+            
+            # Check if entry type needs visiting
+            try:
+                entryObj = catalog.get(self.entries.typeName)
+                needsVisit = entryObj.needsProtection(catalog)
+            except:
+                needsVisit = False
+            
+            if not needsVisit:
+                # Values don't need visiting (primitives, enums, etc)
+                # But still generate iteration code for inspection/logging
+                output.append(f"    (void)context;  // Values are {self.entries.typeName} (not memory-managed)\n")
+                output.append(f"#ifdef NOTDEF\n")
+                output.append(f"    // Iterate over all entries for inspection/logging\n")
+                output.append(f"    Index i = 0;\n")
+                output.append(f"    {entryType} value;\n")
+                output.append(f"    HashSymbol *key;\n")
+                output.append(f"    while ((key = iterate{myName}(node, &i, &value)) != NULL) {{\n")
+                output.append(f"        // Inspect/log key and value here\n")
+                output.append(f"    }}\n")
+                output.append(f"#endif\n")
+                output.append(f"    LEAVE({target}{myName});\n")
+                output.append(f"    return node;\n")
+            else:
+                # Values need visiting - iterate and rebuild if changed
+                output.append(f"    bool changed = false;\n")
+                output.append(f"    {myName} *result = new{myName}();\n")
+                output.append(f"    int save = PROTECT(result);\n")
+                output.append(f"\n")
+                output.append(f"    // Iterate over all entries\n")
+                output.append(f"    Index i = 0;\n")
+                output.append(f"    {entryType} value;\n")
+                output.append(f"    HashSymbol *key;\n")
+                output.append(f"    while ((key = iterate{myName}(node, &i, &value)) != NULL) {{\n")
+                output.append(f"        {entryType} new_value = {target}{self.entries.typeName}(value, context);\n")
+                output.append(f"        PROTECT(new_value);\n")
+                output.append(f"        changed = changed || (new_value != value);\n")
+                output.append(f"        set{myName}(result, key, new_value);\n")
+                output.append(f"    }}\n")
+                output.append(f"\n")
+                output.append(f"    if (changed) {{\n")
+                output.append(f"        UNPROTECT(save);\n")
+                output.append(f"        LEAVE({target}{myName});\n")
+                output.append(f"        return result;\n")
+                output.append(f"    }}\n")
+                output.append(f"\n")
+                output.append(f"    UNPROTECT(save);\n")
+                output.append(f"    LEAVE({target}{myName});\n")
+                output.append(f"    return node;\n")
+        
+        output.append(f"}}\n\n")
+        return ''.join(output)

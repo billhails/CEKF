@@ -13,20 +13,20 @@ PrattTrie --children--> PrattTrie
 PrattBuffer --data--> ustring
 PrattBuffer --start--> ustring
 PrattBuffer --length--> int
-PrattBufList --lineno--> int
-PrattBufList --filename--> HashSymbol
+PrattBufList --lineNo--> int
+PrattBufList --fileName--> HashSymbol
 PrattBufList --buffer--> PrattBuffer
 PrattBufList --next--> PrattBufList
 PrattToken --type--> HashSymbol
-PrattToken --filename--> HashSymbol
-PrattToken --lineno--> int
+PrattToken --fileName--> HashSymbol
+PrattToken --lineNo--> int
 PrattToken --value--> PrattValue
 PrattToken --next--> PrattToken
 PrattLexer --bufList--> PrattBufList
 PrattLexer --tokenHead--> PrattToken
 PrattLexer --tokenTail--> PrattToken
 PrattParser --rules--> PrattRecordTable
-PrattParser --namespaces--> PrattNsIdTable
+PrattParser --nameSpaces--> PrattNsIdTable
 PrattParser --lexer--> PrattLexer
 PrattParser --trie--> PrattTrie
 PrattParser --panicMode--> bool
@@ -42,8 +42,8 @@ PrattExportedOps --exportedRules--> PrattRecordTable
 PrattMixfixPattern --keywords--> PrattStrings
 PrattMixfixPattern --arity--> int
 PrattMixfixPattern --associativity--> PrattAssoc
-PrattMixfixPattern --starts_with_hole--> bool
-PrattMixfixPattern --ends_with_hole--> bool
+PrattMixfixPattern --startsWithHole--> bool
+PrattMixfixPattern --endsWithHole--> bool
 PrattFixityConfig --op--> PrattParselet
 PrattFixityConfig --prec--> int
 PrattFixityConfig --originalImpl--> AstExpression
@@ -66,4 +66,4 @@ PrattUnicode["PrattUnicode[]"] --entries--> character
 PrattNsOpsArray["PrattNsOpsArray[]"] --entries--> PrattExportedOps
 ```
 
-> Generated from src/pratt.yaml by tools/makeAST.py
+> Generated from src/pratt.yaml by tools/generate.py

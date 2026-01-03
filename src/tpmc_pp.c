@@ -32,7 +32,7 @@ void ppTpmcAssignmentPattern(TpmcAssignmentPattern *assignmentPattern) {
 
 void ppTpmcConstructorPattern(TpmcConstructorPattern *constructorPattern) {
     ppTpmcSymbol(constructorPattern->tag);
-    eprintf(":%d", constructorPattern->namespace);
+    eprintf(":%d", constructorPattern->nameSpace);
     ppTpmcPatternArray(constructorPattern->components);
 }
 
@@ -77,7 +77,7 @@ void ppTpmcPatternValue(TpmcPatternValue *patternValue) {
             eprintf("'%c'", patternValue->val.character);
             break;
         case TPMCPATTERNVALUE_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, patternValue->val.biginteger);
+            fprintMaybeBigInt(errout, patternValue->val.bigInteger);
             break;
         case TPMCPATTERNVALUE_TYPE_TUPLE:
             ppTpmcTuplePattern(patternValue->val.tuple);
@@ -138,7 +138,7 @@ static char getTpmcStateType(TpmcState *state) {
 
 void ppTpmcState(TpmcState *state) {
     eprintf("%c%d(%d) ", getTpmcStateType(state), state->stamp,
-            state->refcount);
+            state->refCount);
     ppTpmcVariableTable(state->freeVariables);
     eprintf(" ");
     ppTpmcStateValue(state->state);

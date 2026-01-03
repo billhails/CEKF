@@ -61,8 +61,8 @@ structs:
                 A list of buffers that are parsed in order. The first buffer
                 is the most recent, and the last buffer is the oldest.
         data:
-            lineno: int
-            filename: HashSymbol
+            lineNo: int
+            fileName: HashSymbol
             buffer: PrattBuffer
             next: PrattBufList
 
@@ -74,8 +74,8 @@ structs:
                 and the position in the input stream.
         data:
             type: HashSymbol
-            filename: HashSymbol
-            lineno: int
+            fileName: HashSymbol
+            lineNo: int
             value: PrattValue
             next: PrattToken
 
@@ -96,12 +96,12 @@ structs:
             brief: A parser for a specific scope.
             description: >-
                 A parser for a specific scope. It contains the rules for parsing
-                the input stream, the namespaces, and the lexer. It is intended
+                the input stream, the nameSpaces, and the lexer. It is intended
                 to keep information about user defined operators imported from
-                other namespaces.
+                other nameSpaces.
         data:
             rules: PrattRecordTable
-            namespaces: PrattNsIdTable
+            nameSpaces: PrattNsIdTable
             lexer: PrattLexer=NULL
             trie: PrattTrie=NULL
             panicMode: bool=false
@@ -125,11 +125,11 @@ structs:
 
     PrattExportedOps:
         meta:
-            brief: Exported operators for a namespace.
+            brief: Exported operators for a nameSpace.
             description: >-
-                Snapshot of exported operator records captured after a namespace is
+                Snapshot of exported operator records captured after a nameSpace is
                 parsed for the first time. Intended to be cached and indexed by the
-                namespace reference (nsRef) to support later imports without reparsing.
+                nameSpace reference (nsRef) to support later imports without reparsing.
         data:
             exportedRules: PrattRecordTable
 
@@ -144,8 +144,8 @@ structs:
             keywords: PrattStrings
             arity: int
             associativity: PrattAssoc=PRATTASSOC_TYPE_NONE
-            starts_with_hole: bool
-            ends_with_hole: bool
+            startsWithHole: bool
+            endsWithHole: bool
 
 enums:
     PrattAssoc:
@@ -256,10 +256,10 @@ hashes:
 
     PrattNsIdTable:
         meta:
-            brief: A hash table of namespace ids indexed by HashSymbol.
+            brief: A hash table of nameSpace ids indexed by HashSymbol.
             description: >-
                 A hash table that maps HashSymbol to integer values. It is used
-                to store namespace ids.
+                to store nameSpace ids.
         data:
             entries: int
 
@@ -290,7 +290,7 @@ arrays:
                 A stack of Pratt parsers that are used to parse the input stream.
                 Each parser is associated with a specific scope and contains
                 the rules for parsing tokens in that scope, which can change due
-                to user-defined operators or imported namespaces.
+                to user-defined operators or imported nameSpaces.
         data:
             entries: PrattParser
 
@@ -305,11 +305,11 @@ arrays:
 
     PrattNsOpsArray:
         meta:
-            brief: Array of exported operator sets indexed by namespace reference.
+            brief: Array of exported operator sets indexed by nameSpace reference.
             description: >-
-                Cache of exported operators per namespace. Each entry corresponds
-                to a namespace reference (nsRef) and contains the set of operators
-                that were explicitly exported by that namespace.
+                Cache of exported operators per nameSpace. Each entry corresponds
+                to a nameSpace reference (nsRef) and contains the set of operators
+                that were explicitly exported by that nameSpace.
         data:
             entries: PrattExportedOps
 

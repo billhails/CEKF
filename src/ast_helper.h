@@ -22,20 +22,20 @@
 #  include "hash.h"
 #  include "memory.h"
 
-extern AstNamespaceArray *namespaces;
+extern AstNameSpaceArray *nameSpaces;
 
 void markAstSymbolTable(void);
 
 void printAstSymbol(HashSymbol *x, int depth);
 
-void initNamespaces();
+void initNameSpaces();
 
-void forceInitNamespaces();
+void forceInitNameSpaces();
 
-int lookupNamespace(AgnosticFileId *);
+int lookUpNameSpace(AgnosticFileId *);
 
 AstProg *astNestToProg(AstNest *nest);
 
-void markNamespaces();
+void markNameSpaces();
 
 #endif

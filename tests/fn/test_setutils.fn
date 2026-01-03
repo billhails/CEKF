@@ -1,0 +1,88 @@
+let
+    link "setutils.fn" as SET;
+    import SET operator "_IN_";
+    import SET operator "_N_";
+    import SET operator "_U_";
+    import SET operator "_--_";
+
+    fn test_contains() {
+        let
+            s = SET.to_set([1, 2, 3, 4, 5]);
+        in
+            assert(1 IN s);
+            assert(3 IN s);
+            assert(not 6 IN s);
+            puts("test_contains passed\n");
+            true;
+    }
+
+    fn test_union() {
+        let
+            s1 = SET.to_set([1, 2, 3]);
+            s2 = SET.to_set([3, 4, 5]);
+            su = s1 U s2;
+        in
+            assert(1 IN su);
+            assert(2 IN su);
+            assert(3 IN su);
+            assert(4 IN su);
+            assert(5 IN su);
+            puts("test_union passed\n");
+            true;
+    }
+
+    fn test_intersection() {
+        let
+            s1 = SET.to_set([1, 2, 3, 4]);
+            s2 = SET.to_set([3, 4, 5, 6]);
+            si = s1 N s2;
+        in
+            assert(not 1 IN si);
+            assert(not 2 IN si);
+            assert(3 IN si);
+            assert(4 IN si);
+            assert(not 5 IN si);
+            assert(not 6 IN si);
+            puts("test_intersection passed\n");
+            true;
+    }
+
+    fn test_difference1() {
+        let
+            s1 = SET.to_set([1, 2, 3, 4]);
+            s2 = SET.to_set([3, 4, 5, 6]);
+            sd = s1 -- s2;
+        in
+            assert(1 IN sd);
+            assert(2 IN sd);
+            assert(not 3 IN sd);
+            assert(not 4 IN sd);
+            assert(not 5 IN sd);
+            assert(not 6 IN sd);
+            puts("test_difference 1 passed\n");
+            true;
+    }
+
+    fn test_difference2() {
+        let
+            s1 = SET.to_set([1, 2, 3, 4]);
+            s2 = SET.to_set([3, 4, 5, 6]);
+            sd = s2 -- s1;
+        in
+            assert(not 1 IN sd);
+            assert(not 2 IN sd);
+            assert(not 3 IN sd);
+            assert(not 4 IN sd);
+            assert(5 IN sd);
+            assert(6 IN sd);
+            puts("test_difference 2 passed\n");
+            true;
+    }
+
+in
+    test_contains();
+    test_union();
+    test_intersection();
+    test_difference1();
+    test_difference2();
+    puts("All SET tests passed\n");
