@@ -1,0 +1,4 @@
+// Namespace that exports a prefix operator
+namespace
+    fn negate(x) { 0 - x }
+    export operator "-_" 13 negate;

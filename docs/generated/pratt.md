@@ -36,8 +36,6 @@ PrattRecord --symbol--> HashSymbol
 PrattRecord --prefix--> PrattFixityConfig
 PrattRecord --infix--> PrattFixityConfig
 PrattRecord --postfix--> PrattFixityConfig
-PrattRecord --importNsRef--> int
-PrattRecord --importNsSymbol--> HashSymbol
 PrattExportedOps --exportedRules--> PrattRecordTable
 PrattMixfixPattern --keywords--> PrattStrings
 PrattMixfixPattern --arity--> int
@@ -51,6 +49,8 @@ PrattFixityConfig --hygienicFunc--> HashSymbol
 PrattFixityConfig --isBareSymbol--> bool
 PrattFixityConfig --export--> bool
 PrattFixityConfig --pattern--> PrattMixfixPattern
+PrattFixityConfig --importNsRef--> int
+PrattFixityConfig --importNsSymbol--> HashSymbol
 PrattValue --string--> PrattUTF8
 PrattValue --number--> MaybeBigInt
 PrattValue --character--> PrattUTF8

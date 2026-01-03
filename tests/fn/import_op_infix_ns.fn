@@ -1,0 +1,4 @@
+// Namespace that exports an infix operator with the same symbol as the prefix one
+namespace
+    fn subtract(x, y) { x + (0 - y) }
+    export operator "_-_" left 10 subtract;

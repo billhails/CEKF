@@ -1,0 +1,37 @@
+// Test case: import prefix operator from one namespace and infix operator from another
+// Both operators use the same symbol "-" but different fixities
+// This should expose the bug where importNsRef/importNsSymbol are shared across fixities
+
+let
+    link "import_op_prefix_ns.fn" as pfx;
+    link "import_op_infix_ns.fn" as ifx;
+    
+    // Import prefix "-" from pfx namespace
+    import pfx operator "-_";
+    
+    // Import infix "-" from ifx namespace  
+    import ifx operator "_-_";
+    
+    // Test prefix operator - should call pfx.negate
+    test_prefix = -5;
+    
+    // Test infix operator - should call ifx.subtract
+    test_infix = 10 - 3;
+in
+    {
+        // Print results
+        puts("test_prefix (expected -5): ");
+        putn(test_prefix);
+        puts("\n");
+        
+        puts("test_infix (expected 7): ");
+        putn(test_infix);
+        puts("\n");
+        
+        // Both should work correctly with their respective namespace implementations
+        if (test_prefix == -5 and test_infix == 7) {
+            puts("PASS\n")
+        } else {
+            puts("FAIL\n")
+        }
+    }
