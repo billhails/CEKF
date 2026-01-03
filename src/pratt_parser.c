@@ -1229,6 +1229,8 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal)
     }
     AstDefinition *def = definition(parser);
     int save = PROTECT(def);
+    // Centralized semicolon handling: allow optional semicolons (including multiple) after any definition
+    while (match(parser, TOK_SEMI()));
     AstDefinitions *next = definitions(parser, terminal);
     PROTECT(next);
     AstDefinitions *this = NULL;
@@ -1982,7 +1984,6 @@ static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok, 
     int precedence = bi->small;
     AstExpression *impl = expression(parser);
     PROTECT(impl);
-    consume(parser, TOK_SEMI());
     AstDefinition *def = addMixFixOperator(parser, pattern, assoc, precedence, impl);
     LEAVE(operatorWithPattern);
     UNPROTECT(save);
@@ -2039,18 +2040,12 @@ static AstDefinition *definition(PrattParser *parser)
         consume(parser, TOK_FN());
         res = defun(parser, true, false);
         save = PROTECT(res);
-        // Functions may optionally be terminated by a semicolon in definition context
-        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_FN())) {
         res = defun(parser, false, false);
         save = PROTECT(res);
-        // Accept optional trailing semicolon after function definitions
-        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_PRINT())) {
         res = defun(parser, false, true);
         save = PROTECT(res);
-        // Printers follow the same rule as functions
-        if (check(parser, TOK_SEMI())) { next(parser); validateLastAlloc(); }
     } else if (match(parser, TOK_MACRO())) {
         res = defmacro(parser);
         save = PROTECT(res);
@@ -2119,7 +2114,6 @@ static AstDefinition *exportop(PrattParser *parser) {
         PROTECT(atom);
         // Compare atom symbol to the interned "operators" symbol
         if (isAtomSymbol(atom, TOK_OPERATORS())) {
-            consume(parser, TOK_SEMI());
             // Mark all local operator records as exported for each defined fixity
             Index i = 0;
             HashSymbol *sym = NULL;
@@ -2228,7 +2222,6 @@ static AstDefinition *importop(PrattParser *parser) {
         PrattToken *atom = next(parser);
         PROTECT(atom);
         if (isAtomSymbol(atom, TOK_OPERATORS())) {
-            consume(parser, TOK_SEMI());
             // Import all exported operators
             Index i = 0;
             HashSymbol *op = NULL;
@@ -2275,7 +2268,6 @@ static AstDefinition *importop(PrattParser *parser) {
                                     op);
                 }
             }
-            consume(parser, TOK_SEMI());
             res = newAstDefinition_Blank(TOKPI(tok));
         }
     } else {
@@ -2304,7 +2296,6 @@ static AstDefinition *alias(PrattParser *parser)
     consume(parser, TOK_ASSIGN());
     AstType *t = type_type(parser);
     int save = PROTECT(t);
-    consume(parser, TOK_SEMI());
     AstDefinition *d = makeAstDefinition_Alias(CPI(t), s, t);
     LEAVE(alias);
     UNPROTECT(save);
@@ -3120,7 +3111,6 @@ static AstDefinition *assignment(PrattParser *parser)
     consume(parser, TOK_ASSIGN());
     AstExpression *expr = expression(parser);
     PROTECT(expr);
-    consume(parser, TOK_SEMI());
     AstDefinition *res = makeAstDefinition_Define(TOKPI(tok), s, expr);
     LEAVE(assignment);
     UNPROTECT(save);
@@ -3169,7 +3159,6 @@ static AstDefinition *multidefinition(PrattParser *parser) {
     consume(parser, TOK_ASSIGN());
     AstExpression *expr = expression(parser);
     PROTECT(expr);
-    consume(parser, TOK_SEMI());
     AstDefinition *res = makeAstDefinition_Multi(TOKPI(tok), symbols, expr);
     LEAVE(multidefinition);
     UNPROTECT(save);
@@ -3306,7 +3295,6 @@ static AstDefinition *link(PrattParser *parser)
     } else {
         consume(parser, TOK_AS());
         HashSymbol *name = symbol(parser);
-        consume(parser, TOK_SEMI());
         AstNameSpace *ns = parseLink(parser, path->entries, name);
         PROTECT(ns);
         storeNameSpace(parser, ns);

@@ -1,0 +1,7 @@
+// Test: multiple definitions with various semicolon patterns
+let
+    a = 10;
+    b = 20;
+    c = 30
+in
+    a + b + c
