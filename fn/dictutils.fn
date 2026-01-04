@@ -39,6 +39,10 @@ fn is_empty(d) {
     }
 }
 
+fn empty() {
+    E
+}
+
 fn foreach {
     (_, E) | (_, EE) { nothing }
     (f, D(_, l, #(t, u), r)) {
@@ -48,6 +52,15 @@ fn foreach {
         nothing;
     }
 }
+
+fn map {
+    (_, E) | (_, EE) { E }
+    (f, D(color, l, #(k, v), r)) {
+        D(color, map(f, l), #(k, f(v)), map(f, r))
+    }
+}
+
+export operator "_|>_" left 8 fn (d, f) { map(f, d) };
 
 fn keys (d) {
     let fn h {
@@ -67,6 +80,13 @@ fn values (d) {
         }
     }
     in h(d, [])
+}
+
+fn size {
+    (E) | (EE) { 0 }
+    (D(_, l, #(_, _), r)) {
+        1 + size(l) + size(r)
+    }
 }
 
 fn balance {

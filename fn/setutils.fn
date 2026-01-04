@@ -64,3 +64,15 @@ fn difference(d1, d2) {
 }
 
 export operator "_--_" left 11 difference;
+
+// Set(#a) -> (#a -> #b) -> Set(#b)
+fn map(dict, f) {
+    to_set(list.map(fn (k) { f(k) }, to_list(dict)))
+}
+
+export operator "_|>_" left 8 fn (d, f) { map(f, d) };
+
+// Set(#t) -> number
+fn size(dict) {
+    DICT.size(dict);
+}

@@ -1466,9 +1466,10 @@ AstExpression *userMixFix(PrattRecord *record, PrattParser *parser,
             PrattToken *nextTok = peek(parser);
             HashSymbol *nextSym = utf8ToSymbol(kw);
             if (!isAtomSymbol(nextTok, nextSym)) {
-                parserErrorAt(CPI(lhs), parser,
-                              "expected mixfix operator keyword \"%s\"",
-                              kw->entries);
+                parserErrorAt(
+                    CPI(lhs), parser,
+                    "expected mixfix operator keyword \"%s\" got \"%s\"",
+                    kw->entries, nextTok->type->name);
             }
             next(parser);
         }
@@ -1547,11 +1548,12 @@ static AstDefinition *addMixFixOperator(PrattParser *parser,
     for (Index i = 1; i < pattern->keywords->size; ++i) {
         HashSymbol *inner = utf8ToSymbol(pattern->keywords->entries[i]);
         if (getPrattRecordTable(parser->rules, inner, NULL)) {
-            parserError(parser,
-                        "mixfix operator keyword %s conflicts with existing "
-                        "operator %s",
-                        pattern->keywords->entries[0]->entries, inner->name);
+            parserError(
+                parser,
+                "mixfix operator keyword %s conflicts with existing operator",
+                inner->name);
         }
+        parser->trie = insertPrattTrie(parser->trie, inner);
     }
     PrattFixity fixity = getFixityFromPattern(pattern);
     PrattUTF8 *operator = pattern->keywords->entries[0];
