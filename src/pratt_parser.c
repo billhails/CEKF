@@ -4252,7 +4252,7 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
             DEBUG("PEEKED OP %s", op->type->name);
             PrattRecord *record = fetchRecord(parser, op->type);
             if (record == NULL) {
-                // allow unrecognised tokens to terminate expressions
+                // allow tokens with no records to terminate expressions
                 // on the assumption that they are secondary mixfix operators
                 DEBUG("NULL record for token: %s", op->type->name);
                 break;
