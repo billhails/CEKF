@@ -7,6 +7,7 @@ This document provides concrete code examples showing how mixfix operators would
 ### Example 1: Array Indexing
 
 **Definition:**
+
 ```fn
 namespace
 
@@ -22,6 +23,7 @@ export mixfix "_[_]";
 ```
 
 **Usage:**
+
 ```fn
 let
     link "array_lib.fn" as arr;
@@ -36,6 +38,7 @@ in {
 ```
 
 **Desugared AST (internal):**
+
 ```
 AstFunCall(
     func: AstAnnotatedSymbol($mixfix$42, index),
@@ -49,6 +52,7 @@ AstFunCall(
 ### Example 2: Ternary Conditional
 
 **Definition:**
+
 ```fn
 fn ternary {
     (true, conseq, _) { conseq }
@@ -59,6 +63,7 @@ mixfix 1 "if_then_else_" ternary;
 ```
 
 **Usage:**
+
 ```fn
 let
     x = 5;
@@ -68,6 +73,7 @@ in
 ```
 
 **Comparison with built-in if:**
+
 ```fn
 // Mixfix version (expression)
 let x = if test then a else b in ...
@@ -81,6 +87,7 @@ The mixfix version could coexist with the built-in `if` since they have differen
 ### Example 3: List Slicing
 
 **Definition:**
+
 ```fn
 fn slice {
     (lst, start, end) {
@@ -92,6 +99,7 @@ mixfix 50 "_[_:_]" slice;
 ```
 
 **Usage:**
+
 ```fn
 let
     numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -104,6 +112,7 @@ in {
 ### Example 4: For-Each Loop (Monadic Style)
 
 **Definition:**
+
 ```fn
 fn forEach(body, list) {
     map(body, list)
@@ -113,6 +122,7 @@ mixfix 3 "for_in_do_" forEach;
 ```
 
 **Usage:**
+
 ```fn
 let
     sum = here(fn(cc) {
@@ -137,6 +147,7 @@ for print in [1, 2, 3, 4, 5] do ();
 ### Example 5: Mathematical Notation
 
 **Definition:**
+
 ```fn
 fn factorial {
     (0) { 1 }
@@ -151,6 +162,7 @@ mixfix 100 "_choose_" choose;
 ```
 
 **Usage:**
+
 ```fn
 let
     ways = 10 choose 3;
@@ -161,6 +173,7 @@ in
 ### Example 6: Conditional Execution (When/Unless)
 
 **Definition:**
+
 ```fn
 fn when(cond, action) {
     if (cond) { action } else { () }
@@ -175,6 +188,7 @@ mixfix 3 "unless_do_" unless;
 ```
 
 **Usage:**
+
 ```fn
 let
     debug = true;
@@ -188,6 +202,7 @@ in {
 ### Example 7: Repeat Construct
 
 **Definition:**
+
 ```fn
 fn repeatN {
     (0, _, acc) { acc }
@@ -202,6 +217,7 @@ mixfix 4 "repeat_times_" repeat;
 ```
 
 **Usage:**
+
 ```fn
 let
     counter = here(fn(cc) {
@@ -229,11 +245,13 @@ For mixfix operators, the **first keyword in the pattern** acts as the trigger, 
 #### Pattern Analysis and Registration
 
 When you write:
+
 ```fn
 mixfix 110 "_[_]" index;
 ```
 
 The parser analyzes the pattern `"_[_]"`:
+
 1. **Starts with `_`** (hole) → This is an **infix-style** operator
 2. **First keyword** after the leading hole is `[`
 3. **Register** `[` as an **INFIX** operator in the `PrattRecord` table
@@ -245,6 +263,7 @@ mixfix 1 "if_then_else_" ternary;
 ```
 
 The parser analyzes the pattern `"if_then_else_"`:
+
 1. **Starts with keyword** `if` → This is a **prefix-style** operator
 2. **First keyword** is `if`
 3. **Register** `if` as a **PREFIX** operator in the `PrattRecord` table
@@ -255,6 +274,7 @@ The parser analyzes the pattern `"if_then_else_"`:
 ##### Example 1: Array Indexing `"_[_]"`
 
 **Pattern structure:**
+
 - Starts with: `_` (hole)
 - Keywords: `["["]`
 - Arity: 2
@@ -262,14 +282,15 @@ The parser analyzes the pattern `"if_then_else_"`:
 
 **What happens during parsing of `arr[5]`:**
 
-```
 Step 1: Parser in expressionPrecedence(parser, 0)
+
   - Calls next token → gets 'arr'
   - Looks up 'arr' → no prefix operator, must be identifier
   - Creates: AstExpression(Symbol(arr))
   - Stores as lhs
 
 Step 2: Parser checks for infix operator
+
   - Peeks at next token → gets '['
   - Looks up '[' in PrattRecord table
   - Finds: record->infixOp = userMixfix
@@ -277,6 +298,7 @@ Step 2: Parser checks for infix operator
   - Calls: userMixfix(record, parser, lhs, '[' token)
 
 Step 3: Inside userMixfix parselet
+
   - record->mixfixPattern->starts_with_hole = true
   - record->mixfixPattern->keywords = ["["]
   - record->mixfixPattern->arity = 2
@@ -287,7 +309,6 @@ Step 3: Inside userMixfix parselet
   - But pattern ends with hole, so expect ']'
   - Consume ']' token
   - Build call: $mixfix$42(arr, 5)
-```
 
 **Wait!** There's an issue here - where does the closing `]` come from?
 

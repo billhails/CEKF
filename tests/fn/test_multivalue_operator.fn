@@ -1,0 +1,7 @@
+let
+
+    operator "_||>_|||>_||||>_" right 10 fn (a, b, c, d) {
+        a + b + c + d
+    }
+in
+    assert((1 ||> 2 |||> 3 ||||> 4) == 10);

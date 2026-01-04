@@ -175,7 +175,7 @@ static AstTypeSymbols *type_variables(PrattParser *);
 static AstType *type_type(PrattParser *);
 static HashSymbol *symbol(PrattParser *);
 static HashSymbol *type_variable(PrattParser *);
-static PrattRecord *fetchRecord(PrattParser *, HashSymbol *, bool);
+static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
 static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
 static PrattUTF8 *rawString(PrattParser *);
@@ -1424,7 +1424,7 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
  * @param tok The PrattToken representing the operator.
  * @return An AstExpression representing the parsed mixfix operation.
  */
-AstExpression *userMixFix(PrattRecord *record, PrattParser *parser,
+AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
                           AstExpression *lhs, PrattToken *tok,
                           PrattFixity fixity) {
     // Mixfix operators are implemented via their stored pattern
@@ -1497,7 +1497,7 @@ AstExpression *userMixFix(PrattRecord *record, PrattParser *parser,
         PrattToken *next = peek(parser);
         PROTECT(next);
         if (next != NULL) {
-            PrattRecord *nextRecord = fetchRecord(parser, next->type, false);
+            PrattRecord *nextRecord = fetchRecord(parser, next->type);
             if (nextRecord != NULL &&
                 nextRecord->infix.prec == record->infix.prec &&
                 next->type == tok->type) {
@@ -1514,17 +1514,17 @@ AstExpression *userMixFix(PrattRecord *record, PrattParser *parser,
 
 static AstExpression *userPrefixMix(PrattRecord *record, PrattParser *parser,
                                     AstExpression *lhs, PrattToken *tok) {
-    return userMixFix(record, parser, lhs, tok, PRATTFIXITY_TYPE_PREFIX);
+    return userMixfix(record, parser, lhs, tok, PRATTFIXITY_TYPE_PREFIX);
 }
 
 static AstExpression *userInfixMix(PrattRecord *record, PrattParser *parser,
                                    AstExpression *lhs, PrattToken *tok) {
-    return userMixFix(record, parser, lhs, tok, PRATTFIXITY_TYPE_INFIX);
+    return userMixfix(record, parser, lhs, tok, PRATTFIXITY_TYPE_INFIX);
 }
 
 static AstExpression *userPostfixMix(PrattRecord *record, PrattParser *parser,
                                      AstExpression *lhs, PrattToken *tok) {
-    return userMixFix(record, parser, lhs, tok, PRATTFIXITY_TYPE_POSTFIX);
+    return userMixfix(record, parser, lhs, tok, PRATTFIXITY_TYPE_POSTFIX);
 }
 /**
  * @brief Add a new user-defined mixfix operator to the parser's operator table.
@@ -1541,7 +1541,7 @@ static AstExpression *userPostfixMix(PrattRecord *record, PrattParser *parser,
  * @param precedence The precedence level of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
-static AstDefinition *addMixFixOperator(PrattParser *parser,
+static AstDefinition *addMixfixOperator(PrattParser *parser,
                                         PrattMixfixPattern *pattern,
                                         PrattAssoc associativity,
                                         int precedence, AstExpression *impl) {
@@ -1934,7 +1934,7 @@ static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok,
     AstExpression *impl = expression(parser);
     PROTECT(impl);
     AstDefinition *def =
-        addMixFixOperator(parser, pattern, assoc, precedence, impl);
+        addMixfixOperator(parser, pattern, assoc, precedence, impl);
     LEAVE(operatorWithPattern);
     UNPROTECT(save);
     return def;
@@ -2791,7 +2791,9 @@ static AstLookUpOrSymbol *astFunctionToLos(PrattParser *parser,
                       "invalid use of tuple as structure name");
         return makeLosError(CPI(function));
     case AST_EXPRESSION_TYPE_ENV:
-        cant_happen("encountered ENV as formal argument");
+        parserErrorAt(CPI(function), parser,
+                      "encountered ENV as formal argument");
+        return makeLosError(CPI(function));
     case AST_EXPRESSION_TYPE_STRUCTURE:
         parserErrorAt(CPI(function), parser,
                       "invalid use of tuple as structure name");
@@ -2987,7 +2989,9 @@ static AstFarg *astExpressionToFarg(PrattParser *parser, AstExpression *expr) {
     case AST_EXPRESSION_TYPE_TUPLE:
         return astTupleToFarg(parser, expr->val.tuple);
     case AST_EXPRESSION_TYPE_ENV:
-        cant_happen("encountered ENV as formal argument");
+        parserErrorAt(CPI(expr), parser,
+                      "invalid use of ENV as formal argument");
+        return newAstFarg_WildCard(CPI(expr));
     case AST_EXPRESSION_TYPE_STRUCTURE:
         return astStructureToFarg(parser, expr->val.structure);
     case AST_EXPRESSION_TYPE_ASSERTION:
@@ -3318,7 +3322,7 @@ static PrattUTF8 *rawString(PrattParser *parser) {
 }
 
 /**
- * @brief parses a subsequent string, appendin it to the current.
+ * @brief parses a subsequent string, appending it to the current.
  */
 static void appendString(PrattParser *parser, PrattUTF8 *this) {
     ENTER(appendString);
@@ -3392,19 +3396,14 @@ static AstCompositeFunction *functions(PrattParser *parser) {
 /**
  * @brief find a parser record for a token in a (nested) PrattParser.
  */
-static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol,
-                                bool fatal) {
+static PrattRecord *fetchRecord(PrattParser *parser, HashSymbol *symbol) {
     PrattRecord *record = NULL;
     if (getPrattRecordTable(parser->rules, symbol, &record)) {
         return record;
     } else if (parser->next != NULL) {
-        return fetchRecord(parser->next, symbol, fatal);
+        return fetchRecord(parser->next, symbol);
     } else {
-        if (fatal) {
-            cant_happen("unrecognised op %s", symbol->name);
-        } else {
-            return NULL;
-        }
+        return NULL;
     }
 }
 
@@ -3998,7 +3997,7 @@ static AstExpression *userInfixCommon(PrattRecord *record, PrattParser *parser,
         PrattToken *next = peek(parser);
         PROTECT(next);
         if (next != NULL) {
-            PrattRecord *nextRecord = fetchRecord(parser, next->type, false);
+            PrattRecord *nextRecord = fetchRecord(parser, next->type);
             if (nextRecord != NULL &&
                 nextRecord->infix.prec == record->infix.prec &&
                 next->type == tok->type) {
@@ -4232,8 +4231,11 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     AstExpression *lhs = NULL;
     PrattToken *tok = next(parser);
     int save = PROTECT(tok);
-    PrattRecord *record = fetchRecord(parser, tok->type, true);
-    if (record->prefix.op == NULL) {
+    PrattRecord *record = fetchRecord(parser, tok->type);
+    if (record == NULL) {
+        parserError(parser, "unrecognised prefix token: %s", tok->type->name);
+        lhs = errorExpression(TOKPI(tok));
+    } else if (record->prefix.op == NULL) {
         parserError(parser, "not a prefix operator: %s", tok->type->name);
         lhs = errorExpression(TOKPI(tok));
     } else {
@@ -4248,8 +4250,13 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
             break;
         } else {
             DEBUG("PEEKED OP %s", op->type->name);
-            PrattRecord *record = fetchRecord(parser, op->type, true);
-            if (record->postfix.op != NULL) {
+            PrattRecord *record = fetchRecord(parser, op->type);
+            if (record == NULL) {
+                // allow unrecognised tokens to terminate expressions
+                // on the assumption that they are secondary mixfix operators
+                DEBUG("NULL record for token: %s", op->type->name);
+                break;
+            } else if (record->postfix.op != NULL) {
                 DEBUG("postfix %d %d", record->postfix.prec, minimumPrecedence);
                 if (record->postfix.prec < minimumPrecedence) {
                     break;
