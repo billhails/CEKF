@@ -796,17 +796,11 @@ static inline void mergeFixity(PrattParser *parser, PrattFixityConfig *target,
             target->op = source->op;
             target->importNsRef = nsRef;
             target->importNsSymbol = nsSymbol;
-            // Check for conflicts with existing keywords, except the first
+            // Add secondary keywords to importing parser's trie
             if (source->pattern != NULL) {
                 for (Index i = 1; i < source->pattern->keywords->size; ++i) {
                     HashSymbol *inner =
                         utf8ToSymbol(source->pattern->keywords->entries[i]);
-                    if (getPrattRecordTable(parser->rules, inner, NULL)) {
-                        parserError(
-                            parser,
-                            "import operator conflicts with existing operator");
-                    }
-                    // Add secondary keyword to importing parser's trie
                     parser->trie = insertPrattTrie(parser->trie, inner);
                 }
                 target->pattern = source->pattern;
@@ -1549,14 +1543,9 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                         PrattMixfixPattern *pattern,
                                         PrattAssoc associativity,
                                         int precedence, AstExpression *impl) {
+    // Add secondary keywords to trie (no conflict check - precedence handles disambiguation)
     for (Index i = 1; i < pattern->keywords->size; ++i) {
         HashSymbol *inner = utf8ToSymbol(pattern->keywords->entries[i]);
-        if (getPrattRecordTable(parser->rules, inner, NULL)) {
-            parserError(
-                parser,
-                "mixfix operator keyword %s conflicts with existing operator",
-                inner->name);
-        }
         parser->trie = insertPrattTrie(parser->trie, inner);
     }
     PrattFixity fixity = getFixityFromPattern(pattern);

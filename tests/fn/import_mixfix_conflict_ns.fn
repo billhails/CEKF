@@ -1,0 +1,7 @@
+// Test case 3: Import mixfix operator when standalone already exists
+// Same precedence rules apply
+
+namespace
+
+export operator "_??_" left 5 fn(a, b) { a + b };
+export operator "_?_??_" left 10 fn(a, b, c) { a + b + c };

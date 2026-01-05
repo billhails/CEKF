@@ -1,0 +1,21 @@
+// Test case 2: Mixfix with lower precedence than standalone
+// The standalone operator steals the keyword, causing parse error
+// This test expects to FAIL with "expected mixfix operator keyword"
+
+let
+    // Standalone operator with higher precedence
+    operator "_??_" left 15 fn(a, b) { a * b };
+    
+    // Mixfix operator with lower precedence
+    operator "_?_??_" left 10 fn(a, b, c) { a + b + c };
+    
+    // This should fail because:
+    // - Parser sees '?' and calls userMixfix(prec 10)
+    // - userMixfix parses argument with prec 11
+    // - Sees '??' as standalone operator (prec 15)
+    // - Since 15 >= 11, consumes it: (2 ?? 3)
+    // - userMixfix expects keyword '??' but it's gone
+    // - ERROR: "expected mixfix operator keyword ?? got ..."
+    result = 1 ? 2 ?? 3;
+in
+    result;
