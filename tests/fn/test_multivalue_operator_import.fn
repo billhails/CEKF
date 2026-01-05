@@ -1,0 +1,5 @@
+let
+    link "import_operator_multi.fn" as op;
+    import op operator "_||>_|||>_||||>_";
+in
+    assert((1 ||> 2 |||> 3 ||||> 4) == 10);

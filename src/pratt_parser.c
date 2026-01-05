@@ -797,16 +797,20 @@ static inline void mergeFixity(PrattParser *parser, PrattFixityConfig *target,
             target->importNsRef = nsRef;
             target->importNsSymbol = nsSymbol;
             // Check for conflicts with existing keywords, except the first
-            for (Index i = 1; i < source->pattern->keywords->size; ++i) {
-                HashSymbol *inner =
-                    utf8ToSymbol(source->pattern->keywords->entries[i]);
-                if (getPrattRecordTable(parser->rules, inner, NULL)) {
-                    parserError(
-                        parser,
-                        "import operator conflicts with existing operator");
+            if (source->pattern != NULL) {
+                for (Index i = 1; i < source->pattern->keywords->size; ++i) {
+                    HashSymbol *inner =
+                        utf8ToSymbol(source->pattern->keywords->entries[i]);
+                    if (getPrattRecordTable(parser->rules, inner, NULL)) {
+                        parserError(
+                            parser,
+                            "import operator conflicts with existing operator");
+                    }
+                    // Add secondary keyword to importing parser's trie
+                    parser->trie = insertPrattTrie(parser->trie, inner);
                 }
+                target->pattern = source->pattern;
             }
-            target->pattern = source->pattern;
         }
     }
 }
