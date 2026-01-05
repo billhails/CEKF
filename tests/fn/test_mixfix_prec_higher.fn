@@ -1,0 +1,15 @@
+// Test case 1: Mixfix with higher precedence than standalone
+// The mixfix should work because standalone operator can't steal keyword
+
+let
+    // Standalone operator with lower precedence
+    operator "_??_" left 5 fn(a, b) { a + b };
+    
+    // Mixfix operator with higher precedence
+    operator "_?_??_" left 10 fn(a, b, c) { a + b + c };
+    
+    // This should parse as: mixfix(1, 2, 3) = 6
+    // Because standalone ?? (prec 5) < arg parse prec (11)
+    result = 1 ? 2 ?? 3;
+in
+    assert(result == 6);

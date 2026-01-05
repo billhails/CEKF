@@ -120,8 +120,6 @@ structs:
             prefix: PrattFixityConfig
             infix: PrattFixityConfig
             postfix: PrattFixityConfig
-            importNsRef: int=-1
-            importNsSymbol: HashSymbol=NULL
 
     PrattExportedOps:
         meta:
@@ -226,6 +224,8 @@ inline:
                 isBareSymbol: bool=false
                 export: bool=false
                 pattern: PrattMixfixPattern=NULL
+                importNsRef: int=-1
+                importNsSymbol: HashSymbol=NULL
 
 unions:
     PrattValue:

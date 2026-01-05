@@ -1,0 +1,13 @@
+// Import both standalone and mixfix operators
+// Mixfix should work because it has higher precedence
+
+let
+    link "import_mixfix_conflict_ns.fn" as ops;
+    
+    import ops operator "_??_";
+    import ops operator "_?_??_";
+    
+    // Should work: mixfix(1, 2, 3) = 6
+    result = 1 ? 2 ?? 3;
+in
+    assert(result == 6);

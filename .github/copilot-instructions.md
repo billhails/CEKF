@@ -198,10 +198,10 @@ make indent            # Formats code with GNU indent
   - Generic types use `#` prefix: `#t`, `#a`, `#b`
   - Built-in types: `int`, `char`, `bool`, `string` (alias for `list(char)`)
   - Named fields: `constructor{ fieldName: type }`
-  - **IMPORTANT**: Typedefs at file level are global; typedefs inside `let` blocks are scoped to that block
+  - **IMPORTANT**: Typedefs at `namespace` level are global; typedefs inside `let` blocks are scoped to that block
 - **Operators**: Defined in `src/preamble.fn` (e.g., `@` = cons, `@@` = append)
 - **Namespaces**: Files start with `namespace` keyword (like `let` without `in` - mutually recursive declarations)
-  - **IMPORTANT**: `link` directives must appear inside a `let` block, not at top level
+  - **IMPORTANT**: `link` directives must appear inside a `let` or `namespace` block, not at top level
   - Import via `link "<path>.fn" as <name>` (inside `let`)
   - Reference imported components as `name.component`
   - Example:
@@ -214,7 +214,7 @@ make indent            # Formats code with GNU indent
     ```
 
 ### Common Syntax Gotchas
-- **Link placement**: `link` statements MUST be inside a `let` block, not standalone
+- **Link placement**: `link` statements MUST be inside a `let` or `namespace` block, not standalone
 - **Nested blocks**: Nested `let/in` require `{ }` around the `let/in` expression
 - **Semicolons in let**: Multiple bindings in `let` are separated by semicolons: `let a = 1; b = 2; in a + b`
 - **Variable naming**: Identifiers starting with `fn` followed by a digit (like `fn3`, `fn10`) are rejected by the parser - use different names like `func3`, `f3`

@@ -1,0 +1,6 @@
+// Test: function without trailing semicolon
+let
+    fn double { (x) { x + x } }
+    y = double(21)
+in
+    y

@@ -3,6 +3,8 @@
 More of a wish-list than a hard and fast plan.
 
 * Target LLVM
+* Clean up the parser.
+* Replace hand-written UTF8 support with libc mbstowcs etc. (D'oh).
 * `syntax` construct that allows large-scale syntactic structures to be defined by the user.
 * More numbers:
    * NaN for division by Zero etc.

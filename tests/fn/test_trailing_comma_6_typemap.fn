@@ -1,0 +1,7 @@
+// Test trailing comma in type map (struct type definition)
+let
+    typedef person {
+        p{ name: string, age: number, }
+    }
+in
+    p{ name: "Joe", age: 42 }

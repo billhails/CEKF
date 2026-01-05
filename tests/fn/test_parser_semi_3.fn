@@ -1,0 +1,9 @@
+// Test: typedef without trailing semicolon
+let
+    typedef maybe(#t) {
+        nothing
+        | just(#t)
+    }
+    x = just(42)
+in
+    x

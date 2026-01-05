@@ -1,0 +1,5 @@
+// Test trailing comma in struct tagged expressions
+let
+    typedef person { p{ name: string, age: number } }
+in
+    p{ name: "Joe", age: 42, }

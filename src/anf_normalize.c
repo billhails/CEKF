@@ -96,6 +96,9 @@ AnfExp *anfNormalize(LamExp *lamExp) {
 }
 
 static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
+    if (lamExp == NULL) {
+        return NULL;
+    }
     ENTER(normalize);
     IFDEBUG(ppLamExp(lamExp));
     switch (lamExp->type) {
