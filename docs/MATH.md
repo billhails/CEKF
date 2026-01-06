@@ -412,7 +412,8 @@ $$
 $$
 
 Q. Should $applykont$ get $f$ from its arguments or should we put it in
-the $\mathbf{letk}$?<br/>
+the $\mathbf{letk}$?
+
 A. probably best to get it from its arguments, then we will backtrack
 through `call/cc`.
 
@@ -468,4 +469,4 @@ run(inject(\mathtt{Exp})) \rightharpoonup Value
 $$
 
 > Future Self - there is now a working implementation of this machine (or a close variant of it)
-> written in F♮ itself [here](../fn/rewrite/ceskf.fn).
+> written in F♮ itself [in ceskf.fn](../fn/rewrite/ceskf.fn).

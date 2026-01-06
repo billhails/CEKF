@@ -11,12 +11,14 @@
 ## Quick Reference
 
 ### First Time Setup
+
 ```bash
 # Establish baseline before making ANY changes
 make establish-baseline
 ```
 
 ### Development Workflow
+
 ```bash
 # 1. Make changes to tools/generate/*.py
 vim tools/generate/structs.py
@@ -31,7 +33,7 @@ make test-refactoring
 ### Makefile Targets
 
 | Target | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `make establish-baseline` | Create snapshot of current generated code (do this FIRST!) |
 | `make test-refactoring` | Test refactored generators against baseline |
 | `make update-baseline` | Update baseline with current output (after verifying changes) |
@@ -40,6 +42,7 @@ make test-refactoring
 ### Test Script
 
 `./tools/test_refactoring.sh` automatically:
+
 1. Regenerates all code
 2. Compares with baseline (ignoring whitespace)
 3. Runs full test suite
@@ -64,6 +67,7 @@ make test-refactoring
 ## Safety Net
 
 The baseline is your **golden master**:
+
 - Captured before any changes
 - Proves refactored code generates identical output
 - Allows confident rollback if needed

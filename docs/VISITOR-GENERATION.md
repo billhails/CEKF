@@ -11,6 +11,7 @@ python3 tools/generate.py src/lambda.yaml visitor > src/flatten.c
 ```
 
 Generates `src/flatten.c` - a self-contained file with:
+
 - Context struct skeleton
 - Visitor function for each struct/union in the YAML
 - Dispatcher functions for unions
@@ -123,6 +124,7 @@ def generateVisitor(self):
 ### 4. Update `generate.py`
 
 Add to `generate_output()` function:
+
 ```python
 def generate_output(args, catalog, document, typeName, description, includes, limited_includes, parserInfo):
     """Generate the appropriate output based on args.type"""
@@ -167,6 +169,7 @@ Each field type needs appropriate visitor call:
 ## Example Generated Output
 
 For a simple struct in `src/lambda.yaml`:
+
 ```c
 /*
  * CEKF - VM supporting amb

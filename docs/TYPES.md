@@ -68,6 +68,7 @@ $$
 $$
 
 There are two parts.
+
 * $\tau$ is a **monotype**, which can be a siple type $\alpha$ like `int` or `string`, or
 it can be a "type function application" $C$ like $\mathtt{List[}\tau\mathtt{]}$ or $\tau_1 \rightarrow \tau_2$.
 $\mathtt{Bool}$, $\mathtt{Int}$ etc are also type function applications, but with no arguments.
@@ -112,7 +113,7 @@ $$
 \mathtt{age}:\mathtt{Int} \in \Gamma
 $$
 
-## Context Grammar 
+## Context Grammar
 
 The grammar for contexts is simple
 
@@ -459,6 +460,7 @@ and in fact $\forall\alpha.\alpha$ is like zero in this relation, it's the most 
 because it means any type variable.
 
 ### Formal Definition of Type Order
+>
 > $\sigma_1$ is more general than $\sigma_2$ if there is a substitution $S$ that maps the for-all quantified
 > variables in $\sigma_1$, and $S(\sigma_1) = \sigma_2$.
 
@@ -583,14 +585,14 @@ $$
 You can read this as **if** from the context it follows that $\mathtt{e_0}$ has type $\tau_a \rightarrow \tau_b$
 **and** from the context $\mathtt{e_1}$ has type $\tau_a$ **then** from the context it follows that the
 application of $\mathtt{e_0}$ to $\mathtt{e_1}$ has type $\tau_b$, or mor colloquially "the application
-of a function of type $\tau_a \rightarrow \tau_b$ to a type $\tau_a$ results in a $\tau_b$." 
+of a function of type $\tau_a \rightarrow \tau_b$ to a type $\tau_a$ results in a $\tau_b$."
 
 One point to note is that $\tau_a$ and $\tau_b$ are monotypes, this rule doesn't apply to polytypes ($\sigma$).
 
 Concrete example
 
 $$
-{ 
+{
   {\displaystyle
      {\mathtt{odd}:\mathtt{Int} \rightarrow \mathtt{Bool} \in \Gamma}
      \above{1pt}
@@ -600,7 +602,7 @@ $$
   {\displaystyle
      {\mathtt{age}: \mathtt{Int} \in \Gamma}
      \above{1pt}
-	 \displaystyle
+  \displaystyle
      \Gamma \vdash \mathtt{age}: \mathtt{Int}
   }
 \above{1pt}
@@ -781,7 +783,7 @@ $$
 Nw we know from it's structure that it's a function application, so we'll be using the $\mathtt{APP}$ rule, etc.
 
 $$
-{ 
+{
   {
      {\mathtt{odd}:t_4 \in \Gamma}
      \above{1pt}
@@ -877,7 +879,7 @@ $$
 S(t_1 \rightarrow t_2 \sim t_4) = t_3 \rightarrow t_2 \sim t_4
 $$
 
-resulting in 
+resulting in
 
 $$
 \begin{align}
@@ -998,7 +1000,6 @@ $$
 
 ## Another Perspective
 
-
 The videos refer to [This Paper](https://dl.acm.org/doi/10.1145/291891.291892) by Lee and Yi, which uses a slightly different lambda calculus and formulation of the typing rules, so we start by reviewing those.
 
 ### lambda grammar
@@ -1021,7 +1022,6 @@ $$
 
 Most notable is the addition of a $\mathtt{[fix]}$ construct, which I believe is the pure functional equivalent of `letrec`, but I don't pretend to understand it and I have an alternative approach for handling `letrec`.
 
-
 ### type grammar
 
 $$
@@ -1037,7 +1037,7 @@ $$
 ### type scheme
 
 $$
-\sigma = \tau\ |\ \forall\vec{\alpha}.\tau 
+\sigma = \tau\ |\ \forall\vec{\alpha}.\tau
 $$
 
 Type Schemes are what we've been calling polytypes.
@@ -1109,7 +1109,6 @@ $$
 
 We won't need this rule as we support `letrec`.
 
-
 ## Algorithm W
 
 We're now ready to tackle the HM algoritms themselves, starting with algorithm $\mathcal{W}$.
@@ -1121,7 +1120,6 @@ $$
 $$
 
 e.g. it takes a tuple of a context and an expression, and returns a tuple of a substitution and a type.
-
 
 ### constants
 
@@ -1184,7 +1182,6 @@ $$
 $$
 
 So when applying $\mathcal{W}$ to a function application $\mathtt{e_1e_2}$, first (reading from bottom to top) calculate the substitution for and type of $\mathtt{e_1}$ in the current context: $(S_1, \tau_1)$. Next apply the substitution $S_1$ to the current context and use that new context to determine the substitution for, and type of $\mathtt{e_2}$: $(S_2, \tau_2)$. Then create a fresh type variable $\beta$ and a function application from the inferred type of $\mathtt{e_2}$ to that $\beta$, and unify that with the inferred type of $\mathtt{e_1}$ after applying the substitution $S_2$ to it. Finally return the combination of all the inferred substitutions plus the type resulting from applying $S_3$ to $\beta$.
-
 
 ### let
 

@@ -2,7 +2,7 @@
 
 For my own reference/sanity, no way near correct yet.
 
-```
+```bnf
 top : expression ';'
     | definition ';'
     | construct

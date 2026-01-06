@@ -7,6 +7,7 @@ The code generation system in `tools/generate/` (~4745 lines) suffers from signi
 ## Current Problems
 
 ### 1. **Massive Duplication in Base Class (base.py)**
+
 - **58+ empty stub methods** in the `Base` class, each just `pass`
 - Forces every entity class to override dozens of methods, most of which don't apply
 - Examples:
@@ -15,7 +16,9 @@ The code generation system in `tools/generate/` (~4745 lines) suffers from signi
   - Each entity type implements ~3-5 methods but inherits 58+ stubs
 
 ### 2. **Repetitive Catalog Dispatch Pattern**
+
 The `Catalog` class has 50+ nearly-identical methods like:
+
 ```python
 def printMarkDeclarations(self):
     for entity in self.contents.values():
@@ -32,6 +35,7 @@ def printCopyDeclarations(self):
 ```
 
 ### 3. **Code Generation Logic Scattered Everywhere**
+
 - Each entity type duplicates similar code for generating:
   - Function signatures
   - Documentation comments
@@ -41,6 +45,7 @@ def printCopyDeclarations(self):
 - Example: `printNewFunction()` implemented separately in `SimpleStruct`, `SimpleArray`, `SimpleStack`, `SimpleHash`, `SimpleVector`, `InlineArray` with 70%+ similar code
 
 ### 4. **Poor Separation of Concerns**
+
 - Entity classes mix:
   - Data representation (fields, types)
   - Code generation (printing C code)
@@ -48,13 +53,16 @@ def printCopyDeclarations(self):
   - Template logic (when to add guards, when to use inline)
 
 ### 5. **Inconsistent Patterns**
+
 - Some methods use `printXDeclaration()` / `printXFunction()` pairs
 - Others use `printXFunctionBody()` + wrapper
 - Helper methods scattered: `getTypeDeclaration()`, `getSignature()`, `comment()`
 - No clear pattern for when to use which approach
 
 ### 6. **Hard to Extend**
+
 Adding a new entity type requires:
+
 1. Create class inheriting from `Base`
 2. Override 58+ methods (even if just `pass`)
 3. Implement 10-15 actual methods with duplicated boilerplate
@@ -66,6 +74,7 @@ Adding a new entity type requires:
 ### Phase 1: Introduce Code Generation Abstractions
 
 #### 1.1 Create `CodeGenerator` Classes
+
 Replace scattered print statements with structured code generation:
 
 ```python
@@ -422,6 +431,7 @@ class FieldRenderer:
 Since the refactoring changes **how** code is generated but not **what** is generated, we can use "golden master" testing (also called "characterization testing"):
 
 #### Step 0: Establish Baseline (Before Any Changes)
+
 ```bash
 # 1. Generate all current code
 cd /home/bill/src/CEKF
@@ -505,8 +515,8 @@ echo "=== Refactoring test PASSED ==="
 # Add this to Makefile
 .PHONY: test-refactoring
 test-refactoring:
-	@echo "Testing refactoring against baseline..."
-	@./test_refactoring.sh
+ @echo "Testing refactoring against baseline..."
+ @./test_refactoring.sh
 
 # Run after every change:
 make test-refactoring
@@ -534,12 +544,14 @@ md5sum generated/ast.h >> test_baseline/checksums.txt
 ### Multi-Level Testing Strategy
 
 #### Level 1: Generated Code Identity (Golden Master)
+
 - **What**: Byte-for-byte comparison of generated C files
 - **When**: After every code change
 - **How**: `test_refactoring.sh` script above
 - **Advantage**: Catches any unintended changes immediately
 
 #### Level 2: Compilation Verification
+
 ```bash
 # Ensure generated code still compiles cleanly
 make clean
@@ -551,6 +563,7 @@ make MODE=unit
 ```
 
 #### Level 3: Functional Tests
+
 ```bash
 # Run the full test suite with generated code
 make test
@@ -559,6 +572,7 @@ make test
 ```
 
 #### Level 4: Runtime Verification
+
 ```bash
 # Run actual programs with the generated code
 ./bin/fn fn/barrels.fn
@@ -597,6 +611,7 @@ make test
 ### Handling Edge Cases
 
 #### Problem: Whitespace-Only Differences
+
 ```bash
 # Use normalized comparison
 diff -w -B test_baseline/generated/ast.h generated/ast.h
@@ -627,6 +642,7 @@ EOF
 ```
 
 #### Problem: Non-Deterministic Generation Order
+
 ```bash
 # If hash tables cause non-deterministic ordering,
 # sort the output before comparing
@@ -821,6 +837,7 @@ Maintain a test log during refactoring:
 ## Implementation Plan
 
 ### Step 0: Establish Testing Infrastructure (FIRST!)
+
 1. Create baseline snapshot of all generated code
 2. Create `test_refactoring.sh` script
 3. Add `make test-refactoring` target
@@ -829,6 +846,7 @@ Maintain a test log during refactoring:
 6. **Verify baseline tests pass before any changes**
 
 ### Step 1: Infrastructure (No Breaking Changes)
+
 1. Create `codegen.py` with `CDeclaration`, `CFunction`, `CStruct` classes
 2. Create `templates.py` with reusable function templates
 3. Create `capabilities.py` with capability interfaces
@@ -836,12 +854,14 @@ Maintain a test log during refactoring:
 5. Add comprehensive tests for new infrastructure
 
 ### Step 2: Migrate One Entity Type
+
 1. Choose simplest entity (probably `Primitive`)
 2. Refactor to use new system alongside old
 3. Verify generated code is identical
 4. Use as template for others
 
 ### Step 3: Migrate Remaining Entities
+
 1. `SimpleEnum`
 2. `SimpleStruct`
 3. `SimpleArray` and `SimpleStack`
@@ -850,11 +870,13 @@ Maintain a test log during refactoring:
 6. `DiscriminatedUnion` (most complex)
 
 ### Step 4: Refactor Catalog
+
 1. Introduce capability-based dispatch
 2. Replace repetitive methods with generic ones
 3. Consolidate generator invocations
 
 ### Step 5: Clean Up
+
 1. Remove old code
 2. Update documentation
 3. Add architecture documentation
@@ -862,12 +884,14 @@ Maintain a test log during refactoring:
 ## Expected Benefits
 
 ### Quantitative
+
 - **Lines of Code**: Reduce from ~4745 to ~2500-3000 lines (40-50% reduction)
 - **Base Class Stub Methods**: From 58 to 0
 - **Catalog Dispatcher Methods**: From 50+ to ~10-15
 - **Code Duplication**: Estimate 70% reduction in duplicated patterns
 
 ### Qualitative
+
 - **Easier to Extend**: Adding new entity type requires implementing only relevant capabilities (5-10 methods instead of 58+)
 - **Better Maintainability**: Code generation logic centralized in generators, not scattered across entity classes
 - **Clearer Architecture**: Separation between data model (entities), capabilities (what they can do), and generation (how to generate code)
@@ -877,19 +901,25 @@ Maintain a test log during refactoring:
 ## Risks and Mitigations
 
 ### Risk 1: Breaking Changes
-**Mitigation**: 
+
+**Mitigation**:
+
 - Implement new system alongside old
 - Use diff tool to verify generated code is identical
 - Keep old system until all entities migrated
 
 ### Risk 2: Complexity of Transition
+
 **Mitigation**:
+
 - Migrate one entity at a time
 - Extensive testing at each step
 - Can pause/rollback at any point
 
 ### Risk 3: Over-Engineering
+
 **Mitigation**:
+
 - Start with simplest abstractions
 - Only add complexity where there's clear duplication
 - Keep generator classes simple and focused
@@ -899,7 +929,9 @@ Maintain a test log during refactoring:
 If full refactoring is too ambitious, consider these smaller improvements:
 
 ### Quick Win 1: Extract Common Code Generators
+
 Create utility functions for common patterns:
+
 ```python
 # tools/generate/common_generators.py
 
@@ -914,12 +946,15 @@ def generate_mark_function_wrapper(entity, catalog, mark_body):
 ```
 
 ### Quick Win 2: Remove Dead Code
+
 - Analyze which of the 58 stub methods in `Base` are never actually called
 - Remove unused methods
 - Document which methods each entity type must implement
 
 ### Quick Win 3: Consolidate Catalog Methods
+
 Use Python metaprogramming to reduce repetition:
+
 ```python
 def _make_dispatcher(method_name):
     def dispatcher(self):
@@ -952,26 +987,24 @@ This provides ~80% of the benefit with ~40% of the effort, and leaves the door o
 
 ## Appendix: Current Metrics
 
-```
-File                  Lines  Methods  Complexity
---------------------- ------ -------- ----------
-base.py                377      70      Low (mostly stubs)
-catalog.py             363      60      Low (repetitive)
-structs.py             580      50      Medium
-arrays.py             1759      90      High
-hashes.py              295      31      Medium
-unions.py              223      30      Medium
-vectors.py             348      41      Medium
-enums.py               209      29      Low
-primitives.py          150      16      Low
-fields.py              291      50      Medium
-utils.py                59       4      Low
-loader.py              ~70      ~5      Low
---------------------- ------ -------- ----------
-TOTAL                 4724     476      Medium-High
-```
+| File | Lines | Methods | Complexity |
+| ------ | ------- | --------- | ------------ |
+| base.py | 377 | 70 | Low (mostly stubs) |
+| catalog.py | 363 | 60 | Low (repetitive) |
+| structs.py | 580 | 50 | Medium |
+| arrays.py | 1759 | 90 | High |
+| hashes.py | 295 | 31 | Medium |
+| unions.py | 223 | 30 | Medium |
+| vectors.py | 348 | 41 | Medium |
+| enums.py | 209 | 29 | Low |
+| primitives.py | 150 | 16 | Low |
+| fields.py | 291 | 50 | Medium |
+| utils.py | 59 | 4 | Low |
+| loader.py | ~70 | ~5 | Low |
+| **TOTAL** | **4724** | **476** | **Medium-High** |
 
 **Key Statistics:**
+
 - **476 total methods** across all modules
 - **58 stub methods** in Base class that do nothing
 - **50+ dispatcher methods** in Catalog that just loop and call entity methods

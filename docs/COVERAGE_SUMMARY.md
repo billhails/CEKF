@@ -59,10 +59,12 @@ Or manually:
 ## Test Suite Summary
 
 **Total Tests:** 80 test files
+
 - Original: 56 files
 - Newly Added: 24 files (43% increase)
 
 **New Test Categories:**
+
 - Error handling edge cases
 - Built-in functions (I/O, readdir, string operations)
 - Library functions (listutils, ambutils)
@@ -90,6 +92,7 @@ Or manually:
 ## Coverage Build Configuration
 
 The coverage mode is configured in the Makefile with:
+
 - Compiler flags: `-g --coverage`
 - No aggressive GC stress testing
 - Uses llvm-cov for clang compatibility

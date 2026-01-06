@@ -19,6 +19,7 @@ apply_binary(strict_lazy_or, true, false)  // Works!
 ### Option 1: Post-Type-Checking Pass
 
 Add a new pass after type checking that:
+
 1. Walks the Lambda AST
 2. Re-analyzes types at each application point  
 3. Detects lazy/strict mismatches
@@ -30,6 +31,7 @@ Add a new pass after type checking that:
 ### Option 2: During Type Checking
 
 Modify `tc_analyze.c` to:
+
 1. Detect mismatches during unification
 2. Mark locations needing adapters (add field to LamApply?)
 3. Generate adapter code immediately
@@ -57,6 +59,7 @@ Modify `tc_analyze.c` to:
 ### Implementation Steps
 
 1. **Extend Lambda AST** (`lambda.yaml`):
+
    ```yaml
    LamExp:
      data:
@@ -65,6 +68,7 @@ Modify `tc_analyze.c` to:
    ```
 
 2. **Store types during checking** (`tc_analyze.c`):
+
    ```c
    static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
        TcType *type = /* ... existing type inference ... */;
@@ -74,6 +78,7 @@ Modify `tc_analyze.c` to:
    ```
 
 3. **Add adapter generation pass** (`lambda_adapter.c`):
+
    ```c
    LamExp *generateAdapters(LamExp *exp) {
        // Walk AST looking for applications
@@ -84,6 +89,7 @@ Modify `tc_analyze.c` to:
    ```
 
 4. **Integrate into pipeline** (`main.c`):
+
    ```c
    typeCheck(exp, builtIns);
    exp = generateAdapters(exp);  // NEW PASS

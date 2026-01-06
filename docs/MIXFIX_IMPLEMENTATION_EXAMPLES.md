@@ -39,7 +39,7 @@ in {
 
 **Desugared AST (internal):**
 
-```
+```fn
 AstFunCall(
     func: AstAnnotatedSymbol($mixfix$42, index),
     args: [
@@ -258,6 +258,7 @@ The parser analyzes the pattern `"_[_]"`:
 4. **Store** the full pattern `["["]` with arity 2
 
 When you write:
+
 ```fn
 mixfix 1 "if_then_else_" ternary;
 ```
@@ -284,61 +285,68 @@ The parser analyzes the pattern `"if_then_else_"`:
 
 Step 1: Parser in expressionPrecedence(parser, 0)
 
-  - Calls next token → gets 'arr'
-  - Looks up 'arr' → no prefix operator, must be identifier
-  - Creates: AstExpression(Symbol(arr))
-  - Stores as lhs
+- Calls next token → gets 'arr'
+- Looks up 'arr' → no prefix operator, must be identifier
+- Creates: AstExpression(Symbol(arr))
+- Stores as lhs
 
 Step 2: Parser checks for infix operator
 
-  - Peeks at next token → gets '['
-  - Looks up '[' in PrattRecord table
-  - Finds: record->infixOp = userMixfix
-  - Precedence check: 110 * 3 = 330 > current minimum
-  - Calls: userMixfix(record, parser, lhs, '[' token)
+- Peeks at next token → gets '['
+- Looks up '[' in PrattRecord table
+- Finds: record->infixOp = userMixfix
+- Precedence check: 110 * 3 = 330 > current minimum
+- Calls: userMixfix(record, parser, lhs, '[' token)
 
 Step 3: Inside userMixfix parselet
 
-  - record->mixfixPattern->starts_with_hole = true
-  - record->mixfixPattern->keywords = ["["]
-  - record->mixfixPattern->arity = 2
-  - Already have first argument in lhs (arr expression)
-  - Parse next argument: expressionPrecedence(parser, 331)
+- record->mixfixPattern->starts_with_hole = true
+- record->mixfixPattern->keywords = ["["]
+- record->mixfixPattern->arity = 2
+- Already have first argument in lhs (arr expression)
+- Parse next argument: expressionPrecedence(parser, 331)
     → gets 5
-  - No more keywords in pattern (only one '[')
-  - But pattern ends with hole, so expect ']'
-  - Consume ']' token
-  - Build call: $mixfix$42(arr, 5)
+- No more keywords in pattern (only one '[')
+- But pattern ends with hole, so expect ']'
+- Consume ']' token
+- Build call: $mixfix$42(arr, 5)
 
-**Wait!** There's an issue here - where does the closing `]` come from?
+There's an issue here - where does the closing `]` come from?
 
 **Answer:** The pattern `"_[_]"` should probably be stored as:
-- Keywords: `["[", "]"]` 
+
+- Keywords: `["[", "]"]`
 - Holes: positions [0, 1]
 
 Or we need a different representation. Let me reconsider...
 
 Actually, the pattern `"_[_]"` means:
+
 - Hole 1, then `[`, then hole 2
 - But there's no closing delimiter specified!
 
 This suggests we need to handle **paired delimiters** specially. Alternative approaches:
 
-**Approach A: Require explicit closing in pattern**
+###### Approach A: Require explicit closing in pattern
+
 ```fn
 mixfix 110 "_[_]" index;  // Pattern literally includes ']'
 ```
+
 Pattern stored as: `["[", "]"]` with holes at positions [0, 1]
 
-**Approach B: Paired delimiters are inferred**
+###### Approach B: Paired delimiters are inferred
+
 ```fn
 mixfix 110 "_[_" index;    // Just opening bracket
 ```
+
 Parser automatically looks for matching `]`
 
 **Recommendation:** Use Approach A - be explicit about all keywords.
 
 So `"_[_]"` is actually parsed as:
+
 - Character `_` → hole position 0
 - Character `[` → keyword 1
 - Character `_` → hole position 1  
@@ -349,16 +357,16 @@ Arity: 2
 
 ##### Example 2: If-Then-Else `"if_then_else_"`
 
-**Pattern structure:**
+###### Pattern structure
+
 - Starts with: `if` (keyword)
 - Keywords: `["if", "then", "else"]`
 - Arity: 3
 - Trigger keyword: `if` (registered as PREFIX)
 
-**What happens during parsing of `if x > 5 then "big" else "small"`:**
+###### What happens during parsing of `if x > 5 then "big" else "small"`
 
-```
-Step 1: Parser in expressionPrecedence(parser, 0)
+- Step 1: Parser in expressionPrecedence(parser, 0)
   - Calls next token → gets 'if'
   - Looks up 'if' in PrattRecord table
   - Finds: record->prefixOp = userMixfix
@@ -366,7 +374,7 @@ Step 1: Parser in expressionPrecedence(parser, 0)
                                      ^^^^
                                      No lhs for prefix!
 
-Step 2: Inside userMixfix parselet
+- Step 2: Inside userMixfix parselet
   - record->mixfixPattern->starts_with_hole = false
   - record->mixfixPattern->keywords = ["if", "then", "else"]
   - record->mixfixPattern->arity = 3
@@ -389,30 +397,29 @@ Step 2: Inside userMixfix parselet
     → gets: "small"
   
   - Build call: $mixfix$42(x > 5, "big", "small")
-```
 
 ##### Example 3: Choose Operator `"_choose_"`
 
-**Pattern structure:**
+###### Pattern structure
+
 - Starts with: `_` (hole)
 - Keywords: `["choose"]`
 - Arity: 2
 - Trigger keyword: `choose` (registered as INFIX)
 
-**What happens during parsing of `10 choose 3`:**
+###### What happens during parsing of `10 choose 3`
 
-```
-Step 1: Parser parses '10'
+- Step 1: Parser parses '10'
   - Creates: AstExpression(Number(10))
   - Stores as lhs
 
-Step 2: Parser checks for infix
+- Step 2: Parser checks for infix
   - Peeks at next token → gets 'choose'
   - Looks up 'choose' in PrattRecord table
   - Finds: record->infixOp = userMixfix
   - Calls: userMixfix(record, parser, lhs, 'choose' token)
 
-Step 3: Inside userMixfix parselet
+- Step 3: Inside userMixfix parselet
   - record->mixfixPattern->starts_with_hole = true
   - record->mixfixPattern->keywords = ["choose"]
   - record->mixfixPattern->arity = 2
@@ -422,7 +429,6 @@ Step 3: Inside userMixfix parselet
   - Parse argument 2: expressionPrecedence(parser, 301)
     → gets: 3
   - Build call: $mixfix$42(10, 3)
-```
 
 #### Pattern Representations in Code
 
@@ -441,6 +447,7 @@ typedef struct PrattMixfixPattern {
 **Examples:**
 
 Pattern `"_[_]"`:
+
 ```c
 {
     keywords: ["[", "]"],
@@ -452,6 +459,7 @@ Pattern `"_[_]"`:
 ```
 
 Pattern `"if_then_else_"`:
+
 ```c
 {
     keywords: ["if", "then", "else"],
@@ -463,6 +471,7 @@ Pattern `"if_then_else_"`:
 ```
 
 Pattern `"_choose_"`:
+
 ```c
 {
     keywords: ["choose"],
@@ -539,6 +548,7 @@ static AstExpression *userMixfix(PrattRecord *record,
 **Input string:** `"_[_:_]"`
 
 **Parsing algorithm:**
+
 ```c
 typedef struct {
     char **keywords;      // ["[", ":"]
@@ -592,6 +602,7 @@ MixfixPattern *parse_mixfix_pattern(const char *pattern) {
 ```
 
 **Example outputs:**
+
 - `"_[_]"` → keywords: `["["]`, arity: 2, starts: true, ends: true
 - `"if_then_else_"` → keywords: `["if", "then", "else"]`, arity: 3, starts: false, ends: true
 - `"_!"` → keywords: `["!"]`, arity: 1, starts: true, ends: false
@@ -876,6 +887,7 @@ if a then b else (if d then e else f)  // Clear!
 ```
 
 **Recommendation:** For arity > 2, associativity should be:
+
 - Rejected during parsing (error if user specifies `left` or `right`)
 - Or ignored (treated as `none`)
 - Or only `none` is allowed
@@ -972,6 +984,7 @@ mixfix right 120 "_$_" apply;
 ### Testing Associativity
 
 #### Test 1: Left Associativity
+
 ```fn
 fn test_left_assoc() {
     let
@@ -988,6 +1001,7 @@ fn test_left_assoc() {
 ```
 
 #### Test 2: Right Associativity
+
 ```fn
 fn test_right_assoc() {
     let
@@ -1004,6 +1018,7 @@ fn test_right_assoc() {
 ```
 
 #### Test 3: Non-Associative (Error Case)
+
 ```fn
 fn test_non_assoc() {
     let
@@ -1028,6 +1043,7 @@ fn test_non_assoc() {
 ```
 
 #### Test 4: Default is None
+
 ```fn
 fn test_default_none() {
     let
@@ -1054,7 +1070,8 @@ fn test_default_none() {
 | `"_[_]"` | 2 | (default=none) | `(a[b])[c]` | Works due to composition, not assoc |
 | `"if_then_else_"` | 3 | N/A | N/A | Doesn't chain |
 
-**Key Takeaway:** 
+**Key Takeaway:**
+
 - For **binary mixfix** `"_op_"`: associativity works exactly like infix `op`
 - For **non-binary mixfix**: associativity is meaningless
 - **Default**: `none` (safest, most explicit)
@@ -1063,6 +1080,7 @@ fn test_default_none() {
 ## Testing Examples
 
 ### Test 1: Basic Binary Mixfix
+
 ```fn
 fn test_binary_mixfix() {
     let
@@ -1077,6 +1095,7 @@ fn test_binary_mixfix() {
 ```
 
 ### Test 2: Ternary Mixfix
+
 ```fn
 fn test_ternary_mixfix() {
     let
@@ -1090,6 +1109,7 @@ fn test_ternary_mixfix() {
 ```
 
 ### Test 3: Precedence
+
 ```fn
 fn test_mixfix_precedence() {
     let
@@ -1104,6 +1124,7 @@ fn test_mixfix_precedence() {
 ```
 
 ### Test 4: Hygiene
+
 ```fn
 fn test_mixfix_hygiene() {
     let
@@ -1121,6 +1142,7 @@ fn test_mixfix_hygiene() {
 ```
 
 ### Test 5: Scoping
+
 ```fn
 fn test_mixfix_scoping() {
     let
@@ -1142,6 +1164,7 @@ fn test_mixfix_scoping() {
 ## Error Cases
 
 ### Error 1: Missing Keyword
+
 ```fn
 let
     mixfix 100 "_[_:_]" slice;
@@ -1151,6 +1174,7 @@ in
 ```
 
 ### Error 2: Wrong Arity
+
 ```fn
 let
     mixfix 100 "_[_]" index;
@@ -1160,6 +1184,7 @@ in
 ```
 
 ### Error 3: Conflicting Patterns
+
 ```fn
 let
     mixfix 100 "if_then_else_" ternary;
@@ -1169,6 +1194,7 @@ in
 ```
 
 ### Error 4: No Leading Hole
+
 ```fn
 mixfix 100 "foo_bar_" fn(x, y) { x + y }
 // ERROR: mixfix pattern must start with _ or a keyword followed by _
@@ -1177,6 +1203,7 @@ mixfix 100 "foo_bar_" fn(x, y) { x + y }
 ## Comparison with Existing Operators
 
 ### Infix Operator (Current)
+
 ```fn
 infix left 100 "+" addition;
 // Usage: a + b
@@ -1184,6 +1211,7 @@ infix left 100 "+" addition;
 ```
 
 ### Mixfix Operator (Proposed)
+
 ```fn
 mixfix 100 "_+_" addition;
 // Usage: a + b  (identical!)
@@ -1193,6 +1221,7 @@ mixfix 100 "_+_" addition;
 **Key insight:** Infix operators are just a special case of mixfix with pattern `"_op_"`. We could unify them, but keeping them separate is clearer for users.
 
 ### Postfix Operator (Current)
+
 ```fn
 postfix 120 "!" factorial;
 // Usage: n!
@@ -1200,6 +1229,7 @@ postfix 120 "!" factorial;
 ```
 
 ### Mixfix Equivalent
+
 ```fn
 mixfix 120 "_!" factorial;
 // Usage: n!

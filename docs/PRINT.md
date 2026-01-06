@@ -1,4 +1,4 @@
-# Printing is Hard!
+# Printing is Hard
 
 Thinking out loud again.
 
@@ -8,7 +8,7 @@ internal representations 0 and 1.
 
 If we have a typedef like
 
-```
+```fn
 typedef Tree(#t) { leaf | tree(Tree(#t), #t, Tree(#t)) }
 ```
 
@@ -16,7 +16,7 @@ and we print the result of `tree(leaf, 1, tree(leaf, 2, leaf))` we would
 like to see `tree(leaf, 1, tree(leaf, 2, leaf))`. Instead we see the
 almost unreadable internal vector representation, like
 
-```
+```fn
 #[1, #[0] 1, #[1, #[0], 2, #[0]]]
 ```
 
@@ -57,7 +57,6 @@ Implementation detail, as usual we can use "illegal" characters like
 user defined functions, so our `typedef bool ...` results in `(letrec
 ((print$bool ...` etc.
 
-
 We might start by looking at what these generated functions could
 look like:
 
@@ -65,7 +64,7 @@ look like:
 
 reminder:
 
-```
+```fn
 typedef List(#t) { nil | pair(#t, List(#t)) }
 ```
 
@@ -87,7 +86,7 @@ no need to generate this, we can just inject it.
 `putc` takes a single char (`Value`) and does what the C macro does.
 bytecode would be like
 
-```
+```fn
 CHAR '"' | PUTC
 ```
 
@@ -129,7 +128,7 @@ list, whatever they are.
 prints and pops that many chars from the stack (minus 1 to preserve the
 stack cost invariant).
 
-## simple general case, booleans etc.
+## simple general case, booleans etc
 
 This, and everything else, will be fully generated.
 
@@ -144,7 +143,7 @@ This, and everything else, will be fully generated.
 
 The type is fully parameterised.
 
-```
+```fn
 typedef Dict(#k, #v) { leaf | tree(Dict(#k, #v), #k, #v, Dict(#k, #v)) }
 ```
 
@@ -171,7 +170,7 @@ The function takes a dictionary to print and a helper for each component
 
 The type is partially parameterized, and contains some explicit types.
 
-```
+```fnfn
 typedef NamedResult(#r) { result(list(char), #r) }
 ```
 
@@ -194,8 +193,8 @@ The code can directly infer the correct printer function for `list(char)`.
 
 Notice a common pattern, best evidenced by the Dict example above,
 that each `print$x` takes a thing to print, then zero or more helpers
-for each component, in the same order as declared by the typedef (`#k,
-#v`). Note also that the helpers can only take a single argument, the
+for each component, in the same order as declared by the typedef (`#k, # v`).
+Note also that the helpers can only take a single argument, the
 thing to print, and so in general we should only be using functions of one
 argument, not the multi-argument generated functions like `print$Dict`.
 
@@ -213,7 +212,7 @@ above while processing the typedefs during lambda conversion, then at
 type-checking time, on encountering `(print d)` and determining that
 `d` is of type i.e.
 
-```
+```fn
 Dict(list(char), list(int))
 ```
 
@@ -269,7 +268,7 @@ function taking a key printer, a value printer and a Tree, written in
 F natural, along with a printInt function. We can then print a Tree of
 string to list of int simply as
 
-```
+```fn
 printTree(printString, printList(printInt)) (tree)
 ```
 
@@ -279,7 +278,7 @@ generated ones. That is useful because in a map or set we don't really
 want to expose the implementation, it's not useful to the user. An
 example set, implemented as a red/black tree, say
 
-```
+```fn
 typedef Set(#t) {
   leaf |
   red(Set(#t), #t, Set(#t)) |
@@ -289,7 +288,7 @@ typedef Set(#t) {
 
 could be given a printer like:
 
-```
+```fn
 fn printSet(helper, s) {
     let
         fn h {
@@ -334,7 +333,7 @@ stack for it, followed by a count, so
 
 produces
 
-```
+```text
 | CHAR 'o' | CHAR 'l' | CHAR 'l' | CHAR 'e' | CHAR 'H' | DISPLAY | 5 |
 ```
 

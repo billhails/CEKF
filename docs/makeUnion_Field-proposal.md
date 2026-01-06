@@ -35,5 +35,6 @@ static inline LamExp *makeLamExp_Iff(ParserInfo PI,
 Making it `static inline` means we only need declare it in the header.
 
 Things to bear in mind:
+
 * Not all fields of a discriminated union are pointers though, for those scalar and void types we don't need to create a `make<Union>_<Field>` declaration.
 * There will almost certainly be conflicts with some existing hand-written implementations of this pattern that can be removed/replaced.

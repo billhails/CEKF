@@ -13,7 +13,6 @@ differ in the order of their bindings and hence the lexical addresses of
 their components, a variable access could not then be correctly annotated
 for multiple use-cases.
 
-
 ## Namespaces Only
 
 As an alternative to fully first-class environments we could look at
@@ -26,7 +25,7 @@ on the lhs, like `myns.doSomething(arg)`. The dot operator would have to
 have higher precedence than even function calls, so that would parse as
 `(myns.doSomething)(arg)`. Bytecode might then be something like
 
-```
+```text
 | ..arg.. | SAVENV | myns | SETENV | VAR[n][n] | SWAP | RESTORENV | APPLY |
 ```
 
@@ -53,7 +52,7 @@ that shouldn't be affected, desugaring likewise.
 The `print` construct fails in this scenario though. If an env declares a
 `typedef` and return data of that type, then for example
 
-```
+```fn
 print(a.returnThing())
 ```
 
@@ -89,7 +88,7 @@ It will also pay to keep the syntax distinct in discussions, using
 the surface language, which has very different semantics. To illustrate,
 after:
 
-```
+```text
 env a {
     env b {
     }
@@ -106,7 +105,7 @@ so in this example `a.b.c.d` resolves to `/c/d`.
 
 Before proceeding, there's a problem here:
 
-```
+```text
 env a {
     env b {
         env c {
@@ -130,7 +129,7 @@ Anyway assuming we can always resolve valid type scopes to a canonical
 form, the print compiler will need the type, as before, plus the current
 canonical scope. For example
 
-```
+```text
 env a {
     env b {
         typedef T1 ...
@@ -152,7 +151,7 @@ by removing the common prefix.
 
 This should work fine with `extends` whaen that's implemented:
 
-```
+```fn
 env complex extends math { ... }
 ```
 
@@ -183,7 +182,7 @@ they are not top-level. A possible nomenclature might be `$/a/b/c` meaning
 
 Trial:
 
-```
+```fn
 env a {
     typedef T1 ... // /a/T1
     env b {
@@ -227,7 +226,7 @@ paths are root based. We've identified two "leaking" scenarios so far:
 The first should cause an error if that type is used in a non-polymorphic
 way, the second should be ok.
 
-```
+```fn
 env a {
     fn b() {
         let
@@ -256,7 +255,7 @@ scope is the tail of the list, so in `env a { env b { env c { x } } }`
 the scope of `x` is `c=>b=>a=>/`. Having got that out of the way lets
 tabulate some examples using the following structure:
 
-```
+```fn
 T1
 env a {
     T2
@@ -285,39 +284,39 @@ env d {
 
 ```
 
-| current scope | type scope          | relative scope | accessible | notes |
-| ------------- | ------------------- | -------------- | ---------- | ----- |
-| `/`           | `T1 /`              | `T1`           | Y          | both global |
-| `/`           | `T2 a=>/`           | `a.T2`         | Y          |       |
+| current scope | type scope          | relative scope | accessible | notes                             |
+| ------------- | ------------------- | -------------- | ---------- | --------------------------------- |
+| `/`           | `T1 /`              | `T1`           | Y          | both global                       |
+| `/`           | `T2 a=>/`           | `a.T2`         | Y          |                                   |
 | `/`           | `T3 f1=>a=>/`       | `a.f1.T3`      | N          | relative contains anonymous scope |
-| `/`           | `T4 b=>a=>/`        | `a.b.T4`       | Y          |       |
-| `/`           | `T5 f2=>b=>a=>/`    | `a.b.f2.T5`    | N          |       |
-| `/`           | `T6 c=>b=>a=>/`     | `a.b.c.T6`     | Y          |       |
-| `/`           | `T7 f3=>c=>b=>a=>/` | `a.b.c.f3.T7`  | N          |       |
-| `/`           | `T8 d=>/`           | `d.T8`         | Y          | same as T2 |
-| `/`           | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | same as T3 |
-| `a=>/`        | `T1 /`              | `T1`           | Y          | parent scope |
-| `a=>/`        | `T2 a=>/`           | `T2`           | Y          | same scope |
+| `/`           | `T4 b=>a=>/`        | `a.b.T4`       | Y          |                                   |
+| `/`           | `T5 f2=>b=>a=>/`    | `a.b.f2.T5`    | N          |                                   |
+| `/`           | `T6 c=>b=>a=>/`     | `a.b.c.T6`     | Y          |                                   |
+| `/`           | `T7 f3=>c=>b=>a=>/` | `a.b.c.f3.T7`  | N          |                                   |
+| `/`           | `T8 d=>/`           | `d.T8`         | Y          | same as T2                        |
+| `/`           | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | same as T3                        |
+| `a=>/`        | `T1 /`              | `T1`           | Y          | parent scope                      |
+| `a=>/`        | `T2 a=>/`           | `T2`           | Y          | same scope                        |
 | `a=>/`        | `T3 f1=>a=>/`       | `f1.T3`        | N          | relative contains anonymous scope |
-| `a=>/`        | `T4 b=>a=>/`        | `b.T4`         | Y          |       |
-| `a=>/`        | `T5 f2=>b=>a=>/`    | `b.f2.T5`      | N          |       |
-| `a=>/`        | `T6 c=>b=>a=>/`     | `b.c.T6`       | Y          |       |
-| `a=>/`        | `T7 f3=>c=>b=>a=>/` | `b.c.f3.T7`    | N          |       |
-| `a=>/`        | `T8 d=>/`           | `d.T8`         | Y          | parent scope |
-| `a=>/`        | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | parent scope |
-| `f1=>a=>/`    | `T1 /`              | `T1`           | Y          | parent scope |
-| `f1=>a=>/`    | `T2 a=>/`           | `T2`           | Y          | same scope |
-| `f1=>a=>/`    | `T3 f1=>a=>/`       | `T3`           | Y          | anonymous scope pruned |
-| `f1=>a=>/`    | `T4 b=>a=>/`        | `b.T4`         | Y          |       |
-| `f1=>a=>/`    | `T5 f2=>b=>a=>/`    | `b.f2.T5`      | N          | different functions |
-| `f1=>a=>/`    | `T6 c=>b=>a=>/`     | `b.c.T6`       | Y          |       |
-| `f1=>a=>/`    | `T7 f3=>c=>b=>a=>/` | `b.c.f3.T7`    | N          |       |
-| `f1=>a=>/`    | `T8 d=>/`           | `d.T8`         | Y          | parent scope |
-| `f1=>a=>/`    | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | parent scope |
-| `b=>a=>/`     | `T1 /`              | `T1`           | Y          | parent scope |
-| `b=>a=>/`     | `T2 a=>/`           | `T2`           | Y          | same scope |
-| `b=>a=>/`     | `T3 f1=>a=>/`       | `f2.T3`        | N          | anonymous scope pruned |
-| `b=>a=>/`     | `T4 b=>a=>/`        | `T4`           | Y          |       |
+| `a=>/`        | `T4 b=>a=>/`        | `b.T4`         | Y          |                                   |
+| `a=>/`        | `T5 f2=>b=>a=>/`    | `b.f2.T5`      | N          |                                   |
+| `a=>/`        | `T6 c=>b=>a=>/`     | `b.c.T6`       | Y          |                                   |
+| `a=>/`        | `T7 f3=>c=>b=>a=>/` | `b.c.f3.T7`    | N          |                                   |
+| `a=>/`        | `T8 d=>/`           | `d.T8`         | Y          | parent scope                      |
+| `a=>/`        | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | parent scope                      |
+| `f1=>a=>/`    | `T1 /`              | `T1`           | Y          | parent scope                      |
+| `f1=>a=>/`    | `T2 a=>/`           | `T2`           | Y          | same scope                        |
+| `f1=>a=>/`    | `T3 f1=>a=>/`       | `T3`           | Y          | anonymous scope pruned            |
+| `f1=>a=>/`    | `T4 b=>a=>/`        | `b.T4`         | Y          |                                   |
+| `f1=>a=>/`    | `T5 f2=>b=>a=>/`    | `b.f2.T5`      | N          | different functions               |
+| `f1=>a=>/`    | `T6 c=>b=>a=>/`     | `b.c.T6`       | Y          |                                   |
+| `f1=>a=>/`    | `T7 f3=>c=>b=>a=>/` | `b.c.f3.T7`    | N          |                                   |
+| `f1=>a=>/`    | `T8 d=>/`           | `d.T8`         | Y          | parent scope                      |
+| `f1=>a=>/`    | `T9 f4=>d=>/`       | `d.f4.T9`      | N          | parent scope                      |
+| `b=>a=>/`     | `T1 /`              | `T1`           | Y          | parent scope                      |
+| `b=>a=>/`     | `T2 a=>/`           | `T2`           | Y          | same scope                        |
+| `b=>a=>/`     | `T3 f1=>a=>/`       | `f2.T3`        | N          | anonymous scope pruned            |
+| `b=>a=>/`     | `T4 b=>a=>/`        | `T4`           | Y          |                                   |
 
 etc.
 
@@ -337,7 +336,7 @@ We'll have tuples at some point so let's just use them here, a scope
 element is a tuple of a string and a bool (anonymous flag). A scope is
 a list of elements.
 
-```
+```fn
 fn relativeScope {
     ([], []) { [] }
     (#(v, _) @ sc, #(v, _) @ st) { relativeScope(sc, st) }
@@ -365,7 +364,7 @@ Try it on a few examples
 
 Consider
 
-```
+```fn
 env a {
     env b {
         T1
@@ -434,7 +433,7 @@ worthwhile.
 
 Anyway the transformations are quite straightforward, for example
 
-```
+```fn
 let
     env a {
         typedef color { red | green | blue }
@@ -462,6 +461,7 @@ make use of the existing `match` construct for fast O(1) lookup, safe
 because we know the number of elements in the environment.
 
 Chained lookup also works, so `a.b.c(x)` becomes something like `(((a 0)
+
 1) x)`
 
 It would be preferable to typecheck the dispatcher specially but that
@@ -479,7 +479,7 @@ past the type-checker, if we declare a type that contains all possible
 arguments and another type that contains all popssible result types,
 for example:
 
-```
+```fn
 let
     env a {
         fn map {
@@ -494,8 +494,10 @@ let
 in
     a.factorial(5)
 ```
+
 becomes something like
-```
+
+```fn
 let
     typedef a$args(#f, #u) { a$map$args(#f, list(#t)) | a$fact$args(int) }
     typedef a$results(#u) { a$map$result(list(#u)) | a$fact$result(int) }
@@ -520,5 +522,5 @@ in
         (a$fact$result(n)) { n }
     }
 ```
-That might just work but I'm not sure I like it.
 
+That might just work but I'm not sure I like it.

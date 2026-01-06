@@ -5,6 +5,7 @@
 These test cases explore sophisticated uses of first-class continuations:
 
 ### 1. call/cc Escaping from Deep Nesting
+
 ```fn
 (f (g (call/cc (λ (k) (if test (k 42) 99)))))
 ```
@@ -14,6 +15,7 @@ These test cases explore sophisticated uses of first-class continuations:
 ---
 
 ### 2. Storing and Calling Continuation Later
+
 ```fn
 (letrec ((saved null))
   (+ (call/cc (λ (k) (sequence (saved = k) 10)))
@@ -21,12 +23,14 @@ These test cases explore sophisticated uses of first-class continuations:
 ```
 
 **Expected behavior:**
+
 - First time: `saved` is set to the continuation, returns 10, adds 5, result is 15
 - If you call `(saved 20)` later: ignores current context, returns 20 to the original + expression, result would be 25
 
 ---
 
 ### 3. call/cc with Multiple Returns (Generator-like)
+
 ```fn
 (letrec ((escape null))
   (+ (call/cc (λ (k) 
@@ -37,6 +41,7 @@ These test cases explore sophisticated uses of first-class continuations:
 ```
 
 **Expected behavior:**
+
 - The sequence tries to call `(k 1)`, which escapes immediately with 1
 - `(k 2)` never executes
 - Result: `(+ 1 100)` = 101
@@ -44,6 +49,7 @@ These test cases explore sophisticated uses of first-class continuations:
 ---
 
 ### 4. Double-Escape Pattern
+
 ```fn
 (call/cc (λ (k1)
   (call/cc (λ (k2)
@@ -55,6 +61,7 @@ These test cases explore sophisticated uses of first-class continuations:
 ---
 
 ### 5. Exception-Like Behavior
+
 ```fn
 (letrec ((throw null) (catch null))
   (call/cc (λ (handler)
@@ -73,6 +80,7 @@ This simulates exception handling where `throw` can be called from anywhere to e
 ## amb with call/cc Interactions
 
 ### 6. Escaping from All Branches
+
 ```fn
 (call/cc (λ (escape)
   (amb (escape 1) (escape 2) (escape 3))))
@@ -83,6 +91,7 @@ This simulates exception handling where `throw` can be called from anywhere to e
 ---
 
 ### 7. Selective Escaping
+
 ```fn
 (call/cc (λ (escape)
   (amb (if (test1) (escape 1) 10)
@@ -95,6 +104,7 @@ This simulates exception handling where `throw` can be called from anywhere to e
 ---
 
 ### 8. call/cc Inside amb Branch
+
 ```fn
 (amb (call/cc (λ (k) (k 1)))
      (call/cc (λ (k) (k 2)))
@@ -108,6 +118,7 @@ This simulates exception handling where `throw` can be called from anywhere to e
 ## Primitives and CPS
 
 ### 9. Associativity Test (Left-to-Right Evaluation)
+
 ```fn
 (+ (f 1) (g 2) (h 3))
 ```
@@ -117,6 +128,7 @@ This simulates exception handling where `throw` can be called from anywhere to e
 ---
 
 ### 10. Short-Circuit Logic (If Implemented)
+
 ```fn
 (and (test1) (side-effect) (test2))
 ```
@@ -128,6 +140,7 @@ If `and` is a macro that short-circuits, the CPS transformation of the expanded 
 ## Complex Nesting Patterns
 
 ### 11. Lambda Returning Lambda Returning Lambda (Currying)
+
 ```fn
 (λ (a) (λ (b) (λ (c) (+ a (+ b c)))))
 ```
@@ -137,11 +150,13 @@ If `and` is a macro that short-circuits, the CPS transformation of the expanded 
 ---
 
 ### 12. Application of Nested Lambda Result
+
 ```fn
 ((call/cc (λ (k) (λ (x) (k x)))) 42)
 ```
 
-**Expected:** 
+**Expected:**
+
 - `call/cc` creates a function that takes `x` and escapes with it
 - That function is then applied to 42
 - Result: escapes with 42 immediately
@@ -151,12 +166,14 @@ If `and` is a macro that short-circuits, the CPS transformation of the expanded 
 ---
 
 ### 13. call/cc Returning a Function That Uses the Continuation
+
 ```fn
 (let ((get-value (call/cc (λ (k) (λ () (k 99))))))
   (if (test) (get-value) 42))
 ```
 
 **Expected:**
+
 - First, `call/cc` returns the lambda `(λ () (k 99))` and binds it to `get-value`
 - If `test` is true, calling `(get-value)` will escape back to the binding point with 99
 - If `test` is false, returns 42
@@ -166,6 +183,7 @@ If `and` is a macro that short-circuits, the CPS transformation of the expanded 
 ## Edge Cases
 
 ### 14. Empty Application
+
 ```fn
 ((λ () 42))
 ```
@@ -175,11 +193,13 @@ If `and` is a macro that short-circuits, the CPS transformation of the expanded 
 ---
 
 ### 15. Identity Function in CPS
+
 ```fn
 (λ (x) x)
 ```
 
 **Expected:**
+
 ```fn
 (λ (x $k) ($k x))
 ```
@@ -189,11 +209,13 @@ The simplest possible CPS transform - just pass the argument to the continuation
 ---
 
 ### 16. Constant Function
+
 ```fn
 (λ (x) 42)
 ```
 
 **Expected:**
+
 ```fn
 (λ (x $k) ($k 42))
 ```
@@ -203,6 +225,7 @@ Ignores argument, passes constant to continuation.
 ---
 
 ### 17. Deeply Nested If
+
 ```fn
 (if a (if b (if c 1 2) 3) 4)
 ```
@@ -212,6 +235,7 @@ Ignores argument, passes constant to continuation.
 ---
 
 ### 18. call/cc That Never Calls the Continuation
+
 ```fn
 (call/cc (λ (k) 
   (letrec ((loop (λ (n) (loop n))))
@@ -239,17 +263,19 @@ To validate these tests:
 
 ## What to Watch For
 
-### Red Flags (Should NOT Appear):
-- ❌ Function applications missing continuation argument
-- ❌ Lambdas without continuation parameter
-- ❌ Direct returns (not going through continuation)
-- ❌ Escape continuations that use their continuation parameter
+### Red Flags (Should NOT Appear)
 
-### Green Flags (Should Appear):
-- ✅ All intermediate computations named
-- ✅ All control flow explicit via continuation calls
-- ✅ Primitive operations wrapped in continuation calls
-- ✅ `(λ (x i) (cc x))` pattern for escape continuations
+- Function applications missing continuation argument
+- Lambdas without continuation parameter
+- Direct returns (not going through continuation)
+- Escape continuations that use their continuation parameter
+
+### Green Flags (Should Appear)
+
+- All intermediate computations named
+- All control flow explicit via continuation calls
+- Primitive operations wrapped in continuation calls
+- `(λ (x i) (cc x))` pattern for escape continuations
 
 ---
 
@@ -271,6 +297,7 @@ The CPS transformation is essentially **compiling** high-level control structure
 ## Further Exploration
 
 ### 1. Administrative Reductions
+
 The CPS transformation creates many `((λ (x) e) v)` forms where `v` is a value. These are **administrative redexes** that can be beta-reduced:
 
 ```fn
@@ -280,21 +307,27 @@ The CPS transformation creates many `((λ (x) e) v)` forms where `v` is a value.
 Could be simplified by substituting `halt` for `$k` directly.
 
 ### 2. Continuation Optimizations
+
 When a continuation is used exactly once, it could be inlined. When it's never used, the computation is diverging or escaping.
 
 ### 3. Type Checking CPS
+
 CPS-transformed code has specific type patterns. For example, in a typed language:
-```
+
+```text
 (λ (x) e) : A → B
 ```
+
 Becomes:
-```
+
+```text
 (λ (x k) ...) : A → (B → R) → R
 ```
 
 Where `R` is the final answer type. This is the "double negation" pattern in logic!
 
 ### 4. Defunctionalization
+
 The continuations created by CPS can be **defunctionalized** - turned into data structures representing what operation to perform. This is closer to how compilers implement continuations.
 
 ---
@@ -302,6 +335,7 @@ The continuations created by CPS can be **defunctionalized** - turned into data 
 ## Conclusion
 
 Your CPS implementation correctly handles all the fundamental cases. These additional tests would help validate:
+
 - Edge cases (empty lambdas, deeply nested structures)
 - Interaction patterns (call/cc + amb, call/cc + if)
 - Advanced continuation usage (storing, calling later)

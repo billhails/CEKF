@@ -250,11 +250,13 @@ After fix, verify:
 ## Future Work / TODO
 
 **Review Conflict Check Necessity**: The conflict check at line 804-811 (in the loop over secondary keywords) checks if any secondary keyword conflicts with existing operators in the importing parser's rules table. This may be overly conservative or unnecessary given that:
+
 - Secondary keywords are not standalone operators
 - They can't be used outside their mixfix operator context
 - The conflict might be valid if scoped appropriately
 
 Consider whether this check should:
+
 1. Be removed entirely (allow secondary keywords to shadow existing operators)
 2. Be relaxed to only check for conflicts within the same scope
 3. Be kept as-is for safety

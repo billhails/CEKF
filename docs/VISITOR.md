@@ -36,13 +36,14 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
 ```
 
 **Problems**:
+
 1. **Boilerplate duplication**: Similar switch statements appear in:
    - `lambda_conversion.c` (AST → Lambda)
    - `anf_normalize.c` (Lambda → ANF)
    - `bytecode.c` (ANF → Bytecode)
    - `tc_analyze.c` (Type checking)
    - Pretty-printers (`*_pp.c`)
-   
+
 2. **Maintenance burden**: Adding a new expression type requires updating 5+ switch statements
 
 3. **Error-prone**: Easy to forget a case or mistype a variant name
@@ -62,6 +63,7 @@ static LamData *normalize(LamData *e, LamKont *k);
 ```
 
 **The challenge**: Every continuation needs:
+
 - A function implementing the continuation body
 - A `LamMap` hash table holding free variables
 - Boilerplate to extract free variables from the map
@@ -110,6 +112,7 @@ static LamData *normalizeLet(LamLet *let, LamKont *k) {
 ### Core Idea
 
 Extend the existing Python code generator (`tools/generate/`) to automatically produce:
+
 1. **Visitor dispatch tables** - Eliminate switch statements
 2. **Recursive traversal helpers** - Common patterns like "visit all children"
 3. **Continuation scaffolding** (phase 2) - Boilerplate for CPS transforms
@@ -117,6 +120,7 @@ Extend the existing Python code generator (`tools/generate/`) to automatically p
 ### Why This Fits CEKF
 
 The project already uses extensive code generation:
+
 - `tools/generate.py` generates C code from YAML schemas
 - All data structures (`ast.yaml`, `lambda.yaml`, `anf.yaml`, etc.) are declarative
 - Pattern of schema → generated code is established and working
@@ -345,6 +349,7 @@ static AnfExp *normalize(LamExp *lamExp, AnfExp *tail) {
 ```
 
 **Benefits**:
+
 - Switch statement eliminated
 - Type-safe dispatch through visitor table
 - Individual `normalize*()` functions unchanged
@@ -538,6 +543,7 @@ static LamData *normalizeLet(LamLet *let, LamKont *k) {
 ```
 
 **Benefits over manual approach**:
+
 1. **No hash table overhead**: Fixed-size env structs instead of `LamMap`
 2. **Type safety**: Compiler catches wrong field types
 3. **Clear interfaces**: Env struct shows exactly what continuation needs
@@ -627,10 +633,10 @@ Update `Makefile` to generate visitor files:
 ```makefile
 # generated/lambda_visitor.h: src/lambda.yaml tools/generate.py
 generated/lambda_visitor.h: src/lambda.yaml tools/generate/visitors.py
-	$(PYTHON) tools/generate.py $< visitor_h > $@
+ $(PYTHON) tools/generate.py $< visitor_h > $@
 
 generated/lambda_visitor.c: src/lambda.yaml tools/generate/visitors.py
-	$(PYTHON) tools/generate.py $< visitor_c > $@
+ $(PYTHON) tools/generate.py $< visitor_c > $@
 ```
 
 ### Step 4: Refactor One Transformation
@@ -654,6 +660,7 @@ Once visitor pattern is validated:
 ### Step 6: Roll Out to Other Stages
 
 Apply to remaining transformations:
+
 - Lambda conversion (`lambda_conversion.c`)
 - Type checking (`tc_analyze.c`)
 - Bytecode compilation (`bytecode.c`)
@@ -679,18 +686,22 @@ Apply to remaining transformations:
 ### Risks and Mitigations
 
 **Risk**: Generated code harder to debug than hand-written
+
 - *Mitigation*: Generated code is straightforward C, not complex macros
 - *Mitigation*: Keep generated code readable with comments
 
 **Risk**: Performance overhead from function pointers
+
 - *Mitigation*: Likely negligible (compiler likely inlines)
 - *Mitigation*: Can benchmark and fallback if needed
 
 **Risk**: Continuation env structs use more memory than needed
+
 - *Mitigation*: Most envs are 2-4 pointers (16-32 bytes)
 - *Mitigation*: Still smaller than hash tables with overhead
 
 **Risk**: Implementation effort larger than expected
+
 - *Mitigation*: Phased approach allows early validation
 - *Mitigation*: Phase 1 alone provides value (switch elimination)
 

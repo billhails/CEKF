@@ -14,6 +14,7 @@ This document proposes a comprehensive expansion of the F♮ language test suite
 ## Coverage Gaps by Severity
 
 ### Critical Gaps (Tier 1)
+
 Features that are documented, widely used, but have insufficient or missing tests:
 
 1. **Error Handling & Unsafe Operations**
@@ -38,23 +39,24 @@ Features that are documented, widely used, but have insufficient or missing test
    - Library exported operators (`_except_`, `_|>_`, `$_`, etc.)
 
 ### Important Gaps (Tier 2)
+
 Features with basic tests but missing edge cases and comprehensive scenarios:
 
-4. **Arithmetic Edge Cases**
+1. **Arithmetic Edge Cases**
    - Float arithmetic and precision
    - Mixed-type coercion (rational+float, complex+float)
    - Overflow/underflow boundaries
    - Rational simplification verification
    - Extreme value handling (BigInt limits, float infinity)
 
-5. **String & Character Completeness**
+2. **String & Character Completeness**
    - All escape sequences (`\t`, `\r`, `\\`, `\"`, `\'`, `\0`)
    - Multi-byte UTF-8 edge cases (surrogate pairs, invalid sequences)
    - Unicode normalization (multiple representations of same character)
    - String indexing with multi-byte characters
    - Character literal edge cases
 
-6. **Type System Depth**
+3. **Type System Depth**
    - Named field constructors (`person{ name: "x", age: 30 }`)
    - Named field pattern matching (`person{ name: n, age: _ }`)
    - Mutual recursive types (A references B references A)
@@ -62,20 +64,20 @@ Features with basic tests but missing edge cases and comprehensive scenarios:
    - Type constructor namespacing
    - `typeof` with complex expressions beyond simple variables
 
-7. **Control Flow Completeness**
+4. **Control Flow Completeness**
    - `else if` chain testing (not just binary if/else)
    - Type agreement enforcement in conditional branches
    - Deep nested conditionals
    - Switch statement with complex patterns and guards
 
-8. **Pattern Matching Depth**
+5. **Pattern Matching Depth**
    - Deep nested patterns (`[[[x]]]`, `#(#(a, b), #(c, d))`)
    - Tuple destructuring in function parameters
    - Complex pseudo-unification (multiple repeated variables)
    - Pattern matching in let bindings beyond simple cases
    - Named field patterns in user typedefs
 
-9. **Comparison & Ordering**
+6. **Comparison & Ordering**
    - User-defined type ordering (constructor precedence)
    - Function comparison (bytecode address ordering)
    - Mixed type comparisons
@@ -83,21 +85,22 @@ Features with basic tests but missing edge cases and comprehensive scenarios:
    - Nested structure comparison
 
 ### Enhancement Gaps (Tier 3)
+
 Advanced scenarios and feature interactions for robustness:
 
-10. **Closure & Higher-Order Function Patterns**
+1. **Closure & Higher-Order Function Patterns**
     - Deep closure nesting (3+ levels)
     - Closures that "modify" captured state via shadowing
     - Function composition, piping, partial application patterns
     - Function equality testing
 
-11. **Currying & Over-Application Edge Cases**
+2. **Currying & Over-Application Edge Cases**
     - Functions with 0, 1, 5, 10+ arguments
     - Mixed partial application and over-application
     - Over-applying to non-function error handling
     - Type inference with complex currying chains
 
-12. **Continuation (here) Advanced Usage**
+3. **Continuation (here) Advanced Usage**
     - Multiple continuation capture
     - Continuations as first-class values (stored, passed)
     - Calling continuations multiple times
@@ -105,14 +108,14 @@ Advanced scenarios and feature interactions for robustness:
     - Error handling patterns with continuations
     - Interaction between continuations and backtracking
 
-13. **Backtracking Complexity**
+4. **Backtracking Complexity**
     - Nested backtracking (3+ levels of `then`)
     - Backtracking exhaustion behavior
     - Large search spaces (performance testing)
     - `then` with different result types
     - Side effects during backtracking (if possible with immutability)
 
-14. **Operator System Completeness**
+5. **Operator System Completeness**
     - Complex operator patterns (`_[_]` for indexing)
     - Unicode operators (`_⊕_`, `_∘_`)
     - Multi-character word operators (`sqrt_`, `_squared`)
@@ -120,14 +123,14 @@ Advanced scenarios and feature interactions for robustness:
     - Operator precedence in complex expressions
     - Operators in nested namespace imports
 
-15. **Macro Edge Cases**
+6. **Macro Edge Cases**
     - Multiple lazy arguments
     - Macro hygiene stress tests (variable capture scenarios)
     - Macro recursion (self-calling macros)
     - Macro with side effects and evaluation order
     - Thunk optimization verification (`fn(){a()}` → `a`)
 
-16. **Namespace & Import Complexity**
+7. **Namespace & Import Complexity**
     - Nested imports (A imports B which imports C)
     - Cyclic import detection
     - Namespace shadowing (local vs imported definitions)
@@ -135,14 +138,14 @@ Advanced scenarios and feature interactions for robustness:
     - Print function namespacing
     - Relative vs absolute path resolution
 
-17. **Print System Completeness**
+8. **Print System Completeness**
     - Polymorphic print with different type instantiations
     - Generic representation fallback verification
     - Function printing format
     - Complex/rational number format verification
     - Nested user-defined prints (type A's print uses type B's print)
 
-18. **File I/O Robustness**
+9. **File I/O Robustness**
     - Error handling for all file operations
     - File handle lifecycle and GC interaction
     - Binary I/O testing
@@ -150,33 +153,33 @@ Advanced scenarios and feature interactions for robustness:
     - Nested file operations (multiple open handles)
     - Buffer operations with `openmem`
 
-19. **SQLite Edge Cases**
+10. **SQLite Edge Cases**
     - Transaction handling
     - Error conditions (malformed SQL, constraint violations)
     - Complex queries (joins, subqueries)
     - NULL handling
     - Multiple concurrent connections
 
-20. **Tuple Edge Cases**
+11. **Tuple Edge Cases**
     - Large tuples (10+ elements)
     - Deep nesting (`#(1, #(2, #(3, 4)))`)
     - Tuple unpacking with wrong arity errors
     - Partial unpacking patterns
 
-21. **List Edge Cases**
+12. **List Edge Cases**
     - Very large lists (10000+ elements)
     - Deep nesting (lists of lists of lists)
     - List equality with complex elements
     - Operator precedence (`@` vs `@@` in complex expressions)
     - All listutils functions with empty, single-element, and large lists
 
-22. **Variable & Scoping Edge Cases**
+13. **Variable & Scoping Edge Cases**
     - Type change through shadowing verification
     - Scope lifetime guarantees
     - Shadowing in deeply nested scopes
     - Mutually recursive definitions in let blocks
 
-23. **Boolean & Logic Edge Cases**
+14. **Boolean & Logic Edge Cases**
     - All boolean operators with all input combinations
     - Short-circuit with side effects (multiple scenarios)
     - Comparison operator chaining errors
@@ -187,6 +190,7 @@ Advanced scenarios and feature interactions for robustness:
 ### Tier 1: Critical (Immediate Priority)
 
 #### `test_error_handling.fn`
+
 - Division by zero (int, rational, float)
 - Empty list car/cdr operations
 - Type mismatch scenarios
@@ -194,37 +198,44 @@ Advanced scenarios and feature interactions for robustness:
 - Invalid UTF-8 sequences
 
 #### `test_builtins_rand.fn`
+
 - Basic random number generation
 - Range validation (0.0 to 1.0)
 - Distribution properties (multiple calls)
 
 #### `test_builtins_argv.fn`
+
 - Access command-line arguments
 - Handle missing arguments
 - Argument count verification
 
 #### `test_builtins_env.fn`
+
 - Read environment variables
 - Handle missing variables
 - Common variables (HOME, PATH, etc.)
 
 #### `test_builtins_ftype.fn`
+
 - Detect file types (regular, directory, symlink, etc.)
 - Handle non-existent paths
 - Error conditions
 
 #### `test_builtins_directory.fn`
+
 - Open, read, close directory operations
 - List directory contents
 - Error handling (permissions, non-existent)
 
 #### `test_ambutils_complete.fn`
+
 - `some_of()` subset generation
 - `integers_from()` infinite sequences with backtracking
 - `integers_between()` range generation
 - Exported operator testing
 
 #### `test_listutils_complete.fn`
+
 - `unique()` duplicate removal
 - `for_each()` iteration
 - `sortBy()` with custom comparators
@@ -234,6 +245,7 @@ Advanced scenarios and feature interactions for robustness:
 ### Tier 2: Important (High Priority)
 
 #### `test_arithmetic_comprehensive.fn`
+
 - Float arithmetic and precision
 - Mixed-type coercion chains
 - Rational simplification
@@ -241,6 +253,7 @@ Advanced scenarios and feature interactions for robustness:
 - BigInt edge cases
 
 #### `test_strings_escapes.fn`
+
 - All escape sequences
 - Multi-byte UTF-8 characters
 - Unicode normalization
@@ -248,30 +261,35 @@ Advanced scenarios and feature interactions for robustness:
 - Invalid sequences
 
 #### `test_typedef_named_fields.fn`
+
 - Named field constructor syntax
 - Named field pattern matching
 - Field access patterns
 - Type errors with named fields
 
 #### `test_typedef_advanced.fn`
+
 - Mutual recursive types
 - Complex generics (multiple parameters)
 - Type constructor currying
 - `typeof` with complex expressions
 
 #### `test_control_flow_complete.fn`
+
 - `else if` chains (3+ levels)
 - Deep nested conditionals
 - Type agreement enforcement
 - Switch with complex patterns
 
 #### `test_pattern_matching_deep.fn`
+
 - Deep nested patterns
 - Tuple patterns in functions
 - Complex pseudo-unification
 - Pattern matching in let bindings
 
 #### `test_comparisons_complete.fn`
+
 - User-defined type ordering
 - Function comparison
 - Mixed type comparisons
@@ -281,18 +299,21 @@ Advanced scenarios and feature interactions for robustness:
 ### Tier 3: Enhancement (Medium Priority)
 
 #### `test_closures_advanced.fn`
+
 - Deep closure nesting (3+ levels)
 - Closures with shadowing updates
 - Function composition patterns
 - Partial application chains
 
 #### `test_currying_complete.fn`
+
 - Large arity functions (5, 10 params)
 - Mixed partial and over-application
 - Error cases
 - Type inference verification
 
 #### `test_continuations_advanced.fn`
+
 - Multiple continuation capture
 - Continuation storage and passing
 - Calling continuations multiple times
@@ -301,12 +322,14 @@ Advanced scenarios and feature interactions for robustness:
 - Continuations + backtracking interaction
 
 #### `test_backtracking_advanced.fn`
+
 - Deep nested backtracking
 - Exhaustion behavior
 - Large search spaces
 - Type variations in `then` branches
 
 #### `test_operators_advanced.fn`
+
 - Complex patterns (`_[_]`)
 - Unicode operators
 - Multi-character operators
@@ -314,6 +337,7 @@ Advanced scenarios and feature interactions for robustness:
 - Complex expression parsing
 
 #### `test_macros_advanced.fn`
+
 - Multiple lazy arguments
 - Hygiene edge cases
 - Macro recursion
@@ -321,6 +345,7 @@ Advanced scenarios and feature interactions for robustness:
 - Thunk optimization verification
 
 #### `test_namespaces_advanced.fn`
+
 - Nested imports (3+ levels)
 - Cyclic import detection
 - Shadowing scenarios
@@ -328,6 +353,7 @@ Advanced scenarios and feature interactions for robustness:
 - Print function namespacing
 
 #### `test_print_complete.fn`
+
 - Polymorphic printing
 - Generic representation fallback
 - Function printing
@@ -335,6 +361,7 @@ Advanced scenarios and feature interactions for robustness:
 - Nested user-defined prints
 
 #### `test_file_io_complete.fn`
+
 - All error conditions
 - GC and file handle lifecycle
 - Binary I/O
@@ -342,6 +369,7 @@ Advanced scenarios and feature interactions for robustness:
 - Nested operations
 
 #### `test_sqlite_advanced.fn`
+
 - Transactions
 - Error handling
 - Complex queries
@@ -349,24 +377,28 @@ Advanced scenarios and feature interactions for robustness:
 - Concurrent connections
 
 #### `test_tuples_complete.fn`
+
 - Large tuples (10+ elements)
 - Deep nesting
 - Arity mismatch errors
 - Pattern matching edge cases
 
 #### `test_lists_complete.fn`
+
 - Very large lists (10000+ elements)
 - Deep nesting
 - Complex equality
 - Operator precedence chains
 
 #### `test_scoping_complete.fn`
+
 - Type change via shadowing
 - Scope lifetime
 - Deep nesting
 - Mutual recursion in let
 
 #### `test_logic_complete.fn`
+
 - All boolean operators (truth tables)
 - Short-circuit with side effects
 - Operator combinations
@@ -374,21 +406,25 @@ Advanced scenarios and feature interactions for robustness:
 ## Implementation Strategy
 
 ### Phase 1: Foundation (Weeks 1-2)
+
 - Implement all Tier 1 tests (critical gaps)
 - Focus on error handling and untested builtins
 - Establish patterns for test organization
 
 ### Phase 2: Completeness (Weeks 3-4)
+
 - Implement Tier 2 tests (important gaps)
 - Focus on edge cases for existing features
 - Expand arithmetic, string, and type system coverage
 
 ### Phase 3: Robustness (Weeks 5-6)
+
 - Implement Tier 3 tests (enhancement gaps)
 - Focus on advanced scenarios and interactions
 - Performance and stress testing
 
 ### Phase 4: Integration (Week 7)
+
 - Review all test results
 - Document discovered bugs
 - Prioritize bug fixes

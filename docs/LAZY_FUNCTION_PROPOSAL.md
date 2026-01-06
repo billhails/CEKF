@@ -1,17 +1,20 @@
 # Lazy Function Type Tracking Proposal
 
-## Status: Phase 1 & 2 COMPLETE ✅
+## Status: Phase 1 & 2 COMPLETE
 
 **Completed (October 2024):**
-- ✅ Phase 1: Type system extended with `isLazy` field
-- ✅ Phase 2: Macros marked with `isMacro` flag, laziness propagated to types
-- ✅ Type printing shows lazy arguments: `(#() -> Type) -> Result`
-- ✅ Critical bug fixed: `freshFunction` now preserves `isLazy` during polymorphic instantiation
+
+- Phase 1: Type system extended with `isLazy` field
+- Phase 2: Macros marked with `isMacro` flag, laziness propagated to types
+- Type printing shows lazy arguments: `(#() -> Type) -> Result`
+- Critical bug fixed: `freshFunction` now preserves `isLazy` during polymorphic instantiation
 
 **In Progress:**
+
 - ⧗ Phase 3: Automatic adapter generation (manual adapters work, automatic generation in progress)
 
 **Future Work:**
+
 - ☐ Phase 4: Type unification with laziness checking
 - ☐ Optimization: Avoid unnecessary wrapping/unwrapping
 
@@ -19,13 +22,15 @@
 
 Currently, macros in CEKF are implemented as lazy functions that expect thunked arguments. The system works as follows:
 
-1. **At call site**: When calling a macro, arguments are wrapped in thunks (`fn() { arg }`) in `wrapMacro()` 
+1. **At call site**: When calling a macro, arguments are wrapped in thunks (`fn() { arg }`) in `wrapMacro()`
 2. **In macro body**: Macro arguments are automatically invoked (`arg()`) in `performVarSubstitution()`
 
 The problem: **Macros cannot be passed as first-class functions** because:
+
 - Regular higher-order functions don't know to wrap arguments in thunks
 - Type signatures don't distinguish lazy from strict functions
 - Example failure case:
+
   ```fn
   macro lazy_or(a, b) { a or b }  // expects thunks
   
@@ -37,6 +42,7 @@ The problem: **Macros cannot be passed as first-class functions** because:
 ## Current Architecture
 
 ### Macro Detection (`lambda_conversion.c`)
+
 ```c
 static bool isMacro(HashSymbol *symbol, LamContext *env) {
     // Checks LamMacroSet in environment chain
@@ -51,6 +57,7 @@ static LamExp *makePrimApp(...) {
 ```
 
 ### Type System (`tc.yaml`)
+
 ```yaml
 TcFunction:
     data:
@@ -83,6 +90,7 @@ TcFunction:
 ```
 
 This creates:
+
 - Strict function: `Int -> Int` with `isLazy=false`
 - Lazy function: `Int -> Int` with `isLazy=true` (expects `() -> Int`)
 
@@ -96,14 +104,15 @@ macro weird(strict_arg, lazy_arg, another_strict) { ... }
 ```
 
 The current representation already handles this via currying:
-```
+
+```c
 TcFunction(arg=Int, isLazy=false,
   result=TcFunction(arg=Bool, isLazy=true,
     result=TcFunction(arg=String, isLazy=false,
       result=Result)))
 ```
 
-Each arrow can have its own laziness flag!
+Each arrow can have its own laziness flag.
 
 ### Phase 2: Macro Type Construction
 
@@ -295,27 +304,32 @@ static void unify(TcType *a, TcType *b, TcNg *ng) {
 ## Implementation Plan
 
 ### Step 1: Type System Extension (Low Risk)
+
 1. Add `isLazy` field to `TcFunction` in `tc.yaml`
 2. Run `make` to regenerate type structures
 3. Update `makeFn()` to accept and set laziness flag (default `false`)
 4. Update type printing (`ppTcFunction`) to show laziness
 
 ### Step 2: Macro Marking (Low Risk)
+
 1. Add `isMacro` field to `LamLam` in `lambda.yaml`
 2. Set `isMacro=true` in `convertAstMacro()`
 3. Pass flag through to `makeFunctionType()`
 
 ### Step 3: Test Infrastructure
+
 1. Add test cases for lazy function typing
 2. Test unification of lazy/strict functions
 3. Test error messages
 
 ### Step 4: Adapter Generation (Medium Risk)
+
 1. Implement detection of lazy-function-as-value
 2. Implement wrapper generation
 3. Test with `map`, `filter`, and other HOFs
 
 ### Step 5: Optimization (Optional)
+
 1. Detect unnecessary wrapping/unwrapping
 2. Optimize `fn(){x}` when `x` is already strict
 3. Consider thunk memoization
@@ -323,6 +337,7 @@ static void unify(TcType *a, TcType *b, TcNg *ng) {
 ## Example Transformations
 
 ### Before (Current System)
+
 ```fn
 macro lazy_or(a, b) { a or b }
 
@@ -336,6 +351,7 @@ map(lazy_or, list_of_pairs)
 ```
 
 ### After (Proposed System)
+
 ```fn
 macro lazy_or(a, b) { a or b }
 // Type: (() -> Bool) -> (() -> Bool) -> Bool
@@ -362,7 +378,7 @@ map(fn(x, y) { lazy_or(fn(){x}, fn(){y}) }, list_of_pairs)
 
 ## Implementation Progress
 
-### Phases 1 & 2: Complete ✅
+### Phases 1 & 2: Complete
 
 The type system now fully tracks laziness:
 
@@ -376,7 +392,7 @@ fn strict_function(x, y) { x or y }
 
 Type printing clearly distinguishes lazy arguments with the `#() ->` prefix.
 
-### Phase 3: Manual Adapters (Working) ✅
+### Phase 3: Manual Adapters (Working)
 
 Manual adapter generation works as expected:
 
@@ -395,6 +411,7 @@ apply_binary(strict_lazy_or, true, false)  // Works!
 ```
 
 **Type transformation:**
+
 - `lazy_or`: `(#() -> bool) -> (#() -> bool) -> bool` (lazy)
 - `strict_lazy_or`: `(bool) -> (bool) -> bool` (strict adapter)
 
@@ -407,11 +424,13 @@ The adapter has the type signature that unifies with what HOFs expect, while int
 **Current state:** Manual adapters work perfectly and provide a viable solution. Automatic generation would be a nice-to-have enhancement.
 
 **Design:** See `docs/PHASE3_NOTES.md` for detailed implementation options. Recommended approach:
+
 1. Annotate Lambda AST with inferred types during type checking
 2. Add post-type-checking pass to detect mismatches
 3. Generate adapter wrappers automatically
 
 **Challenges:**
+
 - Need to preserve type information after type checking
 - Complex variable name generation
 - Handle partial application correctly
@@ -422,18 +441,22 @@ The adapter has the type signature that unifies with what HOFs expect, while int
 ## Alternative Approaches Considered
 
 ### 1. Uniform Lazy Evaluation (Haskell-style)
+
 - Make everything lazy by default
 - **Rejected**: Too radical a change, performance implications
 
 ### 2. Explicit Thunk/Force Syntax
+
 - Add `&expr` for thunk, `!expr` for force
 - **Rejected**: Too much syntactic burden on users
 
 ### 3. Separate Macro Application Operator
+
 - Use different syntax for macro calls (e.g., `@lazy_or(a, b)`)
 - **Rejected**: Makes macros second-class, breaks composability
 
 ### 4. Proposed Approach: Type-Directed Laziness
+
 - **Chosen**: Minimal syntax change, maximal composability, type-safe
 
 ## Open Questions

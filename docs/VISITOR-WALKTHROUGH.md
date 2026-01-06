@@ -1,10 +1,11 @@
 # Visitor Pattern Walkthrough: Pretty-Printing Example
 
-**Status: EXPLORATION COMPLETED - NOT PROCEEDING WITH IMPLEMENTATION**
+Status: EXPLORATION COMPLETED - NOT PROCEEDING WITH IMPLEMENTATION
 
 **Conclusion**: The visitor pattern does not provide sufficient benefit for CEKF. The fundamental issue is that CEKF transformations require interleaved control (operation before/between/after child visits), which classic visitor pattern doesn't support. What we'd actually build is just "typed dispatch table generation" - a modest improvement that eliminates switch statements but doesn't reduce the complexity of visitor functions themselves. The cost/benefit ratio doesn't justify the implementation effort.
 
 **Key Learnings**:
+
 1. Pretty-printing needs control before, between, and after visiting children (e.g., printing delimiters)
 2. Classic visitor pattern assumes framework controls traversal, but CEKF needs manual traversal control
 3. Switch elimination saves ~200 lines but visitor functions remain unchanged
@@ -98,6 +99,7 @@ void ppLamApply(LamApply *apply) {
 **Visitor pattern as typically implemented doesn't support this!**
 
 Classic visitor separates traversal strategy from operation:
+
 - **Traversal code** (generated): Visits children in fixed order
 - **Visitor function** (user-written): Operates on already-visited children
 
@@ -108,6 +110,7 @@ But pretty-printing needs to **control the traversal itself** - printing delimit
 This isn't just a pretty-printing problem! Consider:
 
 **ANF normalization** also needs interleaved control:
+
 ```c
 // Need to normalize arg1, THEN build continuation with result, THEN normalize arg2
 normalize(apply(f, arg1, arg2)) =
@@ -117,6 +120,7 @@ normalize(apply(f, arg1, arg2)) =
 ```
 
 **Type checking** needs control flow:
+
 ```c
 // Check condition first, unify result with bool, THEN check branches with updated context
 typecheck(if(cond, cons, alt)) = 
@@ -156,11 +160,13 @@ void visitLamExp(LamExp *exp, LamExpPrettyPrinterTable *vtable) {
 ```
 
 **Pros**:
+
 - Full control over traversal order
 - Can print before/between/after children
 - Natural for pretty-printing and complex transformations
 
 **Cons**:
+
 - Not really "visitor pattern" anymore - just switch elimination
 - No benefit from generated traversal helpers
 - Visitor functions have more boilerplate (manual recursion calls)
@@ -198,11 +204,13 @@ void visitLamExp(LamExp *exp, LamExpPrettyPrinterTable *vtable) {
 ```
 
 **Pros**:
+
 - Automated traversal (generated from schema)
 - Hooks at precise moments
 - Could work for pretty-printing
 
 **Cons**:
+
 - Complex to generate (need to know child structure from YAML)
 - Visitor table bloats (3+ entries per variant)
 - Hard to handle variable-length children (lists, args)
@@ -228,10 +236,12 @@ void visitLam_pp(LamLam *lam, VisitorContext *ctx) {
 ```
 
 **Pros**:
+
 - Visitor has full control over when children are visited
 - Callbacks can be specialized (different printing contexts)
 
 **Cons**:
+
 - Complex to set up (need to create context with right callbacks)
 - Not much simpler than manual recursion
 - Indirection overhead (callback through context)
@@ -244,11 +254,13 @@ void visitLam_pp(LamLam *lam, VisitorContext *ctx) {
 - Use visitor pattern for **transformations** that build new structures (ANF, bytecode)
 
 **Pros**:
+
 - Right tool for right job
 - Pretty-printers stay simple and readable
 - Visitor pattern focuses on cases where it actually helps
 
 **Cons**:
+
 - Still have switch statements in pretty-printers
 - Two different patterns in codebase
 
@@ -257,6 +269,7 @@ void visitLam_pp(LamLam *lam, VisitorContext *ctx) {
 Let's be honest about what the visitor pattern buys us:
 
 **For pretty-printing**:
+
 - ❌ Can't eliminate traversal logic (visitor needs to control it)
 - ✓ Can eliminate type dispatch switch (replace with table lookup)
 - ✓ Can auto-generate NULL handling
@@ -265,6 +278,7 @@ Let's be honest about what the visitor pattern buys us:
 **Net benefit**: ~30 lines saved (switch → table), but visitor functions unchanged
 
 **For transformations (ANF, bytecode, type checking)**:
+
 - ❌ Still can't auto-generate traversal (complex control flow needed)
 - ✓ Can eliminate type dispatch switch
 - ✓ Can generate continuation scaffolding (bigger win!)
@@ -281,11 +295,13 @@ Let's be honest about what the visitor pattern buys us:
 3. **For transformations, also generate continuation scaffolding** - the real win
 
 This is honest about what we're doing:
+
 - Not a "pure" visitor pattern (no automatic traversal)
 - But still eliminates switch boilerplate
 - And enables continuation scaffolding for complex transformations
 
 **Updated YAML config**:
+
 ```yaml
 visitors:
   - name: PrettyPrinter
@@ -298,6 +314,7 @@ visitors:
 ```
 
 **Generated code** (revised):
+
 ```c
 // No automatic traversal helpers - visitor calls recursion manually
 void visitLamExp(LamExp *exp, LamExpPrettyPrinterTable *vtable);
@@ -321,11 +338,13 @@ This is essentially **switch elimination with typed dispatch**, not a classic vi
 ### Problem
 
 The visitor pattern assumes:
+
 ```c
 typedef void* (*LamExpVisitFn)(void *node, void *context);
 ```
 
 But pretty-printing has signature:
+
 ```c
 void ppLamLam(LamLam *lam);  // No context, no return
 ```
@@ -348,11 +367,13 @@ static LamExpVisitorTable ppVisitorTable = {
 };
 ```
 
-**Pros**: 
+**Pros**:
+
 - Minimal changes to existing code
 - Clear separation between visitor infrastructure and implementation
 
 **Cons**:
+
 - Wrapper boilerplate for every variant (31 wrappers!)
 - Extra function call overhead
 
@@ -376,6 +397,7 @@ config:
 ```
 
 Generated:
+
 ```c
 // lambda_pp_visitor.h
 typedef void (*LamExpPrettyPrintFn)(void *node);  // No context!
@@ -390,10 +412,12 @@ void visitLamExpPrettyPrint(LamExp *exp, LamExpPrettyPrinterTable *vtable);
 ```
 
 **Pros**:
+
 - Type-safe, no wrappers needed
 - Can directly use existing functions
 
-**Cons**: 
+**Cons**:
+
 - More complex code generation
 - Need to specify visitor config for each use case
 
@@ -419,6 +443,7 @@ data:
 ```
 
 Current switch can access these directly:
+
 ```c
 case LAMEXP_TYPE_STDINT:
     eprintf("%d", exp->val.stdint);  // Direct access to int
@@ -474,6 +499,7 @@ void visitLamExpPrettyPrint(LamExp *exp, LamExpPrettyPrinterTable *vtable) {
 ```
 
 But then visitor table has mixed signatures:
+
 ```c
 typedef struct {
     void (*visitLam)(LamLam *lam);
@@ -509,6 +535,7 @@ void visitLamExpPrettyPrint(LamExp *exp, LamExpPrettyPrinterTable *vtable) {
 ```
 
 Visitor table only has entries for complex types:
+
 ```c
 typedef struct {
     void (*visitLam)(LamLam *lam);
@@ -518,12 +545,14 @@ typedef struct {
 } LamExpPrettyPrinterTable;
 ```
 
-**Pros**: 
+**Pros**:
+
 - Simplifies visitor table
 - Matches current implementation pattern
 - No overhead for trivial cases
 
 **Cons**:
+
 - Hard-codes primitive handling (what if user wants custom int printing?)
 - Less flexible
 
@@ -534,6 +563,7 @@ typedef struct {
 ### Problem
 
 Current code checks NULL at top of function:
+
 ```c
 void ppLamExp(LamExp *exp) {
     if (exp == NULL) {
@@ -580,6 +610,7 @@ void ppLamExp(LamExp *exp) {
 ### Problem
 
 Some cases are trivial:
+
 ```c
 case LAMEXP_TYPE_BACK:
     eprintf("(back)");
@@ -587,6 +618,7 @@ case LAMEXP_TYPE_BACK:
 ```
 
 Others call complex helpers:
+
 ```c
 case LAMEXP_TYPE_APPLY:
     ppLamApply(exp->val.apply);  // Separate function
@@ -938,7 +970,8 @@ void ppLamExpD(LamExp *exp, int depth) {
 }
 ```
 
-**Code reduction**: 
+**Code reduction**:
+
 - **Before**: ~92 lines in switch statement
 - **After**: ~30 lines in visitor table initialization
 - **Savings**: ~62 lines, plus the switch logic is now generated
@@ -948,6 +981,7 @@ void ppLamExpD(LamExp *exp, int depth) {
 ### Problem
 
 Some variants are recursive:
+
 ```c
 case LAMEXP_TYPE_CALLCC:
     ppLamExp(exp->val.callcc);  // Calls ppLamExp recursively!
@@ -959,6 +993,7 @@ case LAMEXP_TYPE_TAG:
 ```
 
 With visitor table, we need:
+
 ```c
 .visitCallcc = ppLamExp,  // Points back to main dispatcher!
 ```
@@ -1005,6 +1040,7 @@ static void ppLamCallcc(LamExp *callcc) {
 ## Challenge 6: Missing Functions
 
 Current code has:
+
 ```c
 case LAMEXP_TYPE_CONSTRUCTOR:
     eprintf("constructor:%s", exp->val.constructor->name->name);
@@ -1059,6 +1095,7 @@ static LamExpPrettyPrinterTable ppVisitorTable = {
 ### 2. Type-Safe Dispatch
 
 Each visitor function has the correct signature for its type:
+
 ```c
 void (*visitLam)(LamLam *lam);           // Not void*
 void (*visitApply)(LamApply *apply);     // Not void*
@@ -1069,6 +1106,7 @@ Compiler catches type mismatches at compile time.
 ### 3. Incremental Migration
 
 Can move to visitor pattern gradually:
+
 ```c
 static LamExpPrettyPrinterTable ppVisitorTable = {
     .visitLam = ppLamLam,     // Migrated
@@ -1080,6 +1118,7 @@ static LamExpPrettyPrinterTable ppVisitorTable = {
 ### 4. Clear API Surface
 
 Visitor table shows at-a-glance which variants have complex handling:
+
 ```c
 // These variants have dedicated functions:
 .visitApply = ppLamApply,
@@ -1095,6 +1134,7 @@ Visitor table shows at-a-glance which variants have complex handling:
 ### 5. Easier Testing
 
 Can test individual visitor functions without full AST:
+
 ```c
 void test_ppLamApply() {
     LamApply *apply = /* construct test case */;
@@ -1109,7 +1149,8 @@ void test_ppLamApply() {
 
 **Issue**: Union variants can be primitives (int, char) or pointers (struct*)
 
-**Solution**: 
+**Solution**:
+
 - Inline primitives in generated dispatch (configured via YAML)
 - Only generate visitor table entries for complex types
 - Allow custom inline code via YAML config
@@ -1118,7 +1159,8 @@ void test_ppLamApply() {
 
 **Issue**: Generic `void*` approach loses type information
 
-**Solution**: 
+**Solution**:
+
 - Generate use-case-specific visitor types
 - Each visitor table has typed function pointers
 - Configuration in YAML specifies return/context types per use-case
@@ -1128,6 +1170,7 @@ void test_ppLamApply() {
 **Issue**: Where to check for NULL pointers?
 
 **Solution**:
+
 - Generated dispatch includes NULL check
 - Optional `visitNull` callback in visitor table
 - Default NULL behavior if callback not provided
@@ -1137,6 +1180,7 @@ void test_ppLamApply() {
 **Issue**: Some visitors need to recurse back to dispatcher
 
 **Solution**:
+
 - Generate `visitRecursive` helper function
 - Visitor functions call helper to recurse
 - Clearer than circular function pointers
@@ -1146,6 +1190,7 @@ void test_ppLamApply() {
 **Issue**: Some cases are trivial, others complex
 
 **Solution**:
+
 - Allow NULL entries in visitor table
 - Generated dispatch handles NULL entries with inline code
 - Configuration specifies inline handling per variant
@@ -1155,6 +1200,7 @@ void test_ppLamApply() {
 **Issue**: YAML config getting complex with inline code
 
 **Solution**:
+
 - Keep inline code simple (single eprintf statements)
 - Complex cases must use helper functions
 - Limit inline to true primitives and constants
@@ -1164,16 +1210,19 @@ void test_ppLamApply() {
 ### 1. Start Simple
 
 **Phase 1**: Generate basic visitor infrastructure without inline config
+
 - Every variant requires a visitor function
 - No inline primitive handling
 - Validates core visitor pattern
 
 **Phase 2**: Add inline primitive support
+
 - YAML config for inline cases
 - Reduces visitor table size
 - Handles trivial cases efficiently
 
 **Phase 3**: Add use-case-specific typing
+
 - Multiple visitor configs per union
 - Type-safe return values and context
 - Supports diverse use cases (pretty-print, normalize, compile, etc.)
@@ -1267,6 +1316,7 @@ typedef struct {self.visitor_table_name()} {{
 ### 5. Testing Strategy
 
 **Unit tests** for generated code:
+
 ```c
 void test_visitor_dispatch_null() {
     visitLamExpPrettyPrint(NULL, &ppVisitorTable);
@@ -1297,10 +1347,12 @@ The visitor pattern **requires significant revision** based on the traversal con
 ### Critical Realization
 
 **Classic visitor pattern doesn't fit CEKF's needs.** The fundamental assumption of visitor pattern is:
+
 - Framework controls traversal (automatic, generated)
 - User code operates on nodes (before or after traversal)
 
 **CEKF transformations need interleaved control**:
+
 - Print delimiters before/between/after children
 - Build continuations between child normalizations
 - Thread type constraints through inference
@@ -1332,6 +1384,7 @@ This is **switch elimination**, not visitor pattern. But that's still valuable!
 #### For Pretty-Printing
 
 **Before (manual switch)**:
+
 ```c
 void ppLamExp(LamExp *exp) {
     switch (exp->type) {
@@ -1343,6 +1396,7 @@ void ppLamExp(LamExp *exp) {
 ```
 
 **After (generated dispatch)**:
+
 ```c
 void ppLamExp(LamExp *exp) {
     visitLamExp(exp, &ppVisitorTable);
@@ -1355,7 +1409,8 @@ static LamExpPrettyPrinterTable ppVisitorTable = {
 };
 ```
 
-**Net benefit**: 
+**Net benefit**:
+
 - Switch eliminated: ~60 lines → ~30 lines
 - Type safety: Compiler catches wrong function signatures
 - Clarity: Table shows all variants at-a-glance
@@ -1368,6 +1423,7 @@ static LamExpPrettyPrinterTable ppVisitorTable = {
 **Switch elimination**: Same benefit as pretty-printing (~60 lines → ~30)
 
 **Continuation scaffolding**: THIS is the real win!
+
 ```yaml
 # anf_continuations.yaml
 continuations:
@@ -1389,11 +1445,13 @@ Generates env struct, wrapper functions, PROTECT boilerplate, etc.
 ### Honest Assessment: Is This Worth It?
 
 **For switch elimination alone**: Marginal value
+
 - ~200 lines saved across all pretty-printers
 - Modest clarity improvement
 - Still need to write all the visitor functions (manually controlled traversal)
 
 **For switch + continuation scaffolding**: Worthwhile
+
 - ~200 lines (switch) + ~700 lines (continuations) = ~900 lines saved
 - Reduces error-prone continuation boilerplate
 - Type-safe env structs instead of hash tables
@@ -1428,7 +1486,7 @@ Generates env struct, wrapper functions, PROTECT boilerplate, etc.
    - **Phase 2**: Generate continuation scaffolding (THE REAL WIN)
    - **Phase 3**: (Optional) Generate traversal helpers for simple cases
 
-4. **Alternative to consider**: 
+4. **Alternative to consider**:
    - Skip Phase 1 (dispatch tables for pretty-printing)
    - Jump straight to Phase 2 (continuation scaffolding for ANF)
    - That's where the real value is
@@ -1436,13 +1494,15 @@ Generates env struct, wrapper functions, PROTECT boilerplate, etc.
 ### Final Verdict
 
 **The visitor pattern walkthrough revealed**:
+
 - Classic visitor pattern doesn't fit (traversal control issue)
 - Generated dispatch tables are still useful (switch elimination)
 - Continuation scaffolding is the real prize (~700 lines saved)
 - Pretty-printing was the wrong test case (minimal benefit)
 - **Should have started with ANF normalization** (where benefits are clear)
 
-**Updated recommendation**: 
+**Updated recommendation**:
+
 - Focus on **continuation scaffolding** (Phase 2 from VISITOR.md)
 - Treat dispatch table generation as a side benefit, not primary goal
 - Pretty-printing gains are too modest to justify Phase 1 alone

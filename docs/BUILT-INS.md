@@ -18,7 +18,7 @@ We will have to arrange that the builtins internal names are changed, the
 wrapping functions should get the names of the builtins they wrap. For a concrete example, the builtin `rand` would be given the name `builtin$rand`
 or similar, the dollar in the name is not normally valid syntax for an
 identifier so cannot be accidentally overridden by the user (same idea as the
-macro implementation for operators.) The generated wrapper function would 
+macro implementation for operators.) The generated wrapper function would
 then be called `rand`. It would take the
 same arguments as the builtin and call it with those arguments. The function
 will need to be generated because it also needs a dollar in the name of the
