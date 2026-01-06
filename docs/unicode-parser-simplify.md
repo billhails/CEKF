@@ -42,7 +42,7 @@ textfile input and HashSymbol output. Everything else within the parser should b
    - Add encoding error detection: if `mbstowcs()` returns `(size_t)-1`, fail with clear message indicating encoding mismatch
    - Update `prattBufferFromFileName()` to return buffer containing `wchar_t *` instead of `unsigned char *`
    - Store encoding choice in parser state for use in error messages
-     - Remove `PrattUTF8ToUnicode()` conversion function from pratt_parser.c once it is no longer used.
+   - Remove `PrattUTF8ToUnicode()` conversion function from pratt_parser.c once it is no longer used.
    - **Special case**: The preamble is hard-coded as an internalized C string and always parsed as UTF-8 regardless of `--encoding` flag (consider restricting preamble to 7-bit ASCII for maximum compatibility)
 4. **Handle buffer capacity**
    - Review all buffer allocation/reallocation code
