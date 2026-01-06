@@ -34,11 +34,13 @@ messages in the over-application branches but does not need structural changes.
 ## Goals and non-goals
 
 Goals
+
 - Preserve current evaluation order and calling conventions.
 - Support over-application without VM control-flow surgery.
 - Provide clear static or dynamic errors when an intermediate result is not a function.
 
 Non-goals (for this RFC)
+
 - Currying for builtins (currently unsupported; keep behavior unchanged).
 - Global transformation to unary application for every call site (we’ll use a
   targeted compile-time split where it’s safe and beneficial).
@@ -72,6 +74,7 @@ unsafe constructs or future extensions), but we do not expect it to trigger for
 well-typed code.
 
 Evaluation order
+
 - Preserve existing order: arguments evaluated left-to-right, then the function
   expression, just as today.
 - The chaining semantics do not change precedence or associativity; they are
@@ -128,6 +131,7 @@ Initial design targeted compile-time only splitting. Final implementation is a h
 The VM invariants (never executing an `APPLY k` with `k > pending`) are preserved; compile-time splitting avoids triggering the runtime path at direct sites, while the staging mechanism extends support to all other sites.
 
 Why this preserves evaluation order
+
 - Current order is "evaluate args left-to-right, then evaluate function".
 - We keep that exact evaluation schedule. The only change is how we break the
   application into VM steps, not the order expressions are evaluated.
@@ -135,12 +139,14 @@ Why this preserves evaluation order
 ## Stack discipline with APPLY
 
 Contract (existing VM invariants):
+
 - Before an `APPLY k`, the stack holds the `k` arguments (older at lower
   addresses) and then the callable on top (TOS). `applyProc(k)` pops the
   callable, inspects `k` and the closure’s pending arity, and either executes
   the body (exact), produces a partial closure (under), or errors (over).
 
 Over-application compilation strategy:
+
 - Ensure the first `APPLY` never has `k > pending`. That is achieved by choosing
   `k = m` (the callee’s arity) when `n > m`.
 - After that first `APPLY m`, if the result is a function of arity at least 1,
@@ -151,31 +157,34 @@ Over-application compilation strategy:
 
 `applyProc` now distinguishes:
 
-* Under-application: create partial closure (unchanged).
-* Exact application: execute body (unchanged, with counters).
-* Over-application: push an `OverApplyFrame` (auto-generated from `cekf.yaml` as part of an `OverApplicationStack`) capturing extra arguments. Perform exact call immediately; mark frame `ready` on `RETURN`; a post-instruction loop issues `APPLY 1` for the next staged argument when `ready` and the result is callable. Supports arbitrary nesting (one frame per active over-application), removing the prior fixed depth constant.
+- Under-application: create partial closure (unchanged).
+- Exact application: execute body (unchanged, with counters).
+- Over-application: push an `OverApplyFrame` (auto-generated from `cekf.yaml` as part of an `OverApplicationStack`) capturing extra arguments. Perform exact call immediately; mark frame `ready` on `RETURN`; a post-instruction loop issues `APPLY 1` for the next staged argument when `ready` and the result is callable. Supports arbitrary nesting (one frame per active over-application), removing the prior fixed depth constant.
 
 Builtins remain exact-only; over-application still errors for them.
 
 ## Compiler changes (precise)
 
 File: `src/bytecode.c` (`writeCexpApply`):
-* Detect direct lambda (`AEXP_TYPE_LAM`). If `n>m`, emit `APPLY m` + `n-m` times `APPLY 1`.
-* Else emit single `APPLY n`; VM staging handles any over-application.
+
+- Detect direct lambda (`AEXP_TYPE_LAM`). If `n>m`, emit `APPLY m` + `n-m` times `APPLY 1`.
+- Else emit single `APPLY n`; VM staging handles any over-application.
 
 Future extension: simple arity propagation to treat some let-bound lambdas as direct.
 
 ## Pipeline impact & invariants
 
 Affected stages:
-* Pratt / Parsing: No syntactic change; applications unchanged.
-* Lambda Conversion / ANF: Unmodified; over-application handled after ANF (arity known for direct lambdas).
-* Type Checking: Already curried; no new rules, just longer application chains.
-* Bytecode Compiler: Adds compile-time split for direct lambdas (`APPLY m` then chained `APPLY 1`). Emits a single `APPLY n` for indirect sites.
-* Runtime VM (`step.c`): Introduces staging path in `applyProc` plus post-instruction loop and generated `OverApplicationStack` for nested frames.
-* Code Generation (`cekf.yaml`): Now owns the over-application frame/stack types; removes hard-coded max depth.
+
+- Pratt / Parsing: No syntactic change; applications unchanged.
+- Lambda Conversion / ANF: Unmodified; over-application handled after ANF (arity known for direct lambdas).
+- Type Checking: Already curried; no new rules, just longer application chains.
+- Bytecode Compiler: Adds compile-time split for direct lambdas (`APPLY m` then chained `APPLY 1`). Emits a single `APPLY n` for indirect sites.
+- Runtime VM (`step.c`): Introduces staging path in `applyProc` plus post-instruction loop and generated `OverApplicationStack` for nested frames.
+- Code Generation (`cekf.yaml`): Now owns the over-application frame/stack types; removes hard-coded max depth.
 
 Core invariants preserved:
+
 1. Never call `applyProc(k)` with `k > pending` for a closure (compile-time split or runtime staging ensures this).
 2. Stack layout before each `APPLY`: arguments below, callable on top.
 3. Staged extras applied only after a completed RETURN (body evaluated) ensuring result is a stable callable.
@@ -183,20 +192,23 @@ Core invariants preserved:
 5. Nested over-application frames pop in LIFO order; each frame’s vector is GC-protected until completion.
 
 Risks / mitigations:
-* Potential extra dispatch overhead from post-instruction loop: guarded by `overApplyDepth` check (cheap integer test).
-* Memory growth from many nested frames: dynamic vectors are freed promptly on frame completion.
-* Error clarity: non-callable staging boundary produces precise arity error with location; avoids silent failure.
+
+- Potential extra dispatch overhead from post-instruction loop: guarded by `overApplyDepth` check (cheap integer test).
+- Memory growth from many nested frames: dynamic vectors are freed promptly on frame completion.
+- Error clarity: non-callable staging boundary produces precise arity error with location; avoids silent failure.
 
 No changes required in TPMC or macro expansion; operator definitions lower to ordinary applications and inherit semantics automatically.
 
 ## Error reporting & instrumentation
 
 Static
+
 - When type inference proves that after `k` applications the result cannot be a
   function while extra arguments remain, report a compile-time error at the
   application site of arg `k+1`.
 
 Dynamic
+
 - When an `APPLY 1` targets a non-function value (e.g., number), raise an arity
   error at that application with source location from the last `writeLocation`.
 - Optional (nice-to-have): replace the `cant_happen` over-application branches
@@ -226,10 +238,11 @@ Dynamic
 ## Testing plan
 
 Tests:
-* `tests/fn/test_over_application.fn` — direct lambda over-application; multiple extras; under-application; builtin rejection.
-* `tests/fn/test_over_application_nested.fn` — nested over-application using stacked frames; partial then staged cases.
-* Static typing error (typechecker) — where the intermediate is provably non-function, compile-time error at the boundary.
-* Dynamic error — where runtime produces a non-function value mid-chain, precise arity error at the first invalid `APPLY`.
+
+- `tests/fn/test_over_application.fn` — direct lambda over-application; multiple extras; under-application; builtin rejection.
+- `tests/fn/test_over_application_nested.fn` — nested over-application using stacked frames; partial then staged cases.
+- Static typing error (typechecker) — where the intermediate is provably non-function, compile-time error at the boundary.
+- Dynamic error — where runtime produces a non-function value mid-chain, precise arity error at the first invalid `APPLY`.
 
 ## Implementation steps
 
@@ -254,6 +267,7 @@ Tests:
 ## Implementation & test plan (retrospective)
 
 Incremental rollout followed this order:
+
 1. RFC drafting and semantic agreement (curried chaining, left-to-right).
 2. Compile-time split for direct lambdas to eliminate immediate VM over-calls.
 3. Runtime staging for indirect over-application (single-site transparent fallback).

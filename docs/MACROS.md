@@ -4,7 +4,7 @@ Just thinking out loud. Basic intent is just something like lisp
 `defmacro`, no attempt to do `syntax-rules` or anything fancy, but we
 can provide some support for hygene.
 
-```
+```fn
 macro time(expression) {
     let $start = now()
     in
@@ -23,13 +23,13 @@ the same generated symbol.
 Macros can nest without conflict provided `$` prefixes are used to
 resolve conflicts, i.e.
 
-```
+```fn
 time(time(sort(hugeList)))
 ```
 
 would get expanded to:
 
-```
+```fn
 {
     let start$1 = now()
     in
@@ -55,7 +55,7 @@ so nothing downstream should need to change.
 
 `time` as shown above, also
 
-```
+```fn
 macro trace(expression) {
     print("entering " @@ `expression`);
     {
@@ -72,7 +72,7 @@ The backticks or something equivalent could prevent evaluation of the
 
 Something a bit more ambitious...
 
-```
+```fn
 macro for(name, init, test, modifier, expression) {
     let fn $loop (name) {
         if (condition) {
@@ -92,7 +92,7 @@ is simple but ugly.
 
 Maybe we can extend the parser just a bit to acommodate them:
 
-```
+```fn
 macro for(name = init, test, modifier): expression {
     ... same as before
 }
@@ -113,4 +113,3 @@ in fact that's undesirable as there should be no run-time performance
 penalty for using macros. Possibly the place to handle them is immediately
 before type-checking.  we'll need an environment with namespaces installed
 in order to look them up, but we're doing that already for constructors.
-

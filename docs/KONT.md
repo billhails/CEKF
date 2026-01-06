@@ -16,7 +16,7 @@ a stack frame pointer along with a stack pointer.
 
 Something like:
 
-```
+```text
  S
 | |<----+SP
 | |     |

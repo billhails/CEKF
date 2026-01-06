@@ -9,6 +9,7 @@ Should we allow mixfix secondary keywords to coexist with standalone operators o
 ### Current Behavior (With Conflict Check)
 
 If you try to import a mixfix operator whose secondary keyword matches an existing operator:
+
 ```fn
 operator "_??_" left 10 BINARY_OP;
 import ns operator "_?_??_";  // ERROR: conflict with existing operator
@@ -19,6 +20,7 @@ import ns operator "_?_??_";  // ERROR: conflict with existing operator
 Allow both to coexist, with precedence determining which "wins":
 
 **Example**:
+
 - Existing: `_??_` with precedence 10
 - Mixfix: `_?_??_` with precedence 5
 - Expression: `a ? b ?? c`
@@ -44,7 +46,7 @@ Allow both to coexist, with precedence determining which "wins":
 The behavior depends on relative precedences:
 
 | Standalone `??` Prec | Mixfix `_?_??_` Prec | Arg Parse Prec | Result |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 10 | 5 (left) | 6 | Standalone wins, parse ERROR |
 | 10 | 5 (right) | 4 | Standalone wins, parse ERROR |
 | 10 | 15 (left) | 16 | Mixfix wins, parses correctly |
@@ -69,17 +71,21 @@ The behavior depends on relative precedences:
 ### Comparison to Normal Operators
 
 This is analogous to how nested operators work:
+
 ```fn
 a + b * c
 ```
+
 - `*` has higher precedence, so binds tighter
 - Parse as `a + (b * c)` not `(a + b) * c`
 - Precedence determines structure
 
 Similarly:
+
 ```fn
 a ? b ?? c
 ```
+
 - If standalone `??` has higher precedence than mixfix argument-parsing precedence
 - It "binds tighter" and steals the keyword
 - Parse fails, but failure is at use-site with clear message
@@ -124,6 +130,7 @@ a ? b !! c
 **Remove the conflict check** (lines 804-811 in `mergeFixity()`).
 
 **Rationale**:
+
 1. Precedence-based disambiguation is consistent with how Pratt parsing works
 2. Use-site errors are more informative than blanket import-time rejection
 3. Users have control via precedence settings

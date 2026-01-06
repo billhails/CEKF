@@ -30,6 +30,7 @@ checksums.txt  commit.txt  generated/  src/  timestamp.txt
 ```
 
 **What happened:**
+
 - All code was regenerated from scratch
 - Copied to `test_baseline/generated/`
 - Checksums computed for verification
@@ -70,7 +71,7 @@ Running test suite...
 Let's extract the documentation generator to `tools/generate/docgen.py`:
 
 ```bash
-$ vim tools/generate/docgen.py
+vim tools/generate/docgen.py
 ```
 
 ```python
@@ -137,7 +138,7 @@ $ make test-refactoring
 Let's refactor just the `SimpleStruct` class to use it:
 
 ```bash
-$ vim tools/generate/structs.py
+vim tools/generate/structs.py
 ```
 
 ```python
@@ -329,7 +330,7 @@ $ git commit -m "Improve: add @returns to all constructor documentation
 
 ## Summary of Workflow
 
-```
+```text
 1. make establish-baseline     ← Do once at start
 2. Make small change
 3. make test-refactoring       ← Do after EVERY change
@@ -350,11 +351,13 @@ $ git commit -m "Improve: add @returns to all constructor documentation
 ## Next Example
 
 After successfully refactoring documentation generation, you could:
+
 - Extract signature generation (similar process)
 - Refactor mark function generation
 - Create template classes for common patterns
 
 Each time, follow the same workflow:
+
 1. Make change
 2. Test
 3. Debug or commit

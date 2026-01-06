@@ -28,6 +28,7 @@ in
    - Calculates arity (number of `_` holes = 4 in this case)
 
 2. **Operator Registration** (`addMixfixOperator()` at line 1545):
+
    ```c
    for (Index i = 1; i < pattern->keywords->size; ++i) {
        HashSymbol *inner = utf8ToSymbol(pattern->keywords->entries[i]);
@@ -37,6 +38,7 @@ in
        parser->trie = insertPrattTrie(parser->trie, inner);
    }
    ```
+
    - Adds secondary keywords (`|||>`, `||||>`) to the **scanner trie**
    - Checks for conflicts with existing operators
    - **DOES NOT** add PrattRecords for secondary keywords to `parser->rules`
@@ -47,6 +49,7 @@ in
    - The secondary keywords ARE in the trie, so they should be recognized
 
 4. **Parsing Usage** (`userMixfix()` at line 1427):
+
    ```c
    while (arity > 0) {
        lhs = expressionPrecedence(parser, precedence);
@@ -63,8 +66,10 @@ in
        }
    }
    ```
+
    - Expects secondary keywords as ATOM tokens
    - Uses `isAtomSymbol(nextTok, nextSym)` which checks:
+
      ```c
      return (token->value->type == PRATTVALUE_TYPE_ATOM && 
              token->value->val.atom == symbol);
@@ -77,19 +82,21 @@ in
 1. When parsing `1 ||> 2 |||> 3 ||||> 4`:
    - Parser recognizes `||>` as an infix operator with `userInfixMix` parselet
    - Calls `userMixfix()` at line 1427 to handle the mixfix operator
-   
+
 2. Inside `userMixfix()` at line 1457:
    - Calls `expressionPrecedence(parser, precedence)` to parse the first argument
    - This **recursively** parses `2`
    - After parsing `2`, `expressionPrecedence()` **looks ahead** for infix/postfix operators
    - Sees `|||>` token and tries to extend the expression
-   
+
 3. At line 4253 in `expressionPrecedence()`:
+
    ```c
    PrattRecord *record = fetchRecord(parser, op->type);
    if (record == NULL) {
        parserError(parser, "unrecognised token: %s", op->type->name);
    ```
+
    - `fetchRecord()` returns NULL because `|||>` has no PrattRecord
    - Parser errors before `userMixfix()` can consume `|||>` at line 1467
 
@@ -98,6 +105,7 @@ in
 ### Why Secondary Keywords Should NOT Have PrattRecords
 
 Secondary keywords like `|||>` are NOT standalone operators - they're part of the mixfix syntax. They should:
+
 - Be **tokenized** (require trie entry) so `userMixfix()` can peek/consume them at line 1467
 - **Stop expression parsing** (require NO PrattRecord) so `expressionPrecedence()` returns to `userMixfix()`
 
@@ -108,6 +116,7 @@ The current code incorrectly treats "no PrattRecord" as an error. It should trea
 ### Data Structures
 
 **PrattMixfixPattern** (src/pratt.yaml:134):
+
 ```yaml
 PrattMixfixPattern:
     data:
@@ -119,6 +128,7 @@ PrattMixfixPattern:
 ```
 
 **PrattFixityConfig** (src/pratt.yaml:226):
+
 ```yaml
 pattern: PrattMixfixPattern=NULL     # Stored on primary operator only
 ```
@@ -126,6 +136,7 @@ pattern: PrattMixfixPattern=NULL     # Stored on primary operator only
 ### Scanner Token Recognition
 
 The scanner uses a trie-based approach for recognizing operator tokens:
+
 - `insertPrattTrie()` adds symbols to the trie
 - `lookUpTrieSymbol()` searches the trie for matching operator sequences
 - Returns a token with the matched symbol as its type
@@ -155,12 +166,14 @@ if (record == NULL) {
 ```
 
 **Advantages**:
+
 - Minimal change (3 lines)
 - Correct semantics: unknown tokens stop expression parsing
 - Secondary keywords work automatically
 - No special tracking or data structures needed
 
 **Rationale**:
+
 - If a token is in the trie but not in rules, it means:
   - Scanner recognizes it (can be used as keyword)
   - Parser doesn't treat it as operator (can't extend expression)
@@ -169,6 +182,7 @@ if (record == NULL) {
 ### Option 2: Add Dummy PrattRecords with NULL Parselets
 
 Create minimal PrattRecords for secondary keywords:
+
 ```c
 // In addMixfixOperator() after line 1556:
 PrattFixityConfig empty = {NULL, 0, NULL, NULL, false, false, NULL, -1, NULL};
@@ -177,6 +191,7 @@ setPrattRecordTable(parser->rules, inner, keywordRecord);
 ```
 
 Then ensure `expressionPrecedence()` handles NULL parselets:
+
 ```c
 } else if (record->infix.op != NULL) {
     // ... existing infix handling
@@ -187,6 +202,7 @@ Then ensure `expressionPrecedence()` handles NULL parselets:
 ```
 
 **Disadvantages**:
+
 - More complex: changes in two places
 - Creates unnecessary PrattRecord objects
 - Doesn't match semantics (secondary keywords aren't operators)
@@ -194,12 +210,14 @@ Then ensure `expressionPrecedence()` handles NULL parselets:
 ### Option 3: Track Secondary Keywords Explicitly
 
 Maintain a set of secondary keyword symbols:
+
 ```c
 // In addMixfixOperator():
 parser->mixfixKeywords = insertHashSet(parser->mixfixKeywords, inner);
 ```
 
 Then check in `expressionPrecedence()`:
+
 ```c
 if (record == NULL) {
     if (isInHashSet(parser->mixfixKeywords, op->type)) {
@@ -210,6 +228,7 @@ if (record == NULL) {
 ```
 
 **Disadvantages**:
+
 - Requires new data structure
 - More bookkeeping
 - Less elegant than Option 1
@@ -217,6 +236,7 @@ if (record == NULL) {
 ## Recommended Approach
 
 **Option 1 is the correct fix**: Change line 4254-4256 in `expressionPrecedence()` from:
+
 ```c
 parserError(parser, "unrecognised token: %s", op->type->name);
 break;
@@ -254,7 +274,7 @@ if (record == NULL) {
 
 1. **During operator definition**: `addMixfixOperator()` adds secondary keywords to `parser->trie` (line 1556)
 2. **During scanning**: Scanner finds `|||>` in trie, creates token
-3. **During parsing**: 
+3. **During parsing**:
    - `expressionPrecedence()` recursively parses argument inside `userMixfix()`
    - After parsing argument, looks ahead for infix/postfix operators
    - Sees `|||>` token, calls `fetchRecord()` → returns NULL
@@ -274,24 +294,28 @@ if (record == NULL) {
 **Question**: Should truly invalid tokens error in `expressionPrecedence()` or earlier?
 
 **Answer**: Invalid tokens won't be in the trie, so scanner will error with "unrecognised token" before `expressionPrecedence()` is reached. Only tokens that are:
+
 - In the trie (intentionally registered)
 - But not in rules (not operators)
 
 Will reach this code path. These are exactly the mixfix secondary keywords.
 
 **Edge case**: What if someone does `x = |||> + 5`?
+
 - `|||>` is parsed as a symbol/identifier (if used in prefix position, might hit different code path)
 - Actually, `|||>` is in trie, so it becomes a token
 - In prefix position, `expressionPrecedence()` would call prefix parselet
 - No prefix parselet exists → would need NULL check there too
 - OR: prefix position might fail earlier in scanning logic
-2. Test error cases: bare keyword `|||>` without context
-3. Test conflicts: defining `|||>` as both secondary keyword and standalone operator
-4. Test scoping: secondary keywords only valid where mixfix operator is in scope
+
+1. Test error cases: bare keyword `|||>` without context
+2. Test conflicts: defining `|||>` as both secondary keyword and standalone operator
+3. Test scoping: secondary keywords only valid where mixfix operator is in scope
 
 ### Alternative: Error Parselets
 
 Instead of NULL parselets, could create error parselets:
+
 ```c
 static AstExpression *mixfixKeywordError(PrattRecord *record, ...) {
     parserError(parser, "keyword %s can only appear within mixfix operator",

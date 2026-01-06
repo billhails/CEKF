@@ -32,7 +32,7 @@ classes.
 
 Generated using [Unicode.hs](https://lists.gnu.org/archive/html/help-flex/2005-01/msg00043.html)
 
-```
+```text
 0x80 - 0x9F Control characters
 \xC2[\x80-\x9F]
 

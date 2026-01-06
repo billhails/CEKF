@@ -3,7 +3,7 @@
 It would be very useful to be able to immediately unpack the values
 from a tuple returned by a function, for example:
 
-```
+```fn
 let
    #(a, b) = myfunc(c);
 in

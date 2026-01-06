@@ -13,7 +13,7 @@ The meat of the Closure Conversion algorithm remains to investigate.
 
 The core problem: we need to hoist all functions to the top level. Consider
 
-```
+```scheme
 (define adder
   (lambda (x)
     (lambda (y) (+ x y))))
@@ -23,7 +23,7 @@ The core problem: we need to hoist all functions to the top level. Consider
 
 That inner lambda cannot stand. We need to produce something like:
 
-```
+```scheme
 (define f$42
   (lambda (env y)
     (+ (env-ref env x) y)))

@@ -42,10 +42,9 @@ about the functions in the inner "letrec".
 
 ## Notes
 
-
 ### AST
 
-```
+```text
 preamble: {
 rand = fn { (a$0) { builtin$rand(a$0); } };
 assertion = fn { () { builtin$assertion(); } };
@@ -165,8 +164,7 @@ body: {{ 1; }; }
 
 ### Lambda
 
-
-```
+```scheme
 (typedefs
   ((cmp gt eq lt)
    (bool true false)
@@ -631,7 +629,7 @@ body: {{ 1; }; }
 
 ### ANF showing nested lets
 
-```
+```scheme
 (letrec ((barrels_of_fun
            (lambda ()
              (let (barrels [30 32 36 38 40 62])

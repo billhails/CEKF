@@ -7,6 +7,7 @@ Mixfix operators allow multi-part syntax with "holes" for arguments, enabling mo
 ## Examples
 
 ### Array/List Indexing
+
 ```fn
 mixfix 110 "_[_]" index;
 
@@ -16,6 +17,7 @@ let arr = [10, 20, 30, 40] in
 ```
 
 ### If-Then-Else Expression
+
 ```fn
 mixfix 1 "if_then_else_" ternary;
 
@@ -25,6 +27,7 @@ let x = if true then 42 else 0 in
 ```
 
 ### For-In-Do Loop
+
 ```fn
 mixfix 2 "for_in_do_" forEach;
 
@@ -34,6 +37,7 @@ for x in [1, 2, 3] do print(x)
 ```
 
 ### Custom Control Flow
+
 ```fn
 mixfix 3 "when_do_" conditional;
 mixfix 5 "unless_do_" negatedConditional;
@@ -45,6 +49,7 @@ repeat 10 times expensiveComputation();
 ```
 
 ### Mathematical Notation
+
 ```fn
 mixfix 100 "_choose_" binomialCoefficient;
 mixfix 95 "_mod_" modulo;
@@ -55,6 +60,7 @@ x mod 7
 ```
 
 ### Pattern Matching Extension
+
 ```fn
 mixfix 8 "match_with_" patternMatch;
 
@@ -77,12 +83,14 @@ mixfix 1 "if_then_else_" ternary;
 ```
 
 **Pros:**
+
 - Clear visual separation of keywords and argument positions
 - Familiar to Agda/Idris users
 - Unambiguous parsing
 - Natural ASCII representation
 
 **Cons:**
+
 - Requires escaping if `_` is wanted as an operator character
 - Slightly verbose
 
@@ -96,11 +104,13 @@ mixfix 1 "if $1 then $2 else $3" ternary;
 ```
 
 **Pros:**
+
 - Numbered arguments make arity explicit
 - Could support non-linear patterns (e.g., `$1 + $1` for doubling)
 - Clear distinction from regular underscores
 
 **Cons:**
+
 - More verbose
 - Less familiar syntax
 - Numbered arguments might not map cleanly to function parameters
@@ -115,11 +125,13 @@ mixfix 1 "if" "then" "else" ternary;  // ternary: if arg then arg else arg
 ```
 
 **Pros:**
+
 - Cleaner syntax, no underscores
 - Keywords alone define the structure
 - Natural reading
 
 **Cons:**
+
 - Ambiguous: where do arguments go?
 - Hard to parse: is `if x then y else z` three keywords or five?
 - Doesn't work for operators like `_!` (postfix factorial)
@@ -134,11 +146,13 @@ mixfix 1 "if {expr} then {expr} else {expr}" ternary;
 ```
 
 **Pros:**
+
 - Very explicit about argument positions
 - Could support named arguments later
 - Familiar to template users
 
 **Cons:**
+
 - Verbose
 - Mixing string-like syntax with code
 - Requires escaping braces
@@ -153,11 +167,13 @@ mixfix 1 "if X then Y else Z" ternary;
 ```
 
 **Pros:**
+
 - Declarative style
 - Could bind to actual parameter names
 - Familiar to logic programming users
 
 **Cons:**
+
 - Conflates pattern and binding
 - May confuse with actual variables
 - Parsing complexity
@@ -172,11 +188,13 @@ mixfix 1 "if" "then" "else" fn(test, consequent, alternative) { ... };
 ```
 
 **Pros:**
+
 - Parameter names are explicit
 - Clear mapping from pattern to parameters
 - No special markers needed
 
 **Cons:**
+
 - Redundant information (arity appears twice)
 - Harder to see the complete operator at a glance
 - More complex parsing
@@ -184,6 +202,7 @@ mixfix 1 "if" "then" "else" fn(test, consequent, alternative) { ... };
 ## Recommended Syntax: Alternative 1 (Underscore Markers)
 
 **Rationale:**
+
 - Simple, clear, and unambiguous
 - Consistent with existing operator conventions (infix operators are conceptually `_ op _`)
 - Easy to parse: underscores delimit keyword segments
@@ -191,17 +210,20 @@ mixfix 1 "if" "then" "else" fn(test, consequent, alternative) { ... };
 - Works for all cases: prefix, infix, postfix, and mixfix
 
 **Full syntax:**
+
 ```fn
 mixfix [associativity] precedence "pattern_with_underscores_" implementation;
 ```
 
 Where:
+
 - `associativity` is optional: `left`, `right`, or `none` (defaults to `none`)
 - `precedence` is an integer (scaled by `PRECEDENCE_SCALE` internally)
 - `pattern_with_underscores_` contains keywords and `_` for argument positions
 - `implementation` is a function expression (can be a symbol, anonymous function, or complex expression)
 
 **Examples:**
+
 ```fn
 // Unary (like postfix)
 mixfix 120 "_!" factorial;
@@ -256,16 +278,19 @@ arr[i] + arr[j]  // Parsed as: (arr[i]) + (arr[j])
 **Key insight:** Associativity is only meaningful for **binary** (arity 2) mixfix operators.
 
 **Syntax:**
+
 ```fn
 mixfix [associativity] precedence "pattern" implementation;
 ```
 
 Where `associativity` is optional and can be:
+
 - `left` - left associative
 - `right` - right associative  
 - `none` - non-associative (default if omitted)
 
 **Associativity behavior:**
+
 - `left`: `a op b op c` → `(a op b) op c`
 - `right`: `a op b op c` → `a op (b op c)`
 - `none`: `a op b op c` → error (must use explicit parens)
@@ -344,6 +369,7 @@ mixfix left 1 "if_then_else_" ternary;
 **Answer:** `none` (non-associative)
 
 **Rationale:**
+
 1. **Safety:** Prevents accidental mis-parsing of chained expressions
 2. **Explicitness:** Forces users to think about whether chaining makes sense
 3. **Consistency:** Most mixfix operators won't be chainable anyway
@@ -381,11 +407,13 @@ matrix[i][j]
 This is **not** associativity - it's just normal left-to-right parsing where each `[` is an infix operator that can operate on any expression (including the result of a previous indexing).
 
 The precedence is high enough that:
+
 ```fn
 matrix[i] + matrix[j]  →  (matrix[i]) + (matrix[j])
 ```
 
 But:
+
 ```fn
 matrix[i + 1]  →  matrix[(i + 1)]  // + has lower precedence
 ```
@@ -422,6 +450,7 @@ The answer depends on whether the pattern starts with `_` (hole) or a keyword.
 Pattern: `"if_then_else_"`
 
 **Triggering:**
+
 - The scanner sees token `if` in prefix position
 - Parser looks up `if` in the `PrattRecord` table
 - Finds a mixfix parselet registered for prefix position
@@ -429,6 +458,7 @@ Pattern: `"if_then_else_"`
 - The `lhs` argument is `NULL` because there's no left-hand side expression
 
 **Example:**
+
 ```fn
 mixfix 1 "if_then_else_" ternary;
 
@@ -448,6 +478,7 @@ if x > 5 then "big" else "small"
 Pattern: `"_[_]"` or `"_choose_"`
 
 **Triggering:**
+
 - The scanner sees token `[` (or `choose`) in infix position (after an expression)
 - Parser has already parsed the left-hand side expression
 - Parser looks up `[` in the `PrattRecord` table
@@ -455,6 +486,7 @@ Pattern: `"_[_]"` or `"_choose_"`
 - Calls `record->infixOp(record, parser, lhs, tok)` where `lhs` is the left expression and `tok` is the `[` token
 
 **Example:**
+
 ```fn
 mixfix 110 "_[_]" index;
 
@@ -506,6 +538,7 @@ record->infixPrec = precedence * PRECEDENCE_SCALE;
 #### Pattern Analysis Algorithm
 
 When processing a mixfix definition, the parser must determine:
+
 1. **Does it start with `_`?** → Register first keyword as INFIX
 2. **Does it start with a keyword?** → Register that keyword as PREFIX
 3. **Store the full pattern** in the record for the parselet to use
@@ -574,6 +607,7 @@ When `userMixfix()` is called, it has access to the full pattern and knows what 
 #### Example: Full Trigger Sequence
 
 **Code:**
+
 ```fn
 mixfix 1 "if_then_else_" ternary;
 
@@ -626,11 +660,13 @@ The parser generates a unique hygienic function name (e.g., `$mixfix$42`) that c
 ### 1. Scanner Changes
 
 **Keyword Recognition:**
+
 - The scanner needs to recognize mixfix keyword sequences
 - First keyword triggers a mixfix parselet lookup
 - Subsequent keywords are consumed during parsing
 
 **Trie Extension:**
+
 - Current trie structure can handle this with minimal changes
 - Store mixfix patterns in the `PrattRecord` structure
 - First keyword is the lookup key
@@ -688,6 +724,7 @@ PrattMixfixPattern:
 ### 4. Parser Implementation
 
 **New parselet function:**
+
 ```c
 static AstExpression *userMixfix(PrattRecord *record,
                                  PrattParser *parser,
@@ -729,6 +766,7 @@ static AstExpression *userMixfix(PrattRecord *record,
 ```
 
 **Pattern parsing:**
+
 ```c
 // In the parser for mixfix definitions
 static PrattMixfixPattern *parseMixfixPattern(PrattParser *parser, char *pattern_str) {
@@ -796,18 +834,22 @@ in
 ### 1. Pattern Restrictions
 
 **Cannot start and end with keyword:**
+
 ```fn
 mixfix 100 "foo_bar" fn(x) { ... }  // ERROR: no leading hole
 ```
+
 Must have at least one hole. Use prefix/postfix/infix for single-hole operators.
 
 **Minimum arity:**
+
 - Unary: use prefix or postfix operators
 - Binary+: use mixfix
 
 ### 2. Ambiguity Resolution
 
 **Overlapping patterns:**
+
 ```fn
 mixfix 100 "if_then_else_" ternary;
 mixfix 100 "if_then_" binary;  // Conflict!
@@ -816,6 +858,7 @@ mixfix 100 "if_then_" binary;  // Conflict!
 The parser should reject patterns where one is a prefix of another with the same first keyword.
 
 **Keywords vs. operators:**
+
 ```fn
 infix 100 "then" thenOp;
 mixfix 1 "if_then_else_" ternary;  // "then" is both keyword and operator!
@@ -864,17 +907,20 @@ This is tricky. Initial implementation should **not** support partial applicatio
 ## Migration Path
 
 ### Phase 1: Core Implementation
+
 - Basic mixfix pattern parsing
 - Hygiene and definition generation
 - Simple precedence handling
 - No associativity (all `none`)
 
 ### Phase 2: Full Features
+
 - Left/right associativity for mixfix
 - Export/import support
 - Better error messages for pattern conflicts
 
 ### Phase 3: Advanced Features (Future)
+
 - Partial application
 - Non-linear patterns (same argument appears multiple times)
 - Custom delimiter pairs (related but separate feature)
@@ -882,6 +928,7 @@ This is tricky. Initial implementation should **not** support partial applicatio
 ## Examples from Other Languages
 
 ### Agda
+
 ```agda
 if_then_else_ : Bool → A → A → A
 if true  then x else y = x
@@ -889,12 +936,14 @@ if false then x else y = y
 ```
 
 ### Idris
+
 ```idris
 infix 5 `div`
 mixfix [_] : Vect n a → Fin n → a
 ```
 
 ### Fortress (defunct but interesting)
+
 ```
 opr ⟦ i ⟧(self, i:ℤ): E = ...
 ```
@@ -921,6 +970,7 @@ opr ⟦ i ⟧(self, i:ℤ): E = ...
 ## Summary
 
 **Recommended approach:**
+
 - Use underscore-based pattern syntax: `mixfix precedence "_pattern_with_holes_" impl`
 - Implement as an extension to the existing operator system
 - Maintain hygiene via generated wrapper functions
@@ -929,6 +979,7 @@ opr ⟦ i ⟧(self, i:ℤ): E = ...
 - Extend with advanced features in later phases
 
 This design:
+
 - ✓ Fits naturally into existing Pratt parser architecture
 - ✓ Maintains hygiene and scoping properties
 - ✓ Provides powerful syntactic abstraction

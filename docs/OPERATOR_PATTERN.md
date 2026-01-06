@@ -12,7 +12,6 @@ a few simple rules to be followed when parsing:
 
 This converts nicely into a little state machine:
 
-
 ```mermaid
 flowchart TD
 classDef error fill:#844;
@@ -44,16 +43,16 @@ ucu --*--> uc
 
 Which in turn can be translated into a state table
 
-| STATE | CHAR | UNDERSCORE | END |
-|-------|------|------------|-----|
-| S     | C    | U          | ERR |
-| C     | C    | CU         | ERR |
-| CU    | CUC  | ERR        | CUF |
+| STATE | CHAR | UNDERSCORE | END  |
+|-------|------|------------|------|
+| S     | C    | U          | ERR  |
+| C     | C    | CU         | ERR  |
+| CU    | CUC  | ERR        | CUF  |
 | CUC   | CUC  | CU         | CUCF |
-| U     | UC   | ERR        | ERR |
-| UC    | UC   | UCU        | UCF |
+| U     | UC   | ERR        | ERR  |
+| UC    | UC   | UCU        | UCF  |
 | UCU   | UC   | ERR        | UCUF |
-| ERR   | ERR  | ERR        | ERR |
-| CUF   | ERR  | ERR        | ERR |
-| UCF   | ERR  | ERR        | ERR |
-| UCUF  | ERR  | ERR        | ERR |
+| ERR   | ERR  | ERR        | ERR  |
+| CUF   | ERR  | ERR        | ERR  |
+| UCF   | ERR  | ERR        | ERR  |
+| UCUF  | ERR  | ERR        | ERR  |

@@ -6,7 +6,7 @@ in certain circumstances, be able to name the fields.
 
 It would be relatively easy to have a separate struct declaration, like
 
-```
+```fn
 struct named_list(#t) { name: string, values: list(#t) }
 ```
 
@@ -15,7 +15,7 @@ like the use of curlies to delimit structs as it follows well-established
 conventions in C-like languages. A second advantage is that if the struct
 is it's own type, we can safely unpack its values, something like:
 
-```
+```fn
 struct customer { name: string address: list(string) }
 
 x = customer{ name: "Joe", address: ["1", "somestreet", "sometown"] };;
@@ -30,7 +30,7 @@ On the other hand, allowing structs as alternative type constructors in
 normal typedefs has its advantages too, it would allow pattern matching
 on those named fields:
 
-```
+```fn
 fn find_address {
     ([], _) { maybe.nothing }
     (customer{ name: x, address: y } @ _, x) { maybe.some(y) }
@@ -47,7 +47,7 @@ to restore canonical order if the fields are not in their declared order.
 The alternative then is to allow type constructors in a typedef to
 be structs:
 
-```
+```fn
 typedef employee {
     worker{ name: string, id: int } |
     manager{ name: string, id: int, reports: list(employee) }
@@ -81,50 +81,50 @@ based deconstructors, so the stages that wil require modification are:
 As of writing the section of the parser grammar dealing with types is
 as follows:
 
-```
-typedef : TYPEDEF user_type '{' type_body '}'
+```bnf
+typedef ::= TYPEDEF user_type '{' type_body '}'
         ;
 
-user_type : symbol
+user_type ::= symbol
           | symbol '(' type_symbols ')'
           ;
 
-type_symbols : type_symbol
+type_symbols ::= type_symbol
              | type_symbol ',' type_symbols
              ;
 
-type_symbol : TYPE_VAR
+type_symbol ::= TYPE_VAR
             ;
 
-type_body : type_constructor
+type_body ::= type_constructor
           | type_constructor '|' type_body
           ;
 
-type_constructor : symbol
+type_constructor ::= symbol
                  | symbol '(' type_list ')'
                  ;
 
-type_function : scoped_symbol
+type_function ::= scoped_symbol
               | scoped_symbol '(' type_list ')'
               ;
 
-scoped_symbol : symbol
+scoped_symbol ::= symbol
               | symbol '.' symbol
               ;
 
-type_list : type
+type_list ::= type
           | type ',' type_list
           ;
 
-type : type_clause
+type ::= type_clause
      | type_clause ARROW type
      | '(' type ')'
      ;
 
-type_tuple : '#' '(' type_list ')'
+type_tuple ::= '#' '(' type_list ')'
            ;
 
-type_clause : KW_INT
+type_clause ::= KW_INT
             | KW_CHAR
             | type_symbol
             | type_function
@@ -134,7 +134,7 @@ type_clause : KW_INT
 
 So `type_constructor` will need an extra clause for the new struct
 
-```
+```bnf
 type_constructor : symbol
                  | symbol '(' type_list ')'
                  | symbol '{' type_map '}'
@@ -143,7 +143,7 @@ type_constructor : symbol
 
 we'll need to define that `type_map`
 
-```
+```bnf
 type_map : tagged_type
          | tagged_type ',' type_map
          ;
@@ -151,7 +151,7 @@ type_map : tagged_type
 
 and define `tagged_type`
 
-```
+```bnf
 tagged_type : symbol ':' type
             ;
 ```
@@ -165,7 +165,7 @@ order of the declarations so a hash is probably not appropriate here.
 The other section of the parser that will need extending is the pattern
 matching.
 
-```
+```bnf
 fargs : %empty
       | farg
       | farg ',' fargs
@@ -178,7 +178,7 @@ unpack : scoped_symbol '(' fargs ')'
 Not sure why `fargs` is allowed to be empty, probably an error to fix.
 Anyway we'll need an extra clause for `unpack`
 
-```
+```bnf
 unpack : scoped_symbol '(' fargs ')'
        | scoped_symbol '{' fargs_map '}'
        ;
@@ -187,7 +187,7 @@ unpack : scoped_symbol '(' fargs ')'
 (An LALR1 parser like Bison might not like this). Anyway we'll also need
 that `fargs_map`
 
-```
+```bnf
 fargs_map : tagged_farg
           | tagged_farg ',' fargs_map
           ;
@@ -195,7 +195,7 @@ fargs_map : tagged_farg
 
 and `tagged_farg`
 
-```
+```bnf
 tagged_farg : symbol ':' farg
             ;
 ```
@@ -209,7 +209,7 @@ we do with normal constructors, but that could open a can of worms so at
 least as a first attempt I'll say that the application of a constructor
 is limited to something like
 
-```
+```bnf
 struct_application : scoped_symbol '{' tagged_expressions '}'
                    ;
 ```

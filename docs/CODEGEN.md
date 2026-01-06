@@ -29,18 +29,18 @@ generates the same set of `.c` and `.h` files for each. Continuing with
 the `ast.yaml` example, from that file will be generated:
 
 * `generated/ast.c` a number of different functions for each structure:
-   * `new<struct>()` functions that allocate memory and poulate the allocated structs with argument values.
-   * `new<union>_<field>()` type-safe functions that create a discriminated union with the correct tag and value.
-   * `copy<struct>()` functions that will make a deep copy of the struct.
-   * `push<struct>()` functions that will push data onto any declared 1-dimensional arrays.
-   * `mark<struct>()` functions that will recursively mark the structures as part of garbage collection.
-   * a generic `mark` function that will switch on the type and call the correct `mark` function.
-   * `free<struct>` functions that will release unused memory when requested by the garbage collection system
-   * a generic `free` function that dispatches to the correct `free<struct>` function.
-   * a `typename` function that will return the name of a struct for debugging etc.
+  * `new<struct>()` functions that allocate memory and poulate the allocated structs with argument values.
+  * `new<union>_<field>()` type-safe functions that create a discriminated union with the correct tag and value.
+  * `copy<struct>()` functions that will make a deep copy of the struct.
+  * `push<struct>()` functions that will push data onto any declared 1-dimensional arrays.
+  * `mark<struct>()` functions that will recursively mark the structures as part of garbage collection.
+  * a generic `mark` function that will switch on the type and call the correct `mark` function.
+  * `free<struct>` functions that will release unused memory when requested by the garbage collection system
+  * a generic `free` function that dispatches to the correct `free<struct>` function.
+  * a `typename` function that will return the name of a struct for debugging etc.
 * `generated/ast_debug.c` debugging utilities, namely:
-   * `print<struct>()` functions that will recursively display a representation of the struct for debugging.
-   * `eq<struct>()` functions that perform deep comparisons for testing and debugging.
+  * `print<struct>()` functions that will recursively display a representation of the struct for debugging.
+  * `eq<struct>()` functions that perform deep comparisons for testing and debugging.
 * `generated/ast_debug.h` header for `ast_debug.c`
 * `generated/ast.h` header for `ast.c` includes the structure declarations themselves.
 * `generated/ast_objtypes.h` macros collecting the enums and case statements that can then easily be incorporated into the memory management system.

@@ -1,8 +1,8 @@
-β-Redux
+# β-Redux
 
 > Notes taken from [OpenDSA](https://opendsa.cs.vt.edu/OpenDSA/Books/PL/html/BetaReduction.html)
 
-# Substitution
+## Substitution
 
 $$
 b[\lang p \rang \rightarrow a]\quad\text{replace $\lang p \rang$ with $a$ in $b$}
@@ -10,55 +10,55 @@ $$
 
 $\lang p\rang$ is always a variable (angle brackets denote variables throughout).
 
-## Case 1. $b$ is a variable
+### Case 1. $b$ is a variable
 
 $$
 \lang b\rang[\lang p\rang \rightarrow a]
 $$
 
-### Case 1a. $\lang p\rang = \lang b\rang$
+#### Case 1a. $\lang p\rang = \lang b\rang$
 
 $$
 \lang p\rang[\lang p\rang \rightarrow a] = a
 $$
 
-### Case 1b.  $\lang p\rang \ne \lang b\rang$
+#### Case 1b.  $\lang p\rang \ne \lang b\rang$
 
 $$
 \lang b\rang[\lang p\rang \rightarrow a] = \lang b\rang
 $$
 
-## Case 2. $b$ is a $\lambda$-abstraction
+### Case 2. $b$ is a $\lambda$-abstraction
 
 $$
 (\lambda \lang x\rang.E)[\lang p\rang \rightarrow a]
 $$
 
-### Case 2a. $\lang p\rang = \lang x\rang$
+#### Case 2a. $\lang p\rang = \lang x\rang$
 
 $$
 (\lambda \lang x\rang.E)[\lang x\rang \rightarrow a] = \lambda \lang x\rang.E
 $$
 
-### Case 2b. $\lang p\rang \ne \lang x\rang$ and $\lang x\rang$ does not occur free in $a$
+#### Case 2b. $\lang p\rang \ne \lang x\rang$ and $\lang x\rang$ does not occur free in $a$
 
 $$
 (\lambda \lang x\rang.E)[\lang p\rang \rightarrow a] =
 \lambda \lang x\rang.(E[\lang p\rang \rightarrow a])
 $$
 
-### Case 2c. $\lang p\rang \ne \lang x\rang$ but $\lang x\rang$ occurs free in $a$
+#### Case 2c. $\lang p\rang \ne \lang x\rang$ but $\lang x\rang$ occurs free in $a$
 
 Cannot happen if $b$ has been $\alpha$-converted.
 
-## Case 3. $b$ is an application
+### Case 3. $b$ is an application
 
 $$
 (e_1\;e_2)[\lang p\rang \rightarrow a] =
 (e_1[\lang p\rang \rightarrow a]\;e_2[\lang p\rang \rightarrow a])
 $$
 
-# $\beta$-Reduction
+## $\beta$-Reduction
 
 An expression to which $\beta$-reduction can be applied is called a $\beta$-redex. A $\beta$-redex is an application in which the first term is a function abstraction. For example:
 
@@ -74,7 +74,7 @@ $$
 
 Is not a $\beta$-redex becuse the first term is a function application not an abstraction (although the application itself is a $\beta$-redex.)
 
-## $\beta$-reduction is substitution
+### $\beta$-reduction is substitution
 
 Having identified a $\beta$-redex $(\lambda x.E\;E')$:
 
@@ -82,7 +82,7 @@ $$
 \beta(\lambda x.E\;E') = E[\lang x\rang \rightarrow E']
 $$
 
-## Reduction strategies
+### Reduction strategies
 
 Consider
 $$
@@ -97,7 +97,7 @@ These contain two $\beta$-redexes each (delimited by square-ish braces.)
 
 There are two orders in which we can evaluate, inner to outer (applicative order) or outer to inner (normal order).
 
-### Applicative order
+#### Applicative order
 
 $$
 \begin{align*}
@@ -115,7 +115,7 @@ $$
 \end{align*}
 $$
 
-### Normal order
+#### Normal order
 
 $$
 \begin{align*}

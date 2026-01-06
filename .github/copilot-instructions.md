@@ -316,6 +316,12 @@ make indent            # Formats code with GNU indent
 - Example: Write "## Generated Visitor Pattern" not "## Critical Discovery: Generated Visitor Pattern"
 - Example: Write "Problem/Mitigation" not "Risk/Mitigation" for straightforward issue discussion
 
+**Markdown formatting**:
+- Follow linting rules from markdownlint extension: https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/Rules.md
+- Use consistent heading styles, proper list formatting, and appropriate spacing
+- Ensure code blocks have language identifiers
+- Avoid trailing spaces and ensure proper line endings
+
 ## Debugging
 
 **Conditional compilation flags** (define in source to enable):

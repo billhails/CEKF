@@ -3,7 +3,7 @@
 The immediate use case for SQLite is to be able to efficiently query the
 unicode dataset to categorise characters. The unicode consortium hosts a
 CSV containing all of the known characters and their attributes  available
-[here](https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt)
+[on their website](https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt)
 and there's a description of how to read it on
 [Wikipedia](https://en.wikipedia.org/wiki/Unicode_character_property).
 
@@ -45,11 +45,13 @@ rather than ending up with something clunky.
 anyway.
 2. Arguments to `sqlite3_bind` should ideally be an array, so we'll
 need a new type for `sqlite` data, something along the lines of
-```
+
+```fn
 typedef sqlite_data {
     sqlite_int(int) | sqlite_string(string) | ...
 }
 ```
+
 again in the prelude.
 
 Going forward, having to add types directly to the preamble to support

@@ -47,6 +47,7 @@ static LamData *normalizeLet(LamLet *let, AnfKont *k) {
 **Total savings**: ~700 lines across all continuations
 
 **Note**: This proposal completely replaces the `LamMap` hash table approach from ANF-REWRITE.md with typed environment structs. Benefits:
+
 - Type safety: Compiler catches field mismatches
 - Performance: Direct field access vs hash lookup
 - Clarity: Struct definition shows exactly what continuation needs
@@ -126,7 +127,6 @@ primitives: !include primitives.yaml
 ```
 
 ### Code Generation
-
 
 Environment structs are generated using the **existing code generation system** by programmatically adding them to the Catalog:
 
@@ -212,12 +212,12 @@ typedef struct AnfKont {
 }
 ```
 
-**Benefits**: 
+**Benefits**:
+
 - Leverages existing code generation (new, copy, mark, free all automatic)
 - Type-safe field access
 - GC integration automatic via Header
 - Public accessor functions (newKontEnv_Let, getKontEnv_Let, etc.) generated automatically
-
 
 #### Static Implementation Code (generated/anf_kont_impl.inc)
 
@@ -266,6 +266,7 @@ static AnfKont* makeKont_normalizeIff(AnfKont *k, LamExp *e1, LamExp *e2) {
 #### Manual User Implementation of the ANF Algorithm
 
 Note that rather than overwriting the existing implementation we are creating a new `anf_normalize_2.c` as a fresh file that is allowed to be broken.
+
 ```c
 #include "anf_kont.h"           // Public API: env structs, KontEnv union
 #include "anf_kont_impl.inc"    // Static: declarations, wrappers, constructors
@@ -330,7 +331,8 @@ static inline LamExp *INVOKE(AnfKont *k, LamExp *arg) {
 }
 ```
 
-**Benefits**: 
+**Benefits**:
+
 - ✅ **Complete encapsulation**: All ~70 continuation functions are static
 - ✅ **Type safety**: Compiler enforces signatures via static declarations
 - ✅ **Single public interface**: Only `anfNormalize()` is public
@@ -367,17 +369,17 @@ Generation of all of the structures should be handled by existing catalog code, 
 ```makefile
 # Generate continuation environment structs (standard codegen)
 generated/anf_kont.h: src/anf_continuations.yaml tools/generate.py
-	$(PYTHON) tools/generate.py $< h > $@
+ $(PYTHON) tools/generate.py $< h > $@
 
 generated/anf_kont.c: src/anf_continuations.yaml tools/generate.py
-	$(PYTHON) tools/generate.py $< c > $@
+ $(PYTHON) tools/generate.py $< c > $@
 
 generated/anf_kont_objtypes.h: src/anf_continuations.yaml tools/generate.py
-	$(PYTHON) tools/generate.py $< objtypes_h > $@
+ $(PYTHON) tools/generate.py $< objtypes_h > $@
 
 # Generate continuation implementation scaffolding (new codegen)
 generated/anf_kont_impl.inc: src/anf_continuations.yaml tools/generate.py
-	$(PYTHON) tools/generate.py $< kont_impl_inc > $@
+ $(PYTHON) tools/generate.py $< kont_impl_inc > $@
 
 # Dependencies
 obj/anf_kont.o: generated/anf_kont.h generated/anf_kont_objtypes.h
@@ -389,6 +391,7 @@ obj/anf_normalize_2.o: generated/anf_kont.h generated/anf_kont_impl.inc
 ### Generator Extension
 
 Add `tools/generate/kontinuations.py`:
+
 ```python
 class KontinuationGenerator:
     def populate_catalog(self, catalog, kont_specs):
@@ -412,6 +415,7 @@ class KontinuationGenerator:
 ```
 
 **Key Design Points**:
+
 - Standard types use existing Catalog → generates h/c/objtypes normally
 - Special implementation uses new generator → generates .inc with all static
 - `.inc` file keeps ~70 continuation functions completely private
@@ -434,6 +438,7 @@ class KontinuationGenerator:
 **Answer**: Use the `external` section, already supported by the YAML code generation system.
 
 **Example from `anf.yaml`**:
+
 ```yaml
 external:
     TcType:
@@ -446,6 +451,7 @@ external:
 ```
 
 **For continuations, add to `anf_continuations.yaml`**:
+
 ```yaml
 external:
     LamExp:
@@ -459,6 +465,7 @@ external:
 ```
 
 **Result**: When generating `markNormalizeLetKontEnv()`, the generator will:
+
 1. See field `body: LamExp*` in free_vars
 2. Look up `LamExp` in external types
 3. Find `markFn: markLamData`

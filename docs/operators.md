@@ -5,7 +5,7 @@ superficially seems easy to start to replace the hard-coded rewrites of
 `a @ b` to `cons(a, b)` etc. with simple syntax extensions within the
 language, for example
 
-```
+```fn
 infix left 90 "@" cons;
 ```
 
@@ -36,6 +36,7 @@ as described above, but in the context of a formal argument the parsed
 structures are entirely different.
 
 There are a few potential solutions:
+
 1. Perform a purely textual substitution prior to parsing. This has
    all the drawbacks of C macros and is not really a good option.
 2. Parse all formal arguments as expressions then perform an
@@ -63,14 +64,14 @@ we'll eventually want to remove all special case behavior for lists,
 which are defined in the preamble but required in the core. Some of
 that is relatively trivial:
 
-```
+```fn
 prefix 50 "<" car;
 prefix 50 ">" cdr;
 ```
 
 but lists declared with `[]` need a little more thought.
 
-```
+```fn
 macro __id__ (x) { x }
 prefix 2 "[" __id__
 infix right 1 "," cons
@@ -94,7 +95,7 @@ and run on the remaining input.
 
 What about a BNF style approach to macros?
 
-```
+```fn
 prefix 0 "[" grammar {
     conslist: "[" consargs "]"        { $2 }
             ;
@@ -120,7 +121,7 @@ symbols, allowing some hygene. The limitation of these functional
 style macros is they cannot readily extend the actual syntax of
 the language. They would be fine for the booleans though:
 
-```
+```fn
 macro __and__(a, b) { if (a) { b } else { false } }
 infix left 30 "and" __and__;
 ```

@@ -176,7 +176,6 @@ static LamData *normalizeTerm(LamData *e) {
 
 Not quite so trivial, but manageable. The constructed continuation here has a free variable `k`. This means our `LamData` will need `LamKont` as a member, so we can pass it via the map.
 
-
 ```C
 static LamData *normalizeNameKont(LamData *x, LamMap *map) {
     LamKont *k = getLamMap_Kont(map, TOK_K());
@@ -205,7 +204,6 @@ static LamData *normalizeName(LamData *e, LamKont *k) {
 ```
 
 #### 3. `normalize`
-
 
 ```scheme
 (define (normalize e k)
@@ -769,7 +767,7 @@ This will probably need revisiting.
 
 The langage actually allows constructs like:
 
-```
+```fn
 print ns.(a() + b())
 ```
 
@@ -799,6 +797,7 @@ Basically the same as construct
         (normalize-names Ms
             (λ (ts) (k `(make-vec ,nargs . ,ts)))))
 ```
+
 ### match: LamMatch
 
 ```yaml
@@ -919,12 +918,12 @@ Same as print etc.
 Variable, done already.
 
 ## Working Code
+
 [normalize.fn](../fn/rewrite/normalize.fn) now has working examples of all of the above, written in F♮.
 
 ## Summary
 
 The entire specification, in scheme, extended to cover all of the `LamExp` types in F♮.
-
 
 ```scheme
 (define (normalize-term e)

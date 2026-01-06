@@ -45,6 +45,7 @@ struct StackFrame {
 ```
 
 **Key insight**: The stack is frame-oriented, not globally flat. Each frame is an independent slice:
+
 - `entries[frame .. frame+offset-1]` = current frame's values
 - Previous frames are saved in the `frames[]` array when entering nested scopes
 
@@ -68,6 +69,7 @@ struct Frame {
 ```
 
 Environments form a **linked list** representing the lexical scope chain. Variables are looked up using de Bruijn indices: `(frame, offset)` where:
+
 - `frame` = how many Env links to traverse up
 - `offset` = index within that Env's Frame
 
@@ -94,6 +96,7 @@ struct Value {
 ```
 
 Key value types for execution:
+
 - `VALUE_TYPE_CLO` - Direct closure (never been applied)
 - `VALUE_TYPE_PCLO` - Partial closure (has some args captured)
 - `VALUE_TYPE_KONT` - Continuation (reified control flow)
@@ -164,6 +167,7 @@ struct Fail {
 ```
 
 Failure continuations support non-deterministic programming via `amb` (spelled `then` in the language):
+
 - `AMB` bytecode creates a choice point
 - `BACK` restores the most recent choice point
 - Stack, environment, and continuation are all restored on backtrack
@@ -183,6 +187,7 @@ static inline void popn(int n)        { popnStack(state.S, n); }
 ```
 
 **Indexing semantics**:
+
 - `peek(0)` = **bottom** of current frame (first element: `entries[frame + 0]`)
 - `peek(1)` = second element from bottom (`entries[frame + 1]`)
 - `peek(n)` where n ≥ 0 = element at position n from frame base
@@ -191,6 +196,7 @@ static inline void popn(int n)        { popnStack(state.S, n); }
 - `peek(n)` where n < 0 = element at position `offset + n` (n < 0) from frame base
 
 **Implementation** (from `generated/cekfs.c`):
+
 ```c
 struct Value peeknStack(struct Stack *x, int offset) {
     if (offset < 0) offset = ((int) x->offset) + offset;
@@ -222,7 +228,7 @@ Stack frames are **not** automatically created on function calls. Instead, frame
 
 When `APPLY [n]` executes, the stack looks like:
 
-```
+```text
 TOS → | callable |
       | arg_n    |
       | arg_{n-1}|
@@ -232,6 +238,7 @@ TOS → | callable |
 ```
 
 The `applyProc(int naargs)` function:
+
 1. Pops the callable
 2. Checks its type (CLO, PCLO, KONT, BUILTIN)
 3. Dispatches appropriately
@@ -253,11 +260,13 @@ static inline void exactCallFromClo(Clo *clo) {
 ```
 
 **`moveStack(Stack *s, int base, int n)`** (defined in generated code):
+
 - Moves top `n` values to position `base` within current frame
 - Used to "slide" arguments down to frame base
 - Pattern: `s->entries[s->frame + base .. base+n-1] = s->entries[s->frame + s->offset - n .. s->offset-1]`
 
 After this:
+
 - Control points to function body bytecode
 - Environment is the closure's captured environment
 - Stack frame base has the arguments in order
@@ -292,7 +301,8 @@ static inline void exactCallFromPclo(Clo *clo, int naargs) {
 **Key difference from CLO**: PCLO has captured arguments in `clo->E->S`, which must be spliced into the frame **before** the new arguments.
 
 Result stack layout:
-```
+
+```text
 | captured_arg_1  |  offset 0
 | captured_arg_2  |  offset 1
 | ...             |
@@ -330,6 +340,7 @@ static inline void makePartialFromClo(Value *callable, Clo *clo, int naargs) {
 ```
 
 **Result**: A new PCLO where:
+
 - `pending` = original pending - naargs
 - `E` = new Env containing captured args, with parent = original closure's env
 - `C` = same bytecode address (same function)
@@ -424,6 +435,7 @@ struct OverApplyFrame {
    - Frame marked `ready = false`
 
 2. **RETURN phase**: Function returns
+
    ```c
    case BYTECODES_TYPE_RETURN:
        Value kont = value_Kont(state.K);
@@ -438,10 +450,11 @@ struct OverApplyFrame {
            }
        }
    ```
-   
+
    **Critical fix**: Only mark `ready = true` if TOS is a callable (this was the bug we just fixed!)
 
 3. **Resumption phase**: After each bytecode, check for staged over-application
+
    ```c
    if (overApplyStack->size > 0) {
        OverApplyFrame *f = peekOverApplyStack(overApplyStack);
@@ -484,11 +497,13 @@ struct OverApplyFrame {
 Consider: `f(a, b)(c, d, e)` where `f` expects 2 args and returns a function expecting 2 args.
 
 Without staging:
+
 1. Call `f(a, b, c, d, e)` - detect over-application by 3
 2. Call `f(a, b)` → returns closure `g` expecting 2 args
 3. Now need to apply `g(c, d, e)` - another over-application!
 
 Naive approach would require recursion or complex state. Instead:
+
 1. `f(a, b, c, d, e)` pushes frame with `[c, d, e]`
 2. Calls `f(a, b)` exactly
 3. `f` returns `g`
@@ -515,6 +530,7 @@ case BYTECODES_TYPE_LET:
 ```
 
 The `LET` bytecode:
+
 1. Creates a new stack frame (saves current frame info)
 2. Creates a continuation pointing to the "in" part of `let...in...`
 3. Continues executing the binding expressions
@@ -632,11 +648,13 @@ static Value captureKont(void) {
 **Using captured continuations**:
 
 Once captured as a Value, a continuation can be:
+
 - Stored in data structures
 - Passed to functions
 - Applied multiple times (jumping back to the same point)
 
 When applied, it:
+
 1. Restores the entire execution state (C, E, K, S)
 2. Pushes the "return value" onto the restored stack
 3. Resumes from the captured point
@@ -676,6 +694,7 @@ void snapshotFail(Fail *target, Stack *s) {
 ```
 
 **The choice point saves**:
+
 - `C` = address of alternative branch
 - `E` = current environment
 - `K` = current continuation
@@ -738,6 +757,7 @@ in
 ```
 
 Execution:
+
 1. `one_of([1,2,3])` → tries 1, creates choice point with alternatives `[2,3]`
 2. `one_of([10,20])` → tries 10, creates choice point with alternatives `[20]`
 3. `x + y` → computes `1 + 10 = 11`
@@ -752,6 +772,7 @@ Execution:
 ### Key Bytecodes
 
 **LAM [nargs] [letrecOffset] [endOffset]** - Create closure
+
 - Creates `Clo` with current environment
 - `pending = nargs`
 - `C = current bytecode offset` (pointing to function body)
@@ -760,48 +781,58 @@ Execution:
 - Pushes closure value
 
 **VAR [frame] [offset]** - Environment variable access
+
 - Traverses `frame` links in environment chain
 - Returns `env->S->entries[offset]`
 - Pushes result
 
 **LVAR [offset]** - Stack variable access
+
 - Returns `peek(offset)` from current stack frame
 - Used for function parameters and let-bound variables
 
 **APPLY [nargs]** - Function application
+
 - Expects stack: `[arg1, arg2, ..., argN, callable]`
 - Calls `applyProc(nargs)` which handles all closure types
 - May trigger over-application staging
 
 **RETURN** - Return from function/let
+
 - Converts current continuation to value
 - Applies it (delegating to `applyProc`)
 - Triggers over-application resumption if result is callable
 
 **LET [offset]** - Let-binding
+
 - Creates new stack frame
 - Creates continuation pointing to `offset` (the "in" part)
 - Continues with binding expressions
 
 **LETREC [n]** - Mutual recursion
+
 - Patches the environments of top `n` closures on stack
 - Each closure's environment is extended to include the current stack frame
 - Enables mutually recursive function definitions
 
 **CALLCC** - Capture continuation
+
 - Captures current continuation (including stack)
 - Calls function with continuation as argument
 
 **AMB [offset]** - Non-deterministic choice
+
 - Creates failure continuation pointing to `offset` (alternative)
 - Snapshots entire execution state
 - Continues with first alternative
 
 **BACK** - Backtrack
+
 - Restores most recent failure continuation
 - Or halts if no alternatives left
 
 **CUT** - Commit to choice
+
 - Discards most recent failure continuation
 - Prevents backtracking past this point
 
@@ -863,6 +894,7 @@ UNPROTECT(save);
 ```
 
 **How it works**:
+
 - `PROTECT(obj)` pushes `obj` to a global protection stack, returns the stack index
 - During GC, all objects in the protection stack are marked as reachable
 - `UNPROTECT(save)` pops the protection stack back to the saved index
@@ -883,6 +915,7 @@ int protectValue(Value v) {
 ### Common Patterns
 
 **Allocating and protecting**:
+
 ```c
 Clo *clo = newClo(nargs, state.C, state.E);
 int save = PROTECT(clo);
@@ -891,6 +924,7 @@ UNPROTECT(save);
 ```
 
 **Protecting multiple objects**:
+
 ```c
 Vec *v1 = newVec(10);
 int save = PROTECT(v1);
@@ -903,6 +937,7 @@ UNPROTECT(save);  // Pops all three at once
 ```
 
 **Protecting Values**:
+
 ```c
 Value result = pop();
 int save = protectValue(result);

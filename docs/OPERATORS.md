@@ -7,7 +7,7 @@ infix operators and it basically works, but there are some issues which
 make that approach quite clunky.  One specific scenario is where I'm
 declaring an infix addition operator in the preamble as:
 
-```
+```fn
 infix left 100 "+" addition;
 ```
 
@@ -31,7 +31,7 @@ This offers hope, if we can re-work the macro system to be hygenic by
 default, then the parser instead of generating `addition(a, b)` for `a +
 b` could instead generate:
 
-```
+```fn
 macro gensym$1(a, b) { addition(a, b) }
 ```
 
@@ -58,7 +58,7 @@ mean substitution.
 
 What if the arguments to macros were wrapped in a closure?
 
-```
+```fn
 macro AND(a, b) { if (a) { b } else { false } } => fn AND(a, b) { if (a()) { b() } else { false } }
 
 AND(a, b) => AND(fn () { a }, fn () { b })
@@ -77,19 +77,19 @@ lexical variable.
 One little unnecssary inefficiency needs to be addressed. If one macro
 calls another, for example
 
-```
+```fn
 macro NAND(a, b) { NOT(AND(a, b)) }
 ```
 
 This first gets rewritten, by `lambda_conversion.c` to
 
-```
+```fn
 fn NAND(a, b) { NOT(AND(fn () {a}, fn () {b})) }
 ```
 
 and then subsequently by `macro_substitution.c` to
 
-```
+```fn
 fn NAND(a, b) { NOT(AND(fn () {a()}, fn () {b()})) }
 ```
 
@@ -97,7 +97,7 @@ While correct, the expression `fn () {a()}` is just `a` so we'll need
 a pass to optimise away this unnecessary wrapping and unwrapping,
 essentially restoring
 
-```
+```fn
 fn NAND(a, b) { NOT(AND(a, b)) }
 ```
 
@@ -117,7 +117,6 @@ i.e. `fn() { a() + 1 }` would be necessary.
 thunk during macro conversion, if it has no arguments and just contains
 a symbol that would otherwise be invoked then return the symbol.
 
-
 ## Operator scoping and hygiene
 
 F♮ supports user-defined operators in prefix, infix and postfix positions. To make
@@ -127,21 +126,21 @@ rules and are hygienic by construction.
 ### Key rules
 
 - let/in creates a new operator environment
-   - A `let … in …` block is parsed with a child Pratt parser that inherits the
+  - A `let … in …` block is parsed with a child Pratt parser that inherits the
       parent rules table and trie. Operators defined inside the block are visible
       only inside that block and shadow outer definitions with the same symbol.
-   - Redefinition checks are local: attempting to define the same operator twice
+  - Redefinition checks are local: attempting to define the same operator twice
       in the same scope is an error; redefining an operator in an inner scope is
       shadowing and is allowed.
 
 - Namespaces do not export operators (yet)
-   - Operators defined inside a `namespace` remain local to that namespace body
+  - Operators defined inside a `namespace` remain local to that namespace body
       at parse time. We keep namespace parsing in the current global parser so
       preamble/file-level operators (for example, postfix `!`) remain globally
       available. A design for explicit export/import is sketched below.
 
 - Hygiene is automatic
-   - When you define an operator, the parser generates a hygienic wrapper
+  - When you define an operator, the parser generates a hygienic wrapper
       function name (a gensym). The operator application expands to call this
       wrapper, which internally references the original implementation captured in
       the definition’s scope. This ensures free variables in the operator’s
@@ -151,7 +150,7 @@ rules and are hygienic by construction.
 
 Shadowing and restoration across nested blocks:
 
-```
+```fn
 let
       prefix 13 "neg" fn(x) { 0 - x };
       a = neg 5;        // -5
@@ -168,7 +167,7 @@ assert(neg 5 == -5)
 
 Shadowing inside a function body:
 
-```
+```fn
 fn run() {
    {
       let
@@ -237,7 +236,7 @@ bindings in the importing scope will not capture imported operator bodies.
 
 In `ops.fn`:
 
-```
+```fn
 namespace
 
 fn negate(x) { 0 - x }
@@ -254,7 +253,7 @@ export operators;
 
 In a client file:
 
-```
+```fn
 let
   link "ops.fn" as ops;
   import ops operators;
@@ -268,7 +267,7 @@ in
 
 Selective import:
 
-```
+```fn
 let
   link "ops.fn" as ops;
   import ops prefix "~";

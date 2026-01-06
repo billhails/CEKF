@@ -2,21 +2,24 @@
 
 ## Issues Found
 
-### 🔴 Critical Issue #1: Lambda Wrapped in Continuation
+### Critical Issue #1: Lambda Wrapped in Continuation
 
 **Test:** `(λ (a b) (+ a (* b 2)))`
 
 **Actual Output:**
+
 ```fn
 (halt (λ (a b $k3) ($k3 (+ a (* b 2)))))
 ```
 
 **Expected Output:**
+
 ```fn
 (λ (a b $k3) ($k3 (+ a (* b 2))))
 ```
 
 **Problem:** The lambda itself is being passed to `halt`. This happens because when `T_c` receives an `aexpr` (atomic expression), it does:
+
 ```fn
 if (isAexpr(expr)) {
     E.apply(c, [M(expr)])
@@ -29,16 +32,18 @@ For a standalone lambda, this is correct when the lambda is being **used** (eval
 
 ---
 
-### 🔴 Critical Issue #2: call/cc Missing Continuation Argument
+### Critical Issue #2: call/cc Missing Continuation Argument
 
 **Test:** `(call/cc (λ (k) (k 5)))`
 
 **Actual Output:**
+
 ```fn
 (halt ((λ (f cc) (f (λ (x i) (cc x)) cc)) (λ (k $k8) (k 5 $k8))))
 ```
 
 **Expected Output:**
+
 ```fn
 ((λ (f cc) (f (λ (x i) (cc x)) cc)) 
  (λ (k $k8) (k 5 $k8)) 
@@ -46,12 +51,14 @@ For a standalone lambda, this is correct when the lambda is being **used** (eval
 ```
 
 **Problem:** The call/cc wrapper `(λ (f cc) ...)` takes TWO arguments:
+
 1. `f` - the user's function
 2. `cc` - the current continuation
 
 But you're only providing `f`. The `halt` should be passed as the second argument `cc`, not wrapping the whole thing.
 
 **Root Cause:** In your `M` function:
+
 ```fn
 (E.callcc_expr(expr)) {
     E.apply(E.parse("(lambda (f cc) (f (lambda (x i) (cc x)) cc))"), [M(expr)])
@@ -64,22 +71,27 @@ This creates an application with only ONE argument `[M(expr)]`, but the call/cc 
 
 ---
 
-## Correct Transformations ✅
+## Correct Transformations
 
 ### 1. Simple Application
+
 ```fn
 (g a) ==> (g a halt)
 ```
+
 Perfect! Just thread the continuation through.
 
 ---
 
 ### 2. Nested Application
+
 ```fn
 (f (g (h x))) ==>
 (h x (λ ($rv45) (g $rv45 (λ ($rv44) (f $rv44 halt)))))
 ```
+
 Excellent! Each nested call is sequenced with continuations:
+
 1. Call `(h x)` with continuation that receives `$rv45`
 2. Call `(g $rv45)` with continuation that receives `$rv44`  
 3. Call `(f $rv44 halt)` with final continuation
@@ -87,11 +99,14 @@ Excellent! Each nested call is sequenced with continuations:
 ---
 
 ### 3. Lambda with Complex Body
+
 ```fn
 ((λ (a b) (+ a (* (f b) 2))) 3 4) ==>
 ((λ (a b $k5) (f b (λ ($rv6) ($k5 (+ a (* $rv6 2)))))) 3 4 halt)
 ```
+
 Great! The lambda:
+
 - Gains continuation parameter `$k5`
 - Calls `(f b)` with continuation
 - Continuation receives result in `$rv6`
@@ -100,6 +115,7 @@ Great! The lambda:
 ---
 
 ### 4. Factorial with Letrec
+
 ```fn
 (letrec ((fact (λ (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5)) ==>
 (letrec ((fact (λ (n $k17) 
@@ -114,6 +130,7 @@ Great! The lambda:
 ```
 
 This is EXCELLENT and shows the full power of CPS:
+
 1. `fact` gains continuation `$k17`
 2. Bind `$k18` to `$k17` to avoid code duplication in if branches
 3. Test `(= n 0)` in CPS - result in `$rv19`
@@ -128,6 +145,7 @@ This is EXCELLENT and shows the full power of CPS:
 ---
 
 ### 5. Amb (Non-determinism)
+
 ```fn
 (amb 1 2) ==>
 ((λ ($k7) (amb ($k7 1) ($k7 2))) halt)
@@ -138,6 +156,7 @@ Perfect! Both branches of `amb` share the same continuation `$k7`. This is exact
 ---
 
 ### 6. Complex Amb
+
 ```fn
 (+ (amb 1 2) (amb 3 4)) ==>
 (amb ((λ ($rv42) 
@@ -151,6 +170,7 @@ Perfect! Both branches of `amb` share the same continuation `$k7`. This is exact
 ```
 
 This is fascinating! It shows the **search tree**:
+
 - Outer amb chooses between 1 and 2 (binds to `$rv42`)
 - Inner amb chooses between 3 and 4 (binds to `$rv43`)
 - Four possible paths: (1,3), (1,4), (2,3), (2,4)
@@ -162,6 +182,7 @@ Note: There's code duplication here. The inner amb is duplicated for each branch
 ## Understanding Primitives in Your Implementation
 
 Your code treats primitives specially in `T_k`:
+
 ```fn
 (E.primapp(p, e1, e2)) {
     T_k(e1, fn (s1) {
@@ -173,6 +194,7 @@ Your code treats primitives specially in `T_k`:
 ```
 
 And in `T_c`:
+
 ```fn
 (E.primapp(p, e1, e2)) {
     T_k(e1, fn (s1) {
@@ -184,11 +206,13 @@ And in `T_c`:
 ```
 
 This means:
+
 1. Arguments are evaluated in CPS (to handle complex expressions)
-2. The primitive itself stays **direct-style** 
+2. The primitive itself stays **direct-style**
 3. The result is passed to the continuation
 
 **This is correct!** Primitives are assumed to:
+
 - Always terminate
 - Never throw exceptions (in this simple model)
 - Can be called directly
@@ -208,6 +232,7 @@ In the Racket code, `(cps <prim>)` is a **runtime wrapper** that does the same t
 ```
 
 Should behave like:
+
 ```scheme
 (let ((k <current-continuation>))
   ...body...)
@@ -222,6 +247,7 @@ Where `k` is a function that, when called, **abandons** the current computation 
 ```
 
 This says:
+
 - `f` is the user's function (e.g., `(lambda (k) body)`)
 - `cc` is the current continuation (where `call/cc` was invoked)
 - Pass to `f`:
@@ -231,6 +257,7 @@ This says:
 ### Why Your Code is Wrong
 
 Your `M` function creates:
+
 ```fn
 E.apply(wrapper, [M(expr)])
 ```
@@ -279,6 +306,7 @@ fn T_c(expr, c) {
 **Option 2:** Remove `callcc_expr` from `isAexpr` check:
 
 Currently you have:
+
 ```fn
 fn isAexpr {
     ...
@@ -294,6 +322,7 @@ fn isAexpr {
 ## Sequence Issue
 
 Looking at this output:
+
 ```fn
 (sequence (f 1) (g 2) (h 3)) ==>
 (f 1 (λ ($rv33) (g 2 (λ ($rv34) (h 3 (λ ($rv35) (sequence $rv33 $rv34 $rv35 halt)))))))
@@ -314,7 +343,8 @@ The `$rv33` and `$rv34` are bound but never used (unless there are side effects)
 
 ## Summary
 
-### ✅ Working Correctly:
+### ✅ Working Correctly
+
 1. Simple applications
 2. Lambda transformation (gaining continuation parameter)
 3. Nested applications (proper sequencing)
@@ -323,11 +353,13 @@ The `$rv33` and `$rv34` are bound but never used (unless there are side effects)
 6. Amb (both branches share continuation)
 7. Primitives (staying direct-style, wrapped in continuation calls)
 
-### 🔴 Needs Fixing:
+### 🔴 Needs Fixing
+
 1. **call/cc transformation:** Missing the current continuation as second argument
 2. **Sequence transformation:** Should discard intermediate values, only return last
 
-### 💡 Design Questions:
+### 💡 Design Questions
+
 1. Should top-level lambdas be wrapped in `halt`? (Actually yes for pure CPS)
 2. Should amb duplication be optimized? (Would require let-bindings)
 

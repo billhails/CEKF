@@ -3,6 +3,7 @@
 ## Understanding CPS Transformation
 
 CPS (Continuation-Passing Style) makes **control flow explicit** by:
+
 1. Every function takes an extra parameter: the continuation (what to do next)
 2. No function ever "returns" - instead it calls its continuation with the result
 3. All intermediate computations are named
@@ -10,39 +11,46 @@ CPS (Continuation-Passing Style) makes **control flow explicit** by:
 ## Key Transformation Rules
 
 ### Rule 1: Simple Application `(f a)`
-```
-(f a) with continuation halt
+
+```scheme
+(f a) ; with continuation halt
 =>
 (f a halt)  ; Pass continuation as extra argument
 ```
 
 ### Rule 2: Lambda `(lambda (x) body)`
-```
+
+```scheme
 (lambda (x) body)
-=>
+; =>
 (lambda (x $k) (T_c body $k))  ; Add continuation parameter
 ```
 
 ### Rule 3: Nested Application `(f (g x))`
-```
-(f (g x)) with continuation c
-=>
+
+```scheme
+(f (g x)) ; with continuation c
+; =>
 (g x (lambda ($rv) (f $rv c)))  ; Name intermediate result
 ```
 
 ### Rule 4: Primitive Operations `(+ a b)`
+
 Primitives are **direct style**, so wrap them:
-```
-(+ a b) with continuation c
+
+```scheme
+(+ a b) ; with continuation c
 =>
-(c (+ a b))  ; Call continuation with primitive result
+; (c (+ a b))  ; Call continuation with primitive result
 ```
 
 ### Rule 5: If Expression
+
 Branches must be wrapped to avoid code duplication:
-```
-(if test e1 e2) with continuation c
-=>
+
+```scheme
+(if test e1 e2) ; with continuation c
+; =>
 ((lambda ($k)
    (test_in_cps (lambda ($test)
      (if $test (T_c e1 $k) (T_c e2 $k)))))
@@ -50,7 +58,9 @@ Branches must be wrapped to avoid code duplication:
 ```
 
 ### Rule 6: Letrec
+
 Transform bound lambdas, thread continuation through body:
+
 ```
 (letrec ((f (lambda (x) body))) expr)
 =>
@@ -58,7 +68,9 @@ Transform bound lambdas, thread continuation through body:
 ```
 
 ### Rule 7: call/cc
+
 The tricky one! `call/cc` receives the current continuation as a first-class value:
+
 ```
 (call/cc (lambda (k) body))
 =>
@@ -74,23 +86,30 @@ The key insight: when you call the escape continuation `k`, it should jump to wh
 ## Expected Outputs for Test Cases
 
 ### Test 1: `(g a)`
+
 **Expected:**
+
 ```
 (g a halt)
 ```
+
 Simple - just pass the continuation.
 
 ---
 
 ### Test 2: `((lambda (x) (h x)) (g 4))`
+
 **Expected:**
+
 ```
 (g 4 (lambda ($rv1) 
        ((lambda (x $k2) (h x $k2)) 
         $rv1 
         halt)))
 ```
+
 **Explanation:**
+
 1. Evaluate `(g 4)` with continuation that receives result in `$rv1`
 2. Apply transformed lambda (which now takes `x` and `$k2`)
 3. Pass `halt` as final continuation
@@ -98,24 +117,31 @@ Simple - just pass the continuation.
 ---
 
 ### Test 3: `(lambda (a b) (+ a (* b 2)))`
+
 **Expected:**
+
 ```
 (lambda (a b $k) 
   (halt (+ a (* b 2))))  ; Primitives stay direct-style, wrapped in continuation call
 ```
+
 Wait, this is wrong. Let me reconsider...
 
 **Actually Expected:**
+
 ```
 (lambda (a b $k) 
   ($k (+ a (* b 2))))
 ```
+
 The lambda's continuation parameter `$k` is used, not `halt`.
 
 ---
 
 ### Test 4: `((lambda (a b) (+ a (* b 2))) 3 4)`
+
 **Expected:**
+
 ```
 ((lambda (a b $k1) 
    ($k1 (+ a (* b 2)))) 
@@ -123,12 +149,15 @@ The lambda's continuation parameter `$k` is used, not `halt`.
  4 
  halt)
 ```
+
 Direct application with all arguments plus final continuation.
 
 ---
 
 ### Test 5: `(call/cc (lambda (k) (k 5)))`
+
 **Expected:**
+
 ```
 ((lambda (f cc) 
    (f (lambda (x _) (cc x)) cc))
@@ -136,7 +165,9 @@ Direct application with all arguments plus final continuation.
    (k 5 $k1))
  halt)
 ```
+
 **What happens at runtime:**
+
 1. `f` is bound to `(lambda (k $k1) (k 5 $k1))`
 2. `cc` is bound to `halt`
 3. Call `f` with escape continuation `(lambda (x _) (cc x))` and normal continuation `cc`
@@ -147,7 +178,9 @@ Direct application with all arguments plus final continuation.
 ---
 
 ### Test 6: `(call/cc (lambda (k) 42))`
+
 **Expected:**
+
 ```
 ((lambda (f cc) 
    (f (lambda (x _) (cc x)) cc))
@@ -155,7 +188,9 @@ Direct application with all arguments plus final continuation.
    ($k1 42))
  halt)
 ```
+
 **What happens:**
+
 - The escape continuation `k` is never called
 - Just returns 42 via normal continuation `$k1`
 - Eventually reaches `halt`
@@ -163,7 +198,9 @@ Direct application with all arguments plus final continuation.
 ---
 
 ### Test 7: Factorial `(letrec ((fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))`
+
 **Expected (simplified structure):**
+
 ```
 (letrec ((fact (lambda (n $k) 
                  ((lambda ($k2)
@@ -176,7 +213,9 @@ Direct application with all arguments plus final continuation.
                   $k))))
   (fact 5 halt))
 ```
+
 This is complex because:
+
 1. `fact` gets continuation parameter `$k`
 2. `(= n 0)` becomes a CPS call
 3. Each branch is wrapped in the same continuation `$k2`
@@ -186,16 +225,21 @@ This is complex because:
 ---
 
 ### Test 8: Nested Primitives `(+ 1 (+ 2 (+ 3 (+ 4 5))))`
+
 **Expected:**
+
 ```
 (halt (+ 1 (+ 2 (+ 3 (+ 4 5)))))
 ```
+
 All primitives stay as-is, just wrapped in final continuation.
 
 ---
 
 ### Test 9: `(+ (amb 1 2) (amb 3 4))`
+
 **Expected:**
+
 ```
 ((lambda ($k1)
    (amb ((lambda ($k2) 
@@ -214,9 +258,11 @@ All primitives stay as-is, just wrapped in final continuation.
               ($k1 (+ $rv1 $rv2))))))))
  halt)
 ```
+
 Wait, that's not right either. Let me reconsider amb...
 
 Actually, looking at your T_c for amb:
+
 ```fn
 (E.amb_expr(expr1, expr2)) {
     let sk = gensym("$k");
@@ -225,6 +271,7 @@ Actually, looking at your T_c for amb:
 ```
 
 So `(amb e1 e2)` becomes:
+
 ```
 ((lambda ($k) (amb (T_c e1 $k) (T_c e2 $k))) c)
 ```
@@ -234,12 +281,15 @@ This wraps both branches in the same continuation, which is correct for amb!
 ## Common Patterns to Validate
 
 ### Pattern 1: Administrative Redexes
+
 CPS often creates `((lambda (x) e) v)` where `v` is a value. These are **administrative redexes** that can be optimized away via beta-reduction, but should be present in the basic transformation.
 
 ### Pattern 2: Continuation Shadowing
+
 Watch for variables named `$k1`, `$k2`, etc. These should **not** shadow each other - each should be in a separate scope.
 
 ### Pattern 3: call/cc Escape Behavior
+
 The escape continuation `(lambda (x _) (cc x))` must **ignore** its continuation parameter. This is how it "escapes" from nested contexts.
 
 ## Running the Tests
@@ -250,6 +300,7 @@ cd /home/bill/git/CEKF
 ```
 
 Then manually inspect the output to verify:
+
 1. Every lambda has one more parameter than the source
 2. Every application has one more argument (the continuation)
 3. Primitives are wrapped in continuation calls

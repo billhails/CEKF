@@ -36,12 +36,12 @@ The advantages of this approach seem to be:
 
 So lets work through some examples to make sure it'll work.
 
-```
+```fn
 fn xor {
-	(false, false) { false }
-	(false, true)  { true }
-	(true, false)  { true }
-	(true, true)   { false }
+ (false, false) { false }
+ (false, true)  { true }
+ (true, false)  { true }
+ (true, true)   { false }
 }
 ```
 
@@ -77,7 +77,7 @@ S4 --true--> D(((D)))
 
 Which in turn can be trivially compiled to a nested case statement
 
-```
+```scheme
 (lambda ($a $b)
   (match $a (0 (match $b (0 0)
                          (1 1))
@@ -87,7 +87,7 @@ Which in turn can be trivially compiled to a nested case statement
 
 let's try something a bit more ambitious.
 
-```
+```fn
 fn map {
     (_, []) { [] }
     (f, h @ t) { f(h) @ map(f, t) }
@@ -116,7 +116,7 @@ S1 --cons--> S2((S2))--h--> S3((S3)) --t--> B(((B)))
 
 compiling this is much less trivial. the end result should be something like
 
-```
+```scheme
 (lambda ($a $b)
   (match (vec $b 0) (0 (make-vec 1 0))
                     (1 (let (f $a)
@@ -142,7 +142,7 @@ Thankfully, if this is done on the DFA, it can be done without having to cross-r
 
 Another example
 
-```
+```fn
 fn member {
   (x, x @ _) { true }
   (x, []) { false }
@@ -201,7 +201,7 @@ S2 --"else"--> C(((C)))
 
 The resulting lambda
 
-```
+```scheme
 (lambda ($a $b)
   (match (vec $a 0)
          (0 0)
@@ -352,7 +352,6 @@ tag the current failure continuation, then `cut` peels back to leave that
 continuation, un-tagging it instead of removing it. Any downstream backtracking
 from the argument to `cut` will hit that continuation.
 
-
 In fact, we probably don't even need `escape`. If the use of `cut` is restricted
 to this specific situation, there will only ever be one failure continuation
 installed for pattern matching, and `cut` merely restores the previous one.
@@ -469,7 +468,7 @@ All patterns in the arguments to a composite function are collected into a matri
 of patterns, and the components are renamed and labelled in a consistent way,
 such thar the same variable position has the same name, for example in
 
-```
+```fn
 fn map {
     (_, nil) { nil }
     (f, pair(h, t)) { pair(f(h), map(f, t)) }
@@ -478,21 +477,21 @@ fn map {
 
 The matrix is
 
-```
+```fn
 (_, nil)
 (f, pair(h, t))
 ```
 
 and after renaming and labelling that becomes
 
-```
+```fn
 (p$0=_, p$1=nil)
 (p$0=_, p$1=pair(p$1$0=_, p$1$1=_))
 ```
 
 An array of final states (the bodies of the individual functions) is also constructed
 
-```
+```fn
 { nil }
 { pair(p$0(p$1$0), map(p$0, p$1$1)) }
 ```
@@ -518,31 +517,31 @@ If there are no constructors or constants in the top row then the result is the 
 * construct a new matrix MN consisting of all the columns from M except that column.
 * construct a new test state T.
 * for each constructor K in N:
-   * let AK be the arity of K.
-   * let {i1 .. ii} be the indices of the patterns in N (both wildcards and equal constructors) that match that constructor.
-   * let {p1 .. pi} be the patterns at those indices.
-   * let L be the size of {p1 .. pi}
-   * construct a matrix MNC from MN by selecting rows {i1 .. ii}
-   * construct a matrix NC with AK columns and L rows
-   * for each pattern pj in {p1 .. pi}
-       * if pj is a constructor place a row of the constructor's AK arguments in row j of NC
-       * otherwise place a row of AK wildcards with appropriate names (p$1$1 etc.( in row j of NC
-   * construct a new matrix MNCNC by appending MN to MNC
-   * let SN be an array of S's states {i1 .. ii}
-   * call `match` on MNCNC and SN to get state F
-   * create an arc from T to F, labelling it with the constructor K
+  * let AK be the arity of K.
+  * let {i1 .. ii} be the indices of the patterns in N (both wildcards and equal constructors) that match that constructor.
+  * let {p1 .. pi} be the patterns at those indices.
+  * let L be the size of {p1 .. pi}
+  * construct a matrix MNC from MN by selecting rows {i1 .. ii}
+  * construct a matrix NC with AK columns and L rows
+  * for each pattern pj in {p1 .. pi}
+    * if pj is a constructor place a row of the constructor's AK arguments in row j of NC
+    * otherwise place a row of AK wildcards with appropriate names (p$1$1 etc.( in row j of NC
+  * construct a new matrix MNCNC by appending MN to MNC
+  * let SN be an array of S's states {i1 .. ii}
+  * call `match` on MNCNC and SN to get state F
+  * create an arc from T to F, labelling it with the constructor K
 * if the list of constructors in N is exhaustive
-   * return T
+  * return T
 * else if there are wildcards in N:
-   * let {w1 .. wi} be the indices of the wildcards in N
-   * construct a matrix MNF by selecting rows {w1 .. wn}
-   * construct a state array SF from S by selecting states {w1 .. wi}
-   * call match on MNF and SF resulting in a DFA F
-   * add an arc from T to F labelled with a wildcard
-   * return T
+  * let {w1 .. wi} be the indices of the wildcards in N
+  * construct a matrix MNF by selecting rows {w1 .. wn}
+  * construct a state array SF from S by selecting states {w1 .. wi}
+  * call match on MNF and SF resulting in a DFA F
+  * add an arc from T to F labelled with a wildcard
+  * return T
 * else:
-   * add an arc from T to the error state E
-   * return T
+  * add an arc from T to the error state E
+  * return T
 
 ### Step 3. Optimize the DFA
 
@@ -648,7 +647,7 @@ And it's working! At least the python prototype [TPMC2.py](../prototyping/TPMC2.
 The language requires an addition, if possible to the kinds of pattern matching available.
 Specific example is `member`
 
-```
+```fn
 let
   fn member {
     (_, []) { false }
@@ -670,7 +669,7 @@ because it is bound at the top level.
 In the original algorithm variables are brought in to scope by the conversion of the arc pattern.
 But the non-locality of the variable being compared causes problems.
 
-```
+```fn
 let
     typedef baz { foo(int) | bar(baz) }
     fn fail {
@@ -722,8 +721,6 @@ So walking through, the matrix M and final states S will be
 | ------------------- | --------------- | ----------- |
 | `p$15`              | `p$16==p$15`    | `(begin 1)` |
 | `p$15=bar(p$15$0)`  | `p$16==p$15$0`  | `(begin 2)` |
-
-
 
 The mixture rule applies on row 1 column 2 because it is a comparison
 not just a var.

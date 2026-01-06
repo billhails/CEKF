@@ -33,7 +33,7 @@ is still difficult.
 
 Other variations:
 
-```
+```fn
 read "filename" fn (filehandle) { ... }
 ```
 
@@ -50,8 +50,8 @@ I can think of.
 * Read character by character.
 * Read/write binary data.
 * Read/write serialized objects.
-   * one at a time.
-   * as a list.
+  * one at a time.
+  * as a list.
 * Read/write different encodings, at least UTF-16.
 
 For serialization let's not make the mistake of inventing our own

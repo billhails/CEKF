@@ -134,10 +134,11 @@ and a run-time lookup is just:
         )
 )
 ```
+
 And since we've already done the analysis we know the environment must
 be there and we don't even need to check for `null`!
 
-# V2 Wrinkles
+## V2 Wrinkles
 
 in V2 I've gone to a hybrid stack/register VM, where variables local
 to a function are on the stack rather than in the environment. This is

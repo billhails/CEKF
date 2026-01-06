@@ -9,6 +9,7 @@
 The ANF continuation scaffolding generator (`tools/generate/kontinuations.py`) successfully reduces boilerplate by generating environment structs and wrapper code from YAML specifications. This proposal evaluates how much of that infrastructure can be reused for the CPS transform, identifies differences, and proposes a generalized framework.
 
 **TL;DR**: ~80% of the ANF-KONT infrastructure can be directly reused. The main differences are:
+
 1. CPS has **two** transformation functions (T_k and T_c) vs ANF's single `normalize`
 2. CPS continuations have **different signatures** (take expression + return expression)
 3. CPS has **value-vs-computation** distinction requiring different treatment
@@ -26,6 +27,7 @@ python3 tools/generate.py src/lambda.yaml visitor --target=cpsTk
 ```
 
 This generates ~1877 lines of boilerplate including:
+
 - Forward declarations for all visitor functions
 - Complete visitor implementation for every LamExp type
 - Automatic NULL checking and ENTER/LEAVE debugging
@@ -90,6 +92,7 @@ static LamIff *cpsTkLamIff(LamIff *node, VisitorContext *context) {
 ```
 
 **Characteristics**:
+
 - Single transformation function: `normalize(LamExp, AnfKont) -> LamExp`
 - Continuations take normalized result, return final result
 - All subexpressions normalized recursively
@@ -137,6 +140,7 @@ fn T_c(expr, c) {
 ```
 
 **Characteristics**:
+
 - **Two** transformation functions:
   - `T_k(expr, k) -> expr`: Transform with continuation `k` (**needs scaffolding**)
   - `T_c(expr, c) -> expr`: Transform with lambda expression `c` (**just data, no scaffolding**)
@@ -150,7 +154,7 @@ fn T_c(expr, c) {
 ## Comparison: ANF vs CPS Continuation Needs
 
 | Aspect | ANF | CPS | Generalizable? |
-|--------|-----|-----|----------------|
+| -------- | ----- | ----- | ---------------- |
 | **Environment Structs** | ✅ Per-continuation struct holding free vars | ✅ Same pattern | ✅ **Yes - identical** |
 | **Discriminated Union** | ✅ `KontEnv` union of all env structs | ✅ Same pattern | ✅ **Yes - identical** |
 | **Type Safety** | ✅ Typed accessors (`getKontEnv_Let`) | ✅ Same benefit | ✅ **Yes - identical** |
@@ -164,6 +168,7 @@ fn T_c(expr, c) {
 | **🆕 Immutability** | ⚠️ Manual node creation | ✅ **Auto-generated** | ✅ **Significant improvement** |
 
 CPS can use the generated visitor pattern which provides:
+
 - ✅ Complete tree traversal boilerplate (~1800 lines generated)
 - ✅Hybrid Approach: Visitors + Continuation Scaffolding
 
@@ -178,6 +183,7 @@ The optimal CPS implementation combines **two** code generation systems:
 **User modifies**: Add CPS transformation logic to generated visitor functions
 
 **Example**:
+
 ```c
 // Generated visitor - user adds transformation logic between the boilerplate
 static LamIff *cpsTkLamIff(LamIff *node, VisitorContext *context) {
@@ -209,6 +215,7 @@ static LamIff *cpsTkLamIff(LamIff *node, VisitorContext *context) {
 ```
 
 **Benefits**:
+
 - ✅ No manual tree walking
 - ✅ Automatic GC protection
 - ✅ Immutability handled
@@ -221,27 +228,32 @@ static LamIff *cpsTkLamIff(LamIff *node, VisitorContext *context) {
 **Still needed because**: Visitors handle tree walking, but CPS needs continuation closures
 
 **Example CPS pattern**:
+
 ```c
 // CPS needs to create continuation closures with captured free variables
 CpsKont *k2 = makeKont_T_k_if(k, iff->consequent, iff->alternative, cont);
 ```
 
 This is where the continuation scaffolding (from ANF-KONT.md) helps:
+
 - Auto-generate environment structs for each continuation
 - Auto-generate `makeKont_*` constructor functions
 - Auto-generate wrapper functions to bridge generic to specific
 
-##  Automatic GC protection for all fields
+## Automatic GC protection for all fields
+
 - ✅ Immutability pattern (only create new nodes when changed)
 - ✅ NULL checking and debugging hooks
 - ✅ Context threading through transformation
 
 Only **T_k needs continuation scaffolding**:
+
 - T_k uses CpsKont structures (function pointer + environment) - needs scaffolding
 - T_c uses plain LamExp* expressions - just regular function parameters, no scaffolding
 - This makes CPS closer to ANF than initially thought (one set of continuations, not two)
 
 CPS implementation is more straightforward than initially expected:
+
 1. Core scaffolding generation is reusable (continuation structs for T_k only)
 2. Visitor pattern eliminates most manual tree-walking code
 3. T_c doesn't need continuation infrastructure at all
@@ -437,6 +449,7 @@ LamExp *cpsTransform_T_k(LamExp *exp) {
 ```
 
 Summary:
+
 - ✅ Tree traversal is generated (entire visitor structure)
 - ✅ GC protection is generated (PROTECT/UNPROTECT scaffolding)
 - ✅ Continuation structs are generated (from cps_continuations.yaml)
@@ -445,6 +458,7 @@ Summary:
 - ⚠️ User adds: Value/computation distinction (isAexpr checks)
 
 Work estimate:
+
 - Generated automatically: ~1800 lines (visitor) + ~500 lines (continuation scaffolding) = ~2300 lines
 - User writes: ~50-100 lines per case * ~40 cases = ~2000-4000 lines
 - Total: From ~5000-7000 lines manual to ~2000-4000 lines with scaffolding return kont;
@@ -535,6 +549,7 @@ static Expr *T_c(Expr *e, Expr *c) {
 **CPS**: Two functions (`T_k`, `T_c`), continuations namespaced by transformer
 
 Solution: Add `transformer` field to continuation specs:
+
 ```yaml
 continuations:
   T_k_if:
@@ -544,6 +559,7 @@ continuations:
 ```
 
 Generator uses this to:
+
 - Namespace continuation names: `T_k_ifKont`, `T_c_ifKont`
 - Group constructors by transformer
 - Generate separate forward declarations per transformer
@@ -558,6 +574,7 @@ Generator uses this to:
 **Two possible solutions**:
 
 **Option A: Public API with header file**
+
 - Generate `cps_continuations.c` (implementation) and `cps_continuations.h` (declarations)
 - Make all continuation functions public (no `static`)
 - Both `lambda_cpsTk.c` and `lambda_cpsTc.c` include the header and link against the `.c` file
@@ -565,6 +582,7 @@ Generator uses this to:
 - Cons: Slightly more complexity in generator (must produce both `.h` and `.c`)
 
 **Option B: Combine visitor files**
+
 - Merge `lambda_cpsTk.c` and `lambda_cpsTc.c` into a single `lambda_cps.c`
 - Include the generated `.inc` file once in the combined file
 - Pros: Simpler, matches ANF pattern exactly
@@ -573,6 +591,7 @@ Generator uses this to:
 **Recommendation**: Option A (public API with header) is more scalable. If we add more continuation-based transforms in the future, they can all share the same continuation infrastructure.
 
 Generator command-line arguments control output format:
+
 ```bash
 # For ANF-style static .inc file (single consumer)
 python3 tools/generate.py src/anf_continuations.yaml kont_impl_inc > generated/anf_kont.inc
@@ -590,6 +609,7 @@ No YAML configuration needed - the choice is made at generation time.
 **CPS**: Some are `CpsKont*`, others are `Expr*` (generated lambda expressions)
 
 **Solution**: Allow free variables to have different types:
+
 ```yaml
 T_k_if:
   free_vars:
@@ -615,6 +635,7 @@ This already works! The type system handles both.
 **CPS**: Aexpr (values) handled differently from Cexpr (computations)
 
 **Solution**: Add optional `value_predicate` to config:
+
 ```yaml
 continuation_config:
   value_predicate: isAexpr    # Function to test if expression is a value
@@ -701,6 +722,7 @@ def _write_constructors(self, output: TextIO, catalog: Catalog) -> None:
 ```
 
 ### 1. Massive Code Reuse
+
 - **~1800 lines** of visitor boilerplate generated automatically
 - **~500 lines** of continuation scaffolding generated automatically  
 - ~80% of generator code shared between ANF and CPS
@@ -708,30 +730,35 @@ def _write_constructors(self, output: TextIO, catalog: Catalog) -> None:
 - **Total boilerplate savings: ~2300 lines per algorithm**
 
 ### 2. Separation of Concerns
+
 - **Visitor generator**: Handles tree traversal, GC, immutability
 - **Continuation generator**: Handles closure creation, type safety
 - **User code**: Only algorithm-specific transformation logic
 - Each layer is independently testable and maintainable
 
 ### 3. Type Safety at Multiple Levels
+
 - **Visitor**: Compiler verifies field types during traversal
 - **Continuation**: Compiler catches mismatches in environment structs
 - **Runtime**: Type-safe accessors (`getKontEnv_*`) validate discriminated unions
 - No runtime hash table lookups (ANF-REWRITE.md's original approach)
 
 ### 4. Performance
+
 - **No hash table overhead**: Direct struct field access throughout
 - **Compiler optimization**: Static inline-able wrapper functions
 - **Lazy evaluation**: Only create new nodes when children change (visitor pattern)
 - **Memory efficiency**: Fixed-size continuation structs vs dynamic hash tables
 
 ### 5. Debuggability
+
 - **Typed structs visible**: Both visitor state and continuation environments in debugger
 - **Stack traces clear**: Named functions for each case (`cpsTkLamIff`, `T_k_ifKont`)
 - **Breakpoint precision**: Can break at exact transformation point
 - **No opaque structures**: No hash tables or generic pointers to decode
 
 ### 6. Maintainability
+
 - **YAML drives generation**: Change spec, regenerate, minimal manual updates
 - **Consistent patterns**: Both ANF and CPS follow same architecture
 - **Future algorithms easy**: Third algorithm just needs YAML spec + transformation logic
@@ -756,13 +783,16 @@ def _write_constructors(self, output: TextIO, catalog: Catalog) -> None:
 ### 1. Expression-Level Continuations
 
 CPS has two kinds of continuations:
+
 - **C continuations** (`CpsKont*`): Structured continuation objects (what we generate)
 - **Expression continuations** (`Expr*`): Generated lambda expressions
 
 The scaffolding handles both because they're just different field types. Example:
+
 - ❌ **Does NOT use visitor pattern** (manual tree walking)
 
 ### For CPS-KONT (Proposed - With Visitor Pattern)
+
 - [ ] **Generate visitor skeleton**: `tools/generate.py lambda.yaml visitor --target=cpsTk` (~1800 lines)
 - [ ] **Generate continuation scaffolding**: From `cps_continuations.yaml` (~500 lines)
 - [ ] **Support dual-transformer pattern**: T_k and T_c with separate visitor contexts
@@ -772,6 +802,7 @@ The scaffolding handles both because they're just different field types. Example
 - [ ] **Measure LOC savings**: Compare generated+user vs pure manual implementation
 
 ### For Generalization (Long-Term)
+
 - [ ] **Visitor + Continuation pattern**: Document hybrid approach as standard practice
 - [ ] **Third algorithm**: Test framework with different continuation-based transform
 - [ ] **Unified documentation**: Cover ANF (no visitors), CPS (with visitors), patterns
@@ -790,6 +821,7 @@ The scaffolding handles both because they're just different field types. Example
 | **User writes** | **~6000 lines** | **~2500 lines** | **58%** |
 
 Note: User writes only transformation logic, not infrastructure.
+
 ### 2. Fresh Variable Allocation
 
 CPS extensively uses `gensym()` to create fresh variables:
@@ -848,22 +880,26 @@ Advantage: T_c just passes LamExp* as data - no continuation infrastructure need
 ### Recommendations
 
 #### Immediate (Week 1)
+
 1. ✅ **Validate approach**: Generate visitors for T_k and T_c
 2. ✅ **Review proposal**: Gather feedback on hybrid approach
 3. ⚠️ **Create CPS YAML**: Specify 5-10 continuations as proof-of-concept
 
 #### Short-Term (Weeks 2-3)
+
 4. **Implement continuation generator**: Parameterize for CPS config
-5. **Port 3 cases**: Implement T_k_if, T_c_if, T_k_apply using hybrid approach
-6. **Validate output**: Compare against [cps5.fn](../fn/rewrite/cps5.fn) results
+2. **Port 3 cases**: Implement T_k_if, T_c_if, T_k_apply using hybrid approach
+3. **Validate output**: Compare against [cps5.fn](../fn/rewrite/cps5.fn) results
 
 #### Medium-Term (Month 2)
+
 7. **Full CPS port**: Complete all ~40 transformation cases
-8. **Integration**: Wire into lambda conversion pipeline
-9. **Benchmarking**: Measure performance vs manual approach
-10. **Documentation**: Update with lessons learned
+2. **Integration**: Wire into lambda conversion pipeline
+3. **Benchmarking**: Measure performance vs manual approach
+4. **Documentation**: Update with lessons learned
 
 #### Long-Term Benefit
+
 - **Pattern established**: Visitor + Continuation = standard for transformation algorithms
 - **Future algorithms**: Can reuse both generation systems
 - **Maintenance burden**: Reduced by 50%+ through code generation
@@ -872,26 +908,31 @@ Advantage: T_c just passes LamExp* as data - no continuation infrastructure need
 **Final recommendation**: Proceed with hybrid approach. Generate visitors first (already works), then add parameterized continuation scaffolding. This is significantly easier than implementing either system from scratch.
 
 ### 1. Code Reuse
+
 - ~80% of generator code shared between ANF and CPS
 - Same patterns for environment structs, unions, wrappers
 - Unified approach reduces maintenance burden
 
 ### 2. Consistency
+
 - Both transformations use identical scaffolding patterns
 - Easy to understand one after learning the other
 - Future continuation-based algorithms can follow same pattern
 
 ### 3. Type Safety
+
 - Compiler catches field mismatches in continuation environments
 - No runtime hash table lookups (ANF-REWRITE.md's original approach)
 - Direct field access with type checking
 
 ### 4. Performance
+
 - No hash table overhead
 - Direct struct field access
 - Compiler can inline wrapper functions
 
 ### 5. Debuggability
+
 - Typed environment structs visible in debugger
 - Can inspect continuation closures at breakpoints
 - No opaque `LamMap` hash tables to decode
@@ -911,7 +952,8 @@ Mitigation: F♮ implementation in [cps5.fn](fn/rewrite/cps5.fn) already works, 
 ### Risk 3: Performance Regression
 
 Problem: Generated scaffolding might be slower than hand-written code  
-Mitigation: 
+Mitigation:
+
 - Wrappers are static inline-able
 - Struct field access vs hash lookup is faster
 - Benchmark performance
@@ -920,6 +962,7 @@ Mitigation:
 
 Problem: Generated code harder to debug than manual code  
 Mitigation:
+
 - Generated code is readable C with comments
 - `.inc` file can be inspected directly
 - User-written continuation bodies are normal C functions
@@ -927,12 +970,14 @@ Mitigation:
 ## Success Criteria
 
 ### For ANF-KONT (Already Achieved)
+
 - ✅ Reduces boilerplate from ~15 to ~8 lines per continuation
 - ✅ Type-safe environment access
 - ✅ Automatic GC integration
 - ✅ Maintainable YAML specifications
 
 ### For CPS-KONT (Proposed)
+
 - [ ] Generate scaffolding from YAML with minimal config changes
 - [ ] Support dual-transformer pattern (T_k and T_c)
 - [ ] Handle expression-level and structured continuations
@@ -941,6 +986,7 @@ Mitigation:
 - [ ] Documentation shows clear generalization patterns
 
 ### For Generalization (Long-Term)
+
 - [ ] Third continuation-based algorithm can reuse framework with <100 LOC changes
 - [ ] Unified documentation covers ANF, CPS, and generalization patterns
 - [ ] Generator has <5 configuration parameters (avoid complexity explosion)
@@ -948,25 +994,29 @@ Mitigation:
 ## Recommended Next Steps
 
 ### Immediate (Week 1-2)
+
 1. **Review Proposal**: Gather feedback on generalization approach
 2. **Update ANF-KONT**: Add `continuation_config` to ANF YAML (backwards compatible)
 3. **Refactor Generator**: Extract parameterized methods in `KontinuationGenerator`
 
 ### Short-Term (Week 3-4)
+
 4. **Create CPS YAML**: Specify first 10 CPS continuations from [cps5.fn](fn/rewrite/cps5.fn)
-5. **Generate CPS Scaffolding**: Test generation with CPS config
-6. **Port 3 CPS Cases**: Implement `T_k_if`, `T_c_if`, `T_k_apply` in C
+2. **Generate CPS Scaffolding**: Test generation with CPS config
+3. **Port 3 CPS Cases**: Implement `T_k_if`, `T_c_if`, `T_k_apply` in C
 
 ### Medium-Term (Month 2)
+
 7. **Full CPS Port**: Complete all ~40 CPS continuations
-8. **Integration**: Wire CPS transform into lambda conversion pipeline
-9. **Validation**: Compare output against F♮ CPS implementation
-10. **Documentation**: Update ANF-KONT.md with generalization lessons
+2. **Integration**: Wire CPS transform into lambda conversion pipeline
+3. **Validation**: Compare output against F♮ CPS implementation
+4. **Documentation**: Update ANF-KONT.md with generalization lessons
 
 ### Long-Term (Month 3+)
+
 11. **Performance Analysis**: Benchmark ANF vs CPS scaffolded code
-12. **Generalization Guide**: Document patterns for future algorithms
-13. **Consider**: Other continuation-based algorithms that could benefit
+2. **Generalization Guide**: Document patterns for future algorithms
+3. **Consider**: Other continuation-based algorithms that could benefit
 
 ## Conclusion
 
@@ -978,12 +1028,14 @@ The ANF continuation scaffolding generator is generalizable to CPS transform wit
 - Validated patterns: F♮ CPS implementation proves the continuation patterns work
 
 The main work is:
+
 1. Adding `continuation_config` to YAML schema
 2. Updating generator to use config parameters instead of hard-coded names
 3. Specifying 30-40 CPS continuations in YAML
 4. Writing user continuation bodies in C (the actual algorithm logic)
 
 This investment will provide benefits:
+
 - Future continuation-based algorithms can reuse framework
 - Consistent patterns across codebase
 - Less boilerplate to maintain

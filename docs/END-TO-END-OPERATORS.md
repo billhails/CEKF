@@ -114,17 +114,18 @@ These errors are reported with file and line information when run via `./bin/fn`
 
 - Run the full suite (passing and negative tests) using the Makefile target:
 
-```
+```bash
 make test
 ```
 
 - Or run one file manually:
 
-```
+```bash
 ./bin/fn --include=fn --assertions-accumulate tests/fn/test_import_operators_selective.fn
 ```
 
 If you hit an error importing a symbol, check whether:
+
 - The source namespace exported the requested fixity.
 - You’re not redefining the same fixity in the same scope.
 - You’re not mixing fixities for the same symbol in one scope.

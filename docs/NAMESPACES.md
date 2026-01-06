@@ -19,7 +19,7 @@ more limited but hopefully practical approach of namespaces.
 
 ## Syntax
 
-```
+```fn
 import "path/to/myname.fn" as myname;
 ```
 
@@ -27,8 +27,7 @@ Will import and declare a namespace called `myname`.  Repeated imports
 of the same file should not create repeated compilation units.  The path
 will be relative to the file doing the import.
 
-
-```
+```fn
 myname.expr
 ```
 
@@ -53,6 +52,7 @@ the context of the namespace. If the expression happens to be a simple
 variable then it is equivalent to variable lookup, but care must be
 taken not to fall into the trap of treating it as such. The appropriate
 action on seeing a dot operator should always be:
+
 1. push the namespace.
 2. process the rhs in that context.
 3. pop the namespace.
@@ -71,20 +71,20 @@ of a co-ordinating `namespaces` branch to keep some sort of control, and
 
 ```mermaid
 gitGraph TB:
-	commit
-	branch namespaces
-	checkout namespaces
-	commit tag: "namespaces-v1"
-	branch parsing
-	checkout parsing
-	commit
-	checkout namespaces
-	branch lambda
-	checkout lambda
-	commit
-	checkout namespaces
-	merge parsing tag: "parsing-v1"
-	merge lambda tag: "lambda-v1"
+ commit
+ branch namespaces
+ checkout namespaces
+ commit tag: "namespaces-v1"
+ branch parsing
+ checkout parsing
+ commit
+ checkout namespaces
+ branch lambda
+ checkout lambda
+ commit
+ checkout namespaces
+ merge parsing tag: "parsing-v1"
+ merge lambda tag: "lambda-v1"
 ```
 
 Also, because of the scope, I think it makes sense to get an end to end
@@ -134,7 +134,7 @@ be detected but need to be sure.
 
 Mostly straightforward, will require a new lambda construct or two.
 
-```
+```fn
 import "dict.fn" as dict;
 
 fn foo {
@@ -228,7 +228,7 @@ will be an expression that expects to be evaluated in the context of
 the lhs, an'd we haven't run in to the `.` bytecode yet. Consider a
 normal apply:
 
-```
+```text
 | ..argn.. | ... | ..arg1.. | ..fn-expr.. | APPLY |
 ```
 
@@ -238,7 +238,7 @@ itself is treated as a normal VAR or LVAR then we'd need to follow
 it with an op that installs the namespace as the new current context,
 and after the `fn-expr` another op that restores the previous context:
 
-```
+```text
 | ..argn.. | ... | ..arg1.. | (L)VAR | NS_INSTALL | ..fn-expr.. | NS_UNINSTALL | APPLY |
                             |                                                  |
                             |------written by the code generating the dot------|
@@ -409,7 +409,7 @@ The language must support namespace qualified type constructors in patterns.
 
 Assuming we have a new type for "qualified var", like in
 
-```
+```fn
 fn foo {
    (ns.c1) { ... }
    (ns.c2) { ... }
@@ -459,7 +459,7 @@ A namespace is only recorded after it has been completely parsed, by
 which time any of its imports will have been recorded ahead of it. In
 the example above the parse order is:
 
-```
+```text
 1
 +-2
 | +-3
@@ -480,7 +480,7 @@ RECORD 1
 
 so the namespaces are stored in the following order
 
-```
+```text
 3
 2
 6
@@ -516,25 +516,25 @@ curried. We might be on to a winner here if we go with that and
 detect curried applications of constructors in the inlining
 phase, we can convert those into anonymous closures. so after:
 
-```
+```fn
 typedef dict(#k, #v) { leaf | tree(dict(#k, #v), #k, #v, dict(#k, #v)) }
 ```
 
 on seeing:
 
-```
+```fn
 tree(leaf, 1, "hello", leaf)
 ```
 
 the constructor is directly inlined, but on seeing:
 
-```
+```fn
 tree(leaf, 1)
 ```
 
 the result is:
 
-```
+```fn
 fn(a, b, c, d) { tree(a, b, c, d) }(leaf, 1)
 ```
 
@@ -548,7 +548,7 @@ it may be ok, since these functions only have one branch.
 
 basic type importing is done, though I suspect it has issues, anyway
 
-```
+```fn
 let
     import "maybe.fn" as m
 in
@@ -579,7 +579,7 @@ should unify with `(lookup m maybe(number))` not just `maybe(number)`.
 Option 2 should just work for unification, provided the extra id is
 included in the comparison. How would print compilation use it?
 
-```
+```fn
 print(m.some(1))
 ```
 
@@ -617,7 +617,7 @@ I'm hoping I can get an `import <string>;` declaration to do 2 things:
 
 ## Description of the Current Implementation
 
-### Lambda conversion etc.
+### Lambda conversion etc
 
 Namespaces are detected (recursively) during parsing of the main file.
 When a namespace is found, the referenced file is statted with `stat`

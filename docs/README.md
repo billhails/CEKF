@@ -29,4 +29,3 @@ completeness:
 * [generated/pratt](generated/pratt.md) Structures used by the pratt parser.
 * [generated/tc](generated/tc.md) Type Checking support data structures.
 * [generated/tpmc](generated/tpmc.md) Support structures for the Term Pattern Matching Compiler.
-

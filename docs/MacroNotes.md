@@ -1,6 +1,6 @@
-Observations on macro processing in `lambda_conversion.c`
+# Observations on macro processing in `lambda_conversion.c`
 
-```
+```text
 lamConvert
 +---convertFuncDefs(defs, env)
     +---checkMacro(def, env)
@@ -24,7 +24,8 @@ lamConvert
 ```
 
 lamPerformMacroSubstitutions commented out:
-```
+
+```scheme
 (λ ()
     (letrec ((COMPUTE (λ (a b c)
                 (let (((sum (opMacro$9 (λ () a) (λ () b)))
@@ -35,7 +36,8 @@ lamPerformMacroSubstitutions commented out:
 ```
 
 lamPerformMacroSubstitutions uncommented:
-```
+
+```scheme
 (λ ()
     (letrec ((COMPUTE (λ (a b c)
                 (let (((sum (opMacro$9 (λ () ((a))) (λ () ((b)))))

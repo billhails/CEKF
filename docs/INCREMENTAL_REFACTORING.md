@@ -19,12 +19,14 @@ Yes! Small incremental steps with testing at each stage is the **safest and most
 These steps add new code WITHOUT using it yet, so tests should always pass:
 
 #### Step 0.1: Create utils module for common C code patterns
+
 ```bash
 # Create tools/generate/c_types.py
 vim tools/generate/c_types.py
 ```
 
 Add simple utilities for C type manipulation:
+
 ```python
 class CType:
     """Utilities for C type declarations"""
@@ -46,6 +48,7 @@ class CType:
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS - nothing uses this yet
 git add tools/generate/c_types.py
@@ -53,11 +56,13 @@ git commit -m "Add CType utility class (unused)"
 ```
 
 #### Step 0.2: Create code generation building blocks
+
 ```bash
 vim tools/generate/codegen.py
 ```
 
 Add basic code generation structures (see proposal for full code):
+
 ```python
 class Statement:
     """Represents a C statement"""
@@ -81,6 +86,7 @@ class FunctionBody:
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS - still unused
 git add tools/generate/codegen.py
@@ -88,11 +94,13 @@ git commit -m "Add basic code generation classes (unused)"
 ```
 
 #### Step 0.3: Create template utilities
+
 ```bash
 vim tools/generate/templates.py
 ```
 
 Add comment/documentation generators:
+
 ```python
 class DocComment:
     """Generate C documentation comments"""
@@ -122,6 +130,7 @@ class DocComment:
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS
 git add tools/generate/templates.py
@@ -143,6 +152,7 @@ vim tools/generate/primitives.py
 ```
 
 Find this method (around line 50):
+
 ```python
 def printNewDeclaration(self, catalog):
     # Current implementation
@@ -150,6 +160,7 @@ def printNewDeclaration(self, catalog):
 ```
 
 Change to use new templates (MINIMAL change):
+
 ```python
 def printNewDeclaration(self, catalog):
     from .templates import DocComment
@@ -158,11 +169,13 @@ def printNewDeclaration(self, catalog):
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS - just added import
 ```
 
 Now actually use it:
+
 ```python
 def printNewDeclaration(self, catalog):
     from .templates import DocComment
@@ -171,6 +184,7 @@ def printNewDeclaration(self, catalog):
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS - output identical
 git add tools/generate/primitives.py
@@ -191,6 +205,7 @@ git commit -m "Refactor Primitive.printNewFunction"
 #### Step 1.3: Continue with other Primitive methods
 
 One method at a time:
+
 - `printMarkDeclaration()` → test → commit
 - `printMarkFunction()` → test → commit
 - `printFreeDeclaration()` → test → commit
@@ -237,6 +252,7 @@ def printNewDeclaration(self, catalog):
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS
 git commit -m "Refactor SimpleStruct.printNewDeclaration to use common pattern"
@@ -245,6 +261,7 @@ git commit -m "Refactor SimpleStruct.printNewDeclaration to use common pattern"
 #### Step 2.3: Repeat for other entity types
 
 One class at a time:
+
 - SimpleArray → test → commit
 - SimpleHash → test → commit  
 - SimpleVector → test → commit
@@ -276,6 +293,7 @@ class Constructible:
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS - not used yet
 git commit -m "Add Constructible capability interface (unused)"
@@ -302,6 +320,7 @@ class Primitive(Base, Constructible):  # Add Constructible
 ```
 
 Test:
+
 ```bash
 make test-refactoring  # Should PASS
 git commit -m "Make Primitive implement Constructible"
@@ -310,6 +329,7 @@ git commit -m "Make Primitive implement Constructible"
 #### Step 3.3: Gradually migrate other classes
 
 One at a time:
+
 - SimpleEnum → test → commit
 - SimpleStruct → test → commit
 - etc.
@@ -328,6 +348,7 @@ vim tools/generate/comment_gen.py
 ```
 
 Paste this:
+
 ```python
 """
 Simple comment and documentation utilities.
@@ -349,12 +370,14 @@ class CommentGen:
 ```
 
 Test it:
+
 ```bash
 make test-refactoring
 ```
 
 Expected output:
-```
+
+```text
 === Testing Code Generation Refactoring ===
 ...
 ✓ All generated files match baseline!
@@ -365,6 +388,7 @@ Expected output:
 **Why it passes**: You created a new file but didn't use it yet.
 
 Commit it:
+
 ```bash
 git add tools/generate/comment_gen.py
 git commit -m "Add CommentGen utility class (first refactoring step, unused)"
@@ -377,12 +401,14 @@ vim tools/generate/primitives.py
 ```
 
 Find the `comment()` method (around line 100):
+
 ```python
 def comment(self, method):
     return f'// Primitive.{method}'
 ```
 
 Change to:
+
 ```python
 def comment(self, method):
     from .comment_gen import CommentGen
@@ -390,12 +416,14 @@ def comment(self, method):
 ```
 
 Test:
+
 ```bash
 make test-refactoring
 ```
 
 Expected output:
-```
+
+```text
 ✓ All generated files match baseline!
 ✓ All tests pass!
 === Refactoring test PASSED ===
@@ -404,6 +432,7 @@ Expected output:
 **Why it passes**: The output is identical, just generated differently.
 
 Commit:
+
 ```bash
 git add tools/generate/primitives.py
 git commit -m "Use CommentGen in Primitive.comment() - output identical"
@@ -432,17 +461,16 @@ git commit -m "..."
 
 Every change follows this rhythm:
 
-```
 1. Edit one file
 2. make test-refactoring (15-30 seconds)
 3. If ✓ pass: git commit
 4. If ✗ fail: debug (diff shows exactly what changed)
 5. Repeat
-```
 
 ### What "One Step" Means
 
 A single step could be:
+
 - ✓ Add a new utility class (not used yet)
 - ✓ Add a new method to existing class
 - ✓ Change one method in one class to use new utility
@@ -453,15 +481,18 @@ A single step could be:
 ### Sizing Your Steps
 
 **Too small** (inefficient):
+
 - Change one line of code
 - Rename a variable
 
 **Too big** (risky):
+
 - Refactor an entire class
 - Change multiple files at once
 - Introduce new architecture without testing
 
 **Just right** (recommended):
+
 - One method in one class
 - Extract one helper function and use it in one place
 - Add capability interface and make ONE class implement it
@@ -472,33 +503,33 @@ A single step could be:
 
 Print this and keep it next to you while refactoring:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  INCREMENTAL REFACTORING CHECKLIST                      │
 ├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  Before ANY change:                                      │
+│                                                         │
+│  Before ANY change:                                     │
 │    ☐ Working directory is clean (git status)            │
 │    ☐ Baseline exists (ls test_baseline/)                │
 │    ☐ Tests pass (make test-refactoring)                 │
-│                                                          │
-│  For EACH change:                                        │
+│                                                         │
+│  For EACH change:                                       │
 │    ☐ Edit ONE file (or create ONE new file)             │
 │    ☐ Make ONE logical change                            │
 │    ☐ Run: make test-refactoring                         │
 │    ☐ If pass: git commit -m "..."                       │
 │    ☐ If fail: debug with diff, fix, retry               │
-│                                                          │
-│  When stuck:                                             │
+│                                                         │
+│  When stuck:                                            │
 │    ☐ Check diff: diff -u test_baseline/... generated/   │
 │    ☐ Revert: git checkout -- tools/generate/file.py     │
 │    ☐ Smaller steps: break change into smaller pieces    │
-│                                                          │
-│  End of session:                                         │
+│                                                         │
+│  End of session:                                        │
 │    ☐ All tests pass                                     │
 │    ☐ All changes committed                              │
 │    ☐ git push (optional)                                │
-│                                                          │
+│                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -544,12 +575,14 @@ git commit -m "Use CommentGen in SimpleArray"
 **Yes, incremental refactoring works perfectly with this testing setup!**
 
 **Start with**:
+
 1. Create one small utility class (test → commit)
 2. Use it in ONE method in ONE class (test → commit)
 3. Expand to other classes one at a time (test → commit each)
 4. Repeat for other utilities
 
 **Key principles**:
+
 - One change at a time
 - Test after EVERY change (15-30 seconds)
 - Commit immediately after passing test
@@ -557,6 +590,7 @@ git commit -m "Use CommentGen in SimpleArray"
 - Can always rollback to last commit
 
 **First practical step** (do this now):
+
 ```bash
 # Create comment_gen.py as shown above
 vim tools/generate/comment_gen.py

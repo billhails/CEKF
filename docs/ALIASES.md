@@ -2,7 +2,7 @@
 
 Aliases will be shorthand for complex declarations. Simple examples might be
 
-```
+```fn
 alias string = list(char);
 alias some = maybe.some; // import
 alias boolfn = bool -> bool -> bool;
