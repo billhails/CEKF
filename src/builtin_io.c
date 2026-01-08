@@ -19,6 +19,7 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <wchar.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -126,10 +127,12 @@ static Value errnoToTry() {
 }
 
 static void private_fputc(FILE *fh, Character character) {
-    char buf[16];
-    char *end = (char *) writeChar((unsigned char *)buf, character);
-    *end = 0;
-    fprintf(fh, "%s", buf);
+    char buf[MB_LEN_MAX];
+    int len = wctomb(buf, character);
+    if (len > 0) {
+        buf[len] = '\0';
+        fprintf(fh, "%s", buf);
+    }
 }
 
 static Value builtin_putc(Vec *args) {
@@ -467,8 +470,37 @@ static Value private_fgetc(FILE *fh) {
     if (getBuiltInMemBufHash(getMemBufs(), key, NULL)) {
         cant_happen("getc on memory buffers not supported yet");
     }
-    Character c = utf8Fgetc(fh);
-    return value_Character(c);
+    wchar_t wc = 0;
+    char buf[MB_LEN_MAX];
+    int bytes_read = 0;
+    
+    while (bytes_read < MB_LEN_MAX) {
+        int byte = fgetc(fh);
+        if (byte == EOF) {
+            wc = 0;  // Match original behavior: return 0 on EOF
+            break;
+        }
+        buf[bytes_read++] = (char)byte;
+        
+        // Reset state for each attempt to decode accumulated bytes
+        mbstate_t state;
+        memset(&state, 0, sizeof(state));
+        
+        size_t result = mbrtowc(&wc, buf, bytes_read, &state);
+        if (result == (size_t)-1) {
+            // Invalid sequence - return replacement character
+            wc = 0xFFFD;
+            break;
+        } else if (result == (size_t)-2) {
+            // Incomplete sequence - read more bytes
+            continue;
+        } else {
+            // Successfully converted
+            break;
+        }
+    }
+    
+    return value_Character(wc);
 }
 
 static Value builtin_getc() {

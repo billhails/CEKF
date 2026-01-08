@@ -26,43 +26,17 @@
 #include <ctype.h>
 #include "unicode.h"
 #include "common.h"
-
-struct UnicodeDigit {
-    int code;
-    int dec;
-};
-
-#ifdef EXTRA_UNICODE_FUNCTIONS
-static struct UnicodeDigit digits[] = {
 #include "UnicodeDigits.inc"
-};
-#endif
 
 static unsigned char category[] = {
 #include "UnicodeData.inc"
 };
 
-#ifdef EXTRA_UNICODE_FUNCTIONS
-// untested brute-force binary search
 int unicode_getdec(Character c) {
-    int start = 0;
-    int end = NUM_UNICODE_DIGITS - 1;
-    for (;;) {
-        eprintf("getUnicodeDec %d - %d\n", start, end);
-        if (start == end) {
-            cant_happen("failed to find decimal digit %lc", c);
-        }
-        int middle = start + (end - start) / 2;
-        if (digits[middle].code == c) {
-            return digits[middle].dec;
-        } else if (digits[middle].code < c) {
-            start = middle;
-        } else {
-            end = middle;
-        }
+    switch (c) {
+        UNICODE_DIGITS_CASES
     }
 }
-#endif
 
 bool unicode_isvalid(Character c) {
     return c >= 0 && c <= UNICODE_MAX;

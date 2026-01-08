@@ -133,6 +133,12 @@ ustring:
         printf: "%s"
         valued: true
 
+wstring:
+    data:
+        cname: "Character *"
+        printf: "%ls"
+        valued: true
+
 PrattParselet:
     data:
         cname: PrattParselet

@@ -38,21 +38,21 @@ structs:
                 and the children are indexed by subsequent characters of the token.
                 Ordering of siblings ensures efficient search and insertion.
         data:
-            character: byte
+            character: character
             terminal: HashSymbol
             siblings: PrattTrie
             children: PrattTrie
 
     PrattBuffer:
         meta:
-            brief: A buffer of UTF-8 characters.
+            brief: A buffer of wide characters.
             description: >-
-                A buffer of UTF-8 characters that is both used during parsing
+                A buffer of wide characters that is both used during parsing
                 and returned by the token parser (like yytext).
         data:
-            data: ustring
-            start: ustring=NULL
-            length: int=0
+            data: PrattWVec
+            start: wstring=NULL
+            offset: int=0
 
     PrattBufList:
         meta:
@@ -145,6 +145,21 @@ structs:
             startsWithHole: bool
             endsWithHole: bool
 
+vectors:
+    PrattWVec:
+        meta:
+            brief: A fixed-length wchar_t string.
+            description: >-
+        data:
+            entries: character
+
+    PrattCVec:
+        meta:
+            brief: A fixed-length char string.
+            description: >-
+        data:
+            entries: schar
+
 enums:
     PrattAssoc:
         meta:
@@ -177,31 +192,18 @@ enums:
     PrattStringState:
         meta:
             brief: The set of states for the string parser.
-            description: >-
-                The state of the string parser. It is used to parse strings
-                with escape sequences, Unicode characters, and other special
-                characters. It handles both single quoted characters and
-                double quoted strings.
         data:
             - START
             - STR
             - ESC
             - ESCS
             - UNI
-            - CHR1
-            - CHR2
-            - CHR3
-            - CHR4
+            - CHR
             - END
 
     PrattFixity:
         meta:
             brief: The set of fixity types for operators.
-            description: >-
-                The fixity of an operator determines how it is parsed in relation
-                to its operands. It can be prefix, infix, or postfix. This is
-                used to determine the precedence and associativity of operators
-                during parsing.
         data:
             - PREFIX
             - INFIX
@@ -211,11 +213,7 @@ inline:
     structs:
         PrattFixityConfig:
             meta:
-                brief: Configuration for one fixity (prefix/infix/postfix) of an operator.
-                description: >-
-                    Holds the parselet, precedence, implementation, and metadata for
-                    one fixity of an operator. Three of these are embedded in each
-                    PrattRecord for prefix, infix, and postfix configurations.
+                brief: Configuration for an individual fixity (prefix/infix/postfix) of an operator.
             data:
                 op: PrattParselet
                 prec: int
@@ -236,9 +234,9 @@ unions:
                 character, or atom. This is used to represent the value of
                 the token in the parse tree.
         data:
-            string: PrattUTF8
+            string: PrattUnicode
             number: MaybeBigInt
-            character: PrattUTF8
+            character: character
             atom: HashSymbol
 
 hashes:
@@ -264,24 +262,14 @@ hashes:
             entries: int
 
 arrays:
-    PrattUTF8:
-        meta:
-            brief: A UTF-8 encoded string.
-            description: >-
-                A UTF-8 encoded string that is used to represent the value of
-                a token in the parse tree. It is used for string literals,
-                character literals, and other text-based tokens.
-        data:
-            entries: uchar
-
     PrattStrings:
         meta:
-            brief: An array of UTF-8 encoded strings.
+            brief: An array of Unicode strings.
             description: >-
-                An array of UTF-8 encoded strings that is used to hold
+                An array of Unicode strings that is used to hold
                 multiple keywords for the PrattMixfixPattern structure.
         data:
-            entries: PrattUTF8
+            entries: PrattUnicode
 
     PrattParsers:
         meta:

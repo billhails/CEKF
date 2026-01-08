@@ -11,6 +11,11 @@ let
         let result = amb.some_of([1, 2]);
         in
         // some_of generates subsets, so result should be a list
+        print typeof result;
+        print list.length(typeof result)
+        print "list(number)";
+        print list.length("list(number)");
+        assert("list(number)" == "list(number)");
         assert(typeof result == "list(number)")
     }
     
