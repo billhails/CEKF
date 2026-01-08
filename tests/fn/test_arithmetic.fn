@@ -62,3 +62,5 @@ in
     assert(-9 % 8 == -1);
     assert(close_enough(com_mag(5 + 7i), 8.60233));
     assert(close_enough(com_theta(5 + 7i), 0.950547));
+    assert(੨੧੦ == 210);
+    assert(੨੧੦ == ᱒᱑᱐);
