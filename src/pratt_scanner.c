@@ -876,8 +876,9 @@ PrattToken *next(PrattParser *parser) {
                     ++buffer->start;
                     ++lexer->bufList->lineNo;
                 }
-            // alpha
-            } else if (unicode_isalpha(buffer->start[0])) {
+            // alpha or combining mark
+            } else if (unicode_isalpha(buffer->start[0]) ||
+                       unicode_ismark(buffer->start[0])) {
                 PrattToken *token = lookUpTrieSymbol(parser);
                 if (token != NULL) {
                     return token;

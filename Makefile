@@ -274,8 +274,8 @@ $(UNIDIR)/UnicodeData.csv: $(UNIDIR)/UnicodeData.txt ./tools/convertCsv.py
 $(UNIDIR)/UnicodeData.txt: | $(UNIDIR)
 	wget -P $(UNIDIR) https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
 
-$(GENDIR)/UnicodeData.inc: $(UNIDIR)/UnicodeData.txt tools/analyzeCsv.py | $(GENDIR)
-	$(PYTHON) ./tools/analyzeCsv.py > $@
+$(GENDIR)/UnicodeData.inc: $(UNIDIR)/UnicodeData.txt tools/makeUnicodeData.py | $(GENDIR)
+	$(PYTHON) ./tools/makeUnicodeData.py > $@
 
 $(GENDIR)/UnicodeDigits.inc: $(UNIDIR)/UnicodeData.txt tools/makeUnicodeDigits.py | $(GENDIR)
 	$(PYTHON) ./tools/makeUnicodeDigits.py > $@
