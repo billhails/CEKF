@@ -21,7 +21,7 @@
 #include "ast.h"
 #include "pratt.h"
 
-void psprintf(PrattUTF8 *, const char *, ...) __attribute__((format(printf, 2, 3)));
-void ppAstExpression(PrattUTF8 *, AstExpression *);
+void psprintf(AstUTF8 *, const char *, ...) __attribute__((format(printf, 2, 3)));
+void ppAstExpression(AstUTF8 *, AstExpression *);
 
 #endif

@@ -21,6 +21,10 @@
  */
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <wctype.h>
+#include <locale.h>
 
 #include "ast.h"
 #include "bigint.h"
@@ -34,7 +38,7 @@
 #include "preamble.h"
 #include "print_generator.h"
 #include "symbols.h"
-#include "utf8.h"
+#include "unicode.h"
 #include "wrapper_synthesis.h"
 
 #ifdef DEBUG_PRATT_PARSER
@@ -49,7 +53,7 @@
 // precedence level: (1 * 3 + 1) < (2 * 3 - 1).
 #define PRECEDENCE_SCALE 3
 
-// UTF8
+// Unicode
 // re-entrant
 // stacked input stream
 // modified during parse
@@ -177,9 +181,8 @@ static HashSymbol *symbol(PrattParser *);
 static HashSymbol *type_variable(PrattParser *);
 static PrattRecord *fetchRecord(PrattParser *, HashSymbol *);
 static PrattTrie *makePrattTrie(PrattParser *, PrattTrie *);
-static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *);
-static PrattUTF8 *rawString(PrattParser *);
-static PrattUTF8 *str(PrattParser *);
+static PrattUnicode *rawString(PrattParser *);
+static PrattUnicode *str(PrattParser *);
 static void storeNameSpace(PrattParser *, AstNameSpace *);
 static void synchronize(PrattParser *parser);
 static PrattExportedOps *captureNameSpaceOperatorExports(PrattParser *parser);
@@ -199,8 +202,14 @@ void disablePrattDebug(void) { DEBUGGING_OFF(); }
 static PrattParsers *parserStack = NULL;
 static PrattNsOpsArray *nsOpsCache = NULL;
 
-static inline HashSymbol *utf8ToSymbol(PrattUTF8 *utf8) {
-    return newSymbol((char *)utf8->entries);
+static HashSymbol *unicodeToSymbol(PrattUnicode *unicode) {
+    size_t len = wcstombs(NULL, unicode->entries, 0);
+    PrattCVec *mbStr = newPrattCVec(len + 1);
+    int save = PROTECT(mbStr);
+    wcstombs(mbStr->entries, unicode->entries, len + 1);
+    HashSymbol *res = newSymbol(mbStr->entries);
+    UNPROTECT(save);
+    return res;
 }
 
 static inline PrattFixity getFixityFromPattern(PrattMixfixPattern *pattern) {
@@ -336,34 +345,6 @@ makeAstCompositeFunction(AstAltFunction *functions,
     }
     UNPROTECT(save);
     return rest;
-}
-
-/**
- * @brief Convert a PrattUTF8 to a PrattUnicode.
- *
- * This function reads the UTF-8 encoded characters from the PrattUTF8
- * structure, converts them to unencoded (UTF-32) Unicode characters, and stores
- * them in a new PrattUnicode structure.
- *
- * Since the final run-time representation of strings is as lists of characters
- * and the vector representation of lists has two 32 bit fields there is no
- * additional overhead in using U-32.
- *
- * @param utf8 The PrattUTF8 structure containing UTF-8 encoded characters.
- * @return A new PrattUnicode structure containing the unencoded Unicode
- * characters.
- */
-static PrattUnicode *PrattUTF8ToUnicode(PrattUTF8 *utf8) {
-    PrattUnicode *uni = newPrattUnicode();
-    int save = PROTECT(uni);
-    unsigned char *entry = utf8->entries;
-    while (*entry != 0) {
-        Character c;
-        entry = utf8_to_unicode_char(&c, entry);
-        pushPrattUnicode(uni, c);
-    }
-    UNPROTECT(save);
-    return uni;
 }
 
 /**
@@ -524,7 +505,7 @@ static void synchronize(PrattParser *parser) {
 AstNest *prattParseStandaloneString(char *data, char *name) {
     PrattParser *parser = makePrattParser();
     int save = PROTECT(parser);
-    parser->lexer = makePrattLexerFromString(data, name);
+    parser->lexer = makePrattLexerFromMbString(data, name);
     AstNest *nest = top(parser);
     UNPROTECT(save);
     return nest;
@@ -550,7 +531,7 @@ AstNest *prattParseStandaloneString(char *data, char *name) {
 static AstProg *prattParseThing(PrattLexer *thing) {
     PrattParser *parser = makePrattParser();
     int save = PROTECT(parser);
-    parser->lexer = makePrattLexerFromString((char *)preamble, "preamble");
+    parser->lexer = makePrattLexerFromMbString((char *)preamble, "preamble");
     parser->isPreamble = true;
     AstNest *nest = top(parser);
     if (parser->lexer->bufList != NULL) {
@@ -609,7 +590,7 @@ AstProg *prattParseFile(char *file) {
  * @return An AstProg containing the parsed data.
  */
 AstProg *prattParseString(char *data, char *name) {
-    PrattLexer *lexer = makePrattLexerFromString(data, name);
+    PrattLexer *lexer = makePrattLexerFromMbString(data, name);
     int save = PROTECT(lexer);
     AstProg *prog = prattParseThing(lexer);
     UNPROTECT(save);
@@ -719,9 +700,6 @@ int initFileIdStack() {
 /**
  * @brief Initialize the parser stack for PrattParsers.
  *
- * This function checks if the parser stack is already initialized.
- * If not, it creates a new PrattParsers stack to hold PrattParser instances.
- *
  * @return The Index of the newly created and protected parserStack
  */
 int initParserStack() {
@@ -800,7 +778,7 @@ static inline void mergeFixity(PrattParser *parser, PrattFixityConfig *target,
             if (source->pattern != NULL) {
                 for (Index i = 1; i < source->pattern->keywords->size; ++i) {
                     HashSymbol *inner =
-                        utf8ToSymbol(source->pattern->keywords->entries[i]);
+                        unicodeToSymbol(source->pattern->keywords->entries[i]);
                     parser->trie = insertPrattTrie(parser->trie, inner);
                 }
                 target->pattern = source->pattern;
@@ -1188,24 +1166,24 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
  * - It cannot contain whitespace.
  *
  * @param parser The PrattParser to report errors to.
- * @param operator The PrattUTF8 operator string to validate.
+ * @param operator The PrattUnicode operator string to validate.
  */
-static bool validateOperator(PrattParser *parser, PrattUTF8 *operator) {
-    if (strlen((char *)operator->entries) == 0) {
+static bool validateOperator(PrattParser *parser, PrattUnicode *operator) {
+    if (wcslen(operator->entries) == 0) {
         parserError(parser, "operator cannot be empty string");
         return false;
-    } else if (isdigit(operator->entries[0])) {
+    } else if (iswdigit(operator->entries[0])) {
         parserError(parser, "operator cannot start with a numeric digit");
         return false;
-    } else if (utf8_isopen(operator->entries)) {
+    } else if (unicode_isopen(operator->entries[0])) {
         parserError(parser, "operator cannot start with an opening bracket");
         return false;
-    } else if (utf8_isclose(operator->entries)) {
+    } else if (unicode_isclose(operator->entries[0])) {
         parserError(parser, "operator cannot start with a closing bracket");
         return false;
     } else {
         for (Index i = 0; i < operator->size; i++) {
-            if (isspace(operator->entries[i])) {
+            if (iswspace(operator->entries[i])) {
                 parserError(parser, "operator cannot contain whitespace");
                 return false;
             }
@@ -1321,13 +1299,13 @@ static AstDefinition *makeHygienicNaryOperatorDef(ParserInfo PI, int arity,
  * @param associativity The associativity type of the operator (left, right,
  * none).
  * @param precedence The precedence level of the operator.
- * @param operator The PrattUTF8 representation of the operator.
+ * @param operator The PrattUnicode representation of the operator.
  * @param impl The AstExpression implementation of the operator.
  */
 static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
                                   PrattAssoc associativity, int precedence,
-                                  PrattUTF8 *operator, AstExpression *impl) {
-    HashSymbol *op = utf8ToSymbol(operator);
+                                  PrattUnicode *operator, AstExpression *impl) {
+    HashSymbol *op = unicodeToSymbol(operator);
     // Only look for an existing operator in the current (local) parser scope.
     // This allows inner scopes to shadow operators defined in outer scopes.
     PrattRecord *record = NULL;
@@ -1352,7 +1330,7 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
     case PRATTFIXITY_TYPE_PREFIX: {
         if (record->prefix.op) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine prefix operator \"%s\"",
+                          "attempt to redefine prefix operator \"%ls\"",
                           operator->entries);
         }
         fixityConfig = &record->prefix;
@@ -1362,12 +1340,12 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
     case PRATTFIXITY_TYPE_INFIX: {
         if (record->infix.op) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine infix operator \"%s\"",
+                          "attempt to redefine infix operator \"%ls\"",
                           operator->entries);
         } else if (record->postfix.op) {
             parserErrorAt(
                 CPI(impl), parser,
-                "attempt to define existing postfix operator \"%s\" as infix",
+                "attempt to define existing postfix operator \"%ls\" as infix",
                 operator->entries);
         }
         fixityConfig = &record->infix;
@@ -1380,12 +1358,12 @@ static AstDefinition *addOperator(PrattParser *parser, PrattFixity fixity,
     case PRATTFIXITY_TYPE_POSTFIX: {
         if (record->postfix.op) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine postfix operator \"%s\"",
+                          "attempt to redefine postfix operator \"%ls\"",
                           operator->entries);
         } else if (record->infix.op) {
             parserErrorAt(
                 CPI(impl), parser,
-                "attempt to define existing infix operator \"%s\" as postfix",
+                "attempt to define existing infix operator \"%ls\" as postfix",
                 operator->entries);
         }
         fixityConfig = &record->postfix;
@@ -1460,13 +1438,13 @@ AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
         arity--;
         if (arity > 0 || !(pattern->endsWithHole)) {
             // Consume the next keyword
-            PrattUTF8 *kw = keywords->entries[kwIndex++];
+            PrattUnicode *kw = keywords->entries[kwIndex++];
             PrattToken *nextTok = peek(parser);
-            HashSymbol *nextSym = utf8ToSymbol(kw);
+            HashSymbol *nextSym = unicodeToSymbol(kw);
             if (!isAtomSymbol(nextTok, nextSym)) {
                 parserErrorAt(
                     CPI(lhs), parser,
-                    "expected mixfix operator keyword \"%s\" got \"%s\"",
+                    "expected mixfix operator keyword \"%ls\" got \"%s\"",
                     kw->entries, nextTok->type->name);
             }
             next(parser);
@@ -1501,7 +1479,7 @@ AstExpression *userMixfix(PrattRecord *record, PrattParser *parser,
                 next->type == tok->type) {
                 parserErrorAt(
                     TOKPI(next), parser,
-                    "non-associative operator %s(%s) used in succession",
+                    "non-associative operator %ls(%s) used in succession",
                     pattern->keywords->entries[0]->entries, tok->type->name);
             }
         }
@@ -1545,14 +1523,14 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                         int precedence, AstExpression *impl) {
     // Add secondary keywords to trie (no conflict check - precedence handles disambiguation)
     for (Index i = 1; i < pattern->keywords->size; ++i) {
-        HashSymbol *inner = utf8ToSymbol(pattern->keywords->entries[i]);
+        HashSymbol *inner = unicodeToSymbol(pattern->keywords->entries[i]);
         parser->trie = insertPrattTrie(parser->trie, inner);
     }
     PrattFixity fixity = getFixityFromPattern(pattern);
-    PrattUTF8 *operator = pattern->keywords->entries[0];
+    PrattUnicode *operator = pattern->keywords->entries[0];
     (void)addOperator(parser, fixity, associativity, precedence, operator,
                       impl);
-    HashSymbol *op = utf8ToSymbol(operator);
+    HashSymbol *op = unicodeToSymbol(operator);
     // Store the mixfix pattern in the PrattRecord for later parsing
     PrattRecord *record = NULL;
     getPrattRecordTable(parser->rules, op, &record);
@@ -1564,7 +1542,7 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                           record->prefix.hygienicFunc, impl);
         if (record->prefix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine mixfix operator \"%s\"",
+                          "attempt to redefine mixfix operator \"%ls\"",
                           operator->entries);
         }
         record->prefix.pattern = pattern;
@@ -1575,7 +1553,7 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                           record->infix.hygienicFunc, impl);
         if (record->infix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine mixfix operator \"%s\"",
+                          "attempt to redefine mixfix operator \"%ls\"",
                           operator->entries);
         }
         record->infix.pattern = pattern;
@@ -1586,7 +1564,7 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                           record->postfix.hygienicFunc, impl);
         if (record->postfix.pattern != NULL) {
             parserErrorAt(CPI(impl), parser,
-                          "attempt to redefine mixfix operator \"%s\"",
+                          "attempt to redefine mixfix operator \"%ls\"",
                           operator->entries);
         }
         record->postfix.pattern = pattern;
@@ -1731,13 +1709,13 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
     }
 }
 
-static PrattUTF8 *prattUTF8Substr(PrattUTF8 *str, Index start, Index end) {
-    PrattUTF8 *res = newPrattUTF8();
+static PrattUnicode *prattUnicodeSubstr(PrattUnicode *str, Index start, Index end) {
+    PrattUnicode *res = newPrattUnicode();
     int save = PROTECT(res);
     for (Index i = start; i < end; i++) {
-        pushPrattUTF8(res, str->entries[i]);
+        pushPrattUnicode(res, str->entries[i]);
     }
-    pushPrattUTF8(res, '\0');
+    pushPrattUnicode(res, '\0');
     UNPROTECT(save);
     return res;
 }
@@ -1781,7 +1759,7 @@ static int patternStateTable[11][3] = {
 };
 
 static PrattMixfixPattern *
-parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
+parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUnicode *str) {
     // A mixfix pattern is a sequence of keywords and holes.
     // A hole is represented by an underscore character '_'.
     PrattStrings *strings = newPrattStrings();
@@ -1807,7 +1785,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
         case PATTERN_STATE_C:
             break;
         case PATTERN_STATE_CU: {
-            PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1821,7 +1799,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
         case PATTERN_STATE_UC:
             break;
         case PATTERN_STATE_UCU: {
-            PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1830,13 +1808,13 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
         case PATTERN_STATE_CUF:
             break;
         case PATTERN_STATE_CCF: {
-            PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
         } break;
         case PATTERN_STATE_UCF: {
-            PrattUTF8 *kw = prattUTF8Substr(str, start, i);
+            PrattUnicode *kw = prattUnicodeSubstr(str, start, i);
             int save = PROTECT(kw);
             pushPrattStrings(strings, kw);
             UNPROTECT(save);
@@ -1848,7 +1826,7 @@ parseMixfixPattern(ParserInfo PI, PrattParser *parser, PrattUTF8 *str) {
         i++;
     }
     if (state == PATTERN_STATE_ERR) {
-        parserErrorAt(PI, parser, "invalid operator pattern \"%s\"",
+        parserErrorAt(PI, parser, "invalid operator pattern \"%ls\"",
                       str->entries);
         return NULL;
     }
@@ -1908,7 +1886,7 @@ static AstDefinition *operatorWithPattern(PrattParser *parser, PrattToken *tok,
 
     if (!check(parser, TOK_NUMBER())) {
         parserErrorAt(TOKPI(tok), parser,
-                      "expected integer precedence after operator pattern");
+                      "expected numeric precedence after operator pattern");
         LEAVE(operatorWithPattern);
         UNPROTECT(save);
         return newAstDefinition_Blank(TOKPI(tok));
@@ -1940,7 +1918,7 @@ static AstDefinition *operator(PrattParser *parser) {
     ENTER(operator);
     PrattToken *tok = peek(parser);
     int save = PROTECT(tok);
-    PrattUTF8 *str = rawString(parser);
+    PrattUnicode *str = rawString(parser);
     PROTECT(str);
     PrattMixfixPattern *pattern = parseMixfixPattern(TOKPI(tok), parser, str);
     PROTECT(pattern);
@@ -2019,7 +1997,7 @@ static AstDefinition *definition(PrattParser *parser) {
                    tok->value->type == PRATTVALUE_TYPE_STRING &&
                    tok->value->val.string) {
             parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found string \"%s\"",
+                          "expected definition; found string \"%ls\"",
                           tok->value->val.string->entries);
         } else if (tok->type == TOK_NUMBER() && tok->value &&
                    tok->value->type == PRATTVALUE_TYPE_NUMBER &&
@@ -2030,7 +2008,7 @@ static AstDefinition *definition(PrattParser *parser) {
                    tok->value->type == PRATTVALUE_TYPE_STRING &&
                    tok->value->val.string) {
             parserErrorAt(TOKPI(tok), parser,
-                          "expected definition; found character '%s'",
+                          "expected definition; found character '%ls'",
                           tok->value->val.string->entries);
         } else if (tok->type && tok->type->name) {
             parserErrorAt(TOKPI(tok), parser,
@@ -2098,7 +2076,7 @@ static AstDefinition *exportop(PrattParser *parser) {
         // <implementation>; Parse the pattern string first
         PrattToken *opTok = peek(parser);
         PROTECT(opTok);
-        PrattUTF8 *str = rawString(parser);
+        PrattUnicode *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(opTok), parser, str);
@@ -2110,7 +2088,7 @@ static AstDefinition *exportop(PrattParser *parser) {
 
         // Mark the operator as exported
         if (pattern != NULL) {
-            HashSymbol *op = utf8ToSymbol(pattern->keywords->entries[0]);
+            HashSymbol *op = unicodeToSymbol(pattern->keywords->entries[0]);
             PrattRecord *rec = NULL;
             if (!getPrattRecordTable(parser->rules, op, &rec) || rec == NULL) {
                 parserError(parser,
@@ -2228,7 +2206,7 @@ static AstDefinition *importop(PrattParser *parser) {
         }
     } else if (match(parser, TOK_OPERATOR())) {
         // import <ns> operator <pattern>;
-        PrattUTF8 *str = rawString(parser);
+        PrattUnicode *str = rawString(parser);
         PROTECT(str);
         PrattMixfixPattern *pattern =
             parseMixfixPattern(TOKPI(tok), parser, str);
@@ -2236,7 +2214,7 @@ static AstDefinition *importop(PrattParser *parser) {
         if (pattern == NULL) {
             res = newAstDefinition_Blank(TOKPI(tok));
         } else {
-            HashSymbol *op = utf8ToSymbol(pattern->keywords->entries[0]);
+            HashSymbol *op = unicodeToSymbol(pattern->keywords->entries[0]);
             PrattRecord *source = NULL;
             if (!getPrattRecordTable(ops->exportedRules, op, &source) ||
                 source == NULL) {
@@ -3270,7 +3248,7 @@ static AstTypeSymbols *type_variables(PrattParser *parser) {
  */
 static AstDefinition *link(PrattParser *parser) {
     ENTER(link);
-    PrattUTF8 *path = rawString(parser);
+    PrattUnicode *path = rawString(parser);
     int save = PROTECT(path);
     AstDefinition *res = NULL;
     if (path == NULL) {
@@ -3278,7 +3256,12 @@ static AstDefinition *link(PrattParser *parser) {
     } else {
         consume(parser, TOK_AS());
         HashSymbol *name = symbol(parser);
-        AstNameSpace *ns = parseLink(parser, path->entries, name);
+        // Convert wide character path to multibyte
+        size_t len = wcstombs(NULL, path->entries, 0);
+        PrattCVec *mbPath = newPrattCVec(len + 1);
+        PROTECT(mbPath);
+        wcstombs(mbPath->entries, path->entries, len + 1);
+        AstNameSpace *ns = parseLink(parser, (unsigned char *)mbPath->entries, name);
         PROTECT(ns);
         storeNameSpace(parser, ns);
         res = newAstDefinition_Blank(CPI(ns));
@@ -3291,7 +3274,7 @@ static AstDefinition *link(PrattParser *parser) {
 /**
  * @brief parses a raw double-quoted string for a link directive.
  */
-static PrattUTF8 *rawString(PrattParser *parser) {
+static PrattUnicode *rawString(PrattParser *parser) {
     ENTER(rawString);
     PrattToken *tok = next(parser);
     validateLastAlloc();
@@ -3305,9 +3288,9 @@ static PrattUTF8 *rawString(PrattParser *parser) {
         return tok->value->val.string;
     } else {
         parserError(parser, "expected string, got %s", tok->type->name);
-        PrattUTF8 *err = newPrattUTF8();
+        PrattUnicode *err = newPrattUnicode();
         int save = PROTECT(err);
-        pushPrattUTF8(err, 0);
+        pushPrattUnicode(err, 0);
         LEAVE(rawString);
         UNPROTECT(save);
         return err;
@@ -3317,13 +3300,13 @@ static PrattUTF8 *rawString(PrattParser *parser) {
 /**
  * @brief parses a subsequent string, appending it to the current.
  */
-static void appendString(PrattParser *parser, PrattUTF8 *this) {
+static void appendString(PrattParser *parser, PrattUnicode *this) {
     ENTER(appendString);
-    PrattUTF8 *next = rawString(parser);
+    PrattUnicode *next = rawString(parser);
     int save = PROTECT(next);
     this->size--; // backup over '\0'
     for (Index i = 0; i < next->size; i++) {
-        pushPrattUTF8(this, next->entries[i]);
+        pushPrattUnicode(this, next->entries[i]);
     }
     UNPROTECT(save);
     if (check(parser, TOK_STRING())) {
@@ -3335,9 +3318,9 @@ static void appendString(PrattParser *parser, PrattUTF8 *this) {
 /**
  * @brief parses any sequence of adjacent strings into a single string.
  */
-static PrattUTF8 *str(PrattParser *parser) {
+static PrattUnicode *str(PrattParser *parser) {
     ENTER(str);
-    PrattUTF8 *this = rawString(parser);
+    PrattUnicode *this = rawString(parser);
     int save = PROTECT(this);
     if (check(parser, TOK_STRING())) {
         appendString(parser, this);
@@ -4154,9 +4137,7 @@ static AstExpression *makeChar(PrattRecord *record __attribute__((unused)),
         cant_happen("unexpected %s", prattValueTypeName(tok->value->type));
     }
 #endif
-    Character c;
-    (void)utf8_to_unicode_char(
-        &c, (unsigned char *)tok->value->val.string->entries);
+    Character c =tok->value->val.string->entries[0];
     AstExpression *res = newAstExpression_Character(TOKPI(tok), c);
     return res;
 }
@@ -4170,8 +4151,12 @@ static AstFunCall *makeStringList(ParserInfo PI, PrattUnicode *str) {
     AstFunCall *res = newAstFunCall(PI, nil, NULL);
     PROTECT(res);
     for (int size = str->size; size > 0; size--) {
+        Character c = str->entries[size - 1];
+        if (c == 0) {
+            continue;
+        }
         AstExpression *character =
-            newAstExpression_Character(PI, str->entries[size - 1]);
+            newAstExpression_Character(PI, c);
         int save2 = PROTECT(character);
         AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
         PROTECT(cons);
@@ -4203,10 +4188,8 @@ static AstExpression *makeString(PrattRecord *record __attribute__((unused)),
     }
 #endif
     enqueueToken(parser->lexer, tok);
-    PrattUTF8 *utf8 = str(parser);
-    int save = PROTECT(utf8);
-    PrattUnicode *uni = PrattUTF8ToUnicode(utf8);
-    PROTECT(uni);
+    PrattUnicode *uni = str(parser);
+    int save = PROTECT(uni);
     AstFunCall *list = makeStringList(TOKPI(tok), uni);
     PROTECT(list);
     AstExpression *res = newAstExpression_FunCall(TOKPI(tok), list);
@@ -4275,4 +4258,8 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     LEAVE(expressionPrecedence);
     UNPROTECT(save);
     return lhs;
+}
+
+void initLocale(char *locale) {
+    setlocale(LC_ALL, locale);
 }

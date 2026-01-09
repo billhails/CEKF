@@ -34,7 +34,6 @@
 #include "builtins_impl.h"
 #include "builtins_debug.h"
 #include "memory.h"
-#include "utf8.h"
 #include "builtin_io.h"
 
 #ifdef UNIT_TESTS
@@ -1332,10 +1331,12 @@ static void step() {
 
 
 void putCharacter(Character c) {
-    unsigned char buf[8];
-    unsigned char *ptr = writeChar(buf, c);
-    *ptr = 0;
-    printf("%s", buf);
+    char buf[MB_LEN_MAX];
+    int len = wctomb(buf, c);
+    if (len > 0) {
+        buf[len] = '\0';
+        printf("%s", buf);
+    }
 }
 
 #ifdef UNIT_TESTS

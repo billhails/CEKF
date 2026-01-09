@@ -22,66 +22,7 @@
 #include <stdbool.h>
 #include "cekfs.h"
 
-#define UTF8_ONE_BYTE_MASK         0b10000000
-#define UTF8_ONE_BYTE_FLAG         0b00000000
-#define UTF8_ONE_BYTE_PAYLOAD      (~UTF8_ONE_BYTE_MASK)
-
-#define UTF8_TWO_BYTE_START        0x80
-#define UTF8_TWO_BYTE_MASK         0b11100000
-#define UTF8_TWO_BYTE_FLAG         0b11000000
-#define UTF8_TWO_BYTE_PAYLOAD      (~UTF8_TWO_BYTE_MASK)
-
-#define UTF8_THREE_BYTE_START      0x800
-#define UTF8_THREE_BYTE_MASK       0b11110000
-#define UTF8_THREE_BYTE_FLAG       0b11100000
-#define UTF8_THREE_BYTE_PAYLOAD    (~UTF8_THREE_BYTE_MASK)
-
-#define UTF8_FOUR_BYTE_START       0x10000
-#define UTF8_FOUR_BYTE_MASK        0b11111000
-#define UTF8_FOUR_BYTE_FLAG        0b11110000
-#define UTF8_FOUR_BYTE_PAYLOAD     (~UTF8_FOUR_BYTE_MASK)
-#define UTF8_FOUR_BYTE_END         0x10FFFF
-
-#define UTF8_TRAILING_BYTE_MASK    0b11000000
-#define UTF8_TRAILING_BYTE_FLAG    0b10000000
-#define UTF8_TRAILING_BYTE_PAYLOAD (~UTF8_TRAILING_BYTE_MASK)
-#define UTF8_TRAILING_BYTE_SIZE    6
-
-static inline bool isOneByteUtf8(Byte x) { return (x & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_FLAG; }
-static inline bool isTwoByteUtf8(Byte x) { return (x & UTF8_TWO_BYTE_MASK) == UTF8_TWO_BYTE_FLAG; }
-static inline bool isThreeByteUtf8(Byte x) { return (x & UTF8_THREE_BYTE_MASK) == UTF8_THREE_BYTE_FLAG; }
-static inline bool isFourByteUtf8(Byte x) { return (x & UTF8_FOUR_BYTE_MASK) == UTF8_FOUR_BYTE_FLAG; }
-static inline bool isTrailingByteUtf8(Byte x) { return (x & UTF8_TRAILING_BYTE_MASK) == UTF8_TRAILING_BYTE_FLAG; }
-
-int decodedLength(unsigned char *string);
-unsigned char *utf8_to_unicode_char(wchar_t *dest, unsigned char *src);
-void utf8_to_unicode_string(wchar_t *dest, unsigned char *src);
-int byteSize(wchar_t c);
-int encodedLength(wchar_t *s);
-unsigned char *writeChar(unsigned char *dest, wchar_t character);
-void unicode_to_utf8_string(unsigned char *dest, wchar_t *src);
 char *listToUtf8(Value v);
 Value utf8ToList(const char *utf8);
-wchar_t utf8Fgetc(FILE *fh);
-unsigned char *utf8Sgetc(unsigned char *string, wchar_t *dest);
-
-bool utf8_isalnum(unsigned char *s);
-bool utf8_isalpha(unsigned char *s);
-bool utf8_isascii(unsigned char *s);
-bool utf8_isblank(unsigned char *s);
-bool utf8_isclose(unsigned char *s);
-bool utf8_iscntrl(unsigned char *s);
-bool utf8_isdigit(unsigned char *s);
-bool utf8_isgraph(unsigned char *s);
-bool utf8_islower(unsigned char *s);
-bool utf8_isnumber(unsigned char *s);
-bool utf8_isopen(unsigned char *s);
-bool utf8_isprint(unsigned char *s);
-bool utf8_ispunct(unsigned char *s);
-bool utf8_isspace(unsigned char *s);
-bool utf8_issymbol(unsigned char *s);
-bool utf8_isupper(unsigned char *s);
-bool utf8_isvalid(unsigned char *s);
-bool utf8_isxdigit(unsigned char *s);
 
 #endif

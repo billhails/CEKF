@@ -138,6 +138,7 @@ AstNameSpaceArray["AstNameSpaceArray[]"] --entries--> AstNameSpaceImpl
 AstFileIdArray["AstFileIdArray[]"] --entries--> file_id
 AstStringArray["AstStringArray[]"] --entries--> string
 AstExpressionArray["AstExpressionArray[]"] --entries--> AstExpression
+AstUTF8["AstUTF8[]"] --entries--> uchar
 ```
 
 > Generated from src/ast.yaml by tools/generate.py

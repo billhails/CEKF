@@ -14,7 +14,8 @@ in
 
     io.with_input_from(testFile, fn(fh) {
         let data = fgetc(fh);
-        in assert(data == '\ua1;');
+        in
+        assert(data == '\ua1;');
     });
 
     io.with_buffer(fn (fh) {

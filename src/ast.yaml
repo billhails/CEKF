@@ -604,4 +604,10 @@ arrays:
         data:
             entries: AstExpression
 
+    AstUTF8:
+        meta:
+            brief: A UTF-8 encoded string.
+        data:
+            entries: uchar
+
 primitives: !include primitives.yaml

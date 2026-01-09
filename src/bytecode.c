@@ -26,7 +26,6 @@
 #include "bytecode.h"
 #include "debug.h"
 #include "common.h"
-#include "utf8.h"
 
 #ifdef DEBUG_BYTECODE
 #  include "debugging_on.h"
@@ -77,10 +76,14 @@ char *charRep(Character c) {
         case '\0':
             return "\\0";
         default: {
-            static unsigned char buf[8];
-            unsigned char *ptr = writeChar(buf, c);
-            *ptr = 0;
-            return (char *) buf;
+            static char buf[MB_LEN_MAX + 1];
+            int len = wctomb(buf, c);
+            if (len > 0) {
+                buf[len] = '\0';
+            } else {
+                buf[0] = '\0';
+            }
+            return buf;
         }
     }
 }
@@ -112,7 +115,7 @@ static void writeIntegerAt(Control loc, ByteCodeArray *b, Integer word) {
 }
 
 static void writeCharacterAt(Control loc, ByteCodeArray *b, Character c) {
-    DEBUG("%04x writeChar %lc", loc, c);
+    DEBUG("%04x writeCharacterAt %lc", loc, c);
     memcpy(&b->entries[loc], &c, sizeof(Character));
 }
 

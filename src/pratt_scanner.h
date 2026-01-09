@@ -21,7 +21,7 @@
 #include "pratt.h"
 #include "symbol.h"
 
-PrattLexer *makePrattLexerFromString(char *input, char *origin);
+PrattLexer *makePrattLexerFromMbString(char *input, char *origin);
 PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol);
 
 void enqueueToken(PrattLexer *lexer, PrattToken *token);
@@ -38,7 +38,6 @@ static inline ParserInfo TOKPI(PrattToken *token) {
 
 PrattLexer *makePrattLexerFromFileName(char *fileName);
 PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next);
-PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *next);
 
 bool consume(PrattParser *, HashSymbol *);
 bool check(PrattParser *, HashSymbol *);

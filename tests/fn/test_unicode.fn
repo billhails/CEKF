@@ -6,7 +6,8 @@ let
             Σ = "abc\u03b1;\u03b2;\u03b3;";
             Ψ = "abcαβγ";
             α = '\u03b1;';
-            F♮ = "cool";
+            // dissapointing but correct: ♮ is a symbol not a letter so F♮ is not a valid identifier
+            // F♮ = "cool";
             alpha = 'α';
             α = '\u03b1;';
             smile = '😀';
@@ -19,7 +20,8 @@ let
             assert(chr(945) == α);
             assert(chr(0x3b1) == α);
             assert("F\u266e;" == "F♮");
-            assert(F♮ == "cool");
+            // 😥
+            // assert(F♮ == "cool");
             assert(unicode_category(alpha) == GC_Ll);
             assert(ord(smile) == 0x1F600);
     }

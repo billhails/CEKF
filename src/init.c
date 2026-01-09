@@ -29,4 +29,5 @@ void initAll(void) {
     initFileIdStack();
     initParserStack();
     initNsOpsCache();
+    initLocale("C.UTF-8");
 }

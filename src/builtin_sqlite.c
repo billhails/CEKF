@@ -176,12 +176,13 @@ static int helper_bind_string(sqlite3_stmt *stmt, int index, Value string) {
 }
 
 static int helper_bind_char(sqlite3_stmt *stmt, int index, Value character) {
-    unsigned char str[80];
-    unsigned char *end = writeChar(str, character.val.character);
-    *end = '\0';
-    int size = strlen((char *)str);
+    char str[MB_LEN_MAX];
+    int len = wctomb(str, character.val.character);
+    if (len <= 0) len = 0;
+    str[len] = '\0';
+    int size = strlen(str);
     char *buf = NEW_ARRAY(char, size + 1);
-    strcpy(buf, (char *)str);
+    strcpy(buf, str);
     return sqlite3_bind_text(stmt, index, buf, size, helper_free_str);
 }
 

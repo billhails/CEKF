@@ -25,11 +25,12 @@
 #ifdef DEBUG_PRATT_PARSER
 void disablePrattDebug(void);
 #endif
-void ppAstNest(PrattUTF8 *, AstNest *);
-void ppAstProg(PrattUTF8 *, AstProg *);
+void ppAstNest(AstUTF8 *, AstNest *);
+void ppAstProg(AstUTF8 *, AstProg *);
 int initFileIdStack(void);
 int initParserStack(void);
 int initNsOpsCache(void);
+void initLocale(char *);
 AstNest *prattParseStandaloneString(char *, char *);
 AstProg *prattParseFile(char *);
 AstProg *prattParseString(char *, char *);

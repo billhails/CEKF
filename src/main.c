@@ -278,7 +278,7 @@ static AstProg *parseFile(char *file) {
         exit(1);
     }
     if (ast_flag) {
-        PrattUTF8 *dest = newPrattUTF8();
+        AstUTF8 *dest = newAstUTF8();
         PROTECT(dest);
         ppAstProg(dest, prog);
         printf("%s\n", dest->entries);
@@ -300,7 +300,7 @@ static AstProg *parseString(char *string) {
         exit(1);
     }
     if (ast_flag) {
-        PrattUTF8 *dest = newPrattUTF8();
+        AstUTF8 *dest = newAstUTF8();
         PROTECT(dest);
         ppAstProg(dest, prog);
         printf("%s\n", dest->entries);

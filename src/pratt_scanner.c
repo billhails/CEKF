@@ -22,11 +22,12 @@
  */
 
 #include <ctype.h>
+#include <wctype.h>
 #include <stdarg.h>
 
 #include"symbol.h"
 #include "pratt_scanner.h"
-#include "utf8.h"
+#include "unicode.h"
 #include "bigint.h"
 #include "pratt_debug.h"
 
@@ -108,20 +109,6 @@ static inline bool isInternal(HashSymbol *symbol) {
 }
 
 /**
- * @brief alternative isalpha that includes the underscore `_`.
- */
-static bool isALPHA(char c) {
-    return isalpha(c) || c == '_';
-}
-
-/**
- * @brief alternative isalnum that includes the underscore `_`.
- */
-static bool isALNUM(char c) {
-    return isdigit(c) || isALPHA(c);
-}
-
-/**
  * @brief Constructs a ParserInfo value from the argument PrattLexer.
  */
 ParserInfo LEXPI(PrattLexer *lexer) {
@@ -160,7 +147,7 @@ void parserError(PrattParser *parser, const char *message, ...) {
 
 /**
  * @brief If the parser is not already in panic mode, then
- * prints an error message using the ParserInfo context and sets the parser to panic mode.
+ * prints an error message using the argument ParserInfo context and sets the parser to panic mode.
  */
 void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message, ...) {
     va_list args;
@@ -172,23 +159,43 @@ void parserErrorAt(ParserInfo PI, PrattParser *parser, const char *message, ...)
     can_happen(" at +%d %s", PI.lineNo, PI.fileName);
 }
 
-/**
- * @brief Reads the contents of a file into a dynamically allocated string.
- */
-static char *readFile(char *path) {
+static PrattCVec *readFileBytes(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
-        perror(path);
+        perror(path); // FIXME shouldn't need to exit here
         exit(1);
     }
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
     rewind(file);
-    char *buffer = (char *) safeMalloc(fileSize + 1);
-    size_t bytes_read = fread(buffer, sizeof(char), fileSize, file);
-    buffer[bytes_read] = '\0';
+    PrattCVec *bytes = newPrattCVec(fileSize + 1);
+    int save = PROTECT(bytes);
+    size_t bytes_read = fread(bytes->entries, sizeof(char), fileSize, file);
+    bytes->entries[bytes_read] = '\0';
     fclose(file);
-    return buffer;
+    UNPROTECT(save);
+    return bytes;
+}
+
+/**
+ * @brief Reads the contents of a file into a dynamically allocated string.
+ */
+static PrattWVec *readFile(char *path) {
+    PrattCVec *bytes = readFileBytes(path);
+    int save = PROTECT(bytes);
+    size_t wideSize = mbstowcs(NULL, bytes->entries, 0);
+    if (wideSize == (size_t)-1) {
+        can_happen("invalid encoding in file %s", path);
+        PrattWVec *data = newPrattWVec(1);
+        data->entries[0] = L'\0';
+        UNPROTECT(save);
+        return data;
+    }
+    PrattWVec *data = newPrattWVec(wideSize + 1);
+    PROTECT(data);
+    mbstowcs(data->entries, bytes->entries, wideSize + 1);
+    UNPROTECT(save);
+    return data;
 }
 
 /**
@@ -207,18 +214,18 @@ static HashSymbol *lookUpTrieRecursive(PrattTrie *trie,
                                        PrattBuffer *buffer,
                                        int last,
                                        HashSymbol *found) {
-    if (trie == NULL || buffer->start[buffer->length] > trie->character) {
-        buffer->length = last;
+    if (trie == NULL || buffer->start[buffer->offset] > trie->character) {
+        buffer->offset = last;
         return found;
-    } else if (buffer->start[buffer->length] < trie->character) {
+    } else if (buffer->start[buffer->offset] < trie->character) {
         return lookUpTrieRecursive(trie->siblings, buffer, last, found);
     }
-    ++buffer->length;
+    ++buffer->offset;
     if (trie->terminal != NULL) {
         // avoid i.e. "orbit" false matching "or"
-        if (!isALNUM(trie->character) || !isALNUM(buffer->start[buffer->length])) {
+        if (!unicode_isalnum(trie->character) || !unicode_isalnum(buffer->start[buffer->offset])) {
             found = trie->terminal;
-            last = buffer->length;
+            last = buffer->offset;
         }
     }
     return lookUpTrieRecursive(trie->children, buffer, last, found);
@@ -246,18 +253,33 @@ static PrattToken *tokenFromBigInt(PrattBufList *bufList, MaybeBigInt *bi, HashS
     return token;
 }
 
+static PrattCVec *wVecToCVec(PrattWVec *wvec) {
+    size_t needed = wcstombs(NULL, wvec->entries, 0);
+    PrattCVec *cvec = newPrattCVec(needed + 1);
+    wcstombs(cvec->entries, wvec->entries, needed + 1);
+    return cvec;
+}
+
 /**
  * @brief Converts a PrattBuffer to a HashSymbol.
  */
 static HashSymbol *symbolFromBuffer(PrattBuffer *buffer) {
-    return newSymbolFromLength((char *)buffer->start, buffer->length);
+    PrattWVec *data = newPrattWVec(buffer->offset + 1);
+    int save = PROTECT(data);
+    memcpy(data->entries, buffer->start, buffer->offset * sizeof(Character));
+    data->entries[buffer->offset] = L'\0';
+    PrattCVec *bytes = wVecToCVec(data);
+    PROTECT(bytes);
+    HashSymbol *symbol = newSymbol(bytes->entries);
+    UNPROTECT(save);
+    return symbol;
 }
 
 /**
  * @brief Creates a new PrattToken from a string.
  * Uses the PrattBufList to provide ParserInfo context for the token.
  */
-static PrattToken *tokenFromString(PrattBufList *bufList, PrattUTF8 *string, HashSymbol *tokenType) {
+static PrattToken *tokenFromString(PrattBufList *bufList, PrattUnicode *string, HashSymbol *tokenType) {
     PrattValue *value = newPrattValue_String(string);
     int save = PROTECT(value);
     PrattToken *token = newPrattToken(tokenType, bufList->fileName, bufList->lineNo, value, NULL);
@@ -269,8 +291,8 @@ static PrattToken *tokenFromString(PrattBufList *bufList, PrattUTF8 *string, Has
  * @brief Advances the buffer past the current token.
  */
 static void advance(PrattBuffer *buffer) {
-    buffer->start += buffer->length;
-    buffer->length = 0;
+    buffer->start += buffer->offset;
+    buffer->offset = 0;
 }
 
 /**
@@ -299,37 +321,16 @@ static PrattToken *lookUpTrieSymbol(PrattParser *parser) {
 }
 
 /**
- * @brief Validates the UTF8 encoding of the trailing bytes of a 2-4 byte character, moving the buffer forward in the process.
- */
-static void walkUtf8(PrattParser *parser, int size) {
-    PrattBuffer *buffer = parser->lexer->bufList->buffer;
-    ++buffer->length;
-    while (size > 0) {
-        --size;
-        if (!isTrailingByteUtf8(buffer->start[buffer->length])) {
-            parserError(parser, "malformed UTF8");
-        }
-        ++buffer->length;
-    }
-}
-
-/**
  * @brief Parses an identifier from the current position in the buffer.
  */
 static PrattToken *parseIdentifier(PrattParser *parser) {
     PrattBuffer *buffer = parser->lexer->bufList->buffer;
     while (true) {
-        if (isALNUM(buffer->start[buffer->length])) {
-            ++buffer->length;
-        } else if (isTwoByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(parser, 1);
-        } else if (isThreeByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(parser, 2);
-        } else if (isFourByteUtf8(buffer->start[buffer->length])) {
-            walkUtf8(parser, 3);
+        if (unicode_isalnum(buffer->start[buffer->offset])) {
+            ++buffer->offset;
         } else {
 #ifdef SAFETY_CHECKS
-            if (buffer->length == 0) {
+            if (buffer->offset == 0) {
                 cant_happen("parseIdentifier passed bad identifier");
             }
 #endif
@@ -372,33 +373,30 @@ static void bigint_add_n(bigint *b, int n) {
 }
 
 /**
- * @brief Converts a character to its numeric value, handling hexadecimal digits.
+ * @brief Converts a character to its numeric value, handling hexadecimal and non-latin digits.
  * 
  * @param c The character to convert.
  * @return The numeric value of the character.
  */
-static int convert_char(char c) {
+static int digitToInt(Character c) {
     switch (c) {
-        case '0': case '1': case '2': case '3': case '4': case '5':
-        case '6': case '7': case '8': case '9':
-            return c - '0';
-        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-            return 10 + (c - 'a');
-        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-            return 10 + (c - 'A');
+        case L'a': case L'b': case L'c': case L'd': case L'e': case L'f':
+            return 10 + (c - L'a');
+        case L'A': case L'B': case L'C': case L'D': case L'E': case L'F':
+            return 10 + (c - L'A');
         default:
-            cant_happen("unrecognised numeric digit '%c'", c);
+            return unicode_getdec(c);
     }
 }
 
 /**
- * @brief Creates a MaybeBigInt from a string of digits, handling overflow and imaginary numbers.
+ * @brief Creates a MaybeBigInt from a string of digits.
  * 
- * @param digits The string of digits to convert.
+ * @param digits The string of digits to convert, has already been validated.
  * @param length The length of the string.
  * @return A MaybeBigInt representing the number.
  */
-static MaybeBigInt *makeMaybeBigInt(char *digits, int length) {
+static MaybeBigInt *makeMaybeBigInt(Character *digits, int length) {
     bool overflowed = false;
     bool imag = false;
     int a = 0;
@@ -409,13 +407,13 @@ static MaybeBigInt *makeMaybeBigInt(char *digits, int length) {
         length -= 2;
         multiplier = 16;
     }
-    for (char *p = digits; length > 0; --length, ++p) {
-        if (*p == '_') continue;
-        if (*p == 'i') {
-            imag = true;
+    for (Character *p = digits; length > 0; --length, ++p) {
+        if (*p == L'_') continue;
+        if (*p == L'i') {
+            imag = true; // parseNumeric guarantees this is last
             continue;
         }
-        int n = convert_char(*p);
+        int n = digitToInt(*p);
         if(overflowed) {
             bigint_mul_by_n(&bi, multiplier);
             bigint_add_n(&bi, n);
@@ -453,23 +451,23 @@ static MaybeBigInt *makeMaybeBigInt(char *digits, int length) {
  * 
  * MaybeBigInt is a misleading term as it can contain other numeric types than just integers.
  */
-static MaybeBigInt *makeIrrational(char *str, int length) {
+static MaybeBigInt *makeIrrational(Character *str, int length) {
     bool imag = false;
     bool frac = false;
     Double f = 0.0;
     Double div = 1.0;
-    for (char *p = str; length > 0; --length, ++p) {
+    for (Character *p = str; length > 0; --length, ++p) {
         switch (*p) {
-            case '_':
+            case L'_':
                 continue;
-            case 'i':
+            case L'i':
                 imag = true;
                 continue;
-            case '.':
+            case L'.':
                 frac = true;
                 continue;
             default: {
-                int n = convert_char(*p);
+                int n = digitToInt(*p);
                 f *= 10.0;
                 f += n;
                 if (frac) div *= 10.0;
@@ -481,8 +479,6 @@ static MaybeBigInt *makeIrrational(char *str, int length) {
 
 /**
  * @brief Parses a numeric token from the current position in the buffer.
- * 
- * This function handles both integer and floating-point numbers, including hexadecimal and imaginary numbers.
  */
 static PrattToken *parseNumeric(PrattLexer *lexer) {
     PrattBuffer *buffer = lexer->bufList->buffer;
@@ -490,57 +486,59 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
     PrattNumberState state = PRATTNUMBERSTATE_TYPE_START;
     bool floating = false;
     while (state != PRATTNUMBERSTATE_TYPE_END) {
+        if (buffer->start[buffer->offset] == L'_') {
+            ++buffer->offset;
+            continue;
+        }
         switch (state) {
             case PRATTNUMBERSTATE_TYPE_START:
-                switch (buffer->start[buffer->length]) {
-                    case '0':
-                        ++buffer->length;
+                switch (buffer->start[buffer->offset]) {
+                    case L'0':
+                        ++buffer->offset;
                         state = PRATTNUMBERSTATE_TYPE_ZERO;
                         break;
-                    case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9':
-                        ++buffer->length;
+                    default:
+                        ++buffer->offset;
                         state = PRATTNUMBERSTATE_TYPE_DEC;
                         break;
-                    default:
-                        cant_happen("parseNumeric passed bad char %d", buffer->start[buffer->length]);
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_ZERO:
-                switch (buffer->start[buffer->length]) {
-                    case '0': case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9': case '_':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_DEC;
-                        break;
-                    case 'x': case 'X':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_HEX;
-                        break;
-                    case 'i':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
-                    case '.':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                        floating = true;
-                        break;
-                    default:
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
+                if (unicode_isdigit(buffer->start[buffer->offset])) {
+                    ++buffer->offset;
+                    state = PRATTNUMBERSTATE_TYPE_DEC;
+                    break;
+                } else {
+                    switch (buffer->start[buffer->offset]) {
+                        case L'x': case L'X':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_HEX;
+                            break;
+                        case L'.':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_FLOAT;
+                            floating = true;
+                            break;
+                        case L'i':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                        default:
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                    }
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_HEX:
-                switch (buffer->start[buffer->length]) {
-                    case '0': case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9': case 'a': case 'b':
-                    case 'c': case 'd': case 'e': case 'f': case 'A': case 'B':
-                    case 'C': case 'D': case 'E': case 'F': case '_':
-                        ++buffer->length;
+                switch (buffer->start[buffer->offset]) {
+                    case L'0': case L'1': case L'2': case L'3': case L'4': case L'5':
+                    case L'6': case L'7': case L'8': case L'9': case L'a': case L'b':
+                    case L'c': case L'd': case L'e': case L'f': case L'A': case L'B':
+                    case L'C': case L'D': case L'E': case L'F': case L'_':
+                        ++buffer->offset;
                         break;
-                    case 'i':
-                        ++buffer->length;
+                    case L'i':
+                        ++buffer->offset;
                         state = PRATTNUMBERSTATE_TYPE_END;
                         break;
                     default:
@@ -549,38 +547,40 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_DEC:
-                switch (buffer->start[buffer->length]) {
-                    case '0': case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9': case '_':
-                        ++buffer->length;
-                        break;
-                    case 'i':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
-                    case '.':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_FLOAT;
-                        floating = true;
-                        break;
-                    default:
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
+                if (unicode_isdigit(buffer->start[buffer->offset])) {
+                    ++buffer->offset;
+                    break;
+                } else {
+                    switch (buffer->start[buffer->offset]) {
+                        case L'.':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_FLOAT;
+                            floating = true;
+                            break;
+                        case L'i':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                        default:
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                    }
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_FLOAT:
-                switch (buffer->start[buffer->length]) {
-                    case '0': case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9': case '_':
-                        ++buffer->length;
-                        break;
-                    case 'i':
-                        ++buffer->length;
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
-                    default:
-                        state = PRATTNUMBERSTATE_TYPE_END;
-                        break;
+                if (unicode_isdigit(buffer->start[buffer->offset])) {
+                    ++buffer->offset;
+                    break;
+                } else {
+                    switch (buffer->start[buffer->offset]) {
+                        case L'i':
+                            ++buffer->offset;
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                        default:
+                            state = PRATTNUMBERSTATE_TYPE_END;
+                            break;
+                    }
                 }
                 break;
             case PRATTNUMBERSTATE_TYPE_END:
@@ -589,9 +589,9 @@ static PrattToken *parseNumeric(PrattLexer *lexer) {
     }
     MaybeBigInt *bi = NULL;
     if (floating) {
-        bi = makeIrrational((char *)buffer->start, buffer->length);
+        bi = makeIrrational(buffer->start, buffer->offset);
     } else {
-        bi = makeMaybeBigInt((char *)buffer->start, buffer->length);
+        bi = makeMaybeBigInt(buffer->start, buffer->offset);
     }
     int save = PROTECT(bi);
     PrattToken *token = tokenFromBigInt(lexer->bufList, bi, type);
@@ -662,150 +662,98 @@ static PrattToken *tokenERROR(PrattLexer *lexer) {
  * strings, including escape sequences.
  * It returns a PrattToken containing the parsed character or string.
  */
-static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
+static PrattToken *parseString(PrattParser *parser, bool parsingSingleChar, Character sep) {
     PrattLexer *lexer = parser->lexer;
     PrattBuffer *buffer = lexer->bufList->buffer;
-    PrattUTF8 *string = newPrattUTF8();
+    PrattUnicode *string = newPrattUnicode();
     int save = PROTECT(string);
     PrattStringState state = PRATTSTRINGSTATE_TYPE_START;
     Character uni = 0;
     while (state != PRATTSTRINGSTATE_TYPE_END) {
         switch (state) {
             case PRATTSTRINGSTATE_TYPE_START:
-                DEBUG("parseString %s %d (sep %c) START: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
+                DEBUG("parseString %s %d (sep %lc) START: %lc", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
 #ifdef SAFETY_CHECKS
-                if (buffer->start[buffer->length] != sep) {
-                    cant_happen("expected '%c' got '%c'", sep, buffer->start[buffer->length]);
+                if (buffer->start[buffer->offset] != sep) {
+                    cant_happen("expected '%lc' got '%lc'", sep, buffer->start[buffer->offset]);
                 }
 #endif
-                ++buffer->length;
+                ++buffer->offset;
                 state = PRATTSTRINGSTATE_TYPE_STR;
                 break;
             case PRATTSTRINGSTATE_TYPE_STR:
             case PRATTSTRINGSTATE_TYPE_ESCS:
-                DEBUG("parseString %s %d (sep %c) STR: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                if (isTwoByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_CHR2;
-                } else if (isThreeByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_CHR3;
-                } else if (isFourByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_CHR4;
-                } else if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    parserError(parser, "Malformed UTF8");
-                    ++buffer->length;
-                } else {
-                    if (state == PRATTSTRINGSTATE_TYPE_STR) {
-                        if (buffer->start[buffer->length] == sep) {
-                            if (single) {
-                                parserError(parser, "empty char");
-                            }
-                            ++buffer->length;
-                            state = PRATTSTRINGSTATE_TYPE_END;
-                        } else {
-                            switch (buffer->start[buffer->length]) {
-                                case '\\':
-                                    ++buffer->length;
-                                    state = PRATTSTRINGSTATE_TYPE_ESC;
-                                    break;
-                                case '\n':
-                                    parserError(parser, "unexpected EOL");
-                                    ++buffer->length;
-                                    ++lexer->bufList->lineNo;
-                                    break;
-                                case '\0':
-                                    parserError(parser, "unexpected EOF");
-                                    state = PRATTSTRINGSTATE_TYPE_END;
-                                    break;
-                                default:
-                                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                                    ++buffer->length;
-                                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                                    break;
-                            }
+                DEBUG("parseString %s %d (sep %lc) STR: %lc", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->offset]);
+                if (state == PRATTSTRINGSTATE_TYPE_STR) {
+                    if (buffer->start[buffer->offset] == sep) {
+                        if (parsingSingleChar) {
+                            parserError(parser, "empty char");
                         }
-                    } else { // PRATTSTRINGSTATE_TYPE_ESCS
-                        switch (buffer->start[buffer->length]) {
-                                case '\n':
-                                    parserError(parser, "unexpected EOL");
-                                    ++buffer->length;
-                                    ++lexer->bufList->lineNo;
-                                    break;
-                                case '\0':
-                                    parserError(parser, "unexpected EOF");
-                                    state = PRATTSTRINGSTATE_TYPE_END;
-                                    break;
-                                default:
-                                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                                    ++buffer->length;
-                                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                                    break;
+                        ++buffer->offset;
+                        state = PRATTSTRINGSTATE_TYPE_END;
+                    } else {
+                        switch (buffer->start[buffer->offset]) {
+                            case L'\\':
+                                ++buffer->offset;
+                                state = PRATTSTRINGSTATE_TYPE_ESC;
+                                break;
+                            case '\n':
+                                parserError(parser, "unexpected EOL");
+                                ++buffer->offset;
+                                ++lexer->bufList->lineNo;
+                                break;
+                            case L'\0':
+                                parserError(parser, "unexpected EOF");
+                                state = PRATTSTRINGSTATE_TYPE_END;
+                                break;
+                            default:
+                                pushPrattUnicode(string, buffer->start[buffer->offset]);
+                                ++buffer->offset;
+                                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
+                                break;
                         }
                     }
+                } else { // PRATTSTRINGSTATE_TYPE_ESCS
+                    switch (buffer->start[buffer->offset]) {
+                            case L'\n':
+                                parserError(parser, "unexpected EOL");
+                                ++buffer->offset;
+                                ++lexer->bufList->lineNo;
+                                break;
+                            case '\0':
+                                parserError(parser, "unexpected EOF");
+                                state = PRATTSTRINGSTATE_TYPE_END;
+                                break;
+                            default:
+                                pushPrattUnicode(string, buffer->start[buffer->offset]);
+                                ++buffer->offset;
+                                state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
+                                break;
+                    }
                 }
-                break;
-            case PRATTSTRINGSTATE_TYPE_CHR4:
-                DEBUG("parseString %s %d (sep %c) CHR4: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_CHR3;
-                } else {
-                    parserError(parser, "Malformed UTF8");
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_STR;
-                }
-                break;
-            case PRATTSTRINGSTATE_TYPE_CHR3:
-                DEBUG("parseString %s %d (sep %c) CHR3: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_CHR2;
-                } else {
-                    parserError(parser, "Malformed UTF8");
-                    ++buffer->length;
-                    state = PRATTSTRINGSTATE_TYPE_STR;
-                }
-                break;
-            case PRATTSTRINGSTATE_TYPE_CHR2:
-                DEBUG("parseString %s %d (sep %c) CHR2: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                if (isTrailingByteUtf8(buffer->start[buffer->length])) {
-                    pushPrattUTF8(string, buffer->start[buffer->length]);
-                    ++buffer->length;
-                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                } else {
-                    parserError(parser, "Malformed UTF8");
-                    ++buffer->length;
-                    state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                }
+
                 break;
             case PRATTSTRINGSTATE_TYPE_ESC:
-                DEBUG("parseString %s %d (sep %c) ESC: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                switch (buffer->start[buffer->length]) {
-                    case 'u': case 'U':
-                        ++buffer->length;
+                DEBUG("parseString %s %d (sep %lc) ESC: %lc", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->offset]);
+                switch (buffer->start[buffer->offset]) {
+                    case L'u': case L'U':
+                        ++buffer->offset;
                         uni = 0; // reset
                         state = PRATTSTRINGSTATE_TYPE_UNI;
                         break;
-                    case 'n':
-                        pushPrattUTF8(string, '\n');
-                        ++buffer->length;
-                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                    case L'n':
+                        pushPrattUnicode(string, L'\n');
+                        ++buffer->offset;
+                        state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
                         break;
-                    case 't':
-                        pushPrattUTF8(string, '\t');
-                        ++buffer->length;
-                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                    case L't':
+                        pushPrattUnicode(string, L'\t');
+                        ++buffer->offset;
+                        state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
                         break;
-                    case '\n':
+                    case L'\n':
                         parserError(parser, "unexpected EOL");
-                        ++buffer->length;
+                        ++buffer->offset;
                         break;
                     case '\0':
                         parserError(parser, "unexpected EOF");
@@ -816,63 +764,58 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 }
                 break;
             case PRATTSTRINGSTATE_TYPE_UNI:
-                DEBUG("parseString %s %d (sep %c) UNI: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                switch (buffer->start[buffer->length]) {
-                    case '0': case '1': case '2': case '3': case '4': case '5':
-                    case '6': case '7': case '8': case '9': {
-                        Character c = buffer->start[buffer->length] - '0';
+                DEBUG("parseString %s %d (sep %lc) UNI: %lc", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->offset]);
+                switch (buffer->start[buffer->offset]) {
+                    case L'0': case L'1': case L'2': case L'3': case L'4': case L'5':
+                    case L'6': case L'7': case L'8': case L'9': {
+                        Character c = buffer->start[buffer->offset] - L'0';
                         uni <<= 4;
                         uni |= c;
-                        buffer->length++;
+                        buffer->offset++;
                     }
                     break;
-                    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':{
-                        Character c = 10 + buffer->start[buffer->length] - 'a';
+                    case L'a': case L'b': case L'c': case L'd': case L'e': case L'f':{
+                        Character c = 10 + buffer->start[buffer->offset] - L'a';
                         uni <<= 4;
                         uni |= c;
-                        buffer->length++;
+                        buffer->offset++;
                     }
                     break;
-                    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': {
-                        Character c = 10 + buffer->start[buffer->length] - 'A';
+                    case L'A': case L'B': case L'C': case L'D': case L'E': case L'F': {
+                        Character c = 10 + buffer->start[buffer->offset] - L'A';
                         uni <<= 4;
                         uni |= c;
-                        buffer->length++;
+                        buffer->offset++;
                     }
                     break;
-                    case ';':
-                        ++buffer->length;
+                    case L';':
+                        ++buffer->offset;
                         if (uni == 0) {
                             parserError(parser, "Empty Unicode escape while parsing string");
                         } else {
-                            int size = byteSize(uni);
-                            unsigned char *writePoint = &string->entries[string->size];
-                            while (size-- > 0) {
-                                pushPrattUTF8(string, '\0'); // ensure capacity
-                            }
-                            writeChar(writePoint, uni);
+                            pushPrattUnicode(string, uni);
                         }
-                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
+                        state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
                         break;
-                    case '\0':
+                    case L'\0':
                         parserError(parser, "EOF while parsing unicode escape");
                         state = PRATTSTRINGSTATE_TYPE_END;
                         break;
                     default:
                         parserError(parser, "expected hex digit or ';'");
-                        state = single ? PRATTSTRINGSTATE_TYPE_CHR1 : PRATTSTRINGSTATE_TYPE_STR;
-                        ++buffer->length;
+                        state = parsingSingleChar ? PRATTSTRINGSTATE_TYPE_CHR : PRATTSTRINGSTATE_TYPE_STR;
+                        ++buffer->offset;
                         break;
                 }
                 break;
-            case PRATTSTRINGSTATE_TYPE_CHR1: // only get here if single == true
-                DEBUG("parseString %s %d (sep %c) CHR1: %c", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->length]);
-                if (buffer->start[buffer->length] == sep) {
-                    ++buffer->length;
+            case PRATTSTRINGSTATE_TYPE_CHR: // only get here if single == true
+                DEBUG("parseString %s %d (sep %lc) CHR1: %lc", lexer->bufList->fileName->name, lexer->bufList->lineNo, sep, buffer->start[buffer->offset]);
+                if (buffer->start[buffer->offset] == sep) {
+                    ++buffer->offset;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 } else {
                     parserError(parser, "expected \"'\" terminator");
-                    ++buffer->length;
+                    ++buffer->offset;
                     state = PRATTSTRINGSTATE_TYPE_END;
                 }
                 break;
@@ -880,8 +823,8 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
                 cant_happen("end state in loop");
         }
     }
-    pushPrattUTF8(string, '\0');
-    PrattToken *token = tokenFromString(lexer->bufList, string, single ? TOK_CHAR() : TOK_STRING());
+    pushPrattUnicode(string, '\0');
+    PrattToken *token = tokenFromString(lexer->bufList, string, parsingSingleChar ? TOK_CHAR() : TOK_STRING());
     advance(buffer);
     UNPROTECT(save);
     return token;
@@ -893,9 +836,9 @@ static PrattToken *parseString(PrattParser *parser, bool single, char sep) {
  * This function updates the start pointer of the buffer to point past the next character
  * in the UTF-8 encoded string and returns the character.
  */
-static Character nextCharacter(PrattBuffer *buffer) {
-    Character dest;
-    buffer->start = utf8Sgetc(buffer->start, &dest);
+static inline Character nextCharacter(PrattBuffer *buffer) {
+    Character dest = buffer->start[0];
+    buffer->start++;
     return dest;
 }
 
@@ -911,73 +854,68 @@ PrattToken *next(PrattParser *parser) {
     PrattToken *lookahead = dequeueToken(lexer);
     if (lookahead != NULL) {
         return lookahead;
-    } else {
-        while (lexer->bufList != NULL) {
-            PrattBuffer *buffer = lexer->bufList->buffer;
-            if (buffer->start == NULL) {
-                buffer->start = buffer->data;
-            }
-            while (buffer->start[0]) {
-                // whitespace
-                if (utf8_isspace(buffer->start)) {
-                    if (buffer->start[0] == '\n') {
-                        ++lexer->bufList->lineNo;
-                    }
-                    nextCharacter(buffer);
-                // comment
-                } else if (buffer->start[0] == '/' && buffer->start[1] == '/') {
-                    while (buffer->start[0] && buffer->start[0] != '\n') {
-                        ++buffer->start;
-                    }
-                    if (buffer->start[0] == '\n') {
-                        ++buffer->start;
-                        ++lexer->bufList->lineNo;
-                    }
-                // alpha
-                } else if (utf8_isalpha(buffer->start)) {
-                    PrattToken *token = lookUpTrieSymbol(parser);
-                    if (token != NULL) {
-                        return token;
-                    } else {
-                        return parseIdentifier(parser);
-                    }
-                // digit (no unicode support yet)
-                } else if (isdigit(buffer->start[0])) {
-                    return parseNumeric(lexer);
-                // string
-                } else if (buffer->start[0] == '"') {
-                    return parseString(parser, false, '"');
-                // char
-                } else if (buffer->start[0] == '\'') {
-                    return parseString(parser, true, '\'');
-                // punctuation and symbols
-                } else if (utf8_ispunct(buffer->start) || utf8_issymbol(buffer->start)) {
-                    PrattToken *token = lookUpTrieSymbol(parser);
-                    if (token != NULL) {
-                        return token;
-                    }
-                    parserError(parser, "unrecognised operator %c", buffer->start[0]);
-                    nextCharacter(buffer);
-                    return tokenERROR(lexer);
-                // bad UTF8
-                } else if (isTrailingByteUtf8((Byte) (buffer->start[0]))) {
-                    parserError(parser, "malformed utf8");
-                    ++buffer->start;
-                    return tokenERROR(lexer);
-                // unrecognised
-                } else {
-                    parserError(parser, "unexpected character 0x%02x", buffer->start[0]);
-                    ++buffer->start;
-                    return tokenERROR(lexer);
+    }
+    while (lexer->bufList != NULL) {
+        PrattBuffer *buffer = lexer->bufList->buffer;
+        if (buffer->start == NULL) {
+            buffer->start = buffer->data->entries;
+        }
+        while (buffer->start[0]) {
+            // whitespace
+            if (unicode_isspace(buffer->start[0])) {
+                if (buffer->start[0] == L'\n') {
+                    ++lexer->bufList->lineNo;
                 }
-            }
-            lexer->bufList = lexer->bufList->next;
-            if (lexer->bufList) {
-                DEBUG("next buffer %s", lexer->bufList->fileName->name);
+                nextCharacter(buffer);
+            // comment
+            } else if (buffer->start[0] == L'/' && buffer->start[1] == L'/') {
+                while (buffer->start[0] && buffer->start[0] != L'\n') {
+                    ++buffer->start;
+                }
+                if (buffer->start[0] == L'\n') {
+                    ++buffer->start;
+                    ++lexer->bufList->lineNo;
+                }
+            // alpha or combining mark
+            } else if (unicode_isalpha(buffer->start[0]) ||
+                       unicode_ismark(buffer->start[0])) {
+                PrattToken *token = lookUpTrieSymbol(parser);
+                if (token != NULL) {
+                    return token;
+                } else {
+                    return parseIdentifier(parser);
+                }
+            // number
+            } else if (unicode_isdigit(buffer->start[0])) {
+                return parseNumeric(lexer);
+            // string
+            } else if (buffer->start[0] == L'"') {
+                return parseString(parser, false, L'"');
+            // char
+            } else if (buffer->start[0] == L'\'') {
+                return parseString(parser, true, L'\'');
+            // punctuation and symbols
+            } else if (unicode_ispunct(buffer->start[0]) || unicode_issymbol(buffer->start[0])) {
+                PrattToken *token = lookUpTrieSymbol(parser);
+                if (token != NULL) {
+                    return token;
+                }
+                parserError(parser, "unrecognised operator %lc", buffer->start[0]);
+                buffer->start++;
+                return tokenERROR(lexer);
+            // unrecognised
+            } else {
+                parserError(parser, "unexpected character %lc", buffer->start[0]);
+                ++buffer->start;
+                return tokenERROR(lexer);
             }
         }
-        return tokenEOF();
+        lexer->bufList = lexer->bufList->next;
+        if (lexer->bufList) {
+            DEBUG("next buffer %s", lexer->bufList->fileName->name);
+        }
     }
+    return tokenEOF();
 }
 
 /**
@@ -991,16 +929,16 @@ PrattToken *next(PrattParser *parser) {
  * @param bytes The remaining bytes of the symbol's name to process.
  * @return A pointer to the newly created PrattTrie node, or NULL if the end of the name is reached.
  */
-static PrattTrie *addToTrie(HashSymbol *symbol, PrattTrie *siblings, unsigned char *bytes) {
-    if (*bytes == 0) {
+static PrattTrie *addToTrie(HashSymbol *symbol, PrattTrie *siblings, Character *chars) {
+    if (*chars == 0) {
         return NULL;
     }
-    PrattTrie *next = addToTrie(symbol, NULL, bytes + 1);
+    PrattTrie *next = addToTrie(symbol, NULL, chars + 1);
     if (next == NULL) {
-        return newPrattTrie(*bytes, symbol, siblings, NULL);
+        return newPrattTrie(*chars, symbol, siblings, NULL);
     }
     int save = PROTECT(next);
-    PrattTrie *this = newPrattTrie(*bytes, NULL, siblings, next);
+    PrattTrie *this = newPrattTrie(*chars, NULL, siblings, next);
     UNPROTECT(save);
     return this;
 }
@@ -1019,22 +957,22 @@ static PrattTrie *addToTrie(HashSymbol *symbol, PrattTrie *siblings, unsigned ch
  * @param bytes The remaining bytes of the symbol's name to process.
  * @return A pointer to the updated PrattTrie node, or NULL if no changes were made.
  */
-static PrattTrie *insertTrie(PrattTrie *current, HashSymbol *symbol, unsigned char *bytes) {
-    if (*bytes == 0) {
+static PrattTrie *insertTrie(PrattTrie *current, HashSymbol *symbol, Character *chars) {
+    if (*chars == 0) {
         return NULL;
     }
     if (current == NULL) {
-        return addToTrie(symbol, NULL, bytes);
+        return addToTrie(symbol, NULL, chars);
     }
-    if (*bytes < current->character) {
-        PrattTrie *sibling = insertTrie(current->siblings, symbol, bytes);
+    if (*chars < current->character) {
+        PrattTrie *sibling = insertTrie(current->siblings, symbol, chars);
         int save = PROTECT(sibling);
         PrattTrie *this = newPrattTrie(current->character, current->terminal, sibling, current->children);
         UNPROTECT(save);
         return this;
     }
-    if (*bytes == current->character) {
-        PrattTrie *child = insertTrie(current->children, symbol, bytes + 1);
+    if (*chars == current->character) {
+        PrattTrie *child = insertTrie(current->children, symbol, chars + 1);
         if (child == NULL) {
             return newPrattTrie(current->character, symbol, current->siblings, current->children);
         }
@@ -1043,7 +981,7 @@ static PrattTrie *insertTrie(PrattTrie *current, HashSymbol *symbol, unsigned ch
         UNPROTECT(save);
         return this;
     }
-    return addToTrie(symbol, current, bytes);
+    return addToTrie(symbol, current, chars);
 }
 
 /**
@@ -1060,7 +998,12 @@ PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol) {
     if (isInternal(symbol)) {
         return current; // skip internal tokens
     }
-    PrattTrie *this = insertTrie(current, symbol, (unsigned char *) symbol->name);
+    size_t len = mbstowcs(NULL, symbol->name, 0) + 1;
+    PrattWVec *chars = newPrattWVec(len);
+    int save = PROTECT(chars);
+    mbstowcs(chars->entries, symbol->name, len);
+    PrattTrie *this = insertTrie(current, symbol, chars->entries);
+    UNPROTECT(save);
     if (this == NULL) {
         return current;
     }
@@ -1070,14 +1013,23 @@ PrattTrie *insertPrattTrie(PrattTrie *current, HashSymbol *symbol) {
 /**
  * @brief Creates a new PrattBuffer from a string.
  * 
- * This function allocates a new PrattBuffer and initializes it with the given string.
- * The string is converted to an unsigned char pointer for internal use.
+ * This function allocates a new PrattBuffer and initializes it from a copy of the given string.
+ * The copy is stored as a wchar_t array to simplify parsing.
  * 
  * @param string The string to convert into a PrattBuffer.
  * @return A pointer to the newly created PrattBuffer.
  */
 static PrattBuffer *prattBufferFromString(char *string) {
-    return newPrattBuffer((unsigned char *)string);
+    size_t len = mbstowcs(NULL, string, 0);
+    if (len == (size_t)-1) {
+        return NULL;
+    }
+    PrattWVec *data = newPrattWVec(len + 1);
+    int save = PROTECT(data);
+    mbstowcs(data->entries, string, len + 1);
+    PrattBuffer *res = newPrattBuffer(data);
+    UNPROTECT(save);
+    return res;
 }
 
 /**
@@ -1090,15 +1042,15 @@ static PrattBuffer *prattBufferFromString(char *string) {
  * @return A pointer to the newly created PrattBuffer.
  */
 static PrattBuffer *prattBufferFromFileName(char *path) {
-    char *content = readFile(path);
-    return newPrattBuffer((unsigned char *)content);
+    PrattWVec *content = readFile(path);
+    int save = PROTECT(content);
+    PrattBuffer *res = newPrattBuffer(content);
+    UNPROTECT(save);
+    return res;
 }
 
 /**
  * @brief Re-enqueues a token back into the lexer.
- * 
- * This function adds the given token back to the front of the lexer's token queue,
- * allowing it to be reprocessed later.
  * 
  * @param parser The PrattParser instance containing the lexer.
  * @param token The PrattToken to re-enqueue.
@@ -1109,10 +1061,6 @@ void poke(PrattParser *parser, PrattToken *token) {
 
 /**
  * @brief Peeks at the next token without consuming it.
- * 
- * This function retrieves the next token from the lexer without advancing the
- * lexer position, allowing the caller to inspect the token without consuming it.
- * It returns a pointer to the PrattToken.
  */
 PrattToken *peek(PrattParser *parser) {
     // DEBUG("peek");
@@ -1124,11 +1072,7 @@ PrattToken *peek(PrattParser *parser) {
 }
 
 /**
- * @brief Checks if the next token matches the specified type.
- * 
- * This function checks if the next token in the parser matches the given type.
- * It does not consume the token, allowing the caller to inspect it without
- * advancing the parser position.
+ * @brief Checks if the next token matches the specified type, without consuming the token.
  * 
  * @param parser The PrattParser instance to check.
  * @param type The HashSymbol representing the expected token type.
@@ -1141,10 +1085,6 @@ bool check(PrattParser *parser, HashSymbol *type) {
 
 /**
  * @brief Matches the next token against the specified type and consumes it if it matches.
- * 
- * This function checks if the next token in the parser matches the given type.
- * If it does, the token is consumed and the function returns true.
- * If it does not match, the token is re-enqueued for later processing.
  * 
  * @param parser The PrattParser instance to check.
  * @param type The HashSymbol representing the expected token type.
@@ -1229,8 +1169,12 @@ PrattBufList *prattBufListFromFileName(char *fileName, PrattBufList *next) {
  * @param next The next PrattBufList in the chain, or NULL.
  * @return A pointer to the newly created PrattBufList.
  */
-PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *next) {
+static PrattBufList *prattBufListFromMbString(char *string, char *origin, PrattBufList *next) {
     PrattBuffer *buffer = prattBufferFromString(string);
+    if (buffer == NULL) {
+        can_happen("invalid encoding in %s", origin);
+        buffer = prattBufferFromString("");
+    }
     int save = PROTECT(buffer);
     PrattBufList *res = newPrattBufList(1, newSymbol(origin), buffer, next);
     UNPROTECT(save);
@@ -1247,8 +1191,8 @@ PrattBufList *prattBufListFromString(char *string, char *origin, PrattBufList *n
  * @param origin The origin of the input string, used for error reporting.
  * @return A pointer to the newly created PrattLexer.
  */
-PrattLexer *makePrattLexerFromString(char *input, char *origin) {
-    PrattBufList *bl = prattBufListFromString(input, origin, NULL);
+PrattLexer *makePrattLexerFromMbString(char *input, char *origin) {
+    PrattBufList *bl = prattBufListFromMbString(input, origin, NULL);
     int save = PROTECT(bl);
     PrattLexer *res = newPrattLexer(bl);
     UNPROTECT(save);
