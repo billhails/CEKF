@@ -42,7 +42,7 @@ def printGpl(file, document):
         line = gpl.readline()
         while line:
             print(' * ', end='')
-            print(line, end='')
+            print(line.replace('__YEAR__', str(now.year)), end='')
             line = gpl.readline()
     print(" *")
     print(f" * {document['config']['description']}")

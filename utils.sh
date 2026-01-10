@@ -20,8 +20,9 @@ cores_off () {
 }
 
 echo_gpl () {
+    __YEAR=`date +%Y`
     echo '/*'
-    cat docs/gpl.txt | sed -e 's/^/ * /'
+    cat docs/gpl.txt | sed -e 's/^/ * /' -e s/__YEAR__/$__YEAR/
     echo ' */'
 }
 
