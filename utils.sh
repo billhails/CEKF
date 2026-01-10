@@ -21,7 +21,7 @@ cores_off () {
 
 echo_gpl () {
     echo '/*'
-    cat docs/gpl | sed -e 's/^/ * /'
+    cat docs/gpl.txt | sed -e 's/^/ * /'
     echo ' */'
 }
 

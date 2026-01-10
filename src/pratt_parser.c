@@ -1,5 +1,5 @@
 /* * CEKF - VM supporting amb
- * Copyright (C) 2022-2024  Bill Hails
+ * Copyright (C) 2022-2026  Bill Hails
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@
  * @brief The Pratt parser.
  */
 #include <ctype.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
 #include <wctype.h>
-#include <locale.h>
 
 #include "ast.h"
 #include "bigint.h"
@@ -1521,7 +1521,8 @@ static AstDefinition *addMixfixOperator(PrattParser *parser,
                                         PrattMixfixPattern *pattern,
                                         PrattAssoc associativity,
                                         int precedence, AstExpression *impl) {
-    // Add secondary keywords to trie (no conflict check - precedence handles disambiguation)
+    // Add secondary keywords to trie (no conflict check - precedence handles
+    // disambiguation)
     for (Index i = 1; i < pattern->keywords->size; ++i) {
         HashSymbol *inner = unicodeToSymbol(pattern->keywords->entries[i]);
         parser->trie = insertPrattTrie(parser->trie, inner);
@@ -1709,7 +1710,8 @@ static PrattParser *meldParsers(PrattParser *to, PrattParser *from) {
     }
 }
 
-static PrattUnicode *prattUnicodeSubstr(PrattUnicode *str, Index start, Index end) {
+static PrattUnicode *prattUnicodeSubstr(PrattUnicode *str, Index start,
+                                        Index end) {
     PrattUnicode *res = newPrattUnicode();
     int save = PROTECT(res);
     for (Index i = start; i < end; i++) {
@@ -3261,7 +3263,8 @@ static AstDefinition *link(PrattParser *parser) {
         PrattCVec *mbPath = newPrattCVec(len + 1);
         PROTECT(mbPath);
         wcstombs(mbPath->entries, path->entries, len + 1);
-        AstNameSpace *ns = parseLink(parser, (unsigned char *)mbPath->entries, name);
+        AstNameSpace *ns =
+            parseLink(parser, (unsigned char *)mbPath->entries, name);
         PROTECT(ns);
         storeNameSpace(parser, ns);
         res = newAstDefinition_Blank(CPI(ns));
@@ -4137,7 +4140,7 @@ static AstExpression *makeChar(PrattRecord *record __attribute__((unused)),
         cant_happen("unexpected %s", prattValueTypeName(tok->value->type));
     }
 #endif
-    Character c =tok->value->val.string->entries[0];
+    Character c = tok->value->val.string->entries[0];
     AstExpression *res = newAstExpression_Character(TOKPI(tok), c);
     return res;
 }
@@ -4155,8 +4158,7 @@ static AstFunCall *makeStringList(ParserInfo PI, PrattUnicode *str) {
         if (c == 0) {
             continue;
         }
-        AstExpression *character =
-            newAstExpression_Character(PI, c);
+        AstExpression *character = newAstExpression_Character(PI, c);
         int save2 = PROTECT(character);
         AstExpression *cons = newAstExpression_Symbol(PI, consSymbol());
         PROTECT(cons);
@@ -4260,6 +4262,4 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     return lhs;
 }
 
-void initLocale(char *locale) {
-    setlocale(LC_ALL, locale);
-}
+void initLocale(char *locale) { setlocale(LC_ALL, locale); }

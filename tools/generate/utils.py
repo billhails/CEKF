@@ -38,7 +38,7 @@ def printGpl(file, document):
     """Print GPL header comment"""
     now = datetime.datetime.now()
     print('/*')
-    with open('docs/gpl') as gpl:
+    with open('docs/gpl.txt') as gpl:
         line = gpl.readline()
         while line:
             print(' * ', end='')
