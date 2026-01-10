@@ -20,7 +20,6 @@
 #include "value.h"
 #include "cekf.h"
 #include "cekfs.h"
-#include "utf8.h"
 #include "symbol.h"
 #include "builtin_sqlite.h"
 #include "tc_analyze.h"

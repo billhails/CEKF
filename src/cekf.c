@@ -286,6 +286,41 @@ Value charArrayToList(CharacterArray *c) {
     return v;
 }
 
+// converts a list of char to a utf8 string.
+char *listToUtf8(Value v) {
+#ifdef SAFETY_CHECKS
+    if (v.type != VALUE_TYPE_VEC) {
+        cant_happen("unexpected %s", valueTypeName(v.type));
+    }
+#endif
+    CharacterArray *unicode = listToCharArray(v);
+    int save = PROTECT(unicode);
+    size_t size = wcstombs(NULL, unicode->entries, 0);
+    char *buf = NEW_ARRAY(char, size + 1);
+    wcstombs(buf, unicode->entries, size + 1);
+    UNPROTECT(save);
+    return buf;
+}
+
+// converts a utf8 string to a list of char (Value)
+// returns the empty list if the string is invalid
+Value utf8ToList(const char *utf8) {
+    size_t size = mbstowcs(NULL, utf8, 0);
+    CharacterArray *unicode = newCharacterArray();
+    int save = PROTECT(unicode);
+    if (size == (size_t) -1) {
+        pushCharacterArray(unicode, (Character) 0);
+    } else {
+        extendCharacterArray(unicode, (Index)(size + 1));
+        mbstowcs(unicode->entries, utf8, size + 1);
+        unicode->size = (Index)(size + 1);
+    }
+    Value v = charArrayToList(unicode);
+    UNPROTECT(save);
+    return v;
+}
+
+
 Value makeNull(void) {
     Vec *vec = newVec(1);
     vec->entries[0] = value_Stdint(0);
