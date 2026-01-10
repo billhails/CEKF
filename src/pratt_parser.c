@@ -1048,9 +1048,16 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
         save = PROTECT(defs);
         res = newAstNest(CPI(defs), defs, NULL);
     } else {
-        AstExpressions *stats = statements(parser, terminal);
-        save = PROTECT(stats);
-        res = newAstNest(CPI(stats), NULL, stats);
+        AstExpressions *stmts = statements(parser, terminal);
+        if (stmts == NULL) {
+            res = newAstNest((ParserInfo){.fileName = "", .lineNo = 0}, NULL,
+                             NULL);
+            LEAVE(nest_body);
+            UNPROTECT(save);
+            return res;
+        }
+        save = PROTECT(stmts);
+        res = newAstNest(CPI(stmts), NULL, stmts);
     }
     LEAVE(nest_body);
     UNPROTECT(save);
@@ -1071,10 +1078,12 @@ static AstNest *nest_body(PrattParser *parser, HashSymbol *terminal) {
  */
 static AstExpressions *statements(PrattParser *parser, HashSymbol *terminal) {
     ENTER(statements);
+    if (check(parser, TOK_EOF())) {
+        LEAVE(statements);
+        return NULL;
+    }
     AstExpression *expr = expression(parser);
     int save = PROTECT(expr);
-    // Centralized semicolon handling: allow optional semicolons (including
-    // multiple) after statements
     while (match(parser, TOK_SEMI()))
         ;
     AstExpressions *rest = NULL;
@@ -1138,8 +1147,6 @@ static AstDefinitions *definitions(PrattParser *parser, HashSymbol *terminal) {
     }
     AstDefinition *def = definition(parser);
     int save = PROTECT(def);
-    // Centralized semicolon handling: allow optional semicolons (including
-    // multiple) after any definition
     while (match(parser, TOK_SEMI()))
         ;
     AstDefinitions *next = definitions(parser, terminal);
@@ -4209,6 +4216,9 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     AstExpression *lhs = NULL;
     PrattToken *tok = next(parser);
     int save = PROTECT(tok);
+    if (tok->type == TOK_EOF()) {
+        cant_happen("unexpected end of file");
+    }
     PrattRecord *record = fetchRecord(parser, tok->type);
     if (record == NULL) {
         parserError(parser, "unrecognised prefix token: %s", tok->type->name);

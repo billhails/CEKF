@@ -1,0 +1,20 @@
+// just trying out some ideas for lazy evaluation
+let
+    typedef lazy(#t, #v) { thunk(#t) | value(#v) }
+
+    macro THUNK(x) { thunk(fn () {x}) }
+    operator "&_" 14 THUNK;
+
+    fn FORCE {
+        (thunk(t)) { value(t()) }
+        (value(v)) { value(v) }
+    }
+    operator "*_" 14 FORCE;
+
+    fn lazy_list (seed, next) {
+        #(seed, fn () { next(seed) })
+    }
+    operator "_>>_" right 9 lazy_list;
+in
+    print 3 >> fn (x) { x + 1 }
+    

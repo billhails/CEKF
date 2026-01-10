@@ -15,15 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "common.h"
 #include "cekf.h"
-#include "memory.h"
-#include "hash.h"
+#include "common.h"
 #include "debug.h"
+#include "hash.h"
+#include "memory.h"
 #ifdef DEBUG_STACK
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 #ifdef SAFETY_CHECKS
@@ -38,35 +38,17 @@ static Value charArrayToList(CharacterArray *c);
  * constants and memory allocation functions for the CEKF machine
  */
 
-Value vTrue = {
-    .type = VALUE_TYPE_STDINT,
-    .val = VALUE_VAL_STDINT(1)
-};
+Value vTrue = {.type = VALUE_TYPE_STDINT, .val = VALUE_VAL_STDINT(1)};
 
-Value vFalse = {
-    .type = VALUE_TYPE_STDINT,
-    .val = VALUE_VAL_STDINT(0)
-};
+Value vFalse = {.type = VALUE_TYPE_STDINT, .val = VALUE_VAL_STDINT(0)};
 
-Value vLt = {
-    .type = VALUE_TYPE_STDINT,
-    .val = VALUE_VAL_STDINT(0)
-};
+Value vLt = {.type = VALUE_TYPE_STDINT, .val = VALUE_VAL_STDINT(0)};
 
-Value vEq = {
-    .type = VALUE_TYPE_STDINT,
-    .val = VALUE_VAL_STDINT(1)
-};
+Value vEq = {.type = VALUE_TYPE_STDINT, .val = VALUE_VAL_STDINT(1)};
 
-Value vGt = {
-    .type = VALUE_TYPE_STDINT,
-    .val = VALUE_VAL_STDINT(2)
-};
+Value vGt = {.type = VALUE_TYPE_STDINT, .val = VALUE_VAL_STDINT(2)};
 
-Value vVoid = {
-    .type = VALUE_TYPE_NONE,
-    .val = VALUE_VAL_NONE()
-};
+Value vVoid = {.type = VALUE_TYPE_NONE, .val = VALUE_VAL_NONE()};
 
 Env *makeEnv(Env *parent) {
     Frame *s = newFrame();
@@ -101,16 +83,20 @@ void dumpStack(Stack *s) {
     for (Index i = 0; i < s->frames_index; i++) {
         for (Index j = 0; j < s->frames[i].offset; j++) {
             if (j == 0)
-                eprintf("      [%03d] [%03d] %s\n", i, j, valueTypeName(s->entries[s->frames[i].frame + j].type));
+                eprintf("      [%03d] [%03d] %s\n", i, j,
+                        valueTypeName(s->entries[s->frames[i].frame + j].type));
             else
-                eprintf("            [%03d] %s\n", j, valueTypeName(s->entries[s->frames[i].frame + j].type));
+                eprintf("            [%03d] %s\n", j,
+                        valueTypeName(s->entries[s->frames[i].frame + j].type));
         }
     }
     for (Index i = 0; i < s->offset; i++) {
         if (i == 0)
-            eprintf("      [%03d] [%03d] %s\n", s->frames_index, i, valueTypeName(s->entries[s->frame + i].type));
+            eprintf("      [%03d] [%03d] %s\n", s->frames_index, i,
+                    valueTypeName(s->entries[s->frame + i].type));
         else
-            eprintf("            [%03d] %s\n", i, valueTypeName(s->entries[s->frame + i].type));
+            eprintf("            [%03d] %s\n", i,
+                    valueTypeName(s->entries[s->frame + i].type));
     }
 }
 #endif
@@ -136,7 +122,8 @@ void copyTosToVec(Vec *vec, Stack *s) {
         cant_happen("copy too big %u > %u", vec->size, s->offset);
     }
 #endif
-    copyValues(vec->entries, &(s->entries[s->frame + s->offset - vec->size]), vec->size);
+    copyValues(vec->entries, &(s->entries[s->frame + s->offset - vec->size]),
+               vec->size);
 }
 
 void copyTosToEnv(Env *e, Stack *s, int n) {
@@ -148,11 +135,11 @@ void copyTosToEnv(Env *e, Stack *s, int n) {
 void copyStackToFrame(Stack *src, Frame *dest, int n) {
     DEBUG("copyStackToFrame %p -> %p, %d-%d", src, dest, src->offset, n);
 #ifdef SAFETY_CHECKS
-    if ((int) src->offset - n < 0) {
+    if ((int)src->offset - n < 0) {
         cant_happen("stack underflow %d / %u", n, src->offset);
     }
 #endif
-    if ((Index) n < src->offset) {
+    if ((Index)n < src->offset) {
         extendFrame(dest, src->offset - n);
         copyValues(dest->entries, &src->entries[src->frame], src->offset - n);
     }
@@ -170,7 +157,7 @@ void patchVec(Vec *v, Stack *s, int num) {
     if (num < 0) {
         cant_happen("negative count");
     }
-    if (num > (int) s->offset) {
+    if (num > (int)s->offset) {
         cant_happen("not enough values on stack");
     }
     if (s->offset > v->size) {
@@ -185,7 +172,8 @@ void restoreNameSpace(Stack *s, Vec *vl) {
     extendStackEntries(s, s->frame + vl->size);
 #ifdef SAFETY_CHECKS
     if (vl->size > (s->entries_capacity - s->frame)) {
-        cant_happen("copy too big %d/%d", vl->size, s->entries_capacity - s->frame);
+        cant_happen("copy too big %d/%d", vl->size,
+                    s->entries_capacity - s->frame);
     }
 #endif
     copyValues(&s->entries[s->frame], vl->entries, vl->size);
@@ -198,17 +186,11 @@ Vec *snapshotNameSpace(Stack *s) {
     return vl;
 }
 
-void patchClo(Clo *target, Stack *s) {
-    copyStackToFrame(s, target->E->S, 0);
-}
+void patchClo(Clo *target, Stack *s) { copyStackToFrame(s, target->E->S, 0); }
 
-void snapshotKont(Kont *target, Stack *s) {
-    copyAllStackEntries(target->S, s);
-}
+void snapshotKont(Kont *target, Stack *s) { copyAllStackEntries(target->S, s); }
 
-void snapshotFail(Fail *target, Stack *s) {
-    copyAllStackEntries(target->S, s);
-}
+void snapshotFail(Fail *target, Stack *s) { copyAllStackEntries(target->S, s); }
 
 void restoreKont(Stack *s, Kont *source) {
     if (source->S == NULL) {
@@ -231,10 +213,7 @@ void reportKonts() {
 }
 #endif
 
-
-void restoreFail(Stack *s, Fail *source) {
-    copyAllStackEntries(s, source->S);
-}
+void restoreFail(Stack *s, Fail *source) { copyAllStackEntries(s, source->S); }
 
 static CharacterArray *listToCharArray(Value list) {
     CharacterArray *chars = newCharacterArray();
@@ -264,7 +243,7 @@ static CharacterArray *listToCharArray(Value list) {
             list.val.vec = NULL;
         }
     }
-    pushCharacterArray(chars, (Character) 0); // null terminated
+    pushCharacterArray(chars, (Character)0); // null terminated
     UNPROTECT(save);
     return chars;
 }
@@ -312,8 +291,8 @@ Value utf8ToList(const char *utf8) {
     size_t size = mbstowcs(NULL, utf8, 0);
     CharacterArray *unicode = newCharacterArray();
     int save = PROTECT(unicode);
-    if (size == (size_t) -1) {
-        pushCharacterArray(unicode, (Character) 0);
+    if (size == (size_t)-1) {
+        pushCharacterArray(unicode, (Character)0);
     } else {
         extendCharacterArray(unicode, (Index)(size + 1));
         mbstowcs(unicode->entries, utf8, size + 1);
@@ -323,7 +302,6 @@ Value utf8ToList(const char *utf8) {
     UNPROTECT(save);
     return v;
 }
-
 
 Value makeNull(void) {
     Vec *vec = newVec(1);

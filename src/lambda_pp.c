@@ -19,9 +19,9 @@
  *
  */
 
+#include "lambda_pp.h"
 #include <stdio.h>
 #include <unistd.h>
-#include "lambda_pp.h"
 void ppLamTag(LamExp *tag);
 
 void ppLamExpD(LamExp *exp, int depth) {
@@ -79,112 +79,117 @@ void ppLamExp(LamExp *exp) {
         return;
     }
     switch (exp->type) {
-        case LAMEXP_TYPE_LAM:
-            ppLamLam(getLamExp_Lam(exp));
-            break;
-        case LAMEXP_TYPE_VAR:
-            ppHashSymbol(getLamExp_Var(exp));
-            break;
-        case LAMEXP_TYPE_BIGINTEGER:
-            fprintMaybeBigInt(errout, getLamExp_BigInteger(exp));
-            break;
-        case LAMEXP_TYPE_STDINT:
-            eprintf("%d", getLamExp_Stdint(exp));
-            break;
-        case LAMEXP_TYPE_PRIM:
-            ppLamPrimApp(getLamExp_Prim(exp));
-            break;
-        case LAMEXP_TYPE_SEQUENCE:
-            ppLamSequence(getLamExp_Sequence(exp));
-            break;
-        case LAMEXP_TYPE_MAKEVEC:
-            ppLamMakeVec(getLamExp_MakeVec(exp));
-            break;
-        case LAMEXP_TYPE_DECONSTRUCT:
-            ppLamDeconstruct(getLamExp_Deconstruct(exp));
-            break;
-        case LAMEXP_TYPE_CONSTRUCT:
-            ppLamConstruct(getLamExp_Construct(exp));
-            break;
-        case LAMEXP_TYPE_TAG:
-            ppLamTag(getLamExp_Tag(exp));
-            break;
-        case LAMEXP_TYPE_CONSTANT:
-            ppLamConstant(getLamExp_Constant(exp));
-            break;
-        case LAMEXP_TYPE_APPLY:
-            ppLamApply(getLamExp_Apply(exp));
-            break;
-        case LAMEXP_TYPE_IFF:
-            ppLamIff(getLamExp_Iff(exp));
-            break;
-        case LAMEXP_TYPE_CALLCC:
-            ppLamCallCC(getLamExp_CallCC(exp));       // LamExp
-            break;
-        case LAMEXP_TYPE_PRINT:
-            ppLamPrint(getLamExp_Print(exp));
-            break;
-        case LAMEXP_TYPE_LETREC:
-            ppLamLetRec(getLamExp_LetRec(exp));
-            break;
-        case LAMEXP_TYPE_TYPEDEFS:
-            ppLamTypeDefs(getLamExp_TypeDefs(exp));
-            break;
-        case LAMEXP_TYPE_LET:
-            ppLamLet(getLamExp_Let(exp));
-            break;
-        case LAMEXP_TYPE_MATCH:
-            ppLamMatch(getLamExp_Match(exp));
-            break;
-        case LAMEXP_TYPE_CHARACTER:
-            if (getLamExp_Character(exp) == L'\n')
-                eprintf("\"\\n\"");
-            else if (getLamExp_Character(exp) == L'\t')
-                eprintf("\"\\t\"");
-            else if (getLamExp_Character(exp) == L'\"')
-                eprintf("\"\\\"\"");
-            else if (getLamExp_Character(exp) == L'\\')
-                eprintf("\"\\\\\"");
-            else
-                eprintf("\"%lc\"", getLamExp_Character(exp));
-            break;
-        case LAMEXP_TYPE_BACK:
-            eprintf("(back)");
-            break;
-        case LAMEXP_TYPE_ERROR:
-            eprintf("(error)");
-            break;
-        case LAMEXP_TYPE_COND:
-            ppLamCond(getLamExp_Cond(exp));
-            break;
-        case LAMEXP_TYPE_AMB:
-            ppLamAmb(getLamExp_Amb(exp));
-            break;
-        case LAMEXP_TYPE_TUPLEINDEX:
-            ppLamTupleIndex(getLamExp_TupleIndex(exp));
-            break;
-        case LAMEXP_TYPE_MAKETUPLE:
-            ppLamMakeTuple(getLamExp_MakeTuple(exp));
-            break;
-        case LAMEXP_TYPE_NAMESPACES:
-            ppLamNameSpaces(getLamExp_NameSpaces(exp));
-            break;
-        case LAMEXP_TYPE_ENV:
-            eprintf("env");
-            break;
-        case LAMEXP_TYPE_CONSTRUCTOR:
-            eprintf("constructor:%s", getLamExp_Constructor(exp)->name->name);
-            break;
-        case LAMEXP_TYPE_LOOKUP:
-            ppLamLookUp(getLamExp_LookUp(exp));
-            break;
-        default:
-            cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
+    case LAMEXP_TYPE_LAM:
+        ppLamLam(getLamExp_Lam(exp));
+        break;
+    case LAMEXP_TYPE_VAR:
+        ppHashSymbol(getLamExp_Var(exp));
+        break;
+    case LAMEXP_TYPE_BIGINTEGER:
+        fprintMaybeBigInt(errout, getLamExp_BigInteger(exp));
+        break;
+    case LAMEXP_TYPE_STDINT:
+        eprintf("%d", getLamExp_Stdint(exp));
+        break;
+    case LAMEXP_TYPE_PRIM:
+        ppLamPrimApp(getLamExp_Prim(exp));
+        break;
+    case LAMEXP_TYPE_SEQUENCE:
+        ppLamSequence(getLamExp_Sequence(exp));
+        break;
+    case LAMEXP_TYPE_MAKEVEC:
+        ppLamMakeVec(getLamExp_MakeVec(exp));
+        break;
+    case LAMEXP_TYPE_DECONSTRUCT:
+        ppLamDeconstruct(getLamExp_Deconstruct(exp));
+        break;
+    case LAMEXP_TYPE_CONSTRUCT:
+        ppLamConstruct(getLamExp_Construct(exp));
+        break;
+    case LAMEXP_TYPE_TAG:
+        ppLamTag(getLamExp_Tag(exp));
+        break;
+    case LAMEXP_TYPE_CONSTANT:
+        ppLamConstant(getLamExp_Constant(exp));
+        break;
+    case LAMEXP_TYPE_APPLY:
+        ppLamApply(getLamExp_Apply(exp));
+        break;
+    case LAMEXP_TYPE_IFF:
+        ppLamIff(getLamExp_Iff(exp));
+        break;
+    case LAMEXP_TYPE_CALLCC:
+        ppLamCallCC(getLamExp_CallCC(exp)); // LamExp
+        break;
+    case LAMEXP_TYPE_PRINT:
+        ppLamPrint(getLamExp_Print(exp));
+        break;
+    case LAMEXP_TYPE_TYPEDEFS:
+        ppLamTypeDefs(getLamExp_TypeDefs(exp));
+        break;
+    case LAMEXP_TYPE_LET:
+        ppLamLet(getLamExp_Let(exp));
+        break;
+    case LAMEXP_TYPE_LETREC:
+        ppLamLetRec(getLamExp_LetRec(exp));
+        break;
+    case LAMEXP_TYPE_LETSTAR:
+        ppLamLetStar(getLamExp_LetStar(exp));
+        break;
+    case LAMEXP_TYPE_MATCH:
+        ppLamMatch(getLamExp_Match(exp));
+        break;
+    case LAMEXP_TYPE_CHARACTER:
+        if (getLamExp_Character(exp) == L'\n')
+            eprintf("\"\\n\"");
+        else if (getLamExp_Character(exp) == L'\t')
+            eprintf("\"\\t\"");
+        else if (getLamExp_Character(exp) == L'\"')
+            eprintf("\"\\\"\"");
+        else if (getLamExp_Character(exp) == L'\\')
+            eprintf("\"\\\\\"");
+        else
+            eprintf("\"%lc\"", getLamExp_Character(exp));
+        break;
+    case LAMEXP_TYPE_BACK:
+        eprintf("(back)");
+        break;
+    case LAMEXP_TYPE_ERROR:
+        eprintf("(error)");
+        break;
+    case LAMEXP_TYPE_COND:
+        ppLamCond(getLamExp_Cond(exp));
+        break;
+    case LAMEXP_TYPE_AMB:
+        ppLamAmb(getLamExp_Amb(exp));
+        break;
+    case LAMEXP_TYPE_TUPLEINDEX:
+        ppLamTupleIndex(getLamExp_TupleIndex(exp));
+        break;
+    case LAMEXP_TYPE_MAKETUPLE:
+        ppLamMakeTuple(getLamExp_MakeTuple(exp));
+        break;
+    case LAMEXP_TYPE_NAMESPACES:
+        ppLamNameSpaces(getLamExp_NameSpaces(exp));
+        break;
+    case LAMEXP_TYPE_ENV:
+        eprintf("env");
+        break;
+    case LAMEXP_TYPE_CONSTRUCTOR:
+        eprintf("constructor:%s", getLamExp_Constructor(exp)->name->name);
+        break;
+    case LAMEXP_TYPE_LOOKUP:
+        ppLamLookUp(getLamExp_LookUp(exp));
+        break;
+    default:
+        cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
 void ppLamLookUp(LamLookUp *lookUp) {
-    eprintf("(lookUp %s:%d ", lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name, lookUp->nsId);
+    eprintf("(lookUp %s:%d ",
+            lookUp->nsSymbol == NULL ? "" : lookUp->nsSymbol->name,
+            lookUp->nsId);
     ppLamExp(lookUp->exp);
     eprintf(")");
 }
@@ -223,50 +228,50 @@ void ppLamPrimApp(LamPrimApp *primApp) {
 
 void ppLamPrimOp(LamPrimOp type) {
     switch (type) {
-        case LAMPRIMOP_TYPE_ADD:
-            eprintf("add");
-            break;
-        case LAMPRIMOP_TYPE_SUB:
-            eprintf("sub");
-            break;
-        case LAMPRIMOP_TYPE_MUL:
-            eprintf("mul");
-            break;
-        case LAMPRIMOP_TYPE_DIV:
-            eprintf("div");
-            break;
-        case LAMPRIMOP_TYPE_EQ:
-            eprintf("eq");
-            break;
-        case LAMPRIMOP_TYPE_NE:
-            eprintf("ne");
-            break;
-        case LAMPRIMOP_TYPE_GT:
-            eprintf("gt");
-            break;
-        case LAMPRIMOP_TYPE_LT:
-            eprintf("lt");
-            break;
-        case LAMPRIMOP_TYPE_GE:
-            eprintf("ge");
-            break;
-        case LAMPRIMOP_TYPE_LE:
-            eprintf("le");
-            break;
-        case LAMPRIMOP_TYPE_VEC:
-            eprintf("vec");
-            break;
-        case LAMPRIMOP_TYPE_MOD:
-            eprintf("mod");
-            break;
-        case LAMPRIMOP_TYPE_POW:
-            eprintf("pow");
-            break;
-        case LAMPRIMOP_TYPE_CMP:
-            eprintf("cmp");
-            break;
-        default:
-            cant_happen("unrecognised type %d in ppLamPrimOp", type);
+    case LAMPRIMOP_TYPE_ADD:
+        eprintf("add");
+        break;
+    case LAMPRIMOP_TYPE_SUB:
+        eprintf("sub");
+        break;
+    case LAMPRIMOP_TYPE_MUL:
+        eprintf("mul");
+        break;
+    case LAMPRIMOP_TYPE_DIV:
+        eprintf("div");
+        break;
+    case LAMPRIMOP_TYPE_EQ:
+        eprintf("eq");
+        break;
+    case LAMPRIMOP_TYPE_NE:
+        eprintf("ne");
+        break;
+    case LAMPRIMOP_TYPE_GT:
+        eprintf("gt");
+        break;
+    case LAMPRIMOP_TYPE_LT:
+        eprintf("lt");
+        break;
+    case LAMPRIMOP_TYPE_GE:
+        eprintf("ge");
+        break;
+    case LAMPRIMOP_TYPE_LE:
+        eprintf("le");
+        break;
+    case LAMPRIMOP_TYPE_VEC:
+        eprintf("vec");
+        break;
+    case LAMPRIMOP_TYPE_MOD:
+        eprintf("mod");
+        break;
+    case LAMPRIMOP_TYPE_POW:
+        eprintf("pow");
+        break;
+    case LAMPRIMOP_TYPE_CMP:
+        eprintf("cmp");
+        break;
+    default:
+        cant_happen("unrecognised type %d in ppLamPrimOp", type);
     }
 }
 
@@ -359,15 +364,14 @@ static void _ppLamCharCondCases(LamCharCondCases *cases) {
 
 static void _ppLamCondCases(LamCondCases *cases) {
     switch (cases->type) {
-        case LAMCONDCASES_TYPE_INTEGERS:
-            _ppLamIntCondCases(getLamCondCases_Integers(cases));
-            break;
-        case LAMCONDCASES_TYPE_CHARACTERS:
-            _ppLamCharCondCases(getLamCondCases_Characters(cases));
-            break;
-        default:
-            cant_happen("unrecognised type %d in _ppLamCondCases",
-                        cases->type);
+    case LAMCONDCASES_TYPE_INTEGERS:
+        _ppLamIntCondCases(getLamCondCases_Integers(cases));
+        break;
+    case LAMCONDCASES_TYPE_CHARACTERS:
+        _ppLamCharCondCases(getLamCondCases_Characters(cases));
+        break;
+    default:
+        cant_happen("unrecognised type %d in _ppLamCondCases", cases->type);
     }
 }
 
@@ -419,6 +423,20 @@ void ppLamLetRec(LamLetRec *letRec) {
     eprintf(")");
 }
 
+void ppLamLetStar(LamLetStar *letStar) {
+    if (letStar == NULL) {
+        eprintf("<NULL letStar>");
+        return;
+    }
+    eprintf("(let* ");
+    ppLamBindings(letStar->bindings);
+    if (letStar->body != NULL) {
+        eprintf(" ");
+        ppLamExp(letStar->body);
+    }
+    eprintf(")");
+}
+
 void ppLamTypeDefList(LamTypeDefList *typeDefList);
 
 void ppLamTypeDefs(LamTypeDefs *typeDefs) {
@@ -445,7 +463,6 @@ void ppLamLet(LamLet *let) {
     eprintf(") ");
     ppLamExp(let->body);
     eprintf(")");
-
 }
 
 static void _ppLamMatchList(LamMatchList *cases) {
@@ -528,19 +545,20 @@ static void _ppLamTypeSig(LamTypeSig *type) {
 }
 
 static void ppLookUpSymbol(LamLookUpSymbol *ls) {
-    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId, ls->symbol->name);
+    eprintf("(lookUp %s:%d %s)", ls->nsSymbol->name, ls->nsId,
+            ls->symbol->name);
 }
 
 static void ppLookUpOrSymbol(LamLookUpOrSymbol *los) {
     switch (los->type) {
-        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            ppHashSymbol(getLamLookUpOrSymbol_Symbol(los));
-            break;
-        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            ppLookUpSymbol(getLamLookUpOrSymbol_LookUp(los));
-            break;
-        default:
-            cant_happen("unrecognised %s", lamLookUpOrSymbolTypeName(los->type));
+    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+        ppHashSymbol(getLamLookUpOrSymbol_Symbol(los));
+        break;
+    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+        ppLookUpSymbol(getLamLookUpOrSymbol_LookUp(los));
+        break;
+    default:
+        cant_happen("unrecognised %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
@@ -561,24 +579,24 @@ static void _ppLamTypeTuple(LamTypeConstructorArgs *args) {
 
 static void _ppLamTypeConstructorType(LamTypeConstructorType *type) {
     switch (type->type) {
-        case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
-            eprintf("int");
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
-            eprintf("char");
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
-            ppHashSymbol(getLamTypeConstructorType_Var(type));
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            _ppLamTypeFunction(getLamTypeConstructorType_Function(type));
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-            _ppLamTypeTuple(getLamTypeConstructorType_Tuple(type));
-            break;
-        default:
-            cant_happen("unrecognised type %s in _ppLamTypeConstructorType",
-                        lamTypeConstructorTypeTypeName(type->type));
+    case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
+        eprintf("int");
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
+        eprintf("char");
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
+        ppHashSymbol(getLamTypeConstructorType_Var(type));
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
+        _ppLamTypeFunction(getLamTypeConstructorType_Function(type));
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+        _ppLamTypeTuple(getLamTypeConstructorType_Tuple(type));
+        break;
+    default:
+        cant_happen("unrecognised type %s in _ppLamTypeConstructorType",
+                    lamTypeConstructorTypeTypeName(type->type));
     }
 }
 
@@ -662,9 +680,7 @@ void ppLamTag(LamExp *tag) {
     eprintf(")");
 }
 
-void ppLamConstant(LamConstant *constant) {
-    ppHashSymbol(constant->name);
-}
+void ppLamConstant(LamConstant *constant) { ppHashSymbol(constant->name); }
 
 void ppLamDeconstruct(LamDeconstruct *deconstruct) {
     eprintf("(deconstruct ");
@@ -674,9 +690,7 @@ void ppLamDeconstruct(LamDeconstruct *deconstruct) {
     eprintf(")");
 }
 
-static inline void pad(int depth) {
-    eprintf("%*s", depth, "");
-}
+static inline void pad(int depth) { eprintf("%*s", depth, ""); }
 
 static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
     if (env == NULL) {
@@ -693,15 +707,18 @@ static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
         pad(depth);
         if (value->type == LAMINFO_TYPE_NAMESPACEINFO) {
             if (done_nameSpaces) {
-                eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
+                eprintf(" %s => %s\n", name->name,
+                        lamInfoTypeName(value->type));
             } else {
-                eprintf(" %s => %s [\n", name->name, lamInfoTypeName(value->type));
+                eprintf(" %s => %s [\n", name->name,
+                        lamInfoTypeName(value->type));
                 _ppLamContext(getLamInfo_NameSpaceInfo(value), depth + 1, true);
                 pad(depth);
                 eprintf(" ]\n");
             }
         } else if (value->type == LAMINFO_TYPE_NSID) {
-            eprintf(" %s => %s [%d]\n", name->name, lamInfoTypeName(value->type), getLamInfo_NsId(value));
+            eprintf(" %s => %s [%d]\n", name->name,
+                    lamInfoTypeName(value->type), getLamInfo_NsId(value));
         } else {
             eprintf(" %s => %s\n", name->name, lamInfoTypeName(value->type));
         }
@@ -711,6 +728,4 @@ static void _ppLamContext(LamContext *env, int depth, bool done_nameSpaces) {
     eprintf("}\n");
 }
 
-void ppLamContext(LamContext *env) {
-    _ppLamContext(env, 0, false);
-}
+void ppLamContext(LamContext *env) { _ppLamContext(env, 0, false); }

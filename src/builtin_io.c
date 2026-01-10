@@ -1,41 +1,41 @@
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <math.h>
-#include <errno.h>
-#include <string.h>
-#include <wchar.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include "common.h"
-#include "value.h"
+#include "builtin_io.h"
+#include "builtins_helper.h"
 #include "cekf.h"
 #include "cekfs.h"
+#include "common.h"
 #include "symbol.h"
-#include "builtins_helper.h"
-#include "builtin_io.h"
 #include "tc_analyze.h"
+#include "value.h"
+#include <dirent.h>
+#include <errno.h>
+#include <math.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <wchar.h>
 
 #ifdef DEBUG_IO
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 static void registerPutc(BuiltIns *registry);
@@ -68,7 +68,7 @@ static BuiltInMemBufHash *memBufs = NULL;
 
 void markMemBufs() {
     if (memBufs != NULL) {
-        markHashTable((HashTable *) memBufs);
+        markHashTable((HashTable *)memBufs);
     }
 }
 
@@ -101,21 +101,13 @@ void registerIO(BuiltIns *registry) {
     registerFType(registry);
 }
 
-static HashSymbol *fileSymbol(void) {
-    return newSymbol("file");
-}
+static HashSymbol *fileSymbol(void) { return newSymbol("file"); }
 
-static HashSymbol *dirSymbol(void) {
-    return newSymbol("dir");
-}
+static HashSymbol *dirSymbol(void) { return newSymbol("dir"); }
 
-static TcType *makeFileType(void) {
-    return newTcType_Opaque(fileSymbol());
-}
+static TcType *makeFileType(void) { return newTcType_Opaque(fileSymbol()); }
 
-static TcType *makeDirType(void) {
-    return newTcType_Opaque(dirSymbol());
-}
+static TcType *makeDirType(void) { return newTcType_Opaque(dirSymbol()); }
 
 static Value errnoToTry() {
     Value errMsg = utf8ToList(strerror(errno));
@@ -160,15 +152,15 @@ static Value builtin_fputc(Vec *args) {
 
 static Value builtin_fputs(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
-    CharVec * buf = listToUtf8(args->entries[1]);
+    CharVec *buf = listToUtf8(args->entries[1]);
     int save = PROTECT(buf);
-    fprintf((FILE *) data->data, "%s", buf->entries);
+    fprintf((FILE *)data->data, "%s", buf->entries);
     UNPROTECT(save);
     return args->entries[1];
 }
 
 static Value builtin_puts(Vec *args) {
-    CharVec * buf = listToUtf8(args->entries[0]);
+    CharVec *buf = listToUtf8(args->entries[0]);
     int save = PROTECT(buf);
     printf("%s", buf->entries);
     UNPROTECT(save);
@@ -186,8 +178,10 @@ static HashSymbol *fileHandleToKey(FILE *file) {
 }
 
 static void opaque_io_close(Opaque *data) {
-    if (data == NULL) return;
-    if (data->data == NULL) return;
+    if (data == NULL)
+        return;
+    if (data->data == NULL)
+        return;
     fclose(data->data);
     HashSymbol *key = fileHandleToKey(data->data);
     BuiltInMemBuf *memBuf = NULL;
@@ -201,8 +195,10 @@ static void opaque_io_close(Opaque *data) {
 }
 
 static void opaque_io_closedir(Opaque *data) {
-    if (data == NULL) return;
-    if (data->data == NULL) return;
+    if (data == NULL)
+        return;
+    if (data->data == NULL)
+        return;
     DEBUG("closing dir %p", data->data);
     closedir((DIR *)data->data);
     data->data = NULL;
@@ -214,17 +210,17 @@ static Value builtin_open(Vec *args) {
     int mode = args->entries[1].val.stdint;
     FILE *file = NULL;
     switch (mode) {
-        case IO_MODE_READ:
-            file = fopen(fileName->entries, "r");
-            break;
-        case IO_MODE_WRITE:
-            file = fopen(fileName->entries, "w");
-            break;
-        case IO_MODE_APPEND:
-            file = fopen(fileName->entries, "a");
-            break;
-        default:
-            cant_happen("unexpected %d", mode);
+    case IO_MODE_READ:
+        file = fopen(fileName->entries, "r");
+        break;
+    case IO_MODE_WRITE:
+        file = fopen(fileName->entries, "w");
+        break;
+    case IO_MODE_APPEND:
+        file = fopen(fileName->entries, "a");
+        break;
+    default:
+        cant_happen("unexpected %d", mode);
     }
     if (file == NULL) {
         UNPROTECT(save);
@@ -289,22 +285,22 @@ static Value builtin_ftype(Vec *args) {
         return errnoToTry();
     }
     switch (statbuf.st_mode & S_IFMT) {
-        case S_IFSOCK:
-            return makeSome(value_Stdint(FTYPE_SOCKET));
-        case S_IFLNK:
-            return makeSome(value_Stdint(FTYPE_SYMLINK));
-        case S_IFREG:
-            return makeSome(value_Stdint(FTYPE_REGULAR));
-        case S_IFBLK:
-            return makeSome(value_Stdint(FTYPE_BLOCK));
-        case S_IFDIR:
-            return makeSome(value_Stdint(FTYPE_DIR));
-        case S_IFCHR:
-            return makeSome(value_Stdint(FTYPE_CHAR));
-        case S_IFIFO:
-            return makeSome(value_Stdint(FTYPE_FIFO));
-        default:
-            cant_happen("unrecognised file type %u", statbuf.st_mode & S_IFMT);
+    case S_IFSOCK:
+        return makeSome(value_Stdint(FTYPE_SOCKET));
+    case S_IFLNK:
+        return makeSome(value_Stdint(FTYPE_SYMLINK));
+    case S_IFREG:
+        return makeSome(value_Stdint(FTYPE_REGULAR));
+    case S_IFBLK:
+        return makeSome(value_Stdint(FTYPE_BLOCK));
+    case S_IFDIR:
+        return makeSome(value_Stdint(FTYPE_DIR));
+    case S_IFCHR:
+        return makeSome(value_Stdint(FTYPE_CHAR));
+    case S_IFIFO:
+        return makeSome(value_Stdint(FTYPE_FIFO));
+    default:
+        cant_happen("unrecognised file type %u", statbuf.st_mode & S_IFMT);
     }
 }
 
@@ -342,7 +338,7 @@ static Value builtin_readdir(Vec *args) {
     if (data->data == NULL) {
         return makeNothing();
     }
-    DIR *dir = (DIR *) data->data;
+    DIR *dir = (DIR *)data->data;
     struct dirent *entry = readdir(dir);
     if (entry == NULL) {
         return makeNothing();
@@ -356,73 +352,71 @@ static Value builtin_readdir(Vec *args) {
 
 void fputValue(FILE *fh, Value x) {
     switch (x.type) {
-        case VALUE_TYPE_NONE:
-            fprintf(fh, "<void>");
-            break;
-        case VALUE_TYPE_STDINT:
-            fprintf(fh, "%d", x.val.stdint);
-            break;
-        case VALUE_TYPE_STDINT_IMAG:
-            fprintf(fh, "%di", x.val.stdint);
-            break;
-        case VALUE_TYPE_BIGINT:
-            fprintBigInt(fh, x.val.bigint);
-            break;
-        case VALUE_TYPE_BIGINT_IMAG:
-            fprintBigInt(fh, x.val.bigint);
-            fprintf(fh, "i");
-            break;
-        case VALUE_TYPE_RATIONAL:
-            fputValue(fh, x.val.vec->entries[0]);
-            fprintf(fh, "/");
-            fputValue(fh, x.val.vec->entries[1]);
-            break;
-        case VALUE_TYPE_RATIONAL_IMAG:
-            fprintf(fh, "(");
-            fputValue(fh, x.val.vec->entries[0]);
-            fprintf(fh, "/");
-            fputValue(fh, x.val.vec->entries[1]);
-            fprintf(fh, ")i");
-            break;
-        case VALUE_TYPE_IRRATIONAL:
-            if(fmod(x.val.irrational, 1) == 0)
-                fprintf(fh, "%.1f", x.val.irrational);
-            else
-                fprintf(fh, "%g", x.val.irrational);
-            break;
-        case VALUE_TYPE_IRRATIONAL_IMAG:
-            if( fmod(x.val.irrational, 1) == 0)
-                fprintf(fh, "%.1fi", x.val.irrational);
-            else
-                fprintf(fh, "%gi", x.val.irrational);
-            break;
-        case VALUE_TYPE_COMPLEX:
-            fprintf(fh, "(");
-            fputValue(fh, x.val.vec->entries[0]);
-            fprintf(fh, "+");
-            fputValue(fh, x.val.vec->entries[1]);
-            fprintf(fh, ")");
-            break;
-        case VALUE_TYPE_CHARACTER:
-            fprintf(fh, "%s", charRep(x.val.character));
-            break;
-        case VALUE_TYPE_CLO:
-            fprintf(fh, "<closure>");
-            break;
-        case VALUE_TYPE_KONT:
-            fprintf(fh, "<continuation>");
-            break;
-        case VALUE_TYPE_VEC:
-            fputVec(fh, x.val.vec);
-            break;
-        default:
-            cant_happen("unrecognised value type %s", valueTypeName(x.type));
+    case VALUE_TYPE_NONE:
+        fprintf(fh, "<void>");
+        break;
+    case VALUE_TYPE_STDINT:
+        fprintf(fh, "%d", x.val.stdint);
+        break;
+    case VALUE_TYPE_STDINT_IMAG:
+        fprintf(fh, "%di", x.val.stdint);
+        break;
+    case VALUE_TYPE_BIGINT:
+        fprintBigInt(fh, x.val.bigint);
+        break;
+    case VALUE_TYPE_BIGINT_IMAG:
+        fprintBigInt(fh, x.val.bigint);
+        fprintf(fh, "i");
+        break;
+    case VALUE_TYPE_RATIONAL:
+        fputValue(fh, x.val.vec->entries[0]);
+        fprintf(fh, "/");
+        fputValue(fh, x.val.vec->entries[1]);
+        break;
+    case VALUE_TYPE_RATIONAL_IMAG:
+        fprintf(fh, "(");
+        fputValue(fh, x.val.vec->entries[0]);
+        fprintf(fh, "/");
+        fputValue(fh, x.val.vec->entries[1]);
+        fprintf(fh, ")i");
+        break;
+    case VALUE_TYPE_IRRATIONAL:
+        if (fmod(x.val.irrational, 1) == 0)
+            fprintf(fh, "%.1f", x.val.irrational);
+        else
+            fprintf(fh, "%g", x.val.irrational);
+        break;
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+        if (fmod(x.val.irrational, 1) == 0)
+            fprintf(fh, "%.1fi", x.val.irrational);
+        else
+            fprintf(fh, "%gi", x.val.irrational);
+        break;
+    case VALUE_TYPE_COMPLEX:
+        fprintf(fh, "(");
+        fputValue(fh, x.val.vec->entries[0]);
+        fprintf(fh, "+");
+        fputValue(fh, x.val.vec->entries[1]);
+        fprintf(fh, ")");
+        break;
+    case VALUE_TYPE_CHARACTER:
+        fprintf(fh, "%s", charRep(x.val.character));
+        break;
+    case VALUE_TYPE_CLO:
+        fprintf(fh, "<closure>");
+        break;
+    case VALUE_TYPE_KONT:
+        fprintf(fh, "<continuation>");
+        break;
+    case VALUE_TYPE_VEC:
+        fputVec(fh, x.val.vec);
+        break;
+    default:
+        cant_happen("unrecognised value type %s", valueTypeName(x.type));
     }
 }
 
-void putValue(Value x) {
-    fputValue(stdout, x);
-}
+void putValue(Value x) { fputValue(stdout, x); }
 
 void fputVec(FILE *fh, Vec *x) {
     fprintf(fh, "#[");
@@ -435,9 +429,7 @@ void fputVec(FILE *fh, Vec *x) {
     fprintf(fh, "]");
 }
 
-void putVec(Vec *x) {
-    fputVec(stdout, x);
-}
+void putVec(Vec *x) { fputVec(stdout, x); }
 
 static Value private_fgets(FILE *fh) {
     ByteArray *bytes = newByteArray();
@@ -449,25 +441,27 @@ static Value private_fgets(FILE *fh) {
         if (buf->buffer == NULL) {
             cant_happen("fgets on null memstream");
         }
-        do { pushByteArray(bytes, (Byte) buf->buffer[buf->index]); } while (buf->buffer[buf->index++]);
+        do {
+            pushByteArray(bytes, (Byte)buf->buffer[buf->index]);
+        } while (buf->buffer[buf->index++]);
         buf->index--; // point back at '\0' for next time
     } else {
         int c;
         while ((c = fgetc(fh)) != EOF) {
-            if (c == '\n') break;
-            if (c == 0) break;
-            pushByteArray(bytes, (Byte) c);
+            if (c == '\n')
+                break;
+            if (c == 0)
+                break;
+            pushByteArray(bytes, (Byte)c);
         }
         pushByteArray(bytes, 0);
     }
-    Value string = utf8ToList((char *) bytes->entries);
+    Value string = utf8ToList((char *)bytes->entries);
     UNPROTECT(save);
     return string;
 }
 
-static Value builtin_gets() {
-    return private_fgets(stdin);
-}
+static Value builtin_gets() { return private_fgets(stdin); }
 
 static Value private_fgetc(FILE *fh) {
     HashSymbol *key = fileHandleToKey(fh);
@@ -477,19 +471,19 @@ static Value private_fgetc(FILE *fh) {
     wchar_t wc = 0;
     char buf[MB_LEN_MAX];
     int bytes_read = 0;
-    
+
     while (bytes_read < MB_LEN_MAX) {
         int byte = fgetc(fh);
         if (byte == EOF) {
-            wc = 0;  // Match original behavior: return 0 on EOF
+            wc = 0; // Match original behavior: return 0 on EOF
             break;
         }
         buf[bytes_read++] = (char)byte;
-        
+
         // Reset state for each attempt to decode accumulated bytes
         mbstate_t state;
         memset(&state, 0, sizeof(state));
-        
+
         size_t result = mbrtowc(&wc, buf, bytes_read, &state);
         if (result == (size_t)-1) {
             // Invalid sequence - return replacement character
@@ -503,20 +497,18 @@ static Value private_fgetc(FILE *fh) {
             break;
         }
     }
-    
+
     return value_Character(wc);
 }
 
-static Value builtin_getc() {
-    return private_fgetc(stdin);
-}
+static Value builtin_getc() { return private_fgetc(stdin); }
 
 static Value builtin_fgetc(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
     }
-    return private_fgetc((FILE *) data->data);
+    return private_fgetc((FILE *)data->data);
 }
 
 static Value builtin_fgets(Vec *args) {
@@ -524,7 +516,7 @@ static Value builtin_fgets(Vec *args) {
     if (data == NULL || data->data == NULL) {
         cant_happen("fgets on closed file handle");
     }
-    return private_fgets((FILE *) data->data);
+    return private_fgets((FILE *)data->data);
 }
 
 static Value builtin_putv(Vec *args) {
@@ -537,7 +529,7 @@ static Value builtin_fputv(Vec *args) {
     if (data == NULL || data->data == NULL) {
         cant_happen("fput on closed file handle");
     }
-    fputValue((FILE *) data->data, args->entries[1]);
+    fputValue((FILE *)data->data, args->entries[1]);
     return args->entries[1];
 }
 
@@ -613,7 +605,8 @@ static void registerPutn(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *numberType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "putn", numberType, args, (void *)builtin_putv); // re-use putv
+    pushNewBuiltIn(registry, "putn", numberType, args,
+                   (void *)builtin_putv); // re-use putv
     UNPROTECT(save);
 }
 
@@ -623,7 +616,8 @@ static void registerFPutn(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *numberType = pushIntegerArg(args);
-    pushNewBuiltIn(registry, "fputn", numberType, args, (void *)builtin_fputv); // re-use putv
+    pushNewBuiltIn(registry, "fputn", numberType, args,
+                   (void *)builtin_fputv); // re-use putv
     UNPROTECT(save);
 }
 
@@ -632,7 +626,8 @@ static void registerPutv(BuiltIns *registry) {
     BuiltInArgs *args = newBuiltInArgs();
     int save = PROTECT(args);
     TcType *anyType = pushAnyArg(args);
-    pushNewBuiltIn(registry, "putv", anyType, args, (void *)builtin_putv); // re-use putv
+    pushNewBuiltIn(registry, "putv", anyType, args,
+                   (void *)builtin_putv); // re-use putv
     UNPROTECT(save);
 }
 
@@ -642,10 +637,10 @@ static void registerFPutv(BuiltIns *registry) {
     int save = PROTECT(args);
     pushFileArg(args);
     TcType *anyType = pushAnyArg(args);
-    pushNewBuiltIn(registry,"fputv", anyType, args, (void *)builtin_fputv); // re-use putv
+    pushNewBuiltIn(registry, "fputv", anyType, args,
+                   (void *)builtin_fputv); // re-use putv
     UNPROTECT(save);
 }
-
 
 // string -> string
 static void registerPuts(BuiltIns *registry) {
@@ -676,7 +671,8 @@ static void registerOpenMemstream(BuiltIns *registry) {
     PROTECT(stringType);
     TcType *tryFileType = makeTryFileType(stringType);
     PROTECT(tryFileType);
-    pushNewBuiltIn(registry, "openmem", tryFileType, args, (void *)builtin_open_memstream);
+    pushNewBuiltIn(registry, "openmem", tryFileType, args,
+                   (void *)builtin_open_memstream);
     UNPROTECT(save);
 }
 
@@ -687,7 +683,8 @@ static void registerOpenDir(BuiltIns *registry) {
     TcType *stringType = pushStringArg(args);
     TcType *tryDirType = makeTryDirType(stringType);
     PROTECT(tryDirType);
-    pushNewBuiltIn(registry, "opendir", tryDirType, args, (void *)builtin_opendir);
+    pushNewBuiltIn(registry, "opendir", tryDirType, args,
+                   (void *)builtin_opendir);
     UNPROTECT(save);
 }
 
@@ -697,7 +694,8 @@ static void registerFType(BuiltIns *registry) {
     TcType *stringType = pushStringArg(args);
     TcType *tryFTypeType = makeTryFTypeType(stringType);
     PROTECT(tryFTypeType);
-    pushNewBuiltIn(registry, "ftype", tryFTypeType, args, (void *)builtin_ftype);
+    pushNewBuiltIn(registry, "ftype", tryFTypeType, args,
+                   (void *)builtin_ftype);
     UNPROTECT(save);
 }
 
@@ -730,7 +728,8 @@ static void registerReadDir(BuiltIns *registry) {
     pushDirArg(args);
     TcType *maybeStringType = makeMaybeStringType();
     PROTECT(maybeStringType);
-    pushNewBuiltIn(registry, "readdir", maybeStringType, args, (void *)builtin_readdir);
+    pushNewBuiltIn(registry, "readdir", maybeStringType, args,
+                   (void *)builtin_readdir);
     UNPROTECT(save);
 }
 

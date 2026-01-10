@@ -1,5 +1,5 @@
 #ifndef cekf_lambda_pp_h
-#  define cekf_lambda_pp_h
+#define cekf_lambda_pp_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -21,7 +21,7 @@
  *
  */
 
-#  include "lambda.h"
+#include "lambda.h"
 
 void ppLamExpD(LamExp *exp, int depth);
 void ppLamLam(LamLam *lam);
@@ -38,6 +38,7 @@ void ppLamCond(LamCond *cond);
 void ppLamCallCC(LamExp *exp);
 void ppLamPrint(LamPrint *print);
 void ppLamLetRec(LamLetRec *letRec);
+void ppLamLetStar(LamLetStar *letStar);
 void ppLamDeconstruct(LamDeconstruct *deconstruct);
 void ppLamConstruct(LamConstruct *construct);
 void ppLamConstant(LamConstant *constant);
