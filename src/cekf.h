@@ -65,9 +65,7 @@ void dumpStack(Stack *stack);
 void dumpFrame(Frame *frame);
 #endif
 
-CharacterArray *listToCharArray(Value list);
-Value charArrayToList(CharacterArray *c);
-char *listToUtf8(Value v);
+CharVec *listToUtf8(Value v);
 Value utf8ToList(const char *utf8);
 Value makeNull(void);
 Value makePair(Value car, Value cdr);

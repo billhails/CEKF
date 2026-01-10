@@ -65,13 +65,13 @@ static void opaque_sqlite3_finalize(Opaque *data) {
 }
 
 static Value builtin_sqlite3_open(Vec *v) {
-    char *buf = listToUtf8(v->entries[0]);
+    CharVec *buf = listToUtf8(v->entries[0]);
+    int save = PROTECT(buf);
     sqlite3 *ppDb = NULL;
-    int status = sqlite3_open(buf, &ppDb);
-    FREE_ARRAY(char, buf, strlen(buf) + 1);
+    int status = sqlite3_open(buf->entries, &ppDb);
     if (status != SQLITE_OK) {
         Value errMsg = utf8ToList(sqlite3_errmsg(ppDb));
-        int save = protectValue(errMsg);
+        protectValue(errMsg);
         sqlite3_close(ppDb);
         Value result = makeTryResult(0, errMsg);
         UNPROTECT(save);
@@ -80,7 +80,7 @@ static Value builtin_sqlite3_open(Vec *v) {
     DEBUG("sqlite open %p", ppDb);
     Opaque *wrapper = newOpaque(ppDb, opaque_sqlite3_close, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -117,19 +117,20 @@ static Value builtin_sqlite3_prepare(Vec *vec) {
     }
 #endif
     Opaque *data = vec->entries[0].val.opaque;
-    char *string = listToUtf8(vec->entries[1]);
+    CharVec *string = listToUtf8(vec->entries[1]);
+    int save = PROTECT(string);
     sqlite3_stmt *stmt = NULL;
-    int res = sqlite3_prepare_v2(data->data, string, -1, &stmt, NULL);
-    FREE_ARRAY(char, string, strlen(string) + 1);
+    int res = sqlite3_prepare_v2(data->data, string->entries, -1, &stmt, NULL);
     if (res != SQLITE_OK) {
         Value errCode = value_Stdint(res);
         Value result = makeTryResult(0, errCode);
+        UNPROTECT(save);
         return result;
     }
     DEBUG("sqlite prepare %p", stmt);
     Opaque *wrapper = newOpaque(stmt, opaque_sqlite3_finalize, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -170,8 +171,8 @@ static int helper_bind_number(sqlite3_stmt *stmt, int index, Value number) {
 }
 
 static int helper_bind_string(sqlite3_stmt *stmt, int index, Value string) {
-    char *buf = listToUtf8(string);
-    return sqlite3_bind_text(stmt, index, buf, strlen(buf), helper_free_str);
+    CharVec *buf = listToUtf8(string);
+    return sqlite3_bind_text(stmt, index, buf->entries, strlen(buf->entries), helper_free_str);
 }
 
 static int helper_bind_char(sqlite3_stmt *stmt, int index, Value character) {

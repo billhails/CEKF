@@ -176,6 +176,12 @@ vectors:
         data:
             entries: Value
 
+    CharVec:
+        meta:
+            brief: A vector of chars
+        data:
+            entries: schar
+
 stacks:
     Stack:
         meta:

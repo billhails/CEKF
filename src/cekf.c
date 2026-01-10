@@ -31,6 +31,9 @@ static int cont_pops = 0;
 static int cont_restores = 0;
 #endif
 
+static CharacterArray *listToCharArray(Value list);
+static Value charArrayToList(CharacterArray *c);
+
 /*
  * constants and memory allocation functions for the CEKF machine
  */
@@ -233,7 +236,7 @@ void restoreFail(Stack *s, Fail *source) {
     copyAllStackEntries(s, source->S);
 }
 
-CharacterArray *listToCharArray(Value list) {
+static CharacterArray *listToCharArray(Value list) {
     CharacterArray *chars = newCharacterArray();
     int save = PROTECT(chars);
     while (list.val.vec) {
@@ -266,7 +269,7 @@ CharacterArray *listToCharArray(Value list) {
     return chars;
 }
 
-Value charArrayToList(CharacterArray *c) {
+static Value charArrayToList(CharacterArray *c) {
     Vec *nullByte = newVec(1);
     nullByte->entries[0] = value_Stdint(0); // tag=null
     Value v = value_Vec(nullByte);
@@ -287,7 +290,7 @@ Value charArrayToList(CharacterArray *c) {
 }
 
 // converts a list of char to a utf8 string.
-char *listToUtf8(Value v) {
+CharVec *listToUtf8(Value v) {
 #ifdef SAFETY_CHECKS
     if (v.type != VALUE_TYPE_VEC) {
         cant_happen("unexpected %s", valueTypeName(v.type));
@@ -296,8 +299,9 @@ char *listToUtf8(Value v) {
     CharacterArray *unicode = listToCharArray(v);
     int save = PROTECT(unicode);
     size_t size = wcstombs(NULL, unicode->entries, 0);
-    char *buf = NEW_ARRAY(char, size + 1);
-    wcstombs(buf, unicode->entries, size + 1);
+    CharVec *buf = newCharVec((int)(size + 1));
+    PROTECT(buf);
+    wcstombs(buf->entries, unicode->entries, size + 1);
     UNPROTECT(save);
     return buf;
 }

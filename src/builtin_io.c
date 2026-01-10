@@ -160,16 +160,18 @@ static Value builtin_fputc(Vec *args) {
 
 static Value builtin_fputs(Vec *args) {
     Opaque *data = args->entries[0].val.opaque;
-    char * buf = listToUtf8(args->entries[1]);
-    fprintf((FILE *) data->data, "%s", buf);
-    FREE_ARRAY(char, buf, strlen(buf) + 1);
+    CharVec * buf = listToUtf8(args->entries[1]);
+    int save = PROTECT(buf);
+    fprintf((FILE *) data->data, "%s", buf->entries);
+    UNPROTECT(save);
     return args->entries[1];
 }
 
 static Value builtin_puts(Vec *args) {
-    char * buf = listToUtf8(args->entries[0]);
-    printf("%s", buf);
-    FREE_ARRAY(char, buf, strlen(buf) + 1);
+    CharVec * buf = listToUtf8(args->entries[0]);
+    int save = PROTECT(buf);
+    printf("%s", buf->entries);
+    UNPROTECT(save);
     return args->entries[0];
 }
 
@@ -207,30 +209,31 @@ static void opaque_io_closedir(Opaque *data) {
 }
 
 static Value builtin_open(Vec *args) {
-    char *fileName = listToUtf8(args->entries[0]);
+    CharVec *fileName = listToUtf8(args->entries[0]);
+    int save = PROTECT(fileName);
     int mode = args->entries[1].val.stdint;
     FILE *file = NULL;
     switch (mode) {
         case IO_MODE_READ:
-            file = fopen(fileName, "r");
+            file = fopen(fileName->entries, "r");
             break;
         case IO_MODE_WRITE:
-            file = fopen(fileName, "w");
+            file = fopen(fileName->entries, "w");
             break;
         case IO_MODE_APPEND:
-            file = fopen(fileName, "a");
+            file = fopen(fileName->entries, "a");
             break;
         default:
             cant_happen("unexpected %d", mode);
     }
-    FREE_ARRAY(char, fileName, strlen(fileName) + 1);
     if (file == NULL) {
+        UNPROTECT(save);
         return errnoToTry();
     }
     DEBUG("io open %p", file);
     Opaque *wrapper = newOpaque(file, opaque_io_close, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -252,16 +255,17 @@ static Value builtin_open_memstream(Vec *args __attribute__((unused))) {
 }
 
 static Value builtin_opendir(Vec *args) {
-    char *dirname = listToUtf8(args->entries[0]);
-    DIR *dir = opendir(dirname);
-    FREE_ARRAY(char, dirname, strlen(dirname) + 1);
+    CharVec *dirname = listToUtf8(args->entries[0]);
+    int save = PROTECT(dirname);
+    DIR *dir = opendir(dirname->entries);
     if (dir == NULL) {
+        UNPROTECT(save);
         return errnoToTry();
     }
     DEBUG("io opendir %p", dir);
     Opaque *wrapper = newOpaque(dir, opaque_io_closedir, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -277,9 +281,10 @@ static Value builtin_opendir(Vec *args) {
 
 static Value builtin_ftype(Vec *args) {
     struct stat statbuf;
-    char *dirname = listToUtf8(args->entries[0]);
-    int status = stat(dirname, &statbuf);
-    FREE_ARRAY(char, dirname, strlen(dirname) + 1);
+    CharVec *dirname = listToUtf8(args->entries[0]);
+    int save = PROTECT(dirname);
+    int status = stat(dirname->entries, &statbuf);
+    UNPROTECT(save);
     if (status == -1) {
         return errnoToTry();
     }

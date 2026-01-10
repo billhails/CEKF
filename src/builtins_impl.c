@@ -234,14 +234,15 @@ Value builtin_args(Vec *args) {
 }
 
 Value builtin_getenv(Vec *args) {
-    char *name = listToUtf8(args->entries[0]);
-    char *value = getenv(name);
-    FREE_ARRAY(char, name, strlen(name) + 1);
+    CharVec *name = listToUtf8(args->entries[0]);
+    int save = PROTECT(name);
+    char *value = getenv(name->entries);
     if (value == NULL) {
+        UNPROTECT(save);
         return makeNothing();
     }
     Value string = utf8ToList(value);
-    int save = protectValue(string);
+    protectValue(string);
     Value result = makeSome(string);
     UNPROTECT(save);
     return result;
