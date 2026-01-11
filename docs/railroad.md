@@ -2,6 +2,17 @@
 
 ## Top Level Stuff
 
+### top
+
+```mermaid
+flowchart LR
+s(("●"))
+e(("●"))
+s --> nb([nestBody]) --> EOF --> e
+```
+
+* [nestBody](#nestbody)
+
 ### nest
 
 ```mermaid
@@ -9,14 +20,12 @@ flowchart LR
 s(("●"))
 e(("●"))
 open["{"]
-subgraph child
-    nestBody([nestBody])
-end
+childNest([childNest])
 close["}"]
-s --> open --> nestBody --> close --> e
+s --> open --> childNest --> close --> e
 ```
 
-* [nestBody](#nestbody)
+* [childNest](#childnest)
 
 ### nestBody
 
@@ -28,9 +37,7 @@ let[let]
 namespace[namespace]
 namespace_definitions([definitions])
 statements([statements])
-subgraph child
-    let_definitions([definitions]) --> in[in] --> let_statements([statements])
-end
+let_definitions([definitions]) --> in[in] --> let_statements([statements])
 s --> let --> let_definitions
 let_statements --> e
 s --> namespace --> namespace_definitions --> e
@@ -39,6 +46,22 @@ s --> statements --> e
 
 * [definitions](#definitions)
 * [statements](#statements)
+
+### childNest
+
+```mermaid
+flowchart LR
+s(("●"))
+e(("●"))
+subgraph child
+nb([nestBody])
+end
+s --> nb --> e
+```
+
+Create a child parser to parse the nest body, N.B. **not** used by `top`.
+
+* [nestBody](#nestbody)
 
 ### definitions
 
@@ -126,6 +149,7 @@ s --> ep[/expressionPrecedence\] --> synchronize(synchronize) --> e
 
 `expressionPrecedence` is the core Pratt Parser algorithm, and `synchronize` attempts to
 resume parsing in the case of an error.
+`expression` calls `expressionPrecedence` with the lowest precedence (zero).
 
 * [expressionPrecedence](#expressionprecedence)
 
@@ -410,6 +434,7 @@ flowchart LR
 s(("●"))
 e(("●"))
 s --> ca([collectArguments]) --> e
+s --> e
 ```
 
 * [collectArguments](#collectarguments)
@@ -420,7 +445,7 @@ s --> ca([collectArguments]) --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\]
+s --> ep([expression])
 ep --> comma[","]
 comma --> e
 comma --> ca([collectArguments]) --> e
@@ -428,7 +453,7 @@ ep --> e
 ```
 
 * [collectArguments](#collectarguments)
-* [expressionPrecedence](#expressionprecedence)
+* [expression](#expression)
 
 ### defMacro
 
@@ -528,12 +553,16 @@ The opening `(`  or `#(` has already been consumed.
 ## expressionPrecedence
 
 This is different from the rest of the parser in that it is table-driven. Entries
-in the table are tokens and are associated with prefix, infix and postfix operators.
+in the table are tokens associated with prefix, infix and postfix "parselets"
+that handle the specifics of the operator.
 
 This is a precis of that table with links to the relevant parselets. There are no
 built-in postfix operators so that column is omitted, as are entries where there
 are no parselets. Parselets which do no further parsing, such as `makeAtom`, are present
 but do not link to a railroad diagram.
+
+Note in the following railroad diagrams many of the parselets call `expressionPrecedence`
+directly because they are passing the associated precedence from the table (not shown).
 
 | Token | Prefix | Infix |
 | ----- | ------ | ----- |
@@ -637,14 +666,12 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-subgraph child
-body([nestBody]) --> rcurly["}"]
-end
+body([childNest]) --> rcurly["}"]
 s --> body
 rcurly --> e
 ```
 
-* [nestBody](#nestbody)
+* [childNest](#childnest)
 
 ### makeStruct
 
@@ -663,8 +690,11 @@ s --> te([taggedExpressions]) --> rcurly["}"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> cons([consList]) --> rsq["]"] --> e
+s --> cons([consList]) --> e
 ```
+
+Slightly redundant but `consList` is recursive and takes fewer arguments
+than the `list` parselet.
 
 * [consList](#conslist)
 
@@ -674,13 +704,14 @@ s --> cons([consList]) --> rsq["]"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> rsq{"]"} --> e
+s --> rsq["]"] --> e
 s --> expr([expression])
 expr --> comma[","] --> cl([consList]) --> e
-expr --> cl
+expr --> rsq
 ```
 
-Clearly this is wrong and needs fixing.
+* [expression](#expression)
+* [consList](#conslist)
 
 ### taggedExpressions
 
@@ -688,14 +719,14 @@ Clearly this is wrong and needs fixing.
 flowchart LR
 s(("●"))
 e(("●"))
-s --> symbol([symbol]) --> colon[":"] --> ep[/expressionPrecedence\]
+s --> symbol([symbol]) --> colon[":"] --> ep([expression])
 ep --> comma[","]
 comma --> e
 comma --> te([taggedExpressions]) --> e
 ep --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+* [expression](#expression)
 * [taggedExpressions](#taggedexpressions)
 
 ### macro
@@ -715,10 +746,10 @@ Explicit dissalow on creating macros as expressions.
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> close[")"] --> e
+s --> ep([expression]) --> close[")"] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+* [expression](#expression)
 
 ### call
 
