@@ -133,9 +133,9 @@ static AstExpression *makeNumber(PrattRecord *, PrattParser *, AstExpression *,
                                  PrattToken *);
 static AstExpression *makeString(PrattRecord *, PrattParser *, AstExpression *,
                                  PrattToken *);
-static AstExpression *nestexpr(PrattRecord *, PrattParser *, AstExpression *,
+static AstExpression *nestExpr(PrattRecord *, PrattParser *, AstExpression *,
                                PrattToken *);
-static AstExpression *passert(PrattRecord *, PrattParser *, AstExpression *,
+static AstExpression *pAssert(PrattRecord *, PrattParser *, AstExpression *,
                               PrattToken *);
 static AstExpression *print(PrattRecord *, PrattParser *, AstExpression *,
                             PrattToken *);
@@ -275,7 +275,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_ALIAS(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ARROW(), NULL, 0, infixRight, 1, NULL, 0);
     addRecord(table, TOK_AS(), NULL, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_ASSERT(), passert, 0, NULL, 0, NULL, 0);
+    addRecord(table, TOK_ASSERT(), pAssert, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_ASSIGN(), NULL, 0, exprAlias, 7, NULL, 0);
     addRecord(table, TOK_ATOM(), makeAtom, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_BACK(), back, 0, NULL, 0, NULL, 0);
@@ -296,7 +296,7 @@ static PrattParser *makePrattParser(void) {
     addRecord(table, TOK_KW_CHAR(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_ERROR(), error, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_KW_NUMBER(), NULL, 0, NULL, 0, NULL, 0);
-    addRecord(table, TOK_LCURLY(), nestexpr, 0, makeStruct, 0, NULL, 0);
+    addRecord(table, TOK_LCURLY(), nestExpr, 0, makeStruct, 0, NULL, 0);
     addRecord(table, TOK_LET(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LINK(), NULL, 0, NULL, 0, NULL, 0);
     addRecord(table, TOK_LSQUARE(), list, 0, NULL, 0, NULL, 0);
@@ -2555,24 +2555,24 @@ static AstNest *nest(PrattParser *parser) {
  *
  * It differs from nest() above in that it does not consume the opening curly
  * brace, and it returns an AstExpression rather than a bare AstNest. Its
- * signature also matches the PrattParser's nestexpr function as it is called
+ * signature also matches the PrattParser's nestExpr function as it is called
  * directly by the parser.
  *
  * @param parser The PrattParser to use for parsing.
  * @return An AstExpression representing the parsed body of the nest.
  */
-static AstExpression *nestexpr(PrattRecord *record __attribute__((unused)),
+static AstExpression *nestExpr(PrattRecord *record __attribute__((unused)),
                                PrattParser *parser,
                                AstExpression *lhs __attribute__((unused)),
                                PrattToken *tok __attribute__((unused))) {
-    ENTER(nestexpr);
+    ENTER(nestExpr);
     PrattParser *child = makeChildParser(parser);
     int save = PROTECT(child);
     AstNest *body = nestBody(child, TOK_RCURLY());
     PROTECT(body);
     consume(parser, TOK_RCURLY());
     AstExpression *res = newAstExpression_Nest(CPI(body), body);
-    LEAVE(nestexpr);
+    LEAVE(nestExpr);
     UNPROTECT(save);
     return res;
 }
@@ -3415,13 +3415,13 @@ static AstExpression *grouping(PrattRecord *record, PrattParser *parser,
  * bracket.
  * @return a nested chain of cons function applications.
  */
-static AstFunCall *conslist(PrattParser *parser) {
-    ENTER(conslist);
+static AstFunCall *consList(PrattParser *parser) {
+    ENTER(consList);
     AstFunCall *res = NULL;
     int save = PROTECT(res);
     if (check(parser, TOK_RSQUARE())) {
         ParserInfo PI = LEXPI(parser->lexer);
-        DEBUG("conslist parser info %d %s", PI.lineNo, PI.fileName);
+        DEBUG("consList parser info %d %s", PI.lineNo, PI.fileName);
         AstExpression *nil = newAstExpression_Symbol(PI, nilSymbol());
         PROTECT(nil);
         res = newAstFunCall(PI, nil, NULL);
@@ -3432,8 +3432,9 @@ static AstFunCall *conslist(PrattParser *parser) {
     } else {
         AstExpression *expr = expression(parser);
         PROTECT(expr);
-        match(parser, TOK_COMMA());
-        AstFunCall *rest = conslist(parser);
+        match(parser, TOK_COMMA()); // FIXME: this can't be right, or if it is
+                                    // it's confusing
+        AstFunCall *rest = consList(parser);
         if (rest == NULL) {
             UNPROTECT(save);
             return NULL;
@@ -3449,7 +3450,7 @@ static AstFunCall *conslist(PrattParser *parser) {
         PROTECT(args);
         res = newAstFunCall(CPI(expr), cons, args);
     }
-    LEAVE(conslist);
+    LEAVE(consList);
     UNPROTECT(save);
     return res;
 }
@@ -3462,7 +3463,7 @@ static AstExpression *list(PrattRecord *record __attribute__((unused)),
                            AstExpression *lhs __attribute__((unused)),
                            PrattToken *tok __attribute__((unused))) {
     ENTER(list);
-    AstFunCall *conses = conslist(parser);
+    AstFunCall *conses = consList(parser);
     int save = PROTECT(conses);
     consume(parser, TOK_RSQUARE());
     AstExpression *res = newAstExpression_FunCall(CPI(conses), conses);
@@ -3568,23 +3569,23 @@ static AstTaggedExpressions *taggedExpressions(PrattParser *parser) {
 }
 
 static AstLookUpSymbol *astStructLookUpToLus(PrattParser *parser,
-                                             AstLookUp *lookUp) {
-    if (lookUp->expression->type != AST_EXPRESSION_TYPE_SYMBOL) {
-        parserErrorAt(CPI(lookUp->expression), parser,
-                      "expected symbol as lookUp expression, got %s",
-                      astExpressionTypeName(lookUp->expression->type));
-        return newAstLookUpSymbol(CPI(lookUp), -1, TOK_ERROR(), TOK_ERROR());
+                                             AstLookUp *look_up) {
+    if (look_up->expression->type != AST_EXPRESSION_TYPE_SYMBOL) {
+        parserErrorAt(CPI(look_up->expression), parser,
+                      "expected symbol as look_up expression, got %s",
+                      astExpressionTypeName(look_up->expression->type));
+        return newAstLookUpSymbol(CPI(look_up), -1, TOK_ERROR(), TOK_ERROR());
     }
     int index = 0;
-    if (findNameSpace(parser, lookUp->nsSymbol, &index)) {
+    if (findNameSpace(parser, look_up->nsSymbol, &index)) {
         AstLookUpSymbol *lus =
-            newAstLookUpSymbol(CPI(lookUp), index, lookUp->nsSymbol,
-                               lookUp->expression->val.symbol);
+            newAstLookUpSymbol(CPI(look_up), index, look_up->nsSymbol,
+                               look_up->expression->val.symbol);
         return lus;
     } else {
-        parserErrorAt(CPI(lookUp), parser, "unknown nameSpace '%s' in lookUp",
-                      lookUp->nsSymbol->name);
-        return newAstLookUpSymbol(CPI(lookUp), -1, lookUp->nsSymbol,
+        parserErrorAt(CPI(look_up), parser, "unknown nameSpace '%s' in look_up",
+                      look_up->nsSymbol->name);
+        return newAstLookUpSymbol(CPI(look_up), -1, look_up->nsSymbol,
                                   TOK_ERROR());
     }
 }
@@ -3745,14 +3746,14 @@ static AstExpression *typeOfExp(PrattRecord *record, PrattParser *parser,
 /**
  * @brief parselet triggered by a prefix `assert` token.
  */
-static AstExpression *passert(PrattRecord *record, PrattParser *parser,
+static AstExpression *pAssert(PrattRecord *record, PrattParser *parser,
                               AstExpression *lhs __attribute__((unused)),
                               PrattToken *tok __attribute__((unused))) {
-    ENTER(passert);
+    ENTER(pAssert);
     AstExpression *toAssert = expressionPrecedence(parser, record->prefix.prec);
     int save = PROTECT(toAssert);
     AstExpression *res = newAstExpression_Assertion(CPI(toAssert), toAssert);
-    LEAVE(passert);
+    LEAVE(pAssert);
     UNPROTECT(save);
     return res;
 }
