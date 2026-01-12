@@ -1043,14 +1043,16 @@ static AstNest *nestBody(PrattParser *parser, HashSymbol *terminal) {
         consume(parser, TOK_IN());
         AstExpressions *stats = statements(parser, terminal);
         PROTECT(stats);
-        res = newAstNest(CPI(defs), defs, stats);
+        ParserInfo PI = (defs != NULL) ? CPI(defs) : LEXPI(parser->lexer);
+        res = newAstNest(PI, defs, stats);
     } else if (match(parser, TOK_NAMESPACE())) {
         // Keep nameSpace definitions in the current parser so preamble- and
         // file-level operator definitions remain visible globally. Operator
         // export control for nameSpaces can be added later.
         AstDefinitions *defs = definitions(parser, terminal);
         save = PROTECT(defs);
-        res = newAstNest(CPI(defs), defs, NULL);
+        ParserInfo PI = (defs != NULL) ? CPI(defs) : LEXPI(parser->lexer);
+        res = newAstNest(PI, defs, NULL);
     } else {
         AstExpressions *stmts = statements(parser, terminal);
         if (stmts == NULL) {
@@ -4223,7 +4225,8 @@ static AstExpression *expressionPrecedence(PrattParser *parser,
     PrattToken *tok = next(parser);
     int save = PROTECT(tok);
     if (tok->type == TOK_EOF()) {
-        cant_happen("unexpected end of file");
+        parserError(parser, "unexpected end of file");
+        return errorExpression(TOKPI(tok));
     }
     PrattRecord *record = fetchRecord(parser, tok->type);
     if (record == NULL) {

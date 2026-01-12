@@ -4,6 +4,7 @@ dep/
 generated/
 !docs/generated/
 junk/
+tmp/
 out_scm/
 tmp_scm/
 cekf

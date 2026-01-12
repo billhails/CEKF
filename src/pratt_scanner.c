@@ -1232,7 +1232,9 @@ bool consume(PrattParser *parser, HashSymbol *type) {
         foundKind = "token";
         foundLexeme = token->type->name;
     }
-    if (type == TOK_ATOM() && token->type != TOK_ATOM()) {
+    if (token->type == TOK_EOF()) {
+        parserError(parser, "unexpected EOF (expecting '%s')", expectedName);
+    } else if (type == TOK_ATOM() && token->type != TOK_ATOM()) {
         // Helpful hint: common case is trying to name a function with an
         // operator symbol
         parserError(parser, "expected '%s' found operator '%s'", expectedName,

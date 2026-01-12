@@ -151,6 +151,8 @@ s --> ep[/expressionPrecedence\] --> synchronize(synchronize) --> e
 resume parsing in the case of an error.
 `expression` calls `expressionPrecedence` with the lowest precedence (zero).
 
+N.B. `expression` is also used to parse the formal arguments of functions.
+
 * [expressionPrecedence](#expressionprecedence)
 
 ### assignment
@@ -595,7 +597,10 @@ directly because they are passing the associated precedence from the table (not 
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+    lhs([expression]) --> arrow["->"]
+end
+arrow --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -606,7 +611,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+assert
+end
+assert --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -617,7 +625,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+sy([symbol]) --> eq["="]
+end
+eq --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -628,7 +639,23 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+hash["#"]
+end
+hash --> s --> ep[/expressionPrecedence\] --> e
+```
+
+This looks like a mistake, but it may be because formal arguments are parsed as
+expressions then translated. However it does parse when it shouldn't:
+
+```text
+$ bin/fn -e 'let a = 2 in print #a'
+undefined variable # in command-line, line 1
+
+unification failed [type mismatch]
+unknown:# vs number -> #vczb
+while analyzing apply # (type: unknown:#) to a (type: number)
+in command-line, line 1
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -639,7 +666,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> open["("] --> test([expression]) --> close[")"]
+subgraph context
+if0["if"]
+end
+if0 --> s --> open["("] --> test([expression]) --> close[")"]
 --> cons([nest]) --> else["else"]
 else --> alt([nest]) --> e
 else --> if --> iff([iff]) --> e
@@ -655,7 +685,10 @@ else --> if --> iff([iff]) --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+error
+end
+error --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -666,8 +699,11 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
+subgraph context
+lcurly["{"]
+end
 body([childNest]) --> rcurly["}"]
-s --> body
+lcurly --> s --> body
 rcurly --> e
 ```
 
@@ -679,7 +715,10 @@ rcurly --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> te([taggedExpressions]) --> rcurly["}"] --> e
+subgraph context
+    sy([symbol]) --> lcurly["{"]
+end
+lcurly --> s --> te([taggedExpressions]) --> rcurly["}"] --> e
 ```
 
 * [taggedExpressions](#taggedexpressions)
@@ -690,7 +729,10 @@ s --> te([taggedExpressions]) --> rcurly["}"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> cons([consList]) --> e
+subgraph context
+lsq["["]
+end
+lsq --> s --> cons([consList]) --> e
 ```
 
 Slightly redundant but `consList` is recursive and takes fewer arguments
@@ -735,7 +777,10 @@ ep --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> error(error) --> e
+subgraph context
+macro
+end
+macro --> s --> error(error) --> e
 ```
 
 Explicit dissalow on creating macros as expressions.
@@ -746,7 +791,10 @@ Explicit dissalow on creating macros as expressions.
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep([expression]) --> close[")"] --> e
+subgraph context
+open["("]
+end
+open --> s --> ep([expression]) --> close[")"] --> e
 ```
 
 * [expression](#expression)
@@ -757,9 +805,13 @@ s --> ep([expression]) --> close[")"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> exps([expressions]) --> close[")"] --> e
+subgraph context
+ex([expression]) --> open["("]
+end
+open --> s --> exps([expressions]) --> close[")"] --> e
 ```
 
+* [expression](#expression)
 * [expressions](#expressions)
 
 ### lookUp
@@ -768,7 +820,10 @@ s --> exps([expressions]) --> close[")"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+sy([symbol]) --> dot["."]
+end
+dot --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -779,7 +834,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+print
+end
+print --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -790,7 +848,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> sfc([switchFC]) --> e
+subgraph context
+switch
+end
+switch --> s --> sfc([switchFC]) --> e
 ```
 
 Although this looks redundant, `switchFC` is shared with other parselets, and
@@ -817,7 +878,10 @@ s --> open["("] --> exprs([expressions]) --> close[")"]
 flowchart LR
 s(("●"))
 e(("●"))
-s --> exprs([expressions]) --> close[")"] --> e
+subgraph context
+tuple["#("]
+end
+tuple --> s --> exprs([expressions]) --> close[")"] --> e
 ```
 
 * [expressions](#expressions)
@@ -828,7 +892,10 @@ s --> exprs([expressions]) --> close[")"] --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> ep[/expressionPrecedence\] --> e
+subgraph context
+typeof
+end
+typeof --> s --> ep[/expressionPrecedence\] --> e
 ```
 
 * [expressionPrecedence](#expressionprecedence)
@@ -839,6 +906,10 @@ s --> ep[/expressionPrecedence\] --> e
 flowchart LR
 s(("●"))
 e(("●"))
+subgraph context
+unsafe
+end
+unsafe --> s
 s --> fn --> cf([compositeFunction]) --> e
 s --> switch --> sw([switchFC]) --> e
 ```
