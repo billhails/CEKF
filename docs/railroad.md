@@ -11,7 +11,10 @@ e(("●"))
 s --> nb([nestBody]) --> EOF --> e
 ```
 
-* [nestBody](#nestbody)
+Parses the top-level file as well as being called on linked namespaces.
+
+- **See Also**
+  - [nestBody](#nestbody)
 
 ### nest
 
@@ -25,7 +28,25 @@ close["}"]
 s --> open --> childNest --> close --> e
 ```
 
-* [childNest](#childnest)
+- **See Also**
+  - [childNest](#childnest)
+
+### childNest
+
+```mermaid
+flowchart LR
+s(("●"))
+e(("●"))
+subgraph child
+nb([nestBody])
+end
+s --> nb --> e
+```
+
+Create a child parser to parse the nest body, N.B. **not** used by `top`.
+
+- **See Also**
+  - [nestBody](#nestbody)
 
 ### nestBody
 
@@ -44,34 +65,22 @@ s --> namespace --> namespace_definitions --> e
 s --> statements --> e
 ```
 
-* [definitions](#definitions)
-* [statements](#statements)
+N.B. A file is parsed as a `nestBody`.
 
-### childNest
-
-```mermaid
-flowchart LR
-s(("●"))
-e(("●"))
-subgraph child
-nb([nestBody])
-end
-s --> nb --> e
-```
-
-Create a child parser to parse the nest body, N.B. **not** used by `top`.
-
-* [nestBody](#nestbody)
+- **See Also**
+  - [definitions](#definitions)
+  - [statements](#statements)
 
 ### definitions
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 definition([definition])
 semi[";"]
-definitions([definitions])
+definitions([definitions]):::rec
 s --> definition
 definition --> semi
 semi --> semi
@@ -81,18 +90,19 @@ definitions --> e
 s --> e
 ```
 
-* [definition](#definition)
-* [definitions](#definitions)
+- **See Also**
+  - [definition](#definition)
 
 ### statements
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 expression([expression])
 semi[";"]
-statements([statements])
+statements([statements]):::rec
 s --> expression
 expression --> semi
 semi --> semi
@@ -102,8 +112,8 @@ statements --> e
 s --> e
 ```
 
-* [expression](#expression)
-* [statements](#statements)
+- **See Also**
+  - [expression](#expression)
 
 ### definition
 
@@ -127,16 +137,17 @@ s --> operator --> op([operator]) --> e
 s --> else[[else]] --> error(error) --> e
 ```
 
-* [assignment](#assignment)
-* [multiDefinition](#multidefinition)
-* [typeDefinition](#typedefinition)
-* [defun](#defun)
-* [defMacro](#defmacro)
-* [link](#link)
-* [alias](#alias)
-* [importOp](#importop)
-* [exportOp](#exportop)
-* [operator](#operator)
+- **See Also**
+  - [assignment](#assignment)
+  - [multiDefinition](#multidefinition)
+  - [typeDefinition](#typedefinition)
+  - [defun](#defun)
+  - [defMacro](#defmacro)
+  - [link](#link)
+  - [alias](#alias)
+  - [importOp](#importop)
+  - [exportOp](#exportop)
+  - [operator](#operator)
 
 ### expression
 
@@ -153,7 +164,8 @@ resume parsing in the case of an error.
 
 N.B. `expression` is also used to parse the formal arguments of functions.
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### assignment
 
@@ -164,7 +176,8 @@ e(("●"))
 s --> symbol([symbol]) --> assign["="] --> expression([expression]) --> e
 ```
 
-* [expression](#expression)
+- **See Also**
+  - [expression](#expression)
 
 ### multiDefinition
 
@@ -175,11 +188,13 @@ e(("●"))
 s --> symbolList([symbolList]) --> assign["="] --> expression([expression]) --> e
 ```
 
+ Parses a tuple assignment `#(a, b) = #(b, a)` etc.
  The `#(` has already been consumed before entering this routine, and `symbolList`
  consumes the matching close `)`.
 
-* [symbolList](#symbollist)
-* [expression](#expression)
+- **See Also**
+  - [symbolList](#symbollist)
+  - [expression](#expression)
 
 ## Types
 
@@ -195,23 +210,25 @@ symbol --> lcurly
 lcurly --> typeBody([typeBody]) --> rcurly["}"] --> e
 ```
 
-* [typeVariables](#typevariables)
-* [typeBody](#typebody)
+- **See Also**
+  - [typeVariables](#typevariables)
+  - [typeBody](#typebody)
 
 ### typeVariables
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> tv([typeVariable])
 tv --> close[")"] --> e
 tv --> comma[","] --> close
-comma --> tvs([typeVariables]) --> e
+comma --> tvs([typeVariables]):::rec --> e
 ```
 
-* [typeVariable](#typevariable)
-* [typeVariables](#typevariables)
+- **See Also**
+  - [typeVariable](#typevariable)
 
 ### typeVariable
 
@@ -226,14 +243,15 @@ s --> hash["#"] --> symbol([symbol]) --> e
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> tc([typeConstructor]) --> e
-tc --> pipe["|"] --> tb([typeBody]) --> e
+tc --> pipe["|"] --> tb([typeBody]):::rec --> e
 ```
 
-* [typeConstructor](#typeconstructor)
-* [typeBody](#typebody)
+- **See Also**
+  - [typeConstructor](#typeconstructor)
 
 ### typeConstructor
 
@@ -246,39 +264,42 @@ symbol --> open["("] --> tl([typeList]) --> close[")"] --> e
 symbol --> lcurly["{"] --> tm([typeMap]) --> rcurly["}"] --> e
 ```
 
-* [typeList](#typelist)
-* [typeMap](#typemap)
+- **See Also**
+  - [typeList](#typelist)
+  - [typeMap](#typemap)
 
 ### typeList
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> tt([typeType])
 tt --> comma[","]
 comma --> e
-comma --> tl([typeList]) --> e
+comma --> tl([typeList]):::rec --> e
 tt --> e
 ```
 
-* [typeType](#typetype)
-* [typeList](#typelist)
+- **See Also**
+  - [typeType](#typetype)
 
 ### typeType
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
-s --> open["("] --> tt([typeType]) --> close[")"] --> e
+s --> open["("] --> tt([typeType]):::rec --> close[")"] --> e
 s --> tc([typeClause])
 tc --> e
-tc --> arrow["->"] --> tt2([typeType]) --> e
+tc --> arrow["->"] --> tt2([typeType]):::rec --> e
 ```
 
-* [typeClause](#typeclause)
-* [typeType](#typetype)
+- **See Also**
+  - [typeClause](#typeclause)
 
 ### typeClause
 
@@ -294,9 +315,10 @@ s --> tuple{"#("} --> tt([typeTuple]) --> e
 s --> else[[else]] --> error(error) --> e
 ```
 
-* [typeVariable](#typevariable)
-* [typeFunction](#typefunction)
-* [typeTuple](#typetuple)
+- **See Also**
+  - [typeVariable](#typevariable)
+  - [typeFunction](#typefunction)
+  - [typeTuple](#typetuple)
 
 ### typeFunction
 
@@ -309,23 +331,25 @@ ss --> e
 ss --> open["("] --> tl([typeList]) --> close[")"] --> e
 ```
 
-* [scopedSymbol](#scopedsymbol)
-* [typeList](#typelist)
+- **See Also**
+  - [scopedSymbol](#scopedsymbol)
+  - [typeList](#typelist)
 
 ### typeMap
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
-s --> symbol([symbol]) --> colon(":") --> tt([typeType])
+s --> symbol([symbol]) --> colon[":"] --> tt([typeType])
 tt --> comma[","]
-comma --> tm([typeMap]) --> e
+comma --> tm([typeMap]):::rec --> e
 comma --> e
 ```
 
-* [typeType](#typetype)
-* [typeMap](#typemap)
+- **See Also**
+  - [typeType](#typetype)
 
 ### typeTuple
 
@@ -336,7 +360,8 @@ e(("●"))
 s --> tuple["#("] --> typeList([typeList]) --> close[")"] --> e
 ```
 
-* [typeList](#typelist)
+- **See Also**
+  - [typeList](#typelist)
 
 ## Other Bits
 
@@ -363,7 +388,8 @@ s --> symbol([symbol]) --> cf([compositeFunction]) --> e
 The `fn` token has already been consumed. There is more going on here than is apparent in the diagram since
 the `defun` parser is being passed extra arguments regarding the type of definition (`unsafe` or `print` etc.)
 
-* [compositeFunction](#compositefunction)
+- **See Also**
+  - [compositeFunction](#compositefunction)
 
 ### compositeFunction
 
@@ -375,22 +401,24 @@ s --> lcurly["{"] --> functions([functions]) --> rcurly["}"] --> e
 s --> af([altFunction]) --> e
 ```
 
-* [functions](#functions)
-* [altFunction](#altfunction)
+- **See Also**
+  - [functions](#functions)
+  - [altFunction](#altfunction)
 
 ### functions
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> af([altFunction])
-af --> open{"("} --> fns([functions]) --> e
+af --> open{"("} --> fns([functions]):::rec --> e
 af --> e
 ```
 
-* [functions](#functions)
-* [altFunction](#altfunction)
+- **See Also**
+  - [altFunction](#altfunction)
 
 ### altFunction
 
@@ -401,22 +429,25 @@ e(("●"))
 s --> altArgs([altArgs]) --> nest([nest]) --> e
 ```
 
-* [altArgs](#altargs)
-* [nest](#nest)
+- **See Also**
+  - [altArgs](#altargs)
+  - [nest](#nest)
 
 ### altArgs
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> fargs([fargs])
-fargs --> pipe["|"] --> aa([altArgs]) --> e
+fargs --> pipe["|"] --> aa([altArgs]):::rec --> e
 fargs --> e
 ```
 
-* [fargs](#fargs)
-* [altArgs](#altargs)
+- **See Also**
+  - [fargs](#fargs)
+  - [altArgs](#altargs)
 
 ### fargs
 
@@ -427,7 +458,8 @@ e(("●"))
 s --> open["("] --> expressions([expressions]) --> close[")"] --> e
 ```
 
-* [expressions](#expressions)
+- **See Also**
+  - [expressions](#expressions)
 
 ### expressions
 
@@ -439,23 +471,25 @@ s --> ca([collectArguments]) --> e
 s --> e
 ```
 
-* [collectArguments](#collectarguments)
+- **See Also**
+  - [collectArguments](#collectarguments)
 
 ### collectArguments
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> ep([expression])
 ep --> comma[","]
 comma --> e
-comma --> ca([collectArguments]) --> e
+comma --> ca([collectArguments]):::rec --> e
 ep --> e
 ```
 
-* [collectArguments](#collectarguments)
-* [expression](#expression)
+- **See Also**
+  - [expression](#expression)
 
 ### defMacro
 
@@ -469,7 +503,8 @@ s --> symbol([symbol]) --> af([altFunction]) --> e
 The `macro` token has already been consumed.
 The `defMacro` parser only recognises a single `altFunction` (alternative function body of a composite function).
 
-* [altFunction](#altfunction)
+- **See Also**
+  - [altFunction](#altfunction)
 
 ### link
 
@@ -477,7 +512,7 @@ The `defMacro` parser only recognises a single `altFunction` (alternative functi
 flowchart LR
 s(("●"))
 e(("●"))
-s --> rawString([rawString]) --> as --> symbol([symbol]) --> e
+s --> STRING --> as --> symbol([symbol]) --> e
 ```
 
 ### alias
@@ -489,7 +524,8 @@ e(("●"))
 s --> symbol([symbol]) --> assign["="] --> typeType([typeType]) --> e
 ```
 
-* [typeType](#typetype)
+- **See Also**
+  - [typeType](#typetype)
 
 ### importOp
 
@@ -499,7 +535,7 @@ s(("●"))
 e(("●"))
 s --> symbol([symbol])
 symbol --> operators --> e
-symbol --> operator --> rs([rawString]) --> e
+symbol --> operator --> STRING --> e
 ```
 
 ### exportOp
@@ -509,10 +545,11 @@ flowchart LR
 s(("●"))
 e(("●"))
 s --> operators --> e
-s --> operator --> str([rawString]) --> owp([operatorWithPattern]) --> e
+s --> operator --> STRING --> owp([operatorWithPattern]) --> e
 ```
 
-* [operatorWithPattern](#operatorwithpattern)
+- **See Also**
+  - [operatorWithPattern](#operatorwithpattern)
 
 ### operator
 
@@ -520,10 +557,11 @@ s --> operator --> str([rawString]) --> owp([operatorWithPattern]) --> e
 flowchart LR
 s(("●"))
 e(("●"))
-s --> str([rawString]) --> owp([operatorWithPattern]) --> e
+s --> STRING --> owp([operatorWithPattern]) --> e
 ```
 
-* [operatorWithPattern](#operatorwithpattern)
+- **See Also**
+  - [operatorWithPattern](#operatorwithpattern)
 
 ### operatorWithPattern
 
@@ -534,23 +572,23 @@ e(("●"))
 s --> number[NUMBER] --> expr([expression]) --> e
 ```
 
-* [expression](#expression)
+- **See Also**
+  - [expression](#expression)
 
 ### symbolList
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> close[")"] --> e
 s --> ATOM
-ATOM --> comma[","] --> sl([symbolList]) --> e
+ATOM --> comma[","] --> sl([symbolList]):::rec --> e
 ATOM --> close
 ```
 
 The opening `(`  or `#(` has already been consumed.
-
-* [symbolList](#symbollist)
 
 ## expressionPrecedence
 
@@ -603,7 +641,8 @@ end
 arrow --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### pAssert
 
@@ -617,7 +656,8 @@ end
 assert --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### exprAlias
 
@@ -631,7 +671,8 @@ end
 eq --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### doPrefix
 
@@ -658,12 +699,14 @@ while analyzing apply # (type: unknown:#) to a (type: number)
 in command-line, line 1
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### iff
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 subgraph context
@@ -672,12 +715,12 @@ end
 if0 --> s --> open["("] --> test([expression]) --> close[")"]
 --> cons([nest]) --> else["else"]
 else --> alt([nest]) --> e
-else --> if --> iff([iff]) --> e
+else --> if --> iff([iff]):::rec --> e
 ```
 
-* [expression](#expression)
-* [nest](#nest)
-* [iff](#iff)
+- **See Also**
+  - [expression](#expression)
+  - [nest](#nest)
 
 ### error
 
@@ -691,7 +734,8 @@ end
 error --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### nestExpr
 
@@ -707,7 +751,8 @@ lcurly --> s --> body
 rcurly --> e
 ```
 
-* [childNest](#childnest)
+- **See Also**
+  - [childNest](#childnest)
 
 ### makeStruct
 
@@ -721,7 +766,8 @@ end
 lcurly --> s --> te([taggedExpressions]) --> rcurly["}"] --> e
 ```
 
-* [taggedExpressions](#taggedexpressions)
+- **See Also**
+  - [taggedExpressions](#taggedexpressions)
 
 ### list
 
@@ -738,38 +784,41 @@ lsq --> s --> cons([consList]) --> e
 Slightly redundant but `consList` is recursive and takes fewer arguments
 than the `list` parselet.
 
-* [consList](#conslist)
+- **See Also**
+  - [consList](#conslist)
 
 ### consList
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> rsq["]"] --> e
 s --> expr([expression])
-expr --> comma[","] --> cl([consList]) --> e
+expr --> comma[","] --> cl([consList]):::rec --> e
 expr --> rsq
 ```
 
-* [expression](#expression)
-* [consList](#conslist)
+- **See Also**
+  - [expression](#expression)
 
 ### taggedExpressions
 
 ```mermaid
 flowchart LR
+classDef rec stroke-width:3px;
 s(("●"))
 e(("●"))
 s --> symbol([symbol]) --> colon[":"] --> ep([expression])
 ep --> comma[","]
 comma --> e
-comma --> te([taggedExpressions]) --> e
+comma --> te([taggedExpressions]):::rec --> e
 ep --> e
 ```
 
-* [expression](#expression)
-* [taggedExpressions](#taggedexpressions)
+- **See Also**
+  - [expression](#expression)
 
 ### macro
 
@@ -797,7 +846,8 @@ end
 open --> s --> ep([expression]) --> close[")"] --> e
 ```
 
-* [expression](#expression)
+- **See Also**
+  - [expression](#expression)
 
 ### call
 
@@ -811,8 +861,9 @@ end
 open --> s --> exps([expressions]) --> close[")"] --> e
 ```
 
-* [expression](#expression)
-* [expressions](#expressions)
+- **See Also**
+  - [expression](#expression)
+  - [expressions](#expressions)
 
 ### lookUp
 
@@ -826,7 +877,8 @@ end
 dot --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### print
 
@@ -840,7 +892,8 @@ end
 print --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### switchExp
 
@@ -857,7 +910,8 @@ switch --> s --> sfc([switchFC]) --> e
 Although this looks redundant, `switchFC` is shared with other parselets, and
 `switchExp` wraps the result in a different type.
 
-* [switchFC](#switchfc)
+- **See Also**
+  - [switchFC](#switchfc)
 
 ### switchFC
 
@@ -869,8 +923,9 @@ s --> open["("] --> exprs([expressions]) --> close[")"]
 --> cf([compositeFunction]) --> e
 ```
 
-* [expressions](#expressions)
-* [compositeFunction](#compositefunction)
+- **See Also**
+  - [expressions](#expressions)
+  - [compositeFunction](#compositefunction)
 
 ### tuple
 
@@ -884,7 +939,8 @@ end
 tuple --> s --> exprs([expressions]) --> close[")"] --> e
 ```
 
-* [expressions](#expressions)
+- **See Also**
+  - [expressions](#expressions)
 
 ### typeOfExp
 
@@ -898,7 +954,8 @@ end
 typeof --> s --> ep[/expressionPrecedence\] --> e
 ```
 
-* [expressionPrecedence](#expressionprecedence)
+- **See Also**
+  - [expressionPrecedence](#expressionprecedence)
 
 ### unsafe
 
@@ -914,5 +971,6 @@ s --> fn --> cf([compositeFunction]) --> e
 s --> switch --> sw([switchFC]) --> e
 ```
 
-* [compositeFunction](#compositefunction)
-* [switchFC](#switchfc)
+- **See Also**
+  - [compositeFunction](#compositefunction)
+  - [switchFC](#switchfc)
