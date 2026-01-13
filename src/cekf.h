@@ -1,5 +1,5 @@
 #ifndef cekf_cekf_h
-#  define cekf_cekf_h
+#define cekf_cekf_h
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2023  Bill Hails
@@ -22,16 +22,16 @@
  * The structures of the CEKF machine.
  */
 
-#  include <stdbool.h>
-#  include <stddef.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-#  include "bytecode.h"
-#  include "common.h"
-#  include "anf.h"
-#  include "memory.h"
-#  include "value.h"
-#  include "types.h"
-#  include "cekfs.h"
+#include "anf.h"
+#include "bytecode.h"
+#include "cekfs.h"
+#include "common.h"
+#include "memory.h"
+#include "types.h"
+#include "value.h"
 
 Vec *snapshotNameSpace(Stack *s);
 void restoreNameSpace(Stack *s, Vec *vl);
@@ -43,9 +43,9 @@ void restoreKont(Stack *stack, struct Kont *source);
 void restoreFail(Stack *stack, struct Fail *source);
 void copyTosToEnv(Env *e, Stack *s, int n);
 void copyValues(Value *to, Value *from, int size);
-#  ifdef SAFETY_CHECKS
+#ifdef SAFETY_CHECKS
 void reportKonts(void);
-#  endif
+#endif
 
 void copyTosToVec(Vec *vec, Stack *s);
 void pushN(Stack *stack, int n);
@@ -65,8 +65,8 @@ void dumpStack(Stack *stack);
 void dumpFrame(Frame *frame);
 #endif
 
-CharacterArray *listToCharArray(Value list);
-Value charArrayToList(CharacterArray *c);
+CharVec *listToUtf8(Value v);
+Value utf8ToList(const char *utf8);
 Value makeNull(void);
 Value makePair(Value car, Value cdr);
 

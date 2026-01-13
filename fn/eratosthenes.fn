@@ -1,0 +1,12 @@
+let
+    link "listutils.fn" as list;
+    import list operators;
+
+    fn sieve {
+        (h @ t) {
+            h @ sieve(t |? fn (x) { x % h != 0 })
+        }
+        ([]) { [] }
+    }
+in
+    print sieve (2::1000)

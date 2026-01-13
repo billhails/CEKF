@@ -16,25 +16,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  * ANF Normalization - Continuation-Passing Style Implementation
- * 
+ *
  * This is a rewrite of anf_normalize.c using continuation scaffolding
  * generated from tools/anf_continuations.yaml. The old implementation
  * remains untouched for reference.
- * 
+ *
  * The rationale for this rewrite is that although mimicking continuations
  * in C is somewhat cumbersome, it allows the algorithm to be written
  * in a form that closely matches the original scheme specification. This
  * makes it much easier to verify, maintain and extend.
- * 
+ *
  * See the proposals in the docs folder: ANF-REWRITE.md and ANF-KONT.md
  */
 
-#include <stdio.h>
+#include "anf_kont.h"
 #include "common.h"
 #include "lambda.h"
 #include "lambda_pp.h"
-#include "anf_kont.h"
 #include "symbol.h"
+#include <stdio.h>
 
 // Include generated continuation scaffolding (all static)
 #include "anf_kont_impl.inc"
@@ -42,12 +42,12 @@
 // #define DEBUG_ANF2
 
 #ifdef DEBUG_ANF2
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
-static ParserInfo NULLPI = (ParserInfo) {.lineNo = 0, .fileName = ""};
+static ParserInfo NULLPI = (ParserInfo){.lineNo = 0, .fileName = ""};
 
 static LamExp *normalize(LamExp *exp, AnfKont *k);
 
@@ -65,18 +65,18 @@ static LamExp *makeSingleLet(HashSymbol *y, LamExp *e, LamExp *body) {
 
 static bool isValueExp(LamExp *exp) {
     switch (exp->type) {
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_BIGINTEGER:
-        case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_CONSTANT:
-        case LAMEXP_TYPE_CONSTRUCTOR:
-        case LAMEXP_TYPE_ENV:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_STDINT:
-        case LAMEXP_TYPE_VAR:
-            return true;
-        default:
-            return false;
+    case LAMEXP_TYPE_BACK:
+    case LAMEXP_TYPE_BIGINTEGER:
+    case LAMEXP_TYPE_CHARACTER:
+    case LAMEXP_TYPE_CONSTANT:
+    case LAMEXP_TYPE_CONSTRUCTOR:
+    case LAMEXP_TYPE_ENV:
+    case LAMEXP_TYPE_ERROR:
+    case LAMEXP_TYPE_STDINT:
+    case LAMEXP_TYPE_VAR:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -93,7 +93,8 @@ static LamExp *normalize_term(LamExp *e) {
     return result;
 }
 
-static LamExp *normalizeTermKont(LamExp *exp, NormalizeTermKontEnv *k __attribute__((unused))) {
+static LamExp *normalizeTermKont(LamExp *exp, NormalizeTermKontEnv *k
+                                 __attribute__((unused))) {
     return exp;
 }
 
@@ -138,7 +139,7 @@ static LamExp *normalizeNameKont(LamExp *x, NormalizeNameKontEnv *env) {
 static LamExp *normalize_names(LamArgs *Ms, AnfKont *k) {
     ENTER(normalize_names);
     if (Ms == NULL) {
-        LamExp *nullArgs = newLamExp_Args(NULLPI,  NULL);
+        LamExp *nullArgs = newLamExp_Args(NULLPI, NULL);
         int save = PROTECT(nullArgs);
         LamExp *result = INVOKE(k, nullArgs);
         UNPROTECT(save);
@@ -153,7 +154,8 @@ static LamExp *normalize_names(LamArgs *Ms, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeNamesOuterKont(LamExp *t, NormalizeNamesOuterKontEnv *env) {
+static LamExp *normalizeNamesOuterKont(LamExp *t,
+                                       NormalizeNamesOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizeNamesInner(t, env->k);
     int save = PROTECT(k2);
     LamExp *result = normalize_names(env->Ms->next, k2);
@@ -161,7 +163,8 @@ static LamExp *normalizeNamesOuterKont(LamExp *t, NormalizeNamesOuterKontEnv *en
     return result;
 }
 
-static LamExp *normalizeNamesInnerKont(LamExp *ts, NormalizeNamesInnerKontEnv *env) {
+static LamExp *normalizeNamesInnerKont(LamExp *ts,
+                                       NormalizeNamesInnerKontEnv *env) {
     LamExp *newArgs = makeLamExp_Args(CPI(env->t), env->t, getLamExp_Args(ts));
     int save = PROTECT(newArgs);
     LamExp *result = INVOKE(env->k, newArgs);
@@ -179,7 +182,8 @@ static LamExp *normalizeNamesInnerKont(LamExp *ts, NormalizeNamesInnerKontEnv *e
 static LamExp *normalize_Iff(LamExp *exp, AnfKont *k) {
     ENTER(normalize_Iff);
     LamIff *iff = getLamExp_Iff(exp);
-    AnfKont *iffKont = makeKont_normalizeIff(k, iff->consequent, iff->alternative);
+    AnfKont *iffKont =
+        makeKont_normalizeIff(k, iff->consequent, iff->alternative);
     int save = PROTECT(iffKont);
     LamExp *result = normalize_name(iff->condition, iffKont);
     UNPROTECT(save);
@@ -215,7 +219,8 @@ static LamExp *normalize_Apply(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeApplyOuterKont(LamExp *t, NormalizeApplyOuterKontEnv *env) {
+static LamExp *normalizeApplyOuterKont(LamExp *t,
+                                       NormalizeApplyOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizeApplyInner(t, env->k);
     int save = PROTECT(k2);
     LamExp *result = normalize_names(env->Ms, k2);
@@ -223,8 +228,10 @@ static LamExp *normalizeApplyOuterKont(LamExp *t, NormalizeApplyOuterKontEnv *en
     return result;
 }
 
-static LamExp *normalizeApplyInnerKont(LamExp *ts, NormalizeApplyInnerKontEnv *env) {
-    LamExp *newApply = makeLamExp_Apply(CPI(env->t), env->t, getLamExp_Args(ts));
+static LamExp *normalizeApplyInnerKont(LamExp *ts,
+                                       NormalizeApplyInnerKontEnv *env) {
+    LamExp *newApply =
+        makeLamExp_Apply(CPI(env->t), env->t, getLamExp_Args(ts));
     int save = PROTECT(newApply);
     LamExp *result = INVOKE(env->k, newApply);
     UNPROTECT(save);
@@ -252,7 +259,8 @@ static LamExp *normalize_bindings(LamBindings *bindings, AnfKont *k) {
         LEAVE(normalize_bindings);
         return result;
     }
-    AnfKont *bindingsKont = makeKont_normalizeBindingsOuter(bindings->var, bindings->next, k);
+    AnfKont *bindingsKont =
+        makeKont_normalizeBindingsOuter(bindings->var, bindings->next, k);
     int save = PROTECT(bindingsKont);
     LamExp *result = normalize(bindings->val, bindingsKont);
     UNPROTECT(save);
@@ -260,7 +268,8 @@ static LamExp *normalize_bindings(LamBindings *bindings, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeBindingsOuterKont(LamExp *anfVal, NormalizeBindingsOuterKontEnv *env) {
+static LamExp *normalizeBindingsOuterKont(LamExp *anfVal,
+                                          NormalizeBindingsOuterKontEnv *env) {
     AnfKont *k = makeKont_normalizeBindingsInner(env->x, anfVal, env->k);
     int save = PROTECT(k);
     LamExp *result = normalize_bindings(env->rest, k);
@@ -268,9 +277,11 @@ static LamExp *normalizeBindingsOuterKont(LamExp *anfVal, NormalizeBindingsOuter
     return result;
 }
 
-static LamExp *normalizeBindingsInnerKont(LamExp *anfrest, NormalizeBindingsInnerKontEnv *env) {
+static LamExp *normalizeBindingsInnerKont(LamExp *anfrest,
+                                          NormalizeBindingsInnerKontEnv *env) {
     LamBindings *rest = getLamExp_Bindings(anfrest);
-    LamExp *bindingsExp = makeLamExp_Bindings(CPI(env->anfVal), env->x, env->anfVal, rest);
+    LamExp *bindingsExp =
+        makeLamExp_Bindings(CPI(env->anfVal), env->x, env->anfVal, rest);
     int save = PROTECT(bindingsExp);
     LamExp *result = INVOKE(env->k, bindingsExp);
     UNPROTECT(save);
@@ -294,10 +305,12 @@ static LamExp *normalize_LetRec(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeLetRecKont(LamExp *anfbindings, NormalizeLetRecKontEnv *env) {
+static LamExp *normalizeLetRecKont(LamExp *anfbindings,
+                                   NormalizeLetRecKontEnv *env) {
     LamExp *body = normalize(env->body, env->k);
     int save = PROTECT(body);
-    LamExp *result = makeLamExp_LetRec(CPI(env->body), getLamExp_Bindings(anfbindings), body);
+    LamExp *result = makeLamExp_LetRec(CPI(env->body),
+                                       getLamExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -321,7 +334,8 @@ static LamExp *normalize_Let(LamExp *exp, AnfKont *k) {
 static LamExp *normalizeLetKont(LamExp *anfbindings, NormalizeLetKontEnv *env) {
     LamExp *body = normalize(env->body, env->k);
     int save = PROTECT(body);
-    LamExp *result = makeLamExp_Let(CPI(env->body), getLamExp_Bindings(anfbindings), body);
+    LamExp *result =
+        makeLamExp_Let(CPI(env->body), getLamExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -333,7 +347,8 @@ static LamExp *normalizeLetKont(LamExp *anfbindings, NormalizeLetKontEnv *env) {
 static LamExp *normalize_Construct(LamExp *exp, AnfKont *k) {
     ENTER(normalize_Construct);
     LamConstruct *construct = getLamExp_Construct(exp);
-    AnfKont *k1 = makeKont_normalizeConstruct(construct->name, construct->tag, k);
+    AnfKont *k1 =
+        makeKont_normalizeConstruct(construct->name, construct->tag, k);
     int save = PROTECT(k1);
     LamExp *result = normalize_names(construct->args, k1);
     UNPROTECT(save);
@@ -341,9 +356,11 @@ static LamExp *normalize_Construct(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeConstructKont(LamExp *ets, NormalizeConstructKontEnv *env) {
+static LamExp *normalizeConstructKont(LamExp *ets,
+                                      NormalizeConstructKontEnv *env) {
     LamArgs *ts = getLamExp_Args(ets);
-    LamExp *newConstruct = makeLamExp_Construct(CPI(ets), env->name, env->tag, ts);
+    LamExp *newConstruct =
+        makeLamExp_Construct(CPI(ets), env->name, env->tag, ts);
     int save = PROTECT(newConstruct);
     LamExp *result = INVOKE(env->k, newConstruct);
     UNPROTECT(save);
@@ -365,7 +382,8 @@ static LamExp *normalize_MakeTuple(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeMakeTupleKont(LamExp *ts, NormalizeMakeTupleKontEnv *env) {
+static LamExp *normalizeMakeTupleKont(LamExp *ts,
+                                      NormalizeMakeTupleKontEnv *env) {
     LamArgs *tts = getLamExp_Args(ts);
     LamExp *newMakeTuple = newLamExp_MakeTuple(CPI(ts), tts);
     int save = PROTECT(newMakeTuple);
@@ -405,7 +423,8 @@ static LamExp *normalizeMakeVecKont(LamExp *ts, NormalizeMakeVecKontEnv *env) {
 static LamExp *normalize_Deconstruct(LamExp *exp, AnfKont *k) {
     ENTER(normalize_Deconstruct);
     LamDeconstruct *deconstruct = getLamExp_Deconstruct(exp);
-    AnfKont *k2 = makeKont_normalizeDeconstruct(deconstruct->name, deconstruct->nsId, deconstruct->vec, k);
+    AnfKont *k2 = makeKont_normalizeDeconstruct(
+        deconstruct->name, deconstruct->nsId, deconstruct->vec, k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(deconstruct->exp, k2);
     UNPROTECT(save);
@@ -413,8 +432,10 @@ static LamExp *normalize_Deconstruct(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeDeconstructKont(LamExp *t, NormalizeDeconstructKontEnv *env) {
-    LamExp *newDeconstruct = makeLamExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
+static LamExp *normalizeDeconstructKont(LamExp *t,
+                                        NormalizeDeconstructKontEnv *env) {
+    LamExp *newDeconstruct =
+        makeLamExp_Deconstruct(CPI(t), env->name, env->nsId, env->vec, t);
     int save = PROTECT(newDeconstruct);
     LamExp *result = INVOKE(env->k, newDeconstruct);
     UNPROTECT(save);
@@ -444,7 +465,8 @@ static LamCharCondCases *normalize_char_cases(LamCharCondCases *cases) {
     int save = PROTECT(rest);
     LamExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamCharCondCases *newCases = newLamCharCondCases(CPI(cases), cases->constant, newExp, rest);
+    LamCharCondCases *newCases =
+        newLamCharCondCases(CPI(cases), cases->constant, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
@@ -457,7 +479,8 @@ static LamIntCondCases *normalize_int_cases(LamIntCondCases *cases) {
     int save = PROTECT(rest);
     LamExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamIntCondCases *newCases = newLamIntCondCases(CPI(cases), cases->constant, newExp, rest);
+    LamIntCondCases *newCases =
+        newLamIntCondCases(CPI(cases), cases->constant, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
@@ -467,22 +490,25 @@ static LamCondCases *normalize_cases(LamCondCases *cases) {
         return NULL;
     }
     switch (cases->type) {
-        case LAMCONDCASES_TYPE_CHARACTERS: {
-            LamCharCondCases *ccases = normalize_char_cases(getLamCondCases_Characters(cases));
-            int save = PROTECT(ccases);
-            LamCondCases *newCases = newLamCondCases_Characters(CPI(cases), ccases);
-            UNPROTECT(save);
-            return newCases;
-        }
-        case LAMCONDCASES_TYPE_INTEGERS: {
-            LamIntCondCases *icases = normalize_int_cases(getLamCondCases_Integers(cases));
-            int save = PROTECT(icases);
-            LamCondCases *newCases = newLamCondCases_Integers(CPI(cases), icases);
-            UNPROTECT(save);
-            return newCases;
-        }
-        default:
-            cant_happen("normalize_cases: unhandled LamCondCases type %s", lamCondCasesTypeName(cases->type));
+    case LAMCONDCASES_TYPE_CHARACTERS: {
+        LamCharCondCases *ccases =
+            normalize_char_cases(getLamCondCases_Characters(cases));
+        int save = PROTECT(ccases);
+        LamCondCases *newCases = newLamCondCases_Characters(CPI(cases), ccases);
+        UNPROTECT(save);
+        return newCases;
+    }
+    case LAMCONDCASES_TYPE_INTEGERS: {
+        LamIntCondCases *icases =
+            normalize_int_cases(getLamCondCases_Integers(cases));
+        int save = PROTECT(icases);
+        LamCondCases *newCases = newLamCondCases_Integers(CPI(cases), icases);
+        UNPROTECT(save);
+        return newCases;
+    }
+    default:
+        cant_happen("normalize_cases: unhandled LamCondCases type %s",
+                    lamCondCasesTypeName(cases->type));
     }
 }
 
@@ -521,7 +547,8 @@ static LamMatchList *normalize_match_cases(LamMatchList *cases) {
     int save = PROTECT(rest);
     LamExp *newExp = normalize_term(cases->body);
     PROTECT(newExp);
-    LamMatchList *newCases = newLamMatchList(CPI(cases), cases->matches, newExp, rest);
+    LamMatchList *newCases =
+        newLamMatchList(CPI(cases), cases->matches, newExp, rest);
     UNPROTECT(save);
     return newCases;
 }
@@ -546,7 +573,8 @@ static LamExp *normalizeMatchKont(LamExp *t, NormalizeMatchKontEnv *env) {
 static LamExp *normalize_PrimApp(LamExp *exp, AnfKont *k) {
     ENTER(normalize_PrimApp);
     LamPrimApp *primApp = getLamExp_Prim(exp);
-    AnfKont *k1 = makeKont_normalizePrimappOuter(primApp->type, primApp->exp2, k);
+    AnfKont *k1 =
+        makeKont_normalizePrimappOuter(primApp->type, primApp->exp2, k);
     int save = PROTECT(k1);
     LamExp *result = normalize_name(primApp->exp1, k1);
     UNPROTECT(save);
@@ -554,7 +582,8 @@ static LamExp *normalize_PrimApp(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizePrimappOuterKont(LamExp *anfE0, NormalizePrimappOuterKontEnv *env) {
+static LamExp *normalizePrimappOuterKont(LamExp *anfE0,
+                                         NormalizePrimappOuterKontEnv *env) {
     AnfKont *k2 = makeKont_normalizePrimappInner(env->type, anfE0, env->k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(env->e2, k2);
@@ -562,8 +591,10 @@ static LamExp *normalizePrimappOuterKont(LamExp *anfE0, NormalizePrimappOuterKon
     return result;
 }
 
-static LamExp *normalizePrimappInnerKont(LamExp *anfE2, NormalizePrimappInnerKontEnv *env) {
-    LamExp *newPrimApp = makeLamExp_Prim(CPI(anfE2), env->type, env->anfE1, anfE2);
+static LamExp *normalizePrimappInnerKont(LamExp *anfE2,
+                                         NormalizePrimappInnerKontEnv *env) {
+    LamExp *newPrimApp =
+        makeLamExp_Prim(CPI(anfE2), env->type, env->anfE1, anfE2);
     int save = PROTECT(newPrimApp);
     LamExp *result = INVOKE(env->k, newPrimApp);
     UNPROTECT(save);
@@ -623,7 +654,8 @@ static LamExp *normalizeTypeOfKont(LamExp *anfE0, NormalizeTypeOfKontEnv *env) {
 static LamExp *normalize_TupleIndex(LamExp *exp, AnfKont *k) {
     ENTER(normalize_TupleIndex);
     LamTupleIndex *tupleIndexExp = getLamExp_TupleIndex(exp);
-    AnfKont *k2 = makeKont_normalizeTupleIndex(tupleIndexExp->vec, tupleIndexExp->size, k);
+    AnfKont *k2 = makeKont_normalizeTupleIndex(tupleIndexExp->vec,
+                                               tupleIndexExp->size, k);
     int save = PROTECT(k2);
     LamExp *result = normalize_name(tupleIndexExp->exp, k2);
     UNPROTECT(save);
@@ -631,8 +663,10 @@ static LamExp *normalize_TupleIndex(LamExp *exp, AnfKont *k) {
     return result;
 }
 
-static LamExp *normalizeTupleIndexKont(LamExp *t0, NormalizeTupleIndexKontEnv *env) {
-    LamExp *newTupleIndex = makeLamExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
+static LamExp *normalizeTupleIndexKont(LamExp *t0,
+                                       NormalizeTupleIndexKontEnv *env) {
+    LamExp *newTupleIndex =
+        makeLamExp_TupleIndex(CPI(t0), env->vec, env->size, t0);
     int save = PROTECT(newTupleIndex);
     LamExp *result = INVOKE(env->k, newTupleIndex);
     UNPROTECT(save);
@@ -706,7 +740,8 @@ static LamExp *normalize_LookUp(LamExp *exp, AnfKont *k) {
     LamLookUp *lookUpExp = getLamExp_LookUp(exp);
     LamExp *newExpr = normalize_term(lookUpExp->exp);
     int save = PROTECT(newExpr);
-    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsId, lookUpExp->nsSymbol, newExpr);
+    LamExp *newLookUp = makeLamExp_LookUp(CPI(exp), lookUpExp->nsId,
+                                          lookUpExp->nsSymbol, newExpr);
     PROTECT(newLookUp);
     LamExp *result = INVOKE(k, newLookUp);
     UNPROTECT(save);
@@ -736,7 +771,8 @@ static LamExp *normalize_NameSpaces(LamExp *exp, AnfKont *k) {
     int save = PROTECT(nsExp);
     LamExp *newNsExp = newLamExp_NameSpaces(CPI(exp), nsExp);
     PROTECT(newNsExp);
-    LamExp *result = INVOKE(k, newNsExp);;
+    LamExp *result = INVOKE(k, newNsExp);
+    ;
     UNPROTECT(save);
     LEAVE(normalize_NameSpaces);
     return result;
@@ -783,7 +819,8 @@ static LamExp *normalize_Sequence(LamExp *exp, AnfKont *k) {
 }
 
 static LamSequence *_normalizeSquence(LamSequence *seq) {
-    if (seq == NULL) return NULL;
+    if (seq == NULL)
+        return NULL;
     LamSequence *rest = _normalizeSquence(seq->next);
     int save = PROTECT(rest);
     LamExp *newExp = normalize_term(seq->exp);
@@ -801,7 +838,8 @@ static LamExp *normalize_TypeDefs(LamExp *exp, AnfKont *k) {
     LamTypeDefs *typeDefsExp = getLamExp_TypeDefs(exp);
     LamExp *newBody = normalize_term(typeDefsExp->body);
     int save = PROTECT(newBody);
-    LamExp *newTypeDefs = makeLamExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
+    LamExp *newTypeDefs =
+        makeLamExp_TypeDefs(CPI(exp), typeDefsExp->typeDefs, newBody);
     PROTECT(newTypeDefs);
     LamExp *result = INVOKE(k, newTypeDefs);
     UNPROTECT(save);
@@ -822,74 +860,75 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
         res = INVOKE(k, exp);
     } else {
         switch (exp->type) {
-            case LAMEXP_TYPE_AMB:
-                res = normalize_Amb(exp, k);
-                break;
-            case LAMEXP_TYPE_APPLY:
-                res = normalize_Apply(exp, k);
-                break;
-            case LAMEXP_TYPE_CALLCC:
-                res = normalize_CallCC(exp, k);
-                break;
-            case LAMEXP_TYPE_COND:
-                res = normalize_Cond(exp, k);
-                break;
-            case LAMEXP_TYPE_CONSTRUCT:
-                res = normalize_Construct(exp, k);
-                break;
-            case LAMEXP_TYPE_DECONSTRUCT:
-                res = normalize_Deconstruct(exp, k);
-                break;
-            case LAMEXP_TYPE_IFF:
-                res = normalize_Iff(exp, k);
-                break;
-            case LAMEXP_TYPE_LAM:
-                res = normalize_Lam(exp, k);
-                break;
-            case LAMEXP_TYPE_LETREC:
-                res = normalize_LetRec(exp, k);
-                break;
-            case LAMEXP_TYPE_LET:
-                res = normalize_Let(exp, k);
-                break;
-            case LAMEXP_TYPE_LOOKUP:
-                res = normalize_LookUp(exp, k);
-                break;
-            case LAMEXP_TYPE_MAKETUPLE:
-                res = normalize_MakeTuple(exp, k);
-                break;
-            case LAMEXP_TYPE_MAKEVEC:
-                res = normalize_MakeVec(exp, k);
-                break;
-            case LAMEXP_TYPE_MATCH:
-                res = normalize_Match(exp, k);
-                break;
-            case LAMEXP_TYPE_NAMESPACES:
-                res = normalize_NameSpaces(exp, k);
-                break;
-            case LAMEXP_TYPE_PRIM:
-                res = normalize_PrimApp(exp, k);
-                break;
-            case LAMEXP_TYPE_PRINT:
-                res = normalize_Print(exp, k);
-                break;
-            case LAMEXP_TYPE_SEQUENCE:
-                res = normalize_Sequence(exp, k);
-                break;
-            case LAMEXP_TYPE_TAG:
-                res = normalize_Tag(exp, k);
-                break;
-            case LAMEXP_TYPE_TUPLEINDEX:
-                res = normalize_TupleIndex(exp, k);
-                break;
-            case LAMEXP_TYPE_TYPEDEFS:
-                res = normalize_TypeDefs(exp, k);
-                break;
-            case LAMEXP_TYPE_TYPEOF:
-                res = normalize_TypeOf(exp, k);
-                break;
-            default:
-                cant_happen("normalize: unhandled LamExp type %s", lamExpTypeName(exp->type));
+        case LAMEXP_TYPE_AMB:
+            res = normalize_Amb(exp, k);
+            break;
+        case LAMEXP_TYPE_APPLY:
+            res = normalize_Apply(exp, k);
+            break;
+        case LAMEXP_TYPE_CALLCC:
+            res = normalize_CallCC(exp, k);
+            break;
+        case LAMEXP_TYPE_COND:
+            res = normalize_Cond(exp, k);
+            break;
+        case LAMEXP_TYPE_CONSTRUCT:
+            res = normalize_Construct(exp, k);
+            break;
+        case LAMEXP_TYPE_DECONSTRUCT:
+            res = normalize_Deconstruct(exp, k);
+            break;
+        case LAMEXP_TYPE_IFF:
+            res = normalize_Iff(exp, k);
+            break;
+        case LAMEXP_TYPE_LAM:
+            res = normalize_Lam(exp, k);
+            break;
+        case LAMEXP_TYPE_LETREC:
+            res = normalize_LetRec(exp, k);
+            break;
+        case LAMEXP_TYPE_LET:
+            res = normalize_Let(exp, k);
+            break;
+        case LAMEXP_TYPE_LOOKUP:
+            res = normalize_LookUp(exp, k);
+            break;
+        case LAMEXP_TYPE_MAKETUPLE:
+            res = normalize_MakeTuple(exp, k);
+            break;
+        case LAMEXP_TYPE_MAKEVEC:
+            res = normalize_MakeVec(exp, k);
+            break;
+        case LAMEXP_TYPE_MATCH:
+            res = normalize_Match(exp, k);
+            break;
+        case LAMEXP_TYPE_NAMESPACES:
+            res = normalize_NameSpaces(exp, k);
+            break;
+        case LAMEXP_TYPE_PRIM:
+            res = normalize_PrimApp(exp, k);
+            break;
+        case LAMEXP_TYPE_PRINT:
+            res = normalize_Print(exp, k);
+            break;
+        case LAMEXP_TYPE_SEQUENCE:
+            res = normalize_Sequence(exp, k);
+            break;
+        case LAMEXP_TYPE_TAG:
+            res = normalize_Tag(exp, k);
+            break;
+        case LAMEXP_TYPE_TUPLEINDEX:
+            res = normalize_TupleIndex(exp, k);
+            break;
+        case LAMEXP_TYPE_TYPEDEFS:
+            res = normalize_TypeDefs(exp, k);
+            break;
+        case LAMEXP_TYPE_TYPEOF:
+            res = normalize_TypeOf(exp, k);
+            break;
+        default:
+            cant_happen("normalize: unhandled LamExp type %s",
+                        lamExpTypeName(exp->type));
         }
     }
     LEAVE(normalize);
@@ -899,6 +938,4 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
 /**
  * Public entry point.
  */
-LamExp *anfNormalize2(LamExp *exp) {
-    return normalize_term(exp);
-}
+LamExp *anfNormalize2(LamExp *exp) { return normalize_term(exp); }

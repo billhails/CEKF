@@ -21,7 +21,7 @@ textfile input and HashSymbol output. Everything else within the parser should b
 1. **Update primitives.yaml**
    - Add a new primitive type `wstring` for wide character strings: `wchar_t *`
    - Define appropriate printf format (likely `%ls` for wide strings)
-2. **Update pratt.yaml**
+1. **Update pratt.yaml**
    - Change `PrattBuffer.data` from `ustring` (`unsigned char *`) to `wstring` (`wchar_t *`)
    - Change `PrattBuffer.start` from `ustring` to `wstring`
    - Change `PrattTrie.character` from `byte` to `wchar_t`
@@ -33,7 +33,7 @@ textfile input and HashSymbol output. Everything else within the parser should b
 
 ### Phase 2: Buffer Initialization and File Reading
 
-3. **Modify buffer loading in pratt_scanner.c**
+1. **Modify buffer loading in pratt_scanner.c**
    - Update `tokenFromString()` and string parsing functions to use `PrattUnicode`
    - Update `readFile()` which currently uses `fread()` to read entire file into byte buffer
    - After reading with `fread()`, convert the multibyte buffer to `wchar_t` array using `mbstowcs()`
@@ -44,74 +44,75 @@ textfile input and HashSymbol output. Everything else within the parser should b
    - Store encoding choice in parser state for use in error messages
    - Remove `PrattUTF8ToUnicode()` conversion function from pratt_parser.c once it is no longer used.
    - **Special case**: The preamble is hard-coded as an internalized C string and always parsed as UTF-8 regardless of `--encoding` flag (consider restricting preamble to 7-bit ASCII for maximum compatibility)
-4. **Handle buffer capacity**
+1. **Handle buffer capacity**
    - Review all buffer allocation/reallocation code
    - Ensure size calculations multiply by `sizeof(wchar_t)` where appropriate
    - Check buffer growth logic in scanner
 
 ### Phase 3: Character Processing Functions
 
-5. **Simplify character navigation in pratt_scanner.c**
+1. **Simplify character navigation in pratt_scanner.c**
    - Replace `nextCharacter()` which currently uses `utf8Sgetc()` with simple pointer increment
    - Since `wchar_t` arrays are fixed-width, `buffer->start++` moves one character
    - Remove complex UTF-8 state machine logic from character reading
-6. **Update character classification functions**
+1. **Update character classification functions**
    - Replace custom `utf8_isalpha()`, `utf8_isspace()`, `utf8_isdigit()`, etc. with standard `iswalpha()`, `iswspace()`, `iswdigit()` from `<wctype.h>`
    - These functions already handle Unicode categories correctly
    - Remove dependencies on `unicode.h` and Unicode property tables where used by scanner
-7. **Update trie operations**
+1. **Update trie operations**
    - Modify `lookUpTrie()` and `insertTrie()` functions to work with `wchar_t` keys instead of `byte`
    - Comparison operations become simpler: direct `wchar_t` comparison instead of UTF-8 byte sequence comparison
    - Update ordering/sorting logic in trie siblings for `wchar_t`
 
 ### Phase 4: String Building and Token Generation
 
-8. **Update token value creation**
+1. **Update token value creation**
    - In `parseIdentifier()`, `parseString()`, `parseNumeric()`, etc., tokens are built from buffer ranges
    - Need to convert `wchar_t` substrings to multibyte strings when creating `HashSymbol` entries
    - Add conversion helper: `wchar_t *` to `char *` using `wcstombs()`
    - Update `newSymbolFromLength()` calls or create `newSymbolFromWideLength()` wrapper
-9. **Handle string literals**
+1. **Handle string literals**
    - `parseString()` currently builds strings character by character
    - Update to work with `wchar_t` source but produce multibyte output
    - Escape sequence handling should work similarly but with wide chars
-10. **Handle character literals**
+1. **Handle character literals**
     - Character tokens (parsed by `parseCharacter()`) currently return `Character` type (typedef'd to `wchar_t`)
     - This should work naturally with new `wchar_t` buffer
     - Ensure the value extraction logic handles wide chars properly
 
 ### Phase 5: Integration Points
 
-11. **Symbol table interface**
+1. **Symbol table interface**
     - The symbol table (`HashSymbol`) stores `char *` (multibyte strings)
     - All conversions from `wchar_t` to `char *` should happen at symbol creation time
     - Verify `newSymbol()` and `newSymbolFromLength()` receive proper multibyte input
     - Create wrapper functions if needed: `newSymbolFromWide()`, `newSymbolFromWideLength()`
-12. **Token printing and debugging**
+1. **Token printing and debugging**
     - Update `printPrattToken()` and related debug functions
     - Ensure `wchar_t` buffers print correctly in debug output
     - May need `%ls` format specifiers or explicit conversion
-13. **Error reporting**
+1. **Error reporting**
     - Parser error messages include source snippets from buffers
     - Ensure error display converts `wchar_t` buffer contents to multibyte for output
     - Check `errorPrattParser()` and related functions
     - Add specific error message for encoding failures:
-      ```
+
+```text
       Error: File 'example.fn' contains invalid UTF-8 sequences at line X
       Hint: Ensure source files are UTF-8 encoded, or use --encoding flag
-      ```
+```
 
 ### Phase 6: Cleanup and Testing
 
-14. **Remove UTF-8 dependencies from scanner**
+1. **Remove UTF-8 dependencies from scanner**
     - Once scanner works with `wchar_t`, remove includes of `utf8.h` from `pratt_scanner.c`
     - Remove calls to custom UTF-8 functions: `utf8_isalpha()`, `utf8Sgetc()`, etc.
     - Keep `utf8.c` for now as it's used elsewhere (runtime string operations, etc.)
-15. **Update header files**
+1. **Update header files**
     - Add `#include <wchar.h>` and `#include <wctype.h>` to `pratt_scanner.c`
     - Add `#include <locale.h>` for `setlocale()`
     - Remove unnecessary UTF-8 related includes
-16. **Testing**
+1. **Testing**
     - Run existing test suite: `make test`
     - Test with Unicode identifiers, operators, and string literals
     - Test with files in different locales (if applicable)
@@ -120,7 +121,7 @@ textfile input and HashSymbol output. Everything else within the parser should b
 
 ### Phase 7: Command-Line Options and Configuration
 
-17. **Add encoding command-line option**
+1. **Add encoding command-line option**
     - Add `--encoding=<name>` flag to override default UTF-8
     - Supported values: `UTF-8` (default), `ISO-8859-1`, `CP1252`, etc.
     - Implementation: translate flag to appropriate `setlocale()` call
@@ -129,16 +130,16 @@ textfile input and HashSymbol output. Everything else within the parser should b
 
 ### Phase 8: Documentation and Evaluation
 
-18. **Update documentation**
+1. **Update documentation**
     - Document that source files must be UTF-8 encoded (matching existing practice with Unicode operators in preamble.fn)
     - Document `--encoding` flag for legacy file support
     - Note the boundary: parser uses `wchar_t`, symbol table uses UTF-8 multibyte
     - Update any developer documentation about the scanner
-19. **Performance evaluation**
+1. **Performance evaluation**
     - Measure parsing time before and after
     - Check memory usage (wide chars use more space)
     - Evaluate code complexity reduction
-20. **Decide on further expansion**
+1. **Decide on further expansion**
     - If benefits are clear, consider extending `wchar_t` to more subsystems
     - If problems arise, document lessons learned
     - Consider whether to keep multibyte in symbol table or convert entire system

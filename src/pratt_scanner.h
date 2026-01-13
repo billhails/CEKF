@@ -1,19 +1,19 @@
 #ifndef cekf_pratt_scanner_h
-#  define cekf_pratt_scanner_h
+#define cekf_pratt_scanner_h
 /*
  * CEKF - VM supporting amb
- * Copyright (C) 2022-2024  Bill Hails
- * 
+ * Copyright (C) 2022-2026  Bill Hails
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -29,11 +29,12 @@ void enqueueToken(PrattLexer *lexer, PrattToken *token);
 ParserInfo LEXPI(PrattLexer *);
 
 static inline ParserInfo BUFPI(PrattBufList *buf) {
-    return (ParserInfo) { .lineNo = buf->lineNo, .fileName = buf->fileName->name };
+    return (ParserInfo){.lineNo = buf->lineNo, .fileName = buf->fileName->name};
 }
 
 static inline ParserInfo TOKPI(PrattToken *token) {
-    return (ParserInfo) { .lineNo = token->lineNo, .fileName = token->fileName->name };
+    return (ParserInfo){.lineNo = token->lineNo,
+                        .fileName = token->fileName->name};
 }
 
 PrattLexer *makePrattLexerFromFileName(char *fileName);
@@ -46,11 +47,14 @@ PrattToken *peek(PrattParser *);
 void poke(PrattParser *, PrattToken *);
 PrattToken *next(PrattParser *);
 
-void parserError(PrattParser *, const char *, ...) __attribute__((format(printf, 2, 3)));
-void parserErrorAt(ParserInfo, PrattParser *, const char *, ...) __attribute__((format(printf, 3, 4)));
+void parserError(PrattParser *, const char *, ...)
+    __attribute__((format(printf, 2, 3)));
+void parserErrorAt(ParserInfo, PrattParser *, const char *, ...)
+    __attribute__((format(printf, 3, 4)));
 
 static inline bool isAtomSymbol(PrattToken *token, HashSymbol *symbol) {
-    return (token->value->type == PRATTVALUE_TYPE_ATOM && token->value->val.atom == symbol);
+    return (token->value->type == PRATTVALUE_TYPE_ATOM &&
+            token->value->val.atom == symbol);
 }
 
 HashSymbol *TOK_ALIAS(void);

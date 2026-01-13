@@ -1,34 +1,33 @@
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2024  Bill Hails
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sqlite3.h>
-#include "value.h"
+#include "builtin_sqlite.h"
 #include "cekf.h"
 #include "cekfs.h"
-#include "utf8.h"
 #include "symbol.h"
-#include "builtin_sqlite.h"
 #include "tc_analyze.h"
+#include "value.h"
+#include <sqlite3.h>
 
 #ifdef DEBUG_SQLITE
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 static void registerSQLiteOpen(BuiltIns *registry);
@@ -50,29 +49,33 @@ void registerSQLite(BuiltIns *registry) {
 }
 
 static void opaque_sqlite3_close(Opaque *data) {
-    if (data == NULL) return;
-    if (data->data == NULL) return;
+    if (data == NULL)
+        return;
+    if (data->data == NULL)
+        return;
     DEBUG("closing sqlite %p", data->data);
     sqlite3_close(data->data);
     data->data = NULL;
 }
 
 static void opaque_sqlite3_finalize(Opaque *data) {
-    if (data == NULL) return;
-    if (data->data == NULL) return;
+    if (data == NULL)
+        return;
+    if (data->data == NULL)
+        return;
     DEBUG("finalizing sqlite statement %p", data->data);
     sqlite3_finalize(data->data);
     data->data = NULL;
 }
 
 static Value builtin_sqlite3_open(Vec *v) {
-    char *buf = listToUtf8(v->entries[0]);
+    CharVec *buf = listToUtf8(v->entries[0]);
+    int save = PROTECT(buf);
     sqlite3 *ppDb = NULL;
-    int status = sqlite3_open(buf, &ppDb);
-    FREE_ARRAY(char, buf, strlen(buf) + 1);
+    int status = sqlite3_open(buf->entries, &ppDb);
     if (status != SQLITE_OK) {
         Value errMsg = utf8ToList(sqlite3_errmsg(ppDb));
-        int save = protectValue(errMsg);
+        protectValue(errMsg);
         sqlite3_close(ppDb);
         Value result = makeTryResult(0, errMsg);
         UNPROTECT(save);
@@ -81,7 +84,7 @@ static Value builtin_sqlite3_open(Vec *v) {
     DEBUG("sqlite open %p", ppDb);
     Opaque *wrapper = newOpaque(ppDb, opaque_sqlite3_close, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
@@ -118,26 +121,27 @@ static Value builtin_sqlite3_prepare(Vec *vec) {
     }
 #endif
     Opaque *data = vec->entries[0].val.opaque;
-    char *string = listToUtf8(vec->entries[1]);
+    CharVec *string = listToUtf8(vec->entries[1]);
+    int save = PROTECT(string);
     sqlite3_stmt *stmt = NULL;
-    int res = sqlite3_prepare_v2(data->data, string, -1, &stmt, NULL);
-    FREE_ARRAY(char, string, strlen(string) + 1);
+    int res = sqlite3_prepare_v2(data->data, string->entries, -1, &stmt, NULL);
     if (res != SQLITE_OK) {
         Value errCode = value_Stdint(res);
         Value result = makeTryResult(0, errCode);
+        UNPROTECT(save);
         return result;
     }
     DEBUG("sqlite prepare %p", stmt);
     Opaque *wrapper = newOpaque(stmt, opaque_sqlite3_finalize, NULL);
     Value opaque = value_Opaque(wrapper);
-    int save = protectValue(opaque);
+    protectValue(opaque);
     Value result = makeTryResult(1, opaque);
     UNPROTECT(save);
     return result;
 }
 
 static void helper_free_str(void *v) {
-    char *str = (char *) v;
+    char *str = (char *)v;
     FREE_ARRAY(char, str, strlen(str) + 1);
 }
 
@@ -150,35 +154,38 @@ static int helper_bind_bigint(sqlite3_stmt *stmt, int index, BigInt *bigint) {
 
 static int helper_bind_number(sqlite3_stmt *stmt, int index, Value number) {
     switch (number.type) {
-        case VALUE_TYPE_STDINT:
-            return sqlite3_bind_int(stmt, index, number.val.stdint);
-        case VALUE_TYPE_BIGINT:
-            return helper_bind_bigint(stmt, index, number.val.bigint);
-        case VALUE_TYPE_IRRATIONAL:
-            return sqlite3_bind_double(stmt, index, number.val.irrational);
-        case VALUE_TYPE_RATIONAL:
-        case VALUE_TYPE_RATIONAL_IMAG:
-        case VALUE_TYPE_STDINT_IMAG:
-        case VALUE_TYPE_BIGINT_IMAG:
-        case VALUE_TYPE_IRRATIONAL_IMAG:
-        case VALUE_TYPE_COMPLEX:
-            eprintf("numeric type %s not supported yet\n", valueTypeName(number.type));
-            return SQLITE_ERROR;
-            break;
-        default:
-            cant_happen("unexpected %s", valueTypeName(number.type));
+    case VALUE_TYPE_STDINT:
+        return sqlite3_bind_int(stmt, index, number.val.stdint);
+    case VALUE_TYPE_BIGINT:
+        return helper_bind_bigint(stmt, index, number.val.bigint);
+    case VALUE_TYPE_IRRATIONAL:
+        return sqlite3_bind_double(stmt, index, number.val.irrational);
+    case VALUE_TYPE_RATIONAL:
+    case VALUE_TYPE_RATIONAL_IMAG:
+    case VALUE_TYPE_STDINT_IMAG:
+    case VALUE_TYPE_BIGINT_IMAG:
+    case VALUE_TYPE_IRRATIONAL_IMAG:
+    case VALUE_TYPE_COMPLEX:
+        eprintf("numeric type %s not supported yet\n",
+                valueTypeName(number.type));
+        return SQLITE_ERROR;
+        break;
+    default:
+        cant_happen("unexpected %s", valueTypeName(number.type));
     }
 }
 
 static int helper_bind_string(sqlite3_stmt *stmt, int index, Value string) {
-    char *buf = listToUtf8(string);
-    return sqlite3_bind_text(stmt, index, buf, strlen(buf), helper_free_str);
+    CharVec *buf = listToUtf8(string);
+    return sqlite3_bind_text(stmt, index, buf->entries, strlen(buf->entries),
+                             helper_free_str);
 }
 
 static int helper_bind_char(sqlite3_stmt *stmt, int index, Value character) {
     char str[MB_LEN_MAX];
     int len = wctomb(str, character.val.character);
-    if (len <= 0) len = 0;
+    if (len <= 0)
+        len = 0;
     str[len] = '\0';
     int size = strlen(str);
     char *buf = NEW_ARRAY(char, size + 1);
@@ -199,24 +206,24 @@ static Value builtin_sqlite3_bind(Vec *vec) {
     while (bindings.val.vec->entries[0].val.stdint == 1) { // tag == pair
         Value car = bindings.val.vec->entries[1];
         switch (car.val.vec->entries[0].val.stdint) {
-            case BASIC_TYPE_NULL:
-                DEBUG("binding NULL");
-                status = sqlite3_bind_null(stmt, index);
-                break;
-            case BASIC_TYPE_NUMBER:
-                DEBUG("binding NUMBER");
-                status = helper_bind_number(stmt, index, car.val.vec->entries[1]);
-                break;
-            case BASIC_TYPE_STRING:
-                DEBUG("binding STRING");
-                status = helper_bind_string(stmt, index, car.val.vec->entries[1]);
-                break;
-            case BASIC_TYPE_CHAR:
-                DEBUG("binding CHAR");
-                status = helper_bind_char(stmt, index, car.val.vec->entries[1]);
-                break;
-            default:
-                cant_happen("unexpected %d", car.val.vec->entries[0].val.stdint);
+        case BASIC_TYPE_NULL:
+            DEBUG("binding NULL");
+            status = sqlite3_bind_null(stmt, index);
+            break;
+        case BASIC_TYPE_NUMBER:
+            DEBUG("binding NUMBER");
+            status = helper_bind_number(stmt, index, car.val.vec->entries[1]);
+            break;
+        case BASIC_TYPE_STRING:
+            DEBUG("binding STRING");
+            status = helper_bind_string(stmt, index, car.val.vec->entries[1]);
+            break;
+        case BASIC_TYPE_CHAR:
+            DEBUG("binding CHAR");
+            status = helper_bind_char(stmt, index, car.val.vec->entries[1]);
+            break;
+        default:
+            cant_happen("unexpected %d", car.val.vec->entries[0].val.stdint);
         }
         if (status != SQLITE_OK) {
             break;
@@ -247,7 +254,7 @@ static Value helper_fetch_float(sqlite3_stmt *stmt, int iCol, Value cdr) {
 
 static Value helper_fetch_text(sqlite3_stmt *stmt, int iCol, Value cdr) {
     const unsigned char *text = sqlite3_column_text(stmt, iCol);
-    Value s = utf8ToList((const char *) text);
+    Value s = utf8ToList((const char *)text);
     protectValue(s);
     Value bs = makeBasic(s, BASIC_TYPE_STRING);
     protectValue(bs);
@@ -273,23 +280,23 @@ static Value helper_fetch_row(sqlite3_stmt *stmt) {
         int iCol = i - 1;
         int type = sqlite3_column_type(stmt, iCol);
         switch (type) {
-            case SQLITE_INTEGER:
-                result = helper_fetch_integer(stmt, iCol, result);
-                break;
-            case SQLITE_FLOAT:
-                result = helper_fetch_float(stmt, iCol, result);
-                break;
-            case SQLITE_TEXT:
-                result = helper_fetch_text(stmt, iCol, result);
-                break;
-            case SQLITE_BLOB:
-                cant_happen("blob not supported yet");
-                break;
-            case SQLITE_NULL:
-                result = helper_fetch_null(result);
-                break;
-            default:
-                cant_happen("unexpected %d", type);
+        case SQLITE_INTEGER:
+            result = helper_fetch_integer(stmt, iCol, result);
+            break;
+        case SQLITE_FLOAT:
+            result = helper_fetch_float(stmt, iCol, result);
+            break;
+        case SQLITE_TEXT:
+            result = helper_fetch_text(stmt, iCol, result);
+            break;
+        case SQLITE_BLOB:
+            cant_happen("blob not supported yet");
+            break;
+        case SQLITE_NULL:
+            result = helper_fetch_null(result);
+            break;
+        default:
+            cant_happen("unexpected %d", type);
         }
     }
     result = makeSome(result);
@@ -309,13 +316,13 @@ static Value builtin_sqlite3_fetch(Vec *vec) {
     }
     int res = sqlite3_step(stmt);
     switch (res) {
-        case SQLITE_ROW:
-            return helper_fetch_row(stmt);
-        case SQLITE_DONE:
-            return makeNothing();
-        default:
-            eprintf("sqlite3_step returned %d\n", res);
-            return makeNothing();
+    case SQLITE_ROW:
+        return helper_fetch_row(stmt);
+    case SQLITE_DONE:
+        return makeNothing();
+    default:
+        eprintf("sqlite3_step returned %d\n", res);
+        return makeNothing();
     }
 }
 
@@ -360,9 +367,7 @@ static HashSymbol *sqliteStatementSymbol(void) {
     return symbol;
 }
 
-static TcType *makeSqliteType(void) {
-    return newTcType_Opaque(sqliteSymbol());
-}
+static TcType *makeSqliteType(void) { return newTcType_Opaque(sqliteSymbol()); }
 
 static TcType *makeSqliteStatementType(void) {
     return newTcType_Opaque(sqliteStatementSymbol());
@@ -378,7 +383,8 @@ static void registerSQLiteOpen(BuiltIns *registry) {
     TcType *trySqliteType = makeTryType(stringType, sqliteType);
     PROTECT(trySqliteType);
     pushBuiltInArgs(args, stringType);
-    pushNewBuiltIn(registry, "sqlite3_open", trySqliteType, args, (void *)builtin_sqlite3_open);
+    pushNewBuiltIn(registry, "sqlite3_open", trySqliteType, args,
+                   (void *)builtin_sqlite3_open);
     UNPROTECT(save);
 }
 
@@ -390,7 +396,8 @@ static void registerSQLiteClose(BuiltIns *registry) {
     TcType *b = makeBoolean();
     PROTECT(b);
     pushBuiltInArgs(args, ppDb);
-    pushNewBuiltIn(registry, "sqlite3_close", b, args, (void *)builtin_sqlite3_close);
+    pushNewBuiltIn(registry, "sqlite3_close", b, args,
+                   (void *)builtin_sqlite3_close);
     UNPROTECT(save);
 }
 
@@ -409,7 +416,8 @@ static void registerSQLitePrepare(BuiltIns *registry) {
     PROTECT(tryStatementType);
     pushBuiltInArgs(args, sqlite);
     pushBuiltInArgs(args, string);
-    pushNewBuiltIn(registry, "sqlite3_prepare", tryStatementType, args, (void *)builtin_sqlite3_prepare);
+    pushNewBuiltIn(registry, "sqlite3_prepare", tryStatementType, args,
+                   (void *)builtin_sqlite3_prepare);
     UNPROTECT(save);
 }
 
@@ -421,7 +429,8 @@ static void registerSQLiteFinalize(BuiltIns *registry) {
     TcType *b = makeBoolean();
     PROTECT(b);
     pushBuiltInArgs(args, statementType);
-    pushNewBuiltIn(registry, "sqlite3_finalize", b, args, (void *)builtin_sqlite3_finalize);
+    pushNewBuiltIn(registry, "sqlite3_finalize", b, args,
+                   (void *)builtin_sqlite3_finalize);
     UNPROTECT(save);
 }
 
@@ -452,7 +461,8 @@ static void registerSQLiteBind(BuiltIns *registry) {
     PROTECT(bigIntType);
     pushBuiltInArgs(args, statementType);
     pushBuiltInArgs(args, basicListType);
-    pushNewBuiltIn(registry, "sqlite3_bind", bigIntType, args, (void *)builtin_sqlite3_bind);
+    pushNewBuiltIn(registry, "sqlite3_bind", bigIntType, args,
+                   (void *)builtin_sqlite3_bind);
     UNPROTECT(save);
 }
 
@@ -464,7 +474,8 @@ static void registerSQLiteFetch(BuiltIns *registry) {
     pushBuiltInArgs(args, statementType);
     TcType *maybeListBasicType = makeMaybeListBasicType();
     PROTECT(maybeListBasicType);
-    pushNewBuiltIn(registry, "sqlite3_fetch", maybeListBasicType, args, (void *)builtin_sqlite3_fetch);
+    pushNewBuiltIn(registry, "sqlite3_fetch", maybeListBasicType, args,
+                   (void *)builtin_sqlite3_fetch);
     UNPROTECT(save);
 }
 
@@ -478,7 +489,7 @@ static void registerSQLiteNames(BuiltIns *registry) {
     PROTECT(stringType);
     TcType *listStringType = makeListType(stringType);
     PROTECT(listStringType);
-    pushNewBuiltIn(registry, "sqlite3_names", listStringType, args, (void *)builtin_sqlite3_names);
+    pushNewBuiltIn(registry, "sqlite3_names", listStringType, args,
+                   (void *)builtin_sqlite3_names);
     UNPROTECT(save);
 }
-

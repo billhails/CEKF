@@ -16,8 +16,8 @@ in
             E.print_expr(expr);
             puts(" ==>");
             puts(tab);
-            E.print_expr(CC.shared_closure_convert(dexpr));
+            E.print_expr(CC.shared_closure_convert(cexpr));
             puts(tab);
-            E.print_expr(CC.flat_closure_convert(dexpr));
+            E.print_expr(CC.flat_closure_convert(cexpr));
             puts("\n\n")
     }, Samples.data);

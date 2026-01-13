@@ -127,6 +127,8 @@ fn filter(f, lst) {
     in helper(lst, [])
 }
 
+export operator "_|?_" left 8 fn (lst, f) { filter(f, lst) };
+
 // filter_not: (#a -> bool) -> list(#a) -> list(#a)
 fn filter_not (f, l) {
     filter(fn (x) { not f(x) }, l)

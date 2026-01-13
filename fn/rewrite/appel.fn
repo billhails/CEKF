@@ -1,0 +1,31 @@
+// the CPS data type from Compiling with Continuations (Appel)
+namespace
+
+    typedef value(#var) {
+        VAR(#var) |
+        LABEL(#var) |
+        INT(number) |
+        REAL(number) |
+        STRING(string)
+    }
+
+    typedef accesspath {
+        OFFp(number) |
+        SELp(number, accesspath)
+    }
+
+    typedef primop {
+        ADD | SUB | MUL | DIV | MOD | NEG |
+        EQ | NEQ | LT | LEQ | GT | GEQ |
+        AND | OR | NOT
+    }
+
+    typedef cexp(#var) {
+        RECORD(list(#(value(#var), accesspath), #var, cexp(#var))) |
+        SELECT(number, value(#var), #var, cexp(#var)) |
+        OFFSET(number, value(#var), #var, cexp(#var)) |
+        APP(value(#var), list(value(#var))) |
+        FIX(list(#var, list(#var), cexp(#var)), cexp(#var)) |
+        SWITCH(value(#var), list(cexp(#var))) |
+        PRIMOP(primop, list(value(#var)), list(#var), list(cexp(#var)))
+    }

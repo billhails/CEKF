@@ -1,7 +1,8 @@
 .PHONY: all clean realclean deps profile leak-check check-grammar \
 list-cores test indent indent-src indent-generated docs \
 install-sqlite3 coverage extracov view-coverage \
-establish-baseline test-refactoring update-baseline clean-baseline
+establish-baseline test-refactoring update-baseline clean-baseline \
+scratch
 
 # pass on the command line, i.e. `make test MODE=testing`
 #
@@ -285,6 +286,7 @@ realclean: clean
 
 clean: deps
 	rm -rf $(BINDIR) $(OBJDIR) callgrind.out.* $(GENDIR) $(TEST_TARGETS) .typedefs $(SRCDIR)/*~ .generated gmon.out *.fnc core.* coverage_html coverage_report.txt gcov_output *.gcda *.gcno coverage.info coverage_filtered.info test_output.log
+	$(MAKE) -C scratch clean
 
 deps:
 	rm -rf $(DEPDIR)
@@ -384,5 +386,8 @@ clean-baseline:
 	@echo "Removing baseline directory..."
 	rm -rf $(BASELINE_DIR)
 	@echo "Baseline removed."
+
+scratch:
+	$(MAKE) -C scratch run
 
 # vim: set noet sw=4:
