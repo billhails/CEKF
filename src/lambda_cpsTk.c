@@ -53,7 +53,6 @@ static LamExp *cpsTkLamLet(LamLet *node, CpsKont *k);
 static LamExp *cpsTkLamLetStar(LamLetStar *node, CpsKont *k);
 static LamExp *cpsTkLamLetRec(LamLetRec *node, CpsKont *k);
 static LamExp *cpsTkLamAmb(LamAmb *node, CpsKont *k);
-static LamExp *cpsTkLamTypeOf(LamTypeOf *node, CpsKont *k);
 static LamExp *cpsTkLamTypeDefs(LamTypeDefs *node, CpsKont *k);
 static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k);
 static LamExp *cpsTkLamNameSpaceArray(LamNameSpaceArray *node, CpsKont *k);
@@ -757,33 +756,6 @@ static LamExp *cpsTkLamAmb(LamAmb *node, CpsKont *k) {
 }
 
 /*
-    (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-            k(E.typeOf_expr(sexpr))
-        })
-    }
-*/
-static LamExp *cpsTkLamTypeOf(LamTypeOf *node, CpsKont *k) {
-    ENTER(cpsTkLamTypeOf);
-    CpsKont *k1 = makeKont_TkTypeOf(k);
-    int save = PROTECT(k1);
-    LamExp *result = cpsTk(node->exp, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkLamTypeOf);
-    return result;
-}
-
-LamExp *TkTypeOfKont(LamExp *sexpr, TkTypeOfKontEnv *env) {
-    ENTER(TkTypeOfKont);
-    LamExp *typeOf_exp = makeLamExp_TypeOf(CPI(sexpr), sexpr);
-    int save = PROTECT(typeOf_exp);
-    LamExp *result = INVOKE(env->k, typeOf_exp);
-    UNPROTECT(save);
-    LEAVE(TkTypeOfKont);
-    return result;
-}
-
-/*
     (E.typeDefs(defs, expr)) {
         E.typeDefs(defs, T_k(expr, k))
     }
@@ -869,8 +841,6 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
         return cpsTkLamTupleIndex(getLamExp_TupleIndex(node), k);
     case LAMEXP_TYPE_TYPEDEFS:
         return cpsTkLamTypeDefs(getLamExp_TypeDefs(node), k);
-    case LAMEXP_TYPE_TYPEOF:
-        return cpsTkLamTypeOf(getLamExp_TypeOf(node), k);
     default:
         cant_happen("unrecognized LamExp type %s [%s %d]",
                     lamExpTypeName(node->type), CPI(node).fileName,

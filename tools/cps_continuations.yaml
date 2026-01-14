@@ -565,27 +565,3 @@ continuations:
       size: int
       index: int
       c: LamExp
-
-  TkTypeOf:
-    transformer: T_k
-    key: k_typeOf
-    context: |
-      (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.typeOf_expr(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcTypeOf:
-    transformer: T_k
-    key: c_typeOf
-    context: |
-      (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-          E.apply(c, [E.typeOf_expr(sexpr)])
-        })
-      }
-    free_vars:
-      c: LamExp

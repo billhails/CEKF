@@ -71,7 +71,6 @@ static LamBindings *visitLetStarBindings(LamBindings *node,
 static LamLetRec *visitLamLetRec(LamLetRec *node, LamAlphaEnv *context);
 static LamContext *visitLamContext(LamContext *node, LamAlphaEnv *context);
 static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context);
-static LamTypeOf *visitLamTypeOf(LamTypeOf *node, LamAlphaEnv *context);
 static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context);
 static LamTypeDefList *visitLamTypeDefList(LamTypeDefList *node,
                                            LamAlphaEnv *context);
@@ -900,30 +899,6 @@ static LamAmb *visitLamAmb(LamAmb *node, LamAlphaEnv *context) {
     return node;
 }
 
-static LamTypeOf *visitLamTypeOf(LamTypeOf *node, LamAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    LamExp *new_exp = visitLamExp(node->exp, context);
-    int save = PROTECT(new_exp);
-    changed = changed || (new_exp != node->exp);
-    LamExp *new_typeString = visitLamExp(node->typeString, context);
-    PROTECT(new_typeString);
-    changed = changed || (new_typeString != node->typeString);
-
-    if (changed) {
-        // Create new node with modified fields
-        LamTypeOf *result = newLamTypeOf(CPI(node), new_exp);
-        result->typeString = new_typeString;
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
-    return node;
-}
-
 static LamTypeDefs *visitLamTypeDefs(LamTypeDefs *node, LamAlphaEnv *context) {
     if (node == NULL)
         return NULL;
@@ -1490,16 +1465,6 @@ static LamExp *visitLamExp(LamExp *node, LamAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newLamExp_TypeDefs(CPI(node), new_variant);
-        }
-        break;
-    }
-    case LAMEXP_TYPE_TYPEOF: {
-        // LamTypeOf
-        LamTypeOf *variant = getLamExp_TypeOf(node);
-        LamTypeOf *new_variant = visitLamTypeOf(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newLamExp_TypeOf(CPI(node), new_variant);
         }
         break;
     }

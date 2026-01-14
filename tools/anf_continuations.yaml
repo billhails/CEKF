@@ -338,18 +338,6 @@ continuations:
       anfE1: LamExp
       k: AnfKont
 
-  normalizeTypeOf:
-    key: typeOf
-    brief: "Continuation for typeOf expression"
-    context: |
-      (match e
-          ...
-          (`(typeOf ,e0)
-              (normalize-name e0
-                  [λ (anfE0) (k `(typeOf ,anfE0))])))
-    free_vars:
-      k: AnfKont
-
   normalizeTupleIndex:
     key: tupleIndex
     brief: "Continuation for tuple access"

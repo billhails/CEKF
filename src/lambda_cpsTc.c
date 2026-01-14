@@ -53,7 +53,6 @@ static LamExp *cpsTcLamLet(LamLet *node, LamExp *c);
 static LamExp *cpsTcLamLetStar(LamLetStar *node, LamExp *c);
 static LamExp *cpsTcLamLetRec(LamLetRec *node, LamExp *c);
 static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c);
-static LamExp *cpsTcLamTypeOf(LamTypeOf *node, LamExp *c);
 static LamExp *cpsTcLamTypeDefs(LamTypeDefs *node, LamExp *c);
 static LamExp *cpsTcLamExp(LamExp *node, LamExp *c);
 static LamExp *cpsTcLamNameSpaceArray(LamNameSpaceArray *node, LamExp *c);
@@ -695,35 +694,6 @@ static LamExp *cpsTcLamAmb(LamAmb *node, LamExp *c) {
 }
 
 /*
-    (E.typeOf_expr(expr)) {
-        T_k(expr, fn (sexpr) {
-            E.apply(c, [E.typeOf_expr(sexpr)])
-        })
-    }
-*/
-static LamExp *cpsTcLamTypeOf(LamTypeOf *node, LamExp *c) {
-    ENTER(cpsTcLamTypeOf);
-    CpsKont *k = makeKont_TcTypeOf(c);
-    int save = PROTECT(k);
-    LamExp *result = cpsTk(node->exp, k);
-    UNPROTECT(save);
-    LEAVE(cpsTcLamTypeOf);
-    return result;
-}
-
-LamExp *TcTypeOfKont(LamExp *sexpr, TcTypeOfKontEnv *env) {
-    ENTER(TcTypeOfKont);
-    LamExp *typeOf_exp = makeLamExp_TypeOf(CPI(sexpr), sexpr);
-    int save = PROTECT(typeOf_exp);
-    LamArgs *args = newLamArgs(CPI(sexpr), typeOf_exp, NULL);
-    PROTECT(args);
-    LamExp *result = makeLamExp_Apply(CPI(sexpr), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcTypeOfKont);
-    return result;
-}
-
-/*
     (E.typeDefs(defs, expr)) {
         E.typeDefs(defs, T_c(expr, c))
     }
@@ -867,8 +837,6 @@ static LamExp *cpsTcLamExp(LamExp *node, LamExp *c) {
         return cpsTcLamTupleIndex(getLamExp_TupleIndex(node), c);
     case LAMEXP_TYPE_TYPEDEFS:
         return cpsTcLamTypeDefs(getLamExp_TypeDefs(node), c);
-    case LAMEXP_TYPE_TYPEOF:
-        return cpsTcLamTypeOf(getLamExp_TypeOf(node), c);
     default:
         cant_happen("unrecognized LamExp type %s", lamExpTypeName(node->type));
     }

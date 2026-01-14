@@ -19,7 +19,7 @@ Anyway here is a list of the desugaring operations that are desired:
 
 We really want to push towards a pure minimal lambda representation.
 The result should be represented as a new stage, `SimpleLambda.yaml` or similar, presenting a much smaller surface area for subsequent transformations and greatly
-reducing the amount of code in those transforms.
+reducing the amount of code downstream.
 
 Later desugaring that can't be done here:
 

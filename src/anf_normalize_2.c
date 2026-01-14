@@ -601,29 +601,6 @@ static LamExp *normalizePrimappInnerKont(LamExp *anfE2,
     return result;
 }
 
-// (`(typeOf ,e0)
-//     (normalize-name e0
-//         [λ (anfE0) (k `(typeOf ,anfE0))]))
-
-static LamExp *normalize_TypeOf(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_TypeOf);
-    LamTypeOf *typeOfExp = getLamExp_TypeOf(exp);
-    AnfKont *k2 = makeKont_normalizeTypeOf(k);
-    int save = PROTECT(k2);
-    LamExp *result = normalize_name(typeOfExp->exp, k2);
-    UNPROTECT(save);
-    LEAVE(normalize_TypeOf);
-    return result;
-}
-
-static LamExp *normalizeTypeOfKont(LamExp *anfE0, NormalizeTypeOfKontEnv *env) {
-    LamExp *newTypeOf = makeLamExp_TypeOf(CPI(anfE0), anfE0);
-    int save = PROTECT(newTypeOf);
-    LamExp *result = INVOKE(env->k, newTypeOf);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(tuple-index ,vec ,size ,e0)
 //     (normalize-name e0
 //         [λ (t0) (k `(tuple-index ,vec ,size ,t0))]))
@@ -896,9 +873,6 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
             break;
         case LAMEXP_TYPE_TYPEDEFS:
             res = normalize_TypeDefs(exp, k);
-            break;
-        case LAMEXP_TYPE_TYPEOF:
-            res = normalize_TypeOf(exp, k);
             break;
         default:
             cant_happen("normalize: unhandled LamExp type %s",
