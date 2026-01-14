@@ -338,18 +338,6 @@ continuations:
       anfE1: LamExp
       k: AnfKont
 
-  normalizePrint:
-    key: print
-    brief: "Continuation for print expression"
-    context: |
-      (match e
-          ...
-          (`(print ,e0)
-              (normalize-name e0
-                  [λ (anfE0) (k `(print ,anfE0))])))
-    free_vars:
-      k: AnfKont
-
   normalizeTypeOf:
     key: typeOf
     brief: "Continuation for typeOf expression"

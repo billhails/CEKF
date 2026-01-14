@@ -601,29 +601,6 @@ static LamExp *normalizePrimappInnerKont(LamExp *anfE2,
     return result;
 }
 
-// (`(print ,e0)
-//     (normalize-name e0
-//         [λ (anfE0) (k `(print ,anfE0))]))
-
-static LamExp *normalize_Print(LamExp *exp, AnfKont *k) {
-    ENTER(normalize_Print);
-    LamPrint *printExp = getLamExp_Print(exp);
-    AnfKont *k1 = makeKont_normalizePrint(k);
-    int save = PROTECT(k1);
-    LamExp *result = normalize_name(printExp->exp, k1);
-    UNPROTECT(save);
-    LEAVE(normalize_Print);
-    return result;
-}
-
-static LamExp *normalizePrintKont(LamExp *anfE0, NormalizePrintKontEnv *env) {
-    LamExp *newPrint = makeLamExp_Print(CPI(anfE0), anfE0);
-    int save = PROTECT(newPrint);
-    LamExp *result = INVOKE(env->k, newPrint);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(typeOf ,e0)
 //     (normalize-name e0
 //         [λ (anfE0) (k `(typeOf ,anfE0))]))
@@ -907,9 +884,6 @@ static LamExp *normalize(LamExp *exp, AnfKont *k) {
             break;
         case LAMEXP_TYPE_PRIM:
             res = normalize_PrimApp(exp, k);
-            break;
-        case LAMEXP_TYPE_PRINT:
-            res = normalize_Print(exp, k);
             break;
         case LAMEXP_TYPE_SEQUENCE:
             res = normalize_Sequence(exp, k);

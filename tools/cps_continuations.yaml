@@ -486,30 +486,6 @@ continuations:
       s1: LamExp
       p: LamPrimOp
 
-  TkPrint:
-    transformer: T_k
-    key: k_print
-    context: |
-      (E.print_exp(expr)) {
-        T_k(expr, fn (sexpr) {
-          k(E.print_exp(sexpr))
-        })
-      }
-    free_vars:
-      k: CpsKont
-
-  TcPrint:
-    transformer: T_k
-    key: c_print
-    context: |
-      (E.print_exp(expr)) {
-          T_k(expr, fn (sexpr) {
-              E.apply(c, [E.print_exp(sexpr)])
-          })
-      }
-    free_vars:
-      c: LamExp
-
   TkSequence:
     transformer: T_k
     key: k_sequence

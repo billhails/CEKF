@@ -18,90 +18,95 @@
 
 #include <assert.h>
 
-#include "tc_analyze.h"
-#include "symbols.h"
-#include "symbol.h"
-#include "memory.h"
 #include "hash.h"
-#include "tc_debug.h"
-#include "tc_helper.h"
+#include "lambda_pp.h"
+#include "memory.h"
 #include "print_compiler.h"
 #include "print_generator.h"
-#include "lambda_pp.h"
+#include "symbol.h"
+#include "symbols.h"
+#include "tc_analyze.h"
+#include "tc_debug.h"
+#include "tc_helper.h"
 #include "types.h"
 
 #ifdef DEBUG_TC
-#  include "debugging_on.h"
-#  include "lambda_pp.h"
+#include "debugging_on.h"
+#include "lambda_pp.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
-static void addToEnv(TcEnv * env, HashSymbol * key, TcType * type);
-static void addToNg(TcNg * env, TcType * type);
-static void addFreshVarToEnv(TcEnv * env, HashSymbol * key);
-static void addCmpToEnv(TcEnv * env, HashSymbol * key);
-static void addBuiltinsToEnv(TcEnv * env, BuiltIns * builtIns);
-static void addNameSpacesToEnv(TcEnv * env);
+static void addToEnv(TcEnv *env, HashSymbol *key, TcType *type);
+static void addToNg(TcNg *env, TcType *type);
+static void addFreshVarToEnv(TcEnv *env, HashSymbol *key);
+static void addCmpToEnv(TcEnv *env, HashSymbol *key);
+static void addBuiltinsToEnv(TcEnv *env, BuiltIns *builtIns);
+static void addNameSpacesToEnv(TcEnv *env);
 static TcType *makeSpaceship(void);
 static TcType *makeBigInteger(void);
 static TcType *makeCharacter(void);
-static TcType *makeUnknown(HashSymbol * var);
-static TcType *makeVar(HashSymbol * t);
-static TcType *makeFn(TcType * arg, TcType * result);
-static TcType *makeThunk(TcType * type);
+static TcType *makeUnknown(HashSymbol *var);
+static TcType *makeVar(HashSymbol *t);
+static TcType *makeFn(TcType *arg, TcType *result);
+static TcType *makeThunk(TcType *type);
 static TcType *makeTuple(int size);
-static void addHereToEnv(TcEnv * env);
-static void addIfToEnv(TcEnv * env);
-static void addIntBinOpToEnv(TcEnv * env, HashSymbol * symbol);
-static void addNegToEnv(TcEnv * env);
-static void addThenToEnv(TcEnv * env);
-static TcType *analyzeExp(LamExp * exp, TcEnv * env, TcNg * ng);
-static TcType *analyzeLam(LamLam * lam, TcEnv * env, TcNg * ng);
-static TcType *analyzeVar(ParserInfo I, HashSymbol * var, TcEnv * env, TcNg * ng);
+static void addHereToEnv(TcEnv *env);
+static void addIfToEnv(TcEnv *env);
+static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol);
+static void addNegToEnv(TcEnv *env);
+static void addThenToEnv(TcEnv *env);
+static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng);
+static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng);
 static TcType *analyzeSmallInteger();
 static TcType *analyzeBigInteger();
-static TcType *analyzePrim(LamPrimApp * app, TcEnv * env, TcNg * ng);
-static TcType *analyzeSequence(LamSequence * sequence, TcEnv * env, TcNg * ng);
-static TcType *analyzeConstruct(LamConstruct * construct, TcEnv * env, TcNg * ng);
-static TcType *analyzeDeconstruct(LamDeconstruct * deconstruct, TcEnv * env, TcNg * ng);
-static TcType *analyzeTag(LamExp * tag, TcEnv * env, TcNg * ng);
-static TcType *analyzeConstant(LamConstant * constant, TcEnv * env, TcNg * ng);
-static TcType *analyzeApply(LamApply * apply, TcEnv * env, TcNg * ng);
-static TcType *analyzeIff(LamIff * iff, TcEnv * env, TcNg * ng);
-static TcType *analyzeCallCC(LamExp * called, TcEnv * env, TcNg * ng);
-static TcType *analyzePrint(LamPrint * print, TcEnv * env, TcNg * ng);
-static TcType *analyzeTypeDefs(LamTypeDefs * typeDefs, TcEnv * env, TcNg * ng);
-static TcType *analyzeLet(LamLet * let, TcEnv * env, TcNg * ng);
-static TcType *analyzeLetRec(LamLetRec * letRec, TcEnv * env, TcNg * ng);
+static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng);
+static TcType *analyzeSequence(LamSequence *sequence, TcEnv *env, TcNg *ng);
+static TcType *analyzeConstruct(LamConstruct *construct, TcEnv *env, TcNg *ng);
+static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
+                                  TcNg *ng);
+static TcType *analyzeTag(LamExp *tag, TcEnv *env, TcNg *ng);
+static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng);
+static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng);
+static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng);
+static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng);
+static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng);
+static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng);
+static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng);
+static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng);
 static TcType *analyzeLetStar(LamLetStar *letStar, TcEnv *env, TcNg *ng);
-static TcType *analyzeMatch(LamMatch * match, TcEnv * env, TcNg * ng);
-static TcType *analyzeCond(LamCond * cond, TcEnv * env, TcNg * ng);
-static TcType *analyzeAmb(LamAmb * amb, TcEnv * env, TcNg * ng);
-static TcType *analyzeTupleIndex(LamTupleIndex * index, TcEnv * env, TcNg * ng);
-static TcType *analyzeMakeTuple(LamArgs * tuple, TcEnv * env, TcNg * ng);
-static TcType *analyzeNameSpaces(LamNameSpaceArray * nsArray, TcEnv * env, TcNg * ng);
+static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng);
+static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng);
+static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng);
+static TcType *analyzeTupleIndex(LamTupleIndex *index, TcEnv *env, TcNg *ng);
+static TcType *analyzeMakeTuple(LamArgs *tuple, TcEnv *env, TcNg *ng);
+static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env,
+                                 TcNg *ng);
 static TcType *analyzeCharacter();
 static TcType *analyzeBack();
 static TcType *analyzeError();
-static TcType *analyzeEnv(TcEnv * env);
-static bool unify(TcType * a, TcType * b, char *trace __attribute__((unused)));
-static TcType *prune(TcType * t);
-static bool occursInType(TcType * a, TcType * b);
-static bool occursIn(TcType * a, TcType * b);
-static bool sameType(TcType * a, TcType * b);
-static TcType *analyzeBigIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng);
-static TcType *analyzeSmallIntegerExp(LamExp * exp, TcEnv * env, TcNg * ng) __attribute__((unused));
-static TcType *analyzeBooleanExp(LamExp * exp, TcEnv * env, TcNg * ng);
-static TcType *freshRec(TcType * type, TcNg * ng, TcTypeTable * map);
-static TcType *lookUp(TcEnv * env, HashSymbol * symbol, TcNg * ng);
+static TcType *analyzeEnv(TcEnv *env);
+static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused)));
+static TcType *prune(TcType *t);
+static bool occursInType(TcType *a, TcType *b);
+static bool occursIn(TcType *a, TcType *b);
+static bool sameType(TcType *a, TcType *b);
+static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng)
+    __attribute__((unused));
+static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng);
+static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map);
+static TcType *lookUp(TcEnv *env, HashSymbol *symbol, TcNg *ng);
 static TcType *analyzeLookUp(LamLookUp *, TcEnv *, TcNg *);
-static TcType *lookUpConstructorType(HashSymbol * name, int nameSpace, TcEnv * env, TcNg * ng);
-static void addTypeSigToEnv(TcEnv * env, HashSymbol * symbol, TcTypeSig * type);
+static TcType *lookUpConstructorType(HashSymbol *name, int nameSpace,
+                                     TcEnv *env, TcNg *ng);
+static void addTypeSigToEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig *type);
 static bool failUnify(TcType *a, TcType *b, char *reason);
 static bool failUnifyTypeSigs(TcTypeSig *a, TcTypeSig *b, char *reason);
-static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) __attribute__((unused));
-bool getTypeSigFromTcEnv(TcEnv * env, HashSymbol * symbol, TcTypeSig ** type);
+static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason)
+    __attribute__((unused));
+bool getTypeSigFromTcEnv(TcEnv *env, HashSymbol *symbol, TcTypeSig **type);
 
 static int id_counter = 0;
 
@@ -198,17 +203,11 @@ static TcType *makeNamedType(char *name) {
     return res;
 }
 
-TcType *makeBasicType(void) {
-    return makeNamedType("basic_type");
-}
+TcType *makeBasicType(void) { return makeNamedType("basic_type"); }
 
-TcType *makeIOType(void) {
-    return makeNamedType("io_mode");
-}
+TcType *makeIOType(void) { return makeNamedType("io_mode"); }
 
-TcType *makeFTypeType(void) {
-    return makeNamedType("ftype_type");
-}
+TcType *makeFTypeType(void) { return makeNamedType("ftype_type"); }
 
 static TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
     // Analyze the inner expression to get its type
@@ -219,7 +218,7 @@ static TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
     // Convert the C string to a lambda list of chars
     LamExp *stringExp = stringToLamArgs(CPI(exp), typeString);
     PROTECT(stringExp);
-    free(typeString);           // Free the temporary C string
+    free(typeString); // Free the temporary C string
     // Replace just the type discriminator and union value, preserving header
     exp->type = stringExp->type;
     exp->val = stringExp->val;
@@ -235,74 +234,85 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     if (exp == NULL)
         return NULL;
     switch (exp->type) {
-        case LAMEXP_TYPE_LAM:
-            return prune(analyzeLam(getLamExp_Lam(exp), env, ng));
-        case LAMEXP_TYPE_VAR:
-            return prune(analyzeVar(CPI(exp), getLamExp_Var(exp), env, ng));
-        case LAMEXP_TYPE_STDINT:
-            return prune(analyzeSmallInteger());
-        case LAMEXP_TYPE_BIGINTEGER:
-            return prune(analyzeBigInteger());
-        case LAMEXP_TYPE_PRIM:
-            return prune(analyzePrim(getLamExp_Prim(exp), env, ng));
-        case LAMEXP_TYPE_SEQUENCE:
-            return prune(analyzeSequence(getLamExp_Sequence(exp), env, ng));
-        case LAMEXP_TYPE_MAKEVEC:
-            cant_happen("encountered make-vec in analyzeExp");
-        case LAMEXP_TYPE_CONSTRUCT:
-            return prune(analyzeConstruct(getLamExp_Construct(exp), env, ng));
-        case LAMEXP_TYPE_DECONSTRUCT:
-            return prune(analyzeDeconstruct(getLamExp_Deconstruct(exp), env, ng));
-        case LAMEXP_TYPE_TAG:
-            return prune(analyzeTag(getLamExp_Tag(exp), env, ng));
-        case LAMEXP_TYPE_CONSTANT:
-            return prune(analyzeConstant(getLamExp_Constant(exp), env, ng));
-        case LAMEXP_TYPE_APPLY:
-            return prune(analyzeApply(getLamExp_Apply(exp), env, ng));
-        case LAMEXP_TYPE_IFF:
-            return prune(analyzeIff(getLamExp_Iff(exp), env, ng));
-        case LAMEXP_TYPE_CALLCC:
-            return prune(analyzeCallCC(getLamExp_CallCC(exp), env, ng));
-        case LAMEXP_TYPE_PRINT:
-            return prune(analyzePrint(getLamExp_Print(exp), env, ng));
-        case LAMEXP_TYPE_TYPEOF:
-            return analyzeTypeOf(exp, env, ng);
-        case LAMEXP_TYPE_LETREC:
-            return prune(analyzeLetRec(getLamExp_LetRec(exp), env, ng));
-        case LAMEXP_TYPE_TYPEDEFS:
-            return prune(analyzeTypeDefs(getLamExp_TypeDefs(exp), env, ng));
-        case LAMEXP_TYPE_LET:
-            return prune(analyzeLet(getLamExp_Let(exp), env, ng));
-        case LAMEXP_TYPE_LETSTAR:
-            return prune(analyzeLetStar(getLamExp_LetStar(exp), env, ng));
-        case LAMEXP_TYPE_MATCH:
-            return prune(analyzeMatch(getLamExp_Match(exp), env, ng));
-        case LAMEXP_TYPE_COND:
-            return prune(analyzeCond(getLamExp_Cond(exp), env, ng));
-        case LAMEXP_TYPE_AMB:
-            return prune(analyzeAmb(getLamExp_Amb(exp), env, ng));
-        case LAMEXP_TYPE_CHARACTER:
-            return prune(analyzeCharacter());
-        case LAMEXP_TYPE_BACK:
-            return prune(analyzeBack());
-        case LAMEXP_TYPE_ERROR:
-            return prune(analyzeError());
-        case LAMEXP_TYPE_TUPLEINDEX:
-            return prune(analyzeTupleIndex(getLamExp_TupleIndex(exp), env, ng));
-        case LAMEXP_TYPE_MAKETUPLE:
-            return prune(analyzeMakeTuple(getLamExp_MakeTuple(exp), env, ng));
-        case LAMEXP_TYPE_NAMESPACES:
-            return prune(analyzeNameSpaces(getLamExp_NameSpaces(exp), env, ng));
-        case LAMEXP_TYPE_ENV:
-            return prune(analyzeEnv(env));
-        case LAMEXP_TYPE_LOOKUP:
-            return prune(analyzeLookUp(getLamExp_LookUp(exp), env, ng));
-        case LAMEXP_TYPE_CONSTRUCTOR:
-            return
-                prune(analyzeVar
-                      (CPI(exp), getLamExp_Constructor(exp)->name, env, ng));
-        default:
-            cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
+    case LAMEXP_TYPE_LAM:
+        return prune(analyzeLam(getLamExp_Lam(exp), env, ng));
+    case LAMEXP_TYPE_VAR:
+        return prune(analyzeVar(CPI(exp), getLamExp_Var(exp), env, ng));
+    case LAMEXP_TYPE_STDINT:
+        return prune(analyzeSmallInteger());
+    case LAMEXP_TYPE_BIGINTEGER:
+        return prune(analyzeBigInteger());
+    case LAMEXP_TYPE_PRIM:
+        return prune(analyzePrim(getLamExp_Prim(exp), env, ng));
+    case LAMEXP_TYPE_SEQUENCE:
+        return prune(analyzeSequence(getLamExp_Sequence(exp), env, ng));
+    case LAMEXP_TYPE_MAKEVEC:
+        cant_happen("encountered make-vec in analyzeExp");
+    case LAMEXP_TYPE_CONSTRUCT:
+        return prune(analyzeConstruct(getLamExp_Construct(exp), env, ng));
+    case LAMEXP_TYPE_DECONSTRUCT:
+        return prune(analyzeDeconstruct(getLamExp_Deconstruct(exp), env, ng));
+    case LAMEXP_TYPE_TAG:
+        return prune(analyzeTag(getLamExp_Tag(exp), env, ng));
+    case LAMEXP_TYPE_CONSTANT:
+        return prune(analyzeConstant(getLamExp_Constant(exp), env, ng));
+    case LAMEXP_TYPE_APPLY:
+        return prune(analyzeApply(getLamExp_Apply(exp), env, ng));
+    case LAMEXP_TYPE_IFF:
+        return prune(analyzeIff(getLamExp_Iff(exp), env, ng));
+    case LAMEXP_TYPE_CALLCC:
+        return prune(analyzeCallCC(getLamExp_CallCC(exp), env, ng));
+    case LAMEXP_TYPE_PRINT: {
+        // After capturing the type, we convert the print expression
+        // into a simple application.
+        LamPrint *printer = getLamExp_Print(exp);
+        TcType *ret = prune(analyzePrint(printer, env, ng));
+        LamArgs *args = newLamArgs(CPI(printer), printer->exp, NULL);
+        int save = PROTECT(args);
+        LamApply *app = newLamApply(CPI(printer), printer->printer, args);
+        PROTECT(app);
+        exp->type = LAMEXP_TYPE_APPLY;
+        setLamExp_Apply(exp, app);
+        UNPROTECT(save);
+        return ret;
+    }
+    case LAMEXP_TYPE_TYPEOF:
+        return analyzeTypeOf(exp, env, ng);
+    case LAMEXP_TYPE_LETREC:
+        return prune(analyzeLetRec(getLamExp_LetRec(exp), env, ng));
+    case LAMEXP_TYPE_TYPEDEFS:
+        return prune(analyzeTypeDefs(getLamExp_TypeDefs(exp), env, ng));
+    case LAMEXP_TYPE_LET:
+        return prune(analyzeLet(getLamExp_Let(exp), env, ng));
+    case LAMEXP_TYPE_LETSTAR:
+        return prune(analyzeLetStar(getLamExp_LetStar(exp), env, ng));
+    case LAMEXP_TYPE_MATCH:
+        return prune(analyzeMatch(getLamExp_Match(exp), env, ng));
+    case LAMEXP_TYPE_COND:
+        return prune(analyzeCond(getLamExp_Cond(exp), env, ng));
+    case LAMEXP_TYPE_AMB:
+        return prune(analyzeAmb(getLamExp_Amb(exp), env, ng));
+    case LAMEXP_TYPE_CHARACTER:
+        return prune(analyzeCharacter());
+    case LAMEXP_TYPE_BACK:
+        return prune(analyzeBack());
+    case LAMEXP_TYPE_ERROR:
+        return prune(analyzeError());
+    case LAMEXP_TYPE_TUPLEINDEX:
+        return prune(analyzeTupleIndex(getLamExp_TupleIndex(exp), env, ng));
+    case LAMEXP_TYPE_MAKETUPLE:
+        return prune(analyzeMakeTuple(getLamExp_MakeTuple(exp), env, ng));
+    case LAMEXP_TYPE_NAMESPACES:
+        return prune(analyzeNameSpaces(getLamExp_NameSpaces(exp), env, ng));
+    case LAMEXP_TYPE_ENV:
+        return prune(analyzeEnv(env));
+    case LAMEXP_TYPE_LOOKUP:
+        return prune(analyzeLookUp(getLamExp_LookUp(exp), env, ng));
+    case LAMEXP_TYPE_CONSTRUCTOR:
+        return prune(
+            analyzeVar(CPI(exp), getLamExp_Constructor(exp)->name, env, ng));
+    default:
+        cant_happen("unrecognized type %s", lamExpTypeName(exp->type));
     }
 }
 
@@ -331,7 +341,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     int save = PROTECT(env);
     ng = newTcNg(ng);
     PROTECT(ng);
-    for (LamVarList * args = lam->args; args != NULL; args = args->next) {
+    for (LamVarList *args = lam->args; args != NULL; args = args->next) {
         TcType *freshType = makeFreshVar(args->var->name);
         int save2 = PROTECT(freshType);
         addToEnv(env, args->var, freshType);
@@ -340,7 +350,7 @@ static TcType *analyzeLam(LamLam *lam, TcEnv *env, TcNg *ng) {
     }
     TcType *returnType = analyzeExp(lam->exp, env, ng);
     PROTECT(returnType);
-    
+
     // Zero-argument lambda creates a thunk type, not a function type
     TcType *functionType;
     if (lam->args == NULL) {
@@ -361,16 +371,14 @@ static TcType *analyzeVar(ParserInfo I, HashSymbol *var, TcEnv *env, TcNg *ng) {
     if (res == NULL) {
         // ppTcEnv(env);
         can_happen("undefined variable %s in %s, line %d", var->name,
-                    I.fileName, I.lineNo);
+                   I.fileName, I.lineNo);
         return makeUnknown(var);
     }
     // LEAVE(analyzeVar);
     return res;
 }
 
-static TcType *analyzeSmallInteger() {
-    return makeSmallInteger();
-}
+static TcType *analyzeSmallInteger() { return makeSmallInteger(); }
 
 static TcType *analyzeBigInteger() {
     // ENTER(analyzeBigInteger);
@@ -382,7 +390,7 @@ static TcType *analyzeBigInteger() {
 static TcType *analyzeBinaryArith(LamExp *exp1, LamExp *exp2, TcEnv *env,
                                   TcNg *ng) {
     // ENTER(analyzeBinaryArith);
-    (void) analyzeBigIntegerExp(exp1, env, ng);
+    (void)analyzeBigIntegerExp(exp1, env, ng);
     TcType *res = analyzeBigIntegerExp(exp2, env, ng);
     // LEAVE(analyzeBinaryArith);
     return res;
@@ -448,30 +456,30 @@ static TcType *analyzePrim(LamPrimApp *app, TcEnv *env, TcNg *ng) {
     // ENTER(analyzePrim);
     TcType *res = NULL;
     switch (app->type) {
-        case LAMPRIMOP_TYPE_ADD:
-        case LAMPRIMOP_TYPE_SUB:
-        case LAMPRIMOP_TYPE_MUL:
-        case LAMPRIMOP_TYPE_DIV:
-        case LAMPRIMOP_TYPE_MOD:
-        case LAMPRIMOP_TYPE_POW:
-            res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
-            break;
-        case LAMPRIMOP_TYPE_EQ:
-        case LAMPRIMOP_TYPE_NE:
-        case LAMPRIMOP_TYPE_GT:
-        case LAMPRIMOP_TYPE_LT:
-        case LAMPRIMOP_TYPE_GE:
-        case LAMPRIMOP_TYPE_LE:
-            res = analyzeComparison(app->exp1, app->exp2, env, ng);
-            break;
-        case LAMPRIMOP_TYPE_CMP:
-            res = analyzeSpaceship(app->exp1, app->exp2, env, ng);
-            break;
-        case LAMPRIMOP_TYPE_VEC:
-            cant_happen("encountered VEC in analyzePrim");
-            break;
-        default:
-            cant_happen("unrecognised type %d in analyzePrim", app->type);
+    case LAMPRIMOP_TYPE_ADD:
+    case LAMPRIMOP_TYPE_SUB:
+    case LAMPRIMOP_TYPE_MUL:
+    case LAMPRIMOP_TYPE_DIV:
+    case LAMPRIMOP_TYPE_MOD:
+    case LAMPRIMOP_TYPE_POW:
+        res = analyzeBinaryArith(app->exp1, app->exp2, env, ng);
+        break;
+    case LAMPRIMOP_TYPE_EQ:
+    case LAMPRIMOP_TYPE_NE:
+    case LAMPRIMOP_TYPE_GT:
+    case LAMPRIMOP_TYPE_LT:
+    case LAMPRIMOP_TYPE_GE:
+    case LAMPRIMOP_TYPE_LE:
+        res = analyzeComparison(app->exp1, app->exp2, env, ng);
+        break;
+    case LAMPRIMOP_TYPE_CMP:
+        res = analyzeSpaceship(app->exp1, app->exp2, env, ng);
+        break;
+    case LAMPRIMOP_TYPE_VEC:
+        cant_happen("encountered VEC in analyzePrim");
+        break;
+    default:
+        cant_happen("unrecognised type %d in analyzePrim", app->type);
     }
     // LEAVE(analyzePrim);
     return res;
@@ -496,8 +504,7 @@ static LamApply *constructToApply(LamConstruct *construct) {
     // ENTER(constructToApply);
     LamExp *constructor = newLamExp_Var(CPI(construct), construct->name);
     int save = PROTECT(constructor);
-    LamApply *apply =
-        newLamApply(CPI(construct), constructor, construct->args);
+    LamApply *apply = newLamApply(CPI(construct), constructor, construct->args);
     UNPROTECT(save);
     // LEAVE(constructToApply);
     return apply;
@@ -549,8 +556,7 @@ static TcType *analyzeDeconstruct(LamDeconstruct *deconstruct, TcEnv *env,
     int save = PROTECT(constructor);
     // ppTcType(constructor); eprintf("\n");
     if (constructor == NULL) {
-        can_happen("undefined type deconstructor %s",
-                   deconstruct->name->name);
+        can_happen("undefined type deconstructor %s", deconstruct->name->name);
         REPORT_PARSER_INFO(deconstruct);
         TcType *res = makeFreshVar(deconstruct->name->name);
         // LEAVE(analyzeDeconstruct);
@@ -645,7 +651,7 @@ static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env,
         int save = PROTECT(env2);
         TcNg *ng2 = newTcNg(ng);
         PROTECT(ng2);
-        TcType *nsId = newTcType_NsId((int) i);
+        TcType *nsId = newTcType_NsId((int)i);
         PROTECT(nsId);
         addToEnv(env2, nameSpaceSymbol(), nsId);
         TcType *res = analyzeExp(nsArray->entries[i], env2, ng2);
@@ -656,24 +662,22 @@ static TcType *analyzeNameSpaces(LamNameSpaceArray *nsArray, TcEnv *env,
     return nsType;
 }
 
-static TcType *analyzeEnv(TcEnv *env) {
-    return newTcType_Env(env);
-}
+static TcType *analyzeEnv(TcEnv *env) { return newTcType_Env(env); }
 
 static TcType *analyzeTag(LamExp *tagged, TcEnv *env, TcNg *ng) {
     return analyzeExp(tagged, env, ng);
 }
 
 static TcType *analyzeConstant(LamConstant *constant, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeConstant);
+    // ENTER(analyzeConstant);
     TcType *constType = lookUp(env, constant->name, ng);
     if (constType == NULL) {
         can_happen("undefined constant %s", constant->name->name);
         TcType *res = makeFreshVar("err");
-// LEAVE(analyzeConstant);
+        // LEAVE(analyzeConstant);
         return res;
     }
-// LEAVE(analyzeConstant);
+    // LEAVE(analyzeConstant);
     return constType;
 }
 
@@ -691,8 +695,7 @@ static LamApply *curryLamApplyHelper(int nArgs, LamExp *function,
     PROTECT(new);
     LamExp *newFunction = newLamExp_Apply(CPI(new), new);
     PROTECT(newFunction);
-    LamApply *curried =
-        curryLamApplyHelper(nArgs - 1, newFunction, args->next);
+    LamApply *curried = curryLamApplyHelper(nArgs - 1, newFunction, args->next);
     UNPROTECT(save);
     return curried;
 }
@@ -703,98 +706,95 @@ static LamApply *curryLamApply(LamApply *apply) {
 }
 
 static TcType *analyzeApply(LamApply *apply, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeApply);
+    // ENTER(analyzeApply);
     switch (countLamArgs(apply->args)) {
-        case 0:
-            {
-                TcType *fnType = analyzeExp(apply->function, env, ng);
-                int save = PROTECT(fnType);
-                fnType = prune(fnType);
-                
-                // Check if this is a thunk being forced
-                if (fnType->type == TCTYPE_TYPE_THUNK) {
-                    // Forcing a thunk extracts its underlying type
-                    TcType *res = getTcType_Thunk(fnType)->type;
-                    UNPROTECT(save);
-                    return res;
-                }
-                
-                // If it's a type variable, constrain it to be a thunk
-                if (fnType->type == TCTYPE_TYPE_VAR) {
-                    // Create a fresh result type
-                    TcType *resultType = makeFreshVar("thunk_result");
-                    PROTECT(resultType);
-                    // Create a thunk type wrapping the result
-                    TcType *thunkType = makeThunk(resultType);
-                    PROTECT(thunkType);
-                    // Unify the variable with the thunk type
-                    if (!unify(fnType, thunkType, "zero-arg apply")) {
-                        eprintf("while analyzing zero-arg application of:\n");
-                        ppLamExp(apply->function);
-                        eprintf("\n");
-                        REPORT_PARSER_INFO(apply->function);
-                    }
-                    UNPROTECT(save);
-                    return resultType;
-                }
-                
-                // Otherwise, return the function type as-is
-                // (for zero-arg functions that return function types)
-                UNPROTECT(save);
-                // LEAVE(analyzeApply);
-                return fnType;
+    case 0: {
+        TcType *fnType = analyzeExp(apply->function, env, ng);
+        int save = PROTECT(fnType);
+        fnType = prune(fnType);
+
+        // Check if this is a thunk being forced
+        if (fnType->type == TCTYPE_TYPE_THUNK) {
+            // Forcing a thunk extracts its underlying type
+            TcType *res = getTcType_Thunk(fnType)->type;
+            UNPROTECT(save);
+            return res;
+        }
+
+        // If it's a type variable, constrain it to be a thunk
+        if (fnType->type == TCTYPE_TYPE_VAR) {
+            // Create a fresh result type
+            TcType *resultType = makeFreshVar("thunk_result");
+            PROTECT(resultType);
+            // Create a thunk type wrapping the result
+            TcType *thunkType = makeThunk(resultType);
+            PROTECT(thunkType);
+            // Unify the variable with the thunk type
+            if (!unify(fnType, thunkType, "zero-arg apply")) {
+                eprintf("while analyzing zero-arg application of:\n");
+                ppLamExp(apply->function);
+                eprintf("\n");
+                REPORT_PARSER_INFO(apply->function);
             }
-        case 1:
-            {
-                // fn :: #a -> #b
-                TcType *fn = analyzeExp(apply->function, env, ng);
-                int save = PROTECT(fn);
-                // arg :: #c
-                TcType *arg = analyzeExp(apply->args->exp, env, ng);
-                PROTECT(arg);
-                // res :: #d
-                TcType *res = makeFreshVar("apply");
-                PROTECT(res);
-                // functionType :: #c -> #d
-                TcType *functionType = makeFn(arg, res);
-                PROTECT(functionType);
-                // unify(#a -> #b, #c -> #d)
-                if (!unify(fn, functionType, "apply")) {
-                    eprintf("while analyzing apply ");
-                    ppLamExp(apply->function);
-                    eprintf(" (type: ");
-                    ppTcType(prune(fn));
-                    eprintf(") to ");
-                    ppLamExp(apply->args->exp);
-                    eprintf(" (type: ");
-                    ppTcType(prune(arg));
-                    eprintf(")\n");
-                    REPORT_PARSER_INFO(apply->function);
-                    if (!EQ_PARSER_INFO(apply->function, apply->args)) {
-                        REPORT_PARSER_INFO(apply->args);
-                    }
-                }
-                UNPROTECT(save);
-                // LEAVE(analyzeApply);
-                res = prune(res);
-                // #d/#b
-                return res;
+            UNPROTECT(save);
+            return resultType;
+        }
+
+        // Otherwise, return the function type as-is
+        // (for zero-arg functions that return function types)
+        UNPROTECT(save);
+        // LEAVE(analyzeApply);
+        return fnType;
+    }
+    case 1: {
+        // fn :: #a -> #b
+        TcType *fn = analyzeExp(apply->function, env, ng);
+        int save = PROTECT(fn);
+        // arg :: #c
+        TcType *arg = analyzeExp(apply->args->exp, env, ng);
+        PROTECT(arg);
+        // res :: #d
+        TcType *res = makeFreshVar("apply");
+        PROTECT(res);
+        // functionType :: #c -> #d
+        TcType *functionType = makeFn(arg, res);
+        PROTECT(functionType);
+        // unify(#a -> #b, #c -> #d)
+        if (!unify(fn, functionType, "apply")) {
+            eprintf("while analyzing apply ");
+            ppLamExp(apply->function);
+            eprintf(" (type: ");
+            ppTcType(prune(fn));
+            eprintf(") to ");
+            ppLamExp(apply->args->exp);
+            eprintf(" (type: ");
+            ppTcType(prune(arg));
+            eprintf(")\n");
+            REPORT_PARSER_INFO(apply->function);
+            if (!EQ_PARSER_INFO(apply->function, apply->args)) {
+                REPORT_PARSER_INFO(apply->args);
             }
-        default:
-            {
-                LamApply *curried = curryLamApply(apply);
-                int save = PROTECT(curried);
-                TcType *res = analyzeApply(curried, env, ng);
-                UNPROTECT(save);
-                // LEAVE(analyzeApply);
-                return res;
-            }
+        }
+        UNPROTECT(save);
+        // LEAVE(analyzeApply);
+        res = prune(res);
+        // #d/#b
+        return res;
+    }
+    default: {
+        LamApply *curried = curryLamApply(apply);
+        int save = PROTECT(curried);
+        TcType *res = analyzeApply(curried, env, ng);
+        UNPROTECT(save);
+        // LEAVE(analyzeApply);
+        return res;
+    }
     }
 }
 
 static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeIff);
-    (void) analyzeBooleanExp(iff->condition, env, ng);
+    // ENTER(analyzeIff);
+    (void)analyzeBooleanExp(iff->condition, env, ng);
     TcType *consequent = analyzeExp(iff->consequent, env, ng);
     int save = PROTECT(consequent);
     TcType *alternative = analyzeExp(iff->alternative, env, ng);
@@ -815,12 +815,12 @@ static TcType *analyzeIff(LamIff *iff, TcEnv *env, TcNg *ng) {
         }
     }
     UNPROTECT(save);
-// LEAVE(analyzeIff);
+    // LEAVE(analyzeIff);
     return consequent;
 }
 
 static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
-// 'call/cc' is ((a -> b) -> a) -> a
+    // 'call/cc' is ((a -> b) -> a) -> a
     TcType *a = makeFreshVar("callCCA");
     int save = PROTECT(a);
     TcType *b = makeFreshVar("callCCB");
@@ -842,13 +842,13 @@ static TcType *analyzeCallCC(LamExp *called, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *analyzePrint(LamPrint *print, TcEnv *env, TcNg *ng) {
-// a -> a, but installs a printer for type a
-// ENTER(analyzePrint);
+    // a -> a, but installs a printer for type a
+    // ENTER(analyzePrint);
     TcType *type = analyzeExp(print->exp, env, ng);
     int save = PROTECT(type);
     print->printer = compilePrinterForType(CPI(print), type, env);
     UNPROTECT(save);
-// LEAVE(analyzePrint);
+    // LEAVE(analyzePrint);
     IFDEBUG(ppTcType(type));
     return type;
 }
@@ -864,14 +864,13 @@ static void prepareLetRecEnv(LamBindings *bindings, TcEnv *env) {
     UNPROTECT(save);
 }
 
-static void processLetRecBinding(LamBindings *bindings, TcEnv *env,
-                                 TcNg *ng) {
+static void processLetRecBinding(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     TcType *existingType = NULL;
     if (!getFromTcEnv(env, bindings->var, &existingType)) {
         cant_happen("failed to retrieve fresh var from env in analyzeLetRec");
     }
     int save = PROTECT(existingType);
-// Recursive functions need to be statically typed inside their own context:
+    // Recursive functions need to be statically typed inside their own context:
     TcNg *ng2 = newTcNg(ng);
     PROTECT(ng2);
     addToNg(ng2, existingType);
@@ -899,7 +898,7 @@ static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
     int size = 0;
     char *snapshot = malloc(capacity);
 
-    for (LamBindings * b = bindings; b != NULL; b = b->next) {
+    for (LamBindings *b = bindings; b != NULL; b = b->next) {
         if (isLambdaBinding(b)) {
             TcType *type = NULL;
             if (getFromTcEnv(env, b->var, &type)) {
@@ -907,7 +906,7 @@ static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
                 char *typeStr = tcTypeToString(pruned);
                 int nameLen = strlen(b->var->name);
                 int typeLen = strlen(typeStr);
-                int needed = size + nameLen + typeLen + 3;      // "::" + ";"
+                int needed = size + nameLen + typeLen + 3; // "::" + ";"
 
                 if (needed >= capacity) {
                     capacity = needed * 2;
@@ -925,7 +924,7 @@ static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
                 size += typeLen;
                 snapshot[size++] = ';';
 
-                free(typeStr);  // tcTypeToString uses malloc, so we use free
+                free(typeStr); // tcTypeToString uses malloc, so we use free
             }
         }
     }
@@ -934,19 +933,19 @@ static char *snapshotBindingTypes(LamBindings *bindings, TcEnv *env) {
 }
 
 static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeLetRec);
+    // ENTER(analyzeLetRec);
     env = newTcEnv(env);
     int save = PROTECT(env);
     ng = newTcNg(ng);
     PROTECT(ng);
-// bind lambdas early
-    for (LamBindings * bindings = letRec->bindings; bindings != NULL;
+    // bind lambdas early
+    for (LamBindings *bindings = letRec->bindings; bindings != NULL;
          bindings = bindings->next) {
         if (isLambdaBinding(bindings)) {
             prepareLetRecEnv(bindings, env);
         }
     }
-    for (LamBindings * bindings = letRec->bindings; bindings != NULL;
+    for (LamBindings *bindings = letRec->bindings; bindings != NULL;
          bindings = bindings->next) {
         DEBUGN("analyzeLetRec %s => ", bindings->var->name);
         IFDEBUGN(ppLamExp(bindings->val));
@@ -955,9 +954,10 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
         }
         processLetRecBinding(bindings, env, ng);
     }
-// Iterate additional passes to allow type constraints to propagate through
-// forward references. Stop early when types converge (no changes between passes).
-// In practice, most code needs 2-3 passes, complex mutual recursion might need more.
+    // Iterate additional passes to allow type constraints to propagate through
+    // forward references. Stop early when types converge (no changes between
+    // passes). In practice, most code needs 2-3 passes, complex mutual
+    // recursion might need more.
     const int MAX_PASSES = 10;
     int passCount __attribute__((unused)) = 1;
     char *prevSnapshot = NULL;
@@ -965,17 +965,17 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
     for (int pass = 2; pass <= MAX_PASSES && !hadErrors(); pass++) {
         passCount = pass;
 
-        for (LamBindings * bindings = letRec->bindings;
-             bindings != NULL; bindings = bindings->next) {
+        for (LamBindings *bindings = letRec->bindings; bindings != NULL;
+             bindings = bindings->next) {
             if (isLambdaBinding(bindings)) {
                 processLetRecBinding(bindings, env, ng);
             }
         }
 
-// Check if types have converged
+        // Check if types have converged
         char *currentSnapshot = snapshotBindingTypes(letRec->bindings, env);
-        if (prevSnapshot != NULL
-            && strcmp(prevSnapshot, currentSnapshot) == 0) {
+        if (prevSnapshot != NULL &&
+            strcmp(prevSnapshot, currentSnapshot) == 0) {
             // No changes this pass - we've converged!
             DEBUGN("analyzeLetRec converged after %d passes\n", passCount);
             free(currentSnapshot);
@@ -998,7 +998,7 @@ static TcType *analyzeLetRec(LamLetRec *letRec, TcEnv *env, TcNg *ng) {
 
     TcType *res = analyzeExp(letRec->body, env, ng);
     UNPROTECT(save);
-// LEAVE(analyzeLetRec);
+    // LEAVE(analyzeLetRec);
     return res;
 }
 
@@ -1054,8 +1054,8 @@ static TcType *makeTuple(int size) {
     return res;
 }
 
-static TcType *makeTypeConstructorArg(LamTypeConstructorType * arg,
-                                      TcTypeTable * map, TcEnv * env);
+static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
+                                      TcTypeTable *map, TcEnv *env);
 
 static TcTypeArray *makeTupleArray(LamTypeConstructorArgs *args,
                                    TcTypeTable *map, TcEnv *env) {
@@ -1088,47 +1088,45 @@ static TcTypeSigArgs *makeTypeSigArgs(LamTypeConstructorArgs *args,
 
 static int findNameSpace(LamLookUpOrSymbol *los, TcEnv *env) {
     switch (los->type) {
-        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return getLamLookUpOrSymbol_LookUp(los)->nsId;
-        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            {
-                // eprintf("looking for %s in ", getLamLookUpOrSymbol_Symbol(los)->name);
-                // ppTcEnv(env);
-                TcTypeSig *typeSig;
-                if (getTypeSigFromTcEnv(env, getLamLookUpOrSymbol_Symbol(los), &typeSig)) {
-                    return typeSig->ns;
-                }
-                TcType *ns = NULL;
-                getFromTcEnv(env, nameSpaceSymbol(), &ns);
+    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+        return getLamLookUpOrSymbol_LookUp(los)->nsId;
+    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL: {
+        // eprintf("looking for %s in ",
+        // getLamLookUpOrSymbol_Symbol(los)->name); ppTcEnv(env);
+        TcTypeSig *typeSig;
+        if (getTypeSigFromTcEnv(env, getLamLookUpOrSymbol_Symbol(los),
+                                &typeSig)) {
+            return typeSig->ns;
+        }
+        TcType *ns = NULL;
+        getFromTcEnv(env, nameSpaceSymbol(), &ns);
 #ifdef SAFETY_CHECKS
-                if (ns == NULL) {
-                    cant_happen("cannot locate current nameSpace");
-                }
+        if (ns == NULL) {
+            cant_happen("cannot locate current nameSpace");
+        }
 #endif
-                return getTcType_NsId(ns);
-            }
-        default:
-            cant_happen("unrecognized %s",
-                        lamLookUpOrSymbolTypeName(los->type));
+        return getTcType_NsId(ns);
+    }
+    default:
+        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 static HashSymbol *getUnderlyingFunction(LamLookUpOrSymbol *los) {
     switch (los->type) {
-        case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
-            return getLamLookUpOrSymbol_LookUp(los)->symbol;
-        case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
-            return getLamLookUpOrSymbol_Symbol(los);
-        default:
-            cant_happen("unrecognized %s",
-                        lamLookUpOrSymbolTypeName(los->type));
+    case LAMLOOKUPORSYMBOL_TYPE_LOOKUP:
+        return getLamLookUpOrSymbol_LookUp(los)->symbol;
+    case LAMLOOKUPORSYMBOL_TYPE_SYMBOL:
+        return getLamLookUpOrSymbol_Symbol(los);
+    default:
+        cant_happen("unrecognized %s", lamLookUpOrSymbolTypeName(los->type));
     }
 }
 
 static TcType *makeTypeConstructorApplication(LamTypeFunction *func,
                                               TcTypeTable *map, TcEnv *env) {
-// this code is building the inner application of a type, i.e.
-// list(t) in the context of t -> list(t) -> list(t)
+    // this code is building the inner application of a type, i.e.
+    // list(t) in the context of t -> list(t) -> list(t)
     TcTypeSigArgs *args = makeTypeSigArgs(func->args, map, env);
     int save = PROTECT(args);
     int ns = findNameSpace(func->name, env);
@@ -1150,31 +1148,31 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
                                       TcTypeTable *map, TcEnv *env) {
     TcType *res = NULL;
     switch (arg->type) {
-        case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
-            res = makeBigInteger();
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
-            res = makeCharacter();
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_VAR:
-            {
-                if (!getTcTypeTable(map, getLamTypeConstructorType_Var(arg), &res)) {
-                    res = makeVar(getLamTypeConstructorType_Var(arg));
-                    int save = PROTECT(res);
-                    setTcTypeTable(map, getLamTypeConstructorType_Var(arg), res);
-                    UNPROTECT(save);
-                }
-            }
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
-            res = makeTypeConstructorApplication(getLamTypeConstructorType_Function(arg), map, env);
-            break;
-        case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
-            res = makeTupleApplication(getLamTypeConstructorType_Tuple(arg), map, env);
-            break;
-        default:
-            cant_happen("unrecognised type %s in makeTypeConstructorArg",
-                        lamTypeConstructorTypeTypeName(arg->type));
+    case LAMTYPECONSTRUCTORTYPE_TYPE_INTEGER:
+        res = makeBigInteger();
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_CHARACTER:
+        res = makeCharacter();
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_VAR: {
+        if (!getTcTypeTable(map, getLamTypeConstructorType_Var(arg), &res)) {
+            res = makeVar(getLamTypeConstructorType_Var(arg));
+            int save = PROTECT(res);
+            setTcTypeTable(map, getLamTypeConstructorType_Var(arg), res);
+            UNPROTECT(save);
+        }
+    } break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_FUNCTION:
+        res = makeTypeConstructorApplication(
+            getLamTypeConstructorType_Function(arg), map, env);
+        break;
+    case LAMTYPECONSTRUCTORTYPE_TYPE_TUPLE:
+        res = makeTupleApplication(getLamTypeConstructorType_Tuple(arg), map,
+                                   env);
+        break;
+    default:
+        cant_happen("unrecognised type %s in makeTypeConstructorArg",
+                    lamTypeConstructorTypeTypeName(arg->type));
     }
     return res;
 }
@@ -1182,8 +1180,8 @@ static TcType *makeTypeConstructorArg(LamTypeConstructorType *arg,
 static TcType *makeTypeDefConstructor(LamTypeConstructorArgs *args,
                                       TcType *result, TcTypeTable *map,
                                       TcEnv *env) {
-// this code is building the top-level type of a type constructor, i.e.
-// pair => t -> list(t) -> list(t)
+    // this code is building the top-level type of a type constructor, i.e.
+    // pair => t -> list(t) -> list(t)
     if (args == NULL) {
         return result;
     }
@@ -1221,33 +1219,33 @@ static void collectTypeDef(LamTypeDef *lamTypeDef, TcEnv *env) {
 #endif
     TcType *tcType = makeTcTypeSig(lamType, map, getTcType_NsId(ns));
     PROTECT(tcType);
-    addTypeSigToEnv(env, getTcType_TypeSig(tcType)->name, getTcType_TypeSig(tcType));
-    for (LamTypeConstructorList * list = lamTypeDef->constructors;
-         list != NULL; list = list->next) {
+    addTypeSigToEnv(env, getTcType_TypeSig(tcType)->name,
+                    getTcType_TypeSig(tcType));
+    for (LamTypeConstructorList *list = lamTypeDef->constructors; list != NULL;
+         list = list->next) {
         collectTypeDefConstructor(list->constructor, tcType, env, map);
     }
     UNPROTECT(save);
 }
 
 static TcType *analyzeTypeDefs(LamTypeDefs *typeDefs, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeTypeDefs);
+    // ENTER(analyzeTypeDefs);
     env = newTcEnv(env);
     int save = PROTECT(env);
-    for (LamTypeDefList * list = typeDefs->typeDefs; list != NULL;
+    for (LamTypeDefList *list = typeDefs->typeDefs; list != NULL;
          list = list->next) {
         collectTypeDef(list->typeDef, env);
     }
     TcType *res = analyzeExp(typeDefs->body, env, ng);
     UNPROTECT(save);
-// LEAVE(analyzeTypeDefs);
+    // LEAVE(analyzeTypeDefs);
     return res;
 }
 
-static void analyzeLetBindings(LamBindings *bindings, TcEnv *env,
-                                TcNg *ng) {
+static void analyzeLetBindings(LamBindings *bindings, TcEnv *env, TcNg *ng) {
     // FIXME: types of let bindings should be inferred in parallel
     // but we don't currently make use of `let`
-    for (LamBindings * b = bindings; b != NULL; b = b->next) {
+    for (LamBindings *b = bindings; b != NULL; b = b->next) {
         TcType *type = analyzeExp(b->val, env, ng);
         int save = PROTECT(type);
         addToEnv(env, b->var, type);
@@ -1256,8 +1254,8 @@ static void analyzeLetBindings(LamBindings *bindings, TcEnv *env,
 }
 
 static void analyzeLetStarBindings(LamBindings *bindings, TcEnv *env,
-                                TcNg *ng) {
-    for (LamBindings * b = bindings; b != NULL; b = b->next) {
+                                   TcNg *ng) {
+    for (LamBindings *b = bindings; b != NULL; b = b->next) {
         TcType *type = analyzeExp(b->val, env, ng);
         int save = PROTECT(type);
         addToEnv(env, b->var, type);
@@ -1266,33 +1264,33 @@ static void analyzeLetStarBindings(LamBindings *bindings, TcEnv *env,
 }
 
 static TcType *analyzeLet(LamLet *let, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeLet);
+    // ENTER(analyzeLet);
     env = newTcEnv(env);
     int save = PROTECT(env);
     analyzeLetBindings(let->bindings, env, ng);
     TcType *res = analyzeExp(let->body, env, ng);
     UNPROTECT(save);
-// LEAVE(analyzeLet);
+    // LEAVE(analyzeLet);
     return res;
 }
 
 static TcType *analyzeLetStar(LamLetStar *letStar, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeLetStar);
-// let* expression is evaluated in the current environment
+    // ENTER(analyzeLetStar);
+    // let* expression is evaluated in the current environment
     env = newTcEnv(env);
     int save = PROTECT(env);
     analyzeLetStarBindings(letStar->bindings, env, ng);
     TcType *res = analyzeExp(letStar->body, env, ng);
     UNPROTECT(save);
-// LEAVE(analyzeLet);
+    // LEAVE(analyzeLet);
     return res;
 }
 
 static TcType *analyzeMatchCases(LamMatchList *cases, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeMatchCases);
+    // ENTER(analyzeMatchCases);
     if (cases == NULL) {
         TcType *res = makeFreshVar("matchCases");
-// LEAVE(analyzeMatchCases);
+        // LEAVE(analyzeMatchCases);
         return res;
     }
     TcType *rest = analyzeMatchCases(cases->next, env, ng);
@@ -1306,12 +1304,12 @@ static TcType *analyzeMatchCases(LamMatchList *cases, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(cases->body);
     }
     UNPROTECT(save);
-// LEAVE(analyzeMatchCases);
+    // LEAVE(analyzeMatchCases);
     return this;
 }
 
 static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeBigIntegerExp);
+    // ENTER(analyzeBigIntegerExp);
     TcType *type = analyzeExp(exp, env, ng);
     int save = PROTECT(type);
     TcType *integer = makeBigInteger();
@@ -1323,12 +1321,12 @@ static TcType *analyzeBigIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(exp);
     }
     UNPROTECT(save);
-// LEAVE(analyzeBigIntegerExp);
+    // LEAVE(analyzeBigIntegerExp);
     return integer;
 }
 
 static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeSmallIntegerExp);
+    // ENTER(analyzeSmallIntegerExp);
     TcType *type = analyzeExp(exp, env, ng);
     int save = PROTECT(type);
     TcType *integer = makeSmallInteger();
@@ -1340,12 +1338,12 @@ static TcType *analyzeSmallIntegerExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(exp);
     }
     UNPROTECT(save);
-// LEAVE(analyzeSmallIntegerExp);
+    // LEAVE(analyzeSmallIntegerExp);
     return integer;
 }
 
 static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeBooleanExp);
+    // ENTER(analyzeBooleanExp);
     TcType *type = analyzeExp(exp, env, ng);
     int save = PROTECT(type);
     TcType *boolean = makeBoolean();
@@ -1357,7 +1355,7 @@ static TcType *analyzeBooleanExp(LamExp *exp, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(exp);
     }
     UNPROTECT(save);
-// LEAVE(analyzeBooleanExp);
+    // LEAVE(analyzeBooleanExp);
     return boolean;
 }
 
@@ -1390,8 +1388,7 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
     }
     TcType *next = analyzeIntList(intList->next, env, ng);
     int save = PROTECT(next);
-    TcType *this =
-        lookUpConstructorType(intList->name, intList->nsId, env, ng);
+    TcType *this = lookUpConstructorType(intList->name, intList->nsId, env, ng);
     PROTECT(this);
     this = findResultType(this);
     PROTECT(this);
@@ -1404,9 +1401,9 @@ static TcType *analyzeIntList(LamIntList *intList, TcEnv *env, TcNg *ng) {
 }
 
 static TcType *findCaseType(LamMatchList *matchList, TcEnv *env, TcNg *ng) {
-// ENTER(findCaseType);
+    // ENTER(findCaseType);
     if (matchList == NULL) {
-// LEAVE(findCaseType);
+        // LEAVE(findCaseType);
         return makeFreshVar("caseType");
     }
     TcType *next = findCaseType(matchList->next, env, ng);
@@ -1418,12 +1415,12 @@ static TcType *findCaseType(LamMatchList *matchList, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(matchList);
     }
     UNPROTECT(save);
-// LEAVE(findCaseType);
+    // LEAVE(findCaseType);
     return this;
 }
 
 static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeMatch);
+    // ENTER(analyzeMatch);
     TcType *caseType = findCaseType(match->cases, env, ng);
     int save = PROTECT(caseType);
     TcType *indexType = analyzeExp(match->index, env, ng);
@@ -1433,16 +1430,16 @@ static TcType *analyzeMatch(LamMatch *match, TcEnv *env, TcNg *ng) {
         REPORT_PARSER_INFO(match);
     }
     TcType *res = analyzeMatchCases(match->cases, env, ng);
-// LEAVE(analyzeMatch);
+    // LEAVE(analyzeMatch);
     UNPROTECT(save);
     return res;
 }
 
 static TcType *analyzeIntCondCases(LamIntCondCases *cases, TcEnv *env,
                                    TcNg *ng) {
-// ENTER(analyzeIntCondCases);
+    // ENTER(analyzeIntCondCases);
     if (cases == NULL) {
-// LEAVE(analyzeIntCondCases);
+        // LEAVE(analyzeIntCondCases);
         return makeFreshVar("intCondCases");
     }
     TcType *rest = analyzeIntCondCases(cases->next, env, ng);
@@ -1454,15 +1451,15 @@ static TcType *analyzeIntCondCases(LamIntCondCases *cases, TcEnv *env,
         REPORT_PARSER_INFO(cases->body);
     }
     UNPROTECT(save);
-// LEAVE(analyzeIntCondCases);
+    // LEAVE(analyzeIntCondCases);
     return this;
 }
 
 static TcType *analyzeCharCondCases(LamCharCondCases *cases, TcEnv *env,
                                     TcNg *ng) {
-// ENTER(analyzeCharCondCases);
+    // ENTER(analyzeCharCondCases);
     if (cases == NULL) {
-// LEAVE(analyzeCharCondCases);
+        // LEAVE(analyzeCharCondCases);
         return makeFreshVar("charCondCases");
     }
     TcType *rest = analyzeCharCondCases(cases->next, env, ng);
@@ -1474,57 +1471,51 @@ static TcType *analyzeCharCondCases(LamCharCondCases *cases, TcEnv *env,
         REPORT_PARSER_INFO(cases->body);
     }
     UNPROTECT(save);
-// LEAVE(analyzeCharCondCases);
+    // LEAVE(analyzeCharCondCases);
     return this;
 }
 
 static TcType *analyzeCond(LamCond *cond, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeCond);
+    // ENTER(analyzeCond);
     TcType *result = NULL;
     int save = PROTECT(result);
     TcType *value = analyzeExp(cond->value, env, ng);
     PROTECT(value);
     switch (cond->cases->type) {
-        case LAMCONDCASES_TYPE_INTEGERS:
-            {
-                TcType *integer = makeBigInteger();
-                PROTECT(integer);
-                if (!unify(value, integer, "cond[1]")) {
-                    eprintf("while analyzing integer cond:\n");
-                    REPORT_PARSER_INFO(cond->value);
-                    ppLamExp(cond->value);
-                    eprintf("\n");
-                }
-                result =
-                    analyzeIntCondCases(getLamCondCases_Integers(cond->cases), env, ng);
-            }
-            break;
-        case LAMCONDCASES_TYPE_CHARACTERS:
-            {
-                TcType *character = makeCharacter();
-                PROTECT(character);
-                if (!unify(value, character, "cond[2]")) {
-                    eprintf("while analyzing character cond:\n");
-                    REPORT_PARSER_INFO(cond->value);
-                    ppLamExp(cond->value);
-                    eprintf("\n");
-                }
-                result =
-                    analyzeCharCondCases(getLamCondCases_Characters(cond->cases), env,
-                                         ng);
-            }
-            break;
-        default:
-            cant_happen("unrecognized type %d in analyzeCond",
-                        cond->cases->type);
+    case LAMCONDCASES_TYPE_INTEGERS: {
+        TcType *integer = makeBigInteger();
+        PROTECT(integer);
+        if (!unify(value, integer, "cond[1]")) {
+            eprintf("while analyzing integer cond:\n");
+            REPORT_PARSER_INFO(cond->value);
+            ppLamExp(cond->value);
+            eprintf("\n");
+        }
+        result =
+            analyzeIntCondCases(getLamCondCases_Integers(cond->cases), env, ng);
+    } break;
+    case LAMCONDCASES_TYPE_CHARACTERS: {
+        TcType *character = makeCharacter();
+        PROTECT(character);
+        if (!unify(value, character, "cond[2]")) {
+            eprintf("while analyzing character cond:\n");
+            REPORT_PARSER_INFO(cond->value);
+            ppLamExp(cond->value);
+            eprintf("\n");
+        }
+        result = analyzeCharCondCases(getLamCondCases_Characters(cond->cases),
+                                      env, ng);
+    } break;
+    default:
+        cant_happen("unrecognized type %d in analyzeCond", cond->cases->type);
     }
     UNPROTECT(save);
-// LEAVE(analyzeCond);
+    // LEAVE(analyzeCond);
     return result;
 }
 
 static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
-// ENTER(analyzeAmb);
+    // ENTER(analyzeAmb);
     TcType *left = analyzeExp(amb->left, env, ng);
     int save = PROTECT(left);
     TcType *right = analyzeExp(amb->right, env, ng);
@@ -1541,28 +1532,28 @@ static TcType *analyzeAmb(LamAmb *amb, TcEnv *env, TcNg *ng) {
         }
     }
     UNPROTECT(save);
-// LEAVE(analyzeAmb);
+    // LEAVE(analyzeAmb);
     return left;
 }
 
 static TcType *analyzeCharacter() {
-// ENTER(analyzeCharacter);
+    // ENTER(analyzeCharacter);
     TcType *res = makeCharacter();
-// LEAVE(analyzeCharacter);
+    // LEAVE(analyzeCharacter);
     return res;
 }
 
 static TcType *analyzeBack() {
-// ENTER(analyzeBack);
+    // ENTER(analyzeBack);
     TcType *res = makeFreshVar("back");
-// LEAVE(analyzeBack);
+    // LEAVE(analyzeBack);
     return res;
 }
 
 static TcType *analyzeError() {
-// ENTER(analyzeError);
+    // ENTER(analyzeError);
     TcType *res = makeFreshVar("error");
-// LEAVE(analyzeError);
+    // LEAVE(analyzeError);
     return res;
 }
 
@@ -1694,71 +1685,67 @@ static TcType *typeGetOrPut(TcTypeTable *map, TcType *typeVar,
 static TcType *freshRec(TcType *type, TcNg *ng, TcTypeTable *map) {
     type = prune(type);
     switch (type->type) {
-        case TCTYPE_TYPE_FUNCTION:
-            {
-                TcType *res = freshFunction(getTcType_Function(type), ng, map);
-                return res;
-            }
-        case TCTYPE_TYPE_PAIR:
-            {
-                TcType *res = freshPair(getTcType_Pair(type), ng, map);
-                return res;
-            }
-        case TCTYPE_TYPE_THUNK:
-            {
-                TcType *res = freshThunk(getTcType_Thunk(type), ng, map);
-                return res;
-            }
-        case TCTYPE_TYPE_VAR:
-            if (isGeneric(type, ng)) {
-                TcType *freshType = makeFreshVar(getTcType_Var(type)->name->name);
-                int save = PROTECT(freshType);
-                TcType *res = typeGetOrPut(map, type, freshType);
-                UNPROTECT(save);
-                return res;
-            }
-            return type;
-        case TCTYPE_TYPE_SMALLINTEGER:
-        case TCTYPE_TYPE_BIGINTEGER:
-        case TCTYPE_TYPE_CHARACTER:
-        case TCTYPE_TYPE_UNKNOWN:
-        case TCTYPE_TYPE_OPAQUE:
-            return type;
-        case TCTYPE_TYPE_TYPESIG:
-            {
-                TcType *res = freshTypeSig(getTcType_TypeSig(type), ng, map);
-                return res;
-            }
-        case TCTYPE_TYPE_TUPLE:
-            return freshTuple(getTcType_Tuple(type), ng, map);
-        case TCTYPE_TYPE_ENV:
-            return type;
-        default:
-            cant_happen("unrecognised type %s", tcTypeTypeName(type->type));
+    case TCTYPE_TYPE_FUNCTION: {
+        TcType *res = freshFunction(getTcType_Function(type), ng, map);
+        return res;
+    }
+    case TCTYPE_TYPE_PAIR: {
+        TcType *res = freshPair(getTcType_Pair(type), ng, map);
+        return res;
+    }
+    case TCTYPE_TYPE_THUNK: {
+        TcType *res = freshThunk(getTcType_Thunk(type), ng, map);
+        return res;
+    }
+    case TCTYPE_TYPE_VAR:
+        if (isGeneric(type, ng)) {
+            TcType *freshType = makeFreshVar(getTcType_Var(type)->name->name);
+            int save = PROTECT(freshType);
+            TcType *res = typeGetOrPut(map, type, freshType);
+            UNPROTECT(save);
+            return res;
+        }
+        return type;
+    case TCTYPE_TYPE_SMALLINTEGER:
+    case TCTYPE_TYPE_BIGINTEGER:
+    case TCTYPE_TYPE_CHARACTER:
+    case TCTYPE_TYPE_UNKNOWN:
+    case TCTYPE_TYPE_OPAQUE:
+        return type;
+    case TCTYPE_TYPE_TYPESIG: {
+        TcType *res = freshTypeSig(getTcType_TypeSig(type), ng, map);
+        return res;
+    }
+    case TCTYPE_TYPE_TUPLE:
+        return freshTuple(getTcType_Tuple(type), ng, map);
+    case TCTYPE_TYPE_ENV:
+        return type;
+    default:
+        cant_happen("unrecognised type %s", tcTypeTypeName(type->type));
     }
 }
 
 static TcType *fresh(TcType *type, TcNg *ng) {
-// ENTER(fresh);
+    // ENTER(fresh);
     TcTypeTable *map = newTcTypeTable();
     int save = PROTECT(map);
     TcType *res = freshRec(type, ng, map);
     UNPROTECT(save);
-// LEAVE(fresh);
+    // LEAVE(fresh);
     return res;
 }
 
 static TcType *lookUp(TcEnv *env, HashSymbol *symbol, TcNg *ng) {
-// ENTER(lookUp);
+    // ENTER(lookUp);
     TcType *type = NULL;
     if (getFromTcEnv(env, symbol, &type)) {
         TcType *res = fresh(type, ng);
-// LEAVE(lookUp);
+        // LEAVE(lookUp);
         DEBUGN("lookUp %s => ", symbol->name);
         IFDEBUGN(ppTcType(res));
         return res;
     }
-// LEAVE(lookUp);
+    // LEAVE(lookUp);
     DEBUG("lookUp %s => NULL", symbol->name);
     return NULL;
 }
@@ -1848,17 +1835,17 @@ static void addNegToEnv(TcEnv *env) {
 }
 
 static void addIfToEnv(TcEnv *env) {
-// 'if' is bool -> a -> a -> a
+    // 'if' is bool -> a -> a -> a
     TcType *boolean = makeBoolean();
     int save = PROTECT(boolean);
     TcType *a = makeFreshVar("if");
-    (void) PROTECT(a);
+    (void)PROTECT(a);
     TcType *aa = makeFn(a, a);
-    (void) PROTECT(aa);
+    (void)PROTECT(aa);
     TcType *aaa = makeFn(a, aa);
-    (void) PROTECT(aaa);
+    (void)PROTECT(aaa);
     TcType *baaa = makeFn(boolean, aaa);
-    (void) PROTECT(baaa);
+    (void)PROTECT(baaa);
     addToEnv(env, ifSymbol(), baaa);
     UNPROTECT(save);
 }
@@ -1904,37 +1891,37 @@ static void addNameSpacesToEnv(TcEnv *env) {
 }
 
 static void addHereToEnv(TcEnv *env) {
-// 'call/cc' is ((a -> b) -> a) -> a
+    // 'call/cc' is ((a -> b) -> a) -> a
     TcType *a = makeFreshVar("hereA");
     int save = PROTECT(a);
     TcType *b = makeFreshVar("hereB");
-    (void) PROTECT(b);
+    (void)PROTECT(b);
     TcType *ab = makeFn(a, b);
-    (void) PROTECT(ab);
+    (void)PROTECT(ab);
     TcType *aba = makeFn(ab, a);
-    (void) PROTECT(aba);
+    (void)PROTECT(aba);
     TcType *abaa = makeFn(aba, a);
-    (void) PROTECT(abaa);
+    (void)PROTECT(abaa);
     addToEnv(env, hereSymbol(), abaa);
     UNPROTECT(save);
 }
 
 static void addCmpToEnv(TcEnv *env, HashSymbol *symbol) {
-// all binary comparisons are a -> a -> bool
+    // all binary comparisons are a -> a -> bool
     TcType *freshType = makeFreshVar(symbol->name);
     int save = PROTECT(freshType);
     TcType *boolean = makeBoolean();
-    (void) PROTECT(boolean);
+    (void)PROTECT(boolean);
     TcType *unOp = makeFn(freshType, boolean);
-    (void) PROTECT(unOp);
+    (void)PROTECT(unOp);
     TcType *binOp = makeFn(freshType, unOp);
-    (void) PROTECT(binOp);
+    (void)PROTECT(binOp);
     addToEnv(env, symbol, binOp);
     UNPROTECT(save);
 }
 
 static void addFreshVarToEnv(TcEnv *env, HashSymbol *symbol) {
-// 'error' and 'back' both have unconstrained types
+    // 'error' and 'back' both have unconstrained types
     TcType *freshType = makeFreshVar(symbol->name);
     int save = PROTECT(freshType);
     addToEnv(env, symbol, freshType);
@@ -1942,17 +1929,17 @@ static void addFreshVarToEnv(TcEnv *env, HashSymbol *symbol) {
 }
 
 static void addBinOpToEnv(TcEnv *env, HashSymbol *symbol, TcType *type) {
-// handle all fonctions of the form a -> a -> a
+    // handle all fonctions of the form a -> a -> a
     TcType *unOp = makeFn(type, type);
     int save = PROTECT(unOp);
     TcType *binOp = makeFn(type, unOp);
-    (void) PROTECT(binOp);
+    (void)PROTECT(binOp);
     addToEnv(env, symbol, binOp);
     UNPROTECT(save);
 }
 
 static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol) {
-// int -> int -> int
+    // int -> int -> int
     TcType *integer = makeBigInteger();
     int save = PROTECT(integer);
     addBinOpToEnv(env, symbol, integer);
@@ -1960,7 +1947,7 @@ static void addIntBinOpToEnv(TcEnv *env, HashSymbol *symbol) {
 }
 
 static void addThenToEnv(TcEnv *env) {
-// a -> a -> a
+    // a -> a -> a
     TcType *freshType = makeFreshVar(thenSymbol()->name);
     int save = PROTECT(freshType);
     addBinOpToEnv(env, thenSymbol(), freshType);
@@ -1988,14 +1975,14 @@ static bool failUnifyFunctions(TcFunction *a, TcFunction *b, char *reason) {
 }
 
 static bool unifyFunctions(TcFunction *a, TcFunction *b) {
-    bool res = unify(a->arg, b->arg, "functions[arg]")
-        && unify(a->result, b->result, "functions[result]");
+    bool res = unify(a->arg, b->arg, "functions[arg]") &&
+               unify(a->result, b->result, "functions[result]");
     return res;
 }
 
 static bool unifyPairs(TcPair *a, TcPair *b) {
-    bool res = unify(a->first, b->first, "pairs[first]")
-        && unify(a->second, b->second, "pairs[second]");
+    bool res = unify(a->first, b->first, "pairs[first]") &&
+               unify(a->second, b->second, "pairs[second]");
     return res;
 }
 
@@ -2082,40 +2069,42 @@ static bool _unify(TcType *a, TcType *b) {
             return failUnify(a, b, "type mismatch");
         }
         switch (a->type) {
-            case TCTYPE_TYPE_FUNCTION:
-                return unifyFunctions(getTcType_Function(a), getTcType_Function(b));
-            case TCTYPE_TYPE_PAIR:
-                return unifyPairs(getTcType_Pair(a), getTcType_Pair(b));
-            case TCTYPE_TYPE_THUNK:
-                return unifyThunks(getTcType_Thunk(a), getTcType_Thunk(b));
-            case TCTYPE_TYPE_VAR:
-                cant_happen("encountered var in unify");
-            case TCTYPE_TYPE_SMALLINTEGER:
-            case TCTYPE_TYPE_BIGINTEGER:
-            case TCTYPE_TYPE_CHARACTER:
-                return true;
-            case TCTYPE_TYPE_UNKNOWN:
-                return false;
-            case TCTYPE_TYPE_TYPESIG:
-                return unifyTypeSigs(getTcType_TypeSig(a), getTcType_TypeSig(b));
-            case TCTYPE_TYPE_OPAQUE:
-                return unifyOpaque(getTcType_Opaque(a), getTcType_Opaque(b));
-            case TCTYPE_TYPE_TUPLE:
-                return unifyTuples(getTcType_Tuple(a), getTcType_Tuple(b));
-            default:
-                cant_happen("unrecognised type %s", tcTypeTypeName(a->type));
+        case TCTYPE_TYPE_FUNCTION:
+            return unifyFunctions(getTcType_Function(a), getTcType_Function(b));
+        case TCTYPE_TYPE_PAIR:
+            return unifyPairs(getTcType_Pair(a), getTcType_Pair(b));
+        case TCTYPE_TYPE_THUNK:
+            return unifyThunks(getTcType_Thunk(a), getTcType_Thunk(b));
+        case TCTYPE_TYPE_VAR:
+            cant_happen("encountered var in unify");
+        case TCTYPE_TYPE_SMALLINTEGER:
+        case TCTYPE_TYPE_BIGINTEGER:
+        case TCTYPE_TYPE_CHARACTER:
+            return true;
+        case TCTYPE_TYPE_UNKNOWN:
+            return false;
+        case TCTYPE_TYPE_TYPESIG:
+            return unifyTypeSigs(getTcType_TypeSig(a), getTcType_TypeSig(b));
+        case TCTYPE_TYPE_OPAQUE:
+            return unifyOpaque(getTcType_Opaque(a), getTcType_Opaque(b));
+        case TCTYPE_TYPE_TUPLE:
+            return unifyTuples(getTcType_Tuple(a), getTcType_Tuple(b));
+        default:
+            cant_happen("unrecognised type %s", tcTypeTypeName(a->type));
         }
     }
     cant_happen("reached end of unify");
 }
 
 static bool unify(TcType *a, TcType *b, char *trace __attribute__((unused))) {
-// *INDENT-OFF*
-IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(a); eprintf(" =?= "); ppTcType(b));
-bool res = _unify(a, b);
-IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(a); eprintf(" === "); ppTcType(b));
-return res;
-// *INDENT-ON*
+    // *INDENT-OFF*
+    IFDEBUGN(eprintf("unify(%s) :> ", trace); ppTcType(a); eprintf(" =?= ");
+             ppTcType(b));
+    bool res = _unify(a, b);
+    IFDEBUGN(eprintf("unify(%s) <: ", trace); ppTcType(a); eprintf(" === ");
+             ppTcType(b));
+    return res;
+    // *INDENT-ON*
 }
 
 static void pruneTypeSigArgs(TcTypeSigArgs *args) {
@@ -2178,24 +2167,24 @@ static bool sameType(TcType *a, TcType *b) {
         return false;
     }
     switch (a->type) {
-        case TCTYPE_TYPE_FUNCTION:
-            return sameFunctionType(getTcType_Function(a), getTcType_Function(b));
-        case TCTYPE_TYPE_PAIR:
-            return samePairType(getTcType_Pair(a), getTcType_Pair(b));
-        case TCTYPE_TYPE_THUNK:
-            return sameType(getTcType_Thunk(a)->type, getTcType_Thunk(b)->type);
-        case TCTYPE_TYPE_VAR:
-            return getTcType_Var(a)->id == getTcType_Var(b)->id;
-        case TCTYPE_TYPE_BIGINTEGER:
-        case TCTYPE_TYPE_SMALLINTEGER:
-        case TCTYPE_TYPE_CHARACTER:
-            return true;
-        case TCTYPE_TYPE_UNKNOWN:
-            return false;
-        case TCTYPE_TYPE_TYPESIG:
-            return sameTypeSig(getTcType_TypeSig(a), getTcType_TypeSig(b));
-        default:
-            cant_happen("unrecognised type %d in sameType", a->type);
+    case TCTYPE_TYPE_FUNCTION:
+        return sameFunctionType(getTcType_Function(a), getTcType_Function(b));
+    case TCTYPE_TYPE_PAIR:
+        return samePairType(getTcType_Pair(a), getTcType_Pair(b));
+    case TCTYPE_TYPE_THUNK:
+        return sameType(getTcType_Thunk(a)->type, getTcType_Thunk(b)->type);
+    case TCTYPE_TYPE_VAR:
+        return getTcType_Var(a)->id == getTcType_Var(b)->id;
+    case TCTYPE_TYPE_BIGINTEGER:
+    case TCTYPE_TYPE_SMALLINTEGER:
+    case TCTYPE_TYPE_CHARACTER:
+        return true;
+    case TCTYPE_TYPE_UNKNOWN:
+        return false;
+    case TCTYPE_TYPE_TYPESIG:
+        return sameTypeSig(getTcType_TypeSig(a), getTcType_TypeSig(b));
+    default:
+        cant_happen("unrecognised type %d in sameType", a->type);
     }
 }
 
@@ -2222,8 +2211,7 @@ static bool occursInThunk(TcType *var, TcThunk *thunk) {
 }
 
 static bool occursInTypeSig(TcType *var, TcTypeSig *typeSig) {
-    for (TcTypeSigArgs * args = typeSig->args; args != NULL;
-         args = args->next) {
+    for (TcTypeSigArgs *args = typeSig->args; args != NULL; args = args->next) {
         if (occursInType(var, args->type))
             return true;
     }
@@ -2241,26 +2229,26 @@ static bool occursInTuple(TcType *var, TcTypeArray *tuple) {
 
 static bool occursIn(TcType *a, TcType *b) {
     switch (b->type) {
-        case TCTYPE_TYPE_FUNCTION:
-            return occursInFunction(a, getTcType_Function(b));
-        case TCTYPE_TYPE_PAIR:
-            return occursInPair(a, getTcType_Pair(b));
-        case TCTYPE_TYPE_THUNK:
-            return occursInThunk(a, getTcType_Thunk(b));
-        case TCTYPE_TYPE_VAR:
-            cant_happen("occursIn 2nd arg should not be a var");
-        case TCTYPE_TYPE_SMALLINTEGER:
-        case TCTYPE_TYPE_BIGINTEGER:
-        case TCTYPE_TYPE_CHARACTER:
-        case TCTYPE_TYPE_UNKNOWN:
-        case TCTYPE_TYPE_ENV:
-        case TCTYPE_TYPE_OPAQUE:
-            return false;
-        case TCTYPE_TYPE_TYPESIG:
-            return occursInTypeSig(a, getTcType_TypeSig(b));
-        case TCTYPE_TYPE_TUPLE:
-            return occursInTuple(a, getTcType_Tuple(b));
-        default:
-            cant_happen("unrecognised type %s", tcTypeTypeName(b->type));
+    case TCTYPE_TYPE_FUNCTION:
+        return occursInFunction(a, getTcType_Function(b));
+    case TCTYPE_TYPE_PAIR:
+        return occursInPair(a, getTcType_Pair(b));
+    case TCTYPE_TYPE_THUNK:
+        return occursInThunk(a, getTcType_Thunk(b));
+    case TCTYPE_TYPE_VAR:
+        cant_happen("occursIn 2nd arg should not be a var");
+    case TCTYPE_TYPE_SMALLINTEGER:
+    case TCTYPE_TYPE_BIGINTEGER:
+    case TCTYPE_TYPE_CHARACTER:
+    case TCTYPE_TYPE_UNKNOWN:
+    case TCTYPE_TYPE_ENV:
+    case TCTYPE_TYPE_OPAQUE:
+        return false;
+    case TCTYPE_TYPE_TYPESIG:
+        return occursInTypeSig(a, getTcType_TypeSig(b));
+    case TCTYPE_TYPE_TUPLE:
+        return occursInTuple(a, getTcType_Tuple(b));
+    default:
+        cant_happen("unrecognised type %s", tcTypeTypeName(b->type));
     }
 }

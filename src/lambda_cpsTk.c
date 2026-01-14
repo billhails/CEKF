@@ -1,17 +1,17 @@
 /*
  * CEKF - VM supporting amb
  * Copyright (C) 2022-2025  Bill Hails
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
@@ -19,20 +19,20 @@
  * Generated from src/lambda.yaml by tools/generate.py
  */
 
+#include "common.h"
 #include "lambda.h"
 #include "memory.h"
 #include "symbol.h"
-#include "common.h"
 
-#include "lambda_cps.h"
-#include "lambda_functions.h"
 #include "cps_kont.h"
 #include "cps_kont_impl.h"
+#include "lambda_cps.h"
+#include "lambda_functions.h"
 
 #ifdef DEBUG_LAMBDA_CPSTK
-#  include "debugging_on.h"
+#include "debugging_on.h"
 #else
-#  include "debugging_off.h"
+#include "debugging_off.h"
 #endif
 
 // Forward declarations
@@ -53,7 +53,6 @@ static LamExp *cpsTkLamLet(LamLet *node, CpsKont *k);
 static LamExp *cpsTkLamLetStar(LamLetStar *node, CpsKont *k);
 static LamExp *cpsTkLamLetRec(LamLetRec *node, CpsKont *k);
 static LamExp *cpsTkLamAmb(LamAmb *node, CpsKont *k);
-static LamExp *cpsTkLamPrint(LamPrint *node, CpsKont *k);
 static LamExp *cpsTkLamTypeOf(LamTypeOf *node, CpsKont *k);
 static LamExp *cpsTkLamTypeDefs(LamTypeDefs *node, CpsKont *k);
 static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k);
@@ -66,19 +65,19 @@ static LamExp *INVOKE(CpsKont *k, LamExp *arg) {
 
 bool isAexpr(LamExp *exp) {
     switch (exp->type) {
-        case LAMEXP_TYPE_VAR:
-        case LAMEXP_TYPE_BACK:
-        case LAMEXP_TYPE_CHARACTER:
-        case LAMEXP_TYPE_CONSTANT:
-        case LAMEXP_TYPE_CONSTRUCTOR:
-        case LAMEXP_TYPE_ENV:
-        case LAMEXP_TYPE_ERROR:
-        case LAMEXP_TYPE_LAM:
-        case LAMEXP_TYPE_STDINT:
-        case LAMEXP_TYPE_BIGINTEGER:
-            return true;
-        default:
-            return false;
+    case LAMEXP_TYPE_VAR:
+    case LAMEXP_TYPE_BACK:
+    case LAMEXP_TYPE_CHARACTER:
+    case LAMEXP_TYPE_CONSTANT:
+    case LAMEXP_TYPE_CONSTRUCTOR:
+    case LAMEXP_TYPE_ENV:
+    case LAMEXP_TYPE_ERROR:
+    case LAMEXP_TYPE_LAM:
+    case LAMEXP_TYPE_STDINT:
+    case LAMEXP_TYPE_BIGINTEGER:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -87,7 +86,8 @@ LamExp *makeVar(ParserInfo PI, char *prefix) {
 }
 
 LamArgs *appendLamArg(LamArgs *args, LamExp *exp) {
-    if (args == NULL) return newLamArgs(CPI(exp), exp, NULL);
+    if (args == NULL)
+        return newLamArgs(CPI(exp), exp, NULL);
     LamArgs *next = appendLamArg(args->next, exp);
     int save = PROTECT(next);
     LamArgs *this = newLamArgs(CPI(args), args->exp, next);
@@ -96,7 +96,8 @@ LamArgs *appendLamArg(LamArgs *args, LamExp *exp) {
 }
 
 LamVarList *appendLamVar(ParserInfo PI, LamVarList *args, HashSymbol *var) {
-    if (args == NULL) return newLamVarList(PI, var, NULL);
+    if (args == NULL)
+        return newLamVarList(PI, var, NULL);
     LamVarList *next = appendLamVar(PI, args->next, var);
     int save = PROTECT(next);
     LamVarList *this = newLamVarList(CPI(args), args->var, next);
@@ -123,7 +124,8 @@ LamExp *cpsTs_k(LamExp *exp, CpsKont *k) {
     }
     CpsKont *k1 = makeKont_TkS1(getLamExp_Args(exp)->next, k);
     int save = PROTECT(k1);
-    LamExp *result = cpsTk(getLamExp_Args(exp)->exp, k1); // T_k(h, fn (hd) { ...k...t... })
+    LamExp *result =
+        cpsTk(getLamExp_Args(exp)->exp, k1); // T_k(h, fn (hd) { ...k...t... })
     LEAVE(cpsTs_k);
     UNPROTECT(save);
     return result;
@@ -254,7 +256,7 @@ static LamExp *cpsTkLamSequence(LamSequence *node, CpsKont *k) {
 #endif
     LamExp *result = NULL;
     int save = PROTECT(NULL);
-    if(node->next == NULL) {
+    if (node->next == NULL) {
         result = cpsTk(node->exp, k);
     } else {
         CpsKont *k1 = makeKont_TkSequence(k, node->next);
@@ -337,7 +339,8 @@ static LamExp *cpsTkLamLookUp(LamLookUp *node, CpsKont *k) {
     ENTER(cpsTkLamLookUp);
     LamExp *expr = cpsTk(node->exp, k);
     int save = PROTECT(expr);
-    LamExp *result = makeLamExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
+    LamExp *result =
+        makeLamExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTkLamLookUp);
     return result;
@@ -364,7 +367,8 @@ static LamExp *cpsTkLamConstruct(LamConstruct *node, CpsKont *k) {
 
 LamExp *TkConstructKont(LamExp *sargs, TkConstructKontEnv *env) {
     ENTER(TkConstructKont);
-    LamExp *construct = makeLamExp_Construct(CPI(sargs), env->name, env->tag, getLamExp_Args(sargs));
+    LamExp *construct = makeLamExp_Construct(CPI(sargs), env->name, env->tag,
+                                             getLamExp_Args(sargs));
     int save = PROTECT(construct);
     LamExp *result = INVOKE(env->k, construct);
     UNPROTECT(save);
@@ -391,7 +395,8 @@ static LamExp *cpsTkLamDeconstruct(LamDeconstruct *node, CpsKont *k) {
 
 LamExp *TkDeconstructKont(LamExp *sexpr, TkDeconstructKontEnv *env) {
     ENTER(TkDeconstructKont);
-    LamExp *deconstruct = makeLamExp_Deconstruct(CPI(sexpr), env->name, env->nsId, env->vec, sexpr);
+    LamExp *deconstruct = makeLamExp_Deconstruct(CPI(sexpr), env->name,
+                                                 env->nsId, env->vec, sexpr);
     int save = PROTECT(deconstruct);
     LamExp *result = INVOKE(env->k, deconstruct);
     UNPROTECT(save);
@@ -418,7 +423,8 @@ static LamExp *cpsTkLamTupleIndex(LamTupleIndex *node, CpsKont *k) {
 
 LamExp *TkTupleIndexKont(LamExp *sexpr, TkTupleIndexKontEnv *env) {
     ENTER(TkTupleIndexKont);
-    LamExp *tuple_index = makeLamExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
+    LamExp *tuple_index =
+        makeLamExp_TupleIndex(CPI(sexpr), env->size, env->index, sexpr);
     int save = PROTECT(tuple_index);
     LamExp *result = INVOKE(env->k, tuple_index);
     UNPROTECT(save);
@@ -447,7 +453,8 @@ static LamExp *cpsTkMakeVec(LamMakeVec *node, CpsKont *k) {
 
 LamExp *TkMakeVecKont(LamExp *sargs, TkMakeVecKontEnv *env) {
     ENTER(TkMakeVecKont);
-    LamExp *make_vec = makeLamExp_MakeVec(CPI(sargs), env->size, getLamExp_Args(sargs));
+    LamExp *make_vec =
+        makeLamExp_MakeVec(CPI(sargs), env->size, getLamExp_Args(sargs));
     int save = PROTECT(make_vec);
     LamExp *result = INVOKE(env->k, make_vec);
     UNPROTECT(save);
@@ -459,7 +466,7 @@ LamExp *TkMakeVecKont(LamExp *sargs, TkMakeVecKontEnv *env) {
     (E.if_expr(exprc, exprt, exprf)) {
         let
             c = kToC(k);
-        in 
+        in
             T_k(exprc, fn(aexp) {
                 E.if_expr(aexp, T_c(exprt, c), T_c(exprf, c))
             })
@@ -494,23 +501,27 @@ LamExp *TkIffKont(LamExp *aexp, TkIffKontEnv *env) {
 }
 
 static LamIntCondCases *mapIntCondCases(LamIntCondCases *cases, LamExp *c) {
-    if (cases == NULL) return NULL;
+    if (cases == NULL)
+        return NULL;
     LamIntCondCases *next = mapIntCondCases(cases->next, c);
     int save = PROTECT(next);
     LamExp *body = cpsTc(cases->body, c);
     PROTECT(body);
-    LamIntCondCases *this = newLamIntCondCases(CPI(cases), cases->constant, body, next);
+    LamIntCondCases *this =
+        newLamIntCondCases(CPI(cases), cases->constant, body, next);
     UNPROTECT(save);
     return this;
 }
 
 static LamCharCondCases *mapCharCondCases(LamCharCondCases *cases, LamExp *c) {
-    if (cases == NULL) return NULL;
+    if (cases == NULL)
+        return NULL;
     LamCharCondCases *next = mapCharCondCases(cases->next, c);
     int save = PROTECT(next);
     LamExp *body = cpsTc(cases->body, c);
     PROTECT(body);
-    LamCharCondCases *this = newLamCharCondCases(CPI(cases), cases->constant, body, next);
+    LamCharCondCases *this =
+        newLamCharCondCases(CPI(cases), cases->constant, body, next);
     UNPROTECT(save);
     return this;
 }
@@ -548,22 +559,23 @@ LamExp *TkCondKont(LamExp *atest, TkCondKontEnv *env) {
     LamCondCases *cases = NULL;
     int save = PROTECT(NULL);
     switch (env->branches->type) {
-        case LAMCONDCASES_TYPE_INTEGERS: {
-            LamIntCondCases *int_cases = mapIntCondCases(getLamCondCases_Integers(env->branches), env->c);
-            PROTECT(int_cases);
-            cases = newLamCondCases_Integers(CPI(atest), int_cases);
-            PROTECT(cases);
-        }
-        break;
-        case LAMCONDCASES_TYPE_CHARACTERS: {
-            LamCharCondCases *char_cases = mapCharCondCases(getLamCondCases_Characters(env->branches), env->c);
-            PROTECT(char_cases);
-            cases = newLamCondCases_Characters(CPI(atest), char_cases);
-            PROTECT(cases);
-        }
-        break;
-        default:
-            cant_happen("Unknown LamCondCases type %s in TkCondKont", lamCondCasesTypeName(env->branches->type));
+    case LAMCONDCASES_TYPE_INTEGERS: {
+        LamIntCondCases *int_cases =
+            mapIntCondCases(getLamCondCases_Integers(env->branches), env->c);
+        PROTECT(int_cases);
+        cases = newLamCondCases_Integers(CPI(atest), int_cases);
+        PROTECT(cases);
+    } break;
+    case LAMCONDCASES_TYPE_CHARACTERS: {
+        LamCharCondCases *char_cases =
+            mapCharCondCases(getLamCondCases_Characters(env->branches), env->c);
+        PROTECT(char_cases);
+        cases = newLamCondCases_Characters(CPI(atest), char_cases);
+        PROTECT(cases);
+    } break;
+    default:
+        cant_happen("Unknown LamCondCases type %s in TkCondKont",
+                    lamCondCasesTypeName(env->branches->type));
     }
     LamExp *result = makeLamExp_Cond(CPI(atest), atest, cases);
     LEAVE(TkCondKont);
@@ -596,12 +608,14 @@ static LamExp *cpsTkLamMatch(LamMatch *node, CpsKont *k) {
 }
 
 LamMatchList *mapTcOverMatchCases(LamMatchList *cases, LamExp *c) {
-    if (cases == NULL) return NULL;
+    if (cases == NULL)
+        return NULL;
     LamMatchList *next = mapTcOverMatchCases(cases->next, c);
     int save = PROTECT(next);
     LamExp *body = cpsTc(cases->body, c);
     PROTECT(body);
-    LamMatchList *this = newLamMatchList(CPI(cases), cases->matches, body, next);
+    LamMatchList *this =
+        newLamMatchList(CPI(cases), cases->matches, body, next);
     UNPROTECT(save);
     return this;
 }
@@ -616,8 +630,7 @@ LamExp *TkMatchKont(LamExp *atest, TkMatchKontEnv *env) {
     return result;
 }
 
-void cpsUnzipLamBindings(LamBindings *bindings,
-                         LamVarList **vars,
+void cpsUnzipLamBindings(LamBindings *bindings, LamVarList **vars,
                          LamArgs **exps) {
     if (bindings == NULL) {
         *vars = NULL;
@@ -661,7 +674,8 @@ LamExp *cpsNestLets(LamBindings *bindings, LamExp *body) {
     }
     LamExp *rest = cpsNestLets(bindings->next, body);
     int save = PROTECT(rest);
-    LamBindings *binding = newLamBindings(CPI(bindings), bindings->var, bindings->val, NULL);
+    LamBindings *binding =
+        newLamBindings(CPI(bindings), bindings->var, bindings->val, NULL);
     PROTECT(binding);
     LamExp *this = makeLamExp_Let(CPI(bindings), binding, rest);
     UNPROTECT(save);
@@ -691,7 +705,8 @@ static LamExp *cpsTkLamLetStar(LamLetStar *node, CpsKont *k) {
 }
 
 LamBindings *mapMOverBindings(LamBindings *bindings) {
-    if (bindings == NULL) return NULL;
+    if (bindings == NULL)
+        return NULL;
     LamBindings *next = mapMOverBindings(bindings->next);
     int save = PROTECT(next);
     LamExp *val = cpsM(bindings->val);
@@ -725,7 +740,7 @@ static LamExp *cpsTkLamLetRec(LamLetRec *node, CpsKont *k) {
     (E.amb_expr(expr1, expr2)) {
         let
             c = kToC(k);
-        in 
+        in
             E.amb_expr(T_c(expr1, c), T_c(expr2, c))
     }
 */
@@ -738,33 +753,6 @@ static LamExp *cpsTkLamAmb(LamAmb *node, CpsKont *k) {
     PROTECT(exp2);
     LamExp *result = makeLamExp_Amb(CPI(node), exp1, exp2);
     UNPROTECT(save);
-    return result;
-}
-
-/*
-    (E.print_exp(expr)) {
-        T_k(expr, fn (sexpr) {
-            k(E.print_exp(sexpr))
-        })
-    }
-*/
-static LamExp *cpsTkLamPrint(LamPrint *node, CpsKont *k) {
-    ENTER(cpsTkLamPrint);
-    CpsKont *k1 = makeKont_TkPrint(k);
-    int save = PROTECT(k1);
-    LamExp *result = cpsTk(node->exp, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkLamPrint);
-    return result;
-}
-
-LamExp *TkPrintKont(LamExp *sexpr, TkPrintKontEnv *env) {
-    ENTER(TkPrintKont);
-    LamExp *print_exp = makeLamExp_Print(CPI(sexpr), sexpr);
-    int save = PROTECT(print_exp);
-    LamExp *result = INVOKE(env->k, print_exp);
-    UNPROTECT(save);
-    LEAVE(TkPrintKont);
     return result;
 }
 
@@ -829,7 +817,8 @@ static LamExp *cpsTkCallCC(LamExp *node, CpsKont *k) {
 }
 
 static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
-    if (node == NULL) return NULL;
+    if (node == NULL)
+        return NULL;
 
     if (isAexpr(node)) {
         LamExp *expr = cpsM(node);
@@ -840,55 +829,52 @@ static LamExp *cpsTkLamExp(LamExp *node, CpsKont *k) {
     }
 
     switch (node->type) {
-        case LAMEXP_TYPE_AMB:
-            return cpsTkLamAmb(getLamExp_Amb(node), k);
-        case LAMEXP_TYPE_APPLY:
-            return cpsTkLamApply(node, k);
-        case LAMEXP_TYPE_CALLCC:
-            return cpsTkCallCC(getLamExp_CallCC(node), k);
-        case LAMEXP_TYPE_COND:
-            return cpsTkLamCond(getLamExp_Cond(node), k);
-        case LAMEXP_TYPE_CONSTRUCT:
-            return cpsTkLamConstruct(getLamExp_Construct(node), k);
-        case LAMEXP_TYPE_DECONSTRUCT:
-            return cpsTkLamDeconstruct(getLamExp_Deconstruct(node), k);
-        case LAMEXP_TYPE_IFF:
-            return cpsTkLamIff(getLamExp_Iff(node), k);
-        case LAMEXP_TYPE_LET:
-            return cpsTkLamLet(getLamExp_Let(node), k);
-        case LAMEXP_TYPE_LETSTAR:
-            return cpsTkLamLetStar(getLamExp_LetStar(node), k);
-        case LAMEXP_TYPE_LETREC:
-            return cpsTkLamLetRec(getLamExp_LetRec(node), k);
-        case LAMEXP_TYPE_LOOKUP:
-            return cpsTkLamLookUp(getLamExp_LookUp(node), k);
-        case LAMEXP_TYPE_MAKETUPLE:
-            return cpsTkMakeTuple(getLamExp_MakeTuple(node), k);
-        case LAMEXP_TYPE_MAKEVEC:
-            return cpsTkMakeVec(getLamExp_MakeVec(node), k);
-        case LAMEXP_TYPE_MATCH:
-            return cpsTkLamMatch(getLamExp_Match(node), k);
-        case LAMEXP_TYPE_NAMESPACES:
-            return cpsTkLamNameSpaceArray(getLamExp_NameSpaces(node), k);
-        case LAMEXP_TYPE_PRIM:
-            return cpsTkLamPrimApp(getLamExp_Prim(node), k);
-        case LAMEXP_TYPE_PRINT:
-            return cpsTkLamPrint(getLamExp_Print(node), k);
-        case LAMEXP_TYPE_SEQUENCE:
-            return cpsTkLamSequence(getLamExp_Sequence(node), k);
-        case LAMEXP_TYPE_TAG:
-            return cpsTkTag(getLamExp_Tag(node), k);
-        case LAMEXP_TYPE_TUPLEINDEX:
-            return cpsTkLamTupleIndex(getLamExp_TupleIndex(node), k);
-        case LAMEXP_TYPE_TYPEDEFS:
-            return cpsTkLamTypeDefs(getLamExp_TypeDefs(node), k);
-        case LAMEXP_TYPE_TYPEOF:
-            return cpsTkLamTypeOf(getLamExp_TypeOf(node), k);
-        default:
-            cant_happen("unrecognized LamExp type %s [%s %d]",
-                lamExpTypeName(node->type),
-                CPI(node).fileName,
-                CPI(node).lineNo);
+    case LAMEXP_TYPE_AMB:
+        return cpsTkLamAmb(getLamExp_Amb(node), k);
+    case LAMEXP_TYPE_APPLY:
+        return cpsTkLamApply(node, k);
+    case LAMEXP_TYPE_CALLCC:
+        return cpsTkCallCC(getLamExp_CallCC(node), k);
+    case LAMEXP_TYPE_COND:
+        return cpsTkLamCond(getLamExp_Cond(node), k);
+    case LAMEXP_TYPE_CONSTRUCT:
+        return cpsTkLamConstruct(getLamExp_Construct(node), k);
+    case LAMEXP_TYPE_DECONSTRUCT:
+        return cpsTkLamDeconstruct(getLamExp_Deconstruct(node), k);
+    case LAMEXP_TYPE_IFF:
+        return cpsTkLamIff(getLamExp_Iff(node), k);
+    case LAMEXP_TYPE_LET:
+        return cpsTkLamLet(getLamExp_Let(node), k);
+    case LAMEXP_TYPE_LETSTAR:
+        return cpsTkLamLetStar(getLamExp_LetStar(node), k);
+    case LAMEXP_TYPE_LETREC:
+        return cpsTkLamLetRec(getLamExp_LetRec(node), k);
+    case LAMEXP_TYPE_LOOKUP:
+        return cpsTkLamLookUp(getLamExp_LookUp(node), k);
+    case LAMEXP_TYPE_MAKETUPLE:
+        return cpsTkMakeTuple(getLamExp_MakeTuple(node), k);
+    case LAMEXP_TYPE_MAKEVEC:
+        return cpsTkMakeVec(getLamExp_MakeVec(node), k);
+    case LAMEXP_TYPE_MATCH:
+        return cpsTkLamMatch(getLamExp_Match(node), k);
+    case LAMEXP_TYPE_NAMESPACES:
+        return cpsTkLamNameSpaceArray(getLamExp_NameSpaces(node), k);
+    case LAMEXP_TYPE_PRIM:
+        return cpsTkLamPrimApp(getLamExp_Prim(node), k);
+    case LAMEXP_TYPE_SEQUENCE:
+        return cpsTkLamSequence(getLamExp_Sequence(node), k);
+    case LAMEXP_TYPE_TAG:
+        return cpsTkTag(getLamExp_Tag(node), k);
+    case LAMEXP_TYPE_TUPLEINDEX:
+        return cpsTkLamTupleIndex(getLamExp_TupleIndex(node), k);
+    case LAMEXP_TYPE_TYPEDEFS:
+        return cpsTkLamTypeDefs(getLamExp_TypeDefs(node), k);
+    case LAMEXP_TYPE_TYPEOF:
+        return cpsTkLamTypeOf(getLamExp_TypeOf(node), k);
+    default:
+        cant_happen("unrecognized LamExp type %s [%s %d]",
+                    lamExpTypeName(node->type), CPI(node).fileName,
+                    CPI(node).lineNo);
     }
 }
 
@@ -951,6 +937,4 @@ LamNameSpaceArray *argsToNsa(LamExp *args_exp) {
     return nsa;
 }
 
-LamExp *cpsTk(LamExp *node, CpsKont *k) {
-    return cpsTkLamExp(node, k);
-}
+LamExp *cpsTk(LamExp *node, CpsKont *k) { return cpsTkLamExp(node, k); }
