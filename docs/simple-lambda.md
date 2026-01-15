@@ -43,7 +43,7 @@ Later desugaring that can't be done here:
 1. Create a verbatim copy of `lambda.yaml` called `minlam.yaml` **done**
 2. Rename all prefixes in `minlam.yaml` from `Lam` to `Min` **done**
 3. Generate a visitor on `lambda.yaml` called `lambda_desugar.c` **done**
-4. Modify the generator to perform a plain translation from `Lam*` types to the new `Min*` types.
+4. Modify the generator to perform a plain translation from `Lam*` types to the new `Min*` types. **done**
 5. Update the pipeline in main to perform this transform, after the constructor inlining step, before ANF conversion and to pass the new tree downstream to `lambda_alphaconvert.c`.
 6. Update `lambda_alphaconvert.c` and `anf_normalize.c` to consume `Min*` types instead of `Lam*` types.
 7. Test everything still works. We will also need to update the so-far unused `anf_normalize_2.c` and `lambda_CpsT[ck].c` to use `Min*` instead of `Lam*`.
