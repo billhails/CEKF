@@ -42,7 +42,6 @@ static MinExp *cpsTkMakeTuple(MinArgs *node, CpsKont *k);
 static MinExp *cpsTkMinApply(MinExp *node, CpsKont *k);
 static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k);
 static MinExp *cpsTkTag(MinExp *node, CpsKont *k);
-static MinExp *cpsTkMinConstruct(MinConstruct *node, CpsKont *k);
 static MinExp *cpsTkMinDeconstruct(MinDeconstruct *node, CpsKont *k);
 static MinExp *cpsTkMinTupleIndex(MinTupleIndex *node, CpsKont *k);
 static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
@@ -340,36 +339,6 @@ static MinExp *cpsTkMinLookUp(MinLookUp *node, CpsKont *k) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTkMinLookUp);
-    return result;
-}
-
-/*
-    (E.construct(name, args)) {
-        Ts_k(args, fn (sargs) {
-            k(E.construct(name, sargs))
-        })
-    }
-*/
-static MinExp *cpsTkMinConstruct(MinConstruct *node, CpsKont *k) {
-    ENTER(cpsTkMinConstruct);
-    CpsKont *k1 = makeKont_TkConstruct(node->name, node->tag, k);
-    int save = PROTECT(k1);
-    MinExp *args = newMinExp_Args(CPI(node), node->args);
-    PROTECT(args);
-    MinExp *result = cpsTs_k(args, k1);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinConstruct);
-    return result;
-}
-
-MinExp *TkConstructKont(MinExp *sargs, TkConstructKontEnv *env) {
-    ENTER(TkConstructKont);
-    MinExp *construct = makeMinExp_Construct(CPI(sargs), env->name, env->tag,
-                                             getMinExp_Args(sargs));
-    int save = PROTECT(construct);
-    MinExp *result = INVOKE(env->k, construct);
-    UNPROTECT(save);
-    LEAVE(TkConstructKont);
     return result;
 }
 
@@ -764,8 +733,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkCallCC(getMinExp_CallCC(node), k);
     case MINEXP_TYPE_COND:
         return cpsTkMinCond(getMinExp_Cond(node), k);
-    case MINEXP_TYPE_CONSTRUCT:
-        return cpsTkMinConstruct(getMinExp_Construct(node), k);
     case MINEXP_TYPE_DECONSTRUCT:
         return cpsTkMinDeconstruct(getMinExp_Deconstruct(node), k);
     case MINEXP_TYPE_IFF:

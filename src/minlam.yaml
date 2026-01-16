@@ -100,14 +100,6 @@ structs:
             name: HashSymbol # the name of the constructor
             tag: int         # the tag of the constructor
 
-    MinConstruct:
-        meta:
-            brief: A constructor application
-        data:
-            name: HashSymbol # the name of the constructor
-            tag: int         # the tag of the constructor
-            args: MinArgs    # the remaining arguments to make-vec
-
     MinDeconstruct:
         meta:
             brief: A deconstruction of a constructor
@@ -381,7 +373,6 @@ unions:
             character: character
             cond: MinCond
             constant: MinConstant
-            construct: MinConstruct
             constructor: MinTypeConstructorInfo
             deconstruct: MinDeconstruct
             env: void_ptr

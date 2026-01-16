@@ -319,33 +319,6 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
     return result;
 }
 
-// (`(construct ,name ,tag . ,Ms)
-//     (normalize-names Ms
-//         [λ (ts) (k `(construct ,name ,tag . ,ts))]))
-
-static MinExp *normalize_Construct(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_Construct);
-    MinConstruct *construct = getMinExp_Construct(exp);
-    AnfKont *k1 =
-        makeKont_normalizeConstruct(construct->name, construct->tag, k);
-    int save = PROTECT(k1);
-    MinExp *result = normalize_names(construct->args, k1);
-    UNPROTECT(save);
-    LEAVE(normalize_Construct);
-    return result;
-}
-
-static MinExp *normalizeConstructKont(MinExp *ets,
-                                      NormalizeConstructKontEnv *env) {
-    MinArgs *ts = getMinExp_Args(ets);
-    MinExp *newConstruct =
-        makeMinExp_Construct(CPI(ets), env->name, env->tag, ts);
-    int save = PROTECT(newConstruct);
-    MinExp *result = INVOKE(env->k, newConstruct);
-    UNPROTECT(save);
-    return result;
-}
-
 // (`(make-tuple . ,Ms)
 //     (normalize-names Ms
 //         [λ (ts) (k `(make-tuple . ,ts))]))
@@ -804,9 +777,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_COND:
             res = normalize_Cond(exp, k);
-            break;
-        case MINEXP_TYPE_CONSTRUCT:
-            res = normalize_Construct(exp, k);
             break;
         case MINEXP_TYPE_DECONSTRUCT:
             res = normalize_Deconstruct(exp, k);

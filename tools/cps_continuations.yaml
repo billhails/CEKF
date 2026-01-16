@@ -254,34 +254,6 @@ continuations:
     free_vars:
       c: MinExp
 
-  TkConstruct:
-    transformer: T_k
-    key: k_construct
-    context: |
-      (E.construct(name, tag, args)) {
-          Ts_k(args, fn (sargs) {
-              k(E.construct(name, tag, sargs))
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      tag: int
-      k: CpsKont
-
-  TcConstruct:
-    transformer: T_k
-    key: c_construct
-    context: |
-      (E.construct(name, tag, args)) {
-          Ts_k(args, fn (sargs) {
-              E.apply(c, [E.construct(name, tag, sargs)])
-          })
-      }
-    free_vars:
-      name: HashSymbol
-      tag: int
-      c: MinExp
-
   TkDeconstruct:
     transformer: T_k
     key: k_deconstruct

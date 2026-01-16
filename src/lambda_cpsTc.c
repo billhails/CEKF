@@ -42,7 +42,6 @@ static MinExp *cpsTcMinSequence(MinSequence *node, MinExp *c);
 static MinExp *cpsTcMakeTuple(MinArgs *node, MinExp *c);
 static MinExp *cpsTcMinApply(MinApply *node, MinExp *c);
 static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c);
-static MinExp *cpsTcMinConstruct(MinConstruct *node, MinExp *c);
 static MinExp *cpsTcMinDeconstruct(MinDeconstruct *node, MinExp *c);
 static MinExp *cpsTcMinTupleIndex(MinTupleIndex *node, MinExp *c);
 static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
@@ -289,38 +288,6 @@ static MinExp *cpsTcMinLookUp(MinLookUp *node, MinExp *c) {
         makeMinExp_LookUp(CPI(node), node->nsId, node->nsSymbol, expr);
     UNPROTECT(save);
     LEAVE(cpsTcMinLookUp);
-    return result;
-}
-
-/*
-    (E.construct(name, tag, args)) {
-        Ts_k(args, fn (sargs) {
-            E.apply(c, [E.construct(name, tag, sargs)])
-        })
-    }
-*/
-static MinExp *cpsTcMinConstruct(MinConstruct *node, MinExp *c) {
-    ENTER(cpsTcMinConstruct);
-    MinExp *args = newMinExp_Args(CPI(node), node->args);
-    int save = PROTECT(args);
-    CpsKont *kont = makeKont_TcConstruct(node->name, node->tag, c);
-    PROTECT(kont);
-    MinExp *result = cpsTs_k(args, kont);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinConstruct);
-    return result;
-}
-
-MinExp *TcConstructKont(MinExp *sargs, TcConstructKontEnv *env) {
-    ENTER(TcConstructKont);
-    MinExp *construct = makeMinExp_Construct(CPI(sargs), env->name, env->tag,
-                                             getMinExp_Args(sargs));
-    int save = PROTECT(construct);
-    MinArgs *args = newMinArgs(CPI(sargs), construct, NULL);
-    PROTECT(args);
-    MinExp *result = makeMinExp_Apply(CPI(sargs), env->c, args);
-    UNPROTECT(save);
-    LEAVE(TcConstructKont);
     return result;
 }
 
@@ -756,8 +723,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcCallCC(getMinExp_CallCC(node), c);
     case MINEXP_TYPE_COND:
         return cpsTcMinCond(getMinExp_Cond(node), c);
-    case MINEXP_TYPE_CONSTRUCT:
-        return cpsTcMinConstruct(getMinExp_Construct(node), c);
     case MINEXP_TYPE_DECONSTRUCT:
         return cpsTcMinDeconstruct(getMinExp_Deconstruct(node), c);
     case MINEXP_TYPE_IFF:

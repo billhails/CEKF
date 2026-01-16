@@ -35,6 +35,7 @@ static MinExp *desugarLamPrint(LamExp *node);
 static MinExp *desugarLamLet(LamExp *node);
 static MinExp *desugarLamLetStar(LamExp *node);
 static MinExp *desugarLamTypeOf(LamExp *node);
+static MinExp *desugarLamConstruct(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -45,7 +46,6 @@ static MinApply *desugarLamApply(LamApply *node);
 static MinLookUp *desugarLamLookUp(LamLookUp *node);
 static MinLookUpSymbol *desugarLamLookUpSymbol(LamLookUpSymbol *node);
 static MinConstant *desugarLamConstant(LamConstant *node);
-static MinConstruct *desugarLamConstruct(LamConstruct *node);
 static MinDeconstruct *desugarLamDeconstruct(LamDeconstruct *node);
 static MinTupleIndex *desugarLamTupleIndex(LamTupleIndex *node);
 static MinMakeVec *desugarLamMakeVec(LamMakeVec *node);
@@ -261,20 +261,25 @@ static MinConstant *desugarLamConstant(LamConstant *node) {
     return result;
 }
 
-static MinConstruct *desugarLamConstruct(LamConstruct *node) {
-    ENTER(desugarLamConstruct);
-    if (node == NULL) {
-        LEAVE(desugarLamConstruct);
-        return NULL;
-    }
-
-    MinArgs *args = desugarLamArgs(node->args);
-    int save = PROTECT(args);
-    MinConstruct *result =
-        newMinConstruct(CPI(node), node->name, node->tag, args);
-
+static LamMakeVec *constructToMakeVec(LamConstruct *construct) {
+    int nArgs = countLamArgs(construct->args);
+    LamExp *newArg = newLamExp_Stdint(CPI(construct), construct->tag);
+    int save = PROTECT(newArg);
+    LamArgs *extraItem = newLamArgs(CPI(construct), newArg, construct->args);
+    PROTECT(extraItem);
+    LamMakeVec *res = newLamMakeVec(CPI(construct), nArgs + 1, extraItem);
     UNPROTECT(save);
-    LEAVE(desugarLamConstruct);
+    return res;
+}
+
+static MinExp *desugarLamConstruct(LamExp *exp) {
+    ENTER(desugarLamConstruct);
+    LamMakeVec *makeVec = constructToMakeVec(getLamExp_Construct(exp));
+    int save = PROTECT(makeVec);
+    MinMakeVec *newMakeVec = desugarLamMakeVec(makeVec);
+    PROTECT(newMakeVec);
+    MinExp *result = newMinExp_MakeVec(CPI(exp), newMakeVec);
+    UNPROTECT(save);
     return result;
 }
 
@@ -857,12 +862,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Constant(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_CONSTRUCT: {
-        MinConstruct *new = desugarLamConstruct(getLamExp_Construct(node));
-        PROTECT(new);
-        result = newMinExp_Construct(CPI(node), new);
+    case LAMEXP_TYPE_CONSTRUCT:
+        result = desugarLamConstruct(node);
         break;
-    }
     case LAMEXP_TYPE_CONSTRUCTOR: {
         MinTypeConstructorInfo *new =
             desugarLamTypeConstructorInfo(getLamExp_Constructor(node));

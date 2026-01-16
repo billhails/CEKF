@@ -46,8 +46,6 @@ static MinLookUp *visitMinLookUp(MinLookUp *node, MinAlphaEnv *context);
 static MinLookUpSymbol *visitMinLookUpSymbol(MinLookUpSymbol *node,
                                              MinAlphaEnv *context);
 static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context);
-static MinConstruct *visitMinConstruct(MinConstruct *node,
-                                       MinAlphaEnv *context);
 static MinDeconstruct *visitMinDeconstruct(MinDeconstruct *node,
                                            MinAlphaEnv *context);
 static MinTupleIndex *visitMinTupleIndex(MinTupleIndex *node,
@@ -446,30 +444,6 @@ static MinConstant *visitMinConstant(MinConstant *node, MinAlphaEnv *context) {
     // Pass through tag (type: int, not memory-managed)
 
     (void)context; // Unused parameter - all fields are pass-through
-    return node;
-}
-
-static MinConstruct *visitMinConstruct(MinConstruct *node,
-                                       MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-
-    bool changed = false;
-    // Pass through name (type: HashSymbol, not memory-managed)
-    // Pass through tag (type: int, not memory-managed)
-    MinArgs *new_args = visitMinArgs(node->args, context);
-    int save = PROTECT(new_args);
-    changed = changed || (new_args != node->args);
-
-    if (changed) {
-        // Create new node with modified fields
-        MinConstruct *result =
-            newMinConstruct(CPI(node), node->name, node->tag, new_args);
-        UNPROTECT(save);
-        return result;
-    }
-
-    UNPROTECT(save);
     return node;
 }
 
@@ -1180,16 +1154,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Constant(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_CONSTRUCT: {
-        // MinConstruct
-        MinConstruct *variant = getMinExp_Construct(node);
-        MinConstruct *new_variant = visitMinConstruct(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Construct(CPI(node), new_variant);
         }
         break;
     }

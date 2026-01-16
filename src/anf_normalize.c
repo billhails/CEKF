@@ -66,8 +66,6 @@ static AexpVarList *convertVarList(MinVarList *args);
 static AexpList *replaceMinArgs(MinArgs *, MinExpTable *);
 static Aexp *replaceMinPrim(MinPrimApp *minPrimApp, MinExpTable *replacements);
 static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements);
-static Aexp *replaceMinConstruct(MinConstruct *construct,
-                                 MinExpTable *replacements);
 static Aexp *replaceMinCexp(MinExp *apply, MinExpTable *replacements);
 static AnfExp *normalizeMakeVec(MinMakeVec *makeVec, AnfExp *tail);
 static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
@@ -80,7 +78,6 @@ static AexpIntList *convertIntList(MinIntList *list);
 static AnfExp *normalizeCond(MinCond *cond, AnfExp *tail);
 static CexpCondCases *normalizeCondCases(MinCondCases *cases);
 static CexpLetRec *normalizeLetRecBindings(CexpLetRec *, MinBindings *);
-static AnfExp *normalizeConstruct(MinConstruct *construct, AnfExp *tail);
 static AnfExp *normalizeMakeTuple(ParserInfo, MinArgs *, AnfExp *);
 static AnfExp *normalizeTupleIndex(MinTupleIndex *construct, AnfExp *tail);
 static AnfExp *normalizeDeconstruct(MinDeconstruct *deconstruct, AnfExp *tail);
@@ -128,8 +125,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeTupleIndex(getMinExp_TupleIndex(minExp), tail);
     case MINEXP_TYPE_DECONSTRUCT:
         return normalizeDeconstruct(getMinExp_Deconstruct(minExp), tail);
-    case MINEXP_TYPE_CONSTRUCT:
-        return normalizeConstruct(getMinExp_Construct(minExp), tail);
     case MINEXP_TYPE_TAG:
         return normalizeTag(getMinExp_Tag(minExp), tail);
     case MINEXP_TYPE_CONSTANT:
@@ -396,30 +391,9 @@ static AnfExp *normalizeMakeVec(MinMakeVec *minMakeVec, AnfExp *tail) {
     return res;
 }
 
-static MinMakeVec *constructToMakeVec(MinConstruct *construct) {
-    int nArgs = countMinArgs(construct->args);
-    MinExp *newArg = newMinExp_Stdint(CPI(construct), construct->tag);
-    int save = PROTECT(newArg);
-    MinArgs *extraItem = newMinArgs(CPI(construct), newArg, construct->args);
-    PROTECT(extraItem);
-    MinMakeVec *res = newMinMakeVec(CPI(construct), nArgs + 1, extraItem);
-    UNPROTECT(save);
-    return res;
-}
-
 static MinMakeVec *tupleToMakeVec(ParserInfo PI, MinArgs *tuple) {
     int nArgs = countMinArgs(tuple);
     MinMakeVec *res = newMinMakeVec(PI, nArgs, tuple);
-    return res;
-}
-
-static AnfExp *normalizeConstruct(MinConstruct *construct, AnfExp *tail) {
-    ENTER(normalizeConstruct);
-    MinMakeVec *makeVec = constructToMakeVec(construct);
-    int save = PROTECT(makeVec);
-    AnfExp *res = normalizeMakeVec(makeVec, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeConstruct);
     return res;
 }
 
@@ -865,9 +839,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_MAKEVEC:
         res = replaceMinMakeVec(getMinExp_MakeVec(minExp), replacements);
         break;
-    case MINEXP_TYPE_CONSTRUCT:
-        res = replaceMinConstruct(getMinExp_Construct(minExp), replacements);
-        break;
     case MINEXP_TYPE_TAG:
         res = replaceMinTag(getMinExp_Tag(minExp), replacements);
         break;
@@ -914,7 +885,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_BIGINTEGER:
     case MINEXP_TYPE_CHARACTER:
     case MINEXP_TYPE_CONSTANT:
-    case MINEXP_TYPE_CONSTRUCT:
     case MINEXP_TYPE_BACK:
     case MINEXP_TYPE_ERROR:
     case MINEXP_TYPE_AMB:
@@ -973,15 +943,6 @@ static CexpLetRec *normalizeLetRecBindings(CexpLetRec *cexpLetRec,
     }
     UNPROTECT(save);
     return cexpLetRec;
-}
-
-static Aexp *replaceMinConstruct(MinConstruct *construct,
-                                 MinExpTable *replacements) {
-    MinMakeVec *makeVec = constructToMakeVec(construct);
-    int save = PROTECT(makeVec);
-    Aexp *res = replaceMinMakeVec(makeVec, replacements);
-    UNPROTECT(save);
-    return res;
 }
 
 static Aexp *replaceMinMakeVec(MinMakeVec *makeVec, MinExpTable *replacements) {

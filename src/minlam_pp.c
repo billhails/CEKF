@@ -103,9 +103,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_DECONSTRUCT:
         ppMinDeconstruct(getMinExp_Deconstruct(exp));
         break;
-    case MINEXP_TYPE_CONSTRUCT:
-        ppMinConstruct(getMinExp_Construct(exp));
-        break;
     case MINEXP_TYPE_TAG:
         ppMinTag(getMinExp_Tag(exp));
         break;
@@ -611,13 +608,6 @@ static void _ppMinIntList(MinIntList *list) {
 void ppMinIntList(MinIntList *list) {
     eprintf("(");
     _ppMinIntList(list);
-    eprintf(")");
-}
-
-void ppMinConstruct(MinConstruct *construct) {
-    eprintf("(");
-    ppHashSymbol(construct->name);
-    _ppMinArgs(construct->args);
     eprintf(")");
 }
 

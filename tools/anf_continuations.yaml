@@ -206,20 +206,6 @@ continuations:
       anfVal: MinExp
       k: AnfKont
 
-  normalizeConstruct:
-    key: construct
-    brief: "Continuation for type constructor application"
-    context: |
-      (match e
-          ...
-          (`(construct ,name ,tag . ,Ms)
-              (normalize-names Ms
-                  [λ (ts) (k `(construct ,name ,tag . ,ts))])))
-    free_vars:
-      name: HashSymbol
-      tag: int
-      k: AnfKont
-
   normalizeMakeTuple:
     key: makeTuple
     brief: "Continuation for tuple construction"
