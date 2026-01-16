@@ -127,9 +127,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_LETREC:
         ppMinLetRec(getMinExp_LetRec(exp));
         break;
-    case MINEXP_TYPE_LETSTAR:
-        ppMinLetStar(getMinExp_LetStar(exp));
-        break;
     case MINEXP_TYPE_MATCH:
         ppMinMatch(getMinExp_Match(exp));
         break;
@@ -395,20 +392,6 @@ void ppMinLetRec(MinLetRec *letRec) {
     if (letRec->body != NULL) {
         eprintf(" ");
         ppMinExp(letRec->body);
-    }
-    eprintf(")");
-}
-
-void ppMinLetStar(MinLetStar *letStar) {
-    if (letStar == NULL) {
-        eprintf("<NULL letStar>");
-        return;
-    }
-    eprintf("(let* ");
-    ppMinBindings(letStar->bindings);
-    if (letStar->body != NULL) {
-        eprintf(" ");
-        ppMinExp(letStar->body);
     }
     eprintf(")");
 }

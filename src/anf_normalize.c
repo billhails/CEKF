@@ -74,7 +74,6 @@ static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
 static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail);
 static AnfExp *normalizeCallCc(MinExp *callCC, AnfExp *tail);
 static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail);
-static AnfExp *normalizeLetStar(MinLetStar *, AnfExp *);
 static AnfExp *normalizeMatch(MinMatch *match, AnfExp *tail);
 static AnfMatchList *normalizeMatchList(MinMatchList *matchList);
 static AexpIntList *convertIntList(MinIntList *list);
@@ -123,8 +122,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeIff(getMinExp_Iff(minExp), tail);
     case MINEXP_TYPE_CALLCC:
         return normalizeCallCc(getMinExp_CallCC(minExp), tail);
-    case MINEXP_TYPE_LETSTAR:
-        return normalizeLetStar(getMinExp_LetStar(minExp), tail);
     case MINEXP_TYPE_LETREC:
         return normalizeLetRec(getMinExp_LetRec(minExp), tail);
     case MINEXP_TYPE_TUPLEINDEX:
@@ -231,32 +228,6 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     UNPROTECT(save);
     LEAVE(normalizeMatchList);
     return this;
-}
-
-static AnfExp *normalizeLetStarBindings(MinBindings *bindings, AnfExp *body) {
-    ENTER(normalizeLetStarBindings);
-    if (bindings == NULL) {
-        LEAVE(normalizeLetStarBindings);
-        return body;
-    }
-    AnfExp *tail = normalizeLetStarBindings(bindings->next, body);
-    int save = PROTECT(tail);
-    AnfExp *value = normalize(bindings->val, NULL);
-    PROTECT(value);
-    AnfExp *exp = makeAnfExp_Let(CPI(bindings), bindings->var, value, tail);
-    UNPROTECT(save);
-    LEAVE(normalizeLetStarBindings);
-    return exp;
-}
-
-static AnfExp *normalizeLetStar(MinLetStar *minLetStar, AnfExp *tail) {
-    ENTER(normalizeLetStar);
-    AnfExp *body = normalize(minLetStar->body, tail);
-    int save = PROTECT(body);
-    AnfExp *exp = normalizeLetStarBindings(minLetStar->bindings, body);
-    UNPROTECT(save);
-    LEAVE(normalizeLetStar);
-    return exp;
 }
 
 static MinPrimApp *deconstructToPrimApp(MinDeconstruct *deconstruct) {

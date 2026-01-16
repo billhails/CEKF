@@ -218,13 +218,6 @@ structs:
             bindings: MinBindings
             body: MinExp
 
-    MinLetStar:
-        meta:
-            brief: A let* expression
-        data:
-            bindings: MinBindings
-            body: MinExp
-
     MinBindings:
         meta:
             brief: Bindings in a let or letrec expression
@@ -403,7 +396,6 @@ unions:
             iff: MinIff
             lam: MinLam
             letRec: MinLetRec
-            letStar: MinLetStar
             lookUp: MinLookUp
             makeTuple: MinArgs
             makeVec: MinMakeVec

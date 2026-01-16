@@ -36,7 +36,6 @@ void ppMinIff(MinIff *iff);
 void ppMinCond(MinCond *cond);
 void ppMinCallCC(MinExp *exp);
 void ppMinLetRec(MinLetRec *letRec);
-void ppMinLetStar(MinLetStar *letStar);
 void ppMinDeconstruct(MinDeconstruct *deconstruct);
 void ppMinConstruct(MinConstruct *construct);
 void ppMinConstant(MinConstant *constant);

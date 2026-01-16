@@ -49,7 +49,6 @@ static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
-static MinExp *cpsTcMinLetStar(MinLetStar *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
 static MinExp *cpsTcMinTypeDefs(MinTypeDefs *node, MinExp *c);
@@ -590,29 +589,6 @@ MinExp *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
 }
 
 /*
-    (E.letstar_expr(bindings, expr)) {
-        let
-            fn nest_lets {
-                ([], body) { body }
-                (#(var, exp) @ rest, body) {
-                    E.let_expr([#(var, exp)], nest_lets(rest, body))
-                }
-            }
-        in
-            T_c(nest_lets(bindings, expr), c)
-    }
-*/
-static MinExp *cpsTcMinLetStar(MinLetStar *node, MinExp *c) {
-    ENTER(cpsTcMinLetStar);
-    MinExp *lets = cpsNestLets(node->bindings, node->body);
-    int save = PROTECT(lets);
-    MinExp *result = cpsTc(lets, c);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinLetStar);
-    return result;
-}
-
-/*
     (E.letrec_expr(bindings, expr)) {
         let
             #(vars, aexps) = list.unzip(bindings);
@@ -786,8 +762,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinDeconstruct(getMinExp_Deconstruct(node), c);
     case MINEXP_TYPE_IFF:
         return cpsTcMinIff(getMinExp_Iff(node), c);
-    case MINEXP_TYPE_LETSTAR:
-        return cpsTcMinLetStar(getMinExp_LetStar(node), c);
     case MINEXP_TYPE_LETREC:
         return cpsTcMinLetRec(getMinExp_LetRec(node), c);
     case MINEXP_TYPE_LOOKUP:

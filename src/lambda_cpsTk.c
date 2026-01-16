@@ -49,7 +49,6 @@ static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
 static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
 static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
-static MinExp *cpsTkMinLetStar(MinLetStar *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
 static MinExp *cpsTkMinTypeDefs(MinTypeDefs *node, CpsKont *k);
@@ -658,28 +657,6 @@ MinExp *cpsNestLets(MinBindings *bindings, MinExp *body) {
     UNPROTECT(save);
     return apply;
 }
-/*
-    (E.letstar_expr(bindings, expr)) {
-        let
-            fn nest_lets {
-                ([], body) { body }
-                (#(var, exp) @ rest, body) {
-                    E.let_expr([#(var, exp)], nest_lets(rest, body))
-                }
-            }
-        in
-            T_k(nest_lets(bindings, expr), k)
-    }
-*/
-static MinExp *cpsTkMinLetStar(MinLetStar *node, CpsKont *k) {
-    ENTER(cpsTkMinLetStar);
-    MinExp *lets = cpsNestLets(node->bindings, node->body);
-    int save = PROTECT(lets);
-    MinExp *result = cpsTk(lets, k);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinLetStar);
-    return result;
-}
 
 MinBindings *mapMOverBindings(MinBindings *bindings) {
     if (bindings == NULL)
@@ -793,8 +770,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinDeconstruct(getMinExp_Deconstruct(node), k);
     case MINEXP_TYPE_IFF:
         return cpsTkMinIff(getMinExp_Iff(node), k);
-    case MINEXP_TYPE_LETSTAR:
-        return cpsTkMinLetStar(getMinExp_LetStar(node), k);
     case MINEXP_TYPE_LETREC:
         return cpsTkMinLetRec(getMinExp_LetRec(node), k);
     case MINEXP_TYPE_LOOKUP:

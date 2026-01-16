@@ -33,6 +33,7 @@
 // Forward declarations
 static MinExp *desugarLamPrint(LamExp *node);
 static MinExp *desugarLamLet(LamExp *node);
+static MinExp *desugarLamLetStar(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -55,7 +56,6 @@ static MinMatch *desugarLamMatch(LamMatch *node);
 static MinMatchList *desugarLamMatchList(LamMatchList *node);
 static MinIntList *desugarLamIntList(LamIntList *node);
 static MinLetRec *desugarLamLetRec(LamLetRec *node);
-static MinLetStar *desugarLamLetStar(LamLetStar *node);
 static MinBindings *desugarLamBindings(LamBindings *node);
 static MinAmb *desugarLamAmb(LamAmb *node);
 static MinTypeOf *desugarLamTypeOf(LamTypeOf *node);
@@ -513,18 +513,30 @@ static MinLetRec *desugarLamLetRec(LamLetRec *node) {
     return result;
 }
 
-static MinLetStar *desugarLamLetStar(LamLetStar *node) {
-    ENTER(desugarLamLetStar);
-    if (node == NULL) {
-        LEAVE(desugarLamLetStar);
-        return NULL;
+static LamExp *nestLets(LamBindings *bindings, LamExp *body) {
+    ENTER(nestLets);
+    if (bindings == NULL) {
+        LEAVE(nestLets);
+        return body;
     }
+    LamExp *rest = nestLets(bindings->next, body);
+    int save = PROTECT(rest);
+    LamBindings *single_binding =
+        newLamBindings(CPI(bindings), bindings->var, bindings->val, NULL);
+    PROTECT(single_binding);
+    LamExp *let = makeLamExp_Let(CPI(bindings), single_binding, rest);
+    UNPROTECT(save);
+    LEAVE(nestLets);
+    return let;
+}
 
-    MinBindings *bindings = desugarLamBindings(node->bindings);
-    int save = PROTECT(bindings);
-    MinExp *body = desugarLamExp_internal(node->body);
-    PROTECT(body);
-    MinLetStar *result = newMinLetStar(CPI(node), bindings, body);
+static MinExp *desugarLamLetStar(LamExp *exp) {
+    ENTER(desugarLamLetStar);
+    LamLetStar *node = getLamExp_LetStar(exp);
+    // build a nest of lets, then desugar that
+    LamExp *lets = nestLets(node->bindings, node->body);
+    int save = PROTECT(lets);
+    MinExp *result = desugarLamExp_internal(lets);
     UNPROTECT(save);
     LEAVE(desugarLamLetStar);
     return result;
@@ -901,12 +913,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_LetRec(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_LETSTAR: {
-        MinLetStar *new = desugarLamLetStar(getLamExp_LetStar(node));
-        PROTECT(new);
-        result = newMinExp_LetStar(CPI(node), new);
+    case LAMEXP_TYPE_LETSTAR:
+        result = desugarLamLetStar(node);
         break;
-    }
     case LAMEXP_TYPE_LOOKUP: {
         MinLookUp *new = desugarLamLookUp(getLamExp_LookUp(node));
         PROTECT(new);
