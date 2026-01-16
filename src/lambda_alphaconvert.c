@@ -64,8 +64,6 @@ static MinMatchList *visitMinMatchList(MinMatchList *node,
                                        MinAlphaEnv *context);
 static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context);
 static MinLetStar *visitMinLetStar(MinLetStar *node, MinAlphaEnv *context);
-static MinLet *visitMinLet(MinLet *node, MinAlphaEnv *context);
-static MinBindings *visitLetBindings(MinBindings *node, MinAlphaEnv *context);
 static MinBindings *visitLetStarBindings(MinBindings *node,
                                          MinAlphaEnv *context);
 static MinLetRec *visitMinLetRec(MinLetRec *node, MinAlphaEnv *context);
@@ -725,44 +723,6 @@ static MinIntList *visitMinIntList(MinIntList *node, MinAlphaEnv *context) {
     return node;
 }
 
-static MinLet *visitMinLet(MinLet *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-    context = newMinAlphaEnv(context);
-    int save = PROTECT(context);
-    bool changed = false;
-    MinBindings *new_bindings = visitLetBindings(node->bindings, context);
-    PROTECT(new_bindings);
-    changed = changed || (new_bindings != node->bindings);
-    MinExp *new_body = visitMinExp(node->body, context);
-    PROTECT(new_body);
-    changed = changed || (new_body != node->body);
-    if (changed) {
-        // Create new node with modified fields
-        MinLet *result = newMinLet(CPI(node), new_bindings, new_body);
-        UNPROTECT(save);
-        return result;
-    }
-    UNPROTECT(save);
-    return node;
-}
-
-static MinBindings *visitLetBindings(MinBindings *node, MinAlphaEnv *context) {
-    if (node == NULL)
-        return NULL;
-    MinExp *new_val = visitMinExp(node->val, context);
-    int save = PROTECT(new_val);
-    MinBindings *new_next = visitLetBindings(node->next, context);
-    PROTECT(new_next);
-    addUniqueNameToContext(node->var, context);
-    // Create new node with modified fields
-    MinBindings *result = newMinBindings(
-        CPI(node), getNameFromContext(CPI(node), node->var, context), new_val,
-        new_next);
-    UNPROTECT(save);
-    return result;
-}
-
 static MinLetStar *visitMinLetStar(MinLetStar *node, MinAlphaEnv *context) {
     if (node == NULL)
         return NULL;
@@ -1330,16 +1290,6 @@ static MinExp *visitMinExp(MinExp *node, MinAlphaEnv *context) {
         if (new_variant != variant) {
             PROTECT(new_variant);
             result = newMinExp_Lam(CPI(node), new_variant);
-        }
-        break;
-    }
-    case MINEXP_TYPE_LET: {
-        // MinLet
-        MinLet *variant = getMinExp_Let(node);
-        MinLet *new_variant = visitMinLet(variant, context);
-        if (new_variant != variant) {
-            PROTECT(new_variant);
-            result = newMinExp_Let(CPI(node), new_variant);
         }
         break;
     }

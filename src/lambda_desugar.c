@@ -31,6 +31,9 @@
 #endif
 
 // Forward declarations
+static MinExp *desugarLamPrint(LamExp *node);
+static MinExp *desugarLamLet(LamExp *node);
+
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
 static MinPrimApp *desugarLamPrimApp(LamPrimApp *node);
@@ -51,7 +54,6 @@ static MinCharCondCases *desugarLamCharCondCases(LamCharCondCases *node);
 static MinMatch *desugarLamMatch(LamMatch *node);
 static MinMatchList *desugarLamMatchList(LamMatchList *node);
 static MinIntList *desugarLamIntList(LamIntList *node);
-static MinLet *desugarLamLet(LamLet *node);
 static MinLetRec *desugarLamLetRec(LamLetRec *node);
 static MinLetStar *desugarLamLetStar(LamLetStar *node);
 static MinBindings *desugarLamBindings(LamBindings *node);
@@ -447,18 +449,48 @@ static MinIntList *desugarLamIntList(LamIntList *node) {
     return result;
 }
 
-static MinLet *desugarLamLet(LamLet *node) {
-    ENTER(desugarLamLet);
-    if (node == NULL) {
-        LEAVE(desugarLamLet);
+static MinVarList *extractKeysFromBindings(MinBindings *bindings) {
+    ENTER(extractKeysFromBindings);
+    if (bindings == NULL) {
+        LEAVE(extractKeysFromBindings);
         return NULL;
     }
+    MinVarList *next = extractKeysFromBindings(bindings->next);
+    int save = PROTECT(next);
+    MinVarList *result = newMinVarList(CPI(bindings), bindings->var, next);
+    UNPROTECT(save);
+    LEAVE(extractKeysFromBindings);
+    return result;
+}
 
+static MinArgs *extractValuesFromBindings(MinBindings *bindings) {
+    ENTER(extractValuesFromBindings);
+    if (bindings == NULL) {
+        LEAVE(extractValuesFromBindings);
+        return NULL;
+    }
+    MinArgs *next = extractValuesFromBindings(bindings->next);
+    int save = PROTECT(next);
+    MinArgs *result = newMinArgs(CPI(bindings), bindings->val, next);
+    UNPROTECT(save);
+    LEAVE(extractValuesFromBindings);
+    return result;
+}
+
+static MinExp *desugarLamLet(LamExp *exp) {
+    ENTER(desugarLamLet);
+    LamLet *node = getLamExp_Let(exp);
     MinBindings *bindings = desugarLamBindings(node->bindings);
     int save = PROTECT(bindings);
     MinExp *body = desugarLamExp_internal(node->body);
     PROTECT(body);
-    MinLet *result = newMinLet(CPI(node), bindings, body);
+    MinVarList *fargs = extractKeysFromBindings(bindings);
+    PROTECT(fargs);
+    MinExp *lambda = makeMinExp_Lam(CPI(node), fargs, body);
+    PROTECT(lambda);
+    MinArgs *aargs = extractValuesFromBindings(bindings);
+    PROTECT(aargs);
+    MinExp *result = makeMinExp_Apply(CPI(node), lambda, aargs);
     UNPROTECT(save);
     LEAVE(desugarLamLet);
     return result;
@@ -743,6 +775,20 @@ desugarLamTypeConstructorInfo(LamTypeConstructorInfo *node) {
     return result;
 }
 
+static MinExp *desugarLamPrint(LamExp *node) {
+    MinExp *printer = desugarLamExp_internal(getLamExp_Print(node)->printer);
+    int save = PROTECT(printer);
+    MinExp *arg = desugarLamExp_internal(getLamExp_Print(node)->exp);
+    PROTECT(arg);
+    MinArgs *args = newMinArgs(CPI(node), arg, NULL);
+    PROTECT(args);
+    MinApply *app = newMinApply(CPI(node), printer, args);
+    PROTECT(app);
+    MinExp *result = newMinExp_Apply(CPI(node), app);
+    UNPROTECT(save);
+    return result;
+}
+
 static MinExp *desugarLamExp_internal(LamExp *node) {
     ENTER(desugarLamExp);
     if (node == NULL) {
@@ -846,12 +892,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Lam(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_LET: {
-        MinLet *new = desugarLamLet(getLamExp_Let(node));
-        PROTECT(new);
-        result = newMinExp_Let(CPI(node), new);
+    case LAMEXP_TYPE_LET:
+        result = desugarLamLet(node);
         break;
-    }
     case LAMEXP_TYPE_LETREC: {
         MinLetRec *new = desugarLamLetRec(getLamExp_LetRec(node));
         PROTECT(new);
@@ -901,20 +944,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_Prim(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_PRINT: {
-        MinExp *printer =
-            desugarLamExp_internal(getLamExp_Print(node)->printer);
-        int save = PROTECT(printer);
-        MinExp *arg = desugarLamExp_internal(getLamExp_Print(node)->exp);
-        PROTECT(arg);
-        MinArgs *args = newMinArgs(CPI(node), arg, NULL);
-        PROTECT(args);
-        MinApply *app = newMinApply(CPI(node), printer, args);
-        PROTECT(app);
-        result = newMinExp_Apply(CPI(node), app);
-        UNPROTECT(save);
+    case LAMEXP_TYPE_PRINT:
+        result = desugarLamPrint(node);
         break;
-    }
     case LAMEXP_TYPE_SEQUENCE: {
         MinSequence *new = desugarLamSequence(getLamExp_Sequence(node));
         PROTECT(new);

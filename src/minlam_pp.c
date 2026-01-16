@@ -124,9 +124,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_TYPEDEFS:
         ppMinTypeDefs(getMinExp_TypeDefs(exp));
         break;
-    case MINEXP_TYPE_LET:
-        ppMinLet(getMinExp_Let(exp));
-        break;
     case MINEXP_TYPE_LETREC:
         ppMinLetRec(getMinExp_LetRec(exp));
         break;
@@ -429,18 +426,6 @@ void ppMinTypeDefs(MinTypeDefs *typeDefs) {
         eprintf(" ");
         ppMinExp(typeDefs->body);
     }
-    eprintf(")");
-}
-
-void ppMinLet(MinLet *let) {
-    if (let == NULL) {
-        eprintf("<NULL let>");
-        return;
-    }
-    eprintf("(let (");
-    ppMinBindings(let->bindings);
-    eprintf(") ");
-    ppMinExp(let->body);
     eprintf(")");
 }
 

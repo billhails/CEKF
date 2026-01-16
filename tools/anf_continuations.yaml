@@ -78,21 +78,6 @@ continuations:
     free_vars:
       k: AnfKont
 
-  normalizeLet:
-    key: let
-    brief: "Continuation for let-expression bindings"
-    context: |
-      (match e
-          ...
-          (`(let ,bindings ,body)
-              (normalize-bindings bindings
-                  [λ (anfbindings)
-                      `(let ,anfbindings
-                            ,(normalize body k))])))
-    free_vars:
-      body: MinExp
-      k: AnfKont
-
   normalizeIff:
     key: iff
     brief: "Continuation for if-expression test"

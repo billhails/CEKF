@@ -211,13 +211,6 @@ structs:
             nsId: int
             next: MinIntList
 
-    MinLet:
-        meta:
-            brief: A let expression
-        data:
-            bindings: MinBindings
-            body: MinExp
-
     MinLetRec:
         meta:
             brief: A letrec expression
@@ -409,7 +402,6 @@ unions:
             error: void_ptr
             iff: MinIff
             lam: MinLam
-            let: MinLet
             letRec: MinLetRec
             letStar: MinLetStar
             lookUp: MinLookUp

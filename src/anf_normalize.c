@@ -59,7 +59,7 @@ static Aexp *aexpNormalizeVar(ParserInfo I, HashSymbol *var);
 static Aexp *aexpNormalizeMaybeBigInteger(ParserInfo I, MaybeBigInt *integer);
 static Aexp *aexpNormalizeStdInteger(ParserInfo I, int integer);
 static Aexp *aexpNormalizeCharacter(ParserInfo I, Character character);
-static Aexp *aexpNormalizeMin(MinLam *minMin);
+static Aexp *aexpNormalizeLam(MinLam *minMin);
 static AexpNameSpaceArray *aexpNormalizeNameSpaces(ParserInfo I,
                                                    MinNameSpaceArray *nsArray);
 static AexpVarList *convertVarList(MinVarList *args);
@@ -74,7 +74,6 @@ static AnfExp *wrapTail(AnfExp *exp, AnfExp *tail);
 static AnfExp *normalizeIff(MinIff *minIff, AnfExp *tail);
 static AnfExp *normalizeCallCc(MinExp *callCC, AnfExp *tail);
 static AnfExp *normalizeLetRec(MinLetRec *minLetRec, AnfExp *tail);
-static AnfExp *normalizeLet(MinLet *minLet, AnfExp *tail);
 static AnfExp *normalizeLetStar(MinLetStar *, AnfExp *);
 static AnfExp *normalizeMatch(MinMatch *match, AnfExp *tail);
 static AnfMatchList *normalizeMatchList(MinMatchList *matchList);
@@ -124,8 +123,6 @@ static AnfExp *normalize(MinExp *minExp, AnfExp *tail) {
         return normalizeIff(getMinExp_Iff(minExp), tail);
     case MINEXP_TYPE_CALLCC:
         return normalizeCallCc(getMinExp_CallCC(minExp), tail);
-    case MINEXP_TYPE_LET:
-        return normalizeLet(getMinExp_Let(minExp), tail);
     case MINEXP_TYPE_LETSTAR:
         return normalizeLetStar(getMinExp_LetStar(minExp), tail);
     case MINEXP_TYPE_LETREC:
@@ -236,24 +233,6 @@ static AnfMatchList *normalizeMatchList(MinMatchList *matchList) {
     return this;
 }
 
-static AnfExp *normalizeLetBindings(MinBindings *bindings, AnfExp *body) {
-    ENTER(normalizeLetBindings);
-    if (bindings == NULL) {
-        LEAVE(normalizeLetBindings);
-        return body;
-    }
-    AnfExp *tail = normalizeLetBindings(bindings->next, body);
-    int save = PROTECT(tail);
-    AnfExp *value = normalize(bindings->val, NULL);
-    PROTECT(value);
-    AnfExpLet *expLet = newAnfExpLet(CPI(bindings), bindings->var, value, tail);
-    PROTECT(expLet);
-    AnfExp *exp = newAnfExp_Let(CPI(expLet), expLet);
-    UNPROTECT(save);
-    LEAVE(normalizeLetBindings);
-    return exp;
-}
-
 static AnfExp *normalizeLetStarBindings(MinBindings *bindings, AnfExp *body) {
     ENTER(normalizeLetStarBindings);
     if (bindings == NULL) {
@@ -267,16 +246,6 @@ static AnfExp *normalizeLetStarBindings(MinBindings *bindings, AnfExp *body) {
     AnfExp *exp = makeAnfExp_Let(CPI(bindings), bindings->var, value, tail);
     UNPROTECT(save);
     LEAVE(normalizeLetStarBindings);
-    return exp;
-}
-
-static AnfExp *normalizeLet(MinLet *minLet, AnfExp *tail) {
-    ENTER(normalizeLet);
-    AnfExp *body = normalize(minLet->body, tail);
-    int save = PROTECT(body);
-    AnfExp *exp = normalizeLetBindings(minLet->bindings, body);
-    UNPROTECT(save);
-    LEAVE(normalizeLet);
     return exp;
 }
 
@@ -699,7 +668,7 @@ static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail) {
         LEAVE(normalizeMin);
         return tail;
     }
-    Aexp *aexp = aexpNormalizeMin(minMin);
+    Aexp *aexp = aexpNormalizeLam(minMin);
     int save = PROTECT(aexp);
     AnfExp *exp = wrapAexp(aexp);
     UNPROTECT(save);
@@ -707,8 +676,8 @@ static AnfExp *normalizeMin(MinLam *minMin, AnfExp *tail) {
     return exp;
 }
 
-static Aexp *aexpNormalizeMin(MinLam *minMin) {
-    ENTER(aexpNormalizeMin);
+static Aexp *aexpNormalizeLam(MinLam *minMin) {
+    ENTER(aexpNormalizeLam);
     AexpVarList *varList = convertVarList(minMin->args);
     int save = PROTECT(varList);
     AnfExp *body = normalize(minMin->exp, NULL);
@@ -716,7 +685,7 @@ static Aexp *aexpNormalizeMin(MinLam *minMin) {
     Aexp *aexp =
         makeAexp_Lam(CPI(minMin), countAexpVarList(varList), 0, varList, body);
     UNPROTECT(save);
-    LEAVE(aexpNormalizeMin);
+    LEAVE(aexpNormalizeLam);
     return aexp;
 }
 
@@ -890,12 +859,24 @@ static Aexp *replaceMinTag(MinExp *tagged, MinExpTable *replacements) {
     return res;
 }
 
+static Aexp *replaceMinTupleIndex(MinTupleIndex *tupleIndex,
+                                  MinExpTable *replacements) {
+    MinPrimApp *primApp = tupleIndexToPrimApp(tupleIndex);
+    int save = PROTECT(primApp);
+    Aexp *res = replaceMinPrim(primApp, replacements);
+    UNPROTECT(save);
+    return res;
+}
+
 static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     ENTER(replaceMinExp);
     Aexp *res = NULL;
     switch (minExp->type) {
+    case MINEXP_TYPE_TUPLEINDEX:
+        res = replaceMinTupleIndex(getMinExp_TupleIndex(minExp), replacements);
+        break;
     case MINEXP_TYPE_LAM:
-        res = aexpNormalizeMin(getMinExp_Lam(minExp));
+        res = aexpNormalizeLam(getMinExp_Lam(minExp));
         break;
     case MINEXP_TYPE_VAR:
         res = aexpNormalizeVar(CPI(minExp), getMinExp_Var(minExp));
@@ -939,7 +920,6 @@ static Aexp *replaceMinExp(MinExp *minExp, MinExpTable *replacements) {
     case MINEXP_TYPE_IFF:
     case MINEXP_TYPE_CALLCC:
     case MINEXP_TYPE_LETREC:
-    case MINEXP_TYPE_LET:
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_BACK:
@@ -974,7 +954,6 @@ static bool minExpIsMinbda(MinExp *val) {
     case MINEXP_TYPE_CALLCC:
     case MINEXP_TYPE_LETREC:
     case MINEXP_TYPE_TYPEDEFS:
-    case MINEXP_TYPE_LET:
     case MINEXP_TYPE_MATCH:
     case MINEXP_TYPE_COND:
     case MINEXP_TYPE_MAKEVEC:

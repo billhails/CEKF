@@ -49,7 +49,6 @@ static MinExp *cpsTkMakeVec(MinMakeVec *node, CpsKont *k);
 static MinExp *cpsTkMinIff(MinIff *node, CpsKont *k);
 static MinExp *cpsTkMinCond(MinCond *node, CpsKont *k);
 static MinExp *cpsTkMinMatch(MinMatch *node, CpsKont *k);
-static MinExp *cpsTkMinLet(MinLet *node, CpsKont *k);
 static MinExp *cpsTkMinLetStar(MinLetStar *node, CpsKont *k);
 static MinExp *cpsTkMinLetRec(MinLetRec *node, CpsKont *k);
 static MinExp *cpsTkMinAmb(MinAmb *node, CpsKont *k);
@@ -643,42 +642,21 @@ void cpsUnzipMinBindings(MinBindings *bindings, MinVarList **vars,
     PROTECT(*exps);
 }
 
-/*
-    (E.let_expr(bindings, expr)) {
-        let
-            #(vars, exps) = list.unzip(bindings);
-        in
-            T_k(E.apply(E.lambda(vars, expr), exps), k)
-    }
-*/
-static MinExp *cpsTkMinLet(MinLet *node, CpsKont *k) {
-    ENTER(cpsTkMinLet);
-    int save = PROTECT(NULL);
-    MinVarList *vars = NULL;
-    MinArgs *exps = NULL;
-    cpsUnzipMinBindings(node->bindings, &vars, &exps); // PROTECTED
-    MinExp *lambda = makeMinExp_Lam(CPI(node), vars, node->body);
-    PROTECT(lambda);
-    MinExp *apply = makeMinExp_Apply(CPI(node), lambda, exps);
-    PROTECT(apply);
-    MinExp *result = cpsTk(apply, k);
-    UNPROTECT(save);
-    LEAVE(cpsTkMinLet);
-    return result;
-}
-
 MinExp *cpsNestLets(MinBindings *bindings, MinExp *body) {
     if (bindings == NULL) {
         return body;
     }
     MinExp *rest = cpsNestLets(bindings->next, body);
     int save = PROTECT(rest);
-    MinBindings *binding =
-        newMinBindings(CPI(bindings), bindings->var, bindings->val, NULL);
-    PROTECT(binding);
-    MinExp *this = makeMinExp_Let(CPI(bindings), binding, rest);
+    MinVarList *farg = newMinVarList(CPI(bindings), bindings->var, NULL);
+    PROTECT(farg);
+    MinExp *lambda = makeMinExp_Lam(CPI(bindings), farg, rest);
+    PROTECT(lambda);
+    MinArgs *aarg = newMinArgs(CPI(bindings), bindings->val, NULL);
+    PROTECT(aarg);
+    MinExp *apply = makeMinExp_Apply(CPI(bindings), lambda, aarg);
     UNPROTECT(save);
-    return this;
+    return apply;
 }
 /*
     (E.letstar_expr(bindings, expr)) {
@@ -815,8 +793,6 @@ static MinExp *cpsTkMinExp(MinExp *node, CpsKont *k) {
         return cpsTkMinDeconstruct(getMinExp_Deconstruct(node), k);
     case MINEXP_TYPE_IFF:
         return cpsTkMinIff(getMinExp_Iff(node), k);
-    case MINEXP_TYPE_LET:
-        return cpsTkMinLet(getMinExp_Let(node), k);
     case MINEXP_TYPE_LETSTAR:
         return cpsTkMinLetStar(getMinExp_LetStar(node), k);
     case MINEXP_TYPE_LETREC:

@@ -49,7 +49,6 @@ static MinExp *cpsTcMakeVec(MinMakeVec *node, MinExp *c);
 static MinExp *cpsTcMinIff(MinIff *node, MinExp *c);
 static MinExp *cpsTcMinCond(MinCond *node, MinExp *c);
 static MinExp *cpsTcMinMatch(MinMatch *node, MinExp *c);
-static MinExp *cpsTcMinLet(MinLet *node, MinExp *c);
 static MinExp *cpsTcMinLetStar(MinLetStar *node, MinExp *c);
 static MinExp *cpsTcMinLetRec(MinLetRec *node, MinExp *c);
 static MinExp *cpsTcMinAmb(MinAmb *node, MinExp *c);
@@ -591,30 +590,6 @@ MinExp *TcMatchKont(MinExp *atest, TcMatchKontEnv *env) {
 }
 
 /*
-    (E.let_expr(bindings, expr)) {
-        let
-            #(vars, exps) = list.unzip(bindings);
-        in
-            T_c(E.apply(E.lambda(vars, expr), exps), c)
-    }
-*/
-static MinExp *cpsTcMinLet(MinLet *node, MinExp *c) {
-    ENTER(cpsTcMinLet);
-    int save = PROTECT(NULL);
-    MinVarList *vars = NULL;
-    MinArgs *exps = NULL;
-    cpsUnzipMinBindings(node->bindings, &vars, &exps); // PROTECTED
-    MinExp *lambda = makeMinExp_Lam(CPI(node), vars, node->body);
-    PROTECT(lambda);
-    MinExp *apply = makeMinExp_Apply(CPI(node), lambda, exps);
-    PROTECT(apply);
-    MinExp *result = cpsTc(apply, c);
-    UNPROTECT(save);
-    LEAVE(cpsTcMinLet);
-    return result;
-}
-
-/*
     (E.letstar_expr(bindings, expr)) {
         let
             fn nest_lets {
@@ -811,8 +786,6 @@ static MinExp *cpsTcMinExp(MinExp *node, MinExp *c) {
         return cpsTcMinDeconstruct(getMinExp_Deconstruct(node), c);
     case MINEXP_TYPE_IFF:
         return cpsTcMinIff(getMinExp_Iff(node), c);
-    case MINEXP_TYPE_LET:
-        return cpsTcMinLet(getMinExp_Let(node), c);
     case MINEXP_TYPE_LETSTAR:
         return cpsTcMinLetStar(getMinExp_LetStar(node), c);
     case MINEXP_TYPE_LETREC:

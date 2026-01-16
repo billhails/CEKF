@@ -41,7 +41,6 @@ void ppMinDeconstruct(MinDeconstruct *deconstruct);
 void ppMinConstruct(MinConstruct *construct);
 void ppMinConstant(MinConstant *constant);
 void ppMinTypeDefs(MinTypeDefs *typeDefs);
-void ppMinLet(MinLet *let);
 void ppMinMatch(MinMatch *match);
 void ppMinTupleIndex(MinTupleIndex *index);
 void ppMinBindings(MinBindings *bindings);

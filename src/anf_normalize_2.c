@@ -55,10 +55,14 @@ static inline MinExp *INVOKE(AnfKont *k, MinExp *arg) {
     return k->wrapper(arg, k->env);
 }
 
-static MinExp *makeSingleLet(HashSymbol *y, MinExp *e, MinExp *body) {
-    MinBindings *bindings = newMinBindings(CPI(e), y, e, NULL);
-    int save = PROTECT(bindings);
-    MinExp *res = makeMinExp_Let(CPI(e), bindings, body);
+static MinExp *makeSingleLambda(HashSymbol *y, MinExp *e, MinExp *body) {
+    MinVarList *fargs = newMinVarList(CPI(e), y, NULL);
+    int save = PROTECT(fargs);
+    MinExp *lam = makeMinExp_Lam(CPI(body), fargs, body);
+    PROTECT(lam);
+    MinArgs *aargs = newMinArgs(CPI(e), e, NULL);
+    PROTECT(aargs);
+    MinExp *res = makeMinExp_Apply(CPI(e), lam, aargs);
     UNPROTECT(save);
     return res;
 }
@@ -123,7 +127,7 @@ static MinExp *normalizeNameKont(MinExp *x, NormalizeNameKontEnv *env) {
         int save = PROTECT(y);
         MinExp *body = INVOKE(env->k, y);
         PROTECT(body);
-        MinExp *letExp = makeSingleLet(y->val.var, x, body);
+        MinExp *letExp = makeSingleLambda(y->val.var, x, body);
         UNPROTECT(save);
         return letExp;
     }
@@ -311,31 +315,6 @@ static MinExp *normalizeLetRecKont(MinExp *anfbindings,
     int save = PROTECT(body);
     MinExp *result = makeMinExp_LetRec(CPI(env->body),
                                        getMinExp_Bindings(anfbindings), body);
-    UNPROTECT(save);
-    return result;
-}
-
-// (`(let ,bindings ,body)
-//     (normalize-bindings bindings
-//         [λ (anfbindings)
-//             `(let ,anfbindings
-//                   ,(normalize body k))])))
-
-static MinExp *normalize_Let(MinExp *exp, AnfKont *k) {
-    ENTER(normalize_Let);
-    AnfKont *k1 = makeKont_normalizeLet(getMinExp_Let(exp)->body, k);
-    int save = PROTECT(k1);
-    MinExp *result = normalize_bindings(getMinExp_Let(exp)->bindings, k1);
-    UNPROTECT(save);
-    LEAVE(normalize_Let);
-    return result;
-}
-
-static MinExp *normalizeLetKont(MinExp *anfbindings, NormalizeLetKontEnv *env) {
-    MinExp *body = normalize(env->body, env->k);
-    int save = PROTECT(body);
-    MinExp *result =
-        makeMinExp_Let(CPI(env->body), getMinExp_Bindings(anfbindings), body);
     UNPROTECT(save);
     return result;
 }
@@ -840,9 +819,6 @@ static MinExp *normalize(MinExp *exp, AnfKont *k) {
             break;
         case MINEXP_TYPE_LETREC:
             res = normalize_LetRec(exp, k);
-            break;
-        case MINEXP_TYPE_LET:
-            res = normalize_Let(exp, k);
             break;
         case MINEXP_TYPE_LOOKUP:
             res = normalize_LookUp(exp, k);
