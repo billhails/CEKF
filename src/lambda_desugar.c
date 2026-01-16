@@ -34,6 +34,7 @@
 static MinExp *desugarLamPrint(LamExp *node);
 static MinExp *desugarLamLet(LamExp *node);
 static MinExp *desugarLamLetStar(LamExp *node);
+static MinExp *desugarLamTypeOf(LamExp *node);
 
 static MinLam *desugarLamLam(LamLam *node);
 static MinVarList *desugarLamVarList(LamVarList *node);
@@ -58,7 +59,6 @@ static MinIntList *desugarLamIntList(LamIntList *node);
 static MinLetRec *desugarLamLetRec(LamLetRec *node);
 static MinBindings *desugarLamBindings(LamBindings *node);
 static MinAmb *desugarLamAmb(LamAmb *node);
-static MinTypeOf *desugarLamTypeOf(LamTypeOf *node);
 static MinTypeDefs *desugarLamTypeDefs(LamTypeDefs *node);
 static MinTypeDefList *desugarLamTypeDefList(LamTypeDefList *node);
 static MinTypeDef *desugarLamTypeDef(LamTypeDef *node);
@@ -576,21 +576,10 @@ static MinAmb *desugarLamAmb(LamAmb *node) {
     return result;
 }
 
-static MinTypeOf *desugarLamTypeOf(LamTypeOf *node) {
+static MinExp *desugarLamTypeOf(LamExp *exp) {
     ENTER(desugarLamTypeOf);
-    if (node == NULL) {
-        LEAVE(desugarLamTypeOf);
-        return NULL;
-    }
-
-    MinExp *exp = desugarLamExp_internal(node->exp);
-    int save = PROTECT(exp);
-    MinExp *typeString = desugarLamExp_internal(node->typeString);
-    PROTECT(typeString);
-
-    MinTypeOf *result = newMinTypeOf(CPI(node), exp);
-    result->typeString = typeString;
-    UNPROTECT(save);
+    LamTypeOf *node = getLamExp_TypeOf(exp);
+    MinExp *result = desugarLamExp_internal(node->typeString);
     LEAVE(desugarLamTypeOf);
     return result;
 }
@@ -984,12 +973,9 @@ static MinExp *desugarLamExp_internal(LamExp *node) {
         result = newMinExp_TypeDefs(CPI(node), new);
         break;
     }
-    case LAMEXP_TYPE_TYPEOF: {
-        MinTypeOf *new = desugarLamTypeOf(getLamExp_TypeOf(node));
-        PROTECT(new);
-        result = newMinExp_TypeOf(CPI(node), new);
+    case LAMEXP_TYPE_TYPEOF:
+        result = desugarLamTypeOf(node);
         break;
-    }
     case LAMEXP_TYPE_VAR: {
         result = newMinExp_Var(CPI(node), getLamExp_Var(node));
         break;

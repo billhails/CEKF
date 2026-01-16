@@ -11,12 +11,11 @@ step after typechecking that resolves type constructors, we can't desugar before
 
 Anyway here is a list of the desugaring operations that are desired:
 
-1. `let*` becomes a nest of `let`.
-1. `let` in turn becomes an anonymous lambda.
-1. `LamPrimApp` becomes `apply` of a primOp.
+1. `let*` becomes a nest of `let`. **done**
+1. `let` in turn becomes an anonymous lambda. **done**
 1. All typedefs are discarded.
-1. `LamPrint` becomes an `apply` of the compiled printer to its argument (already done in the type-checker but could be moved out to this additional step).
-1. `typeof` is replaced by a string (already done in the type-checker).
+1. `LamPrint` becomes an `apply` of the compiled printer to its argument (already done in the type-checker but could be moved out to this additional step). **done**
+1. `typeof` is replaced by a string (already done in the type-checker). **done**
 1. There should only be `LamLookUp`, `LamLookUpSymbol` etc are redundant.
 1. `Construct` and `Deconstruct` replaced with simple vector operations.
    (`constructToMakeVec` and `deconstructToPrimApp` in `anf_normalize.c`).
@@ -27,6 +26,7 @@ Anyway here is a list of the desugaring operations that are desired:
 1. `tag` becomes `primApp` (see `tagToPrimApp` in `anf_normalize.c`)
 1. `tupleIndex` becomes `primApp` (see `tupleIndexToPrimApp` in `anf_normalize.c`)
 1. `typeDefs` stepped over and discarded (see treatment of `LAMEXP_TYPE_TYPEDEFS` in `anf_normalize.c`)
+1. `LamPrimApp` becomes `apply` of a primOp.
 1. ...
 
 We really want to push towards a pure minimal lambda representation.

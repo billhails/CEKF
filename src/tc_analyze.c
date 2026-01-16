@@ -210,21 +210,11 @@ TcType *makeIOType(void) { return makeNamedType("io_mode"); }
 TcType *makeFTypeType(void) { return makeNamedType("ftype_type"); }
 
 static TcType *analyzeTypeOf(LamExp *exp, TcEnv *env, TcNg *ng) {
-    // Analyze the inner expression to get its type
     TcType *type = analyzeExp(getLamExp_TypeOf(exp)->exp, env, ng);
     int save = PROTECT(type);
-    // Convert the type to a string representation
     char *typeString = tcTypeToString(prune(type));
-    // Convert the C string to a lambda list of chars
-    LamExp *stringExp = stringToLamArgs(CPI(exp), typeString);
-    PROTECT(stringExp);
-    free(typeString); // Free the temporary C string
-    // Replace just the type discriminator and union value, preserving header
-    exp->type = stringExp->type;
-    exp->val = stringExp->val;
-    // Also copy the parser info
-    exp->_yy_parser_info = CPI(stringExp);
-    // Create the return type before unprotecting
+    getLamExp_TypeOf(exp)->typeString = stringToLamArgs(CPI(exp), typeString);
+    free(typeString);
     TcType *stringType = makeStringType();
     UNPROTECT(save);
     return stringType;

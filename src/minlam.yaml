@@ -242,13 +242,6 @@ structs:
             left: MinExp
             right: MinExp
 
-    MinTypeOf:
-        meta:
-            brief: A typeOf expression
-        data:
-            exp: MinExp
-            typeString: MinExp=NULL # assgned by the type checker
-
     MinTypeDefs:
         meta:
             brief: Type definitions in a lambda expression
@@ -407,7 +400,6 @@ unions:
             tag: MinExp
             tupleIndex: MinTupleIndex
             typeDefs: MinTypeDefs
-            typeOf: MinTypeOf
             var: HashSymbol
 
     MinLookUpOrSymbol:

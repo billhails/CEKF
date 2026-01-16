@@ -316,6 +316,8 @@ static LamExp *inlineExp(LamExp *x) {
     case LAMEXP_TYPE_COND:
         setLamExp_Cond(x, inlineCond(getLamExp_Cond(x)));
         break;
+    case LAMEXP_TYPE_TYPEOF:
+        break;
     default:
         cant_happen("unrecognised type %s", lamExpTypeName(x->type));
     }
