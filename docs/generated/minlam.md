@@ -79,8 +79,6 @@ MinContext --macros--> MinMacroSet
 MinContext --parent--> MinContext
 MinAmb --left--> MinExp
 MinAmb --right--> MinExp
-MinPrint --exp--> MinExp
-MinPrint --printer--> MinExp
 MinTypeOf --exp--> MinExp
 MinTypeOf --typeString--> MinExp
 MinTypeDefs --typeDefs--> MinTypeDefList
@@ -141,7 +139,6 @@ MinExp --makeVec--> MinMakeVec
 MinExp --match--> MinMatch
 MinExp --nameSpaces--> MinNameSpaceArray
 MinExp --prim--> MinPrimApp
-MinExp --print--> MinPrint
 MinExp --sequence--> MinSequence
 MinExp --stdint--> int
 MinExp --tag--> MinExp

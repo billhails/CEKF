@@ -309,11 +309,13 @@ static LamExp *inlineExp(LamExp *x) {
     case LAMEXP_TYPE_CONSTRUCT:
         getLamExp_Construct(x)->args = inlineArgs(getLamExp_Construct(x)->args);
         break;
+    case LAMEXP_TYPE_PRINT:
+        getLamExp_Print(x)->exp = inlineExp(getLamExp_Print(x)->exp);
+        getLamExp_Print(x)->printer = inlineExp(getLamExp_Print(x)->printer);
+        break;
     case LAMEXP_TYPE_COND:
         setLamExp_Cond(x, inlineCond(getLamExp_Cond(x)));
         break;
-    case LAMEXP_TYPE_MAKEVEC:
-        cant_happen("encountered %s", lamExpTypeName(x->type));
     default:
         cant_happen("unrecognised type %s", lamExpTypeName(x->type));
     }

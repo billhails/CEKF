@@ -121,9 +121,6 @@ void ppMinExp(MinExp *exp) {
     case MINEXP_TYPE_CALLCC:
         ppMinCallCC(getMinExp_CallCC(exp)); // MinExp
         break;
-    case MINEXP_TYPE_PRINT:
-        ppMinPrint(getMinExp_Print(exp));
-        break;
     case MINEXP_TYPE_TYPEDEFS:
         ppMinTypeDefs(getMinExp_TypeDefs(exp));
         break;
@@ -388,16 +385,6 @@ void ppMinCallCC(MinExp *exp) {
     }
     eprintf("(call/cc ");
     ppMinExp(exp);
-    eprintf(")");
-}
-
-void ppMinPrint(MinPrint *print) {
-    if (print == NULL) {
-        eprintf("<NULL print>");
-        return;
-    }
-    eprintf("(print ");
-    ppMinExp(print->exp);
     eprintf(")");
 }
 

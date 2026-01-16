@@ -263,17 +263,8 @@ static TcType *analyzeExp(LamExp *exp, TcEnv *env, TcNg *ng) {
     case LAMEXP_TYPE_CALLCC:
         return prune(analyzeCallCC(getLamExp_CallCC(exp), env, ng));
     case LAMEXP_TYPE_PRINT: {
-        // After capturing the type, we convert the print expression
-        // into a simple application.
         LamPrint *printer = getLamExp_Print(exp);
         TcType *ret = prune(analyzePrint(printer, env, ng));
-        LamArgs *args = newLamArgs(CPI(printer), printer->exp, NULL);
-        int save = PROTECT(args);
-        LamApply *app = newLamApply(CPI(printer), printer->printer, args);
-        PROTECT(app);
-        exp->type = LAMEXP_TYPE_APPLY;
-        setLamExp_Apply(exp, app);
-        UNPROTECT(save);
         return ret;
     }
     case LAMEXP_TYPE_TYPEOF:

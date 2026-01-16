@@ -256,16 +256,6 @@ structs:
             left: MinExp
             right: MinExp
 
-    MinPrint:
-        meta:
-            brief: A print expression
-            description: >-
-                This structure represents a print expression that outputs
-                the value of an expression to the console.
-        data:
-            exp: MinExp
-            printer: MinExp=NULL
-
     MinTypeOf:
         meta:
             brief: A typeOf expression
@@ -428,7 +418,6 @@ unions:
             match: MinMatch
             nameSpaces: MinNameSpaceArray
             prim: MinPrimApp
-            print: MinPrint
             sequence: MinSequence
             stdint: int
             tag: MinExp
