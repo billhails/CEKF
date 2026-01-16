@@ -44,9 +44,9 @@ Later desugaring that can't be done here:
 2. Rename all prefixes in `minlam.yaml` from `Lam` to `Min` **done**
 3. Generate a visitor on `lambda.yaml` called `lambda_desugar.c` **done**
 4. Modify the generator to perform a plain translation from `Lam*` types to the new `Min*` types. **done**
-5. Update the pipeline in main to perform this transform, after the constructor inlining step, before ANF conversion and to pass the new tree downstream to `lambda_alphaconvert.c`.
-6. Update `lambda_alphaconvert.c` and `anf_normalize.c` to consume `Min*` types instead of `Lam*` types.
-7. Test everything still works. We will also need to update the so-far unused `anf_normalize_2.c` and `lambda_CpsT[ck].c` to use `Min*` instead of `Lam*`.
+5. Update the pipeline in main to perform this transform, after the constructor inlining step, before ANF conversion and to pass the new tree downstream to `lambda_alphaconvert.c`. **done**
+6. Update `lambda_alphaconvert.c` and `anf_normalize.c` to consume `Min*` types instead of `Lam*` types. **done**
+7. Test everything still works. We will also need to update the so-far unused `anf_normalize_2.c` and `lambda_CpsT[ck].c` to use `Min*` instead of `Lam*`. **done**
 8. Iterate on the individual desugaring steps outlined in the previous section using the new visitor to translate, removing the now unused type from minlam.yaml and updating all affected files to no longer perform unnecessary translations.
 
 This may seem slightly pointless since `anf_normalize.c` immediately transforms that tree and discards it in favour of the new structs in `anf.yaml`, but this work is actually more geared towards the alternative lambda transforms "branch" of the pipeline, the alpha conversion, cps conversion, closure conversion, beta-reduction etc. that will all benefit from a much simpler and smaller dataset.
